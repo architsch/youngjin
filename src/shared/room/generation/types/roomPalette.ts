@@ -1,5 +1,4 @@
-// This is an optional piece of information that is attached to a RoomVolume,
-// for the purpose of telling how the RoomVolume should be textured.
+// Optional texturing info for a RoomVolume.
 export default class RoomPalette
 {
     floor: number;

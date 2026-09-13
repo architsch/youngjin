@@ -1,11 +1,4 @@
-/**
- * E2E tests: Error Handling
- *
- * Verifies that the server handles edge cases gracefully:
- * - Rate limiting headers are present
- * - Invalid routes return appropriate status codes
- * - API endpoints reject unauthenticated requests
- */
+/** E2E: rate-limit headers, status codes for invalid routes, and auth rejection on API endpoints. */
 import { test, expect } from "@playwright/test";
 
 test.describe("Error Handling", () => {
@@ -26,12 +19,8 @@ test.describe("Error Handling", () => {
     });
 
     test("single-segment paths that are not room addresses return 404", async ({ request }) => {
-        // A room address is just a name at the root, so anything the server is asked for that is
-        // not one of its own routes arrives looking like one. Turning these away on shape alone is
-        // what stops a passing scanner from spending a guest account per probe, so it is worth
-        // holding onto: the cost of losing it is invisible until the account count is examined.
-        // Kept clear of anything carrying a static file's extension, which a local dev server
-        // answers from the public directory before the room route is ever consulted.
+        // Non-room-shaped paths must 404 before identification (otherwise each scanner probe costs a
+        // guest account). Avoids static-file extensions, which local dev serves from public/.
         for (const path of ["/wp-login.php", "/.env", "/admin", "/short", "/this-is-not-a-room-id"])
         {
             const response = await request.get(path);

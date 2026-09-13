@@ -1,23 +1,9 @@
 /**
- * Scenario tests: multiplayer room generation
- *
- * Every Hub/Regular room the server creates is born from RoomGenerationUtil, so what it builds is
- * the definition of a complete room. A Regular room is laid out procedurally from a seed, which
- * makes its shape unknowable in advance — so what is asserted about it is the set of properties it
- * has to have no matter which seed produced it.
- *
- * What every generated multiplayer room owes, whichever kind it is:
- *
- * - the whole room is walkable from where a player arrives (no region is ever sealed off)
- * - the wall the room's door hangs on is left standing, and the floor in front of it left clear
- * - the boundary wall is intact the whole way round, and through the room's full height
- * - nothing it is built out of hangs in mid-air
- * - it is generated with its own way in and nothing else, for the people who use it to furnish
- * - it is built in one of the texture packs its textures were picked against
- * - a seed reproduces its room exactly
- *
- * On top of that: a Regular room is a procedural layout, in one texture, that differs from seed to
- * seed; and a Hub is currently two empty storeys (see the suspended block at the foot of this file).
+ * Scenario tests: multiplayer room generation (seed-independent properties). Every generated room is
+ * fully walkable from the arrival point, keeps its door wall and the floor before it clear, has an intact
+ * full-height boundary, nothing floating, only its door as an object, a pack its palettes target, and
+ * reproduces from its seed. Regular rooms are procedural in one pack; Hubs are currently two empty
+ * storeys (see the skipped block at the end).
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import RoomGenerationUtil from "../../../src/shared/room/generation/util/roomGenerationUtil";
@@ -43,8 +29,7 @@ import {
     STOREY_FLOOR_COLLISION_LAYER,
 } from "../../../src/shared/system/sharedConstants";
 
-// A handful of unrelated seeds, so that a property asserted below is not one that happens to
-// hold for a single layout.
+// Several unrelated seeds, so a property doesn't hold by one layout's luck.
 const SEEDS = [1, 2, 3, 91, 4242, 104729, 999983, 1234567];
 
 // The collision layers a standing player occupies. A cell is walkable when all of them are free.
@@ -58,10 +43,8 @@ function isWalkable(voxelGrid: VoxelGrid, row: number, col: number): boolean
 
 const DOOR_OBJECT_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Door");
 
-// Where an arriving player ends up. The entrance cell itself is boundary wall — that is what the
-// room's door hangs on, and where a player is put down behind it — so the room is walked from the
-// cell in front of it, which is where his entrance stride sets him down (see SpawnHotspotUtil and
-// PlayerController).
+// The entrance cell is boundary wall (the door hangs there), so walking starts from the cell in front
+// (see SpawnHotspotUtil and PlayerController).
 const ARRIVAL_ROW = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1;
 const ARRIVAL_COL = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL;
 
@@ -90,11 +73,7 @@ function floodFillFromEntrance(voxelGrid: VoxelGrid): Set<number>
     return reached;
 }
 
-/**
- * Every texture index the room is actually finished in. A quad byte carries its visibility in the
- * top bit and its texture index in the rest, and a hidden quad's index is whatever it last held —
- * so only the visible ones say anything about how the room looks.
- */
+/** Texture indices of visible quads only (a hidden quad keeps a stale index). */
 function texturesUsedIn(voxelGrid: VoxelGrid): Set<number>
 {
     const used = new Set<number>();
@@ -121,20 +100,9 @@ function countWalkableCells(voxelGrid: VoxelGrid): number
     return count;
 }
 
-//----------------------------------------------------------------------------------------------
-// Climbing the room
-//
-// A room's upper storey only exists in the sense that matters if a player can get up to it and walk
-// around on it, which is a question about the whole room at once — the stairs, the storey floor,
-// the doorways and the headroom all have to agree — rather than about any one part of it. So it is
-// asked the way the player would: by walking, from the entrance, and seeing where he ends up.
-//
-// A position is where a player stands: a cell, plus the layer whose top surface is under his feet
-// (with -1 standing for the room's own floor). Moving to a neighbouring cell, he steps up at most
-// one layer — the physics engine lets him climb a little over one block's height and no more — and
-// otherwise falls to whatever he lands on. Everywhere he can reach this way is the room he actually
-// has.
-//----------------------------------------------------------------------------------------------
+// ─── Climbing the room ───
+// Reachability is checked by walking from the entrance. A position is a cell plus the layer under the
+// player's feet (-1 = room floor); a move steps up at most one layer, otherwise falls.
 
 // How tall the player stands, in layers, which is how much headroom a place to stand needs.
 const PLAYER_HEIGHT_IN_LAYERS = Math.ceil(PLAYER_HEIGHT / COLLISION_LAYER_HEIGHT);
@@ -162,11 +130,7 @@ function canStandOn(voxelGrid: VoxelGrid, row: number, col: number, supportLayer
     return true;
 }
 
-/**
- * Where a player stepping into this cell from the given height ends up: onto the highest thing he
- * can reach without climbing more than one layer, or down onto whatever is below that. Undefined if
- * there is nowhere in the cell he fits at all.
- */
+/** The support layer after stepping into a cell (climbing at most one layer, else falling); undefined if nothing fits. */
 function getSupportLayerAfterStep(voxelGrid: VoxelGrid, row: number, col: number,
     fromSupportLayer: number): number | undefined
 {
@@ -178,10 +142,7 @@ function getSupportLayerAfterStep(voxelGrid: VoxelGrid, row: number, col: number
     return undefined;
 }
 
-/**
- * Every place in the room a player can walk to from the entrance, storeys and all, together with
- * the step he arrived at each of them from — so that a route to any of them can be read back out.
- */
+/** Every position reachable from the entrance, with its predecessor (for reading routes back). */
 function walkFromEntrance(voxelGrid: VoxelGrid): Map<string, string | undefined>
 {
     const start = getSupportLayerAfterStep(voxelGrid, ARRIVAL_ROW, ARRIVAL_COL,
@@ -190,8 +151,7 @@ function walkFromEntrance(voxelGrid: VoxelGrid): Map<string, string | undefined>
     if (start == undefined)
         return cameFrom;
 
-    // Breadth first, so that the route read back out of it is the shortest one there is — which is
-    // what keeps the physics-driven walk below down to a manageable number of steps.
+    // Breadth first, so routes are shortest (keeping the physics walk short).
     const startKey = `${ARRIVAL_ROW},${ARRIVAL_COL},${start}`;
     cameFrom.set(startKey, undefined);
     const pending: string[] = [startKey];
@@ -240,11 +200,7 @@ function getRouteToUpperStorey(voxelGrid: VoxelGrid): {row: number, col: number,
     return route;
 }
 
-/**
- * The treads of every flight of steps along the route: the cells belonging to a run that climbs a
- * layer at a time, more than once over. One step up on its own is a piece of block work the walk
- * happened to go over rather than a flight, and is left out.
- */
+/** Treads of every flight on the route: runs climbing one layer at a time at least twice. */
 function getFlightTreads(route: {row: number, col: number, supportLayer: number}[]):
     {row: number, col: number, supportLayer: number}[]
 {
@@ -256,8 +212,7 @@ function getFlightTreads(route: {row: number, col: number, supportLayer: number}
             route[i].supportLayer == route[i - 1].supportLayer + 1;
         if (climbs)
             continue;
-        // The run ran from runStart to i-1. Two rises or more make it a flight, and every cell of
-        // it above the room's own floor is one of its treads.
+        // Two or more rises make a flight; its cells above the room floor are treads.
         if (i - 1 - runStart >= 2)
         {
             for (let j = runStart; j < i; ++j)
@@ -283,13 +238,8 @@ function countReachedOnUpperStorey(reached: Map<string, string | undefined>): nu
 }
 
 /**
- * Walks a real player object along a route through the real physics engine, the way the client's
- * Rigidbody does it every frame, and answers where he ended up.
- *
- * This is what turns the walk above from a claim about the grid into a claim about the game: the
- * grid walk knows only that a step of one layer ought to be climbable, while this finds out whether
- * the engine — with the player's own hitbox, its own step-up rule and its own gravity — actually
- * carries him up the stairs the generator built.
+ * Walks a real player along a route through the real physics engine (as Rigidbody does) and returns
+ * where it ends up, checking the engine actually climbs what the grid walk assumes is climbable.
  */
 function walkRouteWithPhysics(room: Room, route: {row: number, col: number}[]): Vec3
 {
@@ -312,8 +262,7 @@ function walkRouteWithPhysics(room: Room, route: {row: number, col: number}[]): 
         const targetX = route[i].col + 0.5;
         const targetZ = route[i].row + 0.5;
 
-        // Long enough for a step that has to be climbed, which costs the walker a few frames of
-        // pressing into the riser before the engine lifts him over it.
+        // Enough frames to climb a step.
         for (let frame = 0; frame < 40; ++frame)
         {
             const toTargetX = targetX - pos.x;
@@ -340,15 +289,9 @@ function walkRouteWithPhysics(room: Room, route: {row: number, col: number}[]): 
     return pos;
 }
 
-//----------------------------------------------------------------------------------------------
-// What holds the room up
-//
-// Nothing a generator builds may hang in mid-air. A block is held up if it rests on the room's own
-// floor, if the block directly under it is held up, or if a block beside it at the same height is —
-// that last one being what carries a storey floor, a slab that hangs between the walls it meets at
-// its edges rather than standing on anything. Whatever is left over after that has spread as far as
-// it can is floating.
-//----------------------------------------------------------------------------------------------
+// ─── What holds the room up ───
+// A block is supported by the floor, a supported block below, or a supported neighbour at the same
+// height (which carries storey slabs). Anything left unsupported is floating.
 
 function getBlockKey(row: number, col: number, layer: number): string
 {
@@ -401,11 +344,7 @@ function findFloatingBlocks(voxelGrid: VoxelGrid): string[]
     return floating;
 }
 
-/**
- * Cells standing open from the room's floor right up past the storey above, i.e. the tall spaces in
- * it. The topmost layer is not asked about: a room is capped there whatever else it does, so that
- * both of its storeys come out the same height as each other.
- */
+/** Cells open from the floor through both storeys (the capped top layer is excluded). */
 function countCellsOpenThroughBothStoreys(voxelGrid: VoxelGrid): number
 {
     let count = 0;
@@ -430,8 +369,7 @@ function encodeVoxelGrid(voxelGrid: VoxelGrid): string
     return new Uint8Array(EncodingUtil.endEncoding(bufferState)).join(",");
 }
 
-// The kinds of room RoomGenerationUtil lays out for itself. A single-player room is not one of
-// them: it is built from the SinglePlayerModeConfig it is named after rather than drawn.
+// Procedurally generated room types (single-player rooms come from their SinglePlayerModeConfig).
 const MULTIPLAYER_ROOM_TYPES = [
     {name: "hub", roomType: RoomTypeEnumMap.Hub},
     {name: "regular", roomType: RoomTypeEnumMap.Regular},
@@ -445,11 +383,7 @@ function generateFromSeed(seed: number, roomType: number = RoomTypeEnumMap.Hub):
     return room;
 }
 
-/**
- * How much block work stands inside the boundary wall between the two heights, counting a cell once
- * for every layer of it that is solid. A stretch that is entirely hollow counts nothing; one that is
- * solid throughout counts every interior cell at every layer of it.
- */
+/** Solid interior blocks between two layers (each solid layer of a cell counts once). */
 function countInteriorBlocks(voxelGrid: VoxelGrid, layerMin: number, layerMax: number): number
 {
     let count = 0;
@@ -498,8 +432,7 @@ describe("every generated multiplayer room", () => {
             {
                 const {voxelGrid} = generateFromSeed(seed, roomType);
 
-                // The entrance cell is wall, not a hole: the room's door is hung on it, and a wall
-                // attachment with nothing behind it is refused (see WallAttachedObjectUtil).
+                // The entrance cell is wall: the door hangs on it (see WallAttachedObjectUtil).
                 expect(isWalkable(voxelGrid, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL),
                     `${name} seed ${seed} :: the wall the door hangs on was carved away`).toBe(false);
 
@@ -527,8 +460,7 @@ describe("every generated multiplayer room", () => {
                 {
                     for (let col = 0; col < NUM_VOXEL_COLS; ++col)
                     {
-                        // Including the entrance: the way in is a door hung on that wall rather
-                        // than a hole cut through it, so nothing breaks the boundary any more.
+                        // Including the entrance: the door hangs on the wall rather than a hole.
                         const onBoundary = row == 0 || col == 0 ||
                             row == NUM_VOXEL_ROWS - 1 || col == NUM_VOXEL_COLS - 1;
                         if (!onBoundary)
@@ -542,9 +474,7 @@ describe("every generated multiplayer room", () => {
     });
 
     it("leaves nothing standing in mid-air", () => {
-        // Every block a generated room is built out of is held up by something: props stand on the
-        // storey they furnish, and a storey a room was left without is one that nothing may be
-        // stood on at all.
+        // Every generated block is supported.
         for (const {name, roomType} of MULTIPLAYER_ROOM_TYPES)
         {
             for (const seed of SEEDS)
@@ -558,8 +488,7 @@ describe("every generated multiplayer room", () => {
     });
 
     it("keeps the upper storey inside the room", () => {
-        // The boundary wall has to stand through the room's whole height, not just the part of it
-        // the ground floor occupies — otherwise reaching the storey above is a way out of the room.
+        // The boundary spans the full height, or the upper storey is a way out.
         for (const {name, roomType} of MULTIPLAYER_ROOM_TYPES)
         {
             for (const seed of SEEDS)
@@ -586,19 +515,9 @@ describe("every generated multiplayer room", () => {
     });
 
     it("furnishes a multiplayer room with its own way in and nothing else", () => {
-        // A Hub or Regular room is meant to be furnished by the people who use it, so what it owes
-        // them is somewhere to build rather than a full house — an object generation placed is one
-        // somebody has to clear away before he can put his own there.
-        //
-        // Its door is the one exception, and is not really furniture: a room with no door is a room
-        // nobody can leave, and it is what an arriving player is put down behind besides. It stands
-        // on the boundary wall at the room's entrance cell, facing into the room, and offers itself
-        // as the way in.
-        //
-        // Being a way in is not what makes it a way out, though — where a door goes is written on
-        // the door, and one naming nowhere is a locked one. So it is generated pointed at the hubs,
-        // which is the only destination generation can honestly choose: which hub is worth arriving
-        // in belongs to the moment somebody walks through, not to the day the room was built.
+        // Generated rooms hold only their door (users furnish the rest). It stands on the boundary at the
+        // entrance cell facing in, as the way in, and targets the hubs (the only destination generation
+        // can choose).
         for (const {name, roomType} of MULTIPLAYER_ROOM_TYPES)
         {
             for (const seed of SEEDS)
@@ -622,8 +541,7 @@ describe("every generated multiplayer room", () => {
     });
 
     it("builds the room in a texture pack whose palettes it drew from", () => {
-        // A room's textures are cell positions within one specific pack's atlas, so a room that
-        // came out in a pack nothing was picked against would be finished at random.
+        // Textures are atlas cells of one pack, so the pack must be one the palettes target.
         for (const {name, roomType} of MULTIPLAYER_ROOM_TYPES)
         {
             for (const seed of SEEDS)
@@ -635,16 +553,13 @@ describe("every generated multiplayer room", () => {
             }
         }
 
-        // A hub may be finished in any pack the game ships, and the one it wears is genuinely drawn
-        // rather than every hub landing on the same one. (A regular room is deliberately always the
-        // one plain pack — see the regular-room block below.)
+        // Hubs draw from every shipped pack (Regular rooms always use the plain one; see below).
         const packsUsed = new Set(SEEDS.map(seed => generateFromSeed(seed).texturePackPath));
         expect(packsUsed.size).toBeGreaterThan(1);
     });
 
     it("keeps every palette within the reach of a texture pack atlas", () => {
-        // The voxel texture pack atlas is a square grid of cells, and a quad's texture is an index
-        // into it — so a palette naming a cell past the end of the grid renders as nothing.
+        // A palette index past the atlas grid renders nothing.
         const NUM_TEXTURES_PER_PACK = 64;
         for (const texturePackPath of RoomPaletteMap.getTexturePackPaths())
         {
@@ -684,8 +599,7 @@ describe("every generated multiplayer room", () => {
             expect(floodFillFromEntrance(room.voxelGrid).size, name)
                 .toBe(countWalkableCells(room.voxelGrid));
 
-            // The room carries the texture pack its contents were picked against, so that the
-            // room it is saved as looks like the room that was generated.
+            // The room carries the pack its contents were picked against.
             expect(RoomPaletteMap.getPalettes(room.texturePackPath).length, name).toBeGreaterThan(0);
         }
     });
@@ -698,9 +612,7 @@ describe("a regular room's procedural layout", () => {
     });
 
     it("carves rooms out of the solid mass rather than hollowing the whole storey", () => {
-        // A regular room starts as one solid chunk with a few small areas taken out of it, the rest
-        // being left for its owner to mine out block by block. So a room that came out with its
-        // whole interior open would be one the carving never ran on.
+        // Regular rooms start solid with a few areas carved out; a fully open interior means carving never ran.
         for (const seed of SEEDS)
         {
             const {voxelGrid} = generateFromSeed(seed, RoomTypeEnumMap.Regular);
@@ -712,8 +624,7 @@ describe("a regular room's procedural layout", () => {
     });
 
     it("is one storey, with the mass above it left standing", () => {
-        // It is a cosy home rather than a lobby: the storey floor and everything over it stay
-        // solid, which is also what a room mined upwards from starts as.
+        // The storey floor and everything above it stay solid.
         for (const seed of SEEDS)
         {
             const {voxelGrid} = generateFromSeed(seed, RoomTypeEnumMap.Regular);
@@ -725,10 +636,7 @@ describe("a regular room's procedural layout", () => {
     });
 
     it("is handed over plain, in one texture throughout", () => {
-        // A regular room belongs to one person, and is a blank room for its owner to decorate
-        // himself. How much decoration it comes out wearing is settled entirely by the texture
-        // packs and palettes its room type is offered — so this is a test that generation reads
-        // those parameters at all, rather than finishing every room alike.
+        // Decoration comes from the room type's packs and palettes, so this checks generation reads them.
         for (const seed of SEEDS)
         {
             const regular = generateFromSeed(seed, RoomTypeEnumMap.Regular);
@@ -749,9 +657,7 @@ describe("a hub room", () => {
         vi.spyOn(console, "log").mockImplementation(() => {});
     });
 
-    // Procedural generation is currently switched off for hubs — see the note in HubRoomBuilder —
-    // and a hub is built as two empty storeys instead. These describe that shape, so that the
-    // temporary arrangement is asserted rather than merely not contradicted.
+    // Hub generation is currently off (see HubRoomBuilder): two empty storeys, asserted here.
 
     it("stands open through both storeys, from wall to wall", () => {
         // Nothing at all is left inside either storey: no interior walls, no block work, no props.
@@ -769,9 +675,7 @@ describe("a hub room", () => {
     });
 
     it("is two storeys of the same height, rather than one tall room", () => {
-        // The slab between them is what makes the upper storey a floor at all, and the cap over the
-        // upper one is what stops it being the taller of the two. Between them they are the only
-        // things left standing inside a hub.
+        // Only the slab and the top cap stand inside a hub.
         for (const seed of SEEDS)
         {
             const {voxelGrid} = generateFromSeed(seed);
@@ -787,8 +691,7 @@ describe("a hub room", () => {
     });
 
     it("comes out in one texture, whichever pack it drew", () => {
-        // Nothing is picked from the hub's palettes while its rooms are not being drawn, so what
-        // its faces carry is the one plain texture of whichever pack it landed on.
+        // With no palettes picked, faces carry the pack's plain texture.
         for (const seed of SEEDS)
         {
             expect(texturesUsedIn(generateFromSeed(seed).voxelGrid).size, `seed ${seed}`).toBe(1);
@@ -796,19 +699,10 @@ describe("a hub room", () => {
     });
 });
 
-//----------------------------------------------------------------------------------------------
-// Suspended: what a procedurally generated hub owes
-//
-// A hub used to be the one room type generation gave two storeys, a flight of steps between them,
-// and block work standing about in it. That is switched off for the moment — HubRoomBuilder builds
-// two empty storeys and keeps the procedural pipeline commented out beside them — so none of these
-// properties hold of anything the generator currently produces.
-//
-// They are kept here rather than deleted because the switch is meant to be flipped back, and
-// because they are the only thing asserting the parts of ProceduralRoomBuilder that nothing else
-// calls any more: allocateStaircaseCapableAreas, raiseSecondStoreys, and the staircase planner
-// behind them. Un-skip this block in the same change that restores HubRoomBuilder's pipeline.
-//----------------------------------------------------------------------------------------------
+// ─── Suspended: procedurally generated hubs ───
+// Hub generation is switched off (HubRoomBuilder keeps the pipeline commented out). Kept because these
+// are the only tests of allocateStaircaseCapableAreas, raiseSecondStoreys and the staircase planner.
+// Un-skip in the same change that restores HubRoomBuilder's pipeline.
 describe.skip("a procedurally generated hub", () => {
     beforeEach(() => {
         vi.spyOn(console, "error").mockImplementation(() => {});
@@ -822,9 +716,7 @@ describe.skip("a procedurally generated hub", () => {
             const reached = walkFromEntrance(voxelGrid);
             const upstairs = countReachedOnUpperStorey(reached);
 
-            // A storey nobody can get to is half a room nobody has. This walks up whatever stairs
-            // the seed produced, so it is the stairs themselves being asserted here as much as the
-            // floor they lead to: a flight with a step too tall to climb strands the player on it.
+            // Walks the generated stairs, so a step too tall to climb fails here.
             expect(upstairs, `seed ${seed} :: the upper storey cannot be reached on foot`)
                 .toBeGreaterThan(0);
 
@@ -851,15 +743,8 @@ describe.skip("a procedurally generated hub", () => {
     });
 
     it("climbs to the upper storey by a flight wide enough to walk up", () => {
-        // A flight one cell across is a ledge the player has to line himself up on before every
-        // stride, and slips off the side of whenever he does not. So every tread of the flight has
-        // to have a second cell beside it at exactly the same height — the other half of the same
-        // tread — that he could equally well have been walking on.
-        //
-        // What counts as a flight is a run of the route that climbs a layer at a time, more than
-        // once over. A single step up on its own is not one: a generated room has waist-high block
-        // work standing about in it, and stepping onto a piece of furniture and down off it again
-        // is not something that has to be walkable two abreast.
+        // Flights must be two cells wide: every tread needs a same-height neighbour. A lone step up (onto
+        // block work) isn't a flight.
         for (const seed of SEEDS)
         {
             const {voxelGrid} = generateFromSeed(seed);
@@ -878,17 +763,13 @@ describe.skip("a procedurally generated hub", () => {
     });
 
     it("opens some of its rooms through both storeys, and floors over the rest", () => {
-        // A room that is uniformly two storeys of the same height reads as a filing cabinet. Some
-        // of its spaces are deliberately left open from the floor to the ceiling instead — which is
-        // a property of the whole run of seeds rather than of any one of them, since whether a
-        // given room gets one is the seed's to decide.
+        // Some spaces must be open floor to ceiling, across the seed set (each seed decides).
         let numRoomsWithTallSpace = 0;
         for (const seed of SEEDS)
         {
             const {voxelGrid} = generateFromSeed(seed);
 
-            // Whichever it does, the storey floor is never left in a state where a player walking
-            // the upper storey finds nothing under him: it either carries him or is not there at all.
+            // The storey floor either supports the upper storey or is absent, never partial.
             expect(countReachedOnUpperStorey(walkFromEntrance(voxelGrid)),
                 `seed ${seed}`).toBeGreaterThan(0);
 
@@ -900,9 +781,7 @@ describe.skip("a procedurally generated hub", () => {
     });
 
     it("decorates the room it hands to everybody", () => {
-        // A hub is the room the game hands to everybody and is worth decorating, so its spaces are
-        // finished in the several palettes hand-picked for whichever pack it drew — as much
-        // decoration as its RoomPaletteSelectionParams offers it, and no more.
+        // Hubs use the hand-picked palettes for their pack, per RoomPaletteSelectionParams.
         for (const seed of SEEDS)
         {
             expect(texturesUsedIn(generateFromSeed(seed).voxelGrid).size,

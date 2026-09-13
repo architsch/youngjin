@@ -5,9 +5,7 @@ import GraphicsManager from "../../../../graphics/graphicsManager";
 const vecTemp1 = new THREE.Vector3();
 const vecTemp2 = new THREE.Vector3();
 
-// A world-space icon-button rendered as a CSS2DObject (always visible on top of all meshes).
-// Displays a text label (e.g. "+" or "-") and responds to click events.
-// Automatically scales down based on camera distance (same formula as SpeechBubble).
+// A CSS2D icon button (always on top) that shrinks with camera distance (same formula as SpeechBubble).
 export default class WorldSpaceIconButton
 {
     private hotspot: THREE.Object3D = new THREE.Object3D();
@@ -25,8 +23,7 @@ export default class WorldSpaceIconButton
         this.wrapper = document.createElement("div");
         this.wrapper.style.cssText = "pointer-events:none;";
 
-        // Inner element carries the visual styling and hover scale effect,
-        // so it won't conflict with CSS2DRenderer's transform on the wrapper.
+        // Styling lives on an inner element so it doesn't fight CSS2DRenderer's wrapper transform.
         this.inner = document.createElement("div");
         this.inner.textContent = label;
         this.inner.style.cssText =
@@ -97,8 +94,7 @@ export default class WorldSpaceIconButton
         this.inner.style.width = iconScale;
         this.inner.style.height = iconScale;
 
-        // Y-axis billboard: rotate the hotspot around Y so local X offset
-        // always faces perpendicular to the camera view direction.
+        // Y-axis billboard, so local X offsets stay perpendicular to the view.
         const dx = vecTemp2.x - vecTemp1.x;
         const dz = vecTemp2.z - vecTemp1.z;
         this.hotspot.rotation.y = Math.atan2(dx, dz);

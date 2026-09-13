@@ -3,17 +3,9 @@ import { screenDiagramObservable } from "../../../system/clientObservables";
 import DragUpDiagram from "../../svg/diagrams/dragUpDiagram";
 import DragSidewaysDiagram from "../../svg/diagrams/dragSidewaysDiagram";
 
-// A semi-transparent panel that shows a vector-graphics diagram (one of the self-contained drawings
-// under svg/diagrams) above a short caption. Used to demonstrate a gesture to the user — e.g.
-// dragging upward to move. The overlay ignores pointer events so the user can still perform the
-// demonstrated gesture "through" it.
-//
-// A gesture demonstrated for its own sake takes the middle of the screen, where it cannot be
-// missed. One demonstrated so the user can watch what it does to something — turning the camera
-// around his character — steps aside to the edge and is drawn small instead, since a panel in the
-// way of the very thing the gesture is for defeats the lesson. The edge it steps to is the left one,
-// clear of the headline above, of the way out of the mode opposite it, and of whatever panel the
-// selection has put along the bottom.
+// Gesture diagram (svg/diagrams) with a caption, ignoring pointer events so the gesture can be done
+// through it. Centred by default; "edge" placement draws it small at the left edge when the user must
+// watch the gesture's effect.
 export default function ScreenDiagram()
 {
     const [content, setContent] = useState<
@@ -21,8 +13,7 @@ export default function ScreenDiagram()
 
     useEffect(() => {
         screenDiagramObservable.addListener("ui.screenDiagram", setContent);
-        // A tutorial step may set the diagram before this component mounts, and addListener
-        // doesn't replay the current value, so sync to it explicitly on mount.
+        // May be set before mount, and addListener doesn't replay, so sync now.
         setContent(screenDiagramObservable.peek());
         return () => screenDiagramObservable.removeListener("ui.screenDiagram");
     }, []);

@@ -46,12 +46,8 @@ const App =
     {
         env = newEnv;
         user = User.fromString(env.userString);
-        // Single-player mode is activated from the room the server actually places us in
-        // (see onRoomChangedSignalReceived) — NOT from this page-embedded user flag. The two
-        // are independent reads of user state that can disagree (e.g. the socket authenticates
-        // a different user than the one rendered into the page), which would otherwise let the
-        // single-player UI run on top of a multiplayer room. Start cleared and let the joined
-        // room decide.
+        // Single-player mode is driven by the joined room (see onRoomChangedSignalReceived), not by
+        // this page-embedded flag, which can disagree with the socket's user.
         singlePlayerObservable.set({mode: "", step: ""});
     },
     getEnv: (): ThingsPoolEnv =>
@@ -75,13 +71,10 @@ const App =
             () => params.roomID === App.getCurrentRoom()?.id);
         if (!success)
             return;
-        // Refused while an edit of this client's own is still on its way to the server, which is
-        // the newer of the two (see RoomLightingUtil). Nothing is announced in that case either:
-        // there is nothing new for the form on screen to show itself.
+        // Ignored while a local edit is pending (see RoomLightingUtil).
         if (!RoomLightingUtil.applyIncoming(params.prefs))
             return;
-        // The room's own string is what anything on screen reads back, so what is announced is the
-        // room rather than the settings (see the observable's own note).
+        // Announces the room, whose prefs string is what the UI reads back.
         roomPrefsChangedObservable.set(params.roomID);
     },
     onRoomTexturePackChangedSignalReceived: async (params: RoomTexturePackChangedSignal) => {
@@ -96,9 +89,7 @@ const App =
     {
         return currentRoom!.voxelGrid.quadsMem.quads;
     },
-    // When this method receives a RoomChangedSignal from the server,
-    // the given room will be loaded on the client side immediately
-    // (The previous room will be unloaded - if it exists).
+    // Unloads the previous room (if any) and loads the new one.
     onRoomChangedSignalReceived: async (roomChangedSignal: RoomChangedSignal) =>
     {
         if (currentRoom != undefined)
@@ -108,15 +99,11 @@ const App =
         }
         await loadRoom(roomChangedSignal.roomRuntimeMemory);
 
-        // Notify listeners that the room has changed. This disposes the previous room's world-space
-        // gizmos and resets their lazy-init state, so the pre-load below re-creates them fresh in
-        // the new scene.
+        // Disposes the previous room's gizmos so the pre-load below recreates them.
         roomChangedObservable.set(roomChangedSignal.roomRuntimeMemory);
 
-        // While the "Loading" indicator is still showing, eagerly create the world-space gizmos and
-        // pre-compile every material's shader program. This pays the one-time shader-compilation
-        // cost up front, instead of stalling the frame the first time a gizmo appears mid-gameplay.
-        // A failure here only forfeits the optimization, so don't let it strand the loading screen.
+        // Precompile shaders and create gizmos behind the loading screen. Failure only loses the
+        // optimization, so it mustn't block loading.
         RoomLoadProgressUtil.enterPhase("compilingShaders");
         try
         {
@@ -133,30 +120,20 @@ const App =
         // Remove superfluous trailing parts of the URL
         window.history.replaceState(null, "", "/");
 
-        // The room the server actually placed us in is the single source of truth for whether
-        // a single-player experience runs — this is what makes it impossible for the tutorial
-        // UI/steps to run on top of a multiplayer room (or vice versa). A single-player room's
-        // name is its mode identifier (Room.roomName == singlePlayerMode).
+        // The joined room decides whether single-player runs (its roomName is the mode id).
         const joinedRoom = roomChangedSignal.roomRuntimeMemory.room;
         if (joinedRoom.roomType == RoomTypeEnumMap.SinglePlayer)
         {
-            // In a single-player room → run its scripted experience, starting at the initial step
-            // now that the room is fully loaded.
             singlePlayerObservable.set({mode: joinedRoom.roomName, step: "initial"});
         }
         else
         {
-            // In any other (multiplayer) room → no single-player experience should be running.
-            // If one was (i.e. we just left a single-player room, whether by reaching the exit or
-            // bailing out early), this ends it: tears down the local UI/flags and tells the server
-            // to clear the persisted mode flag. It is a no-op when nothing was running, so ordinary
-            // multiplayer-to-multiplayer navigation costs nothing.
+            // Ends any single-player experience we just left (tears down UI/flags, tells the server).
+            // No-op otherwise.
             SinglePlayerManager.finishSinglePlayerMode();
         }
     },
-    // The room change the user was waiting for is not going to happen (e.g. the destination
-    // turned out to be full), so no RoomChangedSignal is coming. Release the "Loading"
-    // indicator that the request put up, and tell the user why they are staying put.
+    // Releases the loading indicator and explains why the user stays put.
     onRoomChangeRejectedSignalReceived: (roomChangeRejectedSignal: RoomChangeRejectedSignal) =>
     {
         if (ongoingClientProcessExists("roomChange"))
@@ -180,15 +157,13 @@ async function loadRoom(roomRuntimeMemory: RoomRuntimeMemory)
 {
     currentRoom = roomRuntimeMemory.room;
 
-    // Single-player rooms come over the wire as a content-less descriptor; the client generates the
-    // actual voxels/objects locally and injects them before anything reads room.voxelGrid/objectById.
+    // Generate single-player content before anything reads it.
     if (currentRoom.roomType == RoomTypeEnumMap.SinglePlayer)
         ClientObjectUtil.buildSinglePlayerRoomContent(currentRoom);
 
     RoomLoadProgressUtil.enterPhase("loadingGraphics");
     await GraphicsManager.load(update);
-    // Before anything is drawn, so that the room's first frame is already lit the way the room is
-    // lit rather than the way the previous one was.
+    // Before the first frame, so the room isn't lit like the previous one.
     RoomLightingUtil.applyRoomLighting(currentRoom.prefs);
     PhysicsManager.load(roomRuntimeMemory);
     RoomLoadProgressUtil.enterPhase("loadingVoxels");

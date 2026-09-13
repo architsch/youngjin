@@ -11,31 +11,21 @@ export const GIT_COMMIT: string = typeof __GIT_COMMIT__ !== "undefined" ? __GIT_
 const DB_PREFIX = process.env.DB_PREFIX || "";
 export const COLLECTION_ROOMS = `${DB_PREFIX}rooms`;
 export const COLLECTION_USERS = `${DB_PREFIX}users`;
-// Dev-only: holds a single marker doc whose lifetime tracks the emulated DB, used to invalidate
-// stale browser cookies left over from a previous DevRunner runtime (see DevRuntimeUtil).
+// Dev-only: a marker doc tied to the emulator's lifetime, for invalidating stale cookies (see DevRuntimeUtil).
 export const COLLECTION_DEV_RUNTIME = `${DB_PREFIX}_dev_runtime`;
-// Per-cohort acquisition counters (ServerAnalyticsManager). One document per (source, arrival day),
-// holding only counts — never a reference to an individual account. It is deliberately separate
-// from the users collection because the accounts it counts do not survive: a visitor who arrives
-// and leaves is a guest, and stale guests are deleted. Counting them on their own rows alone would
-// mean the bounce rate of a traffic source erased itself a few days after the source was tried,
-// which is exactly the number worth keeping.
+// Per-(source, arrival day) acquisition counters (ServerAnalyticsManager). Separate from users, since
+// bounced guests are deleted.
 export const COLLECTION_ACQUISITION = `${DB_PREFIX}acquisition`;
 
-// The cohort a visitor is filed under when they arrive without a usable "ref" tag. Direct traffic
-// is a cohort in its own right, and the one every tagged source is worth comparing against.
+// Cohort for visitors without a usable "ref" tag.
 export const ACQUISITION_SOURCE_DIRECT = "direct";
-// Longest ref tag kept. The value comes from whoever wrote the link, so it is capped before it
-// reaches a document ID.
+// Max ref tag length (untrusted input used in document IDs).
 export const ACQUISITION_SOURCE_MAX_LENGTH = 32;
 
-// Firestore commits at most this many writes in a single batch or transaction, so any write
-// spanning an unbounded number of documents has to be split into commits of at most this size.
+// Firestore's per-commit write limit.
 export const DB_MAX_WRITES_PER_COMMIT = 500;
 
-// Minimum inactivity gap separating two "distinct logins". Identified requests arriving
-// closer together than this belong to the same visit and must not inflate loginCount
-// (a single visit fires many identified requests: page load, room APIs, etc.).
+// Minimum gap between "distinct logins"; requests within one visit don't inflate loginCount.
 export const LOGIN_COUNT_MIN_GAP_MS = 1 * DAY_IN_MS;
 
 export const GUEST_TIER_NAME_BY_TIER_PHASE = ["disposable", "casual", "dedicated"];
@@ -50,12 +40,8 @@ export const GUEST_MAX_AGE_BY_TIER_PHASE = [
 export const URL_STATIC = "https://thingspool.net";
 export const URL_DYNAMIC = process.env.DB_PREFIX == "staging_" ? "https://staging.thingspool.net" : "https://app.thingspool.net";
 
-// Whether this deployment is the one the outside world is meant to know about. Only it may
-// present a page's share-preview metadata and carry the analytics tag, because both of those
-// announce a page as *the* ThingsPool site. Staging serves the same pages from an address of its
-// own, so leaving them in place there would offer search engines a second, competing copy of the
-// site and fold staging's traffic — every automated test run included — into the live site's
-// analytics. Dev serves throwaway builds and has no business in either.
+// Only the public site serves share metadata and the analytics tag (staging would duplicate the site in
+// search and pollute analytics; dev is throwaway).
 export const IS_PUBLIC_SITE = process.env.MODE != "dev" && process.env.DB_PREFIX != "staging_";
 export const AUTH_TOKEN_NAME_BASE = "thingspool_token";
 export const TUTORIAL_FINISHED_COOKIE_NAME_BASE = "thingspool_tutorial_finished";

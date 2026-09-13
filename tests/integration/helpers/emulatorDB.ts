@@ -1,11 +1,7 @@
 /**
- * Helpers for the DB suite — the one suite that runs the real query runners against a real
- * Firestore, namely the local emulator. Everything else mocks the DB layer away (see mockDB.ts),
- * which is exactly why the runners themselves need a suite of their own: a mock cannot reproduce
- * what Firestore accepts, rejects, or does under concurrent writers.
- *
- * The emulator is optional. When it isn't running the suite skips itself rather than failing, so
- * that the pre-commit hook stays usable without one — `npm run test:integration:db` starts it.
+ * Helpers for the DB suite, which runs the real query runners against the Firestore emulator (mocks
+ * can't reproduce Firestore behavior). Skips itself without an emulator (`npm run test:integration:db`
+ * starts one).
  */
 import * as net from "net";
 import { vi } from "vitest";
@@ -19,8 +15,7 @@ export const EMULATOR_HOST = process.env.FIRESTORE_EMULATOR_HOST ?? "127.0.0.1:8
 
 const EmulatorDB =
 {
-    // Whether an emulator is listening. Checked once, before the suite declares its tests, so that
-    // the whole suite can be skipped as a unit instead of failing test by test.
+    // Checked once before tests are declared, so the whole suite skips as a unit.
     isAvailable: async (): Promise<boolean> =>
     {
         const [host, port] = EMULATOR_HOST.split(":");
@@ -34,8 +29,7 @@ const EmulatorDB =
         });
     },
 
-    // Refuses to hand out a DB unless it is an emulated one. The suite writes to, and clears,
-    // whole collections — it must never be able to do that to a real project.
+    // Refuses non-emulator DBs (the suite clears whole collections).
     getDB: async () =>
     {
         if (!process.env.FIRESTORE_EMULATOR_HOST)
@@ -43,8 +37,7 @@ const EmulatorDB =
         return await FirebaseUtil.getDB();
     },
 
-    // Removes every document the suite works with, and clears the state the query layer carries
-    // between queries, so each test starts from the same blank slate.
+    // Clears suite collections and query-layer state.
     reset: async (): Promise<void> =>
     {
         const db = await EmulatorDB.getDB();
@@ -63,9 +56,7 @@ const EmulatorDB =
         DBQueryRateMonitorUtil.resetWindow();
     },
 
-    // Writes documents straight to Firestore, bypassing the query layer, so that a test can set up
-    // exactly the stored state it wants to exercise — including states the query layer would never
-    // produce, such as a row left at an outdated version.
+    // Writes directly (bypassing the query layer), e.g. rows at outdated versions.
     seed: async (collection: string, docsById: {[docId: string]: any}): Promise<void> =>
     {
         const db = await EmulatorDB.getDB();
@@ -79,8 +70,7 @@ const EmulatorDB =
         }
     },
 
-    // Reads a document exactly as it is stored, with no migration, caching or id-injection in the
-    // way — the only way to assert what a write actually left behind.
+    // Reads the raw stored document (no migration, cache or id injection).
     readStored: async (collection: string, docId: string): Promise<any | undefined> =>
     {
         const db = await EmulatorDB.getDB();
@@ -97,8 +87,7 @@ const EmulatorDB =
         return result;
     },
 
-    // Migration write-backs are deliberately fire-and-forget, so a test that asserts on their
-    // outcome has to wait for one rather than assume it has landed.
+    // Waits for fire-and-forget writes (e.g. migration write-backs).
     waitFor: async (condition: () => Promise<boolean>, description: string, timeoutMs: number = 5000): Promise<void> =>
     {
         const deadline = Date.now() + timeoutMs;
@@ -111,8 +100,7 @@ const EmulatorDB =
         throw new Error(`EmulatorDB.waitFor :: timed out waiting for: ${description}`);
     },
 
-    // Captures what the DB layer logs, so that tests can assert a failure was reported *and* that
-    // the report carries a usable description of it.
+    // Captures DB-layer logs.
     captureLogs: () =>
     {
         const entries: {title: string, desc: any, level: string, type: string}[] = [];

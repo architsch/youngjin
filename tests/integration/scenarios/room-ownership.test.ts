@@ -1,10 +1,5 @@
 /**
- * Scenario tests: Room ownership and enter/exit flows
- *
- * Covers:
- * - User entering and exiting their own room
- * - User entering and exiting another user's room
- * - User moving from one room to another (room switching)
+ * Scenario tests: room ownership and enter/exit flows (own room, others' rooms, switching).
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runScenario } from "../helpers/scenarioRunner";
@@ -132,8 +127,7 @@ describe("room ownership scenarios", () => {
                 expect(ServerRoomManager.currentRoomIDByUserID["switching-user"]).toBe("my-room");
                 const room = ServerRoomManager.roomRuntimeMemories["my-room"].room;
                 expect(RoomValidationUtil.userOwnsRoom(users[0].user, room)).toBe(true);
-                // The hub stays loaded even though its last user left — hubs are kept resident
-                // so that incoming users can be load-balanced across them without a DB query.
+                // Hubs stay loaded when empty, for load balancing without DB queries.
                 expect(harness.isRoomLoaded("hub-default")).toBe(true);
                 expect(harness.getRoomParticipantCount("hub-default")).toBe(0);
             },

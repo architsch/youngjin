@@ -3,9 +3,7 @@ import EncodableData from "./encodableData";
 
 export default class EncodableRawSignedByteNumber extends EncodableData
 {
-    // The range this field can carry. A caller that has to fit a growing quantity into a signal
-    // checks against this rather than against a literal of its own, so that widening the field is
-    // enough to widen everything measured against it.
+    // The field's range; callers check against these instead of literals.
     static readonly MIN_VALUE = -128;
     static readonly MAX_VALUE = 127;
 

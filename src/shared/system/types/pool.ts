@@ -12,10 +12,7 @@ export default class Pool<T>
             this.freeItems[index] = itemConstructor(index);
     }
 
-    // Returns undefined when the pool has nothing left to hand out. Running dry is a legitimate
-    // outcome rather than an error — a caller that cannot get an item is expected to carry on
-    // without one (e.g. by leaving something undrawn) and try again later, since throwing here
-    // would take down whatever loop the caller happens to be running in.
+    // Undefined when empty; callers carry on without an item (e.g. leave something undrawn) and retry.
     rentItem(): T | undefined
     {
         return this.freeItems.pop();

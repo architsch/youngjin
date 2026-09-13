@@ -264,8 +264,8 @@ node dev/scripts/analytics/funnelReport.js report --app live --days 30
 
 It prints JSON: arrivals per source, the share of each source's arrivals that reached each funnel
 step, and a `ranking` ordered by returned rate. Read
-[`docs/devOps/analytics.md`](../../../docs/devOps/analytics.md) before interpreting it — the section
-on what the rates are shares *of* is the part that is easy to get wrong.
+[`docs/devOps/analytics.md`](../../../docs/devOps/analytics.md) before interpreting it — what the
+rates are shares *of* is the part that is easy to get wrong.
 
 Three things to hold onto when reading it:
 

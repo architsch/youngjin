@@ -2,8 +2,7 @@ import NumUtil from "./numUtil";
 import Vec3 from "../types/vec3";
 import { ColorPaletteMap, ColorPaletteName } from "../maps/colorPaletteMap";
 
-// A palette position is encoded as one visible-ASCII character (see StringUtil), so a palette that
-// held more than this could name colors nothing could write down.
+// Palette positions are one visible-ASCII character (see StringUtil).
 const MAX_PALETTE_SIZE = 94;
 
 const palettes: {[colorPaletteName: ColorPaletteName]: Vec3[]} = {};
@@ -32,8 +31,7 @@ function getPalette(colorPaletteName: ColorPaletteName): Vec3[]
 
 const ColorUtil =
 {
-    // hex = Color expressed in a hexadecimal form (e.g. "#ffffff")
-    // Returns RGB values in range [0,255]
+    // "#rrggbb" -> RGB in [0,255].
     hexToRGB: (hex: string): Vec3 =>
     {
         const sanitizedHex = hex.replace(/^#/, "");
@@ -48,8 +46,7 @@ const ColorUtil =
         const num = parseInt(fullHex, 16);
         return {x: (num >> 16) & 255, y: (num >> 8) & 255, z: num & 255};
     },
-    // rgb = RGB values in range [0,255]
-    // Returns color expressed in a hexadecimal form (e.g. "#ffffff")
+    // RGB in [0,255] -> "#rrggbb".
     rgbToHex: (rgb: Vec3): string =>
     {
         return "#" + [rgb.x, rgb.y, rgb.z].map(x => x.toString(16).padStart(2, "0")).join("");
@@ -59,16 +56,14 @@ const ColorUtil =
     {
         return getPalette(colorPaletteName).length;
     },
-    // index = position in the named palette
-    // Returns RGB values in range [0,255]
+    // Palette position -> RGB in [0,255].
     paletteIndexToRGB: (colorPaletteName: ColorPaletteName, index: number): Vec3 =>
     {
         const palette = getPalette(colorPaletteName);
         const color = palette[NumUtil.clampInRange(Math.round(index), 0, palette.length - 1, true)];
         return {x: color.x, y: color.y, z: color.z}; // Copied, so that the caller cannot mutate the palette.
     },
-    // rgb = RGB values in range [0,255]
-    // Returns a position in the named palette
+    // RGB in [0,255] -> palette position.
     rgbToPaletteIndex: (colorPaletteName: ColorPaletteName, rgb: Vec3): number =>
     {
         // Nearest palette entry, measured by squared distance in RGB space.

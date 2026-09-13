@@ -1,20 +1,8 @@
 /**
- * Integration tests: Guest account creation limits
- *
- * Guest creation is capped along two dimensions, both scoped to the requesting client:
- * - a looser per-IP cap, so one shared network (office, campus) is not treated as one visitor
- * - a tighter per-client cap, keyed on IP *and* User-Agent together
- *
- * The per-client cap must never be keyed on the User-Agent alone: that string is shared by
- * every browser of a given version worldwide, so a UA-only key turns the cap into a global
- * throttle in which a handful of visitors lock out everyone else running the same browser.
- *
- * The limiter keeps its counters in module-level state for the process lifetime, so each
- * test below uses its own IP/User-Agent values rather than resetting between tests.
- *
- * These run with MODE unset (i.e. not "dev"), so the production caps are in force. Were
- * that to change, the "blocked once the cap is reached" assertions would fail rather than
- * pass vacuously.
+ * Integration tests: guest creation limits — a looser per-IP cap (shared networks) and a tighter
+ * per-client cap keyed on IP + User-Agent (never UA alone, which would throttle a browser version
+ * globally). Limiter state is process-wide, so each test uses its own IP/UA. MODE is unset, so the
+ * production caps apply.
  */
 import { describe, it, expect } from "vitest";
 import GuestCreationLimitUtil from "../../../src/server/user/util/guestCreationLimitUtil";
@@ -53,8 +41,7 @@ describe("Guest creation limits", () =>
         {
             const ip = "203.0.113.2";
 
-            // Four distinct browsers behind one address. The per-client cap would permit
-            // 4 x 3 = 12, but the per-IP cap is the binding constraint.
+            // Four browsers on one IP: the per-IP cap binds before the per-client caps.
             const allowed = ["ua-a", "ua-b", "ua-c", "ua-d"]
                 .reduce((sum, ua) => sum + countAllowed(MAX_PER_CLIENT, ip, ua), 0);
 
@@ -71,8 +58,7 @@ describe("Guest creation limits", () =>
             countAllowed(MAX_PER_CLIENT + 20, heavyIP, SHARED_UA);
             expect(GuestCreationLimitUtil.allowGuestCreation(heavyIP, SHARED_UA)).toBe(false);
 
-            // Unrelated visitors on the same browser version must be unaffected. Keyed on
-            // the User-Agent alone, every one of these would be refused.
+            // Other visitors with the same User-Agent are unaffected.
             for (let i = 0; i < 25; i++)
             {
                 const otherIP = `198.51.100.${i}`;
@@ -87,8 +73,7 @@ describe("Guest creation limits", () =>
         {
             const ip = "203.0.113.20";
 
-            // Exhaust one browser's per-client budget, then keep hammering. The rejected
-            // attempts must not draw down the IP budget the other browsers still need.
+            // Rejected attempts from an exhausted client must not consume the IP budget.
             countAllowed(MAX_PER_CLIENT, ip, "ua-heavy");
             countAllowed(30, ip, "ua-heavy");
 

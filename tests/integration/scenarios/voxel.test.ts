@@ -1,15 +1,6 @@
 /**
- * Scenario tests: Voxel operations
- *
- * Covers:
- * - Add, remove, move voxel blocks
- * - Set voxel quad texture
- * - Border voxel restrictions
- * - Mixed add/remove sequences
- * - Collision layer operations
- * - Room dirty flag
- * - What now protects a room's way in, which is the door itself rather than any reserved stretch of
- *   the room around it
+ * Scenario tests: voxel operations — add, remove, move, texture, border restrictions, mixed sequences,
+ * collision layers, the dirty flag, and entrance protection (the door itself, not a reserved area).
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runScenario } from "../helpers/scenarioRunner";
@@ -41,13 +32,10 @@ import BufferState from "../../../src/shared/networking/types/bufferState";
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import { createEditingUser } from "../helpers/mockUser";
 
-// Who the assertions below act as. They are not about who is asking — the editing utilities want
-// the person as well as the role he holds, so somebody has to be named.
+// The acting user (editing utilities require one).
 const actingUser = createEditingUser();
 
-// Raises a stack of blocks in one cell, which the fixtures below use to stand a wall somewhere the
-// room did not already have one. No room is passed, so nothing is validated: these are fixtures
-// being built rather than a user editing a room.
+// Stacks blocks in a cell without validation (fixture building, not a user edit).
 function fillColumn(voxelGrid: VoxelGrid, row: number, col: number,
     collisionLayerMin: number, collisionLayerMax: number, textures?: number[]): void
 {
@@ -199,10 +187,8 @@ describe("voxel scenarios", () => {
     });
 
     it("refuses to take down a wall a door is hanging on", async () => {
-        // Nothing protects the entrance by position any more: the boundary wall around it is
-        // ordinary wall, and the floor in front of it is ordinary floor. What protects the way in is
-        // the door itself — a block cannot go while something hangs on it, and a door is not a
-        // non-admin's to take down first (see DoorObjectTypeConfig).
+        // The entrance has no positional protection: a block can't be removed while something hangs on it,
+        // and non-admins can't remove the door (see DoorObjectTypeConfig).
         await runScenario({
             name: "the wall a door hangs on",
             rooms: [EMPTY_HUB],
@@ -226,9 +212,7 @@ describe("voxel scenarios", () => {
     });
 
     it("builds and hangs freely right up to the entrance, which nothing reserves any more", async () => {
-        // The fixed no-build and no-removal zones the entrance used to carry are gone with the hole
-        // they were protecting. The floor in front of a door is somewhere to build like anywhere
-        // else, and the wall beside one is somewhere to hang a picture like anywhere else.
+        // The floor before a door and the wall beside it are ordinary space to build and hang on.
         await runScenario({
             name: "no entrance zones",
             rooms: [EMPTY_HUB],
@@ -242,10 +226,7 @@ describe("voxel scenarios", () => {
                     INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL)!;
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(inFrontOfDoor, 0)).toBe(true);
 
-                // A picture on the boundary wall beside the door, which the old no-build zone
-                // reached over. Clear of the door's own footprint, which is the one thing that still
-                // keeps anything off that wall — and keeps it off wherever the door happens to be
-                // rather than at one fixed cell.
+                // A picture beside the door, clear of the door's footprint (the only thing keeping it off that wall).
                 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
                 const canHang = WallAttachedObjectUtil.canPlaceObject(room, "attachment",
                     canvasTypeIndex,
@@ -281,13 +262,11 @@ describe("voxel scenarios", () => {
                 expect(WallAttachedObjectUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex))
                     .toEqual([canvas.objectId]);
                 expect(VoxelUpdateUtil.canRemoveVoxelBlock(actingUser, room, quadIndex)).toBe(false);
-                // ...but nothing about the block itself stands in the way of taking both down
-                // together, which is what the user is offered.
+                // ...but the block and its attachments may be removed together, as the user is offered.
                 expect(VoxelUpdateUtil.canRemoveVoxelBlockWithItsWallAttachments(
                     actingUser, room, quadIndex)).toBe(true);
 
-                // And with the canvas down first, the block is free to follow — the order the
-                // menu carries the two removals out in.
+                // With the canvas down first, the block may follow (the menu's removal order).
                 expect(ObjectUpdateUtil.removeObject(user, room,
                     new RemoveObjectSignal(room.id, canvas.objectId))).toBe(true);
                 expect(WallAttachedObjectUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex)).toEqual([]);
@@ -297,12 +276,7 @@ describe("voxel scenarios", () => {
     });
 });
 
-/**
- * The room's boundary, walked into. A room used to have a hole cut through that boundary at its
- * entrance, plugged by an invisible collider so that a player could not walk out through it. Both
- * are gone: the way in is a door hung on the wall, so the wall is simply whole, and what stops a
- * player is the same thing that stops him anywhere else along it.
- */
+/** The boundary wall is whole (the door hangs on it), so it stops players everywhere, entrance included. */
 describe("the room's boundary wall", () => {
     beforeEach(() => {
         vi.spyOn(console, "error").mockImplementation(() => {});
@@ -350,9 +324,7 @@ describe("the room's boundary wall", () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
                 const startZ = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 2.5;
 
-                // Walking at the entrance cell brings him up against the wall the room's door hangs
-                // on and no further, on either storey. There is no gap in the boundary to be held
-                // short of any more, and nothing invisible doing the holding.
+                // At the entrance cell the player stops at the wall on either storey, with no invisible collider.
                 const groundZ = walkTowardsEntrance(room, startZ, COLLISION_LAYER_MIN - 1);
                 expect(groundZ).toBeLessThan(INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW);
 
@@ -363,11 +335,8 @@ describe("the room's boundary wall", () => {
     });
 
     it("takes a wall attachment on the faces inside an opening cut through it", async () => {
-        // An opening cut through the boundary wall has walls of its own — the reveal — and they are
-        // wall like any other: backed by block work on one side and open to the room on the other.
-        // What makes them a case at all is that they stand within the thickness of the boundary
-        // wall rather than in front of it, so an attachment hung on one is the only one in the room
-        // whose position lies inside the boundary ring.
+        // An opening in the boundary wall has reveal walls within its thickness, so attachments on them are
+        // the only ones positioned inside the boundary ring.
         const HOLE_ROW = 8;
         const HOLE_COL = 0;
         await runScenario({
@@ -388,13 +357,11 @@ describe("the room's boundary wall", () => {
                 const holed = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, HOLE_ROW, HOLE_COL)!;
                 expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(holed, 2)).toBe(false);
 
-                // ...and a picture goes up on the reveal to either side of it, facing along the
-                // wall, at the height the opening was cut to.
+                // ...and a picture hangs on either reveal, facing along the wall, at the opening's height.
                 expect(hangs({ x: 0.5, y: 1.5, z: HOLE_ROW }, { x: 0, y: 0, z: 1 })).toBe(true);
                 expect(hangs({ x: 0.5, y: 1.5, z: HOLE_ROW + 1 }, { x: 0, y: 0, z: -1 })).toBe(true);
 
-                // What stays refused is an attachment laid across the wall's inner face, half of it
-                // buried in the boundary wall...
+                // Still refused: an attachment across the wall's inner face, half buried in the boundary...
                 expect(hangs({ x: 1, y: 1.5, z: HOLE_ROW }, { x: 0, y: 0, z: 1 })).toBe(false);
                 // ...and one hung on the wall's outward face, looking out of the room at nothing.
                 expect(hangs({ x: 0, y: 1.5, z: 12.5 }, { x: -1, y: 0, z: 0 })).toBe(false);
@@ -404,12 +371,8 @@ describe("the room's boundary wall", () => {
 });
 
 /**
- * A room is encoded into one reusable buffer, and writing past the end of a typed array is silently
- * ignored rather than throwing — so a buffer sized by guesswork would turn an unusually full room
- * into a quietly truncated one, saved short and read back missing everything past the cut.
- *
- * The room that tests this is the one nobody has built: every cell of it solid from the room's floor
- * to its ceiling, which is the most a room can ever cost to write down.
+ * The room encodes into one reusable buffer, and typed arrays silently ignore out-of-bounds writes, so an
+ * undersized buffer would truncate a full room. Tested with a fully solid room (the costliest to write).
  */
 describe("the encoded voxel grid", () => {
     beforeEach(() => {

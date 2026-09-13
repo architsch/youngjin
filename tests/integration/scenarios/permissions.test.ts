@@ -1,13 +1,6 @@
 /**
- * Scenario tests: Permission enforcement
- *
- * Covers:
- * - A visitor may edit voxels in somebody else's Regular room
- * - Its owner can too
- * - All users can edit voxels in Hub rooms
- *
- * Owning a room is not what lets anybody build in it. What a room's owner keeps to himself is drawn
- * as restricted zones instead, which have scenarios of their own (restricted-zones.test.ts).
+ * Scenario tests: permissions — visitors, owners, and everyone in Hubs may edit voxels. Owners protect
+ * areas via restricted zones (restricted-zones.test.ts).
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runScenario } from "../helpers/scenarioRunner";

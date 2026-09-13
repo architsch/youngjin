@@ -1,22 +1,6 @@
 /**
- * Scenario runner: the core abstraction of the test framework.
- *
- * A "scenario" is a declarative test specification:
- *   Setup (rooms + users) → Action Sequence → Invariants → Assertions → Cleanup
- *
- * Usage:
- *   runScenario({
- *     name: "player can send a chat message",
- *     rooms: [{ id: "room-1", type: RoomTypeEnumMap.Regular }],
- *     users: [{ overrides: { playerMetadata: { "0": "hi" } }, joinRoom: "room-1" }],
- *     actions: [
- *       { type: "moveObject", userIndex: 0, x: 15, y: 0, z: 25 },
- *     ],
- *     assertions: ({ users }) => {
- *       const metadata = harness.getPlayerMetadata(users[0].user.id);
- *       expect(metadata!["0"]).toBe("hi");
- *     },
- *   });
+ * Runs declarative scenarios: setup (rooms + users) → actions → invariants → assertions → cleanup.
+ * See @docs/testing/integration/framework.md for an example.
  */
 import { expect } from "vitest";
 import { harness, ConnectedUser } from "./serverHarness";
@@ -86,10 +70,7 @@ export interface ScenarioContext
 
 // ─── Runner ─────────────────────────────────────────────────────────────────
 
-/**
- * Runs a scenario: setup → actions → invariants → assertions → cleanup.
- * Throws on invariant violation or assertion failure.
- */
+/** Runs a scenario; throws on invariant or assertion failure. */
 export async function runScenario(config: ScenarioConfig): Promise<ScenarioContext>
 {
     // 1. Reset
@@ -108,8 +89,7 @@ export async function runScenario(config: ScenarioConfig): Promise<ScenarioConte
     {
         if (roomConfig.voxels && roomConfig.voxels.length > 0)
         {
-            // We need at least one user in the room to place voxels via the signal handler.
-            // Instead, we directly modify the room's voxel grid.
+            // Voxels are pre-placed directly on the grid (no user is needed).
             const VoxelUpdateUtil = (await import("../../../src/shared/voxel/util/voxelUpdateUtil")).default;
             const VoxelQueryUtil = (await import("../../../src/shared/voxel/util/voxelQueryUtil")).default;
 
@@ -117,10 +97,7 @@ export async function runScenario(config: ScenarioConfig): Promise<ScenarioConte
             const roomMem = harness.ServerRoomManager.roomRuntimeMemories[roomConfig.id];
             if (!roomMem)
             {
-                // Room isn't loaded yet — we need a temporary user to trigger load,
-                // or we can access the room from the mock store directly.
-                // Since rooms are seeded but not loaded, we modify the room object
-                // from the mock DB store before any user joins.
+                // The room isn't loaded yet, so edit the seeded room in the mock store.
                 const { roomStore } = await import("./mockDB");
                 const storedRoom = roomStore[roomConfig.id];
                 if (storedRoom)
@@ -197,10 +174,7 @@ export async function runScenario(config: ScenarioConfig): Promise<ScenarioConte
     return ctx;
 }
 
-/**
- * Convenience: runs a batch of scenarios as separate `it` blocks inside a `describe`.
- * Useful for parameterized test matrices.
- */
+/** Runs each scenario as its own `it` inside a `describe`. */
 export function describeScenarios(suiteName: string, scenarios: ScenarioConfig[]): void
 {
     const { describe, it, beforeEach, vi } = require("vitest");

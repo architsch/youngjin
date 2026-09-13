@@ -5,16 +5,10 @@ import ClientVoxelQueryUtil from "../../../../voxel/util/clientVoxelQueryUtil";
 import { DIRECTION_VECTORS } from "../../../../system/clientConstants";
 import { PLAYER_HEIGHT } from "../../../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 
-//------------------------------------------------------------------------
-// Computes the camera pose for the "firstPerson" camera mode: the camera
-// sits at the player's eye, and its pitch reacts to the room the player is
-// standing in.
-//------------------------------------------------------------------------
+// "firstPerson" pose: camera at the player's eye, pitched by the room ahead.
 
-// How far the camera pitches down per world unit that the ground ahead falls below the player's own.
-// A whole neighbourhood of the room is averaged into that figure, most of which is ordinarily the
-// ground he is already standing on, so even a sheer drop directly ahead arrives here well short of
-// its own depth.
+// Pitch per unit of ground drop ahead. The drop is a neighbourhood average, so even a sheer drop
+// arrives well short of its depth.
 const pitchAnglePerOpenSpaceDrop = 0.7;
 
 // How far we can pitch the camera up or down, in radians.

@@ -5,19 +5,9 @@ const COACH_MARK_WIDTH_PX = 176; // fixed, so the bubble can be kept on screen w
 const COACH_MARK_GAP_PX = 10; // gap between the bubble's pointer and the target's edge
 const SCREEN_MARGIN_PX = 8; // how close to the viewport's edge the bubble may sit
 
-// A small text bubble that sits next to a target UI element and points at it, telling a first-time
-// user what that control is for (see FTUEUtil). One of these is rendered per mark that is up (see
-// ScreenCoachMarks), and each is on its own: it tracks its own target as that element moves, and
-// draws nothing at all while that target isn't on screen (e.g. the menu holding it was closed),
-// since a mark pointing at nothing says nothing. Drawing nothing is all it does about that, though
-// — a mark stays up until it is taken down (see FTUEUtil), and it is up to whoever put the mark
-// there to do so once the control it advertises is gone or beyond use.
-//
-// The bubble is placed on whichever side of the target has room for it: below a control near the
-// top of the screen, above one near the bottom. It is pulled inward when it would otherwise hang
-// off the edge of the viewport, while its pointer stays on the target. It ignores pointer events,
-// and it is layered below popups, so the user can operate the coached control right through it and
-// whatever that control opens covers it.
+// A coach mark bubble pointing at a DOM element (see FTUEUtil). Tracks its target and draws nothing
+// while the target is off screen (it stays up until removed). Placed on whichever side has room and
+// clamped to the viewport. Ignores pointer events and sits below popups.
 export default function ScreenCoachMark({coachMark}: {coachMark: CoachMark})
 {
     const {ftueElementCode, targetElementId, text} = coachMark;
@@ -39,8 +29,7 @@ export default function ScreenCoachMark({coachMark}: {coachMark: CoachMark})
             top: showBelowTarget ? rect.bottom + COACH_MARK_GAP_PX : rect.top - COACH_MARK_GAP_PX,
             width: COACH_MARK_WIDTH_PX,
         }}>
-        {/* The pointer is a square rotated into a diamond, half of it tucked behind the bubble
-            so that only the half sticking out — a triangle aimed at the target — is seen. */}
+        {/* Pointer: a rotated square half-hidden behind the bubble, showing a triangle. */}
         <div className="absolute size-3 -ml-1.5 rotate-45 bg-amber-400"
             style={showBelowTarget ? { left: pointerLeft, top: -4 } : { left: pointerLeft, bottom: -4 }}/>
         {text}

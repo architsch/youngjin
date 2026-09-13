@@ -94,14 +94,10 @@ const SocketsClient =
                 endClientProcess("reconnect");
             if (hasConnectedBefore)
             {
-                // Reconnection: start a new roomChange process so the server's
-                // auto-join flow (which sends roomChangedSignal) can complete.
+                // Start a roomChange process so the server's auto-join (roomChangedSignal) can complete.
                 tryStartClientProcess("roomChange", 1, 0);
 
-                // A socket that dropped and came back may well have come back to a different build
-                // of the server: a deployment is one of the reasons a socket drops, and a page that
-                // slept through one never saw the server-initiated disconnect that would have
-                // reloaded it — it simply re-connected, on the build it was already running.
+                // A drop may have been a deployment the page slept through; reload if the build changed.
                 void VersionSyncUtil.reloadIfOutdated(env.gitCommit);
             }
             hasConnectedBefore = true;
@@ -118,17 +114,13 @@ const SocketsClient =
 
             if (reason === "io server disconnect")
             {
-                // Server-initiated disconnect (graceful shutdown / deployment).
-                // Socket.IO won't auto-reconnect for this reason, so poll
-                // the server until it's back up and then reload the page.
+                // Server-initiated (shutdown/deploy): Socket.IO won't auto-reconnect, so poll and reload.
                 pollServerAndReload();
             }
         });
 
         socket.io.on("reconnect_failed", () => {
-            // All automatic reconnection attempts exhausted (network disconnect).
-            // Reloading right away would land on whatever the reverse proxy serves while the
-            // server is still missing, so wait for a server that can serve the page first.
+            // Reconnection exhausted. Wait for the server before reloading (the proxy would serve an error).
             console.warn("All reconnection attempts exhausted. Waiting for the server to come back...");
             pollServerAndReload();
         });
@@ -244,20 +236,9 @@ function trySendEncodedSignal(signalType: string, signalData: EncodableData): bo
     return true;
 }
 
-// Waits until a server is actually able to serve the page again, and only then reloads into it.
-//
-// The reverse proxy in front of the app stays up across a deployment even while the app process
-// behind it does not, so "the host answered" is not the same as "the app is back": the proxy
-// replies on the app's behalf with a gateway error status. A fetch() settles successfully for any
-// response it receives, error statuses included, so the readiness test has to be the status code
-// itself. That in turn requires a same-origin request, since an opaque cross-origin response
-// carries no readable status. The health route is used rather than the page itself because it is
-// the one endpoint whose only job is to answer this question, and it answers "not ready" for a
-// process that is on its way out as well as for one that is not there yet.
-//
-// Polling continues (with a widening interval) for as long as the page is open. Giving up would
-// only strand the user on a frozen page, whereas waiting costs almost nothing and recovers the
-// session whenever the server does return.
+// Polls until the app can serve the page, then reloads. nginx answers with a gateway error while the
+// app is down, so readiness is judged by the /health status code (same-origin, so it's readable).
+// /health also reports not-ready for a process that is shutting down. Polls forever with backoff.
 function pollServerAndReload(initialInterval: number = 2000, maxInterval: number = 30000)
 {
     if (pollingForServer) // Both disconnect paths can lead here, but one waiting loop is enough.

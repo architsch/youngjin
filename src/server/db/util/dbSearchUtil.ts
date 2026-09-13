@@ -9,8 +9,7 @@ import { COLLECTION_ROOMS, COLLECTION_USERS } from "../../system/serverConstants
 const DBSearchUtil =
 {
     rooms: {
-        // Single page (offset-based) used by the room-list endpoint. Caller chooses pageSize
-        // so the same helper can serve both the default list (10/page) and the search scan.
+        // One offset page; the caller picks pageSize (list vs. search scan).
         page: async (offset: number, limit: number): Promise<DBQueryResponse<DBRoom>> => {
             LogUtil.log("DBSearchUtil.rooms.page", {offset, limit}, "low", "info");
             return await new DBQuery<DBRoom>()

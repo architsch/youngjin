@@ -1,44 +1,13 @@
 # Physics System
 
-Reference: @src/shared/physics/physicsManager.ts , @src/shared/physics/util/physicsCollisionUtil.ts , @src/shared/physics/util/physicsColliderStateUtil.ts , @src/shared/physics/types/physicsRoom.ts , @src/shared/physics/util/physicsVoxelUtil.ts , @src/shared/physics/util/physicsObjectUtil.ts
+Reference: @src/shared/physics/physicsManager.ts , @src/shared/physics/util/physicsCollisionUtil.ts , @src/shared/physics/util/physicsColliderStateUtil.ts , @src/shared/physics/types/physicsRoom.ts
 
-## Global Colliders (Room Boundaries)
-Every `PhysicsRoom` holds a fixed set of `globalColliders` that bounds the playable volume:
-- **Perimeter colliders** — the floor, the ceiling, and the four side walls. Each is a large solid block placed flush just outside one face of the room, so its thickness extends away from the playable volume. They all share one hard-collision configuration (no soft push).
-- **Voxel block hitbox** — every solid voxel block contributes its own box collider.
+The physics engine is shared, so the client and the server simulate movement the same way. All colliders are axis-aligned boxes.
 
-## Collision Systems
-
-### Hard Collision (AABB Raycasting with Sliding)
-Used for solid obstacles (voxel blocks, room boundaries):
-
-1. The physics engine computes the object's movement ray from its current to its desired position.
-2. It uses the **slab method** (Cyrus-Beck clipping) with **Minkowski sum expansion** — the target box is expanded by the source's half-size so that a point ray can be cast against the expanded box.
-3. On hit, the object slides along the collision surface. A few cascading slide attempts are allowed so the object can round corners instead of sticking.
-4. Returns the hit distance and the collision normal.
-
-### Soft Collision (Push-Based)
-Used for dynamic objects that overlap but shouldn't fully penetrate:
-
-1. Computes the **intersection volume** between two overlapping boxes.
-2. Applies push forces proportional to the overlap, using configurable outgoing/incoming force multipliers.
-3. Objects are pushed apart along the axis of minimum overlap.
-
-### Climbing / Step-Up
-Objects can climb obstacles up to a maximum climbable height:
-
-1. When a horizontal collision is detected, the engine checks whether there is space above the obstacle.
-2. If the obstacle is short enough and nothing blocks the space above it, the object steps up onto it.
-3. This enables smooth movement over small ledges without requiring the player to jump.
-
-## Gravity
-Gravity is applied as a constant downward velocity whenever the object is not resting on a surface.
-
-## Orientation-Dependent Colliders
-An object's collider reorients with its facing direction: when the object turns to face along a different horizontal axis, the box's horizontal dimensions swap. This keeps directional objects (e.g. a player facing sideways) shaped correctly for collision.
-
-## Spatial Acceleration
-The physics engine uses the voxel grid as a spatial hash:
-- Queries convert a box's bounds to voxel-grid coordinates, clamped to the valid grid range.
-- The room's `globalColliders` (the room's boundaries) are always tested; beyond those, only the voxels within the box's footprint are checked, keeping collision cost roughly constant per movement.
-- Object-to-object queries similarly use range or volume-overlap checks accelerated by the grid.
+- **Global colliders**: every `PhysicsRoom` has boxes just outside the floor, ceiling and four walls, and every solid voxel block adds its own box.
+- **Hard collision** (voxels and room bounds): a movement ray is cast against target boxes that have been expanded by the mover's half-size (Minkowski sum + slab method). On a hit, the mover slides along the surface, with a few cascaded attempts so it can round corners.
+- **Soft collision** (dynamic objects): overlapping boxes push each other apart along the axis of least overlap, in proportion to the overlap.
+- **Step-up**: on a horizontal hit, a short enough obstacle with free space above it is climbed automatically.
+- **Gravity**: a constant downward velocity applies whenever the object is not resting on something.
+- **Orientation**: turning to face another horizontal axis swaps the box's horizontal dimensions.
+- **Spatial acceleration**: the voxel grid serves as a spatial hash. Only the global colliders and the voxels under a box's footprint are tested.

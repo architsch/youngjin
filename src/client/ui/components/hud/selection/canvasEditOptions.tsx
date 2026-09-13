@@ -27,10 +27,7 @@ export default function CanvasEditOptions(props: {selection: ObjectSelection})
     const frameCoordsMetadata = go.params.metadata[ObjectMetadataKeyEnumMap.CanvasFrameCoords];
     const initialFrameCoords = frameCoordsMetadata ? frameCoordsMetadata.str : "";
 
-    // Whether this canvas is the user's to change at all, which is what both choosers are turned
-    // down by. Worked out on every render, so a zone drawn over the canvas while it is picked out
-    // reaches them — the selection is announced afresh whenever the room changes under it (see
-    // ClientVoxelManager).
+    // Recomputed each render; zone changes re-announce the selection (see ClientVoxelManager).
     const canEdit = canEditCanvas(props.selection);
 
     return <SelectionToolRow>
@@ -65,10 +62,8 @@ export default function CanvasEditOptions(props: {selection: ObjectSelection})
     </SelectionToolRow>;
 }
 
-// Whether this canvas is one the user may change at all: the room has to be his to edit, and the
-// canvas must not be standing in a stretch of it that is somebody else's
-// (see @docs/gameplay/restricted_zone.md). What the choosers offer is a *value*, and it is never the
-// value that is refused here — which is why they are turned down as a whole rather than per choice.
+// The room must be editable and the canvas outside others' restricted zones (see
+// @docs/gameplay/restricted_zone.md). Choosers are disabled as a whole.
 function canEditCanvas(selection: ObjectSelection): boolean
 {
     const room = App.getCurrentRoom();

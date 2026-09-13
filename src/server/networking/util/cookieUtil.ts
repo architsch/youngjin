@@ -18,9 +18,7 @@ const CookieUtil =
             maxAge: 3155692600000, // 100 years
         };
     },
-    // A browser-scoped flag remembering that this browser has already finished (or skipped)
-    // the single-player tutorial, so freshly created user accounts on it are not forced
-    // through the tutorial again (e.g. the new guest spawned after a member signs out).
+    // Browser-scoped flag: this browser finished/skipped the tutorial, so new accounts on it skip it.
     getTutorialFinishedCookieName: () =>
     {
         return `${TUTORIAL_FINISHED_COOKIE_NAME_BASE}${dev ? "_dev" : ""}`;
@@ -34,8 +32,7 @@ const CookieUtil =
             maxAge: 3155692600000, // 100 years
         };
     },
-    // A dev-only cookie stamping the browser with the current DevRunner runtime's boot id, so the
-    // server can tell whether the browser's auth cookies belong to this runtime (see DevRuntimeUtil).
+    // Dev-only runtime boot id (see DevRuntimeUtil).
     getDevBootIdCookieName: () =>
     {
         return DEV_BOOT_ID_COOKIE_NAME;
@@ -49,9 +46,7 @@ const CookieUtil =
             maxAge: 3155692600000, // 100 years
         };
     },
-    // res.clearCookie deprecation-warns on maxAge/expires (it always expires the cookie
-    // immediately), so strip them while keeping the attributes (secure/httpOnly/sameSite)
-    // needed to match the cookie being cleared.
+    // clearCookie warns about maxAge/expires, so strip them while keeping matching attributes.
     toClearOptions: ({ maxAge, expires, ...rest }: CookieOptions): CookieOptions =>
     {
         return rest;

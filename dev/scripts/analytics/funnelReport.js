@@ -1,18 +1,6 @@
-// What became of the visitors each traffic source sent.
-//
-// The server records, per (source, arrival day), how many people arrived and how many of them went
-// on to reach each step of the funnel — see ServerAnalyticsManager. This reads those counters back and
-// turns them into the comparison they exist for: not which source sent the most people, but which
-// source's people stayed.
-//
-// The distinction is the whole point. A portal that sends ten thousand visitors who all leave
-// within a minute is worth less than a forum post that sends forty people, six of whom come back
-// the following week. Raw arrival counts say the opposite, confidently, which is why this tool
-// leads with rates and sorts by retention.
-//
-// Reads are read-only and may address live, which is where the audience being measured actually is.
-// The guard that makes that safe is lib/dbGuard.js — this script never constructs a database handle
-// of its own.
+// Per-source funnel and retention report, read from the counters ServerAnalyticsManager records per
+// (source, arrival day). Rates are shares of arrivals, ranked by retention (raw arrivals mislead).
+// Read-only and may target live; the DB handle comes from lib/dbGuard.js.
 //
 // Usage:
 //   node dev/scripts/analytics/funnelReport.js report  [--app live|staging|local] [--since YYYY-MM-DD] [--days N] [--min-cohort N]
@@ -25,10 +13,8 @@ const DBGuard = require("../playtest/lib/dbGuard");
 
 const COLLECTION = "acquisition";
 
-// Mirrored from src/server/analytics/types/funnelMilestone.ts, which is TypeScript and cannot be
-// required from here. A code this list does not know is reported under "unknownCodes" rather than
-// dropped, so a milestone added on the server side shows up here as a gap to fix instead of
-// silently going missing from every report.
+// Mirrors src/server/analytics/types/funnelMilestone.ts (TypeScript, so not requirable). Unknown codes
+// are reported under "unknownCodes", so a new server milestone shows up as a gap.
 const MILESTONES = [
     { code: "a", key: "arrived",        label: "Arrived" },
     { code: "t", key: "tutorialDone",   label: "Finished or skipped the tutorial" },
@@ -41,9 +27,7 @@ const MILESTONES = [
     { code: "d", key: "retainedRepeat", label: "Came back more than once" },
 ];
 
-// Below this many arrivals a rate is noise — three people out of five returning is 60% and means
-// nothing. Reports still show small cohorts, flagged, rather than hiding them: knowing a source
-// sent four people is itself worth knowing.
+// Below this many arrivals a rate is noise; small cohorts are still shown, flagged.
 const DEFAULT_MIN_COHORT = 25;
 
 function arg(name, fallback)
@@ -57,8 +41,7 @@ function dayString(date)
     return date.toISOString().slice(0, 10);
 }
 
-// The window defaults to the last 30 days of cohorts. "--since" wins over "--days" when both are
-// given, because it is the more specific of the two.
+// Defaults to the last 30 days of cohorts; "--since" wins over "--days".
 function resolveWindow()
 {
     const since = arg("--since", null);
@@ -116,9 +99,7 @@ function rollUp(docs)
     return { rows: [...bySource.values()], unknownCodes: [...unknownCodes] };
 }
 
-// Every rate is "of the people this source brought", so arrivals are the denominator throughout.
-// A funnel whose steps were each measured against the step before it would hide the step that
-// actually loses people behind a healthy-looking local percentage.
+// Every rate uses arrivals as the denominator, so a leaky step can't hide behind a step-to-step percentage.
 function withRates(row)
 {
     const arrived = row.counts.a || 0;
@@ -148,10 +129,7 @@ function buildReport(docs, minCohort)
     const { rows, unknownCodes } = rollUp(docs);
     const sources = rows.map(withRates).sort((a, b) => b.arrived - a.arrived);
 
-    // The ranking answers the question the tool exists for, and it deliberately ranks on the
-    // returned rate rather than on arrivals or on any composite score. Retention is the one number
-    // that cannot be inflated by sending more people, and a weighted blend of several rates would
-    // only bury that behind a coefficient nobody chose on purpose.
+    // Ranked by returned rate alone: retention can't be inflated by sending more people.
     const ranked = sources
         .filter(s => s.arrived >= minCohort)
         .sort((a, b) => (b.rates.returned || 0) - (a.rates.returned || 0));
@@ -193,9 +171,7 @@ async function main()
     const conn = DBGuard.connectReadOnly(process.argv);
     const window = resolveWindow();
 
-    // Narrows every command to one traffic source. Its use is checking a source whose tag is
-    // already known — verifying a playtest's own visits landed, or reading one venue after a push —
-    // rather than exploring, which is what the unfiltered report is for.
+    // Narrows every command to one known source tag (e.g. checking that a playtest's visits landed).
     const source = arg("--source", null);
     const docs = await loadCohorts(conn.db, window, source);
 
@@ -241,6 +217,5 @@ if (require.main === module)
     });
 }
 
-// Exported so the playtest tooling can name the same milestones instead of keeping a second copy of
-// this table. Requiring this file runs nothing — see the guard above.
+// Exported so playtest tooling shares this table. Requiring this file runs nothing (see the guard above).
 module.exports = { MILESTONES };

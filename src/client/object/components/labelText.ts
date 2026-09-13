@@ -11,37 +11,20 @@ import { BACKWARD_DIR, LABEL_ATLAS_CELL_HEIGHT, LABEL_ATLAS_CELL_WIDTH, LABEL_AT
 import ColorUtil from "../../../shared/math/util/colorUtil";
 import { graphicsContextRestoredObservable } from "../../system/clientObservables";
 
-// The text an object carries, written onto a patch of the object itself rather than floated over it
-// in the page. That is the whole reason this exists: a caption drawn in the browser's own layer sits
-// on top of everything, so it would announce a door through the wall standing in front of it, and
-// could only be hidden or shown whole. A label written into the world is hidden by exactly as much
-// as stands in front of it, because it is part of the scene like anything else.
-//
-// Every label in a room is one instance of one mesh, and one cell of one texture, so a room full of
-// them costs a single draw call — the same arrangement a room's canvases are drawn through, and the
-// reason the number of them a room may hold is fixed.
-//
-// What the text says is always the object's own "Label" metadata. Where it goes, how big it is and
-// what colour it is written in come from the object's type config, since those are facts about the
-// object rather than about labelling.
+// An object's "Label" text, drawn onto a patch of the object in the scene (not an HTML overlay), so
+// walls occlude it. All labels in a room share one mesh and one texture (one draw call), which is why
+// the label count is capped. Placement, size and color come from the object's type config.
 
-// The margin left inside the patch, as a fraction of it. Lettering that runs to the very edge of a
-// plate reads as lettering that did not fit.
+// Inner margin as a fraction of the patch.
 const PADDING_FRACTION = 0.06;
 
-// How many lines the text may be broken over, and how much room a line takes beyond the height of
-// the letters themselves.
 const MAX_LINES = 3;
 const LINE_SPACING = 1.15;
 
-// The font is measured once at this size and the size that fits is worked out from it, rather than
-// being searched for by trying sizes: text measured at one size and scaled gives the same answer as
-// text measured again at another.
+// Measured once at this size and scaled, since text metrics scale linearly.
 const MEASURING_FONT_SIZE_PX = 64;
 
-// A label names a way through a building, and the lettering signwriters have always cut into brass
-// and painted onto glass for that is a roman serif. The fallbacks walk down to whatever serif the
-// machine has, since the shape of the letters is what matters here rather than the exact face.
+// Roman serif, as on brass plates and signwriting.
 const FONT_FAMILY = "'Times New Roman', Times, serif";
 
 export default class LabelText extends GameObjectComponent
@@ -52,14 +35,12 @@ export default class LabelText extends GameObjectComponent
     private instancedMeshGraphics: InstancedMeshGraphics;
     private instanceId: number = -1;
 
-    // What is currently written in this label's cell, and in what color, so that a metadata change
-    // which left both alone costs nothing: the composition metadata a door carries changes far more
-    // often than its name does, and both arrive here.
+    // Skip redraws when metadata changes don't affect the text or color (composition changes are
+    // far more frequent).
     private drawnText: string = "";
     private drawnColorHex: string = "";
 
-    // The world transform the instance was last baked under, so a stationary object costs nothing
-    // per frame. This is the test InstancedMeshComposer makes, for the same reason.
+    // Skips per-frame re-baking while stationary (as InstancedMeshComposer does).
     private bakedWorldMatrix: THREE.Matrix4 = new THREE.Matrix4();
 
     constructor(gameObject: GameObject, componentConfig: {[key: string]: any})
@@ -72,8 +53,7 @@ export default class LabelText extends GameObjectComponent
 
         if (LabelText.materialParams == undefined)
         {
-            // The polygon-offset values are -1 for the same reason a canvas's are: the quad stands
-            // flat against a surface, and must not z-fight with it.
+            // Negative polygon offset: the quad sits flat on a surface.
             LabelText.materialParams = new InstancedTexturePackMaterialParams("label_text",
                 LABEL_ATLAS_WIDTH, LABEL_ATLAS_HEIGHT,
                 LABEL_ATLAS_CELL_WIDTH, LABEL_ATLAS_CELL_HEIGHT,
@@ -111,9 +91,7 @@ export default class LabelText extends GameObjectComponent
             this.redraw();
     }
 
-    // Writes out whatever the object is currently called. A label with nothing written on it hands
-    // its instance back rather than drawing an empty cell, so that a room of unnamed objects costs
-    // nothing and leaves the pool to the ones that are named.
+    // An empty label returns its instance instead of drawing an empty cell.
     redraw(): void
     {
         const text = this.gameObject.params.metadata[ObjectMetadataKeyEnumMap.Label]?.str ?? "";
@@ -126,8 +104,7 @@ export default class LabelText extends GameObjectComponent
 
         if (this.instanceId === -1)
         {
-            // The room may hold more labels than the mesh has instances for, in which case this one
-            // stays undrawn rather than taking the whole room's rendering down with it.
+            // The pool may be exhausted; the label then stays undrawn.
             const rentedInstanceId = this.instancedMeshGraphics.rentInstanceFromPool(
                 LabelText.instancedMeshId);
             if (rentedInstanceId == undefined)
@@ -148,17 +125,14 @@ export default class LabelText extends GameObjectComponent
         this.drawnColorHex = colorHex;
     }
 
-    // Forgets what the cell is holding, without touching it. For the one case where the cell's
-    // contents were lost rather than replaced (see the context-restore listener below).
+    // For when the cell's contents were lost, not replaced (context restore, below).
     forgetWhatWasDrawn(): void
     {
         this.drawnText = "";
         this.drawnColorHex = "";
     }
 
-    // What the lettering is written in: the object's own choice where it has made one, and otherwise
-    // the color its type was given. A door's plate is a color its owner picked too, so the ink on it
-    // has to be able to follow — but a door nobody has thought about the ink on should still read.
+    // The object's chosen ink color, falling back to its type default.
     private getFontColorHex(): string
     {
         const stored = this.gameObject.params.metadata[ObjectMetadataKeyEnumMap.LabelColor]?.str;
@@ -174,10 +148,7 @@ export default class LabelText extends GameObjectComponent
         return this.componentConfig.defaultFontColorHex;
     }
 
-    // Visits the instance this label is drawn from, if it has one. Whatever acts on an object as a
-    // whole — taking it out of the orbit camera's way, above all — has to reach this as well as the
-    // parts the object is composed of, or a door goes out of sight and leaves its name hanging in
-    // the air (see OrbitOcclusionHider).
+    // So whole-object actions (e.g. occlusion hiding) also reach the label (see OrbitOcclusionHider).
     forEachInstance(visit: (instancedMeshId: string, instanceId: number) => void)
     {
         if (this.instanceId !== -1)
@@ -212,14 +183,8 @@ export default class LabelText extends GameObjectComponent
         return this.gameObject.visualObj.matrixWorld.equals(this.bakedWorldMatrix);
     }
 
-    // Lays the text out over the patch the object set aside for it, and hands back a canvas holding
-    // it against nothing.
-    //
-    // The layout is done in the patch's own world units and scaled onto the cell at the end, rather
-    // than in the cell's pixels. A cell is one fixed shape and a patch is whatever shape the object
-    // gave it, so laying out in pixels would come out stretched by however far the two disagree.
-    // This way the letters are the shape they were drawn as, and all a mismatch costs is an uneven
-    // share of the cell's pixels between the two axes.
+    // Renders the text onto a transparent canvas. Laid out in the patch's world units and scaled to
+    // the cell at the end, so letters aren't stretched when the shapes differ.
     private renderTextToCanvas(text: string, fontColorHex: string): HTMLCanvasElement
     {
         const {size} = this.componentConfig;
@@ -253,13 +218,8 @@ export default class LabelText extends GameObjectComponent
     }
 }
 
-// How to break the text and how large to write it, chosen together: they are one question, since
-// every extra line buys width at the cost of height and only the two together decide how big the
-// letters end up. So each line count the words allow is tried, and the one that lets the text be
-// written largest wins.
-//
-// Words are never broken. A name split down the middle is harder to read than the same name written
-// smaller, and a plate is read at a glance or not at all.
+// Chooses the line count and font size together, picking the line count that allows the largest text.
+// Words are never split.
 function layOutText(ctx: CanvasRenderingContext2D, text: string,
     usableWidth: number, usableHeight: number): {lines: string[], fontSize: number}
 {
@@ -276,8 +236,7 @@ function layOutText(ctx: CanvasRenderingContext2D, text: string,
         const widestLine = lines.reduce((widest, line) =>
             Math.max(widest, ctx.measureText(line).width), 0);
 
-        // As wide as the widest line allows, and as tall as the stack of lines allows — whichever
-        // of the two is the tighter constraint is the size the text can actually be written at.
+        // Limited by whichever of width and height is tighter.
         const fontSize = Math.min(
             (widestLine > 0) ? (MEASURING_FONT_SIZE_PX * usableWidth / widestLine) : usableHeight,
             usableHeight / (lineCount * LINE_SPACING));
@@ -287,9 +246,7 @@ function layOutText(ctx: CanvasRenderingContext2D, text: string,
     return best!;
 }
 
-// Shares the words out over the given number of lines as evenly as whole words allow. Filling each
-// line to the brim instead would leave the last one holding a single word, which on a plate reads
-// as a mistake rather than as a line break.
+// Balances words across lines (greedy filling would strand one word on the last line).
 function splitIntoLines(words: string[], lineCount: number): string[]
 {
     const lines: string[] = [];
@@ -305,14 +262,10 @@ function splitIntoLines(words: string[], lineCount: number): string[]
     return lines;
 }
 
-// Every label currently in the room, so that they can all be written out again together when their
-// texture is taken away and handed back (see below).
 const spawnedLabelTexts: Set<LabelText> = new Set();
 
-// A label's lettering is drawn into a render target, which is to say straight onto the GPU with no
-// copy kept anywhere else. A drawing context the browser took away and gave back therefore comes
-// back holding an empty one, so every label in the room writes itself out again — the same work it
-// does when it spawns. CanvasGameObject is restored for exactly the same reason.
+// Labels live only in a render target (GPU), so all of them redraw after a context restore (as
+// CanvasGameObject does).
 graphicsContextRestoredObservable.addListener("labelText", () => {
     spawnedLabelTexts.forEach((labelText) => {
         labelText.forgetWhatWasDrawn();

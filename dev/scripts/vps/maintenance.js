@@ -1,23 +1,14 @@
-// VPS maintenance: what the box needs, gathered in one SSH round trip and reported as JSON.
-//
-// This exists so that routine maintenance is not a sequence of thirty ad-hoc `ssh root@...`
-// commands. That shape is bad twice over: every one of them is a permission prompt, and an
-// assistant holding a general-purpose root shell on this machine is holding one on production —
-// live and staging share this VPS. So the read-only survey is a single audited command with a
-// fixed command set, and everything that changes the machine is a separate, explicit verb.
+// VPS maintenance: one audited SSH round trip with a fixed read-only command set, reported as JSON, plus
+// explicit verbs for changes (live and staging share this VPS, so no ad-hoc root shell).
 //
 // Usage:
 //   node dev/scripts/vps/maintenance.js audit [--refresh] [--json]
 //   node dev/scripts/vps/maintenance.js reclaim --dry-run | --apply
 //   node dev/scripts/vps/maintenance.js upgrade --dry-run | --apply
 //
-// `audit` never modifies the machine (with --refresh it also updates the apt package index,
-// which is why that is opt-in rather than automatic). `reclaim` and `upgrade` default to
-// --dry-run: an invocation missing the flag reports and changes nothing.
-//
-// There is deliberately no reboot verb, and no `full-upgrade`. A new kernel is installed but
-// never booted until a human does it, because this machine serves production — the procedure
-// lives in docs/devOps/vps/maintenance.md and is meant to be read before it is run.
+// `audit` never modifies the machine (--refresh also updates the apt index). `reclaim` and `upgrade`
+// default to --dry-run. There is deliberately no reboot verb and no `full-upgrade`: kernels are installed
+// but booted only by a human, following docs/devOps/vps/maintenance.md.
 
 const { execFileSync } = require("child_process");
 const fs = require("fs");
@@ -45,10 +36,7 @@ const LIMITS = {
 const MARKER = "@@__SECTION__@@";
 
 // ─── Remote command set ─────────────────────────────────────────────────
-//
-// Every command here reads. Nothing in this list writes, installs, deletes or restarts, which
-// is what makes `audit` safe to run without asking. Keep it that way: a write belongs in one of
-// the explicit verbs below, where the caller has to opt in.
+// Read-only, which is what makes `audit` safe without asking. Writes belong in the explicit verbs.
 function auditCommands(refresh)
 {
     return [
@@ -64,23 +52,17 @@ function auditCommands(refresh)
         ["autoupg",   `cat /etc/apt/apt.conf.d/20auto-upgrades 2>/dev/null || echo MISSING`],
         ["disk",      `df -BM --output=target,size,used,avail,pcent / /boot 2>/dev/null | tail -n +2`],
         ["journal",   `journalctl --disk-usage 2>/dev/null`],
-        // Rotated logs are counted in both forms. pm2-logrotate runs with compression on, so a
-        // rotated log spends almost all of its life as `.log.gz`, and counting only `.log` reports
-        // a machine with a full backlog as having none.
+        // Counts both `.log` and `.log.gz` (pm2-logrotate compresses rotated logs).
         ["pm2logs",   `du -sm /root/.pm2/logs 2>/dev/null | cut -f1; ` +
                       `ls /root/.pm2/logs/*__*.log /root/.pm2/logs/*__*.log.gz 2>/dev/null | wc -l; ` +
                       `ls /root/.pm2/logs/*__*.log 2>/dev/null | wc -l`],
-        // Only `archives` — the downloaded .deb files — is what `apt-get clean` frees. The rest of
-        // /var/cache/apt is pkgcache.bin and srcpkgcache.bin, which apt rebuilds immediately and
-        // clean does not touch; counting those reports a permanent ~144MB as reclaimable, and the
-        // same figure comes back unchanged after every reclaim.
+        // Only `archives` (downloaded .debs) is what `apt-get clean` frees; the pkgcache files are rebuilt
+        // immediately.
         ["aptcache",  `du -sm /var/cache/apt/archives 2>/dev/null | cut -f1`],
         ["rcpkgs",    `dpkg -l 2>/dev/null | awk '/^rc/ {print $2}'`],
         ["kernels",   `dpkg -l 2>/dev/null | awk '/^ii +linux-image-[0-9]/ {print $2}'`],
         ["dpkgaudit", `dpkg --audit 2>&1 | head -20`],
-        // `/bin` is a symlink to `/usr/bin` on this release, so `which -a` reports the one
-        // binary twice. Canonicalise before deduplicating, or every audit reports a second
-        // Node.js that does not exist.
+        // `/bin` symlinks to `/usr/bin`, so canonicalize before deduplicating or a phantom second Node.js appears.
         ["node",      `node -v; for p in $(which -a node); do readlink -f "$p"; done | sort -u`],
         ["pm2",       `pm2 jlist 2>/dev/null`],
         ["pm2saved",  `stat -c %Y /root/.pm2/dump.pm2 2>/dev/null || echo 0`],
@@ -89,8 +71,7 @@ function auditCommands(refresh)
         ["certTimer", `systemctl list-timers --all --no-pager 2>/dev/null | grep -i certbot || echo NONE`],
         ["fail2ban",  `fail2ban-client status 2>/dev/null | tr -d '\\t' || echo NONE`],
         ["sshd",      `sshd -T 2>/dev/null | grep -E '^(permitrootlogin|passwordauthentication|pubkeyauthentication|permitemptypasswords|port) '`],
-        // Password authentication is off, so "Failed password" is rare by construction and the
-        // real measure of probing is rejected usernames plus overall SSH log volume.
+        // Password auth is off, so probing shows as rejected usernames and SSH log volume.
         ["authfail",  `journalctl -u ssh --since '24 hours ago' --no-pager 2>/dev/null | grep -ci 'Failed password\\|Invalid user' || echo 0`],
         ["authlines", `journalctl -u ssh --since '24 hours ago' --no-pager 2>/dev/null | wc -l`],
         ["ports",     `ss -tlnH 2>/dev/null | awk '{print $4}' | sort -u`],
@@ -101,9 +82,8 @@ function auditCommands(refresh)
 
 function ssh(command)
 {
-    // BatchMode keeps this non-interactive: without an agent key it fails fast rather than
-    // hanging on a password prompt that no agent can answer. LogLevel=ERROR suppresses the
-    // client's advisory banners, which would otherwise land inside a parsed section.
+    // BatchMode fails fast without an agent key instead of prompting; LogLevel=ERROR keeps banners out of
+    // parsed sections.
     return execFileSync("ssh",
         ["-o", "BatchMode=yes", "-o", "ConnectTimeout=15", "-o", "LogLevel=ERROR", SSH_TARGET, command],
         { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
@@ -111,10 +91,8 @@ function ssh(command)
 
 function runSections(commands)
 {
-    // The blank line before each marker is not cosmetic. Some commands (`pm2 jlist` above all)
-    // print without a trailing newline, which would otherwise leave the next marker appended to
-    // the end of their output — the marker is then never recognised, and that section and the
-    // one after it both come back empty.
+    // A blank line precedes each marker, since some commands (`pm2 jlist`) omit a trailing newline and
+    // would swallow it.
     const script = commands
         .map(([key, cmd]) => `echo ""; echo "${MARKER}${key}"; { ${cmd}; } 2>&1 || true`)
         .join("\n");
@@ -273,11 +251,8 @@ function health(url)
 }
 
 // ─── Findings ───────────────────────────────────────────────────────────
-//
-// The point of this section is that the caller does not have to interpret raw shell output.
-// Each finding names what is wrong, why it matters, and the action that addresses it — and
-// every action is either a verb of this script or a section of the maintenance doc, never an
-// improvised command.
+// Each finding names the problem, why it matters, and an action: a verb of this script or a section of
+// the maintenance doc, never an improvised command.
 
 function buildFindings(state)
 {
@@ -330,12 +305,8 @@ function buildFindings(state)
             "docs/devOps/vps/maintenance.md#verifying-that-automatic-updates-actually-run");
     }
 
-    // An index that is merely hours old is old enough to hide a security update entirely: the
-    // upgradable list is a reading of the index, not of what the archives currently hold, so an
-    // audit that did not refresh reports whatever was true when the index was last written — a
-    // shorter list and a lower security count, with nothing to say it is short. Only a refreshed
-    // index makes "0 upgradable" mean anything, so an unrefreshed run says so every time rather
-    // than at a threshold.
+    // The upgradable list reflects the index, not the archives, so only a refreshed audit makes
+    // "0 upgradable" meaningful; unrefreshed runs always say so.
     if (!state.refreshedIndex)
     {
         const stale = state.os.aptIndexAgeHours > LIMITS.aptIndexAgeHours;
@@ -491,10 +462,8 @@ function buildFindings(state)
         }
         else if (proc.restarts > LIMITS.restarts)
         {
-            // Deliberately info, not warn: this counter is cumulative since PM2 first created
-            // the process, so on a machine that deploys from CI it is mostly a deployment count.
-            // What makes it a finding is a jump between two audits, which is why the number is
-            // reported rather than only the fact that it is above a threshold.
+            // Info, not warn: the count is cumulative since PM2 created the process (mostly deploys); a
+            // jump between audits is what matters.
             add("info", "runtime", `"${proc.name}" has restarted ${proc.restarts} times since PM2 created it.`,
                 "Deployments account for most of these. A rise since the previous audit that no deployment explains is the case worth chasing — usually a memory ceiling being hit.",
                 "Compare against the previous audit; if it moved unexpectedly, node dev/scripts/playtest/serverMonitor.js history --app " + proc.name);
@@ -555,8 +524,7 @@ function audit(options)
     const upgradable = sections.upgradable.split("\n").map((l) => l.trim()).filter(Boolean);
     const rcPackages = sections.rcpkgs.split("\n").map((l) => l.trim()).filter(Boolean);
     const kernels = sections.kernels.split("\n").map((l) => l.trim()).filter(Boolean);
-    // Rotated logs, and the subset of them still uncompressed — which is all `reclaim` can act on,
-    // since pm2-logrotate has already compressed the rest.
+    // Rotated logs, and the uncompressed subset `reclaim` can act on.
     const [pm2LogsMB, rotatedLogCount, uncompressedRotatedLogCount] =
         sections.pm2logs.split("\n").map((n) => parseInt(n, 10) || 0);
     const aptCacheMB = parseInt(sections.aptcache, 10) || 0;
@@ -635,9 +603,8 @@ function audit(options)
     return state;
 }
 
-// Non-disruptive housekeeping: nothing here installs, removes a live package, or restarts a
-// service. Every item is something that regrows on its own and that the setup doc already
-// treats as safe to drop at any time.
+// Non-disruptive housekeeping: no installs, live package removals or restarts; only things that regrow
+// and the setup doc treats as safe to drop.
 function reclaim(apply)
 {
     const steps = [
@@ -647,10 +614,7 @@ function reclaim(apply)
         { name: "aptCache", why: "drop the downloaded package cache, which refills on the next upgrade",
           dry: `du -sh /var/cache/apt 2>/dev/null`,
           run: `apt-get clean && echo cleaned` },
-        // pm2-logrotate compresses as it rotates, so this normally finds nothing to do. It stays
-        // because that setting can be turned off, and because a log rotated in the window before
-        // the compression worker runs is still uncompressed. Already-compressed logs are not
-        // counted here — they are not work this step can do.
+        // Usually a no-op (pm2-logrotate compresses on rotation), but compression can be disabled or lag.
         { name: "pm2Logs", why: "compress rotated PM2 logs that pm2-logrotate has not compressed",
           dry: `ls /root/.pm2/logs/*__*.log 2>/dev/null | wc -l`,
           run: `if ls /root/.pm2/logs/*__*.log >/dev/null 2>&1; then gzip -f /root/.pm2/logs/*__*.log && echo compressed; else echo none; fi` },
@@ -677,10 +641,8 @@ function reclaim(apply)
     };
 }
 
-// Package upgrades, held to `upgrade` rather than `full-upgrade`: plain upgrade never installs a
-// new package, so a new kernel is held back and reported rather than pulled in. The config-
-// preserving flags are what keep an upgrade from replacing sshd_config or the Nginx site config,
-// which is how a maintenance window turns into an outage.
+// Plain `upgrade` (not `full-upgrade`) never installs new packages, so new kernels are held back and
+// reported. Config-preserving flags keep sshd_config and the Nginx site config intact.
 function upgrade(apply)
 {
     const flags = `-o Dpkg::Options::=--force-confold -o Dpkg::Options::=--force-confdef`;
@@ -754,8 +716,7 @@ function main()
 
     console.log(JSON.stringify(result, null, 2));
 
-    // A critical finding is worth a non-zero exit so a caller that only checks the status code
-    // does not read a broken machine as a clean one.
+    // Non-zero exit on critical findings, for callers that check only the status.
     if (verb === "audit" && result.summary.critical > 0)
         process.exit(1);
 }

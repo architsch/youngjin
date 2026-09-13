@@ -4,11 +4,8 @@ export default function TabBar({ tabNames, selectedTabName, onSelect }: Props)
 {
     const onRefChange = useMouseDragScroll("horizontal", "grabWhileDragging");
 
-    // The outer wrapper owns bg/padding and stays a normal block so it does not
-    // become a scroll container. Setting `overflow-x` on the same node that paints
-    // the bg would force `overflow-y` to `auto` per spec, which clips descenders
-    // and the bottom edge by a few pixels in flex column ancestors. The inner div
-    // is the actual horizontal scroller.
+    // The inner div scrolls. Putting overflow-x on the painted outer node would force overflow-y
+    // to auto and clip its bottom edge in flex columns.
     return <div className="bg-gray-800 p-1 shrink-0 rounded-md yj-surface-concave">
         <div ref={onRefChange}
             className="flex flex-row gap-1 w-full overflow-x-auto no-scrollbar">

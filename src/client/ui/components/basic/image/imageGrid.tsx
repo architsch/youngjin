@@ -19,12 +19,9 @@ export default function ImageGrid({
     const naturalWidth = numCols * cellSize + (numCols - 1) * cellGap + containerPadding * 2;
 
     const gridClassNames = "grid gap-2 m-2 p-2 max-h-[60vh] overflow-y-auto pointer-events-auto rounded-md";
-    // Tailwind's JIT compiler cannot resolve dynamically-built class names like `grid-cols-${numCols}`,
-    // so the column template is set inline. `width` declares the natural size so ancestors with `w-fit`
-    // (the popup) can size themselves to it; `maxWidth: 100%` then shrinks the grid horizontally when
-    // the parent Form's `max-w-[80vw]` cap is hit. The viewport-based `max-h-[60vh]` paired with
-    // `overflow-y-auto` gives the grid its OWN vertical scrollbar (independent of flex distribution),
-    // so the panel keeps its natural height when content fits and scrolls internally when it doesn't.
+    // Inline column template (Tailwind can't resolve dynamic class names). width sets the natural
+    // size for w-fit ancestors, maxWidth caps it within the form, and max-h + overflow-y give the grid
+    // its own scrollbar.
     const gridStyle = {
         gridTemplateColumns: `repeat(${numCols}, minmax(0, 1fr))`,
         width: `${naturalWidth}px`,

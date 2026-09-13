@@ -49,12 +49,8 @@ export default class InstancedMeshComposition
         }
     }
 
-    // Both the params and the parts are emptied and refilled in place rather than replaced, so that
-    // whoever is already holding on to either of them goes on holding the live composition. A panel
-    // editing the params directly (see CustomizePlayerPanel) is what this is for: a composition is
-    // reloaded here whenever it is saved, since the save writes it to the object's metadata and
-    // comes straight back as a metadata change, and swapping the object out from under such a panel
-    // would leave its next edit written to a copy nothing reads any more.
+    // Params and parts are refilled in place (not replaced), so a panel holding them (see
+    // CustomizePlayerPanel) keeps editing the live composition after a save round-trips as metadata.
     loadFromMetadata(gameObject: GameObject)
     {
         for (const key in this.params)
@@ -84,16 +80,13 @@ export default class InstancedMeshComposition
         const codecVersion = StringUtil.convertVisibleASCIIToRawNumber(str, 1, 0);
         if (codecVersion != this.codecVersion)
         {
-            // Note: In case of a version number mismatch (which implies that the metadata's
-            // format is outdated), an automatic version migration is supposed to run
-            // inside the chosen codec's 'decode' method.
+            // Codecs are expected to migrate outdated versions inside decode.
             console.warn(`InstancedMeshComposition::canDecode :: CodecVersion mismatch (expected: ${this.codecVersion}, decoded: ${codecVersion}). An automatic version migration logic should run.`);
         }
         return true;
     }
 
-    // Encodes the current parts into their encoded-parameters form: a string holding
-    // one visible-ASCII character per quantized parameter (without the codec type/version prefix).
+    // One visible-ASCII char per quantized parameter, without the codec prefix.
     encodeParts(): string
     {
         return InstancedMeshCompositionCodecMap[this.codecType].encode(this.params, this.parts);

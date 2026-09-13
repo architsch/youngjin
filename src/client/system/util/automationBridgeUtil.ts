@@ -13,53 +13,25 @@ import ThingsPoolEnv from "../types/thingsPoolEnv";
 import { gameModeObservable, objectSelectionObservable,
     voxelQuadSelectionObservable } from "../clientObservables";
 
-//------------------------------------------------------------------------
-// A read-only window onto what the running client can see, for anything that drives the game from
-// outside it: automated play, and the scripted runs that capture screenshots.
-//
-// It exists to close one gap, and it is the same gap in both cases. Everything in the world is
-// reached by aiming at it — a door, a picture, a block, the patch of wall a new thing will hang on —
-// and where any of that lands on screen depends on the room that was generated. A caller therefore
-// has nothing to aim at and no way to tell whether what it wanted is even in view, while the HUD
-// that follows a selection is ordinary DOM carrying stable element ids and needs no help at all.
-// What is missing is not a way to act; it is a way to know where, and whether it is worth acting.
-//
-// So this answers *where*, and only that. It reports what the room holds and where each of it falls
-// on screen, what a ray through a given pixel meets, and what is currently selected. It selects
-// nothing, sends nothing, and moves nothing — a caller still has to produce a real gesture on the
-// canvas, which is what makes the click it performs run the same path a player's does: the tap
-// arbitration, the raycast, the object's own handler, and the permission check inside that. A bridge
-// that performed the action instead would prove that the bridge works and nothing else.
-//
-// Nothing here knows what any particular kind of object means. Metadata is reported as the object
-// carries it, under the key names the shared enum gives, so a kind of object invented later is
-// described by this without it being touched — and a caller that wants a door's destination reads
-// the same field the door itself was written with, rather than one this file paraphrased.
-//
-// Being read-only is also what makes the gate below hygiene rather than a security boundary: the
-// most an installed bridge can disclose is where the page has already drawn things for whoever is
-// looking at it.
-//------------------------------------------------------------------------
+// Read-only automation surface (window.__thingspool_automation) for playtests and screenshot capture:
+// reports what the room holds, where it is on screen, what a pixel's raycast meets, and the current
+// selection. It never acts; callers issue real pointer gestures so clicks run the player's code path.
+// Metadata is reported under the shared enum key names. Being read-only makes the gate below hygiene,
+// not security.
 
 const objectWorldTemp = new THREE.Vector3();
 const cameraWorldTemp = new THREE.Vector3();
 const projectionTemp = new THREE.Vector3();
 
-// Metadata keys the other way round, so a value can be reported under the name it is known by
-// rather than the number it is stored under.
 const metadataNameByKey: {[key: number]: string} = {};
 for (const [name, key] of Object.entries(ObjectMetadataKeyEnumMap))
     metadataNameByKey[key] = name;
 
-// Where a world point falls on the page, in the viewport coordinates a pointer event carries — so
-// what comes out of here can be handed straight to whatever dispatches the gesture. Null where the
-// point is behind the camera, which has no answer in screen coordinates at all.
+// World point to viewport coordinates (as pointer events use); null if behind the camera.
 function toScreen(worldPosition: THREE.Vector3): {x: number, y: number} | null
 {
     projectionTemp.copy(worldPosition).project(GraphicsManager.getCamera());
-    // Behind the camera, or standing exactly at it — which the projection answers with infinities
-    // rather than with a pixel, and which happens in the ordinary course of things: the camera
-    // orbits whatever is selected, and can be wound right in to it.
+    // Behind or exactly at the camera (possible when the orbit zooms all the way in).
     if (projectionTemp.z > 1 || !Number.isFinite(projectionTemp.x) || !Number.isFinite(projectionTemp.y))
         return null;
 
@@ -101,19 +73,13 @@ function describeObject(gameObject: GameObject): Record<string, unknown>
         inFieldOfView: CameraUtil.pointIsInFieldOfView(objectWorldTemp),
         inLineOfSight: CameraUtil.objectIsInLineOfSight(objectWorldTemp, gameObject),
         distance,
-        // A click on something out of reach is read as a click on nothing, so this is the difference
-        // between an aim that will do something and one that will silently do nothing.
+        // Out-of-reach clicks silently do nothing.
         withinSelectRange: distance <= WorldSpaceSelectionUtil.getMaxSelectDist(),
         metadata: readMetadata(gameObject),
     };
 }
 
-// What a click at this pixel would meet, decided by the same cast the click itself makes. Null
-// where the ray met nothing at all.
-//
-// getNDC reads only the two coordinates, so a bare pair stands in for the event rather than a
-// synthetic one being dispatched at the canvas — which would be an interaction, and this module
-// performs none.
+// What a click at this pixel would hit, via the click's own cast (no synthetic event). Null if nothing.
 function probeAt(clientX: number, clientY: number): Record<string, unknown> | null
 {
     const intersection = CameraUtil.castFromPointer({clientX, clientY} as PointerEvent);
@@ -126,8 +92,7 @@ function probeAt(clientX: number, clientY: number): Record<string, unknown> | nu
 
     return {
         screen: {x: clientX, y: clientY},
-        // Empty where the geometry belongs to no object, which is a gizmo drawn over the room
-        // rather than a thing standing in it.
+        // Empty for gizmos (geometry with no object).
         objectId: gameObject?.params.objectId ?? "",
         objectType: gameObject == undefined ? "" : getObjectType(gameObject),
         instanceId: intersection.instanceId ?? -1,
@@ -138,13 +103,8 @@ function probeAt(clientX: number, clientY: number): Record<string, unknown> | nu
     };
 }
 
-// A cast is answered by the scene alone, and the scene is not the whole page: the HUD, a popup, a
-// speech bubble and a world-space button are all drawn over the canvas and all take the pointer
-// first. So a pixel the cast happily reports a wall behind may be one where a real click lands on a
-// button instead — the ray passes through what the pointer cannot.
-//
-// Which makes this the other half of the same question, and the reason it is asked here rather than
-// left to the caller: the two answers only mean something together.
+// Which DOM element would actually receive a click at this pixel (the HUD, popups and CSS2D elements
+// sit above the canvas). Only meaningful together with probeAt.
 function whatIsOnTopAt(clientX: number, clientY: number): Record<string, unknown>
 {
     const canvas = GraphicsManager.getGameCanvas();
@@ -160,17 +120,14 @@ function whatIsOnTopAt(clientX: number, clientY: number): Record<string, unknown
 
 const AutomationBridgeUtil =
 {
-    // Installed only where this deployment is not the site the outside world is meant to reach,
-    // which is the condition the server applies to everything else it withholds from the public
-    // build (see IS_PUBLIC_SITE).
+    // Only on non-public deployments (see IS_PUBLIC_SITE).
     install: (env: ThingsPoolEnv): void =>
     {
         if (env.mode != "dev" && env.serverType != "Staging")
             return;
 
         (window as any).__thingspool_automation = {
-            // Whether there is yet anything to aim at. A caller polls this rather than sleeping,
-            // since how long a room takes to arrive depends on the room.
+            // Poll this instead of sleeping; room load time varies.
             ready: () =>
             {
                 const room = App.getCurrentRoom();
@@ -182,10 +139,8 @@ const AutomationBridgeUtil =
                 };
             },
 
-            // Who is playing, where they are standing, and what the app currently lets them do.
-            // The permissions are reported rather than left to be inferred from the user's type,
-            // because they are what the controls themselves test — and they depend on the room as
-            // much as on the person.
+            // User, position and current permissions (permissions depend on the room, so they're
+            // reported rather than inferred from user type).
             context: () =>
             {
                 const user = App.getUser();
@@ -205,9 +160,7 @@ const AutomationBridgeUtil =
                         ownerUserID: room.ownerUserID,
                         ownerUserName: room.ownerUserName,
                         texturePackPath: room.texturePackPath,
-                        // Reported decoded rather than as the handful of characters it is stored
-                        // as, for the same reason the restricted zones below are reported as
-                        // rectangles: what a caller is checking is the room, not the wire format.
+                        // Decoded (like zones below), since callers check the room, not the wire format.
                         lighting: RoomPrefsUtil.decode(room.prefs),
                         restrictedZones: room.voxelGrid.restrictedZones.map(zone => ({
                             rowMin: zone.rowMin, rowMax: zone.rowMax,
@@ -223,8 +176,7 @@ const AutomationBridgeUtil =
                 };
             },
 
-            // Everything the room holds, each with the pixel to aim at and whether aiming there
-            // would reach it. `objectType` narrows it to one kind.
+            // Room objects with aim pixels and reachability, optionally filtered by objectType.
             objects: (objectType?: string) =>
             {
                 const room = App.getCurrentRoom();
@@ -244,15 +196,10 @@ const AutomationBridgeUtil =
                 return reports;
             },
 
-            // What a click at one pixel would meet. This is what turns "the click did nothing" into
-            // an answer: the pixel was over the wrong thing, over nothing, or over the right thing
-            // but out of reach.
+            // Explains a no-op click: wrong target, nothing, or out of reach.
             probe: (clientX: number, clientY: number) => probeAt(clientX, clientY),
 
-            // The same question asked across the whole view at once, which is how a caller finds
-            // somewhere to aim when it has no particular thing in mind — a patch of wall to hang
-            // something on, a block to build against, a surface to stand a shot in front of. One
-            // round trip rather than one per pixel, since the cast is cheap and the crossing is not.
+            // probe across a grid of the view in one round trip, for finding somewhere to aim.
             probeGrid: (options?: {cols?: number, rows?: number, margin?: number}) =>
             {
                 const cols = options?.cols ?? 9;
@@ -275,16 +222,13 @@ const AutomationBridgeUtil =
                 return hits;
             },
 
-            // What the app currently holds selected, which is how a caller confirms that the gesture
-            // it made landed — the HUD it drives next is raised by this and nothing else.
+            // Confirms a gesture landed (the HUD follows the selection).
             selection: () =>
             {
                 const objectSelection = objectSelectionObservable.peek();
                 const quadSelection = voxelQuadSelectionObservable.peek();
                 return {
-                    // The user's own character is an object like any other and is reported here like
-                    // any other, under its own object type — so a caller telling "nothing is picked
-                    // out" from "the character is" reads that type.
+                    // The user's character is reported as an ordinary object of its type.
                     object: objectSelection == null ? null
                         : describeObject(objectSelection.gameObject),
                     voxelQuad: quadSelection == null ? null : {
@@ -295,9 +239,7 @@ const AutomationBridgeUtil =
                 };
             },
 
-            // Where the eye is and how far it may reach. A caller that finds its target out of range
-            // reads the reach from here rather than assuming a number that has since changed, and a
-            // caller framing a shot reads the canvas rect it is composing within.
+            // Camera position, selection reach, and canvas rect.
             camera: () =>
             {
                 const camera = GraphicsManager.getCamera();

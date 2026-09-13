@@ -7,14 +7,8 @@ import { UserTypeEnumMap } from "../../../shared/user/types/userType";
 import LogUtil from "../../../shared/system/util/logUtil";
 import OwnedRoomUtil from "../../room/util/ownedRoomUtil";
 
-// Dev mode only. Imitates a successful OAuth provider (e.g. Google) sign-in without contacting any
-// external provider, so the guest→Member promotion can be exercised end-to-end on a local machine.
-//
-// The real flow redirects the browser to the provider, then a callback exchanges the returned code
-// for the user's email and promotes the current guest. Here we skip every network round-trip and
-// synthesize a *unique* fake email instead, which keeps us on the "brand-new account" path so each
-// click reliably promotes the clicking browser's guest in-place — exactly what the real callback
-// does for a first-time sign-in. Its only caller is gated on MODE == "dev".
+// Dev-only fake OAuth sign-in: promotes the current guest with a unique fake email (the "new account"
+// path), without contacting a provider. Called only when MODE == "dev".
 
 const DevOAuthUtil =
 {
@@ -24,9 +18,7 @@ const DevOAuthUtil =
         const userName = `DevOAuth-${unique}`;
         const email = `${userName.toLowerCase()}@dev.local`;
 
-        // Resolve the current guest from the JWT cookie, mirroring the real callback — including
-        // its refusal to treat a signed-in member as one, so that signing in as another account
-        // locally mints a second account rather than overwriting the first.
+        // Like the real callback, a signed-in member is not treated as a guest (a second account is made).
         const currentToken = req.cookies[CookieUtil.getAuthTokenName()];
         const currentUserID = currentToken ? UserTokenUtil.getUserIdFromToken(currentToken) : undefined;
         const currentUser = currentUserID ? await DBUserUtil.findUserById(currentUserID) : null;
@@ -35,8 +27,7 @@ const DevOAuthUtil =
         let memberUserID = "";
         if (guestId)
         {
-            // Promote the guest document in-place (preserves gameplay state); the JWT keeps pointing
-            // at the same document id, so no new token is needed.
+            // In-place promotion; the JWT still points at the same document.
             await DBUserUtil.upgradeGuestToMember(guestId, userName, email);
             LogUtil.logRaw(`[DevOAuth] Promoted guest ${guestId} to Member "${userName}" (${email})`, "low", "info");
             memberUserID = guestId;
@@ -57,8 +48,7 @@ const DevOAuthUtil =
             }
         }
 
-        // Mirrors the real callback: a first-time member gets their own room and is redirected
-        // into it, so the sign-up experience can be exercised end-to-end locally.
+        // New members get their room and are redirected into it, as in the real callback.
         const ownedRoomID = memberUserID.length > 0
             ? await OwnedRoomUtil.setUpFirstOwnedRoom(memberUserID)
             : "";

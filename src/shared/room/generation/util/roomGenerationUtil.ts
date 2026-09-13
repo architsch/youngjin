@@ -17,19 +17,9 @@ import { COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL,
 
 const RoomGenerationUtil =
 {
-    // Fills in everything about a room that generation gets to decide: the voxels it is built
-    // out of, the objects it comes furnished with, and the room-level parameters those were
-    // chosen to suit. The room's identity (ID, name, type, owner) is left untouched, so this can
-    // be run over a room that already exists as a descriptor as well as over a brand new one.
-    //
-    // Every room-level parameter belongs here. One that no generator sets is one that every room
-    // in the game is silently left holding its default value for — see
-    // @docs/geometry/room_generation.md .
-    //
-    // A multiplayer room is laid out from a seed, so that no two rooms open on the same interior.
-    // Passing one rebuilds exactly the same room; leaving it out draws a fresh one. The seed is not
-    // kept: the room it produced is saved as ordinary content, and is edited from then on like any
-    // other room's.
+    // Generates a room's content and room-level parameters, leaving its identity untouched (works on
+    // existing descriptors too). Every room-level parameter must be decided here (see
+    // @docs/geometry/room_generation.md). A seed reproduces a multiplayer room; it isn't stored.
     generateRoomContent: (room: Room, seed?: number): void =>
     {
         room.voxelGrid = VoxelGrid.createBaseGrid();
@@ -52,18 +42,12 @@ const RoomGenerationUtil =
             default: throw new Error(`Unknown room type :: ${room.roomType}`);
         }
     },
-    // A brand new room of the given type, generated and ready to be stored. Its ID stays empty
-    // until the DB assigns one.
+    // A new generated room; the DB assigns its ID.
     generateRoom: (roomName: string, roomType: RoomType,
         ownerUserID: string = "", ownerUserName: string = "", seed?: number): Room =>
     {
-        // The atmosphere is written out rather than left empty. What a generated room comes with
-        // is the documented default — plain white light and no fog, which is a room seen as it is
-        // rather than a room dressed in somebody's taste — but it is *chosen* here, because a
-        // parameter no generator sets is one no room has ever actually held. That covers the cloud
-        // settings too: they are written at the values the sky was tuned at rather than switched
-        // off, and stay invisible until a room asks for air with a color in it.
-        // See @docs/graphics/lighting.md .
+        // Atmosphere is written explicitly (the documented defaults) rather than left empty, including
+        // tuned cloud values at zero opacity (see @docs/graphics/lighting.md).
         const room = new Room(undefined, roomName, roomType, ownerUserID, ownerUserName,
             "", RoomPrefsUtil.getDefaultPrefsString(),
             new VoxelGrid([], new VoxelQuadsRuntimeMemory()), new ObjectGroup([]));
@@ -72,21 +56,13 @@ const RoomGenerationUtil =
     },
 }
 
-// A hub is the room the game hands to everybody, and the first one most players ever stand in, so
-// it is worth decorating: any of the packs the game ships, finished in whichever palettes were
-// hand-picked for the one it draws. Naming no palettes is what asks for those — and it is the only
-// way to ask for a pack at random, since a palette written out here would be a set of positions in
-// an atlas nobody yet knows.
+// Hubs are decorated: any pack, with that pack's curated palettes (no palettes listed = a random pack).
 const HUB_PALETTE_SELECTION: RoomPaletteSelectionParams = {
     texturePackPaths: RoomPaletteMap.getTexturePackPaths(),
     palettes: [],
 };
 
-// A regular room belongs to one person, so it comes out plain: the one texture, on every face of
-// every block in it. What its owner starts from is then a blank room to decorate, rather than one
-// that arrived already decorated in somebody else's taste — which suits a room that is mostly solid
-// mass to be mined out block by block in the first place. A single candidate of each is all it
-// takes to say so, since a draw with one thing to draw from returns that thing every time.
+// Regular rooms are plain: one texture everywhere, a blank room for the owner to decorate.
 const PLAIN_TEXTURE_PACK_PATH = "default";
 const PLAIN_TEXTURE_INDEX = 0;
 const REGULAR_PALETTE_SELECTION: RoomPaletteSelectionParams = {
@@ -95,12 +71,8 @@ const REGULAR_PALETTE_SELECTION: RoomPaletteSelectionParams = {
         PLAIN_TEXTURE_INDEX)],
 };
 
-// What a procedurally generated multiplayer room is built from. Its entrance is the one fixed cell
-// every multiplayer room shares, its look is whatever the room type allows it to be finished in,
-// and everything else about it is drawn rather than declared.
-//
-// This is the multiplayer counterpart of a SinglePlayerModeConfig: the one place a room-level
-// parameter is named for a Hub or Regular room, since neither has a config of its own.
+// Builder params for procedural multiplayer rooms (the counterpart of a SinglePlayerModeConfig): a
+// fixed entrance, the type's palette selection, everything else drawn.
 function makeMultiplayerRoomBuilderParams(paletteSelection: RoomPaletteSelectionParams,
     seed?: number): RoomBuilderParams
 {

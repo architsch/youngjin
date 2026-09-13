@@ -30,8 +30,7 @@ const playerByUserID: {[userID: string]: GameObject} = {};
 const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
 const voxelTypeIndex = ObjectTypeConfigMap.getIndexByType("Voxel");
 
-// Voxel objects are created on the first room-load and then persist for the app's lifetime (their
-// type config has autoUnload=false). This tracks whether that one-time spawn has happened yet.
+// Voxel objects are spawned once (autoUnload=false) and persist for the app's lifetime.
 let voxelsSpawned = false;
 
 const ClientObjectManager =
@@ -66,17 +65,12 @@ const ClientObjectManager =
     {
         const room = roomRuntimeMemory.room;
 
-        // Everything spawned from here on is counted as it goes in, which is what turns the loading
-        // indicator's progress bar into a real measurement rather than an estimate: the voxels (only
-        // on the first load, since they outlive a room change), the room's own objects, and the one
-        // client-side singleton this room calls for.
+        // Declares the spawn count up front so the loading bar measures real progress.
         RoomLoadProgressUtil.expectUnits(
             (voxelsSpawned ? 0 : room.voxelGrid.voxels.length) +
             Object.keys(room.objectById).length + 1);
 
-        // Voxel objects (and their shared mesh/material/texture) persist across rooms, so they are
-        // created only on the first room-load; subsequent loads rebind the existing ones to the new
-        // room's grid and refresh them in place.
+        // Voxels persist across rooms: created on the first load, then rebound to each new grid.
         if (!voxelsSpawned)
         {
             await ClientObjectUtil.spawnVoxelsFromGrid(room);
@@ -101,8 +95,7 @@ const ClientObjectManager =
         else
             playerPos = ClientObjectUtil.getSingleModePlayerPosition(room);
 
-        // Load all objects from room.objectById, sorted by distance
-        // from the player so that canvas images load nearest-first.
+        // Nearest-first, so canvas images near the player load first.
         const objects = Object.values(room.objectById);
         objects.sort((a, b) =>
         {
@@ -118,10 +111,8 @@ const ClientObjectManager =
             await ClientObjectManager.addObject(gameObject, false, false); // Don't try to add the object to the room data again because it is already part of it.
         }
 
-        // Add special client-side singleton objects. A multiplayer room needs none: its doors arrive
-        // with its object data like anything else in it, and its player objects come from the
-        // server. A singleplayer room's player is the client's own to spawn, since the server keeps
-        // no copy of that room at all.
+        // Single-player rooms spawn the player client-side (the server has no copy). Multiplayer
+        // players and doors arrive from the server.
         if (room.roomType == RoomTypeEnumMap.SinglePlayer)
             await ClientObjectUtil.spawnSingleModePlayer(room);
     },
@@ -129,8 +120,7 @@ const ClientObjectManager =
     {
         for (const objectId of Object.keys(gameObjects))
         {
-            // Objects whose type config has autoUnload=false (e.g. voxels) persist across room
-            // changes and are rebound to the next room rather than being destroyed/recreated.
+            // autoUnload=false objects (e.g. voxels) are rebound to the next room, not destroyed.
             const config = ObjectTypeConfigMap.getConfigByIndex(gameObjects[objectId].params.objectTypeIndex);
             if (!config.autoUnload)
                 continue;
@@ -164,9 +154,7 @@ const ClientObjectManager =
             if (updatable)
                 updatableGameObjects[object.params.objectId] = object;
             await object.onSpawn();
-            // Spawning is the bulk of a room load, and every one of the things a load spawns comes
-            // through here — including the voxels, which take a path of their own. Outside a room
-            // load (e.g. someone else's object showing up mid-game) this counts toward nothing.
+            // Counts toward the loading bar during a room load; a no-op otherwise.
             RoomLoadProgressUtil.reportUnitSpawned();
             return true;
         }
@@ -238,11 +226,7 @@ const ClientObjectManager =
         else
             console.error(`ClientObjectManager.setObjectMetadata :: GameObject not found (objectId = ${objectId})`);
 
-        // An edit leaves the object it was made to selected: a canvas takes a few tries to get
-        // right, and having to pick it out of the room again between them would make a chore of it.
-        // The selection is re-announced rather than merely left alone, so that whatever is showing
-        // the object's metadata — the selection's menu, and the chooser it opens — reads the new
-        // value instead of the one it was rendered with.
+        // Re-announce the edited object's selection so its menu and chooser read the new value.
         const selection = objectSelectionObservable.peek();
         if (selection && selection.gameObject.params.objectId === objectId)
             objectSelectionObservable.notify();
@@ -250,8 +234,7 @@ const ClientObjectManager =
         return true;
     },
 
-    // When the client receives an AddObjectSignal from the server,
-    // the given object will spawn as soon as the room to which it belongs is available.
+    // Spawns once the object's room is available.
     onAddObjectSignalReceived: async (signal: AddObjectSignal) => {
         const success = await waitUntilSignalProcessingReady("addObjectSignal",
             () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == signal.roomID);
@@ -260,8 +243,7 @@ const ClientObjectManager =
         const gameObject = ObjectFactory.createServerSideObject(signal);
         await ClientObjectManager.addObject(gameObject, false);
     },
-    // When the client receives a RemoveObjectSignal from the server,
-    // the given object will despawn as soon as the room to which it belongs is available.
+    // Despawns once the object's room is available.
     onRemoveObjectSignalReceived: async (signal: RemoveObjectSignal) => {
         const success = await waitUntilSignalProcessingReady("removeObjectSignal",
             () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == signal.roomID);
@@ -277,8 +259,7 @@ const ClientObjectManager =
         await ClientObjectManager.removeObject(signal.objectId, false);
     },
     onSetObjectTransformSignalReceived: async (signal: SetObjectTransformSignal) => {
-        // Apply graceful (conditionally deferred) signal handling only if
-        // the signal is NOT a result of real-time physics calculation (for performance reasons).
+        // Deferred handling only for non-physics updates (for performance).
         if (signal.ignorePhysics)
         {
             const success = await waitUntilSignalProcessingReady("setObjectTransformSignal",
@@ -289,10 +270,8 @@ const ClientObjectManager =
         ClientObjectManager.setObjectTransform(signal.objectId,
             signal.transform.pos, signal.transform.dir, signal.ignorePhysics, false);
 
-        // If the moved object was selected by this client, let the selection follow it to its new
-        // location: the outline and the menu are placed from the object's transform, so they would
-        // otherwise be left behind where it used to stand. Gated on ignorePhysics so that
-        // continuous real-time physics updates don't re-announce the selection every frame.
+        // Re-announce a moved selection so its outline and menu follow; skipped for continuous
+        // physics updates.
         if (signal.ignorePhysics)
         {
             const sel = objectSelectionObservable.peek();
@@ -300,8 +279,6 @@ const ClientObjectManager =
                 objectSelectionObservable.notify();
         }
     },
-    // When the client receives a SetObjectMetadataSignal from the server,
-    // the metadata change will be applied to the corresponding game object.
     onSetObjectMetadataSignalReceived: async (signal: SetObjectMetadataSignal) => {
         const success = await waitUntilSignalProcessingReady("setObjectMetadataSignal",
             () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == signal.roomID);
@@ -312,11 +289,8 @@ const ClientObjectManager =
     },
 }
 
-// Voxel objects persist across rooms (autoUnload=false), so on every room-load after the first they
-// must be rebound to the new room's grid and refreshed in place. The voxel grid is the same full,
-// row-major grid in every room, so each persisted voxel object is matched to the new room's voxel at
-// the same (row, col). Rebinding also re-stamps the new voxel's gameObjectId, which voxel-quad edits
-// rely on to find their object.
+// Rebinds persisted voxel objects to the new room's voxels at the same (row, col) and re-stamps each
+// voxel's gameObjectId (which quad edits rely on).
 const resyncVoxelsToCurrentGrid = (room: Room): void =>
 {
     for (const obj of Object.values(gameObjects))

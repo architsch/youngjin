@@ -18,9 +18,7 @@ test.describe("Health Check", () => {
         const response = await request.get("/robots.txt");
         expect(response.status()).toBe(200);
         const text = await response.text();
-        // Which of the two forms appears depends on the deployment under test: a non-public one
-        // (staging, this suite's usual target) closes itself to crawlers wholesale, which covers
-        // the socket endpoint along with everything else, while the live site singles it out.
+        // Non-public deployments disallow everything; the live site disallows only the socket endpoint.
         expect(text).toMatch(/^Disallow: (\/|\/socket\.io\/)$/m);
     });
 });

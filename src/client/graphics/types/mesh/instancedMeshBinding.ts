@@ -12,21 +12,15 @@ const vec3Temp = new THREE.Vector3();
 const colorTemp = new THREE.Color();
 const sphereTemp = new THREE.Sphere();
 
-// Where an instance goes when it must not be drawn: far below any room, so no camera ever sees it.
-// (An instance cannot be dropped from the draw call individually, since the whole mesh is drawn
-// as one — the instances share a single visibility flag, that of the mesh object itself.)
+// Hidden instances are parked far below the room (instances share the mesh's visibility flag).
 const HIDDEN_INSTANCE_Y = -9999;
 const hiddenInstanceMatrix = new THREE.Matrix4().makeTranslation(0, HIDDEN_INSTANCE_Y, 0);
 
-// The GameObject each instance belongs to, held per mesh in an array indexed by instanceId. The
-// ids are dense and bounded by the mesh's capacity, so an array addresses them directly — where a
-// map under a composite `${instancedMeshId}/${instanceId}` key has to build that key on every
-// lookup, and keeps one such string alive for as long as the instance is reserved. A room's voxel
-// mesh holds one instance per quad of the whole room, which makes both costs worth avoiding.
+// Owners per mesh, indexed by instanceId: ids are dense, so an array avoids building a string key per
+// lookup (the voxel mesh has an instance per quad).
 const ownersByInstancedMeshId: {[instancedMeshId: string]: (GameObject | undefined)[] } = {};
 
-// How many instances of one attribute may be marked for upload individually before the whole
-// buffer is sent instead (see markInstanceForUpload).
+// Beyond this many marked instances, the whole buffer is uploaded (see markInstanceForUpload).
 const maxTrackedUpdateRanges = 256;
 
 export default class InstancedMeshBinding
@@ -37,9 +31,8 @@ export default class InstancedMeshBinding
     createInstanceIdPool: boolean;
     instancedMesh: THREE.InstancedMesh | undefined;
 
-    // The transform each temporarily hidden instance is holding on to while it stays out of sight
-    // (see setInstanceHidden), keyed by instanceId. Left undefined while nothing is hidden — which
-    // is the normal case — so the per-frame transform path pays no more than one check for it.
+    // Owner transforms held while an instance is hidden (see setInstanceHidden). Undefined when
+    // nothing is hidden, so the per-frame path costs one check.
     private ownerMatrixByHiddenInstanceId: Map<number, THREE.Matrix4> | undefined;
 
     constructor(materialParams: MaterialParams, geometryId: string, maxNumInstances: number,
@@ -53,8 +46,7 @@ export default class InstancedMeshBinding
 
     static findGameObject(instancedMeshObj: THREE.Object3D, instanceId: number): GameObject | undefined
     {
-        // A mesh is registered under its own name (see MeshFactory), so the object a caller found
-        // the instance on is enough to reach the owners of that mesh.
+        // Meshes are registered by name (see MeshFactory).
         const owner = ownersByInstancedMeshId[instancedMeshObj.name]?.[instanceId];
         if (owner == undefined)
         {
@@ -81,11 +73,8 @@ export default class InstancedMeshBinding
         this.instancedMesh = instancedMesh;
     }
 
-    // Swaps the shared TexturePack material's texture in place, disposing the now-obsolete one. The
-    // material (and its compiled shader, baked UV scales, GPU buffers) is preserved and keeps being
-    // reused — only the underlying image changes. Relies on the material being cached under a stable
-    // customMaterialId so its identity is independent of the texture path (see VoxelGameObject).
-    // A no-op when the requested texture is already current.
+    // Swaps the texture pack image in place, keeping the material, compiled shader and buffers.
+    // Relies on a stable customMaterialId (see VoxelGameObject). No-op if already current.
     async swapTexturePackTexture(newTexturePath: string): Promise<void>
     {
         if (!this.instancedMesh)
@@ -104,8 +93,7 @@ export default class InstancedMeshBinding
         newTexture.needsUpdate = true; // Swapping material.map needs no shader recompile (one map → one map).
         params.texturePath = newTexturePath;
 
-        // Nothing else references the old texture pack image (the voxel material is its sole user),
-        // so dispose it now that the material points at the new one.
+        // The voxel material was the old image's only user.
         if (oldTexturePath)
             TextureFactory.unload(oldTexturePath);
     }
@@ -119,8 +107,7 @@ export default class InstancedMeshBinding
     }
     unreserveInstance(gameObject: GameObject, instanceId: number)
     {
-        // An instance being handed back must not stay hidden: whoever reserves it next owns its
-        // transform, and a hidden instance withholds its owner's transform (see setInstanceHidden).
+        // Unhide on return: the next owner controls the transform.
         this.setInstanceHidden(instanceId, false);
 
         const owners = this.getOwners();
@@ -131,8 +118,7 @@ export default class InstancedMeshBinding
         this.updateInstanceTransform(gameObject, instanceId, 0, HIDDEN_INSTANCE_Y, 0, 0, -1, 0);
     }
 
-    // The owner of every instance of this binding's mesh, created on first use at the mesh's full
-    // capacity so that it stays one dense array rather than growing a hole at a time.
+    // Allocated at full capacity on first use, so it stays a dense array.
     private getOwners(): (GameObject | undefined)[]
     {
         const instancedMeshId = this.getInstancedMeshId();
@@ -145,13 +131,9 @@ export default class InstancedMeshBinding
         return owners;
     }
 
-    // Temporarily takes a single instance out of sight (or brings it back), leaving the instance's
-    // owner none the wiser: a hidden instance parks where unused instances go, and the transforms
-    // its owner keeps baking meanwhile are held rather than drawn — so revealing it restores
-    // whatever its owner asked for most recently, however many times the owner re-baked it. This is
-    // what lets a passing effect (e.g. clearing the orbit camera's line of sight) hide one
-    // instance of a shared instanced mesh, which the mesh object's own visibility flag cannot do:
-    // that flag governs the whole draw call, hence every instance in it.
+    // Hides one instance (or reveals it) without the owner noticing: while hidden it is parked, the
+    // owner's latest transform is buffered, and reveal applies it. Used by e.g. the orbit occlusion
+    // hider, since mesh visibility would hide every instance.
     setInstanceHidden(instanceId: number, hidden: boolean)
     {
         if (!this.instancedMesh)
@@ -169,9 +151,7 @@ export default class InstancedMeshBinding
             const ownerMatrix = new THREE.Matrix4();
             this.instancedMesh.getMatrixAt(instanceId, ownerMatrix);
             this.ownerMatrixByHiddenInstanceId.set(instanceId, ownerMatrix);
-            // Taking an instance out of sight only ever shrinks what the mesh spans, so the cached
-            // bounding sphere still covers everything drawn from it and is left alone. (Discarding
-            // it, as a moved instance does, would cost a pass over every instance of the mesh.)
+            // Hiding only shrinks the mesh's extent, so the cached bounding sphere stays valid.
             this.writeInstanceMatrix(instanceId, hiddenInstanceMatrix);
         }
         else
@@ -182,24 +162,19 @@ export default class InstancedMeshBinding
 
             this.ownerMatrixByHiddenInstanceId!.delete(instanceId);
             this.writeInstanceMatrix(instanceId, ownerMatrix);
-            // The instance may reappear somewhere the sphere was never computed over, because its
-            // owner is free to have moved it while it was hidden.
+            // The owner may have moved it while hidden.
             this.expandBoundingSphereToInstance(ownerMatrix);
         }
     }
 
-    // Whether this instance is one of those currently held out of sight (see setInstanceHidden).
-    // Lets a caller reason about what the room actually shows rather than about what it holds —
-    // e.g. a line-of-sight test, for which a block the orbit camera has taken out of the way is
-    // no obstacle, that being the whole point of taking it out.
+    // Lets line-of-sight tests ignore blocks the orbit camera has hidden.
     instanceIsHidden(instanceId: number): boolean
     {
         return this.ownerMatrixByHiddenInstanceId?.has(instanceId) === true;
     }
 
-    // Grows the cached bounding sphere to cover one instance's transform — the same union
-    // InstancedMesh.computeBoundingSphere performs per instance, so that raycasts keep reaching
-    // this mesh without a full recompute.
+    // Grows the cached bounding sphere to include one instance (as computeBoundingSphere would), so
+    // raycasts work without a full recompute.
     private expandBoundingSphereToInstance(instanceMatrix: THREE.Matrix4)
     {
         const boundingSphere = this.instancedMesh!.boundingSphere;
@@ -210,8 +185,7 @@ export default class InstancedMeshBinding
         boundingSphere.union(sphereTemp);
     }
 
-    // Returns undefined when the mesh has run out of instances (see MeshFactory.rentInstanceId),
-    // which leaves it to the caller to go without one.
+    // Undefined when the mesh has no free instance (see MeshFactory.rentInstanceId).
     rentInstanceFromPool(gameObject: GameObject): number | undefined
     {
         if (!this.instancedMesh)
@@ -247,19 +221,13 @@ export default class InstancedMeshBinding
             return;
         }
         gameObject.obj.updateMatrixWorld(); // Recurses to visualObj, so its (possibly bounced) world matrix is current too.
-        // Bake under the visual node rather than obj, so any cosmetic transform applied there (e.g.
-        // EasingMotion's bounce, pivoting about the GameObject's center) composes into the instance.
-        // At rest the visual node is identity, so this is identical to baking directly under obj.
+        // Baked under visualObj so cosmetic transforms (e.g. EasingMotion's bounce) apply to the instance.
         gameObject.visualObj.add(tempObj);
 
         tempObj.scale.set(xScale, yScale, zScale);
 
         tempObj.position.set(0, 0, 0);
-        // (dirX,dirY,dirZ) is a direction expressed in the GameObject's LOCAL frame — the same frame
-        // the offset above is baked in. Transform it into a world-space look-at target through
-        // visualObj's world matrix, so the instance faces the object's local direction (turning with
-        // the GameObject) rather than a fixed global axis. For an unrotated object (e.g. a voxel,
-        // whose obj rotation is identity) this reduces to gameObject.position + dir.
+        // dir is in the GameObject's local frame; transform it to a world look-at target via visualObj.
         vec3Temp.set(dirX, dirY, dirZ);
         gameObject.visualObj.localToWorld(vec3Temp);
         tempObj.lookAt(vec3Temp);
@@ -267,8 +235,7 @@ export default class InstancedMeshBinding
         tempObj.position.set(offsetX, offsetY, offsetZ);
         tempObj.updateMatrixWorld();
 
-        // While the instance is hidden, its owner's transform is held instead of being drawn, and
-        // takes effect the moment the instance is revealed again (see setInstanceHidden).
+        // Buffered while hidden (see setInstanceHidden).
         const ownerMatrix = this.ownerMatrixByHiddenInstanceId?.get(instanceId);
         if (ownerMatrix != undefined)
         {
@@ -277,8 +244,7 @@ export default class InstancedMeshBinding
         else
         {
             this.writeInstanceMatrix(instanceId, tempObj.matrixWorld);
-            // Invalidate the cached bounding sphere so that InstancedMesh.raycast
-            // recomputes it to include the updated instance position.
+            // Force InstancedMesh.raycast to recompute bounds with the new position.
             this.instancedMesh.boundingSphere = null;
         }
 
@@ -333,17 +299,13 @@ export default class InstancedMeshBinding
             console.error(`InstancedMesh hasn't been loaded yet (objectId = ${gameObject.params.objectId})`);
             return;
         }
-        // Colors arrive as sRGB values in range [0,255] (see ColorUtil); convert them into the
-        // renderer's working color space, the same treatment three.js gives material colors.
+        // sRGB [0,255] -> working color space, as three.js does for material colors.
         colorTemp.setRGB(r / 255, g / 255, b / 255, THREE.SRGBColorSpace);
         this.instancedMesh.setColorAt(instanceId, colorTemp);
         markInstanceForUpload(this.instancedMesh.instanceColor!, instanceId);
     }
 
-    // The moulding running around one "InstancedWood" instance's border: its color, how wide the
-    // band is in world units (not in the quad's own coordinates, which is what keeps a moulding the
-    // same width whatever it frames), and whether its profile stands proud of the surface or is
-    // sunk into it.
+    // "InstancedWood" moulding: color, band width (world units), and proud/sunk.
     updateInstanceMouldingParams(gameObject: GameObject, instanceId: number,
         r: number, g: number, b: number,
         thickness: number, convex: boolean)
@@ -353,8 +315,7 @@ export default class InstancedMeshBinding
             console.error(`InstancedMesh hasn't been loaded yet (objectId = ${gameObject.params.objectId})`);
             return;
         }
-        // Colors arrive as sRGB values in range [0,255] (see ColorUtil); convert them into the
-        // renderer's working color space, the same treatment three.js gives material colors.
+        // sRGB [0,255] -> working color space, as three.js does for material colors.
         const mouldingColorAttrib = this.getOrCreateInstancedAttribute("mouldingColor", 3);
         colorTemp.setRGB(r / 255, g / 255, b / 255, THREE.SRGBColorSpace);
         mouldingColorAttrib.setXYZ(instanceId, colorTemp.r, colorTemp.g, colorTemp.b);
@@ -365,14 +326,9 @@ export default class InstancedMeshBinding
         markInstanceForUpload(mouldingParamsAttrib, instanceId);
     }
 
-    // How strongly this instance wears the outline its material draws around it — 0 for none, 1 for
-    // the full color. Nothing happens on a material that was not given an outline color: the
-    // attribute is simply never read (see the instance-outline shader).
-    //
-    // Unchanged values are dropped rather than written, because this is swept over every instance of
-    // a mesh at once — the whole of a room's voxel mesh, most of which is not outlined and stays as
-    // it was. Marking those would turn a sweep that touches a handful of quads into a re-upload of
-    // the entire buffer (see markInstanceForUpload).
+    // Outline strength (0..1); ignored by materials without an outline color. Unchanged values are
+    // skipped, since this is swept over whole meshes and marking every instance would re-upload the
+    // entire buffer.
     updateInstanceOutline(instanceId: number, strength: number)
     {
         if (!this.instancedMesh)
@@ -384,8 +340,7 @@ export default class InstancedMeshBinding
         markInstanceForUpload(outlineStrengthAttrib, instanceId);
     }
 
-    // Per-instance attributes consumed by specialized instanced materials (e.g. "InstancedWood")
-    // are created lazily, so that instanced meshes which never use them don't pay for the buffers.
+    // Created lazily so meshes that don't use these attributes don't pay for them.
     private getOrCreateInstancedAttribute(name: string, itemSize: number): THREE.InstancedBufferAttribute
     {
         const geometry = this.instancedMesh!.geometry;
@@ -399,16 +354,14 @@ export default class InstancedMeshBinding
         return attrib;
     }
 
-    // Draws a 2D canvas over this instance's whole cell of the texture. The counterpart of
-    // drawImageAtIndex for content the caller draws itself rather than fetches — text above all.
+    // Draws a caller-drawn canvas (e.g. text) over this instance's texture cell.
     drawCanvasAtIndex(textureIndex: number, canvas: HTMLCanvasElement)
     {
         const {u1, v1, u2, v2} = this.getTextureCellUVRect(textureIndex);
         TextureUtil.drawCanvasOnRenderTarget(canvas, this.getDynamicRenderTarget(), u1, v1, u2, v2);
     }
 
-    // The optional source UV rect restricts sampling to a sub-region of the source image
-    // (e.g. a single cell of an atlas image); by default the full image is drawn.
+    // The optional source UV rect selects a sub-region (e.g. one atlas cell).
     async drawImageAtIndex(textureIndex: number, imageURL: string,
         widthScale: number = 1, heightScale: number = 1,
         sourceU1: number = 0, sourceV1: number = 0,
@@ -420,10 +373,7 @@ export default class InstancedMeshBinding
             u1, v1, u2, v2, sourceU1, sourceV1, sourceU2, sourceV2, unloadTextureAfterDraw);
     }
 
-    // Which part of the texture belongs to the given instance. The texture is a grid of cells, one
-    // per instance, and this is the cell's corners in the texture's own coordinates — or, given a
-    // width and height scale, the corners of a region that size, as a fraction of the cell, centered
-    // in it.
+    // UV rect of an instance's texture cell, optionally a centered sub-region scaled by the given factors.
     private getTextureCellUVRect(textureIndex: number, widthScale: number = 1, heightScale: number = 1):
         {u1: number, v1: number, u2: number, v2: number}
     {
@@ -445,8 +395,7 @@ export default class InstancedMeshBinding
         return {u1: u1 + widthMargin, v1: v1 + heightMargin, u2: u2 - widthMargin, v2: v2 - heightMargin};
     }
 
-    // The render target this binding's instances are drawn onto — which only a material whose texture
-    // was created empty for the purpose has (see TextureFactory.loadDynamicEmptyTexture).
+    // Only exists for materials whose texture was created empty (see TextureFactory.loadDynamicEmptyTexture).
     private getDynamicRenderTarget(): THREE.WebGLRenderTarget
     {
         const material = this.instancedMesh!.material as THREE.MeshPhongMaterial;
@@ -464,21 +413,10 @@ export default class InstancedMeshBinding
     }
 }
 
-// Marks the slice of a per-instance attribute that one instance owns as needing to reach the GPU,
-// so that a changed instance costs its own handful of numbers rather than the whole buffer — which
-// on a room's voxel mesh is megabytes, re-sent for as little as one quad changing texture or the
-// orbit camera taking one block out of the way.
-//
-// Every writer of a given attribute must go through here: three.js sends only the ranges an
-// attribute carries, so a write left unmarked among marked ones would never arrive.
-//
-// Ranges are worth carrying only while the changes are sparse. Once there are more of them than a
-// buffer is worth, they are replaced by a single range spanning everything — which subsequent
-// marks fall inside of, so the list stops growing and the upload becomes the whole-buffer one it
-// would have been anyway. That keeps a bulk rewrite (a room being built, or a voxel rebound to a
-// new room's grid) exactly as cheap as it was, and it is why the list is replaced rather than
-// emptied: an empty list would let the next mark start tracking again, and every write made before
-// it would then be left out of the upload.
+// Marks one instance's slice of an attribute for upload, so a small change doesn't re-send the whole
+// buffer. All writers must use this (three.js uploads only listed ranges). Past a threshold the list
+// is replaced by one full range, which stops further growth; it is replaced rather than cleared so
+// earlier writes aren't dropped.
 function markInstanceForUpload(attrib: THREE.BufferAttribute, instanceId: number)
 {
     const updateRanges = attrib.updateRanges;

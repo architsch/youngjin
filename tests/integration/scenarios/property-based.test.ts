@@ -1,13 +1,6 @@
 /**
- * Consolidated property-based tests (fast-check)
- *
- * Parameterized over:
- * - Action weight profiles (balanced, connect-heavy, disconnect-heavy, etc.)
- * - Latency (enabled/disabled)
- * - Room types (Regular, Hub, mixed)
- *
- * Each profile generates random action sequences and verifies that structural
- * invariants hold after execution.
+ * Property-based tests (fast-check): random action sequences over weight profiles, latency on/off and
+ * room types, checking structural invariants.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import fc from "fast-check";
@@ -205,13 +198,11 @@ describe("property-based: structural invariants (with latency)", () => {
                             catch (e) { errors.push(e instanceof Error ? e : new Error(String(e))); }
                         }
 
-                        // Under latency, some race-condition-induced errors may occur,
-                        // but they should not be frequent
+                        // Latency may cause occasional race errors, but not frequent ones.
                         if (errors.length > actions.length * 0.1)
                             expect.fail(`Too many errors (${errors.length}/${actions.length}): ${errors.slice(0, 3).map(e => e.message).join("; ")}`);
 
-                        // Structural invariants (relaxed: skip count check since latency may cause
-                        // race conditions in disconnect tracking)
+                        // Relaxed: latency races can skew disconnect tracking, so counts are skipped.
                         for (const uid of Object.keys(ServerUserManager.socketUserContexts))
                         {
                             const ctx = ServerUserManager.socketUserContexts[uid];
@@ -306,11 +297,7 @@ describe("property-based: gameplay state persistence", () => {
 });
 
 // ─── Room volume geometry ───────────────────────────────────────────────────
-//
-// The arithmetic room generation is built on. Every area a room is made of, every wall between two
-// of them and every opening cut through one is worked out with these, so a fault here is a fault in
-// every room in the game — and each of them is a small pure function with clean boundaries, which
-// is exactly what a property test can pin down and an example cannot.
+// The pure arithmetic room generation is built on, so a fault here affects every room.
 
 const layerRange = fc.tuple(fc.integer({min: 0, max: 15}), fc.integer({min: 0, max: 15}))
     .map(([a, b]) => [Math.min(a, b), Math.max(a, b)] as [number, number]);
@@ -337,20 +324,17 @@ describe("room volume geometry", () => {
             expect(grown.collisionLayerMin).toBe(volume.collisionLayerMin - amount);
             expect(grown.collisionLayerMax).toBe(volume.collisionLayerMax + amount);
 
-            // A copy, not the volume itself: growth asks this of an area over and over while
-            // deciding whether it may grow, and must not move the area by asking.
+            // A copy: growth queries this repeatedly and must not move the area.
             expect(grown).not.toBe(volume);
             expect({...volume}).toEqual(before);
         }));
     });
 
     it("tells volumes that touch apart from volumes with a wall between them", () => {
-        // The two separation questions room generation asks, and the whole reason growth stops
-        // where it does: expanding one volume finds the pairs that would touch, expanding both
-        // finds the pairs a single block of wall stands between.
+        // The two separation checks growth uses: expanding one finds touching pairs, expanding both finds
+        // pairs one wall block apart.
         fc.assert(fc.property(anyVolume, fc.integer({min: 0, max: 3}), (volume, gap) => {
-            // A second volume placed a known number of blocks to one side of the first, sharing its
-            // rows and layers exactly, so the gap between them is the only thing that varies.
+            // Offset along one axis with identical rows and layers, so only the gap varies.
             const other = new RoomVolume(
                 volume.rowMin, volume.rowMax,
                 volume.colMax + 1 + gap, volume.colMax + 1 + gap,
@@ -380,13 +364,11 @@ describe("room volume geometry", () => {
             const passage = RoomVolumeUtil.makePassageBetweenVolumes(volume, other, maxWidth, 16);
             expect(passage).not.toBeNull();
 
-            // It fills exactly the gap, so it meets both volumes and opens neither into anything
-            // else on the way.
+            // Fills exactly the gap, meeting both volumes.
             expect(passage!.colMin).toBe(volume.colMax + 1);
             expect(passage!.colMax).toBe(other.colMin - 1);
 
-            // It is a real passage rather than an inverted, empty one — the case a one-cell overlap
-            // used to produce — and no wider than it was allowed to be.
+            // Non-empty (a one-cell overlap once inverted it) and within the allowed width.
             const numRows = passage!.rowMax - passage!.rowMin + 1;
             expect(numRows).toBeGreaterThan(0);
             expect(numRows).toBeLessThanOrEqual(maxWidth);
@@ -405,9 +387,7 @@ describe("room volume geometry", () => {
     });
 
     it("carves the same room whatever order the volumes are carved in", () => {
-        // Passages are carved flush against the areas they join, so carving is asked to be
-        // order-independent by construction. A face finished while its neighbour was still solid,
-        // and never revisited, is what leaves quads hanging in mid-air.
+        // Carving must be order-independent, or faces finished beside still-solid neighbours float.
         const palette = new RoomPalette(1, 2, 3, 4);
         const volumeSet = fc.array(anyVolume, {minLength: 2, maxLength: 5});
 

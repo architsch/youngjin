@@ -1,13 +1,7 @@
 /**
- * Scenario tests: play mode vs. edit mode
- *
- * Nothing in the room is picked out in play mode: a click on it is a click on the room, and the camera
- * stays at the player's eye. Edit mode is entered deliberately, begins on the user's own character,
- * and is where things are picked out — and where a selection takes the camera into an orbit around
- * it. These tests walk the ways into and out of that mode, and the rules that hold inside it.
- *
- * The logic under test is client-side, so the client modules that need a browser are stubbed out
- * and everything else — room generation, the selection modules, the framing rules — runs for real.
+ * Scenario tests: play vs. edit mode (see @docs/gameplay/game_mode.md). Play mode picks nothing and keeps
+ * the eye camera; edit mode starts on the user's character, and a selection orbits the camera.
+ * Browser-bound client modules are stubbed; generation, selection and framing run for real.
  */
 import { describe, it, expect, beforeEach, vi, Mock } from "vitest";
 
@@ -15,8 +9,7 @@ vi.mock("../../../src/client/graphics/graphicsManager", async () => {
     const THREE = await import("three");
     const camera = new THREE.PerspectiveCamera();
     const scene = new THREE.Scene();
-    // A voxel edit invalidates the room's light map (see LightBlockMap). Nothing here draws
-    // anything, so the map only has to exist and take the message.
+    // Voxel edits invalidate the light map (see LightBlockMap); a stub suffices.
     const lightBlockMap = { requestRecomputation() {}, resetForRoom(_voxels?: unknown) {},
         getNearbyLightAt(_worldPos: unknown, out: any) { return out.setRGB(0, 0, 0); } };
     return { default: { getCamera: () => camera, getScene: () => scene,
@@ -57,8 +50,7 @@ vi.mock("../../../src/client/graphics/types/gizmo/generic/worldSpaceOutlineArrow
     },
 }));
 
-// Imported by the modules under test, none of which asks anything of it here that needs a game
-// running behind it.
+// Imported by the modules under test; nothing here needs a running game.
 vi.mock("../../../src/client/object/clientObjectManager", () => ({
     default: { getMyPlayer: vi.fn(), getObjectById: vi.fn() },
 }));
@@ -113,23 +105,16 @@ function selectQuad(row: number, col: number, quadIndex: number): boolean
     return VoxelQuadSelection.trySelect(voxelAt(room, row, col), quadIndex);
 }
 
-/**
- * A click that actually lands on the block in the room, rather than the selection it ordinarily
- * leads to. Everything a click has to be before it picks anything out is asked on the way, which is
- * what the tests of play mode, and of whose room it is, turn on.
- */
+/** Clicks a voxel quad through the full click path (mode and permission checks included). */
 function clickVoxel(row: number, col: number, quadIndex: number): void
 {
     const voxel = voxelAt(room, row, col);
-    // A click arrives naming the mesh instance it landed on, and the room lends its instances to
-    // whichever quads are on show (see VoxelQuadInstanceUtil) — so a quad has to be holding one
-    // before there is anything there to click.
+    // A click names a mesh instance, so the quad must hold one (see VoxelQuadInstanceUtil).
     const instanceId = 0;
     VoxelQuadInstanceUtil.bind(quadIndex, instanceId);
     try
     {
-        // The voxel's own class, standing on the voxel under test rather than on a spawned object,
-        // so that the click is asked exactly what a real one is.
+        // A real VoxelGameObject, so the click is handled exactly as a real one.
         const clicked = Object.assign(Object.create(VoxelGameObject.prototype),
             { getVoxel: () => voxel }) as VoxelGameObject;
         clicked.onClick(instanceId, new THREE.Vector3(col + 0.5, 0, row + 0.5));
@@ -173,8 +158,7 @@ describe("play mode", () => {
     });
 
     it("refuses a selection asked for by code", () => {
-        // What an edit re-picks once its answer has arrived, which can be after the mode was left.
-        // The click is turned away before it gets this far; this is the rest of the line.
+        // What an edit re-picks after its response, possibly after the mode was left.
         expect(selectQuad(10, 10, floorQuadIndexOf(10, 10))).toBe(false);
         expect(ObjectSelection.trySelect(makeCharacter())).toBe(false);
 
@@ -197,9 +181,7 @@ describe("entering edit mode", () => {
     });
 
     it("opens in somebody else's room too, on the user's own character", () => {
-        // The character is the user's own wherever he is standing, so the mode he changes it in is
-        // open to him in a room that is not his. A hub is nobody's, so this has to be a room with an
-        // owner behind it.
+        // The character may be customized in others' rooms; a hub has no owner, so use a Regular room.
         room = createRoom(`${ROOM_ID}-regular`, RoomTypeEnumMap.Regular);
         (App.getCurrentRoom as Mock).mockReturnValue(room);
         (App.getUser as Mock).mockReturnValue(userOwning(""));
@@ -212,9 +194,7 @@ describe("entering edit mode", () => {
     });
 
     it("lets his click on a block in somebody else's room through", () => {
-        // Owning a room is no condition for picking out its blocks. What its owner keeps to himself
-        // is drawn as restricted zones, and a zone turns down the tools a selection opens rather
-        // than the click that made it.
+        // Ownership doesn't gate picking blocks; restricted zones block the tools, not the click.
         room = createRoom(`${ROOM_ID}-regular-click`, RoomTypeEnumMap.Regular);
         (App.getCurrentRoom as Mock).mockReturnValue(room);
         (App.getVoxelQuads as Mock).mockReturnValue(room.voxelQuads);
@@ -243,8 +223,7 @@ describe("entering edit mode", () => {
     });
 
     it("is not left by a second click on the block being edited", () => {
-        // The mode is left by saying so — the switch, or the back gesture — and not by a click on
-        // the very thing being edited, which leaves that thing exactly where it is.
+        // The mode is left via the switch or back gesture, not by clicking the edited thing.
         GameModeUtil.enterEditMode(makeCharacter());
         const quadIndex = floorQuadIndexOf(10, 10);
         selectQuad(10, 10, quadIndex);
@@ -256,8 +235,7 @@ describe("entering edit mode", () => {
     });
 
     it("is not left by a second click on the user's own character", () => {
-        // The character is what the mode opens on, and opening it goes through the very same call,
-        // which has to report the character picked out whether or not it already was.
+        // Entering the mode uses the same call, which must report the character selected either way.
         const character = makeCharacter();
         GameModeUtil.enterEditMode(character);
         ObjectSelection.trySelect(character);
@@ -307,10 +285,8 @@ describe("leaving edit mode", () => {
     });
 
     it("takes a selection a scripted step had pinned along with it", () => {
-        // The step pinned that selection for the sake of what it was teaching *inside* the mode, and
-        // the mode is what is being left: a selection left standing behind it would be one the user
-        // could neither see nor let go of. (The step that means to keep him in the mode says so
-        // outright — see below.)
+        // Leaving the mode drops a step-pinned selection, or it would be invisible and unreleasable
+        // (a step that keeps the user in the mode says so explicitly; see below).
         GameModeUtil.enterEditMode(makeCharacter());
         selectQuad(10, 10, floorQuadIndexOf(10, 10));
         clientFeatureFlagsObservable.tryAdd(FeatureFlag.DisableVoxelQuadSelectionChange);
@@ -324,9 +300,7 @@ describe("leaving edit mode", () => {
 });
 
 describe("a scripted step holding the user in his mode", () => {
-    // What a tutorial step does while it teaches what is inside a mode. The hold is on the crossing
-    // itself rather than on the switch that offers it, so every way across has to answer to it —
-    // the back gesture goes through no control at all.
+    // The hold applies to the crossing itself, so every exit (including the back gesture) obeys it.
     it("keeps the way out shut", () => {
         GameModeUtil.enterEditMode(makeCharacter());
         selectQuad(10, 10, floorQuadIndexOf(10, 10));
@@ -350,8 +324,7 @@ describe("a scripted step holding the user in his mode", () => {
     });
 
     it("lets the way out through again once it lets go", () => {
-        // The step that teaches the way out opens it for itself, and the selection it had pinned
-        // meanwhile is no obstacle to taking it.
+        // The step teaching the exit opens it; its pinned selection doesn't block leaving.
         GameModeUtil.enterEditMode(makeCharacter());
         selectQuad(10, 10, floorQuadIndexOf(10, 10));
         clientFeatureFlagsObservable.tryAdd(FeatureFlag.DisableVoxelQuadSelectionChange);
@@ -366,9 +339,7 @@ describe("a scripted step holding the user in his mode", () => {
 });
 
 describe("a scripted step pointing the camera", () => {
-    // A tutorial step may hold the camera on a place of its own for as long as it lasts, which is
-    // how it shows the user something he has not picked out yet — and could not pick out without
-    // first seeing it.
+    // A tutorial step may hold the camera on its own focus, to show something not yet selectable.
     const stepsChosenPlace = {x: 20.5, y: 0, z: 30.5};
 
     it("holds the camera on its own place while the user's selection stands", () => {
@@ -423,8 +394,7 @@ describe("only one thing at a time is selected", () => {
         GameModeUtil.enterEditMode(makeCharacter());
         clientFeatureFlagsObservable.tryAdd(FeatureFlag.DisableObjectSelectionChange);
 
-        // The flag stops the user from *dropping* the character, not from picking something else:
-        // what replaces a selection is not the user giving that selection up.
+        // The flag blocks deselecting the character, not selecting something else.
         selectQuad(10, 10, floorQuadIndexOf(10, 10));
 
         expect(ObjectSelection.isSelected()).toBe(false);

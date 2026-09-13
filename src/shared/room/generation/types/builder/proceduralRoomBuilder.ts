@@ -9,45 +9,14 @@ import RoomPropPlacer from "./helpers/roomPropPlacer";
 import RoomStaircasePlanner from "./helpers/roomStaircasePlanner";
 import RoomBuilder from "./roomBuilder";
 
-// Here is the overall idea behind the procedural room generation logic:
-//
-// A room begins as one solid chunk of matter, and everything in it is carved out of that chunk.
-// First, areas are allocated in random places and then grown, while making sure that their
-// boundaries never touch each other - so that at least one block of wall always stands between any
-// two of them. Grown far enough, these become the distinct spaces a room is made of: the lounge,
-// the side rooms, the galleries above them.
-//
-// Because growth stops a block short of contact, any two neighbouring areas end up separated by
-// exactly one block of wall, which is precisely where a passage can be cut. Passages are then made
-// between pairs of them until every area is reachable from every other, directly or indirectly.
-// Where an area has a storey above it, a flight of steps is carved up through the slab dividing
-// them, so that the upper storey is somewhere the player can walk to rather than only see.
-//
-// Only once every volume is settled is any of it applied to the voxel grid. Carving is
-// order-independent (see RoomVolumeUtil), so nothing here has to think about which volume goes
-// first. The room is then furnished with block work, working off the built room rather than off
-// the plan, because whether there is anything at a given place to stand something on is a question
-// only the finished room can answer.
-//
-// (Important notes):
-// 1. ProceduralRoomBuilder is meant to be a generic toolset for many different types of procedural
-//      room generation, not just for a single pattern such as the one used for the Hub, a Regular
-//      room, etc. A specific type of procedural generation should be conducted by
-//      ProceduralRoomBuilder's child classes (such as HubRoomBuilder, RegularRoomBuilder, etc);
-//      the role of ProceduralRoomBuilder is to simply provide a set of generic/reusable pieces of
-//      logic. It owns the plan and the order the pieces run in, and no more than that: each piece
-//      of the work itself belongs to one of the helpers under ./helpers.
-// 2. Generation places no objects at all. Since a Hub or Regular room is meant to be furnished by
-//      users, its areas are initialized as empty (except for purely voxel-based props) and the
-//      user places objects in them later on.
-// 3. Later on, we may be implementing new types of RoomBuilders for new types of single-player game
-//      modes, such as a dungeon crawl, maze escape, treasure hunt, and so on. Their unique gameplay
-//      levels (rooms), too, can be built using child classes of ProceduralRoomBuilder.
+// Generic procedural toolkit (see @docs/geometry/room_generation.md). The room starts solid; areas are
+// scattered and grown one wall block apart, passages connect them, and stairwells reach upper storeys.
+// The plan is applied to the grid only once settled (carving is order-independent), then block work is
+// added based on the carved room. Specific room types are subclasses (HubRoomBuilder,
+// RegularRoomBuilder, ...); this class owns the plan and pass order, and the work lives in ./helpers.
+// No objects are placed here (rooms are furnished by users).
 
-// How the plan is applied to the grid. Everything a room is described by is a volume, and what
-// happens to one is decided entirely by what it is for: a space is taken out of the matter, block
-// work is stood back up in it, and a reserved stretch is neither - it is only somewhere nothing
-// generation places may go.
+// How each volume type is applied: hollowed, filled, or reserved (neither).
 const HOLLOWED_VOLUME_TYPES = [
     RoomVolumeTypeEnumMap.Area,
     RoomVolumeTypeEnumMap.Passage,
@@ -59,9 +28,8 @@ const RAISED_VOLUME_TYPES = [
 
 export default abstract class ProceduralRoomBuilder extends RoomBuilder
 {
-    // Everything the room is planned as, gathered under what each volume is for. Nothing is written
-    // to the grid until carveOutRoom applies this, since a passage can only be worked out once the
-    // areas have stopped growing, and a flight of steps only once there is a storey to climb to.
+    // The plan, by volume type. Applied only in carveOutRoom, since passages and stairs depend on the
+    // finished areas.
     protected volumesByType: {[roomVolumeType: RoomVolumeType]: RoomVolume[]} = {};
 
     private areas: RoomAreaAllocator;
@@ -82,16 +50,14 @@ export default abstract class ProceduralRoomBuilder extends RoomBuilder
         this.props = new RoomPropPlacer(params.rand, this.volumesByType);
     }
 
-    // Records a volume the builder has shaped itself: the way into the room, a stretch of it to be
-    // kept clear. What is done with it is decided by the type it is filed under.
+    // Records a caller-shaped volume (e.g. entrance, keep-clear stretch) under a type.
     protected addVolume(roomVolumeType: RoomVolumeType, volume: RoomVolume): this
     {
         this.volumesByType[roomVolumeType].push(volume);
         return this;
     }
 
-    // An area the builder has shaped itself - the one an entrance opens onto, the open middle a
-    // room is arranged around - placed on the same terms as any the room draws for itself.
+    // A caller-shaped area (e.g. the entrance area) placed like any drawn one.
     protected addArea(volume: RoomVolume): boolean
     {
         return this.areas.add(volume);
@@ -104,9 +70,7 @@ export default abstract class ProceduralRoomBuilder extends RoomBuilder
         return this;
     }
 
-    // Areas shaped to hold a flight of steps, asked for before the rest are scattered - a room that
-    // wants to be climbable needs somewhere long and narrow, and there is only room for something
-    // that shape while the room is still mostly empty.
+    // Stair-capable (long, narrow) areas, requested before general scattering while space remains.
     protected allocateStaircaseCapableAreas(attempts: number, storeyShapes: string[]): this
     {
         this.areas.scatterWithFootprint(attempts, RoomStaircasePlanner.MIN_AREA_RUN,
@@ -132,13 +96,8 @@ export default abstract class ProceduralRoomBuilder extends RoomBuilder
         return this;
     }
 
-    // Applies the plan to the grid: everything to be hollow is taken out of the matter, and then
-    // the block work the room is left standing on is raised back into it. The two halves are one
-    // step because a stairwell without its steps is a hole rather than a way up.
-    //
-    // Order does not matter within either half - both settle which faces are drawn from what is
-    // actually solid once they have finished (see RoomVolumeUtil) - but the halves are ordered with
-    // respect to each other, since carving can only ever take matter away.
+    // Applies the plan: hollow volumes, then fill block work (stair steps, props). Order within each
+    // half doesn't matter (see RoomVolumeUtil), but carving must precede filling.
     protected carveOutRoom(): this
     {
         const voxels = this.room.voxelGrid.voxels;

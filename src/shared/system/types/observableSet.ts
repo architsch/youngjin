@@ -2,11 +2,8 @@ import Observable from "./observable";
 
 export default class ObservableSet<ElementType> extends Observable<Set<ElementType>>
 {
-    // Keyed by element first, then by listener name within that element.
-    // Keying by the element directly (rather than by a composite object) means the Map
-    // compares primitive elements — e.g. FeatureFlag enum values — by value, matching the
-    // underlying Set's semantics. A composite-object key would compare by reference and
-    // never match on lookup/removal.
+    // Keyed by element, then listener name. Using the element directly compares primitives (e.g.
+    // FeatureFlag values) by value, like the Set itself.
     protected elementListeners = new Map<ElementType, Map<string, ElementListenerCallback>>();
 
     constructor()

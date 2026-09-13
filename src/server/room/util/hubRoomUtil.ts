@@ -17,11 +17,7 @@ const HubRoomUtil =
             return;
         }
 
-        // If no hub is found in the DB, create one to make sure that
-        // at least one hub is available for the incoming users.
-        // Also, make sure that all the hub rooms are preloaded in ServerRoomManager,
-        // so as to let us allocate incoming users to the available hubs without
-        // running DB queries repeatedly.
+        // Ensure at least one hub exists, and preload all hubs so balancing needs no DB queries.
         if (roomSearchResult.data.length == 0)
         {
             await HubRoomUtil.createHub();
@@ -37,10 +33,7 @@ const HubRoomUtil =
             }
         }
     },
-    // Creates a brand new hub, preloads it into ServerRoomManager, and returns its ID
-    // (or an empty string if the hub could not be made available).
-    // Concurrent callers share a single creation, so a burst of users arriving while every
-    // existing hub is over-populated opens exactly one new hub instead of one hub per user.
+    // Creates and preloads a hub; returns its ID or "". Concurrent callers share one creation.
     createHub: async (): Promise<string> =>
     {
         if (pendingHubCreation != undefined)

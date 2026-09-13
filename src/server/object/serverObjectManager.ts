@@ -75,10 +75,7 @@ const ServerObjectManager =
 
         const result = ObjectUpdateUtil.setObjectTransform(user, room, signal);
 
-        // If desync was detected,
-        //      Broadcast to everyone (including the sender).
-        // Otherwise,
-        //      Broadcast to everyone except the one who sent the signal. 
+        // On desync, broadcast to everyone including the sender; otherwise to everyone else.
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         if (result.desyncDetected)
         {

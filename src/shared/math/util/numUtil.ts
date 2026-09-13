@@ -42,9 +42,7 @@ const NumUtil =
             return [range2[1] + 1, range1[0] - 1];
         return null;
     },
-    // How far apart two angles (in radians) are, by the shorter way around: something turned all the
-    // way round has come back to where it started, and must not be reported as having gone the long
-    // way there.
+    // Shortest angular difference (radians).
     getAngleDifference: (a: number, b: number): number =>
     {
         const diff = Math.abs(a - b) % (2 * Math.PI);

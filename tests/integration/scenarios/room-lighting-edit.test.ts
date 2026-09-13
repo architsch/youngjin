@@ -1,13 +1,7 @@
 /**
- * Scenario tests: who wins when a room's lighting is changed twice in quick succession
- *
- * A save is deliberately delayed, so a client spends a couple of seconds holding a setting the
- * server has not seen — and once the save does go, the server broadcasts it back, so an edit made
- * *after* that save is racing an echo of the one before it.
- *
- * Getting this wrong is not subtle in effect and is very subtle in cause: what the user sees is a
- * color picker showing one thing and a room lit in another, with the edit they actually made never
- * written down at all. These pin the rule that settles it (see RoomLightingUtil).
+ * Scenario tests: rapid successive lighting edits (see RoomLightingUtil). Saves are delayed and echoed
+ * back, so a later edit can race an earlier save's echo; getting it wrong shows one color in the picker,
+ * another in the room, and never saves the edit.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import RoomPrefsUtil from "../../../src/shared/room/util/roomPrefsUtil";
@@ -54,8 +48,7 @@ function encodedFogColor(fogColorIndex: number)
     return RoomPrefsUtil.encode(prefsWithFogColor(fogColorIndex));
 }
 
-// What the server does with an incoming setting, which is the whole of its validation — so this is
-// exactly what comes back on the wire (see ServerRoomManager.changeRoomPrefs).
+// The server's whole validation, i.e. what comes back on the wire (see ServerRoomManager.changeRoomPrefs).
 function asServerWouldStore(prefs: string)
 {
     return RoomPrefsUtil.encode(RoomPrefsUtil.decode(prefs));
@@ -82,10 +75,8 @@ describe("editing a room's lighting", () => {
     });
 
     it("ignores the echo of its own save once the user has moved on", async () => {
-        // The failure this is here for: edit, save, edit again, and *then* the first save's echo
-        // arrives. Applying it would light the room in a color the user has already left, and — if
-        // the pending save read the room rather than carrying its own setting — write that older
-        // color down as the final answer too.
+        // Edit, save, edit, then the first echo arrives: applying it would revert the color (and, if the
+        // pending save read the room, persist the old one).
         RoomLightingUtil.applyLocalEdit(prefsWithFogColor(3), "room-1");
         await vi.advanceTimersByTimeAsync(2500);
         expect(sentPrefs).toEqual([encodedFogColor(3)]);
@@ -119,8 +110,7 @@ describe("editing a room's lighting", () => {
     });
 
     it("stops holding other people off once its own save has failed", async () => {
-        // Otherwise a single failed request would leave this client refusing every change anybody
-        // else made, for as long as it stayed in the room.
+        // A failed request must not leave the client ignoring others' changes.
         saveResponseStatus = 500;
         RoomLightingUtil.applyLocalEdit(prefsWithFogColor(3), "room-1");
         await vi.advanceTimersByTimeAsync(5000);
@@ -133,8 +123,7 @@ describe("editing a room's lighting", () => {
         RoomLightingUtil.applyLocalEdit(prefsWithFogColor(3), "room-1");
         RoomLightingUtil.applyRoomLighting(encodedFogColor(20));
 
-        // The new room's own lighting stands, and the save still goes with the setting it carries
-        // rather than with whatever the new room happens to hold.
+        // The new room's lighting stands; the save still carries its own setting.
         expect(currentRoom.prefs).toBe(encodedFogColor(20));
         await vi.advanceTimersByTimeAsync(5000);
         expect(sentPrefs).toEqual([encodedFogColor(3)]);

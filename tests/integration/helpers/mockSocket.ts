@@ -1,11 +1,7 @@
 import { EventEmitter } from "events";
 import User from "../../../src/shared/user/types/user";
 
-/**
- * Lightweight mock of a Socket.IO socket for server-side integration tests.
- * Implements only the surface area used by SocketUserContext, GameSockets, and
- * RoomManager — no real network I/O.
- */
+/** Minimal Socket.IO socket mock for server-side tests (no network I/O). */
 export class MockSocket extends EventEmitter
 {
     id: string;
@@ -35,9 +31,7 @@ export class MockSocket extends EventEmitter
     disconnect(_close?: boolean): void
     {
         this.connected = false;
-        // The real Socket.IO socket fires "disconnect" when the transport closes.
-        // In tests the disconnect handler is attached via `socket.on("disconnect", ...)`
-        // inside gameSockets, so we emit it here.
+        // Mirrors the transport-close "disconnect" event the server listens for.
         super.emit("disconnect");
     }
 

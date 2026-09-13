@@ -1,13 +1,6 @@
 /**
- * Scenario tests: Connection lifecycle
- *
- * Covers:
- * - Basic connect/disconnect
- * - Reconnection Case A (new socket before old disconnect)
- * - Reconnection Case B (old disconnect before new socket)
- * - Page refresh / duplicate socket replacement
- * - Rapid connect-disconnect cycles
- * - Gameplay state extraction and persistence
+ * Scenario tests: connection lifecycle — connect/disconnect, reconnection Cases A and B, duplicate
+ * sockets, rapid cycles, and gameplay state persistence.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runScenario } from "../helpers/scenarioRunner";
@@ -78,8 +71,7 @@ describe("connection scenarios", () => {
             rooms: [EMPTY_REGULAR],
             users: [namedUser("eager-user", "regular")],
             assertions: ({ harness }) => {
-                // changeUserRoom kicks off DBUserUtil.setLastRoomID synchronously
-                // from the join path — no disconnect required.
+                // changeUserRoom persists lastRoomID on join; no disconnect needed.
                 expect(harness.getStoredLastRoomID("eager-user")).toBe("regular");
             },
         });
@@ -115,8 +107,7 @@ describe("connection scenarios", () => {
             assertions: ({ users, harness }) => {
                 expect(users[0].user.id).toBe("case-b-user");
                 expect(Object.keys(ServerUserManager.socketUserContexts)).toHaveLength(1);
-                // Even though the disconnect fired first, the snapshot in
-                // recentDisconnectMetadata is consumed by the reconnect path.
+                // The disconnect ran first, but its snapshot is consumed on reconnect.
                 const metadata = harness.getPlayerMetadata("case-b-user");
                 expect(metadata).toBeDefined();
                 expect(metadata!["0"]).toBe("case-b-hello");

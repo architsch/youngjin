@@ -1,10 +1,6 @@
 /**
- * Integration tests: Authentication lifecycle
- *
- * Covers:
- * - Scenario 10: Google OAuth — new account creation (guest upgrade) and existing account access
- * - Scenario 11: Stale guest account cleanup via deleteStaleGuestsByTier
- * - Scenario 12: loginCount accuracy (only page-level identification of a distinct login counts)
+ * Integration tests: authentication lifecycle — Google OAuth (guest upgrade, existing account), stale
+ * guest cleanup (deleteStaleGuestsByTier), and loginCount (only distinct page-level logins count).
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
@@ -148,12 +144,9 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
         vi.spyOn(console, "error").mockImplementation(() => {});
         vi.spyOn(console, "warn").mockImplementation(() => {});
         vi.spyOn(console, "log").mockImplementation(() => {});
-        // Default: no room was opened for this sign-in (an empty ID is what a user who already
-        // owns a room gets back). Tests covering a first-time sign-up override this.
+        // Default: no room opened for this sign-in ("" is what an existing owner gets); sign-up tests override.
         _mockOwnedRoomUtil.setUpFirstOwnedRoom.mockResolvedValue("");
-        // Default: whatever account the browser arrives holding a token for is a guest, which is
-        // the only kind the sign-in may carry into the account being signed in to. Tests covering
-        // a member who never signed out override this.
+        // Default: the browser's token belongs to a guest (the only kind a sign-in may absorb).
         _mockDBUserUtil.findUserById.mockImplementation(async (userID: string) =>
             ({ id: userID, userName: userID, userType: UserTypeEnumMap.Guest }));
     });
@@ -244,8 +237,7 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
         expect(_mockUserTokenUtil.addTokenForUserId).toHaveBeenCalledWith(
             "existing-member", req, res,
         );
-        // A returning member is not a sign-up: no room is opened for them, and the plain
-        // redirect leaves them to resume in whichever room they were in before signing in.
+        // A returning member isn't a sign-up: no room is opened, and the plain redirect resumes their last room.
         expect(_mockOwnedRoomUtil.setUpFirstOwnedRoom).not.toHaveBeenCalled();
         expect(res.redirectUrl).toBe("/");
     });
@@ -270,8 +262,7 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
         const { req, res } = createMockReqRes({ auth_token_dev: "valid-member-1" });
         await UserAuthGoogleUtil.loginCallback(req, res);
 
-        // The signed-in member is an account in its own right, so the new identity goes into an
-        // account of its own rather than being written over the one the browser arrived with.
+        // The signed-in member is its own account; the browser's account isn't overwritten.
         expect(_mockDBUserUtil.upgradeGuestToMember).not.toHaveBeenCalled();
         expect(_mockDBUserUtil.createUser).toHaveBeenCalledWith(
             "second", UserTypeEnumMap.Member, "second@gmail.com",
@@ -331,11 +322,7 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
 
 // ─── Tests: Stale guest cleanup constants & tier classification (Scenario 11) ─
 
-/**
- * The real deleteStaleGuestsByTier is deeply coupled to DBQuery, so we test
- * the tier classification logic and threshold constants directly. This
- * mirrors the inline tierFilter inside dbUserUtil.deleteStaleGuestsByTier.
- */
+/** deleteStaleGuestsByTier is coupled to DBQuery, so its tier logic and thresholds are tested directly. */
 import {
     GUEST_TIER_NAME_BY_TIER_PHASE,
     GUEST_MAX_AGE_BY_TIER_PHASE,
@@ -357,8 +344,7 @@ describe("stale guest tier classification (Scenario 11)", () => {
     });
 
     it("tier max ages are whole days that grow with each tier", () => {
-        // The exact day counts are a tuning decision, so assert what the cleanup sweep
-        // actually depends on: one whole-day cutoff per tier, longer the more a guest returns.
+        // Day counts are tuning; assert one whole-day cutoff per tier, longer for more returns.
         expect(GUEST_MAX_AGE_BY_TIER_PHASE).toHaveLength(GUEST_TIER_NAME_BY_TIER_PHASE.length);
         for (const maxAge of GUEST_MAX_AGE_BY_TIER_PHASE)
         {
@@ -482,8 +468,7 @@ describe("session preservation during identification", () => {
         let nextCalled = false;
         await UserIdentificationUtil.identifyAnyUser(req, res, () => { nextCalled = true; });
 
-        // No guest is minted, and above all no token is issued: overwriting the browser's only
-        // copy of this user's token is what would make the account unreachable forever.
+        // No guest and no token: overwriting the browser's only token would orphan the account.
         expect(_mockDBUserUtil.createUser).not.toHaveBeenCalled();
         expect(_mockUserTokenUtil.addTokenForUserId).not.toHaveBeenCalled();
         expect(nextCalled).toBe(false);
@@ -491,8 +476,7 @@ describe("session preservation during identification", () => {
     });
 
     it("a token naming a genuinely deleted account still yields a guest on a public route", async () => {
-        // The lookup succeeded and the account is simply gone (e.g. a guest the stale-account
-        // cleanup removed). There is nobody to resume, so a guest is the right answer here.
+        // The account is gone (e.g. cleaned up), so a guest is correct.
         _mockDBUserUtil.lookUpUserById.mockResolvedValue({ success: true, data: [] });
 
         const { req, res } = createMockReqRes({ auth_token_dev: "valid-deleted-1" });
@@ -508,9 +492,7 @@ describe("session preservation during identification", () => {
         let nextCalled = false;
         await UserIdentificationUtil.identifyRegisteredUser(req, res, () => { nextCalled = true; });
 
-        // A member-only route is never somebody's first contact with the site, so the account it
-        // would create is one the pass-condition throws away in the same breath — after its token
-        // has already been handed to the browser.
+        // A member-only route is never a first contact, so a new guest (and its issued token) would be wasted.
         expect(_mockDBUserUtil.createUser).not.toHaveBeenCalled();
         expect(_mockUserTokenUtil.addTokenForUserId).not.toHaveBeenCalled();
         expect(nextCalled).toBe(false);
@@ -519,11 +501,8 @@ describe("session preservation during identification", () => {
 });
 
 /**
- * The real updateLastLogin is deeply coupled to DBQuery, so we test the
- * distinct-login decision directly. This mirrors the inline check inside
- * dbUserUtil.updateLastLogin: loginCount only increments when the previous
- * login is at least LOGIN_COUNT_MIN_GAP_MS old, so the many identified
- * requests fired within a single visit count as one login.
+ * Mirrors the check in dbUserUtil.updateLastLogin: loginCount increments only when the previous login
+ * is at least LOGIN_COUNT_MIN_GAP_MS old, so requests within one visit count once.
  */
 function isDistinctLogin(nowMs: number, prevLastLoginAt: number | undefined): boolean
 {

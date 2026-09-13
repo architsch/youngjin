@@ -8,9 +8,7 @@ import { cameraModeObservable } from "../../system/clientObservables";
 
 const vec3Temp = new THREE.Vector3();
 
-// The shortest vector still worth taking a direction from. Anything shorter is a direction the
-// scene does not really hold — a player standing on top of the object, or an object with no facing
-// to speak of — and an angle measured off one would be noise.
+// Below this length a direction is noise (e.g. standing on the object).
 const minMeasurableLength = 0.001;
 
 export default class PlayerProximityDetector extends GameObjectComponent
@@ -65,9 +63,7 @@ export default class PlayerProximityDetector extends GameObjectComponent
             const offsetZ = this.gameObject.position.z - player.position.z;
             const distSqr = offsetX*offsetX + offsetZ*offsetZ;
 
-            // Each of the three questions below answers "yes" for a detector that does not ask it,
-            // and they are asked cheapest first: the two angles are a handful of multiplications,
-            // whereas sight is a walk of the room and a cast through everything drawn in it.
+            // Checks that aren't configured pass. Cheapest first; sight requires a grid walk and a raycast.
             proximityShouldBeOn = (distSqr <= this.maxDist * this.maxDist)
                 && this.playerLooksAtObject(player, offsetX, offsetZ)
                 && this.objectFacesPlayer(offsetX, offsetZ)
@@ -80,8 +76,7 @@ export default class PlayerProximityDetector extends GameObjectComponent
             this.turnProximityOff();
     }
 
-    // Whether the player is looking the object's way. A player faces along his object's -Z (see
-    // FORWARD_DIR), which is the opposite of the direction his transform is authored to point.
+    // Players face their object's -Z (see FORWARD_DIR).
     private playerLooksAtObject(player: GameObject, offsetX: number, offsetZ: number): boolean
     {
         if (this.maxLookAngle <= 0)
@@ -91,17 +86,9 @@ export default class PlayerProximityDetector extends GameObjectComponent
         return directionsAreWithin(this.maxLookAngle, offsetX, offsetZ, -vec3Temp.x, -vec3Temp.z);
     }
 
-    // Whether the object is showing the player the side it faces, which is a separate question from
-    // whether the player is looking at it: an entrance door has a player standing behind it looking
-    // straight through it every time one arrives in the room, since he spawns in the doorway it
-    // fills and walks out of it into the room. Prompting him there would flash the prompt over the
-    // back of a door he is walking away from.
-    //
-    // The side an object faces is the way its own surface points: a flat mesh is drawn facing its
-    // object's +Z (see the "Square" geometry), which is the direction a wall-mounted one is authored
-    // to point out of the wall it is hung on. Note this is the opposite of the -Z a *player* faces
-    // along — a player is drawn all the way round, and has a front only in the sense that he walks
-    // one way rather than the other.
+    // Whether the object's front faces the player (separate from the player looking at it): an
+    // arriving player stands behind the entrance door looking through it, and must not be prompted.
+    // Flat objects face their +Z, the opposite of a player's -Z.
     private objectFacesPlayer(offsetX: number, offsetZ: number): boolean
     {
         if (this.maxFaceAngle <= 0)
@@ -112,9 +99,7 @@ export default class PlayerProximityDetector extends GameObjectComponent
         return directionsAreWithin(this.maxFaceAngle, -offsetX, -offsetZ, vec3Temp.x, vec3Temp.z);
     }
 
-    // Whether the object stands where the camera can actually see it, rather than behind whatever
-    // else the room has put in the way. The object is probed at its own position, which for an
-    // object whose collider is centred on it (a door, say) is already the middle of the thing.
+    // Line-of-sight check from the camera to the object's position (its collider centre).
     private objectIsInSight(): boolean
     {
         if (!this.checkLineOfSight)
@@ -140,8 +125,7 @@ export default class PlayerProximityDetector extends GameObjectComponent
     }
 }
 
-// Whether two directions lie within a given angle of each other, measured on the horizontal plane
-// so that looking up or down at something is still looking at it. Either may be given unnormalized.
+// Horizontal-plane angle test (looking up or down still counts). Inputs needn't be normalized.
 function directionsAreWithin(maxAngle: number, aX: number, aZ: number,
     bX: number, bZ: number): boolean
 {

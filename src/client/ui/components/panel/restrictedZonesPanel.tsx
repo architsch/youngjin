@@ -15,19 +15,14 @@ import TrashIcon from "../../svg/icons/trashIcon";
 import RestrictedZoneGrid from "../input/restrictedZoneGrid";
 import ScrollPanel from "./scrollPanel";
 
-// The plan of the room its restricted zones are drawn on, raised from the room's settings (see
-// CustomizeRoomPanel) into a panel of its own above them: the plan has to be seen whole to be worked
-// with, which an entry in the row of settings could never give it. What a zone is for is in
-// @docs/gameplay/restricted_zone.md.
+// Restricted zone plan panel (see CustomizeRoomPanel, @docs/gameplay/restricted_zone.md).
 export default function RestrictedZonesPanel({ anchorElementId, onClose }: Props)
 {
     const room = App.getCurrentRoom();
 
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
-    // The room's own list is the one on screen, so a zone another superuser draws shows up here
-    // without a reload. This counter is what re-reads it: the list is a field of the room rather
-    // than state of this component, so React has to be told when it has been replaced.
+    // The zone list lives on the room, so this counter forces a re-read when it's replaced.
     const [editCount, setEditCount] = useState(0);
     useEffect(() => {
         restrictedZonesChangedObservable.addListener("restrictedZonesPanel",
@@ -51,8 +46,7 @@ export default function RestrictedZonesPanel({ anchorElementId, onClose }: Props
             notificationMessageObservable.set("Failed to update the restricted zones.");
             return false;
         }
-        // A single-player room is the client's own, regenerated locally each time and never stored,
-        // so there is nobody to tell.
+        // Single-player rooms aren't stored or shared, so nothing is sent.
         if (room.roomType != RoomTypeEnumMap.SinglePlayer)
             SocketsClient.emitSetRestrictedZonesSignal(new SetRestrictedZonesSignal(room.id, next));
         return true;
@@ -89,13 +83,10 @@ export default function RestrictedZonesPanel({ anchorElementId, onClose }: Props
     </ScrollPanel>;
 }
 
-// How big a zone starts out, in voxels. Big enough to be taken hold of straight away on a phone,
-// where a voxel is only a few pixels across, and small enough that it is obviously something to be
-// dragged into shape rather than a room already spoken for.
+// New zone size in voxels: grabbable on a phone, obviously resizable.
 const NEW_ZONE_SIZE = 6;
 
-// A new zone is dropped in the middle of the room, where it is furthest from being mistaken for one
-// of the walls. The plan scrolls to wherever it lands, so it is never laid down out of sight.
+// New zones start at the room centre; the plan scrolls to them.
 function makeNewZone(): RestrictedZone
 {
     const rowMin = Math.floor((NUM_VOXEL_ROWS - NEW_ZONE_SIZE) / 2);

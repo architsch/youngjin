@@ -10,10 +10,7 @@ export default async function runQueryInsert<T extends DBRow>(
     collectionRef: admin.firestore.CollectionReference
 ): Promise<DBQueryResponse<T>>
 {
-    // A caller that hands over a row it has been working with will usually have an "id" on it.
-    // That is the document's identity, not one of its fields, so it never goes into the document
-    // (see DBRowIdentityUtil) — and on the generated-ID path below it could not be right anyway,
-    // since the ID does not exist until the write that creates it.
+    // Never store "id" (see DBRowIdentityUtil); on the generated-ID path it doesn't exist yet anyway.
     const columnValues = DBRowIdentityUtil.forStorage(dbQuery.columnValues);
 
     if (dbQuery.docId)

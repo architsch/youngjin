@@ -1,12 +1,6 @@
-// Server-side observation for the playtest skill: what the VPS was already complaining about
-// before a playtest started, and what it started complaining about because of one.
-//
-// The distinction matters more than it sounds. A public server's error log is mostly weather —
-// vulnerability scanners walking the URL space, deprecation warnings, sockets being replaced on
-// page refresh. Reading the log cold, an agent will "find errors" every single time and report
-// them all as regressions. So this tool works in two modes: a survey of the *existing* backlog,
-// which is the ground truth to compare against, and a byte-offset diff that shows only what a
-// run actually added.
+// Server-side observation for the playtest skill. A public server's error log is mostly background noise
+// (scanners, deprecations, socket replacement), so this separates the existing backlog (`history`) from
+// what a run added (a byte-offset `baseline` / `diff`).
 //
 // Usage:
 //   node dev/scripts/playtest/serverMonitor.js history  [--app staging|live] [--top 20]
@@ -25,48 +19,34 @@ const LOG_DIR = "/root/.pm2/logs";
 const STATE_DIR = path.join(__dirname, "../../../temp/playtest");
 const HEALTH_URL = { staging: "https://staging.thingspool.net/health", live: "https://app.thingspool.net/health" };
 
-// PM2 names the current log `<app>-<stream>-<id>.log` and rotated ones
-// `<app>-<stream>-<id>__<date>.log`. The id differs per app, so both are matched by glob.
-//
-// pm2-logrotate runs here with compression on, so a log ends in `.log` only while it is the one
-// being written to — every rotated log is `.log.gz` within a day of being rotated. A pattern
-// matching `.log` alone therefore sees the current file and nothing else, and it does not fail
-// when it does: the survey simply comes back short, and a long-standing error that lives only in
-// the compressed backlog reads as something a playtest just caused.
+// PM2 logs are `<app>-<stream>-<id>.log`, rotated `<app>-<stream>-<id>__<date>.log`; ids vary, hence globs.
+// pm2-logrotate compresses rotated logs to `.log.gz`, so matching `.log` alone silently misses the backlog.
 function retainedLogGlob(app, stream)
 {
     return `${LOG_DIR}/${app}-${stream}-*.log ${LOG_DIR}/${app}-${stream}-*.log.gz`;
 }
 
-// Only the logs that can still be appended to. A rotated log is finished, and once compressed a
-// byte offset into it means nothing anyway — so the baseline and the diff, which work by byte
-// offset, stay on the uncompressed files.
+// Only appendable (uncompressed, current) logs, since baseline and diff use byte offsets.
 function growingLogGlob(app, stream)
 {
     return `${LOG_DIR}/${app}-${stream}-*.log`;
 }
 
-// A glob that matches nothing is passed through by the shell as its own literal text, which would
-// then be read as a filename. Every loop over one of these globs skips what is not a real file.
+// An unmatched glob stays literal in the shell, so loops skip non-files.
 const SKIP_UNMATCHED = `[ -f "$f" ] || continue;`;
 
 function ssh(command)
 {
-    // BatchMode keeps this non-interactive: without an agent key it fails fast rather than
-    // hanging on a password prompt, which an agent has no way to answer. LogLevel=ERROR
-    // suppresses the client's advisory banners, which would otherwise be interleaved with
-    // this tool's own output and read as part of it.
+    // BatchMode fails fast without an agent key instead of prompting; LogLevel=ERROR keeps banners out of
+    // the output.
     return execFileSync("ssh",
         ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-o", "LogLevel=ERROR", SSH_TARGET, command],
         { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
 }
 
 // ─── Classification ─────────────────────────────────────────────────────
-//
-// Everything matched here is background noise this server produces whether or not anybody is
-// playtesting. Keeping the list explicit — rather than filtering it out silently — means a
-// pattern that stops being benign can be argued about, and the counts stay visible in the
-// output either way.
+// Background noise this server produces regardless of playtests. Explicit (and counted in the output) so
+// a pattern that stops being benign stays visible.
 const BENIGN = [
     { pattern: /^Page rate limit exceeded .*\.php/i,   why: "Vulnerability scanner probing for PHP endpoints" },
     { pattern: /^API rate limit exceeded/i,            why: "Rate limiter doing its job (may be self-inflicted during a playtest)" },
@@ -83,9 +63,8 @@ function classify(title)
     return hit ? { benign: true, why: hit.why } : { benign: false, why: null };
 }
 
-// A log entry is `<title> :: <json>`, optionally prefixed with "Trace: " when LogUtil routed it
-// through console.trace. Grouping on the title alone collapses the payload — which is what makes
-// 407 occurrences of one bug read as one problem rather than 407 unrelated lines.
+// Entries are `<title> :: <json>`, optionally prefixed "Trace: " (console.trace). Grouping by title makes
+// many occurrences of one bug read as one problem.
 function normalize(line)
 {
     let text = line.replace(/^Trace:\s*/, "").trim();
@@ -135,17 +114,14 @@ function summarize(text, topN)
 
 // ─── Commands ───────────────────────────────────────────────────────────
 
-// The pre-playtest survey: what has this server been logging all along? Run this before any
-// seeding or playtesting so that every later finding can be checked against it.
+// The pre-playtest survey of what this server has been logging; run before seeding or playtesting.
 function history(app, topN)
 {
-    // `zcat -f` reads the compressed backlog and the current log through the same command, since
-    // with -f it passes an uncompressed file straight through.
+    // `zcat -f` reads compressed and uncompressed logs alike.
     const raw = ssh(`zcat -f ${retainedLogGlob(app, "error")} 2>/dev/null || true`);
     const summary = summarize(raw, topN);
 
-    // Per-day counts for the recurring offenders make a regression visible as a change in
-    // rate, which a single total cannot show.
+    // Per-day counts show regressions as rate changes.
     const perFile = ssh(`for f in ${retainedLogGlob(app, "error")}; do ` +
         `${SKIP_UNMATCHED} echo "$(basename $f)|$(zcat -f "$f" | wc -l)"; done 2>/dev/null || true`)
         .split("\n").filter(Boolean).map(l => {
@@ -163,8 +139,7 @@ function baseline(app)
 {
     fs.mkdirSync(STATE_DIR, { recursive: true });
 
-    // Sizes are captured per file. A single combined offset would be wrong the moment pm2
-    // rotates a log mid-run, which for a long playtest is a real possibility.
+    // Per-file sizes, since pm2 may rotate a log mid-run.
     const sizes = ssh(`for f in ${growingLogGlob(app, "error")} ${growingLogGlob(app, "out")}; do ` +
         `${SKIP_UNMATCHED} echo "$f|$(stat -c %s "$f")"; done 2>/dev/null || true`)
         .split("\n").filter(Boolean).reduce((acc, l) => {
@@ -185,19 +160,16 @@ function diff(app)
 
     const state = JSON.parse(fs.readFileSync(statePath(app), "utf8"));
 
-    // `tail -c +N` is 1-indexed, hence the +1. A file smaller than its recorded size was
-    // rotated or truncated since the baseline, so it is read from the beginning instead —
-    // otherwise the run's own output would be skipped entirely.
+    // `tail -c +N` is 1-indexed. A file smaller than its baseline was rotated or truncated, so it's read
+    // from the start.
     const tailFrom = ([file, size]) =>
         `if [ -f "${file}" ]; then ` +
         `cur=$(stat -c %s "${file}"); ` +
         `if [ "$cur" -lt "${size}" ]; then tail -c +1 "${file}"; else tail -c +${size + 1} "${file}"; fi; ` +
         `fi`;
 
-    // The two streams mean different things and must not be pooled. stderr is where LogUtil
-    // sends warnings and errors; stdout carries the running commentary (every DB query, every
-    // room save). Summarizing them together would bury one genuine error under a hundred
-    // routine "DB Query Started" lines and mark all of them as needing attention.
+    // stderr (warnings, errors) and stdout (routine commentary like every DB query) are kept apart, so real
+    // errors aren't buried.
     const read = (stream) => {
         const entries = Object.entries(state.sizes).filter(([file]) => file.includes(`-${stream}-`));
         return entries.length > 0 ? ssh(entries.map(tailFrom).join("; ")) : "";
@@ -208,8 +180,7 @@ function diff(app)
     const now = metrics();
     const before = state.metrics;
 
-    // A restart during a playtest is the loudest possible signal — it means the process died
-    // or hit its memory ceiling — so it is surfaced separately from anything in the log.
+    // Restarts (a crash or the memory ceiling) are surfaced separately from the logs.
     const restarts = {};
     for (const name of Object.keys(now.pm2 || {}))
     {
@@ -230,8 +201,7 @@ function diff(app)
         benignNoise: errors.benignNoise,
         distinctErrorMessages: errors.distinctMessages,
         stackFrameLines: errors.stackFrameLines,
-        // Context rather than findings: proof the server was doing the work the playtest asked
-        // of it, and the place to look when an error needs a sequence of events around it.
+        // Context, not findings: evidence the server did the work, and events surrounding any error.
         activity: [...activity.needsAttention, ...activity.benignNoise]
             .map(g => ({ title: g.title, count: g.count })),
         restartsDuringWindow: restarts,

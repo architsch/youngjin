@@ -1,10 +1,7 @@
 /**
- * Screenshot runner for dev-log posts (driven by the `devlog-post` Claude skill).
- *
- * Boots a Chromium session against a local dev server, signs in as a seeded dev member,
- * waits until the game is actually in a room, and then hands control to a "shot script" —
- * a small module under ./shots that walks the game through whatever a given feature needs
- * to be seen, calling `shot(label)` at each moment worth keeping.
+ * Screenshot runner for dev-log posts (driven by the `devlog-post` skill). Boots Chromium against a
+ * running local dev server, signs in as a seeded dev member, waits for a room, then runs a shot script
+ * from ./shots that calls `shot(label)`.
  *
  * Usage:
  *   node dev/scripts/devlog/captureRunner.js dev/scripts/devlog/shots/<slug>.js
@@ -15,32 +12,17 @@
  *   node dev/scripts/devlog/captureRunner.js <script> --headed
  *   node dev/scripts/devlog/captureRunner.js <script> --fresh-room         (a generated room instead)
  *
- * A run opens in the SANDBOX unless it asks for something else: an empty room whose camera is off
- * the player entirely and whose walls, floors, pictures and doors are stood up by asking. That is
- * where a post's photographs are made. The alternative is to go and find a subject inside a room the
- * generator built, and then take the picture from wherever the search ended — which is most of a
- * run's wall-clock time, comes out slightly different every time, and leaves the frame composed by
- * the search rather than by the photographer.
+ * Runs open in the SANDBOX by default: an empty single-player room with a free camera, where sets are
+ * built on request. `--fresh-room` (or `freshRoom: true`) opens a generated room from a fixed seed
+ * instead, for shots of generation itself or of game flows. `--serve` holds the browser open and
+ * performs one op per request (the same functions shot scripts call), for working out shots.
  *
- * `--fresh-room` (or `freshRoom: true` on the shot script) seeds a generated room from a fixed seed
- * and opens on that instead. It is for the shot that is genuinely of a generated room — how a hub is
- * laid out, what procedural generation produced — and for driving the game's own flows, which is
- * what a playtest does. Everything else is quicker, steadier and better composed in the sandbox.
- *
- * `--serve` is the one to reach for while a shot is being worked out. Writing a whole script and
- * running it from boot to find out what one click did costs a full run per guess, and most guesses
- * are wrong the first time; this holds one browser open and performs one step per request, handing
- * back the pose, the view and what is selected each time. Every op is the same function the batch
- * scripts call, so a sequence found this way transcribes straight into a shot script rather than
- * having to be translated into one.
- *
- * The dev server is expected to be up already (`npm run devnossg`); this script never starts
- * one, so that a capture run can never take down a server someone else is using.
+ * Expects a dev server already up (`npm run devnossg`) and never starts one, so it can't take down a
+ * server in use.
  *
  * Environment:
  *   DEVLOG_BASE_URL   address of the dev server (default http://127.0.0.1:3000)
- *   DEVLOG_OUT_DIR    where the JPEGs go (default: the current dev-log year's directory —
- *                     see devlogDir.js for which year that is and why it can still be last year's)
+ *   DEVLOG_OUT_DIR    where the JPEGs go (default: the current dev-log year's directory; see devlogDir.js)
  */
 const fs = require("fs");
 const path = require("path");
@@ -55,8 +37,7 @@ const BASE_URL = (process.env.DEVLOG_BASE_URL || "http://127.0.0.1:3000").replac
 const DEFAULT_OUT_DIR = process.env.DEVLOG_OUT_DIR || resolveDevlogDir().dir;
 const PROBE_OUT_DIR = "test-results/devlog-probe"; // git-ignored, so probe shots never reach a commit
 
-// Post images are shown at half a column's width on a wide screen, so a viewport-sized JPEG at
-// 1x is already more than the page can use — and it doubles as the post's share-preview image.
+// Post images display at half a column wide, so 1x viewport JPEGs suffice (they're also the share preview).
 const DEFAULT_VIEWPORT = { width: 1280, height: 800 };
 const JPEG_QUALITY = 88;
 
@@ -66,13 +47,12 @@ const TIMEOUT_ROOM_MS = 45_000;
 // Where a session listens when --serve is given no port of its own.
 const DEFAULT_SERVE_PORT = 4321;
 
-// Text of the full-screen indicator held up while a room change is in flight. Matched inside the
-// app's UI root alone, so the page's boot-time stand-in for it can never answer a wait meant for
-// the app's own (see tests/e2e/helpers/constants.ts, which matches it the same way).
+// Matched only inside the app's UI root, so the page's boot indicator can't satisfy the wait (as in
+// tests/e2e/helpers/constants.ts).
 const LOADING_INDICATOR_TEXT = "Loading...";
 
-// Browser-scoped flag that tells the server this browser has already been through the tutorial.
-// Local dev suffixes its cookies so they cannot collide with a live session in the same browser.
+// Tells the server this browser finished the tutorial. Local dev suffixes cookie names to avoid clashing
+// with live sessions.
 const TUTORIAL_FINISHED_COOKIE = "thingspool_tutorial_finished"
     + (/\/\/(127\.0\.0\.1|localhost)(:|\/|$)/.test(BASE_URL) ? "_dev" : "");
 
@@ -88,13 +68,9 @@ async function main()
         : (serveArg.includes("=") ? Number(serveArg.split("=")[1]) : DEFAULT_SERVE_PORT);
     const outArg = args.find(a => a.startsWith("--out="));
     const seedArg = args.find(a => a.startsWith("--seed="));
-    // A session has no shot script to say which kind of room it wants, so it is said on the command
-    // line. It matters: only a hub is raised through two storeys, and only in a hub are doors an
-    // admin's to manage.
+    // Sessions choose the room type on the command line: only hubs have two storeys and admin-managed doors.
     const roomTypeArg = args.find(a => a.startsWith("--room-type="));
-    // Likewise the seat. Which one matters as much as the room does: doors are an admin's to manage
-    // and nobody else's, so a session investigating them from the member seat is looking at a HUD
-    // that was never going to carry the controls.
+    // Likewise the seat: doors are admin-only, so a member seat never shows their controls.
     const devUserArg = args.find(a => a.startsWith("--devuser="));
     const scriptPath = args.find(a => !a.startsWith("--"));
 
@@ -117,8 +93,7 @@ async function main()
     if (freshRoomFlag)
         shotScript.freshRoom = true;
 
-    // Two ways of getting a room that answer the same question differently, so asking for both says
-    // nothing about which one was meant.
+    // Contradictory room requests.
     if (shotScript.sandbox && shotScript.freshRoom)
     {
         console.error("[devlog] --sandbox and --fresh-room both decide which room to open, and " +
@@ -127,9 +102,7 @@ async function main()
         process.exit(1);
     }
 
-    // The sandbox is where a post's photographs are made, so it is what a run gets when it says
-    // nothing. A generated room is the exception and has to be asked for by name — which is also
-    // what keeps a script that wants one from silently getting an empty room instead.
+    // The sandbox is the default; a generated room must be requested explicitly.
     if (shotScript.sandbox == undefined)
         shotScript.sandbox = !shotScript.freshRoom;
     const freshRoom = shotScript.freshRoom === true;
@@ -146,8 +119,7 @@ async function main()
         process.exit(1);
     }
 
-    // A session's shots are working material, not the post's, so they go where a probe's do unless
-    // asked for elsewhere — nothing found by feeling around belongs in public/ by default.
+    // Session shots are working material, so they go to the probe directory by default, not public/.
     const outDir = path.resolve(REPO_ROOT,
         outArg ? outArg.slice("--out=".length)
             : ((probeOnly || serveArg) ? PROBE_OUT_DIR : DEFAULT_OUT_DIR));
@@ -155,18 +127,14 @@ async function main()
 
     await assertServerIsUp();
 
-    // A room seeded here rather than whichever one the dev database happens to hold, so that the
-    // coordinates a shot script is written against mean the same thing on another machine and on the
-    // next run. Removed again at the end, which is also what keeps a run from inheriting what the
-    // last one built.
+    // A seeded room makes script coordinates reproducible across machines and runs; removed at the end.
     let seededRoom = null;
     if (freshRoom)
     {
         seededRoom = await seedCaptureRoom({
             seed: seedArg ? Number(seedArg.slice("--seed=".length)) : undefined,
             devUser: shotScript.devUser === undefined ? 1 : shotScript.devUser,
-            // A shot of anything upstairs has to be taken in a hub: a Regular room is built one
-            // storey tall on purpose. See captureRoom.js.
+            // Upstairs shots need a hub (Regular rooms are one storey; see captureRoom.js).
             roomType: shotScript.roomType,
         });
         console.log(`[devlog] Seeded ${seededRoom.roomType == 0 ? "hub" : "regular"} room ` +
@@ -176,8 +144,7 @@ async function main()
 
     const browser = await chromium.launch({
         headless: !headed,
-        // SwiftShader renders WebGL identically headless or not, which is what makes a capture run
-        // reproducible on a machine whose GPU is busy with something else (mirrors the E2E config).
+        // SwiftShader renders identically headless or headed, independent of the GPU (mirrors the E2E config).
         args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-webgl", "--hide-scrollbars", "--mute-audio"],
     });
     const context = await browser.newContext({
@@ -186,8 +153,7 @@ async function main()
         ignoreHTTPSErrors: true,
     });
 
-    // Skipped by default: the tutorial is a single-player room, and a capture that wanted it would
-    // have said so. A shot script covering the tutorial itself sets `tutorial: true`.
+    // Skipped unless the script sets `tutorial: true`.
     if (shotScript.tutorial !== true)
         await context.addCookies([{ name: TUTORIAL_FINISHED_COOKIE, value: "1", url: BASE_URL }]);
 
@@ -208,8 +174,7 @@ async function main()
 
         const ctx = makeContext({ page, outDir, slug, files, shotScript });
 
-        // The sandbox is a single-player room too, so it is exempted here as well: walking out of it
-        // would land the run in the hub, which is the one room it did not ask for.
+        // The sandbox is single-player too; walking out of it would land in the hub.
         if (shotScript.tutorial !== true && !shotScript.sandbox)
             await leaveTutorial(page);
         if (shotScript.sandbox)
@@ -238,8 +203,7 @@ async function main()
     {
         exitCode = 1;
         console.error(`[devlog] Capture failed: ${err && err.message ? err.message : err}`);
-        // The state the run died in is usually the whole explanation, so it is kept — outside the
-        // post's own directory, where a failed run has no business leaving anything behind.
+        // The failure state is kept for diagnosis, outside the post's directory.
         const failDir = path.resolve(REPO_ROOT, PROBE_OUT_DIR);
         fs.mkdirSync(failDir, { recursive: true });
         const failPath = path.join(failDir, `${slug}-failure.jpg`);
@@ -248,8 +212,7 @@ async function main()
     }
     finally
     {
-        // Leave the room the way a closing tab would not: the server drops the player at once,
-        // instead of leaving a ghost standing there until the stale-socket sweep catches it.
+        // Leave the room explicitly so the server drops the player now, not at the stale-socket sweep.
         await page.evaluate(() => new Promise((resolve) => {
             const io = window.__socket_io_instance;
             if (!io || io.disconnected) { resolve(); return; }
@@ -260,8 +223,7 @@ async function main()
         await context.close().catch(() => {});
         await browser.close().catch(() => {});
 
-        // Removed even when the run failed. A seeded room left behind is exactly the state the next
-        // run would inherit, which is the thing seeding one was meant to stop.
+        // Removed even on failure, so the next run inherits nothing.
         if (seededRoom != null)
         {
             await removeCaptureRoom(seededRoom).then(
@@ -288,18 +250,10 @@ async function main()
 }
 
 /**
- * Holds the browser open and performs one step per request, until asked to stop.
- *
- * The point is what it costs to find something out. A shot is a sequence of gestures against a room
- * whose layout nothing wrote down, and most of the sequence is wrong the first time — a click lands
- * on the wall behind the picture, a vantage turns out to be looking at a blank corner. Written as a
- * script, learning any of that costs a run from boot; here it costs a request, and the answer comes
- * back with the pose, the view and what is now selected, so the next step is chosen from what the
- * game actually did rather than from what it was expected to do.
- *
- * The ops are the same functions a shot script calls, under the same names, so what is found here is
- * transcribed into `run(ctx)` rather than translated. Nothing is available through this that is not
- * available there — a session that could do more would be a session whose findings do not keep.
+ * Holds the browser open and performs one step per request until told to stop. Each response carries
+ * the pose, view and selection, so a shot sequence costs a request per guess instead of a run.
+ * Ops are the same functions shot scripts call, under the same names (nothing extra), so findings
+ * transcribe directly into `run(ctx)`.
  *
  *   POST /do     {"op": "place", "args": [16.5, 27.2]}
  *   GET  /state  what the game looks like now, without touching it
@@ -311,8 +265,7 @@ async function serveSession(ctx, port, pageErrors)
     const http = require("node:http");
     const ops = buildOps(ctx);
 
-    // What every step answers with. A step that acts and a step that only looks return the same
-    // shape, so a caller never has to ask a second question to find out what the first one did.
+    // Every step returns the same state shape, whether it acts or only looks.
     const state = async () =>
     {
         const [pose, camera, selection, gameMode] = await Promise.all([
@@ -363,17 +316,14 @@ async function serveSession(ctx, port, pageErrors)
 
                 const before = pageErrors.length;
                 const result = await op(...(body.args || []));
-                // Only what this step provoked. The whole list would repeat every earlier error at
-                // every later step, which buries the one that belongs to what just happened.
+                // Only the errors this step provoked.
                 const errors = pageErrors.slice(before);
                 send(200, {ok: true, result, ...(await state()),
                     ...(errors.length > 0 ? {errors} : {})});
             }
             catch (err)
             {
-                // A failed step is an answer too — usually the interesting one, since the libraries
-                // say why an aim could not be made to work. So the state comes back with it, and the
-                // session stays up.
+                // A failed step still returns the state (the error usually explains why), and the session stays up.
                 send(200, {ok: false, error: String(err && err.message ? err.message : err),
                     ...(await state().catch(() => ({})))});
             }
@@ -394,18 +344,12 @@ async function serveSession(ctx, port, pageErrors)
     console.log("[devlog] Session ended.");
 }
 
-// Getting to a bridge is not a step against the game, and both libraries carry the same names for
-// doing it — including a `call` each, meaning two different bridges. Left out rather than allowed to
-// shadow one another, with `bridge` below offered instead for the one case a session wants: asking
-// the read-only bridge something the libraries do not wrap.
+// Bridge plumbing is excluded (both libraries define these names, including two different `call`s);
+// sessions use `bridge` below instead.
 const SESSION_PLUMBING = new Set(["BRIDGE", "call", "hasBridge", "waitForBridge", "hasSetup",
     "waitForSetup", "waitForRoom"]);
 
-/**
- * The ops a session accepts: everything a shot script has, flattened to one name each. The names are
- * the ones the calls have in a script — `place`, `look`, `clickObject`, `shot` — so a sequence found
- * here is transcribed rather than translated. Nested groups keep their prefix (`ui.click`).
- */
+/** Every shot-script op, flattened to one name each (`place`, `look`, `shot`); nested groups keep their prefix (`ui.click`). */
 function buildOps(ctx)
 {
     const ops = {};
@@ -427,8 +371,7 @@ function buildOps(ctx)
         clickText: ctx.clickText, press: ctx.press, hold: ctx.hold, describeUI: ctx.describeUI,
         hideDebugUI: ctx.hideDebugUI, dismissPopups: ctx.dismissPopups,
         hideHUD: ctx.hideHUD, showHUD: ctx.showHUD,
-        // The read-only bridge's own methods, for the questions the libraries do not wrap —
-        // `probeGrid`, `objects`, `context`. See AutomationBridgeUtil for what it answers.
+        // The read-only bridge's own methods (`probeGrid`, `objects`, `context`; see AutomationBridgeUtil).
         bridge: (method, ...args) => ctx.interact.call(method, ...args),
     });
     add("", ctx.setup);
@@ -455,10 +398,8 @@ async function assertServerIsUp()
 
 async function openGame(page, shotScript, seededRoom)
 {
-    // The sandbox is reached by asking for a seat in it rather than by naming a room: the server
-    // routes a user to the single-player room its mode names, and this seat's mode is the sandbox's.
-    // So it takes neither a path nor a dev member — a dev member has a mode of their own and would
-    // be sent somewhere else entirely.
+    // The sandbox is reached via a seat whose single-player mode is the sandbox, so it takes no path or
+    // dev member (a member's own mode would route elsewhere).
     if (shotScript.sandbox)
     {
         const url = new URL(BASE_URL + "/");
@@ -468,12 +409,10 @@ async function openGame(page, shotScript, seededRoom)
         return;
     }
 
-    // A seeded room is the one the run was started for, so it outranks whatever path the script
-    // names — which is usually a room id from a previous run against a different database.
+    // A seeded room outranks the script's path (often a stale id from another database).
     const startPath = seededRoom != null ? `/${seededRoom.roomID}` : (shotScript.startPath || "/");
     const url = new URL(BASE_URL + startPath);
-    // A seeded dev member, rather than a fresh guest: it owns a room, may edit, and keeps whatever
-    // first-time prompts it has already dismissed — so consecutive runs capture the same game.
+    // A seeded dev member (not a fresh guest) owns a room, may edit, and keeps dismissed prompts, so runs match.
     const devUser = shotScript.devUser === undefined ? 1 : shotScript.devUser;
     if (devUser)
         url.searchParams.set("devuser", String(devUser));
@@ -490,43 +429,27 @@ async function waitForGameReady(page)
     await page.locator("#uiRoot").getByText(LOADING_INDICATOR_TEXT, { exact: true })
         .waitFor({ state: "hidden", timeout: TIMEOUT_ROOM_MS });
 
-    // The indicator coming down says the room arrived, not that there is yet anything standing in
-    // it: its meshes arrive one instanced batch at a time over the frames that follow. So the page
-    // is asked when it has a room and a player rather than being given a fixed moment to get one —
-    // how long that takes depends on the room, and a room that takes longer than the guess is
-    // photographed half-built.
+    // The indicator clearing means the room arrived, not its meshes; wait for a room and player, not a fixed delay.
     await Interact.waitForRoom(page, TIMEOUT_ROOM_MS);
     await Setup.waitForSetup(page, TIMEOUT_SOCKET_MS);
 
-    // What is left is the batches themselves, which nothing reports the end of. Two frames and a
-    // short settle is the same wait `shot` makes before every capture.
+    // Instanced batches report no end; two frames and a short settle, as `shot` waits.
     await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
     await page.waitForTimeout(600);
 }
 
-// Where the sandbox stands its player while a set is built in the middle of the room. Far enough
-// into a corner to be outside any frame a subject at the centre is shot from.
+// Where the sandbox parks its player, outside the frame of a centered subject.
 const SANDBOX_PLAYER_CORNER = { x: 1.5, z: 1.5 };
 
-/**
- * Stands the sandbox's player out of the way.
- *
- * The camera in there is free of him, but he is not free of the room: he spawns at its centre, which
- * is exactly where a set gets built, so he ends up inside the subject with his name over it. Nothing
- * in a sandbox shot is ever of him — a shot that wanted a character in it would be taken in a room
- * with characters — so he is moved once here rather than left for each script to remember, which is
- * the kind of thing that is only remembered after seeing him in the picture.
- */
+/** Moves the sandbox player (who spawns at the center, where sets are built) out of frame. */
 async function parkPlayer(ctx)
 {
     await ctx.setup.place(SANDBOX_PLAYER_CORNER.x, SANDBOX_PLAYER_CORNER.z);
 }
 
 /**
- * Walks out of the single-player tutorial if the session started inside it, and waits for the hub
- * to load in its place. The browser's tutorial-finished cookie only governs accounts created after
- * it was set, so a seeded dev member — created by the server at boot, before any browser said
- * anything — still starts in the tutorial and has to be walked out of it.
+ * Walks out of the tutorial if the session starts there, and waits for the hub. The tutorial-finished
+ * cookie only affects accounts created after it's set, so seeded dev members still start there.
  */
 async function leaveTutorial(page)
 {
@@ -553,8 +476,7 @@ function makeContext({ page, outDir, slug, files, shotScript })
 
         const name = `${slug}-${label}.jpg`;
         const filePath = path.join(outDir, name);
-        // `clip` belongs to a page screenshot alone — an element screenshot is already its own clip,
-        // and Playwright rejects the option there.
+        // `clip` is page-screenshot only; Playwright rejects it for element screenshots.
         const screenshotOptions = { path: filePath, type: "jpeg", quality: JPEG_QUALITY };
         if (opts.clip && !opts.selector)
             screenshotOptions.clip = opts.clip;
@@ -576,11 +498,7 @@ function makeContext({ page, outDir, slug, files, shotScript })
 
     const center = () => ({ x: Math.round(viewport.width / 2), y: Math.round(viewport.height / 2) });
 
-    /**
-     * A pointer drag across the game canvas. Moved in many small steps, and held briefly at each
-     * end, because the game reads a drag as a gesture in its own right (it only becomes one past a
-     * few pixels of travel) rather than as a jump from one point to another.
-     */
+    /** A pointer drag across the canvas, in small steps with brief holds, so the game registers a drag gesture. */
     const drag = async (from, to, opts = {}) =>
     {
         const steps = opts.steps || 24;
@@ -600,8 +518,7 @@ function makeContext({ page, outDir, slug, files, shotScript })
         await page.waitForTimeout(opts.settleMs === undefined ? 500 : opts.settleMs);
     };
 
-    // The game's buttons are styled divs, not <button> elements, so role-based locators find
-    // nothing — they are reached by their id where they have one, and by their label otherwise.
+    // Game buttons are styled divs, so they're found by id or label, not by role.
     const clickId = async (id, opts = {}) =>
     {
         await page.locator(`#${id}`).first().click(opts);
@@ -660,11 +577,7 @@ function makeContext({ page, outDir, slug, files, shotScript })
         return out;
     });
 
-    /**
-     * Takes the in-game debugger's toggle out of shot; it is a development tool, not part of the
-     * feature. Only leaf elements are considered: an ancestor's text includes everything beneath
-     * it, so matching on text alone would hide whole branches of the HUD along with the button.
-     */
+    /** Hides the in-game debugger toggle. Matches leaf elements only, since an ancestor's text includes the whole HUD. */
     const hideDebugUI = () => page.evaluate(() =>
     {
         const root = document.getElementById("uiRoot");
@@ -681,16 +594,8 @@ function makeContext({ page, outDir, slug, files, shotScript })
     });
 
     /**
-     * Takes the whole HUD out of shot, and gives it back — the chat bar along the bottom, the seat's
-     * name in the corner, the mode controls.
-     *
-     * For a shot of the game this is the wrong thing to do: the HUD is part of what the game looks
-     * like, and a picture of the world with the interface cut away is a picture of something nobody
-     * sees. It is for the other kind of shot — one thing on its own, against nothing, usually built
-     * in the sandbox — where the interface is not in the picture so much as in the way.
-     *
-     * Visibility rather than removal, so it can be given back within the same run: a session
-     * arranging several shots may want it for one of them.
+     * Hides or restores the whole HUD. Only for isolated subjects (usually sandbox sets); game shots keep
+     * the HUD, since it's part of how the game looks.
      */
     const showHUD = (visible = true) => page.evaluate((visible) =>
     {
@@ -701,10 +606,7 @@ function makeContext({ page, outDir, slug, files, shotScript })
 
     const hideHUD = () => showHUD(false);
 
-    /**
-     * Clears whatever popup is standing (a first-visit welcome, say). Escape closes the topmost
-     * one, so it is offered repeatedly until nothing is left to close.
-     */
+    /** Closes popups (e.g. a first-visit welcome) by pressing Escape until none remain. */
     const dismissPopups = async () =>
     {
         for (let i = 0; i < 4; ++i)
@@ -718,11 +620,8 @@ function makeContext({ page, outDir, slug, files, shotScript })
         return 4;
     };
 
-    // The two halves of driving the game, bound to this page so a shot script calls them without
-    // passing it in. `setup` arranges the scene — where the player stands, where the camera looks
-    // from — and `interact` acts in it, aiming from what the page reports rather than from
-    // coordinates written down on a previous run. Between them they replace what shot scripts used
-    // to do by holding a walk key and sweeping candidate pixels.
+    // `setup` arranges the scene (player pose, camera) and `interact` acts in it, aiming from what the page
+    // reports; both are bound to this page.
     const setup = bindPage(Setup, page);
     const interact = bindPage(Interact, page);
 
@@ -736,15 +635,10 @@ function makeContext({ page, outDir, slug, files, shotScript })
     };
 }
 
-// The two functions in those libraries that are not about a page: one waits, the other reads a
-// report the caller already has. Binding them to a page would quietly give them the wrong first
-// argument, which is the kind of mistake that shows up as a nonsense failure much later.
+// Not page functions; binding them would pass the wrong first argument.
 const NOT_PAGE_BOUND = new Set(["sleep", "diagnose"]);
 
-/**
- * Re-exposes a library whose functions take `page` first as one that already has it. Nested objects
- * (interact's `ui`) are bound the same way one level down, which is as deep as either library goes.
- */
+/** Re-exposes a library whose functions take `page` first with it bound (one level deep, e.g. interact's `ui`). */
 function bindPage(library, page)
 {
     const bound = {};

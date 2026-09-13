@@ -10,13 +10,8 @@ import { InstancedMeshCompositionParams } from "../compositionParams/instancedMe
 import InstancedMeshCompositionPart from "../instancedMeshCompositionPart";
 import InstancedMeshCompositionCodec from "./instancedMeshCompositionCodec";
 
-// A door's appearance as an object-metadata string: one visible-ASCII character per color, over the
-// one design every door is built to (see DoorCompositionConstants). Keeping the encoded form this
-// small and this literal is what makes a door customizable later — a form editing these three colors
-// is the whole feature, with nothing to migrate and nothing to interpret.
-//
-// Like the player's, this string arrives from elsewhere and is untrusted on the read side: decoding
-// clamps rather than trusts, and always yields a drawable door.
+// Door appearance: one visible-ASCII char per color (timber, plate, knob) over the single door design
+// (see DoorCompositionConstants). Untrusted on read: decoding clamps and always yields a drawable door.
 export const DoorCompositionCodec: InstancedMeshCompositionCodec = {
     encode: (params: InstancedMeshCompositionParams,
         parts: InstancedMeshCompositionPart[]): string =>
@@ -44,8 +39,7 @@ export const DoorCompositionCodec: InstancedMeshCompositionCodec = {
         const rand = new RandomNumberGenerator(seed);
 
         const params = getBaseParams();
-        // Drawn as one finish rather than as three independent colors, so that a door nobody chose
-        // the colors of still looks like a door somebody painted (see DoorCompositionConstants).
+        // Default finishes come from coordinated schemes (see DoorCompositionConstants).
         const schemes = DoorCompositionConstants.colorSchemes;
         const scheme = schemes[rand.randomInt(0, schemes.length)];
         params.colors.panel = {...scheme.panel};
@@ -60,17 +54,14 @@ export const DoorCompositionCodec: InstancedMeshCompositionCodec = {
 
 function decodeColor(strToDecode: string, charIndex: number)
 {
-    // paletteIndexToRGB clamps the position into the palette, so a hostile or truncated string
-    // yields a real color rather than an undefined one.
+    // paletteIndexToRGB clamps, so bad input still yields a real color.
     return ColorUtil.paletteIndexToRGB("Timber",
         StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charIndex));
 }
 
 function getBaseParams(): DoorCompositionParams
 {
-    // Every part of a door is a flat quad finished as moulded timber ("InstancedWood"), including
-    // the knob: what distinguishes the parts is their color, how wide a moulding runs around them,
-    // and whether that moulding stands proud or is sunk, none of which needs a geometry of its own.
+    // Every part (knob included) is a moulded-timber quad; parts differ only in color and moulding.
     const ids = {
         instancedMeshId_square: MeshDataUtil.getInstancedMeshId(
             DOOR_GEOMETRY_ID, INSTANCED_WOOD_MATERIAL_ID),

@@ -31,15 +31,10 @@ const RoomPickerUtil =
 
         return roomID;
     },
-    // Picks the hub that the next user should be routed into, keeping every hub's population
-    // inside the healthy band (i.e. neither so empty that its visitors have nobody to meet,
-    // nor so crowded that everyone's performance degrades).
-    // Returns an empty string only if no hub could be made available at all.
+    // Picks a hub keeping populations in the healthy band. Returns "" only if no hub is available.
     pickBestHubRoomID: async (): Promise<string> =>
     {
-        // Note: It is assumed here that all Hub rooms are preloaded in ServerRoomManager.
-        // A hub that has already reached the hard player cap can never be a destination,
-        // so it is left out before any of the balancing decisions below.
+        // Assumes hubs are preloaded. Almost-full hubs are excluded first.
         const hubRooms: RoomRuntimeMemory[] = [];
         for (const roomRuntimeMemory of Object.values(ServerRoomManager.roomRuntimeMemories))
         {
@@ -53,14 +48,12 @@ const RoomPickerUtil =
         if (hubRooms.length == 0 || hubRooms.every(mem =>
             RoomPickerUtil.getRoomPopulation(mem) >= ROOM_OVER_POPULATION_THRESHOLD))
         {
-            // Every existing hub is over-populated (or there is no hub at all yet), so open a
-            // brand new one rather than pushing yet another user into a crowded room.
+            // All over-populated (or none exist): open a new hub.
             const newHubRoomID = await HubRoomUtil.createHub();
             if (newHubRoomID.length > 0)
                 return newHubRoomID;
 
-            // The new hub could not be made available. Rather than leaving the user roomless,
-            // fall back to the emptiest hub that still has a free slot (if there is one).
+            // Creation failed: fall back to the emptiest hub with space.
             console.error(`RoomPickerUtil.pickBestHubRoomID :: Failed to open a new hub. Falling back to an over-populated one.`);
             return pickLeastPopulatedRoomID(hubRooms);
         }
@@ -70,39 +63,29 @@ const RoomPickerUtil =
 
         if (underPopulatedHubRooms.length > 0)
         {
-            // "Fill one up to a sufficient level, then start filling the next one":
-            // every user keeps landing in the same under-populated hub until that hub grows past
-            // the under-population threshold. Distributing them evenly instead would leave a set
-            // of near-empty hubs, which is the worse outcome — a hub is a meeting place, so a
-            // handful of users spread one per room would each end up alone.
-            // Ordering the candidates by their room ID keeps the choice deterministic (i.e. the
-            // same hub is chosen for as long as the set of under-populated hubs stays the same).
+            // Fill one under-populated hub (lowest room ID, deterministic) past the threshold before
+            // the next, so visitors meet instead of being spread thin.
             return underPopulatedHubRooms
                 .map(mem => mem.room.id)
                 .sort()[0];
         }
 
-        // Every remaining hub sits in the medium band (i.e. neither under- nor over-populated),
-        // so spread the incoming users evenly and let those hubs fill up at the same rate.
+        // All medium: pick the least populated.
         return pickLeastPopulatedRoomID(hubRooms);
     },
     getRoomPopulation: (roomRuntimeMemory: RoomRuntimeMemory): number =>
     {
         return Object.keys(roomRuntimeMemory.participantUserNameByID).length;
     },
-    // The admission test for every route into a room. It stops short of the hard cap by a margin,
-    // so that the joins which may already be in flight cannot carry the room past it. Should a
-    // burst of simultaneous joins overrun the margin anyway, the room simply holds more players
-    // than its clients have mesh instances for, and the surplus body parts go undrawn.
+    // Admission test with a margin below the hard cap for in-flight joins. Overruns just leave some
+    // body parts undrawn on clients.
     isRoomAlmostFull: (roomRuntimeMemory: RoomRuntimeMemory): boolean =>
     {
         return RoomPickerUtil.getRoomPopulation(roomRuntimeMemory) >= MAX_PLAYERS_PER_ROOM - ROOM_ALMOST_FULL_MARGIN;
     },
 }
 
-// Returns the ID of the least populated room among the given candidates
-// (or an empty string if there is no candidate at all).
-// Ties are broken by the room ID, so that the outcome stays deterministic.
+// Least populated candidate (ties by room ID), or "".
 function pickLeastPopulatedRoomID(candidates: RoomRuntimeMemory[]): string
 {
     let bestRoomID = "";

@@ -29,9 +29,7 @@ const DBRoomUtil =
             return null;
         return await getRoomFromDBRoom(result.data[0]);
     },
-    // Returns the room's DB row only (no voxel/object content). Use this when you need
-    // fields like roomType / ownerUserName but don't want the cost of deserializing the
-    // binary content blob from cloud storage.
+    // The DB row only, without loading the content blob.
     getDBRoom: async (roomID: string): Promise<DBRoom | null> =>
     {
         LogUtil.log("DBRoomUtil.getDBRoom", {roomID}, "low", "info");
@@ -50,10 +48,8 @@ const DBRoomUtil =
         const bufferState = EncodingUtil.startEncoding();
         room.voxelGrid.encode(bufferState);
 
-        // Encode only persistent objects when saving the room's data to file storage
-        // (except in case of first-time save (e.g. right after initial room generation),
-        // in which case the non-persistent objects should be taken as part of the
-        // room's intrinsic content and thus should not be discarded)
+        // Only persistent objects are saved, except on the first save after generation (all generated
+        // objects are intrinsic content).
         const persistentObjects = forceSaveNonPersistentObjects
             ? Object.values(room.objectById)
             : Object.values(room.objectById)
@@ -73,12 +69,10 @@ const DBRoomUtil =
     {
         LogUtil.log("DBRoomUtil.createRoom", {roomType, ownerUserID, ownerUserName}, "low", "info");
 
-        // Generation decides the room's whole initial state — not just its voxels and objects,
-        // but the room-level parameters they were picked to suit (see RoomGenerationUtil).
+        // Generation decides all initial state, including room-level parameters (see RoomGenerationUtil).
         const room = RoomGenerationUtil.generateRoom(roomName, roomType, ownerUserID, ownerUserName);
 
-        // No "id": the room has none to give until the insert below assigns one, and the document
-        // holds its identity as its own key rather than as a field (see DBRowIdentityUtil).
+        // No "id" field (see DBRowIdentityUtil).
         const dbRoom: Omit<DBRoom, "id"> = {
             version: DBRoomVersionMigration.length,
             roomName: room.roomName,
@@ -151,20 +145,14 @@ async function getRoomFromDBRoom(dbRoom: DBRoom): Promise<Room | null>
 
     const bufferState = new BufferState(new Uint8Array(buffer));
     const voxelGrid = VoxelGrid.decode(bufferState) as VoxelGrid;
-    // The grid's own version dates the objects stored alongside it, which is the only thing that can
-    // tell an object placed in a one-storey room from one placed in a two-storey room. See
-    // ObjectGroup's converters.
+    // The grid's version dates the objects stored with it (see ObjectGroup's converters).
     const objectGroup = ObjectGroup.decodeWithParams(bufferState, dbRoom.id ?? "",
         voxelGrid.sourceFormatVersion) as ObjectGroup;
     const room = new Room(dbRoom.id, dbRoom.roomName, dbRoom.roomType,
         dbRoom.ownerUserID, dbRoom.ownerUserName, dbRoom.texturePackPath, dbRoom.prefs,
         voxelGrid, objectGroup);
 
-    // A room read from an older format was brought up to date on the way in (see VoxelGrid's and
-    // ObjectGroup's converters), and what came out only exists in memory. Marking it dirty is what
-    // gets that written back, so the conversion is paid for once rather than on every load — and,
-    // more to the point, so that a room whose doorway was just filled and whose door was just
-    // created keeps them.
+    // Rooms converted from an older format are marked dirty, so the conversion is saved once.
     if (voxelGrid.sourceFormatVersion < VoxelGrid.latestFormatVersion)
         room.dirty = true;
 

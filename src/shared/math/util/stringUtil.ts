@@ -2,8 +2,7 @@ import NumUtil from "./numUtil";
 
 const StringUtil =
 {
-    // Truncates by Unicode code points rather than UTF-16 code units, so multi-unit
-    // characters (e.g. emojis represented as surrogate pairs) are never split mid-character.
+    // Counts code points, so surrogate pairs (e.g. emoji) are never split.
     truncateByCodePoints: (str: string, maxCodePoints: number): string =>
     {
         const codePoints = Array.from(str);
@@ -21,16 +20,8 @@ const StringUtil =
         return hash;
     },
 
-    //------------------------------------------------------------------------
-    // NOTE: The purpose of the following methods is to be able to encode
-    // arbitrary data as a string of printable characters (e.g. a GameObject's metadata),
-    // so as to safely store it in the DB's string data field.
-    // I am using a base-94 & fixed-width & quantized encoding scheme here, which is lossy.
-    //------------------------------------------------------------------------
-    // "Visible ASCII Range" = Range of UTF-8/UTF-16 char codes covering only the visible ASCII characters such as alphanumerics and symbols (no blank spaces).
-    // There are 94 characters within the Visible ASCII Range [33,126] (inclusive)
-    // 33 = UTF-16/UTF-8 char code of the exclamation mark (!)
-    // 126 = UTF-16/UTF-8 char code of tilde (~)
+    // Lossy, fixed-width, quantized base-94 encoding into visible ASCII [33 '!', 126 '~'], for storing
+    // arbitrary data (e.g. object metadata) as printable strings.
     convertVisibleASCIIToNumber: (str: string, charIndex: number,
         min: number, max: number, fallbackRawNumber: number = 0): number =>
     {

@@ -1,84 +1,42 @@
 # User State Management Flows
 
-Reference: @src/server/db/types/row/dbUser.ts , @src/server/db/types/row/dbRoom.ts , @src/server/sockets/socketsServer.ts , @src/client/networking/client/socketsClient.ts , @src/server/room/serverRoomManager.ts , @src/server/user/serverUserManager.ts , @src/server/sockets/types/socketUserContext.ts
+Reference: @src/server/db/types/row/dbUser.ts , @src/server/db/types/row/dbRoom.ts , @src/server/sockets/socketsServer.ts , @src/server/room/serverRoomManager.ts , @src/server/user/serverUserManager.ts , @src/server/sockets/types/socketUserContext.ts
 
-> For how single-player rooms (e.g. the tutorial) differ from the multi-player flows described here — they are not registered as participants and never write a last-room — see [single_player_mode.md](single_player_mode.md). For the rules governing which room a user may enter and how many users a room holds, see [room_population.md](room_population.md).
+Single-player rooms differ from these flows (see [single_player_mode.md](single_player_mode.md)). Room capacity rules are in [room_population.md](room_population.md).
 
-## Where user state lives
+## Where state lives
+- **`DBUser`**: last room, player metadata (shared across rooms), single-player mode, seen FTUE elements, account info and login bookkeeping.
+- **`DBRoom`**: owner and texture pack. Room contents are a separate blob.
+- There is no per-session snapshot. Players always spawn behind a door, and permissions are derived from user + room by `RoomValidationUtil`, so there is nothing to establish or restore per session.
 
-- **`DBUser`** — per-user, persistent. Holds the user's last room, their player metadata, their single-player mode (see [single_player_mode.md](single_player_mode.md)), the features they have already been introduced to (see [ftue.md](ftue.md)), account info, and login bookkeeping. Player metadata follows the user across rooms; it is not per-room.
-- **`DBRoom`** — per-room, persistent. Holds the owner and the texture pack.
-- **State is not bundled into a per-session snapshot.** Players always spawn behind one of the destination room's doors, what a user may do in a room is worked out from who he is and which room it is (see [my_room.md](my_room.md#who-a-room-answers-to)), and the last room and player metadata are written to `DBUser` directly.
+## Choosing the room on connect
+- `/`: the user's single-player room if that mode is set, otherwise their last room, otherwise a hub from the [balancer](room_population.md).
+- `/:roomID`: that room, falling back to a hub if it does not exist or is full.
 
-## When the user moves from one room to another without reloading the game page
-1. The client sends a room-change request and blocks further requests until the current one completes.
-2. The server loads the target room (from cache or the database) and checks that it can take another player. If it cannot, the user is turned away and stays in their current room (see [room_population.md](room_population.md)).
-3. The server removes the user from the previous room, despawning their player object and, when requested, flushing player metadata to `DBUser`.
-4. The server places the user behind one of the room's [doors](../geometry/room_entrance.md#player-spawning) and restores their player metadata (see "Player Metadata Restoration" below).
-5. The server writes the new last room to `DBUser` and notifies the client that the room has changed.
+## Changing rooms (no reload)
+1. The client sends a room-change request and blocks further requests until it finishes.
+2. The server loads the target room (cache or DB, deduplicated across concurrent loads) and checks capacity. If the room is full, the user stays where they are.
+3. The server leaves the old room (despawns the player and optionally flushes metadata), spawns the user behind a [door](../geometry/room_entrance.md) with restored metadata, writes the last room to `DBUser` and notifies the client.
 
-## When the user opens "/" without a room ID in the URL
-1. The standard authentication and socket connection flow runs (see [authentication.md](authentication.md)).
-2. With no room specified, the server picks the target room by priority: the user's single-player room if their mode flag is set; otherwise their last room; otherwise a Hub room chosen by the [load balancer](room_population.md#picking-a-hub).
-3. The server tells the client which room it joined, and the client initializes the game.
+## Player metadata across sessions
+On join, metadata is resolved from: **(1)** an in-memory recent-disconnect buffer, **(2)** `DBUser`, **(3)** empty.
 
-## When the user opens "/:roomID" with a room ID in the URL
-1. The standard authentication and socket connection flow runs with the URL-specified room ID.
-2. The server joins the user to that room, falling back to a Hub room if the room doesn't exist or has reached its player cap.
-3. The server tells the client which room it joined, and the client initializes the game.
+The buffer is filled synchronously whenever a session ends (disconnect, or eviction by a newer socket), before the asynchronous DB write. It covers:
+- **Close and reopen**: the reconnect reads the buffer if the DB write has not landed yet.
+- **Refresh**: whichever of the new connect and the old disconnect happens first, the buffer bridges them. A new socket evicts the still-registered old one.
+- **Duplicate tab**: the old socket is sent to the duplication error page, and the new tab inherits its metadata.
 
-## When the user closes the page and reopens it
-1. On disconnect, the server snapshots the user's latest player metadata synchronously into an in-memory buffer, then kicks off the asynchronous write to `DBUser`.
-2. On reconnect, the new connection consults the in-memory buffer first; if it is empty, the server falls back to `DBUser`. Either way, the new player object inherits the latest metadata.
+Entries expire after a short TTL.
 
-## When the user refreshes the page
-The new socket may connect before or after the old socket's disconnect fires. Either way, the same in-memory metadata buffer bridges the two sessions: it is populated synchronously when the old session is torn down and consumed when the new session joins.
-- **New socket connects first:** the server proactively evicts the still-registered old socket, and that eviction populates the buffer. The old socket's later disconnect is then a no-op.
-- **Old socket disconnects first:** its disconnect already populated the buffer, so the new connection needs no special handling.
+## Server shutdown and crashes
+- **Crash**: in-memory state is lost. The last DB writes are the recovery point.
+- **Graceful shutdown**: all players' metadata is batch-saved, users are removed from rooms and disconnected. Clients poll the health route and reload when it reports ready. Readiness is judged by **status code**, because nginx answers with a gateway error while the app is down (so the poll must be same-origin). A process that is shutting down also reports not-ready. Polling backs off and never stops.
 
-The last room is already on `DBUser` from when the user originally joined, so the refreshed session lands in the same room without any extra cache.
+## Server upkeep
+- **Stale sockets**: a periodic check cleans up sockets whose disconnect never fired, after a grace period. The same loop evicts expired buffer entries.
+- **Heartbeat**: aggressive ping and timeout settings detect dead connections quickly.
+- **Room auto-save**: dirty rooms are saved in rate-limited batches. When the last user leaves, the room is saved and then unloaded, after re-checking that it is still empty.
+- **Signal batching**: signals queue per type per connection and flush on a fixed interval. Some types have a minimum send interval (e.g. room changes and commands). The server rejects signals that arrive too early, and the client retries a few times.
 
-## When the user duplicates the current browser tab
-The server detects that the same user is already connected, captures the player metadata from the existing player object, disconnects the old socket (redirecting it to an error page), and proceeds with the new connection. The new tab joins the same room and rebuilds the player object from the captured metadata.
-
-## When the server crashes unexpectedly
-All in-memory state (including the metadata buffer) is lost, and clients attempt to reconnect automatically. The last successful writes of player metadata and last room to `DBUser` are the recovery point; anything still only in memory is gone.
-
-## When the server undergoes a graceful shutdown
-The server batches a save of every connected user's player metadata, then routes each user out of their room (no further DB write needed) and disconnects them. Clients detect the server-initiated disconnect, wait for the server to come back, then reload and read their state from `DBUser`.
-
-Waiting is the delicate part, because the reverse proxy in front of the app stays up while the app process behind it does not, and answers on its behalf with a gateway error. A response therefore proves only that the host is reachable, not that the app is back, so clients decide readiness from the *status* of the health route rather than from the mere arrival of a reply. This also requires the poll to be same-origin, since a cross-origin response carries no readable status.
-
-The health route reports "not ready" for a process that is on its way out, as well as for one that is not yet listening. Both must count as unavailable: a client that reloaded into the outgoing process would only be disconnected again moments later. Clients keep polling (at a widening interval) for as long as the page is open, so the session recovers whenever the server does return.
-
-## What a user may do in a room
-Nothing about this is stored per session, per room, or per pair of the two: `RoomValidationUtil` is asked, and it answers from the person and the room alone — he owns this room, or it is a hub, or it is his own single-player room. So there is nothing to establish on the way in, nothing to keep in step while he is there, and nothing to re-establish after a reconnect.
-
-## Player Metadata Restoration
-When a user joins a room, the server resolves their player metadata by priority:
-1. **The in-memory disconnect buffer** — bridges the window where the previous session's `DBUser` write has not yet landed.
-2. **`DBUser`** — the persistent fallback.
-3. **Empty** — a brand-new user with no history.
-
-## In-Memory Buffers (server-only)
-- **Recent-disconnect metadata buffer** — keyed by user. Populated synchronously at disconnect and consumed on the matching reconnect, then swept after a short time-to-live. It closes the race window where the disconnect's `DBUser` write has not yet landed when the new socket reads `DBUser`.
-
-## Stale Socket Detection & Cleanup
-A periodic check detects sockets that are no longer connected but whose disconnect handler never fired (e.g. an abrupt browser crash). Such sockets are cleaned up after a short grace period — removing the user from their room and discarding their context. The same loop evicts expired entries from the disconnect-metadata buffer.
-
-## Socket Heartbeat
-The server uses aggressive heartbeat timing, pinging clients frequently and disconnecting any socket that fails to respond within a short timeout, so dead connections are detected quickly.
-
-## Room Load Deduplication
-When multiple users request the same room concurrently, the server tracks the in-flight load and has all requests await the same result, so the room is loaded from the database only once.
-
-## Periodic Room Auto-Saving
-A background cycle saves rooms that are marked dirty, rate-limited so that a busy room is not written too often, and processed in batches to avoid overwhelming the database. When the last user leaves a room, the server saves it immediately and then unloads it (re-checking that it is still empty first, in case someone joined during the save).
-
-## Signal Batching & Throttling
-Signals are not sent one at a time. They accumulate per signal type on each connection and are flushed together on a fixed interval. Each signal type has a minimum send interval that throttles how often it may be sent; signals tied to expensive operations (such as room changes and user commands) are throttled more aggressively, while most are not throttled at all. The server rejects signals that arrive too soon, and the client retries a few times before giving up.
-
-## User Commands
-The server supports an extensible command system: the client sends a command string, which the server parses and dispatches to the matching handler. For example, the **finish-tutorial** command verifies the user is in the tutorial, then clears their single-player mode and persists it (see [single_player_mode.md](single_player_mode.md)); the **add-FTUE-element** command records that the user has been through one of the features the app introduces to first-time users (see [ftue.md](ftue.md)).
-
-Because these commands mutate the user record, each handler updates the in-memory user alongside the write to `DBUser`: the same user object serves the rest of the socket session, so a handler that only wrote to the database would leave the next command reading stale state.
+## User commands
+The client sends a command string, and the server dispatches it to a handler (e.g. finish-tutorial, add-FTUE-element). Handlers that modify the user **update the in-memory user as well as `DBUser`**, because the in-memory object serves the rest of the session.

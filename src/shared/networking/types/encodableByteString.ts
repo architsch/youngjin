@@ -1,9 +1,7 @@
 import BufferState from "./bufferState";
 import EncodableData from "./encodableData";
 
-// UTF-8 is used so multi-byte characters (e.g. Korean, emojis) survive the wire round-trip.
-// The 0x00 terminator stays valid because UTF-8 never emits 0x00 except for U+0000,
-// which we reject explicitly in encode().
+// UTF-8 keeps multi-byte characters intact; the 0x00 terminator is safe because U+0000 is rejected in encode().
 const encoder = new TextEncoder();
 const decoder = new TextDecoder("utf-8");
 

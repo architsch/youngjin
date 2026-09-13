@@ -50,9 +50,7 @@ export default function UIRoot({ env, user }: UIRootProps)
     const [roomRuntimeMemory, setRoomRuntimeMemory] = useState<RoomRuntimeMemory>();
     const [inEditMode, setInEditMode] = useState<boolean>(false);
     const [forceHideChat, setForceHideChat] = useState<boolean>(false);
-    // Whether the room's own settings are open (see CustomizeRoomPanel). Held here rather than by
-    // the panel or the button that opens it, because both of those need it: the button in the top
-    // bar is lit while the panel is up, and the panel takes the bottom edge from what else lives there.
+    // Lifted here because both the top-bar button (lit state) and the bottom UI (stands down) need it.
     const [roomSettingsOpen, setRoomSettingsOpen] = useState<boolean>(false);
 
     useEffect(() => {
@@ -77,10 +75,7 @@ export default function UIRoot({ env, user }: UIRootProps)
         });
         gameModeObservable.addListener("ui_root", (mode: GameMode) => {
             setInEditMode(mode == "edit");
-            // Edit mode opens on the user's own character, and the panel that selection brings out
-            // lives along the same bottom edge the room's settings hold while they are open. So
-            // entering the mode puts the settings away, rather than leaving the character's panel
-            // standing down behind them with nothing on screen to say why.
+            // Entering edit mode closes room settings, since the character panel needs the same edge.
             if (mode == "edit")
                 setRoomSettingsOpen(false);
         });
@@ -98,60 +93,43 @@ export default function UIRoot({ env, user }: UIRootProps)
         };
     }, []);
 
-    // The game page carries a loading indicator of its own, which is what holds the screen while
-    // the bundle this code arrived in is still being fetched and parsed. It is given up here, once
-    // this tree has an indicator of its own on screen to replace it. An effect is what makes that
-    // ordering true: it runs only after the first render has been committed to the DOM, so the two
-    // indicators — drawn to look alike precisely for this moment — swap places invisibly. Doing it
-    // any earlier would take the page's indicator away and leave nothing behind in its place.
+    // Removes the page's own boot loading indicator after the first commit, when this tree's
+    // look-alike indicator is on screen, so the swap is invisible.
     useEffect(() => {
         document.getElementById("bootLoadingIndicator")?.remove();
     }, []);
 
-    // Leaving the app, whether the user asked for it outright or by going back with nothing left on
-    // screen to close. The site's own home page is where they are taken: a tab has no reliable way
-    // back to wherever its user came from, and cannot close itself unless a script opened it, so a
-    // destination is the one ending that always works — and this one is the page that explains what
-    // they have just been in.
+    // Exits to the site's home page (a tab can't reliably go back or close itself).
     const exitApp = () => {
         window.location.href = env.mode == "dev"
             ? `${env.static_server_url}/index.html#other-works`
             : `${env.static_server_url}#other-works`;
     };
 
-    // Going back, in whatever way the user's device offers, closes the topmost thing that is open —
-    // a popup first, then a panel (see ClosablePanelUtil), then edit mode itself — instead of leaving
-    // the page. With nothing left to close, only a second back gesture gives the page up.
+    // Back gestures close the topmost thing: a popup, then a panel (see ClosablePanelUtil), then edit
+    // mode. With nothing to close, a second back gesture leaves the page.
     useCloseGesture((kind) => {
-        // The Escape key is already answered by whichever input element currently holds the user's
-        // attention: a focused text field gives up focus, an open color palette dismisses itself.
-        // So whatever lies underneath keeps its place until that has been dealt with. Nothing
-        // answers a back gesture that way, which is why only the key is held back here.
+        // Escape is first handled by a focused input (blur, palette close); back gestures aren't.
         if (kind == "escape" && numActiveInputElementsObservable.peek() > 0)
             return;
 
         if (popupStack.length == 0 && !ClosablePanelUtil.hasOpenPanel() && !inEditMode)
         {
-            // Nothing on screen to close, so the gesture keeps the meaning it came with — except
-            // that a back gesture only gives the page up once the user has asked for it twice.
+            // Nothing to close: back leaves only on the second press.
             if (kind == "back")
                 ExitConfirmationUtil.requestExit(exitApp);
             return;
         }
 
-        // Something on screen is taking the gesture, so an exit prompt left standing from an
-        // earlier one no longer holds: leaving takes two gestures of its own, back to back.
+        // A consumed gesture cancels any pending exit prompt.
         ExitConfirmationUtil.cancel();
 
         if (popupStack.length > 0)
             PopupUtil.closePopup();
         else if (ClosablePanelUtil.hasOpenPanel())
             ClosablePanelUtil.closeTopmost();
-        else // Going back out of edit mode leaves the mode itself, not merely the selection standing
-             // in it, which would leave the user in a mode with nothing selected and no sign of how
-             // he got there. Nothing comes of it while a single-player step is holding the user in
-             // that mode, and the gesture is spent on it all the same rather than reaching the page
-             // underneath: the mode is still what is on screen.
+        else // Leaves edit mode itself (not just the selection). If a step locks the mode, the
+             // gesture is still consumed.
             GameModeUtil.exitEditMode();
     });
 
@@ -159,16 +137,13 @@ export default function UIRoot({ env, user }: UIRootProps)
     const isMultiplayerRoomLoaded = isRoomLoaded &&
         roomRuntimeMemory.room.roomType != RoomTypeEnumMap.SinglePlayer;
 
-    // The room's settings take the bottom edge while they are open, so what normally lives there —
-    // the chat, and the tools for whatever is selected — stands down meanwhile rather than being
-    // drawn over, and comes back once they are put away: the tools onto whatever is selected by
-    // then (see ObjectSelectionMenu and VoxelQuadSelectionMenu, which each read it on the way in).
+    // Room settings take the bottom edge, so chat and selection tools stand down meanwhile (the tools
+    // re-read the selection when they return; see ObjectSelectionMenu, VoxelQuadSelectionMenu).
     const chatHidden = forceHideChat || !isRoomLoaded || inEditMode || roomSettingsOpen;
     const hideSkipTutorialButton = !chatHidden || !isRoomLoaded || inEditMode;
 
     return <>
-        {/* The debugger is drawn after the top bar, which keeps it on top of it: it is a
-            development tool, and it is wanted most in the states that cover everything else. */}
+        {/* DebugStats after TopBarMenu, so the debugger draws on top. */}
         {isRoomLoaded && <TopBarMenu
             user={user}
             room={roomRuntimeMemory.room}
@@ -178,8 +153,7 @@ export default function UIRoot({ env, user }: UIRootProps)
         />}
         {isMultiplayerRoomLoaded && <DebugStats env={env}/>}
         <CameraZoomSlider/>
-        {/* The tools for changing what is selected belong to edit mode alone, as the selection
-            itself does. */}
+        {/* Selection tools are edit-mode only. */}
         <div className="flex flex-col absolute bottom-0 w-full pointer-events-none">
             {!roomSettingsOpen && <ObjectSelectionMenu inEditMode={inEditMode}/>}
             {inEditMode && !roomSettingsOpen && <VoxelQuadSelectionMenu/>}

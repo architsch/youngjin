@@ -1,37 +1,22 @@
 /**
- * Scenario tests: acquisition analytics (funnel and retention by traffic source)
- *
- * The server records where each visitor came from and how far they got, so that two traffic
- * sources can be compared by what their people went on to do. See docs/devOps/analytics.md.
- *
- * Covers:
- * - The ref tag as untrusted input: what survives sanitising, what is capped, and what falls back
- *   to the direct cohort.
- * - Cohorts keyed by the day the visitor arrived, in UTC.
- * - Milestones counted once per account: the first call records, later calls do nothing.
- * - Counts credited to the arrival cohort rather than to the day the milestone happened, which is
- *   what makes a retention figure belong to the source that earned it.
- * - Return visits recorded as a first return, then as a repeat.
- * - The user migration defaulting the new fields rather than assigning them, so a funnel written
- *   outside the migration path is not erased by it.
+ * Scenario tests: acquisition analytics (see @docs/devOps/analytics.md).
+ * Covers: ref tag sanitising, capping and direct fallback; UTC arrival-day cohorts; once-per-account
+ * milestones credited to the arrival cohort; first vs repeat returns; the user migration defaulting
+ * (not assigning) the new fields.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 // ─── A stand-in Firestore ────────────────────────────────────────────────
-// Documents are plain objects. Only the four operations the analytics module uses are
-// implemented, and every write is recorded so the tests can assert on what was written where.
+// Implements only the operations the analytics module uses, recording every write.
 
 const _docs = vi.hoisted(() => new Map<string, any>());
 const _writes = vi.hoisted(() => [] as Array<{ path: string; op: string; data: any }>);
 const _reads = vi.hoisted(() => [] as string[]);
 
-// Lets one test make a single row write fail, to check what the module does with a claim it has
-// made but not managed to carry through.
+// Makes the next row write fail (a milestone claimed but not carried through).
 const _failNextUpdate = vi.hoisted(() => ({ value: false }));
 
-// A merging write descends into map fields rather than replacing them, which is the behaviour the
-// counters depend on: each milestone writes only its own key under "counts", and the keys already
-// there have to survive. A shallow spread would drop every earlier milestone on each new one.
+// Merging writes descend into maps: each milestone writes only its own key under "counts".
 const mergeLikeFirestore = vi.hoisted(() => (existing: any, incoming: any): any => {
     const isPlainMap = (v: any) => v !== null && typeof v === "object" && !Array.isArray(v)
         && (v.constructor === Object || v.constructor === undefined);
@@ -111,8 +96,7 @@ function seedUser(fields: Record<string, unknown>): string
     return userID;
 }
 
-// Stands in for the live connection. Only the funnel string is touched by the analytics module, so
-// the real SocketUserContext — which needs a socket to construct — is not what these tests want.
+// Stands in for SocketUserContext (which needs a socket); only the funnel string is used.
 function fakeSession(funnel: string): any
 {
     return { funnel };
@@ -197,8 +181,7 @@ describe("milestones are counted once per account", () => {
     });
 
     it("credits the cohort the visitor arrived in, not the day the milestone happened", async () => {
-        // Somebody who arrived weeks ago and only now built something. The count belongs to the
-        // push that brought them, otherwise no source can ever be judged on what it retained.
+        // A late milestone still counts toward the arrival cohort, so sources are judged on retention.
         const userID = seedUser({ funnel: "a", acquisitionSource: "hn", createdAt: Date.UTC(2026, 6, 1) });
 
         await ServerAnalyticsManager.recordMilestone(userID, FunnelMilestoneEnumMap.Built);
@@ -268,16 +251,13 @@ describe("return visits", () => {
         await ServerAnalyticsManager.recordReturnVisit(userID);
         await ServerAnalyticsManager.recordReturnVisit(userID);
 
-        // These still cost a read each, and are meant to: a return visit is recognised at most once
-        // a day per account, on a request path that has no connection to answer from.
+        // Still one read each: a return is recognised at most once a day, with no session to consult.
         expect(_writes.length).toBe(writesAfterRepeat);
     });
 });
 
 describe("a live session answers the repeat calls", () => {
-    // This is what lets recordMilestone sit on the edit path, where it fires once per block placed.
-    // The session carries the milestones already recorded, taken from the row when the socket
-    // authenticated, so only the first edit of a session reaches the database.
+    // The session carries recorded milestones, so only the first edit of a session reaches the DB.
     it("costs no read at all once the session already carries the milestone", async () => {
         const userID = seedUser({ funnel: "a", acquisitionSource: "reddit", createdAt: Date.UTC(2026, 7, 20) });
         const session = fakeSession("a");
@@ -303,9 +283,7 @@ describe("a live session answers the repeat calls", () => {
     });
 
     it("collapses a burst of simultaneous calls into a single count", async () => {
-        // A player placing blocks quickly produces exactly this. Were the milestone claimed only
-        // after the write, every call in the burst would read the row before any of them had
-        // written it, and the cohort would be credited once per block.
+        // A burst of edits: claiming only after the write would credit the cohort once per block.
         const userID = seedUser({ funnel: "a", acquisitionSource: "reddit", createdAt: Date.UTC(2026, 7, 20) });
         const session = fakeSession("a");
 
@@ -331,9 +309,7 @@ describe("a live session answers the repeat calls", () => {
     });
 
     it("trusts the session to say 'already done' but never to say 'not yet'", async () => {
-        // The session's copy is taken when the connection opens, and the HTTP paths record
-        // milestones on the same row while it is open. So the row decides, and a session that has
-        // fallen behind costs one wasted read rather than a second count.
+        // The row decides; a stale session costs one wasted read, not a second count.
         const userID = seedUser({ funnel: "ab", acquisitionSource: "reddit", createdAt: Date.UTC(2026, 7, 20) });
         const staleSession = fakeSession("a");
 
@@ -345,10 +321,8 @@ describe("a live session answers the repeat calls", () => {
 });
 
 describe("chatting and building are separate milestones", () => {
-    // Chat reaches the server as a change to the speaker's own player object's metadata, so it
-    // arrives on the same signal as an edit and differs only by its key. If the two were ever
-    // conflated again, every visitor who said hello would land in the "built something" figure,
-    // which is the column the funnel is actually read for.
+    // Chat arrives on the same signal as an edit (differing only by key); conflating them would inflate
+    // the "built something" figure.
     it("gives chat and building different codes", () => {
         expect(FunnelMilestoneEnumMap.Chatted).not.toBe(FunnelMilestoneEnumMap.Built);
     });
@@ -383,8 +357,7 @@ describe("the user migration that adds these fields", () => {
     });
 
     it("preserves a funnel already written outside the migration path", async () => {
-        // Analytics writes "funnel" straight to the document, so a row can carry one before it is
-        // ever migrated. An unconditional assignment here would erase the measurement.
+        // Analytics may write "funnel" before migration; assigning it here would erase it.
         const migrated = await DBUserVersionMigration[4]({ funnel: "abr", acquisitionSource: "reddit" });
         expect(migrated.funnel).toBe("abr");
         expect(migrated.acquisitionSource).toBe("reddit");

@@ -25,8 +25,7 @@ export default class RandomNumberGenerator
         return items[this.randomInt(0, items.length)];
     }
 
-    // Rearranges the items into a random order, in place, and hands the same array back. Callers
-    // that must not disturb the array they were given pass a copy of it.
+    // In-place shuffle; returns the same array.
     shuffle<T>(items: T[]): T[]
     {
         for (let i = items.length - 1; i > 0; --i)

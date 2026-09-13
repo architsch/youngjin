@@ -1,14 +1,4 @@
-/**
- * Game state helpers for E2E tests.
- *
- * Provides reusable utilities for waiting on game initialization,
- * querying in-game state, and performing common gameplay actions
- * via Playwright page.evaluate().
- *
- * These helpers abstract over the client-side globals exposed by the
- * game bundle (e.g. window.__socket_io_instance) so that individual
- * specs stay concise and don't duplicate low-level evaluate calls.
- */
+/** E2E helpers for waiting on game state and querying it via page.evaluate (wrapping client globals). */
 import { Page, expect } from "@playwright/test";
 import { LOADING_INDICATOR_TEXT, SELECTORS, TIMEOUTS } from "./constants";
 
@@ -39,14 +29,7 @@ export async function waitForGameReady(page: Page): Promise<void>
     page.off("console", logHandler);
 }
 
-/**
- * Wait until the client has actually been placed in a room.
- *
- * The full-screen loading indicator is put up when the room change starts and only comes
- * down once the server's roomChangedSignal has been applied, so its disappearance is the
- * client-visible proof that the user ended up in a room (rather than being left waiting
- * for a room change that never completes).
- */
+/** Waits until the client is in a room: the loading indicator clears only after roomChangedSignal is applied. */
 export async function waitForRoomLoaded(page: Page): Promise<void>
 {
     await expect(page.locator(SELECTORS.UI_ROOT).getByText(LOADING_INDICATOR_TEXT, { exact: true }))
@@ -83,13 +66,7 @@ export async function getGameEnv(page: Page): Promise<Record<string, any> | null
 // ─── Console Log Capture ────────────────────────────────────────────────
 
 /**
- * Creates a console log capture context. Returns an object with:
- * - `logs`: array of captured log strings
- * - `errors`: array of captured error strings
- * - `stop()`: removes the listener
- * - `find(substring)`: finds the first log containing the substring
- * - `findAll(substring)`: finds all logs containing the substring
- * - `waitFor(substring, timeout)`: waits for a log containing the substring
+ * Console capture: `logs`, `errors`, `stop()`, `find(sub)`, `findAll(sub)`, `waitFor(sub, timeout)`.
  */
 export function captureConsole(page: Page)
 {
@@ -113,11 +90,7 @@ export function captureConsole(page: Page)
         find: (sub: string) => logs.find(l => l.includes(sub)),
         findAll: (sub: string) => logs.filter(l => l.includes(sub)),
         waitFor: async (sub: string, timeout: number = TIMEOUTS.SOCKET_CONNECT): Promise<void> => {
-            // The target message may already have been emitted before waitFor was
-            // called — e.g. during a page.goto({ waitUntil: "networkidle" }) that
-            // settles only after the socket connects. The handler above buffers every
-            // console message since capture start, so check that buffer first and fall
-            // back to waiting for a future event only if it hasn't appeared yet.
+            // Check the buffer first: the message may have been logged before waitFor was called.
             if (logs.some(l => l.includes(sub)) || errors.some(e => e.includes(sub)))
                 return;
             await page.waitForEvent("console", {

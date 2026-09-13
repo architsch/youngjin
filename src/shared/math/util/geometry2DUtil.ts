@@ -11,10 +11,7 @@ const Geometry2DUtil =
         return Math.abs(a.center.x - b.center.x) < (a.halfSize.x + b.halfSize.x) &&
             Math.abs(a.center.y - b.center.y) < (a.halfSize.y + b.halfSize.y);
     },
-    // Returns the AABB-casting ray's scale factor which, when applied to the ray,
-    // pushes the source AABB to end up at the point of collision
-    // between itself and the target AABB.
-    // (Returns 1 when the source AABB doesn't hit the target AABB)
+    // Ray scale factor that moves the source AABB to its first contact with the target (1 = no hit).
     castAABBAgainstAABB: (source: AABB2, destination: Vec2, target: AABB2): RaycastHitResult2 =>
     {
         const x1 = target.center.x - target.halfSize.x - source.halfSize.x;
@@ -64,10 +61,7 @@ const Geometry2DUtil =
         }
         return { hitRayScale: minHitRayScale, hitLine };
     },
-    // Returns the ray's scale factor which, when applied to the ray,
-    // makes the ray end up at the point of intersection
-    // between itself and the target line segment.
-    // (Returns 1 when the ray doesn't hit the line)
+    // Ray scale factor at the intersection with the line segment (1 = no hit).
     raycastToLine: (ray: LineSegment2, line: LineSegment2, hitLineFromRightSideOnly: boolean = false): number =>
     {
         const rayFromTo = Vector2DUtil.subtract(ray.end, ray.start);

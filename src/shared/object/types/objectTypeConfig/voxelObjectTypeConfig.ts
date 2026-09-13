@@ -5,9 +5,8 @@ import ObjectTypeConfig from "./objectTypeConfig";
 import SetObjectMetadataSignal from "../../types/setObjectMetadataSignal";
 import SetObjectTransformSignal from "../../types/setObjectTransformSignal";
 
-// This object represents each voxel in the room's voxelGrid. Each voxel consists of blocks, and each block consists of quads (aka "voxelQuads").
-// No maxCountPerRoom: the voxel grid is one object however large the room is, and nobody may add
-// another (see canUserAddObject below), so there is no collection of them for a room to cap.
+// The room's voxel grid as a single object (voxels -> blocks -> quads). No per-room cap: there is only
+// one, and nobody may add another.
 const VoxelObjectTypeConfig =
 {
     objectType: "Voxel",

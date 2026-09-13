@@ -10,14 +10,9 @@ const GROWTH_ROUNDS = 4;
 const PROP_CHANCE_PER_CELL = 0.05;
 const MAX_PROP_STACK_HEIGHT = 2;
 
-// A Regular room is more of a personal space than a shared playground. It therefore starts as a
-// relatively small, cosy home-like environment that is only one storey tall. The rest of the room
-// is left as fully occupied blocks, which the user is then able to manually remove block-by-block
-// if he wants - just like how mining works in Minecraft.
-//
-// It is also handed over plain, in one texture throughout, since it is the owner's room to decorate
-// rather than the game's. That is settled by the palette selection it is generated with rather than
-// by anything here (see @src/shared/room/generation/util/roomGenerationUtil.ts).
+// A personal space: a small single-storey home carved out of solid blocks, which the owner can mine
+// out further. Finished plainly via its palette selection (see
+// @src/shared/room/generation/util/roomGenerationUtil.ts).
 export default class RegularRoomBuilder extends MultiplayerRoomBuilder
 {
     override run(): RoomBuilder

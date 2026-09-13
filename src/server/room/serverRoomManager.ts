@@ -113,8 +113,7 @@ const ServerRoomManager =
             }));
         }
     },
-    // Flushes every connected user's latest player metadata to DBUser in one batched query.
-    // Called by graceful shutdown so that the next-session data is preserved.
+    // Batch-saves every connected user's player metadata (graceful shutdown).
     saveAllUsersPlayerMetadata: async (socketUserContextsByUserID: {[userID: string]: SocketUserContext}) =>
     {
         const updates: Array<{userID: string; playerMetadata: {[key: string]: string}}> = [];
@@ -127,9 +126,7 @@ const ServerRoomManager =
         }
         await DBUserUtil.saveMultipleUsersPlayerMetadata(updates);
     },
-    // "destinationDoorLabel" names the door of the destination room the user means to arrive behind,
-    // if he came through a door that pointed at one. Everything else — a room picked from a list, a
-    // room the server routed him to — names none, and lands wherever the room's own way in is.
+    // destinationDoorLabel: the arrival door, when travelling through a door that names one.
     changeUserRoom: async (socketUserContext: SocketUserContext, roomID: string | undefined, prevRoomShouldExist: boolean,
         savePlayerMetadata: boolean, allowFallback: boolean,
         destinationDoorLabel: string = ""): Promise<UserRoomChangeResult> =>
@@ -143,9 +140,7 @@ const ServerRoomManager =
             return {type: "success", newRoomID: undefined};
         }
 
-        // An empty room ID means a destination was wanted but none could be found (i.e. every
-        // room that could have taken this user is full). That is a refusal, not a request to
-        // leave the user roomless, so it must not be mistaken for the case above.
+        // Empty ID = no destination could take the user (a refusal, not "leave the room").
         if (roomID.length == 0)
             return {type: "rejected", reason: RoomChangeRejectionReasonEnumMap.RoomUnavailable};
 
@@ -159,19 +154,11 @@ const ServerRoomManager =
             return {type: "success", newRoomID: roomID};
         }
 
-        // Everything from here down to the point where the user actually leaves their current
-        // room is about vetting the destination. Doing it in that order is what makes a refusal
-        // harmless: a user turned away from a full room stays exactly where they were, instead
-        // of being stranded in no room at all.
-        //
-        // "allowFallback" separates the two kinds of destination a user can end up with: one
-        // they picked by name (fallback NOT allowed — if it can't be entered, they are simply
-        // turned away) and one the server routed them to, such as the room from their last
-        // session or a room ID carried in the URL (fallback allowed — an unusable destination
-        // sends them to a hub instead of leaving them roomless).
+        // Vet the destination before leaving the current room, so a refusal leaves the user in place.
+        // allowFallback: false for user-picked destinations (refuse), true for server-routed ones
+        // (last room, URL; fall back to a hub).
 
-        // Check in-memory multiplayer rooms first to avoid a Firestore query.
-        // If the in-memory instance is unavailable, load it from the DB.
+        // In-memory rooms first; otherwise load from the DB.
         let roomRuntimeMemory = roomRuntimeMemories[roomID];
         if (!roomRuntimeMemory)
         {
@@ -187,11 +174,7 @@ const ServerRoomManager =
             roomRuntimeMemory = mem;
         }
 
-        // Every room holds a limited number of players, both to keep the client's per-room
-        // instanced-mesh pool from running dry and to stop one room from degrading everyone's
-        // performance.
-        // (A user re-entering the room they are already in is not blocked by their own slot,
-        // since they release it on the way in.)
+        // Player cap (mesh pools and performance). Re-entering one's own room isn't blocked by one's own slot.
         if (RoomPickerUtil.isRoomAlmostFull(roomRuntimeMemory) &&
             roomRuntimeMemory.participantUserNameByID[user.id] == undefined)
         {
@@ -204,14 +187,8 @@ const ServerRoomManager =
         // The destination has been vetted, so the user can now give up their current room.
         await leavePreviousRoom(socketUserContext, prevRoomShouldExist, savePlayerMetadata);
 
-        // Player metadata is per-user (stored on DBUser), so it follows the user
-        // across rooms. Resolution order:
-        //   1. The recentDisconnectMetadata buffer on ServerUserManager — populated
-        //      synchronously by the previous session's removeUserFromRoom, so it
-        //      bridges the gap where the disconnect's DBUser write has not yet landed.
-        //   2. DBUser.playerMetadata — the persistent fallback (the buffer was either
-        //      never populated, or already evicted by TTL).
-        //   3. Empty object — brand-new user with no chat history.
+        // Metadata resolution: (1) the recent-disconnect buffer (bridges an unfinished DB write),
+        // (2) DBUser.playerMetadata, (3) empty.
         let playerMetadata: {[key: string]: string} = {};
         const consumed = ServerUserManager.consumeRecentDisconnectMetadata(user.id);
         if (consumed)
@@ -223,18 +200,10 @@ const ServerRoomManager =
                 playerMetadata = dbUser.playerMetadata;
         }
 
-        // Theoretically, it is possible for other users to have joined the room
-        // during the preceding DBUser lookup process (which is very brief but nevertheless
-        // asynchronous), thereby resulting in the room becoming full AFTER it was decided
-        // that it was not full yet and thus safe for the user to enter.
-        // However, since our initial check was based on the
-        // "Almost Full" (instead of just "Full") condition which includes a
-        // margin to take account of this potential race condition, we are probably safe here.
+        // Joins during the async lookup above could fill the room; the "almost full" margin covers this.
 
-        // Add the user to the multiplayer room.
-        // (In case of a singleplayer room, the user's player object will be added/handled directly by the client.)
-        // The room the user actually lands in is whichever instance was live at registration time,
-        // which is not necessarily the one resolved above (see addUserToRoom).
+        // Multiplayer only (single-player players are client-side). The joined instance is whichever
+        // is live at registration (see addUserToRoom).
         socketUserContext.isInSinglePlayerRoom = false;
         const joinedRoomRuntimeMemory = await ServerUserManager.addUserToRoom(socketUserContext, roomRuntimeMemory, user.id,
             SpawnHotspotUtil.pickSpawnTransform(roomRuntimeMemory.room, destinationDoorLabel),
@@ -243,30 +212,19 @@ const ServerRoomManager =
         if (!joinedRoomRuntimeMemory)
             return {type: "error"};
 
-        // Persist the user's latest room to DBUser, so that the user will come back to the same room when reconnected.
-        // (A singleplayer room is not meant to be revisited based on the user's lastRoomID. It will be visited based on the user's singlePlayerMode.)
+        // Persist the last room (single-player rooms are re-entered via singlePlayerMode instead).
         DBUserUtil.setLastRoomID(user.id, roomID).catch(err =>
             console.error(`ServerRoomManager.changeUserRoom :: setLastRoomID failed for userID = ${user.id}: ${err}`)
         );
 
-        // Wrap the room memory in a RoomChangedSignal and send it to the joining user.
-        // The signal goes straight to the user's own socket context rather than being routed through
-        // the room's SocketRoomContext: a single-player user is intentionally never registered in the
-        // room context (see above), so an indirect unicast would fail to find them. Since this is a
-        // pure unicast to the joining user, the direct path is equivalent for multiplayer rooms too.
+        // Sent directly to the user's socket context, since single-player users aren't registered in
+        // the room context.
         const roomChangedSignal = new RoomChangedSignal(joinedRoomRuntimeMemory);
         socketUserContext.addPendingSignalToUser("roomChangedSignal", roomChangedSignal);
         return {type: "success", newRoomID: roomID};
     },
-    // What a request carries is not always a room. Two of the things it can say name a decision
-    // rather than a destination, and both are the picker's to make: nothing at all ("put me
-    // wherever I should be") and the reserved hub keyword ("put me in a hub"). A door carries the
-    // keyword for the same reason a URL does — which hub anybody should be let into depends on how
-    // busy each of them is at the moment he asks, so a door that named one outright would go on
-    // sending people to a hub that has since filled up or been taken down.
-    //
-    // A hub chosen for the user is also a hub he may be moved on from: he named no room, so being
-    // handed a different one beats being turned away should the chosen one fill up in between.
+    // An empty room ID or the hub keyword is resolved by the picker (hub load changes over time, so doors
+    // name the keyword rather than a hub). Picker-chosen hubs allow fallback.
     onRequestRoomChangeSignalReceived: async (socketUserContext: SocketUserContext, params: RequestRoomChangeSignal): Promise<void> =>
     {
         let roomID = params.roomID;
@@ -282,9 +240,7 @@ const ServerRoomManager =
             roomID, true, true, allowFallback, params.destinationDoorLabel);
         ServerRoomManager.notifyRoomChangeRejection(socketUserContext, result);
     },
-    // Tells the user that the room change they were waiting for is not going to happen, so
-    // that their client can stop blocking on it and show the reason instead. Does nothing for
-    // a successful room change, which the user learns about through the RoomChangedSignal.
+    // Releases the client's loading block with a reason. No-op on success (RoomChangedSignal covers that).
     notifyRoomChangeRejection: (socketUserContext: SocketUserContext, result: UserRoomChangeResult): void =>
     {
         if (result.type == "success")
@@ -295,10 +251,8 @@ const ServerRoomManager =
         socketUserContext.addPendingSignalToUser("roomChangeRejectedSignal",
             new RoomChangeRejectedSignal(reason));
     },
-    // Re-lights a room. What arrives is canonicalized before anything is done with it — decoding is
-    // total and encoding clamps, so a round trip through RoomPrefsUtil is both the validation and
-    // the whole of it, and what gets stored and broadcast is a string this version of the game can
-    // read back rather than whatever the client happened to send.
+    // Canonicalizes prefs via a RoomPrefsUtil round trip (decode is total, encode clamps) before
+    // storing and broadcasting.
     changeRoomPrefs: async (room: Room, newPrefs: string): Promise<boolean> =>
     {
         const canonicalPrefs = RoomPrefsUtil.encode(RoomPrefsUtil.decode(newPrefs));
@@ -344,9 +298,7 @@ const ServerRoomManager =
     },
 }
 
-// Sends a user whose intended destination turned out to be unusable to a hub that still has
-// room for them, so they are never left without a room to be in. The rejection reason is what
-// the user is told when even that is impossible (i.e. no hub can take another player).
+// Routes a user whose destination was unusable to a hub with space; the reason is reported if none can.
 async function fallBackToHub(socketUserContext: SocketUserContext, prevRoomShouldExist: boolean,
     savePlayerMetadata: boolean, rejectionReason: RoomChangeRejectionReason): Promise<UserRoomChangeResult>
 {
@@ -358,9 +310,7 @@ async function fallBackToHub(socketUserContext: SocketUserContext, prevRoomShoul
         prevRoomShouldExist, savePlayerMetadata, false);
 }
 
-// Removes the user from the room they are currently in (if any).
-// A single-player environment is skipped: a user never gets added to one, so they are never
-// meant to be removed from one either.
+// Removes the user from their current room (never from single-player rooms, which they were never added to).
 async function leavePreviousRoom(socketUserContext: SocketUserContext,
     prevRoomShouldExist: boolean, savePlayerMetadata: boolean): Promise<void>
 {
@@ -369,15 +319,11 @@ async function leavePreviousRoom(socketUserContext: SocketUserContext,
     await ServerUserManager.removeUserFromRoom(socketUserContext, prevRoomShouldExist, savePlayerMetadata);
 }
 
-// Builds a transient, content-less RoomRuntimeMemory for a single-player room. It is intentionally
-// NOT stored in roomRuntimeMemories and gets no server-side PhysicsManager world: the client owns
-// and regenerates the room's voxels/objects locally, so the server only needs an identity (the
-// id/name both equal the single-player mode). Content is omitted on the wire too (see Room.encode).
+// A transient, content-less RoomRuntimeMemory for a single-player room: not stored, no physics world;
+// id and name are the mode. The client generates the content (see Room.encode).
 function buildSinglePlayerRoomRuntimeMemory(mode: string): RoomRuntimeMemory
 {
-    // The texture pack is left empty along with the rest of the content. It is part of what the
-    // room is built out of rather than part of its identity, so the client settles it as it builds
-    // the room, before anything reads it — a value stamped here would only ever be overwritten.
+    // Texture pack left empty; the client sets it while building the room.
     const room = new Room(mode /*id*/, mode /*roomName*/, RoomTypeEnumMap.SinglePlayer,
         "", "", "" /*texturePackPath*/, RoomPrefsUtil.getDefaultPrefsString(),
         new VoxelGrid([], new VoxelQuadsRuntimeMemory()),
@@ -399,14 +345,8 @@ async function _loadRoom(roomID: string): Promise<RoomRuntimeMemory | null>
     return roomRuntimeMemory;
 }
 
-// periodic multiplayer room saving
-//
-// Unref'd, so that this timer is never itself a reason for the process to stay alive: there are no
-// rooms to save in a process that has nothing else left to do, and this module is reached from the
-// server's entry point in every mode — including the one-shot static-site generation run, which
-// would otherwise never end. While the server is actually serving, the listening socket keeps the
-// loop alive and this timer fires exactly as before; shutdown saves the rooms explicitly rather
-// than relying on a final tick here.
+// Periodic multiplayer room saving. Unref'd so it never keeps the process alive (e.g. the SSG run);
+// shutdown saves explicitly.
 let savingInProgress = false;
 setInterval(async () => {
     if (savingInProgress)

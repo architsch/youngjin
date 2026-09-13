@@ -17,27 +17,20 @@ import SinglePlayerModeClientConfig from "./singlePlayerModeClientConfig";
 
 let cachedSteps: {[stepName: string]: SinglePlayerStep} | undefined;
 
-// How heavy a line the game-mode switch's track is outlined with. The track is a small capsule,
-// which the heavy line framing the tutorial's buttons would swallow.
+// Thin outline for the small mode-switch capsule.
 const MODE_SWITCH_OUTLINE_THICKNESS_PX = 2;
 
 // How far the user has to swing the camera around before he is taken to have discovered that he can.
 const TUTORIAL_CAMERA_TURN_DEG = 20;
 
-// The view the camera is put in while the user is asked to pick out a patch of floor: high enough
-// above it to look down on the ground rather than along it, and turned off the room's own axes so
-// that the patch reads as a square of floor instead of as a line. Far enough back for the outline
-// drawn around it to sit among its surroundings, which is what the user has to pick it out from.
+// Camera view for the floor-picking step: looking down at an angle so the patch reads as a square,
+// far enough back to show its surroundings.
 const FLOOR_VIEW_AZIMUTH_DEG = 30;
 const FLOOR_VIEW_POLAR_DEG = 45;
 const FLOOR_VIEW_ZOOM = 0.5;
 
-// What the tutorial's steps work out for each other while they are being played (see the
-// "set_variable" action).
-//
-// The view the camera settled into when edit mode opened, which the step about turning the camera
-// measures the user's own turning against. Noted down rather than arranged, so that the step asks
-// the user to move from where he already is instead of jolting him somewhere else first.
+// Step variables (see "set_variable"). The edit-mode view is recorded (not imposed) so the
+// camera-turning step measures from where the user already is.
 const EDIT_VIEW_AZIMUTH_DEG_VARIABLE = "editViewAzimuthDeg";
 const EDIT_VIEW_POLAR_DEG_VARIABLE = "editViewPolarDeg";
 // The patch of floor the user is asked to select (see pickFloorHotspot).
@@ -49,9 +42,7 @@ const FLOOR_HOTSPOT_MAX_DIST = 3;
 
 const cameraPosTemp = new THREE.Vector3();
 
-// What the tutorial does to the client while it is being played: the steps the user is walked
-// through, and the teardown that follows them. The room those steps are played in is described
-// elsewhere, by the shared TutorialSinglePlayerModeConfig, since the server generates that room too.
+// Tutorial steps and teardown. The room is in the shared TutorialSinglePlayerModeConfig.
 const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
 {
     loadSteps: () =>
@@ -93,8 +84,7 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                     // The switch sits in the top-right corner, with no room above it for an arrow.
                     {type: "ui_arrow", targetElementId: "gameModeToggleSwitch", arrowBias: "center",
                         arrowSide: "below"},
-                    // Outlined around the track alone, which is what reads as the switch; the labels
-                    // on either side of it only name its two settings.
+                    // Outline only the track, not its labels.
                     {type: "ui_outline_capsule", targetElementId: "gameModeToggleSwitchTrack",
                         thicknessPx: () => MODE_SWITCH_OUTLINE_THICKNESS_PX},
                     {type: "feature_flag", flag: FeatureFlag.DisableGameModeTransition, enable: false},
@@ -107,24 +97,18 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                 }],
                 actionsOnEnd: [
                     {type: "clear_all_ui_and_gizmo"},
-                    // The user is now inside the mode, and stays there until the step that teaches
-                    // him the way out of it.
+                    // Locked in edit mode until the step that teaches leaving it.
                     {type: "feature_flag", flag: FeatureFlag.DisableGameModeTransition, enable: true},
-                    // The character stays selected from here until the user is asked to pick
-                    // something else, so the next few steps have it to talk about.
+                    // Keep the character selected for the next few steps.
                     {type: "feature_flag", flag: FeatureFlag.DisableObjectSelectionChange, enable: true},
                 ],
             },
             "change_camera_angle": {
-                // Long enough for the camera to have settled into the orbit the mode opens in,
-                // since that settled view is the one noted down below.
+                // Wait for the orbit to settle before recording its view.
                 startDelay: 500,
                 actionsOnStart: [
                     {type: "ui_headline", text: () => "This is you.<br>Watch it from different angles!"},
-                    // The view the user is asked to move away from is the one the mode gave him,
-                    // noted down here rather than arranged: a camera that swung somewhere else the
-                    // moment the step began would undo the framing he had just been handed, and
-                    // answer a question he had not asked.
+                    // Record the current view rather than imposing one.
                     {type: "set_variable", name: EDIT_VIEW_AZIMUTH_DEG_VARIABLE,
                         computeValue: () => THREE.MathUtils.radToDeg(
                             orbitCameraAnglesObservable.peek().azimuth)},
@@ -166,23 +150,17 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
             "before_select_floor": {
                 startDelay: 0,
                 actionsOnStart: [
-                    // Which patch of floor to ask for cannot be known until the user is standing
-                    // somewhere (see pickFloorHotspot), so it is settled here, once, and everything
-                    // this step points with reads it back.
+                    // The patch depends on where the user stands (see pickFloorHotspot), so pick it once.
                     {type: "set_variable", name: FLOOR_HOTSPOT_VARIABLE,
                         computeValue: () => pickFloorHotspot(
                             {row: Math.floor(p.hotspots.floor.z), col: Math.floor(p.hotspots.floor.x)})},
-                    // The camera is turned on that patch instead of on the character, which puts it
-                    // in the middle of the view: showing the user the thing he is being asked to
-                    // pick out beats telling him where to look for it. Since it is framed exactly
-                    // as the quad itself would be, picking it hands the camera on without a jolt.
+                    // Show the patch by centring the camera on it; framed like the quad, so selecting
+                    // it doesn't jolt the camera.
                     {type: "orbit_camera_target_override",
                         targetX: () => SinglePlayerManager.getVariable(FLOOR_HOTSPOT_VARIABLE).col+0.5,
                         targetY: () => 0,
                         targetZ: () => SinglePlayerManager.getVariable(FLOOR_HOTSPOT_VARIABLE).row+0.5},
-                    // Whichever way the user had turned the camera by now, a patch of floor seen
-                    // from close to its own level is a sliver, so this step asks for a view of its
-                    // own rather than keeping his.
+                    // Force a top-down-ish view: a floor patch seen near its level is a sliver.
                     {type: "orbit_camera_pose", zoomAmount: () => FLOOR_VIEW_ZOOM,
                         azimuthDeg: () => FLOOR_VIEW_AZIMUTH_DEG,
                         polarDeg: () => FLOOR_VIEW_POLAR_DEG},
@@ -209,11 +187,7 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                     {type: "feature_flag", flag: FeatureFlag.DisableVoxelQuadSelectionChange, enable: false},
                 ],
                 transitionRules: [{
-                    // The patch being pointed at, and no other. Everything the next three steps do
-                    // happens on this one patch — its texture, the block built on it, the floor
-                    // uncovered when that block goes again — so the step waits until the user has
-                    // picked out the patch it is pointing at rather than working with whichever
-                    // one he happened to click.
+                    // Require this exact patch, since the next steps all act on it.
                     requirements: [{type: "voxel_quad_selected", negate: false,
                         row: () => SinglePlayerManager.getVariable(FLOOR_HOTSPOT_VARIABLE).row,
                         col: () => SinglePlayerManager.getVariable(FLOOR_HOTSPOT_VARIABLE).col,
@@ -225,12 +199,8 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                 actionsOnEnd: [
                     {type: "clear_all_ui_and_gizmo"},
                     {type: "clear_orbit_camera_target_override"},
-                    // The patch is now the user's selection, and it stays his selection until the
-                    // block he is about to build on it has been built and taken away again. Each
-                    // of the three steps in between is about this one patch of floor, and a click
-                    // that wandered off to another face of the room would leave the user texturing,
-                    // building on, or removing something the instruction was never about. The steps
-                    // themselves move the selection where they need it (see "select_voxel_quad").
+                    // Lock the selection through the texture/build/remove steps; the steps move it
+                    // themselves (see "select_voxel_quad").
                     {type: "feature_flag", flag: FeatureFlag.DisableVoxelQuadSelectionChange, enable: true},
                 ],
             },
@@ -268,8 +238,7 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                 actionsOnEnd: [
                     {type: "clear_all_ui_and_gizmo"},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockAddition, enable: true},
-                    // Up onto the block the user has just built, which stands on the patch of floor
-                    // he selected and which the next step asks him to remove.
+                    // Select the top of the newly built block, which the next step removes.
                     {type: "select_voxel_quad",
                         row: () => SinglePlayerManager.getVariable(FLOOR_HOTSPOT_VARIABLE).row,
                         col: () => SinglePlayerManager.getVariable(FLOOR_HOTSPOT_VARIABLE).col,
@@ -309,9 +278,7 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                         arrowSide: "below"},
                     {type: "ui_outline_capsule", targetElementId: "gameModeToggleSwitchTrack",
                         thicknessPx: () => MODE_SWITCH_OUTLINE_THICKNESS_PX},
-                    // The way out is opened for this step alone. The selection standing in the mode
-                    // stays pinned throughout: leaving the mode drops it along with the mode, so
-                    // there is no need to hand the room back to the user's clicks to let him go.
+                    // Allow leaving edit mode for this step only (leaving drops the pinned selection anyway).
                     {type: "feature_flag", flag: FeatureFlag.DisableGameModeTransition, enable: false},
                 ],
                 transitionRules: [{
@@ -321,11 +288,8 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                 }],
                 actionsOnEnd: [
                     {type: "clear_all_ui_and_gizmo"},
-                    // Play mode is where the rest of the tutorial takes place, so the user is held
-                    // in it just as he was held in the one he has just left.
+                    // Lock play mode for the rest of the tutorial.
                     {type: "feature_flag", flag: FeatureFlag.DisableGameModeTransition, enable: true},
-                    // Nothing is asked of the room itself again, so the rest of the tutorial goes
-                    // back to leaving the scenery alone.
                     {type: "feature_flag", flag: FeatureFlag.DisableVoxelQuadSelectionChange, enable: true},
                 ],
             },
@@ -340,9 +304,7 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                         colStart: () => p.volumes.wall1.colMin,
                         numRows: () => p.volumes.wall1.rowMax - p.volumes.wall1.rowMin + 1,
                         numCols: () => p.volumes.wall1.colMax - p.volumes.wall1.colMin + 1,
-                        // The wall's own height, which stops at the slab that caps the room: that
-                        // slab is the ceiling the player is standing under, and has to stay where
-                        // it is.
+                        // Stop at the capping slab (the ceiling must stay).
                         collisionLayerMin: () => p.volumes.wall1.collisionLayerMin,
                         collisionLayerMax: () => p.volumes.wall1.collisionLayerMax},
                 ],
@@ -419,8 +381,7 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                 startDelay: 0,
                 actionsOnStart: [
                     {type: "ui_headline", text: () => "Exit through the door."},
-                    // Pointed at from a few cells beyond the door, i.e. out of the room: what the
-                    // arrow is showing the player is the way out rather than the panel itself.
+                    // Aimed past the door, pointing the way out.
                     {type: "gizmo_navigation_arrow",
                         targetX: () => p.hotspots.door.x, targetZ: () => p.hotspots.door.z - 5},
                     {type: "remove_voxel_blocks",
@@ -439,8 +400,7 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                 }],
                 actionsOnEnd: [
                     {type: "clear_all_ui_and_gizmo"},
-                    // Feature-flag teardown is handled centrally by onModeEnd (below), so it
-                    // also runs when the tutorial is skipped rather than exited through the door.
+                    // Flag teardown lives in onModeEnd, so it also runs on skip.
                 ],
             },
         };
@@ -449,8 +409,7 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
     },
     onModeEnd: () =>
     {
-        // When the tutorial ends (completed or skipped), disable every feature flag and give the
-        // camera back to whatever the user selects from here on.
+        // Disable all feature flags and release the camera override.
         const actions: SinglePlayerAction[] = [{type: "clear_orbit_camera_target_override"}];
         for (const flag of Object.values(FeatureFlag))
         {
@@ -461,15 +420,9 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
     },
 };
 
-// Picks the patch of floor the user is asked to select, at the moment he is asked for it.
-//
-// A patch written into the room's layout would sooner or later be the very one the user is standing
-// on, where the outline drawn around it and the arrow hanging over it would be lost inside his own
-// character. So one is looked for afresh, out from his feet toward the camera: ground he is already
-// facing, and which lies between him and the view, so that turning the camera on it leaves him in
-// the picture. The search walks outward and keeps the furthest bare patch it reaches before the
-// floor gives out — a wall, a block standing on it, or the edge of the room — and falls back to the
-// patch in the layout if it finds nothing at all.
+// Picks the floor patch at request time: a fixed patch could be under the player. Walks outward from
+// the player toward the camera and keeps the furthest bare patch before the floor ends; falls back to
+// the layout's patch.
 function pickFloorHotspot(fallback: {row: number, col: number}): {row: number, col: number}
 {
     const room = App.getCurrentRoom();
@@ -501,9 +454,7 @@ function pickFloorHotspot(fallback: {row: number, col: number}): {row: number, c
     return hotspot ?? fallback;
 }
 
-// Whether the given cell is a bare patch of the room's own floor: floor the user can see and click
-// on, with nothing standing on it — so that an outline drawn around it is visible, and the block he
-// is asked to build on it afterwards has somewhere to go.
+// Visible, clickable floor with nothing on it.
 function isBareFloor(voxels: Voxel[], row: number, col: number): boolean
 {
     const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);

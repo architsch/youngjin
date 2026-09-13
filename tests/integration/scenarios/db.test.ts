@@ -1,14 +1,7 @@
 /**
- * Integration tests: the DB query layer, against a real (emulated) Firestore.
- *
- * Every other suite replaces the DB layer with an in-memory mock, which leaves the query runners
- * themselves — the code that decides what Firestore is actually asked to do — untested. A mock
- * cannot stand in here: the defects this suite is built around are all ones only a real Firestore
- * exhibits (what it accepts inside a transaction, how many writes it takes per commit, what it
- * stores when a write is malformed).
- *
- * Requires the Firestore emulator. Without one the whole suite skips itself — see
- * `test:integration:db` for a run that starts one.
+ * Integration tests: the DB query layer against the Firestore emulator, since mocks can't reproduce the
+ * target defects (transaction rules, writes per commit, malformed writes). Skips without an emulator;
+ * see `test:integration:db`.
  */
 import { describe, it, expect, beforeAll, beforeEach, afterAll, afterEach, vi } from "vitest";
 import { FieldValue } from "firebase-admin/firestore";
@@ -43,8 +36,7 @@ if (!emulatorAvailable)
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
-// Rows as the current schema defines them. Tests that are about migration override "version"
-// (and drop/add fields) to describe rows written by an older schema.
+// Current-schema rows; migration tests override "version" and fields.
 function currentUser(overrides: Partial<DBUser> = {}): DBRow
 {
     return {
@@ -89,8 +81,7 @@ function manyRooms(count: number, overrides: Partial<DBRoom> = {}): {[docId: str
 const selectRooms = () => new DBQuery<DBRoom>().select().from(COLLECTION_ROOMS);
 const selectUsers = () => new DBQuery<DBUser>().select().from(COLLECTION_USERS);
 
-// Makes every document write take a noticeable amount of time, so that a test can distinguish a
-// query that waited for its write from one that merely started it. Returns the undo.
+// Slows document writes so a test can tell an awaited write from a started one. Returns the undo.
 async function delayDocumentWrites(delayMs: number): Promise<() => void>
 {
     const db = await EmulatorDB.getDB();
@@ -102,9 +93,7 @@ async function delayDocumentWrites(delayMs: number): Promise<() => void>
     return () => { docRefPrototype.set = originalSet; };
 }
 
-// How many commits a write was split into. The emulator accepts oversized commits that real
-// Firestore would reject, so the split has to be observed directly rather than inferred from
-// whether the write succeeded.
+// Counts commits directly: the emulator accepts oversized commits that real Firestore rejects.
 async function countCommits(operation: () => Promise<void>): Promise<{batches: number, transactions: number}>
 {
     const db = await EmulatorDB.getDB();
@@ -122,8 +111,7 @@ async function countCommits(operation: () => Promise<void>): Promise<{batches: n
 
 describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
 {
-    // Every query narrates itself at the lowest log level, which would bury the suite's output.
-    // Tests that care about what was logged capture it directly, ahead of the threshold.
+    // Silences per-query logging; tests that check logs capture them directly.
     let originalLogLevel: number;
 
     beforeAll(() => {
@@ -185,9 +173,7 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
         });
 
         it("does not store an id field, even when the caller supplies one", async () => {
-            // A caller inserting a row it has been holding will usually still have an "id" on it,
-            // and on this path that id cannot be right anyway — the document has none until the
-            // write below creates it.
+            // An inserted row often still carries a (necessarily wrong) "id".
             const result = await new DBQuery<DBRow>()
                 .insertInto(COLLECTION_ROOMS)
                 .values(currentRoom({ id: "stale-id" } as Partial<DBRoom>))
@@ -283,9 +269,7 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
         });
 
         it("does not match documents that lack the field being filtered on", async () => {
-            // The consequence of a row never reaching the schema version that introduced a field:
-            // Firestore cannot match what isn't stored, so such a row is invisible to the query
-            // regardless of what an in-memory migration would have filled in.
+            // Firestore can't match a field that isn't stored, whatever in-memory migration would fill in.
             const { roomName, ...roomWithoutName } = currentRoom({ roomName: "x" }) as any;
             await EmulatorDB.seed(COLLECTION_ROOMS, { legacy: roomWithoutName });
 
@@ -401,9 +385,7 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
         });
 
         it("has already written a single-match query update by the time it reports success", async () => {
-            // A query matching exactly one outdated document is the branch that rewrites the whole
-            // row. The write is slowed down here so that a caller reading straight afterwards can
-            // tell whether the query really waited for it, rather than racing it and usually winning.
+            // A single outdated match rewrites the whole row; slowed writes show whether the query awaits it.
             await EmulatorDB.seed(COLLECTION_ROOMS, {
                 only: { version: 1, roomType: RoomTypeEnumMap.Hub, ownerUserID: "", ownerUserName: "",
                         texturePackPath: "pack" } as DBRow,
@@ -495,8 +477,7 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
         });
 
         it("does not store the row's id when a migration rewrites the document", async () => {
-            // The rewrite here replaces the document wholesale, exactly as the write-back does,
-            // so it is the other place a stored "id" could appear from.
+            // This rewrite also replaces the whole document, so it's another place a stored "id" could appear.
             await EmulatorDB.seed(COLLECTION_ROOMS, {
                 r1: { version: 1, roomType: RoomTypeEnumMap.Hub, ownerUserID: "", ownerUserName: "",
                       texturePackPath: "pack" } as DBRow,
@@ -788,15 +769,12 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
             expect(result.data[0].ownerUserName).toBe("landlord");
             expect(result.data[0].editors).toBeUndefined();
             expect(result.data[0].roomName).toBe("");
-            // The v5 -> v6 step gives an old room the atmosphere field, and gives it empty — which
-            // is what a room that has never been configured holds, and decodes to exactly how every
-            // room looked before there was anything to configure (see RoomPrefsUtil).
+            // v5 -> v6 adds an empty atmosphere field, which decodes to the unconfigured look (see RoomPrefsUtil).
             expect(result.data[0].prefs).toBe("");
         });
 
         it("drops the id field that rooms written before the rule still carry", async () => {
-            // The v3 -> v4 step exists for exactly this: it changes nothing itself, and the
-            // version bump is what makes the read rewrite the row without its stored identity.
+            // v3 -> v4 changes nothing; the version bump makes the read rewrite the row without its stored id.
             await EmulatorDB.seed(COLLECTION_ROOMS, {
                 r1: { ...currentRoom(), version: 3, id: "r1" } as DBRow,
                 r2: { ...currentRoom(), version: 3, id: "" } as DBRow,   // What createRoom used to store
@@ -814,9 +792,7 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
         });
 
         it("drops the id field that migrated user accounts still carry", async () => {
-            // A user was never created with an "id", but one that was *migrated* was stored with
-            // the reader's copy of its key — so accounts old enough to have come up through a
-            // schema change have one, and accounts created since do not.
+            // Migrated users were stored with an "id"; users created since have none.
             await EmulatorDB.seed(COLLECTION_USERS, { u1: { ...currentUser(), version: 3, id: "u1" } as DBRow });
 
             const result = await selectUsers().where("id", "==", "u1").run();
@@ -829,10 +805,8 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
         });
 
         it("hands a migration step the document's own id, whichever query triggered it", async () => {
-            // A migration step is one function running under every runner, so it has to be handed
-            // the same row shape by all of them. That drifted once: only the select runner attached
-            // the document's id, so a step that read row.id would have seen it under a read and not
-            // under a write — and the write is the path that then stores what the step returned.
+            // Every runner must hand migration steps the same row shape (only the select runner once added
+            // the id, so a step reading row.id behaved differently on writes).
             const idSeenByTrigger: {[trigger: string]: unknown} = {};
             const originalStep = DBRoomVersionMigration[0];
             DBRoomVersionMigration[0] = async (row: any) => {
@@ -904,8 +878,7 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
         };
 
         it("persists every outdated document a multi-document read returned", async () => {
-            // The regression: writes used to be interleaved with reads inside one transaction,
-            // which Firestore rejects outright, so nothing was ever persisted past the first.
+            // Regression: reads and writes interleaved in one transaction, which Firestore rejects.
             await EmulatorDB.seed(COLLECTION_ROOMS, outdatedRooms(4));
             const logs = EmulatorDB.captureLogs();
             try {
@@ -939,8 +912,7 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
             await selectRooms().where("roomType", "==", RoomTypeEnumMap.Hub).run();
             await EmulatorDB.waitFor(allRoomsAtCurrentVersion, "the first read's write-back to land");
 
-            // A sentinel on each row would be wiped by a second write-back, since the write-back
-            // replaces the row wholesale.
+            // A per-row sentinel would be wiped by a second (wholesale) write-back.
             const stored = await EmulatorDB.readStoredAll(COLLECTION_ROOMS);
             for (const docId of Object.keys(stored))
                 await EmulatorDB.seed(COLLECTION_ROOMS, { [docId]: { ...stored[docId], sentinel: "intact" } });
@@ -975,8 +947,7 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
             let result: DBQueryResponse<DBRoom> | undefined;
             const commits = await countCommits(async () => {
                 result = await selectRooms().where("roomType", "==", RoomTypeEnumMap.Hub).run();
-                // The write-back is fire-and-forget, so its commits are still being issued when the
-                // read returns. Waiting for the documents keeps the count from being read too early.
+                // The write-back is fire-and-forget; wait for the documents before counting commits.
                 await EmulatorDB.waitFor(async () => {
                     const stored = await EmulatorDB.readStoredAll(COLLECTION_ROOMS);
                     return Object.values(stored).filter(row => row.version === ROOM_VERSION).length === count;

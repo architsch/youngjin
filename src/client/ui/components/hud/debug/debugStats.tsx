@@ -96,9 +96,7 @@ export default function DebugStats({env}: Props)
                         case "show dummy-images": imageListChooserDebugEnabledObservable.set(true); break;
                         case "hide dummy-images": imageListChooserDebugEnabledObservable.set(false); break;
                         case "restart tutorial": void restartTutorial(); break;
-                        // The way to sign in. The room list used to carry a Login button, and is
-                        // now the admin's destination chooser rather than something a player ever
-                        // opens — so until the app grows a proper place for it, this is it.
+                        // Temporary sign-in entry point until the app has a proper place for it.
                         case "login": PopupUtil.openPopup({popupType: "authPrompt"}); break;
                         case "log": PopupUtil.openPopup({popupType: "consoleLog"}); break;
                         case "lose context": setWebGLContextLost(true); break;
@@ -112,9 +110,8 @@ export default function DebugStats({env}: Props)
     </div>;
 }
 
-// "restart tutorial" debug command: send a user who has already finished the single-player
-// experience back through the tutorial (handy for testing tutorial gameplay in live/staging).
-// Rejected here (and on the server) unless the user is not currently in any single-player mode.
+// "restart tutorial" debug command. Only allowed when not in a single-player mode (also enforced
+// server-side).
 async function restartTutorial(): Promise<void>
 {
     if (App.getUser().singlePlayerMode != "")
@@ -122,8 +119,7 @@ async function restartTutorial(): Promise<void>
         notificationMessageObservable.set("Cannot restart the tutorial while a single-player mode is in progress.");
         return;
     }
-    // The server clears the "tutorial finished" cookie and flips the persisted singlePlayerMode back
-    // to the tutorial; reloading re-enters the tutorial from a clean page load.
+    // The server resets the tutorial state; reload to re-enter it.
     const response = await UserAPIClient.restartTutorial();
     if (response.status >= 200 && response.status < 300)
         window.location.reload();
@@ -131,16 +127,9 @@ async function restartTutorial(): Promise<void>
         notificationMessageObservable.set("Failed to restart the tutorial.");
 }
 
-// "lose context" / "restore context" debug commands: throw the WebGL drawing context away on
-// purpose, and hand it back again. Losing it is what a mobile browser does to a tab whose GPU memory
-// it has decided to reclaim, and it cannot be asked to do so on demand — so these are the only
-// practical way to watch the recovery path (see GraphicsManager) do its work on the device the
-// problem actually happens on. Losing the context and leaving it lost exercises the last resort (a
-// page reload, once the grace period is up); restoring it exercises recovery in place.
-//
-// Worth knowing when testing: that reload will not happen twice in quick succession, because
-// GraphicsManager declines to repeat one it has only just performed. The console says as much when
-// it declines, and a tab opened afresh starts over with no such history.
+// "lose context" / "restore context" debug commands for testing WebGL context recovery on a real
+// device (see GraphicsManager). Staying lost exercises the reload fallback, which won't repeat within
+// its cooldown.
 function setWebGLContextLost(lost: boolean): void
 {
     const loseContextExtension = GraphicsManager.getGameRenderer()

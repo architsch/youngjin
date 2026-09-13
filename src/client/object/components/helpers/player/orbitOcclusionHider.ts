@@ -22,89 +22,33 @@ import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_R
     NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS,
     VOXEL_BLOCK_HITBOX_HALFSIZE } from "../../../../../shared/system/sharedConstants";
 
-//------------------------------------------------------------------------
-// Keeps the orbit camera's view of what it frames clear: whatever stands between the camera and the
-// target volume (a wall the target sits behind, the ceiling the orbit rises above, a canvas hanging
-// on that wall) is hidden for as long as it stands there, and shown again once it no longer does.
-//
-// Only what belongs to the room's fabric is hidden at all, and each type of object says whether it
-// does by carrying an OrbitOccluder component. That is what keeps characters standing where they
-// are while the room around them gives way: a wall taken out reads as the room being opened up,
-// where a body taken out reads as the person having left (see OrbitOccluder). Geometry belonging to
-// no object at all — a gizmo drawn over the room to point something out — declares nothing and is
-// left alone for the same reason: it is not part of the room to begin with, so removing it takes
-// away a piece of guidance instead of opening anything up.
-//
-// Standing in the way is a matter of degree, and taking something out of the room is a heavy-handed
-// thing to do to it: something clipping a corner of the target costs the user next to nothing, while
-// something covering the target costs him the whole point of the mode. So the target is reduced to a
-// grid of samples spread over its silhouette as the camera sees it, and every candidate is judged by
-// how many of those samples it stands in front of — the share of the target it actually takes away —
-// rather than by whether it touches the view at all. Only a candidate that blocks a fair share of
-// them is hidden; the rest are left where they are.
-//
-// Those samples stand on the target's surface, at the points the camera's own rays into it first
-// meet it, and only where that surface could ever be shown at all — which is everywhere except
-// where it is walled off by something that is staying put (see faceIsExposed). Sampling the inside
-// of the target instead would misjudge everything the target is embedded in: a block belongs to a
-// wall, and a picture hangs flat on one, so a point taken from within either lies behind that wall's
-// face, and its line back to the camera runs away down the length of the wall — condemning block
-// after block of it, none of which stands in front of anything the user could see in the first place.
-//
-// The room's own geometry and everything else in it reach that judgement by different routes,
-// because their costs are nothing alike:
-//
-//   - The room's voxel quads are first thinned out by sweeping the target's box toward the camera
-//     through the voxel grid, which settles almost all of a room's tens of thousands of quads — far
-//     too many to raycast repeatedly — and only what survives is measured against the samples. Each
-//     quad belongs to the voxel column it was baked for, so the declaration above is read off that
-//     column's own object, once per column rather than once per quad.
-//   - Everything else (canvases, doors) is found by raycasting the remaining meshes, which are few,
-//     along the samples themselves. What a ray strikes counts against the whole object it belongs
-//     to rather than the piece hit, since an object drawn out of many parts covers the target with
-//     all of them together, and hiding one part would leave the rest of it standing there in pieces.
-//
-// Whatever the orbit is looking *at* is exempt from all of this, since hiding it is precisely what
-// would defeat the mode (see the protected region below).
-//
-// A sweep is paced rather than run every frame: promptly after the camera has moved, and slowly
-// while it rests, which is when only a moving occluder could change the answer.
-//------------------------------------------------------------------------
+// Hides whatever blocks the orbit camera's view of its target (see @docs/graphics/camera_control.md).
+// - Only objects with an OrbitOccluder (room fabric) and voxel blocks are hidden; characters and
+//   gizmos never are.
+// - The target is sampled over its silhouette; a candidate is hidden only if it blocks enough samples.
+//   Samples sit on the target's exposed surface (see faceIsExposed): interior samples would condemn
+//   whole walls the target is embedded in.
+// - Voxels are culled by sweeping the target box toward the camera through the grid, then tested
+//   against samples. Other meshes are raycast along the samples, and a hit hides the whole object.
+// - The target itself is protected (see setProtectedRegion).
+// - Sweeps are throttled: frequent while the camera moves, rare at rest.
 
 const minSweepInterval = 0.15; // seconds between sweeps while the camera keeps moving
 const maxSweepInterval = 0.5; // seconds between sweeps while the camera rests
 const cameraRestDistSqr = 0.0001; // camera movement below this counts as resting
 
-// How densely the target's silhouette is aimed at, and how much of it something has to stand in
-// front of before it is worth hiding.
-//
-// The threshold is small, because it is a share of the *whole* target: a fifth of a standing
-// character is a shoulder or a head, so a threshold generous enough to sound like "a fair share"
-// leaves whole limbs of him behind the wall. It also flatters what sparing a block achieves.
-// Nothing reaches this judgement without standing in front of the target to begin with, so the
-// block spared here is never one holding an intact wall together — it is one at the rim of the
-// opening the sweep is making anyway, and leaving it there does not keep the wall. It only makes
-// the opening the wrong shape around the thing the user asked to see, which is the whole of what
-// the mode owes him.
-//
-// What keeps geometry that merely passes near the line of sight in its place is not this threshold
-// but the samples themselves: they stand on the target's own surface, so something that crosses
-// none of them was never in the way of any part of it. The threshold is there for the narrower
-// case of geometry that genuinely clips the target, but by so little that emptying its place in the
-// room would be the greater loss — which takes more than a single sample to tell apart from a
-// sample landing near an edge.
-//
-// The grid is dense enough for the share it measures to be a measure rather than a step: too coarse
-// a grid, and a block covers either exactly one row of samples or none, so what is hidden follows
-// the grid's own spacing instead of the shape of the target.
+// Silhouette grid density, and the share of samples a candidate must block to be hidden. The share is
+// small because it's of the whole target (a fifth of a character is a whole limb), and sparing a
+// block at the opening's rim doesn't save the wall anyway. Geometry merely near the line of sight is
+// already excluded because samples lie on the target's surface. The grid must be fine enough that
+// coverage isn't quantized to whole rows.
 const numSilhouetteColumns = 7;
 const numSilhouetteRows = 7;
 const minBlockedSampleRatio = 0.04;
 
 const maxNumSamples = numSilhouetteColumns * numSilhouetteRows;
 
-// How far outside a sample's own face the room is looked up when asking whether that part of the
-// target is exposed at all. Enough to clear the face itself, and far short of a block.
+// Offset outside a sample's face for the exposure lookup.
 const exposureProbeDist = 0.02;
 
 const cameraPos = new THREE.Vector3();
@@ -115,40 +59,29 @@ const upTemp = new THREE.Vector3();
 const sampleRayTemp = new THREE.Vector3();
 const sampleDestTemp = new THREE.Vector3();
 
-// The points the target is reduced to for the duration of a sweep (see buildSilhouetteSamples), of
-// which only the leading "numSamples" are in use — an aim that finds no exposed part of the target
-// leaves no sample behind, so how many the target is worth varies with where the camera stands, and
-// so does the share of them something has to block.
+// Sample buffer; only the first numSamples are used, since aims that find no exposed surface are dropped.
 const silhouetteSamples = Array.from({length: maxNumSamples}, () => new THREE.Vector3());
 let numSamples = 0;
 let minBlockedSamples = 1;
 
-// A single point, in the form the shared cast utility takes, so that a line can be traced by the
-// same code that sweeps a volume along one.
+// A point as an AABB3, so lines reuse the volume-sweep code.
 const pointTemp: AABB3 = {center: {x: 0, y: 0, z: 0}, halfSize: {x: 0, y: 0, z: 0}};
 
-// The volume that has to end up in view — held a hair smaller than the target itself, which is what
-// keeps the surface the samples are placed on a hair inside it. The sweep below reports what the
-// target would run *into* on its way to the camera, so a surface the target already rests flush
-// against (the floor under a player's feet, the wall a block belongs to) has to start a hair away
-// from it to count as something run into rather than something already touched. The same step-back
-// keeps the physics engine's own casts out of the walls they start on.
+// Inset so surfaces the target rests flush against (floor, host wall) count as hits rather than
+// contact. Same trick the physics casts use.
 const targetSweepInset = 0.001;
 const targetBox: AABB3 = {center: {x: 0, y: 0, z: 0}, halfSize: {x: 0, y: 0, z: 0}};
 
-// How far a sample's ray is carried past the aim it was given (see placeSampleOnTarget): the width
-// of the sphere that holds the target, which no two points of the target are further apart than.
+// Distance a sample ray is carried past its aim: the target's bounding-sphere diameter.
 let targetSpan = 0;
 
-// The block a target that is part of the room's own geometry sits in, together with every block
-// touching that one — diagonals, and the layers above and below, included (see setProtectedRegion).
+// A voxel target's block plus all 26 neighbours (see setProtectedRegion).
 const protectedNeighborhood: AABB3 = {
     center: {x: 0, y: 0, z: 0},
     halfSize: {x: 1.5, y: 1.5 * COLLISION_LAYER_HEIGHT, z: 1.5},
 };
 
-// Whatever the orbit is looking at, out of which nothing is hidden however much of the view it
-// takes up: one of the two volumes above, settled at every sweep (see setProtectedRegion).
+// The region nothing may be hidden from (see setProtectedRegion).
 let protectedRegion: AABB3 = targetBox;
 
 const blockBoxTemp: AABB3 = {center: {x: 0, y: 0, z: 0}, halfSize: VOXEL_BLOCK_HITBOX_HALFSIZE};
@@ -163,16 +96,14 @@ export default class OrbitOcclusionHider
     private lastSweepCameraPos = new THREE.Vector3();
     private timeSinceLastSweep = 0;
 
-    // The voxel quads hidden right now, each tagged with the sweep that last found it in the way,
-    // so that a sweep can tell which of them have since been stepped out of.
+    // Hidden quads tagged with the sweep that last found them, to release stale ones.
     private sweepTagByHiddenQuadIndex: {[quadIndex: number]: number} = {};
     private sweepCount = 0;
 
     // Everything hidden that is not a voxel quad, keyed by `${meshId}/${instanceId}`.
     private hiddenOccluderByKey: {[occluderKey: string]: HiddenOccluder} = {};
 
-    // What the samples of the sweep under way have struck so far, keyed by the object each belongs
-    // to (or by the geometry itself, where it belongs to no object). Emptied at every sweep.
+    // This sweep's candidates, keyed by object (or geometry without one).
     private candidateByKey: {[candidateKey: string]: OccluderCandidate} = {};
 
     update(deltaTime: number, camera: THREE.Camera, target: AABB3): void
@@ -209,8 +140,7 @@ export default class OrbitOcclusionHider
         setTargetBox(target);
         setProtectedRegion(target, voxels);
 
-        // The camera has no exposed part of the target to look at — it sits on the target, or every
-        // part of it facing this way is buried — so there is nothing anything could be in the way of.
+        // No exposed part of the target (camera inside it, or all visible faces buried).
         if (!buildSilhouetteSamples(voxels))
         {
             this.revealAll();
@@ -222,18 +152,14 @@ export default class OrbitOcclusionHider
         this.hideMeshesInTheWay();
     }
 
-    //--------------------------------------------------------------------
-    // The room's own geometry
-    //--------------------------------------------------------------------
+    // Voxel geometry
 
     private hideVoxelQuadsInTheWay(voxels: Voxel[]): void
     {
         collectQuadIndicesInTheWay(voxels);
 
-        // The grid answers on its own, without regard for what is hidden at the moment, so the
-        // previous sweep's quads are released by comparison instead of by showing them all first.
-        // That matters here: the voxel mesh carries a whole room's instances, and putting every
-        // hidden quad back only to hide it again would rewrite that entire buffer every sweep.
+        // Release by comparison instead of unhiding everything first, which would rewrite the whole
+        // voxel instance buffer every sweep.
         ++this.sweepCount;
         for (let i = 0; i < quadIndicesTemp.length; ++i)
         {
@@ -252,16 +178,12 @@ export default class OrbitOcclusionHider
         }
     }
 
-    //--------------------------------------------------------------------
-    // Everything else in the room
-    //--------------------------------------------------------------------
+    // Other geometry
 
     private hideMeshesInTheWay(): void
     {
-        // Rays cannot find what is already hidden, since a hidden instance is parked outside the
-        // room, so this shows what it hid last time before looking again. Nothing is rendered in
-        // between, and these occluders sit on small meshes — unlike the room's voxel quads, whose
-        // buffer is left alone above.
+        // Hidden instances are parked out of the room where rays can't reach them, so reveal before
+        // raycasting (cheap on these small meshes).
         this.revealHiddenMeshOccluders();
 
         this.candidateByKey = {};
@@ -281,8 +203,7 @@ export default class OrbitOcclusionHider
 
     private collectCandidatesInFrontOf(sample: THREE.Vector3, sampleIndex: number): void
     {
-        // Only what stands between the camera and this sample can block it, and the room's own voxel
-        // quads are left out — the grid sweep above has already settled those (see CameraUtil).
+        // Voxel quads are excluded; the grid sweep handled them (see CameraUtil).
         CameraUtil.castBetweenPoints(cameraPos, sample, intersectionsTemp);
 
         for (const intersection of intersectionsTemp)
@@ -291,8 +212,6 @@ export default class OrbitOcclusionHider
             const instanceId = (intersection.instanceId != undefined) ? intersection.instanceId : -1;
             const gameObject = CameraUtil.getObjectFromIntersection(intersection);
 
-            // Nothing is hidden that has not declared itself part of the room (see above), and
-            // nothing is hidden that the camera is looking at, however much of the view it takes.
             if (!objectIsOccluder(gameObject) || objectIsProtected(gameObject))
                 continue;
 
@@ -300,10 +219,8 @@ export default class OrbitOcclusionHider
         }
     }
 
-    // Puts one blocked sample on the account of the object the struck geometry belongs to. Keeping
-    // the account per object is what lets an object drawn out of several pieces be measured by the
-    // whole of itself instead of by whichever piece a sample landed on, and what keeps a single
-    // sample passing through two of its pieces worth the one sample it is.
+    // Per-object accounting, so multi-part objects are judged as a whole and a sample through two parts
+    // counts once.
     private creditBlockedSample(mesh: THREE.Mesh, instanceId: number,
         gameObject: GameObject, sampleIndex: number): void
     {
@@ -332,12 +249,7 @@ export default class OrbitOcclusionHider
         this.hiddenOccluderByKey[occluderKey] = occluder;
     }
 
-    // A ray reports the one piece of geometry it struck, but an object need not be one piece: a
-    // composed object draws each of its parts as an instance of its own, and its name is an instance
-    // besides — so hiding only the part a sample happened to land on would leave the rest of it
-    // standing in front of what the camera is meant to see, or leave a door's name hanging in the
-    // air where the door was. So an object found in the way goes out of sight whole. Objects drawn
-    // as a single piece have nothing further to hide, and say so by carrying neither of these.
+    // Hides every part (and the label) of an object found in the way, not just the part a ray hit.
     private hideRemainingPartsOf(gameObject: GameObject): void
     {
         const hideInstance = (instancedMeshId: string, instanceId: number) => {
@@ -374,23 +286,10 @@ function setTargetBox(target: AABB3): void
     targetSpan = 2 * Math.hypot(targetBox.halfSize.x, targetBox.halfSize.y, targetBox.halfSize.z);
 }
 
-// Settles what is exempt from being hidden, which is whatever the orbit is looking at.
-//
-// A target that is itself a piece of the room's geometry — a selected face, which is a block — is
-// rarely alone where it stands: the wall it belongs to is made of the blocks around it, and a
-// picture hanging there rests against the same wall. Emptying that neighbourhood would take away
-// the very thing the user asked to look at, so such a target is spared it entirely. (A center
-// falling exactly on the boundary between two blocks needs no special care: whichever side it is
-// counted on, the block on the other side is a neighbour anyway.)
-//
-// A target that merely stands in the room — a character, a prop, a place a scripted step is
-// pointing at — is spared nothing beyond the space it occupies itself. Sparing its surroundings as
-// well would empty the mode of its point: nothing can stand between the camera and the target
-// without being nearer to the target than the camera is, so a neighbourhood spared for its nearness
-// takes in every occluder there is as soon as the user draws the camera in, and holds the wall in
-// front of his own character in place at exactly the range he most wants to see past it. Whatever
-// such a target is set *into*, if anything, is kept by its samples instead (see
-// buildSilhouetteSamples), which is a matter of the target's own surface rather than of distance.
+// The protected region. A voxel target (a face) protects its whole 3x3x3 neighbourhood, since its
+// wall and anything hung on it are what the user is inspecting. Any other target (character, prop,
+// step point) protects only its own volume: protecting its surroundings would protect every
+// occluder once the camera gets close. Embedding is handled by sample exposure instead.
 function setProtectedRegion(target: AABB3, voxels: Voxel[] | undefined): void
 {
     const col = VoxelQueryUtil.getVoxelColFromWorldX(target.center.x);
@@ -408,9 +307,7 @@ function setProtectedRegion(target: AABB3, voxels: Voxel[] | undefined): void
     protectedRegion = protectedNeighborhood;
 }
 
-// Whether the room's own geometry fills the given block. Nothing lies beyond the room's walls,
-// under its floor, or above its ceiling, so a target reaching out there is standing in the open
-// rather than being set into anything.
+// Outside the room counts as open.
 function blockIsSolid(voxels: Voxel[] | undefined,
     row: number, col: number, collisionLayer: number): boolean
 {
@@ -418,30 +315,23 @@ function blockIsSolid(voxels: Voxel[] | undefined,
         collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
         return false;
 
-    // Out-of-grid rows and columns are what getVoxel answers "no voxel" to, so they need no check
-    // of their own here.
     const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);
     return voxel != undefined && VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer);
 }
 
-// Whether the game object a piece of geometry belongs to is one the orbit may take out of the room,
-// which each type of object declares for itself (see OrbitOccluder). Geometry belonging to no object
-// declares nothing, and so is never hidden.
+// Per-type OrbitOccluder declaration; object-less geometry is never hidden.
 function objectIsOccluder(gameObject: GameObject | undefined): gameObject is GameObject
 {
     return gameObject != undefined && gameObject.components.orbitOccluder != undefined;
 }
 
-// The same question for one column of the room's own geometry, which the grid sweep reaches by the
-// column rather than by the quad: every quad of a column is drawn by the one object that owns it,
-// so the answer is the same for all of them.
+// Voxel columns are asked per column (one owning object per column).
 function voxelIsOccluder(voxel: Voxel): boolean
 {
     return objectIsOccluder(ClientObjectManager.getObjectById(voxel.gameObjectId));
 }
 
-// Whether the game object a ray hit is one of those the orbit is looking at, i.e. one whose own
-// volume reaches into the protected region.
+// Whether the object's volume reaches into the protected region.
 function objectIsProtected(gameObject: GameObject | undefined): boolean
 {
     if (gameObject == undefined)
@@ -454,8 +344,7 @@ function objectIsProtected(gameObject: GameObject | undefined): boolean
     return Geometry3DUtil.AABBsOverlap(protectedRegion, colliderState.hitbox);
 }
 
-// Fills "quadIndicesTemp" with every voxel quad standing in enough of the target's way to be worth
-// hiding (a quad's index is also its instance id in the voxel mesh).
+// Fills quadIndicesTemp with quads worth hiding (quad index = voxel mesh instance id).
 function collectQuadIndicesInTheWay(voxels: Voxel[]): void
 {
     quadIndicesTemp.length = 0;
@@ -479,8 +368,7 @@ function collectQuadIndicesInTheWay(voxels: Voxel[]): void
 
 function collectQuadIndicesInTheWayOfVoxel(voxel: Voxel, row: number, col: number): void
 {
-    // Solid blocks. A block in the way takes all of its faces with it, so the target ends up seen
-    // through a clean opening rather than through a single missing face.
+    // A blocking block hides all its faces, for a clean opening.
     for (let collisionLayer = COLLISION_LAYER_MIN; collisionLayer <= COLLISION_LAYER_MAX; ++collisionLayer)
     {
         if (!VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer))
@@ -513,22 +401,15 @@ function collectQuadIndicesInTheWayOfVoxel(voxel: Voxel, row: number, col: numbe
         collectQuadIndexIfDrawn(VoxelQueryUtil.getCeilingVoxelQuadIndex(row, col));
 }
 
-// A face buried against another block is drawn by nothing, so there is nothing about it to take out
-// of the way — and a block in the way brings only the faces it actually shows.
+// Only drawn faces have anything to hide.
 function collectQuadIndexIfDrawn(quadIndex: number): void
 {
     if (VoxelQuadInstanceUtil.getInstanceId(quadIndex) >= 0)
         quadIndicesTemp.push(quadIndex);
 }
 
-// Whether the box covers enough of the target to be worth hiding.
-//
-// The target's box is first swept toward the camera, since whatever that sweep would not run into
-// cannot cover any of the target, and one such test settles nearly every block of a room. What
-// survives it is then measured against the silhouette's samples, because the sweep on its own is
-// far too eager to condemn: it keeps the target's full width all the way to the camera, where the
-// view the target takes up has in truth narrowed to almost nothing, so it would also carry off
-// geometry standing well beside the line of sight, and geometry that merely clips an edge.
+// A box sweep toward the camera cheaply rejects most blocks; survivors are tested against samples,
+// since the sweep keeps the target's full width all the way to the camera and over-condemns.
 function boxIsInTheWay(box: AABB3): boolean
 {
     if (Geometry3DUtil.castAABBAgainstAABB(targetBox, cameraPos, box).hitNormal == undefined)
@@ -548,9 +429,8 @@ function boxIsInTheWay(box: AABB3): boolean
     return false;
 }
 
-// Whether the box stands between the camera and one sample of the target. The trace runs from the
-// sample outward rather than from the camera in, so that the surface the sample sits on — and
-// whatever the target rests flush against — is something touched rather than something run into.
+// Traced from the sample outward, so the target's own surface and flush neighbours count as touched,
+// not hit.
 function traceToCameraHits(sample: THREE.Vector3, box: AABB3): boolean
 {
     pointTemp.center.x = sample.x;
@@ -559,20 +439,10 @@ function traceToCameraHits(sample: THREE.Vector3, box: AABB3): boolean
     return Geometry3DUtil.castAABBAgainstAABB(pointTemp, cameraPos, box).hitNormal != undefined;
 }
 
-// Places the points the target is reduced to for this sweep, and settles how many of them something
-// has to block to count. The grid is aimed over the target's silhouette as the camera sees it, but
-// no sample stays where it is aimed: each is moved to where the camera's ray toward it first meets
-// the target, so that every one of them stands on the target's surface with a clear line back.
-//
-// An aim that finds nothing there leaves no sample behind at all. It may have gone wide — a
-// silhouette is measured as a rectangle, and a target rarely fills the corners of one — or it may
-// have landed on a face walled off by geometry that is staying put, which stands for a part of the
-// target that is out of sight whatever the camera does about it. Counting such a part would be
-// worse than useless: the line from it back to the camera runs through the wall the target is set
-// into, and would carry off the length of that wall on behalf of something nobody can see.
-//
-// Returns false if nothing of the target is left to look at, which is also the case when the camera
-// sits inside it.
+// Aims a grid over the target's silhouette and moves each aim onto the target's surface along the
+// camera ray. Aims that miss, or land on faces walled off by protected geometry, are dropped (a line
+// from a buried face would carry off the wall). Returns false if nothing is left (including when the
+// camera is inside the target).
 function buildSilhouetteSamples(voxels: Voxel[] | undefined): boolean
 {
     numSamples = 0;
@@ -608,19 +478,9 @@ function buildSilhouetteSamples(voxels: Voxel[] | undefined): boolean
     return numSamples > 0;
 }
 
-// Moves an aimed-at point of the silhouette onto the target itself — to where the camera's ray
-// toward it enters the target's volume — and says whether the sample it now is stands for anything
-// worth counting.
-//
-// An aim marks a direction into the target rather than a distance to it, so the ray is carried past
-// the aim by the whole span of the target before being asked what it first met. The aims are spread
-// over a plane standing square to the camera through the target's center, and half of that plane
-// lies in front of the surface it speaks for: a camera looking down at a standing character sees
-// its silhouette tilted, the top leaning away and the bottom leaning toward the camera, so an aim
-// low on that silhouette is a point hanging in the air short of the character's chest. Stopping the
-// ray there would find nothing and throw the sample away — leaving a target sampled only where the
-// aims happen to fall deep enough to reach it, which for anything taller than it is wide means the
-// upper part of it alone, and an opening cleared for it no bigger than its head.
+// Moves an aim onto the target surface. Aims lie on a plane through the target centre, part of which
+// is in front of the surface (e.g. a tilted silhouette), so the ray is extended by the target span
+// before looking for the entry point. Returns whether the sample counts.
 function placeSampleOnTarget(sample: THREE.Vector3, voxels: Voxel[] | undefined): boolean
 {
     pointTemp.center.x = cameraPos.x;
@@ -642,22 +502,9 @@ function placeSampleOnTarget(sample: THREE.Vector3, voxels: Voxel[] | undefined)
     return faceIsExposed(sample, hit.hitNormal, voxels);
 }
 
-// Whether the face of the target a sample landed on stands for anything the camera could ever be
-// shown, or is walled off for good. Looked up just outside that face rather than along the line of
-// sight, since the sample sits exactly on the boundary the target and whatever it meets there
-// share, and how steeply the camera happens to look at that boundary has nothing to do with what
-// lies on the other side of it.
-//
-// What decides it is not whether the room's geometry is pressed against the face, but whether that
-// geometry is *staying*. A block buried in a wall has the rest of that wall pressed against its
-// sides, and a picture fixed flat to a wall has the wall behind its back — both of them protected,
-// both of them there whatever the camera does, so those faces stand for parts of the target nobody
-// can ever be shown, and a line drawn from them back to the camera would carry off the wall they
-// are buried in on behalf of something invisible. A character standing with his back to that same
-// wall meets it exactly as flatly, but nothing about the wall is staying: it is the very thing in
-// his way, and taking it away is the whole of what this mode is for. So his back counts, and says
-// so — where treating it as buried would leave him behind the wall with nothing left asking for the
-// wall to be cleared, which is to say with the mode doing nothing at all for him.
+// Whether a sample's face could ever be visible. Checked just outside the face. Buried means covered
+// by geometry that stays (protected blocks or a picture's host wall); a character's back against an
+// unprotected wall still counts, since clearing that wall is the point.
 function faceIsExposed(sample: THREE.Vector3, faceNormal: Vec3, voxels: Voxel[] | undefined): boolean
 {
     const col = VoxelQueryUtil.getVoxelColFromWorldX(sample.x + faceNormal.x * exposureProbeDist);
@@ -673,11 +520,8 @@ function faceIsExposed(sample: THREE.Vector3, faceNormal: Vec3, voxels: Voxel[] 
     return !Geometry3DUtil.AABBsOverlap(protectedRegion, blockBoxTemp);
 }
 
-// How far the target reaches to either side of its center along one of the camera's own axes, i.e.
-// how wide a shadow it casts on that axis. Taking its half-size along a world axis instead would
-// spread the aims over a width the target does not have from where the camera happens to stand: a
-// canvas seen edge-on would be aimed at a whole block wide, and nearly every aim would sail past it
-// into the room and be thrown away.
+// Half-width of the target along a camera axis (world-axis half-sizes would over-aim at edge-on
+// targets).
 function silhouetteRadius(axis: THREE.Vector3): number
 {
     return Math.abs(axis.x) * targetBox.halfSize.x +
@@ -685,18 +529,13 @@ function silhouetteRadius(axis: THREE.Vector3): number
         Math.abs(axis.z) * targetBox.halfSize.z;
 }
 
-// Spreads the aims evenly across the silhouette, one in the middle of each cell of the grid. Aiming
-// at the middle rather than out at the edges is what makes each sample stand for an equal share of
-// the target, and keeps the outermost of them off the very rim, where a sample says more about what
-// the target sits next to than about the target itself.
+// Aims at cell centres so each sample represents an equal share and stays off the rim.
 function silhouetteOffset(sampleIndex: number, numSamples: number, radius: number): number
 {
     return radius * (2 * (sampleIndex + 0.5) / numSamples - 1);
 }
 
-// Takes one of the room's own quads out of sight, or brings it back. Which instance of the room's
-// mesh is drawing that quad has to be looked up, and a quad that is not on show at all is drawn by
-// none of them — there being nothing there to take out of the way (see VoxelQuadInstanceUtil).
+// Quads not on show have no instance to hide (see VoxelQuadInstanceUtil).
 function setVoxelQuadHidden(quadIndex: number, hidden: boolean): void
 {
     const instanceId = VoxelQuadInstanceUtil.getInstanceId(quadIndex);

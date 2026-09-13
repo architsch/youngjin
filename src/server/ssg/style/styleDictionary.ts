@@ -1,6 +1,4 @@
-//------------------------------------------------------------------------
 // Global Parameters
-//------------------------------------------------------------------------
 
 const extraDarkColor = "#101010";
 const darkColor = "#303030";
@@ -48,9 +46,7 @@ const fontScaleInc2 = fontScaleInc*fontScaleInc;
 const fontScaleInc3 = fontScaleInc*fontScaleInc*fontScaleInc;
 const fontScaleInc4 = fontScaleInc*fontScaleInc*fontScaleInc*fontScaleInc;
 
-//------------------------------------------------------------------------
 // Functions
-//------------------------------------------------------------------------
 
 // Areas
 
@@ -133,9 +129,7 @@ const underlinedFrame = (backgroundColor: string, foregroundColor: string, under
 simpleFrame(backgroundColor, foregroundColor, opacity) + "\n" +
 `\tborder-bottom: ${underlineThickness}vmin ${underlineColor} solid;`;
 
-//------------------------------------------------------------------------
 // Elementary Styles
-//------------------------------------------------------------------------
 
 const fullscreen_whole_area = absoluteArea(
 	0, 0, 0, 0,
@@ -206,10 +200,7 @@ const l_spacing = (landscape: boolean): string => spacing(landscape, 3, 3);
 const xl_spacing = (landscape: boolean): string => spacing(landscape, 4, 4);
 const xxl_spacing = (landscape: boolean): string => spacing(landscape, 6, 6);
 
-// An xxl element spends its full horizontal allowance on its own padding and margin, which on a
-// phone leaves little of the row for the content. This keeps the vertical generosity of xxl while
-// holding the sides to what the narrowest screen of each orientation can actually spare — portrait
-// most of all, whose horizontal unit is several times the landscape one.
+// xxl vertical spacing with horizontal spacing capped for narrow (especially portrait) screens.
 const xxl_spacing_narrowHorizontal = (landscape: boolean): string => spacing(landscape, 6, landscape ? 4.5 : 2.5);
 
 const xs_spacing_paddingOnly = (landscape: boolean): string => spacing(landscape, 0.5, 1, true, false);
@@ -267,9 +258,7 @@ const text_input_frame = elevatedFrame(dimColor, lightColor, mediumColor, "0.25"
 const list_scroll_panel_frame = outlinedFrame(darkColor, lightColor, dimColor, "0.1");
 const list_item_frame = outlinedFrame(mediumColor, lightColor, lightColor, "0.1");
 
-//------------------------------------------------------------------------
 // Orientation-Dependent Styles
-//------------------------------------------------------------------------
 
 const stylesForOrientation = (landscape: boolean): string =>
 `
@@ -617,9 +606,7 @@ hr {
 }
 `;
 
-//------------------------------------------------------------------------
 // CSS
-//------------------------------------------------------------------------
 
 const css =
 `/* These pages already carry a dark palette of their own, so a mobile browser set to darken web

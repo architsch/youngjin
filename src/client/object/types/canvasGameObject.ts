@@ -55,9 +55,7 @@ export default class CanvasGameObject extends GameObject
         await this.instancedMeshGraphics.loadInstancedMesh(CANVAS_GEOMETRY_ID,
             CanvasGameObject.materialParams, CanvasObjectTypeConfig.maxCountPerRoom, true);
 
-        // The room may hold more canvases than the mesh has instances for, in which case this
-        // canvas stays unrendered (the same state it is in once despawned) rather than taking the
-        // whole room's rendering down with it.
+        // An exhausted pool leaves this canvas unrendered.
         const rentedInstanceId = this.instancedMeshGraphics.rentInstanceFromPool(CanvasGameObject.instancedMeshId);
         if (rentedInstanceId == undefined)
             return;
@@ -76,14 +74,11 @@ export default class CanvasGameObject extends GameObject
     async onDespawn(): Promise<void>
     {
         await super.onDespawn();
-        // Nothing to hand back if the canvas never got an instance in the first place (the mesh
-        // was out of them when it spawned).
+        // -1 if it never got an instance.
         if (this.instanceId !== -1)
             this.instancedMeshGraphics.returnInstanceToPool(CanvasGameObject.instancedMeshId, this.instanceId);
 
-        // Mark as despawned (in order to inform a potentially pending
-        // "loadImageImpl" task that the canvas's mesh instance is now obsolete
-        // so that the image shouldn't be loaded.)
+        // Tells a pending loadImageImpl that its instance is obsolete.
         this.instanceId = -1;
 
         CanvasGameObject.spawnedCanvasGameObjects.delete(this.params.objectId);
@@ -92,8 +87,7 @@ export default class CanvasGameObject extends GameObject
     onSetMetadata(key: ObjectMetadataKey, value: string)
     {
         super.onSetMetadata(key, value);
-        // Both the picture frame and the image live in the same render-target cell,
-        // so any metadata change simply re-draws the whole cell.
+        // Frame and image share one cell, so any metadata change redraws the whole cell.
         this.loadImage();
     }
 
@@ -103,8 +97,7 @@ export default class CanvasGameObject extends GameObject
         return CanvasGameObject.loadQueue;
     }
 
-    // Re-draws this canvas's render-target cell: first the chosen picture frame (filling the
-    // whole cell), then the canvas's image on top of it (fitted inside the frame's inner window).
+    // Redraws the cell: the frame first, then the image fitted inside its inner window.
     private async loadImageImpl()
     {
         if (this.instanceId === -1) // Already despawned
@@ -126,8 +119,7 @@ export default class CanvasGameObject extends GameObject
         const col = parseInt(words[0]);
         const row = parseInt(words[1]);
 
-        // The source rect is in texture coordinates, whose V counts rows from the bottom of the
-        // atlas image, while the cell coords count them from the top.
+        // Texture V counts rows from the bottom; cell coords count from the top.
         const numCols = CANVAS_FRAME_ATLAS_SIZE / CANVAS_FRAME_ATLAS_CELL_SIZE;
         const numRows = CANVAS_FRAME_ATLAS_SIZE / CANVAS_FRAME_ATLAS_CELL_SIZE;
         const frameAtlasURL = `${App.getEnv().assets_url}/${CANVAS_FRAME_ATLAS_PATH}`;
@@ -148,11 +140,8 @@ export default class CanvasGameObject extends GameObject
         }
     }
 
-    // Draws the canvas's image over the frame's inner window (scaled down so it fits inside it).
-    //
-    // What is drawn is the image's thumbnail, which is no larger than the cell it is drawn into (see
-    // CANVAS_TEXTURE_CELL_SIZE). The image itself would only be decoded and uploaded at full size to
-    // be shrunk to that anyway.
+    // Draws the image's thumbnail (no larger than the cell; see CANVAS_TEXTURE_CELL_SIZE) into the
+    // frame's inner window.
     private async drawImage(textureIndex: number, frameCellCoords: string)
     {
         const imageDrawScale = CanvasFrameInnerWindowMap.getImageDrawScale(frameCellCoords);
@@ -163,8 +152,7 @@ export default class CanvasGameObject extends GameObject
             : "";
         try
         {
-            // An empty URL paints the placeholder color, which still needs to happen so that
-            // the frame's placeholder-colored inner window never shows through.
+            // An empty URL still paints the placeholder, covering the frame's placeholder window.
             await this.instancedMeshGraphics.drawImageAtIndex(CanvasGameObject.instancedMeshId,
                 textureIndex, imageURL, imageDrawScale, imageDrawScale);
         }
@@ -177,9 +165,7 @@ export default class CanvasGameObject extends GameObject
         }
     }
 
-    // Re-bakes this canvas's instance so it follows a cosmetic transform of "visualObj" (e.g.
-    // EasingMotion's bounce). The transform is recomputed from the canvas's own state, which composes
-    // the moved visual node via InstancedMeshGraphics.
+    // Re-bakes the instance to follow visualObj's cosmetic transform (e.g. EasingMotion).
     onVisualTransformChanged(): void
     {
         this.updateMeshInstanceTransform();
@@ -194,10 +180,8 @@ export default class CanvasGameObject extends GameObject
         const sizeX = colliderConfig.hitboxSize.sizeX;
         const sizeY = colliderConfig.hitboxSize.sizeY;
 
-        // The canvas's facing already lives in its obj rotation (set from the spawn/update
-        // direction), so the instance just faces the object's local forward (+Z). InstancedMeshBinding
-        // rotates this local direction into world space by the obj's orientation. The quad sits
-        // slightly in front of the wall (assisted by the material's polygon offset).
+        // Facing is in obj's rotation, so the instance faces local +Z; the polygon offset keeps it
+        // in front of the wall.
         this.instancedMeshGraphics.updateInstanceTransform(
             CanvasGameObject.instancedMeshId,
             this.instanceId,
@@ -206,8 +190,7 @@ export default class CanvasGameObject extends GameObject
             sizeX, sizeY, 1);
     }
 
-    // Returns the "{col},{row}" atlas cell coords of this canvas's picture frame, falling back to
-    // the first frame in CanvasFrameImageMap when the metadata is absent or invalid.
+    // Falls back to the first frame when metadata is absent or invalid.
     private getFrameCellCoords(): string
     {
         const frameImageMap = ImageMapUtil.getImageMap("CanvasFrameImageMap");
@@ -218,12 +201,7 @@ export default class CanvasGameObject extends GameObject
     }
 }
 
-// Every canvas's picture — its frame and its image both — is drawn into a render target, which is to
-// say straight onto the GPU, with no copy kept anywhere else. A drawing context the browser took
-// away and gave back therefore comes back holding an empty one: the renderer restores the texture,
-// but has nothing to restore its contents from. So every canvas currently in the room draws its own
-// cell over again, which is the same work it does when it spawns, queued behind the others exactly
-// as it is then, since they all share the one render target.
+// Canvas cells live only in a render target (GPU), so every canvas redraws after a context restore.
 graphicsContextRestoredObservable.addListener("canvasGameObject", () => {
     CanvasGameObject.spawnedCanvasGameObjects.forEach(
         (canvasGameObject: CanvasGameObject) => void canvasGameObject.loadImage());

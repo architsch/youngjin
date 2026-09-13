@@ -5,16 +5,8 @@ import { TUTORIAL_SINGLE_PLAYER_MODE } from "../../../../../shared/system/shared
 import PopupUtil from "../../../util/popupUtil";
 import Button from "../../input/button";
 
-// A button that lets the user bail out of the single-player tutorial. It lives at the bottom
-// of the screen and is shown only while the tutorial is being played and no other bottom UI
-// (Chat / VoxelQuadSelection / ObjectSelection) would overlap it — the parent decides the
-// latter via the `hide` prop. Clicking it asks for confirmation first (to guard against an
-// accidental tap); confirming skips the tutorial and sends the player to the hub.
-//
-// Named for the one mode it belongs to, rather than offered to single-player modes at large. What
-// it offers is a way out of being walked through something, which is a thing only the tutorial does
-// — and the button says so in as many words, so a mode that inherited it would be offering to skip a
-// tutorial the user is not in. Any future mode wanting its own way out wants its own wording too.
+// Skip button, shown during the tutorial unless other bottom UI would overlap (parent's `hide`).
+// Confirms first, then sends the player to a hub. Tutorial-specific by design (its wording says so).
 const skippable = (mode: string) => mode == TUTORIAL_SINGLE_PLAYER_MODE;
 
 export default function SkipTutorialButton({ hide }: Props)

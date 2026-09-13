@@ -5,13 +5,10 @@ import RoomPalette from "../roomPalette";
 import MultiplayerRoomBuilder from "./multiplayerRoomBuilder";
 import RoomBuilder from "./roomBuilder";
 
-// The open space the hub is built around: a lounge standing through both storeys, in the middle of
-// the room, with the smaller areas gathered around it.
+// The central lounge spanning both storeys.
 const LOUNGE_HALF_SPAN = 5;
 
-// The wings: areas shaped to hold a flight of steps, so that the hub reliably comes out with a
-// second storey to climb to. They are placed before the smaller areas, while there is still room
-// around the lounge for something this shape.
+// Stair-capable wing attempts, placed before the smaller areas while space remains.
 const NUM_WING_ATTEMPTS = 12;
 
 const NUM_SEED_ATTEMPTS = 14;
@@ -25,9 +22,7 @@ const SECOND_STOREY_CHANCE = 0.7;
 const PROP_CHANCE_PER_CELL = 0.04;
 const MAX_PROP_STACK_HEIGHT = 3;
 
-// A Hub room is a shared social playground, so it consists of a vast open space in the middle (with
-// a high ceiling), surrounded by relatively smaller random areas across two storeys. Think of it as
-// a wide multi-storey lounge or lobby.
+// A shared social space: a tall central lounge surrounded by smaller areas across two storeys.
 export default class HubRoomBuilder extends MultiplayerRoomBuilder
 {
     override run(): RoomBuilder

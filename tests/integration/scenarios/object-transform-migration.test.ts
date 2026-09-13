@@ -1,19 +1,8 @@
 /**
- * Version migration of a room's objects, and the ranges their positions are measured against.
- *
- * An object's position is not stored as a coordinate. Each component is stored as a fraction of a
- * range, and multiplied back out by whatever that range says at the moment it is read — so the range
- * is part of the format. While the vertical one was written as [0, MAX_ROOM_Y], giving the room a
- * second storey doubled it, and every object already in storage came back at twice the height it was
- * placed at. Nothing failed; the stored bytes were still correct, and were still read correctly, as
- * a fraction of a room that had grown underneath them.
- *
- * Two things guard against that here:
- *   - the ranges are frozen, and are asserted to still contain the room, so a room that outgrows one
- *     fails these tests rather than silently moving every object in the game;
- *   - objects written before the change are recognised and put back, using the version of the voxel
- *     grid stored beside them — the object format's own version byte cannot date them, because it
- *     never moved when the meaning of its contents did.
+ * Object transform migration. Positions are stored as fractions of ranges; when the vertical range was
+ * MAX_ROOM_Y, adding a storey doubled every stored object's height. Guards: the ranges are frozen and
+ * must still contain the room, and older objects are corrected using the stored voxel grid's version
+ * (the object format's own version byte never changed).
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import fs from "fs";
@@ -31,8 +20,7 @@ const FIXTURE_DIR = path.join(__dirname, "../fixtures/legacyVoxelGrids");
 const ROOM_ID = "object-migration-room";
 const SCRATCH_BUFFER_BYTES = 256 * 1024;
 
-// The room's height before it gained a second storey, which is the range the fixtures' objects were
-// measured against.
+// Room height before the second storey (the fixtures' original range).
 const LEGACY_MAX_ROOM_Y = 4;
 
 const CANVAS_OBJECT_TYPE_INDEX = 2;
@@ -46,26 +34,15 @@ function canvas(objectId: string, y: number): AddObjectSignal
         new ObjectTransform({x: 10.5, y, z: 4.5}, {x: 0, y: 0, z: 1}), {});
 }
 
-// A painting as the old code left it in storage, given the height it was actually hung at.
-//
-// Only the current encoder exists in this tree, and it measures against the present range — so
-// writing the placed height directly would store a different fraction than the old encoder stored
-// for that same height, and the blob would not be a legacy blob at all. Scaling the height by the
-// ratio between the two ranges produces the fraction the old encoder really wrote. The check below
-// pins that to what legacy rooms on the server actually hold: a painting hung at 1.5 reads back
-// uncorrected at 3.0.
+// A legacy painting at a placed height, scaled by the range ratio into the fraction the old encoder
+// wrote (a painting hung at 1.5 reads back uncorrected at 3.0).
 function legacyCanvas(objectId: string, placedHeight: number): AddObjectSignal
 {
     return canvas(objectId, placedHeight * (ObjectTransform.encodableBounds.maxY / LEGACY_MAX_ROOM_Y));
 }
 
-// Builds a room blob the way storage holds one: a voxel grid, then the objects standing in it.
-//
-// The objects are encoded by the current encoder and their version byte then stamped back down. The
-// two versions lay their bytes out identically, so that produces a real version-0 record — provided
-// the heights handed in are the ones the old encoder would have written, which is what legacyCanvas
-// is for. The grid in front of them is a real one written by the old code, so what the decoder is
-// handed is a genuine pairing of the two.
+// A stored room blob: a real legacy voxel grid, then objects encoded now with their version byte
+// stamped back to 0 (both versions share a layout).
 function buildRoomBlob(voxelGridBytes: Uint8Array, objects: AddObjectSignal[],
     stampObjectVersion?: number): Uint8Array
 {
@@ -110,10 +87,7 @@ describe("object transform ranges and migration", () => {
     });
 
     it("the room still fits inside the ranges positions are measured against", () => {
-        // The check that keeps this from happening again. These ranges are the format; growing the
-        // room past one of them does not fail anywhere else, it just quietly rescales every object
-        // already in storage. A room that outgrows one needs a new ObjectGroup version and a
-        // converter, and this is what says so.
+        // The ranges are the format: outgrowing one needs a new ObjectGroup version and converter.
         const bounds = ObjectTransform.encodableBounds;
         expect(MAX_ROOM_Y).toBeLessThanOrEqual(bounds.maxY);
         expect(NUM_VOXEL_COLS).toBeLessThanOrEqual(bounds.maxX);
@@ -121,9 +95,7 @@ describe("object transform ranges and migration", () => {
     });
 
     it("the ranges no longer track the room's own dimensions", () => {
-        // Written as a fact about the file rather than about behaviour, because the behaviour is
-        // indistinguishable until the day someone changes the room's height — which is the day it
-        // matters. If MAX_ROOM_Y is reintroduced here, this is what notices.
+        // Checked on the source, since behavior is identical until the room height changes.
         const source = fs.readFileSync(
             path.join(__dirname, "../../../src/shared/object/types/objectTransform.ts"), "utf8");
         const rangeDefinitions = source.substring(0, source.indexOf("export default class"));
@@ -143,9 +115,7 @@ describe("object transform ranges and migration", () => {
     });
 
     it("leaves objects placed after the change exactly where they are", () => {
-        // Same object bytes, same version byte, a current grid in front of them. Rescaling these
-        // would be the original fault repeated in the other direction — every painting in every
-        // present-day room dropping to half its height.
+        // A current grid must not trigger rescaling (it would halve present-day heights).
         const currentGridBytes = encodeCurrentVoxelGrid();
         const heights = [2.0, 5.5];
         const blob = buildRoomBlob(currentGridBytes,
@@ -159,11 +129,8 @@ describe("object transform ranges and migration", () => {
     });
 
     it("keeps a painting off the storey floor that the migration lays", () => {
-        // The symptom this whole path exists for. A painting hung at the middle of a one-storey
-        // wall read back at exactly the height the storey floor is laid at, so it was left standing
-        // inside the new floor.
-        // The slab replaces the ceiling of the room being migrated, so it is laid at that room's
-        // own full height rather than at the storey floor of a room built today.
+        // The original symptom: a mid-wall painting ended up inside the new storey floor. The slab sits at
+        // the migrated room's full height.
         const storeyFloorY = LEGACY_MAX_ROOM_Y;
         const midWallOfOneStoreyRoom = LEGACY_MAX_ROOM_Y / 2;
         expect(midWallOfOneStoreyRoom * 2).toBeCloseTo(storeyFloorY, 6); // what used to happen
@@ -187,15 +154,12 @@ describe("object transform ranges and migration", () => {
     });
 
     it("keeps every object of a legacy group, not just their heights", () => {
-        // The converters this replaced returned an empty group. Bumping the version without
-        // replacing them would have emptied every legacy room instead of correcting it.
+        // The old converters returned an empty group; a bare version bump would have emptied legacy rooms.
         const blob = buildRoomBlob(legacyVoxelGridBytes(),
             [legacyCanvas("a", 1.5), legacyCanvas("b", 2.0), legacyCanvas("c", 1.0)], 0);
 
         const {objectGroup} = decodeRoomBlob(blob);
-        // A legacy room is also given the entrance door it never stored, since a door used to be
-        // something every client spawned for itself (see ObjectGroup's converters). That is a
-        // different object entirely, so the canvases are what this is about.
+        // Legacy rooms also gain their entrance door (see ObjectGroup's converters); only canvases matter here.
         const objects = Object.values(objectGroup.objectById)
             .filter(object => object.objectTypeIndex === CANVAS_OBJECT_TYPE_INDEX);
 
@@ -214,8 +178,7 @@ describe("object transform ranges and migration", () => {
         const blob = buildRoomBlob(legacyVoxelGridBytes(), [legacyCanvas("h", 2.0)], 0);
         const [object] = Object.values(decodeRoomBlob(blob).objectGroup.objectById);
 
-        // x and z are measured against the grid's own dimensions, which did not change — so the
-        // correction must not touch them.
+        // The x and z ranges didn't change, so they're untouched.
         expect(object.transform.pos.x).toBeCloseTo(10.5, 2);
         expect(object.transform.pos.z).toBeCloseTo(4.5, 2);
     });

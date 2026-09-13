@@ -21,9 +21,7 @@ export default class SpeechBubble extends GameObjectComponent
     private vecTemp1 = new THREE.Vector3();
     private vecTemp2 = new THREE.Vector3();
 
-    // Set by whoever owns the object when the body this bubble belongs to is not being drawn (see
-    // PlayerGameObject). A bubble left hanging in the air where its speaker is not would be read as
-    // belonging to whatever it happened to hang over.
+    // Set when the speaker's body isn't drawn (see PlayerGameObject), so the bubble doesn't float alone.
     private hidden: boolean = false;
 
     async onSpawn(): Promise<void>
@@ -56,11 +54,7 @@ export default class SpeechBubble extends GameObjectComponent
             GraphicsManager.getCamera().getWorldPosition(this.vecTemp2);
             const dist = this.vecTemp1.distanceTo(this.vecTemp2);
 
-            // Show the bubble only where it can actually be read: near enough, inside the camera's
-            // field of view, and (if required) not blocked by anything. The field-of-view test is
-            // what keeps a bubble hidden while its speaker is out of frame, which is where one's
-            // own sits in first-person — above the head — and it lets that one appear again once
-            // the camera orbits the body and looks back at it.
+            // Near, in the field of view (hides one's own bubble in first person), and optionally unoccluded.
             if (dist < 12 && CameraUtil.pointIsInFieldOfView(this.vecTemp1) &&
                 (!this.componentConfig.checkLineOfSight || this.orbitCameraIsFramingSpeaker() ||
                 CameraUtil.objectIsInLineOfSight(this.vecTemp1, this.gameObject)))
@@ -111,18 +105,8 @@ export default class SpeechBubble extends GameObjectComponent
         this.displayMessage(value, true);
     }
 
-    // Whether the orbit camera is currently framing this bubble's own speaker, in which case
-    // whether he can be seen is already somebody else's question and this component must not ask it
-    // a second time.
-    //
-    // The orbit clears the room between itself and the volume it frames, and keeps it clear for as
-    // long as it frames it (see OrbitOcclusionHider). But it answers for a volume, at its own pace,
-    // and leaves alone whatever is barely in the way — where the sight test above asks about a
-    // single point, every frame, and spares nothing. So while the camera turns, the two disagree
-    // for a moment at a time: the room has not yet given way to where the camera has got to, or has
-    // given way as far as the speaker's own outline while the bubble hangs a little above it. Each
-    // such moment is a blink of the bubble, and none of them is a moment the user could not see the
-    // speaker — the orbit's whole promise is that he can.
+    // While the orbit frames this speaker, skip the bubble's own occlusion test: it disagrees
+    // momentarily with OrbitOcclusionHider during camera turns, causing blinks.
     private orbitCameraIsFramingSpeaker(): boolean
     {
         const mode = cameraModeObservable.peek();
@@ -130,9 +114,7 @@ export default class SpeechBubble extends GameObjectComponent
             Geometry3DUtil.pointOverlapsAABB(this.gameObject.position, mode.target);
     }
 
-    // "animate" plays a brief bouncy scale to flag that the message just changed. We bounce on
-    // every change, whether it arrived through the local setMessage or a remote onSetMetadata, so
-    // the effect plays for whoever happens to have the bubble in their field of view at the time.
+    // Bounces on every change, local or remote.
     private displayMessage(message: string, animate: boolean): void
     {
         const prepend = this.componentConfig.prependUserNameToMessage;
@@ -165,9 +147,7 @@ export default class SpeechBubble extends GameObjectComponent
             this.playBounce();
     }
 
-    // Briefly enlarges the bubble and lets it shrink back to its default size. Runs on
-    // bubbleElement (not the CSS2D root, whose transform is overwritten every frame by the
-    // renderer) so the scale isn't clobbered by on-screen positioning.
+    // Scales bubbleElement, since the renderer overwrites the CSS2D root's transform each frame.
     private playBounce(): void
     {
         this.bubbleElement?.animate(

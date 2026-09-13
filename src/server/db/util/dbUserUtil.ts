@@ -33,9 +33,7 @@ const DBUserUtil =
             ownedRoomID: "",
             ftue: "",
             acquisitionSource,
-            // The arrival milestone is stamped here rather than recorded afterwards, so that the
-            // row is never briefly present with an empty funnel — which a milestone arriving in the
-            // same moment would then append to, losing the arrival.
+            // Stamped at creation, so a concurrent milestone can't append to an empty funnel and lose Arrived.
             funnel: FunnelMilestoneEnumMap.Arrived,
             playerMetadata: {},
         };
@@ -49,10 +47,8 @@ const DBUserUtil =
 
         return result;
     },
-    // The lookup as the DB actually answers it: "the query failed" and "there is no such user"
-    // are different answers, and a caller that *acts* on absence — rather than merely reporting
-    // it — must not treat one as the other. Mistaking a failed lookup for a deleted account is
-    // how a signed-in user gets silently replaced by a brand-new guest.
+    // Distinguishes a failed query from an absent user. Callers that act on absence must use this, or a
+    // failed lookup could replace a signed-in user with a new guest.
     lookUpUserById: async (userID: string): Promise<DBQueryResponse<DBUser>> =>
     {
         LogUtil.log("DBUserUtil.lookUpUserById", {userID}, "low", "info");
@@ -62,9 +58,7 @@ const DBUserUtil =
             .where("id", "==", userID)
             .run();
     },
-    // The same lookup for callers whose answer to both "failed" and "absent" is identical (a 404,
-    // a skipped enrichment step). They give up the distinction deliberately; anyone who needs it
-    // reaches for lookUpUserById instead.
+    // For callers that treat failure and absence the same (see lookUpUserById).
     findUserById: async (userID: string): Promise<DBUser | null> =>
     {
         const result = await DBUserUtil.lookUpUserById(userID);
@@ -81,8 +75,7 @@ const DBUserUtil =
             .where("id", "==", userID)
             .run();
 
-        // Leaving single-player mode is how the tutorial ends, whether it was worked through or
-        // skipped. Entering one is not a milestone, so only the empty mode counts.
+        // Clearing the mode (finish or skip) is the TutorialDone milestone.
         if (result.success && singlePlayerMode == "")
             await ServerAnalyticsManager.recordMilestone(userID, FunnelMilestoneEnumMap.TutorialDone);
 
@@ -107,10 +100,8 @@ const DBUserUtil =
             .where("id", "==", userID)
             .run();
 
-        // Only multiplayer rooms reach here — a single-player room is deliberately never stored as
-        // the room to come back to (see ServerRoomManager). That is what makes this the point at
-        // which somebody has genuinely left the tutorial behind and gone into the shared world,
-        // rather than merely having been placed somewhere on arrival.
+        // Only multiplayer rooms are stored as last room (see ServerRoomManager), so this marks
+        // entering the shared world.
         await ServerAnalyticsManager.recordMilestone(userID, FunnelMilestoneEnumMap.EnteredRoom);
     },
     savePlayerMetadata: async (userID: string, playerMetadata: {[key: string]: string}): Promise<void> =>
@@ -157,10 +148,9 @@ const DBUserUtil =
     },
     updateLastLogin: async (userID: string, prevLastLoginAt: number): Promise<void> =>
     {
-        // Cache invalidation must NOT happen here ((Reason 1): Cache invalidation in this case will immediately invalidate the cache of a user who is currently logging in, resulting in redundant DB lookups. (Reason 2): 'lastLoginAt' and 'loginCount' are only used by deleteStaleGuestsByTier)
-        // loginCount counts distinct logins, not requests: it only increments when the previous
-        // login is at least LOGIN_COUNT_MIN_GAP_MS old, so the many identified requests fired
-        // within a single visit don't inflate the engagement tier used by deleteStaleGuestsByTier.
+        // No cache invalidation here: it would evict users mid-login, and lastLoginAt/loginCount are
+        // only read by deleteStaleGuestsByTier. loginCount counts distinct logins (gap >=
+        // LOGIN_COUNT_MIN_GAP_MS), not requests.
         const isDistinctLogin = Date.now() - (prevLastLoginAt ?? 0) >= LOGIN_COUNT_MIN_GAP_MS;
         await new DBQuery<DBRow>()
             .update(COLLECTION_USERS)
@@ -171,9 +161,7 @@ const DBUserUtil =
             .where("id", "==", userID)
             .run();
 
-        // Retention, measured on the same definition of a distinct login that the engagement tiers
-        // use: the gap is a day, so this fires for somebody who came back, never for a page
-        // refresh or a second tab within one visit.
+        // Distinct login (a day's gap) counts as a return, never a refresh.
         if (isDistinctLogin)
             await ServerAnalyticsManager.recordReturnVisit(userID);
     },
@@ -190,9 +178,7 @@ const DBUserUtil =
 
         if (!selectResult.success)
         {
-            // Surface the failure instead of silently reporting "nothing to delete" — e.g. a
-            // missing composite index (userType + lastLoginAt) makes this query fail on every
-            // run, and without this log the cleanup task appears healthy while doing nothing.
+            // Log failures (e.g. a missing userType + lastLoginAt composite index) instead of looking healthy.
             LogUtil.log("DBUserUtil.deleteStaleGuestsByTier - stale-guest query failed",
                 { phase }, "high", "error");
             return 0;

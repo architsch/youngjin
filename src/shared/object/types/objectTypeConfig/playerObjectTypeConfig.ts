@@ -10,17 +10,11 @@ import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../graphics/mesh
 import { PlayerCompositionCodec } from "../../../graphics/mesh/composition/types/compositionCodec/playerCompositionCodec";
 import StringUtil from "../../../math/util/stringUtil";
 
-// How big a player character stands in the world. The two of them are the player's collider, which
-// is where anything that has to measure against a player's body — where his eyes sit, how far a
-// selection ring floats over his head, which collision layer he is standing on — reads them back
-// from. Exported as well, because a great deal of the game is measured against a player and the
-// expressions doing the measuring stay legible only if the quantity is named.
+// The player collider size; exported because much of the game measures against the player's body.
 export const PLAYER_HEIGHT = 2.5;
 export const PLAYER_RADIUS_XZ = 0.375; // radius of the player on the XZ plane.
 
-// Every player character in the room draws its parts from one pool of mesh instances, so the room
-// can only hold as many as that pool was sized for. The cap is also what the room balancer fills
-// rooms up to (see RoomPickerUtil).
+// Bounded by the mesh instance pool; also the room balancer's cap (see RoomPickerUtil).
 export const MAX_PLAYERS_PER_ROOM = 64;
 const MAX_MESH_INSTANCES_PER_PLAYER = 32;
 

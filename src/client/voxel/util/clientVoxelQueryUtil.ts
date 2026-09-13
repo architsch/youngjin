@@ -9,30 +9,17 @@ import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NEAR_
     NUM_COLLISION_LAYERS, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS,
     VOXEL_QUAD_GEOMETRY_ID, VOXEL_TEXTURE_PACK_MATERIAL_ID } from "../../../shared/system/sharedConstants";
 
-//------------------------------------------------------------------------
-// What the room's voxels amount to on screen, as opposed to what the grid holds — which is what
-// VoxelQueryUtil answers, and which the client alone cannot settle: a block the orbit camera has
-// taken out of the way is still in the grid, and still solid to walk into, while being no part of
-// what the user is looking at (see OrbitOcclusionHider).
-//
-// Questions are asked of "the room" rather than of a grid handed in, there being exactly one room
-// the client is drawing at a time, so that a caller with a world-space question of its own need
-// know nothing about voxels to ask it.
-//------------------------------------------------------------------------
+// Queries about the room as drawn (vs. VoxelQueryUtil's stored grid): blocks hidden by the orbit camera
+// are still solid but not visible (see OrbitOcclusionHider). Always about the single current room.
 
-// Every voxel quad in the room is drawn from this one instanced mesh, in which a quad's index in
-// the grid is also its instance id.
+// The voxel mesh (quad index = instance id).
 const voxelInstancedMeshId = MeshDataUtil.getInstancedMeshId(
     VOXEL_QUAD_GEOMETRY_ID, VOXEL_TEXTURE_PACK_MATERIAL_ID);
 
-// One step of the walk below crosses one block boundary, and the grid is finite, so the walk is too.
-// The bound is only there to keep a degenerate segment — one aimed far outside the room, or one
-// whose ends float-round oddly — from turning a missed destination into a spin.
+// Upper bound on walk steps, guarding against degenerate segments.
 const maxGridWalkSteps = NUM_VOXEL_ROWS + NUM_VOXEL_COLS + NUM_COLLISION_LAYERS + 3;
 
-// How far into the room the open space around a viewpoint is measured (see getOpenSpaceDropAhead).
-// Far enough to take in the ground a walk of a few seconds would cover, and near enough that what
-// the viewer is standing among still decides the answer rather than the far side of the room.
+// Reach for the open-space measure (see getOpenSpaceDropAhead).
 const openSpaceReach = 5; // in world units
 
 const blockCenterTemp = new THREE.Vector3();
@@ -44,18 +31,9 @@ const ClientVoxelQueryUtil =
         return voxelInstancedMeshId;
     },
 
-    // Whether the room's own geometry stands between two points, as the room is currently drawn.
-    //
-    // The grid is walked block by block along the segment rather than raycast, because the room
-    // draws every one of its quads from a single instanced mesh and three.js tests a ray against
-    // every instance such a mesh holds — a whole room's worth, for a question asked every frame.
-    // The walk instead costs one step per block boundary the segment crosses, whatever the room is
-    // built of.
-    //
-    // The block the segment starts in is not counted, so a camera pushed into a wall does not blind
-    // itself, and neither is the block it ends in, that being the one the target stands in. Which is
-    // to say this is not the segment *intersecting* a block: a segment ending deep inside a wall is
-    // blocked by nothing.
+    // Whether drawn room geometry lies between two points. Walks blocks along the segment (raycasting
+    // the voxel mesh would test every instance). Start and end blocks are excluded (a camera inside a
+    // wall isn't blinded; the target's own block doesn't hide it).
     lineSegmentIsBlockedByDrawnVoxelBlock(from: THREE.Vector3, to: THREE.Vector3): boolean
     {
         const room = App.getCurrentRoom();
@@ -76,9 +54,7 @@ const ClientVoxelQueryUtil =
         const absDx = Math.abs(dx), absDy = Math.abs(dy), absDz = Math.abs(dz);
         const colStep = Math.sign(dx), rowStep = Math.sign(dz), layerStep = Math.sign(dy);
 
-        // How much of the segment (as a fraction of its length) one whole block costs on each axis,
-        // and how much of it is left before the next block boundary on that axis. An axis the segment
-        // does not travel along never comes up, so its boundary is never reached.
+        // Per-axis cost of one block (as a segment fraction) and distance to the next boundary.
         const colStride = (absDx > 0) ? (1 / absDx) : Infinity;
         const rowStride = (absDz > 0) ? (1 / absDz) : Infinity;
         const layerStride = (absDy > 0) ? (COLLISION_LAYER_HEIGHT / absDy) : Infinity;
@@ -123,12 +99,8 @@ const ClientVoxelQueryUtil =
             if (boundaryCrossed >= 1)
                 return false; // Stepped past the target itself, which the block test above may have missed.
 
-            // Arrived at the block the target stands in, having met nothing solid on the way. Asked
-            // here, before the block is judged, rather than at the top of the next turn: a target
-            // standing *inside* a solid block would otherwise be reported as hidden by the very
-            // block it stands in. That is not a corner case but the ordinary lot of anything hung
-            // on a wall, whose position sits exactly on the boundary between the wall and the room
-            // and lands on whichever side of it the rounding of a stored coordinate happens to fall.
+            // Check arrival before judging the block, since wall attachments often sit exactly on a
+            // boundary and may round into the wall block.
             if (col === endCol && row === endRow && collisionLayer === endCollisionLayer)
                 return false;
 
@@ -138,37 +110,11 @@ const ClientVoxelQueryUtil =
         return false;
     },
 
-    // How far the room's open space ahead of a viewpoint drops below the level that viewpoint
-    // stands at, in world units: zero while the ground ahead lies at his own level or above it,
-    // and growing as it falls away beneath him.
-    //
-    // "Open space" is the empty part of the room the viewpoint can actually see into, block by
-    // block, so what this answers is where there is somewhere to look rather than where the ground
-    // happens to be — which is what tells apart a viewer standing on a platform over an open floor,
-    // who finds the room falling away in front of him, from one standing on the upper storey of a
-    // building, who finds it laid out around him at his own level however high above the room's
-    // floor he has climbed.
-    //
-    // Measured against the level the viewer stands at rather than his eye, and never below zero,
-    // because the space over his head is no part of the question. Every room has open space above a
-    // viewer — that is what headroom is — and weighing it against the space below him would answer
-    // for the height of the room rather than for the lie of its ground: an open column of a room
-    // reads as its own midpoint, so a viewer would have to climb past the middle of the room before
-    // what lies beneath him counted for anything, by which point he has usually arrived wherever he
-    // was climbing to.
-    //
-    // A voxel with nothing to look down into — filled solid, standing level with the viewer, or
-    // standing behind something that fills the way to it — answers zero rather than dropping out of
-    // the reckoning. A wall is not an absence of an answer, but the answer that there is nothing to
-    // look down into that way, and it has to weigh against the open ground beside it: a viewer
-    // facing a wall across a pit would otherwise be shown the pit he cannot see instead of the wall
-    // he is facing.
-    //
-    // Every voxel within reach contributes what its own space says, weighted by how near it is and
-    // how squarely the viewer faces it. Both are measured on the horizontal plane, since what the
-    // weighting stands for is which way the viewer is facing rather than how steeply he is looking.
-    // Weighing a voxel by the full angle to it in space would push away precisely the space lying
-    // low in front of him — the space this measure exists to find.
+    // How far the visible open space ahead drops below the viewer's standing level (>= 0). Measures
+    // where there is room to look, which distinguishes a platform over a floor from an upper storey.
+    // Space above standing level is ignored. Voxels with nothing to look down into (solid, level, or
+    // occluded) count as zero rather than being skipped, so walls weigh against pits. Weighted by
+    // horizontal proximity and facing.
     getOpenSpaceDropAhead(viewPosition: THREE.Vector3, forwardDir: THREE.Vector3,
         standingLevelY: number): number
     {
@@ -199,15 +145,12 @@ const ClientVoxelQueryUtil =
                 if (voxel == undefined)
                     continue;
 
-                // Settled before the voxel is looked into, since a voxel carrying no weight is one
-                // whose contents cannot change the answer however much is on view in it.
+                // Weight first: a zero-weight voxel can't affect the result.
                 const weight = getVoxelProximityWeight(viewPosition, forwardX, forwardZ, row, col);
                 if (weight <= 0)
                     continue;
 
-                // A voxel with nothing below the viewer on view is not silent: it answers that this
-                // way holds nothing to look down into, which is as much of the answer as an opening
-                // is (see above).
+                // Zero is a real answer (see above).
                 const drop = getVisibleDropBelow(voxel, row, col, viewPosition, standingLevelY);
 
                 weightedDropSum += weight * drop;
@@ -218,11 +161,7 @@ const ClientVoxelQueryUtil =
     },
 }
 
-// How near one voxel is to a viewpoint, as a share between 0 and 1 — near in both of the senses that
-// bear on what he is looking at: how short the way to it is, times how squarely he faces it. Both
-// fade to nothing at their limits — at the edge of the reach, and at a right angle to the way the
-// viewer faces — so that a voxel coming into the measure or leaving it does so without a step in
-// the answer.
+// Weight in [0, 1]: distance falloff times horizontal facing, both fading smoothly to zero at limits.
 function getVoxelProximityWeight(viewPosition: THREE.Vector3, forwardX: number, forwardZ: number,
     row: number, col: number): number
 {
@@ -240,24 +179,14 @@ function getVoxelProximityWeight(viewPosition: THREE.Vector3, forwardX: number, 
     return (forwardness > 0) ? (nearness * forwardness) : 0;
 }
 
-// How far one voxel's open space falls below a standing level: the depth of the lowest empty block
-// of it the viewpoint can see from there, or zero where it can see none below that level — a voxel
-// filled to the top, one whose own ground lies level with the viewer, or one standing behind
-// something that fills the way to it.
-//
-// The lowest block on view rather than an average of those on view, so that a voxel answers with
-// how far down there is to look into it. Taken off the empty blocks rather than off the height of
-// whatever fills the voxel, so that it answers about where there is room to look instead of where a
-// surface is: a doorway through a wall and the solid wall beside it carry their surfaces at the same
-// height, and only one of the two is somewhere to look.
+// Depth of the lowest visible empty block below the standing level, or 0. Uses empty blocks (room to
+// look into) rather than surface heights, so a doorway differs from the wall beside it.
 function getVisibleDropBelow(voxel: Voxel, row: number, col: number, viewPosition: THREE.Vector3,
     standingLevelY: number): number
 {
     for (let collisionLayer = COLLISION_LAYER_MIN; collisionLayer <= COLLISION_LAYER_MAX; ++collisionLayer)
     {
-        // A block standing at the viewer's own level is nothing to look *down* into, and neither is
-        // anything above it, so the walk up the column ends here. Which is also what keeps the cost
-        // of this to the part of the room below him however tall the room is.
+        // Stop at standing level; also bounds the cost.
         const blockCenterY = VoxelQueryUtil.getWorldYAtVoxelCollisionLayerCenter(collisionLayer);
         if (blockCenterY >= standingLevelY)
             break;
@@ -265,9 +194,7 @@ function getVisibleDropBelow(voxel: Voxel, row: number, col: number, viewPositio
         if (VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer))
             continue;
 
-        // Aimed at the block's middle, which is as fine as this needs to be: the answer is already
-        // an average over a whole neighbourhood of blocks, so where within one of them the line
-        // lands changes nothing about it.
+        // Block centre is precise enough, given the neighbourhood average.
         blockCenterTemp.set(col + 0.5, blockCenterY, row + 0.5);
         if (ClientVoxelQueryUtil.lineSegmentIsBlockedByDrawnVoxelBlock(viewPosition, blockCenterTemp))
             continue;
@@ -277,10 +204,8 @@ function getVisibleDropBelow(voxel: Voxel, row: number, col: number, viewPositio
     return 0;
 }
 
-// Whether one block of the grid has anything of the room drawn in it. An empty block has nothing to
-// draw, and neither, for the moment, has one the orbit camera has taken out of sight — the opening
-// it leaves being one the room really is seen through. The room's floor and ceiling count as blocks
-// of their own here, lying past the ends of the collision layers.
+// Whether a block has anything drawn: false for empty blocks and blocks hidden by the orbit camera.
+// Floor and ceiling count as blocks beyond the layer range.
 function voxelBlockIsDrawn(voxels: Voxel[], row: number, col: number, collisionLayer: number): boolean
 {
     const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);
@@ -302,10 +227,8 @@ function voxelBlockIsDrawn(voxels: Voxel[], row: number, col: number, collisionL
     return !blockIsTakenOutOfSight(row, col, collisionLayer);
 }
 
-// Whether the orbit camera is currently holding one block of the room out of the way. A block goes
-// out of sight whole, every face of it at once (see OrbitOcclusionHider), so whichever of its faces
-// is being drawn answers for all six — and a block none of whose faces is drawn, being buried in
-// the middle of something, was never in anyone's way to begin with.
+// Blocks are hidden whole (see OrbitOcclusionHider), so any drawn face answers for all; fully buried
+// blocks were never in the way.
 function blockIsTakenOutOfSight(row: number, col: number, collisionLayer: number): boolean
 {
     const firstQuadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, collisionLayer);
@@ -318,9 +241,7 @@ function blockIsTakenOutOfSight(row: number, col: number, collisionLayer: number
     return false;
 }
 
-// The same question for a single quad. A quad that is not on show holds no instance at all (see
-// VoxelQuadInstanceUtil), and is not something the camera has taken away — it is something the room
-// never had on view in the first place, which is what a floor tile covered by a block amounts to.
+// Quads not on show hold no instance (see VoxelQuadInstanceUtil), so they aren't "taken out of sight".
 function quadIsTakenOutOfSight(quadIndex: number): boolean
 {
     const instanceId = VoxelQuadInstanceUtil.getInstanceId(quadIndex);

@@ -18,14 +18,10 @@ const RoomRouter = express.Router();
 
 // Page size for room-list responses (and the unit for the client's pagination cursor).
 const ROOM_LIST_PAGE_SIZE = 10;
-// Hard cap on rooms scanned per search call. Firestore can't do substring matches,
-// so search is implemented as an in-memory filter over a paged scan; this bound prevents
-// a single search from runaway-scanning the whole collection.
+// Search scan cap: Firestore has no substring queries, so search filters a paged scan in memory.
 const ROOM_SEARCH_MAX_SCAN = 500;
 
-// Opens a new room. Which kind is asked for decides who may ask: a Regular room is the one room a
-// member owns, while a Hub is a room of the game's own that the world is built out of — so opening
-// one is world-building rather than a personal act, and belongs to an admin.
+// Regular rooms: a member's one owned room. Hubs: admin-only world-building.
 RoomRouter.post("/create_room", UserIdentificationUtil.identifyRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const user = User.fromString((req as any).userString);
 
@@ -43,9 +39,7 @@ RoomRouter.post("/create_room", UserIdentificationUtil.identifyRegisteredUser, a
             res.status(403).send("Only an admin can create a hub.");
             return;
         }
-        // Made through HubRoomUtil rather than as an owned room: a hub belongs to nobody, is
-        // preloaded into memory for the room picker to balance users across, and does not count
-        // against the one room its creator is allowed to own.
+        // Via HubRoomUtil: unowned, preloaded for balancing, and not counted as the admin's owned room.
         const newHubID = await HubRoomUtil.createHub();
         if (newHubID.length === 0)
         {
@@ -84,8 +78,7 @@ RoomRouter.post("/create_room", UserIdentificationUtil.identifyRegisteredUser, a
     res.status(200).json({ roomID: newRoomID });
 });
 
-// Re-skins the named room. Whether the caller may touch it is settled by resolveConfigurableRoom
-// below.
+// Permission via resolveConfigurableRoom.
 RoomRouter.post("/change_room_texture", UserIdentificationUtil.identifyRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const user = User.fromString((req as any).userString);
 
@@ -110,13 +103,8 @@ RoomRouter.post("/change_room_texture", UserIdentificationUtil.identifyRegistere
     res.status(200).send("Room texture updated.");
 });
 
-// Re-lights the named room: its ambient light, the light the player carries while standing in it,
-// and its fog. Whether the caller may touch it is settled the same way re-skinning one is — the two
-// are the same act of decorating a room one owns or a hub one administers.
-//
-// What arrives is not checked here. It is a quantized string with no invalid values in it, only
-// values that decode to something other than what was meant, so ServerRoomManager canonicalizes it
-// instead (see changeRoomPrefs).
+// Changes room prefs (permission as for texture packs). Input isn't validated here; ServerRoomManager
+// canonicalizes it (see changeRoomPrefs).
 RoomRouter.post("/change_room_prefs", UserIdentificationUtil.identifyRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const user = User.fromString((req as any).userString);
 
@@ -141,8 +129,7 @@ RoomRouter.post("/change_room_prefs", UserIdentificationUtil.identifyRegisteredU
     res.status(200).send("Room lighting updated.");
 });
 
-// List rooms with offset-based pagination. The client is responsible for hiding
-// "special entries" (Hub, the user's own room) that it pins above the regular list.
+// Offset-paginated room list. The client hides entries it pins separately.
 RoomRouter.post("/list_rooms", UserIdentificationUtil.identifyAnyUser, async (req: Request, res: Response): Promise<void> => {
     const page = parsePage(req.body?.page);
 
@@ -160,9 +147,7 @@ RoomRouter.post("/list_rooms", UserIdentificationUtil.identifyAnyUser, async (re
     res.status(200).json({ rooms, hasMore });
 });
 
-// Substring search over ownerUserName (case-insensitive). Firestore has no substring
-// operator, so this scans rooms in chunks and filters in memory; the scan is hard-capped
-// at ROOM_SEARCH_MAX_SCAN to keep latency bounded.
+// Case-insensitive substring search over ownerUserName via a capped in-memory scan.
 RoomRouter.post("/search_rooms", UserIdentificationUtil.identifyAnyUser, async (req: Request, res: Response): Promise<void> => {
     const rawQuery = typeof req.body?.query === "string" ? req.body.query : "";
     const query = rawQuery.trim().toLowerCase();
@@ -180,8 +165,7 @@ RoomRouter.post("/search_rooms", UserIdentificationUtil.identifyAnyUser, async (
     let exhausted = false;
     const CHUNK = 50;
 
-    // Scan until we've collected enough matches to satisfy this page (with one extra
-    // to detect hasMore), or we hit the scan cap, or we've exhausted the collection.
+    // Collect enough matches for this page (+1 for hasMore), up to the scan cap or collection end.
     while (matches.length < targetSkip + ROOM_LIST_PAGE_SIZE + 1 && scanned < ROOM_SEARCH_MAX_SCAN)
     {
         const chunkLimit = Math.min(CHUNK, ROOM_SEARCH_MAX_SCAN - scanned);
@@ -209,8 +193,7 @@ RoomRouter.post("/search_rooms", UserIdentificationUtil.identifyAnyUser, async (
     }
 
     const slice = matches.slice(targetSkip, targetSkip + ROOM_LIST_PAGE_SIZE);
-    // hasMore: we have more accumulated matches than this page, OR we hit the scan cap
-    // without exhausting the collection (so additional matches may exist further in).
+    // More matches than this page, or the cap was hit before the end.
     const hasMore = matches.length > targetSkip + ROOM_LIST_PAGE_SIZE || (!exhausted && scanned >= ROOM_SEARCH_MAX_SCAN);
 
     res.status(200).json({ rooms: slice.map(toRoomListEntry), hasMore });
@@ -252,18 +235,8 @@ RoomRouter.post("/get_my_room_list_entry", UserIdentificationUtil.identifyAnyUse
     res.status(200).json({ room: toRoomListEntry(dbRoom) });
 });
 
-// The room a request to decorate one is about, or null once the reason it is about none has been
-// sent to the caller.
-//
-// **Every such request names the room it means.** Whether the caller may decorate it is then a
-// question about that room, and it has exactly two affirmative answers:
-//
-//   - **A room the caller owns.** Decorating one's own room is the ordinary case.
-//   - **A hub, asked for by an admin.** A hub belongs to nobody, so ownership can never reach one;
-//     dressing the game's own rooms is world-building rather than a personal act.
-//
-// Everything else is refused, which covers a member reaching for a hub, an admin reaching for
-// somebody else's private room, and a guest — who owns nothing — reaching for anything at all.
+// Resolves the room for a decoration request, or null after sending an error. Allowed: a room the
+// caller owns, or a hub for an admin. Everything else is refused.
 async function resolveConfigurableRoom(user: User, roomID: unknown, res: Response): Promise<Room | null>
 {
     if (typeof roomID !== "string" || roomID.length === 0)
@@ -279,9 +252,7 @@ async function resolveConfigurableRoom(user: User, roomID: unknown, res: Respons
         return null;
     }
 
-    // Read off the room rather than off the caller's own record, so that the permission is settled
-    // by the one thing being decorated. Ownership is checked against a non-empty id on both sides,
-    // since "owned by nobody" and "is nobody" must not come out equal.
+    // Checked against the room's owner, requiring non-empty ids so "nobody" never matches "nobody".
     const ownerUserID = dbRoom.ownerUserID ?? "";
     const callerOwnsIt = ownerUserID.length > 0 && ownerUserID === user.id;
     const callerAdministersIt = dbRoom.roomType === RoomTypeEnumMap.Hub
@@ -292,8 +263,7 @@ async function resolveConfigurableRoom(user: User, roomID: unknown, res: Respons
         return null;
     }
 
-    // The row above carries the room's identity; this is the room's contents, which is what
-    // decorating one actually rewrites.
+    // Room contents (what decoration rewrites).
     const room = await DBRoomUtil.getRoomContent(roomID);
     if (!room)
     {

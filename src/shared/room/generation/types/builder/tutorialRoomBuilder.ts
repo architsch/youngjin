@@ -12,17 +12,12 @@ import { DoorTypeEnumMap } from "../../../../object/types/doorType";
 import { ObjectMetadataKeyEnumMap } from "../../../../object/types/objectMetadataKey";
 import { HUB_ROOM_ID_KEYWORD, LABEL_COLOR_PALETTE_NAME } from "../../../../system/sharedConstants";
 
-// What the tutorial's two fixtures look like is settled here rather than derived, because the
-// tutorial is the first thing anybody sees of the game and it should be the same first thing every
-// time. Elsewhere an object nobody has dressed falls back on an appearance seeded from where it
-// stands, which is deterministic but nobody's choice: it is only asked to look like *a* door or *a*
-// character, since it is a room's own people who will dress it afterwards. Nobody is going to dress
-// these two, and a screenshot of the tutorial should keep matching the tutorial.
+// The tutorial's fixtures have explicit appearances (not derived defaults), so the first thing players
+// see is always the same.
 const RECEPTIONIST_APPEARANCE = CompositionMetadataUtil.encode(
     InstancedMeshCompositionCodecTypeEnumMap.Player, 0,
     {
-        // The plainest build of every part but the hat, which is the round one with a brim — the one
-        // thing on him that says he is standing there in a job rather than as another visitor.
+        // Plainest parts except the brimmed hat, which marks him as staff.
         types: {head: 0, ear: 0, hat: 1, torso: 0, arm: 0, bottom: 0},
         colors: playerColors({
             head: "#c6b492", ear: "#c6b492", hat: "#95002d",
@@ -30,25 +25,19 @@ const RECEPTIONIST_APPEARANCE = CompositionMetadataUtil.encode(
         }),
     });
 
-// Pine, with a putty plate and a brass knob: the friendliest of the finishes a door can be given,
-// and the one that shows a door's grain and joinery most plainly of them all.
+// Pine with a putty plate and brass knob (shows grain and joinery best).
 const TUTORIAL_DOOR_COLOR_SCHEME_INDEX = 0;
 
 const TUTORIAL_DOOR_APPEARANCE = CompositionMetadataUtil.encode(
     InstancedMeshCompositionCodecTypeEnumMap.Door, 0,
     {colors: DoorCompositionConstants.colorSchemes[TUTORIAL_DOOR_COLOR_SCHEME_INDEX]});
 
-// A dark grey that reads as lettering on the plate without going to flat black, snapped to the
-// nearest position the lettering palette holds.
+// Dark grey label ink, snapped to the lettering palette.
 const TUTORIAL_DOOR_LABEL_COLOR_INDEX = ColorUtil.rgbToPaletteIndex(
     LABEL_COLOR_PALETTE_NAME, ColorUtil.hexToRGB("#33302c"));
 
-// The tutorial's room: four small spaces the player is walked through in turn, each finished in a
-// palette of its own so that moving from one to the next is visible as such, plus the two fixtures
-// the tutorial's steps address by name.
-//
-// The stretches of wall between the spaces are deliberately left uncarved. They are mass like the
-// rest of the room until a scripted step opens one up and sends the player on.
+// Four small spaces with distinct palettes, walked through in turn, plus two named fixtures. The walls
+// between spaces stay solid until a scripted step opens them.
 export default class TutorialRoomBuilder extends RoomBuilder
 {
     override run(): RoomBuilder
@@ -71,9 +60,7 @@ export default class TutorialRoomBuilder extends RoomBuilder
                     new EncodableByteString(RECEPTIONIST_APPEARANCE),
             });
 
-        // Add the door. It is the room's own way in, and it is wired to the hubs rather than to one
-        // hub in particular: whoever walks through it is taken out to whichever hub is worth being
-        // in when he gets there, which is exactly what leaving the tutorial means.
+        // The exit door points at the hubs, so leaving the tutorial goes to a balanced hub.
         room.objectGroup.objectById["door"] = new AddObjectSignal("", "", "",
             ObjectTypeConfigMap.getIndexByType("Door"), "door",
             new ObjectTransform(params.hotspots.door, {x: 0, y: 0, z: 1}),
@@ -93,9 +80,7 @@ export default class TutorialRoomBuilder extends RoomBuilder
     }
 }
 
-// The character's colors, written as hexes for the sake of reading them. Encoding snaps each to the
-// nearest position the palette a character is painted from holds, so these are named from that
-// palette to begin with and nothing is lost on the way down.
+// Hex colors for readability; encoding snaps them to the player palette (they're taken from it).
 function playerColors(hexByPart: {[partName: string]: string})
 {
     const colors: {[partName: string]: {x: number, y: number, z: number}} = {};

@@ -1,30 +1,11 @@
 /**
- * Version migration of a room's voxel grid.
- *
- * A room's contents are stored as an opaque binary blob rather than as database rows, so they are
- * not migrated the way a row is: nothing rewrites them in place, and no migration pass runs over
- * storage. Instead the decoder recognises the version a blob was written in, reads it in that
- * version's own format, and carries it forward one version at a time until it is current — every
- * time the room is loaded, for as long as blobs of that vintage are still out there.
- *
- * That makes the decoder the only thing standing between an old room and being read as nonsense, so
- * these tests run it against rooms that were genuinely written by the old code. The fixtures were
- * produced by the previous commit's own encoder (see the fixtures' README), not by a
- * re-implementation of the old format in this tree — which would only prove that two descriptions
- * of the format agree with each other.
- *
- * What migration owes an existing room, from version 1 to version 2 (the room's height doubling):
- *   - everything the room already held stays exactly where it stood, face for face;
- *   - the ceiling it had becomes a real floor slab at that same height, so the room below it is
- *     left looking exactly as it did;
- *   - the storey the room has gained above that slab arrives empty.
- *
- * And from version 2 to version 3 (the doorway being filled in, now that a door is a panel hung on
- * the wall rather than a cover over a hole cut through it):
- *   - the entrance cell is solid to the height the doorway stood at, finished like the wall it is
- *     now part of;
- *   - nothing else about the room changes at all — which is asserted by taking the doorway back out
- *     again and finding the room byte for byte as version 2 left it.
+ * Voxel grid version migration. Content blobs aren't rewritten in storage; the decoder reads each
+ * version's format and steps it forward on every load. Fixtures were written by the previous commit's
+ * encoder (see the fixtures' README), not a reimplementation.
+ * - v1 -> v2 (height doubled): existing faces stay put, the old ceiling becomes a floor slab at the same
+ *   height, and the new upper storey is empty.
+ * - v2 -> v3 (doors hang on walls): the doorway cell is filled and finished like the wall; nothing else
+ *   changes (reopening the doorway yields v2 byte for byte).
  */
 import { describe, it, expect } from "vitest";
 import fs from "fs";
@@ -47,10 +28,7 @@ const FIXTURE_DIR = path.join(__dirname, "../fixtures/legacyVoxelGrids");
 const FIXTURE_NAMES = ["bare", "procedural_1", "procedural_7", "procedural_12345",
     "procedural_999999", "mixed"];
 
-// The height a room stood at in the format these fixtures were written in. It is also where
-// migration lays the slab that replaces such a room's ceiling: that height belongs to the old
-// format, not to wherever a room built today happens to put its storey floor, and the two are no
-// longer the same number.
+// Legacy room height, and where migration lays the slab (not today's storey floor height).
 const LEGACY_NUM_COLLISION_LAYERS = 8;
 const LEGACY_COLLISION_LAYER_MAX = LEGACY_NUM_COLLISION_LAYERS - 1;
 
@@ -76,12 +54,8 @@ function decode(bytes: Uint8Array): VoxelGrid
     return VoxelGrid.decode(new BufferState(bytes)) as VoxelGrid;
 }
 
-// The migrated room with its doorway opened up again, which is what version 2 left behind.
-//
-// The whole of what version 3 does is fill that one cell, so undoing it is what lets every
-// assertion about what migration preserved go on being made against the fixtures exactly as they
-// were recorded — and makes those assertions stronger rather than weaker, since a fill that
-// disturbed anything beyond the doorway would no longer undo cleanly.
+// The migrated room with its doorway reopened (v2's state), so preservation checks run against the
+// recorded fixtures; a fill touching anything else wouldn't undo cleanly.
 function decodeWithDoorwayReopened(bytes: Uint8Array): VoxelGrid
 {
     const grid = decode(bytes);
@@ -92,9 +66,7 @@ function decodeWithDoorwayReopened(bytes: Uint8Array): VoxelGrid
             doorway.rowMin, doorway.colMin, layer);
         VoxelUpdateUtil.removeVoxelBlock(undefined, grid.voxels, first);
 
-        // Taking a block out hides its faces but leaves them painted, so the cell would come back
-        // carrying the finish the fill gave it. A doorway is an unpainted hole — that is what a
-        // version-2 room has there — so the paint goes too.
+        // Removal hides faces but keeps their paint; a v2 doorway is unpainted, so clear it too.
         for (let i = 0; i < NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
             grid.quadsMem.quads[first + i] = 0;
     }
@@ -111,8 +83,7 @@ function quadIsVisible(quad: number): boolean
     return (quad & 0b10000000) != 0;
 }
 
-// The same fold the fixtures were written with, over the layers the legacy room had. Every one of
-// those layers has to come through migration byte for byte, so this is what says whether it did.
+// The fixtures' hash over the legacy layers, which must survive migration byte for byte.
 function hashLegacyLayerQuads(grid: VoxelGrid): number
 {
     let hash = 0x811c9dc5; // FNV-1a
@@ -142,8 +113,7 @@ describe.each(FIXTURE_NAMES)("migrating a version-1 room (%s)", (name) => {
     it("is recognised as an older version than the one being written now", () => {
         expect(bytes[0]).toBe(1);
 
-        // Re-encoding what came out stamps the current version on it, which is what makes the
-        // migration a one-time cost per room rather than something paid on every load forever.
+        // Re-encoding stamps the current version, so migration is a one-time cost per room.
         const grid = decode(bytes);
         const out = new BufferState(new Uint8Array(1024 * 1024));
         grid.encode(out);
@@ -178,8 +148,7 @@ describe.each(FIXTURE_NAMES)("migrating a version-1 room (%s)", (name) => {
             // Solid, so that a door has something to hang on...
             expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(doorway, layer)).toBe(true);
 
-            // ...and finished like its neighbour, so the filled cell reads as the stretch of wall
-            // it now is rather than as a patch over a hole.
+            // ...and finished like its neighbour, so it reads as wall.
             const doorwayFirst = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(
                 doorway.row, doorway.col, layer);
             const wallFirst = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(
@@ -228,8 +197,7 @@ describe.each(FIXTURE_NAMES)("migrating a version-1 room (%s)", (name) => {
             // It carries what the ceiling tile it replaces carried...
             expect(quadTextureIndex(slabQuad)).toBe(quadTextureIndex(expected.ceilingQuads[i]));
 
-            // ...and is on show under exactly the cells the ceiling tile was on show under, which
-            // is every cell not filled to the top by a wall.
+            // ...visible exactly where the ceiling tile was (every cell not walled to the top).
             expect(quadIsVisible(slabQuad)).toBe(quadIsVisible(expected.ceilingQuads[i]));
         }
     });
@@ -242,16 +210,14 @@ describe.each(FIXTURE_NAMES)("migrating a version-1 room (%s)", (name) => {
             const quad = grid.quadsMem.quads[
                 VoxelQueryUtil.getCeilingVoxelQuadIndex(voxel.row, voxel.col)];
 
-            // Nothing stands against it up there, so every cell of it is on show — including the
-            // cells a wall reaching the old ceiling used to cover.
+            // Nothing stands above it, so every cell is visible.
             expect(quadIsVisible(quad)).toBe(true);
             expect(quadTextureIndex(quad)).toBe(quadTextureIndex(expected.ceilingQuads[i]));
         }
     });
 
     it("comes out of a second decode identical to the first", () => {
-        // Migration has to be a function of the blob alone: a room read twice — as it is, once per
-        // server that loads it — must not come out differently the second time.
+        // Migration depends only on the blob, so repeated loads agree.
         const first = decode(bytes);
         const second = decode(bytes);
         expect(Array.from(second.quadsMem.quads)).toEqual(Array.from(first.quadsMem.quads));
@@ -260,9 +226,7 @@ describe.each(FIXTURE_NAMES)("migrating a version-1 room (%s)", (name) => {
     });
 
     it("survives a round trip through the current format unchanged", () => {
-        // What migration produced is written back in the current format, so reading that back has
-        // to give the same room — which is the only thing keeping a migrated room from decaying a
-        // little more every time it is saved.
+        // Re-reading a migrated room must give the same room, or it decays on each save.
         const migrated = decode(bytes);
         const out = new BufferState(new Uint8Array(1024 * 1024));
         migrated.encode(out);
@@ -275,10 +239,7 @@ describe.each(FIXTURE_NAMES)("migrating a version-1 room (%s)", (name) => {
 });
 
 describe("migrating a version-0 room", () => {
-    // Version 0 was written in the same binary layout as version 1, and differs from it only in
-    // what the room is taken to contain, so a version-0 blob is a version-1 one with a different
-    // number on the front. Reading one exercises the whole chain of conversions rather than only
-    // the last of them.
+    // v0 shares v1's layout, so reading one exercises the whole conversion chain.
     const {bytes} = loadFixture("bare");
     const version0Bytes = bytes.slice();
     version0Bytes[0] = 0;
@@ -310,25 +271,17 @@ describe("the migrated room as a room", () => {
     });
 
     it("seals the doorway, so that the room's door has a wall to hang on", () => {
-        // A migrated room whose doorway was left open is a room whose own door cannot be placed in
-        // it — a door is a wall attachment, and an attachment with no wall behind it is refused
-        // (see WallAttachedObjectUtil). So this is checked on the far side of the migration rather
-        // than only where the fill is written.
+        // An open doorway would reject the room's own door (see WallAttachedObjectUtil), so this is checked
+        // after migration.
         const grid = decode(loadFixture("procedural_1").bytes);
         const entrance = getVoxel(grid, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL);
         expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(entrance, COLLISION_LAYER_MIN)).toBe(true);
     });
 });
 
-//-----------------------------------------------------------------------------------------------
-// Version 3 -> 4: a room gained its restricted zones.
-//
-// This conversion adds nothing to the room, which is what makes it worth testing rather than what
-// makes it safe to skip. The zones were appended behind the voxels, so nothing in front of them
-// moved and every byte of a version-3 room still has to read back exactly as it did — a reader that
-// had drifted by so much as a byte would still decode, and would only show up as a room that came
-// back subtly different from the one that was written.
-//-----------------------------------------------------------------------------------------------
+// ─── Version 3 -> 4: restricted zones ───
+// Zones are appended after the voxels, so every v3 byte must read back unchanged (a byte of drift would
+// still decode, just subtly wrong).
 
 const V3_FIXTURE_DIR = path.join(__dirname, "../fixtures/voxelGridsV3");
 const V3_FIXTURE_NAMES = ["solid", "hub", "regular", "mixed"];
@@ -377,8 +330,7 @@ describe.each(V3_FIXTURE_NAMES)("migrating a version-3 room (%s)", (name) => {
     });
 
     it("comes back holding no restricted zones", () => {
-        // A room from before zones existed has not said which part of it its owner meant to keep to
-        // himself, so it stays editable exactly as it was.
+        // Pre-zone rooms have no zones, so they stay fully editable.
         expect(decode(bytes).restrictedZones).toEqual([]);
     });
 
@@ -400,8 +352,7 @@ describe.each(V3_FIXTURE_NAMES)("migrating a version-3 room (%s)", (name) => {
 
 describe("the encoded room's size bound", () => {
     it("holds for the largest room there is, with every zone it may carry", () => {
-        // The buffer a room is encoded into is sized from this bound, so a room that outgrew it
-        // would be writing past the end of that buffer rather than failing here.
+        // The encode buffer is sized from this bound, so exceeding it would write past the buffer.
         const grid = VoxelGrid.createBaseGrid(); // solid floor to ceiling: the costliest room to write
         for (let i = 0; i < MAX_RESTRICTED_ZONES; ++i)
             grid.restrictedZones.push(new RestrictedZone(i, i, 0, NUM_VOXEL_COLS - 1));

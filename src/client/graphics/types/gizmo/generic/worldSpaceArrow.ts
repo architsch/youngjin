@@ -79,8 +79,6 @@ export default class WorldSpaceArrow
 
         this.baseClickSize = 2 * scale;
 
-        // A non-interactive arrow (e.g. a directional tutorial hint) has no click target,
-        // so it never intercepts pointer events nor shows a hover cursor.
         if (!interactive)
             return;
 
@@ -90,11 +88,8 @@ export default class WorldSpaceArrow
             "cursor:pointer; pointer-events:auto;" +
             "border-radius:50%; background:transparent;";
 
-        // Drag-vs-click handoff: when a press starts on the click target,
-        // wait to see if the pointer moves past a small threshold. If it does,
-        // hand off to the game canvas so first-person drag-to-rotate runs.
-        // If it doesn't, the press stays on this element and the "click"
-        // listener below fires normally so the arrow's onClick callback runs.
+        // A press that moves past the drag threshold is handed to the game canvas (camera drag);
+        // otherwise it stays here and fires "click".
         let pressArmed = false;
         let pressStartX = 0;
         let pressStartY = 0;

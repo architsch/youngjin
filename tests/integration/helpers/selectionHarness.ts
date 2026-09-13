@@ -1,10 +1,6 @@
 /**
- * Helpers for the voxelQuad auto-reselection scenarios.
- *
- * The reselection logic lives on the client, so these tests drive the real client modules
- * (VoxelQuadSelection, ClientVoxelManager) against a really generated room. The test file that
- * uses this helper must stub out the three client modules that need a browser
- * (graphicsManager, app, worldSpaceOutlineRect) BEFORE importing anything from here.
+ * Helpers for voxel quad reselection scenarios, driving the real client modules against a generated
+ * room. The test must stub graphicsManager, app and worldSpaceOutlineRect BEFORE importing this.
  */
 import Room from "../../../src/shared/room/types/room";
 import RoomRuntimeMemory from "../../../src/shared/room/types/roomRuntimeMemory";
@@ -24,15 +20,10 @@ import { createEditingUser } from "./mockUser";
 export type FacingAxis = "x" | "y" | "z";
 export type Orientation = "-" | "+";
 
-// Who these helpers act as. They stand in for a user editing a room by hand, and the editing
-// utilities want the person as well as the role he holds.
+// The acting user for these helpers.
 const actingUser = createEditingUser();
 
-/**
- * A freshly built room of the given type, ready to be handed to the App stub. The room is
- * registered with the physics engine too, since the voxel-removal rules consult it in order to
- * find any wall-attached object that would lose its support.
- */
+/** A built room for the App stub, registered with physics (removal rules query attachments through it). */
 export function createRoom(id: string = "test-room", type: RoomType = RoomTypeEnumMap.Hub): Room
 {
     const room = createTestRoom(id, id, type, "owner-user", "Owner", "default");
@@ -120,10 +111,8 @@ export function buildPillar(room: Room, row: number, col: number,
     }
 }
 
-// ─── Mirrors of the placement menu's own derivation ────────────────────────
-// The two buttons that interrupt a voxelQuad selection live inside a React component
-// (voxelQuadPlacementOptions.tsx) whose handlers are module-private, so the sequence each one
-// performs is reproduced here. Keep these in step with that component.
+// ─── Mirrors of the placement menu's handlers ─────────────────────────────
+// Reproduces voxelQuadPlacementOptions.tsx's module-private handler sequences; keep in step.
 
 /** What the "add block" button does: place a block against the selected face, then reselect. */
 export function userAddsBlockAt(room: Room, selection: VoxelQuadSelection): boolean

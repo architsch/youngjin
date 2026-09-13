@@ -1,21 +1,7 @@
-// Driving the game the way a person does: real gestures on the canvas, real clicks on the HUD.
-//
-// Two things have to be true at once for an automated run to prove anything. The gesture has to be
-// a real one — a pointer that presses and releases on the canvas, a key that goes down and comes up
-// — so that everything between the browser and the object's own handler actually runs: the tap
-// arbitration that tells a click from a drag, the raycast, the permission check inside whatever was
-// hit. And the gesture has to land where it was aimed, which nothing on the Playwright side can
-// know, because where anything in a room falls on screen depends on the room that was generated.
-//
-// So the aim comes from the page (AutomationBridgeUtil, which only ever answers questions) and the
-// act happens here (which only ever produces input). Neither half can shortcut the other: this file
-// has no way to select an object except by clicking on it, and the bridge has no way to click.
-//
-// The failures this is built around are the quiet ones. A click on something out of reach is read
-// as a click on nothing; a click on something standing behind a wall hits the wall; a click during
-// a drag is not a click at all. Each of those does exactly nothing and reports exactly nothing, so
-// every aim here is verified against the page before the gesture is made, and an aim that cannot be
-// made to work comes back saying which of those it was.
+// Drives the game the way a person does: real pointer and key input on the canvas and HUD, so tap
+// arbitration, raycasts and permission checks all run. Aim comes from the page (AutomationBridgeUtil,
+// read-only); input happens here. Clicks fail silently (out of reach, occluded, mid-drag), so every aim
+// is verified against the page first, and a failed aim reports which failure it was.
 
 const BRIDGE = "__thingspool_automation";
 
@@ -28,9 +14,8 @@ async function hasBridge(page)
     return page.evaluate((name) => typeof window[name] === "object" && window[name] !== null, BRIDGE);
 }
 
-// The bridge is installed on a deployment that is not the public site, so its absence is nearly
-// always one of two things worth telling apart: the page has not finished booting, or this is a
-// build that does not carry it.
+// The bridge exists only on non-public deployments; its absence means the page is still booting or the
+// build lacks it.
 async function waitForBridge(page, timeout = 30_000)
 {
     const startedAt = Date.now();
@@ -51,8 +36,7 @@ async function call(page, method, ...args)
         {name: BRIDGE, method, args});
 }
 
-// Waits until the client has actually been placed in a room and its contents have spawned, which is
-// the point from which anything is there to aim at.
+// Waits until the client is in a room with its contents spawned.
 async function waitForRoom(page, timeout = 45_000)
 {
     await waitForBridge(page, timeout);
@@ -68,15 +52,14 @@ async function waitForRoom(page, timeout = 45_000)
 
 // ─── Choosing what to aim at ────────────────────────────────────────────
 
-// A target is named by whichever of its properties the caller actually knows:
+// A target is named by whichever properties the caller knows:
 //
 //   {objectId: "entrance_door"}                     — by identity
 //   {objectType: "Door"}                            — the nearest one of a kind
 //   {objectType: "Door", metadata: {Label: "Attic"}} — by what it carries
 //   {objectType: "Canvas", index: 2}                — by position in the room's own order
 //
-// Metadata is matched on the key names the shared enum gives, so this file needs to know nothing
-// about what any of them mean.
+// Metadata is matched on the shared enum's key names.
 function matches(report, target)
 {
     if (target.objectId != null && report.objectId !== target.objectId) return false;
@@ -94,8 +77,7 @@ async function findAll(page, target)
     const found = reports.filter(report => matches(report, target));
     if (target.index != null)
         return found[target.index] == null ? [] : [found[target.index]];
-    // Nearest first, so a bare {objectType} names the one the player is standing closest to — which
-    // is the one a person would have meant.
+    // Nearest first, so a bare {objectType} names the closest one.
     return found.sort((a, b) => a.distance - b.distance);
 }
 
@@ -114,9 +96,8 @@ async function find(page, target)
 
 // ─── Gestures ───────────────────────────────────────────────────────────
 
-// One tap: the pointer arrives, presses, and releases without travelling. The stillness is the
-// point — a press and release that moved is read as the user steering the view, and the click is
-// discarded rather than being applied to whatever the pointer came to rest on.
+// A press and release without moving; a press that moves is read as steering the view, and the click is
+// discarded.
 async function tap(page, x, y)
 {
     await page.mouse.move(x, y);
@@ -126,23 +107,9 @@ async function tap(page, x, y)
     await sleep(120);
 }
 
-// A tap on the room, made where the point of it is to change what is picked out.
-//
-// Two things happen to such a tap that look identical from outside, and telling them apart is the
-// whole job here.
-//
-// A control hanging off the current selection — the character's own options, a color palette — puts
-// itself away when the room behind it is tapped, and *spends* the tap doing so, so that the user who
-// meant to close the control does not lose the selection along with it. That tap never reaches the
-// canvas: the pixel is over the canvas, the cast through it meets the wall, and nothing happens. A
-// tap that changed nothing is therefore given one more attempt, and only one — a second silent tap
-// means something other than this.
-//
-// Tapping what is *already* picked out is the opposite case: it is how a selection is let go of, so
-// the tap lands and the answer to it is that there is now no selection. Retrying that would pick the
-// same thing straight back up and leave no trace of what happened in between — and in edit mode what
-// happens in between is that the mode ends, because the mode is the selection. So it is reported
-// rather than undone, and the caller decides what to do about it.
+// A tap meant to change the selection. A control hanging off the selection (character options, a
+// palette) closes on a room tap and consumes it, so a tap that changed nothing is retried once.
+// Tapping what's already selected deselects it (ending edit mode); that's reported, not retried.
 async function tapToSelect(page, x, y)
 {
     const before = await call(page, "selection");
@@ -174,13 +141,8 @@ async function gameMode(page)
     return (await call(page, "context")).gameMode;
 }
 
-// Puts the app into edit mode, unless it is there already.
-//
-// Worth a helper rather than a line in the caller, because a run moving from one scenario to the
-// next does not always know which mode the last one left it in, and nothing can be picked out until
-// it is in this one (see GameModeUtil). There is one way in — the game-mode switch in the top bar —
-// and the mode opens on the user's own character, whose panel coming up is the sign that the mode
-// arrived with a selection under it.
+// Enters edit mode via the top bar's switch unless already there; the character's panel appearing
+// confirms it (see GameModeUtil).
 async function ensureEditMode(page, timeout = 10_000)
 {
     if (await gameMode(page) === "edit")
@@ -195,9 +157,7 @@ async function ensureEditMode(page, timeout = 10_000)
     return true;
 }
 
-// Dragging across the canvas is how the view is turned, which is the only way to bring something
-// into sight that is behind the camera or off to one side. Deliberately made of several small
-// steps: one jump would be a teleport, and the drag reading accumulates movement per frame.
+// Drags across the canvas to turn the view, in small steps (the drag accumulates movement per frame).
 async function orbit(page, dx, dy, options = {})
 {
     const steps = options.steps ?? 12;
@@ -229,8 +189,7 @@ async function zoom(page, deltaY, options = {})
     await sleep(150);
 }
 
-// Walking. `keys` is anything the movement controls accept ("KeyW", "ArrowLeft", …); several at
-// once walk diagonally, exactly as holding both would.
+// Holds movement keys ("KeyW", "ArrowLeft", …); several at once walk diagonally.
 async function walk(page, keys, durationMs = 500)
 {
     const held = Array.isArray(keys) ? keys : [keys];
@@ -242,9 +201,8 @@ async function walk(page, keys, durationMs = 500)
 
 // ─── Aiming, and the reasons an aim fails ───────────────────────────────
 
-// Whether the pixel this object occupies would actually reach it, and if not, which of the several
-// silent failures is in the way. Everything that decides this is read from the page rather than
-// assumed, including how far the reach extends — that distance changes with the view.
+// Whether clicking this object's pixel would reach it, and if not, which silent failure is in the way
+// (reach is read from the page, since it varies with the view).
 function diagnose(report)
 {
     if (report.screen == null)
@@ -255,49 +213,32 @@ function diagnose(report)
         return "hidden behind something";
     if (!report.withinSelectRange)
         return `out of reach (${report.distance.toFixed(1)} away)`;
-    // The cast reaches it but the pointer would not: something drawn over the canvas takes the
-    // click first. Last, because it is the only one of these that moving the camera cannot fix.
+    // The cast reaches it, but HUD over the canvas takes the click. Checked last, since moving the camera
+    // can't fix it.
     if (report.overCanvas === false)
         return `covered by ${report.coveredBy}, which would take the click instead`;
     return null;
 }
 
-// Brings a target within reach, by turning towards it and then walking at it. Both are ordinary
-// input, so a target that cannot be reached this way is one a player could not reach either — which
-// is a finding rather than a harness problem, and is reported as one.
-// How far to drag to bring something at this many pixels off-centre into the middle of the view.
-//
-// Two things about the conversion are easy to get wrong and neither announces itself, because a
-// steer aimed wrongly still moves the view and the run still ends somewhere plausible. A drag
-// carries what is on screen the *opposite* way, so bringing something on the right back to the
-// middle is a drag to the right, not away from it. And the two are different measures: a drag turns
-// the camera, and how far that carries a thing across the screen depends on the field of view —
-// roughly seven screen pixels to one of drag, so a factor guessed near 1 turns straight past the
-// target and then straight past it again coming back.
+// Drag distance to bring something this many pixels off-center to the middle. A drag carries on-screen
+// content the opposite way, at roughly seven screen pixels per drag pixel.
 function steerDrag(offsetFromCentre)
 {
     const drag = offsetFromCentre * 0.13;
     return Math.max(-200, Math.min(200, drag));
 }
 
-// Two things have to happen and they are not interchangeable: the target has to be found, and then
-// it has to be walked to. They are kept to separate budgets deliberately — sharing one lets a long
-// search leave nothing for the walk, and reports a target the run had in plain sight as unreachable.
+// Brings a target within reach by turning towards it and walking at it (real input, so unreachable is a
+// finding). Finding and walking have separate budgets, so a long search can't starve the walk.
 async function approach(page, target, options = {})
 {
-    // Deliberately narrower than the camera's field of view. A sweep made in steps wider than what
-    // the camera can see passes over things: the target is off the right edge on one step and off
-    // the left edge on the next, having been in plain view for none of them, and the search turns
-    // circles around a target it reports as never findable.
+    // Narrower than the field of view, so a sweep can't step over the target.
     const orbitStep = options.orbitStep ?? 100;
     const sweepLimit = options.sweepLimit ?? 14; // Comfortably more than one revolution at that step.
     const closeLimit = options.closeLimit ?? 12;
     const rounds = options.rounds ?? 3;
 
-    // What was tried and what the target looked like at each step. An approach that gives up is one
-    // of the harder failures to read from the outside — the run ends standing somewhere arbitrary,
-    // and the last report says only where the target was by then — so the whole walk is carried out
-    // with the error rather than reconstructed by running it again with logging.
+    // Every step's report, carried with any error so a failed approach is readable without a rerun.
     const steps = [];
     const note = (move) => steps.push({
         move,
@@ -312,13 +253,8 @@ async function approach(page, target, options = {})
 
     for (let round = 0; round < rounds; round++)
     {
-        // Turn until it is in view — blind, and always the same way. It is tempting to read the
-        // bearing off the projected position and aim at it, but a projection only means anything
-        // inside the frustum: for a point outside it the coordinate that comes back is a large
-        // number bearing no usable relation to the angle, and steering by it overshoots into the
-        // blind spot behind, sweeps back round, and overshoots again — forever. A plain sweep has
-        // none of that and is bounded: one revolution in steps this size has to bring the target
-        // through the view.
+        // Sweep blindly in one direction until in view: projected coordinates are meaningless outside the
+        // frustum, and steering by them oscillates forever. One revolution must pass the target.
         for (let turn = 0; turn < sweepLimit && !report.inFieldOfView; turn++)
         {
             await orbit(page, orbitStep, 0);
@@ -342,8 +278,7 @@ async function approach(page, target, options = {})
 
             if (!report.withinSelectRange || !report.inLineOfSight)
             {
-                // Too far, or something between. Walking is what changes both, and the steer before
-                // it is what keeps the target ahead while doing so.
+                // Too far or occluded: walk, steering to keep the target ahead.
                 if (Math.abs(offsetFromCentre) > canvas.width * 0.15)
                     await orbit(page, steerDrag(offsetFromCentre), 0);
                 await walk(page, "KeyW", options.walkMs ?? 700);
@@ -353,10 +288,8 @@ async function approach(page, target, options = {})
             }
             else
             {
-                // Within reach and in plain sight, and still not clickable — so the pixel it
-                // occupies belongs to the HUD. The HUD keeps to the edges of the view, which makes
-                // turning the answer and walking exactly the wrong one: it would carry a target
-                // that is already in reach back out of it.
+                // In reach and in sight but unclickable, so the HUD covers it. The HUD hugs the edges, so
+                // turn (walking would carry the target out of reach).
                 if (Math.abs(offsetFromCentre) < canvas.width * 0.05)
                     break; // Already central and still covered: turning cannot move what is there.
                 await orbit(page, steerDrag(offsetFromCentre), 0);
@@ -375,10 +308,8 @@ async function approach(page, target, options = {})
 
 // ─── Clicking things in the world ───────────────────────────────────────
 
-// Clicks an object where it actually is. The aim is checked against the page immediately before the
-// gesture — a cast through the very pixel about to be pressed — so a click that would have hit
-// something else is refused with the name of what is in the way, rather than being made and
-// reported as having done nothing.
+// Clicks an object where it is, verifying the exact pixel against the page first; a click that would hit
+// something else is refused, naming what's in the way.
 async function clickObject(page, target, options = {})
 {
     let report = options.approach === false
@@ -405,30 +336,21 @@ async function clickObject(page, target, options = {})
             `Aimed at ${report.objectType}#${report.objectId}, which is ${hit.distance.toFixed(1)} ` +
             `away — beyond the reach a click has.`);
 
-    // `select: false` for a click whose point is not to pick the thing out — walking through a door
-    // rather than taking hold of one — where a second attempt would be a second journey.
+    // `select: false` for clicks not meant to select (walking through a door), where a retry would be a
+    // second trip.
     const tapped = options.select === false
         ? (await tap(page, report.screen.x, report.screen.y), {taps: 1, firstTapSpent: false})
         : await tapToSelect(page, report.screen.x, report.screen.y);
     return { ...report, ...tapped };
 }
 
-// Clicks a patch of the room itself — a wall, a floor, the face of a block — which is how anything
-// hung on a surface is placed.
-//
-// Not every patch of room that a ray meets can actually be picked out, and the reasons are the
-// room's own business rather than something worth reproducing out here: a quad that is not currently
-// drawn refuses the selection, and the surfaces nearest the camera are the likeliest to be in that
-// state, since those are the ones culled to keep the view of whatever is being edited clear. So
-// candidates are tried in turn until one takes, which needs no theory about why the others did not,
-// and reports how many were refused when none of them takes at all.
+// Clicks a room surface (wall, floor, block face) to place things on it. Some quads refuse selection
+// (e.g. undrawn ones near the camera), so candidates are tried in turn, reporting refusals if none take.
 async function clickSurface(page, options = {})
 {
     const hits = await call(page, "probeGrid", options.grid);
     let candidates = hits
-        // A pixel under the HUD is one the pointer never reaches, however plainly the cast through
-        // it meets a wall. In edit mode — which is when surfaces are being clicked at all — the
-        // HUD covers a good part of the view, so this is a common reason a grid point is unusable.
+        // Pixels under the HUD (common in edit mode) never receive the pointer.
         .filter(hit => hit.overCanvas)
         .filter(hit => hit.withinSelectRange)
         .filter(hit => (options.objectType == null ? true : hit.objectType === options.objectType))
@@ -459,8 +381,8 @@ async function clickSurface(page, options = {})
         if (after.voxelQuad != null && JSON.stringify(after.voxelQuad) !== JSON.stringify(before.voxelQuad))
             return { ...chosen, ...tapped, attempts: attempt + 1 };
 
-        // Tapping the patch already picked out lets it go, and in edit mode the mode goes too. The
-        // next candidate has to be tried from the mode this one started in, not from play mode.
+        // Tapping the selected patch deselects it and ends edit mode, so the mode is restored before the
+        // next candidate.
         if (tapped.outcome === "deselected" && startingMode === "edit")
             await ensureEditMode(page);
     }
@@ -471,18 +393,7 @@ async function clickSurface(page, options = {})
         `not currently drawn refuses selection, which is what culling near the camera produces.`);
 }
 
-// Picks out surfaces in turn until the one selected is a surface the app will actually do the thing
-// on — named by the control that offers it, which is enabled or disabled per selection.
-//
-// Selecting a surface and finding the tool for it greyed out is not a failure: most of a room is
-// wall that will not take a door, floor that will not take a picture, block that cannot be built
-// against. Which patch will is a question only the app can answer, and it answers it by enabling the
-// control. So this asks it, once per candidate, and reports how many patches were offered and
-// refused — which is the difference between "this room has nowhere to put one" and "the tool is
-// broken", the two readings the same symptom otherwise has.
-// Where a room is not offering what is being looked for anywhere in sight, a person does not stand
-// still and squint — he goes and looks somewhere else. These are the moves the search makes between
-// views, in order: widen the view first, since that is free and often enough, then cover ground.
+// Moves the search makes between views: widen the view first (free), then cover ground.
 const DEFAULT_SEARCH_MOVES = [
     async (page) => { await zoom(page, -400); },
     async (page) => { await orbit(page, 0, 150); },
@@ -494,16 +405,8 @@ const DEFAULT_SEARCH_MOVES = [
     async (page) => { await orbit(page, 700, 150); },
 ];
 
-// Which of the candidates to actually try, when there are more of them than there are attempts.
-//
-// Taking the nearest few is the obvious choice and the wrong one. What is nearest to a player
-// standing in a room is the floor under him and the low blocks around him, and those are the very
-// surfaces least likely to take anything: a thing hung on a wall needs wall behind it over its whole
-// height. The surfaces that qualify are further off and higher up, and a search that spends every
-// attempt on the closest cluster never reaches one — it reports the room as having nowhere while
-// standing a few paces from somewhere.
-//
-// So the attempts are spread evenly across the whole ordered set instead, near to far.
+// Spreads attempts evenly across the near-to-far candidates: the nearest surfaces (floor, low blocks)
+// rarely accept wall-hung things.
 function spread(candidates, count)
 {
     if (candidates.length <= count)
@@ -517,6 +420,8 @@ function spread(candidates, count)
     return picked;
 }
 
+// Selects surfaces until the control `elementId` is enabled for the selection, reporting how many were
+// refused (telling "nowhere to put one" from a broken tool).
 async function clickSurfaceUntilEnabled(page, elementId, options = {})
 {
     const maxPerView = options.maxAttempts ?? 12;
@@ -524,9 +429,7 @@ async function clickSurfaceUntilEnabled(page, elementId, options = {})
     const views = options.views ?? Math.min(moves.length + 1, 4);
     const tried = [];
 
-    // The mode the search begins in is the mode it has to stay in: the control being waited on lives
-    // there, and every one of the moves below can end it — walking is a movement key, and tapping a
-    // surface that is already picked out lets the selection the mode stands on go.
+    // The search must stay in its starting mode (the awaited control lives there); moves and taps can end it.
     const startingMode = await gameMode(page);
 
     for (let view = 0; view < views; view++)
@@ -554,9 +457,7 @@ async function clickSurfaceUntilEnabled(page, elementId, options = {})
 
             if (tapped.outcome === "deselected")
             {
-                // The patch under this grid point is the one already picked out, so the tap let it
-                // go — and in edit mode the mode went with it. Nothing was learnt about the patch
-                // that is not already known, but the mode has to be recovered before the next one.
+                // This tap deselected the already-selected patch (ending edit mode); restore the mode first.
                 tried.push({...chosen, view, outcome: "already picked out"});
                 if (startingMode === "edit")
                     await ensureEditMode(page);
@@ -572,9 +473,7 @@ async function clickSurfaceUntilEnabled(page, elementId, options = {})
 
             if ((await ui.locator(page, elementId).count()) === 0)
             {
-                // Absent rather than disabled, which is a different answer: the app is not offering
-                // this action here at all — because of who the user is, or because the mode the
-                // control belongs to is no longer the mode being stood in.
+                // Absent, not disabled: the app doesn't offer this action here (the user's role, or the mode ended).
                 tried.push({...chosen, view, quad: after.voxelQuad,
                     mode: await gameMode(page), outcome: `#${elementId} not present`});
                 if (startingMode === "edit")
@@ -602,9 +501,7 @@ async function clickSurfaceUntilEnabled(page, elementId, options = {})
 
 // ─── Confirming that a gesture landed ───────────────────────────────────
 
-// What the app holds selected is the one thing that says a world click did what it was meant to,
-// and it is also what raises the HUD driven next — so waiting on it is the join between the two
-// halves of any scenario.
+// The selection confirms a world click worked and drives the HUD, so waiting on it joins the two.
 async function waitForSelection(page, predicate, options = {})
 {
     const timeout = options.timeout ?? 5000;
@@ -622,11 +519,8 @@ async function waitForSelection(page, predicate, options = {})
 }
 
 // ─── The HUD ────────────────────────────────────────────────────────────
-//
-// Everything raised by a selection is ordinary DOM carrying a stable element id, so it needs none
-// of the aiming above. What it does need is the waiting: these controls are mounted and unmounted
-// by the selection beneath them, and a disabled one looks exactly like an enabled one to a click
-// that does not check.
+// Selection-driven DOM with stable ids: no aiming needed, but controls mount, unmount and disable with
+// the selection, so clicks wait and check.
 
 const ui =
 {
@@ -637,11 +531,7 @@ const ui =
         await ui.locator(page, elementId).waitFor({state: "visible", timeout: options.timeout ?? 5000});
     },
 
-    // Whether the app is currently offering this control, which is not the same question Playwright's
-    // own isEnabled answers. These controls are divs rather than form elements, so they carry no
-    // `disabled` property for it to read and it calls every one of them enabled — including the ones
-    // drawn greyed out with their handler taken off. The refusal is stated in `aria-disabled`, and
-    // that is what has to be read.
+    // Reads `aria-disabled`: these controls are divs, so Playwright's isEnabled reports them all enabled.
     async isEnabled(page, elementId)
     {
         const locator = ui.locator(page, elementId);
@@ -650,8 +540,7 @@ const ui =
         return (await locator.getAttribute("aria-disabled")) !== "true";
     },
 
-    // A control that is present but disabled is the app refusing, and that refusal is usually the
-    // thing under test — so it is reported as itself rather than as a click that failed.
+    // A disabled control is the app refusing (usually what's under test), so it's reported as such.
     async click(page, elementId, options = {})
     {
         const locator = ui.locator(page, elementId);

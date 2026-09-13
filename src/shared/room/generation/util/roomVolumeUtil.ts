@@ -8,8 +8,7 @@ import VoxelUpdateUtil from "../../../voxel/util/voxelUpdateUtil";
 import RoomVolume from "../types/roomVolume";
 import RoomVolumeRangeIntersections from "../types/roomVolumeRangeIntersections";
 
-// A `Voxel` is a stack of blocks (i.e voxelBlocks). Each block is uniquely identified by its row, col, and collisionLayer.
-// A `RoomVolume` is a box-shaped 3D region in which an integral number of voxels and their blocks can fit.
+// A Voxel is a stack of blocks (row, col, collisionLayer); a RoomVolume is a box of whole blocks.
 const RoomVolumeUtil =
 {
     volumeContainsBlock(volume: RoomVolume,
@@ -44,19 +43,11 @@ const RoomVolumeUtil =
             rangeIntersections.collisionLayerRangeIntersection[1]
         );
     },
-    // A copy of the volume with all six of its bounds pushed out by the given amount (pass a negative
-    // amount to pull them in). Everything about keeping volumes apart is asked through this together
-    // with volumesIntersect, and the two questions differ only in how many sides are expanded:
-    //
-    //   - volumesIntersect(getExpandedVolume(a, 1), b) is true exactly when a and b would touch,
-    //     which is what a routine growing a volume rejects on. Refusing it leaves every pair
-    //     separated by at least one voxel, i.e. by a wall.
-    //   - volumesIntersect(getExpandedVolume(a, 1), getExpandedVolume(b, 1)) is true when they are
-    //     within one voxel of each other. Alongside the above, which rules out touching, that means
-    //     exactly one voxel of wall stands between them - which is where a passage can be cut.
-    //
-    // The height is expanded along with the footprint, so a volume sitting directly above another
-    // answers these the same way one sitting beside it does.
+    // The volume expanded by `amount` on all six sides (negative shrinks). With volumesIntersect:
+    // - intersects(expand(a, 1), b): a and b would touch (growth rejects this).
+    // - intersects(expand(a, 1), expand(b, 1)) while not touching: exactly one wall block between them
+    //   (where passages go).
+    // Height expands too, so stacked volumes behave like side-by-side ones.
     getExpandedVolume(volume: RoomVolume, amount: number): RoomVolume
     {
         return new RoomVolume(
@@ -72,12 +63,7 @@ const RoomVolumeUtil =
             inner.collisionLayerMin >= outer.collisionLayerMin &&
             inner.collisionLayerMax <= outer.collisionLayerMax;
     },
-    // Whether the volume stands entirely within `bounds` and clear of every one of `others` - clear
-    // meaning not so much as touching, so that at least one voxel of matter is left between it and
-    // each of them (see getExpandedVolume).
-    //
-    // `ignore` is for testing a grown copy of a volume that is itself among the others, which would
-    // otherwise always be found to touch itself.
+    // Inside `bounds` and not touching any of `others`. `ignore` excludes the volume being grown.
     volumeFitsAmong(volume: RoomVolume, bounds: RoomVolume, others: RoomVolume[],
         ignore?: RoomVolume): boolean
     {
@@ -92,11 +78,8 @@ const RoomVolumeUtil =
         }
         return true;
     },
-    // Returns a volume which connects the two given volume by joining one of its sides to that of the other.
-    // Returns NULL if the two given volumes either:
-    //   (1) Are intersecting each other, or
-    //   (2) Are adjacent to each other, or
-    //   (3) Do not have any row, column, or collisionLayer in common.
+    // A passage volume joining two volumes, or null if they intersect, are adjacent, or share no row,
+    // column or layer.
     makePassageBetweenVolumes(volume1: RoomVolume, volume2: RoomVolume,
         maxPassageWidth: number, maxPassageHeight: number): RoomVolume | null
     {
@@ -157,25 +140,15 @@ const RoomVolumeUtil =
             return null;
     },
 
-    // It is assumed that, during the initial state of room generation, the room is fully occupied by
-    // blocks and has no empty space at all. Empty spaces must be created by "carving out" volumes
-    // from this solid chunk of matter.
-    //
-    // A volume is carved in two passes, and the order matters: the blocks go first, and only then
-    // are the surfaces they left behind finished. That is what makes carving order-independent -
-    // carving the same set of volumes in any order leaves the same room, whether or not they touch
-    // one another. Finishing a surface while a neighbouring volume is still solid, and never
-    // revisiting it, is what leaves faces drawn in mid-air once that neighbour is carved too.
+    // Carves a volume from the (initially solid) grid in two passes: remove blocks, then finish the
+    // enclosing faces based on what is still solid. This makes carving order-independent.
     carveOutVolume(voxels: Voxel[], volume: RoomVolume): void
     {
         if (!volumeCanBeApplied("carveOutVolume", volume) || !volume.palette)
             return;
 
-        // The blocks. Removing one through VoxelUpdateUtil settles which faces of it and of every
-        // block around it are drawn, from what is actually solid once it has gone - so a volume
-        // carved into a neighbour that was carved earlier leaves no face standing between them.
-        // No room is passed, which is what tells it not to validate: this is a room being generated
-        // rather than a room being edited.
+        // Blocks removed via VoxelUpdateUtil (no room passed, so no validation), which updates faces
+        // from actual solidity.
         for (let row = volume.rowMin; row <= volume.rowMax; ++row)
         {
             for (let col = volume.colMin; col <= volume.colMax; ++col)
@@ -188,9 +161,7 @@ const RoomVolumeUtil =
             }
         }
 
-        // The surfaces. A face belongs to whatever encloses the volume rather than to the volume
-        // itself, so it is finished on the enclosing block and drawn only where there is such a
-        // block - where the volume opens into another one there is no surface between them at all.
+        // Faces belong to the enclosing blocks and are drawn only where such a block exists.
         const palette = volume.palette;
 
         for (let row = volume.rowMin; row <= volume.rowMax; ++row)
@@ -210,9 +181,8 @@ const RoomVolumeUtil =
             }
         }
 
-        // The floor under the volume and the ceiling over it. Either may fall outside the collision
-        // layers altogether, which is where the room's own floor or ceiling closes the volume off
-        // instead of a slab of blocks (see COLLISION_LAYER_NULL).
+        // Floor and ceiling; outside the layer range, the room's own floor/ceiling closes the volume
+        // (see COLLISION_LAYER_NULL).
         const floorCollisionLayer = volume.collisionLayerMin - 1;
         const ceilingCollisionLayer = volume.collisionLayerMax + 1;
 
@@ -226,23 +196,14 @@ const RoomVolumeUtil =
         }
     },
 
-    // The counterpart of carveOutVolume: stands the volume solid instead of hollowing it out. This
-    // is how a carved room gets the block work it is left standing on - the steps of a flight, a
-    // stack of props - and it can only come after the carving, since carving takes matter away and
-    // has no way to express something that survives being carved.
-    //
-    // Adding a block through VoxelUpdateUtil settles the faces of it and of every block around it
-    // from what is actually solid, exactly as removing one does, so filling is order-independent
-    // for the same reason carving is: a block stood against something already solid leaves no face
-    // drawn between the two.
+    // Fills a volume solid (stair steps, props). Must come after carving. Order-independent like carving,
+    // since VoxelUpdateUtil updates faces from actual solidity.
     fillVolume(voxels: Voxel[], volume: RoomVolume): void
     {
         if (!volumeCanBeApplied("fillVolume", volume) || !volume.palette)
             return;
 
-        // A block stood in a room is walked on from above, seen from the side, and passed under
-        // from below where it stands over open floor - so it wears its palette the way the room
-        // around it does rather than one texture all over.
+        // Uses the palette like the room around it (walked on, seen from the side, passed under).
         const palette = volume.palette;
         const textures = new Array<number>(NUM_VOXEL_QUADS_PER_COLLISION_LAYER).fill(palette.wall);
         textures[VoxelQueryUtil.getVoxelQuadIndexOffsetInsideLayer("y", "+")] = palette.floor;
@@ -262,14 +223,8 @@ const RoomVolumeUtil =
     },
 }
 
-// Whether a volume is something the grid can actually be made to hold: somewhere it reaches, and
-// the right way round. A volume touching the outermost row or column is allowed rather than
-// refused - that is the boundary wall, and a cavity cut through it is exactly what a room's
-// entrance is.
-//
-// A volume with no palette is refused too. Every face a volume settles is finished from its
-// palette, so a volume without one would leave the room's surfaces as whatever they happened to
-// already be.
+// A volume must be within the grid, correctly ordered, and have a palette (faces are finished from it).
+// Touching the boundary wall is allowed.
 function volumeCanBeApplied(methodName: string, volume: RoomVolume): boolean
 {
     if (volume.rowMin < 0 || volume.rowMax > NUM_VOXEL_ROWS-1 ||
@@ -290,17 +245,15 @@ function volumeCanBeApplied(methodName: string, volume: RoomVolume): boolean
     return true;
 }
 
-// The largest run of at most `maxLength` cells that fits in the given inclusive range, centred in
-// it. Returned as [start, length].
+// The largest centred run of at most maxLength within the inclusive range, as [start, length].
 function fitCentered(range: [number, number], maxLength: number): [number, number]
 {
     const length = Math.max(1, Math.min(maxLength, range[1] - range[0] + 1));
     return [Math.floor(0.5 * (range[0] + range[1] - length + 1)), length];
 }
 
-// Finishes one face of whatever encloses a carved volume: what it carries, and whether it is drawn
-// at all. It is drawn only where the enclosing block is solid - anywhere outside the collision
-// layers counts as solid, which is how the room's own floor and ceiling always come out drawn.
+// Finishes one enclosing face; drawn only if the enclosing block is solid (outside the layer range
+// counts as solid, so room floors and ceilings are drawn).
 function paintEnclosingFace(voxels: Voxel[], row: number, col: number,
     facingAxis: "x" | "y" | "z", orientation: "-" | "+", collisionLayer: number,
     textureIndex: number): void
@@ -309,16 +262,13 @@ function paintEnclosingFace(voxels: Voxel[], row: number, col: number,
     if (voxel == undefined)
         return; // outside the room, where there is no face to finish
 
-    // Note: this deliberately does not go through VoxelUpdateUtil.setVoxelQuadTexture, which forces
-    // the quad visible. A face over a block that has been carved away has to come out undrawn, or
-    // it is left hanging in mid-air.
+    // Not setVoxelQuadTexture, which forces visibility; faces over carved blocks must stay undrawn.
     VoxelQuadUpdateUtil.setVoxelQuadVisible(
         VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer),
         voxel, facingAxis, orientation, getQuadCollisionLayer(collisionLayer), textureIndex);
 }
 
-// The room's own floor and ceiling are not collision layers, so the faces that draw them are
-// addressed by the one layer position that stands for both ends of the stack.
+// Room floor and ceiling faces share one layer position.
 function getQuadCollisionLayer(collisionLayer: number): number
 {
     return (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)

@@ -19,14 +19,11 @@ export default class ImageMap
 
     private imageMetadataList: ImageMetadata[];
 
-    // Name of a pre-composed atlas image file (without extension) located right under the root
-    // directory. If defined, the map's images are the atlas's grid cells (each image's "path" is
-    // its "{col},{row}" cell coordinates) instead of separate image files, and the grid image is
-    // the atlas itself.
+    // Atlas image name (no extension) under the root directory. If set, images are atlas cells
+    // (path = "{col},{row}") and the atlas is the grid image.
     private atlasImageName?: string;
 
-    // The longest side of the thumbnail written beside each of the map's images, in pixels, or 0 if
-    // the map has no thumbnails (see ImageMapSeed.thumbnailSize).
+    // Thumbnail longest side in px, or 0 for none (see ImageMapSeed.thumbnailSize).
     private thumbnailSize: number;
 
     constructor(rootDirName: string, gridCellSize: number,
@@ -103,15 +100,12 @@ export default class ImageMap
         return this.imageMetadataList;
     }
 
-    // path = (relative path under the root directory, but excluding the file extension)
-    // The name of the root directory is given by rootDirName,
-    // and the root directory is located right under the app's assets_url (see ThingsPoolEnv).
+    // path: relative to the root directory (rootDirName under the assets URL), without extension.
     getImageURLByPath(assetsURL: string, path: string): string
     {
         return this.getFileURLByPath(assetsURL, path, "");
     }
-    // Same as above, but for the image's thumbnail — or for the image itself, where the map has no
-    // thumbnails, so that a caller who only ever shows images small can ask any map for thumbnails.
+    // Falls back to the full image when the map has no thumbnails.
     getThumbnailURLByPath(assetsURL: string, path: string): string
     {
         return this.getFileURLByPath(assetsURL, path,
@@ -125,8 +119,7 @@ export default class ImageMap
             return "";
         return `${assetsURL}/${this.rootDirName}/${path}${pathSuffix}.webp`;
     }
-    // coords = {subfolderName},{col},{row}
-    // (subfolderName == "") if there is no subfolder.
+    // coords = {subfolderName},{col},{row} (subfolderName is "" without subfolders).
     getImageURLByCoords(assetsURL: string, coords: string): string
     {
         const imageMetadata = this.getImageMetadataByCoords(coords);

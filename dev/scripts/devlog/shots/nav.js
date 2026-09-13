@@ -1,20 +1,6 @@
-// Walking the player somewhere, for the shots that want the walk itself.
-//
-// Almost none of them do. Where a shot is *of* something, the way to get in front of it is
-// `ctx.setup.place` or `ctx.setup.vantage`, which put the player down exactly and instantly; a
-// photograph is not evidence about locomotion, and spending a minute of held keys to compose one
-// buys nothing but a vantage that comes out slightly different every run. What remains here is for
-// the case where the walking is the subject — a shot of the player crossing his own room, a run
-// checking that a staircase can in fact be climbed.
-//
-// Even then it is a closed loop rather than a stopwatch. The game advances by wall-clock time and
-// the headless renderer's frame rate varies by more than tenfold between runs, so the same held key
-// covers a wildly different distance each time; a route tuned by timing works once and never again.
-// This watches where the player actually is and stops when he is there.
-//
-// What it no longer does is work out how to turn. The heading is set exactly through the setup
-// bridge, so there is no gain to measure and no sign to discover — the two things the old version of
-// this file spent most of itself learning, and re-learning, every run.
+// Walks the player to a point, for shots where walking is the subject (e.g. climbing a staircase);
+// otherwise use `ctx.setup.place` or `ctx.setup.vantage`. Closed-loop on the player's actual position,
+// since headless frame rates vary too much for timed walks. The heading is set via the setup bridge.
 
 const ARRIVE_DEFAULT = 1.6;
 const POLL_MS = 400;
@@ -25,13 +11,8 @@ const MIN_PROGRESS = 0.12;
 const distanceBetween = (pose, x, z) => Math.hypot(pose.x - x, pose.z - z);
 
 /**
- * Walks the player to a point, correcting his heading as he goes, and gives back the pose he
- * finished at. Stops early when he stops making ground, which is what walking into a wall looks
- * like from here — and, deliberately, what climbing looks like too, so a leg that goes up a
- * staircase should be given `noStallCheck`.
- *
- * The caller is told what happened rather than left to infer it: `arrived` is the only outcome that
- * means the point was reached.
+ * Walks to a point, correcting heading, and returns the final pose. Stops early when progress stalls (a
+ * wall, but also climbing, so staircase legs pass `noStallCheck`). Only `arrived` means it got there.
  */
 async function walkTo(ctx, x, z, options = {})
 {
@@ -67,8 +48,7 @@ async function walkTo(ctx, x, z, options = {})
                 return {outcome: "blocked", pose, remaining};
             }
 
-            // Held keys and a turn are independent controls, so the heading is put right without
-            // the walk being interrupted.
+            // The heading is corrected without interrupting the held keys.
             const bearing = Math.atan2(x - pose.x, z - pose.z) * 180 / Math.PI;
             let error = bearing - pose.headingDeg;
             while (error > 180) error -= 360;

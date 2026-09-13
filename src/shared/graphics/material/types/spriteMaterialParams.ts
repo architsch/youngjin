@@ -1,11 +1,8 @@
 import MaterialParams from "./materialParams";
 
-// Note: The "CanvasRenderingContext2D" type is not explicitly specified in this file,
-// since it is part of the "shared" codebase which does not include client-side libraries.
+// The canvas context type is left untyped here, since shared code has no DOM types.
 
-// Describes a flat, unlit "sprite" material whose color image is drawn onto a canvas at runtime.
-// The resulting material is transparent and double-sided, and it skips the depth test so the
-// sprite always renders on top of scene geometry.
+// A flat, unlit, transparent, double-sided sprite drawn onto a canvas at runtime; always renders on top.
 export default class SpriteMaterialParams extends MaterialParams
 {
     textureId: string;

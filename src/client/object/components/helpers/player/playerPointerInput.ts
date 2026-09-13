@@ -5,21 +5,10 @@ import CameraUtil from "../../../../graphics/util/cameraUtil";
 import PointerDragInput from "./pointer/pointerDragInput";
 import PointerZoomInput from "./pointer/pointerZoomInput";
 
-//------------------------------------------------------------------------
-// Watches the game canvas for pointer activity, independently of the camera
-// mode, and hands each event to the module that reads that kind of gesture:
-// PointerDragInput (one pointer moving while held down), PointerZoomInput
-// (two fingers pinching, or the mouse wheel). A press and release that stayed
-// in one place is a click, which this class reads itself: there is no gesture
-// to accumulate, only the one cast into the scene that answers what was
-// clicked on (see CameraUtil).
-//
-// Listening in one place is what lets those gestures be told apart, since
-// they are not distinguishable event by event: a drag and a pinch are the
-// same events until a second finger arrives, and a click is only a click by
-// virtue of the drag that did not happen. This class holds the arbitration
-// between them, and exposes each reading for whoever acts on it.
-//------------------------------------------------------------------------
+// Arbitrates canvas pointer gestures regardless of camera mode: PointerDragInput (one held pointer),
+// PointerZoomInput (pinch/wheel), and taps, read here as a raycast click (see CameraUtil). Gestures
+// can't be told apart per event (a drag becomes a pinch when a second finger lands), so the
+// arbitration lives in one place.
 
 export default class PlayerPointerInput
 {
@@ -32,8 +21,7 @@ export default class PlayerPointerInput
         return this.dragInput.dragDelta;
     }
 
-    // How much the user asked the view to grow over the previous frame, as a multiple of its
-    // current apparent size (1 = unchanged).
+    // Requested view scale over the last frame (1 = unchanged).
     get viewScale(): number
     {
         return this.zoomInput.viewScale;
@@ -59,8 +47,7 @@ export default class PlayerPointerInput
         canvas.addEventListener("blur", this.onBlur);
         canvas.addEventListener("pointermove", this.onPointerMove);
 
-        // Not passive, since the wheel gesture is the browser's own to scroll or zoom the page with
-        // unless it is told otherwise (see PointerZoomInput).
+        // Non-passive so preventDefault can stop page scroll/zoom (see PointerZoomInput).
         canvas.addEventListener("wheel", this.onWheel, {passive: false});
         canvas.addEventListener("click", this.onClick);
     }
@@ -90,16 +77,13 @@ export default class PlayerPointerInput
 
     private onPointerPress(ev: PointerEvent): void
     {
-        // Capture the pointer so the gesture continues even when the cursor passes
-        // over CSS2D overlays (e.g. WorldSpaceArrow click targets).
+        // Capture so the gesture continues over CSS2D overlays (e.g. WorldSpaceArrow click targets).
         const canvas = GraphicsManager.getGameCanvas();
         canvas.setPointerCapture(ev.pointerId);
 
         this.zoomInput.onPointerPress(ev);
 
-        // A second finger settles what the gesture is: what would have been read as one finger
-        // dragging the view around is the user pinching it, and taking it for both at once would
-        // spin the view while it is being zoomed.
+        // A second finger turns the drag into a pinch (never both).
         if (this.zoomInput.isPinching())
             this.dragInput.cancel();
         else
@@ -117,9 +101,7 @@ export default class PlayerPointerInput
     {
         this.zoomInput.onPointerRelease(ev);
 
-        // Any finger leaving ends the drag, rather than the drag carrying on with whichever finger
-        // is left: the one left behind is nowhere near where the drag it would inherit began, and
-        // the view would jump the difference on the next frame. Pressing again starts a new one.
+        // Any lifted finger ends the drag; continuing with the remaining finger would jump the view.
         this.dragInput.onPointerRelease();
     }
 
@@ -142,9 +124,7 @@ export default class PlayerPointerInput
     {
         ev.preventDefault();
 
-        // Only a gesture that stayed in one place is a click on what lies under it. One that
-        // travelled was the user steering, orbiting, or pinching the view, and clicking whatever
-        // the pointer happened to come to rest on would be a surprise every time.
+        // Only a stationary gesture clicks.
         if (!this.dragInput.gestureIsTap())
             return;
 
@@ -152,15 +132,13 @@ export default class PlayerPointerInput
         if (intersection == undefined)
             return; // The user pointed past everything drawn.
 
-        // Geometry belonging to no object is a gizmo drawn over the room, which has nothing of its
-        // own to be told about the click.
+        // Gizmos belong to no object.
         const gameObject = CameraUtil.getObjectFromIntersection(intersection);
         if (gameObject != undefined)
             gameObject.onClick(intersection.instanceId ?? -1, intersection.point);
     }
 
-    // Whatever gestures were in progress are given up on, for when their ends will never be seen:
-    // the canvas has lost the user's attention, or the player is going away.
+    // For gestures whose end will never arrive (lost focus, player removed).
     private abortGestures(): void
     {
         this.dragInput.cancel();

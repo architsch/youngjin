@@ -18,8 +18,7 @@ export default class PhysicsRoom
         this.room = room;
         this.voxels = room.voxelGrid.voxels.map(voxel => new PhysicsVoxel(voxel));
         this.objectById = {};
-        // The room's boundary is solid all the way round now: a door is a panel hung on that wall
-        // rather than a cover over a hole cut through it, so there is nothing left to plug.
+        // The boundary is solid all the way round (doors hang on it).
         this.globalColliders = [floor, ceiling, wall_lowerX, wall_upperX, wall_lowerZ, wall_upperZ];
     }
 }

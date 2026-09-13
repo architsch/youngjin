@@ -20,10 +20,8 @@ export default function Popup({ children, showCloseButton = false, title = "" }:
             downIsMouseRef.current = (e.pointerType === "mouse");
         }}
         onClick={(e) => {
-            // Close on click (not pointerup) so the backdrop is still mounted when the
-            // synthetic touch-click is dispatched on mobile, absorbing it. Closing during
-            // pointerup removes the backdrop before the synthetic click is hit-tested,
-            // which lets the click fall through to the game canvas and fire a raycast.
+            // Close on click, not pointerup: on mobile the synthetic click would otherwise fall
+            // through the removed backdrop to the canvas.
             const dx = e.clientX - downPosRef.current.x;
             const dy = e.clientY - downPosRef.current.y;
             // The pointer type is remembered from the press, since a click event does not carry one.

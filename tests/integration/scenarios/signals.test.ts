@@ -1,12 +1,6 @@
 /**
- * Scenario tests: Signal emission correctness
- *
- * Covers:
- * - Multicast signals reach all room participants except sender
- * - Unicast rollback signals reach only the sender
- * - Desync signals reach ALL participants (including sender)
- * - No signal leaks to users in other rooms
- * - Signal batching and pending queue behavior
+ * Scenario tests: signal emission — multicast excludes the sender, unicast rollbacks reach only the
+ * sender, desyncs reach everyone, nothing leaks across rooms, and batching/pending queues.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runScenario } from "../helpers/scenarioRunner";
@@ -43,8 +37,7 @@ describe("signal emission scenarios", () => {
                 // Users 1 and 2 should have received the transform signal
                 const u1Signals = getPendingSignals(users[1], "setObjectTransformSignal");
                 const u2Signals = getPendingSignals(users[2], "setObjectTransformSignal");
-                // At least one signal should be pending for observers
-                // (may have more from the initial spawn)
+                // At least one pending signal for observers (the spawn may add more).
                 expect(u1Signals.length).toBeGreaterThanOrEqual(1);
                 expect(u2Signals.length).toBeGreaterThanOrEqual(1);
             },
@@ -141,14 +134,12 @@ describe("signal emission scenarios", () => {
                 { type: "moveObject", userIndex: 0, targetUserIndex: 1, x: 25, y: 0, z: 25 },
             ],
             assertions: ({ users }) => {
-                // Both users (including sender) should independently have transform signals.
-                // Desync broadcasts to ALL with no exclude — so each must receive at least one.
+                // Desync broadcasts to everyone, sender included.
                 const u0Signals = getPendingSignals(users[0], "setObjectTransformSignal");
                 const u1Signals = getPendingSignals(users[1], "setObjectTransformSignal");
                 expect(u0Signals.length, "sender should receive desync correction").toBeGreaterThanOrEqual(1);
                 expect(u1Signals.length, "observer should receive desync correction").toBeGreaterThanOrEqual(1);
-                // The correction carries the server-authoritative transform, so it must override
-                // the client's own physics rather than be re-simulated by it.
+                // The correction is server-authoritative, so it overrides client physics instead of being re-simulated.
                 const correction = u0Signals[u0Signals.length - 1];
                 expect(correction.ignorePhysics, "correction must be authoritative").toBe(true);
             },

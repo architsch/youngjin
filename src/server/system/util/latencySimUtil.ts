@@ -1,13 +1,7 @@
 /**
- * Simulates network and DB latency in dev mode for testing race conditions.
- *
- * Controlled by environment variables:
- *   SIMULATED_LATENCY_MS      – base delay for HTTP responses and Socket.IO events (default: 0)
- *   SIMULATED_DB_LATENCY_MS   – base delay for Firestore / Firebase Storage operations (default: 0)
- *   SIMULATED_LATENCY_JITTER_MS – random ± jitter added to every delay (default: 0)
- *
- * When the base delay is 0 (or unset), the corresponding simulate* function resolves
- * immediately with no setTimeout overhead.
+ * Dev-mode latency simulation for race-condition testing, configured by env vars:
+ * SIMULATED_LATENCY_MS (HTTP and socket), SIMULATED_DB_LATENCY_MS (Firestore/Storage),
+ * SIMULATED_LATENCY_JITTER_MS (± jitter). A base of 0 resolves immediately.
  */
 
 const networkLatencyMs = parseInt(process.env.SIMULATED_LATENCY_MS || "0", 10);

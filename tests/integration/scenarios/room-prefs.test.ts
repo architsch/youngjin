@@ -1,14 +1,7 @@
 /**
- * Scenario tests: a room's atmosphere
- *
- * What light fills a room, what light the player carries while standing in it, and what the air
- * between the two is like are settings the room carries and the whole of what these cover:
- *
- * - that the settings survive the handful of characters they are stored as
- * - that **a room that has said nothing looks exactly as rooms looked before it could say anything**,
- *   which is the promise that lets every existing room go untouched
- * - that decoding is total, so nothing downstream has to carry a check for a value that is not one
- * - that the fog's two distances always leave a span between them, however they were set
+ * Scenario tests: room atmosphere prefs (room light, head lamp, air). Covers round-trips; an empty string
+ * decoding to the pre-prefs look (so existing rooms need no migration); total decoding; and fog
+ * distances always leaving a span.
  */
 import { describe, it, expect } from "vitest";
 import fc from "fast-check";
@@ -26,18 +19,14 @@ import { ColorPaletteMap } from "../../../src/shared/math/maps/colorPaletteMap";
 import { FOG_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME,
     SCENERY_COLOR_PALETTE_NAME } from "../../../src/shared/system/sharedConstants";
 
-// The reach of a camera at the player's own eye, past which nothing is drawn. Written here rather
-// than imported because it belongs to the renderer's camera; what matters is only that the default
-// fog is beyond it.
+// The eye camera's far plane (the renderer's, written out); the default fog must lie beyond it.
 const CAMERA_FAR_PLANE = 45;
 
-// Every character the encoding can carry, so that a decoded string is exercised over its whole
-// domain rather than over the values this code happens to write.
+// Every encodable character, so decoding is exercised over its whole domain.
 const prefsStrings = fc.array(fc.integer({min: 33, max: 126}), {maxLength: 34})
     .map(codes => codes.map(code => String.fromCharCode(code)).join(""));
 
-// Any string at all, including the ones a stored value could never be — which is the point: what is
-// read back off a room is whatever is in the document, not whatever this version last wrote there.
+// Any string: a stored value is whatever the document holds, not what this version wrote.
 const arbitraryStrings = fc.string({maxLength: 20});
 
 const steps = fc.integer({min: 0, max: MAX_ROOM_PREFS_STEP});
@@ -87,9 +76,8 @@ describe("room prefs encoding", () => {
     });
 
     it("stores only what a room can be read back from", () => {
-        // Canonicalizing is the server's whole validation (see ServerRoomManager.changeRoomPrefs),
-        // so it has to be a fixed point: a string that has been through it once must survive being
-        // put through it again unchanged, or a room would drift every time it was saved.
+        // Canonicalizing is the server's whole validation (see ServerRoomManager.changeRoomPrefs), so it
+        // must be idempotent, or a room drifts on each save.
         const canonicalize = (raw: string) => RoomPrefsUtil.encode(RoomPrefsUtil.decode(raw));
         fc.assert(fc.property(arbitraryStrings, (raw) => {
             const once = canonicalize(raw);
@@ -115,9 +103,7 @@ describe("room prefs encoding", () => {
     });
 
     it("keeps the fog's two distances apart, however they were set", () => {
-        // Fog whose distances meet is not thin fog but undefined fog — the shader divides by the
-        // span between them — so this holds for every pair of steps, including the pair a room that
-        // has said nothing decodes to.
+        // The shader divides by the fog span, so it must never be zero (defaults included).
         fc.assert(fc.property(prefsStrings, (raw) => {
             const prefs = RoomPrefsUtil.decode(raw);
             expect(RoomPrefsUtil.getFogFarDistance(prefs))
@@ -127,9 +113,7 @@ describe("room prefs encoding", () => {
 });
 
 describe("a room that has said nothing", () => {
-    // These are the whole promise that no existing room has to be brought up to date: an empty
-    // string is what every room stored before any of this existed, and it has to come back meaning
-    // exactly what those rooms already looked like.
+    // An empty string (every room before prefs existed) must decode to exactly how those rooms looked.
     const defaults = RoomPrefsUtil.decode("");
 
     it("is lit in plain white", () => {
@@ -140,18 +124,13 @@ describe("a room that has said nothing", () => {
     });
 
     it("is filled at exactly the ambient strength it always had", () => {
-        // The one number in here that predates a room being able to say anything about its
-        // lighting, so it is the one that would show if the default drifted. Compared to a
-        // tolerance rather than exactly, because it now arrives through a curve rather than off the
-        // end of a range and lands a float's width short of itself; what is being asserted is that
-        // it has not *drifted*, and a part in a hundred billion is not drift.
+        // The ambient default predates prefs, so it reveals drift; compared with a tolerance since it now
+        // passes through a curve.
         expect(RoomPrefsUtil.getAmbientIntensity(defaults)).toBeCloseTo(0.15, 10);
     });
 
     it("carries the head lamp at the strength it always had", () => {
-        // No longer the top of the range, and that is the point: the top is now an effect well past
-        // the ordinary lamp, so the ordinary lamp had to move down to leave room for it. What must
-        // not move is the lamp itself, which is what these three pin.
+        // The range's top is now an effect, so the ordinary head lamp sits below it; these pin that lamp.
         expect(defaults.headLightPowerStep).toBeLessThan(MAX_ROOM_PREFS_STEP);
         expect(defaults.headLightRangeStep).toBeLessThan(MAX_ROOM_PREFS_STEP);
         expect(HeadLightUtil.getIntensity(defaults.headLightPowerStep))
@@ -166,8 +145,7 @@ describe("a room that has said nothing", () => {
     });
 
     it("leaves the lamps room to be turned far past what seeing by takes", () => {
-        // The whole of what this change was for: both lights reach well past the ordinary room, so
-        // that a room can be lit as an effect rather than only as somewhere to see.
+        // Both lights reach well past an ordinary room's needs, for effect lighting.
         expect(HeadLightUtil.getIntensity(MAX_ROOM_PREFS_STEP))
             .toBeGreaterThan(3 * ORDINARY_POWER_INTENSITY);
         expect(RoomPrefsUtil.getAmbientIntensity(
@@ -181,54 +159,40 @@ describe("a room that has said nothing", () => {
     });
 
     it("paints its sky in its own air's color", () => {
-        // The sky has no default of its own: a room that does not carry one is given its air's
-        // color, which for a room that has said nothing at all is the black void past the room it
-        // has always had.
+        // The sky has no default: without one it takes the fog color (a black void when unconfigured).
         expect(defaults.skyColorIndex).toBe(defaults.fogColorIndex);
         expect(ColorPaletteMap[FOG_COLOR_PALETTE_NAME][defaults.skyColorIndex]).toBe("#000000");
     });
 
     it("shows no clouds, because there is no weather at all", () => {
-        // Said with the strength rather than with the color, which is what the move to a palette of
-        // the clouds' own forced and what a person reading the sliders would expect anyway. The color
-        // waiting behind it is a real cloud color, so turning the strength up gives a cloud rather
-        // than a stain.
+        // Clouds are off via zero strength, not via color; the color behind it is a real cloud color.
         expect(RoomPrefsUtil.getCloudOpacity(defaults)).toBe(0);
         expect(ColorPaletteMap[SCENERY_COLOR_PALETTE_NAME][defaults.cloudColorIndex])
             .toBe("#ffffff");
     });
 
     it("stands the room over quiet neutral land", () => {
-        // The one default here that is not "as things were", and deliberately: a sky with no clouds
-        // is a clear sky, but a sky with no ground is a room hanging in a void — a stronger statement
-        // than any weather, and not one an unconfigured room should be making. Dark neutrals are also
-        // the one choice that reads correctly against every air a room might pick, since ground
-        // darker than the sky above it is what a horizon is.
+        // Unlike the rest, the ground default isn't "as before": a groundless sky reads as a void, and dark
+        // neutrals sit correctly under any air.
         expect(ColorPaletteMap[SCENERY_COLOR_PALETTE_NAME][defaults.groundColorIndex])
             .toBe("#1a1a1a");
         expect(ColorPaletteMap[SCENERY_COLOR_PALETTE_NAME][defaults.groundPeakColorIndex])
             .toBe("#4d4d4d");
-        // Coarse enough that a handful of hills stand between the room's edge and the horizon, solid
-        // enough to be a country rather than a suggestion of one, and meeting over a hillside rather
-        // than at a drawn line — pinned for the reason the cloud settings are, since there is no
-        // "as it always was" here.
+        // A few solid hills before the horizon, meeting on a hillside; pinned (no prior look to match).
         expect(RoomPrefsUtil.getGroundScale(defaults)).toBeCloseTo(1.2, 1);
         expect(RoomPrefsUtil.getGroundSolidity(defaults)).toBeGreaterThan(1);
         expect(RoomPrefsUtil.getGroundSoftness(defaults)).toBeCloseTo(0.066, 3);
     });
 
     it("carries smoke in air there is none of", () => {
-        // The smoke defaults to on, and it costs nothing to do so: an unconfigured room's fog is
-        // pushed past everything the camera draws, so there is no haze for it to be uneven in. What
-        // it buys is that the first room to pull its fog in finds air that already moves.
+        // Smoke defaults on at no cost (the default fog is past the far plane), so pulled-in fog already moves.
         expect(RoomPrefsUtil.getFogSmokeAmplitude(defaults)).toBeGreaterThan(0);
         expect(RoomPrefsUtil.getFogSmokeSpeed(defaults)).toBeGreaterThan(0);
         expect(RoomPrefsUtil.getFogNearDistance(defaults)).toBeGreaterThanOrEqual(CAMERA_FAR_PLANE);
     });
 
     it("sends the smoke off an axis, and gently upward", () => {
-        // Rising, as smoke does — and off a bearing that is none of the world's own axes, since air
-        // travelling exactly along one reads as a mechanism rather than as a draught.
+        // Rising, off every world axis (axis-aligned drift looks mechanical).
         const drift = RoomPrefsUtil.getFogSmokeDrift(defaults);
         expect(drift.y).toBeGreaterThan(0);
         expect(Math.abs(drift.x)).toBeGreaterThan(0.01);
@@ -236,20 +200,14 @@ describe("a room that has said nothing", () => {
     });
 
     it("carries the cloud settings the sky was tuned at", () => {
-        // Unlike everything else here there is no "as it always was" to fall back on, so these are
-        // simply the values the atmosphere was tuned at — pinned so that a change to the curves or
-        // the ranges cannot quietly re-weather every room that never asked for anything.
+        // No prior look to match, so the tuned values are pinned against curve or range changes.
         expect(RoomPrefsUtil.getCloudScale(defaults)).toBeCloseTo(5.3, 1);
         expect(RoomPrefsUtil.getCloudSpeed(defaults)).toBeCloseTo(0.008, 3);
         expect(RoomPrefsUtil.getCloudSoftness(defaults)).toBeCloseTo(0.1, 2);
     });
 
     it("moves its clouds and its smoke at the speeds they were tuned at, however far the top reaches", () => {
-        // Generation writes every setting out in full, so every generated room holds these two
-        // steps explicitly — which makes the speed each one names the one point on its curve that
-        // can never move. Pinned far more tightly than the rest for that reason: the top of both
-        // ranges reaches a long way past them, and a curve reshaped carelessly around the default
-        // would quietly re-weather every room ever generated.
+        // Generation writes these steps explicitly, so their speeds must never move; pinned tightly.
         expect(RoomPrefsUtil.getCloudSpeed(defaults)).toBeCloseTo(0.00801942421, 10);
         expect(RoomPrefsUtil.getFogSmokeSpeed(defaults)).toBeCloseTo(0.11723898717, 10);
         // ...and the tops are storms rather than drifts.
@@ -258,16 +216,13 @@ describe("a room that has said nothing", () => {
     });
 
     it("is what a shorter string from some other version decodes to as well", () => {
-        // Every field past the end of the string falls back on its own default, which is what makes
-        // the format extendable in both directions rather than versioned.
+        // Missing trailing fields fall back to defaults, so the format extends without versioning.
         const partial = RoomPrefsUtil.decode(RoomPrefsUtil.encode(defaults).substring(0, 2));
         expect(partial).toEqual(defaults);
     });
 
     it("is what generation writes out explicitly", () => {
-        // The obligation is to *decide*, and the decision here is the default — but it is written
-        // rather than left empty, so no room is ever holding a value nothing chose.
-        // See @.claude/rules/room-generation.md .
+        // Generation decides, here by writing the default explicitly (see @.claude/rules/room-generation.md).
         expect(RoomPrefsUtil.getDefaultPrefsString().length).toBeGreaterThan(0);
         expect(RoomPrefsUtil.decode(RoomPrefsUtil.getDefaultPrefsString())).toEqual(defaults);
     });
@@ -293,9 +248,7 @@ describe("power as one setting", () => {
     });
 
     it("gives the head lamp two dials that do not move together", () => {
-        // The whole of what separating them bought. Fused, a dim lamp was always a small one and a
-        // bright lamp always a far-reaching one, so a soft wash filling the room and a fierce pool a
-        // pace across were opposite ends of one dial and neither crossing could be asked for.
+        // Separate intensity and range allow both a dim wide wash and a bright tight pool.
         const dimAndWide = HeadLightUtil.getIntensity(10);
         const fierceAndTight = HeadLightUtil.getIntensity(MAX_ROOM_PREFS_STEP);
         expect(dimAndWide).toBeLessThan(fierceAndTight);
@@ -317,8 +270,7 @@ describe("power as one setting", () => {
     });
 
     it("lets the air be made still, and the clouds be faded out entirely", () => {
-        // Both bottoms are settings in their own right rather than range artifacts, and neither is
-        // expressible on a geometric curve — which is why these two do not use one.
+        // Both zero steps are real settings that no geometric curve can express, hence no curve here.
         expect(RoomPrefsUtil.getCloudSpeed({...defaultPrefs, cloudSpeedStep: 0})).toBe(0);
         expect(RoomPrefsUtil.getCloudOpacity({...defaultPrefs, cloudOpacityStep: 0})).toBe(0);
     });
@@ -342,8 +294,7 @@ describe("power as one setting", () => {
                     RoomPrefsUtil.getCloudSoftness(read("cloudSoftnessStep", low)));
         }));
 
-        // The scale never reaches zero, and should not: a field of no frequency is a flat sky, which
-        // is what picking the cloud color the air already is says.
+        // Scale never reaches zero (a flat sky is expressed by matching the cloud color to the air).
         expect(RoomPrefsUtil.getCloudScale({...defaultPrefs, cloudScaleStep: 0}))
             .toBeCloseTo(MIN_CLOUD_SCALE, 6);
         expect(RoomPrefsUtil.getCloudScale(
@@ -354,8 +305,7 @@ describe("power as one setting", () => {
             .toBeCloseTo(MAX_CLOUD_SPEED, 6);
         expect(RoomPrefsUtil.getCloudOpacity(
             {...defaultPrefs, cloudOpacityStep: MAX_ROOM_PREFS_STEP})).toBe(1);
-        // Like the scale, the edge width never reaches zero — the tightest a room may ask for is a
-        // cut edge, and the shader still holds it open to a pixel so that it cannot shimmer.
+        // Edge width never reaches zero; the shader keeps at least a pixel to prevent shimmer.
         expect(RoomPrefsUtil.getCloudSoftness({...defaultPrefs, cloudSoftnessStep: 0}))
             .toBeCloseTo(MIN_CLOUD_SOFTNESS, 6);
         expect(RoomPrefsUtil.getCloudSoftness(
@@ -371,8 +321,7 @@ describe("power as one setting", () => {
                     RoomPrefsUtil.getGroundScale({...defaultPrefs, groundScaleStep: low}));
         }));
 
-        // Never zero, for the reason the clouds' scale is never zero: land of no frequency at all is
-        // a flat plain, which is what picking one color for both the low ground and the high says.
+        // Never zero: flat land is expressed by one color for low and high ground.
         expect(RoomPrefsUtil.getGroundScale({...defaultPrefs, groundScaleStep: 0}))
             .toBeCloseTo(MIN_GROUND_SCALE, 6);
         expect(RoomPrefsUtil.getGroundScale(
@@ -391,9 +340,8 @@ describe("power as one setting", () => {
                     {...defaultPrefs, groundSoftnessStep: low}));
         }));
 
-        // Neither reaches zero, and neither should. Land of no solidity is land the air has taken,
-        // which picking one color for both says better; a slope of no width is an edge the screen
-        // cannot draw without crawling, and the shader holds it open to a pixel regardless.
+        // Neither reaches zero: no solidity is expressed by matching colors, and the shader keeps slopes
+        // at least a pixel wide.
         expect(RoomPrefsUtil.getGroundSolidity({...defaultPrefs, groundSolidityStep: 0}))
             .toBeCloseTo(MIN_GROUND_SOLIDITY, 6);
         expect(RoomPrefsUtil.getGroundSolidity(
@@ -438,17 +386,14 @@ describe("power as one setting", () => {
     });
 
     it("points the smoke somewhere, whatever the two steps say", () => {
-        // The direction and the speed have to stay independent, so that a steeply rising smoke
-        // travels neither faster nor slower than a level one. That holds only while this is a unit
-        // vector, which is the one thing every pair of steps must produce.
+        // The direction must be a unit vector for every step pair, so rise doesn't change speed.
         fc.assert(fc.property(steps, steps, (drift, rise) => {
             const d = RoomPrefsUtil.getFogSmokeDrift(
                 {...defaultPrefs, fogSmokeDriftStep: drift, fogSmokeRiseStep: rise});
             expect(Math.hypot(d.x, d.y, d.z)).toBeCloseTo(1, 6);
         }));
 
-        // Its middle is air travelling flat, which is why this step is centred rather than starting
-        // at nothing — and its ends are smoke climbing and dry ice pouring down.
+        // Centered: the middle is level drift, the ends rising smoke and pouring dry ice.
         const level = RoomPrefsUtil.getFogSmokeDrift(
             {...defaultPrefs, fogSmokeRiseStep: Math.round(MAX_ROOM_PREFS_STEP / 2)});
         expect(level.y).toBeCloseTo(0, 1);
@@ -463,18 +408,14 @@ const defaultPrefs = RoomPrefsUtil.decode("");
 
 describe("the palettes a room's lighting is drawn from", () => {
     it("starts each with the entry that changes nothing", () => {
-        // Load-bearing: index 0 is what an unconfigured room reads back, so white light and a black
-        // void are what "nobody has said anything" has to mean.
+        // Index 0 is the unconfigured default: white light and a black void.
         expect(ColorPaletteMap[LIGHT_COLOR_PALETTE_NAME][0]).toBe("#ffffff");
         expect(ColorPaletteMap[FOG_COLOR_PALETTE_NAME][0]).toBe("#000000");
     });
 
     it("offers no light that is merely a dimmed one", () => {
-        // Every entry sits at the top of the brightness range, so what is picked from this set is a
-        // light's color and never how much of it there is — that is the strength beside it, in all
-        // three of the places the set is read. A darkened entry is that dial spelled a second time,
-        // and it is the one way somebody could install a lamp expecting to light a room and end up
-        // with a fitting that gives nothing back.
+        // Every entry is full brightness, since strength is a separate dial (a dark entry could make a lamp
+        // that gives no light).
         for (const hex of ColorPaletteMap[LIGHT_COLOR_PALETTE_NAME])
         {
             const rgb = ColorUtil.hexToRGB(hex);
@@ -495,15 +436,13 @@ describe("the palettes a room's lighting is drawn from", () => {
     });
 });
 
-// How many characters a room's string ran to before its sky had a color of its own — everything up
-// to and including the head lamp's range.
+// String length before the sky had its own color (through the head lamp's range).
 const PRE_SKY_PREFS_LENGTH = 23;
 
 describe("a sky with a color of its own", () => {
     it("gives a room stored before it could choose a sky the sky it already had", () => {
-        // Such a room's string stops short of the sky's character, and its sky was painted in its
-        // air's color. Reading it back any other way would repaint the sky of every room that ever
-        // chose a fog.
+        // Such strings end before the sky field, and their sky was the fog color; reading them otherwise
+        // would repaint every such room's sky.
         const fogColors = fc.integer({min: 0,
             max: ColorUtil.getPaletteSize(FOG_COLOR_PALETTE_NAME) - 1});
         fc.assert(fc.property(fogColors, (fogColorIndex) => {
@@ -514,8 +453,7 @@ describe("a sky with a color of its own", () => {
     });
 
     it("keeps the sky it was given once it carries one, whatever the air is", () => {
-        // Only a room that has never said follows its air; one that has chosen a sky keeps it
-        // however its fog is changed afterwards.
+        // Only an unset sky follows the fog; a chosen sky persists through fog changes.
         const decoded = RoomPrefsUtil.decode(
             RoomPrefsUtil.encode({...defaultPrefs, fogColorIndex: 12, skyColorIndex: 60}));
         expect(decoded.skyColorIndex).toBe(60);

@@ -1,11 +1,6 @@
 /**
- * Helpers for building mesh-composition metadata strings, for the two kinds of object that carry
- * one: a player's appearance and a door's.
- *
- * The wire format of the InstancedMeshComposition metadata is a two-character codec prefix
- * (type, then version) followed by the codec's encoded params. These helpers reproduce that
- * format the way a real client would, reading the codec type/version from the object config
- * so the tests stay honest if the config changes.
+ * Builds player and door composition metadata strings (two-char codec prefix + encoded params), using
+ * the codec type/version from the object configs.
  */
 import PlayerObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import DoorObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";

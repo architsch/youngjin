@@ -132,22 +132,17 @@ export default class VoxelQuadSelection
             return false;
         }
 
-        // Nothing is picked out outside edit mode, as for an object (see ObjectSelection.trySelect).
+        // Edit mode only (see ObjectSelection.trySelect).
         if (gameModeObservable.peek() != "edit")
             return false;
 
-        // A quad that does not exist, or that nobody can see, is nothing to pick out — and asking for
-        // one is no reason to drop what the user already has: a selection is given up by saying so,
-        // never by a request that found nothing there.
+        // Invalid or invisible quads are refused without dropping the current selection.
         if (quadIndex < 0 || quadIndex >= NUM_VOXEL_QUADS_PER_ROOM)
             return false;
         if ((voxel.quadsMem.quads[quadIndex] & 0b10000000) == 0)
             return false;
 
-        // Clicking what is already picked out leaves it picked out, as it does for an object (see
-        // ObjectSelection.trySelect). A selection is given up by saying so — the way out of the mode
-        // it stands in, or the back gesture — rather than by a click indistinguishable from the one
-        // that made it.
+        // Re-clicking the selection keeps it (see ObjectSelection.trySelect).
         const existingSelection = voxelQuadSelectionObservable.peek();
         if (existingSelection != null &&
             existingSelection.voxel == voxel && existingSelection.quadIndex == quadIndex)
@@ -200,9 +195,7 @@ voxelQuadSelectionObservable.addListener("voxelQuadSelection", async (selection:
     }
 });
 
-// Whenever the current room changes, the existing selection (if there is one) should be discarded.
-// Forced: a room the user has left is not a room he can be holding anything in, and a scripted step
-// pinning a selection was pinning it in the room that step was played in.
+// Forced: a room change overrides any selection lock from a scripted step.
 roomChangedObservable.addListener("voxelQuadSelection", async (_roomRuntimeMemory: RoomRuntimeMemory) => {
     VoxelQuadSelection.unselect(true);
 
@@ -213,9 +206,7 @@ roomChangedObservable.addListener("voxelQuadSelection", async (_roomRuntimeMemor
     }
 });
 
-// The collisionLayer whose neighborhood should be searched for an alternative to the given quad.
-// A quad belonging to the room's own floor or ceiling sits in no collisionLayer at all,
-// so it is answered for by the layer lying against whichever end of the room it belongs to.
+// Layer to search around; room floor/ceiling quads have no layer, so use the adjacent end layer.
 function getCollisionLayerToSearchAround(quadIndex: number): number
 {
     const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);

@@ -6,10 +6,8 @@ export default class RequestRoomChangeSignal extends EncodableData
 {
     roomID: string;
     allowFallback: boolean;
-    // Which door of the destination room the user means to arrive behind, named by its label. A door
-    // leading somewhere is what names one, so that walking through a door in one room puts the user
-    // behind the door that answers it in the next, rather than wherever that room's own way in
-    // happens to be. Empty when the user simply asked for the room (see SpawnHotspotUtil).
+    // Arrival door label in the destination room (set when travelling through a door); empty for the
+    // room's default entrance (see SpawnHotspotUtil).
     destinationDoorLabel: string;
 
     constructor(roomID: string, allowFallback: boolean, destinationDoorLabel: string = "")

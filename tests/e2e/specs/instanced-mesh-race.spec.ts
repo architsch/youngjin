@@ -1,12 +1,8 @@
 import { test, expect } from "../fixtures/auth.fixture";
 
-// Regression test: multiple composed objects spawning in the same frame (e.g. the user's player
-// and the tutorial's NPC player) request the same instanced meshes concurrently. Those requests
-// must share a single load — a duplicate creation clobbers the mesh registry and its instanceId
-// pool, leaving every part on the affected mesh invisible.
-//
-// The console/page-error listeners attach before navigation, because the failure fires during the
-// initial room load (listeners attached after the fact miss it).
+// Regression: composed objects spawning in the same frame must share one instanced mesh load (a
+// duplicate creation makes parts invisible). Listeners attach before navigation, since the failure
+// happens during the initial load.
 test.describe("Instanced mesh concurrent loading", () => {
     test("same-frame spawns do not duplicate instanced-mesh loads", async ({ page }) => {
         const errors: string[] = [];

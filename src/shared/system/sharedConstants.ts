@@ -37,35 +37,23 @@ export const ROOM_AUTO_SAVE_INTERVAL = 10 * MINUTE_IN_MS; // in milliseconds (10
 export const OBJECT_MESSAGE_MAX_LENGTH = 72;
 export const OBJECT_INSTANCED_MESH_COMPOSITION_METADATA_MAX_LENGTH = 512;
 
-// How long the text written on an object may be. It is short because of where it is read: a label
-// is drawn onto a patch of the object itself (see the LabelText component), and a name that fills
-// that patch at a size nobody can make out from across the room is worse than one that was cut.
+// Short, since labels are drawn onto a small patch of the object.
 export const OBJECT_LABEL_MAX_LENGTH = 24;
 
-// Which set of colors a label's lettering is drawn from (see ColorPaletteMap). Named here rather
-// than written out at each of the three places that need it — what is stored is a position in this
-// exact palette, so a second name for it would be a second meaning for every label already written.
+// Stored label colors are positions in this palette.
 export const LABEL_COLOR_PALETTE_NAME = "LabelColor";
 
-// Which sets of colors a room's lighting is drawn from (see ColorPaletteMap). Named here for the
-// same reason the one above is: what a room stores is a position in this exact palette, so a second
-// name for it would be a second meaning for every room already lit.
+// Stored room light colors are positions in this palette.
 export const LIGHT_COLOR_PALETTE_NAME = "Light";
 export const FOG_COLOR_PALETTE_NAME = "Fog";
-// What the sky past a room is furnished with — its clouds and the land under them. A different set
-// from the air's own, because these are masses seen *against* the air rather than the air itself.
+// Palette for clouds and ground (masses against the air, unlike the fog palette).
 export const SCENERY_COLOR_PALETTE_NAME = "Scenery";
 
-// The longest a stored document id may be. Firestore's own limit, which is what bounds a door's
-// destination room id: an id is never composed by hand, so this only has to refuse a value that was
-// never an id in the first place.
+// Firestore's document id limit (bounds a door's destination id).
 export const DOCUMENT_ID_MAX_LENGTH = 1500;
 
-// The reserved room id that names a hub without naming which one, leaving that to the balancer
-// (see RoomPickerUtil). A visitor's URL may carry it, and so may a door — which is how a door opens
-// onto the hubs at all, since which hub anybody should be let into is a question about the moment he
-// walks through rather than about the day the door was hung. No real room answers to it: ids are
-// drawn by the database rather than written.
+// Reserved room id meaning "a hub, chosen by the balancer" (see RoomPickerUtil), usable in URLs and
+// door destinations. No real room id matches it.
 export const HUB_ROOM_ID_KEYWORD = "hub";
 
 // Physics
@@ -73,14 +61,8 @@ export const HUB_ROOM_ID_KEYWORD = "hub";
 export const GRAVITY_SPEED = 3;
 export const SOFT_COLLISION_PUSH_SPEED_LIMIT = GRAVITY_SPEED * 2;
 
-// How much narrower and shorter than its footprint a wall attachment's hitbox is actually built
-// (see PhysicsColliderStateUtil). A footprint is a whole number of half-voxels, so two attachments
-// hung side by side share an edge exactly — and an overlap test on two boxes that share an edge is
-// deciding a tie, which the arithmetic that got them there is not reliable enough to be trusted
-// with. Taking a hair off both sides means neighbours never touch at all, so the question is never
-// close. It is far below anything the eye or the placement grid can resolve, and it is taken off
-// the two axes lying in the wall only: the depth is already a sliver, and shrinking it would lift
-// the attachment off the wall it is supposed to be hanging on.
+// Inset of a wall attachment's hitbox on its in-wall axes (see PhysicsColliderStateUtil), so neighbours
+// sharing a footprint edge never register as overlapping. Depth is not inset.
 export const WALL_ATTACHMENT_HITBOX_INSET = 0.02;
 
 export const NUM_COLLISION_LAYERS = 16; // Total number of collision layers which span the room's Y-axis
@@ -109,8 +91,7 @@ export const COLLISION_LAYER_NULL = 16;
 export const COLLISION_LAYER_MIN = COLLISION_LAYER_00_TO_05;
 export const COLLISION_LAYER_MAX = COLLISION_LAYER_75_TO_80;
 
-// The collision layer mask of a voxel that is solid from the room's floor to its ceiling, which is
-// also the largest value such a mask can take.
+// Mask of a voxel solid from floor to ceiling (also the maximum mask value).
 export const FULL_COLLISION_LAYER_MASK = (1 << NUM_COLLISION_LAYERS) - 1;
 
 export const NUM_COLLISION_LAYERS_PER_STOREY = 7;
@@ -138,8 +119,7 @@ export const DIR_VEC_BY_CODE: Vec3[] = [
 
 // Graphics
 
-// The local -Z axis that Three.js `lookAt` treats as "facing the target": the engine's
-// forward-facing direction, and the reference frame that composition part dirs are authored against.
+// Three.js lookAt's forward (-Z); composition part dirs are authored against it.
 export const FORWARD_DIR: Vec3 = {x: 0, y: 0, z: -1};
 export const BACKWARD_DIR: Vec3 = {x: 0, y: 0, z: 1};
 
@@ -163,14 +143,8 @@ export const INSTANCED_TIN_MATERIAL_ID = new InstancedTinMaterialParams().getMat
 export const INSTANCED_WOOD_MATERIAL_ID = new InstancedWoodMaterialParams().getMaterialId();
 export const INSTANCED_EMISSIVE_MATERIAL_ID = new InstancedEmissiveMaterialParams().getMaterialId();
 
-// A part's material, as one character of a composition string (see DefaultCompositionCodec). These
-// codes are what every composition already saved means, so they are appended and never renumbered —
-// a code that changes meaning repaints every object stored against it.
-//
-// A retired code keeps its place for the same reason. Code 1 was an "InstancedEye" material that
-// drew a player's eye as two concentric circles; eyes are now drawn as plain colored squares like
-// every other part, so nothing composes one any more. Closing the gap would move tin to 1 and wood
-// to 2 and repaint everything.
+// Material codes in composition strings (see DefaultCompositionCodec). Append-only; retired codes keep
+// their slot (code 1 was the removed "InstancedEye").
 const RETIRED_MATERIAL_ID = "";
 
 export const MATERIAL_ID_BY_CODE: string[] = [
@@ -186,11 +160,8 @@ MATERIAL_CODE_BY_ID[INSTANCED_TIN_MATERIAL_ID] = 2;
 MATERIAL_CODE_BY_ID[INSTANCED_WOOD_MATERIAL_ID] = 3;
 MATERIAL_CODE_BY_ID[INSTANCED_EMISSIVE_MATERIAL_ID] = 4;
 
-// Materials that tint each instance through the instance color (InstancedMesh.setColorAt), and
-// hence need a composition part's color both encoded and pushed to the GPU. Anything driven by
-// specialized per-instance attributes instead (e.g. the eye colors) is deliberately excluded.
-// A material may appear here and still read attributes of its own: the wood surface takes its
-// background color this way and its moulding color from a buffer attribute alongside it.
+// Materials tinted via the instance color, so composition colors are encoded and uploaded for them. A
+// material may also read its own attributes (wood reads its moulding color from one).
 export const INSTANCE_COLORED_MATERIAL_IDS: string[] = [
     INSTANCED_COLOR_MATERIAL_ID,
     INSTANCED_TIN_MATERIAL_ID,
@@ -201,20 +172,13 @@ export const INSTANCE_COLORED_MATERIAL_IDS: string[] = [
 export const VOXEL_TEXTURE_PACK_MATERIAL_ID = "voxelTexturePack";
 export const VOXEL_QUAD_GEOMETRY_ID = "Square";
 
-// Anything that belongs to one kind of GameObject alone — how much wall a door claims, how many
-// canvases a room holds, how tall a player stands — is declared by that type's own ObjectTypeConfig
-// instead of here, and is reached through it (see ObjectTypeConfigMap).
+// Per-type constants (door footprint, canvas count, player height, ...) live in each ObjectTypeConfig.
 
 // Label Text
 
 export const LABEL_GEOMETRY_ID = "Square";
 
-// Every label in a room is drawn from one mesh, and every one of them is written into one cell of
-// one texture — so this is a room-wide budget rather than a per-object one, and the atlas is a grid
-// of exactly this many cells. A cell is wide and short because a label is: what goes on one is a
-// name on a plate, and giving it a square cell would spend most of the pixels above and below the
-// lettering. A quad of a different shape is still drawn correctly (the text is laid out in world
-// units and scaled onto the cell), it just spends its pixels less evenly.
+// Room-wide label budget: one shared mesh and one texture atlas of this many wide, short cells.
 export const MAX_LABELS_PER_ROOM = 16;
 export const LABEL_ATLAS_WIDTH = 2048; // in pixels
 export const LABEL_ATLAS_HEIGHT = 512; // in pixels
@@ -226,39 +190,24 @@ export const LABEL_ATLAS_CELL_HEIGHT = 128; // in pixels
 export const NUM_VOXEL_ROWS = 32;
 export const NUM_VOXEL_COLS = 32;
 
-// How many voxel blocks a room holds — one collision layer of one voxel each, which is the smallest
-// volume the grid distinguishes (see VoxelQueryUtil's voxel-block section). Every block of the room
-// is addressed at once by anything that reasons about the room as a solid volume rather than about
-// the surfaces drawn on it, so this is the length such a buffer is sized to.
+// Voxel blocks per room (one layer of one voxel); the buffer size for whole-volume computations.
 export const NUM_VOXEL_BLOCKS = NUM_VOXEL_ROWS * NUM_VOXEL_COLS * NUM_COLLISION_LAYERS;
 
 export const NUM_VOXEL_QUADS_PER_COLLISION_LAYER = 6; // corresponding to 6 sides of a 3D box: [-y, +y, -x, +x, -z, +z]
 export const NUM_VOXEL_QUADS_PER_VOXEL =
     (NUM_VOXEL_QUADS_PER_COLLISION_LAYER * NUM_COLLISION_LAYERS) + 2; // 2 is for the floor and ceiling quads, which sit outside of the collision layers (They belong to "COLLISION_LAYER_NULL").
 
-// How many quads a room addresses, and so the range every quadIndex is drawn from. Growing the room
-// in any direction — more rows, more columns, more collision layers — grows this, and a quadIndex is
-// carried in the voxel edit signals, so the field it is sent in has to stay wide enough to hold the
-// largest one. A field that is too narrow does not fail loudly: the index is clamped down to a value
-// that still names a real quad, and the edit lands on the wrong part of the room. The tests assert
-// this range against the width of that field, so a room that outgrows it fails there instead.
+// Quads per room; bounds quadIndex. The signal field carrying quadIndex must hold this range (an overflow
+// would silently clamp onto the wrong quad); tests assert it.
 export const NUM_VOXEL_QUADS_PER_ROOM = NUM_VOXEL_QUADS_PER_VOXEL * NUM_VOXEL_ROWS * NUM_VOXEL_COLS; // 100352
 
-// How many restricted zones one room may hold. A zone is drawn by hand and read at a glance, so the
-// cap is about how many a person can keep track of on the room's plan rather than about what the
-// format could carry (see @docs/gameplay/restricted_zone.md).
+// Max zones per room, sized for readability on the plan (see @docs/gameplay/restricted_zone.md).
 export const MAX_RESTRICTED_ZONES = 16;
 
-// How many bytes one restricted zone is written in: its two row bounds and its two column bounds,
-// a byte each.
+// Bytes per zone: row min/max and col min/max, one byte each.
 export const ENCODED_RESTRICTED_ZONE_BYTES = 4;
 
-// The largest a room's voxel grid can come out once encoded: every cell writing its floor and
-// ceiling quads, its collision layer mask, and the six faces of every one of its collision layers —
-// which is what a room built solid from its floor to its ceiling amounts to. Only the occupied
-// layers of a cell are written, so an ordinary room costs a small fraction of this; it is here so
-// that the buffer a room is encoded into can be sized for the room nobody has built yet
-// (see EncodingUtil).
+// Worst-case encoded grid size (a fully solid room), for sizing the encoding buffer (see EncodingUtil).
 export const MAX_ENCODED_VOXEL_GRID_BYTES = 1 /* format version */ +
     NUM_VOXEL_ROWS * NUM_VOXEL_COLS *
         (2 /* floor and ceiling quads */ + 2 /* collision layer mask */ +
@@ -266,13 +215,8 @@ export const MAX_ENCODED_VOXEL_GRID_BYTES = 1 /* format version */ +
     1 /* how many restricted zones follow */ +
     MAX_RESTRICTED_ZONES * ENCODED_RESTRICTED_ZONE_BYTES;
 
-// How many of a room's quads can be on show at once, which is what the room's instanced mesh is
-// sized for rather than the far larger number of quads the grid addresses (see
-// VoxelQuadInstanceUtil). A quad is drawn only where something solid meets something open, so the
-// bound is the number of such boundaries the grid holds: one per pair of vertically stacked blocks
-// (the room's own floor and ceiling being the outermost two), and one per pair of side-by-side
-// blocks along each horizontal axis. A boundary between two solid blocks, or between two open ones,
-// draws nothing at all, so no arrangement of a room can exceed this.
+// Upper bound on simultaneously visible quads (the voxel mesh's size; see VoxelQuadInstanceUtil): one per
+// solid/open boundary, so no room layout can exceed it.
 export const MAX_VISIBLE_VOXEL_QUADS_PER_ROOM =
     (NUM_COLLISION_LAYERS + 1) * NUM_VOXEL_ROWS * NUM_VOXEL_COLS +
     (NUM_VOXEL_COLS - 1) * NUM_VOXEL_ROWS * NUM_COLLISION_LAYERS +
@@ -282,39 +226,25 @@ export const VOXEL_BLOCK_HITBOX_HALFSIZE = {x: 0.5, y: 0.5 * COLLISION_LAYER_HEI
 
 // Room Population
 
-// Population bands used to load-balance the users across the rooms.
-// A room at or above the over-population threshold is considered "over-populated"
-// (i.e. crowded enough that no more users should be routed into it),
-// and a room at or below the under-population threshold is considered "under-populated"
-// (i.e. still empty enough that it should be filled up before another room is filled).
-// Anything in between is a medium-populated room.
+// Population bands for hub balancing: at or above over = crowded (route elsewhere); at or below under =
+// fill before others; in between = medium.
 export const ROOM_OVER_POPULATION_THRESHOLD = 50;
 export const ROOM_UNDER_POPULATION_THRESHOLD = 20;
 
-// Slots held in reserve below the hard cap, which is the player's own maxCountPerRoom. A room is
-// considered "almost full" — and stops admitting anyone new — once its population reaches that cap
-// less this margin, so that a handful of joins that were already in flight cannot push it past.
+// Reserve below the player cap; rooms stop admitting at cap minus this (covers in-flight joins).
 export const ROOM_ALMOST_FULL_MARGIN = 4;
 
 // Gameplay
 
-// How far the user may reach into the room to select something. This is the base reach, which is
-// what a first-person view gets; a camera taken further back than this to orbit a selection reaches
-// as far as it can see instead (see WorldSpaceSelectionUtil).
+// Base selection reach (first person); orbiting extends it (see WorldSpaceSelectionUtil).
 export const MAX_WORLDSPACE_SELECT_DIST = 10;
 
-// Where a multiplayer room's own door is hung when the room is generated: one cell of one boundary
-// wall, which is also what an arriving player is put down behind unless a door of the room says
-// otherwise (see SpawnHotspotUtil). Only the starting point — an admin is free to slide that door
-// along the wall or take it down afterwards, so nothing may read this as where a room's way in
-// stands now. A singleplayer room names its own entrance cell in its SinglePlayerModeConfig.
+// Initial entrance door cell for generated multiplayer rooms (admins may move it later, so don't read
+// this as the current entrance). Single-player rooms set their own.
 export const INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL = 16;
 export const INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW = 31;
 
-// How tall the doorway a multiplayer room used to be entered through stood, in collision layers.
-// Nothing carves one any more — a room's way in is a door hung on the boundary wall — but this is a
-// fact about the format older rooms were written in, and the conversions that carry them across need
-// it to fill that stretch of wall back in.
+// Legacy doorway height, used by conversions of older rooms.
 export const INITIAL_MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS = 5;
 
 // UI

@@ -43,9 +43,10 @@ never needs the phases that already reported clean.
 
 Documentation and tests are **not** a phase here. They are kept in step with the code as each
 feature is built, so a pass over them at release time re-reads the whole batch to confirm what is
-already true. If phase 0's survey shows they have genuinely fallen behind — a `src/` change with no
-matching movement in `docs/` or `tests/` anywhere in the batch — record it as a finding for the user
-and carry on. Catching up is a separate, user-invoked `docs-and-tests-sync` run.
+already true. If phase 0's survey shows they have genuinely fallen behind — a new behavior with no
+test anywhere in the batch, or a change to a concept a `/docs` page describes with no matching edit
+to that page (most `src/` changes need none, since the pages are short maps rather than
+descriptions) — record it as a finding for the user and carry on. Catching up is a separate, user-invoked `docs-and-tests-sync` run.
 
 ## Token discipline
 

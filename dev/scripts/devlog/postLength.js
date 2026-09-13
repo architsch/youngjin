@@ -1,21 +1,14 @@
 /**
- * Character-budget check for dev-log posts (driven by the `devlog-post` Claude skill).
- *
- * A dev-log post is written to be pasted into a social post as it stands, with a short "Play Here"
- * line added underneath by hand. LinkedIn is the tightest of the places it goes, so its ceiling is
- * the one that governs, minus the room that trailing line needs.
- *
- * What gets counted is what a reader would select on the page and copy: the title, then the body
- * paragraphs and hashtags — not the source file's own directives, image references or raw HTML,
- * and not the byline, which the page adds and nobody pastes.
+ * Character-budget check for dev-log posts (driven by the `devlog-post` skill). The budget is LinkedIn's
+ * limit minus a hand-added "Play Here" line. Counts what a reader would copy: the title, body paragraphs
+ * and hashtags (not directives, image references, raw HTML or the byline).
  *
  * Usage:
  *   node dev/scripts/devlog/postLength.js                 (the newest post)
  *   node dev/scripts/devlog/postLength.js --all           (every post in the file)
  *   node dev/scripts/devlog/postLength.js --source=public/devlog-2031/source.txt
  *
- * With no --source it reads the current dev-log year's file; see devlogDir.js for which year that
- * is and why it can still be last year's.
+ * Without --source it reads the current dev-log year's file (see devlogDir.js).
  */
 const fs = require("fs");
 const path = require("path");
@@ -23,9 +16,7 @@ const { resolveDevlogDir } = require("./devlogDir");
 
 const REPO_ROOT = path.resolve(__dirname, "../../..");
 
-// Hashtags are how a post reaches anyone who was not already looking for it, but each one is spent
-// from the budget below, and a long line reads as spam to the person scrolling past it. The bank
-// they are drawn from lives in the skill's reference/hashtags.md.
+// Each hashtag spends budget; the bank lives in the skill's reference/hashtags.md.
 const MIN_HASHTAGS = 12;
 const MAX_HASHTAGS = 18;
 
@@ -34,12 +25,8 @@ const LINKEDIN_LIMIT = 3000;
 const RESERVED_FOR_PLAY_LINE = 36;
 const BUDGET = LINKEDIN_LIMIT - RESERVED_FOR_PLAY_LINE;
 
-// What a post should actually come out at, as against what it is allowed to reach. The three posts
-// the user wrote by hand run 620, 550 and 510 characters of body text — title and hashtags aside —
-// and they are the house length. The budget above is a platform limit, and a post anywhere near it
-// has stopped being an advertisement and become a report. The band is deliberately wide: it is
-// there to catch a draft that has drifted into essay length, not to police a good post by ten
-// characters.
+// The house body length (hand-written posts run about 510-620 chars), as opposed to the platform limit
+// above. The band is wide: it catches essay-length drafts, not small overruns.
 const PROSE_TARGET = 600;
 const PROSE_MAX = 1000;
 const PROSE_MIN = 250;
@@ -99,9 +86,8 @@ function main()
 }
 
 /**
- * Splits the source into posts, one per "[Title] Date" header, in file order (newest last).
- * A post's :d: / :k: / :l: directives sit above its header, so they are held aside as they are
- * read and handed to the post they introduce.
+ * Splits the source into posts at each "[Title] Date" header (newest last). The :d: / :k: / :l:
+ * directives above a header belong to that post.
  */
 function parsePosts(raw)
 {
@@ -162,11 +148,7 @@ function renderSocialText(post)
     return `${post.title}\n\n${body.join("\n")}`;
 }
 
-/**
- * The body text alone: what renderSocialText counts, less the title and the trailing hashtag line.
- * This is the number the house length is stated in, since the title and the tags are fixed costs
- * that say nothing about whether the post itself is the right size.
- */
+/** Body text only (renderSocialText minus the title and hashtag line), the measure the house length uses. */
 function proseLength(post)
 {
     const withoutTitle = renderSocialText(post).slice(`${post.title}\n\n`.length);
@@ -217,10 +199,7 @@ function lint(post)
     return warnings;
 }
 
-// Every post opens with a link to the site's landing page, so a reader who arrives at one post
-// first can find out what the game is before reading about a piece of it.
-// The href is the live site's own, as the other library posts write their internal links: the SSG
-// rewrites it to the local address when the dev server serves the page.
+// Every post opens with a link to the landing page. The live href is rewritten by the SSG for local dev.
 const INTRO_PAGE_HREF = "https://thingspool.net#what-is-thingspool";
 const INTRO_LINK_LINE = `@@<h3>New here? Start with <a class="inlineButton" href="${INTRO_PAGE_HREF}">What is ThingsPool?</a></h3>`;
 

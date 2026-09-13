@@ -50,11 +50,8 @@ plans to the README index either. The full rule is
 [`../../rules/plan-documents.md`](../../rules/plan-documents.md); this pass is the one most likely to
 break it, because sweeping `/docs` for stale descriptions is exactly what it does.
 
-**Rewrite the passage that is now wrong; do not append the new behaviour beside it.** A page that
-grows a paragraph per change becomes a sedimentary record rather than a description of the present,
-which is the failure CLAUDE.md's documentation guidelines are written against. "How an improvement is
-written" in [`skill-upkeep/SKILL.md`](../skill-upkeep/SKILL.md) states the rule in full; it applies to
-every page this skill touches.
+**Rewrite the passage that is now wrong; do not append the new behaviour beside it** — see
+[The rules that govern /docs](#the-rules-that-govern-docs) below.
 
 Three documents sit outside `/docs` and are checked separately:
 
@@ -107,24 +104,23 @@ attribution goes in the other files.
 
 ### The rules that govern /docs
 
-These come from [CLAUDE.md](../../../CLAUDE.md) and they are not stylistic preferences — they are
-what keeps these pages from going stale:
+CLAUDE.md's **Documentation Guidelines** are the rules; read them before editing a page. What they
+mean for a sync pass:
 
-- **Conceptual, not exhaustive.** Explain the idea, the purpose, the flow. Implementation detail a
-  reader does not need in order to understand the concept goes stale the moment the code is tweaked.
-- **Present tense only.** No "it used to work this way", no "once X is implemented". When a change
-  makes a paragraph wrong, *replace* it. Never append a note about the change.
-- **No exact numbers, no internal symbol names.** Not constant values, sizes, intervals, counts or
-  thresholds; not local variables, functions or methods. Say "a short grace period", not "5
-  seconds". Module, class and type names are fine — they are stable anchors — as is linking to a
-  source file.
-- **Exception:** `/docs/testing`, `/docs/devOps`, and DB/migration specifics elsewhere may carry
-  concrete commands, schema and version steps. Precision genuinely matters there.
-- **`/docs/plans` is governed by none of the above, because it is not describing the present.** These
-  are dated records, edited only on the day they were written. Never rewrite one to match the code.
-- **A small UI feature does not get its own page.** It gets a code comment, and a sentence in an
-  existing page if it changes something that page describes. Adding a page per feature is how a
-  documentation set becomes unreadable.
+- **A page is a short map, and a sync keeps it one.** Most behavior changes alter a bullet or a
+  clause, not add a paragraph. If an edit makes a page longer, check whether what was added is
+  something a developer needs in order to work on the subsystem or just a description of what it
+  does — only the first belongs.
+- **Replace what is wrong; never append.** No notes about what changed, no history, no future plans.
+- **No numbers, no function or local names, no prose.** Module, class, type and exported names and
+  `@src/...` references are the anchors. `/docs/testing` and `/docs/devOps` may carry commands and
+  configuration, still tersely.
+- **A small feature gets a short code comment, not a page** (and not a paragraph in an existing page
+  unless it changes a concept that page describes).
+- **`/docs/plans` is governed by none of this.** Dated records are never rewritten to match the code.
+
+Code comments the batch touched are in scope too: a comment the change made wrong gets fixed or
+deleted, and one written as an essay gets cut to CLAUDE.md's **Code Comment Guidelines**.
 
 ### One architectural check worth making every time
 

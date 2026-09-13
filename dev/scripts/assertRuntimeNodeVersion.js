@@ -1,12 +1,6 @@
 /**
- * Asserts that a PM2-managed app is actually running on the Node.js major version
- * declared in `.nvmrc`.
- *
- * `actions/setup-node` only governs the Node.js used to *build* within a workflow.
- * The PM2 daemon spawns apps with the `node` it inherited when the daemon itself
- * started, so a VPS whose system Node.js was never upgraded will keep serving
- * freshly-built bundles on a stale runtime, with nothing to indicate it. This turns
- * that silent drift into a failed deployment.
+ * Asserts a PM2 app runs on the Node.js major version in `.nvmrc`. PM2 spawns apps with the `node` its
+ * daemon inherited, so a stale VPS runtime would otherwise go unnoticed after a deploy.
  *
  * Usage: node dev/scripts/assertRuntimeNodeVersion.js <pm2-app-name>
  */
@@ -41,8 +35,7 @@ if (!app)
     process.exit(1);
 }
 
-// PM2 records this from the spawned process's own `process.versions.node`, so it is
-// the true runtime version rather than whatever built the bundle.
+// Recorded from the spawned process itself, so it's the true runtime version.
 const actualVersion = app.pm2_env && app.pm2_env.node_version;
 
 if (!actualVersion)

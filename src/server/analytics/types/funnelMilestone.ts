@@ -1,12 +1,5 @@
-// The steps of the acquisition funnel, in the order a player passes through them.
-//
-// Each milestone is one letter, because a user's whole funnel history is stored as a single string
-// on their row — the same compact form the FTUE flags use. The two are kept apart on purpose: FTUE
-// records which one-off hints a player has been shown and is reset whenever that guidance should
-// play again, whereas this is a measurement and is never reset or replayed.
-//
-// A milestone counts once per account, the first time it is reached. Codes are permanent: changing
-// what a letter means would silently rewrite the meaning of every count already recorded under it.
+// Funnel steps in order. One letter each, stored as a string on the user row (like FTUE, but never
+// reset). Counted once per account. Codes are permanent.
 
 export type FunnelMilestone = string;
 
@@ -16,32 +9,23 @@ export const FunnelMilestoneEnumMap: Record<string, FunnelMilestone> =
     Arrived: "a",
     // Left the tutorial, by finishing or skipping it.
     TutorialDone: "t",
-    // Entered a multiplayer room. Single-player rooms do not count — the tutorial is one, so
-    // counting them would mark every visitor as having reached this step on arrival.
+    // Multiplayer rooms only (the tutorial is single-player).
     EnteredRoom: "r",
-    // Changed the world: sent an edit to a voxel or an object. The clearest evidence that somebody
-    // did more than look around. A chat message is deliberately not one of these, even though it
-    // travels as an object-metadata edit — see Chatted.
+    // Sent a voxel or object edit (chat excluded; see Chatted).
     Built: "b",
-    // Said something to the room. A message travels as a change to the player object's metadata,
-    // so it arrives on the same signal as an edit and has to be told apart from one by its key. It
-    // is a different behaviour and a different question: talking to somebody is the one thing here
-    // that needs another person present, which makes it the sharpest read on whether a visitor
-    // found the place alive.
+    // Sent a chat message (arrives as a metadata edit, distinguished by key). Needs another person present.
     Chatted: "c",
     // Came to own a room.
     OwnedRoom: "o",
     // Converted from guest to member by signing up.
     SignedUp: "s",
-    // Came back after the first visit. "Distinct login" is defined by LOGIN_COUNT_MIN_GAP_MS, which
-    // is a day — so this is a returning visitor, not a page refresh.
+    // A distinct login after the first visit (see LOGIN_COUNT_MIN_GAP_MS), not a refresh.
     Returned: "n",
     // Came back again, on a third distinct occasion. Separates a one-off return from a habit.
     RetainedRepeat: "d",
 };
 
-// The order the funnel is reported in. Kept beside the codes so a milestone cannot be added
-// without deciding where in the funnel it belongs.
+// Report order; forces each new milestone to be placed.
 export const FUNNEL_MILESTONE_ORDER: FunnelMilestone[] =
 [
     FunnelMilestoneEnumMap.Arrived,

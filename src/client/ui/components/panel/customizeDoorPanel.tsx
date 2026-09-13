@@ -11,15 +11,8 @@ import ObjectSelection from "../../../graphics/types/gizmo/objectSelection";
 import createDeferredSave from "../../util/deferredSave";
 import ScrollPanel from "./scrollPanel";
 
-//------------------------------------------------------------------------
-// This panel finishes a door, by editing the three colours its appearance is made of — the timber,
-// the plate its name is written on, and the knob. It works the way the player-customization panel
-// does: the params the door is composed of are edited in place and the door rebuilt from them, so
-// what the user sees is the door itself changing rather than a preview of it.
-//
-// The colours come from the timber palette rather than the general one: a door is joinery, and the
-// finishes a toy is painted in are not finishes a door was ever given (see ColorPaletteMap).
-//------------------------------------------------------------------------
+// Edits a door's three colours (timber, plate, knob) in place, rebuilding the door live. Uses the
+// joinery palette (see ColorPaletteMap).
 
 const COLOR_PALETTE_NAME = "Timber";
 
@@ -33,9 +26,7 @@ export default function CustomizeDoorPanel({ selection, onClose }: Props)
 {
     const [editCount, setEditCount] = useState(0);
 
-    // A tap on the room puts this panel away and goes no further. Left to reach the room, that tap
-    // would drop the very door being painted — taking the panel with it, since the panel belongs to
-    // the selection — so putting the panel down would quietly cost the user his place as well.
+    // A world tap closes this panel only; otherwise it would deselect the door.
     useWorldTapDismiss(onClose);
 
     // Re-read 'params' whenever 'editCount' changes.
@@ -43,9 +34,7 @@ export default function CustomizeDoorPanel({ selection, onClose }: Props)
     if (params == undefined)
         return null;
 
-    // The edit is written to the params the door is composed of at this moment, rather than to the
-    // ones this render read: a composition is reloaded whenever it is saved, so the two are only the
-    // same object for as long as nobody has swapped it (see InstancedMeshComposition).
+    // Writes to the live params (compositions are reloaded on save; see InstancedMeshComposition).
     const applyEdit = (mutateParams: (liveParams: DoorCompositionParams) => void) => {
         const liveParams = getDoorParams(selection);
         if (liveParams == undefined)
@@ -56,9 +45,7 @@ export default function CustomizeDoorPanel({ selection, onClose }: Props)
         setEditCount(prev => prev + 1);
     };
 
-    // A whole finish at once, drawn from the coordinated schemes a door can be given. Three colours
-    // picked independently rarely look like a door somebody painted, so the quickest way to a good
-    // one is to take a scheme and adjust it rather than to start from nothing.
+    // Applies a whole coordinated scheme as a starting point.
     const applyScheme = (schemeIndex: number) => applyEdit((p) => {
         const scheme = DoorCompositionConstants.colorSchemes[schemeIndex];
         p.colors.panel = {...scheme.panel};
@@ -94,9 +81,7 @@ export default function CustomizeDoorPanel({ selection, onClose }: Props)
     </ScrollPanel>;
 }
 
-// Which of the authored schemes the door is currently wearing, or the first one if it is wearing a
-// finish of its own. The stepper has to start somewhere, and a door whose colours were adjusted by
-// hand is not any of them — stepping from the first is as good a place to resume as any.
+// The matching scheme index, or 0 for a hand-adjusted finish.
 function findMatchingScheme(params: DoorCompositionParams): number
 {
     const index = DoorCompositionConstants.colorSchemes.findIndex(scheme =>
@@ -111,13 +96,11 @@ function sameColor(a: {x: number, y: number, z: number}, b: {x: number, y: numbe
     return a.x === b.x && a.y === b.y && a.z === b.z;
 }
 
-// Painting a door is a run of small edits — a scheme, then a colour, then another — and each one
-// rewrites the whole composition, so they are written down together rather than one at a time.
+// Batches rapid edits into one save.
 const trySave = createDeferredSave((selection: ObjectSelection) =>
     doForDoor(selection, (c) => c.saveParts()));
 
-// Reads the selected door's composition params (the live object, so that edits can be applied to it
-// directly).
+// The live params object, so edits apply directly.
 function getDoorParams(selection: ObjectSelection): DoorCompositionParams | undefined
 {
     return doForDoor(selection, (c) => c.getParams()) as DoorCompositionParams | undefined;

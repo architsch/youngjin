@@ -3,9 +3,7 @@ import EncodableData from "./encodableData";
 
 export default class EncodableRaw4ByteNumber extends EncodableData
 {
-    // The range this field can carry. A caller that has to fit a growing quantity into a signal
-    // checks against this rather than against a literal of its own, so that widening the field is
-    // enough to widen everything measured against it.
+    // The field's range; callers check against these instead of literals.
     static readonly MIN_VALUE = 0;
     static readonly MAX_VALUE = 4294967295;
 
@@ -41,8 +39,7 @@ export default class EncodableRaw4ByteNumber extends EncodableData
         const secondQuarter = bufferState.view[bufferState.byteIndex++];
         const thirdQuarter = bufferState.view[bufferState.byteIndex++];
         const fourthQuarter = bufferState.view[bufferState.byteIndex++];
-        // Reassembled unsigned: the top bit falling inside a 32-bit signed shift would otherwise
-        // read every value above 2^31 back as a negative one.
+        // Reassembled unsigned (a signed shift would make values above 2^31 negative).
         return new EncodableRaw4ByteNumber(
             (((firstQuarter << 24) | (secondQuarter << 16) | (thirdQuarter << 8) | fourthQuarter) >>> 0)
         );

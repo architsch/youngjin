@@ -1,13 +1,7 @@
 /**
- * Bootstrap script for VPS production deployment.
- *
- * Loads secrets from Google Secret Manager into process.env,
- * then starts the server bundle. This is necessary because some modules
- * (e.g. userAuthGoogleUtil.ts) read process.env at module load time,
- * so secrets must be available before the bundle is require()'d.
- *
- * Authentication: Uses the service account key file specified by
- * the GOOGLE_APPLICATION_CREDENTIALS environment variable.
+ * VPS production entry: loads secrets from Google Secret Manager into process.env, then requires the
+ * server bundle (some modules read process.env at load time). Authenticates with the key file named by
+ * GOOGLE_APPLICATION_CREDENTIALS.
  */
 
 const { SecretManagerServiceClient } = require("@google-cloud/secret-manager");

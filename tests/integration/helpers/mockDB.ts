@@ -1,8 +1,4 @@
-/**
- * In-memory mock for all Firestore / Firebase Storage interactions.
- * Vitest's vi.mock() will redirect imports from the real DB utils to these
- * stubs so that tests never touch a real database.
- */
+/** In-memory Firestore/Storage mocks, wired in via vi.mock(). */
 import { vi } from "vitest";
 import Room from "../../../src/shared/room/types/room";
 import { RoomType, RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
@@ -48,8 +44,7 @@ interface SavedMetadataRecord
 
 export const roomStore: {[roomID: string]: StoredRoom} = {};
 export const userStore: {[userID: string]: StoredUser} = {};
-// Record of all writes performed via savePlayerMetadata / saveMultipleUsersPlayerMetadata.
-// Tests assert against this to verify the disconnect / graceful-shutdown flush.
+// Player metadata writes, for asserting disconnect/shutdown flushes.
 export const savedPlayerMetadataRecords: SavedMetadataRecord[] = [];
 
 let roomCounter = 0;
@@ -66,9 +61,7 @@ export function resetStores(): void
 
 // ─── Helper: create a test room in the store ─────────────────────────────────
 
-// Idempotent: if a room with the same ID already exists in the store, return it
-// rather than wiping prior mutations (e.g. ownerUserID set via the setRoomOwner
-// action). Callers that need a fresh room must call resetStores() first.
+// Idempotent: returns an existing room rather than wiping mutations (call resetStores() for a fresh one).
 export function seedRoom(
     roomID: string,
     roomType: RoomType = RoomTypeEnumMap.Hub,
@@ -105,8 +98,7 @@ export const mockDBRoomUtil = {
         if (!stored) return null;
         return {
             id: stored.id,
-            // What the real util returns is a row the query layer has already brought up to date,
-            // so this tracks the current version rather than naming one.
+            // Current version, as rows from the real util are already migrated.
             version: DBRoomVersionMigration.length,
             roomName: stored.room.roomName,
             roomType: stored.roomType,
@@ -220,8 +212,7 @@ export const mockDBUserUtil = {
             loginCount: 1,
             ftue: "",
             playerMetadata: {},
-            // Taken from the migration list rather than written out, so a newly added migration
-            // cannot leave the seeded row claiming a version the schema has already moved past.
+            // Derived from the migration list, so new migrations don't leave it stale.
             version: DBUserVersionMigration.length,
         };
         return { success: true, data: [{ id }] };
@@ -237,9 +228,7 @@ export const mockDBUserUtil = {
     deleteUser: vi.fn(async () => ({ success: true, data: [] })),
     fromDBType: vi.fn((dbUser: any) =>
     {
-        // The real fromDBType defaults a missing FTUE record to "" (rows written before the field
-        // existed). Mirrored here — in place, so callers keep observing the stored row — otherwise
-        // a user seeded without one reaches the code that reads the record as undefined.
+        // Mirrors fromDBType's "" default for a missing FTUE record (in place).
         dbUser.ftue = dbUser.ftue ?? "";
         return dbUser;
     }),

@@ -14,16 +14,9 @@ const SOURCE_FILE_NAME = "pre_encoding_source.json";
 const MAPS_ROOT_PATH = `${SRC_ROOT_DIR}/shared/graphics/mesh/composition/maps`;
 const MAP_FILE_NAME = "preEncodedCompositionStringMap.ts";
 
-// A value of -1 in the source marks a field the authored composition cannot settle, because it
-// belongs to the individual object rather than to the drawing every object of that kind shares — a
-// lamp's lit face takes its color from the light that particular lamp gives off.
-//
-// Such a field cannot be carried through the encoding: a composition string has a character for it
-// either way, and the quantization clamps, so -1 would be stored as the bottom of the field's range
-// and read back as a deliberate choice. What is written instead is a neutral placeholder that the
-// object overwrites on the way in. White rather than black on purpose: if an object ever fails to
-// overwrite it, a part that is plainly wrong is a bug somebody can see, where an unlit black one
-// looks like a part that was never drawn.
+// -1 in the source marks a per-object field (e.g. a lamp face's color, set from its light). It can't
+// survive encoding (clamping would store a real value), so a white placeholder is written for the
+// object to overwrite; white makes a missed overwrite visibly wrong rather than looking undrawn.
 const INDETERMINATE = -1;
 const INDETERMINATE_COLOR_CHANNEL = 255;
 
@@ -43,17 +36,9 @@ type PreEncodingSourceEntry = {
     parts: PreEncodingSourcePart[],
 };
 
-// Turns the authored compositions into the table objects name their appearance out of.
-//
-// The point of doing this at build time is that it costs the client nothing: an appearance that would
-// otherwise be either a long string stored on every object wearing it, or a hard-coded builder
-// compiled into the bundle, becomes one entry in a generated array. Adding a variant is then an edit
-// to data (see @docs/graphics/instanced_mesh_composition.md).
-//
-// Anything wrong in the source stops the build rather than being written out. A composition is read
-// by every client and cannot be corrected once objects are stored against its index, and the failure
-// modes here are all silent ones — an unknown geometry encodes as a character that reads back as a
-// different shape entirely, with nothing at runtime to notice.
+// Encodes authored compositions into the generated indexed table at build time (see
+// @docs/graphics/instanced_mesh_composition.md). Any source error fails the build, since bad entries
+// fail silently at runtime and can't be fixed once objects reference their index.
 export default class PreEncodedCompositionBuilder
 {
     async build(): Promise<void>
@@ -73,17 +58,14 @@ export default class PreEncodedCompositionBuilder
         if (codecType == undefined)
             throw new Error(`Composition pre-encoding failed :: Unknown codecType "${entry.codecType}" (compositionIndex = ${compositionIndex})`);
 
-        // The prefix is added here rather than by the codec: every codec's encode writes its body
-        // alone and its decode skips the two characters (see CompositionMetadataUtil).
+        // Codecs encode bodies only; the prefix is added here (see CompositionMetadataUtil).
         const codecVersion = entry.codecVersion ?? 0;
         const prefix = CompositionMetadataUtil.getCodecPrefix(codecType, codecVersion);
 
         if (codecType == InstancedMeshCompositionCodecTypeEnumMap.Default)
             return prefix + DefaultCompositionCodec.encode({}, this.parseDefaultParts(entry, compositionIndex));
 
-        // The params-only codecs build their parts from a handful of authored choices rather than
-        // from parts written down one by one, so each needs a parser of its own saying what those
-        // choices are. None is needed yet.
+        // Params-only codecs would each need their own parser; none is needed yet.
         throw new Error(`Composition pre-encoding failed :: codecType "${entry.codecType}" cannot be pre-encoded yet (compositionIndex = ${compositionIndex})`);
     }
 
@@ -104,9 +86,7 @@ export default class PreEncodedCompositionBuilder
                 scale: part.scale,
             };
 
-            // The Default codec writes a color only for the materials that are tinted per instance,
-            // and reads one back only for those — so a part is given one exactly when the codec is
-            // going to look for it.
+            // The Default codec only writes/reads colors for instance-colored materials.
             if (INSTANCE_COLORED_MATERIAL_IDS.includes(part.materialId))
             {
                 if (part.color == undefined)
@@ -119,8 +99,7 @@ export default class PreEncodedCompositionBuilder
 
     private async writeMapFile(encodedStrings: string[]): Promise<void>
     {
-        // Written through JSON.stringify rather than wrapped in quotes: the encoding's alphabet is
-        // every printable ASCII character, which includes the quote and the backslash.
+        // JSON.stringify, since the alphabet includes quotes and backslashes.
         const entries = encodedStrings.map(str => JSON.stringify(str)).join(",");
 
         const text = `// THIS FILE IS AUTO-GENERATED BY PreEncodedCompositionBuilder. DO NOT EDIT MANUALLY.

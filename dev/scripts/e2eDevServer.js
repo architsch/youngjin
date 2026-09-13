@@ -1,21 +1,11 @@
 /**
- * Launcher used by Playwright's `webServer` (see playwright.config.ts) to run the
- * local dev stack for E2E tests with reliable startup AND teardown.
- *
- * Why this exists instead of pointing `webServer.command` at `npm run dev`:
- *
- *  - Startup: the Firebase emulator's Java process can outlive a previously killed
- *    run and keep holding its ports, so a fresh `firebase emulators:start` fails
- *    with "port taken". This launcher frees those ports first. It only runs when
- *    Playwright found no server on the app port (otherwise the server is reused and
- *    the command never runs), so no live dev server can be using them.
- *
- *  - Teardown: Playwright signals THIS process when the run ends. npm/concurrently
- *    don't reliably forward that signal down to the Firebase CLI, and the CLI spawns
- *    its Java emulators in a separate process group — so they orphan. Handling the
- *    signal here lets us kill the child's process group and sweep the emulator ports
- *    deterministically. `gracefulShutdown` in the config sends SIGTERM (not the
- *    default SIGKILL) so the handler below actually gets to run.
+ * Playwright `webServer` launcher (see playwright.config.ts) for the local dev stack, with reliable
+ * startup and teardown:
+ *  - Startup: frees emulator ports an orphaned Java emulator may hold (it runs only when Playwright found
+ *    no server, so no live dev server is using them).
+ *  - Teardown: npm/concurrently don't reliably forward Playwright's signal, and the Firebase CLI puts its
+ *    emulators in their own process group, so this kills the child's group and sweeps the ports.
+ *    `gracefulShutdown` in the config sends SIGTERM (not SIGKILL) so the handler runs.
  */
 const { spawn, execSync } = require("child_process");
 
@@ -49,9 +39,8 @@ function freeEmulatorPorts(reason)
 // 1. Clear any orphaned emulator left by a previously killed run before booting.
 freeEmulatorPorts("startup");
 
-// 2. Boot the dev stack in its own process group so we can signal the whole tree.
-//    The npm script to run comes from argv (see playwright.config.ts) and defaults to
-//    `devnossg` — the dev stack without static-site generation, which E2E doesn't need.
+// 2. Boot the dev stack in its own process group. The npm script comes from argv (see
+//    playwright.config.ts), defaulting to `devnossg` (no SSG).
 const npmScript = process.argv[2] || "devnossg";
 const child = spawn("npm", ["run", npmScript], { stdio: "inherit", detached: true });
 
@@ -61,8 +50,7 @@ function cleanup()
     if (cleanedUp)
         return;
     cleanedUp = true;
-    // Terminate the child's process group, then sweep the emulator ports in case the
-    // Firebase CLI's Java emulator was spawned into a group of its own and survives.
+    // Kill the child's group, then sweep the emulator ports in case the Java emulator escaped it.
     try { process.kill(-child.pid, "SIGTERM"); } catch (_) { /* already exited */ }
     freeEmulatorPorts("teardown");
 }

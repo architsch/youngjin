@@ -6,16 +6,8 @@ textureLoader.setCrossOrigin("anonymous");
 const loadedTextures: { [textureId: string]: THREE.Texture } = {};
 const loadedRenderTargets: { [renderTargetId: string]: THREE.WebGLRenderTarget } = {};
 
-// What the images drawn onto dynamic textures are fetched through (see loadSourceImageTexture).
-//
-// An ImageBitmap wherever the browser's createImageBitmap can be relied on, because the browser decodes
-// one on a background thread before handing it over. An <img> is decoded on the main thread instead,
-// at the moment it is first uploaded — which, for a room's pictures, is a moment the room is already
-// being played in, so the decoding stalls frames the player sees.
-//
-// "Relied on" is the line three.js's own GLTFLoader draws: not Safari before 17, and not Firefox
-// before 98. Those decode through an <img> as before, and so does every iOS browser other than Safari,
-// since none of them reports a Safari version to be judged by.
+// ImageBitmaps decode off the main thread; <img> decoding would stall frames during play. Reliability
+// cutoffs follow three.js's GLTFLoader (Safari >= 17, Firefox >= 98).
 const sourceImageLoader: THREE.ImageBitmapLoader | THREE.ImageLoader = imageBitmapsAreReliable()
     ? new THREE.ImageBitmapLoader().setCrossOrigin("anonymous")
     : new THREE.ImageLoader().setCrossOrigin("anonymous");
@@ -28,15 +20,13 @@ const TextureFactory =
         const loadedTexture = loadedTextures[texturePath];
         if (loadedTexture != undefined)
             return loadedTexture;
-        
+
         const newTexture = await textureLoader.loadAsync(texturePath);
         loadedTextures[texturePath] = newTexture;
         return newTexture;
     },
-    // An image asset that is fetched in order to be drawn onto a dynamic texture (see TextureUtil)
-    // rather than to be rendered with directly. Cached by its path, and disposed via unload/unloadAll,
-    // like a static image texture — but it is set up differently from one (see createSourceTexture),
-    // so the same path is never to be loaded as both.
+    // An image to be drawn onto a dynamic texture (see TextureUtil). Set up differently from a static
+    // texture, so never load the same path as both.
     loadSourceImageTexture: async (imagePath: string): Promise<THREE.Texture> =>
     {
         const loadedTexture = loadedTextures[imagePath];
@@ -47,12 +37,8 @@ const TextureFactory =
         loadedTextures[imagePath] = newTexture;
         return newTexture;
     },
-    // A 2D canvas the caller has drawn into, set up to be drawn onto a dynamic texture exactly the way
-    // an image asset is (see loadSourceImageTexture). Not cached, since a canvas is drawn once and then
-    // thrown away: the caller disposes of the texture as soon as it has been drawn.
-    //
-    // Unlike an image asset's, the canvas's colors are marked as sRGB, as are those of every canvas
-    // texture (see loadCanvasTexture): the canvas was painted in CSS colors.
+    // Like loadSourceImageTexture but for a caller-drawn canvas (sRGB). Not cached; the caller
+    // disposes it after drawing.
     createSourceCanvasTexture: (canvas: HTMLCanvasElement): THREE.Texture =>
     {
         const newTexture = createSourceTexture(canvas);
@@ -82,14 +68,7 @@ const TextureFactory =
         return newTexture;
     },
     // An empty texture upon which images can be freely rendered during runtime.
-    //
-    // "withAlpha" is for a texture whose drawn-on cells are meant to be partly see-through — text
-    // written straight onto an object, where everything around the lettering has to show what is
-    // behind it. A texture that only ever holds pictures does not need the extra channel.
-    //
-    // "filterType" is a separate question from that one (see TextureFilterType): what a texture
-    // holds decides how it should be sampled, and a see-through texture of pictures would still
-    // want its cells kept crisp.
+    // withAlpha: for partly see-through cells (e.g. text on an object).
     loadDynamicEmptyTexture: (textureId: string, width: number, height: number,
         withAlpha: boolean = false, filterType: TextureFilterType = "nearest"): THREE.Texture =>
     {
@@ -133,9 +112,7 @@ const TextureFactory =
             return;
         }
         texture.dispose();
-        // An ImageBitmap keeps its decoded pixels until it is closed, however long it then waits to
-        // be collected. Closing it is safe only because nothing else holds on to it: three.js's own
-        // loader cache (THREE.Cache) is left off, and would hand a closed bitmap to the next load.
+        // Frees decoded pixels immediately. Safe only because THREE.Cache is off.
         if (typeof ImageBitmap !== "undefined" && texture.image instanceof ImageBitmap)
             texture.image.close();
         delete loadedTextures[textureId];
@@ -149,17 +126,8 @@ const TextureFactory =
     },
 }
 
-// How every texture that is drawn onto a dynamic texture is set up, whatever its image came from.
-//
-// **Uploaded the right way up**, where three.js otherwise flips an image as it uploads it. For an <img>
-// or a canvas that flip can be a pass over every pixel on the main thread, and an ImageBitmap cannot be
-// flipped at upload at all. So the flip is left to the moment the texture is drawn, where the quad
-// drawing it makes it by mirroring its texture coordinates, which costs nothing (see TextureUtil).
-//
-// **Without mipmaps.** A picture drawn onto a dynamic texture is already about the size it is drawn at
-// — a label's canvas is made at the size of its cell, a picture frame is one cell of an atlas drawn onto
-// a cell of the same size, and a canvas's image is fetched as a thumbnail no larger than its cell (see
-// ImageMap) — so there is never enough shrinking to be done to be worth computing them.
+// No flipY (costly for <img>/canvas, impossible for ImageBitmap; the drawing quad mirrors its UVs
+// instead, see TextureUtil) and no mipmaps (source images are already about the drawn size).
 function createSourceTexture(image: ImageBitmap | HTMLImageElement | HTMLCanvasElement): THREE.Texture
 {
     const texture = new THREE.Texture(image);

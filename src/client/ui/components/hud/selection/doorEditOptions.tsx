@@ -25,20 +25,13 @@ import VoxelQuadSelection from "../../../../graphics/types/gizmo/voxelQuadSelect
 import CustomizeDoorPanel from "../../panel/customizeDoorPanel";
 import SelectionToolRow from "./selectionToolRow";
 
-// What an admin can do to the door he has picked out: take it down, name it, point it somewhere,
-// paint it, and say whether it is the room's own way in.
-//
-// The appearance bar is raised from here rather than from the screen's own layout, and stacks above
-// this row: it belongs to this door, and it should go away when the door does. Everything else opens
-// as a popup, since each is a question with an answer rather than a control to keep to hand.
+// Admin tools for a selected door: remove, name, destination, paint, default entrance. The appearance
+// bar stacks above this row (it belongs to the door); the rest open as popups.
 export default function DoorEditOptions(props: {selection: ObjectSelection})
 {
     const [customizing, setCustomizing] = useState<boolean>(false);
 
-    // The column takes the width it is given rather than shrinking to its contents: both the
-    // appearance bar and the tool row below it scroll sideways when they hold more than fits, and a
-    // column sized to its widest child would grow to fit it instead and leave them nothing to scroll
-    // within.
+    // Full width, so the rows can scroll horizontally instead of growing.
     return <div className="flex flex-col gap-1 w-full">
         {customizing && <CustomizeDoorPanel
             selection={props.selection}
@@ -86,9 +79,7 @@ export default function DoorEditOptions(props: {selection: ObjectSelection})
                         `${isDefaultEntrance ? DoorTypeEnumMap.DefaultEntrance : DoorTypeEnumMap.CustomEntrance}`),
                 }})}
             />
-            {/* Set apart from the rest, because it is the one button here that does nothing to the
-                door: it uses it. Picking a door out is how an admin comes to be working on it, so
-                this is also the only way left for him to walk through one. */}
+            {/* Set apart: it uses the door rather than editing it (a selected door can't be clicked through). */}
             <div className="w-px shrink-0 self-stretch bg-gray-600"/>
             <IconButton id="enterDoorButton" icon={<DoorIcon/>} size="md" color="green"
                 onClick={() => (props.selection.gameObject as DoorGameObject).enter()}
@@ -128,8 +119,7 @@ function openRemoveConfirmPopup(selection: ObjectSelection)
 
 async function tryRemoveDoor(selection: ObjectSelection)
 {
-    // Re-checked rather than trusted from the caller: a confirmation popup stands between the click
-    // and this call, and the room may have moved on while it was up.
+    // Re-checked: the room may have changed while the confirmation popup was up.
     if (objectSelectionObservable.peek() != selection || !canRemoveDoor(selection))
         return;
 

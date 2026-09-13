@@ -1,21 +1,7 @@
-//------------------------------------------------------------------------
-// The panels on screen that the user can put away, newest last.
-//
-// The back gesture (Escape, or the device's Back) puts away whatever is on top before it does
-// anything else. For popups that is easy to know, since there is a single stack of them held by the
-// UI root. Panels are not like that: each one is raised by whatever it belongs to, from wherever in
-// the tree that happens to be — a door's colours from the door's own tools, a room's settings from
-// the top bar — so each one enters itself here for as long as it is up, and the back gesture asks
-// here what there is to put away (see UIRoot).
-//
-// One gesture puts away one panel, the newest, as it does with popups: a panel raised from inside
-// another is the one the user is looking at, and taking both at once would take the one he had not
-// finished with.
-//------------------------------------------------------------------------
+// Stack of open closable panels (newest last). Panels register themselves from anywhere in the tree;
+// the back gesture closes the newest one per gesture (see UIRoot).
 
-// Each entry is the panel's own way of putting itself away. Taking it off the list is the panel's
-// business rather than this module's, done as it leaves the screen — which a request to close
-// normally leads to, but only the panel can say whether it did.
+// Each entry's close callback. Panels remove their own entry when they unmount.
 const openPanels: {token: number, close: () => void}[] = [];
 let nextToken = 0;
 

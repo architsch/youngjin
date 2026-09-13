@@ -1,18 +1,7 @@
 /**
- * Scenario tests: Race conditions
- *
- * Thoroughly tests all possible race conditions among concurrent signals:
- *
- * 1. Multiple users joining an unloaded room simultaneously (loadRoom dedup)
- * 2. User joining while another user is leaving (room save + unload race)
- * 3. Two users editing the same voxel simultaneously
- * 4. Object transform updates during room transitions
- * 5. Concurrent disconnections under latency
- * 6. Join/leave churn with concurrent voxel edits
- * 7. Reconnection during room load
- * 8. Simultaneous room switches by multiple users
- * 9. Signal arrival during room change async gaps
- * 10. Graceful shutdown during active operations
+ * Scenario tests: race conditions among concurrent signals — concurrent loads, joining during unload,
+ * conflicting voxel edits, transforms during transitions, disconnects under latency, churn, reconnecting
+ * during load, simultaneous switches, signals during room-change gaps, and shutdown mid-operation.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runScenario } from "../helpers/scenarioRunner";
@@ -198,9 +187,7 @@ describe("race condition scenarios", () => {
                     ),
                 ],
                 assertions: () => {
-                    // The voxel state should be internally consistent:
-                    // either occupied (add won) or not (remove won), and
-                    // structural invariants should hold for the room
+                    // Either the add or the remove won; either way the room's invariants hold.
                     const roomMem = ServerRoomManager.roomRuntimeMemories["ar-race"];
                     expect(roomMem).toBeDefined();
                     expect(Object.keys(roomMem.participantUserNameByID).length).toBe(2);
@@ -431,8 +418,7 @@ describe("race condition scenarios", () => {
                 ],
                 skipInvariants: true,
                 assertions: () => {
-                    // Under latency, room switches may complete in any order.
-                    // Verify that all loaded rooms have consistent participant/memory state.
+                    // Switches may finish in any order; all loaded rooms must stay consistent.
                     for (const [roomID, roomMem] of Object.entries(ServerRoomManager.roomRuntimeMemories))
                     {
                         const socketRoomCtx = ServerRoomManager.socketRoomContexts[roomID];
@@ -576,15 +562,9 @@ describe("race condition scenarios", () => {
     });
 
     // ─── RC12: Disconnect/reconnect metadata-cache race ──────────────────────
-    //
-    // These tests pin down the disconnect → reconnect contract:
-    //   - Case A (new connection BEFORE old disconnect): the still-live player
-    //     object's metadata must be captured and applied to the new player.
-    //   - Case B (old disconnect BEFORE new connection): the disconnect handler
-    //     snapshots metadata into ServerUserManager.recentDisconnectMetadata
-    //     synchronously (before the DBUser write begins), so the new connection
-    //     can consume the snapshot regardless of how slow the DB write is.
-    //   - When nothing is cached, the DBUser fallback supplies the metadata.
+    // Case A (new connection first): the live player's metadata carries over. Case B (disconnect first):
+    // the recentDisconnectMetadata snapshot is taken before the DB write, so a slow write doesn't matter.
+    // With nothing cached, DBUser supplies the metadata.
 
     describe("RC12: metadata-cache race", () => {
         it("Case B: brand-new chat message at disconnect lands on next session", async () => {
@@ -633,8 +613,7 @@ describe("race condition scenarios", () => {
                     playerMetadata: { "0": "from-DBUser" },
                 })],
                 assertions: ({ harness }) => {
-                    // No reconnect happened — the join read the metadata from the
-                    // mocked DBUser store and applied it to the player object.
+                    // No reconnect: the join read metadata from the mocked DBUser.
                     const metadata = harness.getPlayerMetadata("rc12-db-user");
                     expect(metadata!["0"]).toBe("from-DBUser");
                     expect(harness.hasRecentDisconnectMetadata("rc12-db-user")).toBe(false);
@@ -706,9 +685,7 @@ describe("race condition scenarios", () => {
         });
 
         it("Case A: a room owner's reconnect leaves the room still his", async () => {
-            // Owning a room must survive a reconnect. It is read from the person and the room rather
-            // than kept as a per-session standing, so nothing has to be re-established — which is
-            // exactly what this asserts.
+            // Ownership is derived from the user and room, so it survives a reconnect.
             await runScenario({
                 name: "case A preserves ownership",
                 rooms: [regularRoom("rc12-owner")],

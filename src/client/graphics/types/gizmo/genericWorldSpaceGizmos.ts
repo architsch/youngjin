@@ -64,12 +64,8 @@ function ensureInitialized(): Promise<void>
     return initPromise;
 }
 
-// Eagerly creates the generic world-space gizmos (loading their geometry/materials) ahead of time,
-// so the room-loading screen can pre-warm them. This lets GraphicsManager.precompileSceneShaders
-// compile their shader programs up front, instead of the GPU stalling the first frame a gizmo
-// appears. Safe to call repeatedly — initialization is cached. Because Three.js shares compiled
-// programs by cache key, warming these gizmos also covers the selection outlines and block-move
-// arrows, which reuse the same materials.
+// Creates the gizmos ahead of time so the loading screen precompiles their shaders (which also covers
+// selection outlines and move arrows, as they share materials). Idempotent.
 export async function preloadGenericWorldSpaceGizmos(): Promise<void>
 {
     await ensureInitialized();

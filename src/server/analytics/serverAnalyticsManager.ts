@@ -7,44 +7,23 @@ import SocketUserContext from "../sockets/types/socketUserContext";
 import { FunnelMilestone, FunnelMilestoneEnumMap } from "./types/funnelMilestone";
 import { COLLECTION_ACQUISITION, COLLECTION_USERS } from "../system/serverConstants";
 
-// Counts how far the visitors from each traffic source get, so that two sources can be compared by
-// what their people went on to do rather than by how many of them arrived.
-//
-// Two places hold the answer, and both are needed:
-//
-//   - Each account carries the source it arrived from and the milestones it has already been
-//     counted for. That is what makes a milestone count once per person, and what lets a return
-//     visit weeks later still be credited to the source that first brought them.
-//   - A per-cohort counter document holds the totals. It exists because the accounts do not: a
-//     visitor who bounces is a guest, and stale guests are deleted, so a tally that lived only on
-//     the rows would quietly lose exactly the people a disappointing source sent.
-//
-// This module talks to Firestore directly rather than through DBQuery, which is a deliberate
-// exception to the rule elsewhere in the server. The counter documents are pure accumulators: they
-// are never migrated, never cached, never read while serving a request, and they are written with
-// atomic increments so that concurrent visitors do not overwrite each other's totals — none of
-// which DBQuery offers, and its version-migration and cache-invalidation paths would be actively
-// wrong here. The one user-row write below does go on to invalidate that row's cache entry, since
-// that row *is* served through the cached path.
-//
-// Nothing here is allowed to interrupt what the player was doing. Every entry point swallows its
-// own errors: a lost count is a worse report, while a thrown error is a lost visitor.
+// Acquisition funnel recording (see @docs/devOps/analytics.md). Accounts hold their source and
+// recorded milestones (count once per person); per-cohort counter documents hold totals, since bounced
+// guests get deleted. Writes Firestore directly (not DBQuery): counters are atomic-increment
+// accumulators with no migration or cache. The user-row write still invalidates that row's cache.
+// Every entry point swallows errors so gameplay is never interrupted.
 
 const ServerAnalyticsManager =
 {
-    // Called once, immediately after an account is minted. The row is written with its source and
-    // its first milestone already on it (see DBUserUtil.createUser), so all that is left is the
-    // cohort's total.
+    // Called right after account creation (the row already has source and Arrived; see
+    // DBUserUtil.createUser), so only the cohort total is incremented.
     recordArrival: async (source: string, createdAtMs: number): Promise<void> =>
     {
         await increment(source, AcquisitionSourceUtil.cohortDay(createdAtMs), FunnelMilestoneEnumMap.Arrived);
     },
 
-    // Called when a visit is recognised as a distinct login — that is, when somebody has come back
-    // after being away. The first such visit is a return; any later one says the return was not a
-    // one-off. Which of the two it is can only be told from the funnel already recorded, so this
-    // reads that string once and hands the answer to recordMilestone rather than making both calls
-    // and having the first one's read go to waste.
+    // On a distinct login: Returned the first time, RetainedRepeat afterwards. Reads the funnel once to
+    // decide.
     recordReturnVisit: async (userID: string): Promise<void> =>
     {
         if (!userID)
@@ -70,14 +49,8 @@ const ServerAnalyticsManager =
         }
     },
 
-    // Called wherever a player does one of the things the funnel measures, on every occurrence
-    // rather than only the first — the caller is not expected to know which is which.
-    //
-    // `session` is what makes that affordable. A caller holding the live connection already has
-    // this account's recorded milestones, loaded from its row when the socket authenticated, so the
-    // repeat calls — which are nearly all of them on the edit path — are answered from memory and
-    // never reach the database. Callers without a connection omit it; the HTTP paths record at most
-    // a handful of milestones per account in its whole lifetime, so a read each costs nothing.
+    // Call on every occurrence. `session` (from the live connection) answers repeats from memory, so
+    // only the first reaches the DB; HTTP callers omit it.
     recordMilestone: async (userID: string, milestone: FunnelMilestone,
         session?: SocketUserContext): Promise<void> =>
     {
@@ -89,10 +62,8 @@ const ServerAnalyticsManager =
             if (session.funnel.includes(milestone))
                 return;
 
-            // Claimed synchronously, before the first await. A player placing blocks quickly
-            // produces a burst of calls that would otherwise all get past this line and all read
-            // the row before any of them had written it. Given back below if the work does not
-            // complete, so a failed attempt is retried rather than lost for the whole session.
+            // Claimed synchronously before any await, so bursts don't all read the row; released on
+            // failure so it's retried.
             session.funnel += milestone;
         }
 
@@ -101,14 +72,8 @@ const ServerAnalyticsManager =
             const db = await FirebaseUtil.getDB();
             const docRef = db.collection(COLLECTION_USERS).doc(userID);
 
-            // The row, not the session, is what decides whether to count. The session's copy was
-            // taken when the connection opened and another path may have recorded something since,
-            // so it is trusted to say "already done" — which can only become more true — and never
-            // to say "not yet".
-            //
-            // Read straight through rather than from DBCacheUtil, for the same reason: the cache is
-            // there to spare the request path repeated lookups and may be up to its TTL out of
-            // date, and acting on a stale funnel string here would count the same milestone twice.
+            // The row decides, not the session copy (which can only say "already done"). Read
+            // directly, bypassing DBCacheUtil, since a stale cache could double-count.
             const doc = await docRef.get();
             if (!doc.exists)
             {
@@ -126,15 +91,12 @@ const ServerAnalyticsManager =
                 : AcquisitionSourceUtil.normalize(undefined);
             const createdAt: number = typeof data.createdAt == "number" ? data.createdAt : Date.now();
 
-            // The row is stamped before the total is incremented. If the process dies between the
-            // two, the cohort undercounts by one — whereas the other order would let a retry count
-            // the same person twice, and a total that drifts upward is the one that misleads.
+            // Stamp the row before incrementing: a crash in between undercounts rather than double-counts.
             const updatedFunnel = `${funnel}${milestone}`;
             await docRef.update({ funnel: updatedFunnel });
             DBCacheUtil.invalidate(COLLECTION_USERS, userID);
 
-            // Brought fully into step with the row, which also picks up whatever another path
-            // recorded while this connection was open.
+            // Sync the session with the row (including other paths' writes).
             if (session)
                 session.funnel = updatedFunnel;
 
@@ -148,8 +110,7 @@ const ServerAnalyticsManager =
     },
 }
 
-// Takes back a claim that was made on a session but not carried through, so that the next call
-// tries again instead of the milestone being lost for as long as the connection lives.
+// Releases an uncompleted claim so the next call retries.
 function releaseClaim(session: SocketUserContext | undefined, milestone: FunnelMilestone): void
 {
     if (session)

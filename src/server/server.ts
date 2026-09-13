@@ -68,8 +68,7 @@ ${LatencySimUtil.getConfigSummary()}
 
     await HubRoomUtil.setupHubs();
 
-    // Seed dev user accounts and establish this runtime's boot id (dev mode only). The boot id is
-    // loaded/minted before the server starts listening, so it is ready for the first request.
+    // Dev only: seed dev users and establish the boot id before listening.
     if (dev)
     {
         await DevUserSeedUtil.seed();
@@ -83,8 +82,7 @@ ${LatencySimUtil.getConfigSummary()}
     // config
     app.set("view engine", "ejs");
 
-    // Trust proxy headers from Nginx reverse proxy
-    // Required for correct req.ip, req.protocol, req.secure behind Nginx
+    // Trust Nginx's proxy headers (req.ip, req.protocol, req.secure).
     app.set("trust proxy", 1); // Allow up to a single (i.e. 1) proxy hop.
 
     // middleware
@@ -127,9 +125,7 @@ ${LatencySimUtil.getConfigSummary()}
     // graceful shutdown
     const gracefulShutdown = async (signal: string) =>
     {
-        // Flip the health route over to "not ready" first. From this moment on, the clients that
-        // are polling for the next deployment's server are told to keep waiting, so none of them
-        // reloads into this process while it is busy saving and about to stop listening.
+        // Report not-ready first, so polling clients don't reload into this process.
         if (!ServerLifecycleUtil.beginShutdown())
         {
             console.log(`[${signal}] Shutdown already in progress. Ignoring.`);

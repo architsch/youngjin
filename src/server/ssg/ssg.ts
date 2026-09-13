@@ -16,10 +16,7 @@ export default async function SSG(): Promise<void>
 {
     console.log("SSG START");
 
-    // ImageMapBuilder pulls in `sharp`, a native module that requires an x86-64-v2 CPU
-    // baseline our prod VPS does not meet. Dynamic-importing it here keeps `sharp` out
-    // of the static module graph reachable from server.ts, so the prod server (which
-    // never calls SSG) never loads `sharp`.
+    // Dynamic import keeps `sharp` (unsupported on the prod VPS CPU) out of server.ts's static module graph.
     const { default: ImageMapBuilder } = await import("./builder/imageMapBuilder");
 
     // Generate pages
@@ -28,8 +25,7 @@ export default async function SSG(): Promise<void>
     const atomFeedB = new AtomFeedBuilder();
 
     let tb = new TextFileBuilder();
-    // The landing page links to the newest year of the dev log. Taken from the same list the
-    // Library is built from, so that opening a new year is one edit rather than two.
+    // The landing page links to the newest dev-log year, from the Library's list.
     const devlogEntries = LibraryData.entriesByCategory["Development History"];
     tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/static/index.ejs", {
         gameEntries: ArcadeData.gameEntries,
@@ -80,9 +76,6 @@ export default async function SSG(): Promise<void>
     }).build();
 
     // Generate Pre-Encoded Compositions
-    //
-    // Imported statically, unlike ImageMapBuilder above: the dynamic import there exists only to keep
-    // `sharp` out of the prod server's module graph, and nothing here touches it.
 
     await new PreEncodedCompositionBuilder().build();
 

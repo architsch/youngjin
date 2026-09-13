@@ -2,10 +2,7 @@ import { ReactNode } from "react";
 
 export default function IconButton({icon, size = "md", color = "gray", disabled = false, highlight = false, onClick, additionalClassNames = "", id }: Props)
 {
-    // The refusal is stated as well as drawn. Being a div, this element carries no `disabled`
-    // property of its own, so a greyed-out button is one whose unavailability lives entirely in a
-    // class name — invisible to a screen reader, which announces it as something to press, and to
-    // anything else reading the page rather than looking at it.
+    // A div has no `disabled`, so declare it via aria for assistive tech and automation.
     return <div
         id={id}
         aria-disabled={disabled}
@@ -31,8 +28,7 @@ const panelClassNames = {
     transparent: "pointer-events-auto",
 };
 
-// Layered on top of the color class above, so it reads as an "on" state of that
-// same button rather than as a separate color.
+// An "on" state layered over the color class.
 const highlightClassName = "yj-panel-highlight";
 
 interface Props

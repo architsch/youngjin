@@ -23,9 +23,7 @@ const entries: {[key: number]: ObjectMetadataEntry} = {
     [ObjectMetadataKeyEnumMap.CanvasFrameCoords]: {
         preprocessingMethod: (rawValue: string) => rawValue,
     },
-    // A label is both drawn on the object and searched for by name (a door is found by its label
-    // when an arriving player asks for it), so the surrounding whitespace goes: a name that is not
-    // the name it looks like is a door nobody can route to.
+    // Trimmed, since labels are matched by name when routing arrivals.
     [ObjectMetadataKeyEnumMap.Label]: {
         preprocessingMethod: (rawValue: string) => StringUtil.truncateByCodePoints(rawValue.trim(), OBJECT_LABEL_MAX_LENGTH),
     },
@@ -36,18 +34,14 @@ const entries: {[key: number]: ObjectMetadataEntry} = {
     [ObjectMetadataKeyEnumMap.DestinationDoorLabel]: {
         preprocessingMethod: (rawValue: string) => StringUtil.truncateByCodePoints(rawValue.trim(), OBJECT_LABEL_MAX_LENGTH),
     },
-    // Snapped to a value the enum actually holds, so that reading it back never has to ask whether
-    // what it found is a door type at all.
+    // Snapped to a valid enum value.
     [ObjectMetadataKeyEnumMap.DoorType]: {
         preprocessingMethod: (rawValue: string) => {
             const doorType = parseInt(rawValue.trim());
             return `${doorTypeValues.includes(doorType) ? doorType : DoorTypeEnumMap.CustomEntrance}`;
         },
     },
-    // A position in the lettering palette, so what is stored is only ever one of the colors on
-    // offer. A value that is not a number at all falls back on the first of them rather than being
-    // refused, since a label drawn in some color is still a label and an unreadable one is a bug the
-    // user can see and fix.
+    // A lettering palette position; non-numeric input falls back to index 0 (a visible, fixable result).
     [ObjectMetadataKeyEnumMap.LabelColor]: {
         preprocessingMethod: (rawValue: string) => {
             const index = parseInt(rawValue.trim());
@@ -57,12 +51,8 @@ const entries: {[key: number]: ObjectMetadataEntry} = {
                 ColorUtil.getPaletteSize(LABEL_COLOR_PALETTE_NAME) - 1)}`;
         },
     },
-    // A lamp's color and strength, as two quantized characters. Round-tripped through the util that
-    // owns their meaning, which clamps both halves into range and supplies a default for either half
-    // that is missing — so what is stored is always a pair a lamp can actually be lit by, whatever
-    // arrived. Without an entry here the raw value would be stored as it came
-    // (see ObjectMetadataEntryMap.preprocess), which for a fixed-width encoding means a lamp could
-    // be handed a string of any length at all.
+    // Round-tripped through WallLampObjectTypeConfig's util, which clamps both values and fills
+    // defaults, so any input becomes a valid fixed-width pair (see ObjectMetadataEntryMap.preprocess).
     [ObjectMetadataKeyEnumMap.LightProperties]: {
         preprocessingMethod: (rawValue: string) => WallLampObjectTypeConfig.util.canonicalize(rawValue),
     },

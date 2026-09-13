@@ -1,9 +1,7 @@
 import { CANVAS_FRAME_ATLAS_CELL_SIZE } from "../../../shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
 
-// Side length (in atlas pixels) of the square inner "window" of each picture frame in the
-// canvas_frames atlas, keyed by the frame's "{col},{row}" cell coordinates (see CanvasFrameImageMap).
-// Each frame's window is centered within its cell, so this single length fully describes the
-// region where the canvas's image belongs. Measured from the atlas's placeholder-colored windows.
+// Inner window side length (atlas px) per frame cell "{col},{row}" (see CanvasFrameImageMap). Windows
+// are centred, so one length describes each. Measured from the atlas's placeholder windows.
 const innerWindowSizeByCellCoords: {[cellCoords: string]: number} =
 {
     "0,0": 190, "1,0": 190, "2,0": 179, "3,0": 190,
@@ -14,9 +12,7 @@ const innerWindowSizeByCellCoords: {[cellCoords: string]: number} =
 
 const CanvasFrameInnerWindowMap =
 {
-    // Returns the scale at which a canvas's image should be drawn relative to its full
-    // render-target cell — i.e. the fraction of the frame's full size that its inner window
-    // (plus a small overlap margin) occupies.
+    // Image draw scale relative to the cell: the inner window's share plus a small overlap margin.
     getImageDrawScale: (cellCoords: string): number =>
     {
         const innerWindowSize = innerWindowSizeByCellCoords[cellCoords];

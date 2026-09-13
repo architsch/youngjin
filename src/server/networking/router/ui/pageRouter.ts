@@ -7,8 +7,7 @@ import { GIT_COMMIT } from "../../../system/serverConstants";
 
 const PageRouter = express.Router();
 
-// Specific named routes are registered before the catch-all "/:roomID" so they
-// are matched first (e.g. "/console" must not be interpreted as a room ID).
+// Named routes come before the "/:roomID" catch-all.
 if (process.env.MODE == "dev")
 {
     PageRouter.get("/console", (req: Request, res: Response): void => {
@@ -41,17 +40,11 @@ PageRouter.get("/:roomID", rejectMalformedRoomID, UserIdentificationUtil.identif
         EJSUtil.render(req, res, "page/dynamic/mypage", { gitCommit: GIT_COMMIT, targetRoomID: req.params.roomID });
     });
 
-// Room IDs are Firestore document IDs, which are always exactly this many characters drawn from
-// this one alphabet.
+// Firestore document IDs: exactly 20 alphanumeric characters.
 const ROOM_ID_PATTERN = /^[A-Za-z0-9]{20}$/;
 
-// Everything the server is asked for that is not one of its own routes lands on the room route,
-// since a room address is just a name at the root. That includes a browser's unbidden
-// "/favicon.ico" and the steady background traffic of scanners trying "/wp-login.php", "/.env" and
-// the like. A room address has exactly one shape, so anything of another shape is turned away here
-// — before it reaches the identification step, where it would otherwise have cost a guest account
-// and a Firestore write apiece. Checking the shape also leaves the ID safe to place into the URL
-// that the page advertises as its own.
+// Rejects non-room-shaped paths (favicon, scanner probes) before identification, which would otherwise
+// create a guest and a Firestore write each. Also makes the ID safe to embed in the page URL.
 function rejectMalformedRoomID(req: Request, res: Response, next: () => void): void
 {
     const roomID = req.params.roomID;

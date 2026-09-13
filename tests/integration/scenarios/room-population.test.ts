@@ -1,14 +1,7 @@
 /**
- * Scenario tests: Room population
- *
- * Covers:
- * - A room turning users away once its population reaches the admission cap
- * - A refused room change leaving the user where they were, and reaching the client as a signal
- * - Falling back to an available hub when the destination is full
- * - Hub picking across the under- / medium- / over-populated bands
- * - Opening a new hub (exactly one) when every existing hub is over-populated
- * - Every route a user takes into a room: app start-up (single-player mode / URL target / last
- *   room / first visit), leaving single-player mode, a page refresh, and a server restart
+ * Scenario tests: room population — admission cap refusals (the user stays put and is signalled), hub
+ * fallback when full, hub picking across population bands, opening exactly one hub when all are
+ * over-populated, and every entry route (app start, leaving single-player, refresh, server restart).
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { harness } from "../helpers/serverHarness";
@@ -27,17 +20,10 @@ import {
     ROOM_UNDER_POPULATION_THRESHOLD,
 } from "../../../src/shared/system/sharedConstants";
 
-/**
- * The population at which a room stops admitting anyone new. It sits below the hard cap by the
- * reserve margin, so that joins already in flight cannot push the room past the hard cap.
- */
+/** Admission stops below the hard cap by a reserve margin, so in-flight joins can't exceed it. */
 const ADMISSION_CAP = MAX_PLAYERS_PER_ROOM - ROOM_ALMOST_FULL_MARGIN;
 
-/**
- * Seeds the given hubs and preloads them the way HubRoomUtil does at server start-up
- * (the room picker only ever looks at hubs that are resident in memory), then gives each
- * one the requested population.
- */
+/** Seeds and preloads hubs (as HubRoomUtil does at startup) with the given populations. */
 async function setUpHubs(populationByHubID: {[hubID: string]: number}): Promise<void>
 {
     for (const hubID of Object.keys(populationByHubID))
@@ -135,8 +121,7 @@ describe("room population scenarios", () => {
     });
 
     it("a destination that could not be resolved at all is refused rather than left roomless", async () => {
-        // An empty destination is what the picker yields when no room can take the user. It must
-        // not be mistaken for the "put this user in no room" request that a disconnect makes.
+        // An empty pick means no room can take the user, not the "no room" request a disconnect makes.
         const ctx = harness.connectUser();
         const result = await ServerRoomManager.changeUserRoom(ctx.socketUserContext, "",
             /*prevRoomShouldExist*/ false, /*savePlayerMetadata*/ false, /*allowFallback*/ false);
@@ -203,8 +188,7 @@ describe("room population scenarios", () => {
             "hub-c": 0,
         });
 
-        // hub-a is the busiest of the three, and it is still the one that gets filled:
-        // spreading users evenly this early would leave every hub with a lonely visitor.
+        // The busiest hub still fills first; spreading users this early would leave every hub lonely.
         expect(await RoomPickerUtil.pickBestHubRoomID()).toBe("hub-a");
     });
 
@@ -313,8 +297,7 @@ describe("room population scenarios", () => {
         const ctx = harness.connectUser({lastRoomID: "previous"});
         const result = await harness.appStartJoin(ctx);
 
-        // The user never asked for this room by name, so being re-routed beats being turned
-        // away — and there is nothing to tell them about.
+        // The user didn't name this room, so rerouting beats refusing, with nothing to report.
         expect(result).toEqual({type: "success", newRoomID: "hub-a"});
         expect(getPendingSignals(ctx, "roomChangeRejectedSignal")).toHaveLength(0);
     });
@@ -360,16 +343,14 @@ describe("room population scenarios", () => {
         ctx.socket.handshake.auth.targetRoomID = "from-url";
         const result = await harness.appStartJoin(ctx);
 
-        // A single-player room is not a real room: nobody is registered in it, and it is not
-        // subject to any population rule.
+        // Single-player rooms register nobody and have no population rules.
         expect(result).toEqual({type: "success", newRoomID: "tutorial"});
         expect(ServerRoomManager.currentRoomIDByUserID[ctx.user.id]).toBeUndefined();
         expect(harness.isRoomLoaded("tutorial")).toBe(false);
     });
 
     it("tells a connecting user when no room at all can take them", async () => {
-        // No hub exists and none can be opened, so the picker comes back empty-handed. The user
-        // must hear about it: their client is sitting behind a loading indicator.
+        // No hub exists or can be opened; the user must be told (their client sits behind a loading indicator).
         vi.mocked(DBRoomUtil.createRoom).mockResolvedValueOnce({success: false, data: []});
 
         const ctx = harness.connectUser();
@@ -396,9 +377,7 @@ describe("room population scenarios", () => {
     });
 
     it("routes a door wired to the hub keyword through the hub balancer", async () => {
-        // How the tutorial's door takes the player out: it names the hubs rather than one hub, and
-        // no room answers to that name — so a request carrying it has to reach the balancer instead
-        // of being looked up as a room and failing.
+        // The tutorial's door names the hubs keyword (no room has that name), so it must reach the balancer.
         await setUpHubs({
             "hub-a": ROOM_UNDER_POPULATION_THRESHOLD + 1,
             "hub-b": 0,
@@ -415,9 +394,7 @@ describe("room population scenarios", () => {
     });
 
     it("takes a user leaving through the hub keyword to a hub rather than the room in his URL", async () => {
-        // The keyword says which decision is wanted, not merely that one is: a door pointing at the
-        // hubs opens onto a hub even for a user who named a room on the way in. That is what makes
-        // the keyword mean the same thing on a door as it does in a URL.
+        // The keyword always means a hub, even for a user who named a room, so doors and URLs agree.
         harness.seedRoom("asked-for", RoomTypeEnumMap.Regular);
         await setUpHubs({"hub-a": 0});
 
@@ -454,8 +431,7 @@ describe("room population scenarios", () => {
         await harness.joinRoom(ctx, "packed");
         expect(harness.getRoomParticipantCount("packed")).toBe(ADMISSION_CAP);
 
-        // A refresh evicts the old socket before the new one picks a destination, so the slot
-        // the user is giving up is free again by the time they ask for it back.
+        // A refresh evicts the old socket first, so the user's slot is free again.
         const newCtx = await harness.reconnectCaseA(ctx);
         const result = await harness.appStartJoin(newCtx);
 
@@ -500,8 +476,7 @@ describe("room population scenarios", () => {
 
         await harness.gracefulShutdown();
 
-        // Returning users are found by what the previous session persisted, so a shutdown that
-        // lost this would scatter everyone on the way back.
+        // Returning users are routed by persisted state, which a shutdown must not lose.
         for (const ctx of contexts)
             expect(harness.getStoredLastRoomID(ctx.user.id)).toBe("shared");
     });
@@ -531,8 +506,7 @@ describe("room population scenarios", () => {
     });
 
     it("returns a hub visitor to the same hub rather than re-balancing them", async () => {
-        // Both hubs are empty once everyone has been disconnected, so the balancer would send
-        // this user to hub-a. Being remembered has to outrank being balanced.
+        // Both hubs are empty, so balancing would pick hub-a; the remembered room must win.
         await setUpHubs({"hub-a": 0, "hub-b": 0});
 
         const ctx = harness.connectUser();

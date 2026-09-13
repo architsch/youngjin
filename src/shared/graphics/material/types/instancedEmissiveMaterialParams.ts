@@ -1,8 +1,6 @@
 import MaterialParams from "./materialParams";
 
-// The material a light-emitting part of an object is finished in: it is drawn at the full strength
-// of its own color, regardless of what is falling on it, which is what being a source of light
-// rather than a receiver of it looks like.
+// Unlit material for light-emitting parts: drawn at full color regardless of lighting.
 export default class InstancedEmissiveMaterialParams extends MaterialParams
 {
     constructor()

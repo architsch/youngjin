@@ -5,17 +5,8 @@ import CookieUtil from "../../networking/util/cookieUtil";
 import LogUtil from "../../../shared/system/util/logUtil";
 import { COLLECTION_DEV_RUNTIME } from "../serverConstants";
 
-// Identifies a single DevRunner runtime, used (dev mode only) to invalidate browser cookies left
-// behind by a *previous* DevRunner process so a fresh run starts from a clean slate.
-//
-// The id is stored in the emulated DB, so its lifetime is deliberately tied to the DB's:
-//   - Full restart (e.g. `npm stop` + `npm run dev`) resets the Firestore emulator → the marker is
-//     gone, so a fresh id is minted, and any cookie stamped with the old id is invalidated.
-//   - Hot reload (a file-change-triggered restart) leaves the emulator running → the marker
-//     persists, so the same id is reused and existing cookies stay valid.
-//
-// Anchoring to the DB means we react to the exact condition that matters — "was the DB reset" —
-// without needing to know how the process was restarted. This util is inert outside dev mode.
+// Dev-only DevRunner runtime id, stored in the emulated DB so it resets exactly when the DB does:
+// a full restart mints a new id (stale cookies are invalidated); a hot reload keeps it.
 
 const DEV_RUNTIME_DOC_ID = "singleton";
 
@@ -23,8 +14,7 @@ let bootId = "";
 
 const DevRuntimeUtil =
 {
-    // Loads (hot reload) or mints (full restart) this runtime's boot id. Must be awaited once at
-    // startup, before the server begins handling requests, so the id is ready for every request.
+    // Loads or mints the boot id. Await once before handling requests.
     init: async (): Promise<void> =>
     {
         const db = await FirebaseUtil.getDB();
@@ -43,10 +33,8 @@ const DevRuntimeUtil =
         }
     },
 
-    // When a request's cookies were stamped by a previous runtime (or have no stamp yet), drop the
-    // auth-related cookies so the request is handled as a brand-new browser, then stamp the current
-    // runtime's boot id so the rest of this runtime's requests are recognized as current. Mutates
-    // req.cookies and queues the relevant Set-Cookie headers on res.
+    // Drops auth cookies stamped by a previous runtime (or unstamped) and stamps the current id.
+    // Mutates req.cookies and queues Set-Cookie headers.
     invalidateStaleCookies: (req: Request, res: Response): void =>
     {
         if (req.cookies[CookieUtil.getDevBootIdCookieName()] === bootId)

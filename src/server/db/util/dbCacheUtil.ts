@@ -1,18 +1,12 @@
 import { DBRow } from "../types/row/dbRow";
 
-// Generic short-lived cache to avoid redundant DB lookups for any document type.
-// Cache key: "tableId:docId"
+// Short-lived document cache, keyed "tableId:docId".
 const cache: {[key: string]: { data: DBRow, expiry: number }} = {};
 const keysToRemove: string[] = [];
 const CACHE_TTL_MS = 30_000; // 30 seconds
 
-// Periodically sweep expired entries to prevent unbounded growth.
-//
-// Unref'd, so that this sweep is never itself a reason for the process to stay alive. A cache with
-// nothing left to serve is not worth running for, and this module is reached from the server's entry
-// point in every mode — including the one-shot static-site generation run, which would otherwise
-// never end. While the server is actually serving, the listening socket keeps the loop alive and
-// this timer fires exactly as before.
+// Periodic sweep of expired entries. Unref'd so it never keeps the process alive (e.g. the one-shot
+// SSG run).
 setInterval(() => {
     const now = Date.now();
     keysToRemove.length = 0;
@@ -52,8 +46,7 @@ const DBCacheUtil =
     {
         delete cache[getCacheKey(tableId, docId)];
     },
-    // Drops every entry at once, for when the documents behind the whole cache have gone out from
-    // under it rather than any one of them having been written.
+    // For when the underlying documents all changed at once.
     invalidateAll: (): void =>
     {
         for (const key of Object.keys(cache))

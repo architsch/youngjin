@@ -14,15 +14,8 @@ const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 const DOOR_FOOTPRINT_HEIGHT =
     DoorObjectTypeConfig.components.spawnedByAny.collider.hitboxSize.sizeY;
 
-// Where a player arriving in a room is put down. The counterpart of RoomPickerUtil: that decides
-// which room a user is headed for, and this decides where in it they land.
-//
-// A room may hold several doors now, so this is a real question rather than a fixed cell. It is
-// answered by asking, in turn, for something more and more general — the door the traveller named,
-// then any door the room offers as a way in, then any door at all, then the room itself. Each step
-// is a room the previous answer did not exist in: a door may have been renamed or taken down since
-// whoever pointed at it did so, a room's admin may have marked none of its doors as a way in, and a
-// room may have no door left at all.
+// Where an arriving player is placed (RoomPickerUtil decides the room). Tries in order: the named door,
+// a default-entrance door, any door, the room centre.
 const SpawnHotspotUtil =
 {
     pickSpawnTransform: (room: Room, destinationDoorLabel: string): ObjectTransform =>
@@ -49,22 +42,15 @@ const SpawnHotspotUtil =
     },
 }
 
-// Several doors may answer to one name — a room can be given two ways in from the same place on
-// purpose — and there is nothing to choose between them, so the choice is drawn.
+// Doors may share a label; pick one at random.
 function pickOne(doors: AddObjectSignal[]): AddObjectSignal
 {
     return doors[Math.floor(Math.random() * doors.length)];
 }
 
-// Where a player stands to be about to come through the given door: behind its face, on the floor
-// the door stands on, facing away from it into the room. PlayerController walks him out from there,
-// which is what makes his arrival a step out of the doorway rather than a step up to it.
-//
-// A door's origin sits at the middle of its own height while the door stands on the floor, so the
-// floor is half a footprint below it; the player's own origin is likewise at the middle of his
-// height. The direction is flipped because a player's transform is authored pointing behind him
-// (see PlayerProximityDetector) — so facing away from the door is the door's own facing reversed,
-// and standing behind the door is that same facing walked backwards from its face.
+// Behind the door's face, on its floor, facing into the room (PlayerController walks the player out).
+// Door and player origins are at mid-height; the player's transform direction points behind them
+// (see PlayerProximityDetector), hence the flip.
 function getTransformBehindDoor(door: AddObjectSignal): ObjectTransform
 {
     const {pos, dir} = door.transform;
@@ -77,8 +63,7 @@ function getTransformBehindDoor(door: AddObjectSignal): ObjectTransform
     return new ObjectTransform(spawnPos, {x: -dir.x, y: 0, z: -dir.z});
 }
 
-// The last resort, for a room holding no door at all. Somewhere in it is better than nowhere, and
-// the middle is the one place every room has.
+// Last resort for rooms without doors.
 function getRoomCenterTransform(): ObjectTransform
 {
     return new ObjectTransform(

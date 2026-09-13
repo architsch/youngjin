@@ -1,24 +1,8 @@
 /**
- * Scenario tests: line of sight through the room's own geometry
- *
- * Whether something in the room can actually be seen from where the camera stands is answered by
- * walking the voxel grid along the line between the two, rather than by raycasting a mesh that
- * holds a whole room's worth of instances. Two things hang on that answer: whether a door offers
- * its "Click to Enter" prompt to a player who has walked up to it, and whether a speech bubble is
- * shown over the head of whoever is speaking.
- *
- * The walk has one rule that is easy to lose and expensive to lose: the block the line *ends* in is
- * not something standing in the way of it. That matters for everything hung on a wall, because a
- * wall attachment's position sits exactly on the boundary between the wall and the room — and a
- * stored coordinate comes back a hair below what was written (see ObjectTransform, whose encoder
- * floors), so which side of that boundary the door is found on is decided by nothing more than
- * which way it happens to face. A door facing into the room from the west or north wall lands
- * inside the wall; one facing from the east or south lands inside the room. Judged as an occluder,
- * the wall a door is hung on would then hide that door from every player in half the rooms in the
- * game, and only until somebody dragged it along its wall — which puts the exact coordinate back.
- *
- * The logic under test is client-side, so the client modules that need a browser are stubbed out
- * and the grid, the room and the door placement are all real.
+ * Scenario tests: line of sight via voxel grid traversal (door "Click to Enter" prompts, speech bubbles).
+ * The end block never occludes: wall attachments sit on the wall/room boundary and stored coordinates
+ * floor (see ObjectTransform), so half of all doors land inside their wall and would hide themselves.
+ * Browser-bound client modules are stubbed; grid, room and door placement are real.
  */
 import { describe, it, expect, beforeEach, vi, Mock } from "vitest";
 import * as THREE from "three";
@@ -27,8 +11,7 @@ vi.mock("../../../src/client/graphics/graphicsManager", async () => {
     const THREE = await import("three");
     const camera = new THREE.PerspectiveCamera();
     const scene = new THREE.Scene();
-    // A voxel edit invalidates the room's light map (see LightBlockMap). Nothing here draws
-    // anything, so the map only has to exist and take the message.
+    // Voxel edits invalidate the light map (see LightBlockMap); a stub suffices.
     const lightBlockMap = { requestRecomputation() {}, resetForRoom(_voxels?: unknown) {},
         getNearbyLightAt(_worldPos: unknown, out: any) { return out.setRGB(0, 0, 0); } };
     return { default: { getCamera: () => camera, getScene: () => scene,
@@ -65,8 +48,7 @@ const ROOM_ID = "line-of-sight-room";
 const MIDDLE_ROW = Math.floor(0.5 * NUM_VOXEL_ROWS);
 const MIDDLE_COL = Math.floor(0.5 * NUM_VOXEL_COLS);
 
-// Each boundary wall, named by the way a door hung on it faces into the room, and the cell of that
-// wall the door is hung in (see DoorObjectTypeConfig, which places a door from the cell alone).
+// Boundary walls by door facing, with the cell each door hangs in (see DoorObjectTypeConfig).
 const WALLS = [
     {facing: "+x", col: 0, row: MIDDLE_ROW},
     {facing: "-x", col: NUM_VOXEL_COLS - 1, row: MIDDLE_ROW},
@@ -74,8 +56,7 @@ const WALLS = [
     {facing: "-z", col: MIDDLE_COL, row: NUM_VOXEL_ROWS - 1},
 ];
 
-// How far into the room a viewpoint is put from the door it is looking at. Several blocks, so that
-// the line crosses cells rather than merely leaving the one it starts in.
+// Viewpoint distance from the door, far enough to cross several cells.
 const VIEWING_DIST = 6;
 
 let room: Room;
@@ -86,10 +67,7 @@ function makeDoor(col: number, row: number): AddObjectSignal
     return DoorObjectTypeConfig.util.makeEntranceDoor(ROOM_ID, col, row, COLLISION_LAYER_MIN);
 }
 
-/**
- * A transform as it comes back out of storage: written into a buffer and read out again, so what is
- * under test is the coordinate a client really receives rather than one chosen to make a point.
- */
+/** Round-trips a transform through storage, yielding the coordinate a client really receives. */
 function asStored(transform: ObjectTransform): ObjectTransform
 {
     const view = new Uint8Array(64);
@@ -135,8 +113,7 @@ describe("Stored coordinates on a block boundary", () => {
     });
 
     it("leaves a door standing in the wall's own cell on half of the room's walls", () => {
-        // Not a fault to be fixed here but the fact the test below exists for: half of a room's
-        // doors are found inside the wall they are hung on, and half beside it in the open room.
+        // The premise: half of stored doors fall inside their wall, half in the room.
         const cellsOfStoredDoors = WALLS.map(wall => {
             const stored = asStored(makeDoor(wall.col, wall.row).transform);
             return {
@@ -169,8 +146,7 @@ describe("Seeing a door from inside the room", () => {
     });
 
     it("finds a door in sight from along the wall it is hung on", () => {
-        // Approached at an angle rather than head-on, so the line crosses the corner of a cell of
-        // that same wall on its way in.
+        // An angled approach, so the line crosses a corner cell of the same wall.
         for (const wall of WALLS)
         {
             const door = makeDoor(wall.col, wall.row);

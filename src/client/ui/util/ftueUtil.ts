@@ -4,12 +4,8 @@ import SocketsClient from "../../networking/client/socketsClient";
 import { screenCoachMarksObservable } from "../../system/clientObservables";
 import { FTUEElementCode } from "../types/ftueElementCode";
 
-// The FTUE elements a user has already been through are persisted as a single string, one
-// character per element, so that adding an element never needs a schema change. Only letters are
-// used: the user's record is embedded verbatim in the page that boots the client app, so a quote
-// or a backslash finding its way in there would break that page (the server rejects anything else
-// for the same reason). This is also why the mapping is by position — an element's character must
-// never change once users have it stored.
+// Experienced elements are stored as one string, one letter per element (positions are permanent).
+// Letters only, since the user record is embedded verbatim in the page (the server enforces this).
 const FTUE_ELEMENT_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 const FTUEUtil =
@@ -22,9 +18,7 @@ const FTUEUtil =
             return;
         SocketsClient.emitUserCommandSignal(new UserCommandSignal(`addFTUEElement ${element}`));
         App.getUser().ftue = `${ftue}${element}`;
-        // The user is doing the very thing the coach mark was there to suggest, so the mark has
-        // nothing left to say: it goes as soon as the feature is used, rather than lingering for
-        // the rest of its stay while the user is already busy with what it asked for.
+        // Using the feature removes its coach mark immediately.
         FTUEUtil.hideCoachMark(ftueElementCode);
     },
     hasFTUEElement: (ftueElementCode: FTUEElementCode) =>
@@ -33,27 +27,19 @@ const FTUEUtil =
         const element = convertFTUEElementCodeToChar(ftueElementCode);
         return ftue.includes(element);
     },
-    // Points a coach mark at the UI element that leads to the given feature, unless the user has
-    // already been through it. Coach marks are scheduled ahead of time (a while after the control
-    // comes within reach), so the user may well have discovered the feature on their own in the
-    // meantime — which is exactly when there is nothing left to say.
+    // Shows a coach mark unless the element was experienced meanwhile (marks are scheduled in advance).
     tryShowCoachMark: (ftueElementCode: FTUEElementCode, targetElementId: string, text: string) =>
     {
         if (FTUEUtil.hasFTUEElement(ftueElementCode))
             return;
-        // The new mark joins the ones already on screen instead of replacing them, since the marks
-        // of unrelated features fall due independently of one another and a mark cut short by a
-        // newcomer would be guidance the user never got to read. A feature that already carries a
-        // mark is left alone, so a repeated trigger neither doubles the bubble nor extends its stay.
+        // Marks accumulate rather than replace; one mark per element.
         screenCoachMarksObservable.change(coachMarks =>
             coachMarks.some(mark => mark.ftueElementCode == ftueElementCode)
                 ? coachMarks
                 : [...coachMarks, {ftueElementCode, targetElementId, text}]);
     },
-    // Takes the given feature's coach mark off screen, if it has one up. A mark has no clock of its
-    // own, so this is how every mark ends other than by its feature being used: the UI that
-    // scheduled the mark takes it down once the control it points at is gone or beyond use — a mark
-    // merely losing sight of its target leaves it on the list, ready to reappear with the target.
+    // Removes a mark. The owning UI calls this when its control is gone or disabled (marks don't
+    // expire on their own).
     hideCoachMark: (ftueElementCode: FTUEElementCode) =>
     {
         screenCoachMarksObservable.change(coachMarks =>

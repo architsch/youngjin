@@ -1,12 +1,4 @@
-/**
- * Structural invariants that must hold after any valid sequence of server actions.
- *
- * These are grouped into:
- *   - Core structural invariants (user/room/object consistency)
- *   - Signal emission invariants (multicast/unicast correctness)
- *   - Physics consistency invariants
- *   - Permission enforcement invariants
- */
+/** Invariants that must hold after any valid action sequence (structural, signal, physics, permission). */
 import { expect } from "vitest";
 import { harness, ConnectedUser } from "./serverHarness";
 import { MockSocket } from "./mockSocket";
@@ -19,10 +11,7 @@ import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 
 // ─── Core Structural Invariants ────────────────────────────────────────────
 
-/**
- * Runs all core structural invariants against the current server state.
- * Throws (via `expect`) on the first violation.
- */
+/** Runs the core structural invariants; throws on the first violation. */
 export function checkStructuralInvariants(connectedUsers: ConnectedUser[]): void
 {
     checkUserManagerCount(connectedUsers);
@@ -76,11 +65,8 @@ export function checkRoomIDReferences(): void
     }
 }
 
-/** Invariant 5: Every object a user put in a room belongs to a participant of that room.
- *  Objects with no source user are exempt: those belong to the room itself, having been placed
- *  by room generation (e.g. the paintings a multiplayer room is generated with, or a
- *  single-player room's NPCs and doors), and outlive any participant.
- *  Single-player rooms are exempt altogether, since they have no participants at all. */
+/** Invariant 5: every user-placed object belongs to a room participant. Room-owned objects (no source
+ *  user) and single-player rooms are exempt. */
 export function checkObjectOwnership(): void
 {
     for (const [roomID, roomMem] of Object.entries(ServerRoomManager.roomRuntimeMemories))
@@ -125,8 +111,7 @@ export function checkPlayerObjectsExist(): void
     }
 }
 
-/** Invariant 8: Every connected user with a current room has a player object AND
- *  a readable in-memory player-metadata snapshot. */
+/** Invariant 8: every in-room user has a player object and a readable metadata snapshot. */
 export function checkObjectTransformConsistency(connectedUsers: ConnectedUser[]): void
 {
     for (const ctx of connectedUsers)
@@ -145,14 +130,7 @@ export function checkObjectTransformConsistency(connectedUsers: ConnectedUser[])
 
 // ─── Signal Emission Utilities ─────────────────────────────────────────────
 
-/**
- * Returns all pending signal data of a given type for a user's socket.
- * Uses the MockSocket's emitted record (captured by SocketRoomContext calls).
- *
- * Note: This checks `pendingSignalsToUserByTypeIndex` via the SocketUserContext,
- * which buffers signals until the next batch interval. For testing, we inspect
- * the buffer directly.
- */
+/** Pending signals of a type from a user's SocketUserContext buffer (flushed on the batch interval). */
 export function getPendingSignals(ctx: ConnectedUser, signalType: string): any[]
 {
     // Access the private pendingSignalsToUserByTypeIndex via the socket context
@@ -168,10 +146,7 @@ function getSignalTypeIndex(signalType: string): number | undefined
     return SignalTypeConfigMap.getIndexByType(signalType);
 }
 
-/**
- * Verifies that after a multicast signal, all room participants (except excludedUserID)
- * have the signal pending, and no user outside the room has it.
- */
+/** All room participants except excludedUserID have the multicast signal; nobody outside the room does. */
 export function checkMulticastSignalReach(
     roomID: string,
     signalType: string,
@@ -199,9 +174,7 @@ export function checkMulticastSignalReach(
     }
 }
 
-/**
- * Verifies that a unicast signal reached only the target user.
- */
+/** A unicast signal reached only the target user. */
 export function checkUnicastSignalReach(
     targetUserID: string,
     signalType: string,
@@ -252,13 +225,7 @@ export function checkPhysicsObjectConsistency(): void
     }
 }
 
-/**
- * Invariant 11: Ownership agrees with itself.
- *
- * Ownership is one fact recorded in two places — the room names its owner, and the owner names his
- * room — and every permission check reads the second of the two. A room whose named owner is
- * standing in it while denying that he owns it would be a room its owner cannot edit.
- */
+/** Invariant 11: a room's owner, while in it, names it as their owned room (both sides of ownership agree). */
 export function checkRoomOwnershipConsistency(): void
 {
     for (const [roomID, roomMem] of Object.entries(ServerRoomManager.roomRuntimeMemories))
@@ -277,13 +244,7 @@ export function checkRoomOwnershipConsistency(): void
 
 // ─── Clean State Invariants ────────────────────────────────────────────────
 
-/**
- * Verifies the server is in a clean state after all users have disconnected.
- *
- * Hub rooms stay resident even when empty — the room picker load-balances incoming users
- * by scanning the hubs held in memory, so unloading them would force a DB query per join.
- * Every other room type must have been unloaded once its last participant left.
- */
+/** Clean state after all users disconnect. Hubs stay loaded (for balancing) but must be empty. */
 export function checkCleanState(): void
 {
     expect(Object.keys(ServerUserManager.socketUserContexts)).toHaveLength(0);
@@ -299,13 +260,7 @@ export function checkCleanState(): void
 
 export type InvariantSet = "structural" | "full" | "extended";
 
-/**
- * Runs the specified invariant set.
- *
- * - "structural": Core data-structure invariants (1–7).
- * - "full": Structural + object transform consistency (8).
- * - "extended": Full + physics & ownership consistency (9–11).
- */
+/** Invariant sets: "structural" (1–7), "full" (+8), "extended" (+9–11). */
 export function checkInvariants(
     connectedUsers: ConnectedUser[],
     level: InvariantSet = "structural",

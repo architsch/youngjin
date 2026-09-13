@@ -28,9 +28,7 @@ UserRouter.post("/logout", (req: Request, res: Response): void => {
         res.end();
 });
 
-// Debug-only convenience for testing the tutorial in live/staging: send a user who has already
-// finished the single-player experience back through the tutorial. Only valid when the user is not
-// currently in any single-player mode (singlePlayerMode == ""); otherwise it is a no-op rejection.
+// Debug: send a user who finished the tutorial back through it. Rejected while in a single-player mode.
 UserRouter.post("/restart_tutorial", UserIdentificationUtil.identifyAnyUser, async (req: Request, res: Response): Promise<void> => {
     const user = User.fromString((req as any).userString);
 
@@ -41,9 +39,8 @@ UserRouter.post("/restart_tutorial", UserIdentificationUtil.identifyAnyUser, asy
         return;
     }
 
-    // identifyAnyUser just (re)set the "tutorial finished" browser cookie because this user's mode is
-    // "". Clear it here so a fresh guest later spawned on this browser is not skipped past the tutorial
-    // too; this clearCookie is queued after the middleware's set, so the browser ends up clearing it.
+    // identifyAnyUser just set the "tutorial finished" cookie; clear it (queued after) so a future
+    // guest on this browser isn't skipped past the tutorial.
     res.clearCookie(CookieUtil.getTutorialFinishedCookieName(), CookieUtil.toClearOptions(CookieUtil.getTutorialFinishedCookieOptions()));
 
     // Persist the mode flip so the next page load / socket connect routes the user into the tutorial.

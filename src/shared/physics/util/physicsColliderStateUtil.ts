@@ -49,23 +49,10 @@ const PhysicsColliderStateUtil =
             return undefined;
         const hitboxSize = colliderConfig.hitboxSize;
 
-        // A wall attachment declares the footprint it lays claim to, and the box it is actually
-        // tested with is a hair inside that (see WALL_ATTACHMENT_HITBOX_INSET). Taken off here
-        // rather than written into each kind of object's own size, so that everything measuring an
-        // attachment against the room — which voxel columns back it, where the grid puts it, how
-        // big its outline is — goes on reading the round number it was given, and so that a
-        // footprint sitting exactly on a rounding boundary cannot be tipped over it by the inset.
-        //
-        // Only wall attachments. The tie it settles is one they alone are placed into: they are
-        // snapped to the same grid their footprints are measured in, so two of them side by side
-        // share an edge exactly. A rigidbody's position is resolved rather than snapped and is
-        // never edge-to-edge with anything by construction, so taking anything off it would only
-        // make it smaller than it says it is — and it is the body the player stands, climbs and is
-        // pushed around with.
-        //
-        // The two axes lying in the wall are the object's own x and y, so this is taken off before
-        // the box is turned to face the way the object does. The depth is left alone: it is already
-        // a sliver, and thinning it would lift the attachment off the wall it hangs on.
+        // Wall attachments get a slightly inset test box (WALL_ATTACHMENT_HITBOX_INSET), so neighbours
+        // sharing an edge don't register as overlapping, while everything else reads the round footprint.
+        // Not applied to rigidbodies (never snapped edge-to-edge). Inset on the in-wall x/y axes before
+        // rotation; depth is untouched so attachments stay on the wall.
         const inset = colliderConfig.colliderType == "wallAttachment"
             ? WALL_ATTACHMENT_HITBOX_INSET : 0;
         const insetSizeX = Math.max(0, hitboxSize.sizeX - inset);

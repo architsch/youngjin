@@ -136,9 +136,7 @@ const ServerVoxelManager =
         {
             console.error(`ServerVoxelManager::onSetRestrictedZonesSignalReceived :: Failed (roomID=${room.id})`);
 
-            // The whole list is what was sent, so the whole list is what puts the sender right
-            // again: there is no partial edit to unpick, only a room whose zones he has drawn
-            // differently from everybody else's.
+            // Send back the room's full list to correct the sender.
             socketUserContext.addPendingSignalToUser("setRestrictedZonesSignal",
                 new SetRestrictedZonesSignal(room.id, room.voxelGrid.restrictedZones));
             return;
@@ -163,8 +161,7 @@ function sendMoveReversal(socketUserContext: SocketUserContext,
     room: Room,
     signal: MoveVoxelBlockSignal, sourceTextures: number[])
 {
-    // The client applied the move optimistically: added block at target, removed block at source.
-    // To reverse: remove the block at the target and re-add the block at the source.
+    // Reverse the optimistic move: remove at the target, re-add at the source.
     const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(signal.quadIndex);
     const col = VoxelQueryUtil.getVoxelColFromQuadIndex(signal.quadIndex);
     const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(signal.quadIndex);

@@ -6,17 +6,12 @@ import FormPaletteColorInput from "../input/formPaletteColorInput";
 import FormRangeInput from "../input/formRangeInput";
 import ScrollPanel from "./scrollPanel";
 
-// A room's fog, raised from the room's settings (see CustomizeRoomPanel): what the air in the room
-// is, and where things start and finish fading into it. What each setting means is in
-// @docs/graphics/lighting.md, and how an edit reaches the room is in useEditableRoomPrefs.
+// Fog settings (see CustomizeRoomPanel, @docs/graphics/lighting.md, useEditableRoomPrefs).
 export default function FogPanel({ anchorElementId, onClose }: Props)
 {
     const [prefs, apply] = useEditableRoomPrefs();
 
-    // Where the fog starts can never be further off than where it ends: a fade that begins after it
-    // has finished is not a fade. So dragging either slider past the other carries the other along
-    // with it, rather than refusing the drag or leaving the pair crossed — the one edit writes both,
-    // and both handles are seen to move.
+    // Near can't exceed far: dragging one past the other carries both.
     const setNearStep = (value: string) => apply(next => {
         next.fogNearStep = Number(value);
         next.fogFarStep = Math.max(next.fogFarStep, next.fogNearStep);
@@ -53,13 +48,10 @@ export default function FogPanel({ anchorElementId, onClose }: Props)
     </ScrollPanel>;
 }
 
-// Every quantized setting of a room runs over the same range, since every one of them is a single
-// stored character (see RoomPrefsUtil). An <input> wants its bounds as text.
+// All room prefs share one step range (one stored character each; see RoomPrefsUtil).
 const MAX_STEP_ATTRIBUTE = String(MAX_ROOM_PREFS_STEP);
 
-// One setting to a line, so that each is within reach without the panel being scrolled sideways to
-// find it. The lines are ranged right, which lines the tracks up under each other whatever their
-// labels say.
+// One setting per line, right-aligned so tracks line up.
 const COLUMN_CLASS_NAMES = "flex flex-col items-end gap-1 shrink-0";
 
 interface Props

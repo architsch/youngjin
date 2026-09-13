@@ -1,7 +1,5 @@
-// Ambient declaration for the CloseWatcher API, which TypeScript's DOM library does not carry yet.
-// A CloseWatcher hears the platform's "close request" — the Escape key on a keyboard, and the Back
-// button or back gesture on Android — and reports it as one event, claiming it before the browser
-// would have turned it into a history navigation. A watcher is spent by the request it reports.
+// Ambient types for CloseWatcher (not yet in TypeScript's DOM lib): Escape or Android Back, reported
+// once before it becomes a history navigation.
 
 interface CloseWatcher extends EventTarget
 {

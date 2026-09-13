@@ -2,12 +2,8 @@ import rateLimit from "express-rate-limit";
 import LogUtil from "../../../shared/system/util/logUtil";
 import { MINUTE_IN_MS } from "../../../shared/system/sharedConstants";
 
-// In dev mode the whole dev/test workload originates from a single IP (127.0.0.1) and
-// legitimately bursts well past the production ceiling — e.g. the E2E suite loads the
-// game page and hits API routes dozens of times within a minute. Applying the 20/min
-// production limit there trips it and causes spurious failures, so dev uses a high
-// ceiling. The limiter stays active (rate-limit headers are still emitted), so its
-// behaviour remains testable.
+// Dev traffic all comes from 127.0.0.1 and bursts (e.g. E2E), so dev uses a high ceiling. The limiter
+// stays active so its headers remain testable.
 const REQUESTS_PER_MINUTE = process.env.MODE == "dev" ? 1000 : 20;
 
 const RateLimitUtil =

@@ -4,14 +4,8 @@ import { FeatureFlag } from "../../../shared/system/types/featureFlag";
 import SinglePlayerParam from "./singlePlayerParam";
 import CameraMode from "../../graphics/types/cameraMode";
 
-// A small tagged command a step carries out on its way in or on its way out (see
-// SinglePlayerActionMap for what each one does).
-//
-// Whatever an action acts *with* — a coordinate, a count, a line of text — is a SinglePlayerParam
-// rather than a value, so that a step may work it out from where the user has got to instead of
-// having to know it in advance. Whatever names *what* the action acts on or which command it is —
-// a feature flag, a face of a voxel, a UI element's id, an object's id — stays a plain value: those
-// pick the command out rather than feed it.
+// A tagged step command (see SinglePlayerActionMap). Inputs are SinglePlayerParams so they can be
+// computed during play; identifiers (flags, faces, element ids, object ids) stay plain values.
 type SinglePlayerAction =
     | {type: "clear_all_ui_and_gizmo"}
     | {type: "ui_headline", text: SinglePlayerParam<string>}

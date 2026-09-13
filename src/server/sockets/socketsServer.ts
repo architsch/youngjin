@@ -89,18 +89,12 @@ const SocketsServer =
                 const user = socketUserContext.user;
                 console.log(`(SocketsServer) Client connected :: ${JSON.stringify(user)}`);
 
-                // Player metadata from the previous session is bridged across a reconnect
-                // by ServerUserManager.recentDisconnectMetadata: the previous session's
-                // removeUserFromRoom snapshots it synchronously before the DBUser write,
-                // and changeUserRoom (below) consumes that snapshot, falling back to
-                // DBUser. This holds whether the old socket's disconnect fired before
-                // (Case B) or after (Case A) this new socket connected — the only thing
-                // Case A must do here is proactively evict the still-registered old socket.
+                // Metadata is bridged by ServerUserManager.recentDisconnectMetadata whether the old
+                // disconnect fired before (Case B) or after (Case A) this connection; Case A only needs
+                // to evict the old socket here.
                 if (ServerUserManager.hasUser(user.id))
                 {
-                    // Case A: New socket connects BEFORE old disconnect fires (common on
-                    // low-latency environments as well as cases in which another tab inside the same
-                    // browser window connects to the server while the original tab is still connected).
+                    // Case A: new socket before the old disconnect (refresh, or another tab).
                     console.warn(`(SocketsServer) Replacing existing socket for userID = ${user.id} (likely page refresh)`);
                     const oldContext = ServerUserManager.getSocketUserContext(user.id)!;
 
@@ -122,13 +116,8 @@ const SocketsServer =
                     const signal = UserCommandSignal.decode(bufferState) as UserCommandSignal;
                     await UserCommandUtil.onUserCommandSignalReceived(user, signal);
                 });
-                // Every signal below is somebody changing the world rather than moving through it,
-                // so each one marks this account as having built something. Only the first such
-                // signal reaches the database: the session carries the milestones already recorded,
-                // so afterwards this costs a string check and nothing else, which is what lets it
-                // sit on a path that fires once per block placed. It is deliberately not awaited —
-                // measurement must never delay the edit it is measuring — and it never rejects,
-                // because ServerAnalyticsManager handles its own failures.
+                // Edit signals record the Built milestone. Only the first reaches the DB (session cache);
+                // not awaited, and it never rejects.
                 const recordEdit = () => ServerAnalyticsManager.recordMilestone(
                     user.id, FunnelMilestoneEnumMap.Built, socketUserContext);
 
@@ -161,8 +150,7 @@ const SocketsServer =
                     const signal = SetRestrictedZonesSignal.decode(bufferState) as SetRestrictedZonesSignal;
                     ServerVoxelManager.onSetRestrictedZonesSignalReceived(socketUserContext, signal);
 
-                    // No recordEdit: drawing a zone is saying who may build here rather than
-                    // building, so it is not what the milestone above is counting.
+                    // Zone edits aren't "building".
                 });
                 socketUserContext.onReceivedSignalFromUser("addObjectSignal", (buffer: ArrayBuffer) => {
                     const bufferState = new BufferState(new Uint8Array(buffer));
@@ -181,11 +169,8 @@ const SocketsServer =
                     const signal = SetObjectMetadataSignal.decode(bufferState) as SetObjectMetadataSignal;
                     ServerObjectManager.onSetObjectMetadataSignalReceived(socketUserContext, signal);
 
-                    // Chat travels on this signal too: a message is written to the speaker's own
-                    // player object as metadata (SpeechBubble), so it arrives here indistinguishable
-                    // from an edit except by its key. Counting it as an edit would put every visitor
-                    // who says hello into the "built something" figure — the one column the funnel is
-                    // read for — so the two are separated here rather than conflated.
+                    // Chat arrives on this signal too (SentMessage metadata), so it's counted as
+                    // Chatted rather than Built.
                     if (signal.metadataKey == ObjectMetadataKeyEnumMap.SentMessage)
                         ServerAnalyticsManager.recordMilestone(
                             user.id, FunnelMilestoneEnumMap.Chatted, socketUserContext);
@@ -203,18 +188,13 @@ const SocketsServer =
 
                     if (ServerUserManager.getSocketUserContext(user.id) != socketUserContext)
                     {
-                        // This socket was already replaced by a newer connection (page
-                        // refresh), or was cleaned up earlier. The replacement logic in
-                        // the connection handler already captured the player metadata, so
-                        // there is nothing left to do.
+                        // Already replaced by a newer connection or cleaned up; metadata was captured then.
                         console.warn(`(SocketsServer) Skipping stale disconnect handler (userID = ${user.id})`);
                         return;
                     }
 
-                    // ServerUserManager.removeUserFromRoom (invoked via changeUserRoom)
-                    // snapshots playerMetadata synchronously into recentDisconnectMetadata
-                    // before kicking off the DBUser write, so a near-instant reconnect can
-                    // still read the latest chat message etc.
+                    // removeUserFromRoom snapshots playerMetadata synchronously before the DB write, so
+                    // a quick reconnect still sees it.
                     ServerUserManager.removeUser(user.id);
                     await ServerRoomManager.changeUserRoom(socketUserContext, undefined, false, true, false);
                 });
@@ -229,9 +209,7 @@ const SocketsServer =
             }
         });
 
-        // Sending a separate packet for every individual signal is too wasteful of network resources.
-        // Therefore, we should batch signals that are very close to one another in time
-        // and send those batches at regular intervals instead.
+        // Signals are batched and flushed on an interval.
         signalProcessingInterval = setInterval(() => {
             for (const userID in ServerUserManager.socketUserContexts)
             {
@@ -240,10 +218,7 @@ const SocketsServer =
         }, SIGNAL_BATCH_SEND_INTERVAL);
 
         setInterval(async () => {
-            // Periodically remove users whose socket connection is no longer alive.
-            // This catches edge cases where the "disconnect" event fails to fire
-            // (e.g., abrupt browser crash with no TCP FIN, or a swallowed error in
-            // the disconnect handler).
+            // Clean up sockets whose disconnect never fired (e.g. browser crash).
             const currTime = Date.now();
             for (const [userID, ctx] of Object.entries(ServerUserManager.socketUserContexts))
             {
@@ -324,9 +299,8 @@ function makeAuthMiddleware(passCondition: (user: User) => Boolean): SocketMiddl
                 return;
             }
 
-            // Both are set after the spread, so whatever the client put in the handshake is
-            // replaced rather than trusted. The funnel travels separately from the user because it
-            // is server-side measurement state and is deliberately not part of User.
+            // Set after the spread so client handshake values are overwritten. funnel is server-only
+            // state, deliberately not part of User.
             socket.handshake.auth = { ...socket.handshake.auth, user, funnel: dbUser.funnel ?? "" };
             next();
         }

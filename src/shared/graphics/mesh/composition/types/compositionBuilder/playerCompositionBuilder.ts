@@ -21,12 +21,8 @@ export default class PlayerCompositionBuilder extends InstancedMeshCompositionBu
     
     protected addEyes(offsetInUnits: Vec3)
     {
-        // The face is drawn unlit (see PlayerCompositionCodec), so these colors are what actually
-        // reaches the screen rather than a starting point the room's light then works on. Both are
-        // held well down the range because of it: an unlit color at full strength reads as a light
-        // rather than as paint, and a character is not meant to have headlamps for eyes. The dark
-        // patch behind them is lifted a little off black for the same reason in reverse — nothing
-        // will ever brighten it now, and at black it reads as a hole cut in the face.
+        // Face colors are drawn unlit (see PlayerCompositionCodec), so they are kept dim (full strength
+        // would read as lights); the eye background is lifted off black so it doesn't look like a hole.
         //
         // Background for the eyes (0.01 = offset to prevent z-fighting)
         this.addSquare(

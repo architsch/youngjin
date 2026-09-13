@@ -4,9 +4,7 @@ import useTrackedElementRect from "../../util/trackedElementRect";
 
 const OUTLINE_PADDING_PX = 2; // how far outside the target's edges the outline sits
 
-// A 2D rectangular outline overlay that surrounds a target UI element to highlight it,
-// pulsing gently to draw attention. The target is identified by its DOM element id, which
-// is supplied via screenOutlineRectTargetObservable; the outline tracks the element as it moves.
+// Pulsing rectangle outline around a DOM element (screenOutlineRectTargetObservable). Tracks the element.
 export default function ScreenOutlineRect()
 {
     const [targetId, setTargetId] = useState<string | null>(null);

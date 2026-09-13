@@ -8,12 +8,8 @@ let nextInstanceId = 0;
 const TEXTURE_SIZE = 128;
 const ARROW_OPACITY = 0.85;
 
-// A world-space arrow rendered as a flat, sprite-like textured quad whose surface lies
-// parallel to the XZ plane (it lays flat, like a directional marker painted on the floor).
-// Unlike the 3D cone+cylinder WorldSpaceArrow, this reads as an arrow from any viewing angle
-// because it is a flat picture rather than a solid of revolution.
-// The quad, material, and canvas-drawn texture are all produced through the graphics factories;
-// the material skips the depth test so the arrow always renders on top of scene geometry.
+// A flat textured arrow lying in the XZ plane (like a floor marking), readable from any angle. Renders
+// on top of scene geometry.
 export default class WorldSpaceSpriteArrow
 {
     private group: THREE.Group = new THREE.Group();
@@ -25,10 +21,8 @@ export default class WorldSpaceSpriteArrow
         this.meshId = meshId;
         mesh.renderOrder = 9999;
 
-        // The "Square" quad stands upright in the XY plane (normal +Z). Lay it flat so its
-        // surface is parallel to the XZ plane (normal points up, +Y). After this rotation the
-        // top of the drawn arrow (the quad's local +Y) maps to world -Z, which is therefore the
-        // arrow's heading before setDirection() spins the assembly about the Y axis.
+        // Lay the upright "Square" quad flat. Afterwards the arrow's heading is world -Z until
+        // setDirection() rotates the assembly about Y.
         mesh.rotation.x = -Math.PI / 2;
 
         this.arrowAssembly.add(mesh);
@@ -67,8 +61,7 @@ export default class WorldSpaceSpriteArrow
         this.group.visible = visible;
     }
 
-    // Aims the flat arrow at a horizontal heading. The component is taken in the XZ plane
-    // (the y component is ignored), since the arrow always lies flat on the ground.
+    // Horizontal heading only (y ignored).
     setDirection(dir: THREE.Vector3): void
     {
         tempDir.set(dir.x, 0, dir.z);

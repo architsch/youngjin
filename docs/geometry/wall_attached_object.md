@@ -1,77 +1,28 @@
 # Geometry of Wall-Attached Objects
 
-A wall-attached object is a game object mounted on the surface of a voxel wall (e.g. a painting, or a [door](door_design.md)). Nowhere in the room is off limits to one: what settles whether it may go up is the wall behind it and whatever is already hanging there. Its position snaps to a regular sub-cell grid, and its facing direction is always axis-aligned, pointing outward from the wall it is attached to.
+Reference: @src/shared/object/util/wallAttachedObjectUtil.ts , @src/shared/physics/util/physicsColliderStateUtil.ts
 
-An attachment's collider is centred on its position, so one that stands on a floor rather than hanging at eye level has its origin half its own height above that floor. A door is the case that matters.
+A wall-attached object (e.g. a painting or a [door](door_design.md)) is mounted on a voxel wall. It can go anywhere that the wall and the existing attachments allow.
 
-## Position & Direction Quantization
-Wall-attached object transforms are quantized before use: positions snap to the grid the wall is built on, facing directions round to the nearest axis-aligned unit vector, and the collider's footprint is sized sideways to whole cells, which is what makes an attachment claim whole columns of wall. This keeps these objects flush with the wall and aligned with the voxel structure behind them.
+## Quantization
+- Positions snap to a sub-cell grid, and facing directions round to the nearest axis. The footprint spans whole cells.
+- The **bottom edge** is snapped vertically, not the center. Otherwise objects of odd height would float half a layer up.
+- The collider is centered on the position, so a door's origin sits half its height above the floor.
+- The collision test box is shrunk slightly along the two in-wall axes (in `PhysicsColliderStateUtil`), so that neighbors sharing an edge never register as overlapping.
+- **Trap**: a stored position decodes slightly below the value that was written (see `ObjectTransform`), so an attachment's origin can land on either side of the wall boundary. Always find the wall an attachment belongs to from its facing direction, never from the cell its origin falls in.
 
-The footprint each kind of attachment declares is itself a whole number of grid steps, and the box it is actually collision-tested with is a fraction smaller. Two attachments hung side by side therefore share a footprint edge *exactly*, and an overlap test on two boxes that share an edge is deciding a tie — which the arithmetic that placed them there is not reliable enough to settle the same way every time. Shrinking only the test box means neighbours never quite touch, so the question is never close, while everything that measures an attachment against the room — which columns of wall back it, where the grid puts it, how big its outline is — goes on reading the round number it was given. The margin is taken off the two axes lying in the wall only: the depth is already a sliver, and thinning it would lift the attachment off the wall it is meant to be hanging on. It is applied where the collision box is built (`PhysicsColliderStateUtil`) rather than written into each kind of object, so no footprint has to be authored as an odd number to get it.
-
-One consequence is worth naming, because it is a trap. An attachment's position lands exactly on the boundary between the wall it hangs on and the room it faces — and a stored position is not a coordinate but a fraction of a fixed range, which comes back a hair below what was written (see `ObjectTransform`). So an attachment read out of storage is found on one side of that boundary or the other according to nothing but which way it happens to face, while the same attachment moved by hand sits exactly on it. Nothing may therefore read the cell an attachment's origin falls in as the cell it stands in front of, or judge it by whatever fills that cell: which wall it belongs to is a matter of its facing direction.
-
-Vertically it is the object's **bottom edge** that is snapped, not its centre. An object standing an odd number of collision layers tall has its centre half a layer off that grid, so snapping the centre would lift it clear of the floor it stands on and keep it there every time it was moved. An object of even height comes out the same either way.
-
-## Movement Types
-Wall-attached objects support three movement types:
-1. **Vertical movement** — a step up or down along the wall surface, with the facing direction unchanged.
-2. **Horizontal movement (same wall)** — a step sideways along the wall surface, derived from a perpendicular rotation of the facing direction.
-3. **Horizontal movement (corner wrap)** — when the object reaches a wall corner, it wraps around the corner onto the adjacent wall face instead of stopping or detaching (see below). The object tries a concave wrap first and falls back to a convex one.
-
-## Computing Corner-Wrapped Movement of a Wall-Attached Object
+## Movement
+Attachments step up and down or sideways along a wall. At a corner they wrap onto the adjacent face: a concave wrap is tried first, then a convex one. The facing rotates a quarter turn, and the position is offset by half the object's width along both the facing axis and the sideways axis.
 
 ![Corner Wrapped Move](figures/corner_wrapped_move.jpg)
 
-### Overview
-
-When a wall-attached object slides horizontally and reaches a corner, it should seamlessly wrap around the corner rather than stop or detach. There are two cases:
-
-- **Concave corner** (inner corner): the wall turns inward. The object pivots around the inner edge and continues along the adjacent wall face.
-- **Convex corner** (outer corner): the wall turns outward. The object pivots around the outer edge and continues along the adjacent wall face.
-
-In both cases the object's facing direction rotates by a quarter turn and its position shifts to align with the new wall surface.
-
-### Algorithm
-
-1. **Quantize the object's transform.** Snap the position to the grid and round the facing direction to the nearest axis-aligned unit vector.
-
-2. **Derive the sideways axis.** Rotate the facing direction a quarter turn on the XZ plane to obtain the object's sideways axis, which distinguishes a leftward move from a rightward one.
-
-3. **Compute the wrapped position.** Offset the current position both along the facing axis (forward for a concave wrap, backward for a convex one) and along the sideways axis (toward the direction of travel), each by half the object's width along the wall.
-
-4. **Compute the new facing direction.** The new facing is the sideways axis, flipped or not depending on the combination of wrap type (concave vs convex) and travel direction (left vs right), so the object always faces outward from its new wall.
-
-5. **Validate placement.** Check that the resulting position is valid (backed by a wall, in bounds, and not colliding with other objects). If not, the wrap fails.
-
-The caller tries a concave wrap first and falls back to a convex wrap if the concave attempt fails.
-
-Implemented in @src/shared/object/util/wallAttachedObjectUtil.ts .
-
-## Finding the Front/Back-Facing Voxels of a Wall-Attached Object
-
+## Placement validity
 ![Front and Back Voxel Query](figures/front_and_back_voxel_query.jpg)
 
-### Overview
+A placement is valid when, across the object's width and height:
+- every cell **behind** it is solid (the object is supported);
+- at least one cell **in front** of it is open (the object is not buried);
+- it does not overlap another attachment.
 
-A wall-attached object may only be placed where (1) its back is fully supported by solid voxel blocks and (2) its front is at least partially exposed (not entirely buried inside a wall). This is validated by querying the voxel grid along the object's back and front rows/columns.
-
-### Algorithm
-
-1. **Determine the primary axis.** From the object's facing direction, decide whether it spans along the X-axis or the Z-axis.
-
-2. **Identify the back and front cells.** The cells directly behind (opposite the facing direction) and directly in front of the object.
-
-3. **Iterate across the object's width.** For each cell the object spans:
-   - **Back check** — the cell's collision layer mask must fully cover the object's vertical range; otherwise the object would not be supported, and placement is rejected.
-   - **Front check** — at least one front cell must *not* fully cover that vertical range, so some of the object is exposed. If every front cell is solid across the range, the object would be invisible inside the wall, and placement is rejected.
-
-4. **Collision check.** Finally, verify the new position does not overlap any existing wall-attached object.
-
-Implemented in @src/shared/object/util/wallAttachedObjectUtil.ts .
-
-## Removing the Wall Behind an Attachment
-
-The support a placement requires can also be taken away afterwards, by removing the voxel block the object hangs on. So a block is asked what it is holding up before it may go: the attachments standing against it count, while ones merely overlapping it from the far side hang on some other block and do not. Removing such a block by itself is refused, since it would leave an attachment with no wall behind it. Removing it together with everything hanging on it is a request of its own — the editing UI warns that the attachments will be destroyed, and on the user's confirmation takes those down first and the block after them.
-
-That way through is only open where every attachment is the user's own to remove. Where one is not — a door, which is an admin's alone — the wall is staying up whatever is agreed to, so the user is told which kind of thing is holding it there rather than being asked to confirm a removal that would then do nothing.
+## Removing the supporting wall
+A block that holds up attachments cannot be removed on its own. The user can instead remove the block together with its attachments after confirming, but only when the user may remove every one of those attachments. A door, for example, keeps its wall for any non-admin.

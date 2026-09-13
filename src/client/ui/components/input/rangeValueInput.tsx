@@ -2,32 +2,15 @@ import { FormEvent, FormEventHandler, useCallback, useEffect, useRef, useState }
 import RangeValueUtil from "../../util/rangeValueUtil";
 import { numActiveInputElementsObservable } from "../../../system/clientObservables";
 
-// The number a slider is currently standing on, written out beside it and typeable.
-//
-// A slider says where a setting sits *within its range* and nothing else: it cannot be read off, it
-// cannot be returned to exactly, and it cannot be told to somebody. This field is the same setting
-// in the other language — one the user can read, copy and type back — and the two being one setting
-// rather than two is the whole of what it has to get right:
-//
-//   - **The handle moves, the number follows.** Dragging is by far the commoner gesture, so what is
-//     shown here answers it live, mid-drag included.
-//   - **The number is typed, the handle follows.** Answered on every keystroke rather than when the
-//     field is left, so that the two are never seen disagreeing. A keystroke that does not make a
-//     number — a half-typed value, a stray letter — simply does not move the handle, and leaving the
-//     field puts back whatever the handle is actually standing on. There is nothing to undo and no
-//     error to report: the setting was never changed.
-//
-// What is typed survives until the field is left, rather than being rewritten as it is typed:
-// a field that reformatted itself mid-word would be fighting the user for the caret. Leaving it is
-// where the two are made to agree again — see RangeValueUtil for both of the rules that settles it
-// by.
+// Typeable value for a slider. Dragging updates the number live; typing updates the handle on each
+// keystroke when the text parses (otherwise nothing changes). Typed text isn't reformatted until
+// blur, which restores agreement (see RangeValueUtil).
 export default function RangeValueInput({ currValue, setValue, min, max, step }: Props)
 {
     const inputRef = useRef<HTMLInputElement>(null);
     const [text, setText] = useState<string>(() => RangeValueUtil.format(currValue));
 
-    // Whether the count of active inputs currently holds this one, which is the same thing as the
-    // caret still standing in this field (see the unmount cleanup below).
+    // Whether this field currently counts toward active inputs.
     const isFocused = useRef<boolean>(false);
 
     // Follow the handle wherever it goes — dragged, or moved by a gesture elsewhere in the app.
@@ -69,12 +52,7 @@ export default function RangeValueInput({ currValue, setValue, min, max, step }:
         };
     }, []);
 
-    // Keep the press on this field from reaching an ancestor drag-scroll container (see
-    // useMouseDragScroll), which would otherwise read the drag across the field as a drag along the
-    // tray it stands in — scrolling the tools sideways instead of selecting the text, and
-    // preventDefault-ing the pointer move so that nothing in the field can be selected at all. The
-    // slider beside it needs the same guard for the same reason; see RangeInput, whose note explains
-    // why these have to be native listeners rather than React's own.
+    // Native listeners stop presses reaching an ancestor drag-scroll container (see RangeInput).
     useEffect(() => {
         const input = inputRef.current;
         if (!input)
@@ -87,11 +65,7 @@ export default function RangeValueInput({ currValue, setValue, min, max, step }:
         };
     }, []);
 
-    // Give the count of active inputs back on the way out, for a field taken off screen while the
-    // caret still stands in it — a popup something else closed, or a selection that went away. An
-    // element removed from the document is never told it lost focus, so nothing else would ever hand
-    // this back, and a count left standing at one is read app-wide as the user typing into
-    // something: movement keys stop answering for the rest of the session.
+    // Release the active-input count on unmount while focused (see RangeInput).
     useEffect(() => {
         return () => {
             if (isFocused.current)
@@ -99,10 +73,7 @@ export default function RangeValueInput({ currValue, setValue, min, max, step }:
         };
     }, []);
 
-    // Kept out of the row's shrinking (see RangeInput): the track is what gives way when the row
-    // runs out of width, since a number squeezed to nothing says nothing at all. Sunken and a shade
-    // darker than the panel it stands on, like every other thing in the app that holds a value the
-    // user put there.
+    // Doesn't shrink (the track does); sunken style marks a user-set value.
     return <input
         ref={inputRef}
         type="text"
@@ -126,8 +97,7 @@ interface Props
     // The slider's own value, as it holds it — a string, since that is what an <input> deals in.
     currValue: string;
     setValue: (value: string) => void;
-    // The same bounds the slider was given, as numbers: this field has to know which values the
-    // slider actually has in order to take a typed one down to one of them.
+    // The slider's bounds, for snapping typed values.
     min: number;
     max: number;
     step: number;

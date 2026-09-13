@@ -12,11 +12,8 @@ export default class SandboxRoomBuilder extends RoomBuilder
         const {params, room} = this;
         const voxels = room.voxelGrid.voxels;
 
-        // Carve out everything and leave only the bottommost floor and topmost ceiling.
-        //
-        // The palette is what the carve finishes the enclosing faces in, and a volume handed none
-        // is refused outright - so it has to be asked for even here, where every face it settles is
-        // the one floor and the one ceiling this room has.
+        // Carve everything but the bottom floor and top ceiling. A palette is required even here, since
+        // carving refuses volumes without one.
         RoomVolumeUtil.carveOutVolume(voxels, new RoomVolume(
             0, NUM_VOXEL_ROWS-1, 0, NUM_VOXEL_COLS-1,
             COLLISION_LAYER_MIN, COLLISION_LAYER_MAX, this.nextPalette()));

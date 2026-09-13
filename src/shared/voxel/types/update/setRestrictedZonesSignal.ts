@@ -5,14 +5,8 @@ import EncodableRawByteNumber from "../../../networking/types/encodableRawByteNu
 import { MAX_RESTRICTED_ZONES } from "../../../system/sharedConstants";
 import RestrictedZone from "../restrictedZone";
 
-// The room's restricted zones, all of them, as they are now.
-//
-// Every other voxel edit names the one thing it changed, because a room holds tens of thousands of
-// them and sending the room would be absurd. A room holds a handful of zones, and the whole list
-// fits in a few dozen bytes — so drawing one, dragging one, resizing one and taking one away are all
-// sent as the same message, and none of them needs a way to name a zone. Two people editing the
-// zones of the same room at once is then the last one to speak winning outright, rather than two
-// half-applied edits meeting somewhere in the middle.
+// The room's full zone list. It's tiny, so every zone change sends the whole list (no zone ids needed),
+// and concurrent editors resolve as last writer wins.
 export default class SetRestrictedZonesSignal extends EncodableData
 {
     roomID: string;
@@ -29,8 +23,7 @@ export default class SetRestrictedZonesSignal extends EncodableData
     {
         new EncodableByteString(this.roomID).encode(bufferState);
 
-        // Capped rather than trusted: the count goes out in a single byte, so a list longer than the
-        // room may hold must not be allowed to write a length that cannot be read back.
+        // Capped, since the count is a single byte.
         const numZones = Math.min(this.restrictedZones.length, MAX_RESTRICTED_ZONES);
         if (this.restrictedZones.length > MAX_RESTRICTED_ZONES)
         {

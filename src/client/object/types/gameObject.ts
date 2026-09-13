@@ -16,14 +16,8 @@ import GameModeUtil from "../../system/util/gameModeUtil";
 const vec3Temp = new THREE.Vector3();
 const cameraPosTemp = new THREE.Vector3();
 
-// Whenever you are implementing a new GameObject type, you must:
-//      (1) Create a class for the new type and make sure that it inherits from GameObject.
-//      (2) Add an entry to ObjectTypeConfigMap, describing what the new type *is*.
-//      (3) Add an entry to ObjectTypeClientConfigMap, describing how one is built and what picking
-//          one out brings out on screen.
-// Whenever you are modifying an existing GameObject type, you must:
-//      (1) Make appropriate modifications to the existing type's class (i.e. the one which inherits from GameObject).
-//      (2) Make appropriate modifications to the existing type's entries in the two maps above.
+// A new GameObject type needs: a GameObject subclass, an ObjectTypeConfigMap entry (what it is), and
+// an ObjectTypeClientConfigMap entry (how it's built and selected).
 export default abstract class GameObject
 {
     params: AddObjectSignal; // When a GameObject spawns, use these parameters to initialize it.
@@ -87,9 +81,8 @@ export default abstract class GameObject
         return selectionConfig.canBeSelectedByUserInEditMode(this, App.getUser(), room);
     }
 
-    // What every click that picks anything out has to be, whatever it lands on — an object, or the
-    // face of a voxel (see VoxelGameObject): made in edit mode, since nothing is picked out in play
-    // mode (see GameModeUtil), and within the user's reach (see WorldSpaceSelectionUtil).
+    // Conditions shared by every selecting click: edit mode (see GameModeUtil) and within reach (see
+    // WorldSpaceSelectionUtil).
     protected isSelectableClick(selectionPoint: THREE.Vector3): boolean
     {
         if (!GameModeUtil.isInEditMode())
@@ -104,8 +97,7 @@ export default abstract class GameObject
         return true;
     }
 
-    // Callback functions which must be overriden by subclasses
-    // if they are meant to be used:
+    // Optional callbacks for subclasses:
     onPlayerProximityStart() {} // Invoked when the object gets close to the player.
     onPlayerProximityEnd() {} // Invoked when the object moves away from the player.
     onSetMetadata(key: ObjectMetadataKey, value: string) // Invoked when the object's metadata is set (e.g. one of the entries in object's "metadata" field).
@@ -116,14 +108,10 @@ export default abstract class GameObject
                 component.onSetMetadata(key, value);
         }
     }
-    // Invoked after a cosmetic effect (e.g. EasingMotion) transforms this GameObject's "visualObj".
-    // Scene-graph meshes follow "visualObj" automatically and need nothing here; baked renderers such
-    // as instanced meshes don't, so those GameObjects override this to re-apply their instance
-    // transforms (recomputed from their own source of truth, which composes the moved "visualObj").
+    // Called after a cosmetic effect moves visualObj. Baked renderers (instanced meshes) override this
+    // to re-apply instance transforms.
     onVisualTransformChanged() {}
-    // Invoked once per frame for GameObjects registered as updatable — i.e. those that override this,
-    // or that carry at least one component with its own "update" method. Override to drive per-frame
-    // logic such as character-part animation. Default is a no-op.
+    // Per-frame update for objects that override this or have a component with update().
     update(deltaTime: number) {}
 
     async onSpawn(): Promise<void>

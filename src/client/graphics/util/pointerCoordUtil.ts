@@ -3,11 +3,7 @@ import GraphicsManager from "../graphicsManager";
 
 const canvasSizeTemp: THREE.Vector2 = new THREE.Vector2();
 
-//------------------------------------------------------------------------
-// Conversions between the two units pointer input is worked with in: the game canvas' normalized
-// device coordinates (NDC), which is what a raycast into the scene takes, and CSS pixels, which is
-// what every measurement of pointer travel is made in.
-//------------------------------------------------------------------------
+// Conversions between canvas NDC (for raycasts) and CSS pixels (for pointer travel).
 
 const PointerCoordUtil =
 {
@@ -20,10 +16,7 @@ const PointerCoordUtil =
         return outVec;
     },
 
-    // Pointer positions are captured in NDC, where each axis is normalized by its own edge of the
-    // canvas — so on a canvas that is not square, the same NDC distance means different amounts of
-    // travel on the two axes. Scaling by half the canvas size (half, because NDC spans -1..1 across
-    // a full edge) recovers CSS pixels.
+    // NDC axes are normalized per canvas edge, so scale by half the canvas size to get CSS pixels.
     getPixelOffset: (fromPos: THREE.Vector2, toPos: THREE.Vector2, outVec: THREE.Vector2): THREE.Vector2 =>
     {
         GraphicsManager.getGameRenderer().getSize(canvasSizeTemp);

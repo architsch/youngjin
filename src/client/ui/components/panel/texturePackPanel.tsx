@@ -9,10 +9,8 @@ import ImageChooser from "../input/imageChooser";
 import TooltipButton from "../input/tooltipButton";
 import ScrollPanel from "./scrollPanel";
 
-// The texture pack a room's block work is finished in, raised from the room's settings (see
-// CustomizeRoomPanel) into a panel of its own above them, where there is room to show the pack itself
-// rather than only its name. Choosing another opens the pack chooser; whether the room may be
-// re-skinned is the server's to decide (see the room API), and the new pack is shown once it has.
+// Texture pack panel (see CustomizeRoomPanel). Choosing another pack opens the chooser; the server
+// decides whether the change is allowed.
 export default function TexturePackPanel({ anchorElementId, onClose }: Props)
 {
     const room = App.getCurrentRoom();

@@ -3,15 +3,8 @@ import CompactIconButton from "./compactIconButton";
 import TooltipPanel from "../overlay/tooltipPanel";
 import QuestionMarkIcon from "../../svg/icons/questionMarkIcon";
 
-// A "?" that raises a few words about whatever it stands beside, and takes them down again (see
-// TooltipPanel).
-//
-// Whether the explanation is up is the button's own business, since nothing else ever needs to know:
-// the next click anywhere takes it down, so a second explanation could only be raised by the very
-// click that dismisses the first, and two are never up at once.
-//
-// The explanation is fixed to the viewport rather than laid out beside the button, so it neither
-// takes up room in whatever row the button stands in nor gets cut off by that row's scrolling.
+// A "?" button toggling a TooltipPanel. Owns its open state (the next click anywhere dismisses it, so
+// only one is ever open). The panel is viewport-fixed, so row scrolling can't clip it.
 export default function TooltipButton({ id, text, additionalClassNames = "" }: Props)
 {
     const [open, setOpen] = useState(false);

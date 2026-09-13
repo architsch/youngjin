@@ -13,43 +13,25 @@ import LightBlockSmoothingUtil from "../util/lightBlockSmoothingUtil";
 import LightBlockDilationUtil from "../util/lightBlockDilationUtil";
 import LightSource from "../types/lightSource";
 
-// Every light in the room except the one the camera carries, held as data rather than as
-// THREE.PointLight objects and delivered to the shaders as a pair of 3D textures covering the room's
-// own voxel-block grid.
-//
-// Why not real lights: three.js compiles the number of point lights into every shader as a #define,
-// so installing one would recompile every material in the scene mid-frame — and a real point light
-// shines straight through walls, which in a room people build enclosures in looks more broken than
-// the dark it was meant to fix. Sampling a grid costs one texture fetch per fragment whether the room
-// holds three lamps or three hundred, and walls occlude light for free because the fill that builds
-// the grid stops at solid blocks.
-//
-// What is given up is specular: a lamp produces no glint, only diffuse light. That suits the
-// materials here, which are written around the single head-mounted lamp being the only thing that
-// glints.
+// All lights except the head light, stored as data and delivered to shaders as 3D textures over the
+// voxel-block grid. Real THREE lights would recompile every shader when added and shine through walls
+// (see @docs/graphics/lighting.md).
 export default class LightBlockMap
 {
-    // Where light is accumulated, three entries per block. Kept apart from the textures' own storage
-    // because what accumulates has no upper bound — several lamps can meet in one place — while the
-    // textures hold bytes. The exposure step in uploadTextures is where the two meet.
+    // Unbounded float accumulation (lamps can overlap); exposed into bytes in uploadTextures.
     private blockLightBuffer = new Float32Array(NUM_VOXEL_BLOCKS * 3);
     private blockFluxBuffer = new Float32Array(NUM_VOXEL_BLOCKS * 3);
 
     private scratch = new LightPropagationScratch();
 
-    // What the smoothing pass sweeps through, and which blocks it is allowed to sweep across.
     private smoothingScratch = new Float32Array(NUM_VOXEL_BLOCKS * 3);
     private openBlocks = new Uint8Array(NUM_VOXEL_BLOCKS);
 
-    // The brightest light standing near each block rather than in it, three entries per block (see
-    // LightBlockDilationUtil). Nothing is drawn from it: it is what getNearbyLightAt answers from.
+    // Brightest light near each block (see LightBlockDilationUtil); read by getNearbyLightAt only.
     private nearbyLightBuffer = new Float32Array(NUM_VOXEL_BLOCKS * 3);
 
-    // Four channels rather than three because three.js derives no sized internal format for an RGB
-    // byte 3D texture, so RGB is not a usable combination. Both textures spend the fourth channel
-    // they are therefore obliged to carry: the color texture on whether the block is open room or
-    // solid block, which is what lets a filtered read be renormalized, and the flux texture on how
-    // much of the light standing in the block has a direction at all (see uploadTextures).
+    // RGBA because three.js has no sized format for RGB byte 3D textures. Alpha holds openness (color)
+    // and the directional share of the light (flux).
     private colorBuffer = new Uint8Array(NUM_VOXEL_BLOCKS * 4);
     private fluxBuffer = new Uint8Array(NUM_VOXEL_BLOCKS * 4);
     private colorTexture: THREE.Data3DTexture;
@@ -57,22 +39,15 @@ export default class LightBlockMap
 
     private lightSourceByObjectId: { [objectId: string]: LightSource } = {};
 
-    // The voxels light is propagated through. Held rather than looked up so that this class does not
-    // have to reach back into App for the current room, which would close an import cycle
-    // (app -> graphicsManager -> lightBlockMap -> app).
+    // Held here rather than read from App, which would create an import cycle.
     private voxels: Voxel[] | undefined;
 
-    // Set whenever anything propagation depends on changes, and consumed once per frame, so that
-    // dragging a lamp across the room costs one recomputation per frame rather than one per
-    // transform update.
+    // Consumed once per frame, so many transform updates cost one recomputation.
     private needsRecomputation = true;
 
     constructor()
     {
-        // Nothing has been propagated yet, so the flux buffer starts out saying "no direction"
-        // rather than "straight down the negative axes", which is what a buffer of zeroes decodes to.
-        // Its fourth channel is the share of the light that has a direction, and a room with no
-        // light in it has none, so that one really is zero.
+        // Zero bytes would decode to a direction; start at "no direction" with no directional share.
         this.fluxBuffer.fill(FLUX_ZERO_BYTE);
         for (let blockIndex = 0; blockIndex < NUM_VOXEL_BLOCKS; ++blockIndex)
             this.fluxBuffer[blockIndex * 4 + 3] = 0;
@@ -88,9 +63,7 @@ export default class LightBlockMap
         this.needsRecomputation = true;
     }
 
-    // Called when a room is loaded, and with no voxels when one is unloaded. This object outlives
-    // every room it is used for (GraphicsManager keeps it for the app's whole lifetime), so the
-    // previous room's lamps have to be dropped explicitly or they would go on lighting the next one.
+    // This object outlives rooms, so the previous room's lamps must be dropped explicitly.
     resetForRoom(voxels: Voxel[] | undefined)
     {
         this.voxels = voxels;
@@ -124,22 +97,11 @@ export default class LightBlockMap
         this.needsRecomputation = true;
     }
 
-    // What light the room's own lamps have put near a given point — the brightest light standing
-    // within a few paces of it, discounted by how far off it is (see LightBlockDilationUtil) — in
-    // the linear space they accumulate in. Read once a frame by whatever needs to know how well lit
-    // the player's surroundings already are — the lamp the camera carries stands down where the
-    // room lights itself, and takes on its color, so that a room somebody has lit is seen by its
-    // own light rather than washed flat by a white one held an arm's length away (see
-    // GraphicsManager).
-    //
-    // Sampled the way the shader samples the light itself, smoothly between block centres rather
-    // than block by block. A value that stepped as the player crossed from one block to the next
-    // would be a step in how bright his own lamp is, which is a far more noticeable thing than the
-    // step itself.
+    // Lamp light near a point (linear space), used by the head light to yield to the room. Trilinearly
+    // interpolated so the head light doesn't step as the player crosses blocks.
     getNearbyLightAt(worldPos: Vec3, outLight: THREE.Color): THREE.Color
     {
-        // Block centres sit at half-integers, so a position drops half a block to land on the
-        // lattice the interpolation runs over.
+        // Block centres sit at half-integers.
         const col = worldPos.x - 0.5;
         const row = worldPos.z - 0.5;
         const layer = worldPos.y / COLLISION_LAYER_HEIGHT - 0.5;
@@ -159,11 +121,8 @@ export default class LightBlockMap
                     const layerWeight = layerStep === 0 ? 1 - layerFraction : layerFraction;
                     const blockIndex = this.clampedBlockIndex(
                         row0 + rowStep, col0 + colStep, layer0 + layerStep);
-                    // A solid block holds no light because there is nowhere in it for light to be,
-                    // which is not the same as its surroundings being dark. Left out and the weights
-                    // renormalized without it, so that standing against a wall does not read as
-                    // standing in the dark — and hand the player's own lamp back at full strength
-                    // exactly where he has walked up to look at something closely.
+                    // Solid blocks are excluded (not counted as dark), so standing at a wall doesn't
+                    // bring the head light back.
                     if (this.openBlocks[blockIndex] === 0)
                         continue;
 
@@ -184,8 +143,7 @@ export default class LightBlockMap
             THREE.LinearSRGBColorSpace);
     }
 
-    // Coordinates outside the grid are clamped to its edge rather than refused, since this is asked
-    // about wherever the camera happens to be and a camera can sit outside the room.
+    // Clamped because the camera may be outside the room.
     private clampedBlockIndex(row: number, col: number, collisionLayer: number): number
     {
         return VoxelQueryUtil.getVoxelBlockIndex(
@@ -203,8 +161,7 @@ export default class LightBlockMap
         this.blockLightBuffer.fill(0);
         this.blockFluxBuffer.fill(0);
 
-        // Marked whether or not there is anything to propagate, because getNearbyLightAt reads it
-        // too and must never be answering from the shape of a room that has since been left.
+        // Always refreshed, so getNearbyLightAt never answers from a room that was left.
         LightBlockSmoothingUtil.markOpenBlocks(this.voxels, this.openBlocks);
 
         if (this.voxels != undefined)
@@ -222,8 +179,6 @@ export default class LightBlockMap
                 this.openBlocks);
         }
 
-        // Worked out from the light as smoothed, which is the light the room is actually seen in —
-        // and whether or not there was anything to propagate, for the same reason as the openness.
         LightBlockDilationUtil.dilate(this.blockLightBuffer, this.nearbyLightBuffer,
             this.openBlocks);
 
@@ -238,13 +193,8 @@ export default class LightBlockMap
             const sourceIndex = blockIndex * 3;
             const targetIndex = blockIndex * 4;
 
-            // The square root is stored and the shader squares it back. A byte spends half its steps
-            // on the brightest half of the range, which is the half a dark room never visits, so the
-            // dark falloff around a lamp bands visibly when stored directly; storing the root spends
-            // those steps where the eye is actually looking, for one multiply in the shader.
-            //
-            // Clamping is what makes the brightest places flatten to white rather than wrap round to
-            // black, since a typed array of bytes takes an out-of-range number modulo 256.
+            // Stores sqrt (squared back in the shader) to spend byte precision on dark falloff.
+            // Clamped so overexposure saturates instead of wrapping modulo 256.
             for (let channel = 0; channel < 3; ++channel)
             {
                 const exposed = Math.min(1,
@@ -252,21 +202,11 @@ export default class LightBlockMap
                 this.colorBuffer[targetIndex + channel] = Math.sqrt(exposed) * 255;
             }
 
-            // How much of this block is room rather than wall, which the shader divides back out of
-            // whatever the filter mixed together.
-            //
-            // A solid block holds no light — the fill cannot enter one — so a sample taken anywhere
-            // but exactly at an open block's centre is pulled toward black by however many solid
-            // blocks the filter happened to reach. A wall's own face never notices, because the
-            // half-block push along its normal lands its sample precisely on a block centre by
-            // construction; anything standing *in* the room lands between centres and is darkened
-            // for no reason but where it happens to be. Recording openness here is what lets that
-            // be undone, and costs a channel that had nothing else to carry.
+            // Openness, so the shader can renormalize filtered reads that include solid (lightless)
+            // blocks; otherwise objects between block centres get darkened.
             this.colorBuffer[targetIndex + 3] = (this.openBlocks[blockIndex] !== 0) ? 255 : 0;
 
-            // Only the direction survives; how much arrived is already in the color texture. A block
-            // no light reached has no direction, and is written as the value that decodes to a zero
-            // vector so the shader can tell the two apart.
+            // Direction only (magnitude lives in the color texture); zero vector for no light.
             const fluxX = this.blockFluxBuffer[sourceIndex];
             const fluxY = this.blockFluxBuffer[sourceIndex + 1];
             const fluxZ = this.blockFluxBuffer[sourceIndex + 2];
@@ -285,18 +225,9 @@ export default class LightBlockMap
                 this.fluxBuffer[targetIndex + 2] = FLUX_ZERO_BYTE;
             }
 
-            // How much of the light standing here is travelling that way, against how much of it is
-            // simply *here* — the flux is the sum of what every lamp brought, so two lamps facing
-            // each other across a block cancel each other's direction while both of them go on
-            // lighting it. The direction alone cannot tell the two cases apart, and a shader given
-            // only the direction has to treat "coming from every side" as "coming from a side this
-            // surface is turned away from", which is the one way installing a lamp could leave a
-            // room darker than it found it.
-            //
-            // The share is what the length says once the light itself is divided back out, and it
-            // is never more than the whole because the two fields are accumulated in step (see
-            // LightBlockPropagationUtil). Written as zero for a solid block, so that a filtered
-            // read can be renormalized by openness exactly as the color is.
+            // Share of the light that has a net direction (opposing lamps cancel). Only this share is
+            // subject to the facing test, so adding a lamp never darkens a surface. <= 1 because both
+            // fields accumulate in step; 0 for solid blocks so it renormalizes like color.
             const luminance = getLightLuminance(this.blockLightBuffer[sourceIndex],
                 this.blockLightBuffer[sourceIndex + 1], this.blockLightBuffer[sourceIndex + 2]);
             this.fluxBuffer[targetIndex + 3] = (luminance > 0)
@@ -313,26 +244,20 @@ const FLUX_ZERO_BYTE = 128;
 
 function createBlockTexture(buffer: Uint8Array): THREE.Data3DTexture
 {
-    // The dimensions follow the block index's layout rather than the world's axis order: a
-    // Data3DTexture reads its data with the first dimension varying fastest, and the fastest-varying
-    // part of a voxel-block index is the collision layer. So the texture's axes are
-    // (collision layer, col, row), and a shader sampling it has to swizzle a world position into that
-    // order — see LightBlockMapMaterialUtil.
+    // Axes follow the block index layout (layer, col, row), since the first dimension varies fastest;
+    // shaders swizzle world positions accordingly (see LightBlockMapMaterialUtil).
     const texture = new THREE.Data3DTexture(buffer, NUM_COLLISION_LAYERS, NUM_VOXEL_COLS,
         NUM_VOXEL_ROWS);
     texture.format = THREE.RGBAFormat;
     texture.type = THREE.UnsignedByteType;
-    // Interpolating between blocks is what turns a grid of cells into a smooth wash of light.
-    // Data3DTexture defaults both filters to NearestFilter, so both have to be set.
+    // Data3DTexture defaults to NearestFilter.
     texture.minFilter = THREE.LinearFilter;
     texture.magFilter = THREE.LinearFilter;
-    // Sampling just outside the room (a surface on the boundary wall, pushed half a block outward)
-    // should read the edge block rather than wrap round to the far side of the room.
+    // Samples pushed outside the boundary wall must read the edge, not wrap around.
     texture.wrapS = THREE.ClampToEdgeWrapping;
     texture.wrapT = THREE.ClampToEdgeWrapping;
     texture.wrapR = THREE.ClampToEdgeWrapping;
-    // Color space left at its default (none): these buffers hold linear-space light, and marking
-    // them as sRGB would have three.js convert them a second time on the way into the shader.
+    // Linear-space data: leave color space unset to avoid a double conversion.
     texture.needsUpdate = true;
     return texture;
 }

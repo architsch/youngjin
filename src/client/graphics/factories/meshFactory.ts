@@ -10,8 +10,7 @@ const loadedMeshes: { [meshId: string]: THREE.Mesh } = {};
 const loadedLineSegments: { [id: string]: THREE.LineSegments } = {};
 const instanceIdPools: { [meshId: string]: Pool<number> } = {};
 const ongoingInstancedMeshLoads: { [meshId: string]: Promise<THREE.InstancedMesh> } = {};
-// Meshes whose instance pool has been reported as exhausted, so that the shortage is logged once
-// rather than on every frame the callers spend retrying.
+// So pool exhaustion is logged once per mesh, not every frame callers retry.
 const exhaustedMeshIds: Set<string> = new Set();
 
 const MeshFactory =
@@ -20,10 +19,8 @@ const MeshFactory =
     {
         return Object.values(loadedMeshes);
     },
-    // Fills "out" with every loaded mesh but one, for the callers that raycast the scene without
-    // the room's voxel mesh: that mesh holds one instance per quad of a whole room, and three.js
-    // tests a ray against every instance a mesh holds. The array is the caller's own, so a test
-    // made every frame allocates nothing.
+    // For raycasts that must skip the room's voxel mesh (three.js tests every instance). Fills the
+    // caller's array to avoid per-frame allocation.
     getMeshesExcept: (excludedMeshId: string, out: THREE.Mesh[]): THREE.Mesh[] =>
     {
         out.length = 0;
@@ -34,8 +31,6 @@ const MeshFactory =
         }
         return out;
     },
-    // Undefined until the mesh has been loaded, which lets a caller holding an id alone (e.g. one of
-    // an object's parts) reach the mesh that draws it.
     getMesh: (meshId: string): THREE.Mesh | undefined =>
     {
         return loadedMeshes[meshId];
@@ -76,11 +71,8 @@ const MeshFactory =
             return loadedMesh as THREE.InstancedMesh;
         }
 
-        // The same mesh may be requested again while its first load is still awaiting the geometry
-        // and material (e.g. two composed objects spawning in the same frame). All such callers must
-        // share the first load: a second creation would replace the registered mesh and instanceId
-        // pool, while earlier callers keep writing into the original — whose instances then never
-        // get drawn (its count stays untouched by the pool's rentals).
+        // Concurrent callers must share the first load; a second creation would replace the
+        // registered mesh and pool while earlier callers keep writing into the orphaned one.
         let ongoingLoad = ongoingInstancedMeshLoads[meshId];
         if (ongoingLoad == undefined)
         {
@@ -98,10 +90,7 @@ const MeshFactory =
         }
         return ongoingLoad;
     },
-    // Returns undefined when the mesh has no instance left to give out. A pool is sized for the
-    // most a room is expected to need, so this means the room is holding more of something (e.g.
-    // players) than that: the caller leaves whatever it was going to draw undrawn and retries
-    // later, which degrades the scene rather than breaking it.
+    // Undefined when the pool is exhausted; the caller leaves the part undrawn and retries later.
     rentInstanceId: (meshId: string): number | undefined =>
     {
         const pool = instanceIdPools[meshId];
@@ -113,8 +102,6 @@ const MeshFactory =
         const instanceId = pool.rentItem();
         if (instanceId == undefined)
         {
-            // Reported once per mesh: the callers retry every frame, so logging each attempt
-            // would bury everything else in the console.
             if (!exhaustedMeshIds.has(meshId))
             {
                 exhaustedMeshIds.add(meshId);
@@ -133,7 +120,7 @@ const MeshFactory =
         if (pool == undefined)
             throw new Error(`Instance ID pool not found (meshId = ${meshId})`);
         pool.returnItem(instanceId);
-        exhaustedMeshIds.delete(meshId); // The mesh has capacity again, so a later shortage is worth reporting afresh.
+        exhaustedMeshIds.delete(meshId);
         if (pool.allItemsAreFree())
             (loadedMeshes[meshId] as THREE.InstancedMesh).count = 0;
     },
@@ -183,9 +170,7 @@ const MeshFactory =
     },
 }
 
-// Creates, registers, and adds to the scene a new instanced mesh (plus its instanceId pool, when
-// requested). Must only run once per meshId — loadInstancedMesh above guards this by sharing the
-// returned promise among concurrent callers.
+// Must run only once per meshId (loadInstancedMesh shares the promise among concurrent callers).
 async function createInstancedMesh(meshId: string, geometryId: string, materialParams: MaterialParams,
     maxNumInstances: number, createInstanceIdPool: boolean): Promise<THREE.InstancedMesh>
 {
@@ -200,11 +185,7 @@ async function createInstancedMesh(meshId: string, geometryId: string, materialP
     const uvSampleSizeBufferAttrib = new THREE.InstancedBufferAttribute(uvSampleSizeArray, 2);
     geometryClone.setAttribute("uvSampleSize", uvSampleSizeBufferAttrib);
 
-    // A material that paints an outline around its instances reads a per-instance strength to know
-    // which of them wear one (see the instance-outline shader). Made here, alongside
-    // the mesh, rather than the first time an instance asks for one: it is what the compiled shader
-    // reads, and a mesh that gained it partway through its life would have been drawn without it up
-    // to that point.
+    // Created up front because the compiled shader reads it; adding it later wouldn't take effect.
     const outlineColorHex = (materialParams as InstancedTexturePackMaterialParams).outlineColorHex;
     if (outlineColorHex)
     {
@@ -217,9 +198,7 @@ async function createInstancedMesh(meshId: string, geometryId: string, materialP
     const newMesh = new THREE.InstancedMesh(geometryClone, material, maxNumInstances);
     newMesh.name = meshId;
     newMesh.frustumCulled = false;
-    // Instances are re-baked continuously (a voxel edit, a player moving, the orbit camera taking a
-    // block out of the way), and each such change now uploads only its own slice of the buffer
-    // rather than the whole of it — see InstancedMeshBinding's markInstanceForUpload.
+    // Partial uploads per changed instance (see InstancedMeshBinding).
     newMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     uvStartBufferAttrib.setUsage(THREE.DynamicDrawUsage);
     uvSampleSizeBufferAttrib.setUsage(THREE.DynamicDrawUsage);
@@ -232,11 +211,8 @@ async function createInstancedMesh(meshId: string, geometryId: string, materialP
             throw new Error(`InstanceId pool already exists (meshId = ${meshId})`);
         instanceIdPools[meshId] = new Pool<number>(maxNumInstances,
             (index: number) => maxNumInstances - index - 1);
-        // The pool rents low instanceIds first (see the seeding order above), so the mesh's
-        // active instance range only needs to span the high-water mark of rented instanceIds
-        // (maintained in rentInstanceId/returnInstanceId) instead of the full capacity.
-        // This keeps per-frame instance-buffer uploads, draws, and raycasts proportional to
-        // actual usage. Meshes without a pool keep the default (full-capacity) count.
+        // The pool rents low ids first, so count only needs to track the high-water mark, keeping
+        // uploads, draws and raycasts proportional to actual usage.
         newMesh.count = 0;
     }
     return newMesh;

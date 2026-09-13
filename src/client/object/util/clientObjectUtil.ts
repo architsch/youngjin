@@ -19,16 +19,12 @@ const ClientObjectUtil =
 {
     // Room construction
 
-    // A single-player room arrives from the server as a content-less descriptor (its voxelGrid and
-    // objectGroup are empty — see Room.encode). The client is the sole authority over single-player
-    // content, so it generates the real room here from the shared SinglePlayerModeConfig and injects
-    // it into the room before the room is loaded. Must run before GraphicsManager/PhysicsManager/
-    // ClientObjectManager consume room.voxelGrid / room.objectById.
+    // Single-player rooms arrive empty (see Room.encode), so the client generates their content from
+    // SinglePlayerModeConfig. Must run before anything reads room.voxelGrid / room.objectById.
     buildSinglePlayerRoomContent: (room: Room): void =>
     {
         RoomGenerationUtil.generateRoomContent(room);
-        // buildRoom hard-codes each object's roomID to "" (server-loaded rooms get it stamped by
-        // ObjectGroup.decodeWithParams, which never runs for client-generated content). Backfill it.
+        // buildRoom leaves roomID empty (only decodeWithParams stamps it), so backfill it.
         for (const obj of Object.values(room.objectById))
             obj.roomID = room.id;
     },
@@ -60,9 +56,7 @@ const ClientObjectUtil =
             new ObjectTransform(pos, {x: 0, y: 0, z: 1}),
             {}, "my_player"
         );
-        // The player must be registered to the client-side room's objectById because
-        // ObjectUpdateUtil processes the player rigidbody's "setTransform" call
-        // through its corresponding entry in room.objectById.
+        // ObjectUpdateUtil resolves the player's setTransform through room.objectById.
         await ClientObjectManager.addObject(gameObject, false, true);
         return gameObject;
     },

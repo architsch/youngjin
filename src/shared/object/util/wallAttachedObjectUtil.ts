@@ -33,9 +33,8 @@ const WallAttachedObjectUtil =
         const halfHorizontal = getQuantizedColliderHorizontalHalfSize(newColliderState);
         const halfVertical = getColliderVerticalHalfSize(newColliderState);
 
-        // (1) The object's back side must be fully covered (by voxel blocks).
-        // (2) The object's front side must be at least partially exposed.
-        // We check voxel occupancy using the object's Y range against collision layers.
+        // (1) The back must be fully backed by voxel blocks. (2) The front must be at least partly open.
+        // Checked over the object's Y range in collision layers.
 
         const objBottomY = newColliderState.hitbox.center.y - halfVertical;
         const objTopY = newColliderState.hitbox.center.y + halfVertical;
@@ -46,9 +45,7 @@ const WallAttachedObjectUtil =
         const absZ = Math.abs(dir.z);
         const primaryAxis = absZ >= absX ? "z" : "x";
 
-        // NOTE:
-        // See the section called "Finding the Front/Back-Facing Voxels of a Wall-Attached Object"
-        // in @docs/geometry/wall_attached_object.md for technical details.
+        // See @docs/geometry/wall_attached_object.md (placement validity).
 
         if (primaryAxis == "z") // object is a horizontal line on the XZ plane (X = horizontal, Z = vertical)
         {
@@ -95,9 +92,7 @@ const WallAttachedObjectUtil =
         }
         return true;
     },
-    // The wall-attached objects that the given voxel block is holding up: those whose back side
-    // rests against it. Nothing else keeps them on the wall, so taking the block away has to
-    // account for them — either by refusing, or by taking them down along with it.
+    // Attachments whose back rests on this block (they must be refused or removed along with it).
     getObjectIdsAttachedToVoxelBlock: (room: Room, quadIndex: number): string[] =>
     {
         const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
@@ -118,19 +113,15 @@ const WallAttachedObjectUtil =
                 console.error(`Colliding object not found (objectId = ${collidingObject.objectId})`);
                 continue;
             }
-            // An object hanging on this block stands in front of it, and so faces away from it. One
-            // that faces towards it is merely overlapping it from the far side, and hangs elsewhere.
+            // Attachments on this block face away from it; ones facing it hang on the far side.
             const fromVoxelToObject = Vector3DUtil.subtract(object.transform.pos, voxelPos);
             if (Vector3DUtil.dot(object.transform.dir, fromVoxelToObject) > 0)
                 objectIds.push(collidingObject.objectId);
         }
         return objectIds;
     },
-    // Where an attachment of the given kind stands when it is hung on the boundary wall of the given
-    // cell. A wall attachment's collider is centred on its position while the object itself stands on
-    // the floor, so its origin sits half a footprint above the storey it is mounted on; across the
-    // wall it is centred on the cell, and along the wall's normal it sits on the face the room looks
-    // at. Which of the four boundary walls the cell belongs to is read off the cell itself.
+    // Boundary-wall attachment position: origin half a footprint above the storey floor (collider-centred),
+    // centred on the cell, on the room-facing wall surface.
     getBoundaryWallAttachmentPos: (objectTypeIndex: number, col: number, row: number,
         collisionLayer: number): Vec3 =>
     {
@@ -145,8 +136,7 @@ const WallAttachedObjectUtil =
             return {x: col, y, z: row + 0.5};
         return {x: col + 1, y, z: row + 0.5};
     },
-    // Which way an attachment hung on the boundary wall of that cell faces: out of the wall it is
-    // hung on, into the room.
+    // Facing out of the boundary wall, into the room.
     getBoundaryWallInwardDir: (col: number, row: number): Vec3 =>
     {
         if (row >= NUM_VOXEL_ROWS - 1)
@@ -170,13 +160,8 @@ const WallAttachedObjectUtil =
     },
 }
 
-// Snaps a wall attachment onto the grid it hangs on: half a voxel along the wall, and one collision
-// layer up it.
-//
-// The vertical step is measured from the object's bottom edge rather than from its centre. An object
-// standing an odd number of layers tall — a door does — has its centre half a layer off that grid, so
-// snapping the centre would shift it a quarter of a layer off the floor it stands on every time it
-// was nudged, while an object of even height is unaffected either way.
+// Snaps to half a voxel along the wall and one layer vertically, measured from the bottom edge (snapping
+// the centre would float odd-height objects off the floor).
 function getQuantizedTransform(objectTypeIndex: number, pos: Vec3, dir: Vec3): {pos: Vec3, dir: Vec3}
 {
     const halfVertical = getColliderVerticalHalfSizeByType(objectTypeIndex);
@@ -243,9 +228,7 @@ function getStraightHorizontalMoveResult(room: Room, obj: AddObjectSignal,
     return undefined;
 }
 
-// NOTE:
-// See the section called "Computing Corner-Wrapped Movement of a Wall-Attached Object"
-// in @docs/geometry/wall_attached_object.md for technical details.
+// See @docs/geometry/wall_attached_object.md (corner wrapping).
 
 function getCornerWrappedHorizontalMoveResult(room: Room, obj: AddObjectSignal,
     moveRight: boolean, tryConcaveWrap: boolean): {newPos: Vec3, newDir: Vec3} | undefined
@@ -297,26 +280,19 @@ function voxelCoversYRange(collisionLayerMask: number, bottomY: number, topY: nu
 
 function getQuantizedColliderHorizontalHalfSize(colliderState: ColliderState): number
 {
-    // ColliderConfig's sizeX is not being affected by the collider's
-    // current orientation (i.e. whether is aligned with x-axis or z-axis),
-    // unlike ColliderState's halfSizeX which varies depending on the
-    // collider's orientation.
+    // hitboxSize.sizeX is orientation-independent (unlike ColliderState.halfSizeX).
     const hitboxSize = colliderState.colliderConfig.hitboxSize;
     return 0.5*Math.round(hitboxSize.sizeX);
 }
 
-// Unlike the horizontal half size above, this one is exact. The horizontal rounding is what makes an
-// attachment claim whole voxel columns of wall; vertically there is nothing to round to, since the
-// collision layers an attachment is checked against are already finer than the object itself, and
-// rounding here would make a door that stands seven layers tall demand eight layers of wall behind
-// it — and, worse, land a quarter of a layer off the floor whenever it was quantized.
+// Exact (not rounded like the horizontal half size): rounding would demand an extra layer of wall and
+// misalign the bottom edge.
 function getColliderVerticalHalfSize(colliderState: ColliderState): number
 {
     return 0.5 * colliderState.colliderConfig.hitboxSize.sizeY;
 }
 
-// The same figure read straight off the object's type, for use before a collider state exists — the
-// height of a hitbox does not depend on which way the object is turned.
+// From the type, before a collider state exists (height is orientation-independent).
 function getColliderVerticalHalfSizeByType(objectTypeIndex: number): number
 {
     const colliderConfig = ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex)

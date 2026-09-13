@@ -1,27 +1,18 @@
 /**
- * The one "Dynamic Doors" screenshot that cannot be taken in the sandbox: `dynamic-doors-finish`,
- * the panel an admin customizes a door's timber, plate and knob through.
- *
- * It is a picture of the game being used rather than of a room, so every part of it — entering edit
- * mode, taking hold of a door, opening the panel — has to happen as a real gesture, in a room the
- * generator made, on the seeded admin seat. The post's other two images are set pieces built in the
- * sandbox by `dynamic-doors.js`, in about a tenth of the time this takes.
+ * The "Dynamic Doors" shot that can't be taken in the sandbox: `dynamic-doors-finish`, the admin's door
+ * customization panel, performed as real gestures in a generated room on the seeded admin seat (the other
+ * two images come from `dynamic-doors.js`). Writes only `dynamic-doors-finish.jpg`, the name the post
+ * references, so the two scripts never overwrite each other.
  *
  *   node dev/scripts/devlog/captureRunner.js dev/scripts/devlog/shots/dynamic-doors-admin.js
  *
- * The slug stays "dynamic-doors" because it names the file this writes, which the post refers to by
- * name. This writes only `dynamic-doors-finish.jpg`, so the two scripts never overwrite each other.
- *
- * A generated hub is one repeated block in every direction, so the wall the frame uses is dressed
- * before it is shot: pictures hung along it, a second door beside the first, a band of another
- * material at the subject's own height. That dressing is most of what follows.
+ * A generated hub repeats one block everywhere, so most of this dresses the framed wall first: pictures,
+ * a second door, and a band of another material.
  */
 const Nav = require("./nav.js");
 
-// Texture indices into this room's pack ("inferno", an 8x8 atlas whose walls here are finished in
-// the pale sandstone at 17). The palette's DOM children run in this same order, so a swatch is
-// reached by index rather than by a pixel coordinate in a strip that scrolls itself to whatever is
-// currently selected.
+// Texture indices in this room's pack ("inferno", an 8x8 atlas; the walls are sandstone at 17). Palette
+// DOM children follow the same order, so swatches are reached by index (the strip scrolls itself).
 const TEX = {
     cobble: 36,     // cool grey brick, against the warm sandstone
     lava: 45,       // glowing cracks: the one saturated note
@@ -83,9 +74,8 @@ async function wheel(ctx, notches)
     await ctx.sleep(700);
 }
 
-// Puts the camera a known number of notches from the near end of its range by running it up against
-// that end first. Edit mode opens at whatever distance the camera already stood from what it is now
-// framing, so counting notches from wherever the mode opened frames a different shot every run.
+// Pins the camera a known number of notches from the near end by first zooming fully in (edit mode opens
+// at the previous camera distance).
 async function settleZoom(ctx, notchesBack)
 {
     await wheel(ctx, 14);
@@ -105,9 +95,8 @@ async function deselect(ctx)
     }
 }
 
-// Clicks the world and reports what came up: "door", "quad" (a wall or floor face), or "none". On
-// the admin seat a door takes hold of itself and opens edit mode along with the selection; a wall
-// face only offers "Start Editing", which has to be taken up before its tools appear.
+// Clicks the world and reports "door", "quad" (a wall or floor face) or "none". On the admin seat a door
+// click enters edit mode with the selection; a face offers "Start Editing" first.
 async function selectAt(ctx, x, y)
 {
     await ctx.clickAt({ x, y });
@@ -122,8 +111,7 @@ async function selectAt(ctx, x, y)
     return (await vis(ctx, "voxelQuadTextureOptions")) ? "quad" : "none";
 }
 
-// Paints the selected face. The palette carries itself to whatever is already selected, so its
-// swatches are reached through the DOM in texture order rather than by a coordinate that moves.
+// Paints the selected face; swatches are reached through the DOM in texture order.
 async function paint(ctx, textureIndex)
 {
     const swatch = ctx.page.locator("#voxelQuadTextureOptions > *").nth(textureIndex);
@@ -163,8 +151,7 @@ async function hangPictures(ctx, points, log)
     log(`  hung ${n}/${points.length} pictures`);
 }
 
-// Grows a block off the selected face and repaints it, so it does not read as more of the wall it
-// came from. Used for the low plinth that gives the foreground something at its own depth.
+// Grows a block off the selected face and repaints it, for a low foreground plinth.
 async function buildPlinth(ctx, x, y, depth, textureIndex, log)
 {
     if (await selectAt(ctx, x, y) != "quad")
@@ -190,12 +177,7 @@ async function buildPlinth(ctx, x, y, depth, textureIndex, log)
 
 // --- Doors ----------------------------------------------------------------------------------
 
-// Sweeps outward from a point until a door's own tools come up. A door is a narrow thing at the end
-// of a turn that stops a few degrees either side of where it was aimed, so a single coordinate
-// written down from one run lands on the wall beside it in the next.
-// Takes hold of a door — the nearest one the page reports as reachable, rather than a sweep of
-// screen coordinates. Where a door falls on screen depends on the room that was generated and on
-// where the camera ended up, so a list of pixels is a list of guesses that were right once.
+// Takes hold of the nearest reachable door the page reports (screen positions vary with room and camera).
 async function pickDoor(ctx)
 {
     try
@@ -232,8 +214,7 @@ async function addDoor(ctx, points, log)
     return false;
 }
 
-// Writes a name onto the selected door's plate. Typed rather than filled, since the form writes
-// every keystroke through to the door as it arrives.
+// Typed, not filled, since the form writes each keystroke through to the door.
 async function nameDoor(ctx, text)
 {
     if (!(await vis(ctx, "changeDoorLabelButton")))
@@ -250,9 +231,7 @@ async function nameDoor(ctx, text)
     return true;
 }
 
-// Puts the appearance bar's preset stepper on one particular scheme by reading what it shows and
-// stepping until it shows what is wanted. The bar opens on whatever the door is already wearing and
-// the room is saved between runs, so a fixed number of steps paints a different door each time.
+// Steps the preset stepper until it shows the target (it opens on the door's current, persisted scheme).
 async function setPreset(ctx, target)
 {
     const readout = ctx.page.locator("#customizeDoorOptions div")
@@ -271,12 +250,10 @@ async function setPreset(ctx, target)
 module.exports = {
     slug: "dynamic-doors",
 
-    // The seeded admin. Doors are his to lay; for everybody else a door is only somewhere to walk
-    // through, so nothing below would be on screen at all as an ordinary member.
+    // The seeded admin: only admins manage doors, so none of this appears for a member.
     devUser: 4,
 
-    // A generated room rather than the sandbox: the panel this frame is of belongs to the admin's
-    // tools, and the tools only exist where there is a room to edit and a door that is his to hold.
+    // A generated room: the admin's door tools need a room to edit.
     freshRoom: true,
 
     // Only a hub raises both storeys, and doors answer to an admin in a hub and nowhere else.
@@ -289,17 +266,12 @@ module.exports = {
     {
         const { shot, sleep, log } = ctx;
         const quiet = () => {};
-        // Frames kept only while the route and the dressing are being worked out. They are off by
-        // default so that a plain run writes the three the post carries and nothing else; set
-        // DEVLOG_DIAG=1 to get them back when a step needs to be seen again.
+        // Diagnostic frames, off by default; set DEVLOG_DIAG=1 to write them.
         const diag = process.env.DEVLOG_DIAG ? shot : async () => {};
         log("spawn: " + Nav.describe(await ctx.setup.pose()));
 
         // === The spawn hall's south wall ===================================================
-        // Standing back off the wall the arrival door hangs on, square to it, is the vantage the
-        // dressing below is aimed from — so it is set outright rather than walked to. Where the
-        // player stands is a precondition of this shot, not the thing it is of, and a held walk key
-        // used to spend a minute of the run landing somewhere slightly different each time.
+        // Placed (not walked) back from the arrival door's wall, square to it: the vantage the dressing is aimed from.
         await ctx.setup.place(16.5, 27.2, { faceX: 16.2, faceZ: 31.0 });
         await sleep(1800);
         log("wall vantage: " + Nav.describe(await ctx.setup.pose()));
@@ -310,12 +282,9 @@ module.exports = {
         await paintFaces(ctx, [
             { x: 330, y: 560 }, { x: 415, y: 560 }, { x: 810, y: 560 }, { x: 900, y: 560 },
         ], TEX.cobble, log);
-        // The niche further along this wall is unlit, and an unlit recess photographs as a flat
-        // black rectangle. Its inner faces are given the pack's glowing material instead, which
-        // reads as an alcove and is the one warm note against the wall's cool grey banding.
+        // The unlit niche would photograph as a black rectangle, so its inner faces get the glowing material.
         await paintFaces(ctx, [{ x: 1000, y: 480 }, { x: 1035, y: 545 }], TEX.lava, log);
-        // One block per run, since the room keeps what the last run built and a plinth grown by two
-        // every time would be a wall across the frame within a few passes.
+        // One block per run, since the room keeps earlier runs' builds.
         await buildPlinth(ctx, 300, 690, 1, TEX.lava, log);
         await diag("dressed");
 

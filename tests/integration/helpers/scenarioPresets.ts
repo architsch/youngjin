@@ -1,9 +1,4 @@
-/**
- * Reusable building blocks for scenario-based tests.
- *
- * Provides pre-built room configs, user configs, and action sequences
- * so that individual test files stay concise and declarative.
- */
+/** Reusable room, user and action presets for concise scenarios. */
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import { RoomConfig, UserConfig, VoxelPlacement } from "./scenarioRunner";
 import { Action } from "./actions";
@@ -50,8 +45,7 @@ export function userAtCenter(joinRoom?: string, overrides?: MockUserOverrides): 
     };
 }
 
-/** Kept for source-compat with older tests; position args are ignored — players always
- * spawn at the room's entrance. */
+/** Kept for compatibility; positions are ignored (players spawn at the entrance). */
 export function userAt(_x: number, _z: number, joinRoom?: string, overrides?: MockUserOverrides): UserConfig
 {
     return {

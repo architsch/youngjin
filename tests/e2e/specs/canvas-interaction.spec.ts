@@ -1,9 +1,7 @@
 import { test, expect } from "../fixtures/auth.fixture";
 import { SELECTORS } from "../helpers/constants";
 
-// The Three.js canvas is created after the full game initialization sequence:
-// page load → bundle exec → socket connect → room data received → renderer init.
-// This takes significantly longer than a simple page load, so we use a generous timeout.
+// The canvas appears only after full game init (bundle, socket, room data, renderer), so allow extra time.
 const GAME_INIT_TIMEOUT = 45_000;
 
 test.describe("Three.js Canvas", () => {

@@ -1,7 +1,6 @@
 import { RoomType } from "./roomType";
 
-// Lightweight room metadata returned by the room-list/search endpoints.
-// Excludes voxel/object content so listings stay cheap.
+// Room list/search entry, without voxel or object content.
 export default interface RoomListEntry
 {
     id: string;

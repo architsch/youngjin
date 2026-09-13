@@ -1,6 +1,4 @@
-// An animated finger swiping from the bottom to the top of the screen, with a thin arrow
-// tracing its trajectory. Drawn entirely with inline SVG — the motion uses SVG's native
-// SMIL elements — so it is self-contained and needs no image assets or extra CSS keyframes.
+// Animated finger swiping upward (inline SVG with SMIL; no assets or CSS).
 export default function DragUpDiagram({ additionalClassNames = "" }: Props)
 {
     return <svg viewBox="0 0 120 200" fill="none" className={additionalClassNames}>
@@ -9,8 +7,7 @@ export default function DragUpDiagram({ additionalClassNames = "" }: Props)
             <line x1="60" y1="176" x2="60" y2="38"/>
             <path d="M46 56 L60 36 L74 56"/>
         </g>
-        {/* Animated finger (Material 'touch_app' glyph): swipes bottom -> top, then lifts
-            and resets to the bottom while invisible, looping forever. */}
+        {/* Animated finger (Material 'touch_app' glyph): swipes bottom -> top, loops. */}
         <g>
             <animateTransform attributeName="transform" type="translate"
                 calcMode="spline" dur="2.1s" repeatCount="indefinite"

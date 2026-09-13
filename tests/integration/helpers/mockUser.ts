@@ -19,11 +19,7 @@ export interface MockUserResult {
     playerMetadata: {[key: string]: string};
 }
 
-/**
- * Creates a unique mock User for testing. Each call returns a user with a
- * unique ID so that multiple concurrent users never collide.
- * Player metadata is per-user (stored on DBUser) and is returned alongside the user.
- */
+/** A unique mock user, with its player metadata. */
 export function createMockUser(overrides: MockUserOverrides = {}): MockUserResult
 {
     const i = ++userCounter;
@@ -39,11 +35,7 @@ export function createMockUser(overrides: MockUserOverrides = {}): MockUserResul
     return { user, playerMetadata: overrides.playerMetadata ?? {} };
 }
 
-/**
- * A stand-in for whoever is doing the editing, for helpers and assertions that are not about who is
- * asking. Every room-editing utility is told who is asking (see RoomValidationUtil), so a test
- * exercising something else still has to name somebody.
- */
+/** A stand-in acting user, for tests not about who is asking (editing utilities require one). */
 export function createEditingUser(userType: number = UserTypeEnumMap.Admin): User
 {
     return createMockUser({userType}).user;

@@ -1,57 +1,28 @@
 # Staging Playtest Workflow
 
-An AI-driven playtest run against the deployed staging server, driven by the `staging-playtest`
-skill. Where the E2E suite asks "do the core flows still work", this asks "what is this server
-actually doing, and does its stored state survive contact with the code that was just deployed".
-
-It exists for the states that ordinary play cannot produce. Everything the app writes is written
-at the current schema version, so the row-migration path and its write-back are only ever
-exercised by rows that predate a schema change — and the only way to get one on a real server is
-to write it there directly. The same is true of a room content blob at an older binary version,
-and of a world with enough member-owned rooms in it to be worth walking.
-
-## The three tools
-
-All of them print JSON on stdout, so an agent can consume the output directly.
+An AI-driven playtest against the deployed staging server, driven by the `staging-playtest` skill. It covers what E2E cannot: stored states that ordinary play never produces (outdated row versions, old content blobs, a large population of owned rooms) and what the server logs while real browser sessions play.
 
 | Script | Purpose |
 |---|---|
-| `dev/scripts/playtest/serverMonitor.js` | Survey the log backlog, baseline, diff, process metrics |
-| `dev/scripts/playtest/stagingAdmin.js` | Seed and clean Firestore/Storage state; verify migration landed |
-| `dev/scripts/playtest/runPlan.js` | Drive one browser session through a JSON action plan |
+| `dev/scripts/playtest/serverMonitor.js` | log backlog survey, baseline/diff, process metrics |
+| `dev/scripts/playtest/stagingAdmin.js` | seed and clean Firestore/Storage state, verify migrations and funnel |
+| `dev/scripts/playtest/runPlan.js` | drive one browser session through a JSON action plan |
 
-Two modules sit behind them and are not run directly: `lib/dbGuard.js`, which is where the
-database handles come from and which decides what they may address, and `generateRoomContent.js`
-with its TypeScript entry, which produces a room the way the server produces one.
+All output is JSON. Internal modules: `lib/dbGuard.js` (the only source of DB handles) and `generateRoomContent.js` (bundles the real generator with esbuild, from source).
 
-### serverMonitor.js
-
+## serverMonitor.js
 ```
 node dev/scripts/playtest/serverMonitor.js history  --app staging [--top 20]
 node dev/scripts/playtest/serverMonitor.js baseline --app staging
 node dev/scripts/playtest/serverMonitor.js diff     --app staging
 node dev/scripts/playtest/serverMonitor.js metrics
 ```
+It reads PM2 logs over SSH. `history` surveys the existing backlog. `baseline` records log offsets, restarts and memory, and `diff` reports only what came after.
+- Benign noise (scanners hitting rate limits) is separated out, not hidden.
+- `needsAttention` comes from stderr (warnings and errors). `activity` comes from stdout and is context only.
+- `restartsDuringWindow` > 0 means a crash or the memory ceiling was hit.
 
-Reaches the VPS over SSH and reads PM2's logs at `/root/.pm2/logs/`. `history` is the
-pre-playtest survey: what this server has been logging all along, which is the baseline every
-later finding is compared against. `baseline` records per-file byte offsets plus PM2 restart
-counts and memory; `diff` then reports only what was appended since.
-
-Two classifications are applied, and both matter:
-
-- **Benign noise is separated but not hidden.** A public server's error log is dominated by
-  vulnerability scanners tripping the page rate limiter. Left unfiltered, every run "finds
-  errors"; filtered silently, a pattern that stops being benign would never be noticed.
-- **The two streams are kept apart.** `needsAttention` comes from stderr — what the logging
-  utility recorded as a warning or error. `activity` comes from stdout — every DB query, every
-  room save — and is context for reading an error, not a finding in itself.
-
-`restartsDuringWindow` is the loudest signal available: a process that restarted mid-run either
-crashed or hit its memory ceiling.
-
-### stagingAdmin.js
-
+## stagingAdmin.js
 ```
 node dev/scripts/playtest/stagingAdmin.js inspect
 node dev/scripts/playtest/stagingAdmin.js seed-users      --version 0 --count 3 --run <runID>
@@ -66,335 +37,70 @@ node dev/scripts/playtest/stagingAdmin.js downgrade-content --room <roomID> [--t
 node dev/scripts/playtest/stagingAdmin.js restore-content   [--room <roomID>]
 node dev/scripts/playtest/stagingAdmin.js cleanup [--run <runID>] [--all]
 ```
+- `--target staging` (default, gcloud ADC) or `--target local` (emulator). There is no live target.
+- `--version` means "no newer than this" and is clamped per collection.
+- **Row versions** (`DBVersionMigration`) and **content blob versions** (the leading byte, `VoxelGrid`/`ObjectGroup` converters) are separate. `downgrade-content` refuses to cross a decoder boundary, because that would produce a corrupt blob rather than an old one. Cross-decoder migration is tested offline in `voxel-grid-migration.test.ts`.
+- `seed-population` creates Members paired with their rooms. It is the only way to get owned rooms on staging, because production mode disables the dev user switch. **Pass `--with-content`**: a room without a blob cannot be entered and leaves an error in every later baseline.
+- Seeded content comes from the real `RoomGenerationUtil` with per-room seeds, and the row gets the texture pack that generation chose.
+- `set-user-type` promotes a guest minted through the real page (the server re-reads the user type on every request). It refuses rows that have an email and marks the row for `cleanup`. Use a plan's `sessionFile` to keep the session across the change.
 
-Every command takes `--target staging` (the default) or `--target local`, and prints the target
-it addressed alongside its result. Staging authenticates with the local `gcloud`
-application-default credentials; `local` requires the Firebase emulators. There is no live
-target — see Safety.
-
-Users and rooms carry separate schema versions, so `--version` is read as "no newer than this" and
-clamped per collection — a number at or above both current versions seeds a current population,
-and a row from the future, which no migration could bring back, cannot be written at all.
-
-There are two independent versioning schemes and both can be seeded. Firestore rows carry a
-`version` field migrated by the `DBVersionMigration` arrays. Room content blobs carry a leading
-version byte migrated by the decoder and converter chains on `VoxelGrid` and `ObjectGroup` —
-`downgrade-content` rewrites that byte, which manufactures a genuinely old blob rather than a
-corrupt one **only between versions the same decoder reads**, since only those share a body layout.
-Asked to cross from one decoder to another, it refuses: the rewritten header would claim a layout
-the body is not written in, giving a corrupt blob rather than an old room. Migration across that
-boundary is covered offline instead, by `tests/integration/scenarios/voxel-grid-migration.test.ts`
-against fixtures the old encoder itself produced.
-
-`seed-population` creates a Member account paired with the room it owns. This is the only
-practical way to get member-owned rooms onto staging at all: staging runs in production mode, where
-the dev OAuth bypass is disabled, so a browser session can only ever become a guest, and guests
-cannot own rooms.
-
-**`--with-content` is usually wanted.** A seeded room with no content blob cannot be entered — the
-server finds no blob, logs a load failure, and falls back to a hub. That fallback is correct
-behaviour, but it makes the room decorative and puts a recurring error into every later baseline.
-
-### Playing as somebody other than a guest
-
-Staging runs in production mode, so the dev user switch is off and a browser session there can only
-ever become a guest. That puts everything reserved for the other two kinds of user out of reach:
-the doors a Hub is joined to the rest of the world by, which are an admin's, and every check that
-turns on being *registered* rather than on being an admin, which a guest fails a layer earlier and
-so proves nothing about.
-
-`set-user-type` reaches them by the route the product itself uses — nothing in the game ever makes
-an admin, and one is promoted by hand in the database. A run mints an ordinary guest through the
-real page, changes what that guest is, and reloads. The server reads the user's type back out of the
-database on every identified request and at every socket handshake, so the change takes effect on
-the reload with nothing restarted, and no code that ships knows anything about it.
-
-Two guards keep it away from real accounts: it refuses any row carrying an email address, which is
-what a registered person has and a throwaway guest does not, and it stamps the seed marker so
-`cleanup` deletes the promoted account with the rest of the run. `restore-user-type` puts a
-promoted account back without waiting for cleanup.
-
-The session has to survive between the two halves, since the account is changed while no browser is
-open. That is what a plan's `sessionFile` is for — see below.
-
-### Seeded rooms are generated, not copied
-
-`--with-content` runs `RoomGenerationUtil` — the same generator the server runs when a user
-creates a room — and writes the same encoding the server writes. Each room is generated from its
-own seed, so a seeded population varies the way an organic one does.
-
-That is not only about realism. Generation does not merely fill a room with voxels and objects;
-it decides room-level parameters that those contents were chosen to suit, the texture pack above
-all, and every voxel's texture is an index into one specific pack's atlas. So the seeder writes
-what generation decided onto the Firestore row rather than defaulting it. A room whose row names
-one pack while its blob was built against another is a room generation could never have produced,
-and testing against it is testing against a state the game cannot reach.
-
-The generator is TypeScript with the extensionless imports the webpack build resolves, so
-`generateRoomContent.js` bundles it in memory (via esbuild, already present as a test-runner
-dependency) the first time it is asked for. It bundles from source rather than from `dist/`,
-because the point of a generated seed is that it was built by the generator the repository
-currently has.
-
-### runPlan.js
-
+## runPlan.js
 ```
 node dev/scripts/playtest/runPlan.js <plan.json> [--out <result.json>]
 ```
+A real browser and socket. Data assertions use the page's authenticated request context.
 
-Runs a real browser with a real socket connection, so the server sees a genuine concurrent
-player. Assertions about data go through the page's own authenticated request context — the
-same session and cookies as the UI, without depending on clicking anything.
+| Group | Actions |
+|---|---|
+| Session | `start`, `reload`, `waitForRoom`, `skipTutorial`, `dismissPopups`, `gotoRoom`, `whoami`, `wait`, `screenshot`, `end` |
+| Data | `listRooms`, `searchRooms`, `hubEntries`, `myRoomEntry` |
+| Placement | `place`, `vantage`, `look`, `pose`, `standingSpots` |
+| World | `objects`, `clickObject`, `clickSurface`, `clickSurfaceUntilEnabled`, `orbit`, `zoom`, `walk`, `expectSelection` |
+| UI | `enterEditMode`, `ensureEditMode`, `exitEditMode`, `uiClick`, `expectDisabled`, `click`, `fill`, `expect`, `say` |
 
-Session actions: `start`, `reload`, `waitForRoom`, `skipTutorial`, `dismissPopups`, `gotoRoom`,
-`whoami`, `wait`, `screenshot`, `end`.
-Data actions: `listRooms`, `searchRooms`, `hubEntries`, `myRoomEntry`.
-Placement actions (arranging the scene, not acting in it): `place`, `vantage`, `look`, `pose`,
-`standingSpots`.
-World actions: `objects`, `clickObject`, `clickSurface`, `clickSurfaceUntilEnabled`, `orbit`,
-`zoom`, `walk`, `expectSelection`.
-UI actions: `enterEditMode`, `ensureEditMode`, `exitEditMode`, `uiClick`, `expectDisabled`, `click`, `fill`,
-`expect`, `say`.
+- `start` accepts `ref` (an analytics cohort tag) and `devUser` (local dev mode only).
+- `sessionFile` persists cookies between plans. It is written even when actions fail.
+- `say` sends chat through the real HUD input and needs non-empty text.
+- **Always `skipTutorial` before anything multiplayer.** New guests start in the tutorial, where room navigation silently does nothing.
+- **Always `end`.** Otherwise the player lingers until the stale-socket sweep, which the next run reads as a bug.
+- Ready-made plans are in `dev/scripts/playtest/plans/`. Artifacts go to `temp/playtest/artifacts/`.
 
-`say` sends a chat message through the HUD's own input and send button, which is the only way to
-exercise the chat path at all: a message travels as a change to the speaker's own player object's
-metadata, so nothing offline proves a real one leaves the browser. An empty message is ignored by
-the client in a multiplayer room, so the text is required.
-
-`start` takes an optional `ref`, which is appended to the address as the query tag the server reads
-to attribute a visitor to a traffic source (see the acquisition-analytics check below), and an
-optional `devUser`, which picks one of the seeded dev accounts. `devUser` is honoured only in dev
-mode, so it is how a *local* run becomes an admin; against a deployment the account is promoted in
-the database instead.
-
-`sessionFile` on the plan keeps the browser's cookies in a file between runs. A plan is otherwise one
-browser from launch to close, which is right for a run that starts as a fresh visitor and wrong for
-anything that has to happen to an account between two plans — a user promoted, a guest left to age —
-because the session dies with the browser and the next plan arrives as a stranger. It is written even
-when actions failed, since a broken plan still minted the account the next one is meant to resume.
-
-### Two bridges: arranging a scene, and acting in it
-
-The page carries two automation surfaces, installed only where the deployment is not the public site,
-and the line between them is the design rather than an accident of how they grew.
-
-`AutomationBridgeUtil` (`window.__thingspool_automation`) **only answers questions**: what the room
-holds, where each thing falls on screen, what a ray through a given pixel meets, what is selected,
-where the camera is. It selects nothing and moves nothing. A caller still has to produce a real
-gesture, which is what makes the click it performs run the same path a player's does — a bridge that
-performed the action instead would prove that the bridge works and nothing else.
-
-`AutomationSetupUtil` (`window.__thingspool_setup`) **only arranges**: it puts the player somewhere,
-turns him, and points the orbit camera. It clicks nothing and edits nothing. It exists because
-standing in a particular spot is a precondition of a test rather than the thing being tested, and
-paying for it in locomotion is expensive and unrepeatable — the walk covers a pace in a few seconds,
-the turn's gain varies more than tenfold between runs, and the result lands somewhere different every
-time.
-
-So: **arrange with one, act with the other.** Collapsing them would mean a passing run no longer
-showed that the game works.
-
-Two consequences a caller has to know:
-
-- The orbit belongs to edit mode, and so do the editing tools. In play mode the camera sits at the
-  player's eye and nothing can be picked out at all; the game-mode switch in the top bar is the only
-  way into the mode.
-- In a multiplayer room the server keeps its own copy of the player's position and sweeps every
-  reported move through collision from *its* last known point. A placement is exact on the client
-  that made it, and the server's copy stops at the first wall between — so it belongs to composing a
-  view or shortening a journey, never to an assertion about a server-side position.
-
-The setup bridge carries one group that does more than arrange: it builds. Walls and floors, the
-texture pack they are finished in, the pictures and doors hung on them, the restricted zones laid
-over parts of the grid, and a camera bound neither to the player nor to a selection. That group works
-only inside the sandbox single-player room and refuses to act anywhere else, which is what keeps the
-line above intact.
-
-The sandbox is an empty room generated to be a set. It belongs to screenshot capture, and it is where
-the dev-log's photographs are made: a set built to suit the frame, photographed by a camera put where
-the picture wants it, instead of a subject hunted for in a generated room and then shot from wherever
-the search ended. What a photograph is honest about is the thing it is of — a material, a shape, a
-doorway — and that thing is the real one, spawned and drawn and lit as the game does it.
-
-It has no place in a playtest, and the room check is what enforces that. A playtest is asking whether
-the game works, and the sandbox is the one room where the answer could not mean anything: nobody else
-is in it, no gameplay is running, and a wall that stands there because a script asked for one is not
-evidence that walls can be built.
+### Automation bridges
+Both are installed only on non-public deployments. **Arrange with one, act with the other.**
+- `AutomationBridgeUtil` (`window.__thingspool_automation`) is **read-only**: room contents, screen positions, raycasts, selection, camera. `dev/scripts/lib/interact.js` uses it to aim real pointer gestures, so clicks run the player's code path.
+- `AutomationSetupUtil` (`window.__thingspool_setup`) **only arranges**: player placement and orientation, and orbit camera angles (`dev/scripts/lib/setup.js`). A placement is exact on the client, but the server sweeps the move through collision, so never assert server positions after a `place`. Its build group (walls, textures, objects, zones, a free camera) works only in the sandbox single-player room, which exists for dev-log screenshots and is never used in playtests.
 
 ### Driving the 3D world
+- The orbit camera and editing tools exist only in edit mode, which is entered through the top-bar toggle.
+- `clickObject` matches by id, type or metadata (e.g. `{"objectType": "Door", "metadata": {"Label": "Attic"}}`) and walks into reach first. `expectSelection` confirms that the click landed.
+- Silent failures (out of reach, occluded, covered by the HUD) are reported explicitly. Expected quirks: the first tap on the room closes a control attached to the selection, so selection taps are retried once. Culled surfaces refuse selection, so candidates are tried in turn. Tapping the current selection drops it, which exits edit mode; `ensureEditMode` restores it.
+- `clickSurfaceUntilEnabled` selects surfaces until a named control becomes enabled, widening the view and moving between rounds. Its report separates "nowhere valid" from "the tool is broken".
+- HUD controls are `div`s with `aria-disabled`, so use `uiClick` and `expectDisabled` rather than raw DOM clicks.
 
-Everything in a room is reached by aiming at it, and where anything lands on screen depends on the
-room that was generated — so a plan cannot carry coordinates. `dev/scripts/lib/interact.js` closes
-that by asking the read-only bridge where things are and then producing an ordinary pointer gesture
-on the canvas. Neither half can shortcut the other, so a click made this way runs the same path a
-player's does: the tap arbitration, the raycast, and the permission check inside the object's own
-handler.
-
-`dev/scripts/lib/setup.js` is the other half, and a plan should open with it rather than with a blind
-`walk`: `place` stands the player at a point, `vantage` a few paces off one facing it, `look` sets the
-orbit's angles and zoom outright, and `standingSpots` reports every place in the room the player
-could stand — read off the grid the room was built from, which is also how the two storeys and the
-staircase treads between them are told apart.
-
-`clickObject` names its target by identity, by type, or by the metadata it carries —
-`{"objectType": "Door", "metadata": {"Label": "Attic"}}` — and turns and walks towards it until it
-is in reach before clicking. `expectSelection` is what says the click landed, since a selection is
-also what raises the HUD driven next.
-
-Several failures here are silent, and each is reported as itself rather than as a click that did
-nothing: a target out of reach, hidden behind something, or covered by a HUD element that would take
-the click instead. Two more are worth knowing because they look like faults and are not:
-
-- **A control hanging off the current selection spends the first tap on the room**, putting itself
-  away rather than letting the tap through, so that closing it does not also drop the selection. A
-  tap meant to change the selection is therefore given one second attempt.
-- **A surface that is not currently drawn refuses selection**, and the surfaces nearest the camera
-  are the likeliest to be culled. Candidates are tried in turn rather than a single point being
-  aimed at.
-- **Tapping what is already picked out lets it go**, which is how a selection is dropped. In edit
-  mode the mode goes with it, because the mode *is* the selection — so a run that taps its way
-  across a room falls out of edit mode as a matter of course, and the controls it was driving
-  vanish rather than turning disabled. `ensureEditMode` is the way back in, and the searches below
-  call it for themselves.
-
-`clickSurfaceUntilEnabled` picks out surfaces until the named control is actually offered. Most of a
-room is wall that will not take a door and floor that will not take a picture; which patch will is a
-question only the app can answer, and it answers it by enabling the control. When none does, the
-report says how many patches were selectable, how many were offered and refused, and how many did
-not carry the control at all — the difference between "nowhere here" and "the tool is broken".
-
-Between rounds it widens the view and then covers ground, because standing still and squinting is
-not how a person finds somewhere either. Within a round the attempts are spread across everything in
-sight rather than spent on the nearest few: what is nearest to a player is the floor under him and
-the low blocks around him, and those are the surfaces least likely to take anything, since a thing
-hung on a wall needs wall behind it over its whole height.
-
-`uiClick` and `expectDisabled` read the app's own refusal. HUD controls are `div`s carrying
-`aria-disabled` rather than form elements, so a greyed-out one is clicked quite happily by anything
-reading the DOM alone, and does nothing — which is how a refusal comes to be recorded as a success.
-
-Ready-made scenarios live in `dev/scripts/playtest/plans/`.
-
-Two are easy to omit and expensive to omit:
-
-- **`skipTutorial` before anything multiplayer.** A newly created guest starts in the
-  single-player tutorial. Until it leaves, navigating to a room ID appears to succeed while the
-  client stays put, so every room-list and room-entry check silently tests nothing.
-- **`end` at the finish.** It disconnects the socket explicitly. Without it the player lingers
-  in the room until the stale-socket sweep notices, which the next run reads as a bug.
-
-Screenshots and failure screenshots are written under `temp/playtest/artifacts/`.
-
-## The acquisition-analytics check
-
-A playtest drives real guests through the real page, so it moves the funnel the server records —
-arriving, leaving the tutorial, entering a room. That makes a playtest the only place the analytics
-path runs end to end: a browser, the server, and the database it writes through. Nothing offline
-covers that seam, because the ref tag is read off a real request. See
-[Acquisition Analytics](../../devOps/analytics.md) for what is being recorded and why.
-
-Tag the run's `start` action so its visitors form a cohort of their own rather than mixing with
-staging's ordinary traffic:
-
-```json
-{ "type": "start", "ref": "playtest-<runID>" }
-```
-
-Then read it back once the plan has finished:
-
-```
-node dev/scripts/playtest/stagingAdmin.js verify-funnel --run <runID>
-```
-
-Three things decide whether this works:
-
-- **The `playtest-` prefix is required, not cosmetic.** `cleanup` deletes cohort documents on that
-  prefix alone, so a tag without it is indistinguishable from real traffic and will be left behind
-  in the counters permanently.
-- **The tag must be written in `a-z`, `0-9`, `-`, `_`.** The server rebuilds a ref tag rather than
-  trimming it, so anything else is silently dropped and the cohort ends up under a different name
-  than the one the plan sent — or under `direct`, if nothing survives.
-- **A `ref` only counts on the visit that mints the account.** Attribution is first-touch, so a
-  session reused from an earlier run keeps whatever source it originally arrived with, and tagging
-  a later navigation records nothing.
-
-`verify-funnel` reports which milestones the cohort reached and which it did not. It deliberately
-does not pass or fail: which milestones *should* be there depends on what the plan did, and a plan
-that never left the tutorial is not a broken funnel. Compare it against the actions the plan ran.
-
-The milestones it names come from `dev/scripts/analytics/funnelReport.js`, which is the same table
-the reporting tool uses, so there is one list in the tooling rather than two that can disagree.
+## Acquisition-analytics check
+The only end-to-end test of [analytics](../../devOps/analytics.md). Tag the start action as `{ "type": "start", "ref": "playtest-<runID>" }`, then run `stagingAdmin.js verify-funnel --run <runID>`.
+- **The `playtest-` prefix is required**, because `cleanup` deletes cohort documents by that prefix.
+- Use only `a-z0-9-_` characters, or the tag is rewritten.
+- A ref counts only on the visit that creates the account, so reused sessions keep their original source.
+- `verify-funnel` reports the milestones reached without passing or failing. Compare them with what the plan did. The milestone list comes from `funnelReport.js`.
 
 ## What persists between runs
-
 | Seed | Reusable | Why |
 |---|---|---|
-| `seed-population` at the current version, with `--persist` | Yes | Reading it does not change it, so a stable population stays the same world between runs. |
-| `seed-users` / `seed-rooms` at an outdated version | No | Single-use by nature — the first read migrates the row and writes it back at the current version, after which it is no longer the fixture the test needed. |
-| Seeded guests | No | The server's own stale-guest sweep deletes them on its schedule regardless. |
-| `downgrade-content` | No | Allowed only within one decoder's versions. The next room save re-encodes the blob at the current version. Always restore afterwards. |
+| `seed-population` at current version with `--persist` | yes | reading does not change it |
+| outdated `seed-users` / `seed-rooms` | no | the first read migrates them |
+| seeded guests | no | the stale-guest sweep deletes them |
+| `downgrade-content` | no | the next save re-encodes it, so always restore |
 
-`cleanup` keeps `--persist` seeds; `cleanup --all` removes them too.
+`cleanup` keeps `--persist` seeds, and `cleanup --all` removes them too.
 
-## Rate limits shape the run
-
-Staging runs in production mode, so the production ceilings apply: a per-minute request cap per
-IP covering both page and API routes, and hourly caps on guest creation scoped per IP and per
-IP+User-Agent together. Every agent on one machine shares that IP.
-
-The consequences are practical. Two or three concurrent agents, not a swarm. Sessions get
-reused rather than creating fresh guests. Each agent gets a distinct User-Agent, or they share
-one guest quota. `runPlan.js` paces its own API calls and reports rate-limit hits separately —
-a non-zero count is self-inflicted and has to be reported as such rather than as a server fault.
+## Rate limits
+Staging enforces production limits: a per-IP request rate, and per-IP and per-IP+UA guest caps. Run at most two or three agents, reuse sessions, and give each agent its own User-Agent. `runPlan.js` paces its API calls and reports rate-limit hits separately. Those hits are self-inflicted, not server faults.
 
 ## Safety
-
-Direct database writes are confined to staging and the local emulator. There is no live write
-path in this tooling and none is to be added.
-
-Live and staging share one Firebase project and one storage bucket, separated only by a
-collection-name prefix. Which database is being addressed therefore comes down to a string
-comparison, which is the kind of thing that goes wrong quietly — so it is guarded in three
-places, of which only the first holds without anybody remembering it.
-
-**`dev/scripts/playtest/lib/dbGuard.js` is the only place a playtest script obtains a Firestore
-or Storage handle.** It resolves `--target`, which accepts `staging` and `local` and nothing
-else: `live`, `prod` and `production` are refused by name, and any other value is unknown. What
-it returns is a facade rather than the SDK's own objects, and it checks every collection name and
-every storage path against the target's prefix before that name reaches the SDK. A
-`CollectionReference` handed back stays inside its own collection through every query and
-document it produces, which is what makes checking the name once sufficient.
-
-The `local` target requires `FIRESTORE_EMULATOR_HOST`, and refuses to run without it. This is the
-inversion worth being deliberate about: local and live are both unprefixed, so an unprefixed
-namespace with no emulator behind it is not local — it is live, and it would look correct in
-every log line. Conversely `staging` refuses to run *with* the emulator variables set, so a
-command believed to be seeding staging cannot quietly seed the emulator instead.
-
-**`.claude/settings.json` denies the gcloud and firebase CLI subcommands** that could reach live
-data without going through Node at all — `gcloud firestore`, `firebase firestore`, and the
-storage copy/remove commands. These are denials for the assistant, not for the developer; any of
-them remains available in a terminal, which is the intent, since an irreversible operation on
-production data should be a deliberate human act.
-
-**`serverMonitor.js --app live` is read-only.** It tails PM2's logs over SSH and writes nothing.
-Comparing live's backlog against staging's is genuinely useful, so that path stays.
-
-One read-only exception exists and is confined to one collection. The question of which traffic
-sources bring people who stay can only be answered where the audience is, which is live, so
-`dbGuard.js` also offers a read-only path that accepts `live` as a target. What it returns exposes
-reads and hands back plain data — no document reference, no batch, no route back to the SDK — and
-it may name only the aggregate acquisition counters, which hold counts per traffic source and
-nothing belonging to any one person. The users collection is not readable through it, and the write
-path above still refuses `live` by name.
-
-Beyond the target boundary: `cleanup` deletes only documents carrying the marker field the seeder
-stamps on its own seeds, so organic data cannot be removed by it, and `downgrade-content` copies
-the original blob aside before touching it and never overwrites an existing backup. Acquisition
-cohort documents are the one thing `cleanup` selects differently — they carry no marker, since the
-server rather than the seeder writes them — and there it deletes only documents whose traffic
-source begins with the reserved `playtest-` prefix.
-
-Every command prints the target it addressed, so which namespace was touched is never something
-the reader of a report has to infer. Staging's writes draw on the same Firebase quota as
-production traffic.
+- **No live write path exists, and none may be added.** Live and staging share a project and are separated only by a prefix.
+- `lib/dbGuard.js` accepts only `staging` and `local` (it refuses `live`, `prod` and `production` by name). It returns a facade that checks every collection and storage path against the target prefix. `local` requires `FIRESTORE_EMULATOR_HOST` (an unprefixed namespace without an emulator would be live), and `staging` refuses to run when that variable is set.
+- `.claude/settings.json` denies the assistant the gcloud and firebase CLI data commands.
+- `serverMonitor.js --app live` is read-only. `dbGuard.js` also offers a read-only live facade limited to the `acquisition` collection.
+- `cleanup` deletes only marker-stamped seeds, plus acquisition cohorts with the `playtest-` prefix. `downgrade-content` backs up the original blob and never overwrites an existing backup.
+- Every command prints its target. Staging writes consume the shared Firebase quota.

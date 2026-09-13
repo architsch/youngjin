@@ -1,15 +1,7 @@
-// Runs the integration test suite with a Firestore emulator available to it.
-//
-// Most of the suite mocks the DB layer away and needs nothing. The DB suite is the exception: it
-// drives the real query runners, so it needs a real Firestore to drive them against, and it skips
-// itself when there is none. Leaving that to chance would mean the DB layer is covered only on the
-// runs where somebody happened to have an emulator open — so this script makes sure there is one.
-//
-//   - An emulator is already listening (a `npm run dev` session, typically) -> reuse it. Starting a
-//     second one would fail on the taken port, and the tests keep to their own collections anyway.
-//   - Otherwise -> start a throwaway emulator that lives exactly as long as the test run.
-//
-// If no emulator can be started, the run fails rather than quietly proceeding without DB coverage.
+// Runs the integration suite with a Firestore emulator for the DB suite (which otherwise skips itself):
+//   - An emulator is already listening (a `npm run dev` session, typically) -> reuse it.
+//   - Otherwise -> start a throwaway emulator for the run.
+// Fails if no emulator can be started, rather than silently skipping DB coverage.
 
 const { spawn, spawnSync } = require("child_process");
 const http = require("http");

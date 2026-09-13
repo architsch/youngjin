@@ -1,27 +1,12 @@
-// Runs one playtest agent's plan against a deployed server in a real browser.
-//
-// An agent writes a plan (JSON), runs it through here, reads the result (JSON), and writes the
-// next plan informed by what happened. That round-trip is deliberate: driving a browser one
-// click at a time from a model is slow and expensive, and a fixed script cannot react to what
-// it finds. A round of a dozen actions is the middle ground.
-//
-// What this drives:
-//   - It runs a real browser with a real Socket.IO connection, so the server sees a genuine
-//     concurrent player: room load, presence, physics, the socket lifecycle.
-//   - Assertions about *data* (room lists, search, pagination, ownership) go through the
-//     page's own authenticated request context. That is the same session and the same cookies
-//     as the UI, but it does not depend on clicking anything.
-//   - HUD controls that carry a stable element id are driven for real (edit mode, the mode's
-//     way out, everything a selection raises).
-//   - The 3D scene is driven for real too, through ../lib/interact.js: the page is asked where
-//     something is and whether a click would reach it, and the click itself is an ordinary
-//     pointer gesture on the canvas. Nothing about that path is simulated — the tap
-//     arbitration, the raycast and the permission check inside the object's own handler all
-//     run — so a world action that fails here is one that would fail for a player.
-//   - Getting to where the acting happens is not itself acting, so it is not driven that way.
-//     ../lib/setup.js stands the player somewhere and points the camera directly ("place",
-//     "vantage", "look"), which is what a plan should open with instead of a blind walk. The
-//     boundary is the design: arranging a scene is set, acting in it is performed.
+// Runs one playtest agent's plan (JSON in, JSON result out) against a deployed server in a real browser;
+// agents iterate plan by plan, a middle ground between per-click driving and a fixed script.
+//   - A real browser and Socket.IO connection, so the server sees a genuine concurrent player.
+//   - Data assertions (room lists, search, ownership) use the page's authenticated request context.
+//   - HUD controls with stable ids are clicked for real.
+//   - The 3D scene is driven via ../lib/interact.js with real pointer input, so a failing world action
+//     would fail for a player too.
+//   - Scene arrangement ("place", "vantage", "look") uses ../lib/setup.js directly: arranging is set,
+//     acting is performed.
 //
 // Usage:
 //   node dev/scripts/playtest/runPlan.js <plan.json> [--out <result.json>]
@@ -35,10 +20,8 @@ const Setup = require("../lib/setup");
 const DEFAULT_BASE_URL = "https://staging.thingspool.net";
 const ARTIFACT_DIR = path.join(__dirname, "../../../temp/playtest/artifacts");
 
-// The staging server allows 20 requests per minute per IP, and every agent on this machine
-// shares one IP. Without pacing, a couple of agents spend their run discovering the rate
-// limiter rather than testing anything — so requests are spaced, and any 429 is reported as a
-// distinct outcome rather than being mistaken for a server fault.
+// Staging allows 20 requests/min per IP, shared by every agent on this machine, so requests are spaced
+// and 429s are reported as their own outcome.
 const MIN_REQUEST_SPACING_MS = 1200;
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -61,28 +44,20 @@ async function runPlan(plan)
         args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-webgl"],
     });
 
-    // Where this agent's cookies are kept between plans, when the plan asks for that.
-    //
-    // A plan is one browser from launch to close, which is usually right: each run starts from a
-    // clean visitor, the way a new player does. It is wrong for anything that has to happen to an
-    // account *between* two plans — a user promoted in the database, a guest left to age — because
-    // the session that account was reached through dies with the browser, and the next plan comes
-    // back as a stranger. Naming a session file makes the account outlive the plan.
+    // Optional cookie file persisting the session across plans, for scenarios that change an account
+    // between plans (e.g. promoting a user); otherwise each plan starts as a fresh visitor.
     const sessionFile = plan.sessionFile
         ? path.resolve(process.cwd(), plan.sessionFile)
         : null;
     const resumedSession = sessionFile != null && fs.existsSync(sessionFile);
 
-    // A distinct User-Agent per agent matters beyond realism: guest creation is capped per
-    // IP *and* User-Agent together, so agents sharing one string would share one small quota.
+    // Distinct User-Agents per agent: guest creation is capped per IP + User-Agent.
     const context = await browser.newContext({
         userAgent: plan.userAgent || `ThingspoolPlaytest-${agentName}/1.0`,
         ignoreHTTPSErrors: true,
         ...(resumedSession ? { storageState: sessionFile } : {}),
-        // There is no GPU here, so WebGL runs on a software rasterizer and the frame rate is
-        // decided almost entirely by how many pixels there are to fill. That makes the viewport
-        // a lever rather than a detail: a narrow one both stands in for a phone and buys back
-        // enough frames per second for anything that moves to move at a believable speed.
+        // Software WebGL: frame rate scales with pixel count, so a narrow viewport doubles as a phone and a
+        // speed-up.
         viewport: plan.viewport || { width: 1280, height: 800 },
     });
 
@@ -90,11 +65,8 @@ async function runPlan(plan)
     page.on("console", msg => { if (msg.type() === "error") consoleErrors.push(msg.text().substring(0, 500)); });
     page.on("pageerror", err => pageErrors.push(String(err).substring(0, 500)));
 
-    // A deployment can leave the server serving a bundle that asks for an asset the deployment
-    // did not carry — a renamed texture atlas, a new icon — and nothing else in this run would
-    // notice: the page still loads, the room still enters, and the missing thing is simply not
-    // drawn. So every request that failed outright, and every same-origin response that came
-    // back an error, is collected. Requests to other hosts are not this deployment's business.
+    // Collects failed requests and same-origin error responses, catching assets a deploy forgot (the page
+    // otherwise loads fine without them).
     page.on("requestfailed", req => {
         if (!req.url().startsWith(baseURL)) return;
         failedRequests.push({ url: req.url().substring(0, 200), reason: req.failure()?.errorText || "" });
@@ -135,19 +107,10 @@ async function runPlan(plan)
             {
                 case "start":
                 {
-                    // Visiting the root creates a guest and serves the game page in one step.
-                    //
-                    // An optional `ref` arrives as the query tag the server reads to decide which
-                    // traffic source this visitor came from, which is what puts the run's own
-                    // guests in a cohort of their own instead of among staging's ordinary
-                    // visitors. Attribution is first-touch, so it is only read here, on the visit
-                    // that mints the account — a `ref` on any later navigation is ignored.
-                    //
-                    // `devUser` picks one of the seeded dev accounts instead, which is how a run
-                    // against a local server becomes somebody other than a guest — an admin, above
-                    // all. The server honours it only in dev mode, so it does nothing against a
-                    // deployment; there, an account is reached by promoting one in the database
-                    // and resuming the session (see stagingAdmin.js's grant-admin).
+                    // Visiting the root creates a guest. An optional `ref` becomes the traffic-source tag
+                    // (read only on the account-minting visit), isolating the run's guests in their own cohort.
+                    // `devUser` picks a seeded dev account (dev mode only); on deployments, promote an
+                    // account instead (see stagingAdmin.js set-user-type).
                     const params = new URLSearchParams();
                     if (action.ref) params.set("ref", action.ref);
                     if (action.devUser != null) params.set("devuser", String(action.devUser));
@@ -160,11 +123,8 @@ async function runPlan(plan)
                     if (action.ref) record.ref = action.ref;
                     if (action.devUser != null) record.devUser = action.devUser;
 
-                    // A visit carrying no session of its own is answered by minting a guest, and
-                    // guest creation is capped per IP and per User-Agent. So a machine that has
-                    // already minted several today is refused the page itself — correct behaviour,
-                    // and worth saying here rather than leaving the run to fail several actions
-                    // later with a missing bridge, which reads like a broken deployment.
+                    // Guest creation is capped per IP and User-Agent, so a 401 here means the machine hit
+                    // that cap (not a broken deploy).
                     if (record.status === 401)
                     {
                         throw new Error(
@@ -180,8 +140,7 @@ async function runPlan(plan)
 
                 case "waitForRoom":
                 {
-                    // The app's own loading indicator coming down is the client-visible proof
-                    // that the server actually placed this user in a room.
+                    // The loading indicator clearing proves the server placed this user in a room.
                     await page.locator("#uiRoot").getByText("Loading...", { exact: true })
                         .waitFor({ state: "hidden", timeout: action.timeout || 45_000 });
                     record.socketConnected = await page.evaluate(() => {
@@ -189,11 +148,8 @@ async function runPlan(plan)
                         return io ? io.connected === true : false;
                     });
 
-                    // The indicator coming down says the room arrived, not that there is yet
-                    // anything standing in it: the contents spawn after, and the user's own
-                    // character with them. A world action run in that gap aims at a room that is
-                    // still filling, which fails as intermittently as the timing varies. So where
-                    // the bridge is installed, the room's own account of itself is waited for too.
+                    // The room arrived, but its contents (and character) spawn afterwards, so wait for the
+                    // bridge's room report too.
                     if (await Interact.hasBridge(page))
                         record.roomReady = await Interact.waitForRoom(page, action.timeout || 45_000);
                     break;
@@ -201,18 +157,15 @@ async function runPlan(plan)
 
                 case "skipTutorial":
                 {
-                    // A newly created guest starts in the single-player tutorial, not in a
-                    // multiplayer room. Until it leaves, navigating to a room ID appears to
-                    // succeed while the client stays in the tutorial — so any multiplayer or
-                    // room-list check run before this is testing nothing.
+                    // New guests start in the tutorial, where navigating to a room ID appears to succeed but
+                    // doesn't; multiplayer checks before this test nothing.
                     const skip = page.locator("#uiRoot").getByText("Skip Tutorial", { exact: true });
                     const appeared = await skip.waitFor({ state: "visible", timeout: action.timeout || 20_000 })
                         .then(() => true).catch(() => false);
 
                     if (!appeared)
                     {
-                        // Not an error: an agent reusing a session that already left the
-                        // tutorial has nothing to skip.
+                        // A reused session may have already left the tutorial.
                         record.skipped = "no tutorial active";
                         break;
                     }
@@ -229,12 +182,8 @@ async function runPlan(plan)
 
                 case "dismissPopups":
                 {
-                    // Arriving somewhere now opens a popup of its own the first time: a welcome
-                    // for the hub, another for the user's own room. They are correct behaviour,
-                    // but they sit over the whole screen, so a screenshot taken behind one shows
-                    // the popup rather than the room, and every later click lands on its backdrop.
-                    // What was on screen is recorded before it goes, so the report can say which
-                    // popup appeared rather than merely how many did.
+                    // First-arrival welcome popups cover the screen and intercept clicks, so each is
+                    // recorded and dismissed.
                     const backdrop = page.locator("#uiRoot div.z-40");
                     const dismissed = [];
 
@@ -254,9 +203,7 @@ async function runPlan(plan)
 
                 case "enterEditMode":
                 {
-                    // Edit mode opens on the user's own character, so the character's own controls
-                    // coming up is the client-visible proof that the mode arrived with a selection
-                    // under it — the switch alone would read "Edit" over a mode standing on nothing.
+                    // Edit mode opens on the character, so its controls appearing proves the mode has a selection.
                     await page.locator("#gameModeToggleSwitch").click({ timeout: action.timeout || 15_000 });
                     await page.locator("#customizePlayerOptions")
                         .waitFor({ state: "visible", timeout: 15_000 });
@@ -270,8 +217,7 @@ async function runPlan(plan)
                     await page.locator("#gameModeToggleSwitch").click({ timeout: action.timeout || 15_000 });
                     await page.locator("#customizePlayerOptions")
                         .waitFor({ state: "hidden", timeout: 15_000 });
-                    // The switch standing on "Play" again is what says the mode really ended, rather
-                    // than the character's panel merely having gone.
+                    // The switch reading "Play" again proves the mode ended (not just that the panel closed).
                     record.switchShowsEdit =
                         await page.locator("#gameModeToggleSwitch").getAttribute("aria-checked") === "true";
                     break;
@@ -279,10 +225,7 @@ async function runPlan(plan)
 
                 case "click":
                 {
-                    // The escape hatch for UI this harness does not name. A plan is written after
-                    // reading the run before it, so a selector belongs in the plan rather than
-                    // baked in here, where it would go stale on the next markup change and take a
-                    // whole run down with it.
+                    // Escape hatch for unnamed UI: selectors belong in plans, not hard-coded here.
                     const target = page.locator(action.selector).nth(action.nth || 0);
                     await target.click({ timeout: action.timeout || 10_000 });
                     if (action.settleMs) await sleep(action.settleMs);
@@ -291,8 +234,7 @@ async function runPlan(plan)
 
                 case "fill":
                 {
-                    // A text field, addressed by selector because a popup's fields are ordinary
-                    // inputs — the form around them is what carries a name (see Form's `id`).
+                    // Popup fields are plain inputs, addressed by selector (the form carries the id; see Form's `id`).
                     await Interact.ui.fill(page, action.selector, String(action.text ?? ""));
                     record.selector = action.selector;
                     if (action.settleMs) await sleep(action.settleMs);
@@ -301,10 +243,8 @@ async function runPlan(plan)
 
                 case "uiClick":
                 {
-                    // A HUD control, addressed by its element id and clicked only if the app is
-                    // actually offering it. These controls are divs, so a greyed-out one is clicked
-                    // quite happily by anything reading the DOM alone, and does nothing — which is
-                    // how a refusal comes to be recorded as a success (see Interact.ui.isEnabled).
+                    // Clicked only if enabled: these are divs, so a DOM-only click on a disabled one
+                    // "succeeds" and does nothing (see Interact.ui.isEnabled).
                     await Interact.ui.click(page, action.elementId, {
                         timeout: action.timeout,
                         settleMs: action.settleMs,
@@ -315,8 +255,7 @@ async function runPlan(plan)
 
                 case "expectDisabled":
                 {
-                    // The refusal itself is often the thing under test — a tool the app must not
-                    // offer to this user, in this room, on this surface.
+                    // The refusal itself is often what's under test.
                     await Interact.ui.waitFor(page, action.elementId, {timeout: action.timeout});
                     record.elementId = action.elementId;
                     record.enabled = await Interact.ui.isEnabled(page, action.elementId);
@@ -327,20 +266,13 @@ async function runPlan(plan)
 
                 case "say":
                 {
-                    // Chat is the one player-to-player action that is reachable without aiming at
-                    // the 3D scene, so unlike building it can be driven for real. It is also the
-                    // only way to exercise the chat path end to end — a message travels as a
-                    // change to the speaker's own player object, so nothing offline proves that a
-                    // real one leaves the browser.
-                    //
-                    // An empty message is ignored by the client in a multiplayer room, so the text
-                    // is required rather than defaulted.
+                    // Chat needs no aiming, so it's driven for real end to end (messages travel as player
+                    // object changes). Empty messages are ignored in multiplayer rooms, so text is required.
                     const message = String(action.message || "");
                     if (message.length === 0)
                         throw new Error("'say' needs a non-empty message");
 
-                    // Both controls carry stable element ids, so they are addressed by id rather
-                    // than by their visible text, which is localized.
+                    // Addressed by id, since visible text is localized.
                     await page.locator("#chatTextInput").fill(message, { timeout: action.timeout || 10_000 });
                     await page.locator("#chatSendButton").click({ timeout: action.timeout || 10_000 });
                     record.message = message;
@@ -409,17 +341,12 @@ async function runPlan(plan)
                 }
 
                 // ── The world ───────────────────────────────────────────
-                //
-                // Everything below aims through the page and acts through the browser (see
-                // lib/interact.js). Each records what it aimed at, so a plan that fails says which
-                // of the silent failures it hit — out of reach, hidden, or over the wrong thing —
-                // rather than only that nothing happened.
+                // Aims through the page and acts through the browser (see lib/interact.js); each records its
+                // aim, so a failure names its silent cause (out of reach, hidden, wrong target).
 
                 case "whoami":
                 {
-                    // Who the server thinks this session is, and what it is currently allowed to
-                    // do. The user id is what an admin promotion is applied to, so this is also the
-                    // first step of any scenario that needs one.
+                    // Who the server thinks this session is and what it may do; admin promotion targets the user id.
                     await Interact.waitForBridge(page, action.timeout || 30_000);
                     record.context = await Interact.call(page, "context");
                     break;
@@ -427,9 +354,8 @@ async function runPlan(plan)
 
                 case "reload":
                 {
-                    // A user's type is read fresh on every identified request and every socket
-                    // handshake, so a promotion made in the database takes effect on the next page
-                    // load and needs nothing restarted.
+                    // User type is read on every identified request and socket handshake, so a DB promotion
+                    // applies on reload.
                     const response = await page.reload({ waitUntil: "networkidle", timeout: 60_000 });
                     record.status = response?.status() ?? 0;
                     if (record.status === 429) rateLimitHits++;
@@ -441,8 +367,7 @@ async function runPlan(plan)
                     await Interact.waitForRoom(page, action.timeout || 45_000);
                     const reports = await Interact.call(page, "objects", action.objectType);
                     record.count = reports.length;
-                    // Trimmed to what a plan is written against: identity, what the object
-                    // carries, and whether it could be clicked from where the player stands.
+                    // Trimmed to identity, metadata, and clickability from the current position.
                     record.objects = reports.map(o => ({
                         objectId: o.objectId, objectType: o.objectType, metadata: o.metadata,
                         distance: Number(o.distance.toFixed(2)),
@@ -466,9 +391,7 @@ async function runPlan(plan)
                     }
                     catch (err)
                     {
-                        // Where the walk went, and what the target looked like at each step. An
-                        // approach that gives up otherwise leaves nothing behind but the position it
-                        // gave up from, which says very little about why.
+                        // The walk's steps, so a failed approach shows why.
                         if (err.steps) record.steps = err.steps;
                         throw err;
                     }
@@ -477,8 +400,7 @@ async function runPlan(plan)
 
                 case "clickSurface":
                 {
-                    // A patch of the room itself — a wall, a floor, the face of a block — which is
-                    // how anything hung on a surface gets somewhere to hang.
+                    // A room surface (wall, floor, block face) to hang things on.
                     const hit = await Interact.clickSurface(page, {
                         objectType: action.objectType,
                         grid: action.grid,
@@ -491,9 +413,7 @@ async function runPlan(plan)
 
                 case "clickSurfaceUntilEnabled":
                 {
-                    // Most of a room is surface that will not take the thing being placed, and the
-                    // app says which will by enabling the control. So the plan names the control
-                    // rather than a place, and the search is what finds somewhere it applies.
+                    // The plan names the control, and the search finds a surface where the app enables it.
                     try
                     {
                         const found = await Interact.clickSurfaceUntilEnabled(page, action.elementId, {
@@ -509,8 +429,7 @@ async function runPlan(plan)
                     }
                     catch (err)
                     {
-                        // How each candidate was refused is the finding here, so it is carried into
-                        // the record rather than left in the message.
+                        // How each candidate was refused is the finding, so it goes into the record.
                         if (err.tried) record.tried = err.tried.map(t => ({
                             quad: t.quad, outcome: t.outcome,
                         }));
@@ -520,9 +439,7 @@ async function runPlan(plan)
                 }
 
                 case "ensureEditMode":
-                    // Edit mode is held up by whatever is picked out, so letting that go ends it —
-                    // which a plan does whenever it taps the patch it already had. This is the way
-                    // back in, and it reports whether it was needed.
+                    // Deselecting ends edit mode; this re-enters it and reports whether that was needed.
                     record.reentered = await Interact.ensureEditMode(page);
                     record.gameMode = await Interact.gameMode(page);
                     break;
@@ -539,11 +456,8 @@ async function runPlan(plan)
                     await Interact.walk(page, action.keys || "KeyW", action.ms || 500);
                     break;
 
-                // Priming, not playing. A plan that opens by walking blindly away from the spawn
-                // wall is spending a minute to arrive somewhere it cannot name, and arriving
-                // somewhere slightly different each run; these say where to start instead. What the
-                // plan then tests still happens through real gestures — see dev/scripts/lib/setup.js
-                // for why the line falls there.
+                // Priming, not playing: start positions are set directly (see dev/scripts/lib/setup.js);
+                // tested actions still use real gestures.
                 case "place":
                     record.pose = await Setup.place(page, action.x, action.z, {
                         collisionLayer: action.collisionLayer,
@@ -574,8 +488,7 @@ async function runPlan(plan)
 
                 case "expectSelection":
                 {
-                    // What the app holds selected is the only proof a world click landed, and it is
-                    // what raises the HUD the next action drives.
+                    // The selection is the only proof a world click landed, and it drives the next action's HUD.
                     const want = action.selection || {};
                     const selection = await Interact.waitForSelection(page, (current) => {
                         if (want.voxelQuad) return current.voxelQuad != null;
@@ -598,11 +511,7 @@ async function runPlan(plan)
                     const file = path.join(ARTIFACT_DIR, `${agentName}-${action.name || index}.png`);
                     const buffer = await page.screenshot({ path: file, fullPage: false });
                     record.file = file;
-                    // A screenshot is only evidence if somebody looks at it, and the one failure
-                    // that does not need looking at is the blank one: a room that rendered nothing
-                    // compresses to almost nothing, while a room that rendered is a photograph of
-                    // a 3D scene and cannot. So the size is reported as a first reading, and the
-                    // image is still there to be read properly.
+                    // Byte size is a first check: a blank render compresses to almost nothing.
                     record.bytes = buffer.length;
                     break;
                 }
@@ -613,9 +522,7 @@ async function runPlan(plan)
 
                 case "end":
                 {
-                    // Closing the browser without this leaves the player in the room until the
-                    // server's stale-socket sweep notices, which shows up on staging as ghost
-                    // players and would be misread as a bug by the next run.
+                    // Leave explicitly, or the player lingers until the stale-socket sweep (ghosts on staging).
                     await page.evaluate(() => new Promise((resolve) => {
                         const io = (window).__socket_io_instance;
                         if (!io || io.disconnected) { resolve(); return; }
@@ -646,9 +553,7 @@ async function runPlan(plan)
         results.push(record);
     }
 
-    // Saved before the context is closed, and saved even when actions failed: a plan that broke
-    // halfway still minted the account the next plan is meant to pick up, and losing the session
-    // would mean starting that scenario over as a different user.
+    // Saved even when actions failed, since the minted account is what the next plan resumes.
     if (sessionFile != null)
     {
         fs.mkdirSync(path.dirname(sessionFile), { recursive: true });

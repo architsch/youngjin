@@ -13,10 +13,7 @@ export default interface ObjectTypeConfig
     objectType: string;
     persistent: boolean;
     autoUnload: boolean; // Whether the client-side object instance (i.e. GameObject) should automatically unload when the room unloads.
-    // How many of this kind of object one room may hold. What it bounds is not only the pool of
-    // mesh instances the type's objects are lent, but the clutter a room can be filled with and the
-    // size of the room's own stored contents — so it is a fact about the kind of object rather than
-    // about the drawing of it. Left unset by a kind of object a room holds no collection of.
+    // Per-room cap (mesh pool, clutter, stored size). Unset for types a room holds no collection of.
     maxCountPerRoom?: number;
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => boolean,
     canUserRemoveObject: (user: User, room: Room, obj: AddObjectSignal) => boolean,
@@ -30,11 +27,8 @@ export default interface ObjectTypeConfig
                 maxNumInstancesPerMesh: number,
                 codecType: InstancedMeshCompositionCodecType,
                 codecVersion: number,
-                // What an object looks like before anything has been chosen for it. Handed the whole
-                // object rather than one field of it, because different kinds of object are
-                // recognized by different things: a player by who he belongs to, a door by the room
-                // it stands in. Whatever is picked has to come out the same on every client and in
-                // every session, so this must be derived from the object rather than drawn freshly.
+                // Default appearance, derived deterministically from the object (e.g. owner or room) so
+                // it matches on every client and session.
                 generateDefaultParts: (obj: AddObjectSignal) =>
                     {params: InstancedMeshCompositionParams,
                         parts: InstancedMeshCompositionPart[]},
@@ -44,11 +38,8 @@ export default interface ObjectTypeConfig
                 checkLineOfSight: boolean,
                 prependUserNameToMessage: boolean,
             },
-            // Text written onto a patch of the object itself, drawn in the world rather than over
-            // it. What the text says is always the object's own "Label" metadata; what is declared
-            // here is where on the object that patch is and how big it is, in the object's own local
-            // space. The color is the one this kind of object is lettered in when nobody has said
-            // otherwise — an object may carry a "LabelColor" of its own, which wins.
+            // In-world label from the object's "Label" metadata: patch position and size in local space,
+            // and a default color (a "LabelColor" metadata value wins).
             labelText?: {
                 localOffset: {x: number, y: number, z: number},
                 size: {x: number, y: number},
@@ -56,24 +47,16 @@ export default interface ObjectTypeConfig
             },
             playerProximityDetector?: {
                 maxDist: number,
-                // How far from straight ahead the player may be looking and still count as looking
-                // at the object, and how far round the side it faces he may stand and still count
-                // as standing in front of it. Either left at or below zero is a question not asked.
+                // Max angles for "looking at" and "in front of"; <= 0 disables that check.
                 maxLookAngle: number,
                 maxFaceAngle: number,
-                // Whether the object also has to be in plain view, which costs a cast through the
-                // room and is worth asking only where something can come between the two.
+                // Line-of-sight check (costs a raycast).
                 checkLineOfSight: boolean,
             },
             orbitOccluder?: {},
-            // Light the object gives off into the room. What the light is like is the object's own
-            // metadata rather than a setting here, since two lamps of the same kind are lit
-            // differently — see the lamp's own util.
+            // Light parameters come from the object's metadata (see the lamp's util).
             lightSource?: {},
-            // A cosmetic bounce is a property of the object itself, not of who is watching it, so
-            // it belongs to every copy: the player character its owner sees in third person needs
-            // it as much as everybody else's does, and a thing that is springy is springy no matter
-            // who put it there.
+            // On every copy, including the owner's own character.
             easingMotion?: {},
         },
         spawnedByMe?: {
@@ -85,16 +68,8 @@ export default interface ObjectTypeConfig
             periodicTransformReceiver?: {},
         },
     },
-    // Everything about this kind of object that is a question of what it *means* rather than of how
-    // it is drawn or who may touch it: reading back the metadata it carries, and building one where
-    // the game needs one. It lives here so that a kind of object is described in one place — the
-    // permissions, the components, and the reading of the thing all sit together.
-    //
-    // The methods are the type's own, so they are reached through the type's own config module
-    // (`DoorObjectTypeConfig.util.getLabel(obj)`) rather than through a lookup by type index, which
-    // could only ever hand back a shape common to every type. Each config is declared with
-    // `satisfies ObjectTypeConfig`, which is what keeps those signatures intact through this
-    // deliberately loose declaration.
+    // Type-specific semantics (metadata reading, construction), accessed via the type's own config module
+    // (e.g. `DoorObjectTypeConfig.util.getLabel(obj)`); `satisfies ObjectTypeConfig` keeps signatures typed.
     util?: {[methodName: string]: (...args: any[]) => any},
 }
 

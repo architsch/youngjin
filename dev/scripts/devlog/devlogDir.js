@@ -1,16 +1,7 @@
 /**
- * Which dev-log directory the tooling is working in (shared by captureRunner.js and postLength.js).
- *
- * Dev-log posts are filed one year to a directory — `public/devlog-2026/`, `public/devlog-2027/`
- * and so on — each holding one `source.txt` and the screenshots its posts reference. Nothing
- * creates next year's directory on its own, because opening a year is not only a matter of making
- * a folder: the year also has to be registered in `src/server/ssg/data/libraryData.ts` before the
- * SSG will build pages out of it.
- *
- * So this module reports rather than decides. It prefers the current calendar year's directory
- * when that exists, falls back to the newest one that does, and says which case it landed in so a
- * caller can tell the difference between "working in this year" and "still writing into last
- * year's directory because nobody has opened this one yet".
+ * Which dev-log directory to work in (shared by captureRunner.js and postLength.js). Posts are filed per
+ * year (`public/devlog-<year>/`); a new year also needs a `src/server/ssg/data/libraryData.ts` entry, so
+ * this prefers the current year's directory, falls back to the newest existing one, and reports which.
  */
 const fs = require("fs");
 const path = require("path");
@@ -33,16 +24,13 @@ function listDevlogYears()
 }
 
 /**
- * The dev-log directory to work in.
- *
- * Returns, with every path repo-relative so it reads the same in a log line as in a command:
+ * The dev-log directory to work in. Returns repo-relative paths:
  *   year            the year whose directory was picked
  *   dir             "public/devlog-<year>"
  *   source          "public/devlog-<year>/source.txt"
- *   exists          whether that directory is actually there
+ *   exists          whether that directory exists
  *   currentYear     this calendar year
- *   isCurrentYear   whether the picked year is this one — false means a new year is due, and
- *                   opening it takes a libraryData.ts entry as well as a directory
+ *   isCurrentYear   false means a new year is due (a directory plus a libraryData.ts entry)
  */
 function resolveDevlogDir()
 {

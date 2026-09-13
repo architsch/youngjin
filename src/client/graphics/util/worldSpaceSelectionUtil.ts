@@ -14,38 +14,21 @@ import VoxelQuadSelection from "../types/gizmo/voxelQuadSelection";
 
 const cameraPosTemp = new THREE.Vector3();
 
-// What an object with no collider of its own is framed by, so that selecting one still gives the
-// camera something of a size to orbit around.
+// Framing size for collider-less objects.
 const defaultObjectHalfSize = {x: 0.5, y: 0.5, z: 0.5};
 
-// A bare place in the room, which has no extent to be framed by and is left to the minimum distance
-// to decide how much of its surroundings comes into view.
+// A bare point has no extent; the minimum distance decides the framing.
 const pointTargetHalfSize = {x: 0, y: 0, z: 0};
 
-// How far back the camera sits from a selection, at the least. A block or a picture is small, and
-// framing one by its own size alone leaves it filling the screen with nothing around it — which is
-// the wrong view for something being edited in place, where the wall it belongs to and the room it
-// stands in are what the edit is judged against. On a screen held upright, where the narrow side of
-// the view governs, this is roughly the distance at which a few cells of the room fit across.
+// Minimum orbit distance for in-place edits, so the surrounding wall and room stay in view.
 const SELECTION_ORBIT_MIN_DISTANCE = 5;
 
-// How far the user may reach to select something while the camera orbits a selection, as a multiple
-// of how far the camera stands from that selection. The margin above 1 covers what lies around the
-// edges of the view rather than at its center, which is further from the camera than the selection
-// it is arranged around.
+// Selection reach while orbiting, as a multiple of orbit distance (>1 covers the edges of the view).
 const selectReachPerOrbitDistance = 1.75;
 
-//------------------------------------------------------------------------
-// What the user currently has picked out in the room, and where the camera stands in answer to it.
-//
-// Only one thing is ever selected — a voxel-quad, or an object of the room, the user's own character
-// included — so each kind hands the other over to this module as it takes the selection for itself.
-//
-// What a selection *means* is a matter of which mode the user is in (see GameModeUtil): during play
-// mode it is a way of looking at something, while edit mode is what gives the camera over to it.
-// So the camera is pointed from here rather than from any one selection's own listener, since one
-// selection replacing another is two changes and only their outcome matters.
-//------------------------------------------------------------------------
+// The current selection (one voxel quad or one object) and the camera's response to it. The camera
+// is pointed from here, not per selection, because replacing a selection is two changes and only the
+// outcome matters.
 
 export default class WorldSpaceSelectionUtil
 {
@@ -60,9 +43,7 @@ export default class WorldSpaceSelectionUtil
         ObjectSelection.unselect(force);
     }
 
-    // Drops every selection but the named one, which is what each kind calls upon becoming the
-    // selection. Forced, since this is not the user giving a selection up but it being replaced:
-    // a scripted step holding one in place has no say over what the user picks instead of it.
+    // Called by a kind when it takes the selection. Forced: replacement overrides scripted locks.
     static unselectOthers(keptSelection: SelectionKind): void
     {
         if (keptSelection != "voxelQuad" && VoxelQuadSelection.isSelected())
@@ -71,15 +52,8 @@ export default class WorldSpaceSelectionUtil
             ObjectSelection.unselect(true);
     }
 
-    // How far into the room the user may reach to select something, measured from the camera to the
-    // point he clicked.
-    //
-    // Ordinarily this is an arm's reach into the room, a fixed distance that stops a click from
-    // picking out something across the room that the user can barely make out. But an orbit around
-    // a selection is the user's to move: he may pull the camera right back to see what he is
-    // editing among its surroundings, and everything he has thereby brought into view is something
-    // he expects to be able to click. So while the camera orbits a selection, the reach grows in
-    // step with how far back the camera has been taken, and whatever the user can see he can select.
+    // Max click distance from the camera: a fixed arm's reach, or while orbiting, proportional to the
+    // orbit distance so anything the user can see can be selected.
     static getMaxSelectDist(): number
     {
         return Math.max(MAX_WORLDSPACE_SELECT_DIST,
@@ -87,8 +61,7 @@ export default class WorldSpaceSelectionUtil
     }
 }
 
-// How far the camera currently stands from what it is orbiting, or zero whenever it is not
-// orbiting anything.
+// Zero when not orbiting.
 function getSelectionOrbitDist(): number
 {
     const mode = cameraModeObservable.peek();
@@ -108,9 +81,7 @@ function syncCameraModeWithSelection(): void
     const framing = getSelectionOrbitFraming();
     const mode = cameraModeObservable.peek();
 
-    // A free camera is not bound to a selection, which is the whole of what makes it free: it is
-    // aimed by whatever set the mode, and a selection landing under it is not a reason to swing it
-    // somewhere else. Only the thing that put the camera in this mode takes it out again.
+    // A free camera belongs to whoever set that mode; selections don't move it.
     if (mode.type === "free")
         return;
 
@@ -121,10 +92,8 @@ function syncCameraModeWithSelection(): void
         return;
     }
 
-    // A selection announced again without having moved (an edit to the selected object re-announces
-    // it, so that the menu showing it reads the new value) leaves the camera alone: pointing it at
-    // the very same volume would frame an orbit it is already in, and cut short the glide into that
-    // orbit if one were still under way.
+    // A re-announced but unmoved selection (e.g. after a metadata edit) keeps the current orbit, so
+    // an in-progress glide isn't cut short.
     if (mode.type === "orbit" && targetsMatch(mode.target, framing.target))
         return;
 
@@ -137,21 +106,13 @@ function targetsMatch(a: AABB3, b: AABB3): boolean
         a.halfSize.x == b.halfSize.x && a.halfSize.y == b.halfSize.y && a.halfSize.z == b.halfSize.z;
 }
 
-// The volume the camera should orbit around, and how far back it should stand from it at the least;
-// null whenever the camera has no business orbiting anything.
-//
-// Outside edit mode there is nothing to frame, however much is selected: a click on the scenery
-// during play mode is not an edit, and must not take the run of the room away from the user (which
-// is what an orbit does, the player standing still throughout).
+// Orbit target and minimum distance, or null outside edit mode (play-mode clicks never orbit).
 function getSelectionOrbitFraming(): {target: AABB3, minDistance?: number} | null
 {
     if (gameModeObservable.peek() != "edit")
         return null;
 
-    // A scripted step may hold the camera on a place of its own choosing for as long as it lasts
-    // (see orbitCameraTargetOverrideObservable), which outranks the selection: the step is showing
-    // the user something he has not picked out yet, and would have no way of picking out if he
-    // could not see it. Framed like a place, with no size of its own to be framed by.
+    // A scripted step's target override outranks the selection, framed like a point.
     const targetOverride = orbitCameraTargetOverrideObservable.peek();
     if (targetOverride)
     {
@@ -184,15 +145,8 @@ function getSelectionOrbitFraming(): {target: AABB3, minDistance?: number} | nul
         const gameObject = objectSelection.gameObject;
         const colliderState = PhysicsColliderStateUtil.getObjectColliderState(
             gameObject.params.objectTypeIndex, gameObject.position, gameObject.direction);
-        // The center is the object's own position vector rather than a copy of it — the two are the
-        // same point, since a collider is centered on what it belongs to — so the orbit keeps the
-        // object in frame even if something nudges it meanwhile.
-        //
-        // How far back to stand follows from what the object is. A thing fixed to the room's fabric
-        // is being edited in place, and the wall or floor around it is what the edit is judged
-        // against, so the camera keeps its distance. A body standing in the room — the user's own
-        // character — is looked at for its own sake instead, and its own size alone decides the
-        // framing, with no floor under it to pull the camera further out than it needs to be.
+        // Uses the object's live position vector so the orbit follows it. Wall/floor-fixed objects
+        // keep a minimum distance for context; rigidbodies (e.g. characters) are framed by size alone.
         const standsInTheRoom = colliderState?.colliderConfig.colliderType === "rigidbody";
         return {target: {
             center: gameObject.position,
@@ -200,12 +154,7 @@ function getSelectionOrbitFraming(): {target: AABB3, minDistance?: number} | nul
         }, minDistance: standsInTheRoom ? 0 : SELECTION_ORBIT_MIN_DISTANCE};
     }
 
-    // In edit mode with nothing picked out, the camera holds the view it already has. This is the
-    // moment between one selection being dropped and the next taking its place — adding a block
-    // moves the selection onto what was just built — and a camera that answered it would swing away
-    // and back again for no reason, while the mode itself never wavered. It is also the instant the
-    // mode opens in, before its first selection has landed, where the view to hold is the
-    // first-person one the user is still standing in.
+    // Edit mode with nothing selected (between selections, or as the mode opens): keep the current view.
     const mode = cameraModeObservable.peek();
     return (mode.type === "orbit")
         ? {target: mode.target, minDistance: mode.minDistance}
@@ -215,8 +164,6 @@ function getSelectionOrbitFraming(): {target: AABB3, minDistance?: number} | nul
 voxelQuadSelectionObservable.addListener("worldSpaceSelectionUtil", syncCameraModeWithSelection);
 objectSelectionObservable.addListener("worldSpaceSelectionUtil", syncCameraModeWithSelection);
 
-// The mode the user is in decides what a selection is worth to the camera, so a change of mode is a
-// change of framing even when the selection under it stayed exactly as it was. The same goes for a
-// step taking the camera for itself, and for giving it back.
+// Mode changes and step overrides change framing even when the selection doesn't.
 gameModeObservable.addListener("worldSpaceSelectionUtil", syncCameraModeWithSelection);
 orbitCameraTargetOverrideObservable.addListener("worldSpaceSelectionUtil", syncCameraModeWithSelection);

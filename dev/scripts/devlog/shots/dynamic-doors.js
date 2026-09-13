@@ -1,17 +1,8 @@
 /**
- * Screenshots for the "Dynamic Doors" dev-log post (public/devlog-2026).
- *
- * Two sets, built in the sandbox and photographed:
- *
- *   - `room`    a hall whose walls carry doors on three sides, each one named and finished
- *               differently. The post's opening claim is that rooms now open onto one another, so
- *               the frame has to hold several doors at once and show that no two are alike.
- *   - `placing` a corridor of doors receding away, which is what "navigating a vast labyrinth of
- *               rooms" looks like when it is a picture rather than a sentence.
- *
- * The third image the post carries, `finish`, is the door-customizing panel — a picture of the
- * admin's tools rather than of a room, so it cannot be taken here. It has a script of its own:
- * `dynamic-doors-admin.js`, which opens a generated hub on the admin seat and performs the gestures.
+ * Screenshots for the "Dynamic Doors" dev-log post (public/devlog-2026), as two sandbox sets:
+ *   - `room`    a hall with differently named and finished doors on three sides
+ *   - `placing` a corridor of doors receding into the distance
+ * The third image, `finish` (the admin's door panel), comes from `dynamic-doors-admin.js`.
  *
  *   node dev/scripts/devlog/captureRunner.js dev/scripts/devlog/shots/dynamic-doors.js
  */
@@ -25,14 +16,11 @@ module.exports = {
         await hideHUD();
         await setup.texturePack("default");
 
-        // "oak hall" — a warm stone wall over a wood floor, which is the pair with the most contrast
-        // between the two big surfaces every one of these frames is mostly made of.
+        // "oak hall": warm stone walls over wood, the highest-contrast pair for these frames.
         const palette = (await setup.palettes())[1];
         const timber = palette.prop;
 
-        // The twelve finishes a door can be given. Chosen rather than left to chance: a door nobody
-        // picks the colors of takes one at random from its own id, and in a post whose whole subject
-        // is that doors are customizable, the dice regularly hand three in a row the same paint.
+        // Door finishes, chosen explicitly (random per-id finishes often repeat).
         const styles = await setup.doorStyles();
 
         // ── 1. The hall ─────────────────────────────────────────────────────────────────────
@@ -41,23 +29,19 @@ module.exports = {
             wallTextureIndex: palette.wall, floorTextureIndex: palette.floor,
         });
 
-        // A step running the whole width of the far wall. It is what the three doors along that wall
-        // stand on — `addObject` takes a door's height from the floor in front of it, so the step
-        // raises them together and their bottom edges stay on the line where wall meets floor.
+        // A step along the far wall. `addObject` sets a door's height from the floor in front of it, so the
+        // doors on that wall stay on the floor line.
         await setup.addBlocks({ ...hall.walls["+z"], row: hall.walls["+z"].row - 1,
             col: hall.col + 1, cols: hall.cols - 2, collisionLayer: 1, layers: 1, textureIndex: timber });
 
-        // Pilasters between the doorways, turning a flat wall into three recessed bays. They stand
-        // clear of every door: block work in front of one would hide it, and `addObject` refuses
-        // that outright rather than letting it into the frame.
+        // Pilasters between the doorways, clear of every door (`addObject` refuses doors blocked by block work).
         for (const col of [16, 20])
         {
             await setup.addBlocks({ row: hall.walls["+z"].row - 1, col,
                 collisionLayer: 1, layers: 11, textureIndex: timber });
         }
 
-        // A cornice around the top of the room, which is what stops the walls reading as four flat
-        // planes meeting at the ceiling.
+        // A cornice, so the walls don't read as flat planes.
         for (const band of [
             { row: hall.row + 1, col: hall.col + 1, rows: 1, cols: hall.cols - 2 },
             { row: hall.row + hall.rows - 2, col: hall.col + 1, rows: 1, cols: hall.cols - 2 },
@@ -66,8 +50,7 @@ module.exports = {
         ])
             await setup.addBlocks({ ...band, collisionLayer: 12, layers: 1, textureIndex: timber });
 
-        // A runner down the middle of the floor: the floor is a layer of blocks like any other, so
-        // re-laying a strip of it in another material is a strip taken away and put back.
+        // A floor runner: a strip of floor blocks re-laid in another material.
         const runner = { row: hall.row + 1, col: 17, rows: hall.rows - 2, cols: 3, collisionLayer: 0, layers: 1 };
         await setup.removeBlocks(runner);
         await setup.addBlocks({ ...runner, textureIndex: 52 });
@@ -87,9 +70,7 @@ module.exports = {
                 metadata: { Label: label, ...styles[style] } });
         }
 
-        // A ceiling of its own. The sandbox room has one already, but it is finished in whatever
-        // palette the room was generated from rather than in the one this set is dressed out of —
-        // and it shows above the walls as a band of an unrelated colour.
+        // Its own ceiling (the sandbox's is finished in an unrelated palette).
         await setup.addBlocks({ row: hall.row + 1, col: hall.col + 1,
             rows: hall.rows - 2, cols: hall.cols - 2,
             collisionLayer: 15, layers: 1, textureIndex: palette.ceiling });
@@ -100,16 +81,12 @@ module.exports = {
         await setup.addObject({ ...hall.walls["+z"], type: "Canvas", col: 18,
             collisionLayer: 10, metadata: { ImagePath: "1/22" } });
 
-        // Inside the room and off to one side, so the far wall runs away to a vanishing point and
-        // the near corner carries the left of the frame.
+        // Inside the room, off to one side, so the far wall recedes.
         log(`hall: ${(await setup.camera({
             x: 14.6, y: 2.7, z: 15.4, atX: 19.5, atY: 2.9, atZ: 22.4,
         })).distance.toFixed(1)} to the far wall`);
 
-        // A canvas fetches its picture over the network and draws it once it arrives, so a frame
-        // taken too soon after one goes up catches the placeholder — an empty white rectangle in the
-        // middle of the shot, which is the one fault here that looks like a broken game rather than
-        // a badly composed picture.
+        // Canvases load their image over the network; shooting too soon catches a white placeholder.
         await shot("room", { settleMs: 2500 });
 
         // ── 2. The corridor ─────────────────────────────────────────────────────────────────
@@ -120,8 +97,7 @@ module.exports = {
             wallTextureIndex: palette.wall, floorTextureIndex: palette.floor,
         });
 
-        // Doors down both sides, staggered so that neither wall answers the other, and one closing
-        // the far end. Seven finishes and seven names, which is the point of the frame.
+        // Staggered doors on both sides and one at the end: seven finishes and names.
         const corridorDoors = [
             { ...hallway.walls["-x"], row: 11, label: "Library", style: 2 },
             { ...hallway.walls["-x"], row: 15, label: "Workshop", style: 6 },
@@ -138,8 +114,7 @@ module.exports = {
                 metadata: { Label: label, ...styles[style] } });
         }
 
-        // Its own ceiling, then bands across it between the doorways — the corridor equivalent of
-        // the hall's cornice, and what gives the length of it a rhythm to recede along.
+        // A ceiling and bands between the doorways, giving the corridor a rhythm.
         await setup.addBlocks({ row: hallway.row + 1, col: hallway.col + 1,
             rows: hallway.rows - 2, cols: hallway.cols - 2,
             collisionLayer: 15, layers: 1, textureIndex: palette.ceiling });
@@ -149,16 +124,13 @@ module.exports = {
                 collisionLayer: 14, layers: 1, textureIndex: timber });
         }
 
-        // A runner the length of it, for the same reason the hall has one: a corridor of one
-        // material photographs as a tunnel of one colour however good the perspective is.
+        // A runner, so the corridor isn't one color.
         const hallwayRunner = { row: hallway.row + 1, col: 17, rows: hallway.rows - 2, cols: 1,
             collisionLayer: 0, layers: 1 };
         await setup.removeBlocks(hallwayRunner);
         await setup.addBlocks({ ...hallwayRunner, textureIndex: 52 });
 
-        // Near the middle of the corridor's width rather than against one wall: off-axis enough that
-        // the two sides do not mirror each other, close enough to centre that the nearest door is
-        // not a slab across the edge of the frame.
+        // Near the corridor's center line but off-axis, so the sides don't mirror and the nearest door isn't cut off.
         log(`corridor: ${(await setup.camera({
             x: 17.1, y: 2.6, z: 9.6, atX: 17.9, atY: 1.9, atZ: 24.5,
         })).distance.toFixed(1)} down its length`);

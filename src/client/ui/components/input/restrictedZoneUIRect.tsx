@@ -1,36 +1,24 @@
 import RestrictedZone from "../../../../shared/voxel/types/restrictedZone";
 
-// Which edges a handle moves. A corner takes two, the middle of an edge takes one, and the body
-// takes all four together — which is what makes dragging the inside of the rectangle a move rather
-// than a resize.
+// Edges moved by each handle (corners move two, edge midpoints one; the body moves all four).
 export type ZoneHandle = "nw" | "n" | "ne" | "w" | "e" | "sw" | "s" | "se";
 
 export const ZONE_HANDLES: ZoneHandle[] = ["nw", "n", "ne", "w", "e", "sw", "s", "se"];
 
-// How big a handle is drawn, in pixels: sized for a fingertip. Everything else about the plan's size
-// follows from it — a voxel has to be drawn larger than this, or the handles of a small zone pile up
-// on one another, and once a voxel is that large the whole room no longer fits on a phone's screen.
+// Fingertip-sized handles; this drives the plan's cell size.
 export const HANDLE_SIZE_PX = 14;
 
-// How many pixels one voxel takes on the plan, and how far the plan is inset within the area that
-// scrolls. The inset is what the handles of a zone lying against the wall of the room hang into,
-// rather than being cut off at the panel's edge.
+// Plan cell size, and the inset that edge handles hang into.
 export const CELL_SIZE_PX = 20;
 export const PLAN_INSET_PX = HANDLE_SIZE_PX / 2 + 1;
 
-// Says that an element belongs to a zone rather than to the plan underneath it, which is how a press
-// meant to drag a zone is told apart from one meant to scroll the plan (see RestrictedZoneGrid).
+// Marks zone elements, so zone drags can be told apart from plan scrolls (see RestrictedZoneGrid).
 export const ZONE_RECT_MARKER_ATTRIBUTE = "data-restricted-zone-rect";
 
-// One restricted zone as it is drawn on the room's plan: a filled rectangle with a bright edge,
-// and — while it is the one picked out — eight handles to take hold of.
-//
-// It is the marquee of an image editor rather than a control of its own: it knows how to draw itself
-// and where a press landed, and the grid it sits in works out what that press means.
+// One zone on the plan: a filled rectangle, with eight handles when selected. The grid interprets presses.
 export default function RestrictedZoneUIRect({zone, selected, onGrab}: Props)
 {
-    // Rows run along z and columns along x, the same way round as the room itself, so the plan is
-    // laid out the way somebody standing in the room would find it.
+    // Rows map to z and columns to x, matching the room.
     const left = PLAN_INSET_PX + zone.colMin * CELL_SIZE_PX;
     const top = PLAN_INSET_PX + zone.rowMin * CELL_SIZE_PX;
     const width = (zone.colMax - zone.colMin + 1) * CELL_SIZE_PX;
@@ -49,8 +37,7 @@ export default function RestrictedZoneUIRect({zone, selected, onGrab}: Props)
             style={{
                 width: HANDLE_SIZE_PX,
                 height: HANDLE_SIZE_PX,
-                // Straddling the edge rather than sitting inside it, so a zone only one cell wide
-                // still has handles that can be told apart and taken hold of.
+                // Centred on the edge, so handles on one-cell zones stay distinguishable.
                 left: `calc(${HANDLE_ANCHORS[handle].x} - ${HANDLE_SIZE_PX / 2}px)`,
                 top: `calc(${HANDLE_ANCHORS[handle].y} - ${HANDLE_SIZE_PX / 2}px)`,
             }}
@@ -59,8 +46,7 @@ export default function RestrictedZoneUIRect({zone, selected, onGrab}: Props)
     </div>
 }
 
-// The rectangle is a value drawn inside the well the plan is, so it wears neither of the surface
-// treatments: what says it is picked out is a brighter edge and a stronger fill, not depth.
+// No surface depth treatment; selection shows as a brighter edge and fill.
 const UNSELECTED_CLASS = "bg-red-500/25 border-2 border-red-400/70";
 const SELECTED_CLASS = "bg-red-500/45 border-3 border-red-300";
 

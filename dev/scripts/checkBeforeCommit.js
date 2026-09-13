@@ -22,10 +22,8 @@ function checkBundle(pathStr)
     }
 }
 
-// `.nvmrc` is the single source of truth for the Node.js major version — CI reads it
-// via `actions/setup-node`, and the VPS runtime is asserted against it at deploy time.
-// Verify that the two things it cannot reach on its own agree with it: package.json's
-// declared engine range, and the Node.js actually running this commit's build.
+// `.nvmrc` is the source of truth for the Node.js major version (CI and the VPS use it); checks that
+// package.json's engines range and the running Node.js agree with it.
 function checkNodeVersion()
 {
     const expectedMajor = fs.readFileSync(path.join(__dirname, "../../.nvmrc"), "utf8")

@@ -23,20 +23,14 @@ import { clientFeatureFlagsObservable, objectSelectionObservable } from "../../.
 import PopupUtil from "../../../util/popupUtil";
 import VoxelQuadSelection from "../../../../graphics/types/gizmo/voxelQuadSelection";
 
-// An <input> wants its bounds as text, and both of the lamp's dials are chosen from a short run of
-// whole values (see LampLightUtil) — so each of them is also short enough for the slider to mark
-// every value it has.
+// Input bounds as strings; the ranges are short enough to tick every value (see LampLightUtil).
 const MIN_INTENSITY_ATTRIBUTE = String(MIN_LAMP_INTENSITY);
 const MAX_INTENSITY_ATTRIBUTE = String(MAX_LAMP_INTENSITY);
 const MIN_RANGE_ATTRIBUTE = String(MIN_LAMP_RANGE);
 const MAX_RANGE_ATTRIBUTE = String(MAX_LAMP_RANGE);
 
-// The tools for a lamp somebody has picked out: take it down, or change what it gives off.
-//
-// Everything about the light is one setting stored and written together, because the lit face of
-// the lamp takes its color from the same value the light does — see the lamp's own util. How much light
-// there is and how far it carries are separate dials within that, so a dim wash and a tight bright
-// pool are both askable for (see LampLightUtil).
+// Lamp tools: remove, or change its light (one stored setting that also colors the lit face;
+// intensity and range are separate dials, see LampLightUtil).
 export default function LampEditOptions(props: {selection: ObjectSelection})
 {
     const obj = props.selection.gameObject.params;
@@ -46,9 +40,7 @@ export default function LampEditOptions(props: {selection: ObjectSelection})
         range: WallLampObjectTypeConfig.util.getRange(obj),
     }));
 
-    // Written straight through rather than deferred, the way a room's own lighting is: a lamp is
-    // adjusted a step at a time — a swatch picked, a handle let go of, a number typed — rather than
-    // dragged against a live preview, and there are only three values to send.
+    // Written immediately (not deferred): lamp edits are discrete, with few values.
     const apply = (edit: (next: typeof light) => void) => {
         const next = {...light};
         edit(next);

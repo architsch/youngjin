@@ -21,11 +21,8 @@ export default function AtlasCellSprite(props: {
         if (props.highlight && props.autoScrollToHighlight)
         {
             const element = myRef.current;
-            // Kept to the strip this cell lives in. Naming only the axis the strip scrolls on
-            // leaves the other one at its default, which asks for the cell at the *top* of the
-            // view — and the browser answers that by scrolling every ancestor that can scroll,
-            // the full-screen UI layer included: it is `overflow: hidden`, which the user cannot
-            // scroll but code still can, so the whole HUD is dragged along with the cell.
+            // Specify both axes: leaving one at its default scrolls every scrollable ancestor,
+            // including the overflow-hidden full-screen UI layer.
             if (element)
                 element.scrollIntoView({ inline: "center", block: "nearest" });
             else
@@ -35,8 +32,7 @@ export default function AtlasCellSprite(props: {
 
     const displayRow = props.flipRow ? (numRows - props.atlasCellRow - 1) : props.atlasCellRow;
 
-    // I am hard-coding CSS styles here instead of using Tailwind's utility classes,
-    // since the parameters must be dynamically determined (and thus cannot be preloaded during Tailwind's CSS build process)
+    // Inline styles, since these values are dynamic and Tailwind can't generate them.
     return <div ref={myRef} onClick={props.onClick} style={{
         aspectRatio: props.atlasCellWidth / props.atlasCellHeight,
         backgroundImage: `url(${props.atlasImageURL})`,

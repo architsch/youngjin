@@ -1,19 +1,8 @@
 /**
- * Scenario tests: FTUE (first-time user experience)
- *
- * The FTUE system shows a coach mark next to a control that a first-time user has not used yet,
- * and remembers — on the user's record — which of those features they have been through, so each
- * one is only ever advertised until it has been discovered. See docs/networking/ftue.md.
- *
- * Covers:
- * - Client side (FTUEUtil): which character each FTUE element is stored as, the local record of
- *   what the user has been through, and when a coach mark is (and is not) put on screen.
- * - The client/server agreement: every element the client can send is one the server accepts.
- * - Server side (UserCommandUtil): the add-FTUE-element command appends to the user's record —
- *   in memory as well as in storage — and turns away duplicates and anything that is not a
- *   storable element.
- * - Persistence: restarting the tutorial wipes the record, the record survives the user wire
- *   format, and user records written before the field existed migrate to an empty one.
+ * Scenario tests: FTUE (see @docs/networking/ftue.md).
+ * Covers: FTUEUtil's element chars, local record and coach mark timing; client/server agreement on
+ * elements; the add-FTUE-element command (memory and storage, rejecting duplicates and invalid input);
+ * restart, wire format and migration.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
@@ -43,8 +32,7 @@ const _mockDBUserUtil = vi.hoisted(() => ({
 }));
 
 // ─── Apply mocks ──────────────────────────────────────────────────────────
-// The client-side util is exercised against a stand-in for the running app: a plain user object
-// it can mutate, and a socket client that just records what it was asked to send.
+// The client util runs against a plain user object and a socket client that records sends.
 
 vi.mock("../../../src/client/app", () => ({
     default: {
@@ -58,9 +46,7 @@ vi.mock("../../../src/client/networking/client/socketsClient", () => ({
     },
 }));
 
-// The real observable module reaches into the 3D client (three.js, gizmo types), which has no
-// place in a node test run — but the observable semantics do matter here, so the channel the
-// coach marks travel on is a real Observable.
+// The real module pulls in three.js; the coach mark channel stays a real Observable.
 vi.mock("../../../src/client/system/clientObservables", async () => {
     const Observable = (await import("../../../src/shared/system/types/observable")).default;
     return {
@@ -105,8 +91,7 @@ vi.mock("../../../src/server/user/util/userTokenUtil", () => ({
 
 vi.mock("../../../src/server/user/util/userIdentificationUtil", () => ({
     default: {
-        // Auth itself is not what these tests are about: a pre-set userString stands in for an
-        // identified user, exactly as the real middleware would leave it.
+        // A pre-set userString stands in for the auth middleware.
         identifyAnyUser: async (req: any, res: any, next: () => void) => {
             if (req.userString) next();
             else res.status(401).send("Unauthorized");
@@ -207,9 +192,7 @@ beforeEach(() => {
 
 describe("FTUE element records (client)", () => {
     it("stores each element as its own letter", () => {
-        // Letters only, one per element: the user's record is embedded verbatim in the page that
-        // boots the client app, so a quote or a backslash in it would break that page. Distinct,
-        // because two features sharing a character would silence each other.
+        // One distinct letter per element: the record is embedded verbatim in the boot page.
         const chars = new Set<string>();
         for (const code of allFTUEElementCodes)
         {
@@ -223,12 +206,8 @@ describe("FTUE element records (client)", () => {
     });
 
     it("stores every element as the same character it has always been stored as", () => {
-        // The mapping is by position and users already have these characters in their records, so a
-        // code may never be reassigned. This pins the whole mapping rather than any one element,
-        // because the way it breaks is renumbering: a retired element leaves a hole behind, and
-        // closing that hole up would silently shift every element after it onto another feature's
-        // stored character — handing returning users guidance they have seen and hiding guidance
-        // they have not.
+        // Codes are positional and already stored, so the whole mapping is pinned: closing the gap left by
+        // a retired element would shift every later element onto another feature's character.
         const storedChars: Record<string, string> = {};
         for (const [name, code] of Object.entries(FTUEElementCodeEnumMap))
         {
@@ -301,8 +280,7 @@ describe("FTUE coach marks (client)", () => {
     });
 
     it("stays quiet about a feature the user has already been through", () => {
-        // Coach marks are scheduled ahead of time, so the user may discover the feature before the
-        // mark is due — at which point there is nothing left to say.
+        // A mark scheduled for an already-discovered feature must not appear.
         FTUEUtil.tryAddFTUEElement(FTUEElementCodeEnumMap.AddCanvas);
         FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.AddCanvas, "addCanvasButton", "Hang a picture.");
 
@@ -310,8 +288,7 @@ describe("FTUE coach marks (client)", () => {
     });
 
     it("leaves the marks already on screen alone when another one appears", () => {
-        // Unrelated features fall due independently of one another, so a mark arriving must not
-        // take the place of one the user may still be reading.
+        // A new mark must not replace one that is still up.
         FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.ChangeCanvasImage, "changeCanvasImageButton", "Your picture.");
         FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.ChangeCanvasFrame, "changeCanvasFrameButton", "Your frame.");
 
@@ -320,8 +297,7 @@ describe("FTUE coach marks (client)", () => {
     });
 
     it("keeps one mark per control, no matter how often the trigger fires", () => {
-        // A re-triggered mark must neither double the bubble nor extend the stay of the one that
-        // is already up, since each mark is taken back down by a clock of its own.
+        // A re-triggered mark must not duplicate the bubble or extend its stay.
         FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.CustomizePlayer, "customizePlayerButton", "Your look.");
         FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.CustomizePlayer, "customizePlayerButton", "Your look.");
 
@@ -345,10 +321,8 @@ describe("FTUE coach marks (client)", () => {
     });
 
     it("leaves a mark up when its target goes off screen, and takes it down only when told to", () => {
-        // A mark has no clock of its own: losing sight of the control is not what ends it, so the
-        // UI that scheduled it has to take it down explicitly once the control is beyond use.
-        // Otherwise the mark would come straight back with the control, skipping the wait that
-        // earned it the first time.
+        // Hiding the control doesn't end a mark, so the UI must dismiss it (or it returns with the control,
+        // skipping its wait).
         FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.MyRoomSettings, "roomSettingsButton", "Your room.");
         FTUEUtil.hideCoachMark(FTUEElementCodeEnumMap.MyRoomSettings);
 
@@ -362,8 +336,7 @@ describe("FTUE coach marks (client)", () => {
     });
 
     it("shows a mark without recording anything, so the control still has to be used", () => {
-        // Showing guidance is an offer, not the experience itself: every element is recorded by the
-        // user's own use of its control, never by the mark going up.
+        // Elements are recorded by using the control, never by showing the mark.
         FTUEUtil.tryShowCoachMark(FTUEElementCodeEnumMap.CustomizePlayer, "customizePlayerButton", "Your look.");
 
         expect(FTUEUtil.hasFTUEElement(FTUEElementCodeEnumMap.CustomizePlayer)).toBe(false);
@@ -375,8 +348,7 @@ describe("FTUE coach marks (client)", () => {
 
 describe("FTUE client/server agreement", () => {
     it("the server accepts every element the client can send", async () => {
-        // The client owns which elements exist and the server owns what may be stored, so the two
-        // could drift apart silently — with the user's progress quietly never being saved.
+        // Client and server own the element list separately and could drift, silently dropping progress.
         for (const code of allFTUEElementCodes)
         {
             _clientUser.current = makeUser();
@@ -406,9 +378,7 @@ describe("FTUE user command (server)", () => {
     });
 
     it("accumulates elements across one session rather than overwriting", async () => {
-        // The user object lives for the whole socket session, so an element added earlier must
-        // still be there when the next one arrives — otherwise the last write wins and everything
-        // the user did before it is forgotten.
+        // The user object lives for the session, so earlier elements must persist (not last-write-wins).
         const user = makeUser();
         await sendAddFTUEElement(user, "A");
         await sendAddFTUEElement(user, "B");
@@ -434,8 +404,7 @@ describe("FTUE user command (server)", () => {
     });
 
     it("stores nothing that is not a single letter", async () => {
-        // Only letters may reach the record: it is embedded verbatim in the page that boots the
-        // client app, so a quote or a backslash would break that page for this user.
+        // Only letters: the record is embedded verbatim in the boot page.
         for (const element of ["", "AB", "1", "\"", "\\", "<", " ", "$"])
         {
             const user = makeUser();
@@ -480,15 +449,13 @@ describe("FTUE persistence", () => {
     });
 
     it("treats a user string written before the record existed as an empty record", () => {
-        // Fields are positional, so a string from a client/server that predates the FTUE field
-        // simply ends where the field would have been.
+        // Fields are positional, so a pre-FTUE string simply ends early.
         const legacyUserString = `user-1 TestUser ${UserTypeEnumMap.Member} test@test.com  room-1`;
         expect(User.fromString(legacyUserString).ftue).toBe("");
     });
 
     it("migrates a user record written before the field existed to an empty record", async () => {
-        // Existing users start out with everything still to discover, rather than being treated as
-        // having already seen it all.
+        // Existing users start with everything undiscovered.
         let row: any = {
             id: "user-1", userName: "TestUser", userType: UserTypeEnumMap.Member,
             email: "test@test.com", tutorialStep: 3, totalPlaytimeMs: 1000,

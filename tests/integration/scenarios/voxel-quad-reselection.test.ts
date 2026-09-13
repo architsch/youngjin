@@ -1,14 +1,7 @@
 /**
- * Scenario tests: voxelQuad auto-reselection
- *
- * Whenever the user's current selection is interrupted — by an edit of their own, by an edit
- * another client made, or by the object they had selected going away — the selection is supposed
- * to move to a nearby voxelQuad rather than simply vanish. These tests walk every way a selection
- * can be interrupted and check that something visible ends up selected on the other side of it.
- *
- * The logic under test is client-side, so the three client modules that need a browser are stubbed
- * out and everything else — room generation, the voxel update rules, the selection search itself —
- * runs for real.
+ * Scenario tests: voxelQuad auto-reselection. When a selection is interrupted (the user's own edit,
+ * another client's edit, or the selected object going away), a nearby visible quad is selected instead.
+ * Browser-bound client modules are stubbed; generation, update rules and the search run for real.
  */
 import { describe, it, expect, beforeEach, vi, Mock } from "vitest";
 
@@ -16,8 +9,7 @@ vi.mock("../../../src/client/graphics/graphicsManager", async () => {
     const THREE = await import("three");
     const camera = new THREE.PerspectiveCamera();
     const scene = new THREE.Scene();
-    // A voxel edit invalidates the room's light map (see LightBlockMap). Nothing here draws
-    // anything, so the map only has to exist and take the message.
+    // Voxel edits invalidate the light map (see LightBlockMap); a stub suffices.
     const lightBlockMap = { requestRecomputation() {}, resetForRoom(_voxels?: unknown) {},
         getNearbyLightAt(_worldPos: unknown, out: any) { return out.setRGB(0, 0, 0); } };
     return { default: { getCamera: () => camera, getScene: () => scene,
@@ -71,8 +63,7 @@ import {
     isQuadVisible, quadIndexOf, userAddsBlockAt, userRemovesBlockAt,
 } from "../helpers/selectionHarness";
 
-// Who the assertions below act as. They are not about who is asking — the editing utilities want
-// the person as well as the role he holds, so somebody has to be named.
+// The acting user (editing utilities require one).
 const actingUser = createEditingUser();
 
 const ROOM_ID = "reselection-room";
@@ -110,12 +101,10 @@ beforeEach(() => {
 
     clientFeatureFlagsObservable.tryRemove(FeatureFlag.DisableVoxelQuadSelectionChange);
     clientFeatureFlagsObservable.tryRemove(FeatureFlag.DisableAllSelectionChange);
-    // Every interruption walked here happens to a selection, and selections are made in edit mode
-    // alone (see GameModeUtil).
+    // Selections exist only in edit mode (see GameModeUtil).
     gameModeObservable.set("edit");
     voxelQuadSelectionObservable.set(null);
-    // The room these tests use is a hub, which everyone may build in, so who is asking is not what
-    // any of them turns on — but somebody has to be, since every edit is checked against a person.
+    // A hub, so anyone may build; an acting user is still required.
     (App.getUser as Mock).mockReturnValue(actingUser);
     useRoom(createRoom(ROOM_ID));
     placeCameraAt(NUM_VOXEL_COLS * 0.5, 2, NUM_VOXEL_ROWS * 0.5);
@@ -203,8 +192,7 @@ describe("reselection after the user's own voxel edit", () => {
     });
 
     it("keeps a selection after removing a floating block seen from underneath", () => {
-        // A block with empty space below it: the face looking down at that gap is the one selected,
-        // and the neighbour it points at sits in a layer that holds nothing.
+        // A block over empty space: its downward face is selected, pointing at an empty layer.
         buildPillar(room, 10, 5, COLLISION_LAYER_MIN + 2, COLLISION_LAYER_MIN + 2);
         const quadIndex = quadIndexOf(10, 5, "y", "-", COLLISION_LAYER_MIN + 2);
         expect(isQuadVisible(room, quadIndex)).toBe(true);
@@ -221,10 +209,8 @@ describe("reselection after the user's own voxel edit", () => {
         expectSomethingVisibleIsSelected();
     });
 
-    // On removal, the placement menu looks for a replacement on the far side of the block that just
-    // went away, so that the face carries on pointing at the user. For a wall block on the room's
-    // outer ring, seen from inside, that lands one voxel outside the grid; the coords are clamped
-    // back onto it, which hands the search the removed block's own voxel to work outwards from.
+    // After a removal the search starts beyond the removed block; for a boundary block seen from inside
+    // that's outside the grid, so coords are clamped back to the removed block's voxel.
     it("keeps a selection after removing a boundary wall block seen from inside", () => {
         const quadIndex = quadIndexOf(10, 0, "x", "+", 3);
         expect(isQuadVisible(room, quadIndex)).toBe(true);
@@ -263,11 +249,8 @@ describe("reselection after the user's own voxel edit", () => {
 // ─── The whole wall surface, swept ──────────────────────────────────────────
 
 describe("reselection after removing any wall block in the room", () => {
-    // The boundary walls are where losing the selection went unnoticed: the neighbour a removal
-    // reaches for lies outside the grid along the room's whole outer ring, and the ring is most of
-    // what a user ever clicks on. Sampling a few faces is not enough to know that the fallback
-    // holds, so every visible, removable quad of all four walls is walked here — which is the walls
-    // as the user sees them, their room-facing side, the outer shell being drawn from neither side.
+    // Walks every visible, removable room-facing quad of all four boundary walls (where the neighbour
+    // lies outside the grid), since sampling isn't enough.
     it("never leaves the user with nothing selected, on any of the four walls", () => {
         const lost: string[] = [];
         const hidden: string[] = [];
@@ -285,9 +268,8 @@ describe("reselection after removing any wall block in the room", () => {
             wallCoords.push([row, NUM_VOXEL_COLS - 1]);
         }
 
-        // Each case is undone by putting the block back rather than by regenerating the room, which
-        // is what keeps a sweep this size quick. The restore is exact: an add and a remove both
-        // recompute the affected faces from the collision mask, so nothing of the removal survives.
+        // Each case is undone by re-adding the block (exact, since faces are recomputed from the collision
+        // mask), keeping the sweep fast.
         const pristineQuads = Uint8Array.from(room.voxelQuads);
 
         for (const [row, col] of wallCoords)
@@ -358,8 +340,7 @@ describe("reselection after another client's voxel edit", () => {
     });
 
     it("keeps a selection when a remote client removes a boundary wall block", async () => {
-        // The same wall block whose local removal loses the selection: over the wire the ideal quad
-        // is the destroyed one itself, so the search has a voxel to work outwards from.
+        // Over the wire the ideal quad is the destroyed one, so the search has a voxel to start from.
         const quadIndex = quadIndexOf(10, 0, "x", "+", 3);
         forceSelect(room, quadIndex);
 
@@ -488,10 +469,8 @@ describe("reselection after the selected object goes away", () => {
     });
 
     it("gives up rather than misfiring when an object sits off the far edge of the grid", () => {
-        // A position on the grid's outer boundary rounds to a voxel that does not exist, and the
-        // search reports failure instead of reaching for one. Nothing selectable can stand there
-        // today — a wall-attached object is refused a spot outside the room — so this records the
-        // edge of what the search covers rather than a case a user can reach.
+        // A position on the grid's outer boundary finds no voxel, so the search fails; unreachable today
+        // (wall attachments can't be placed outside the room).
         expect(VoxelQuadSelection.trySelectBestQuadNearby({x: NUM_VOXEL_COLS, y: 1.25, z: 10.5})).toBe(false);
         expect(VoxelQuadSelection.trySelectBestQuadNearby({x: 10.5, y: 1.25, z: NUM_VOXEL_ROWS})).toBe(false);
     });
@@ -520,11 +499,8 @@ describe("interruptions that are meant to leave nothing selected", () => {
 });
 
 // ─── Interruptions while selection changes are held back ────────────────────
-//
-// The tutorial pins the selection in place with these flags while it points the user at it, and the
-// freeze covers auto-reselection too: an edit made during a frozen step leaves the outline on a quad
-// that has since been buried or destroyed, until the step itself moves the selection (which it does
-// through its own "select_voxel_quad" action, being the party that put the freeze there).
+// The tutorial's freeze also blocks auto-reselection, so the outline stays on a buried or destroyed quad
+// until the step moves it (via its own "select_voxel_quad" action).
 
 describe("interruptions while selection changes are disabled", () => {
     it("holds the selection in place when the user's own edit destroys the quad", () => {

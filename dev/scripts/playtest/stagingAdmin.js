@@ -1,17 +1,10 @@
-// Direct database manipulation for the playtest skill's "server admin" role.
+// Direct database manipulation for the playtest skill's "server admin" role, producing states normal
+// play can't (e.g. rows at outdated versions, which exercise migration and its write-back).
 //
-// Why this exists: the states most worth testing are the ones a human cannot conveniently
-// produce by playing. A row left at an outdated version is the clearest example — every
-// document the app writes is written at the current version, so the migration path and its
-// fire-and-forget write-back are only ever exercised by rows that predate a schema change.
-// Seeding those rows directly is the only way to put that code under test on a real server.
+// SAFETY: handles come only from lib/dbGuard.js, which resolves `staging` or `local` (there is no live
+// target) and confines them to that namespace.
 //
-// SAFETY: this script never constructs a database handle of its own. It asks lib/dbGuard.js,
-// which resolves a target (`staging` or `local` — there is no live target) and hands back
-// handles that can only address that target's namespace. See that file for the reasoning and
-// for the two layers outside it.
-//
-// There are two independent versioning schemes, and both are worth seeding:
+// Two versioning schemes are seeded:
 //   - Firestore rows carry a `version` field, migrated by the DBVersionMigration arrays.
 //   - Room content blobs in Cloud Storage carry a leading version byte, migrated by the
 //     decoder/converter chains on VoxelGrid and ObjectGroup.
@@ -31,47 +24,36 @@
 //   node dev/scripts/playtest/stagingAdmin.js list
 //   node dev/scripts/playtest/stagingAdmin.js cleanup
 //
-// Every command prints JSON on stdout so an agent can consume it directly, and every command's
-// output names the target it addressed.
+// Every command prints JSON on stdout, naming the target it addressed.
 
 const DBGuard = require("./lib/dbGuard");
 const { generateRoomContent } = require("./generateRoomContent");
 const { MILESTONES } = require("../analytics/funnelReport");
 
-// Stamped on every document this tool writes. `cleanup` deletes on this field alone, so a
-// document that was not seeded here can never be removed by it. Version migrations copy
-// unknown fields through untouched, so the marker survives a write-back — which is also
-// what lets `verify-migration` tell a migrated seed apart from an organic document.
+// Stamped on every document written here; `cleanup` deletes by it alone. Migrations copy unknown fields,
+// so it survives write-backs (letting `verify-migration` identify seeds).
 const MARKER = "__playtestSeed";
 
-// The namespace prefix for the resolved target, filled in once the guard has resolved it.
-// Names are composed from it; the guard is what checks them.
+// The resolved target's prefix; names are composed from it and checked by the guard.
 let PREFIX = null;
 
 function collection(name) { return `${PREFIX}${name}`; }
 
-// Downgrades copy the original blob aside first, under a path that belongs to this tool alone,
-// so `restore-content` can always put the room back exactly as it was.
+// Downgrades back up the original blob under this tool's own path, for `restore-content`.
 function backupRoot() { return `${PREFIX}playtest_backup`; }
 
-// Current versions, mirrored from the migration arrays (their length is the current version).
-// Kept as literals rather than imported because those modules are TypeScript; `inspect`
-// reports what it finds so a drift between the two shows up rather than passing silently.
+// Current versions (migration array lengths), as literals since those modules are TypeScript; `inspect`
+// reports what it finds, so drift shows.
 const CURRENT_VERSION = { users: 5, rooms: 4 };
 
 const ROOM_TYPE_REGULAR = 1;
 
 // ─── Row builders ───────────────────────────────────────────────────────
-// Each builder produces a row exactly as that version's schema had it — the fields a later
-// migration adds are absent, and the fields a later migration drops are present. A seed that
-// merely set `version: 0` on a current-shaped row would migrate to a no-op and prove nothing.
+// Rows exactly as each version's schema had them (later-added fields absent, later-dropped fields
+// present); merely setting `version: 0` on a current row would migrate as a no-op.
 
-// Rows written before the identity rule was enforced carry a copy of their own key as a field, and
-// dropping that copy is the whole subject of the v3 -> v4 step on both collections. A seed without
-// one is therefore a seed that step has nothing to do to — the migration still bumps the version,
-// but the thing it exists for is never reproduced, and nothing checks that the write-back leaves it
-// gone. The value seeded is deliberately not the document's key: that is the shape the migration
-// describes, and it also proves the caller is handed the key rather than the field.
+// Pre-v4 rows carry a copy of their key as a field, which v3 -> v4 drops; seeds include it so that step
+// has work. The value deliberately differs from the key, proving callers get the key, not the field.
 function addLegacyStoredID(row, version, currentVersion, runID)
 {
     if (version < currentVersion)
@@ -119,9 +101,7 @@ function buildRoom(version, runID, index, ownerUserID)
         [MARKER]: runID,
     };
 
-    // v0 -> v1 adds ownerUserName by looking the owner up. Left absent so that migration
-    // actually performs its lookup — which is the step that makes several stale rooms
-    // sharing one owner fire concurrent reads, the contention this seeding is meant to probe.
+    // Absent so v0 -> v1 performs its owner lookup (concurrent reads across stale rooms sharing an owner).
     if (version >= 1) row.ownerUserName = `Playtest-${runID}-owner`;
     if (version >= 2) row.editors = [];
     if (version >= 3) row.roomName = "";
@@ -130,24 +110,15 @@ function buildRoom(version, runID, index, ownerUserID)
 }
 
 // ─── Room content ───────────────────────────────────────────────────────
-//
-// A seeded room's content comes from the game's own generator — the same RoomGenerationUtil the
-// server runs when a user creates a room, producing the same encoding DBRoomUtil writes. That
-// matters for more than realism. Generation does not only fill a room with voxels and objects;
-// it decides room-level parameters that the contents were chosen to suit, the texture pack above
-// all. Every voxel's texture is an index into one specific pack's atlas, so a room whose row
-// names one pack and whose blob was built against another is a room that could not have been
-// generated, and testing against it means testing against a state the game cannot reach.
-//
-// Which is also why this returns the parameters alongside the bytes: the row has to carry what
-// generation decided, not a default the seeder picked.
+// Content comes from the real generator, which also decides room-level parameters (the texture pack), so
+// those are returned with the bytes for the row: a row and blob built against different packs describe
+// an unreachable state.
 function generateContentFor(roomName, ownerUserID, ownerUserName)
 {
     return generateRoomContent(roomName, ROOM_TYPE_REGULAR, ownerUserID, ownerUserName);
 }
 
-// Applies a generated room to the pair of places it has to land: the blob in Cloud Storage, and
-// the generation-decided parameters on the Firestore row.
+// Writes the blob to Cloud Storage and the generated parameters to the row.
 function applyGeneratedContent(row, generated)
 {
     row.texturePackPath = generated.texturePackPath;
@@ -171,13 +142,10 @@ async function inspect(db)
             const v = String(data.version);
             byVersion[v] = (byVersion[v] || 0) + 1;
             if (data[MARKER]) seeded++;
-            // A row still holding a copy of its own key is one no read has rewritten since the
-            // step that drops it. Counted here because it says how far that sweep has got through
-            // the organic data, which no single seeded row can.
+            // Rows still holding a stored id show how far the v3 -> v4 sweep has got through organic data.
             if (data.id !== undefined) withStoredID++;
         });
-        // Anything below the current version is a row the next read will migrate — which is
-        // precisely the population that drives the write-back path.
+        // Rows below the current version migrate on their next read (driving the write-back path).
         const outdated = Object.entries(byVersion)
             .filter(([v]) => Number(v) < CURRENT_VERSION[name])
             .reduce((sum, [, count]) => sum + count, 0);
@@ -208,29 +176,18 @@ async function seedUsers(db, version, count, runID)
     return { collection: collection("users"), version, count, runID, docIDs: created };
 }
 
-// Creates whole owners — a Member account paired with the room it owns — rather than users and
-// rooms independently.
-//
-// This is the population that the room-list UI is hard to test without. Staging runs in
-// production mode, where the dev OAuth bypass is disabled, so a browser session can only ever
-// become a guest; guests cannot own rooms, and the list is a list of owned rooms. Producing
-// twenty distinct room owners through the real sign-in flow would mean twenty Google accounts.
-// Writing the pair directly is the only practical way to fill the list, and it also lets the
-// list be filled with rows at *outdated* versions, which no amount of real play can produce.
-//
-// `--with-content` generates each room properly, and is usually wanted. Without it a seeded room
-// is listed but cannot be entered: the server finds no blob, logs a load failure, and falls back
-// to a hub. That fallback is correct behaviour, but it makes the seeded rooms decorative, and it
-// puts a recurring error in the log that later baselines would inherit.
+// Seeds Member accounts paired with owned rooms. Staging can only mint guests (no dev OAuth bypass) and
+// guests can't own rooms, so this is how the room list gets filled (at outdated versions too).
+// `--with-content` generates each room (usually wanted): without a blob, entering falls back to a hub and
+// logs a load error that later baselines would inherit.
 async function seedPopulation(db, bucket, version, count, runID, options)
 {
     const batch = db.batch();
     const created = [];
     const blobs = [];
 
-    // Users and rooms do not share a schema version, so one --version cannot mean the same thing
-    // to both. It is read as "no newer than this": a version past a collection's current one would
-    // seed a row from the future, which no migration knows how to bring back.
+    // Users and rooms version separately, so --version means "no newer than" (a future version can't
+    // migrate).
     const userVersion = Math.min(version, CURRENT_VERSION.users);
     const roomVersion = Math.min(version, CURRENT_VERSION.rooms);
 
@@ -248,9 +205,7 @@ async function seedPopulation(db, bucket, version, count, runID, options)
         batch.set(userRef, user);
 
         const room = buildRoom(roomVersion, runID, i, userRef.id);
-        // The denormalized owner name is what the list renders, so at versions that have the
-        // field it must agree with the user document — a mismatch would look like a UI bug
-        // rather than the seeding artifact it is.
+        // The list renders the denormalized owner name, so it must match the user document.
         if (roomVersion >= 1) room.ownerUserName = user.userName;
         if (options.persist) room.__playtestPersist = true;
 
@@ -258,10 +213,7 @@ async function seedPopulation(db, bucket, version, count, runID, options)
 
         if (options.withContent)
         {
-            // Each room is generated from its own seed, so the population comes out as varied
-            // as an organic one: different layouts, different texture packs, different numbers
-            // of hung canvases. Seeding one interior copied N times would make every list entry
-            // open on the same room and would hide anything that depends on the differences.
+            // Each room from its own seed, so the population varies like organic rooms.
             const generated = generateContentFor(`Playtest-${runID}-${i}`, userRef.id, user.userName);
             applyGeneratedContent(room, generated);
             blobs.push({ roomID: roomRef.id, content: generated.content });
@@ -332,32 +284,12 @@ async function seedRooms(db, bucket, version, count, runID, ownerUserID, options
     };
 }
 
-// Reads every seeded document back and reports whether the server has since migrated and
-// written it back. This is the assertion the whole seeding exercise exists to make: the row
-// should have advanced to the current version *in storage*, not merely in the reply the
-// client received. A row still sitting at its seeded version after the server has read it
-// means the write-back silently failed.
 // ─── Who a session is allowed to be ─────────────────────────────────────
-//
-// A browser session on staging can only ever become a guest, because staging runs in production
-// mode and the dev user switch is off. That puts everything reserved for the other two kinds of
-// user out of reach of a playtest: the doors a Hub is joined to the rest of the world by, and the
-// settings of a room nobody owns, which are an admin's; and every check that turns on being
-// registered rather than on being an admin, which needs a member to be told apart from an admin at
-// all — a guest is refused a layer earlier and proves neither.
-//
-// There is no need for a new way in, because the product already has one, and it is exactly this:
-// nothing in the game ever makes an admin, and the one in the local dev seed exists because such an
-// account is promoted by hand in the database. So a run mints an ordinary guest through the real
-// page, changes what that guest is here, and reloads. Every request the server serves afterwards
-// reads the user's type back out of the database — the identification path on every HTTP route, and
-// the handshake on every new socket — so the change takes effect on a reload with nothing restarted
-// and no code that ships knowing anything about it.
-//
-// Two things keep it from reaching anybody real. It refuses an account with an email address, which
-// is what a registered person has and a throwaway guest does not. And it stamps the seed marker, so
-// the existing cleanup deletes the promoted account along with everything else the run created —
-// leaving no standing admin behind on a server that is reachable from the internet.
+// Staging sessions can only be guests (production mode), which puts admin- and member-only checks out of
+// reach. As in production (admins are promoted by hand in the DB), a run mints a guest through the real
+// page, changes its type here, and reloads; the server reads user type on every request and socket
+// handshake, so nothing restarts. Safety: accounts with an email address are refused, and the seed
+// marker makes `cleanup` delete the promoted account.
 
 const PRIOR_USER_TYPE_FIELD = "__playtestPriorUserType";
 const USER_TYPE_BY_NAME = { admin: 0, member: 1, guest: 2 };
@@ -387,8 +319,7 @@ async function setUserType(db, userID, typeName, runID)
 
     await ref.update({
         userType,
-        // Only the first change records what was there originally, so a run that promotes twice
-        // still restores to the type the account was actually minted with.
+        // Only the first change records the original type, so repeated promotions still restore correctly.
         ...(before[PRIOR_USER_TYPE_FIELD] === undefined
             ? { [PRIOR_USER_TYPE_FIELD]: before.userType } : {}),
         [MARKER]: runID,
@@ -429,6 +360,8 @@ async function restoreUserType(db, userID)
     return { userID, userName: before.userName, userType: before[PRIOR_USER_TYPE_FIELD] };
 }
 
+// Reports whether each seeded document was migrated and written back in storage; a row still at its
+// seeded version after a server read means the write-back failed silently.
 async function verifyMigration(db)
 {
     const results = {};
@@ -442,10 +375,7 @@ async function verifyMigration(db)
                 runID: data[MARKER],
                 version: data.version,
                 migrated: data.version === CURRENT_VERSION[name],
-                // The version bump is only half of what the last step is for. A row that came out
-                // current but still carrying a copy of its own key means the write-back stored the
-                // row as the reader had it, identity included — the exact byproduct that step
-                // exists to clear, silently reintroduced.
+                // A current row still carrying its stored id means the write-back reintroduced it.
                 storedIDRemains: data.id !== undefined,
             };
         });
@@ -475,12 +405,8 @@ async function list(db)
     return results;
 }
 
-// Documents seeded with `--persist` are left alone unless `--all` is given. The distinction is
-// not cosmetic: a population seeded at the current version is a reusable fixture, because
-// nothing about reading it changes it. A row seeded at an *outdated* version is single-use —
-// the first read migrates it and writes it back at the current version, after which it is no
-// longer the thing the test needed. Those must be re-seeded per run, so they are never
-// persistent.
+// `--persist` documents are kept unless `--all`: current-version seeds are reusable fixtures, while
+// outdated seeds migrate on first read and so are never persistent.
 async function cleanup(db, bucket, runID, includePersistent)
 {
     const results = {};
@@ -489,8 +415,7 @@ async function cleanup(db, bucket, runID, includePersistent)
     for (const name of ["users", "rooms"])
     {
         const snap = await db.collection(collection(name)).where(MARKER, "!=", null).get();
-        // Filtering in memory keeps the delete set derived from the marker query above, so a
-        // document without the marker can never enter it.
+        // Filtered from the marker query's results, so unmarked documents can never be deleted.
         const targets = snap.docs.filter(doc => {
             const data = doc.data();
             if (runID && data[MARKER] !== runID) return false;
@@ -525,34 +450,20 @@ async function cleanup(db, bucket, runID, includePersistent)
 }
 
 // ─── Acquisition analytics ──────────────────────────────────────────────
-//
-// A playtest drives real guests through the real page, so it moves the funnel that
-// ServerAnalyticsManager records: arriving, leaving the tutorial, entering a room. That makes a
-// playtest the only place the analytics path is exercised end to end — a browser, the server, and
-// the database it writes through — and checking it costs one read.
-//
-// A run's own visitors are told apart from staging's by the ref tag the plan's `start` action
-// carries. The tag has to be one no organic visitor could arrive with, so it is composed from a
-// reserved prefix, and cleanup deletes on that prefix alone: a cohort document without it is
-// somebody's real traffic and is never touched.
+// Playtests drive real guests through the funnel ServerAnalyticsManager records, exercising analytics
+// end to end. A run's visitors carry a ref tag with a reserved prefix, and cleanup deletes only that prefix.
 const PLAYTEST_REF_PREFIX = "playtest-";
 
-// The server rebuilds a ref tag rather than trimming it — anything outside a-z0-9_- is dropped and
-// the result is capped at 32 characters — so a tag that is not written in that alphabet is not the
-// tag the cohort ends up under. Composing it through the same rule here is what keeps the tag the
-// plan sends and the tag this reads back the same string.
+// Composed with the server's sanitizing rule (a-z0-9_- only, capped at 32 chars), so the sent and
+// read-back tags match.
 function playtestRef(runID)
 {
     const cleaned = String(runID || "").toLowerCase().replace(/[^a-z0-9_-]/g, "");
     return `${PLAYTEST_REF_PREFIX}${cleaned}`.slice(0, 32);
 }
 
-// The assertion a tagged playtest exists to make: the run's visitors reached the milestones the
-// plan drove them through, and they are filed under the run's own source rather than under direct.
-//
-// Reports what it found rather than deciding a verdict. Which milestones *should* be there depends
-// on what the plan did — a plan that never left the tutorial is not a broken funnel — and only the
-// agent that wrote the plan knows that.
+// Reports the milestones the run's visitors reached under the run's own source. No verdict: the expected
+// milestones depend on the plan, which only its agent knows.
 async function verifyFunnel(db, runID)
 {
     const refTag = runID ? playtestRef(runID) : null;
@@ -573,8 +484,7 @@ async function verifyFunnel(db, runID)
         refTag: refTag || "(all sources)",
         cohortDocuments: cohorts.length,
         cohorts: cohorts.map(c => ({ id: c.id, source: c.source, cohortDay: c.cohortDay, counts: c.counts || {} })),
-        // Named through the report tool's own table, so there is one list of milestone letters in
-        // the tooling rather than two that can disagree.
+        // Named via the report tool's table, so there's one milestone list.
         reached: MILESTONES
             .filter(m => totals[m.code] > 0)
             .map(m => ({ code: m.code, key: m.key, label: m.label, count: totals[m.code] })),
@@ -582,8 +492,7 @@ async function verifyFunnel(db, runID)
     };
 }
 
-// Deletes only cohort documents whose source carries the reserved prefix. Organic traffic — which
-// on staging is whoever happened to open the site — cannot be named by this.
+// Deletes only cohort documents with the reserved prefix; organic traffic can't be named.
 async function cleanupAcquisition(db)
 {
     const snap = await db.collection(collection("acquisition")).get();
@@ -597,29 +506,14 @@ async function cleanupAcquisition(db)
 }
 
 // ─── Room content versioning (Cloud Storage binary) ─────────────────────
-//
-// A content blob is VoxelGrid's encoding followed by ObjectGroup's, and each begins with its
-// own version byte. Only the VoxelGrid one sits at a fixed offset (byte 0) — reaching
-// ObjectGroup's would mean decoding the entire voxel grid first — so that is the one these
-// commands address, and it is the one with a live migration path today.
-//
-// Rewriting byte 0 downward manufactures an old blob rather than a corrupt one only when the two
-// versions are read by the same decoder. Then the body layout is identical and the version byte is
-// genuinely all that separates them, so what comes back is a real old room and the converter chain
-// has real work to do on it.
-//
-// Across a change of decoder it manufactures corruption instead. The header would claim a layout
-// the body is not written in, and the decoder would read a room's worth of bytes as the wrong
-// fields — which is not an old room, and tests nothing that migrating one exercises. So the
-// downgrade is refused there rather than written, and the versions each decoder covers are listed
-// below so that adding a decoder means extending this rather than discovering it afterwards.
-//
-// Cross-decoder migration is covered instead by tests/integration/scenarios/voxel-grid-migration.test.ts,
-// against fixtures produced by the old encoder itself — see that fixture directory's README.
+// A content blob is VoxelGrid's encoding then ObjectGroup's, each with a version byte; only VoxelGrid's
+// is at a fixed offset (byte 0), so these commands address it. Rewriting it downward yields a genuine old
+// room only between versions sharing a decoder (identical body layout); across decoders it yields
+// corruption, so that downgrade is refused. Cross-decoder migration is covered by
+// tests/integration/scenarios/voxel-grid-migration.test.ts instead.
 const CONTENT_FILE = "content.bin";
 
-// voxel-grid format version -> the decoder that reads it. Versions sharing a decoder share a body
-// layout; versions that do not, do not.
+// Voxel-grid format version -> decoder. Versions sharing a decoder share a body layout.
 const VOXEL_GRID_DECODER_BY_VERSION = { 0: "decoder_1", 1: "decoder_1", 2: "decoder_2" };
 
 function contentPath(roomID) { return `${collection("rooms")}/${roomID}/${CONTENT_FILE}`; }
@@ -680,9 +574,7 @@ async function downgradeContent(bucket, roomID, toVersion)
             `tests/integration/scenarios/voxel-grid-migration.test.ts against real old-encoder fixtures.`);
     }
 
-    // Back the original up before touching it, and never overwrite an existing backup —
-    // a second downgrade of the same room must not replace the pristine copy with a
-    // already-downgraded one.
+    // Back up the original first, never overwriting an existing backup with a downgraded copy.
     const backup = bucket.file(backupPath(roomID));
     const [backupExists] = await backup.exists();
     if (!backupExists)
@@ -733,8 +625,7 @@ async function main()
 {
     const command = process.argv[2];
 
-    // No handle is constructed here. The guard resolves the target and returns handles that
-    // cannot address anything outside it.
+    // The guard resolves the target and returns handles confined to it.
     const { db, bucket, target, describe } = DBGuard.connect(process.argv);
     PREFIX = target.prefix;
 
@@ -768,14 +659,11 @@ async function main()
         case "restore-content":    output = await restoreContent(bucket, flag("room", "")); break;
         case "list":               output = await list(db); break;
         case "cleanup":
-            // Restoring content comes first: a downgraded room must be put back even if the
-            // Firestore cleanup below finds nothing to delete.
+            // Content is restored first, even if the Firestore cleanup finds nothing.
             output = {
                 content: await restoreContent(bucket, ""),
                 rows: await cleanup(db, bucket, flag("run", ""), process.argv.includes("--all")),
-                // Unlike the seeded rows, these are not addressed by run: a cohort document holds
-                // counts from every playtest that shared its arrival day, so it belongs to none of
-                // them individually and the reserved prefix is the whole selector.
+                // Not per run: a cohort document aggregates every playtest on its arrival day, so the prefix selects.
                 acquisition: await cleanupAcquisition(db),
             };
             break;
@@ -788,8 +676,7 @@ async function main()
             process.exit(2);
     }
 
-    // Which namespace was addressed is reported on every command, so it is never something the
-    // reader of a playtest report has to infer.
+    // Every command reports the namespace it addressed.
     console.log(JSON.stringify({ ...describe(), command, result: output }, null, 2));
     process.exit(0);
 }

@@ -2,8 +2,7 @@ export default function AddLampIcon()
 {
     return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
         <g className="stroke-amber-300">
-            {/* The sun: a filled disc throwing rays in every direction — a source of light itself,
-                rather than any one fitting that happens to hold one. */}
+            {/* A sun: light itself rather than a particular fitting. */}
             <circle cx="10" cy="14" r="3.6" className="fill-amber-300/40"/>
             <line x1="10" y1="8.4" x2="10" y2="6"/>
             <line x1="10" y1="19.6" x2="10" y2="22"/>

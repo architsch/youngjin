@@ -6,9 +6,7 @@ import FormPaletteColorInput from "../input/formPaletteColorInput";
 import FormRangeInput from "../input/formRangeInput";
 import ScrollPanel from "./scrollPanel";
 
-// A room's head light — the light every visitor carries — raised from the room's settings (see
-// CustomizeRoomPanel). What each setting means is in @docs/graphics/lighting.md, and how an edit
-// reaches the room is in useEditableRoomPrefs.
+// Head light settings (see CustomizeRoomPanel, @docs/graphics/lighting.md, useEditableRoomPrefs).
 export default function HeadLightPanel({ anchorElementId, onClose }: Props)
 {
     const [prefs, apply] = useEditableRoomPrefs();
@@ -40,13 +38,10 @@ export default function HeadLightPanel({ anchorElementId, onClose }: Props)
     </ScrollPanel>;
 }
 
-// Every quantized setting of a room runs over the same range, since every one of them is a single
-// stored character (see RoomPrefsUtil). An <input> wants its bounds as text.
+// All room prefs share one step range (one stored character each; see RoomPrefsUtil).
 const MAX_STEP_ATTRIBUTE = String(MAX_ROOM_PREFS_STEP);
 
-// One setting to a line, so that each is within reach without the panel being scrolled sideways to
-// find it. The lines are ranged right, which lines the tracks up under each other whatever their
-// labels say.
+// One setting per line, right-aligned so tracks line up.
 const COLUMN_CLASS_NAMES = "flex flex-col items-end gap-1 shrink-0";
 
 interface Props

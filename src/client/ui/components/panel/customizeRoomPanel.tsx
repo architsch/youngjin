@@ -17,25 +17,9 @@ import SmokeSection, { SMOKE_BUTTON_ID } from "./section/smokeSection";
 import SkySection, { SKY_BUTTON_ID } from "./section/skySection";
 import GroundSection, { GROUND_BUTTON_ID } from "./section/groundSection";
 
-//------------------------------------------------------------------------
-// A room's own settings — what the room *is*, as against what is in it: the texture pack its block
-// work is finished in, the stretches of it kept to its superuser, and how it is lit and weathered.
-//
-// A panel rather than a popup, so that the room stays in view behind it: nearly every setting here is
-// judged by looking at the room while it changes, and each is applied the moment it is made (see
-// useEditableRoomPrefs), so there is nothing to confirm and nothing to close before seeing the result.
-// It can be opened in either mode for the same reason: a room's light is as much a thing to walk
-// about in as to look at from above.
-//
-// Laid out whole, the settings would stand as a wall of controls over the very room they adjust. So
-// this panel only names them, in a single row no taller than one small button, and each setting's
-// controls come up in a panel of their own, hung just above the row from the toggle beside its name
-// (see ScrollPanel). One at a time: they would all hang in the same place, and two stacked up would
-// leave little of the room to see what either of them does to it.
-//
-// Hub or private room, the settings are the same ones. Who may open them is decided where the button
-// that does so is offered (see TopBarMenu), and whether a change is taken is the server's to decide.
-//------------------------------------------------------------------------
+// Room settings (texture pack, restricted zones, lighting). A panel, not a popup, so the room stays
+// visible while edits apply immediately. The row only names settings; each opens its own panel hung
+// from its toggle (see ScrollPanel), one at a time. Access is decided by TopBarMenu and the server.
 
 export default function CustomizeRoomPanel({ onClose }: Props)
 {
@@ -46,8 +30,7 @@ export default function CustomizeRoomPanel({ onClose }: Props)
     }, []);
     const closeSubPanel = useCallback(() => setOpenButtonId(null), []);
 
-    // Anchored to the foot of the screen, over whatever else lives there (which stands down while this
-    // is open — see UIRoot), and under any popup, since choosing a new texture pack opens one.
+    // Bottom of the screen (other bottom UI stands down; see UIRoot), below popups.
     return <div className="absolute bottom-0 inset-x-0 z-30 p-2 pointer-events-none">
         <ScrollPanel id="customizeRoomOptions" onClose={onClose}>
             <TexturePackSection open={openButtonId == TEXTURE_PACK_BUTTON_ID}
@@ -74,9 +57,7 @@ export default function CustomizeRoomPanel({ onClose }: Props)
             <GroundSection open={openButtonId == GROUND_BUTTON_ID}
                 onToggle={() => toggleSubPanel(GROUND_BUTTON_ID)}/>
         </ScrollPanel>
-        {/* Rendered beside the row rather than inside it, since each hangs from its toggle on its own
-            (see ScrollPanel): inside, it would be part of the row, and a drag across it would scroll
-            the row as well as itself. */}
+        {/* Outside the row, so dragging a sub-panel doesn't also scroll the row (see ScrollPanel). */}
         {openButtonId == TEXTURE_PACK_BUTTON_ID &&
             <TexturePackPanel anchorElementId={TEXTURE_PACK_BUTTON_ID} onClose={closeSubPanel}/>}
         {openButtonId == RESTRICTED_ZONES_BUTTON_ID &&
@@ -96,8 +77,7 @@ export default function CustomizeRoomPanel({ onClose }: Props)
     </div>;
 }
 
-// Each setting's entry is set apart from the next by a rule rather than by a box of its own, as the
-// character's parts are (see CustomizePlayerPanel).
+// Rules between entries (as in CustomizePlayerPanel).
 const DIVIDER_CLASS_NAMES = "w-px self-stretch shrink-0 bg-gray-500";
 
 interface Props

@@ -34,8 +34,7 @@ const ObjectUpdateUtil =
         if (!config.canUserAddObject(user, room, obj))
             return false;
 
-        // Check if the object would stand in a stretch of the room that is not this user's to build
-        // in (see @docs/gameplay/restricted_zone.md).
+        // Restricted zone check (see @docs/gameplay/restricted_zone.md).
         if (RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex,
             obj.transform.pos, obj.transform.dir))
             return false;
@@ -62,9 +61,7 @@ const ObjectUpdateUtil =
             markRoomAsDirtyIfPersistent(room, obj);
         }
 
-        // Add the object's corresponding PhysicsObject, unless it already has one: the objects a room
-        // arrives with are registered in bulk when the physics room loads, and are then spawned through
-        // here as well, so a room load would otherwise re-add every one of them.
+        // Skip if already registered (room loads bulk-register physics objects before spawning).
         const colliderState = PhysicsColliderStateUtil.getObjectColliderState(obj.objectTypeIndex, obj.transform.pos, obj.transform.dir);
         if (colliderState && !PhysicsManager.hasObject(room.id, obj.objectId))
             PhysicsManager.addObject(room.id, obj.objectId, obj.objectTypeIndex, colliderState);
@@ -129,10 +126,7 @@ const ObjectUpdateUtil =
         if (!config.canUserSetObjectTransform(user, room, obj, signal))
             return false;
 
-        // Check where the object is coming from as well as where it is going. A zone that only
-        // refused what was being carried into it would leave what is already inside one free to be
-        // dragged out and then taken down anywhere, which is the removal rule undone by two steps
-        // instead of one.
+        // Check both source and destination, or objects could be dragged out of a zone and then removed.
         if (RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex,
                 obj.transform.pos, obj.transform.dir) ||
             RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex,
@@ -199,10 +193,7 @@ const ObjectUpdateUtil =
         if (!config.canUserSetObjectMetadata(user, room, obj, signal))
             return false;
 
-        // Check whether the object stands in a stretch of the room that is not this user's to
-        // change. What a picture hanging inside a zone shows is as much a part of what that stretch
-        // of the room looks like as the wall behind it, so a zone that let it be repainted while
-        // refusing to let it be moved or taken down would be protecting the frame and not the view.
+        // Metadata edits are also zone-restricted (a picture's content is part of that stretch of room).
         if (RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex,
             obj.transform.pos, obj.transform.dir))
             return false;

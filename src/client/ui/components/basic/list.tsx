@@ -1,8 +1,7 @@
 import { ReactNode, UIEvent, useCallback, useEffect, useRef } from "react";
 import useMouseDragScroll from "../../util/mouseDragScroll";
 
-// Generic vertical list with optional infinite-scroll growth and mouse-drag scrolling.
-// Consumers add layout styling (width, max-height, gap, padding) via `additionalClassNames`.
+// Vertical list with optional infinite scroll and mouse-drag scrolling. Layout via additionalClassNames.
 export default function List<T>({ items, renderItem, getItemKey,
     onReachEnd, hasMore = false, loading = false,
     emptyMessage, scrollThresholdPx = 32, additionalClassNames = "" }: Props<T>)
@@ -10,9 +9,7 @@ export default function List<T>({ items, renderItem, getItemKey,
     const scrollElementRef = useRef<HTMLDivElement | null>(null);
     const dragScrollRef = useMouseDragScroll("vertical", "grabWhileDragging");
 
-    // Merged ref: useMouseDragScroll wants a callback ref to attach its listeners;
-    // we also need a regular ref so the "container too short to scroll" effect can
-    // measure scrollHeight/clientHeight directly.
+    // Callback ref for useMouseDragScroll plus a regular ref for measuring scroll height.
     const refCallback = useCallback((node: HTMLDivElement | null) => {
         scrollElementRef.current = node;
         dragScrollRef(node);
@@ -25,9 +22,7 @@ export default function List<T>({ items, renderItem, getItemKey,
             onReachEnd();
     }, [hasMore, loading, onReachEnd, scrollThresholdPx]);
 
-    // Edge case: the initial page may not fill the scroll container, so the scroll
-    // handler never fires. Trigger another fetch as long as there's more and we're
-    // not already loading.
+    // If the first page doesn't fill the container, no scroll event fires, so fetch more.
     useEffect(() => {
         const el = scrollElementRef.current;
         if (!el || !hasMore || loading || !onReachEnd) return;

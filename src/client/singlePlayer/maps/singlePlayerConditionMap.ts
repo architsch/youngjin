@@ -13,9 +13,7 @@ import { ongoingClientProcessExists } from "../../system/types/clientProcess";
 import SinglePlayerCondition from "../types/singlePlayerCondition";
 import { ClientEventType } from "../../system/types/clientEventType";
 
-// Each condition is asked of the game as it stands at that moment, which it reaches for directly.
-// What it measures against comes from its own parameters, read here rather than written into the
-// step (see SinglePlayerParam).
+// Evaluated against live game state; parameters are evaluated here (see SinglePlayerParam).
 const SinglePlayerConditionMap: {
     [K in SinglePlayerCondition["type"]]:
         (condition: Extract<SinglePlayerCondition, {type: K}>) => boolean;
@@ -29,8 +27,7 @@ const SinglePlayerConditionMap: {
     },
     "voxel_quad_selected": (condition) =>
     {
-        // Whatever the condition left unsaid, it does not care about: a step may ask for one
-        // particular quad, or merely for the user having picked one out at all.
+        // Unspecified properties match anything.
         const selection = voxelQuadSelectionObservable.peek();
         const result = selection != null &&
             (condition.row == undefined || selection.voxel.row == condition.row()) &&
@@ -83,9 +80,7 @@ const SinglePlayerConditionMap: {
     },
     "orbit_camera_angle_differs": (condition) =>
     {
-        // Measured against a view the step noted down for itself when it began, which is what makes
-        // "the user has moved the camera" a question about the here and now rather than about
-        // everything he has done since.
+        // Compared against the view the step recorded when it began.
         const angles = orbitCameraAnglesObservable.peek();
         const azimuthDiff = NumUtil.getAngleDifference(angles.azimuth,
             THREE.MathUtils.degToRad(condition.azimuthDeg()));

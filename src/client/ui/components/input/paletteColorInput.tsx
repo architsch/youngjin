@@ -6,19 +6,14 @@ import useMouseDragScroll from "../../util/mouseDragScroll";
 
 const PALETTE_GAP = 4; // Space kept between the button and the palette above it
 const SCREEN_MARGIN = 8; // Space kept between the palette and the screen edges
-// The palette hugs the left screen edge, so its width decides how much of the middle of the
-// screen — where the player's body is being previewed — stays uncovered while a color is picked.
-// A horizontal screen has enough room to the left of the player for a wider grid; a vertical
-// screen does not, so it gets a narrow grid that scrolls instead.
+// Palette columns: wider on landscape screens; narrow and scrolling on portrait, to keep the preview
+// visible.
 const PALETTE_COLUMNS_ON_HORIZONTAL_SCREEN = 4;
 const PALETTE_COLUMNS_ON_VERTICAL_SCREEN = 2;
-// How far a press outside the palette may travel and still be read as a click that
-// dismisses the palette, rather than as a drag of the screen behind it (in pixels).
+// Max travel (px) for an outside press to count as a dismissing click rather than a camera drag.
 const DISMISS_MOVEMENT_TOLERANCE = 8;
 
-// Which colors are on offer is a question about what is being painted rather than about the control:
-// a character is a tin toy and a door is joinery, and the two are finished in almost nothing in
-// common (see ColorPaletteMap).
+// Palette contents depend on what is painted (see ColorPaletteMap).
 export default function PaletteColorInput({ paletteName, currValue, setColorIndex }: Props)
 {
     const paletteSize = ColorUtil.getPaletteSize(paletteName);
@@ -37,19 +32,14 @@ export default function PaletteColorInput({ paletteName, currValue, setColorInde
     useEffect(() => {
         if (!paletteOpen)
             return;
-        // While the palette is open, count it as an active input element
-        // (like a focused input field), and let the Escape key close it.
+        // Counts as an active input while open; Escape closes it.
         numActiveInputElementsObservable.change(n => n + 1);
         const onKeyDown = (ev: KeyboardEvent) => {
             if (ev.key == "Escape")
                 setPaletteOpen(false);
         };
-        // A press that lands outside the palette closes it too — but only once it ends
-        // without having travelled, since a press that travels is the user dragging the
-        // screen behind the palette to orbit the camera, and that drag must
-        // not cost them the palette they are picking a color from. The button counts as
-        // part of the palette here, so that its own toggling stays the only thing that
-        // decides what a press on it does.
+        // An outside press closes the palette only if it didn't travel (a drag orbits the camera).
+        // The toggle button counts as inside.
         let pressPos: {x: number, y: number} | undefined;
         const onPointerDown = (ev: PointerEvent) => {
             const target = ev.target as Node | null;
@@ -87,17 +77,14 @@ export default function PaletteColorInput({ paletteName, currValue, setColorInde
             setPaletteStyle(undefined);
             return;
         }
-        // Anchor the palette between the left screen edge and the top edge of the button,
-        // capping its height so that its own top edge stays below the top screen edge
-        // instead of being cut off there.
+        // Anchored between the left edge and the button top, height-capped to stay on screen.
         const reposition = () => {
             const buttonRect = button.getBoundingClientRect();
             const bottom = window.innerHeight - buttonRect.top + PALETTE_GAP;
             const maxHeight = Math.max(0, buttonRect.top - PALETTE_GAP - SCREEN_MARGIN);
             setPaletteColumns((window.innerHeight > window.innerWidth)
                 ? PALETTE_COLUMNS_ON_VERTICAL_SCREEN : PALETTE_COLUMNS_ON_HORIZONTAL_SCREEN);
-            // Kept identical while nothing moved, so that scrolling the palette itself
-            // (which the capturing listener below also hears) costs no re-render.
+            // Unchanged style avoids re-renders while scrolling the palette.
             setPaletteStyle(prevStyle => (prevStyle != undefined && prevStyle.bottom == bottom
                 && prevStyle.maxHeight == maxHeight)
                 ? prevStyle : {left: SCREEN_MARGIN, bottom, maxHeight});
@@ -113,10 +100,7 @@ export default function PaletteColorInput({ paletteName, currValue, setColorInde
     }, [paletteOpen]);
 
     const renderSwatch = (index: number) => {
-        // The selected swatch is marked by a white outer border with a dark ring just inside it.
-        // The dark ring keeps the swatch's own color from ever touching the white border, so the
-        // border is only ever judged against the panel behind it — which makes the mark equally
-        // readable on a white swatch and on a black one.
+        // Selected: white border with a dark inner ring, readable on any swatch color.
         return <button
             key={"swatch-" + index}
             className={`w-10 h-10 shrink-0 rounded-md cursor-pointer select-none touch-manipulation border-2 ${(index == currValue) ? "border-white shadow-[inset_0_0_0_2px_#000000]" : "border-gray-600"}`}
@@ -136,9 +120,7 @@ export default function PaletteColorInput({ paletteName, currValue, setColorInde
             onClick={() => setPaletteOpen(prev => !prev)}
         />
         {paletteOpen &&
-            // The overlay only gives the palette a screen-sized frame to be anchored in; it takes
-            // no pointer input of its own, so that everything it covers — the game canvas above
-            // all, where a drag orbits the camera — keeps receiving presses as usual.
+            // Positioning frame only; pointer-events-none so the canvas still receives drags.
             <div className="fixed inset-0 z-50 pointer-events-none">
                 {/* The palette stays hidden until measured, so that it never flashes at an unanchored spot. */}
                 <div ref={onPaletteRefChange}

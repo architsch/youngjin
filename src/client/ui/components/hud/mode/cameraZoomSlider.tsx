@@ -5,35 +5,11 @@ import MagnifierMinusIcon from "../../../svg/icons/magnifierMinusIcon";
 import MagnifierPlusIcon from "../../../svg/icons/magnifierPlusIcon";
 import { cameraModeObservable, orbitCameraZoomObservable } from "../../../../system/clientObservables";
 
-// Fine enough that the view answers the handle continuously rather than in visible jumps, and
-// coarse enough that a step of it is still a step: the track is a couple of finger-widths long.
 const zoomStep = 0.01;
 
-//------------------------------------------------------------------------
-// The camera's zoom, as something the user can see and take hold of.
-//
-// Zooming has always been possible — a pinch, or the wheel — but neither gesture says it exists,
-// and neither says where the view currently stands within what the mode allows. A slider says both
-// at once: a magnifier at each end of its travel says which way is which, and the handle's place
-// along it is the answer to "how far in am I, and how much further can I go".
-//
-// It shows the zoom and sets it through the same value (orbitCameraZoomObservable), which is what
-// keeps the two in step: a pinch or a wheel notch moves the handle exactly as if the user had
-// dragged it there, and dragging it does exactly what a gesture would have done.
-//
-// It appears only while the camera is actually orbiting, which is to say in edit mode: the
-// first-person view of play mode has no zoom to speak of, and a control offering one would be a lie.
-//
-// It stands upright against the right-hand edge of the screen, with nothing behind it. Edit mode is
-// spent looking at the room, and this is on screen for the whole of it, so it keeps to the narrowest
-// strip it can — no wider than its handle, at the edge where it takes the least of a portrait phone's
-// view. With no tray to stand out against, the magnifiers carry a dark outline of their own to stay
-// legible over whatever the room behind them is.
-//
-// The track carries no number beside it. Zoom is the one setting here that is read off the view
-// rather than off a figure — the user zooms until the room looks right, and a number saying how far
-// along the travel that landed is not something anyone would type, note down or tell somebody.
-//------------------------------------------------------------------------
+// Vertical orbit zoom slider at the right screen edge, shown only in edit mode. Shares
+// orbitCameraZoomObservable with pinch and wheel, so they stay in sync. No numeric readout (zoom is
+// judged by eye). Icons have outlines to stay legible over the scene.
 
 export default function CameraZoomSlider()
 {

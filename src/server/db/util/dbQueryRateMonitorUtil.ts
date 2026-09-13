@@ -10,10 +10,7 @@ let windowStart = Date.now();
 
 const DBQueryRateMonitorUtil =
 {
-    /**
-     * Records a query and checks if the rate is within acceptable limits.
-     * Returns true if the query should proceed, false if it should be rejected.
-     */
+    // Records a query; returns false if the rate limit is exceeded.
     allowQuery(queryType: string): boolean
     {
         const now = Date.now();
@@ -46,10 +43,7 @@ const DBQueryRateMonitorUtil =
 
         return true;
     },
-    /**
-     * Starts a fresh rolling window. The window otherwise only resets with the passage of time,
-     * which leaves the monitor carrying state across unrelated stretches of work.
-     */
+    // Starts a fresh rolling window.
     resetWindow(): void
     {
         queryCount = 0;

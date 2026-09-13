@@ -4,22 +4,17 @@ import Form from "./form";
 import ConsoleLogCaptureUtil from "../../../system/util/consoleLogCaptureUtil";
 import { notificationMessageObservable } from "../../../system/clientObservables";
 
-// A live view onto the rolling console record (see ConsoleLogCaptureUtil), opened by the "log"
-// debug command. It exists for troubleshooting on a device whose console is out of reach, which is
-// also why it offers the text up for copying: selecting a long log by hand on a phone is not a
-// realistic way of getting it off the device.
+// Live view of the console record (see ConsoleLogCaptureUtil) for the "log" debug command, with copy
+// support since selecting long text on a phone is impractical.
 export default function ConsoleLogForm()
 {
     const [text, setText] = useState<string>(ConsoleLogCaptureUtil.getText());
     const scrollRef = useRef<HTMLDivElement | null>(null);
-    // Whether the view is still following the newest output. Scrolling up parks it, so older lines
-    // can be read while output keeps arriving; scrolling back down to the end resumes following.
+    // Scrolling up pauses following; scrolling to the end resumes it.
     const followingRef = useRef<boolean>(true);
 
-    // The record is polled rather than subscribed to. A burst of console output then costs one
-    // re-render instead of one per line, and — the reason it matters more than the saving — a
-    // warning logged from within this component's own render cannot turn into an endless loop of
-    // renders feeding the very record they are drawing.
+    // Polled rather than subscribed: bursts cost one render, and a warning logged during this
+    // component's render can't loop.
     useEffect(() => {
         let lastRevision = ConsoleLogCaptureUtil.getRevision();
         const interval = setInterval(() => {
@@ -64,18 +59,12 @@ export default function ConsoleLogForm()
     </Form>;
 }
 
-// How often the record is checked for new output. Fast enough to read as live, slow enough that a
-// chatty moment in the app cannot flood the UI with re-renders.
 const refreshInterval = 250;
 
-// How close to the end the view has to be for it to count as still following the newest output.
-// A margin rather than an exact match, since the browser's own scroll rounding rarely lands the
-// view exactly at the end.
+// Tolerance for "at the end" (scroll rounding rarely lands exactly).
 const followingThresholdInPixels = 24;
 
-// select-text overrides the page-wide select-none, so the log can also be picked up by hand where
-// the clipboard is unavailable; break-all keeps a long unbroken token (a URL, a stack frame) from
-// widening the panel instead of wrapping inside it.
+// select-text overrides the page-wide select-none; break-all wraps long tokens (URLs, stack frames).
 const logPanelClassName = "w-[70vw] h-[55vh] min-h-0 p-2 overflow-auto rounded-md yj-surface-concave " +
     "bg-black text-gray-300 text-left text-[10px] leading-snug font-mono " +
     "whitespace-pre-wrap break-all select-text pointer-events-auto";

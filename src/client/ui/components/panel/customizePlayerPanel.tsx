@@ -14,17 +14,9 @@ import { ClientEventType } from "../../../system/types/clientEventType";
 import createDeferredSave from "../../util/deferredSave";
 import ScrollPanel from "./scrollPanel";
 
-//------------------------------------------------------------------------
-// This panel edits the player's composition by directly manipulating its
-// PlayerCompositionParams object: each body part has a type (which selects
-// the part's shape variant) and a color. After every edit, the player's
-// parts are rebuilt from the params, which keeps every derived placement
-// consistent automatically.
-//------------------------------------------------------------------------
+// Edits the player's PlayerCompositionParams in place (type + color per part) and rebuilds the parts.
 
-// 'builderName' joins with the slot's selected type to name the composition builder
-// that shape belongs to, which is both what assembles the part and what the stepper's
-// preview icon is drawn from.
+// builderName + selected type names the composition builder (also used for the preview icon).
 const partSlots: {title: string, key: keyof PlayerCompositionParams["types"], builderName: string}[] = [
     {title: "Head", key: "head", builderName: "PlayerHead"},
     {title: "Ears", key: "ear", builderName: "PlayerEar"},
@@ -43,11 +35,8 @@ export default function CustomizePlayerPanel()
     if (params == undefined)
         return null;
 
-    // The edit is written to the params the player is composed of at this moment, rather than to
-    // the ones this render read. Nothing re-renders this panel when the composition is reloaded from
-    // the object's metadata, so the two are only the same object for as long as nobody has swapped
-    // it (see InstancedMeshComposition), and an edit written to a params object the player is no
-    // longer composed of is an edit the user never made.
+    // Writes to the live params, since the composition may have been swapped by a reload (see
+    // InstancedMeshComposition).
     const applyEdit = (mutateParams: (liveParams: PlayerCompositionParams) => void) => {
         const liveParams = getMyPlayerParams();
         if (liveParams == undefined)
@@ -59,10 +48,7 @@ export default function CustomizePlayerPanel()
         setEditCount(prev => prev + 1);
     };
 
-    // This panel is what the user's own character being selected looks like, so it neither moves the
-    // camera nor can be put away on its own: the selection frames the character (see
-    // WorldSpaceSelectionUtil), and what takes the panel away is the selection moving on — or edit
-    // mode itself ending, by the game-mode switch or the back gesture.
+    // Not closable: it is the character selection's panel and goes away with the selection or edit mode.
     return <ScrollPanel id="customizePlayerOptions">
         {partSlots.map((slot, slotIndex) =>
             <div key={"part-slot-" + slot.key} className="flex flex-row items-stretch gap-3 shrink-0">
@@ -91,12 +77,10 @@ export default function CustomizePlayerPanel()
     </ScrollPanel>;
 }
 
-// Dressing a character is a run of small edits, each of which rewrites the whole composition, so
-// they are written down together rather than one at a time.
+// Batches rapid edits into one save.
 const trySave = createDeferredSave(() => saveMyPlayerParts());
 
-// Reads the user's own player object's composition params (the live object,
-// so that edits can be applied to it directly).
+// The live params object, so edits apply directly.
 function getMyPlayerParams(): PlayerCompositionParams | undefined
 {
     return doForMyPlayer((c) => c.getParams());

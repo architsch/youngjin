@@ -1,15 +1,6 @@
 /**
- * Scenario tests: Room lifecycle
- *
- * Covers:
- * - Joining unloaded / loaded rooms
- * - Joining non-existent rooms
- * - Rapid room switching
- * - Cross-user visibility (position, metadata)
- * - Room-specific state independence
- * - Room switching saves previous state
- * - Last user leaving unloads the room
- * - Graceful server shutdown
+ * Scenario tests: room lifecycle — joining loaded, unloaded and nonexistent rooms, rapid switching,
+ * cross-user visibility, per-room state, saving on switch, unloading on last leave, graceful shutdown.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runScenario } from "../helpers/scenarioRunner";
@@ -83,8 +74,7 @@ describe("room scenarios", () => {
             rooms: [EMPTY_REGULAR],
             users: usersInRoom(N, "regular"),
             assertions: ({ users, harness }) => {
-                // The room's own door is one of its objects, and belongs to nobody in particular,
-                // so it is the players that are counted here.
+                // The door is a room object, so only players are counted.
                 const roomMem = ServerRoomManager.roomRuntimeMemories["regular"];
                 const playerObjects = Object.values(roomMem.room.objectById)
                     .filter(obj => obj.objectTypeIndex === PLAYER_OBJECT_TYPE_INDEX);
@@ -148,8 +138,7 @@ describe("room scenarios", () => {
                 expect(ServerRoomManager.currentRoomIDByUserID[users[0].user.id]).toBe("room-B");
                 // lastRoomID is overwritten by the join into room-B.
                 expect(harness.getStoredLastRoomID(users[0].user.id)).toBe("room-B");
-                // The message sent while in room-A should have been flushed via savePlayerMetadata
-                // because room-change runs with savePlayerMetadata=true.
+                // Room changes flush player metadata (savePlayerMetadata=true).
                 const flushed = harness.savedPlayerMetadataRecords.find(s => s.userID === users[0].user.id);
                 expect(flushed).toBeDefined();
                 expect(flushed!.playerMetadata["0"]).toBe("from-A");

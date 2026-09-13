@@ -1,15 +1,7 @@
-// A rolling, in-memory copy of everything the page writes to the browser console, kept so that a
-// problem which only shows up on a device with no console attached — a phone, most of the time —
-// can still be read back from inside the app itself. The "log" debug command opens a view onto it.
-//
-// The capture is installed as this module is loaded, and this module is loaded before anything else
-// the client does (see @src/client/client.ts), so the record starts at the very beginning of the
-// page's life. It only observes: every captured call is still forwarded to the console method it
-// came from, unchanged, so the browser's own console reads exactly as it otherwise would.
-//
-// The record lives in memory, and therefore starts over on every page load — which is itself worth
-// reading. A record whose oldest entries are the app's own start-up messages says the page was
-// re-loaded; one whose oldest entries are hours old says the page was merely suspended and resumed.
+// In-memory rolling copy of console output, readable in-app via the "log" debug command (for devices
+// without a console). Loaded first (see @src/client/client.ts) and forwards every call unchanged.
+// Resets on page load: if the oldest entries are start-up messages, the page reloaded; if hours old,
+// it was suspended and resumed.
 const ConsoleLogCaptureUtil =
 {
     // Everything captured so far, as one block of text, oldest entry first.
@@ -17,9 +9,7 @@ const ConsoleLogCaptureUtil =
     {
         return entries.join("\n");
     },
-    // Changes whenever the captured text changes. A viewer compares this against what it last drew
-    // to decide whether there is anything new to draw — which is cheaper, and far less prone to
-    // feeding back on itself, than being notified once per console call.
+    // Changes when the text changes; viewers poll it instead of being notified per console call.
     getRevision: (): number =>
     {
         return revision;
@@ -32,8 +22,7 @@ const ConsoleLogCaptureUtil =
     },
 }
 
-// The console methods that are copied, and how each one is labelled in the record. Labels are
-// padded to the same width so that the text of the entries themselves lines up in a column.
+// Captured methods and their labels (padded for column alignment).
 const levelLabels: {[method: string]: string} = {
     log: "LOG",
     info: "INF",
@@ -42,9 +31,7 @@ const levelLabels: {[method: string]: string} = {
     debug: "DBG",
 };
 
-// How much text the record is allowed to hold in total, and how much of it any single entry may
-// account for. The first is what keeps a page left open for hours from growing without bound; the
-// second stops one enormous dump (a decoded signal, a deep object) from evicting everything else.
+// Total and per-entry caps: bound memory, and stop one huge dump from evicting everything.
 const maxTotalCharacters = 20000;
 const maxEntryCharacters = 1000;
 
@@ -52,8 +39,7 @@ const entries: string[] = [];
 let totalCharacters = 0;
 let revision = 0;
 
-// Guards against a capture that ends up logging something itself — via a property getter reached
-// while formatting, say — from recursing back into the console it is in the middle of copying.
+// Prevents recursion if formatting triggers another console call.
 let capturing = false;
 
 function install(): void
@@ -70,9 +56,7 @@ function install(): void
         };
     }
 
-    // Uncaught errors and rejected promises reach the console without passing through any of the
-    // methods above, and they are the entries most worth having, so they are taken from the events
-    // the page fires for them instead.
+    // Uncaught errors and rejections bypass the console methods, so capture them from events.
     window.addEventListener("error", (event: ErrorEvent) => {
         append(levelLabels["error"], [event.error != undefined ? event.error : event.message]);
     });
@@ -95,9 +79,7 @@ function append(label: string, args: unknown[]): void
         entries.push(entry);
         totalCharacters += entry.length + 1; // +1 for the newline joining it to the entry before it
 
-        // Oldest out first, so that what survives the cap is the newest output — the part someone
-        // troubleshooting is actually looking at. The last entry is never evicted, however long it
-        // is, so that the record can never end up empty while output is still arriving.
+        // Evict oldest first; never the last entry, so the record can't go empty.
         while (totalCharacters > maxTotalCharacters && entries.length > 1)
             totalCharacters -= entries.shift()!.length + 1;
 
@@ -113,8 +95,7 @@ function append(label: string, args: unknown[]): void
     }
 }
 
-// Wall-clock time rather than time since the page loaded: the gap it leaves across a spell in the
-// background is the very thing this record exists to make visible.
+// Wall-clock time, so gaps from backgrounding are visible.
 function getTimestamp(): string
 {
     const now = new Date();

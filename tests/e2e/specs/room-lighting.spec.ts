@@ -1,22 +1,12 @@
 /**
- * E2E tests: a room's lighting, end to end
- *
- * What these are actually guarding is the wire format. A room's atmosphere is a field on the room,
- * and it sits ahead of the room's voxels and objects in the encoding — so getting its position
- * wrong does not lose the lighting, it corrupts everything read after it, and the room fails to
- * arrive at all. Nothing in the integration suite can catch that, because nothing there sends a
- * room over a socket and draws it.
- *
- * So: the room arrives, it carries lighting the client can read, and drawing it under that lighting
- * raises nothing.
+ * E2E: room lighting end to end. Guards the wire format: prefs are encoded before voxels and objects,
+ * so a misplaced field corrupts everything after it. Only a real socket round trip and render catch this.
  */
 import { test, expect } from "../fixtures/auth.fixture";
 import { SELECTORS, TIMEOUTS } from "../helpers/constants";
 import { waitForGameReady, waitForRoomLoaded, captureConsole } from "../helpers/game";
 
-// The largest value one stored character can carry (see RoomPrefsUtil). Written out rather than
-// imported, since what this is checking is what arrived over the wire rather than what the client
-// bundle happens to believe.
+// Written out (not imported), to check what arrived rather than what the bundle believes.
 const MAX_ROOM_PREFS_STEP = 93;
 
 interface RoomLighting
@@ -45,9 +35,7 @@ test.describe("Room Lighting", () => {
 
         const lighting = await readLighting(authenticatedPage);
 
-        // Every field decoded to a whole number inside its range. A field that came through as
-        // undefined or NaN is the wire format having gone out of step, which is the failure this
-        // spec exists for.
+        // Undefined or NaN fields mean the wire format is out of step.
         for (const [name, value] of Object.entries(lighting))
         {
             expect(Number.isInteger(value), `${name} is not a whole number`).toBe(true);
@@ -60,9 +48,7 @@ test.describe("Room Lighting", () => {
         await waitForGameReady(authenticatedPage);
         await waitForRoomLoaded(authenticatedPage);
 
-        // The lighting is encoded ahead of the room's contents, so contents that came through at
-        // all is the proof that the field was read back at exactly the width it was written. Every
-        // room has a way in, so there is always at least one object to find.
+        // Contents arriving proves the prefs field was read at the right width (every room has a door).
         const ready = await authenticatedPage.evaluate(
             () => (window as any).__thingspool_automation.ready());
         expect(ready.room).toBe(true);
@@ -70,9 +56,7 @@ test.describe("Room Lighting", () => {
     });
 
     test("drawing a lit room raises nothing", async ({ authenticatedPage }) => {
-        // Every lit material samples the room's light field, and the fog is compiled into all of
-        // them — so a mistake in either is a shader that fails to link, which surfaces as a console
-        // error rather than as a wrong picture.
+        // Light field or fog shader errors surface as console errors (link failures).
         const console_ = captureConsole(authenticatedPage);
 
         await waitForGameReady(authenticatedPage);

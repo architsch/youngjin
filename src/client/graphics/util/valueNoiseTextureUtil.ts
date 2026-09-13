@@ -1,73 +1,25 @@
 import * as THREE from "three";
 
-// The value-noise field that every procedural surface and every part of the room's air is drawn from,
-// baked once into a 3D texture and *read* by the shaders rather than evaluated by them.
-//
-// **Why it is baked.** Evaluated in the shader, one sample of this field costs eight hashes and seven
-// interpolations, and the places that want it want it several times over: the room's air warps its
-// coordinate by three samples of itself and then reads a three-octave sum at the result, which is
-// forty-eight hashes for one fragment. That chunk is spliced into every material standing in the room,
-// so on a phone it was comfortably the most expensive thing in the frame — more than the lighting, the
-// finish and the texture work put together. Read out of a texture instead, the same field costs one
-// filtered fetch, and the hardware doing the filtering is idle hardware that the arithmetic units are
-// not.
-//
-// **Why one texture serves everything.** The fog's smoke, the sky's clouds and the land below the
-// horizon are three different fields only in what they are read *on* — a place in the room, a
-// direction on the dome, a point on a plane — and in what is done with the answer. The field itself is
-// the same field, so they share this one and none of them pays to have its own.
-//
-// **Why it may be tiled without showing.** The texture repeats, and what would give that away is the
-// field's own broad shape coming round again within sight. It does not: at the fineness a room asks
-// for by default, a whole room is a fraction of one period across (see VALUE_NOISE_PERIOD). The finer
-// octaves repeat sooner, but they are read at ratios that come round with the period only a hundred
-// periods on, so the sum of the three lines up with itself nowhere anyone could compare — while each
-// octave stays continuous across the seam, which is what actually matters. There is no seam to find,
-// only a pattern that eventually rhymes; and where it rhymes exactly is what lets the drifting air be
-// wrapped without a jump (see VALUE_NOISE_FBM_PERIOD).
+// Shared value-noise field baked into a 3D texture. Evaluating it per fragment was the most expensive
+// cost on phones; a filtered fetch is far cheaper. All procedural surfaces, smoke, clouds and ground
+// read this one field. Tiling doesn't show: the period is large relative to default feature sizes,
+// and octaves use non-commensurate ratios (see VALUE_NOISE_FBM_PERIOD).
 
-// How many noise units the baked field covers before it comes round again.
-//
-// **Set by the sky, which is the one reader that can see a whole period at once.** The clouds are read
-// on a direction, so the entire dome spans only about twice whatever coarseness the room asked for —
-// and a period shorter than that puts the same cloud in the sky twice, which is the one thing here the
-// eye finds instantly. At this length the default sky is comfortably inside one period. Everything
-// else has room to spare: a whole room is a fraction of one period of its own air, and the timber's
-// broad figure comes round again only over a span longer than any part it is drawn on.
+// Period in noise units. Set by the sky, whose dome spans about twice the cloud scale; a shorter
+// period would repeat clouds visibly.
 export const VALUE_NOISE_PERIOD = 16;
 
-// How many texels stand across that period, which together with the period sets how many fall inside
-// one lattice cell — and that is the real dial here.
-//
-// **It trades against the period rather than standing on its own.** The texels carry the smooth curve
-// the field is defined by, and the hardware joins them with straight lines, so more of them per cell
-// means a closer reproduction of that curve. Fewer means a longer period for the same memory. At the
-// pair chosen here the straight lines depart from the true curve by a few percent at the worst point
-// of the broadest octave and by almost nothing on the finer ones — invisible on a field that is then
-// smoothstepped into cloud or haze, and much the cheaper mistake to make than repeating the sky.
-//
-// Held down rather than raised, because this is bytes a fragment shader reads at scattered
-// coordinates. At this size the whole field is a megabyte and stays in the texture cache; at twice it,
-// each of the three octaves would be pulling from a different part of eight megabytes and the fetch
-// would start costing what the arithmetic used to.
+// Texels per period: trades interpolation accuracy against period length. Kept small so the texture
+// (about 1MB) stays in cache for scattered fragment reads.
 const VALUE_NOISE_TEXTURE_SIZE = 64;
 
-// Held as one object and never replaced, because three.js keeps whatever object is put into
-// shader.uniforms and re-reads its "value" every frame — so writing the value reaches every material
-// already compiled, while replacing the holder would reach none of them. The same reason
-// AtmosphereMaterialUtil holds its uniforms this way.
+// Holder never replaced (three.js re-reads "value"; see AtmosphereMaterialUtil).
 const valueNoiseTextureUniform: { value: THREE.Data3DTexture | null } = { value: null };
 
 const ValueNoiseTextureUtil =
 {
-    // Hands a material being compiled the field its shader is about to read from. Every install that
-    // splices in VALUE_NOISE_GLSL has to call this, since that chunk declares the sampler and a
-    // sampler nothing binds reads as black — which for these fields is not a degraded picture but a
-    // flat one.
-    //
-    // The bake happens on the first material that asks, which is during the room-loading screen where
-    // the shader compilation it accompanies already is. Doing it at module load would put the same
-    // work in front of the page's first paint instead, where there is nothing to hide it behind.
+    // Must be called by every shader install that includes VALUE_NOISE_GLSL (an unbound sampler
+    // reads black). Bakes lazily on first use, i.e. during the loading screen.
     bindUniform: (shader: THREE.WebGLProgramParametersWithUniforms) =>
     {
         if (valueNoiseTextureUniform.value == null)
@@ -76,24 +28,15 @@ const ValueNoiseTextureUtil =
     },
 }
 
-// Fills the texture with four fields at once: three that are only ever read together, as the vector
-// the air and the sky drag their own coordinates by, and a fourth that is read on its own and summed
-// across octaves. Four channels is what an RGBA texture costs anyway — three.js derives no sized
-// format for a three-channel byte 3D texture, the same constraint LightBlockMap ran into — so the
-// fourth field rides along free, and the warp that used to be three separate samples becomes one.
+// RGB: three decorrelated fields read together as a warp vector; A: the scalar field. RGBA because
+// three.js has no sized RGB byte 3D format.
 function bakeTexture(): THREE.Data3DTexture
 {
     const size = VALUE_NOISE_TEXTURE_SIZE;
     const data = new Uint8Array(size * size * size * 4);
 
-    // Where each texel falls on the lattice and how far it stands between two of its points. The same
-    // for all three axes and for all four fields, so it is worked out once per axis position rather
-    // than a million times over — which is most of what makes the bake quick enough to sit inside a
-    // loading screen rather than being noticed as one.
-    //
-    // Taken at the texel's centre rather than its corner, because that is the coordinate the hardware
-    // will hand back unfiltered, and the fade is the same smooth curve the field was defined by when
-    // it was still being evaluated per fragment.
+    // Per-axis lattice cell and fade, computed once per axis position. Sampled at texel centres with
+    // the same smooth fade the per-fragment version used.
     const cellLow = new Int32Array(size);
     const cellHigh = new Int32Array(size);
     const cellFade = new Float32Array(size);
@@ -129,26 +72,20 @@ function bakeTexture(): THREE.Data3DTexture
     const texture = new THREE.Data3DTexture(data, size, size, size);
     texture.format = THREE.RGBAFormat;
     texture.type = THREE.UnsignedByteType;
-    // The field is continuous across its own seam by construction, so repeating it is what turns a
-    // finite block of texels into a field without edges — which is what every reader of it assumes.
+    // The field is seamless, so repeat wrapping makes it edgeless.
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
     texture.wrapR = THREE.RepeatWrapping;
     texture.minFilter = THREE.LinearFilter;
     texture.magFilter = THREE.LinearFilter;
-    // No mip chain. The octaves are read at fixed ratios rather than at whatever scale a surface
-    // happens to be seen at, so there is no level for the hardware to choose between — and a mip
-    // chain built by averaging would blur the finest octave into nothing at the first level.
+    // No mipmaps: octaves are read at fixed ratios, and averaging would erase the finest octave.
     texture.generateMipmaps = false;
-    // Color space left at its default (none): these are field values rather than colors, and having
-    // them converted on the way into the shader would bend the very curve that was baked in.
+    // Field values, not colors: no color space conversion.
     texture.needsUpdate = true;
     return texture;
 }
 
-// One field's lattice: a value at every corner of the repeating block, which everything between them
-// is interpolated from. Kept as its own array per field rather than hashed on demand, since every
-// point is read eight times over by the texels around it.
+// One field's lattice values (precomputed, since each point is read by eight texels).
 function buildLattice(seed: number): Float32Array
 {
     const lattice = new Float32Array(VALUE_NOISE_PERIOD * VALUE_NOISE_PERIOD * VALUE_NOISE_PERIOD);
@@ -181,10 +118,7 @@ function lerp(a: number, b: number, t: number): number
     return a + (b - a) * t;
 }
 
-// A value in [0, 1] for one lattice point of one field, decided by where the point is and which field
-// it belongs to. Integer arithmetic throughout, so that the four fields are decorrelated by their seed
-// rather than by being sampled at offsets from one another — which is what lets all four be read in a
-// single fetch, where offset sampling would need one fetch each.
+// Integer hash in [0, 1]. Fields are decorrelated by seed (not offsets), so all four fit one fetch.
 function latticeValue(x: number, y: number, z: number, seed: number): number
 {
     let hash = Math.imul(x, 374761393) + Math.imul(y, 668265263) +

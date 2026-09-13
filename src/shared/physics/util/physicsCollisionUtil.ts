@@ -23,9 +23,8 @@ const PhysicsCollisionUtil =
         const maxClimbableHeight = newColliderState.colliderConfig.maxClimbableHeight;
         let start = object.colliderState.hitbox.center;
 
-        // Any attempt to move more than 3 units from the server's last synced location
-        // will be subject to forced resync.
-        // (NOTE: Turning this OFF for now, since false alarm seems too frequent due to network latency.)
+        // Forced resync for moves > 3 units from the last synced position.
+        // (NOTE: Disabled for now: too many false alarms from network latency.)
         /*if (Vector3DUtil.distSqr(target, start) >= 9)
         {
             console.warn(`Physics-position desync due to distance gap`);

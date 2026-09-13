@@ -1,17 +1,8 @@
 /**
- * Scenario tests: Player mesh composition (InstancedMeshComposition)
- *
- * A player's appearance is an encoded string carried in the player object's metadata. The owner
- * writes it, the server relays it to everyone else in the room, and every receiving client decodes
- * it to build that player's body — so the string is untrusted input on the read side.
- *
- * Covers:
- * - Codec round-trip, determinism, and canonical (re-encodable) decoded params
- * - Codec robustness: a malformed or hostile string must never throw, and must still yield a body
- * - Permissions: only the owner may set his/her own composition, and only on allowed metadata keys
- * - Preprocessing: an oversized composition is truncated by the server
- * - Relay: a composition change reaches the other participants
- * - Persistence: a composition survives reconnection and room switches
+ * Scenario tests: player mesh composition (InstancedMeshComposition). The encoded string is relayed
+ * between clients, so decoding treats it as untrusted.
+ * Covers: codec round-trip and robustness, owner-only permissions, oversized truncation, relay, and
+ * persistence across reconnects and room switches.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import fc from "fast-check";
@@ -45,16 +36,13 @@ import { OBJECT_INSTANCED_MESH_COMPOSITION_METADATA_MAX_LENGTH } from "../../../
 
 const COMPOSITION_KEY = ObjectMetadataKeyEnumMap.InstancedMeshComposition;
 
-// Asserts that a decoded composition is something the renderer can actually draw. The part count is
-// deliberately not checked: it varies with the chosen body-part variants, so pinning it would only
-// assert which variants a given string happens to select.
+// Asserts a decoded composition is drawable (the part count varies with variants, so isn't checked).
 function expectRenderableBody(
     params: InstancedMeshCompositionParams, parts: InstancedMeshCompositionPart[]): void
 {
     expect(parts.length).toBeGreaterThan(0);
 
-    // Every part must be drawn with one of the instanced meshes the composition itself declares —
-    // anything else would have no mesh to rent an instance from.
+    // Every part must use a mesh the composition declares.
     const declaredMeshIds = Object.values(params.ids as {[id: string]: string});
     for (const part of parts)
     {
@@ -134,8 +122,7 @@ describe("player mesh composition", () => {
             const types = decoded.params.types as {[part: string]: number};
             for (const part of Object.keys(types))
             {
-                // A decoded part type must always name a body-part variant that exists, otherwise
-                // the body cannot be built from it.
+                // A decoded part type must name an existing body-part variant.
                 const builderType = `${BUILDER_TYPE_BY_PART[part]}_${types[part]}`;
                 expect(InstancedMeshCompositionBuilderMap[builderType],
                     `no builder registered for "${builderType}"`).toBeDefined();
@@ -319,9 +306,8 @@ describe("player mesh composition", () => {
 });
 
 /**
- * A door's appearance is carried the same way a player's is — an encoded string in the object's
- * InstancedMeshComposition metadata — but is decided for the door rather than chosen by anyone, and
- * has to come out the same for every player standing in the room and the same again next session.
+ * Door appearance: encoded like a player's, but derived for the door, so it's identical for every
+ * player and every session.
  */
 describe("door mesh composition", () => {
     beforeEach(() => {
@@ -361,9 +347,7 @@ describe("door mesh composition", () => {
     });
 
     it("every authored color scheme survives the palette the codec quantizes to", () => {
-        // A scheme is written as hex and encoded as a palette position, so a color that does not
-        // land on a palette entry would come back as a different one and the finish would not be
-        // what was authored. Asserted here rather than trusted, since the palette may change.
+        // Scheme colors must land exactly on palette entries, or they decode to a different color.
         for (const scheme of DoorCompositionConstants.colorSchemes)
         {
             for (const color of Object.values(scheme))
@@ -375,10 +359,7 @@ describe("door mesh composition", () => {
     });
 
     it("every palette round-trips its own colors, and none outgrows what can name it", () => {
-        // A palette's positions are what every stored appearance means, and a position is one
-        // visible-ASCII character. Both halves of that are checked here rather than assumed: a
-        // palette that outgrew the encoding would hold colors nothing could write down, and a color
-        // that did not come back as itself would repaint whatever was saved as it.
+        // Each palette must fit the one-visible-ASCII-char encoding and round-trip every color.
         for (const paletteName of Object.keys(ColorPaletteMap))
         {
             const paletteSize = ColorUtil.getPaletteSize(paletteName);
@@ -416,9 +397,7 @@ describe("door mesh composition", () => {
     // ─── The appearance a door falls back on ───────────────────────────
 
     it("a door's default appearance depends on where it stands, not on who is looking at it", () => {
-        // A client-spawned object carries the viewing user's id, so anything derived from the user
-        // would give each player in a room a different door. Two rooms should differ; the same room
-        // must not.
+        // Derived from the room and object only (not the viewing user), so everyone sees the same door.
         const a = generateDefaultDoorComposition("room-a", ENTRANCE_DOOR_OBJECT_ID);
         const b = generateDefaultDoorComposition("room-a", ENTRANCE_DOOR_OBJECT_ID);
         expect(b.params.colors).toEqual(a.params.colors);
@@ -444,9 +423,7 @@ describe("door mesh composition", () => {
     // ─── Permissions ───────────────────────────────────────────────────
 
     it("a door is finished by an admin in a hub, and by nobody else anywhere", () => {
-        // What a door looks like is part of what an admin builds a world out of — one hub's doors
-        // told apart from another's at a glance. It is not a room's users' to change, and not even
-        // an admin's in a Regular room, whose one door is that room's own.
+        // Door appearance is admin world-building: hubs only, never a Regular room's own door.
         const canReskin = (userType: number, roomType: number) =>
             DoorObjectTypeConfig.canUserSetObjectMetadata(
                 {id: "u", userType} as any, {roomType} as any, {} as any,
@@ -469,8 +446,7 @@ describe("door mesh composition", () => {
 
     it("every part of a door is drawn by a mesh the composition itself declares", () => {
         const {params, parts} = DoorCompositionCodec.getRandomComposition(1);
-        // A door is laid down back to front, each region in front of what it is let into, so that
-        // quads sharing a plane never z-fight (see DoorCompositionConstants).
+        // Regions are layered back to front to avoid z-fighting (see DoorCompositionConstants).
         expectRenderableBody(params, parts);
         expectMouldedParts(parts);
         const reliefs = parts.map((part) => Math.abs(part.offset.z));
@@ -479,8 +455,7 @@ describe("door mesh composition", () => {
     });
 });
 
-// Asserts that every part carries the per-instance moulding inputs the wood material reads. A part
-// missing them would be drawn with a zero-width band and no trim color at all.
+// Every part must carry the moulding inputs the wood material reads.
 function expectMouldedParts(parts: InstancedMeshCompositionPart[]): void
 {
     for (const part of parts)
@@ -497,17 +472,9 @@ function expectMouldedParts(parts: InstancedMeshCompositionPart[]): void
 }
 
 /**
- * An indexed composition *names* one of the compositions authored ahead of time and encoded into
- * PreEncodedCompositionStringMap at build time, instead of spelling its own parts out. That makes it
- * a router rather than a format: what it stores is a position, and what it gives back is whatever the
- * codec that wrote the entry at that position decodes.
- *
- * The index arrives from the database and from other clients like any other stored appearance, so the
- * same rule the other codecs are held to applies — reading is total, and an index naming nothing must
- * still leave the object drawable.
- *
- * Note the codec is reached through the codec map here, exactly as production code reaches it:
- * importing the module directly is what puts it at the head of the import cycle it forms with the map.
+ * An indexed composition names a build-time entry in PreEncodedCompositionStringMap and decodes as that
+ * entry's codec. Decoding must be total: an index naming nothing still leaves the object drawable.
+ * Reached through the codec map, as in production, to avoid an import cycle.
  */
 describe("indexed mesh composition", () => {
     const IndexedCodec = InstancedMeshCompositionCodecMap[
@@ -541,14 +508,12 @@ describe("indexed mesh composition", () => {
     // ─── What it stores ────────────────────────────────────────────────
 
     it("costs the same whatever it names, and whatever it is handed", () => {
-        // The whole reason the codec exists: an appearance shared by many objects is stored once per
-        // object, so its size is what decides how many look-alike objects a room can hold.
+        // Its size matters: the string is stored once per look-alike object.
         const first = IndexedCodec.encode({compositionIndex: 0}, []);
         const last = IndexedCodec.encode({compositionIndex: MAX_COMPOSITION_INDEX}, []);
         expect(last.length).toBe(first.length);
 
-        // The parts belong to the table rather than to the object, so handing some over changes
-        // nothing about what is written down.
+        // Parts belong to the table, so passing some doesn't change the encoding.
         const {parts} = PlayerCompositionCodec.getRandomComposition(1);
         expect(IndexedCodec.encode({compositionIndex: 0}, parts).length).toBe(first.length);
     });
@@ -589,8 +554,7 @@ describe("indexed mesh composition", () => {
     // ─── The generated table ───────────────────────────────────────────
 
     it("every pre-encoded composition decodes to parts the renderer can draw", () => {
-        // The table is generated at build time, so this asserts nothing until it has been — which is
-        // itself worth knowing, since an empty table means every indexed object draws nothing.
+        // An empty (not yet built) table would make every indexed object draw nothing.
         for (let index = 0; index < PreEncodedCompositionStringMap.length; ++index)
         {
             const encoded = indexedPrefix() + IndexedCodec.encode({compositionIndex: index}, []);

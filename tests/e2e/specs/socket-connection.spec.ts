@@ -2,10 +2,7 @@ import { test, expect } from "@playwright/test";
 import { TIMEOUTS } from "../helpers/constants";
 import { disconnectSocket } from "../fixtures/auth.fixture";
 
-// Socket tests need to capture console events BEFORE the page navigates,
-// because the socket connection log fires during page load. We use `page`
-// directly (with storageState cookies from setup) instead of the
-// authenticatedPage fixture.
+// Uses `page` directly (with setup cookies), since console capture must start before navigation.
 
 test.afterEach(async ({ page }) => {
     await disconnectSocket(page);

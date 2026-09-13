@@ -3,27 +3,15 @@ import EncodableData from "../../networking/types/encodableData";
 import Vec3 from "../../math/types/vec3";
 import Encodable2ByteVec3 from "../../networking/types/encodable2ByteVec3";
 
-// A position is not stored as a coordinate. It is stored as a *fraction* of the range below, and
-// multiplied back out by whatever that range says on the way in — so these numbers are part of the
-// format itself. Change one and every position already written moves, without a byte of stored data
-// changing and without anything failing.
-//
-// That is why they are plain literals rather than being written in terms of MAX_ROOM_Y or
-// NUM_VOXEL_ROWS/COLS. Tying them to the room's dimensions is what put every painting in the game
-// at twice its height when the room grew a second storey: nothing about the objects changed, but the
-// yardstick they were measured against did. A room dimension is free to change; a yardstick is not.
-//
-// So: these are frozen. Growing the room does not change them — the tests assert the room still fits
-// inside them, and a room that outgrows one needs a new ObjectGroup version and a converter, exactly
-// as the height change should have had.
+// Positions are stored as fractions of these ranges, so the ranges are part of the format: changing one
+// silently moves every stored object. Frozen literals, independent of room dimensions (tying them to
+// the room height once doubled every painting's height). A room that outgrows them needs a new
+// ObjectGroup version and converter.
 const X_RANGE = [0, 32];
 const Y_RANGE = [0, 8];
 const Z_RANGE = [0, 32];
 
-// The vertical yardstick as it stood before the room's height doubled. Objects written against it
-// come back at twice the height they were placed, and ObjectGroup's converter uses this to put them
-// back. It stays here, beside the range that replaced it, because the two only mean anything
-// together.
+// The old vertical range, used by ObjectGroup's converter to rescale legacy heights.
 const LEGACY_Y_RANGE_MAX = 4;
 
 const dirVecRange = [-1, 1]; // direction vector is a unit vector, so none of its components will ever exceed 1.
@@ -46,9 +34,7 @@ export default class ObjectTransform extends EncodableData
         return {maxX: X_RANGE[1], maxY: Y_RANGE[1], maxZ: Z_RANGE[1]};
     }
 
-    // Reads a height written against the old vertical yardstick. The stored fraction is the same;
-    // only what it is a fraction *of* has changed, so the height it was placed at is recovered by
-    // measuring it against the old range instead of the new one.
+    // Reinterprets a stored fraction against the legacy Y range.
     static rescaleLegacyY(y: number): number
     {
         return y * (LEGACY_Y_RANGE_MAX / Y_RANGE[1]);

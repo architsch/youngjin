@@ -6,15 +6,8 @@ import Form from "./form";
 import ObjectLabelProps from "../../types/objectLabelProps";
 import { LABEL_COLOR_PALETTE_NAME } from "../../../../shared/system/sharedConstants";
 
-// What an object says, and what it says it in.
-//
-// Deliberately about no particular kind of object: the text written on something and the color it is
-// written in are one pair of metadata entries that any object carrying a LabelText component has, so
-// a door is only the first thing to be named through this form.
-//
-// Both controls take effect as they are used, with nothing to confirm. The object is in view behind
-// the form, so what a name looks like on it is answer enough — and a confirming button beside the
-// field is the first thing a narrow screen pushes off its edge.
+// Edits an object's label text and color (any object with LabelText). Changes apply immediately with
+// no confirm button, since the object is visible behind the form.
 export default function CustomizeObjectLabelForm({ initialText, initialColorIndex,
     onSetText, onSetColorIndex }: ObjectLabelProps)
 {

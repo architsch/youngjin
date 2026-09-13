@@ -36,8 +36,7 @@ export default async function runQueryDelete<T extends DBRow>(
         if (querySnapshot.docs.length > 1)
         {
             const db = await FirebaseUtil.getDB();
-            // A query can match any number of documents, so the deletions are split into commits
-            // small enough for Firestore to accept.
+            // Chunked to Firestore's per-commit write limit.
             for (let i = 0; i < querySnapshot.docs.length; i += DB_MAX_WRITES_PER_COMMIT)
             {
                 const batch = db.batch();

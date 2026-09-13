@@ -14,13 +14,8 @@ import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 const socketUserContexts: {[userID: string]: SocketUserContext} = {};
 const playerObjectByUserID: {[userID: string]: AddObjectSignal} = {};
 
-// Short-lived per-user buffer of the last known player metadata at disconnect time.
-// When a user reconnects before the disconnect's DBUser write has landed (the race
-// window for case 1 of the user-state-management flow), this buffer is consulted
-// before falling back to DBUser so the rebuilt player object still carries the
-// user's latest chat message etc.
-// Entries are evicted on the next successful reconnect, or via TTL (handled by
-// SocketsServer's periodic stale-socket sweep).
+// Player metadata captured at disconnect, read on reconnect before DBUser (the DB write may not have
+// landed). Evicted on reconnect or by TTL (SocketsServer's stale-socket sweep).
 const recentDisconnectMetadata: {[userID: string]: {metadata: {[key: string]: string}; timestamp: number}} = {};
 
 const ServerUserManager =
@@ -43,9 +38,7 @@ const ServerUserManager =
     {
         return socketUserContexts[userID] != undefined;
     },
-    // Registers the user as a participant of the given room and spawns their player object in it.
-    // Returns the RoomRuntimeMemory the user ended up in, or undefined if the room turned out to
-    // be unavailable.
+    // Registers the user in the room and spawns their player. Returns the room joined, or undefined.
     addUserToRoom: async (socketUserContext: SocketUserContext, roomRuntimeMemory: RoomRuntimeMemory,
         userID: string, playerObjectTransform: ObjectTransform,
         playerMetadata: {[key: string]: string}): Promise<RoomRuntimeMemory | undefined> =>
@@ -55,11 +48,8 @@ const ServerUserManager =
 
         console.log(`ServerUserManager.addUserToRoom :: roomID = ${roomID}, userID = ${userID}`);
 
-        // The caller resolved this RoomRuntimeMemory before awaiting its way here, so it may no
-        // longer be the live instance: a Regular room is unloaded as soon as its last participant
-        // leaves, which can happen (even as a result of this very user's own departure from it)
-        // while the join is still in flight. Registering into a detached instance would leave the
-        // user in a room nobody else can see, so revive the room and use the live instance instead.
+        // The resolved instance may have been unloaded during the async join (Regular rooms unload when
+        // empty), so revive the room and use the live instance.
         if (ServerRoomManager.roomRuntimeMemories[roomID] != roomRuntimeMemory)
         {
             const reloaded = await ServerRoomManager.loadRoom(roomID);
@@ -121,10 +111,7 @@ const ServerUserManager =
             return;
         }
 
-        // Snapshot the player metadata BEFORE removing the player object, so that a
-        // reconnect arriving in the gap between this point and the DB write below
-        // can still read the user's latest chat message etc. from the in-memory
-        // buffer rather than seeing a stale DBUser document.
+        // Snapshot metadata before removing the player, for reconnects that arrive before the DB write.
         const metadataSnapshot = savePlayerMetadata ? extractPlayerMetadata(user.id) : undefined;
         if (savePlayerMetadata && metadataSnapshot)
             recentDisconnectMetadata[user.id] = {metadata: metadataSnapshot, timestamp: Date.now()};
@@ -148,33 +135,23 @@ const ServerUserManager =
         else
             socketRoomContext.removeSocketUserContext(user.id);
 
-        // Persist the metadata snapshot AFTER releasing in-memory state, so the
-        // reconnect path (which checks recentDisconnectMetadata first) always sees
-        // a consistent view. If the DB write completes before the reconnect,
-        // DBUser is the source of truth; otherwise, the buffer covers the gap.
+        // Persisted after releasing in-memory state; the buffer covers reconnects until the write lands.
         if (savePlayerMetadata && metadataSnapshot)
             await DBUserUtil.savePlayerMetadata(user.id, metadataSnapshot);
 
-        // Only Regular rooms should be unloaded when there is no player in it.
-        // (Hub rooms should NOT be unloaded because the presence of its RoomRuntimeMemory is essential for load-balancing incoming user traffic without frequent DB lookup.)
-        // (SinglePlayer rooms should NOT be unloaded because they follow a different loading/unloading logic.)
+        // Only Regular rooms unload when empty (hubs stay for balancing; single-player rooms aren't loaded here).
         if (roomRuntimeMemory.room.roomType == RoomTypeEnumMap.Regular &&
             Object.keys(roomRuntimeMemory.participantUserNameByID).length == 0)
         {
             if (await DBRoomUtil.saveRoomContent(roomRuntimeMemory.room))
             {
-                // Check once again to see if there is any user in the room,
-                // before proceeding to unload the room. The reason why this check is necessary
-                // is that a user might have joined the room WHILE we were saving the
-                // room's content to the DB (by the async "DBRoomUtil.saveRoomContent" call above).
+                // Re-check emptiness: someone may have joined during the save.
                 if (Object.keys(roomRuntimeMemory.participantUserNameByID).length == 0)
                     ServerRoomManager.unloadRoom(roomID);
             }
         }
     },
-    // Returns a snapshot of the user's current player metadata (read from the live
-    // player object). Used by graceful-shutdown to flush all connected users in one
-    // batch query.
+    // Current metadata from the live player object (for the shutdown batch save).
     getPlayerMetadata: (userID: string): {[key: string]: string} | undefined =>
     {
         return extractPlayerMetadata(userID);
@@ -191,8 +168,7 @@ const ServerUserManager =
         const now = Date.now();
         for (const [userID, cached] of Object.entries(recentDisconnectMetadata))
         {
-            // `>=` (not `>`) so a maxAgeMs of 0 evicts everything synchronously,
-            // which makes test setup straightforward.
+            // `>=` so maxAgeMs 0 evicts everything (useful in tests).
             if (now - cached.timestamp >= maxAgeMs)
                 delete recentDisconnectMetadata[userID];
         }

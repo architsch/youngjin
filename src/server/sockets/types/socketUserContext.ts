@@ -13,15 +13,9 @@ export default class SocketUserContext
     user: User;
     isInSinglePlayerRoom: boolean = false;
 
-    // The funnel milestones already recorded for this account, taken from the row the socket was
-    // authenticated against. ServerAnalyticsManager reads it here instead of fetching the row,
-    // which is what lets it sit on the edit path at all: an edit signal fires once per block
-    // placed, and asking the database each time whether this player has ever built anything would
-    // be a read per block for an answer that stopped changing after the first one.
-    //
-    // It is kept here rather than on User because User is serialized into the page the browser is
-    // served, and a measurement has no business crossing to the client and back. Kept in step by
-    // the analytics module, which updates it in the same breath as the row.
+    // Recorded funnel milestones from the authenticated row, so analytics can skip DB reads on the
+    // edit path. Not on User, which is serialized to the browser. Kept in sync by
+    // ServerAnalyticsManager.
     funnel: string;
 
     private pendingSignalsToUserByTypeIndex: Array<EncodableData[]>;

@@ -34,9 +34,7 @@ const Vector3DUtil =
             z: v1.x * v2.y - v1.y * v2.x
         };
     },
-    // Rotates `v` by the shortest-arc rotation that carries unit direction `from` onto unit
-    // direction `to`. `from`/`to` need not be pre-normalized. The result keeps the length of `v`
-    // (it is a pure rotation), so a unit `v` stays unit. When `from == to` this is a no-op.
+    // Rotates v by the shortest-arc rotation from `from` to `to` (normalized internally). Preserves length.
     rotateFromTo: (v: Vec3, from: Vec3, to: Vec3): Vec3 =>
     {
         const f = Vector3DUtil.normalize(from);

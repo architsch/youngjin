@@ -14,14 +14,10 @@ import SinglePlayerModeConfig from "./singlePlayerModeConfig";
 
 let cachedParams: RoomBuilderParams | undefined;
 
-// The tutorial room is the same room every time it is built, so its generator is handed a fixed
-// seed rather than a fresh one. Nothing in the tutorial's own construction draws from it today; it
-// is here so that a template room and a procedural one are built from the same kind of thing.
+// Fixed seed (currently unused), so template and procedural rooms share the same inputs.
 const TUTORIAL_SEED = 0;
 
-// The tutorial room's spaces are each finished in a palette of their own, so that a player being
-// walked from one to the next can see that he has moved from one room into another. Nothing stands
-// free inside them, so what the prop texture would decorate never comes up.
+// Distinct palettes per space, so moving between them is visible.
 const ARRIVAL_PALETTE = new RoomPalette(16, 51, 41, 41);
 const PASSAGE_PALETTE = new RoomPalette(6, 51, 43, 43);
 const RECEPTION_PALETTE = new RoomPalette(31, 51, 46, 46);
@@ -33,8 +29,7 @@ const TutorialSinglePlayerModeConfig: SinglePlayerModeConfig =
         if (cachedParams)
             return cachedParams;
 
-        // Note: See the "Tutorial Room" section of `docs/geometry/room_generation.md` for
-        // more details on what these variables mean geometrically.
+        // See the "Tutorial room" section of @docs/geometry/room_generation.md.
 
         // Manually set parameters:
         const entranceVoxelCol = 5;
@@ -52,20 +47,14 @@ const TutorialSinglePlayerModeConfig: SinglePlayerModeConfig =
         const z0 = entranceVoxelRow - Z + 1;
 
         const hotspots = {
-            // A patch of bare floor a few steps in front of the entrance. The tutorial ordinarily
-            // looks for one of its own, out from wherever the user is standing when it comes to ask
-            // for it, and falls back to this one when that search comes up empty.
+            // Fallback floor patch in front of the entrance (the tutorial normally picks one near the user).
             floor: {x: entranceVoxelCol + 0.5, y: 0, z: entranceVoxelRow - 3 + 0.5},
             npc: {x: x0 + X - 1 + 0.5, y: 0.5 * PLAYER_HEIGHT, z: z0 + Z1 + 0.5*(Z2 - 1) + 0.5},
-            // A door's collider is centered on its position while the door itself stands on the
-            // floor, so its origin sits half a footprint up (see DoorObjectTypeConfig).
+            // Door origin half a footprint up (collider-centred; see DoorObjectTypeConfig).
             door: {x: x0 + X - 1 - 0.5*(X3 - 1) + 0.5, y: 0.5 * DOOR_FOOTPRINT_HEIGHT, z: z0},
         };
 
-        // Every one of the tutorial's spaces is on the first storey and none on the storey above,
-        // which is what makes it a single-storey room: it is built no higher than the slab that
-        // caps it, and nothing stands in the empty height over that for a camera looking down into
-        // the room to have to see past.
+        // All spaces are on the first storey (a single-storey room with nothing above it).
         const volume = (rowStart: number, colStart: number,
             numRows: number, numCols: number,
             palette?: RoomPalette): RoomVolume =>
@@ -73,14 +62,12 @@ const TutorialSinglePlayerModeConfig: SinglePlayerModeConfig =
                 COLLISION_LAYER_MIN, STOREY_FLOOR_COLLISION_LAYER - 1, palette);
 
         const volumes = {
-            // The four rooms the tutorial is walked through, from the one the player arrives in to
-            // the one he leaves by.
+            // The four rooms, in the order the player passes through them.
             room1: volume(z0 + Z1, x0, Z2 + Z3, X1, ARRIVAL_PALETTE),
             room2: volume(z0 + Z1, x0 + X1 + 1, Z2, X2 - 1, PASSAGE_PALETTE),
             room3: volume(z0 + Z1, x0 + X1 + X2, Z2, X3, RECEPTION_PALETTE),
             room4: volume(z0, x0 + X1 + X2, Z1 - 1, X3, RECEPTION_PALETTE),
-            // The two stretches of wall between them, which the tutorial opens up as the player is
-            // sent on. Until it does, these are mass like the rest of the room around it.
+            // Walls between them, opened by steps.
             wall1: volume(z0 + Z1, x0 + X1, Z2, 1),
             wall2: volume(z0 + Z1 - 1, x0 + X1 + X2, 1, X3),
         };
@@ -89,8 +76,7 @@ const TutorialSinglePlayerModeConfig: SinglePlayerModeConfig =
             entranceVoxelCol,
             entranceVoxelRow,
             entranceVoxelCollisionLayer,
-            // The tutorial's rooms each carry the palette they are finished in, so there is nothing
-            // left for the room to draw - only the pack those palettes are positions within.
+            // Palettes are set per volume, so only the pack is selected.
             paletteSelection: {texturePackPaths: ["default"], palettes: []},
             hotspots,
             volumes,

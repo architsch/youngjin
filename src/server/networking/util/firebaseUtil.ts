@@ -16,10 +16,8 @@ const FirebaseUtil =
     },
 }
 
-// The initialization in flight, or the finished one. A boolean flag cannot stand in for this:
-// the startup below awaits a round-trip to Firestore before it could set one, and every caller
-// arriving inside that window would find the flag still false and call initializeApp() a second
-// time — which throws, and reaches the caller as a failed query rather than as a startup error.
+// The in-flight or finished init promise. A boolean flag would let callers during the async startup
+// call initializeApp() twice (which throws).
 let firebaseInitialization: Promise<void> | undefined;
 let db: admin.firestore.Firestore;
 let storage: admin.storage.Storage;
@@ -28,8 +26,7 @@ function ensureFirebaseInitialized(): Promise<void>
 {
     if (!firebaseInitialization)
     {
-        // Forgotten if it fails, so that a startup which never got as far as creating the app is
-        // retried by the next caller rather than being remembered as a permanent verdict.
+        // Cleared on failure so the next caller retries.
         firebaseInitialization = initializeFirebase()
             .catch(err => { firebaseInitialization = undefined; throw err; });
     }

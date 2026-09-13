@@ -5,22 +5,9 @@ import RoomVolume from "../../roomVolume";
 import { RoomVolumeType, RoomVolumeTypeEnumMap } from "../../roomVolumeType";
 import RoomPaletteSelector from "./roomPaletteSelector";
 
-//------------------------------------------------------------------------
-// Decides where the areas a room is made of stand, and how big they get.
-//
-// Areas begin as small footprints scattered over the room, and are then
-// grown outwards a block at a time for as long as they can grow without
-// touching one another. That last condition is what the whole layout
-// rests on: because growth stops a block short of contact, any two
-// neighbouring areas end up separated by exactly one block of wall -
-// which is precisely where a passage can later be cut. So the room comes
-// out as distinct spaces with real walls between them rather than as one
-// merged blob, and nothing has to arrange that afterwards.
-//
-// A candidate that does not fit is simply dropped. How many areas a room
-// ends up with is a consequence of how much room was left for them,
-// rather than something to force.
-//------------------------------------------------------------------------
+// Places room areas: scatter small footprints, then grow each a block at a time while it doesn't touch
+// another, so neighbours end up exactly one wall block apart (where passages get cut). Candidates that
+// don't fit are dropped.
 
 export default class RoomAreaAllocator
 {
@@ -37,8 +24,7 @@ export default class RoomAreaAllocator
         this.palettes = palettes;
     }
 
-    // Takes an area the caller has shaped itself - the one an entrance opens onto, the open middle
-    // a room is arranged around - on the same terms as any other. Answers whether it fitted.
+    // Adds a caller-shaped area (e.g. the entrance area); returns whether it fits.
     add(volume: RoomVolume): boolean
     {
         if (!this.areaFits(volume))
@@ -49,8 +35,7 @@ export default class RoomAreaAllocator
         return true;
     }
 
-    // Whether an area may stand here: inside the room's boundary, and not touching anything already
-    // placed. `ignore` is for testing a grown copy of an area that is already placed.
+    // Inside the boundary and not touching placed areas. `ignore` excludes the area being grown.
     areaFits(volume: RoomVolume, ignore?: RoomVolume): boolean
     {
         return RoomVolumeUtil.volumeFitsAmong(volume, RoomVolumeConstructorMap["Interior"](),
@@ -67,11 +52,8 @@ export default class RoomAreaAllocator
         }
     }
 
-    // Scatters footprints of one exact shape, laid whichever way round the draw says. This is for
-    // an area that has to be able to hold something long and narrow - a flight of steps above all.
-    // A footprint drawn at random is unlikely to come out either long or narrow, so a room that
-    // wants one asks for it before it scatters the rest, while there is still room for something
-    // this shape. Growth widens it from there like any other area.
+    // Scatters footprints of an exact long, narrow shape (e.g. for stairs). Call before the general
+    // scatter, while space remains.
     scatterWithFootprint(attempts: number, longSide: number, shortSide: number,
         storeyShapes: string[]): void
     {
@@ -83,9 +65,7 @@ export default class RoomAreaAllocator
         }
     }
 
-    // Grows every area outwards a block at a time, in a random direction, for as long as it can do
-    // so without touching another. Growing them all together round by round, rather than one after
-    // another, keeps a single area from swallowing the room before the rest have started.
+    // Grows all areas round by round in random directions, so no single area swallows the room.
     grow(rounds: number): void
     {
         for (let round = 0; round < rounds; ++round)

@@ -3,30 +3,16 @@ import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import { NUM_COLLISION_LAYERS, NUM_VOXEL_BLOCKS, NUM_VOXEL_COLS, NUM_VOXEL_ROWS }
     from "../../../../shared/system/sharedConstants";
 
-// Softens an accumulated light field across neighbouring blocks.
-//
-// Why it is needed: the field is sampled by the shader through the texture's own linear filtering,
-// which joins the block centres with straight lines. That is continuous but its slope is not — the
-// slope changes abruptly at every block boundary — and the eye reads a field of abruptly changing
-// slopes as facets. The steeper the falloff, the larger the change and the more plainly the room
-// comes out in blocks. Widening what each block holds to include its neighbours flattens those
-// changes, and is also simply what light does: a room is lit by every surface in it, not only by the
-// lamp.
-//
-// It is a separable pass — one sweep along each axis rather than one sweep over a 27-block
-// neighbourhood — which is the same result for a ninth of the work.
+// Smooths the light field across neighbouring blocks. Linear texture filtering has slope
+// discontinuities at block boundaries that read as facets. Separable per-axis sweeps.
 
-// A tent: a block keeps half of what it holds and takes a quarter from each side. Held deliberately
-// narrow, since this runs once per axis and a wider kernel starts to move light noticeably away from
-// the lamp that cast it.
+// Narrow tent kernel; wider would visibly shift light away from its lamp.
 const CENTER_WEIGHT = 0.5;
 const NEIGHBOR_WEIGHT = 0.25;
 
 const LightBlockSmoothingUtil =
 {
-    // Marks which blocks light is allowed to occupy at all. Worked out once and handed to every
-    // sweep, since a sweep asks about three blocks for each one it writes and reading the voxel grid
-    // that many times costs more than the sweep itself.
+    // Precomputed once, since sweeps would otherwise read the voxel grid repeatedly.
     markOpenBlocks(voxels: Voxel[] | undefined, outIsOpen: Uint8Array)
     {
         if (voxels == undefined)
@@ -49,13 +35,10 @@ const LightBlockSmoothingUtil =
         }
     },
 
-    // Smooths in place, using the scratch buffer to sweep through. Both buffers hold three entries
-    // per block; the light field and the direction field are both swept, since a direction that
-    // still turned block by block would band a wall the smoothed brightness no longer does.
+    // In place; 3 entries per block. Also applied to the direction field, which would otherwise band.
     smooth(field: Float32Array, scratch: Float32Array, isOpen: Uint8Array)
     {
-        // The stride between neighbouring blocks along each axis, which follows the block index's
-        // layout: the collision layer varies fastest, then the column, then the row.
+        // Strides follow the block index layout: layer fastest, then column, then row.
         const layerStride = 1;
         const colStride = NUM_COLLISION_LAYERS;
         const rowStride = NUM_VOXEL_COLS * NUM_COLLISION_LAYERS;
@@ -67,10 +50,7 @@ const LightBlockSmoothingUtil =
     },
 }
 
-// One sweep along one axis. A solid block is not a dark neighbour but no neighbour at all: it is left
-// out of the average and the weights are renormalized without it, so that light never crosses a wall
-// on its way to being smoothed — which would undo the very thing the flood fill went to the trouble
-// of respecting.
+// Solid blocks are excluded and weights renormalized, so light never crosses walls while smoothing.
 function sweep(source: Float32Array, target: Float32Array, isOpen: Uint8Array,
     stride: number, axisLength: number)
 {
@@ -85,8 +65,7 @@ function sweep(source: Float32Array, target: Float32Array, isOpen: Uint8Array,
             continue;
         }
 
-        // Where this block sits along the axis being swept, so that the sweep stops at the grid's
-        // edge rather than wrapping onto the far side of the room.
+        // Prevents wrapping across the grid edge.
         const positionAlongAxis = Math.floor(blockIndex / stride) % axisLength;
         const hasLower = positionAlongAxis > 0 && isOpen[blockIndex - stride] === 1;
         const hasUpper = positionAlongAxis < axisLength - 1 && isOpen[blockIndex + stride] === 1;

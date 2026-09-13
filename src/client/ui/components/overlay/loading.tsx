@@ -8,8 +8,7 @@ import ScreenCenterText from "./screenCenterText";
 export default function Loading()
 {
     const [state, setState] = useState<LoadingState>({loading: ongoingClientProcessExists()});
-    // How much of the room being entered has been loaded, or null when the wait is not a room load
-    // (e.g. a reconnection) and so has no progress to speak of.
+    // Room load progress, or null for waits that aren't room loads (e.g. reconnection).
     const [progress, setProgress] = useState<number | null>(null);
 
     useEffect(() => {
@@ -21,10 +20,7 @@ export default function Loading()
         };
     }, []);
 
-    // The progress estimate advances with the clock as well as with the load's milestones, so it is
-    // sampled per frame rather than pushed. Sampling stops along with the indicator itself, and a
-    // sample too close to the last one to shift the bar on screen is dropped rather than turned
-    // into a re-render.
+    // Sampled per frame (the estimate advances with time); negligible changes are skipped.
     useEffect(() => {
         if (!state.loading)
             return;
@@ -49,8 +45,7 @@ export default function Loading()
     </>;
 }
 
-// The bar spans a few hundred pixels at most, so anything finer than this is a difference the
-// screen cannot show.
+// Below this, a change isn't visible on the bar.
 const smallestVisibleProgressChange = 0.001;
 
 function isVisiblyDifferent(prevProgress: number | null, newProgress: number | null): boolean

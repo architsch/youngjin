@@ -1,63 +1,22 @@
 # Player Customization System
 
-Reference: @src/shared/graphics/mesh/composition/types/compositionCodec/playerCompositionCodec.ts , @src/shared/graphics/mesh/composition/types/compositionParams/playerCompositionParams.ts , @src/shared/graphics/mesh/composition/types/compositionBuilder/playerCompositionBuilder.ts , @src/client/object/types/playerGameObject.ts , @src/client/object/components/instancedMeshComposer.ts , @src/client/ui/components/panel/customizePlayerPanel.tsx
+Reference: @src/shared/graphics/mesh/composition/types/compositionCodec/playerCompositionCodec.ts , @src/shared/graphics/mesh/composition/types/compositionBuilder/playerCompositionBuilder.ts , @src/client/object/types/playerGameObject.ts , @src/client/ui/components/panel/customizePlayerPanel.tsx
 
-## Overview
+The character's appearance is an `InstancedMeshComposition` (see [instanced_mesh_composition.md](../graphics/instanced_mesh_composition.md)). Its parameters are encoded as a compact base-94 string that is stored in the user's `playerMetadata`. The customization panel is visible while the user's own character is selected in edit mode.
 
-Each user is able to customize the visual appearance of his/her own player character, by adjusting a list of parameters in the in-game UI (see `customizePlayerPanel.tsx`). That panel is what the character being *selected* looks like: it is on screen for exactly as long as the user has his own character picked out, which is where edit mode begins (see [game_mode.md](../gameplay/game_mode.md)) and what the user returns to by clicking his own body. The camera orbits the character throughout, so the user can watch from any side what he is changing.
+- A color is stored as an index into the player's own palette of vivid "tin toy" hues. **Palette entries are only ever appended**, because reordering them would change every saved character.
+- The face is drawn with the unlit material, so its colors are kept dim enough to read as paint rather than as a light.
 
-## Underlying Logic
-
-A user's player customization parameters are encoded as base-94 ASCII characters and saved as an object metadata string (of type `InstancedMeshComposition`) inside the user's `playerMetadata` data field. This lets the customization state persist across different sessions.
-
-A colour is stored as a position in a named palette rather than as a colour, which is what lets a whole character travel in a handful of characters. The player's palette is its own: a character is a tin toy, lithographed in the pure and vivid hues a child's toy is painted in, which are not the colours anything else in the game is finished in (see [door_design.md](door_design.md)). Because a stored position means whatever the palette says it means, a palette's contents and their order are what every character already saved is: entries are appended to one, never rearranged.
-
-The player customization logic is driven by the generic "InstancedMeshComposition" system, which allows each `GameObject` render itself by composing a number of "graphical building blocks" (i.e. instances) from any arbitrary set of instanced meshes (with the help of the `InstancedMeshComposer` component).
-
-## Design Standards
-
-The player's body is essentially an assembly of primitive geometric forms (e.g. boxes, cylinders, squares) which are disposed at specific offsets from the player's center location.
-
-### Grid
-
-In order to keep track of the offsets efficiently, I have come up with a discrete coordinate system which subdivides the player's body into grid cells (see the figure below).
+## Design standards
+The body is built from primitives placed on a discrete grid. Offsets are counted in grid cells rather than raw coordinates.
 
 ![Player Customization Grid](figures/player_customization_1.jpg)
 
-The offset of each individual body part (geometric form) is expressed in terms of the number of grid cells, rather than raw X,Y,Z coordinates.
+- **Circular shapes**: a cylinder in an N×N space is sized to fully cover the middle two cells on each side, and no larger. Its area then roughly matches the square's, and neighbors attach without gaps.
 
-### Circular Shapes
+  ![Circular Shape in Player Customization](figures/player_customization_2.jpg)
+- **Eyes on a cylinder**: the head's side is padded with a box so the flat eyes have a flat surface.
 
-There is one tricky case in which fitting a geometric form in an integer number of grid cells (or an integer fraction of a cell) is not appropriate. A form which produces circular cross sections, such as a cylinder, falls into this category.
+  ![Player Eyes on a Cylinder](figures/player_customization_3.jpg)
 
-Suppose that a customization option lets the user decide whether to fit a box or cylinder inside a 4x4 grid space. The following figure shows these two cases in a top-down view.
-
-![Circular Shape in Player Customization](figures/player_customization_2.jpg)
-
-Fitting a circular cross section inside a 4x4 grid space will make the circle too small, as well as leave awkward empty spaces (gaps) between its border and neighboring shapes. Fitting it inside a 5x5 or even 4.5x4.5 grid space, on the other hand, will make the circle too big, as well as overwhelm its neighboring shapes by trespassing regions outside the 4x4 grid.
-
-The solution is to make the circle just as large as to let it fully cover the middle 2 grid cells (on every side of the 4x4 grid space), but not larger. It happens to be the case that, at this particular size, the area of the circle is approximately 15.708, which is very close to that of a 4x4 grid (i.e. 16). In addition, this exact size lets us safely attach other geometric shapes that are adjacent to at least the middle 2 grid cells on each side, without leaving unexpected spatial gaps.
-
-### Eyes on a Curved Surface
-
-The face — the eyes and the dark patch behind them — is drawn in the same unlit material a lamp's lit panel is (see [lighting.md](../graphics/lighting.md)), rather than in a lit one of its own. It is meant to read as paint on a toy: flat, clean, and the same whichever way the light falls, which is exactly what an unlit material gives. Its colors are therefore what actually reaches the screen rather than a starting point the room's light then works on, so they are kept well down the range — a face at full strength would read as a lamp rather than as paint.
-
-Since the player's eyes are flat patches of color rendered on a flat surface, it can be problematic if we try to render the eyes on the side of a cylinder. Therefore, it is necessary to pad the cylinder's side with a box so as to provide a flat surface for the eyes. The figure top-down view illustrates how this solution is implemented. The circle shape is a cross section of the cylinder (which is the player's head).
-
-![Player Eyes on a Cylinder](figures/player_customization_3.jpg)
-
-### Case-by-Case Design
-
-- Design of `PlayerHat`:<br>
-    - Type 1:<br>
-        ![PlayerHat 1](figures/player_customization_4.jpg)<br>
-
-- Design of `PlayerBottom`:<br>
-    ![PlayerBottom Design Components](figures/player_customization_5.jpg)<br>
-    - Type 0,1,2:<br>
-        ![PlayerBottom 0,1,2](figures/player_customization_6.jpg)<br>
-
-## Related docs
-
-- [Instanced Mesh Composition](../graphics/instanced_mesh_composition.md) — underlying mechanism which powers the player customization logic
-- [Camera Control](../graphics/camera_control.md) — the orbit camera mode used while customizing the character
+Reference designs: `PlayerHat` type 1 ([figure](figures/player_customization_4.jpg)); `PlayerBottom` components ([figure](figures/player_customization_5.jpg)) and types 0–2 ([figure](figures/player_customization_6.jpg)).

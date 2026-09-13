@@ -6,9 +6,7 @@ import FormPaletteColorInput from "../input/formPaletteColorInput";
 import FormRangeInput from "../input/formRangeInput";
 import ScrollPanel from "./scrollPanel";
 
-// The sky past a room — its own color, and the weather drifting across it — raised from the room's
-// settings (see CustomizeRoomPanel). What each setting means is in @docs/graphics/lighting.md, and
-// how an edit reaches the room is in useEditableRoomPrefs.
+// Sky and cloud settings (see CustomizeRoomPanel, @docs/graphics/lighting.md, useEditableRoomPrefs).
 export default function SkyPanel({ anchorElementId, onClose }: Props)
 {
     const [prefs, apply] = useEditableRoomPrefs();
@@ -18,8 +16,7 @@ export default function SkyPanel({ anchorElementId, onClose }: Props)
             text="The sky past your room, and the cloud drifting across it — the air outside it, where Smoke is the air inside. The sky and the clouds each have a color of their own, so the further apart you pick the two the stronger the clouds read. Strength is how much weather there is at all, and starts at none. Softness is how sharp the edge of a cloud is, from cut to no edge at all. Your room's fog is laid over the sky as well, as far as the room stands in front of it."/>
         */}
         <div className={COLUMN_CLASS_NAMES}>
-            {/* The sky is air rather than a mass seen against it, so it is picked from the set of airs
-                the fog is, while the clouds have a palette of their own (see RoomPrefs). */}
+            {/* Sky uses the fog palette; clouds use the scenery palette (see RoomPrefs). */}
             <FormPaletteColorInput
                 label="Sky Color"
                 paletteName={FOG_COLOR_PALETTE_NAME}
@@ -60,13 +57,10 @@ export default function SkyPanel({ anchorElementId, onClose }: Props)
     </ScrollPanel>;
 }
 
-// Every quantized setting of a room runs over the same range, since every one of them is a single
-// stored character (see RoomPrefsUtil). An <input> wants its bounds as text.
+// All room prefs share one step range (one stored character each; see RoomPrefsUtil).
 const MAX_STEP_ATTRIBUTE = String(MAX_ROOM_PREFS_STEP);
 
-// One setting to a line, so that each is within reach without the panel being scrolled sideways to
-// find it. The lines are ranged right, which lines the tracks up under each other whatever their
-// labels say.
+// One setting per line, right-aligned so tracks line up.
 const COLUMN_CLASS_NAMES = "flex flex-col items-end gap-1 shrink-0";
 
 interface Props

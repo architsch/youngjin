@@ -1,11 +1,4 @@
-/**
- * Extended action vocabulary for the scenario-based integration test framework.
- *
- * Every atomic operation the game supports is represented as an Action type.
- * The `executeAction` function maps each action to the appropriate harness/manager call.
- *
- * For property-based testing, fast-check arbitraries are provided for each action type.
- */
+/** The scenario action vocabulary, its executor, and fast-check arbitraries for property-based tests. */
 import fc from "fast-check";
 import { harness, ConnectedUser } from "./serverHarness";
 import { MockUserOverrides } from "./mockUser";
@@ -39,14 +32,12 @@ export type Action =
     | { type: "joinRoom"; userIndex: number; roomID: string; allowFallback?: boolean }
     | { type: "requestRoomChange"; userIndex: number; roomID: string; allowFallback?: boolean }
     | { type: "seedRoom"; roomID: string; roomType?: RoomType }
-    // Object — player movement. `targetUserIndex` defaults to the acting user's own player
-    // object, so that a differing target models one user trying to move another user's player.
+    // `targetUserIndex` defaults to the actor's own player (a different target models moving another's).
     | { type: "moveObject"; userIndex: number; x: number; y: number; z: number;
         dirX?: number; dirY?: number; dirZ?: number; targetUserIndex?: number }
     // Object — metadata (chat message)
     | { type: "sendMessage"; userIndex: number; message: string }
-    // Object — metadata (player appearance). `raw` sends the string as-is, bypassing the codec,
-    // to model a client that emits a malformed or hostile composition.
+    // `raw` bypasses the codec, to model a malformed or hostile composition.
     | { type: "setPlayerComposition"; userIndex: number; seed?: number; raw?: string }
     // Object — metadata (arbitrary key, for permission testing)
     | { type: "setObjectMetadata"; userIndex: number; metadataKey: number; metadataValue: string;
@@ -70,10 +61,7 @@ export type Action =
 
 // ─── Action Executor ────────────────────────────────────────────────────────
 
-/**
- * Executes a single action against the harness, mutating `connectedUsers` as needed.
- * Returns silently if the action targets a non-existent user or room (graceful no-op).
- */
+/** Executes one action (no-op for a missing user or room), updating `connectedUsers`. */
 export async function executeAction(action: Action, connectedUsers: ConnectedUser[]): Promise<void>
 {
     switch (action.type)
@@ -198,8 +186,7 @@ export async function executeAction(action: Action, connectedUsers: ConnectedUse
             const ctx = connectedUsers[idx];
             const roomID = ServerRoomManager.currentRoomIDByUserID[ctx.user.id];
             if (!roomID) return;
-            // Defaults to the acting user's own player object, so that a differing target models
-            // one user trying to write to another user's player.
+            // Defaults to the actor's own player (a different target models writing another's).
             const targetIdx = (action.targetUserIndex ?? idx) % connectedUsers.length;
             const targetObj = harness.getPlayerObject(connectedUsers[targetIdx].user.id);
             if (!targetObj) return;
@@ -265,10 +252,8 @@ export async function executeAction(action: Action, connectedUsers: ConnectedUse
             const ctx = connectedUsers[idx];
             const roomMem = ServerRoomManager.roomRuntimeMemories[action.roomID];
             if (!roomMem) return;
-            // Ownership is one fact recorded in two places, and it is the second of the two that
-            // every permission check reads: the room names its owner, and the owner names his room.
-            // Written to the stored user as well as the live one, so that it survives a reconnect
-            // the way it does on the real server, which rebuilds the User from DBUser.
+            // Both sides of ownership, plus the stored user, so it survives a reconnect (the server
+            // rebuilds User from DBUser).
             roomMem.room.ownerUserID = ctx.user.id;
             ctx.user.ownedRoomID = action.roomID;
             await DBUserUtil.setOwnedRoomID(ctx.user.id, action.roomID);

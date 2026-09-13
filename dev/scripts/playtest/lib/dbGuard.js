@@ -1,45 +1,26 @@
-// The barrier between the playtest tooling and the live database.
-//
-// The tooling exists to write to a database directly, which is the whole reason it can produce
-// states ordinary play cannot. That same capability pointed one namespace to the left would be
-// editing production. The live and staging data live in one Firebase project and one storage
-// bucket, separated only by a collection-name prefix, so "which database am I talking to" is a
-// string comparison — and a string comparison is exactly the kind of thing that goes wrong
-// quietly.
-//
-// So no playtest script constructs a Firestore or Storage handle itself. They ask here, and
-// what they get back is a facade that can only name the namespace they asked for:
-//
-//   - There are two targets, `staging` and `local`, and no third one. "live" is not a value
-//     this module accepts; it is not a target that exists.
-//   - Every collection name and every storage path is checked against the target's prefix
-//     before it reaches the SDK, so a typo or a bad flag fails loudly instead of resolving to
-//     a live collection.
-//   - `local` demands the emulator environment variables, because an empty prefix with no
-//     emulator is not "local" — it is live, and it is the one mistake that would look right in
-//     every log line until the damage was done.
-//
-// This is one layer of three. The other two are outside this file: the deny rules in
-// .claude/settings.json, which stop an agent reaching the live data through the gcloud and
-// firebase CLIs without going through Node at all; and the standing instruction in the
-// staging-playtest skill that a playtest script must obtain its handles here. This layer is the
-// one that holds without anybody remembering it.
+// The barrier between the playtest tooling and the live database. Live and staging share one Firebase
+// project and bucket, separated only by a collection prefix, so no playtest script builds its own handle.
+// Scripts get a facade that can only name the requested namespace:
+//   - Targets are `staging` and `local` only; "live" isn't accepted.
+//   - Every collection name and storage path is checked against the target's prefix before the SDK.
+//   - `local` requires the emulator environment variables (unprefixed without an emulator is live).
+// The other two layers: deny rules in .claude/settings.json (blocking gcloud/firebase CLI access to
+// live), and the staging-playtest skill's rule that scripts obtain handles here.
 
 const admin = require("firebase-admin");
 
 const PROJECT_ID = "thingspool";
 const STORAGE_BUCKET = "thingspool.firebasestorage.app";
 
-// The live namespace is the unprefixed one. It is named here only so that the check below can
-// recognise an attempt to reach it and say so plainly, never as somewhere to route to.
+// The live (unprefixed) namespace, named only so the check can reject it explicitly.
 const LIVE_PREFIX = "";
 
 const TARGETS = {
-    // Deployed staging. Shares the project and the bucket with live; the prefix is the only
-    // thing separating them, which is why it is enforced on every single path.
+    // Deployed staging. Shares project and bucket with live; the prefix is the only separation, so it's
+    // enforced on every path.
     staging: { prefix: "staging_", requiresEmulator: false },
-    // The Firebase emulators on this machine. Unprefixed like live, and harmless *only*
-    // because the emulator host variables send it somewhere else entirely — hence the check.
+    // Local emulators. Unprefixed like live, and safe only because the emulator host variables redirect
+    // it (hence the check).
     local: { prefix: "", requiresEmulator: true },
 };
 
@@ -74,9 +55,7 @@ function resolveTarget(name)
     return { name: target, prefix: TARGETS[target].prefix, emulator: Boolean(emulatorHost) };
 }
 
-// A namespace check that has to pass before any name reaches the SDK. It rejects the two ways
-// a name goes wrong: not carrying the target's prefix (so it belongs to another namespace), and
-// carrying path syntax (so it could climb out of the collection it names).
+// Rejects names without the target's prefix, or with path syntax that could escape the collection.
 function assertInNamespace(target, name, what)
 {
     if (typeof name !== "string" || name.length === 0)
@@ -87,8 +66,7 @@ function assertInNamespace(target, name, what)
 
     if (target.prefix === LIVE_PREFIX)
     {
-        // Only the emulator ever gets here, and only because resolveTarget already proved the
-        // emulator host is set. On the emulator there is nothing to protect.
+        // Only reached for the emulator, whose host resolveTarget already verified.
         return name;
     }
 
@@ -100,12 +78,8 @@ function assertInNamespace(target, name, what)
     return name;
 }
 
-// What the scripts get instead of a Firestore instance.
-//
-// A facade rather than a wrapper: it exposes the two entry points the tooling actually needs,
-// so there is no unguarded method to reach past it by accident. A CollectionReference handed
-// back from here stays inside its own collection through every query and document it produces,
-// which is what makes checking the name once sufficient.
+// The Firestore facade: only the two entry points the tooling needs, so nothing unguarded is reachable.
+// References it returns stay within their collection, so one name check suffices.
 function guardedFirestore(db, target)
 {
     return {
@@ -118,8 +92,7 @@ function guardedFirestore(db, target)
             return db.collection(assertInNamespace(target, name, "collection"));
         },
 
-        // Batches carry no names of their own — every write in one is addressed by a reference
-        // that came from collection() above, and so was checked there.
+        // Batch writes use references from collection() above, already checked.
         batch()
         {
             return db.batch();
@@ -138,8 +111,7 @@ function guardedBucket(bucket, target)
             return bucket.file(assertInNamespace(target, filePath, "storage path"));
         },
 
-        // Listing is scoped by prefix, and an unscoped listing would enumerate the live rooms'
-        // content, so the prefix is required rather than optional.
+        // The prefix is required, since an unscoped listing would enumerate live rooms' content.
         getFiles(options)
         {
             const prefix = options && options.prefix;
@@ -151,9 +123,7 @@ function guardedBucket(bucket, target)
     };
 }
 
-// Reads --target off the command line, resolves it, and returns the guarded handles plus a
-// description of what was resolved. Every command should print that description, so which
-// namespace was touched is never something the reader has to infer.
+// Resolves --target and returns the guarded handles plus a description every command should print.
 function connect(argv)
 {
     const i = argv.indexOf("--target");
@@ -178,25 +148,12 @@ function connect(argv)
 }
 
 // ─── Read-only access, including live ───────────────────────────────────
-//
-// Everything above exists because the playtest tooling writes, and a write aimed at the wrong
-// namespace is unrecoverable. Reading is a different act with a different worst case, and one
-// question genuinely cannot be answered anywhere else: which traffic sources bring people who stay.
-// That happens on the live server, so a tool that may only read staging would be measuring an
-// audience nobody was sent to.
-//
-// So live is a target here and nowhere else, and three things keep it narrow:
-//
-//   - What comes back cannot write. The facade exposes reads and returns plain data; there is no
-//     document reference, no batch, and no path back to the SDK through it.
-//   - It can only name collections on READABLE_COLLECTIONS. That list holds aggregate counters —
-//     documents whose contents are counts per traffic source, with nothing in them that belongs to
-//     any one person. The users collection is deliberately absent.
-//   - The target is still resolved by resolveTarget's rules, so the emulator checks that stop
-//     "local" from silently meaning "live" apply here exactly as they do above.
-//
-// The unprefixed names below are the live ones by definition. That is the whole reason the write
-// path refuses to accept them, and it is why this list is short and stated literally.
+// Some questions (which traffic sources retain people) only live data answers, so live is a read-only
+// target here and nowhere else, kept narrow three ways:
+//   - The facade exposes reads returning plain data: no references, batches, or path back to the SDK.
+//   - Only READABLE_COLLECTIONS may be named: aggregate counters with nothing per-person (not users).
+//   - Targets still resolve via resolveTarget, so the emulator checks for "local" still apply.
+// These unprefixed names are the live ones, which is why the write path refuses them.
 const READABLE_COLLECTIONS = ["acquisition"];
 
 function resolveReadTarget(name)
@@ -226,8 +183,7 @@ function assertReadable(target, name)
     return `${target.prefix}${name}`;
 }
 
-// Reads are returned as plain objects, keyed by document id. Handing back snapshots would hand back
-// their references, and a reference is a write.
+// Plain objects keyed by id: snapshots carry references, and a reference can write.
 function toPlainDocs(snapshot)
 {
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -239,8 +195,7 @@ function readOnlyFirestore(db, target)
         target: target.name,
         prefix: target.prefix,
 
-        // `name` is the bare collection name without a prefix — the prefix belongs to the target
-        // and is applied here, so a caller cannot address another namespace by naming one.
+        // `name` is unprefixed; the target's prefix is applied here, so callers can't name another namespace.
         async readAll(name)
         {
             return toPlainDocs(await db.collection(assertReadable(target, name)).get());
@@ -253,8 +208,7 @@ function readOnlyFirestore(db, target)
     };
 }
 
-// The read-only counterpart of connect(). Accepts --app (matching serverMonitor.js, which is the
-// other tool that reads live) as well as --target.
+// Read-only counterpart of connect(); accepts --app (as serverMonitor.js does) as well as --target.
 function connectReadOnly(argv)
 {
     const appIndex = argv.indexOf("--app");
@@ -278,9 +232,7 @@ function connectReadOnly(argv)
     };
 }
 
-// The field-level sentinels (deleting a field, incrementing a number). They name no collection and
-// no document, so they carry no namespace to check — they only ever take effect through a reference
-// that came from the guarded facade above and was checked there.
+// Field sentinels (delete, increment) name no path; they only act through guarded references.
 const FieldValue = admin.firestore.FieldValue;
 
 module.exports = {

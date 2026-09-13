@@ -9,8 +9,8 @@ import InstancedMeshGraphics from "./instancedMeshGraphics";
 import MaterialParamsMap from "../../../shared/graphics/material/maps/materialParamsMap";
 import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
 
-// Precomputed "+materialId" suffixes, so the refresh loop can branch on a part's material without
-// splitting its instancedMeshId (see MeshDataUtil.getInstancedMeshId for the id's format).
+// Precomputed "+materialId" suffixes, to avoid splitting ids in the refresh loop (see
+// MeshDataUtil.getInstancedMeshId).
 const INSTANCE_COLORED_SUFFIXES = INSTANCE_COLORED_MATERIAL_IDS.map(
     (materialId) => MeshDataUtil.getInstancedMeshId("", materialId));
 const INSTANCED_WOOD_SUFFIX = MeshDataUtil.getInstancedMeshId("", INSTANCED_WOOD_MATERIAL_ID);
@@ -32,17 +32,12 @@ export default class InstancedMeshComposer extends GameObjectComponent
     private instanceIdsByInstancedMeshId: {[instancedMeshId: string]: number[]} = {};
     private nextIndexByInstancedMeshIdTemp: {[instancedMeshId: string]: number} = {};
 
-    // The composer's update pipeline, expressed as a single state variable:
-    //   "refreshPending" - a full refresh is due (composition/visibility changed, or just spawned).
-    //                      update() first ensures every part's instanced mesh is loaded, then
-    //                      refreshes and settles into "upToDate".
-    //   "meshesLoading"  - an asynchronous instanced-mesh load is in flight; update() waits.
-    //   "upToDate"       - instances mirror the current parts; only movement triggers re-baking.
+    // "refreshPending": refresh due (loads meshes first); "meshesLoading": waiting on a load;
+    // "upToDate": instances match the parts, re-baked only on movement.
     private updateState: "refreshPending" | "meshesLoading" | "upToDate" = "refreshPending";
 
-    // The instance matrices bake the GameObject's world transform (see InstancedMeshBinding), so a
-    // refresh is due not only when the composition changes but whenever the object moves. This holds
-    // the visual node's world matrix as of the last refresh, so stationary frames can be skipped.
+    // Instance matrices bake the world transform, so movement also requires a refresh. Stationary
+    // frames are skipped by comparing against this.
     private bakedWorldMatrix: THREE.Matrix4 = new THREE.Matrix4();
 
     private hidden: boolean = false;
@@ -83,12 +78,8 @@ export default class InstancedMeshComposer extends GameObjectComponent
         this.reloadComposition();
     }
 
-    // Reads the object's composition again and has the instances rebuilt from it.
-    //
-    // Public because a composition is not always stored: an object whose metadata holds none is
-    // composed afresh from generateDefaultParts every time this runs, so an object whose appearance
-    // is *derived* from something else it carries — a lamp's, from the light it gives off — asks for
-    // this when that something else changes (see WallLampGameObject).
+    // Rebuilds instances from the composition. Public for objects whose appearance is derived (e.g. a
+    // lamp's, from its light; see WallLampGameObject), which recompose when that source changes.
     reloadComposition(): void
     {
         this.instancedMeshComposition.loadFromMetadata(this.gameObject);
@@ -121,10 +112,7 @@ export default class InstancedMeshComposer extends GameObjectComponent
         this.updateState = "refreshPending";
     }
 
-    // Visits every instance this object is currently drawn from. A composed object is scattered over
-    // as many instances as it has parts, across several instanced meshes, so anything that acts on
-    // it as a whole (e.g. taking it out of a camera's line of sight) has to reach all of them rather
-    // than the single part it happened to find the object by.
+    // Visits all instances across meshes, for whole-object actions (e.g. occlusion hiding).
     forEachInstance(visit: (instancedMeshId: string, instanceId: number) => void)
     {
         for (const instancedMeshId in this.instanceIdsByInstancedMeshId)
@@ -168,9 +156,7 @@ export default class InstancedMeshComposer extends GameObjectComponent
         return true;
     }
 
-    // True while the visual node's world matrix still matches the one the instances were last baked
-    // under — i.e. the GameObject hasn't moved (nor bounced via a cosmetic transform) since the
-    // last refresh, so the baked instance matrices are still valid.
+    // Whether visualObj hasn't moved (or bounced) since the last bake.
     private transformIsInSync(): boolean
     {
         this.gameObject.obj.updateMatrixWorld(); // Recurses to visualObj, so the compared matrix is current.
@@ -231,16 +217,11 @@ export default class InstancedMeshComposer extends GameObjectComponent
                 this.instanceIdsByInstancedMeshId[instancedMeshId] = instanceIds;
             }
 
-            // Rent a new instance if this part doesn't have one yet. The mesh may have none left
-            // to give (a room holding more players than its instance pools were sized for), in
-            // which case the part simply goes undrawn until one frees up — the rest of the body,
-            // and everything else in the room, keeps being drawn as usual.
+            // An exhausted pool leaves this part undrawn until an instance frees up.
             let instanceId = instanceIds[nextIndex];
             if (instanceId == undefined)
             {
-                // A part can only ever take the next slot in the list, so once one part of this
-                // mesh has gone without an instance, the parts behind it go without one too
-                // rather than taking the missing part's place.
+                // Parts take slots in order, so once one misses, later parts of this mesh miss too.
                 if (nextIndex != instanceIds.length)
                     continue;
                 const rentedInstanceId = this.instancedMeshGraphics.rentInstanceFromPool(instancedMeshId);
@@ -261,9 +242,7 @@ export default class InstancedMeshComposer extends GameObjectComponent
                     part.color!.x, part.color!.y, part.color!.z);
             }
 
-            // Checked separately from the instance color above rather than as an alternative to it:
-            // a moulded wooden part takes its surface color through the instance color like any
-            // other, and carries the moulding around its border on top of that.
+            // In addition to the instance color: wood parts also carry moulding params.
             if (instancedMeshId.endsWith(INSTANCED_WOOD_SUFFIX))
             {
                 this.instancedMeshGraphics.updateInstanceMouldingParams(
@@ -283,15 +262,12 @@ export default class InstancedMeshComposer extends GameObjectComponent
                 this.instancedMeshGraphics.returnInstanceToPool(
                     instancedMeshId, instanceIds[obsoleteIndex]);
             }
-            // Only ever shrinks: the list is shorter than the part count whenever some parts went
-            // without an instance, and padding it out would leave holes that later get handed back
-            // to the pool as if they were instances.
+            // Only shrinks; padding would hand bogus ids back to the pool later.
             if (instanceIds.length > numInstancesInUse)
                 instanceIds.length = numInstancesInUse;
         }
 
-        // Capture the world transform the instances were just baked under (see transformIsInSync).
-        // The extra updateMatrixWorld covers the zero-part case, where no bake refreshed it above.
+        // updateMatrixWorld covers the zero-part case, where no bake refreshed it.
         this.gameObject.obj.updateMatrixWorld();
         this.bakedWorldMatrix.copy(this.gameObject.visualObj.matrixWorld);
 

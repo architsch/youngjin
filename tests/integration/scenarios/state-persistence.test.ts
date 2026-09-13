@@ -1,13 +1,6 @@
 /**
- * Scenario tests: State persistence & metadata
- *
- * Covers scenarios not addressed by the existing connection/room/object tests:
- * - Player metadata persistence across reconnection
- * - Player metadata persistence across room switches
- * - Multiple reconnection cycles
- * - Voxel state persistence (blocks survive user leave/rejoin)
- * - Graceful shutdown preserves voxel state
- * - Extended invariant checks (physics + role consistency)
+ * Scenario tests: state persistence — player metadata across reconnects and room switches, repeated
+ * reconnects, voxels across leave/rejoin and shutdown, and extended invariants.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runScenario } from "../helpers/scenarioRunner";
@@ -146,8 +139,7 @@ describe("state persistence scenarios", () => {
             skipInvariants: true,
             skipCleanup: true,
             assertions: () => {
-                // The hub stays resident after its last user left (hubs are never unloaded),
-                // and the voxels the builder placed are still in it.
+                // Hubs are never unloaded, so the builder's voxels remain.
                 expect(harness.isRoomLoaded("voxel-persist")).toBe(true);
                 expect(harness.getRoomParticipantCount("voxel-persist")).toBe(0);
             },

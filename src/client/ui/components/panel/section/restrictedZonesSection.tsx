@@ -1,7 +1,6 @@
 import SubPanelSection from "./subPanelSection";
 
-// The restricted zones' entry in a room's settings (see CustomizeRoomPanel), which raises
-// RestrictedZonesPanel.
+// Room settings entry that raises RestrictedZonesPanel.
 export default function RestrictedZonesSection({ open, onToggle }: Props)
 {
     return <SubPanelSection title="Restricted Zones" buttonId={RESTRICTED_ZONES_BUTTON_ID} open={open} onToggle={onToggle}/>;

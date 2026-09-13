@@ -5,41 +5,19 @@ import { MOUSE_DRAG_THRESHOLD_PX, TOUCH_DRAG_THRESHOLD_PX } from "../../../../..
 
 const dragOffsetTemp: THREE.Vector2 = new THREE.Vector2();
 
-// How far the pointer travels, as a physical distance, for a drag to read as one full unit of
-// steering input. CSS pixels stand in for physical distance here: the page is served at
-// "width=device-width, initial-scale=1", which makes one CSS pixel a density-independent unit
-// rather than a hardware pixel, so this length is roughly constant across handheld screens.
-//
-// Measuring the drag against a fixed length, rather than against the canvas, is what keeps the
-// control feeling the same whichever way the device is held. A canvas-relative measure makes the
-// longer edge of the canvas the least responsive axis, and in portrait that axis is the one the
-// player walks along.
+// Pointer travel (CSS px) for one unit of steering. A fixed length, not canvas-relative, so control
+// feels the same in portrait and landscape.
 const dragReferenceLengthPx = 120;
 
-// Steering produced per reference length of pointer travel, per axis. Independent knobs: turning
-// and walking are clamped to different ranges by PlayerController, so matching gains here do not
-// imply the two axes reach full deflection at the same drag distance.
+// Per-axis gains; PlayerController clamps turning and walking to different ranges.
 const dragSensitivityX = 0.85;
 const dragSensitivityY = 1.25;
 
-// A mouse is dragged from the wrist across a desk rather than with a thumb across a screen being
-// held, so the same physical travel can warrant a different gain than a touch drag gets. Left
-// neutral because the fixed-length measure already leaves a mouse drag more responsive than a
-// canvas-relative one did on a large window; this is the knob to turn if that proves wrong.
-// Applies to the steering reading only: the orbit reading is grab-style, and a control that follows
-// the pointer is expected to follow it identically whatever is doing the pointing.
+// Mouse gain for steering only (the orbit reading is 1:1 for any pointer).
 const mouseDragMultiplier = 0.6;
 
-//------------------------------------------------------------------------
-// Reads a single pointer being moved while held down. The drag is exposed in
-// two readings, because the two things it drives want different ones: a
-// joystick-style offset from the press point, fed into the controller's
-// steering, and a grab-style per-frame delta (dragDelta) for consumers that
-// follow the pointer 1:1, such as the orbit camera.
-//
-// It also answers whether the gesture that has just ended stayed still enough
-// to count as a tap, which is what decides whether a click reaches the scene.
-//------------------------------------------------------------------------
+// One held pointer, read two ways: a joystick-style offset from the press point (steering) and a 1:1
+// per-frame dragDelta (orbit). Also decides whether a gesture was a tap.
 
 export default class PointerDragInput
 {
@@ -48,13 +26,10 @@ export default class PointerDragInput
 
     private pointerIsDown: boolean = false;
 
-    // Which kind of pointer started the ongoing drag, taken from the press rather than assumed from
-    // the device: a touchscreen laptop and a tablet with a mouse attached both make the device a
-    // poor proxy for how the drag is actually being performed.
+    // From the press event, not the device (hybrid devices exist).
     private pointerIsMouse: boolean = false;
 
-    // Whether the ongoing gesture may still turn out to be a tap. A gesture given up on midway
-    // (a pinch taking it over) is none, however little the pointer ended up travelling.
+    // False once the gesture is cancelled (e.g. taken over by a pinch).
     private gestureMayBeTap: boolean = false;
 
     private pointerDownPos: THREE.Vector2 = new THREE.Vector2();
@@ -103,19 +78,14 @@ export default class PointerDragInput
             PointerCoordUtil.getNDC(ev, this.pointerDragPos);
     }
 
-    // Gives up the ongoing drag altogether, for when the gesture turns out to be something else
-    // (see PlayerPointerInput). Unlike a release, this also rules out the tap that a gesture ending
-    // where it started would otherwise be taken for.
+    // Abandons the drag and rules out a tap (see PlayerPointerInput).
     cancel(): void
     {
         this.pointerIsDown = false;
         this.gestureMayBeTap = false;
     }
 
-    // Whether the gesture stayed within the allowance for a click rather than a drag. Measured
-    // against the press that produced it, not against the device: a touchscreen laptop and a tablet
-    // with a mouse attached both make the device a poor proxy for how steadily the pointer can be
-    // held.
+    // Tap tolerance depends on the pointer type of the press.
     gestureIsTap(): boolean
     {
         if (!this.gestureMayBeTap)

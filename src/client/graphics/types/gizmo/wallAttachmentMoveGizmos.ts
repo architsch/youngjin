@@ -18,20 +18,11 @@ import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
 import ObjectTypeConfigMap from "../../../../shared/object/maps/objectTypeConfigMap";
 import ObjectTypeClientConfigMap from "../../../object/maps/objectTypeClientConfigMap";
 
-//------------------------------------------------------------------------
-// The four arrows that move a wall attachment along the wall it hangs on, put up around whichever
-// one is currently picked out.
-//
-// One set of arrows serves every kind of attachment there is, because only one thing is ever picked
-// out (see WorldSpaceSelectionUtil): the arrows read the object under them each time they are put
-// up. Every wall attachment is moved in exactly the same way too — WallAttachedObjectUtil settles
-// where a step lands, corners and all — so a kind of object declares nothing here beyond whether it
-// is moved this way at all (see ObjectTypeClientConfig). How big it is comes from its own collider,
-// and who may move it is already answered by who may pick it out.
-//------------------------------------------------------------------------
+// Arrows that nudge the selected wall attachment along its wall. One shared set (only one thing is
+// selected); movement rules live in WallAttachedObjectUtil, sizing in the collider, and a type opts in
+// via ObjectTypeClientConfig.
 
-// The same four ways a wall attachment can be nudged along the wall it hangs on: a step to either
-// side, and a step up or down. (For a wall-attached object, dx is along its own local x-axis.)
+// dx is along the object's local x-axis.
 const arrowDefs = [
     { dir: "+x", dx: 0.5, dy: 0, dz: 0 },  // local right
     { dir: "-x", dx: -0.5, dy: 0, dz: 0 }, // local left
@@ -39,9 +30,7 @@ const arrowDefs = [
     { dir: "-y", dx: 0, dy: -0.5, dz: 0 }, // down
 ];
 
-// How far past the object's own edge an arrow sits, so an arrow reads as attached to the outline it
-// is nudging rather than as floating somewhere near it. The two axes are measured separately only
-// because a footprint need not be square: the margin beyond each edge is the same.
+// Gap between the footprint edge and each arrow.
 const EDGE_MARGIN = 0.1;
 const ARROW_COLOR_HEX = "#ffff00";
 const ARROW_SIZE = 2;
@@ -75,11 +64,8 @@ function hideAll()
         arrow.setVisible(false);
 }
 
-// The object the arrows are currently to be put up around, along with the stretch of wall it lays
-// claim to, if any. Moving one is an edit, so the arrows belong to edit mode alone.
-//
-// The footprint is the object's own collider rather than what is drawn, so the arrows frame the same
-// rectangle the selection outline does.
+// The selection to put arrows around (edit mode only), with its collider footprint (matching the
+// selection outline).
 function getGizmoTarget(): {selection: ObjectSelection, footprintWidth: number,
     footprintHeight: number} | null
 {
@@ -94,8 +80,6 @@ function getGizmoTarget(): {selection: ObjectSelection, footprintWidth: number,
     if (!selection)
         return null;
 
-    // A kind of object that asks for no arrows is one that is not moved this way at all — the user's
-    // own character walks where it is going.
     const objectTypeIndex = selection.gameObject.params.objectTypeIndex;
     if (!ObjectTypeClientConfigMap.getConfigByIndex(objectTypeIndex).selection?.showMoveGizmos)
         return null;
@@ -118,8 +102,7 @@ async function refreshGizmos()
 
     await ensureInitialized();
 
-    // Creating the arrows is awaited, and what they were to be put up around may be gone by the time
-    // that returns — the selection dropped, or edit mode left.
+    // Re-check: the selection or mode may have changed during the await.
     const target = getGizmoTarget();
     if (!target)
     {
@@ -213,8 +196,7 @@ function tryMove(selection: ObjectSelection, dx: number, dy: number, dz: number)
 
         const tr = ClientObjectManager.setObjectTransform(objectId, result.newPos, result.newDir, true);
 
-        // Notify the observable to move the arrows and the camera onto where the object now is.
-        // (The selection outline follows the object of its own accord, frame by frame.)
+        // Moves the arrows and camera to the new position.
         objectSelectionObservable.notify();
 
         // Emit to server
@@ -229,9 +211,6 @@ function tryMove(selection: ObjectSelection, dx: number, dy: number, dz: number)
 
 objectSelectionObservable.addListener("wallAttachmentMoveGizmos", refreshGizmos);
 
-// The mode decides whether a selected object is something being moved or merely something being
-// looked at, so a change of mode puts the arrows up or takes them down even when the object under
-// them stayed exactly as it was.
 gameModeObservable.addListener("wallAttachmentMoveGizmos", refreshGizmos);
 
 roomChangedObservable.addListener("wallAttachmentMoveGizmos", (_roomRuntimeMemory: RoomRuntimeMemory) => {

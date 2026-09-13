@@ -9,9 +9,7 @@ import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import SinglePlayerManager from "../singlePlayerManager";
 import SinglePlayerAction from "../types/singlePlayerAction";
 
-// Each action reaches straight for whatever it acts upon — the room, the character, the camera, the
-// UI — since a step is played on the client and nowhere else. What it acts *with* comes from its own
-// parameters, which are read here rather than written into the step (see SinglePlayerParam).
+// Handlers act directly on client state; parameters are evaluated here (see SinglePlayerParam).
 const SinglePlayerActionMap: {
     [K in SinglePlayerAction["type"]]: (action: Extract<SinglePlayerAction, {type: K}>) => void;
 } =
@@ -106,8 +104,7 @@ const SinglePlayerActionMap: {
             action.facingAxis, action.orientation, action.collisionLayer());
         if ((voxel.quadsMem.quads[quadIndex] & 0b10000000) == 0)
         {
-            // A quad nobody can see is a quad nobody can act on, so the step is asking for
-            // something that is not there. Whatever is selected is left alone.
+            // An invisible quad can't be acted on; the current selection is left alone.
             console.error(`SinglePlayerActionMap :: Voxel-quad is not visible (row = ${row}, col = ${col})`);
             return;
         }

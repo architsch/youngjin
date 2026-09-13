@@ -7,10 +7,7 @@ const dragThreshold = 20;
 export default function useMouseDragScroll(scrollType: ScrollType,
     scrollCursorTransitionType: ScrollCursorTransitionType)
 {
-    // What the element was given is taken back off it once React lets go of it (calling the ref
-    // with null). One of the listeners is on the document rather than on the element, and left in
-    // place it would outlive the element, keep it in memory, and be joined by another for every
-    // scrolling panel opened after it.
+    // Cleanup for when React calls the ref with null (a document listener would otherwise leak).
     const disableRef = useRef<(() => void) | undefined>(undefined);
 
     return useCallback((node: HTMLElement | null) => {

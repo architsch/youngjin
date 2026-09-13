@@ -1,12 +1,4 @@
-/**
- * E2E tests: Room Navigation
- *
- * Verifies that the client can:
- * - Load into a default room when visiting /
- * - Navigate to a specific room via /:roomID URL
- * - Handle navigation to a non-existent room gracefully
- * - Maintain socket connection after room load
- */
+/** E2E: loading the default room, /:roomID navigation, nonexistent rooms, and socket persistence. */
 import { test, expect } from "../fixtures/auth.fixture";
 import { TIMEOUTS } from "../helpers/constants";
 import { waitForGameReady, waitForRoomLoaded, isSocketConnected, captureConsole } from "../helpers/game";
@@ -17,18 +9,14 @@ test.describe("Room Navigation", () => {
         const connected = await isSocketConnected(authenticatedPage);
         expect(connected).toBe(true);
 
-        // The server picks the room on the user's behalf here, so reaching a loaded room is
-        // what proves the pick resolved to a room that could actually take the user.
+        // Reaching a loaded room proves the server's pick could take the user.
         await waitForRoomLoaded(authenticatedPage);
     });
 
     test("visiting /:roomID with a non-existent room ID falls back to a room that exists", async ({ page }) => {
         const console = captureConsole(page);
 
-        // Well-formed but unclaimed — the shape of a room address is checked before the request is
-        // allowed to cost anything, so an ID of any other shape would be turned away as a 404 long
-        // before reaching the fallback this test is about. That is the case a shared link to a room
-        // which has since been deleted actually presents.
+        // Well-formed but unclaimed (malformed ids 404 earlier), like a link to a deleted room.
         await page.goto("/nonexistentRoom00001", { waitUntil: "networkidle" });
 
         // The page should still load (server falls back to a Hub room)
@@ -38,9 +26,7 @@ test.describe("Room Navigation", () => {
         // Socket should eventually connect (server redirects to fallback room)
         await console.waitFor("Successfully connected to socket server", TIMEOUTS.ROOM_LOAD);
 
-        // A room ID carried in the URL is a destination the server routed the user to rather
-        // than one they asked for by name, so an unusable one must hand them to a hub instead
-        // of leaving them stuck behind the loading indicator forever.
+        // A URL room is server-routed, so an unusable one must fall back to a hub.
         await waitForRoomLoaded(page);
 
         console.stop();

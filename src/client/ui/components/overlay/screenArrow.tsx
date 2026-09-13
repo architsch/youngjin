@@ -4,11 +4,8 @@ import useTrackedElementRect from "../../util/trackedElementRect";
 
 const ARROW_GAP_PX = 8; // gap between the arrow's tip and the edge of the target it points at
 
-// A 2D arrow overlay that hovers just beside a target UI element and points at it, bouncing to draw
-// attention. It sits above the target by default; a target at the very top of the screen, with no
-// room above it for an arrow, is pointed at from below instead. The target is identified by its DOM
-// element id, which is supplied via screenArrowTargetObservable; the arrow tracks the element as it
-// moves.
+// Bouncing 2D arrow pointing at a DOM element (screenArrowTargetObservable), from above by default or
+// from below for top-of-screen targets. Tracks the element.
 export default function ScreenArrow()
 {
     const [arrowParams, setArrowParams] = useState<{targetElementId: string,

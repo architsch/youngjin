@@ -8,9 +8,7 @@ import LogUtil from "../../../shared/system/util/logUtil";
 
 const ejsPartialRootPath = `${process.env.PWD}/${VIEWS_ROOT_DIR}/partial`;
 
-// Everything a page marks as belonging to the public site alone — its share-preview metadata and
-// its analytics tag. The character class, rather than a dot, is what lets the match run past the
-// newlines such a block always spans.
+// Public-site-only blocks (share metadata, analytics tag). [\s\S] matches across newlines.
 const PROD_CODE_BLOCK_PATTERN = /PROD_CODE_BEGIN[\s\S]*?PROD_CODE_END/g;
 
 const baseStaticPageEJSParams = {
@@ -46,11 +44,8 @@ const EJSUtil =
             }
         });
     },
-    // Applied to every page on its way out — both the ones rendered per request and, in dev mode,
-    // the pre-generated static files (see Router). Deliberately not applied when those static files
-    // are *generated*: they are generated in dev as well, and a build that quietly wrote away the
-    // live site's own metadata would ship that loss the next time the public directory was
-    // committed. Generation always emits the full page; what varies is what each deployment serves.
+    // Applied when serving pages (including dev-served static files), not when generating them, so
+    // generated files always contain the full markup.
     postProcessHTML: (html: string): string => {
         let processedHTML = html;
 

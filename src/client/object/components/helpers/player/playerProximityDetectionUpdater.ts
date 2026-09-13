@@ -8,12 +8,8 @@ const maxProximityDetectionDist = 6;
 
 export default class PlayerProximityDetectionUpdater
 {
-    // Warning: This proximity detection logic may fail if the player
-    // happens to teleport by a distance of more than [maxProximityDetectionDist - maxDist]
-    // within a single frame of time,
-    // since the player must be within the distance of [maxProximityDetectionDist] from the target
-    // at least for a single frame of time (i.e. a single `update` method call) in order to
-    // turn the target's proximity mode OFF (when the player moves away from the target).
+    // May miss a proximity exit if the player teleports more than
+    // [maxProximityDetectionDist - maxDist] in one frame.
     update(deltaTime: number, controller: PlayerController): void
     {
         const currentRoom = App.getCurrentRoom();

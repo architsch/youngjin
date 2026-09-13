@@ -4,9 +4,7 @@ import VoxelQuadTransformDimensions from "../types/voxelQuadTransformDimensions"
 
 const VoxelQueryUtil =
 {
-    //-------------------------------------------------------------------------------------
     // Basic
-    //-------------------------------------------------------------------------------------
 
     getVoxel(voxels: Voxel[], row: number, col: number): Voxel | undefined
     {
@@ -15,15 +13,8 @@ const VoxelQueryUtil =
         return voxels[row * NUM_VOXEL_COLS + col];
     },
 
-    //-------------------------------------------------------------------------------------
-    // World coordinates
-    //
-    // Where the grid sits in the world: one cell per world unit along X and Z, one collision layer
-    // per layer-height along Y, with the grid's origin at the world's. Coordinates outside the room
-    // map to cells outside it (a negative row, a layer above the ceiling) rather than being clamped,
-    // so that a caller can tell it has left the room instead of being handed an edge cell that looks
-    // like a real one.
-    //-------------------------------------------------------------------------------------
+    // World coordinates: one cell per unit on X/Z, one layer per layer height on Y, origin at the world
+    // origin. Out-of-room coordinates map to out-of-range cells (not clamped), so callers can detect them.
 
     getVoxelColFromWorldX(worldX: number): number
     {
@@ -45,9 +36,7 @@ const VoxelQueryUtil =
         return (collisionLayer + 0.5) * COLLISION_LAYER_HEIGHT;
     },
 
-    //-------------------------------------------------------------------------------------
     // Physics
-    //-------------------------------------------------------------------------------------
 
     isVoxelCollisionLayerOccupied(voxel: Voxel, collisionLayer: number): boolean
     {
@@ -67,14 +56,8 @@ const VoxelQueryUtil =
         return COLLISION_LAYER_NULL;
     },
 
-    //-------------------------------------------------------------------------------------
-    // Voxel blocks
-    //
-    // A "voxel block" is one collision layer of one voxel — the smallest volume the grid
-    // distinguishes, and so the finest thing a caller can ask about a room's shape. The collision
-    // layer varies fastest in the index, then the column, then the row, so that one voxel's own
-    // layers sit next to each other and walking up a column costs one stride.
-    //-------------------------------------------------------------------------------------
+    // Voxel blocks: one layer of one voxel. Index order is layer fastest, then column, then row, so a
+    // voxel's layers are contiguous.
 
     getVoxelBlockIndex(row: number, col: number, collisionLayer: number): number
     {
@@ -103,10 +86,7 @@ const VoxelQueryUtil =
             collisionLayer >= COLLISION_LAYER_MIN && collisionLayer <= COLLISION_LAYER_MAX;
     },
 
-    // Whether something solid stands in the given block. A block outside the grid counts as
-    // occupied, matching isVoxelCollisionLayerOccupied's treatment of a layer outside the room — so
-    // a caller walking the grid is stopped by the floor, the ceiling and the boundary wall without
-    // having to check for them separately.
+    // Out-of-grid blocks count as occupied, so grid walks stop at the floor, ceiling and boundary.
     isVoxelBlockOccupied(voxels: Voxel[], row: number, col: number, collisionLayer: number): boolean
     {
         const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);
@@ -115,9 +95,7 @@ const VoxelQueryUtil =
         return VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer);
     },
 
-    //-------------------------------------------------------------------------------------
     // Get quadIndex from properties
-    //-------------------------------------------------------------------------------------
 
     getVoxelQuadIndex(row: number, col: number, facingAxis: "x" | "y" | "z", orientation: "-" | "+",
         collisionLayer: number): number
@@ -132,9 +110,7 @@ const VoxelQueryUtil =
             return firstIndex + offset;
     },
 
-    // The quad that draws the room's floor over one cell, and the one that draws its ceiling. Both
-    // sit outside the collision layers (see COLLISION_LAYER_NULL), and each faces into the room:
-    // the floor's upwards, the ceiling's downwards.
+    // The quads drawing the room floor (facing up) and ceiling (facing down) over a cell (see COLLISION_LAYER_NULL).
     getFloorVoxelQuadIndex(row: number, col: number): number
     {
         return VoxelQueryUtil.getVoxelQuadIndex(row, col, "y", "+", COLLISION_LAYER_NULL);
@@ -153,9 +129,7 @@ const VoxelQueryUtil =
         return firstIndex + NUM_VOXEL_QUADS_PER_COLLISION_LAYER * collisionLayer;
     },
 
-    // Returns -1 if the coords fall outside the voxelGrid. A voxel's index is (row * NUM_VOXEL_COLS + col),
-    // so without this check a col of -1 or NUM_VOXEL_COLS would land on a real voxel one row away, letting
-    // a neighbor derived from a quad on the room's edge silently address the opposite edge.
+    // -1 outside the grid (otherwise an out-of-range col would wrap to a voxel in another row).
     getFirstVoxelQuadIndexInVoxel(row: number, col: number): number
     {
         if (row < 0 || row >= NUM_VOXEL_ROWS || col < 0 || col >= NUM_VOXEL_COLS)
@@ -171,15 +145,10 @@ const VoxelQueryUtil =
             (orientation == "-" ? 0 : 1);
     },
 
-    //-------------------------------------------------------------------------------------
     // Get properties from quadIndex
-    //-------------------------------------------------------------------------------------
 
-    // Whether a quadIndex names a quad of this room at all. Every "get X from quadIndex" below
-    // answers for any number it is handed — the arithmetic divides and takes remainders, and neither
-    // objects to an index from outside the room — so an out-of-range index is not returned as an
-    // error but as the coordinates of some other quad. That makes this the check that has to be made
-    // before an index coming from anywhere but this module's own arithmetic is acted on.
+    // Whether quadIndex is in range. The getters below return coordinates for any number, so check
+    // external indices first.
     isValidVoxelQuadIndex(quadIndex: number): boolean
     {
         return Number.isInteger(quadIndex) && quadIndex >= 0 && quadIndex < NUM_VOXEL_QUADS_PER_ROOM;
@@ -223,9 +192,7 @@ const VoxelQueryUtil =
         return voxelIndex % NUM_VOXEL_COLS;
     },
 
-    //-------------------------------------------------------------------------------------
     // Get transform dimensions from properties
-    //-------------------------------------------------------------------------------------
 
     getVoxelQuadTransformDimensions(voxel: Voxel, quadIndex: number, ignoreVisibility: boolean = false): VoxelQuadTransformDimensions
     {

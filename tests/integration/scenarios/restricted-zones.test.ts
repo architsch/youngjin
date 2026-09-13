@@ -1,14 +1,7 @@
 /**
- * Restricted zones: the stretches of a room only a superuser may edit.
- *
- * A zone is a rectangle of the voxel grid reaching the whole height of the room, and inside one the
- * right to edit voxels and persistent objects belongs to the admin (in a hub) or the room's owner
- * (in a regular room) alone. See @docs/gameplay/restricted_zone.md.
- *
- * What is asserted here is the rule as the *server* enforces it, because that is the only place it
- * counts: a client that has been talked into ignoring a zone still has to get past this. The
- * refusals therefore go in as signals and come back out as the rollback the sender is sent, which is
- * what a real client would receive.
+ * Restricted zones (see @docs/gameplay/restricted_zone.md): full-height grid rectangles where only the
+ * superuser (a hub's admin, a Regular room's owner) may edit voxels and persistent objects. Asserted as
+ * the server enforces it: refusals go in as signals and come back as rollbacks.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runScenario } from "../helpers/scenarioRunner";
@@ -41,8 +34,7 @@ import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import { COLLISION_LAYER_MIN, MAX_RESTRICTED_ZONES,
     NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../../src/shared/system/sharedConstants";
 
-// The zone every test below draws, well clear of the room's boundary walls and of the stretch its
-// own door hangs on, so that nothing here is really asking about those.
+// Clear of the boundary walls and the door's wall.
 const ZONE = new RestrictedZone(8, 15, 8, 15);
 
 // A cell inside that zone, and one outside it, at a height the room is hollow at.
@@ -51,8 +43,7 @@ const OUTSIDE = {row: 20, col: 20};
 const LAYER = COLLISION_LAYER_MIN + 2;
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
-// A picture the canvas rule will actually accept — it checks the value against CanvasImageMap, so
-// what matters here is only that it is one of the authored ones.
+// Any authored CanvasImageMap entry passes the canvas rule.
 const CANVAS_IMAGE_PATH = "1/1";
 const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
 
@@ -63,8 +54,7 @@ function makeUser(id: string, userType: number, ownedRoomID: string = ""): User
 
 const ADMIN = makeUser("an-admin", UserTypeEnumMap.Admin);
 const MEMBER = makeUser("a-member", UserTypeEnumMap.Member);
-// The owner of the regular room below. Owning a room is a matter of the user naming it as his own,
-// which is what every permission check reads.
+// Ownership is the user naming the room as their own.
 const OWNER = makeUser("an-owner", UserTypeEnumMap.Member, "regular");
 
 function getRoom(roomID: string): Room
@@ -72,15 +62,13 @@ function getRoom(roomID: string): Room
     return ServerRoomManager.roomRuntimeMemories[roomID].room;
 }
 
-// Draws the zone straight onto the room, rather than through a signal. Setting the zones up is not
-// what these tests are about — the tests that are, are at the bottom of this file.
+// Drawn directly; zone-drawing signals are tested at the bottom.
 function drawZone(room: Room, ...zones: RestrictedZone[]): void
 {
     room.voxelGrid.restrictedZones = zones;
 }
 
-// Makes the given user whatever kind of person the test needs, since a socket user arrives as an
-// ordinary guest and being an admin is a property of the person rather than of the room.
+// Socket users arrive as guests; being an admin is a property of the user.
 function becomeAdmin(ctx: ConnectedUser): void
 {
     ctx.user.userType = UserTypeEnumMap.Admin;
@@ -97,8 +85,7 @@ function blockIsThere(room: Room, row: number, col: number, layer: number = LAYE
     return VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, layer);
 }
 
-// A canvas hung on the wall at the given cell. Only where its collider ends up matters here, so this
-// is deliberately not asking whether that is a wall a canvas could really be hung on.
+// Only the collider's position matters, not whether a canvas could really hang there.
 function makeCanvasSignal(room: Room, user: User, row: number, col: number,
     objectId: string = "a-canvas"): AddObjectSignal
 {
@@ -113,9 +100,7 @@ describe("restricted zones", () => {
         vi.spyOn(console, "log").mockImplementation(() => {});
     });
 
-    //-------------------------------------------------------------------------------------------
-    // Voxel blocks
-    //-------------------------------------------------------------------------------------------
+    // ─── Voxel blocks ───
 
     it("refuses an ordinary user's block inside a zone, and rolls his own copy back", async () => {
         await runScenario({
@@ -186,8 +171,7 @@ describe("restricted zones", () => {
             assertions: ({users}) => {
                 const room = getRoom("hub");
 
-                // Built before the zone is drawn over it. A zone drawn over what is already there
-                // does not take it away; it stops anybody else touching it.
+                // A zone drawn over existing blocks doesn't remove them; it stops others touching them.
                 ServerVoxelManager.onAddVoxelBlockSignalReceived(users[0].socketUserContext,
                     new AddVoxelBlockSignal(room.id, blockQuadIndex(INSIDE.row, INSIDE.col),
                         [0, 0, 0, 0, 0, 0]));
@@ -205,9 +189,7 @@ describe("restricted zones", () => {
         });
     });
 
-    //-------------------------------------------------------------------------------------------
-    // Voxel faces
-    //-------------------------------------------------------------------------------------------
+    // ─── Voxel faces ───
 
     it("refuses a repaint inside a zone but leaves the zone's outward faces paintable", async () => {
         await runScenario({
@@ -217,9 +199,7 @@ describe("restricted zones", () => {
             assertions: ({users}) => {
                 const room = getRoom("hub");
 
-                // A block on the zone's own western edge, built before the zone is drawn. Its
-                // outward face is the surface the zone is seen through from outside it, and stays
-                // the room's to finish; the face pointing the other way is inside the zone.
+                // A block on the zone's west edge: its outward face stays editable, its inward face is in the zone.
                 const edge = {row: 10, col: ZONE.colMin};
                 ServerVoxelManager.onAddVoxelBlockSignalReceived(users[0].socketUserContext,
                     new AddVoxelBlockSignal(room.id, blockQuadIndex(edge.row, edge.col),
@@ -240,9 +220,7 @@ describe("restricted zones", () => {
         });
     });
 
-    //-------------------------------------------------------------------------------------------
-    // Who counts as a superuser
-    //-------------------------------------------------------------------------------------------
+    // ─── Who counts as a superuser ───
 
     it("counts the owner of a regular room, and the admin of a hub", async () => {
         await runScenario({
@@ -252,8 +230,7 @@ describe("restricted zones", () => {
             assertions: () => {
                 const hub = getRoom("hub");
                 const regular = getRoom("regular");
-                // Reads as "the zone shuts this user out", so `false` is what being a superuser
-                // looks like here.
+                // True means "the zone blocks this user", so false means superuser.
                 const blocked = RestrictedZoneUtil.blocksVoxelBlockEdit;
 
                 // In a hub, which belongs to the game, only an admin is above the rule.
@@ -262,8 +239,7 @@ describe("restricted zones", () => {
                 expect(blocked(MEMBER, hub, INSIDE.row, INSIDE.col)).toBe(true);
                 expect(blocked(OWNER, hub, INSIDE.row, INSIDE.col)).toBe(true);
 
-                // In a regular room, which belongs to one person, only that person is — and an
-                // admin has no standing there that anybody else lacks.
+                // In a Regular room only the owner is; an admin has no extra standing.
                 drawZone(regular, ZONE);
                 expect(blocked(OWNER, regular, INSIDE.row, INSIDE.col)).toBe(false);
                 expect(blocked(MEMBER, regular, INSIDE.row, INSIDE.col)).toBe(true);
@@ -272,9 +248,7 @@ describe("restricted zones", () => {
         });
     });
 
-    //-------------------------------------------------------------------------------------------
-    // Objects
-    //-------------------------------------------------------------------------------------------
+    // ─── Objects ───
 
     it("refuses an ordinary user's canvas that would reach into a zone", async () => {
         await runScenario({
@@ -297,10 +271,8 @@ describe("restricted zones", () => {
                 expect(blocks(MEMBER, outside)).toBe(false);
                 expect(blocks(ADMIN, inside)).toBe(false);
 
-                // And the refusal is reached through the same door every other object rule is —
-                // this is what a client's request actually runs into. (An admin's is turned away
-                // here too, but on the separate question of whether that is a wall a canvas can
-                // hang on at all, which is what the assertions above hold this one apart from.)
+                // Also refused via canAddObject, the path clients hit (an admin's is refused too, but for
+                // wall validity, not the zone).
                 expect(ObjectUpdateUtil.canAddObject(MEMBER, room, inside))
                     .toBe(false);
             },
@@ -322,8 +294,7 @@ describe("restricted zones", () => {
                 expect(ObjectUpdateUtil.canRemoveObject(MEMBER, room,
                     new RemoveObjectSignal(room.id, canvas.objectId))).toBe(false);
 
-                // Dragging it out of the zone is refused as well as dragging one in. Allowing the
-                // way out would leave the removal rule undone in two steps instead of one.
+                // Dragging out of a zone is refused too, or removal could be done in two steps.
                 expect(ObjectUpdateUtil.canSetObjectTransform(MEMBER, room,
                     new SetObjectTransformSignal(room.id, canvas.objectId,
                         new ObjectTransform({x: OUTSIDE.col + 0.5, y: 2, z: OUTSIDE.row + 0.5},
@@ -352,8 +323,7 @@ describe("restricted zones", () => {
                 expect(ObjectUpdateUtil.canSetObjectMetadata(MEMBER, room,
                     newPicture(inside.objectId))).toBe(true);
 
-                // What a picture inside a zone shows is as much a part of that stretch of the room
-                // as the wall behind it, so it goes out of reach along with the wall.
+                // A picture's image in a zone is protected like the wall behind it.
                 drawZone(room, ZONE);
                 expect(ObjectUpdateUtil.canSetObjectMetadata(MEMBER, room,
                     newPicture(inside.objectId))).toBe(false);
@@ -374,8 +344,7 @@ describe("restricted zones", () => {
                 const room = getRoom("hub");
                 drawZone(room, ZONE);
 
-                // A zone says who may build here, not who may stand here — and a player is not
-                // something the room keeps, so it is never asked about at all.
+                // Zones restrict building, not standing; players are never checked.
                 expect(RestrictedZoneUtil.blocksObjectEdit(MEMBER, room,
                     playerTypeIndex, {x: INSIDE.col + 0.5, y: 1, z: INSIDE.row + 0.5},
                     {x: 0, y: 0, z: -1})).toBe(false);
@@ -383,9 +352,7 @@ describe("restricted zones", () => {
         });
     });
 
-    //-------------------------------------------------------------------------------------------
-    // Drawing the zones themselves
-    //-------------------------------------------------------------------------------------------
+    // ─── Drawing the zones themselves ───
 
     it("lets an admin redraw a hub's zones, tells the room, and leaves the room to be saved later",
         async () => {
@@ -403,8 +370,7 @@ describe("restricted zones", () => {
 
                 expect(room.voxelGrid.restrictedZones).toEqual([ZONE]);
 
-                // Marked for the periodic save rather than written out on the spot — a zone is
-                // dragged about, and each frame of that is not worth a room's worth of storage.
+                // Marked dirty for the periodic save, since zones are dragged frame by frame.
                 expect(room.dirty).toBe(true);
 
                 // Everybody else in the room is told, and the sender is not told twice.

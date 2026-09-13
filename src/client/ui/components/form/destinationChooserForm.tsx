@@ -14,22 +14,8 @@ import DoorDestinationProps from "../../types/doorDestinationProps";
 import { roomListDebugEnabledObservable } from "../../../../shared/system/sharedObservables";
 import Spacer from "../basic/spacer";
 
-//------------------------------------------------------------------------
-// Where a door goes.
-//
-// Only hubs are offered. A hub is the world's public fabric — somewhere the game may put anybody
-// down — whereas a regular room belongs to one person, and wiring a door into it would hand strangers
-// a way into somebody's own room that its owner never agreed to. So there is nothing here to search
-// through either: the hubs are few enough to read, and there is no second kind of room to sift them
-// out of.
-//
-// A room is shown by its id and nothing else. An admin is wiring up a graph, and the id is the only
-// thing about a hub that identifies it — a hub belongs to nobody, so any name it were given here
-// would be one this form made up.
-//
-// Opening a new hub lives here because this is where the need for one is felt: an admin wiring a door
-// up finds there is nowhere yet to wire it to.
-//------------------------------------------------------------------------
+// Door destination chooser. Lists hubs only (wiring doors into Regular rooms would let strangers into
+// private rooms). Rooms are shown by id (hubs have no owner-given name). Also where admins open a new hub.
 
 export default function DestinationChooserForm({ initialDestinationRoomID, initialDestinationDoorLabel,
     onChooseRoom, onSetDoorLabel }: DoorDestinationProps)
@@ -42,8 +28,7 @@ export default function DestinationChooserForm({ initialDestinationRoomID, initi
     const loadHubs = useCallback(async () => {
         setLoading(true);
 
-        // Debug mode: synthesize a long list of dummy entries instead of hitting the API, so the
-        // list's scrolling can be exercised without a populated room database.
+        // Debug mode: dummy entries for testing list scrolling.
         if (roomListDebugEnabledObservable.peek())
         {
             setHubRooms(makeDummyHubRooms());
@@ -85,10 +70,8 @@ export default function DestinationChooserForm({ initialDestinationRoomID, initi
         }
     }, [loadHubs]);
 
-    // The room the door already points at is pinned above the rest and shown as the choice standing
-    // rather than as one more room to pick. It may be a room the listing does not hold at all — a hub
-    // that has since been taken down, or a regular room wired up before hubs became the only offer —
-    // and it is still where the door goes, so it is shown as such rather than silently dropped.
+    // The current destination is pinned on top, even if it's not listed (e.g. a removed hub or a
+    // Regular room from before hubs-only).
     const listedDestination = hubRooms.find(r => r.id === destinationRoomID);
     const pinned: RoomListEntry[] = [];
     if (destinationRoomID.length > 0)
@@ -110,8 +93,7 @@ export default function DestinationChooserForm({ initialDestinationRoomID, initi
             additionalClassNames="max-h-64 w-full"
         />
 
-        {/* Which door of the destination the traveller arrives behind. Left empty, he arrives at
-            whichever of its doors that room offers as its way in. */}
+        {/* Arrival door label; empty = the room's default entrance. */}
         <FormTextInput
             label="Target Door:"
             size="sm"
@@ -127,9 +109,7 @@ export default function DestinationChooserForm({ initialDestinationRoomID, initi
         <hr/>
         <Spacer size="sm"/>
 
-        {/* Where the admin is standing. Every room above is named by an id and nothing else, so
-            without this there is no way to tell which of them he is wiring a door in — or to notice
-            that he has just pointed a door back at the room it hangs in. */}
+        {/* The current room's id, so admins can tell it apart (and avoid self-pointing doors). */}
         <div className="flex flex-row items-center gap-1">
             <Text content="Current Room:" size="sm" additionalClassNames="shrink-0"/>
             <div className="yj-text-xs text-amber-300 min-w-0 text-left wrap-break-word">
@@ -145,9 +125,7 @@ export default function DestinationChooserForm({ initialDestinationRoomID, initi
 function RoomEntryRow({ entry, isCurrentDestination, onChoose }: RowProps)
 {
     return <div className="flex flex-row items-center justify-between gap-2 py-1 border-b border-gray-700">
-        {/* min-w-0 lets the id column shrink past its longest word, and wrap-break-word lets that
-            word itself break, so a long room id spills onto the next line instead of being clipped
-            or pushing the button out of the row. */}
+        {/* min-w-0 + wrap-break-word let long ids wrap instead of clipping or pushing the button out. */}
         <div className="yj-text-xs text-amber-300 min-w-0 text-left wrap-break-word">
             {`Room: ${entry.id}`}
         </div>
@@ -158,8 +136,7 @@ function RoomEntryRow({ entry, isCurrentDestination, onChoose }: RowProps)
     </div>;
 }
 
-// A destination the hub listing does not hold. It is still where the door points, and the id is all
-// this form ever shows of a room anyway.
+// An entry for a destination not in the hub listing.
 function makeUnlistedEntry(roomID: string): RoomListEntry
 {
     return {id: roomID, roomType: RoomTypeEnumMap.Regular, ownerUserID: "", ownerUserName: ""};

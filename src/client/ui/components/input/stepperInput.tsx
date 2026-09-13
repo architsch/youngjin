@@ -3,17 +3,8 @@ import IconButton from "./iconButton";
 import TriangleLeftIcon from "../../svg/icons/triangleLeftIcon";
 import TriangleRightIcon from "../../svg/icons/triangleRightIcon";
 
-//------------------------------------------------------------------------
-// Cycles through a fixed set of consecutive values (0 .. numValues - 1) with
-// a left/right arrow button pair, in the manner of a character-customization
-// selector in a video game.
-// Stepping past either end wraps around to the opposite end, so
-// every value stays reachable from wherever the user currently is.
-//
-// The middle area displays 'preview' when one is supplied (e.g. an icon
-// standing for the selected value); otherwise it falls back to showing the
-// selection's position within the set.
-//------------------------------------------------------------------------
+// Wrap-around stepper over 0..numValues-1 with left/right arrows (like a character-creator selector).
+// Shows `preview` if given, otherwise the position in the set.
 
 export default function StepperInput({ currValue, numValues, setValue, preview, additionalClassNames = "" }: Props)
 {
@@ -24,8 +15,7 @@ export default function StepperInput({ currValue, numValues, setValue, preview, 
 
     return <div className={`flex flex-row items-center gap-1 shrink-0 ${additionalClassNames}`}>
         <IconButton icon={<TriangleLeftIcon/>} onClick={() => step(-1)}/>
-        {/* Sunken between the two raised arrows: it is what the stepper currently holds,
-            not a third thing to press. */}
+        {/* Sunken: it holds the value, it isn't pressable. */}
         <div className="flex items-center justify-center shrink-0 min-w-10 h-10 px-1 text-sm select-none rounded-md bg-gray-700 text-gray-200 yj-surface-concave">
             {preview ?? `${currValue + 1}/${numValues}`}
         </div>

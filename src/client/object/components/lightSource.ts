@@ -10,14 +10,9 @@ import GameObjectComponent from "./gameObjectComponent";
 
 const colorTemp = new THREE.Color();
 
-// The bridge between an object that is meant to give off light and the field the room is actually lit
-// by. What it registers is data rather than a THREE.PointLight — see LightBlockMap for why the scene
-// keeps exactly one real light.
-//
-// The light stands in the block in front of the object rather than in the object itself. This is not
-// cosmetic: a wall attachment's own origin sits on the wall face, and propagation returns
-// immediately from a block that is solid, so a lamp whose light was placed at its own origin would
-// light nothing at all.
+// Registers an object's light with the light block map (data, not a THREE light; see LightBlockMap).
+// The light is placed in the block in front of the object: a wall attachment's origin sits on the wall
+// face, and propagation from a solid block lights nothing.
 export default class LightSource extends GameObjectComponent
 {
     async onSpawn(): Promise<void>
@@ -37,10 +32,8 @@ export default class LightSource extends GameObjectComponent
         this.registerLight();
     }
 
-    // Called whenever the object is moved, which for a wall attachment is a placement rather than a
-    // motion — so this runs a handful of times as somebody slides a lamp along a wall, rather than
-    // every frame. Handed the new transform rather than reading it back off the object, so that it
-    // cannot depend on whether the object's own copy has caught up yet.
+    // Called on placement (not every frame). Takes the transform as arguments so it doesn't depend on
+    // the object's copy having updated yet.
     setTransform(pos: Vec3, dir: Vec3): void
     {
         GraphicsManager.getLightBlockMap().setLightSourcePosition(
@@ -51,9 +44,7 @@ export default class LightSource extends GameObjectComponent
     {
         const obj = this.gameObject.params;
 
-        // Read back through THREE.Color so the palette's sRGB hex is converted into the renderer's
-        // linear working space, which is what the block map accumulates in — the same treatment the
-        // materials give their own colors.
+        // THREE.Color converts sRGB hex to linear, matching the block map's space.
         colorTemp.set(ColorUtil.rgbToHex(
             ColorUtil.paletteIndexToRGB(LIGHT_COLOR_PALETTE_NAME,
                 WallLampObjectTypeConfig.util.getColorIndex(obj))));
@@ -72,10 +63,8 @@ export default class LightSource extends GameObjectComponent
 
 }
 
-// The centre of the block standing in front of the wall the object is mounted on. A wall
-// attachment's transform is quantized to half-integers across the wall and its facing to -1|0|1
-// (see WallAttachedObjectUtil), so stepping half a block along that facing lands exactly inside the
-// front cell rather than near it.
+// Centre of the block in front of the wall. Attachments are quantized to half-integers with an axis
+// facing (see WallAttachedObjectUtil), so a half-block step lands inside that cell.
 function getLightWorldPos(pos: Vec3, dir: Vec3): Vec3
 {
     return {

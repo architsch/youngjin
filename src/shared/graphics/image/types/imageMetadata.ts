@@ -1,14 +1,11 @@
 export default interface ImageMetadata
 {
-    // path = (relative path under the root directory, but excluding the file extension)
-    // The name of the root directory is given by rootDirName (in ImageMap),
-    // and the root directory is located right under the app's assets_url (in ThingsPoolEnv).
+    // Relative to the map's root directory (rootDirName under assets_url), without extension.
     path: string;
 
     author: string;
     title: string;
 
-    // coords = {subfolderName},{col},{row}
-    // (subfolderName == "") if there is no subfolder.
+    // {subfolderName},{col},{row} (subfolderName is "" without subfolders).
     coords?: string;
 }

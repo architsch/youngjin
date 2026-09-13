@@ -169,7 +169,7 @@ builds:
 
 1. `mkdir public/devlog-<year>` and start a `source.txt` in it.
 2. Add a row to `"Development History"` in `src/server/ssg/data/libraryData.ts`:
-   `{ dirName: "devlog-<year>", title: "Dev Log - <year>", author: "Youngjin Kang & Claude" }`. The Library index
+   `{ dirName: "devlog-<year>", title: "Dev Log - <year>" }`. The Library index
    and the landing page's dev-log link are both built from that list, so the new year appears in
    both once it is there. Because this touches `src/`, the publish step in Step 6 is the
    bundle-rebuilding one.

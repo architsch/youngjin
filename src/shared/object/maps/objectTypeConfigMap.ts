@@ -5,21 +5,9 @@ import CanvasObjectTypeConfig from "../types/objectTypeConfig/canvasObjectTypeCo
 import DoorObjectTypeConfig from "../types/objectTypeConfig/doorObjectTypeConfig";
 import WallLampObjectTypeConfig from "../types/objectTypeConfig/wallLampObjectTypeConfig";
 
-// This map specifies all types of GameObject and their global configs.
-// Each config specifies all types of GameObjectComponents which must be included in the
-// GameObject when it spawns (Each GameObject can have one or more GameObjectComponents in it).
-//
-// **The index a type is filed under is what every stored object names itself by, so these numbers
-// are appended and never reordered** — a number that changes meaning turns every object already
-// saved into an object of some other kind.
-//
-// The list is read on first lookup rather than while this module is being evaluated. Every config
-// imports this map back — a door has to know its own type index in order to build one — so the two
-// are a cycle, and whichever of them a program happens to reach first is evaluated first. Reaching
-// a config first is the ordinary case now that a type's own constants and util live on it, and
-// reading the configs at that moment would read them half-declared. Deferring the read to the first
-// lookup, which cannot happen before every module has finished loading, is what makes the order
-// stop mattering.
+// All GameObject types and the components each spawns with. Type indices are stored with objects, so
+// they are append-only. The list is read lazily on first lookup, because configs import this map (an
+// import cycle whose evaluation order varies).
 function getObjectTypeConfigPairs(): [number, ObjectTypeConfig][]
 {
     return [

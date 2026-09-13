@@ -2,8 +2,7 @@ export enum FeatureFlag
 {
     DisableAllSelectionChange,
     DisableVoxelQuadSelectionChange,
-    // Holds whichever object the user currently has picked out, his own character included: it can
-    // neither be dropped nor replaced by another (see ObjectSelection).
+    // Locks the current object selection (see ObjectSelection).
     DisableObjectSelectionChange,
     DisableManualVoxelBlockAddition,
     DisableManualVoxelBlockRemoval,
@@ -12,8 +11,6 @@ export enum FeatureFlag
     HideChatInput,
     DisableChatSend,
     UseFallbackChatMessage,
-    // Holds the user in whichever game mode he is currently in: both ways across the line between
-    // play and edit mode are refused, and the controls that offer them are taken off screen with
-    // them (see GameModeUtil).
+    // Locks the current game mode; both transitions are refused (see GameModeUtil).
     DisableGameModeTransition,
 }

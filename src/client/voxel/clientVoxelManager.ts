@@ -29,15 +29,12 @@ const ClientVoxelManager =
 {
     load: async (): Promise<void> =>
     {
-        // Apply the current room's texture pack to the shared voxel material before the voxels spawn
-        // (so the first room's voxels pick up the right texture) or are rebound (so a later room with a
-        // different pack swaps its texture in place). Must run before ClientObjectManager.load.
+        // Must run before ClientObjectManager.load: sets the texture pack so new voxels use it, or
+        // swaps it in place for rebound ones.
         await ClientVoxelManager.applyVoxelTexturePack(App.getCurrentRoom()!.texturePackPath);
         voxelQuadChangeObservable.addListener("clientVoxelManager", onVoxelQuadChange);
 
-        // Light is propagated through the room's own blocks, so the block map is told which room's
-        // voxels it is now looking at. It outlives every room it is used for (GraphicsManager keeps
-        // it for the app's whole lifetime), so this also drops the previous room's lamps.
+        // The block map outlives rooms; this also drops the previous room's lamps.
         GraphicsManager.getLightBlockMap().resetForRoom(App.getCurrentRoom()!.voxelGrid.voxels);
     },
     applyVoxelTexturePack: async (texturePackPath: string): Promise<void> =>
@@ -47,10 +44,8 @@ const ClientVoxelManager =
         if (texturePackURLObservable.peek() === texturePackURL)
             return;
 
-        // Before the first voxel spawns, no voxel material exists yet: skip the in-place swap and just
-        // publish the URL, so the first VoxelGameObject's constructor initializes its material with this
-        // texture pack. Once a material exists (e.g. a later room with a different pack), swap its texture
-        // in place instead.
+        // Before any voxel exists, just publish the URL (the first VoxelGameObject reads it);
+        // afterwards swap the texture in place.
         if (VoxelGameObject.materialParams != undefined)
             await InstancedMeshGraphics.swapTexturePackTexture(
                 ClientVoxelQueryUtil.getVoxelInstancedMeshId(), texturePackURL);
@@ -62,10 +57,7 @@ const ClientVoxelManager =
         GraphicsManager.getLightBlockMap().resetForRoom(undefined);
     },
     // --- Edits to the current room's voxel grid ---
-    //
-    // "validate" says whether the edit has to be checked against what the user is allowed to do,
-    // and so also says who asked for it: an edit the user made himself is checked, while one
-    // arriving from the server or from a scripted step is not.
+    // validate: true for the user's own edits; false for server-relayed or scripted ones.
 
     addVoxelBlock: (room: Room, quadIndex: number, quadTextureIndicesWithinLayer?: number[],
         validate: boolean = true): boolean =>
@@ -146,8 +138,7 @@ const ClientVoxelManager =
             ClientEventHistoryUtil.add(new ClientEvent(ClientEventType.ManuallyChangedVoxelQuadTexture));
         return success;
     },
-    // Redraws the room's restricted zones. Reporting the change to the server is the caller's, as it
-    // is for every other edit here — see voxelQuadTextureOptions for the pattern.
+    // Redraws zone outlines. Sending to the server is the caller's job (see voxelQuadTextureOptions).
     setRestrictedZones: (room: Room, restrictedZones: RestrictedZone[],
         validate: boolean = true): boolean =>
     {
@@ -199,21 +190,13 @@ const ClientVoxelManager =
             return;
         ClientVoxelManager.setRestrictedZones(App.getCurrentRoom()!, signal.restrictedZones, false);
 
-        // The selection is refreshed like any other edit's: a zone drawn over what the user has
-        // picked out is the moment that selection stops being his to work on.
+        // Zone changes can affect what the selection allows.
         refreshSelections();
     },
 }
 
-// Brings whatever the user has picked out back into line with the room as it now stands. Called
-// after every edit that arrives from elsewhere, because an edit to the room can change what the
-// selected thing is, where it is, or whether it is still the user's to work on at all — and the
-// tools on screen are worked out from all three.
-//
-// Both kinds of selection are seen to, not only the one the edit was made to. Only one of the two is
-// ever up at a time, so the other's announcement reaches nobody; and an edit to the room's fabric
-// can perfectly well be what changes what may be done to a thing standing in it — a restricted zone
-// drawn over the stretch of floor a picture hangs on being the clearest case.
+// Re-announces both selection kinds after any external edit, since edits can change what a selection
+// is, where it is, or whether it's still editable (e.g. a zone drawn over a picture's wall).
 function refreshSelections()
 {
     const existingSelection = voxelQuadSelectionObservable.peek();
@@ -245,10 +228,7 @@ function refreshSelections()
         objectSelectionObservable.notify();
 }
 
-// What light can and cannot get past is the room's own solid blocks, so any edit that puts one down
-// or takes one away invalidates the light block map. Only asked for here, never done here: the map
-// recomputes once on the next frame, so building a wall block by block costs one recomputation a
-// frame rather than one per block.
+// Solid block changes invalidate lighting. Recomputation happens once on the next frame.
 function onRoomShapeChanged()
 {
     GraphicsManager.getLightBlockMap().requestRecomputation();

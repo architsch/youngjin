@@ -1,6 +1,4 @@
-// An animated finger swiping from side to side, with a thin double-headed arrow tracing its
-// trajectory. Drawn entirely with inline SVG — the motion uses SVG's native SMIL elements — so it
-// is self-contained and needs no image assets or extra CSS keyframes.
+// Animated finger swiping side to side (inline SVG with SMIL; no assets or CSS).
 export default function DragSidewaysDiagram({ additionalClassNames = "" }: Props)
 {
     return <svg viewBox="0 0 200 120" fill="none" className={additionalClassNames}>

@@ -1,14 +1,7 @@
 /**
- * Scenario tests: Extended permission enforcement
- *
- * Covers what permissions.test.ts only samples with a single add:
- * - Every voxel operation (add, remove, move, setTexture) by a visitor in somebody else's Regular room
- * - Every voxel operation in a Hub room
- * - Owning one room is no condition for editing another
- *
- * Owning a room is not what lets anybody build in it; what its owner keeps to himself is drawn as
- * restricted zones instead (restricted-zones.test.ts). What these guard against is ownership creeping
- * back in as a condition on any one of the operations.
+ * Scenario tests: extended permissions — every voxel operation by a visitor in another's Regular room
+ * and in a Hub; owning one room doesn't gate editing another. Ownership must never become a condition
+ * (owners protect areas via restricted zones; see restricted-zones.test.ts).
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runScenario } from "../helpers/scenarioRunner";
@@ -19,9 +12,7 @@ import RoomValidationUtil from "../../../src/shared/room/util/roomValidationUtil
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import { Action } from "../helpers/actions";
 
-// Where the top of a block stands among the faces of its layer. It is the face painted below because
-// it is one nobody can miss: a face that cannot be seen — the underside of a block resting on the
-// floor — is refused a new texture whoever asks, which would be a test of something else.
+// Top-face offset: always visible (hidden faces refuse retexturing whoever asks).
 const TOP_FACE_OFFSET = VoxelQueryUtil.getVoxelQuadIndex(10, 10, "y", "+", 0) -
     VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(10, 10, 0);
 
@@ -37,9 +28,7 @@ function allVoxelOperations(userIndex: number): Action[]
     ];
 }
 
-// That every one of those operations was taken. A client is never sent its own accepted edit back
-// (it is relayed to everybody else), so any of these arriving at the one who made the edits is the
-// server putting one of them right again.
+// Accepted edits aren't echoed to their sender, so any signal back is a correction.
 function expectAllVoxelOperationsTaken(user: Parameters<typeof getPendingSignals>[0], roomID: string)
 {
     for (const rollbackSignal of ["removeVoxelBlockSignal", "addVoxelBlockSignal", "setVoxelQuadTextureSignal"])
@@ -91,8 +80,7 @@ describe("extended permission scenarios", () => {
             rooms: [regularRoom("room-A"), regularRoom("room-B")],
             users: [
                 userAt(16, 16, "room-A", { id: "the-traveller" }),
-                // Stays behind in room-A, which is what keeps it loaded once the traveller leaves:
-                // a Regular room is unloaded the moment its last participant goes.
+                // Keeps room-A loaded (a Regular room unloads when its last participant leaves).
                 userAt(20, 20, "room-A", { id: "the-stayer" }),
             ],
             actions: [

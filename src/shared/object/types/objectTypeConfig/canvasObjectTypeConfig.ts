@@ -12,27 +12,21 @@ import { WALL_ATTACHMENT_HITBOX_INSET } from "../../../system/sharedConstants";
 // A canvas is drawn as a single flat quad hanging on the wall.
 export const CANVAS_GEOMETRY_ID = "Square";
 
-// The picture frames a canvas can be mounted in, kept as one atlas: a square image of square cells,
-// one frame to a cell, addressed by the "{col},{row}" coords a canvas stores.
+// Picture frame atlas of square cells, addressed by "{col},{row}".
 export const CANVAS_FRAME_ATLAS_PATH = "object_texture_packs/canvas_frames.webp"; // relative to the app's assets_url
 export const CANVAS_FRAME_ATLAS_SIZE = 1024; // in pixels (the atlas is square)
 export const CANVAS_FRAME_ATLAS_CELL_SIZE = 256; // in pixels (each cell is square)
 
-// The texture every canvas in a room is drawn into, a cell each: a square grid of square cells. A cell
-// is the most pixels a canvas's picture is ever given, however close it is looked at, so it is also
-// the size a canvas's image is fetched at (see CanvasImageMap's thumbnails).
+// Shared render target for all canvases in a room, one cell each. The cell size is also the thumbnail
+// size canvas images are fetched at.
 export const CANVAS_TEXTURE_SIZE = 2048; // in pixels (the texture is square)
 export const CANVAS_TEXTURE_CELL_SIZE = 256; // in pixels (each cell is square)
 
-// How much wall a canvas lays claim to, and therefore how much of it is drawn: one whole voxel of
-// wall, which is the cell a picture hangs in. This is the canvas's collider, which is where
-// everything outside this file reads its footprint from — the box it is actually tested against is
-// a hair inside this (see PhysicsColliderStateUtil).
+// One voxel of wall. This is the collider; the tested box is slightly inset (see PhysicsColliderStateUtil).
 const CANVAS_FOOTPRINT_WIDTH = 1;
 const CANVAS_FOOTPRINT_HEIGHT = 1;
 
-// Every canvas in the room is drawn into one cell of one render target, which is an 8x8 grid — so
-// this is a room-wide budget rather than a per-object one, and it is what the grid was cut into.
+// Room-wide cap: one render target cell per canvas (8x8 grid).
 const MAX_CANVASES_PER_ROOM = 64;
 
 // This object represents a canvas (image) that can be exhibited in the room (like a painting in an art gallery).

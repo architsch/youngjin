@@ -18,9 +18,7 @@ const ImageListChooserUtil =
             allItems[randIndex] = allItems[i];
             allItems[i] = temp;
         }
-        // Bring the selected item to the top of the list
-        // (so that the user will be able to see the currently selected item
-        // right at the top of the list)
+        // Move the selected item to the top.
         const selectedIndex = getImageIndexAtPath(allItems, selectedPath);
         const temp = allItems[0];
         allItems[0] = allItems[selectedIndex];
@@ -79,13 +77,10 @@ function getImageIndexAtPath(items: ImageMetadata[], path: string): number
     return index;
 }
 
-// Page = number of rows mounted at a time. Even though the metadata is fully in-memory,
-// rendering every row up front (plus every thumbnail's network request) doesn't scale
-// when the ImageMap holds many thousands of images.
+// Rows mounted per page; rendering thousands of rows (and thumbnail requests) at once doesn't scale.
 const PAGE_SIZE = 30;
 
-// Debug-only total — exercised when imageListChooserDebugEnabledObservable is on,
-// to verify pagination/scroll on a list large enough to span many pages.
+// Dummy total for testing pagination in debug mode.
 const DEBUG_DUMMY_IMAGE_TOTAL = 200;
 
 const cachedDummyImageList: ImageMetadata[] = [];

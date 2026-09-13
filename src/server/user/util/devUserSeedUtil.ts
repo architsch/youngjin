@@ -10,10 +10,7 @@ interface DevUserDef
     userType: UserType;
 }
 
-// An admin is among them because an admin is the only user some of the app exists for — the doors a
-// world is built out of, and the settings of a room nobody owns. Nothing in the product ever makes
-// one (an admin is promoted by hand in the database), so without this there is no way to reach any
-// of that locally.
+// Includes an admin, the only way to reach admin features locally (admins are only granted in the DB).
 const DEV_USERS: DevUserDef[] = [
     { userName: "DevMember1", email: "devmember1@test.com", userType: UserTypeEnumMap.Member },
     { userName: "DevMember2", email: "devmember2@test.com", userType: UserTypeEnumMap.Member },

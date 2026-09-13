@@ -2,51 +2,27 @@ import ColorUtil from "../../../../../math/util/colorUtil";
 import { COLLISION_LAYER_HEIGHT, NUM_COLLISION_LAYERS_PER_STOREY } from "../../../../../system/sharedConstants";
 import DoorCompositionParams from "../compositionParams/doorCompositionParams";
 
-// The design standard every door is built to: a panelled wooden door with mouldings, of the kind
-// that is recognizable as a door on sight. A door varies from its neighbours in color alone, so that
-// a wall of them stays legible as a row of doors rather than as an assortment of shapes.
-//
-// Everything here is authored in "panel space": the origin sits at the bottom center of the visible
-// panel, x runs across it and y up it, both in world units. That is the frame a joiner would measure
-// a door in, and DoorCompositionBuilder is what shifts it onto the object's own origin.
+// The single door design (colors vary, the shape doesn't). Authored in panel space: origin at the
+// panel's bottom centre, x across and y up, in world units; DoorCompositionBuilder shifts it onto the
+// object origin.
 
-// Every part of a door's face is a flat quad laid over the ones beneath it, so there is only ever
-// one geometry involved however elaborate the joinery gets.
 export const DOOR_GEOMETRY_ID = "Square";
 
-// How much wall a door lays claim to, and how much of that claim it actually fills. The footprint is
-// what other wall attachments are kept out of — it is the door's collider, which DoorObjectTypeConfig
-// takes from here, and every consumer outside this file reads it back off that config. The panel is
-// what is drawn, centered across the footprint and flush with its bottom. The difference is
-// deliberate margin: room to stand two doors side by side without their frames touching, and a gap
-// under the ceiling above.
-//
-// Both are kept to whole half-voxels, which is the grid a wall attachment is snapped to, so that a
-// door's stored position stays an exact number rather than one that drifts as it is nudged along
-// the wall. The slack that keeps two neighbouring doors from reading as overlapping is taken off
-// the collision box instead of these (see PhysicsColliderStateUtil).
-//
-// The footprint stands exactly one storey tall, so a door reaches from the floor it is mounted on to
-// just under the slab over it, and the panel keeps a door's real proportions within that.
+// Footprint (the collider, read via DoorObjectTypeConfig) vs. the drawn panel, centred and flush at
+// the bottom; the difference is margin. Kept to half-voxels so stored positions stay exact (overlap
+// slack is applied to the collision box instead; see PhysicsColliderStateUtil). The footprint is one
+// storey tall.
 export const DOOR_FOOTPRINT_WIDTH = 1.5;
 export const DOOR_FOOTPRINT_HEIGHT = NUM_COLLISION_LAYERS_PER_STOREY * COLLISION_LAYER_HEIGHT; // 3.5
 
 const W = 1.375;
 const H = 3.25;
 
-// The shift from panel space onto the object's own origin, which is centered on the collider: the
-// panel is centered across the footprint and flush with its bottom, so the panel's origin sits half
-// the footprint's height below the object's, and the difference between the footprint and the panel
-// is left as clearance at the top.
-//
-// Exported because anything else placed against the door's face has to be measured in the same frame
-// the face itself was authored in — the plate's label text above all, which has to sit on the plate
-// rather than merely near it.
+// Panel space to object origin (collider-centred): the panel bottom is half the footprint height down.
+// Exported so things placed on the face (e.g. the plate label) use the same frame.
 export const DOOR_PANEL_ORIGIN_Y = -0.5 * DOOR_FOOTPRINT_HEIGHT;
 
-// The solid timber the panels are let into. A door's proportions live in these four numbers: the
-// uprights down each side, the one between the panels, the rail underfoot, and the rail the knob
-// goes through.
+// The four stile/rail widths that define the door's proportions.
 const SIDE_STILE = 0.16;
 const MID_STILE = 0.12;
 const BOTTOM_RAIL = 0.26;
@@ -60,27 +36,19 @@ const KNOB_Y = 1.45;
 const LOCK_RAIL_BOTTOM = KNOB_Y - 0.5 * LOCK_RAIL;
 const LOCK_RAIL_TOP = KNOB_Y + 0.5 * LOCK_RAIL;
 
-// The plate the destination room's name is written on. It is the one region finished in a color
-// other than the door's own, so that it reads as something to be looked at — and it is placed where
-// a sign belongs, above everything the door is made of.
+// The name plate: the only region in a different color, placed where a sign belongs.
 const LABEL_HEIGHT = 0.39;
 const LABEL_MARGIN = 0.19;
 const LABEL_CENTER_Y = H - LABEL_MARGIN - 0.5 * LABEL_HEIGHT;
 
 const UPPER_PANEL_TOP = LABEL_CENTER_Y - 0.5 * LABEL_HEIGHT - LABEL_MARGIN;
 
-// Every part of a door is drawn as a flat quad, and quads laid over one another in the same plane
-// z-fight — visibly so on the lower-precision depth buffers phones tend to have, where offsets of a
-// thousandth of a unit fall below what the buffer can tell apart at the distance a door is seen
-// from. So the parts are separated by an amount that is real relief rather than a nudge: a panelled
-// door genuinely is built up in layers, and giving each layer the depth it would actually have costs
-// nothing and settles the question on every device.
+// Real relief between layers (not tiny offsets), which avoids z-fighting on low-precision mobile depth
+// buffers.
 const RELIEF_STEP = 0.02;
 
-// A region of the door's face: where it sits in panel space, how big it is, how far it stands out
-// from the wall, how wide its moulding runs, and whether that moulding stands proud of the surface
-// or is sunk into it. The outline of the door and its knob are raised; everything let into the face
-// is sunk. That contrast is most of what makes a flat quad read as joinery.
+// A face region: position, size, relief, moulding width, and raised or sunk (the outline and knob are
+// raised; inset parts are sunk).
 export interface DoorRegion
 {
     offset: {x: number, y: number},
@@ -94,14 +62,8 @@ const DoorCompositionConstants = {
     panelWidth: W,
     panelHeight: H,
 
-    // The regions the door's face is divided into, in the order they are laid down: the slab first,
-    // then everything that sits on it. The panels come in pairs, one on each side of the mid stile,
-    // and are mirrored by the builder rather than being listed twice.
-    // A moulding is seen entirely by the light falling across its profile, so how wide it runs is
-    // how much of it there is to be seen. A band narrow enough to be taken in at a glance reads as
-    // a line scored around the region rather than as timber worked into a shape, however carefully
-    // it is shaded — a carving needs room across it for the light to travel. These are accordingly
-    // heavy by the standards of a real door, and deliberately so.
+    // Regions in draw order (slab first); mirrored panels are added by the builder. Moulding bands are
+    // intentionally wide so the relief shading reads.
     slab: {
         offset: {x: 0, y: 0.5 * H},
         size: {x: W, y: H},
@@ -130,8 +92,7 @@ const DoorCompositionConstants = {
         mouldingThickness: 0.062,
         mouldingIsConvex: false,
     } as DoorRegion,
-    // Nearly half the knob's own half-width, which leaves it almost no flat top: what the profile
-    // draws is then a dome with a rim around it, which is the shape a knob actually has.
+    // A moulding nearly half the knob's width, which reads as a dome with a rim.
     knob: {
         offset: {x: 0.5 * W - 0.20, y: KNOB_Y},
         size: {x: 0.11, y: 0.11},
@@ -140,35 +101,10 @@ const DoorCompositionConstants = {
         mouldingIsConvex: true,
     } as DoorRegion,
 
-    // Coordinated finishes a door could plausibly have been given. A door's colors are drawn from
-    // one of these rather than picked independently, because three unrelated colors on one door do
-    // not look like a door that was painted — they look like a fault. The values are snapped to the
-    // "Timber" palette the codec encodes with, so a scheme survives being written out and read back
-    // unchanged; a customization form is free to set any color that palette holds.
-    //
-    // That palette is already only what timber is finished in, so nothing here has to steer clear of
-    // colors a door was never painted. What is still chosen deliberately, and cannot be, is how the
-    // three colors of one door sit against each other:
-    //
-    // The **panels stay in the middle of the palette's brightness range**. The material ages a color
-    // by warming it and pulling its saturation back, the figure and the carving darken it further,
-    // and the room it hangs in is lit by one lamp on a low ambient. A finish that starts dark has
-    // nowhere to go from there: it arrives as a black rectangle with no grain and no joinery visible
-    // in it, which is a door's whole appearance spent on nothing. The far end is no better — a face
-    // at the top of the range washes out and takes the moulding's shading with it.
-    //
-    // The **plate stays close in brightness to the panel it sits on**. It only has to carry dark
-    // lettering, and the smallest step that does is the one to want: a plate that leaps off the door
-    // stops being part of it, and reads as a sticker rather than as something screwed to the face.
-    // Measured against what the material makes of a color rather than against the hex written here,
-    // a plate lands between a fifth and two thirds brighter than the door it is screwed to.
-    //
-    // The **knob is metal or bone**, since that is what a knob is made of, and it is the one part of
-    // a door that was never painted to match the rest.
-    //
-    // The mouldings take no color here at all. Every one of them is worked into the timber it runs
-    // around, and is seen by the light falling across its profile rather than by any contrast with
-    // the face it is cut out of (see the "InstancedWood" material).
+    // Coordinated finishes (snapped to the "Timber" palette so they round-trip). Unrelated colors look
+    // like a fault. Panels stay mid-brightness (the aging material makes dark finishes black and pale
+    // ones wash out); the plate stays close to the panel's brightness; the knob is metal or bone.
+    // Mouldings take no color of their own (see the "InstancedWood" material).
     colorSchemes: [
         scheme("#b98b56", "#d5cdb6", "#c9a227"), // pine, putty plate, brass knob
         scheme("#71452b", "#6b6659", "#a98a3f"), // dark walnut

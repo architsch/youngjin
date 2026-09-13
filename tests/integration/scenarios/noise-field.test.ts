@@ -1,19 +1,7 @@
 /**
- * Scenario tests: the baked value-noise field
- *
- * The room's air, its sky, the land below the horizon and the texture-less finishes are all drawn
- * from one value-noise field, which is baked into a 3D texture once at load and read back by the
- * shaders rather than evaluated by them (see ValueNoiseTextureUtil). That trade is only sound while
- * the baked field still behaves like the field it replaced, and nothing about a shader reading a
- * wrong texture looks like an error — it looks like weather.
- *
- * Covers:
- * - Distribution: every channel is a field rather than a constant, centred where value noise sits
- * - Seamlessness: the field is continuous across the wrap, so tiling it shows no crease
- * - Decorrelation: the channels read together as a warp vector do not agree with each other
- * - Determinism: the same field every time, so a room looks the same on every load and to everyone
- * - Periodicity: the stacked octaves come back onto themselves all at once, at the distance the
- *   drifting clouds and smoke are wrapped at
+ * Scenario tests: the baked value-noise texture (see ValueNoiseTextureUtil), read by shaders for air,
+ * sky, land and texture-less finishes. Covers distribution, seamless wrapping, channel decorrelation,
+ * determinism, and octave periodicity matching the cloud/smoke drift wrap.
  */
 import { describe, it, expect } from "vitest";
 import * as THREE from "three";
@@ -22,9 +10,7 @@ import ValueNoiseTextureUtil, { VALUE_NOISE_PERIOD }
 import { VALUE_NOISE_FBM_PERIOD, VALUE_NOISE_SECOND_OCTAVE, VALUE_NOISE_THIRD_OCTAVE }
     from "../../../src/client/graphics/shaders/valueNoiseGLSL";
 
-// The util hands the texture over by binding it onto a material being compiled, which is the only
-// thing it is ever asked to do — so the tests ask for it the same way rather than through a door
-// opened only for them.
+// Fetched by binding onto a material, the util's only interface.
 function getBakedTexture(): THREE.Data3DTexture
 {
     const shader = { uniforms: {} } as unknown as THREE.WebGLProgramParametersWithUniforms;
@@ -50,8 +36,7 @@ describe("baked value-noise field", () =>
     {
         expect(texture.image.height).toBe(size);
         expect(texture.image.depth).toBe(size);
-        // The wrap is only seamless where the texture spans a whole number of lattice cells, since a
-        // partial cell would meet its own start mid-slope.
+        // Seamless only if the texture spans whole lattice cells.
         expect(size % VALUE_NOISE_PERIOD).toBe(0);
         // Repeating in all three axes is what makes the block of texels a field without edges.
         expect(texture.wrapS).toBe(THREE.RepeatWrapping);
@@ -64,10 +49,8 @@ describe("baked value-noise field", () =>
 
     it("comes back onto itself, every octave at once, where drifting air is wrapped", () =>
     {
-        // The clouds and the smoke keep how far they have drifted modulo this, so every octave of
-        // the stacked field has to come round there exactly: one that did not would jump each time
-        // the drift wrapped, which on a sky reads as a flicker with no cause anybody could find. The
-        // base period and each finer octave must all fit a whole number of times.
+        // Clouds and smoke wrap their drift at this period, so every octave must fit it a whole number of
+        // times (or the sky flickers on each wrap).
         const basePeriods = VALUE_NOISE_FBM_PERIOD / VALUE_NOISE_PERIOD;
         expect(Number.isInteger(basePeriods)).toBe(true);
         for (const octave of [VALUE_NOISE_SECOND_OCTAVE, VALUE_NOISE_THIRD_OCTAVE])
@@ -88,8 +71,7 @@ describe("baked value-noise field", () =>
             const mean = sum / texelCount;
             const deviation = Math.sqrt(sumOfSquares / texelCount - mean * mean);
 
-            // Value noise crowds around the middle of its range and reaches the ends only in
-            // pockets, so the mean sits near a half and the spread is a fraction of that.
+            // Value noise clusters mid-range: mean near a half, modest spread.
             expect(mean).toBeGreaterThan(0.45);
             expect(mean).toBeLessThan(0.55);
             expect(deviation).toBeGreaterThan(0.1);
@@ -98,9 +80,7 @@ describe("baked value-noise field", () =>
 
     it("is continuous across its own wrap", () =>
     {
-        // What a crease would look like: a step across the seam larger than the steps the field
-        // takes anywhere else. Measured against an interior boundary rather than against a fixed
-        // number, so the comparison holds whatever resolution the field is baked at.
+        // A crease is a seam step larger than interior steps (resolution-independent).
         let seamStep = 0;
         let interiorStep = 0;
         const middle = size >> 1;
@@ -122,8 +102,7 @@ describe("baked value-noise field", () =>
 
     it("keeps the channels independent of one another", () =>
     {
-        // The first three are read together as one vector, so a field that agreed with itself would
-        // drag every coordinate along a diagonal instead of in a direction.
+        // The first three channels form a warp vector, so they must not correlate.
         for (const [a, b] of [[0, 1], [0, 2], [1, 2], [0, 3], [1, 3], [2, 3]])
         {
             let sumA = 0, sumB = 0, sumAB = 0, sumAA = 0, sumBB = 0;
@@ -144,9 +123,7 @@ describe("baked value-noise field", () =>
 
     it("bakes once and hands the same field to every material", () =>
     {
-        // Both that the work is not repeated per material, and that every material in the scene is
-        // reading the same field — two materials on the same wall drawn from different noise would
-        // not agree about where the air is thick.
+        // Baked once and shared, so every material reads the same field.
         expect(getBakedTexture()).toBe(texture);
     });
 });

@@ -37,12 +37,8 @@ const Geometry3DUtil =
             halfSize: {x: 0.5*(x2-x1), y: 0.5*(y2-y1), z: 0.5*(z2-z1)}
         };
     },
-    // Returns the AABB-casting ray's scale factor which, when applied to the ray,
-    // pushes the source AABB to end up at the point of collision
-    // between itself and the target AABB.
-    // (Returns hitRayScale=1 when the source AABB doesn't hit the target AABB)
-    // Uses the slab method for ray-AABB intersection.
-    // (Note: Look up "Cyrus-Beck clipping")
+    // Ray scale factor that moves the source AABB to its first contact with the target (1 = no hit).
+    // Slab method (see Cyrus-Beck clipping).
     castAABBAgainstAABB: (source: AABB3, destination: Vec3, target: AABB3): RaycastHitResult3 =>
     {
         // Expand target by source's half-sizes (Minkowski sum)

@@ -1,34 +1,17 @@
 /**
- * Scenario tests: Single-player mode
- *
- * Covers the server-side contract for single-player rooms (e.g. the tutorial room):
- * - A single-player room is NOT loaded or stored server-side — the client generates it locally,
- *   so the server only synthesizes a transient, content-less descriptor and never registers the
- *   joining user as a participant (the player object is spawned and driven entirely client-side).
- * - The socket context is flagged as being in a single-player room.
- * - The user's lastRoomID is never persisted for a single-player room
- *   (single-player rooms are re-entered via `user.singlePlayerMode`, not lastRoomID).
- * - A multiplayer room (Hub/Regular) still registers the user as a participant.
- * - Defense-in-depth: because a single-player user is never bound to a server-side room, every
- *   room-mutating signal handler bails and no server-side room is ever created or mutated.
- *
- * Also covers shared single-player behavior:
- * - The wire format omits room content for single-player rooms (and reconstructs it empty),
- *   while multiplayer rooms still carry their full content.
- * - The shared generator builds the tutorial room's interactive blocks (the client relies on this).
- * - The tutorial step graph is name-keyed: every transition must name an existing step (or the ""
- *   terminal), and every step must be reachable from "initial".
+ * Scenario tests: single-player mode (see @docs/networking/single_player_mode.md).
+ * Server: the room is never loaded or stored (a transient, content-less descriptor), the user isn't a
+ * participant, the context is flagged, lastRoomID isn't persisted, and every room-mutating handler bails.
+ * Shared: the wire format omits content, the generator builds the tutorial room, and the tutorial step
+ * graph is well-formed.
  */
 import { describe, it, expect, beforeEach, vi, Mock } from "vitest";
 
-// The tutorial's steps are client-side, and reach straight for the room, the character and the
-// camera as they are played. Those three are stubbed out here so that a step's own choosing can be
-// run against a player and a camera placed wherever a test wants them.
+// Tutorial steps reach for the room, character and camera; stubbed so tests can place them freely.
 vi.mock("../../../src/client/graphics/graphicsManager", async () => {
     const THREE = await import("three");
     const camera = new THREE.PerspectiveCamera();
-    // A voxel edit invalidates the room's light map (see LightBlockMap). Nothing here draws
-    // anything, so the map only has to exist and take the message.
+    // Voxel edits invalidate the light map (see LightBlockMap); a stub suffices.
     const lightBlockMap = { requestRecomputation() {}, resetForRoom(_voxels?: unknown) {},
         getNearbyLightAt(_worldPos: unknown, out: any) { return out.setRGB(0, 0, 0); } };
     return { default: { getCamera: () => camera, getScene: () => new THREE.Scene(),
@@ -49,9 +32,7 @@ vi.mock("../../../src/client/object/clientObjectManager", () => ({
     default: { getMyPlayer: vi.fn(), getObjectById: vi.fn() },
 }));
 
-// What the steps of a mode work out for each other while it is being played. The real manager holds
-// exactly this and empties it when the mode ends; here it stands in for a run of the tutorial that
-// has got as far as whatever a test says it has.
+// The mode's shared variables (the real manager clears them when the mode ends).
 const { singlePlayerVariables } = vi.hoisted(() => ({
     singlePlayerVariables: {} as {[name: string]: any},
 }));
@@ -134,8 +115,7 @@ describe("single-player scenarios", () => {
             rooms: [],
             users: [userAtCenter("tutorial", { singlePlayerMode: "tutorial" })],
             assertions: ({ harness, users }) => {
-                // lastRoomID stays empty: single-player rooms are re-entered via
-                // user.singlePlayerMode, not via lastRoomID.
+                // lastRoomID stays empty (re-entry uses user.singlePlayerMode).
                 expect(harness.getStoredLastRoomID(users[0].user.id) ?? "").toBe("");
             },
         });
@@ -162,8 +142,7 @@ describe("single-player scenarios", () => {
                 const ctx = users[0].socketUserContext;
                 const userID = users[0].user.id;
                 const m = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE].getRoomBuilderParams();
-                // A quad of the dividing wall — a real part of the tutorial room, so that a handler
-                // that did touch a room would have something to touch.
+                // A real dividing-wall quad, so a misbehaving handler would have something to touch.
                 const wallQuad = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(
                     m.volumes.wall1.rowMin, m.volumes.wall1.colMin, COLLISION_LAYER_MIN);
                 const transform = new ObjectTransform({ x: 1, y: 0, z: 1 }, { x: 0, y: 0, z: 1 });
@@ -172,8 +151,7 @@ describe("single-player scenarios", () => {
                 expect(ServerRoomManager.currentRoomIDByUserID[userID]).toBeUndefined();
                 expect(ServerRoomManager.roomRuntimeMemories["tutorial"]).toBeUndefined();
 
-                // Fire every room-mutating signal as the single-player user. Each handler must bail
-                // at its no-room guard rather than touch a room (or throw).
+                // Each room-mutating handler must bail at its no-room guard (without throwing).
                 ServerObjectManager.onAddObjectSignalReceived(ctx, new AddObjectSignal("tutorial", "", "", 0, "intruder", transform));
                 ServerObjectManager.onRemoveObjectSignalReceived(ctx, new RemoveObjectSignal("tutorial", "npc"));
                 ServerObjectManager.onSetObjectTransformSignalReceived(ctx, new SetObjectTransformSignal("tutorial", "npc", transform, false));
@@ -183,8 +161,7 @@ describe("single-player scenarios", () => {
                 ServerVoxelManager.onMoveVoxelBlockSignalReceived(ctx, new MoveVoxelBlockSignal("tutorial", wallQuad, 1, 0, 0));
                 ServerVoxelManager.onSetVoxelQuadTextureSignalReceived(ctx, new SetVoxelQuadTextureSignal("tutorial", wallQuad, 7));
 
-                // Nothing changed: the user is still unbound, and no server-side room was created
-                // as a side effect of any handler.
+                // The user is still unbound, and no handler created a room.
                 expect(ServerRoomManager.currentRoomIDByUserID[userID]).toBeUndefined();
                 expect(ServerRoomManager.roomRuntimeMemories["tutorial"]).toBeUndefined();
             },
@@ -193,9 +170,7 @@ describe("single-player scenarios", () => {
 });
 
 describe("single-player room wire format", () => {
-    // A single-player room is sent to the client as a content-less descriptor: Room.encode/decode
-    // omit the voxel grid and object group for single-player rooms (keyed on the roomType already on
-    // the wire) and reconstruct them empty, leaving the client to generate the real content locally.
+    // Room.encode/decode omit single-player content (keyed on roomType) and reconstruct it empty.
     function roundTrip(mem: RoomRuntimeMemory): RoomRuntimeMemory {
         const bufferState = EncodingUtil.startEncoding();
         mem.encode(bufferState);
@@ -226,15 +201,12 @@ describe("single-player room wire format", () => {
 });
 
 describe("single-player room generation", () => {
-    // Single-player rooms are no longer built or stored server-side; the same shared generator the
-    // client uses must build what the tutorial's steps then work on and take apart.
+    // The shared generator (also used by the client) must build what the tutorial's steps take apart.
     it("generates the tutorial room with the walls its steps take down", () => {
         const { voxelGrid, objectGroup } = RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
         const m = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE].getRoomBuilderParams();
 
-        // Both walls stand to begin with: the one between the user and the receptionist, which the
-        // step that sends him there takes down, and the one across the way out, which the last step
-        // takes down. A wall already gone is a step with nothing to open.
+        // Both walls stand initially (each is removed by a later step).
         for (const volume of [m.volumes.wall1, m.volumes.wall2])
         {
             for (let row = volume.rowMin; row <= volume.rowMax; ++row)
@@ -248,8 +220,7 @@ describe("single-player room generation", () => {
             }
         }
 
-        // The patch of floor the tutorial falls back on when it can find none of its own (see the
-        // hotspot tests below): bare, so that the block the user is told to add has somewhere to go.
+        // The fallback floor patch (see the hotspot tests) is bare, so the requested block fits.
         const floorVoxel = VoxelQueryUtil.getVoxel(voxelGrid.voxels,
             Math.floor(m.hotspots.floor.z), Math.floor(m.hotspots.floor.x));
         expect(floorVoxel).toBeDefined();
@@ -261,9 +232,7 @@ describe("single-player room generation", () => {
     });
 
     it("dresses the tutorial's two fixtures itself, the same way every time", () => {
-        // Elsewhere an object nobody has dressed falls back on an appearance derived from where it
-        // stands. The tutorial is the first thing anybody sees of the game, so its two fixtures are
-        // chosen outright instead — and being chosen, they must survive being generated twice.
+        // The tutorial's two fixtures have explicit appearances, which must be deterministic.
         const first = RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
         const second = RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
 
@@ -284,11 +253,8 @@ describe("single-player room generation", () => {
     });
 
     it("wires the tutorial's door to the hubs, as the room's own way in", () => {
-        // Which is what takes the player out of the tutorial: the reserved keyword names the hubs
-        // without naming one of them, so clicking this door hands him to the balancer and that is
-        // how the tutorial ends (see DoorGameObject and RoomPickerUtil). Naming a hub outright
-        // would pin the way out to a room that may since have filled up or been taken down, and
-        // naming nothing at all would make the door a locked one.
+        // The hubs keyword hands the player to the balancer (see DoorGameObject and RoomPickerUtil); naming
+        // one hub could hit a full or deleted room, and naming nothing would lock the door.
         const { objectGroup } = RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
         const door = objectGroup.objectById["door"];
 
@@ -298,9 +264,7 @@ describe("single-player room generation", () => {
     });
 
     it("builds the tutorial room as a single storey the camera can look down into", () => {
-        // The tutorial is played from above as much as from inside it, so the room is built as one
-        // storey with the slab that caps it left whole: the space the player is walked around in
-        // stops there, and everything over it is the mass the room was carved out of.
+        // One storey, with its capping slab left whole.
         const { voxelGrid } = RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
         const m = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE].getRoomBuilderParams();
 
@@ -312,11 +276,7 @@ describe("single-player room generation", () => {
                 STOREY_FLOOR_COLLISION_LAYER);
         }
 
-        // The roof: laid over the whole grid, and drawn nowhere on it. That it is never drawn is
-        // what lets a camera drawn back far enough look into the room rather than down onto a lid —
-        // and it is asked of every cell rather than of the room's own spaces, because the mass the
-        // room is set into stands at that height too, and a lid over that reads from above exactly
-        // like a lid over the room.
+        // The roof covers the whole grid but is never drawn, so a pulled-back camera sees into the room.
         for (let row = 0; row < NUM_VOXEL_ROWS; ++row)
         {
             for (let col = 0; col < NUM_VOXEL_COLS; ++col)
@@ -336,12 +296,8 @@ describe("single-player room generation", () => {
     });
 
     it("emits per-quad change events during generation (why the client listens only after voxels spawn)", () => {
-        // Generation builds walls through the runtime-edit path, which emits a voxelQuadChangeObservable
-        // event per quad. The client therefore registers its quad-change listener only once the room's
-        // voxel game objects exist — ClientVoxelManager.load() runs after ClientObjectManager.load() in
-        // app.ts, and unload() runs before those objects are despawned. Otherwise these generation-time
-        // events would look up voxels that haven't spawned ("Voxel not found"). This guards that
-        // generation is in fact a source of such events.
+        // Generation emits voxelQuadChangeObservable events, so the client subscribes only once voxel game
+        // objects exist (ClientVoxelManager loads after ClientObjectManager). Guards that it does emit them.
         let fireCount = 0;
         voxelQuadChangeObservable.addListener("test-spy", () => { fireCount++; });
         try
@@ -357,26 +313,19 @@ describe("single-player room generation", () => {
 });
 
 describe("tutorial floor hotspot", () => {
-    // The patch of floor the tutorial asks the user to select is settled while the step is being
-    // played, from where the user happens to be standing (see the "set_variable" action): a patch
-    // fixed in the room's layout would sooner or later be the one he is standing on, where the
-    // outline drawn around it and the arrow hanging over it would be lost inside his own character.
+    // The floor patch is chosen at play time from the user's position (see "set_variable"), so it's never
+    // the one hidden under the character.
     const config = SinglePlayerModeClientConfigMap[TUTORIAL_SINGLE_PLAYER_MODE];
     const room = { voxelGrid: RoomGenerationUtil.generateRoom(
         TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer).voxelGrid } as Room;
 
-    // Each test is its own run of the tutorial, and nothing an earlier one worked out carries over
-    // — which is what the real manager guarantees by emptying these when the mode ends.
+    // Each test is a fresh run (the real manager clears these when the mode ends).
     beforeEach(() => {
         for (const name of Object.keys(singlePlayerVariables))
             delete singlePlayerVariables[name];
     });
 
-    /**
-     * Plays the step's own choosing, with the user and the camera placed where the test wants them,
-     * and sets the result aside under its own name exactly as the step does — which is what leaves
-     * everything the step points with something to read back.
-     */
+    /** Runs the step's hotspot choice with the given player and camera, storing the result as the step does. */
     function pickHotspot(playerPosition: Vec3, cameraPosition: Vec3): {row: number, col: number} {
         (App.getCurrentRoom as Mock).mockReturnValue(room);
         (ClientObjectManager.getMyPlayer as Mock).mockReturnValue({ position: playerPosition });
@@ -399,21 +348,15 @@ describe("tutorial floor hotspot", () => {
         expect(hotspot.col).toBe(4);
         expect(hotspot.row).toBeLessThan(28);
 
-        // Bare, so the outline drawn around it is visible and the block the user is asked to build
-        // on it afterwards has somewhere to go.
+        // Bare, so the outline shows and the next step's block fits.
         const voxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, hotspot.row, hotspot.col);
         expect(voxel).toBeDefined();
         expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel!, COLLISION_LAYER_MIN)).toBe(false);
     });
 
     it("keeps the whole block-building passage on the one patch it asked for", () => {
-        // The three steps after "select_floor" all work on that patch: its texture, the block built
-        // on it, and the floor uncovered when that block goes again. That only holds because the
-        // step demands the patch it is pointing at rather than taking whichever quad the user
-        // clicked, and because each step afterwards says outright where the selection goes — the
-        // selection being pinned throughout, so the user cannot carry it off mid-passage. Each of
-        // them reads the one patch back out of what "select_floor" settled, which is what makes the
-        // passage hold together wherever the user happened to be standing when it began.
+        // The next three steps reuse the patch "select_floor" stored; this holds because that step demands
+        // the pointed-at patch and the selection stays pinned.
         const hotspot = pickHotspot({ x: 4.5, y: 0, z: 28.5 }, { x: 4.5, y: 3, z: 18.5 });
         const steps = config.loadSteps();
 
@@ -444,8 +387,7 @@ describe("tutorial floor hotspot", () => {
     });
 
     it("falls back to the room's own patch when the floor gives out at once", () => {
-        // Camera on the far side of the entrance wall, so the first step out of the player's cell
-        // lands in solid wall.
+        // Camera beyond the entrance wall, so the first step out of the player's cell hits wall.
         const m = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE].getRoomBuilderParams();
         const hotspot = pickHotspot(
             { x: m.entranceVoxelCol + 0.5, y: 0, z: m.entranceVoxelRow + 0.5 },
@@ -458,9 +400,7 @@ describe("tutorial floor hotspot", () => {
 });
 
 describe("tutorial step graph", () => {
-    // The tutorial's steps are addressed by name, not by array position: each transition rule
-    // names the step to advance to, and "" marks the end of the mode. A mistyped or stale step
-    // name would silently strand the tutorial, so these tests assert the graph is well-formed.
+    // Steps are addressed by name ("" ends the mode); a stale name would strand the tutorial.
     const config = SinglePlayerModeClientConfigMap[TUTORIAL_SINGLE_PLAYER_MODE];
 
     it("loadSteps returns a name-keyed map with an 'initial' entry step and a terminal step", () => {

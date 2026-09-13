@@ -4,13 +4,8 @@ import EncodableData from "../../networking/types/encodableData";
 import EncodableRawByteNumber from "../../networking/types/encodableRawByteNumber";
 import { MAX_ROOM_Y } from "../../system/sharedConstants";
 
-// A rectangular stretch of the room that only a superuser may edit — see
-// @docs/gameplay/restricted_zone.md for who that is and what the restriction covers.
-//
-// A zone is given as rows and columns alone because it always reaches the whole height of the room.
-// What zones exist to protect is the room's shape as seen from the next room along: a hole in a
-// boundary wall says "outdoors" wherever it is cut, so a zone that stopped short of the ceiling
-// would leave the part of the wall above it open to exactly the hole it was drawn to prevent.
+// A rectangle only the superuser may edit (see @docs/gameplay/restricted_zone.md). Rows and columns only,
+// since it always spans the full room height (a partial zone would leave the wall above unprotected).
 export default class RestrictedZone extends EncodableData
 {
     rowMin: number;
@@ -27,9 +22,7 @@ export default class RestrictedZone extends EncodableData
         this.colMax = colMax;
     }
 
-    // The volume an edit is tested against. Both of the margins below are load-bearing, because the
-    // overlap tests this volume is fed to (see Geometry3DUtil) compare strictly: something lying
-    // exactly on a face of the box is outside it.
+    // Test volume. Both margins matter because the overlap tests are strict (a point on a face is outside).
     getVolume(): AABB3
     {
         return {
@@ -39,14 +32,9 @@ export default class RestrictedZone extends EncodableData
                 z: 0.5 * (this.rowMax + this.rowMin + 1),
             },
             halfSize: {
-                // Drawn in far enough to leave the zone's own outermost faces lying outside it, so
-                // the wall a zone protects can still be painted from the side it is seen from. What
-                // the zone holds shut is the wall itself; how it is finished is nobody's structural
-                // business.
+                // Inset horizontally, so the zone's outermost faces stay paintable.
                 x: 0.5 * (this.colMax - this.colMin + 1) - EDGE_MARGIN,
-                // Pushed out far enough to take in the room's own floor and ceiling tiles, which sit
-                // exactly on y=0 and y=MAX_ROOM_Y and would otherwise fall outside the volume that
-                // is meant to reach the whole height of the room.
+                // Extended vertically to include the room's floor and ceiling tiles.
                 y: 0.5 * MAX_ROOM_Y + EDGE_MARGIN,
                 z: 0.5 * (this.rowMax - this.rowMin + 1) - EDGE_MARGIN,
             },
@@ -71,6 +59,5 @@ export default class RestrictedZone extends EncodableData
     }
 }
 
-// Small enough to be well inside a voxel, large enough to survive the rounding of the coordinates
-// that are compared against it.
+// Well inside a voxel, larger than coordinate rounding.
 const EDGE_MARGIN = 0.01;

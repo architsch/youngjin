@@ -6,14 +6,10 @@ import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
 // instancedMeshId = MeshDataUtil.getInstancedMeshId(geometryId, materialId)
 const bindingMap: {[instancedMeshId: string]: InstancedMeshBinding } = {};
 
-// The instancedMeshId is the canonical key of every loaded instanced mesh: loadInstancedMesh derives
-// it once from the geometry/material pair, and all per-instance methods take it directly (rather
-// than re-deriving it per call), so the per-frame paths do no string building at all.
+// Per-instance methods take the precomputed instancedMeshId, so per-frame paths build no strings.
 export default class InstancedMeshGraphics extends GameObjectComponent
 {
-    // Swaps the texture of a shared TexturePack binding in place (e.g. when the voxel texture pack
-    // changes), preserving the binding's mesh/material/shader and reusing it. A no-op if the binding
-    // hasn't been created yet (e.g. before the first voxel has spawned).
+    // Swaps a texture pack binding's texture in place. No-op before the binding exists.
     static async swapTexturePackTexture(instancedMeshId: string, newTexturePath: string)
     {
         const binding = bindingMap[instancedMeshId];
@@ -22,31 +18,21 @@ export default class InstancedMeshGraphics extends GameObjectComponent
         await binding.swapTexturePackTexture(newTexturePath);
     }
 
-    // Temporarily takes a single instance out of sight (or brings it back), without disturbing the
-    // GameObject that owns it (see InstancedMeshBinding.setInstanceHidden) — as opposed to the
-    // instanced mesh's own visibility, which every instance drawn from that mesh shares. Callers
-    // reach an instance by the mesh it is drawn from, rather than through its owner, because they
-    // find it that way in the first place (e.g. as a raycast hit). A no-op if the binding hasn't
-    // been created yet.
+    // Hides/reveals one instance without disturbing its owner (see InstancedMeshBinding.setInstanceHidden).
+    // Addressed by mesh, since callers find instances via raycasts. No-op before the binding exists.
     static setInstanceHidden(instancedMeshId: string, instanceId: number, hidden: boolean)
     {
         bindingMap[instancedMeshId]?.setInstanceHidden(instanceId, hidden);
     }
 
-    // Whether an instance is one of those currently held out of sight by the method above. False
-    // if the binding hasn't been created yet, nothing drawn from a mesh that does not exist being
-    // hidden in the sense that matters here (see InstancedMeshBinding.instanceIsHidden).
+    // False if the binding doesn't exist yet.
     static instanceIsHidden(instancedMeshId: string, instanceId: number): boolean
     {
         return bindingMap[instancedMeshId]?.instanceIsHidden(instanceId) === true;
     }
 
-    // Draws (or stops drawing) the outline its material gives an instance — a border painted around
-    // the instance in the material's outline color. Reached by mesh rather than through the
-    // GameObject that owns the instance, because what decides this is a property of the room rather
-    // than of any one object: a room's restricted zones are drawn by sweeping every instance of its
-    // voxel mesh at once (see RestrictedZoneOutlineUtil). A no-op if the binding hasn't been created
-    // yet.
+    // Addressed by mesh because room-wide sweeps set it (see RestrictedZoneOutlineUtil). No-op before
+    // the binding exists.
     static setInstanceOutline(instancedMeshId: string, instanceId: number, strength: number)
     {
         bindingMap[instancedMeshId]?.updateInstanceOutline(instanceId, strength);
@@ -78,8 +64,7 @@ export default class InstancedMeshGraphics extends GameObjectComponent
         bindingMap[instancedMeshId].unreserveInstance(this.gameObject, instanceId);
     }
 
-    // Returns undefined when the mesh has run out of instances (see MeshFactory.rentInstanceId),
-    // which leaves it to the caller to go without one.
+    // Undefined when the pool is exhausted (see MeshFactory.rentInstanceId).
     rentInstanceFromPool(instancedMeshId: string): number | undefined
     {
         return bindingMap[instancedMeshId].rentInstanceFromPool(this.gameObject);
@@ -123,8 +108,7 @@ export default class InstancedMeshGraphics extends GameObjectComponent
             this.gameObject, instanceId, r, g, b, thickness, convex);
     }
 
-    // The optional source UV rect restricts sampling to a sub-region of the source image
-    // (e.g. a single cell of an atlas image); by default the full image is drawn.
+    // The optional source UV rect selects a sub-region (e.g. one atlas cell).
     async drawImageAtIndex(instancedMeshId: string,
         textureIndex: number, imageURL: string,
         widthScale: number = 1, heightScale: number = 1,
@@ -137,8 +121,7 @@ export default class InstancedMeshGraphics extends GameObjectComponent
             unloadTextureAfterDraw);
     }
 
-    // Draws a 2D canvas over the whole of the given cell — content the caller drew itself, rather
-    // than an image fetched from somewhere.
+    // Draws a caller-drawn canvas over the whole cell.
     drawCanvasAtIndex(instancedMeshId: string, textureIndex: number, canvas: HTMLCanvasElement)
     {
         bindingMap[instancedMeshId].drawCanvasAtIndex(textureIndex, canvas);

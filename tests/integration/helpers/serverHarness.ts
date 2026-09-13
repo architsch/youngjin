@@ -1,17 +1,6 @@
 /**
- * Server harness: wires up the real server-side modules (ServerRoomManager,
- * ServerUserManager, ServerObjectManager, PhysicsManager) with mocked DB layer
- * so that integration tests exercise real game logic without touching Firestore.
- *
- * Usage:
- *   import { harness } from "./helpers/serverHarness";
- *
- *   beforeEach(() => harness.reset());
- *
- *   const ctx = harness.connectUser();          // auto-generated user
- *   const ctx = harness.connectUser(myUser);     // explicit user
- *   await harness.joinRoom(ctx, "room-1");
- *   await harness.disconnectUser(ctx);
+ * Wires the real server modules (ServerRoomManager, ServerUserManager, ServerObjectManager,
+ * PhysicsManager) to a mocked DB (see @docs/testing/integration/framework.md).
  */
 
 import { vi } from "vitest";
@@ -22,8 +11,7 @@ import Room from "../../../src/shared/room/types/room";
 import { RoomType, RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 
 // ─── Hoisted stores for vi.mock factories ──────────────────────────────────
-// vi.mock is hoisted by Vitest. Factory functions must not close over module-
-// scope variables, so we use vi.hoisted to share state.
+// vi.mock factories are hoisted and can't close over module scope, hence vi.hoisted.
 
 const _roomStore = vi.hoisted(() => {
     const store: { [roomID: string]: { room: any; ownerUserID: string; ownerUserName: string; roomType: number; texturePackPath: string } } = {};
@@ -41,8 +29,7 @@ const _latencyConfig = vi.hoisted(() => ({
     maxMs: 0,
 }));
 
-// Serial number for rooms created through the mocked DBRoomUtil.createRoom (e.g. the hubs
-// that RoomPickerUtil opens once every existing hub is over-populated).
+// Serial number for rooms created by the mocked DBRoomUtil.createRoom (e.g. auto-opened hubs).
 const _autoRoomCounter = vi.hoisted(() => ({ value: 0 }));
 
 function _randomDelay(): Promise<void>
@@ -82,8 +69,7 @@ vi.mock("../../../src/server/db/util/dbRoomUtil", () => ({
             return true;
         }),
         deleteRoomContent: vi.fn(async () => true),
-        // Generates a real (loadable) room, so that server code which creates rooms on demand
-        // — hub creation in particular — can be exercised end to end.
+        // Generates a real, loadable room, so on-demand room creation (hubs) works end to end.
         createRoom: vi.fn(async (roomName: string, roomType: number,
             ownerUserID: string, ownerUserName: string) => {
             if (_latencyConfig.enabled) await _randomDelay();
@@ -176,10 +162,7 @@ vi.mock("../../../src/server/db/util/dbUserUtil", () => ({
         deleteStaleGuestsByTier: vi.fn(async () => 0),
         deleteUser: vi.fn(async () => ({ success: true, data: [] })),
         fromDBType: vi.fn((u: any) => {
-            // The real fromDBType defaults a missing FTUE record to "" (rows written before the
-            // field existed). Mirrored here — in place, so callers keep observing the stored row —
-            // otherwise a user seeded without one reaches the code that reads the record as
-            // undefined.
+            // Mirrors fromDBType's "" default for a missing FTUE record (in place).
             u.ftue = u.ftue ?? "";
             return u;
         }),
@@ -213,8 +196,7 @@ vi.mock("../../../src/server/system/util/latencySimUtil", () => ({
 
 vi.mock("../../../src/server/user/util/userCommandUtil", () => ({
     default: {
-        // Must match the real module's entry point (the one SocketsServer calls), or a
-        // harness-emitted user command dies on an undefined function instead of no-opping.
+        // Must match the real entry point name, or harness user commands fail instead of no-opping.
         onUserCommandSignalReceived: vi.fn(async () => {}),
     },
 }));
@@ -267,19 +249,14 @@ function syncRoomStore(): void
 }
 
 // ─── Internal: pending initial metadata for users ────────────────────────────
-// Tests sometimes need to seed playerMetadata before joining a room.
 
 const _pendingMetadata: {[userID: string]: {[key: string]: string}} = {};
 
-// Builds and registers a fresh socket/context for a user reconnecting under the
-// same userID. The previous session's playerMetadata is bridged via
-// ServerUserManager.recentDisconnectMetadata (populated by the disconnect path),
-// which the subsequent joinRoom consumes — so the new context just needs to exist.
+// A fresh socket/context for a reconnecting user; metadata is bridged by
+// ServerUserManager.recentDisconnectMetadata when the next joinRoom runs.
 function reconnectSocket(oldCtx: ConnectedUser): ConnectedUser
 {
-    // The real server rebuilds the User from DBUser on every connection (see the socket auth
-    // middleware), so the reconnecting user carries whatever the previous session persisted —
-    // which is precisely what the room picker consults to send them back where they were.
+    // Rebuilt from DBUser, as the real auth middleware does (so the room picker sees the last room).
     const storedUser = _userStore[oldCtx.user.id];
     const { user: newUser } = createMockUser({
         id: oldCtx.user.id,
@@ -288,8 +265,7 @@ function reconnectSocket(oldCtx: ConnectedUser): ConnectedUser
         email: oldCtx.user.email,
         singlePlayerMode: storedUser?.singlePlayerMode ?? oldCtx.user.singlePlayerMode,
         lastRoomID: storedUser?.lastRoomID ?? oldCtx.user.lastRoomID,
-        // Which room the user owns comes back with him, since that is what says whether the room he
-        // is being sent back into is his to build in.
+        // Ownership persists across reconnects.
         ownedRoomID: storedUser?.ownedRoomID ?? oldCtx.user.ownedRoomID,
     });
     const socket = new MockSocket(newUser);
@@ -301,10 +277,7 @@ function reconnectSocket(oldCtx: ConnectedUser): ConnectedUser
 // ─── Harness ─────────────────────────────────────────────────────────────────
 
 export const harness = {
-    /**
-     * Resets ALL server state (rooms, users, physics, DB stores) to a clean
-     * slate. Call this in beforeEach.
-     */
+    /** Resets all server state (rooms, users, physics, DB stores). Call in beforeEach. */
     reset(): void
     {
         for (const uid in ServerUserManager.socketUserContexts)
@@ -336,10 +309,7 @@ export const harness = {
         _latencyConfig.maxMs = 0;
     },
 
-    /**
-     * Seeds a room into the mock DB so that it can be loaded via
-     * ServerRoomManager.changeUserRoom.
-     */
+    /** Seeds a room into the mock DB. */
     seedRoom(
         roomID: string,
         roomType: RoomType = RoomTypeEnumMap.Hub,
@@ -350,10 +320,7 @@ export const harness = {
         return room;
     },
 
-    /**
-     * Simulates a user connecting a socket. Returns the context needed to
-     * interact with the server.
-     */
+    /** Simulates a socket connection; returns the user's context. */
     connectUser(userOrOverrides?: User | MockUserOverrides): ConnectedUser
     {
         let user: User;
@@ -379,8 +346,7 @@ export const harness = {
             ownedRoomID: user.ownedRoomID,
             ftue: user.ftue,
             playerMetadata,
-            // Taken from the migration list rather than written out, so a newly added migration
-            // cannot leave the seeded row claiming a version the schema has already moved past.
+            // Derived from the migration list, so new migrations don't leave it stale.
             version: DBUserVersionMigration.length,
         };
 
@@ -393,17 +359,12 @@ export const harness = {
     },
 
     /**
-     * Moves a connected user into a room (loads the room if needed).
-     * Seeds the user's playerMetadata on DBUser before joining so the server
-     * reads the latest value from the mocked DB.
-     *
-     * `allowFallback` mirrors the server-side flag: when true, a full destination
-     * re-routes the user to a hub that still has room, instead of rejecting them.
+     * Moves a user into a room (loading it if needed), seeding pending playerMetadata first.
+     * allowFallback: a full destination reroutes to a hub instead of rejecting.
      */
     async joinRoom(ctx: ConnectedUser, roomID: string, allowFallback: boolean = false): Promise<UserRoomChangeResult>
     {
-        // Player metadata is per-user (stored on DBUser), so it must be present in the
-        // user store before changeUserRoom reads it.
+        // Metadata must be in the user store before changeUserRoom reads it.
         const pending = _pendingMetadata[ctx.user.id];
         if (pending && _userStore[ctx.user.id])
             _userStore[ctx.user.id].playerMetadata = pending;
@@ -411,12 +372,8 @@ export const harness = {
     },
 
     /**
-     * Mirrors what SocketsServer does the moment a client connects: let RoomPickerUtil decide
-     * where the user belongs (single-player mode, URL target, last room, or a balanced hub),
-     * join them there with a fallback allowed, and tell them if it could not happen.
-     *
-     * Use this instead of `joinRoom` whenever the destination itself is what is under test —
-     * `joinRoom` names a room outright and so bypasses the picker entirely.
+     * Mirrors SocketsServer on connect: RoomPickerUtil picks the destination, joins with fallback, and
+     * reports refusals. Use instead of joinRoom when the destination itself is under test.
      */
     async appStartJoin(ctx: ConnectedUser): Promise<UserRoomChangeResult>
     {
@@ -431,9 +388,7 @@ export const harness = {
         return result;
     },
 
-    /**
-     * Simulates user disconnection: removes from room + ServerUserManager.
-     */
+    /** Disconnects a user (room removal + ServerUserManager). */
     async disconnectUser(ctx: ConnectedUser, saveState: boolean = true): Promise<void>
     {
         ServerUserManager.removeUser(ctx.user.id);
@@ -441,21 +396,15 @@ export const harness = {
         ctx.socket.connected = false;
     },
 
-    /**
-     * Preloads a seeded room into memory without putting anyone in it. Mirrors the way
-     * HubRoomUtil preloads every hub at server start-up, which is what the room picker
-     * assumes when it scans the loaded hubs.
-     */
+    /** Preloads a room with no one in it (as HubRoomUtil does at startup). */
     async loadRoom(roomID: string): Promise<void>
     {
         await ServerRoomManager.loadRoom(roomID);
     },
 
     /**
-     * Overwrites a loaded room's participant table with `population` synthetic entries, so
-     * that population-dependent logic (room picking, capacity gates) can be exercised without
-     * standing up one real socket per player. Rooms populated this way have no player objects
-     * and no socket contexts, so scenarios using it must skip the structural invariants.
+     * Fakes a room's participant count without sockets, for population logic. No player objects or
+     * contexts exist, so scenarios using it must skip structural invariants.
      */
     setSyntheticRoomPopulation(roomID: string, population: number): void
     {
@@ -467,11 +416,7 @@ export const harness = {
             mem.participantUserNameByID[`synthetic-${roomID}-${i}`] = `synthetic-${i}`;
     },
 
-    /**
-     * Connects `count` users and joins them all into the same room. Returns the contexts of
-     * the users who actually made it in (a join rejected by the room's capacity gate yields
-     * a connected-but-roomless user, which is still returned so cleanup can disconnect it).
-     */
+    /** Connects and joins `count` users; returns all contexts (rejected ones are roomless but returned for cleanup). */
     async fillRoomWithUsers(roomID: string, count: number): Promise<ConnectedUser[]>
     {
         const contexts: ConnectedUser[] = [];
@@ -484,9 +429,7 @@ export const harness = {
         return contexts;
     },
 
-    /**
-     * Returns the number of participants in a room, or -1 if the room is not loaded.
-     */
+    /** Participant count, or -1 if the room isn't loaded. */
     getRoomParticipantCount(roomID: string): number
     {
         const mem = ServerRoomManager.roomRuntimeMemories[roomID];
@@ -494,68 +437,50 @@ export const harness = {
         return Object.keys(mem.participantUserNameByID).length;
     },
 
-    /**
-     * Returns true if a room is currently loaded in memory.
-     */
+    /** Whether a room is loaded. */
     isRoomLoaded(roomID: string): boolean
     {
         return ServerRoomManager.roomRuntimeMemories[roomID] != undefined;
     },
 
-    /**
-     * Returns the player object for a user.
-     */
+    /** The user's player object. */
     getPlayerObject(userID: string)
     {
         return ServerUserManager.getPlayerObject(userID);
     },
 
-    /**
-     * Returns the live player metadata snapshot for a connected user (read from
-     * the live player object), or undefined if the user isn't in a room.
-     */
+    /** Live player metadata, or undefined if not in a room. */
     getPlayerMetadata(userID: string): {[key: string]: string} | undefined
     {
         return ServerUserManager.getPlayerMetadata(userID);
     },
 
-    /**
-     * Returns true if the in-memory recentDisconnectMetadata buffer currently
-     * holds an entry for this user.
-     */
+    /** Whether recentDisconnectMetadata holds an entry for the user. */
     hasRecentDisconnectMetadata(userID: string): boolean
     {
         return ServerUserManager.recentDisconnectMetadata[userID] != undefined;
     },
 
-    /**
-     * Returns all player-metadata writes captured by the mocked DBUserUtil.
-     */
+    /** Player metadata writes captured by the mocked DBUserUtil. */
     get savedPlayerMetadataRecords(): Array<{userID: string; playerMetadata: {[key: string]: string}}>
     {
         return _savedMetadataRecords;
     },
 
-    /**
-     * Returns the lastRoomID currently stored in the mocked DBUser for the given user.
-     */
+    /** lastRoomID stored in the mocked DBUser. */
     getStoredLastRoomID(userID: string): string | undefined
     {
         return _userStore[userID]?.lastRoomID;
     },
 
-    /**
-     * Returns the playerMetadata currently stored in the mocked DBUser for the given user.
-     */
+    /** playerMetadata stored in the mocked DBUser. */
     getStoredPlayerMetadata(userID: string): {[key: string]: string} | undefined
     {
         return _userStore[userID]?.playerMetadata;
     },
 
 
-    /**
-     * Enables or disables random latency on mocked DB operations.
-     */
+    /** Toggles random latency on mocked DB operations. */
     setLatency(enabled: boolean, minMs: number = 0, maxMs: number = 5): void
     {
         _latencyConfig.enabled = enabled;
@@ -563,15 +488,7 @@ export const harness = {
         _latencyConfig.maxMs = maxMs;
     },
 
-    /**
-     * Simulates reconnection Case A: new socket connects BEFORE old disconnect fires.
-     *
-     * Mirrors the real SocketsServer flow: the new connection proactively evicts the
-     * still-registered old socket via changeUserRoom, whose removeUserFromRoom
-     * snapshots playerMetadata into ServerUserManager.recentDisconnectMetadata. The
-     * subsequent joinRoom (on the returned context) consumes that snapshot — no
-     * separate metadata plumbing required.
-     */
+    /** Case A: the new socket connects first, evicting the old one and snapshotting its metadata. */
     async reconnectCaseA(oldCtx: ConnectedUser): Promise<ConnectedUser>
     {
         ServerUserManager.removeUser(oldCtx.user.id);
@@ -581,13 +498,7 @@ export const harness = {
         return reconnectSocket(oldCtx);
     },
 
-    /**
-     * Simulates reconnection Case B: old disconnect fires BEFORE new socket connects.
-     *
-     * The disconnect path populates ServerUserManager.recentDisconnectMetadata
-     * synchronously; the subsequent joinRoom (on the returned context) consumes it,
-     * exactly as in Case A — the two orderings converge on the same buffer.
-     */
+    /** Case B: the old disconnect fires first, populating recentDisconnectMetadata. */
     async reconnectCaseB(oldCtx: ConnectedUser): Promise<ConnectedUser>
     {
         await harness.disconnectUser(oldCtx, true);
@@ -595,20 +506,13 @@ export const harness = {
         return reconnectSocket(oldCtx);
     },
 
-    /**
-     * Rebuilds a user's socket context without disconnecting first — what happens when a client
-     * that the server already dropped (a graceful shutdown, say) reloads and connects afresh.
-     * Like a real reconnection, the returned context carries whatever the previous session
-     * persisted to DBUser.
-     */
+    /** Rebuilds a context without disconnecting (e.g. a client reloading after a shutdown), from DBUser. */
     reconnectUser(oldCtx: ConnectedUser): ConnectedUser
     {
         return reconnectSocket(oldCtx);
     },
 
-    /**
-     * Simulates a graceful server shutdown.
-     */
+    /** Simulates a graceful shutdown. */
     async gracefulShutdown(): Promise<void>
     {
         await ServerRoomManager.saveMultiplayerRooms(true);
@@ -624,10 +528,7 @@ export const harness = {
             delete ServerUserManager.socketUserContexts[uid];
     },
 
-    /**
-     * Convenience: update a connected user's player object transform via
-     * the real ServerObjectManager signal handler.
-     */
+    /** Updates a player's transform via the real ServerObjectManager handler. */
     updateObjectTransform(ctx: ConnectedUser, newTransform: ObjectTransform): void
     {
         const playerObj = ServerUserManager.getPlayerObject(ctx.user.id);
@@ -638,9 +539,7 @@ export const harness = {
         ServerObjectManager.onSetObjectTransformSignalReceived(ctx.socketUserContext, signal);
     },
 
-    /**
-     * Convenience: send an object message (sets SentMessage metadata key=0).
-     */
+    /** Sends a chat message (SentMessage metadata). */
     sendObjectMessage(ctx: ConnectedUser, message: string): void
     {
         const playerObj = ServerUserManager.getPlayerObject(ctx.user.id);
@@ -658,9 +557,7 @@ export const harness = {
         return playerObj.objectId;
     },
 
-    /**
-     * Direct access to the underlying modules for advanced assertions.
-     */
+    /** The underlying modules, for direct assertions. */
     ServerRoomManager,
     ServerUserManager,
     ServerObjectManager,

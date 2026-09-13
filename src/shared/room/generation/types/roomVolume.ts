@@ -1,11 +1,7 @@
 import RoomPalette from "./roomPalette";
 
-// RoomVolume represents a 3D box-shaped interior space of a room. I am saying "interior" here
-// because RoomVolume's row, col, and collisionLayer ranges are not supposed to include
-// the surrounding floor-blocks, wall-blocks, and ceiling-blocks; they only span the inner (empty) space of
-// the 3D region, excluding the solid parts of its boundaries (i.e. floor, walls, ceiling).
-// (Note: There are cases, however, where a RoomVolume may simply represent
-// a region in space, without any association with the room's interior - for purely semantic purposes.)
+// A box-shaped interior space (excluding its enclosing floor, walls and ceiling). Sometimes used just to
+// name a region.
 export default class RoomVolume
 {
     rowMin: number;

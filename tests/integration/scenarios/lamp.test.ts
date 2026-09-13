@@ -1,13 +1,6 @@
 /**
- * Scenario tests: lamps, and the light they put into a room
- *
- * A lamp is the only thing besides the head lamp and the ambient that lights a room, and it is
- * furniture that anybody may install — held back only by what holds back a picture. That is the
- * whole of what these cover:
- *
- * - who may install a lamp, take one down, move one, and change what it gives off
- * - which metadata a lamp answers to at all, and what it makes of a value it is handed
- * - that what a lamp *looks* like and what it *lights the room with* can never disagree
+ * Scenario tests: lamps (furniture anyone may install, under the same rules as pictures) — permissions,
+ * metadata validation, and a lamp's appearance always matching its light.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import fc from "fast-check";
@@ -47,8 +40,7 @@ const ADMIN = makeUser("an-admin", UserTypeEnumMap.Admin);
 const MEMBER = makeUser("a-member", UserTypeEnumMap.Member);
 const GUEST = makeUser("a-guest", UserTypeEnumMap.Guest);
 
-// A lamp on the boundary wall, well clear of the door the room already has. The exact spot is not
-// what any of these are asking about — only that it is a stretch of wall a lamp fits on.
+// A lamp on the boundary wall, clear of the room's door.
 function makeLampSignal(room: Room, sourceUser: User, objectId: string = "new-lamp",
     colOffset: number = -5): AddObjectSignal
 {
@@ -87,8 +79,7 @@ describe("lamp permissions", () => {
     });
 
     it("lets a visitor install a lamp in a regular room he does not own", async () => {
-        // Unlike a door, which is world-building and belongs to hubs alone, a lamp is furniture — so
-        // it is anybody's to install wherever a picture would be.
+        // Unlike doors (hubs only), lamps may be installed wherever a picture could.
         await runScenario({
             name: "installing a lamp in a regular room",
             rooms: [EMPTY_REGULAR],
@@ -162,9 +153,7 @@ describe("lamp permissions", () => {
     });
 
     it("keeps an ordinary user's lamp out of a restricted zone, and his hands off one inside it", async () => {
-        // With no privilege of its own left to ask about, a restricted zone is what stops a lamp
-        // being installed, taken down or re-lit in a stretch of the room that is not the user's —
-        // and the hub's superuser is still above it (see @docs/gameplay/restricted_zone.md).
+        // Restricted zones block lamp edits by non-superusers (see @docs/gameplay/restricted_zone.md).
         await runScenario({
             name: "a lamp inside a restricted zone",
             rooms: [EMPTY_HUB],
@@ -194,8 +183,7 @@ describe("lamp permissions", () => {
     });
 
     it("refuses a lamp moved the way something with physics moves", async () => {
-        // A wall attachment is placed rather than driven, so a transform that asks to be resolved
-        // against the world is not a lamp being slid along its wall.
+        // Wall attachments are placed, so a physics-resolved transform is rejected.
         await runScenario({
             name: "a lamp shoved rather than placed",
             rooms: [EMPTY_HUB],
@@ -227,8 +215,7 @@ describe("lamp permissions", () => {
                         new SetObjectMetadataSignal(room.id, lamp.objectId, key, value));
 
                 expect(canSet(ObjectMetadataKeyEnumMap.LightProperties, "!!")).toBe(true);
-                // Its appearance is derived from its light rather than stored beside it, so there is
-                // nothing about it left for a composition to say.
+                // Appearance is derived from the light, so no composition is settable.
                 expect(canSet(ObjectMetadataKeyEnumMap.InstancedMeshComposition, "!!")).toBe(false);
                 expect(canSet(ObjectMetadataKeyEnumMap.Label, "Lamp")).toBe(false);
                 expect(canSet(ObjectMetadataKeyEnumMap.ImagePath, "1/1")).toBe(false);
@@ -263,9 +250,7 @@ describe("what a lamp gives off", () => {
     });
 
     it("offers a dozen whole values on each of its two dials", () => {
-        // Few enough to be marked out on the slider and read off beside it, and each one a quantity
-        // rather than a position on a scale — an intensity of 4 is four times the light of one at 1,
-        // and a range of 9 reaches nine blocks (see LampLightUtil).
+        // Few whole-quantity steps: intensity is linear, range is in blocks (see LampLightUtil).
         for (const [min, max] of [[MIN_LAMP_INTENSITY, MAX_LAMP_INTENSITY],
             [MIN_LAMP_RANGE, MAX_LAMP_RANGE]])
         {
@@ -274,10 +259,7 @@ describe("what a lamp gives off", () => {
     });
 
     it("is a light whatever the object was handed", () => {
-        // Reading has to be total: a lamp carrying anything at all — a value from another version,
-        // a value somebody made up — is still a lamp, and nothing downstream carries a check for it.
-        // One stored character addresses far more numbers than either dial has, so what comes back
-        // is held to the dial's own range rather than to the encoding's.
+        // Reading is total: any string decodes to a lamp within the dials' ranges.
         fc.assert(fc.property(fc.string({maxLength: 20}), (raw) => {
             const lamp = lampWith(raw);
             expect(WallLampObjectTypeConfig.util.getColorIndex(lamp)).toBeGreaterThanOrEqual(0);
@@ -291,8 +273,7 @@ describe("what a lamp gives off", () => {
     });
 
     it("holds a lamp asked for more than a lamp has to what a lamp has", () => {
-        // The bounds are the whole of what the two dials are, so a value from outside them is not a
-        // brighter lamp or a longer-reaching one — it is a lamp that does not exist.
+        // Out-of-range values clamp to the dials' bounds.
         const beyond = lampWith(WallLampObjectTypeConfig.util.encodeLightProperties(0, 999, 999));
         expect(WallLampObjectTypeConfig.util.getIntensity(beyond)).toBe(MAX_LAMP_INTENSITY);
         expect(WallLampObjectTypeConfig.util.getRange(beyond)).toBe(MAX_LAMP_RANGE);
@@ -303,10 +284,7 @@ describe("what a lamp gives off", () => {
     });
 
     it("leaves a lamp a light even at its lowest, and an effect at its highest", () => {
-        // A lamp is furniture rather than a torch: one turned all the way down is a small light, not
-        // a dark fitting, since there would be nothing on screen to tell that from a broken one. The
-        // top of the range is the opposite end of that — a lamp that blows out the wall it is
-        // mounted on, which takes a strength well past the one that merely lights a room.
+        // The minimum is still a visible light (a dark lamp looks broken); the maximum blows out its wall.
         const unconfigured = lampWith("");
         expect(MIN_LAMP_INTENSITY).toBeGreaterThan(0);
         expect(MIN_LAMP_RANGE).toBeGreaterThan(0);
@@ -315,10 +293,7 @@ describe("what a lamp gives off", () => {
     });
 
     it("gives a lamp two dials that do not move together", () => {
-        // The whole point of splitting them: a dim wash and a tight bright pool both have to be
-        // askable for, which they are not while one dial drives strength and reach at once. Reach
-        // and falloff are the one pair that does move together, and opposite ways, so that a wide
-        // lamp is wide rather than merely long-range.
+        // Intensity and range are independent; range and falloff move together, in opposite directions.
         expect(MIN_LAMP_INTENSITY).toBeGreaterThan(0);
         expect(LampLightUtil.getDecay(MIN_LAMP_RANGE))
             .toBeGreaterThan(LampLightUtil.getDecay(MAX_LAMP_RANGE));
@@ -329,9 +304,7 @@ describe("what a lamp gives off", () => {
     });
 
     it("is stored as something a lamp can be lit by, whatever arrived", () => {
-        // Preprocessing is where an incoming value is made safe (see ObjectMetadataEntryMap), and
-        // it has to be a fixed point — a value that has been through it once must survive a second
-        // pass unchanged, or a lamp would drift every time it was re-saved.
+        // Preprocessing must be idempotent, or a lamp drifts on each re-save.
         const preprocess = (raw: string) => ObjectMetadataEntryMap.preprocess(
             ObjectMetadataKeyEnumMap.LightProperties, raw);
         fc.assert(fc.property(fc.string({maxLength: 20}), (raw) => {
@@ -342,9 +315,7 @@ describe("what a lamp gives off", () => {
     });
 
     it("arrives lit rather than dark when nothing has been said about it", () => {
-        // There is nothing on screen to tell an unconfigured lamp from a broken one, so a lamp with
-        // no metadata at all has to be a light — and an ordinary one rather than one at the top of
-        // a range that exists for dramatic effect.
+        // A lamp with no metadata is an ordinary light, not a maximal one.
         const lamp = lampWith("");
         expect(WallLampObjectTypeConfig.util.getIntensity(lamp)).toBeGreaterThanOrEqual(MIN_LAMP_INTENSITY);
         expect(WallLampObjectTypeConfig.util.getIntensity(lamp)).toBeLessThan(MAX_LAMP_INTENSITY);
@@ -355,8 +326,7 @@ describe("what a lamp gives off", () => {
     });
 
     it("reads a lamp stored by a version that knew fewer settings", () => {
-        // A character past the end of the string falls back on its own default, so a lamp is never
-        // read as dark or as reaching nowhere just because its string was short.
+        // Missing trailing chars fall back to defaults, so a short string is never dark or zero-range.
         const colorOnly = WallLampObjectTypeConfig.util.getDefaultLightProperties().substring(0, 1);
         const lamp = lampWith(colorOnly);
         expect(WallLampObjectTypeConfig.util.getIntensity(lamp)).toBe(
@@ -366,8 +336,7 @@ describe("what a lamp gives off", () => {
     });
 
     it("draws the lamp in the color it lights the room with", () => {
-        // The one thing that keeps a lamp from glowing one color while lighting the room another:
-        // the parts it is drawn from are derived from the same setting the light is.
+        // Parts derive from the same setting as the light, so glow and light never disagree.
         const config = ObjectTypeConfigMap.getConfigByIndex(lampTypeIndex);
         const generateDefaultParts = config.components.spawnedByAny!
             .instancedMeshComposer!.generateDefaultParts;

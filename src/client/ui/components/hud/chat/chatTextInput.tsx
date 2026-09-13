@@ -8,10 +8,8 @@ export default function ChatTextInput({textInput, setTextInput}
 {
     const inputRef = useRef<HTMLInputElement>(null);
 
-    // The input is uncontrolled (defaultValue + ref). A controlled value={textInput} would
-    // force React to overwrite the DOM on every render, which disrupts IME composition
-    // and drops characters in CJK input. We sync external textInput changes (e.g. the
-    // parent clearing the field after send) one-way via this effect.
+    // Uncontrolled input: a controlled value breaks IME (CJK) composition. External changes (e.g.
+    // clearing after send) are synced one-way here.
     useEffect(() => {
         if (inputRef.current && inputRef.current.value !== textInput)
             inputRef.current.value = textInput;
@@ -46,10 +44,7 @@ export default function ChatTextInput({textInput, setTextInput}
         };
     }, []);
 
-    // min-w-0 overrides the intrinsic minimum width an input carries by default (about twenty
-    // characters), which would otherwise push the Send button onto its own row on a narrow phone.
-    // The field absorbs all of the shrinking for the chat row, down to nothing if it has to — a
-    // clipped placeholder is a better trade than a wrapped row.
+    // min-w-0 removes the default intrinsic width, so the field (not the Send button) shrinks on phones.
     return <input
         id="chatTextInput"
         type="text"

@@ -2,16 +2,8 @@ import * as THREE from "three";
 import GameObjectComponent from "./gameObjectComponent";
 import Vec3 from "../../../shared/math/types/vec3";
 
-// Performs a brief, self-contained easing motion on the owning GameObject's *visual* node: it
-// offsets, rotates, and/or scales the meshes away from their resting pose and lets them ease back
-// over a short interval. The motion is generic and parameterized via "bounce", so it can express
-// anything from a single "pop" to a repeated "nod".
-//
-// It animates GameObject.visualObj — not GameObject.obj — so the cosmetic bounce never disturbs the
-// authoritative gameplay transform (which networking, physics, the camera, and proximity logic read
-// and write on "obj"). visualObj rests at identity, so the motion simply interpolates between
-// identity and the peak offset/rotation/scale; nothing else writes visualObj, so there is no
-// ordering dependency and re-triggering mid-bounce is safe.
+// A brief cosmetic motion (pop, nod, ...) on GameObject.visualObj, never obj, so gameplay transforms
+// are unaffected. visualObj rests at identity and nothing else writes it, so re-triggering is safe.
 export default class EasingMotion extends GameObjectComponent
 {
     private elapsed = -1; // seconds into the active motion, or negative when idle
@@ -23,10 +15,8 @@ export default class EasingMotion extends GameObjectComponent
 
     private eulerTemp = new THREE.Euler();
 
-    // Triggers (or restarts) a motion. The visuals ease to their peak offset/rotation/scale and
-    // back to rest over "durationSeconds". "oscillations" controls how many swings happen along the
-    // way: a value of 0.5 gives a single out-and-back, while larger values produce a repeated,
-    // decaying bob (e.g. a nod). Omitted offsets/multipliers leave that channel at rest.
+    // Starts or restarts a motion. oscillations = 0.5 is one out-and-back; larger values give a
+    // decaying bob. Omitted channels stay at rest.
     bounce(params: {
         durationSeconds: number,
         positionOffset?: Vec3,
@@ -66,8 +56,7 @@ export default class EasingMotion extends GameObjectComponent
         else
         {
             const t = this.elapsed / this.duration;
-            // A weight that starts and ends at 0 so the visuals ease out and back to rest: the sine
-            // carrier produces "oscillations" swings while the (1 - t) envelope tapers them.
+            // Sine carrier with a (1 - t) envelope: starts and ends at rest.
             const weight = Math.sin(2 * Math.PI * this.oscillations * t) * (1 - t);
 
             node.position.copy(this.positionOffset).multiplyScalar(weight);
@@ -84,8 +73,7 @@ export default class EasingMotion extends GameObjectComponent
                 1 + (this.scaleMultiplier.z - 1) * weight);
         }
 
-        // Scene-graph meshes follow "node" automatically; baked instanced meshes
-        // don't, so let the GameObject re-apply them. No-op for objects without instanced graphics.
+        // Instanced meshes are baked, so they must be re-applied (no-op without instanced graphics).
         this.gameObject.onVisualTransformChanged();
     }
 }

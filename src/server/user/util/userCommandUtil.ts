@@ -44,9 +44,8 @@ async function handleFinishSinglePlayerModeCommand(user: User, words: string[], 
 async function handleAddFTUEElement(user: User, words: string[], params: UserCommandSignal): Promise<void>
 {
     const element = words[1];
-    // One letter per FTUE element (the client's FTUEUtil owns the mapping). Letters are the only
-    // thing that may be persisted here: the user's record is embedded verbatim in the page that
-    // boots the client app, so a quote or a backslash reaching it would break that page.
+    // One letter per element (mapping owned by FTUEUtil). Letters only: the user record is embedded
+    // verbatim in the page.
     if (!element || !/^[A-Za-z]$/.test(element))
     {
         LogUtil.log("FTUE element is not properly specified", {params}, "high", "error");
@@ -57,9 +56,7 @@ async function handleAddFTUEElement(user: User, words: string[], params: UserCom
         LogUtil.log("FTUE element already exists in the user", {params}, "high", "error");
         return;
     }
-    // The in-memory user is what the rest of this session reads, so it has to carry the new element
-    // as well — otherwise the next element added would be appended to a stale string, dropping this
-    // one, and the duplicate check above would stop recognizing what has already been stored.
+    // Update the in-memory user too, or later appends and the duplicate check would use a stale string.
     user.ftue = `${user.ftue}${element}`;
     await DBUserUtil.setFTUE(user.id, user.ftue);
 }

@@ -13,51 +13,25 @@ const DBRoomVersionMigration: DBVersionMigration = [
         }
         return { ...row, ownerUserName };
     },
-    // v1 -> v2: introduce editors[]. Per-(user, room) editor roles were previously
-    // stored in the userRoomStates collection, which has been retired; the editor
-    // list now lives directly on the room as a denormalized {userID, userName, email}
-    // snapshot for cheap rendering in the room-configuration UI.
+    // v1 -> v2: add editors[] (formerly in the retired userRoomStates collection).
     async (row: any) => {
         row.editors = [];
         return row;
     },
-    // v2 -> v3: add a new field called "roomName".
-    // The purpose of this is to let us distinguish between different singleplayer rooms
-    // (based upon their names).
+    // v2 -> v3: add "roomName" (distinguishes single-player rooms).
     async (row: any) => {
         row.roomName = "";
         return row;
     },
-    // v3 -> v4: drop the stored "id" field.
-    //
-    // A room's identity is the document's key, and rooms written before that was enforced also
-    // carry a copy of it as a field — sometimes correct, sometimes the empty string the room had
-    // before the DB assigned it one. Nothing reads that copy, but leaving it means rooms come in
-    // two shapes, and the next person to write a query has to know which.
-    //
-    // The step itself changes nothing: it is the version bump that matters, because that is what
-    // makes a read rewrite the row, and every write already drops the field (DBRowIdentityUtil).
-    // Removing "id" here instead would strip it from the row on its way to the caller, who needs
-    // it.
+    // v3 -> v4: drop the stored "id" field. The bump alone forces a rewrite, and writes already strip
+    // "id" (DBRowIdentityUtil); removing it here would strip it from the returned row.
     async (row: any) => row,
-    // v4 -> v5: drop "editors".
-    //
-    // A room could once appoint people to build in it alongside its owner, which is what this list
-    // held. What a user may do in a room is now settled from who he is and which room it is — he
-    // owns it, or it is a hub, or it is his own single-player room — so there is no roll to keep,
-    // and a list nothing reads is a list that can only mislead the next person to open the document.
+    // v4 -> v5: drop "editors" (permissions are now derived from user and room).
     async (row: any) => {
         delete row.editors;
         return row;
     },
-    // v5 -> v6: introduce "prefs", the room's atmosphere — what light fills it, what light the
-    // player carries while standing in it, and what the air between the two is like.
-    //
-    // The empty string is not a placeholder to be filled in later: it is what a room that has never
-    // been configured stores, and it decodes to the documented defaults, which are exactly how every
-    // room looked before there was anything to configure (see RoomPrefsUtil). So this step is only
-    // here to give existing rows the field at all — a row written from now on carries what
-    // generation chose for it.
+    // v5 -> v6: add "prefs" (atmosphere). "" decodes to the defaults (see RoomPrefsUtil).
     async (row: any) => {
         row.prefs = row.prefs ?? "";
         return row;

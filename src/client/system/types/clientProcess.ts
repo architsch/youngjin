@@ -1,8 +1,6 @@
 import { ongoingClientProcessesObservable } from "../clientObservables";
 
-// While there is at least 1 ongoing ClientProcess,
-// the system should be showing a full-screen loading indicator UI as well as blocking
-// any other major (i.e. network or system-related) actions.
+// While any ClientProcess is ongoing, show the loading indicator and block major actions.
 export default interface ClientProcess
 {
     numOngoingProcesses: number;

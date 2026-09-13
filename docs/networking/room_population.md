@@ -1,76 +1,38 @@
 # Room Population Flows
 
-Reference: @src/shared/system/sharedConstants.ts , @src/server/room/serverRoomManager.ts , @src/server/room/util/roomPickerUtil.ts , @src/server/room/util/hubRoomUtil.ts , @src/server/user/serverUserManager.ts , @src/shared/room/types/roomChangeRejectedSignal.ts
+Reference: @src/shared/system/sharedConstants.ts , @src/server/room/serverRoomManager.ts , @src/server/room/util/roomPickerUtil.ts , @src/server/room/util/hubRoomUtil.ts , @src/shared/room/types/roomChangeRejectedSignal.ts
 
-> For how the user's destination is chosen on connect, and how single-player rooms sit outside these rules, see [user_state_management.md](user_state_management.md) and [single_player_mode.md](single_player_mode.md).
-
-## Why a room's population is bounded
-
-Every player standing in a room costs each of the other clients in that room a fixed share of resources: a slice of the client's per-room instanced-mesh pool for the player's body, plus the physics and networking work of keeping that player in sync. Both costs are borne by everyone in the room, so an unbounded room degrades the experience for all of its occupants and can exhaust the mesh pool outright.
-
-Two mechanisms follow from this:
-
-- **A hard cap** (`MAX_PLAYERS_PER_ROOM`) that no room may exceed, whatever route a user takes into it. In practice a room stops admitting users slightly below it — see [Population bands](#population-bands).
-- **Load balancing across the hubs**, so that users spread out long before any single hub approaches that cap.
+Every player in a room costs every other client in it (a mesh-pool slice, plus physics and sync work). Room population is bounded by a hard cap (`MAX_PLAYERS_PER_ROOM`), and hubs are load-balanced so they rarely approach it.
 
 ## Population bands
+- **Under-populated** (≤ `ROOM_UNDER_POPULATION_THRESHOLD`): too empty to be worth visiting.
+- **Medium**: healthy.
+- **Over-populated** (≥ `ROOM_OVER_POPULATION_THRESHOLD`): route new users elsewhere if possible.
+- **Almost full**: admits nobody. A margin below the cap absorbs joins that are already in flight.
 
-A room's population is the number of users currently registered as its participants. Three lines divide it into bands:
-
-- **Under-populated** — at or below `ROOM_UNDER_POPULATION_THRESHOLD`. The room has capacity to spare and, more importantly, too few people in it to be worth visiting.
-- **Medium-populated** — between the under- and over-population thresholds. This is the healthy band.
-- **Over-populated** — at or above `ROOM_OVER_POPULATION_THRESHOLD`. The room still has free slots, but it is a bit too crowded. Thus, new users should be routed into other rooms if possible.
-- **Almost full** — close enough to the hard cap that the room stops admitting anyone new. A margin of slots is deliberately left unused so that the joins which may already be in flight cannot carry the room past the hard cap. From a user's point of view an almost-full room simply *is* full.
-
-Deciding whether a room can take another player and registering that player are separated by asynchronous work, so a large enough burst of simultaneous joins can still slip past the margin. The cap is therefore treated as a target rather than an invariant: rather than paying to enforce it exactly, the client degrades gracefully when a room holds more players than it has mesh instances for (see [Running short of instances](#running-short-of-instances)).
+Capacity checks and registration are separated by async work, so a burst of joins can exceed the cap. The cap is a target rather than an invariant. When instance pools run dry, parts that cannot get an instance are left undrawn until one frees up.
 
 ## Choosing a destination
-
-Every route into a multiplayer room converges on the same two stages: `RoomPickerUtil` decides *which* room the user is headed for, and `ServerRoomManager` decides whether they are actually allowed in.
-
 ![Room Join Flow](figures/room_join_flow.jpg)
 
-The picker is consulted when the user has not named a room themselves — on app start-up, and when a single-player experience is skipped. It prefers an explicit room ID from the URL, then the room from the user's last session, and otherwise falls through to the hub balancer described below. The reserved `hub` keyword goes straight to that balancer, whether it is a URL that carries it or a door pointed at the hubs rather than at one of them (see [room_entrance.md](../geometry/room_entrance.md#what-a-door-carries)).
-
-Where in the destination room the user lands is a separate question, decided from the doors that room holds — see [room_entrance.md](../geometry/room_entrance.md#player-spawning).
+`RoomPickerUtil` decides where the user goes, and `ServerRoomManager` decides whether they may enter. When the user names no room, the picker takes the URL room, then the last room, then the hub balancer. The `hub` keyword (in a URL or on a door) goes straight to the balancer. Where the user lands inside the room is decided by its doors ([room_entrance.md](../geometry/room_entrance.md)).
 
 ## Picking a hub
+All hubs are kept in memory, so balancing needs no DB query. Almost-full hubs are excluded, then:
+- **All over-populated** (or no hubs at all): a new hub is created. Concurrent callers share a single creation. If creation fails, the user goes to the emptiest hub that still accepts players.
 
-Whenever a user needs *a* hub rather than a specific one, `RoomPickerUtil` chooses it. All hubs are kept resident in memory (see [Hub residency](#hub-residency)), so the choice costs no database query. Hubs that are almost full are excluded outright, and the remaining ones fall into one of three cases.
+  ![Over-Populated Hub Logic](figures/over_populated_room_logic.jpg)
+- **Some under-populated**: fill **one** of them (lowest room id) until it passes the threshold, so hubs become meeting places instead of many near-empty rooms.
 
-**Every hub is over-populated.** A brand new hub is opened and the user is sent there. This is also what happens when the server has no hub at all yet, and it is the same path an admin opening a hub by hand goes down (see [admin.md](../gameplay/admin.md)) — so a hub is preloaded and load-balanced over however it came into being.
+  ![Under-Populated Hub Logic](figures/under_populated_room_logic.jpg)
+- **All medium**: the emptiest hub.
 
-![Over-Populated Hub Logic](figures/over_populated_room_logic.jpg)
+  ![Medium-Populated Hub Logic](figures/medium_populated_room_logic.jpg)
 
-Concurrent arrivals that all find every hub over-populated share a single hub creation between them, so a burst of traffic opens one new hub rather than one per user. In the unlikely event that the new hub cannot be made available, the user falls back to the emptiest hub that can still take them.
-
-**At least one hub is under-populated.** The user joins one of them — and keeps joining *the same one* until it grows past the under-population threshold, at which point the next under-populated hub takes over. Filling hubs one at a time is deliberate: spreading the first arrivals evenly would leave every hub with a couple of lonely visitors, and a hub exists to be a meeting place. The choice among the under-populated hubs is ordered by room ID, which keeps it deterministic.
-
-![Under-Populated Hub Logic](figures/under_populated_room_logic.jpg)
-
-**Every hub is medium-populated.** The emptiest one wins, so the hubs fill up evenly from there on.
-
-![Medium-Populated Hub Logic](figures/medium_populated_room_logic.jpg)
-
-## Entering a specific room
-
-A room change carries a flag distinguishing the two kinds of destination a user can end up with:
-
-- **A destination the user picked by name** — the room a door leads to, or their own room. If it cannot be entered, the request is simply refused.
-- **A destination the server routed them to** — the room from their last session, a room ID carried in the connection URL, or the reserved hub keyword. If it cannot be entered, the user is re-routed to a hub instead of being left without a room.
-
-"Cannot be entered" covers both a room that is already almost full and a room that no longer loads at all.
-
-`ServerRoomManager` vets the destination *before* the user gives up the room they are currently in. That ordering is what makes a refusal harmless: a user turned away from a full room stays exactly where they were, rather than being stranded in no room at all. Re-entering a room one already occupies is never blocked by one's own slot, since that slot is released on the way in.
-
-## Telling the user
-
-When a room change will not happen, the server sends a `RoomChangeRejectedSignal` carrying a `RoomChangeRejectionReason` instead of the usual `RoomChangedSignal`. The client is blocking on a full-screen loading indicator at that point, so the signal is what releases it; the client then shows the reason as a brief notification and leaves the user where they are.
-
-## Running short of instances
-
-Each client draws the players around it from instanced meshes whose pools are sized for a full room. Should a room ever hold more players than that — the population rules make it unlikely, not impossible — the pools run dry, and a part that cannot get an instance is simply left undrawn until one frees up. Everything else in the room keeps rendering as usual, so the worst outcome is a few incomplete-looking characters rather than a stalled scene. The same applies to any other instanced object a room is allowed a fixed number of, such as its canvases.
+## Entering a room
+- A room change is flagged as **user-picked** (a door, or the user's own room), which is refused if the room cannot be entered, or **server-routed** (last room, URL, hub keyword), which falls back to a hub. "Cannot be entered" means almost full or failing to load.
+- `ServerRoomManager` vets the destination **before** leaving the current room, so a refused user stays where they are. The user's own slot does not count against a room they re-enter.
+- A refusal sends `RoomChangeRejectedSignal` with a `RoomChangeRejectionReason`. This releases the client's loading screen and shows a notification.
 
 ## Hub residency
-
-A Regular room is unloaded from memory as soon as its last participant leaves. A hub is not: the room picker load-balances incoming users by scanning the hubs held in memory, so evicting them would turn every join into a database query. Hubs are therefore preloaded at server start-up (`HubRoomUtil`) and stay resident, empty or not.
+Regular rooms unload when empty. Hubs are preloaded at startup (`HubRoomUtil`) and stay in memory for balancing.

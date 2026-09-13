@@ -1,6 +1,4 @@
-// One flat face of a projected 3D form, ready to be drawn: an outline expressed in
-// the target viewBox's coordinates, plus the relative brightness (1 = fully lit) that
-// stands in for the lighting a real 3D view would have given it.
+// A projected face: outline in viewBox coordinates plus relative brightness (1 = fully lit).
 export default interface IsometricFace
 {
     d: string;

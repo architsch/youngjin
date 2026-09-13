@@ -17,28 +17,17 @@ let temp_sourceVoxelGridVersion = 0;
 
 const latestVersion = 2;
 
-// The voxel-grid format that first stood a room two storeys tall. A room's objects are written in
-// the same blob as its voxel grid, so a grid older than this is also objects written while the room
-// was half its present height — which is the one thing this format's own version byte cannot say.
-//
-// It cannot say it because the byte never moved: the object layout did not change when the room's
-// height did, only the vertical range positions are measured against (see ObjectTransform), so
-// version 0 was written both before that change and after it. The grid beside them is the only
-// record of which. That is why the converter below takes the room's word for its age rather than
-// this format's own.
+// Grid version where rooms became two storeys. Objects share a blob with the grid, and the object
+// format's version byte didn't change then (only the Y range did; see ObjectTransform), so the grid
+// version dates the objects.
 const FIRST_TWO_STOREY_VOXEL_GRID_VERSION = 2;
 
-// The voxel-grid format that first filled the entrance doorway back in, which is the same change
-// that made a room's own way in a stored object rather than one every client spawned for itself. A
-// grid older than this belongs to a room whose door was never written down, and that is what dates
-// the objects beside it: a group holding no door is either such a room, or a room whose admin took
-// its door away, and only the grid can tell the two apart.
+// Grid version where the entrance doorway was filled and the entrance door became a stored object.
+// Older grids mean the room never stored its door.
 const FIRST_STORED_ENTRANCE_DOOR_VOXEL_GRID_VERSION = 3;
 
-// What a group decoded on its own is dated at. Objects arriving without a grid beside them were
-// encoded by a running build rather than read out of storage, so they are current-era by
-// construction and need no rescaling. Named as its own thing rather than importing VoxelGrid's
-// latest version, which would make these two modules import each other.
+// Objects decoded without a grid are current by construction. A local constant avoids a circular
+// import with VoxelGrid.
 const CURRENT_ERA_VOXEL_GRID_VERSION = FIRST_STORED_ENTRANCE_DOOR_VOXEL_GRID_VERSION;
 
 export default class ObjectGroup extends EncodableData
@@ -85,9 +74,7 @@ export default class ObjectGroup extends EncodableData
             objectSourceUserIndices[i] = userIndex;
         }
 
-        // Encode the number of unique source users, so as to let the decoder know
-        // how many subsequent byte-strings will need to be parsed as the
-        // sourceUserIDs and sourceUserNames.
+        // Number of unique source users (so the decoder knows how many id/name strings follow).
         new EncodableRawByteNumber(sourceUserIDs.length).encode(bufferState);
 
         // Encode the sourceUserIDs and sourceUserNames.
@@ -97,8 +84,7 @@ export default class ObjectGroup extends EncodableData
             new EncodableByteString(sourceUserNames[i]).encode(bufferState);
         }
 
-        // Encode the number of objects, so as to let the decoder know
-        // how many objects will need to be decoded.
+        // Object count, for the decoder.
         if (objects.length > 65535)
             throw new Error(`Number of objects exceeded the maximum value 65535 (objects.length = ${objects.length})`);
         new EncodableRaw2ByteNumber(objects.length).encode(bufferState);
@@ -115,10 +101,8 @@ export default class ObjectGroup extends EncodableData
         }
     }
 
-    // "sourceVoxelGridVersion" is the version of the voxel grid decoded from the same blob, just
-    // before this call. The converters need it to date the objects; see the note on
-    // FIRST_TWO_STOREY_VOXEL_GRID_VERSION. A caller with no grid beside these objects — a group
-    // encoded on its own, which is always written at the current version — can leave it out.
+    // sourceVoxelGridVersion: the version of the grid decoded from the same blob, used to date the
+    // objects (see FIRST_TWO_STOREY_VOXEL_GRID_VERSION). Omit for standalone (current) groups.
     static decodeWithParams(bufferState: BufferState, roomID: string,
         sourceVoxelGridVersion: number = CURRENT_ERA_VOXEL_GRID_VERSION): EncodableData
     {
@@ -144,8 +128,7 @@ export default class ObjectGroup extends EncodableData
     }
 }
 
-// The object list itself. Every version so far has written it the same way — what changed between
-// them is what the numbers inside it mean — so one reader serves them all.
+// All versions share one body layout (only the meaning of values changed).
 function decodeBody(bufferState: BufferState): ObjectGroup
 {
     const objects: AddObjectSignal[] = [];
@@ -182,9 +165,7 @@ function decodeBody(bufferState: BufferState): ObjectGroup
 }
 
 const olderVersionDecoders: ((bufferState: BufferState) => EncodableData)[] = [
-    // Every version so far is written byte for byte the way the current one is — what changed
-    // between them is what the numbers mean, and what the room is expected to hold — so they are all
-    // read by the same reader and corrected afterwards.
+    // Same layout for every version so far; converters fix meanings afterwards.
     decodeBody,
     decodeBody,
 ];
@@ -193,14 +174,7 @@ const versionConverters: ((olderVersionData: EncodableData) => EncodableData)[] 
     (olderVersionData: EncodableData) => { // version 0 -> 1
         const objectGroup = olderVersionData as ObjectGroup;
 
-        // Version 0 spans both sides of the change this converts, because the object format's own
-        // version byte never moved when the room's height did. The blob's voxel grid is what dates
-        // it: a grid from before the room gained its second storey means these objects were placed
-        // against a room half as tall, and every height read out of them is twice what was meant.
-        //
-        // Objects written after that change are already right and must be left alone — halving them
-        // would drop every painting in a current room to half its height, which is the same fault
-        // over again in the other direction.
+        // Only objects from pre-two-storey grids had heights doubled; newer ones must be left alone.
         if (temp_sourceVoxelGridVersion >= FIRST_TWO_STOREY_VOXEL_GRID_VERSION)
             return objectGroup;
 
@@ -214,15 +188,8 @@ const versionConverters: ((olderVersionData: EncodableData) => EncodableData)[] 
     (olderVersionData: EncodableData) => { // version 1 -> 2
         const objectGroup = olderVersionData as ObjectGroup;
 
-        // A room's own way in used to be a door every client spawned for itself and nobody stored,
-        // standing over a hole in the boundary wall. Now it is an ordinary object the room holds,
-        // and a room that never held one has to be given it — otherwise it comes out with a filled
-        // doorway and nothing to open it (the grid beside these objects is filled by the conversion
-        // that dates them; see FIRST_STORED_ENTRANCE_DOOR_VOXEL_GRID_VERSION).
-        //
-        // Rooms written after that change already hold their door, and must be left alone: adding a
-        // second one would put a door over a door in every room in the game, and would put back the
-        // one an admin had deliberately taken down.
+        // Rooms from before stored entrance doors get one; newer rooms already have it (or an admin
+        // removed it deliberately), so they must be left alone.
         if (temp_sourceVoxelGridVersion >= FIRST_STORED_ENTRANCE_DOOR_VOXEL_GRID_VERSION)
             return objectGroup;
 

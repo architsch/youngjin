@@ -1,14 +1,5 @@
-// Loads the TypeScript room generator so a plain-JS script can call it.
-//
-// The generator is part of the shared game code and is written in TypeScript, with the
-// extensionless relative imports the webpack build resolves. Node cannot run that directly, so
-// the module is bundled in memory the first time it is asked for — with esbuild, which is
-// already present as a dependency of the test runner, so this adds nothing to install and
-// leaves no build artifact behind.
-//
-// Bundling from source rather than from `dist/` is deliberate: the point of seeding a
-// procedurally generated room is that it was built by the generator the repository currently
-// has, not by whatever was last compiled.
+// Loads the TypeScript room generator for plain-JS scripts, bundling it in memory with esbuild on first
+// use (no artifact). Bundled from source, not `dist/`, so seeded rooms come from the current generator.
 
 const path = require("path");
 const Module = require("module");
@@ -29,8 +20,7 @@ function load()
         platform: "node",
         format: "cjs",
         target: "node20",
-        // three.js is only reached for types and math helpers here, but bundling it costs
-        // seconds; leaving it external lets Node resolve the installed copy instead.
+        // three.js stays external (bundling it costs seconds).
         external: ["three"],
         logLevel: "silent",
     });
@@ -47,6 +37,6 @@ function load()
 
 module.exports = {
     // (roomName, roomType, ownerUserID, ownerUserName, seed?) -> { texturePackPath, content, ... }
-    // Passing a seed rebuilds exactly the same interior; leaving it out draws a fresh one.
+    // A seed reproduces the same interior; omitting it draws a fresh one.
     generateRoomContent: (...args) => load().generateRoomContent(...args),
 };

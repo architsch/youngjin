@@ -1,3 +1,2 @@
-// Array Index = "version number to migrate from"
-// (Example: The function at index N migrates the given DBRow from version N to version N+1)
+// Index N migrates a row from version N to N+1.
 export type DBVersionMigration = ((row: any) => Promise<any>)[];

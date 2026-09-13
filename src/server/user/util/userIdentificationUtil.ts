@@ -32,13 +32,9 @@ const UserIdentificationUtil =
     {
         await identifyUserFromReq(req, res, _ => true, next, true);
     },
-    // As above, except that a self-declared crawler or link-preview fetcher is passed straight
-    // through without an account being made for it. Such a client keeps no cookies, so every one
-    // of its visits would otherwise mint a guest — and once a run of them exhausted the guest
-    // allowance, the ones that followed would be answered with a 401. That answer is the expensive
-    // part: it is what turns a link posted into a chat window into a card that will not load, and
-    // what tells a search engine that the site's own front door is unavailable. The page renders
-    // for them without a session instead (see the game page's no-session branch).
+    // Like identifyAnyUser, but self-declared bots get no account (they keep no cookies, so each visit
+    // would mint a guest until the cap returned 401s, breaking link previews and indexing). The page
+    // renders without a session for them.
     identifyAnyUserUnlessBot: async (req: Request, res: Response, next: () => void): Promise<void> =>
     {
         if (BotDetectionUtil.isBot(req.headers["user-agent"]))
@@ -50,12 +46,8 @@ const UserIdentificationUtil =
     },
 }
 
-// `admitsAnonymousVisitors` says whether this route is one a visitor may arrive at without an
-// account yet. Both of the things that follow from that are its business: only such a route mints
-// a guest for a visitor who has none, and only such a route counts the arrival as a login. A route
-// reserved for admins or members is never a person's first contact with the site, so minting an
-// account there produces one that is thrown away in the same breath by the pass-condition below —
-// while still handing the browser the new account's token, over the top of whatever it was holding.
+// admitsAnonymousVisitors: only such routes mint guests and count logins. Member/admin routes are
+// never a first visit, and minting there would overwrite the browser's token with a discarded account.
 async function identifyUserFromReq(req: Request, res: Response,
     passCondition: (user: User) => Boolean, next: () => void, admitsAnonymousVisitors: boolean): Promise<boolean>
 {
@@ -78,9 +70,7 @@ async function identifyUserFromReq(req: Request, res: Response,
 
         UserTokenUtil.addTokenForUserId(user.id, req, res);
 
-        // Remember, at the browser level, that this user has already finished (or skipped) the
-        // tutorial, so any brand-new account later created on this browser (e.g. the guest
-        // spawned after this user signs out) skips the tutorial instead of replaying it.
+        // Browser-level flag so future accounts on this browser skip the tutorial.
         if (user.singlePlayerMode == "")
             res.cookie(CookieUtil.getTutorialFinishedCookieName(), "1", CookieUtil.getTutorialFinishedCookieOptions());
 
@@ -98,10 +88,7 @@ async function identifyUserFromReq(req: Request, res: Response,
 
 async function getUserFromReq(req: Request, res: Response, admitsAnonymousVisitors: boolean): Promise<User | undefined>
 {
-    // Dev mode: drop auth cookies left over from a previous DevRunner runtime (whose emulated DB
-    // has since been reset), so a freshly started runtime doesn't resurrect a now-nonexistent user
-    // or replay browser-scoped state. A no-op for cookies belonging to the current runtime, so it
-    // does not disturb hot reloads. Runs before any cookie/devuser resolution below.
+    // Dev: drop auth cookies from a previous runtime (reset DB). No-op for the current runtime.
     if (process.env.MODE == "dev")
         DevRuntimeUtil.invalidateStaleCookies(req, res);
 
@@ -124,21 +111,9 @@ async function getUserFromReq(req: Request, res: Response, admitsAnonymousVisito
         }
     }
 
-    // Dev mode: a seat in the sandbox single-player room, for gameplay experiments and for arranging
-    // a scene to photograph.
-    //
-    // Dev-only, and under a name of this route's own making, for the same reason ?devuser= above is:
-    // whoever gets past here is handed an auth cookie for the id it returns (see
-    // identifyUserFromReq), so a route that named a user of the caller's choosing would mint a valid
-    // session for any account whose id could be guessed. Deriving the account from a sanitised name
-    // under a reserved address is what makes that impossible rather than merely unreachable — no
-    // real account can be reached by any spelling of the query.
-    //
-    // A real stored account rather than one made up on the spot, because the socket authenticates
-    // separately and looks its user up in the database (see SocketsServer): a user that exists only
-    // in the answer to this request gets a page that loads and a game that never connects. It is
-    // found again on the next visit rather than remade, so a name is one seat rather than a row per
-    // run, and its mode is written back each time because finishing the mode clears it.
+    // Dev: a sandbox single-player account under a reserved, sanitized name (never an arbitrary id,
+    // which would let anyone mint a session for a guessed account). Stored for real because the
+    // socket looks users up in the DB; reused per name, with its mode rewritten each visit.
     if (process.env.MODE == "dev" && req.query.sandboxuser)
     {
         const name = String(req.query.sandboxuser).replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32) || "0";
@@ -175,11 +150,8 @@ async function getUserFromReq(req: Request, res: Response, admitsAnonymousVisito
         {
             const lookUpResult = await DBUserUtil.lookUpUserById(userId);
 
-            // A lookup that *failed* says nothing about whether this account exists, so it must
-            // not be answered by minting a guest: doing so overwrites the browser's only copy of
-            // this user's token with the new guest's, and the account — with everything built
-            // under it — becomes unreachable forever. Failing the request instead leaves the
-            // cookie alone, so the next attempt finds the user exactly where it left them.
+            // A failed lookup must not mint a guest: that would overwrite the browser's only token.
+            // Fail the request and leave the cookie.
             if (!lookUpResult.success)
             {
                 LogUtil.log("User lookup failed for a valid token — refusing to replace the session",
@@ -197,9 +169,8 @@ async function getUserFromReq(req: Request, res: Response, admitsAnonymousVisito
         }
     }
 
-    // The token is missing, unreadable, or names an account that is genuinely gone (a guest the
-    // stale-account cleanup has since removed). Whichever it is, there is nobody to resume, so a
-    // guest is minted — but only where an anonymous visitor is somebody this route serves.
+    // No resumable account (missing/invalid token or a deleted guest): mint a guest, only on routes that
+    // admit anonymous visitors.
     if (!admitsAnonymousVisitors)
         return undefined;
 
@@ -215,15 +186,11 @@ async function getUserFromReq(req: Request, res: Response, admitsAnonymousVisito
     const uniqueHex = uniqueInt.toString(16);
     const guestName = `Guest-${uniqueHex}`;
 
-    // If this browser has already finished the tutorial, the new guest skips it (mode "");
-    // otherwise it starts in the tutorial like any first-time visitor.
+    // New guests skip the tutorial if this browser already finished it.
     const tutorialFinished = !!req.cookies[CookieUtil.getTutorialFinishedCookieName()];
     const initialSinglePlayerMode = tutorialFinished ? "" : TUTORIAL_SINGLE_PLAYER_MODE;
 
-    // Where this visitor came from, read off the address they arrived at. It is captured here and
-    // nowhere else, which is what makes attribution first-touch: this branch is reached only when
-    // there is no account to resume, so somebody returning through a differently tagged link keeps
-    // the source that originally brought them rather than being re-credited to the latest one.
+    // First-touch attribution: captured only here, when creating an account.
     const acquisitionSource = AcquisitionSourceUtil.fromQuery(req.query as Record<string, unknown>);
 
     const result = await DBUserUtil.createUser(guestName, UserTypeEnumMap.Guest, "", initialSinglePlayerMode,

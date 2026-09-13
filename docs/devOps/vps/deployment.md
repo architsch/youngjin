@@ -1,113 +1,55 @@
 # VPS Deployment
 
-> Part of the [VPS Hosting Guide](./) — see also: [Basic Setup](basic-setup.md), [Networking & Security](networking-and-security.md), [Maintenance](maintenance.md), [Firebase & Google Cloud](../firebase.md)
+> VPS Hosting Guide: [Basic Setup](basic-setup.md) · [Networking & Security](networking-and-security.md) · [Maintenance](maintenance.md) · [Firebase & Google Cloud](../firebase.md)
 
 ## Self-hosted GitHub Actions runner setup for the VPS
-
-This section explains how to set up a self-hosted GitHub Actions runner on the VPS, which allows GitHub workflows to execute directly on the VPS without needing inbound SSH access from GitHub.
-
-1. Connect to the VPS via SSH:
+Workflows run on the VPS itself (`runs-on: self-hosted`), so GitHub never needs inbound SSH.
 ```
 ssh root@222.239.251.208
-```
-(If the connection fails, check if your IP address isn't whitelisted in the VPS's inbound SSH rules - see [Inbound Rules](networking-and-security.md#inbound-rules-incoming-traffic-to-the-vps))
-
-2. Create a directory for the runner:
-```
 mkdir -p /root/actions-runner && cd /root/actions-runner
-```
-
-3. Download the latest GitHub Actions runner package. Check the [GitHub Actions runner releases page](https://github.com/actions/runner/releases) for the latest version and replace the URL accordingly (Warning: The number `2.321.0` is just a placeholder; it may differ based on the action runner's latest version.):
-```
-curl -o actions-runner-linux-x64.tar.gz -L https://github.com/actions/runner/releases/download/v2.321.0/actions-runner-linux-x64-2.321.0.tar.gz
+# use the latest version from https://github.com/actions/runner/releases
+curl -o actions-runner-linux-x64.tar.gz -L https://github.com/actions/runner/releases/download/v<VERSION>/actions-runner-linux-x64-<VERSION>.tar.gz
 tar xzf actions-runner-linux-x64.tar.gz
+./config.sh --url https://github.com/<OWNER>/<REPO> --token <TOKEN>   # token from Settings → Actions → Runners → New
+./svc.sh install && ./svc.sh start && ./svc.sh status
 ```
-
-4. Go to the GitHub repository's `Settings -> Actions -> Runners -> New self-hosted runner`. Copy the token shown in the configuration command, and run:
-```
-./config.sh --url https://github.com/<OWNER>/<REPO> --token <TOKEN>
-```
-Accept the defaults when prompted (or customize the runner name/labels as needed).
-
-5. Install and start the runner as a system service so it persists across reboots:
-```
-./svc.sh install
-./svc.sh start
-```
-
-6. Verify the runner is active:
-```
-./svc.sh status
-```
-You should also see the runner listed as "Idle" in the repository's `Settings -> Actions -> Runners` page.
-
-7. Make sure Node.js and PM2 are installed on the VPS (see [Basic Setup](basic-setup.md) steps 8–9).
-
-8. The workflows (defined in `.github/workflows/`) use `runs-on: self-hosted` to target this runner. Once the runner is active, any push to `main` will trigger the staging deployment workflow, and the promote/rollback workflows can be triggered manually via GitHub's UI.
+The runner should show as "Idle" on GitHub. Node.js and PM2 must be installed (see [basic-setup.md](basic-setup.md) steps 8–9).
 
 ### Troubleshooting the runner
-
-- **Check runner logs**: `journalctl -u actions.runner.<OWNER>-<REPO>.<RUNNER_NAME>.service -f`
-- **Restart the runner**: `cd /root/actions-runner && ./svc.sh stop && ./svc.sh start`
-- **Re-register the runner**: If the runner becomes stale, remove it with `./config.sh remove --token <TOKEN>` and repeat step 4 onwards.
-- **File permission issues**: If the browser cannot fetch files served by Nginx from the runner's working directory, see the `chmod` command in the [Important Notes](basic-setup.md#important-notes) section.
+- Logs: `journalctl -u actions.runner.<OWNER>-<REPO>.<RUNNER_NAME>.service -f`
+- Restart: `cd /root/actions-runner && ./svc.sh stop && ./svc.sh start`
+- Re-register: `./config.sh remove --token <TOKEN>`, then configure again.
+- Nginx cannot read files: use the `chmod` in [Important Notes](basic-setup.md#important-notes).
 
 ## Firestore Composite Indexes
-
-`firestore.indexes.json` defines the composite indexes required by the server's Firestore queries (e.g. the stale-guest cleanup query filters on `userType` equality plus a `lastLoginAt` range, which Firestore can only serve with a composite index).
-
-Important details:
-
-- **Composite indexes match by collection ID.** The staging server stores its data in `staging_`-prefixed collections within the same Firebase project as the live server, so every composite index needed by the live (unprefixed) collections must have a twin entry for its `staging_`-prefixed counterpart. An index defined only for `users` does nothing for `staging_users`.
-- **Indexes are deployed manually, not by CI.** No workflow touches Firebase. After editing `firestore.indexes.json`, deploy it from a dev machine:
+`firestore.indexes.json` defines the indexes that server queries need (e.g. stale-guest cleanup filters on `userType` plus a `lastLoginAt` range).
+- **Indexes match by collection ID**, so every index needs a twin for the `staging_` collection.
+- **Deploy manually** (no CI touches Firebase), before shipping code that depends on the index:
   ```
   firebase deploy --only firestore:indexes
   ```
-  The project is taken from `.firebaserc`, and the credentials from `gcloud auth application-default login`. This never deletes indexes that exist in the Firebase console but are absent from the file (firebase-tools requires `--force` for deletions). If the deploy fails with a `403`, see [Firebase & Google Cloud → IAM roles](../firebase.md#iam-roles) and its [Troubleshooting](../firebase.md#troubleshooting) table.
-- **A deploy is project-wide.** Because live and staging share one Firebase project, deploying reconciles the entire file — both the live (`users`) and staging (`staging_`-prefixed) entries — so it affects both environments at once. Deploy before shipping code that depends on a new index, and confirm in the Firebase console that the index has finished building: index creation is asynchronous, and queries needing it keep failing until it is enabled.
-- **A missing index announces itself in the logs.** Queries that depend on a composite index log a distinct error when they fail, so a forgotten deploy surfaces in the process logs rather than silently returning nothing.
-- **The Firestore emulator does not enforce composite indexes**, so a missing index never reproduces in local dev — the affected queries only start failing (with `FAILED_PRECONDITION`) against the real Firestore backend. If a server-side query silently returns no results in staging/live but works locally, check the process logs for "DB Query Error" and verify the index exists in the Firebase console (`Firestore -> Indexes`).
+  The deploy covers the whole project (live and staging), never deletes indexes without `--force`, and finishes building asynchronously, so wait for "Enabled". For a 403, see [firebase.md](../firebase.md#troubleshooting).
+- The emulator does not enforce indexes. A missing index shows up on the VPS as `FAILED_PRECONDITION` / "DB Query Error" in the logs.
 
 ## The deployment window
-
-A deployment leaves a stretch during which the app cannot answer: the workspace is being rewritten by checkout and build, and then PM2 stops the old process while the new one runs its startup work before it begins listening. Nginx stays up throughout — only the Node.js process behind it goes away — so during that stretch Nginx answers on the app's behalf with `502 Bad Gateway`.
-
-Instead of that bare gateway error, both server blocks serve a static maintenance page:
-
+While a deploy rebuilds and restarts the app, Nginx returns 502. Both server blocks serve a maintenance page instead:
 ```
 error_page 502 503 504 /error/deploying.html;
 ```
-
-Details worth knowing:
-
-- **The page is generated by the SSG**, from `views/page/static/error/deploying.ejs` into `public/error/deploying.html`, like the other error pages. It is self-contained, since it exists precisely for the moments when other things are not being served.
-- **It waits and returns the visitor by itself.** The page polls `/health` and reloads once it answers with a success status, which brings the visitor back to the URL they originally asked for. Anything short of a success status — including the gateway error Nginx produces for the missing app — counts as "still down".
-- **Deploy the page before reloading Nginx.** An `error_page` target that does not exist on disk makes Nginx return `500`, which is strictly worse than the `502` it replaces. Push first (so a deploy writes `public/error/deploying.html` onto the VPS), then run `npm run nginx:update`.
-- **The file survives the deployment it covers.** It is git-tracked, and the checkout step's clean only removes untracked files, so the page stays readable on disk while the build that needs it is running.
-- **`add_header` needs `always` here**, because the page is delivered with the original 5xx status and Nginx otherwise drops added headers on non-2xx/3xx responses.
-- **`proxy_intercept_errors` is deliberately not set.** These statuses are the ones Nginx itself produces when it cannot reach the upstream, so the app's own responses still pass through untouched — the health route in particular has to keep reporting its real status.
+- The page is generated by SSG (`views/page/static/error/deploying.ejs` → `public/error/deploying.html`) and is self-contained. It polls `/health` and reloads once it gets a success status.
+- **Push the page before running `npm run nginx:update`**, because a missing `error_page` target makes Nginx return 500.
+- The file is git-tracked, so the checkout clean step keeps it during the build.
+- `add_header` needs `always` (the page is served with a 5xx status). `proxy_intercept_errors` is intentionally off, so the app's own statuses (including `/health`) pass through.
 
 ## Workflows
+| Workflow | Purpose |
+|---|---|
+| `deploy-staging.yml` | build and deploy to staging on push to `main` |
+| `promote-live.yml` | promote staging bundles to live |
+| `rollback-live.yml` | restore the previous live backup |
+| `restart-live.yml` / `restart-staging.yml` | restart in place without building |
 
-- `.github/workflows/deploy-staging.yml` - Workflow for automatically deploying the app bundles to the VPS whenever "git push" happens.
-- `.github/workflows/promote-live.yml` - Workflow for applying the staging apps to the live apps.
-- `.github/workflows/rollback-live.yml` - Workflow for rolling back the latest live apps to their previous backup copies (in case the latest ones happen to be problematic).
-- `.github/workflows/restart-live.yml` - Workflow for restarting the live app in place, without changing the bundle it is running.
-- `.github/workflows/restart-staging.yml` - The same, for the staging app.
-
-The workflows above share a concurrency group per app, so a deployment, a promotion, a rollback and a
-restart acting on the same one queue behind each other instead of interleaving.
+Workflows share a concurrency group per app, so they queue rather than interleave.
 
 ### Restarting without deploying
-
-A server's in-memory state outlives the database it was read from. Rooms are held as
-`RoomRuntimeMemory` once loaded, and hub rooms stay loaded for as long as the process lives, so a
-room edited or removed directly in Firebase goes on being served from the copy the process took
-beforehand. Restarting is what makes the process read the database again.
-
-The restart workflows exist for that, and are deliberately not deployments: they check out nothing
-and build nothing, so the app comes back on exactly the bundle it went down with and only its memory
-starts empty. The process is stopped with a signal it handles rather than dies on — it reports itself
-unavailable on the health route, saves every room with unsaved changes along with each connected
-user's gameplay state, and only then exits — after which the workflow polls the health route until
-the replacement answers, rather than assuming a fixed startup time.
+Loaded rooms (`RoomRuntimeMemory`), and hubs in particular, stay in memory, so edits made directly in Firebase are not seen until a restart. The restart workflows keep the same bundle. The app handles the stop signal by reporting unavailable on `/health`, saving dirty rooms and user state, and then exiting. The workflow then polls `/health` until the new process is up.

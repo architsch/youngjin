@@ -1,13 +1,6 @@
 /**
- * Integration tests: Room API routes
- *
- * Tests the HTTP API routes for room management:
- * - Scenario 1:  User creating a room (POST /create_room)
- * - Scenario 9:  User changing room texture pack (POST /change_room_texture)
- * - Scenario 10: User changing a room's lighting (POST /change_room_prefs)
- *
- * These tests mock the DB layer and call the route handlers directly
- * with mock Express request/response objects.
+ * Integration tests: room API routes (/create_room, /change_room_texture, /change_room_prefs), called
+ * directly with mock Express objects and a mocked DB.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
@@ -368,9 +361,7 @@ describe("room API: change room lighting (Scenario 10)", () => {
     });
 
     it("passes a nonsense value straight through, for the manager to canonicalize", async () => {
-        // The route deliberately checks only that a string arrived: a quantized value has no
-        // invalid characters, only characters that decode to something other than what was meant,
-        // so what makes it safe is the round trip in ServerRoomManager rather than a check here.
+        // The route only checks for a string; the ServerRoomManager round trip makes quantized values safe.
         mockFindUserById.mockResolvedValue(ownerRow);
         mockGetDBRoom.mockResolvedValue(ownedRoomRow);
         mockGetRoomContent.mockResolvedValue({ id: "my-room", prefs: "" });

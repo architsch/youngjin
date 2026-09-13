@@ -11,8 +11,7 @@ export default function Button({name, size = "md", color = "gray", disabled = fa
     </div>
 }
 
-// Heights mirror the square sizes in iconButton.tsx, so buttons and icon-buttons
-// line up when placed side by side in a row.
+// Heights match iconButton.tsx sizes so they line up in a row.
 const sizeClassNames = {
     xs: "h-5 px-1.5 text-xs",
     sm: "h-7.5 px-3 text-sm",
@@ -28,8 +27,7 @@ const panelClassNames = {
     transparent: "pointer-events-auto",
 };
 
-// Layered on top of the color class above, so it reads as an "on" state of that
-// same button rather than as a separate color.
+// An "on" state layered over the color class.
 const highlightClassName = "yj-panel-highlight";
 
 interface Props

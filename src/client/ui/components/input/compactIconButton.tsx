@@ -11,8 +11,7 @@ export default function CompactIconButton({icon, size = "md", onClick, additiona
     </div>
 }
 
-// Each step is roughly two thirds of its counterpart in iconButton.tsx, and the padding is only as
-// much as it takes to keep the icon off the surrounding circle.
+// About two thirds of iconButton.tsx sizes.
 const sizeClassNames = {
     xs: "size-3.5 p-px",
     sm: "size-5 p-px",

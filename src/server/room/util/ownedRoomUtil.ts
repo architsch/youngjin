@@ -4,10 +4,8 @@ import DBUserUtil from "../../db/util/dbUserUtil";
 
 const OwnedRoomUtil =
 {
-    // Opens the one room that belongs to this user and records it on their account, returning the
-    // new room's ID (or an empty string if it could not be created).
-    // A user owns at most one room, so the caller is responsible for having established that this
-    // user owns none yet — calling it for a user who already owns one strands the room they had.
+    // Creates the user's owned room and records it; returns the ID or "". The caller must ensure the
+    // user owns none (an existing one would be stranded).
     createOwnedRoom: async (userID: string, ownerUserName: string): Promise<string> =>
     {
         const createResult = await DBRoomUtil.createRoom("", RoomTypeEnumMap.Regular,
@@ -22,11 +20,8 @@ const OwnedRoomUtil =
         await DBUserUtil.setOwnedRoomID(userID, roomID);
         return roomID;
     },
-    // Hands a user who has just signed up the room that comes with being a member, returning its
-    // ID so that the caller can send them straight into it. Owning a room already means this is a
-    // returning member rather than a first-time sign-up, so nothing is created and an empty string
-    // comes back — the same answer as a failed creation, since in both cases there is no new room
-    // to send anyone to and the user simply resumes wherever they were.
+    // Gives a new member their room and returns its ID; returns "" if they already own one (returning
+    // member) or creation failed.
     setUpFirstOwnedRoom: async (userID: string): Promise<string> =>
     {
         const dbUser = await DBUserUtil.findUserById(userID);

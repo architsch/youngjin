@@ -1,12 +1,6 @@
 /**
- * Scenario tests: doors, and the admin privilege they exist for
- *
- * A door is how one room is joined to another, so laying one is an edit to the shape of the world
- * rather than to a room's contents. That is the whole of what these cover:
- *
- * - who may put a door up, take one down, move one, and change what it says and where it goes
- * - which metadata a door answers to at all, and what it makes of a value it is handed
- * - where an arriving player is put down, which is a question about the doors the room holds
+ * Scenario tests: doors (admin world-building) — who may add, remove, move and edit them, how their
+ * metadata is validated, and where arriving players spawn.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runScenario } from "../helpers/scenarioRunner";
@@ -49,8 +43,7 @@ const ADMIN = makeUser("an-admin", UserTypeEnumMap.Admin);
 const MEMBER = makeUser("a-member", UserTypeEnumMap.Member);
 const GUEST = makeUser("a-guest", UserTypeEnumMap.Guest);
 
-// A door somewhere along the boundary wall well clear of the one the room already has, so that
-// nothing here is really asking whether two doors fit on the same stretch of wall.
+// A door on the boundary wall, well clear of the room's existing one.
 function makeDoorSignal(room: Room, sourceUser: User, objectId: string = "new-door"): AddObjectSignal
 {
     return new AddObjectSignal(room.id, sourceUser.id, sourceUser.userName, doorTypeIndex, objectId,
@@ -94,8 +87,7 @@ describe("door permissions", () => {
     });
 
     it("refuses a door in a regular room, even to an admin", async () => {
-        // A Regular room belongs to one person and keeps the one door generation gave it. An admin
-        // shapes the world out of hubs; he does not rearrange the way into somebody's own room.
+        // Regular rooms keep their generated door; admins shape hubs only.
         await runScenario({
             name: "hanging a door in a regular room",
             rooms: [EMPTY_REGULAR],
@@ -155,8 +147,7 @@ describe("door permissions", () => {
     });
 
     it("refuses a door move that would be resolved against physics", async () => {
-        // A door is slid along the wall by a gizmo, which is a placement rather than a motion — the
-        // physics-resolved path is for things that walk.
+        // Doors are placed via gizmo, not the physics-resolved motion path.
         await runScenario({
             name: "physical door move",
             rooms: [EMPTY_HUB],
@@ -218,8 +209,7 @@ describe("what a door makes of the values it is handed", () => {
         expect(preprocess(`${DoorTypeEnumMap.CustomEntrance}`))
             .toBe(`${DoorTypeEnumMap.CustomEntrance}`);
 
-        // Anything that is not a door type at all comes out as the safer of the two: a door nobody
-        // said anything sensible about is not one arriving players are put down behind.
+        // A non-door type falls back to the safer kind (not offered as an arrival door).
         for (const nonsense of ["", "banana", "99", "-1", "1.5"])
             expect(preprocess(nonsense)).toBe(`${DoorTypeEnumMap.CustomEntrance}`);
     });
@@ -248,9 +238,8 @@ describe("what a door makes of the values it is handed", () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
                 const door = getEntranceDoor(room);
 
-                // Nothing said about it, so the picker opens on whichever palette position is
-                // nearest the color the door's own type declares — which is the color the label is
-                // actually wearing, so picking that same swatch back changes nothing.
+                // Unset: the picker opens on the palette entry nearest the type's declared color, so
+                // re-picking it changes nothing.
                 const configuredHex = ObjectTypeConfigMap.getConfigByIndex(doorTypeIndex)
                     .components.spawnedByAny!.labelText!.defaultFontColorHex;
                 expect(DoorObjectTypeConfig.util.getLabelColorIndex(door)).toBe(
@@ -281,12 +270,8 @@ describe("what a door makes of the values it is handed", () => {
 });
 
 /**
- * Sliding a door up and down the wall.
- *
- * A door stands an odd number of collision layers tall, so the middle of it — which is where its
- * position is — falls half a layer off the grid the wall is built on. Snapping that middle onto the
- * grid would lift the door a quarter of a layer clear of the floor and keep it there, so what is
- * snapped is the door's bottom edge instead.
+ * Moving a door vertically: a door is an odd number of layers tall, so its center is off-grid; the
+ * bottom edge is snapped instead (snapping the center would float it a quarter layer).
  */
 describe("moving a door up the wall", () => {
     beforeEach(() => {
@@ -304,12 +289,10 @@ describe("moving a door up the wall", () => {
                 const door = getEntranceDoor(room);
                 const spawnedY = door.transform.pos.y;
 
-                // Where generation put it: standing on the room's floor, so its middle is half a
-                // footprint up.
+                // As generated: on the floor, center half a footprint up.
                 expect(spawnedY).toBeCloseTo(0.5 * DOOR_FOOTPRINT_HEIGHT, 6);
 
-                // Each step up is one collision layer, and the door's foot lands on that layer's
-                // boundary — never a quarter of a layer above it.
+                // Each step is one layer, landing the foot exactly on a layer boundary.
                 let y = spawnedY;
                 for (let step = 1; step <= 4; ++step)
                 {
@@ -334,12 +317,7 @@ describe("moving a door up the wall", () => {
 });
 
 /**
- * Where an arriving player is put down.
- *
- * A room may hold several doors, so this is a real question rather than a fixed cell, and it is
- * answered by asking for something more and more general until something answers: the door the
- * traveller named, then any door the room offers as its way in, then any door at all, then the room
- * itself. Each step exists because the one before it can genuinely come up empty.
+ * Arrival spawn: the named door, else any entrance door, else any door, else the room itself.
  */
 describe("choosing where a player arrives", () => {
     beforeEach(() => {
@@ -370,10 +348,8 @@ describe("choosing where a player arrives", () => {
 
                 const {pos, dir} = SpawnHotspotUtil.pickSpawnTransform(room, "Side Door");
 
-                // Behind that door's face, on the floor it stands on, facing away from it. The door
-                // hangs on the wall at the far end of the room and faces back into it, so behind it
-                // is further out along z than the door itself — which is inside that wall, where he
-                // is meant to be until his entrance stride carries him through the doorway.
+                // Behind the door (inside its wall), on its floor, facing into the room; the entrance
+                // stride carries the player through.
                 expect(pos.x).toBeCloseTo(named.transform.pos.x, 3);
                 expect(pos.z).toBeCloseTo(named.transform.pos.z + SPAWN_DIST_BEHIND_DOOR, 3);
                 expect(dir.z).toBeCloseTo(1, 3);
@@ -442,8 +418,7 @@ describe("choosing where a player arrives", () => {
                 const entrance = getEntranceDoor(room);
                 addDoor(room, "side-door", 6, "", DoorTypeEnumMap.CustomEntrance);
 
-                // Drawn at random among equals, so this is asked repeatedly: what is being asserted
-                // is that the custom door is never among them.
+                // Picked at random among equals, so repeated to show the custom door is never chosen.
                 for (let attempt = 0; attempt < 20; ++attempt)
                 {
                     const {pos} = SpawnHotspotUtil.pickSpawnTransform(room, "");

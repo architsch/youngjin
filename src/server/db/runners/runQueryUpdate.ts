@@ -70,8 +70,7 @@ export default async function runQueryUpdate<T extends DBRow>(
                 const newDocData = await runQueryVersionMigration(dbQuery, docData);
                 return { ref: doc.ref, originalVersion, newDocData };
             }));
-            // A query can match any number of documents, so the writes are split into commits
-            // small enough for Firestore to accept.
+            // Chunked to Firestore's per-commit write limit.
             for (let i = 0; i < migrated.length; i += DB_MAX_WRITES_PER_COMMIT)
             {
                 const batch = db.batch();

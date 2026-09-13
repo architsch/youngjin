@@ -1,14 +1,6 @@
 /**
- * Scenario tests: Object management
- *
- * Covers:
- * - Player spawn at correct position
- * - Player transform updates
- * - Authority checks (can't move another's object), which are what trigger a resync
- * - Objects removed when user leaves
- * - Movement bounded by physics alone, not by how far the position jumped
- * - Player metadata snapshot mirrors the live player object
- * - Metadata (chat messages)
+ * Scenario tests: object management — spawning, transform updates, authority checks (which trigger a
+ * resync), removal on leave, physics-only movement bounds, player metadata snapshots, chat metadata.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runScenario } from "../helpers/scenarioRunner";
@@ -22,10 +14,7 @@ import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfi
 import { PLAYER_HEIGHT } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import { INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW } from "../../../src/shared/system/sharedConstants";
 
-// Players always spawn behind one of the room's doors, regardless of where they were before, and a
-// fixture room has exactly one (see roomContent.ts). Asked of the room rather than written out, so
-// that these scenarios stay about who lands where rather than about the arithmetic that decides it —
-// that is SpawnHotspotUtil's own to be tested on.
+// Players spawn behind the fixture room's only door; asked of the room (SpawnHotspotUtil is tested on its own).
 function spawnPos(roomID: string): {x: number, z: number}
 {
     const room = ServerRoomManager.roomRuntimeMemories[roomID].room;
@@ -37,9 +26,7 @@ const PLAYER_OBJECT_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Player");
 
 const SPAWN_X = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5;
 
-// A point just inside the room from its way in, which the walking scenarios below measure their
-// distances from. It only has to be somewhere a player can stand near the entrance, so it is written
-// out rather than asked for — an action has to be described before the room it runs in exists.
+// A standable point just inside the entrance, written out since actions are declared before the room exists.
 const SPAWN_Z = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 0.5;
 
 describe("object scenarios", () => {
@@ -79,8 +66,7 @@ describe("object scenarios", () => {
             assertions: ({ users, harness }) => {
                 const obj = harness.getPlayerObject(users[0].user.id);
                 expect(obj).toBeDefined();
-                // Movement across open floor is unobstructed,
-                // so the server should accept a position close to the target
+                // Open floor, so the server accepts a position near the target.
                 expect(obj!.transform.pos.x).toBeCloseTo(SPAWN_X, 0);
                 expect(obj!.transform.pos.z).toBeCloseTo(SPAWN_Z - 2, 0);
             },
@@ -125,8 +111,7 @@ describe("object scenarios", () => {
                 userAt(20, 20, "regular"),
             ],
             assertions: ({ users, harness }) => {
-                // The room's own door is one of its objects and stays put whoever comes and goes,
-                // so it is the players that are counted here.
+                // The door stays, so only players are counted.
                 const roomMem = ServerRoomManager.roomRuntimeMemories["regular"];
                 const playerObjects = Object.values(roomMem.room.objectById)
                     .filter(obj => obj.objectTypeIndex === PLAYER_OBJECT_TYPE_INDEX);
@@ -141,14 +126,12 @@ describe("object scenarios", () => {
             rooms: [EMPTY_REGULAR],
             users: [userAt(5, 5, "regular")],
             actions: [
-                // A long jump across open floor — distance alone must not revert it,
-                // since network latency makes large legitimate gaps routine.
+                // Distance alone must not revert a move (latency makes long jumps routine).
                 { type: "moveObject", userIndex: 0, x: SPAWN_X, y: 0, z: SPAWN_Z - 20 },
             ],
             assertions: ({ users, harness }) => {
                 const obj = harness.getPlayerObject(users[0].user.id)!;
-                // Only physics (collision) constrains the move, and the path here is clear,
-                // so the player ends up at the requested position.
+                // Only collisions constrain movement, and the path is clear.
                 expect(obj.transform.pos.x).toBeCloseTo(SPAWN_X, 0);
                 expect(obj.transform.pos.z).toBeCloseTo(SPAWN_Z - 20, 0);
             },

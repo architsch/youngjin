@@ -67,8 +67,10 @@ claim to test, not text to read. In practice that means:
 - **Numbers.** Character budgets, rate limits, page sizes, thresholds. These come from a constant
   somewhere — find it and compare. A budget that has drifted produces work that fails validation at
   the last step.
-- **Referenced documents.** Every relative link resolves; every `/docs` page it points at still
-  covers what the skill says it covers.
+- **Referenced documents.** Every relative link and `#anchor` resolves; every `/docs` page it points
+  at still covers what the skill says it covers. Those pages are deliberately short maps (CLAUDE.md's
+  Documentation Guidelines), so a skill that needs a precise detail the page does not carry should
+  cite the source file or script instead, rather than asking for the page to grow.
 - **Claims about behaviour.** "Staging runs in production mode, so the dev OAuth bypass is off",
   "guest creation is capped per IP and User-Agent" — these are the load-bearing sentences. Confirm
   each against the code that implements it. When one is now false, the instruction built on top of

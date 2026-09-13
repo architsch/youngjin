@@ -1,7 +1,6 @@
 import SubPanelSection from "./subPanelSection";
 
-// The ambient light's entry in a room's settings (see CustomizeRoomPanel), which raises
-// AmbientLightPanel.
+// Room settings entry that raises AmbientLightPanel.
 export default function AmbientLightSection({ open, onToggle }: Props)
 {
     return <SubPanelSection title="Ambient Light" buttonId={AMBIENT_LIGHT_BUTTON_ID} open={open} onToggle={onToggle}/>;

@@ -41,12 +41,9 @@ export default class VoxelGameObject extends GameObject
         if (VoxelGameObject.materialParams?.texturePath !== currentTexturePackURL)
         {
             VoxelGameObject.materialParams = new InstancedTexturePackMaterialParams(currentTexturePackURL, 1024, 1024, 128, 128, "staticImageFromPath");
-            // The room's own faces are what a restricted zone is drawn on, so the material every one
-            // of them is drawn with is where the outline comes from (see RestrictedZoneOutlineUtil).
+            // Restricted zone outlines are drawn by the voxel material (see RestrictedZoneOutlineUtil).
             VoxelGameObject.materialParams.outlineColorHex = RESTRICTED_ZONE_OUTLINE_COLOR;
-            // Pinning the material's id keeps the mesh these quads are drawn from the same one
-            // across a change of texture pack, which is what lets the pack be swapped in place
-            // rather than rebuilding the room's mesh (see InstancedMeshBinding).
+            // A fixed material id lets texture packs swap in place (see InstancedMeshBinding).
             VoxelGameObject.materialParams.customMaterialId = VOXEL_TEXTURE_PACK_MATERIAL_ID;
         }
     }
@@ -59,9 +56,7 @@ export default class VoxelGameObject extends GameObject
             throw new Error(`Voxel material hasn't been defined yet.`);
         await super.onSpawn();
 
-        // The mesh is sized for the quads a room can have on show at once rather than for every
-        // quad the grid addresses, and its instances are borrowed from a pool for as long as a quad
-        // is drawn (see VoxelQuadInstanceUtil).
+        // Sized for visible quads, not every addressable quad; instances are lent (see VoxelQuadInstanceUtil).
         await this.instancedMeshGraphics.loadInstancedMesh(VOXEL_QUAD_GEOMETRY_ID,
             VoxelGameObject.materialParams, MAX_VISIBLE_VOXEL_QUADS_PER_ROOM, true);
 
@@ -76,14 +71,8 @@ export default class VoxelGameObject extends GameObject
         this.forEachQuadIndex(quadIndex => this.releaseVoxelQuadInstance(quadIndex));
     }
 
-    // "instanceId" is the ID of the voxelQuad's mesh instance that was
-    // hit by the user's pointer input. Which quad that instance is drawing has to be looked up,
-    // since an instance is lent to whichever quad is on show rather than belonging to one
-    // (see VoxelQuadInstanceUtil).
-    //
-    // A voxel is never picked out as an object (see VoxelObjectTypeClientConfig): what a click on one
-    // picks out is the face it landed on. So only what every click has to be is asked here, and not
-    // whether this kind of object lets the user take hold of one — which has no answer for a voxel.
+    // instanceId is looked up to find its current quad (see VoxelQuadInstanceUtil). Only the shared
+    // click conditions apply, since voxels aren't selected as objects.
     onClick(instanceId: number, hitPoint: THREE.Vector3)
     {
         if (!this.isSelectableClick(hitPoint))
@@ -122,18 +111,14 @@ export default class VoxelGameObject extends GameObject
             console.log(String(voxelQuadChange));
     }
 
-    // Re-bakes this voxel's quad instances so they follow a cosmetic transform of "visualObj" (e.g.
-    // EasingMotion's bounce). Each quad is recomputed from the voxel data, which composes the moved
-    // visual node via InstancedMeshGraphics.
+    // Re-bakes quads to follow visualObj's cosmetic transform.
     onVisualTransformChanged(): void
     {
         this.refreshAllQuads();
     }
 
-    // Re-applies every quad instance of this voxel from its current voxel data. Used both by the
-    // cosmetic-transform refresh above and when the voxel is rebound to a new room's grid (voxel
-    // objects persist across rooms — see ClientObjectManager.load — so their instances must be
-    // refreshed against the new room's data instead of being recreated).
+    // Re-applies all quads from voxel data; also used when the persisted voxel is rebound to a new
+    // room (see ClientObjectManager.load).
     refreshAllQuads(): void
     {
         if (this.voxel == undefined)
@@ -141,9 +126,7 @@ export default class VoxelGameObject extends GameObject
         this.forEachQuadIndex(quadIndex => this.updateVoxelQuadInstance(quadIndex));
     }
 
-    // Brings one quad's instance into line with what the voxel now holds: a quad that has come into
-    // view takes an instance out of the mesh's pool, one that has gone out of view hands its
-    // instance back, and one that was already on show keeps the instance it had.
+    // Rents an instance for a newly visible quad, returns it for a hidden one, or keeps it.
     updateVoxelQuadInstance(quadIndex: number)
     {
         if (this.voxel == undefined)
@@ -171,9 +154,7 @@ export default class VoxelGameObject extends GameObject
         this.instancedMeshGraphics.updateInstanceTransform(instancedMeshId, instanceId,
             offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ);
         this.updateTextureUV(quadIndex, instanceId, quad, scaleX, scaleY);
-        // Asked here rather than only when the zones change, because an instance is lent to whichever
-        // quad is on show: one that has just been taken out of the pool may last have been drawing a
-        // quad on the other side of the room, and would otherwise keep that quad's outline.
+        // Set on every update: a recycled instance may still carry another quad's outline.
         InstancedMeshGraphics.setInstanceOutline(instancedMeshId, instanceId,
             RestrictedZoneOutlineUtil.getOutlineStrength(quadIndex));
     }

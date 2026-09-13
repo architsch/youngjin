@@ -5,22 +5,10 @@ const TOOLTIP_WIDTH_PX = 240; // fixed, so the panel can be kept on screen witho
 const TOOLTIP_GAP_PX = 10; // gap between the panel's pointer and the anchor's edge
 const SCREEN_MARGIN_PX = 8; // how close to the viewport's edge the panel may sit
 
-// An explanatory panel that hangs off the control it was opened from — a "?" button beside a
-// section title, say — and points back at it. Whatever renders it owns the open/closed state and
-// tells it which element to hang off (by DOM element id), what to say, and what to do when it is
-// dismissed, so the panel itself knows nothing about the feature being explained.
-//
-// It is placed the way a coach mark is (see ScreenCoachMark): below an anchor sitting in the upper
-// half of the screen and above one in the lower half, pulled inward when it would otherwise hang
-// off the edge of the viewport while its pointer stays on the anchor, and following the anchor as
-// the layout shifts. Its position is viewport-fixed rather than page-absolute, so that it can be
-// rendered from within a scrolling panel — a form, typically — without being cut off by it.
-//
-// The next click anywhere on the screen takes the panel down, the panel's own area included —
-// unlike a coach mark, which is passed through, this one takes the click that dismisses it, so that
-// reaching for a panel the user is done reading cannot also work whatever the panel is covering. A
-// click on the anchor itself is left alone: that click is the caller's own toggle closing the
-// panel, and dismissing it here as well would only close it in time for the toggle to reopen it.
+// Explanatory panel anchored to a control (by DOM id), placed like a coach mark (see ScreenCoachMark)
+// but viewport-fixed so scrolling containers can't clip it. The caller owns open state. The next click
+// anywhere dismisses it and is consumed (so it can't activate what's underneath); clicks on the anchor
+// are left to the caller's toggle.
 export default function TooltipPanel({targetElementId, text, onDismiss}: Props)
 {
     useEffect(() => {
@@ -30,12 +18,8 @@ export default function TooltipPanel({targetElementId, text, onDismiss}: Props)
                 return;
             onDismiss();
         };
-        // Dismissing on the click rather than on the press is what keeps the panel from being
-        // clicked through: leaving on the press would take the panel out of the way before the
-        // click that follows is hit-tested, handing that click to whatever the panel was covering.
-        // Listening during the capture phase keeps the panel from dismissing itself, since the
-        // click that opened it has long passed this point by the time the listener goes on, and it
-        // means a click that something else swallows still counts.
+        // Dismiss on click (not press), so the click can't fall through to what the panel covered.
+        // Capture phase also sees clicks that others swallow.
         document.addEventListener("click", dismiss, true);
         return () => document.removeEventListener("click", dismiss, true);
     }, [targetElementId, onDismiss]);
@@ -57,8 +41,7 @@ export default function TooltipPanel({targetElementId, text, onDismiss}: Props)
             top: showBelowAnchor ? rect.bottom + TOOLTIP_GAP_PX : rect.top - TOOLTIP_GAP_PX,
             width: TOOLTIP_WIDTH_PX,
         }}>
-        {/* The pointer is a square rotated into a diamond, half of it tucked behind the panel
-            so that only the half sticking out — a triangle aimed at the anchor — is seen. */}
+        {/* Pointer: a rotated square half-hidden behind the panel, showing a triangle. */}
         <div className="absolute size-3 -ml-1.5 rotate-45 bg-gray-100"
             style={showBelowAnchor ? { left: pointerLeft, top: -4 } : { left: pointerLeft, bottom: -4 }}/>
         {text}

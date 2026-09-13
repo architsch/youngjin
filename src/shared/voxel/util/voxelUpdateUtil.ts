@@ -8,26 +8,9 @@ import WallAttachedObjectUtil from "../../object/util/wallAttachedObjectUtil";
 import RoomValidationUtil from "../../room/util/roomValidationUtil";
 import RestrictedZoneUtil from "./restrictedZoneUtil";
 
-// Every entry point here takes a quadIndex, and a quadIndex arrives from outside: decoded off a
-// voxel edit signal, or computed by a caller from a selection. The arithmetic that turns one back
-// into a row, a column and a collision layer answers for any number at all — it divides and takes
-// remainders, and neither objects — so an index from outside the room comes back as the coordinates
-// of some quad rather than as an error.
-//
-// As the room is currently shaped, an index past the end happens to divide out to a row past the
-// end too, which getVoxel already refuses. That is arithmetic rather than a guarantee, and it is
-// not what the checks further in are for, so it is not what this relies on:
-//
-//   - It names the fault. Without it the log says "Voxel not found", which sent a reader looking
-//     for a missing voxel the last time an index field turned out to be too narrow.
-//   - It covers the width of the field itself. A deployment leaves browser sessions running the
-//     previous bundle, whose narrower quadIndex runs into the bytes behind it and decodes as an
-//     enormous number; refusing that is what keeps the changeover from writing somewhere else.
-//   - It rejects an index that is not a whole number, which no check further in does.
-//
-// The check is repeated in the mutating methods rather than left to the can* predicates alone,
-// because a mutator called without a room skips its predicate entirely — that is how a brand-new
-// room is generated, and how a client applies an update the server has already accepted.
+// Validates externally supplied quadIndex values. The index arithmetic accepts any number, so this gives
+// a clear error, rejects huge values from old client bundles with a narrower field, and rejects
+// non-integers. Repeated in mutators, since mutators called without a room skip the can* predicates.
 function quadIndexIsInRange(methodName: string, quadIndex: number): boolean
 {
     if (VoxelQueryUtil.isValidVoxelQuadIndex(quadIndex))
@@ -37,18 +20,9 @@ function quadIndexIsInRange(methodName: string, quadIndex: number): boolean
     return false;
 }
 
-// Every entry point below is told who is asking, because being allowed to edit is a fact about the
-// person: he owns this room, or he is an admin and this is a hub whose restricted zones are his
-// alone (see @docs/gameplay/restricted_zone.md).
-//
-// Each mutator is asked in one of two ways, and the room is what tells them apart:
-//
-//   - **With a room**, the edit is somebody's, and it is checked against what that somebody may do
-//     here. The person has to be named: a room handed over with no user is that same request with
-//     its subject missing, so it is refused rather than waved through — whoever means to have an
-//     edit checked has to say who it is being checked for.
-//   - **With no room**, the edit is on nobody's behalf — a room being generated, or a format
-//     converter bringing an old grid up to date — and there is nothing to check it against.
+// Entry points take the requesting user (permission is personal: owner, or admin in a hub).
+// - With a room: the edit is validated for that user (a missing user is refused).
+// - Without a room: generation or format conversion, with nothing to validate.
 const VoxelUpdateUtil =
 {
     canAddVoxelBlock(user: User, room: Room, quadIndex: number): boolean
@@ -108,14 +82,12 @@ const VoxelUpdateUtil =
 
     canRemoveVoxelBlock(user: User, room: Room, quadIndex: number): boolean
     {
-        // A block with something hanging on it cannot go on its own: the attachment would be left
-        // with no wall behind it. Taking both down together is a request of its own, made through
-        // canRemoveVoxelBlockWithItsWallAttachments once the attachments have been removed.
+        // Blocks with attachments can't be removed alone; removing both uses
+        // canRemoveVoxelBlockWithItsWallAttachments after the attachments are gone.
         return VoxelUpdateUtil.canRemoveVoxelBlockWithItsWallAttachments(user, room, quadIndex)
             && WallAttachedObjectUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex).length == 0;
     },
-    // Everything canRemoveVoxelBlock asks of the block itself, minus the objects hanging on it —
-    // for a caller that removes those first, and so leaves nothing behind without its support.
+    // canRemoveVoxelBlock without the attachment check (for callers that remove attachments first).
     canRemoveVoxelBlockWithItsWallAttachments(user: User, room: Room, quadIndex: number): boolean
     {
         if (!quadIndexIsInRange("canRemoveVoxelBlockWithItsWallAttachments", quadIndex))
@@ -170,8 +142,7 @@ const VoxelUpdateUtil =
         return true;
     },
 
-    // Nothing about restricted zones is asked here: a move is an add and a remove, and each of those
-    // asks for itself, so a block may neither be carried into a zone nor out of one.
+    // No zone check here: the add and remove each check, so blocks can't cross zone boundaries.
     canMoveVoxelBlock(user: User, room: Room, quadIndex: number,
         rowOffset: number, colOffset: number, collisionLayerOffset: number): boolean
     {
@@ -228,9 +199,7 @@ const VoxelUpdateUtil =
         const targetQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(
             row + rowOffset, col + colOffset, "y", "-", newCollisionLayer);
 
-        // The offsets arrive from outside alongside the quadIndex, so the destination they point at
-        // is no more trusted than the source: an offset carrying the block past the edge of the grid
-        // is reported here as an invalid index rather than resolved to a cell on the far side.
+        // Offsets are external too, so an off-grid destination is reported as invalid, not wrapped.
         if (!quadIndexIsInRange("moveVoxelBlock (destination)", targetQuadIndex))
             return false;
 
@@ -239,8 +208,7 @@ const VoxelUpdateUtil =
         for (let i = startIndex; i < startIndex + NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
             quadTextureIndicesWithinLayer.push(voxels[0].quadsMem.quads[i] & 0b01111111);
 
-        // Use internal helpers directly to avoid double user-role checking.
-        // canMoveVoxelBlock already validated both add and remove.
+        // Internal helpers avoid re-checking; canMoveVoxelBlock already validated both halves.
         const addRow = VoxelQueryUtil.getVoxelRowFromQuadIndex(targetQuadIndex);
         const addCol = VoxelQueryUtil.getVoxelColFromQuadIndex(targetQuadIndex);
         const addCollisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(targetQuadIndex);
@@ -269,8 +237,7 @@ const VoxelUpdateUtil =
         if (!quadIndexIsInRange("canSetVoxelQuadTexture", quadIndex))
             return false;
 
-        // Asked of the face rather than of the voxel it belongs to, so that the surface a zone is
-        // seen through from outside it stays paintable — see RestrictedZoneUtil.
+        // Checked per face, so a zone's outer faces stay paintable (see RestrictedZoneUtil).
         if (RestrictedZoneUtil.blocksVoxelQuadEdit(user, room, quadIndex))
             return false;
 
@@ -372,10 +339,8 @@ function updateVoxelBlockSide(voxels: Voxel[], voxel: Voxel, collisionLayer: num
     }
 
     const myBlockOccupied = VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer);
-    // A neighbour outside the grid counts as solid, so the room's outer shell is never drawn: the
-    // orbit camera pulls back past the boundary walls, and a shell drawn from out there would hide
-    // the very room the user is looking into. Only x/z faces can point out of the grid — the y ones
-    // stay within their own voxel — so the floor and ceiling tiles are untouched by this.
+    // Out-of-grid neighbours count as solid, so the room's outer shell is never drawn (it would hide the
+    // room from an orbit camera outside the walls). Only x/z faces can point out of the grid.
     const adjBlockOccupied = (adjBlockVoxel == undefined) ||
         VoxelQueryUtil.isVoxelCollisionLayerOccupied(adjBlockVoxel, adjBlockCollisionLayer);
 

@@ -16,13 +16,8 @@ import { cameraModeObservable } from "../../system/clientObservables";
 
 const forwardTemp = new THREE.Vector3();
 
-// The walk out of the doorway an arriving player is given: how far it carries him, how fast, and how
-// long it may go on for at the most. The distance is what normally ends it; the time limit is there
-// because a player who arrived facing something solid would otherwise never cover the distance and
-// would be held walking into it forever.
-//
-// He starts behind the door and the stride is meant to leave him just clear of it, so its length is
-// simply the two distances laid end to end, with the door's own face between them.
+// The walk out of the doorway on arrival. Normally ends by distance; the time limit covers arriving
+// facing something solid. The stride spans from behind the door to just clear of it.
 const ENTERING_STRIDE_LENGTH = SPAWN_DIST_BEHIND_DOOR + ENTRANCE_DIST_IN_FRONT_OF_DOOR;
 const ENTERING_SPEED = 3;
 const ENTERING_MAX_DURATION = 1.5; // in seconds
@@ -32,13 +27,8 @@ export default class PlayerController extends GameObjectComponent
     dx: number = 0;
     dy: number = 0;
 
-    // A player arriving in a multiplayer room spawns behind a door and is walked out from under it,
-    // so that what he sees first is the room rather than the back of a panel, and so that he is
-    // never left standing inside the doorway he came through.
-    //
-    // Where that is, and which way it faces, is whatever the server put him down at — a room may
-    // hold several doors, and he arrives behind whichever one he was routed to (see
-    // SpawnHotspotUtil). A player is drawn facing along his object's -Z, so that is the way out.
+    // Multiplayer arrivals spawn behind a door (see SpawnHotspotUtil) and walk out along -Z, so the
+    // first view is the room and the player never rests in the doorway.
     private fullyEntered: boolean = false;
     private spawnPos: {x: number, z: number} = {x: 0, z: 0};
     private enteringDir: {x: number, z: number} = {x: 0, z: 0};
@@ -67,9 +57,7 @@ export default class PlayerController extends GameObjectComponent
         this.keyInput.onSpawn(this);
     }
 
-    // Records the stride out of the doorway: where it starts and which way it runs. A single-player
-    // room is not entered through a door at all — its player is placed by the mode's own config and
-    // its opening is a scripted step's to direct — so there is nothing there to walk out of.
+    // Single-player rooms aren't entered through a door, so there's nothing to walk out of.
     private beginEntering(): void
     {
         this.fullyEntered = App.getCurrentRoom()?.roomType == RoomTypeEnumMap.SinglePlayer;

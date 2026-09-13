@@ -20,62 +20,42 @@ import SetObjectMetadataSignal from "../setObjectMetadataSignal";
 import SetObjectTransformSignal from "../setObjectTransformSignal";
 import { ObjectMetadataKeyEnumMap } from "../objectMetadataKey";
 
-// Which of the pre-encoded compositions a wall lamp is drawn from, and the version of the codec that
-// names it. What the composition actually is — a single flat quad, standing a hair off the wall and
-// filling the footprint below — is authored in the pre-encoding source rather than here, so that a
-// lamp with a body later is an edit to that file rather than to this one
-// (see @docs/graphics/instanced_mesh_composition.md).
+// Pre-encoded composition index and codec version for lamps (the shape is authored in the pre-encoding
+// source; see @docs/graphics/instanced_mesh_composition.md).
 const WALL_LAMP_COMPOSITION_INDEX = 0;
 const COMPOSITION_CODEC_VERSION = 0;
 
-// The tail of the instancedMeshId of any part drawn in the unlit material, which is the part of a
-// lamp whose color is the lamp's own rather than something the composition could have settled.
+// instancedMeshId suffix of unlit parts, whose color comes from the lamp's light.
 const EMISSIVE_MESH_ID_SUFFIX = MeshDataUtil.getInstancedMeshId("", INSTANCED_EMISSIVE_MATERIAL_ID);
 
-// How much wall a lamp lays claim to, and therefore how much of it is drawn: one voxel across and
-// one collision layer tall. A wall attachment claims whole voxel columns of wall horizontally
-// (see WallAttachedObjectUtil), so anything narrower would claim the same stretch while looking
-// like it had been squeezed into a corner of it. This is the lamp's collider, which is where
-// everything outside this file reads a lamp's footprint from — the box it is actually tested
-// against is a hair inside it (see PhysicsColliderStateUtil).
+// One voxel wide, one layer tall (attachments claim whole columns). This is the collider; the tested
+// box is slightly inset (see PhysicsColliderStateUtil).
 const LAMP_FOOTPRINT_WIDTH = 1;
 const LAMP_FOOTPRINT_HEIGHT = COLLISION_LAYER_HEIGHT;
 
-// Every lamp in the room draws its parts from one pool of mesh instances, so the room can only hold
-// as many as that pool was sized for. What actually bounds the number is not the drawing — the block
-// map costs the same whether a room holds three lamps or three hundred (see LightBlockMap) — but the
-// propagation each one costs, the clutter of a wall covered in them, and the size of the room's own
-// stored contents.
+// Bounded by the mesh pool, propagation cost, clutter and stored size (the block map itself doesn't
+// scale with lamp count).
 const MAX_LAMPS_PER_ROOM = 64;
 const MAX_MESH_INSTANCES_PER_LAMP = 4;
 
-// Where each of the lamp's settings sits in its stored string. Fixed positions, never reordered: a
-// character's position is its whole meaning, so moving one re-lights every lamp already installed.
+// Character positions in the stored string; never reorder.
 const COLOR_CHAR_INDEX = 0;
 const INTENSITY_CHAR_INDEX = 1;
 const RANGE_CHAR_INDEX = 2;
 
-// A lamp with nothing said about it burns plain white, at about a quarter of the strength it can be
-// given and over most of a room. Chosen so that a lamp is always *something* — a lamp that arrived
-// dark would read as broken rather than as unconfigured, and there is nothing on screen to tell the
-// two apart by — and so that it arrives as an ordinary room light rather than at the top of a range
-// that exists for dramatic effect (see LampLightUtil).
+// Default: white, moderate intensity, room-sized range, so a new lamp is visibly an ordinary light
+// (see LampLightUtil).
 const DEFAULT_COLOR_INDEX = 0;
 const DEFAULT_INTENSITY = 3;
 const DEFAULT_RANGE = 6;
 
-// The metadata a lamp answers to, which is only the light it gives off. Notably *not* its
-// composition: what a lamp looks like is derived from its light rather than authored beside it (see
-// generateDefaultParts below), so there is nothing about its appearance left to store, and a stored
-// composition could only ever be one that disagreed with the light.
+// Only the light is editable; the appearance is derived from it (see generateDefaultParts).
 const editableMetadataKeys = [
     ObjectMetadataKeyEnumMap.LightProperties,
 ];
 
-// A lamp is a light somebody installed on a wall — the only thing in the game that lights a room
-// other than the light every visitor carries (see @docs/graphics/lighting.md). It is anybody's to
-// install, move, re-light and take down, on the same terms as a canvas: the room's restricted zones
-// are what keep one out of a stretch that is not the user's (see ObjectUpdateUtil).
+// Wall lamps (see @docs/graphics/lighting.md). Anyone may edit them, subject to restricted zones (see
+// ObjectUpdateUtil).
 const WallLampObjectTypeConfig =
 {
     objectType: "WallLamp",
@@ -87,9 +67,7 @@ const WallLampObjectTypeConfig =
         if (obj.sourceUserID != user.id)
             return false;
 
-        // The room can only hold as many lamps as the mesh instance pool was sized for. Looked up
-        // here rather than at module scope: this file is inside the object-config import cycle (see
-        // DoorObjectTypeConfig).
+        // Looked up per call because of the config import cycle (see DoorObjectTypeConfig).
         const typeIndex = ObjectTypeConfigMap.getIndexByType("WallLamp");
         const lampCount = Object.values(room.objectById)
             .filter(obj => obj.objectTypeIndex === typeIndex).length;
@@ -109,15 +87,13 @@ const WallLampObjectTypeConfig =
         return true;
     },
     canUserSetObjectMetadata: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectMetadataSignal) => {
-        // The values themselves are settled by ObjectMetadataEntryMap, which clamps a lamp's color
-        // and strength into range, so what is left to ask here is only which keys a lamp answers to.
+        // Values are sanitized by ObjectMetadataEntryMap; only the key is checked here.
         return editableMetadataKeys.includes(signal.metadataKey);
     },
     components: {
         spawnedByAny: {
             collider: {
-                // A lamp lays claim to the patch of wall it is mounted on, so nothing else can be
-                // hung over it — and so that taking the wall away takes the lamp with it.
+                // Claims its wall patch; removing the wall removes the lamp.
                 colliderType: "wallAttachment",
                 hitboxSize: {
                     sizeX: LAMP_FOOTPRINT_WIDTH,
@@ -134,15 +110,9 @@ const WallLampObjectTypeConfig =
                 maxNumInstancesPerMesh: MAX_LAMPS_PER_ROOM * MAX_MESH_INSTANCES_PER_LAMP,
                 codecType: InstancedMeshCompositionCodecTypeEnumMap.Indexed,
                 codecVersion: COMPOSITION_CODEC_VERSION,
-                // The shape comes from the pre-encoded composition this kind of lamp is named
-                // against; the color is the lamp's own and is written over it here.
-                //
-                // **The color is derived from the lamp's light rather than authored beside it**,
-                // which is what keeps a lamp from being able to glow one color and light the room
-                // another — and it is exactly what an authored composition cannot know, since it is
-                // one drawing shared by every lamp however each of them is lit. A change to the
-                // light rebuilds these parts (see WallLampGameObject), so the two are re-derived
-                // together every time.
+                // Shape from the pre-encoded composition; emissive part color derived from the light, so
+                // the lamp can't glow one color and light another. Light changes rebuild the parts (see
+                // WallLampGameObject).
                 generateDefaultParts: (obj: AddObjectSignal) => {
                     const params: InstancedMeshCompositionParams = {};
                     const parts: InstancedMeshCompositionPart[] = [];
@@ -163,18 +133,8 @@ const WallLampObjectTypeConfig =
             lightSource: {},
         },
     },
-    // What a lamp gives off, to and from the three characters it stores.
-    //
-    // The two light settings are stored as the quantities themselves rather than as positions on a
-    // scale (see LampLightUtil), which is what lets the same number be shown to whoever is adjusting
-    // the lamp. They still fit in one character each, since everything stored on an object is
-    // quantized the same way (see StringUtil) and both ranges are far inside what one character
-    // carries.
-    //
-    // Reading is total: any string at all decodes to a lamp, including the empty one a lamp arrives
-    // with before anybody has adjusted it, one from a version that stored fewer settings than this
-    // one does — a character past the end of the string reads back as that setting's default — and
-    // one carrying a number outside the range its setting allows, which is clamped into it.
+    // Encodes/decodes the stored light properties (quantities in one character each; see LampLightUtil).
+    // Decoding is total: missing characters default and out-of-range values clamp.
     util: {
         getColorIndex: (obj: AddObjectSignal): number =>
         {
@@ -188,9 +148,7 @@ const WallLampObjectTypeConfig =
         {
             return readRange(getLightProperties(obj));
         },
-        // The same string written back out after being read, which is how a value arriving from
-        // anywhere but this file is made safe to store (see ObjectMetadataEntryMap). Reading is
-        // total and writing clamps, so the round trip is the whole of the validation.
+        // Decode + encode round trip is the whole validation (see ObjectMetadataEntryMap).
         canonicalize: (rawLightProperties: string): string =>
         {
             return encodeLightProperties(
@@ -241,10 +199,7 @@ function readRange(lightProperties: string): number
         MIN_LAMP_RANGE, MAX_LAMP_RANGE);
 }
 
-// A stored character addresses far more numbers than any of these settings allows, so what comes
-// back is clamped to the setting's own range rather than to the encoding's — a lamp naming a range
-// no lamp has is asking for something that does not exist, exactly as one naming a palette entry
-// past the end of the palette is.
+// Clamped to the setting's own range, not the encoding's.
 function readValue(lightProperties: string, charIndex: number, fallback: number, min: number,
     max: number): number
 {
@@ -252,8 +207,7 @@ function readValue(lightProperties: string, charIndex: number, fallback: number,
     return NumUtil.clampInRange(raw, min, max);
 }
 
-// Clamping alone leaves NaN as NaN, and the character that comes of that is not one this encoding
-// can read back — so anything that is not a number at all is treated as the bottom of the range.
+// NaN becomes the minimum (clamping alone keeps NaN).
 function clampToWholeValue(n: number, min: number, max: number): number
 {
     if (!Number.isFinite(n))

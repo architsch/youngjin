@@ -1,81 +1,23 @@
 # The Admin Privilege
 
-Reference: @src/shared/room/util/roomValidationUtil.ts , @src/shared/object/types/objectTypeConfig/doorObjectTypeConfig.ts , @src/server/room/util/spawnHotspotUtil.ts , @src/server/user/util/userIdentificationUtil.ts
+Reference: @src/shared/room/util/roomValidationUtil.ts , @src/shared/object/types/objectTypeConfig/doorObjectTypeConfig.ts , @src/server/user/util/userIdentificationUtil.ts
 
-## Why it exists
+Admin is a user type that is granted manually in the database. Admins decide by hand how rooms connect through doors, which forms the world's room graph.
 
-Rooms are joined to one another by doors, and a world of many rooms is therefore a graph: each room a
-point, each pair of doors between two rooms an edge. Nothing can draw that graph for us. Which rooms
-should lead where, what each way through should be called, and where a traveller should come out are
-questions about how the world reads to somebody walking it — so they are made by hand, from inside
-the game, by a user who has been given the **admin** privilege.
+## Admin-only abilities
+- Adding, moving, removing, labeling and linking doors. This is **Hub rooms only**; a Regular room keeps its generated door.
+- Setting door colors (see [door_design.md](../geometry/door_design.md)).
+- Creating a new hub. The server otherwise creates one only when every hub is full.
+- Acting as a hub's superuser, which covers its texture pack, room settings and restricted zones.
 
-Being an admin is a property of the person, granted by hand in the database and by nothing in the
-product, and it means the same thing wherever he stands — unlike owning a room, which is a fact about
-one particular room and says nothing anywhere else.
+In all other respects an admin edits like any user.
 
-## What an admin may do
+## Enforcement
+- `RoomValidationUtil` answers both "is this user an admin" and "may this user edit this room's doors". Door operations run that check on the client and the server.
+- Admin HTTP routes re-read the user type from the database on every request (`UserIdentificationUtil`), so the client's claims are never trusted.
 
-- **Lay a room's doors.** Put one up on any wall wide enough, slide it along the wall or up and down
-  it, take it down, and set what it says, what that is written in, and where it goes.
-- **Finish a door.** Choose the three colours a door is made of, the same way a user finishes his own
-  character (see [door_design.md](../geometry/door_design.md)).
-- **Open a new hub.** Hubs are the rooms the game hands to everybody and the thoroughfares the world
-  is built out of. One is normally opened by the server when every existing hub is too crowded (see
-  [room_population.md](../networking/room_population.md)); an admin opens one because he needs
-  somewhere new to lead.
-- **Re-skin a hub.** A hub belongs to nobody, so its texture pack is nobody's to change but an
-  admin's.
-- **Draw a hub's restricted zones.** A hub is everybody's to build in, which is exactly why the parts
-  of it that hold the world together — the walls it shares with the rooms it leads to — have to be
-  somebody's to hold shut (see [restricted_zone.md](restricted_zone.md)).
+## Door semantics
+See [room_entrance.md](../geometry/room_entrance.md). A door's label is the name that the destination room looks up on arrival. A door with no destination, or one that points at its own room, is locked.
 
-**Doors are a Hub-only tool.** A Regular room belongs to one person, and keeps the one door
-generation gave it — an admin shapes the world out of the rooms the game owns rather than
-rearranging the way into somebody's own room.
-
-Everything else an admin does, he does as any user would. A Hub is already editable by anyone, so an
-admin builds, hangs pictures and installs lamps in one on the same terms as everybody else.
-
-## Where the privilege is checked
-
-In one place, `RoomValidationUtil`, which every other check reads. Two questions are asked there:
-whether the user is an admin at all, and whether the doors of *this* room are his to lay. Every door
-operation — putting one up, taking one down, moving it, changing anything it carries — goes through
-the second, and it is asked on the client and on the server alike, from the object type config a door
-is described by.
-
-The HTTP routes an admin uses ask the same question their own way, since a request arrives with no
-room attached: the user's type is re-read from the database on every request (see
-`UserIdentificationUtil`), so what the browser claims about itself never enters into it.
-
-## What a door means
-
-The semantics an admin is setting are described in
-[room_entrance.md](../geometry/room_entrance.md) — what a door carries, how a traveller's arrival
-point is chosen from the doors a room holds, and what a door with no destination does.
-
-Two of them are worth restating here, because they are what a world is actually built out of:
-
-- **A label is a name to be found by**, not only text on a plate. Pointing one door at another names
-  it, and the destination room is searched for a door by that name when the traveller arrives. Two
-  doors may share a name on purpose — several ways into the same place, one of them drawn at random.
-- **A door goes where it says and nowhere else.** One that names no room, or names the room it is
-  hanging in, says it is locked, whoever hung it and whether or not the room offers it to arrivals.
-  What keeps a room's own way in from shutting its visitors in is therefore the destination it is
-  generated with: the reserved id that names the hubs without naming one of them, which is always
-  somewhere to go. A door an admin hung and has not yet wired up is locked, since that is what it is.
-
-## Reaching the admin UI
-
-There is no admin mode to enter. What an admin has is a few more things on screen in the places they
-belong: an extra option when a wall is selected, a door that can be picked out rather than only
-walked through, and a room-settings button in a room nobody owns.
-
-A door is picked out the way anything else is, from inside edit mode: outside it a door is the way
-out of the room to an admin as much as to anybody else, and a click on it is a journey. Going through
-the door is also among the tools a picked-out door offers, since a door being worked on is still a
-door.
-
-Locally, the development server seeds an admin among its dev users, reachable through the
-`?devuser=` query parameter (see [local_dev.md](../devOps/local_dev.md)).
+## UI
+There is no separate admin mode. Admins see extra tools: adding a door to a selected wall, selecting doors in edit mode, and room settings in hubs. Locally, a dev admin is available through `?devuser=` (see [local_dev.md](../devOps/local_dev.md)).

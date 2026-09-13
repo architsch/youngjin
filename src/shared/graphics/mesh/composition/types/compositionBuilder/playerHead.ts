@@ -37,12 +37,8 @@ class PlayerHead_2 extends PlayerCompositionBuilder // upward-facing cylinder
     override run(): InstancedMeshCompositionBuilder
     {
         this.addUpwardFacingCylinder(ZERO_VEC3, {x: d, y: d, z: 4}, this.params.colors.head);
-        // Pad the player's face (front) with a box which provides a flat surface,
-        // so as to be able to put the player's eyes on it.
-        // (Explanation for "eyeHolderBoxCenterZ = -2 - s - 0.01 + 0.5"):
-        //      2 + s = radius of the circle (cylinder's cross section)
-        //      0.01 = slight offset to ensure that the front of the box won't z-fight with the cylinder's surface
-        //      0.5 = offset to ensure that the resulting "z" value is at the center of the box's z-range (The box's size on the z-axis is 1)
+        // A box padding the front of the head, so the eyes have a flat surface.
+        // eyeHolderBoxCenterZ = -(2 + s) (circle radius) - 0.01 (anti-z-fight) + 0.5 (half the box depth)
         const eyeHolderBoxCenterZ = -2 - s - 0.01 + 0.5;
         this.addBox({x: 0, y: 0, z: eyeHolderBoxCenterZ}, {x: 3, y: 1, z: 1}, this.params.colors.head);
         this.addEyes({x: 0, y: 0, z: eyeHolderBoxCenterZ - 0.5});

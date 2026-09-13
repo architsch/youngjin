@@ -5,28 +5,19 @@ import fs from "fs";
 const AUTH_STATE_PATH = path.join(__dirname, "../.auth/guest.json");
 const AUTH_STATE_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
 
-// This setup runs once before all authenticated tests. It creates a guest user
-// by visiting / (which auto-creates a guest and sets the thingspool_token
-// cookie), then saves the browser's storage state for reuse.
-//
-// To avoid burning through the staging server's rate limit (3 guests per
-// User-Agent per hour), it reuses a previously saved auth state if it's
-// less than 30 minutes old.
+// Creates a guest (visiting / sets thingspool_token) and saves the storage state. Reuses a recent saved
+// state (< 30 min) to stay under the staging guest creation limit.
 setup("authenticate as guest", async ({ page }) => {
     const authDir = path.dirname(AUTH_STATE_PATH);
     if (!fs.existsSync(authDir)) {
         fs.mkdirSync(authDir, { recursive: true });
     }
 
-    // Reuse existing auth state if it's recent enough AND still valid.
-    // A server restart (local dev or staging deploy) invalidates all
-    // in-memory sessions, so we verify the cached token with a quick
-    // navigation before trusting it.
+    // Reuse only if recent and still accepted (a server restart invalidates sessions).
     if (fs.existsSync(AUTH_STATE_PATH)) {
         const age = Date.now() - fs.statSync(AUTH_STATE_PATH).mtimeMs;
         if (age < AUTH_STATE_MAX_AGE_MS) {
-            // Load the saved cookies into the browser context, then
-            // check whether the server still accepts them.
+            // Load the saved cookies, then check the server still accepts them.
             await page.context().addCookies(
                 JSON.parse(fs.readFileSync(AUTH_STATE_PATH, "utf-8")).cookies ?? [],
             );
@@ -36,8 +27,7 @@ setup("authenticate as guest", async ({ page }) => {
                 console.log(`Reusing cached auth state (age: ${Math.round(age / 1000)}s)`);
                 return;
             }
-            // Token rejected — discard the stale cache and fall through
-            // to create a fresh guest session.
+            // Token rejected: discard the cache and create a fresh guest.
             // eslint-disable-next-line no-console
             console.log("Cached auth state is stale (server rejected token). Creating new guest.");
             fs.unlinkSync(AUTH_STATE_PATH);
@@ -63,8 +53,7 @@ setup("authenticate as guest", async ({ page }) => {
     // Save cookies for reuse by all authenticated test projects
     await page.context().storageState({ path: AUTH_STATE_PATH });
 
-    // Explicitly disconnect the socket so the server removes the player
-    // from the room. Without this, a stale player may persist on the server.
+    // Disconnect so the server removes the player from the room.
     await page.evaluate(() => {
         return new Promise<void>((resolve) => {
             const io = (window as any).__socket_io_instance;

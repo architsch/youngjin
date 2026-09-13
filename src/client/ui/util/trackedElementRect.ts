@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
 
-// Tracks the live bounding rectangle (in viewport coordinates) of the DOM element
-// with the given id, re-reading it every animation frame so that an on-screen overlay
-// can follow the element as the layout shifts. The returned rect only updates when the
-// element's position or size actually changes, so a stationary target costs no re-renders.
-// Returns null when no id is given or the element is not currently in the DOM.
+// Live viewport rect of the element with the given id, re-read every frame but only updating state on
+// change. Null if no id or the element isn't in the DOM.
 export default function useTrackedElementRect(elementId: string | null): DOMRect | null
 {
     const [rect, setRect] = useState<DOMRect | null>(null);

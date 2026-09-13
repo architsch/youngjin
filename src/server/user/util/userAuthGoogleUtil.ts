@@ -17,8 +17,7 @@ const UserAuthGoogleUtil =
 {
     login: async (req: Request, res: Response): Promise<void> =>
     {
-        // Dev mode: skip the provider round-trip entirely and fake a successful sign-in, so the
-        // guest→Member promotion can be tested locally without real OAuth credentials.
+        // Dev mode fakes the provider (see DevOAuthUtil).
         if (process.env.MODE == "dev")
         {
             await DevOAuthUtil.fakeSignIn(req, res);
@@ -70,23 +69,14 @@ const UserAuthGoogleUtil =
                 return;
             }
 
-            // The account this browser already holds a token for, if any, and only if that account
-            // is a guest. A guest is a placeholder for the account its user is about to have, so it
-            // is the one thing this sign-in may consume: upgraded in place where the email is new,
-            // discarded where it turns out to belong to somebody who already has an account.
-            //
-            // A member arriving here is signing in as somebody else, which says nothing whatsoever
-            // about the account they are leaving — so that account is not touched. Treating one as
-            // a guest would overwrite a real person's identity with the incoming one, or delete it
-            // outright, purely because they did not sign out first.
+            // The browser's current account, only if it's a guest: a guest may be upgraded (new email)
+            // or discarded (existing account). A member signing in as someone else is left untouched.
             const currentToken = req.cookies[CookieUtil.getAuthTokenName()];
             const currentUserID = currentToken ? UserTokenUtil.getUserIdFromToken(currentToken) : undefined;
             const currentUser = currentUserID ? await DBUserUtil.findUserById(currentUserID) : null;
             const guestId = currentUser?.userType == UserTypeEnumMap.Guest ? currentUserID : undefined;
 
-            // Where the browser is sent once the sign-in is settled. A brand-new member is sent
-            // into the room created for them below; everyone else lands on the plain page, which
-            // resumes them wherever they were before signing in.
+            // New members go to their new room; everyone else resumes where they were.
             let redirectPath = "/";
 
             if (existingUsersResult.data.length == 0) // new user
@@ -134,10 +124,7 @@ const UserAuthGoogleUtil =
                     memberUserID = result.data[0].id;
                 }
 
-                // Signing up is what earns the user a room of their own, so it is opened for them
-                // right away and named as the redirect target, which is what lands them inside it.
-                // Having to go and ask for a room first is the kind of friction a first-time user
-                // never gets past.
+                // Create the new member's room immediately and redirect into it.
                 const ownedRoomID = await OwnedRoomUtil.setUpFirstOwnedRoom(memberUserID);
                 if (ownedRoomID.length > 0)
                     redirectPath = `/${ownedRoomID}`;
@@ -169,9 +156,7 @@ const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
 const redirectURL = `${AddressUtil.getEnvDynamicURL()}/${USER_API_ROUTE_PATH}/login_google_callback`;
 const userInfoURL = `https://www.googleapis.com/oauth2/v3/userinfo?alt=json`;
 
-// The account chooser is asked for explicitly, so that a user who came here to sign in as somebody
-// else is actually given the choice. Without it, a browser holding a single provider session is
-// sent straight back in as that same account, with no say in the matter.
+// Forces the account chooser, so users can pick a different account.
 function generateOAuthURL(): string
 {
     return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&response_type=code&redirect_uri=${redirectURL}&scope=openid%20profile%20email&access_type=offline&state=${crypto.randomUUID()}&prompt=select_account%20consent`;
