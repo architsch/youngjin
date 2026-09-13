@@ -73,15 +73,15 @@ export default class VoxelGameObject extends GameObject
 
     // instanceId is looked up to find its current quad (see VoxelQuadInstanceUtil). Only the shared
     // click conditions apply, since voxels aren't selected as objects.
-    onClick(instanceId: number, hitPoint: THREE.Vector3)
+    trySelect(instanceId: number): boolean
     {
-        if (!this.isSelectableClick(hitPoint))
-            return;
+        if (!GameModeUtil.isInEditMode())
+            return false;
 
         const quadIndex = VoxelQuadInstanceUtil.getQuadIndex(instanceId);
         if (quadIndex < 0)
-            return; // The instance has been handed back since the ray was cast, so it draws nothing.
-        VoxelQuadSelection.trySelect(this.getVoxel(), quadIndex);
+            return false; // The instance has been handed back since the ray was cast, so it draws nothing.
+        return VoxelQuadSelection.trySelect(this.getVoxel(), quadIndex);
     }
 
     getVoxel(): Voxel

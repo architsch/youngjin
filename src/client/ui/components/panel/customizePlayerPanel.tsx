@@ -8,9 +8,6 @@ import PlayerCompositionConstants from "../../../../shared/graphics/mesh/composi
 import StepperInput from "../input/stepperInput";
 import PaletteColorInput from "../input/paletteColorInput";
 import PartShapeIcon from "../../svg/icons/partShapeIcon";
-import ClientEventHistoryUtil from "../../../system/util/clientEventHistoryUtil";
-import ClientEvent from "../../../system/types/clientEvent";
-import { ClientEventType } from "../../../system/types/clientEventType";
 import createDeferredSave from "../../util/deferredSave";
 import ScrollPanel from "./scrollPanel";
 
@@ -44,7 +41,6 @@ export default function CustomizePlayerPanel()
         trySave();
         mutateParams(liveParams);
         rebuildMyPlayerParts();
-        ClientEventHistoryUtil.add(new ClientEvent(ClientEventType.ManuallyChangedPlayerPart));
         setEditCount(prev => prev + 1);
     };
 

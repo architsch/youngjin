@@ -10,7 +10,7 @@ A `GameMode` decides the camera behavior, whether the player can walk, and which
 The mode is stored separately from camera state, because the camera briefly has no target while one selection replaces another.
 
 ## Switching
-- Edit mode can only be entered through the top-bar toggle, and it opens with the user's own character selected.
+- Edit mode can only be entered through the top-bar toggle. It opens on the nearest voxel quad or object in the middle of the view that can be selected, looking past objects that refuse (e.g. other players) but never through a room surface. If there is none, it opens on the user's own character, even past a step's selection lock.
 - It is left through the toggle or the back gesture (Escape / device Back). The back gesture closes popups and closable panels first (`ClosablePanelUtil`). Leaving clears the selection.
 - Selecting or deselecting never changes the mode.
 - Edit mode is open to everyone. Permissions are checked per edit (see [restricted_zone.md](restricted_zone.md)).

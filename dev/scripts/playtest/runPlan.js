@@ -203,10 +203,9 @@ async function runPlan(plan)
 
                 case "enterEditMode":
                 {
-                    // Edit mode opens on the character, so its controls appearing proves the mode has a selection.
                     await page.locator("#gameModeToggleSwitch").click({ timeout: action.timeout || 15_000 });
-                    await page.locator("#customizePlayerOptions")
-                        .waitFor({ state: "visible", timeout: 15_000 });
+                    await Interact.waitForGameMode(page, "edit", 15_000);
+                    // Read separately: the page being in the mode doesn't prove the switch shows it.
                     record.switchShowsEdit =
                         await page.locator("#gameModeToggleSwitch").getAttribute("aria-checked") === "true";
                     break;
@@ -215,9 +214,7 @@ async function runPlan(plan)
                 case "exitEditMode":
                 {
                     await page.locator("#gameModeToggleSwitch").click({ timeout: action.timeout || 15_000 });
-                    await page.locator("#customizePlayerOptions")
-                        .waitFor({ state: "hidden", timeout: 15_000 });
-                    // The switch reading "Play" again proves the mode ended (not just that the panel closed).
+                    await Interact.waitForGameMode(page, "play", 15_000);
                     record.switchShowsEdit =
                         await page.locator("#gameModeToggleSwitch").getAttribute("aria-checked") === "true";
                     break;

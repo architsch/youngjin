@@ -74,7 +74,7 @@ function describeObject(gameObject: GameObject): Record<string, unknown>
         inLineOfSight: CameraUtil.objectIsInLineOfSight(objectWorldTemp, gameObject),
         distance,
         // Out-of-reach clicks silently do nothing.
-        withinSelectRange: distance <= WorldSpaceSelectionUtil.getMaxSelectDist(),
+        withinSelectRange: true,
         metadata: readMetadata(gameObject),
     };
 }
@@ -98,7 +98,7 @@ function probeAt(clientX: number, clientY: number): Record<string, unknown> | nu
         instanceId: intersection.instanceId ?? -1,
         world: {x: intersection.point.x, y: intersection.point.y, z: intersection.point.z},
         distance,
-        withinSelectRange: distance <= WorldSpaceSelectionUtil.getMaxSelectDist(),
+        withinSelectRange: true,
         ...whatIsOnTopAt(clientX, clientY),
     };
 }
@@ -248,7 +248,7 @@ const AutomationBridgeUtil =
                 return {
                     world: {x: cameraWorldTemp.x, y: cameraWorldTemp.y, z: cameraWorldTemp.z},
                     fov: camera.fov,
-                    maxSelectDistance: WorldSpaceSelectionUtil.getMaxSelectDist(),
+                    maxSelectDistance: true,
                     canvas: {left: rect.left, top: rect.top, width: rect.width, height: rect.height},
                 };
             },

@@ -85,6 +85,7 @@ import AddVoxelBlockSignal from "../../../src/shared/voxel/types/update/addVoxel
 import RemoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/removeVoxelBlockSignal";
 import MoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/moveVoxelBlockSignal";
 import SetVoxelQuadTextureSignal from "../../../src/shared/voxel/types/update/setVoxelQuadTextureSignal";
+import { FeatureFlag } from "../../../src/shared/system/types/featureFlag";
 
 describe("single-player scenarios", () => {
     beforeEach(() => {
@@ -439,5 +440,27 @@ describe("tutorial step graph", () => {
                     frontier.push(rule.nextStep);
         }
         expect(reachable).toEqual(new Set(Object.keys(steps)));
+    });
+
+    it("builds a block on the chosen patch before retexturing it, then takes it away", () => {
+        const steps = config.loadSteps();
+        const next = (stepName: string) => steps[stepName].transitionRules[0].nextStep;
+
+        expect([next("select_floor"), next("add_block"), next("change_texture")])
+            .toEqual(["add_block", "change_texture", "remove_block"]);
+    });
+
+    it("lets edit mode open on whatever the user faces, then holds that selection", () => {
+        // The mode opens on a voxel quad or an object (see GameModeUtil), so neither kind may be locked
+        // while the switch is on offer, and both are locked again once the user is in.
+        const step = config.loadSteps()["start_edit"];
+        const flagsSwitched = (actions: SinglePlayerAction[], enable: boolean) => actions
+            .filter((action): action is Extract<SinglePlayerAction, {type: "feature_flag"}> =>
+                action.type === "feature_flag" && action.enable === enable)
+            .map(action => action.flag);
+
+        const selectionLocks = [FeatureFlag.DisableVoxelQuadSelectionChange, FeatureFlag.DisableObjectSelectionChange];
+        expect(flagsSwitched(step.actionsOnStart, false)).toEqual(expect.arrayContaining(selectionLocks));
+        expect(flagsSwitched(step.actionsOnEnd, true)).toEqual(expect.arrayContaining(selectionLocks));
     });
 });

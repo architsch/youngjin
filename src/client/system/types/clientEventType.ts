@@ -4,5 +4,4 @@ export enum ClientEventType
     ManuallyAddedVoxelBlock,
     ManuallyRemovedVoxelBlock,
     ManuallyChangedVoxelQuadTexture,
-    ManuallyChangedPlayerPart,
 }

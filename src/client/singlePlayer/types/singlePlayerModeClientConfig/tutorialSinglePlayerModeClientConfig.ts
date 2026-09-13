@@ -88,6 +88,8 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                     {type: "ui_outline_capsule", targetElementId: "gameModeToggleSwitchTrack",
                         thicknessPx: () => MODE_SWITCH_OUTLINE_THICKNESS_PX},
                     {type: "feature_flag", flag: FeatureFlag.DisableGameModeTransition, enable: false},
+                    // The mode opens on whatever the user faces, which may be either kind.
+                    {type: "feature_flag", flag: FeatureFlag.DisableVoxelQuadSelectionChange, enable: false},
                     {type: "feature_flag", flag: FeatureFlag.DisableObjectSelectionChange, enable: false},
                 ],
                 transitionRules: [{
@@ -99,7 +101,8 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                     {type: "clear_all_ui_and_gizmo"},
                     // Locked in edit mode until the step that teaches leaving it.
                     {type: "feature_flag", flag: FeatureFlag.DisableGameModeTransition, enable: true},
-                    // Keep the character selected for the next few steps.
+                    // Keep the selection the mode opened on for the next step.
+                    {type: "feature_flag", flag: FeatureFlag.DisableVoxelQuadSelectionChange, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableObjectSelectionChange, enable: true},
                 ],
             },
@@ -107,7 +110,7 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                 // Wait for the orbit to settle before recording its view.
                 startDelay: 500,
                 actionsOnStart: [
-                    {type: "ui_headline", text: () => "This is you.<br>Watch it from different angles!"},
+                    {type: "ui_headline", text: () => "Edit mode selects what you were looking at.<br>Watch it from different angles!"},
                     // Record the current view rather than imposing one.
                     {type: "set_variable", name: EDIT_VIEW_AZIMUTH_DEG_VARIABLE,
                         computeValue: () => THREE.MathUtils.radToDeg(
@@ -123,25 +126,8 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                         azimuthDeg: () => SinglePlayerManager.getVariable(EDIT_VIEW_AZIMUTH_DEG_VARIABLE),
                         polarDeg: () => SinglePlayerManager.getVariable(EDIT_VIEW_POLAR_DEG_VARIABLE),
                         minDifferenceDeg: () => TUTORIAL_CAMERA_TURN_DEG}],
-                    nextStep: "customize_player",
-                    nextStepDelay: 500,
-                }],
-                actionsOnEnd: [
-                    {type: "clear_all_ui_and_gizmo"},
-                ],
-            },
-            "customize_player": {
-                startDelay: 500,
-                actionsOnStart: [
-                    {type: "ui_headline", text: () => "Customize your look."},
-                    {type: "ui_arrow", targetElementId: "customizePlayerOptions", arrowBias: "left"},
-                    {type: "ui_outline_rect", targetElementId: "customizePlayerOptions"},
-                ],
-                transitionRules: [{
-                    requirements: [{type: "client_events_occurred_after_step_began", negate: false,
-                        eventType: ClientEventType.ManuallyChangedPlayerPart, minNumEvents: () => 1}],
                     nextStep: "before_select_floor",
-                    nextStepDelay: 1000,
+                    nextStepDelay: 500,
                 }],
                 actionsOnEnd: [
                     {type: "clear_all_ui_and_gizmo"},
@@ -193,32 +179,15 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                         col: () => SinglePlayerManager.getVariable(FLOOR_HOTSPOT_VARIABLE).col,
                         collisionLayer: () => COLLISION_LAYER_NULL, facingAxis: "y",
                         orientation: "+"}],
-                    nextStep: "change_texture",
-                    nextStepDelay: 0,
-                }],
-                actionsOnEnd: [
-                    {type: "clear_all_ui_and_gizmo"},
-                    {type: "clear_orbit_camera_target_override"},
-                    // Lock the selection through the texture/build/remove steps; the steps move it
-                    // themselves (see "select_voxel_quad").
-                    {type: "feature_flag", flag: FeatureFlag.DisableVoxelQuadSelectionChange, enable: true},
-                ],
-            },
-            "change_texture": {
-                startDelay: 500,
-                actionsOnStart: [
-                    {type: "ui_headline", text: () => "Change the texture."},
-                    {type: "ui_arrow", targetElementId: "voxelQuadTextureOptions", arrowBias: "right"},
-                    {type: "ui_outline_rect", targetElementId: "voxelQuadTextureOptions"},
-                ],
-                transitionRules: [{
-                    requirements: [{type: "client_events_occurred_after_step_began", negate: false,
-                        eventType: ClientEventType.ManuallyChangedVoxelQuadTexture, minNumEvents: () => 1}],
                     nextStep: "add_block",
                     nextStepDelay: 0,
                 }],
                 actionsOnEnd: [
                     {type: "clear_all_ui_and_gizmo"},
+                    {type: "clear_orbit_camera_target_override"},
+                    // Lock the selection through the build/texture/remove steps; the steps move it
+                    // themselves (see "select_voxel_quad").
+                    {type: "feature_flag", flag: FeatureFlag.DisableVoxelQuadSelectionChange, enable: true},
                 ],
             },
             "add_block": {
@@ -232,17 +201,34 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                 transitionRules: [{
                     requirements: [{type: "client_events_occurred_after_step_began", negate: false,
                         eventType: ClientEventType.ManuallyAddedVoxelBlock, minNumEvents: () => 1}],
-                    nextStep: "remove_block",
+                    nextStep: "change_texture",
                     nextStepDelay: 0,
                 }],
                 actionsOnEnd: [
                     {type: "clear_all_ui_and_gizmo"},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockAddition, enable: true},
-                    // Select the top of the newly built block, which the next step removes.
+                    // Select the top of the newly built block, which the next steps retexture and remove.
                     {type: "select_voxel_quad",
                         row: () => SinglePlayerManager.getVariable(FLOOR_HOTSPOT_VARIABLE).row,
                         col: () => SinglePlayerManager.getVariable(FLOOR_HOTSPOT_VARIABLE).col,
                         collisionLayer: () => COLLISION_LAYER_MIN, facingAxis: "y", orientation: "+"},
+                ],
+            },
+            "change_texture": {
+                startDelay: 500,
+                actionsOnStart: [
+                    {type: "ui_headline", text: () => "Change the texture."},
+                    {type: "ui_arrow", targetElementId: "voxelQuadTextureOptions", arrowBias: "right"},
+                    {type: "ui_outline_rect", targetElementId: "voxelQuadTextureOptions"},
+                ],
+                transitionRules: [{
+                    requirements: [{type: "client_events_occurred_after_step_began", negate: false,
+                        eventType: ClientEventType.ManuallyChangedVoxelQuadTexture, minNumEvents: () => 1}],
+                    nextStep: "remove_block",
+                    nextStepDelay: 0,
+                }],
+                actionsOnEnd: [
+                    {type: "clear_all_ui_and_gizmo"},
                 ],
             },
             "remove_block": {

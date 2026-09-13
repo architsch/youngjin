@@ -236,9 +236,6 @@ export const ROOM_ALMOST_FULL_MARGIN = 4;
 
 // Gameplay
 
-// Base selection reach (first person); orbiting extends it (see WorldSpaceSelectionUtil).
-export const MAX_WORLDSPACE_SELECT_DIST = 10;
-
 // Initial entrance door cell for generated multiplayer rooms (admins may move it later, so don't read
 // this as the current entrance). Single-player rooms set their own.
 export const INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL = 16;

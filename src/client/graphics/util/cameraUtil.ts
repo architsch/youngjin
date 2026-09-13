@@ -6,10 +6,11 @@ import GameObject from "../../object/types/gameObject";
 import ClientObjectManager from "../../object/clientObjectManager";
 import InstancedMeshBinding from "../types/mesh/instancedMeshBinding";
 import ClientVoxelQueryUtil from "../../voxel/util/clientVoxelQueryUtil";
+import ObjectHit from "../types/objectHit";
 import { NEAR_EPSILON } from "../../../shared/system/sharedConstants";
 
 // All client raycasts. castBetweenPoints skips the voxel mesh (three.js tests every instance; the
-// voxel grid walk in ClientVoxelQueryUtil is far cheaper). castFromPointer includes it.
+// voxel grid walk in ClientVoxelQueryUtil is far cheaper). The casts through the view include it.
 
 const raycaster: THREE.Raycaster = new THREE.Raycaster();
 const ndcTemp: THREE.Vector2 = new THREE.Vector2();
@@ -54,12 +55,21 @@ const CameraUtil =
     castFromPointer: (ev: PointerEvent): THREE.Intersection | undefined =>
     {
         PointerCoordUtil.getNDC(ev, ndcTemp);
-        raycaster.setFromCamera(ndcTemp, GraphicsManager.getCamera());
-        raycaster.far = Infinity; // Whatever a previous cast between two points left behind.
+        return castThroughView(ndcTemp)[0];
+    },
 
-        intersectionsTemp.length = 0;
-        raycaster.intersectObjects(MeshFactory.getMeshes(), true, intersectionsTemp);
-        return intersectionsTemp[0];
+    // The objects the camera's line of sight (the middle of the view) meets, nearest first. Gizmos
+    // belong to no object, so they're left out.
+    getObjectsAlongLineOfSight: (): ObjectHit[] =>
+    {
+        const hits: ObjectHit[] = [];
+        for (const intersection of castThroughView(ndcTemp.set(0, 0)))
+        {
+            const gameObject = CameraUtil.getObjectFromIntersection(intersection);
+            if (gameObject != undefined)
+                hits.push({gameObject, instanceId: intersection.instanceId ?? -1});
+        }
+        return hits;
     },
 
     // Undefined for geometry that belongs to no object (e.g. gizmos).
@@ -89,6 +99,17 @@ const CameraUtil =
         const nearestObject = CameraUtil.getObjectFromIntersection(intersectionsTemp[0]);
         return (nearestObject == undefined) || (nearestObject == lookTargetObject);
     },
+}
+
+// Hits through a point of the view (in NDC), nearest first, into the shared array.
+function castThroughView(ndc: THREE.Vector2): THREE.Intersection[]
+{
+    raycaster.setFromCamera(ndc, GraphicsManager.getCamera());
+    raycaster.far = Infinity; // Whatever a previous cast between two points left behind.
+
+    intersectionsTemp.length = 0;
+    raycaster.intersectObjects(MeshFactory.getMeshes(), true, intersectionsTemp);
+    return intersectionsTemp;
 }
 
 export default CameraUtil;

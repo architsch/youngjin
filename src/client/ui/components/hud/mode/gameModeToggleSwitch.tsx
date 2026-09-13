@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import GameMode from "../../../../system/types/gameMode";
 import GameModeUtil from "../../../../system/util/gameModeUtil";
 import ClientObjectManager from "../../../../object/clientObjectManager";
+import CameraUtil from "../../../../graphics/util/cameraUtil";
 import { clientFeatureFlagsObservable, gameModeObservable } from "../../../../system/clientObservables";
 import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
 
@@ -33,10 +34,11 @@ export default function GameModeToggleSwitch()
         }
         else // Is in play mode
         {
-            // The mode opens on the user's own character, so there is no mode to open without one.
+            // The mode falls back on the user's own character (see GameModeUtil), so there is no mode
+            // to open without one.
             const myPlayer = ClientObjectManager.getMyPlayer();
             if (myPlayer)
-                GameModeUtil.enterEditMode(myPlayer);
+                GameModeUtil.enterEditMode(myPlayer, CameraUtil.getObjectsAlongLineOfSight());
         }
     };
 
@@ -44,6 +46,7 @@ export default function GameModeToggleSwitch()
     return <div
         id="gameModeToggleSwitch"
         role="switch"
+        aria-checked={gameMode == "edit"}
         aria-disabled={!canChangeGameMode}
         className={`flex flex-row items-center mr-3 gap-2 shrink-0 select-none touch-manipulation pointer-events-auto ${canChangeGameMode ? "cursor-pointer" : "opacity-50 cursor-not-allowed"}`}
         onClick={canChangeGameMode ? onClick : undefined}

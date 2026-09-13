@@ -10,7 +10,6 @@ import { ObjectMetadataKey } from "../../../shared/object/types/objectMetadataKe
 import Vec3 from "../../../shared/math/types/vec3";
 import ObjectTypeClientConfigMap from "../maps/objectTypeClientConfigMap";
 import ObjectSelection from "../../graphics/types/gizmo/objectSelection";
-import WorldSpaceSelectionUtil from "../../graphics/util/worldSpaceSelectionUtil";
 import GameModeUtil from "../../system/util/gameModeUtil";
 
 const vec3Temp = new THREE.Vector3();
@@ -58,15 +57,20 @@ export default abstract class GameObject
         }
     }
 
-    onClick(_instanceId: number, hitPoint: THREE.Vector3)
+    onClick(instanceId: number, _hitPoint: THREE.Vector3)
     {
-        if (this.canBeSelected(hitPoint))
-            ObjectSelection.trySelect(this);
+        this.trySelect(instanceId);
     }
 
-    canBeSelected(selectionPoint: THREE.Vector3): boolean
+    // Selects what the given instance shows (the object itself, unless overridden); false if refused.
+    trySelect(_instanceId: number): boolean
     {
-        if (!this.isSelectableClick(selectionPoint))
+        return this.canBeSelected() && ObjectSelection.trySelect(this);
+    }
+
+    canBeSelected(): boolean
+    {
+        if (!GameModeUtil.isInEditMode())
             return false;
 
         const selectionConfig = ObjectTypeClientConfigMap.getConfigByIndex(
@@ -79,22 +83,6 @@ export default abstract class GameObject
             return false;
 
         return selectionConfig.canBeSelectedByUserInEditMode(this, App.getUser(), room);
-    }
-
-    // Conditions shared by every selecting click: edit mode (see GameModeUtil) and within reach (see
-    // WorldSpaceSelectionUtil).
-    protected isSelectableClick(selectionPoint: THREE.Vector3): boolean
-    {
-        if (!GameModeUtil.isInEditMode())
-            return false;
-
-        if (selectionPoint)
-        {
-            GraphicsManager.getCamera().getWorldPosition(cameraPosTemp);
-            if (selectionPoint.distanceTo(cameraPosTemp) > WorldSpaceSelectionUtil.getMaxSelectDist())
-                return false;
-        }
-        return true;
     }
 
     // Optional callbacks for subclasses:

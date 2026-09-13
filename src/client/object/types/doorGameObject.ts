@@ -32,7 +32,7 @@ export default class DoorGameObject extends GameObject
     // check, not by whether selection succeeded); for everyone else it travels through the door.
     onClick(instanceId: number, hitPoint: THREE.Vector3)
     {
-        if (this.canBeSelected(hitPoint))
+        if (this.canBeSelected())
         {
             super.onClick(instanceId, hitPoint);
             return;

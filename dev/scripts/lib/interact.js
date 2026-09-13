@@ -141,19 +141,27 @@ async function gameMode(page)
     return (await call(page, "context")).gameMode;
 }
 
-// Enters edit mode via the top bar's switch unless already there; the character's panel appearing
-// confirms it (see GameModeUtil).
+// Waits for the page to report the mode. No panel proves it: edit mode opens on whatever the camera
+// faces (see GameModeUtil).
+async function waitForGameMode(page, mode, timeout = 10_000)
+{
+    const startedAt = Date.now();
+    while (Date.now() - startedAt < timeout)
+    {
+        if (await gameMode(page) === mode) return;
+        await sleep(150);
+    }
+    throw new Error(`The game did not get into ${mode} mode within ${timeout}ms.`);
+}
+
+// Enters edit mode via the top bar's switch unless already there.
 async function ensureEditMode(page, timeout = 10_000)
 {
     if (await gameMode(page) === "edit")
         return false;
 
     await ui.locator(page, "gameModeToggleSwitch").click({timeout});
-    await page.locator("#customizePlayerOptions").waitFor({state: "visible", timeout});
-
-    await sleep(300);
-    if (await gameMode(page) !== "edit")
-        throw new Error("Could not get into edit mode.");
+    await waitForGameMode(page, "edit", timeout);
     return true;
 }
 
@@ -569,7 +577,7 @@ module.exports = {
     hasBridge, waitForBridge, waitForRoom, call,
     find, findAll, diagnose,
     tap, tapToSelect, orbit, zoom, walk, approach,
-    gameMode, ensureEditMode,
+    gameMode, waitForGameMode, ensureEditMode,
     clickObject, clickSurface, clickSurfaceUntilEnabled, waitForSelection,
     ui, sleep,
 };

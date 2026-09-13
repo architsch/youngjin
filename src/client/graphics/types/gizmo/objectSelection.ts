@@ -33,10 +33,12 @@ export default class ObjectSelection
         return objectSelectionObservable.peek() != null;
     }
 
-    static trySelect(gameObject: GameObject): boolean
+    // force: overrides scripted locks (see GameModeUtil.enterEditMode).
+    static trySelect(gameObject: GameObject, force: boolean = false): boolean
     {
-        if (clientFeatureFlagsObservable.has(FeatureFlag.DisableObjectSelectionChange) ||
-            clientFeatureFlagsObservable.has(FeatureFlag.DisableAllSelectionChange))
+        if (!force &&
+            (clientFeatureFlagsObservable.has(FeatureFlag.DisableObjectSelectionChange) ||
+            clientFeatureFlagsObservable.has(FeatureFlag.DisableAllSelectionChange)))
         {
             return false;
         }
@@ -45,8 +47,8 @@ export default class ObjectSelection
         if (gameModeObservable.peek() != "edit")
             return false;
 
-        // Re-clicking the selection keeps it (only leaving edit mode deselects). Returns true either
-        // way, since GameModeUtil opens edit mode through this call.
+        // Re-clicking the selection keeps it (only leaving edit mode deselects), and it still counts
+        // as selected.
         const existingSelection = objectSelectionObservable.peek();
         if (existingSelection != null && existingSelection.gameObject === gameObject)
             return true;

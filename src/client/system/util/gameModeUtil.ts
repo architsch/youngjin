@@ -1,5 +1,6 @@
 import GameMode from "../types/gameMode";
 import GameObject from "../../object/types/gameObject";
+import ObjectHit from "../../graphics/types/objectHit";
 import ObjectSelection from "../../graphics/types/gizmo/objectSelection";
 import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";
 import WorldSpaceSelectionUtil from "../../graphics/util/worldSpaceSelectionUtil";
@@ -7,7 +8,7 @@ import { clientFeatureFlagsObservable, gameModeObservable, roomChangedObservable
 import { FeatureFlag } from "../../../shared/system/types/featureFlag";
 
 // Owns the current game mode (see @docs/gameplay/game_mode.md). Followers watch gameModeObservable.
-// Edit mode is entered only via the top-bar switch (opening on the user's character) and left via the
+// Edit mode is entered only via the top-bar switch (opening on what the camera faces) and left via the
 // switch or the back gesture. It's open to everyone; permissions are checked per edit. Every crossing
 // checks canChangeGameMode, since the back gesture bypasses the switch.
 
@@ -29,16 +30,18 @@ const GameModeUtil =
         return !clientFeatureFlagsObservable.has(FeatureFlag.DisableGameModeTransition);
     },
 
-    // Enters edit mode, on the user's own character.
-    enterEditMode: (myPlayer: GameObject): void =>
+    // Enters edit mode on the voxel quad or object the camera faces, or on the user's own character if
+    // nothing there can be selected. The line of sight is passed in: casting it here would import a
+    // cycle through GameObject (see CameraUtil.getObjectsAlongLineOfSight).
+    enterEditMode: (myPlayer: GameObject, lineOfSight: ObjectHit[] = []): void =>
     {
         if (!GameModeUtil.canChangeGameMode())
             return;
 
         gameModeObservable.set("edit");
-        // If the character can't be selected (e.g. a step locks selection), don't enter.
-        if (!ObjectSelection.trySelect(myPlayer))
-            gameModeObservable.set("play");
+        // Forced past scripted locks, since the mode always opens with something selected.
+        if (!WorldSpaceSelectionUtil.trySelectInLineOfSight(lineOfSight))
+            ObjectSelection.trySelect(myPlayer, true);
     },
 
     // Leaving drops the selection, even one pinned by a step (the pin only matters inside the mode).

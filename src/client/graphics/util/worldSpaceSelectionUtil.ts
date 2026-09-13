@@ -1,18 +1,17 @@
-import * as THREE from "three";
 import AABB3 from "../../../shared/math/types/aabb3";
-import GraphicsManager from "../graphicsManager";
 import PhysicsColliderStateUtil from "../../../shared/physics/util/physicsColliderStateUtil";
 import SelectionKind from "../types/gizmo/selectionKind";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import { cameraModeObservable, gameModeObservable, objectSelectionObservable,
     orbitCameraTargetOverrideObservable,
     voxelQuadSelectionObservable } from "../../system/clientObservables";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y,
-    MAX_WORLDSPACE_SELECT_DIST } from "../../../shared/system/sharedConstants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y } from "../../../shared/system/sharedConstants";
 import ObjectSelection from "../types/gizmo/objectSelection";
 import VoxelQuadSelection from "../types/gizmo/voxelQuadSelection";
+import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
+import ObjectHit from "../types/objectHit";
 
-const cameraPosTemp = new THREE.Vector3();
+const voxelTypeIndex = ObjectTypeConfigMap.getIndexByType("Voxel");
 
 // Framing size for collider-less objects.
 const defaultObjectHalfSize = {x: 0.5, y: 0.5, z: 0.5};
@@ -22,9 +21,6 @@ const pointTargetHalfSize = {x: 0, y: 0, z: 0};
 
 // Minimum orbit distance for in-place edits, so the surrounding wall and room stay in view.
 const SELECTION_ORBIT_MIN_DISTANCE = 5;
-
-// Selection reach while orbiting, as a multiple of orbit distance (>1 covers the edges of the view).
-const selectReachPerOrbitDistance = 1.75;
 
 // The current selection (one voxel quad or one object) and the camera's response to it. The camera
 // is pointed from here, not per selection, because replacing a selection is two changes and only the
@@ -52,27 +48,23 @@ export default class WorldSpaceSelectionUtil
             ObjectSelection.unselect(true);
     }
 
-    // Max click distance from the camera: a fixed arm's reach, or while orbiting, proportional to the
-    // orbit distance so anything the user can see can be selected.
-    static getMaxSelectDist(): number
+    // Selects the first voxel quad or object along a line of sight (nearest first) that can be selected.
+    // Refusing objects (e.g. another player) are looked past; a refusing quad ends the search, since a
+    // room surface hides what lies behind it.
+    static trySelectInLineOfSight(lineOfSight: ObjectHit[]): boolean
     {
-        return Math.max(MAX_WORLDSPACE_SELECT_DIST,
-            selectReachPerOrbitDistance * getSelectionOrbitDist());
+        for (const {gameObject, instanceId} of lineOfSight)
+        {
+            // Selects the quad for a voxel, or the object itself (see GameObject.trySelect).
+            if (gameObject.trySelect(instanceId))
+                return true;
+
+            const isVoxelQuad = gameObject.params.objectTypeIndex == voxelTypeIndex;
+            if (isVoxelQuad)
+                return false;
+        }
+        return false;
     }
-}
-
-// Zero when not orbiting.
-function getSelectionOrbitDist(): number
-{
-    const mode = cameraModeObservable.peek();
-    if (mode.type !== "orbit")
-        return 0;
-
-    GraphicsManager.getCamera().getWorldPosition(cameraPosTemp);
-    return Math.hypot(
-        cameraPosTemp.x - mode.target.center.x,
-        cameraPosTemp.y - mode.target.center.y,
-        cameraPosTemp.z - mode.target.center.z);
 }
 
 // Points the camera at whatever is currently selected, for as long as edit mode lasts.

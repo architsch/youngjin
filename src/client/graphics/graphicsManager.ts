@@ -82,6 +82,10 @@ const pointLightRoomHalfBrightness = 0.15;
 // The view distance fog distances were tuned for; farther cameras push the fog out proportionally.
 const referenceFogViewDistance = 8;
 
+// Far plane for the player's own eye: roughly the room's diagonal. Farther cameras push it out by their
+// view distance, so the room behind what they look at is still drawn.
+const baseCameraFar = 45;
+
 let currViewDistance = 0;
 const currRoomLightNearCamera = new THREE.Color(0, 0, 0);
 
@@ -127,8 +131,8 @@ const GraphicsManager =
     {
         return camera;
     },
-    // Distance to what the camera is looking at (0 = player's own eye). Sizes both the head light and
-    // the fog, so a pulled-back camera can still see the room.
+    // Distance to what the camera is looking at (0 = player's own eye). Sizes the head light, the fog
+    // and the far plane, so a pulled-back camera can still see the room.
     setViewDistance: (viewDistance: number) =>
     {
         if (viewDistance === currViewDistance)
@@ -136,6 +140,8 @@ const GraphicsManager =
         currViewDistance = viewDistance;
         refreshPointLight();
         refreshFog();
+        camera.far = baseCameraFar + currViewDistance;
+        camera.updateProjectionMatrix();
     },
     // Room lamp light around the camera, which the head light yields to (see refreshPointLight).
     setPointLightSurroundings: (roomLightNearCamera: THREE.Color) =>
@@ -210,7 +216,7 @@ const GraphicsManager =
                 RoomPrefsUtil.getAmbientIntensity(currRoomPrefs));
             scene.add(ambLight);
 
-            camera = new THREE.PerspectiveCamera(60, 1, 0.1, 45); // 45 = roughly the maximum diagonal distance from one corner of the room to the other (Room comprises a 32x32 voxel grid)
+            camera = new THREE.PerspectiveCamera(60, 1, 0.1, baseCameraFar);
 
             // Parented to the camera so it follows the view.
             pointLight = new THREE.PointLight(0xffffff, basePointLightIntensity,

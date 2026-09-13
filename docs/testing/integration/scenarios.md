@@ -39,7 +39,8 @@ A map of what each suite in `tests/integration/scenarios/` covers. The test name
 | `object-transform-migration.test.ts` | transform ranges and their migration |
 | `voxel-quad-index-encoding.test.ts` | quad index encoding and validation |
 | `voxel-quad-reselection.test.ts` | where the selection goes after local and remote edits and removals, and interruptions |
-| `game-mode.test.ts` | play/edit transitions, step locks on mode and camera, single selection |
+| `game-mode.test.ts` | play/edit transitions, what edit mode opens on and the camera staying put as it does, step locks on mode and camera, single selection |
+| `orbit-camera.test.ts` | how close zoom brings the orbit camera to a target, and never past its near side |
 | `line-of-sight.test.ts` | stored coordinates on block boundaries, door visibility, seeing past room geometry |
 | `composition.test.ts` | player, door and indexed mesh composition codecs |
 | `lighting.test.ts` | light block propagation: occlusion, falloff, direction, accumulation, smoothing, nearness, never darkening, read-back |

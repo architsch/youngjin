@@ -17,15 +17,16 @@ const maxPolarAngle = Math.PI * 0.75;
 const orbitDistancePerTargetReach = 2.4;
 const minOrbitDistance = 3;
 
-// Zoom range as multiples of the framing distance.
-const minZoomDistanceFactor = 0.4;
-const maxZoomDistanceFactor = 2;
+// Zoom range as multiples of the framing distance, reciprocal so the middle is the framing distance.
+// Wide enough for an orbit to start from across the room without moving the camera.
+const maxZoomDistanceFactor = 9;
+const minZoomDistanceFactor = 1 / maxZoomDistanceFactor;
 
 // Zoom is multiplicative, so steps are measured against this ratio.
 const zoomDistanceFactorSpan = maxZoomDistanceFactor / minZoomDistanceFactor;
 
-// The camera always stays outside the target's bounding sphere.
-const minZoomDistancePerTargetReach = 1.2;
+// How close the camera may come to the side of the target facing it (well beyond the near plane).
+const minTargetClearance = 0.25;
 
 // Aim point above centre as a share of half-height (faces and door tops sit above the middle). A share
 // rather than a distance keeps flat targets like floor tiles centred.
@@ -36,6 +37,7 @@ const defaultOrbitDirection = new THREE.Vector3(0, 0.5, 1).normalize();
 
 const pivotTemp = new THREE.Vector3();
 const orbitOffsetTemp = new THREE.Vector3();
+const orbitDirTemp = new THREE.Vector3();
 const worldPosTemp = new THREE.Vector3();
 const worldQuatTemp = new THREE.Quaternion();
 const parentQuatTemp = new THREE.Quaternion();
@@ -135,7 +137,7 @@ export default class OrbitCameraPose
 
         this.spherical.radius = Math.max(
             this.framingDistance * getZoomDistanceFactor(newZoomAmount),
-            minZoomDistancePerTargetReach * getTargetReach(target));
+            getTargetExtentToward(target, this.spherical) + minTargetClearance);
 
         setPivot(target, pivotTemp);
         orbitOffsetTemp.setFromSpherical(this.spherical);
@@ -184,8 +186,19 @@ function setPivot(target: AABB3, out: THREE.Vector3): THREE.Vector3
         target.center.z);
 }
 
-// Target bounding-sphere radius, the unit for all orbit distances.
+// Target bounding-sphere radius, the unit for framing distances.
 function getTargetReach(target: AABB3): number
 {
     return Math.hypot(target.halfSize.x, target.halfSize.y, target.halfSize.z);
+}
+
+// How far the target reaches from its pivot toward a camera at these angles. Much less than its
+// reach for a camera facing a narrow side, which is what lets the camera come close to it.
+function getTargetExtentToward(target: AABB3, spherical: THREE.Spherical): number
+{
+    orbitDirTemp.setFromSphericalCoords(1, spherical.phi, spherical.theta);
+    return target.halfSize.x * Math.abs(orbitDirTemp.x) +
+        target.halfSize.y * Math.abs(orbitDirTemp.y) +
+        target.halfSize.z * Math.abs(orbitDirTemp.z) -
+        orbitPivotHeightPerTargetHalfHeight * target.halfSize.y * orbitDirTemp.y;
 }
