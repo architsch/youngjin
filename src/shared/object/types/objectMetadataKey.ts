@@ -20,7 +20,7 @@ export const ObjectMetadataKeyEnumMap: Record<string, number> =
     // change when the answer to that does.
     LabelColor: 8,
     // For lamps: what the light it gives off is like — its color, and how strong it is — as two
-    // quantized characters (see LampObjectTypeConfig). One key rather than two because the two are read
+    // quantized characters (see WallLampObjectTypeConfig). One key rather than two because the two are read
     // and written together every time: a lamp is re-lit as a whole, and the part of it that glows
     // takes its color from the same value the light does, so the two can never disagree.
     LightProperties: 9,

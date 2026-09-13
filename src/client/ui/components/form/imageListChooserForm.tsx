@@ -59,7 +59,7 @@ export default function ImageListChooserForm({mapName, initialChoicePath, onChoo
             items={pageItems}
             getItemKey={(metadata) => metadata.path}
             renderItem={(metadata) => <ImageListRow
-                imageURL={imageMap.getImageURLByPath(assetsURL, metadata.path)}
+                imageURL={imageMap.getThumbnailURLByPath(assetsURL, metadata.path)}
                 title={metadata.title}
                 author={metadata.author}
                 selected={metadata.path === selectedPath}

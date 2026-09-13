@@ -3,9 +3,11 @@ import { DefaultCompositionCodec } from "../types/compositionCodec/defaultCompos
 import { PlayerCompositionCodec } from "../types/compositionCodec/playerCompositionCodec";
 import { DoorCompositionCodec } from "../types/compositionCodec/doorCompositionCodec";
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../types/instancedMeshCompositionCodecType";
+import { IndexedCompositionCodec } from "../types/compositionCodec/indexedCompositionCodec";
 
 export const InstancedMeshCompositionCodecMap: {[codecType: number]: InstancedMeshCompositionCodec} = {
     [InstancedMeshCompositionCodecTypeEnumMap.Default]: DefaultCompositionCodec,
     [InstancedMeshCompositionCodecTypeEnumMap.Player]: PlayerCompositionCodec,
     [InstancedMeshCompositionCodecTypeEnumMap.Door]: DoorCompositionCodec,
+    [InstancedMeshCompositionCodecTypeEnumMap.Indexed]: IndexedCompositionCodec,
 }

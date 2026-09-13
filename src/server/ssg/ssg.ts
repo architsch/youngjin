@@ -7,8 +7,10 @@ import LibraryPageBuilder from "./builder/page/libraryPageBuilder";
 import TextFileBuilder from "./builder/textFileBuilder";
 import styleDictionary from "./style/styleDictionary";
 import ErrorPageBuilder from "./builder/page/errorPageBuilder";
+import PreEncodedCompositionBuilder from "./builder/preEncodedCompositionBuilder";
 import { ArcadeData } from "./data/arcadeData";
 import { LibraryData } from "./data/libraryData";
+import { CANVAS_TEXTURE_CELL_SIZE } from "../../shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
 
 export default async function SSG(): Promise<void>
 {
@@ -70,12 +72,19 @@ export default async function SSG(): Promise<void>
     }).build();
     await new ImageMapBuilder({
         rootDirName: "canvas_images", mapName: "CanvasImageMap",
-        hasGrid: false,
+        hasGrid: false, thumbnailSize: CANVAS_TEXTURE_CELL_SIZE,
     }).build();
     await new ImageMapBuilder({
         rootDirName: "object_texture_packs", mapName: "CanvasFrameImageMap",
         hasGrid: true, gridCellSize: 256, atlasImageName: "canvas_frames",
     }).build();
+
+    // Generate Pre-Encoded Compositions
+    //
+    // Imported statically, unlike ImageMapBuilder above: the dynamic import there exists only to keep
+    // `sharp` out of the prod server's module graph, and nothing here touches it.
+
+    await new PreEncodedCompositionBuilder().build();
 
     console.log("SSG END");
 }

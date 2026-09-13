@@ -5,7 +5,8 @@ import InstancedMeshGraphics from "../components/instancedMeshGraphics";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import InstancedTexturePackMaterialParams from "../../../shared/graphics/material/types/instancedTexturePackMaterialParams";
 import CanvasObjectTypeConfig, { CANVAS_FRAME_ATLAS_CELL_SIZE, CANVAS_FRAME_ATLAS_PATH,
-    CANVAS_FRAME_ATLAS_SIZE, CANVAS_GEOMETRY_ID } from "../../../shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
+    CANVAS_FRAME_ATLAS_SIZE, CANVAS_GEOMETRY_ID, CANVAS_TEXTURE_CELL_SIZE,
+    CANVAS_TEXTURE_SIZE } from "../../../shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
 import Vec3 from "../../../shared/math/types/vec3";
 import { ColliderConfig } from "../../../shared/physics/types/colliderConfig";
 import App from "../../app";
@@ -36,7 +37,8 @@ export default class CanvasGameObject extends GameObject
         {
             // The polygon-offset values are -1 because the mesh must not z-fight with the wall behind it.
             CanvasGameObject.materialParams = new InstancedTexturePackMaterialParams("canvas_texture_pack",
-                2048, 2048, 256, 256, "dynamicEmpty", -1, -1);
+                CANVAS_TEXTURE_SIZE, CANVAS_TEXTURE_SIZE, CANVAS_TEXTURE_CELL_SIZE, CANVAS_TEXTURE_CELL_SIZE,
+                "dynamicEmpty", -1, -1);
             CanvasGameObject.instancedMeshId = MeshDataUtil.getInstancedMeshId(
                 CANVAS_GEOMETRY_ID, CanvasGameObject.materialParams.getMaterialId());
         }
@@ -124,9 +126,8 @@ export default class CanvasGameObject extends GameObject
         const col = parseInt(words[0]);
         const row = parseInt(words[1]);
 
-        // The atlas image is flipped vertically at load time (three.js's default for image
-        // textures), so the chosen cell's V range counts rows from the bottom of the atlas
-        // image, while the cell coords count them from the top.
+        // The source rect is in texture coordinates, whose V counts rows from the bottom of the
+        // atlas image, while the cell coords count them from the top.
         const numCols = CANVAS_FRAME_ATLAS_SIZE / CANVAS_FRAME_ATLAS_CELL_SIZE;
         const numRows = CANVAS_FRAME_ATLAS_SIZE / CANVAS_FRAME_ATLAS_CELL_SIZE;
         const frameAtlasURL = `${App.getEnv().assets_url}/${CANVAS_FRAME_ATLAS_PATH}`;
@@ -148,13 +149,17 @@ export default class CanvasGameObject extends GameObject
     }
 
     // Draws the canvas's image over the frame's inner window (scaled down so it fits inside it).
+    //
+    // What is drawn is the image's thumbnail, which is no larger than the cell it is drawn into (see
+    // CANVAS_TEXTURE_CELL_SIZE). The image itself would only be decoded and uploaded at full size to
+    // be shrunk to that anyway.
     private async drawImage(textureIndex: number, frameCellCoords: string)
     {
         const imageDrawScale = CanvasFrameInnerWindowMap.getImageDrawScale(frameCellCoords);
 
         const metadata = this.params.metadata[ObjectMetadataKeyEnumMap.ImagePath];
         const imageURL = metadata
-            ? ImageMapUtil.getImageMap("CanvasImageMap").getImageURLByPath(App.getEnv().assets_url, metadata.str)
+            ? ImageMapUtil.getImageMap("CanvasImageMap").getThumbnailURLByPath(App.getEnv().assets_url, metadata.str)
             : "";
         try
         {

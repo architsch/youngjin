@@ -34,6 +34,10 @@ import { ColorPaletteMap } from "../../../src/shared/math/maps/colorPaletteMap";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import { InstancedMeshCompositionBuilderMap } from "../../../src/shared/graphics/mesh/composition/maps/instancedMeshCompositionBuilderMap";
+import { InstancedMeshCompositionCodecMap } from "../../../src/shared/graphics/mesh/composition/maps/instancedMeshCompositionCodecMap";
+import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionCodecType";
+import PreEncodedCompositionStringMap from "../../../src/shared/graphics/mesh/composition/maps/preEncodedCompositionStringMap";
+import StringUtil from "../../../src/shared/math/util/stringUtil";
 import InstancedMeshCompositionPart from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
 import { InstancedMeshCompositionParams } from "../../../src/shared/graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
@@ -491,3 +495,117 @@ function expectMouldedParts(parts: InstancedMeshCompositionPart[]): void
         }
     }
 }
+
+/**
+ * An indexed composition *names* one of the compositions authored ahead of time and encoded into
+ * PreEncodedCompositionStringMap at build time, instead of spelling its own parts out. That makes it
+ * a router rather than a format: what it stores is a position, and what it gives back is whatever the
+ * codec that wrote the entry at that position decodes.
+ *
+ * The index arrives from the database and from other clients like any other stored appearance, so the
+ * same rule the other codecs are held to applies — reading is total, and an index naming nothing must
+ * still leave the object drawable.
+ *
+ * Note the codec is reached through the codec map here, exactly as production code reaches it:
+ * importing the module directly is what puts it at the head of the import cycle it forms with the map.
+ */
+describe("indexed mesh composition", () => {
+    const IndexedCodec = InstancedMeshCompositionCodecMap[
+        InstancedMeshCompositionCodecTypeEnumMap.Indexed];
+
+    // The index is written as two base-94 digits, so this is the last position one can name.
+    const MAX_COMPOSITION_INDEX = 94 * 94 - 1;
+
+    beforeEach(() => {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        vi.spyOn(console, "warn").mockImplementation(() => {});
+        vi.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    function indexedPrefix(codecVersion: number = 0): string
+    {
+        return StringUtil.convertRawNumberToVisibleASCII(
+            InstancedMeshCompositionCodecTypeEnumMap.Indexed)
+            + StringUtil.convertRawNumberToVisibleASCII(codecVersion);
+    }
+
+    function decodeIndexed(str: string):
+        {params: InstancedMeshCompositionParams, parts: InstancedMeshCompositionPart[]}
+    {
+        const params: InstancedMeshCompositionParams = {};
+        const parts: InstancedMeshCompositionPart[] = [];
+        IndexedCodec.decode(str, params, parts);
+        return {params, parts};
+    }
+
+    // ─── What it stores ────────────────────────────────────────────────
+
+    it("costs the same whatever it names, and whatever it is handed", () => {
+        // The whole reason the codec exists: an appearance shared by many objects is stored once per
+        // object, so its size is what decides how many look-alike objects a room can hold.
+        const first = IndexedCodec.encode({compositionIndex: 0}, []);
+        const last = IndexedCodec.encode({compositionIndex: MAX_COMPOSITION_INDEX}, []);
+        expect(last.length).toBe(first.length);
+
+        // The parts belong to the table rather than to the object, so handing some over changes
+        // nothing about what is written down.
+        const {parts} = PlayerCompositionCodec.getRandomComposition(1);
+        expect(IndexedCodec.encode({compositionIndex: 0}, parts).length).toBe(first.length);
+    });
+
+    it("an index survives the round trip", () => {
+        fc.assert(fc.property(fc.integer({min: 0, max: MAX_COMPOSITION_INDEX}), (index) => {
+            const encoded = indexedPrefix() + IndexedCodec.encode({compositionIndex: index}, []);
+            expect(decodeIndexed(encoded).params.compositionIndex).toBe(index);
+        }), {numRuns: 200});
+    });
+
+    // ─── Robustness against untrusted input ────────────────────────────
+
+    it("decoding an arbitrary string never throws", () => {
+        fc.assert(fc.property(fc.string(), (garbage) => {
+            expect(() => decodeIndexed(indexedPrefix() + garbage)).not.toThrow();
+        }), {numRuns: 500});
+    });
+
+    it("an index naming no composition degrades rather than throwing", () => {
+        // Nothing guarantees the table still holds the position an old object was stored against.
+        const encoded = indexedPrefix()
+            + IndexedCodec.encode({compositionIndex: MAX_COMPOSITION_INDEX}, []);
+        const decoded = decodeIndexed(encoded);
+        expect(decoded.params.compositionIndex).toBe(MAX_COMPOSITION_INDEX);
+        expect(Array.isArray(decoded.parts)).toBe(true);
+    });
+
+    it("no pre-encoded composition names the indexed codec itself", () => {
+        // Such an entry would send the router back through itself without end.
+        for (const preEncoded of PreEncodedCompositionStringMap)
+        {
+            expect(StringUtil.convertVisibleASCIIToRawNumber(preEncoded, 0))
+                .not.toBe(InstancedMeshCompositionCodecTypeEnumMap.Indexed);
+        }
+    });
+
+    // ─── The generated table ───────────────────────────────────────────
+
+    it("every pre-encoded composition decodes to parts the renderer can draw", () => {
+        // The table is generated at build time, so this asserts nothing until it has been — which is
+        // itself worth knowing, since an empty table means every indexed object draws nothing.
+        for (let index = 0; index < PreEncodedCompositionStringMap.length; ++index)
+        {
+            const encoded = indexedPrefix() + IndexedCodec.encode({compositionIndex: index}, []);
+            const {parts} = decodeIndexed(encoded);
+            expect(parts.length).toBeGreaterThan(0);
+            for (const part of parts)
+            {
+                expect(typeof part.instancedMeshId).toBe("string");
+                for (const vec of [part.offset, part.dir, part.scale])
+                {
+                    expect(Number.isFinite(vec.x)).toBe(true);
+                    expect(Number.isFinite(vec.y)).toBe(true);
+                    expect(Number.isFinite(vec.z)).toBe(true);
+                }
+            }
+        }
+    });
+});

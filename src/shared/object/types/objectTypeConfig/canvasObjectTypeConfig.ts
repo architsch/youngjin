@@ -19,6 +19,12 @@ export const CANVAS_FRAME_ATLAS_PATH = "object_texture_packs/canvas_frames.webp"
 export const CANVAS_FRAME_ATLAS_SIZE = 1024; // in pixels (the atlas is square)
 export const CANVAS_FRAME_ATLAS_CELL_SIZE = 256; // in pixels (each cell is square)
 
+// The texture every canvas in a room is drawn into, a cell each: a square grid of square cells. A cell
+// is the most pixels a canvas's picture is ever given, however close it is looked at, so it is also
+// the size a canvas's image is fetched at (see CanvasImageMap's thumbnails).
+export const CANVAS_TEXTURE_SIZE = 2048; // in pixels (the texture is square)
+export const CANVAS_TEXTURE_CELL_SIZE = 256; // in pixels (each cell is square)
+
 // How much wall a canvas lays claim to, and therefore how much of it is drawn: one whole voxel of
 // wall, which is the cell a picture hangs in. This is the canvas's collider, which is where
 // everything outside this file reads its footprint from — the box it is actually tested against is

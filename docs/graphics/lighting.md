@@ -270,7 +270,7 @@ Two things about it are worth stating because they are easy to get wrong:
 - **Its color and its strength are one setting.** The lit face takes its color from the same value the light does, and the parts it is drawn from are *derived* from that value rather than authored beside it — so a lamp cannot glow one color and light the room another.
 - **The light stands in the block in front of the wall**, not at the lamp's own origin. A wall attachment's origin sits on the wall face, and the fill returns immediately from a block that is solid, so a lamp whose light was placed at its origin would light nothing at all.
 
-Because the lamp's body will eventually be several pieces rather than one, it is drawn through the general composition path from the start (see [instanced_mesh_composition.md](instanced_mesh_composition.md)) — giving it a body later is adding parts rather than rewriting how it is drawn.
+Because the lamp's body will eventually be several pieces rather than one, it is drawn through the general composition path from the start (see [instanced_mesh_composition.md](instanced_mesh_composition.md)) — giving it a body later is adding parts rather than rewriting how it is drawn. The shape it is drawn in is one of the compositions authored ahead of time and named by an index, so a lamp stores no description of itself at all; its color alone is filled in from the light, which is what keeps the two from disagreeing.
 
 ## What a generated room comes with
 

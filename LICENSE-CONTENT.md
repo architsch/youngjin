@@ -50,7 +50,10 @@ Concretely, it covers:
 - **Dev-log prose and its screenshots** — `public/devlog-2026/` and later years.
 - **Original game artwork** — the textures, canvas images, character atlases,
   icons and logos authored for ThingsPool under `public/app/assets/` and
-  `public/`, excluding the third-party packs listed below.
+  `public/`, excluding the third-party packs listed below. This includes the
+  authored descriptions of that artwork as well as the images themselves —
+  `public/app/assets/instanced_mesh_composition/`, which is the source the
+  game's object appearances are composed from.
 - **The ThingsPool name and logo.** Apache-2.0 grants no trademark rights
   (section 6), and none are granted here either.
 

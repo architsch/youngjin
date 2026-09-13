@@ -88,7 +88,7 @@ export default class InstancedMeshComposer extends GameObjectComponent
     // Public because a composition is not always stored: an object whose metadata holds none is
     // composed afresh from generateDefaultParts every time this runs, so an object whose appearance
     // is *derived* from something else it carries — a lamp's, from the light it gives off — asks for
-    // this when that something else changes (see LampGameObject).
+    // this when that something else changes (see WallLampGameObject).
     reloadComposition(): void
     {
         this.instancedMeshComposition.loadFromMetadata(this.gameObject);

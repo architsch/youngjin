@@ -8,7 +8,7 @@ import InstancedMeshComposer from "../components/instancedMeshComposer";
 // A light somebody installed on a wall. What is drawn is the composer's business and what is lit is
 // the light source's; what this class does is keep the two pointed at the same place and the same
 // color as the lamp is moved and adjusted.
-export default class LampGameObject extends GameObject
+export default class WallLampGameObject extends GameObject
 {
     private lightSource: LightSource;
     private instancedMeshComposer: InstancedMeshComposer;
@@ -19,11 +19,11 @@ export default class LampGameObject extends GameObject
 
         this.lightSource = this.components.lightSource as LightSource;
         if (!this.lightSource)
-            throw new Error("LampGameObject requires LightSource component");
+            throw new Error("WallLampGameObject requires LightSource component");
 
         this.instancedMeshComposer = this.components.instancedMeshComposer as InstancedMeshComposer;
         if (!this.instancedMeshComposer)
-            throw new Error("LampGameObject requires InstancedMeshComposer component");
+            throw new Error("WallLampGameObject requires InstancedMeshComposer component");
     }
 
     // Moving a lamp moves the light it gives off, and there is no update loop to notice that: a wall
@@ -38,7 +38,7 @@ export default class LampGameObject extends GameObject
 
     // Re-lighting a lamp also repaints it: the lit face takes its color from the same setting the
     // light does, and the parts are derived from that setting rather than stored beside it, so they
-    // have to be built again from the new one (see LampObjectTypeConfig).
+    // have to be built again from the new one (see WallLampObjectTypeConfig).
     onSetMetadata(key: ObjectMetadataKey, value: string)
     {
         super.onSetMetadata(key, value);

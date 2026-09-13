@@ -1,0 +1,16 @@
+{
+    "compositions": [
+        {
+            "comment": "[Index 0] This is the default composition for 'WallLamp' object. The presence of '-1' within the 'color' field of the first InstancedMeshCompositionPart implies that it is meant to be dynamically set by the WallLampGameObject based on its current light color.",
+            "codecType": "Default",
+            "parts": [{
+                "geometryId": "Square",
+                "materialId": "InstancedEmissive",
+                "dir": {"x": 0, "y": 0, "z": 1},
+                "offset": {"x": 0, "y": 0, "z": 0.01},
+                "scale": {"x": 1, "y": 0.5, "z": 1},
+                "color": {"x": -1, "y": -1, "z": -1}
+            }]
+        }
+    ]
+}

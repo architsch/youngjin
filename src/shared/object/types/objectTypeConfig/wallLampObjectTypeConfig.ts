@@ -1,4 +1,7 @@
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../graphics/mesh/composition/types/instancedMeshCompositionCodecType";
+import { InstancedMeshCompositionParams } from "../../../graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
+import InstancedMeshCompositionPart from "../../../graphics/mesh/composition/types/instancedMeshCompositionPart";
+import CompositionMetadataUtil from "../../../graphics/mesh/composition/util/compositionMetadataUtil";
 import { MAX_LAMP_INTENSITY, MAX_LAMP_RANGE, MIN_LAMP_INTENSITY,
     MIN_LAMP_RANGE } from "../../../graphics/light/util/lampLightUtil";
 import ColorUtil from "../../../math/util/colorUtil";
@@ -7,8 +10,8 @@ import StringUtil from "../../../math/util/stringUtil";
 import MeshDataUtil from "../../../graphics/mesh/util/meshDataUtil";
 import Room from "../../../room/types/room";
 import RoomValidationUtil from "../../../room/util/roomValidationUtil";
-import { BACKWARD_DIR, COLLISION_LAYER_HEIGHT, INSTANCED_EMISSIVE_MATERIAL_ID,
-    LIGHT_COLOR_PALETTE_NAME, 
+import { COLLISION_LAYER_HEIGHT, INSTANCED_EMISSIVE_MATERIAL_ID,
+    LIGHT_COLOR_PALETTE_NAME,
     WALL_ATTACHMENT_HITBOX_INSET} from "../../../system/sharedConstants";
 import User from "../../../user/types/user";
 import AddObjectSignal from "../addObjectSignal";
@@ -18,8 +21,17 @@ import SetObjectMetadataSignal from "../setObjectMetadataSignal";
 import SetObjectTransformSignal from "../setObjectTransformSignal";
 import { ObjectMetadataKeyEnumMap } from "../objectMetadataKey";
 
-// A lamp's lit face is a single flat quad.
-const LAMP_GEOMETRY_ID = "Square";
+// Which of the pre-encoded compositions a wall lamp is drawn from, and the version of the codec that
+// names it. What the composition actually is — a single flat quad, standing a hair off the wall and
+// filling the footprint below — is authored in the pre-encoding source rather than here, so that a
+// lamp with a body later is an edit to that file rather than to this one
+// (see @docs/graphics/instanced_mesh_composition.md).
+const WALL_LAMP_COMPOSITION_INDEX = 0;
+const COMPOSITION_CODEC_VERSION = 0;
+
+// The tail of the instancedMeshId of any part drawn in the unlit material, which is the part of a
+// lamp whose color is the lamp's own rather than something the composition could have settled.
+const EMISSIVE_MESH_ID_SUFFIX = MeshDataUtil.getInstancedMeshId("", INSTANCED_EMISSIVE_MATERIAL_ID);
 
 // How much wall a lamp lays claim to, and therefore how much of it is drawn: one voxel across and
 // one collision layer tall. A wall attachment claims whole voxel columns of wall horizontally
@@ -37,11 +49,6 @@ const LAMP_FOOTPRINT_HEIGHT = COLLISION_LAYER_HEIGHT;
 // stored contents.
 const MAX_LAMPS_PER_ROOM = 24;
 const MAX_MESH_INSTANCES_PER_LAMP = 4;
-
-// How far the lit face stands off the wall behind it. Enough to keep it clear of the wall's own
-// surface, and no more — what is drawn is the face of a fitting mounted flush, not a panel floating
-// in front of one.
-const EMITTER_RELIEF = 0.01;
 
 // Where each of the lamp's settings sits in its stored string. Fixed positions, never reordered: a
 // character's position is its whole meaning, so moving one re-lights every lamp already installed.
@@ -70,9 +77,9 @@ const editableMetadataKeys = [
 // other than the light every visitor carries (see @docs/graphics/lighting.md). It is admin-only for
 // now, being a placeholder: what it looks like is a single lit rectangle, and what a room is
 // actually furnished with should be a fitting with a body.
-const LampObjectTypeConfig =
+const WallLampObjectTypeConfig =
 {
-    objectType: "Lamp",
+    objectType: "WallLamp",
     persistent: true,
     autoUnload: true,
     maxCountPerRoom: MAX_LAMPS_PER_ROOM,
@@ -87,7 +94,7 @@ const LampObjectTypeConfig =
         // The room can only hold as many lamps as the mesh instance pool was sized for. Looked up
         // here rather than at module scope: this file is inside the object-config import cycle (see
         // DoorObjectTypeConfig).
-        const typeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
+        const typeIndex = ObjectTypeConfigMap.getIndexByType("WallLamp");
         const lampCount = Object.values(room.objectById)
             .filter(obj => obj.objectTypeIndex === typeIndex).length;
         if (lampCount >= MAX_LAMPS_PER_ROOM)
@@ -135,32 +142,31 @@ const LampObjectTypeConfig =
             instancedMeshGraphics: {},
             instancedMeshComposer: {
                 maxNumInstancesPerMesh: MAX_LAMPS_PER_ROOM * MAX_MESH_INSTANCES_PER_LAMP,
-                codecType: InstancedMeshCompositionCodecTypeEnumMap.Default,
-                codecVersion: 0,
-                // One lit rectangle filling the patch of wall the lamp claims, in the color of the
-                // light it gives off.
+                codecType: InstancedMeshCompositionCodecTypeEnumMap.Indexed,
+                codecVersion: COMPOSITION_CODEC_VERSION,
+                // The shape comes from the pre-encoded composition this kind of lamp is named
+                // against; the color is the lamp's own and is written over it here.
                 //
                 // **The color is derived from the lamp's light rather than authored beside it**,
                 // which is what keeps a lamp from being able to glow one color and light the room
-                // another. A change to the light rebuilds these parts (see LampGameObject), so the
-                // two are re-derived together every time.
+                // another — and it is exactly what an authored composition cannot know, since it is
+                // one drawing shared by every lamp however each of them is lit. A change to the
+                // light rebuilds these parts (see WallLampGameObject), so the two are re-derived
+                // together every time.
                 generateDefaultParts: (obj: AddObjectSignal) => {
+                    const params: InstancedMeshCompositionParams = {};
+                    const parts: InstancedMeshCompositionPart[] = [];
+                    CompositionMetadataUtil.decodeIndexed(WALL_LAMP_COMPOSITION_INDEX,
+                        COMPOSITION_CODEC_VERSION, params, parts);
+
                     const color = ColorUtil.paletteIndexToRGB(LIGHT_COLOR_PALETTE_NAME,
                         readColorIndex(getLightProperties(obj)));
-                    return {
-                        params: {},
-                        parts: [{
-                            instancedMeshId: MeshDataUtil.getInstancedMeshId(LAMP_GEOMETRY_ID,
-                                INSTANCED_EMISSIVE_MATERIAL_ID),
-                            // A wall attachment carries its facing in the object's own rotation, so
-                            // every part of it simply faces the object's local forward and turns
-                            // with the wall (the same as a door's regions and a canvas's one quad).
-                            dir: BACKWARD_DIR,
-                            offset: {x: 0, y: 0, z: EMITTER_RELIEF},
-                            scale: {x: LAMP_FOOTPRINT_WIDTH, y: LAMP_FOOTPRINT_HEIGHT, z: 1},
-                            color,
-                        }],
-                    };
+                    for (const part of parts)
+                    {
+                        if (part.instancedMeshId.endsWith(EMISSIVE_MESH_ID_SUFFIX))
+                            part.color = color;
+                    }
+                    return {params, parts};
                 },
             },
             orbitOccluder: {}, // Part of the wall it is mounted on, as far as the orbit camera is concerned.
@@ -265,4 +271,4 @@ function clampToWholeValue(n: number, min: number, max: number): number
     return Math.round(NumUtil.clampInRange(n, min, max));
 }
 
-export default LampObjectTypeConfig;
+export default WallLampObjectTypeConfig;

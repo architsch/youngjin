@@ -411,6 +411,19 @@ See [ftue.md](../../networking/ftue.md) for the behavior under test.
 | the door object is configured with the codec these tests encode against | Guard: the door's composer config uses the codec type/version the tests encode with, and does not collide with the player's |
 | every part of a door is drawn by a mesh the composition itself declares | Every part names a declared mesh, carries moulding inputs, and stands at a non-zero relief with more than one distinct depth |
 
+## Indexed Mesh Composition (`composition.test.ts`) — 6 tests
+
+An indexed composition names one of the compositions authored ahead of time and encoded into `PreEncodedCompositionStringMap` at build time, rather than spelling its own parts out — so it is a router rather than a format. The codec is reached through `InstancedMeshCompositionCodecMap` here, exactly as production code reaches it: importing the module directly puts it at the head of the import cycle it forms with the map.
+
+| Test | What it verifies |
+|------|-----------------|
+| costs the same whatever it names, and whatever it is handed | The encoded length is the same for the first and last addressable index, and handing the codec a set of parts does not change it — the parts belong to the table, not the object |
+| an index survives the round trip | Property-based: any addressable index encodes and decodes back to itself, including one that names no composition |
+| decoding an arbitrary string never throws | Property-based: any garbage string decodes without throwing |
+| an index naming no composition degrades rather than throwing | An index past the end of the table still yields the index back and a usable parts array, rather than a `TypeError` part-way through building a room |
+| no pre-encoded composition names the indexed codec itself | Guard: such an entry would send the router back through itself without end |
+| every pre-encoded composition decodes to parts the renderer can draw | Every entry in the generated table decodes to at least one part, each naming a mesh and carrying finite offset, direction and scale |
+
 ## Signal Emission (`signals.test.ts`) — 6 tests
 
 | Test | What it verifies |
@@ -820,6 +833,7 @@ for how to run it. It skips itself when no emulator is available.
 | FTUE | 26 |
 | Player Mesh Composition | 16 |
 | Door Mesh Composition | 12 |
+| Indexed Mesh Composition | 6 |
 | Doors and the Admin Privilege | 14 |
 | Signals | 6 |
 | Permissions | 5 |
@@ -833,4 +847,4 @@ for how to run it. It skips itself when no emulator is available.
 | Authentication Lifecycle | 25 |
 | Guest Creation Limits | 4 |
 | DB Query Layer | 61 |
-| **Total** | **518** |
+| **Total** | **524** |

@@ -403,15 +403,29 @@ export default class InstancedMeshBinding
     // drawImageAtIndex for content the caller draws itself rather than fetches — text above all.
     drawCanvasAtIndex(textureIndex: number, canvas: HTMLCanvasElement)
     {
-        const cell = this.getTextureCellUVRect(textureIndex);
-        const material = this.instancedMesh!.material as THREE.MeshPhongMaterial;
-        const rt = material.map!.renderTarget as THREE.WebGLRenderTarget;
-        TextureUtil.drawCanvasOnRenderTarget(canvas, rt, cell.u1, cell.v1, cell.u2, cell.v2);
+        const {u1, v1, u2, v2} = this.getTextureCellUVRect(textureIndex);
+        TextureUtil.drawCanvasOnRenderTarget(canvas, this.getDynamicRenderTarget(), u1, v1, u2, v2);
+    }
+
+    // The optional source UV rect restricts sampling to a sub-region of the source image
+    // (e.g. a single cell of an atlas image); by default the full image is drawn.
+    async drawImageAtIndex(textureIndex: number, imageURL: string,
+        widthScale: number = 1, heightScale: number = 1,
+        sourceU1: number = 0, sourceV1: number = 0,
+        sourceU2: number = 1, sourceV2: number = 1,
+        unloadTextureAfterDraw: boolean = true)
+    {
+        const {u1, v1, u2, v2} = this.getTextureCellUVRect(textureIndex, widthScale, heightScale);
+        await TextureUtil.drawImageOnRenderTarget(imageURL, this.getDynamicRenderTarget(),
+            u1, v1, u2, v2, sourceU1, sourceV1, sourceU2, sourceV2, unloadTextureAfterDraw);
     }
 
     // Which part of the texture belongs to the given instance. The texture is a grid of cells, one
-    // per instance, and this is the cell's corners in the texture's own coordinates.
-    private getTextureCellUVRect(textureIndex: number): {u1: number, v1: number, u2: number, v2: number}
+    // per instance, and this is the cell's corners in the texture's own coordinates — or, given a
+    // width and height scale, the corners of a region that size, as a fraction of the cell, centered
+    // in it.
+    private getTextureCellUVRect(textureIndex: number, widthScale: number = 1, heightScale: number = 1):
+        {u1: number, v1: number, u2: number, v2: number}
     {
         const instancedTexturePackMaterialParams = this.materialParams as InstancedTexturePackMaterialParams;
         const textureGridCellWidthScale = instancedTexturePackMaterialParams.textureGridCellWidth
@@ -423,31 +437,20 @@ export default class InstancedMeshBinding
         const textureCol = textureIndex % (1 / textureGridCellWidthScale);
         const u1 = textureGridCellWidthScale * textureCol;
         const v1 = textureGridCellHeightScale * textureRow;
-        return {u1, v1, u2: u1 + textureGridCellWidthScale, v2: v1 + textureGridCellHeightScale};
+        const u2 = u1 + textureGridCellWidthScale;
+        const v2 = v1 + textureGridCellHeightScale;
+
+        const widthMargin = textureGridCellWidthScale * (1 - widthScale) * 0.5;
+        const heightMargin = textureGridCellHeightScale * (1 - heightScale) * 0.5;
+        return {u1: u1 + widthMargin, v1: v1 + heightMargin, u2: u2 - widthMargin, v2: v2 - heightMargin};
     }
 
-    // The optional source UV rect restricts sampling to a sub-region of the source image
-    // (e.g. a single cell of an atlas image); by default the full image is drawn.
-    async drawImageAtIndex(textureIndex: number, imageURL: string,
-        widthScale: number = 1, heightScale: number = 1,
-        sourceU1: number = 0, sourceV1: number = 0,
-        sourceU2: number = 1, sourceV2: number = 1,
-        unloadTextureAfterDraw: boolean = true)
+    // The render target this binding's instances are drawn onto — which only a material whose texture
+    // was created empty for the purpose has (see TextureFactory.loadDynamicEmptyTexture).
+    private getDynamicRenderTarget(): THREE.WebGLRenderTarget
     {
-        const instancedTexturePackMaterialParams = this.materialParams as InstancedTexturePackMaterialParams;
-        const textureGridCellWidthScale = instancedTexturePackMaterialParams.textureGridCellWidth
-            / instancedTexturePackMaterialParams.textureWidth;
-
-        const {u1, v1, u2, v2} = this.getTextureCellUVRect(textureIndex);
-        const widthMargin = textureGridCellWidthScale * (1 - widthScale) * 0.5;
-        const heightMargin = textureGridCellWidthScale * (1 - heightScale) * 0.5;
-
         const material = this.instancedMesh!.material as THREE.MeshPhongMaterial;
-        const rt = material.map!.renderTarget as THREE.WebGLRenderTarget;
-        await TextureUtil.drawImageOnRenderTarget(imageURL, rt,
-            u1 + widthMargin, v1 + heightMargin,
-            u2 - widthMargin, v2 - heightMargin,
-            sourceU1, sourceV1, sourceU2, sourceV2, unloadTextureAfterDraw);
+        return material.map!.renderTarget as THREE.WebGLRenderTarget;
     }
 
     private getInstancedMeshId(): string

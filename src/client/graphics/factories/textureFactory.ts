@@ -6,6 +6,20 @@ textureLoader.setCrossOrigin("anonymous");
 const loadedTextures: { [textureId: string]: THREE.Texture } = {};
 const loadedRenderTargets: { [renderTargetId: string]: THREE.WebGLRenderTarget } = {};
 
+// What the images drawn onto dynamic textures are fetched through (see loadSourceImageTexture).
+//
+// An ImageBitmap wherever the browser's createImageBitmap can be relied on, because the browser decodes
+// one on a background thread before handing it over. An <img> is decoded on the main thread instead,
+// at the moment it is first uploaded — which, for a room's pictures, is a moment the room is already
+// being played in, so the decoding stalls frames the player sees.
+//
+// "Relied on" is the line three.js's own GLTFLoader draws: not Safari before 17, and not Firefox
+// before 98. Those decode through an <img> as before, and so does every iOS browser other than Safari,
+// since none of them reports a Safari version to be judged by.
+const sourceImageLoader: THREE.ImageBitmapLoader | THREE.ImageLoader = imageBitmapsAreReliable()
+    ? new THREE.ImageBitmapLoader().setCrossOrigin("anonymous")
+    : new THREE.ImageLoader().setCrossOrigin("anonymous");
+
 const TextureFactory =
 {
     // A fixed texture that is based on an image asset (cannot be modified during runtime).
@@ -17,6 +31,32 @@ const TextureFactory =
         
         const newTexture = await textureLoader.loadAsync(texturePath);
         loadedTextures[texturePath] = newTexture;
+        return newTexture;
+    },
+    // An image asset that is fetched in order to be drawn onto a dynamic texture (see TextureUtil)
+    // rather than to be rendered with directly. Cached by its path, and disposed via unload/unloadAll,
+    // like a static image texture — but it is set up differently from one (see createSourceTexture),
+    // so the same path is never to be loaded as both.
+    loadSourceImageTexture: async (imagePath: string): Promise<THREE.Texture> =>
+    {
+        const loadedTexture = loadedTextures[imagePath];
+        if (loadedTexture != undefined)
+            return loadedTexture;
+
+        const newTexture = createSourceTexture(await sourceImageLoader.loadAsync(imagePath));
+        loadedTextures[imagePath] = newTexture;
+        return newTexture;
+    },
+    // A 2D canvas the caller has drawn into, set up to be drawn onto a dynamic texture exactly the way
+    // an image asset is (see loadSourceImageTexture). Not cached, since a canvas is drawn once and then
+    // thrown away: the caller disposes of the texture as soon as it has been drawn.
+    //
+    // Unlike an image asset's, the canvas's colors are marked as sRGB, as are those of every canvas
+    // texture (see loadCanvasTexture): the canvas was painted in CSS colors.
+    createSourceCanvasTexture: (canvas: HTMLCanvasElement): THREE.Texture =>
+    {
+        const newTexture = createSourceTexture(canvas);
+        newTexture.colorSpace = THREE.SRGBColorSpace;
         return newTexture;
     },
     // A texture whose image is drawn onto a 2D canvas at load time (e.g. a procedurally
@@ -93,6 +133,11 @@ const TextureFactory =
             return;
         }
         texture.dispose();
+        // An ImageBitmap keeps its decoded pixels until it is closed, however long it then waits to
+        // be collected. Closing it is safe only because nothing else holds on to it: three.js's own
+        // loader cache (THREE.Cache) is left off, and would hand a closed bitmap to the next load.
+        if (typeof ImageBitmap !== "undefined" && texture.image instanceof ImageBitmap)
+            texture.image.close();
         delete loadedTextures[textureId];
 
         const rt = loadedRenderTargets[textureId];
@@ -102,6 +147,40 @@ const TextureFactory =
             delete loadedRenderTargets[textureId];
         }
     },
+}
+
+// How every texture that is drawn onto a dynamic texture is set up, whatever its image came from.
+//
+// **Uploaded the right way up**, where three.js otherwise flips an image as it uploads it. For an <img>
+// or a canvas that flip can be a pass over every pixel on the main thread, and an ImageBitmap cannot be
+// flipped at upload at all. So the flip is left to the moment the texture is drawn, where the quad
+// drawing it makes it by mirroring its texture coordinates, which costs nothing (see TextureUtil).
+//
+// **Without mipmaps.** A picture drawn onto a dynamic texture is already about the size it is drawn at
+// — a label's canvas is made at the size of its cell, a picture frame is one cell of an atlas drawn onto
+// a cell of the same size, and a canvas's image is fetched as a thumbnail no larger than its cell (see
+// ImageMap) — so there is never enough shrinking to be done to be worth computing them.
+function createSourceTexture(image: ImageBitmap | HTMLImageElement | HTMLCanvasElement): THREE.Texture
+{
+    const texture = new THREE.Texture(image);
+    texture.flipY = false;
+    texture.generateMipmaps = false;
+    texture.minFilter = THREE.LinearFilter;
+    texture.needsUpdate = true;
+    return texture;
+}
+
+function imageBitmapsAreReliable(): boolean
+{
+    if (typeof createImageBitmap === "undefined" || typeof navigator === "undefined")
+        return false;
+
+    const userAgent = navigator.userAgent;
+    const isSafari = /^((?!chrome|android).)*safari/i.test(userAgent);
+    const safariVersion = parseInt(userAgent.match(/Version\/(\d+)/)?.[1] ?? "-1");
+    const isFirefox = userAgent.includes("Firefox");
+    const firefoxVersion = parseInt(userAgent.match(/Firefox\/(\d+)\./)?.[1] ?? "-1");
+    return !(isSafari && safariVersion < 17) && !(isFirefox && firefoxVersion < 98);
 }
 
 export default TextureFactory;

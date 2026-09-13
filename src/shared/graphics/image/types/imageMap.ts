@@ -3,6 +3,9 @@ import ImageMetadata from "./imageMetadata";
 
 export default class ImageMap
 {
+    // What an image's path is followed by in its thumbnail's (see ImageMapSeed.thumbnailSize).
+    static readonly THUMBNAIL_PATH_SUFFIX = ".thumbnail";
+
     private rootDirName: string;
     private gridCellSize: number; // in pixels
 
@@ -22,16 +25,22 @@ export default class ImageMap
     // the atlas itself.
     private atlasImageName?: string;
 
+    // The longest side of the thumbnail written beside each of the map's images, in pixels, or 0 if
+    // the map has no thumbnails (see ImageMapSeed.thumbnailSize).
+    private thumbnailSize: number;
+
     constructor(rootDirName: string, gridCellSize: number,
         subfolderGridSizes: {[subfolderName: string]: {numCols: number, numRows: number}},
         imageMetadataList: ImageMetadata[],
-        atlasImageName?: string)
+        atlasImageName?: string,
+        thumbnailSize: number = 0)
     {
         this.rootDirName = rootDirName;
         this.gridCellSize = gridCellSize;
         this.subfolderGridSizes = subfolderGridSizes;
         this.imageMetadataList = imageMetadataList;
         this.atlasImageName = atlasImageName;
+        this.thumbnailSize = thumbnailSize;
 
         for (const imageMetadata of imageMetadataList)
         {
@@ -99,11 +108,22 @@ export default class ImageMap
     // and the root directory is located right under the app's assets_url (see ThingsPoolEnv).
     getImageURLByPath(assetsURL: string, path: string): string
     {
+        return this.getFileURLByPath(assetsURL, path, "");
+    }
+    // Same as above, but for the image's thumbnail — or for the image itself, where the map has no
+    // thumbnails, so that a caller who only ever shows images small can ask any map for thumbnails.
+    getThumbnailURLByPath(assetsURL: string, path: string): string
+    {
+        return this.getFileURLByPath(assetsURL, path,
+            (this.thumbnailSize > 0) ? ImageMap.THUMBNAIL_PATH_SUFFIX : "");
+    }
+    private getFileURLByPath(assetsURL: string, path: string, pathSuffix: string): string
+    {
         if (imageListChooserDebugEnabledObservable.peek())
-            return `${assetsURL}/${this.rootDirName}/1/1.webp`;
+            return `${assetsURL}/${this.rootDirName}/1/1${pathSuffix}.webp`;
         if (path.length <= 0)
             return "";
-        return `${assetsURL}/${this.rootDirName}/${path}.webp`;
+        return `${assetsURL}/${this.rootDirName}/${path}${pathSuffix}.webp`;
     }
     // coords = {subfolderName},{col},{row}
     // (subfolderName == "") if there is no subfolder.

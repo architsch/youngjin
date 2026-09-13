@@ -40,12 +40,12 @@ import { FTUEElementCodeEnumMap } from "../../../types/ftueElementCode";
 import NumUtil from "../../../../../shared/math/util/numUtil";
 import RoomValidationUtil from "../../../../../shared/room/util/roomValidationUtil";
 import { DoorTypeEnumMap } from "../../../../../shared/object/types/doorType";
-import LampObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/lampObjectTypeConfig";
+import WallLampObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/wallLampObjectTypeConfig";
 import SelectionToolRow from "./selectionToolRow";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
-const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
+const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("WallLamp");
 
 let addCanvasButtonFTUETimeout: ReturnType<typeof setTimeout> | undefined;
 
@@ -150,7 +150,7 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
                 // adjusted from there through its own options (see the lamp's own util).
                 tryAddObjectFromQuad(props.selection, lampTypeIndex, {
                     [ObjectMetadataKeyEnumMap.LightProperties]:
-                        new EncodableByteString(LampObjectTypeConfig.util.getDefaultLightProperties()),
+                        new EncodableByteString(WallLampObjectTypeConfig.util.getDefaultLightProperties()),
                 });
             }}
         />}
@@ -418,9 +418,11 @@ function reportUndetachableAttachment(room: Room, quadIndex: number): boolean
             continue;
         }
         // Named by what it is, since what the user has to be told is which thing on this wall is
-        // standing in the way rather than that something is.
+        // standing in the way rather than that something is. A type names itself as one run of
+        // words ("WallLamp"), so it is broken back apart before being shown — lowercasing it alone
+        // would put "a walllamp" in front of the user.
         const objectName = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex)
-            .objectType.toLowerCase();
+            .objectType.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase();
         notificationMessageObservable.set(
             `Can't remove a block because a ${objectName} is attached to it.`);
         return true;

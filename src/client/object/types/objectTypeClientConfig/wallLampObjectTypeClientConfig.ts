@@ -2,12 +2,12 @@ import AddObjectSignal from "../../../../shared/object/types/addObjectSignal";
 import RoomValidationUtil from "../../../../shared/room/util/roomValidationUtil";
 import LampEditOptions from "../../../ui/components/hud/selection/lampEditOptions";
 import ObjectTypeClientConfigMap from "../../maps/objectTypeClientConfigMap";
-import LampGameObject from "../lampGameObject";
+import WallLampGameObject from "../wallLampGameObject";
 import ObjectTypeClientConfig from "./objectTypeClientConfig";
 
-const LampObjectTypeClientConfig: ObjectTypeClientConfig =
+const WallLampObjectTypeClientConfig: ObjectTypeClientConfig =
 {
-    construct: (params: AddObjectSignal) => new LampGameObject(params),
+    construct: (params: AddObjectSignal) => new WallLampGameObject(params),
     selection: {
         canBeSelectedByUserInEditMode: (_gameObject, user) =>
             RoomValidationUtil.userIsAdmin(user),
@@ -16,6 +16,6 @@ const LampObjectTypeClientConfig: ObjectTypeClientConfig =
     },
 };
 
-ObjectTypeClientConfigMap.setConfig("Lamp", LampObjectTypeClientConfig);
+ObjectTypeClientConfigMap.setConfig("WallLamp", WallLampObjectTypeClientConfig);
 
-export default LampObjectTypeClientConfig;
+export default WallLampObjectTypeClientConfig;

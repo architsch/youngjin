@@ -16,7 +16,7 @@ import ServerRoomManager from "../../../src/server/room/serverRoomManager";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 import ObjectMetadataEntryMap from "../../../src/shared/object/maps/objectMetadataEntryMap";
 import ObjectUpdateUtil from "../../../src/shared/object/util/objectUpdateUtil";
-import LampObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/lampObjectTypeConfig";
+import WallLampObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/wallLampObjectTypeConfig";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import RemoveObjectSignal from "../../../src/shared/object/types/removeObjectSignal";
 import SetObjectMetadataSignal from "../../../src/shared/object/types/setObjectMetadataSignal";
@@ -33,8 +33,8 @@ import LampLightUtil, { MAX_LAMP_INTENSITY, MAX_LAMP_RANGE, MIN_LAMP_INTENSITY, 
 import { INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
     LIGHT_COLOR_PALETTE_NAME } from "../../../src/shared/system/sharedConstants";
 
-const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
-const MAX_LAMPS_PER_ROOM = LampObjectTypeConfig.maxCountPerRoom;
+const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("WallLamp");
+const MAX_LAMPS_PER_ROOM = WallLampObjectTypeConfig.maxCountPerRoom;
 
 function makeUser(id: string, userType: number): User
 {
@@ -147,7 +147,7 @@ describe("lamp permissions", () => {
                 const canRelight = (user: User) => ObjectUpdateUtil.canSetObjectMetadata(user, room,
                     new SetObjectMetadataSignal(room.id, lamp.objectId,
                         ObjectMetadataKeyEnumMap.LightProperties,
-                        LampObjectTypeConfig.util.encodeLightProperties(3, 8, 9)));
+                        WallLampObjectTypeConfig.util.encodeLightProperties(3, 8, 9)));
 
                 expect(canRemove(ADMIN)).toBe(true);
                 expect(canMove(ADMIN)).toBe(true);
@@ -224,11 +224,11 @@ describe("what a lamp gives off", () => {
     it("comes back exactly as it was set", () => {
         fc.assert(fc.property(colorIndices, intensities, ranges,
             (colorIndex, intensity, range) => {
-                const lamp = lampWith(LampObjectTypeConfig.util.encodeLightProperties(
+                const lamp = lampWith(WallLampObjectTypeConfig.util.encodeLightProperties(
                     colorIndex, intensity, range));
-                expect(LampObjectTypeConfig.util.getColorIndex(lamp)).toBe(colorIndex);
-                expect(LampObjectTypeConfig.util.getIntensity(lamp)).toBe(intensity);
-                expect(LampObjectTypeConfig.util.getRange(lamp)).toBe(range);
+                expect(WallLampObjectTypeConfig.util.getColorIndex(lamp)).toBe(colorIndex);
+                expect(WallLampObjectTypeConfig.util.getIntensity(lamp)).toBe(intensity);
+                expect(WallLampObjectTypeConfig.util.getRange(lamp)).toBe(range);
             }));
     });
 
@@ -250,26 +250,26 @@ describe("what a lamp gives off", () => {
         // is held to the dial's own range rather than to the encoding's.
         fc.assert(fc.property(fc.string({maxLength: 20}), (raw) => {
             const lamp = lampWith(raw);
-            expect(LampObjectTypeConfig.util.getColorIndex(lamp)).toBeGreaterThanOrEqual(0);
-            expect(LampObjectTypeConfig.util.getColorIndex(lamp)).toBeLessThan(
+            expect(WallLampObjectTypeConfig.util.getColorIndex(lamp)).toBeGreaterThanOrEqual(0);
+            expect(WallLampObjectTypeConfig.util.getColorIndex(lamp)).toBeLessThan(
                 ColorUtil.getPaletteSize(LIGHT_COLOR_PALETTE_NAME));
-            expect(LampObjectTypeConfig.util.getIntensity(lamp)).toBeGreaterThanOrEqual(MIN_LAMP_INTENSITY);
-            expect(LampObjectTypeConfig.util.getIntensity(lamp)).toBeLessThanOrEqual(MAX_LAMP_INTENSITY);
-            expect(LampObjectTypeConfig.util.getRange(lamp)).toBeGreaterThanOrEqual(MIN_LAMP_RANGE);
-            expect(LampObjectTypeConfig.util.getRange(lamp)).toBeLessThanOrEqual(MAX_LAMP_RANGE);
+            expect(WallLampObjectTypeConfig.util.getIntensity(lamp)).toBeGreaterThanOrEqual(MIN_LAMP_INTENSITY);
+            expect(WallLampObjectTypeConfig.util.getIntensity(lamp)).toBeLessThanOrEqual(MAX_LAMP_INTENSITY);
+            expect(WallLampObjectTypeConfig.util.getRange(lamp)).toBeGreaterThanOrEqual(MIN_LAMP_RANGE);
+            expect(WallLampObjectTypeConfig.util.getRange(lamp)).toBeLessThanOrEqual(MAX_LAMP_RANGE);
         }));
     });
 
     it("holds a lamp asked for more than a lamp has to what a lamp has", () => {
         // The bounds are the whole of what the two dials are, so a value from outside them is not a
         // brighter lamp or a longer-reaching one — it is a lamp that does not exist.
-        const beyond = lampWith(LampObjectTypeConfig.util.encodeLightProperties(0, 999, 999));
-        expect(LampObjectTypeConfig.util.getIntensity(beyond)).toBe(MAX_LAMP_INTENSITY);
-        expect(LampObjectTypeConfig.util.getRange(beyond)).toBe(MAX_LAMP_RANGE);
+        const beyond = lampWith(WallLampObjectTypeConfig.util.encodeLightProperties(0, 999, 999));
+        expect(WallLampObjectTypeConfig.util.getIntensity(beyond)).toBe(MAX_LAMP_INTENSITY);
+        expect(WallLampObjectTypeConfig.util.getRange(beyond)).toBe(MAX_LAMP_RANGE);
 
-        const beneath = lampWith(LampObjectTypeConfig.util.encodeLightProperties(0, 0, 0));
-        expect(LampObjectTypeConfig.util.getIntensity(beneath)).toBe(MIN_LAMP_INTENSITY);
-        expect(LampObjectTypeConfig.util.getRange(beneath)).toBe(MIN_LAMP_RANGE);
+        const beneath = lampWith(WallLampObjectTypeConfig.util.encodeLightProperties(0, 0, 0));
+        expect(WallLampObjectTypeConfig.util.getIntensity(beneath)).toBe(MIN_LAMP_INTENSITY);
+        expect(WallLampObjectTypeConfig.util.getRange(beneath)).toBe(MIN_LAMP_RANGE);
     });
 
     it("leaves a lamp a light even at its lowest, and an effect at its highest", () => {
@@ -281,7 +281,7 @@ describe("what a lamp gives off", () => {
         expect(MIN_LAMP_INTENSITY).toBeGreaterThan(0);
         expect(MIN_LAMP_RANGE).toBeGreaterThan(0);
         expect(MAX_LAMP_INTENSITY)
-            .toBeGreaterThan(3 * LampObjectTypeConfig.util.getIntensity(unconfigured));
+            .toBeGreaterThan(3 * WallLampObjectTypeConfig.util.getIntensity(unconfigured));
     });
 
     it("gives a lamp two dials that do not move together", () => {
@@ -316,23 +316,23 @@ describe("what a lamp gives off", () => {
         // no metadata at all has to be a light — and an ordinary one rather than one at the top of
         // a range that exists for dramatic effect.
         const lamp = lampWith("");
-        expect(LampObjectTypeConfig.util.getIntensity(lamp)).toBeGreaterThanOrEqual(MIN_LAMP_INTENSITY);
-        expect(LampObjectTypeConfig.util.getIntensity(lamp)).toBeLessThan(MAX_LAMP_INTENSITY);
-        expect(LampObjectTypeConfig.util.getRange(lamp)).toBeGreaterThan(MIN_LAMP_RANGE);
-        expect(LampObjectTypeConfig.util.getRange(lamp)).toBeLessThanOrEqual(MAX_LAMP_RANGE);
+        expect(WallLampObjectTypeConfig.util.getIntensity(lamp)).toBeGreaterThanOrEqual(MIN_LAMP_INTENSITY);
+        expect(WallLampObjectTypeConfig.util.getIntensity(lamp)).toBeLessThan(MAX_LAMP_INTENSITY);
+        expect(WallLampObjectTypeConfig.util.getRange(lamp)).toBeGreaterThan(MIN_LAMP_RANGE);
+        expect(WallLampObjectTypeConfig.util.getRange(lamp)).toBeLessThanOrEqual(MAX_LAMP_RANGE);
         expect(ColorUtil.rgbToHex(ColorUtil.paletteIndexToRGB(LIGHT_COLOR_PALETTE_NAME,
-            LampObjectTypeConfig.util.getColorIndex(lamp)))).toBe("#ffffff");
+            WallLampObjectTypeConfig.util.getColorIndex(lamp)))).toBe("#ffffff");
     });
 
     it("reads a lamp stored by a version that knew fewer settings", () => {
         // A character past the end of the string falls back on its own default, so a lamp is never
         // read as dark or as reaching nowhere just because its string was short.
-        const colorOnly = LampObjectTypeConfig.util.getDefaultLightProperties().substring(0, 1);
+        const colorOnly = WallLampObjectTypeConfig.util.getDefaultLightProperties().substring(0, 1);
         const lamp = lampWith(colorOnly);
-        expect(LampObjectTypeConfig.util.getIntensity(lamp)).toBe(
-            LampObjectTypeConfig.util.getIntensity(lampWith("")));
-        expect(LampObjectTypeConfig.util.getRange(lamp)).toBe(
-            LampObjectTypeConfig.util.getRange(lampWith("")));
+        expect(WallLampObjectTypeConfig.util.getIntensity(lamp)).toBe(
+            WallLampObjectTypeConfig.util.getIntensity(lampWith("")));
+        expect(WallLampObjectTypeConfig.util.getRange(lamp)).toBe(
+            WallLampObjectTypeConfig.util.getRange(lampWith("")));
     });
 
     it("draws the lamp in the color it lights the room with", () => {
@@ -344,7 +344,7 @@ describe("what a lamp gives off", () => {
 
         fc.assert(fc.property(colorIndices, intensities, ranges,
             (colorIndex, intensity, range) => {
-                const lamp = lampWith(LampObjectTypeConfig.util.encodeLightProperties(
+                const lamp = lampWith(WallLampObjectTypeConfig.util.encodeLightProperties(
                     colorIndex, intensity, range));
                 const {parts} = generateDefaultParts(lamp);
                 expect(parts.length).toBeGreaterThan(0);
