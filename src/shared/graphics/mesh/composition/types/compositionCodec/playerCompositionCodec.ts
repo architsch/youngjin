@@ -73,6 +73,44 @@ export const PlayerCompositionCodec: InstancedMeshCompositionCodec = {
         constructParts(params, parts);
         return {params, parts};
     },
+    getStructuralVariants: (): string[] =>
+    {
+        // A slot's parts depend only on its own type, so the appearance putting the most parts in a mesh
+        // takes, in each slot, the type whose own parts use that mesh the most. One variant per mesh.
+        const slotNames = Object.keys(SLOT_PART_CONSTRUCTORS);
+
+        // 1. What each type of each slot adds on its own: countsByType[type][instancedMeshId], per slot.
+        const countsByTypeBySlot: {[slotName: string]: {[instancedMeshId: string]: number}[]} = {};
+        const instancedMeshIds: string[] = [];
+        for (const slotName of slotNames)
+        {
+            countsByTypeBySlot[slotName] = [];
+            for (let type = 0; type < PlayerCompositionConstants.numTypes[slotName]; ++type)
+            {
+                const counts = countSlotPartsByMesh(slotName, type);
+                countsByTypeBySlot[slotName].push(counts);
+                for (const instancedMeshId in counts)
+                {
+                    if (!instancedMeshIds.includes(instancedMeshId))
+                        instancedMeshIds.push(instancedMeshId);
+                }
+            }
+        }
+
+        // 2. For each mesh, every slot takes its type with the most parts in that mesh.
+        const variants: string[] = [];
+        for (const instancedMeshId of instancedMeshIds)
+        {
+            const params: InstancedMeshCompositionParams = getBaseParams();
+            for (const slotName of slotNames)
+            {
+                const countByType = countsByTypeBySlot[slotName].map(counts => counts[instancedMeshId] ?? 0);
+                params.types[slotName] = countByType.indexOf(Math.max(...countByType));
+            }
+            variants.push(PlayerCompositionCodec.encode(params, []));
+        }
+        return variants;
+    },
 }
 
 function decodePartType(partTypeName: string, strToDecode: string, charIndex: number): number
@@ -86,6 +124,20 @@ function getBuilder(partName: string, partType: number)
 {
     const map = InstancedMeshCompositionBuilderMap;
     return map[`${partName}_${partType}`] ?? map[`${partName}_0`];
+}
+
+// The parts one slot adds by itself when it takes the given type.
+function countSlotPartsByMesh(slotName: string, type: number): {[instancedMeshId: string]: number}
+{
+    const params: InstancedMeshCompositionParams = getBaseParams();
+    params.types[slotName] = type;
+    const parts: InstancedMeshCompositionPart[] = [];
+    SLOT_PART_CONSTRUCTORS[slotName](params, parts);
+
+    const counts: {[instancedMeshId: string]: number} = {};
+    for (const part of parts)
+        counts[part.instancedMeshId] = (counts[part.instancedMeshId] ?? 0) + 1;
+    return counts;
 }
 
 function getBaseParams(): PlayerCompositionParams
@@ -102,36 +154,57 @@ function getBaseParams(): PlayerCompositionParams
     return {ids, types, colors};
 }
 
+// Each slot's parts, placed on the body. A slot reads only its own type, which getStructuralVariants relies on.
+const SLOT_PART_CONSTRUCTORS: {[slotName: string]:
+    (params: PlayerCompositionParams, parts: InstancedMeshCompositionPart[]) => void} =
+{
+    head: (params, parts) => {
+        getBuilder("PlayerHead", params.types.head)(params, parts)
+            .offset(0, 6, 0).run();
+    },
+    ear: (params, parts) => {
+        getBuilder("PlayerEar", params.types.ear)(params, parts)
+            .offset(2.5, 6, 0).run();
+        getBuilder("PlayerEar", params.types.ear)(params, parts)
+            .offset(-2.5, 6, 0).backward().run();
+    },
+    hat: (params, parts) => {
+        getBuilder("PlayerHat", params.types.hat)(params, parts)
+            .offset(0, 9, 0).run();
+    },
+    torso: (params, parts) => {
+        getBuilder("PlayerTorso", params.types.torso)(params, parts)
+            .offset(0, -1, 0).run();
+    },
+    arm: (params, parts) => {
+        getBuilder("PlayerArm", params.types.arm)(params, parts)
+            .offset(2.5, -1, 0).run();
+        getBuilder("PlayerArm", params.types.arm)(params, parts)
+            .offset(-2.5, -1, 0).backward().run();
+    },
+    bottom: (params, parts) => {
+        getBuilder("PlayerBottom", params.types.bottom)(params, parts)
+            .offset(0, -8, 0).run();
+    },
+};
+
 function constructParts(params: PlayerCompositionParams,
     parts: InstancedMeshCompositionPart[])
 {
     const map = InstancedMeshCompositionBuilderMap;
 
-    getBuilder("PlayerHead", params.types.head)(params, parts)
-        .offset(0, 6, 0).run();
-
-    getBuilder("PlayerEar", params.types.ear)(params, parts)
-        .offset(2.5, 6, 0).run();
-    getBuilder("PlayerEar", params.types.ear)(params, parts)
-        .offset(-2.5, 6, 0).backward().run();
-
-    getBuilder("PlayerHat", params.types.hat)(params, parts)
-        .offset(0, 9, 0).run();
+    SLOT_PART_CONSTRUCTORS.head(params, parts);
+    SLOT_PART_CONSTRUCTORS.ear(params, parts);
+    SLOT_PART_CONSTRUCTORS.hat(params, parts);
 
     map["PlayerNeckAndWaist"](params, parts)
         .offset(0, 3.5, 0).run();
 
-    getBuilder("PlayerTorso", params.types.torso)(params, parts)
-        .offset(0, -1, 0).run();
-
-    getBuilder("PlayerArm", params.types.arm)(params, parts)
-        .offset(2.5, -1, 0).run();
-    getBuilder("PlayerArm", params.types.arm)(params, parts)
-        .offset(-2.5, -1, 0).backward().run();
+    SLOT_PART_CONSTRUCTORS.torso(params, parts);
+    SLOT_PART_CONSTRUCTORS.arm(params, parts);
 
     map["PlayerNeckAndWaist"](params, parts)
         .offset(0, -5.5, 0).run();
 
-    getBuilder("PlayerBottom", params.types.bottom)(params, parts)
-        .offset(0, -8, 0).run();
+    SLOT_PART_CONSTRUCTORS.bottom(params, parts);
 }

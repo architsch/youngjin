@@ -1,4 +1,3 @@
-import { useState } from "react";
 import ObjectSelection from "../../../../graphics/types/gizmo/objectSelection";
 import IconButton from "../../input/iconButton";
 import TrashIcon from "../../../svg/icons/trashIcon";
@@ -24,18 +23,21 @@ import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
 import VoxelQuadSelection from "../../../../graphics/types/gizmo/voxelQuadSelection";
 import CustomizeDoorPanel from "../../panel/customizeDoorPanel";
 import SelectionToolRow from "./selectionToolRow";
+import EditOptionsProps from "../../../types/editOptionsProps";
+
+const APPEARANCE_PANEL = "appearance";
 
 // Admin tools for a selected door: remove, name, destination, paint, default entrance. The appearance
 // bar stacks above this row (it belongs to the door); the rest open as popups.
-export default function DoorEditOptions(props: {selection: ObjectSelection})
+export default function DoorEditOptions(props: EditOptionsProps)
 {
-    const [customizing, setCustomizing] = useState<boolean>(false);
+    const customizing = props.openPanel == APPEARANCE_PANEL;
 
     // Full width, so the rows can scroll horizontally instead of growing.
     return <div className="flex flex-col gap-1 w-full">
         {customizing && <CustomizeDoorPanel
             selection={props.selection}
-            onClose={() => setCustomizing(false)}
+            onClose={() => props.setOpenPanel(null)}
         />}
         <SelectionToolRow>
             <IconButton id="removeDoorButton" icon={<TrashIcon/>} size="md" color="red"
@@ -67,7 +69,7 @@ export default function DoorEditOptions(props: {selection: ObjectSelection})
             />
             <IconButton id="customizeDoorButton" icon={<PaintBrushIcon/>} size="md"
                 highlight={customizing}
-                onClick={() => setCustomizing(prev => !prev)}
+                onClick={() => props.setOpenPanel(customizing ? null : APPEARANCE_PANEL)}
             />
             <IconButton id="doorSettingsButton" icon={<GearIcon/>} size="md"
                 onClick={() => PopupUtil.openPopup({popupType: "doorSettings", params: {

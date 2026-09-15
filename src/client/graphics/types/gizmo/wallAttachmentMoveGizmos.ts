@@ -4,6 +4,7 @@ import { gameModeObservable, objectSelectionObservable, roomChangedObservable, u
 import GameModeUtil from "../../../system/util/gameModeUtil";
 import GraphicsManager from "../../graphicsManager";
 import WorldSpaceArrow from "./generic/worldSpaceArrow";
+import WorldSpaceOutlineRect from "./generic/worldSpaceOutlineRect";
 import ObjectUpdateUtil from "../../../../shared/object/util/objectUpdateUtil";
 import App from "../../../app";
 import SocketsClient from "../../../networking/client/socketsClient";
@@ -30,10 +31,10 @@ const arrowDefs = [
     { dir: "-y", dx: 0, dy: -0.5, dz: 0 }, // down
 ];
 
-// Gap between the footprint edge and each arrow.
-const EDGE_MARGIN = 0.1;
 const ARROW_COLOR_HEX = "#ffff00";
 const ARROW_SIZE = 2;
+// An arrow's origin is its shaft's midpoint, this far ahead of its tail (see WorldSpaceArrow).
+const ARROW_TAIL_OFFSET = 0.05 * ARROW_SIZE;
 
 const vec3Dir = new THREE.Vector3();
 const vec3Right = new THREE.Vector3();
@@ -130,8 +131,9 @@ function updateGizmos(selection: ObjectSelection, footprintWidth: number, footpr
     const obj = room.objectById[objectId];
     const pos = go.position;
 
-    const horizontalEdgeOffset = 0.5 * footprintWidth + EDGE_MARGIN;
-    const verticalEdgeOffset = 0.5 * footprintHeight + EDGE_MARGIN;
+    // Tails sit on the selection outline's edges.
+    const horizontalEdgeOffset = WorldSpaceOutlineRect.getEdgeOffset(footprintWidth) + ARROW_TAIL_OFFSET;
+    const verticalEdgeOffset = WorldSpaceOutlineRect.getEdgeOffset(footprintHeight) + ARROW_TAIL_OFFSET;
 
     vec3Dir.set(go.params.transform.dir.x, go.params.transform.dir.y, go.params.transform.dir.z);
     vec3Right.crossVectors(DIRECTION_VECTORS["+y"], vec3Dir).normalize().negate();

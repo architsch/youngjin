@@ -99,7 +99,7 @@ export default class Room extends EncodableData
         if (roomType != RoomTypeEnumMap.SinglePlayer)
         {
             voxelGrid = VoxelGrid.decode(bufferState) as VoxelGrid;
-            // The grid version dates the objects (see ObjectGroup's converters).
+            // The grid version dates the objects (see ObjectGroupVersionMigration).
             objectGroup = ObjectGroup.decodeWithParams(bufferState, id,
                 voxelGrid.sourceFormatVersion) as ObjectGroup;
         }

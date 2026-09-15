@@ -18,8 +18,9 @@ const orbitDistancePerTargetReach = 2.4;
 const minOrbitDistance = 3;
 
 // Zoom range as multiples of the framing distance, reciprocal so the middle is the framing distance.
-// Wide enough for an orbit to start from across the room without moving the camera.
-const maxZoomDistanceFactor = 9;
+// Wide enough for an orbit to start from as far off as edit mode opens on something (see
+// EDIT_MODE_OPENING_REACH) without moving the camera.
+const maxZoomDistanceFactor = 5;
 const minZoomDistanceFactor = 1 / maxZoomDistanceFactor;
 
 // Zoom is multiplicative, so steps are measured against this ratio.
@@ -96,6 +97,23 @@ export default class OrbitCameraPose
         this.spherical.phi = NumUtil.clampInRange(view.polar, minPolarAngle, maxPolarAngle);
         this.publishAngles();
         orbitCameraZoomObservable.set(NumUtil.clampInRange(view.zoomAmount, 0, 1));
+    }
+
+    // Zooms just far enough to bring the camera's distance to every point of the target within range
+    // (see orbitCameraDistanceRangeRequestObservable), so turning the camera afterwards can't break it.
+    // The minimum wins a range too narrow for the target.
+    applyDistanceRange(range: {min: number, max: number}, target: AABB3): void
+    {
+        const pivotToFarthestPoint = Math.hypot(target.halfSize.x,
+            (1 + orbitPivotHeightPerTargetHalfHeight) * target.halfSize.y, target.halfSize.z);
+        const minDistance = range.min + pivotToFarthestPoint;
+        const maxDistance = Math.max(minDistance, range.max - pivotToFarthestPoint);
+
+        const distance = NumUtil.clampInRange(
+            this.framingDistance * getZoomDistanceFactor(orbitCameraZoomObservable.peek()),
+            minDistance, maxDistance);
+        orbitCameraZoomObservable.set(NumUtil.clampInRange(
+            getZoomAmount(distance / this.framingDistance), 0, 1));
     }
 
     // How far the camera is currently being held from the target.

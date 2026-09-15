@@ -26,11 +26,11 @@ const RECEPTIONIST_APPEARANCE = CompositionMetadataUtil.encode(
     });
 
 // Pine with a putty plate and brass knob (shows grain and joinery best).
-const TUTORIAL_DOOR_COLOR_SCHEME_INDEX = 0;
+const TUTORIAL_DOOR_PRESET_INDEX = 0;
 
 const TUTORIAL_DOOR_APPEARANCE = CompositionMetadataUtil.encode(
     InstancedMeshCompositionCodecTypeEnumMap.Door, 0,
-    {colors: DoorCompositionConstants.colorSchemes[TUTORIAL_DOOR_COLOR_SCHEME_INDEX]});
+    {colors: DoorCompositionConstants.presets[TUTORIAL_DOOR_PRESET_INDEX]});
 
 // Dark grey label ink, snapped to the lettering palette.
 const TUTORIAL_DOOR_LABEL_COLOR_INDEX = ColorUtil.rgbToPaletteIndex(

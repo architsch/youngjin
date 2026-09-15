@@ -3,11 +3,13 @@ import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/obj
 import { INSTANCE_COLORED_MATERIAL_IDS, INSTANCED_WOOD_MATERIAL_ID } from "../../../shared/system/sharedConstants";
 import InstancedMeshComposition from "./helpers/mesh/instancedMeshComposition";
 import { InstancedMeshCompositionParams } from "../../../shared/graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
+import InstancedMeshCompositionPart from "../../../shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
 import GameObject from "../types/gameObject";
 import GameObjectComponent from "./gameObjectComponent";
 import InstancedMeshGraphics from "./instancedMeshGraphics";
 import MaterialParamsMap from "../../../shared/graphics/material/maps/materialParamsMap";
 import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
+import InstancedMeshCapacityMap from "../../../shared/graphics/mesh/composition/maps/instancedMeshCapacityMap";
 
 // Precomputed "+materialId" suffixes, to avoid splitting ids in the refresh loop (see
 // MeshDataUtil.getInstancedMeshId).
@@ -140,6 +142,18 @@ export default class InstancedMeshComposer extends GameObjectComponent
     {
         return this.instancedMeshComposition.params;
     }
+    // The first part drawn by a mesh whose id ends with the suffix (e.g. "+InstancedWood"; see
+    // MeshDataUtil.getInstancedMeshId), for objects that place their own drawing by a part.
+    getPartWithSuffix(instancedMeshIdSuffix: string): InstancedMeshCompositionPart | undefined
+    {
+        const parts = this.instancedMeshComposition.parts;
+        for (let i = 0; i < parts.length; ++i)
+        {
+            if (parts[i].instancedMeshId.endsWith(instancedMeshIdSuffix))
+                return parts[i];
+        }
+        return undefined;
+    }
     rebuildParts()
     {
         this.decodeParts(this.encodeParts());
@@ -171,12 +185,16 @@ export default class InstancedMeshComposer extends GameObjectComponent
             const parts = this.instancedMeshComposition.parts;
             for (let i = 0; i < parts.length; ++i)
             {
-                const ids = parts[i].instancedMeshId.split("+");
+                const instancedMeshId = parts[i].instancedMeshId;
+                // Meshes are shared across object types, so whichever loads one first fixes its size.
+                const capacity = InstancedMeshCapacityMap[instancedMeshId];
+                if (capacity == undefined)
+                    throw new Error(`No generated capacity for "${instancedMeshId}" (see InstancedMeshCapacityBuilder)`);
+                const ids = instancedMeshId.split("+");
                 const geometryId = ids[0];
                 const materialId = ids[1];
                 await this.instancedMeshGraphics.loadInstancedMesh(
-                    geometryId, MaterialParamsMap.getParamsById(materialId),
-                    this.componentConfig.maxNumInstancesPerMesh, true);
+                    geometryId, MaterialParamsMap.getParamsById(materialId), capacity, true);
             }
         }
         catch (error)

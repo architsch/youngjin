@@ -1,7 +1,8 @@
 import * as THREE from "three";
 import PlayerController from "../../playerController";
 import GraphicsManager from "../../../../graphics/graphicsManager";
-import { cameraModeObservable, orbitCameraViewRequestObservable } from "../../../../system/clientObservables";
+import { cameraModeObservable, orbitCameraDistanceRangeRequestObservable,
+    orbitCameraViewRequestObservable } from "../../../../system/clientObservables";
 import AABB3 from "../../../../../shared/math/types/aabb3";
 import FirstPersonCameraPose from "./firstPersonCameraPose";
 import OrbitCameraPose from "./orbitCameraPose";
@@ -60,11 +61,14 @@ export default class PlayerCamera
     {
         const mode = cameraModeObservable.peek();
 
-        // Consumed here, after framing, so the requested view isn't overwritten. Always cleared so a
+        // Requests are consumed here, after framing, so they aren't overwritten. Always cleared so a
         // stale request can't apply to a later orbit.
         const viewRequest = orbitCameraViewRequestObservable.peek();
         if (viewRequest != null)
             orbitCameraViewRequestObservable.set(null);
+        const distanceRangeRequest = orbitCameraDistanceRangeRequestObservable.peek();
+        if (distanceRangeRequest != null)
+            orbitCameraDistanceRangeRequestObservable.set(null);
 
         let interpRate: number;
 
@@ -84,6 +88,8 @@ export default class PlayerCamera
             }
             if (viewRequest != null)
                 this.orbitPose.setView(viewRequest);
+            if (distanceRangeRequest != null)
+                this.orbitPose.applyDistanceRange(distanceRangeRequest, mode.target);
             this.orbitTarget = mode.target;
             interpRate = this.orbitPose.updatePose(this.pointerInput!.dragDelta, this.pointerInput!.viewScale,
                 mode.target, controller.gameObject.obj,

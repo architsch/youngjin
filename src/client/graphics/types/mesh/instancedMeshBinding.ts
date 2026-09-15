@@ -6,10 +6,9 @@ import GameObject from "../../../object/types/gameObject";
 import InstancedTexturePackMaterialParams from "../../../../shared/graphics/material/types/instancedTexturePackMaterialParams";
 import TextureUtil from "../../util/textureUtil";
 import MeshDataUtil from "../../../../shared/graphics/mesh/util/meshDataUtil";
+import InstancedPartUtil from "../../util/instancedPartUtil";
 
-const tempObj = new THREE.Object3D();
-const vec3Temp = new THREE.Vector3();
-const colorTemp = new THREE.Color();
+const matrixTemp = new THREE.Matrix4();
 const sphereTemp = new THREE.Sphere();
 
 // Hidden instances are parked far below the room (instances share the mesh's visibility flag).
@@ -222,33 +221,21 @@ export default class InstancedMeshBinding
         }
         gameObject.obj.updateMatrixWorld(); // Recurses to visualObj, so its (possibly bounced) world matrix is current too.
         // Baked under visualObj so cosmetic transforms (e.g. EasingMotion's bounce) apply to the instance.
-        gameObject.visualObj.add(tempObj);
-
-        tempObj.scale.set(xScale, yScale, zScale);
-
-        tempObj.position.set(0, 0, 0);
-        // dir is in the GameObject's local frame; transform it to a world look-at target via visualObj.
-        vec3Temp.set(dirX, dirY, dirZ);
-        gameObject.visualObj.localToWorld(vec3Temp);
-        tempObj.lookAt(vec3Temp);
-
-        tempObj.position.set(offsetX, offsetY, offsetZ);
-        tempObj.updateMatrixWorld();
+        InstancedPartUtil.bakePartMatrix(gameObject.visualObj,
+            offsetX, offsetY, offsetZ, dirX, dirY, dirZ, xScale, yScale, zScale, matrixTemp);
 
         // Buffered while hidden (see setInstanceHidden).
         const ownerMatrix = this.ownerMatrixByHiddenInstanceId?.get(instanceId);
         if (ownerMatrix != undefined)
         {
-            ownerMatrix.copy(tempObj.matrixWorld);
+            ownerMatrix.copy(matrixTemp);
         }
         else
         {
-            this.writeInstanceMatrix(instanceId, tempObj.matrixWorld);
+            this.writeInstanceMatrix(instanceId, matrixTemp);
             // Force InstancedMesh.raycast to recompute bounds with the new position.
             this.instancedMesh.boundingSphere = null;
         }
-
-        tempObj.removeFromParent();
     }
 
     private writeInstanceMatrix(instanceId: number, matrix: THREE.Matrix4)
@@ -299,9 +286,7 @@ export default class InstancedMeshBinding
             console.error(`InstancedMesh hasn't been loaded yet (objectId = ${gameObject.params.objectId})`);
             return;
         }
-        // sRGB [0,255] -> working color space, as three.js does for material colors.
-        colorTemp.setRGB(r / 255, g / 255, b / 255, THREE.SRGBColorSpace);
-        this.instancedMesh.setColorAt(instanceId, colorTemp);
+        InstancedPartUtil.setInstanceColor(this.instancedMesh, instanceId, r, g, b);
         markInstanceForUpload(this.instancedMesh.instanceColor!, instanceId);
     }
 
@@ -315,14 +300,11 @@ export default class InstancedMeshBinding
             console.error(`InstancedMesh hasn't been loaded yet (objectId = ${gameObject.params.objectId})`);
             return;
         }
-        // sRGB [0,255] -> working color space, as three.js does for material colors.
         const mouldingColorAttrib = this.getOrCreateInstancedAttribute("mouldingColor", 3);
-        colorTemp.setRGB(r / 255, g / 255, b / 255, THREE.SRGBColorSpace);
-        mouldingColorAttrib.setXYZ(instanceId, colorTemp.r, colorTemp.g, colorTemp.b);
-        markInstanceForUpload(mouldingColorAttrib, instanceId);
-
         const mouldingParamsAttrib = this.getOrCreateInstancedAttribute("mouldingParams", 2);
-        mouldingParamsAttrib.setXY(instanceId, thickness, convex ? 1 : -1);
+        InstancedPartUtil.setInstanceMoulding(mouldingColorAttrib, mouldingParamsAttrib, instanceId,
+            r, g, b, thickness, convex);
+        markInstanceForUpload(mouldingColorAttrib, instanceId);
         markInstanceForUpload(mouldingParamsAttrib, instanceId);
     }
 

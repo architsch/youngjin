@@ -2,6 +2,7 @@ import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../graphics/mesh
 import { InstancedMeshCompositionParams } from "../../../graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
 import InstancedMeshCompositionPart from "../../../graphics/mesh/composition/types/instancedMeshCompositionPart";
 import CompositionMetadataUtil from "../../../graphics/mesh/composition/util/compositionMetadataUtil";
+import PreEncodedCompositionIndexMap from "../../../graphics/mesh/composition/maps/preEncodedCompositionIndexMap";
 import { MAX_LAMP_INTENSITY, MAX_LAMP_RANGE, MIN_LAMP_INTENSITY,
     MIN_LAMP_RANGE } from "../../../graphics/light/util/lampLightUtil";
 import ColorUtil from "../../../math/util/colorUtil";
@@ -20,9 +21,8 @@ import SetObjectMetadataSignal from "../setObjectMetadataSignal";
 import SetObjectTransformSignal from "../setObjectTransformSignal";
 import { ObjectMetadataKeyEnumMap } from "../objectMetadataKey";
 
-// Pre-encoded composition index and codec version for lamps (the shape is authored in the pre-encoding
-// source; see @docs/graphics/instanced_mesh_composition.md).
-const WALL_LAMP_COMPOSITION_INDEX = 0;
+// Lamps have a single pre-encoded appearance (authored in the pre-encoding source; see
+// @docs/graphics/instanced_mesh_composition.md).
 const COMPOSITION_CODEC_VERSION = 0;
 
 // instancedMeshId suffix of unlit parts, whose color comes from the lamp's light.
@@ -36,7 +36,6 @@ const LAMP_FOOTPRINT_HEIGHT = COLLISION_LAYER_HEIGHT;
 // Bounded by the mesh pool, propagation cost, clutter and stored size (the block map itself doesn't
 // scale with lamp count).
 const MAX_LAMPS_PER_ROOM = 64;
-const MAX_MESH_INSTANCES_PER_LAMP = 4;
 
 // Character positions in the stored string; never reorder.
 const COLOR_CHAR_INDEX = 0;
@@ -107,7 +106,6 @@ const WallLampObjectTypeConfig =
             },
             instancedMeshGraphics: {},
             instancedMeshComposer: {
-                maxNumInstancesPerMesh: MAX_LAMPS_PER_ROOM * MAX_MESH_INSTANCES_PER_LAMP,
                 codecType: InstancedMeshCompositionCodecTypeEnumMap.Indexed,
                 codecVersion: COMPOSITION_CODEC_VERSION,
                 // Shape from the pre-encoded composition; emissive part color derived from the light, so
@@ -116,7 +114,7 @@ const WallLampObjectTypeConfig =
                 generateDefaultParts: (obj: AddObjectSignal) => {
                     const params: InstancedMeshCompositionParams = {};
                     const parts: InstancedMeshCompositionPart[] = [];
-                    CompositionMetadataUtil.decodeIndexed(WALL_LAMP_COMPOSITION_INDEX,
+                    CompositionMetadataUtil.decodeIndexed(PreEncodedCompositionIndexMap.WallLamp[0],
                         COMPOSITION_CODEC_VERSION, params, parts);
 
                     const color = ColorUtil.paletteIndexToRGB(LIGHT_COLOR_PALETTE_NAME,

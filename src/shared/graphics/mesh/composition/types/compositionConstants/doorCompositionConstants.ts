@@ -105,23 +105,23 @@ const DoorCompositionConstants = {
     // like a fault. Panels stay mid-brightness (the aging material makes dark finishes black and pale
     // ones wash out); the plate stays close to the panel's brightness; the knob is metal or bone.
     // Mouldings take no color of their own (see the "InstancedWood" material).
-    colorSchemes: [
-        scheme("#b98b56", "#d5cdb6", "#c9a227"), // pine, putty plate, brass knob
-        scheme("#71452b", "#6b6659", "#a98a3f"), // dark walnut
-        scheme("#a87545", "#bdb59d", "#8a7346"), // medium oak
-        scheme("#87816f", "#d5cdb6", "#5c5c5a"), // weathered grey, iron knob
-        scheme("#74856b", "#bdb59d", "#c9a227"), // painted sage
-        scheme("#647684", "#a29b86", "#9a9a97"), // painted slate blue
-        scheme("#5c6f57", "#87816f", "#a98a3f"), // painted deep green
-        scheme("#8a5f56", "#a29b86", "#c9a227"), // painted oxblood
-        scheme("#a89263", "#e6dcc8", "#8a7346"), // painted ochre
-        scheme("#a29b86", "#f0e7d2", "#7a7a78"), // painted putty, ivory plate
-        scheme("#845433", "#87816f", "#ded2b8"), // dark stain, bone knob
-        scheme("#7d8f9c", "#ded2b8", "#5c5c5a"), // painted blue-grey
+    presets: [
+        preset("#b98b56", "#d5cdb6", "#c9a227"), // pine, putty plate, brass knob
+        preset("#71452b", "#6b6659", "#a98a3f"), // dark walnut
+        preset("#a87545", "#bdb59d", "#8a7346"), // medium oak
+        preset("#87816f", "#d5cdb6", "#5c5c5a"), // weathered grey, iron knob
+        preset("#74856b", "#bdb59d", "#c9a227"), // painted sage
+        preset("#647684", "#a29b86", "#9a9a97"), // painted slate blue
+        preset("#5c6f57", "#87816f", "#a98a3f"), // painted deep green
+        preset("#8a5f56", "#a29b86", "#c9a227"), // painted oxblood
+        preset("#a89263", "#e6dcc8", "#8a7346"), // painted ochre
+        preset("#a29b86", "#f0e7d2", "#7a7a78"), // painted putty, ivory plate
+        preset("#845433", "#87816f", "#ded2b8"), // dark stain, bone knob
+        preset("#7d8f9c", "#ded2b8", "#5c5c5a"), // painted blue-grey
     ] as DoorCompositionParams["colors"][],
 };
 
-function scheme(panel: string, label: string, knob: string): DoorCompositionParams["colors"]
+function preset(panel: string, label: string, knob: string): DoorCompositionParams["colors"]
 {
     const snap = (hex: string) => ColorUtil.paletteIndexToRGB("Timber", 
         ColorUtil.rgbToPaletteIndex("Timber", ColorUtil.hexToRGB(hex)));

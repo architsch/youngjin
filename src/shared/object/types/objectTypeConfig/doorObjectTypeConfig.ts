@@ -22,9 +22,8 @@ import { ObjectMetadataKeyEnumMap } from "../objectMetadataKey";
 // Fixed id for a room's entrance door, so conversions add exactly one and its derived appearance is stable.
 export const ENTRANCE_DOOR_OBJECT_ID = "entrance_door";
 
-// Bounded by the shared mesh instance pool.
+// Sizes the shared mesh instance pools (see InstancedMeshCapacityBuilder).
 const MAX_DOORS_PER_ROOM = 16;
-const MAX_MESH_INSTANCES_PER_DOOR = 8;
 
 // Spawn and walk-out distances along the door's facing. The door sits on the wall/room boundary, so
 // half a voxel either way is a cell centre: spawn behind the door in the wall cell, walk out to the
@@ -117,7 +116,6 @@ const DoorObjectTypeConfig =
             },
             instancedMeshGraphics: {},
             instancedMeshComposer: {
-                maxNumInstancesPerMesh: MAX_DOORS_PER_ROOM * MAX_MESH_INSTANCES_PER_DOOR,
                 codecType: InstancedMeshCompositionCodecTypeEnumMap.Door,
                 codecVersion: 0,
                 generateDefaultParts: (obj: AddObjectSignal) => {

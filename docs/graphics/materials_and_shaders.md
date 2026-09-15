@@ -2,7 +2,7 @@
 
 Reference: @src/client/graphics/maps/materialConstructorMap.ts , @src/client/graphics/factories/materialFactory.ts , @src/client/graphics/shaders/ , @src/client/graphics/util/valueNoiseTextureUtil.ts , @src/client/graphics/util/shaderPrecompileUtil.ts
 
-Almost nothing is textured. Surfaces such as the moulded timber of doors and the aged tin of players are procedural shader code.
+Almost nothing is textured. Surfaces such as the moulded timber of doors and canvas frames and the aged tin of players are procedural shader code.
 
 ## Structure
 - Each surface has its own module under `src/client/graphics/shaders` containing its GLSL and the splices into three.js shader chunks. `MaterialConstructorMap` only pairs a material type with a `THREE.Material` and a shader.

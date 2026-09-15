@@ -17,49 +17,53 @@ import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
 import PictureIcon from "../../../svg/icons/pictureIcon";
 import PictureFrameIcon from "../../../svg/icons/pictureFrameIcon";
 import VoxelQuadSelection from "../../../../graphics/types/gizmo/voxelQuadSelection";
+import CustomizeCanvasPanel from "../../panel/customizeCanvasPanel";
 import SelectionToolRow from "./selectionToolRow";
+import EditOptionsProps from "../../../types/editOptionsProps";
 
-export default function CanvasEditOptions(props: {selection: ObjectSelection})
+const FRAME_PANEL = "frame";
+
+// Canvas tools: remove, image, and frame. The frame bar stacks above this row (it belongs to the canvas).
+export default function CanvasEditOptions(props: EditOptionsProps)
 {
-    const go = props.selection.gameObject;
-    const imagePathMetadata = go.params.metadata[ObjectMetadataKeyEnumMap.ImagePath];
+    const imagePathMetadata = props.selection.gameObject.params.metadata[ObjectMetadataKeyEnumMap.ImagePath];
     const initialImagePath = imagePathMetadata ? imagePathMetadata.str : "";
-    const frameCoordsMetadata = go.params.metadata[ObjectMetadataKeyEnumMap.CanvasFrameCoords];
-    const initialFrameCoords = frameCoordsMetadata ? frameCoordsMetadata.str : "";
+
+    const customizingFrame = props.openPanel == FRAME_PANEL;
 
     // Recomputed each render; zone changes re-announce the selection (see ClientVoxelManager).
     const canEdit = canEditCanvas(props.selection);
 
-    return <SelectionToolRow>
-        <IconButton icon={<TrashIcon/>} size="md" color="red"
-            disabled={!canRemoveCanvas(props.selection)}
-            onClick={() => openRemoveConfirmPopup(props.selection)}
-        />
-        <ImageChooser
-            title="Change Image"
-            id="changeCanvasImageButton"
-            icon={<PictureIcon/>}
-            viewType="list"
-            mapName="CanvasImageMap"
-            initialChoicePath={initialImagePath}
-            disabled={!canEdit}
-            onChoose={path => {
-                trySetCanvasMetadata(props.selection, ObjectMetadataKeyEnumMap.ImagePath, path);
-            }}
-        />
-        <ImageChooser
-            title="Change Frame"
-            id="changeCanvasFrameButton"
-            icon={<PictureFrameIcon/>}
-            viewType="grid"
-            mapName="CanvasFrameImageMap"
-            initialChoicePath={initialFrameCoords}
-            disabled={!canEdit}
-            onChoose={coords => {
-                trySetCanvasMetadata(props.selection, ObjectMetadataKeyEnumMap.CanvasFrameCoords, coords);
-            }}
-        />
-    </SelectionToolRow>;
+    // Full width, so the rows can scroll horizontally instead of growing.
+    return <div className="flex flex-col gap-1 w-full">
+        {customizingFrame && canEdit && <CustomizeCanvasPanel
+            selection={props.selection}
+            onClose={() => props.setOpenPanel(null)}
+        />}
+        <SelectionToolRow>
+            <IconButton icon={<TrashIcon/>} size="md" color="red"
+                disabled={!canRemoveCanvas(props.selection)}
+                onClick={() => openRemoveConfirmPopup(props.selection)}
+            />
+            <ImageChooser
+                title="Change Image"
+                id="changeCanvasImageButton"
+                icon={<PictureIcon/>}
+                viewType="list"
+                mapName="CanvasImageMap"
+                initialChoicePath={initialImagePath}
+                disabled={!canEdit}
+                onChoose={path => {
+                    trySetCanvasMetadata(props.selection, ObjectMetadataKeyEnumMap.ImagePath, path);
+                }}
+            />
+            <IconButton id="changeCanvasFrameButton" icon={<PictureFrameIcon/>} size="md"
+                disabled={!canEdit}
+                highlight={customizingFrame && canEdit}
+                onClick={() => props.setOpenPanel(customizingFrame ? null : FRAME_PANEL)}
+            />
+        </SelectionToolRow>
+    </div>;
 }
 
 // The room must be editable and the canvas outside others' restricted zones (see

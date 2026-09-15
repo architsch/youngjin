@@ -11,9 +11,6 @@ const X_RANGE = [0, 32];
 const Y_RANGE = [0, 8];
 const Z_RANGE = [0, 32];
 
-// The old vertical range, used by ObjectGroup's converter to rescale legacy heights.
-const LEGACY_Y_RANGE_MAX = 4;
-
 const dirVecRange = [-1, 1]; // direction vector is a unit vector, so none of its components will ever exceed 1.
 
 export default class ObjectTransform extends EncodableData
@@ -32,12 +29,6 @@ export default class ObjectTransform extends EncodableData
     static get encodableBounds(): {maxX: number, maxY: number, maxZ: number}
     {
         return {maxX: X_RANGE[1], maxY: Y_RANGE[1], maxZ: Z_RANGE[1]};
-    }
-
-    // Reinterprets a stored fraction against the legacy Y range.
-    static rescaleLegacyY(y: number): number
-    {
-        return y * (LEGACY_Y_RANGE_MAX / Y_RANGE[1]);
     }
 
     encode(bufferState: BufferState)

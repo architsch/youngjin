@@ -263,6 +263,8 @@ export default class OrbitOcclusionHider
 
         const labelText = gameObject.components.labelText as LabelText | undefined;
         labelText?.forEachInstance(hideInstance);
+
+        gameObject.forEachOwnedInstance(hideInstance);
     }
 
     private revealHiddenMeshOccluders(): void

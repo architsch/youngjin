@@ -18,6 +18,9 @@ export default class InstancedTexturePackMaterialParams extends MaterialParams
     // Outline color "#rrggbb", set after construction. Enables the per-instance outline attribute
     // and shader code (see InstancedMeshBinding.updateInstanceOutline); undefined costs nothing.
     outlineColorHex: string | undefined;
+    // Set after construction: texels with low alpha are discarded instead of blended, so the quad keeps
+    // opaque depth and sorting while parts of its cell stay see-through (e.g. around a letterboxed picture).
+    alphaCutout: boolean;
 
     constructor(texturePath: string, textureWidth: number, textureHeight: number,
         textureGridCellWidth: number, textureGridCellHeight: number,
@@ -38,6 +41,7 @@ export default class InstancedTexturePackMaterialParams extends MaterialParams
         this.polygonOffsetFactor = polygonOffsetFactor;
         this.polygonOffsetUnits = polygonOffsetUnits;
         this.outlineColorHex = undefined;
+        this.alphaCutout = false;
     }
 
     protected getDefaultMaterialId(): string

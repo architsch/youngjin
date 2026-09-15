@@ -3,7 +3,7 @@ import App from "../../app";
 import VoxelQuadSelection from "../../graphics/types/gizmo/voxelQuadSelection";
 import ClientObjectManager from "../../object/clientObjectManager";
 import EasingMotion from "../../object/components/easingMotion";
-import { cameraModeObservable, clientFeatureFlagsObservable, downwardArrowTargetObservable, headlineMessageObservable, navigationArrowTargetObservable, orbitCameraTargetOverrideObservable, orbitCameraViewRequestObservable, screenArrowTargetObservable, screenDiagramObservable, screenOutlineCapsuleTargetObservable, screenOutlineRectTargetObservable, voxelQuadHighlightObservable, voxelQuadSelectionObservable } from "../../system/clientObservables";
+import { cameraModeObservable, clientFeatureFlagsObservable, downwardArrowTargetObservable, editModeOpeningOverrideObservable, headlineMessageObservable, myPlayerHiddenObservable, navigationArrowTargetObservable, orbitCameraDistanceRangeRequestObservable, orbitCameraTargetOverrideObservable, orbitCameraViewRequestObservable, screenArrowTargetObservable, screenDiagramObservable, screenOutlineCapsuleTargetObservable, screenOutlineRectTargetObservable, voxelQuadHighlightObservable, voxelQuadSelectionObservable } from "../../system/clientObservables";
 import ClientVoxelManager from "../../voxel/clientVoxelManager";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import SinglePlayerManager from "../singlePlayerManager";
@@ -86,33 +86,23 @@ const SinglePlayerActionMap: {
     },
     "select_voxel_quad": (action) => // Puts the selection on a quad of the step's own choosing. This is the script's doing rather than the user's, so it goes through whatever the step is holding still meanwhile: a step that pins the selection to keep the user from wandering off it still has to be able to move it itself, once the block it was pinned to has been built or taken away.
     {
-        const room = App.getCurrentRoom();
-        if (!room)
-        {
-            console.error("SinglePlayerActionMap :: Current room doesn't exits.");
-            return;
-        }
-        const row = action.row();
-        const col = action.col();
-        const voxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, col);
-        if (!voxel)
-        {
-            console.error(`SinglePlayerActionMap :: Voxel doesn't exist (row = ${row}, col = ${col})`);
-            return;
-        }
-        const quadIndex = VoxelQueryUtil.getVoxelQuadIndex(row, col,
-            action.facingAxis, action.orientation, action.collisionLayer());
-        if ((voxel.quadsMem.quads[quadIndex] & 0b10000000) == 0)
-        {
-            // An invisible quad can't be acted on; the current selection is left alone.
-            console.error(`SinglePlayerActionMap :: Voxel-quad is not visible (row = ${row}, col = ${col})`);
-            return;
-        }
-        voxelQuadSelectionObservable.set(new VoxelQuadSelection(voxel, quadIndex));
+        selectVoxelQuad(action.quadIndex());
+    },
+    "edit_mode_opening_voxel_quad": (action) => // Makes edit mode open on a quad of the step's choosing instead of what the camera faces, until cleared. The quad is picked as the mode opens rather than now, since the user may still walk until then, and it is selected the way "select_voxel_quad" selects one.
+    {
+        editModeOpeningOverrideObservable.set(() => selectVoxelQuad(action.quadIndex()));
+    },
+    "clear_edit_mode_opening_voxel_quad": (action) => // Gives edit mode back its usual opening (see GameModeUtil.enterEditMode).
+    {
+        editModeOpeningOverrideObservable.set(null);
     },
     "set_variable": (action) => // Works something out and sets it aside under a name, for the steps that follow to build their own parameters from (see SinglePlayerManager).
     {
         SinglePlayerManager.setVariable(action.name, action.computeValue());
+    },
+    "set_my_player_hidden": (action) => // Hides the user's own character and its speech bubble whatever the camera does, letting raycasts through it, or shows it again (see myPlayerHiddenObservable).
+    {
+        myPlayerHiddenObservable.set(action.hidden);
     },
     "set_camera_mode": (action) =>
     {
@@ -125,6 +115,10 @@ const SinglePlayerActionMap: {
             polar: THREE.MathUtils.degToRad(action.polarDeg()),
             zoomAmount: action.zoomAmount(),
         });
+    },
+    "orbit_camera_distance_range": (action) => // Zooms the orbit camera just enough to hold it within a range of distances from its target, keeping its angles (see orbitCameraDistanceRangeRequestObservable).
+    {
+        orbitCameraDistanceRangeRequestObservable.set({min: action.minDistance(), max: action.maxDistance()});
     },
     "orbit_camera_target_override": (action) => // Holds the orbit camera on a point of the step's choosing, whatever the user has selected meanwhile, until the override is cleared. Showing the user the thing he is being asked to pick out beats telling him where to look for it.
     {
@@ -183,6 +177,38 @@ const SinglePlayerActionMap: {
             oscillations: action.oscillations?.(),
         });
     },
+}
+
+// Selects a visible quad, past any selection lock (see "select_voxel_quad"). Returns whether it did.
+function selectVoxelQuad(quadIndex: number): boolean
+{
+    const room = App.getCurrentRoom();
+    if (!room)
+    {
+        console.error("SinglePlayerActionMap :: Current room doesn't exits.");
+        return false;
+    }
+    if (!VoxelQueryUtil.isValidVoxelQuadIndex(quadIndex))
+    {
+        console.error(`SinglePlayerActionMap :: Invalid voxel-quad index (quadIndex = ${quadIndex})`);
+        return false;
+    }
+    const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
+    const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
+    const voxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, col);
+    if (!voxel)
+    {
+        console.error(`SinglePlayerActionMap :: Voxel doesn't exist (row = ${row}, col = ${col})`);
+        return false;
+    }
+    if ((voxel.quadsMem.quads[quadIndex] & 0b10000000) == 0)
+    {
+        // An invisible quad can't be acted on; the current selection is left alone.
+        console.error(`SinglePlayerActionMap :: Voxel-quad is not visible (row = ${row}, col = ${col})`);
+        return false;
+    }
+    voxelQuadSelectionObservable.set(new VoxelQuadSelection(voxel, quadIndex));
+    return true;
 }
 
 export default SinglePlayerActionMap;

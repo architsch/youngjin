@@ -5,7 +5,9 @@ export const ObjectMetadataKeyEnumMap: Record<string, number> =
     SentMessage: 0, // for objects that can send object-messages (e.g. players)
     ImagePath: 1, // for objects that are meant to display an image from the web
     InstancedMeshComposition: 2, // properties of the mesh instances that are being used to render the 3D object
-    CanvasFrameCoords: 3, // "{col},{row}" cell coordinates of the canvas's picture frame within the frame atlas
+    // Retired (slot reserved): a canvas's "{col},{row}" frame atlas cell, now its InstancedMeshComposition.
+    // Read only by ObjectGroup's migration.
+    CanvasFrameCoords: 3,
     // Text drawn by LabelText. Generic (not door-specific) so every labeled object reads the same key.
     Label: 4,
     DestinationRoomId: 5, // for doors: which room this one opens onto ("" if it opens onto nowhere)

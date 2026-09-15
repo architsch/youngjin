@@ -52,6 +52,16 @@ const ObjectTypeConfigMap =
             throw new Error(`getIndexByType :: Invalid object type (objectType = ${objectType})`);
         return objectTypeIndex;
     },
+    hasType: (objectType: string): boolean =>
+    {
+        ensureIndexed();
+        return typeToIndex[objectType] != undefined;
+    },
+    getAllConfigs: (): ObjectTypeConfig[] =>
+    {
+        ensureIndexed();
+        return Object.values(indexToConfig);
+    },
 }
 
 export default ObjectTypeConfigMap;

@@ -20,9 +20,6 @@ const entries: {[key: number]: ObjectMetadataEntry} = {
     [ObjectMetadataKeyEnumMap.InstancedMeshComposition]: {
         preprocessingMethod: (rawValue: string) => StringUtil.truncateByCodePoints(rawValue, OBJECT_INSTANCED_MESH_COMPOSITION_METADATA_MAX_LENGTH),
     },
-    [ObjectMetadataKeyEnumMap.CanvasFrameCoords]: {
-        preprocessingMethod: (rawValue: string) => rawValue,
-    },
     // Trimmed, since labels are matched by name when routing arrivals.
     [ObjectMetadataKeyEnumMap.Label]: {
         preprocessingMethod: (rawValue: string) => StringUtil.truncateByCodePoints(rawValue.trim(), OBJECT_LABEL_MAX_LENGTH),

@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import Text from "../basic/text";
-import useWorldTapDismiss from "../../util/worldTapDismiss";
 import InstancedMeshComposer from "../../../object/components/instancedMeshComposer";
 import ColorUtil from "../../../../shared/math/util/colorUtil";
 import DoorCompositionParams from "../../../../shared/graphics/mesh/composition/types/compositionParams/doorCompositionParams";
@@ -26,9 +25,6 @@ export default function CustomizeDoorPanel({ selection, onClose }: Props)
 {
     const [editCount, setEditCount] = useState(0);
 
-    // A world tap closes this panel only; otherwise it would deselect the door.
-    useWorldTapDismiss(onClose);
-
     // Re-read 'params' whenever 'editCount' changes.
     const params = useMemo(() => getDoorParams(selection), [selection, editCount]);
     if (params == undefined)
@@ -45,21 +41,21 @@ export default function CustomizeDoorPanel({ selection, onClose }: Props)
         setEditCount(prev => prev + 1);
     };
 
-    // Applies a whole coordinated scheme as a starting point.
-    const applyScheme = (schemeIndex: number) => applyEdit((p) => {
-        const scheme = DoorCompositionConstants.colorSchemes[schemeIndex];
-        p.colors.panel = {...scheme.panel};
-        p.colors.label = {...scheme.label};
-        p.colors.knob = {...scheme.knob};
+    // Applies a whole preset as a starting point.
+    const applyPreset = (presetIndex: number) => applyEdit((p) => {
+        const preset = DoorCompositionConstants.presets[presetIndex];
+        p.colors.panel = {...preset.panel};
+        p.colors.label = {...preset.label};
+        p.colors.knob = {...preset.knob};
     });
 
     return <ScrollPanel id="customizeDoorOptions" onClose={onClose} additionalClassNames="m-2">
         <div className="flex flex-col items-center gap-1 shrink-0">
             <Text content="Presets" size="sm"/>
             <StepperInput
-                currValue={findMatchingScheme(params)}
-                numValues={DoorCompositionConstants.colorSchemes.length}
-                setValue={applyScheme}
+                currValue={findMatchingPreset(params)}
+                numValues={DoorCompositionConstants.presets.length}
+                setValue={applyPreset}
             />
         </div>
         <div className="w-px self-stretch shrink-0 bg-gray-500"/>
@@ -81,14 +77,13 @@ export default function CustomizeDoorPanel({ selection, onClose }: Props)
     </ScrollPanel>;
 }
 
-// The matching scheme index, or 0 for a hand-adjusted finish.
-function findMatchingScheme(params: DoorCompositionParams): number
+// The matching preset index, or -1 for a hand-adjusted finish.
+function findMatchingPreset(params: DoorCompositionParams): number
 {
-    const index = DoorCompositionConstants.colorSchemes.findIndex(scheme =>
-        sameColor(scheme.panel, params.colors.panel) &&
-        sameColor(scheme.label, params.colors.label) &&
-        sameColor(scheme.knob, params.colors.knob));
-    return index >= 0 ? index : 0;
+    return DoorCompositionConstants.presets.findIndex(preset =>
+        sameColor(preset.panel, params.colors.panel) &&
+        sameColor(preset.label, params.colors.label) &&
+        sameColor(preset.knob, params.colors.knob));
 }
 
 function sameColor(a: {x: number, y: number, z: number}, b: {x: number, y: number, z: number}): boolean
@@ -96,9 +91,9 @@ function sameColor(a: {x: number, y: number, z: number}, b: {x: number, y: numbe
     return a.x === b.x && a.y === b.y && a.z === b.z;
 }
 
-// Batches rapid edits into one save.
+// Batches rapid edits into one save per door.
 const trySave = createDeferredSave((selection: ObjectSelection) =>
-    doForDoor(selection, (c) => c.saveParts()));
+    doForDoor(selection, (c) => c.saveParts()), (selection) => selection.gameObject);
 
 // The live params object, so edits apply directly.
 function getDoorParams(selection: ObjectSelection): DoorCompositionParams | undefined

@@ -8,17 +8,22 @@ export default function ObjectSelectionMenu({ inEditMode }: Props)
 {
     // Read the selection on mount (it may have changed while hidden behind room settings, see
     // UIRoot), in the initial state so tools appear without a one-frame delay.
-    const [selection, setSelection] = useState<ObjectSelection | null>(
-        () => objectSelectionObservable.peek());
+    const [state, setState] = useState<{selection: ObjectSelection | null, openPanel: string | null}>(
+        () => ({selection: objectSelectionObservable.peek(), openPanel: null}));
 
     useEffect(() => {
-        objectSelectionObservable.addListener("ui.objectSelection", setSelection);
+        objectSelectionObservable.addListener("ui.objectSelection", selection => setState(prev => ({
+            selection,
+            // Moving to another object of the same type keeps its sub-panel open; any other change closes it.
+            openPanel: isSameObjectType(prev.selection, selection) ? prev.openPanel : null,
+        })));
         return () => {
             objectSelectionObservable.removeListener("ui.objectSelection");
         };
     }, []);
 
     // Edit mode only.
+    const selection = state.selection;
     if (!selection || !inEditMode)
         return null;
 
@@ -28,9 +33,18 @@ export default function ObjectSelectionMenu({ inEditMode }: Props)
         return null;
 
     return <div className="flex flex-col gap-1 p-2 max-w-full h-fit overflow-hidden relative z-10">
-        {/* Keyed by object, so switching between objects of one type remounts the panel with fresh state. */}
-        <EditOptions key={selection.gameObject.params.objectId} selection={selection}/>
+        {/* Keyed by object, so each object's tools start fresh; only the open sub-panel carries over. */}
+        <EditOptions key={selection.gameObject.params.objectId} selection={selection}
+            openPanel={state.openPanel}
+            setOpenPanel={openPanel => setState(prev => ({...prev, openPanel}))}
+        />
     </div>;
+}
+
+function isSameObjectType(a: ObjectSelection | null, b: ObjectSelection | null): boolean
+{
+    return a != null && b != null &&
+        a.gameObject.params.objectTypeIndex == b.gameObject.params.objectTypeIndex;
 }
 
 interface Props

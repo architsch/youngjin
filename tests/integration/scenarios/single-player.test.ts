@@ -2,12 +2,12 @@
  * Scenario tests: single-player mode (see @docs/networking/single_player_mode.md).
  * Server: the room is never loaded or stored (a transient, content-less descriptor), the user isn't a
  * participant, the context is flagged, lastRoomID isn't persisted, and every room-mutating handler bails.
- * Shared: the wire format omits content, the generator builds the tutorial room, and the tutorial step
- * graph is well-formed.
+ * Shared: the wire format omits content, the generator builds the tutorial room, the tutorial's edit mode
+ * opens on the wall ahead and builds against it, and the tutorial step graph is well-formed.
  */
 import { describe, it, expect, beforeEach, vi, Mock } from "vitest";
 
-// Tutorial steps reach for the room, character and camera; stubbed so tests can place them freely.
+// Tutorial steps reach for the room and camera; stubbed so tests can place them freely.
 vi.mock("../../../src/client/graphics/graphicsManager", async () => {
     const THREE = await import("three");
     const camera = new THREE.PerspectiveCamera();
@@ -67,12 +67,14 @@ import SinglePlayerModeConfigMap from "../../../src/shared/singlePlayer/maps/sin
 import SinglePlayerModeClientConfigMap from "../../../src/client/singlePlayer/maps/singlePlayerModeClientConfigMap";
 import SinglePlayerManager from "../../../src/client/singlePlayer/singlePlayerManager";
 import SinglePlayerAction from "../../../src/client/singlePlayer/types/singlePlayerAction";
-import SinglePlayerCondition from "../../../src/client/singlePlayer/types/singlePlayerCondition";
 import App from "../../../src/client/app";
 import GraphicsManager from "../../../src/client/graphics/graphicsManager";
-import ClientObjectManager from "../../../src/client/object/clientObjectManager";
-import Vec3 from "../../../src/shared/math/types/vec3";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, HUB_ROOM_ID_KEYWORD,
+import type VoxelQuadSelection from "../../../src/client/graphics/types/gizmo/voxelQuadSelection";
+import FirstPersonCameraPose from "../../../src/client/object/components/helpers/player/firstPersonCameraPose";
+import { voxelQuadSelectionObservable } from "../../../src/client/system/clientObservables";
+import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
+import { PLAYER_HEIGHT } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, HUB_ROOM_ID_KEYWORD,
     NUM_VOXEL_COLS, NUM_VOXEL_ROWS, STOREY_FLOOR_COLLISION_LAYER,
     TUTORIAL_SINGLE_PLAYER_MODE } from "../../../src/shared/system/sharedConstants";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
@@ -221,7 +223,7 @@ describe("single-player room generation", () => {
             }
         }
 
-        // The fallback floor patch (see the hotspot tests) is bare, so the requested block fits.
+        // The fallback floor patch (see the edit mode opening tests) is bare, so a block built on it fits.
         const floorVoxel = VoxelQueryUtil.getVoxel(voxelGrid.voxels,
             Math.floor(m.hotspots.floor.z), Math.floor(m.hotspots.floor.x));
         expect(floorVoxel).toBeDefined();
@@ -313,90 +315,148 @@ describe("single-player room generation", () => {
     });
 });
 
-describe("tutorial floor hotspot", () => {
-    // The floor patch is chosen at play time from the user's position (see "set_variable"), so it's never
-    // the one hidden under the character.
+describe("tutorial edit mode opening", () => {
+    // Edit mode opens on the wall face ahead of the user, picked as the user switches (see
+    // "edit_mode_opening_voxel_quad"), and the building steps build against that face.
     const config = SinglePlayerModeClientConfigMap[TUTORIAL_SINGLE_PLAYER_MODE];
+    const m = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE].getRoomBuilderParams();
     const room = { voxelGrid: RoomGenerationUtil.generateRoom(
         TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer).voxelGrid } as Room;
 
-    // Each test is a fresh run (the real manager clears these when the mode ends).
+    // The eye of a user standing on the floor.
+    const EYE_Y = 0.5 * PLAYER_HEIGHT + FirstPersonCameraPose.restPosition.y;
+
     beforeEach(() => {
+        (App.getCurrentRoom as Mock).mockReturnValue(room);
         for (const name of Object.keys(singlePlayerVariables))
             delete singlePlayerVariables[name];
     });
 
-    /** Runs the step's hotspot choice with the given player and camera, storing the result as the step does. */
-    function pickHotspot(playerPosition: Vec3, cameraPosition: Vec3): {row: number, col: number} {
-        (App.getCurrentRoom as Mock).mockReturnValue(room);
-        (ClientObjectManager.getMyPlayer as Mock).mockReturnValue({ position: playerPosition });
-        GraphicsManager.getCamera().position.set(
-            cameraPosition.x, cameraPosition.y, cameraPosition.z);
+    /** Where edit mode opens for a user whose eye is at a point, looking level toward another. */
+    function openingQuadIndex(eye: {x: number, z: number}, lookToward: {x: number, z: number}): number
+    {
+        const camera = GraphicsManager.getCamera();
+        camera.position.set(eye.x, EYE_Y, eye.z);
+        camera.lookAt(lookToward.x, EYE_Y, lookToward.z);
 
-        const setVariable = config.loadSteps()["before_select_floor"].actionsOnStart
-            .find(action => action.type === "set_variable");
-        expect(setVariable, "the before_select_floor step no longer settles anything").toBeDefined();
-        const action = setVariable as Extract<SinglePlayerAction, {type: "set_variable"}>;
-        SinglePlayerManager.setVariable(action.name, action.computeValue());
-        return SinglePlayerManager.getVariable(action.name);
+        const opening = config.loadSteps()["start_edit"].actionsOnStart
+            .find(action => action.type === "edit_mode_opening_voxel_quad");
+        expect(opening, "the start_edit step no longer picks what edit mode opens on").toBeDefined();
+        return (opening as Extract<SinglePlayerAction, {type: "edit_mode_opening_voxel_quad"}>).quadIndex();
     }
 
-    it("picks a bare patch of floor between the player and the camera", () => {
-        // Standing inside the entrance region, with the camera pulled back the way the room runs.
-        const hotspot = pickHotspot({ x: 4.5, y: 0, z: 28.5 }, { x: 4.5, y: 3, z: 18.5 });
+    /** A face's cell, layer and facing (e.g. "+z"). */
+    function describeQuad(quadIndex: number): {row: number, col: number, collisionLayer: number, facing: string}
+    {
+        return {
+            row: VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex),
+            col: VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex),
+            collisionLayer: VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex),
+            facing: VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex) +
+                VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex),
+        };
+    }
 
-        // Toward the camera, and never the patch the user is standing on.
-        expect(hotspot.col).toBe(4);
-        expect(hotspot.row).toBeLessThan(28);
+    it("opens on the drawn face of the wall straight ahead, a little below the eye", () => {
+        // In the arrival room, looking down its length toward the wall at its far end.
+        const col = m.entranceVoxelCol;
+        const quadIndex = openingQuadIndex({x: col + 0.5, z: m.entranceVoxelRow - 2.5}, {x: col + 0.5, z: 0});
+        const quad = describeQuad(quadIndex);
 
-        // Bare, so the outline shows and the next step's block fits.
-        const voxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, hotspot.row, hotspot.col);
-        expect(voxel).toBeDefined();
-        expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel!, COLLISION_LAYER_MIN)).toBe(false);
+        expect({row: quad.row, col: quad.col, facing: quad.facing})
+            .toEqual({row: m.volumes.room1.rowMin - 1, col, facing: "+z"});
+        expect(room.voxelGrid.quadsMem.quads[quadIndex] & 0b10000000, "the face is not drawn").not.toBe(0);
+
+        // About a block's height below the eye.
+        const drop = EYE_Y - VoxelQueryUtil.getWorldYAtVoxelCollisionLayerCenter(quad.collisionLayer);
+        expect(drop).toBeGreaterThan(0.5);
+        expect(drop).toBeLessThan(1.5);
     });
 
-    it("keeps the whole block-building passage on the one patch it asked for", () => {
-        // The next three steps reuse the patch "select_floor" stored; this holds because that step demands
-        // the pointed-at patch and the selection stays pinned.
-        const hotspot = pickHotspot({ x: 4.5, y: 0, z: 28.5 }, { x: 4.5, y: 3, z: 18.5 });
+    it("opens on the dividing wall when the user turns to face it", () => {
+        const wall = m.volumes.wall1;
+        const row = wall.rowMin + 2;
+        const quad = describeQuad(openingQuadIndex({x: wall.colMin - 2.5, z: row + 0.5}, {x: NUM_VOXEL_COLS, z: row + 0.5}));
+
+        expect({row: quad.row, col: quad.col, facing: quad.facing}).toEqual({row, col: wall.colMin, facing: "-x"});
+    });
+
+    it("follows a slanting look to where it meets the wall", () => {
+        // One cell across for every cell along, from off a cell's middle so the look grazes no corner.
+        const wall = m.volumes.wall1;
+        const eye = {x: m.volumes.room1.colMin + 0.5, z: m.volumes.room1.rowMax - 0.8};
+        const quad = describeQuad(openingQuadIndex(eye, {x: eye.x + 10, z: eye.z - 10}));
+
+        expect({row: quad.row, col: quad.col, facing: quad.facing})
+            .toEqual({row: Math.floor(eye.z - (wall.colMin - eye.x)), col: wall.colMin, facing: "-x"});
+    });
+
+    it("falls back to the room's own floor patch when no block stands ahead", () => {
+        // Beyond the grid, looking away from the room.
+        const x = m.entranceVoxelCol + 0.5;
+        const quadIndex = openingQuadIndex({x, z: NUM_VOXEL_ROWS + 2}, {x, z: NUM_VOXEL_ROWS + 10});
+
+        expect(quadIndex).toBe(VoxelQueryUtil.getFloorVoxelQuadIndex(
+            Math.floor(m.hotspots.floor.z), Math.floor(m.hotspots.floor.x)));
+    });
+
+    it("builds against the face the mode opened on, then comes back to it once the block is gone", () => {
+        const wall = m.volumes.wall1;
+        const row = wall.rowMin + 2;
+        const wallQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(row, wall.colMin, "x", "-", COLLISION_LAYER_MIN + 2);
         const steps = config.loadSteps();
 
-        const wanted = steps["select_floor"].transitionRules[0].requirements[0];
-        expect(wanted.type).toBe("voxel_quad_selected");
-        const quad = wanted as Extract<SinglePlayerCondition, {type: "voxel_quad_selected"}>;
-        expect({row: quad.row!(), col: quad.col!()}).toEqual(hotspot);
-        expect(quad.collisionLayer!()).toBe(COLLISION_LAYER_NULL);
-        expect([quad.facingAxis, quad.orientation]).toEqual(["y", "+"]);
+        // The face is taken from the selection the mode opened on.
+        const peekSpy = vi.spyOn(voxelQuadSelectionObservable, "peek")
+            .mockReturnValue({voxel: undefined, quadIndex: wallQuadIndex} as unknown as VoxelQuadSelection);
+        try
+        {
+            const recordOpening = steps["start_edit"].actionsOnEnd.find(action => action.type === "set_variable");
+            expect(recordOpening, "the start_edit step no longer records the face the mode opened on").toBeDefined();
+            const action = recordOpening as Extract<SinglePlayerAction, {type: "set_variable"}>;
+            SinglePlayerManager.setVariable(action.name, action.computeValue());
+        }
+        finally
+        {
+            peekSpy.mockRestore();
+        }
 
-        // Up onto the block just built, then back down onto the floor it stood on.
-        const landsOn = (stepName: string) => {
-            const select = steps[stepName].actionsOnEnd
-                .find(action => action.type === "select_voxel_quad");
+        const selectedAtEndOf = (stepName: string): number => {
+            const select = steps[stepName].actionsOnEnd.find(action => action.type === "select_voxel_quad");
             expect(select, `the ${stepName} step no longer says where the selection goes`).toBeDefined();
-            const at = select as Extract<SinglePlayerAction, {type: "select_voxel_quad"}>;
-            return {row: at.row(), col: at.col(), collisionLayer: at.collisionLayer()};
+            return (select as Extract<SinglePlayerAction, {type: "select_voxel_quad"}>).quadIndex();
         };
-        expect(landsOn("add_block")).toEqual({...hotspot, collisionLayer: COLLISION_LAYER_MIN});
-        expect(landsOn("remove_block")).toEqual({...hotspot, collisionLayer: COLLISION_LAYER_NULL});
 
-        // And the camera is turned on that same patch before the user is asked to look for it.
-        const override = steps["before_select_floor"].actionsOnStart
-            .find(action => action.type === "orbit_camera_target_override");
-        expect(override, "the before_select_floor step no longer shows the user the patch").toBeDefined();
-        const at = override as Extract<SinglePlayerAction, {type: "orbit_camera_target_override"}>;
-        expect([at.targetX(), at.targetZ()]).toEqual([hotspot.col + 0.5, hotspot.row + 0.5]);
+        // The block goes into the cell the face looks into, and its own face that way is selected.
+        const builtQuadIndex = selectedAtEndOf("add_block");
+        expect(describeQuad(builtQuadIndex)).toEqual(
+            {row, col: wall.colMin - 1, collisionLayer: COLLISION_LAYER_MIN + 2, facing: "-x"});
+
+        // Which is a face the built block really draws, covering the wall's.
+        const builtRoom = RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
+        expect(VoxelUpdateUtil.addVoxelBlock(undefined, builtRoom.voxelGrid.voxels, builtQuadIndex)).toBe(true);
+        expect(builtRoom.voxelGrid.quadsMem.quads[builtQuadIndex] & 0b10000000).not.toBe(0);
+        expect(builtRoom.voxelGrid.quadsMem.quads[wallQuadIndex] & 0b10000000).toBe(0);
+
+        expect(selectedAtEndOf("remove_block")).toBe(wallQuadIndex);
     });
 
-    it("falls back to the room's own patch when the floor gives out at once", () => {
-        // Camera beyond the entrance wall, so the first step out of the player's cell hits wall.
-        const m = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE].getRoomBuilderParams();
-        const hotspot = pickHotspot(
-            { x: m.entranceVoxelCol + 0.5, y: 0, z: m.entranceVoxelRow + 0.5 },
-            { x: m.entranceVoxelCol + 0.5, y: 3, z: m.entranceVoxelRow + 10.5 });
+    it("frames the face it opened on from neither too near nor too far", () => {
+        const range = config.loadSteps()["start_edit"].actionsOnEnd
+            .find(action => action.type === "orbit_camera_distance_range");
+        expect(range, "the start_edit step no longer keeps the camera at a sensible distance").toBeDefined();
+        const {minDistance, maxDistance} = range as Extract<SinglePlayerAction, {type: "orbit_camera_distance_range"}>;
 
-        // The room's own patch is declared as a world position; the step works in cells.
-        expect(hotspot).toEqual(
-            { row: Math.floor(m.hotspots.floor.z), col: Math.floor(m.hotspots.floor.x) });
+        expect(minDistance()).toBeGreaterThan(0);
+        expect(maxDistance()).toBeGreaterThan(minDistance());
+    });
+
+    it("lets go of edit mode's opening once the mode is open, and however the tutorial ends", () => {
+        const letsGo = (actions: SinglePlayerAction[]) =>
+            actions.some(action => action.type === "clear_edit_mode_opening_voxel_quad");
+
+        expect(letsGo(config.loadSteps()["start_edit"].actionsOnEnd)).toBe(true);
+        expect(letsGo(config.onModeEnd())).toBe(true);
     });
 });
 
@@ -442,25 +502,45 @@ describe("tutorial step graph", () => {
         expect(reachable).toEqual(new Set(Object.keys(steps)));
     });
 
-    it("builds a block on the chosen patch before retexturing it, then takes it away", () => {
+    it("opens edit mode and turns the camera, then builds a block before retexturing it and taking it away", () => {
         const steps = config.loadSteps();
         const next = (stepName: string) => steps[stepName].transitionRules[0].nextStep;
 
-        expect([next("select_floor"), next("add_block"), next("change_texture")])
-            .toEqual(["add_block", "change_texture", "remove_block"]);
+        expect([next("start_edit"), next("change_camera_angle"), next("add_block"), next("change_texture")])
+            .toEqual(["change_camera_angle", "add_block", "change_texture", "remove_block"]);
     });
 
-    it("lets edit mode open on whatever the user faces, then holds that selection", () => {
-        // The mode opens on a voxel quad or an object (see GameModeUtil), so neither kind may be locked
-        // while the switch is on offer, and both are locked again once the user is in.
-        const step = config.loadSteps()["start_edit"];
+    it("holds the selection still from the start, since the steps themselves move it", () => {
+        // Edit mode opens on the step's own pick, and the building steps reselect, both past the lock.
+        const steps = config.loadSteps();
+        const selectionLocks = [FeatureFlag.DisableVoxelQuadSelectionChange, FeatureFlag.DisableObjectSelectionChange];
         const flagsSwitched = (actions: SinglePlayerAction[], enable: boolean) => actions
             .filter((action): action is Extract<SinglePlayerAction, {type: "feature_flag"}> =>
                 action.type === "feature_flag" && action.enable === enable)
             .map(action => action.flag);
 
-        const selectionLocks = [FeatureFlag.DisableVoxelQuadSelectionChange, FeatureFlag.DisableObjectSelectionChange];
-        expect(flagsSwitched(step.actionsOnStart, false)).toEqual(expect.arrayContaining(selectionLocks));
-        expect(flagsSwitched(step.actionsOnEnd, true)).toEqual(expect.arrayContaining(selectionLocks));
+        expect(flagsSwitched(steps["initial"].actionsOnStart, true)).toEqual(expect.arrayContaining(selectionLocks));
+        for (const [name, step] of Object.entries(steps))
+        {
+            const lifted = [...flagsSwitched(step.actionsOnStart, false), ...flagsSwitched(step.actionsOnEnd, false)];
+            expect(lifted.filter(flag => selectionLocks.includes(flag)), `step "${name}" lifts a selection lock`)
+                .toEqual([]);
+        }
+    });
+
+    it("hides the user's own character from the start, and shows it again however the tutorial ends", () => {
+        // A hidden character can't catch clicks meant for the room around it.
+        const steps = config.loadSteps();
+        const setsHidden = (actions: SinglePlayerAction[], hidden: boolean) =>
+            actions.some(action => action.type === "set_my_player_hidden" && action.hidden === hidden);
+
+        expect(setsHidden(steps["initial"].actionsOnStart, true)).toBe(true);
+        for (const [name, step] of Object.entries(steps))
+        {
+            expect(setsHidden(step.actionsOnStart, false) || setsHidden(step.actionsOnEnd, false),
+                `step "${name}" shows the character mid-tutorial`).toBe(false);
+        }
+        expect(setsHidden(config.onModeEnd(), true)).toBe(false);
+        expect(setsHidden(config.onModeEnd(), false)).toBe(true);
     });
 });

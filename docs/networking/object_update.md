@@ -24,7 +24,7 @@ Object edits are optimistic: the client validates and applies an edit through th
 - For high-frequency signals such as transforms, a pending signal of the same type is replaced instead of queued.
 
 ### Stored positions
-`ObjectTransform` stores each component as a fraction of a fixed range. **Those ranges are part of the stored format.** Changing one silently moves every stored object, so the ranges are frozen and independent of room dimensions. A room that outgrows them needs a new `ObjectGroup` version with a converter. Objects share a blob with the `VoxelGrid`, whose version dates both.
+`ObjectTransform` stores each component as a fraction of a fixed range. **Those ranges are part of the stored format.** Changing one silently moves every stored object, so the ranges are frozen and independent of room dimensions. A room that outgrows them needs a new `ObjectGroup` version with a converter in `ObjectGroupVersionMigration`. Objects share a blob with the `VoxelGrid`, whose version dates both.
 
 ## Metadata
 `SetObjectMetadataSignal`. On failure, the server sends back the current server-side value.

@@ -20,11 +20,11 @@ Only the user's own player has a `PlayerController`. It reads input, steers the 
 - **firstPerson** (play mode): the camera sits at eye level.
 - **orbit** (edit mode): the camera orbits a **target volume** (not a point) that travels with the mode. The volume's extent sets the framing distance and what must be cleared from view. Target volumes come from the physics colliders.
 
-`WorldSpaceSelectionUtil` points the orbit at the current selection. A voxel quad frames its block, and an object frames itself. A selection dropped mid-edit leaves the camera where it is. A single-player step can override the target, and optionally the view angles.
+`WorldSpaceSelectionUtil` points the orbit at the current selection. A voxel quad frames its block, and an object frames itself. A selection dropped mid-edit leaves the camera where it is. A single-player step can override the target, request view angles, or zoom the camera into a distance range that holds for every point of the target at any angle.
 
 Selection reach is a fixed arm's length in first person. While orbiting, it extends to the camera's distance, so anything visible can be selected.
 
-The user's own body is shown only in orbit mode when the camera is not inside it. Other players are hidden while they are too close to the camera.
+The user's own body is shown only in orbit mode when the camera is not inside it, and never while a single-player step hides it. Hidden parts are parked out of the room, so raycasts pass through them. Other players are hidden while they are too close to the camera.
 
 ## PlayerCamera
 The camera is parented to the player object. Each frame, the active pose helper supplies a target pose in the player's frame and the camera eases toward it, so mode and target changes glide rather than snap.
@@ -32,7 +32,7 @@ The camera is parented to the player object. Each frame, the active pose helper 
 - **`FirstPersonCameraPose`**: pitch is the only freedom. It tilts down according to how far the visible room ahead drops below the player's standing level (`ClientVoxelQueryUtil`). Open space overhead is ignored, so storeys behave the same as the ground floor.
 - **`OrbitCameraPose`**:
   - The drag maps 1:1 to orbit angles, with the polar angle clamped away from the poles. The aim point sits slightly above the target's center, by a share of its height.
-  - The framing distance scales with the target's size, and a selection can require a minimum distance (a block or wall object is framed with its surroundings). Zoom is a multiple of the framing distance, published logarithmically through `orbitCameraZoomObservable` for the zoom slider, whose middle is the framing distance. The range reaches across the room, so an orbit can start anywhere without moving the camera.
+  - The framing distance scales with the target's size, and a selection can require a minimum distance (a block or wall object is framed with its surroundings). Zoom is a multiple of the framing distance, published logarithmically through `orbitCameraZoomObservable` for the zoom slider, whose middle is the framing distance. The range covers edit mode's opening reach (see [game_mode.md](../gameplay/game_mode.md)), so an orbit can start from there without moving the camera.
   - Zooming in stops a small clearance short of the target's side facing the camera (its extent along the view, not its bounding sphere), so the camera comes right up to tall or wide targets without clipping them.
   - An orbit starts at the camera's **current** distance and direction, unless the camera is inside the target's footprint (e.g. orbiting the user's own body), in which case it uses an over-the-shoulder default. Zoom persists across targets and resets when edit mode ends.
   - Angles are published in world terms (`orbitCameraAnglesObservable`). A requested view is applied right after the target is framed.

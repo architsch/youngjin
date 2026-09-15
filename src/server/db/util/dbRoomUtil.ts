@@ -145,7 +145,7 @@ async function getRoomFromDBRoom(dbRoom: DBRoom): Promise<Room | null>
 
     const bufferState = new BufferState(new Uint8Array(buffer));
     const voxelGrid = VoxelGrid.decode(bufferState) as VoxelGrid;
-    // The grid's version dates the objects stored with it (see ObjectGroup's converters).
+    // The grid's version dates the objects stored with it (see ObjectGroupVersionMigration).
     const objectGroup = ObjectGroup.decodeWithParams(bufferState, dbRoom.id ?? "",
         voxelGrid.sourceFormatVersion) as ObjectGroup;
     const room = new Room(dbRoom.id, dbRoom.roomName, dbRoom.roomType,
@@ -153,7 +153,8 @@ async function getRoomFromDBRoom(dbRoom: DBRoom): Promise<Room | null>
         voxelGrid, objectGroup);
 
     // Rooms converted from an older format are marked dirty, so the conversion is saved once.
-    if (voxelGrid.sourceFormatVersion < VoxelGrid.latestFormatVersion)
+    if (voxelGrid.sourceFormatVersion < VoxelGrid.latestFormatVersion
+        || objectGroup.sourceFormatVersion < ObjectGroup.latestFormatVersion)
         room.dirty = true;
 
     return room;

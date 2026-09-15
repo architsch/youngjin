@@ -38,7 +38,7 @@ export default function GameModeToggleSwitch()
             // to open without one.
             const myPlayer = ClientObjectManager.getMyPlayer();
             if (myPlayer)
-                GameModeUtil.enterEditMode(myPlayer, CameraUtil.getObjectsAlongLineOfSight());
+                GameModeUtil.enterEditMode(myPlayer, CameraUtil.getObjectsAlongLineOfSight);
         }
     };
 

@@ -44,6 +44,11 @@ export const IndexedCompositionCodec: InstancedMeshCompositionCodec = {
     {
         throw new Error("IndexedCompositionCodec::getRandomComposition : NOT IMPLEMENTED");
     },
+    getStructuralVariants: (): string[] =>
+    {
+        // Its variants are an object type's pre-encoded entries, which the codec doesn't know.
+        throw new Error("IndexedCompositionCodec::getStructuralVariants : NOT IMPLEMENTED");
+    },
 }
 
 // Total: a missing index yields no parts (draws nothing) rather than throwing mid-room-build.

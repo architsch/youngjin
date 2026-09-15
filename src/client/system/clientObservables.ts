@@ -45,6 +45,10 @@ export const objectSelectionObservable = new Observable<ObjectSelection | null>(
 // target during selection swaps.
 export const gameModeObservable = new Observable<GameMode>("play");
 
+// A scripted step's own choice of what edit mode opens on: selects it and returns whether it did, or null
+// for the usual opening (see GameModeUtil.enterEditMode).
+export const editModeOpeningOverrideObservable = new Observable<(() => boolean) | null>(null);
+
 // Number of focused UI inputs; 0 means game input is free.
 export const numActiveInputElementsObservable = new Observable<number>(0);
 
@@ -87,6 +91,10 @@ export const popupStateObservable = new Observable<PopupState>({ popupType: "non
 // Camera mode, including the orbit target. Drives PlayerCamera and own-body visibility.
 export const cameraModeObservable = new Observable<CameraMode>({type: "firstPerson"});
 
+// Whether a scripted step hides the user's own character and its speech bubble, whatever the camera does.
+// Hidden parts are parked out of the room, so raycasts pass through them too.
+export const myPlayerHiddenObservable = new Observable<boolean>(false);
+
 // A point the orbit camera is held on regardless of selection (scripted steps), or null. Framed like a
 // selected block (see WorldSpaceSelectionUtil).
 export const orbitCameraTargetOverrideObservable = new Observable<Vec3 | null>(null);
@@ -103,6 +111,11 @@ export const orbitCameraAnglesObservable = new Observable<{azimuth: number, pola
 // because re-framing would overwrite it; PlayerCamera applies it after framing.
 export const orbitCameraViewRequestObservable =
     new Observable<{azimuth: number, polar: number, zoomAmount: number} | null>(null);
+
+// A requested range for the orbit camera's distance from its target, or null once applied. Applied after
+// framing, like orbitCameraViewRequestObservable.
+export const orbitCameraDistanceRangeRequestObservable =
+    new Observable<{min: number, max: number} | null>(null);
 
 // This observable notifies its listeners whenever ChatTextInput's input text changes.
 export const chatTextInputObservable = new Observable<string>("");

@@ -2,7 +2,7 @@
 
 Reference: @src/shared/graphics/image/types/imageMap.ts , @src/shared/graphics/image/types/imageMapSeed.ts , @src/server/ssg/builder/imageMapBuilder.ts , @src/client/ui/components/form/imageListChooserForm.tsx , @src/client/ui/components/form/imageGridChooserForm.tsx
 
-An `ImageMap` catalogs a set of related images (canvas artwork, voxel texture packs, picture frames) so the app can refer to each one by a short, stable `imagePath` instead of a URL.
+An `ImageMap` catalogs a set of related images (canvas artwork, voxel texture packs) so the app can refer to each one by a short, stable `imagePath` instead of a URL.
 
 - Each map has a root directory under `public/app/assets/` with a hand-written `manifest.json` that lists every image with its author and title. The manifest is the source of truth.
 - During SSG, `ImageMapBuilder` processes each `ImageMapSeed`. It writes auxiliary images (grid images, thumbnails) and generates a TypeScript module that registers the map in `ImageMapUtil`. The client and the server both import the generated modules. **Never edit generated files**; edit the manifest and rerun the generator instead.
@@ -21,7 +21,7 @@ The seed determines the mode.
 
 - **List**: separate files, browsed as a searchable list (canvas artwork).
 - **Grid**: separate files that the builder composes into a uniform grid image (texture packs).
-- **Atlas**: a pre-composed atlas. Manifest paths are cell coordinates, and the builder validates that they fall inside the atlas (picture frames). Atlas maps get no thumbnails.
+- **Atlas**: a pre-composed atlas. Manifest paths are cell coordinates, and the builder validates that they fall inside the atlas. Atlas maps get no thumbnails.
 
 ![Image Map Builder's Flow Chart](figures/image_map_1.jpg)
 

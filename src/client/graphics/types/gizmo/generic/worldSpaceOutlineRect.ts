@@ -12,8 +12,11 @@ const CORE_WIDTH = 0.03;
 const HALO_WIDTH = 0.16;
 const HALO_OPACITY = 0.5; // peak (centre) alpha of the glow, before the edge-ward fade
 
-// A glowing, always-on-top rectangle outline (e.g. a selected quad or object footprint). Owns its
-// materials so its brightness animates independently.
+// Edges sit this far outside the outlined area, so no part of the line covers the area's edge pixels.
+const OUTSET = 0.5 * HALO_WIDTH;
+
+// A glowing, always-on-top rectangle outline drawn just outside an area (e.g. a selected quad or
+// object footprint). Owns its materials so its brightness animates independently.
 export default class WorldSpaceOutlineRect
 {
     private group: THREE.Group = new THREE.Group();
@@ -99,11 +102,11 @@ export default class WorldSpaceOutlineRect
         return this.group.visible;
     }
 
-    // Positions, orients, and scales the outline. `lookDir` is the outward normal that the
-    // square's face should point along.
+    // Positions, orients, and scales the outline around an area of size `scale` (x, y). `lookDir` is
+    // the outward normal that the square's face should point along.
     setTransform(position: THREE.Vector3, lookDir: THREE.Vector3, scale: THREE.Vector3): void
     {
-        this.group.scale.copy(scale);
+        this.setOutsetScale(scale);
         this.group.position.copy(position);
         vecTemp.copy(position).add(lookDir);
         this.group.lookAt(vecTemp);
@@ -115,7 +118,19 @@ export default class WorldSpaceOutlineRect
     {
         this.group.position.copy(position);
         this.group.quaternion.copy(quaternion);
-        this.group.scale.copy(scale);
+        this.setOutsetScale(scale);
+    }
+
+    // Distance from an outlined area's centre to the outline's edge, along an axis where the area is `size` long.
+    static getEdgeOffset(size: number): number
+    {
+        return 0.5 * size + OUTSET;
+    }
+
+    // Line widths are in world units, so the group's scale is the area's world size plus the outset.
+    private setOutsetScale(scale: THREE.Vector3): void
+    {
+        this.group.scale.set(scale.x + 2 * OUTSET, scale.y + 2 * OUTSET, scale.z);
     }
 
     // A 0..1 multiplier applied to the base color, used to animate the outline's brightness.

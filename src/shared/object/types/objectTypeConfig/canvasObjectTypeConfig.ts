@@ -1,4 +1,9 @@
 import ImageMapUtil from "../../../graphics/image/util/imageMapUtil";
+import { CanvasCompositionCodec } from "../../../graphics/mesh/composition/types/compositionCodec/canvasCompositionCodec";
+import { CANVAS_FOOTPRINT_HEIGHT,
+    CANVAS_FOOTPRINT_WIDTH } from "../../../graphics/mesh/composition/types/compositionConstants/canvasCompositionConstants";
+import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../graphics/mesh/composition/types/instancedMeshCompositionCodecType";
+import StringUtil from "../../../math/util/stringUtil";
 import Room from "../../../room/types/room";
 import User from "../../../user/types/user";
 import AddObjectSignal from "../../types/addObjectSignal";
@@ -9,25 +14,19 @@ import SetObjectTransformSignal from "../../types/setObjectTransformSignal";
 import ObjectTypeConfigMap from "../../maps/objectTypeConfigMap";
 import { WALL_ATTACHMENT_HITBOX_INSET } from "../../../system/sharedConstants";
 
-// A canvas is drawn as a single flat quad hanging on the wall.
-export const CANVAS_GEOMETRY_ID = "Square";
-
-// Picture frame atlas of square cells, addressed by "{col},{row}".
-export const CANVAS_FRAME_ATLAS_PATH = "object_texture_packs/canvas_frames.webp"; // relative to the app's assets_url
-export const CANVAS_FRAME_ATLAS_SIZE = 1024; // in pixels (the atlas is square)
-export const CANVAS_FRAME_ATLAS_CELL_SIZE = 256; // in pixels (each cell is square)
-
 // Shared render target for all canvases in a room, one cell each. The cell size is also the thumbnail
 // size canvas images are fetched at.
 export const CANVAS_TEXTURE_SIZE = 2048; // in pixels (the texture is square)
 export const CANVAS_TEXTURE_CELL_SIZE = 256; // in pixels (each cell is square)
 
-// One voxel of wall. This is the collider; the tested box is slightly inset (see PhysicsColliderStateUtil).
-const CANVAS_FOOTPRINT_WIDTH = 1;
-const CANVAS_FOOTPRINT_HEIGHT = 1;
-
 // Room-wide cap: one render target cell per canvas (8x8 grid).
 const MAX_CANVASES_PER_ROOM = 64;
+
+// Metadata keys a user may write to a canvas; anything else is refused.
+const editableMetadataKeys = [
+    ObjectMetadataKeyEnumMap.ImagePath,
+    ObjectMetadataKeyEnumMap.InstancedMeshComposition,
+];
 
 // This object represents a canvas (image) that can be exhibited in the room (like a painting in an art gallery).
 const CanvasObjectTypeConfig =
@@ -61,13 +60,15 @@ const CanvasObjectTypeConfig =
         return true;
     },
     canUserSetObjectMetadata: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectMetadataSignal) => {
-        // User can only set the canvas's image path or picture-frame coords, and nothing else
+        if (!editableMetadataKeys.includes(signal.metadataKey))
+            return false;
+
+        // The image must be one on offer; a composition is sanitized by ObjectMetadataEntryMap and decodes
+        // to a drawable canvas whatever it holds (see CanvasCompositionCodec).
         if (signal.metadataKey == ObjectMetadataKeyEnumMap.ImagePath)
             return ImageMapUtil.getImageMap("CanvasImageMap").hasImagePath(signal.metadataValue);
-        if (signal.metadataKey == ObjectMetadataKeyEnumMap.CanvasFrameCoords)
-            return ImageMapUtil.getImageMap("CanvasFrameImageMap").hasImagePath(signal.metadataValue);
 
-        return false;
+        return true;
     },
     components: {
         spawnedByAny: {
@@ -84,6 +85,15 @@ const CanvasObjectTypeConfig =
                 maxClimbableHeight: 0,
             },
             instancedMeshGraphics: {},
+            instancedMeshComposer: {
+                codecType: InstancedMeshCompositionCodecTypeEnumMap.Canvas,
+                codecVersion: 0,
+                generateDefaultParts: (obj: AddObjectSignal) => {
+                    // Seeded from room and canvas id, so every client and session sees the same frame.
+                    const hashCode = StringUtil.getHashCode(`${obj.roomID}/${obj.objectId}`);
+                    return CanvasCompositionCodec.getRandomComposition(hashCode);
+                },
+            },
             orbitOccluder: {}, // A picture hanging on a wall stands in the orbit camera's way like the wall itself does.
         },
     },

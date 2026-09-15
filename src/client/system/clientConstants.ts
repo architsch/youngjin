@@ -6,8 +6,15 @@ import VoxelBlockOffset from "../../shared/voxel/types/voxelBlockOffset";
 
 // Max pointer travel (CSS px) for a click rather than a drag. Touch gets a larger allowance, since
 // finger contact points wander.
-export const MOUSE_DRAG_THRESHOLD_PX = 8;
-export const TOUCH_DRAG_THRESHOLD_PX = 40;
+export const MOUSE_DRAG_THRESHOLD_PX = 4;
+export const TOUCH_DRAG_THRESHOLD_PX = 30;
+
+// Edit mode
+
+// How far edit mode looks for something to open on, and how far toward the ground it tilts its look
+// when nothing is within reach straight ahead (see GameModeUtil).
+export const EDIT_MODE_OPENING_REACH = 8;
+export const EDIT_MODE_OPENING_TILT = THREE.MathUtils.degToRad(15);
 
 // UI
 

@@ -19,7 +19,7 @@ A map of what each suite in `tests/integration/scenarios/` covers. The test name
 | `state-persistence.test.ts` | metadata and voxels across reconnects, empty-room saves, extended invariants, shutdown |
 | `race-conditions.test.ts` | RC1–RC12: concurrent joins, join during unload, simultaneous edits, transitions, disconnects, churn, shutdown, latency stress, metadata-cache race |
 | `property-based.test.ts` | random action sequences across weight profiles (with and without latency), gameplay persistence, room volume geometry, integer range math |
-| `single-player.test.ts` | single-player server contract, wire format, local generation, tutorial hotspot and step graph |
+| `single-player.test.ts` | single-player server contract, wire format, local generation, the tutorial's edit-mode opening and building face, step graph |
 
 ## Server routes, commands and DB
 | Suite | Covers |
@@ -39,10 +39,12 @@ A map of what each suite in `tests/integration/scenarios/` covers. The test name
 | `object-transform-migration.test.ts` | transform ranges and their migration |
 | `voxel-quad-index-encoding.test.ts` | quad index encoding and validation |
 | `voxel-quad-reselection.test.ts` | where the selection goes after local and remote edits and removals, and interruptions |
-| `game-mode.test.ts` | play/edit transitions, what edit mode opens on and the camera staying put as it does, step locks on mode and camera, single selection |
-| `orbit-camera.test.ts` | how close zoom brings the orbit camera to a target, and never past its near side |
+| `game-mode.test.ts` | play/edit transitions, what edit mode opens on (reach, ground tilt, a step's pick) and the camera staying put or within a step's range as it does, step locks on mode and camera, single selection, a step hiding the user's own character |
+| `orbit-camera.test.ts` | how close zoom brings the orbit camera to a target, never past its near side, and holding it within a distance range from every side |
 | `line-of-sight.test.ts` | stored coordinates on block boundaries, door visibility, seeing past room geometry |
 | `composition.test.ts` | player, door and indexed mesh composition codecs |
+| `canvas-frame.test.ts` | the Default codec's wood parts, the canvas codec (round trip, presets, no frame, untrusted input), canvas defaults and permissions, the bitmap-frame migration, the per-type pre-encoded table, the thumbnail atlas layout |
+| `instanced-mesh-capacity.test.ts` | the generated mesh capacity table matching current code, and a room full of any decodable appearance of every type fitting it |
 | `lighting.test.ts` | light block propagation: occlusion, falloff, direction, accumulation, smoothing, nearness, never darkening, read-back |
 | `room-prefs.test.ts` | room prefs encoding, defaults, head-lamp power, light palettes, sky color |
 | `room-lighting-edit.test.ts` | client lighting edits and the pending-save rule |

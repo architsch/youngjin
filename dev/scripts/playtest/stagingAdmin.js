@@ -7,7 +7,7 @@
 // Two versioning schemes are seeded:
 //   - Firestore rows carry a `version` field, migrated by the DBVersionMigration arrays.
 //   - Room content blobs in Cloud Storage carry a leading version byte, migrated by the
-//     decoder/converter chains on VoxelGrid and ObjectGroup.
+//     decoder/converter chains in VoxelGridVersionMigration and ObjectGroupVersionMigration.
 //
 // Usage (every command takes an optional --target staging|local, defaulting to staging):
 //   node dev/scripts/playtest/stagingAdmin.js inspect
@@ -514,7 +514,11 @@ async function cleanupAcquisition(db)
 const CONTENT_FILE = "content.bin";
 
 // Voxel-grid format version -> decoder. Versions sharing a decoder share a body layout.
-const VOXEL_GRID_DECODER_BY_VERSION = { 0: "decoder_1", 1: "decoder_1", 2: "decoder_2" };
+const VOXEL_GRID_DECODER_BY_VERSION = {
+    0: "decodeHalfHeightFormat", 1: "decodeHalfHeightFormat",
+    2: "decodeVoxelsOnlyFormat", 3: "decodeVoxelsOnlyFormat",
+    4: "VoxelGrid's decodeBody",
+};
 
 function contentPath(roomID) { return `${collection("rooms")}/${roomID}/${CONTENT_FILE}`; }
 function backupPath(roomID) { return `${backupRoot()}/${roomID}/${CONTENT_FILE}`; }

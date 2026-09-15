@@ -159,7 +159,7 @@ describe("object transform ranges and migration", () => {
             [legacyCanvas("a", 1.5), legacyCanvas("b", 2.0), legacyCanvas("c", 1.0)], 0);
 
         const {objectGroup} = decodeRoomBlob(blob);
-        // Legacy rooms also gain their entrance door (see ObjectGroup's converters); only canvases matter here.
+        // Legacy rooms also gain their entrance door (see ObjectGroupVersionMigration); only canvases matter here.
         const objects = Object.values(objectGroup.objectById)
             .filter(object => object.objectTypeIndex === CANVAS_OBJECT_TYPE_INDEX);
 

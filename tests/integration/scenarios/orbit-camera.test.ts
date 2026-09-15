@@ -92,3 +92,73 @@ describe("zooming the orbit in", () => {
             {examples: [[{halfX: 0, halfY: 2, halfZ: 0, azimuth: 0, polar: Math.PI, minDistance: 0}]]});
     });
 });
+
+describe("bringing the orbit within a distance range", () => {
+    // How near to and far from its target a step might ask the camera to be.
+    const RANGE = {min: 2.5, max: 6};
+
+    /** How far a point is from the nearest and the farthest point of a target. */
+    function distancesTo(target: AABB3, point: THREE.Vector3): {nearest: number, farthest: number}
+    {
+        const box = new THREE.Box3(
+            new THREE.Vector3(target.center.x - target.halfSize.x, target.center.y - target.halfSize.y,
+                target.center.z - target.halfSize.z),
+            new THREE.Vector3(target.center.x + target.halfSize.x, target.center.y + target.halfSize.y,
+                target.center.z + target.halfSize.z));
+        const farthest = Math.max(...cornersOf(target).map(corner => corner.distanceTo(point)));
+        return {nearest: box.distanceToPoint(point), farthest};
+    }
+
+    it("holds every point of the target within range, however far off the camera began and however it turns after", () => {
+        fc.assert(fc.property(
+            fc.record({
+                // No larger than a block each way, so the range can hold from every side.
+                halfX: fc.double({min: 0, max: 0.5, noNaN: true}),
+                halfY: fc.double({min: 0, max: 0.5, noNaN: true}),
+                halfZ: fc.double({min: 0, max: 0.5, noNaN: true}),
+                zoomAmount: fc.double({min: 0, max: 1, noNaN: true}),
+                azimuth: fc.double({min: -Math.PI, max: Math.PI, noNaN: true}),
+                polar: fc.double({min: 0, max: Math.PI, noNaN: true}),
+                minDistance: fc.constantFrom(0, 5),
+            }),
+            ({halfX, halfY, halfZ, zoomAmount, azimuth, polar, minDistance}) =>
+            {
+                const target: AABB3 = {center: {x: 10, y: 2, z: 10}, halfSize: {x: halfX, y: halfY, z: halfZ}};
+                const player = new THREE.Object3D();
+                const camera = new THREE.PerspectiveCamera();
+                player.add(camera);
+                camera.position.set(target.center.x + 20, target.center.y, target.center.z + 20);
+
+                const pose = new OrbitCameraPose();
+                pose.reframe(target, minDistance, camera, player);
+                orbitCameraZoomObservable.set(zoomAmount);
+                pose.applyDistanceRange(RANGE, target);
+
+                // Turned only afterwards.
+                orbitCameraAnglesObservable.set({azimuth, polar});
+                const position = new THREE.Vector3();
+                pose.updatePose(new THREE.Vector2(), 1, target, player, position, new THREE.Quaternion());
+
+                const {nearest, farthest} = distancesTo(target, position);
+                expect(nearest).toBeGreaterThanOrEqual(RANGE.min - 1e-9);
+                expect(farthest).toBeLessThanOrEqual(RANGE.max + 1e-9);
+            }));
+    });
+
+    it("leaves a zoom already within range as it was", () => {
+        const target: AABB3 = {center: {x: 0, y: 0, z: 0}, halfSize: {x: 0.5, y: 0.25, z: 0.5}};
+        const player = new THREE.Object3D();
+        const camera = new THREE.PerspectiveCamera();
+        player.add(camera);
+        camera.position.set(4, 1, 0);
+
+        const pose = new OrbitCameraPose();
+        pose.reframe(target, 5, camera, player);
+        pose.matchZoomToCurrentDistance();
+        const zoomAmount = orbitCameraZoomObservable.peek();
+
+        pose.applyDistanceRange(RANGE, target);
+
+        expect(orbitCameraZoomObservable.peek()).toBeCloseTo(zoomAmount, 12);
+    });
+});

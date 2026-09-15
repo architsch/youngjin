@@ -346,11 +346,11 @@ describe("door mesh composition", () => {
         }), {numRuns: 100});
     });
 
-    it("every authored color scheme survives the palette the codec quantizes to", () => {
-        // Scheme colors must land exactly on palette entries, or they decode to a different color.
-        for (const scheme of DoorCompositionConstants.colorSchemes)
+    it("every authored preset survives the palette the codec quantizes to", () => {
+        // Preset colors must land exactly on palette entries, or they decode to a different color.
+        for (const preset of DoorCompositionConstants.presets)
         {
-            for (const color of Object.values(scheme))
+            for (const color of Object.values(preset))
             {
                 expect(ColorUtil.paletteIndexToRGB("Timber",
                     ColorUtil.rgbToPaletteIndex("Timber", color))).toEqual(color);
@@ -412,11 +412,11 @@ describe("door mesh composition", () => {
         expect(finishes.size).toBeGreaterThan(1);
     });
 
-    it("a door's default appearance is one of the authored schemes", () => {
+    it("a door's default appearance is one of the authored presets", () => {
         for (let i = 0; i < 40; ++i)
         {
             const {params} = generateDefaultDoorComposition(`room-${i}`, ENTRANCE_DOOR_OBJECT_ID);
-            expect(DoorCompositionConstants.colorSchemes).toContainEqual(params.colors);
+            expect(DoorCompositionConstants.presets).toContainEqual(params.colors);
         }
     });
 

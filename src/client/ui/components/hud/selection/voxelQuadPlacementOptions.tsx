@@ -89,10 +89,9 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
             disabled={!canAddCanvas}
             onClick={() => {
                 const randomImagePath = ImageMapUtil.getImageMap("CanvasImageMap").getRandomImagePath();
-                const randomFrameCoords = ImageMapUtil.getImageMap("CanvasFrameImageMap").getRandomImagePath();
+                // The frame is derived from the new canvas's id (see CanvasObjectTypeConfig).
                 tryAddObjectFromQuad(props.selection, canvasTypeIndex, {
                     [ObjectMetadataKeyEnumMap.ImagePath]: new EncodableByteString(randomImagePath),
-                    [ObjectMetadataKeyEnumMap.CanvasFrameCoords]: new EncodableByteString(randomFrameCoords),
                 });
             }}
         />

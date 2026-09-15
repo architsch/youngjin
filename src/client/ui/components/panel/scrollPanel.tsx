@@ -5,11 +5,10 @@ import useMouseDragScroll from "../../util/mouseDragScroll";
 import useTrackedElementRect from "../../util/trackedElementRect";
 import ClosablePanelUtil from "../../util/closablePanelUtil";
 
-// Shared shell for bottom panels: a horizontally scrolling tray that covers only itself, so the room
-// stays visible. Normally laid out by its owner. A panel raised from a toggle inside another panel
-// (anchorElementId) instead hangs just above that toggle, sized to its contents and right-aligned to
-// the toggle within the screen. With onClose it gets a close button and joins the back-gesture stack
-// (see ClosablePanelUtil).
+// Shared shell for bottom panels: a horizontally scrolling tray sized to its contents, covering only
+// itself so the room stays visible. Normally laid out by its owner. A panel raised from a toggle inside
+// another panel (anchorElementId) instead hangs just above that toggle, right-aligned to it within the
+// screen. With onClose it gets a close button and joins the back-gesture stack (see ClosablePanelUtil).
 
 export default function ScrollPanel({ children, id, onClose, anchorElementId, size = "md", additionalClassNames = "" }: Props)
 {
@@ -29,12 +28,12 @@ export default function ScrollPanel({ children, id, onClose, anchorElementId, si
         return () => ClosablePanelUtil.unregister(token);
     }, [closable]);
 
-    // Close button sits above the panel, so the panel is only as tall as its controls. The row takes
-    // its given width so it can scroll (children are shrink-0; see SelectionToolRow); anchored panels
-    // size to their contents instead.
+    // Close button sits above the panel, so the panel is only as tall as its controls. The body fits its
+    // contents up to the column's width, past which the row scrolls (children are shrink-0; see
+    // SelectionToolRow). Fitting the column instead would let an owner's margins overflow.
     const panel = <div className={`flex flex-col gap-1 items-start min-w-0 ${anchored ? "w-fit max-w-full shrink-0" : ""} ${additionalClassNames}`}>
         {closable && <IconButton icon={<CloseIcon/>} size="sm" onClick={() => onCloseRef.current?.()}/>}
-        <div id={id} className={`p-2 flex flex-col w-full ${maxHeightClassNames[size]} bg-gray-700 rounded-lg pointer-events-auto yj-surface-convex`}>
+        <div id={id} className={`p-2 flex flex-col w-fit max-w-full ${maxHeightClassNames[size]} bg-gray-700 rounded-lg pointer-events-auto yj-surface-convex`}>
             <div ref={onRefChange} className="flex flex-row items-stretch gap-3 w-full min-h-0 overflow-auto no-scrollbar">
                 {children}
             </div>

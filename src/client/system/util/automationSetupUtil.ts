@@ -5,6 +5,7 @@ import ClientObjectManager from "../../object/clientObjectManager";
 import ClientVoxelManager from "../../voxel/clientVoxelManager";
 import CompositionMetadataUtil from "../../../shared/graphics/mesh/composition/util/compositionMetadataUtil";
 import DoorCompositionConstants from "../../../shared/graphics/mesh/composition/types/compositionConstants/doorCompositionConstants";
+import CanvasCompositionConstants from "../../../shared/graphics/mesh/composition/types/compositionConstants/canvasCompositionConstants";
 import EncodableByteString from "../../../shared/networking/types/encodableByteString";
 import FreeCameraPose from "../../object/components/helpers/player/freeCameraPose";
 import GameObject from "../../object/types/gameObject";
@@ -22,6 +23,7 @@ import Vec3 from "../../../shared/math/types/vec3";
 import Voxel from "../../../shared/voxel/types/voxel";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import DoorObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
+import CanvasObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
 import { PLAYER_HEIGHT } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN,
     FOG_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME, MAX_RESTRICTED_ZONES, MAX_ROOM_Y,
@@ -578,9 +580,21 @@ const AutomationSetupUtil =
                 doorStyles: () =>
                 {
                     requireSandboxRoom("Listing the door finishes");
-                    return DoorCompositionConstants.colorSchemes.map(colors => ({
+                    return DoorCompositionConstants.presets.map(colors => ({
                         InstancedMeshComposition: CompositionMetadataUtil.encode(
                             InstancedMeshCompositionCodecTypeEnumMap.Door, 0, {colors}),
+                    }));
+                },
+
+                // Canvas frame presets as ready-to-spread metadata. Explicit for the same reason as the
+                // door finishes. Same set as the customization form.
+                canvasFrameStyles: () =>
+                {
+                    requireSandboxRoom("Listing the canvas frame presets");
+                    const composer = CanvasObjectTypeConfig.components.spawnedByAny.instancedMeshComposer;
+                    return CanvasCompositionConstants.presets.map(preset => ({
+                        InstancedMeshComposition: CompositionMetadataUtil.encode(
+                            composer.codecType, composer.codecVersion, preset),
                     }));
                 },
 

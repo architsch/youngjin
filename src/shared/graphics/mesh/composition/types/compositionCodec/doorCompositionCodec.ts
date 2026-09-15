@@ -39,16 +39,21 @@ export const DoorCompositionCodec: InstancedMeshCompositionCodec = {
         const rand = new RandomNumberGenerator(seed);
 
         const params = getBaseParams();
-        // Default finishes come from coordinated schemes (see DoorCompositionConstants).
-        const schemes = DoorCompositionConstants.colorSchemes;
-        const scheme = schemes[rand.randomInt(0, schemes.length)];
-        params.colors.panel = {...scheme.panel};
-        params.colors.label = {...scheme.label};
-        params.colors.knob = {...scheme.knob};
+        // Default finishes come from authored presets (see DoorCompositionConstants).
+        const presets = DoorCompositionConstants.presets;
+        const preset = presets[rand.randomInt(0, presets.length)];
+        params.colors.panel = {...preset.panel};
+        params.colors.label = {...preset.label};
+        params.colors.knob = {...preset.knob};
 
         const parts: InstancedMeshCompositionPart[] = [];
         constructParts(params, parts);
         return {params, parts};
+    },
+    getStructuralVariants: (): string[] =>
+    {
+        // A single design: colors are the only thing a door varies in.
+        return [DoorCompositionCodec.encode(getBaseParams(), [])];
     },
 }
 

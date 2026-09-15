@@ -1,11 +1,20 @@
 import Vec3 from "../../../../../math/types/vec3";
 import StringUtil from "../../../../../math/util/stringUtil";
-import { GEOMETRY_CODE_BY_ID, GEOMETRY_ID_BY_CODE, INSTANCE_COLORED_MATERIAL_IDS, MATERIAL_CODE_BY_ID, MATERIAL_ID_BY_CODE } from "../../../../../system/sharedConstants";
+import { GEOMETRY_CODE_BY_ID, GEOMETRY_ID_BY_CODE, INSTANCE_COLORED_MATERIAL_IDS, INSTANCED_WOOD_MATERIAL_ID,
+    MATERIAL_CODE_BY_ID, MATERIAL_ID_BY_CODE } from "../../../../../system/sharedConstants";
 import MeshDataUtil from "../../../util/meshDataUtil";
 import { InstancedMeshCompositionParams } from "../compositionParams/instancedMeshCompositionParams";
 import InstancedMeshCompositionPart from "../instancedMeshCompositionPart";
 import InstancedMeshCompositionCodec from "./instancedMeshCompositionCodec";
 
+// Moulding band width range (world units). Decoding never yields less than one step, so a damaged
+// string still draws a band.
+const MAX_MOULDING_THICKNESS = 0.5;
+const MIN_MOULDING_THICKNESS = MAX_MOULDING_THICKNESS / 93;
+const FALLBACK_MOULDING_THICKNESS_RAW = 10;
+
+// Parts are space-separated words: geometry, material, dir, offset, scale, then the color if the
+// material is instance-colored, then the moulding (color, band width, proud/sunk) if it is wood.
 export const DefaultCompositionCodec: InstancedMeshCompositionCodec = {
     encode: (params: InstancedMeshCompositionParams,
         parts: InstancedMeshCompositionPart[]): string =>
@@ -34,6 +43,15 @@ export const DefaultCompositionCodec: InstancedMeshCompositionCodec = {
                 partChars.push(StringUtil.convertNumberToVisibleASCII(part.color!.x, 0, 255));
                 partChars.push(StringUtil.convertNumberToVisibleASCII(part.color!.y, 0, 255));
                 partChars.push(StringUtil.convertNumberToVisibleASCII(part.color!.z, 0, 255));
+            }
+            if (materialId == INSTANCED_WOOD_MATERIAL_ID)
+            {
+                const mouldingColor = part.mouldingColor ?? part.color!;
+                partChars.push(StringUtil.convertNumberToVisibleASCII(mouldingColor.x, 0, 255));
+                partChars.push(StringUtil.convertNumberToVisibleASCII(mouldingColor.y, 0, 255));
+                partChars.push(StringUtil.convertNumberToVisibleASCII(mouldingColor.z, 0, 255));
+                partChars.push(StringUtil.convertNumberToVisibleASCII(part.mouldingThickness!, 0, MAX_MOULDING_THICKNESS));
+                partChars.push(StringUtil.convertRawNumberToVisibleASCII(part.mouldingIsConvex ? 1 : 0));
             }
 
             if (i < parts.length-1)
@@ -72,24 +90,37 @@ export const DefaultCompositionCodec: InstancedMeshCompositionCodec = {
                 z: StringUtil.convertVisibleASCIIToNumber(word, charOffset++, 0, 2.5, 1),
             };
 
+            const part: InstancedMeshCompositionPart = {instancedMeshId, dir, offset, scale};
             if (INSTANCE_COLORED_MATERIAL_IDS.includes(materialId))
             {
-                const color: Vec3 = {
+                part.color = {
                     x: StringUtil.convertVisibleASCIIToNumber(word, charOffset++, 0, 255, 255),
                     y: StringUtil.convertVisibleASCIIToNumber(word, charOffset++, 0, 255, 0),
                     z: StringUtil.convertVisibleASCIIToNumber(word, charOffset++, 0, 255, 255),
                 };
-                decodedParts.push({instancedMeshId, dir, offset, scale, color});
             }
-            else
+            if (materialId == INSTANCED_WOOD_MATERIAL_ID)
             {
-                decodedParts.push({instancedMeshId, dir, offset, scale});
+                part.mouldingColor = {
+                    x: StringUtil.convertVisibleASCIIToNumber(word, charOffset++, 0, 255, 255),
+                    y: StringUtil.convertVisibleASCIIToNumber(word, charOffset++, 0, 255, 0),
+                    z: StringUtil.convertVisibleASCIIToNumber(word, charOffset++, 0, 255, 255),
+                };
+                part.mouldingThickness = Math.max(MIN_MOULDING_THICKNESS, StringUtil.convertVisibleASCIIToNumber(
+                    word, charOffset++, 0, MAX_MOULDING_THICKNESS, FALLBACK_MOULDING_THICKNESS_RAW));
+                part.mouldingIsConvex = StringUtil.convertVisibleASCIIToRawNumber(word, charOffset++, 1) != 0;
             }
+            decodedParts.push(part);
         }
     },
     getRandomComposition: (seed: number):
         {params: InstancedMeshCompositionParams, parts: InstancedMeshCompositionPart[]} =>
     {
         throw new Error("DefaultCompositionCodec::getRandomComposition : NOT IMPLEMENTED");
+    },
+    getStructuralVariants: (): string[] =>
+    {
+        // Spells out arbitrary parts, so no set of variants bounds it.
+        throw new Error("DefaultCompositionCodec::getStructuralVariants : NOT IMPLEMENTED");
     },
 }

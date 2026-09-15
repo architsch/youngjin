@@ -107,9 +107,8 @@ async function tap(page, x, y)
     await sleep(120);
 }
 
-// A tap meant to change the selection. A control hanging off the selection (character options, a
-// palette) closes on a room tap and consumes it, so a tap that changed nothing is retried once.
-// Tapping what's already selected deselects it (ending edit mode); that's reported, not retried.
+// A tap meant to change the selection. Tapping what's already selected deselects it (ending edit mode);
+// that's reported as its own outcome.
 async function tapToSelect(page, x, y)
 {
     const before = await call(page, "selection");
@@ -117,21 +116,12 @@ async function tapToSelect(page, x, y)
 
     await tap(page, x, y);
     await sleep(400);
-    let after = await call(page, "selection");
+    const after = await call(page, "selection");
+    const nowEmpty = after.object == null && after.voxelQuad == null && after.player == null;
 
     if (JSON.stringify(after) !== JSON.stringify(before))
-    {
-        const nowEmpty = after.object == null && after.voxelQuad == null && after.player == null;
-        return { taps: 1, firstTapSpent: false,
-            outcome: (hadSelection && nowEmpty) ? "deselected" : "selected", selection: after };
-    }
-
-    await tap(page, x, y);
-    await sleep(400);
-    after = await call(page, "selection");
-    const nowEmpty = after.object == null && after.voxelQuad == null && after.player == null;
-    return { taps: 2, firstTapSpent: true,
-        outcome: nowEmpty ? "nothing" : "selected", selection: after };
+        return { outcome: (hadSelection && nowEmpty) ? "deselected" : "selected", selection: after };
+    return { outcome: nowEmpty ? "nothing" : "selected", selection: after };
 }
 
 // ─── The mode a scenario is being carried out in ────────────────────────
@@ -344,10 +334,9 @@ async function clickObject(page, target, options = {})
             `Aimed at ${report.objectType}#${report.objectId}, which is ${hit.distance.toFixed(1)} ` +
             `away — beyond the reach a click has.`);
 
-    // `select: false` for clicks not meant to select (walking through a door), where a retry would be a
-    // second trip.
+    // `select: false` for clicks not meant to select (walking through a door).
     const tapped = options.select === false
-        ? (await tap(page, report.screen.x, report.screen.y), {taps: 1, firstTapSpent: false})
+        ? (await tap(page, report.screen.x, report.screen.y), {})
         : await tapToSelect(page, report.screen.x, report.screen.y);
     return { ...report, ...tapped };
 }

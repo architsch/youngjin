@@ -47,7 +47,7 @@ const TutorialSinglePlayerModeConfig: SinglePlayerModeConfig =
         const z0 = entranceVoxelRow - Z + 1;
 
         const hotspots = {
-            // Fallback floor patch in front of the entrance (the tutorial normally picks one near the user).
+            // Fallback floor patch in front of the entrance (the tutorial normally picks the wall the user faces).
             floor: {x: entranceVoxelCol + 0.5, y: 0, z: entranceVoxelRow - 3 + 0.5},
             npc: {x: x0 + X - 1 + 0.5, y: 0.5 * PLAYER_HEIGHT, z: z0 + Z1 + 0.5*(Z2 - 1) + 0.5},
             // Door origin half a footprint up (collider-centred; see DoorObjectTypeConfig).

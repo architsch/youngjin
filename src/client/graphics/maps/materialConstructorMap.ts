@@ -87,7 +87,7 @@ async function createInstancedTexturePackMaterial(p: InstancedTexturePackMateria
             break;
         case "dynamicEmpty":
             texture = TextureFactory.loadDynamicEmptyTexture(p.texturePath, p.textureWidth,
-                p.textureHeight, p.transparent, p.filterType);
+                p.textureHeight, p.transparent || p.alphaCutout, p.filterType);
             break;
         default:
             throw new Error(`Unknown texture load type :: "${p.textureLoadType}"`);
@@ -99,6 +99,8 @@ async function createInstancedTexturePackMaterial(p: InstancedTexturePackMateria
     // They never overlap each other, so draw order doesn't matter.
     newMaterial.transparent = p.transparent;
     newMaterial.depthWrite = !p.transparent;
+    if (p.alphaCutout)
+        newMaterial.alphaTest = 0.5;
     if (p.polygonOffsetFactor && p.polygonOffsetUnits)
     {
         newMaterial.polygonOffset = true;

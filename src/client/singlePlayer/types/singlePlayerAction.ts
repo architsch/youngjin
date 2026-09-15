@@ -5,7 +5,8 @@ import SinglePlayerParam from "./singlePlayerParam";
 import CameraMode from "../../graphics/types/cameraMode";
 
 // A tagged step command (see SinglePlayerActionMap). Inputs are SinglePlayerParams so they can be
-// computed during play; identifiers (flags, faces, element ids, object ids) stay plain values.
+// computed during play; identifiers known up front (flags, faces, element ids, object ids) stay plain
+// values.
 type SinglePlayerAction =
     | {type: "clear_all_ui_and_gizmo"}
     | {type: "ui_headline", text: SinglePlayerParam<string>}
@@ -23,13 +24,16 @@ type SinglePlayerAction =
         col: SinglePlayerParam<number>, collisionLayer: SinglePlayerParam<number>,
         facingAxis: "x" | "y" | "z", orientation: "-" | "+"}
     | {type: "feature_flag", flag: FeatureFlag, enable: boolean}
-    | {type: "select_voxel_quad", row: SinglePlayerParam<number>, col: SinglePlayerParam<number>,
-        collisionLayer: SinglePlayerParam<number>, facingAxis: "x" | "y" | "z",
-        orientation: "-" | "+"}
+    | {type: "select_voxel_quad", quadIndex: SinglePlayerParam<number>}
+    | {type: "edit_mode_opening_voxel_quad", quadIndex: SinglePlayerParam<number>}
+    | {type: "clear_edit_mode_opening_voxel_quad"}
     | {type: "set_variable", name: string, computeValue: SinglePlayerParam<any>}
+    | {type: "set_my_player_hidden", hidden: boolean}
     | {type: "set_camera_mode", mode: CameraMode}
     | {type: "orbit_camera_pose", zoomAmount: SinglePlayerParam<number>,
         azimuthDeg: SinglePlayerParam<number>, polarDeg: SinglePlayerParam<number>}
+    | {type: "orbit_camera_distance_range", minDistance: SinglePlayerParam<number>,
+        maxDistance: SinglePlayerParam<number>}
     | {type: "orbit_camera_target_override", targetX: SinglePlayerParam<number>,
         targetY: SinglePlayerParam<number>, targetZ: SinglePlayerParam<number>}
     | {type: "clear_orbit_camera_target_override"}

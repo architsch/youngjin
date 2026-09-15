@@ -14,9 +14,9 @@ import StringUtil from "../../../math/util/stringUtil";
 export const PLAYER_HEIGHT = 2.5;
 export const PLAYER_RADIUS_XZ = 0.375; // radius of the player on the XZ plane.
 
-// Bounded by the mesh instance pool; also the room balancer's cap (see RoomPickerUtil).
+// Sizes the mesh instance pools (see InstancedMeshCapacityBuilder); also the room balancer's cap (see
+// RoomPickerUtil).
 export const MAX_PLAYERS_PER_ROOM = 64;
-const MAX_MESH_INSTANCES_PER_PLAYER = 32;
 
 // This object represents each user's player character. Users directly control their player characters in first-person view, using input devices (such as mouse and keyboard).
 const PlayerObjectTypeConfig =
@@ -58,7 +58,6 @@ const PlayerObjectTypeConfig =
         spawnedByAny: {
             instancedMeshGraphics: {},
             instancedMeshComposer: {
-                maxNumInstancesPerMesh: MAX_PLAYERS_PER_ROOM * MAX_MESH_INSTANCES_PER_PLAYER,
                 codecType: InstancedMeshCompositionCodecTypeEnumMap.Player,
                 codecVersion: 0,
                 generateDefaultParts: (obj: AddObjectSignal) => {

@@ -16,7 +16,7 @@ The name is drawn in the scene as a quad slightly in front of the plate, so wall
 
 ## Appearance metadata
 - `DoorCompositionCodec` encodes three colors: timber, plate and knob. Decoding clamps its input, so any string yields a drawable door.
-- Colors come from a joinery palette (separate from the player palette) and are drawn as coordinated schemes. The timber stays mid-brightness, and the plate stays close to the timber's brightness.
+- Colors come from a joinery palette (separate from the player palette) and are drawn as coordinated presets. The timber stays mid-brightness, and the plate stays close to the timber's brightness.
 - A door without stored appearance derives one from its room and object id, not from the viewer, so everyone sees the same door.
 
 ## Moulded timber material

@@ -1,14 +1,13 @@
 import * as THREE from "three";
 import { ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
 import TutorialSinglePlayerModeConfig from "../../../../shared/singlePlayer/types/singlePlayerModeConfig/tutorialSinglePlayerModeConfig";
-import { COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NEAR_EPSILON } from "../../../../shared/system/sharedConstants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NEAR_EPSILON, NUM_VOXEL_COLS,
+    NUM_VOXEL_ROWS } from "../../../../shared/system/sharedConstants";
 import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
-import Voxel from "../../../../shared/voxel/types/voxel";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import App from "../../../app";
 import GraphicsManager from "../../../graphics/graphicsManager";
-import ClientObjectManager from "../../../object/clientObjectManager";
-import { orbitCameraAnglesObservable } from "../../../system/clientObservables";
+import { orbitCameraAnglesObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
 import { ClientEventType } from "../../../system/types/clientEventType";
 import SinglePlayerManager from "../../singlePlayerManager";
 import SinglePlayerAction from "../singlePlayerAction";
@@ -20,27 +19,26 @@ let cachedSteps: {[stepName: string]: SinglePlayerStep} | undefined;
 // Thin outline for the small mode-switch capsule.
 const MODE_SWITCH_OUTLINE_THICKNESS_PX = 2;
 
-// How far the user has to swing the camera around before he is taken to have discovered that he can.
+// How far the user has to swing the camera around before they are taken to have discovered that they can.
 const TUTORIAL_CAMERA_TURN_DEG = 20;
 
-// Camera view for the floor-picking step: looking down at an angle so the patch reads as a square,
-// far enough back to show its surroundings.
-const FLOOR_VIEW_AZIMUTH_DEG = 30;
-const FLOOR_VIEW_POLAR_DEG = 45;
-const FLOOR_VIEW_ZOOM = 0.5;
+// How far below the camera edit mode's opening face is looked for: about a block's height, landing in the
+// middle of a block layer for a standing user rather than on the boundary between two.
+const WALL_QUAD_DEPTH_BELOW_CAMERA = 0.75;
+
+// How close to and how far from that face the camera may be as edit mode opens on it.
+const WALL_QUAD_MIN_CAMERA_DIST = 2.5;
+const WALL_QUAD_MAX_CAMERA_DIST = 6;
 
 // Step variables (see "set_variable"). The edit-mode view is recorded (not imposed) so the
 // camera-turning step measures from where the user already is.
 const EDIT_VIEW_AZIMUTH_DEG_VARIABLE = "editViewAzimuthDeg";
 const EDIT_VIEW_POLAR_DEG_VARIABLE = "editViewPolarDeg";
-// The patch of floor the user is asked to select (see pickFloorHotspot).
-const FLOOR_HOTSPOT_VARIABLE = "floorHotspot";
-
-// How far from the player, in voxels, the tutorial looks for that patch of floor.
-const FLOOR_HOTSPOT_MIN_DIST = 1;
-const FLOOR_HOTSPOT_MAX_DIST = 3;
+// The face edit mode opened on, which the building steps build against and return to.
+const WALL_QUAD_VARIABLE = "wallQuadIndex";
 
 const cameraPosTemp = new THREE.Vector3();
+const cameraDirTemp = new THREE.Vector3();
 
 // Tutorial steps and teardown. The room is in the shared TutorialSinglePlayerModeConfig.
 const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
@@ -57,6 +55,8 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                 startDelay: 0,
                 actionsOnStart: [
                     {type: "ui_diagram", diagram: "drag_up", text: () => "Drag to move"},
+                    // Kept out of view and out of the way of clicks meant for the room around it.
+                    {type: "set_my_player_hidden", hidden: true},
                     {type: "feature_flag", flag: FeatureFlag.HideChatInput, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableChatSend, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableVoxelQuadSelectionChange, enable: true},
@@ -88,9 +88,11 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                     {type: "ui_outline_capsule", targetElementId: "gameModeToggleSwitchTrack",
                         thicknessPx: () => MODE_SWITCH_OUTLINE_THICKNESS_PX},
                     {type: "feature_flag", flag: FeatureFlag.DisableGameModeTransition, enable: false},
-                    // The mode opens on whatever the user faces, which may be either kind.
-                    {type: "feature_flag", flag: FeatureFlag.DisableVoxelQuadSelectionChange, enable: false},
-                    {type: "feature_flag", flag: FeatureFlag.DisableObjectSelectionChange, enable: false},
+                    // The next steps build against a wall, so the mode opens on the one ahead rather than
+                    // on whatever is in view. Falls back to the layout's floor patch.
+                    {type: "edit_mode_opening_voxel_quad", quadIndex: () => pickWallQuadAhead(
+                        VoxelQueryUtil.getFloorVoxelQuadIndex(
+                            Math.floor(p.hotspots.floor.z), Math.floor(p.hotspots.floor.x)))},
                 ],
                 transitionRules: [{
                     requirements: [{type: "edit_mode_active", negate: false}],
@@ -99,11 +101,14 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                 }],
                 actionsOnEnd: [
                     {type: "clear_all_ui_and_gizmo"},
+                    {type: "clear_edit_mode_opening_voxel_quad"},
                     // Locked in edit mode until the step that teaches leaving it.
                     {type: "feature_flag", flag: FeatureFlag.DisableGameModeTransition, enable: true},
-                    // Keep the selection the mode opened on for the next step.
-                    {type: "feature_flag", flag: FeatureFlag.DisableVoxelQuadSelectionChange, enable: true},
-                    {type: "feature_flag", flag: FeatureFlag.DisableObjectSelectionChange, enable: true},
+                    {type: "set_variable", name: WALL_QUAD_VARIABLE,
+                        computeValue: () => voxelQuadSelectionObservable.peek()?.quadIndex ?? -1},
+                    // The user may have switched while hugging the wall or from across the room.
+                    {type: "orbit_camera_distance_range", minDistance: () => WALL_QUAD_MIN_CAMERA_DIST,
+                        maxDistance: () => WALL_QUAD_MAX_CAMERA_DIST},
                 ],
             },
             "change_camera_angle": {
@@ -126,70 +131,15 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                         azimuthDeg: () => SinglePlayerManager.getVariable(EDIT_VIEW_AZIMUTH_DEG_VARIABLE),
                         polarDeg: () => SinglePlayerManager.getVariable(EDIT_VIEW_POLAR_DEG_VARIABLE),
                         minDifferenceDeg: () => TUTORIAL_CAMERA_TURN_DEG}],
-                    nextStep: "before_select_floor",
+                    nextStep: "add_block",
                     nextStepDelay: 500,
                 }],
                 actionsOnEnd: [
                     {type: "clear_all_ui_and_gizmo"},
                 ],
             },
-            "before_select_floor": {
-                startDelay: 0,
-                actionsOnStart: [
-                    // The patch depends on where the user stands (see pickFloorHotspot), so pick it once.
-                    {type: "set_variable", name: FLOOR_HOTSPOT_VARIABLE,
-                        computeValue: () => pickFloorHotspot(
-                            {row: Math.floor(p.hotspots.floor.z), col: Math.floor(p.hotspots.floor.x)})},
-                    // Show the patch by centring the camera on it; framed like the quad, so selecting
-                    // it doesn't jolt the camera.
-                    {type: "orbit_camera_target_override",
-                        targetX: () => SinglePlayerManager.getVariable(FLOOR_HOTSPOT_VARIABLE).col+0.5,
-                        targetY: () => 0,
-                        targetZ: () => SinglePlayerManager.getVariable(FLOOR_HOTSPOT_VARIABLE).row+0.5},
-                    // Force a top-down-ish view: a floor patch seen near its level is a sliver.
-                    {type: "orbit_camera_pose", zoomAmount: () => FLOOR_VIEW_ZOOM,
-                        azimuthDeg: () => FLOOR_VIEW_AZIMUTH_DEG,
-                        polarDeg: () => FLOOR_VIEW_POLAR_DEG},
-                    {type: "gizmo_downward_arrow",
-                        targetX: () => SinglePlayerManager.getVariable(FLOOR_HOTSPOT_VARIABLE).col+0.5, targetY: () => 0,
-                        targetZ: () => SinglePlayerManager.getVariable(FLOOR_HOTSPOT_VARIABLE).row+0.5},
-                    {type: "gizmo_voxel_quad_outline_rect",
-                        row: () => SinglePlayerManager.getVariable(FLOOR_HOTSPOT_VARIABLE).row,
-                        col: () => SinglePlayerManager.getVariable(FLOOR_HOTSPOT_VARIABLE).col,
-                        collisionLayer: () => COLLISION_LAYER_NULL, facingAxis: "y", orientation: "+"},
-                ],
-                transitionRules: [{
-                    requirements: [{type: "always_true"}],
-                    nextStep: "select_floor",
-                    nextStepDelay: 750,
-                }],
-                actionsOnEnd: [
-                ],
-            },
-            "select_floor": {
-                startDelay: 0,
-                actionsOnStart: [
-                    {type: "ui_headline", text: () => "Select the floor."},
-                    {type: "feature_flag", flag: FeatureFlag.DisableVoxelQuadSelectionChange, enable: false},
-                ],
-                transitionRules: [{
-                    // Require this exact patch, since the next steps all act on it.
-                    requirements: [{type: "voxel_quad_selected", negate: false,
-                        row: () => SinglePlayerManager.getVariable(FLOOR_HOTSPOT_VARIABLE).row,
-                        col: () => SinglePlayerManager.getVariable(FLOOR_HOTSPOT_VARIABLE).col,
-                        collisionLayer: () => COLLISION_LAYER_NULL, facingAxis: "y",
-                        orientation: "+"}],
-                    nextStep: "add_block",
-                    nextStepDelay: 0,
-                }],
-                actionsOnEnd: [
-                    {type: "clear_all_ui_and_gizmo"},
-                    {type: "clear_orbit_camera_target_override"},
-                    // Lock the selection through the build/texture/remove steps; the steps move it
-                    // themselves (see "select_voxel_quad").
-                    {type: "feature_flag", flag: FeatureFlag.DisableVoxelQuadSelectionChange, enable: true},
-                ],
-            },
+            // The selection stays locked through the build/texture/remove steps; the steps move it
+            // themselves (see "select_voxel_quad").
             "add_block": {
                 startDelay: 500,
                 actionsOnStart: [
@@ -207,11 +157,9 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                 actionsOnEnd: [
                     {type: "clear_all_ui_and_gizmo"},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockAddition, enable: true},
-                    // Select the top of the newly built block, which the next steps retexture and remove.
-                    {type: "select_voxel_quad",
-                        row: () => SinglePlayerManager.getVariable(FLOOR_HOTSPOT_VARIABLE).row,
-                        col: () => SinglePlayerManager.getVariable(FLOOR_HOTSPOT_VARIABLE).col,
-                        collisionLayer: () => COLLISION_LAYER_MIN, facingAxis: "y", orientation: "+"},
+                    // Onto the same face of the newly built block, which the next steps retexture and remove.
+                    {type: "select_voxel_quad", quadIndex: () => getSameQuadOnBlockBuiltAgainst(
+                        SinglePlayerManager.getVariable(WALL_QUAD_VARIABLE))},
                 ],
             },
             "change_texture": {
@@ -248,11 +196,9 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                 actionsOnEnd: [
                     {type: "clear_all_ui_and_gizmo"},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockRemoval, enable: true},
-                    // Back down onto the patch of floor the block was standing on, bare again now.
+                    // Back onto the face the block was built against, bare again now.
                     {type: "select_voxel_quad",
-                        row: () => SinglePlayerManager.getVariable(FLOOR_HOTSPOT_VARIABLE).row,
-                        col: () => SinglePlayerManager.getVariable(FLOOR_HOTSPOT_VARIABLE).col,
-                        collisionLayer: () => COLLISION_LAYER_NULL, facingAxis: "y", orientation: "+"},
+                        quadIndex: () => SinglePlayerManager.getVariable(WALL_QUAD_VARIABLE)},
                 ],
             },
             "exit_edit_mode": {
@@ -395,8 +341,11 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
     },
     onModeEnd: () =>
     {
-        // Disable all feature flags and release the camera override.
-        const actions: SinglePlayerAction[] = [{type: "clear_orbit_camera_target_override"}];
+        // Show the user's character again, restore edit mode's usual opening, and disable all feature flags.
+        const actions: SinglePlayerAction[] = [
+            {type: "set_my_player_hidden", hidden: false},
+            {type: "clear_edit_mode_opening_voxel_quad"},
+        ];
         for (const flag of Object.values(FeatureFlag))
         {
             if (typeof flag === "number")
@@ -406,48 +355,92 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
     },
 };
 
-// Picks the floor patch at request time: a fixed patch could be under the player. Walks outward from
-// the player toward the camera and keeps the furthest bare patch before the floor ends; falls back to
-// the layout's patch.
-function pickFloorHotspot(fallback: {row: number, col: number}): {row: number, col: number}
+// Picked as edit mode opens, since the user walks until then. Walks the grid from the camera along its
+// horizontal facing, a little below it, and takes the face of the first block met; falls back if none is.
+function pickWallQuadAhead(fallbackQuadIndex: number): number
 {
     const room = App.getCurrentRoom();
-    const playerPos = ClientObjectManager.getMyPlayer()?.position;
-    if (!room || !playerPos)
-        return fallback;
+    if (!room)
+        return fallbackQuadIndex;
 
-    GraphicsManager.getCamera().getWorldPosition(cameraPosTemp);
-    const towardCameraX = cameraPosTemp.x - playerPos.x;
-    const towardCameraZ = cameraPosTemp.z - playerPos.z;
-    const distToCamera = Math.hypot(towardCameraX, towardCameraZ);
-    if (distToCamera < NEAR_EPSILON) // The camera stands right over him, and points nowhere.
-        return fallback;
-
-    const playerRow = Math.floor(playerPos.z);
-    const playerCol = Math.floor(playerPos.x);
-    let hotspot: {row: number, col: number} | undefined = undefined;
-
-    for (let dist = FLOOR_HOTSPOT_MIN_DIST; dist <= FLOOR_HOTSPOT_MAX_DIST; ++dist)
+    const camera = GraphicsManager.getCamera();
+    camera.getWorldPosition(cameraPosTemp);
+    camera.getWorldDirection(cameraDirTemp);
+    const collisionLayer = VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(
+        cameraPosTemp.y - WALL_QUAD_DEPTH_BELOW_CAMERA);
+    const horizontalLength = Math.hypot(cameraDirTemp.x, cameraDirTemp.z);
+    if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX ||
+        horizontalLength < NEAR_EPSILON)
     {
-        const row = Math.floor(playerPos.z + (towardCameraZ / distToCamera) * dist);
-        const col = Math.floor(playerPos.x + (towardCameraX / distToCamera) * dist);
-        if (row == playerRow && col == playerCol)
-            continue; // Still the patch he is standing on, which is the one patch of no use here.
-        if (!isBareFloor(room.voxelGrid.voxels, row, col))
-            break; // The floor has given out; whatever was reached before it stands.
-        hotspot = {row, col};
+        return fallbackQuadIndex;
     }
-    return hotspot ?? fallback;
+    const dirX = cameraDirTemp.x / horizontalLength;
+    const dirZ = cameraDirTemp.z / horizontalLength;
+
+    let col = VoxelQueryUtil.getVoxelColFromWorldX(cameraPosTemp.x);
+    let row = VoxelQueryUtil.getVoxelRowFromWorldZ(cameraPosTemp.z);
+
+    // Walk length between successive column (row) boundaries, and to the next one.
+    const colStride = 1 / Math.abs(dirX);
+    const rowStride = 1 / Math.abs(dirZ);
+    let colBoundary = (dirX != 0)
+        ? Math.abs(col + ((dirX > 0) ? 1 : 0) - cameraPosTemp.x) * colStride : Infinity;
+    let rowBoundary = (dirZ != 0)
+        ? Math.abs(row + ((dirZ > 0) ? 1 : 0) - cameraPosTemp.z) * rowStride : Infinity;
+
+    for (let step = 0; step < NUM_VOXEL_ROWS + NUM_VOXEL_COLS; ++step)
+    {
+        const crossesCol = colBoundary <= rowBoundary;
+        if (crossesCol)
+        {
+            col += (dirX > 0) ? 1 : -1;
+            colBoundary += colStride;
+        }
+        else
+        {
+            row += (dirZ > 0) ? 1 : -1;
+            rowBoundary += rowStride;
+        }
+
+        const voxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, col);
+        if (!voxel)
+            break; // Left the room without meeting a block.
+        if (!VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer))
+            continue;
+
+        // The face turned back toward the camera.
+        const quadIndex = crossesCol
+            ? VoxelQueryUtil.getVoxelQuadIndex(row, col, "x", (dirX > 0) ? "-" : "+", collisionLayer)
+            : VoxelQueryUtil.getVoxelQuadIndex(row, col, "z", (dirZ > 0) ? "-" : "+", collisionLayer);
+        return ((voxel.quadsMem.quads[quadIndex] & 0b10000000) != 0) ? quadIndex : fallbackQuadIndex;
+    }
+    return fallbackQuadIndex;
 }
 
-// Visible, clickable floor with nothing on it.
-function isBareFloor(voxels: Voxel[], row: number, col: number): boolean
+// The same face on the block that adding one against the given face builds (see
+// VoxelQuadPlacementOptions).
+function getSameQuadOnBlockBuiltAgainst(quadIndex: number): number
 {
-    const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);
-    if (!voxel || VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, COLLISION_LAYER_MIN))
-        return false;
-    const floorQuadIndex = VoxelQueryUtil.getFloorVoxelQuadIndex(row, col);
-    return floorQuadIndex >= 0 && (voxel.quadsMem.quads[floorQuadIndex] & 0b10000000) != 0;
+    if (!VoxelQueryUtil.isValidVoxelQuadIndex(quadIndex))
+        return -1;
+
+    const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
+    const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
+    const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
+    const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex);
+    const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+    const step = (orientation == "+") ? 1 : -1;
+
+    if (facingAxis != "y")
+    {
+        return VoxelQueryUtil.getVoxelQuadIndex(row + ((facingAxis == "z") ? step : 0),
+            col + ((facingAxis == "x") ? step : 0), facingAxis, orientation, collisionLayer);
+    }
+    // The room's own floor and ceiling belong to no layer; a block built on one takes the layer next to it.
+    const builtLayer = (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
+        ? ((orientation == "+") ? COLLISION_LAYER_MIN : COLLISION_LAYER_MAX)
+        : collisionLayer + step;
+    return VoxelQueryUtil.getVoxelQuadIndex(row, col, "y", orientation, builtLayer);
 }
 
 export default TutorialSinglePlayerModeClientConfig;

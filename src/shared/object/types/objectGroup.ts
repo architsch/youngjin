@@ -7,32 +7,20 @@ import EncodableRawByteNumber from "../../networking/types/encodableRawByteNumbe
 import AddObjectSignal from "./addObjectSignal";
 import { ObjectMetadata } from "./objectMetadata";
 import ObjectTransform from "./objectTransform";
-import DoorObjectTypeConfig from "./objectTypeConfig/doorObjectTypeConfig";
-import { COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL,
-    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW } from "../../system/sharedConstants";
+import ObjectGroupVersionMigration, { CURRENT_ERA_VOXEL_GRID_VERSION }
+    from "../versionMigration/objectGroupVersionMigration";
 
 let temp_roomID = "";
 let temp_participantUserNameByID: { [userID: string]: string } = {};
 let temp_sourceVoxelGridVersion = 0;
 
-const latestVersion = 2;
-
-// Grid version where rooms became two storeys. Objects share a blob with the grid, and the object
-// format's version byte didn't change then (only the Y range did; see ObjectTransform), so the grid
-// version dates the objects.
-const FIRST_TWO_STOREY_VOXEL_GRID_VERSION = 2;
-
-// Grid version where the entrance doorway was filled and the entrance door became a stored object.
-// Older grids mean the room never stored its door.
-const FIRST_STORED_ENTRANCE_DOOR_VOXEL_GRID_VERSION = 3;
-
-// Objects decoded without a grid are current by construction. A local constant avoids a circular
-// import with VoxelGrid.
-const CURRENT_ERA_VOXEL_GRID_VERSION = FIRST_STORED_ENTRANCE_DOOR_VOXEL_GRID_VERSION;
+const latestVersion = 3;
 
 export default class ObjectGroup extends EncodableData
 {
     objectById: {[objectId: string]: AddObjectSignal};
+    // The format the group was decoded from; older ones were converted (see ObjectGroupVersionMigration).
+    sourceFormatVersion: number = latestVersion;
 
     constructor(objects: AddObjectSignal[])
     {
@@ -41,6 +29,8 @@ export default class ObjectGroup extends EncodableData
         for (const object of objects)
             this.objectById[object.objectId] = object;
     }
+
+    static get latestFormatVersion(): number { return latestVersion; }
 
     encodeWithParams(bufferState: BufferState, participantUserNameByID: { [userID: string]: string })
     {
@@ -102,7 +92,7 @@ export default class ObjectGroup extends EncodableData
     }
 
     // sourceVoxelGridVersion: the version of the grid decoded from the same blob, used to date the
-    // objects (see FIRST_TWO_STOREY_VOXEL_GRID_VERSION). Omit for standalone (current) groups.
+    // objects (see ObjectGroupVersionMigration). Omit for standalone (current) groups.
     static decodeWithParams(bufferState: BufferState, roomID: string,
         sourceVoxelGridVersion: number = CURRENT_ERA_VOXEL_GRID_VERSION): EncodableData
     {
@@ -116,15 +106,14 @@ export default class ObjectGroup extends EncodableData
     static decode(bufferState: BufferState): EncodableData
     {
         const versionFound = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
+        const objectGroup = decodeBody(bufferState);
         if (versionFound < latestVersion)
         {
-            let data = olderVersionDecoders[versionFound](bufferState);
-            for (let version = versionFound; version < latestVersion; ++version)
-                data = versionConverters[version](data);
-            return data;
+            ObjectGroupVersionMigration.convert(objectGroup, versionFound, latestVersion, temp_roomID,
+                temp_sourceVoxelGridVersion);
         }
-
-        return decodeBody(bufferState);
+        objectGroup.sourceFormatVersion = versionFound;
+        return objectGroup;
     }
 }
 
@@ -163,39 +152,3 @@ function decodeBody(bufferState: BufferState): ObjectGroup
 
     return new ObjectGroup(objects);
 }
-
-const olderVersionDecoders: ((bufferState: BufferState) => EncodableData)[] = [
-    // Same layout for every version so far; converters fix meanings afterwards.
-    decodeBody,
-    decodeBody,
-];
-
-const versionConverters: ((olderVersionData: EncodableData) => EncodableData)[] = [
-    (olderVersionData: EncodableData) => { // version 0 -> 1
-        const objectGroup = olderVersionData as ObjectGroup;
-
-        // Only objects from pre-two-storey grids had heights doubled; newer ones must be left alone.
-        if (temp_sourceVoxelGridVersion >= FIRST_TWO_STOREY_VOXEL_GRID_VERSION)
-            return objectGroup;
-
-        for (const object of Object.values(objectGroup.objectById))
-        {
-            const {pos} = object.transform;
-            object.transform.pos = {x: pos.x, y: ObjectTransform.rescaleLegacyY(pos.y), z: pos.z};
-        }
-        return objectGroup;
-    },
-    (olderVersionData: EncodableData) => { // version 1 -> 2
-        const objectGroup = olderVersionData as ObjectGroup;
-
-        // Rooms from before stored entrance doors get one; newer rooms already have it (or an admin
-        // removed it deliberately), so they must be left alone.
-        if (temp_sourceVoxelGridVersion >= FIRST_STORED_ENTRANCE_DOOR_VOXEL_GRID_VERSION)
-            return objectGroup;
-
-        const entranceDoor = DoorObjectTypeConfig.util.makeEntranceDoor(temp_roomID,
-            INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, COLLISION_LAYER_MIN);
-        objectGroup.objectById[entranceDoor.objectId] = entranceDoor;
-        return objectGroup;
-    },
-];

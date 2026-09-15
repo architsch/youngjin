@@ -107,11 +107,6 @@ const FRAGMENT_PARS_GLSL = `
         vec3 aged = color * WOOD_PATINA_TINT;
         return mix(vec3(dot(aged, vec3(0.2126, 0.7152, 0.0722))), aged, WOOD_SATURATION);
     }
-    // 0 at the nearest edge, 1 at the band's inner boundary. Using the nearer axis mitres corners.
-    float woodBandCoord(vec2 edgeDist, float bandWidth)
-    {
-        return clamp(min(edgeDist.x, edgeDist.y) / bandWidth, 0.0, 1.0);
-    }
 `;
 
 const COLOR_FRAGMENT_GLSL = `
@@ -119,7 +114,9 @@ const COLOR_FRAGMENT_GLSL = `
 
     vec2 woodEdgeDist = (0.5 - abs(vWoodQuad.xy)) * vWoodQuad.zw;
     float woodBandWidth = abs(vWoodMoulding.a);
-    float woodBand = woodBandCoord(woodEdgeDist, woodBandWidth);
+    // 0 at the nearest edge, 1 at the band's inner boundary. Using the nearer axis mitres corners.
+    float woodBandCoord = min(woodEdgeDist.x, woodEdgeDist.y) / woodBandWidth;
+    float woodBand = clamp(woodBandCoord, 0.0, 1.0);
     float woodProfileSign = (vWoodMoulding.a < 0.0) ? -1.0 : 1.0;
     // Profile height and slope; level at both band boundaries so parts sit flush.
     float woodHeight = WOOD_RELIEF * 0.5
@@ -208,9 +205,11 @@ const COLOR_FRAGMENT_GLSL = `
     float woodCarve = WOOD_CARVE_CONTRAST * woodSlope * dot(woodOutward, vWoodBoardRake.zw)
         + WOOD_CAVITY_CONTRAST * woodHeight;
 
-    // The moulding color blends across the band (a hard color edge reads as a drawn line).
-    vec3 woodTimber = mix(woodAge(diffuseColor.rgb), woodAge(vWoodMoulding.rgb),
-        1.0 - smoothstep(0.55, 1.0, woodBand));
+    // Hard color edge at the band's inner boundary, anti-aliased over one pixel (a gradient reads as a
+    // blurry line). Takes the unclamped coordinate, whose derivative clamping would zero past the boundary.
+    float woodColorEdge = max(fwidth(woodBandCoord), 0.0005);
+    vec3 woodTimber = woodAge(mix(vWoodMoulding.rgb, diffuseColor.rgb,
+        smoothstep(1.0 - 0.5 * woodColorEdge, 1.0 + 0.5 * woodColorEdge, woodBandCoord)));
     diffuseColor.rgb = woodTimber * woodFigure
         * max(1.0 + woodCarve, WOOD_MIN_CARVE_SHADE);
 `;

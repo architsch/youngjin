@@ -89,7 +89,7 @@ room, with a named error.
 | `restrictedZones([{rowMin, rowMax, colMin, colMax}, ...])` | The stretches of a room only its superuser may edit. Called with nothing it reports what the room holds |
 | `texturePack(path?)` | What the whole set is finished in; re-dresses everything already standing. Called with nothing it reports the current pack and the ones on offer |
 | `palettes(path?)` | The `{floor, ceiling, wall, prop}` texture indices the game finishes its **own** rooms in |
-| `pictures()` / `doorStyles()` | The paintings a canvas can carry; the finishes a door can be given, each ready to spread into `metadata` |
+| `pictures()` / `doorStyles()` / `canvasFrameStyles()` | The paintings a canvas can carry; the finishes a door can be given and the frame presets a canvas can be given, each ready to spread into `metadata` |
 | `camera({x?, y?, z?, atX?, atY?, atZ?})` | Where the camera stands and what it is aimed at, in **world** coordinates. Either half alone: moving without re-aiming keeps the subject in frame |
 | `cameraPose()` | Where it is now, with the distance and unit direction between the two |
 | `place(x, z, opts?)` / `face(x, z)` | Stands the player somewhere and turns him — only for a shot that wants a character in it |

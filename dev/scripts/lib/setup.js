@@ -213,6 +213,14 @@ const roomLighting = (page, prefs) => callSandbox(page, "roomLighting", prefs);
 const doorStyles = (page) => callSandbox(page, "doorStyles");
 
 /**
+ * The canvas frame presets, ready to pass as metadata (otherwise a canvas's frame is random per id):
+ *
+ *   const frames = await setup.canvasFrameStyles();
+ *   addObject({type: "Canvas", ...wall, col: 14, metadata: {ImagePath: "1/14", ...frames[2]}})
+ */
+const canvasFrameStyles = (page) => callSandbox(page, "canvasFrameStyles");
+
+/**
  * Hangs a picture or a door on a cell's face:
  *
  *   addObject({type: "Canvas", row, col, face: "-z", collisionLayer: 2, metadata: {ImagePath: "1/14"}})
@@ -314,6 +322,6 @@ module.exports = {
     place, face, faceDeg, vantage,
     look, view, swing, lookAt, clearLookAt,
     sandboxActive, camera, cameraPose, addBlocks, removeBlocks, clearSandbox, roomLighting,
-    texturePack, palettes, pictures, doorStyles, addObject, removeObject, restrictedZones, stage,
+    texturePack, palettes, pictures, doorStyles, canvasFrameStyles, addObject, removeObject, restrictedZones, stage,
     sleep,
 };

@@ -24,7 +24,6 @@ export default interface ObjectTypeConfig
             collider?: ColliderConfig,
             instancedMeshGraphics?: {},
             instancedMeshComposer?: {
-                maxNumInstancesPerMesh: number,
                 codecType: InstancedMeshCompositionCodecType,
                 codecVersion: number,
                 // Default appearance, derived deterministically from the object (e.g. owner or room) so
@@ -32,6 +31,9 @@ export default interface ObjectTypeConfig
                 generateDefaultParts: (obj: AddObjectSignal) =>
                     {params: InstancedMeshCompositionParams,
                         parts: InstancedMeshCompositionPart[]},
+                // Camera angle of the type's pre-encoded composition thumbnails (see CompositionThumbnailBuilder),
+                // in degrees from straight in front of the +Z face: yaw turns right, pitch rises. Isometric if unset.
+                thumbnailView?: {yawDeg: number, pitchDeg: number},
             },
             speechBubble?: {
                 yOffset: number,

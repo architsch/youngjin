@@ -55,15 +55,16 @@ const CameraUtil =
     castFromPointer: (ev: PointerEvent): THREE.Intersection | undefined =>
     {
         PointerCoordUtil.getNDC(ev, ndcTemp);
-        return castThroughView(ndcTemp)[0];
+        return castThroughView(ndcTemp, Infinity)[0];
     },
 
-    // The objects the camera's line of sight (the middle of the view) meets, nearest first. Gizmos
-    // belong to no object, so they're left out.
-    getObjectsAlongLineOfSight: (): ObjectHit[] =>
+    // The objects the camera's line of sight (the middle of the view) meets within maxDistance, nearest
+    // first. The line can be tilted toward the ground by pitchDownAngle (radians), stopping at straight
+    // down. Gizmos belong to no object, so they're left out.
+    getObjectsAlongLineOfSight: (maxDistance: number, pitchDownAngle: number = 0): ObjectHit[] =>
     {
         const hits: ObjectHit[] = [];
-        for (const intersection of castThroughView(ndcTemp.set(0, 0)))
+        for (const intersection of castThroughView(ndcTemp.set(0, 0), maxDistance, pitchDownAngle))
         {
             const gameObject = CameraUtil.getObjectFromIntersection(intersection);
             if (gameObject != undefined)
@@ -101,15 +102,28 @@ const CameraUtil =
     },
 }
 
-// Hits through a point of the view (in NDC), nearest first, into the shared array.
-function castThroughView(ndc: THREE.Vector2): THREE.Intersection[]
+// Hits through a point of the view (in NDC) within a distance, nearest first, into the shared array.
+function castThroughView(ndc: THREE.Vector2, far: number, pitchDownAngle: number = 0): THREE.Intersection[]
 {
     raycaster.setFromCamera(ndc, GraphicsManager.getCamera());
-    raycaster.far = Infinity; // Whatever a previous cast between two points left behind.
+    pitchDown(raycaster.ray.direction, pitchDownAngle);
+    raycaster.far = far;
 
     intersectionsTemp.length = 0;
     raycaster.intersectObjects(MeshFactory.getMeshes(), true, intersectionsTemp);
     return intersectionsTemp;
+}
+
+// Tilts a unit direction toward -y, keeping its heading.
+function pitchDown(dir: THREE.Vector3, angle: number): void
+{
+    const horizontalLength = Math.hypot(dir.x, dir.z);
+    if (angle == 0 || horizontalLength < NEAR_EPSILON)
+        return; // Already vertical: no heading to tilt along.
+
+    const pitch = Math.max(Math.atan2(dir.y, horizontalLength) - angle, -0.5 * Math.PI);
+    const horizontalScale = Math.cos(pitch) / horizontalLength;
+    dir.set(dir.x * horizontalScale, Math.sin(pitch), dir.z * horizontalScale);
 }
 
 export default CameraUtil;

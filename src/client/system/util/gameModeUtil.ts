@@ -4,8 +4,10 @@ import ObjectHit from "../../graphics/types/objectHit";
 import ObjectSelection from "../../graphics/types/gizmo/objectSelection";
 import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";
 import WorldSpaceSelectionUtil from "../../graphics/util/worldSpaceSelectionUtil";
-import { clientFeatureFlagsObservable, gameModeObservable, roomChangedObservable } from "../clientObservables";
+import { clientFeatureFlagsObservable, editModeOpeningOverrideObservable, gameModeObservable,
+    roomChangedObservable } from "../clientObservables";
 import { FeatureFlag } from "../../../shared/system/types/featureFlag";
+import { EDIT_MODE_OPENING_REACH, EDIT_MODE_OPENING_TILT } from "../clientConstants";
 
 // Owns the current game mode (see @docs/gameplay/game_mode.md). Followers watch gameModeObservable.
 // Edit mode is entered only via the top-bar switch (opening on what the camera faces) and left via the
@@ -30,18 +32,29 @@ const GameModeUtil =
         return !clientFeatureFlagsObservable.has(FeatureFlag.DisableGameModeTransition);
     },
 
-    // Enters edit mode on the voxel quad or object the camera faces, or on the user's own character if
-    // nothing there can be selected. The line of sight is passed in: casting it here would import a
-    // cycle through GameObject (see CameraUtil.getObjectsAlongLineOfSight).
-    enterEditMode: (myPlayer: GameObject, lineOfSight: ObjectHit[] = []): void =>
+    // Enters edit mode on what a scripted step picks, else on the voxel quad or object the camera faces
+    // within reach, else on what it faces looking toward the ground, else on the user's own character.
+    // The cast is passed in: casting here would import a cycle through GameObject (see
+    // CameraUtil.getObjectsAlongLineOfSight).
+    enterEditMode: (myPlayer: GameObject,
+        castLineOfSight: (maxDistance: number, pitchDownAngle: number) => ObjectHit[] = () => []): void =>
     {
         if (!GameModeUtil.canChangeGameMode())
             return;
 
         gameModeObservable.set("edit");
+
+        const scriptedOpening = editModeOpeningOverrideObservable.peek();
+        if (scriptedOpening != null && scriptedOpening())
+            return;
+        if (WorldSpaceSelectionUtil.trySelectInLineOfSight(castLineOfSight(EDIT_MODE_OPENING_REACH, 0)) ||
+            WorldSpaceSelectionUtil.trySelectInLineOfSight(
+                castLineOfSight(EDIT_MODE_OPENING_REACH, EDIT_MODE_OPENING_TILT)))
+        {
+            return;
+        }
         // Forced past scripted locks, since the mode always opens with something selected.
-        if (!WorldSpaceSelectionUtil.trySelectInLineOfSight(lineOfSight))
-            ObjectSelection.trySelect(myPlayer, true);
+        ObjectSelection.trySelect(myPlayer, true);
     },
 
     // Leaving drops the selection, even one pinned by a step (the pin only matters inside the mode).

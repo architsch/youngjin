@@ -1,8 +1,9 @@
 /**
  * Scenario tests: play vs. edit mode (see @docs/gameplay/game_mode.md). Play mode picks nothing and keeps
- * the eye camera; edit mode starts on what the camera faces (else on the user's character), and a
- * selection orbits the camera. Browser-bound client modules and the view's raycast are stubbed;
- * generation, selection and framing run for real.
+ * the eye camera; edit mode starts on a scripted step's pick, else on what the camera faces within reach
+ * (straight ahead, then tilted toward the ground), else on the user's character, and a selection orbits
+ * the camera. Browser-bound client modules are stubbed, and so is the view's raycast wherever edit mode
+ * is entered; generation, selection, framing and the raycast itself run for real.
  */
 import { describe, it, expect, beforeEach, afterEach, vi, Mock } from "vitest";
 
@@ -69,14 +70,22 @@ import VoxelQuadSelection from "../../../src/client/graphics/types/gizmo/voxelQu
 import WorldSpaceSelectionUtil from "../../../src/client/graphics/util/worldSpaceSelectionUtil";
 import ObjectHit from "../../../src/client/graphics/types/objectHit";
 import GameModeUtil from "../../../src/client/system/util/gameModeUtil";
-import { cameraModeObservable, clientFeatureFlagsObservable, gameModeObservable,
-    notificationMessageObservable, objectSelectionObservable, orbitCameraTargetOverrideObservable,
+import CameraUtil from "../../../src/client/graphics/util/cameraUtil";
+import MeshFactory from "../../../src/client/graphics/factories/meshFactory";
+import ClientObjectManager from "../../../src/client/object/clientObjectManager";
+import SinglePlayerActionMap from "../../../src/client/singlePlayer/maps/singlePlayerActionMap";
+import PlayerGameObject from "../../../src/client/object/types/playerGameObject";
+import { cameraModeObservable, clientFeatureFlagsObservable, editModeOpeningOverrideObservable,
+    gameModeObservable, myPlayerHiddenObservable, notificationMessageObservable, objectSelectionObservable,
+    orbitCameraDistanceRangeRequestObservable, orbitCameraTargetOverrideObservable,
     voxelQuadSelectionObservable } from "../../../src/client/system/clientObservables";
+import { EDIT_MODE_OPENING_REACH, EDIT_MODE_OPENING_TILT } from "../../../src/client/system/clientConstants";
 import { FeatureFlag } from "../../../src/shared/system/types/featureFlag";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
-import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, NUM_VOXEL_COLS,
-    NUM_VOXEL_ROWS } from "../../../src/shared/system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN,
+    VOXEL_BLOCK_HITBOX_HALFSIZE } from "../../../src/shared/system/sharedConstants";
+import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import Room from "../../../src/shared/room/types/room";
 import User from "../../../src/shared/user/types/user";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
@@ -132,6 +141,14 @@ function makeOtherPlayer(): GameObject
 function hitOn(gameObject: GameObject): ObjectHit
 {
     return {gameObject, instanceId: -1};
+}
+
+type LineOfSightCast = (maxDistance: number, pitchDownAngle: number) => ObjectHit[];
+
+/** A view whose line of sight meets these straight ahead, and nothing when tilted toward the ground. */
+function lookingAt(...hits: ObjectHit[]): LineOfSightCast
+{
+    return (_maxDistance, pitchDownAngle) => (pitchDownAngle == 0) ? hits : [];
 }
 
 // Quads given an instance by hitOnVoxelQuad, released after each test.
@@ -193,6 +210,8 @@ beforeEach(() => {
     gameModeObservable.set("play");
     cameraModeObservable.set({type: "firstPerson"});
     orbitCameraTargetOverrideObservable.set(null);
+    orbitCameraDistanceRangeRequestObservable.set(null);
+    editModeOpeningOverrideObservable.set(null);
     notificationMessageObservable.set(null);
 
     // A hub, which belongs to nobody. The test about somebody else's room makes one of its own below.
@@ -230,7 +249,7 @@ describe("entering edit mode", () => {
     it("selects the voxel quad the camera faces and orbits it", () => {
         const quadIndex = floorQuadIndexOf(10, 10);
 
-        GameModeUtil.enterEditMode(makeCharacter(), [hitOnVoxelQuad(10, 10, quadIndex)]);
+        GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOnVoxelQuad(10, 10, quadIndex)));
 
         expect(GameModeUtil.isInEditMode()).toBe(true);
         expect(voxelQuadSelectionObservable.peek()?.quadIndex).toBe(quadIndex);
@@ -243,7 +262,7 @@ describe("entering edit mode", () => {
     it("selects the object the camera faces", () => {
         const picture = makePicture();
 
-        GameModeUtil.enterEditMode(makeCharacter(), [hitOn(picture)]);
+        GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOn(picture)));
 
         expect(objectSelectionObservable.peek()?.gameObject).toBe(picture);
         expect(cameraModeObservable.peek().type).toBe("orbit");
@@ -253,7 +272,7 @@ describe("entering edit mode", () => {
         const quadIndex = floorQuadIndexOf(10, 10);
 
         GameModeUtil.enterEditMode(makeCharacter(),
-            [hitOn(makeOtherPlayer()), hitOnVoxelQuad(10, 10, quadIndex)]);
+            lookingAt(hitOn(makeOtherPlayer()), hitOnVoxelQuad(10, 10, quadIndex)));
 
         expect(voxelQuadSelectionObservable.peek()?.quadIndex).toBe(quadIndex);
     });
@@ -264,15 +283,41 @@ describe("entering edit mode", () => {
         const character = makeCharacter();
 
         GameModeUtil.enterEditMode(character,
-            [hitOnVoxelQuad(10, 10, floorQuadIndexOf(10, 10)), hitOn(makePicture())]);
+            lookingAt(hitOnVoxelQuad(10, 10, floorQuadIndexOf(10, 10)), hitOn(makePicture())));
 
         expect(objectSelectionObservable.peek()?.gameObject).toBe(character);
+    });
+
+    it("looks straight ahead only as far as its reach, and stops there once something is selected", () => {
+        const casts: number[][] = [];
+
+        GameModeUtil.enterEditMode(makeCharacter(), (maxDistance, pitchDownAngle) => {
+            casts.push([maxDistance, pitchDownAngle]);
+            return [hitOn(makePicture())];
+        });
+
+        expect(casts).toEqual([[EDIT_MODE_OPENING_REACH, 0]]);
+        expect(ObjectSelection.isSelected()).toBe(true);
+    });
+
+    it("looks toward the ground, just as far, when nothing straight ahead can be selected", () => {
+        // E.g. the user faces an open room whose far wall is out of reach.
+        const quadIndex = floorQuadIndexOf(10, 10);
+        const casts: number[][] = [];
+
+        GameModeUtil.enterEditMode(makeCharacter(), (maxDistance, pitchDownAngle) => {
+            casts.push([maxDistance, pitchDownAngle]);
+            return (pitchDownAngle == 0) ? [hitOn(makeOtherPlayer())] : [hitOnVoxelQuad(10, 10, quadIndex)];
+        });
+
+        expect(casts).toEqual([[EDIT_MODE_OPENING_REACH, 0], [EDIT_MODE_OPENING_REACH, EDIT_MODE_OPENING_TILT]]);
+        expect(voxelQuadSelectionObservable.peek()?.quadIndex).toBe(quadIndex);
     });
 
     it("falls back on the user's own character when nothing in view can be selected, and orbits it", () => {
         const character = makeCharacter();
 
-        GameModeUtil.enterEditMode(character, [hitOn(makeOtherPlayer())]);
+        GameModeUtil.enterEditMode(character, () => [hitOn(makeOtherPlayer())]);
 
         expect(GameModeUtil.isInEditMode()).toBe(true);
         expect(objectSelectionObservable.peek()?.gameObject).toBe(character);
@@ -391,12 +436,17 @@ describe("the camera as edit mode opens", () => {
     const WALL_ROW = 0;
     const WALL_FACE_Z = WALL_ROW + 1;
 
+    // How near to and far from the framed block a step might ask the camera to be.
+    const DISTANCE_RANGE = {min: 2.5, max: 6};
+
     /**
      * Opens edit mode on the boundary wall's face in front of a user standing at (x, z), letting the real
-     * camera settle before and after. Returns where the camera was, and where the orbit put it.
+     * camera settle before and after, then asks for a distance range (if given) the way a step does once
+     * the mode is open. Returns where the camera was, where the orbit put it, and the block it frames.
      */
-    function openEditModeFacingWall(x: number, z: number, wallCol: number):
-        {before: THREE.Vector3, after: THREE.Vector3}
+    function openEditModeFacingWall(x: number, z: number, wallCol: number,
+        distanceRange?: {min: number, max: number}):
+        {before: THREE.Vector3, after: THREE.Vector3, block: THREE.Box3}
     {
         const player = new THREE.Object3D();
         player.position.set(x, 0.5 * PLAYER_HEIGHT, z);
@@ -414,11 +464,22 @@ describe("the camera as edit mode opens", () => {
             const quadIndex = quadIndexOf(WALL_ROW, wallCol, "z", "+", eyeLayer);
             expect(isQuadVisible(room, quadIndex), "the wall face in view is not drawn").toBe(true);
 
-            GameModeUtil.enterEditMode(makeCharacter(), [hitOnVoxelQuad(WALL_ROW, wallCol, quadIndex)]);
+            GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOnVoxelQuad(WALL_ROW, wallCol, quadIndex)));
             expect(voxelQuadSelectionObservable.peek()?.quadIndex).toBe(quadIndex);
 
             playerCamera.update(1, controller);
-            return {before, after: GraphicsManager.getCamera().getWorldPosition(new THREE.Vector3())};
+            if (distanceRange != undefined)
+            {
+                orbitCameraDistanceRangeRequestObservable.set(distanceRange);
+                playerCamera.update(1, controller);
+            }
+
+            const blockCenter = new THREE.Vector3(wallCol + 0.5,
+                VoxelQueryUtil.getWorldYAtVoxelCollisionLayerCenter(eyeLayer), WALL_ROW + 0.5);
+            const blockSize = new THREE.Vector3(VOXEL_BLOCK_HITBOX_HALFSIZE.x, VOXEL_BLOCK_HITBOX_HALFSIZE.y,
+                VOXEL_BLOCK_HITBOX_HALFSIZE.z).multiplyScalar(2);
+            return {before, after: GraphicsManager.getCamera().getWorldPosition(new THREE.Vector3()),
+                block: new THREE.Box3().setFromCenterAndSize(blockCenter, blockSize)};
         }
         finally
         {
@@ -427,17 +488,186 @@ describe("the camera as edit mode opens", () => {
         }
     }
 
-    it("keeps the camera where it was when the wall faced is across the room", () => {
-        const {before, after} = openEditModeFacingWall(NUM_VOXEL_COLS - 1.5, NUM_VOXEL_ROWS - 1.5, 1);
+    /** How far a point is from the nearest and the farthest point of a box. */
+    function distancesToBox(point: THREE.Vector3, box: THREE.Box3): {nearest: number, farthest: number}
+    {
+        let farthest = 0;
+        for (const x of [box.min.x, box.max.x])
+            for (const y of [box.min.y, box.max.y])
+                for (const z of [box.min.z, box.max.z])
+                    farthest = Math.max(farthest, point.distanceTo(new THREE.Vector3(x, y, z)));
+        return {nearest: box.distanceToPoint(point), farthest};
+    }
 
-        expect(before.distanceTo(new THREE.Vector3(1.5, before.y, WALL_FACE_Z))).toBeGreaterThan(NUM_VOXEL_ROWS);
+    it("keeps the camera where it was when the wall faced is as far off as edit mode looks", () => {
+        const {before, after} = openEditModeFacingWall(10.5, WALL_FACE_Z + EDIT_MODE_OPENING_REACH, 10);
+
+        expect(before.distanceTo(new THREE.Vector3(10.5, before.y, WALL_FACE_Z)))
+            .toBeGreaterThanOrEqual(EDIT_MODE_OPENING_REACH);
         expect(after.distanceTo(before)).toBeLessThan(1e-6);
     });
 
-    it("keeps the camera where it was when the user stands right up against the wall", () => {
-        const {before, after} = openEditModeFacingWall(10.5, WALL_FACE_Z + PLAYER_RADIUS_XZ, 10);
+    it("keeps the camera where it was when the user stands close to the wall", () => {
+        const {before, after} = openEditModeFacingWall(10.5, WALL_FACE_Z + 1, 10);
 
         expect(after.distanceTo(before)).toBeLessThan(1e-6);
+    });
+
+    it("backs the camera off a wall the user stands against, as far as a step asks", () => {
+        const {before, after, block} = openEditModeFacingWall(10.5, WALL_FACE_Z + PLAYER_RADIUS_XZ, 10,
+            DISTANCE_RANGE);
+
+        expect(distancesToBox(before, block).nearest).toBeLessThan(DISTANCE_RANGE.min);
+        const {nearest, farthest} = distancesToBox(after, block);
+        expect(nearest).toBeGreaterThanOrEqual(DISTANCE_RANGE.min);
+        expect(farthest).toBeLessThanOrEqual(DISTANCE_RANGE.max);
+    });
+
+    it("brings the camera in on a wall as far off as edit mode looks, as far as a step asks", () => {
+        const {before, after, block} = openEditModeFacingWall(10.5, WALL_FACE_Z + EDIT_MODE_OPENING_REACH, 10,
+            DISTANCE_RANGE);
+
+        expect(distancesToBox(before, block).farthest).toBeGreaterThan(DISTANCE_RANGE.max);
+        const {nearest, farthest} = distancesToBox(after, block);
+        expect(nearest).toBeGreaterThanOrEqual(DISTANCE_RANGE.min);
+        expect(farthest).toBeLessThanOrEqual(DISTANCE_RANGE.max);
+    });
+
+    it("leaves a camera already within the range a step asks for where it was", () => {
+        const {before, after} = openEditModeFacingWall(10.5, WALL_FACE_Z + 4, 10, DISTANCE_RANGE);
+
+        expect(after.distanceTo(before)).toBeLessThan(1e-6);
+    });
+});
+
+describe("the line of sight edit mode looks along", () => {
+    // The camera's eye, looking level along -z.
+    const EYE = new THREE.Vector3(10.5, 2, 20.5);
+
+    const meshes: THREE.Mesh[] = [];
+    const objectById: {[objectId: string]: GameObject} = {};
+
+    // Boxes sit this far off their point, so a ray through the point doesn't run along the seam between
+    // two triangles of a face and meet the box twice.
+    const OFF_SEAM = new THREE.Vector3(0.03, 0.02, 0.01);
+
+    /** A small box around a point, drawing an object of its own. */
+    function objectAt(objectId: string, position: THREE.Vector3): GameObject
+    {
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), new THREE.MeshBasicMaterial());
+        mesh.name = objectId; // A plain mesh is named after its object (see CameraUtil).
+        mesh.position.copy(position).add(OFF_SEAM);
+        mesh.updateMatrixWorld();
+        meshes.push(mesh);
+
+        const gameObject = { params: { objectId } } as unknown as GameObject;
+        objectById[objectId] = gameObject;
+        return gameObject;
+    }
+
+    /** The point a distance along the camera's heading, tilted toward the ground by an angle. */
+    function aheadOfEye(distance: number, pitchDownAngle: number = 0): THREE.Vector3
+    {
+        return new THREE.Vector3(EYE.x, EYE.y - distance * Math.sin(pitchDownAngle),
+            EYE.z - distance * Math.cos(pitchDownAngle));
+    }
+
+    function objectsMet(maxDistance: number, pitchDownAngle: number): GameObject[]
+    {
+        return CameraUtil.getObjectsAlongLineOfSight(maxDistance, pitchDownAngle).map(hit => hit.gameObject);
+    }
+
+    function lookToward(target: THREE.Vector3): void
+    {
+        const camera = GraphicsManager.getCamera();
+        camera.position.copy(EYE);
+        camera.lookAt(target);
+        camera.updateMatrixWorld();
+    }
+
+    beforeEach(() => {
+        meshes.length = 0;
+        lookToward(aheadOfEye(1));
+        vi.spyOn(MeshFactory, "getMeshes").mockReturnValue(meshes);
+        (ClientObjectManager.getObjectById as Mock).mockImplementation((objectId: string) => objectById[objectId]);
+    });
+
+    afterEach(() => {
+        vi.mocked(MeshFactory.getMeshes).mockRestore();
+    });
+
+    it("meets what stands within reach, and nothing beyond it", () => {
+        const near = objectAt("near", aheadOfEye(EDIT_MODE_OPENING_REACH - 1));
+        objectAt("far", aheadOfEye(EDIT_MODE_OPENING_REACH + 1));
+
+        expect(objectsMet(EDIT_MODE_OPENING_REACH, 0)).toEqual([near]);
+    });
+
+    it("tilts toward the ground by the angle asked for, keeping its heading", () => {
+        const level = objectAt("level", aheadOfEye(3));
+        const tilted = objectAt("tilted", aheadOfEye(3, EDIT_MODE_OPENING_TILT));
+
+        expect(objectsMet(EDIT_MODE_OPENING_REACH, 0)).toEqual([level]);
+        expect(objectsMet(EDIT_MODE_OPENING_REACH, EDIT_MODE_OPENING_TILT)).toEqual([tilted]);
+    });
+
+    it("tilts no further than straight down, rather than over onto what lies behind", () => {
+        // Already looking steeply down, so the tilt would carry it past the vertical.
+        const steepPitchDown = 0.5 * Math.PI - 0.5 * EDIT_MODE_OPENING_TILT;
+        lookToward(aheadOfEye(1, steepPitchDown));
+        const below = objectAt("below", new THREE.Vector3(EYE.x, EYE.y - 1.5, EYE.z));
+        objectAt("behind", aheadOfEye(1.5, steepPitchDown + EDIT_MODE_OPENING_TILT));
+
+        expect(objectsMet(EDIT_MODE_OPENING_REACH, EDIT_MODE_OPENING_TILT)).toEqual([below]);
+    });
+});
+
+describe("a scripted step choosing what edit mode opens on", () => {
+    // A face of the boundary wall along row 0, as a step might pick it.
+    const WALL_FACE_QUAD_INDEX = quadIndexOf(0, 10, "z", "+", COLLISION_LAYER_MIN + 2);
+
+    function pickOpening(quadIndex: () => number): void
+    {
+        SinglePlayerActionMap["edit_mode_opening_voxel_quad"]({type: "edit_mode_opening_voxel_quad", quadIndex});
+    }
+
+    it("opens on the step's pick instead of anything the camera faces, past the step's selection lock", () => {
+        expect(isQuadVisible(room, WALL_FACE_QUAD_INDEX), "the wall face is not drawn").toBe(true);
+        clientFeatureFlagsObservable.tryAdd(FeatureFlag.DisableVoxelQuadSelectionChange);
+        clientFeatureFlagsObservable.tryAdd(FeatureFlag.DisableObjectSelectionChange);
+        pickOpening(() => WALL_FACE_QUAD_INDEX);
+        const cast = vi.fn(lookingAt(hitOn(makePicture())));
+
+        GameModeUtil.enterEditMode(makeCharacter(), cast);
+
+        expect(voxelQuadSelectionObservable.peek()?.quadIndex).toBe(WALL_FACE_QUAD_INDEX);
+        expect(cast).not.toHaveBeenCalled();
+        expect(cameraModeObservable.peek().type).toBe("orbit");
+    });
+
+    it("picks as the mode opens, not as the step sets it up, since the user may still walk meanwhile", () => {
+        let quadIndexWhereTheUserEndsUp = floorQuadIndexOf(10, 10);
+        pickOpening(() => quadIndexWhereTheUserEndsUp);
+        quadIndexWhereTheUserEndsUp = WALL_FACE_QUAD_INDEX;
+
+        GameModeUtil.enterEditMode(makeCharacter(), lookingAt());
+
+        expect(voxelQuadSelectionObservable.peek()?.quadIndex).toBe(WALL_FACE_QUAD_INDEX);
+    });
+
+    it("opens as usual when the step's pick can't be selected, or once the step lets go", () => {
+        const picture = makePicture();
+        pickOpening(() => -1);
+
+        GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOn(picture)));
+        expect(objectSelectionObservable.peek()?.gameObject).toBe(picture);
+
+        GameModeUtil.exitEditMode();
+        pickOpening(() => WALL_FACE_QUAD_INDEX);
+        SinglePlayerActionMap["clear_edit_mode_opening_voxel_quad"]({type: "clear_edit_mode_opening_voxel_quad"});
+
+        GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOn(picture)));
+        expect(objectSelectionObservable.peek()?.gameObject).toBe(picture);
     });
 });
 
@@ -568,5 +798,57 @@ describe("only one thing at a time is selected", () => {
 
         expect(ObjectSelection.isSelected()).toBe(false);
         expect(VoxelQuadSelection.isSelected()).toBe(true);
+    });
+});
+
+describe("the user's own character", () => {
+    /** The user's own character, with its body and speech bubble reduced to whether each is hidden. */
+    function makeOwnCharacter(): {character: PlayerGameObject, shown: {body: boolean, bubble: boolean}}
+    {
+        const shown = {body: true, bubble: true};
+        const character = Object.assign(Object.create(PlayerGameObject.prototype), {
+            params: { objectTypeIndex: ObjectTypeConfigMap.getIndexByType("Player"),
+                sourceUserID: App.getUser().id },
+            obj: new THREE.Object3D(),
+            instancedMeshComposer: { setHidden: (hidden: boolean) => { shown.body = !hidden; } },
+            speechBubble: { setHidden: (hidden: boolean) => { shown.bubble = !hidden; } },
+        }) as PlayerGameObject;
+        character.obj.position.set(10.5, 0.5 * PLAYER_HEIGHT, 10.5);
+        return {character, shown};
+    }
+
+    beforeEach(() => {
+        myPlayerHiddenObservable.set(false);
+
+        // Orbiting from well clear of the body, where it would ordinarily be shown.
+        const camera = GraphicsManager.getCamera();
+        camera.removeFromParent();
+        camera.position.set(10.5, 4, 16.5);
+        camera.updateMatrixWorld();
+        cameraModeObservable.set({type: "orbit", target: {center: {x: 10.5, y: 1.25, z: 10.5},
+            halfSize: {x: 0.5, y: 0.5, z: 0.5}}});
+    });
+
+    afterEach(() => {
+        myPlayerHiddenObservable.set(false);
+    });
+
+    it("stays hidden, speech bubble and all, while a step hides it, and shows again once the step lets go", () => {
+        const {character, shown} = makeOwnCharacter();
+        character.update(0);
+        expect(shown).toEqual({body: true, bubble: true});
+
+        SinglePlayerActionMap["set_my_player_hidden"]({type: "set_my_player_hidden", hidden: true});
+        character.update(0);
+        expect(shown).toEqual({body: false, bubble: false});
+
+        // Even as the thing edit mode orbits.
+        ObjectSelection.trySelect(character, true);
+        character.update(0);
+        expect(shown).toEqual({body: false, bubble: false});
+
+        SinglePlayerActionMap["set_my_player_hidden"]({type: "set_my_player_hidden", hidden: false});
+        character.update(0);
+        expect(shown).toEqual({body: true, bubble: true});
     });
 });

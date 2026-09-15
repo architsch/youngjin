@@ -8,16 +8,20 @@ import TextFileBuilder from "./builder/textFileBuilder";
 import styleDictionary from "./style/styleDictionary";
 import ErrorPageBuilder from "./builder/page/errorPageBuilder";
 import PreEncodedCompositionBuilder from "./builder/preEncodedCompositionBuilder";
+import InstancedMeshCapacityBuilder from "./builder/instancedMeshCapacityBuilder";
+import ImageMapBuilder from "./builder/imageMapBuilder";
+import CompositionThumbnailBuilder from "./builder/compositionThumbnailBuilder";
 import { ArcadeData } from "./data/arcadeData";
 import { LibraryData } from "./data/libraryData";
 import { CANVAS_TEXTURE_CELL_SIZE } from "../../shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
+// Capacities decode compositions, which needs the part builders registered.
+import "../../shared/graphics/mesh/composition/instancedMeshCompositionBuilderMapDependencies";
 
+// Loaded lazily by server.ts, so nothing here (sharp included, which the prod VPS CPU can't run) is part
+// of the production server's startup.
 export default async function SSG(): Promise<void>
 {
     console.log("SSG START");
-
-    // Dynamic import keeps `sharp` (unsupported on the prod VPS CPU) out of server.ts's static module graph.
-    const { default: ImageMapBuilder } = await import("./builder/imageMapBuilder");
 
     // Generate pages
 
@@ -70,14 +74,12 @@ export default async function SSG(): Promise<void>
         rootDirName: "canvas_images", mapName: "CanvasImageMap",
         hasGrid: false, thumbnailSize: CANVAS_TEXTURE_CELL_SIZE,
     }).build();
-    await new ImageMapBuilder({
-        rootDirName: "object_texture_packs", mapName: "CanvasFrameImageMap",
-        hasGrid: true, gridCellSize: 256, atlasImageName: "canvas_frames",
-    }).build();
 
-    // Generate Pre-Encoded Compositions
+    // Generate Pre-Encoded Compositions, the mesh capacities they need, and their thumbnails
 
-    await new PreEncodedCompositionBuilder().build();
+    const preEncodedCompositions = await new PreEncodedCompositionBuilder().build();
+    await new InstancedMeshCapacityBuilder(preEncodedCompositions).build();
+    await new CompositionThumbnailBuilder(preEncodedCompositions, process.env.MODE == "ssg").build();
 
     console.log("SSG END");
 }

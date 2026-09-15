@@ -99,6 +99,9 @@ export default abstract class GameObject
     // Called after a cosmetic effect moves visualObj. Baked renderers (instanced meshes) override this
     // to re-apply instance transforms.
     onVisualTransformChanged() {}
+    // Visits instances the object renders itself, outside its components (e.g. a canvas's picture), so
+    // whole-object actions reach them (see OrbitOcclusionHider).
+    forEachOwnedInstance(_visit: (instancedMeshId: string, instanceId: number) => void) {}
     // Per-frame update for objects that override this or have a component with update().
     update(deltaTime: number) {}
 

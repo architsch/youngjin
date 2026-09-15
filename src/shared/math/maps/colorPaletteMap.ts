@@ -28,7 +28,7 @@ export const ColorPaletteMap: {[colorPaletteName: ColorPaletteName]: string[]} =
 {
     // The player's tin-toy colors.
     "Player": [...FULL_SPECTRUM_COLORS],
-    // Joinery (doors, furniture): timber, joinery paints, metal and bone. Kept mid-brightness because the
+    // Joinery (doors, canvas frames, furniture): timber, joinery paints, metal and bone. Kept mid-brightness because the
     // moulded-timber material ages colors (see @docs/geometry/door_design.md). The vivid bands appended
     // later compensate for that aging, which would otherwise make muted colors read as uniform brown.
     "Timber": [

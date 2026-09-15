@@ -6,13 +6,16 @@ import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../shared/graphi
 import InstancedMeshCompositionPart from "../../../shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
 import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
 import Vec3 from "../../../shared/math/types/vec3";
-import { GEOMETRY_CODE_BY_ID, INSTANCE_COLORED_MATERIAL_IDS,
+import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
+import PreEncodedCompositions from "../types/preEncodedCompositions";
+import { GEOMETRY_CODE_BY_ID, INSTANCE_COLORED_MATERIAL_IDS, INSTANCED_WOOD_MATERIAL_ID,
     MATERIAL_CODE_BY_ID } from "../../../shared/system/sharedConstants";
 
 const SOURCE_ROOT_PATH = `${STATIC_PAGE_ROOT_DIR}/app/assets/instanced_mesh_composition`;
 const SOURCE_FILE_NAME = "pre_encoding_source.json";
 const MAPS_ROOT_PATH = `${SRC_ROOT_DIR}/shared/graphics/mesh/composition/maps`;
-const MAP_FILE_NAME = "preEncodedCompositionStringMap.ts";
+const STRING_MAP_FILE_NAME = "preEncodedCompositionStringMap.ts";
+const INDEX_MAP_FILE_NAME = "preEncodedCompositionIndexMap.ts";
 
 // -1 in the source marks a per-object field (e.g. a lamp face's color, set from its light). It can't
 // survive encoding (clamping would store a real value), so a white placeholder is written for the
@@ -27,29 +30,53 @@ type PreEncodingSourcePart = {
     offset: Vec3,
     scale: Vec3,
     color?: Vec3,
+    mouldingColor?: Vec3,
+    mouldingThickness?: number,
+    mouldingIsConvex?: boolean,
 };
 
 type PreEncodingSourceEntry = {
     comment?: string,
+    objectType: string,
     codecType: string,
     codecVersion?: number,
     parts: PreEncodingSourcePart[],
 };
 
-// Encodes authored compositions into the generated indexed table at build time (see
+// Encodes authored compositions into the generated indexed tables at build time (see
 // @docs/graphics/instanced_mesh_composition.md). Any source error fails the build, since bad entries
 // fail silently at runtime and can't be fixed once objects reference their index.
 export default class PreEncodedCompositionBuilder
 {
-    async build(): Promise<void>
+    // Returns what it wrote, since the running (compiled) app still holds the previous tables.
+    async build(): Promise<PreEncodedCompositions>
     {
         const sourceJSON = await FileUtil.read(SOURCE_FILE_NAME, SOURCE_ROOT_PATH);
         const source = JSON.parse(sourceJSON) as {compositions: PreEncodingSourceEntry[]};
 
-        const encodedStrings = source.compositions.map(
-            (entry, compositionIndex) => this.encodeComposition(entry, compositionIndex));
+        const encodedStrings: string[] = [];
+        const indicesByObjectType: {[objectType: string]: number[]} = {};
+        source.compositions.forEach((entry, compositionIndex) => {
+            this.validateObjectType(entry, compositionIndex);
+            encodedStrings.push(this.encodeComposition(entry, compositionIndex));
+            (indicesByObjectType[entry.objectType] ??= []).push(compositionIndex);
+        });
 
-        await this.writeMapFile(encodedStrings);
+        await this.writeStringMapFile(encodedStrings);
+        await this.writeIndexMapFile(indicesByObjectType);
+        return {encodedStrings, indicesByObjectType};
+    }
+
+    // An entry belongs to exactly one object type, which must render itself through the indexed codec.
+    private validateObjectType(entry: PreEncodingSourceEntry, compositionIndex: number): void
+    {
+        if (!entry.objectType || !ObjectTypeConfigMap.hasType(entry.objectType))
+            throw new Error(`Composition pre-encoding failed :: Unknown objectType "${entry.objectType}" (compositionIndex = ${compositionIndex})`);
+
+        const config = ObjectTypeConfigMap.getConfigByIndex(ObjectTypeConfigMap.getIndexByType(entry.objectType));
+        const codecType = config.components.spawnedByAny?.instancedMeshComposer?.codecType;
+        if (codecType != InstancedMeshCompositionCodecTypeEnumMap.Indexed)
+            throw new Error(`Composition pre-encoding failed :: objectType "${entry.objectType}" does not use the indexed codec (compositionIndex = ${compositionIndex})`);
     }
 
     private encodeComposition(entry: PreEncodingSourceEntry, compositionIndex: number): string
@@ -93,11 +120,23 @@ export default class PreEncodedCompositionBuilder
                     throw new Error(`Composition pre-encoding failed :: Material "${part.materialId}" is tinted per instance and needs a color (${where})`);
                 composedPart.color = resolveIndeterminateColor(part.color);
             }
+            // ...and mouldings only for wood.
+            if (part.materialId == INSTANCED_WOOD_MATERIAL_ID)
+            {
+                if (part.mouldingColor == undefined || part.mouldingThickness == undefined
+                    || part.mouldingIsConvex == undefined)
+                    throw new Error(`Composition pre-encoding failed :: Material "${part.materialId}" needs mouldingColor, mouldingThickness and mouldingIsConvex (${where})`);
+                if (!(part.mouldingThickness > 0))
+                    throw new Error(`Composition pre-encoding failed :: mouldingThickness must be positive (${where})`);
+                composedPart.mouldingColor = resolveIndeterminateColor(part.mouldingColor);
+                composedPart.mouldingThickness = part.mouldingThickness;
+                composedPart.mouldingIsConvex = part.mouldingIsConvex;
+            }
             return composedPart;
         });
     }
 
-    private async writeMapFile(encodedStrings: string[]): Promise<void>
+    private async writeStringMapFile(encodedStrings: string[]): Promise<void>
     {
         // JSON.stringify, since the alphabet includes quotes and backslashes.
         const entries = encodedStrings.map(str => JSON.stringify(str)).join(",");
@@ -107,7 +146,18 @@ const PreEncodedCompositionStringMap: string[] = [${entries}];
 
 export default PreEncodedCompositionStringMap;
 `;
-        await FileUtil.write(MAP_FILE_NAME, text, MAPS_ROOT_PATH);
+        await FileUtil.write(STRING_MAP_FILE_NAME, text, MAPS_ROOT_PATH);
+    }
+
+    private async writeIndexMapFile(indicesByObjectType: {[objectType: string]: number[]}): Promise<void>
+    {
+        const text = `// THIS FILE IS AUTO-GENERATED BY PreEncodedCompositionBuilder. DO NOT EDIT MANUALLY.
+// Positions in PreEncodedCompositionStringMap that belong to each object type, in source order.
+const PreEncodedCompositionIndexMap: {[objectType: string]: number[]} = ${JSON.stringify(indicesByObjectType)};
+
+export default PreEncodedCompositionIndexMap;
+`;
+        await FileUtil.write(INDEX_MAP_FILE_NAME, text, MAPS_ROOT_PATH);
     }
 }
 

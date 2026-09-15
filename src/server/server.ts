@@ -3,7 +3,6 @@ import http from "http";
 import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
 import hpp from "hpp";
-import SSG from "./ssg/ssg";
 import Router from "./networking/router/router";
 import SocketsServer from "./sockets/socketsServer";
 import ServerRoomManager from "./room/serverRoomManager";
@@ -39,13 +38,15 @@ ${LatencySimUtil.getConfigSummary()}
     // SSG = "Static Site Generator"
     if (process.env.SKIP_SSG != "true")
     {
+        // Loaded only here, so SSG (with sharp and Playwright) stays out of the production bundle's startup.
+        const loadSSG = async () => (await import("./ssg/ssg")).default;
         if (dev) // If you are in dev mode, rebuild the static pages on restart.
         {
-            await SSG();
+            await (await loadSSG())();
         }
         else if (process.env.MODE == "ssg") // If you are in ssg mode, just rebuild the static pages and quit immediately.
         {
-            await SSG();
+            await (await loadSSG())();
             return;
         }
     }

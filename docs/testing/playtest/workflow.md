@@ -39,7 +39,7 @@ node dev/scripts/playtest/stagingAdmin.js cleanup [--run <runID>] [--all]
 ```
 - `--target staging` (default, gcloud ADC) or `--target local` (emulator). There is no live target.
 - `--version` means "no newer than this" and is clamped per collection.
-- **Row versions** (`DBVersionMigration`) and **content blob versions** (the leading byte, `VoxelGrid`/`ObjectGroup` converters) are separate. `downgrade-content` refuses to cross a decoder boundary, because that would produce a corrupt blob rather than an old one. Cross-decoder migration is tested offline in `voxel-grid-migration.test.ts`.
+- **Row versions** (`DBVersionMigration`) and **content blob versions** (the leading byte, `VoxelGridVersionMigration`/`ObjectGroupVersionMigration`) are separate. `downgrade-content` refuses to cross a decoder boundary, because that would produce a corrupt blob rather than an old one. Cross-decoder migration is tested offline in `voxel-grid-migration.test.ts`.
 - `seed-population` creates Members paired with their rooms. It is the only way to get owned rooms on staging, because production mode disables the dev user switch. **Pass `--with-content`**: a room without a blob cannot be entered and leaves an error in every later baseline.
 - Seeded content comes from the real `RoomGenerationUtil` with per-room seeds, and the row gets the texture pack that generation chose.
 - `set-user-type` promotes a guest minted through the real page (the server re-reads the user type on every request). It refuses rows that have an email and marks the row for `cleanup`. Use a plan's `sessionFile` to keep the session across the change.
@@ -73,7 +73,7 @@ Both are installed only on non-public deployments. **Arrange with one, act with 
 ### Driving the 3D world
 - The orbit camera and editing tools exist only in edit mode, which is entered through the top-bar toggle.
 - `clickObject` matches by id, type or metadata (e.g. `{"objectType": "Door", "metadata": {"Label": "Attic"}}`) and walks into reach first. `expectSelection` confirms that the click landed.
-- Silent failures (out of reach, occluded, covered by the HUD) are reported explicitly. Expected quirks: the first tap on the room closes a control attached to the selection, so selection taps are retried once. Culled surfaces refuse selection, so candidates are tried in turn. Tapping the current selection drops it, which exits edit mode; `ensureEditMode` restores it.
+- Silent failures (out of reach, occluded, covered by the HUD) are reported explicitly. Expected quirks: culled surfaces refuse selection, so candidates are tried in turn. Tapping the current selection drops it, which exits edit mode; `ensureEditMode` restores it.
 - `clickSurfaceUntilEnabled` selects surfaces until a named control becomes enabled, widening the view and moving between rounds. Its report separates "nowhere valid" from "the tool is broken".
 - HUD controls are `div`s with `aria-disabled`, so use `uiClick` and `expectDisabled` rather than raw DOM clicks.
 

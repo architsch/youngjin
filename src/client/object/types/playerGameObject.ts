@@ -1,7 +1,8 @@
 import * as THREE from "three";
 import GameObject from "./gameObject";
 import GraphicsManager from "../../graphics/graphicsManager";
-import { cameraModeObservable, objectSelectionObservable } from "../../system/clientObservables";
+import { cameraModeObservable, myPlayerHiddenObservable,
+    objectSelectionObservable } from "../../system/clientObservables";
 import InstancedMeshComposer from "../components/instancedMeshComposer";
 import SpeechBubble from "../components/speechBubble";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
@@ -51,12 +52,13 @@ export default class PlayerGameObject extends GameObject
             this.instancedMeshComposer.setHidden(false);
     }
 
-    // The user's own body (and bubble) is shown when the mode isn't first-person and the camera isn't
-    // inside the body. The body is never hidden as an occluder (see OrbitOccluder), and orbiting one's
-    // own character always shows it.
+    // The user's own body (and bubble) is shown when no scripted step hides it, the mode isn't
+    // first-person and the camera isn't inside the body. The body is never hidden as an occluder (see
+    // OrbitOccluder), and orbiting one's own character shows it unless a step hides it.
     private refreshOwnVisibility()
     {
-        const hidden = cameraModeObservable.peek().type === "firstPerson" ||
+        const hidden = myPlayerHiddenObservable.peek() ||
+            cameraModeObservable.peek().type === "firstPerson" ||
             this.cameraIsInsideOwnBody();
         this.instancedMeshComposer.setHidden(hidden);
         this.speechBubble.setHidden(hidden);

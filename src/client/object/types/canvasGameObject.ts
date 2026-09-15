@@ -2,28 +2,40 @@ import * as THREE from "three";
 import GameObject from "./gameObject";
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 import InstancedMeshGraphics from "../components/instancedMeshGraphics";
+import InstancedMeshComposer from "../components/instancedMeshComposer";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import InstancedTexturePackMaterialParams from "../../../shared/graphics/material/types/instancedTexturePackMaterialParams";
-import CanvasObjectTypeConfig, { CANVAS_FRAME_ATLAS_CELL_SIZE, CANVAS_FRAME_ATLAS_PATH,
-    CANVAS_FRAME_ATLAS_SIZE, CANVAS_GEOMETRY_ID, CANVAS_TEXTURE_CELL_SIZE,
+import InstancedMeshCompositionPart from "../../../shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
+import CanvasObjectTypeConfig, { CANVAS_TEXTURE_CELL_SIZE,
     CANVAS_TEXTURE_SIZE } from "../../../shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
-import Vec3 from "../../../shared/math/types/vec3";
-import { ColliderConfig } from "../../../shared/physics/types/colliderConfig";
+import { CANVAS_BOARD_RELIEF, CANVAS_FOOTPRINT_HEIGHT, CANVAS_FOOTPRINT_WIDTH,
+    CANVAS_GEOMETRY_ID, CANVAS_PICTURE_LIFT } from "../../../shared/graphics/mesh/composition/types/compositionConstants/canvasCompositionConstants";
+import { BACKWARD_DIR, INSTANCED_WOOD_MATERIAL_ID } from "../../../shared/system/sharedConstants";
 import App from "../../app";
 import ImageMapUtil from "../../../shared/graphics/image/util/imageMapUtil";
-import CanvasFrameInnerWindowMap from "../maps/canvasFrameInnerWindowMap";
 import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
 import { graphicsContextRestoredObservable } from "../../system/clientObservables";
 
+const BOARD_SUFFIX = MeshDataUtil.getInstancedMeshId("", INSTANCED_WOOD_MATERIAL_ID);
+
+// The frame is composed from the canvas's wood inputs (see CanvasCompositionCodec); the picture is drawn
+// here, into this canvas's cell of the room's shared render target, on the board inside its band (or across
+// the whole footprint when there is no frame).
 export default class CanvasGameObject extends GameObject
 {
     instancedMeshGraphics: InstancedMeshGraphics;
+    instancedMeshComposer: InstancedMeshComposer;
     static materialParams: InstancedTexturePackMaterialParams | undefined; // Caching mechanism to minimize computational burden (by preventing repetitive initialization of params)
     static instancedMeshId: string; // Caching mechanism to minimize computational burden (by preventing repetitive initialization of the string)
     static spawnedCanvasGameObjects: Map<string, CanvasGameObject> = new Map();
     private static loadQueue: Promise<void> = Promise.resolve();
 
     private instanceId: number = -1;
+
+    // What the picture was last placed by. Parts are replaced whenever the frame is recomposed (e.g. a
+    // customization edit), and the world matrix changes with movement.
+    private placedBoard: InstancedMeshCompositionPart | undefined;
+    private bakedWorldMatrix: THREE.Matrix4 = new THREE.Matrix4();
 
     constructor(params: AddObjectSignal)
     {
@@ -33,12 +45,20 @@ export default class CanvasGameObject extends GameObject
         if (!this.instancedMeshGraphics)
             throw new Error("CanvasGameObject requires InstancedMeshGraphics component");
 
+        this.instancedMeshComposer = this.components.instancedMeshComposer as InstancedMeshComposer;
+        if (!this.instancedMeshComposer)
+            throw new Error("CanvasGameObject requires InstancedMeshComposer component");
+
         if (CanvasGameObject.materialParams == undefined)
         {
-            // The polygon-offset values are -1 because the mesh must not z-fight with the wall behind it.
+            // Polygon offset beyond the board's (wood draws at -1; see the "InstancedWood" material), on top
+            // of the picture's real gap in front of it (see CANVAS_PICTURE_LIFT).
             CanvasGameObject.materialParams = new InstancedTexturePackMaterialParams("canvas_texture_pack",
                 CANVAS_TEXTURE_SIZE, CANVAS_TEXTURE_SIZE, CANVAS_TEXTURE_CELL_SIZE, CANVAS_TEXTURE_CELL_SIZE,
-                "dynamicEmpty", -1, -1);
+                "dynamicEmpty", -2, -2);
+            // The board, or the wall behind a canvas without a frame, shows around a letterboxed picture
+            // (see TextureUtil).
+            CanvasGameObject.materialParams.alphaCutout = true;
             CanvasGameObject.instancedMeshId = MeshDataUtil.getInstancedMeshId(
                 CANVAS_GEOMETRY_ID, CanvasGameObject.materialParams.getMaterialId());
         }
@@ -55,7 +75,7 @@ export default class CanvasGameObject extends GameObject
         await this.instancedMeshGraphics.loadInstancedMesh(CANVAS_GEOMETRY_ID,
             CanvasGameObject.materialParams, CanvasObjectTypeConfig.maxCountPerRoom, true);
 
-        // An exhausted pool leaves this canvas unrendered.
+        // An exhausted pool leaves this canvas's picture unrendered.
         const rentedInstanceId = this.instancedMeshGraphics.rentInstanceFromPool(CanvasGameObject.instancedMeshId);
         if (rentedInstanceId == undefined)
             return;
@@ -63,12 +83,6 @@ export default class CanvasGameObject extends GameObject
         this.instanceId = rentedInstanceId;
         this.updateMeshInstanceTransform();
         this.loadImage();
-    }
-
-    setObjectTransform(pos: Vec3, dir: Vec3)
-    {
-        super.setObjectTransform(pos, dir);
-        this.updateMeshInstanceTransform();
     }
 
     async onDespawn(): Promise<void>
@@ -84,11 +98,23 @@ export default class CanvasGameObject extends GameObject
         CanvasGameObject.spawnedCanvasGameObjects.delete(this.params.objectId);
     }
 
+    update(deltaTime: number): void
+    {
+        if (this.instanceId !== -1 && !this.placementIsInSync())
+            this.updateMeshInstanceTransform();
+    }
+
     onSetMetadata(key: ObjectMetadataKey, value: string)
     {
         super.onSetMetadata(key, value);
-        // Frame and image share one cell, so any metadata change redraws the whole cell.
-        this.loadImage();
+        if (key === ObjectMetadataKeyEnumMap.ImagePath)
+            this.loadImage();
+    }
+
+    forEachOwnedInstance(visit: (instancedMeshId: string, instanceId: number) => void)
+    {
+        if (this.instanceId !== -1)
+            visit(CanvasGameObject.instancedMeshId, this.instanceId);
     }
 
     loadImage(): Promise<void>
@@ -97,7 +123,9 @@ export default class CanvasGameObject extends GameObject
         return CanvasGameObject.loadQueue;
     }
 
-    // Redraws the cell: the frame first, then the image fitted inside its inner window.
+    // Redraws the cell: cleared to transparent (the fitted image may not cover a previous occupant's),
+    // then the image's thumbnail (no larger than the cell; see CANVAS_TEXTURE_CELL_SIZE), or the
+    // placeholder if there is no image to show.
     private async loadImageImpl()
     {
         if (this.instanceId === -1) // Already despawned
@@ -106,99 +134,63 @@ export default class CanvasGameObject extends GameObject
         const textureIndex = this.instanceId % 64;
         this.instancedMeshGraphics.updateInstanceTextureUV(CanvasGameObject.instancedMeshId,
             this.instanceId, textureIndex);
+        this.instancedMeshGraphics.drawCanvasAtIndex(CanvasGameObject.instancedMeshId,
+            textureIndex, getTransparentCanvas());
 
-        const frameCellCoords = this.getFrameCellCoords();
-        await this.drawFrame(textureIndex, frameCellCoords);
-        await this.drawImage(textureIndex, frameCellCoords);
-    }
-
-    // Draws the chosen picture frame's atlas cell so it fills this canvas's render-target cell.
-    private async drawFrame(textureIndex: number, frameCellCoords: string)
-    {
-        const words = frameCellCoords.split(",");
-        const col = parseInt(words[0]);
-        const row = parseInt(words[1]);
-
-        // Texture V counts rows from the bottom; cell coords count from the top.
-        const numCols = CANVAS_FRAME_ATLAS_SIZE / CANVAS_FRAME_ATLAS_CELL_SIZE;
-        const numRows = CANVAS_FRAME_ATLAS_SIZE / CANVAS_FRAME_ATLAS_CELL_SIZE;
-        const frameAtlasURL = `${App.getEnv().assets_url}/${CANVAS_FRAME_ATLAS_PATH}`;
+        const metadata = this.params.metadata[ObjectMetadataKeyEnumMap.ImagePath];
+        const imageURL = (metadata && metadata.str.length > 0)
+            ? ImageMapUtil.getImageMap("CanvasImageMap").getThumbnailURLByPath(App.getEnv().assets_url, metadata.str)
+            : "";
         try
         {
+            // An empty URL paints the placeholder.
             await this.instancedMeshGraphics.drawImageAtIndex(CanvasGameObject.instancedMeshId,
-                textureIndex, frameAtlasURL, 1, 1,
-                col / numCols, (numRows - 1 - row) / numRows,
-                (col + 1) / numCols, (numRows - row) / numRows,
-                false);
+                textureIndex, imageURL);
         }
         catch (error)
         {
-            console.warn(`Failed to load canvas frame (objectId=${this.params.objectId}, coords=${frameCellCoords}):`, error);
-            // Paint a placeholder color so the cell isn't stuck showing the old frame
+            console.warn(`Failed to load canvas image (objectId=${this.params.objectId}, value=${metadata?.str}):`, error);
             await this.instancedMeshGraphics.drawImageAtIndex(CanvasGameObject.instancedMeshId,
                 textureIndex, "");
         }
     }
 
-    // Draws the image's thumbnail (no larger than the cell; see CANVAS_TEXTURE_CELL_SIZE) into the
-    // frame's inner window.
-    private async drawImage(textureIndex: number, frameCellCoords: string)
+    private placementIsInSync(): boolean
     {
-        const imageDrawScale = CanvasFrameInnerWindowMap.getImageDrawScale(frameCellCoords);
-
-        const metadata = this.params.metadata[ObjectMetadataKeyEnumMap.ImagePath];
-        const imageURL = metadata
-            ? ImageMapUtil.getImageMap("CanvasImageMap").getThumbnailURLByPath(App.getEnv().assets_url, metadata.str)
-            : "";
-        try
-        {
-            // An empty URL still paints the placeholder, covering the frame's placeholder window.
-            await this.instancedMeshGraphics.drawImageAtIndex(CanvasGameObject.instancedMeshId,
-                textureIndex, imageURL, imageDrawScale, imageDrawScale);
-        }
-        catch (error)
-        {
-            console.warn(`Failed to load canvas image (objectId=${this.params.objectId}, value=${metadata?.str}):`, error);
-            // Paint a placeholder color so the canvas isn't stuck showing the old image
-            await this.instancedMeshGraphics.drawImageAtIndex(CanvasGameObject.instancedMeshId,
-                textureIndex, "", imageDrawScale, imageDrawScale);
-        }
+        if (this.instancedMeshComposer.getPartWithSuffix(BOARD_SUFFIX) !== this.placedBoard)
+            return false;
+        this.obj.updateMatrixWorld(); // Recurses to visualObj, so the compared matrix is current.
+        return this.visualObj.matrixWorld.equals(this.bakedWorldMatrix);
     }
 
-    // Re-bakes the instance to follow visualObj's cosmetic transform (e.g. EasingMotion).
-    onVisualTransformChanged(): void
-    {
-        this.updateMeshInstanceTransform();
-    }
-
+    // Placed on the board's inner surface, inside its band (as a door's label sits inside its plate's). The
+    // board always spans the footprint, so without one the picture spans it instead.
     private updateMeshInstanceTransform()
     {
-        if (this.instanceId === -1)
-            return;
-
-        const colliderConfig = this.components.collider.componentConfig as ColliderConfig;
-        const sizeX = colliderConfig.hitboxSize.sizeX;
-        const sizeY = colliderConfig.hitboxSize.sizeY;
-
-        // Facing is in obj's rotation, so the instance faces local +Z; the polygon offset keeps it
-        // in front of the wall.
+        const board = this.instancedMeshComposer.getPartWithSuffix(BOARD_SUFFIX);
+        this.placedBoard = board;
+        const inset = board ? 2 * board.mouldingThickness : 0;
         this.instancedMeshGraphics.updateInstanceTransform(
-            CanvasGameObject.instancedMeshId,
-            this.instanceId,
-            0, 0, 0.001,
-            0, 0, 1,
-            sizeX, sizeY, 1);
-    }
+            CanvasGameObject.instancedMeshId, this.instanceId,
+            0, 0, CANVAS_BOARD_RELIEF + CANVAS_PICTURE_LIFT, BACKWARD_DIR.x, BACKWARD_DIR.y, BACKWARD_DIR.z,
+            CANVAS_FOOTPRINT_WIDTH - inset, CANVAS_FOOTPRINT_HEIGHT - inset, 1);
 
-    // Falls back to the first frame when metadata is absent or invalid.
-    private getFrameCellCoords(): string
-    {
-        const frameImageMap = ImageMapUtil.getImageMap("CanvasFrameImageMap");
-        const metadata = this.params.metadata[ObjectMetadataKeyEnumMap.CanvasFrameCoords];
-        if (metadata && frameImageMap.hasImagePath(metadata.str))
-            return metadata.str;
-        return frameImageMap.getFirstImagePath();
+        this.obj.updateMatrixWorld();
+        this.bakedWorldMatrix.copy(this.visualObj.matrixWorld);
     }
+}
+
+// A blank canvas, drawn over a cell to clear it (the draw replaces rather than blends; see TextureUtil).
+let transparentCanvas: HTMLCanvasElement | undefined;
+function getTransparentCanvas(): HTMLCanvasElement
+{
+    if (transparentCanvas == undefined)
+    {
+        transparentCanvas = document.createElement("canvas");
+        transparentCanvas.width = 1;
+        transparentCanvas.height = 1;
+    }
+    return transparentCanvas;
 }
 
 // Canvas cells live only in a render target (GPU), so every canvas redraws after a context restore.

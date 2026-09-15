@@ -1,6 +1,6 @@
 # Voxel Grid Structure
 
-Reference: @src/shared/voxel/types/voxel.ts , @src/shared/voxel/types/voxelGrid.ts , @src/shared/voxel/util/voxelQueryUtil.ts , @src/client/voxel/util/clientVoxelQueryUtil.ts , @src/client/voxel/util/voxelQuadInstanceUtil.ts
+Reference: @src/shared/voxel/types/voxel.ts , @src/shared/voxel/types/voxelGrid.ts , @src/shared/voxel/versionMigration/voxelGridVersionMigration.ts , @src/shared/voxel/util/voxelQueryUtil.ts , @src/client/voxel/util/clientVoxelQueryUtil.ts , @src/client/voxel/util/voxelQuadInstanceUtil.ts
 
 ## Layout
 - A room is a fixed-size square grid of cells on XZ, one world unit per cell. Its height is split into equal **collision layers**.
@@ -16,7 +16,7 @@ Reference: @src/shared/voxel/types/voxel.ts , @src/shared/voxel/types/voxelGrid.
 ## Stored format
 - Room contents (voxels and restricted zones) are one versioned binary blob, not database rows. A cell encodes its layer mask and then only its occupied layers.
 - Loading reads the blob with the reader for its own version, then converts it forward one version at a time. The room is re-saved in the current version the next time it is written.
-- Every past version keeps a **reader** (how the bytes are laid out) and a **converter** to the next version (how to keep the room's meaning).
+- Every past version keeps a **reader** (how the bytes are laid out) and a **converter** to the next version (how to keep the room's meaning). Both live in `VoxelGridVersionMigration`, so `VoxelGrid` itself describes only the current format.
 
 ## Rendering
 - The whole room is one instanced mesh. The mesh is sized for the most quads a room can show at once, not for every quad the grid can address. Instances are lent to visible quads and returned when those quads are hidden (`VoxelQuadInstanceUtil`).
