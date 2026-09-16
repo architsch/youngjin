@@ -21,6 +21,11 @@ import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objec
 import { DoorTypeEnumMap } from "../../../src/shared/object/types/doorType";
 import EncodableByteString from "../../../src/shared/networking/types/encodableByteString";
 import Room from "../../../src/shared/room/types/room";
+import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
+import RoomValidationUtil from "../../../src/shared/room/util/roomValidationUtil";
+import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
+import VoxelQuadsRuntimeMemory from "../../../src/shared/voxel/types/voxelQuadsRuntimeMemory";
+import ObjectGroup from "../../../src/shared/object/types/objectGroup";
 import User from "../../../src/shared/user/types/user";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import ColorUtil from "../../../src/shared/math/util/colorUtil";
@@ -28,7 +33,8 @@ import WallAttachedObjectUtil from "../../../src/shared/object/util/wallAttached
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN,
     LABEL_COLOR_PALETTE_NAME, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL,
     INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, NUM_VOXEL_COLS,
-    NUM_VOXEL_ROWS, OBJECT_LABEL_MAX_LENGTH } from "../../../src/shared/system/sharedConstants";
+    NUM_VOXEL_ROWS, OBJECT_LABEL_MAX_LENGTH, SANDBOX_SINGLE_PLAYER_MODE,
+    TUTORIAL_SINGLE_PLAYER_MODE } from "../../../src/shared/system/sharedConstants";
 
 const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 const DOOR_FOOTPRINT_HEIGHT =
@@ -101,6 +107,19 @@ describe("door permissions", () => {
                 }
             },
         });
+    });
+
+    it("lets an admin manage doors in the sandbox, but in no other single-player room", () => {
+        // The sandbox's edits stay local, so it stands in for a hub when trying out admin tools.
+        const singlePlayerRoom = (name: string) => new Room(name, name, RoomTypeEnumMap.SinglePlayer, "", "",
+            "default", "", new VoxelGrid([], new VoxelQuadsRuntimeMemory()), new ObjectGroup([]));
+        const sandbox = singlePlayerRoom(SANDBOX_SINGLE_PLAYER_MODE);
+        const tutorial = singlePlayerRoom(TUTORIAL_SINGLE_PLAYER_MODE);
+
+        expect(RoomValidationUtil.canUserManageDoors(ADMIN, sandbox)).toBe(true);
+        expect(RoomValidationUtil.canUserManageDoors(MEMBER, sandbox)).toBe(false);
+        expect(RoomValidationUtil.canUserManageDoors(GUEST, sandbox)).toBe(false);
+        expect(RoomValidationUtil.canUserManageDoors(ADMIN, tutorial)).toBe(false);
     });
 
     it("refuses a door hung under somebody else's name", async () => {

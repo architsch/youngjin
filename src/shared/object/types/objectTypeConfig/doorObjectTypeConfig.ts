@@ -41,7 +41,7 @@ const editableMetadataKeys = [
     ObjectMetadataKeyEnumMap.DoorType,
 ];
 
-// Doors connect rooms; laying one is admin-only and Hub-only (see RoomValidationUtil.canUserManageDoors).
+// Doors connect rooms; laying one is admin-only, in hubs (see RoomValidationUtil.canUserManageDoors).
 const DoorObjectTypeConfig =
 {
     objectType: "Door",

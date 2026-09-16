@@ -1,43 +1,43 @@
 /**
- * Screenshot runner for dev-log posts (driven by the `devlog-post` skill). Boots Chromium against a
- * running local dev server, signs in as a seeded dev member, waits for a room, then runs a shot script
- * from ./shots that calls `shot(label)`.
+ * Local playtest runner: boots Chromium against a running local dev server, opens the SANDBOX, and either
+ * runs a script from a file or holds a session open to be driven one step at a time. Unlike runPlan.js
+ * (which drives the deployed staging server through a fixed action list), this is for trying something out
+ * in a room built for the purpose.
  *
  * Usage:
- *   node dev/scripts/devlog/captureRunner.js dev/scripts/devlog/shots/<slug>.js
- *   node dev/scripts/devlog/captureRunner.js --probe                       (boot + dump the UI)
- *   node dev/scripts/devlog/captureRunner.js --serve                       (hold it open; see below)
- *   node dev/scripts/devlog/captureRunner.js --serve --fresh-room --room-type=hub
- *   node dev/scripts/devlog/captureRunner.js <script> --out=test-results/devlog-probe
- *   node dev/scripts/devlog/captureRunner.js <script> --headed
- *   node dev/scripts/devlog/captureRunner.js <script> --fresh-room         (a generated room instead)
+ *   node dev/scripts/playtest/sandboxRunner.js --serve                    (hold it open; see below)
+ *   node dev/scripts/playtest/sandboxRunner.js --serve --admin            (as an admin, for the door tools)
+ *   node dev/scripts/playtest/sandboxRunner.js <script.js> [--out=dir] [--headed]
+ *   node dev/scripts/playtest/sandboxRunner.js --probe                    (boot + dump the UI)
+ *   node dev/scripts/playtest/sandboxRunner.js --serve --fresh-room [--room-type=hub] [--devuser=4]
  *
- * Runs open in the SANDBOX by default: an empty single-player room with a free camera, where sets are
- * built on request. `--fresh-room` (or `freshRoom: true`) opens a generated room from a fixed seed
- * instead, for shots of generation itself or of game flows. `--serve` holds the browser open and
- * performs one op per request (the same functions shot scripts call), for working out shots.
+ * Runs open in the sandbox by default: an empty single-player room with a free camera, where sets are
+ * built on request (see AutomationSetupUtil's sandbox group). `--fresh-room` (or `freshRoom: true`) opens a
+ * generated room from a fixed seed instead, for what the sandbox cannot host — room generation itself, and
+ * flows that need a stored, multiplayer room. `--admin` opens either as an admin.
  *
  * Expects a dev server already up (`npm run devnossg`) and never starts one, so it can't take down a
  * server in use.
  *
  * Environment:
- *   DEVLOG_BASE_URL   address of the dev server (default http://127.0.0.1:3000)
- *   DEVLOG_OUT_DIR    where the JPEGs go (default: the current dev-log year's directory; see devlogDir.js)
+ *   SANDBOX_BASE_URL   address of the dev server (default http://127.0.0.1:3000)
  */
 const fs = require("fs");
 const path = require("path");
 const { chromium } = require("@playwright/test");
-const { resolveDevlogDir } = require("./devlogDir");
-const { seedCaptureRoom, removeCaptureRoom } = require("./captureRoom");
+const { seedFreshRoom, removeFreshRoom } = require("./lib/freshRoom");
 const Interact = require("../lib/interact");
 const Setup = require("../lib/setup");
 
 const REPO_ROOT = path.resolve(__dirname, "../../..");
-const BASE_URL = (process.env.DEVLOG_BASE_URL || "http://127.0.0.1:3000").replace(/\/$/, "");
-const DEFAULT_OUT_DIR = process.env.DEVLOG_OUT_DIR || resolveDevlogDir().dir;
-const PROBE_OUT_DIR = "test-results/devlog-probe"; // git-ignored, so probe shots never reach a commit
+const BASE_URL = (process.env.SANDBOX_BASE_URL || "http://127.0.0.1:3000").replace(/\/$/, "");
+// Git-ignored, so nothing a run photographs reaches a commit.
+const DEFAULT_OUT_DIR = "test-results/sandbox";
 
-// Post images display at half a column wide, so 1x viewport JPEGs suffice (they're also the share preview).
+// Seeded dev users (see DevUserSeedUtil): 1-3 are members, 4 is the admin.
+const DEV_USER_MEMBER = 1;
+const DEV_USER_ADMIN = 4;
+
 const DEFAULT_VIEWPORT = { width: 1280, height: 800 };
 const JPEG_QUALITY = 88;
 
@@ -63,81 +63,83 @@ async function main()
     const headed = args.includes("--headed");
     const freshRoomFlag = args.includes("--fresh-room");
     const sandboxFlag = args.includes("--sandbox");
+    const adminFlag = args.includes("--admin");
     const serveArg = args.find(a => a == "--serve" || a.startsWith("--serve="));
     const servePort = serveArg == undefined ? 0
         : (serveArg.includes("=") ? Number(serveArg.split("=")[1]) : DEFAULT_SERVE_PORT);
     const outArg = args.find(a => a.startsWith("--out="));
     const seedArg = args.find(a => a.startsWith("--seed="));
-    // Sessions choose the room type on the command line: only hubs have two storeys and admin-managed doors.
+    // Runs choose the room type on the command line: only hubs have two storeys and admin-managed doors.
     const roomTypeArg = args.find(a => a.startsWith("--room-type="));
-    // Likewise the seat: doors are admin-only, so a member seat never shows their controls.
+    // Likewise the seat, for a generated room: the sandbox has seats of its own (see openGame).
     const devUserArg = args.find(a => a.startsWith("--devuser="));
     const scriptPath = args.find(a => !a.startsWith("--"));
 
     if (!scriptPath && !probeOnly && !serveArg)
     {
-        console.error("Usage: node dev/scripts/devlog/captureRunner.js <shotScript.js> [--out=dir] [--headed] [--fresh-room]");
-        console.error("       node dev/scripts/devlog/captureRunner.js --probe");
-        console.error("       node dev/scripts/devlog/captureRunner.js --serve[=port]   (the sandbox, unless --fresh-room)");
-        console.error("       node dev/scripts/devlog/captureRunner.js --serve --fresh-room [--room-type=hub] [--devuser=4]");
+        console.error("Usage: node dev/scripts/playtest/sandboxRunner.js <script.js> [--out=dir] [--headed] [--admin]");
+        console.error("       node dev/scripts/playtest/sandboxRunner.js --probe");
+        console.error("       node dev/scripts/playtest/sandboxRunner.js --serve[=port]   (the sandbox, unless --fresh-room)");
+        console.error("       node dev/scripts/playtest/sandboxRunner.js --serve --fresh-room [--room-type=hub] [--devuser=4]");
         process.exit(1);
     }
 
-    const shotScript = scriptPath ? require(path.resolve(REPO_ROOT, scriptPath)) : {};
+    const runScript = scriptPath ? require(path.resolve(REPO_ROOT, scriptPath)) : {};
+    if (adminFlag)
+        runScript.admin = true;
     if (devUserArg)
-        shotScript.devUser = Number(devUserArg.slice("--devuser=".length));
+        runScript.devUser = Number(devUserArg.slice("--devuser=".length));
     if (roomTypeArg)
-        shotScript.roomType = roomTypeArg.slice("--room-type=".length);
+        runScript.roomType = roomTypeArg.slice("--room-type=".length);
     if (sandboxFlag)
-        shotScript.sandbox = true;
+        runScript.sandbox = true;
     if (freshRoomFlag)
-        shotScript.freshRoom = true;
+        runScript.freshRoom = true;
 
     // Contradictory room requests.
-    if (shotScript.sandbox && shotScript.freshRoom)
+    if (runScript.sandbox && runScript.freshRoom)
     {
-        console.error("[devlog] --sandbox and --fresh-room both decide which room to open, and " +
+        console.error("[sandbox] --sandbox and --fresh-room both decide which room to open, and " +
             "they disagree: the sandbox is an empty room a set is built in, a fresh room is one the " +
             "generator made. Pick one.");
         process.exit(1);
     }
 
     // The sandbox is the default; a generated room must be requested explicitly.
-    if (shotScript.sandbox == undefined)
-        shotScript.sandbox = !shotScript.freshRoom;
-    const freshRoom = shotScript.freshRoom === true;
-    const slug = shotScript.slug || (serveArg ? "session" : "probe");
+    if (runScript.sandbox == undefined)
+        runScript.sandbox = !runScript.freshRoom;
+    const freshRoom = runScript.freshRoom === true;
+    // In a generated room the seat is a seeded dev user; an admin run takes the seeded admin.
+    if (runScript.devUser == undefined)
+        runScript.devUser = runScript.admin ? DEV_USER_ADMIN : DEV_USER_MEMBER;
+    // Names every file the run writes, and the sandbox seat it opens under.
+    const slug = runScript.slug
+        || (scriptPath ? path.basename(scriptPath, path.extname(scriptPath))
+            : (serveArg ? "session" : "probe"));
 
-    if (scriptPath && !probeOnly && !serveArg && typeof shotScript.run != "function")
+    if (scriptPath && !probeOnly && !serveArg && typeof runScript.run != "function")
     {
-        console.error(`[devlog] ${scriptPath} exports no run() function.`);
+        console.error(`[sandbox] ${scriptPath} exports no run() function.`);
         process.exit(1);
     }
-    if (scriptPath && !probeOnly && !serveArg && !shotScript.slug)
-    {
-        console.error(`[devlog] ${scriptPath} exports no slug — it names every file the run produces.`);
-        process.exit(1);
-    }
 
-    // Session shots are working material, so they go to the probe directory by default, not public/.
     const outDir = path.resolve(REPO_ROOT,
-        outArg ? outArg.slice("--out=".length)
-            : ((probeOnly || serveArg) ? PROBE_OUT_DIR : DEFAULT_OUT_DIR));
+        outArg ? outArg.slice("--out=".length) : DEFAULT_OUT_DIR);
     fs.mkdirSync(outDir, { recursive: true });
 
     await assertServerIsUp();
 
-    // A seeded room makes script coordinates reproducible across machines and runs; removed at the end.
+    // A seeded room makes a script's coordinates reproducible across machines and runs; removed at the end.
     let seededRoom = null;
     if (freshRoom)
     {
-        seededRoom = await seedCaptureRoom({
+        seededRoom = await seedFreshRoom({
             seed: seedArg ? Number(seedArg.slice("--seed=".length)) : undefined,
-            devUser: shotScript.devUser === undefined ? 1 : shotScript.devUser,
-            // Upstairs shots need a hub (Regular rooms are one storey; see captureRoom.js).
-            roomType: shotScript.roomType,
+            devUser: runScript.devUser,
+            // Two-storey work needs a hub (Regular rooms are one storey; see freshRoom.js).
+            roomType: runScript.roomType,
         });
-        console.log(`[devlog] Seeded ${seededRoom.roomType == 0 ? "hub" : "regular"} room ` +
+        console.log(`[sandbox] Seeded ${seededRoom.roomType == 0 ? "hub" : "regular"} room ` +
             `${seededRoom.roomID} from seed ${seededRoom.seed} ` +
             `(${seededRoom.voxelCount} voxels, ${seededRoom.objectCount} objects).`);
     }
@@ -148,13 +150,13 @@ async function main()
         args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-webgl", "--hide-scrollbars", "--mute-audio"],
     });
     const context = await browser.newContext({
-        viewport: shotScript.viewport || DEFAULT_VIEWPORT,
+        viewport: runScript.viewport || DEFAULT_VIEWPORT,
         deviceScaleFactor: 1,
         ignoreHTTPSErrors: true,
     });
 
     // Skipped unless the script sets `tutorial: true`.
-    if (shotScript.tutorial !== true)
+    if (runScript.tutorial !== true)
         await context.addCookies([{ name: TUTORIAL_FINISHED_COOKIE, value: "1", url: BASE_URL }]);
 
     const page = await context.newPage();
@@ -169,19 +171,19 @@ async function main()
 
     try
     {
-        await openGame(page, shotScript, seededRoom);
+        await openGame(page, runScript, slug, seededRoom);
         await waitForGameReady(page);
 
-        const ctx = makeContext({ page, outDir, slug, files, shotScript });
+        const ctx = makeContext({ page, outDir, slug, files, runScript });
 
         // The sandbox is single-player too; walking out of it would land in the hub.
-        if (shotScript.tutorial !== true && !shotScript.sandbox)
+        if (runScript.tutorial !== true && !runScript.sandbox)
             await leaveTutorial(page);
-        if (shotScript.sandbox)
+        if (runScript.sandbox)
             await parkPlayer(ctx);
-        if (shotScript.hideDebugUI !== false)
+        if (runScript.hideDebugUI !== false)
             await ctx.hideDebugUI();
-        if (shotScript.dismissPopups !== false)
+        if (runScript.dismissPopups !== false)
             await ctx.dismissPopups();
 
         if (serveArg)
@@ -190,25 +192,22 @@ async function main()
         }
         else if (probeOnly)
         {
-            console.log("[devlog] --- visible UI ---");
+            console.log("[sandbox] --- visible UI ---");
             console.log(JSON.stringify(await ctx.describeUI(), null, 2));
             await ctx.shot("probe");
         }
         else
         {
-            await shotScript.run(ctx);
+            await runScript.run(ctx);
         }
     }
     catch (err)
     {
         exitCode = 1;
-        console.error(`[devlog] Capture failed: ${err && err.message ? err.message : err}`);
-        // The failure state is kept for diagnosis, outside the post's directory.
-        const failDir = path.resolve(REPO_ROOT, PROBE_OUT_DIR);
-        fs.mkdirSync(failDir, { recursive: true });
-        const failPath = path.join(failDir, `${slug}-failure.jpg`);
+        console.error(`[sandbox] Run failed: ${err && err.message ? err.message : err}`);
+        const failPath = path.join(outDir, `${slug}-failure.jpg`);
         await page.screenshot({ path: failPath, type: "jpeg", quality: JPEG_QUALITY }).catch(() => {});
-        console.error(`[devlog] State at failure: ${path.relative(REPO_ROOT, failPath)}`);
+        console.error(`[sandbox] State at failure: ${path.relative(REPO_ROOT, failPath)}`);
     }
     finally
     {
@@ -226,20 +225,20 @@ async function main()
         // Removed even on failure, so the next run inherits nothing.
         if (seededRoom != null)
         {
-            await removeCaptureRoom(seededRoom).then(
-                () => console.log(`[devlog] Removed seeded room ${seededRoom.roomID}.`),
-                (err) => console.warn(`[devlog] Could not remove seeded room ${seededRoom.roomID}: ${err.message}`));
+            await removeFreshRoom(seededRoom).then(
+                () => console.log(`[sandbox] Removed seeded room ${seededRoom.roomID}.`),
+                (err) => console.warn(`[sandbox] Could not remove seeded room ${seededRoom.roomID}: ${err.message}`));
         }
     }
 
     if (pageErrors.length > 0)
     {
-        console.warn(`[devlog] ${pageErrors.length} console/page error(s) during the run:`);
+        console.warn(`[sandbox] ${pageErrors.length} console/page error(s) during the run:`);
         for (const err of pageErrors.slice(0, 10))
             console.warn(`  - ${err}`);
     }
 
-    console.log(`[devlog] ${files.length} screenshot(s) written to ${path.relative(REPO_ROOT, outDir)}/`);
+    console.log(`[sandbox] ${files.length} screenshot(s) written to ${path.relative(REPO_ROOT, outDir)}/`);
     for (const file of files)
     {
         const size = file.width ? `${file.width}x${file.height}, ` : "";
@@ -251,8 +250,8 @@ async function main()
 
 /**
  * Holds the browser open and performs one step per request until told to stop. Each response carries
- * the pose, view and selection, so a shot sequence costs a request per guess instead of a run.
- * Ops are the same functions shot scripts call, under the same names (nothing extra), so findings
+ * the pose, view and selection, so working a sequence out costs a request per guess instead of a run.
+ * Ops are the same functions a script calls, under the same names (nothing extra), so findings
  * transcribe directly into `run(ctx)`.
  *
  *   POST /do     {"op": "place", "args": [16.5, 27.2]}
@@ -332,16 +331,16 @@ async function serveSession(ctx, port, pageErrors)
 
     await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));
     const address = `http://127.0.0.1:${server.address().port}`;
-    console.log(`[devlog] Session open at ${address} — ${Object.keys(ops).length} ops (GET ${address}/ops).`);
-    console.log(`[devlog]   curl -s ${address}/do -d '{"op":"standingSpots","args":[{}]}'`);
-    console.log(`[devlog]   curl -s ${address}/end     to finish`);
+    console.log(`[sandbox] Session open at ${address} — ${Object.keys(ops).length} ops (GET ${address}/ops).`);
+    console.log(`[sandbox]   curl -s ${address}/do -d '{"op":"standingSpots","args":[{}]}'`);
+    console.log(`[sandbox]   curl -s ${address}/end     to finish`);
 
     await new Promise((resolve) => {
         stopping = () => server.close(() => resolve());
         process.once("SIGINT", stopping);
         process.once("SIGTERM", stopping);
     });
-    console.log("[devlog] Session ended.");
+    console.log("[sandbox] Session ended.");
 }
 
 // Bridge plumbing is excluded (both libraries define these names, including two different `call`s);
@@ -349,7 +348,7 @@ async function serveSession(ctx, port, pageErrors)
 const SESSION_PLUMBING = new Set(["BRIDGE", "call", "hasBridge", "waitForBridge", "hasSetup",
     "waitForSetup", "waitForRoom"]);
 
-/** Every shot-script op, flattened to one name each (`place`, `look`, `shot`); nested groups keep their prefix (`ui.click`). */
+/** Every op a script can call, flattened to one name each (`place`, `look`, `shot`); nested groups keep their prefix (`ui.click`). */
 function buildOps(ctx)
 {
     const ops = {};
@@ -390,34 +389,33 @@ async function assertServerIsUp()
     }
     catch (err)
     {
-        console.error(`[devlog] No dev server answering at ${BASE_URL} (${err.message}).`);
-        console.error("[devlog] Start one first:  node dev/scripts/e2eDevServer.js devnossg");
+        console.error(`[sandbox] No dev server answering at ${BASE_URL} (${err.message}).`);
+        console.error("[sandbox] Start one first:  node dev/scripts/e2eDevServer.js devnossg");
         process.exit(1);
     }
 }
 
-async function openGame(page, shotScript, seededRoom)
+async function openGame(page, runScript, slug, seededRoom)
 {
     // The sandbox is reached via a seat whose single-player mode is the sandbox, so it takes no path or
-    // dev member (a member's own mode would route elsewhere).
-    if (shotScript.sandbox)
+    // dev user (a dev user's own mode would route elsewhere). The admin seat is a separate account.
+    if (runScript.sandbox)
     {
         const url = new URL(BASE_URL + "/");
-        url.searchParams.set("sandboxuser", shotScript.slug || "session");
-        console.log(`[devlog] Opening the sandbox: ${url.toString()}`);
+        url.searchParams.set(runScript.admin ? "sandboxadmin" : "sandboxuser", slug);
+        console.log(`[sandbox] Opening the sandbox${runScript.admin ? " as an admin" : ""}: ${url.toString()}`);
         await page.goto(url.toString(), { waitUntil: "domcontentloaded", timeout: 60_000 });
         return;
     }
 
     // A seeded room outranks the script's path (often a stale id from another database).
-    const startPath = seededRoom != null ? `/${seededRoom.roomID}` : (shotScript.startPath || "/");
+    const startPath = seededRoom != null ? `/${seededRoom.roomID}` : (runScript.startPath || "/");
     const url = new URL(BASE_URL + startPath);
-    // A seeded dev member (not a fresh guest) owns a room, may edit, and keeps dismissed prompts, so runs match.
-    const devUser = shotScript.devUser === undefined ? 1 : shotScript.devUser;
-    if (devUser)
-        url.searchParams.set("devuser", String(devUser));
+    // A seeded dev user (not a fresh guest) owns a room, may edit, and keeps dismissed prompts, so runs match.
+    if (runScript.devUser)
+        url.searchParams.set("devuser", String(runScript.devUser));
 
-    console.log(`[devlog] Opening ${url.toString()}`);
+    console.log(`[sandbox] Opening ${url.toString()}`);
     await page.goto(url.toString(), { waitUntil: "domcontentloaded", timeout: 60_000 });
 }
 
@@ -438,10 +436,10 @@ async function waitForGameReady(page)
     await page.waitForTimeout(600);
 }
 
-// Where the sandbox parks its player, outside the frame of a centered subject.
+// Where the sandbox parks its player, out of the way of a centered subject.
 const SANDBOX_PLAYER_CORNER = { x: 1.5, z: 1.5 };
 
-/** Moves the sandbox player (who spawns at the center, where sets are built) out of frame. */
+/** Moves the sandbox player (who spawns at the center, where sets are built) out of the way. */
 async function parkPlayer(ctx)
 {
     await ctx.setup.place(SANDBOX_PLAYER_CORNER.x, SANDBOX_PLAYER_CORNER.z);
@@ -449,7 +447,7 @@ async function parkPlayer(ctx)
 
 /**
  * Walks out of the tutorial if the session starts there, and waits for the hub. The tutorial-finished
- * cookie only affects accounts created after it's set, so seeded dev members still start there.
+ * cookie only affects accounts created after it's set, so seeded dev users still start there.
  */
 async function leaveTutorial(page)
 {
@@ -457,15 +455,15 @@ async function leaveTutorial(page)
     if (await skipButton.count() == 0 || !(await skipButton.isVisible().catch(() => false)))
         return;
 
-    console.log("[devlog] Session started in the tutorial — skipping it.");
+    console.log("[sandbox] Session started in the tutorial — skipping it.");
     await skipButton.click();
     await page.locator("#uiRoot").getByText("Yes", { exact: true }).first().click();
     await waitForGameReady(page);
 }
 
-function makeContext({ page, outDir, slug, files, shotScript })
+function makeContext({ page, outDir, slug, files, runScript })
 {
-    const viewport = shotScript.viewport || DEFAULT_VIEWPORT;
+    const viewport = runScript.viewport || DEFAULT_VIEWPORT;
 
     /** Waits out any in-flight animation, then keeps a JPEG named `<slug>-<label>.jpg`. */
     const shot = async (label, opts = {}) =>
@@ -490,7 +488,7 @@ function makeContext({ page, outDir, slug, files, shotScript })
             width: wholeViewport ? viewport.width : undefined,
             height: wholeViewport ? viewport.height : undefined,
         });
-        console.log(`[devlog] shot: ${name}`);
+        console.log(`[sandbox] shot: ${name}`);
         return filePath;
     };
 
@@ -594,8 +592,8 @@ function makeContext({ page, outDir, slug, files, shotScript })
     });
 
     /**
-     * Hides or restores the whole HUD. Only for isolated subjects (usually sandbox sets); game shots keep
-     * the HUD, since it's part of how the game looks.
+     * Hides or restores the whole HUD. Only for looking at an isolated subject; anything about the game's
+     * own controls keeps the HUD, since it's part of what is under test.
      */
     const showHUD = (visible = true) => page.evaluate((visible) =>
     {
@@ -631,7 +629,7 @@ function makeContext({ page, outDir, slug, files, shotScript })
         describeUI, hideDebugUI, dismissPopups, hideHUD, showHUD,
         setup, interact,
         waitForGameReady: () => waitForGameReady(page),
-        log: (...msg) => console.log("[devlog]", ...msg),
+        log: (...msg) => console.log("[sandbox]", ...msg),
     };
 }
 
@@ -655,6 +653,6 @@ function bindPage(library, page)
 }
 
 main().catch((err) => {
-    console.error("[devlog] Fatal error:", err);
+    console.error("[sandbox] Fatal error:", err);
     process.exit(1);
 });

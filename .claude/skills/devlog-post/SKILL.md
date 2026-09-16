@@ -1,13 +1,17 @@
 ---
 name: devlog-post
-description: Write and publish a ThingsPool dev-log post about a feature the user names — research the feature in the codebase, capture in-game screenshots against the local dev server with Playwright, write an inviting description aimed at players that fits inside a single LinkedIn post, and publish it as a static page under public/devlog-<year> via the SSG. Use when asked for a dev log, devlog post, feature write-up, release note, or promotional/announcement post about something in this project.
+description: Write a ThingsPool dev-log post about a feature the user names — research the feature in the codebase, write an inviting description aimed at players that fits inside a single LinkedIn post, add it to public/devlog-<year>/source.txt, and hand it to the user to review and revise. Use when asked for a dev log, devlog post, feature write-up, release note, or promotional/announcement post about something in this project.
 ---
 
 # Dev-Log Post
 
-Turns one finished feature into a published dev-log entry: a static page under
-`public/devlog-<year>/`, carrying screenshots taken from the running game and a description short
-enough to be pasted into a LinkedIn post as it stands.
+Turns one finished feature into a dev-log entry: a block of text in `public/devlog-<year>/source.txt`
+short enough to be pasted into a LinkedIn post as it stands, which the SSG turns into a static page
+under the same directory.
+
+**This skill writes the text and nothing else.** The screenshots are the user's: they take them,
+name them and add their lines to the post themselves. So never capture, generate or reference an
+image here — hand the text over and let them illustrate it.
 
 The user pastes the finished text onto LinkedIn, Facebook and elsewhere, and adds
 `Play Here: https://thingspool.net` underneath by hand. That is what the character budget is for,
@@ -26,8 +30,8 @@ The feature is whatever the user named when invoking this skill. If they named n
 feature the post is about (offer the last few commits' subjects as options) and stop until they
 answer — everything below depends on the answer.
 
-One post covers one feature. If the user names something sprawling, pick the part of it that can
-be seen on screen and say in the final report what you left out.
+One post covers one feature. If the user names something sprawling, pick the part of it a player
+would notice and say when handing the post over what you left out.
 
 ## Step 2 — Research it
 
@@ -45,117 +49,11 @@ Read the actual code before writing a word about it. Work out:
   several during research and keep the best one.
 - The idea behind how it works — one short paragraph's worth at most, and only the part that would
   interest someone who does not program.
-- What of it is **visible**, and what a player has to do to see it. This decides the screenshots.
 
 `git log`, the relevant `/docs` page and the source files themselves are the sources. Never
-describe behaviour you have not confirmed in the code or seen on screen.
+describe behaviour you have not confirmed in the code.
 
-## Step 3 — Get the dev server up
-
-```bash
-curl -s -o /dev/null -w "%{http_code}" --max-time 3 http://127.0.0.1:3000/health
-```
-
-`200` means one is already running — use it, and leave it running when you are done.
-
-Otherwise start one in the background (this launcher clears stale Firebase-emulator ports first,
-which a bare `npm run devnossg` does not):
-
-```bash
-node dev/scripts/e2eDevServer.js devnossg
-```
-
-Poll `/health` until it answers `200`; the bundles take a couple of minutes to compile. If it
-never comes up, show the launcher's output and stop. Do not invent screenshots. Common causes:
-`gcloud auth application-default login` has never been run on this machine, or `firebase-tools` /
-`pm2` are missing from the Node version currently selected by nvm.
-
-If **you** started it, stop it once the captures are done (`npm run stop`, then kill the launcher).
-
-## Step 4 — Capture the screenshots
-
-Full details in [reference/capture.md](reference/capture.md). **Work each shot out in a live session,
-writing the script last**, since running a whole script from boot to learn what one step did costs a
-full run per guess.
-
-**Screenshots are for exhibition, not for testing — there is no need to play the game to take one.**
-So every capture run happens in the **sandbox** single-player room: an empty room whose walls,
-floors, blocks, pictures and doors you stand up by asking, and whose camera goes anywhere. Decide the
-frame, build what belongs in it, put the camera where the picture wants it. The picture stays honest
-because the thing it is *of* is spawned, drawn and lit exactly as the game does it; only the room
-around it was arranged.
-
-**When the sandbox has no way to show a feature yet, add one before shooting** — a case in
-`dev/scripts/lib/setup.js` and the matching entry on the client bridge behind it. What the new op
-owes is the feature's *appearance*, a couple of convincing visual artifacts, not its behaviour. It is
-done once per feature rather than once per post. See
-[always shoot in the sandbox](reference/capture.md#1-always-shoot-in-the-sandbox).
-
-1. **Open a session and leave it in the background:**
-
-   ```bash
-   node dev/scripts/devlog/captureRunner.js --serve &
-   ```
-
-2. **Build each shot one step at a time.** Every response carries the resulting pose, view and
-   camera, so the next step follows from what the game actually did:
-
-   ```bash
-   curl -s -X POST http://127.0.0.1:4321/do -d '{"op":"hideHUD"}'
-   curl -s -X POST http://127.0.0.1:4321/do -d '{"op":"palettes"}'
-   curl -s -X POST http://127.0.0.1:4321/do -d '{"op":"stage","args":[{"row":14,"col":14,"rows":9,"cols":11,"layers":8,"wallTextureIndex":45,"floorTextureIndex":14,"open":["-z"]}]}'
-   curl -s -X POST http://127.0.0.1:4321/do -d '{"op":"addObject","args":[{"type":"Canvas","row":22,"col":19,"face":"-z","collisionLayer":4,"metadata":{"ImagePath":"1/14"}}]}'
-   curl -s -X POST http://127.0.0.1:4321/do -d '{"op":"camera","args":[{"x":14.5,"y":3.4,"z":11.5,"atX":19.5,"atY":1.7,"atZ":19}]}'
-   curl -s -X POST http://127.0.0.1:4321/do -d '{"op":"shot","args":["try"]}'
-   curl -s -X POST http://127.0.0.1:4321/do -d '{"op":"clearSandbox"}'
-   curl -s http://127.0.0.1:4321/ops     # every op available
-   ```
-
-   **Dress the set out of a palette** (`palettes()` returns the texture-index combinations the game
-   finishes its own rooms in), and **fill the frame** — a set that is a grey box with the subject in
-   it has wasted the whole advantage of building it. See
-   [building the set](reference/capture.md#ctxsetup--building-the-set).
-
-3. **Read every JPEG as you go.** They are images; open them with the Read tool and look. The runner
-   cannot tell a good frame from a bad one, and neither can the pose. Re-shoot anything showing a
-   loading indicator, a half-arrived room, an open debugger, an empty canvas, or simply not the
-   feature. This is the step that decides whether the post is worth publishing. Re-shoot for a
-   **fault**, never for variety: settle the palette and the vantages up front and stop at a couple of
-   good frames, rather than working through the options to see which wins.
-
-4. **Transcribe what worked** into `dev/scripts/devlog/shots/<slug>.js` (copy `_template.js`). The
-   ops are the same functions `run(ctx)` calls, under the same names, so this is transcription
-   rather than translation. Then `curl -s -X POST http://127.0.0.1:4321/end`.
-
-5. Run the script end to end with `--out=test-results/devlog-probe`, read the images again, then a
-   final run without `--out`, writing into `public/devlog-<year>/`.
-
-**Two to four images per post**, roughly one per paragraph. The first one becomes the post's
-share-preview image, so lead with the one that reads best at a glance. They have to look
-**sufficiently different from each other and from the images already in `public/devlog-<year>/`** —
-read the recent ones first. Differ in kind (high over the set; through a doorway with depth beyond
-it; close and oblique at the subject's own level), not merely in distance. That is not licence to
-survey: choose the palette and the vantages up front, shoot them, and stop.
-
-**Compose each frame; do not merely capture it.** Most readers meet the post as a thumbnail on a
-phone, so a frame that technically contains the feature but reads as a grey room has failed. Full
-detail in [reference/capture.md](reference/capture.md#3-composing-the-frame):
-
-- **The rule of thirds.** Aiming *at* the subject centres it; offset the aim point so it falls on a
-  third, without letting it leave the light the camera carries. The subject should still fill a
-  third to a half of the frame's shorter side — four to eight units back from it in the sandbox.
-- **Decent contrast, in colour rather than brightness** — parts the eye can tell apart, all inside
-  one scheme rather than clashing.
-- **No dead margin, and a balanced frame** — a blank wall over half of it, a band of empty floor
-  along the bottom, or an unlit void along an edge is a set that was not finished.
-- **A variety of architectural patterns, blocks and objects** at different depths — a corner and a
-  vanishing point, a picture on a wall, a plinth or a pillar, a doorway cut through to somewhere
-  beyond. Busy is as bad as bare: the eye should find the subject in about a second and still have
-  somewhere else to go.
-- **Come round off the square-on view**, off the subject's axis and above or below its level, so the
-  room recedes instead of standing flat like a backdrop.
-
-## Step 5 — Write the post
+## Step 3 — Write the post
 
 Posts are filed one year to a directory. Ask the tooling which one is current rather than assuming:
 
@@ -171,17 +69,17 @@ builds:
 2. Add a row to `"Development History"` in `src/server/ssg/data/libraryData.ts`:
    `{ dirName: "devlog-<year>", title: "Dev Log - <year>" }`. The Library index
    and the landing page's dev-log link are both built from that list, so the new year appears in
-   both once it is there. Because this touches `src/`, the publish step in Step 6 is the
-   bundle-rebuilding one.
+   both once it is there. It touches `src/`, so say so when handing over: that year's first page
+   needs the bundles rebuilt (`npm run beforeCommit`), not the SSG alone.
 
 Then append a new block to that year's `source.txt` — never touch the posts already in it, and
 never insert anything above them.
 
 The exception is a **revision**: when you are asked to write the post again about a feature an
 earlier attempt already covered, the newest block in the file is that attempt's, and it gets
-replaced where it stands. Appending instead leaves the site with two posts about one feature. Its
-screenshots are revised the same way — re-shoot to the same filenames, and delete from the year's
-directory any image the new version no longer references.
+replaced where it stands. Appending instead leaves the site with two posts about one feature. **A
+revision keeps every image line the user has added**, each at the same point in the prose it was
+illustrating — a rewrite that drops them silently un-illustrates the post.
 
 Three documents govern the writing, and all three are read before drafting:
 
@@ -212,12 +110,10 @@ The rules that do not bend:
   ```
   A reader who lands on a post about one camera behaviour has no idea what the game is, and that
   line is where they find out. `postLength.js` warns when a post is missing it.
-- **Images.** Every screenshot kept from step 4 is referenced in the post, on its own line. They
-  break the text up at roughly even intervals, about one per paragraph — an image may sit *before*
-  the prose it illustrates, and a post may end on one. A post about a visible feature that carries
-  no images has failed at its main job. They cost nothing against the character budget — the
-  counter ignores those lines, because a pasted social post carries the text only and the user
-  attaches the JPEGs themselves.
+- **Images.** Not yours to add. The user takes the screenshots and writes their `<name>` lines into
+  the block themselves, so leave the prose to stand on its own and never reference a file you have
+  not been given. They cost nothing against the character budget either way — the counter ignores
+  those lines, because a pasted social post carries the text only and the user attaches the JPEGs.
 - **Length.** **Aim for about 600 characters of prose.** The first three posts in `source.txt` run
   roughly 620, 550 and 510 characters of body text, and they are the target. 2964 is a hard ceiling
   (LinkedIn's 3000-character limit less the 36 the "Play Here" line needs), not a goal — being at a
@@ -278,35 +174,29 @@ finished text. The first check is the one that matters most and the easiest to s
 stranger want to click after reading this?** If the honest answer is "it is accurate", the draft
 has failed and needs rewriting rather than polishing.
 
-## Step 6 — Publish
+## Step 4 — Hand it over
 
-Regenerating the static site is what turns `source.txt` into pages. From the repo root:
+The post is finished when the user has read it, not when it is in the file. **Stop here and ask them
+to review it**, giving them everything they need to judge it without opening anything:
 
-- Only `source.txt` and images changed, and `public/library.html` already lists this year's dev log:
-  ```bash
-  MODE=ssg node dist/server/bundle.js
-  ```
-  (Runs the SSG and exits — no secrets, no emulators, no server.)
-- Anything under `src/` changed — which includes **opening a new dev-log year**, since that adds a
-  row to `libraryData.ts` — or `public/library.html` has no "Development History" section yet
-  (meaning the committed server bundle predates it): `npm run beforeCommit` instead, which rebuilds
-  the bundles first.
-
-Then confirm, don't assume: the new `public/devlog-<year>/page-<N>.html` exists and contains the
-post's title, `public/library.html` lists the entry, and every `<img>` the page carries points at
-a file that is actually in `public/devlog-<year>/` — a mistyped image reference produces a page that
-builds cleanly and shows a broken image.
-
-## Step 7 — Report
-
-Tell the user:
-
-- The post's title and its page number.
-- Local preview: `http://127.0.0.1:3000/devlog-<year>/page-<N>.html` (dev server serves `public/`).
-- Published address once committed: `https://thingspool.net/devlog-<year>/page-<N>.html`.
-- The screenshot files, so they can attach them to the social post.
+- The post's title, and which `page-<N>.html` it will become (the oldest block in `source.txt` is
+  page 1, so the new one is the block count).
 - The **full post text as they will paste it**, in a copyable block, with its prose length against
   the house length of about 600 characters. Report that number, not the distance to the ceiling —
   the room left under a platform limit says nothing about whether the post is the right size.
-- That the page goes live after they commit and their static pages deploy — this skill does not
-  commit anything.
+- What is left to them: the screenshots. Say where they go — a JPEG in `public/devlog-<year>/`, and
+  a line of the form `<name>` on its own between the paragraphs it illustrates (see
+  [reference/post-format.md](reference/post-format.md#images)).
+- That the page is generated from `source.txt` by the SSG — `npm run beforeCommit` before the
+  commit, or `MODE=ssg node dist/server/bundle.js` on its own for a local preview at
+  `http://127.0.0.1:3000/devlog-<year>/page-<N>.html` once a dev server is up. Opening a new dev-log
+  year needs the first of the two, since it touches `libraryData.ts`. This skill neither generates
+  nor commits anything.
+
+When they come back with notes, revise the block in place (see the revision rule above) and put the
+new version in front of them again. A note about how dev-log posts are *written*, rather than about
+this one, belongs in the guidance rather than only in the draft: fold it into the principle it is an
+instance of in [`../../writing-style.md`](../../writing-style.md) (how to write) or
+[reference/writing.md](reference/writing.md) (what a post must contain) — never as a new bullet
+appended beside them. The full rule for that is "How an improvement is written" in
+[`../skill-upkeep/SKILL.md`](../skill-upkeep/SKILL.md).

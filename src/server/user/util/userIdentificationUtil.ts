@@ -114,11 +114,15 @@ async function getUserFromReq(req: Request, res: Response, admitsAnonymousVisito
     // Dev: a sandbox single-player account under a reserved, sanitized name (never an arbitrary id,
     // which would let anyone mint a session for a guessed account). Stored for real because the
     // socket looks users up in the DB; reused per name, with its mode rewritten each visit.
-    if (process.env.MODE == "dev" && req.query.sandboxuser)
+    // `?sandboxadmin=` names a separate Admin account, so admin tools can be tried without a hub.
+    if (process.env.MODE == "dev" && (req.query.sandboxadmin || req.query.sandboxuser))
     {
-        const name = String(req.query.sandboxuser).replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32) || "0";
-        const email = `${name}@${SANDBOX_SINGLE_PLAYER_MODE}.invalid`;
-        const userName = `Sandbox-${name}`;
+        const sandboxName = req.query.sandboxadmin || req.query.sandboxuser;
+        const asAdmin = !!req.query.sandboxadmin;
+        const userType = asAdmin ? UserTypeEnumMap.Admin : UserTypeEnumMap.Guest;
+        const name = String(sandboxName).replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32) || "0";
+        const email = `${name}@${asAdmin ? "admin." : ""}${SANDBOX_SINGLE_PLAYER_MODE}.invalid`;
+        const userName = `${asAdmin ? "SandboxAdmin" : "Sandbox"}-${name}`;
 
         const existing = await DBSearchUtil.users.withEmail(email);
         if (existing.success && existing.data.length > 0)
@@ -126,19 +130,16 @@ async function getUserFromReq(req: Request, res: Response, admitsAnonymousVisito
             const dbUser = existing.data[0];
             if (dbUser.singlePlayerMode != SANDBOX_SINGLE_PLAYER_MODE)
                 await DBUserUtil.setSinglePlayerMode(dbUser.id!, SANDBOX_SINGLE_PLAYER_MODE);
-            return new User(dbUser.id, userName, UserTypeEnumMap.Guest, email,
-                SANDBOX_SINGLE_PLAYER_MODE);
+            return new User(dbUser.id, userName, userType, email, SANDBOX_SINGLE_PLAYER_MODE);
         }
 
-        const created = await DBUserUtil.createUser(userName, UserTypeEnumMap.Guest, email,
-            SANDBOX_SINGLE_PLAYER_MODE);
+        const created = await DBUserUtil.createUser(userName, userType, email, SANDBOX_SINGLE_PLAYER_MODE);
         if (!created.success || created.data.length == 0)
         {
             LogUtil.logRaw(`Failed to create the sandbox user "${userName}"`, "high", "error");
             return undefined;
         }
-        return new User(created.data[0].id, userName, UserTypeEnumMap.Guest, email,
-            SANDBOX_SINGLE_PLAYER_MODE);
+        return new User(created.data[0].id, userName, userType, email, SANDBOX_SINGLE_PLAYER_MODE);
     }
 
     const token = req.cookies[CookieUtil.getAuthTokenName()];

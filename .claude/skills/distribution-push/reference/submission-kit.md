@@ -4,8 +4,8 @@ One folder per venue, at `temp/distribution/<venue-slug>/`, holding everything n
 ThingsPool there. `temp/` is gitignored, so kits never enter the change set — the ledger row is what
 persists.
 
-A kit exists so that the user's part of the work is *paste and send*. If they have to think about
-wording, hunt for an image, or check a rule, the kit is unfinished.
+A kit exists so that the user's part of the work is *take the images, paste, and send*. If they have
+to think about wording, work out what an image should show, or check a rule, the kit is unfinished.
 
 ## What a kit contains
 
@@ -21,7 +21,8 @@ wording, hunt for an image, or check a rule, the kit is unfinished.
 4. **The body**, exact and copyable, at that venue's length.
 5. **The tagged link** — the chosen destination with `?ref=<venue-slug>` appended — already
    confirmed with a `curl` to return `200`.
-6. **The images**, by absolute path, in the order they should be attached.
+6. **The image brief** — one row per image the venue shows: what to save it as, what it must show,
+   at what size, and where. The user takes them; see below.
 7. **The draft ledger row**, ready to be completed once the post is live.
 
 ## The copy ladder
@@ -85,22 +86,33 @@ past submissions are a record of what was sent, useful for checking what a venue
 and what facts were committed to, but they were written under earlier versions of these rules and
 several break the current ones.
 
-## Images
+## The image brief
 
-Look before capturing. `public/devlog-<year>/` already holds screenshots taken from the running game
-for the dev-log posts, and for most venues one of those is the right image. Open the candidates with
-the Read tool and pick — do not choose by filename.
+**Every image is taken by the user**, so the kit does not contain images — it contains the brief that
+lets the user produce them without asking a follow-up question. Write one row per image the venue
+shows, in the order they are attached:
 
-Capture new ones only when the venue needs something the existing set does not have: a specific
-aspect ratio, a thumbnail at a required size, or a feature no post has covered. The capture tooling
-and its rules of composition are documented in
-[`../../devlog-post/reference/capture.md`](../../devlog-post/reference/capture.md); use it as
-written rather than driving the runner from memory, and write any new shot script into
-`dev/scripts/devlog/shots/` alongside the existing ones.
+| Field | What it says |
+|---|---|
+| Filename | Exactly what to save it as, in `temp/distribution/<venue-slug>/images/` — the kit's body refers to it by that name |
+| Purpose | Where the venue displays it: thumbnail in a grid, header of the listing, the post's own body, the share preview |
+| Must show | The subject, in one sentence a person can act on — "a room with somebody else's avatar in it, seen from across the floor", not "gameplay" |
+| Size | The venue's stated pixel dimensions or aspect ratio, its format, and its maximum file size |
+| Notes | Anything the venue's rules impose: no text overlay, no border, safe area for a cropped thumbnail |
 
-**Read every image you intend to submit.** The failure this prevents — a frame containing a loading
-indicator, an empty canvas, or a grey wall where the feature was supposed to be — is invisible until
-it is on someone else's website.
+Two things decide whether that brief is any good.
+
+- **The size comes from the venue, verified this run** (step 3 of SKILL.md). A remembered dimension
+  is a guess, and a listing rejected for a wrong-sized cover costs the venue's whole turnaround.
+  Where the venue genuinely does not say, write "not specified" rather than inventing a number, and
+  name a safe default.
+- **The thumbnail is the one that matters.** Most venues show a grid, and that one frame decides
+  whether anything else in the kit is ever read. Say which row is the thumbnail, and let its brief be
+  the most specific of them.
+
+A dev-log post already carries screenshots of its own feature, and the user may well reuse one. That
+is their call to make from the brief — never assert that an existing file fits a venue's
+requirements, since judging that means looking at it.
 
 ## One kit per venue, never one kit copied
 
@@ -123,6 +135,7 @@ spam signature there is, and it is detected by the platforms, not by the readers
   venue's ledger row. Anything else is silently rewritten by the server, and the venue then cannot
   be told apart from direct traffic in the report.
 - The venue's rules read this run, not remembered from a previous one.
-- Every image opened and looked at.
-- Every factual claim in the copy traceable to code or to a screenshot.
+- The image brief complete — filename, purpose, subject, size and format for each, the thumbnail
+  named — with every size taken from the venue's own rules rather than remembered.
+- Every factual claim in the copy traceable to the code or to a `/docs` page.
 - The whole thing shown to the user in full, inline, before it goes anywhere.

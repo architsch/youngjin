@@ -32,8 +32,8 @@ look at the tail only when it fails.
 
 This matters more than it looks. `dist/` is committed, the deployment builds from source but the
 committed bundles are what a rollback and the local dev flow rely on, and the SSG step is what turns
-`public/devlog-<year>/source.txt` into the published pages. A devlog post written in phase 3 is not in
-the changeset until this has run.
+`public/devlog-<year>/source.txt` — and the screenshots the user added beside it — into the published
+pages. Phase 2 generates nothing, so the dev-log post is not in the changeset until this has run.
 
 If `checkBeforeCommit.js` reports a Node.js mismatch, stop. `nvm use` fixes it in a shell, but the
 hook runs in whatever environment the editor captured at launch — see

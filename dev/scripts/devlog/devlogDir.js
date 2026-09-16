@@ -1,5 +1,5 @@
 /**
- * Which dev-log directory to work in (shared by captureRunner.js and postLength.js). Posts are filed per
+ * Which dev-log directory to work in (used by postLength.js and the `devlog-post` skill). Posts are filed per
  * year (`public/devlog-<year>/`); a new year also needs a `src/server/ssg/data/libraryData.ts` entry, so
  * this prefers the current year's directory, falls back to the newest existing one, and reports which.
  */

@@ -1,6 +1,6 @@
 # Staging Playtest Workflow
 
-An AI-driven playtest against the deployed staging server, driven by the `staging-playtest` skill. It covers what E2E cannot: stored states that ordinary play never produces (outdated row versions, old content blobs, a large population of owned rooms) and what the server logs while real browser sessions play.
+An AI-driven playtest against the deployed staging server, driven by the `staging-playtest` skill. It covers what E2E cannot: stored states that ordinary play never produces (outdated row versions, old content blobs, a large population of owned rooms) and what the server logs while real browser sessions play. For a quick local run in a room built on request, see [sandbox.md](sandbox.md).
 
 | Script | Purpose |
 |---|---|
@@ -68,7 +68,7 @@ A real browser and socket. Data assertions use the page's authenticated request 
 ### Automation bridges
 Both are installed only on non-public deployments. **Arrange with one, act with the other.**
 - `AutomationBridgeUtil` (`window.__thingspool_automation`) is **read-only**: room contents, screen positions, raycasts, selection, camera. `dev/scripts/lib/interact.js` uses it to aim real pointer gestures, so clicks run the player's code path.
-- `AutomationSetupUtil` (`window.__thingspool_setup`) **only arranges**: player placement and orientation, and orbit camera angles (`dev/scripts/lib/setup.js`). A placement is exact on the client, but the server sweeps the move through collision, so never assert server positions after a `place`. Its build group (walls, textures, objects, zones, a free camera) works only in the sandbox single-player room, which exists for dev-log screenshots and is never used in playtests.
+- `AutomationSetupUtil` (`window.__thingspool_setup`) **only arranges**: player placement and orientation, and orbit camera angles (`dev/scripts/lib/setup.js`). A placement is exact on the client, but the server sweeps the move through collision, so never assert server positions after a `place`. Its build group (walls, textures, objects, zones, a free camera) works only in the sandbox single-player room, which is local and dev-only — see [sandbox.md](sandbox.md).
 
 ### Driving the 3D world
 - The orbit camera and editing tools exist only in edit mode, which is entered through the top-bar toggle.

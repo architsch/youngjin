@@ -24,12 +24,15 @@ kill -INT -<that process group id>
 Use SIGINT or SIGTERM, never SIGKILL, which orphans the Java emulators. E2E runs clear these ports themselves (`dev/scripts/e2eDevServer.js`).
 
 ## Dev users
-`npm run dev` seeds users into the emulator. Log in as one with `?devuser=N`, which sets the auth cookie. This works in dev mode only, and it is the only way to reach the admin UI locally.
+`npm run dev` seeds users into the emulator. Log in as one with `?devuser=N`, which sets the auth cookie. Dev mode only.
 
 | N | Username | Type |
 |---|---|---|
 | 1–3 | DevMember1–3 | Member |
 | 4 | DevAdmin | Admin |
+
+## Sandbox seats
+`?sandboxuser=<name>` opens the sandbox — an empty single-player room built on request — as a guest, and `?sandboxadmin=<name>` as an admin, which is the quick way to reach the door tools without a hub. Each name is its own reusable account, and these too are dev mode only. See [sandbox.md](../testing/playtest/sandbox.md).
 
 ## Cookie reset across restarts
 The emulator DB is empty on every fresh start, but browser cookies persist. The server stamps each browser with a boot id (`thingspool_dev_boot_id` cookie) that matches a marker document in the emulated DB. After a full restart the marker is gone, so stale browsers have their auth cookies cleared. A hot reload keeps the marker, so sessions survive. Dev only.

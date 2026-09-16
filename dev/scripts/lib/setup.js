@@ -152,8 +152,9 @@ async function swing(page, {azimuthDeg = 0, polarDeg, zoom} = {}, options = {})
 }
 
 // ─── The sandbox: building the set instead of finding one ───────────────
-// An empty single-player room (`--sandbox`) with a free camera, where sets are built on request so the
-// frame is composed rather than found. The subject is rendered by the real game; only the set is staged.
+// An empty single-player room with a free camera, where a local run builds what it needs instead of
+// going and finding it (see playtest/sandboxRunner.js). Only the set is staged: everything standing in
+// it is spawned, drawn and lit by the real game.
 
 /** Whether this page is in the sandbox, so a script can branch instead of failing on its first build. */
 const sandboxActive = (page) => callSandbox(page, "active");

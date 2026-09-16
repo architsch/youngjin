@@ -92,6 +92,9 @@ A line of the form `<name>` on its own becomes `public/devlog-<year>/name.jpg`, 
 screenshot's filename without the extension — `<orbit-camera-overview>` for
 `public/devlog-<year>/orbit-camera-overview.jpg`.
 
+**The user adds these**, along with the JPEGs themselves; the skill writes prose only. This section
+is here so a post being revised keeps the lines already in it, and so the user can be told the form.
+
 The **first** image in a post becomes its share-preview image. Appending `*` to the line
 (`<orbit-camera-detail>*`) hands that job to a different one instead.
 

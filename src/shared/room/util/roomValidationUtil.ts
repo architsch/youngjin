@@ -2,6 +2,7 @@ import User from "../../user/types/user";
 import { UserTypeEnumMap } from "../../user/types/userType";
 import Room from "../types/room";
 import { RoomTypeEnumMap } from "../types/roomType";
+import { SANDBOX_SINGLE_PLAYER_MODE } from "../../system/sharedConstants";
 
 // Permissions, derived only from the user and the room (identically on client and server).
 const RoomValidationUtil =
@@ -32,10 +33,14 @@ const RoomValidationUtil =
                 return false;
         }
     },
-    // Doors shape the world: admin-only and Hub-only (Regular rooms keep their generated door).
+    // Doors shape the world: admin-only, in Hubs (Regular rooms keep their generated door) and in the dev
+    // sandbox, whose edits stay local, so door tools can be tried without a hub.
     canUserManageDoors: (user: User, room: Room): boolean =>
     {
-        return RoomValidationUtil.userIsAdmin(user) && room.roomType == RoomTypeEnumMap.Hub;
+        if (!RoomValidationUtil.userIsAdmin(user))
+            return false;
+        return room.roomType == RoomTypeEnumMap.Hub ||
+            (room.roomType == RoomTypeEnumMap.SinglePlayer && room.roomName == SANDBOX_SINGLE_PLAYER_MODE);
     },
 }
 

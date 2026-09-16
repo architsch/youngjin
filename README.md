@@ -76,8 +76,9 @@ The ThingsPool source code is open source under the Apache License 2.0. It is bu
         - [Workflow](docs/testing/integration/workflow.md)
         - [Framework](docs/testing/integration/framework.md)
         - [Scenarios](docs/testing/integration/scenarios.md)
-    - Staging Playtest
-        - [Workflow](docs/testing/playtest/workflow.md)
+    - Playtest
+        - [Staging Workflow](docs/testing/playtest/workflow.md)
+        - [Local Sandbox](docs/testing/playtest/sandbox.md)
 
 ## License
 

@@ -5,8 +5,8 @@ const SandboxSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
     loadSteps: () =>
     {
         return {
-            // Sandbox: an empty, static room with a free camera (FreeCameraPose.moveTo/lookAt), used
-            // as a set for screenshots. Build it via ClientVoxelManager and ClientObjectManager.
+            // Sandbox: an empty, static room with a free camera (FreeCameraPose.moveTo/lookAt), where
+            // local playtests build what they test (see AutomationSetupUtil's sandbox group).
             "initial": {
                 startDelay: 0,
                 actionsOnStart: [

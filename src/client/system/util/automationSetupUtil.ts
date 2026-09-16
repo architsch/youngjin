@@ -49,7 +49,7 @@ import { cameraModeObservable, orbitCameraAnglesObservable, orbitCameraTargetOve
 // - In multiplayer rooms the server sweeps the move through collision from its own position, so
 //   `place` is exact only on this client. Never assert server positions after it.
 // The `sandbox` group also builds, but only inside the sandbox single-player room (checked on every
-// call). It is a studio for dev-log screenshots, never used in playtests.
+// call), where quick local playtests stand up what they need (see dev/scripts/playtest/sandboxRunner.js).
 
 // Player height in collision layers (headroom required to stand).
 const DOOR_FOOTPRINT_HEIGHT =
@@ -175,8 +175,9 @@ function requireSandboxRoom(what: string)
     if (room.roomType != RoomTypeEnumMap.SinglePlayer || room.roomName != SANDBOX_SINGLE_PLAYER_MODE)
     {
         throw new Error(`${what} only works in the sandbox room; this is "${room.roomName}". Open ` +
-            `the game with ?sandboxuser=<name> to get a sandbox, or in a room like this one stand ` +
-            `the player somewhere with place() and build through the editing gestures.`);
+            `the game with ?sandboxuser=<name> (or ?sandboxadmin=<name>) to get a sandbox, or in a ` +
+            `room like this one stand the player somewhere with place() and build through the editing ` +
+            `gestures.`);
     }
     return room;
 }
@@ -454,8 +455,8 @@ const AutomationSetupUtil =
                 return null;
             },
 
-            // Sandbox: an empty single-player room (?sandboxuser=<name>) with a free camera, where
-            // scenes are built by calls for dev-log screenshots.
+            // Sandbox: an empty single-player room (?sandboxuser=<name> or ?sandboxadmin=<name>) with a
+            // free camera, where a local playtest builds what it tests by calls.
             sandbox: {
                 active: () =>
                 {

@@ -101,7 +101,7 @@ an open list.
 Note what it does not do. It never says which button to press, where anything sits on screen, or how
 a storey is built. It does not explain, summarize itself, or thank anyone for reading.
 
-## Checks before publishing
+## Checks before handing it over
 
 Run every check in "The checks" at the end of
 [`../../../writing-style.md`](../../../writing-style.md) first. Then these four, which are the post's
@@ -109,6 +109,7 @@ own:
 
 1. **The title is a short noun phrase naming the feature.**
 2. **The opening stands alone** if everything below it is covered up.
-3. **Every screenshot kept is referenced**, and every reference resolves to a file.
+3. **The prose stands without pictures**, and carries no image line of your own — the user adds
+   those. A revision keeps the ones they have already added.
 4. `node dev/scripts/devlog/postLength.js` passes, and the post is near 600 characters rather than
    near the ceiling.

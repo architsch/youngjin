@@ -1,6 +1,6 @@
 ---
 name: distribution-push
-description: Find where ThingsPool can be published or promoted on the web and get it in front of players there — re-verify candidate venues against their current rules, check the game is ready to spend a first impression on one, build the copy and screenshots each venue asks for, hand over post-ready text for the places that require a human account, and record every submission and what came of it. Use when asked to promote, advertise, market, distribute, publish or launch the app, to find places to post it, to reach more players, or to work out why nobody is playing.
+description: Find where ThingsPool can be published or promoted on the web and get it in front of players there — re-verify candidate venues against their current rules, check the game is ready to spend a first impression on one, build the copy each venue asks for plus a brief for the images the user supplies, hand over post-ready text for the places that require a human account, and record every submission and what came of it. Use when asked to promote, advertise, market, distribute, publish or launch the app, to find places to post it, to reach more players, or to work out why nobody is playing.
 ---
 
 # Distribution Push
@@ -23,6 +23,12 @@ serves both skills, so neither invents its own register.
 
 Those posts are not only a source of copy. **A published dev-log page is itself something worth
 linking to**, and for a good number of venues it is the better thing to link to — see below.
+
+**The images are the user's.** They take every screenshot this project publishes, so no image is
+captured, generated, cropped or chosen here. What a kit carries instead is an **image brief**: what
+each image must show and why, the size and format the venue demands, and the filename to save it
+under. Getting that brief right — from the venue's own stated requirements — is this skill's share of
+the work, and a kit whose brief is vague costs the user a second round of guessing.
 
 ## What this skill owns
 
@@ -154,6 +160,10 @@ For every venue this run intends to use, fetch its actual submission or rules pa
 - Does it still accept new submissions at all?
 - Does it accept an **outbound link**, or does it require an uploaded build?
 - What are the hard limits — file sizes, formats, required assets, exclusivity?
+- **Exactly what images it asks for**: how many, at what pixel dimensions or aspect ratio, in what
+  format, under what maximum size, and which one becomes the thumbnail. This is the material the
+  image brief is built from, and it is the detail most often left as "a screenshot or two" — which
+  is what produces a rejected listing or a cover image cropped through the middle of the subject.
 - What are the community's own rules — self-promotion ratios, flair requirements, dedicated
   promotion threads, minimum account age?
 
@@ -181,7 +191,8 @@ If the user named a venue when invoking the skill, that is the run — verify it
 
 One kit per venue, under `temp/distribution/<venue-slug>/`. Full specification in
 [reference/submission-kit.md](reference/submission-kit.md). In short, each kit holds the copy at
-exactly the lengths that venue asks for, the screenshots it needs, and the tagged link.
+exactly the lengths that venue asks for, the brief for the images the user will supply, and the
+tagged link.
 
 Three rules that do not bend:
 
@@ -203,7 +214,7 @@ Three rules that do not bend:
 
   Curl the exact URL before handing it over; a link that 404s is the one mistake a venue will not
   forgive. The full mechanism is in [`docs/devOps/analytics.md`](../../../docs/devOps/analytics.md).
-- **Truth.** Every claim traceable to code or to a screenshot you looked at. Possibilities are
+- **Truth.** Every claim traceable to the code, or to a `/docs` page describing it. Possibilities are
   written as possibilities. This is the standard the house style sets for every piece of public
   copy, and for the same reason — a promotional claim that the game does not deliver is discovered
   within thirty seconds of the click.
@@ -235,7 +246,8 @@ handover contains everything needed to act without opening a file:
 - The exact body, in a copyable block, at the venue's length.
 - The tagged link, and which flair or category to choose.
 - The venue's rules that bear on this post, in one or two lines.
-- The images to attach, by path.
+- The image brief — what each image must show, its size and format, and where to save it — since
+  those are the one part of the kit the user still has to make.
 - The ledger row that will be filled in once it is posted.
 
 ### Lane C — never
@@ -288,7 +300,8 @@ produced nothing, write down that it produced nothing, so the next run spends th
 ## Step 8 — Report
 
 - What was posted, where, and by whom — separating what you did from what the user must still do.
-- The prepared kits, with the pasteable text inline so the user need not open files.
+- The prepared kits, with the pasteable text inline so the user need not open files, and each kit's
+  image brief inline beside it — a kit is not actionable until those images exist.
 - Findings that need a decision, each anchored to a `path:line`: embed blockers, oversized payloads,
   missing assets, a readiness gate that failed.
 - What the registry learned this run — venues newly verified, newly found, newly dead.

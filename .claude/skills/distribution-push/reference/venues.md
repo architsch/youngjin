@@ -7,6 +7,10 @@ facts — step 3 of the skill re-fetches the venue's own rules page before the v
 Entries marked **Unverified** were written from general knowledge and have never been checked
 against the venue itself. Treat their mechanics as a lead to confirm, not as instructions to follow.
 
+**Mechanics** is also where a verified entry records what images the venue asks for — how many, at
+what dimensions or aspect ratio, in what format, and which one becomes the thumbnail. That is what a
+kit's image brief is built from, and the user takes the screenshots to it.
+
 > **Reddit's rules cannot be read by the assistant.** Verified 2026-08-22: `old.reddit.com` now
 > answers "accounts are required to access old Reddit", the modern rules page renders its rules only
 > after sign-in, and the `.json` endpoints return an app shell to non-browser clients. A headless
