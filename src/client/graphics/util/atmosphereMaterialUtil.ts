@@ -5,8 +5,9 @@ import installSkyShader from "../shaders/skyShader";
 import ValueNoiseTextureUtil from "./valueNoiseTextureUtil";
 import { VALUE_NOISE_FBM_PERIOD } from "../shaders/valueNoiseGLSL";
 import { ATMOSPHERE_CLOUD_DRIFT, ATMOSPHERE_FOG_FRAGMENT_GLSL, ATMOSPHERE_FOG_FRAGMENT_PARS_GLSL,
-    ATMOSPHERE_FOG_VERTEX_GLSL, ATMOSPHERE_FOG_VERTEX_PARS_GLSL, ATMOSPHERE_SMOKE_CHURN }
-    from "../shaders/atmosphereGLSL";
+    ATMOSPHERE_FOG_LAMP_TINT, ATMOSPHERE_FOG_VERTEX_GLSL, ATMOSPHERE_FOG_VERTEX_PARS_GLSL,
+    ATMOSPHERE_SMOKE_CHURN } from "../shaders/atmosphereGLSL";
+import LightBlockMapMaterialUtil from "../light/util/lightBlockMapMaterialUtil";
 
 // Room air: the sky mesh, shared atmosphere uniforms, and cloud/smoke drift. Shader logic is in
 // atmosphereGLSL. Uniforms live here (not GraphicsManager) to avoid an import cycle.
@@ -21,6 +22,8 @@ const atmospherePeakColorUniform = { value: new THREE.Color(0, 0, 0) };
 const atmosphereGroundUniform = { value: defaultGroundVector() };
 // Smoke (every fogged material and the sky).
 const atmosphereSmokeUniform = { value: defaultSmokeVector() };
+// How much lamps tint the fog, zero until the room has a lamp at all (see setRoomHasLamps).
+const atmosphereFogLampTintUniform = { value: 0 };
 // Running drift totals in noise units, wrapped (see update).
 const atmosphereCloudDriftUniform = { value: new THREE.Vector3() };
 const atmosphereSmokeTravelUniform = { value: new THREE.Vector3() };
@@ -67,6 +70,7 @@ const AtmosphereMaterialUtil =
             shader.uniforms.atmospherePeakColor = atmospherePeakColorUniform;
             shader.uniforms.atmosphereGroundShape = atmosphereGroundUniform;
             bindSmokeUniforms(shader);
+            bindFogTintUniforms(shader);
             shader.uniforms.skyColor = skyColorUniform;
             shader.uniforms.skyInverseProjection = skyInverseProjectionUniform;
             shader.uniforms.skyFarDepth = skyFarDepthUniform;
@@ -95,6 +99,7 @@ const AtmosphereMaterialUtil =
 
             ValueNoiseTextureUtil.bindUniform(shader);
             bindSmokeUniforms(shader);
+            bindFogTintUniforms(shader);
 
             shader.vertexShader = ATMOSPHERE_FOG_VERTEX_PARS_GLSL + shader.vertexShader;
             // Where three.js computes fog depth, after the position is resolved.
@@ -119,6 +124,13 @@ const AtmosphereMaterialUtil =
     setSkyColor: (color: THREE.Color) =>
     {
         skyColorUniform.value.copy(color);
+    },
+
+    // Whether lamps brighten the fog around them (see atmosphereGLSL). A room with no lamps has
+    // nothing to tint it with, so the whole sample is skipped on a uniform, whole-frame branch.
+    setRoomHasLamps: (roomHasLamps: boolean) =>
+    {
+        atmosphereFogLampTintUniform.value = roomHasLamps ? ATMOSPHERE_FOG_LAMP_TINT : 0;
     },
 
     // Set together: one description of the room's air.
@@ -177,6 +189,14 @@ function bindSmokeUniforms(shader: THREE.WebGLProgramParametersWithUniforms)
     shader.uniforms.atmosphereSmoke = atmosphereSmokeUniform;
     shader.uniforms.atmosphereSmokeTravel = atmosphereSmokeTravelUniform;
     shader.uniforms.atmosphereSmokeChurn = atmosphereSmokeChurnUniform;
+}
+
+// Also shared with the sky: its fog is the same air, so it has to be tinted the same way or a
+// doorway shows a different fog from the wall around it.
+function bindFogTintUniforms(shader: THREE.WebGLProgramParametersWithUniforms)
+{
+    shader.uniforms.atmosphereFogLampTint = atmosphereFogLampTintUniform;
+    LightBlockMapMaterialUtil.bindColorUniform(shader);
 }
 
 // Advances a drift, wrapped to one field period.

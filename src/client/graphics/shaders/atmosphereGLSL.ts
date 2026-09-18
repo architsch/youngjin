@@ -1,5 +1,6 @@
 import VALUE_NOISE_GLSL from "./valueNoiseGLSL";
 import Vec3 from "../../../shared/math/types/vec3";
+import { LIGHT_BLOCK_MAP_SAMPLE_PARS_GLSL } from "./lightBlockMapGLSL";
 
 // Room atmosphere GLSL. Two fields: the sky is read by view *direction* (it's at infinity, so weather
 // stays put as the player walks); fog/smoke is read by world *position* (a volume the player stands
@@ -188,6 +189,56 @@ export const ATMOSPHERE_SMOKE_PARS_GLSL = `
     }
 `;
 
+// Brightest-channel lamp light at which the tint reaches half its maximum, in the units LightBlockMap
+// accumulates. Well above the level the head light yields at, so a distant wash barely colors the air
+// and a lamp's own pool is what shows.
+const ATMOSPHERE_FOG_TINT_HALF_LIGHT = 0.6;
+
+// The most a lamp's own color can add to the fog color, where its pool is brightest. Chosen against
+// the fog palette's own range so neither color takes the other over: the fog color stays the floor of
+// every channel, and the lamp rides on top of it. Zero on rooms with no lamps at all (see
+// AtmosphereMaterialUtil), which skips the sample for a whole frame.
+export const ATMOSPHERE_FOG_LAMP_TINT = 0.45;
+
+// Tints the fog by the lamp light in the air at the far end of the fogged stretch — the air just in
+// front of whatever is being looked at (see LightBlockMap). The fog color is an argument because this
+// block is prepended ahead of three.js's own fog declarations.
+//
+// The far end, not the middle of the stretch: a fragment is only fogged at all once it is distant, so
+// the middle lies in dark air well short of the lamp and no glow appears around it. Sampling the far
+// end also keeps the fog over a given point a property of the air there rather than of where the
+// player happens to be standing.
+export const ATMOSPHERE_FOG_TINT_PARS_GLSL = `
+    uniform float atmosphereFogLampTint;
+    ${LIGHT_BLOCK_MAP_SAMPLE_PARS_GLSL}
+
+    const float ATMOSPHERE_FOG_TINT_HALF_LIGHT = ${ATMOSPHERE_FOG_TINT_HALF_LIGHT.toFixed(4)};
+
+    vec3 atmosphereFogColor(vec3 baseColor, vec3 airPos)
+    {
+        if (atmosphereFogLampTint <= 0.0)
+            return baseColor;
+
+        float openness;
+        vec3 lit = lightBlockMapLightAt(airPos, openness);
+
+        // How much lamp light is in this air, and what color it is, kept apart. The amount has to
+        // saturate, since lamp light is unbounded; the color must not, or compressing the brightest
+        // channel first would wash a strong lamp white. Guarded rather than branched: with no light
+        // the amount is zero, so the direction it points in stops mattering.
+        float peak = max(lit.r, max(lit.g, lit.b));
+        float amount = peak / (peak + ATMOSPHERE_FOG_TINT_HALF_LIGHT);
+        vec3 lampColor = lit / max(peak, 0.0001);
+
+        // The lamp's color rides on top of the fog's, in the fog's own display space. Neither takes
+        // the other over: the fog color stays the floor of every channel (a lamp can only ever add,
+        // as one can only ever add to a surface), while the lamp keeps its own hue instead of being
+        // filtered through the fog's. Scaling the fog color instead leaves its hue in charge, so a
+        // green lamp in slate air can only ever come out slate-green.
+        return baseColor + lampColor * (amount * atmosphereFogLampTint);
+    }
+`;
+
 // World position from the vertex stage (cheaper than reconstructing it per fragment).
 export const ATMOSPHERE_FOG_VERTEX_PARS_GLSL = `
     #ifdef USE_FOG
@@ -211,11 +262,12 @@ export const ATMOSPHERE_FOG_FRAGMENT_PARS_GLSL = `
         varying vec3 vAtmosphereWorldPos;
     #endif
     ${ATMOSPHERE_SMOKE_PARS_GLSL}
+    ${ATMOSPHERE_FOG_TINT_PARS_GLSL}
 `;
 
-// Replaces three.js's fog chunk (distance math verbatim) so smoke can scale fog *coverage*; the color
-// is the plain fog color. The field only runs when strength > 0 (uniform, whole-frame branch) and the
-// fragment is actually fogged (usually false for nearby surfaces).
+// Replaces three.js's fog chunk (distance math verbatim) so smoke can scale fog *coverage* and lamps
+// can tint its color. Both only run when the fragment is actually fogged (usually false for nearby
+// surfaces), and each is additionally skipped by its own uniform, whole-frame branch.
 export const ATMOSPHERE_FOG_FRAGMENT_GLSL = `
     #ifdef USE_FOG
         #ifdef FOG_EXP2
@@ -223,11 +275,15 @@ export const ATMOSPHERE_FOG_FRAGMENT_GLSL = `
         #else
             float fogFactor = smoothstep( fogNear, fogFar, vFogDepth );
         #endif
-        if (atmosphereSmoke.y > 0.0 && fogFactor > 0.0)
+        if (fogFactor > 0.0)
         {
-            fogFactor *= 1.0 -
-                atmosphereSmoke.y * atmosphereSmokeThinning(vAtmosphereWorldPos);
+            if (atmosphereSmoke.y > 0.0)
+            {
+                fogFactor *= 1.0 -
+                    atmosphereSmoke.y * atmosphereSmokeThinning(vAtmosphereWorldPos);
+            }
+            gl_FragColor.rgb = mix(gl_FragColor.rgb,
+                atmosphereFogColor(fogColor, vAtmosphereWorldPos), fogFactor);
         }
-        gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor, fogFactor);
     #endif
 `;

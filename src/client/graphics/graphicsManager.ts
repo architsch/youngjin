@@ -188,6 +188,7 @@ const GraphicsManager =
         updatePixelRatio();
         // Once per frame, so dragging a lamp costs one propagation per frame.
         lightBlockMap.update();
+        AtmosphereMaterialUtil.setRoomHasLamps(lightBlockMap.hasLightSources());
         AtmosphereMaterialUtil.update(camera);
         gameRenderer.render(scene, camera);
         overlayRenderer.render(scene, camera);

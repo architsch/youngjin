@@ -21,6 +21,13 @@ const LightBlockMapMaterialUtil =
         lightBlockMapFluxUniform.value = fluxTexture;
     },
 
+    // For splices that sample by world position alone (the fog and the sky); the lit path below
+    // binds the flux as well.
+    bindColorUniform(shader: THREE.WebGLProgramParametersWithUniforms)
+    {
+        shader.uniforms.lightBlockMapColor = lightBlockMapColorUniform;
+    },
+
     // Chains onto the material's existing onBeforeCompile. Returns the material for wrapping.
     addSampling<T extends THREE.Material>(material: T): T
     {
@@ -29,7 +36,7 @@ const LightBlockMapMaterialUtil =
         {
             existingOnBeforeCompile.call(material, shader, renderer);
 
-            shader.uniforms.lightBlockMapColor = lightBlockMapColorUniform;
+            LightBlockMapMaterialUtil.bindColorUniform(shader);
             shader.uniforms.lightBlockMapFlux = lightBlockMapFluxUniform;
 
             shader.vertexShader = LIGHT_BLOCK_MAP_PARS_GLSL + shader.vertexShader;

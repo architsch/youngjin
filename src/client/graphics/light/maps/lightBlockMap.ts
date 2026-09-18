@@ -39,6 +39,9 @@ export default class LightBlockMap
 
     private lightSourceByObjectId: { [objectId: string]: LightSource } = {};
 
+    // Counted rather than derived, since it is read every frame (see hasLightSources).
+    private numLightSources = 0;
+
     // Held here rather than read from App, which would create an import cycle.
     private voxels: Voxel[] | undefined;
 
@@ -68,11 +71,21 @@ export default class LightBlockMap
     {
         this.voxels = voxels;
         this.lightSourceByObjectId = {};
+        this.numLightSources = 0;
         this.needsRecomputation = true;
+    }
+
+    // Whether the room has any lamp at all. The fog's lamp tint costs nothing when it has none (see
+    // AtmosphereMaterialUtil).
+    hasLightSources(): boolean
+    {
+        return this.numLightSources > 0;
     }
 
     addLightSource(objectId: string, lightSource: LightSource)
     {
+        if (this.lightSourceByObjectId[objectId] == undefined)
+            ++this.numLightSources;
         this.lightSourceByObjectId[objectId] = lightSource;
         this.needsRecomputation = true;
     }
@@ -82,6 +95,7 @@ export default class LightBlockMap
         if (this.lightSourceByObjectId[objectId] == undefined)
             return;
         delete this.lightSourceByObjectId[objectId];
+        --this.numLightSources;
         this.needsRecomputation = true;
     }
 

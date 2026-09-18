@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import { ATMOSPHERE_GROUND_PARS_GLSL, ATMOSPHERE_PARS_GLSL, ATMOSPHERE_SMOKE_PARS_GLSL }
-    from "./atmosphereGLSL";
+import { ATMOSPHERE_FOG_TINT_PARS_GLSL, ATMOSPHERE_GROUND_PARS_GLSL, ATMOSPHERE_PARS_GLSL,
+    ATMOSPHERE_SMOKE_PARS_GLSL } from "./atmosphereGLSL";
 import ValueNoiseTextureUtil from "../util/valueNoiseTextureUtil";
 import { NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../../shared/system/sharedConstants";
 
@@ -26,6 +26,7 @@ const FRAGMENT_PARS_GLSL = `
     ${ATMOSPHERE_PARS_GLSL}
     ${ATMOSPHERE_GROUND_PARS_GLSL}
     ${ATMOSPHERE_SMOKE_PARS_GLSL}
+    ${ATMOSPHERE_FOG_TINT_PARS_GLSL}
 
     // Room footprint on XZ, starting at the origin (see VoxelQueryUtil).
     const vec2 SKY_ROOM_SIZE = vec2(${NUM_VOXEL_COLS.toFixed(1)}, ${NUM_VOXEL_ROWS.toFixed(1)});
@@ -49,9 +50,12 @@ const FRAGMENT_PARS_GLSL = `
 // sampled far away from glittering near the zenith. Placed after fog_pars_fragment, which it reads.
 const FOG_PARS_GLSL = `
     #ifdef USE_FOG
-        float skyFogCoverage(vec3 ray)
+        float skyFogCoverage(vec3 ray, out vec3 exitPos)
         {
             float depth = skyRoomExitDepth(cameraPosition, ray);
+            // Where the ray leaves the room: the far end of the air this fog is made of, so it is
+            // tinted over the same stretch a surface's fog is.
+            exitPos = cameraPosition + ray * depth;
             #ifdef FOG_EXP2
                 float coverage = 1.0 - exp( - fogDensity * fogDensity * depth * depth );
             #else
@@ -77,7 +81,8 @@ const FRAGMENT_GLSL = `
     vec3 skyRay = (skyViewRay / -skyViewRay.z) * mat3(viewMatrix);
     vec3 skyDir = normalize(skyRay);
     #ifdef USE_FOG
-        float skyFog = skyFogCoverage(skyRay);
+        vec3 skyFogExitPos;
+        float skyFog = skyFogCoverage(skyRay, skyFogExitPos);
     #else
         float skyFog = 0.0;
     #endif
@@ -89,7 +94,11 @@ const FRAGMENT_GLSL = `
 // same program rather than as a second pass.
 const FOG_GLSL = `
     #ifdef USE_FOG
-        gl_FragColor.rgb = mix(gl_FragColor.rgb, fogColor, skyFog);
+        if (skyFog > 0.0)
+        {
+            gl_FragColor.rgb = mix(gl_FragColor.rgb,
+                atmosphereFogColor(fogColor, skyFogExitPos), skyFog);
+        }
     #endif
 `;
 

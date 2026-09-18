@@ -16,10 +16,15 @@ export const LIGHT_BLOCK_MAP_PARS_GLSL = `
     varying vec3 vLightBlockMapWorldNormal;
 `;
 
-export const LIGHT_BLOCK_MAP_FRAGMENT_PARS_GLSL = `
-    ${LIGHT_BLOCK_MAP_PARS_GLSL}
+// The color half of the map, read by world position alone. Split out and include-guarded because the
+// fog samples it too (see atmosphereGLSL) and one material can splice both.
+export const LIGHT_BLOCK_MAP_SAMPLE_PARS_GLSL = `
+    #ifndef LIGHT_BLOCK_MAP_SAMPLE_GLSL_INCLUDED
+    #define LIGHT_BLOCK_MAP_SAMPLE_GLSL_INCLUDED
     uniform sampler3D lightBlockMapColor;
-    uniform sampler3D lightBlockMapFlux;
+
+    // Under this filtered openness the sample sits inside a wall, where there is no light to read.
+    const float LIGHT_BLOCK_MAP_MIN_OPENNESS = 0.004;
 
     // Texture axes are (layer, col, row), following the block index layout.
     vec3 lightBlockMapWorldToUVW(vec3 worldPos)
@@ -29,6 +34,30 @@ export const LIGHT_BLOCK_MAP_FRAGMENT_PARS_GLSL = `
             worldPos.x * ${(1 / NUM_VOXEL_COLS).toFixed(8)},
             worldPos.z * ${(1 / NUM_VOXEL_ROWS).toFixed(8)});
     }
+
+    // Lamp light at a world position, plus the filtered openness, which the caller needs to
+    // renormalize anything else it reads at the same point.
+    vec3 lightBlockMapLightAt(vec3 worldPos, out float openness)
+    {
+        vec4 texel = texture(lightBlockMapColor, lightBlockMapWorldToUVW(worldPos));
+
+        // Alpha = filtered openness. Dividing it out stops nearby solid (lightless) blocks from
+        // darkening samples.
+        openness = texel.a;
+        if (openness < LIGHT_BLOCK_MAP_MIN_OPENNESS)
+            return vec3(0.0);
+
+        // Stored as sqrt(brightness).
+        vec3 lit = texel.rgb / openness;
+        return lit * lit * ${LIGHT_BLOCK_MAP_MAX_BRIGHTNESS.toFixed(4)};
+    }
+    #endif
+`;
+
+export const LIGHT_BLOCK_MAP_FRAGMENT_PARS_GLSL = `
+    ${LIGHT_BLOCK_MAP_PARS_GLSL}
+    ${LIGHT_BLOCK_MAP_SAMPLE_PARS_GLSL}
+    uniform sampler3D lightBlockMapFlux;
 
     // Returns lamp light at this fragment, plus the direction toward the light (view space, the
     // three.js convention), the facing cosine against the final perturbed normal, and the share of
@@ -42,20 +71,14 @@ export const LIGHT_BLOCK_MAP_FRAGMENT_PARS_GLSL = `
 
         vec3 samplePos = vLightBlockMapWorldPos +
             vLightBlockMapWorldNormal * ${HALF_BLOCK_GLSL};
-        vec3 uvw = lightBlockMapWorldToUVW(samplePos);
 
-        vec4 texel = texture(lightBlockMapColor, uvw);
-
-        // Alpha = filtered openness. Dividing it out stops nearby solid (lightless) blocks from
-        // darkening samples; ~0 means the sample is inside a wall.
-        if (texel.a < 0.004)
+        float openness;
+        vec3 lit = lightBlockMapLightAt(samplePos, openness);
+        // ~0 means the sample is inside a wall.
+        if (openness < LIGHT_BLOCK_MAP_MIN_OPENNESS)
             return vec3(0.0);
 
-        // Stored as sqrt(brightness).
-        vec3 lit = texel.rgb / texel.a;
-        lit = lit * lit * ${LIGHT_BLOCK_MAP_MAX_BRIGHTNESS.toFixed(4)};
-
-        vec4 fluxTexel = texture(lightBlockMapFlux, uvw);
+        vec4 fluxTexel = texture(lightBlockMapFlux, lightBlockMapWorldToUVW(samplePos));
         vec3 flux = fluxTexel.rgb * 2.0 - 1.0;
         float fluxLength = length(flux);
         // Flux points along travel, so the light direction is its negation. Zero = no light.
@@ -65,7 +88,7 @@ export const LIGHT_BLOCK_MAP_FRAGMENT_PARS_GLSL = `
             facing = max(0.0, dot(viewSpaceNormal, lightDir));
         }
         // Renormalized by openness like the color.
-        directionalShare = clamp(fluxTexel.a / texel.a, 0.0, 1.0);
+        directionalShare = clamp(fluxTexel.a / openness, 0.0, 1.0);
         return lit;
     }
 `;
