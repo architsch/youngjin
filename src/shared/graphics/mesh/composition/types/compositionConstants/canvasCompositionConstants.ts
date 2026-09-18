@@ -21,10 +21,7 @@ export const CANVAS_BOARD_RELIEF = 0.01;
 export const CANVAS_PICTURE_LIFT = 0.005;
 
 const CanvasCompositionConstants = {
-    // Band widths on offer (one stored step each; see CanvasCompositionCodec).
-    minMouldingThickness: 0.04,
-    maxMouldingThickness: 0.16,
-    mouldingThicknessStep: 0.02,
+    // Band widths are the shared ones (see MouldingCompositionConstants).
 
     // Coordinated finishes (snapped to the "Timber" palette so they round-trip). Frames stay
     // mid-brightness, as on doors (see DoorCompositionConstants); the inner stays a quieter mid-tone,
@@ -46,11 +43,11 @@ const CanvasCompositionConstants = {
         preset("#3f8f7a", "#a29b86", 0.08, true),  // verdigris, grey putty inside
         preset("#8b4818", "#c8a271", 0.10, false), // cherry, light timber inside
         preset("#5c5c5a", "#bdb59d", 0.04, false), // slim iron, putty inside
-    ] as Omit<CanvasCompositionParams, "ids" | "framed">[],
+    ] as Omit<CanvasCompositionParams, "framed">[],
 };
 
 function preset(frame: string, inner: string, mouldingThickness: number,
-    mouldingIsConvex: boolean): Omit<CanvasCompositionParams, "ids" | "framed">
+    mouldingIsConvex: boolean): Omit<CanvasCompositionParams, "framed">
 {
     const snap = (hex: string) => ColorUtil.paletteIndexToRGB("Timber",
         ColorUtil.rgbToPaletteIndex("Timber", ColorUtil.hexToRGB(hex)));

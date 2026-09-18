@@ -8,7 +8,6 @@ import { MAX_LAMP_INTENSITY, MAX_LAMP_RANGE, MIN_LAMP_INTENSITY,
 import ColorUtil from "../../../math/util/colorUtil";
 import NumUtil from "../../../math/util/numUtil";
 import StringUtil from "../../../math/util/stringUtil";
-import MeshDataUtil from "../../../graphics/mesh/util/meshDataUtil";
 import Room from "../../../room/types/room";
 import { COLLISION_LAYER_HEIGHT, INSTANCED_EMISSIVE_MATERIAL_ID,
     LIGHT_COLOR_PALETTE_NAME,
@@ -25,8 +24,6 @@ import { ObjectMetadataKeyEnumMap } from "../objectMetadataKey";
 // @docs/graphics/instanced_mesh_composition.md).
 const COMPOSITION_CODEC_VERSION = 0;
 
-// instancedMeshId suffix of unlit parts, whose color comes from the lamp's light.
-const EMISSIVE_MESH_ID_SUFFIX = MeshDataUtil.getInstancedMeshId("", INSTANCED_EMISSIVE_MATERIAL_ID);
 
 // One voxel wide, one layer tall (attachments claim whole columns). This is the collider; the tested
 // box is slightly inset (see PhysicsColliderStateUtil).
@@ -121,7 +118,8 @@ const WallLampObjectTypeConfig =
                         readColorIndex(getLightProperties(obj)));
                     for (const part of parts)
                     {
-                        if (part.instancedMeshId.endsWith(EMISSIVE_MESH_ID_SUFFIX))
+                        // Unlit parts take their color from the lamp's light.
+                        if (part.materialId == INSTANCED_EMISSIVE_MATERIAL_ID)
                             part.color = color;
                     }
                     return {params, parts};

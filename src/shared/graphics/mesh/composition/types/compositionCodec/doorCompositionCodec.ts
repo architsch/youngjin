@@ -1,10 +1,9 @@
 import RandomNumberGenerator from "../../../../../math/types/randomNumberGenerator";
 import ColorUtil from "../../../../../math/util/colorUtil";
 import StringUtil from "../../../../../math/util/stringUtil";
-import { INSTANCED_WOOD_MATERIAL_ID, ZERO_VEC3 } from "../../../../../system/sharedConstants";
-import MeshDataUtil from "../../../util/meshDataUtil";
+import { ZERO_VEC3 } from "../../../../../system/sharedConstants";
 import { InstancedMeshCompositionBuilderMap } from "../../maps/instancedMeshCompositionBuilderMap";
-import DoorCompositionConstants, { DOOR_GEOMETRY_ID } from "../compositionConstants/doorCompositionConstants";
+import DoorCompositionConstants from "../compositionConstants/doorCompositionConstants";
 import DoorCompositionParams from "../compositionParams/doorCompositionParams";
 import { InstancedMeshCompositionParams } from "../compositionParams/instancedMeshCompositionParams";
 import InstancedMeshCompositionPart from "../instancedMeshCompositionPart";
@@ -66,13 +65,8 @@ function decodeColor(strToDecode: string, charIndex: number)
 
 function getBaseParams(): DoorCompositionParams
 {
-    // Every part (knob included) is a moulded-timber quad; parts differ only in color and moulding.
-    const ids = {
-        instancedMeshId_square: MeshDataUtil.getInstancedMeshId(
-            DOOR_GEOMETRY_ID, INSTANCED_WOOD_MATERIAL_ID),
-    };
     const colors = {panel: ZERO_VEC3, label: ZERO_VEC3, knob: ZERO_VEC3};
-    return {ids, colors};
+    return {colors};
 }
 
 function constructParts(params: DoorCompositionParams,

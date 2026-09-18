@@ -1,6 +1,7 @@
 import Vec3 from "../../../../../math/types/vec3";
-import { BACKWARD_DIR } from "../../../../../system/sharedConstants";
-import { DoorRegion, DOOR_PANEL_ORIGIN_Y } from "../compositionConstants/doorCompositionConstants";
+import { BACKWARD_DIR, INSTANCED_WOOD_MATERIAL_ID } from "../../../../../system/sharedConstants";
+import { DoorRegion, DOOR_GEOMETRY_ID,
+    DOOR_PANEL_ORIGIN_Y } from "../compositionConstants/doorCompositionConstants";
 import InstancedMeshCompositionBuilder from "./instancedMeshCompositionBuilder";
 
 export default class DoorCompositionBuilder extends InstancedMeshCompositionBuilder
@@ -16,7 +17,8 @@ export default class DoorCompositionBuilder extends InstancedMeshCompositionBuil
     protected addRegion(region: DoorRegion, color: Vec3, mirrored: boolean = false)
     {
         this.addPartRelativeToBase({
-            instancedMeshId: this.params.ids.instancedMeshId_square,
+            geometryId: DOOR_GEOMETRY_ID,
+            materialId: INSTANCED_WOOD_MATERIAL_ID,
             // Faces local forward; the object's rotation carries the wall facing (as in CanvasGameObject).
             dir: BACKWARD_DIR,
             offset: {

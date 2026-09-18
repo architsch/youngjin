@@ -72,9 +72,7 @@ const IsometricProjectionUtil =
 
 function addPartPolygons(part: InstancedMeshCompositionPart, polygons: Vec3[][])
 {
-    // A part's instancedMeshId carries the geometry it is drawn from (see MeshDataUtil).
-    const geometryId = part.instancedMeshId.split("+")[0];
-    switch (geometryId)
+    switch (part.geometryId)
     {
         case "Box":
             addBoxPolygons(part.offset, part.scale, polygons);

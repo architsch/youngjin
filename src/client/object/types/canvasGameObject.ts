@@ -16,8 +16,6 @@ import ImageMapUtil from "../../../shared/graphics/image/util/imageMapUtil";
 import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
 import { graphicsContextRestoredObservable } from "../../system/clientObservables";
 
-const BOARD_SUFFIX = MeshDataUtil.getInstancedMeshId("", INSTANCED_WOOD_MATERIAL_ID);
-
 // The frame is composed from the canvas's wood inputs (see CanvasCompositionCodec); the picture is drawn
 // here, into this canvas's cell of the room's shared render target, on the board inside its band (or across
 // the whole footprint when there is no frame).
@@ -157,7 +155,7 @@ export default class CanvasGameObject extends GameObject
 
     private placementIsInSync(): boolean
     {
-        if (this.instancedMeshComposer.getPartWithSuffix(BOARD_SUFFIX) !== this.placedBoard)
+        if (this.instancedMeshComposer.getPartWithMaterial(INSTANCED_WOOD_MATERIAL_ID) !== this.placedBoard)
             return false;
         this.obj.updateMatrixWorld(); // Recurses to visualObj, so the compared matrix is current.
         return this.visualObj.matrixWorld.equals(this.bakedWorldMatrix);
@@ -167,7 +165,7 @@ export default class CanvasGameObject extends GameObject
     // board always spans the footprint, so without one the picture spans it instead.
     private updateMeshInstanceTransform()
     {
-        const board = this.instancedMeshComposer.getPartWithSuffix(BOARD_SUFFIX);
+        const board = this.instancedMeshComposer.getPartWithMaterial(INSTANCED_WOOD_MATERIAL_ID);
         this.placedBoard = board;
         const inset = board ? 2 * board.mouldingThickness : 0;
         this.instancedMeshGraphics.updateInstanceTransform(

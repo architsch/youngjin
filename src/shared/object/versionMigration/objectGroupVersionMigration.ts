@@ -122,7 +122,7 @@ const ObjectGroupVersionMigration =
 }
 
 function legacyCanvasFrame(frame: string, inner: string, mouldingThickness: number,
-    mouldingIsConvex: boolean): Omit<CanvasCompositionParams, "ids">
+    mouldingIsConvex: boolean): CanvasCompositionParams
 {
     return {colors: {frame: ColorUtil.hexToRGB(frame), inner: ColorUtil.hexToRGB(inner)},
         mouldingThickness, mouldingIsConvex, framed: true};

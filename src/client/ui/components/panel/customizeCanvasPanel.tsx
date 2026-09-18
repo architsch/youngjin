@@ -5,6 +5,7 @@ import ColorUtil from "../../../../shared/math/util/colorUtil";
 import Vec3 from "../../../../shared/math/types/vec3";
 import CanvasCompositionParams from "../../../../shared/graphics/mesh/composition/types/compositionParams/canvasCompositionParams";
 import CanvasCompositionConstants from "../../../../shared/graphics/mesh/composition/types/compositionConstants/canvasCompositionConstants";
+import MouldingCompositionConstants from "../../../../shared/graphics/mesh/composition/types/compositionConstants/mouldingCompositionConstants";
 import StepperInput from "../input/stepperInput";
 import Checkbox from "../input/checkbox";
 import PaletteColorInput from "../input/paletteColorInput";
@@ -87,9 +88,9 @@ export default function CustomizeCanvasPanel({ selection, onClose }: Props)
                 <RangeInput
                     currValue={String(params.mouldingThickness)}
                     setValue={(value: string) => applyEdit((p) => p.mouldingThickness = Number(value))}
-                    min={String(CanvasCompositionConstants.minMouldingThickness)}
-                    max={String(CanvasCompositionConstants.maxMouldingThickness)}
-                    step={String(CanvasCompositionConstants.mouldingThicknessStep)}
+                    min={String(MouldingCompositionConstants.minMouldingThickness)}
+                    max={String(MouldingCompositionConstants.maxMouldingThickness)}
+                    step={String(MouldingCompositionConstants.mouldingThicknessStep)}
                     showValueInput={false}
                     additionalClassNames="w-28"
                 />

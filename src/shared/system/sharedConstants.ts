@@ -123,12 +123,15 @@ export const DIR_VEC_BY_CODE: Vec3[] = [
 export const FORWARD_DIR: Vec3 = {x: 0, y: 0, z: -1};
 export const BACKWARD_DIR: Vec3 = {x: 0, y: 0, z: 1};
 
+// Geometry codes in composition strings (see DefaultCompositionCodec). Append-only, as material
+// codes are.
 export const GEOMETRY_ID_BY_CODE: string[] = [
     "Square", // 0
     "Box", // 1
     "Icosphere", // 2
     "Cone", // 3
     "Capsule", // 4
+    "Cylinder", // 5
 ];
 export const GEOMETRY_CODE_BY_ID: {[geometryId: string]: number} = {
     "Square": 0,
@@ -136,7 +139,12 @@ export const GEOMETRY_CODE_BY_ID: {[geometryId: string]: number} = {
     "Icosphere": 2,
     "Cone": 3,
     "Capsule": 4,
+    "Cylinder": 5,
 };
+
+// Depth between stacked coplanar surfaces. Real relief rather than a tiny offset, which avoids
+// z-fighting on low-precision mobile depth buffers (see DefaultCompositionCodec, DoorCompositionConstants).
+export const RELIEF_STEP = 0.02;
 
 export const INSTANCED_COLOR_MATERIAL_ID = new InstancedColorMaterialParams().getMaterialId();
 export const INSTANCED_TIN_MATERIAL_ID = new InstancedTinMaterialParams().getMaterialId();
@@ -168,6 +176,15 @@ export const INSTANCE_COLORED_MATERIAL_IDS: string[] = [
     INSTANCED_WOOD_MATERIAL_ID,
     INSTANCED_EMISSIVE_MATERIAL_ID,
 ];
+
+// The palette a material's colors are stored as, one char each (see DefaultCompositionCodec). Every
+// instance-colored material needs an entry, or its parts encode without a color.
+export const COMPOSITION_PALETTE_NAME_BY_MATERIAL_ID: {[materialId: string]: string} = {
+    [INSTANCED_COLOR_MATERIAL_ID]: "Scenery",
+    [INSTANCED_TIN_MATERIAL_ID]: "Player",
+    [INSTANCED_WOOD_MATERIAL_ID]: "Timber",
+    [INSTANCED_EMISSIVE_MATERIAL_ID]: LIGHT_COLOR_PALETTE_NAME,
+};
 
 export const VOXEL_TEXTURE_PACK_MATERIAL_ID = "voxelTexturePack";
 export const VOXEL_QUAD_GEOMETRY_ID = "Square";

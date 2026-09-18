@@ -4,6 +4,8 @@ import RaycastHitResult3 from "../types/raycastHitResult3";
 import Vector3DUtil from "./vector3DUtil";
 import { DIR_VEC_BY_NAME } from "../../system/sharedConstants";
 
+const WORLD_UP: Vec3 = {x: 0, y: 1, z: 0};
+
 const Geometry3DUtil =
 {
     areAABBsEqual: (a: AABB3, b: AABB3): boolean =>
@@ -36,6 +38,36 @@ const Geometry3DUtil =
             center: {x: 0.5*(x1+x2), y: 0.5*(y1+y2), z: 0.5*(z1+z2)},
             halfSize: {x: 0.5*(x2-x1), y: 0.5*(y2-y1), z: 0.5*(z2-z1)}
         };
+    },
+    // The in-plane axes a flat part gets when it is turned to face dir. Mirrors how three.js orients
+    // an Object3D by lookAt, including its nudge for a dir along the up axis, so this agrees with what
+    // is drawn (see InstancedPartUtil.bakePartMatrix).
+    getFacingBasis: (dir: Vec3): {right: Vec3, up: Vec3} =>
+    {
+        let forward = (Vector3DUtil.lengthSqr(dir) == 0) ? {x: 0, y: 0, z: 1} : dir;
+        forward = Vector3DUtil.normalize(forward);
+
+        let right = Vector3DUtil.cross(WORLD_UP, forward);
+        if (Vector3DUtil.lengthSqr(right) == 0)
+        {
+            forward = Vector3DUtil.normalize({x: forward.x, y: forward.y, z: forward.z + 0.0001});
+            right = Vector3DUtil.cross(WORLD_UP, forward);
+        }
+        right = Vector3DUtil.normalize(right);
+
+        return {right, up: Vector3DUtil.cross(forward, right)};
+    },
+    // Whether two squares that share a facing overlap once projected onto their common plane. Their
+    // separation along dir is ignored, so parallel squares at different depths still count as
+    // overlapping.
+    squaresOverlap: (offsetA: Vec3, scaleA: Vec3, offsetB: Vec3, scaleB: Vec3, dir: Vec3): boolean =>
+    {
+        const basis = Geometry3DUtil.getFacingBasis(dir);
+        const between = Vector3DUtil.subtract(offsetB, offsetA);
+        return Math.abs(Vector3DUtil.dot(between, basis.right))
+                < 0.5 * (Math.abs(scaleA.x) + Math.abs(scaleB.x))
+            && Math.abs(Vector3DUtil.dot(between, basis.up))
+                < 0.5 * (Math.abs(scaleA.y) + Math.abs(scaleB.y));
     },
     // Ray scale factor that moves the source AABB to its first contact with the target (1 = no hit).
     // Slab method (see Cyrus-Beck clipping).

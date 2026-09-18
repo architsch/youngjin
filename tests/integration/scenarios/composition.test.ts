@@ -6,6 +6,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import fc from "fast-check";
+import * as THREE from "three";
 import { runScenario } from "../helpers/scenarioRunner";
 import { getPendingSignals } from "../helpers/invariants";
 import { regularRoom, namedUser, usersInRoom } from "../helpers/scenarioPresets";
@@ -28,11 +29,16 @@ import { InstancedMeshCompositionBuilderMap } from "../../../src/shared/graphics
 import { InstancedMeshCompositionCodecMap } from "../../../src/shared/graphics/mesh/composition/maps/instancedMeshCompositionCodecMap";
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionCodecType";
 import PreEncodedCompositionStringMap from "../../../src/shared/graphics/mesh/composition/maps/preEncodedCompositionStringMap";
+import InstancedMeshCapacityMap from "../../../src/shared/graphics/mesh/composition/maps/instancedMeshCapacityMap";
+import InstancedMeshIdMap from "../../../src/shared/graphics/mesh/maps/instancedMeshIdMap";
 import StringUtil from "../../../src/shared/math/util/stringUtil";
 import InstancedMeshCompositionPart from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
 import { InstancedMeshCompositionParams } from "../../../src/shared/graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
-import { OBJECT_INSTANCED_MESH_COMPOSITION_METADATA_MAX_LENGTH } from "../../../src/shared/system/sharedConstants";
+import DirUtil from "../../../src/shared/math/util/dirUtil";
+import Geometry3DUtil from "../../../src/shared/math/util/geometry3DUtil";
+import { DIR_VEC_BY_CODE,
+    OBJECT_INSTANCED_MESH_COMPOSITION_METADATA_MAX_LENGTH } from "../../../src/shared/system/sharedConstants";
 
 const COMPOSITION_KEY = ObjectMetadataKeyEnumMap.InstancedMeshComposition;
 
@@ -42,11 +48,11 @@ function expectRenderableBody(
 {
     expect(parts.length).toBeGreaterThan(0);
 
-    // Every part must use a mesh the composition declares.
-    const declaredMeshIds = Object.values(params.ids as {[id: string]: string});
+    // Every part must name a mesh that was sized for it, or it goes undrawn.
     for (const part of parts)
     {
-        expect(declaredMeshIds).toContain(part.instancedMeshId);
+        expect(InstancedMeshCapacityMap).toHaveProperty(
+            InstancedMeshIdMap.getInstancedMeshId(part.geometryId, part.materialId));
         for (const vec of [part.offset, part.dir, part.scale])
         {
             expect(Number.isFinite(vec.x)).toBe(true);
@@ -444,7 +450,7 @@ describe("door mesh composition", () => {
         expect(DOOR_CODEC_TYPE).not.toBe(PLAYER_CODEC_TYPE);
     });
 
-    it("every part of a door is drawn by a mesh the composition itself declares", () => {
+    it("every part of a door is drawn by a mesh that was sized for it", () => {
         const {params, parts} = DoorCompositionCodec.getRandomComposition(1);
         // Regions are layered back to front to avoid z-fighting (see DoorCompositionConstants).
         expectRenderableBody(params, parts);
@@ -562,13 +568,54 @@ describe("indexed mesh composition", () => {
             expect(parts.length).toBeGreaterThan(0);
             for (const part of parts)
             {
-                expect(typeof part.instancedMeshId).toBe("string");
+                expect(typeof part.geometryId).toBe("string");
+                expect(typeof part.materialId).toBe("string");
                 for (const vec of [part.offset, part.dir, part.scale])
                 {
                     expect(Number.isFinite(vec.x)).toBe(true);
                     expect(Number.isFinite(vec.y)).toBe(true);
                     expect(Number.isFinite(vec.z)).toBe(true);
                 }
+            }
+        }
+    });
+});
+
+// ─── How a part is placed ──────────────────────────────────────────────
+
+describe("composition part placement", () => {
+    it("every axis direction survives being stored as a code", () => {
+        for (let code = 0; code < DIR_VEC_BY_CODE.length; ++code)
+            expect(DirUtil.dirVecToCode(DIR_VEC_BY_CODE[code])).toBe(code);
+    });
+
+    it("a direction a little off an axis snaps to that axis rather than failing", () => {
+        for (let code = 0; code < DIR_VEC_BY_CODE.length; ++code)
+        {
+            const dirVec = DIR_VEC_BY_CODE[code];
+            const nudged = {x: dirVec.x + 0.01, y: dirVec.y - 0.02, z: dirVec.z + 0.015};
+            expect(DirUtil.dirVecToCode(nudged)).toBe(code);
+        }
+    });
+
+    // The overlap test that gives stacked squares their relief has to agree with the basis three.js
+    // turns a part to, or it would compare footprints the renderer never draws (see InstancedPartUtil).
+    it("the facing basis matches the one three.js orients a part with", () => {
+        for (const dir of DIR_VEC_BY_CODE)
+        {
+            const basis = Geometry3DUtil.getFacingBasis(dir);
+
+            const obj = new THREE.Object3D();
+            obj.lookAt(new THREE.Vector3(dir.x, dir.y, dir.z));
+            obj.updateMatrixWorld();
+            const right = new THREE.Vector3().setFromMatrixColumn(obj.matrixWorld, 0);
+            const up = new THREE.Vector3().setFromMatrixColumn(obj.matrixWorld, 1);
+
+            for (const [ours, theirs] of [[basis.right, right], [basis.up, up]] as const)
+            {
+                expect(ours.x).toBeCloseTo(theirs.x, 3);
+                expect(ours.y).toBeCloseTo(theirs.y, 3);
+                expect(ours.z).toBeCloseTo(theirs.z, 3);
             }
         }
     });

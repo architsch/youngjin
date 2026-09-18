@@ -4,6 +4,7 @@ import { InstancedMeshCompositionCodecMap } from "../../../shared/graphics/mesh/
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../shared/graphics/mesh/composition/types/instancedMeshCompositionCodecType";
 import InstancedMeshCompositionPart from "../../../shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
 import CompositionMetadataUtil from "../../../shared/graphics/mesh/composition/util/compositionMetadataUtil";
+import InstancedMeshIdMap from "../../../shared/graphics/mesh/maps/instancedMeshIdMap";
 import StringUtil from "../../../shared/math/util/stringUtil";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import ObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/objectTypeConfig";
@@ -92,7 +93,10 @@ export default InstancedMeshCapacityMap;
 
         const counts: {[instancedMeshId: string]: number} = {};
         for (const part of parts)
-            counts[part.instancedMeshId] = (counts[part.instancedMeshId] ?? 0) + 1;
+        {
+            const instancedMeshId = InstancedMeshIdMap.getInstancedMeshId(part.geometryId, part.materialId);
+            counts[instancedMeshId] = (counts[instancedMeshId] ?? 0) + 1;
+        }
         return counts;
     }
 }

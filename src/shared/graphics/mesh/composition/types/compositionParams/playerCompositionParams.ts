@@ -3,11 +3,6 @@ import { InstancedMeshCompositionParams } from "./instancedMeshCompositionParams
 
 export default interface PlayerCompositionParams extends InstancedMeshCompositionParams
 {
-    ids: {
-        instancedMeshId_box: string,
-        instancedMeshId_cylinder: string,
-        instancedMeshId_square: string,
-    },
     types: {
         head: number,
         ear: number,

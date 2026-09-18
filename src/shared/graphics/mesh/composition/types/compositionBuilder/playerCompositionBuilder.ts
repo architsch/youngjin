@@ -1,8 +1,11 @@
 import Vec3 from "../../../../../math/types/vec3";
-import { FORWARD_DIR } from "../../../../../system/sharedConstants";
+import { FORWARD_DIR, INSTANCED_EMISSIVE_MATERIAL_ID,
+    INSTANCED_TIN_MATERIAL_ID } from "../../../../../system/sharedConstants";
 import { UNIT_PLAYER_PART_LENGTH } from "../compositionConstants/playerCompositionConstants";
 import InstancedMeshCompositionBuilder from "./instancedMeshCompositionBuilder";
 
+// Solid forms use aged tin; the face squares use the unlit emissive material (flat paint look),
+// shared with lamp faces to save a draw call.
 export default class PlayerCompositionBuilder extends InstancedMeshCompositionBuilder
 {
     run(): InstancedMeshCompositionBuilder
@@ -40,31 +43,32 @@ export default class PlayerCompositionBuilder extends InstancedMeshCompositionBu
 
     protected addBox(offsetInUnits: Vec3, scaleInUnits: Vec3, color: Vec3)
     {
-        this.addPart(offsetInUnits, scaleInUnits, this.params.ids.instancedMeshId_box, color);
+        this.addPart(offsetInUnits, scaleInUnits, "Box", INSTANCED_TIN_MATERIAL_ID, color);
     }
     protected addUpwardFacingCylinder(offsetInUnits: Vec3, scaleInUnits: Vec3, color: Vec3)
     {
-        this.addPart(offsetInUnits, scaleInUnits, this.params.ids.instancedMeshId_cylinder, color,
+        this.addPart(offsetInUnits, scaleInUnits, "Cylinder", INSTANCED_TIN_MATERIAL_ID, color,
             {x: 0, y: 1, z: 0});
     }
     protected addForwardFacingCylinder(offsetInUnits: Vec3, scaleInUnits: Vec3, color: Vec3)
     {
-        this.addPart(offsetInUnits, scaleInUnits, this.params.ids.instancedMeshId_cylinder, color);
+        this.addPart(offsetInUnits, scaleInUnits, "Cylinder", INSTANCED_TIN_MATERIAL_ID, color);
     }
     protected addSideFacingCylinder(offsetInUnits: Vec3, scaleInUnits: Vec3, color: Vec3)
     {
-        this.addPart(offsetInUnits, scaleInUnits, this.params.ids.instancedMeshId_cylinder, color,
+        this.addPart(offsetInUnits, scaleInUnits, "Cylinder", INSTANCED_TIN_MATERIAL_ID, color,
             {x: 1, y: 0, z: 0});
     }
     protected addSquare(offsetInUnits: Vec3, scaleInUnits: Vec3, color: Vec3)
     {
-        this.addPart(offsetInUnits, scaleInUnits, this.params.ids.instancedMeshId_square, color);
+        this.addPart(offsetInUnits, scaleInUnits, "Square", INSTANCED_EMISSIVE_MATERIAL_ID, color);
     }
     protected addPart(offsetInUnits: Vec3, scaleInUnits: Vec3,
-        instancedMeshId: string, color: Vec3, dir?: Vec3)
+        geometryId: string, materialId: string, color: Vec3, dir?: Vec3)
     {
         this.addPartRelativeToBase({
-            instancedMeshId,
+            geometryId,
+            materialId,
             dir: dir ?? FORWARD_DIR,
             offset: {
                 x: offsetInUnits.x * UNIT_PLAYER_PART_LENGTH,

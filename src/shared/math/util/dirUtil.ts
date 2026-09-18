@@ -1,3 +1,4 @@
+import { DIR_VEC_BY_CODE } from "../../system/sharedConstants";
 import { Dir4 } from "../types/dir4";
 import Vec3 from "../types/vec3";
 
@@ -68,6 +69,24 @@ const DirUtil =
             case 3: return "-x";
             default: throw new Error(`Unknown number for Dir4 :: ${n}`);
         }
+    },
+    // Nearest of the six axis directions, by dot product, so a vector a little off an axis snaps to
+    // it rather than failing. Note this numbering is DIR_VEC_BY_CODE's, not dir4ToNumber's.
+    dirVecToCode: (v: Vec3): number =>
+    {
+        let bestCode = 0;
+        let bestDot = -Infinity;
+        for (let code = 0; code < DIR_VEC_BY_CODE.length; ++code)
+        {
+            const dirVec = DIR_VEC_BY_CODE[code];
+            const dot = v.x * dirVec.x + v.y * dirVec.y + v.z * dirVec.z;
+            if (dot > bestDot)
+            {
+                bestDot = dot;
+                bestCode = code;
+            }
+        }
+        return bestCode;
     },
     rotateCW: (dir: Dir4): Dir4 =>
     {

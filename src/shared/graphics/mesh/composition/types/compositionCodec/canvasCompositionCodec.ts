@@ -1,11 +1,9 @@
 import RandomNumberGenerator from "../../../../../math/types/randomNumberGenerator";
 import ColorUtil from "../../../../../math/util/colorUtil";
-import NumUtil from "../../../../../math/util/numUtil";
 import StringUtil from "../../../../../math/util/stringUtil";
-import { INSTANCED_WOOD_MATERIAL_ID } from "../../../../../system/sharedConstants";
-import MeshDataUtil from "../../../util/meshDataUtil";
 import { InstancedMeshCompositionBuilderMap } from "../../maps/instancedMeshCompositionBuilderMap";
-import CanvasCompositionConstants, { CANVAS_GEOMETRY_ID } from "../compositionConstants/canvasCompositionConstants";
+import CanvasCompositionConstants from "../compositionConstants/canvasCompositionConstants";
+import MouldingCompositionConstants from "../compositionConstants/mouldingCompositionConstants";
 import CanvasCompositionParams from "../compositionParams/canvasCompositionParams";
 import { InstancedMeshCompositionParams } from "../compositionParams/instancedMeshCompositionParams";
 import InstancedMeshCompositionPart from "../instancedMeshCompositionPart";
@@ -25,7 +23,8 @@ export const CanvasCompositionCodec: InstancedMeshCompositionCodec = {
         const arr: string[] = [];
         arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToPaletteIndex("Timber", params.colors.frame)));
         arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToPaletteIndex("Timber", params.colors.inner)));
-        arr.push(StringUtil.convertRawNumberToVisibleASCII(toThicknessStep(params.mouldingThickness)));
+        arr.push(StringUtil.convertRawNumberToVisibleASCII(
+            MouldingCompositionConstants.toThicknessStep(params.mouldingThickness)));
         arr.push(StringUtil.convertRawNumberToVisibleASCII(
             (params.mouldingIsConvex ? CONVEX_FLAG : 0) | (params.framed ? FRAMED_FLAG : 0)));
         return arr.join("");
@@ -40,7 +39,7 @@ export const CanvasCompositionCodec: InstancedMeshCompositionCodec = {
         {
             decodedParams.colors.frame = decodeColor(strToDecode, charOffset++);
             decodedParams.colors.inner = decodeColor(strToDecode, charOffset++);
-            decodedParams.mouldingThickness = fromThicknessStep(
+            decodedParams.mouldingThickness = MouldingCompositionConstants.fromThicknessStep(
                 StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++));
             // A string cut before the flags keeps its frame.
             const flags = StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++, FRAMED_FLAG);
@@ -83,37 +82,12 @@ function decodeColor(strToDecode: string, charIndex: number)
         StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charIndex));
 }
 
-function getNumThicknessSteps(): number
-{
-    const c = CanvasCompositionConstants;
-    return Math.round((c.maxMouldingThickness - c.minMouldingThickness) / c.mouldingThicknessStep) + 1;
-}
-
-function toThicknessStep(mouldingThickness: number): number
-{
-    const c = CanvasCompositionConstants;
-    const step = Math.round((mouldingThickness - c.minMouldingThickness) / c.mouldingThicknessStep);
-    return Number.isFinite(step) ? NumUtil.clampInRange(step, 0, getNumThicknessSteps() - 1) : 0;
-}
-
-// Clamped, so any char yields a band; rounded so a decoded width equals the authored one.
-function fromThicknessStep(step: number): number
-{
-    const c = CanvasCompositionConstants;
-    const clampedStep = NumUtil.clampInRange(step, 0, getNumThicknessSteps() - 1);
-    return Math.round((c.minMouldingThickness + clampedStep * c.mouldingThicknessStep) * 1e6) / 1e6;
-}
-
 function getBaseParams(): CanvasCompositionParams
 {
-    const ids = {
-        instancedMeshId_square: MeshDataUtil.getInstancedMeshId(
-            CANVAS_GEOMETRY_ID, INSTANCED_WOOD_MATERIAL_ID),
-    };
     // Frameless when nothing is stored, but with a real finish for the frame to come back with.
     const preset = CanvasCompositionConstants.presets[0];
     const colors = {frame: {...preset.colors.frame}, inner: {...preset.colors.inner}};
-    return {ids, colors, mouldingThickness: preset.mouldingThickness,
+    return {colors, mouldingThickness: preset.mouldingThickness,
         mouldingIsConvex: preset.mouldingIsConvex, framed: false};
 }
 

@@ -8,23 +8,12 @@ import GameObject from "../types/gameObject";
 import GameObjectComponent from "./gameObjectComponent";
 import InstancedMeshGraphics from "./instancedMeshGraphics";
 import MaterialParamsMap from "../../../shared/graphics/material/maps/materialParamsMap";
-import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
+import InstancedMeshIdMap from "../../../shared/graphics/mesh/maps/instancedMeshIdMap";
 import InstancedMeshCapacityMap from "../../../shared/graphics/mesh/composition/maps/instancedMeshCapacityMap";
 
-// Precomputed "+materialId" suffixes, to avoid splitting ids in the refresh loop (see
-// MeshDataUtil.getInstancedMeshId).
-const INSTANCE_COLORED_SUFFIXES = INSTANCE_COLORED_MATERIAL_IDS.map(
-    (materialId) => MeshDataUtil.getInstancedMeshId("", materialId));
-const INSTANCED_WOOD_SUFFIX = MeshDataUtil.getInstancedMeshId("", INSTANCED_WOOD_MATERIAL_ID);
-
-function usesInstanceColor(instancedMeshId: string): boolean
+function getPartMeshId(part: InstancedMeshCompositionPart): string
 {
-    for (let i = 0; i < INSTANCE_COLORED_SUFFIXES.length; ++i)
-    {
-        if (instancedMeshId.endsWith(INSTANCE_COLORED_SUFFIXES[i]))
-            return true;
-    }
-    return false;
+    return InstancedMeshIdMap.getInstancedMeshId(part.geometryId, part.materialId);
 }
 
 export default class InstancedMeshComposer extends GameObjectComponent
@@ -142,14 +131,13 @@ export default class InstancedMeshComposer extends GameObjectComponent
     {
         return this.instancedMeshComposition.params;
     }
-    // The first part drawn by a mesh whose id ends with the suffix (e.g. "+InstancedWood"; see
-    // MeshDataUtil.getInstancedMeshId), for objects that place their own drawing by a part.
-    getPartWithSuffix(instancedMeshIdSuffix: string): InstancedMeshCompositionPart | undefined
+    // The first part drawn in the given material, for objects that place their own drawing by a part.
+    getPartWithMaterial(materialId: string): InstancedMeshCompositionPart | undefined
     {
         const parts = this.instancedMeshComposition.parts;
         for (let i = 0; i < parts.length; ++i)
         {
-            if (parts[i].instancedMeshId.endsWith(instancedMeshIdSuffix))
+            if (parts[i].materialId == materialId)
                 return parts[i];
         }
         return undefined;
@@ -164,7 +152,7 @@ export default class InstancedMeshComposer extends GameObjectComponent
         const parts = this.instancedMeshComposition.parts;
         for (let i = 0; i < parts.length; ++i)
         {
-            if (!this.instancedMeshGraphics.instancedMeshIsLoaded(parts[i].instancedMeshId))
+            if (!this.instancedMeshGraphics.instancedMeshIsLoaded(getPartMeshId(parts[i])))
                 return false;
         }
         return true;
@@ -180,21 +168,27 @@ export default class InstancedMeshComposer extends GameObjectComponent
     private async loadInstancedMeshes()
     {
         this.updateState = "meshesLoading";
+        // A composition reloaded while this is suspended starts a pass of its own, and the parts this
+        // one was walking are gone. Abandoning it leaves the state machine to that newer pass; carrying
+        // on would load meshes nothing needs and hand back a state it no longer owns, which starts yet
+        // another pass. (Loads are shared, so abandoning one wastes nothing; see MeshFactory.)
+        const revision = this.instancedMeshComposition.revision;
+        const superseded = () => this.instancedMeshComposition.revision != revision;
         try
         {
             const parts = this.instancedMeshComposition.parts;
             for (let i = 0; i < parts.length; ++i)
             {
-                const instancedMeshId = parts[i].instancedMeshId;
+                const part = parts[i];
+                const instancedMeshId = getPartMeshId(part);
                 // Meshes are shared across object types, so whichever loads one first fixes its size.
                 const capacity = InstancedMeshCapacityMap[instancedMeshId];
                 if (capacity == undefined)
                     throw new Error(`No generated capacity for "${instancedMeshId}" (see InstancedMeshCapacityBuilder)`);
-                const ids = instancedMeshId.split("+");
-                const geometryId = ids[0];
-                const materialId = ids[1];
                 await this.instancedMeshGraphics.loadInstancedMesh(
-                    geometryId, MaterialParamsMap.getParamsById(materialId), capacity, true);
+                    part.geometryId, MaterialParamsMap.getParamsById(part.materialId), capacity, true);
+                if (superseded())
+                    return;
             }
         }
         catch (error)
@@ -203,7 +197,8 @@ export default class InstancedMeshComposer extends GameObjectComponent
         }
         finally
         {
-            this.updateState = "refreshPending";
+            if (!superseded())
+                this.updateState = "refreshPending";
         }
     }
 
@@ -216,7 +211,7 @@ export default class InstancedMeshComposer extends GameObjectComponent
         for (let i = 0; i < parts.length; ++i)
         {
             const part = parts[i];
-            const instancedMeshId = part.instancedMeshId;
+            const instancedMeshId = getPartMeshId(part);
             let nextIndex = this.nextIndexByInstancedMeshIdTemp[instancedMeshId];
             if (nextIndex == undefined)
             {
@@ -253,7 +248,7 @@ export default class InstancedMeshComposer extends GameObjectComponent
                 instancedMeshId, instanceId,
                 part.offset.x, this.hidden ? -9999 : part.offset.y, part.offset.z,
                 part.dir.x, part.dir.y, part.dir.z, part.scale.x, part.scale.y, part.scale.z);
-            if (usesInstanceColor(instancedMeshId))
+            if (INSTANCE_COLORED_MATERIAL_IDS.includes(part.materialId))
             {
                 this.instancedMeshGraphics.updateInstanceColor(
                     instancedMeshId, instanceId,
@@ -261,7 +256,7 @@ export default class InstancedMeshComposer extends GameObjectComponent
             }
 
             // In addition to the instance color: wood parts also carry moulding params.
-            if (instancedMeshId.endsWith(INSTANCED_WOOD_SUFFIX))
+            if (part.materialId == INSTANCED_WOOD_MATERIAL_ID)
             {
                 this.instancedMeshGraphics.updateInstanceMouldingParams(
                     instancedMeshId, instanceId,

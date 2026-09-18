@@ -1,6 +1,6 @@
-import { BACKWARD_DIR } from "../../../../../system/sharedConstants";
-import { CANVAS_BOARD_RELIEF, CANVAS_FOOTPRINT_HEIGHT,
-    CANVAS_FOOTPRINT_WIDTH } from "../compositionConstants/canvasCompositionConstants";
+import { BACKWARD_DIR, INSTANCED_WOOD_MATERIAL_ID } from "../../../../../system/sharedConstants";
+import { CANVAS_BOARD_RELIEF, CANVAS_FOOTPRINT_HEIGHT, CANVAS_FOOTPRINT_WIDTH,
+    CANVAS_GEOMETRY_ID } from "../compositionConstants/canvasCompositionConstants";
 import InstancedMeshCompositionBuilder from "./instancedMeshCompositionBuilder";
 
 export default class CanvasCompositionBuilder extends InstancedMeshCompositionBuilder
@@ -15,7 +15,8 @@ export default class CanvasCompositionBuilder extends InstancedMeshCompositionBu
     protected addBoard()
     {
         this.addPartRelativeToBase({
-            instancedMeshId: this.params.ids.instancedMeshId_square,
+            geometryId: CANVAS_GEOMETRY_ID,
+            materialId: INSTANCED_WOOD_MATERIAL_ID,
             // Faces local forward; the object's rotation carries the wall facing.
             dir: BACKWARD_DIR,
             offset: {x: 0, y: 0, z: CANVAS_BOARD_RELIEF},

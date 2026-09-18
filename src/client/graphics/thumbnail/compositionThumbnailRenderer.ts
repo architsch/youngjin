@@ -4,6 +4,7 @@ import { InstancedMeshCompositionCodecMap } from "../../../shared/graphics/mesh/
 import { InstancedMeshCompositionParams } from "../../../shared/graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
 import InstancedMeshCompositionPart from "../../../shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
 import MaterialParamsMap from "../../../shared/graphics/material/maps/materialParamsMap";
+import InstancedMeshIdMap from "../../../shared/graphics/mesh/maps/instancedMeshIdMap";
 import StringUtil from "../../../shared/math/util/stringUtil";
 import { INSTANCE_COLORED_MATERIAL_IDS, INSTANCED_WOOD_MATERIAL_ID } from "../../../shared/system/sharedConstants";
 import GeometryFactory from "../factories/geometryFactory";
@@ -104,13 +105,16 @@ async function buildMeshes(encoded: string, root: THREE.Object3D): Promise<THREE
 
     const partsByMeshId: {[instancedMeshId: string]: InstancedMeshCompositionPart[]} = {};
     for (const part of parts)
-        (partsByMeshId[part.instancedMeshId] ??= []).push(part);
+    {
+        (partsByMeshId[InstancedMeshIdMap.getInstancedMeshId(part.geometryId, part.materialId)]
+            ??= []).push(part);
+    }
 
     const meshes: THREE.InstancedMesh[] = [];
     for (const instancedMeshId of Object.keys(partsByMeshId))
     {
         const group = partsByMeshId[instancedMeshId];
-        const [geometryId, materialId] = instancedMeshId.split("+");
+        const {geometryId, materialId} = group[0];
         const geometry = (await GeometryFactory.load(geometryId)).clone();
         const material = await MaterialFactory.load(MaterialParamsMap.getParamsById(materialId));
 

@@ -19,6 +19,11 @@ export default class InstancedMeshComposition
     params: InstancedMeshCompositionParams = {};
     parts: InstancedMeshCompositionPart[] = [];
 
+    // Bumped every time the parts are rebuilt. Anything that reads them across an await compares this
+    // to tell a composition it is still working on from one that has since been replaced. Counted here,
+    // beside the array, so no rebuild can forget to (unrelated to codecVersion, which is the format).
+    revision: number = 0;
+
     constructor(codecType: InstancedMeshCompositionCodecType, codecVersion: number)
     {
         this.codecType = codecType;
@@ -56,6 +61,7 @@ export default class InstancedMeshComposition
         for (const key in this.params)
             delete this.params[key];
         this.parts.length = 0;
+        ++this.revision;
         const metadata = gameObject.params.metadata[ObjectMetadataKeyEnumMap.InstancedMeshComposition];
         if (!metadata || !this.canDecode(metadata.str))
         {
@@ -96,6 +102,7 @@ export default class InstancedMeshComposition
     decodeParts(encodedParams: string)
     {
         this.parts.length = 0;
+        ++this.revision;
         InstancedMeshCompositionCodecMap[this.codecType].decode(
             `${this.getCodecPrefix()}${encodedParams}`, this.params, this.parts);
     }

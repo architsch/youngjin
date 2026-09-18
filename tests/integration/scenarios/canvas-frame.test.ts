@@ -12,13 +12,13 @@ import fc from "fast-check";
 import { DefaultCompositionCodec } from "../../../src/shared/graphics/mesh/composition/types/compositionCodec/defaultCompositionCodec";
 import { CanvasCompositionCodec } from "../../../src/shared/graphics/mesh/composition/types/compositionCodec/canvasCompositionCodec";
 import CanvasCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/canvasCompositionConstants";
+import MouldingCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/mouldingCompositionConstants";
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionCodecType";
 import PreEncodedCompositionStringMap from "../../../src/shared/graphics/mesh/composition/maps/preEncodedCompositionStringMap";
 import PreEncodedCompositionIndexMap from "../../../src/shared/graphics/mesh/composition/maps/preEncodedCompositionIndexMap";
 import CompositionThumbnailUtil from "../../../src/shared/graphics/mesh/composition/util/compositionThumbnailUtil";
 import InstancedMeshCompositionPart from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
 import { InstancedMeshCompositionParams } from "../../../src/shared/graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
-import MeshDataUtil from "../../../src/shared/graphics/mesh/util/meshDataUtil";
 import ColorUtil from "../../../src/shared/math/util/colorUtil";
 import StringUtil from "../../../src/shared/math/util/stringUtil";
 import Vec3 from "../../../src/shared/math/types/vec3";
@@ -31,7 +31,9 @@ import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objec
 import BufferState from "../../../src/shared/networking/types/bufferState";
 import EncodableByteString from "../../../src/shared/networking/types/encodableByteString";
 import ImageMapUtil from "../../../src/shared/graphics/image/util/imageMapUtil";
-import { INSTANCED_COLOR_MATERIAL_ID, INSTANCED_WOOD_MATERIAL_ID } from "../../../src/shared/system/sharedConstants";
+import { COMPOSITION_PALETTE_NAME_BY_MATERIAL_ID, GEOMETRY_CODE_BY_ID, INSTANCE_COLORED_MATERIAL_IDS,
+    INSTANCED_COLOR_MATERIAL_ID, INSTANCED_WOOD_MATERIAL_ID, MATERIAL_CODE_BY_ID,
+    RELIEF_STEP } from "../../../src/shared/system/sharedConstants";
 import { DOOR_CODEC_TYPE, PLAYER_CODEC_TYPE } from "../helpers/composition";
 
 const COMPOSITION_KEY = ObjectMetadataKeyEnumMap.InstancedMeshComposition;
@@ -40,32 +42,46 @@ const ROOM_ID = "canvas-frame-room";
 const CANVAS_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Canvas");
 const DOOR_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Door");
 
-const WOOD_MESH_ID = MeshDataUtil.getInstancedMeshId("Square", INSTANCED_WOOD_MATERIAL_ID);
-const COLOR_MESH_ID = MeshDataUtil.getInstancedMeshId("Square", INSTANCED_COLOR_MATERIAL_ID);
-
 const CANVAS_CONFIG = CanvasObjectTypeConfig.components.spawnedByAny;
 const CANVAS_COMPOSER = CANVAS_CONFIG.instancedMeshComposer;
 
-// One quantization step of each Default-codec range (94 levels).
-const COLOR_STEP = 255 / 93;
-const THICKNESS_STEP = 0.5 / 93;
+// The Default codec's quantization grids. A value on the grid must survive a round trip exactly.
+const OFFSET_STEP = 0.0625;
+const SCALE_STEP = 0.125;
 
+const DEFAULT_CODEC_VERSION = 1;
 const DEFAULT_PREFIX = StringUtil.convertRawNumberToVisibleASCII(InstancedMeshCompositionCodecTypeEnumMap.Default)
-    + StringUtil.convertRawNumberToVisibleASCII(0);
+    + StringUtil.convertRawNumberToVisibleASCII(DEFAULT_CODEC_VERSION);
 const CANVAS_PREFIX = StringUtil.convertRawNumberToVisibleASCII(CANVAS_COMPOSER.codecType)
     + StringUtil.convertRawNumberToVisibleASCII(CANVAS_COMPOSER.codecVersion);
 
+// Authored the way the codec stores parts: colors from the material's palette, band width on a
+// thickness step, offset and scale on the quantization grid.
 function woodPart(overrides: Partial<InstancedMeshCompositionPart> = {}): InstancedMeshCompositionPart
 {
     return {
-        instancedMeshId: WOOD_MESH_ID,
+        geometryId: "Square",
+        materialId: INSTANCED_WOOD_MATERIAL_ID,
         dir: {x: 0, y: 0, z: 1},
-        offset: {x: 0, y: 0, z: 0.01},
+        offset: {x: 0, y: 0, z: 0},
         scale: {x: 1, y: 1, z: 1},
-        color: {x: 168, y: 117, z: 69},
-        mouldingColor: {x: 201, y: 162, z: 39},
-        mouldingThickness: 0.14,
+        color: ColorUtil.paletteIndexToRGB("Timber", 12),
+        mouldingColor: ColorUtil.paletteIndexToRGB("Timber", 30),
+        mouldingThickness: MouldingCompositionConstants.fromThicknessStep(5),
         mouldingIsConvex: true,
+        ...overrides,
+    };
+}
+
+function colorPart(overrides: Partial<InstancedMeshCompositionPart> = {}): InstancedMeshCompositionPart
+{
+    return {
+        geometryId: "Square",
+        materialId: INSTANCED_COLOR_MATERIAL_ID,
+        dir: {x: 0, y: 0, z: 1},
+        offset: {x: 0.5, y: 0, z: 0},
+        scale: {x: 1, y: 1, z: 1},
+        color: ColorUtil.paletteIndexToRGB("Scenery", 7),
         ...overrides,
     };
 }
@@ -123,7 +139,7 @@ function expectMoulded(part: InstancedMeshCompositionPart): void
 // no parts at all when its frame is off.
 function expectDrawableCanvas(params: InstancedMeshCompositionParams, parts: InstancedMeshCompositionPart[]): void
 {
-    expect(params.mouldingThickness).toBeGreaterThanOrEqual(CanvasCompositionConstants.minMouldingThickness);
+    expect(params.mouldingThickness).toBeGreaterThanOrEqual(MouldingCompositionConstants.minMouldingThickness);
     if (!params.framed)
     {
         expect(parts).toHaveLength(0);
@@ -131,11 +147,11 @@ function expectDrawableCanvas(params: InstancedMeshCompositionParams, parts: Ins
     }
     expect(parts).toHaveLength(1);
     const [board] = parts;
-    expect(Object.values(params.ids)).toContain(board.instancedMeshId);
-    expect(board.instancedMeshId).toBe(WOOD_MESH_ID);
+    expect(board.geometryId).toBe("Square");
+    expect(board.materialId).toBe(INSTANCED_WOOD_MATERIAL_ID);
     expectMoulded(board);
-    expect(board.mouldingThickness).toBeGreaterThanOrEqual(CanvasCompositionConstants.minMouldingThickness);
-    expect(board.mouldingThickness).toBeLessThanOrEqual(CanvasCompositionConstants.maxMouldingThickness);
+    expect(board.mouldingThickness).toBeGreaterThanOrEqual(MouldingCompositionConstants.minMouldingThickness);
+    expect(board.mouldingThickness).toBeLessThanOrEqual(MouldingCompositionConstants.maxMouldingThickness);
     for (const vec of [board.offset, board.dir, board.scale])
         for (const axis of ["x", "y", "z"] as const)
             expect(Number.isFinite(vec[axis])).toBe(true);
@@ -155,51 +171,123 @@ beforeEach(() => {
     vi.spyOn(console, "log").mockImplementation(() => {});
 });
 
-describe("Default composition codec: wood parts", () => {
-    it("a wood part keeps its moulding through the round trip", () => {
+describe("Default composition codec", () => {
+    it("a wood part keeps its geometry, material and moulding through the round trip", () => {
         const part = woodPart();
         const [decoded] = decodeDefault(DEFAULT_PREFIX + DefaultCompositionCodec.encode({}, [part]));
 
-        expect(decoded.instancedMeshId).toBe(WOOD_MESH_ID);
+        expect(decoded.geometryId).toBe("Square");
+        expect(decoded.materialId).toBe(INSTANCED_WOOD_MATERIAL_ID);
         expect(decoded.mouldingIsConvex).toBe(true);
-        expect(Math.abs(decoded.mouldingThickness - part.mouldingThickness)).toBeLessThanOrEqual(THICKNESS_STEP);
-        for (const axis of ["x", "y", "z"] as const)
-        {
-            expect(Math.abs(decoded.color[axis] - part.color[axis])).toBeLessThanOrEqual(COLOR_STEP);
-            expect(Math.abs(decoded.mouldingColor[axis] - part.mouldingColor[axis])).toBeLessThanOrEqual(COLOR_STEP);
-        }
+        expect(decoded.mouldingThickness).toBe(part.mouldingThickness);
+        // Palette colors are stored as a position, so they come back exactly.
+        expect(decoded.color).toEqual(part.color);
+        expect(decoded.mouldingColor).toEqual(part.mouldingColor);
     });
 
     it("a sunk moulding stays sunk, and parts after a wood part still decode in place", () => {
-        const parts = [woodPart({mouldingIsConvex: false}),
-            {instancedMeshId: COLOR_MESH_ID, dir: {x: 0, y: 0, z: 1}, offset: {x: 0.5, y: 0, z: 0},
-                scale: {x: 1, y: 1, z: 1}, color: {x: 10, y: 200, z: 30}}];
+        const parts = [woodPart({mouldingIsConvex: false}), colorPart()];
         const decoded = decodeDefault(DEFAULT_PREFIX + DefaultCompositionCodec.encode({}, parts));
 
         expect(decoded).toHaveLength(2);
         expect(decoded[0].mouldingIsConvex).toBe(false);
-        expect(decoded[1].instancedMeshId).toBe(COLOR_MESH_ID);
-        expect(decoded[1].offset.x).toBeCloseTo(0.5, 1);
-        expect(decoded[1].color.y).toBeCloseTo(200, -1);
+        expect(decoded[1].materialId).toBe(INSTANCED_COLOR_MATERIAL_ID);
+        expect(decoded[1].offset.x).toBe(0.5);
+        expect(decoded[1].color).toEqual(parts[1].color);
     });
 
-    it("a truncated or damaged wood part still decodes to a drawable moulding", () => {
-        const encoded = DEFAULT_PREFIX + DefaultCompositionCodec.encode({}, [woodPart()]);
-        // Keep the geometry and material codes, then cut anywhere or replace the rest with garbage.
-        for (let length = 2; length <= encoded.length - 2; ++length)
-            expectMoulded(decodeDefault(DEFAULT_PREFIX + encoded.substring(2, 2 + length))[0]);
+    // Parts are fixed-width and unseparated, so the decoder works out where each one ends from its
+    // material. A part the string stops part-way through cannot be read at all.
+    it("a truncated composition yields whole parts and drops the one it cuts", () => {
+        const body = DefaultCompositionCodec.encode({}, [woodPart(), colorPart()]);
+        const woodChars = 11;
+        const colorChars = 9;
+        expect(body).toHaveLength(woodChars + colorChars);
 
+        for (let length = 0; length <= body.length; ++length)
+        {
+            const decoded = decodeDefault(DEFAULT_PREFIX + body.substring(0, length));
+            const expectedParts = (length >= woodChars + colorChars) ? 2 : (length >= woodChars) ? 1 : 0;
+            expect(decoded, `length ${length}`).toHaveLength(expectedParts);
+            if (expectedParts > 0)
+                expectMoulded(decoded[0]);
+        }
+    });
+
+    it("a damaged composition never throws and every part it yields is drawable", () => {
         fc.assert(fc.property(fc.string({unit: "binary-ascii"}), (garbage) => {
-            const [decoded] = decodeDefault(DEFAULT_PREFIX + encoded.substring(2, 4) + garbage.replace(/ /g, ""));
-            expectMoulded(decoded);
+            for (const part of decodeDefault(DEFAULT_PREFIX + garbage))
+            {
+                expect(GEOMETRY_CODE_BY_ID[part.geometryId]).toBeDefined();
+                expect(MATERIAL_CODE_BY_ID[part.materialId]).toBeDefined();
+                for (const vec of [part.offset, part.dir, part.scale])
+                    for (const axis of ["x", "y", "z"] as const)
+                        expect(Number.isFinite(vec[axis])).toBe(true);
+                if (part.materialId == INSTANCED_WOOD_MATERIAL_ID)
+                    expectMoulded(part);
+            }
         }), {numRuns: 300});
+    });
+
+    it("offsets and scales on the quantization grid come back exactly", () => {
+        fc.assert(fc.property(
+            fc.integer({min: -40, max: 40}), fc.integer({min: -40, max: 40}),
+            fc.integer({min: 1, max: 40}), fc.integer({min: 1, max: 40}),
+            (offsetSteps, offsetSteps2, scaleSteps, scaleSteps2) => {
+                const part = colorPart({
+                    offset: {x: offsetSteps * OFFSET_STEP, y: offsetSteps2 * OFFSET_STEP, z: 0},
+                    scale: {x: scaleSteps * SCALE_STEP, y: scaleSteps2 * SCALE_STEP, z: SCALE_STEP},
+                });
+                const [decoded] = decodeDefault(DEFAULT_PREFIX + DefaultCompositionCodec.encode({}, [part]));
+                expect(decoded.offset.x).toBe(part.offset.x);
+                expect(decoded.offset.y).toBe(part.offset.y);
+                expect(decoded.scale).toEqual(part.scale);
+            }), {numRuns: 300});
+    });
+
+    // A flat square laid over another is lifted clear of it, so the two don't z-fight.
+    it("overlapping coplanar squares are given rising relief, and disjoint ones are not", () => {
+        const stacked = decodeDefault(DEFAULT_PREFIX + DefaultCompositionCodec.encode({}, [
+            colorPart({offset: {x: 0, y: 0, z: 0}, scale: {x: 1, y: 1, z: 1}}),
+            colorPart({offset: {x: 0, y: 0, z: 0}, scale: {x: 0.5, y: 0.5, z: 1}}),
+            colorPart({offset: {x: 0, y: 0, z: 0}, scale: {x: 0.25, y: 0.25, z: 1}}),
+        ]));
+        expect(stacked.map((part) => part.offset.z)).toEqual([RELIEF_STEP, 2 * RELIEF_STEP, 3 * RELIEF_STEP]);
+
+        // Side by side and not touching, so neither sits on the other.
+        const sideBySide = decodeDefault(DEFAULT_PREFIX + DefaultCompositionCodec.encode({}, [
+            colorPart({offset: {x: -1, y: 0, z: 0}, scale: {x: 1, y: 1, z: 1}}),
+            colorPart({offset: {x: 1, y: 0, z: 0}, scale: {x: 1, y: 1, z: 1}}),
+        ]));
+        expect(sideBySide.map((part) => part.offset.z)).toEqual([RELIEF_STEP, RELIEF_STEP]);
+
+        // Relief is re-derived on every decode rather than stored, so it doesn't accumulate.
+        const reEncoded = decodeDefault(DEFAULT_PREFIX + DefaultCompositionCodec.encode({}, stacked));
+        expect(reEncoded.map((part) => part.offset.z)).toEqual(stacked.map((part) => part.offset.z));
+    });
+
+    // A material the codec tints but has no palette for would encode without a color, and the composer
+    // dereferences that color when it uploads the instance.
+    it("every material the composer tints has a palette to store its color in", () => {
+        for (const materialId of INSTANCE_COLORED_MATERIAL_IDS)
+        {
+            const paletteName = COMPOSITION_PALETTE_NAME_BY_MATERIAL_ID[materialId];
+            expect(paletteName, materialId).toBeDefined();
+            expect(ColorUtil.getPaletteSize(paletteName), paletteName).toBeGreaterThan(0);
+        }
+    });
+
+    it("relief goes towards the face the square shows", () => {
+        const [facingBack] = decodeDefault(DEFAULT_PREFIX + DefaultCompositionCodec.encode({},
+            [colorPart({dir: {x: 0, y: 0, z: -1}, offset: {x: 0, y: 0, z: 0}})]));
+        expect(facingBack.offset.z).toBe(-RELIEF_STEP);
     });
 });
 
 describe("canvas mesh composition", () => {
     const paletteSize = ColorUtil.getPaletteSize("Timber");
-    const numThicknessSteps = Math.round((CanvasCompositionConstants.maxMouldingThickness
-        - CanvasCompositionConstants.minMouldingThickness) / CanvasCompositionConstants.mouldingThicknessStep) + 1;
+    const numThicknessSteps = Math.round((MouldingCompositionConstants.maxMouldingThickness
+        - MouldingCompositionConstants.minMouldingThickness) / MouldingCompositionConstants.mouldingThicknessStep) + 1;
 
     // Any finish the form can produce.
     const anyFinish = fc.record({
@@ -209,8 +297,8 @@ describe("canvas mesh composition", () => {
         convex: fc.boolean(),
     }).map(({frame, inner, thicknessStep, convex}) => ({
         colors: {frame: ColorUtil.paletteIndexToRGB("Timber", frame), inner: ColorUtil.paletteIndexToRGB("Timber", inner)},
-        mouldingThickness: CanvasCompositionConstants.minMouldingThickness
-            + thicknessStep * CanvasCompositionConstants.mouldingThicknessStep,
+        mouldingThickness: MouldingCompositionConstants.minMouldingThickness
+            + thicknessStep * MouldingCompositionConstants.mouldingThicknessStep,
         mouldingIsConvex: convex,
         framed: true,
     }));
@@ -296,7 +384,7 @@ describe("canvas mesh composition", () => {
 
     it("even the widest band leaves room inside it for the picture", () => {
         const {params, parts} = decodeCanvas(encodeCanvas({...CanvasCompositionConstants.presets[0],
-            mouldingThickness: CanvasCompositionConstants.maxMouldingThickness, framed: true}));
+            mouldingThickness: MouldingCompositionConstants.maxMouldingThickness, framed: true}));
         expectDrawableCanvas(params, parts);
     });
 

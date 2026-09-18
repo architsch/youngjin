@@ -5,7 +5,7 @@ import StringUtil from "../../../../../math/util/stringUtil";
 import { ZERO_VEC3 } from "../../../../../system/sharedConstants";
 import InstancedMeshCompositionPart from "../instancedMeshCompositionPart";
 import InstancedMeshCompositionCodec from "./instancedMeshCompositionCodec";
-import MeshDataUtil from "../../../util/meshDataUtil";
+import InstancedMeshIdMap from "../../../maps/instancedMeshIdMap";
 import { InstancedMeshCompositionParams } from "../compositionParams/instancedMeshCompositionParams";
 import PlayerCompositionParams from "../compositionParams/playerCompositionParams";
 import { InstancedMeshCompositionBuilderMap } from "../../maps/instancedMeshCompositionBuilderMap";
@@ -136,22 +136,18 @@ function countSlotPartsByMesh(slotName: string, type: number): {[instancedMeshId
 
     const counts: {[instancedMeshId: string]: number} = {};
     for (const part of parts)
-        counts[part.instancedMeshId] = (counts[part.instancedMeshId] ?? 0) + 1;
+    {
+        const instancedMeshId = InstancedMeshIdMap.getInstancedMeshId(part.geometryId, part.materialId);
+        counts[instancedMeshId] = (counts[instancedMeshId] ?? 0) + 1;
+    }
     return counts;
 }
 
 function getBaseParams(): PlayerCompositionParams
 {
-    // Solid forms use aged tin; the face squares use the unlit emissive material (flat paint look),
-    // shared with lamp faces to save a draw call.
-    const ids = {
-        instancedMeshId_box: MeshDataUtil.getInstancedMeshId("Box", "InstancedTin"),
-        instancedMeshId_cylinder: MeshDataUtil.getInstancedMeshId("Cylinder", "InstancedTin"),
-        instancedMeshId_square: MeshDataUtil.getInstancedMeshId("Square", "InstancedEmissive"),
-    };
     const types = {head: 0, ear: 0, hat: 0, torso: 0, arm: 0, bottom: 0};
     const colors = {head: ZERO_VEC3, ear: ZERO_VEC3, hat: ZERO_VEC3, torso: ZERO_VEC3, arm: ZERO_VEC3, bottom: ZERO_VEC3};
-    return {ids, types, colors};
+    return {types, colors};
 }
 
 // Each slot's parts, placed on the body. A slot reads only its own type, which getStructuralVariants relies on.

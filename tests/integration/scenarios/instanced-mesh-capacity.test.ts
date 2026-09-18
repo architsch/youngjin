@@ -11,6 +11,7 @@ import InstancedMeshCapacityBuilder from "../../../src/server/ssg/builder/instan
 import InstancedMeshCapacityMap from "../../../src/shared/graphics/mesh/composition/maps/instancedMeshCapacityMap";
 import PreEncodedCompositionStringMap from "../../../src/shared/graphics/mesh/composition/maps/preEncodedCompositionStringMap";
 import PreEncodedCompositionIndexMap from "../../../src/shared/graphics/mesh/composition/maps/preEncodedCompositionIndexMap";
+import InstancedMeshIdMap from "../../../src/shared/graphics/mesh/maps/instancedMeshIdMap";
 import { InstancedMeshCompositionCodecMap } from "../../../src/shared/graphics/mesh/composition/maps/instancedMeshCompositionCodecMap";
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionCodecType";
 import InstancedMeshCompositionPart from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
@@ -64,7 +65,11 @@ describe("instanced mesh capacity", () => {
             for (const config of COMPOSER_CONFIGS)
             {
                 for (const part of appearances[config.objectType])
-                    needed[part.instancedMeshId] = (needed[part.instancedMeshId] ?? 0) + config.maxCountPerRoom!;
+                {
+                    const instancedMeshId = InstancedMeshIdMap.getInstancedMeshId(
+                        part.geometryId, part.materialId);
+                    needed[instancedMeshId] = (needed[instancedMeshId] ?? 0) + config.maxCountPerRoom!;
+                }
             }
             for (const instancedMeshId in needed)
                 expect(InstancedMeshCapacityMap[instancedMeshId] ?? 0, instancedMeshId).toBeGreaterThanOrEqual(needed[instancedMeshId]);

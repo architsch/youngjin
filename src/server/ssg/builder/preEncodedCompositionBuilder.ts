@@ -4,11 +4,12 @@ import { DefaultCompositionCodec } from "../../../shared/graphics/mesh/compositi
 import CompositionMetadataUtil from "../../../shared/graphics/mesh/composition/util/compositionMetadataUtil";
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../shared/graphics/mesh/composition/types/instancedMeshCompositionCodecType";
 import InstancedMeshCompositionPart from "../../../shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
-import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
+import ColorUtil from "../../../shared/math/util/colorUtil";
 import Vec3 from "../../../shared/math/types/vec3";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import PreEncodedCompositions from "../types/preEncodedCompositions";
-import { GEOMETRY_CODE_BY_ID, INSTANCE_COLORED_MATERIAL_IDS, INSTANCED_WOOD_MATERIAL_ID,
+import { COMPOSITION_PALETTE_NAME_BY_MATERIAL_ID, GEOMETRY_CODE_BY_ID,
+    INSTANCE_COLORED_MATERIAL_IDS, INSTANCED_WOOD_MATERIAL_ID,
     MATERIAL_CODE_BY_ID } from "../../../shared/system/sharedConstants";
 
 const SOURCE_ROOT_PATH = `${STATIC_PAGE_ROOT_DIR}/app/assets/instanced_mesh_composition`;
@@ -107,7 +108,8 @@ export default class PreEncodedCompositionBuilder
                 throw new Error(`Composition pre-encoding failed :: Unknown materialId "${part.materialId}" (${where})`);
 
             const composedPart: InstancedMeshCompositionPart = {
-                instancedMeshId: MeshDataUtil.getInstancedMeshId(part.geometryId, part.materialId),
+                geometryId: part.geometryId,
+                materialId: part.materialId,
                 dir: part.dir,
                 offset: part.offset,
                 scale: part.scale,
@@ -119,6 +121,7 @@ export default class PreEncodedCompositionBuilder
                 if (part.color == undefined)
                     throw new Error(`Composition pre-encoding failed :: Material "${part.materialId}" is tinted per instance and needs a color (${where})`);
                 composedPart.color = resolveIndeterminateColor(part.color);
+                assertColorIsInPalette(part.materialId, composedPart.color, "color", where);
             }
             // ...and mouldings only for wood.
             if (part.materialId == INSTANCED_WOOD_MATERIAL_ID)
@@ -129,6 +132,7 @@ export default class PreEncodedCompositionBuilder
                 if (!(part.mouldingThickness > 0))
                     throw new Error(`Composition pre-encoding failed :: mouldingThickness must be positive (${where})`);
                 composedPart.mouldingColor = resolveIndeterminateColor(part.mouldingColor);
+                assertColorIsInPalette(part.materialId, composedPart.mouldingColor, "mouldingColor", where);
                 composedPart.mouldingThickness = part.mouldingThickness;
                 composedPart.mouldingIsConvex = part.mouldingIsConvex;
             }
@@ -159,6 +163,19 @@ export default PreEncodedCompositionIndexMap;
 `;
         await FileUtil.write(INDEX_MAP_FILE_NAME, text, MAPS_ROOT_PATH);
     }
+}
+
+// Colors are stored as a position in the material's palette, so one that is not in it comes back as
+// its nearest neighbour. Caught here rather than left to surprise whoever authored the entry.
+function assertColorIsInPalette(materialId: string, color: Vec3, fieldName: string, where: string): void
+{
+    const paletteName = COMPOSITION_PALETTE_NAME_BY_MATERIAL_ID[materialId];
+    if (paletteName == undefined)
+        throw new Error(`Composition pre-encoding failed :: Material "${materialId}" has no palette (${where})`);
+
+    const snapped = ColorUtil.paletteIndexToRGB(paletteName, ColorUtil.rgbToPaletteIndex(paletteName, color));
+    if (snapped.x != color.x || snapped.y != color.y || snapped.z != color.z)
+        throw new Error(`Composition pre-encoding failed :: ${fieldName} is not in the "${paletteName}" palette (${where})`);
 }
 
 function resolveIndeterminateColor(color: Vec3): Vec3

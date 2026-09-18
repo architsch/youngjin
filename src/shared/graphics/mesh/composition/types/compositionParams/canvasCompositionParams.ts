@@ -5,9 +5,6 @@ import { InstancedMeshCompositionParams } from "./instancedMeshCompositionParams
 // CanvasCompositionConstants).
 export default interface CanvasCompositionParams extends InstancedMeshCompositionParams
 {
-    ids: {
-        instancedMeshId_square: string,
-    },
     colors: {
         frame: Vec3, // the moulding band around the edge
         inner: Vec3, // the surface inside the band, where the picture hangs
