@@ -35,6 +35,10 @@ export const roomChangedObservable = new Observable<RoomRuntimeMemory>();
 // Selected voxel quad (one face of a voxel block), or null.
 export const voxelQuadSelectionObservable = new Observable<VoxelQuadSelection | null>(null);
 
+// The one quad a scripted step lets the user select, or null for no such restriction. Narrower than the
+// selection lock, which refuses every quad (see VoxelQuadSelection.trySelect).
+export const voxelQuadSelectionRestrictionObservable = new Observable<number | null>(null);
+
 // Fires after a lost WebGL context is restored. Anything drawn only into render targets must redraw.
 export const graphicsContextRestoredObservable = new Observable<number>(0);
 
@@ -82,7 +86,8 @@ export const navigationArrowTargetObservable = new Observable<{ x: number, z: nu
 // The world-space location the downward arrow should point at, or null to hide it.
 export const downwardArrowTargetObservable = new Observable<THREE.Vector3 | null>(null);
 
-// The voxel-quad whose boundary should be highlighted in world space, or null to hide it.
+// The voxel-quad whose boundary should be highlighted in world space, or null to hide it. It also
+// decides whether the marks are shown at all (see GenericWorldSpaceGizmos).
 export const voxelQuadHighlightObservable = new Observable<VoxelQuadSelection | null>(null);
 
 // This observable notifies its listeners whenever a popup needs to be opened/closed.

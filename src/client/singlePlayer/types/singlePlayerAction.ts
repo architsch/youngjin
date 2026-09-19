@@ -5,26 +5,26 @@ import SinglePlayerParam from "./singlePlayerParam";
 import CameraMode from "../../graphics/types/cameraMode";
 
 // A tagged step command (see SinglePlayerActionMap). Inputs are SinglePlayerParams so they can be
-// computed during play; identifiers known up front (flags, faces, element ids, object ids) stay plain
-// values.
+// computed during play; identifiers known up front (flags, object ids) stay plain values.
 type SinglePlayerAction =
     | {type: "clear_all_ui_and_gizmo"}
     | {type: "ui_headline", text: SinglePlayerParam<string>}
     | {type: "ui_diagram", diagram: "drag_up" | "drag_sideways", text: SinglePlayerParam<string>,
         placement?: "center" | "side"}
-    | {type: "ui_arrow", targetElementId: string, arrowBias: "center" | "left" | "right",
-        arrowSide?: "above" | "below"}
-    | {type: "ui_outline_rect", targetElementId: string}
-    | {type: "ui_outline_capsule", targetElementId: string, thicknessPx: SinglePlayerParam<number>}
+    | {type: "ui_arrow", targetElementId: SinglePlayerParam<string>,
+        arrowBias: "center" | "left" | "right", arrowSide?: "above" | "below"}
+    | {type: "ui_outline_rect", targetElementId: SinglePlayerParam<string>}
+    | {type: "ui_outline_capsule", targetElementId: SinglePlayerParam<string>,
+        thicknessPx: SinglePlayerParam<number>}
     | {type: "gizmo_navigation_arrow", targetX: SinglePlayerParam<number>,
         targetZ: SinglePlayerParam<number>}
     | {type: "gizmo_downward_arrow", targetX: SinglePlayerParam<number>,
         targetY: SinglePlayerParam<number>, targetZ: SinglePlayerParam<number>}
-    | {type: "gizmo_voxel_quad_outline_rect", row: SinglePlayerParam<number>,
-        col: SinglePlayerParam<number>, collisionLayer: SinglePlayerParam<number>,
-        facingAxis: "x" | "y" | "z", orientation: "-" | "+"}
+    | {type: "gizmo_voxel_quad_outline_rect", quadIndex: SinglePlayerParam<number>}
     | {type: "feature_flag", flag: FeatureFlag, enable: boolean}
     | {type: "select_voxel_quad", quadIndex: SinglePlayerParam<number>}
+    | {type: "restrict_voxel_quad_selection", quadIndex: SinglePlayerParam<number>}
+    | {type: "clear_voxel_quad_selection_restriction"}
     | {type: "edit_mode_opening_voxel_quad", quadIndex: SinglePlayerParam<number>}
     | {type: "clear_edit_mode_opening_voxel_quad"}
     | {type: "set_variable", name: string, computeValue: SinglePlayerParam<any>}

@@ -38,7 +38,7 @@ import DoorObjectTypeConfig from "../../../src/shared/object/types/objectTypeCon
 import Room from "../../../src/shared/room/types/room";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
-import { COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
+import { COLLISION_LAYER_MIN, MAX_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
     STOREY_FLOOR_COLLISION_LAYER } from "../../../src/shared/system/sharedConstants";
 import { createTestRoom } from "../helpers/roomContent";
 
@@ -173,6 +173,34 @@ describe("Seeing past the room's own geometry", () => {
         const inside = new THREE.Vector3(MIDDLE_COL + 0.5, 1.75, 4.5);
         const outside = new THREE.Vector3(MIDDLE_COL + 0.5, 1.75, -4.5);
         expect(isBlocked(inside, outside)).toBe(true);
+    });
+
+    it("reports the room's own floor and ceiling as closing it off from inside", () => {
+        const x = MIDDLE_COL + 0.5, z = MIDDLE_ROW + 0.5;
+        expect(isBlocked(new THREE.Vector3(x, 0.25, z), new THREE.Vector3(x, -2, z)),
+            "down through the floor").toBe(true);
+        expect(isBlocked(new THREE.Vector3(x, MAX_ROOM_Y - 0.25, z), new THREE.Vector3(x, MAX_ROOM_Y + 2, z)),
+            "up through the ceiling").toBe(true);
+    });
+
+    it("sees in through the floor and ceiling from outside, which they are not drawn on", () => {
+        // As with the walls, and for the same reason: an orbit camera lifted over the room or dropped
+        // below it keeps sight of what it is pointed at. Each tile lies at the boundary, so only the
+        // step that leaves the room crosses it — not every cell of the empty space beyond.
+        const x = MIDDLE_COL + 0.5, z = MIDDLE_ROW + 0.5;
+        expect(isBlocked(new THREE.Vector3(x, -2, z), new THREE.Vector3(x, 0.25, z)),
+            "up from below the floor").toBe(false);
+        expect(isBlocked(new THREE.Vector3(x, MAX_ROOM_Y + 2, z), new THREE.Vector3(x, MAX_ROOM_Y - 0.25, z)),
+            "down from above the ceiling").toBe(false);
+    });
+
+    it("sees into the room from outside it, where the same wall draws nothing", () => {
+        // The other way along the same line. A wall is drawn on the side that faces the room and bare
+        // on the side that faces away, so from out there the eye passes through it — and so must this,
+        // or an orbit camera swung out of the room loses sight of what it is pointed at.
+        const outside = new THREE.Vector3(MIDDLE_COL + 0.5, 1.75, -4.5);
+        const inside = new THREE.Vector3(MIDDLE_COL + 0.5, 1.75, 4.5);
+        expect(isBlocked(outside, inside)).toBe(false);
     });
 
     it("does not blind a viewpoint pushed into a wall", () => {

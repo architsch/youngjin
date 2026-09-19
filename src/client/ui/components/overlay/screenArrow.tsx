@@ -16,7 +16,7 @@ export default function ScreenArrow()
         return () => screenArrowTargetObservable.removeListener("ui.screenArrow");
     }, []);
 
-    const rect = useTrackedElementRect(arrowParams?.targetElementId ?? null);
+    const rect = useTrackedElementRect(arrowParams?.targetElementId ?? null, true);
     if (!arrowParams || !rect)
         return null;
 

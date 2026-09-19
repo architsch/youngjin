@@ -14,7 +14,7 @@ export default function ScreenOutlineRect()
         return () => screenOutlineRectTargetObservable.removeListener("ui.screenOutlineRect");
     }, []);
 
-    const rect = useTrackedElementRect(targetId);
+    const rect = useTrackedElementRect(targetId, true);
     if (!rect) return null;
 
     return <div className="absolute z-50 box-border rounded-md border-4 border-amber-400 animate-pulse-strong pointer-events-none"

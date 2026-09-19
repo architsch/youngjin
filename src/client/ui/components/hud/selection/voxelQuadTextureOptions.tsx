@@ -62,6 +62,8 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
             };
             return <AtlasCellSprite
                 key={`voxelQuadTexture.select.${textureIndex}`}
+                // Addressable one cell at a time, so a scripted step can point at a single texture.
+                id={`voxelQuadTextureOption.${textureIndex}`}
                 atlasImageURL={materialParams.texturePath}
                 atlasWidth={materialParams.textureWidth}
                 atlasHeight={materialParams.textureHeight}

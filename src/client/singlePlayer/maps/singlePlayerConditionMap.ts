@@ -27,17 +27,10 @@ const SinglePlayerConditionMap: {
     },
     "voxel_quad_selected": (condition) =>
     {
-        // Unspecified properties match anything.
+        // No quad given matches any selection at all.
         const selection = voxelQuadSelectionObservable.peek();
         const result = selection != null &&
-            (condition.row == undefined || selection.voxel.row == condition.row()) &&
-            (condition.col == undefined || selection.voxel.col == condition.col()) &&
-            (condition.orientation == undefined || condition.orientation ==
-                VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(selection.quadIndex)) &&
-            (condition.facingAxis == undefined || condition.facingAxis ==
-                VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(selection.quadIndex)) &&
-            (condition.collisionLayer == undefined || condition.collisionLayer() ==
-                VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(selection.quadIndex));
+            (condition.quadIndex == undefined || selection.quadIndex == condition.quadIndex());
         return condition.negate ? !result : result;
     },
     "voxel_quad_texture_equals": (condition) =>
@@ -46,9 +39,7 @@ const SinglePlayerConditionMap: {
         const room = App.getCurrentRoom();
         if (room)
         {
-            const quadIndex = VoxelQueryUtil.getVoxelQuadIndex(condition.row(), condition.col(),
-                condition.facingAxis, condition.orientation, condition.collisionLayer());
-            const quadTextureIndex = App.getVoxelQuads()[quadIndex] & 0b01111111;
+            const quadTextureIndex = App.getVoxelQuads()[condition.quadIndex()] & 0b01111111;
             result = quadTextureIndex == condition.textureIndex();
         }
         return condition.negate ? !result : result;

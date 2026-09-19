@@ -33,7 +33,9 @@ const ClientVoxelQueryUtil =
 
     // Whether drawn room geometry lies between two points. Walks blocks along the segment (raycasting
     // the voxel mesh would test every instance). Start and end blocks are excluded (a camera inside a
-    // wall isn't blinded; the target's own block doesn't hide it).
+    // wall isn't blinded; the target's own block doesn't hide it). A block stops the segment only if
+    // the face it enters through is drawn, so the rock around the room — solid but with nothing drawn
+    // on the outside — lets the segment through, just as it lets the eye through.
     lineSegmentIsBlockedByDrawnVoxelBlock(from: THREE.Vector3, to: THREE.Vector3): boolean
     {
         const room = App.getCurrentRoom();
@@ -75,25 +77,34 @@ const ClientVoxelQueryUtil =
 
         for (let step = 0; step < maxGridWalkSteps; ++step)
         {
-            // Cross into the next block over whichever boundary the segment reaches first.
+            // Cross into the next block over whichever boundary the segment reaches first. The face it
+            // enters the new block through is the one facing back the way it came.
             let boundaryCrossed: number;
+            let entryAxis: "x" | "y" | "z";
+            let entryStep: number;
             if (colBoundary <= rowBoundary && colBoundary <= layerBoundary)
             {
                 boundaryCrossed = colBoundary;
                 col += colStep;
                 colBoundary += colStride;
+                entryAxis = "x";
+                entryStep = colStep;
             }
             else if (rowBoundary <= layerBoundary)
             {
                 boundaryCrossed = rowBoundary;
                 row += rowStep;
                 rowBoundary += rowStride;
+                entryAxis = "z";
+                entryStep = rowStep;
             }
             else
             {
                 boundaryCrossed = layerBoundary;
                 collisionLayer += layerStep;
                 layerBoundary += layerStride;
+                entryAxis = "y";
+                entryStep = layerStep;
             }
 
             if (boundaryCrossed >= 1)
@@ -104,8 +115,11 @@ const ClientVoxelQueryUtil =
             if (col === endCol && row === endRow && collisionLayer === endCollisionLayer)
                 return false;
 
-            if (voxelBlockIsDrawn(voxels, row, col, collisionLayer))
+            if (voxelBlockFaceIsDrawn(voxels, row, col, collisionLayer,
+                entryAxis, (entryStep > 0) ? "-" : "+"))
+            {
                 return true;
+            }
         }
         return false;
     },
@@ -204,9 +218,11 @@ function getVisibleDropBelow(voxel: Voxel, row: number, col: number, viewPositio
     return 0;
 }
 
-// Whether a block has anything drawn: false for empty blocks and blocks hidden by the orbit camera.
-// Floor and ceiling count as blocks beyond the layer range.
-function voxelBlockIsDrawn(voxels: Voxel[], row: number, col: number, collisionLayer: number): boolean
+// Whether a block shows anything on the side a line enters it from: false for an empty block, for a
+// face buried against its neighbour or turned away from the room, and for a block the orbit camera has
+// hidden. Floor and ceiling count as the faces of the space beyond the layer range, which has no sides.
+function voxelBlockFaceIsDrawn(voxels: Voxel[], row: number, col: number, collisionLayer: number,
+    facingAxis: "x" | "y" | "z", orientation: "-" | "+"): boolean
 {
     const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);
     if (voxel == undefined)
@@ -214,31 +230,24 @@ function voxelBlockIsDrawn(voxels: Voxel[], row: number, col: number, collisionL
 
     if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
     {
-        // Under the room or over it, which the room's floor and ceiling close off.
-        const belowFloor = (collisionLayer < COLLISION_LAYER_MIN);
-        return !quadIsTakenOutOfSight(belowFloor
-            ? VoxelQueryUtil.getFloorVoxelQuadIndex(row, col)
-            : VoxelQueryUtil.getCeilingVoxelQuadIndex(row, col));
-    }
-
-    if (!VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer))
+        // Under the room or over it, where the only thing standing is the room's own floor or ceiling.
+        // Each is one flat tile lying at the boundary with the room, so a line meets it only on the
+        // step that leaves the room through it, and only from the room's side, which is the side it is
+        // drawn on. Deeper out, and from the side, there is nothing there at all.
+        if (facingAxis != "y")
+            return false;
+        if (collisionLayer == COLLISION_LAYER_MIN - 1 && orientation == "+")
+            return !quadIsTakenOutOfSight(VoxelQueryUtil.getFloorVoxelQuadIndex(row, col));
+        if (collisionLayer == COLLISION_LAYER_MAX + 1 && orientation == "-")
+            return !quadIsTakenOutOfSight(VoxelQueryUtil.getCeilingVoxelQuadIndex(row, col));
         return false;
-
-    return !blockIsTakenOutOfSight(row, col, collisionLayer);
-}
-
-// Blocks are hidden whole (see OrbitOcclusionHider), so any drawn face answers for all; fully buried
-// blocks were never in the way.
-function blockIsTakenOutOfSight(row: number, col: number, collisionLayer: number): boolean
-{
-    const firstQuadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, collisionLayer);
-    for (let i = 0; i < NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
-    {
-        const instanceId = VoxelQuadInstanceUtil.getInstanceId(firstQuadIndex + i);
-        if (instanceId >= 0)
-            return InstancedMeshGraphics.instanceIsHidden(voxelInstancedMeshId, instanceId);
     }
-    return false;
+
+    const quadIndex = VoxelQueryUtil.getVoxelQuadIndex(row, col, facingAxis, orientation, collisionLayer);
+    if ((voxel.quadsMem.quads[quadIndex] & 0b10000000) == 0)
+        return false; // Nothing drawn on that side, so nothing there to stop the line.
+
+    return !quadIsTakenOutOfSight(quadIndex);
 }
 
 // Quads not on show hold no instance (see VoxelQuadInstanceUtil), so they aren't "taken out of sight".

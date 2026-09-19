@@ -25,10 +25,12 @@ export default class WorldSpaceOutlineRect
     private coreMaterial: LineMaterial;
     private haloMaterial: LineMaterial;
     private baseColor: THREE.Color = new THREE.Color();
+    private outset: number;
 
-    private constructor(geometry: LineSegmentsGeometry, color: string)
+    private constructor(geometry: LineSegmentsGeometry, color: string, padded: boolean)
     {
         this.baseColor.set(color);
+        this.outset = padded ? OUTSET : 0;
 
         this.haloMaterial = WorldSpaceOutlineRect.makeMaterial(color, HALO_WIDTH, HALO_OPACITY, THREE.AdditiveBlending, true);
         this.coreMaterial = WorldSpaceOutlineRect.makeMaterial(color, CORE_WIDTH, 1, THREE.NormalBlending, false);
@@ -47,13 +49,15 @@ export default class WorldSpaceOutlineRect
         this.group.visible = false;
     }
 
-    static async create(color: string = "#00ff00"): Promise<WorldSpaceOutlineRect>
+    // padded: the line sits just outside the area, clear of its edge pixels (the default). Unpadded, it
+    // runs along the area's own edges, for an outline whose job is to show how far the area reaches.
+    static async create(color: string = "#00ff00", padded: boolean = true): Promise<WorldSpaceOutlineRect>
     {
         // setPositions copies the cached geometry's data.
         const edges = await GeometryFactory.load("Square", "edges");
         const geometry = new LineSegmentsGeometry();
         geometry.setPositions((edges.attributes.position as THREE.BufferAttribute).array as Float32Array);
-        return new WorldSpaceOutlineRect(geometry, color);
+        return new WorldSpaceOutlineRect(geometry, color, padded);
     }
 
     private static makeMaterial(color: string, linewidth: number, opacity: number, blending: THREE.Blending, fade: boolean): LineMaterial
@@ -106,7 +110,7 @@ export default class WorldSpaceOutlineRect
     // the outward normal that the square's face should point along.
     setTransform(position: THREE.Vector3, lookDir: THREE.Vector3, scale: THREE.Vector3): void
     {
-        this.setOutsetScale(scale);
+        this.setAreaScale(scale);
         this.group.position.copy(position);
         vecTemp.copy(position).add(lookDir);
         this.group.lookAt(vecTemp);
@@ -118,19 +122,19 @@ export default class WorldSpaceOutlineRect
     {
         this.group.position.copy(position);
         this.group.quaternion.copy(quaternion);
-        this.setOutsetScale(scale);
+        this.setAreaScale(scale);
     }
 
-    // Distance from an outlined area's centre to the outline's edge, along an axis where the area is `size` long.
+    // Distance from a padded outline's centre to its edge, along an axis where the area is `size` long.
     static getEdgeOffset(size: number): number
     {
         return 0.5 * size + OUTSET;
     }
 
     // Line widths are in world units, so the group's scale is the area's world size plus the outset.
-    private setOutsetScale(scale: THREE.Vector3): void
+    private setAreaScale(scale: THREE.Vector3): void
     {
-        this.group.scale.set(scale.x + 2 * OUTSET, scale.y + 2 * OUTSET, scale.z);
+        this.group.scale.set(scale.x + 2 * this.outset, scale.y + 2 * this.outset, scale.z);
     }
 
     // A 0..1 multiplier applied to the base color, used to animate the outline's brightness.

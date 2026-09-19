@@ -6,13 +6,9 @@ import SinglePlayerParam from "./singlePlayerParam";
 type SinglePlayerCondition =
     | {type: "player_is_nearby", negate: boolean, targetX: SinglePlayerParam<number>,
         targetZ: SinglePlayerParam<number>, detectionDist: SinglePlayerParam<number>}
-    // Unspecified quad properties match anything.
-    | {type: "voxel_quad_selected", negate: boolean, row?: SinglePlayerParam<number>,
-        col?: SinglePlayerParam<number>, collisionLayer?: SinglePlayerParam<number>,
-        facingAxis?: "x" | "y" | "z", orientation?: "-" | "+"}
-    | {type: "voxel_quad_texture_equals", negate: boolean, row: SinglePlayerParam<number>,
-        col: SinglePlayerParam<number>, collisionLayer: SinglePlayerParam<number>,
-        facingAxis: "x" | "y" | "z", orientation: "-" | "+",
+    // No quad given matches any selection at all.
+    | {type: "voxel_quad_selected", negate: boolean, quadIndex?: SinglePlayerParam<number>}
+    | {type: "voxel_quad_texture_equals", negate: boolean, quadIndex: SinglePlayerParam<number>,
         textureIndex: SinglePlayerParam<number>}
     | {type: "voxel_block_exists", negate: boolean, row: SinglePlayerParam<number>,
         col: SinglePlayerParam<number>, collisionLayer: SinglePlayerParam<number>}

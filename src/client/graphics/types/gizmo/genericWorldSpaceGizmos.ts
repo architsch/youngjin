@@ -6,6 +6,7 @@ import WorldSpaceOutlineRect from "./generic/worldSpaceOutlineRect";
 import VoxelQuadSelection from "./voxelQuadSelection";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
+import CameraUtil from "../../util/cameraUtil";
 import { downwardArrowTargetObservable, navigationArrowTargetObservable, roomChangedObservable, updateObservable, voxelQuadHighlightObservable } from "../../../system/clientObservables";
 
 const GIZMO_COLOR = "#ffe14d";
@@ -21,7 +22,8 @@ const DOWN_BASE_OFFSET = 0.9; // base height above the target
 const DOWN_BOB_AMPLITUDE = 0.3;
 const DOWN_BOB_SPEED = 7.5; // radians per second
 
-// Voxel-quad outline: brightness oscillates dramatically and rapidly to grab attention.
+// Voxel-quad outline: brightness oscillates dramatically and rapidly to grab attention. Drawn tight to
+// the quad rather than padded, since it is saying which quad this is rather than how far it reaches.
 const OUTLINE_MIN_BRIGHTNESS = 0.08;
 const OUTLINE_PULSE_SPEED = 8; // radians per second
 
@@ -32,15 +34,18 @@ let initPromise: Promise<void> | null = null;
 
 let navTarget: { x: number, z: number } | null = null;
 let downTarget: THREE.Vector3 | null = null;
+let outlineTarget: VoxelQuadSelection | null = null;
 let elapsed = 0;
 
 const camPos = new THREE.Vector3();
 const camForward = new THREE.Vector3();
 const arrowPos = new THREE.Vector3();
 const arrowDir = new THREE.Vector3();
+// The marked face's middle and outward normal, kept for the sight test (see refreshMarkVisibility).
 const outlinePos = new THREE.Vector3();
 const outlineDir = new THREE.Vector3();
 const outlineScale = new THREE.Vector3();
+const sightRayTemp = new THREE.Vector3();
 
 function ensureInitialized(): Promise<void>
 {
@@ -57,7 +62,7 @@ function ensureInitialized(): Promise<void>
             downArrow.addToParent(scene);
             downArrow.setVisible(false);
 
-            outlineRect = await WorldSpaceOutlineRect.create(GIZMO_COLOR);
+            outlineRect = await WorldSpaceOutlineRect.create(GIZMO_COLOR, false);
             outlineRect.addToParent(scene);
         })();
     }
@@ -82,7 +87,7 @@ navigationArrowTargetObservable.addListener("genericWorldSpaceGizmos", async (ta
 downwardArrowTargetObservable.addListener("genericWorldSpaceGizmos", async (target: THREE.Vector3 | null) => {
     await ensureInitialized();
     downTarget = target;
-    downArrow?.setVisible(target != null);
+    refreshMarkVisibility();
 });
 
 voxelQuadHighlightObservable.addListener("genericWorldSpaceGizmos", async (selection: VoxelQuadSelection | null) => {
@@ -90,6 +95,7 @@ voxelQuadHighlightObservable.addListener("genericWorldSpaceGizmos", async (selec
     if (!outlineRect)
         return;
 
+    outlineTarget = selection;
     if (selection)
     {
         const d = VoxelQueryUtil.getVoxelQuadTransformDimensions(selection.voxel, selection.quadIndex);
@@ -97,16 +103,15 @@ voxelQuadHighlightObservable.addListener("genericWorldSpaceGizmos", async (selec
         outlineDir.set(d.dirX, d.dirY, d.dirZ);
         outlineScale.set(d.scaleX, d.scaleY, d.scaleZ);
         outlineRect.setTransform(outlinePos, outlineDir, outlineScale);
-        outlineRect.setVisible(true);
     }
-    else
-    {
-        outlineRect.setVisible(false);
-    }
+    refreshMarkVisibility();
 });
 
 updateObservable.addListener("genericWorldSpaceGizmos", (deltaTime: number) => {
     elapsed += deltaTime;
+
+    // The camera moves without telling anyone, so the sight test is redone every frame.
+    refreshMarkVisibility();
 
     if (navTarget && navArrow)
     {
@@ -146,9 +151,39 @@ updateObservable.addListener("genericWorldSpaceGizmos", (deltaTime: number) => {
 roomChangedObservable.addListener("genericWorldSpaceGizmos", (_roomRuntimeMemory: RoomRuntimeMemory) => {
     navTarget = null;
     downTarget = null;
+    outlineTarget = null;
 
     if (navArrow) { navArrow.dispose(); navArrow = null; }
     if (downArrow) { downArrow.dispose(); downArrow = null; }
     if (outlineRect) { outlineRect.dispose(); outlineRect = null; }
     initPromise = null;
 });
+
+// The marks (the quad outline and the downward arrow) point out one face, and they draw on top of
+// everything, so from the wrong side of a wall they would hang in the middle of it. They show only
+// while that face is in sight: nothing drawn in between, and the camera on the face's own side of it.
+// With no face marked out there is nothing to be on the wrong side of, and the arrow shows as it is.
+function refreshMarkVisibility(): void
+{
+    if (downTarget == null && outlineTarget == null)
+    {
+        downArrow?.setVisible(false);
+        outlineRect?.setVisible(false);
+        return;
+    }
+
+    const inSight = (outlineTarget == null) || highlightedQuadIsInSight();
+    downArrow?.setVisible(downTarget != null && inSight);
+    outlineRect?.setVisible(outlineTarget != null && inSight);
+}
+
+// Both tests run against the marked face's own middle, which outlinePos and outlineDir hold.
+function highlightedQuadIsInSight(): boolean
+{
+    GraphicsManager.getCamera().getWorldPosition(sightRayTemp);
+    sightRayTemp.subVectors(outlinePos, sightRayTemp);
+    // Facing first: it is the cheaper of the two, and it is what a swing around the wall breaks.
+    if (sightRayTemp.dot(outlineDir) >= 0)
+        return false; // Behind the face, which draws nothing on this side.
+    return CameraUtil.pointIsInLineOfSight(outlinePos);
+}

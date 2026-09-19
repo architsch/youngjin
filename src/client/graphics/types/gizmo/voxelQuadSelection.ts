@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import Voxel from "../../../../shared/voxel/types/voxel";
-import { clientFeatureFlagsObservable, gameModeObservable, roomChangedObservable, voxelQuadSelectionObservable } from "../../../system/clientObservables";
+import { clientFeatureFlagsObservable, gameModeObservable, roomChangedObservable, voxelQuadSelectionObservable, voxelQuadSelectionRestrictionObservable } from "../../../system/clientObservables";
 import GraphicsManager from "../../graphicsManager";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
@@ -131,6 +131,11 @@ export default class VoxelQuadSelection
         {
             return false;
         }
+
+        // A scripted step may leave just one quad selectable (see voxelQuadSelectionRestrictionObservable).
+        const allowedQuadIndex = voxelQuadSelectionRestrictionObservable.peek();
+        if (allowedQuadIndex != null && quadIndex != allowedQuadIndex)
+            return false;
 
         // Edit mode only (see ObjectSelection.trySelect).
         if (gameModeObservable.peek() != "edit")

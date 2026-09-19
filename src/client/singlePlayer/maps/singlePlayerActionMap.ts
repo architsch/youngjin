@@ -3,7 +3,7 @@ import App from "../../app";
 import VoxelQuadSelection from "../../graphics/types/gizmo/voxelQuadSelection";
 import ClientObjectManager from "../../object/clientObjectManager";
 import EasingMotion from "../../object/components/easingMotion";
-import { cameraModeObservable, clientFeatureFlagsObservable, downwardArrowTargetObservable, editModeOpeningOverrideObservable, headlineMessageObservable, myPlayerHiddenObservable, navigationArrowTargetObservable, orbitCameraDistanceRangeRequestObservable, orbitCameraTargetOverrideObservable, orbitCameraViewRequestObservable, screenArrowTargetObservable, screenDiagramObservable, screenOutlineCapsuleTargetObservable, screenOutlineRectTargetObservable, voxelQuadHighlightObservable, voxelQuadSelectionObservable } from "../../system/clientObservables";
+import { cameraModeObservable, clientFeatureFlagsObservable, downwardArrowTargetObservable, editModeOpeningOverrideObservable, headlineMessageObservable, myPlayerHiddenObservable, navigationArrowTargetObservable, orbitCameraDistanceRangeRequestObservable, orbitCameraTargetOverrideObservable, orbitCameraViewRequestObservable, screenArrowTargetObservable, screenDiagramObservable, screenOutlineCapsuleTargetObservable, screenOutlineRectTargetObservable, voxelQuadHighlightObservable, voxelQuadSelectionObservable, voxelQuadSelectionRestrictionObservable } from "../../system/clientObservables";
 import ClientVoxelManager from "../../voxel/clientVoxelManager";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import SinglePlayerManager from "../singlePlayerManager";
@@ -34,18 +34,18 @@ const SinglePlayerActionMap: {
         screenDiagramObservable.set({diagram: action.diagram, text: action.text(),
             placement: action.placement ?? "center"});
     },
-    "ui_arrow": (action) => // A React-based 2D arrow which points at the target, while pulsating to grab the user's attention. It hangs above the target by default, and below it (pointing up) for a target too near the top of the screen to have room above it.
+    "ui_arrow": (action) => // A React-based 2D arrow which points at the target, while pulsating to grab the user's attention. It hangs above the target by default, and below it (pointing up) for a target too near the top of the screen to have room above it. A target inside a scrollable list is scrolled into view (see useTrackedElementRect).
     {
-        screenArrowTargetObservable.set({targetElementId: action.targetElementId,
+        screenArrowTargetObservable.set({targetElementId: action.targetElementId(),
             arrowBias: action.arrowBias, arrowSide: action.arrowSide ?? "above"});
     },
     "ui_outline_rect": (action) => // A React-based 2D rectangular outline which surrounds the target UI element for the purpose of highlighting.
     {
-        screenOutlineRectTargetObservable.set(action.targetElementId);
+        screenOutlineRectTargetObservable.set(action.targetElementId());
     },
     "ui_outline_capsule": (action) => // A React-based 2D capsule-shaped outline which surrounds a pill-shaped target UI element (such as a switch's track) for the purpose of highlighting. Its line is as thick as the step asks for, since a control of that shape tends to be too small for the rectangular outline's heavy line.
     {
-        screenOutlineCapsuleTargetObservable.set({targetElementId: action.targetElementId,
+        screenOutlineCapsuleTargetObservable.set({targetElementId: action.targetElementId(),
             thicknessPx: action.thicknessPx()});
     },
     "gizmo_navigation_arrow": (action) => // A 3D world-space arrow which helps the user navigate to the target location. This arrow is always positioned right in front of the player (about 3 units away in the XZ plane), at the height of 1 (i.e. y = 1), and it always keeps pointing at the target.
@@ -57,25 +57,11 @@ const SinglePlayerActionMap: {
         downwardArrowTargetObservable.set(new THREE.Vector3(
             action.targetX(), action.targetY(), action.targetZ()));
     },
-    "gizmo_voxel_quad_outline_rect": (action) => // A 3D world-space rectangular outline (i.e. gizmo) which highlights the boundary of a voxel-quad. Its brightness keeps oscillating in order to grab the user's attention.
+    "gizmo_voxel_quad_outline_rect": (action) => // A 3D world-space rectangular outline (i.e. gizmo) which highlights the boundary of a voxel-quad. Its brightness keeps oscillating in order to grab the user's attention. It hides itself, and the downward arrow with it, whenever the quad is out of the camera's sight (see GenericWorldSpaceGizmos).
     {
-        const room = App.getCurrentRoom();
-        if (!room)
-        {
-            console.error("SinglePlayerActionMap :: Current room doesn't exits.");
-            return;
-        }
-        const row = action.row();
-        const col = action.col();
-        const voxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, col);
-        if (!voxel)
-        {
-            console.error(`SinglePlayerActionMap :: Voxel doesn't exist (row = ${row}, col = ${col})`);
-            return;
-        }
-        const quadIndex = VoxelQueryUtil.getVoxelQuadIndex(row, col,
-            action.facingAxis, action.orientation, action.collisionLayer());
-        voxelQuadHighlightObservable.set(new VoxelQuadSelection(voxel, quadIndex));
+        const selection = resolveVoxelQuad(action.quadIndex());
+        if (selection)
+            voxelQuadHighlightObservable.set(selection);
     },
     "feature_flag": (action) => // Enables or disables a feature flag.
     {
@@ -87,6 +73,14 @@ const SinglePlayerActionMap: {
     "select_voxel_quad": (action) => // Puts the selection on a quad of the step's own choosing. This is the script's doing rather than the user's, so it goes through whatever the step is holding still meanwhile: a step that pins the selection to keep the user from wandering off it still has to be able to move it itself, once the block it was pinned to has been built or taken away.
     {
         selectVoxelQuad(action.quadIndex());
+    },
+    "restrict_voxel_quad_selection": (action) => // Leaves the user just one quad of the room to select, so a step can ask for that one and refuse the rest. Narrower than the selection lock, which refuses every quad; the step lifts that lock alongside this (see voxelQuadSelectionRestrictionObservable).
+    {
+        voxelQuadSelectionRestrictionObservable.set(action.quadIndex());
+    },
+    "clear_voxel_quad_selection_restriction": (action) => // Gives the rest of the room back.
+    {
+        voxelQuadSelectionRestrictionObservable.set(null);
     },
     "edit_mode_opening_voxel_quad": (action) => // Makes edit mode open on a quad of the step's choosing instead of what the camera faces, until cleared. The quad is picked as the mode opens rather than now, since the user may still walk until then, and it is selected the way "select_voxel_quad" selects one.
     {
@@ -179,19 +173,19 @@ const SinglePlayerActionMap: {
     },
 }
 
-// Selects a visible quad, past any selection lock (see "select_voxel_quad"). Returns whether it did.
-function selectVoxelQuad(quadIndex: number): boolean
+// The voxel a drawn quad belongs to, paired with the quad, or null if the room holds no such quad.
+function resolveVoxelQuad(quadIndex: number): VoxelQuadSelection | null
 {
     const room = App.getCurrentRoom();
     if (!room)
     {
         console.error("SinglePlayerActionMap :: Current room doesn't exits.");
-        return false;
+        return null;
     }
     if (!VoxelQueryUtil.isValidVoxelQuadIndex(quadIndex))
     {
         console.error(`SinglePlayerActionMap :: Invalid voxel-quad index (quadIndex = ${quadIndex})`);
-        return false;
+        return null;
     }
     const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
     const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
@@ -199,15 +193,24 @@ function selectVoxelQuad(quadIndex: number): boolean
     if (!voxel)
     {
         console.error(`SinglePlayerActionMap :: Voxel doesn't exist (row = ${row}, col = ${col})`);
-        return false;
+        return null;
     }
     if ((voxel.quadsMem.quads[quadIndex] & 0b10000000) == 0)
     {
-        // An invisible quad can't be acted on; the current selection is left alone.
+        // An invisible quad can't be acted on or pointed at.
         console.error(`SinglePlayerActionMap :: Voxel-quad is not visible (row = ${row}, col = ${col})`);
-        return false;
+        return null;
     }
-    voxelQuadSelectionObservable.set(new VoxelQuadSelection(voxel, quadIndex));
+    return new VoxelQuadSelection(voxel, quadIndex);
+}
+
+// Selects a visible quad, past any selection lock (see "select_voxel_quad"). Returns whether it did.
+function selectVoxelQuad(quadIndex: number): boolean
+{
+    const selection = resolveVoxelQuad(quadIndex);
+    if (!selection)
+        return false; // The current selection is left alone.
+    voxelQuadSelectionObservable.set(selection);
     return true;
 }
 

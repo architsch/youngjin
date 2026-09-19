@@ -18,7 +18,7 @@ let cachedParams: RoomBuilderParams | undefined;
 const TUTORIAL_SEED = 0;
 
 // Distinct palettes per space, so moving between them is visible.
-const ARRIVAL_PALETTE = new RoomPalette(16, 51, 41, 41);
+const ARRIVAL_PALETTE = new RoomPalette(0, 0, 0, 0);
 const PASSAGE_PALETTE = new RoomPalette(6, 51, 43, 43);
 const RECEPTION_PALETTE = new RoomPalette(31, 51, 46, 46);
 

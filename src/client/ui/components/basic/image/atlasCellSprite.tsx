@@ -1,6 +1,7 @@
 import { RefObject, useEffect, useRef } from "react";
 
 export default function AtlasCellSprite(props: {
+        id?: string,
         atlasImageURL: string,
         atlasWidth: number, atlasHeight: number,
         atlasCellWidth: number, atlasCellHeight: number,
@@ -33,7 +34,7 @@ export default function AtlasCellSprite(props: {
     const displayRow = props.flipRow ? (numRows - props.atlasCellRow - 1) : props.atlasCellRow;
 
     // Inline styles, since these values are dynamic and Tailwind can't generate them.
-    return <div ref={myRef} onClick={props.onClick} style={{
+    return <div id={props.id} ref={myRef} onClick={props.onClick} style={{
         aspectRatio: props.atlasCellWidth / props.atlasCellHeight,
         backgroundImage: `url(${props.atlasImageURL})`,
         backgroundSize: `${100 * numCols}% ${100 * numRows}%`,

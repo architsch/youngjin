@@ -44,7 +44,8 @@ import GraphicsManager from "../../../src/client/graphics/graphicsManager";
 import VoxelQuadSelection from "../../../src/client/graphics/types/gizmo/voxelQuadSelection";
 import ClientVoxelManager from "../../../src/client/voxel/clientVoxelManager";
 import { clientFeatureFlagsObservable, gameModeObservable, roomChangedObservable,
-    voxelQuadSelectionObservable } from "../../../src/client/system/clientObservables";
+    voxelQuadSelectionObservable,
+    voxelQuadSelectionRestrictionObservable } from "../../../src/client/system/clientObservables";
 import WorldSpaceSelectionUtil from "../../../src/client/graphics/util/worldSpaceSelectionUtil";
 import { FeatureFlag } from "../../../src/shared/system/types/featureFlag";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
@@ -60,7 +61,7 @@ import RoomRuntimeMemory from "../../../src/shared/room/types/roomRuntimeMemory"
 import { createEditingUser } from "../helpers/mockUser";
 import {
     buildPillar, ceilingQuadIndexOf, createRoom, currentSelection, floorQuadIndexOf, forceSelect,
-    isQuadVisible, quadIndexOf, userAddsBlockAt, userRemovesBlockAt,
+    isQuadVisible, quadIndexOf, userAddsBlockAt, userRemovesBlockAt, voxelAt,
 } from "../helpers/selectionHarness";
 
 // The acting user (editing utilities require one).
@@ -101,6 +102,7 @@ beforeEach(() => {
 
     clientFeatureFlagsObservable.tryRemove(FeatureFlag.DisableVoxelQuadSelectionChange);
     clientFeatureFlagsObservable.tryRemove(FeatureFlag.DisableAllSelectionChange);
+    voxelQuadSelectionRestrictionObservable.set(null);
     // Selections exist only in edit mode (see GameModeUtil).
     gameModeObservable.set("edit");
     voxelQuadSelectionObservable.set(null);
@@ -538,5 +540,34 @@ describe("interruptions while selection changes are disabled", () => {
 
         expect(isQuadVisible(room, quadIndex)).toBe(false);
         expect(currentSelection(room)!.quadIndex).toBe(quadIndex);
+    });
+});
+
+// ─── Selection narrowed to a single quad ────────────────────────────────────
+// A scripted step can ask the user to pick out one face and have the room refuse the rest (see
+// voxelQuadSelectionRestrictionObservable), which is narrower than freezing the selection outright.
+
+describe("selection restricted to one quad", () => {
+    it("takes the allowed quad and refuses every other", () => {
+        buildPillar(room, 10, 5);
+        const allowed = quadIndexOf(10, 5, "x", "+", 2);
+        const other = quadIndexOf(10, 5, "z", "+", 2);
+        voxelQuadSelectionRestrictionObservable.set(allowed);
+
+        expect(VoxelQuadSelection.trySelect(voxelAt(room, 10, 5), other)).toBe(false);
+        expect(voxelQuadSelectionObservable.peek()).toBeNull();
+
+        expect(VoxelQuadSelection.trySelect(voxelAt(room, 10, 5), allowed)).toBe(true);
+        expect(currentSelection(room)!.quadIndex).toBe(allowed);
+    });
+
+    it("gives the rest of the room back once the restriction is cleared", () => {
+        buildPillar(room, 10, 5);
+        const other = quadIndexOf(10, 5, "z", "+", 2);
+        voxelQuadSelectionRestrictionObservable.set(quadIndexOf(10, 5, "x", "+", 2));
+        voxelQuadSelectionRestrictionObservable.set(null);
+
+        expect(VoxelQuadSelection.trySelect(voxelAt(room, 10, 5), other)).toBe(true);
+        expect(currentSelection(room)!.quadIndex).toBe(other);
     });
 });

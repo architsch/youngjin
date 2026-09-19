@@ -3,7 +3,7 @@
  * Server: the room is never loaded or stored (a transient, content-less descriptor), the user isn't a
  * participant, the context is flagged, lastRoomID isn't persisted, and every room-mutating handler bails.
  * Shared: the wire format omits content, the generator builds the tutorial room, the tutorial's edit mode
- * opens on the wall ahead and builds against it, and the tutorial step graph is well-formed.
+ * opens on the wall ahead and builds against a face beside it, and the tutorial step graph is well-formed.
  */
 import { describe, it, expect, beforeEach, vi, Mock } from "vitest";
 
@@ -400,45 +400,72 @@ describe("tutorial edit mode opening", () => {
             Math.floor(m.hotspots.floor.z), Math.floor(m.hotspots.floor.x)));
     });
 
-    it("builds against the face the mode opened on, then comes back to it once the block is gone", () => {
+    it("asks for a drawn face beside the one the mode opened on, builds against it, and comes back to it once the block is gone", () => {
         const wall = m.volumes.wall1;
         const row = wall.rowMin + 2;
         const wallQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(row, wall.colMin, "x", "-", COLLISION_LAYER_MIN + 2);
         const steps = config.loadSteps();
 
-        // The face is taken from the selection the mode opened on.
+        // Steps set aside the faces the steps after them work from (see "set_variable").
+        const runVariables = (actions: SinglePlayerAction[]) => {
+            for (const action of actions)
+            {
+                if (action.type === "set_variable")
+                    SinglePlayerManager.setVariable(action.name, action.computeValue());
+            }
+        };
+
+        // The opening face is taken from the selection the mode opened on.
         const peekSpy = vi.spyOn(voxelQuadSelectionObservable, "peek")
             .mockReturnValue({voxel: undefined, quadIndex: wallQuadIndex} as unknown as VoxelQuadSelection);
         try
         {
             const recordOpening = steps["start_edit"].actionsOnEnd.find(action => action.type === "set_variable");
             expect(recordOpening, "the start_edit step no longer records the face the mode opened on").toBeDefined();
-            const action = recordOpening as Extract<SinglePlayerAction, {type: "set_variable"}>;
-            SinglePlayerManager.setVariable(action.name, action.computeValue());
+            runVariables(steps["start_edit"].actionsOnEnd);
         }
         finally
         {
             peekSpy.mockRestore();
         }
 
+        // The user is sent to its neighbour along the same wall, which that wall really draws.
+        runVariables(steps["select_block"].actionsOnStart);
+        const highlight = steps["select_block"].actionsOnStart
+            .find(action => action.type === "gizmo_voxel_quad_outline_rect");
+        expect(highlight, "the select_block step no longer marks the face to pick out").toBeDefined();
+        const targetQuadIndex =
+            (highlight as Extract<SinglePlayerAction, {type: "gizmo_voxel_quad_outline_rect"}>).quadIndex();
+        expect(describeQuad(targetQuadIndex)).toEqual(
+            {row: row - 1, col: wall.colMin, collisionLayer: COLLISION_LAYER_MIN + 2, facing: "-x"});
+        expect(room.voxelGrid.quadsMem.quads[targetQuadIndex] & 0b10000000, "the marked face is not drawn").not.toBe(0);
+
+        // And nothing else in the room may be picked instead of it.
+        const restriction = steps["select_block"].actionsOnStart
+            .find(action => action.type === "restrict_voxel_quad_selection");
+        expect(restriction, "the select_block step no longer narrows the selection to that face").toBeDefined();
+        expect((restriction as Extract<SinglePlayerAction,
+            {type: "restrict_voxel_quad_selection"}>).quadIndex()).toBe(targetQuadIndex);
+
         const selectedAtEndOf = (stepName: string): number => {
+            runVariables(steps[stepName].actionsOnEnd);
             const select = steps[stepName].actionsOnEnd.find(action => action.type === "select_voxel_quad");
             expect(select, `the ${stepName} step no longer says where the selection goes`).toBeDefined();
             return (select as Extract<SinglePlayerAction, {type: "select_voxel_quad"}>).quadIndex();
         };
 
-        // The block goes into the cell the face looks into, and its own face that way is selected.
+        // The block goes into the cell that face looks into, and its own face that way is selected.
         const builtQuadIndex = selectedAtEndOf("add_block");
         expect(describeQuad(builtQuadIndex)).toEqual(
-            {row, col: wall.colMin - 1, collisionLayer: COLLISION_LAYER_MIN + 2, facing: "-x"});
+            {row: row - 1, col: wall.colMin - 1, collisionLayer: COLLISION_LAYER_MIN + 2, facing: "-x"});
 
         // Which is a face the built block really draws, covering the wall's.
         const builtRoom = RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
         expect(VoxelUpdateUtil.addVoxelBlock(undefined, builtRoom.voxelGrid.voxels, builtQuadIndex)).toBe(true);
         expect(builtRoom.voxelGrid.quadsMem.quads[builtQuadIndex] & 0b10000000).not.toBe(0);
-        expect(builtRoom.voxelGrid.quadsMem.quads[wallQuadIndex] & 0b10000000).toBe(0);
+        expect(builtRoom.voxelGrid.quadsMem.quads[targetQuadIndex] & 0b10000000).toBe(0);
 
-        expect(selectedAtEndOf("remove_block")).toBe(wallQuadIndex);
+        expect(selectedAtEndOf("remove_block")).toBe(targetQuadIndex);
     });
 
     it("frames the face it opened on from neither too near nor too far", () => {
@@ -502,30 +529,48 @@ describe("tutorial step graph", () => {
         expect(reachable).toEqual(new Set(Object.keys(steps)));
     });
 
-    it("opens edit mode and turns the camera, then builds a block before retexturing it and taking it away", () => {
+    it("opens edit mode and turns the camera, then picks a block out and builds against it before retexturing and taking it away", () => {
         const steps = config.loadSteps();
         const next = (stepName: string) => steps[stepName].transitionRules[0].nextStep;
 
-        expect([next("start_edit"), next("change_camera_angle"), next("add_block"), next("change_texture")])
-            .toEqual(["change_camera_angle", "add_block", "change_texture", "remove_block"]);
+        expect([next("start_edit"), next("change_camera_angle"), next("select_block"), next("add_block"),
+            next("change_texture"), next("change_texture_back")])
+            .toEqual(["change_camera_angle", "select_block", "add_block", "change_texture",
+                "change_texture_back", "remove_block"]);
     });
 
-    it("holds the selection still from the start, since the steps themselves move it", () => {
+    it("holds the selection still from the start, and hands it back for one step only, one face wide", () => {
         // Edit mode opens on the step's own pick, and the building steps reselect, both past the lock.
+        // Only the step that asks the user to select lifts it, and only onto the face it marks.
         const steps = config.loadSteps();
         const selectionLocks = [FeatureFlag.DisableVoxelQuadSelectionChange, FeatureFlag.DisableObjectSelectionChange];
         const flagsSwitched = (actions: SinglePlayerAction[], enable: boolean) => actions
             .filter((action): action is Extract<SinglePlayerAction, {type: "feature_flag"}> =>
                 action.type === "feature_flag" && action.enable === enable)
             .map(action => action.flag);
+        const acts = (actions: SinglePlayerAction[], type: SinglePlayerAction["type"]) =>
+            actions.some(action => action.type === type);
 
         expect(flagsSwitched(steps["initial"].actionsOnStart, true)).toEqual(expect.arrayContaining(selectionLocks));
         for (const [name, step] of Object.entries(steps))
         {
+            if (name === "select_block")
+                continue;
             const lifted = [...flagsSwitched(step.actionsOnStart, false), ...flagsSwitched(step.actionsOnEnd, false)];
             expect(lifted.filter(flag => selectionLocks.includes(flag)), `step "${name}" lifts a selection lock`)
                 .toEqual([]);
         }
+
+        // The one exception, which narrows the selection as it lifts the lock and restores both after.
+        const selectStep = steps["select_block"];
+        expect(flagsSwitched(selectStep.actionsOnStart, false))
+            .toEqual([FeatureFlag.DisableVoxelQuadSelectionChange]);
+        expect(acts(selectStep.actionsOnStart, "restrict_voxel_quad_selection")).toBe(true);
+        expect(flagsSwitched(selectStep.actionsOnEnd, true))
+            .toEqual([FeatureFlag.DisableVoxelQuadSelectionChange]);
+        expect(acts(selectStep.actionsOnEnd, "clear_voxel_quad_selection_restriction")).toBe(true);
+        // However the tutorial ends, the rest of the room is selectable again.
+        expect(acts(config.onModeEnd(), "clear_voxel_quad_selection_restriction")).toBe(true);
     });
 
     it("hides the user's own character from the start, and shows it again however the tutorial ends", () => {

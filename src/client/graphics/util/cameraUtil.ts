@@ -83,6 +83,22 @@ const CameraUtil =
         return ClientObjectManager.getObjectById(intersection.object.name);
     },
 
+    // Whether nothing drawn stands between the camera and a world-space point. The grid walk leaves out
+    // the point's own block, so a point resting on a block's face isn't hidden by that block.
+    pointIsInLineOfSight: (worldPosition: THREE.Vector3): boolean =>
+    {
+        GraphicsManager.getCamera().getWorldPosition(vec3Temp);
+
+        // Voxel blocks are checked by grid walk, so the cast below excludes them.
+        if (ClientVoxelQueryUtil.lineSegmentIsBlockedByDrawnVoxelBlock(vec3Temp, worldPosition))
+            return false;
+
+        CameraUtil.castBetweenPoints(vec3Temp, worldPosition, intersectionsTemp);
+        // Object-less geometry is a gizmo and doesn't block the view.
+        return intersectionsTemp.length == 0 ||
+            CameraUtil.getObjectFromIntersection(intersectionsTemp[0]) == undefined;
+    },
+
     objectIsInLineOfSight: (lookTargetWorldPosition: THREE.Vector3, lookTargetObject: GameObject): boolean =>
     {
         const camera = GraphicsManager.getCamera();

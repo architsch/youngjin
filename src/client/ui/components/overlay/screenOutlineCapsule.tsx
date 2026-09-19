@@ -17,7 +17,7 @@ export default function ScreenOutlineCapsule()
         return () => screenOutlineCapsuleTargetObservable.removeListener("ui.screenOutlineCapsule");
     }, []);
 
-    const rect = useTrackedElementRect(outlineParams?.targetElementId ?? null);
+    const rect = useTrackedElementRect(outlineParams?.targetElementId ?? null, true);
     if (!outlineParams || !rect)
         return null;
 
