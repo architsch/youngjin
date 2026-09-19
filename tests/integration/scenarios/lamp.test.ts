@@ -7,11 +7,14 @@ import fc from "fast-check";
 import { runScenario } from "../helpers/scenarioRunner";
 import { EMPTY_HUB, EMPTY_REGULAR, userAtCenter } from "../helpers/scenarioPresets";
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
+import ObjectCategoryConfigMap from "../../../src/shared/object/maps/objectCategoryConfigMap";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 import ObjectMetadataEntryMap from "../../../src/shared/object/maps/objectMetadataEntryMap";
 import ObjectUpdateUtil from "../../../src/shared/object/util/objectUpdateUtil";
 import WallLampObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/wallLampObjectTypeConfig";
+import DoorObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
+import ObjectGroup from "../../../src/shared/object/types/objectGroup";
 import RemoveObjectSignal from "../../../src/shared/object/types/removeObjectSignal";
 import SetObjectMetadataSignal from "../../../src/shared/object/types/setObjectMetadataSignal";
 import SetObjectTransformSignal from "../../../src/shared/object/types/setObjectTransformSignal";
@@ -25,11 +28,12 @@ import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import ColorUtil from "../../../src/shared/math/util/colorUtil";
 import LampLightUtil, { MAX_LAMP_INTENSITY, MAX_LAMP_RANGE, MIN_LAMP_INTENSITY, MIN_LAMP_RANGE }
     from "../../../src/shared/graphics/light/util/lampLightUtil";
-import { INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
+import { COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL,
+    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
     LIGHT_COLOR_PALETTE_NAME } from "../../../src/shared/system/sharedConstants";
 
 const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("WallLamp");
-const MAX_LAMPS_PER_ROOM = WallLampObjectTypeConfig.maxCountPerRoom;
+const MAX_LAMPS_PER_ROOM = ObjectCategoryConfigMap.getMaxCountPerRoom(WallLampObjectTypeConfig.category);
 
 function makeUser(id: string, userType: number): User
 {
@@ -39,6 +43,10 @@ function makeUser(id: string, userType: number): User
 const ADMIN = makeUser("an-admin", UserTypeEnumMap.Admin);
 const MEMBER = makeUser("a-member", UserTypeEnumMap.Member);
 const GUEST = makeUser("a-guest", UserTypeEnumMap.Guest);
+
+// A stretch of boundary wall the filled-in lamps never reach, so a cap refusal is the cap and not the
+// wall (lamps written straight into the room get no collider to be refused by).
+const CLEAR_COL_OFFSET = 5;
 
 // A lamp on the boundary wall, clear of the room's door.
 function makeLampSignal(room: Room, sourceUser: User, objectId: string = "new-lamp",
@@ -115,14 +123,75 @@ describe("lamp permissions", () => {
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
                 for (let i = 0; i < MAX_LAMPS_PER_ROOM; ++i)
-                    room.objectById[`lamp-${i}`] = makeLampSignal(room, ADMIN, `lamp-${i}`, -5 - i);
+                    room.objectGroup.addObject(makeLampSignal(room, ADMIN, `lamp-${i}`, -5 - i));
 
                 // The cap is not a privilege: an admin runs into it as surely as anybody else.
                 for (const user of [MEMBER, ADMIN])
                 {
                     expect(ObjectUpdateUtil.canAddObject(user, room,
-                        makeLampSignal(room, user, "one-too-many", -40))).toBe(false);
+                        makeLampSignal(room, user, "one-too-many", CLEAR_COL_OFFSET))).toBe(false);
                 }
+            },
+        });
+    });
+
+    it("counts a room's lamps the moment it is loaded, not only the ones installed since", async () => {
+        await runScenario({
+            name: "lamps counted on load",
+            rooms: [EMPTY_HUB],
+            users: [userAtCenter("hub")],
+            assertions: () => {
+                const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
+                const lamps: AddObjectSignal[] = [];
+                for (let i = 0; i < MAX_LAMPS_PER_ROOM; ++i)
+                    lamps.push(makeLampSignal(room, ADMIN, `lamp-${i}`, -5 - i));
+                room.objectGroup = new ObjectGroup(lamps); // as a stored room arrives (see ObjectGroup.decode)
+
+                expect(room.objectGroup.getCategoryCount(WallLampObjectTypeConfig.category))
+                    .toBe(MAX_LAMPS_PER_ROOM);
+                expect(ObjectUpdateUtil.canAddObject(ADMIN, room,
+                    makeLampSignal(room, ADMIN, "one-too-many", CLEAR_COL_OFFSET))).toBe(false);
+            },
+        });
+    });
+
+    it("frees the slot again when a lamp is taken down", async () => {
+        await runScenario({
+            name: "the lamp cap after a removal",
+            rooms: [EMPTY_HUB],
+            users: [userAtCenter("hub")],
+            assertions: () => {
+                const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
+                for (let i = 0; i < MAX_LAMPS_PER_ROOM; ++i)
+                    room.objectGroup.addObject(makeLampSignal(room, ADMIN, `lamp-${i}`, -5 - i));
+
+                expect(ObjectUpdateUtil.removeObject(MEMBER, room,
+                    new RemoveObjectSignal(room.id, "lamp-0"))).toBe(true);
+                expect(ObjectUpdateUtil.canAddObject(MEMBER, room,
+                    makeLampSignal(room, MEMBER, "one-more", CLEAR_COL_OFFSET))).toBe(true);
+            },
+        });
+    });
+
+    it("spends the lamp cap on lamps alone, leaving the room's other categories untouched", async () => {
+        await runScenario({
+            name: "the lamp cap is not a room-wide budget",
+            rooms: [EMPTY_HUB],
+            users: [userAtCenter("hub")],
+            assertions: () => {
+                const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
+                for (let i = 0; i < MAX_LAMPS_PER_ROOM; ++i)
+                    room.objectGroup.addObject(makeLampSignal(room, ADMIN, `lamp-${i}`, -5 - i));
+
+                // Only the entrance door the room was generated with.
+                expect(room.objectGroup.getCategoryCount(DoorObjectTypeConfig.category)).toBe(1);
+
+                const door = DoorObjectTypeConfig.util.makeEntranceDoor(room.id,
+                    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL + 4,
+                    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, COLLISION_LAYER_MIN);
+                door.objectId = "another-door";
+                door.sourceUserID = ADMIN.id;
+                expect(ObjectUpdateUtil.canAddObject(ADMIN, room, door)).toBe(true);
             },
         });
     });
@@ -135,7 +204,7 @@ describe("lamp permissions", () => {
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
                 const lamp = makeLampSignal(room, ADMIN);
-                room.objectById[lamp.objectId] = lamp;
+                room.objectGroup.addObject(lamp);
 
                 for (const user of [ADMIN, MEMBER, GUEST])
                 {
@@ -171,7 +240,7 @@ describe("lamp permissions", () => {
                     makeLampSignal(room, ADMIN))).toBe(true);
 
                 const lamp = makeLampSignal(room, ADMIN, "zoned-lamp");
-                room.objectById[lamp.objectId] = lamp;
+                room.objectGroup.addObject(lamp);
                 expect(ObjectUpdateUtil.canRemoveObject(MEMBER, room,
                     new RemoveObjectSignal(room.id, lamp.objectId))).toBe(false);
                 expect(ObjectUpdateUtil.canSetObjectMetadata(MEMBER, room,
@@ -191,7 +260,7 @@ describe("lamp permissions", () => {
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
                 const lamp = makeLampSignal(room, ADMIN);
-                room.objectById[lamp.objectId] = lamp;
+                room.objectGroup.addObject(lamp);
 
                 expect(ObjectUpdateUtil.canSetObjectTransform(ADMIN, room,
                     new SetObjectTransformSignal(room.id, lamp.objectId, lamp.transform,
@@ -208,7 +277,7 @@ describe("lamp permissions", () => {
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
                 const lamp = makeLampSignal(room, ADMIN);
-                room.objectById[lamp.objectId] = lamp;
+                room.objectGroup.addObject(lamp);
 
                 const canSet = (key: number, value: string) =>
                     ObjectUpdateUtil.canSetObjectMetadata(ADMIN, room,

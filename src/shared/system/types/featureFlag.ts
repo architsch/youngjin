@@ -6,6 +6,7 @@ export enum FeatureFlag
     DisableObjectSelectionChange,
     DisableManualVoxelBlockAddition,
     DisableManualVoxelBlockRemoval,
+    DisableManualVoxelQuadTextureChange,
     DisableManualObjectAddition,
     DisableManualObjectRemoval,
     HideChatInput,

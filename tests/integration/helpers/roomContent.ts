@@ -40,7 +40,7 @@ export function buildBareMultiplayerRoomContent(room: Room): void
     // The entrance door on the boundary wall (needed for spawning; see SpawnHotspotUtil).
     const entranceDoor = DoorObjectTypeConfig.util.makeEntranceDoor(room.id,
         INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, COLLISION_LAYER_MIN);
-    room.objectGroup.objectById[entranceDoor.objectId] = entranceDoor;
+    room.objectGroup.addObject(entranceDoor);
 }
 
 /** A fixture room of the given type. Single-player rooms keep their real template. */

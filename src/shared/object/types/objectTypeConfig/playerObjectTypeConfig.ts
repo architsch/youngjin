@@ -2,6 +2,7 @@ import Room from "../../../room/types/room";
 import { IS_SERVER } from "../../../system/sharedConstants";
 import User from "../../../user/types/user";
 import AddObjectSignal from "../addObjectSignal";
+import { ObjectCategoryEnumMap } from "../objectCategory";
 import { ObjectMetadataKeyEnumMap } from "../objectMetadataKey";
 import ObjectTypeConfig from "./objectTypeConfig";
 import SetObjectMetadataSignal from "../setObjectMetadataSignal";
@@ -14,17 +15,13 @@ import StringUtil from "../../../math/util/stringUtil";
 export const PLAYER_HEIGHT = 2.5;
 export const PLAYER_RADIUS_XZ = 0.375; // radius of the player on the XZ plane.
 
-// Sizes the mesh instance pools (see InstancedMeshCapacityBuilder); also the room balancer's cap (see
-// RoomPickerUtil).
-export const MAX_PLAYERS_PER_ROOM = 64;
-
 // This object represents each user's player character. Users directly control their player characters in first-person view, using input devices (such as mouse and keyboard).
 const PlayerObjectTypeConfig =
 {
     objectType: "Player",
     persistent: false,
     autoUnload: true,
-    maxCountPerRoom: MAX_PLAYERS_PER_ROOM,
+    category: ObjectCategoryEnumMap.Player,
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => {
         return IS_SERVER; // Only the server can add a player character.
     },

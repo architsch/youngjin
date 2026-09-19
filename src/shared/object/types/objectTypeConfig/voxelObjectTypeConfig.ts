@@ -1,6 +1,7 @@
 import Room from "../../../room/types/room";
 import User from "../../../user/types/user";
 import AddObjectSignal from "../../types/addObjectSignal";
+import { ObjectCategoryEnumMap } from "../../types/objectCategory";
 import ObjectTypeConfig from "./objectTypeConfig";
 import SetObjectMetadataSignal from "../../types/setObjectMetadataSignal";
 import SetObjectTransformSignal from "../../types/setObjectTransformSignal";
@@ -12,6 +13,7 @@ const VoxelObjectTypeConfig =
     objectType: "Voxel",
     persistent: false,
     autoUnload: false, // Voxels persist across rooms (shared instanced mesh + texture pack); rebound, not recreated.
+    category: ObjectCategoryEnumMap.Voxel,
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => {
         return false;
     },

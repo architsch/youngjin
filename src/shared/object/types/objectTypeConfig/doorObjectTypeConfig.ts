@@ -10,6 +10,7 @@ import RoomValidationUtil from "../../../room/util/roomValidationUtil";
 import { HUB_ROOM_ID_KEYWORD, LABEL_COLOR_PALETTE_NAME, WALL_ATTACHMENT_HITBOX_INSET } from "../../../system/sharedConstants";
 import User from "../../../user/types/user";
 import AddObjectSignal from "../addObjectSignal";
+import { ObjectCategoryEnumMap } from "../objectCategory";
 import ObjectTypeConfig from "./objectTypeConfig";
 import ObjectTypeConfigMap from "../../maps/objectTypeConfigMap";
 import WallAttachedObjectUtil from "../../util/wallAttachedObjectUtil";
@@ -21,9 +22,6 @@ import { ObjectMetadataKeyEnumMap } from "../objectMetadataKey";
 
 // Fixed id for a room's entrance door, so conversions add exactly one and its derived appearance is stable.
 export const ENTRANCE_DOOR_OBJECT_ID = "entrance_door";
-
-// Sizes the shared mesh instance pools (see InstancedMeshCapacityBuilder).
-const MAX_DOORS_PER_ROOM = 16;
 
 // Spawn and walk-out distances along the door's facing. The door sits on the wall/room boundary, so
 // half a voxel either way is a cell centre: spawn behind the door in the wall cell, walk out to the
@@ -47,20 +45,13 @@ const DoorObjectTypeConfig =
     objectType: "Door",
     persistent: true,
     autoUnload: true,
-    maxCountPerRoom: MAX_DOORS_PER_ROOM,
+    category: ObjectCategoryEnumMap.Door,
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => {
         if (!RoomValidationUtil.canUserManageDoors(user, room))
             return false;
 
         // Block spoofing attempts
         if (obj.sourceUserID != user.id)
-            return false;
-
-        // Looked up per call (not at module scope) because of the config/map import cycle.
-        const typeIndex = ObjectTypeConfigMap.getIndexByType("Door");
-        const doorCount = Object.values(room.objectById)
-            .filter(obj => obj.objectTypeIndex === typeIndex).length;
-        if (doorCount >= MAX_DOORS_PER_ROOM)
             return false;
 
         return true;

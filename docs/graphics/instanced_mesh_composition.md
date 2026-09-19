@@ -31,8 +31,9 @@ Metadata is stored and sent once per object, so a spelled-out composition is exp
 - Entries are regenerated from their source whenever the format changes, so no stored object needs converting: an object holds only the index.
 
 ## Mesh capacities
-`InstancedMeshCapacityBuilder` generates `InstancedMeshCapacityMap` during SSG: for each mesh, the sum over types of the type's room cap × the most parts one object of that type can put in it.
+`InstancedMeshCapacityBuilder` generates `InstancedMeshCapacityMap` during SSG: for each mesh, the sum over object categories of the category's room cap × the most parts one object of any type in it can put in that mesh.
 - A type's appearances are the structural variants its codec lists (every distinct set of parts it can build), or its pre-encoded entries for indexed types. A new part type or variant must be reachable from that list.
+- A cap is shared by its category's types (see `ObjectCategoryConfigMap`), so a category contributes its greediest type once rather than every type it holds.
 - Objects vary independently, so each mesh's maximum is taken on its own; the result is exact, not padded.
 - Only composed meshes are listed. Voxel quads, canvas pictures and labels size their own meshes from their room caps.
 - The inputs are code, so an integration test fails when the committed table no longer matches; re-run SSG.

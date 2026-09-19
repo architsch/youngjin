@@ -12,13 +12,16 @@ import DBRoomUtil from "../../../src/server/db/util/dbRoomUtil";
 import RequestRoomChangeSignal from "../../../src/shared/room/types/requestRoomChangeSignal";
 import { RoomChangeRejectionReasonEnumMap } from "../../../src/shared/room/types/roomChangeRejectionReason";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
-import { MAX_PLAYERS_PER_ROOM } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import ObjectCategoryConfigMap from "../../../src/shared/object/maps/objectCategoryConfigMap";
+import { ObjectCategoryEnumMap } from "../../../src/shared/object/types/objectCategory";
 import {
     HUB_ROOM_ID_KEYWORD,
     ROOM_ALMOST_FULL_MARGIN,
     ROOM_OVER_POPULATION_THRESHOLD,
     ROOM_UNDER_POPULATION_THRESHOLD,
 } from "../../../src/shared/system/sharedConstants";
+
+const MAX_PLAYERS_PER_ROOM = ObjectCategoryConfigMap.getMaxCountPerRoom(ObjectCategoryEnumMap.Player);
 
 /** Admission stops below the hard cap by a reserve margin, so in-flight joins can't exceed it. */
 const ADMISSION_CAP = MAX_PLAYERS_PER_ROOM - ROOM_ALMOST_FULL_MARGIN;

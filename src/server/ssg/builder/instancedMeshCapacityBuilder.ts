@@ -6,6 +6,7 @@ import InstancedMeshCompositionPart from "../../../shared/graphics/mesh/composit
 import CompositionMetadataUtil from "../../../shared/graphics/mesh/composition/util/compositionMetadataUtil";
 import InstancedMeshIdMap from "../../../shared/graphics/mesh/maps/instancedMeshIdMap";
 import StringUtil from "../../../shared/math/util/stringUtil";
+import ObjectCategoryConfigMap from "../../../shared/object/maps/objectCategoryConfigMap";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import ObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/objectTypeConfig";
 import PreEncodedCompositions from "../types/preEncodedCompositions";
@@ -14,20 +15,19 @@ const MAPS_ROOT_PATH = `${SRC_ROOT_DIR}/shared/graphics/mesh/composition/maps`;
 const MAP_FILE_NAME = "instancedMeshCapacityMap.ts";
 
 // Sizes every composed mesh for its worst case (see @docs/graphics/instanced_mesh_composition.md): a room
-// holding the most objects of every type, each built as whichever variant uses that mesh the most. Objects
-// of a type vary independently, so taking each mesh's maximum separately is exact, not an overestimate.
+// holding the most objects of every category, each built as whichever type and variant uses that mesh the
+// most. Objects vary independently, so taking each mesh's maximum separately is exact, not an overestimate.
 export default class InstancedMeshCapacityBuilder
 {
     // Takes this build's tables, since the running (compiled) app still holds the previous ones.
     static computeCapacities(compositions: PreEncodedCompositions): {[instancedMeshId: string]: number}
     {
-        const capacities: {[instancedMeshId: string]: number} = {};
+        // A cap is shared by its category's types, so the worst case is the greediest of them, not their sum.
+        const maxCountsPerCategory: {[category: string]: {[instancedMeshId: string]: number}} = {};
         for (const config of ObjectTypeConfigMap.getAllConfigs())
         {
             if (!config.components.spawnedByAny?.instancedMeshComposer)
                 continue;
-            if (config.maxCountPerRoom == undefined)
-                throw new Error(`Instanced mesh capacity computation failed :: objectType "${config.objectType}" composes meshes but has no maxCountPerRoom`);
 
             const maxCountsPerObject: {[instancedMeshId: string]: number} = {};
             for (const variant of InstancedMeshCapacityBuilder.getVariants(config, compositions))
@@ -36,10 +36,24 @@ export default class InstancedMeshCapacityBuilder
                 for (const instancedMeshId in counts)
                     maxCountsPerObject[instancedMeshId] = Math.max(maxCountsPerObject[instancedMeshId] ?? 0, counts[instancedMeshId]);
             }
+            if (maxCountsPerCategory[config.category] == undefined)
+                maxCountsPerCategory[config.category] = {};
+            const maxCounts = maxCountsPerCategory[config.category];
             for (const instancedMeshId in maxCountsPerObject)
+                maxCounts[instancedMeshId] = Math.max(maxCounts[instancedMeshId] ?? 0, maxCountsPerObject[instancedMeshId]);
+        }
+
+        const capacities: {[instancedMeshId: string]: number} = {};
+        for (const category in maxCountsPerCategory)
+        {
+            const maxCountPerRoom = ObjectCategoryConfigMap.getConfig(category).maxCountPerRoom;
+            if (maxCountPerRoom == undefined)
+                throw new Error(`Instanced mesh capacity computation failed :: category "${category}" composes meshes but has no maxCountPerRoom`);
+            const maxCounts = maxCountsPerCategory[category];
+            for (const instancedMeshId in maxCounts)
             {
                 capacities[instancedMeshId] = (capacities[instancedMeshId] ?? 0)
-                    + config.maxCountPerRoom * maxCountsPerObject[instancedMeshId];
+                    + maxCountPerRoom * maxCounts[instancedMeshId];
             }
         }
         return capacities;

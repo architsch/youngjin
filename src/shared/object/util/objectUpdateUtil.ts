@@ -6,6 +6,7 @@ import WallAttachedObjectUtil from "./wallAttachedObjectUtil";
 import PhysicsManager from "../../physics/physicsManager";
 import ObjectTransformUpdateResult from "../types/objectTransformUpdateResult";
 import PhysicsColliderStateUtil from "../../physics/util/physicsColliderStateUtil";
+import ObjectCategoryConfigMap from "../maps/objectCategoryConfigMap";
 import ObjectTypeConfigMap from "../maps/objectTypeConfigMap";
 import RemoveObjectSignal from "../types/removeObjectSignal";
 import User from "../../user/types/user";
@@ -34,6 +35,13 @@ const ObjectUpdateUtil =
         if (!config.canUserAddObject(user, room, obj))
             return false;
 
+        // Check if the room already holds as many of the object's category as it may. The cap belongs to
+        // the category, so every type in one spends it together (see ObjectCategoryConfigMap).
+        const maxCountPerRoom = ObjectCategoryConfigMap.getConfig(config.category).maxCountPerRoom;
+        if (maxCountPerRoom != undefined
+            && room.objectGroup.getCategoryCount(config.category) >= maxCountPerRoom)
+            return false;
+
         // Restricted zone check (see @docs/gameplay/restricted_zone.md).
         if (RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex,
             obj.transform.pos, obj.transform.dir))
@@ -57,7 +65,7 @@ const ObjectUpdateUtil =
         // Add the object.
         if (addToRoomData)
         {
-            room.objectById[obj.objectId] = obj;
+            room.objectGroup.addObject(obj);
             markRoomAsDirtyIfPersistent(room, obj);
         }
 
@@ -103,7 +111,7 @@ const ObjectUpdateUtil =
         if (removeFromRoomData)
         {
             const obj = room.objectById[signal.objectId];
-            delete room.objectById[signal.objectId];
+            room.objectGroup.removeObject(signal.objectId);
             markRoomAsDirtyIfPersistent(room, obj);
         }
 

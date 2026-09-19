@@ -16,6 +16,7 @@ import { InstancedMeshCompositionCodecMap } from "../../../src/shared/graphics/m
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionCodecType";
 import InstancedMeshCompositionPart from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
 import CompositionMetadataUtil from "../../../src/shared/graphics/mesh/composition/util/compositionMetadataUtil";
+import ObjectCategoryConfigMap from "../../../src/shared/object/maps/objectCategoryConfigMap";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 
 const COMPOSER_CONFIGS = ObjectTypeConfigMap.getAllConfigs()
@@ -50,25 +51,48 @@ describe("instanced mesh capacity", () => {
         expect(InstancedMeshCapacityMap).toEqual(expected);
     });
 
-    it("every composing type has a room cap and sizes at least one mesh", () => {
+    it("every composing type belongs to a capped category and sizes at least one mesh", () => {
         expect(COMPOSER_CONFIGS.length).toBeGreaterThan(0);
         for (const config of COMPOSER_CONFIGS)
-            expect(config.maxCountPerRoom, config.objectType).toBeGreaterThan(0);
+        {
+            expect(ObjectCategoryConfigMap.getMaxCountPerRoom(config.category),
+                config.objectType).toBeGreaterThan(0);
+        }
         expect(Object.keys(InstancedMeshCapacityMap).length).toBeGreaterThan(0);
     });
 
-    it("a room full of every type, each in any decodable appearance, fits every mesh", () => {
+    // A cap is shared by its category's types, so the fullest possible room is one filled to each
+    // category's cap with whichever of its types asks the most of a mesh.
+    it("a room full of every category, in any decodable appearance, fits every mesh", () => {
         const partsByType = Object.fromEntries(
             COMPOSER_CONFIGS.map(config => [config.objectType, arbitraryParts(config.objectType)]));
         fc.assert(fc.property(fc.record(partsByType), (appearances) => {
-            const needed: {[instancedMeshId: string]: number} = {};
+            const neededPerCategory: {[category: string]: {[instancedMeshId: string]: number}} = {};
             for (const config of COMPOSER_CONFIGS)
             {
+                const perObject: {[instancedMeshId: string]: number} = {};
                 for (const part of appearances[config.objectType])
                 {
                     const instancedMeshId = InstancedMeshIdMap.getInstancedMeshId(
                         part.geometryId, part.materialId);
-                    needed[instancedMeshId] = (needed[instancedMeshId] ?? 0) + config.maxCountPerRoom!;
+                    perObject[instancedMeshId] = (perObject[instancedMeshId] ?? 0) + 1;
+                }
+                const perCategory = neededPerCategory[config.category] ??= {};
+                for (const instancedMeshId in perObject)
+                {
+                    perCategory[instancedMeshId] = Math.max(perCategory[instancedMeshId] ?? 0,
+                        perObject[instancedMeshId]);
+                }
+            }
+
+            const needed: {[instancedMeshId: string]: number} = {};
+            for (const category in neededPerCategory)
+            {
+                const maxCountPerRoom = ObjectCategoryConfigMap.getMaxCountPerRoom(category);
+                for (const instancedMeshId in neededPerCategory[category])
+                {
+                    needed[instancedMeshId] = (needed[instancedMeshId] ?? 0)
+                        + maxCountPerRoom * neededPerCategory[category][instancedMeshId];
                 }
             }
             for (const instancedMeshId in needed)

@@ -84,6 +84,7 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                     {type: "feature_flag", flag: FeatureFlag.DisableObjectSelectionChange, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockAddition, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockRemoval, enable: true},
+                    {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelQuadTextureChange, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualObjectAddition, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableGameModeTransition, enable: true},
                 ],
@@ -241,6 +242,7 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                     {type: "ui_outline_rect", targetElementId: () => textureOptionElementId(
                         getSuggestedTextureIndex(
                             SinglePlayerManager.getVariable(ORIGINAL_TEXTURE_VARIABLE)))},
+                    {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelQuadTextureChange, enable: false},
                 ],
                 transitionRules: [{
                     requirements: [{type: "client_events_occurred_after_step_began", negate: false,
@@ -271,6 +273,7 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                 }],
                 actionsOnEnd: [
                     {type: "clear_all_ui_and_gizmo"},
+                    {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelQuadTextureChange, enable: true},
                 ],
             },
             "remove_block": {

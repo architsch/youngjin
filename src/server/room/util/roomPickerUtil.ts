@@ -1,6 +1,7 @@
 import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
-import { MAX_PLAYERS_PER_ROOM } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import ObjectCategoryConfigMap from "../../../shared/object/maps/objectCategoryConfigMap";
+import { ObjectCategoryEnumMap } from "../../../shared/object/types/objectCategory";
 import { HUB_ROOM_ID_KEYWORD, ROOM_ALMOST_FULL_MARGIN, ROOM_OVER_POPULATION_THRESHOLD, ROOM_UNDER_POPULATION_THRESHOLD } from "../../../shared/system/sharedConstants";
 import SocketUserContext from "../../sockets/types/socketUserContext";
 import ServerRoomManager from "../serverRoomManager";
@@ -81,7 +82,8 @@ const RoomPickerUtil =
     // body parts undrawn on clients.
     isRoomAlmostFull: (roomRuntimeMemory: RoomRuntimeMemory): boolean =>
     {
-        return RoomPickerUtil.getRoomPopulation(roomRuntimeMemory) >= MAX_PLAYERS_PER_ROOM - ROOM_ALMOST_FULL_MARGIN;
+        const maxPlayersPerRoom = ObjectCategoryConfigMap.getMaxCountPerRoom(ObjectCategoryEnumMap.Player);
+        return RoomPickerUtil.getRoomPopulation(roomRuntimeMemory) >= maxPlayersPerRoom - ROOM_ALMOST_FULL_MARGIN;
     },
 }
 

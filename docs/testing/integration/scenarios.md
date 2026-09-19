@@ -15,7 +15,7 @@ A map of what each suite in `tests/integration/scenarios/` covers. The test name
 | `permissions.test.ts`, `permissions-extended.test.ts` | anyone may build in Hub and Regular rooms, and ownership is never a per-operation condition |
 | `restricted-zones.test.ts` | server enforcement for blocks, faces and persistent objects, superuser identity, zone-list validation, persistence, single-player exemption |
 | `door.test.ts` | admin-only door operations, metadata sanitizing, vertical moves, spawn selection |
-| `lamp.test.ts` | lamp permissions and emitted light |
+| `lamp.test.ts` | lamp permissions, the per-category room cap (on load, after a removal, and against other categories) and emitted light |
 | `state-persistence.test.ts` | metadata and voxels across reconnects, empty-room saves, extended invariants, shutdown |
 | `race-conditions.test.ts` | RC1–RC12: concurrent joins, join during unload, simultaneous edits, transitions, disconnects, churn, shutdown, latency stress, metadata-cache race |
 | `property-based.test.ts` | random action sequences across weight profiles (with and without latency), gameplay persistence, room volume geometry, integer range math |

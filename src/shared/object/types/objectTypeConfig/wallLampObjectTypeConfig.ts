@@ -14,8 +14,8 @@ import { COLLISION_LAYER_HEIGHT, INSTANCED_EMISSIVE_MATERIAL_ID,
     WALL_ATTACHMENT_HITBOX_INSET} from "../../../system/sharedConstants";
 import User from "../../../user/types/user";
 import AddObjectSignal from "../addObjectSignal";
+import { ObjectCategoryEnumMap } from "../objectCategory";
 import ObjectTypeConfig from "./objectTypeConfig";
-import ObjectTypeConfigMap from "../../maps/objectTypeConfigMap";
 import SetObjectMetadataSignal from "../setObjectMetadataSignal";
 import SetObjectTransformSignal from "../setObjectTransformSignal";
 import { ObjectMetadataKeyEnumMap } from "../objectMetadataKey";
@@ -29,10 +29,6 @@ const COMPOSITION_CODEC_VERSION = 0;
 // box is slightly inset (see PhysicsColliderStateUtil).
 const LAMP_FOOTPRINT_WIDTH = 1;
 const LAMP_FOOTPRINT_HEIGHT = COLLISION_LAYER_HEIGHT;
-
-// Bounded by the mesh pool, propagation cost, clutter and stored size (the block map itself doesn't
-// scale with lamp count).
-const MAX_LAMPS_PER_ROOM = 64;
 
 // Character positions in the stored string; never reorder.
 const COLOR_CHAR_INDEX = 0;
@@ -57,17 +53,10 @@ const WallLampObjectTypeConfig =
     objectType: "WallLamp",
     persistent: true,
     autoUnload: true,
-    maxCountPerRoom: MAX_LAMPS_PER_ROOM,
+    category: ObjectCategoryEnumMap.Lamp,
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => {
         // Block spoofing attempts
         if (obj.sourceUserID != user.id)
-            return false;
-
-        // Looked up per call because of the config import cycle (see DoorObjectTypeConfig).
-        const typeIndex = ObjectTypeConfigMap.getIndexByType("WallLamp");
-        const lampCount = Object.values(room.objectById)
-            .filter(obj => obj.objectTypeIndex === typeIndex).length;
-        if (lampCount >= MAX_LAMPS_PER_ROOM)
             return false;
 
         return true;

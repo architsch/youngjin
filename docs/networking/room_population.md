@@ -2,7 +2,7 @@
 
 Reference: @src/shared/system/sharedConstants.ts , @src/server/room/serverRoomManager.ts , @src/server/room/util/roomPickerUtil.ts , @src/server/room/util/hubRoomUtil.ts , @src/shared/room/types/roomChangeRejectedSignal.ts
 
-Every player in a room costs every other client in it (a mesh-pool slice, plus physics and sync work). Room population is bounded by a hard cap (`MAX_PLAYERS_PER_ROOM`), and hubs are load-balanced so they rarely approach it.
+Every player in a room costs every other client in it (a mesh-pool slice, plus physics and sync work). Room population is bounded by a hard cap — the Player category's per-room cap in `ObjectCategoryConfigMap` — and hubs are load-balanced so they rarely approach it.
 
 ## Population bands
 - **Under-populated** (≤ `ROOM_UNDER_POPULATION_THRESHOLD`): too empty to be worth visiting.

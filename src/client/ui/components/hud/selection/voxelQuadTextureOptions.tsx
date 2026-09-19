@@ -1,4 +1,4 @@
-import { voxelQuadSelectionObservable } from "../../../../system/clientObservables";
+import { clientFeatureFlagsObservable, voxelQuadSelectionObservable } from "../../../../system/clientObservables";
 import VoxelQuadSelection from "../../../../graphics/types/gizmo/voxelQuadSelection";
 import AtlasCellSprite from "../../basic/image/atlasCellSprite";
 import SocketsClient from "../../../../networking/client/socketsClient";
@@ -9,10 +9,24 @@ import VoxelGameObject from "../../../../object/types/voxelGameObject";
 import useMouseDragScroll from "../../../util/mouseDragScroll";
 import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
 import VoxelUpdateUtil from "../../../../../shared/voxel/util/voxelUpdateUtil";
+import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
+import { useEffect, useReducer } from "react";
 
 export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSelection})
 {
     const onRefChange = useMouseDragScroll("horizontal", "alwaysGrab");
+
+    const [, forceRefresh] = useReducer((x: number) => x + 1, 0);
+    
+    // Re-render this menu only when the feature flags it depends on change (e.g. tutorial steps).
+    useEffect(() => {
+        clientFeatureFlagsObservable.addElementListener("voxelQuadTextureOptions",
+            FeatureFlag.DisableManualVoxelQuadTextureChange, forceRefresh);
+        return () => {
+            clientFeatureFlagsObservable.removeElementListener("voxelQuadTextureOptions",
+                FeatureFlag.DisableManualVoxelQuadTextureChange);
+        };
+    }, []);
 
     const quadIndex = props.selection.quadIndex;
     const selectedTextureIndex = App.getVoxelQuads()[quadIndex] & 0b01111111;
@@ -20,8 +34,9 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
     // Disabled (not hidden) inside restricted zones (see @docs/gameplay/restricted_zone.md), so the
     // current texture stays visible.
     const currentRoom = App.getCurrentRoom();
-    const disabled = currentRoom == undefined || !VoxelUpdateUtil.canSetVoxelQuadTexture(
-        App.getUser(), currentRoom, quadIndex);
+    const disabled = currentRoom == undefined ||
+        clientFeatureFlagsObservable.has(FeatureFlag.DisableManualVoxelQuadTextureChange) ||
+        !VoxelUpdateUtil.canSetVoxelQuadTexture(App.getUser(), currentRoom, quadIndex);
 
     const materialParams = VoxelGameObject.materialParams;
     if (!materialParams)
@@ -45,6 +60,9 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
             const col = textureIndex % numCols;
             const row = Math.floor(textureIndex / numCols);
             const onClick = async () => {
+                if (clientFeatureFlagsObservable.has(FeatureFlag.DisableManualVoxelQuadTextureChange))
+                    return;
+
                 const room = App.getCurrentRoom();
                 if (!room)
                 {

@@ -7,20 +7,17 @@ import StringUtil from "../../../math/util/stringUtil";
 import Room from "../../../room/types/room";
 import User from "../../../user/types/user";
 import AddObjectSignal from "../../types/addObjectSignal";
+import { ObjectCategoryEnumMap } from "../../types/objectCategory";
 import { ObjectMetadataKeyEnumMap } from "../../types/objectMetadataKey";
 import ObjectTypeConfig from "./objectTypeConfig";
 import SetObjectMetadataSignal from "../../types/setObjectMetadataSignal";
 import SetObjectTransformSignal from "../../types/setObjectTransformSignal";
-import ObjectTypeConfigMap from "../../maps/objectTypeConfigMap";
 import { WALL_ATTACHMENT_HITBOX_INSET } from "../../../system/sharedConstants";
 
 // Shared render target for all canvases in a room, one cell each. The cell size is also the thumbnail
 // size canvas images are fetched at.
 export const CANVAS_TEXTURE_SIZE = 2048; // in pixels (the texture is square)
 export const CANVAS_TEXTURE_CELL_SIZE = 256; // in pixels (each cell is square)
-
-// Room-wide cap: one render target cell per canvas (8x8 grid).
-const MAX_CANVASES_PER_ROOM = 64;
 
 // Metadata keys a user may write to a canvas; anything else is refused.
 const editableMetadataKeys = [
@@ -34,17 +31,10 @@ const CanvasObjectTypeConfig =
     objectType: "Canvas",
     persistent: true,
     autoUnload: true,
-    maxCountPerRoom: MAX_CANVASES_PER_ROOM,
+    category: ObjectCategoryEnumMap.Canvas,
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => {
         // Block spoofing attempts
         if (obj.sourceUserID != user.id)
-            return false;
-
-        // Block users from adding too many canvases
-        const typeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
-        const canvasCount = Object.values(room.objectById)
-            .filter(obj => obj.objectTypeIndex === typeIndex).length;
-        if (canvasCount >= MAX_CANVASES_PER_ROOM)
             return false;
 
         return true;

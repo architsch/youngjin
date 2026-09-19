@@ -43,7 +43,7 @@ export default abstract class MultiplayerRoomBuilder extends ProceduralRoomBuild
         const {params, room} = this;
         const door = DoorObjectTypeConfig.util.makeEntranceDoor(room.id, params.entranceVoxelCol,
             params.entranceVoxelRow, params.entranceVoxelCollisionLayer);
-        room.objectGroup.objectById[door.objectId] = door;
+        room.objectGroup.addObject(door);
         return this;
     }
 }

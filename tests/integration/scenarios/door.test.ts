@@ -351,7 +351,7 @@ describe("choosing where a player arrives", () => {
         door.objectId = objectId;
         door.metadata[ObjectMetadataKeyEnumMap.Label] = new EncodableByteString(label);
         door.metadata[ObjectMetadataKeyEnumMap.DoorType] = new EncodableByteString(`${doorType}`);
-        room.objectById[objectId] = door;
+        room.objectGroup.addObject(door);
         return door;
     }
 
@@ -398,7 +398,7 @@ describe("choosing where a player arrives", () => {
             users: [userAtCenter("hub")],
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
-                delete room.objectById[ENTRANCE_DOOR_OBJECT_ID];
+                room.objectGroup.removeObject(ENTRANCE_DOOR_OBJECT_ID);
                 const custom = addDoor(room, "side-door", 6, "", DoorTypeEnumMap.CustomEntrance);
 
                 const {pos} = SpawnHotspotUtil.pickSpawnTransform(room, "");
@@ -417,7 +417,7 @@ describe("choosing where a player arrives", () => {
                 for (const objectId of Object.keys(room.objectById))
                 {
                     if (room.objectById[objectId].objectTypeIndex === doorTypeIndex)
-                        delete room.objectById[objectId];
+                        room.objectGroup.removeObject(objectId);
                 }
 
                 const {pos} = SpawnHotspotUtil.pickSpawnTransform(room, "");

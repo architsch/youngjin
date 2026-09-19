@@ -52,16 +52,16 @@ export default class TutorialRoomBuilder extends RoomBuilder
         RoomVolumeUtil.carveOutVolume(voxels, params.volumes.room4);
 
         // Add the NPC.
-        room.objectGroup.objectById["npc"] = new AddObjectSignal("", "@npc", "Receptionist",
+        room.objectGroup.addObject(new AddObjectSignal("", "@npc", "Receptionist",
             ObjectTypeConfigMap.getIndexByType("Player"), "npc",
             new ObjectTransform(params.hotspots.npc, {x: 1, y: 0, z: 0}),
             {
                 [ObjectMetadataKeyEnumMap.InstancedMeshComposition]:
                     new EncodableByteString(RECEPTIONIST_APPEARANCE),
-            });
+            }));
 
         // The exit door points at the hubs, so leaving the tutorial goes to a balanced hub.
-        room.objectGroup.objectById["door"] = new AddObjectSignal("", "", "",
+        room.objectGroup.addObject(new AddObjectSignal("", "", "",
             ObjectTypeConfigMap.getIndexByType("Door"), "door",
             new ObjectTransform(params.hotspots.door, {x: 0, y: 0, z: 1}),
             {
@@ -75,7 +75,7 @@ export default class TutorialRoomBuilder extends RoomBuilder
                 [ObjectMetadataKeyEnumMap.DestinationDoorLabel]: new EncodableByteString(""),
                 [ObjectMetadataKeyEnumMap.DoorType]:
                     new EncodableByteString(`${DoorTypeEnumMap.DefaultEntrance}`),
-            });
+            }));
         return this;
     }
 }

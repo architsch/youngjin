@@ -9,6 +9,7 @@ Object edits are optimistic: the client validates and applies an edit through th
 
 - **Add**: the client registers the object, creates its physics body, spawns it as spawned-by-me, and sends `AddObjectSignal` with a locally computed id. The server recomputes the id. If the ids differ or validation fails, it sends `RemoveObjectSignal` back to the sender.
 - **Remove**: applied optimistically. A server-side failure is only logged.
+- **Category caps**: every object type belongs to a category (`ObjectCategoryEnumMap`), and a room may hold only so many of each (`ObjectCategoryConfigMap`). Types in one category spend that budget together, so a second kind of lamp does not double how many lamps a room can hold. `ObjectGroup` counts what it holds per category as objects come and go; both the client and the server refuse an add that would pass the cap.
 - **Restricted zones**: adding, moving (into or out of a zone), removing or changing the metadata of a persistent object whose collider touches a zone is refused for anyone but the superuser (see [restricted_zone.md](../gameplay/restricted_zone.md)). Non-persistent objects, including players, are never checked.
 - **Local-only objects** (e.g. render objects spawned from the voxel grid) get client-only ids and are never registered, persisted or signaled. They still get physics bodies.
 

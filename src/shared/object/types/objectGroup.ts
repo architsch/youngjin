@@ -5,8 +5,10 @@ import EncodableMap from "../../networking/types/encodableMap";
 import EncodableRaw2ByteNumber from "../../networking/types/encodableRaw2ByteNumber";
 import EncodableRawByteNumber from "../../networking/types/encodableRawByteNumber";
 import AddObjectSignal from "./addObjectSignal";
+import { ObjectCategory } from "./objectCategory";
 import { ObjectMetadata } from "./objectMetadata";
 import ObjectTransform from "./objectTransform";
+import ObjectTypeConfigMap from "../maps/objectTypeConfigMap";
 import ObjectGroupVersionMigration, { CURRENT_ERA_VOXEL_GRID_VERSION }
     from "../versionMigration/objectGroupVersionMigration";
 
@@ -18,19 +20,50 @@ const latestVersion = 3;
 
 export default class ObjectGroup extends EncodableData
 {
-    objectById: {[objectId: string]: AddObjectSignal};
+    // Private, with the counts below: they are kept up to date as objects come and go, so every change
+    // has to go through addObject/removeObject.
+    private readonly objects: {[objectId: string]: AddObjectSignal} = {};
+    private readonly countByCategory: {[category: string]: number} = {};
     // The format the group was decoded from; older ones were converted (see ObjectGroupVersionMigration).
     sourceFormatVersion: number = latestVersion;
 
     constructor(objects: AddObjectSignal[])
     {
         super();
-        this.objectById = {};
         for (const object of objects)
-            this.objectById[object.objectId] = object;
+            this.addObject(object);
     }
 
     static get latestFormatVersion(): number { return latestVersion; }
+
+    get objectById(): Readonly<{[objectId: string]: AddObjectSignal}>
+    {
+        return this.objects;
+    }
+
+    // What the category's per-room cap is spent against (see ObjectUpdateUtil).
+    getCategoryCount(category: ObjectCategory): number
+    {
+        return this.countByCategory[category] ?? 0;
+    }
+
+    addObject(object: AddObjectSignal): void
+    {
+        this.removeObject(object.objectId); // an id written over must not be counted twice
+        this.objects[object.objectId] = object;
+        const category = getCategory(object);
+        this.countByCategory[category] = this.getCategoryCount(category) + 1;
+    }
+
+    removeObject(objectId: string): void
+    {
+        const object = this.objects[objectId];
+        if (object == undefined)
+            return;
+        delete this.objects[objectId];
+        const category = getCategory(object);
+        this.countByCategory[category] = this.getCategoryCount(category) - 1;
+    }
 
     encodeWithParams(bufferState: BufferState, participantUserNameByID: { [userID: string]: string })
     {
@@ -42,7 +75,7 @@ export default class ObjectGroup extends EncodableData
     {
         new EncodableRawByteNumber(latestVersion).encode(bufferState);
         
-        const objects = Object.values(this.objectById);
+        const objects = Object.values(this.objects);
         const sourceUserIDs: string[] = [];
         const sourceUserNames: string[] = [];
         const objectSourceUserIndices: number[] = [];
@@ -115,6 +148,11 @@ export default class ObjectGroup extends EncodableData
         objectGroup.sourceFormatVersion = versionFound;
         return objectGroup;
     }
+}
+
+function getCategory(object: AddObjectSignal): ObjectCategory
+{
+    return ObjectTypeConfigMap.getConfigByIndex(object.objectTypeIndex).category;
 }
 
 // All versions share one body layout (only the meaning of values changed).

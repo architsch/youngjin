@@ -288,7 +288,7 @@ describe("restricted zones", () => {
                 const room = getRoom("hub");
 
                 const canvas = makeCanvasSignal(room, MEMBER, INSIDE.row, INSIDE.col);
-                room.objectById[canvas.objectId] = canvas;
+                room.objectGroup.addObject(canvas);
                 drawZone(room, ZONE);
 
                 expect(ObjectUpdateUtil.canRemoveObject(MEMBER, room,
@@ -313,8 +313,8 @@ describe("restricted zones", () => {
 
                 const inside = makeCanvasSignal(room, MEMBER, INSIDE.row, INSIDE.col, "inside-canvas");
                 const outside = makeCanvasSignal(room, MEMBER, OUTSIDE.row, OUTSIDE.col, "outside-canvas");
-                room.objectById[inside.objectId] = inside;
-                room.objectById[outside.objectId] = outside;
+                room.objectGroup.addObject(inside);
+                room.objectGroup.addObject(outside);
 
                 const newPicture = (objectId: string) => new SetObjectMetadataSignal(room.id,
                     objectId, ObjectMetadataKeyEnumMap.ImagePath, CANVAS_IMAGE_PATH);

@@ -8,6 +8,7 @@ import InstancedTexturePackMaterialParams from "../../../shared/graphics/materia
 import InstancedMeshCompositionPart from "../../../shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
 import CanvasObjectTypeConfig, { CANVAS_TEXTURE_CELL_SIZE,
     CANVAS_TEXTURE_SIZE } from "../../../shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
+import ObjectCategoryConfigMap from "../../../shared/object/maps/objectCategoryConfigMap";
 import { CANVAS_BOARD_RELIEF, CANVAS_FOOTPRINT_HEIGHT, CANVAS_FOOTPRINT_WIDTH,
     CANVAS_GEOMETRY_ID, CANVAS_PICTURE_LIFT } from "../../../shared/graphics/mesh/composition/types/compositionConstants/canvasCompositionConstants";
 import { BACKWARD_DIR, INSTANCED_WOOD_MATERIAL_ID } from "../../../shared/system/sharedConstants";
@@ -71,7 +72,8 @@ export default class CanvasGameObject extends GameObject
         CanvasGameObject.spawnedCanvasGameObjects.set(this.params.objectId, this);
 
         await this.instancedMeshGraphics.loadInstancedMesh(CANVAS_GEOMETRY_ID,
-            CanvasGameObject.materialParams, CanvasObjectTypeConfig.maxCountPerRoom, true);
+            CanvasGameObject.materialParams,
+            ObjectCategoryConfigMap.getMaxCountPerRoom(CanvasObjectTypeConfig.category), true);
 
         // An exhausted pool leaves this canvas's picture unrendered.
         const rentedInstanceId = this.instancedMeshGraphics.rentInstanceFromPool(CanvasGameObject.instancedMeshId);

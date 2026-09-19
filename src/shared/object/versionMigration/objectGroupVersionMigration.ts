@@ -79,7 +79,7 @@ const converters: ((objectGroup: ObjectGroup, roomID: string, sourceVoxelGridVer
 
         const entranceDoor = DoorObjectTypeConfig.util.makeEntranceDoor(roomID,
             INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, COLLISION_LAYER_MIN);
-        objectGroup.objectById[entranceDoor.objectId] = entranceDoor;
+        objectGroup.addObject(entranceDoor);
     },
     (objectGroup: ObjectGroup) => { // version 2 -> 3
         // Bitmap canvas frames became composed wood frames: an atlas cell becomes its look-alike.
