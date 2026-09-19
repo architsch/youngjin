@@ -8,17 +8,17 @@
 
 ThingsPool is a 3D chat app you can open up in a browser. You don't need to download anything; just click the link and you will be right inside our virtual universe!
 
-<intro-1>
+<20260808-intro-1>
 
 ThingsPool is made up of virtual rooms, where you can chat with people, build your own personal space, and partake in unforeseen adventures. So jump in, and become part of our everlasting journey.
 
-<intro-2>
+<20260808-intro-2>
 
 You can even have your own room and fill it with various treatures.
 
 This is the first post of ThingsPool's development log, which is a news feed for the project's major updates. Whenever a new feature comes in, you will hear about it here. Stay tuned!
 
-<intro-3>
+<20260808-intro-3>
 
 #ThingsPool #Metaverse #VirtualWorld #Sandbox #OpenWorld #BrowserGame #MultiplayerGame #IndieGame #GameDev #WorldBuilding #OpenSource #FreeToPlay #VoxelEngine #LevelEditor #ThreeJS #WebGL
 
@@ -36,15 +36,15 @@ This is the first post of ThingsPool's development log, which is a news feed for
 
 ThingsPool, an immersive browser-based metaverse app, now supports two distinct game modes - "Play Mode" and "Edit Mode".
 
-<game-mode-1>
+<20260815-game-mode-1>
 
 In Play Mode, you will be engaging in all sorts of rich gameplay experiences - such as inspecting, attacking, picking things up, eating, and so on.
 
-<game-mode-2>*
+<20260815-game-mode-2>*
 
 In Edit Mode, on the other hand, you will be editing the room's walls, floors, ceilings, doors, staircases, furniture, and a variety of other hidden corners.
 
-<game-mode-3>
+<20260815-game-mode-3>
 
 Enter the Edit Mode, and click anything you see; you will fly in mid air, chasing what you are editing in real time!
 
@@ -66,15 +66,15 @@ You can now build two-story rooms in ThingsPool!
 
 ThingsPool is a 3D real-time chat application, in which you can build your own room, socialize with other people, and engage in many hidden adventures.
 
-<second-floor-1>
+<20260821-second-floor-1>
 
 ThingsPool used to have only single-story rooms, which severely limited your creative freedom. It is no longer the case. Rooms are now two stories high, meaning you can build stairs, vast halls of high ceilings, and other architectural wonders!
 
-<second-floor-2>
+<20260821-second-floor-2>
 
 Come join ThingsPool. The second floor's open air is inviting you.
 
-<second-floor-3>
+<20260821-second-floor-3>
 
 #ThingsPool #VirtualSpace #OpenWorld #WebGame #SandboxGame #GameDesign #WorldBuilding #FreeToPlay #VoxelEngine #ProceduralGeneration #LevelEditor #GameEngine #DigitalArt #ThreeJS #WebGL #TypeScript
 
@@ -93,15 +93,15 @@ ThingsPool, a 3D virtual universe of rooms, now includes custom doors!
 
 Try entering these new doors, and you will find yourself wandering off into places of pure mystery.
 
-<dynamic-doors-1>
+<20260830-dynamic-doors-1>
 
 Each door has its own name, and it leads to a unique site of adventure. Try entering them one by one, and you will end up navigating ThingsPool's vast labyrinth of rooms.
 
-<dynamic-doors-2>
+<20260830-dynamic-doors-2>
 
 Internally, we now have an admin system which grants the special admin user (i.e. the "Game Master") a right to install these custom doors, connect them to other rooms, and even create brand new rooms!
 
-<dynamic-doors-3>
+<20260830-dynamic-doors-3>
 
 So come and enjoy this new, ever-growing world of interconnected doors.
 
@@ -121,11 +121,11 @@ ThingsPool, a freely editable virtual world, now supports restricted zones.
 
 A restricted zone is a special part of your room that nobody but you can touch - the walls, the floor, the paintings, and every other treasure you have gathered there.
 
-<restricted-zones-1>
+<20260905-restricted-zones-1>
 
 The rest of the room stays open, so you can hand your friends a corner to build in while your own private area stays intact. They can walk right through your zone and admire everything in it, but not a single block of it will move!
 
-<restricted-zones-2>
+<20260905-restricted-zones-2>
 
 So come and claim a corner of ThingsPool for your own.
 
@@ -135,8 +135,8 @@ So come and claim a corner of ThingsPool for your own.
 
 
 
-:d:ThingsPool now lets you keep part of a room to yourself.
-:k:ThingsPool, Dev Log, Browser Game, Web Game, Multiplayer Game, Sandbox Game, Virtual World, Room Building, Permissions, Level Editor, World Building, Free to Play, Three.js, WebGL
+:d:ThingsPool now has lights, sky, and fog.
+:k:ThingsPool, Dev Log, Browser Game, Web Game, Multiplayer Game, Sandbox Game, Virtual World, Room Building, Skybox, World Building, Free to Play, Three.js, WebGL
 :l:2026-09-13
 
 [Lights, Sky, and Fog!] September 13, 2026
@@ -145,20 +145,49 @@ So come and claim a corner of ThingsPool for your own.
 
 ThingsPool now has lights!
 
-<lights-8>
+<20260913-lights-8>
 
 Inside ThingsPool's vast sandbox environment, you are now able to install lamps, change their colors, and experiment with their chromatic harmony.
 
-<lights-16>
+<20260913-lights-16>
 
 Try combining different lights, until you end up creating your own visual masterpiece.
 
-<lights-19>
+<20260913-lights-19>
 
 Besides, rooms are now furnished with atmospheric effects (e.g. fog), sky, and the horizon. Look out the window, and embrace the vastness of our natural landscape!
 
-<lights-5>
+<20260913-lights-5>
 
-<lights-12>
+<20260913-lights-12>
 
 #3DApp #VoxelGame #CraftEngine #SandboxGame #WebGame #FPS #VirtualWorld #FineArts #Multimedia #InteriorDesign #Architecture #MultiplayerGame #ChatApp #LandscapePainting
+
+
+
+
+
+
+:d:ThingsPool's new feature update include colored fog.
+:k:ThingsPool, Dev Log, Browser Game, Web Game, Multiplayer Game, Sandbox Game, Virtual World, Room Building, World Building, Free to Play, Three.js, WebGL
+:l:2026-09-19
+
+[Colored Fog, and Other Visual Subtleties] September 19, 2026
+
+@@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net#what-is-thingspool">What is ThingsPool?</a></h3>
+
+ThingsPool, an interactive webpage where you can build your own imaginary spaces, recently had a number of updates in the domain of artistic tooling.
+
+<20260919-colors-1>
+
+The biggest change is that the fog now reflects the colors of nearby lights, which enables you to experiment with a wider variety of visual elements.
+
+<20260919-colors-2>
+
+Paint ThingsPool's vast three-dimensional canvas with lamps and fuzzy atmospheric mirrors. You will end up summoning the place of your dream - a liminal space which leads to the dungeon of your subconscious.
+
+<20260919-colors-3>
+
+<20260919-colors-4>
+
+#WebApp #WebGame #BrowserGame #ArtSimulation #VisualArts #FineArts #Architecture #Painting #DigitalArts #InteractivePainting #LiminalSpace #Dreamcore #Aesthetics
