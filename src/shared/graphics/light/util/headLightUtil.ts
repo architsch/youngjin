@@ -12,7 +12,6 @@ const HeadLightUtil =
         const t = NumUtil.normalizeInRange(powerStep, 0, MAX_ROOM_PREFS_STEP);
         return MAX_POWER_INTENSITY * t * t * t;
     },
-    // Also the reference reach for scaling with view distance (see GraphicsManager).
     getDistance: (rangeStep: number): number =>
     {
         return interpolate(rangeStep, MIN_RANGE_DISTANCE, MAX_RANGE_DISTANCE);

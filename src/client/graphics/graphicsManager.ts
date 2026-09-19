@@ -2,7 +2,8 @@ import * as THREE from "three";
 import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import { graphicsContextRestoredObservable } from "../system/clientObservables";
 import { endClientProcess, ongoingClientProcessExists, tryStartClientProcess } from "../system/types/clientProcess";
-import { FOG_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME, MINUTE_IN_MS,
+import { FOG_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME, MAX_ROOM_Y, MINUTE_IN_MS,
+    NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
     SCENERY_COLOR_PALETTE_NAME } from "../../shared/system/sharedConstants";
 import LightBlockMap from "./light/maps/lightBlockMap";
 import { getLightLuminance } from "./light/util/lightBlockPropagationUtil";
@@ -72,21 +73,15 @@ let basePointLightIntensity = HeadLightUtil.getIntensity(unconfiguredPrefs.headL
 let basePointLightDistance = HeadLightUtil.getDistance(unconfiguredPrefs.headLightRangeStep);
 let pointLightDecay = HeadLightUtil.getDecay(unconfiguredPrefs.headLightRangeStep);
 
-// The light must reach past the view target so the target is lit among its surroundings.
-const pointLightRangePerViewDistance = 2;
-
 // Room light (in block map units) at which the room takes half the say over the head light. A
 // saturating curve, because a linear ramp over this dynamic range behaves like a switch.
 const pointLightRoomHalfBrightness = 0.15;
 
-// The view distance fog distances were tuned for; farther cameras push the fog out proportionally.
-const referenceFogViewDistance = 8;
+// Fixed, so clarity never depends on where the camera is: the room's diagonal plus the farthest an
+// orbit camera is pulled back from a pivot in its corner (see OrbitCameraPose).
+const cameraFar = Math.hypot(NUM_VOXEL_COLS, NUM_VOXEL_ROWS, MAX_ROOM_Y) + 50;
 
-// Far plane for the player's own eye: roughly the room's diagonal. Farther cameras push it out by their
-// view distance, so the room behind what they look at is still drawn.
-const baseCameraFar = 45;
-
-let currViewDistance = 0;
+let currViewReferenceOffset = 0;
 const currRoomLightNearCamera = new THREE.Color(0, 0, 0);
 
 let currRoomPrefs: RoomPrefs = RoomPrefsUtil.decode("");
@@ -94,8 +89,9 @@ let currRoomPrefs: RoomPrefs = RoomPrefsUtil.decode("");
 const pointLightBaseColor = new THREE.Color(0xffffff);
 const pointLightColorTemp = new THREE.Color();
 
-// Never removed: toggling scene.fog recompiles every material, so "no fog" is fog beyond the far plane.
-const sceneFog = new THREE.Fog(0x000000, MAX_FOG_DISTANCE, MAX_FOG_DISTANCE * 2);
+// Never removed: toggling scene.fog recompiles every material, so "no fog" is fog beyond the far
+// plane (see refreshFog).
+const sceneFog = new THREE.Fog(0x000000, cameraFar, 2 * cameraFar);
 
 // Lamps as data rather than THREE lights (see LightBlockMap). Lives as long as the scene.
 const lightBlockMap = new LightBlockMap();
@@ -131,19 +127,19 @@ const GraphicsManager =
     {
         return camera;
     },
-    // Distance to what the camera is looking at (0 = player's own eye). Sizes the head light, the fog
-    // and the far plane, so a pulled-back camera can still see the room.
-    setViewDistance: (viewDistance: number) =>
+    // How far in front of the camera the head light sits and the fog is measured from (0 = at the
+    // camera itself; see PlayerCamera). Nothing else moves with it: reach, fadeout and the far plane
+    // are fixed, so a pulled-back camera sees the room lit as it is, not as it needs to be seen.
+    setViewReferenceOffset: (offset: number) =>
     {
-        if (viewDistance === currViewDistance)
+        if (offset === currViewReferenceOffset)
             return;
-        currViewDistance = viewDistance;
-        refreshPointLight();
+        currViewReferenceOffset = offset;
+        // The camera looks down its own -z, so the light slides toward what it is looking at.
+        pointLight.position.z = -offset;
         refreshFog();
-        camera.far = baseCameraFar + currViewDistance;
-        camera.updateProjectionMatrix();
     },
-    // Room lamp light around the camera, which the head light yields to (see refreshPointLight).
+    // Room lamp light around the head light, which it yields to (see refreshPointLight).
     setPointLightSurroundings: (roomLightNearCamera: THREE.Color) =>
     {
         if (currRoomLightNearCamera.equals(roomLightNearCamera))
@@ -217,7 +213,7 @@ const GraphicsManager =
                 RoomPrefsUtil.getAmbientIntensity(currRoomPrefs));
             scene.add(ambLight);
 
-            camera = new THREE.PerspectiveCamera(60, 1, 0.1, baseCameraFar);
+            camera = new THREE.PerspectiveCamera(60, 1, 0.1, cameraFar);
 
             // Parented to the camera so it follows the view.
             pointLight = new THREE.PointLight(0xffffff, basePointLightIntensity,
@@ -315,23 +311,19 @@ function updatePixelRatio()
     timeSincePixelRatioChange = 0;
 }
 
-// Range grows with view distance and intensity compensates for the decay, so the target stays as
-// bright as up close. The room's own light then takes over its share.
+// The room's own light takes over its share of the head light.
 function refreshPointLight()
 {
-    const range = Math.max(basePointLightDistance,
-        pointLightRangePerViewDistance * currViewDistance);
-
-    // Measured like the block map measures light, from light near (not only at) the camera, so a
+    // Measured like the block map measures light, from light near (not only at) the head light, so a
     // lamp's pool isn't flattened when viewed from outside it (see LightBlockDilationUtil).
     const roomLuminance = getLightLuminance(currRoomLightNearCamera.r, currRoomLightNearCamera.g,
         currRoomLightNearCamera.b);
     const roomShare = roomLuminance / (roomLuminance + pointLightRoomHalfBrightness);
 
     // No floor: any white head light washes out a lit room's saturated colors up close.
-    pointLight.distance = range;
-    pointLight.intensity = basePointLightIntensity *
-        Math.pow(range / basePointLightDistance, pointLightDecay) * (1 - roomShare);
+    pointLight.distance = basePointLightDistance;
+    pointLight.decay = pointLightDecay;
+    pointLight.intensity = basePointLightIntensity * (1 - roomShare);
 
     // Tinted toward the room light's color, which deepens rather than dilutes the surfaces it adds to.
     pointLightColorTemp.copy(pointLightBaseColor);
@@ -348,13 +340,23 @@ function refreshPointLight()
     pointLight.color.copy(pointLightColorTemp);
 }
 
-// Fog distances describe a standing player's view; a farther camera pushes them out proportionally
-// (never in).
+// Fog is measured from the camera, so the reference point shifts the whole band out by its offset.
+// The fadeout span is the room's own, whatever the camera does.
 function refreshFog()
 {
-    const scale = Math.max(1, currViewDistance / referenceFogViewDistance);
-    sceneFog.near = RoomPrefsUtil.getFogNearDistance(currRoomPrefs) * scale;
-    sceneFog.far = RoomPrefsUtil.getFogFarDistance(currRoomPrefs) * scale;
+    const nearDistance = RoomPrefsUtil.getFogNearDistance(currRoomPrefs);
+
+    // The top of the range means no fog at all, which only holds while the band stays out of reach
+    // of the far plane (see sceneFog).
+    if (nearDistance >= MAX_FOG_DISTANCE)
+    {
+        sceneFog.near = cameraFar;
+        sceneFog.far = 2 * cameraFar;
+        return;
+    }
+
+    sceneFog.near = nearDistance + currViewReferenceOffset;
+    sceneFog.far = RoomPrefsUtil.getFogFarDistance(currRoomPrefs) + currViewReferenceOffset;
 }
 
 function getPaletteColor(paletteName: string, index: number): string

@@ -10,8 +10,13 @@ import OrbitOcclusionHider from "./orbitOcclusionHider";
 import PlayerPointerInput from "./playerPointerInput";
 import FreeCameraPose from "./freeCameraPose";
 
-const worldPositionTemp = new THREE.Vector3();
+const viewReferenceTemp = new THREE.Vector3();
 const roomLightTemp = new THREE.Color();
+
+// How far in front of the camera the head light and the fog may be measured from (see
+// GraphicsManager.setViewReferenceOffset). Past it, an orbit lights and fogs the room the way it
+// looks from beside its subject, rather than from wherever the camera was pulled back to.
+const maxViewReferenceDistance = 8;
 
 // Parents the camera to the player and eases it toward the active mode's pose (FirstPersonCameraPose,
 // OrbitCameraPose, FreeCameraPose), so mode changes glide.
@@ -30,8 +35,8 @@ export default class PlayerCamera
     // What the orbit is framing right now, or undefined while the orbit mode is not active.
     private orbitTarget: AABB3 | undefined;
 
-    // Eased with the camera (not taken from the target pose) so the light doesn't flare ahead of a zoom.
-    private pointLightViewDistance: number = 0;
+    // Eased with the camera (not taken from the target pose) so the light doesn't slide ahead of a zoom.
+    private viewReferenceOffset: number = 0;
 
     // Eased so the head light doesn't flicker when walking under a lamp.
     private roomLightNearCamera = new THREE.Color(0, 0, 0);
@@ -50,9 +55,9 @@ export default class PlayerCamera
     {
         this.occlusionHider.revealAll();
 
-        // Reset light and fog sizing when no one is looking through the camera.
-        this.pointLightViewDistance = 0;
-        GraphicsManager.setViewDistance(0);
+        // Reset light and fog placement when no one is looking through the camera.
+        this.viewReferenceOffset = 0;
+        GraphicsManager.setViewReferenceOffset(0);
         this.roomLightNearCamera.setRGB(0, 0, 0);
         GraphicsManager.setPointLightSurroundings(this.roomLightNearCamera);
     }
@@ -120,16 +125,20 @@ export default class PlayerCamera
         this.camera!.position.lerp(this.positionInterpTarget, t);
         this.camera!.quaternion.slerp(this.quaternionInterpTarget, t);
 
-        // Light and fog reach depend on the mode's view distance, eased with the camera (see
-        // pointLightViewDistance).
+        // Light and fog stand where a player looking at the same subject would, which is the camera
+        // itself until it is pulled further back than maxViewReferenceDistance.
         const viewDistance = (mode.type === "orbit") ? this.orbitPose.getOrbitDistance()
             : (mode.type === "free") ? FreeCameraPose.getViewDistance() : 0;
-        this.pointLightViewDistance += (viewDistance - this.pointLightViewDistance) * t;
-        GraphicsManager.setViewDistance(this.pointLightViewDistance);
+        const offset = Math.max(0, viewDistance - maxViewReferenceDistance);
+        this.viewReferenceOffset += (offset - this.viewReferenceOffset) * t;
+        GraphicsManager.setViewReferenceOffset(this.viewReferenceOffset);
 
-        // Sampled at the eased camera position.
+        // Sampled where the head light stands rather than at the camera, so it still yields to the
+        // lamps around its subject. The eased pose is the one the light follows.
+        this.camera!.updateWorldMatrix(true, false);
         GraphicsManager.getLightBlockMap().getNearbyLightAt(
-            this.camera!.getWorldPosition(worldPositionTemp), roomLightTemp);
+            this.camera!.localToWorld(viewReferenceTemp.set(0, 0, -this.viewReferenceOffset)),
+            roomLightTemp);
         this.roomLightNearCamera.lerp(roomLightTemp, t);
         GraphicsManager.setPointLightSurroundings(this.roomLightNearCamera);
 

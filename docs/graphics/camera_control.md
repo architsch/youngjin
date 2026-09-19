@@ -37,7 +37,7 @@ The camera is parented to the player object. Each frame, the active pose helper 
   - An orbit starts at the camera's **current** distance and direction, unless the camera is inside the target's footprint (e.g. orbiting the user's own body), in which case it uses an over-the-shoulder default. Zoom persists across targets and resets when edit mode ends.
   - Angles are published in world terms (`orbitCameraAnglesObservable`). A requested view is applied right after the target is framed.
   - The orbit is computed in world space and converted into the player's frame, which avoids re-parenting mid-glide.
-- The head light follows the eased camera. Its range grows with distance and its intensity compensates for falloff, so the target keeps its brightness. `GraphicsManager` pushes the fog and the far plane out by the same view distance, so a distant camera still sees the whole room.
+- The head light stands at a point on the view axis, at most a fixed distance in front of the eased camera: the camera itself up close, otherwise a stand-in for a player standing near the subject. The fog is measured from there too, and so is the room light the head light yields to. Nothing about them grows with the camera's distance, and the far plane is fixed wide enough for the whole room from any orbit (`GraphicsManager`).
 
 ## Clearing the line of sight (`OrbitOcclusionHider`)
 While orbiting, anything that blocks the target is hidden.

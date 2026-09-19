@@ -14,7 +14,7 @@ vi.mock("../../../src/client/graphics/graphicsManager", async () => {
         getNearbyLightAt(_worldPos: unknown, out: any) { return out.setRGB(0, 0, 0); } };
     return { default: { getCamera: () => camera, getScene: () => scene,
         getLightBlockMap: () => lightBlockMap,
-        setViewDistance: () => {}, setPointLightSurroundings: () => {},
+        setViewReferenceOffset: () => {}, setPointLightSurroundings: () => {},
         setRoomLightingPrefs: () => {} } };
 });
 

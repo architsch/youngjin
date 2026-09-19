@@ -76,7 +76,7 @@ export default class FreeCameraPose
         return {position: cameraPos.clone(), target: lookTarget.clone()};
     }
 
-    // Used to size the camera-mounted light and fog (see GraphicsManager.setViewDistance).
+    // Distance to the subject, which places the camera-mounted light and the fog (see PlayerCamera).
     static getViewDistance(): number
     {
         return cameraPos.distanceTo(lookTarget);

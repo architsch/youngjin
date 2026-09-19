@@ -24,9 +24,9 @@ Rebuild requests (a lamp changed, block work edited) are batched and handled onc
 - **Sampling** (`lightBlockMapGLSL`): the sample point is pushed half a block out along the surface normal, so light does not bleed through one-block walls. The result is renormalized by the filtered openness, so objects between block centers are not darkened. The light direction meets the relief-perturbed normal.
 
 ## Head lamp
-- It supplies only the light the room is not already providing. Each frame, the room light **near** the camera is read (`LightBlockDilationUtil`: nearby brightness discounted by distance, spread only through open blocks). The head lamp then dims along a saturating curve and tints toward the room light's color. Reading nearby light rather than light at the camera keeps the head lamp from flattening a lamp's pool when the player views it from outside.
+- It supplies only the light the room is not already providing. Each frame, the room light **near** where it stands is read (`LightBlockDilationUtil`: nearby brightness discounted by distance, spread only through open blocks). The head lamp then dims along a saturating curve and tints toward the room light's color. Reading nearby light rather than the light at that one point keeps the head lamp from flattening a lamp's pool when the player views it from outside.
 - It cannot be removed: generated rooms have no lamps, and a player who cannot see cannot place the first one.
-- It and the fog both scale with the camera's view distance (`GraphicsManager`). Range grows with distance and intensity compensates for falloff. Fog is pushed out, never pulled in.
+- Its reach never changes with the camera. It and the fog are instead measured from a point at most a fixed distance in front of the camera (`GraphicsManager`), so a pulled-back orbit shows the room lit as it is around its subject (see [camera_control.md](camera_control.md)).
 
 ## Atmosphere settings (`RoomPrefs`)
 - Every setting is a small integer step, encoded by `RoomPrefsUtil` into a short string on `Room`, so the atmosphere travels with the room. Colors are palette indices, and each step maps through a curve suited to its quantity.
