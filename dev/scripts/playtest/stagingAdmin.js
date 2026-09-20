@@ -42,9 +42,11 @@ function collection(name) { return `${PREFIX}${name}`; }
 // Downgrades back up the original blob under this tool's own path, for `restore-content`.
 function backupRoot() { return `${PREFIX}playtest_backup`; }
 
-// Current versions (migration array lengths), as literals since those modules are TypeScript; `inspect`
-// reports what it finds, so drift shows.
-const CURRENT_VERSION = { users: 5, rooms: 4 };
+// Current versions (migration array lengths), as literals since those modules are TypeScript. Nothing
+// here detects drift — `inspect` and `verify-migration` both measure against these numbers, so a stale
+// one reports migrated rows as outdated and hides real staleness. Bump alongside
+// src/server/db/types/versionMigration/.
+const CURRENT_VERSION = { users: 5, rooms: 6 };
 
 const ROOM_TYPE_REGULAR = 1;
 
