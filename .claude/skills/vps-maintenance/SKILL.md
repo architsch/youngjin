@@ -53,6 +53,7 @@ sections are worth knowing individually:
 | `security` | sshd's effective config, fail2ban jails, SSH probing volume, listening ports |
 | `runtime` | Node.js version against `.nvmrc`, duplicate interpreters, the Actions runner's frozen `PATH`, PM2 per-process status/restarts/memory |
 | `services` | nginx, ssh, fail2ban, pm2-root — active *and* enabled |
+| `nginxConfig` | Whether each config on the machine still matches its copy in `dev/config/` |
 | `health` | Public `/health` for live and staging, including the commit each is serving |
 
 Three of these mislead if read naively, and the audit is built around exactly that:
@@ -121,7 +122,9 @@ not before.
   called for it.
 - **Never edit files on the VPS by hand.** Nginx config is deployed from this repository
   (`npm run nginx:update`); application code arrives through the deployment workflow. A hand-edit
-  on the box is overwritten by the next deployment and lost without trace.
+  on the box is overwritten by the next deployment and lost without trace. No workflow ships the
+  Nginx config, which is why `nginxConfig` compares it — but that command reloads production Nginx,
+  so a `differs` finding is reported for the user to run, never run here.
 - **The Node.js upgrade procedure is not this skill's to run.** If the audit reports a version
   mismatch, report it and point at
   [the documented procedure](../../../docs/devOps/vps/maintenance.md#how-to-upgrade-the-nodejs-version)

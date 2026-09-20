@@ -13,9 +13,10 @@ tails, and never print a whole build log or a whole workflow log.
 
 The pre-commit hook (`.husky/pre-commit`) runs two things, and both will reject a commit:
 
-1. `dev/scripts/checkBeforeCommit.js` — verifies that `dist/client/bundle.js` and
-   `dist/server/bundle.js` are **production** builds, and that the Node.js running the commit
-   matches `.nvmrc` and `package.json`'s `engines.node`.
+1. `dev/scripts/checkBeforeCommit.js` — verifies that **every** client chunk in `dist/client/`
+   (the entry bundle and the `vendor.*.js` beside it) and `dist/server/bundle.js` are
+   **production** builds, and that the Node.js running the commit matches `.nvmrc` and
+   `package.json`'s `engines.node`.
 2. `npm run test:integration` — the full integration suite, with a Firestore emulator started for
    the run if none is up.
 
@@ -30,8 +31,9 @@ npm run beforeCommit > temp/release-train/build.log 2>&1 || tail -n 40 temp/rele
 A successful build says nothing worth reading, and it says it in hundreds of lines. Redirect it, and
 look at the tail only when it fails.
 
-This matters more than it looks. `dist/` is committed, the deployment builds from source but the
-committed bundles are what a rollback and the local dev flow rely on, and the SSG step is what turns
+This matters more than it looks. `dist/` is committed; the staging deploy overwrites it with bundles
+built on a GitHub-hosted runner, but the committed ones are what the local dev flow and a rollback
+rely on, and the SSG step is what turns
 `public/devlog-<year>/source.txt` — and the screenshots the user added beside it — into the published
 pages. Phase 2 generates nothing, so the dev-log post is not in the changeset until this has run.
 
@@ -74,9 +76,17 @@ One commit for the whole batch is the norm here. Do not split into several witho
 
 | Workflow | Trigger | Runs on |
 |---|---|---|
-| **Deploy to Staging** | push to `main` | self-hosted runner (the VPS itself) |
+| **Deploy to Staging** | push to `main` | GitHub-hosted (builds `dist/`), then the self-hosted runner on the VPS (installs, restarts) |
 | **Deploy static content to Pages** | push to `main` | GitHub-hosted |
 | **E2E Tests (Staging)** | completion of *Deploy to Staging*, only when it succeeded | GitHub-hosted |
+
+Both jobs are in the one run, so a compile error fails it before the VPS is touched at all.
+
+**No workflow ships the Nginx config.** If the batch changed `dev/config/nginx_*.txt`, the deploy
+lands code that the running Nginx does not know how to serve — a client chunk it has no route for
+falls through to Node, which serves none of them in production mode, and the page comes back with a
+404 for a script it cannot run without. Say so at the commit gate and let the user run
+`npm run nginx:update` themselves; it reloads production Nginx, so it is not this workflow's to run.
 
 `Promote to Live`, `Rollback Live` and `Restart Live` are `workflow_dispatch` only. **Never trigger
 any of them.** The first two move production and the third interrupts it, and none is part of this

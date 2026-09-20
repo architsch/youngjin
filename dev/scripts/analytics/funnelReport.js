@@ -3,11 +3,12 @@
 // Read-only and may target live; the DB handle comes from lib/dbGuard.js.
 //
 // Usage:
-//   node dev/scripts/analytics/funnelReport.js report  [--app live|staging|local] [--since YYYY-MM-DD] [--days N] [--min-cohort N]
-//   node dev/scripts/analytics/funnelReport.js sources [--app ...] [--since ...] [--days N]
-//   node dev/scripts/analytics/funnelReport.js raw     [--app ...] [--since ...] [--days N]
+//   node dev/scripts/analytics/funnelReport.js report  [--app live|staging|local] [--since YYYY-MM-DD] [--days N] [--source TAG] [--min-cohort N]
+//   node dev/scripts/analytics/funnelReport.js sources [--app ...] [--since ...] [--days N] [--source TAG]
+//   node dev/scripts/analytics/funnelReport.js raw     [--app ...] [--since ...] [--days N] [--source TAG]
 //
-// Every command prints JSON on stdout, and names the target it read.
+// Every command prints JSON on stdout, and names the target it read. `--source` narrows any of them
+// to one tag; `--min-cohort` applies to `report` alone.
 
 const DBGuard = require("../playtest/lib/dbGuard");
 

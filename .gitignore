@@ -10,6 +10,12 @@ node_modules
 dist/client/bundle.js.map
 dist/server/bundle.js.map
 
+# Pre-compressed copies of whatever Nginx serves off disk (see dev/scripts/compressBundles.js).
+# Rebuilt from the bundles beside them, and shipped to the VPS by the deploy workflow, so there is
+# nothing to gain from committing a second copy of every bundle that churns on every build.
+dist/client/*.gz
+dist/client/*.br
+
 # VPS deployment artifacts (live bundle copy and backup for rollback)
 dist/server/bundle.live.js
 dist/server/bundle.backup.js

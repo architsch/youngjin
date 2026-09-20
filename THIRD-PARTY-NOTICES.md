@@ -53,7 +53,6 @@ The substantive ones, for attribution:
 | [socket.io](https://github.com/socketio/socket.io) / socket.io-client | MIT | real-time networking |
 | [express](https://github.com/expressjs/express) | MIT | HTTP server |
 | [tailwindcss](https://github.com/tailwindlabs/tailwindcss) | MIT | styling |
-| [axios](https://github.com/axios/axios) | MIT | HTTP client |
 | [firebase-admin](https://github.com/firebase/firebase-admin-node) | Apache-2.0 | database and storage |
 | [@google-cloud/secret-manager](https://github.com/googleapis/google-cloud-node) | Apache-2.0 | secret loading |
 | [ejs](https://github.com/mde/ejs) | Apache-2.0 | templating |

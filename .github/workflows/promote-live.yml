@@ -15,16 +15,12 @@ jobs:
 
     steps:
     - name: Back up current live bundles
-      run: |
-        cp dist/server/bundle.live.js dist/server/bundle.backup.js || true
-        cp dist/client/bundle.live.js dist/client/bundle.backup.js || true
-        cp dist/client/style.live.css dist/client/style.backup.css || true
+      # Skipped on the very first promote, when there is no live bundle to back up yet.
+      continue-on-error: true
+      run: node dev/scripts/promoteBundles.js backup
 
     - name: Promote staging bundles to live
-      run: |
-        cp dist/server/bundle.js dist/server/bundle.live.js
-        cp dist/client/bundle.js dist/client/bundle.live.js
-        cp dist/client/style.css dist/client/style.live.css
+      run: node dev/scripts/promoteBundles.js promote
 
     - name: Restart live server
       run: pm2 startOrRestart ecosystem.config.js --only live

@@ -1,3 +1,20 @@
+# Which client chunks may be requested, and how a pre-compressed copy of one is chosen.
+#
+# The app is split into an entry bundle and the dependency chunks beside it (see
+# webpack.config.client.js), so the bundle routes below match a name pattern rather than one path.
+# The pattern is also what keeps a request from reaching outside dist/client.
+#
+# The build leaves a .gz and a .br copy beside every file Nginx serves off disk (see
+# dev/scripts/compressBundles.js). `gzip_static` picks up the .gz on its own. Brotli has no module
+# in the Nginx packaged for Ubuntu 22.04, so it is negotiated by hand: $br_ok says the client
+# accepts it, and the request is rewritten into an internal location that serves the .br file with
+# the matching Content-Encoding. That location must switch gzip off — left on, it appends its own
+# encoding and the browser is told the body is "br, gzip" when it is only brotli.
+map $http_accept_encoding $br_ok {
+    default     0;
+    "~*\bbr\b"  1;
+}
+
 # Live server
 server {
     listen 80;
@@ -19,18 +36,45 @@ server {
     limit_req_status 429;
 
     # Client bundles — served directly by Nginx (not proxied to Node.js).
-    # Live uses promoted copies (bundle.live.js / style.live.css) mapped to the canonical paths.
+    # Live uses promoted copies (*.live.js / style.live.css) mapped to the canonical paths, and
+    # falls back to the staging file for a chunk it has never had promoted to it — without that, a
+    # chunk introduced by a deploy is missing from the live page until someone promotes.
     # no-cache = browser caches the file but always revalidates via ETag before using it.
     # If unchanged: 304 Not Modified (~200 bytes). If changed: full re-download.
-    location = /app/bundle.js {
-        alias /root/actions-runner/_work/youngjin/youngjin/dist/client/bundle.live.js;
-        types { application/javascript js; }
+    location ~ ^/app/(?<chunk>bundle|vendor\.[a-z]+)\.js$ {
+        root /root/actions-runner/_work/youngjin/youngjin/dist/client;
+        default_type application/javascript;
         add_header Cache-Control "no-cache";
+        gzip_static on;
+        if ($br_ok) { rewrite ^ /__br/$chunk.js last; }
+        try_files /$chunk.live.js /$chunk.js =404;
+    }
+    location ~ ^/__br/(?<chunk>bundle|vendor\.[a-z]+)\.js$ {
+        internal;
+        root /root/actions-runner/_work/youngjin/youngjin/dist/client;
+        default_type application/javascript;
+        gzip off;
+        gzip_static off;
+        add_header Content-Encoding br;
+        add_header Cache-Control "no-cache";
+        add_header Vary "Accept-Encoding";
+        # Only this server's own promoted brotli copy. Anything else hands back to @plain, so a
+        # missing .br degrades to gzip rather than serving a different build than the plain route
+        # would have.
+        try_files /$chunk.live.js.br @plain;
+    }
+    location @plain {
+        root /root/actions-runner/_work/youngjin/youngjin/dist/client;
+        default_type application/javascript;
+        add_header Cache-Control "no-cache";
+        gzip_static on;
+        try_files /$chunk.live.js /$chunk.js =404;
     }
     location = /app/style.css {
         alias /root/actions-runner/_work/youngjin/youngjin/dist/client/style.live.css;
         types { text/css css; }
         add_header Cache-Control "no-cache";
+        gzip_static on;
     }
 
     # Served in place of any page whose Node.js process is unreachable — during a deployment, a
@@ -89,16 +133,39 @@ server {
     limit_req_status 429;
 
     # Client bundles — served directly by Nginx (staging uses the git-tracked files).
+    # See the live server block above for how the chunk routes and brotli negotiation work.
     # no-cache = always revalidate via ETag, so you see changes immediately during testing.
-    location = /app/bundle.js {
-        alias /root/actions-runner/_work/youngjin/youngjin/dist/client/bundle.js;
-        types { application/javascript js; }
+    location ~ ^/app/(?<chunk>bundle|vendor\.[a-z]+)\.js$ {
+        root /root/actions-runner/_work/youngjin/youngjin/dist/client;
+        default_type application/javascript;
         add_header Cache-Control "no-cache";
+        gzip_static on;
+        if ($br_ok) { rewrite ^ /__br/$chunk.js last; }
+        try_files /$chunk.js =404;
+    }
+    location ~ ^/__br/(?<chunk>bundle|vendor\.[a-z]+)\.js$ {
+        internal;
+        root /root/actions-runner/_work/youngjin/youngjin/dist/client;
+        default_type application/javascript;
+        gzip off;
+        gzip_static off;
+        add_header Content-Encoding br;
+        add_header Cache-Control "no-cache";
+        add_header Vary "Accept-Encoding";
+        try_files /$chunk.js.br @plain;
+    }
+    location @plain {
+        root /root/actions-runner/_work/youngjin/youngjin/dist/client;
+        default_type application/javascript;
+        add_header Cache-Control "no-cache";
+        gzip_static on;
+        try_files /$chunk.js =404;
     }
     location = /app/style.css {
         alias /root/actions-runner/_work/youngjin/youngjin/dist/client/style.css;
         types { text/css css; }
         add_header Cache-Control "no-cache";
+        gzip_static on;
     }
 
     # See the live server block above for why this is wired the way it is. Staging carries it too

@@ -11,11 +11,12 @@ function checkBundle(pathStr)
         process.exit(1);
     }
 
-    const content = fs.readFileSync(bundlePath, "utf8");
+    // Only an unminified build carries webpack's commented bootstrap banner. Checking for its
+    // absence covers every shape a production chunk comes in — the entry bundle, a chunk that
+    // starts with an extracted license comment, and one that starts by registering its modules.
+    const isDevBuild = fs.readFileSync(bundlePath, "utf8").startsWith("/******/");
 
-    const isProdBuild = content.startsWith("(()=>") || content.startsWith("/*! For license");
-
-    if (!isProdBuild)
+    if (isDevBuild)
     {
         console.error(`❌ The bundle at [${pathStr}] is a development build. Run 'npm run beforeCommit' first.`);
         process.exit(1);
@@ -52,7 +53,21 @@ function checkNodeVersion()
 
 checkNodeVersion();
 
-checkBundle("../../dist/client/bundle.js");
+// Every chunk the game page loads, not just the entry bundle — the dependency chunks beside it are
+// committed too, and a stale one breaks the page just as thoroughly (see webpack.config.client.js).
+const clientDir = path.join(__dirname, "../../dist/client");
+const clientChunks = fs.readdirSync(clientDir).filter((fileName) => fileName.endsWith(".js")
+    && !fileName.includes(".live.") && !fileName.includes(".backup."));
+
+if (!clientChunks.includes("bundle.js"))
+{
+    console.error(`❌ No client bundle found in [dist/client]. Run 'npm run beforeCommit' first.`);
+    process.exit(1);
+}
+
+for (const chunk of clientChunks)
+    checkBundle(`../../dist/client/${chunk}`);
+
 checkBundle("../../dist/server/bundle.js");
 
 console.log("✅ Production build and Node.js version verified.");

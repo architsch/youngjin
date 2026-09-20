@@ -22,7 +22,7 @@ Block everything else. The Actions runner connects **outbound**, so restricting 
 | UDP / TCP | 53 | DNS |
 
 ## Nginx setup for the VPS
-From the project root, run `npm run nginx:update`. It applies the Nginx configs in `dev/config/` and restarts Nginx.
+From the project root, run `npm run nginx:update`. It copies the Nginx configs in `dev/config/` to the VPS, then tests and reloads Nginx (a reload, not a restart, so live connections survive). **No deployment workflow does this**, so a config change reaches the server only when someone runs it.
 
 ## DNS/SSL setup for the VPS
 1. DNS A records: `app.thingspool.net` and `staging.thingspool.net` both point to `222.239.251.208`.

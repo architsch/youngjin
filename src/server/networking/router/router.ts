@@ -20,14 +20,16 @@ export default function Router(app: Express): void
             res.status(200).setHeader("content-type", "text/html")
                 .send(EJSUtil.postProcessHTML(staticContent));
         });
-        // Client bundles are built to dist/client/, not public/
-        app.get("/app/bundle.js", (req: Request, res: Response): void => {
+        // Client bundles are built to dist/client/, not public/. In production these are served
+        // straight off disk by Nginx (see nginx_default.txt); this route is what stands in for it.
+        // The name pattern is what keeps a request from reaching outside dist/client.
+        app.get(/^\/app\/(bundle\.js|vendor\.[a-z]+\.js)$/, (req: Request, res: Response): void => {
             res.status(200).setHeader("content-type", "text/javascript")
-                .sendFile(FileUtil.getAbsoluteFilePath("bundle.js", "dist/client"));
+                .sendFile(FileUtil.getAbsoluteFilePath(req.params[0], "dist/client"));
         });
-        // The dev source map sits beside the bundle, so it needs its own route.
-        app.get("/app/bundle.js.map", (req: Request, res: Response): void => {
-            res.sendFile(FileUtil.getAbsoluteFilePath("bundle.js.map", "dist/client"));
+        // The dev source maps sit beside the chunks they belong to, so they need their own route.
+        app.get(/^\/app\/(bundle\.js\.map|vendor\.[a-z]+\.js\.map)$/, (req: Request, res: Response): void => {
+            res.sendFile(FileUtil.getAbsoluteFilePath(req.params[0], "dist/client"));
         });
         app.get("/app/style.css", (req: Request, res: Response): void => {
             res.sendFile(FileUtil.getAbsoluteFilePath("style.css", "dist/client"));

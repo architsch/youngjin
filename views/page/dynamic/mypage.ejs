@@ -64,6 +64,13 @@
             targetRoomID: targetRoomID,
         }).replace(/</g, "\\u003c") %>;
     </script>
+    <%_ /* The dependency chunks carry no side effects of their own — each one only registers its
+          modules with the webpack runtime, which lives in `bundle.js` and runs the app once it
+          has them. So `bundle.js` must come last, and the rest may arrive in any order (see the
+          `splitChunks` groups in [webpack.config.client.js]). */ _%>
+    <script type="text/javascript" src="<%= URL_DYNAMIC %>/app/vendor.three.js"></script>
+    <script type="text/javascript" src="<%= URL_DYNAMIC %>/app/vendor.react.js"></script>
+    <script type="text/javascript" src="<%= URL_DYNAMIC %>/app/vendor.misc.js"></script>
     <script type="text/javascript" src="<%= URL_DYNAMIC %>/app/bundle.js"></script>
 <%_ } else { _%>
     <%_ /* Reached when the request was deliberately not given an account of its own, which in

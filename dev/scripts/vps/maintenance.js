@@ -11,6 +11,7 @@
 // but booted only by a human, following docs/devOps/vps/maintenance.md.
 
 const { execFileSync } = require("child_process");
+const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 
@@ -76,6 +77,10 @@ function auditCommands(refresh)
         ["authlines", `journalctl -u ssh --since '24 hours ago' --no-pager 2>/dev/null | wc -l`],
         ["ports",     `ss -tlnH 2>/dev/null | awk '{print $4}' | sort -u`],
         ["runner",    `cat /root/actions-runner/.path /root/actions-runner/.env 2>/dev/null || echo NONE`],
+        // No workflow deploys these, so the only thing that notices a repo config the machine never
+        // received is this comparison. One line per file, in the order they are listed.
+        ["nginxconf", `for f in /etc/nginx/sites-available/default /etc/nginx/nginx.conf; do ` +
+                      `if [ -f "$f" ]; then md5sum "$f" | cut -d' ' -f1; else echo MISSING; fi; done`],
         ["mem",       `free -m | awk '/^Mem:/ {print $2, $3}'`],
     ].filter(([, cmd]) => cmd);
 }
@@ -248,6 +253,32 @@ function health(url)
     {
         return { status: 0, ok: false, error: e.message };
     }
+}
+
+// Only `npm run nginx:update` copies these to the VPS. Nothing else reports when it was skipped, and
+// the machine goes on serving the config it already had without logging anything.
+const NGINX_CONFIGS = [["site", "nginx_default.txt"], ["main", "nginx_conf.txt"]];
+
+function parseNginxConfig(text)
+{
+    const remoteHashes = text.split("\n").map((line) => line.trim()).filter(Boolean);
+    const state = {};
+
+    NGINX_CONFIGS.forEach(([key, fileName], i) =>
+    {
+        const localPath = path.join(REPO_ROOT, "dev/config", fileName);
+        const remote = remoteHashes[i];
+
+        if (remote == undefined || remote === "MISSING" || !fs.existsSync(localPath))
+            state[key] = "UNKNOWN";
+        else
+        {
+            const local = crypto.createHash("md5").update(fs.readFileSync(localPath)).digest("hex");
+            state[key] = remote === local ? "inSync" : "differs";
+        }
+    });
+
+    return state;
 }
 
 // ─── Findings ───────────────────────────────────────────────────────────
@@ -492,11 +523,27 @@ function buildFindings(state)
             add("warn", "services", `${name} is running but not enabled at boot.`, "It would not come back after a reboot.", `systemctl enable ${name} on the VPS.`);
     }
 
+    for (const [key, fileName] of NGINX_CONFIGS)
+    {
+        if (state.nginxConfig[key] === "differs")
+        {
+            add("warn", "services", `The Nginx config on the VPS does not match dev/config/${fileName}.`,
+                "No workflow deploys it, so a route the repo added — a new client chunk, a new location — exists nowhere on the machine, and requests for it fall through to Node instead of 404ing visibly in Nginx's own log.",
+                "Have the user run `npm run nginx:update` from the repo root. It reloads production Nginx, so it is not an automated step.");
+        }
+        else if (state.nginxConfig[key] === "UNKNOWN")
+        {
+            add("info", "services", `Could not compare the VPS's Nginx config against dev/config/${fileName}.`,
+                "Either the file is absent on the machine or the local copy was not found, so drift cannot be ruled out.",
+                "docs/devOps/vps/networking-and-security.md#nginx-setup-for-the-vps");
+        }
+    }
+
     if (state.memory.usedPercent > LIMITS.memPercent)
     {
         add("warn", "runtime", `Memory is ${state.memory.usedPercent}% used (${state.memory.usedMB}/${state.memory.totalMB}MB).`,
-            "This VPS runs live, staging and the Actions runner together, and the runner's build step is the spike that pushes it over.",
-            "Check pm2 memory ceilings and whether a build is running concurrently.");
+            "This VPS runs live, staging and the Actions runner together on under 1GB, which is why the client is compiled on a GitHub runner instead. A spike here is one of the two app processes, not a build.",
+            "Check the pm2 memory ceilings and whether either app is climbing between audits.");
     }
 
     // ── Health ──
@@ -586,6 +633,7 @@ function audit(options)
             pm2SavedAgeHours: pm2SavedEpoch ? Math.round((Date.now() / 1000 - pm2SavedEpoch) / 3600) : null,
         },
         services: parseServices(sections.services),
+        nginxConfig: parseNginxConfig(sections.nginxconf),
         memory: {
             totalMB: memTotal,
             usedMB: memUsed,

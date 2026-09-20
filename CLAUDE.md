@@ -3,7 +3,7 @@
 ## Technology Stack
 - **Runtime**: Node.js with TypeScript
 - **Frontend**: Three.js (3D graphics), React, Tailwind CSS, EJS
-- **Networking**: Express.js (HTTP requests, authentication), Socket.IO (real-time communication), Axios (client-side HTTP requests), Nginx (VPS's web server)
+- **Networking**: Express.js (HTTP requests, authentication), Socket.IO (real-time communication), Fetch API (HTTP requests from the client and to external APIs), Nginx (VPS's web server)
 - **Database**: Firebase (Firestore, Cloud Storage, Content Distribution)
 - **Build Tools**: Webpack (typescript compiler, bundler), Sharp (static site image generation)
 - **Dev Tools**: Husky (git hooks), PM2 (runtime process management), GitHub (source control, workflows, and static page hosting), VS Code (IDE), Claude Code (AI assistant)
@@ -13,7 +13,7 @@
 ### `/src` - Main Source Code
 - **`/client`** - Client-side code (browser)
   - `/graphics` - 3D graphics for game objects, voxels, and world-space gizmos
-  - `/networking` - Client-side networking (SocketsClient for Socket.IO, API clients for Axios)
+  - `/networking` - Client-side networking (SocketsClient for Socket.IO, RestAPI and the API clients over it)
   - `/object` - Game object management (ClientObjectManager, component system including Rigidbody, PlayerController, PeriodicTransformEmitter/Receiver)
   - `/singlePlayer` - Client-side single-player gameplay logic (SinglePlayerManager, the scripted steps of each mode in SinglePlayerModeClientConfigMap, and the action/condition maps those steps are carried out through)
   - `/system` - Client-side observables and state management

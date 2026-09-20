@@ -1,5 +1,10 @@
 # Deploys the latest code to the staging server on the VPS.
 # Secrets are fetched at runtime from Google Secret Manager (not from GitHub Secrets).
+#
+# The build runs on a GitHub-hosted runner and only its output is shipped to the VPS, which has
+# under 1 GB of RAM — not enough to webpack the client bundle without leaning on swap. The VPS
+# job installs runtime dependencies (the server bundle externalizes node_modules) and restarts
+# the process; it never compiles.
 name: Deploy to Staging
 
 on:
@@ -12,25 +17,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    runs-on: self-hosted
+  build:
+    runs-on: ubuntu-latest
 
     steps:
-    - name: Preserve live bundles before checkout
-      run: |
-        mkdir -p /tmp/thingspool-live-bundles/server /tmp/thingspool-live-bundles/client
-        cp dist/server/bundle.live.js /tmp/thingspool-live-bundles/server/ || true
-        cp dist/client/bundle.live.js /tmp/thingspool-live-bundles/client/ || true
-        cp dist/client/style.live.css /tmp/thingspool-live-bundles/client/ || true
-
     - uses: actions/checkout@v4
-
-    - name: Restore live bundles after checkout
-      run: |
-        cp /tmp/thingspool-live-bundles/server/bundle.live.js dist/server/ || true
-        cp /tmp/thingspool-live-bundles/client/bundle.live.js dist/client/ || true
-        cp /tmp/thingspool-live-bundles/client/style.live.css dist/client/ || true
-        rm -rf /tmp/thingspool-live-bundles
 
     - name: Use Node.js from .nvmrc
       uses: actions/setup-node@v4
@@ -43,29 +34,75 @@ jobs:
 
     - name: Build
       env:
+        # The bundle is built for the VPS, where `sharp` is deleted after install (see the deploy
+        # job), so webpack must ignore any `require("sharp")` it encounters regardless of the fact
+        # that sharp is installed and working on this runner.
         EXCLUDE_SHARP: "true"
-        # The VPS has under 1 GB of RAM, so Node sizes its default heap ceiling from
-        # total system memory and lands at ~526 MB. The client bundle (Three.js +
-        # React, minified) has been creeping up and now needs a little under 500 MB of
-        # old space to compile, which no longer fits under that default — the build
-        # died with "Reached heap limit" partway through the client webpack pass.
-        # Raise the ceiling explicitly so it is set by the build's needs rather than by
-        # how much RAM the box happens to have. This is a cap, not a reservation: the
-        # build peaks around 720 MB RSS, which the VPS covers with its swap.
-        NODE_OPTIONS: "--max-old-space-size=1024"
       run: npm run build
 
+    - name: Upload build output
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist
+        path: dist/
+        retention-days: 7
+
+  deploy:
+    runs-on: self-hosted
+    needs: build
+
+    steps:
+    - name: Preserve live bundles before checkout
+      # Checkout cleans the working tree, gitignored files included, which is every copy the
+      # promote/rollback flow owns. The client is a set of chunks whose names change as the build
+      # does, so whole groups are moved rather than named files. Backups are carried across too:
+      # without them a rollback is impossible from the moment staging is next deployed.
+      run: |
+        rm -rf /tmp/thingspool-live-bundles
+        mkdir -p /tmp/thingspool-live-bundles/server /tmp/thingspool-live-bundles/client
+        cp dist/server/*.live.* dist/server/*.backup.* /tmp/thingspool-live-bundles/server/ 2>/dev/null || true
+        cp dist/client/*.live.* dist/client/*.backup.* /tmp/thingspool-live-bundles/client/ 2>/dev/null || true
+
+    - uses: actions/checkout@v4
+
+    - name: Restore live bundles after checkout
+      run: |
+        cp /tmp/thingspool-live-bundles/server/* dist/server/ 2>/dev/null || true
+        cp /tmp/thingspool-live-bundles/client/* dist/client/ 2>/dev/null || true
+        rm -rf /tmp/thingspool-live-bundles
+
+    - name: Use Node.js from .nvmrc
+      uses: actions/setup-node@v4
+      with:
+        node-version-file: '.nvmrc'
+        cache: 'npm'
+
+    - name: Install dependencies
+      # Runtime dependencies only — nothing is compiled here. The server bundle is built with
+      # webpack-node-externals, so it require()s these from node_modules at run time.
+      run: npm ci
+
     - name: Remove sharp before runtime
-      # `sharp` is an optional dep used only by the local SSG image-map step, which
-      # never runs on the VPS (SKIP_SSG=true in prod). Its prebuilt linux-x64 binary
-      # also requires an x86-64-v2 CPU the VPS does not have, so leaving it on disk
-      # is a loaded gun if anything ever require()s it. Remove it after the build,
-      # which needs sharp's TypeScript types to compile.
+      # `sharp` is an optional dep used only by the local SSG image-map step, which never runs on
+      # the VPS (SKIP_SSG=true in prod). Its prebuilt linux-x64 binary also requires an x86-64-v2
+      # CPU the VPS does not have, so leaving it on disk is a loaded gun if anything ever
+      # require()s it.
       #
-      # Do NOT use `npm prune --omit=optional` here: that prunes optional deps
-      # tree-wide, including `@google-cloud/firestore` (an optionalDependency of
-      # `firebase-admin` that we very much DO need at runtime).
+      # Do NOT use `npm prune --omit=optional` here: that prunes optional deps tree-wide,
+      # including `@google-cloud/firestore` (an optionalDependency of `firebase-admin` that we
+      # very much DO need at runtime).
       run: rm -rf node_modules/sharp
+
+    - name: Download build output
+      # Overwrites the bundles that came from the checkout with the ones just built from this
+      # commit. Extraction adds and replaces files, so the restored live bundles are left alone.
+      uses: actions/download-artifact@v4
+      with:
+        name: dist
+        path: dist/
+
+    - name: Report what is being deployed
+      run: ls -la dist/client dist/server
 
     - name: Restart staging server
       run: pm2 startOrRestart ecosystem.config.js --only staging

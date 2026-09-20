@@ -284,6 +284,8 @@ Four things come back per agent and all four are findings, not decoration:
 - `failedRequests` — same-origin requests that failed or came back 4xx/5xx. This is how a
   deployment that shipped a bundle asking for an asset it did not carry shows itself; nothing
   else in the run notices, because the page still loads and the missing thing is simply not drawn.
+  The loud case is one of the page's several client chunks 404ing, which stops the app booting at
+  all — so read this list before concluding from a dead session that the build is broken.
 - `screenshot.bytes` — a rendered 3D scene is a photograph and cannot compress small. A few KB
   means a blank or single-colour frame.
 - The screenshots themselves. **Read them.** They are the only check on whether the thing that

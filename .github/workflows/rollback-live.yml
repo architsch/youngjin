@@ -17,10 +17,7 @@ jobs:
       run: test -f dist/server/bundle.backup.js
 
     - name: Restore backup bundles
-      run: |
-        cp dist/server/bundle.backup.js dist/server/bundle.live.js
-        cp dist/client/bundle.backup.js dist/client/bundle.live.js || true
-        cp dist/client/style.backup.css dist/client/style.live.css || true
+      run: node dev/scripts/promoteBundles.js rollback
 
     - name: Restart live server
       run: pm2 startOrRestart ecosystem.config.js --only live
