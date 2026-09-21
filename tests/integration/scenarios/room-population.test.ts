@@ -26,14 +26,28 @@ const MAX_PLAYERS_PER_ROOM = ObjectCategoryConfigMap.getMaxCountPerRoom(ObjectCa
 /** Admission stops below the hard cap by a reserve margin, so in-flight joins can't exceed it. */
 const ADMISSION_CAP = MAX_PLAYERS_PER_ROOM - ROOM_ALMOST_FULL_MARGIN;
 
-/** Seeds and preloads hubs (as HubRoomUtil does at startup) with the given populations. */
-async function setUpHubs(populationByHubID: {[hubID: string]: number}): Promise<void>
+/** How one hub starts out: its population, optionally with its place in the admins' order. */
+type HubSetup = number | {population: number, initialJoinPriority: number};
+
+/**
+ * Seeds hubs and makes the balancer aware of them (as HubRoomUtil does at startup), with the given
+ * populations. Only a hub with somebody in it is held in memory, which is what makes an unloaded hub
+ * readable as an empty one.
+ */
+async function setUpHubs(setUpByHubID: {[hubID: string]: HubSetup}): Promise<void>
 {
-    for (const hubID of Object.keys(populationByHubID))
+    for (const hubID of Object.keys(setUpByHubID))
     {
-        harness.seedRoom(hubID, RoomTypeEnumMap.Hub);
-        await harness.loadRoom(hubID);
-        harness.setSyntheticRoomPopulation(hubID, populationByHubID[hubID]);
+        const setUp = setUpByHubID[hubID];
+        const population = (typeof setUp === "number") ? setUp : setUp.population;
+
+        harness.seedHub(hubID, (typeof setUp === "number") ? undefined : setUp.initialJoinPriority);
+
+        if (population > 0)
+        {
+            await harness.loadRoom(hubID);
+            harness.setSyntheticRoomPopulation(hubID, population);
+        }
     }
 }
 
@@ -266,6 +280,112 @@ describe("room population scenarios", () => {
         vi.mocked(DBRoomUtil.createRoom).mockResolvedValueOnce({success: false, data: []});
 
         expect(await RoomPickerUtil.pickBestHubRoomID()).toBe("");
+    });
+
+    // ─── The order admins fill hubs in ──────────────────────────────────────
+
+    it("fills the hub its admins put first, not the one whose ID happens to sort first", async () => {
+        await setUpHubs({
+            "hub-a": {population: 0, initialJoinPriority: 7},
+            "hub-b": {population: 0, initialJoinPriority: 2},
+            "hub-c": {population: 0, initialJoinPriority: 4},
+        });
+
+        expect(await RoomPickerUtil.pickBestHubRoomID()).toBe("hub-b");
+    });
+
+    it("moves down the admins' order as each hub fills past being under-populated", async () => {
+        await setUpHubs({
+            "hub-a": {population: 0, initialJoinPriority: 9},
+            "hub-b": {population: 0, initialJoinPriority: 0},
+        });
+
+        expect(await RoomPickerUtil.pickBestHubRoomID()).toBe("hub-b");
+
+        await harness.loadRoom("hub-b");
+        harness.setSyntheticRoomPopulation("hub-b", ROOM_UNDER_POPULATION_THRESHOLD + 1);
+        expect(await RoomPickerUtil.pickBestHubRoomID()).toBe("hub-a");
+    });
+
+    it("settles ties in the order by room ID, so the same hub is picked every time", async () => {
+        await setUpHubs({
+            "hub-b": {population: 0, initialJoinPriority: 3},
+            "hub-a": {population: 0, initialJoinPriority: 3},
+        });
+
+        expect(await RoomPickerUtil.pickBestHubRoomID()).toBe("hub-a");
+    });
+
+    it("leaves a hub its admins put last out of the running while any other is under-populated", async () => {
+        await setUpHubs({
+            "hub-quiet": {population: 0, initialJoinPriority: 9},
+            "hub-busy": {population: ROOM_UNDER_POPULATION_THRESHOLD - 1, initialJoinPriority: 1},
+        });
+
+        expect(await RoomPickerUtil.pickBestHubRoomID()).toBe("hub-busy");
+    });
+
+    it("spreads users by population rather than by the order once every hub is medium", async () => {
+        // The order says which hub fills first, not which crowd to add to; balancing takes over here.
+        await setUpHubs({
+            "hub-first": {population: ROOM_OVER_POPULATION_THRESHOLD - 1, initialJoinPriority: 0},
+            "hub-last": {population: ROOM_UNDER_POPULATION_THRESHOLD + 1, initialJoinPriority: 9},
+        });
+
+        expect(await RoomPickerUtil.pickBestHubRoomID()).toBe("hub-last");
+    });
+
+    it("gives a hub nobody has ordered a place in the middle, so it can be promoted or demoted", async () => {
+        await setUpHubs({
+            "hub-unordered": 0,
+            "hub-promoted": {population: 0, initialJoinPriority: 0},
+        });
+        expect(await RoomPickerUtil.pickBestHubRoomID()).toBe("hub-promoted");
+
+        harness.reset();
+        await setUpHubs({
+            "hub-unordered": 0,
+            "hub-demoted": {population: 0, initialJoinPriority: 9},
+        });
+        expect(await RoomPickerUtil.pickBestHubRoomID()).toBe("hub-unordered");
+    });
+
+    it("re-orders a hub the moment an admin changes its setting, without it being loaded", async () => {
+        await setUpHubs({
+            "hub-a": {population: 0, initialJoinPriority: 1},
+            "hub-b": {population: 0, initialJoinPriority: 5},
+        });
+        expect(await RoomPickerUtil.pickBestHubRoomID()).toBe("hub-a");
+
+        // Nobody is in either hub, so neither is in memory — the balancer reads the change anyway.
+        expect(harness.isRoomLoaded("hub-b")).toBe(false);
+        await harness.changeHubInitialJoinPriority("hub-b", 0);
+
+        expect(await RoomPickerUtil.pickBestHubRoomID()).toBe("hub-b");
+    });
+
+    // ─── Hub residency ──────────────────────────────────────────────────────
+
+    it("reads a hub nobody is in as empty without holding it in memory", async () => {
+        await setUpHubs({"hub-a": 0});
+
+        expect(harness.isRoomLoaded("hub-a")).toBe(false);
+        expect(RoomPickerUtil.getRoomPopulationByID("hub-a")).toBe(0);
+        expect(await RoomPickerUtil.pickBestHubRoomID()).toBe("hub-a");
+    });
+
+    it("lets go of a hub once its last visitor leaves", async () => {
+        await setUpHubs({"hub-a": 0});
+
+        const ctx = harness.connectUser();
+        await harness.joinRoom(ctx, "hub-a");
+        expect(harness.isRoomLoaded("hub-a")).toBe(true);
+
+        await harness.disconnectUser(ctx);
+
+        expect(harness.isRoomLoaded("hub-a")).toBe(false);
+        // Still a candidate: what the balancer knows of a hub outlives the hub's residency.
+        expect(await RoomPickerUtil.pickBestHubRoomID()).toBe("hub-a");
     });
 
     it("routes the reserved \"hub\" target through the hub balancer", async () => {

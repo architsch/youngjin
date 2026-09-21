@@ -67,6 +67,7 @@ import SinglePlayerModeConfigMap from "../../../src/shared/singlePlayer/maps/sin
 import SinglePlayerModeClientConfigMap from "../../../src/client/singlePlayer/maps/singlePlayerModeClientConfigMap";
 import SinglePlayerManager from "../../../src/client/singlePlayer/singlePlayerManager";
 import SinglePlayerAction from "../../../src/client/singlePlayer/types/singlePlayerAction";
+import type SinglePlayerCondition from "../../../src/client/singlePlayer/types/singlePlayerCondition";
 import App from "../../../src/client/app";
 import GraphicsManager from "../../../src/client/graphics/graphicsManager";
 import type VoxelQuadSelection from "../../../src/client/graphics/types/gizmo/voxelQuadSelection";
@@ -328,6 +329,7 @@ describe("tutorial edit mode opening", () => {
 
     beforeEach(() => {
         (App.getCurrentRoom as Mock).mockReturnValue(room);
+        (App.getVoxelQuads as Mock).mockReturnValue(room.voxelGrid.quadsMem.quads);
         for (const name of Object.keys(singlePlayerVariables))
             delete singlePlayerVariables[name];
     });
@@ -400,34 +402,41 @@ describe("tutorial edit mode opening", () => {
             Math.floor(m.hotspots.floor.z), Math.floor(m.hotspots.floor.x)));
     });
 
-    it("asks for a drawn face beside the one the mode opened on, builds against it, and comes back to it once the block is gone", () => {
-        const wall = m.volumes.wall1;
-        const row = wall.rowMin + 2;
-        const wallQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(row, wall.colMin, "x", "-", COLLISION_LAYER_MIN + 2);
-        const steps = config.loadSteps();
+    // A face on the dividing wall, standing in for the one edit mode opened on.
+    const wall = m.volumes.wall1;
+    const openedOnRow = wall.rowMin + 2;
+    const openedOnQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(openedOnRow, wall.colMin, "x", "-",
+        COLLISION_LAYER_MIN + 2);
 
-        // Steps set aside the faces the steps after them work from (see "set_variable").
-        const runVariables = (actions: SinglePlayerAction[]) => {
-            for (const action of actions)
-            {
-                if (action.type === "set_variable")
-                    SinglePlayerManager.setVariable(action.name, action.computeValue());
-            }
-        };
+    /** Steps set aside the faces the steps after them work from (see "set_variable"). */
+    const runVariables = (actions: SinglePlayerAction[]) => {
+        for (const action of actions)
+        {
+            if (action.type === "set_variable")
+                SinglePlayerManager.setVariable(action.name, action.computeValue());
+        }
+    };
 
-        // The opening face is taken from the selection the mode opened on.
+    /** The opening face is taken from the selection the mode opened on. */
+    const recordOpeningQuad = (steps: ReturnType<typeof config.loadSteps>) => {
         const peekSpy = vi.spyOn(voxelQuadSelectionObservable, "peek")
-            .mockReturnValue({voxel: undefined, quadIndex: wallQuadIndex} as unknown as VoxelQuadSelection);
+            .mockReturnValue({voxel: undefined, quadIndex: openedOnQuadIndex} as unknown as VoxelQuadSelection);
         try
         {
-            const recordOpening = steps["start_edit"].actionsOnEnd.find(action => action.type === "set_variable");
-            expect(recordOpening, "the start_edit step no longer records the face the mode opened on").toBeDefined();
             runVariables(steps["start_edit"].actionsOnEnd);
         }
         finally
         {
             peekSpy.mockRestore();
         }
+    };
+
+    it("asks for a drawn face beside the one the mode opened on, builds against it, and comes back to it once the block is gone", () => {
+        const steps = config.loadSteps();
+
+        const recordOpening = steps["start_edit"].actionsOnEnd.find(action => action.type === "set_variable");
+        expect(recordOpening, "the start_edit step no longer records the face the mode opened on").toBeDefined();
+        recordOpeningQuad(steps);
 
         // The user is sent to its neighbour along the same wall, which that wall really draws.
         runVariables(steps["select_block"].actionsOnStart);
@@ -437,7 +446,7 @@ describe("tutorial edit mode opening", () => {
         const targetQuadIndex =
             (highlight as Extract<SinglePlayerAction, {type: "gizmo_voxel_quad_outline_rect"}>).quadIndex();
         expect(describeQuad(targetQuadIndex)).toEqual(
-            {row: row - 1, col: wall.colMin, collisionLayer: COLLISION_LAYER_MIN + 2, facing: "-x"});
+            {row: openedOnRow - 1, col: wall.colMin, collisionLayer: COLLISION_LAYER_MIN + 2, facing: "-x"});
         expect(room.voxelGrid.quadsMem.quads[targetQuadIndex] & 0b10000000, "the marked face is not drawn").not.toBe(0);
 
         // And nothing else in the room may be picked instead of it.
@@ -454,10 +463,13 @@ describe("tutorial edit mode opening", () => {
             return (select as Extract<SinglePlayerAction, {type: "select_voxel_quad"}>).quadIndex();
         };
 
+        // Where the block will stand is worked out before there is one, when retexturing begins.
+        runVariables(steps["change_texture"].actionsOnStart);
+
         // The block goes into the cell that face looks into, and its own face that way is selected.
         const builtQuadIndex = selectedAtEndOf("add_block");
         expect(describeQuad(builtQuadIndex)).toEqual(
-            {row: row - 1, col: wall.colMin - 1, collisionLayer: COLLISION_LAYER_MIN + 2, facing: "-x"});
+            {row: openedOnRow - 1, col: wall.colMin - 1, collisionLayer: COLLISION_LAYER_MIN + 2, facing: "-x"});
 
         // Which is a face the built block really draws, covering the wall's.
         const builtRoom = RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
@@ -466,6 +478,34 @@ describe("tutorial edit mode opening", () => {
         expect(builtRoom.voxelGrid.quadsMem.quads[targetQuadIndex] & 0b10000000).toBe(0);
 
         expect(selectedAtEndOf("remove_block")).toBe(targetQuadIndex);
+    });
+
+    it("puts the texture back on the wall face it was taken from, not on the block built against it", () => {
+        // The retexturing steps straddle the building ones, and the block between them is gone by the
+        // time the texture is asked back — so both must name the wall's face, never the block's.
+        const steps = config.loadSteps();
+        recordOpeningQuad(steps);
+        runVariables(steps["select_block"].actionsOnStart);
+        runVariables(steps["change_texture"].actionsOnStart);
+
+        const targetQuadIndex = (steps["select_block"].actionsOnStart
+            .find(action => action.type === "gizmo_voxel_quad_outline_rect") as
+            Extract<SinglePlayerAction, {type: "gizmo_voxel_quad_outline_rect"}>).quadIndex();
+
+        runVariables(steps["add_block"].actionsOnEnd);
+        const builtQuadIndex = (steps["add_block"].actionsOnEnd
+            .find(action => action.type === "select_voxel_quad") as
+            Extract<SinglePlayerAction, {type: "select_voxel_quad"}>).quadIndex();
+        expect(builtQuadIndex).not.toBe(targetQuadIndex);
+
+        const requirement = steps["change_texture_back"].transitionRules[0].requirements
+            .find(condition => condition.type === "voxel_quad_texture_equals");
+        expect(requirement, "the change_texture_back step no longer waits on a face's texture").toBeDefined();
+        const waitsOn = requirement as Extract<SinglePlayerCondition, {type: "voxel_quad_texture_equals"}>;
+
+        expect(waitsOn.quadIndex()).toBe(targetQuadIndex);
+        // And back to the texture that face wore before the user painted over it.
+        expect(waitsOn.textureIndex()).toBe(room.voxelGrid.quadsMem.quads[targetQuadIndex] & 0b01111111);
     });
 
     it("frames the face it opened on from neither too near nor too far", () => {
@@ -529,14 +569,14 @@ describe("tutorial step graph", () => {
         expect(reachable).toEqual(new Set(Object.keys(steps)));
     });
 
-    it("opens edit mode and turns the camera, then picks a block out and builds against it before retexturing and taking it away", () => {
+    it("opens edit mode and turns the camera, then picks a face out and retextures it before building against it, taking the block away and putting the texture back", () => {
         const steps = config.loadSteps();
         const next = (stepName: string) => steps[stepName].transitionRules[0].nextStep;
 
-        expect([next("start_edit"), next("change_camera_angle"), next("select_block"), next("add_block"),
-            next("change_texture"), next("change_texture_back")])
-            .toEqual(["change_camera_angle", "select_block", "add_block", "change_texture",
-                "change_texture_back", "remove_block"]);
+        expect([next("start_edit"), next("change_camera_angle"), next("select_block"),
+            next("change_texture"), next("add_block"), next("remove_block"), next("change_texture_back")])
+            .toEqual(["change_camera_angle", "select_block", "change_texture", "add_block",
+                "remove_block", "change_texture_back", "exit_edit_mode"]);
     });
 
     it("holds the selection still from the start, and hands it back for one step only, one face wide", () => {

@@ -1,4 +1,6 @@
 import { useCallback, useState } from "react";
+import App from "../../../app";
+import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
 import ScrollPanel from "./scrollPanel";
 import TexturePackPanel from "./texturePackPanel";
 import RestrictedZonesPanel from "./restrictedZonesPanel";
@@ -8,6 +10,7 @@ import FogPanel from "./fogPanel";
 import SmokePanel from "./smokePanel";
 import SkyPanel from "./skyPanel";
 import GroundPanel from "./groundPanel";
+import InitialJoinPriorityPanel from "./initialJoinPriorityPanel";
 import TexturePackSection, { TEXTURE_PACK_BUTTON_ID } from "./section/texturePackSection";
 import RestrictedZonesSection, { RESTRICTED_ZONES_BUTTON_ID } from "./section/restrictedZonesSection";
 import AmbientLightSection, { AMBIENT_LIGHT_BUTTON_ID } from "./section/ambientLightSection";
@@ -16,10 +19,12 @@ import FogSection, { FOG_BUTTON_ID } from "./section/fogSection";
 import SmokeSection, { SMOKE_BUTTON_ID } from "./section/smokeSection";
 import SkySection, { SKY_BUTTON_ID } from "./section/skySection";
 import GroundSection, { GROUND_BUTTON_ID } from "./section/groundSection";
+import InitialJoinPrioritySection, { INITIAL_JOIN_PRIORITY_BUTTON_ID } from "./section/initialJoinPrioritySection";
 
-// Room settings (texture pack, restricted zones, lighting). A panel, not a popup, so the room stays
-// visible while edits apply immediately. The row only names settings; each opens its own panel hung
-// from its toggle (see ScrollPanel), one at a time. Access is decided by TopBarMenu and the server.
+// Room settings (texture pack, restricted zones, lighting, and a hub's join priority). A panel, not a
+// popup, so the room stays visible while edits apply immediately. The row only names settings; each
+// opens its own panel hung from its toggle (see ScrollPanel), one at a time. Access is decided by
+// TopBarMenu and the server.
 
 export default function CustomizeRoomPanel({ onClose }: Props)
 {
@@ -29,6 +34,9 @@ export default function CustomizeRoomPanel({ onClose }: Props)
         setOpenButtonId(prev => prev == buttonId ? null : buttonId);
     }, []);
     const closeSubPanel = useCallback(() => setOpenButtonId(null), []);
+
+    // Only hubs are balanced between, so only they are ordered (see @docs/networking/room_population.md).
+    const isHub = App.getCurrentRoom()?.roomType == RoomTypeEnumMap.Hub;
 
     // Bottom of the screen (other bottom UI stands down; see UIRoot), below popups.
     return <div className="absolute bottom-0 inset-x-0 z-30 p-2 pointer-events-none">
@@ -56,6 +64,11 @@ export default function CustomizeRoomPanel({ onClose }: Props)
             <div className={DIVIDER_CLASS_NAMES}/>
             <GroundSection open={openButtonId == GROUND_BUTTON_ID}
                 onToggle={() => toggleSubPanel(GROUND_BUTTON_ID)}/>
+            {isHub && <>
+                <div className={DIVIDER_CLASS_NAMES}/>
+                <InitialJoinPrioritySection open={openButtonId == INITIAL_JOIN_PRIORITY_BUTTON_ID}
+                    onToggle={() => toggleSubPanel(INITIAL_JOIN_PRIORITY_BUTTON_ID)}/>
+            </>}
         </ScrollPanel>
         {/* Outside the row, so dragging a sub-panel doesn't also scroll the row (see ScrollPanel). */}
         {openButtonId == TEXTURE_PACK_BUTTON_ID &&
@@ -74,6 +87,8 @@ export default function CustomizeRoomPanel({ onClose }: Props)
             <SkyPanel anchorElementId={SKY_BUTTON_ID} onClose={closeSubPanel}/>}
         {openButtonId == GROUND_BUTTON_ID &&
             <GroundPanel anchorElementId={GROUND_BUTTON_ID} onClose={closeSubPanel}/>}
+        {isHub && openButtonId == INITIAL_JOIN_PRIORITY_BUTTON_ID &&
+            <InitialJoinPriorityPanel anchorElementId={INITIAL_JOIN_PRIORITY_BUTTON_ID} onClose={closeSubPanel}/>}
     </div>;
 }
 

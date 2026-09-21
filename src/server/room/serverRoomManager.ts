@@ -23,6 +23,7 @@ import VoxelQuadsRuntimeMemory from "../../shared/voxel/types/voxelQuadsRuntimeM
 import ObjectGroup from "../../shared/object/types/objectGroup";
 import UserRoomChangeResult from "./types/userRoomChangeResult";
 import RoomPickerUtil from "./util/roomPickerUtil";
+import HubRoomUtil from "./util/hubRoomUtil";
 
 const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
 const socketRoomContexts: {[roomID: string]: SocketRoomContext} = {};
@@ -264,6 +265,10 @@ const ServerRoomManager =
         const roomRuntimeMemory = roomRuntimeMemories[room.id];
         if (roomRuntimeMemory)
             roomRuntimeMemory.room.prefs = canonicalPrefs;
+
+        // Prefs carry the hub balancer's ordering, which is read without loading the room.
+        if (room.roomType == RoomTypeEnumMap.Hub)
+            HubRoomUtil.registerHub(room.id, canonicalPrefs);
 
         const socketRoomContext = socketRoomContexts[room.id];
         if (socketRoomContext)

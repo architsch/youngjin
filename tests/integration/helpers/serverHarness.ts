@@ -8,13 +8,14 @@ import { resetStores, seedRoom, roomStore } from "./mockDB";
 import DBRoomVersionMigration from "../../../src/server/db/types/versionMigration/dbRoomVersionMigration";
 
 import Room from "../../../src/shared/room/types/room";
+import RoomPrefsUtil from "../../../src/shared/room/util/roomPrefsUtil";
 import { RoomType, RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 
 // ─── Hoisted stores for vi.mock factories ──────────────────────────────────
 // vi.mock factories are hoisted and can't close over module scope, hence vi.hoisted.
 
 const _roomStore = vi.hoisted(() => {
-    const store: { [roomID: string]: { room: any; ownerUserID: string; ownerUserName: string; roomType: number; texturePackPath: string } } = {};
+    const store: { [roomID: string]: { room: any; ownerUserID: string; ownerUserName: string; roomType: number; texturePackPath: string; prefs: string } } = {};
     return store;
 });
 
@@ -62,6 +63,7 @@ vi.mock("../../../src/server/db/util/dbRoomUtil", () => ({
                 ownerUserID: entry.ownerUserID,
                 ownerUserName: entry.ownerUserName,
                 texturePackPath: entry.texturePackPath,
+                prefs: entry.prefs,
             };
         }),
         saveRoomContent: vi.fn(async () => {
@@ -78,12 +80,20 @@ vi.mock("../../../src/server/db/util/dbRoomUtil", () => ({
             const room = seedRoomInStore(roomID, roomType);
             room.roomName = roomName;
             _roomStore[roomID] = { room, ownerUserID, ownerUserName, roomType,
-                texturePackPath: room.texturePackPath };
+                texturePackPath: room.texturePackPath, prefs: room.prefs };
             return { success: true, data: [{ id: roomID }] };
         }),
         deleteRoom: vi.fn(async () => true),
         changeRoomTexturePackPath: vi.fn(async () => true),
-        changeRoomPrefs: vi.fn(async () => true),
+        changeRoomPrefs: vi.fn(async (room: any, newPrefs: string) => {
+            const entry = _roomStore[room.id];
+            if (entry)
+            {
+                entry.prefs = newPrefs;
+                entry.room.prefs = newPrefs;
+            }
+            return true;
+        }),
     },
 }));
 
@@ -95,7 +105,8 @@ vi.mock("../../../src/server/db/util/dbSearchUtil", () => ({
                 success: true,
                 data: Object.entries(_roomStore)
                     .filter(([, entry]) => entry.roomType === roomType)
-                    .map(([roomID, entry]) => ({ id: roomID, roomType: entry.roomType })),
+                    .map(([roomID, entry]) => ({ id: roomID, roomType: entry.roomType,
+                        prefs: entry.prefs })),
             })),
             withRoomNameAndType: vi.fn(async (roomName: string, roomType: number) => ({
                 success: true,
@@ -244,6 +255,7 @@ function syncRoomStore(): void
             ownerUserName: v.ownerUserName,
             roomType: v.roomType,
             texturePackPath: v.texturePackPath,
+            prefs: v.prefs,
         };
     }
 }
@@ -294,6 +306,9 @@ export const harness = {
             delete ServerRoomManager.currentRoomIDByUserID[uid];
         ServerUserManager.clearPlayerObjects();
 
+        for (const hubID in HubRoomUtil.initialJoinPriorityByHubRoomID)
+            delete HubRoomUtil.initialJoinPriorityByHubRoomID[hubID];
+
         resetStores();
         resetUserCounter();
 
@@ -318,6 +333,34 @@ export const harness = {
         const room = seedRoom(roomID, roomType);
         syncRoomStore();
         return room;
+    },
+
+    /**
+     * Seeds a hub and makes the balancer aware of it, as HubRoomUtil does at startup. A stated join
+     * priority is written into the hub's stored prefs first, the way an admin's edit would leave it.
+     */
+    seedHub(hubID: string, initialJoinPriority?: number): Room
+    {
+        const room = harness.seedRoom(hubID, RoomTypeEnumMap.Hub);
+        if (initialJoinPriority != undefined)
+        {
+            const prefs = RoomPrefsUtil.decode(room.prefs);
+            prefs.initialJoinPriority = initialJoinPriority;
+            room.prefs = RoomPrefsUtil.encode(prefs);
+            roomStore[hubID].prefs = room.prefs;
+            syncRoomStore();
+        }
+        HubRoomUtil.registerHub(hubID, room.prefs);
+        return room;
+    },
+
+    /** An admin moving a hub in the order, along the path the room API takes (a prefs change). */
+    async changeHubInitialJoinPriority(hubID: string, initialJoinPriority: number): Promise<boolean>
+    {
+        const room = roomStore[hubID].room;
+        const prefs = RoomPrefsUtil.decode(room.prefs);
+        prefs.initialJoinPriority = initialJoinPriority;
+        return await ServerRoomManager.changeRoomPrefs(room, RoomPrefsUtil.encode(prefs));
     },
 
     /** Simulates a socket connection; returns the user's context. */
@@ -396,7 +439,7 @@ export const harness = {
         ctx.socket.connected = false;
     },
 
-    /** Preloads a room with no one in it (as HubRoomUtil does at startup). */
+    /** Holds a room in memory with no one in it, so its population can be faked. */
     async loadRoom(roomID: string): Promise<void>
     {
         await ServerRoomManager.loadRoom(roomID);

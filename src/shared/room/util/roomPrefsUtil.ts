@@ -9,6 +9,10 @@ import { FOG_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME,
 // Max value of one stored character; every step is in [0, this] (see StringUtil).
 export const MAX_ROOM_PREFS_STEP = 93;
 
+// Hub join priority range. Far shorter than a step range: it is an ordering an admin holds in mind
+// across every hub, not a value to tune.
+export const MAX_ROOM_INITIAL_JOIN_PRIORITY = 9;
+
 // Beyond the camera's far plane, so the top step means "no fog".
 export const MAX_FOG_DISTANCE = 48;
 
@@ -86,6 +90,8 @@ const DEFAULT_FOG_SMOKE_SCALE_STEP = 56;
 const DEFAULT_FOG_SMOKE_SPEED_STEP = 26;
 const DEFAULT_FOG_SMOKE_DRIFT_STEP = 12;
 const DEFAULT_FOG_SMOKE_RISE_STEP = 58;
+// Mid-range, so a hub can be promoted as well as demoted relative to the ones generation opens.
+const DEFAULT_INITIAL_JOIN_PRIORITY = 5;
 
 // Speeds at the default steps. Generated rooms store these steps explicitly, so these speeds must never
 // change (they are the originally tuned speeds).
@@ -122,6 +128,7 @@ const GROUND_SOLIDITY_CHAR_INDEX = 20;
 const GROUND_SOFTNESS_CHAR_INDEX = 21;
 const HEAD_LIGHT_RANGE_CHAR_INDEX = 22;
 const SKY_COLOR_CHAR_INDEX = 23;
+const INITIAL_JOIN_PRIORITY_CHAR_INDEX = 24;
 
 // Encodes and decodes RoomPrefs. Decoding is total and establishes all invariants (indices in palettes,
 // steps in range, a valid fog span); the server stores only canonicalized strings.
@@ -175,6 +182,9 @@ const RoomPrefsUtil =
                 DEFAULT_FOG_SMOKE_DRIFT_STEP),
             fogSmokeRiseStep: readStep(prefs, FOG_SMOKE_RISE_CHAR_INDEX,
                 DEFAULT_FOG_SMOKE_RISE_STEP),
+            initialJoinPriority: NumUtil.clampInRange(
+                readStep(prefs, INITIAL_JOIN_PRIORITY_CHAR_INDEX, DEFAULT_INITIAL_JOIN_PRIORITY),
+                0, MAX_ROOM_INITIAL_JOIN_PRIORITY),
         };
     },
     encode: (prefs: RoomPrefs): string =>
@@ -209,6 +219,8 @@ const RoomPrefsUtil =
         chars[FOG_SMOKE_SPEED_CHAR_INDEX] = writeStep(prefs.fogSmokeSpeedStep);
         chars[FOG_SMOKE_DRIFT_CHAR_INDEX] = writeStep(prefs.fogSmokeDriftStep);
         chars[FOG_SMOKE_RISE_CHAR_INDEX] = writeStep(prefs.fogSmokeRiseStep);
+        chars[INITIAL_JOIN_PRIORITY_CHAR_INDEX] = StringUtil.convertRawNumberToVisibleASCII(
+            clampToWholeStep(prefs.initialJoinPriority, MAX_ROOM_INITIAL_JOIN_PRIORITY));
         return chars.join("");
     },
     // Generated rooms store explicit defaults (see @.claude/rules/room-generation.md).

@@ -42,7 +42,7 @@ const QUAD_ARROW_LIFT = 0.25;
 
 // How far along the texture strip the retexturing step points, in cells: far enough that the texture it
 // suggests is plainly not the one the block already wears.
-const SUGGESTED_TEXTURE_OFFSET = 3;
+const SUGGESTED_TEXTURE_OFFSET = 6;
 
 // Step variables (see "set_variable"). The edit-mode view is recorded (not imposed) so the
 // camera-turning step measures from where the user already is.
@@ -192,13 +192,42 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                 transitionRules: [{
                     requirements: [{type: "voxel_quad_selected", negate: false,
                         quadIndex: () => SinglePlayerManager.getVariable(TARGET_QUAD_VARIABLE)}],
-                    nextStep: "add_block",
+                    nextStep: "change_texture",
                     nextStepDelay: 0,
                 }],
                 actionsOnEnd: [
                     {type: "clear_all_ui_and_gizmo"},
                     {type: "feature_flag", flag: FeatureFlag.DisableVoxelQuadSelectionChange, enable: true},
                     {type: "clear_voxel_quad_selection_restriction"},
+                ],
+            },
+            "change_texture": {
+                startDelay: 500,
+                actionsOnStart: [
+                    {type: "set_variable", name: BLOCK_QUAD_VARIABLE, computeValue: () =>
+                        getSameQuadOnBlockBuiltAgainst(
+                            SinglePlayerManager.getVariable(TARGET_QUAD_VARIABLE))},
+                    // Noted before the user paints over it, since the next step asks for it back.
+                    {type: "set_variable", name: ORIGINAL_TEXTURE_VARIABLE, computeValue: () =>
+                        getQuadTextureIndex(SinglePlayerManager.getVariable(TARGET_QUAD_VARIABLE))},
+                    {type: "ui_headline", text: () => "Change the texture."},
+                    // One texture is suggested rather than the whole strip, but any change moves on.
+                    {type: "ui_arrow", arrowBias: "center", targetElementId: () => textureOptionElementId(
+                        getSuggestedTextureIndex(
+                            SinglePlayerManager.getVariable(ORIGINAL_TEXTURE_VARIABLE)))},
+                    {type: "ui_outline_rect", targetElementId: () => textureOptionElementId(
+                        getSuggestedTextureIndex(
+                            SinglePlayerManager.getVariable(ORIGINAL_TEXTURE_VARIABLE)))},
+                    {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelQuadTextureChange, enable: false},
+                ],
+                transitionRules: [{
+                    requirements: [{type: "client_events_occurred_after_step_began", negate: false,
+                        eventType: ClientEventType.ManuallyChangedVoxelQuadTexture, minNumEvents: () => 1}],
+                    nextStep: "add_block",
+                    nextStepDelay: 0,
+                }],
+                actionsOnEnd: [
+                    {type: "clear_all_ui_and_gizmo"},
                 ],
             },
             // The selection stays locked again through the build/texture/remove steps; the steps move it
@@ -214,66 +243,14 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                 transitionRules: [{
                     requirements: [{type: "client_events_occurred_after_step_began", negate: false,
                         eventType: ClientEventType.ManuallyAddedVoxelBlock, minNumEvents: () => 1}],
-                    nextStep: "change_texture",
-                    nextStepDelay: 0,
-                }],
-                actionsOnEnd: [
-                    {type: "clear_all_ui_and_gizmo"},
-                    {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockAddition, enable: true},
-                    // Onto the same face of the newly built block, which the next steps retexture and remove.
-                    {type: "set_variable", name: BLOCK_QUAD_VARIABLE, computeValue: () =>
-                        getSameQuadOnBlockBuiltAgainst(
-                            SinglePlayerManager.getVariable(TARGET_QUAD_VARIABLE))},
-                    {type: "select_voxel_quad",
-                        quadIndex: () => SinglePlayerManager.getVariable(BLOCK_QUAD_VARIABLE)},
-                ],
-            },
-            "change_texture": {
-                startDelay: 500,
-                actionsOnStart: [
-                    // Noted before the user paints over it, since the next step asks for it back.
-                    {type: "set_variable", name: ORIGINAL_TEXTURE_VARIABLE, computeValue: () =>
-                        getQuadTextureIndex(SinglePlayerManager.getVariable(BLOCK_QUAD_VARIABLE))},
-                    {type: "ui_headline", text: () => "Change the texture."},
-                    // One texture is suggested rather than the whole strip, but any change moves on.
-                    {type: "ui_arrow", arrowBias: "center", targetElementId: () => textureOptionElementId(
-                        getSuggestedTextureIndex(
-                            SinglePlayerManager.getVariable(ORIGINAL_TEXTURE_VARIABLE)))},
-                    {type: "ui_outline_rect", targetElementId: () => textureOptionElementId(
-                        getSuggestedTextureIndex(
-                            SinglePlayerManager.getVariable(ORIGINAL_TEXTURE_VARIABLE)))},
-                    {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelQuadTextureChange, enable: false},
-                ],
-                transitionRules: [{
-                    requirements: [{type: "client_events_occurred_after_step_began", negate: false,
-                        eventType: ClientEventType.ManuallyChangedVoxelQuadTexture, minNumEvents: () => 1}],
-                    nextStep: "change_texture_back",
-                    nextStepDelay: 0,
-                }],
-                actionsOnEnd: [
-                    {type: "clear_all_ui_and_gizmo"},
-                ],
-            },
-            "change_texture_back": {
-                startDelay: 500,
-                actionsOnStart: [
-                    {type: "ui_headline", text: () => "Change it back to the original."},
-                    {type: "ui_arrow", arrowBias: "center", targetElementId: () => textureOptionElementId(
-                        SinglePlayerManager.getVariable(ORIGINAL_TEXTURE_VARIABLE))},
-                    {type: "ui_outline_rect", targetElementId: () => textureOptionElementId(
-                        SinglePlayerManager.getVariable(ORIGINAL_TEXTURE_VARIABLE))},
-                ],
-                transitionRules: [{
-                    // This one texture only, unlike the step before it: the point is finding a named one.
-                    requirements: [{type: "voxel_quad_texture_equals", negate: false,
-                        quadIndex: () => SinglePlayerManager.getVariable(BLOCK_QUAD_VARIABLE),
-                        textureIndex: () => SinglePlayerManager.getVariable(ORIGINAL_TEXTURE_VARIABLE)}],
                     nextStep: "remove_block",
                     nextStepDelay: 0,
                 }],
                 actionsOnEnd: [
                     {type: "clear_all_ui_and_gizmo"},
-                    {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelQuadTextureChange, enable: true},
+                    {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockAddition, enable: true},
+                    {type: "select_voxel_quad",
+                        quadIndex: () => SinglePlayerManager.getVariable(BLOCK_QUAD_VARIABLE)},
                 ],
             },
             "remove_block": {
@@ -287,7 +264,7 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                 transitionRules: [{
                     requirements: [{type: "client_events_occurred_after_step_began", negate: false,
                         eventType: ClientEventType.ManuallyRemovedVoxelBlock, minNumEvents: () => 1}],
-                    nextStep: "exit_edit_mode",
+                    nextStep: "change_texture_back",
                     nextStepDelay: 0,
                 }],
                 actionsOnEnd: [
@@ -296,6 +273,28 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                     // Back onto the face the block was built against, bare again now.
                     {type: "select_voxel_quad",
                         quadIndex: () => SinglePlayerManager.getVariable(TARGET_QUAD_VARIABLE)},
+                ],
+            },
+            "change_texture_back": {
+                startDelay: 500,
+                actionsOnStart: [
+                    {type: "ui_headline", text: () => "Change the texture back to the original."},
+                    {type: "ui_arrow", arrowBias: "center", targetElementId: () => textureOptionElementId(
+                        SinglePlayerManager.getVariable(ORIGINAL_TEXTURE_VARIABLE))},
+                    {type: "ui_outline_rect", targetElementId: () => textureOptionElementId(
+                        SinglePlayerManager.getVariable(ORIGINAL_TEXTURE_VARIABLE))},
+                ],
+                transitionRules: [{
+                    // This one texture only, unlike the step before it: the point is finding a named one.
+                    requirements: [{type: "voxel_quad_texture_equals", negate: false,
+                        quadIndex: () => SinglePlayerManager.getVariable(TARGET_QUAD_VARIABLE),
+                        textureIndex: () => SinglePlayerManager.getVariable(ORIGINAL_TEXTURE_VARIABLE)}],
+                    nextStep: "exit_edit_mode",
+                    nextStepDelay: 0,
+                }],
+                actionsOnEnd: [
+                    {type: "clear_all_ui_and_gizmo"},
+                    {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelQuadTextureChange, enable: true},
                 ],
             },
             "exit_edit_mode": {

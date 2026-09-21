@@ -8,6 +8,7 @@ Admin is a user type that is granted manually in the database. Admins decide by 
 - Adding, moving, removing, labeling and linking doors. This is **Hub rooms only**; a Regular room keeps its generated door. The dev sandbox is the exception, so the tools can be tried without a hub (see [sandbox.md](../testing/playtest/sandbox.md)).
 - Setting door colors (see [door_design.md](../geometry/door_design.md)).
 - Creating a new hub. The server otherwise creates one only when every hub is full.
+- Ordering the hubs, by setting each one's join priority (see [room_population.md](../networking/room_population.md)).
 - Acting as a hub's superuser, which covers its texture pack, room settings and restricted zones.
 
 In all other respects an admin edits like any user.

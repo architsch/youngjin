@@ -1,6 +1,6 @@
-// A room's atmosphere settings (lamps themselves are contents). All fields are small integer steps or
-// palette indices, so the whole thing encodes to a short string on the room (see RoomPrefsUtil and
-// @docs/graphics/lighting.md).
+// A room's stored settings: its atmosphere (lamps themselves are contents), plus the hub balancer's
+// ordering. All fields are small integer steps or palette indices, so the whole thing encodes to a
+// short string on the room (see RoomPrefsUtil and @docs/graphics/lighting.md).
 export default interface RoomPrefs
 {
     // Ambient color ("Light" palette) and strength step.
@@ -44,4 +44,8 @@ export default interface RoomPrefs
     groundScaleStep: number;
     groundSolidityStep: number;
     groundSoftnessStep: number;
+
+    // Hubs only: where this one stands in the order the balancer fills hubs, smallest first (see
+    // RoomPickerUtil). Other room types carry it and never have it read.
+    initialJoinPriority: number;
 }

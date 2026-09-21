@@ -137,6 +137,16 @@ const ClientVoxelQueryUtil =
             return 0;
         const voxels = room.voxelGrid.voxels;
 
+        // An eye buried in solid rock — an arrival still standing in the wall behind its door — has no
+        // open space to measure, and its sight lines would leave through buried faces (see above).
+        if (VoxelQueryUtil.isVoxelBlockOccupied(voxels,
+            VoxelQueryUtil.getVoxelRowFromWorldZ(viewPosition.z),
+            VoxelQueryUtil.getVoxelColFromWorldX(viewPosition.x),
+            VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(viewPosition.y)))
+        {
+            return 0;
+        }
+
         const forwardLength = Math.hypot(forwardDir.x, forwardDir.z);
         if (forwardLength < NEAR_EPSILON)
             return 0; // Facing straight up or down, leaving no direction on the plane to be ahead of.

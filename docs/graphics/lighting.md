@@ -36,6 +36,7 @@ Rebuild requests (a lamp changed, block work edited) are batched and handled onc
 - Fog and sky colors come from the "Fog" palette. Clouds and ground use the full-range "Scenery" palette, so they can contrast with the air.
 - Unconfigured (missing) values decode to defaults.
 - **Concurrent edits**: saves are deferred briefly. While a local edit is pending, lighting updates from the server are ignored, so the last writer wins without flicker.
+- One setting in `RoomPrefs` is not atmosphere: a hub's join priority rides along in the same string, since it is a small integer stored on the room like the rest ([room_population.md](../networking/room_population.md)).
 
 ## Air, sky and ground (`atmosphereGLSL`, `skyShader`)
 - **Fog and smoke** are read by **world position**, so smoke is a 3D volume inside the room. Smoke changes fog *coverage*; lamps change its *color*. Smoke has no hard edge, and its shearing field moves more slowly than the smoke itself, so the smoke deforms rather than scrolls.

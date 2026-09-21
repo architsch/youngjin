@@ -139,11 +139,19 @@ describe("state persistence scenarios", () => {
             skipInvariants: true,
             skipCleanup: true,
             assertions: () => {
-                // Hubs are never unloaded, so the builder's voxels remain.
-                expect(harness.isRoomLoaded("voxel-persist")).toBe(true);
-                expect(harness.getRoomParticipantCount("voxel-persist")).toBe(0);
+                // An empty room is saved and released, hubs included.
+                expect(harness.isRoomLoaded("voxel-persist")).toBe(false);
             },
         });
+
+        // Somebody arriving loads it again, with the column where the builder left it.
+        const returning = harness.connectUser();
+        await harness.joinRoom(returning, "voxel-persist");
+
+        const roomMem = ServerRoomManager.roomRuntimeMemories["voxel-persist"];
+        const voxel = VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 10, 10)!;
+        expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, 0)).toBe(true);
+        expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, 2)).toBe(true);
     });
 
     it("voxel blocks placed by one user are visible to newly joined user", async () => {

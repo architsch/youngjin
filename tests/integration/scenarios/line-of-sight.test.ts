@@ -1,5 +1,6 @@
 /**
- * Scenario tests: line of sight via voxel grid traversal (door "Click to Enter" prompts, speech bubbles).
+ * Scenario tests: line of sight via voxel grid traversal (door "Click to Enter" prompts, speech bubbles),
+ * and the open-space drop the first-person camera pitches by, which is measured along the same lines.
  * The end block never occludes: wall attachments sit on the wall/room boundary and stored coordinates
  * floor (see ObjectTransform), so half of all doors land inside their wall and would hide themselves.
  * Browser-bound client modules are stubbed; grid, room and door placement are real.
@@ -34,11 +35,14 @@ import ClientVoxelQueryUtil from "../../../src/client/voxel/util/clientVoxelQuer
 import BufferState from "../../../src/shared/networking/types/bufferState";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
-import DoorObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
+import DoorObjectTypeConfig, { ENTRANCE_DIST_IN_FRONT_OF_DOOR,
+    SPAWN_DIST_BEHIND_DOOR } from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
+import { PLAYER_HEIGHT } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import Room from "../../../src/shared/room/types/room";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
-import { COLLISION_LAYER_MIN, MAX_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
+import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, MAX_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
     STOREY_FLOOR_COLLISION_LAYER } from "../../../src/shared/system/sharedConstants";
 import { createTestRoom } from "../helpers/roomContent";
 
@@ -62,9 +66,10 @@ const VIEWING_DIST = 6;
 let room: Room;
 
 /** The door itself, as room generation hangs one on the given cell of the boundary wall. */
-function makeDoor(col: number, row: number): AddObjectSignal
+function makeDoor(col: number, row: number,
+    collisionLayer: number = COLLISION_LAYER_MIN): AddObjectSignal
 {
-    return DoorObjectTypeConfig.util.makeEntranceDoor(ROOM_ID, col, row, COLLISION_LAYER_MIN);
+    return DoorObjectTypeConfig.util.makeEntranceDoor(ROOM_ID, col, row, collisionLayer);
 }
 
 /** Round-trips a transform through storage, yielding the coordinate a client really receives. */
@@ -214,5 +219,44 @@ describe("Seeing past the room's own geometry", () => {
         const from = new THREE.Vector3(2.5, 1.75, MIDDLE_ROW + 0.5);
         const to = new THREE.Vector3(NUM_VOXEL_COLS - 2.5, 1.75, MIDDLE_ROW + 0.5);
         expect(isBlocked(from, to)).toBe(false);
+    });
+});
+
+describe("The drop the first-person camera pitches by", () => {
+    // The upper storey's lowest layer, and the floor a player stands on there.
+    const UPPER_STOREY_LAYER = STOREY_FLOOR_COLLISION_LAYER + 1;
+    const UPPER_STOREY_FLOOR_Y = UPPER_STOREY_LAYER * COLLISION_LAYER_HEIGHT;
+
+    /** The measure as FirstPersonCameraPose takes it, from where the player's feet are. */
+    function dropAheadOf(footX: number, footZ: number, footY: number, forward: THREE.Vector3): number
+    {
+        const eye = new THREE.Vector3(footX, footY + 0.8 * PLAYER_HEIGHT, footZ);
+        return ClientVoxelQueryUtil.getOpenSpaceDropAhead(eye, forward, footY);
+    }
+
+    it("finds nothing below an upper storey, either side of an arrival's walk out of the doorway", () => {
+        // Arrivals spawn inside the wall behind their door and walk out (see SpawnHotspotUtil). From in
+        // there, sight lines down to the storey below leave through buried faces, which draw nothing —
+        // so the sealed storey would read as a drop and tip the camera down for the length of the walk.
+        const door = makeDoor(0, MIDDLE_ROW, UPPER_STOREY_LAYER);
+        const {pos, dir} = door.transform;
+        const forward = new THREE.Vector3(dir.x, 0, dir.z);
+
+        const spawn = dropAheadOf(pos.x - dir.x * SPAWN_DIST_BEHIND_DOOR,
+            pos.z - dir.z * SPAWN_DIST_BEHIND_DOOR, UPPER_STOREY_FLOOR_Y, forward);
+        const walkedOut = dropAheadOf(pos.x + dir.x * ENTRANCE_DIST_IN_FRONT_OF_DOOR,
+            pos.z + dir.z * ENTRANCE_DIST_IN_FRONT_OF_DOOR, UPPER_STOREY_FLOOR_Y, forward);
+
+        expect(spawn, "still in the wall").toBe(0);
+        expect(walkedOut, "clear of the wall").toBe(0);
+    });
+
+    it("still finds the floor below a block standing on it", () => {
+        VoxelUpdateUtil.addVoxelBlock(undefined, room.voxelGrid.voxels,
+            VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(MIDDLE_ROW, MIDDLE_COL, COLLISION_LAYER_MIN));
+
+        const onTop = dropAheadOf(MIDDLE_COL + 0.5, MIDDLE_ROW + 0.5, COLLISION_LAYER_HEIGHT,
+            new THREE.Vector3(1, 0, 0));
+        expect(onTop).toBeGreaterThan(0);
     });
 });

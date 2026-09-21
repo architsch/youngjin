@@ -1,10 +1,10 @@
 import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";
-import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 import ObjectCategoryConfigMap from "../../../shared/object/maps/objectCategoryConfigMap";
 import { ObjectCategoryEnumMap } from "../../../shared/object/types/objectCategory";
 import { HUB_ROOM_ID_KEYWORD, ROOM_ALMOST_FULL_MARGIN, ROOM_OVER_POPULATION_THRESHOLD, ROOM_UNDER_POPULATION_THRESHOLD } from "../../../shared/system/sharedConstants";
 import SocketUserContext from "../../sockets/types/socketUserContext";
 import ServerRoomManager from "../serverRoomManager";
+import HubRoomCandidate from "../types/hubRoomCandidate";
 import HubRoomUtil from "./hubRoomUtil";
 
 const RoomPickerUtil =
@@ -35,19 +35,18 @@ const RoomPickerUtil =
     // Picks a hub keeping populations in the healthy band. Returns "" only if no hub is available.
     pickBestHubRoomID: async (): Promise<string> =>
     {
-        // Assumes hubs are preloaded. Almost-full hubs are excluded first.
-        const hubRooms: RoomRuntimeMemory[] = [];
-        for (const roomRuntimeMemory of Object.values(ServerRoomManager.roomRuntimeMemories))
+        // Hubs are known by the registry rather than being held in memory (see HubRoomUtil).
+        // Almost-full hubs are excluded first.
+        const hubRooms: HubRoomCandidate[] = [];
+        for (const [hubRoomID, initialJoinPriority] of Object.entries(HubRoomUtil.initialJoinPriorityByHubRoomID))
         {
-            if (roomRuntimeMemory.room.roomType == RoomTypeEnumMap.Hub &&
-                !RoomPickerUtil.isRoomAlmostFull(roomRuntimeMemory))
-            {
-                hubRooms.push(roomRuntimeMemory);
-            }
+            const population = RoomPickerUtil.getRoomPopulationByID(hubRoomID);
+            if (!RoomPickerUtil.isPopulationAlmostFull(population))
+                hubRooms.push({roomID: hubRoomID, initialJoinPriority, population});
         }
 
-        if (hubRooms.length == 0 || hubRooms.every(mem =>
-            RoomPickerUtil.getRoomPopulation(mem) >= ROOM_OVER_POPULATION_THRESHOLD))
+        if (hubRooms.length == 0 || hubRooms.every(hubRoom =>
+            hubRoom.population >= ROOM_OVER_POPULATION_THRESHOLD))
         {
             // All over-populated (or none exist): open a new hub.
             const newHubRoomID = await HubRoomUtil.createHub();
@@ -59,16 +58,14 @@ const RoomPickerUtil =
             return pickLeastPopulatedRoomID(hubRooms);
         }
 
-        const underPopulatedHubRooms = hubRooms.filter(mem =>
-            RoomPickerUtil.getRoomPopulation(mem) <= ROOM_UNDER_POPULATION_THRESHOLD);
+        const underPopulatedHubRooms = hubRooms.filter(hubRoom =>
+            hubRoom.population <= ROOM_UNDER_POPULATION_THRESHOLD);
 
         if (underPopulatedHubRooms.length > 0)
         {
-            // Fill one under-populated hub (lowest room ID, deterministic) past the threshold before
-            // the next, so visitors meet instead of being spread thin.
-            return underPopulatedHubRooms
-                .map(mem => mem.room.id)
-                .sort()[0];
+            // Fill one under-populated hub past the threshold before the next, so visitors meet
+            // instead of being spread thin. Which one goes first is the admins' to order.
+            return pickEarliestByPriorityRoomID(underPopulatedHubRooms);
         }
 
         // All medium: pick the least populated.
@@ -78,31 +75,57 @@ const RoomPickerUtil =
     {
         return Object.keys(roomRuntimeMemory.participantUserNameByID).length;
     },
+    // A room is held in memory only while somebody is in it, so an unloaded room is an empty one.
+    getRoomPopulationByID: (roomID: string): number =>
+    {
+        const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
+        return (roomRuntimeMemory != undefined)
+            ? RoomPickerUtil.getRoomPopulation(roomRuntimeMemory) : 0;
+    },
     // Admission test with a margin below the hard cap for in-flight joins. Overruns just leave some
     // body parts undrawn on clients.
-    isRoomAlmostFull: (roomRuntimeMemory: RoomRuntimeMemory): boolean =>
+    isPopulationAlmostFull: (population: number): boolean =>
     {
         const maxPlayersPerRoom = ObjectCategoryConfigMap.getMaxCountPerRoom(ObjectCategoryEnumMap.Player);
-        return RoomPickerUtil.getRoomPopulation(roomRuntimeMemory) >= maxPlayersPerRoom - ROOM_ALMOST_FULL_MARGIN;
+        return population >= maxPlayersPerRoom - ROOM_ALMOST_FULL_MARGIN;
+    },
+    isRoomAlmostFull: (roomRuntimeMemory: RoomRuntimeMemory): boolean =>
+    {
+        return RoomPickerUtil.isPopulationAlmostFull(
+            RoomPickerUtil.getRoomPopulation(roomRuntimeMemory));
     },
 }
 
-// Least populated candidate (ties by room ID), or "".
-function pickLeastPopulatedRoomID(candidates: RoomRuntimeMemory[]): string
+// Earliest in the admins' order (ties by room ID), or "".
+function pickEarliestByPriorityRoomID(candidates: HubRoomCandidate[]): string
 {
-    let bestRoomID = "";
-    let bestPopulation = Number.MAX_SAFE_INTEGER;
-    for (const roomRuntimeMemory of candidates)
+    return pickBestRoomID(candidates, (candidate, best) =>
+        (candidate.initialJoinPriority != best.initialJoinPriority)
+            ? candidate.initialJoinPriority < best.initialJoinPriority
+            : candidate.roomID < best.roomID);
+}
+
+// Least populated candidate (ties by priority, then room ID), or "".
+function pickLeastPopulatedRoomID(candidates: HubRoomCandidate[]): string
+{
+    return pickBestRoomID(candidates, (candidate, best) =>
+        (candidate.population != best.population)
+            ? candidate.population < best.population
+            : (candidate.initialJoinPriority != best.initialJoinPriority)
+                ? candidate.initialJoinPriority < best.initialJoinPriority
+                : candidate.roomID < best.roomID);
+}
+
+function pickBestRoomID(candidates: HubRoomCandidate[],
+    isBetter: (candidate: HubRoomCandidate, best: HubRoomCandidate) => boolean): string
+{
+    let best: HubRoomCandidate | undefined = undefined;
+    for (const candidate of candidates)
     {
-        const population = RoomPickerUtil.getRoomPopulation(roomRuntimeMemory);
-        if (population < bestPopulation ||
-            (population == bestPopulation && roomRuntimeMemory.room.id < bestRoomID))
-        {
-            bestRoomID = roomRuntimeMemory.room.id;
-            bestPopulation = population;
-        }
+        if (best == undefined || isBetter(candidate, best))
+            best = candidate;
     }
-    return bestRoomID;
+    return (best != undefined) ? best.roomID : "";
 }
 
 export default RoomPickerUtil;

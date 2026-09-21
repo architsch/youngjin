@@ -1,14 +1,14 @@
 /**
- * Scenario tests: room atmosphere prefs (room light, head lamp, air). Covers round-trips; an empty string
- * decoding to the pre-prefs look (so existing rooms need no migration); total decoding; and fog
- * distances always leaving a span.
+ * Scenario tests: room prefs — atmosphere (room light, head lamp, air) and a hub's join priority.
+ * Covers round-trips; an empty string decoding to the pre-prefs look (so existing rooms need no
+ * migration); total decoding; and fog distances always leaving a span.
  */
 import { describe, it, expect } from "vitest";
 import fc from "fast-check";
 import RoomPrefsUtil, { MAX_AMBIENT_INTENSITY, MAX_CLOUD_SCALE, MAX_CLOUD_SOFTNESS, MAX_CLOUD_SPEED,
     MAX_FOG_DISTANCE, MAX_FOG_SMOKE_SCALE, MAX_FOG_SMOKE_SPEED, MAX_GROUND_SCALE,
-    MAX_GROUND_SOFTNESS, MAX_GROUND_SOLIDITY, MAX_ROOM_PREFS_STEP, MIN_CLOUD_SCALE,
-    MIN_CLOUD_SOFTNESS, MIN_FOG_SMOKE_SCALE, MIN_GROUND_SCALE, MIN_GROUND_SOFTNESS,
+    MAX_GROUND_SOFTNESS, MAX_GROUND_SOLIDITY, MAX_ROOM_INITIAL_JOIN_PRIORITY, MAX_ROOM_PREFS_STEP,
+    MIN_CLOUD_SCALE, MIN_CLOUD_SOFTNESS, MIN_FOG_SMOKE_SCALE, MIN_GROUND_SCALE, MIN_GROUND_SOFTNESS,
     MIN_GROUND_SOLIDITY }
     from "../../../src/shared/room/util/roomPrefsUtil";
 import RoomPrefs from "../../../src/shared/room/types/roomPrefs";
@@ -65,6 +65,7 @@ function arbitraryPrefs(): fc.Arbitrary<RoomPrefs>
         fogSmokeSpeedStep: steps,
         fogSmokeDriftStep: steps,
         fogSmokeRiseStep: steps,
+        initialJoinPriority: fc.integer({min: 0, max: MAX_ROOM_INITIAL_JOIN_PRIORITY}),
     });
 }
 
@@ -458,5 +459,35 @@ describe("a sky with a color of its own", () => {
             RoomPrefsUtil.encode({...defaultPrefs, fogColorIndex: 12, skyColorIndex: 60}));
         expect(decoded.skyColorIndex).toBe(60);
         expect(decoded.fogColorIndex).toBe(12);
+    });
+});
+
+// String length before hubs could be ordered (through the sky color).
+const PRE_JOIN_PRIORITY_PREFS_LENGTH = 24;
+
+describe("a hub's place in the order visitors fill hubs in", () => {
+    it("puts a hub stored before there was an order in the middle of it", () => {
+        // Every hub predates the setting, so they must all read back as one undecided group rather
+        // than as hubs their admins put first.
+        const stored = RoomPrefsUtil.encode(defaultPrefs)
+            .substring(0, PRE_JOIN_PRIORITY_PREFS_LENGTH);
+        expect(RoomPrefsUtil.decode(stored).initialJoinPriority)
+            .toBe(RoomPrefsUtil.decode("").initialJoinPriority);
+    });
+
+    it("leaves room to promote a hub as well as demote one", () => {
+        const defaultPriority = RoomPrefsUtil.decode("").initialJoinPriority;
+        expect(defaultPriority).toBeGreaterThan(0);
+        expect(defaultPriority).toBeLessThan(MAX_ROOM_INITIAL_JOIN_PRIORITY);
+    });
+
+    it("reads a place inside the order out of any stored character", () => {
+        // The field shares the prefs alphabet, which addresses far more than the order has places.
+        fc.assert(fc.property(prefsStrings, (raw) => {
+            const priority = RoomPrefsUtil.decode(raw).initialJoinPriority;
+            expect(Number.isInteger(priority)).toBe(true);
+            expect(priority).toBeGreaterThanOrEqual(0);
+            expect(priority).toBeLessThanOrEqual(MAX_ROOM_INITIAL_JOIN_PRIORITY);
+        }));
     });
 });

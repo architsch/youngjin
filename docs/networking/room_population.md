@@ -18,16 +18,25 @@ Capacity checks and registration are separated by async work, so a burst of join
 `RoomPickerUtil` decides where the user goes, and `ServerRoomManager` decides whether they may enter. When the user names no room, the picker takes the URL room, then the last room, then the hub balancer. The `hub` keyword (in a URL or on a door) goes straight to the balancer. Where the user lands inside the room is decided by its doors ([room_entrance.md](../geometry/room_entrance.md)).
 
 ## Picking a hub
-All hubs are kept in memory, so balancing needs no DB query. Almost-full hubs are excluded, then:
+`HubRoomUtil` keeps every hub's id and join priority, so balancing needs neither a DB query nor the hubs themselves. Almost-full hubs are excluded, then:
 - **All over-populated** (or no hubs at all): a new hub is created. Concurrent callers share a single creation. If creation fails, the user goes to the emptiest hub that still accepts players.
 
   ![Over-Populated Hub Logic](figures/over_populated_room_logic.jpg)
-- **Some under-populated**: fill **one** of them (lowest room id) until it passes the threshold, so hubs become meeting places instead of many near-empty rooms.
+- **Some under-populated**: fill **one** of them until it passes the threshold, so hubs become meeting places instead of many near-empty rooms. Which one is the admins' to order (see below).
 
   ![Under-Populated Hub Logic](figures/under_populated_room_logic.jpg)
 - **All medium**: the emptiest hub.
 
   ![Medium-Populated Hub Logic](figures/medium_populated_room_logic.jpg)
+
+Every remaining tie falls to the lowest room id, so the same hub is picked each time.
+
+## The order hubs are filled in
+Each hub carries a **join priority**: its place in the order arriving visitors fill hubs in, smallest first. Admins set it in the room's settings, and it is stored in the room's `RoomPrefs` string beside the atmosphere.
+
+- It orders hubs **within** the bands and never overrides them: a hub put first is still skipped while it is over-populated or almost full, and once every hub is medium, population decides.
+- Generation gives a new hub the **middle** of the range. Nothing a generator knows tells one hub from another, and the middle leaves an admin room to promote as well as demote; until anything is set, hubs tie and fall to the room-id order.
+- A change takes effect at once, whether or not the hub is loaded.
 
 ## Entering a room
 - A room change is flagged as **user-picked** (a door, or the user's own room), which is refused if the room cannot be entered, or **server-routed** (last room, URL, hub keyword), which falls back to a hub. "Cannot be entered" means almost full or failing to load.
@@ -35,4 +44,4 @@ All hubs are kept in memory, so balancing needs no DB query. Almost-full hubs ar
 - A refusal sends `RoomChangeRejectedSignal` with a `RoomChangeRejectionReason`. This releases the client's loading screen and shows a notification.
 
 ## Hub residency
-Regular rooms unload when empty. Hubs are preloaded at startup (`HubRoomUtil`) and stay in memory for balancing.
+Every multiplayer room, hubs included, is loaded on demand and saved and unloaded when its last visitor leaves. So a hub that is not in memory is one nobody is in, and the balancer reads its population as zero without touching it — which is why it needs only ids and priorities. At startup `HubRoomUtil` reads the hubs from the DB into that registry, and opens one if none exist.
