@@ -5,7 +5,7 @@ import Room from "../../../shared/room/types/room";
 import RoomGenerationUtil from "../../../shared/room/generation/util/roomGenerationUtil";
 import SinglePlayerModeConfigMap from "../../../shared/singlePlayer/maps/singlePlayerModeConfigMap";
 import { PLAYER_HEIGHT } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
-import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN } from "../../../shared/system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, UNIT_VEC3 } from "../../../shared/system/sharedConstants";
 import ClientObjectManager from "../clientObjectManager";
 import ObjectFactory from "../factories/objectFactory";
 import GameObject from "../types/gameObject";
@@ -40,7 +40,8 @@ const ClientObjectUtil =
                 voxelTypeIndex,
                 new ObjectTransform(
                     {x: voxel.col + 0.5, y: 0, z: voxel.row + 0.5},
-                    {x: 0, y: 0, z: 1}
+                    {x: 0, y: 0, z: 1},
+                    {...UNIT_VEC3}
                 )
             );
             (gameObject as VoxelGameObject).setVoxel(voxel);
@@ -53,7 +54,7 @@ const ClientObjectUtil =
         const gameObject = ObjectFactory.createClientSideObject(
             room.id,
             playerTypeIndex,
-            new ObjectTransform(pos, {x: 0, y: 0, z: 1}),
+            new ObjectTransform(pos, {x: 0, y: 0, z: 1}, {...UNIT_VEC3}),
             {}, "my_player"
         );
         // ObjectUpdateUtil resolves the player's setTransform through room.objectById.

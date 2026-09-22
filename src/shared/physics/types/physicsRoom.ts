@@ -28,7 +28,7 @@ const cubeColliderSizeHalf = cubeColliderSize*0.5;
 
 const cubeColliderConfig: ColliderConfig = {
     colliderType: "standalone",
-    hitboxSize: {sizeX: cubeColliderSize, sizeY: cubeColliderSize, sizeZ: cubeColliderSize},
+    baseHitboxSize: {sizeX: cubeColliderSize, sizeY: cubeColliderSize, sizeZ: cubeColliderSize},
     applyHardCollisionToOthers: true,
     outgoingSoftCollisionForceMultiplier: 1,
     incomingSoftCollisionForceMultiplier: 0,

@@ -8,10 +8,6 @@ import CanvasCompositionParams from "../compositionParams/canvasCompositionParam
 
 export const CANVAS_GEOMETRY_ID = "Square";
 
-// One voxel of wall. This is the collider; the tested box is slightly inset (see PhysicsColliderStateUtil).
-export const CANVAS_FOOTPRINT_WIDTH = 1;
-export const CANVAS_FOOTPRINT_HEIGHT = 1;
-
 // The board sits just proud of the wall.
 export const CANVAS_BOARD_RELIEF = 0.01;
 

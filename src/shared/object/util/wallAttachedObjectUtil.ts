@@ -1,23 +1,24 @@
 import Vec3 from "../../math/types/vec3";
 import DirUtil from "../../math/util/dirUtil";
 import Vector3DUtil from "../../math/util/vector3DUtil";
-import { ColliderState } from "../../physics/types/colliderState";
 import PhysicsColliderStateUtil from "../../physics/util/physicsColliderStateUtil";
 import PhysicsObjectUtil from "../../physics/util/physicsObjectUtil";
 import Room from "../../room/types/room";
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
 import VoxelQueryUtil from "../../voxel/util/voxelQueryUtil";
 import AddObjectSignal from "../types/addObjectSignal";
+import ObjectTransform from "../types/objectTransform";
 import ObjectTypeConfigMap from "../maps/objectTypeConfigMap";
+import ObjectScaleUtil from "./objectScaleUtil";
 
 const WallAttachedObjectUtil =
 {
     canPlaceObject: (room: Room, objectId: string, objectTypeIndex: number,
-        pos: Vec3, dir: Vec3): boolean =>
+        transform: ObjectTransform): boolean =>
     {
-        const tr = getQuantizedTransform(objectTypeIndex, pos, dir);
-        pos = tr.pos;
-        dir = tr.dir;
+        const tr = getQuantizedTransform(objectTypeIndex, transform);
+        const pos = tr.pos;
+        const dir = tr.dir;
 
         if (pos.x <= 0 || pos.x >= NUM_VOXEL_COLS ||
             pos.y <= 0 || pos.y >= MAX_ROOM_Y ||
@@ -26,12 +27,12 @@ const WallAttachedObjectUtil =
             return false;
         }
 
-        const newColliderState = PhysicsColliderStateUtil.getObjectColliderState(objectTypeIndex, pos, dir);
+        const newColliderState = PhysicsColliderStateUtil.getObjectColliderState(objectTypeIndex, tr);
         if (!newColliderState)
             throw new Error(`new ColliderState not found (objectTypeIndex = ${objectTypeIndex})`);
 
-        const halfHorizontal = getQuantizedColliderHorizontalHalfSize(newColliderState);
-        const halfVertical = getColliderVerticalHalfSize(newColliderState);
+        const halfHorizontal = getQuantizedColliderHorizontalHalfSize(objectTypeIndex, tr.scale);
+        const halfVertical = getColliderVerticalHalfSize(objectTypeIndex, tr.scale);
 
         // (1) The back must be fully backed by voxel blocks. (2) The front must be at least partly open.
         // Checked over the object's Y range in collision layers.
@@ -126,7 +127,7 @@ const WallAttachedObjectUtil =
         collisionLayer: number): Vec3 =>
     {
         const floorY = (collisionLayer - COLLISION_LAYER_MIN) * COLLISION_LAYER_HEIGHT;
-        const y = floorY + getColliderVerticalHalfSizeByType(objectTypeIndex);
+        const y = floorY + getBaseColliderVerticalHalfSize(objectTypeIndex);
 
         if (row >= NUM_VOXEL_ROWS - 1)
             return {x: col + 0.5, y, z: row};
@@ -147,6 +148,62 @@ const WallAttachedObjectUtil =
             return {x: -1, y: 0, z: 0};
         return {x: 1, y: 0, z: 0};
     },
+    // The way along the wall a positive dx moves toward (see getMoveResult), for anything that lays out
+    // or drags an attachment on its own axes. The facing is rounded onto its axis first: a stored one
+    // decodes a little off it, enough to read an x-facing wall as a z-facing one.
+    getRightDir: (dir: Vec3): Vec3 =>
+    {
+        const facing = {x: Math.round(dir.x), y: 0, z: Math.round(dir.z)};
+        return DirUtil.dir4ToVec3(DirUtil.rotateCCW(DirUtil.vec3ToDir4(facing)));
+    },
+    // Where a resize puts the object when one corner is dragged to cornerPos: the nearest size its type
+    // allows, with the opposite corner of anchor (the object as the drag began) held still. Positions sit
+    // on a half-voxel grid, so an odd number of half-steps can hold that corner only to within a quarter
+    // voxel; it gives way toward the dragged side, or behind when only that fits. Undefined if that size
+    // fits neither way. cornerSignX/Y: the dragged corner, +1 toward getRightDir / up, -1 the other way.
+    getResizeResult: (room: Room, obj: AddObjectSignal, anchor: ObjectTransform,
+        cornerSignX: number, cornerSignY: number, cornerPos: Vec3): ObjectTransform | undefined =>
+    {
+        const objectTypeIndex = obj.objectTypeIndex;
+        const baseHitboxSize = ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex)
+            .components.spawnedByAny?.collider?.baseHitboxSize;
+        if (!baseHitboxSize)
+            throw new Error(`ColliderConfig not found (objectTypeIndex = ${objectTypeIndex})`);
+
+        const start = getQuantizedTransform(objectTypeIndex, anchor);
+        const startSize = ObjectScaleUtil.getObjectSize(objectTypeIndex, start.scale);
+        const right = WallAttachedObjectUtil.getRightDir(start.dir);
+
+        const fixedCorner = {
+            x: start.pos.x - cornerSignX * right.x * 0.5 * startSize.x,
+            y: start.pos.y - cornerSignY * 0.5 * startSize.y,
+            z: start.pos.z - cornerSignX * right.z * 0.5 * startSize.x,
+        };
+        const scale = ObjectScaleUtil.sanitize(objectTypeIndex, {
+            x: cornerSignX * Vector3DUtil.dot(Vector3DUtil.subtract(cornerPos, fixedCorner), right)
+                / baseHitboxSize.sizeX,
+            y: cornerSignY * (cornerPos.y - fixedCorner.y) / baseHitboxSize.sizeY,
+            z: start.scale.z,
+        });
+        const size = ObjectScaleUtil.getObjectSize(objectTypeIndex, scale);
+
+        const alongX = right.x != 0;
+        const outward = cornerSignX * (alongX ? right.x : right.z);
+        const idealAlong = (alongX ? fixedCorner.x : fixedCorner.z) + outward * 0.5 * size.x;
+        const bottomY = (cornerSignY > 0) ? fixedCorner.y : fixedCorner.y - size.y;
+
+        // Both roundings coincide when the corner can be held exactly.
+        for (const along of [snapToHalfVoxelToward(idealAlong, outward),
+            snapToHalfVoxelToward(idealAlong, -outward)])
+        {
+            const candidate = getQuantizedTransform(objectTypeIndex, new ObjectTransform(
+                {x: alongX ? along : start.pos.x, y: bottomY + 0.5 * size.y, z: alongX ? start.pos.z : along},
+                {...start.dir}, scale));
+            if (WallAttachedObjectUtil.canPlaceObject(room, obj.objectId, objectTypeIndex, candidate))
+                return candidate;
+        }
+        return undefined;
+    },
     getMoveResult(room: Room, obj: AddObjectSignal,
         dx: number, dy: number, dz: number): {newPos: Vec3, newDir: Vec3} | undefined
     {
@@ -161,36 +218,44 @@ const WallAttachedObjectUtil =
 }
 
 // Snaps to half a voxel along the wall and one layer vertically, measured from the bottom edge (snapping
-// the centre would float odd-height objects off the floor).
-function getQuantizedTransform(objectTypeIndex: number, pos: Vec3, dir: Vec3): {pos: Vec3, dir: Vec3}
+// the centre would float odd-height objects off the floor). The scale is snapped too, since it decides
+// where that bottom edge is.
+function getQuantizedTransform(objectTypeIndex: number, transform: ObjectTransform): ObjectTransform
 {
-    const halfVertical = getColliderVerticalHalfSizeByType(objectTypeIndex);
+    const pos = transform.pos;
+    const dir = transform.dir;
+    const scale = ObjectScaleUtil.sanitize(objectTypeIndex, transform.scale);
+
+    const halfVertical = 0.5 * ObjectScaleUtil.getObjectSize(objectTypeIndex, scale).y;
     const bottomY = COLLISION_LAYER_HEIGHT * Math.round((pos.y - halfVertical) / COLLISION_LAYER_HEIGHT);
 
-    return {
-        pos: { // wall-attached object's position is always an integer multiple of 0.5.
+    return new ObjectTransform(
+        { // wall-attached object's position is always an integer multiple of 0.5.
             x: 0.5*Math.round(2*pos.x),
             y: bottomY + halfVertical,
             z: 0.5*Math.round(2*pos.z),
         },
-        dir: { // wall-attached object's direction only consists of -1, 0, or 1 coordinate values.
+        { // wall-attached object's direction only consists of -1, 0, or 1 coordinate values.
             x: Math.round(dir.x),
             y: Math.round(dir.y),
             z: Math.round(dir.z),
         },
-    };
+        scale);
 }
 
 function getVerticalMoveResult(room: Room, obj: AddObjectSignal,
     moveUp: boolean): {newPos: Vec3, newDir: Vec3} | undefined
 {
-    const tr = getQuantizedTransform(obj.objectTypeIndex, obj.transform.pos, obj.transform.dir);
+    const tr = getQuantizedTransform(obj.objectTypeIndex, obj.transform);
 
     const newPos = {x: tr.pos.x, y: tr.pos.y + (moveUp ? 0.5 : -0.5), z: tr.pos.z};
     const newDir = tr.dir;
 
-    if (WallAttachedObjectUtil.canPlaceObject(room, obj.objectId, obj.objectTypeIndex, newPos, newDir))
+    if (WallAttachedObjectUtil.canPlaceObject(room, obj.objectId, obj.objectTypeIndex,
+        new ObjectTransform(newPos, newDir, tr.scale)))
+    {
         return {newPos, newDir};
+    }
     return undefined;
 }
 
@@ -213,18 +278,18 @@ function getHorizontalMoveResult(room: Room, obj: AddObjectSignal,
 function getStraightHorizontalMoveResult(room: Room, obj: AddObjectSignal,
     moveRight: boolean): {newPos: Vec3, newDir: Vec3} | undefined
 {
-    const tr = getQuantizedTransform(obj.objectTypeIndex, obj.transform.pos, obj.transform.dir);
-
-    const dir4 = DirUtil.vec3ToDir4(tr.dir);
-    const dir4CCW = DirUtil.rotateCCW(dir4);
-    const dirCCW = DirUtil.dir4ToVec3(dir4CCW);
+    const tr = getQuantizedTransform(obj.objectTypeIndex, obj.transform);
+    const dirCCW = WallAttachedObjectUtil.getRightDir(tr.dir);
 
     const offset = Vector3DUtil.scale(dirCCW, moveRight ? 0.5 : -0.5);
     const newPos = Vector3DUtil.add(tr.pos, offset);
     const newDir = tr.dir;
 
-    if (WallAttachedObjectUtil.canPlaceObject(room, obj.objectId, obj.objectTypeIndex, newPos, newDir))
+    if (WallAttachedObjectUtil.canPlaceObject(room, obj.objectId, obj.objectTypeIndex,
+        new ObjectTransform(newPos, newDir, tr.scale)))
+    {
         return {newPos, newDir};
+    }
     return undefined;
 }
 
@@ -233,26 +298,29 @@ function getStraightHorizontalMoveResult(room: Room, obj: AddObjectSignal,
 function getCornerWrappedHorizontalMoveResult(room: Room, obj: AddObjectSignal,
     moveRight: boolean, tryConcaveWrap: boolean): {newPos: Vec3, newDir: Vec3} | undefined
 {
-    const tr = getQuantizedTransform(obj.objectTypeIndex, obj.transform.pos, obj.transform.dir);
+    const tr = getQuantizedTransform(obj.objectTypeIndex, obj.transform);
+    const dirCCW = WallAttachedObjectUtil.getRightDir(tr.dir);
 
-    const dir4 = DirUtil.vec3ToDir4(tr.dir);
-    const dir4CCW = DirUtil.rotateCCW(dir4);
-    const dirCCW = DirUtil.dir4ToVec3(dir4CCW);
-
-    const colliderState = PhysicsColliderStateUtil.getObjectColliderState(obj.objectTypeIndex, tr.pos, tr.dir);
-    if (!colliderState)
-        throw new Error(`ColliderState not found (objectTypeIndex = ${obj.objectTypeIndex})`);
-
-    const halfHorizontal = getQuantizedColliderHorizontalHalfSize(colliderState);
+    const halfHorizontal = getQuantizedColliderHorizontalHalfSize(obj.objectTypeIndex, tr.scale);
     const offset1 = Vector3DUtil.scale(tr.dir, (tryConcaveWrap ? 1 : -1) * halfHorizontal);
     const offset2 = Vector3DUtil.scale(dirCCW, (moveRight ? 1 : -1) * halfHorizontal);
 
     const newPos = Vector3DUtil.add(Vector3DUtil.add(tr.pos, offset1), offset2);
     const newDir = Vector3DUtil.scale(dirCCW, (tryConcaveWrap != moveRight) ? 1 : -1);
 
-    if (WallAttachedObjectUtil.canPlaceObject(room, obj.objectId, obj.objectTypeIndex, newPos, newDir))
+    if (WallAttachedObjectUtil.canPlaceObject(room, obj.objectId, obj.objectTypeIndex,
+        new ObjectTransform(newPos, newDir, tr.scale)))
+    {
         return {newPos, newDir};
+    }
     return undefined;
+}
+
+// Onto the half-voxel grid, rounding toward direction's side. The allowance keeps a value that is already
+// on the grid, give or take float error, where it is.
+function snapToHalfVoxelToward(value: number, direction: number): number
+{
+    return 0.5 * (direction > 0 ? Math.ceil(2 * value - 1e-6) : Math.floor(2 * value + 1e-6));
 }
 
 // The layers a wall attachment of the given height stands among, clamped to the room.
@@ -278,28 +346,28 @@ function voxelCoversYRange(collisionLayerMask: number, bottomY: number, topY: nu
     return true;
 }
 
-function getQuantizedColliderHorizontalHalfSize(colliderState: ColliderState): number
+// Rounded to a half-voxel, and orientation-independent (unlike ColliderState.halfSize.x). Corner wraps
+// step by this distance, so a value off the half-voxel grid would land the object between cells.
+function getQuantizedColliderHorizontalHalfSize(objectTypeIndex: number, scale: Vec3): number
 {
-    // hitboxSize.sizeX is orientation-independent (unlike ColliderState.halfSizeX).
-    const hitboxSize = colliderState.colliderConfig.hitboxSize;
-    return 0.5*Math.round(hitboxSize.sizeX);
+    return 0.5*Math.round(ObjectScaleUtil.getObjectSize(objectTypeIndex, scale).x);
 }
 
 // Exact (not rounded like the horizontal half size): rounding would demand an extra layer of wall and
 // misalign the bottom edge.
-function getColliderVerticalHalfSize(colliderState: ColliderState): number
+function getColliderVerticalHalfSize(objectTypeIndex: number, scale: Vec3): number
 {
-    return 0.5 * colliderState.colliderConfig.hitboxSize.sizeY;
+    return 0.5 * ObjectScaleUtil.getObjectSize(objectTypeIndex, scale).y;
 }
 
-// From the type, before a collider state exists (height is orientation-independent).
-function getColliderVerticalHalfSizeByType(objectTypeIndex: number): number
+// At unit scale, for an attachment that doesn't exist yet (height is orientation-independent).
+function getBaseColliderVerticalHalfSize(objectTypeIndex: number): number
 {
     const colliderConfig = ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex)
         .components.spawnedByAny?.collider;
     if (!colliderConfig)
         throw new Error(`ColliderConfig not found (objectTypeIndex = ${objectTypeIndex})`);
-    return 0.5 * colliderConfig.hitboxSize.sizeY;
+    return 0.5 * colliderConfig.baseHitboxSize.sizeY;
 }
 
 export default WallAttachedObjectUtil;

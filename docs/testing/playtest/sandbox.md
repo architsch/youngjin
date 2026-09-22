@@ -35,6 +35,7 @@ The bare `:4321/...` shorthand does not work under zsh. Ops share their names wi
 | `stage` | four walls around a floor rectangle; returns each wall's cells and its inward face |
 | `addBlocks` / `removeBlocks` | a box of blocks, or a doorway cut through one already standing |
 | `addObject` / `removeObject` | a canvas or a door on a cell's face, by the game's own metadata keys |
+| `resizeObject` | a standing object at another size, in multiples of its type's step; the placement rule still applies, and the size it ended up with is returned |
 | `restrictedZones` / `texturePack` / `roomLighting` | room-level state; each reports when called with nothing |
 | `palettes` / `pictures` / `doorStyles` / `canvasFrameStyles` | the values to build out of, as the game uses them |
 | `camera` / `cameraPose` | where the free camera stands and what it aims at, in world coordinates |
@@ -47,3 +48,4 @@ The bare `:4321/...` shorthand does not work under zsh. Ops share their names wi
 - A canvas fetches its picture over the network, so a frame taken straight after one goes up catches a blank placeholder.
 - Restricted-zone outlines are drawn in edit mode only; the zones themselves stand either way.
 - Selection does not move the free camera, so a composed view survives entering edit mode.
+- A drag that starts on the selected wall attachment's outline moves or resizes it rather than the view. `bridge("selectionGizmo")` gives the points to drag from (its middle, and the outline's corners when it resizes), and `interact.orbit` starts beside the outline when it covers the canvas's middle.

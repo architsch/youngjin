@@ -1,6 +1,6 @@
 # Camera Control
 
-Reference: @src/client/object/components/playerController.ts , @src/client/object/components/helpers/player/playerCamera.ts , @src/client/object/components/helpers/player/firstPersonCameraPose.ts , @src/client/object/components/helpers/player/orbitCameraPose.ts , @src/client/object/components/helpers/player/orbitOcclusionHider.ts , @src/client/object/components/helpers/player/playerPointerInput.ts , @src/client/graphics/util/worldSpaceSelectionUtil.ts
+Reference: @src/client/object/components/playerController.ts , @src/client/object/components/helpers/player/playerCamera.ts , @src/client/object/components/helpers/player/firstPersonCameraPose.ts , @src/client/object/components/helpers/player/orbitCameraPose.ts , @src/client/object/components/helpers/player/orbitOcclusionHider.ts , @src/client/object/components/helpers/player/playerPointerInput.ts , @src/client/graphics/util/gizmoDragUtil.ts , @src/client/graphics/util/worldSpaceSelectionUtil.ts
 
 ![Player Control Scheme](figures/player_control.jpg)
 
@@ -8,6 +8,7 @@ Only the user's own player has a `PlayerController`. It reads input, steers the 
 
 ## Input
 - `PlayerPointerInput` arbitrates canvas pointer gestures:
+  - Gizmo drags (`GizmoDragUtil`): every press is offered to the registered drag sources first (e.g. the selected wall attachment's outline). A press one takes never reaches the camera or reads as a click; it becomes a drag only past the tap tolerance, and is cancelled otherwise. Hovering shows the cursor of what a press would take.
   - `PointerDragInput`: one held pointer. It exposes a joystick offset (for steering) and a 1:1 per-frame delta (for orbiting). Its tap-versus-drag tolerance depends on the pointer type.
   - `PointerZoomInput`: pinch or mouse wheel, reported as a **scale factor** rather than a distance.
   - Click: a press that did not move, raycast through `CameraUtil` to find the clicked object.
@@ -20,7 +21,7 @@ Only the user's own player has a `PlayerController`. It reads input, steers the 
 - **firstPerson** (play mode): the camera sits at eye level.
 - **orbit** (edit mode): the camera orbits a **target volume** (not a point) that travels with the mode. The volume's extent sets the framing distance and what must be cleared from view. Target volumes come from the physics colliders.
 
-`WorldSpaceSelectionUtil` points the orbit at the current selection. A voxel quad frames its block, and an object frames itself. A selection dropped mid-edit leaves the camera where it is. A single-player step can override the target, request view angles, or zoom the camera into a distance range that holds for every point of the target at any angle.
+`WorldSpaceSelectionUtil` points the orbit at the current selection. A voxel quad frames its block, and an object frames itself; the target follows the object's live position, so the orbit moves with it. While a gizmo drag moves or resizes the selection, the target is held as a copy, so the view stays still under the pointer, and it is traded back for the live one on release. A selection dropped mid-edit leaves the camera where it is. A single-player step can override the target, request view angles, or zoom the camera into a distance range that holds for every point of the target at any angle.
 
 Selection reach is a fixed arm's length in first person. While orbiting, it extends to the camera's distance, so anything visible can be selected.
 

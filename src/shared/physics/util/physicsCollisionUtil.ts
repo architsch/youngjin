@@ -13,12 +13,14 @@ import NumUtil from "../../math/util/numUtil";
 
 const PhysicsCollisionUtil =
 {
-    applyHardCollision: (physicsRoom: PhysicsRoom, object: PhysicsObject, target: Vec3, targetDir: Vec3): ObjectTransformUpdateResult =>
+    applyHardCollision: (physicsRoom: PhysicsRoom, object: PhysicsObject,
+        targetTransform: ObjectTransform): ObjectTransformUpdateResult =>
     {
-        const newColliderState = PhysicsColliderStateUtil.getObjectColliderState(object.objectTypeIndex, target, targetDir);
+        const newColliderState = PhysicsColliderStateUtil.getObjectColliderState(object.objectTypeIndex, targetTransform);
         if (!newColliderState)
             throw new Error(`ColliderState couldn't be computed (objectId = ${object.objectId}, objectTypeIndex = ${object.objectTypeIndex})`);
 
+        const target = targetTransform.pos;
         const halfSize = newColliderState.hitbox.halfSize;
         const maxClimbableHeight = newColliderState.colliderConfig.maxClimbableHeight;
         let start = object.colliderState.hitbox.center;
@@ -47,7 +49,8 @@ const PhysicsCollisionUtil =
                 resolvedTarget = result3.closestHitPos;
             }
         }
-        return {transform: new ObjectTransform(resolvedTarget, targetDir), desyncDetected: false};
+        return {transform: new ObjectTransform(resolvedTarget, targetTransform.dir, targetTransform.scale),
+            desyncDetected: false};
     },
 
     // Returns the adjusted velocity.

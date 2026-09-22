@@ -20,6 +20,6 @@ The mode is stored separately from camera state, because the camera briefly has 
 ## Selection
 - A selection is a single voxel quad or object. Nothing is selected in play mode, and something is always selected in edit mode. When the selected thing is removed, the selection moves to something nearby.
 - Clicking the current selection or an unselectable spot keeps the current selection.
-- Each object type declares its selection behavior in `ObjectTypeClientConfig`: who may select it, the tool panel it opens, and whether it slides along walls. Every selection also requires edit mode and reach. A refused click passes through silently.
+- Each object type declares its selection behavior in `ObjectTypeClientConfig`: who may select it, the tool panel it opens, and whether it can be dragged along walls by its outline. Every selection also requires edit mode and reach. A refused click passes through silently.
 - A sub-panel opened from those tools (see `EditOptionsProps`) stays open while clicks move the selection between objects of one type; selecting anything else closes it.
-- The outline and camera framing come from the object's collider. Anyone who may select an object may also move it, and each move is validated.
+- The outline and camera framing come from the object's collider at the object's own size. Anyone who may select an object may also move it, dragging inside the outline, and resize it by the outline's corners if its type scales (see [wall_attached_object.md](../geometry/wall_attached_object.md)). Each step is validated as it previews, and the result is sent once, on release.

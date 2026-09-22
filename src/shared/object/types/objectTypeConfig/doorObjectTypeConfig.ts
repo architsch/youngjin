@@ -7,11 +7,12 @@ import StringUtil from "../../../math/util/stringUtil";
 import EncodableByteString from "../../../networking/types/encodableByteString";
 import Room from "../../../room/types/room";
 import RoomValidationUtil from "../../../room/util/roomValidationUtil";
-import { HUB_ROOM_ID_KEYWORD, LABEL_COLOR_PALETTE_NAME, WALL_ATTACHMENT_HITBOX_INSET } from "../../../system/sharedConstants";
+import { HUB_ROOM_ID_KEYWORD, LABEL_COLOR_PALETTE_NAME, UNIT_VEC3, WALL_ATTACHMENT_HITBOX_INSET } from "../../../system/sharedConstants";
 import User from "../../../user/types/user";
 import AddObjectSignal from "../addObjectSignal";
 import { ObjectCategoryEnumMap } from "../objectCategory";
 import ObjectTypeConfig from "./objectTypeConfig";
+import ObjectScaleUtil from "../../util/objectScaleUtil";
 import ObjectTypeConfigMap from "../../maps/objectTypeConfigMap";
 import WallAttachedObjectUtil from "../../util/wallAttachedObjectUtil";
 import ObjectTransform from "../objectTransform";
@@ -82,7 +83,7 @@ const DoorObjectTypeConfig =
                 // Claims its stretch of wall so nothing hangs over it. The footprint is a round number
                 // of half-voxels; the tested box is slightly inset (see PhysicsColliderStateUtil).
                 colliderType: "wallAttachment",
-                hitboxSize: {
+                baseHitboxSize: {
                     sizeX: DOOR_FOOTPRINT_WIDTH,
                     sizeY: DOOR_FOOTPRINT_HEIGHT,
                     sizeZ: 0.5 * WALL_ATTACHMENT_HITBOX_INSET
@@ -113,7 +114,8 @@ const DoorObjectTypeConfig =
                     // Seeded from room and door id (not the viewer's id, which client-spawned objects
                     // carry; see ObjectFactory), so everyone sees the same door every session.
                     const hashCode = StringUtil.getHashCode(`${obj.roomID}/${obj.objectId}`);
-                    return DoorCompositionCodec.getRandomComposition(hashCode);
+                    return DoorCompositionCodec.getRandomComposition(hashCode,
+                        ObjectScaleUtil.getObjectSize(obj.objectTypeIndex, obj.transform.scale));
                 },
             },
             // The name goes on the plate: the rect comes from the plate declaration, inset by its
@@ -149,7 +151,8 @@ const DoorObjectTypeConfig =
                 new ObjectTransform(
                     WallAttachedObjectUtil.getBoundaryWallAttachmentPos(objectTypeIndex,
                         entranceVoxelCol, entranceVoxelRow, entranceVoxelCollisionLayer),
-                    WallAttachedObjectUtil.getBoundaryWallInwardDir(entranceVoxelCol, entranceVoxelRow)),
+                    WallAttachedObjectUtil.getBoundaryWallInwardDir(entranceVoxelCol, entranceVoxelRow),
+                    {...UNIT_VEC3}),
                 {
                     [ObjectMetadataKeyEnumMap.DoorType]:
                         new EncodableByteString(`${DoorTypeEnumMap.DefaultEntrance}`),

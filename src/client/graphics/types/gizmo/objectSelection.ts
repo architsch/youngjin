@@ -4,6 +4,7 @@ import { clientFeatureFlagsObservable, gameModeObservable, objectSelectionObserv
     roomChangedObservable, updateObservable } from "../../../system/clientObservables";
 import GraphicsManager from "../../graphicsManager";
 import ObjectTypeConfigMap from "../../../../shared/object/maps/objectTypeConfigMap";
+import ObjectScaleUtil from "../../../../shared/object/util/objectScaleUtil";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import WorldSpaceSelectionUtil from "../../util/worldSpaceSelectionUtil";
 import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
@@ -88,18 +89,19 @@ function refreshSelectionOutline(selection: ObjectSelection)
         return;
     }
 
-    const size = collider.hitboxSize;
+    // The object's own footprint, not the type's, so the outline follows a resize.
+    const size = ObjectScaleUtil.getObjectSize(go.params.objectTypeIndex, go.params.transform.scale);
     if (collider.colliderType == "wallAttachment")
     {
         outlinePos.copy(go.position);
         outlineQuat.copy(go.quaternion);
-        outlineScale.set(size.sizeX, size.sizeY, 1);
+        outlineScale.set(size.x, size.y, 1);
     }
     else
     {
-        outlinePos.set(go.position.x, go.position.y - 0.5 * size.sizeY, go.position.z);
+        outlinePos.set(go.position.x, go.position.y - 0.5 * size.y, go.position.z);
         outlineQuat.copy(flatOnGroundQuat);
-        outlineScale.set(size.sizeX, size.sizeZ, 1);
+        outlineScale.set(size.x, size.z, 1);
     }
     selectionOutline.setTransformRaw(outlinePos, outlineQuat, outlineScale);
 }
@@ -124,7 +126,7 @@ objectSelectionObservable.addListener("objectSelection", async (selection: Objec
     WorldSpaceSelectionUtil.unselectOthers("object");
 });
 
-// Refreshed every frame, since a selected object can still move (gizmo nudges, falling).
+// Refreshed every frame, since a selected object can still move or change size (gizmo drags, falling).
 updateObservable.addListener("objectSelection", (_deltaTime: number) => {
     const selection = objectSelectionObservable.peek();
     if (selection && selectionOutline?.isVisible())

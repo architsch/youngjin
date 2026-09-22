@@ -10,6 +10,8 @@ import InstancedMeshGraphics from "./instancedMeshGraphics";
 import MaterialParamsMap from "../../../shared/graphics/material/maps/materialParamsMap";
 import InstancedMeshIdMap from "../../../shared/graphics/mesh/maps/instancedMeshIdMap";
 import InstancedMeshCapacityMap from "../../../shared/graphics/mesh/composition/maps/instancedMeshCapacityMap";
+import ObjectScaleUtil from "../../../shared/object/util/objectScaleUtil";
+import Vector3DUtil from "../../../shared/math/util/vector3DUtil";
 
 function getPartMeshId(part: InstancedMeshCompositionPart): string
 {
@@ -88,7 +90,11 @@ export default class InstancedMeshComposer extends GameObjectComponent
                     this.loadInstancedMeshes(); // Upon start, this function call sets "updateState" to "meshesLoading".
                 break;
             case "upToDate":
-                if (!this.transformIsInSync())
+                // A resize is a re-decode, not a re-bake: the codec lays the parts out against the
+                // size, so new parts have to be built before any of them can be placed.
+                if (!this.objectSizeIsInSync())
+                    this.reloadComposition();
+                else if (!this.transformIsInSync())
                     this.refreshInstancedMeshes();
                 break;
             // Otherwise (i.e. updateState === "meshesLoading"), the meshes are still loading so we must skip this 'update' frame.
@@ -163,6 +169,15 @@ export default class InstancedMeshComposer extends GameObjectComponent
     {
         this.gameObject.obj.updateMatrixWorld(); // Recurses to visualObj, so the compared matrix is current.
         return this.gameObject.visualObj.matrixWorld.equals(this.bakedWorldMatrix);
+    }
+
+    // Whether the object is still the size its parts were built for. Scale lives outside the three.js
+    // transform, so the matrix comparison above can't see a resize.
+    private objectSizeIsInSync(): boolean
+    {
+        const size = ObjectScaleUtil.getObjectSize(
+            this.gameObject.params.objectTypeIndex, this.gameObject.params.transform.scale);
+        return Vector3DUtil.equal(size, this.instancedMeshComposition.objectSize);
     }
 
     private async loadInstancedMeshes()

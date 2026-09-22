@@ -12,6 +12,7 @@ import { DoorCompositionCodec } from "../../../src/shared/graphics/mesh/composit
 import { InstancedMeshCompositionParams } from "../../../src/shared/graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
 import InstancedMeshCompositionPart from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
 import StringUtil from "../../../src/shared/math/util/stringUtil";
+import { UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
 
 const composerConfig = PlayerObjectTypeConfig.components.spawnedByAny!.instancedMeshComposer!;
 
@@ -30,7 +31,7 @@ export function playerCodecPrefix(
 /** A valid, fully-formed composition metadata string, as a real client would emit it. */
 export function encodePlayerComposition(seed: number): string
 {
-    const {params, parts} = PlayerCompositionCodec.getRandomComposition(seed);
+    const {params, parts} = PlayerCompositionCodec.getRandomComposition(seed, UNIT_VEC3);
     return playerCodecPrefix() + PlayerCompositionCodec.encode(params, parts);
 }
 
@@ -40,7 +41,7 @@ export function decodePlayerComposition(str: string):
 {
     const params: InstancedMeshCompositionParams = {};
     const parts: InstancedMeshCompositionPart[] = [];
-    PlayerCompositionCodec.decode(str, params, parts);
+    PlayerCompositionCodec.decode(str, UNIT_VEC3, params, parts);
     return {params, parts};
 }
 
@@ -61,7 +62,7 @@ export function doorCodecPrefix(
 /** A valid, fully-formed door composition metadata string. */
 export function encodeDoorComposition(seed: number): string
 {
-    const {params, parts} = DoorCompositionCodec.getRandomComposition(seed);
+    const {params, parts} = DoorCompositionCodec.getRandomComposition(seed, UNIT_VEC3);
     return doorCodecPrefix() + DoorCompositionCodec.encode(params, parts);
 }
 
@@ -71,7 +72,7 @@ export function decodeDoorComposition(str: string):
 {
     const params: InstancedMeshCompositionParams = {};
     const parts: InstancedMeshCompositionPart[] = [];
-    DoorCompositionCodec.decode(str, params, parts);
+    DoorCompositionCodec.decode(str, UNIT_VEC3, params, parts);
     return {params, parts};
 }
 
@@ -82,5 +83,5 @@ export function generateDefaultDoorComposition(roomID: string, objectId: string)
     return doorComposerConfig.generateDefaultParts(
         new AddObjectSignal(roomID, "", "",
             ObjectTypeConfigMap.getIndexByType("Door"), objectId,
-            new ObjectTransform({x: 0, y: 0, z: 0}, {x: 0, y: 0, z: -1})));
+            new ObjectTransform({x: 0, y: 0, z: 0}, {x: 0, y: 0, z: -1}, {...UNIT_VEC3})));
 }

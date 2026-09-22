@@ -6,7 +6,7 @@ import InstancedMeshCompositionPart from "../../../shared/graphics/mesh/composit
 import MaterialParamsMap from "../../../shared/graphics/material/maps/materialParamsMap";
 import InstancedMeshIdMap from "../../../shared/graphics/mesh/maps/instancedMeshIdMap";
 import StringUtil from "../../../shared/math/util/stringUtil";
-import { INSTANCE_COLORED_MATERIAL_IDS, INSTANCED_WOOD_MATERIAL_ID } from "../../../shared/system/sharedConstants";
+import { INSTANCE_COLORED_MATERIAL_IDS, INSTANCED_WOOD_MATERIAL_ID, UNIT_VEC3 } from "../../../shared/system/sharedConstants";
 import GeometryFactory from "../factories/geometryFactory";
 import MaterialFactory from "../factories/materialFactory";
 import InstancedPartUtil from "../util/instancedPartUtil";
@@ -101,7 +101,8 @@ async function buildMeshes(encoded: string, root: THREE.Object3D): Promise<THREE
         throw new Error(`CompositionThumbnailRenderer :: Unknown codec (encoded = ${encoded})`);
     const params: InstancedMeshCompositionParams = {};
     const parts: InstancedMeshCompositionPart[] = [];
-    codec.decode(encoded, params, parts);
+    // Unit footprint: a thumbnail shows the design, not the size some object was stretched to.
+    codec.decode(encoded, UNIT_VEC3, params, parts);
 
     const partsByMeshId: {[instancedMeshId: string]: InstancedMeshCompositionPart[]} = {};
     for (const part of parts)

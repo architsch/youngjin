@@ -1,4 +1,5 @@
 import RandomNumberGenerator from "../../../../../math/types/randomNumberGenerator";
+import Vec3 from "../../../../../math/types/vec3";
 import ColorUtil from "../../../../../math/util/colorUtil";
 import NumUtil from "../../../../../math/util/numUtil";
 import StringUtil from "../../../../../math/util/stringUtil";
@@ -30,7 +31,7 @@ export const PlayerCompositionCodec: InstancedMeshCompositionCodec = {
         arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToPaletteIndex("Player", params.colors.bottom)));
         return arr.join("");
     },
-    decode: (strToDecode: string,
+    decode: (strToDecode: string, objectSize: Vec3,
         decodedParams: InstancedMeshCompositionParams,
         decodedParts: InstancedMeshCompositionPart[]): void =>
     {
@@ -50,7 +51,7 @@ export const PlayerCompositionCodec: InstancedMeshCompositionCodec = {
         decodedParams.colors.bottom = ColorUtil.paletteIndexToRGB("Player", StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++));
         constructParts(decodedParams, decodedParts);
     },
-    getRandomComposition: (seed: number):
+    getRandomComposition: (seed: number, objectSize: Vec3):
         {params: InstancedMeshCompositionParams, parts: InstancedMeshCompositionPart[]} =>
     {
         const rand = new RandomNumberGenerator(seed);

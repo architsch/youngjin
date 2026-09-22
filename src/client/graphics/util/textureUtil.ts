@@ -6,10 +6,13 @@ import GraphicsManager from "../graphicsManager";
 // shared quad pass. Regions are in texture coordinates (V up).
 const TextureUtil =
 {
-    // Draws an image fitted (aspect preserved) into a region; an empty URL paints the placeholder
-    // color. The optional source UV rect selects a sub-region (e.g. one atlas cell).
+    // Draws an image fitted (aspect preserved) into a region, leaving the rest of the region transparent;
+    // an empty URL paints the placeholder color. regionAspect is the region's aspect ratio as shown, for a
+    // region stretched where it is shown (e.g. a texture cell on a quad of another shape). The optional
+    // source UV rect selects a sub-region (e.g. one atlas cell).
     drawImageOnRenderTarget: async (textureURL: string, renderTarget: THREE.WebGLRenderTarget,
         targetU1: number, targetV1: number, targetU2: number, targetV2: number,
+        regionAspect?: number,
         sourceU1: number = 0, sourceV1: number = 0,
         sourceU2: number = 1, sourceV2: number = 1,
         unloadTextureAfterDraw: boolean = true): Promise<void> =>
@@ -32,26 +35,28 @@ const TextureUtil =
             ? (texture.image.width * (sourceU2 - sourceU1)) / (texture.image.height * (sourceV2 - sourceV1))
             : 1.0;
 
-        // At = Aspect Ratio of the Target Region
-        const At = (u2 - u1) / (v2 - v1);
+        // At = Aspect Ratio of the Target Region (as shown)
+        const At = regionAspect ?? (u2 - u1) / (v2 - v1);
 
         if (As < At)
         {
-            const du = As * (v2 - v1) / 2;
+            const du = (u2 - u1) * As / (2 * At);
             const uAvg = (u1 + u2) / 2;
             u1 = uAvg - du;
             u2 = uAvg + du;
         }
         else if (As > At)
         {
-            const dv = (u2 - u1) / (2 * As);
+            const dv = (v2 - v1) * At / (2 * As);
             const vAvg = (v1 + v2) / 2;
             v1 = vAvg - dv;
             v2 = vAvg + dv;
         }
 
-        // Render the texture
+        // Render the texture. The region is cleared only now that the texture has loaded, so a redraw never
+        // leaves it empty for a while.
 
+        drawSourceTexture(transparentTexture, renderTarget, targetU1, targetV1, targetU2, targetV2, 0, 0, 1, 1);
         drawSourceTexture(texture, renderTarget, u1, v1, u2, v2, sourceU1, sourceV1, sourceU2, sourceV2);
 
         if (unloadTextureAfterDraw && textureURL.length > 0)
@@ -74,6 +79,10 @@ const TextureUtil =
 const placeholderData = new Uint8Array([40, 40, 40, 255]);
 const placeholderTexture = new THREE.DataTexture(placeholderData, 1, 1, THREE.RGBAFormat);
 placeholderTexture.needsUpdate = true;
+
+const transparentData = new Uint8Array([0, 0, 0, 0]);
+const transparentTexture = new THREE.DataTexture(transparentData, 1, 1, THREE.RGBAFormat);
+transparentTexture.needsUpdate = true;
 
 // Replaces the target region instead of blending, so transparent canvases don't mix with old contents.
 const material = new THREE.RawShaderMaterial({

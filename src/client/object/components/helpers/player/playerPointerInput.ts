@@ -4,11 +4,12 @@ import PlayerController from "../../playerController";
 import CameraUtil from "../../../../graphics/util/cameraUtil";
 import PointerDragInput from "./pointer/pointerDragInput";
 import PointerZoomInput from "./pointer/pointerZoomInput";
+import GizmoDragUtil from "../../../../graphics/util/gizmoDragUtil";
 
-// Arbitrates canvas pointer gestures regardless of camera mode: PointerDragInput (one held pointer),
-// PointerZoomInput (pinch/wheel), and taps, read here as a raycast click (see CameraUtil). Gestures
-// can't be told apart per event (a drag becomes a pinch when a second finger lands), so the
-// arbitration lives in one place.
+// Arbitrates canvas pointer gestures regardless of camera mode: gizmo drags (GizmoDragUtil, offered
+// every press first), PointerDragInput (one held pointer), PointerZoomInput (pinch/wheel), and taps,
+// read here as a raycast click (see CameraUtil). Gestures can't be told apart per event (a drag becomes
+// a pinch when a second finger lands), so the arbitration lives in one place.
 
 export default class PlayerPointerInput
 {
@@ -83,18 +84,28 @@ export default class PlayerPointerInput
 
         this.zoomInput.onPointerPress(ev);
 
-        // A second finger turns the drag into a pinch (never both).
+        // A second finger turns the drag into a pinch (never both), a gizmo's drag included.
         if (this.zoomInput.isPinching())
+        {
             this.dragInput.cancel();
-        else
+            GizmoDragUtil.cancel();
+        }
+        // A press a gizmo takes (e.g. on the selected object's outline) never reaches the camera.
+        else if (!GizmoDragUtil.tryBegin(ev))
             this.dragInput.onPointerPress(ev);
     }
 
     private onPointerMove(ev: PointerEvent): void
     {
         this.zoomInput.onPointerMove(ev);
-        if (!this.zoomInput.isPinching())
+        if (GizmoDragUtil.isActive())
+            GizmoDragUtil.move(ev);
+        else if (!this.zoomInput.isPinching())
+        {
             this.dragInput.onPointerMove(ev);
+            if (ev.buttons === 0)
+                GizmoDragUtil.hover(ev);
+        }
     }
 
     private onPointerRelease(ev: PointerEvent): void
@@ -103,6 +114,7 @@ export default class PlayerPointerInput
 
         // Any lifted finger ends the drag; continuing with the remaining finger would jump the view.
         this.dragInput.onPointerRelease();
+        GizmoDragUtil.end();
     }
 
     private onFocusOut(ev: FocusEvent): void
@@ -124,8 +136,9 @@ export default class PlayerPointerInput
     {
         ev.preventDefault();
 
-        // Only a stationary gesture clicks.
-        if (!this.dragInput.gestureIsTap())
+        // Only a stationary gesture clicks, and never one a gizmo took (a tap on a handle would
+        // otherwise select whatever is behind it).
+        if (GizmoDragUtil.lastGestureWasClaimed() || !this.dragInput.gestureIsTap())
             return;
 
         const intersection = CameraUtil.castFromPointer(ev);
@@ -143,5 +156,6 @@ export default class PlayerPointerInput
     {
         this.dragInput.cancel();
         this.zoomInput.reset();
+        GizmoDragUtil.cancel();
     }
 }

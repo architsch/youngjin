@@ -1,6 +1,8 @@
 import Geometry3DUtil from "../../math/util/geometry3DUtil";
 import Vec3 from "../../math/types/vec3";
 import ObjectTypeConfigMap from "../../object/maps/objectTypeConfigMap";
+// Type-only: ObjectUpdateUtil reaches this module, so a value import would be a cycle.
+import type ObjectTransform from "../../object/types/objectTransform";
 import PhysicsColliderStateUtil from "../../physics/util/physicsColliderStateUtil";
 import Room from "../../room/types/room";
 import RoomValidationUtil from "../../room/util/roomValidationUtil";
@@ -67,7 +69,7 @@ const RestrictedZoneUtil =
     // Whether an object here would reach into a zone blocking this user. Only persistent objects are
     // checked, and the type check comes first (players pass through here constantly).
     blocksObjectEdit(user: User, room: Room, objectTypeIndex: number,
-        position: Vec3, direction: Vec3): boolean
+        transform: ObjectTransform): boolean
     {
         if (!ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex).persistent)
             return false;
@@ -77,7 +79,7 @@ const RestrictedZoneUtil =
             return false;
 
         const colliderState = PhysicsColliderStateUtil.getObjectColliderState(
-            objectTypeIndex, position, direction);
+            objectTypeIndex, transform);
         if (!colliderState)
             return false;
 

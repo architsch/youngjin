@@ -16,6 +16,7 @@ import User from "../../../user/types/user";
 import AddObjectSignal from "../addObjectSignal";
 import { ObjectCategoryEnumMap } from "../objectCategory";
 import ObjectTypeConfig from "./objectTypeConfig";
+import ObjectScaleUtil from "../../util/objectScaleUtil";
 import SetObjectMetadataSignal from "../setObjectMetadataSignal";
 import SetObjectTransformSignal from "../setObjectTransformSignal";
 import { ObjectMetadataKeyEnumMap } from "../objectMetadataKey";
@@ -80,7 +81,7 @@ const WallLampObjectTypeConfig =
             collider: {
                 // Claims its wall patch; removing the wall removes the lamp.
                 colliderType: "wallAttachment",
-                hitboxSize: {
+                baseHitboxSize: {
                     sizeX: LAMP_FOOTPRINT_WIDTH,
                     sizeY: LAMP_FOOTPRINT_HEIGHT,
                     sizeZ: 0.5 * WALL_ATTACHMENT_HITBOX_INSET
@@ -101,7 +102,9 @@ const WallLampObjectTypeConfig =
                     const params: InstancedMeshCompositionParams = {};
                     const parts: InstancedMeshCompositionPart[] = [];
                     CompositionMetadataUtil.decodeIndexed(PreEncodedCompositionIndexMap.WallLamp[0],
-                        COMPOSITION_CODEC_VERSION, params, parts);
+                        COMPOSITION_CODEC_VERSION,
+                        ObjectScaleUtil.getObjectSize(obj.objectTypeIndex, obj.transform.scale),
+                        params, parts);
 
                     const color = ColorUtil.paletteIndexToRGB(LIGHT_COLOR_PALETTE_NAME,
                         readColorIndex(getLightProperties(obj)));

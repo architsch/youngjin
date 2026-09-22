@@ -30,7 +30,7 @@ import LampLightUtil, { MAX_LAMP_INTENSITY, MAX_LAMP_RANGE, MIN_LAMP_INTENSITY, 
     from "../../../src/shared/graphics/light/util/lampLightUtil";
 import { COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL,
     INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
-    LIGHT_COLOR_PALETTE_NAME } from "../../../src/shared/system/sharedConstants";
+    LIGHT_COLOR_PALETTE_NAME, UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
 
 const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("WallLamp");
 const MAX_LAMPS_PER_ROOM = ObjectCategoryConfigMap.getMaxCountPerRoom(WallLampObjectTypeConfig.category);
@@ -59,7 +59,7 @@ function makeLampSignal(room: Room, sourceUser: User, objectId: string = "new-la
                 y: 2.25,
                 z: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
             },
-            {x: 0, y: 0, z: -1}));
+            {x: 0, y: 0, z: -1}, {...UNIT_VEC3}));
 }
 
 describe("lamp permissions", () => {
@@ -303,7 +303,7 @@ describe("what a lamp gives off", () => {
     function lampWith(lightProperties: string): AddObjectSignal
     {
         return new AddObjectSignal("room", "user", "User", lampTypeIndex, "lamp",
-            new ObjectTransform({x: 1, y: 1, z: 1}, {x: 0, y: 0, z: -1}),
+            new ObjectTransform({x: 1, y: 1, z: 1}, {x: 0, y: 0, z: -1}, {...UNIT_VEC3}),
             {[ObjectMetadataKeyEnumMap.LightProperties]: new EncodableByteString(lightProperties)});
     }
 

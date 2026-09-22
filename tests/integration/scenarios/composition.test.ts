@@ -38,7 +38,8 @@ import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objec
 import DirUtil from "../../../src/shared/math/util/dirUtil";
 import Geometry3DUtil from "../../../src/shared/math/util/geometry3DUtil";
 import { DIR_VEC_BY_CODE,
-    OBJECT_INSTANCED_MESH_COMPOSITION_METADATA_MAX_LENGTH } from "../../../src/shared/system/sharedConstants";
+    OBJECT_INSTANCED_MESH_COMPOSITION_METADATA_MAX_LENGTH,
+    UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
 
 const COMPOSITION_KEY = ObjectMetadataKeyEnumMap.InstancedMeshComposition;
 
@@ -82,7 +83,7 @@ describe("player mesh composition", () => {
     // ─── Codec: round-trip & determinism ───────────────────────────────
 
     it("a composition survives an encode/decode round-trip", () => {
-        const {params, parts} = PlayerCompositionCodec.getRandomComposition(12345);
+        const {params, parts} = PlayerCompositionCodec.getRandomComposition(12345, UNIT_VEC3);
         const encoded = playerCodecPrefix() + PlayerCompositionCodec.encode(params, parts);
 
         const decoded = decodePlayerComposition(encoded);
@@ -93,9 +94,9 @@ describe("player mesh composition", () => {
     });
 
     it("the same seed always yields the same composition", () => {
-        const a = PlayerCompositionCodec.getRandomComposition(777);
-        const b = PlayerCompositionCodec.getRandomComposition(777);
-        const c = PlayerCompositionCodec.getRandomComposition(778);
+        const a = PlayerCompositionCodec.getRandomComposition(777, UNIT_VEC3);
+        const b = PlayerCompositionCodec.getRandomComposition(777, UNIT_VEC3);
+        const c = PlayerCompositionCodec.getRandomComposition(778, UNIT_VEC3);
 
         expect(PlayerCompositionCodec.encode(a.params, a.parts))
             .toBe(PlayerCompositionCodec.encode(b.params, b.parts));
@@ -325,7 +326,7 @@ describe("door mesh composition", () => {
     // ─── Codec: round-trip & determinism ───────────────────────────────
 
     it("a composition survives an encode/decode round-trip", () => {
-        const {params, parts} = DoorCompositionCodec.getRandomComposition(12345);
+        const {params, parts} = DoorCompositionCodec.getRandomComposition(12345, UNIT_VEC3);
         const encoded = doorCodecPrefix() + DoorCompositionCodec.encode(params, parts);
 
         const decoded = decodeDoorComposition(encoded);
@@ -335,8 +336,8 @@ describe("door mesh composition", () => {
     });
 
     it("the same seed always yields the same door", () => {
-        const a = DoorCompositionCodec.getRandomComposition(777);
-        const b = DoorCompositionCodec.getRandomComposition(777);
+        const a = DoorCompositionCodec.getRandomComposition(777, UNIT_VEC3);
+        const b = DoorCompositionCodec.getRandomComposition(777, UNIT_VEC3);
 
         expect(DoorCompositionCodec.encode(a.params, a.parts))
             .toBe(DoorCompositionCodec.encode(b.params, b.parts));
@@ -451,7 +452,7 @@ describe("door mesh composition", () => {
     });
 
     it("every part of a door is drawn by a mesh that was sized for it", () => {
-        const {params, parts} = DoorCompositionCodec.getRandomComposition(1);
+        const {params, parts} = DoorCompositionCodec.getRandomComposition(1, UNIT_VEC3);
         // Regions are layered back to front to avoid z-fighting (see DoorCompositionConstants).
         expectRenderableBody(params, parts);
         expectMouldedParts(parts);
@@ -507,7 +508,7 @@ describe("indexed mesh composition", () => {
     {
         const params: InstancedMeshCompositionParams = {};
         const parts: InstancedMeshCompositionPart[] = [];
-        IndexedCodec.decode(str, params, parts);
+        IndexedCodec.decode(str, UNIT_VEC3, params, parts);
         return {params, parts};
     }
 
@@ -520,7 +521,7 @@ describe("indexed mesh composition", () => {
         expect(last.length).toBe(first.length);
 
         // Parts belong to the table, so passing some doesn't change the encoding.
-        const {parts} = PlayerCompositionCodec.getRandomComposition(1);
+        const {parts} = PlayerCompositionCodec.getRandomComposition(1, UNIT_VEC3);
         expect(IndexedCodec.encode({compositionIndex: 0}, parts).length).toBe(first.length);
     });
 

@@ -70,7 +70,7 @@ function ensureInitialized(): Promise<void>
 }
 
 // Creates the gizmos ahead of time so the loading screen precompiles their shaders (which also covers
-// selection outlines and move arrows, as they share materials). Idempotent.
+// selection outlines and their resize handles, as they share materials). Idempotent.
 export async function preloadGenericWorldSpaceGizmos(): Promise<void>
 {
     await ensureInitialized();

@@ -8,14 +8,19 @@ export default abstract class InstancedMeshCompositionBuilder
 {
     protected params: InstancedMeshCompositionParams;
     protected parts: InstancedMeshCompositionPart[];
+    // The footprint the parts have to fill, in world units. Only a builder for a resizable type reads
+    // it, and only that type's codec passes it; everything else is built at its authored size.
+    protected objectSize: Vec3;
     protected baseDir: Vec3 = {...FORWARD_DIR};
     protected baseOffset: Vec3 = {...ZERO_VEC3};
     protected baseScale: Vec3 = {...UNIT_VEC3};
 
-    constructor(params: InstancedMeshCompositionParams, parts: InstancedMeshCompositionPart[])
+    constructor(params: InstancedMeshCompositionParams, parts: InstancedMeshCompositionPart[],
+        objectSize: Vec3 = UNIT_VEC3)
     {
         this.params = params;
         this.parts = parts;
+        this.objectSize = objectSize;
     }
 
     abstract run(): InstancedMeshCompositionBuilder;

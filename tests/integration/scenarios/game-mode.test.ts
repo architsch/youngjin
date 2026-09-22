@@ -84,7 +84,8 @@ import { FeatureFlag } from "../../../src/shared/system/types/featureFlag";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN,
-    VOXEL_BLOCK_HITBOX_HALFSIZE } from "../../../src/shared/system/sharedConstants";
+    UNIT_VEC3, VOXEL_BLOCK_HITBOX_HALFSIZE } from "../../../src/shared/system/sharedConstants";
+import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import Room from "../../../src/shared/room/types/room";
 import User from "../../../src/shared/user/types/user";
@@ -105,11 +106,18 @@ function userOwning(ownedRoomID: string): User
     return user;
 }
 
+/** An unresized transform at a place, which is what the framing and outline rules read a size from. */
+function unitTransform(x: number, y: number, z: number): ObjectTransform
+{
+    return new ObjectTransform({x, y, z}, {x: 0, y: 0, z: 1}, {...UNIT_VEC3});
+}
+
 /** A stand-in for the user's own character: only what the framing rules actually read of it. */
 function makeCharacter(): GameObject
 {
     return {
-        params: { objectTypeIndex: ObjectTypeConfigMap.getIndexByType("Player") },
+        params: { objectTypeIndex: ObjectTypeConfigMap.getIndexByType("Player"),
+            transform: unitTransform(10.5, 0.5 * PLAYER_HEIGHT, 10.5) },
         position: new THREE.Vector3(10.5, 0.5 * PLAYER_HEIGHT, 10.5),
         direction: new THREE.Vector3(0, 0, 1),
     } as unknown as GameObject;
@@ -119,7 +127,8 @@ function makeCharacter(): GameObject
 function makePicture(): GameObject
 {
     const picture = {
-        params: { objectTypeIndex: ObjectTypeConfigMap.getIndexByType("Canvas") },
+        params: { objectTypeIndex: ObjectTypeConfigMap.getIndexByType("Canvas"),
+            transform: unitTransform(10.5, 1.5, 0.01) },
         position: new THREE.Vector3(10.5, 1.5, 0.01),
         direction: new THREE.Vector3(0, 0, 1),
         quaternion: new THREE.Quaternion(),
@@ -132,7 +141,8 @@ function makePicture(): GameObject
 function makeOtherPlayer(): GameObject
 {
     return {
-        params: { objectTypeIndex: ObjectTypeConfigMap.getIndexByType("Player") },
+        params: { objectTypeIndex: ObjectTypeConfigMap.getIndexByType("Player"),
+            transform: unitTransform(0, 0, 0) },
         trySelect: (): boolean => false,
     } as unknown as GameObject;
 }
@@ -698,6 +708,53 @@ describe("leaving edit mode", () => {
     });
 });
 
+describe("a gizmo drag holding the view", () => {
+    // A failed case must not leave the orbit held for the next one.
+    afterEach(() => WorldSpaceSelectionUtil.releaseOrbitTarget());
+
+    it("keeps the pivot where it was while the selection moves under it, and follows it once let go", () => {
+        const picture = makePicture();
+        GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOn(picture)));
+        const startX = picture.position.x;
+
+        WorldSpaceSelectionUtil.holdOrbitTarget();
+        picture.position.x += 2;
+        // Re-announced mid-drag (e.g. by somebody else's edit): still held.
+        objectSelectionObservable.notify();
+
+        const held = cameraModeObservable.peek();
+        expect(held.type == "orbit" && held.target.center.x).toBe(startX);
+        expect(held.type == "orbit" && held.target.center).not.toBe(picture.position);
+
+        WorldSpaceSelectionUtil.releaseOrbitTarget();
+
+        const released = cameraModeObservable.peek();
+        expect(released.type == "orbit" && released.target.center).toBe(picture.position);
+    });
+
+    it("goes back to following the selection even when the drag moved nothing", () => {
+        const picture = makePicture();
+        GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOn(picture)));
+
+        WorldSpaceSelectionUtil.holdOrbitTarget();
+        WorldSpaceSelectionUtil.releaseOrbitTarget();
+
+        // The held copy is traded back, so later moves carry the orbit along again.
+        const released = cameraModeObservable.peek();
+        expect(released.type == "orbit" && released.target.center).toBe(picture.position);
+    });
+
+    it("hands the camera back on release if edit mode was left during the drag", () => {
+        GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOn(makePicture())));
+
+        WorldSpaceSelectionUtil.holdOrbitTarget();
+        GameModeUtil.exitEditMode();
+        WorldSpaceSelectionUtil.releaseOrbitTarget();
+
+        expect(cameraModeObservable.peek().type).toBe("firstPerson");
+    });
+});
+
 describe("a scripted step holding the user in his mode", () => {
     // The hold applies to the crossing itself, so every exit (including the back gesture) obeys it.
     it("keeps the way out shut", () => {
@@ -808,7 +865,8 @@ describe("the user's own character", () => {
         const shown = {body: true, bubble: true};
         const character = Object.assign(Object.create(PlayerGameObject.prototype), {
             params: { objectTypeIndex: ObjectTypeConfigMap.getIndexByType("Player"),
-                sourceUserID: App.getUser().id },
+                sourceUserID: App.getUser().id,
+                transform: unitTransform(10.5, 0.5 * PLAYER_HEIGHT, 10.5) },
             obj: new THREE.Object3D(),
             instancedMeshComposer: { setHidden: (hidden: boolean) => { shown.body = !hidden; } },
             speechBubble: { setHidden: (hidden: boolean) => { shown.bubble = !hidden; } },

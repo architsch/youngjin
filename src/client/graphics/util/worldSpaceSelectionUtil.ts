@@ -22,6 +22,8 @@ const pointTargetHalfSize = {x: 0, y: 0, z: 0};
 // Minimum orbit distance for in-place edits, so the surrounding wall and room stay in view.
 const SELECTION_ORBIT_MIN_DISTANCE = 5;
 
+let orbitTargetHeld = false;
+
 // The current selection (one voxel quad or one object) and the camera's response to it. The camera
 // is pointed from here, not per selection, because replacing a selection is two changes and only the
 // outcome matters.
@@ -48,6 +50,34 @@ export default class WorldSpaceSelectionUtil
             ObjectSelection.unselect(true);
     }
 
+    // Keeps the view still while a gizmo drag moves or resizes the selection under it: the orbit's target
+    // follows the object's live position, so it is swapped for a copy until releaseOrbitTarget.
+    // Re-announcements meanwhile are ignored; the release catches up on them.
+    static holdOrbitTarget(): void
+    {
+        if (orbitTargetHeld)
+            return;
+        orbitTargetHeld = true;
+
+        const mode = cameraModeObservable.peek();
+        if (mode.type !== "orbit")
+            return;
+        const {center, halfSize} = mode.target;
+        cameraModeObservable.set({type: "orbit", minDistance: mode.minDistance, target: {
+            center: {x: center.x, y: center.y, z: center.z},
+            halfSize: {x: halfSize.x, y: halfSize.y, z: halfSize.z},
+        }});
+    }
+
+    // Points the orbit back at the selection where it now stands.
+    static releaseOrbitTarget(): void
+    {
+        if (!orbitTargetHeld)
+            return;
+        orbitTargetHeld = false;
+        syncCameraModeWithSelection(true);
+    }
+
     // Selects the first voxel quad or object along a line of sight (nearest first) that can be selected.
     // Refusing objects (e.g. another player) are looked past; a refusing quad ends the search, since a
     // room surface hides what lies behind it.
@@ -67,9 +97,13 @@ export default class WorldSpaceSelectionUtil
     }
 }
 
-// Points the camera at whatever is currently selected, for as long as edit mode lasts.
-function syncCameraModeWithSelection(): void
+// Points the camera at whatever is currently selected, for as long as edit mode lasts. force: re-target
+// even onto an unchanged volume, to trade a held copy for the live one (see holdOrbitTarget).
+function syncCameraModeWithSelection(force: boolean = false): void
 {
+    if (orbitTargetHeld)
+        return;
+
     const framing = getSelectionOrbitFraming();
     const mode = cameraModeObservable.peek();
 
@@ -86,7 +120,7 @@ function syncCameraModeWithSelection(): void
 
     // A re-announced but unmoved selection (e.g. after a metadata edit) keeps the current orbit, so
     // an in-progress glide isn't cut short.
-    if (mode.type === "orbit" && targetsMatch(mode.target, framing.target))
+    if (!force && mode.type === "orbit" && targetsMatch(mode.target, framing.target))
         return;
 
     cameraModeObservable.set({type: "orbit", ...framing});
@@ -136,7 +170,7 @@ function getSelectionOrbitFraming(): {target: AABB3, minDistance?: number} | nul
     {
         const gameObject = objectSelection.gameObject;
         const colliderState = PhysicsColliderStateUtil.getObjectColliderState(
-            gameObject.params.objectTypeIndex, gameObject.position, gameObject.direction);
+            gameObject.params.objectTypeIndex, gameObject.params.transform);
         // Uses the object's live position vector so the orbit follows it. Wall/floor-fixed objects
         // keep a minimum distance for context; rigidbodies (e.g. characters) are framed by size alone.
         const standsInTheRoom = colliderState?.colliderConfig.colliderType === "rigidbody";
@@ -153,9 +187,9 @@ function getSelectionOrbitFraming(): {target: AABB3, minDistance?: number} | nul
         : null;
 }
 
-voxelQuadSelectionObservable.addListener("worldSpaceSelectionUtil", syncCameraModeWithSelection);
-objectSelectionObservable.addListener("worldSpaceSelectionUtil", syncCameraModeWithSelection);
+voxelQuadSelectionObservable.addListener("worldSpaceSelectionUtil", () => syncCameraModeWithSelection());
+objectSelectionObservable.addListener("worldSpaceSelectionUtil", () => syncCameraModeWithSelection());
 
 // Mode changes and step overrides change framing even when the selection doesn't.
-gameModeObservable.addListener("worldSpaceSelectionUtil", syncCameraModeWithSelection);
-orbitCameraTargetOverrideObservable.addListener("worldSpaceSelectionUtil", syncCameraModeWithSelection);
+gameModeObservable.addListener("worldSpaceSelectionUtil", () => syncCameraModeWithSelection());
+orbitCameraTargetOverrideObservable.addListener("worldSpaceSelectionUtil", () => syncCameraModeWithSelection());

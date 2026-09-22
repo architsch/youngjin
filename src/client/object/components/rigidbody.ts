@@ -8,6 +8,7 @@ import PhysicsManager from "../../../shared/physics/physicsManager";
 import App from "../../app";
 import Vector3DUtil from "../../../shared/math/util/vector3DUtil";
 import { GRAVITY_SPEED } from "../../../shared/system/sharedConstants";
+import ObjectTransform from "../../../shared/object/types/objectTransform";
 
 export default class Rigidbody extends GameObjectComponent
 {
@@ -51,7 +52,7 @@ export default class Rigidbody extends GameObjectComponent
                 z: this.gameObject.direction.z,
             };
             ClientObjectManager.setObjectTransform(this.gameObject.params.objectId,
-                targetPos, targetDir, false);
+                new ObjectTransform(targetPos, targetDir, this.gameObject.params.transform.scale), false);
 
             this.desiredVelocity.x = 0;
             this.desiredVelocity.y = 0;

@@ -160,8 +160,7 @@ async function orbit(page, dx, dy, options = {})
 {
     const steps = options.steps ?? 12;
     const {canvas} = await call(page, "camera");
-    const startX = canvas.left + canvas.width / 2;
-    const startY = canvas.top + canvas.height / 2;
+    const {x: startX, y: startY} = await orbitStartPoint(page, canvas);
 
     await page.mouse.move(startX, startY);
     await page.mouse.down();
@@ -172,6 +171,48 @@ async function orbit(page, dx, dy, options = {})
     }
     await page.mouse.up();
     await sleep(150);
+}
+
+// Pointer travel (px) kept between a drag's start and the selection outline's corners.
+const ORBIT_CLEARANCE_PX = 40;
+
+// The canvas's middle, unless the selected object's outline covers it: in edit mode the orbit frames the
+// selection there, and a drag that starts on the outline moves the object instead of the view. Then it
+// starts midway between the outline and whichever canvas edge leaves the most room.
+async function orbitStartPoint(page, canvas)
+{
+    const middle = {x: canvas.left + canvas.width / 2, y: canvas.top + canvas.height / 2};
+    let gizmo = null;
+    try
+    {
+        gizmo = await call(page, "selectionGizmo");
+    }
+    catch
+    {
+        return middle; // A build from before the op: it has no outline drags either.
+    }
+    if (gizmo == null || gizmo.corners.length == 0)
+        return middle;
+
+    const xs = gizmo.corners.map(c => c.x);
+    const ys = gizmo.corners.map(c => c.y);
+    const box = {
+        left: Math.min(...xs) - ORBIT_CLEARANCE_PX, right: Math.max(...xs) + ORBIT_CLEARANCE_PX,
+        top: Math.min(...ys) - ORBIT_CLEARANCE_PX, bottom: Math.max(...ys) + ORBIT_CLEARANCE_PX,
+    };
+    if (middle.x < box.left || middle.x > box.right || middle.y < box.top || middle.y > box.bottom)
+        return middle;
+
+    const canvasRight = canvas.left + canvas.width;
+    const canvasBottom = canvas.top + canvas.height;
+    const sides = [
+        {room: box.left - canvas.left, point: {x: (canvas.left + box.left) / 2, y: middle.y}},
+        {room: canvasRight - box.right, point: {x: (box.right + canvasRight) / 2, y: middle.y}},
+        {room: box.top - canvas.top, point: {x: middle.x, y: (canvas.top + box.top) / 2}},
+        {room: canvasBottom - box.bottom, point: {x: middle.x, y: (box.bottom + canvasBottom) / 2}},
+    ];
+    const roomiest = sides.reduce((best, side) => side.room > best.room ? side : best);
+    return roomiest.room > 0 ? roomiest.point : middle;
 }
 
 async function zoom(page, deltaY, options = {})

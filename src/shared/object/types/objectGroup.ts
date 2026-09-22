@@ -16,7 +16,7 @@ let temp_roomID = "";
 let temp_participantUserNameByID: { [userID: string]: string } = {};
 let temp_sourceVoxelGridVersion = 0;
 
-const latestVersion = 3;
+const latestVersion = 4;
 
 export default class ObjectGroup extends EncodableData
 {
@@ -139,7 +139,7 @@ export default class ObjectGroup extends EncodableData
     static decode(bufferState: BufferState): EncodableData
     {
         const versionFound = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
-        const objectGroup = decodeBody(bufferState);
+        const objectGroup = decodeBody(bufferState, versionFound);
         if (versionFound < latestVersion)
         {
             ObjectGroupVersionMigration.convert(objectGroup, versionFound, latestVersion, temp_roomID,
@@ -155,8 +155,9 @@ function getCategory(object: AddObjectSignal): ObjectCategory
     return ObjectTypeConfigMap.getConfigByIndex(object.objectTypeIndex).category;
 }
 
-// All versions share one body layout (only the meaning of values changed).
-function decodeBody(bufferState: BufferState): ObjectGroup
+// The body's own layout is the current one; only the transform has ever changed shape, and
+// ObjectGroupVersionMigration reads the older one (see decodeTransform).
+function decodeBody(bufferState: BufferState, formatVersion: number): ObjectGroup
 {
     const objects: AddObjectSignal[] = [];
     const sourceUserIDs: string[] = [];
@@ -182,7 +183,7 @@ function decodeBody(bufferState: BufferState): ObjectGroup
         const sourceUserName = sourceUserNames[userIndex];
         const objectTypeIndex = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
         const objectId = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
-        const transform = ObjectTransform.decode(bufferState) as ObjectTransform;
+        const transform = ObjectGroupVersionMigration.decodeTransform(bufferState, formatVersion);
         const metadata = (EncodableMap.decodeWithParams(bufferState, EncodableByteString.decode) as EncodableMap).map as ObjectMetadata;
 
         objects.push(new AddObjectSignal(temp_roomID, sourceUserID, sourceUserName, objectTypeIndex, objectId, transform, metadata));

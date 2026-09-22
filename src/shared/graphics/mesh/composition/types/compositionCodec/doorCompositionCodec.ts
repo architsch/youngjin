@@ -1,4 +1,5 @@
 import RandomNumberGenerator from "../../../../../math/types/randomNumberGenerator";
+import Vec3 from "../../../../../math/types/vec3";
 import ColorUtil from "../../../../../math/util/colorUtil";
 import StringUtil from "../../../../../math/util/stringUtil";
 import { ZERO_VEC3 } from "../../../../../system/sharedConstants";
@@ -21,7 +22,7 @@ export const DoorCompositionCodec: InstancedMeshCompositionCodec = {
         arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToPaletteIndex("Timber", params.colors.knob)));
         return arr.join("");
     },
-    decode: (strToDecode: string,
+    decode: (strToDecode: string, objectSize: Vec3,
         decodedParams: InstancedMeshCompositionParams,
         decodedParts: InstancedMeshCompositionPart[]): void =>
     {
@@ -32,7 +33,7 @@ export const DoorCompositionCodec: InstancedMeshCompositionCodec = {
         decodedParams.colors.knob = decodeColor(strToDecode, charOffset++);
         constructParts(decodedParams, decodedParts);
     },
-    getRandomComposition: (seed: number):
+    getRandomComposition: (seed: number, objectSize: Vec3):
         {params: InstancedMeshCompositionParams, parts: InstancedMeshCompositionPart[]} =>
     {
         const rand = new RandomNumberGenerator(seed);

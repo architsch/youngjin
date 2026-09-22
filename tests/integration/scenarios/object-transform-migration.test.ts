@@ -9,12 +9,16 @@ import fs from "fs";
 import path from "path";
 
 import BufferState from "../../../src/shared/networking/types/bufferState";
+import { writeLegacyObjectGroup } from "../helpers/legacyObjectGroup";
+import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
+import ObjectScaleUtil from "../../../src/shared/object/util/objectScaleUtil";
+import CanvasObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import ObjectGroup from "../../../src/shared/object/types/objectGroup";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import { MAX_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
-    COLLISION_LAYER_HEIGHT } from "../../../src/shared/system/sharedConstants";
+    COLLISION_LAYER_HEIGHT, UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
 
 const FIXTURE_DIR = path.join(__dirname, "../fixtures/legacyVoxelGrids");
 const ROOM_ID = "object-migration-room";
@@ -31,7 +35,7 @@ const LEGACY_PLACED_HEIGHTS = [1.5, 2.0];
 function canvas(objectId: string, y: number): AddObjectSignal
 {
     return new AddObjectSignal(ROOM_ID, "user-1", "User One", CANVAS_OBJECT_TYPE_INDEX, objectId,
-        new ObjectTransform({x: 10.5, y, z: 4.5}, {x: 0, y: 0, z: 1}), {});
+        new ObjectTransform({x: 10.5, y, z: 4.5}, {x: 0, y: 0, z: 1}, {...UNIT_VEC3}), {});
 }
 
 // A legacy painting at a placed height, scaled by the range ratio into the fraction the old encoder
@@ -41,8 +45,8 @@ function legacyCanvas(objectId: string, placedHeight: number): AddObjectSignal
     return canvas(objectId, placedHeight * (ObjectTransform.encodableBounds.maxY / LEGACY_MAX_ROOM_Y));
 }
 
-// A stored room blob: a real legacy voxel grid, then objects encoded now with their version byte
-// stamped back to 0 (both versions share a layout).
+// A stored room blob: a real legacy voxel grid, then its objects. Writing an older version writes that
+// version's own layout (see writeLegacyObjectGroup), not just its version byte.
 function buildRoomBlob(voxelGridBytes: Uint8Array, objects: AddObjectSignal[],
     stampObjectVersion?: number): Uint8Array
 {
@@ -50,11 +54,10 @@ function buildRoomBlob(voxelGridBytes: Uint8Array, objects: AddObjectSignal[],
     view.set(voxelGridBytes, 0);
 
     const writeState = new BufferState(view, voxelGridBytes.length);
-    const objectVersionByteIndex = writeState.byteIndex;
-    new ObjectGroup(objects).encodeWithParams(writeState, {});
-
-    if (stampObjectVersion != undefined)
-        view[objectVersionByteIndex] = stampObjectVersion;
+    if (stampObjectVersion == undefined)
+        new ObjectGroup(objects).encodeWithParams(writeState, {});
+    else
+        writeLegacyObjectGroup(writeState, objects, stampObjectVersion);
 
     return view.subarray(0, writeState.byteIndex);
 }
@@ -151,6 +154,49 @@ describe("object transform ranges and migration", () => {
         const {objectGroup} = decodeRoomBlob(blob);
         for (const [i, height] of heights.entries())
             expect(heightsOf(objectGroup)[i]).toBeCloseTo(height, 3);
+    });
+
+    it("gives every object of a group stored before scale existed its type's base size", () => {
+        const blob = buildRoomBlob(encodeCurrentVoxelGrid(),
+            [canvas("a", 2.0), canvas("b", 3.0)], ObjectGroup.latestFormatVersion - 1);
+
+        const {objectGroup} = decodeRoomBlob(blob);
+
+        expect(objectGroup.sourceFormatVersion).toBe(ObjectGroup.latestFormatVersion - 1);
+        for (const object of Object.values(objectGroup.objectById))
+            expect(object.transform.scale).toEqual(UNIT_VEC3);
+    });
+
+    it("brings a resized object back at the size it was stored at, off the wire's coarser grid", () => {
+        // The scale byte decodes slightly below what was written, so what comes back is only right
+        // once it is snapped to the type's own step (see ObjectScaleUtil).
+        const scaling = CanvasObjectTypeConfig.scaling;
+        for (let scale = scaling.minScale.x; scale <= scaling.maxScale.x; scale += scaling.scaleStep.x)
+        {
+            const resized = canvas("resized", 2.0);
+            resized.transform.scale = {x: scale, y: scale, z: 1};
+            const blob = buildRoomBlob(encodeCurrentVoxelGrid(), [resized]);
+
+            const stored = decodeRoomBlob(blob).objectGroup.objectById["resized"];
+            expect(ObjectScaleUtil.sanitize(CANVAS_OBJECT_TYPE_INDEX, stored.transform.scale))
+                .toEqual({x: scale, y: scale, z: 1});
+        }
+    });
+
+    it("holds a scale no canvas is allowed to whatever the stored bytes say", () => {
+        const hostile = canvas("hostile", 2.0);
+        hostile.transform.scale = {x: 999, y: -5, z: 7};
+        const blob = buildRoomBlob(encodeCurrentVoxelGrid(), [hostile]);
+
+        const stored = decodeRoomBlob(blob).objectGroup.objectById["hostile"];
+        const scaling = CanvasObjectTypeConfig.scaling;
+        expect(ObjectScaleUtil.sanitize(CANVAS_OBJECT_TYPE_INDEX, stored.transform.scale))
+            .toEqual({x: scaling.maxScale.x, y: scaling.minScale.y, z: 1});
+    });
+
+    it("holds a type that declares no scaling at its base size, whatever it was handed", () => {
+        const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
+        expect(ObjectScaleUtil.sanitize(doorTypeIndex, {x: 3, y: 0.1, z: 2})).toEqual(UNIT_VEC3);
     });
 
     it("keeps every object of a legacy group, not just their heights", () => {

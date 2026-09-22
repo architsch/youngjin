@@ -1,8 +1,10 @@
 import AABB3 from "../../math/types/aabb3";
-import Vec3 from "../../math/types/vec3";
 import Geometry3DUtil from "../../math/util/geometry3DUtil";
 import { ColliderState } from "../types/colliderState";
 import ObjectTypeConfigMap from "../../object/maps/objectTypeConfigMap";
+import ObjectScaleUtil from "../../object/util/objectScaleUtil";
+// Type-only: the transform is the carrier of position, facing and scale.
+import type ObjectTransform from "../../object/types/objectTransform";
 import { ColliderConfig } from "../types/colliderConfig";
 import PhysicsDebugUtil from "./physicsDebugUtil";
 import PhysicsRoom from "../types/physicsRoom";
@@ -17,7 +19,7 @@ for (let i = 0; i < 64; ++i)
 
 const voxelBlockColliderConfig: ColliderConfig = {
     colliderType: "standalone",
-    hitboxSize: {sizeX: 1, sizeY: 0.5, sizeZ: 1},
+    baseHitboxSize: {sizeX: 1, sizeY: 0.5, sizeZ: 1},
     applyHardCollisionToOthers: true,
     outgoingSoftCollisionForceMultiplier: 1,
     incomingSoftCollisionForceMultiplier: 0,
@@ -40,14 +42,17 @@ const PhysicsColliderStateUtil =
         return state;
     },
     getObjectColliderState: (objectTypeIndex: number,
-        position: Vec3, direction: Vec3): ColliderState | undefined =>
+        transform: ObjectTransform): ColliderState | undefined =>
     {
         const objectTypeConfig = ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex);
         const components = objectTypeConfig.components;
         let colliderConfig = components.spawnedByAny?.collider;
         if (!colliderConfig)
             return undefined;
-        const hitboxSize = colliderConfig.hitboxSize;
+        // This object's own footprint, not the type's: the scale is applied before anything else, so the
+        // inset below stays an absolute distance whatever size the object is.
+        const hitboxSize = ObjectScaleUtil.getObjectSize(objectTypeIndex, transform.scale);
+        const direction = transform.dir;
 
         // Wall attachments get a slightly inset test box (WALL_ATTACHMENT_HITBOX_INSET), so neighbours
         // sharing an edge don't register as overlapping, while everything else reads the round footprint.
@@ -55,17 +60,17 @@ const PhysicsColliderStateUtil =
         // rotation; depth is untouched so attachments stay on the wall.
         const inset = colliderConfig.colliderType == "wallAttachment"
             ? WALL_ATTACHMENT_HITBOX_INSET : 0;
-        const insetSizeX = Math.max(0, hitboxSize.sizeX - inset);
-        const insetSizeY = Math.max(0, hitboxSize.sizeY - inset);
+        const insetSizeX = Math.max(0, hitboxSize.x - inset);
+        const insetSizeY = Math.max(0, hitboxSize.y - inset);
 
         const moreAlignedWithXAxis = Math.abs(direction.x) > Math.abs(direction.z);
-        const reorientedSizeX = moreAlignedWithXAxis ? hitboxSize.sizeZ : insetSizeX;
-        const reorientedSizeZ = moreAlignedWithXAxis ? insetSizeX : hitboxSize.sizeZ;
+        const reorientedSizeX = moreAlignedWithXAxis ? hitboxSize.z : insetSizeX;
+        const reorientedSizeZ = moreAlignedWithXAxis ? insetSizeX : hitboxSize.z;
         const hitbox: AABB3 = {
             center: {
-                x: position.x,
-                y: position.y,
-                z: position.z
+                x: transform.pos.x,
+                y: transform.pos.y,
+                z: transform.pos.z
             },
             halfSize: {
                 x: 0.5 * reorientedSizeX,

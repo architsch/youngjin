@@ -88,7 +88,9 @@ export const DefaultCompositionCodec: InstancedMeshCompositionCodec = {
         }
         return partChars.join("");
     },
-    decode: (strToDecode: string,
+    // objectSize is unused: this codec spells its parts out, so they are already the size they were
+    // authored at. A resizable type needs a codec that lays its parts out against the size instead.
+    decode: (strToDecode: string, objectSize: Vec3,
         decodedParams: InstancedMeshCompositionParams,
         decodedParts: InstancedMeshCompositionPart[]): void =>
     {
@@ -144,7 +146,7 @@ export const DefaultCompositionCodec: InstancedMeshCompositionCodec = {
 
         applySquareRelief(decodedParts, firstDecodedIndex);
     },
-    getRandomComposition: (seed: number):
+    getRandomComposition: (seed: number, objectSize: Vec3):
         {params: InstancedMeshCompositionParams, parts: InstancedMeshCompositionPart[]} =>
     {
         throw new Error("DefaultCompositionCodec::getRandomComposition : NOT IMPLEMENTED");

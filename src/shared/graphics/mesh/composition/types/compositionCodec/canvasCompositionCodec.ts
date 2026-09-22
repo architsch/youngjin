@@ -1,4 +1,5 @@
 import RandomNumberGenerator from "../../../../../math/types/randomNumberGenerator";
+import Vec3 from "../../../../../math/types/vec3";
 import ColorUtil from "../../../../../math/util/colorUtil";
 import StringUtil from "../../../../../math/util/stringUtil";
 import { InstancedMeshCompositionBuilderMap } from "../../maps/instancedMeshCompositionBuilderMap";
@@ -29,7 +30,7 @@ export const CanvasCompositionCodec: InstancedMeshCompositionCodec = {
             (params.mouldingIsConvex ? CONVEX_FLAG : 0) | (params.framed ? FRAMED_FLAG : 0)));
         return arr.join("");
     },
-    decode: (strToDecode: string,
+    decode: (strToDecode: string, objectSize: Vec3,
         decodedParams: InstancedMeshCompositionParams,
         decodedParts: InstancedMeshCompositionPart[]): void =>
     {
@@ -46,9 +47,9 @@ export const CanvasCompositionCodec: InstancedMeshCompositionCodec = {
             decodedParams.mouldingIsConvex = (flags & CONVEX_FLAG) != 0;
             decodedParams.framed = (flags & FRAMED_FLAG) != 0;
         }
-        constructParts(decodedParams, decodedParts);
+        constructParts(decodedParams, decodedParts, objectSize);
     },
-    getRandomComposition: (seed: number):
+    getRandomComposition: (seed: number, objectSize: Vec3):
         {params: InstancedMeshCompositionParams, parts: InstancedMeshCompositionPart[]} =>
     {
         const rand = new RandomNumberGenerator(seed);
@@ -64,7 +65,7 @@ export const CanvasCompositionCodec: InstancedMeshCompositionCodec = {
         params.framed = true;
 
         const parts: InstancedMeshCompositionPart[] = [];
-        constructParts(params, parts);
+        constructParts(params, parts, objectSize);
         return {params, parts};
     },
     getStructuralVariants: (): string[] =>
@@ -92,7 +93,7 @@ function getBaseParams(): CanvasCompositionParams
 }
 
 function constructParts(params: CanvasCompositionParams,
-    parts: InstancedMeshCompositionPart[])
+    parts: InstancedMeshCompositionPart[], objectSize: Vec3)
 {
-    InstancedMeshCompositionBuilderMap["CanvasFrame_0"](params, parts).run();
+    InstancedMeshCompositionBuilderMap["CanvasFrame_0"](params, parts, objectSize).run();
 }

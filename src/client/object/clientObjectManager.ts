@@ -190,13 +190,13 @@ const ClientObjectManager =
             return false;
         }
     },
-    setObjectTransform: (objectId: string, pos: Vec3, dir: Vec3, ignorePhysics: boolean,
+    setObjectTransform: (objectId: string, transform: ObjectTransform, ignorePhysics: boolean,
         validate: boolean = true): ObjectTransform =>
     {
         const user = App.getUser();
         const room = App.getCurrentRoom()!;
 
-        const signal = new SetObjectTransformSignal(room.id, objectId, new ObjectTransform(pos, dir), ignorePhysics);
+        const signal = new SetObjectTransformSignal(room.id, objectId, transform, ignorePhysics);
         const result = ObjectUpdateUtil.setObjectTransform(user, room, signal, validate);
         const object = ClientObjectManager.getObjectById(objectId);
         if (object)
@@ -267,8 +267,8 @@ const ClientObjectManager =
             if (!success)
                 return;
         }
-        ClientObjectManager.setObjectTransform(signal.objectId,
-            signal.transform.pos, signal.transform.dir, signal.ignorePhysics, false);
+        ClientObjectManager.setObjectTransform(signal.objectId, signal.transform,
+            signal.ignorePhysics, false);
 
         // Re-announce a moved selection so its outline and menu follow; skipped for continuous
         // physics updates.

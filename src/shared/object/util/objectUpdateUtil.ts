@@ -13,6 +13,8 @@ import User from "../../user/types/user";
 import SetObjectTransformSignal from "../types/setObjectTransformSignal";
 import SetObjectMetadataSignal from "../types/setObjectMetadataSignal";
 import RestrictedZoneUtil from "../../voxel/util/restrictedZoneUtil";
+import ObjectTransform from "../types/objectTransform";
+import ObjectScaleUtil from "./objectScaleUtil";
 
 const ObjectUpdateUtil =
 {
@@ -43,14 +45,13 @@ const ObjectUpdateUtil =
             return false;
 
         // Restricted zone check (see @docs/gameplay/restricted_zone.md).
-        if (RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex,
-            obj.transform.pos, obj.transform.dir))
+        if (RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex, obj.transform))
             return false;
 
         // Check if the object's collider is placeable.
-        const colliderState = PhysicsColliderStateUtil.getObjectColliderState(obj.objectTypeIndex, obj.transform.pos, obj.transform.dir);
+        const colliderState = PhysicsColliderStateUtil.getObjectColliderState(obj.objectTypeIndex, obj.transform);
         if (colliderState && colliderState.colliderConfig.colliderType == "wallAttachment")
-            return WallAttachedObjectUtil.canPlaceObject(room, obj.objectId, obj.objectTypeIndex, obj.transform.pos, obj.transform.dir);
+            return WallAttachedObjectUtil.canPlaceObject(room, obj.objectId, obj.objectTypeIndex, obj.transform);
         else
             return true;
     },
@@ -70,7 +71,7 @@ const ObjectUpdateUtil =
         }
 
         // Skip if already registered (room loads bulk-register physics objects before spawning).
-        const colliderState = PhysicsColliderStateUtil.getObjectColliderState(obj.objectTypeIndex, obj.transform.pos, obj.transform.dir);
+        const colliderState = PhysicsColliderStateUtil.getObjectColliderState(obj.objectTypeIndex, obj.transform);
         if (colliderState && !PhysicsManager.hasObject(room.id, obj.objectId))
             PhysicsManager.addObject(room.id, obj.objectId, obj.objectTypeIndex, colliderState);
         return true;
@@ -93,8 +94,7 @@ const ObjectUpdateUtil =
             return false;
 
         // Check if the object stands in a stretch of the room that is not this user's to clear.
-        if (RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex,
-            obj.transform.pos, obj.transform.dir))
+        if (RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex, obj.transform))
             return false;
 
         return true;
@@ -134,19 +134,28 @@ const ObjectUpdateUtil =
         if (!config.canUserSetObjectTransform(user, room, obj, signal))
             return false;
 
+        const target = ObjectUpdateUtil.getSanitizedTargetTransform(obj, signal);
+
         // Check both source and destination, or objects could be dragged out of a zone and then removed.
-        if (RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex,
-                obj.transform.pos, obj.transform.dir) ||
-            RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex,
-                signal.transform.pos, signal.transform.dir))
+        if (RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex, obj.transform) ||
+            RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex, target))
             return false;
 
-        // Check if the object's collider is placeable.
-        const colliderState = PhysicsColliderStateUtil.getObjectColliderState(obj.objectTypeIndex, obj.transform.pos, obj.transform.dir);
+        // Check that the object is placeable where it is going, at the size it is going to be. The
+        // request is the client's, so the destination is what has to hold up, not where it stands now.
+        const colliderState = PhysicsColliderStateUtil.getObjectColliderState(obj.objectTypeIndex, target);
         if (colliderState && colliderState.colliderConfig.colliderType == "wallAttachment")
-            return WallAttachedObjectUtil.canPlaceObject(room, obj.objectId, obj.objectTypeIndex, obj.transform.pos, obj.transform.dir);
+            return WallAttachedObjectUtil.canPlaceObject(room, obj.objectId, obj.objectTypeIndex, target);
         else
             return true;
+    },
+    // What the signal is allowed to mean: its position and facing, with the scale snapped onto the
+    // type's own grid (see ObjectScaleUtil). A scale is never taken as sent — quantization leaves the
+    // wire value just below what was written, and nothing else bounds what a client may ask for.
+    getSanitizedTargetTransform(obj: AddObjectSignal, signal: SetObjectTransformSignal): ObjectTransform
+    {
+        return new ObjectTransform(signal.transform.pos, signal.transform.dir,
+            ObjectScaleUtil.sanitize(obj.objectTypeIndex, signal.transform.scale));
     },
     setObjectTransform(user: User, room: Room, signal: SetObjectTransformSignal,
         validate: boolean = true): ObjectTransformUpdateResult
@@ -159,28 +168,36 @@ const ObjectUpdateUtil =
         }
         markRoomAsDirtyIfPersistent(room, obj);
 
+        const target = ObjectUpdateUtil.getSanitizedTargetTransform(obj, signal);
+
         // Set the transform.
         if (PhysicsManager.hasObject(room.id, signal.objectId))
         {
             const result = PhysicsManager.setObjectTransform(room.id, signal.objectId,
-                signal.transform.pos, signal.transform.dir, signal.ignorePhysics);
+                target, signal.ignorePhysics);
             obj.transform.pos.x = result.transform.pos.x;
             obj.transform.pos.y = result.transform.pos.y;
             obj.transform.pos.z = result.transform.pos.z;
             obj.transform.dir.x = result.transform.dir.x;
             obj.transform.dir.y = result.transform.dir.y;
             obj.transform.dir.z = result.transform.dir.z;
+            obj.transform.scale.x = result.transform.scale.x;
+            obj.transform.scale.y = result.transform.scale.y;
+            obj.transform.scale.z = result.transform.scale.z;
             return result;
         }
         else
         {
-            obj.transform.pos.x = signal.transform.pos.x;
-            obj.transform.pos.y = signal.transform.pos.y;
-            obj.transform.pos.z = signal.transform.pos.z;
-            obj.transform.dir.x = signal.transform.dir.x;
-            obj.transform.dir.y = signal.transform.dir.y;
-            obj.transform.dir.z = signal.transform.dir.z;
-            return {transform: signal.transform, desyncDetected: false};
+            obj.transform.pos.x = target.pos.x;
+            obj.transform.pos.y = target.pos.y;
+            obj.transform.pos.z = target.pos.z;
+            obj.transform.dir.x = target.dir.x;
+            obj.transform.dir.y = target.dir.y;
+            obj.transform.dir.z = target.dir.z;
+            obj.transform.scale.x = target.scale.x;
+            obj.transform.scale.y = target.scale.y;
+            obj.transform.scale.z = target.scale.z;
+            return {transform: target, desyncDetected: false};
         }
     },
 
@@ -202,8 +219,7 @@ const ObjectUpdateUtil =
             return false;
 
         // Metadata edits are also zone-restricted (a picture's content is part of that stretch of room).
-        if (RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex,
-            obj.transform.pos, obj.transform.dir))
+        if (RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex, obj.transform))
             return false;
 
         return true;

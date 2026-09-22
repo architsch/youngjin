@@ -1,3 +1,4 @@
+import Vec3 from "../../../../../math/types/vec3";
 import NumUtil from "../../../../../math/util/numUtil";
 import StringUtil from "../../../../../math/util/stringUtil";
 import { InstancedMeshCompositionCodecMap } from "../../maps/instancedMeshCompositionCodecMap";
@@ -26,7 +27,7 @@ export const IndexedCompositionCodec: InstancedMeshCompositionCodec = {
         return StringUtil.convertRawNumberToVisibleASCII(Math.floor(compositionIndex / INDEX_RADIX))
             + StringUtil.convertRawNumberToVisibleASCII(compositionIndex % INDEX_RADIX);
     },
-    decode: (strToDecode: string,
+    decode: (strToDecode: string, objectSize: Vec3,
         decodedParams: InstancedMeshCompositionParams,
         decodedParts: InstancedMeshCompositionPart[]): void =>
     {
@@ -34,12 +35,12 @@ export const IndexedCompositionCodec: InstancedMeshCompositionCodec = {
         const lowerDigit = StringUtil.convertVisibleASCIIToRawNumber(strToDecode, INDEX_CHAR_INDEX + 1, 0);
         const compositionIndex = upperDigit * INDEX_RADIX + lowerDigit;
 
-        buildPartsFromPreEncodedComposition(compositionIndex, decodedParams, decodedParts);
+        buildPartsFromPreEncodedComposition(compositionIndex, objectSize, decodedParams, decodedParts);
 
         // Always recorded (even if nothing was found) so re-encoding returns the original string.
         decodedParams.compositionIndex = compositionIndex;
     },
-    getRandomComposition: (seed: number):
+    getRandomComposition: (seed: number, objectSize: Vec3):
         {params: InstancedMeshCompositionParams, parts: InstancedMeshCompositionPart[]} =>
     {
         throw new Error("IndexedCompositionCodec::getRandomComposition : NOT IMPLEMENTED");
@@ -52,7 +53,7 @@ export const IndexedCompositionCodec: InstancedMeshCompositionCodec = {
 }
 
 // Total: a missing index yields no parts (draws nothing) rather than throwing mid-room-build.
-function buildPartsFromPreEncodedComposition(compositionIndex: number,
+function buildPartsFromPreEncodedComposition(compositionIndex: number, objectSize: Vec3,
     decodedParams: InstancedMeshCompositionParams,
     decodedParts: InstancedMeshCompositionPart[]): void
 {
@@ -73,5 +74,5 @@ function buildPartsFromPreEncodedComposition(compositionIndex: number,
     if (actualCodec == undefined)
         return;
 
-    actualCodec.decode(actualStrToDecode, decodedParams, decodedParts);
+    actualCodec.decode(actualStrToDecode, objectSize, decodedParams, decodedParts);
 }

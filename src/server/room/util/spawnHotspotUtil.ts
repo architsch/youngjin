@@ -6,13 +6,13 @@ import ObjectTransform from "../../../shared/object/types/objectTransform";
 import DoorObjectTypeConfig, { SPAWN_DIST_BEHIND_DOOR } from "../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import { PLAYER_HEIGHT } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import Room from "../../../shared/room/types/room";
-import { NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../../shared/system/sharedConstants";
+import { NUM_VOXEL_COLS, NUM_VOXEL_ROWS, UNIT_VEC3 } from "../../../shared/system/sharedConstants";
 
 const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 
 // How much wall a door claims, which is what its origin sits at the middle of.
 const DOOR_FOOTPRINT_HEIGHT =
-    DoorObjectTypeConfig.components.spawnedByAny.collider.hitboxSize.sizeY;
+    DoorObjectTypeConfig.components.spawnedByAny.collider.baseHitboxSize.sizeY;
 
 // Where an arriving player is placed (RoomPickerUtil decides the room). Tries in order: the named door,
 // a default-entrance door, any door, the room centre.
@@ -60,7 +60,7 @@ function getTransformBehindDoor(door: AddObjectSignal): ObjectTransform
         y: floorY + 0.5 * PLAYER_HEIGHT,
         z: pos.z - dir.z * SPAWN_DIST_BEHIND_DOOR,
     };
-    return new ObjectTransform(spawnPos, {x: -dir.x, y: 0, z: -dir.z});
+    return new ObjectTransform(spawnPos, {x: -dir.x, y: 0, z: -dir.z}, {...UNIT_VEC3});
 }
 
 // Last resort for rooms without doors.
@@ -68,7 +68,7 @@ function getRoomCenterTransform(): ObjectTransform
 {
     return new ObjectTransform(
         {x: 0.5 * NUM_VOXEL_COLS, y: 0.5 * PLAYER_HEIGHT, z: 0.5 * NUM_VOXEL_ROWS},
-        {x: 0, y: 0, z: 1});
+        {x: 0, y: 0, z: 1}, {...UNIT_VEC3});
 }
 
 export default SpawnHotspotUtil;

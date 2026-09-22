@@ -18,6 +18,7 @@ import InstancedMeshCompositionPart from "../../../src/shared/graphics/mesh/comp
 import CompositionMetadataUtil from "../../../src/shared/graphics/mesh/composition/util/compositionMetadataUtil";
 import ObjectCategoryConfigMap from "../../../src/shared/object/maps/objectCategoryConfigMap";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
+import ObjectScaleUtil from "../../../src/shared/object/util/objectScaleUtil";
 
 const COMPOSER_CONFIGS = ObjectTypeConfigMap.getAllConfigs()
     .filter(config => config.components.spawnedByAny?.instancedMeshComposer != undefined);
@@ -35,9 +36,11 @@ function arbitraryParts(objectType: string): fc.Arbitrary<InstancedMeshCompositi
         ? fc.constantFrom(...PreEncodedCompositionIndexMap[objectType])
             .map(compositionIndex => codec.encode({compositionIndex}, []))
         : fc.string({maxLength: 32});
+    // At the type's largest, as the builder sizes the meshes.
+    const objectSize = ObjectScaleUtil.getMaxObjectSize(ObjectTypeConfigMap.getIndexByType(objectType));
     return body.map(str => {
         const parts: InstancedMeshCompositionPart[] = [];
-        codec.decode(prefix + str, {}, parts);
+        codec.decode(prefix + str, objectSize, {}, parts);
         return parts;
     });
 }

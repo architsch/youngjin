@@ -27,7 +27,7 @@ import ClientVoxelManager from "../../../../voxel/clientVoxelManager";
 import VoxelUpdateUtil from "../../../../../shared/voxel/util/voxelUpdateUtil";
 import RemoveVoxelBlockSignal from "../../../../../shared/voxel/types/update/removeVoxelBlockSignal";
 import DoorObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
-import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS, STOREY_FLOOR_COLLISION_LAYER } from "../../../../../shared/system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS, STOREY_FLOOR_COLLISION_LAYER, UNIT_VEC3 } from "../../../../../shared/system/sharedConstants";
 import AddVoxelBlockSignal from "../../../../../shared/voxel/types/update/addVoxelBlockSignal";
 import ObjectIdUtil from "../../../../../shared/object/util/objectIdUtil";
 import { clientFeatureFlagsObservable, notificationMessageObservable, voxelQuadSelectionObservable } from "../../../../system/clientObservables";
@@ -145,7 +145,7 @@ function getPlaceableWallAttachedObjectTransform(selection: VoxelQuadSelection,
 
     for (const y of getCandidateHeights(objectTypeIndex, quadIndex, offsetY))
     {
-        const tr = new ObjectTransform({x, y, z}, dir);
+        const tr = new ObjectTransform({x, y, z}, dir, {...UNIT_VEC3});
         const obj = new AddObjectSignal(room.id, user.id, user.userName, objectTypeIndex,
             ObjectIdUtil.generateRandomObjectId(), tr);
         if (ObjectUpdateUtil.canAddObject(user, room, obj))
@@ -180,7 +180,7 @@ function getCandidateHeights(objectTypeIndex: number, quadIndex: number, offsetY
     const storeyFloorLayer = (collisionLayer >= STOREY_FLOOR_COLLISION_LAYER)
         ? STOREY_FLOOR_COLLISION_LAYER + 1 : COLLISION_LAYER_MIN;
     const floorY = (storeyFloorLayer - COLLISION_LAYER_MIN) * COLLISION_LAYER_HEIGHT;
-    return [floorY + 0.5 * DoorObjectTypeConfig.components.spawnedByAny.collider.hitboxSize.sizeY];
+    return [floorY + 0.5 * DoorObjectTypeConfig.components.spawnedByAny.collider.baseHitboxSize.sizeY];
 }
 
 async function tryAddObjectFromQuad(selection: VoxelQuadSelection,

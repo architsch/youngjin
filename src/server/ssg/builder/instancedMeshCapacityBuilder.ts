@@ -5,7 +5,9 @@ import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../shared/graphi
 import InstancedMeshCompositionPart from "../../../shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
 import CompositionMetadataUtil from "../../../shared/graphics/mesh/composition/util/compositionMetadataUtil";
 import InstancedMeshIdMap from "../../../shared/graphics/mesh/maps/instancedMeshIdMap";
+import Vec3 from "../../../shared/math/types/vec3";
 import StringUtil from "../../../shared/math/util/stringUtil";
+import ObjectScaleUtil from "../../../shared/object/util/objectScaleUtil";
 import ObjectCategoryConfigMap from "../../../shared/object/maps/objectCategoryConfigMap";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import ObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/objectTypeConfig";
@@ -32,7 +34,9 @@ export default class InstancedMeshCapacityBuilder
             const maxCountsPerObject: {[instancedMeshId: string]: number} = {};
             for (const variant of InstancedMeshCapacityBuilder.getVariants(config, compositions))
             {
-                const counts = InstancedMeshCapacityBuilder.countPartsByMesh(variant);
+                // At the type's largest, since the mesh has to hold whatever the biggest one needs.
+                const counts = InstancedMeshCapacityBuilder.countPartsByMesh(variant,
+                    ObjectScaleUtil.getMaxObjectSize(ObjectTypeConfigMap.getIndexByType(config.objectType)));
                 for (const instancedMeshId in counts)
                     maxCountsPerObject[instancedMeshId] = Math.max(maxCountsPerObject[instancedMeshId] ?? 0, counts[instancedMeshId]);
             }
@@ -99,11 +103,12 @@ export default InstancedMeshCapacityMap;
             .map(body => prefix + body);
     }
 
-    private static countPartsByMesh(encodedComposition: string): {[instancedMeshId: string]: number}
+    private static countPartsByMesh(encodedComposition: string,
+        objectSize: Vec3): {[instancedMeshId: string]: number}
     {
         const codecType = StringUtil.convertVisibleASCIIToRawNumber(encodedComposition, 0);
         const parts: InstancedMeshCompositionPart[] = [];
-        InstancedMeshCompositionCodecMap[codecType].decode(encodedComposition, {}, parts);
+        InstancedMeshCompositionCodecMap[codecType].decode(encodedComposition, objectSize, {}, parts);
 
         const counts: {[instancedMeshId: string]: number} = {};
         for (const part of parts)

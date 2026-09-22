@@ -343,16 +343,19 @@ export default class InstancedMeshBinding
         TextureUtil.drawCanvasOnRenderTarget(canvas, this.getDynamicRenderTarget(), u1, v1, u2, v2);
     }
 
-    // The optional source UV rect selects a sub-region (e.g. one atlas cell).
-    async drawImageAtIndex(textureIndex: number, imageURL: string,
+    // cellAspect is the cell's aspect ratio as shown, when the instance stretches it (see
+    // TextureUtil.drawImageOnRenderTarget). The optional source UV rect selects a sub-region (e.g. one
+    // atlas cell).
+    async drawImageAtIndex(textureIndex: number, imageURL: string, cellAspect?: number,
         widthScale: number = 1, heightScale: number = 1,
         sourceU1: number = 0, sourceV1: number = 0,
         sourceU2: number = 1, sourceV2: number = 1,
         unloadTextureAfterDraw: boolean = true)
     {
         const {u1, v1, u2, v2} = this.getTextureCellUVRect(textureIndex, widthScale, heightScale);
+        const regionAspect = cellAspect == undefined ? undefined : cellAspect * widthScale / heightScale;
         await TextureUtil.drawImageOnRenderTarget(imageURL, this.getDynamicRenderTarget(),
-            u1, v1, u2, v2, sourceU1, sourceV1, sourceU2, sourceV2, unloadTextureAfterDraw);
+            u1, v1, u2, v2, regionAspect, sourceU1, sourceV1, sourceU2, sourceV2, unloadTextureAfterDraw);
     }
 
     // UV rect of an instance's texture cell, optionally a centered sub-region scaled by the given factors.

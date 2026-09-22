@@ -9,7 +9,7 @@ import { PLAYER_HEIGHT } from "../../../object/types/objectTypeConfig/playerObje
 import { COLLISION_LAYER_MIN, STOREY_FLOOR_COLLISION_LAYER } from "../../../system/sharedConstants";
 
 const DOOR_FOOTPRINT_HEIGHT =
-    DoorObjectTypeConfig.components.spawnedByAny.collider.hitboxSize.sizeY;
+    DoorObjectTypeConfig.components.spawnedByAny.collider.baseHitboxSize.sizeY;
 import SinglePlayerModeConfig from "./singlePlayerModeConfig";
 
 let cachedParams: RoomBuilderParams | undefined;

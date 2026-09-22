@@ -24,6 +24,8 @@ import StringUtil from "../../../src/shared/math/util/stringUtil";
 import Vec3 from "../../../src/shared/math/types/vec3";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 import CanvasObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
+import ObjectScaleUtil from "../../../src/shared/object/util/objectScaleUtil";
+import { writeLegacyObjectGroup } from "../helpers/legacyObjectGroup";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import ObjectGroup from "../../../src/shared/object/types/objectGroup";
@@ -33,7 +35,7 @@ import EncodableByteString from "../../../src/shared/networking/types/encodableB
 import ImageMapUtil from "../../../src/shared/graphics/image/util/imageMapUtil";
 import { COMPOSITION_PALETTE_NAME_BY_MATERIAL_ID, GEOMETRY_CODE_BY_ID, INSTANCE_COLORED_MATERIAL_IDS,
     INSTANCED_COLOR_MATERIAL_ID, INSTANCED_WOOD_MATERIAL_ID, MATERIAL_CODE_BY_ID,
-    RELIEF_STEP } from "../../../src/shared/system/sharedConstants";
+    RELIEF_STEP, UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
 import { DOOR_CODEC_TYPE, PLAYER_CODEC_TYPE } from "../helpers/composition";
 
 const COMPOSITION_KEY = ObjectMetadataKeyEnumMap.InstancedMeshComposition;
@@ -44,6 +46,12 @@ const DOOR_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Door");
 
 const CANVAS_CONFIG = CanvasObjectTypeConfig.components.spawnedByAny;
 const CANVAS_COMPOSER = CANVAS_CONFIG.instancedMeshComposer;
+
+// A canvas nobody has resized, which is what every case here but the resize one is about.
+function canvasBaseSize()
+{
+    return ObjectScaleUtil.getObjectSize(CANVAS_TYPE_INDEX, UNIT_VEC3);
+}
 
 // The Default codec's quantization grids. A value on the grid must survive a round trip exactly.
 const OFFSET_STEP = 0.0625;
@@ -89,7 +97,7 @@ function colorPart(overrides: Partial<InstancedMeshCompositionPart> = {}): Insta
 function decodeDefault(encoded: string): InstancedMeshCompositionPart[]
 {
     const parts: InstancedMeshCompositionPart[] = [];
-    DefaultCompositionCodec.decode(encoded, {}, parts);
+    DefaultCompositionCodec.decode(encoded, UNIT_VEC3, {}, parts);
     return parts;
 }
 
@@ -97,7 +105,7 @@ function decodeCanvas(encoded: string): {params: InstancedMeshCompositionParams,
 {
     const params: InstancedMeshCompositionParams = {};
     const parts: InstancedMeshCompositionPart[] = [];
-    CanvasCompositionCodec.decode(encoded, params, parts);
+    CanvasCompositionCodec.decode(encoded, canvasBaseSize(), params, parts);
     return {params, parts};
 }
 
@@ -119,7 +127,8 @@ function canvas(objectId: string, metadata: {[key: number]: string} = {}): AddOb
     for (const key of Object.keys(metadata))
         encodableMetadata[Number(key)] = new EncodableByteString(metadata[Number(key)]);
     return new AddObjectSignal(ROOM_ID, "user-1", "User One", CANVAS_TYPE_INDEX, objectId,
-        new ObjectTransform({x: 10.5, y: 2, z: 4.5}, {x: 0, y: 0, z: 1}), encodableMetadata);
+        new ObjectTransform({x: 10.5, y: 2, z: 4.5}, {x: 0, y: 0, z: 1}, {...UNIT_VEC3}),
+        encodableMetadata);
 }
 
 // Every part must carry finite, in-range moulding inputs the wood material reads.
@@ -345,8 +354,8 @@ describe("canvas mesh composition", () => {
 
     it("the same seed always yields the same canvas", () => {
         fc.assert(fc.property(fc.integer(), (seed) => {
-            const a = CanvasCompositionCodec.getRandomComposition(seed);
-            const b = CanvasCompositionCodec.getRandomComposition(seed);
+            const a = CanvasCompositionCodec.getRandomComposition(seed, canvasBaseSize());
+            const b = CanvasCompositionCodec.getRandomComposition(seed, canvasBaseSize());
             expect(encodeCanvas(b.params)).toBe(encodeCanvas(a.params));
         }), {numRuns: 50});
     });
@@ -391,13 +400,26 @@ describe("canvas mesh composition", () => {
     // ─── Shape ─────────────────────────────────────────────────────────
 
     it("the board covers the canvas's footprint, just proud of the wall it hangs on", () => {
-        const {parts} = CanvasCompositionCodec.getRandomComposition(1);
+        const {parts} = CanvasCompositionCodec.getRandomComposition(1, canvasBaseSize());
         const [board] = parts;
-        expect(board.scale.x).toBe(CANVAS_CONFIG.collider.hitboxSize.sizeX);
-        expect(board.scale.y).toBe(CANVAS_CONFIG.collider.hitboxSize.sizeY);
+        expect(board.scale.x).toBe(CANVAS_CONFIG.collider.baseHitboxSize.sizeX);
+        expect(board.scale.y).toBe(CANVAS_CONFIG.collider.baseHitboxSize.sizeY);
         expect(board.offset.x).toBe(0);
         expect(board.offset.y).toBe(0);
         expect(board.offset.z).toBeGreaterThan(0);
+    });
+
+    it("the board grows with the canvas, and the band it is framed by does not", () => {
+        const scale = CanvasObjectTypeConfig.scaling.maxScale;
+        const stretched = ObjectScaleUtil.getObjectSize(CANVAS_TYPE_INDEX, scale);
+
+        const base = CanvasCompositionCodec.getRandomComposition(1, canvasBaseSize()).parts[0];
+        const big = CanvasCompositionCodec.getRandomComposition(1, stretched).parts[0];
+
+        expect(big.scale.x).toBe(CANVAS_CONFIG.collider.baseHitboxSize.sizeX * scale.x);
+        expect(big.scale.y).toBe(CANVAS_CONFIG.collider.baseHitboxSize.sizeY * scale.y);
+        // The wood material measures its band in world units, so the frame reads the same at any size.
+        expect(big.mouldingThickness).toBe(base.mouldingThickness);
     });
 
     // ─── The appearance a canvas falls back on ─────────────────────────
@@ -450,8 +472,11 @@ describe("bitmap frame migration", () => {
     {
         const view = new Uint8Array(64 * 1024);
         const writeState = new BufferState(view);
-        new ObjectGroup(objects).encodeWithParams(writeState, {});
-        view[0] = version;
+        // Older versions are written in their own layout, not stamped onto a current one.
+        if (version >= ObjectGroup.latestFormatVersion)
+            new ObjectGroup(objects).encodeWithParams(writeState, {});
+        else
+            writeLegacyObjectGroup(writeState, objects, version);
         return ObjectGroup.decodeWithParams(new BufferState(view.subarray(0, writeState.byteIndex)), ROOM_ID) as ObjectGroup;
     }
 
@@ -522,7 +547,7 @@ describe("bitmap frame migration", () => {
 
     it("only canvases are reframed", () => {
         const door = new AddObjectSignal(ROOM_ID, "user-1", "User One", DOOR_TYPE_INDEX, "door",
-            new ObjectTransform({x: 16, y: 1.75, z: 31}, {x: 0, y: 0, z: -1}),
+            new ObjectTransform({x: 16, y: 1.75, z: 31}, {x: 0, y: 0, z: -1}, {...UNIT_VEC3}),
             {[FRAME_COORDS_KEY]: new EncodableByteString("0,0")});
         const migrated = decodeAsVersion([door], 2).objectById["door"];
         expect(migrated.metadata[FRAME_COORDS_KEY]).toBeUndefined();

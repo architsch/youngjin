@@ -5,6 +5,7 @@ import { ColliderConfig } from "../../../physics/types/colliderConfig";
 import Room from "../../../room/types/room";
 import User from "../../../user/types/user";
 import { ObjectCategory } from "../objectCategory";
+import { ObjectScalingConfig } from "../objectScalingConfig";
 import AddObjectSignal from "../addObjectSignal";
 import SetObjectMetadataSignal from "../setObjectMetadataSignal";
 import SetObjectTransformSignal from "../setObjectTransformSignal";
@@ -17,6 +18,8 @@ export default interface ObjectTypeConfig
     // The kind of thing this type is. The per-room cap belongs to the category, so every type in one
     // spends the same budget (see ObjectCategoryConfigMap).
     category: ObjectCategory;
+    // How far this type may be resized. Absent means fixed at the collider's base size.
+    scaling?: ObjectScalingConfig;
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => boolean,
     canUserRemoveObject: (user: User, room: Room, obj: AddObjectSignal) => boolean,
     canUserSetObjectTransform: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => boolean,

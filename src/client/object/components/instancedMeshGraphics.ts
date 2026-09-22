@@ -108,15 +108,16 @@ export default class InstancedMeshGraphics extends GameObjectComponent
             this.gameObject, instanceId, r, g, b, thickness, convex);
     }
 
-    // The optional source UV rect selects a sub-region (e.g. one atlas cell).
+    // cellAspect is the cell's aspect ratio as shown (see InstancedMeshBinding.drawImageAtIndex). The
+    // optional source UV rect selects a sub-region (e.g. one atlas cell).
     async drawImageAtIndex(instancedMeshId: string,
-        textureIndex: number, imageURL: string,
+        textureIndex: number, imageURL: string, cellAspect?: number,
         widthScale: number = 1, heightScale: number = 1,
         sourceU1: number = 0, sourceV1: number = 0,
         sourceU2: number = 1, sourceV2: number = 1,
         unloadTextureAfterDraw: boolean = true)
     {
-        await bindingMap[instancedMeshId].drawImageAtIndex(textureIndex, imageURL,
+        await bindingMap[instancedMeshId].drawImageAtIndex(textureIndex, imageURL, cellAspect,
             widthScale, heightScale, sourceU1, sourceV1, sourceU2, sourceV2,
             unloadTextureAfterDraw);
     }

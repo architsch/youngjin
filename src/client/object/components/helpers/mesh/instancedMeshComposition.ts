@@ -11,6 +11,9 @@ import StringUtil from "../../../../../shared/math/util/stringUtil";
 import CompositionMetadataUtil from "../../../../../shared/graphics/mesh/composition/util/compositionMetadataUtil";
 import { InstancedMeshCompositionCodecType, InstancedMeshCompositionCodecTypeEnumMap } from "../../../../../shared/graphics/mesh/composition/types/instancedMeshCompositionCodecType";
 import { InstancedMeshCompositionParams } from "../../../../../shared/graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
+import Vec3 from "../../../../../shared/math/types/vec3";
+import ObjectScaleUtil from "../../../../../shared/object/util/objectScaleUtil";
+import { UNIT_VEC3 } from "../../../../../shared/system/sharedConstants";
 
 export default class InstancedMeshComposition
 {
@@ -18,6 +21,8 @@ export default class InstancedMeshComposition
     codecVersion: number = 0;
     params: InstancedMeshCompositionParams = {};
     parts: InstancedMeshCompositionPart[] = [];
+    // The footprint the current parts were built for (see InstancedMeshCompositionCodec).
+    objectSize: Vec3 = {...UNIT_VEC3};
 
     // Bumped every time the parts are rebuilt. Anything that reads them across an await compares this
     // to tell a composition it is still working on from one that has since been replaced. Counted here,
@@ -62,6 +67,10 @@ export default class InstancedMeshComposition
             delete this.params[key];
         this.parts.length = 0;
         ++this.revision;
+        // Kept so decodeParts can rebuild at the same size, and so the composer can tell a resize from
+        // a move (see InstancedMeshComposer).
+        this.objectSize = ObjectScaleUtil.getObjectSize(
+            gameObject.params.objectTypeIndex, gameObject.params.transform.scale);
         const metadata = gameObject.params.metadata[ObjectMetadataKeyEnumMap.InstancedMeshComposition];
         if (!metadata || !this.canDecode(metadata.str))
         {
@@ -72,7 +81,8 @@ export default class InstancedMeshComposition
                 this.parts.push(parts[i]);
             return;
         }
-        InstancedMeshCompositionCodecMap[this.codecType].decode(metadata.str, this.params, this.parts);
+        InstancedMeshCompositionCodecMap[this.codecType].decode(
+            metadata.str, this.objectSize, this.params, this.parts);
     }
 
     private canDecode(str: string): boolean
@@ -104,7 +114,7 @@ export default class InstancedMeshComposition
         this.parts.length = 0;
         ++this.revision;
         InstancedMeshCompositionCodecMap[this.codecType].decode(
-            `${this.getCodecPrefix()}${encodedParams}`, this.params, this.parts);
+            `${this.getCodecPrefix()}${encodedParams}`, this.objectSize, this.params, this.parts);
     }
 
     // The prefix consists of two characters, denoting the codec's type and version, respectively.

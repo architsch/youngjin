@@ -11,6 +11,7 @@ import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 import ObjectUpdateUtil from "../../../src/shared/object/util/objectUpdateUtil";
 import WallAttachedObjectUtil from "../../../src/shared/object/util/wallAttachedObjectUtil";
+import ObjectScaleUtil from "../../../src/shared/object/util/objectScaleUtil";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import RemoveObjectSignal from "../../../src/shared/object/types/removeObjectSignal";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
@@ -19,7 +20,7 @@ import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN,
     MAX_ENCODED_VOXEL_GRID_BYTES, INITIAL_MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS,
     INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
     NUM_COLLISION_LAYERS_PER_STOREY, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
-    STOREY_FLOOR_COLLISION_LAYER } from "../../../src/shared/system/sharedConstants";
+    STOREY_FLOOR_COLLISION_LAYER, UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
 import { PLAYER_HEIGHT } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import { RoomVolumeConstructorMap } from "../../../src/shared/room/generation/maps/roomVolumeConstructorMap";
 import Room from "../../../src/shared/room/types/room";
@@ -229,9 +230,9 @@ describe("voxel scenarios", () => {
                 // A picture beside the door, clear of the door's footprint (the only thing keeping it off that wall).
                 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
                 const canHang = WallAttachedObjectUtil.canPlaceObject(room, "attachment",
-                    canvasTypeIndex,
-                    { x: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL - 3 + 0.5, y: 1, z: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW },
-                    { x: 0, y: 0, z: -1 });
+                    canvasTypeIndex, new ObjectTransform(
+                        { x: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL - 3 + 0.5, y: 1, z: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW },
+                        { x: 0, y: 0, z: -1 }, {...UNIT_VEC3}));
                 expect(canHang).toBe(true);
             },
         });
@@ -253,7 +254,8 @@ describe("voxel scenarios", () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
                 const canvas = new AddObjectSignal(room.id, user.id, user.userName,
                     ObjectTypeConfigMap.getIndexByType("Canvas"), "canvas-on-wall",
-                    new ObjectTransform({ x: WALL_COL + 0.5, y: 0.5, z: WALL_ROW }, { x: 0, y: 0, z: -1 }));
+                    new ObjectTransform({ x: WALL_COL + 0.5, y: 0.5, z: WALL_ROW }, { x: 0, y: 0, z: -1 },
+                        {...UNIT_VEC3}));
                 expect(ObjectUpdateUtil.addObject(user, room, canvas)).toBe(true);
 
                 const quadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(WALL_ROW, WALL_COL, 0);
@@ -300,7 +302,8 @@ describe("the room's boundary wall", () => {
         let pos: Vec3 = { x: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5, y: feetY + 0.5 * PLAYER_HEIGHT,
             z: startZ };
         PhysicsManager.addObject(room.id, objectId, playerTypeIndex,
-            PhysicsColliderStateUtil.getObjectColliderState(playerTypeIndex, pos, dir)!);
+            PhysicsColliderStateUtil.getObjectColliderState(playerTypeIndex,
+                new ObjectTransform(pos, dir, {...UNIT_VEC3}))!);
 
         const deltaTime = 1 / 60;
         for (let frame = 0; frame < 120; ++frame)
@@ -309,7 +312,8 @@ describe("the room's boundary wall", () => {
             const adjusted = PhysicsManager.getAdjustedVelocity(room.id, objectId, desired);
             const target: Vec3 = { x: pos.x + adjusted.x * deltaTime, y: pos.y + adjusted.y * deltaTime,
                 z: pos.z + adjusted.z * deltaTime };
-            pos = PhysicsManager.setObjectTransform(room.id, objectId, target, dir, false).transform.pos;
+            pos = PhysicsManager.setObjectTransform(room.id, objectId,
+                new ObjectTransform(target, dir, {...UNIT_VEC3}), false).transform.pos;
         }
         PhysicsManager.unload(room.id);
         return pos.z;
@@ -351,7 +355,8 @@ describe("the room's boundary wall", () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
                 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
                 const hangs = (pos: Vec3, dir: Vec3) => WallAttachedObjectUtil.canPlaceObject(
-                    room, "attachment", canvasTypeIndex, pos, dir);
+                    room, "attachment", canvasTypeIndex,
+                    new ObjectTransform(pos, dir, {...UNIT_VEC3}));
 
                 // The cell the opening was cut through is gone from the wall...
                 const holed = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, HOLE_ROW, HOLE_COL)!;
@@ -365,6 +370,66 @@ describe("the room's boundary wall", () => {
                 expect(hangs({ x: 1, y: 1.5, z: HOLE_ROW }, { x: 0, y: 0, z: 1 })).toBe(false);
                 // ...and one hung on the wall's outward face, looking out of the room at nothing.
                 expect(hangs({ x: 0, y: 1.5, z: 12.5 }, { x: -1, y: 0, z: 0 })).toBe(false);
+            },
+        });
+    });
+
+    it("asks a resized attachment for the wall its own size needs, not its type's", async () => {
+        // A canvas stretched past the block work holding it has nothing to hang from, whatever its
+        // origin cell says.
+        const WALL_ROW = 8;
+        const WALL_COL = 8;
+        await runScenario({
+            name: "a resized canvas on a patch of wall",
+            rooms: [{ ...EMPTY_HUB, voxels: [
+                // Two cells wide and two layers tall: room for a 1x1 canvas, not for a 2.5x2.5 one.
+                { row: WALL_ROW, col: WALL_COL, layer: 0 },
+                { row: WALL_ROW, col: WALL_COL, layer: 1 },
+                { row: WALL_ROW, col: WALL_COL + 1, layer: 0 },
+                { row: WALL_ROW, col: WALL_COL + 1, layer: 1 },
+            ] }],
+            users: [userAtCenter("hub")],
+            assertions: () => {
+                const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
+                const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
+                const hangsAtScale = (scale: number) => WallAttachedObjectUtil.canPlaceObject(
+                    room, "attachment", canvasTypeIndex,
+                    new ObjectTransform({ x: WALL_COL + 1, y: 0.5, z: WALL_ROW },
+                        { x: 0, y: 0, z: -1 }, {x: scale, y: scale, z: 1}));
+
+                expect(hangsAtScale(1)).toBe(true);
+                expect(hangsAtScale(2.5)).toBe(false);
+            },
+        });
+    });
+
+    it("hangs a widened attachment that the wall does reach behind", async () => {
+        const WALL_ROW = 8;
+        const WALL_COL = 8;
+        const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
+        // A patch the largest canvas just covers, hung in its middle: exactly as tall, and a cell wider.
+        const largest = ObjectScaleUtil.getMaxObjectSize(canvasTypeIndex);
+        const cols = [...Array(Math.ceil(largest.x) + 1).keys()];
+        const layers = [...Array(Math.ceil(largest.y / COLLISION_LAYER_HEIGHT)).keys()];
+        await runScenario({
+            name: "a wide patch of wall",
+            rooms: [{ ...EMPTY_HUB, voxels: cols.flatMap(col => layers.map(
+                layer => ({ row: WALL_ROW, col: WALL_COL + col, layer }))) }],
+            users: [userAtCenter("hub")],
+            assertions: () => {
+                const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
+                const canvasConfig = ObjectTypeConfigMap.getConfigByIndex(canvasTypeIndex);
+                const hangsAtScale = (scale: number) => WallAttachedObjectUtil.canPlaceObject(
+                    room, "attachment", canvasTypeIndex,
+                    new ObjectTransform({ x: WALL_COL + 0.5 * cols.length, y: 0.5 * largest.y, z: WALL_ROW },
+                        { x: 0, y: 0, z: -1 }, {x: scale, y: scale, z: 1}));
+
+                for (let scale = canvasConfig.scaling!.minScale.x;
+                    scale <= canvasConfig.scaling!.maxScale.x;
+                    scale += canvasConfig.scaling!.scaleStep.x)
+                {
+                    expect(hangsAtScale(scale), `a canvas at ${scale}x found no wall`).toBe(true);
+                }
             },
         });
     });

@@ -51,6 +51,14 @@ const CameraUtil =
         return out;
     },
 
+    // The ray from the camera through the pointer, for hit tests against shapes that aren't meshes.
+    getPointerRay: (ev: PointerEvent, out: THREE.Ray): THREE.Ray =>
+    {
+        PointerCoordUtil.getNDC(ev, ndcTemp);
+        raycaster.setFromCamera(ndcTemp, GraphicsManager.getCamera());
+        return out.copy(raycaster.ray);
+    },
+
     // Frontmost hit under the pointer. Valid until the next cast (the array is reused).
     castFromPointer: (ev: PointerEvent): THREE.Intersection | undefined =>
     {

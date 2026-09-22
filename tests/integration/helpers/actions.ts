@@ -145,6 +145,7 @@ export async function executeAction(action: Action, connectedUsers: ConnectedUse
             const transform = new ObjectTransform(
                 {x: action.x, y: action.y, z: action.z},
                 {x: action.dirX ?? 0, y: action.dirY ?? 0, z: action.dirZ ?? 1},
+                {...targetObj.transform.scale},
             );
             const signal = new SetObjectTransformSignal(roomID, targetObj.objectId, transform, false);
             ServerObjectManager.onSetObjectTransformSignalReceived(ctx.socketUserContext, signal);

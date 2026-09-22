@@ -1,3 +1,4 @@
+import Vec3 from "../../../../math/types/vec3";
 import StringUtil from "../../../../math/util/stringUtil";
 import { InstancedMeshCompositionCodecMap } from "../maps/instancedMeshCompositionCodecMap";
 import { InstancedMeshCompositionParams } from "../types/compositionParams/instancedMeshCompositionParams";
@@ -25,7 +26,7 @@ const CompositionMetadataUtil =
 
     // An appearance from a pre-encoded table index (see IndexedCompositionCodec). The codec is reached
     // through the map, not imported, because of an import cycle that only resolves when the map loads first.
-    decodeIndexed: (compositionIndex: number, codecVersion: number,
+    decodeIndexed: (compositionIndex: number, codecVersion: number, objectSize: Vec3,
         decodedParams: InstancedMeshCompositionParams,
         decodedParts: InstancedMeshCompositionPart[]): void =>
     {
@@ -33,7 +34,7 @@ const CompositionMetadataUtil =
         const codec = InstancedMeshCompositionCodecMap[codecType];
         const metadata = CompositionMetadataUtil.getCodecPrefix(codecType, codecVersion)
             + codec.encode({compositionIndex}, []);
-        codec.decode(metadata, decodedParams, decodedParts);
+        codec.decode(metadata, objectSize, decodedParams, decodedParts);
     },
 }
 

@@ -76,8 +76,7 @@ function canEditCanvas(selection: ObjectSelection): boolean
     const user = App.getUser();
     const params = selection.gameObject.params;
 
-    return !RestrictedZoneUtil.blocksObjectEdit(user, room, params.objectTypeIndex,
-        params.transform.pos, params.transform.dir);
+    return !RestrictedZoneUtil.blocksObjectEdit(user, room, params.objectTypeIndex, params.transform);
 }
 
 function canRemoveCanvas(selection: ObjectSelection): boolean

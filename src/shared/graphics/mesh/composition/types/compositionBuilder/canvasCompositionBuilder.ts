@@ -1,6 +1,5 @@
 import { BACKWARD_DIR, INSTANCED_WOOD_MATERIAL_ID } from "../../../../../system/sharedConstants";
-import { CANVAS_BOARD_RELIEF, CANVAS_FOOTPRINT_HEIGHT, CANVAS_FOOTPRINT_WIDTH,
-    CANVAS_GEOMETRY_ID } from "../compositionConstants/canvasCompositionConstants";
+import { CANVAS_BOARD_RELIEF, CANVAS_GEOMETRY_ID } from "../compositionConstants/canvasCompositionConstants";
 import InstancedMeshCompositionBuilder from "./instancedMeshCompositionBuilder";
 
 export default class CanvasCompositionBuilder extends InstancedMeshCompositionBuilder
@@ -12,6 +11,8 @@ export default class CanvasCompositionBuilder extends InstancedMeshCompositionBu
 
     // Adds the moulded board across the footprint, finished with the canvas's own wood inputs: the band
     // in the frame color, the surface inside it in the inner color (see CanvasCompositionConstants).
+    // The board spans whatever the canvas has been sized to; the band keeps its width, because the wood
+    // material measures it in world units (see the "InstancedWood" shader).
     protected addBoard()
     {
         this.addPartRelativeToBase({
@@ -20,7 +21,7 @@ export default class CanvasCompositionBuilder extends InstancedMeshCompositionBu
             // Faces local forward; the object's rotation carries the wall facing.
             dir: BACKWARD_DIR,
             offset: {x: 0, y: 0, z: CANVAS_BOARD_RELIEF},
-            scale: {x: CANVAS_FOOTPRINT_WIDTH, y: CANVAS_FOOTPRINT_HEIGHT, z: 1},
+            scale: {x: this.objectSize.x, y: this.objectSize.y, z: 1},
             color: this.params.colors.inner,
             mouldingColor: this.params.colors.frame,
             mouldingThickness: this.params.mouldingThickness,

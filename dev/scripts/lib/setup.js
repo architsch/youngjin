@@ -232,6 +232,17 @@ const canvasFrameStyles = (page) => callSandbox(page, "canvasFrameStyles");
  */
 const addObject = (page, spec) => callSandbox(page, "addObject", spec);
 
+/**
+ * Resizes a standing object, in multiples of its type's step (a canvas goes from 1 to its maxScale in
+ * halves):
+ *
+ *   resizeObject({objectId, x: 2.5, y: 1.5})
+ *
+ * Any axis left out keeps its scale. The game's placement rule applies, so an object with no room to
+ * grow into keeps the size it had; the returned scale and world size are what it ended up with.
+ */
+const resizeObject = (page, spec) => callSandbox(page, "resizeObject", spec);
+
 /** Takes one down again, by the id `addObject` gave back. */
 const removeObject = (page, objectId) => callSandbox(page, "removeObject", objectId);
 
@@ -323,6 +334,7 @@ module.exports = {
     place, face, faceDeg, vantage,
     look, view, swing, lookAt, clearLookAt,
     sandboxActive, camera, cameraPose, addBlocks, removeBlocks, clearSandbox, roomLighting,
-    texturePack, palettes, pictures, doorStyles, canvasFrameStyles, addObject, removeObject, restrictedZones, stage,
+    texturePack, palettes, pictures, doorStyles, canvasFrameStyles, addObject, resizeObject, removeObject,
+    restrictedZones, stage,
     sleep,
 };

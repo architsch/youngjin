@@ -2,6 +2,8 @@ import * as THREE from "three";
 import App from "../../app";
 import GraphicsManager from "../../graphics/graphicsManager";
 import CameraUtil from "../../graphics/util/cameraUtil";
+import PointerCoordUtil from "../../graphics/util/pointerCoordUtil";
+import WallAttachmentEditGizmos from "../../graphics/types/gizmo/wallAttachmentEditGizmos";
 import WorldSpaceSelectionUtil from "../../graphics/util/worldSpaceSelectionUtil";
 import ClientObjectManager from "../../object/clientObjectManager";
 import GameObject from "../../object/types/gameObject";
@@ -21,7 +23,7 @@ import { gameModeObservable, objectSelectionObservable,
 
 const objectWorldTemp = new THREE.Vector3();
 const cameraWorldTemp = new THREE.Vector3();
-const projectionTemp = new THREE.Vector3();
+const screenTemp = new THREE.Vector2();
 
 const metadataNameByKey: {[key: number]: string} = {};
 for (const [name, key] of Object.entries(ObjectMetadataKeyEnumMap))
@@ -30,16 +32,8 @@ for (const [name, key] of Object.entries(ObjectMetadataKeyEnumMap))
 // World point to viewport coordinates (as pointer events use); null if behind the camera.
 function toScreen(worldPosition: THREE.Vector3): {x: number, y: number} | null
 {
-    projectionTemp.copy(worldPosition).project(GraphicsManager.getCamera());
-    // Behind or exactly at the camera (possible when the orbit zooms all the way in).
-    if (projectionTemp.z > 1 || !Number.isFinite(projectionTemp.x) || !Number.isFinite(projectionTemp.y))
-        return null;
-
-    const rect = GraphicsManager.getGameCanvas().getBoundingClientRect();
-    return {
-        x: rect.left + ((projectionTemp.x + 1) / 2) * rect.width,
-        y: rect.top + ((1 - projectionTemp.y) / 2) * rect.height,
-    };
+    const screen = PointerCoordUtil.worldToClient(worldPosition, screenTemp);
+    return screen == null ? null : {x: screen.x, y: screen.y};
 }
 
 function getObjectType(gameObject: GameObject): string
@@ -66,6 +60,7 @@ function describeObject(gameObject: GameObject): Record<string, unknown>
         objectId: gameObject.params.objectId,
         objectType: getObjectType(gameObject),
         world: {x: objectWorldTemp.x, y: objectWorldTemp.y, z: objectWorldTemp.z},
+        scale: {...gameObject.params.transform.scale},
         screen,
         // Whether the pointer could actually get to that pixel, which the cast alone cannot say.
         ...(screen == null ? {overCanvas: false, coveredBy: "(behind the camera)"}
@@ -238,6 +233,10 @@ const AutomationBridgeUtil =
                     },
                 };
             },
+
+            // Where the selected wall attachment can be dragged from: its middle moves it, a corner resizes
+            // it (when canResize). Null when the selection is nothing this user may drag.
+            selectionGizmo: () => WallAttachmentEditGizmos.getGrabPoints(),
 
             // Camera position, selection reach, and canvas rect.
             camera: () =>

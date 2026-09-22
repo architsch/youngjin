@@ -34,11 +34,11 @@ import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN,
     LABEL_COLOR_PALETTE_NAME, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL,
     INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, NUM_VOXEL_COLS,
     NUM_VOXEL_ROWS, OBJECT_LABEL_MAX_LENGTH, SANDBOX_SINGLE_PLAYER_MODE,
-    TUTORIAL_SINGLE_PLAYER_MODE } from "../../../src/shared/system/sharedConstants";
+    TUTORIAL_SINGLE_PLAYER_MODE, UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
 
 const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 const DOOR_FOOTPRINT_HEIGHT =
-    DoorObjectTypeConfig.components.spawnedByAny.collider.hitboxSize.sizeY;
+    DoorObjectTypeConfig.components.spawnedByAny.collider.baseHitboxSize.sizeY;
 
 function makeUser(id: string, userType: number): User
 {
@@ -59,7 +59,7 @@ function makeDoorSignal(room: Room, sourceUser: User, objectId: string = "new-do
                 y: 0.5 * DOOR_FOOTPRINT_HEIGHT,
                 z: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
             },
-            {x: 0, y: 0, z: -1}));
+            {x: 0, y: 0, z: -1}, {...UNIT_VEC3}));
 }
 
 function getEntranceDoor(room: Room): AddObjectSignal

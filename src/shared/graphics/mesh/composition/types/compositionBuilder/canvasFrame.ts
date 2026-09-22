@@ -14,4 +14,4 @@ class CanvasFrame_0 extends CanvasCompositionBuilder
     }
 }
 InstancedMeshCompositionBuilderMap["CanvasFrame_0"] =
-    (params, parts) => new CanvasFrame_0(params, parts);
+    (params, parts, objectSize) => new CanvasFrame_0(params, parts, objectSize);

@@ -1,7 +1,5 @@
 import ImageMapUtil from "../../../graphics/image/util/imageMapUtil";
 import { CanvasCompositionCodec } from "../../../graphics/mesh/composition/types/compositionCodec/canvasCompositionCodec";
-import { CANVAS_FOOTPRINT_HEIGHT,
-    CANVAS_FOOTPRINT_WIDTH } from "../../../graphics/mesh/composition/types/compositionConstants/canvasCompositionConstants";
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../graphics/mesh/composition/types/instancedMeshCompositionCodecType";
 import StringUtil from "../../../math/util/stringUtil";
 import Room from "../../../room/types/room";
@@ -10,6 +8,7 @@ import AddObjectSignal from "../../types/addObjectSignal";
 import { ObjectCategoryEnumMap } from "../../types/objectCategory";
 import { ObjectMetadataKeyEnumMap } from "../../types/objectMetadataKey";
 import ObjectTypeConfig from "./objectTypeConfig";
+import ObjectScaleUtil from "../../util/objectScaleUtil";
 import SetObjectMetadataSignal from "../../types/setObjectMetadataSignal";
 import SetObjectTransformSignal from "../../types/setObjectTransformSignal";
 import { WALL_ATTACHMENT_HITBOX_INSET } from "../../../system/sharedConstants";
@@ -32,6 +31,12 @@ const CanvasObjectTypeConfig =
     persistent: true,
     autoUnload: true,
     category: ObjectCategoryEnumMap.Canvas,
+    // Resized in half-voxel steps along the wall. Depth is the wall gap and never changes.
+    scaling: {
+        scaleStep: {x: 0.5, y: 0.5, z: 0},
+        minScale: {x: 1, y: 1, z: 1},
+        maxScale: {x: 3.5, y: 3.5, z: 1},
+    },
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => {
         // Block spoofing attempts
         if (obj.sourceUserID != user.id)
@@ -64,9 +69,9 @@ const CanvasObjectTypeConfig =
         spawnedByAny: {
             collider: {
                 colliderType: "wallAttachment",
-                hitboxSize: {
-                    sizeX: CANVAS_FOOTPRINT_WIDTH,
-                    sizeY: CANVAS_FOOTPRINT_HEIGHT,
+                baseHitboxSize: {
+                    sizeX: 1,
+                    sizeY: 1,
                     sizeZ: 0.5 * WALL_ATTACHMENT_HITBOX_INSET
                 },
                 applyHardCollisionToOthers: false,
@@ -81,7 +86,8 @@ const CanvasObjectTypeConfig =
                 generateDefaultParts: (obj: AddObjectSignal) => {
                     // Seeded from room and canvas id, so every client and session sees the same frame.
                     const hashCode = StringUtil.getHashCode(`${obj.roomID}/${obj.objectId}`);
-                    return CanvasCompositionCodec.getRandomComposition(hashCode);
+                    return CanvasCompositionCodec.getRandomComposition(hashCode,
+                        ObjectScaleUtil.getObjectSize(obj.objectTypeIndex, obj.transform.scale));
                 },
             },
             orbitOccluder: {}, // A picture hanging on a wall stands in the orbit camera's way like the wall itself does.

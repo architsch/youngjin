@@ -33,9 +33,7 @@ export default class PeriodicTransformEmitter extends GameObjectComponent
             throw new Error("Only the user's own object is allowed to have the PeriodicTransformEmitter component.");
 
         const colliderState = PhysicsColliderStateUtil.getObjectColliderState(
-            this.gameObject.params.objectTypeIndex,
-            this.gameObject.params.transform.pos,
-            this.gameObject.params.transform.dir);
+            this.gameObject.params.objectTypeIndex, this.gameObject.params.transform);
         this.ignorePhysics = !colliderState || colliderState.colliderConfig.colliderType != "rigidbody";
 
         this.lastSyncTime = performance.now();
@@ -74,7 +72,8 @@ export default class PeriodicTransformEmitter extends GameObjectComponent
                     this.gameObject.params.objectId,
                     new ObjectTransform(
                         {x: this.lastSyncedPosition.x, y: this.lastSyncedPosition.y, z: this.lastSyncedPosition.z},
-                        {x: vec3Temp.x, y: vec3Temp.y, z: vec3Temp.z}
+                        {x: vec3Temp.x, y: vec3Temp.y, z: vec3Temp.z},
+                        this.gameObject.params.transform.scale
                     ),
                     this.ignorePhysics
                 );

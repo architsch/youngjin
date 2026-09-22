@@ -5,6 +5,7 @@ import AddObjectSignal from "../addObjectSignal";
 import { ObjectCategoryEnumMap } from "../objectCategory";
 import { ObjectMetadataKeyEnumMap } from "../objectMetadataKey";
 import ObjectTypeConfig from "./objectTypeConfig";
+import ObjectScaleUtil from "../../util/objectScaleUtil";
 import SetObjectMetadataSignal from "../setObjectMetadataSignal";
 import SetObjectTransformSignal from "../setObjectTransformSignal";
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../graphics/mesh/composition/types/instancedMeshCompositionCodecType";
@@ -59,12 +60,13 @@ const PlayerObjectTypeConfig =
                 codecVersion: 0,
                 generateDefaultParts: (obj: AddObjectSignal) => {
                     const hashCode = StringUtil.getHashCode(obj.sourceUserID);
-                    return PlayerCompositionCodec.getRandomComposition(hashCode);
+                    return PlayerCompositionCodec.getRandomComposition(hashCode,
+                        ObjectScaleUtil.getObjectSize(obj.objectTypeIndex, obj.transform.scale));
                 },
             },
             collider: {
                 colliderType: "rigidbody",
-                hitboxSize: {sizeX: 2 * PLAYER_RADIUS_XZ, sizeY: PLAYER_HEIGHT, sizeZ: 2 * PLAYER_RADIUS_XZ},
+                baseHitboxSize: {sizeX: 2 * PLAYER_RADIUS_XZ, sizeY: PLAYER_HEIGHT, sizeZ: 2 * PLAYER_RADIUS_XZ},
                 applyHardCollisionToOthers: false,
                 outgoingSoftCollisionForceMultiplier: 1,
                 outgoingSoftCollisionForceLimit: {x: 1, y: 0, z: 1},

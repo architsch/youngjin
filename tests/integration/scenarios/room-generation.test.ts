@@ -26,8 +26,9 @@ import {
     HUB_ROOM_ID_KEYWORD,
     INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
     NUM_COLLISION_LAYERS_PER_STOREY, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
-    STOREY_FLOOR_COLLISION_LAYER,
+    STOREY_FLOOR_COLLISION_LAYER, UNIT_VEC3,
 } from "../../../src/shared/system/sharedConstants";
+import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 
 // Several unrelated seeds, so a property doesn't hold by one layout's luck.
 const SEEDS = [1, 2, 3, 91, 4242, 104729, 999983, 1234567];
@@ -253,7 +254,8 @@ function walkRouteWithPhysics(room: Room, route: {row: number, col: number}[]): 
 
     let pos: Vec3 = {x: route[0].col + 0.5, y: 0.5 * PLAYER_HEIGHT, z: route[0].row + 0.5};
     PhysicsManager.addObject(room.id, objectId, playerTypeIndex,
-        PhysicsColliderStateUtil.getObjectColliderState(playerTypeIndex, pos, dir)!);
+        PhysicsColliderStateUtil.getObjectColliderState(playerTypeIndex,
+            new ObjectTransform(pos, dir, {...UNIT_VEC3}))!);
 
     const deltaTime = 1 / 60;
     const walkSpeed = 3;
@@ -282,7 +284,8 @@ function walkRouteWithPhysics(room: Room, route: {row: number, col: number}[]): 
                 y: pos.y + adjusted.y * deltaTime,
                 z: pos.z + adjusted.z * deltaTime,
             };
-            pos = PhysicsManager.setObjectTransform(room.id, objectId, target, dir, false).transform.pos;
+            pos = PhysicsManager.setObjectTransform(room.id, objectId,
+                new ObjectTransform(target, dir, {...UNIT_VEC3}), false).transform.pos;
         }
     }
     PhysicsManager.unload(room.id);

@@ -10,4 +10,5 @@ The physics engine is shared, so the client and the server simulate movement the
 - **Step-up**: on a horizontal hit, a short enough obstacle with free space above it is climbed automatically.
 - **Gravity**: a constant downward velocity applies whenever the object is not resting on something.
 - **Orientation**: turning to face another horizontal axis swaps the box's horizontal dimensions.
+- **Size**: a collider's box is its type's `baseHitboxSize` at the object's own scale, resolved through `ObjectScaleUtil` before the wall-attachment inset and the orientation swap, so the inset stays an absolute distance at any size.
 - **Spatial acceleration**: the voxel grid serves as a spatial hash. Only the global colliders and the voxels under a box's footprint are tested.

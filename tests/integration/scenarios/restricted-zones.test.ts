@@ -32,7 +32,7 @@ import RemoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/remov
 import SetVoxelQuadTextureSignal from "../../../src/shared/voxel/types/update/setVoxelQuadTextureSignal";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import { COLLISION_LAYER_MIN, MAX_RESTRICTED_ZONES,
-    NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../../src/shared/system/sharedConstants";
+    NUM_VOXEL_COLS, NUM_VOXEL_ROWS, UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
 
 // Clear of the boundary walls and the door's wall.
 const ZONE = new RestrictedZone(8, 15, 8, 15);
@@ -90,7 +90,7 @@ function makeCanvasSignal(room: Room, user: User, row: number, col: number,
     objectId: string = "a-canvas"): AddObjectSignal
 {
     return new AddObjectSignal(room.id, user.id, user.userName, canvasTypeIndex, objectId,
-        new ObjectTransform({x: col + 0.5, y: 2, z: row + 0.5}, {x: 0, y: 0, z: -1}));
+        new ObjectTransform({x: col + 0.5, y: 2, z: row + 0.5}, {x: 0, y: 0, z: -1}, {...UNIT_VEC3}));
 }
 
 describe("restricted zones", () => {
@@ -261,7 +261,7 @@ describe("restricted zones", () => {
                 const outside = makeCanvasSignal(room, MEMBER, OUTSIDE.row, OUTSIDE.col);
                 const blocks = (user: User, obj: AddObjectSignal) =>
                     RestrictedZoneUtil.blocksObjectEdit(user, room,
-                        obj.objectTypeIndex, obj.transform.pos, obj.transform.dir);
+                        obj.objectTypeIndex, obj.transform);
 
                 // A room with no zones in it holds nothing against anybody.
                 expect(blocks(MEMBER, inside)).toBe(false);
@@ -298,7 +298,7 @@ describe("restricted zones", () => {
                 expect(ObjectUpdateUtil.canSetObjectTransform(MEMBER, room,
                     new SetObjectTransformSignal(room.id, canvas.objectId,
                         new ObjectTransform({x: OUTSIDE.col + 0.5, y: 2, z: OUTSIDE.row + 0.5},
-                            {x: 0, y: 0, z: -1}), false))).toBe(false);
+                            {x: 0, y: 0, z: -1}, {...UNIT_VEC3}), false))).toBe(false);
             },
         });
     });
@@ -345,9 +345,9 @@ describe("restricted zones", () => {
                 drawZone(room, ZONE);
 
                 // Zones restrict building, not standing; players are never checked.
-                expect(RestrictedZoneUtil.blocksObjectEdit(MEMBER, room,
-                    playerTypeIndex, {x: INSIDE.col + 0.5, y: 1, z: INSIDE.row + 0.5},
-                    {x: 0, y: 0, z: -1})).toBe(false);
+                expect(RestrictedZoneUtil.blocksObjectEdit(MEMBER, room, playerTypeIndex,
+                    new ObjectTransform({x: INSIDE.col + 0.5, y: 1, z: INSIDE.row + 0.5},
+                        {x: 0, y: 0, z: -1}, {...UNIT_VEC3}))).toBe(false);
             },
         });
     });

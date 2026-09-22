@@ -340,7 +340,7 @@ function objectIsProtected(gameObject: GameObject | undefined): boolean
         return false;
 
     const colliderState = PhysicsColliderStateUtil.getObjectColliderState(
-        gameObject.params.objectTypeIndex, gameObject.position, gameObject.direction);
+        gameObject.params.objectTypeIndex, gameObject.params.transform);
     if (colliderState == undefined) // Nothing solid to speak of, so nothing to protect.
         return false;
     return Geometry3DUtil.AABBsOverlap(protectedRegion, colliderState.hitbox);

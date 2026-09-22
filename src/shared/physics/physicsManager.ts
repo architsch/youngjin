@@ -23,7 +23,7 @@ const PhysicsManager =
         for (const obj of objects)
         {
             const colliderState = PhysicsColliderStateUtil.getObjectColliderState(
-                obj.objectTypeIndex, obj.transform.pos, obj.transform.dir);
+                obj.objectTypeIndex, obj.transform);
             if (colliderState)
                 PhysicsManager.addObject(roomRuntimeMemory.room.id, obj.objectId, obj.objectTypeIndex, colliderState);
         }
@@ -74,11 +74,11 @@ const PhysicsManager =
         object.onDestroy();
     },
     setObjectTransform: (roomID: string, objectId: string,
-        targetPos: Vec3, targetDir: Vec3, ignorePhysics: boolean): ObjectTransformUpdateResult =>
+        target: ObjectTransform, ignorePhysics: boolean): ObjectTransformUpdateResult =>
     {
         const physicsRoom = physicsRooms[roomID];
         const object = physicsRoom.objectById[objectId];
-        const newColliderState = PhysicsColliderStateUtil.getObjectColliderState(object.objectTypeIndex, targetPos, targetDir);
+        const newColliderState = PhysicsColliderStateUtil.getObjectColliderState(object.objectTypeIndex, target);
         if (!newColliderState)
             throw new Error(`ColliderState couldn't be computed (objectId = ${objectId}, objectTypeIndex = ${object.objectTypeIndex})`);
 
@@ -88,11 +88,14 @@ const PhysicsManager =
         {
             object.colliderState = newColliderState;
             object.addToIntersectingVoxels();
-            return { transform: new ObjectTransform(targetPos, targetDir), desyncDetected: false };
+            return { transform: target, desyncDetected: false };
         }
         else
         {
-            const result = PhysicsCollisionUtil.applyHardCollision(physicsRoom, object, targetPos, targetDir);
+            const result = PhysicsCollisionUtil.applyHardCollision(physicsRoom, object, target);
+            // The sweep resolves where the object ends up, but its size is the target's: a resize that
+            // happens mid-motion must reach the live state, or the box stays at its old extents.
+            object.colliderState.hitbox.halfSize = newColliderState.hitbox.halfSize;
             object.colliderState.hitbox.center.x = result.transform.pos.x;
             object.colliderState.hitbox.center.y = result.transform.pos.y;
             object.colliderState.hitbox.center.z = result.transform.pos.z;

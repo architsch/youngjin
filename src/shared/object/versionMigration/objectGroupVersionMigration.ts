@@ -10,12 +10,17 @@ import CompositionMetadataUtil from "../../graphics/mesh/composition/util/compos
 import CanvasCompositionParams from "../../graphics/mesh/composition/types/compositionParams/canvasCompositionParams";
 import ColorUtil from "../../math/util/colorUtil";
 import { COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL,
-    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW } from "../../system/sharedConstants";
+    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, UNIT_VEC3 } from "../../system/sharedConstants";
+import BufferState from "../../networking/types/bufferState";
 
 // Grid version where rooms became two storeys. Objects share a blob with the grid, and the object
 // format's version byte didn't change then (only the Y range did; see ObjectTransform), so the grid
 // version dates the objects.
 const FIRST_TWO_STOREY_VOXEL_GRID_VERSION = 2;
+
+// Object format version where a transform gained its scale. Earlier ones stop after the facing, so
+// their bytes have to be read as the shorter record they are.
+const FIRST_SCALED_TRANSFORM_VERSION = 4;
 
 // Grid version where the entrance doorway was filled and the entrance door became a stored object.
 // Older grids mean the room never stored its door.
@@ -107,10 +112,24 @@ const converters: ((objectGroup: ObjectGroup, roomID: string, sourceVoxelGridVer
                     LEGACY_CANVAS_FRAMES[cellIndex]));
         }
     },
+    () => { // version 3 -> 4
+        // Transforms gained a scale; objects stored without one were all drawn at their type's base
+        // size, and decodeTransform gives them that as it reads them.
+    },
 ];
 
 const ObjectGroupVersionMigration =
 {
+    // Reads one object's transform out of a body of the given version. A transform has to come out
+    // whole, so the scale an older record doesn't carry is filled in here rather than by a converter.
+    decodeTransform: (bufferState: BufferState, formatVersion: number): ObjectTransform =>
+    {
+        if (formatVersion >= FIRST_SCALED_TRANSFORM_VERSION)
+            return ObjectTransform.decode(bufferState) as ObjectTransform;
+
+        const {pos, dir} = ObjectTransform.decodePosAndDir(bufferState);
+        return new ObjectTransform(pos, dir, {...UNIT_VEC3});
+    },
     // Converts a group read at an older version forward, one version at a time. The grid decoded from
     // the same blob dates the objects (see FIRST_TWO_STOREY_VOXEL_GRID_VERSION).
     convert: (objectGroup: ObjectGroup, version: number, latestVersion: number, roomID: string,

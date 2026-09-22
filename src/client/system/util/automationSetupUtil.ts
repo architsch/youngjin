@@ -28,7 +28,8 @@ import { PLAYER_HEIGHT } from "../../../shared/object/types/objectTypeConfig/pla
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN,
     FOG_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME, MAX_RESTRICTED_ZONES, MAX_ROOM_Y,
     NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS,
-    SANDBOX_SINGLE_PLAYER_MODE } from "../../../shared/system/sharedConstants";
+    SANDBOX_SINGLE_PLAYER_MODE, UNIT_VEC3 } from "../../../shared/system/sharedConstants";
+import ObjectScaleUtil from "../../../shared/object/util/objectScaleUtil";
 import RoomLightingUtil from "../../graphics/light/util/roomLightingUtil";
 import RoomPrefs from "../../../shared/room/types/roomPrefs";
 import RoomPrefsUtil, { MAX_ROOM_PREFS_STEP } from "../../../shared/room/util/roomPrefsUtil";
@@ -53,7 +54,7 @@ import { cameraModeObservable, orbitCameraAnglesObservable, orbitCameraTargetOve
 
 // Player height in collision layers (headroom required to stand).
 const DOOR_FOOTPRINT_HEIGHT =
-    DoorObjectTypeConfig.components.spawnedByAny.collider.hitboxSize.sizeY;
+    DoorObjectTypeConfig.components.spawnedByAny.collider.baseHitboxSize.sizeY;
 const PLAYER_LAYER_COUNT = Math.ceil(PLAYER_HEIGHT / COLLISION_LAYER_HEIGHT);
 
 // Default cap on reported spots (nearest first).
@@ -164,7 +165,8 @@ function placePlayer(position: Vec3, facingX?: number, facingZ?: number)
     const player = requireMyPlayer();
     const dir = (facingX == undefined || facingZ == undefined)
         ? dirOfPlayer(player) : dirFromFacing(facingX, facingZ);
-    ClientObjectManager.setObjectTransform(player.params.objectId, position, dir, true, false);
+    ClientObjectManager.setObjectTransform(player.params.objectId,
+        new ObjectTransform(position, dir, player.params.transform.scale), true, false);
     return describePose();
 }
 
@@ -636,10 +638,11 @@ const AutomationSetupUtil =
                     const user = App.getUser();
                     const objectId = ObjectIdUtil.generateRandomObjectId();
                     const pos = {x: place.x, y, z: place.z};
+                    const transform = new ObjectTransform(pos, place.dir, {...UNIT_VEC3});
 
                     // The stricter photo check first, since it gives the more specific error.
                     const colliderState = PhysicsColliderStateUtil.getObjectColliderState(
-                        objectTypeIndex, pos, place.dir);
+                        objectTypeIndex, transform);
                     const blockers = colliderState == undefined ? []
                         : blockersInFrontOf(room.voxelGrid.voxels, colliderState, place.dir);
                     if (blockers.length > 0)
@@ -653,7 +656,7 @@ const AutomationSetupUtil =
 
                     // The game's placement rule still applies (catches mid-air and overlapping attachments).
                     if (!WallAttachedObjectUtil.canPlaceObject(room, objectId, objectTypeIndex,
-                        pos, place.dir))
+                        transform))
                     {
                         throw new Error(`No wall will hold a ${spec.type} on the "${face}" face of ` +
                             `cell [row ${spec.row}, col ${spec.col}] at y ${y}. Either nothing is ` +
@@ -662,14 +665,32 @@ const AutomationSetupUtil =
                     }
 
                     const signal = new AddObjectSignal(room.id, user.id, user.userName,
-                        objectTypeIndex, objectId,
-                        new ObjectTransform(pos, place.dir), metadataFrom(spec.metadata));
+                        objectTypeIndex, objectId, transform, metadataFrom(spec.metadata));
 
                     const gameObject = ObjectFactory.createServerSideObject(signal);
                     if (!await ClientObjectManager.addObject(gameObject, false))
                         throw new Error(`The room would not take a ${spec.type} there.`);
 
                     return {objectId, type: spec.type, x: place.x, y, z: place.z, dir: place.dir};
+                },
+
+                // Resizes an object in place, in multiples of its type's step. The game's own rule is
+                // applied, so an object with no room to grow into keeps the size it had.
+                resizeObject: (spec: {objectId: string, x?: number, y?: number, z?: number}) =>
+                {
+                    const room = requireSandboxRoom("Resizing an object");
+                    const obj = room.objectById[spec.objectId];
+                    if (obj == undefined)
+                        throw new Error(`No object "${spec.objectId}" is standing in the room.`);
+
+                    const scale = obj.transform.scale;
+                    const transform = new ObjectTransform({...obj.transform.pos}, {...obj.transform.dir},
+                        {x: spec.x ?? scale.x, y: spec.y ?? scale.y, z: spec.z ?? scale.z});
+                    ClientObjectManager.setObjectTransform(spec.objectId, transform, true);
+
+                    const applied = room.objectById[spec.objectId].transform.scale;
+                    return {objectId: spec.objectId, scale: {...applied},
+                        size: ObjectScaleUtil.getObjectSize(obj.objectTypeIndex, applied)};
                 },
 
                 // Removes an object by id. Checked here because the removal skips its own validation and

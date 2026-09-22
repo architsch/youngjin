@@ -10,7 +10,7 @@ import DoorCompositionConstants from "../../../../graphics/mesh/composition/type
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../../graphics/mesh/composition/types/instancedMeshCompositionCodecType";
 import { DoorTypeEnumMap } from "../../../../object/types/doorType";
 import { ObjectMetadataKeyEnumMap } from "../../../../object/types/objectMetadataKey";
-import { HUB_ROOM_ID_KEYWORD, LABEL_COLOR_PALETTE_NAME } from "../../../../system/sharedConstants";
+import { HUB_ROOM_ID_KEYWORD, LABEL_COLOR_PALETTE_NAME, UNIT_VEC3 } from "../../../../system/sharedConstants";
 
 // The tutorial's fixtures have explicit appearances (not derived defaults), so the first thing players
 // see is always the same.
@@ -54,7 +54,7 @@ export default class TutorialRoomBuilder extends RoomBuilder
         // Add the NPC.
         room.objectGroup.addObject(new AddObjectSignal("", "@npc", "Receptionist",
             ObjectTypeConfigMap.getIndexByType("Player"), "npc",
-            new ObjectTransform(params.hotspots.npc, {x: 1, y: 0, z: 0}),
+            new ObjectTransform(params.hotspots.npc, {x: 1, y: 0, z: 0}, {...UNIT_VEC3}),
             {
                 [ObjectMetadataKeyEnumMap.InstancedMeshComposition]:
                     new EncodableByteString(RECEPTIONIST_APPEARANCE),
@@ -63,7 +63,7 @@ export default class TutorialRoomBuilder extends RoomBuilder
         // The exit door points at the hubs, so leaving the tutorial goes to a balanced hub.
         room.objectGroup.addObject(new AddObjectSignal("", "", "",
             ObjectTypeConfigMap.getIndexByType("Door"), "door",
-            new ObjectTransform(params.hotspots.door, {x: 0, y: 0, z: 1}),
+            new ObjectTransform(params.hotspots.door, {x: 0, y: 0, z: 1}, {...UNIT_VEC3}),
             {
                 [ObjectMetadataKeyEnumMap.InstancedMeshComposition]:
                     new EncodableByteString(TUTORIAL_DOOR_APPEARANCE),

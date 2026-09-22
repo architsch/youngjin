@@ -77,7 +77,7 @@ import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
 import { PLAYER_HEIGHT } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, HUB_ROOM_ID_KEYWORD,
     NUM_VOXEL_COLS, NUM_VOXEL_ROWS, STOREY_FLOOR_COLLISION_LAYER,
-    TUTORIAL_SINGLE_PLAYER_MODE } from "../../../src/shared/system/sharedConstants";
+    TUTORIAL_SINGLE_PLAYER_MODE, UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
@@ -149,7 +149,8 @@ describe("single-player scenarios", () => {
                 // A real dividing-wall quad, so a misbehaving handler would have something to touch.
                 const wallQuad = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(
                     m.volumes.wall1.rowMin, m.volumes.wall1.colMin, COLLISION_LAYER_MIN);
-                const transform = new ObjectTransform({ x: 1, y: 0, z: 1 }, { x: 0, y: 0, z: 1 });
+                const transform = new ObjectTransform({ x: 1, y: 0, z: 1 }, { x: 0, y: 0, z: 1 },
+                    {...UNIT_VEC3});
 
                 // A single-player user is never bound to a server-side room, and none is loaded.
                 expect(ServerRoomManager.currentRoomIDByUserID[userID]).toBeUndefined();
