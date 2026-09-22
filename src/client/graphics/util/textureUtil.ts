@@ -67,12 +67,30 @@ const TextureUtil =
     drawCanvasOnRenderTarget: (canvas: HTMLCanvasElement, renderTarget: THREE.WebGLRenderTarget,
         targetU1: number, targetV1: number, targetU2: number, targetV2: number): void =>
     {
-        const texture = TextureFactory.createSourceCanvasTexture(canvas);
-        drawSourceTexture(texture, renderTarget, targetU1, targetV1, targetU2, targetV2, 0, 0, 1, 1);
-
-        // The pixels are in the render target now; nothing reads this copy of them again.
-        texture.dispose();
+        drawSourceTexture(getCanvasTexture(canvas), renderTarget,
+            targetU1, targetV1, targetU2, targetV2, 0, 0, 1, 1);
     },
+}
+
+// Kept while callers pass the same canvas (e.g. LabelText's shared one), so a redraw re-uploads into
+// one GPU texture instead of allocating a new one. That storage is fixed-size, hence the size check.
+let canvasTexture: THREE.Texture | undefined;
+let canvasTextureWidth = 0;
+let canvasTextureHeight = 0;
+
+function getCanvasTexture(canvas: HTMLCanvasElement): THREE.Texture
+{
+    if (canvasTexture != undefined && canvasTexture.image === canvas
+        && canvasTextureWidth === canvas.width && canvasTextureHeight === canvas.height)
+    {
+        canvasTexture.needsUpdate = true; // The canvas has been redrawn since the last upload.
+        return canvasTexture;
+    }
+    canvasTexture?.dispose();
+    canvasTexture = TextureFactory.createSourceCanvasTexture(canvas);
+    canvasTextureWidth = canvas.width;
+    canvasTextureHeight = canvas.height;
+    return canvasTexture;
 }
 
 // 1x1 dark gray placeholder texture for when no image is available
@@ -85,12 +103,14 @@ const transparentTexture = new THREE.DataTexture(transparentData, 1, 1, THREE.RG
 transparentTexture.needsUpdate = true;
 
 // Replaces the target region instead of blending, so transparent canvases don't mix with old contents.
-const material = new THREE.RawShaderMaterial({
-    blending: THREE.NoBlending,
-    uniforms: {
-        sourceTexture: { value: placeholderTexture },
-    },
-    vertexShader: `
+function createCopyMaterial(fragColorGLSL: string): THREE.RawShaderMaterial
+{
+    return new THREE.RawShaderMaterial({
+        blending: THREE.NoBlending,
+        uniforms: {
+            sourceTexture: { value: placeholderTexture },
+        },
+        vertexShader: `
 attribute vec3 position;
 attribute vec2 uv;
 
@@ -101,7 +121,7 @@ void main() {
     gl_Position = vec4(position, 1.0);
 }
 `,
-    fragmentShader: `
+        fragmentShader: `
 precision highp float;
 
 uniform sampler2D sourceTexture;
@@ -109,10 +129,15 @@ uniform sampler2D sourceTexture;
 varying vec2 vUv;
 
 void main() {
-    gl_FragColor = texture2D(sourceTexture, vUv);
+    gl_FragColor = ${fragColorGLSL};
 }
 `,
-});
+    });
+}
+
+const colorCopyMaterial = createCopyMaterial("texture2D(sourceTexture, vUv)");
+// A single-channel target keeps only the source's coverage.
+const coverageCopyMaterial = createCopyMaterial("vec4(texture2D(sourceTexture, vUv).a)");
 
 const geometry = new THREE.BufferGeometry();
 
@@ -138,7 +163,7 @@ const uvs = new Float32Array([
 const uvAttrib = new THREE.BufferAttribute(uvs, 2, false);
 geometry.setAttribute("uv", uvAttrib);
 
-const mesh = new THREE.Mesh(geometry, material);
+const mesh = new THREE.Mesh(geometry, colorCopyMaterial);
 mesh.position.set(0, 0, 0);
 const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
 camera.position.set(0, 0, 1);
@@ -147,6 +172,9 @@ function drawSourceTexture(texture: THREE.Texture, renderTarget: THREE.WebGLRend
     targetU1: number, targetV1: number, targetU2: number, targetV2: number,
     sourceU1: number, sourceV1: number, sourceU2: number, sourceV2: number)
 {
+    const material = (renderTarget.texture.format === THREE.RedFormat)
+        ? coverageCopyMaterial : colorCopyMaterial;
+    mesh.material = material;
     // Don't set needsUpdate: new textures are already flagged, and re-flagging re-uploads (costly for
     // atlases drawn from repeatedly).
     material.uniforms.sourceTexture.value = texture;

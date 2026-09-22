@@ -36,9 +36,9 @@ export default class LabelText extends GameObjectComponent
     private instanceId: number = -1;
 
     // Skip redraws when metadata changes don't affect the text or color (composition changes are
-    // far more frequent).
+    // far more frequent). A color change only recolors the instance.
     private drawnText: string = "";
-    private drawnColorHex: string = "";
+    private appliedColorHex: string = "";
 
     // Skips per-frame re-baking while stationary (as InstancedMeshComposer does).
     private bakedWorldMatrix: THREE.Matrix4 = new THREE.Matrix4();
@@ -60,6 +60,8 @@ export default class LabelText extends GameObjectComponent
                 "dynamicEmpty", -1, -1,
                 true /* see-through around the lettering */,
                 "linear" /* a glyph's edges are its legibility (see TextureFilterType) */);
+            // Every label is one ink, so the atlas holds only the lettering's coverage.
+            LabelText.materialParams.coverageOnly = true;
             LabelText.instancedMeshId = MeshDataUtil.getInstancedMeshId(
                 LABEL_GEOMETRY_ID, LabelText.materialParams.getMaterialId());
         }
@@ -111,25 +113,31 @@ export default class LabelText extends GameObjectComponent
                 return;
             this.instanceId = rentedInstanceId;
             this.drawnText = "";
-            this.drawnColorHex = "";
+            this.appliedColorHex = "";
             this.instancedMeshGraphics.updateInstanceTextureUV(LabelText.instancedMeshId,
                 this.instanceId, this.instanceId);
             this.updateInstanceTransform();
         }
 
-        if (this.drawnText === text && this.drawnColorHex === colorHex)
-            return;
-        this.instancedMeshGraphics.drawCanvasAtIndex(LabelText.instancedMeshId, this.instanceId,
-            this.renderTextToCanvas(text, colorHex));
-        this.drawnText = text;
-        this.drawnColorHex = colorHex;
+        if (this.appliedColorHex !== colorHex)
+        {
+            const rgb = ColorUtil.hexToRGB(colorHex);
+            this.instancedMeshGraphics.updateInstanceColor(LabelText.instancedMeshId, this.instanceId,
+                rgb.x, rgb.y, rgb.z);
+            this.appliedColorHex = colorHex;
+        }
+        if (this.drawnText !== text)
+        {
+            this.instancedMeshGraphics.drawCanvasAtIndex(LabelText.instancedMeshId, this.instanceId,
+                this.renderTextToCanvas(text));
+            this.drawnText = text;
+        }
     }
 
     // For when the cell's contents were lost, not replaced (context restore, below).
     forgetWhatWasDrawn(): void
     {
         this.drawnText = "";
-        this.drawnColorHex = "";
     }
 
     // The object's chosen ink color, falling back to its type default.
@@ -185,16 +193,14 @@ export default class LabelText extends GameObjectComponent
 
     // Renders the text onto a transparent canvas. Laid out in the patch's world units and scaled to
     // the cell at the end, so letters aren't stretched when the shapes differ.
-    private renderTextToCanvas(text: string, fontColorHex: string): HTMLCanvasElement
+    private renderTextToCanvas(text: string): HTMLCanvasElement
     {
         const {size} = this.componentConfig;
 
-        const canvas = document.createElement("canvas");
-        canvas.width = LABEL_ATLAS_CELL_WIDTH;
-        canvas.height = LABEL_ATLAS_CELL_HEIGHT;
-        const ctx = canvas.getContext("2d");
-        if (ctx == null)
-            throw new Error("LabelText :: Failed to acquire a 2D canvas context");
+        const ctx = getSharedCanvasContext();
+        const canvas = ctx.canvas;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         // Everything below is in the patch's world units, with the origin at its centre.
         ctx.setTransform(canvas.width / size.x, 0, 0, canvas.height / size.y,
@@ -205,7 +211,8 @@ export default class LabelText extends GameObjectComponent
         const {lines, fontSize} = layOutText(ctx, text, usableWidth, usableHeight);
 
         ctx.font = `${fontSize}px ${FONT_FAMILY}`;
-        ctx.fillStyle = fontColorHex;
+        // Only coverage reaches the atlas, so any opaque ink will do; emoji keep just their silhouette.
+        ctx.fillStyle = "#ffffff";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
 
@@ -260,6 +267,24 @@ function splitIntoLines(words: string[], lineCount: number): string[]
         wordIndex += wordsOnThisLine;
     }
     return lines;
+}
+
+// One canvas serves every label, since drawCanvasAtIndex copies it into the atlas before returning.
+let sharedCanvasContext: CanvasRenderingContext2D | undefined;
+
+function getSharedCanvasContext(): CanvasRenderingContext2D
+{
+    if (sharedCanvasContext == undefined)
+    {
+        const canvas = document.createElement("canvas");
+        canvas.width = LABEL_ATLAS_CELL_WIDTH;
+        canvas.height = LABEL_ATLAS_CELL_HEIGHT;
+        const ctx = canvas.getContext("2d");
+        if (ctx == null)
+            throw new Error("LabelText :: Failed to acquire a 2D canvas context");
+        sharedCanvasContext = ctx;
+    }
+    return sharedCanvasContext;
 }
 
 const spawnedLabelTexts: Set<LabelText> = new Set();

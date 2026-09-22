@@ -127,8 +127,9 @@ describe("room ownership scenarios", () => {
                 expect(ServerRoomManager.currentRoomIDByUserID["switching-user"]).toBe("my-room");
                 const room = ServerRoomManager.roomRuntimeMemories["my-room"].room;
                 expect(RoomValidationUtil.userOwnsRoom(users[0].user, room)).toBe(true);
-                // The hub they left empties out and is released, as any room does.
-                expect(harness.isRoomLoaded("hub-default")).toBe(false);
+                // Unlike a Regular room, the hub they left stays loaded, empty.
+                expect(harness.isRoomLoaded("hub-default")).toBe(true);
+                expect(harness.getRoomParticipantCount("hub-default")).toBe(0);
             },
         });
     });
@@ -170,8 +171,9 @@ describe("room ownership scenarios", () => {
             skipInvariants: true,
             assertions: ({ harness }) => {
                 expect(ServerRoomManager.currentRoomIDByUserID["navigator"]).toBe("target-room");
-                // The hub the navigator came from is left empty, and released (see above).
-                expect(harness.isRoomLoaded("hub")).toBe(false);
+                // The hub the navigator came from stays loaded (see above), but empty.
+                expect(harness.isRoomLoaded("hub")).toBe(true);
+                expect(harness.getRoomParticipantCount("hub")).toBe(0);
                 expect(harness.isRoomLoaded("target-room")).toBe(true);
             },
         });

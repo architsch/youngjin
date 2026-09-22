@@ -374,7 +374,7 @@ describe("room population scenarios", () => {
         expect(await RoomPickerUtil.pickBestHubRoomID()).toBe("hub-a");
     });
 
-    it("lets go of a hub once its last visitor leaves", async () => {
+    it("keeps a hub loaded once its last visitor leaves", async () => {
         await setUpHubs({"hub-a": 0});
 
         const ctx = harness.connectUser();
@@ -383,8 +383,8 @@ describe("room population scenarios", () => {
 
         await harness.disconnectUser(ctx);
 
-        expect(harness.isRoomLoaded("hub-a")).toBe(false);
-        // Still a candidate: what the balancer knows of a hub outlives the hub's residency.
+        expect(harness.isRoomLoaded("hub-a")).toBe(true);
+        expect(RoomPickerUtil.getRoomPopulationByID("hub-a")).toBe(0);
         expect(await RoomPickerUtil.pickBestHubRoomID()).toBe("hub-a");
     });
 

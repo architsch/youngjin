@@ -35,7 +35,7 @@ Entries expire after a short TTL.
 ## Server upkeep
 - **Stale sockets**: a periodic check cleans up sockets whose disconnect never fired, after a grace period. The same loop evicts expired buffer entries.
 - **Heartbeat**: aggressive ping and timeout settings detect dead connections quickly.
-- **Room auto-save**: dirty rooms are saved in rate-limited batches. When the last user leaves, the room is saved and then unloaded, after re-checking that it is still empty.
+- **Room auto-save**: dirty rooms are saved in rate-limited batches. When the last user leaves a Regular room, it is saved and then unloaded, after re-checking that it is still empty. Hubs stay loaded.
 - **Signal batching**: signals queue per type per connection and flush on a fixed interval. Some types have a minimum send interval (e.g. room changes and commands). The server rejects signals that arrive too early, and the client retries a few times.
 
 ## User commands

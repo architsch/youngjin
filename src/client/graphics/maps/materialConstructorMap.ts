@@ -86,9 +86,13 @@ async function createInstancedTexturePackMaterial(p: InstancedTexturePackMateria
             texture = await TextureFactory.loadStaticImageTexture(p.texturePath);
             break;
         case "dynamicEmpty":
+        {
+            const format = p.coverageOnly ? THREE.RedFormat
+                : (p.transparent || p.alphaCutout) ? THREE.RGBAFormat : THREE.RGBFormat;
             texture = TextureFactory.loadDynamicEmptyTexture(p.texturePath, p.textureWidth,
-                p.textureHeight, p.transparent || p.alphaCutout, p.filterType);
+                p.textureHeight, format, p.filterType);
             break;
+        }
         default:
             throw new Error(`Unknown texture load type :: "${p.textureLoadType}"`);
     }
@@ -112,7 +116,7 @@ async function createInstancedTexturePackMaterial(p: InstancedTexturePackMateria
     const uvScales = getUVScales(p.textureWidth, p.textureHeight,
         p.textureGridCellWidth, p.textureGridCellHeight);
     newMaterial.onBeforeCompile = (shader) =>
-        installInstancedTexturePackShader(shader, uvScales, p.outlineColorHex);
+        installInstancedTexturePackShader(shader, uvScales, p.outlineColorHex, p.coverageOnly);
     return newMaterial;
 }
 

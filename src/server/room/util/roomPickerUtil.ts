@@ -75,7 +75,7 @@ const RoomPickerUtil =
     {
         return Object.keys(roomRuntimeMemory.participantUserNameByID).length;
     },
-    // A room is held in memory only while somebody is in it, so an unloaded room is an empty one.
+    // Rooms load only when somebody joins, so an unloaded room is an empty one.
     getRoomPopulationByID: (roomID: string): number =>
     {
         const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];

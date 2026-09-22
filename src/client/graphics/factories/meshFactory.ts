@@ -196,6 +196,12 @@ async function createInstancedMesh(meshId: string, geometryId: string, materialP
     }
 
     const newMesh = new THREE.InstancedMesh(geometryClone, material, maxNumInstances);
+    // Before any instance is colored, so a precompiled program already reads the instance color.
+    if ((materialParams as InstancedTexturePackMaterialParams).coverageOnly)
+    {
+        newMesh.instanceColor = new THREE.InstancedBufferAttribute(
+            new Float32Array(maxNumInstances * 3), 3);
+    }
     newMesh.name = meshId;
     newMesh.frustumCulled = false;
     // Partial uploads per changed instance (see InstancedMeshBinding).

@@ -37,8 +37,8 @@ const TextureFactory =
         loadedTextures[imagePath] = newTexture;
         return newTexture;
     },
-    // Like loadSourceImageTexture but for a caller-drawn canvas (sRGB). Not cached; the caller
-    // disposes it after drawing.
+    // Like loadSourceImageTexture but for a caller-drawn canvas (sRGB). Not cached; the caller owns
+    // and disposes it.
     createSourceCanvasTexture: (canvas: HTMLCanvasElement): THREE.Texture =>
     {
         const newTexture = createSourceTexture(canvas);
@@ -67,10 +67,10 @@ const TextureFactory =
         loadedTextures[textureId] = newTexture;
         return newTexture;
     },
-    // An empty texture upon which images can be freely rendered during runtime.
-    // withAlpha: for partly see-through cells (e.g. text on an object).
+    // An empty texture upon which images can be freely rendered during runtime. RedFormat keeps only
+    // the coverage of what is drawn (see TextureUtil).
     loadDynamicEmptyTexture: (textureId: string, width: number, height: number,
-        withAlpha: boolean = false, filterType: TextureFilterType = "nearest"): THREE.Texture =>
+        format: THREE.PixelFormat = THREE.RGBFormat, filterType: TextureFilterType = "nearest"): THREE.Texture =>
     {
         const loadedTexture = loadedTextures[textureId];
         if (loadedTexture != undefined)
@@ -84,10 +84,12 @@ const TextureFactory =
             throw new Error(`RenderTarget with the same textureId already exists (textureId: ${textureId})`);
 
         const filter = (filterType == "linear") ? THREE.LinearFilter : THREE.NearestFilter;
+        // Only ever filled by flat copies (see TextureUtil), which need no depth buffer.
         const rt = new THREE.WebGLRenderTarget(width, height, {
-            format: withAlpha ? THREE.RGBAFormat : THREE.RGBFormat,
+            format,
             magFilter: filter,
             minFilter: filter,
+            depthBuffer: false,
         });
         loadedRenderTargets[textureId] = rt;
 

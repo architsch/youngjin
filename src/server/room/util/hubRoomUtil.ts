@@ -6,8 +6,8 @@ import ServerRoomManager from "../serverRoomManager";
 
 let pendingHubCreation: Promise<string> | undefined = undefined;
 
-// Every hub's join priority, by room ID. This is all that balancing needs of a hub nobody is in, so
-// hubs are held no differently from any other room (see RoomPickerUtil).
+// Every hub's join priority, by room ID: all that balancing needs of a hub that isn't loaded (see
+// RoomPickerUtil).
 const initialJoinPriorityByHubRoomID: {[hubRoomID: string]: number} = {};
 
 const HubRoomUtil =

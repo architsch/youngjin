@@ -130,7 +130,8 @@ describe("state persistence scenarios", () => {
     it("voxel blocks persist when all users leave and one rejoins", async () => {
         await runScenario({
             name: "voxels persist across empty room",
-            rooms: [hubRoom("voxel-persist")],
+            // Regular, since hubs stay loaded when empty and would never make the round trip.
+            rooms: [regularRoom("voxel-persist")],
             users: [namedUser("builder", "voxel-persist")],
             actions: [
                 ...buildColumn(0, 10, 10, 3),
@@ -139,7 +140,7 @@ describe("state persistence scenarios", () => {
             skipInvariants: true,
             skipCleanup: true,
             assertions: () => {
-                // An empty room is saved and released, hubs included.
+                // The empty room is saved and released.
                 expect(harness.isRoomLoaded("voxel-persist")).toBe(false);
             },
         });

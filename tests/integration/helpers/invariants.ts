@@ -244,7 +244,7 @@ export function checkRoomOwnershipConsistency(): void
 
 // ─── Clean State Invariants ────────────────────────────────────────────────
 
-/** Clean state after all users disconnect. Hubs stay loaded (for balancing) but must be empty. */
+/** Clean state after all users disconnect. Hubs stay loaded but must be empty. */
 export function checkCleanState(): void
 {
     expect(Object.keys(ServerUserManager.socketUserContexts)).toHaveLength(0);

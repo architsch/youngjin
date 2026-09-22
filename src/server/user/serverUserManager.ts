@@ -139,9 +139,8 @@ const ServerUserManager =
         if (savePlayerMetadata && metadataSnapshot)
             await DBUserUtil.savePlayerMetadata(user.id, metadataSnapshot);
 
-        // Multiplayer rooms unload when empty; hubs included, since balancing knows them by ID rather
-        // than by memory (see HubRoomUtil). Single-player rooms aren't loaded here.
-        if (roomRuntimeMemory.room.roomType != RoomTypeEnumMap.SinglePlayer &&
+        // Regular rooms unload when empty.
+        if (roomRuntimeMemory.room.roomType == RoomTypeEnumMap.Regular &&
             Object.keys(roomRuntimeMemory.participantUserNameByID).length == 0)
         {
             if (await DBRoomUtil.saveRoomContent(roomRuntimeMemory.room))

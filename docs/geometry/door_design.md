@@ -12,7 +12,7 @@ A door is a wall-attached `GameObject` that is drawn with no textures. It is ass
 - Regions are layered back to front with real depth offsets rather than tiny nudges, which avoids z-fighting on low-precision mobile depth buffers.
 
 ## Label
-The name is drawn in the scene as a quad slightly in front of the plate, so walls occlude it (unlike an HTML overlay). All labels in a room share one mesh and one texture atlas, which is one draw call and the reason a room's label count is capped. The label component is generic: it draws any object's text onto the patch that object reserves. The label color comes from its own full-spectrum palette.
+The name is drawn in the scene as a quad slightly in front of the plate, so walls occlude it (unlike an HTML overlay). All labels in a room share one mesh and one texture atlas, which is one draw call and the reason a room's label count is capped. The label component is generic: it draws any object's text onto the patch that object reserves. The label color comes from its own full-spectrum palette and is applied per instance: the atlas holds only the lettering's coverage, so emoji show as silhouettes in the label color.
 
 ## Appearance metadata
 - `DoorCompositionCodec` encodes three colors: timber, plate and knob. Decoding clamps its input, so any string yields a drawable door.

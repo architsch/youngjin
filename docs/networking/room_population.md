@@ -44,4 +44,4 @@ Each hub carries a **join priority**: its place in the order arriving visitors f
 - A refusal sends `RoomChangeRejectedSignal` with a `RoomChangeRejectionReason`. This releases the client's loading screen and shows a notification.
 
 ## Hub residency
-Every multiplayer room, hubs included, is loaded on demand and saved and unloaded when its last visitor leaves. So a hub that is not in memory is one nobody is in, and the balancer reads its population as zero without touching it — which is why it needs only ids and priorities. At startup `HubRoomUtil` reads the hubs from the DB into that registry, and opens one if none exist.
+Every multiplayer room is loaded on demand. A Regular room is saved and unloaded when its last visitor leaves; a hub, once loaded, stays in memory. So a hub that is not in memory is one nobody has entered, and the balancer reads its population as zero without loading it — which is why it needs only ids and priorities. At startup `HubRoomUtil` reads the hubs from the DB into that registry, and opens one if none exist.

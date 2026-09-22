@@ -21,6 +21,9 @@ export default class InstancedTexturePackMaterialParams extends MaterialParams
     // Set after construction: texels with low alpha are discarded instead of blended, so the quad keeps
     // opaque depth and sorting while parts of its cell stay see-through (e.g. around a letterboxed picture).
     alphaCutout: boolean;
+    // Set after construction: the texture keeps one channel of coverage and each instance supplies the
+    // color (see InstancedMeshBinding.updateInstanceColor), e.g. lettering in one ink per label.
+    coverageOnly: boolean;
 
     constructor(texturePath: string, textureWidth: number, textureHeight: number,
         textureGridCellWidth: number, textureGridCellHeight: number,
@@ -42,6 +45,7 @@ export default class InstancedTexturePackMaterialParams extends MaterialParams
         this.polygonOffsetUnits = polygonOffsetUnits;
         this.outlineColorHex = undefined;
         this.alphaCutout = false;
+        this.coverageOnly = false;
     }
 
     protected getDefaultMaterialId(): string
