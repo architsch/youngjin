@@ -6,7 +6,9 @@ Server-side, first-party measurement of **what visitors from each traffic source
 
 ## Attribution
 - Promoted links carry `?ref=<tag>` (e.g. `https://app.thingspool.net/?ref=reddit-webgames`).
+- The static site carries a visitor's first `ref` of the session onto its links into the app (`views/partial/common/footer.ejs`), so a tagged dev-log post is attributed as well.
 - **First-touch**: the tag is stored only when a new account is created for the visitor.
+- Crawlers, scanners, link-preview fetchers, scripted clients and requests with no User-Agent get no account (`BotDetectionUtil`), so they never count as arrivals. Fetchers posing as a browser still do. **Any other client that loads an app page does**, so check a tagged link with a bot User-Agent, never a plain browser or HTTP client.
 - The tag is rebuilt, not trimmed: only `a-z0-9-_` survive, the result is lowercased and capped at 32 characters, and an empty result becomes `direct`. **A tag outside that alphabet cannot be measured.**
 
 ## Funnel

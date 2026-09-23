@@ -39,6 +39,14 @@
         "dispatching those. Restart Staging is left out on purpose — staging is the environment",
         "these workflows exist to be tried on.",
         "",
+        "The ask list sits between the two: a command there always stops for a person, in every",
+        "mode, and auto mode's classifier can neither run it silently nor refuse it outright.",
+        "`ssh` and `scp` are there because the VPS serves live as well as staging. Reading its",
+        "logs is routine and must stay possible, but only the person watching can tell a read",
+        "from a write on production. The `nginx:*` npm scripts are there because they reach the",
+        "same machine from inside package.json, where neither the hook below nor the classifier",
+        "sees the `ssh`; an ask rule still prompts when the hook has said \"allow\".",
+        "",
         "The allow list above is a prefix matcher, and that is the limit of it. It cannot see",
         "into `a && b`, `until curl ...; do ...; done`, `git -C . rev-parse` or",
         "`kill $(lsof -ti:3000)` — the shapes an in-browser test or a screenshot run actually",
@@ -127,6 +135,11 @@
             "Bash(node dev/scripts/vps/maintenance.js audit:*)",
             "Bash(node dev/scripts/vps/maintenance.js reclaim --dry-run:*)",
             "Bash(node dev/scripts/vps/maintenance.js upgrade --dry-run:*)"
+        ],
+        "ask": [
+            "Bash(ssh:*)",
+            "Bash(scp:*)",
+            "Bash(npm run nginx:*)"
         ],
         "deny": [
             "Bash(gcloud firestore:*)",

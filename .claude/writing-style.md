@@ -15,7 +15,8 @@ audience is unusual. It may not quietly write in a different register.
 
 **The published dev-log posts are the authority. Read them before drafting anything, and imitate the
 pattern that runs through them.** They live one year to a directory, as
-`public/devlog-<year>/source.txt`. Read the whole of the current year's file and the year before it —
+`public/devlog-<year>/source.txt`. Read the whole of the current year's file and the year before it,
+where there is one —
 **many posts, not the latest one**. A single post shows one solution; the run of them shows the style,
 and it is the style that is being copied.
 

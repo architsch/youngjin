@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<meta name="description" content="ThingsPool is an experimental web community for collaborative research and development in arts, games, and other forms of interactive media.">
+<meta name="description" content="ThingsPool is a 3D sandbox game that runs in your browser, with no download. Build your own room, chat with people, and explore a world made of rooms.">
 <meta name="keywords" content="thingspool, software toys, technical design, computer science, systems engineering, game design, game development">
 <meta name="author" content="Youngjin Kang">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -12,7 +12,7 @@
 <meta property="og:url" content="https://thingspool.net"/>
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="ThingsPool"/>
-<meta property="og:description" content="ThingsPool is an experimental web community for collaborative research and development in arts, games, and other forms of interactive media."/>
+<meta property="og:description" content="ThingsPool is a 3D sandbox game that runs in your browser, with no download. Build your own room, chat with people, and explore a world made of rooms."/>
 <meta property="og:image" content="https://thingspool.net/share.jpg"/>
 <meta property="og:image:alt" content="ThingsPool">
 <meta property="og:image:width" content="1200"/>
@@ -84,7 +84,7 @@ gtag('config', 'G-JL7KHR7HK8');
 <div class="m_row"></div>
 
 <h2>Development History</h2>
-<p>The full history of ThingPool and its course of development is in the link below. Here you can find ThingsPool's past, current, and upcoming gameplay features, as well as development-related news in general.</p>
+<p>The full history of ThingsPool and its course of development is in the link below. Here you can find ThingsPool's past, current, and upcoming gameplay features, as well as development-related news in general.</p>
 <a class="inlineButtonBig" href="https://thingspool.net/devlog-2026/list.html">Dev Log - 2026</a>
 <div class="m_row"></div>
 
@@ -133,5 +133,25 @@ gtag('config', 'G-JL7KHR7HK8');
 <div class="s_row"></div>
 <p class="dim">&copy 2019-2026 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
 <div class="xl_row"></div>
+<script>
+(function () {
+    var ref = null;
+    try { ref = sessionStorage.getItem("thingspool_ref"); } catch (e) {}
+    if (!ref) {
+        ref = new URLSearchParams(location.search).get("ref");
+        try { if (ref) sessionStorage.setItem("thingspool_ref", ref); } catch (e) {}
+    }
+    if (!ref)
+        return;
+    var links = document.querySelectorAll('a[href^="https://app.thingspool.net"]');
+    for (var i = 0; i < links.length; ++i) {
+        var url = new URL(links[i].href);
+        if (!url.searchParams.has("ref")) {
+            url.searchParams.set("ref", ref);
+            links[i].href = url.toString();
+        }
+    }
+})();
+</script>
 </body>
 </html>

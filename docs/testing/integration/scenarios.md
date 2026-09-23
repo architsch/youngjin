@@ -25,7 +25,7 @@ A map of what each suite in `tests/integration/scenarios/` covers. The test name
 | Suite | Covers |
 |---|---|
 | `auth-lifecycle.test.ts` | Google OAuth paths, stale-guest tiers, `loginCount` distinct-login gap, session preservation during identification |
-| `guest-creation-limit.test.ts` | per-client and per-IP caps, and budget accounting |
+| `guest-creation-limit.test.ts` | per-client and per-IP caps, budget accounting, and which User-Agents count as bots |
 | `room-api.test.ts` | creating a room, changing the texture pack and lighting (permissions per caller) |
 | `ftue.test.ts` | client recording and coach-mark lifecycle, client/server agreement, the add-element command, persistence and migration |
 | `acquisition-analytics.test.ts` | ref sanitizing, count-once milestones, returns, session cache, chat vs. build, user migration |

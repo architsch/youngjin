@@ -2,10 +2,11 @@
  * Integration tests: guest creation limits — a looser per-IP cap (shared networks) and a tighter
  * per-client cap keyed on IP + User-Agent (never UA alone, which would throttle a browser version
  * globally). Limiter state is process-wide, so each test uses its own IP/UA. MODE is unset, so the
- * production caps apply.
+ * production caps apply. Also covers which User-Agents are treated as bots and never given a guest.
  */
 import { describe, it, expect } from "vitest";
 import GuestCreationLimitUtil from "../../../src/server/user/util/guestCreationLimitUtil";
+import BotDetectionUtil from "../../../src/server/networking/util/botDetectionUtil";
 
 const MAX_PER_IP = 10;
 const MAX_PER_CLIENT = 3;
@@ -82,6 +83,51 @@ describe("Guest creation limits", () =>
                 .reduce((sum, ua) => sum + countAllowed(MAX_PER_CLIENT, ip, ua), 0);
 
             expect(remaining).toBe(MAX_PER_IP - MAX_PER_CLIENT);
+        });
+    });
+
+    // Each guest minted for a fetcher that keeps no cookies is counted as an acquisition arrival.
+    describe("bot detection (no guest at all)", () =>
+    {
+        it.each([
+            ["self-declared crawler", "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"],
+            ["Discord preview", "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)"],
+            ["Facebook preview", "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"],
+            ["Meta crawler", "meta-externalagent/1.1 (+https://developers.facebook.com/docs/sharing/webmasters/crawler)"],
+            ["WhatsApp preview", "WhatsApp/2.23.20.0 A"],
+            ["Bluesky preview", "Mozilla/5.0 (compatible; Bluesky Cardyb/1.1; +mailto:support@bsky.app)"],
+            ["Mastodon preview", "http.rb/5.1.1 (Mastodon/4.2.10; +https://mastodon.social/)"],
+            ["Iframely preview", "Iframely/1.3.1 (+https://iframely.com/docs/about)"],
+            ["Google inspection", "Mozilla/5.0 (compatible; Google-InspectionTool/1.0;)"],
+            ["curl", "curl/8.7.1"],
+            ["Wget", "Wget/1.21.4"],
+            ["python-requests", "python-requests/2.31.0"],
+            ["Go client", "Go-http-client/2.0"],
+            ["self-declared scanner", "odin-scanner/1.0"],
+            ["scanner that says so in prose", "Hello from Palo Alto Networks, find out more about our scans in " +
+                "https://docs-cortex.paloaltonetworks.com/r/1/Cortex-Xpanse/Scanning-activity"],
+            ["aiohttp client", "Python/3.12 aiohttp/3.9.5"],
+            ["fasthttp client", "fasthttp"],
+            ["missing User-Agent", undefined],
+            ["empty User-Agent", ""],
+        ])("treats a %s as a bot", (_label, userAgent) =>
+        {
+            expect(BotDetectionUtil.isBot(userAgent)).toBe(true);
+        });
+
+        it.each([
+            ["desktop Chrome", SHARED_UA],
+            ["iPhone Safari", "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 " +
+                "(KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1"],
+            ["Facebook in-app browser", "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 " +
+                "(KHTML, like Gecko) Mobile/15E148 [FBAN/FBIOS;FBAV/500.0.0.0.0;FBBV/700000000]"],
+            ["Instagram in-app browser", "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 " +
+                "(KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36 Instagram 400.0.0.0.0 Android"],
+            ["headless Chromium (E2E and playtests)", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) " +
+                "AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0.0.0 Safari/537.36"],
+        ])("gives a %s an account", (_label, userAgent) =>
+        {
+            expect(BotDetectionUtil.isBot(userAgent)).toBe(false);
         });
     });
 });

@@ -7,7 +7,7 @@ Reference: @src/server/sockets/socketsServer.ts , @src/client/networking/client/
 2. Paths that do not look like a room address get a 404 before any user lookup happens.
 3. `UserIdentificationUtil` identifies the user:
    - a valid auth-token cookie loads the existing user;
-   - a self-declared crawler or link-preview bot gets the page without a session and no guest is created (the page shows a plain site description);
+   - a crawler, scanner, link-preview fetcher, scripted client or request with no User-Agent (`BotDetectionUtil`) gets the page without a session and no guest is created (the page shows a plain site description). Headless Chromium is not one of them, since E2E and playtests arrive as it;
    - otherwise a guest account is created (rate-limited) and its token is set as an HTTP-only cookie.
 
    The cookie is the only copy of a session, so never replace it by accident. **A failed lookup is refused, not treated as a missing account**, and only anonymous-facing routes ever create guests.

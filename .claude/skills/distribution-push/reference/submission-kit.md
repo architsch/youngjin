@@ -20,7 +20,7 @@ to think about wording, work out what an image should show, or check a rule, the
 3. **The title**, exact and copyable.
 4. **The body**, exact and copyable, at that venue's length.
 5. **The tagged link** — the chosen destination with `?ref=<venue-slug>` appended — already
-   confirmed with a `curl` to return `200`.
+   confirmed to return `200` with the link check in SKILL.md step 5.
 6. **The image brief** — one row per image the venue shows: what to save it as, what it must show,
    at what size, and where. The user takes them; see below.
 7. **The draft ledger row**, ready to be completed once the post is live.
@@ -130,7 +130,8 @@ spam signature there is, and it is detected by the platforms, not by the readers
 ## Before handing a kit over
 
 - Every length limit actually counted, not estimated.
-- The tagged link curled and returning `200`.
+- The tagged link returning `200` to the bot-agent link check in SKILL.md step 5. Any client the
+  server does not recognize as a bot counts a fake arrival under the tag.
 - The `ref` slug written in `a-z`, `0-9`, `-`, `_`, at most 32 characters, and identical to the
   venue's ledger row. Anything else is silently rewritten by the server, and the venue then cannot
   be told apart from direct traffic in the report.

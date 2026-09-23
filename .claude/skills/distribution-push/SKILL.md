@@ -80,9 +80,13 @@ portals, the game directories.
 
 **A dev-log post** — `https://thingspool.net/devlog-<year>/page-<N>.html`. A written piece about one
 finished feature, with screenshots from the running game, which then leads the reader into the app
-through the "New here? Start with What is ThingsPool?" line every post opens with. Verified
-2026-08-22 that these pages serve tagged URLs normally and carry both the analytics tag and
-`og:title` / `og:image`, so they are measurable and they preview properly when shared.
+through the "New here? Start with What is ThingsPool?" line every post opens with. These pages
+serve tagged URLs normally and carry `og:title` / `og:image`, so they preview properly when shared.
+
+A tagged post is measured twice. Google Analytics sees its page views with the query string. The
+static pages also carry the tag onto their links into the app for the rest of the session, so a
+reader who clicks through, even by way of the landing page, is counted under the venue's tag in the
+funnel report.
 
 Link to a post rather than to the app when:
 
@@ -135,14 +139,17 @@ Both must answer `200`. Then three judgements that need actual looking:
   overlook, because the developer never experiences it. Someone arriving from a link at a quiet hour
   meets an empty world. Read `docs/networking/ftue.md` and `docs/networking/single_player_mode.md`
   and establish what that person is actually given to do. If the answer is "wait for somebody", say
-  so and recommend holding the push — no venue fixes an empty-room first session.
+  so and recommend holding the push — no venue fixes an empty-room first session. Then check it
+  against what visitors actually did: the `direct` cohort in the step 7 report is the baseline, and
+  its `tutorialDone` and `returned` rates say how the first minute and the first day are going
+  before any venue is spent on them.
 - **Does the landing page explain the game to a stranger?** The link lands somebody who has never
   heard of it. Check that `https://thingspool.net` answers "what is this and why would I click play"
   above the fold.
 - **Does the shared link preview well?** The Open Graph tags in `views/partial/common/ogTags.ejs`
   decide what a Reddit or Discord post looks like. A link with no preview image loses most of its
   clicks before anyone reads the title. Fetch the URL being promoted and confirm the tags resolve to
-  an image that exists.
+  an image that exists. Fetch an app URL only with the link-check command in step 5.
 
 If the gate fails, report what failed and stop. Do not push anyway; the venues will still be there
 next week and the first impressions will not.
@@ -212,8 +219,16 @@ Three rules that do not bend:
   as direct traffic. A slug outside that alphabet produces a venue that silently cannot be measured.
   Keep the slug identical to the venue's ledger row, or the report and the ledger cannot be lined up.
 
-  Curl the exact URL before handing it over; a link that 404s is the one mistake a venue will not
-  forgive. The full mechanism is in [`docs/devOps/analytics.md`](../../../docs/devOps/analytics.md).
+  Check the exact URL before handing it over; a link that 404s is the one mistake a venue will not
+  forgive. **Check it only as a self-declared bot:**
+
+  ```bash
+  curl -s -A "thingspool-linkcheck-bot" -o /dev/null -w "%{http_code}\n" --max-time 15 "<tagged URL>"
+  ```
+
+  A client that `BotDetectionUtil` does not recognize is given a guest account when it loads an app
+  page, and its arrival is counted under the tag. A self-declared bot still gets a `200` but no
+  account. The full mechanism is in [`docs/devOps/analytics.md`](../../../docs/devOps/analytics.md).
 - **Truth.** Every claim traceable to the code, or to a `/docs` page describing it. Possibilities are
   written as possibilities. This is the standard the house style sets for every piece of public
   copy, and for the same reason — a promotional claim that the game does not deliver is discovered
@@ -282,8 +297,10 @@ rates are shares *of* is the part that is easy to get wrong.
 Three things to hold onto when reading it:
 
 - **`arrived` is the least interesting column.** It measures how many people a venue sent, which is
-  the thing a venue will tell you anyway. The columns worth acting on are `returned` and `built` —
-  people who came back, and people who did something once they were there.
+  the thing a venue will tell you anyway. It also counts any fetcher or scanner that
+  `BotDetectionUtil` does not recognize, so not every arrival is a person.
+  The columns worth acting on are `returned` and `built` — people who came back, and people who
+  did something once they were there.
 - **Respect `belowThreshold`.** A source with fewer than the minimum arrivals is not ranked, and it
   should not be argued about either. Four visitors is an anecdote.
 - **A cohort needs time.** Retention is measured on a gap of a day at minimum, so a source posted

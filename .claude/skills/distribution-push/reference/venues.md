@@ -14,7 +14,8 @@ kit's image brief is built from, and the user takes the screenshots to it.
 > **Reddit's rules cannot be read by the assistant.** Verified 2026-08-22: `old.reddit.com` now
 > answers "accounts are required to access old Reddit", the modern rules page renders its rules only
 > after sign-in, and the `.json` endpoints return an app shell to non-browser clients. A headless
-> browser reaches the page and finds the rules table empty. Signing in would be Lane C, so **every
+> browser reaches the page and finds the rules table empty. Re-checked 2026-09-24: WebFetch now
+> refuses `reddit.com` outright. Signing in would be Lane C, so **every
 > Reddit entry below is permanently unverifiable from here.** That does not rule the venues out — it
 > moves one step to the user. A Reddit kit must carry "read the subreddit's rules yourself before
 > posting" as a required action in the handover, not as a footnote, and must say which rules it is
@@ -34,12 +35,14 @@ post, it becomes a **repeatable** channel — a new post is a new reason to retu
 
 | Venue | Link to | Repeatable |
 |---|---|---|
-| r/WebGames, r/iogames | The app | No — one link, once |
+| r/WebGames, r/iogames, r/playmygame | The app | No — one link, once |
 | Hacker News, Show HN | The app | No — Show HN is for something people can play with |
 | Hacker News, ordinary submission | A dev-log post | Yes, sparingly |
+| Three.js forum — Showcase | The app, from a post with its own text and images | Once as a thread; later news as replies in it |
 | r/threejs, r/webgl, r/proceduralgeneration | A dev-log post | Yes, per feature |
 | r/gamedev Screenshot Saturday | A dev-log post | Yes, weekly |
-| dev.to, Lobsters | A dev-log post | Yes, per feature |
+| dev.to | A full article on dev.to itself — link-only posts are banned | Yes, per feature |
+| Lobsters | A dev-log post | Yes, sparingly |
 | Discord showcase channels | Either | Yes, per feature |
 | itch.io, portals, directories | The app / the build | No — a listing, not a post |
 | The user's own social feeds | A dev-log post | Yes, per feature |
@@ -74,13 +77,37 @@ post, it becomes a **repeatable** channel — a new post is a new reason to retu
   Apache-2.0, while the essays and artwork under `public/` stay all rights reserved
   (`LICENSE-CONTENT.md`). "Open source" is accurate for the code and should be said that way, not
   as a claim about the whole repository. Expect somebody to ask why the repo is not wholly open.
-- **Effort:** Low to prepare, high to attend. **Verified:** 2026-08-22 (showhn.html, newsguidelines.html).
-- **Kit prepared:** 2026-08-22, `temp/distribution/hn-show/`. Not posted.
+- **Effort:** Low to prepare, high to attend. **Verified:** 2026-09-24 (showhn.html: still asks for
+  something people can try "ideally without barriers such as signups or emails"; excludes blog
+  posts, sign-up pages, landing pages and quick one-offs).
+- **Kit prepared:** 2026-08-22, `temp/distribution/hn-show/`. Not posted. It was written before
+  lights, sky and fog, labels and resizable objects shipped, so rebuild it before using it.
 
 ### r/iogames
 - **Fit:** Good. Audience is specifically browser multiplayer.
 - **Mechanics:** Link post.
 - **Rules and gotchas:** Not yet read. **Unverified.**
+
+### r/playmygame, r/IndieGaming, r/IndieDev
+- **Fit:** r/playmygame is players asking for games to try, which suits the app link. r/IndieGaming
+  is player-facing and r/IndieDev is devlog culture, so the latter suits a dev-log post.
+- **Rules and gotchas:** Not yet read. Named by several 2026 indie-marketing guides, which also say
+  short gameplay clips beat text posts on Reddit. **Unverified.**
+
+### Three.js forum — Showcase
+- **Fit:** High for the technical audience, and the only Three.js venue whose rules can be read from
+  here. Games are posted there regularly. **Projects posted there are considered for the
+  threejs.org homepage**, which lists featured projects and is updated "a couple of times a year".
+  threejs.org's own "submit project" link points at this category.
+- **Mechanics:** A topic in `discourse.threejs.org/c/showcase`, from the user's own forum account,
+  with its own text and images and a link to the project.
+- **Rules and gotchas:** Every showcase post waits for moderator approval, usually a couple of
+  hours. Only your own work. New accounts get stricter automatic moderation on long posts and posts
+  with several links, and it relaxes after a few days of ordinary use. So sign up and take part a
+  little before posting, and keep the post to one or two links.
+- **Image sizes:** Not specified.
+- **Effort:** Low. **Verified:** 2026-09-24 (the category description and forum FAQ, and the
+  threejs.org homepage).
 
 ### r/threejs, r/webgl
 - **Fit:** Good for the technical story; small but genuinely interested, and the kind of readers who
@@ -110,20 +137,52 @@ post, it becomes a **repeatable** channel — a new post is a new reason to retu
   HTML5 build, which puts it in the embed lane and under the cookie prerequisite.
 - **Rules and gotchas:** itch tightened its policies on link-forwarding pages in response to malware
   distribution; do not plan around a redirect trick. A page still has value as a landing presence
-  even unindexed, and jams can be entered with it.
-- **Effort:** Low for a link page, medium for a real build. **Verified:** 2026-08-22.
+  even unindexed, and jams can be entered with it. The quality guidelines say "avoid only uploading
+  keys or links to other stores", and staff answers on the support forum say a page must be
+  purchasable, downloadable or playable in the browser to be indexed.
+- **Effort:** Low for a link page, medium for a real build. **Verified:** 2026-09-24.
 
 ### Discord communities (Three.js, indie gamedev, web gamedev)
 - **Fit:** Good, and repeatable in a way one-shot submissions are not.
 - **Mechanics:** Sharing in the appropriate showcase channel, from the user's account.
 - **Rules and gotchas:** Nearly all such servers restrict self-promotion to a named channel and
-  expect participation first. **Unverified** — specific servers not yet identified. Identifying three
-  worth joining is a good task for an early run.
+  expect participation first. The official Three.js server is `discord.gg/56GBJwAnUS`, linked from
+  threejs.org. Its channels cannot be read without joining. **Unverified** beyond that. Identifying
+  two more worth joining is a good task for an early run.
 
-### dev.to, Lobsters, Product Hunt
+### dev.to
 - **Fit:** Moderate. The technical and open-source angle again.
-- **Rules and gotchas:** Product Hunt is effectively one-shot and rewards a prepared launch day; do
-  not spend it casually. Lobsters requires an invite. **Unverified.**
+- **Rules and gotchas:** "Posts must contain substantial content — they may not merely reference an
+  external link that contains the full post", and content "designed primarily for the purposes of
+  promotion" is removable. So this venue takes a real article about how something was built,
+  published on dev.to itself, with the link to the app or post inside it. That article is new
+  writing, so it waits on the user rather than being lifted from a dev-log post.
+- **Verified:** 2026-09-24 (dev.to/terms, content policy).
+
+### Lobsters
+- **Fit:** Moderate, technical.
+- **Rules and gotchas:** Invite-only. New accounts are marked for their first 70 days and cannot
+  use the `show` tag or submit new domains freely. Self-promotion should stay under a quarter of an
+  account's stories and comments. Not usable until the user has an invite and some history there.
+- **Verified:** 2026-09-24 (lobste.rs/about).
+
+### Product Hunt
+- **Fit:** Moderate, and effectively one-shot. It rewards a prepared launch day, so do not spend it
+  casually.
+- **Mechanics:** Posted from a personal account; company accounts cannot post.
+- **Image sizes:** Thumbnail 240×240 (square; GIF allowed under 3MB). Gallery 1270×760, and at least
+  two images before it shows. Video only as a YouTube link.
+- **Verified:** 2026-09-24 (help.producthunt.com, "How to post a product"). Relaunch rules not
+  read.
+
+### Short-form video — YouTube Shorts, TikTok, Reels
+- **Fit:** Unknown for this game, but the 2026 indie-marketing guides agree it is the strongest
+  free discovery channel, and a room being lit, fogged and built reads well in a few seconds of
+  footage.
+- **Mechanics:** The user records and posts, as with every image. A clip can also sit in a Reddit
+  or Three.js post.
+- **Rules and gotchas:** The guides say it takes a steady habit of several clips a week, not a
+  single post. **Unverified** for this project.
 
 ### The user's own feeds — LinkedIn, Facebook, X, Medium
 - **Fit:** Low for finding new players, and this is worth stating plainly rather than rediscovering:
@@ -146,6 +205,9 @@ post, it becomes a **repeatable** channel — a new post is a new reason to retu
   webgl, awesome threejs, awesome gamedev), AlternativeTo, browser-game directory sites.
 - **Rules and gotchas:** Awesome-list maintainers reject entries that do not meet a quality bar; read
   the list's contribution guide. **Unverified.**
+- **iogames.space:** There is no submission form. Its "feature your game" page says to contact the
+  site, and its paid feature tokens are "not currently available". The site favors competitive
+  pick-up-and-play games, which a sandbox is not. Low fit. **Verified:** 2026-09-24.
 
 ---
 
@@ -166,16 +228,28 @@ Confirm that has been resolved before preparing any submission in this lane.
   anywhere else. Provides a JWT the game can pass to its own backend for auth, verified against a
   published public key, which is a plausible route around the cookie problem for this lane
   specifically. The launch gate is measured on retention, so the first ten seconds decide it.
-- **Verified:** 2026-08-22 (docs.crazygames.com).
+- **Accounts:** Even Basic Launch requires "no external login options", so the Google sign-up
+  would have to be hidden inside the embed. Full Launch requires progress tied to the CrazyGames
+  account, its username and avatar, and automatic login. That is an account integration, not a
+  config change.
+- **Image sizes:** Three covers — 1920×1080, 800×1200 and 800×800 — consistent with each other. No
+  border, no text but the game's title (which should be on the cover), no store logos, and no
+  "New" or "Play" labels. The docs discourage a bare gameplay screenshot, so a cover is a designed
+  image. Format and file size are not specified.
+- **Verified:** 2026-09-24 (docs.crazygames.com, requirements and game covers).
 
 ### Poki
 - **Fit:** High reach; the established home of browser multiplayer games. Hardest gate on this list.
-- **Limits:** **Initial download under 8MB.** For a Three.js voxel game this is the whole problem —
-  it means aggressive asset splitting and lazy loading, and it should be measured before the venue is
-  seriously considered.
-- **Rules and gotchas:** Requires a clean build with debug code removed, and either a working save
-  system or an explicit notice that progress will not be saved.
-- **Verified:** 2026-08-22 (sdk.poki.com/new-requirements).
+- **Limits:** No fixed size is stated any more. The requirements now judge by load time: players
+  leave after about ten seconds, so keep the initial download small with progressive loading. The
+  client JavaScript is about 270KB compressed on a first visit (commit `c141428f`). The rest of a
+  first load has not been measured.
+- **Rules and gotchas:** **"Poki blocks all external requests by default"**, with limited
+  exceptions. A game whose world lives on its own Socket.IO server needs one of those exceptions
+  before anything else matters. Also requires incognito support (storage access wrapped in
+  try/catch), and either progress saving or a clear notice that progress is not saved.
+- **Verified:** 2026-09-24 (sdk.poki.com/new-requirements now redirects to
+  developers.poki.com/guide/requirements-quality).
 
 ### Newgrounds, GameJolt
 - **Fit:** Moderate. Smaller than the above, but engaged, and the submission effort is low once a
@@ -201,6 +275,6 @@ rediscovering it. Only previously approved developers retain upload access.
 ## Not yet researched
 
 Leads worth a future survey, recorded so they are not lost: browser-game aggregator sites that accept
-external links; university and hobbyist metaverse or virtual-world communities; Three.js's own
-showcase or examples listings; creative-coding and generative-art communities, which suit the
+external links; university and hobbyist metaverse or virtual-world communities; Bluesky and
+Mastodon (gamedev.place) gamedev circles; creative-coding and generative-art communities, which suit the
 build-a-room framing; teacher and classroom-tool directories, which suit the shared-space framing.

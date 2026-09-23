@@ -116,5 +116,25 @@ gtag('config', 'G-JL7KHR7HK8');
 
 <p class="dim">&copy 2019-2026 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
 <div class="xl_row"></div>
+<script>
+(function () {
+    var ref = null;
+    try { ref = sessionStorage.getItem("thingspool_ref"); } catch (e) {}
+    if (!ref) {
+        ref = new URLSearchParams(location.search).get("ref");
+        try { if (ref) sessionStorage.setItem("thingspool_ref", ref); } catch (e) {}
+    }
+    if (!ref)
+        return;
+    var links = document.querySelectorAll('a[href^="https://app.thingspool.net"]');
+    for (var i = 0; i < links.length; ++i) {
+        var url = new URL(links[i].href);
+        if (!url.searchParams.has("ref")) {
+            url.searchParams.set("ref", ref);
+            links[i].href = url.toString();
+        }
+    }
+})();
+</script>
 </body>
 </html>

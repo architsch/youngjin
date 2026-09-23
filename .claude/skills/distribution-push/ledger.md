@@ -29,7 +29,7 @@ user confirms it went out — never promote a row on the assumption that they di
 
 | Date | Venue | Destination | Ref tag | Post URL | Status | Result |
 |---|---|---|---|---|---|---|
-| 2026-08-22 | Hacker News — Show HN | app | `hn-show` | — | prepared | Kit at `temp/distribution/hn-show/`. Rules verified against showhn.html and newsguidelines.html the same day. Not sent: Show HN requires the author present in the comments for hours, so the hour is the user's to pick. |
+| 2026-08-22 | Hacker News — Show HN | app | `hn-show` | — | prepared | Kit at `temp/distribution/hn-show/`. Rules verified against showhn.html and newsguidelines.html the same day. Not sent: Show HN requires the author present in the comments for hours, so the hour is the user's to pick. 2026-09-24: the one `hn-show` arrival in the live funnel (cohort 2026-09-23) came from an assistant's plain-`curl` link check, not a visitor, so subtract it. A `linkcheck-test` source with one arrival was created the same way. |
 
 ## Prior history, outside this ledger
 
