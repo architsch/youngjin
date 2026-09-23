@@ -6,6 +6,7 @@ import Room from "../../../room/types/room";
 import User from "../../../user/types/user";
 import { ObjectCategory } from "../objectCategory";
 import { ObjectScalingConfig } from "../objectScalingConfig";
+import { ObjectAttachmentConfig } from "../objectAttachmentConfig";
 import AddObjectSignal from "../addObjectSignal";
 import SetObjectMetadataSignal from "../setObjectMetadataSignal";
 import SetObjectTransformSignal from "../setObjectTransformSignal";
@@ -20,6 +21,8 @@ export default interface ObjectTypeConfig
     category: ObjectCategory;
     // How far this type may be resized. Absent means fixed at the collider's base size.
     scaling?: ObjectScalingConfig;
+    // Which voxel faces the type is attached to. Absent means it stands free in the room.
+    attachment?: ObjectAttachmentConfig;
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => boolean,
     canUserRemoveObject: (user: User, room: Room, obj: AddObjectSignal) => boolean,
     canUserSetObjectTransform: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => boolean,
@@ -36,6 +39,9 @@ export default interface ObjectTypeConfig
                 generateDefaultParts: (obj: AddObjectSignal) =>
                     {params: InstancedMeshCompositionParams,
                         parts: InstancedMeshCompositionPart[]},
+                // Fills in what the parts take from the object rather than the composition (e.g. a
+                // lamp's glow, from its light), after every decode.
+                deriveParts?: (obj: AddObjectSignal, parts: InstancedMeshCompositionPart[]) => void,
                 // Camera angle of the type's pre-encoded composition thumbnails (see CompositionThumbnailBuilder),
                 // in degrees from straight in front of the +Z face: yaw turns right, pitch rises. Isometric if unset.
                 thumbnailView?: {yawDeg: number, pitchDeg: number},

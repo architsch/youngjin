@@ -435,7 +435,7 @@ describe("every generated multiplayer room", () => {
             {
                 const {voxelGrid} = generateFromSeed(seed, roomType);
 
-                // The entrance cell is wall: the door hangs on it (see WallAttachedObjectUtil).
+                // The entrance cell is wall: the door hangs on it (see ObjectAttachmentUtil).
                 expect(isWalkable(voxelGrid, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL),
                     `${name} seed ${seed} :: the wall the door hangs on was carved away`).toBe(false);
 

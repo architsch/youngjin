@@ -7,4 +7,5 @@ export const InstancedMeshCompositionCodecTypeEnumMap: Record<string, number> =
     Door: 2,
     Indexed: 3,
     Canvas: 4,
+    Lamp: 5,
 }

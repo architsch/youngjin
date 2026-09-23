@@ -1,10 +1,13 @@
 import ColorUtil from "../../../../../math/util/colorUtil";
+import Vec3 from "../../../../../math/types/vec3";
 import CanvasCompositionParams from "../compositionParams/canvasCompositionParams";
+import MarginCompositionConstants from "./marginCompositionConstants";
 
-// The single canvas design: one moulded board over the whole footprint. Its band is the frame and the
-// picture covers the surface inside it (see CanvasGameObject), so the inner color shows around a
-// letterboxed picture. Colors and moulding vary; the shape doesn't. A canvas without a frame has no board
-// at all, and its picture covers the footprint.
+// The single canvas design: one moulded board, a margin inside the footprint (see
+// MarginCompositionConstants). Its band is the frame and the picture covers the surface inside it (see
+// CanvasGameObject), so the inner color shows around a letterboxed picture. Colors, moulding and margin
+// vary; the shape doesn't. A canvas without a frame has no board at all, and its picture covers what the
+// board would.
 
 export const CANVAS_GEOMETRY_ID = "Square";
 
@@ -18,6 +21,25 @@ export const CANVAS_PICTURE_LIFT = 0.005;
 
 const CanvasCompositionConstants = {
     // Band widths are the shared ones (see MouldingCompositionConstants).
+
+    // The board's extent (band included), or the picture's when there is no frame.
+    getDrawnSize: (params: CanvasCompositionParams, objectSize: Vec3): Vec3 =>
+    {
+        const band = params.framed ? params.mouldingThickness : 0;
+        return {
+            x: MarginCompositionConstants.getDrawnSize(objectSize.x, params.margin, band),
+            y: MarginCompositionConstants.getDrawnSize(objectSize.y, params.margin, band),
+            z: 1,
+        };
+    },
+
+    // The picture's extent, inside the band.
+    getPictureSize: (params: CanvasCompositionParams, objectSize: Vec3): Vec3 =>
+    {
+        const band = params.framed ? params.mouldingThickness : 0;
+        const drawnSize = CanvasCompositionConstants.getDrawnSize(params, objectSize);
+        return {x: drawnSize.x - 2 * band, y: drawnSize.y - 2 * band, z: 1};
+    },
 
     // Coordinated finishes (snapped to the "Timber" palette so they round-trip). Frames stay
     // mid-brightness, as on doors (see DoorCompositionConstants); the inner stays a quieter mid-tone,
@@ -39,11 +61,12 @@ const CanvasCompositionConstants = {
         preset("#3f8f7a", "#a29b86", 0.08, true),  // verdigris, grey putty inside
         preset("#8b4818", "#c8a271", 0.10, false), // cherry, light timber inside
         preset("#5c5c5a", "#bdb59d", 0.04, false), // slim iron, putty inside
-    ] as Omit<CanvasCompositionParams, "framed">[],
+    ] as Omit<CanvasCompositionParams, "framed" | "margin">[],
 };
 
+// A preset is a finish only: whether the frame is shown, and the margin, are left as they are.
 function preset(frame: string, inner: string, mouldingThickness: number,
-    mouldingIsConvex: boolean): Omit<CanvasCompositionParams, "framed">
+    mouldingIsConvex: boolean): Omit<CanvasCompositionParams, "framed" | "margin">
 {
     const snap = (hex: string) => ColorUtil.paletteIndexToRGB("Timber",
         ColorUtil.rgbToPaletteIndex("Timber", ColorUtil.hexToRGB(hex)));

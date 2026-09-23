@@ -8,7 +8,7 @@ Only the user's own player has a `PlayerController`. It reads input, steers the 
 
 ## Input
 - `PlayerPointerInput` arbitrates canvas pointer gestures:
-  - Gizmo drags (`GizmoDragUtil`): every press is offered to the registered drag sources first (e.g. the selected wall attachment's outline). A press one takes never reaches the camera or reads as a click; it becomes a drag only past the tap tolerance, and is cancelled otherwise. Hovering shows the cursor of what a press would take.
+  - Gizmo drags (`GizmoDragUtil`): every press is offered to the registered drag sources first (e.g. the selected attached object's outline). A press one takes never reaches the camera or reads as a click; it becomes a drag only past the tap tolerance, and is cancelled otherwise. Hovering shows the cursor of what a press would take.
   - `PointerDragInput`: one held pointer. It exposes a joystick offset (for steering) and a 1:1 per-frame delta (for orbiting). Its tap-versus-drag tolerance depends on the pointer type.
   - `PointerZoomInput`: pinch or mouse wheel, reported as a **scale factor** rather than a distance.
   - Click: a press that did not move, raycast through `CameraUtil` to find the clicked object.

@@ -26,14 +26,14 @@ Object edits are optimistic: the client validates and applies an edit through th
 - For high-frequency signals such as transforms, a pending signal of the same type is replaced instead of queued.
 
 ### Size
-A transform's scale multiplies the type's `baseHitboxSize`; `ObjectScaleUtil` is the only way to read it, and turns it into the footprint everything else uses — collider, wall placement, selection outline, mesh composition. A type opts into resizing with `ObjectScalingConfig` (step, minimum and maximum per axis); one without it is fixed at its base size.
+A transform's scale multiplies the type's `baseHitboxSize`; `ObjectScaleUtil` is the only way to read it, and turns it into the footprint everything else uses — collider, attached placement, selection outline, mesh composition. A type opts into resizing with `ObjectScalingConfig` (step, minimum and maximum per axis); one without it is fixed at its base size.
 
 A stored scale is never used as read. `ObjectScaleUtil` snaps it onto the type's step grid and clamps it, which absorbs the encoding's coarser quantization and is also what bounds a scale arriving from a client.
 
 ### Stored positions
 `ObjectTransform` stores each component as a fraction of a fixed range. **Those ranges are part of the stored format.** Changing one silently moves every stored object, so the ranges are frozen and independent of room dimensions. A room that outgrows them needs a new `ObjectGroup` version with a converter in `ObjectGroupVersionMigration`. Objects share a blob with the `VoxelGrid`, whose version dates both.
 
-Versions before the scale existed hold a shorter transform, so `ObjectGroupVersionMigration` reads the body at the version it was written in rather than only converting values afterwards.
+Versions before the scale existed hold a shorter transform, so `ObjectGroupVersionMigration` reads the body at the version it was written in rather than only converting values afterwards. Changing a type's `baseHitboxSize` likewise needs a converter that rescales its stored objects, or every one of them changes size.
 
 ## Metadata
 `SetObjectMetadataSignal`. On failure, the server sends back the current server-side value.

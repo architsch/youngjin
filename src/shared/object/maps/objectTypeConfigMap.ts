@@ -3,7 +3,7 @@ import VoxelObjectTypeConfig from "../types/objectTypeConfig/voxelObjectTypeConf
 import PlayerObjectTypeConfig from "../types/objectTypeConfig/playerObjectTypeConfig";
 import CanvasObjectTypeConfig from "../types/objectTypeConfig/canvasObjectTypeConfig";
 import DoorObjectTypeConfig from "../types/objectTypeConfig/doorObjectTypeConfig";
-import WallLampObjectTypeConfig from "../types/objectTypeConfig/wallLampObjectTypeConfig";
+import LampObjectTypeConfig from "../types/objectTypeConfig/lampObjectTypeConfig";
 
 // All GameObject types and the components each spawns with. Type indices are stored with objects, so
 // they are append-only. The list is read lazily on first lookup, because configs import this map (an
@@ -15,7 +15,7 @@ function getObjectTypeConfigPairs(): [number, ObjectTypeConfig][]
         [1, PlayerObjectTypeConfig],
         [2, CanvasObjectTypeConfig],
         [3, DoorObjectTypeConfig],
-        [4, WallLampObjectTypeConfig],
+        [4, LampObjectTypeConfig],
     ];
 }
 

@@ -12,7 +12,6 @@ const DoorObjectTypeClientConfig: ObjectTypeClientConfig =
         canBeSelectedByUserInEditMode: (_gameObject, user, room) =>
             RoomValidationUtil.canUserManageDoors(user, room),
         editOptions: DoorEditOptions,
-        showMoveGizmos: true,
     },
 };
 

@@ -6,7 +6,7 @@ import LightSource from "../components/lightSource";
 import InstancedMeshComposer from "../components/instancedMeshComposer";
 
 // Keeps a lamp's composed parts and its LightSource in sync (position and color).
-export default class WallLampGameObject extends GameObject
+export default class LampGameObject extends GameObject
 {
     private lightSource: LightSource;
     private instancedMeshComposer: InstancedMeshComposer;
@@ -17,26 +17,26 @@ export default class WallLampGameObject extends GameObject
 
         this.lightSource = this.components.lightSource as LightSource;
         if (!this.lightSource)
-            throw new Error("WallLampGameObject requires LightSource component");
+            throw new Error("LampGameObject requires LightSource component");
 
         this.instancedMeshComposer = this.components.instancedMeshComposer as InstancedMeshComposer;
         if (!this.instancedMeshComposer)
-            throw new Error("WallLampGameObject requires InstancedMeshComposer component");
+            throw new Error("LampGameObject requires InstancedMeshComposer component");
     }
 
-    // Wall attachments are placed, not driven, so the light is moved here. (Parts re-bake on their own.)
+    // Attached objects are placed, not driven, so the light is moved here. (Parts re-bake on their own.)
     setObjectTransform(pos: Vec3, dir: Vec3)
     {
         super.setObjectTransform(pos, dir);
         this.lightSource.setTransform(pos, dir);
     }
 
-    // The face color derives from the light setting, so the parts are recomposed (see
-    // WallLampObjectTypeConfig).
+    // The glow's color derives from the light setting, so the parts are recomposed (see
+    // LampObjectTypeConfig).
     onSetMetadata(key: ObjectMetadataKey, value: string)
     {
         super.onSetMetadata(key, value);
         if (key === ObjectMetadataKeyEnumMap.LightProperties)
-            this.instancedMeshComposer.reloadComposition();
+            this.instancedMeshComposer.rebuildParts();
     }
 }

@@ -65,7 +65,6 @@ const PlayerObjectTypeConfig =
                 },
             },
             collider: {
-                colliderType: "rigidbody",
                 baseHitboxSize: {sizeX: 2 * PLAYER_RADIUS_XZ, sizeY: PLAYER_HEIGHT, sizeZ: 2 * PLAYER_RADIUS_XZ},
                 applyHardCollisionToOthers: false,
                 outgoingSoftCollisionForceMultiplier: 1,

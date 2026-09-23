@@ -5,7 +5,8 @@ import Voxel from "../../../shared/voxel/types/voxel";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
 import VoxelQuadInstanceUtil from "./voxelQuadInstanceUtil";
-import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NEAR_EPSILON,
+import Vec3 from "../../../shared/math/types/vec3";
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y, NEAR_EPSILON,
     NUM_COLLISION_LAYERS, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS,
     VOXEL_QUAD_GEOMETRY_ID, VOXEL_TEXTURE_PACK_MATERIAL_ID } from "../../../shared/system/sharedConstants";
 
@@ -16,13 +17,21 @@ import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NEAR_
 const voxelInstancedMeshId = MeshDataUtil.getInstancedMeshId(
     VOXEL_QUAD_GEOMETRY_ID, VOXEL_TEXTURE_PACK_MATERIAL_ID);
 
-// Upper bound on walk steps, guarding against degenerate segments.
-const maxGridWalkSteps = NUM_VOXEL_ROWS + NUM_VOXEL_COLS + NUM_COLLISION_LAYERS + 3;
+// Upper bound on walk steps: enough to cross the whole room and the margin either side of it (see
+// ROOM_BOX_MARGIN), guarding against degenerate segments.
+const maxGridWalkSteps = NUM_VOXEL_ROWS + NUM_VOXEL_COLS + NUM_COLLISION_LAYERS + 12;
+
+// How far past the room the ray walk's box reaches (see getFirstDrawnFaceAlongRay): a whole block, since
+// the walk never judges the block it ends in, and one just past the floor is the one the floor tile tops.
+const ROOM_BOX_MARGIN = 1;
 
 // Reach for the open-space measure (see getOpenSpaceDropAhead).
 const openSpaceReach = 5; // in world units
 
 const blockCenterTemp = new THREE.Vector3();
+const roomBoxTemp = new THREE.Box3();
+const segmentStartTemp = new THREE.Vector3();
+const segmentEndTemp = new THREE.Vector3();
 
 const ClientVoxelQueryUtil =
 {
@@ -42,86 +51,44 @@ const ClientVoxelQueryUtil =
         if (room == undefined)
             return false;
         const voxels = room.voxelGrid.voxels;
+        return walkBlocks(from, to, (row, col, collisionLayer, entryAxis, entryOrientation) =>
+            voxelBlockFaceIsDrawn(voxels, row, col, collisionLayer, entryAxis, entryOrientation));
+    },
 
-        // A block of the walk is one collision layer of one voxel: a unit square in XZ, one layer tall.
-        let col = VoxelQueryUtil.getVoxelColFromWorldX(from.x);
-        let row = VoxelQueryUtil.getVoxelRowFromWorldZ(from.z);
-        let collisionLayer = VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(from.y);
+    // The first drawn face the ray meets, as lineSegmentIsBlockedByDrawnVoxelBlock judges one: where it
+    // is met, and the axis direction the face looks along. Objects are not considered.
+    getFirstDrawnFaceAlongRay(ray: THREE.Ray): {point: Vec3, normal: Vec3} | undefined
+    {
+        const room = App.getCurrentRoom();
+        if (room == undefined)
+            return undefined;
+        const voxels = room.voxelGrid.voxels;
 
-        const endCol = VoxelQueryUtil.getVoxelColFromWorldX(to.x);
-        const endRow = VoxelQueryUtil.getVoxelRowFromWorldZ(to.z);
-        const endCollisionLayer = VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(to.y);
+        // Only the stretch through the room can meet a face, and the walk is bounded by the room's size.
+        // The box reaches past the room so that a walk from outside enters every block through a face, and
+        // one leaving through the floor or ceiling crosses it before it ends.
+        roomBoxTemp.min.set(-ROOM_BOX_MARGIN, -ROOM_BOX_MARGIN, -ROOM_BOX_MARGIN);
+        roomBoxTemp.max.set(NUM_VOXEL_COLS + ROOM_BOX_MARGIN, MAX_ROOM_Y + ROOM_BOX_MARGIN,
+            NUM_VOXEL_ROWS + ROOM_BOX_MARGIN);
+        const span = getRaySpanInBox(ray, roomBoxTemp);
+        if (span == undefined)
+            return undefined;
+        ray.at(span.enter, segmentStartTemp);
+        ray.at(span.exit, segmentEndTemp);
 
-        const dx = to.x - from.x, dy = to.y - from.y, dz = to.z - from.z;
-        const absDx = Math.abs(dx), absDy = Math.abs(dy), absDz = Math.abs(dz);
-        const colStep = Math.sign(dx), rowStep = Math.sign(dz), layerStep = Math.sign(dy);
-
-        // Per-axis cost of one block (as a segment fraction) and distance to the next boundary.
-        const colStride = (absDx > 0) ? (1 / absDx) : Infinity;
-        const rowStride = (absDz > 0) ? (1 / absDz) : Infinity;
-        const layerStride = (absDy > 0) ? (COLLISION_LAYER_HEIGHT / absDy) : Infinity;
-
-        let colBoundary = (absDx > 0)
-            ? (((colStep > 0) ? (col + 1 - from.x) : (from.x - col)) / absDx) : Infinity;
-        let rowBoundary = (absDz > 0)
-            ? (((rowStep > 0) ? (row + 1 - from.z) : (from.z - row)) / absDz) : Infinity;
-        let layerBoundary = (absDy > 0)
-            ? (((layerStep > 0)
-                ? ((collisionLayer + 1) * COLLISION_LAYER_HEIGHT - from.y)
-                : (from.y - collisionLayer * COLLISION_LAYER_HEIGHT)) / absDy)
-            : Infinity;
-
-        // The target stands where the viewpoint does, so there is no block in between to speak of.
-        if (col === endCol && row === endRow && collisionLayer === endCollisionLayer)
-            return false;
-
-        for (let step = 0; step < maxGridWalkSteps; ++step)
+        let hit: {point: Vec3, normal: Vec3} | undefined = undefined;
+        walkBlocks(segmentStartTemp, segmentEndTemp, (row, col, collisionLayer, entryAxis, entryOrientation,
+            along) =>
         {
-            // Cross into the next block over whichever boundary the segment reaches first. The face it
-            // enters the new block through is the one facing back the way it came.
-            let boundaryCrossed: number;
-            let entryAxis: "x" | "y" | "z";
-            let entryStep: number;
-            if (colBoundary <= rowBoundary && colBoundary <= layerBoundary)
-            {
-                boundaryCrossed = colBoundary;
-                col += colStep;
-                colBoundary += colStride;
-                entryAxis = "x";
-                entryStep = colStep;
-            }
-            else if (rowBoundary <= layerBoundary)
-            {
-                boundaryCrossed = rowBoundary;
-                row += rowStep;
-                rowBoundary += rowStride;
-                entryAxis = "z";
-                entryStep = rowStep;
-            }
-            else
-            {
-                boundaryCrossed = layerBoundary;
-                collisionLayer += layerStep;
-                layerBoundary += layerStride;
-                entryAxis = "y";
-                entryStep = layerStep;
-            }
-
-            if (boundaryCrossed >= 1)
-                return false; // Stepped past the target itself, which the block test above may have missed.
-
-            // Check arrival before judging the block, since wall attachments often sit exactly on a
-            // boundary and may round into the wall block.
-            if (col === endCol && row === endRow && collisionLayer === endCollisionLayer)
+            if (!voxelBlockFaceIsDrawn(voxels, row, col, collisionLayer, entryAxis, entryOrientation))
                 return false;
-
-            if (voxelBlockFaceIsDrawn(voxels, row, col, collisionLayer,
-                entryAxis, (entryStep > 0) ? "-" : "+"))
-            {
-                return true;
-            }
-        }
-        return false;
+            const point = segmentStartTemp.clone().lerp(segmentEndTemp, along);
+            const normal: Vec3 = {x: 0, y: 0, z: 0};
+            normal[entryAxis] = (entryOrientation == "+") ? 1 : -1;
+            hit = {point: {x: point.x, y: point.y, z: point.z}, normal};
+            return true;
+        });
+        return hit;
     },
 
     // How far the visible open space ahead drops below the viewer's standing level (>= 0). Measures
@@ -226,6 +193,114 @@ function getVisibleDropBelow(voxel: Voxel, row: number, col: number, viewPositio
         return standingLevelY - blockCenterY;
     }
     return 0;
+}
+
+// Walks the blocks a segment passes through after from's own, handing visit each one with the face it is
+// entered through (the face looking back the way the segment came) and how far along the segment that is,
+// from 0 to 1. Stops before to's block, or when visit returns true, which the walk then returns.
+function walkBlocks(from: THREE.Vector3, to: THREE.Vector3,
+    visit: (row: number, col: number, collisionLayer: number, entryAxis: "x" | "y" | "z",
+        entryOrientation: "-" | "+", along: number) => boolean): boolean
+{
+    // A block of the walk is one collision layer of one voxel: a unit square in XZ, one layer tall.
+    let col = VoxelQueryUtil.getVoxelColFromWorldX(from.x);
+    let row = VoxelQueryUtil.getVoxelRowFromWorldZ(from.z);
+    let collisionLayer = VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(from.y);
+
+    const endCol = VoxelQueryUtil.getVoxelColFromWorldX(to.x);
+    const endRow = VoxelQueryUtil.getVoxelRowFromWorldZ(to.z);
+    const endCollisionLayer = VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(to.y);
+
+    const dx = to.x - from.x, dy = to.y - from.y, dz = to.z - from.z;
+    const absDx = Math.abs(dx), absDy = Math.abs(dy), absDz = Math.abs(dz);
+    const colStep = Math.sign(dx), rowStep = Math.sign(dz), layerStep = Math.sign(dy);
+
+    // Per-axis cost of one block (as a segment fraction) and distance to the next boundary.
+    const colStride = (absDx > 0) ? (1 / absDx) : Infinity;
+    const rowStride = (absDz > 0) ? (1 / absDz) : Infinity;
+    const layerStride = (absDy > 0) ? (COLLISION_LAYER_HEIGHT / absDy) : Infinity;
+
+    let colBoundary = (absDx > 0)
+        ? (((colStep > 0) ? (col + 1 - from.x) : (from.x - col)) / absDx) : Infinity;
+    let rowBoundary = (absDz > 0)
+        ? (((rowStep > 0) ? (row + 1 - from.z) : (from.z - row)) / absDz) : Infinity;
+    let layerBoundary = (absDy > 0)
+        ? (((layerStep > 0)
+            ? ((collisionLayer + 1) * COLLISION_LAYER_HEIGHT - from.y)
+            : (from.y - collisionLayer * COLLISION_LAYER_HEIGHT)) / absDy)
+        : Infinity;
+
+    // The segment ends in the block it starts in, so there is no block in between to speak of.
+    if (col === endCol && row === endRow && collisionLayer === endCollisionLayer)
+        return false;
+
+    for (let step = 0; step < maxGridWalkSteps; ++step)
+    {
+        // Cross into the next block over whichever boundary the segment reaches first.
+        let boundaryCrossed: number;
+        let entryAxis: "x" | "y" | "z";
+        let entryStep: number;
+        if (colBoundary <= rowBoundary && colBoundary <= layerBoundary)
+        {
+            boundaryCrossed = colBoundary;
+            col += colStep;
+            colBoundary += colStride;
+            entryAxis = "x";
+            entryStep = colStep;
+        }
+        else if (rowBoundary <= layerBoundary)
+        {
+            boundaryCrossed = rowBoundary;
+            row += rowStep;
+            rowBoundary += rowStride;
+            entryAxis = "z";
+            entryStep = rowStep;
+        }
+        else
+        {
+            boundaryCrossed = layerBoundary;
+            collisionLayer += layerStep;
+            layerBoundary += layerStride;
+            entryAxis = "y";
+            entryStep = layerStep;
+        }
+
+        if (boundaryCrossed >= 1)
+            return false; // Stepped past the end itself, which the block test below may have missed.
+
+        // Check arrival before judging the block, since attached objects often sit exactly on a
+        // boundary and may round into the block behind them.
+        if (col === endCol && row === endRow && collisionLayer === endCollisionLayer)
+            return false;
+
+        if (visit(row, col, collisionLayer, entryAxis, (entryStep > 0) ? "-" : "+", boundaryCrossed))
+            return true;
+    }
+    return false;
+}
+
+// Where along the ray (in ray lengths) it enters and leaves the box, from its origin at the earliest.
+// Undefined if it misses the box.
+function getRaySpanInBox(ray: THREE.Ray, box: THREE.Box3): {enter: number, exit: number} | undefined
+{
+    let enter = 0;
+    let exit = Infinity;
+    for (const axis of ["x", "y", "z"] as const)
+    {
+        const origin = ray.origin[axis];
+        const direction = ray.direction[axis];
+        if (Math.abs(direction) < NEAR_EPSILON)
+        {
+            if (origin < box.min[axis] || origin > box.max[axis])
+                return undefined;
+            continue;
+        }
+        const t1 = (box.min[axis] - origin) / direction;
+        const t2 = (box.max[axis] - origin) / direction;
+        enter = Math.max(enter, Math.min(t1, t2));
+        exit = Math.min(exit, Math.max(t1, t2));
+    }
+    return (enter <= exit) ? {enter, exit} : undefined;
 }
 
 // Whether a block shows anything on the side a line enters it from: false for an empty block, for a

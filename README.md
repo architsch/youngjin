@@ -54,7 +54,7 @@ The ThingsPool source code is open source under the Apache License 2.0. It is bu
 
 - **Geometry**
     - [Texture](docs/geometry/texture.md)
-    - [Wall-Attached Object](docs/geometry/wall_attached_object.md)
+    - [Attached Object](docs/geometry/object_attachment.md)
     - [Voxel Grid Structure](docs/geometry/voxel_grid.md)
     - [Physics System](docs/geometry/physics.md)
     - [Room Entrances](docs/geometry/room_entrance.md)

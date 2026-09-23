@@ -18,7 +18,8 @@ import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap
 import PhysicsColliderStateUtil from "../../../shared/physics/util/physicsColliderStateUtil";
 import RestrictedZone from "../../../shared/voxel/types/restrictedZone";
 import RoomPaletteMap from "../../../shared/room/generation/maps/roomPaletteMap";
-import WallAttachedObjectUtil from "../../../shared/object/util/wallAttachedObjectUtil";
+import ObjectAttachmentUtil from "../../../shared/object/util/objectAttachmentUtil";
+import Geometry3DUtil from "../../../shared/math/util/geometry3DUtil";
 import Vec3 from "../../../shared/math/types/vec3";
 import Voxel from "../../../shared/voxel/types/voxel";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
@@ -28,7 +29,7 @@ import { PLAYER_HEIGHT } from "../../../shared/object/types/objectTypeConfig/pla
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN,
     FOG_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME, MAX_RESTRICTED_ZONES, MAX_ROOM_Y,
     NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS,
-    SANDBOX_SINGLE_PLAYER_MODE, UNIT_VEC3 } from "../../../shared/system/sharedConstants";
+    SANDBOX_SINGLE_PLAYER_MODE } from "../../../shared/system/sharedConstants";
 import ObjectScaleUtil from "../../../shared/object/util/objectScaleUtil";
 import RoomLightingUtil from "../../graphics/light/util/roomLightingUtil";
 import RoomPrefs from "../../../shared/room/types/roomPrefs";
@@ -209,27 +210,34 @@ function regionOf(region: {row: number, col: number, collisionLayer: number,
     };
 }
 
-// Compass faces of a cell, as axis + orientation.
-const QUAD_FACES: {[face: string]: {axis: "x" | "z", orientation: "-" | "+"}} = {
+// Faces of a cell's block, as axis + orientation: the compass sides, its top (+y) and its bottom (-y).
+const QUAD_FACES: {[face: string]: {axis: "x" | "y" | "z", orientation: "-" | "+"}} = {
     "-x": {axis: "x", orientation: "-"},
     "+x": {axis: "x", orientation: "+"},
+    "-y": {axis: "y", orientation: "-"},
+    "+y": {axis: "y", orientation: "+"},
     "-z": {axis: "z", orientation: "-"},
     "+z": {axis: "z", orientation: "+"},
 };
 
 // Attachment position and facing on a cell face, from the grid's own math (matches click placement).
-// ignoreVisibility, because sets are often dressed before the wall behind goes up.
+// ignoreVisibility, because sets are often dressed before the wall behind goes up. A top face below the
+// lowest layer is the room's floor, and a bottom face above the highest is its ceiling.
 function faceTransformOf(voxel: Voxel, face: string, collisionLayer: number)
 {
     const side = QUAD_FACES[face];
     if (side == undefined)
     {
         throw new Error(`"${face}" is not a face of a cell. Use one of ` +
-            `${Object.keys(QUAD_FACES).join(", ")} — the side of the cell the object hangs on.`);
+            `${Object.keys(QUAD_FACES).join(", ")} — the side of the cell the object is attached to.`);
     }
 
-    const quadIndex = VoxelQueryUtil.getVoxelQuadIndex(voxel.row, voxel.col, side.axis,
-        side.orientation, collisionLayer);
+    const beyondLayers = collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX;
+    const quadIndex = (side.axis == "y" && beyondLayers)
+        ? ((side.orientation == "+")
+            ? VoxelQueryUtil.getFloorVoxelQuadIndex(voxel.row, voxel.col)
+            : VoxelQueryUtil.getCeilingVoxelQuadIndex(voxel.row, voxel.col))
+        : VoxelQueryUtil.getVoxelQuadIndex(voxel.row, voxel.col, side.axis, side.orientation, collisionLayer);
     if (quadIndex < 0)
         throw new Error(`Cell [row ${voxel.row}, col ${voxel.col}] has no "${face}" face on layer ${collisionLayer}.`);
 
@@ -263,38 +271,34 @@ function doorFloorY(voxels: Voxel[], row: number, col: number, face: string): nu
     return undefined;
 }
 
-// Cells blocking any part of an attachment's face. Stricter than the game's rule (partly clear is
-// fine for building, bad for a photo). Returns the blockers so the caller can move.
+// Blocks covering any part of an attachment's face, one block out from it. Stricter than the game's rule
+// (partly clear is fine for building, bad for a photo). Returns the blockers so the caller can move.
 function blockersInFrontOf(voxels: Voxel[], colliderState: {hitbox: {center: Vec3, halfSize: Vec3}},
-    dir: Vec3): {row: number, col: number}[]
+    dir: Vec3): {row: number, col: number, layer: number}[]
 {
     const {center, halfSize} = colliderState.hitbox;
-    const bottomLayer = VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(center.y - halfSize.y + 0.01);
-    const topLayer = VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(center.y + halfSize.y - 0.01);
+    const {normal} = Geometry3DUtil.getAxisFacingBasis(dir);
+    // Along the facing, the block just in front; across it, every block the face spans.
+    const range = (toIndex: (v: number) => number, axis: "x" | "y" | "z") => (normal[axis] != 0)
+        ? {first: toIndex(center[axis] + 0.01 * normal[axis]), last: toIndex(center[axis] + 0.01 * normal[axis])}
+        : {first: toIndex(center[axis] - halfSize[axis] + 0.01), last: toIndex(center[axis] + halfSize[axis] - 0.01)};
+    const cols = range(VoxelQueryUtil.getVoxelColFromWorldX, "x");
+    const layers = range(VoxelQueryUtil.getVoxelCollisionLayerFromWorldY, "y");
+    const rows = range(VoxelQueryUtil.getVoxelRowFromWorldZ, "z");
 
-    // The face runs along the axis the object doesn't face.
-    const alongZ = Math.abs(dir.z) >= Math.abs(dir.x);
-    const frontRow = Math.floor(center.z + (alongZ ? 0.51 * Math.sign(dir.z) : 0));
-    const frontCol = Math.floor(center.x + (alongZ ? 0 : 0.51 * Math.sign(dir.x)));
-    const halfSpan = alongZ ? halfSize.x : halfSize.z;
-    const spanStart = Math.floor((alongZ ? center.x : center.z) - halfSpan + 0.01);
-    const spanEnd = Math.floor((alongZ ? center.x : center.z) + halfSpan - 0.01);
-
-    const blockers: {row: number, col: number}[] = [];
-    for (let along = spanStart; along <= spanEnd; ++along)
+    const blockers: {row: number, col: number, layer: number}[] = [];
+    for (let row = rows.first; row <= rows.last; ++row)
     {
-        const row = alongZ ? frontRow : along;
-        const col = alongZ ? along : frontCol;
-        const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);
-        if (voxel == undefined)
-            continue;
-        for (let layer = Math.max(COLLISION_LAYER_MIN, bottomLayer);
-            layer <= Math.min(COLLISION_LAYER_MAX, topLayer); ++layer)
+        for (let col = cols.first; col <= cols.last; ++col)
         {
-            if (VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, layer))
+            const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);
+            if (voxel == undefined)
+                continue;
+            for (let layer = Math.max(COLLISION_LAYER_MIN, layers.first);
+                layer <= Math.min(COLLISION_LAYER_MAX, layers.last); ++layer)
             {
-                blockers.push({row, col});
-                break;
+                if (VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, layer))
+                    blockers.push({row, col, layer});
             }
         }
     }
@@ -595,13 +599,14 @@ const AutomationSetupUtil =
                 {
                     requireSandboxRoom("Listing the canvas frame presets");
                     const composer = CanvasObjectTypeConfig.components.spawnedByAny.instancedMeshComposer;
+                    // A preset is a finish only, so the frame is turned on here.
                     return CanvasCompositionConstants.presets.map(preset => ({
                         InstancedMeshComposition: CompositionMetadataUtil.encode(
-                            composer.codecType, composer.codecVersion, preset),
+                            composer.codecType, composer.codecVersion, {...preset, framed: true, margin: 0}),
                     }));
                 },
 
-                // Hangs a picture or door on a cell face (cell-addressed, like the walls). Spawned
+                // Attaches a picture, door or lamp to a cell face (cell-addressed, like the walls). Spawned
                 // through the normal factory with normal metadata; only the permission check is skipped.
                 addObject: async (spec: {type: string, row: number, col: number,
                     collisionLayer?: number, face?: string, y?: number,
@@ -638,7 +643,8 @@ const AutomationSetupUtil =
                     const user = App.getUser();
                     const objectId = ObjectIdUtil.generateRandomObjectId();
                     const pos = {x: place.x, y, z: place.z};
-                    const transform = new ObjectTransform(pos, place.dir, {...UNIT_VEC3});
+                    const transform = new ObjectTransform(pos, place.dir,
+                        ObjectScaleUtil.getDefaultScale(objectTypeIndex));
 
                     // The stricter photo check first, since it gives the more specific error.
                     const colliderState = PhysicsColliderStateUtil.getObjectColliderState(
@@ -650,18 +656,20 @@ const AutomationSetupUtil =
                         throw new Error(`A ${spec.type} on the "${face}" face of cell ` +
                             `[row ${spec.row}, col ${spec.col}] would be hidden behind the block ` +
                             `work at ` +
-                            `${blockers.map(b => `[row ${b.row}, col ${b.col}]`).join(", ")}. ` +
-                            `Move it along the wall, or take that block work away.`);
+                            `${blockers.map(b => `[row ${b.row}, col ${b.col}, layer ${b.layer}]`).join(", ")}. ` +
+                            `Move it along its face, or take that block work away.`);
                     }
 
-                    // The game's placement rule still applies (catches mid-air and overlapping attachments).
-                    if (!WallAttachedObjectUtil.canPlaceObject(room, objectId, objectTypeIndex,
+                    // The game's placement rule still applies (catches mid-air and overlapping
+                    // attachments, and faces the type may not be attached to).
+                    if (!ObjectAttachmentUtil.canPlaceObject(room, objectId, objectTypeIndex,
                         transform))
                     {
-                        throw new Error(`No wall will hold a ${spec.type} on the "${face}" face of ` +
-                            `cell [row ${spec.row}, col ${spec.col}] at y ${y}. Either nothing is ` +
-                            `standing in that cell over the object's height — name the wall's own ` +
-                            `cell, not the one in front of it — or something is already hanging there.`);
+                        throw new Error(`Nothing will hold a ${spec.type} on the "${face}" face of ` +
+                            `cell [row ${spec.row}, col ${spec.col}] at y ${y}. Either the type can't ` +
+                            `face that way, or nothing is standing in that cell across the object's ` +
+                            `size — name the supporting block's own cell, not the one in front of ` +
+                            `it — or something is already attached there.`);
                     }
 
                     const signal = new AddObjectSignal(room.id, user.id, user.userName,

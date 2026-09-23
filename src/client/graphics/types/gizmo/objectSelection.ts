@@ -72,18 +72,17 @@ export default class ObjectSelection
 
 let selectionOutline: WorldSpaceOutlineRect | null = null;
 
-// Placement comes from the collider: wall attachments are outlined on their face; other objects on
-// the ground beneath them; collider-less objects use their own transform.
+// Attached objects are outlined on their face; other objects on the ground beneath their collider;
+// collider-less objects use their own transform.
 function refreshSelectionOutline(selection: ObjectSelection)
 {
     if (!selectionOutline)
         return;
 
     const go = selection.gameObject;
-    const collider = ObjectTypeConfigMap.getConfigByIndex(go.params.objectTypeIndex)
-        .components.spawnedByAny?.collider;
+    const config = ObjectTypeConfigMap.getConfigByIndex(go.params.objectTypeIndex);
 
-    if (!collider)
+    if (!config.components.spawnedByAny?.collider)
     {
         selectionOutline.setTransformRaw(go.position, go.quaternion, go.obj.scale);
         return;
@@ -91,7 +90,7 @@ function refreshSelectionOutline(selection: ObjectSelection)
 
     // The object's own footprint, not the type's, so the outline follows a resize.
     const size = ObjectScaleUtil.getObjectSize(go.params.objectTypeIndex, go.params.transform.scale);
-    if (collider.colliderType == "wallAttachment")
+    if (config.attachment)
     {
         outlinePos.copy(go.position);
         outlineQuat.copy(go.quaternion);

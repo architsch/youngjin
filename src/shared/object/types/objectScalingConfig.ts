@@ -6,4 +6,5 @@ export type ObjectScalingConfig = {
     scaleStep: Vec3,
     minScale: Vec3,
     maxScale: Vec3,
+    defaultScale: Vec3, // what a new one is added at; on the grid, within the limits
 };

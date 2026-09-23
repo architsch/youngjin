@@ -61,9 +61,9 @@ export const HUB_ROOM_ID_KEYWORD = "hub";
 export const GRAVITY_SPEED = 3;
 export const SOFT_COLLISION_PUSH_SPEED_LIMIT = GRAVITY_SPEED * 2;
 
-// Inset of a wall attachment's hitbox on its in-wall axes (see PhysicsColliderStateUtil), so neighbours
-// sharing a footprint edge never register as overlapping. Depth is not inset.
-export const WALL_ATTACHMENT_HITBOX_INSET = 0.02;
+// Inset of an attached object's hitbox on the axes of its face (see PhysicsColliderStateUtil), so
+// neighbours sharing a footprint edge never register as overlapping. Depth is not inset.
+export const ATTACHMENT_HITBOX_INSET = 0.02;
 
 export const NUM_COLLISION_LAYERS = 16; // Total number of collision layers which span the room's Y-axis
 export const COLLISION_LAYER_HEIGHT = 0.5; // How tall one collision layer stands, in world units
@@ -115,6 +115,14 @@ export const DIR_VEC_BY_CODE: Vec3[] = [
     {x: 1, y: 0, z: 0}, // +x = 3
     {x: 0, y: 0, z: -1}, // -z = 4
     {x: 0, y: 0, z: 1}, // +z = 5
+];
+
+// Facings an attached object can be allowed (see ObjectAttachmentConfig).
+export const WALL_DIRECTIONS: Vec3[] = [
+    DIR_VEC_BY_NAME["+x"], DIR_VEC_BY_NAME["-x"], DIR_VEC_BY_NAME["+z"], DIR_VEC_BY_NAME["-z"],
+];
+export const ALL_FACE_DIRECTIONS: Vec3[] = [
+    ...WALL_DIRECTIONS, DIR_VEC_BY_NAME["+y"], DIR_VEC_BY_NAME["-y"],
 ];
 
 // Graphics

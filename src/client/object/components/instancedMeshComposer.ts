@@ -25,9 +25,10 @@ export default class InstancedMeshComposer extends GameObjectComponent
     private instanceIdsByInstancedMeshId: {[instancedMeshId: string]: number[]} = {};
     private nextIndexByInstancedMeshIdTemp: {[instancedMeshId: string]: number} = {};
 
-    // "refreshPending": refresh due (loads meshes first); "meshesLoading": waiting on a load;
-    // "upToDate": instances match the parts, re-baked only on movement.
-    private updateState: "refreshPending" | "meshesLoading" | "upToDate" = "refreshPending";
+    // "awaitingSpawn": no composition loaded yet (updates can run before onSpawn); "refreshPending":
+    // refresh due (loads meshes first); "meshesLoading": waiting on a load; "upToDate": instances match
+    // the parts, re-baked only on movement.
+    private updateState: "awaitingSpawn" | "refreshPending" | "meshesLoading" | "upToDate" = "awaitingSpawn";
 
     // Instance matrices bake the world transform, so movement also requires a refresh. Stationary
     // frames are skipped by comparing against this.
@@ -71,9 +72,7 @@ export default class InstancedMeshComposer extends GameObjectComponent
         this.reloadComposition();
     }
 
-    // Rebuilds instances from the composition. Public for objects whose appearance is derived (e.g. a
-    // lamp's, from its light; see WallLampGameObject), which recompose when that source changes.
-    reloadComposition(): void
+    private reloadComposition(): void
     {
         this.instancedMeshComposition.loadFromMetadata(this.gameObject);
         this.updateState = "refreshPending";
@@ -91,13 +90,14 @@ export default class InstancedMeshComposer extends GameObjectComponent
                 break;
             case "upToDate":
                 // A resize is a re-decode, not a re-bake: the codec lays the parts out against the
-                // size, so new parts have to be built before any of them can be placed.
+                // size, so new parts have to be built before any of them can be placed. Built from the
+                // live params, so an edit still waiting to be saved survives it.
                 if (!this.objectSizeIsInSync())
-                    this.reloadComposition();
+                    this.rebuildParts();
                 else if (!this.transformIsInSync())
                     this.refreshInstancedMeshes();
                 break;
-            // Otherwise (i.e. updateState === "meshesLoading"), the meshes are still loading so we must skip this 'update' frame.
+            // Otherwise (i.e. "meshesLoading" or "awaitingSpawn"), there is nothing to draw yet so we must skip this 'update' frame.
         }
     }
 
@@ -106,7 +106,8 @@ export default class InstancedMeshComposer extends GameObjectComponent
         if (this.hidden === hidden)
             return;
         this.hidden = hidden;
-        this.updateState = "refreshPending";
+        if (this.updateState != "awaitingSpawn")
+            this.updateState = "refreshPending";
     }
 
     // Visits all instances across meshes, for whole-object actions (e.g. occlusion hiding).
@@ -130,7 +131,7 @@ export default class InstancedMeshComposer extends GameObjectComponent
     }
     decodeParts(encodedParams: string)
     {
-        this.instancedMeshComposition.decodeParts(encodedParams);
+        this.instancedMeshComposition.decodeParts(encodedParams, this.gameObject);
         this.updateState = "refreshPending";
     }
     getParams(): InstancedMeshCompositionParams
@@ -148,6 +149,8 @@ export default class InstancedMeshComposer extends GameObjectComponent
         }
         return undefined;
     }
+    // Also for objects whose appearance is derived (e.g. a lamp's, from its light; see LampGameObject),
+    // which recompose when that source changes.
     rebuildParts()
     {
         this.decodeParts(this.encodeParts());

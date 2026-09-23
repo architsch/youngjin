@@ -15,7 +15,7 @@ export const ObjectMetadataKeyEnumMap: Record<string, number> =
     DoorType: 7, // for doors: whether the door offers itself as a room's default entrance
     // Label ink as a "LabelColor" palette position, separate from the text.
     LabelColor: 8,
-    // Lamp color and strength as two quantized characters (see WallLampObjectTypeConfig), always read and
+    // Lamp color and strength as two quantized characters (see LampObjectTypeConfig), always read and
     // written together.
     LightProperties: 9,
 }

@@ -8,12 +8,17 @@ import ObjectComponentFactory from "../factories/objectComponentFactory";
 import ObjectTypeConfig, { SpawnType } from "../../../shared/object/types/objectTypeConfig/objectTypeConfig";
 import { ObjectMetadataKey } from "../../../shared/object/types/objectMetadataKey";
 import Vec3 from "../../../shared/math/types/vec3";
+import Geometry3DUtil from "../../../shared/math/util/geometry3DUtil";
 import ObjectTypeClientConfigMap from "../maps/objectTypeClientConfigMap";
 import ObjectSelection from "../../graphics/types/gizmo/objectSelection";
 import GameModeUtil from "../../system/util/gameModeUtil";
 
 const vec3Temp = new THREE.Vector3();
 const cameraPosTemp = new THREE.Vector3();
+const rightTemp = new THREE.Vector3();
+const upTemp = new THREE.Vector3();
+const normalTemp = new THREE.Vector3();
+const basisTemp = new THREE.Matrix4();
 
 // A new GameObject type needs: a GameObject subclass, an ObjectTypeConfigMap entry (what it is), and
 // an ObjectTypeClientConfigMap entry (how it's built and selected).
@@ -30,17 +35,12 @@ export default abstract class GameObject
     {
         this.params = params;
 
+        this.config = ObjectTypeConfigMap.getConfigByIndex(this.params.objectTypeIndex);
+
         GraphicsManager.addObjectToScene(this.obj);
         this.obj.add(this.visualObj);
-        this.position.set(this.params.transform.pos.x, this.params.transform.pos.y, this.params.transform.pos.z);
-        vec3Temp.set(
-            this.params.transform.pos.x + this.params.transform.dir.x,
-            this.params.transform.pos.y + this.params.transform.dir.y,
-            this.params.transform.pos.z + this.params.transform.dir.z
-        );
-        this.obj.lookAt(vec3Temp);
+        this.applyTransform(this.params.transform.pos, this.params.transform.dir);
 
-        this.config = ObjectTypeConfigMap.getConfigByIndex(this.params.objectTypeIndex);
         for (const [spawnType, componentConfigs] of Object.entries(this.config.components))
         {
             // Only add components which meet the object's spawn condition.
@@ -141,13 +141,7 @@ export default abstract class GameObject
     }
     setObjectTransform(pos: Vec3, dir: Vec3)
     {
-        this.obj.position.set(pos.x, pos.y, pos.z);
-        const target = new THREE.Vector3(
-            this.position.x + dir.x,
-            this.position.y + dir.y,
-            this.position.z + dir.z
-        );
-        this.obj.lookAt(target);
+        this.applyTransform(pos, dir);
     }
     get rotation(): THREE.Euler { return this.obj.rotation; }
     set rotation(r: THREE.Euler) { this.obj.rotation.set(r.x, r.y, r.z); }
@@ -159,5 +153,23 @@ export default abstract class GameObject
         return spawnType == "spawnedByAny" ||
             (spawnType == "spawnedByMe" && this.isMine()) ||
             (spawnType == "spawnedByOther" && !this.isMine());
+    }
+
+    // Not setObjectTransform, which subclasses extend with state the constructor hasn't set up yet.
+    private applyTransform(pos: Vec3, dir: Vec3)
+    {
+        this.obj.position.set(pos.x, pos.y, pos.z);
+        if (this.config.attachment)
+        {
+            // From the face's own axes. lookAt would leave a floor or ceiling facing's roll to the error
+            // its stored facing decodes with (see Geometry3DUtil.getAxisFacingBasis).
+            const {normal, right, up} = Geometry3DUtil.getAxisFacingBasis(dir);
+            basisTemp.makeBasis(rightTemp.set(right.x, right.y, right.z), upTemp.set(up.x, up.y, up.z),
+                normalTemp.set(normal.x, normal.y, normal.z));
+            this.obj.quaternion.setFromRotationMatrix(basisTemp);
+            return;
+        }
+        vec3Temp.set(pos.x + dir.x, pos.y + dir.y, pos.z + dir.z);
+        this.obj.lookAt(vec3Temp);
     }
 }

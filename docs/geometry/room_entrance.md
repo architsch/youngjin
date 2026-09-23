@@ -2,7 +2,7 @@
 
 Reference: @src/shared/object/types/objectTypeConfig/doorObjectTypeConfig.ts , @src/server/room/util/spawnHotspotUtil.ts
 
-A room's only entrances are its **doors**. A door is a wall-attached object (see [wall_attached_object.md](wall_attached_object.md)) that is stored with the room and used by clicking it. No hole is cut behind a door: an attachment needs a solid wall, so room boundaries stay solid all the way round.
+A room's only entrances are its **doors**. A door is an attached object on a wall (see [object_attachment.md](object_attachment.md)) that is stored with the room and used by clicking it. No hole is cut behind a door: an attachment needs a solid wall, so room boundaries stay solid all the way round.
 
 Every multiplayer room is generated with exactly one door on a boundary wall. Regular rooms keep that single door. Hub doors are added and linked by admins (see [admin.md](../gameplay/admin.md)).
 

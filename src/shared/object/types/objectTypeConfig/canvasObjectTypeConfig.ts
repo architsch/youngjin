@@ -11,7 +11,7 @@ import ObjectTypeConfig from "./objectTypeConfig";
 import ObjectScaleUtil from "../../util/objectScaleUtil";
 import SetObjectMetadataSignal from "../../types/setObjectMetadataSignal";
 import SetObjectTransformSignal from "../../types/setObjectTransformSignal";
-import { WALL_ATTACHMENT_HITBOX_INSET } from "../../../system/sharedConstants";
+import { ATTACHMENT_HITBOX_INSET, WALL_DIRECTIONS } from "../../../system/sharedConstants";
 
 // Shared render target for all canvases in a room, one cell each. The cell size is also the thumbnail
 // size canvas images are fetched at.
@@ -36,6 +36,10 @@ const CanvasObjectTypeConfig =
         scaleStep: {x: 0.5, y: 0.5, z: 0},
         minScale: {x: 1, y: 1, z: 1},
         maxScale: {x: 3.5, y: 3.5, z: 1},
+        defaultScale: {x: 1, y: 1, z: 1},
+    },
+    attachment: {
+        allowedDirections: WALL_DIRECTIONS,
     },
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => {
         // Block spoofing attempts
@@ -68,11 +72,10 @@ const CanvasObjectTypeConfig =
     components: {
         spawnedByAny: {
             collider: {
-                colliderType: "wallAttachment",
                 baseHitboxSize: {
                     sizeX: 1,
                     sizeY: 1,
-                    sizeZ: 0.5 * WALL_ATTACHMENT_HITBOX_INSET
+                    sizeZ: 0.5 * ATTACHMENT_HITBOX_INSET
                 },
                 applyHardCollisionToOthers: false,
                 outgoingSoftCollisionForceMultiplier: 0,

@@ -2,7 +2,8 @@ import AABB3 from "../types/aabb3";
 import Vec3 from "../types/vec3";
 import RaycastHitResult3 from "../types/raycastHitResult3";
 import Vector3DUtil from "./vector3DUtil";
-import { DIR_VEC_BY_NAME } from "../../system/sharedConstants";
+import DirUtil from "./dirUtil";
+import { DIR_VEC_BY_CODE, DIR_VEC_BY_NAME } from "../../system/sharedConstants";
 
 const WORLD_UP: Vec3 = {x: 0, y: 1, z: 0};
 
@@ -56,6 +57,15 @@ const Geometry3DUtil =
         right = Vector3DUtil.normalize(right);
 
         return {right, up: Vector3DUtil.cross(forward, right)};
+    },
+    // dir snapped onto its nearest axis, with getFacingBasis's in-plane axes made exact. For anything
+    // that must face an axis whatever its stored facing decodes to (a zero component decodes slightly
+    // off zero, which along the up axis would leave the roll to that error).
+    getAxisFacingBasis: (dir: Vec3): {normal: Vec3, right: Vec3, up: Vec3} =>
+    {
+        const normal = DIR_VEC_BY_CODE[DirUtil.dirVecToCode(dir)];
+        const {right, up} = Geometry3DUtil.getFacingBasis(normal);
+        return {normal: {...normal}, right: roundToAxis(right), up: roundToAxis(up)};
     },
     // Whether two squares that share a facing overlap once projected onto their common plane. Their
     // separation along dir is ignored, so parallel squares at different depths still count as
@@ -147,6 +157,12 @@ const Geometry3DUtil =
 
         return { hitRayScale: tmin, hitNormal };
     },
+}
+
+// Adding 0 turns a rounded -0 into 0, which strict comparisons tell apart.
+function roundToAxis(v: Vec3): Vec3
+{
+    return {x: Math.round(v.x) + 0, y: Math.round(v.y) + 0, z: Math.round(v.z) + 0};
 }
 
 export default Geometry3DUtil;

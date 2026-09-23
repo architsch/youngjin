@@ -9,7 +9,7 @@ import fs from "fs";
 import path from "path";
 
 import BufferState from "../../../src/shared/networking/types/bufferState";
-import { writeLegacyObjectGroup } from "../helpers/legacyObjectGroup";
+import { LAST_UNSCALED_OBJECT_GROUP_VERSION, writeLegacyObjectGroup } from "../helpers/legacyObjectGroup";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 import ObjectScaleUtil from "../../../src/shared/object/util/objectScaleUtil";
 import CanvasObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
@@ -56,6 +56,12 @@ function buildRoomBlob(voxelGridBytes: Uint8Array, objects: AddObjectSignal[],
     const writeState = new BufferState(view, voxelGridBytes.length);
     if (stampObjectVersion == undefined)
         new ObjectGroup(objects).encodeWithParams(writeState, {});
+    else if (stampObjectVersion > LAST_UNSCALED_OBJECT_GROUP_VERSION)
+    {
+        // Laid out as the current version is; only the leading version byte differs.
+        new ObjectGroup(objects).encodeWithParams(writeState, {});
+        view[voxelGridBytes.length] = stampObjectVersion;
+    }
     else
         writeLegacyObjectGroup(writeState, objects, stampObjectVersion);
 
@@ -158,13 +164,36 @@ describe("object transform ranges and migration", () => {
 
     it("gives every object of a group stored before scale existed its type's base size", () => {
         const blob = buildRoomBlob(encodeCurrentVoxelGrid(),
-            [canvas("a", 2.0), canvas("b", 3.0)], ObjectGroup.latestFormatVersion - 1);
+            [canvas("a", 2.0), canvas("b", 3.0)], LAST_UNSCALED_OBJECT_GROUP_VERSION);
 
         const {objectGroup} = decodeRoomBlob(blob);
 
-        expect(objectGroup.sourceFormatVersion).toBe(ObjectGroup.latestFormatVersion - 1);
+        expect(objectGroup.sourceFormatVersion).toBe(LAST_UNSCALED_OBJECT_GROUP_VERSION);
         for (const object of Object.values(objectGroup.objectById))
             expect(object.transform.scale).toEqual(UNIT_VEC3);
+    });
+
+    it("keeps a lamp stored before lamps could be resized at the one voxel by one layer it was drawn at", () => {
+        const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
+        const lamp = (objectId: string) => new AddObjectSignal(ROOM_ID, "user-1", "User One", lampTypeIndex,
+            objectId, new ObjectTransform({x: 10.5, y: 2.25, z: 4}, {x: 0, y: 0, z: 1}, {...UNIT_VEC3}), {});
+
+        // Both with a stored scale (always unit, since lamps had no scaling) and from before scales.
+        for (const version of [LAST_UNSCALED_OBJECT_GROUP_VERSION, LAST_UNSCALED_OBJECT_GROUP_VERSION + 1])
+        {
+            const blob = buildRoomBlob(encodeCurrentVoxelGrid(), [lamp("lamp"), canvas("canvas", 2.0)], version);
+            const {objectGroup} = decodeRoomBlob(blob);
+
+            const stored = objectGroup.objectById["lamp"];
+            expect(ObjectScaleUtil.getObjectSize(lampTypeIndex, stored.transform.scale).x, `version ${version}`)
+                .toBeCloseTo(1, 6);
+            expect(ObjectScaleUtil.getObjectSize(lampTypeIndex, stored.transform.scale).y, `version ${version}`)
+                .toBeCloseTo(COLLISION_LAYER_HEIGHT, 6);
+            expect(stored.transform.pos.y).toBeCloseTo(2.25, 3);
+            // Only lamps are converted.
+            expect(ObjectScaleUtil.sanitize(CANVAS_OBJECT_TYPE_INDEX, objectGroup.objectById["canvas"].transform.scale))
+                .toEqual(UNIT_VEC3);
+        }
     });
 
     it("brings a resized object back at the size it was stored at, off the wire's coarser grid", () => {

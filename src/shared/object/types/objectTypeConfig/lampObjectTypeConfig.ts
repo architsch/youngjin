@@ -1,17 +1,16 @@
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../graphics/mesh/composition/types/instancedMeshCompositionCodecType";
 import { InstancedMeshCompositionParams } from "../../../graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
 import InstancedMeshCompositionPart from "../../../graphics/mesh/composition/types/instancedMeshCompositionPart";
+import { LampCompositionCodec } from "../../../graphics/mesh/composition/types/compositionCodec/lampCompositionCodec";
 import CompositionMetadataUtil from "../../../graphics/mesh/composition/util/compositionMetadataUtil";
-import PreEncodedCompositionIndexMap from "../../../graphics/mesh/composition/maps/preEncodedCompositionIndexMap";
 import { MAX_LAMP_INTENSITY, MAX_LAMP_RANGE, MIN_LAMP_INTENSITY,
     MIN_LAMP_RANGE } from "../../../graphics/light/util/lampLightUtil";
 import ColorUtil from "../../../math/util/colorUtil";
 import NumUtil from "../../../math/util/numUtil";
 import StringUtil from "../../../math/util/stringUtil";
 import Room from "../../../room/types/room";
-import { COLLISION_LAYER_HEIGHT, INSTANCED_EMISSIVE_MATERIAL_ID,
-    LIGHT_COLOR_PALETTE_NAME,
-    WALL_ATTACHMENT_HITBOX_INSET} from "../../../system/sharedConstants";
+import { ALL_FACE_DIRECTIONS, ATTACHMENT_HITBOX_INSET, INSTANCED_EMISSIVE_MATERIAL_ID,
+    LIGHT_COLOR_PALETTE_NAME } from "../../../system/sharedConstants";
 import User from "../../../user/types/user";
 import AddObjectSignal from "../addObjectSignal";
 import { ObjectCategoryEnumMap } from "../objectCategory";
@@ -21,15 +20,7 @@ import SetObjectMetadataSignal from "../setObjectMetadataSignal";
 import SetObjectTransformSignal from "../setObjectTransformSignal";
 import { ObjectMetadataKeyEnumMap } from "../objectMetadataKey";
 
-// Lamps have a single pre-encoded appearance (authored in the pre-encoding source; see
-// @docs/graphics/instanced_mesh_composition.md).
 const COMPOSITION_CODEC_VERSION = 0;
-
-
-// One voxel wide, one layer tall (attachments claim whole columns). This is the collider; the tested
-// box is slightly inset (see PhysicsColliderStateUtil).
-const LAMP_FOOTPRINT_WIDTH = 1;
-const LAMP_FOOTPRINT_HEIGHT = COLLISION_LAYER_HEIGHT;
 
 // Character positions in the stored string; never reorder.
 const COLOR_CHAR_INDEX = 0;
@@ -42,19 +33,32 @@ const DEFAULT_COLOR_INDEX = 0;
 const DEFAULT_INTENSITY = 3;
 const DEFAULT_RANGE = 6;
 
-// Only the light is editable; the appearance is derived from it (see generateDefaultParts).
+// The glow's color is derived from the light (see deriveParts), so it isn't part of the composition.
 const editableMetadataKeys = [
     ObjectMetadataKeyEnumMap.LightProperties,
+    ObjectMetadataKeyEnumMap.InstancedMeshComposition,
 ];
 
-// Wall lamps (see @docs/graphics/lighting.md). Anyone may edit them, subject to restricted zones (see
-// ObjectUpdateUtil).
-const WallLampObjectTypeConfig =
+// Lamps, on walls, floors or ceilings (see @docs/graphics/lighting.md). Anyone may edit them, subject to
+// restricted zones (see ObjectUpdateUtil).
+const LampObjectTypeConfig =
 {
-    objectType: "WallLamp",
+    objectType: "Lamp",
     persistent: true,
     autoUnload: true,
     category: ObjectCategoryEnumMap.Lamp,
+    // Resized in half-voxel steps on its face; with no roll to turn it by, this is how it is shaped to
+    // suit whichever face it is on. Depth is the gap from the face and never changes. A new one is one
+    // layer tall, so the side of a lone block holds it.
+    scaling: {
+        scaleStep: {x: 0.5, y: 0.5, z: 0},
+        minScale: {x: 0.5, y: 0.5, z: 1},
+        maxScale: {x: 1.5, y: 1.5, z: 1},
+        defaultScale: {x: 1, y: 0.5, z: 1},
+    },
+    attachment: {
+        allowedDirections: ALL_FACE_DIRECTIONS,
+    },
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => {
         // Block spoofing attempts
         if (obj.sourceUserID != user.id)
@@ -66,7 +70,7 @@ const WallLampObjectTypeConfig =
         return true;
     },
     canUserSetObjectTransform: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => {
-        // A lamp is slid along the wall by a gizmo, which is a placement rather than a motion.
+        // A lamp is dragged from face to face by a gizmo, which is a placement rather than a motion.
         if (!signal.ignorePhysics)
             return false;
 
@@ -79,45 +83,44 @@ const WallLampObjectTypeConfig =
     components: {
         spawnedByAny: {
             collider: {
-                // Claims its wall patch; removing the wall removes the lamp.
-                colliderType: "wallAttachment",
+                // A unit square on its face; removing the block behind removes the lamp. The tested box
+                // is slightly inset (see PhysicsColliderStateUtil).
                 baseHitboxSize: {
-                    sizeX: LAMP_FOOTPRINT_WIDTH,
-                    sizeY: LAMP_FOOTPRINT_HEIGHT,
-                    sizeZ: 0.5 * WALL_ATTACHMENT_HITBOX_INSET
+                    sizeX: 1,
+                    sizeY: 1,
+                    sizeZ: 0.5 * ATTACHMENT_HITBOX_INSET
                 },
-                applyHardCollisionToOthers: false, // pass-through: the wall behind already blocks the player
+                applyHardCollisionToOthers: false, // pass-through: the block behind already blocks the player
                 outgoingSoftCollisionForceMultiplier: 0,
                 incomingSoftCollisionForceMultiplier: 0,
                 maxClimbableHeight: 0,
             },
             instancedMeshGraphics: {},
             instancedMeshComposer: {
-                codecType: InstancedMeshCompositionCodecTypeEnumMap.Indexed,
+                codecType: InstancedMeshCompositionCodecTypeEnumMap.Lamp,
                 codecVersion: COMPOSITION_CODEC_VERSION,
-                // Shape from the pre-encoded composition; emissive part color derived from the light, so
-                // the lamp can't glow one color and light another. Light changes rebuild the parts (see
-                // WallLampGameObject).
+                // Every lamp starts as the first preset, which is what the codec makes of nothing stored.
                 generateDefaultParts: (obj: AddObjectSignal) => {
                     const params: InstancedMeshCompositionParams = {};
                     const parts: InstancedMeshCompositionPart[] = [];
-                    CompositionMetadataUtil.decodeIndexed(PreEncodedCompositionIndexMap.WallLamp[0],
-                        COMPOSITION_CODEC_VERSION,
+                    LampCompositionCodec.decode(CompositionMetadataUtil.getCodecPrefix(
+                        InstancedMeshCompositionCodecTypeEnumMap.Lamp, COMPOSITION_CODEC_VERSION),
                         ObjectScaleUtil.getObjectSize(obj.objectTypeIndex, obj.transform.scale),
                         params, parts);
-
+                    return {params, parts};
+                },
+                // The glow takes its light's color. Light changes recompose the parts (see LampGameObject).
+                deriveParts: (obj: AddObjectSignal, parts: InstancedMeshCompositionPart[]) => {
                     const color = ColorUtil.paletteIndexToRGB(LIGHT_COLOR_PALETTE_NAME,
                         readColorIndex(getLightProperties(obj)));
                     for (const part of parts)
                     {
-                        // Unlit parts take their color from the lamp's light.
                         if (part.materialId == INSTANCED_EMISSIVE_MATERIAL_ID)
-                            part.color = color;
+                            part.color = {...color};
                     }
-                    return {params, parts};
                 },
             },
-            orbitOccluder: {}, // Part of the wall it is mounted on, as far as the orbit camera is concerned.
+            orbitOccluder: {}, // Part of the face it is mounted on, as far as the orbit camera is concerned.
             lightSource: {},
         },
     },
@@ -203,4 +206,4 @@ function clampToWholeValue(n: number, min: number, max: number): number
     return Math.round(NumUtil.clampInRange(n, min, max));
 }
 
-export default WallLampObjectTypeConfig;
+export default LampObjectTypeConfig;

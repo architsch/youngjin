@@ -14,43 +14,45 @@ import WorldSpaceSelectionUtil from "../../util/worldSpaceSelectionUtil";
 import App from "../../../app";
 import SocketsClient from "../../../networking/client/socketsClient";
 import ClientObjectManager from "../../../object/clientObjectManager";
-import ObjectTypeClientConfigMap from "../../../object/maps/objectTypeClientConfigMap";
+import ClientVoxelQueryUtil from "../../../voxel/util/clientVoxelQueryUtil";
 import AddObjectSignal from "../../../../shared/object/types/addObjectSignal";
 import ObjectTransform from "../../../../shared/object/types/objectTransform";
 import SetObjectTransformSignal from "../../../../shared/object/types/setObjectTransformSignal";
 import ObjectTypeConfigMap from "../../../../shared/object/maps/objectTypeConfigMap";
 import ObjectScaleUtil from "../../../../shared/object/util/objectScaleUtil";
 import ObjectUpdateUtil from "../../../../shared/object/util/objectUpdateUtil";
-import WallAttachedObjectUtil from "../../../../shared/object/util/wallAttachedObjectUtil";
+import ObjectAttachmentUtil from "../../../../shared/object/util/objectAttachmentUtil";
+import Geometry3DUtil from "../../../../shared/math/util/geometry3DUtil";
+import Vector3DUtil from "../../../../shared/math/util/vector3DUtil";
 import Room from "../../../../shared/room/types/room";
 import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
 import Vec3 from "../../../../shared/math/types/vec3";
 import ErrorUtil from "../../../../shared/system/util/errorUtil";
 
-// Moving and resizing the selected wall attachment by its selection outline: dragging inside it moves the
-// object along its wall, in the steps and corner wraps of WallAttachedObjectUtil.getMoveResult, and
-// dragging a corner handle resizes it (types with an ObjectScalingConfig). A type opts in through
-// ObjectTypeClientConfig. The view holds still while a drag lasts (see
-// WorldSpaceSelectionUtil.holdOrbitTarget); edits preview locally and reach the server once, on release.
+// Moving and resizing the selected attached object by its selection outline: dragging inside it puts the
+// object on whichever voxel face the pointer is over (see ObjectAttachmentUtil.findPlacement), and dragging
+// a corner handle resizes it (types with an ObjectScalingConfig). The view holds still while a drag lasts
+// (see WorldSpaceSelectionUtil.holdOrbitTarget); edits preview locally and reach the server once, on
+// release.
 
 const HANDLE_COLOR = "#ffff00";
 const HANDLE_DIAMETER_PX = 18; // on screen, at any distance
-
-// Along-wall and vertical distance of one move (see WallAttachedObjectUtil.getMoveResult).
-const MOVE_STEP = 0.5;
 
 // How close to a handle's middle a press takes hold of it, in CSS px; wider for a finger. Keep them at
 // least half of HANDLE_DIAMETER_PX, or pressing the handle's edge won't grab it.
 const MOUSE_HANDLE_REACH_PX = 14;
 const TOUCH_HANDLE_REACH_PX = 28;
 
-// Which way each handle's corner lies from the middle: along the wall (see
-// WallAttachedObjectUtil.getRightDir) and up.
+// Which way each handle's corner lies from the middle, along the face's right and up (see
+// Geometry3DUtil.getAxisFacingBasis).
 const CORNERS: {x: number, y: number}[] = [{x: -1, y: -1}, {x: 1, y: -1}, {x: 1, y: 1}, {x: -1, y: 1}];
+
+// How far from the object's face a pointer hit still counts as on that face.
+const SAME_FACE_TOLERANCE = 0.01;
 
 type EditTarget = {selection: ObjectSelection, canMove: boolean, canResize: boolean};
 
-// The selection, when it is a wall attachment this user may drag (refreshed on every re-announcement).
+// The selection, when it is an attached object this user may drag (refreshed on every re-announcement).
 let target: EditTarget | null = null;
 
 let handles: WorldSpaceHandle[] = [];
@@ -62,14 +64,13 @@ let draggedCorner: {x: number, y: number} | null = null;
 const rayTemp = new THREE.Ray();
 const planeTemp = new THREE.Plane();
 const hitTemp = new THREE.Vector3();
-const nextAnchorTemp = new THREE.Vector3();
 const cornerTemp = new THREE.Vector3();
 const normalTemp = new THREE.Vector3();
 const pointTemp = new THREE.Vector3();
 const screenTemp = new THREE.Vector2();
 const middleScreenTemp = new THREE.Vector2();
 
-const WallAttachmentEditGizmos =
+const ObjectAttachmentEditGizmos =
 {
     // Where the selection can be taken hold of, in the viewport coordinates a real drag starts from: its
     // middle (to move it) and the outline's corners (to resize it, when canResize). Null when there is
@@ -106,19 +107,15 @@ function findTarget(): EditTarget | null
     if (!room || !selection)
         return null;
 
-    const objectTypeIndex = selection.gameObject.params.objectTypeIndex;
-    if (!ObjectTypeClientConfigMap.getConfigByIndex(objectTypeIndex).selection?.showMoveGizmos)
-        return null;
-    const config = ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex);
-    if (config.components.spawnedByAny?.collider?.colliderType != "wallAttachment")
+    const config = ObjectTypeConfigMap.getConfigByIndex(selection.gameObject.params.objectTypeIndex);
+    if (!config.attachment)
         return null;
     const obj = room.objectById[selection.gameObject.params.objectId];
     if (!obj)
         return null;
 
     // Asked of where it stands, so this comes down to whether this user may move it at all.
-    const canMove = ObjectUpdateUtil.canSetObjectTransform(App.getUser(), room,
-        new SetObjectTransformSignal(room.id, obj.objectId, obj.transform, true));
+    const canMove = canApply(room, obj.objectId, obj.transform);
     return {selection, canMove, canResize: canMove && config.scaling != undefined};
 }
 
@@ -162,10 +159,10 @@ function pick(ev: PointerEvent): {cursor: string, begin: () => GizmoDragHandler}
     if (rayTemp.direction.dot(plane.normal) >= 0 || rayTemp.intersectPlane(plane, hitTemp) == null)
         return null;
     const size = ObjectScaleUtil.getObjectSize(params.objectTypeIndex, params.transform.scale);
-    const right = WallAttachedObjectUtil.getRightDir(params.transform.dir);
+    const {right, up} = Geometry3DUtil.getAxisFacingBasis(params.transform.dir);
     hitTemp.sub(selection.gameObject.position);
-    if (Math.abs(hitTemp.x * right.x + hitTemp.z * right.z) > WorldSpaceOutlineRect.getEdgeOffset(size.x) ||
-        Math.abs(hitTemp.y) > WorldSpaceOutlineRect.getEdgeOffset(size.y))
+    if (Math.abs(hitTemp.dot(pointTemp.set(right.x, right.y, right.z))) > WorldSpaceOutlineRect.getEdgeOffset(size.x) ||
+        Math.abs(hitTemp.dot(pointTemp.set(up.x, up.y, up.z))) > WorldSpaceOutlineRect.getEdgeOffset(size.y))
     {
         return null;
     }
@@ -174,16 +171,15 @@ function pick(ev: PointerEvent): {cursor: string, begin: () => GizmoDragHandler}
 
 // ─── Drags ──────────────────────────────────────────────────────────────
 
-// Travel is measured on the plane of the wall the object hangs on, and every step goes through
-// getMoveResult, so a drag goes exactly where stepping would (round corners included).
+// The object goes to the face under the pointer, keeping under it the spot it was taken hold of while it
+// stays on the same face. Where the object can't go, it slides back toward where it stood along that face,
+// or tries the spots around the pointer on another one.
 function beginMove(selection: ObjectSelection, pressEv: PointerEvent): GizmoDragHandler
 {
     const objectId = selection.gameObject.params.objectId;
     const start = copyTransform(selection.gameObject.params.transform);
-    const plane = getFacePlane(start, start.pos, new THREE.Plane());
-    const anchor = new THREE.Vector3();
-    hitPlane(pressEv, plane, anchor);
-    const steps = {x: 0, y: 0};
+    const grabOffset = getGrabOffset(start, pressEv);
+    let lastRequest: string | null = null;
     let started = false;
     draggingObjectId = objectId;
 
@@ -199,44 +195,22 @@ function beginMove(selection: ObjectSelection, pressEv: PointerEvent): GizmoDrag
                 started = true;
                 WorldSpaceSelectionUtil.holdOrbitTarget();
             }
-            if (!hitPlane(ev, plane, hitTemp))
+
+            const request = getMoveRequest(obj, ev, grabOffset);
+            if (request == undefined)
                 return;
+            // Placement is searched for, so a pointer still over the same spot isn't asked about again.
+            const requestKey = `${request.dir.x},${request.dir.y},${request.dir.z}:` +
+                `${request.center.x.toFixed(2)},${request.center.y.toFixed(2)},${request.center.z.toFixed(2)}`;
+            if (requestKey == lastRequest)
+                return;
+            lastRequest = requestKey;
 
-            const right = WallAttachedObjectUtil.getRightDir(obj.transform.dir);
-            hitTemp.sub(anchor);
-            const wantX = Math.round((hitTemp.x * right.x + hitTemp.z * right.z) / MOVE_STEP);
-            const wantY = Math.round(hitTemp.y / MOVE_STEP);
-
-            while (steps.y != wantY)
-            {
-                const step = Math.sign(wantY - steps.y);
-                if (!tryStep(room, obj, 0, step))
-                    break;
-                steps.y += step;
-            }
-            while (steps.x != wantX)
-            {
-                const step = Math.sign(wantX - steps.x);
-                const rightBefore = WallAttachedObjectUtil.getRightDir(obj.transform.dir);
-                if (!tryStep(room, obj, step, 0))
-                    break;
-                steps.x += step;
-
-                // Round a corner it hangs on another wall, so travel is measured afresh on that one.
-                const rightAfter = WallAttachedObjectUtil.getRightDir(obj.transform.dir);
-                if (rightAfter.x != rightBefore.x || rightAfter.z != rightBefore.z)
-                {
-                    const nextPlane = getFacePlane(obj.transform, obj.transform.pos, new THREE.Plane());
-                    if (hitPlane(ev, nextPlane, nextAnchorTemp))
-                    {
-                        plane.copy(nextPlane);
-                        anchor.copy(nextAnchorTemp);
-                        steps.x = 0;
-                        steps.y = 0;
-                    }
-                    break;
-                }
-            }
+            const placed = ObjectAttachmentUtil.findPlacement(room, obj.objectTypeIndex, request.center, request.dir,
+                obj.transform.scale, (transform) => canApply(room, objectId, transform),
+                request.onSameFace ? obj.transform.pos : undefined);
+            if (placed != undefined && !transformsMatch(placed, obj.transform))
+                apply(objectId, placed);
         },
         onEnd: () => finishDrag(objectId, start, started, true),
         onCancel: () => finishDrag(objectId, start, started, false),
@@ -244,7 +218,7 @@ function beginMove(selection: ObjectSelection, pressEv: PointerEvent): GizmoDrag
 }
 
 // The dragged corner follows the pointer, offset by where on the handle it took hold, and the opposite
-// corner stays where it was (see WallAttachedObjectUtil.getResizeResult).
+// corner stays where it was (see ObjectAttachmentUtil.getResizeResult).
 function beginResize(selection: ObjectSelection, pressEv: PointerEvent,
     corner: {x: number, y: number}): GizmoDragHandler
 {
@@ -276,34 +250,78 @@ function beginResize(selection: ObjectSelection, pressEv: PointerEvent,
                 return;
 
             hitTemp.sub(grabOffset);
-            const resized = WallAttachedObjectUtil.getResizeResult(room, obj, start, corner.x, corner.y,
+            const resized = ObjectAttachmentUtil.getResizeResult(room, obj, start, corner.x, corner.y,
                 {x: hitTemp.x, y: hitTemp.y, z: hitTemp.z});
-            if (resized != undefined && !transformsMatch(resized, obj.transform))
-                tryApply(room, objectId, resized);
+            if (resized != undefined && !transformsMatch(resized, obj.transform) &&
+                canApply(room, objectId, resized))
+            {
+                apply(objectId, resized);
+            }
         },
         onEnd: () => finishDrag(objectId, start, started, true),
         onCancel: () => finishDrag(objectId, start, started, false),
     };
 }
 
-function tryStep(room: Room, obj: AddObjectSignal, dx: number, dy: number): boolean
+// Where on the object the press took hold of it, along its face's right and up.
+function getGrabOffset(transform: ObjectTransform, pressEv: PointerEvent): {x: number, y: number}
 {
-    const result = WallAttachedObjectUtil.getMoveResult(room, obj, dx * MOVE_STEP, dy * MOVE_STEP, 0);
-    return result != undefined &&
-        tryApply(room, obj.objectId, new ObjectTransform(result.newPos, result.newDir, {...obj.transform.scale}));
+    const plane = getFacePlane(transform, transform.pos, planeTemp);
+    if (!hitPlane(pressEv, plane, hitTemp))
+        return {x: 0, y: 0};
+    const {right, up} = Geometry3DUtil.getAxisFacingBasis(transform.dir);
+    const offset = Vector3DUtil.subtract(hitTemp, transform.pos);
+    return {x: Vector3DUtil.dot(offset, right), y: Vector3DUtil.dot(offset, up)};
 }
 
-// Previews an edit locally. Checked first by the same rule the server applies (permissions, restricted
-// zones, placement), so a step that won't take is refused quietly rather than logged as a failure.
-function tryApply(room: Room, objectId: string, transform: ObjectTransform): boolean
+// Where the pointer asks the object to be centred, and facing which way. The face under it if the type
+// may be attached there; otherwise the object's own face, where the pointer meets its plane. Undefined if
+// the pointer is on neither.
+function getMoveRequest(obj: AddObjectSignal, ev: PointerEvent, grabOffset: {x: number, y: number}):
+    {center: Vec3, dir: Vec3, onSameFace: boolean} | undefined
 {
-    if (!ObjectUpdateUtil.canSetObjectTransform(App.getUser(), room,
-        new SetObjectTransformSignal(room.id, objectId, transform, true)))
+    const current = Geometry3DUtil.getAxisFacingBasis(obj.transform.dir);
+    CameraUtil.getPointerRay(ev, rayTemp);
+
+    let point: Vec3 | undefined;
+    let normal = current.normal;
+    const face = ClientVoxelQueryUtil.getFirstDrawnFaceAlongRay(rayTemp);
+    if (face != undefined && ObjectAttachmentUtil.allowsFacing(obj.objectTypeIndex, face.normal))
     {
-        return false;
+        point = face.point;
+        normal = face.normal;
     }
+    else
+    {
+        const plane = getFacePlane(obj.transform, obj.transform.pos, planeTemp);
+        if (rayTemp.direction.dot(plane.normal) >= 0 || rayTemp.intersectPlane(plane, hitTemp) == null)
+            return undefined;
+        point = {x: hitTemp.x, y: hitTemp.y, z: hitTemp.z};
+    }
+
+    const onSameFace = Vector3DUtil.equal(normal, current.normal) &&
+        Math.abs(Vector3DUtil.dot(Vector3DUtil.subtract(point, obj.transform.pos), normal)) < SAME_FACE_TOLERANCE;
+    if (!onSameFace)
+        return {center: point, dir: normal, onSameFace};
+
+    // On the object's own face, the spot it was taken hold of stays under the pointer.
+    const center = Vector3DUtil.subtract(point, Vector3DUtil.add(
+        Vector3DUtil.scale(current.right, grabOffset.x), Vector3DUtil.scale(current.up, grabOffset.y)));
+    return {center, dir: normal, onSameFace};
+}
+
+// Asked by the same rule the server applies (permissions, restricted zones, placement), so an edit that
+// won't take is refused quietly rather than logged as a failure.
+function canApply(room: Room, objectId: string, transform: ObjectTransform): boolean
+{
+    return ObjectUpdateUtil.canSetObjectTransform(App.getUser(), room,
+        new SetObjectTransformSignal(room.id, objectId, transform, true));
+}
+
+// Previews an edit locally; the server hears of it on release (see finishDrag).
+function apply(objectId: string, transform: ObjectTransform): void
+{
     ClientObjectManager.setObjectTransform(objectId, transform, true, false);
-    return true;
 }
 
 // keep: send the result; otherwise put the object back where it started. Only a drag that got past the
@@ -332,7 +350,7 @@ function finishDrag(objectId: string, start: ObjectTransform, started: boolean, 
     }
     catch (err)
     {
-        console.error(`Exception while finishing a wall attachment drag :: Error: ${ErrorUtil.getErrorMessage(err)}`);
+        console.error(`Exception while finishing an attached object drag :: Error: ${ErrorUtil.getErrorMessage(err)}`);
     }
     finally
     {
@@ -349,11 +367,12 @@ function finishDrag(objectId: string, start: ObjectTransform, started: boolean, 
 
 // ─── Geometry ───────────────────────────────────────────────────────────
 
-// The plane of the object's face, through the given point. The facing is rounded onto its axis, as a
+// The plane of the object's face, through the given point. The facing is snapped onto its axis, as a
 // stored one decodes a little off it.
 function getFacePlane(transform: ObjectTransform, point: Vec3, out: THREE.Plane): THREE.Plane
 {
-    normalTemp.set(Math.round(transform.dir.x), 0, Math.round(transform.dir.z));
+    const {normal} = Geometry3DUtil.getAxisFacingBasis(transform.dir);
+    normalTemp.set(normal.x, normal.y, normal.z);
     return out.setFromNormalAndCoplanarPoint(normalTemp, pointTemp.set(point.x, point.y, point.z));
 }
 
@@ -379,15 +398,17 @@ function getHandlePosition(selection: ObjectSelection, corner: {x: number, y: nu
         WorldSpaceOutlineRect.getEdgeOffset, out);
 }
 
-// From center toward a corner, by reach(size) along the wall and up, for the object's current size.
+// From center toward a corner, by reach(size) along the face's right and up, for the object's current size.
 function offsetAlongFace(objectTypeIndex: number, transform: ObjectTransform, center: Vec3,
     corner: {x: number, y: number}, reach: (size: number) => number, out: THREE.Vector3): THREE.Vector3
 {
     const size = ObjectScaleUtil.getObjectSize(objectTypeIndex, transform.scale);
-    const right = WallAttachedObjectUtil.getRightDir(transform.dir);
-    const along = corner.x * reach(size.x);
-    return out.set(center.x + right.x * along, center.y + corner.y * reach(size.y),
-        center.z + right.z * along);
+    const {right, up} = Geometry3DUtil.getAxisFacingBasis(transform.dir);
+    const alongRight = corner.x * reach(size.x);
+    const alongUp = corner.y * reach(size.y);
+    return out.set(center.x + right.x * alongRight + up.x * alongUp,
+        center.y + right.y * alongRight + up.y * alongUp,
+        center.z + right.z * alongRight + up.z * alongUp);
 }
 
 function copyTransform(transform: ObjectTransform): ObjectTransform
@@ -436,27 +457,27 @@ function abandonDrag(): void
 
 // ─── Wiring ─────────────────────────────────────────────────────────────
 
-GizmoDragUtil.addSource("wallAttachmentEditGizmos", {pick});
+GizmoDragUtil.addSource("objectAttachmentEditGizmos", {pick});
 
-objectSelectionObservable.addListener("wallAttachmentEditGizmos", (selection: ObjectSelection | null) => {
+objectSelectionObservable.addListener("objectAttachmentEditGizmos", (selection: ObjectSelection | null) => {
     // A drag belongs to the object it began on.
     if (draggingObjectId != null && selection?.gameObject.params.objectId !== draggingObjectId)
         abandonDrag();
     refresh();
 });
 
-gameModeObservable.addListener("wallAttachmentEditGizmos", () => {
+gameModeObservable.addListener("objectAttachmentEditGizmos", () => {
     if (!GameModeUtil.isInEditMode())
         abandonDrag();
     refresh();
 });
 
-roomChangedObservable.addListener("wallAttachmentEditGizmos", () => {
+roomChangedObservable.addListener("objectAttachmentEditGizmos", () => {
     abandonDrag();
     target = null;
 });
 
-updateObservable.addListener("wallAttachmentEditGizmos", () => {
+updateObservable.addListener("objectAttachmentEditGizmos", () => {
     const shown = target != null && target.canResize ? target.selection : null;
     for (let i = 0; i < handles.length; ++i)
     {
@@ -470,4 +491,4 @@ updateObservable.addListener("wallAttachmentEditGizmos", () => {
     }
 });
 
-export default WallAttachmentEditGizmos;
+export default ObjectAttachmentEditGizmos;

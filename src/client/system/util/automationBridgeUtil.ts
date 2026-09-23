@@ -3,7 +3,7 @@ import App from "../../app";
 import GraphicsManager from "../../graphics/graphicsManager";
 import CameraUtil from "../../graphics/util/cameraUtil";
 import PointerCoordUtil from "../../graphics/util/pointerCoordUtil";
-import WallAttachmentEditGizmos from "../../graphics/types/gizmo/wallAttachmentEditGizmos";
+import ObjectAttachmentEditGizmos from "../../graphics/types/gizmo/objectAttachmentEditGizmos";
 import WorldSpaceSelectionUtil from "../../graphics/util/worldSpaceSelectionUtil";
 import ClientObjectManager from "../../object/clientObjectManager";
 import GameObject from "../../object/types/gameObject";
@@ -234,9 +234,9 @@ const AutomationBridgeUtil =
                 };
             },
 
-            // Where the selected wall attachment can be dragged from: its middle moves it, a corner resizes
+            // Where the selected attached object can be dragged from: its middle moves it, a corner resizes
             // it (when canResize). Null when the selection is nothing this user may drag.
-            selectionGizmo: () => WallAttachmentEditGizmos.getGrabPoints(),
+            selectionGizmo: () => ObjectAttachmentEditGizmos.getGrabPoints(),
 
             // Camera position, selection reach, and canvas rect.
             camera: () =>

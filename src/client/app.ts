@@ -15,7 +15,7 @@ import User from "../shared/user/types/user";
 import { roomChangedObservable, updateObservable, singlePlayerObservable, notificationMessageObservable } from "./system/clientObservables";
 import { roomPrefsChangedObservable } from "../shared/system/sharedObservables";
 import "./graphics/types/gizmo/colliderDebugGizmo";
-import "./graphics/types/gizmo/wallAttachmentEditGizmos"; // Side-effect: lets the selected wall attachment be dragged and resized by its outline
+import "./graphics/types/gizmo/objectAttachmentEditGizmos"; // Side-effect: lets the selected attached object be dragged and resized by its outline
 import "./voxel/util/restrictedZoneOutlineUtil"; // Side-effect: keeps the outlines on the room's restricted zones up to date
 import { preloadGenericWorldSpaceGizmos } from "./graphics/types/gizmo/genericWorldSpaceGizmos"; // Side-effect: registers world-space gizmos that are used for general purposes; also exposes a pre-load hook
 import RoomTexturePackChangedSignal from "../shared/room/types/roomTexturePackChangedSignal";

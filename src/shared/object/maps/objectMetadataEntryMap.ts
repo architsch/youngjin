@@ -6,7 +6,7 @@ import NumUtil from "../../math/util/numUtil";
 import ObjectMetadataEntry from "../types/objectMetadataEntry";
 import { ObjectMetadataKeyEnumMap } from "../types/objectMetadataKey";
 import { DoorTypeEnumMap } from "../types/doorType";
-import WallLampObjectTypeConfig from "../types/objectTypeConfig/wallLampObjectTypeConfig";
+import LampObjectTypeConfig from "../types/objectTypeConfig/lampObjectTypeConfig";
 
 const doorTypeValues = Object.values(DoorTypeEnumMap);
 
@@ -48,10 +48,10 @@ const entries: {[key: number]: ObjectMetadataEntry} = {
                 ColorUtil.getPaletteSize(LABEL_COLOR_PALETTE_NAME) - 1)}`;
         },
     },
-    // Round-tripped through WallLampObjectTypeConfig's util, which clamps both values and fills
+    // Round-tripped through LampObjectTypeConfig's util, which clamps both values and fills
     // defaults, so any input becomes a valid fixed-width pair (see ObjectMetadataEntryMap.preprocess).
     [ObjectMetadataKeyEnumMap.LightProperties]: {
-        preprocessingMethod: (rawValue: string) => WallLampObjectTypeConfig.util.canonicalize(rawValue),
+        preprocessingMethod: (rawValue: string) => LampObjectTypeConfig.util.canonicalize(rawValue),
     },
 };
 

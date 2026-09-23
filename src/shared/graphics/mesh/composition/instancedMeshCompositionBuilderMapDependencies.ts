@@ -1,5 +1,6 @@
 import "./types/compositionBuilder/canvasFrame.ts";
 import "./types/compositionBuilder/doorPanel.ts";
+import "./types/compositionBuilder/lampFrame.ts";
 import "./types/compositionBuilder/playerArm.ts";
 import "./types/compositionBuilder/playerBottom.ts";
 import "./types/compositionBuilder/playerEar.ts";

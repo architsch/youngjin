@@ -33,6 +33,10 @@ export const CURRENT_ERA_VOXEL_GRID_VERSION = FIRST_STORED_ENTRANCE_DOOR_VOXEL_G
 // The vertical range before rooms became two storeys.
 const LEGACY_Y_RANGE_MAX = 4;
 
+// A lamp's height before lamps could be resized: one layer, which is half the unit square they are now
+// scaled from.
+const LEGACY_LAMP_HEIGHT = 0.5;
+
 // Bitmap canvas frames were cells of a square atlas, this many cells a side.
 const LEGACY_CANVAS_FRAME_ATLAS_CELLS_PER_SIDE = 4;
 
@@ -116,6 +120,18 @@ const converters: ((objectGroup: ObjectGroup, roomID: string, sourceVoxelGridVer
         // Transforms gained a scale; objects stored without one were all drawn at their type's base
         // size, and decodeTransform gives them that as it reads them.
     },
+    (objectGroup: ObjectGroup) => { // version 4 -> 5
+        // A lamp's base footprint went from one voxel by one layer to a unit square it is scaled from, so
+        // lamps are halved in height to keep the size they were drawn at.
+        const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
+        for (const object of Object.values(objectGroup.objectById))
+        {
+            if (object.objectTypeIndex !== lampTypeIndex)
+                continue;
+            const {scale} = object.transform;
+            object.transform.scale = {x: scale.x, y: LEGACY_LAMP_HEIGHT, z: scale.z};
+        }
+    },
 ];
 
 const ObjectGroupVersionMigration =
@@ -144,7 +160,7 @@ function legacyCanvasFrame(frame: string, inner: string, mouldingThickness: numb
     mouldingIsConvex: boolean): CanvasCompositionParams
 {
     return {colors: {frame: ColorUtil.hexToRGB(frame), inner: ColorUtil.hexToRGB(inner)},
-        mouldingThickness, mouldingIsConvex, framed: true};
+        mouldingThickness, mouldingIsConvex, framed: true, margin: 0};
 }
 
 export default ObjectGroupVersionMigration;

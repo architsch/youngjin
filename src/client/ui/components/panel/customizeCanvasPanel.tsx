@@ -1,23 +1,19 @@
 import { useMemo, useState } from "react";
 import Text from "../basic/text";
 import InstancedMeshComposer from "../../../object/components/instancedMeshComposer";
-import ColorUtil from "../../../../shared/math/util/colorUtil";
 import Vec3 from "../../../../shared/math/types/vec3";
 import CanvasCompositionParams from "../../../../shared/graphics/mesh/composition/types/compositionParams/canvasCompositionParams";
 import CanvasCompositionConstants from "../../../../shared/graphics/mesh/composition/types/compositionConstants/canvasCompositionConstants";
-import MouldingCompositionConstants from "../../../../shared/graphics/mesh/composition/types/compositionConstants/mouldingCompositionConstants";
 import StepperInput from "../input/stepperInput";
 import Checkbox from "../input/checkbox";
-import PaletteColorInput from "../input/paletteColorInput";
-import RangeInput from "../input/rangeInput";
+import MarginInput from "../input/marginInput";
+import MouldingInput from "../input/mouldingInput";
 import ObjectSelection from "../../../graphics/types/gizmo/objectSelection";
 import createDeferredSave from "../../util/deferredSave";
 import ScrollPanel from "./scrollPanel";
 
-// Edits a canvas frame's wood inputs (frame and inner colors, band width and profile) in place,
-// rebuilding the frame live. Uses the joinery palette, as doors do (see ColorPaletteMap).
-
-const COLOR_PALETTE_NAME = "Timber";
+// Edits a canvas's look in place, rebuilding it live: how far inside its footprint it is drawn, and its
+// frame's wood inputs (frame and inner colors, band width and profile).
 
 const colorSlots: {title: string, key: keyof CanvasCompositionParams["colors"]}[] = [
     {title: "Frame", key: "frame"},
@@ -55,6 +51,9 @@ export default function CustomizeCanvasPanel({ selection, onClose }: Props)
     });
 
     return <ScrollPanel id="customizeCanvasOptions" onClose={onClose} additionalClassNames="m-2">
+        <MarginInput margin={params.margin}
+            setMargin={(margin: number) => applyEdit((p) => p.margin = margin)}/>
+        <div className="w-px self-stretch shrink-0 bg-gray-500"/>
         <Checkbox label="Frame On" size="sm" checked={params.framed}
             onChange={(checked: boolean) => applyEdit((p) => p.framed = checked)} additionalClassNames="shrink-0"/>
         {params.framed && <>
@@ -68,43 +67,14 @@ export default function CustomizeCanvasPanel({ selection, onClose }: Props)
                 />
             </div>
             <div className="w-px self-stretch shrink-0 bg-gray-500"/>
-            {colorSlots.map(slot =>
-                <div key={"color-slot-" + slot.key} className="flex flex-row items-stretch gap-3 shrink-0">
-                    <div className="flex flex-row items-center gap-1 shrink-0">
-                        <Text content={slot.title} size="sm"/>
-                        <PaletteColorInput
-                            paletteName={COLOR_PALETTE_NAME}
-                            currValue={ColorUtil.rgbToPaletteIndex(COLOR_PALETTE_NAME, params.colors[slot.key])}
-                            setColorIndex={(index: number) => applyEdit(
-                                (p) => p.colors[slot.key] = ColorUtil.paletteIndexToRGB(COLOR_PALETTE_NAME, index))}
-                        />
-                    </div>
-                    <div className="w-px self-stretch bg-gray-500"/>
-                </div>
-            )}
-            <div className="flex flex-col items-center gap-1 shrink-0">
-                <Text content="Thickness" size="sm"/>
-                {/* Judged by eye, so no value field (see RangeInput). */}
-                <RangeInput
-                    currValue={String(params.mouldingThickness)}
-                    setValue={(value: string) => applyEdit((p) => p.mouldingThickness = Number(value))}
-                    min={String(MouldingCompositionConstants.minMouldingThickness)}
-                    max={String(MouldingCompositionConstants.maxMouldingThickness)}
-                    step={String(MouldingCompositionConstants.mouldingThicknessStep)}
-                    showValueInput={false}
-                    additionalClassNames="w-28"
-                />
-            </div>
-            <div className="w-px self-stretch shrink-0 bg-gray-500"/>
-            <div className="flex flex-col items-center gap-1 shrink-0">
-                <Text content="Profile" size="sm"/>
-                <StepperInput
-                    currValue={params.mouldingIsConvex ? 0 : 1}
-                    numValues={2}
-                    setValue={(value: number) => applyEdit((p) => p.mouldingIsConvex = (value == 0))}
-                    labels={["Convex", "Concave"]}
-                />
-            </div>
+            <MouldingInput
+                colorSlots={colorSlots.map(slot => ({title: slot.title, color: params.colors[slot.key],
+                    setColor: (color: Vec3) => applyEdit((p) => p.colors[slot.key] = color)}))}
+                mouldingThickness={params.mouldingThickness}
+                setMouldingThickness={(thickness: number) => applyEdit((p) => p.mouldingThickness = thickness)}
+                mouldingIsConvex={params.mouldingIsConvex}
+                setMouldingIsConvex={(convex: boolean) => applyEdit((p) => p.mouldingIsConvex = convex)}
+            />
         </>}
     </ScrollPanel>;
 }

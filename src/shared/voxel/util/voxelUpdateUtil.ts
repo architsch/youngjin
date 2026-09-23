@@ -4,7 +4,7 @@ import User from "../../user/types/user";
 import VoxelQuadUpdateUtil from "./voxelQuadUpdateUtil";
 import VoxelQueryUtil from "./voxelQueryUtil";
 import Voxel from "../types/voxel";
-import WallAttachedObjectUtil from "../../object/util/wallAttachedObjectUtil";
+import ObjectAttachmentUtil from "../../object/util/objectAttachmentUtil";
 import RoomValidationUtil from "../../room/util/roomValidationUtil";
 import RestrictedZoneUtil from "./restrictedZoneUtil";
 
@@ -83,14 +83,14 @@ const VoxelUpdateUtil =
     canRemoveVoxelBlock(user: User, room: Room, quadIndex: number): boolean
     {
         // Blocks with attachments can't be removed alone; removing both uses
-        // canRemoveVoxelBlockWithItsWallAttachments after the attachments are gone.
-        return VoxelUpdateUtil.canRemoveVoxelBlockWithItsWallAttachments(user, room, quadIndex)
-            && WallAttachedObjectUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex).length == 0;
+        // canRemoveVoxelBlockWithItsAttachments after the attachments are gone.
+        return VoxelUpdateUtil.canRemoveVoxelBlockWithItsAttachments(user, room, quadIndex)
+            && ObjectAttachmentUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex).length == 0;
     },
     // canRemoveVoxelBlock without the attachment check (for callers that remove attachments first).
-    canRemoveVoxelBlockWithItsWallAttachments(user: User, room: Room, quadIndex: number): boolean
+    canRemoveVoxelBlockWithItsAttachments(user: User, room: Room, quadIndex: number): boolean
     {
-        if (!quadIndexIsInRange("canRemoveVoxelBlockWithItsWallAttachments", quadIndex))
+        if (!quadIndexIsInRange("canRemoveVoxelBlockWithItsAttachments", quadIndex))
             return false;
 
         const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);

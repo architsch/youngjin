@@ -10,7 +10,7 @@ import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 import ObjectUpdateUtil from "../../../src/shared/object/util/objectUpdateUtil";
-import WallAttachedObjectUtil from "../../../src/shared/object/util/wallAttachedObjectUtil";
+import ObjectAttachmentUtil from "../../../src/shared/object/util/objectAttachmentUtil";
 import ObjectScaleUtil from "../../../src/shared/object/util/objectScaleUtil";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import RemoveObjectSignal from "../../../src/shared/object/types/removeObjectSignal";
@@ -229,7 +229,7 @@ describe("voxel scenarios", () => {
 
                 // A picture beside the door, clear of the door's footprint (the only thing keeping it off that wall).
                 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
-                const canHang = WallAttachedObjectUtil.canPlaceObject(room, "attachment",
+                const canHang = ObjectAttachmentUtil.canPlaceObject(room, "attachment",
                     canvasTypeIndex, new ObjectTransform(
                         { x: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL - 3 + 0.5, y: 1, z: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW },
                         { x: 0, y: 0, z: -1 }, {...UNIT_VEC3}));
@@ -261,18 +261,49 @@ describe("voxel scenarios", () => {
                 const quadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(WALL_ROW, WALL_COL, 0);
 
                 // The block is all that keeps the canvas on the wall, so it cannot go by itself...
-                expect(WallAttachedObjectUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex))
+                expect(ObjectAttachmentUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex))
                     .toEqual([canvas.objectId]);
                 expect(VoxelUpdateUtil.canRemoveVoxelBlock(actingUser, room, quadIndex)).toBe(false);
                 // ...but the block and its attachments may be removed together, as the user is offered.
-                expect(VoxelUpdateUtil.canRemoveVoxelBlockWithItsWallAttachments(
+                expect(VoxelUpdateUtil.canRemoveVoxelBlockWithItsAttachments(
                     actingUser, room, quadIndex)).toBe(true);
 
                 // With the canvas down first, the block may follow (the menu's removal order).
                 expect(ObjectUpdateUtil.removeObject(user, room,
                     new RemoveObjectSignal(room.id, canvas.objectId))).toBe(true);
-                expect(WallAttachedObjectUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex)).toEqual([]);
+                expect(ObjectAttachmentUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex)).toEqual([]);
                 expect(VoxelUpdateUtil.canRemoveVoxelBlock(actingUser, room, quadIndex)).toBe(true);
+            },
+        });
+    });
+
+    it("a block holds the lamps standing on it and hanging under it, and only those", async () => {
+        // One block up in the air: a lamp on its top, one under it, and one on the room floor beneath.
+        const ROW = 8;
+        const COL = 8;
+        const LAYER = 4;
+        await runScenario({
+            name: "lamps on a floating block",
+            rooms: [{ ...EMPTY_HUB, voxels: [{ row: ROW, col: COL, layer: LAYER }] }],
+            users: [userAtCenter("hub")],
+            assertions: ({ users }) => {
+                const user = users[0].user;
+                const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
+                const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
+                const lamp = (objectId: string, y: number, dirY: number) => new AddObjectSignal(room.id,
+                    user.id, user.userName, lampTypeIndex, objectId, new ObjectTransform(
+                        { x: COL + 0.5, y, z: ROW + 0.5 }, { x: 0, y: dirY, z: 0 }, {...UNIT_VEC3}));
+
+                const onTop = lamp("on-top", (LAYER + 1) * COLLISION_LAYER_HEIGHT, 1);
+                const underneath = lamp("underneath", LAYER * COLLISION_LAYER_HEIGHT, -1);
+                const onFloor = lamp("on-floor", 0, 1);
+                for (const attached of [onTop, underneath, onFloor])
+                    expect(ObjectUpdateUtil.addObject(user, room, attached), attached.objectId).toBe(true);
+
+                const quadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(ROW, COL, LAYER);
+                expect(ObjectAttachmentUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex).sort())
+                    .toEqual([onTop.objectId, underneath.objectId].sort());
+                expect(VoxelUpdateUtil.canRemoveVoxelBlock(actingUser, room, quadIndex)).toBe(false);
             },
         });
     });
@@ -354,7 +385,7 @@ describe("the room's boundary wall", () => {
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
                 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
-                const hangs = (pos: Vec3, dir: Vec3) => WallAttachedObjectUtil.canPlaceObject(
+                const hangs = (pos: Vec3, dir: Vec3) => ObjectAttachmentUtil.canPlaceObject(
                     room, "attachment", canvasTypeIndex,
                     new ObjectTransform(pos, dir, {...UNIT_VEC3}));
 
@@ -392,7 +423,7 @@ describe("the room's boundary wall", () => {
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
                 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
-                const hangsAtScale = (scale: number) => WallAttachedObjectUtil.canPlaceObject(
+                const hangsAtScale = (scale: number) => ObjectAttachmentUtil.canPlaceObject(
                     room, "attachment", canvasTypeIndex,
                     new ObjectTransform({ x: WALL_COL + 1, y: 0.5, z: WALL_ROW },
                         { x: 0, y: 0, z: -1 }, {x: scale, y: scale, z: 1}));
@@ -419,7 +450,7 @@ describe("the room's boundary wall", () => {
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
                 const canvasConfig = ObjectTypeConfigMap.getConfigByIndex(canvasTypeIndex);
-                const hangsAtScale = (scale: number) => WallAttachedObjectUtil.canPlaceObject(
+                const hangsAtScale = (scale: number) => ObjectAttachmentUtil.canPlaceObject(
                     room, "attachment", canvasTypeIndex,
                     new ObjectTransform({ x: WALL_COL + 0.5 * cols.length, y: 0.5 * largest.y, z: WALL_ROW },
                         { x: 0, y: 0, z: -1 }, {x: scale, y: scale, z: 1}));

@@ -2,7 +2,7 @@ import EncodableByteString from "../../networking/types/encodableByteString";
 import Room from "../../room/types/room";
 import ObjectMetadataEntryMap from "../maps/objectMetadataEntryMap";
 import AddObjectSignal from "../types/addObjectSignal";
-import WallAttachedObjectUtil from "./wallAttachedObjectUtil";
+import ObjectAttachmentUtil from "./objectAttachmentUtil";
 import PhysicsManager from "../../physics/physicsManager";
 import ObjectTransformUpdateResult from "../types/objectTransformUpdateResult";
 import PhysicsColliderStateUtil from "../../physics/util/physicsColliderStateUtil";
@@ -48,12 +48,10 @@ const ObjectUpdateUtil =
         if (RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex, obj.transform))
             return false;
 
-        // Check if the object's collider is placeable.
-        const colliderState = PhysicsColliderStateUtil.getObjectColliderState(obj.objectTypeIndex, obj.transform);
-        if (colliderState && colliderState.colliderConfig.colliderType == "wallAttachment")
-            return WallAttachedObjectUtil.canPlaceObject(room, obj.objectId, obj.objectTypeIndex, obj.transform);
-        else
-            return true;
+        // Check if an attached object has a face to rest on.
+        if (config.attachment)
+            return ObjectAttachmentUtil.canPlaceObject(room, obj.objectId, obj.objectTypeIndex, obj.transform);
+        return true;
     },
     addObject(user: User, room: Room, obj: AddObjectSignal,
         validate: boolean = true, addToRoomData: boolean = true): boolean
@@ -143,11 +141,9 @@ const ObjectUpdateUtil =
 
         // Check that the object is placeable where it is going, at the size it is going to be. The
         // request is the client's, so the destination is what has to hold up, not where it stands now.
-        const colliderState = PhysicsColliderStateUtil.getObjectColliderState(obj.objectTypeIndex, target);
-        if (colliderState && colliderState.colliderConfig.colliderType == "wallAttachment")
-            return WallAttachedObjectUtil.canPlaceObject(room, obj.objectId, obj.objectTypeIndex, target);
-        else
-            return true;
+        if (config.attachment)
+            return ObjectAttachmentUtil.canPlaceObject(room, obj.objectId, obj.objectTypeIndex, target);
+        return true;
     },
     // What the signal is allowed to mean: its position and facing, with the scale snapped onto the
     // type's own grid (see ObjectScaleUtil). A scale is never taken as sent — quantization leaves the

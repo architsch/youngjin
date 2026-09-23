@@ -4,6 +4,7 @@ import ColorUtil from "../../../../../math/util/colorUtil";
 import StringUtil from "../../../../../math/util/stringUtil";
 import { InstancedMeshCompositionBuilderMap } from "../../maps/instancedMeshCompositionBuilderMap";
 import CanvasCompositionConstants from "../compositionConstants/canvasCompositionConstants";
+import MarginCompositionConstants from "../compositionConstants/marginCompositionConstants";
 import MouldingCompositionConstants from "../compositionConstants/mouldingCompositionConstants";
 import CanvasCompositionParams from "../compositionParams/canvasCompositionParams";
 import { InstancedMeshCompositionParams } from "../compositionParams/instancedMeshCompositionParams";
@@ -11,9 +12,11 @@ import InstancedMeshCompositionPart from "../instancedMeshCompositionPart";
 import InstancedMeshCompositionCodec from "./instancedMeshCompositionCodec";
 
 // Canvas appearance: one visible-ASCII char each for the frame color, inner color (palette positions),
-// band width (a step; see CanvasCompositionConstants), and a flags char holding the profile (proud or sunk)
-// and whether the frame is shown. A canvas without a frame still stores its finish, so turning the frame
-// back on restores it. Untrusted on read: decoding clamps and always yields a drawable canvas.
+// band width (a step; see MouldingCompositionConstants), a flags char holding the profile (proud or sunk)
+// and whether the frame is shown, and the margin (a step; see MarginCompositionConstants), last so a
+// string written before it existed reads as none. A canvas without a frame still stores its finish, so
+// turning the frame back on restores it. Untrusted on read: decoding clamps and always yields a drawable
+// canvas.
 const CONVEX_FLAG = 1;
 const FRAMED_FLAG = 2;
 
@@ -28,6 +31,7 @@ export const CanvasCompositionCodec: InstancedMeshCompositionCodec = {
             MouldingCompositionConstants.toThicknessStep(params.mouldingThickness)));
         arr.push(StringUtil.convertRawNumberToVisibleASCII(
             (params.mouldingIsConvex ? CONVEX_FLAG : 0) | (params.framed ? FRAMED_FLAG : 0)));
+        arr.push(StringUtil.convertRawNumberToVisibleASCII(MarginCompositionConstants.toMarginStep(params.margin)));
         return arr.join("");
     },
     decode: (strToDecode: string, objectSize: Vec3,
@@ -46,6 +50,8 @@ export const CanvasCompositionCodec: InstancedMeshCompositionCodec = {
             const flags = StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++, FRAMED_FLAG);
             decodedParams.mouldingIsConvex = (flags & CONVEX_FLAG) != 0;
             decodedParams.framed = (flags & FRAMED_FLAG) != 0;
+            decodedParams.margin = MarginCompositionConstants.fromMarginStep(
+                StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++, 0));
         }
         constructParts(decodedParams, decodedParts, objectSize);
     },
@@ -89,7 +95,7 @@ function getBaseParams(): CanvasCompositionParams
     const preset = CanvasCompositionConstants.presets[0];
     const colors = {frame: {...preset.colors.frame}, inner: {...preset.colors.inner}};
     return {colors, mouldingThickness: preset.mouldingThickness,
-        mouldingIsConvex: preset.mouldingIsConvex, framed: false};
+        mouldingIsConvex: preset.mouldingIsConvex, framed: false, margin: 0};
 }
 
 function constructParts(params: CanvasCompositionParams,

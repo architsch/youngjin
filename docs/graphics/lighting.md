@@ -4,7 +4,7 @@ Reference: @src/client/graphics/light/maps/lightBlockMap.ts , @src/client/graphi
 
 A room is lit by three sources:
 - **Head lamp**: the only real `THREE.PointLight` in the scene. It is parented to the camera.
-- **Lamps**: installed on walls, stored as data, and delivered to shaders as a voxel light field.
+- **Lamps**: installed on walls, floors and ceilings, stored as data, and delivered to shaders as a voxel light field.
 - **Ambient light**.
 
 Everything else (light colors and strengths, fog, smoke, sky, clouds, ground) is the room's **atmosphere**, stored in `RoomPrefs`.
@@ -53,10 +53,10 @@ Rebuild requests (a lamp changed, block work edited) are batched and handled onc
 - A single shared value-noise texture feeds these effects (see [materials_and_shaders.md](materials_and_shaders.md)).
 
 ## Lamps
-- A lamp is a wall-attached object (see [wall_attached_object.md](../geometry/wall_attached_object.md)). Anyone may edit lamps, subject to restricted zones, and every kind of lamp shares one capped count per room (see [object_update.md](../networking/object_update.md)).
-- The current look is a placeholder: a lit rectangle drawn with the **unlit** material, which is shared with the player's face. It is not lit by the field.
-- Its face color is derived from its light, and it uses an indexed composition (see [instanced_mesh_composition.md](instanced_mesh_composition.md)).
-- Its light originates in the **block in front of the wall**, because the fill stops immediately in a solid block.
+- A lamp is an attached object that may go on any face: a wall, a floor or a ceiling (see [object_attachment.md](../geometry/object_attachment.md)). Anyone may edit lamps, subject to restricted zones, and every kind of lamp shares one capped count per room (see [object_update.md](../networking/object_update.md)).
+- It is resized to suit whichever face it is on. Its look is a glow drawn with the **unlit** material (shared with the player's face, and not lit by the field), optionally inside a moulded wood frame, drawn a margin inside its footprint. A new lamp starts as a bare glow with no margin, one layer tall so that the side of a lone block holds it.
+- The glow's color is derived from its light, whatever look is stored (see [instanced_mesh_composition.md](instanced_mesh_composition.md)).
+- Its light originates in the **block in front of its face**, because the fill stops immediately in a solid block.
 - Lamp intensity and range steps are the quantities themselves (multiplier, block count), so the UI can display and accept them directly.
 
 ## What generated rooms come with

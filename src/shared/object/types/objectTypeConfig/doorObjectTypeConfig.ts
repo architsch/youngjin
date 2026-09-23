@@ -7,15 +7,17 @@ import StringUtil from "../../../math/util/stringUtil";
 import EncodableByteString from "../../../networking/types/encodableByteString";
 import Room from "../../../room/types/room";
 import RoomValidationUtil from "../../../room/util/roomValidationUtil";
-import { HUB_ROOM_ID_KEYWORD, LABEL_COLOR_PALETTE_NAME, UNIT_VEC3, WALL_ATTACHMENT_HITBOX_INSET } from "../../../system/sharedConstants";
+import { ATTACHMENT_HITBOX_INSET, COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, HUB_ROOM_ID_KEYWORD,
+    LABEL_COLOR_PALETTE_NAME, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, UNIT_VEC3,
+    WALL_DIRECTIONS } from "../../../system/sharedConstants";
 import User from "../../../user/types/user";
 import AddObjectSignal from "../addObjectSignal";
 import { ObjectCategoryEnumMap } from "../objectCategory";
 import ObjectTypeConfig from "./objectTypeConfig";
 import ObjectScaleUtil from "../../util/objectScaleUtil";
 import ObjectTypeConfigMap from "../../maps/objectTypeConfigMap";
-import WallAttachedObjectUtil from "../../util/wallAttachedObjectUtil";
 import ObjectTransform from "../objectTransform";
+import Vec3 from "../../../math/types/vec3";
 import SetObjectMetadataSignal from "../setObjectMetadataSignal";
 import SetObjectTransformSignal from "../setObjectTransformSignal";
 import { DoorType, DoorTypeEnumMap } from "../doorType";
@@ -47,6 +49,9 @@ const DoorObjectTypeConfig =
     persistent: true,
     autoUnload: true,
     category: ObjectCategoryEnumMap.Door,
+    attachment: {
+        allowedDirections: WALL_DIRECTIONS,
+    },
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => {
         if (!RoomValidationUtil.canUserManageDoors(user, room))
             return false;
@@ -82,11 +87,10 @@ const DoorObjectTypeConfig =
             collider: {
                 // Claims its stretch of wall so nothing hangs over it. The footprint is a round number
                 // of half-voxels; the tested box is slightly inset (see PhysicsColliderStateUtil).
-                colliderType: "wallAttachment",
                 baseHitboxSize: {
                     sizeX: DOOR_FOOTPRINT_WIDTH,
                     sizeY: DOOR_FOOTPRINT_HEIGHT,
-                    sizeZ: 0.5 * WALL_ATTACHMENT_HITBOX_INSET
+                    sizeZ: 0.5 * ATTACHMENT_HITBOX_INSET
                 },
                 applyHardCollisionToOthers: false, // pass-through: the wall behind already blocks the player
                 outgoingSoftCollisionForceMultiplier: 0,
@@ -149,9 +153,8 @@ const DoorObjectTypeConfig =
             return new AddObjectSignal(roomID, "", "",
                 objectTypeIndex, ENTRANCE_DOOR_OBJECT_ID,
                 new ObjectTransform(
-                    WallAttachedObjectUtil.getBoundaryWallAttachmentPos(objectTypeIndex,
-                        entranceVoxelCol, entranceVoxelRow, entranceVoxelCollisionLayer),
-                    WallAttachedObjectUtil.getBoundaryWallInwardDir(entranceVoxelCol, entranceVoxelRow),
+                    getBoundaryWallDoorPos(entranceVoxelCol, entranceVoxelRow, entranceVoxelCollisionLayer),
+                    getBoundaryWallInwardDir(entranceVoxelCol, entranceVoxelRow),
                     {...UNIT_VEC3}),
                 {
                     [ObjectMetadataKeyEnumMap.DoorType]:
@@ -199,5 +202,33 @@ const DoorObjectTypeConfig =
         },
     },
 } satisfies ObjectTypeConfig;
+
+// On the room-facing surface of a boundary wall cell, centred on the cell, origin half a doorway above
+// the storey floor (collider-centred).
+function getBoundaryWallDoorPos(col: number, row: number, collisionLayer: number): Vec3
+{
+    const floorY = (collisionLayer - COLLISION_LAYER_MIN) * COLLISION_LAYER_HEIGHT;
+    const y = floorY + 0.5 * DOOR_FOOTPRINT_HEIGHT;
+
+    if (row >= NUM_VOXEL_ROWS - 1)
+        return {x: col + 0.5, y, z: row};
+    if (row <= 0)
+        return {x: col + 0.5, y, z: row + 1};
+    if (col >= NUM_VOXEL_COLS - 1)
+        return {x: col, y, z: row + 0.5};
+    return {x: col + 1, y, z: row + 0.5};
+}
+
+// Facing out of the boundary wall, into the room.
+function getBoundaryWallInwardDir(col: number, row: number): Vec3
+{
+    if (row >= NUM_VOXEL_ROWS - 1)
+        return {x: 0, y: 0, z: -1};
+    if (row <= 0)
+        return {x: 0, y: 0, z: 1};
+    if (col >= NUM_VOXEL_COLS - 1)
+        return {x: -1, y: 0, z: 0};
+    return {x: 1, y: 0, z: 0};
+}
 
 export default DoorObjectTypeConfig;

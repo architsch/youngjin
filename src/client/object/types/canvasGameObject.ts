@@ -9,8 +9,9 @@ import InstancedMeshCompositionPart from "../../../shared/graphics/mesh/composit
 import CanvasObjectTypeConfig, { CANVAS_TEXTURE_CELL_SIZE,
     CANVAS_TEXTURE_SIZE } from "../../../shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
 import ObjectCategoryConfigMap from "../../../shared/object/maps/objectCategoryConfigMap";
-import { CANVAS_BOARD_RELIEF,
+import CanvasCompositionConstants, { CANVAS_BOARD_RELIEF,
     CANVAS_GEOMETRY_ID, CANVAS_PICTURE_LIFT } from "../../../shared/graphics/mesh/composition/types/compositionConstants/canvasCompositionConstants";
+import CanvasCompositionParams from "../../../shared/graphics/mesh/composition/types/compositionParams/canvasCompositionParams";
 import { BACKWARD_DIR, INSTANCED_WOOD_MATERIAL_ID, ZERO_VEC3 } from "../../../shared/system/sharedConstants";
 import Vec3 from "../../../shared/math/types/vec3";
 import Vector3DUtil from "../../../shared/math/util/vector3DUtil";
@@ -21,8 +22,8 @@ import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
 import { graphicsContextRestoredObservable } from "../../system/clientObservables";
 
 // The frame is composed from the canvas's wood inputs (see CanvasCompositionCodec); the picture is drawn
-// here, into this canvas's cell of the room's shared render target, on the board inside its band (or across
-// the whole footprint when there is no frame).
+// here, into this canvas's cell of the room's shared render target, on the board inside its band (or where
+// the board would be when there is no frame; see CanvasCompositionConstants).
 export default class CanvasGameObject extends GameObject
 {
     instancedMeshGraphics: InstancedMeshGraphics;
@@ -162,26 +163,22 @@ export default class CanvasGameObject extends GameObject
     {
         if (this.instancedMeshComposer.getPartWithMaterial(INSTANCED_WOOD_MATERIAL_ID) !== this.placedBoard)
             return false;
-        // A frameless canvas has no board part, so identity alone would never notice a resize.
+        // A frameless canvas has no board part, so identity alone would never notice a resize or a margin.
         if (!Vector3DUtil.equal(this.getPictureSize(), this.placedPictureSize))
             return false;
         this.obj.updateMatrixWorld(); // Recurses to visualObj, so the compared matrix is current.
         return this.visualObj.matrixWorld.equals(this.bakedWorldMatrix);
     }
 
-    // The picture sits inside the board's band, which keeps its width at any canvas size (the wood
-    // material measures it in world units), so the inset comes off the object's own footprint.
     private getPictureSize(): Vec3
     {
-        const board = this.instancedMeshComposer.getPartWithMaterial(INSTANCED_WOOD_MATERIAL_ID);
-        const inset = board ? 2 * board.mouldingThickness : 0;
-        const size = ObjectScaleUtil.getObjectSize(this.params.objectTypeIndex,
-            this.params.transform.scale);
-        return {x: size.x - inset, y: size.y - inset, z: 1};
+        return CanvasCompositionConstants.getPictureSize(
+            this.instancedMeshComposer.getParams() as CanvasCompositionParams,
+            ObjectScaleUtil.getObjectSize(this.params.objectTypeIndex, this.params.transform.scale));
     }
 
-    // Placed on the board's inner surface, inside its band (as a door's label sits inside its plate's). The
-    // board always spans the footprint, so without one the picture spans it instead.
+    // Placed on the board's inner surface, inside its band (as a door's label sits inside its plate's), or
+    // where the board would be when there is none.
     private updateMeshInstanceTransform()
     {
         const previousSize = this.placedPictureSize;

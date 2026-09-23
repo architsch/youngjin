@@ -62,7 +62,7 @@
 ### `/docs` - Documents explaining technical details
 - **`/devOps`** - Local Development, VPS
 - **`/gameplay`** - Game modes (play mode, edit mode), the admin privilege
-- **`/geometry`** - Voxel grid, physics, room generation, room entrances and doors, wall-attached objects, textures, player customization
+- **`/geometry`** - Voxel grid, physics, room generation, room entrances and doors, attached objects (on walls, floors and ceilings), textures, player customization
 - **`/graphics`** - Camera control, instanced mesh composition, image map
 - **`/networking`** - HTTP/Socket/Authentication Flows, single-player mode
 - **`/testing`** - E2E and integration test workflows, framework, and scenario coverage

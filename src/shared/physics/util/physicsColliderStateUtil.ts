@@ -1,4 +1,5 @@
 import AABB3 from "../../math/types/aabb3";
+import Vec3 from "../../math/types/vec3";
 import Geometry3DUtil from "../../math/util/geometry3DUtil";
 import { ColliderState } from "../types/colliderState";
 import ObjectTypeConfigMap from "../../object/maps/objectTypeConfigMap";
@@ -8,8 +9,8 @@ import type ObjectTransform from "../../object/types/objectTransform";
 import { ColliderConfig } from "../types/colliderConfig";
 import PhysicsDebugUtil from "./physicsDebugUtil";
 import PhysicsRoom from "../types/physicsRoom";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
-    VOXEL_BLOCK_HITBOX_HALFSIZE, WALL_ATTACHMENT_HITBOX_INSET } from "../../system/sharedConstants";
+import { ATTACHMENT_HITBOX_INSET, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
+    VOXEL_BLOCK_HITBOX_HALFSIZE } from "../../system/sharedConstants";
 
 // Sequentially recycle each of the sets in the array (because there may be a function which uses multiple sets simultaneously).
 let colliderStatesTempNextIndex = 0;
@@ -18,7 +19,6 @@ for (let i = 0; i < 64; ++i)
     colliderStatesTemp.push(new Set<ColliderState>());
 
 const voxelBlockColliderConfig: ColliderConfig = {
-    colliderType: "standalone",
     baseHitboxSize: {sizeX: 1, sizeY: 0.5, sizeZ: 1},
     applyHardCollisionToOthers: true,
     outgoingSoftCollisionForceMultiplier: 1,
@@ -49,34 +49,18 @@ const PhysicsColliderStateUtil =
         let colliderConfig = components.spawnedByAny?.collider;
         if (!colliderConfig)
             return undefined;
-        // This object's own footprint, not the type's: the scale is applied before anything else, so the
-        // inset below stays an absolute distance whatever size the object is.
+        // This object's own footprint, not the type's: the scale is applied before anything else, so an
+        // attached object's inset stays an absolute distance whatever size the object is.
         const hitboxSize = ObjectScaleUtil.getObjectSize(objectTypeIndex, transform.scale);
-        const direction = transform.dir;
-
-        // Wall attachments get a slightly inset test box (WALL_ATTACHMENT_HITBOX_INSET), so neighbours
-        // sharing an edge don't register as overlapping, while everything else reads the round footprint.
-        // Not applied to rigidbodies (never snapped edge-to-edge). Inset on the in-wall x/y axes before
-        // rotation; depth is untouched so attachments stay on the wall.
-        const inset = colliderConfig.colliderType == "wallAttachment"
-            ? WALL_ATTACHMENT_HITBOX_INSET : 0;
-        const insetSizeX = Math.max(0, hitboxSize.x - inset);
-        const insetSizeY = Math.max(0, hitboxSize.y - inset);
-
-        const moreAlignedWithXAxis = Math.abs(direction.x) > Math.abs(direction.z);
-        const reorientedSizeX = moreAlignedWithXAxis ? hitboxSize.z : insetSizeX;
-        const reorientedSizeZ = moreAlignedWithXAxis ? insetSizeX : hitboxSize.z;
         const hitbox: AABB3 = {
             center: {
                 x: transform.pos.x,
                 y: transform.pos.y,
                 z: transform.pos.z
             },
-            halfSize: {
-                x: 0.5 * reorientedSizeX,
-                y: 0.5 * insetSizeY,
-                z: 0.5 * reorientedSizeZ
-            },
+            halfSize: objectTypeConfig.attachment
+                ? getAttachedHalfSize(hitboxSize, transform.dir)
+                : getFreeStandingHalfSize(hitboxSize, transform.dir),
         };
         const state: ColliderState = {hitbox, colliderConfig};
         PhysicsDebugUtil.tryShowColliderBox("object", state, "#ff00ff");
@@ -141,6 +125,30 @@ const PhysicsColliderStateUtil =
         }
         return set;
     }
+}
+
+// Laid on its face (see Geometry3DUtil.getAxisFacingBasis). The box is slightly inset on the face's own
+// axes (ATTACHMENT_HITBOX_INSET), so neighbours sharing an edge don't register as overlapping; depth is
+// untouched so the object stays on its face.
+function getAttachedHalfSize(size: Vec3, dir: Vec3): Vec3
+{
+    const {normal, right, up} = Geometry3DUtil.getAxisFacingBasis(dir);
+    const insetSizeX = Math.max(0, size.x - ATTACHMENT_HITBOX_INSET);
+    const insetSizeY = Math.max(0, size.y - ATTACHMENT_HITBOX_INSET);
+    const halfSizeAlong = (axis: "x" | "y" | "z") => 0.5 * (Math.abs(right[axis]) * insetSizeX
+        + Math.abs(up[axis]) * insetSizeY + Math.abs(normal[axis]) * size.z);
+    return {x: halfSizeAlong("x"), y: halfSizeAlong("y"), z: halfSizeAlong("z")};
+}
+
+// Upright: turning to face another horizontal axis swaps the box's horizontal dimensions.
+function getFreeStandingHalfSize(size: Vec3, dir: Vec3): Vec3
+{
+    const moreAlignedWithXAxis = Math.abs(dir.x) > Math.abs(dir.z);
+    return {
+        x: 0.5 * (moreAlignedWithXAxis ? size.z : size.x),
+        y: 0.5 * size.y,
+        z: 0.5 * (moreAlignedWithXAxis ? size.x : size.z),
+    };
 }
 
 export default PhysicsColliderStateUtil;

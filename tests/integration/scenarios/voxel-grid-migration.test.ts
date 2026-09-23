@@ -271,7 +271,7 @@ describe("the migrated room as a room", () => {
     });
 
     it("seals the doorway, so that the room's door has a wall to hang on", () => {
-        // An open doorway would reject the room's own door (see WallAttachedObjectUtil), so this is checked
+        // An open doorway would reject the room's own door (see ObjectAttachmentUtil), so this is checked
         // after migration.
         const grid = decode(loadFixture("procedural_1").bytes);
         const entrance = getVoxel(grid, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL);

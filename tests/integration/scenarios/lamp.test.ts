@@ -1,6 +1,6 @@
 /**
  * Scenario tests: lamps (furniture anyone may install, under the same rules as pictures) — permissions,
- * metadata validation, and a lamp's appearance always matching its light.
+ * metadata validation, a lamp's appearance always matching its light, and a floor lamp being walked over.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import fc from "fast-check";
@@ -11,7 +11,7 @@ import ObjectCategoryConfigMap from "../../../src/shared/object/maps/objectCateg
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 import ObjectMetadataEntryMap from "../../../src/shared/object/maps/objectMetadataEntryMap";
 import ObjectUpdateUtil from "../../../src/shared/object/util/objectUpdateUtil";
-import WallLampObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/wallLampObjectTypeConfig";
+import LampObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/lampObjectTypeConfig";
 import DoorObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import ObjectGroup from "../../../src/shared/object/types/objectGroup";
@@ -28,12 +28,27 @@ import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import ColorUtil from "../../../src/shared/math/util/colorUtil";
 import LampLightUtil, { MAX_LAMP_INTENSITY, MAX_LAMP_RANGE, MIN_LAMP_INTENSITY, MIN_LAMP_RANGE }
     from "../../../src/shared/graphics/light/util/lampLightUtil";
-import { COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL,
-    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
+import { COLLISION_LAYER_MIN, GRAVITY_SPEED, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL,
+    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, INSTANCED_EMISSIVE_MATERIAL_ID, INSTANCED_WOOD_MATERIAL_ID,
     LIGHT_COLOR_PALETTE_NAME, UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
+import { PLAYER_HEIGHT } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import PhysicsManager from "../../../src/shared/physics/physicsManager";
+import PhysicsColliderStateUtil from "../../../src/shared/physics/util/physicsColliderStateUtil";
+import ObjectScaleUtil from "../../../src/shared/object/util/objectScaleUtil";
+import Vec3 from "../../../src/shared/math/types/vec3";
+import InstancedMeshCompositionPart from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
+import CompositionMetadataUtil from "../../../src/shared/graphics/mesh/composition/util/compositionMetadataUtil";
+import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionCodecType";
+import { LampCompositionCodec } from "../../../src/shared/graphics/mesh/composition/types/compositionCodec/lampCompositionCodec";
+import LampCompositionConstants
+    from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/lampCompositionConstants";
+import MarginCompositionConstants
+    from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/marginCompositionConstants";
+import MouldingCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/mouldingCompositionConstants";
+import LampCompositionParams from "../../../src/shared/graphics/mesh/composition/types/compositionParams/lampCompositionParams";
 
-const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("WallLamp");
-const MAX_LAMPS_PER_ROOM = ObjectCategoryConfigMap.getMaxCountPerRoom(WallLampObjectTypeConfig.category);
+const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
+const MAX_LAMPS_PER_ROOM = ObjectCategoryConfigMap.getMaxCountPerRoom(LampObjectTypeConfig.category);
 
 function makeUser(id: string, userType: number): User
 {
@@ -147,7 +162,7 @@ describe("lamp permissions", () => {
                     lamps.push(makeLampSignal(room, ADMIN, `lamp-${i}`, -5 - i));
                 room.objectGroup = new ObjectGroup(lamps); // as a stored room arrives (see ObjectGroup.decode)
 
-                expect(room.objectGroup.getCategoryCount(WallLampObjectTypeConfig.category))
+                expect(room.objectGroup.getCategoryCount(LampObjectTypeConfig.category))
                     .toBe(MAX_LAMPS_PER_ROOM);
                 expect(ObjectUpdateUtil.canAddObject(ADMIN, room,
                     makeLampSignal(room, ADMIN, "one-too-many", CLEAR_COL_OFFSET))).toBe(false);
@@ -215,7 +230,7 @@ describe("lamp permissions", () => {
                     expect(ObjectUpdateUtil.canSetObjectMetadata(user, room,
                         new SetObjectMetadataSignal(room.id, lamp.objectId,
                             ObjectMetadataKeyEnumMap.LightProperties,
-                            WallLampObjectTypeConfig.util.encodeLightProperties(3, 8, 9)))).toBe(true);
+                            LampObjectTypeConfig.util.encodeLightProperties(3, 8, 9)))).toBe(true);
                 }
             },
         });
@@ -246,13 +261,13 @@ describe("lamp permissions", () => {
                 expect(ObjectUpdateUtil.canSetObjectMetadata(MEMBER, room,
                     new SetObjectMetadataSignal(room.id, lamp.objectId,
                         ObjectMetadataKeyEnumMap.LightProperties,
-                        WallLampObjectTypeConfig.util.encodeLightProperties(3, 8, 9)))).toBe(false);
+                        LampObjectTypeConfig.util.encodeLightProperties(3, 8, 9)))).toBe(false);
             },
         });
     });
 
     it("refuses a lamp moved the way something with physics moves", async () => {
-        // Wall attachments are placed, so a physics-resolved transform is rejected.
+        // Attached objects are placed, so a physics-resolved transform is rejected.
         await runScenario({
             name: "a lamp shoved rather than placed",
             rooms: [EMPTY_HUB],
@@ -269,7 +284,7 @@ describe("lamp permissions", () => {
         });
     });
 
-    it("refuses every metadata key but the light a lamp gives off", async () => {
+    it("refuses every metadata key but the light a lamp gives off and its look", async () => {
         await runScenario({
             name: "metadata a lamp does not answer to",
             rooms: [EMPTY_HUB],
@@ -284,8 +299,8 @@ describe("lamp permissions", () => {
                         new SetObjectMetadataSignal(room.id, lamp.objectId, key, value));
 
                 expect(canSet(ObjectMetadataKeyEnumMap.LightProperties, "!!")).toBe(true);
-                // Appearance is derived from the light, so no composition is settable.
-                expect(canSet(ObjectMetadataKeyEnumMap.InstancedMeshComposition, "!!")).toBe(false);
+                // Its margin and frame; the glow's color is derived from the light either way.
+                expect(canSet(ObjectMetadataKeyEnumMap.InstancedMeshComposition, "!!")).toBe(true);
                 expect(canSet(ObjectMetadataKeyEnumMap.Label, "Lamp")).toBe(false);
                 expect(canSet(ObjectMetadataKeyEnumMap.ImagePath, "1/1")).toBe(false);
                 expect(canSet(ObjectMetadataKeyEnumMap.DestinationRoomId, "hub")).toBe(false);
@@ -310,11 +325,11 @@ describe("what a lamp gives off", () => {
     it("comes back exactly as it was set", () => {
         fc.assert(fc.property(colorIndices, intensities, ranges,
             (colorIndex, intensity, range) => {
-                const lamp = lampWith(WallLampObjectTypeConfig.util.encodeLightProperties(
+                const lamp = lampWith(LampObjectTypeConfig.util.encodeLightProperties(
                     colorIndex, intensity, range));
-                expect(WallLampObjectTypeConfig.util.getColorIndex(lamp)).toBe(colorIndex);
-                expect(WallLampObjectTypeConfig.util.getIntensity(lamp)).toBe(intensity);
-                expect(WallLampObjectTypeConfig.util.getRange(lamp)).toBe(range);
+                expect(LampObjectTypeConfig.util.getColorIndex(lamp)).toBe(colorIndex);
+                expect(LampObjectTypeConfig.util.getIntensity(lamp)).toBe(intensity);
+                expect(LampObjectTypeConfig.util.getRange(lamp)).toBe(range);
             }));
     });
 
@@ -331,25 +346,25 @@ describe("what a lamp gives off", () => {
         // Reading is total: any string decodes to a lamp within the dials' ranges.
         fc.assert(fc.property(fc.string({maxLength: 20}), (raw) => {
             const lamp = lampWith(raw);
-            expect(WallLampObjectTypeConfig.util.getColorIndex(lamp)).toBeGreaterThanOrEqual(0);
-            expect(WallLampObjectTypeConfig.util.getColorIndex(lamp)).toBeLessThan(
+            expect(LampObjectTypeConfig.util.getColorIndex(lamp)).toBeGreaterThanOrEqual(0);
+            expect(LampObjectTypeConfig.util.getColorIndex(lamp)).toBeLessThan(
                 ColorUtil.getPaletteSize(LIGHT_COLOR_PALETTE_NAME));
-            expect(WallLampObjectTypeConfig.util.getIntensity(lamp)).toBeGreaterThanOrEqual(MIN_LAMP_INTENSITY);
-            expect(WallLampObjectTypeConfig.util.getIntensity(lamp)).toBeLessThanOrEqual(MAX_LAMP_INTENSITY);
-            expect(WallLampObjectTypeConfig.util.getRange(lamp)).toBeGreaterThanOrEqual(MIN_LAMP_RANGE);
-            expect(WallLampObjectTypeConfig.util.getRange(lamp)).toBeLessThanOrEqual(MAX_LAMP_RANGE);
+            expect(LampObjectTypeConfig.util.getIntensity(lamp)).toBeGreaterThanOrEqual(MIN_LAMP_INTENSITY);
+            expect(LampObjectTypeConfig.util.getIntensity(lamp)).toBeLessThanOrEqual(MAX_LAMP_INTENSITY);
+            expect(LampObjectTypeConfig.util.getRange(lamp)).toBeGreaterThanOrEqual(MIN_LAMP_RANGE);
+            expect(LampObjectTypeConfig.util.getRange(lamp)).toBeLessThanOrEqual(MAX_LAMP_RANGE);
         }));
     });
 
     it("holds a lamp asked for more than a lamp has to what a lamp has", () => {
         // Out-of-range values clamp to the dials' bounds.
-        const beyond = lampWith(WallLampObjectTypeConfig.util.encodeLightProperties(0, 999, 999));
-        expect(WallLampObjectTypeConfig.util.getIntensity(beyond)).toBe(MAX_LAMP_INTENSITY);
-        expect(WallLampObjectTypeConfig.util.getRange(beyond)).toBe(MAX_LAMP_RANGE);
+        const beyond = lampWith(LampObjectTypeConfig.util.encodeLightProperties(0, 999, 999));
+        expect(LampObjectTypeConfig.util.getIntensity(beyond)).toBe(MAX_LAMP_INTENSITY);
+        expect(LampObjectTypeConfig.util.getRange(beyond)).toBe(MAX_LAMP_RANGE);
 
-        const beneath = lampWith(WallLampObjectTypeConfig.util.encodeLightProperties(0, 0, 0));
-        expect(WallLampObjectTypeConfig.util.getIntensity(beneath)).toBe(MIN_LAMP_INTENSITY);
-        expect(WallLampObjectTypeConfig.util.getRange(beneath)).toBe(MIN_LAMP_RANGE);
+        const beneath = lampWith(LampObjectTypeConfig.util.encodeLightProperties(0, 0, 0));
+        expect(LampObjectTypeConfig.util.getIntensity(beneath)).toBe(MIN_LAMP_INTENSITY);
+        expect(LampObjectTypeConfig.util.getRange(beneath)).toBe(MIN_LAMP_RANGE);
     });
 
     it("leaves a lamp a light even at its lowest, and an effect at its highest", () => {
@@ -358,7 +373,7 @@ describe("what a lamp gives off", () => {
         expect(MIN_LAMP_INTENSITY).toBeGreaterThan(0);
         expect(MIN_LAMP_RANGE).toBeGreaterThan(0);
         expect(MAX_LAMP_INTENSITY)
-            .toBeGreaterThan(3 * WallLampObjectTypeConfig.util.getIntensity(unconfigured));
+            .toBeGreaterThan(3 * LampObjectTypeConfig.util.getIntensity(unconfigured));
     });
 
     it("gives a lamp two dials that do not move together", () => {
@@ -386,38 +401,189 @@ describe("what a lamp gives off", () => {
     it("arrives lit rather than dark when nothing has been said about it", () => {
         // A lamp with no metadata is an ordinary light, not a maximal one.
         const lamp = lampWith("");
-        expect(WallLampObjectTypeConfig.util.getIntensity(lamp)).toBeGreaterThanOrEqual(MIN_LAMP_INTENSITY);
-        expect(WallLampObjectTypeConfig.util.getIntensity(lamp)).toBeLessThan(MAX_LAMP_INTENSITY);
-        expect(WallLampObjectTypeConfig.util.getRange(lamp)).toBeGreaterThan(MIN_LAMP_RANGE);
-        expect(WallLampObjectTypeConfig.util.getRange(lamp)).toBeLessThanOrEqual(MAX_LAMP_RANGE);
+        expect(LampObjectTypeConfig.util.getIntensity(lamp)).toBeGreaterThanOrEqual(MIN_LAMP_INTENSITY);
+        expect(LampObjectTypeConfig.util.getIntensity(lamp)).toBeLessThan(MAX_LAMP_INTENSITY);
+        expect(LampObjectTypeConfig.util.getRange(lamp)).toBeGreaterThan(MIN_LAMP_RANGE);
+        expect(LampObjectTypeConfig.util.getRange(lamp)).toBeLessThanOrEqual(MAX_LAMP_RANGE);
         expect(ColorUtil.rgbToHex(ColorUtil.paletteIndexToRGB(LIGHT_COLOR_PALETTE_NAME,
-            WallLampObjectTypeConfig.util.getColorIndex(lamp)))).toBe("#ffffff");
+            LampObjectTypeConfig.util.getColorIndex(lamp)))).toBe("#ffffff");
     });
 
     it("reads a lamp stored by a version that knew fewer settings", () => {
         // Missing trailing chars fall back to defaults, so a short string is never dark or zero-range.
-        const colorOnly = WallLampObjectTypeConfig.util.getDefaultLightProperties().substring(0, 1);
+        const colorOnly = LampObjectTypeConfig.util.getDefaultLightProperties().substring(0, 1);
         const lamp = lampWith(colorOnly);
-        expect(WallLampObjectTypeConfig.util.getIntensity(lamp)).toBe(
-            WallLampObjectTypeConfig.util.getIntensity(lampWith("")));
-        expect(WallLampObjectTypeConfig.util.getRange(lamp)).toBe(
-            WallLampObjectTypeConfig.util.getRange(lampWith("")));
+        expect(LampObjectTypeConfig.util.getIntensity(lamp)).toBe(
+            LampObjectTypeConfig.util.getIntensity(lampWith("")));
+        expect(LampObjectTypeConfig.util.getRange(lamp)).toBe(
+            LampObjectTypeConfig.util.getRange(lampWith("")));
     });
 
-    it("draws the lamp in the color it lights the room with", () => {
-        // Parts derive from the same setting as the light, so glow and light never disagree.
-        const config = ObjectTypeConfigMap.getConfigByIndex(lampTypeIndex);
-        const generateDefaultParts = config.components.spawnedByAny!
-            .instancedMeshComposer!.generateDefaultParts;
+    it("draws the lamp in the color it lights the room with, whatever look it has", () => {
+        // The glow derives from the same setting as the light, so glow and light never disagree, and
+        // no stored look can override it.
+        const composer = LampObjectTypeConfig.components.spawnedByAny.instancedMeshComposer;
+        const presetLooks = LampCompositionConstants.presets.map(preset =>
+            CompositionMetadataUtil.encode(composer.codecType, composer.codecVersion, preset));
 
-        fc.assert(fc.property(colorIndices, intensities, ranges,
-            (colorIndex, intensity, range) => {
-                const lamp = lampWith(WallLampObjectTypeConfig.util.encodeLightProperties(
+        fc.assert(fc.property(colorIndices, intensities, ranges, fc.constantFrom(...presetLooks),
+            (colorIndex, intensity, range, look) => {
+                const lamp = lampWith(LampObjectTypeConfig.util.encodeLightProperties(
                     colorIndex, intensity, range));
-                const {parts} = generateDefaultParts(lamp);
-                expect(parts.length).toBeGreaterThan(0);
-                expect(parts[0].color).toEqual(
-                    ColorUtil.paletteIndexToRGB(LIGHT_COLOR_PALETTE_NAME, colorIndex));
+                const lightColor = ColorUtil.paletteIndexToRGB(LIGHT_COLOR_PALETTE_NAME, colorIndex);
+
+                const {parts: defaultParts} = composer.generateDefaultParts(lamp);
+                const storedParts: InstancedMeshCompositionPart[] = [];
+                LampCompositionCodec.decode(look, UNIT_VEC3, {}, storedParts);
+
+                for (const parts of [defaultParts, storedParts])
+                {
+                    composer.deriveParts(lamp, parts);
+                    const glows = parts.filter(part => part.materialId == INSTANCED_EMISSIVE_MATERIAL_ID);
+                    expect(glows).toHaveLength(1);
+                    expect(glows[0].color).toEqual(lightColor);
+                }
             }));
+    });
+});
+
+describe("how a lamp looks", () => {
+    const lampSize = (scale: number) => ObjectScaleUtil.getObjectSize(lampTypeIndex, {x: scale, y: scale, z: 1});
+    const decode = (params: LampCompositionParams, size: Vec3) =>
+    {
+        const parts: InstancedMeshCompositionPart[] = [];
+        LampCompositionCodec.decode(CompositionMetadataUtil.encode(InstancedMeshCompositionCodecTypeEnumMap.Lamp,
+            0, params), size, {}, parts);
+        return {
+            glow: parts.find(part => part.materialId == INSTANCED_EMISSIVE_MATERIAL_ID)!,
+            board: parts.find(part => part.materialId == INSTANCED_WOOD_MATERIAL_ID),
+        };
+    };
+    const scaling = LampObjectTypeConfig.scaling;
+    const scales = fc.constantFrom(...[0, 1, 2].map(i => scaling.minScale.x + i * scaling.scaleStep.x));
+    const margins = fc.integer({min: 0, max: Math.round(MarginCompositionConstants.maxMargin
+        / MarginCompositionConstants.marginStep)}).map(step => MarginCompositionConstants.fromMarginStep(step));
+    const minGlowSize = MarginCompositionConstants.minInnerSize;
+    const thicknesses = fc.integer({min: 0, max: MouldingCompositionConstants.numThicknessSteps - 1})
+        .map(step => MouldingCompositionConstants.fromThicknessStep(step));
+
+    it("starts as a bare glow over its whole footprint, the same as a lamp with nothing stored", () => {
+        const first = LampCompositionConstants.presets[0];
+        expect(first.framed).toBe(false);
+        expect(first.margin).toBe(0);
+
+        const lamp = new AddObjectSignal("room", "user", "User", lampTypeIndex, "lamp",
+            new ObjectTransform({x: 1, y: 1, z: 1}, {x: 0, y: 0, z: -1}, {x: 1.5, y: 0.5, z: 1}), {});
+        const {params, parts} = LampObjectTypeConfig.components.spawnedByAny.instancedMeshComposer
+            .generateDefaultParts(lamp);
+        expect(params.framed).toBe(false);
+        expect(params.margin).toBe(0);
+        expect(parts).toHaveLength(1);
+        expect(parts[0].materialId).toBe(INSTANCED_EMISSIVE_MATERIAL_ID);
+        const size = ObjectScaleUtil.getObjectSize(lampTypeIndex, lamp.transform.scale);
+        expect(parts[0].scale.x).toBeCloseTo(size.x, 6);
+        expect(parts[0].scale.y).toBeCloseTo(size.y, 6);
+    });
+
+    it("keeps its look through a round trip", () => {
+        for (const preset of LampCompositionConstants.presets)
+        {
+            const decoded: LampCompositionParams = {} as LampCompositionParams;
+            LampCompositionCodec.decode(CompositionMetadataUtil.encode(
+                InstancedMeshCompositionCodecTypeEnumMap.Lamp, 0, preset), UNIT_VEC3, decoded, []);
+            expect(decoded).toEqual(preset);
+        }
+    });
+
+    it("draws inside its margin on every side, and never past its footprint", () => {
+        fc.assert(fc.property(scales, margins, fc.boolean(), thicknesses, (scale, margin, framed, thickness) => {
+            const size = lampSize(scale);
+            const {glow, board} = decode({...LampCompositionConstants.presets[1], framed, margin,
+                mouldingThickness: thickness}, size);
+            const drawn = board ?? glow;
+            for (const axis of ["x", "y"] as const)
+            {
+                expect(drawn.scale[axis]).toBeLessThanOrEqual(size[axis] + 1e-9);
+                // Short of the margin only where the glow would otherwise vanish.
+                if (drawn.scale[axis] > size[axis] - 2 * margin + 1e-9)
+                    expect(glow.scale[axis]).toBeCloseTo(minGlowSize, 6);
+            }
+        }));
+    });
+
+    it("keeps its band the width it was given, at any size and margin, and a glow inside it", () => {
+        fc.assert(fc.property(scales, margins, thicknesses, (scale, margin, thickness) => {
+            const {glow, board} = decode({...LampCompositionConstants.presets[1], framed: true, margin,
+                mouldingThickness: thickness}, lampSize(scale));
+            expect(board!.mouldingThickness).toBe(thickness);
+            expect(glow.scale.x).toBeCloseTo(board!.scale.x - 2 * thickness, 6);
+            expect(glow.scale.y).toBeCloseTo(board!.scale.y - 2 * thickness, 6);
+            expect(glow.scale.x).toBeGreaterThanOrEqual(minGlowSize - 1e-9);
+            expect(glow.scale.y).toBeGreaterThanOrEqual(minGlowSize - 1e-9);
+            // In front of the band, so the two never fight over depth.
+            expect(glow.offset.z).toBeGreaterThan(board!.offset.z);
+        }));
+    });
+
+    it("decodes whatever it is handed into a lamp that can be drawn", () => {
+        fc.assert(fc.property(fc.string({maxLength: 12}), (garbage) => {
+            const parts: InstancedMeshCompositionPart[] = [];
+            const prefix = CompositionMetadataUtil.getCodecPrefix(InstancedMeshCompositionCodecTypeEnumMap.Lamp, 0);
+            expect(() => LampCompositionCodec.decode(prefix + garbage, UNIT_VEC3, {}, parts)).not.toThrow();
+            expect(parts.filter(part => part.materialId == INSTANCED_EMISSIVE_MATERIAL_ID)).toHaveLength(1);
+        }));
+    });
+});
+
+describe("a lamp on the floor", () => {
+    beforeEach(() => {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        vi.spyOn(console, "warn").mockImplementation(() => {});
+        vi.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    it("is walked over, and never lifts a player standing on it", async () => {
+        await runScenario({
+            name: "standing on a floor lamp",
+            rooms: [EMPTY_HUB],
+            users: [userAtCenter("hub")],
+            assertions: ({ users }) => {
+                const user = users[0].user;
+                const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
+                const spot: Vec3 = {x: 8.5, y: 0, z: 8.5};
+                expect(ObjectUpdateUtil.addObject(user, room, new AddObjectSignal(room.id, user.id,
+                    user.userName, lampTypeIndex, "floor-lamp",
+                    new ObjectTransform(spot, {x: 0, y: 1, z: 0}, {...UNIT_VEC3})))).toBe(true);
+
+                // A real player collider on the lamp, under gravity, through the real physics engine.
+                const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
+                const objectId = "stander";
+                const dir: Vec3 = {x: 0, y: 0, z: 1};
+                const standingY = spot.y + 0.5 * PLAYER_HEIGHT;
+                let pos: Vec3 = {x: spot.x, y: standingY, z: spot.z};
+                PhysicsManager.addObject(room.id, objectId, playerTypeIndex,
+                    PhysicsColliderStateUtil.getObjectColliderState(playerTypeIndex,
+                        new ObjectTransform(pos, dir, {...UNIT_VEC3}))!);
+
+                // The lamp's box stands just proud of the floor, so it is under the player's feet.
+                const physicsRoom = PhysicsManager.physicsRooms[room.id];
+                expect(PhysicsColliderStateUtil.findOverlappingColliderStates(physicsRoom,
+                    physicsRoom.objectById[objectId].colliderState.hitbox)
+                    .has(physicsRoom.objectById["floor-lamp"].colliderState)).toBe(true);
+
+                const deltaTime = 1 / 60;
+                for (let frame = 0; frame < 60; ++frame)
+                {
+                    const velocity = PhysicsManager.getAdjustedVelocity(room.id, objectId,
+                        {x: 0, y: -GRAVITY_SPEED, z: 0});
+                    expect(velocity.y, `pushed up on frame ${frame}`).toBeLessThanOrEqual(0);
+                    pos = PhysicsManager.setObjectTransform(room.id, objectId, new ObjectTransform(
+                        {x: pos.x + velocity.x * deltaTime, y: pos.y + velocity.y * deltaTime,
+                            z: pos.z + velocity.z * deltaTime}, dir, {...UNIT_VEC3}), false).transform.pos;
+                    expect(pos.y).toBeCloseTo(standingY, 2);
+                }
+                PhysicsManager.removeObject(room.id, objectId);
+            },
+        });
     });
 });

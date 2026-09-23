@@ -17,7 +17,8 @@ import ObjectFactory from "../../../../object/factories/objectFactory";
 import ClientObjectManager from "../../../../object/clientObjectManager";
 import AddObjectSignal from "../../../../../shared/object/types/addObjectSignal";
 import RemoveObjectSignal from "../../../../../shared/object/types/removeObjectSignal";
-import WallAttachedObjectUtil from "../../../../../shared/object/util/wallAttachedObjectUtil";
+import ObjectAttachmentUtil from "../../../../../shared/object/util/objectAttachmentUtil";
+import ObjectScaleUtil from "../../../../../shared/object/util/objectScaleUtil";
 import ObjectTransform from "../../../../../shared/object/types/objectTransform";
 import ObjectSelection from "../../../../graphics/types/gizmo/objectSelection";
 import Vec3 from "../../../../../shared/math/types/vec3";
@@ -38,12 +39,12 @@ import PopupUtil from "../../../util/popupUtil";
 import NumUtil from "../../../../../shared/math/util/numUtil";
 import RoomValidationUtil from "../../../../../shared/room/util/roomValidationUtil";
 import { DoorTypeEnumMap } from "../../../../../shared/object/types/doorType";
-import WallLampObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/wallLampObjectTypeConfig";
+import LampObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/lampObjectTypeConfig";
 import SelectionToolRow from "./selectionToolRow";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
-const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("WallLamp");
+const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
 
 // Feature flags whose toggling changes whether this menu's buttons are enabled.
 const placementFeatureFlags = [
@@ -66,17 +67,16 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
         };
     }, []);
 
-    const canAddCanvas = getPlaceableWallAttachedObjectTransform(
-        props.selection, canvasTypeIndex) !== null;
+    const canAddCanvas = getPlaceableAttachedObjectTransform(props.selection, canvasTypeIndex) !== null;
 
     // Doors: admin only, in rooms whose doors are theirs to lay (see RoomValidationUtil).
     const room = App.getCurrentRoom();
     const canManageDoors = room != undefined &&
         RoomValidationUtil.canUserManageDoors(App.getUser(), room);
     const canAddDoor = canManageDoors &&
-        getPlaceableWallAttachedObjectTransform(props.selection, doorTypeIndex) !== null;
+        getPlaceableAttachedObjectTransform(props.selection, doorTypeIndex) !== null;
 
-    const canAddLamp = getPlaceableWallAttachedObjectTransform(props.selection, lampTypeIndex) !== null;
+    const canAddLamp = getPlaceableAttachedObjectTransform(props.selection, lampTypeIndex) !== null;
 
     return <SelectionToolRow>
         <IconButton id="removeVoxelBlockButton" icon={<TrashIcon/>} size="md" color="red"
@@ -108,19 +108,20 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
         <IconButton id="addLampButton" icon={<AddLampIcon/>} size="md"
             disabled={!canAddLamp}
             onClick={() => {
-                // New lamps use default light settings.
+                // New lamps use default light settings, the first preset's look, and the default size
+                // (see LampObjectTypeConfig).
                 tryAddObjectFromQuad(props.selection, lampTypeIndex, {
                     [ObjectMetadataKeyEnumMap.LightProperties]:
-                        new EncodableByteString(WallLampObjectTypeConfig.util.getDefaultLightProperties()),
+                        new EncodableByteString(LampObjectTypeConfig.util.getDefaultLightProperties()),
                 });
             }}
         />
     </SelectionToolRow>;
 }
 
-// Placement transform for an attachment on the clicked wall, or null. Position and facing come from
-// the quad; heights are tried per type (see getCandidateHeights).
-function getPlaceableWallAttachedObjectTransform(selection: VoxelQuadSelection,
+// Placement transform for an object attached to the clicked face, or null if its type can't face that way
+// or nothing on the face near the click takes it (see ObjectAttachmentUtil.findPlacement).
+function getPlaceableAttachedObjectTransform(selection: VoxelQuadSelection,
     objectTypeIndex: number): ObjectTransform | null
 {
     if (clientFeatureFlagsObservable.has(FeatureFlag.DisableManualObjectAddition))
@@ -135,59 +136,46 @@ function getPlaceableWallAttachedObjectTransform(selection: VoxelQuadSelection,
     const quadIndex = selection.quadIndex;
     const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ } =
         VoxelQueryUtil.getVoxelQuadTransformDimensions(voxel, quadIndex);
-
-    if (dirY != 0)
-        return null; // a floor or a ceiling, which nothing hangs on
-
-    const x = voxel.col + 0.5 + offsetX;
-    const z = voxel.row + 0.5 + offsetZ;
     const dir: Vec3 = {x: dirX, y: dirY, z: dirZ};
+    if (!ObjectAttachmentUtil.allowsFacing(objectTypeIndex, dir))
+        return null;
 
-    for (const y of getCandidateHeights(objectTypeIndex, quadIndex, offsetY))
+    const objectId = ObjectIdUtil.generateRandomObjectId();
+    const accepts = (tr: ObjectTransform) => ObjectUpdateUtil.canAddObject(user, room,
+        new AddObjectSignal(room.id, user.id, user.userName, objectTypeIndex, objectId, tr));
+    const center = {x: voxel.col + 0.5 + offsetX, y: offsetY, z: voxel.row + 0.5 + offsetZ};
+
+    // Doors stand on the storey floor, origin half a footprint up (see DoorObjectTypeConfig), rather than
+    // wherever there is room near the click.
+    if (objectTypeIndex == doorTypeIndex)
     {
-        const tr = new ObjectTransform({x, y, z}, dir, {...UNIT_VEC3});
-        const obj = new AddObjectSignal(room.id, user.id, user.userName, objectTypeIndex,
-            ObjectIdUtil.generateRandomObjectId(), tr);
-        if (ObjectUpdateUtil.canAddObject(user, room, obj))
-            return tr;
+        const doorY = getDoorHeight(quadIndex);
+        if (doorY == undefined)
+            return null;
+        const tr = new ObjectTransform({...center, y: doorY}, dir, {...UNIT_VEC3});
+        return accepts(tr) ? tr : null;
     }
-    return null;
+    return ObjectAttachmentUtil.findPlacement(room, objectTypeIndex, center, dir,
+        ObjectScaleUtil.getDefaultScale(objectTypeIndex), accepts) ?? null;
 }
 
-// Candidate heights in order: pictures try the snap steps around the click height; lamps (one layer
-// tall) try the clicked layer then the one above; doors stand on the storey floor, origin half a
-// footprint up (see DoorObjectTypeConfig).
-function getCandidateHeights(objectTypeIndex: number, quadIndex: number, offsetY: number): number[]
+function getDoorHeight(quadIndex: number): number | undefined
 {
-    if (objectTypeIndex == lampTypeIndex)
-    {
-        // A wall quad is exactly one layer, as tall as a lamp.
-        const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
-        if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
-            return [];
-        return [
-            VoxelQueryUtil.getWorldYAtVoxelCollisionLayerCenter(collisionLayer),
-            VoxelQueryUtil.getWorldYAtVoxelCollisionLayerCenter(collisionLayer + 1),
-        ];
-    }
-    if (objectTypeIndex != doorTypeIndex)
-        return [0.5 * Math.ceil(2 * offsetY), 0.5 * Math.floor(2 * offsetY)];
-
     const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
     if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
-        return [];
+        return undefined;
 
     const storeyFloorLayer = (collisionLayer >= STOREY_FLOOR_COLLISION_LAYER)
         ? STOREY_FLOOR_COLLISION_LAYER + 1 : COLLISION_LAYER_MIN;
     const floorY = (storeyFloorLayer - COLLISION_LAYER_MIN) * COLLISION_LAYER_HEIGHT;
-    return [floorY + 0.5 * DoorObjectTypeConfig.components.spawnedByAny.collider.baseHitboxSize.sizeY];
+    return floorY + 0.5 * DoorObjectTypeConfig.components.spawnedByAny.collider.baseHitboxSize.sizeY;
 }
 
 async function tryAddObjectFromQuad(selection: VoxelQuadSelection,
     objectTypeIndex: number, metadata: {[key: number]: EncodableByteString})
 {
     try {
-        const tr = getPlaceableWallAttachedObjectTransform(selection, objectTypeIndex);
+        const tr = getPlaceableAttachedObjectTransform(selection, objectTypeIndex);
         if (tr == null)
             return;
 
@@ -300,7 +288,7 @@ function canRemoveVoxelBlock(selection: VoxelQuadSelection): boolean
     const room = App.getCurrentRoom();
     if (!room)
         return false;
-    return VoxelUpdateUtil.canRemoveVoxelBlockWithItsWallAttachments(
+    return VoxelUpdateUtil.canRemoveVoxelBlockWithItsAttachments(
         App.getUser(), room, selection.quadIndex);
 }
 
@@ -315,22 +303,22 @@ function tryRemoveVoxelBlock(selection: VoxelQuadSelection)
         return;
 
     // Confirm only when hand-placed attachments would be destroyed.
-    if (WallAttachedObjectUtil.getObjectIdsAttachedToVoxelBlock(room, selection.quadIndex).length > 0)
+    if (ObjectAttachmentUtil.getObjectIdsAttachedToVoxelBlock(room, selection.quadIndex).length > 0)
     {
         PopupUtil.openPopup({
             popupType: "confirm",
             params: {
-                message: "Something is attached to the wall. Removing the wall will destroy it, too. Want to proceed?",
+                message: "Something is attached to this block. Removing the block will destroy it, too. Want to proceed?",
                 onConfirm: () => {
                     PopupUtil.closePopup();
-                    removeVoxelBlockWithItsWallAttachments(selection);
+                    removeVoxelBlockWithItsAttachments(selection);
                 },
                 onCancel: PopupUtil.closePopup,
             },
         });
         return;
     }
-    removeVoxelBlockWithItsWallAttachments(selection);
+    removeVoxelBlockWithItsAttachments(selection);
 }
 
 // Reports and returns true if an attachment on the block can't be removed by this user (e.g. a door),
@@ -339,7 +327,7 @@ function reportUndetachableAttachment(room: Room, quadIndex: number): boolean
 {
     const user = App.getUser();
 
-    for (const objectId of WallAttachedObjectUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex))
+    for (const objectId of ObjectAttachmentUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex))
     {
         const obj = room.objectById[objectId];
         if (obj == undefined || ObjectUpdateUtil.canRemoveObject(user, room,
@@ -347,7 +335,7 @@ function reportUndetachableAttachment(room: Room, quadIndex: number): boolean
         {
             continue;
         }
-        // Type names are CamelCase ("WallLamp"), so split into words for display.
+        // Type names are CamelCase, so split into words for display.
         const objectName = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex)
             .objectType.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase();
         notificationMessageObservable.set(
@@ -357,7 +345,7 @@ function reportUndetachableAttachment(room: Room, quadIndex: number): boolean
     return false;
 }
 
-async function removeVoxelBlockWithItsWallAttachments(selection: VoxelQuadSelection)
+async function removeVoxelBlockWithItsAttachments(selection: VoxelQuadSelection)
 {
     // Re-checked: the room may have changed while the confirmation popup was up.
     if (voxelQuadSelectionObservable.peek() != selection || !canRemoveVoxelBlock(selection))
@@ -371,7 +359,7 @@ async function removeVoxelBlockWithItsWallAttachments(selection: VoxelQuadSelect
         return;
 
     // Attachments first; the server processes signals in order and reaches the same result.
-    for (const objectId of WallAttachedObjectUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex))
+    for (const objectId of ObjectAttachmentUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex))
     {
         const removed = await ClientObjectManager.removeObject(objectId);
         if (removed && room.roomType != RoomTypeEnumMap.SinglePlayer)

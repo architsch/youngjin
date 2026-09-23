@@ -1,8 +1,8 @@
 import Vec3 from "../../../../../math/types/vec3";
 import { InstancedMeshCompositionParams } from "./instancedMeshCompositionParams";
 
-// A canvas frame's wood-material inputs, the only thing that varies between canvases (see
-// CanvasCompositionConstants).
+// A canvas frame's wood-material inputs and how far inside its footprint it is drawn, the only things that
+// vary between canvases (see CanvasCompositionConstants).
 export default interface CanvasCompositionParams extends InstancedMeshCompositionParams
 {
     colors: {
@@ -12,4 +12,5 @@ export default interface CanvasCompositionParams extends InstancedMeshCompositio
     mouldingThickness: number, // band width, in world units
     mouldingIsConvex: boolean,
     framed: boolean, // without a frame, the finish above is kept but not drawn
+    margin: number, // how far inside its footprint the canvas is drawn on every side, in world units
 }

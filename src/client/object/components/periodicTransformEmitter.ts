@@ -5,7 +5,6 @@ import GameObjectComponent from "./gameObjectComponent";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
 import GameObject from "../types/gameObject";
 import { SIGNAL_BATCH_SEND_INTERVAL } from "../../../shared/system/sharedConstants";
-import PhysicsColliderStateUtil from "../../../shared/physics/util/physicsColliderStateUtil";
 import App from "../../app";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 
@@ -32,9 +31,7 @@ export default class PeriodicTransformEmitter extends GameObjectComponent
         if (!this.gameObject.isMine())
             throw new Error("Only the user's own object is allowed to have the PeriodicTransformEmitter component.");
 
-        const colliderState = PhysicsColliderStateUtil.getObjectColliderState(
-            this.gameObject.params.objectTypeIndex, this.gameObject.params.transform);
-        this.ignorePhysics = !colliderState || colliderState.colliderConfig.colliderType != "rigidbody";
+        this.ignorePhysics = this.gameObject.config.components.spawnedByMe?.rigidbody == undefined;
 
         this.lastSyncTime = performance.now();
         this.lastSyncedPosition.copy(this.gameObject.position);

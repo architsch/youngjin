@@ -13,6 +13,9 @@ import EncodableRawByteNumber from "../../../src/shared/networking/types/encodab
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 
+// The last version whose transforms carried no scale.
+export const LAST_UNSCALED_OBJECT_GROUP_VERSION = 3;
+
 export function writeLegacyObjectGroup(writeState: BufferState, objects: AddObjectSignal[],
     version: number)
 {

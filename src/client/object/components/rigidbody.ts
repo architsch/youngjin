@@ -1,7 +1,6 @@
 import Vec3 from "../../../shared/math/types/vec3";
 import Collider from "./collider";
 import GameObjectComponent from "./gameObjectComponent";
-import { ColliderConfig } from "../../../shared/physics/types/colliderConfig";
 import ClientObjectManager from "../clientObjectManager";
 import ErrorUtil from "../../../shared/system/util/errorUtil";
 import PhysicsManager from "../../../shared/physics/physicsManager";
@@ -20,10 +19,6 @@ export default class Rigidbody extends GameObjectComponent
         this.collider = this.gameObject.components.collider as Collider;
         if (!this.collider)
             throw new Error("Rigidbody requires Collider component");
-
-        const colliderConfig = this.collider.componentConfig as ColliderConfig;
-        if (colliderConfig.colliderType != "rigidbody")
-            throw new Error("Rigidbody requires a Collider component whose type is 'rigidobdy'");
     }
 
     update(deltaTime: number): void

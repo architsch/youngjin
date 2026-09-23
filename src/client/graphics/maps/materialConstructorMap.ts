@@ -134,6 +134,11 @@ function createInstancedEmissiveMaterial(p: InstancedEmissiveMaterialParams): TH
 {
     const newMaterial = new THREE.MeshBasicMaterial();
     newMaterial.transparent = false;
+    // Beyond the wood's (see instancedWoodShader), so a lamp's glow stays in front of its board: at
+    // oblique angles the board's offset outgrows the real gap between them.
+    newMaterial.polygonOffset = true;
+    newMaterial.polygonOffsetFactor = -2;
+    newMaterial.polygonOffsetUnits = -2;
     newMaterial.onBeforeCompile = installInstanceColorShader;
     return newMaterial;
 }

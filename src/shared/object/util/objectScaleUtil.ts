@@ -24,6 +24,12 @@ const ObjectScaleUtil =
             z: snap(scale.z, scaling.scaleStep.z, scaling.minScale.z, scaling.maxScale.z),
         };
     },
+    // The scale a new object of the type is added at: unit for a type that declares no scaling.
+    getDefaultScale: (objectTypeIndex: number): Vec3 =>
+    {
+        const scaling = ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex).scaling;
+        return {...(scaling?.defaultScale ?? UNIT_VEC3)};
+    },
     // The object's footprint in world units: its collider's base size at the given scale, which is
     // sanitized on the way through. A type with no collider declares no footprint and reads as a unit cube.
     getObjectSize: (objectTypeIndex: number, scale: Vec3): Vec3 =>

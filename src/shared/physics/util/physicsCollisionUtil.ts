@@ -180,6 +180,10 @@ function applyHardCollisionToAABBMovement(physicsRoom: PhysicsRoom, object: Phys
 function canClimbObstacle(physicsRoom: PhysicsRoom, object: PhysicsObject,
     myPos: Vec3, maxClimbableHeight: number, obstacle: ColliderState): boolean
 {
+    // Something walked through (e.g. a lamp on the floor) is never climbed.
+    if (!obstacle.colliderConfig.applyHardCollisionToOthers)
+        return false;
+
     const myHitbox = object.colliderState.hitbox;
     const myBottom = myPos.y - myHitbox.halfSize.y;
     const obstacleTop = obstacle.hitbox.center.y + obstacle.hitbox.halfSize.y;

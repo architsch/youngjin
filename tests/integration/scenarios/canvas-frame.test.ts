@@ -1,8 +1,8 @@
 /**
- * Canvas frames. A canvas composes one moulded wood board from its own wood inputs (frame and inner
- * colors, band width, profile), which a user edits as a door's colors are edited; the picture hangs
- * inside the band, or covers the canvas when its frame is off. The stored string is untrusted, and rooms
- * saved with bitmap frames (CanvasFrameCoords) are converted on load.
+ * Canvas frames. A canvas composes one moulded wood board, a margin inside its footprint, from its own wood
+ * inputs (frame and inner colors, band width, profile), which a user edits as a door's colors are edited;
+ * the picture hangs inside the band, or where the board would be when its frame is off. The stored string
+ * is untrusted, and rooms saved with bitmap frames (CanvasFrameCoords) are converted on load.
  * Covers: the Default codec's wood parts, the canvas codec, canvas defaults and permissions, the
  * ObjectGroup migration, the per-type pre-encoded table, and the thumbnail atlas layout.
  */
@@ -13,6 +13,7 @@ import { DefaultCompositionCodec } from "../../../src/shared/graphics/mesh/compo
 import { CanvasCompositionCodec } from "../../../src/shared/graphics/mesh/composition/types/compositionCodec/canvasCompositionCodec";
 import CanvasCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/canvasCompositionConstants";
 import MouldingCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/mouldingCompositionConstants";
+import MarginCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/marginCompositionConstants";
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionCodecType";
 import PreEncodedCompositionStringMap from "../../../src/shared/graphics/mesh/composition/maps/preEncodedCompositionStringMap";
 import PreEncodedCompositionIndexMap from "../../../src/shared/graphics/mesh/composition/maps/preEncodedCompositionIndexMap";
@@ -25,7 +26,7 @@ import Vec3 from "../../../src/shared/math/types/vec3";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 import CanvasObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
 import ObjectScaleUtil from "../../../src/shared/object/util/objectScaleUtil";
-import { writeLegacyObjectGroup } from "../helpers/legacyObjectGroup";
+import { LAST_UNSCALED_OBJECT_GROUP_VERSION, writeLegacyObjectGroup } from "../helpers/legacyObjectGroup";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import ObjectGroup from "../../../src/shared/object/types/objectGroup";
@@ -144,7 +145,7 @@ function expectMoulded(part: InstancedMeshCompositionPart): void
     }
 }
 
-// A drawable canvas: one moulded board across the footprint, with room inside its band for the picture, or
+// A drawable canvas: one moulded board, with room inside its band for the picture, or
 // no parts at all when its frame is off.
 function expectDrawableCanvas(params: InstancedMeshCompositionParams, parts: InstancedMeshCompositionPart[]): void
 {
@@ -298,18 +299,24 @@ describe("canvas mesh composition", () => {
     const numThicknessSteps = Math.round((MouldingCompositionConstants.maxMouldingThickness
         - MouldingCompositionConstants.minMouldingThickness) / MouldingCompositionConstants.mouldingThicknessStep) + 1;
 
+    const numMarginSteps = Math.round(MarginCompositionConstants.maxMargin / MarginCompositionConstants.marginStep) + 1;
+    const anyMargin = fc.integer({min: 0, max: numMarginSteps - 1})
+        .map(step => MarginCompositionConstants.fromMarginStep(step));
+
     // Any finish the form can produce.
     const anyFinish = fc.record({
         frame: fc.integer({min: 0, max: paletteSize - 1}),
         inner: fc.integer({min: 0, max: paletteSize - 1}),
         thicknessStep: fc.integer({min: 0, max: numThicknessSteps - 1}),
         convex: fc.boolean(),
-    }).map(({frame, inner, thicknessStep, convex}) => ({
+        margin: anyMargin,
+    }).map(({frame, inner, thicknessStep, convex, margin}) => ({
         colors: {frame: ColorUtil.paletteIndexToRGB("Timber", frame), inner: ColorUtil.paletteIndexToRGB("Timber", inner)},
         mouldingThickness: MouldingCompositionConstants.minMouldingThickness
             + thicknessStep * MouldingCompositionConstants.mouldingThicknessStep,
         mouldingIsConvex: convex,
         framed: true,
+        margin,
     }));
 
     // ─── Codec: round-trip & determinism ───────────────────────────────
@@ -323,6 +330,7 @@ describe("canvas mesh composition", () => {
             expect(params.mouldingThickness).toBeCloseTo(finish.mouldingThickness, 9);
             expect(params.mouldingIsConvex).toBe(finish.mouldingIsConvex);
             expect(params.framed).toBe(true);
+            expect(params.margin).toBe(finish.margin);
             expect(encodeCanvas(params)).toBe(encoded);
 
             // The board carries exactly these inputs: the band is the frame, inside it the inner color.
@@ -348,8 +356,21 @@ describe("canvas mesh composition", () => {
     it("a canvas storing nothing past the codec prefix is frameless, with a preset to turn the frame on with", () => {
         const {params, parts} = decodeCanvas(CANVAS_PREFIX);
         expect(params.framed).toBe(false);
+        expect(params.margin).toBe(0);
         expect(parts).toHaveLength(0);
         expect(finishOf(params)).toEqual(CanvasCompositionConstants.presets[0]);
+    });
+
+    it("a canvas stored before it had a margin keeps its finish, and is drawn over its whole footprint", () => {
+        fc.assert(fc.property(anyFinish, (finish) => {
+            const encoded = encodeCanvas(finish);
+            const {params, parts} = decodeCanvas(encoded.substring(0, encoded.length - 1));
+            expect(finishOf(params)).toEqual(finishOf(finish));
+            expect(params.framed).toBe(true);
+            expect(params.margin).toBe(0);
+            expect(parts[0].scale.x).toBe(canvasBaseSize().x);
+            expect(parts[0].scale.y).toBe(canvasBaseSize().y);
+        }), {numRuns: 50});
     });
 
     it("the same seed always yields the same canvas", () => {
@@ -422,6 +443,34 @@ describe("canvas mesh composition", () => {
         expect(big.mouldingThickness).toBe(base.mouldingThickness);
     });
 
+    it("the board and the picture sit a margin inside the footprint, which gives way before the picture would vanish", () => {
+        const scaling = CanvasObjectTypeConfig.scaling;
+        const numScales = Math.round((scaling.maxScale.x - scaling.minScale.x) / scaling.scaleStep.x) + 1;
+        const anyScale = fc.integer({min: 0, max: numScales - 1})
+            .map(step => scaling.minScale.x + step * scaling.scaleStep.x);
+        fc.assert(fc.property(anyFinish, fc.boolean(), anyScale, anyScale, (finish, framed, scaleX, scaleY) => {
+            const size = ObjectScaleUtil.getObjectSize(CANVAS_TYPE_INDEX, {x: scaleX, y: scaleY, z: 1});
+            const params = {...finish, framed};
+            const parts: InstancedMeshCompositionPart[] = [];
+            CanvasCompositionCodec.decode(encodeCanvas(params), size, {}, parts);
+            const drawn = CanvasCompositionConstants.getDrawnSize(params, size);
+            const picture = CanvasCompositionConstants.getPictureSize(params, size);
+            if (framed)
+            {
+                expect(parts[0].scale.x).toBeCloseTo(drawn.x, 9);
+                expect(parts[0].scale.y).toBeCloseTo(drawn.y, 9);
+            }
+            for (const axis of ["x", "y"] as const)
+            {
+                expect(drawn[axis]).toBeLessThanOrEqual(size[axis] + 1e-9);
+                expect(picture[axis]).toBeGreaterThanOrEqual(MarginCompositionConstants.minInnerSize - 1e-9);
+                // Short of the margin only where the picture would otherwise shrink past its minimum.
+                if (drawn[axis] > size[axis] - 2 * finish.margin + 1e-9)
+                    expect(picture[axis]).toBeCloseTo(MarginCompositionConstants.minInnerSize, 9);
+            }
+        }), {numRuns: 200});
+    });
+
     // ─── The appearance a canvas falls back on ─────────────────────────
 
     it("a canvas's default frame depends on where it hangs, is a preset, and varies across canvases", () => {
@@ -472,9 +521,12 @@ describe("bitmap frame migration", () => {
     {
         const view = new Uint8Array(64 * 1024);
         const writeState = new BufferState(view);
-        // Older versions are written in their own layout, not stamped onto a current one.
-        if (version >= ObjectGroup.latestFormatVersion)
+        // Versions from before the scale are written in their own layout, not stamped onto a current one.
+        if (version > LAST_UNSCALED_OBJECT_GROUP_VERSION)
+        {
             new ObjectGroup(objects).encodeWithParams(writeState, {});
+            view[0] = version;
+        }
         else
             writeLegacyObjectGroup(writeState, objects, version);
         return ObjectGroup.decodeWithParams(new BufferState(view.subarray(0, writeState.byteIndex)), ROOM_ID) as ObjectGroup;
@@ -578,8 +630,16 @@ describe("pre-encoded compositions by object type", () => {
         expect(all).toEqual(PreEncodedCompositionStringMap.map((_, index) => index));
     });
 
-    it("lamps have their appearance in the table", () => {
-        expect(PreEncodedCompositionIndexMap.WallLamp?.length).toBeGreaterThan(0);
+    it("every type that renders through the indexed codec has its appearance in the table", () => {
+        for (const config of ObjectTypeConfigMap.getAllConfigs())
+        {
+            if (config.components.spawnedByAny?.instancedMeshComposer?.codecType
+                === InstancedMeshCompositionCodecTypeEnumMap.Indexed)
+            {
+                expect(PreEncodedCompositionIndexMap[config.objectType]?.length, config.objectType)
+                    .toBeGreaterThan(0);
+            }
+        }
     });
 });
 
@@ -602,7 +662,7 @@ describe("composition thumbnail atlas layout", () => {
     });
 
     it("each type gets its own atlas", () => {
-        expect(CompositionThumbnailUtil.getAtlasPath("WallLamp"))
+        expect(CompositionThumbnailUtil.getAtlasPath("Lamp"))
             .not.toBe(CompositionThumbnailUtil.getAtlasPath("Door"));
     });
 });

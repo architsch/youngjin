@@ -12,7 +12,7 @@ import ClientObjectManager from "../../../../object/clientObjectManager";
 import SetObjectMetadataSignal from "../../../../../shared/object/types/setObjectMetadataSignal";
 import RemoveObjectSignal from "../../../../../shared/object/types/removeObjectSignal";
 import ObjectUpdateUtil from "../../../../../shared/object/util/objectUpdateUtil";
-import WallLampObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/wallLampObjectTypeConfig";
+import LampObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/lampObjectTypeConfig";
 import { ObjectMetadataKeyEnumMap } from "../../../../../shared/object/types/objectMetadataKey";
 import { MAX_LAMP_INTENSITY, MAX_LAMP_RANGE, MIN_LAMP_INTENSITY,
     MIN_LAMP_RANGE } from "../../../../../shared/graphics/light/util/lampLightUtil";
@@ -22,6 +22,9 @@ import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
 import { clientFeatureFlagsObservable, objectSelectionObservable } from "../../../../system/clientObservables";
 import PopupUtil from "../../../util/popupUtil";
 import VoxelQuadSelection from "../../../../graphics/types/gizmo/voxelQuadSelection";
+import PictureFrameIcon from "../../../svg/icons/pictureFrameIcon";
+import CustomizeLampPanel from "../../panel/customizeLampPanel";
+import EditOptionsProps from "../../../types/editOptionsProps";
 
 // Input bounds as strings; the ranges are short enough to tick every value (see LampLightUtil).
 const MIN_INTENSITY_ATTRIBUTE = String(MIN_LAMP_INTENSITY);
@@ -29,15 +32,18 @@ const MAX_INTENSITY_ATTRIBUTE = String(MAX_LAMP_INTENSITY);
 const MIN_RANGE_ATTRIBUTE = String(MIN_LAMP_RANGE);
 const MAX_RANGE_ATTRIBUTE = String(MAX_LAMP_RANGE);
 
-// Lamp tools: remove, or change its light (one stored setting that also colors the lit face;
-// intensity and range are separate dials, see LampLightUtil).
-export default function LampEditOptions(props: {selection: ObjectSelection})
+const LOOK_PANEL = "look";
+
+// Lamp tools: remove, change its look (margin and frame), or change its light (one stored setting that
+// also colors the glow; intensity and range are separate dials, see LampLightUtil). The look bar stacks
+// above this row.
+export default function LampEditOptions(props: EditOptionsProps)
 {
     const obj = props.selection.gameObject.params;
     const [light, setLight] = useState(() => ({
-        colorIndex: WallLampObjectTypeConfig.util.getColorIndex(obj),
-        intensity: WallLampObjectTypeConfig.util.getIntensity(obj),
-        range: WallLampObjectTypeConfig.util.getRange(obj),
+        colorIndex: LampObjectTypeConfig.util.getColorIndex(obj),
+        intensity: LampObjectTypeConfig.util.getIntensity(obj),
+        range: LampObjectTypeConfig.util.getRange(obj),
     }));
 
     // Written immediately (not deferred): lamp edits are discrete, with few values.
@@ -45,42 +51,72 @@ export default function LampEditOptions(props: {selection: ObjectSelection})
         const next = {...light};
         edit(next);
         setLight(next);
-        trySetLightProperties(props.selection, WallLampObjectTypeConfig.util.encodeLightProperties(
+        trySetLightProperties(props.selection, LampObjectTypeConfig.util.encodeLightProperties(
             next.colorIndex, next.intensity, next.range));
     };
 
-    return <SelectionToolRow>
-        <IconButton icon={<TrashIcon/>} size="md" color="red"
-            disabled={!canRemoveLamp(props.selection)}
-            onClick={() => openRemoveConfirmPopup(props.selection)}
-        />
-        <div className="flex flex-row items-center gap-1 shrink-0">
-            <Text content="Color" size="sm" additionalClassNames="shrink-0"/>
-            <PaletteColorInput
-                paletteName={LIGHT_COLOR_PALETTE_NAME}
-                currValue={light.colorIndex}
-                setColorIndex={(index) => apply(next => next.colorIndex = index)}
+    // Recomputed each render; zone changes re-announce the selection (see ClientVoxelManager).
+    const canCustomize = canCustomizeLamp(props.selection);
+    const customizing = props.openPanel == LOOK_PANEL;
+
+    // Full width, so the rows can scroll horizontally instead of growing.
+    return <div className="flex flex-col gap-1 w-full">
+        {customizing && canCustomize && <CustomizeLampPanel
+            selection={props.selection}
+            onClose={() => props.setOpenPanel(null)}
+        />}
+        <SelectionToolRow>
+            <IconButton icon={<TrashIcon/>} size="md" color="red"
+                disabled={!canRemoveLamp(props.selection)}
+                onClick={() => openRemoveConfirmPopup(props.selection)}
             />
-        </div>
-        <div className="flex flex-row items-center gap-1 shrink-0">
-            <Text content="Intensity" size="sm" additionalClassNames="shrink-0"/>
-            <RangeInput
-                currValue={String(light.intensity)}
-                setValue={(value) => apply(next => next.intensity = Number(value))}
-                min={MIN_INTENSITY_ATTRIBUTE} max={MAX_INTENSITY_ATTRIBUTE} step="1"
-                additionalClassNames="w-28"
+            <IconButton id="changeLampLookButton" icon={<PictureFrameIcon/>} size="md"
+                disabled={!canCustomize}
+                highlight={customizing && canCustomize}
+                onClick={() => props.setOpenPanel(customizing ? null : LOOK_PANEL)}
             />
-        </div>
-        <div className="flex flex-row items-center gap-1 shrink-0">
-            <Text content="Range" size="sm" additionalClassNames="shrink-0"/>
-            <RangeInput
-                currValue={String(light.range)}
-                setValue={(value) => apply(next => next.range = Number(value))}
-                min={MIN_RANGE_ATTRIBUTE} max={MAX_RANGE_ATTRIBUTE} step="1"
-                additionalClassNames="w-28"
-            />
-        </div>
-    </SelectionToolRow>;
+            <div className="flex flex-row items-center gap-1 shrink-0">
+                <Text content="Color" size="sm" additionalClassNames="shrink-0"/>
+                <PaletteColorInput
+                    paletteName={LIGHT_COLOR_PALETTE_NAME}
+                    currValue={light.colorIndex}
+                    setColorIndex={(index) => apply(next => next.colorIndex = index)}
+                />
+            </div>
+            <div className="flex flex-row items-center gap-1 shrink-0">
+                <Text content="Intensity" size="sm" additionalClassNames="shrink-0"/>
+                <RangeInput
+                    currValue={String(light.intensity)}
+                    setValue={(value) => apply(next => next.intensity = Number(value))}
+                    min={MIN_INTENSITY_ATTRIBUTE} max={MAX_INTENSITY_ATTRIBUTE} step="1"
+                    additionalClassNames="w-28"
+                />
+            </div>
+            <div className="flex flex-row items-center gap-1 shrink-0">
+                <Text content="Range" size="sm" additionalClassNames="shrink-0"/>
+                <RangeInput
+                    currValue={String(light.range)}
+                    setValue={(value) => apply(next => next.range = Number(value))}
+                    min={MIN_RANGE_ATTRIBUTE} max={MAX_RANGE_ATTRIBUTE} step="1"
+                    additionalClassNames="w-28"
+                />
+            </div>
+        </SelectionToolRow>
+    </div>;
+}
+
+// Asked of the look's own key, so this comes down to permissions and restricted zones (see
+// @docs/gameplay/restricted_zone.md).
+function canCustomizeLamp(selection: ObjectSelection): boolean
+{
+    const room = App.getCurrentRoom();
+    if (!room)
+        return false;
+
+    const params = selection.gameObject.params;
+    const currentLook = params.metadata[ObjectMetadataKeyEnumMap.InstancedMeshComposition]?.str ?? "";
+    return ObjectUpdateUtil.canSetObjectMetadata(App.getUser(), room, new SetObjectMetadataSignal(
+        room.id, params.objectId, ObjectMetadataKeyEnumMap.InstancedMeshComposition, currentLook));
 }
 
 function canRemoveLamp(selection: ObjectSelection): boolean

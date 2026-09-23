@@ -29,7 +29,7 @@ import ObjectGroup from "../../../src/shared/object/types/objectGroup";
 import User from "../../../src/shared/user/types/user";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import ColorUtil from "../../../src/shared/math/util/colorUtil";
-import WallAttachedObjectUtil from "../../../src/shared/object/util/wallAttachedObjectUtil";
+import ObjectAttachmentUtil from "../../../src/shared/object/util/objectAttachmentUtil";
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN,
     LABEL_COLOR_PALETTE_NAME, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL,
     INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, NUM_VOXEL_COLS,
@@ -292,44 +292,44 @@ describe("what a door makes of the values it is handed", () => {
  * Moving a door vertically: a door is an odd number of layers tall, so its center is off-grid; the
  * bottom edge is snapped instead (snapping the center would float it a quarter layer).
  */
-describe("moving a door up the wall", () => {
+describe("placing a door on its wall", () => {
     beforeEach(() => {
         vi.spyOn(console, "error").mockImplementation(() => {});
         vi.spyOn(console, "log").mockImplementation(() => {});
     });
 
-    it("leaves it standing on a floor a whole number of layers up", async () => {
+    it("stands it with its foot on a layer boundary, clear of the slab and never below the floor", async () => {
         await runScenario({
-            name: "door vertical movement",
+            name: "door vertical placement",
             rooms: [EMPTY_HUB],
             users: [userAtCenter("hub")],
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
                 const door = getEntranceDoor(room);
                 const spawnedY = door.transform.pos.y;
+                const placeAt = (y: number) => ObjectAttachmentUtil.findPlacement(room, doorTypeIndex,
+                    {...door.transform.pos, y}, door.transform.dir, door.transform.scale,
+                    (tr) => ObjectAttachmentUtil.canPlaceObject(room, door.objectId, doorTypeIndex, tr));
 
                 // As generated: on the floor, center half a footprint up.
                 expect(spawnedY).toBeCloseTo(0.5 * DOOR_FOOTPRINT_HEIGHT, 6);
 
-                // Each step is one layer, landing the foot exactly on a layer boundary.
-                let y = spawnedY;
-                for (let step = 1; step <= 4; ++step)
-                {
-                    const result = WallAttachedObjectUtil.getMoveResult(room, door, 0, 0.5, 0);
-                    expect(result).toBeDefined();
-                    y = result!.newPos.y;
-                    expect(y).toBeCloseTo(spawnedY + step * COLLISION_LAYER_HEIGHT, 6);
-                    door.transform.pos = result!.newPos;
-                }
+                // Asked for a little off the grid, the foot lands exactly on a layer boundary.
+                for (const offset of [0.1, -0.1, 0.2])
+                    expect(placeAt(spawnedY + offset)!.pos.y).toBeCloseTo(spawnedY, 6);
 
-                // And back down again to exactly where it started.
-                for (let step = 1; step <= 4; ++step)
-                {
-                    const result = WallAttachedObjectUtil.getMoveResult(room, door, 0, -0.5, 0);
-                    expect(result).toBeDefined();
-                    door.transform.pos = result!.newPos;
-                }
-                expect(door.transform.pos.y).toBeCloseTo(spawnedY, 6);
+                // A layer up is allowed, but a storey-tall door's top would then run into the storey slab,
+                // so a drag prefers to keep its face clear and leaves it standing on the floor.
+                const layerUp = new ObjectTransform({...door.transform.pos, y: spawnedY + COLLISION_LAYER_HEIGHT},
+                    door.transform.dir, door.transform.scale);
+                expect(ObjectAttachmentUtil.canPlaceObject(room, door.objectId, doorTypeIndex, layerUp)).toBe(true);
+                expect(placeAt(spawnedY + COLLISION_LAYER_HEIGHT)!.pos.y).toBeCloseTo(spawnedY, 6);
+
+                // Never below the floor, which the wall runs on beneath (see ObjectAttachmentUtil).
+                expect(ObjectAttachmentUtil.canPlaceObject(room, door.objectId, doorTypeIndex,
+                    new ObjectTransform({...door.transform.pos, y: spawnedY - COLLISION_LAYER_HEIGHT},
+                        door.transform.dir, door.transform.scale))).toBe(false);
+                expect(placeAt(spawnedY - 0.2)!.pos.y).toBeCloseTo(spawnedY, 6);
             },
         });
     });

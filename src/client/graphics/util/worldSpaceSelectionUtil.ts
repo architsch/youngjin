@@ -171,13 +171,14 @@ function getSelectionOrbitFraming(): {target: AABB3, minDistance?: number} | nul
         const gameObject = objectSelection.gameObject;
         const colliderState = PhysicsColliderStateUtil.getObjectColliderState(
             gameObject.params.objectTypeIndex, gameObject.params.transform);
-        // Uses the object's live position vector so the orbit follows it. Wall/floor-fixed objects
-        // keep a minimum distance for context; rigidbodies (e.g. characters) are framed by size alone.
-        const standsInTheRoom = colliderState?.colliderConfig.colliderType === "rigidbody";
+        // Uses the object's live position vector so the orbit follows it. Attached objects keep a minimum
+        // distance for context; free-standing ones (e.g. characters) are framed by size alone.
+        const attached = ObjectTypeConfigMap.getConfigByIndex(gameObject.params.objectTypeIndex)
+            .attachment != undefined;
         return {target: {
             center: gameObject.position,
             halfSize: colliderState ? colliderState.hitbox.halfSize : defaultObjectHalfSize,
-        }, minDistance: standsInTheRoom ? 0 : SELECTION_ORBIT_MIN_DISTANCE};
+        }, minDistance: attached ? SELECTION_ORBIT_MIN_DISTANCE : 0};
     }
 
     // Edit mode with nothing selected (between selections, or as the mode opens): keep the current view.

@@ -30,5 +30,5 @@ Reference: @src/shared/voxel/types/voxel.ts , @src/shared/voxel/types/voxelGrid.
 
 ## Editing
 - Adding a block fills the cell next to the selected face. Removing a block removes the block that owns the face.
-- Removing a block that holds up wall-attached objects requires confirmation, and is only possible when the user may remove every one of those objects (see [wall_attached_object.md](wall_attached_object.md)).
+- Removing a block that holds up attached objects requires confirmation, and is only possible when the user may remove every one of those objects (see [object_attachment.md](object_attachment.md)).
 - Edits are limited by the grid bounds and by restricted zones (see [restricted_zone.md](../gameplay/restricted_zone.md)).

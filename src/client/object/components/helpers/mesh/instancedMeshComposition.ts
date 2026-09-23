@@ -14,6 +14,7 @@ import { InstancedMeshCompositionParams } from "../../../../../shared/graphics/m
 import Vec3 from "../../../../../shared/math/types/vec3";
 import ObjectScaleUtil from "../../../../../shared/object/util/objectScaleUtil";
 import { UNIT_VEC3 } from "../../../../../shared/system/sharedConstants";
+import ObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/objectTypeConfig";
 
 export default class InstancedMeshComposition
 {
@@ -38,6 +39,8 @@ export default class InstancedMeshComposition
     saveToMetadata(gameObject: GameObject)
     {
         const metadata = `${this.getCodecPrefix()}${this.encodeParts()}`;
+        const objectId = gameObject.params.objectId;
+        const key = ObjectMetadataKeyEnumMap.InstancedMeshComposition;
 
         const room = App.getCurrentRoom();
         if (!room)
@@ -47,16 +50,12 @@ export default class InstancedMeshComposition
         }
         if (room.roomType == RoomTypeEnumMap.SinglePlayer)
         {
-            ClientObjectManager.setObjectMetadata(gameObject.params.objectId,
-                ObjectMetadataKeyEnumMap.InstancedMeshComposition, metadata, false);
+            ClientObjectManager.setObjectMetadata(objectId, key, metadata, false);
+            return;
         }
-        else
-        {
-            const params = new SetObjectMetadataSignal(
-                room.id, gameObject.params.objectId,
-                ObjectMetadataKeyEnumMap.InstancedMeshComposition, metadata);
-            SocketsClient.emitSetObjectMetadataSignal(params);
-        }
+        // Applied here as well, since the server passes an edit on to everyone but its sender.
+        if (ClientObjectManager.setObjectMetadata(objectId, key, metadata))
+            SocketsClient.emitSetObjectMetadataSignal(new SetObjectMetadataSignal(room.id, objectId, key, metadata));
     }
 
     // Params and parts are refilled in place (not replaced), so a panel holding them (see
@@ -67,22 +66,21 @@ export default class InstancedMeshComposition
             delete this.params[key];
         this.parts.length = 0;
         ++this.revision;
-        // Kept so decodeParts can rebuild at the same size, and so the composer can tell a resize from
-        // a move (see InstancedMeshComposer).
-        this.objectSize = ObjectScaleUtil.getObjectSize(
-            gameObject.params.objectTypeIndex, gameObject.params.transform.scale);
+        this.objectSize = getObjectSize(gameObject);
         const metadata = gameObject.params.metadata[ObjectMetadataKeyEnumMap.InstancedMeshComposition];
         if (!metadata || !this.canDecode(metadata.str))
         {
-            const config = gameObject.components.instancedMeshComposer.componentConfig;
-            const {params, parts} = config.generateDefaultParts(gameObject.params);
+            const {params, parts} = getComposerConfig(gameObject).generateDefaultParts(gameObject.params);
             Object.assign(this.params, params);
             for (let i = 0; i < parts.length; ++i)
                 this.parts.push(parts[i]);
-            return;
         }
-        InstancedMeshCompositionCodecMap[this.codecType].decode(
-            metadata.str, this.objectSize, this.params, this.parts);
+        else
+        {
+            InstancedMeshCompositionCodecMap[this.codecType].decode(
+                metadata.str, this.objectSize, this.params, this.parts);
+        }
+        this.deriveParts(gameObject);
     }
 
     private canDecode(str: string): boolean
@@ -108,13 +106,22 @@ export default class InstancedMeshComposition
         return InstancedMeshCompositionCodecMap[this.codecType].encode(this.params, this.parts);
     }
 
-    // Rebuilds all the parts from the given encoded parameters (see "encodeParts").
-    decodeParts(encodedParams: string)
+    // Rebuilds all the parts from the given encoded parameters (see "encodeParts"), at the object's
+    // current size.
+    decodeParts(encodedParams: string, gameObject: GameObject)
     {
         this.parts.length = 0;
         ++this.revision;
+        this.objectSize = getObjectSize(gameObject);
         InstancedMeshCompositionCodecMap[this.codecType].decode(
             `${this.getCodecPrefix()}${encodedParams}`, this.objectSize, this.params, this.parts);
+        this.deriveParts(gameObject);
+    }
+
+    // What the parts take from the object rather than the composition (see ObjectTypeConfig).
+    private deriveParts(gameObject: GameObject)
+    {
+        getComposerConfig(gameObject).deriveParts?.(gameObject.params, this.parts);
     }
 
     // The prefix consists of two characters, denoting the codec's type and version, respectively.
@@ -122,4 +129,17 @@ export default class InstancedMeshComposition
     {
         return CompositionMetadataUtil.getCodecPrefix(this.codecType, this.codecVersion);
     }
+}
+
+// Kept with the parts, so the composer can tell a resize from a move (see InstancedMeshComposer).
+function getObjectSize(gameObject: GameObject): Vec3
+{
+    return ObjectScaleUtil.getObjectSize(gameObject.params.objectTypeIndex, gameObject.params.transform.scale);
+}
+
+function getComposerConfig(gameObject: GameObject): NonNullable<NonNullable<
+    ObjectTypeConfig["components"]["spawnedByAny"]>["instancedMeshComposer"]>
+{
+    return gameObject.components.instancedMeshComposer.componentConfig as NonNullable<NonNullable<
+        ObjectTypeConfig["components"]["spawnedByAny"]>["instancedMeshComposer"]>;
 }
