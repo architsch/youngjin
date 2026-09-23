@@ -8,6 +8,7 @@ const syncIntervalInMillis = SIGNAL_BATCH_SEND_INTERVAL;
 const syncIntervalInMillisInverse = 1 / syncIntervalInMillis;
 
 const vec3Temp = new THREE.Vector3();
+const quaternionTemp = new THREE.Quaternion();
 
 const tempObj = new THREE.Object3D();
 tempObj.position.set(0, 0, 0);
@@ -49,10 +50,16 @@ export default class PeriodicTransformReceiver extends GameObjectComponent
 
         vec3Temp.lerpVectors(
             this.positionInterpRange[0], this.positionInterpRange[1], interpProgressNormalized);
+        quaternionTemp.slerpQuaternions(
+            this.quaternionInterpRange[0], this.quaternionInterpRange[1], interpProgressNormalized);
+
+        // Settled between syncs; announcing it every frame would re-bake a still object.
+        if (vec3Temp.equals(this.gameObject.position) && quaternionTemp.equals(this.gameObject.quaternion))
+            return;
 
         this.gameObject.position.copy(vec3Temp);
-        this.gameObject.quaternion.slerpQuaternions(
-            this.quaternionInterpRange[0], this.quaternionInterpRange[1], interpProgressNormalized);
+        this.gameObject.quaternion.copy(quaternionTemp);
+        this.gameObject.notifyTransformChanged();
     }
 
     setObjectTransform(transform: ObjectTransform): void

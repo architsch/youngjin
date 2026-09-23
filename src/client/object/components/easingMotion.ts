@@ -73,7 +73,6 @@ export default class EasingMotion extends GameObjectComponent
                 1 + (this.scaleMultiplier.z - 1) * weight);
         }
 
-        // Instanced meshes are baked, so they must be re-applied (no-op without instanced graphics).
-        this.gameObject.onVisualTransformChanged();
+        this.gameObject.notifyTransformChanged();
     }
 }

@@ -2,7 +2,8 @@ import Text from "../basic/text";
 import MarginCompositionConstants from "../../../../shared/graphics/mesh/composition/types/compositionConstants/marginCompositionConstants";
 import RangeInput from "./rangeInput";
 
-// How far inside its footprint a canvas or a lamp is drawn (see MarginCompositionConstants).
+// How far inside its footprint a framed panel (a canvas, a lamp, a label) is drawn (see
+// MarginCompositionConstants).
 export default function MarginInput(props: Props)
 {
     return <div className="flex flex-col items-center gap-1 shrink-0">

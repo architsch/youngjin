@@ -5,7 +5,7 @@ import { numActiveInputElementsObservable } from "../../../system/clientObservab
 // Typeable value for a slider. Dragging updates the number live; typing updates the handle on each
 // keystroke when the text parses (otherwise nothing changes). Typed text isn't reformatted until
 // blur, which restores agreement (see RangeValueUtil).
-export default function RangeValueInput({ currValue, setValue, min, max, step }: Props)
+export default function RangeValueInput({ currValue, setValue, min, max, step, disabled = false }: Props)
 {
     const inputRef = useRef<HTMLInputElement>(null);
     const [text, setText] = useState<string>(() => RangeValueUtil.format(currValue));
@@ -78,8 +78,9 @@ export default function RangeValueInput({ currValue, setValue, min, max, step }:
         ref={inputRef}
         type="text"
         inputMode="decimal"
-        className="shrink-0 w-12 h-8 px-1 text-sm text-center text-gray-200 cursor-text bg-gray-700 rounded-md yj-surface-concave"
+        className="shrink-0 w-12 h-8 px-1 text-sm text-center text-gray-200 cursor-text bg-gray-700 rounded-md yj-surface-concave disabled:opacity-50 disabled:cursor-not-allowed"
         value={text}
+        disabled={disabled}
         onInput={onInput}
         onFocus={onFocus}
         onBlur={onBlur}
@@ -101,4 +102,5 @@ interface Props
     min: number;
     max: number;
     step: number;
+    disabled?: boolean;
 }

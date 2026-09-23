@@ -9,4 +9,5 @@ export const ObjectCategoryEnumMap: Record<string, ObjectCategory> =
     Canvas: "Canvas",
     Door: "Door",
     Lamp: "Lamp",
+    Label: "Label",
 }

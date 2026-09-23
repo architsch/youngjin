@@ -93,6 +93,14 @@ export default class InstancedMeshGraphics extends GameObjectComponent
             sampleOffsetX, sampleOffsetY, sampleScaleX, sampleScaleY);
     }
 
+    // See InstancedMeshBinding.updateInstanceTextureRect.
+    updateInstanceTextureRect(instancedMeshId: string, instanceId: number,
+        texelX: number, texelY: number, texelWidth: number, texelHeight: number)
+    {
+        bindingMap[instancedMeshId].updateInstanceTextureRect(
+            this.gameObject, instanceId, texelX, texelY, texelWidth, texelHeight);
+    }
+
     updateInstanceColor(instancedMeshId: string, instanceId: number,
         r: number, g: number, b: number)
     {
@@ -122,9 +130,9 @@ export default class InstancedMeshGraphics extends GameObjectComponent
             unloadTextureAfterDraw);
     }
 
-    // Draws a caller-drawn canvas over the whole cell.
-    drawCanvasAtIndex(instancedMeshId: string, textureIndex: number, canvas: HTMLCanvasElement)
+    // See InstancedMeshBinding.drawCanvasAtTexel.
+    drawCanvasAtTexel(instancedMeshId: string, texelX: number, texelY: number, canvas: HTMLCanvasElement)
     {
-        bindingMap[instancedMeshId].drawCanvasAtIndex(textureIndex, canvas);
+        bindingMap[instancedMeshId].drawCanvasAtTexel(texelX, texelY, canvas);
     }
 }

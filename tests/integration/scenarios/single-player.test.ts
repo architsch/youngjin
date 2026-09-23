@@ -57,6 +57,7 @@ import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import VoxelQuadsRuntimeMemory from "../../../src/shared/voxel/types/voxelQuadsRuntimeMemory";
 import ObjectGroup from "../../../src/shared/object/types/objectGroup";
 import DoorObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
+import LabelTextUtil from "../../../src/shared/object/util/labelTextUtil";
 import { DoorTypeEnumMap } from "../../../src/shared/object/types/doorType";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
 import Room from "../../../src/shared/room/types/room";
@@ -252,9 +253,9 @@ describe("single-player room generation", () => {
         }
 
         const door = first.objectGroup.objectById["door"];
-        expect(DoorObjectTypeConfig.util.getLabel(door)).toBe("Door");
-        expect(DoorObjectTypeConfig.util.getLabelColorIndex(door)).toBe(
-            DoorObjectTypeConfig.util.getLabelColorIndex(second.objectGroup.objectById["door"]));
+        expect(LabelTextUtil.getText(door)).toBe("Door");
+        expect(LabelTextUtil.getColorIndex(door)).toBe(
+            LabelTextUtil.getColorIndex(second.objectGroup.objectById["door"]));
     });
 
     it("wires the tutorial's door to the hubs, as the room's own way in", () => {

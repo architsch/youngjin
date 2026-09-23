@@ -130,7 +130,10 @@ export default class PlayerController extends GameObjectComponent
                 this.dy = Math.max(-0.6, Math.min(0.6, this.dy));
 
                 if (Math.abs(this.dx) > NEAR_EPSILON)
+                {
                     this.gameObject.obj.rotateOnWorldAxis(DIRECTION_VECTORS["+y"], -3 * deltaTime * this.dx);
+                    this.gameObject.notifyTransformChanged();
+                }
 
                 let vx = 0, vz = 0;
                 if (Math.abs(this.dy) > NEAR_EPSILON)

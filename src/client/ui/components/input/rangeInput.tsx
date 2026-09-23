@@ -5,7 +5,7 @@ import { numActiveInputElementsObservable } from "../../../system/clientObservab
 // Slider with an editable value field (see RangeValueInput); the field is omitted only for settings
 // judged by eye (e.g. CameraZoomSlider). Short ranges (<= MAX_TICK_MARKS values) get unlabeled ticks.
 export default function RangeInput({ currValue, setValue, min, max, step, showValueInput = true,
-    orientation = "horizontal", additionalClassNames = "" }: Props)
+    orientation = "horizontal", disabled = false, additionalClassNames = "" }: Props)
 {
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -74,11 +74,12 @@ export default function RangeInput({ currValue, setValue, min, max, step, showVa
             <input
                 ref={inputRef}
                 type="range"
-                className={`${vertical ? "w-8 h-full [writing-mode:vertical-lr] [direction:rtl]" : "w-full h-8"} p-0 rounded-md cursor-pointer accent-green-600 yj-surface-concave`}
+                className={`${vertical ? "w-8 h-full [writing-mode:vertical-lr] [direction:rtl]" : "w-full h-8"} p-0 rounded-md cursor-pointer accent-green-600 yj-surface-concave disabled:opacity-50 disabled:cursor-not-allowed`}
                 value={currValue}
                 min={min}
                 max={max}
                 step={step}
+                disabled={disabled}
                 onChange={onChange}
                 onFocus={onFocus}
                 onBlur={onBlur}
@@ -93,6 +94,7 @@ export default function RangeInput({ currValue, setValue, min, max, step, showVa
                 min={minValue}
                 max={maxValue}
                 step={stepValue}
+                disabled={disabled}
             />}
     </div>
 }
@@ -136,6 +138,8 @@ interface Props
     showValueInput?: boolean;
     // Vertical sliders (e.g. CameraZoomSlider) have no tick marks.
     orientation?: "horizontal" | "vertical";
+    // Shown but not adjustable, e.g. while another setting decides the value.
+    disabled?: boolean;
     // Width and shrink behavior are up to the caller; height is fixed so sliders align.
     additionalClassNames?: string;
 }

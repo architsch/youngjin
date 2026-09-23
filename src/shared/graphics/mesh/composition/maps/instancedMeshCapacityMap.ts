@@ -4,7 +4,7 @@ const InstancedMeshCapacityMap: {[instancedMeshId: string]: number} = {
     "Box+InstancedTin": 1152,
     "Cylinder+InstancedTin": 768,
     "Square+InstancedEmissive": 256,
-    "Square+InstancedWood": 240
+    "Square+InstancedWood": 256
 };
 
 export default InstancedMeshCapacityMap;

@@ -7,7 +7,7 @@ import CanvasObjectTypeConfig from "../types/objectTypeConfig/canvasObjectTypeCo
 import ObjectTypeConfigMap from "../maps/objectTypeConfigMap";
 import { ObjectMetadataKeyEnumMap } from "../types/objectMetadataKey";
 import CompositionMetadataUtil from "../../graphics/mesh/composition/util/compositionMetadataUtil";
-import CanvasCompositionParams from "../../graphics/mesh/composition/types/compositionParams/canvasCompositionParams";
+import FramedPanelCompositionParams from "../../graphics/mesh/composition/types/compositionParams/framedPanelCompositionParams";
 import ColorUtil from "../../math/util/colorUtil";
 import { COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL,
     INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, UNIT_VEC3 } from "../../system/sharedConstants";
@@ -157,7 +157,7 @@ const ObjectGroupVersionMigration =
 }
 
 function legacyCanvasFrame(frame: string, inner: string, mouldingThickness: number,
-    mouldingIsConvex: boolean): CanvasCompositionParams
+    mouldingIsConvex: boolean): FramedPanelCompositionParams
 {
     return {colors: {frame: ColorUtil.hexToRGB(frame), inner: ColorUtil.hexToRGB(inner)},
         mouldingThickness, mouldingIsConvex, framed: true, margin: 0};

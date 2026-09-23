@@ -2,13 +2,12 @@ import { DoorCompositionCodec } from "../../../graphics/mesh/composition/types/c
 import DoorCompositionConstants, { DOOR_FOOTPRINT_HEIGHT, DOOR_FOOTPRINT_WIDTH,
     DOOR_PANEL_ORIGIN_Y } from "../../../graphics/mesh/composition/types/compositionConstants/doorCompositionConstants";
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../graphics/mesh/composition/types/instancedMeshCompositionCodecType";
-import ColorUtil from "../../../math/util/colorUtil";
 import StringUtil from "../../../math/util/stringUtil";
 import EncodableByteString from "../../../networking/types/encodableByteString";
 import Room from "../../../room/types/room";
 import RoomValidationUtil from "../../../room/util/roomValidationUtil";
-import { ATTACHMENT_HITBOX_INSET, COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, HUB_ROOM_ID_KEYWORD,
-    LABEL_COLOR_PALETTE_NAME, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, UNIT_VEC3,
+import { ATTACHMENT_HITBOX_INSET, BACKWARD_DIR, COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN,
+    HUB_ROOM_ID_KEYWORD, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, UNIT_VEC3,
     WALL_DIRECTIONS } from "../../../system/sharedConstants";
 import User from "../../../user/types/user";
 import AddObjectSignal from "../addObjectSignal";
@@ -37,6 +36,7 @@ const editableMetadataKeys = [
     ObjectMetadataKeyEnumMap.InstancedMeshComposition,
     ObjectMetadataKeyEnumMap.Label,
     ObjectMetadataKeyEnumMap.LabelColor,
+    ObjectMetadataKeyEnumMap.LabelFont,
     ObjectMetadataKeyEnumMap.DestinationRoomId,
     ObjectMetadataKeyEnumMap.DestinationDoorLabel,
     ObjectMetadataKeyEnumMap.DoorType,
@@ -125,23 +125,27 @@ const DoorObjectTypeConfig =
             // The name goes on the plate: the rect comes from the plate declaration, inset by its
             // moulding, slightly in front of its relief.
             labelText: {
-                localOffset: {
-                    x: DoorCompositionConstants.label.offset.x,
-                    y: DOOR_PANEL_ORIGIN_Y + DoorCompositionConstants.label.offset.y,
-                    z: DoorCompositionConstants.label.relief + 0.005,
-                },
-                size: {
-                    x: DoorCompositionConstants.label.size.x
-                        - 2 * DoorCompositionConstants.label.mouldingThickness,
-                    y: DoorCompositionConstants.label.size.y
-                        - 2 * DoorCompositionConstants.label.mouldingThickness,
+                localTransform: {
+                    pos: {
+                        x: DoorCompositionConstants.label.offset.x,
+                        y: DOOR_PANEL_ORIGIN_Y + DoorCompositionConstants.label.offset.y,
+                        z: DoorCompositionConstants.label.relief + 0.005,
+                    },
+                    dir: BACKWARD_DIR,
+                    scale: {
+                        x: DoorCompositionConstants.label.size.x
+                            - 2 * DoorCompositionConstants.label.mouldingThickness,
+                        y: DoorCompositionConstants.label.size.y
+                            - 2 * DoorCompositionConstants.label.mouldingThickness,
+                        z: 1,
+                    },
                 },
                 defaultFontColorHex: "#33302c", // a dark grey that reads as lettering without going to black
             },
             orbitOccluder: {}, // Part of the wall it sits in, as far as the orbit camera is concerned.
         },
     },
-    // Door semantics: entrance creation and metadata reading.
+    // Door semantics: entrance creation and metadata reading (its label is read through LabelTextUtil).
     util: {
         // A multiplayer room's entrance door on the boundary wall, facing in. Points at the hub keyword
         // (an unwired door is locked; the balancer picks the hub at travel time). Used by both
@@ -162,26 +166,6 @@ const DoorObjectTypeConfig =
                     [ObjectMetadataKeyEnumMap.DestinationRoomId]:
                         new EncodableByteString(HUB_ROOM_ID_KEYWORD),
                 });
-        },
-        getLabel: (obj: AddObjectSignal): string =>
-        {
-            return obj.metadata[ObjectMetadataKeyEnumMap.Label]?.str ?? "";
-        },
-        // The label's palette index, defaulting to the nearest match for the type's default color (so
-        // the picker opens on the color actually shown).
-        getLabelColorIndex: (obj: AddObjectSignal): number =>
-        {
-            const stored = obj.metadata[ObjectMetadataKeyEnumMap.LabelColor]?.str;
-            if (stored != undefined && stored.length > 0)
-            {
-                const index = parseInt(stored);
-                if (!isNaN(index))
-                    return index;
-            }
-            const configuredHex = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex)
-                .components.spawnedByAny?.labelText?.defaultFontColorHex;
-            return ColorUtil.rgbToPaletteIndex(LABEL_COLOR_PALETTE_NAME,
-                ColorUtil.hexToRGB(configuredHex ?? "#000000"));
         },
         getDestinationRoomId: (obj: AddObjectSignal): string =>
         {

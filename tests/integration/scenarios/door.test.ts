@@ -12,6 +12,7 @@ import ObjectMetadataEntryMap from "../../../src/shared/object/maps/objectMetada
 import ObjectUpdateUtil from "../../../src/shared/object/util/objectUpdateUtil";
 import DoorObjectTypeConfig, { ENTRANCE_DOOR_OBJECT_ID,
     SPAWN_DIST_BEHIND_DOOR } from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
+import LabelTextUtil from "../../../src/shared/object/util/labelTextUtil";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import RemoveObjectSignal from "../../../src/shared/object/types/removeObjectSignal";
 import SetObjectMetadataSignal from "../../../src/shared/object/types/setObjectMetadataSignal";
@@ -261,12 +262,12 @@ describe("what a door makes of the values it is handed", () => {
                 // re-picking it changes nothing.
                 const configuredHex = ObjectTypeConfigMap.getConfigByIndex(doorTypeIndex)
                     .components.spawnedByAny!.labelText!.defaultFontColorHex;
-                expect(DoorObjectTypeConfig.util.getLabelColorIndex(door)).toBe(
+                expect(LabelTextUtil.getColorIndex(door)).toBe(
                     ColorUtil.rgbToPaletteIndex(LABEL_COLOR_PALETTE_NAME,
                         ColorUtil.hexToRGB(configuredHex)));
 
                 door.metadata[ObjectMetadataKeyEnumMap.LabelColor] = new EncodableByteString("7");
-                expect(DoorObjectTypeConfig.util.getLabelColorIndex(door)).toBe(7);
+                expect(LabelTextUtil.getColorIndex(door)).toBe(7);
             },
         });
     });
@@ -279,7 +280,7 @@ describe("what a door makes of the values it is handed", () => {
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
                 const bare = makeDoorSignal(room, ADMIN);
-                expect(DoorObjectTypeConfig.util.getLabel(bare)).toBe("");
+                expect(LabelTextUtil.getText(bare)).toBe("");
                 expect(DoorObjectTypeConfig.util.getDestinationRoomId(bare)).toBe("");
                 expect(DoorObjectTypeConfig.util.getDestinationDoorLabel(bare)).toBe("");
                 expect(DoorObjectTypeConfig.util.getDoorType(bare)).toBe(DoorTypeEnumMap.CustomEntrance);

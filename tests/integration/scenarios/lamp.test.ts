@@ -45,7 +45,7 @@ import LampCompositionConstants
 import MarginCompositionConstants
     from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/marginCompositionConstants";
 import MouldingCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/mouldingCompositionConstants";
-import LampCompositionParams from "../../../src/shared/graphics/mesh/composition/types/compositionParams/lampCompositionParams";
+import FramedPanelCompositionParams from "../../../src/shared/graphics/mesh/composition/types/compositionParams/framedPanelCompositionParams";
 
 const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
 const MAX_LAMPS_PER_ROOM = ObjectCategoryConfigMap.getMaxCountPerRoom(LampObjectTypeConfig.category);
@@ -449,7 +449,7 @@ describe("what a lamp gives off", () => {
 
 describe("how a lamp looks", () => {
     const lampSize = (scale: number) => ObjectScaleUtil.getObjectSize(lampTypeIndex, {x: scale, y: scale, z: 1});
-    const decode = (params: LampCompositionParams, size: Vec3) =>
+    const decode = (params: FramedPanelCompositionParams, size: Vec3) =>
     {
         const parts: InstancedMeshCompositionPart[] = [];
         LampCompositionCodec.decode(CompositionMetadataUtil.encode(InstancedMeshCompositionCodecTypeEnumMap.Lamp,
@@ -488,7 +488,7 @@ describe("how a lamp looks", () => {
     it("keeps its look through a round trip", () => {
         for (const preset of LampCompositionConstants.presets)
         {
-            const decoded: LampCompositionParams = {} as LampCompositionParams;
+            const decoded: FramedPanelCompositionParams = {} as FramedPanelCompositionParams;
             LampCompositionCodec.decode(CompositionMetadataUtil.encode(
                 InstancedMeshCompositionCodecTypeEnumMap.Lamp, 0, preset), UNIT_VEC3, decoded, []);
             expect(decoded).toEqual(preset);

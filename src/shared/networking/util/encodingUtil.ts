@@ -2,9 +2,10 @@ import { MAX_ENCODED_VOXEL_GRID_BYTES } from "../../system/sharedConstants";
 import BufferState from "../types/bufferState";
 
 // One reusable encoding buffer for room contents and signal batches, sized for the largest encoding: a
-// solid voxel grid plus a generous object allowance. Typed arrays silently drop out-of-range writes, so
-// an undersized buffer would silently truncate a full room.
-const MAX_ENCODED_OBJECTS_BYTES = 128 * 1024;
+// solid voxel grid plus an object allowance that covers every category at its cap with every string at
+// its longest (tests assert it). Typed arrays silently drop out-of-range writes, so an undersized buffer
+// would silently truncate a full room.
+export const MAX_ENCODED_OBJECTS_BYTES = 256 * 1024;
 const writeBuffer = new ArrayBuffer(MAX_ENCODED_VOXEL_GRID_BYTES + MAX_ENCODED_OBJECTS_BYTES);
 
 let writeBufferReserved = false;

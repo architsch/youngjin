@@ -7,6 +7,7 @@ import ObjectMetadataEntry from "../types/objectMetadataEntry";
 import { ObjectMetadataKeyEnumMap } from "../types/objectMetadataKey";
 import { DoorTypeEnumMap } from "../types/doorType";
 import LampObjectTypeConfig from "../types/objectTypeConfig/lampObjectTypeConfig";
+import LabelTextUtil from "../util/labelTextUtil";
 
 const doorTypeValues = Object.values(DoorTypeEnumMap);
 
@@ -52,6 +53,10 @@ const entries: {[key: number]: ObjectMetadataEntry} = {
     // defaults, so any input becomes a valid fixed-width pair (see ObjectMetadataEntryMap.preprocess).
     [ObjectMetadataKeyEnumMap.LightProperties]: {
         preprocessingMethod: (rawValue: string) => LampObjectTypeConfig.util.canonicalize(rawValue),
+    },
+    // Round-tripped the same way, through LabelTextUtil.
+    [ObjectMetadataKeyEnumMap.LabelFont]: {
+        preprocessingMethod: (rawValue: string) => LabelTextUtil.canonicalizeFont(rawValue),
     },
 };
 

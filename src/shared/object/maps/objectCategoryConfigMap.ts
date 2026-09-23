@@ -18,6 +18,9 @@ const configByCategory: {[category: string]: ObjectCategoryConfig} =
     // Bounded by the mesh pool, propagation cost, clutter and stored size (the block map itself doesn't
     // scale with lamp count).
     [ObjectCategoryEnumMap.Lamp]: {maxCountPerRoom: 64},
+    // With the doors, as many labels as the label atlas always has room for, even all at their largest
+    // (see LabelText).
+    [ObjectCategoryEnumMap.Label]: {maxCountPerRoom: 16},
 }
 
 const ObjectCategoryConfigMap =

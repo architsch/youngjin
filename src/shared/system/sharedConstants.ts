@@ -37,8 +37,8 @@ export const ROOM_AUTO_SAVE_INTERVAL = 10 * MINUTE_IN_MS; // in milliseconds (10
 export const OBJECT_MESSAGE_MAX_LENGTH = 72;
 export const OBJECT_INSTANCED_MESH_COMPOSITION_METADATA_MAX_LENGTH = 512;
 
-// Short, since labels are drawn onto a small patch of the object.
-export const OBJECT_LABEL_MAX_LENGTH = 24;
+// In code points. Text past what a label's patch holds is cut off at its bottom (see LabelText).
+export const OBJECT_LABEL_MAX_LENGTH = 512;
 
 // Stored label colors are positions in this palette.
 export const LABEL_COLOR_PALETTE_NAME = "LabelColor";
@@ -203,12 +203,13 @@ export const VOXEL_QUAD_GEOMETRY_ID = "Square";
 
 export const LABEL_GEOMETRY_ID = "Square";
 
-// Room-wide label budget: one shared mesh and one texture atlas of this many wide, short cells.
-export const MAX_LABELS_PER_ROOM = 16;
-export const LABEL_ATLAS_WIDTH = 2048; // in pixels
-export const LABEL_ATLAS_HEIGHT = 512; // in pixels
-export const LABEL_ATLAS_CELL_WIDTH = 512; // in pixels
-export const LABEL_ATLAS_CELL_HEIGHT = 128; // in pixels
+// Every label in a room is drawn into one single-channel atlas, handed out in rectangles of whole cells
+// (see TextureAtlasAllocator). A cell covers a fixed patch of world space, so text has the same density at
+// any label size, and a font size in pixels means the same size everywhere.
+export const LABEL_ATLAS_SIZE = 4096; // in pixels (the atlas is square)
+export const LABEL_ATLAS_CELL_SIZE = 128; // in pixels (each cell is square)
+export const LABEL_ATLAS_CELL_WORLD_SIZE = 0.5; // in world units: the step labels are resized in
+export const LABEL_PIXELS_PER_WORLD_UNIT = LABEL_ATLAS_CELL_SIZE / LABEL_ATLAS_CELL_WORLD_SIZE;
 
 // Voxel Grid
 

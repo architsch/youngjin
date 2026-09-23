@@ -1,49 +1,12 @@
-import ColorUtil from "../../../../../math/util/colorUtil";
-import Vec3 from "../../../../../math/types/vec3";
-import CanvasCompositionParams from "../compositionParams/canvasCompositionParams";
-import MarginCompositionConstants from "./marginCompositionConstants";
+import FramedPanelPreset from "../compositionParams/framedPanelPreset";
+import FramedPanelCompositionConstants from "./framedPanelCompositionConstants";
 
-// The single canvas design: one moulded board, a margin inside the footprint (see
-// MarginCompositionConstants). Its band is the frame and the picture covers the surface inside it (see
-// CanvasGameObject), so the inner color shows around a letterboxed picture. Colors, moulding and margin
-// vary; the shape doesn't. A canvas without a frame has no board at all, and its picture covers what the
-// board would.
-
-export const CANVAS_GEOMETRY_ID = "Square";
-
-// The board sits just proud of the wall.
-export const CANVAS_BOARD_RELIEF = 0.01;
-
-// The picture's real gap in front of the board, as a door's label has in front of its plate. Polygon offset
-// alone leaves a coplanar picture within rounding of the board's depth, so it flickers as the camera's
-// distance changes (worst on mobile depth buffers).
-export const CANVAS_PICTURE_LIFT = 0.005;
-
+// A canvas is a framed panel whose board frames its picture (see FramedPanelCompositionConstants), so the
+// inner color shows around a letterboxed picture. Colors, moulding and margin vary; the shape doesn't.
 const CanvasCompositionConstants = {
-    // Band widths are the shared ones (see MouldingCompositionConstants).
-
-    // The board's extent (band included), or the picture's when there is no frame.
-    getDrawnSize: (params: CanvasCompositionParams, objectSize: Vec3): Vec3 =>
-    {
-        const band = params.framed ? params.mouldingThickness : 0;
-        return {
-            x: MarginCompositionConstants.getDrawnSize(objectSize.x, params.margin, band),
-            y: MarginCompositionConstants.getDrawnSize(objectSize.y, params.margin, band),
-            z: 1,
-        };
-    },
-
-    // The picture's extent, inside the band.
-    getPictureSize: (params: CanvasCompositionParams, objectSize: Vec3): Vec3 =>
-    {
-        const band = params.framed ? params.mouldingThickness : 0;
-        const drawnSize = CanvasCompositionConstants.getDrawnSize(params, objectSize);
-        return {x: drawnSize.x - 2 * band, y: drawnSize.y - 2 * band, z: 1};
-    },
-
-    // Coordinated finishes (snapped to the "Timber" palette so they round-trip). Frames stay
-    // mid-brightness, as on doors (see DoorCompositionConstants); the inner stays a quieter mid-tone,
-    // since a pale one outshines the frame and a dark one reads as a hole around the picture.
+    // Coordinated finishes. Frames stay mid-brightness, as on doors (see DoorCompositionConstants); the
+    // inner stays a quieter mid-tone, since a pale one outshines the frame and a dark one reads as a hole
+    // around the picture.
     presets: [
         preset("#c9a227", "#6d5b36", 0.16, true),  // gilt, dark ochre inside
         preset("#71452b", "#bdb59d", 0.12, false), // walnut, putty inside
@@ -61,15 +24,14 @@ const CanvasCompositionConstants = {
         preset("#3f8f7a", "#a29b86", 0.08, true),  // verdigris, grey putty inside
         preset("#8b4818", "#c8a271", 0.10, false), // cherry, light timber inside
         preset("#5c5c5a", "#bdb59d", 0.04, false), // slim iron, putty inside
-    ] as Omit<CanvasCompositionParams, "framed" | "margin">[],
+    ] as FramedPanelPreset[],
 };
 
 // A preset is a finish only: whether the frame is shown, and the margin, are left as they are.
 function preset(frame: string, inner: string, mouldingThickness: number,
-    mouldingIsConvex: boolean): Omit<CanvasCompositionParams, "framed" | "margin">
+    mouldingIsConvex: boolean): FramedPanelPreset
 {
-    const snap = (hex: string) => ColorUtil.paletteIndexToRGB("Timber",
-        ColorUtil.rgbToPaletteIndex("Timber", ColorUtil.hexToRGB(hex)));
+    const snap = FramedPanelCompositionConstants.snapColor;
     return {colors: {frame: snap(frame), inner: snap(inner)}, mouldingThickness, mouldingIsConvex};
 }
 

@@ -33,10 +33,11 @@ export default class LightSource extends GameObjectComponent
         this.registerLight();
     }
 
-    // Called on placement (not every frame). Takes the transform as arguments so it doesn't depend on
-    // the object's copy having updated yet.
-    setTransform(pos: Vec3, dir: Vec3): void
+    // From the stored placement, not the rendered one, so a cosmetic bounce doesn't move the light (the
+    // block map ignores a position it already has).
+    onTransformChanged(_resized: boolean): void
     {
+        const {pos, dir} = this.gameObject.params.transform;
         GraphicsManager.getLightBlockMap().setLightSourcePosition(
             this.gameObject.params.objectId, getLightWorldPos(pos, dir));
     }

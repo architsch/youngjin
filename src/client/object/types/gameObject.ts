@@ -12,6 +12,8 @@ import Geometry3DUtil from "../../../shared/math/util/geometry3DUtil";
 import ObjectTypeClientConfigMap from "../maps/objectTypeClientConfigMap";
 import ObjectSelection from "../../graphics/types/gizmo/objectSelection";
 import GameModeUtil from "../../system/util/gameModeUtil";
+import ObjectScaleUtil from "../../../shared/object/util/objectScaleUtil";
+import Vector3DUtil from "../../../shared/math/util/vector3DUtil";
 
 const vec3Temp = new THREE.Vector3();
 const cameraPosTemp = new THREE.Vector3();
@@ -19,6 +21,8 @@ const rightTemp = new THREE.Vector3();
 const upTemp = new THREE.Vector3();
 const normalTemp = new THREE.Vector3();
 const basisTemp = new THREE.Matrix4();
+const positionTemp = new THREE.Vector3();
+const quaternionTemp = new THREE.Quaternion();
 
 // A new GameObject type needs: a GameObject subclass, an ObjectTypeConfigMap entry (what it is), and
 // an ObjectTypeClientConfigMap entry (how it's built and selected).
@@ -31,11 +35,15 @@ export default abstract class GameObject
     components: {[componentName: string]: GameObjectComponent} = {};
     spawnFinished: boolean = false;
 
+    // The scale last announced by notifyTransformChanged, which a resize is measured against.
+    private announcedScale: Vec3;
+
     constructor(params: AddObjectSignal)
     {
         this.params = params;
 
         this.config = ObjectTypeConfigMap.getConfigByIndex(this.params.objectTypeIndex);
+        this.announcedScale = ObjectScaleUtil.sanitize(params.objectTypeIndex, params.transform.scale);
 
         GraphicsManager.addObjectToScene(this.obj);
         this.obj.add(this.visualObj);
@@ -96,9 +104,13 @@ export default abstract class GameObject
                 component.onSetMetadata(key, value);
         }
     }
-    // Called after a cosmetic effect moves visualObj. Baked renderers (instanced meshes) override this
-    // to re-apply instance transforms.
-    onVisualTransformChanged() {}
+    // Invoked after the object moved, turned or was resized, including visualObj's cosmetic motion (see
+    // notifyTransformChanged). Baked renderers (instanced meshes, lights) follow it here.
+    onTransformChanged(resized: boolean)
+    {
+        for (const componentName in this.components)
+            this.components[componentName].onTransformChanged?.(resized);
+    }
     // Visits instances the object renders itself, outside its components (e.g. a canvas's picture), so
     // whole-object actions reach them (see OrbitOcclusionHider).
     forEachOwnedInstance(_visit: (instancedMeshId: string, instanceId: number) => void) {}
@@ -141,7 +153,23 @@ export default abstract class GameObject
     }
     setObjectTransform(pos: Vec3, dir: Vec3)
     {
+        positionTemp.copy(this.obj.position);
+        quaternionTemp.copy(this.obj.quaternion);
         this.applyTransform(pos, dir);
+
+        // Resting objects are re-set every frame (e.g. a rigidbody under gravity), so only a change is
+        // announced.
+        const moved = !this.obj.position.equals(positionTemp) || !this.obj.quaternion.equals(quaternionTemp);
+        const resized = this.takeResize();
+        if (moved || resized)
+            this.onTransformChanged(resized);
+    }
+
+    // Every other writer of obj or visualObj calls this once it is done, so nothing has to poll for
+    // movement.
+    notifyTransformChanged()
+    {
+        this.onTransformChanged(this.takeResize());
     }
     get rotation(): THREE.Euler { return this.obj.rotation; }
     set rotation(r: THREE.Euler) { this.obj.rotation.set(r.x, r.y, r.z); }
@@ -153,6 +181,18 @@ export default abstract class GameObject
         return spawnType == "spawnedByAny" ||
             (spawnType == "spawnedByMe" && this.isMine()) ||
             (spawnType == "spawnedByOther" && !this.isMine());
+    }
+
+    // Scale lives in params.transform (written before the object is told; see ObjectUpdateUtil), not the
+    // three.js transform, so a resize is found by comparing it with the scale last announced.
+    private takeResize(): boolean
+    {
+        if (!this.config.scaling)
+            return false;
+        const scale = ObjectScaleUtil.sanitize(this.params.objectTypeIndex, this.params.transform.scale);
+        const resized = !Vector3DUtil.equal(scale, this.announcedScale);
+        this.announcedScale = scale;
+        return resized;
     }
 
     // Not setObjectTransform, which subclasses extend with state the constructor hasn't set up yet.

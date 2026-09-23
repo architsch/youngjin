@@ -12,6 +12,7 @@ import fc from "fast-check";
 import { DefaultCompositionCodec } from "../../../src/shared/graphics/mesh/composition/types/compositionCodec/defaultCompositionCodec";
 import { CanvasCompositionCodec } from "../../../src/shared/graphics/mesh/composition/types/compositionCodec/canvasCompositionCodec";
 import CanvasCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/canvasCompositionConstants";
+import FramedPanelCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/framedPanelCompositionConstants";
 import MouldingCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/mouldingCompositionConstants";
 import MarginCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/marginCompositionConstants";
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionCodecType";
@@ -453,8 +454,8 @@ describe("canvas mesh composition", () => {
             const params = {...finish, framed};
             const parts: InstancedMeshCompositionPart[] = [];
             CanvasCompositionCodec.decode(encodeCanvas(params), size, {}, parts);
-            const drawn = CanvasCompositionConstants.getDrawnSize(params, size);
-            const picture = CanvasCompositionConstants.getPictureSize(params, size);
+            const drawn = FramedPanelCompositionConstants.getDrawnSize(params, size);
+            const picture = FramedPanelCompositionConstants.getInnerSize(params, size);
             if (framed)
             {
                 expect(parts[0].scale.x).toBeCloseTo(drawn.x, 9);

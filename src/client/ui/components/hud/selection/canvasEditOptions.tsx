@@ -3,21 +3,13 @@ import IconButton from "../../input/iconButton";
 import TrashIcon from "../../../svg/icons/trashIcon";
 import ImageChooser from "../../input/imageChooser";
 import App from "../../../../app";
-import SocketsClient from "../../../../networking/client/socketsClient";
-import ClientObjectManager from "../../../../object/clientObjectManager";
-import SetObjectMetadataSignal from "../../../../../shared/object/types/setObjectMetadataSignal";
-import RemoveObjectSignal from "../../../../../shared/object/types/removeObjectSignal";
-import ObjectUpdateUtil from "../../../../../shared/object/util/objectUpdateUtil";
 import RestrictedZoneUtil from "../../../../../shared/voxel/util/restrictedZoneUtil";
-import { clientFeatureFlagsObservable, objectSelectionObservable } from "../../../../system/clientObservables";
-import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../../../shared/object/types/objectMetadataKey";
-import PopupUtil from "../../../util/popupUtil";
-import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
-import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
+import { ObjectMetadataKeyEnumMap } from "../../../../../shared/object/types/objectMetadataKey";
+import ObjectEditUtil from "../../../util/objectEditUtil";
 import PictureIcon from "../../../svg/icons/pictureIcon";
 import PictureFrameIcon from "../../../svg/icons/pictureFrameIcon";
-import VoxelQuadSelection from "../../../../graphics/types/gizmo/voxelQuadSelection";
-import CustomizeCanvasPanel from "../../panel/customizeCanvasPanel";
+import CustomizeFramePanel from "../../panel/customizeFramePanel";
+import CanvasCompositionConstants from "../../../../../shared/graphics/mesh/composition/types/compositionConstants/canvasCompositionConstants";
 import SelectionToolRow from "./selectionToolRow";
 import EditOptionsProps from "../../../types/editOptionsProps";
 
@@ -36,14 +28,17 @@ export default function CanvasEditOptions(props: EditOptionsProps)
 
     // Full width, so the rows can scroll horizontally instead of growing.
     return <div className="flex flex-col gap-1 w-full">
-        {customizingFrame && canEdit && <CustomizeCanvasPanel
+        {customizingFrame && canEdit && <CustomizeFramePanel
+            id="customizeCanvasOptions"
             selection={props.selection}
+            colorSlots={[{title: "Frame", key: "frame"}, {title: "Inner", key: "inner"}]}
+            presets={CanvasCompositionConstants.presets}
             onClose={() => props.setOpenPanel(null)}
         />}
         <SelectionToolRow>
             <IconButton icon={<TrashIcon/>} size="md" color="red"
-                disabled={!canRemoveCanvas(props.selection)}
-                onClick={() => openRemoveConfirmPopup(props.selection)}
+                disabled={!ObjectEditUtil.canRemoveObject(props.selection)}
+                onClick={() => ObjectEditUtil.openRemoveConfirmPopup(props.selection, "Want to remove this?")}
             />
             <ImageChooser
                 title="Change Image"
@@ -54,7 +49,7 @@ export default function CanvasEditOptions(props: EditOptionsProps)
                 initialChoicePath={initialImagePath}
                 disabled={!canEdit}
                 onChoose={path => {
-                    trySetCanvasMetadata(props.selection, ObjectMetadataKeyEnumMap.ImagePath, path);
+                    ObjectEditUtil.trySetObjectMetadata(props.selection, ObjectMetadataKeyEnumMap.ImagePath, path);
                 }}
             />
             <IconButton id="changeCanvasFrameButton" icon={<PictureFrameIcon/>} size="md"
@@ -77,78 +72,4 @@ function canEditCanvas(selection: ObjectSelection): boolean
     const params = selection.gameObject.params;
 
     return !RestrictedZoneUtil.blocksObjectEdit(user, room, params.objectTypeIndex, params.transform);
-}
-
-function canRemoveCanvas(selection: ObjectSelection): boolean
-{
-    if (clientFeatureFlagsObservable.has(FeatureFlag.DisableManualObjectRemoval))
-        return false;
-
-    const room = App.getCurrentRoom();
-    if (!room)
-        return false;
-    const user = App.getUser();
-
-    const objectId = selection.gameObject.params.objectId;
-    return ObjectUpdateUtil.canRemoveObject(user, room, new RemoveObjectSignal(room.id, objectId));
-}
-
-function openRemoveConfirmPopup(selection: ObjectSelection)
-{
-    PopupUtil.openPopup({
-        popupType: "confirm",
-        params: {
-            message: "Want to remove this?",
-            onConfirm: () => {
-                tryRemoveCanvas(selection);
-                PopupUtil.closePopup();
-            },
-            onCancel: PopupUtil.closePopup
-        }
-    });
-}
-
-async function tryRemoveCanvas(selection: ObjectSelection)
-{
-    if (objectSelectionObservable.peek() != selection || !canRemoveCanvas(selection))
-        return;
-
-    const room = App.getCurrentRoom()!;
-    const objectId = selection.gameObject.params.objectId;
-
-    // Remove the game object locally, and report it to the server if successful.
-    ObjectSelection.unselect();
-    VoxelQuadSelection.trySelectBestQuadNearby(selection.gameObject.params.transform.pos);
-    const success = await ClientObjectManager.removeObject(objectId);
-    if (success)
-    {
-        if (room.roomType != RoomTypeEnumMap.SinglePlayer)
-            SocketsClient.emitRemoveObjectSignal(new RemoveObjectSignal(room.id, objectId));
-    }
-}
-
-function canSetCanvasMetadata(selection: ObjectSelection, metadataKey: ObjectMetadataKey, metadataValue: string): boolean
-{
-    const room = App.getCurrentRoom();
-    if (!room)
-        return false;
-    const user = App.getUser();
-
-    const objectId = selection.gameObject.params.objectId;
-    const signal = new SetObjectMetadataSignal(room.id, objectId, metadataKey, metadataValue);
-    return ObjectUpdateUtil.canSetObjectMetadata(user, room, signal);
-}
-
-function trySetCanvasMetadata(selection: ObjectSelection, metadataKey: ObjectMetadataKey, metadataValue: string)
-{
-    if (!canSetCanvasMetadata(selection, metadataKey, metadataValue))
-        return;
-
-    const room = App.getCurrentRoom()!;
-    const objectId = selection.gameObject.params.objectId;
-    if (!ClientObjectManager.setObjectMetadata(objectId, metadataKey, metadataValue))
-        return;
-
-    if (room.roomType != RoomTypeEnumMap.SinglePlayer)
-        SocketsClient.emitSetObjectMetadataSignal(new SetObjectMetadataSignal(room.id, objectId, metadataKey, metadataValue));
 }

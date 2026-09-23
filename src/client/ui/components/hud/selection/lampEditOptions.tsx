@@ -6,24 +6,15 @@ import PaletteColorInput from "../../input/paletteColorInput";
 import RangeInput from "../../input/rangeInput";
 import SelectionToolRow from "./selectionToolRow";
 import Text from "../../basic/text";
-import App from "../../../../app";
-import SocketsClient from "../../../../networking/client/socketsClient";
-import ClientObjectManager from "../../../../object/clientObjectManager";
-import SetObjectMetadataSignal from "../../../../../shared/object/types/setObjectMetadataSignal";
-import RemoveObjectSignal from "../../../../../shared/object/types/removeObjectSignal";
-import ObjectUpdateUtil from "../../../../../shared/object/util/objectUpdateUtil";
 import LampObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/lampObjectTypeConfig";
 import { ObjectMetadataKeyEnumMap } from "../../../../../shared/object/types/objectMetadataKey";
 import { MAX_LAMP_INTENSITY, MAX_LAMP_RANGE, MIN_LAMP_INTENSITY,
     MIN_LAMP_RANGE } from "../../../../../shared/graphics/light/util/lampLightUtil";
 import { LIGHT_COLOR_PALETTE_NAME } from "../../../../../shared/system/sharedConstants";
-import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
-import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
-import { clientFeatureFlagsObservable, objectSelectionObservable } from "../../../../system/clientObservables";
-import PopupUtil from "../../../util/popupUtil";
-import VoxelQuadSelection from "../../../../graphics/types/gizmo/voxelQuadSelection";
+import ObjectEditUtil from "../../../util/objectEditUtil";
 import PictureFrameIcon from "../../../svg/icons/pictureFrameIcon";
-import CustomizeLampPanel from "../../panel/customizeLampPanel";
+import CustomizeFramePanel from "../../panel/customizeFramePanel";
+import LampCompositionConstants from "../../../../../shared/graphics/mesh/composition/types/compositionConstants/lampCompositionConstants";
 import EditOptionsProps from "../../../types/editOptionsProps";
 
 // Input bounds as strings; the ranges are short enough to tick every value (see LampLightUtil).
@@ -51,8 +42,8 @@ export default function LampEditOptions(props: EditOptionsProps)
         const next = {...light};
         edit(next);
         setLight(next);
-        trySetLightProperties(props.selection, LampObjectTypeConfig.util.encodeLightProperties(
-            next.colorIndex, next.intensity, next.range));
+        ObjectEditUtil.trySetObjectMetadata(props.selection, ObjectMetadataKeyEnumMap.LightProperties,
+            LampObjectTypeConfig.util.encodeLightProperties(next.colorIndex, next.intensity, next.range));
     };
 
     // Recomputed each render; zone changes re-announce the selection (see ClientVoxelManager).
@@ -61,14 +52,17 @@ export default function LampEditOptions(props: EditOptionsProps)
 
     // Full width, so the rows can scroll horizontally instead of growing.
     return <div className="flex flex-col gap-1 w-full">
-        {customizing && canCustomize && <CustomizeLampPanel
+        {customizing && canCustomize && <CustomizeFramePanel
+            id="customizeLampOptions"
             selection={props.selection}
+            colorSlots={[{title: "Frame", key: "frame"}]}
+            presets={LampCompositionConstants.presets}
             onClose={() => props.setOpenPanel(null)}
         />}
         <SelectionToolRow>
             <IconButton icon={<TrashIcon/>} size="md" color="red"
-                disabled={!canRemoveLamp(props.selection)}
-                onClick={() => openRemoveConfirmPopup(props.selection)}
+                disabled={!ObjectEditUtil.canRemoveObject(props.selection)}
+                onClick={() => ObjectEditUtil.openRemoveConfirmPopup(props.selection, "Want to remove this?")}
             />
             <IconButton id="changeLampLookButton" icon={<PictureFrameIcon/>} size="md"
                 disabled={!canCustomize}
@@ -109,78 +103,8 @@ export default function LampEditOptions(props: EditOptionsProps)
 // @docs/gameplay/restricted_zone.md).
 function canCustomizeLamp(selection: ObjectSelection): boolean
 {
-    const room = App.getCurrentRoom();
-    if (!room)
-        return false;
-
-    const params = selection.gameObject.params;
-    const currentLook = params.metadata[ObjectMetadataKeyEnumMap.InstancedMeshComposition]?.str ?? "";
-    return ObjectUpdateUtil.canSetObjectMetadata(App.getUser(), room, new SetObjectMetadataSignal(
-        room.id, params.objectId, ObjectMetadataKeyEnumMap.InstancedMeshComposition, currentLook));
-}
-
-function canRemoveLamp(selection: ObjectSelection): boolean
-{
-    if (clientFeatureFlagsObservable.has(FeatureFlag.DisableManualObjectRemoval))
-        return false;
-
-    const room = App.getCurrentRoom();
-    if (!room)
-        return false;
-
-    const objectId = selection.gameObject.params.objectId;
-    return ObjectUpdateUtil.canRemoveObject(App.getUser(), room,
-        new RemoveObjectSignal(room.id, objectId));
-}
-
-function openRemoveConfirmPopup(selection: ObjectSelection)
-{
-    PopupUtil.openPopup({
-        popupType: "confirm",
-        params: {
-            message: "Want to remove this?",
-            onConfirm: () => {
-                tryRemoveLamp(selection);
-                PopupUtil.closePopup();
-            },
-            onCancel: PopupUtil.closePopup
-        }
-    });
-}
-
-async function tryRemoveLamp(selection: ObjectSelection)
-{
-    if (objectSelectionObservable.peek() != selection || !canRemoveLamp(selection))
-        return;
-
-    const room = App.getCurrentRoom()!;
-    const objectId = selection.gameObject.params.objectId;
-
-    ObjectSelection.unselect();
-    VoxelQuadSelection.trySelectBestQuadNearby(selection.gameObject.params.transform.pos);
-    const success = await ClientObjectManager.removeObject(objectId);
-    if (success && room.roomType != RoomTypeEnumMap.SinglePlayer)
-        SocketsClient.emitRemoveObjectSignal(new RemoveObjectSignal(room.id, objectId));
-}
-
-function trySetLightProperties(selection: ObjectSelection, lightProperties: string)
-{
-    const room = App.getCurrentRoom();
-    if (!room)
-        return;
-
-    const objectId = selection.gameObject.params.objectId;
-    const signal = new SetObjectMetadataSignal(room.id, objectId,
-        ObjectMetadataKeyEnumMap.LightProperties, lightProperties);
-    if (!ObjectUpdateUtil.canSetObjectMetadata(App.getUser(), room, signal))
-        return;
-
-    if (!ClientObjectManager.setObjectMetadata(objectId,
-        ObjectMetadataKeyEnumMap.LightProperties, lightProperties))
-    {
-        return;
-    }
-
-    if (room.roomType != RoomTypeEnumMap.SinglePlayer)
-        SocketsClient.emitSetObjectMetadataSignal(signal);
+    const currentLook = selection.gameObject.params
+        .metadata[ObjectMetadataKeyEnumMap.InstancedMeshComposition]?.str ?? "";
+    return ObjectEditUtil.canSetObjectMetadata(selection, ObjectMetadataKeyEnumMap.InstancedMeshComposition,
+        currentLook);
 }

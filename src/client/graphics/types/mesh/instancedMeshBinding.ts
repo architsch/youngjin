@@ -278,6 +278,32 @@ export default class InstancedMeshBinding
         markInstanceForUpload(uvSampleSizeBufferAttrib, instanceId);
     }
 
+    // As updateInstanceTextureUV, for any rect of texels rather than one whole cell (e.g. a region of
+    // cells, or part of one; see TextureAtlasAllocator). In texels from the texture's bottom-left.
+    updateInstanceTextureRect(gameObject: GameObject, instanceId: number,
+        texelX: number, texelY: number, texelWidth: number, texelHeight: number)
+    {
+        if (!this.instancedMesh)
+        {
+            console.error(`InstancedMesh hasn't been loaded yet (objectId = ${gameObject.params.objectId})`);
+            return;
+        }
+        const params = this.materialParams as InstancedTexturePackMaterialParams;
+
+        // Half a texel in on every edge, as for a cell.
+        const uvStartBufferAttrib = this.instancedMesh.geometry.getAttribute("uvStart") as THREE.InstancedBufferAttribute;
+        uvStartBufferAttrib.setXY(instanceId,
+            (texelX + 0.5) / params.textureWidth, (texelY + 0.5) / params.textureHeight);
+        markInstanceForUpload(uvStartBufferAttrib, instanceId);
+
+        // The shader spans one cell less a texel per unit of sample size (see getUVScales).
+        const uvSampleSizeBufferAttrib = this.instancedMesh.geometry.getAttribute("uvSampleSize") as THREE.InstancedBufferAttribute;
+        uvSampleSizeBufferAttrib.setXY(instanceId,
+            (texelWidth - 1) / (params.textureGridCellWidth - 1),
+            (texelHeight - 1) / (params.textureGridCellHeight - 1));
+        markInstanceForUpload(uvSampleSizeBufferAttrib, instanceId);
+    }
+
     updateInstanceColor(gameObject: GameObject, instanceId: number,
         r: number, g: number, b: number)
     {
@@ -336,11 +362,15 @@ export default class InstancedMeshBinding
         return attrib;
     }
 
-    // Draws a caller-drawn canvas (e.g. text) over this instance's texture cell.
-    drawCanvasAtIndex(textureIndex: number, canvas: HTMLCanvasElement)
+    // Draws a caller-drawn canvas (e.g. text) texel for texel, its bottom-left corner at the given texel (see
+    // updateInstanceTextureRect).
+    drawCanvasAtTexel(texelX: number, texelY: number, canvas: HTMLCanvasElement)
     {
-        const {u1, v1, u2, v2} = this.getTextureCellUVRect(textureIndex);
-        TextureUtil.drawCanvasOnRenderTarget(canvas, this.getDynamicRenderTarget(), u1, v1, u2, v2);
+        const params = this.materialParams as InstancedTexturePackMaterialParams;
+        const u1 = texelX / params.textureWidth;
+        const v1 = texelY / params.textureHeight;
+        TextureUtil.drawCanvasOnRenderTarget(canvas, this.getDynamicRenderTarget(), u1, v1,
+            u1 + canvas.width / params.textureWidth, v1 + canvas.height / params.textureHeight);
     }
 
     // cellAspect is the cell's aspect ratio as shown, when the instance stretches it (see

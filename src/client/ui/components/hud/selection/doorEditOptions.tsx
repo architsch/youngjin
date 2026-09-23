@@ -1,4 +1,3 @@
-import ObjectSelection from "../../../../graphics/types/gizmo/objectSelection";
 import IconButton from "../../input/iconButton";
 import TrashIcon from "../../../svg/icons/trashIcon";
 import TextCursorIcon from "../../../svg/icons/textCursorIcon";
@@ -7,53 +6,45 @@ import PaintBrushIcon from "../../../svg/icons/paintBrushIcon";
 import GearIcon from "../../../svg/icons/gearIcon";
 import DoorIcon from "../../../svg/icons/doorIcon";
 import DoorGameObject from "../../../../object/types/doorGameObject";
-import App from "../../../../app";
-import SocketsClient from "../../../../networking/client/socketsClient";
-import ClientObjectManager from "../../../../object/clientObjectManager";
-import SetObjectMetadataSignal from "../../../../../shared/object/types/setObjectMetadataSignal";
-import RemoveObjectSignal from "../../../../../shared/object/types/removeObjectSignal";
-import ObjectUpdateUtil from "../../../../../shared/object/util/objectUpdateUtil";
 import DoorObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import { DoorTypeEnumMap } from "../../../../../shared/object/types/doorType";
-import { clientFeatureFlagsObservable, objectSelectionObservable } from "../../../../system/clientObservables";
-import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../../../shared/object/types/objectMetadataKey";
+import { ObjectMetadataKeyEnumMap } from "../../../../../shared/object/types/objectMetadataKey";
 import PopupUtil from "../../../util/popupUtil";
-import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
-import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
-import VoxelQuadSelection from "../../../../graphics/types/gizmo/voxelQuadSelection";
+import ObjectEditUtil from "../../../util/objectEditUtil";
 import CustomizeDoorPanel from "../../panel/customizeDoorPanel";
+import CustomizeLabelTextPanel from "../../panel/customizeLabelTextPanel";
 import SelectionToolRow from "./selectionToolRow";
 import EditOptionsProps from "../../../types/editOptionsProps";
 
+const TEXT_PANEL = "text";
 const APPEARANCE_PANEL = "appearance";
 
-// Admin tools for a selected door: remove, name, destination, paint, default entrance. The appearance
-// bar stacks above this row (it belongs to the door); the rest open as popups.
+// Admin tools for a selected door: remove, name, destination, paint, default entrance. The name and
+// appearance bars stack above this row (they belong to the door), one at a time; the rest open as popups.
 export default function DoorEditOptions(props: EditOptionsProps)
 {
+    const customizingText = props.openPanel == TEXT_PANEL;
     const customizing = props.openPanel == APPEARANCE_PANEL;
 
     // Full width, so the rows can scroll horizontally instead of growing.
     return <div className="flex flex-col gap-1 w-full">
+        {customizingText && <CustomizeLabelTextPanel
+            selection={props.selection}
+            onClose={() => props.setOpenPanel(null)}
+        />}
         {customizing && <CustomizeDoorPanel
             selection={props.selection}
             onClose={() => props.setOpenPanel(null)}
         />}
         <SelectionToolRow>
             <IconButton id="removeDoorButton" icon={<TrashIcon/>} size="md" color="red"
-                disabled={!canRemoveDoor(props.selection)}
-                onClick={() => openRemoveConfirmPopup(props.selection)}
+                disabled={!ObjectEditUtil.canRemoveObject(props.selection)}
+                onClick={() => ObjectEditUtil.openRemoveConfirmPopup(props.selection,
+                    "Want to remove this door?")}
             />
             <IconButton id="changeDoorLabelButton" icon={<TextCursorIcon/>} size="md"
-                onClick={() => PopupUtil.openPopup({popupType: "objectLabel", params: {
-                    initialText: DoorObjectTypeConfig.util.getLabel(props.selection.gameObject.params),
-                    initialColorIndex: DoorObjectTypeConfig.util.getLabelColorIndex(
-                        props.selection.gameObject.params),
-                    onSetText: (text: string) => trySetDoorMetadata(props.selection,
-                        ObjectMetadataKeyEnumMap.Label, text),
-                    onSetColorIndex: (colorIndex: number) => trySetDoorMetadata(props.selection,
-                        ObjectMetadataKeyEnumMap.LabelColor, `${colorIndex}`),
-                }})}
+                highlight={customizingText}
+                onClick={() => props.setOpenPanel(customizingText ? null : TEXT_PANEL)}
             />
             <IconButton id="changeDoorDestinationButton" icon={<DestinationIcon/>} size="md"
                 onClick={() => PopupUtil.openPopup({popupType: "doorDestination", params: {
@@ -61,9 +52,9 @@ export default function DoorEditOptions(props: EditOptionsProps)
                         DoorObjectTypeConfig.util.getDestinationRoomId(props.selection.gameObject.params),
                     initialDestinationDoorLabel:
                         DoorObjectTypeConfig.util.getDestinationDoorLabel(props.selection.gameObject.params),
-                    onChooseRoom: (roomID: string) => trySetDoorMetadata(props.selection,
+                    onChooseRoom: (roomID: string) => ObjectEditUtil.trySetObjectMetadata(props.selection,
                         ObjectMetadataKeyEnumMap.DestinationRoomId, roomID),
-                    onSetDoorLabel: (label: string) => trySetDoorMetadata(props.selection,
+                    onSetDoorLabel: (label: string) => ObjectEditUtil.trySetObjectMetadata(props.selection,
                         ObjectMetadataKeyEnumMap.DestinationDoorLabel, label),
                 }})}
             />
@@ -76,7 +67,7 @@ export default function DoorEditOptions(props: EditOptionsProps)
                     isDefaultEntrance:
                         DoorObjectTypeConfig.util.getDoorType(props.selection.gameObject.params)
                             == DoorTypeEnumMap.DefaultEntrance,
-                    onSetDefaultEntrance: (isDefaultEntrance: boolean) => trySetDoorMetadata(
+                    onSetDefaultEntrance: (isDefaultEntrance: boolean) => ObjectEditUtil.trySetObjectMetadata(
                         props.selection, ObjectMetadataKeyEnumMap.DoorType,
                         `${isDefaultEntrance ? DoorTypeEnumMap.DefaultEntrance : DoorTypeEnumMap.CustomEntrance}`),
                 }})}
@@ -88,78 +79,4 @@ export default function DoorEditOptions(props: EditOptionsProps)
             />
         </SelectionToolRow>
     </div>;
-}
-
-function canRemoveDoor(selection: ObjectSelection): boolean
-{
-    if (clientFeatureFlagsObservable.has(FeatureFlag.DisableManualObjectRemoval))
-        return false;
-
-    const room = App.getCurrentRoom();
-    if (!room)
-        return false;
-    const user = App.getUser();
-
-    const objectId = selection.gameObject.params.objectId;
-    return ObjectUpdateUtil.canRemoveObject(user, room, new RemoveObjectSignal(room.id, objectId));
-}
-
-function openRemoveConfirmPopup(selection: ObjectSelection)
-{
-    PopupUtil.openPopup({
-        popupType: "confirm",
-        params: {
-            message: "Want to remove this door?",
-            onConfirm: () => {
-                tryRemoveDoor(selection);
-                PopupUtil.closePopup();
-            },
-            onCancel: PopupUtil.closePopup
-        }
-    });
-}
-
-async function tryRemoveDoor(selection: ObjectSelection)
-{
-    // Re-checked: the room may have changed while the confirmation popup was up.
-    if (objectSelectionObservable.peek() != selection || !canRemoveDoor(selection))
-        return;
-
-    const room = App.getCurrentRoom()!;
-    const objectId = selection.gameObject.params.objectId;
-
-    ObjectSelection.unselect();
-    VoxelQuadSelection.trySelectBestQuadNearby(selection.gameObject.params.transform.pos);
-    const success = await ClientObjectManager.removeObject(objectId);
-    if (success)
-    {
-        if (room.roomType != RoomTypeEnumMap.SinglePlayer)
-            SocketsClient.emitRemoveObjectSignal(new RemoveObjectSignal(room.id, objectId));
-    }
-}
-
-function canSetDoorMetadata(selection: ObjectSelection, metadataKey: ObjectMetadataKey, metadataValue: string): boolean
-{
-    const room = App.getCurrentRoom();
-    if (!room)
-        return false;
-    const user = App.getUser();
-
-    const objectId = selection.gameObject.params.objectId;
-    const signal = new SetObjectMetadataSignal(room.id, objectId, metadataKey, metadataValue);
-    return ObjectUpdateUtil.canSetObjectMetadata(user, room, signal);
-}
-
-function trySetDoorMetadata(selection: ObjectSelection, metadataKey: ObjectMetadataKey, metadataValue: string)
-{
-    if (!canSetDoorMetadata(selection, metadataKey, metadataValue))
-        return;
-
-    const room = App.getCurrentRoom()!;
-    const objectId = selection.gameObject.params.objectId;
-    if (!ClientObjectManager.setObjectMetadata(objectId, metadataKey, metadataValue))
-        return;
-
-    if (room.roomType != RoomTypeEnumMap.SinglePlayer)
-        SocketsClient.emitSetObjectMetadataSignal(new SetObjectMetadataSignal(room.id, objectId, metadataKey, metadataValue));
 }

@@ -1,0 +1,92 @@
+import ObjectSelection from "../../graphics/types/gizmo/objectSelection";
+import VoxelQuadSelection from "../../graphics/types/gizmo/voxelQuadSelection";
+import App from "../../app";
+import SocketsClient from "../../networking/client/socketsClient";
+import ClientObjectManager from "../../object/clientObjectManager";
+import SetObjectMetadataSignal from "../../../shared/object/types/setObjectMetadataSignal";
+import RemoveObjectSignal from "../../../shared/object/types/removeObjectSignal";
+import ObjectUpdateUtil from "../../../shared/object/util/objectUpdateUtil";
+import { ObjectMetadataKey } from "../../../shared/object/types/objectMetadataKey";
+import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
+import { FeatureFlag } from "../../../shared/system/types/featureFlag";
+import { clientFeatureFlagsObservable, objectSelectionObservable } from "../../system/clientObservables";
+import PopupUtil from "./popupUtil";
+
+// The edits every selected object's tools share. Each is checked as the server will check it (see
+// ObjectUpdateUtil), applied locally, then sent (a single-player room has no server to send it to).
+const ObjectEditUtil =
+{
+    canRemoveObject: (selection: ObjectSelection): boolean =>
+    {
+        if (clientFeatureFlagsObservable.has(FeatureFlag.DisableManualObjectRemoval))
+            return false;
+
+        const room = App.getCurrentRoom();
+        if (!room)
+            return false;
+
+        const objectId = selection.gameObject.params.objectId;
+        return ObjectUpdateUtil.canRemoveObject(App.getUser(), room, new RemoveObjectSignal(room.id, objectId));
+    },
+    openRemoveConfirmPopup: (selection: ObjectSelection, message: string): void =>
+    {
+        PopupUtil.openPopup({
+            popupType: "confirm",
+            params: {
+                message,
+                onConfirm: () => {
+                    tryRemoveObject(selection);
+                    PopupUtil.closePopup();
+                },
+                onCancel: PopupUtil.closePopup,
+            },
+        });
+    },
+    canSetObjectMetadata: (selection: ObjectSelection, metadataKey: ObjectMetadataKey,
+        metadataValue: string): boolean =>
+    {
+        const room = App.getCurrentRoom();
+        if (!room)
+            return false;
+
+        const objectId = selection.gameObject.params.objectId;
+        const signal = new SetObjectMetadataSignal(room.id, objectId, metadataKey, metadataValue);
+        return ObjectUpdateUtil.canSetObjectMetadata(App.getUser(), room, signal);
+    },
+    trySetObjectMetadata: (selection: ObjectSelection, metadataKey: ObjectMetadataKey,
+        metadataValue: string): void =>
+    {
+        if (!ObjectEditUtil.canSetObjectMetadata(selection, metadataKey, metadataValue))
+            return;
+
+        const room = App.getCurrentRoom()!;
+        const objectId = selection.gameObject.params.objectId;
+        if (!ClientObjectManager.setObjectMetadata(objectId, metadataKey, metadataValue))
+            return;
+
+        if (room.roomType != RoomTypeEnumMap.SinglePlayer)
+        {
+            SocketsClient.emitSetObjectMetadataSignal(
+                new SetObjectMetadataSignal(room.id, objectId, metadataKey, metadataValue));
+        }
+    },
+}
+
+async function tryRemoveObject(selection: ObjectSelection)
+{
+    // Re-checked: the room may have changed while the confirmation popup was up.
+    if (objectSelectionObservable.peek() != selection || !ObjectEditUtil.canRemoveObject(selection))
+        return;
+
+    const room = App.getCurrentRoom()!;
+    const objectId = selection.gameObject.params.objectId;
+
+    // Removed locally, then reported to the server if that succeeded.
+    ObjectSelection.unselect();
+    VoxelQuadSelection.trySelectBestQuadNearby(selection.gameObject.params.transform.pos);
+    const success = await ClientObjectManager.removeObject(objectId);
+    if (success && room.roomType != RoomTypeEnumMap.SinglePlayer)
+        SocketsClient.emitRemoveObjectSignal(new RemoveObjectSignal(room.id, objectId));
+}
+
+export default ObjectEditUtil;

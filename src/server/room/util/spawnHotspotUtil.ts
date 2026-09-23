@@ -5,6 +5,7 @@ import { DoorTypeEnumMap } from "../../../shared/object/types/doorType";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
 import DoorObjectTypeConfig, { SPAWN_DIST_BEHIND_DOOR } from "../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import { PLAYER_HEIGHT } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import LabelTextUtil from "../../../shared/object/util/labelTextUtil";
 import Room from "../../../shared/room/types/room";
 import { NUM_VOXEL_COLS, NUM_VOXEL_ROWS, UNIT_VEC3 } from "../../../shared/system/sharedConstants";
 
@@ -25,7 +26,7 @@ const SpawnHotspotUtil =
 
         if (destinationDoorLabel.length > 0)
         {
-            const named = doors.filter(door => DoorObjectTypeConfig.util.getLabel(door) === destinationDoorLabel);
+            const named = doors.filter(door => LabelTextUtil.getText(door) === destinationDoorLabel);
             if (named.length > 0)
                 return getTransformBehindDoor(pickOne(named));
         }

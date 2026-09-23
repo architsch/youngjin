@@ -222,15 +222,16 @@ const doorStyles = (page) => callSandbox(page, "doorStyles");
 const canvasFrameStyles = (page) => callSandbox(page, "canvasFrameStyles");
 
 /**
- * Attaches a picture, a door or a lamp to a cell's face:
+ * Attaches a picture, a door, a lamp or a label to a cell's face:
  *
  *   addObject({type: "Canvas", row, col, face: "-z", collisionLayer: 2, metadata: {ImagePath: "1/14"}})
  *   addObject({type: "Door", row, col, face: "+x", metadata: {Label: "Library"}})
  *   addObject({type: "Lamp", row, col, face: "+y", collisionLayer: -1})   // on the room's floor
+ *   addObject({type: "Label", row, col, face: "-z", collisionLayer: 2, metadata: {Label: "Reading Room"}})
  *
  * `face` is `-x`, `+x`, `-z` or `+z` for a wall, where `collisionLayer` is the height on it, or `+y` / `-y`
  * for the top / underside of the block on `collisionLayer`; below the lowest layer is the room's floor, above
- * the highest its ceiling. Pictures and doors go on walls only. A door ignores the layer and stands on the
+ * the highest its ceiling. Pictures, doors and labels go on walls only. A door ignores the layer and stands on the
  * floor unless given a `y`. Each goes up at the size the game adds it at (a lamp one layer tall; see
  * `resizeObject` for others). Metadata uses the game's key names; returns the object's id.
  */

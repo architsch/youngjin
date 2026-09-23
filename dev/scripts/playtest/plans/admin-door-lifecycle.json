@@ -60,11 +60,13 @@
     },
     {
       "type": "fill",
-      "selector": "#objectLabelForm input[type=text]",
+      "selector": "#labelTextInput",
       "text": "Attic"
     },
     {
-      "type": "dismissPopups"
+      "type": "uiClick",
+      "elementId": "changeDoorLabelButton",
+      "settleMs": 400
     },
     {
       "type": "expectSelection",

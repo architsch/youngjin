@@ -1,20 +1,17 @@
-import * as THREE from "three";
 import GameObject from "./gameObject";
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 import InstancedMeshGraphics from "../components/instancedMeshGraphics";
 import InstancedMeshComposer from "../components/instancedMeshComposer";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import InstancedTexturePackMaterialParams from "../../../shared/graphics/material/types/instancedTexturePackMaterialParams";
-import InstancedMeshCompositionPart from "../../../shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
 import CanvasObjectTypeConfig, { CANVAS_TEXTURE_CELL_SIZE,
     CANVAS_TEXTURE_SIZE } from "../../../shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
 import ObjectCategoryConfigMap from "../../../shared/object/maps/objectCategoryConfigMap";
-import CanvasCompositionConstants, { CANVAS_BOARD_RELIEF,
-    CANVAS_GEOMETRY_ID, CANVAS_PICTURE_LIFT } from "../../../shared/graphics/mesh/composition/types/compositionConstants/canvasCompositionConstants";
-import CanvasCompositionParams from "../../../shared/graphics/mesh/composition/types/compositionParams/canvasCompositionParams";
-import { BACKWARD_DIR, INSTANCED_WOOD_MATERIAL_ID, ZERO_VEC3 } from "../../../shared/system/sharedConstants";
+import FramedPanelCompositionConstants, { FRAMED_PANEL_BOARD_RELIEF, FRAMED_PANEL_CONTENT_LIFT,
+    FRAMED_PANEL_GEOMETRY_ID } from "../../../shared/graphics/mesh/composition/types/compositionConstants/framedPanelCompositionConstants";
+import FramedPanelCompositionParams from "../../../shared/graphics/mesh/composition/types/compositionParams/framedPanelCompositionParams";
+import { BACKWARD_DIR, ZERO_VEC3 } from "../../../shared/system/sharedConstants";
 import Vec3 from "../../../shared/math/types/vec3";
-import Vector3DUtil from "../../../shared/math/util/vector3DUtil";
 import ObjectScaleUtil from "../../../shared/object/util/objectScaleUtil";
 import App from "../../app";
 import ImageMapUtil from "../../../shared/graphics/image/util/imageMapUtil";
@@ -23,7 +20,7 @@ import { graphicsContextRestoredObservable } from "../../system/clientObservable
 
 // The frame is composed from the canvas's wood inputs (see CanvasCompositionCodec); the picture is drawn
 // here, into this canvas's cell of the room's shared render target, on the board inside its band (or where
-// the board would be when there is no frame; see CanvasCompositionConstants).
+// the board would be when there is no frame; see FramedPanelCompositionConstants).
 export default class CanvasGameObject extends GameObject
 {
     instancedMeshGraphics: InstancedMeshGraphics;
@@ -35,11 +32,8 @@ export default class CanvasGameObject extends GameObject
 
     private instanceId: number = -1;
 
-    // What the picture was last placed by. Parts are replaced whenever the frame is recomposed (e.g. a
-    // customization edit), and the world matrix changes with movement.
-    private placedBoard: InstancedMeshCompositionPart | undefined;
+    // The shape the image was last fitted to (see loadImageImpl).
     private placedPictureSize: Vec3 = {...ZERO_VEC3};
-    private bakedWorldMatrix: THREE.Matrix4 = new THREE.Matrix4();
 
     constructor(params: AddObjectSignal)
     {
@@ -56,7 +50,7 @@ export default class CanvasGameObject extends GameObject
         if (CanvasGameObject.materialParams == undefined)
         {
             // Polygon offset beyond the board's (wood draws at -1; see the "InstancedWood" material), on top
-            // of the picture's real gap in front of it (see CANVAS_PICTURE_LIFT).
+            // of the picture's real gap in front of it (see FRAMED_PANEL_CONTENT_LIFT).
             CanvasGameObject.materialParams = new InstancedTexturePackMaterialParams("canvas_texture_pack",
                 CANVAS_TEXTURE_SIZE, CANVAS_TEXTURE_SIZE, CANVAS_TEXTURE_CELL_SIZE, CANVAS_TEXTURE_CELL_SIZE,
                 "dynamicEmpty", -2, -2);
@@ -64,7 +58,7 @@ export default class CanvasGameObject extends GameObject
             // (see TextureUtil).
             CanvasGameObject.materialParams.alphaCutout = true;
             CanvasGameObject.instancedMeshId = MeshDataUtil.getInstancedMeshId(
-                CANVAS_GEOMETRY_ID, CanvasGameObject.materialParams.getMaterialId());
+                FRAMED_PANEL_GEOMETRY_ID, CanvasGameObject.materialParams.getMaterialId());
         }
     }
 
@@ -75,8 +69,11 @@ export default class CanvasGameObject extends GameObject
         await super.onSpawn();
 
         CanvasGameObject.spawnedCanvasGameObjects.set(this.params.objectId, this);
+        // A frame edit moves the picture without moving the canvas.
+        this.instancedMeshComposer.partsRebuiltObservable.addListener("canvasGameObject",
+            () => this.placePicture());
 
-        await this.instancedMeshGraphics.loadInstancedMesh(CANVAS_GEOMETRY_ID,
+        await this.instancedMeshGraphics.loadInstancedMesh(FRAMED_PANEL_GEOMETRY_ID,
             CanvasGameObject.materialParams,
             ObjectCategoryConfigMap.getMaxCountPerRoom(CanvasObjectTypeConfig.category), true);
 
@@ -86,12 +83,13 @@ export default class CanvasGameObject extends GameObject
             return;
 
         this.instanceId = rentedInstanceId;
-        this.updateMeshInstanceTransform();
+        this.placePicture();
         this.loadImage();
     }
 
     async onDespawn(): Promise<void>
     {
+        this.instancedMeshComposer.partsRebuiltObservable.removeListener("canvasGameObject");
         await super.onDespawn();
         // -1 if it never got an instance.
         if (this.instanceId !== -1)
@@ -103,10 +101,10 @@ export default class CanvasGameObject extends GameObject
         CanvasGameObject.spawnedCanvasGameObjects.delete(this.params.objectId);
     }
 
-    update(deltaTime: number): void
+    onTransformChanged(resized: boolean): void
     {
-        if (this.instanceId !== -1 && !this.placementIsInSync())
-            this.updateMeshInstanceTransform();
+        super.onTransformChanged(resized);
+        this.placePicture();
     }
 
     onSetMetadata(key: ObjectMetadataKey, value: string)
@@ -159,38 +157,25 @@ export default class CanvasGameObject extends GameObject
         }
     }
 
-    private placementIsInSync(): boolean
-    {
-        if (this.instancedMeshComposer.getPartWithMaterial(INSTANCED_WOOD_MATERIAL_ID) !== this.placedBoard)
-            return false;
-        // A frameless canvas has no board part, so identity alone would never notice a resize or a margin.
-        if (!Vector3DUtil.equal(this.getPictureSize(), this.placedPictureSize))
-            return false;
-        this.obj.updateMatrixWorld(); // Recurses to visualObj, so the compared matrix is current.
-        return this.visualObj.matrixWorld.equals(this.bakedWorldMatrix);
-    }
-
     private getPictureSize(): Vec3
     {
-        return CanvasCompositionConstants.getPictureSize(
-            this.instancedMeshComposer.getParams() as CanvasCompositionParams,
+        return FramedPanelCompositionConstants.getInnerSize(
+            this.instancedMeshComposer.getParams() as FramedPanelCompositionParams,
             ObjectScaleUtil.getObjectSize(this.params.objectTypeIndex, this.params.transform.scale));
     }
 
     // Placed on the board's inner surface, inside its band (as a door's label sits inside its plate's), or
-    // where the board would be when there is none.
-    private updateMeshInstanceTransform()
+    // where the board would be when there is none. Called on movement, resize and frame edits.
+    private placePicture()
     {
+        if (this.instanceId === -1)
+            return;
         const previousSize = this.placedPictureSize;
-        this.placedBoard = this.instancedMeshComposer.getPartWithMaterial(INSTANCED_WOOD_MATERIAL_ID);
         this.placedPictureSize = this.getPictureSize();
         this.instancedMeshGraphics.updateInstanceTransform(
             CanvasGameObject.instancedMeshId, this.instanceId,
-            0, 0, CANVAS_BOARD_RELIEF + CANVAS_PICTURE_LIFT, BACKWARD_DIR.x, BACKWARD_DIR.y, BACKWARD_DIR.z,
+            0, 0, FRAMED_PANEL_BOARD_RELIEF + FRAMED_PANEL_CONTENT_LIFT, BACKWARD_DIR.x, BACKWARD_DIR.y, BACKWARD_DIR.z,
             this.placedPictureSize.x, this.placedPictureSize.y, this.placedPictureSize.z);
-
-        this.obj.updateMatrixWorld();
-        this.bakedWorldMatrix.copy(this.visualObj.matrixWorld);
 
         // The image is fitted to the picture's shape (see loadImageImpl), so a new shape needs it redrawn.
         // The first placement compares equal (against a zero size); onSpawn draws after it.

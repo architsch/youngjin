@@ -2,6 +2,7 @@ import { InstancedMeshCompositionParams } from "../../../graphics/mesh/compositi
 import { InstancedMeshCompositionCodecType } from "../../../graphics/mesh/composition/types/instancedMeshCompositionCodecType";
 import InstancedMeshCompositionPart from "../../../graphics/mesh/composition/types/instancedMeshCompositionPart";
 import { ColliderConfig } from "../../../physics/types/colliderConfig";
+import Transform from "../../../math/types/transform";
 import Room from "../../../room/types/room";
 import User from "../../../user/types/user";
 import { ObjectCategory } from "../objectCategory";
@@ -51,11 +52,12 @@ export default interface ObjectTypeConfig
                 checkLineOfSight: boolean,
                 prependUserNameToMessage: boolean,
             },
-            // In-world label from the object's "Label" metadata: patch position and size in local space,
-            // and a default color (a "LabelColor" metadata value wins).
+            // In-world label from the object's "Label" metadata, and a default ink (a "LabelColor" metadata
+            // value wins). localTransform is the patch the text is drawn on, relative to the object's
+            // transform: the object's scale multiplies it, so the patch grows with a resize. An object
+            // that frames its text may narrow it further (see LabelText.setContentSize).
             labelText?: {
-                localOffset: {x: number, y: number, z: number},
-                size: {x: number, y: number},
+                localTransform: Transform,
                 defaultFontColorHex: string,
             },
             playerProximityDetector?: {
@@ -82,7 +84,7 @@ export default interface ObjectTypeConfig
         },
     },
     // Type-specific semantics (metadata reading, construction), accessed via the type's own config module
-    // (e.g. `DoorObjectTypeConfig.util.getLabel(obj)`); `satisfies ObjectTypeConfig` keeps signatures typed.
+    // (e.g. `DoorObjectTypeConfig.util.getDestinationRoomId(obj)`); `satisfies ObjectTypeConfig` keeps signatures typed.
     util?: {[methodName: string]: (...args: any[]) => any},
 }
 

@@ -46,6 +46,8 @@ A map of what each suite in `tests/integration/scenarios/` covers. The test name
 | `line-of-sight.test.ts` | stored coordinates on block boundaries, door visibility, seeing past room geometry, seeing in from outside the room |
 | `composition.test.ts` | player, door and indexed mesh composition codecs |
 | `canvas-frame.test.ts` | the Default codec's wood parts, the canvas codec (round trip, presets, no frame, margin and margins stored before it existed, untrusted input, resizing), canvas defaults and permissions, the bitmap-frame migration, the per-type pre-encoded table (every indexed type present), the thumbnail atlas layout |
+| `label.test.ts` | label permissions (the doors' rule, the metadata whitelist, the cap), the lettering settings (round trip, untrusted input, clamping, defaults), text length in characters, the plaque codec, and a room at every cap holding the longest text fitting the encoding buffer |
+| `label-atlas.test.ts` | atlas allocation (no shared or out-of-bounds cells under any sequence, reuse, a room's worth of labels always fitting once packed largest first) and lettering layout (auto size fits, even lines, fixed size breaking long words and leaving overflow below) |
 | `instanced-mesh-capacity.test.ts` | the generated mesh capacity table matching current code, and a room full of any decodable appearance of every type fitting it |
 | `lighting.test.ts` | light block propagation: occlusion, falloff, direction, accumulation, smoothing, nearness, never darkening, read-back |
 | `room-prefs.test.ts` | room prefs encoding, defaults, head-lamp power, light palettes, sky color |

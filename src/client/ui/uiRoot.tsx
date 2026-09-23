@@ -40,7 +40,6 @@ import GameModeUtil from "../system/util/gameModeUtil";
 import FTUEUtil from "./util/ftueUtil";
 import { FTUEElementCodeEnumMap } from "./types/ftueElementCode";
 import HubRoomWelcomeForm from "./components/form/hubRoomWelcomeForm";
-import CustomizeObjectLabelForm from "./components/form/customizeObjectLabelForm";
 import DoorSettingsForm from "./components/form/doorSettingsForm";
 import CustomizeRoomPanel from "./components/panel/customizeRoomPanel";
 
@@ -183,14 +182,6 @@ export default function UIRoot({ env, user }: UIRootProps)
                         initialDestinationDoorLabel={state.params.initialDestinationDoorLabel}
                         onChooseRoom={state.params.onChooseRoom}
                         onSetDoorLabel={state.params.onSetDoorLabel}
-                    />
-                </Popup>;
-                case "objectLabel": return <Popup key={i} title="Label" showCloseButton={true}>
-                    <CustomizeObjectLabelForm
-                        initialText={state.params.initialText}
-                        initialColorIndex={state.params.initialColorIndex}
-                        onSetText={state.params.onSetText}
-                        onSetColorIndex={state.params.onSetColorIndex}
                     />
                 </Popup>;
                 case "doorSettings": return <Popup key={i} title="Settings" showCloseButton={true}>

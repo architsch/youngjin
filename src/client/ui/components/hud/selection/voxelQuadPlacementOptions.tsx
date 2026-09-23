@@ -6,6 +6,7 @@ import AddBlockIcon from "../../../svg/icons/addBlockIcon";
 import AddCanvasIcon from "../../../svg/icons/addCanvasIcon";
 import AddDoorIcon from "../../../svg/icons/addDoorIcon";
 import AddLampIcon from "../../../svg/icons/addLampIcon";
+import AddLabelIcon from "../../../svg/icons/addLabelIcon";
 import App from "../../../../app";
 import SocketsClient from "../../../../networking/client/socketsClient";
 import ObjectTypeConfigMap from "../../../../../shared/object/maps/objectTypeConfigMap";
@@ -45,6 +46,10 @@ import SelectionToolRow from "./selectionToolRow";
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
+const labelTypeIndex = ObjectTypeConfigMap.getIndexByType("Label");
+
+// What a new label says, so it shows (and can be clicked) before anything is written on it.
+const NEW_LABEL_TEXT = "Label";
 
 // Feature flags whose toggling changes whether this menu's buttons are enabled.
 const placementFeatureFlags = [
@@ -69,12 +74,14 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
 
     const canAddCanvas = getPlaceableAttachedObjectTransform(props.selection, canvasTypeIndex) !== null;
 
-    // Doors: admin only, in rooms whose doors are theirs to lay (see RoomValidationUtil).
+    // Doors and labels: admin only, in rooms whose doors are theirs to lay (see RoomValidationUtil).
     const room = App.getCurrentRoom();
     const canManageDoors = room != undefined &&
         RoomValidationUtil.canUserManageDoors(App.getUser(), room);
     const canAddDoor = canManageDoors &&
         getPlaceableAttachedObjectTransform(props.selection, doorTypeIndex) !== null;
+    const canAddLabel = canManageDoors &&
+        getPlaceableAttachedObjectTransform(props.selection, labelTypeIndex) !== null;
 
     const canAddLamp = getPlaceableAttachedObjectTransform(props.selection, lampTypeIndex) !== null;
 
@@ -116,6 +123,15 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
                 });
             }}
         />
+        {canManageDoors && <IconButton id="addLabelButton" icon={<AddLabelIcon/>} size="md"
+            disabled={!canAddLabel}
+            onClick={() => {
+                // The plaque is derived from the new label's id (see LabelObjectTypeConfig).
+                tryAddObjectFromQuad(props.selection, labelTypeIndex, {
+                    [ObjectMetadataKeyEnumMap.Label]: new EncodableByteString(NEW_LABEL_TEXT),
+                });
+            }}
+        />}
     </SelectionToolRow>;
 }
 

@@ -18,4 +18,6 @@ export default abstract class GameObjectComponent
     async onDespawn?(): Promise<void>;
     update?(deltaTime: number): void;
     onSetMetadata?(key: ObjectMetadataKey, value: string): void;
+    // After the object moved, turned or was resized (see GameObject.notifyTransformChanged).
+    onTransformChanged?(resized: boolean): void;
 }

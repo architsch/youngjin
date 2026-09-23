@@ -1,4 +1,3 @@
-import * as THREE from "three";
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 import { INSTANCE_COLORED_MATERIAL_IDS, INSTANCED_WOOD_MATERIAL_ID } from "../../../shared/system/sharedConstants";
 import InstancedMeshComposition from "./helpers/mesh/instancedMeshComposition";
@@ -10,8 +9,7 @@ import InstancedMeshGraphics from "./instancedMeshGraphics";
 import MaterialParamsMap from "../../../shared/graphics/material/maps/materialParamsMap";
 import InstancedMeshIdMap from "../../../shared/graphics/mesh/maps/instancedMeshIdMap";
 import InstancedMeshCapacityMap from "../../../shared/graphics/mesh/composition/maps/instancedMeshCapacityMap";
-import ObjectScaleUtil from "../../../shared/object/util/objectScaleUtil";
-import Vector3DUtil from "../../../shared/math/util/vector3DUtil";
+import Observable from "../../../shared/system/types/observable";
 
 function getPartMeshId(part: InstancedMeshCompositionPart): string
 {
@@ -30,11 +28,11 @@ export default class InstancedMeshComposer extends GameObjectComponent
     // the parts, re-baked only on movement.
     private updateState: "awaitingSpawn" | "refreshPending" | "meshesLoading" | "upToDate" = "awaitingSpawn";
 
-    // Instance matrices bake the world transform, so movement also requires a refresh. Stationary
-    // frames are skipped by comparing against this.
-    private bakedWorldMatrix: THREE.Matrix4 = new THREE.Matrix4();
-
     private hidden: boolean = false;
+
+    // Notified after every decode, for owners that place their own drawing by the composition (e.g. a
+    // canvas's picture inside its frame). Per object, so a listener hears only its own composer.
+    readonly partsRebuiltObservable = new Observable<InstancedMeshComposer>(this);
 
     constructor(gameObject: GameObject, componentConfig: {[key: string]: any})
     {
@@ -50,8 +48,7 @@ export default class InstancedMeshComposer extends GameObjectComponent
 
     async onSpawn(): Promise<void>
     {
-        this.instancedMeshComposition.loadFromMetadata(this.gameObject);
-        this.updateState = "refreshPending";
+        this.reloadComposition();
     }
 
     async onDespawn(): Promise<void>
@@ -76,29 +73,31 @@ export default class InstancedMeshComposer extends GameObjectComponent
     {
         this.instancedMeshComposition.loadFromMetadata(this.gameObject);
         this.updateState = "refreshPending";
+        this.partsRebuiltObservable.notify();
+    }
+
+    // A resize is a re-decode, not a re-bake: the codec lays the parts out against the size, so new parts
+    // have to be built before any of them can be placed. Built from the live params, so an edit still
+    // waiting to be saved survives it. Before spawn there is nothing to follow; onSpawn reads both.
+    onTransformChanged(resized: boolean): void
+    {
+        if (this.updateState == "awaitingSpawn")
+            return;
+        if (resized)
+            this.rebuildParts();
+        else if (this.updateState == "upToDate") // A pending refresh or load bakes the latest matrix anyway.
+            this.updateState = "refreshPending";
     }
 
     update(deltaTime: number)
     {
-        switch (this.updateState)
-        {
-            case "refreshPending": // Composition has been modified, so it needs a refresh.
-                if (this.allPartMeshesAreLoaded())
-                    this.refreshInstancedMeshes(); // Upon termination, this function call sets "updateState" to "upToDate".
-                else
-                    this.loadInstancedMeshes(); // Upon start, this function call sets "updateState" to "meshesLoading".
-                break;
-            case "upToDate":
-                // A resize is a re-decode, not a re-bake: the codec lays the parts out against the
-                // size, so new parts have to be built before any of them can be placed. Built from the
-                // live params, so an edit still waiting to be saved survives it.
-                if (!this.objectSizeIsInSync())
-                    this.rebuildParts();
-                else if (!this.transformIsInSync())
-                    this.refreshInstancedMeshes();
-                break;
-            // Otherwise (i.e. "meshesLoading" or "awaitingSpawn"), there is nothing to draw yet so we must skip this 'update' frame.
-        }
+        // "meshesLoading", "awaitingSpawn" and "upToDate" have nothing to do this frame.
+        if (this.updateState != "refreshPending") // Composition has been modified, or the object moved.
+            return;
+        if (this.allPartMeshesAreLoaded())
+            this.refreshInstancedMeshes(); // Upon termination, this function call sets "updateState" to "upToDate".
+        else
+            this.loadInstancedMeshes(); // Upon start, this function call sets "updateState" to "meshesLoading".
     }
 
     setHidden(hidden: boolean)
@@ -133,6 +132,7 @@ export default class InstancedMeshComposer extends GameObjectComponent
     {
         this.instancedMeshComposition.decodeParts(encodedParams, this.gameObject);
         this.updateState = "refreshPending";
+        this.partsRebuiltObservable.notify();
     }
     getParams(): InstancedMeshCompositionParams
     {
@@ -165,22 +165,6 @@ export default class InstancedMeshComposer extends GameObjectComponent
                 return false;
         }
         return true;
-    }
-
-    // Whether visualObj hasn't moved (or bounced) since the last bake.
-    private transformIsInSync(): boolean
-    {
-        this.gameObject.obj.updateMatrixWorld(); // Recurses to visualObj, so the compared matrix is current.
-        return this.gameObject.visualObj.matrixWorld.equals(this.bakedWorldMatrix);
-    }
-
-    // Whether the object is still the size its parts were built for. Scale lives outside the three.js
-    // transform, so the matrix comparison above can't see a resize.
-    private objectSizeIsInSync(): boolean
-    {
-        const size = ObjectScaleUtil.getObjectSize(
-            this.gameObject.params.objectTypeIndex, this.gameObject.params.transform.scale);
-        return Vector3DUtil.equal(size, this.instancedMeshComposition.objectSize);
     }
 
     private async loadInstancedMeshes()
@@ -297,10 +281,6 @@ export default class InstancedMeshComposer extends GameObjectComponent
             if (instanceIds.length > numInstancesInUse)
                 instanceIds.length = numInstancesInUse;
         }
-
-        // updateMatrixWorld covers the zero-part case, where no bake refreshed it.
-        this.gameObject.obj.updateMatrixWorld();
-        this.bakedWorldMatrix.copy(this.gameObject.visualObj.matrixWorld);
 
         this.updateState = "upToDate";
     }

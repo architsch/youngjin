@@ -34,7 +34,7 @@ The bare `:4321/...` shorthand does not work under zsh. Ops share their names wi
 |---|---|
 | `stage` | four walls around a floor rectangle; returns each wall's cells and its inward face |
 | `addBlocks` / `removeBlocks` | a box of blocks, or a doorway cut through one already standing |
-| `addObject` / `removeObject` | a canvas, a door or a lamp on a cell's face (walls, or a block's top or underside), at the size the game adds it at, by the game's own metadata keys |
+| `addObject` / `removeObject` | a canvas, a door, a lamp or a label on a cell's face (walls, or a block's top or underside), at the size the game adds it at, by the game's own metadata keys |
 | `resizeObject` | a standing object at another size, in multiples of its type's step; the placement rule still applies, and the size it ended up with is returned |
 | `restrictedZones` / `texturePack` / `roomLighting` | room-level state; each reports when called with nothing |
 | `palettes` / `pictures` / `doorStyles` / `canvasFrameStyles` | the values to build out of, as the game uses them |

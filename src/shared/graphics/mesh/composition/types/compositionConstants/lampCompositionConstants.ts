@@ -1,22 +1,11 @@
-import ColorUtil from "../../../../../math/util/colorUtil";
-import LampCompositionParams from "../compositionParams/lampCompositionParams";
+import FramedPanelPreset from "../compositionParams/framedPanelPreset";
+import FramedPanelCompositionConstants from "./framedPanelCompositionConstants";
 
-// The single lamp design: a glowing square, optionally inside a moulded band, drawn a margin inside the
-// footprint (see MarginCompositionConstants). The footprint (and so what the lamp claims of its face)
-// doesn't change with the margin, and neither does the band, which the wood material measures in world
-// units.
-
-export const LAMP_GEOMETRY_ID = "Square";
-
-// The lamp sits just proud of its face, and the glow just proud of the band around it (as a canvas's
-// picture sits in front of its board).
-export const LAMP_BOARD_RELIEF = 0.01;
-export const LAMP_GLOW_LIFT = 0.005;
-
+// A lamp is a framed panel whose board frames a glow (see FramedPanelCompositionConstants). The footprint
+// (and so what the lamp claims of its face) doesn't change with the margin.
 const LampCompositionConstants = {
-    // Coordinated finishes (snapped to the "Timber" palette so they round-trip), balanced as the door and
-    // canvas ones are. Every new lamp starts as the first: a bare glow over its whole footprint, keeping
-    // the second's finish for when a frame is turned on.
+    // Coordinated finishes, balanced as the door and canvas ones are. Every new lamp starts as the first:
+    // a bare glow over its whole footprint, keeping the second's finish for when a frame is turned on.
     presets: [
         preset("#c9a227", 0.06, true, false, 0),     // bare glow
         preset("#c9a227", 0.06, true, true, 0),      // brass rim
@@ -27,15 +16,14 @@ const LampCompositionConstants = {
         preset("#74856b", 0.06, false, true, 0.15),  // painted sage
         preset("#a98a3f", 0.08, true, true, 0.1),    // old gilt
         preset("#647684", 0.04, true, true, 0.2),    // painted slate blue
-    ] as LampCompositionParams[],
+    ] as FramedPanelPreset[],
 };
 
 function preset(frame: string, mouldingThickness: number, mouldingIsConvex: boolean, framed: boolean,
-    margin: number): LampCompositionParams
+    margin: number): FramedPanelPreset
 {
-    const snapped = ColorUtil.paletteIndexToRGB("Timber",
-        ColorUtil.rgbToPaletteIndex("Timber", ColorUtil.hexToRGB(frame)));
-    return {colors: {frame: snapped}, mouldingThickness, mouldingIsConvex, framed, margin};
+    return {colors: {frame: FramedPanelCompositionConstants.snapColor(frame)}, mouldingThickness,
+        mouldingIsConvex, framed, margin};
 }
 
 export default LampCompositionConstants;

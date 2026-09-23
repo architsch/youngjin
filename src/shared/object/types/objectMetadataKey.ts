@@ -18,4 +18,7 @@ export const ObjectMetadataKeyEnumMap: Record<string, number> =
     // Lamp color and strength as two quantized characters (see LampObjectTypeConfig), always read and
     // written together.
     LightProperties: 9,
+    // Label lettering: whether its size fits the text to the patch, and the size used when it doesn't (see
+    // LabelTextUtil).
+    LabelFont: 10,
 }

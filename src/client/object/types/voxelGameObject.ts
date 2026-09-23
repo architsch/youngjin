@@ -111,9 +111,10 @@ export default class VoxelGameObject extends GameObject
             console.log(String(voxelQuadChange));
     }
 
-    // Re-bakes quads to follow visualObj's cosmetic transform.
-    onVisualTransformChanged(): void
+    // Re-bakes quads to follow visualObj's cosmetic transform (the grid itself never moves).
+    onTransformChanged(resized: boolean): void
     {
+        super.onTransformChanged(resized);
         this.refreshAllQuads();
     }
 
