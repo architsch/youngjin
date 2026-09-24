@@ -4,7 +4,7 @@ Reference: @src/client/object/components/playerController.ts , @src/client/objec
 
 ![Player Control Scheme](figures/player_control.jpg)
 
-Only the user's own player has a `PlayerController`. It reads input, steers the player's `Rigidbody`, and drives `PlayerCamera`. Input helpers update before the camera each frame.
+Only the user's own player has a `PlayerController`. It reads input, steers the player's `Rigidbody`, and drives `PlayerCamera`. The camera updates in the components' late pass, after this frame's input and physics.
 
 ## Input
 - `PlayerPointerInput` arbitrates canvas pointer gestures:
@@ -30,7 +30,8 @@ The user's own body is shown only in orbit mode when the camera is not inside it
 ## PlayerCamera
 The camera is parented to the player object. Each frame, the active pose helper supplies a target pose in the player's frame and the camera eases toward it, so mode and target changes glide rather than snap.
 
-- **`FirstPersonCameraPose`**: pitch is the only freedom. It tilts down according to how far the visible room ahead drops below the player's standing level (`ClientVoxelQueryUtil`). Open space overhead is ignored, so storeys behave the same as the ground floor.
+- **`FirstPersonCameraPose`**: pitch is the only freedom. It tilts down according to how far the visible room ahead drops below the player's standing level (`ClientVoxelQueryUtil`). Open space overhead is ignored, so storeys behave the same as the ground floor. While falling (nothing solid under the feet within a gap deeper than a stair, probed through the physics colliders), it looks fully down instead, since the drop ahead shrinks on the way down and would lift the gaze. After landing, the gaze rises back from wherever the camera got to at a slower rate than it looks down; only rising is slowed, so a drop ahead can still pull it down straight away.
+- **Trailing physics**: in first person, the part of each move that physics made rather than the steering (a step climbed, a drop, a push; reported by `Rigidbody`) is trailed on a critically damped spring, outside the pose easing. Steering is followed exactly, so walking never lags, and so is a move held back by a wall or a crowd, so the camera never goes where the body couldn't.
 - **`OrbitCameraPose`**:
   - The drag maps 1:1 to orbit angles, with the polar angle clamped away from the poles. The aim point sits slightly above the target's center, by a share of its height.
   - The framing distance scales with the target's size, and a selection can require a minimum distance (a block or wall object is framed with its surroundings). Zoom is a multiple of the framing distance, published logarithmically through `orbitCameraZoomObservable` for the zoom slider, whose middle is the framing distance. The range covers edit mode's opening reach (see [game_mode.md](../gameplay/game_mode.md)), so an orbit can start from there without moving the camera.

@@ -124,7 +124,18 @@ const PhysicsColliderStateUtil =
             }
         }
         return set;
-    }
+    },
+    // Whether anything that blocks movement (voxel blocks, the room's boundary, solid objects) overlaps
+    // the box.
+    boxOverlapsHardCollider(physicsRoom: PhysicsRoom, box: AABB3): boolean
+    {
+        for (const overlap of PhysicsColliderStateUtil.findOverlappingColliderStates(physicsRoom, box))
+        {
+            if (overlap.colliderConfig.applyHardCollisionToOthers)
+                return true;
+        }
+        return false;
+    },
 }
 
 // Laid on its face (see Geometry3DUtil.getAxisFacingBasis). The box is slightly inset on the face's own

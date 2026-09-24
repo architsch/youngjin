@@ -7,7 +7,7 @@ import PhysicsRoom from "../types/physicsRoom";
 import PhysicsColliderStateUtil from "./physicsColliderStateUtil";
 import ObjectTransformUpdateResult from "../../object/types/objectTransformUpdateResult";
 import ObjectTransform from "../../object/types/objectTransform";
-import { GRAVITY_SPEED, SOFT_COLLISION_PUSH_SPEED_LIMIT } from "../../system/sharedConstants";
+import { CLIMB_SPEED, GRAVITY_SPEED, SOFT_COLLISION_PUSH_SPEED_LIMIT } from "../../system/sharedConstants";
 import { ColliderState } from "../types/colliderState";
 import NumUtil from "../../math/util/numUtil";
 
@@ -111,7 +111,7 @@ const PhysicsCollisionUtil =
         });
 
         if (climbing)
-            velocity.y = Math.max(GRAVITY_SPEED, velocity.y);
+            velocity.y = Math.max(CLIMB_SPEED, velocity.y);
         return velocity;
     },
 }

@@ -17,6 +17,8 @@ export default abstract class GameObjectComponent
     async onSpawn?(): Promise<void>;
     async onDespawn?(): Promise<void>;
     update?(deltaTime: number): void;
+    // After every object's update this frame, e.g. to follow where physics left the object.
+    lateUpdate?(deltaTime: number): void;
     onSetMetadata?(key: ObjectMetadataKey, value: string): void;
     // After the object moved, turned or was resized (see GameObject.notifyTransformChanged).
     onTransformChanged?(resized: boolean): void;

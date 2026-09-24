@@ -9,14 +9,21 @@ import OrbitCameraPose from "./orbitCameraPose";
 import OrbitOcclusionHider from "./orbitOcclusionHider";
 import PlayerPointerInput from "./playerPointerInput";
 import FreeCameraPose from "./freeCameraPose";
+import Vec3 from "../../../../../shared/math/types/vec3";
 
 const viewReferenceTemp = new THREE.Vector3();
 const roomLightTemp = new THREE.Color();
+const vectorTemp = new THREE.Vector3();
+const quaternionTemp = new THREE.Quaternion();
 
 // How far in front of the camera the head light and the fog may be measured from (see
 // GraphicsManager.setViewReferenceOffset). Past it, an orbit lights and fogs the room the way it
 // looks from beside its subject, rather than from wherever the camera was pulled back to.
 const maxViewReferenceDistance = 8;
+
+// Stiffness of the spring the first-person camera trails the physics' moves on (see updateTrail).
+// The physics' speed caps keep the trail within about a block.
+const trailRate = 12;
 
 // Parents the camera to the player and eases it toward the active mode's pose (FirstPersonCameraPose,
 // OrbitCameraPose, FreeCameraPose), so mode changes glide.
@@ -41,6 +48,12 @@ export default class PlayerCamera
     // Eased so the head light doesn't flicker when walking under a lamp.
     private roomLightNearCamera = new THREE.Color(0, 0, 0);
 
+    // How far the camera is left behind its pose by moves the player didn't steer: in world terms, and
+    // in the player's frame as last applied to the camera.
+    private trailOffset = new THREE.Vector3();
+    private trailVelocity = new THREE.Vector3();
+    private appliedTrailOffset = new THREE.Vector3();
+
     onSpawn(controller: PlayerController, pointerInput: PlayerPointerInput): void
     {
         this.pointerInput = pointerInput;
@@ -62,9 +75,13 @@ export default class PlayerCamera
         GraphicsManager.setPointLightSurroundings(this.roomLightNearCamera);
     }
 
-    update(deltaTime: number, controller: PlayerController): void
+    // Runs after physics has moved the player this frame (see PlayerController.lateUpdate).
+    update(deltaTime: number, controller: PlayerController, imposedDisplacement: Vec3): void
     {
         const mode = cameraModeObservable.peek();
+
+        // The poses and the easing work without the trail; it is laid back on after them.
+        this.camera!.position.sub(this.appliedTrailOffset);
 
         // Requests are consumed here, after framing, so they aren't overwritten. Always cleared so a
         // stale request can't apply to a later orbit.
@@ -108,7 +125,7 @@ export default class PlayerCamera
                 this.occlusionHider.revealAll();
                 this.orbitTarget = undefined;
             }
-            interpRate = this.firstPersonPose.updatePose(controller, this.camera!,
+            interpRate = this.firstPersonPose.updatePose(deltaTime, controller, this.camera!,
                 this.positionInterpTarget, this.quaternionInterpTarget);
         }
         else if (mode.type == "free")
@@ -124,6 +141,11 @@ export default class PlayerCamera
         const t = Math.min(1, interpRate * deltaTime);
         this.camera!.position.lerp(this.positionInterpTarget, t);
         this.camera!.quaternion.slerp(this.quaternionInterpTarget, t);
+
+        this.updateTrail(deltaTime, imposedDisplacement, mode.type === "firstPerson");
+        controller.gameObject.obj.getWorldQuaternion(quaternionTemp).invert();
+        this.appliedTrailOffset.copy(this.trailOffset).applyQuaternion(quaternionTemp);
+        this.camera!.position.add(this.appliedTrailOffset);
 
         // Light and fog stand where a player looking at the same subject would, which is the camera
         // itself until it is pulled further back than maxViewReferenceDistance.
@@ -145,5 +167,22 @@ export default class PlayerCamera
         // The camera the sweep must see past is the eased one, so this follows the easing above.
         if (mode.type === "orbit")
             this.occlusionHider.update(deltaTime, this.camera!, mode.target);
+    }
+
+    // Physics moves the player in jolts (a step climbed, a drop, a push) that steering never makes.
+    // The camera is held against those and catches up on a critically damped spring, while steering
+    // is followed as is, so a staircase becomes a steady glide and walking never lags.
+    private updateTrail(deltaTime: number, imposedDisplacement: Vec3, trailPlayer: boolean): void
+    {
+        // The other modes place the camera in world terms, so a trail would displace it.
+        if (trailPlayer)
+            this.trailOffset.sub(vectorTemp.set(imposedDisplacement.x, imposedDisplacement.y, imposedDisplacement.z));
+
+        // Closed-form spring step toward zero, stable at any frame rate.
+        const decay = Math.exp(-trailRate * deltaTime);
+        const step = vectorTemp.copy(this.trailOffset).multiplyScalar(trailRate)
+            .add(this.trailVelocity).multiplyScalar(deltaTime);
+        this.trailOffset.add(step).multiplyScalar(decay);
+        this.trailVelocity.addScaledVector(step, -trailRate).multiplyScalar(decay);
     }
 }

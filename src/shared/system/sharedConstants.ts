@@ -59,7 +59,8 @@ export const HUB_ROOM_ID_KEYWORD = "hub";
 // Physics
 
 export const GRAVITY_SPEED = 6;
-export const SOFT_COLLISION_PUSH_SPEED_LIMIT = GRAVITY_SPEED * 2;
+export const CLIMB_SPEED = 3;
+export const SOFT_COLLISION_PUSH_SPEED_LIMIT = 6;
 
 // Inset of an attached object's hitbox on the axes of its face (see PhysicsColliderStateUtil), so
 // neighbours sharing a footprint edge never register as overlapping. Depth is not inset.

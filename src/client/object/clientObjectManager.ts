@@ -60,6 +60,12 @@ const ClientObjectManager =
                     components[name].update(deltaTime);
             }
         }
+        for (const id in updatableGameObjects)
+        {
+            const components = updatableGameObjects[id].components;
+            for (const name in components)
+                components[name].lateUpdate?.(deltaTime);
+        }
     },
     load: async (roomRuntimeMemory: RoomRuntimeMemory) =>
     {
@@ -144,11 +150,11 @@ const ClientObjectManager =
             if (object.params.objectTypeIndex === playerTypeIndex)
                 playerByUserID[object.params.sourceUserID] = object;
 
-            // Updatable if the GameObject itself overrides "update", or any component has an "update".
+            // Updatable if the GameObject itself overrides "update", or any component has an "update" or "lateUpdate".
             let updatable = object.update !== GameObject.prototype.update;
             for (const component of Object.values(object.components))
             {
-                if (component.update)
+                if (component.update || component.lateUpdate)
                     updatable = true;
             }
             if (updatable)

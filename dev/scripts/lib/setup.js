@@ -173,6 +173,14 @@ async function camera(page, view_, options = {})
 /** Where the free camera is now, for composing off the view it already has. */
 const cameraPose = (page) => callSandbox(page, "cameraPose");
 
+/** "firstPerson" to look through the player's eyes and walk (keys steer), or "free" to go back. */
+async function cameraMode(page, type, options = {})
+{
+    const result = await callSandbox(page, "cameraMode", type);
+    await sleep(options.settleMs === undefined ? SETTLE_MS : options.settleMs);
+    return result;
+}
+
 /**
  * Stands a box of blocks: a corner cell (`row`, `col`, `collisionLayer`) and a size (`rows`, `cols`,
  * `layers`, each defaulting to one), finished in `textureIndex` of the room's pack.
@@ -340,7 +348,7 @@ module.exports = {
     pose, standingSpots,
     place, face, faceDeg, vantage,
     look, view, swing, lookAt, clearLookAt,
-    sandboxActive, camera, cameraPose, addBlocks, removeBlocks, clearSandbox, roomLighting,
+    sandboxActive, camera, cameraPose, cameraMode, addBlocks, removeBlocks, clearSandbox, roomLighting,
     texturePack, palettes, pictures, doorStyles, canvasFrameStyles, addObject, resizeObject, removeObject,
     restrictedZones, stage,
     sleep,

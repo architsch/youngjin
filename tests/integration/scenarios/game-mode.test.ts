@@ -452,6 +452,9 @@ describe("the camera as edit mode opens", () => {
     // How near to and far from the framed block a step might ask the camera to be.
     const DISTANCE_RANGE = {min: 2.5, max: 6};
 
+    // The stand-in player is never moved by physics, so there is nothing for the camera to trail.
+    const NO_IMPOSED_DISPLACEMENT = {x: 0, y: 0, z: 0};
+
     /**
      * Opens edit mode on the boundary wall's face in front of a user standing at (x, z), letting the real
      * camera settle before and after, then asks for a distance range (if given) the way a step does once
@@ -470,7 +473,7 @@ describe("the camera as edit mode opens", () => {
         try
         {
             // A whole second eases the camera all the way to its pose.
-            playerCamera.update(1, controller);
+            playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT);
             const before = GraphicsManager.getCamera().getWorldPosition(new THREE.Vector3());
 
             const eyeLayer = COLLISION_LAYER_MIN + Math.floor(before.y / COLLISION_LAYER_HEIGHT);
@@ -480,11 +483,11 @@ describe("the camera as edit mode opens", () => {
             GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOnVoxelQuad(WALL_ROW, wallCol, quadIndex)));
             expect(voxelQuadSelectionObservable.peek()?.quadIndex).toBe(quadIndex);
 
-            playerCamera.update(1, controller);
+            playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT);
             if (distanceRange != undefined)
             {
                 orbitCameraDistanceRangeRequestObservable.set(distanceRange);
-                playerCamera.update(1, controller);
+                playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT);
             }
 
             const blockCenter = new THREE.Vector3(wallCol + 0.5,

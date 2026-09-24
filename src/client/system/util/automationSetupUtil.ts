@@ -505,6 +505,15 @@ const AutomationSetupUtil =
                     return AutomationSetupUtil.describeFreeCamera();
                 },
 
+                // Hands the view to the player's eyes ("firstPerson"), so a run can walk and steer, or back
+                // to the free camera ("free").
+                cameraMode: (type: "firstPerson" | "free") =>
+                {
+                    requireSandboxRoom("Switching the camera");
+                    cameraModeObservable.set({type});
+                    return cameraModeObservable.peek().type;
+                },
+
                 // Adds a box of blocks in one texture (corner cell + size). No permission validation.
                 addBlocks: (region: {row: number, col: number, collisionLayer: number,
                     rows?: number, cols?: number, layers?: number, textureIndex?: number}) =>

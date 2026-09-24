@@ -92,10 +92,8 @@ export default class PlayerController extends GameObjectComponent
         if (ongoingClientProcessExists())
             return;
 
-        // Inputs update before the camera, so that the camera reacts to this frame's drag.
         this.pointerInput.update(deltaTime, this);
         this.keyInput.update(deltaTime, this);
-        this.playerCamera.update(deltaTime, this);
         this.proxUpdater.update(deltaTime, this);
 
         if (!this.fullyEntered)
@@ -150,5 +148,15 @@ export default class PlayerController extends GameObjectComponent
         }
         this.dx = 0;
         this.dy = 0;
+    }
+
+    // The camera follows after this frame's input and physics, so it reacts to this frame's drag and
+    // sees where the player actually ended up.
+    lateUpdate(deltaTime: number): void
+    {
+        if (ongoingClientProcessExists())
+            return;
+
+        this.playerCamera.update(deltaTime, this, this.rigidbody!.getImposedDisplacement());
     }
 }

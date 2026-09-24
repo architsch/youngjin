@@ -5,7 +5,7 @@ A quick playtest against the local dev server, in a room built for the purpose i
 Reference: @dev/scripts/playtest/sandboxRunner.js , @dev/scripts/lib/setup.js , @dev/scripts/lib/interact.js , @src/client/system/util/automationSetupUtil.ts
 
 ## The sandbox room
-- A dev-only single-player room: bare floor under a ceiling, a free camera, and a player who does not walk. Edits stay on the client and nothing is stored (see [single_player_mode.md](../../networking/single_player_mode.md)).
+- A dev-only single-player room: bare floor under a ceiling, a free camera, and a player who walks only once `cameraMode("firstPerson")` hands the view to their eyes (movement keys then steer). Edits stay on the client and nothing is stored (see [single_player_mode.md](../../networking/single_player_mode.md)).
 - `?sandboxuser=<name>` opens it as a guest, `?sandboxadmin=<name>` as an admin. Each name is its own reusable account, dev mode only.
 - Its player, guest or admin, is its superuser and gets the door and label tools a hub's admin has (`RoomValidationUtil`). Room settings stay hidden, since the room is not stored — those need `--fresh-room` or the staging playtest.
 - Build calls refuse to run in any other room, so they can never fake evidence a real room would have refused.
@@ -39,6 +39,7 @@ The bare `:4321/...` shorthand does not work under zsh. Ops share their names wi
 | `restrictedZones` / `texturePack` / `roomLighting` | room-level state; each reports when called with nothing |
 | `palettes` / `pictures` / `doorStyles` / `canvasFrameStyles` | the values to build out of, as the game uses them |
 | `camera` / `cameraPose` | where the free camera stands and what it aims at, in world coordinates |
+| `cameraMode` | `"firstPerson"` to walk the player (e.g. to test movement or the view on stairs), `"free"` to go back |
 | `clearSandbox` | back to bare floor, between one test and the next |
 
 ## Traps
