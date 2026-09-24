@@ -7,6 +7,8 @@
 import { describe, it, expect } from "vitest";
 import fc from "fast-check";
 
+// SSG registers the part builders its capacities decode with (see ssg.ts).
+import "../../../src/shared/graphics/mesh/composition/instancedMeshCompositionBuilderMapDependencies";
 import InstancedMeshCapacityBuilder from "../../../src/server/ssg/builder/instancedMeshCapacityBuilder";
 import InstancedMeshCapacityMap from "../../../src/shared/graphics/mesh/composition/maps/instancedMeshCapacityMap";
 import PreEncodedCompositionStringMap from "../../../src/shared/graphics/mesh/composition/maps/preEncodedCompositionStringMap";

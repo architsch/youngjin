@@ -15,6 +15,9 @@ import Vec3 from "../../math/types/vec3";
 import { ObjectMetadataKeyEnumMap } from "../types/objectMetadataKey";
 import CompositionMetadataUtil from "../../graphics/mesh/composition/util/compositionMetadataUtil";
 import PreEncodedCompositionIndexMap from "../../graphics/mesh/composition/maps/preEncodedCompositionIndexMap";
+// Matching a finish to its nearest look decodes compositions, which needs the part builders registered.
+// The server registers them nowhere else.
+import "../../graphics/mesh/composition/instancedMeshCompositionBuilderMapDependencies";
 import FramedPanelCompositionParams from "../../graphics/mesh/composition/types/compositionParams/framedPanelCompositionParams";
 import DoorCompositionParams from "../../graphics/mesh/composition/types/compositionParams/doorCompositionParams";
 import { InstancedMeshCompositionParams } from "../../graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
