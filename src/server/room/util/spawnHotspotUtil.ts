@@ -24,9 +24,12 @@ const SpawnHotspotUtil =
         const doors = Object.values(room.objectById)
             .filter(obj => obj.objectTypeIndex === doorTypeIndex);
 
-        if (destinationDoorLabel.length > 0)
+        // Matched as read, so a plate's markup and line breaks don't change what it is called.
+        const destinationDoorName = LabelTextUtil.toName(destinationDoorLabel);
+        if (destinationDoorName.length > 0)
         {
-            const named = doors.filter(door => LabelTextUtil.getText(door) === destinationDoorLabel);
+            const named = doors.filter(door =>
+                LabelTextUtil.toName(LabelTextUtil.getText(door)) === destinationDoorName);
             if (named.length > 0)
                 return getTransformBehindDoor(pickOne(named));
         }

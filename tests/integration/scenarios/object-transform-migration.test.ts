@@ -12,6 +12,7 @@ import BufferState from "../../../src/shared/networking/types/bufferState";
 import { LAST_UNSCALED_OBJECT_GROUP_VERSION, writeLegacyObjectGroup } from "../helpers/legacyObjectGroup";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 import ObjectScaleUtil from "../../../src/shared/object/util/objectScaleUtil";
+import LabelTextUtil from "../../../src/shared/object/util/labelTextUtil";
 import CanvasObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import ObjectGroup from "../../../src/shared/object/types/objectGroup";
@@ -228,6 +229,37 @@ describe("object transform ranges and migration", () => {
         const unchanged = objectGroup.objectById["kept"].transform;
         expect(ObjectScaleUtil.sanitize(lampTypeIndex, unchanged.scale)).toEqual({x: 1, y: 1, z: 1});
         expect(unchanged.pos.y).toBeCloseTo(2.5, 3);
+    });
+
+    it("keeps a label's font size at the nearest one still on offer, and its Auto Size as it was", () => {
+        const LAST_STEPPED_LABEL_FONT_VERSION = 5;
+        const labelTypeIndex = ObjectTypeConfigMap.getIndexByType("Label");
+        // A flags character, then the size as a step of 8 pixels above 16.
+        const legacyFont = (autoSize: boolean, fontSize: number) =>
+            String.fromCharCode(33 + (autoSize ? 1 : 0), 33 + (fontSize - 16) / 8);
+        const label = (objectId: string, font: string | undefined) => new AddObjectSignal(ROOM_ID, "user-1",
+            "User One", labelTypeIndex, objectId,
+            new ObjectTransform({x: 10.5, y: 2.25, z: 4}, {x: 0, y: 0, z: 1}, {...UNIT_VEC3}),
+            (font == undefined) ? {} : {[ObjectMetadataKeyEnumMap.LabelFont]: new EncodableByteString(font)});
+        // 128's old step is the position of another size now, so it is kept only if converted.
+        const expected: {[objectId: string]: [string | undefined, {autoSize: boolean, fontSize: number}]} = {
+            "on-offer": [legacyFont(false, 128), {autoSize: false, fontSize: 128}],
+            "between": [legacyFont(false, 72), {autoSize: false, fontSize: 80}],
+            "largest": [legacyFont(true, 248), {autoSize: true, fontSize: 256}],
+            "flags-only": [legacyFont(false, 16).substring(0, 1), {autoSize: false, fontSize: 64}],
+            "unset": [undefined, {autoSize: true, fontSize: 64}],
+        };
+
+        const blob = buildRoomBlob(encodeCurrentVoxelGrid(),
+            Object.entries(expected).map(([objectId, [font]]) => label(objectId, font)), LAST_STEPPED_LABEL_FONT_VERSION);
+        const {objectGroup} = decodeRoomBlob(blob);
+        for (const [objectId, [, font]] of Object.entries(expected))
+            expect(LabelTextUtil.getFont(objectGroup.objectById[objectId]), objectId).toEqual(font);
+
+        // A current group is already in positions.
+        const current = label("current", LabelTextUtil.encodeFont(false, 128));
+        const {objectGroup: currentGroup} = decodeRoomBlob(buildRoomBlob(encodeCurrentVoxelGrid(), [current]));
+        expect(LabelTextUtil.getFont(currentGroup.objectById["current"]).fontSize).toBe(128);
     });
 
     it("brings a resized object back at the size it was stored at, off the wire's coarser grid", () => {

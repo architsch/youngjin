@@ -7,7 +7,10 @@ import CanvasObjectTypeConfig from "../types/objectTypeConfig/canvasObjectTypeCo
 import ObjectTypeConfigMap from "../maps/objectTypeConfigMap";
 import ObjectScaleUtil from "../util/objectScaleUtil";
 import ObjectAttachmentUtil from "../util/objectAttachmentUtil";
+import LabelTextUtil from "../util/labelTextUtil";
 import Geometry3DUtil from "../../math/util/geometry3DUtil";
+import NumUtil from "../../math/util/numUtil";
+import StringUtil from "../../math/util/stringUtil";
 import Vec3 from "../../math/types/vec3";
 import { ObjectMetadataKeyEnumMap } from "../types/objectMetadataKey";
 import CompositionMetadataUtil from "../../graphics/mesh/composition/util/compositionMetadataUtil";
@@ -40,6 +43,14 @@ const LEGACY_Y_RANGE_MAX = 4;
 // A lamp's height before lamps could be resized: one layer, which is half the unit square they are now
 // scaled from.
 const LEGACY_LAMP_HEIGHT = 0.5;
+
+// A label's font size before sizes came from a list: a step of this range, in the LabelFont string's
+// second character (see LabelTextUtil).
+const LEGACY_LABEL_FONT_SIZE_CHAR_INDEX = 1;
+const LEGACY_MIN_LABEL_FONT_SIZE = 16;
+const LEGACY_LABEL_FONT_SIZE_STEP = 8;
+const LEGACY_NUM_LABEL_FONT_SIZE_STEPS = 31;
+const LEGACY_DEFAULT_LABEL_FONT_SIZE_STEP = 6;
 
 // Bitmap canvas frames were cells of a square atlas, this many cells a side.
 const LEGACY_CANVAS_FRAME_ATLAS_CELLS_PER_SIDE = 4;
@@ -156,6 +167,21 @@ const converters: ((objectGroup: ObjectGroup, roomID: string, sourceVoxelGridVer
             const heldPos = {...pos, y: pos.y + 0.5 * (heightOf(scale) - heightOf(storedScale))};
             object.transform = ObjectAttachmentUtil.getResizedInPlace(lampTypeIndex,
                 new ObjectTransform(heldPos, dir, scale), scale);
+        }
+
+        // Label font sizes went from a step of a range to a place in a shorter list of sizes: each keeps the
+        // nearest size still on offer.
+        for (const object of Object.values(objectGroup.objectById))
+        {
+            const font = object.metadata[ObjectMetadataKeyEnumMap.LabelFont]?.str;
+            if (font == undefined)
+                continue;
+            const step = NumUtil.clampInRange(StringUtil.convertVisibleASCIIToRawNumber(font,
+                LEGACY_LABEL_FONT_SIZE_CHAR_INDEX, LEGACY_DEFAULT_LABEL_FONT_SIZE_STEP),
+                0, LEGACY_NUM_LABEL_FONT_SIZE_STEPS - 1);
+            object.metadata[ObjectMetadataKeyEnumMap.LabelFont] = new EncodableByteString(
+                LabelTextUtil.encodeFont(LabelTextUtil.getFont(object).autoSize,
+                    LEGACY_MIN_LABEL_FONT_SIZE + step * LEGACY_LABEL_FONT_SIZE_STEP));
         }
     },
 ];

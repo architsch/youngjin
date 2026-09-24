@@ -380,6 +380,27 @@ describe("choosing where a player arrives", () => {
         });
     });
 
+    it("finds a door by its name as read, whatever markup and line breaks its plate is lettered with", async () => {
+        await runScenario({
+            name: "styled destination door",
+            rooms: [EMPTY_HUB],
+            users: [userAtCenter("hub")],
+            assertions: () => {
+                const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
+                const named = addDoor(room, "side-door", 6, "<b>Side</b>\nDoor", DoorTypeEnumMap.CustomEntrance);
+
+                for (const destination of ["Side Door", "<i>Side  Door</i>"])
+                {
+                    expect(SpawnHotspotUtil.pickSpawnTransform(room, destination).pos.x, destination)
+                        .toBeCloseTo(named.transform.pos.x, 3);
+                }
+                // A destination that reads as nothing names no door, not every unlettered one.
+                expect(SpawnHotspotUtil.pickSpawnTransform(room, "<b> </b>").pos.x)
+                    .toBeCloseTo(getEntranceDoor(room).transform.pos.x, 3);
+            },
+        });
+    });
+
     it("falls back on the room's own way in when the named door is not there", async () => {
         await runScenario({
             name: "unknown destination door",

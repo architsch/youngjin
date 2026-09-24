@@ -205,8 +205,7 @@ describe("label permissions", () => {
 });
 
 describe("a label's lettering", () => {
-    const sizes = fc.integer({min: 0, max: Math.round((LabelTextUtil.maxFontSize - LabelTextUtil.minFontSize)
-        / LabelTextUtil.fontSizeStep)}).map(step => LabelTextUtil.minFontSize + step * LabelTextUtil.fontSizeStep);
+    const fontSizes = LabelTextUtil.fontSizes;
     const withFont = (font?: string) => new AddObjectSignal("room", "user", "User", labelTypeIndex, "label",
         new ObjectTransform({x: 1, y: 1, z: 1}, {x: 0, y: 0, z: -1}, {...UNIT_VEC3}),
         font == undefined ? {} : {[ObjectMetadataKeyEnumMap.LabelFont]: new EncodableByteString(font)});
@@ -216,8 +215,15 @@ describe("a label's lettering", () => {
         expect(LabelTextUtil.getFont(withFont("")).autoSize).toBe(true);
     });
 
-    it("comes back exactly as it was set, on any size the slider offers", () => {
-        fc.assert(fc.property(fc.boolean(), sizes, (autoSize, fontSize) => {
+    it("offers few enough sizes to step through, smallest to largest", () => {
+        expect(fontSizes.length).toBeLessThanOrEqual(16);
+        for (let i = 1; i < fontSizes.length; ++i)
+            expect(fontSizes[i]).toBeGreaterThan(fontSizes[i - 1]);
+        expect(fontSizes).toContain(LabelTextUtil.getFont(withFont("")).fontSize);
+    });
+
+    it("comes back exactly as it was set, on any size the stepper offers", () => {
+        fc.assert(fc.property(fc.boolean(), fc.constantFrom(...fontSizes), (autoSize, fontSize) => {
             expect(LabelTextUtil.getFont(withFont(LabelTextUtil.encodeFont(autoSize, fontSize))))
                 .toEqual({autoSize, fontSize});
         }));
@@ -229,20 +235,26 @@ describe("a label's lettering", () => {
         fc.assert(fc.property(fc.string(), (garbage) => {
             const stored = preprocess(garbage);
             expect(preprocess(stored)).toBe(stored);
-            const {fontSize} = LabelTextUtil.getFont(withFont(stored));
-            expect(fontSize).toBeGreaterThanOrEqual(LabelTextUtil.minFontSize);
-            expect(fontSize).toBeLessThanOrEqual(LabelTextUtil.maxFontSize);
-            expect((fontSize - LabelTextUtil.minFontSize) % LabelTextUtil.fontSizeStep).toBe(0);
+            expect(fontSizes).toContain(LabelTextUtil.getFont(withFont(stored)).fontSize);
         }), {numRuns: 300});
     });
 
-    it("holds a size asked for beyond the slider to the slider's ends", () => {
+    it("stores a size between two on offer as the nearer of them by ratio", () => {
+        const [smallest, next] = fontSizes;
+        const between = Math.sqrt(smallest * next); // equally far from both by ratio
+        expect(LabelTextUtil.getFont(withFont(LabelTextUtil.encodeFont(false, between * 0.99))).fontSize)
+            .toBe(smallest);
+        expect(LabelTextUtil.getFont(withFont(LabelTextUtil.encodeFont(false, between * 1.01))).fontSize)
+            .toBe(next);
+    });
+
+    it("holds a size asked for beyond the ones on offer to the ends of them", () => {
         expect(LabelTextUtil.getFont(withFont(LabelTextUtil.encodeFont(false, 10_000))).fontSize)
-            .toBe(LabelTextUtil.maxFontSize);
+            .toBe(fontSizes[fontSizes.length - 1]);
         expect(LabelTextUtil.getFont(withFont(LabelTextUtil.encodeFont(false, -5))).fontSize)
-            .toBe(LabelTextUtil.minFontSize);
+            .toBe(fontSizes[0]);
         expect(LabelTextUtil.getFont(withFont(LabelTextUtil.encodeFont(false, NaN))).fontSize)
-            .toBe(LabelTextUtil.minFontSize);
+            .toBe(fontSizes[0]);
     });
 
     it("keeps text up to its length in characters, not in the code units an emoji takes two of", () => {
@@ -257,6 +269,71 @@ describe("a label's lettering", () => {
         const label = withFont();
         expect(LabelTextUtil.getColorIndex(label)).toBe(ColorUtil.rgbToPaletteIndex(LABEL_COLOR_PALETTE_NAME,
             ColorUtil.hexToRGB(LabelObjectTypeConfig.components.spawnedByAny.labelText.defaultFontColorHex)));
+    });
+});
+
+describe("a label's markup", () => {
+    const styled = (text: string) => LabelTextUtil.parseText(text).map(({text, style}) => ({text,
+        styles: [style.bold && "b", style.italic && "i", style.underline && "u", style.strikethrough && "s"]
+            .filter(Boolean).join(""), scale: style.scale, fontFace: style.fontFace}));
+
+    it("styles only the tags it knows, leaving any other in the text as typed", () => {
+        expect(styled("<B>bold</b> <u><s>both</s></u> <script>alert(1)</script>")).toEqual([
+            {text: "bold", styles: "b", scale: 1, fontFace: "serif"},
+            {text: " ", styles: "", scale: 1, fontFace: "serif"},
+            {text: "both", styles: "us", scale: 1, fontFace: "serif"},
+            {text: " <script>alert(1)</script>", styles: "", scale: 1, fontFace: "serif"},
+        ]);
+    });
+
+    it("reads <font> sizes and faces as browsers do, and nothing else of it", () => {
+        const fontOf = (attributes: string) => styled(`<font ${attributes}>x</font>`)[0];
+        expect(fontOf("size=1").scale).toBe(0.625);
+        expect(fontOf("size=\"+1\"").scale).toBe(1.125);
+        expect(fontOf("size='-9'").scale).toBe(0.625);
+        expect(fontOf("size=99").scale).toBe(3);
+        expect(fontOf("size=big").scale).toBe(1);
+        expect(fontOf("face=\" Sans-Serif \"").fontFace).toBe("sans-serif");
+        expect(fontOf("face=Papyrus").fontFace).toBe("serif");
+        expect(fontOf("color=red style=\"x\" size=7 size=1")).toEqual(
+            {text: "x", styles: "", scale: 3, fontFace: "serif"});
+    });
+
+    it("closes what was opened inside a closing tag, and drops one with nothing to close", () => {
+        expect(styled("<b>a<i>b</b>c</i>d").map(({text, styles}) => [text, styles]))
+            .toEqual([["a", "b"], ["b", "bi"], ["cd", ""]]);
+    });
+
+    it("keeps an unclosed tag's style to the end, and reads a self-closed one as nothing", () => {
+        expect(styled("<i/>a<i>b").map(({text, styles}) => [text, styles])).toEqual([["a", ""], ["b", "i"]]);
+    });
+
+    it("writes out the characters of a tag's entities as text", () => {
+        expect(styled("&lt;b&gt;x&lt;/b&gt; &amp;amp; &copy;")).toEqual(
+            [{text: "<b>x</b> &amp; &copy;", styles: "", scale: 1, fontFace: "serif"}]);
+    });
+
+    it("takes no inherited property's name for a tag it knows", () => {
+        const text = "<constructor>x</constructor><toString>y<__proto__>";
+        expect(styled(text)).toEqual([{text, styles: "", scale: 1, fontFace: "serif"}]);
+    });
+
+    it("keeps every character of text that holds no markup", () => {
+        fc.assert(fc.property(fc.string().filter(str => !str.includes("<") && !str.includes("&")), (text) => {
+            expect(LabelTextUtil.parseText(text).map(span => span.text).join("")).toBe(text);
+        }), {numRuns: 300});
+    });
+
+    it("reads the longest malformed markup a label can hold at once", () => {
+        const start = performance.now();
+        LabelTextUtil.parseText(`<font${" a=1".repeat(OBJECT_LABEL_MAX_LENGTH / 4)}`);
+        LabelTextUtil.parseText("<b".repeat(OBJECT_LABEL_MAX_LENGTH / 2));
+        expect(performance.now() - start).toBeLessThan(100);
+    });
+
+    it("is named by its text as read: no markup, and whitespace between words one space", () => {
+        expect(LabelTextUtil.toName(" <b>Grand</b>\n\n  <font size=7>Library</font> ")).toBe("Grand Library");
+        expect(LabelTextUtil.toName("<i> </i>")).toBe("");
     });
 });
 

@@ -14,7 +14,7 @@ A map of what each suite in `tests/integration/scenarios/` covers. The test name
 | `signals.test.ts` | multicast excludes the sender, unicast rollback, no cross-room leaks, authoritative transform correction reaches everyone |
 | `permissions.test.ts`, `permissions-extended.test.ts` | anyone may build in Hub and Regular rooms, and ownership is never a per-operation condition |
 | `restricted-zones.test.ts` | server enforcement for blocks, faces and persistent objects, superuser identity, zone-list validation, persistence, the sandbox's exemption |
-| `door.test.ts` | superuser-only door operations, metadata sanitizing, vertical placement, spawn selection |
+| `door.test.ts` | superuser-only door operations, metadata sanitizing, vertical placement, spawn selection (including a door found by its label as read) |
 | `ghost-mode.test.ts` | the `AdminPrefs` codec and untrusted input, admin-only ghost mode on one's own character, relay, saving and restoring it, dropping it after a demotion |
 | `lamp.test.ts` | lamp permissions (no stored look), the per-category room cap (on load, after a removal, and against other categories), emitted light, the glow following the light at every size, the sizes (exactly the scale grid, no corner handles), each size's own pre-encoded look and the look following an untrusted scale, and a player standing on a floor lamp |
 | `state-persistence.test.ts` | metadata and voxels across reconnects, empty-room saves, extended invariants, shutdown |
@@ -37,7 +37,7 @@ A map of what each suite in `tests/integration/scenarios/` covers. The test name
 |---|---|
 | `room-generation.test.ts` | properties of every generated multiplayer room (reachability, solid boundary, nothing floating, a single door, palettes, determinism), the Regular layout and the current Hub shape. **The `describe.skip` block covers the procedural Hub**, which is currently disabled in `HubRoomBuilder`. Un-skip it when that pipeline is restored, because it is the only coverage for stairs and second storeys. |
 | `voxel-grid-migration.test.ts` | decoding fixture blobs written by earlier encoders, and the migrated room's validity and size bound |
-| `object-transform-migration.test.ts` | transform ranges and their migration, the scale a stored object comes back at, older lamps keeping their size, and framed lamps losing their look and shrinking in place to the largest size |
+| `object-transform-migration.test.ts` | transform ranges and their migration, the scale a stored object comes back at, older lamps keeping their size, framed lamps losing their look and shrinking in place to the largest size, and label font sizes moving to the nearest size on offer |
 | `voxel-quad-index-encoding.test.ts` | quad index encoding and validation |
 | `voxel-quad-reselection.test.ts` | where the selection goes after local and remote edits and removals, interruptions, and selection narrowed to one quad |
 | `game-mode.test.ts` | play/edit transitions, what edit mode opens on (reach, ground tilt, a step's pick) and the camera staying put or within a step's range as it does, step locks on mode and camera, single selection, a step or ghost mode hiding the user's own character, ghost mode hiding another player's (alongside the too-close-to-the-camera hide), the orbit held still through a gizmo drag |
@@ -47,8 +47,8 @@ A map of what each suite in `tests/integration/scenarios/` covers. The test name
 | `line-of-sight.test.ts` | stored coordinates on block boundaries, door visibility, seeing past room geometry, seeing in from outside the room |
 | `composition.test.ts` | player, door and indexed mesh composition codecs |
 | `canvas-frame.test.ts` | the Default codec's wood parts, the canvas codec (round trip, presets, no frame, margin and margins stored before it existed, untrusted input, resizing), canvas defaults and permissions, the bitmap-frame migration, the per-type pre-encoded table (every indexed type present), the thumbnail atlas layout |
-| `label.test.ts` | label permissions (the doors' rule, the metadata whitelist, the cap), the lettering settings (round trip, untrusted input, clamping, defaults), text length in characters, the plaque codec, and a room at every cap holding the longest text fitting the encoding buffer |
-| `label-atlas.test.ts` | atlas allocation (no shared or out-of-bounds cells under any sequence, reuse, a room's worth of labels always fitting once packed largest first) and lettering layout (auto size fits, even lines, fixed size breaking long words and leaving overflow below) |
+| `label.test.ts` | label permissions (the doors' rule, the metadata whitelist, the cap), the lettering settings (round trip, untrusted input, nearest size, clamping, defaults), markup (allowed tags only, `<font>` as browsers read it, unbalanced tags, entities, malformed input, the name a label reads as), text length in characters, the plaque codec, and a room at every cap holding the longest text fitting the encoding buffer |
+| `label-atlas.test.ts` | atlas allocation (no shared or out-of-bounds cells under any sequence, reuse, a room's worth of labels always fitting once packed largest first) and lettering layout (auto size fits, styled text and line breaks included, even lines, blank lines, line height following the largest lettering, fixed size breaking long words and leaving overflow below) |
 | `instanced-mesh-capacity.test.ts` | the generated mesh capacity table matching current code, and a room full of any decodable appearance of every type fitting it |
 | `lighting.test.ts` | light block propagation: occlusion, falloff, direction, accumulation, smoothing, nearness, never darkening, read-back |
 | `room-prefs.test.ts` | room prefs encoding, defaults, head-lamp power, light palettes, sky color |
