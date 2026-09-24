@@ -18,9 +18,9 @@ import ImageMapUtil from "../../../shared/graphics/image/util/imageMapUtil";
 import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
 import { graphicsContextRestoredObservable } from "../../system/clientObservables";
 
-// The frame is composed from the canvas's wood inputs (see CanvasCompositionCodec); the picture is drawn
-// here, into this canvas's cell of the room's shared render target, on the board inside its band (or where
-// the board would be when there is no frame; see FramedPanelCompositionConstants).
+// The frame is composed from the canvas's look (see FramedPanelCompositionCodec); the picture is drawn here,
+// into this canvas's cell of the room's shared render target, on the board inside its band (or over the
+// whole footprint when there is no frame; see FramedPanelCompositionConstants).
 export default class CanvasGameObject extends GameObject
 {
     instancedMeshGraphics: InstancedMeshGraphics;
@@ -69,7 +69,7 @@ export default class CanvasGameObject extends GameObject
         await super.onSpawn();
 
         CanvasGameObject.spawnedCanvasGameObjects.set(this.params.objectId, this);
-        // A frame edit moves the picture without moving the canvas.
+        // A frame change moves the picture without moving the canvas.
         this.instancedMeshComposer.partsRebuiltObservable.addListener("canvasGameObject",
             () => this.placePicture());
 
@@ -165,7 +165,7 @@ export default class CanvasGameObject extends GameObject
     }
 
     // Placed on the board's inner surface, inside its band (as a door's label sits inside its plate's), or
-    // where the board would be when there is none. Called on movement, resize and frame edits.
+    // over the whole footprint when there is none. Called on movement, resize and frame changes.
     private placePicture()
     {
         if (this.instanceId === -1)

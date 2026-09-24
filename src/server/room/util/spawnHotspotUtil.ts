@@ -24,7 +24,7 @@ const SpawnHotspotUtil =
         const doors = Object.values(room.objectById)
             .filter(obj => obj.objectTypeIndex === doorTypeIndex);
 
-        // Matched as read, so a plate's markup and line breaks don't change what it is called.
+        // Matched as read, so a plate's line breaks and spacing don't change what it is called.
         const destinationDoorName = LabelTextUtil.toName(destinationDoorLabel);
         if (destinationDoorName.length > 0)
         {

@@ -38,7 +38,8 @@ It fails in one of two directions, and both are public:
 5. **`LICENSE` is verbatim Apache-2.0 and is never edited.** Scope statements, exclusions and
    attributions go in the other three files. Editing the license text produces a licence that is no
    longer Apache-2.0 and that nobody can evaluate.
-6. **Web fonts**: `THIRD-PARTY-NOTICES.md` currently states that none are used. Adding one makes that
+6. **Fonts**: `THIRD-PARTY-NOTICES.md` states that the label font (Tinos) is the only font bundled
+   and that no web font is fetched. Adding a font, or fetching one from a provider, makes that
    statement false, and it must be updated.
 
 The `docs-and-tests-sync` skill is where this checklist is actually run against a batch of changes,

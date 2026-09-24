@@ -8,14 +8,15 @@ import { ObjectMetadataKeyEnumMap } from "../../../../../shared/object/types/obj
 import ObjectEditUtil from "../../../util/objectEditUtil";
 import PictureIcon from "../../../svg/icons/pictureIcon";
 import PictureFrameIcon from "../../../svg/icons/pictureFrameIcon";
-import CustomizeFramePanel from "../../panel/customizeFramePanel";
-import CanvasCompositionConstants from "../../../../../shared/graphics/mesh/composition/types/compositionConstants/canvasCompositionConstants";
+import CompositionThumbnailPanel from "../../panel/compositionThumbnailPanel";
+import CanvasObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
 import SelectionToolRow from "./selectionToolRow";
 import EditOptionsProps from "../../../types/editOptionsProps";
 
 const FRAME_PANEL = "frame";
 
-// Canvas tools: remove, image, and frame. The frame bar stacks above this row (it belongs to the canvas).
+// Canvas tools: remove, image, and frame (one of its looks, the first frameless). The frame list stacks above
+// this row (it belongs to the canvas).
 export default function CanvasEditOptions(props: EditOptionsProps)
 {
     const imagePathMetadata = props.selection.gameObject.params.metadata[ObjectMetadataKeyEnumMap.ImagePath];
@@ -28,11 +29,11 @@ export default function CanvasEditOptions(props: EditOptionsProps)
 
     // Full width, so the rows can scroll horizontally instead of growing.
     return <div className="flex flex-col gap-1 w-full">
-        {customizingFrame && canEdit && <CustomizeFramePanel
+        {customizingFrame && canEdit && <CompositionThumbnailPanel
             id="customizeCanvasOptions"
-            selection={props.selection}
-            colorSlots={[{title: "Frame", key: "frame"}, {title: "Inner", key: "inner"}]}
-            presets={CanvasCompositionConstants.presets}
+            objectType={CanvasObjectTypeConfig.objectType}
+            currentCompositionIndex={ObjectEditUtil.getCompositionIndex(props.selection)}
+            onChoose={(compositionIndex) => ObjectEditUtil.trySetCompositionIndex(props.selection, compositionIndex)}
             onClose={() => props.setOpenPanel(null)}
         />}
         <SelectionToolRow>

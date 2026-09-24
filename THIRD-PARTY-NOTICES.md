@@ -34,6 +34,19 @@ demanded.
 Each directory keeps its own `License.txt` as received. Those files are the
 authoritative terms and should not be removed when the assets are.
 
+### Label font — Tinos
+
+`public/app/assets/resources/Tinos/Tinos-Regular-Latin.ttf` is a Latin subset of
+[Tinos](https://github.com/googlefonts/tinos) Regular, Copyright 2026 The Tinos
+Project Authors, released under the
+[SIL Open Font License 1.1](https://openfontlicense.org). No Reserved Font Name
+is declared. The game inlines it into the client bundle to letter labels, and the
+font keeps its copyright and license notice in its own name records.
+
+The directory keeps `OFL.txt`, the authoritative terms, and a `README.md`
+recording how the subset was made. The OFL covers the font alone; the code that
+uses it stays under Apache-2.0.
+
 ## Software dependencies
 
 Dependencies are resolved from npm at build time rather than vendored into this
@@ -74,5 +87,6 @@ npx license-checker --production --summary
 
 ## Fonts
 
-None to declare. The site and the game render in the reader's own system fonts:
-no font file is bundled, and no web font is fetched from a provider.
+One font file is bundled: Tinos, for label text (see *Bundled assets* above).
+Everything else on the site and in the game renders in the reader's own system
+fonts, and no web font is fetched from a provider.

@@ -1,10 +1,8 @@
-import ColorUtil from "../../../../../math/util/colorUtil";
 import { COLLISION_LAYER_HEIGHT, NUM_COLLISION_LAYERS_PER_STOREY } from "../../../../../system/sharedConstants";
-import DoorCompositionParams from "../compositionParams/doorCompositionParams";
 
-// The single door design (colors vary, the shape doesn't). Authored in panel space: origin at the
-// panel's bottom centre, x across and y up, in world units; DoorCompositionBuilder shifts it onto the
-// object origin.
+// The single door design (colors vary, the shape doesn't; see pre_encoding_source.json for the finishes
+// on offer). Authored in panel space: origin at the panel's bottom centre, x across and y up, in world
+// units; DoorCompositionBuilder shifts it onto the object origin.
 
 export const DOOR_GEOMETRY_ID = "Square";
 
@@ -100,32 +98,6 @@ const DoorCompositionConstants = {
         mouldingThickness: 0.048,
         mouldingIsConvex: true,
     } as DoorRegion,
-
-    // Coordinated finishes (snapped to the "Timber" palette so they round-trip). Unrelated colors look
-    // like a fault. Panels stay mid-brightness (the aging material makes dark finishes black and pale
-    // ones wash out); the plate stays close to the panel's brightness; the knob is metal or bone.
-    // Mouldings take no color of their own (see the "InstancedWood" material).
-    presets: [
-        preset("#b98b56", "#d5cdb6", "#c9a227"), // pine, putty plate, brass knob
-        preset("#71452b", "#6b6659", "#a98a3f"), // dark walnut
-        preset("#a87545", "#bdb59d", "#8a7346"), // medium oak
-        preset("#87816f", "#d5cdb6", "#5c5c5a"), // weathered grey, iron knob
-        preset("#74856b", "#bdb59d", "#c9a227"), // painted sage
-        preset("#647684", "#a29b86", "#9a9a97"), // painted slate blue
-        preset("#5c6f57", "#87816f", "#a98a3f"), // painted deep green
-        preset("#8a5f56", "#a29b86", "#c9a227"), // painted oxblood
-        preset("#a89263", "#e6dcc8", "#8a7346"), // painted ochre
-        preset("#a29b86", "#f0e7d2", "#7a7a78"), // painted putty, ivory plate
-        preset("#845433", "#87816f", "#ded2b8"), // dark stain, bone knob
-        preset("#7d8f9c", "#ded2b8", "#5c5c5a"), // painted blue-grey
-    ] as DoorCompositionParams["colors"][],
 };
-
-function preset(panel: string, label: string, knob: string): DoorCompositionParams["colors"]
-{
-    const snap = (hex: string) => ColorUtil.paletteIndexToRGB("Timber", 
-        ColorUtil.rgbToPaletteIndex("Timber", ColorUtil.hexToRGB(hex)));
-    return {panel: snap(panel), label: snap(label), knob: snap(knob)};
-}
 
 export default DoorCompositionConstants;

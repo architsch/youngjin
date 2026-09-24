@@ -8,7 +8,7 @@ Every multiplayer room is generated with exactly one door on a boundary wall. Do
 
 ## Door metadata
 Besides its appearance ([door_design.md](door_design.md)), a door stores:
-- **Label** (and label color): the text on its plate, which, as read (no markup, whitespace collapsed), is also the name other doors look it up by. Labels may repeat.
+- **Label** (and label color): the text on its plate, which, as read (whitespace collapsed), is also the name other doors look it up by. Labels may repeat.
 - **Destination room**: a door with no destination, or one that points at its own room, is locked. A reserved id means "the hubs", and the hub balancer picks one at travel time (see [room_population.md](../networking/room_population.md)). Generated doors use this id, so every room can be left.
 - **Destination door label**: which door of the destination room the traveler arrives behind.
 - **Door type**: whether the door counts as one of the room's default entrances.

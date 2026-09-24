@@ -2,7 +2,7 @@ import NumUtil from "../../../../../math/util/numUtil";
 
 // Band widths a moulded part can take, as one stored step each. Shared by every codec that stores a
 // moulding, so a width means the same thing wherever it is written (see DefaultCompositionCodec,
-// CanvasCompositionCodec).
+// FramedPanelCompositionCodec).
 const MIN_MOULDING_THICKNESS = 0.04;
 const MAX_MOULDING_THICKNESS = 0.16;
 const MOULDING_THICKNESS_STEP = 0.02;

@@ -6,8 +6,9 @@ import RoomVolumeUtil from "../../util/roomVolumeUtil";
 import ColorUtil from "../../../../math/util/colorUtil";
 import EncodableByteString from "../../../../networking/types/encodableByteString";
 import CompositionMetadataUtil from "../../../../graphics/mesh/composition/util/compositionMetadataUtil";
-import DoorCompositionConstants from "../../../../graphics/mesh/composition/types/compositionConstants/doorCompositionConstants";
+import PreEncodedCompositionIndexMap from "../../../../graphics/mesh/composition/maps/preEncodedCompositionIndexMap";
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../../graphics/mesh/composition/types/instancedMeshCompositionCodecType";
+import DoorObjectTypeConfig from "../../../../object/types/objectTypeConfig/doorObjectTypeConfig";
 import { DoorTypeEnumMap } from "../../../../object/types/doorType";
 import { ObjectMetadataKeyEnumMap } from "../../../../object/types/objectMetadataKey";
 import { HUB_ROOM_ID_KEYWORD, LABEL_COLOR_PALETTE_NAME, UNIT_VEC3 } from "../../../../system/sharedConstants";
@@ -25,12 +26,10 @@ const RECEPTIONIST_APPEARANCE = CompositionMetadataUtil.encode(
         }),
     });
 
-// Pine with a putty plate and brass knob (shows grain and joinery best).
-const TUTORIAL_DOOR_PRESET_INDEX = 0;
-
-const TUTORIAL_DOOR_APPEARANCE = CompositionMetadataUtil.encode(
-    InstancedMeshCompositionCodecTypeEnumMap.Door, 0,
-    {colors: DoorCompositionConstants.presets[TUTORIAL_DOOR_PRESET_INDEX]});
+// The door's first finish: pine with a putty plate and brass knob (shows grain and joinery best).
+const TUTORIAL_DOOR_APPEARANCE = CompositionMetadataUtil.encodeIndexed(
+    PreEncodedCompositionIndexMap.Door?.[0] ?? 0,
+    DoorObjectTypeConfig.components.spawnedByAny.instancedMeshComposer.codecVersion);
 
 // Dark grey label ink, snapped to the lettering palette.
 const TUTORIAL_DOOR_LABEL_COLOR_INDEX = ColorUtil.rgbToPaletteIndex(

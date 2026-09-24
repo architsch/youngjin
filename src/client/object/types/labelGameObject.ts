@@ -6,8 +6,8 @@ import FramedPanelCompositionConstants from "../../../shared/graphics/mesh/compo
 import FramedPanelCompositionParams from "../../../shared/graphics/mesh/composition/types/compositionParams/framedPanelCompositionParams";
 import ObjectScaleUtil from "../../../shared/object/util/objectScaleUtil";
 
-// Text on a plaque (see LabelCompositionCodec), kept inside the plaque's band: the text fills the patch
-// its LabelText is configured with, narrowed to what the frame leaves inside it.
+// Text on a plaque (see FramedPanelCompositionCodec), kept inside the plaque's band: the text fills the
+// patch its LabelText is configured with, narrowed to what the frame leaves inside it.
 export default class LabelGameObject extends GameObject
 {
     private instancedMeshComposer: InstancedMeshComposer;
@@ -29,7 +29,7 @@ export default class LabelGameObject extends GameObject
     async onSpawn(): Promise<void>
     {
         await super.onSpawn();
-        // Every decode, including a resize's and a frame edit's, may move the band.
+        // Every decode, including a resize's and a frame change's, may move the band.
         this.instancedMeshComposer.partsRebuiltObservable.addListener("labelGameObject",
             () => this.fitTextInsideFrame());
         this.fitTextInsideFrame();

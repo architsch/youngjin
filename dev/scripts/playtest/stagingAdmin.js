@@ -46,7 +46,7 @@ function backupRoot() { return `${PREFIX}playtest_backup`; }
 // here detects drift — `inspect` and `verify-migration` both measure against these numbers, so a stale
 // one reports migrated rows as outdated and hides real staleness. Bump alongside
 // src/server/db/types/versionMigration/.
-const CURRENT_VERSION = { users: 5, rooms: 6 };
+const CURRENT_VERSION = { users: 5, rooms: 7 };
 
 const ROOM_TYPE_REGULAR = 1;
 
@@ -107,6 +107,8 @@ function buildRoom(version, runID, index, ownerUserID)
     if (version >= 1) row.ownerUserName = `Playtest-${runID}-owner`;
     if (version >= 2) row.editors = [];
     if (version >= 3) row.roomName = "";
+    // A soft green ambient and a strong blue head light: colors v6 -> v7 moves to the nearest ones left.
+    if (version >= 6) row.prefs = "Pl";
 
     return addLegacyStoredID(row, version, CURRENT_VERSION.rooms, runID);
 }

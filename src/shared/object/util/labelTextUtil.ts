@@ -1,12 +1,8 @@
 import ColorUtil from "../../math/util/colorUtil";
 import NumUtil from "../../math/util/numUtil";
 import StringUtil from "../../math/util/stringUtil";
-import HTMLUtil from "../../math/util/htmlUtil";
-import HTMLTag from "../../math/types/htmlTag";
 import { LABEL_COLOR_PALETTE_NAME } from "../../system/sharedConstants";
 import AddObjectSignal from "../types/addObjectSignal";
-import LabelTextSpan from "../types/labelTextSpan";
-import LabelTextStyle from "../types/labelTextStyle";
 import { ObjectMetadataKeyEnumMap } from "../types/objectMetadataKey";
 import ObjectTypeConfigMap from "../maps/objectTypeConfigMap";
 
@@ -22,18 +18,6 @@ const FONT_SIZE_CHAR_INDEX = 1;
 
 const AUTO_SIZE_FLAG = 1;
 
-// The tags a label's text may be styled with, and the attributes each one reads (see HTMLUtil.parse).
-const MARKUP_ATTRIBUTES_BY_TAG = {b: [], i: [], u: [], s: [], font: ["size", "face"]};
-
-// <font size> levels 1-7, 3 being the text's own size, scaled as browsers draw them.
-const FONT_SIZE_LEVEL_SCALES = [0.625, 0.8125, 1, 1.125, 1.5, 2, 3];
-const DEFAULT_FONT_SIZE_LEVEL = 3;
-
-const FONT_FACES: readonly LabelTextStyle["fontFace"][] = ["serif", "sans-serif", "monospace"];
-
-const PLAIN_STYLE: LabelTextStyle = {bold: false, italic: false, underline: false, strikethrough: false,
-    scale: 1, fontFace: "serif"};
-
 // What an object with LabelText shows, read from its metadata. The font is one stored string (flags, then
 // a size's position in FONT_SIZES), and decoding is total: nothing stored means Auto Size, and a position
 // out of range clamps.
@@ -45,18 +29,11 @@ const LabelTextUtil =
     {
         return obj.metadata[ObjectMetadataKeyEnumMap.Label]?.str ?? "";
     },
-    // The text as drawn: its markup read into styled runs, in order.
-    parseText: (text: string): LabelTextSpan[] =>
-    {
-        return HTMLUtil.parse(text, MARKUP_ATTRIBUTES_BY_TAG).map(run =>
-            ({text: run.text, style: run.tags.reduce(applyTag, PLAIN_STYLE)}));
-    },
-    // The text as read, which is what a door is looked up by: no markup, and any run of whitespace (a line
-    // break included) one space.
+    // The text as read, which is what a door is looked up by: any run of whitespace (a line break included)
+    // one space.
     toName: (text: string): string =>
     {
-        return HTMLUtil.parse(text, MARKUP_ATTRIBUTES_BY_TAG).map(run => run.text).join("")
-            .replace(/\s+/g, " ").trim();
+        return text.replace(/\s+/g, " ").trim();
     },
     // The ink's palette index, defaulting to the nearest match for the type's default color (so the
     // picker opens on the color actually shown).
@@ -120,41 +97,6 @@ function toFontSizeIndex(fontSize: number): number
             nearest = i;
     }
     return nearest;
-}
-
-function applyTag(style: LabelTextStyle, tag: HTMLTag): LabelTextStyle
-{
-    switch (tag.name)
-    {
-        case "b": return {...style, bold: true};
-        case "i": return {...style, italic: true};
-        case "u": return {...style, underline: true};
-        case "s": return {...style, strikethrough: true};
-        case "font":
-        {
-            const level = parseFontSizeLevel(tag.attributes.size);
-            const face = tag.attributes.face?.trim().toLowerCase();
-            return {
-                ...style,
-                scale: (level != undefined) ? FONT_SIZE_LEVEL_SCALES[level - 1] : style.scale,
-                fontFace: FONT_FACES.find(fontFace => fontFace === face) ?? style.fontFace,
-            };
-        }
-        default: return style;
-    }
-}
-
-// As browsers read <font size>: a level, or one relative to the default with a sign, clamped to the levels.
-function parseFontSizeLevel(size: string | undefined): number | undefined
-{
-    const match = /^\s*([+-]?)(\d+)/.exec(size ?? "");
-    if (match == null)
-        return undefined;
-    const n = parseInt(match[2]);
-    const level = (match[1] == "+") ? DEFAULT_FONT_SIZE_LEVEL + n
-        : (match[1] == "-") ? DEFAULT_FONT_SIZE_LEVEL - n
-        : n;
-    return NumUtil.clampInRange(level, 1, FONT_SIZE_LEVEL_SCALES.length);
 }
 
 export default LabelTextUtil;

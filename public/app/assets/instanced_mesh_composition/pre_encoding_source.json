@@ -55,6 +55,486 @@
                 "scale": {"x": 1, "y": 1, "z": 1},
                 "color": {"x": -1, "y": -1, "z": -1}
             }]
+        },
+        {
+            "comment": "[Index 4]",
+            "objectType": "Canvas",
+            "codecType": "FramedPanel",
+            "params": {"framed": false}
+        },
+        {
+            "comment": "[Index 5]",
+            "objectType": "Canvas",
+            "codecType": "FramedPanel",
+            "params": {
+                "colors": {"frame": {"x": 200, "y": 162, "z": 113}, "inner": {"x": 213, "y": 205, "z": 182}},
+                "mouldingThickness": 0.16,
+                "mouldingIsConvex": true,
+                "framed": true
+            }
+        },
+        {
+            "comment": "[Index 6]",
+            "objectType": "Canvas",
+            "codecType": "FramedPanel",
+            "params": {
+                "colors": {"frame": {"x": 113, "y": 69, "z": 43}, "inner": {"x": 156, "y": 127, "z": 116}},
+                "mouldingThickness": 0.12,
+                "mouldingIsConvex": true,
+                "framed": true
+            }
+        },
+        {
+            "comment": "[Index 7]",
+            "objectType": "Canvas",
+            "codecType": "FramedPanel",
+            "params": {
+                "colors": {"frame": {"x": 92, "y": 111, "z": 87}, "inner": {"x": 143, "y": 154, "z": 128}},
+                "mouldingThickness": 0.08,
+                "mouldingIsConvex": true,
+                "framed": true
+            }
+        },
+        {
+            "comment": "[Index 8]",
+            "objectType": "Canvas",
+            "codecType": "FramedPanel",
+            "params": {
+                "colors": {"frame": {"x": 168, "y": 117, "z": 69}, "inner": {"x": 200, "y": 162, "z": 113}},
+                "mouldingThickness": 0.1,
+                "mouldingIsConvex": true,
+                "framed": true
+            }
+        },
+        {
+            "comment": "[Index 9]",
+            "objectType": "Canvas",
+            "codecType": "FramedPanel",
+            "params": {
+                "colors": {"frame": {"x": 28, "y": 88, "z": 206}, "inner": {"x": 84, "y": 176, "z": 222}},
+                "mouldingThickness": 0.08,
+                "mouldingIsConvex": false,
+                "framed": true
+            }
+        },
+        {
+            "comment": "[Index 10]",
+            "objectType": "Canvas",
+            "codecType": "FramedPanel",
+            "params": {
+                "colors": {"frame": {"x": 63, "y": 139, "z": 24}, "inner": {"x": 189, "y": 181, "z": 157}},
+                "mouldingThickness": 0.1,
+                "mouldingIsConvex": true,
+                "framed": true
+            }
+        },
+        {
+            "comment": "[Index 11]",
+            "objectType": "Canvas",
+            "codecType": "FramedPanel",
+            "params": {
+                "colors": {"frame": {"x": 200, "y": 16, "z": 46}, "inner": {"x": 222, "y": 141, "z": 84}},
+                "mouldingThickness": 0.1,
+                "mouldingIsConvex": false,
+                "framed": true
+            }
+        },
+        {
+            "comment": "[Index 12]",
+            "objectType": "Canvas",
+            "codecType": "FramedPanel",
+            "params": {
+                "colors": {"frame": {"x": 58, "y": 28, "z": 206}, "inner": {"x": 107, "y": 84, "z": 222}},
+                "mouldingThickness": 0.06,
+                "mouldingIsConvex": true,
+                "framed": true
+            }
+        },
+        {
+            "comment": "[Index 13]",
+            "objectType": "Canvas",
+            "codecType": "FramedPanel",
+            "params": {
+                "colors": {"frame": {"x": 211, "y": 222, "z": 84}, "inner": {"x": 224, "y": 203, "z": 171}},
+                "mouldingThickness": 0.08,
+                "mouldingIsConvex": false,
+                "framed": true
+            }
+        },
+        {
+            "comment": "[Index 14]",
+            "objectType": "Canvas",
+            "codecType": "FramedPanel",
+            "params": {
+                "colors": {"frame": {"x": 92, "y": 111, "z": 87}, "inner": {"x": 169, "y": 138, "z": 63}},
+                "mouldingThickness": 0.14,
+                "mouldingIsConvex": false,
+                "framed": true
+            }
+        },
+        {
+            "comment": "[Index 15]",
+            "objectType": "Canvas",
+            "codecType": "FramedPanel",
+            "params": {
+                "colors": {"frame": {"x": 162, "y": 28, "z": 206}, "inner": {"x": 188, "y": 84, "z": 222}},
+                "mouldingThickness": 0.1,
+                "mouldingIsConvex": false,
+                "framed": true
+            }
+        },
+        {
+            "comment": "[Index 16]",
+            "objectType": "Canvas",
+            "codecType": "FramedPanel",
+            "params": {
+                "colors": {"frame": {"x": 130, "y": 222, "z": 84}, "inner": {"x": 24, "y": 139, "z": 82}},
+                "mouldingThickness": 0.04,
+                "mouldingIsConvex": true,
+                "framed": true
+            }
+        },
+        {
+            "comment": "[Index 17]",
+            "objectType": "Canvas",
+            "codecType": "FramedPanel",
+            "params": {
+                "colors": {"frame": {"x": 138, "y": 115, "z": 70}, "inner": {"x": 168, "y": 146, "z": 99}},
+                "mouldingThickness": 0.12,
+                "mouldingIsConvex": false,
+                "framed": true
+            }
+        },
+        {
+            "comment": "[Index 18]",
+            "objectType": "Canvas",
+            "codecType": "FramedPanel",
+            "params": {
+                "colors": {"frame": {"x": 28, "y": 88, "z": 206}, "inner": {"x": 84, "y": 130, "z": 222}},
+                "mouldingThickness": 0.08,
+                "mouldingIsConvex": true,
+                "framed": true
+            }
+        },
+        {
+            "comment": "[Index 19]",
+            "objectType": "Canvas",
+            "codecType": "FramedPanel",
+            "params": {
+                "colors": {"frame": {"x": 222, "y": 84, "z": 176}, "inner": {"x": 206, "y": 28, "z": 147}},
+                "mouldingThickness": 0.16,
+                "mouldingIsConvex": true,
+                "framed": true
+            }
+        },
+        {
+            "comment": "[Index 20]",
+            "objectType": "Canvas",
+            "codecType": "FramedPanel",
+            "params": {
+                "colors": {"frame": {"x": 192, "y": 86, "z": 33}, "inner": {"x": 222, "y": 141, "z": 84}},
+                "mouldingThickness": 0.06,
+                "mouldingIsConvex": true,
+                "framed": true
+            }
+        },
+        {
+            "comment": "[Index 21]",
+            "objectType": "Label",
+            "codecType": "FramedPanel",
+            "params": {"framed": false}
+        },
+        {
+            "comment": "[Index 22]",
+            "objectType": "Label",
+            "codecType": "FramedPanel",
+            "params": {
+                "colors": {"frame": {"x": 201, "y": 162, "z": 39}, "inner": {"x": 213, "y": 205, "z": 182}},
+                "mouldingThickness": 0.06,
+                "mouldingIsConvex": true,
+                "framed": true
+            }
+        },
+        {
+            "comment": "[Index 23]",
+            "objectType": "Label",
+            "codecType": "FramedPanel",
+            "params": {
+                "colors": {"frame": {"x": 113, "y": 69, "z": 43}, "inner": {"x": 169, "y": 138, "z": 63}},
+                "mouldingThickness": 0.08,
+                "mouldingIsConvex": true,
+                "framed": true
+            }
+        },
+        {
+            "comment": "[Index 24]",
+            "objectType": "Label",
+            "codecType": "FramedPanel",
+            "params": {
+                "colors": {"frame": {"x": 116, "y": 133, "z": 107}, "inner": {"x": 200, "y": 162, "z": 113}},
+                "mouldingThickness": 0.12,
+                "mouldingIsConvex": true,
+                "framed": true
+            }
+        },
+        {
+            "comment": "[Index 25]",
+            "objectType": "Label",
+            "codecType": "FramedPanel",
+            "params": {
+                "colors": {"frame": {"x": 58, "y": 28, "z": 206}, "inner": {"x": 84, "y": 130, "z": 222}},
+                "mouldingThickness": 0.08,
+                "mouldingIsConvex": true,
+                "framed": true
+            }
+        },
+        {
+            "comment": "[Index 26]",
+            "objectType": "Label",
+            "codecType": "FramedPanel",
+            "params": {
+                "colors": {"frame": {"x": 206, "y": 102, "z": 28}, "inner": {"x": 213, "y": 205, "z": 182}},
+                "mouldingThickness": 0.16,
+                "mouldingIsConvex": false,
+                "framed": true
+            }
+        },
+        {
+            "comment": "[Index 27]",
+            "objectType": "Label",
+            "codecType": "FramedPanel",
+            "params": {
+                "colors": {"frame": {"x": 200, "y": 16, "z": 46}, "inner": {"x": 222, "y": 84, "z": 84}},
+                "mouldingThickness": 0.06,
+                "mouldingIsConvex": false,
+                "framed": true
+            }
+        },
+        {
+            "comment": "[Index 28]",
+            "objectType": "Label",
+            "codecType": "FramedPanel",
+            "params": {
+                "colors": {"frame": {"x": 156, "y": 127, "z": 116}, "inner": {"x": 222, "y": 188, "z": 84}},
+                "mouldingThickness": 0.14,
+                "mouldingIsConvex": false,
+                "framed": true
+            }
+        },
+        {
+            "comment": "[Index 29]",
+            "objectType": "Label",
+            "codecType": "FramedPanel",
+            "params": {
+                "colors": {"frame": {"x": 107, "y": 84, "z": 222}, "inner": {"x": 58, "y": 28, "z": 206}},
+                "mouldingThickness": 0.06,
+                "mouldingIsConvex": false,
+                "framed": true
+            }
+        },
+        {
+            "comment": "[Index 30]",
+            "objectType": "Door",
+            "codecType": "Door",
+            "params": {"colors": {
+                "panel": {"x": 185, "y": 139, "z": 86},
+                "label": {"x": 216, "y": 185, "z": 139},
+                "knob": {"x": 192, "y": 206, "z": 28}
+            }}
+        },
+        {
+            "comment": "[Index 31]",
+            "objectType": "Door",
+            "codecType": "Door",
+            "params": {"colors": {
+                "panel": {"x": 113, "y": 69, "z": 43},
+                "label": {"x": 150, "y": 96, "z": 58},
+                "knob": {"x": 169, "y": 138, "z": 63}
+            }}
+        },
+        {
+            "comment": "[Index 32]",
+            "objectType": "Door",
+            "codecType": "Door",
+            "params": {"colors": {
+                "panel": {"x": 211, "y": 222, "z": 84},
+                "label": {"x": 211, "y": 222, "z": 84},
+                "knob": {"x": 143, "y": 154, "z": 128}
+            }}
+        },
+        {
+            "comment": "[Index 33]",
+            "objectType": "Door",
+            "codecType": "Door",
+            "params": {"colors": {
+                "panel": {"x": 188, "y": 84, "z": 222},
+                "label": {"x": 185, "y": 139, "z": 86},
+                "knob": {"x": 132, "y": 84, "z": 51}
+            }}
+        },
+        {
+            "comment": "[Index 34]",
+            "objectType": "Door",
+            "codecType": "Door",
+            "params": {"colors": {
+                "panel": {"x": 116, "y": 133, "z": 107},
+                "label": {"x": 162, "y": 155, "z": 134},
+                "knob": {"x": 201, "y": 162, "z": 39}
+            }}
+        },
+        {
+            "comment": "[Index 35]",
+            "objectType": "Door",
+            "codecType": "Door",
+            "params": {"colors": {
+                "panel": {"x": 222, "y": 84, "z": 84},
+                "label": {"x": 206, "y": 162, "z": 28},
+                "knob": {"x": 222, "y": 188, "z": 84}
+            }}
+        },
+        {
+            "comment": "[Index 36]",
+            "objectType": "Door",
+            "codecType": "Door",
+            "params": {"colors": {
+                "panel": {"x": 88, "y": 206, "z": 28},
+                "label": {"x": 211, "y": 222, "z": 84},
+                "knob": {"x": 24, "y": 139, "z": 82}
+            }}
+        },
+        {
+            "comment": "[Index 37]",
+            "objectType": "Door",
+            "codecType": "Door",
+            "params": {"colors": {
+                "panel": {"x": 84, "y": 130, "z": 222},
+                "label": {"x": 84, "y": 176, "z": 222},
+                "knob": {"x": 28, "y": 88, "z": 206}
+            }}
+        },
+        {
+            "comment": "[Index 38]",
+            "objectType": "Door",
+            "codecType": "Door",
+            "params": {"colors": {
+                "panel": {"x": 107, "y": 84, "z": 222},
+                "label": {"x": 125, "y": 143, "z": 156},
+                "knob": {"x": 113, "y": 69, "z": 43}
+            }}
+        },
+        {
+            "comment": "[Index 39]",
+            "objectType": "Door",
+            "codecType": "Door",
+            "params": {"colors": {
+                "panel": {"x": 216, "y": 185, "z": 139},
+                "label": {"x": 216, "y": 185, "z": 139},
+                "knob": {"x": 135, "y": 129, "z": 111}
+            }}
+        },
+        {
+            "comment": "[Index 40]",
+            "objectType": "Door",
+            "codecType": "Door",
+            "params": {"colors": {
+                "panel": {"x": 200, "y": 16, "z": 46},
+                "label": {"x": 222, "y": 84, "z": 176},
+                "knob": {"x": 206, "y": 162, "z": 28}
+            }}
+        },
+        {
+            "comment": "[Index 41]",
+            "objectType": "Door",
+            "codecType": "Door",
+            "params": {"colors": {
+                "panel": {"x": 63, "y": 139, "z": 24},
+                "label": {"x": 63, "y": 139, "z": 24},
+                "knob": {"x": 92, "y": 92, "z": 90}
+            }}
+        },
+        {
+            "comment": "[Index 42]",
+            "objectType": "Label",
+            "codecType": "FramedPanel",
+            "params": {
+                "colors": {"frame": {"x": 28, "y": 206, "z": 117}, "inner": {"x": 211, "y": 222, "z": 84}},
+                "mouldingThickness": 0.12,
+                "mouldingIsConvex": true,
+                "framed": true
+            }
+        },
+        {
+            "comment": "[Index 43]",
+            "objectType": "Label",
+            "codecType": "FramedPanel",
+            "params": {
+                "colors": {"frame": {"x": 111, "y": 70, "z": 66}, "inner": {"x": 132, "y": 84, "z": 51}},
+                "mouldingThickness": 0.04,
+                "mouldingIsConvex": true,
+                "framed": true
+            }
+        },
+        {
+            "comment": "[Index 44]",
+            "objectType": "Label",
+            "codecType": "FramedPanel",
+            "params": {
+                "colors": {"frame": {"x": 31, "y": 74, "z": 44}, "inner": {"x": 92, "y": 111, "z": 87}},
+                "mouldingThickness": 0.1,
+                "mouldingIsConvex": false,
+                "framed": true
+            }
+        },
+        {
+            "comment": "[Index 45]",
+            "objectType": "Label",
+            "codecType": "FramedPanel",
+            "params": {
+                "colors": {"frame": {"x": 84, "y": 176, "z": 222}, "inner": {"x": 28, "y": 147, "z": 206}},
+                "mouldingThickness": 0.08,
+                "mouldingIsConvex": true,
+                "framed": true
+            }
+        },
+        {
+            "comment": "[Index 46]",
+            "objectType": "Door",
+            "codecType": "Door",
+            "params": {"colors": {
+                "panel": {"x": 84, "y": 222, "z": 211},
+                "label": {"x": 84, "y": 176, "z": 222},
+                "knob": {"x": 84, "y": 130, "z": 222}
+            }}
+        },
+        {
+            "comment": "[Index 47]",
+            "objectType": "Door",
+            "codecType": "Door",
+            "params": {"colors": {
+                "panel": {"x": 135, "y": 129, "z": 111},
+                "label": {"x": 154, "y": 154, "z": 151},
+                "knob": {"x": 109, "y": 91, "z": 54}
+            }}
+        },
+        {
+            "comment": "[Index 48]",
+            "objectType": "Door",
+            "codecType": "Door",
+            "params": {"colors": {
+                "panel": {"x": 162, "y": 28, "z": 206},
+                "label": {"x": 188, "y": 84, "z": 222},
+                "knob": {"x": 222, "y": 84, "z": 176}
+            }}
+        },
+        {
+            "comment": "[Index 49]",
+            "objectType": "Door",
+            "codecType": "Door",
+            "params": {"colors": {
+                "panel": {"x": 222, "y": 141, "z": 84},
+                "label": {"x": 216, "y": 185, "z": 139},
+                "knob": {"x": 138, "y": 117, "z": 72}
+            }}
         }
     ]
 }

@@ -11,8 +11,8 @@ import GeometryFactory from "../factories/geometryFactory";
 import MaterialFactory from "../factories/materialFactory";
 import InstancedPartUtil from "../util/instancedPartUtil";
 
-// Build-time only: CompositionThumbnailBuilder loads this into a headless browser to draw each
-// pre-encoded composition with the game's own geometry and materials. The client app never imports it.
+// Never part of the client app: CompositionThumbnailBuilder loads this into a headless browser to draw each
+// pre-encoded composition with the game's own geometry and materials, and dev tools import it to preview them.
 
 // Rendered larger than the cell, then downscaled, for smooth edges.
 const SUPERSAMPLING = 2;
@@ -29,10 +29,10 @@ const boxTemp = new THREE.Box3();
 
 let renderer: THREE.WebGLRenderer | undefined;
 
-// Returns each composition's pixels (RGBA, bottom row first) as base64. The view is in degrees from
-// straight in front of the compositions' +Z face (see ObjectTypeConfig's thumbnailView).
-async function renderCompositionThumbnails(encodedCompositions: string[], cellSize: number,
-    view: {yawDeg: number, pitchDeg: number}): Promise<string[]>
+// Returns each composition's pixels (RGBA, bottom row first), SUPERSAMPLING times cellSize a side. The view
+// is in degrees from straight in front of the compositions' +Z face (see ObjectTypeConfig's thumbnailView).
+export async function renderCompositionPixels(encodedCompositions: string[], cellSize: number,
+    view: {yawDeg: number, pitchDeg: number}): Promise<Uint8Array[]>
 {
     const size = cellSize * SUPERSAMPLING;
     const activeRenderer = getRenderer(size);
@@ -63,7 +63,7 @@ async function renderCompositionThumbnails(encodedCompositions: string[], cellSi
     const camera = new THREE.OrthographicCamera();
     frameBounds(camera, bounds, viewDir);
 
-    const results: string[] = [];
+    const results: Uint8Array[] = [];
     for (const meshes of meshesList)
     {
         for (const mesh of meshes)
@@ -73,7 +73,7 @@ async function renderCompositionThumbnails(encodedCompositions: string[], cellSi
         const pixels = new Uint8Array(size * size * 4);
         const gl = activeRenderer.getContext();
         gl.readPixels(0, 0, size, size, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-        results.push(toBase64(pixels));
+        results.push(pixels);
 
         for (const mesh of meshes)
         {
@@ -83,6 +83,13 @@ async function renderCompositionThumbnails(encodedCompositions: string[], cellSi
         }
     }
     return results;
+}
+
+// As base64, which is how CompositionThumbnailBuilder reads the pixels back out of the page.
+async function renderCompositionThumbnails(encodedCompositions: string[], cellSize: number,
+    view: {yawDeg: number, pitchDeg: number}): Promise<string[]>
+{
+    return (await renderCompositionPixels(encodedCompositions, cellSize, view)).map(toBase64);
 }
 
 function getRenderer(size: number): THREE.WebGLRenderer

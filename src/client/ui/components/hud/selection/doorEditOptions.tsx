@@ -11,7 +11,7 @@ import { DoorTypeEnumMap } from "../../../../../shared/object/types/doorType";
 import { ObjectMetadataKeyEnumMap } from "../../../../../shared/object/types/objectMetadataKey";
 import PopupUtil from "../../../util/popupUtil";
 import ObjectEditUtil from "../../../util/objectEditUtil";
-import CustomizeDoorPanel from "../../panel/customizeDoorPanel";
+import CompositionThumbnailPanel from "../../panel/compositionThumbnailPanel";
 import CustomizeLabelTextPanel from "../../panel/customizeLabelTextPanel";
 import SelectionToolRow from "./selectionToolRow";
 import EditOptionsProps from "../../../types/editOptionsProps";
@@ -19,8 +19,8 @@ import EditOptionsProps from "../../../types/editOptionsProps";
 const TEXT_PANEL = "text";
 const APPEARANCE_PANEL = "appearance";
 
-// Superuser tools for a selected door: remove, name, destination, paint, default entrance. The name and
-// appearance bars stack above this row (they belong to the door), one at a time; the rest open as popups.
+// Superuser tools for a selected door: remove, name, destination, finish, default entrance. The name bar and
+// the finish list stack above this row (they belong to the door), one at a time; the rest open as popups.
 export default function DoorEditOptions(props: EditOptionsProps)
 {
     const customizingText = props.openPanel == TEXT_PANEL;
@@ -32,8 +32,11 @@ export default function DoorEditOptions(props: EditOptionsProps)
             selection={props.selection}
             onClose={() => props.setOpenPanel(null)}
         />}
-        {customizing && <CustomizeDoorPanel
-            selection={props.selection}
+        {customizing && <CompositionThumbnailPanel
+            id="customizeDoorOptions"
+            objectType={DoorObjectTypeConfig.objectType}
+            currentCompositionIndex={ObjectEditUtil.getCompositionIndex(props.selection)}
+            onChoose={(compositionIndex) => ObjectEditUtil.trySetCompositionIndex(props.selection, compositionIndex)}
             onClose={() => props.setOpenPanel(null)}
         />}
         <SelectionToolRow>

@@ -3,17 +3,17 @@ import TrashIcon from "../../../svg/icons/trashIcon";
 import TextCursorIcon from "../../../svg/icons/textCursorIcon";
 import PictureFrameIcon from "../../../svg/icons/pictureFrameIcon";
 import ObjectEditUtil from "../../../util/objectEditUtil";
-import CustomizeFramePanel from "../../panel/customizeFramePanel";
+import CompositionThumbnailPanel from "../../panel/compositionThumbnailPanel";
 import CustomizeLabelTextPanel from "../../panel/customizeLabelTextPanel";
-import LabelCompositionConstants from "../../../../../shared/graphics/mesh/composition/types/compositionConstants/labelCompositionConstants";
+import LabelObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/labelObjectTypeConfig";
 import SelectionToolRow from "./selectionToolRow";
 import EditOptionsProps from "../../../types/editOptionsProps";
 
 const TEXT_PANEL = "text";
 const FRAME_PANEL = "frame";
 
-// Superuser tools for a selected label: remove, text, and frame. The text and frame bars stack above this row
-// (they belong to the label), one at a time.
+// Superuser tools for a selected label: remove, text, and frame (one of its looks, the first frameless). The
+// text bar and the frame list stack above this row (they belong to the label), one at a time.
 export default function LabelEditOptions(props: EditOptionsProps)
 {
     const customizingText = props.openPanel == TEXT_PANEL;
@@ -25,11 +25,11 @@ export default function LabelEditOptions(props: EditOptionsProps)
             selection={props.selection}
             onClose={() => props.setOpenPanel(null)}
         />}
-        {customizingFrame && <CustomizeFramePanel
+        {customizingFrame && <CompositionThumbnailPanel
             id="customizeLabelOptions"
-            selection={props.selection}
-            colorSlots={[{title: "Frame", key: "frame"}, {title: "Plaque", key: "inner"}]}
-            presets={LabelCompositionConstants.presets}
+            objectType={LabelObjectTypeConfig.objectType}
+            currentCompositionIndex={ObjectEditUtil.getCompositionIndex(props.selection)}
+            onChoose={(compositionIndex) => ObjectEditUtil.trySetCompositionIndex(props.selection, compositionIndex)}
             onClose={() => props.setOpenPanel(null)}
         />}
         <SelectionToolRow>

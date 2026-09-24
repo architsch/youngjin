@@ -14,9 +14,6 @@ const WORK_DIR = "temp/composition_thumbnail"; // gitignored
 const RENDERER_WEBPACK_CONFIG = "dev/config/webpack.config.compositionThumbnail.js";
 const FINGERPRINTS_FILE_NAME = "fingerprints.json";
 
-// For types that don't set their own thumbnail view: a true isometric view.
-const ISOMETRIC_VIEW = {yawDeg: 45, pitchDeg: Math.atan(1 / Math.SQRT2) * 180 / Math.PI};
-
 // SwiftShader renders on the CPU, so every machine produces the same pixels and the committed atlases
 // change only when the look does.
 const BROWSER_ARGS = ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"];
@@ -109,8 +106,8 @@ export default class CompositionThumbnailBuilder
 
 function getView(objectType: string): {yawDeg: number, pitchDeg: number}
 {
-    const config = ObjectTypeConfigMap.getConfigByIndex(ObjectTypeConfigMap.getIndexByType(objectType));
-    return config.components.spawnedByAny?.instancedMeshComposer?.thumbnailView ?? ISOMETRIC_VIEW;
+    return CompositionThumbnailUtil.getView(
+        ObjectTypeConfigMap.getConfigByIndex(ObjectTypeConfigMap.getIndexByType(objectType)));
 }
 
 async function bundleRenderer(): Promise<string>

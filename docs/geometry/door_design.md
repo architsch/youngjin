@@ -15,9 +15,10 @@ A door is a wall-attached `GameObject` that is drawn with no textures. It is ass
 The name is drawn in the scene as a quad slightly in front of the plate, so walls occlude it (unlike an HTML overlay). All labels in a room share one mesh and one texture atlas, which is one draw call and the reason a room's label count is capped. The label component is generic: it draws any object's text onto the patch that object reserves. The label color comes from its own full-spectrum palette and is applied per instance: the atlas holds only the lettering's coverage, so emoji show as silhouettes in the label color.
 
 ## Appearance metadata
-- `DoorCompositionCodec` encodes three colors: timber, plate and knob. Decoding clamps its input, so any string yields a drawable door.
-- Colors come from a joinery palette (separate from the player palette) and are drawn as coordinated presets. The timber stays mid-brightness, and the plate stays close to the timber's brightness.
-- A door without stored appearance derives one from its room and object id, not from the viewer, so everyone sees the same door.
+- A door stores only which of its authored **finishes** it shows, as an [indexed composition](../graphics/instanced_mesh_composition.md#indexed-compositions). Anything else stored for a door is refused.
+- Each finish is a `DoorCompositionCodec` string of three colors: timber, plate and knob. Decoding clamps its input, so any string yields a drawable door.
+- Colors come from a joinery palette (separate from the player palette) and are coordinated per finish. The timber stays mid-brightness, and the plate stays close to the timber's brightness.
+- A door without stored appearance derives a finish from its room and object id, not from the viewer, so everyone sees the same door.
 
 ## Moulded timber material
 A reusable procedural wood shader for any moulded rectangular surface. Per quad, it takes a surface color, a moulding color, a band width and raised/sunk.

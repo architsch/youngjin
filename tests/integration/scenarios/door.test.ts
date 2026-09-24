@@ -5,6 +5,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runScenario } from "../helpers/scenarioRunner";
 import { EMPTY_HUB, EMPTY_REGULAR, userAtCenter } from "../helpers/scenarioPresets";
+import { getLooks } from "../helpers/composition";
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
 import SpawnHotspotUtil from "../../../src/server/room/util/spawnHotspotUtil";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
@@ -203,7 +204,9 @@ describe("door permissions", () => {
                 expect(canSet(ObjectMetadataKeyEnumMap.DestinationDoorLabel, "Back Door")).toBe(true);
                 expect(canSet(ObjectMetadataKeyEnumMap.DoorType,
                     `${DoorTypeEnumMap.DefaultEntrance}`)).toBe(true);
-                expect(canSet(ObjectMetadataKeyEnumMap.InstancedMeshComposition, "abc")).toBe(true);
+                expect(canSet(ObjectMetadataKeyEnumMap.InstancedMeshComposition, getLooks("Door")[1].stored)).toBe(true);
+                // Only as one of its own finishes.
+                expect(canSet(ObjectMetadataKeyEnumMap.InstancedMeshComposition, "abc")).toBe(false);
 
                 // A door displays no picture and says nothing, so neither key means anything on one.
                 expect(canSet(ObjectMetadataKeyEnumMap.ImagePath, "some/image.webp")).toBe(false);
@@ -380,22 +383,22 @@ describe("choosing where a player arrives", () => {
         });
     });
 
-    it("finds a door by its name as read, whatever markup and line breaks its plate is lettered with", async () => {
+    it("finds a door by its name as read, whatever line breaks and spacing its plate is lettered with", async () => {
         await runScenario({
-            name: "styled destination door",
+            name: "multiline destination door",
             rooms: [EMPTY_HUB],
             users: [userAtCenter("hub")],
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
-                const named = addDoor(room, "side-door", 6, "<b>Side</b>\nDoor", DoorTypeEnumMap.CustomEntrance);
+                const named = addDoor(room, "side-door", 6, "Side\nDoor", DoorTypeEnumMap.CustomEntrance);
 
-                for (const destination of ["Side Door", "<i>Side  Door</i>"])
+                for (const destination of ["Side Door", " Side  Door "])
                 {
                     expect(SpawnHotspotUtil.pickSpawnTransform(room, destination).pos.x, destination)
                         .toBeCloseTo(named.transform.pos.x, 3);
                 }
                 // A destination that reads as nothing names no door, not every unlettered one.
-                expect(SpawnHotspotUtil.pickSpawnTransform(room, "<b> </b>").pos.x)
+                expect(SpawnHotspotUtil.pickSpawnTransform(room, " \n ").pos.x)
                     .toBeCloseTo(getEntranceDoor(room).transform.pos.x, 3);
             },
         });

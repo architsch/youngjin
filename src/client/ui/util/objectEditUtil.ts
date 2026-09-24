@@ -8,7 +8,9 @@ import SetObjectTransformSignal from "../../../shared/object/types/setObjectTran
 import ObjectTransform from "../../../shared/object/types/objectTransform";
 import RemoveObjectSignal from "../../../shared/object/types/removeObjectSignal";
 import ObjectUpdateUtil from "../../../shared/object/util/objectUpdateUtil";
-import { ObjectMetadataKey } from "../../../shared/object/types/objectMetadataKey";
+import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
+import CompositionMetadataUtil from "../../../shared/graphics/mesh/composition/util/compositionMetadataUtil";
+import InstancedMeshComposer from "../../object/components/instancedMeshComposer";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 import { FeatureFlag } from "../../../shared/system/types/featureFlag";
 import { clientFeatureFlagsObservable, objectSelectionObservable } from "../../system/clientObservables";
@@ -97,6 +99,22 @@ const ObjectEditUtil =
                 new ObjectTransform({...applied.pos}, {...applied.dir}, {...applied.scale}), true));
         }
         // Re-announced so the outline and the tools catch up with where and how big it now is.
+        objectSelectionObservable.notify();
+    },
+    // The pre-encoded look a composed object shows (see IndexedCompositionCodec), or -1 for none.
+    getCompositionIndex: (selection: ObjectSelection): number =>
+    {
+        const composer = selection.gameObject.components.instancedMeshComposer as InstancedMeshComposer | undefined;
+        return composer?.getParams().compositionIndex ?? -1;
+    },
+    trySetCompositionIndex: (selection: ObjectSelection, compositionIndex: number): void =>
+    {
+        const composer = selection.gameObject.components.instancedMeshComposer as InstancedMeshComposer | undefined;
+        if (!composer || compositionIndex == ObjectEditUtil.getCompositionIndex(selection))
+            return;
+        ObjectEditUtil.trySetObjectMetadata(selection, ObjectMetadataKeyEnumMap.InstancedMeshComposition,
+            CompositionMetadataUtil.encodeIndexed(compositionIndex, composer.componentConfig.codecVersion));
+        // Re-announced so the tools catch up with the look it now has.
         objectSelectionObservable.notify();
     },
 }

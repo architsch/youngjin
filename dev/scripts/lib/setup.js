@@ -206,7 +206,8 @@ const pictures = (page) => callSandbox(page, "pictures");
 const roomLighting = (page, prefs) => callSandbox(page, "roomLighting", prefs);
 
 /**
- * The door finishes, ready to pass as metadata (otherwise a door's finish is random per id):
+ * The door finishes, in the order the finish list shows them, ready to pass as metadata (otherwise a door's
+ * finish is random per id):
  *
  *   const styles = await setup.doorStyles();
  *   addObject({type: "Door", ...wall, col: 14, metadata: {Label: "Cellar", ...styles[3]}})
@@ -214,7 +215,8 @@ const roomLighting = (page, prefs) => callSandbox(page, "roomLighting", prefs);
 const doorStyles = (page) => callSandbox(page, "doorStyles");
 
 /**
- * The canvas frame presets, ready to pass as metadata (otherwise a canvas's frame is random per id):
+ * The canvas frames, in the order the frame list shows them (the first is no frame at all), ready to pass as
+ * metadata (otherwise a canvas's frame is random per id):
  *
  *   const frames = await setup.canvasFrameStyles();
  *   addObject({type: "Canvas", ...wall, col: 14, metadata: {ImagePath: "1/14", ...frames[2]}})

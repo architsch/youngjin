@@ -1,5 +1,9 @@
 import { DBVersionMigration } from "./dbVersionMigration";
 import DBUserUtil from "../../util/dbUserUtil";
+import LightPaletteVersionMigration from "../../../../shared/math/versionMigration/lightPaletteVersionMigration";
+
+// The prefs string's "Light" palette positions: the ambient color, then the head light's (see RoomPrefsUtil).
+const LEGACY_PREFS_LIGHT_COLOR_CHAR_INDICES = [0, 1];
 
 const DBRoomVersionMigration: DBVersionMigration = [
     // v0 -> v1: introduce ownerUserName (denormalized for room listings).
@@ -34,6 +38,15 @@ const DBRoomVersionMigration: DBVersionMigration = [
     // v5 -> v6: add "prefs" (atmosphere). "" decodes to the defaults (see RoomPrefsUtil).
     async (row: any) => {
         row.prefs = row.prefs ?? "";
+        return row;
+    },
+    // v6 -> v7: the "Light" palette was cut to a few temperatures and hues, so the ambient and head light
+    // colors become the nearest ones left.
+    async (row: any) => {
+        let prefs: string = row.prefs ?? "";
+        for (const charIndex of LEGACY_PREFS_LIGHT_COLOR_CHAR_INDICES)
+            prefs = LightPaletteVersionMigration.convertColorChar(prefs, charIndex);
+        row.prefs = prefs;
         return row;
     },
 ];

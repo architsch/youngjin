@@ -11,6 +11,7 @@
 | `npm run dev` | full stack (SSG, client, server, emulators) |
 | `npm run devnossg` | full stack without SSG |
 | `npm run devclient` / `devserver` / `devcss` | one part only |
+| `npm run compositionEditor` | edit `pre_encoding_source.json` with live thumbnails, at `http://127.0.0.1:3100` (see [instanced_mesh_composition.md](../graphics/instanced_mesh_composition.md#indexed-compositions)) |
 
 Open `http://127.0.0.1:3000`. Stop with `Ctrl+C`, then run `npm stop`.
 

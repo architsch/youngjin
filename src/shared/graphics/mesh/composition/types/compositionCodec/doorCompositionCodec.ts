@@ -1,17 +1,16 @@
-import RandomNumberGenerator from "../../../../../math/types/randomNumberGenerator";
 import Vec3 from "../../../../../math/types/vec3";
 import ColorUtil from "../../../../../math/util/colorUtil";
 import StringUtil from "../../../../../math/util/stringUtil";
 import { ZERO_VEC3 } from "../../../../../system/sharedConstants";
 import { InstancedMeshCompositionBuilderMap } from "../../maps/instancedMeshCompositionBuilderMap";
-import DoorCompositionConstants from "../compositionConstants/doorCompositionConstants";
 import DoorCompositionParams from "../compositionParams/doorCompositionParams";
 import { InstancedMeshCompositionParams } from "../compositionParams/instancedMeshCompositionParams";
 import InstancedMeshCompositionPart from "../instancedMeshCompositionPart";
 import InstancedMeshCompositionCodec from "./instancedMeshCompositionCodec";
 
 // Door appearance: one visible-ASCII char per color (timber, plate, knob) over the single door design
-// (see DoorCompositionConstants). Untrusted on read: decoding clamps and always yields a drawable door.
+// (see DoorCompositionConstants). Doors store only an index to one of these (see IndexedCompositionCodec).
+// Untrusted on read: decoding clamps and always yields a drawable door.
 export const DoorCompositionCodec: InstancedMeshCompositionCodec = {
     encode: (params: InstancedMeshCompositionParams,
         parts: InstancedMeshCompositionPart[]): string =>
@@ -36,24 +35,13 @@ export const DoorCompositionCodec: InstancedMeshCompositionCodec = {
     getRandomComposition: (seed: number, objectSize: Vec3):
         {params: InstancedMeshCompositionParams, parts: InstancedMeshCompositionPart[]} =>
     {
-        const rand = new RandomNumberGenerator(seed);
-
-        const params = getBaseParams();
-        // Default finishes come from authored presets (see DoorCompositionConstants).
-        const presets = DoorCompositionConstants.presets;
-        const preset = presets[rand.randomInt(0, presets.length)];
-        params.colors.panel = {...preset.panel};
-        params.colors.label = {...preset.label};
-        params.colors.knob = {...preset.knob};
-
-        const parts: InstancedMeshCompositionPart[] = [];
-        constructParts(params, parts);
-        return {params, parts};
+        // Its looks are authored ones, and a seeded default is one of those (see CompositionMetadataUtil).
+        throw new Error("DoorCompositionCodec::getRandomComposition : NOT IMPLEMENTED");
     },
     getStructuralVariants: (): string[] =>
     {
-        // A single design: colors are the only thing a door varies in.
-        return [DoorCompositionCodec.encode(getBaseParams(), [])];
+        // Reached only through pre-encoded entries, which are its variants (see InstancedMeshCapacityBuilder).
+        throw new Error("DoorCompositionCodec::getStructuralVariants : NOT IMPLEMENTED");
     },
 }
 

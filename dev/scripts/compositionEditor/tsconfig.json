@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+        "strict": true,
+        "noEmit": true,
+        "noImplicitAny": true,
+        "module": "es2020",
+        "target": "es2020",
+        "jsx": "react-jsx",
+        "moduleResolution": "node",
+        "allowSyntheticDefaultImports": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "lib": ["dom", "dom.iterable", "es2022"]
+    },
+    "include": ["app/**/*"]
+}

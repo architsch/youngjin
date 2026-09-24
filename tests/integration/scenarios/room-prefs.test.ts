@@ -1,7 +1,8 @@
 /**
  * Scenario tests: room prefs — atmosphere (room light, head lamp, air) and a hub's join priority.
  * Covers round-trips; an empty string decoding to the pre-prefs look (so existing rooms need no
- * migration); total decoding; and fog distances always leaving a span.
+ * migration); total decoding; fog distances always leaving a span; and light colors carried over from the
+ * six-saturation "Light" palette.
  */
 import { describe, it, expect } from "vitest";
 import fc from "fast-check";
@@ -15,7 +16,9 @@ import RoomPrefs from "../../../src/shared/room/types/roomPrefs";
 import HeadLightUtil, { ORDINARY_POWER_INTENSITY, ORDINARY_RANGE_DECAY, ORDINARY_RANGE_DISTANCE }
     from "../../../src/shared/graphics/light/util/headLightUtil";
 import ColorUtil from "../../../src/shared/math/util/colorUtil";
+import StringUtil from "../../../src/shared/math/util/stringUtil";
 import { ColorPaletteMap } from "../../../src/shared/math/maps/colorPaletteMap";
+import LightPaletteVersionMigration from "../../../src/shared/math/versionMigration/lightPaletteVersionMigration";
 import { FOG_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME,
     SCENERY_COLOR_PALETTE_NAME } from "../../../src/shared/system/sharedConstants";
 
@@ -422,6 +425,45 @@ describe("the palettes a room's lighting is drawn from", () => {
             const rgb = ColorUtil.hexToRGB(hex);
             expect(Math.max(rgb.x, rgb.y, rgb.z)).toBe(255);
         }
+    });
+
+    it("carries a light chosen when each hue came at six saturations to the nearest color left", () => {
+        const carried = (legacyIndex: number) =>
+            ColorPaletteMap[LIGHT_COLOR_PALETTE_NAME][LightPaletteVersionMigration.convertColorIndex(legacyIndex)];
+        // Colors still on offer come through exactly.
+        expect(carried(0)).toBe("#ffffff");
+        expect(carried(9)).toBe("#ffd5aa");
+        expect(carried(33)).toBe("#ffffc2");
+        expect(carried(63)).toBe("#6b6bff");
+        expect(carried(87)).toBe("#0000ff");
+        // A dropped one keeps its hue wherever the palette still has it, at another saturation (an
+        // unweighted distance would turn a mid yellow yellow-green and a mid cyan sky blue).
+        expect(carried(57)).toBe("#ffffc2");
+        expect(carried(61)).toBe("#c2ffff");
+        expect(carried(65)).toBe("#ff93ff");
+        expect(carried(47)).toBe("#c2ffc2");
+        expect(carried(75)).toBe("#6b6bff");
+        expect(carried(82)).toBe("#ccff7b");
+        expect(carried(62)).toBe("#74c9ff");
+        // A dropped temperature goes to the nearest one left, or the hue it all but was.
+        expect(carried(7)).toBe("#ffb56b");
+        expect(carried(11)).toBe("#fff2e5");
+        // A faint tint was all but white, and stays so.
+        expect(carried(23)).toBe("#ffffff");
+    });
+
+    it("carries only the character a light's color is stored in", () => {
+        const char = StringUtil.convertRawNumberToVisibleASCII;
+        expect(LightPaletteVersionMigration.convertColorChar(char(47) + char(75) + "rest", 1))
+            .toBe(char(47) + char(11) + "rest");
+        // A string that stops short already reads back white, in either palette.
+        expect(LightPaletteVersionMigration.convertColorChar(char(47), 1)).toBe(char(47));
+        // Whatever a stored character says, it lands in the palette.
+        fc.assert(fc.property(prefsStrings, prefs => {
+            const index = StringUtil.convertVisibleASCIIToRawNumber(
+                LightPaletteVersionMigration.convertColorChar(prefs, 0), 0);
+            expect(index).toBeLessThan(ColorUtil.getPaletteSize(LIGHT_COLOR_PALETTE_NAME));
+        }));
     });
 
     it("keeps both inside what one stored character can address", () => {

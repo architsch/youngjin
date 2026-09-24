@@ -1,7 +1,7 @@
-import { DoorCompositionCodec } from "../../../graphics/mesh/composition/types/compositionCodec/doorCompositionCodec";
 import DoorCompositionConstants, { DOOR_FOOTPRINT_HEIGHT, DOOR_FOOTPRINT_WIDTH,
     DOOR_PANEL_ORIGIN_Y } from "../../../graphics/mesh/composition/types/compositionConstants/doorCompositionConstants";
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../graphics/mesh/composition/types/instancedMeshCompositionCodecType";
+import CompositionMetadataUtil from "../../../graphics/mesh/composition/util/compositionMetadataUtil";
 import StringUtil from "../../../math/util/stringUtil";
 import EncodableByteString from "../../../networking/types/encodableByteString";
 import Room from "../../../room/types/room";
@@ -30,6 +30,8 @@ export const ENTRANCE_DOOR_OBJECT_ID = "entrance_door";
 // floor cell (see SpawnHotspotUtil, PlayerController).
 export const SPAWN_DIST_BEHIND_DOOR = 0.5;
 export const ENTRANCE_DIST_IN_FRONT_OF_DOOR = 0.5;
+
+const COMPOSITION_CODEC_VERSION = 0;
 
 // Metadata keys the room's superuser may write to a door; anything else is refused.
 const editableMetadataKeys = [
@@ -79,7 +81,12 @@ const DoorObjectTypeConfig =
         if (!RoomValidationUtil.isRoomSuperuser(user, room))
             return false;
 
-        // Values are sanitized by ObjectMetadataEntryMap; only the key is checked here.
+        // A look must be one of a door's own; other values are sanitized by ObjectMetadataEntryMap.
+        if (signal.metadataKey == ObjectMetadataKeyEnumMap.InstancedMeshComposition)
+        {
+            return CompositionMetadataUtil.isIndexedLookOf("Door", COMPOSITION_CODEC_VERSION,
+                signal.metadataValue);
+        }
         return editableMetadataKeys.includes(signal.metadataKey);
     },
     components: {
@@ -111,16 +118,19 @@ const DoorObjectTypeConfig =
                 prependUserNameToMessage: false,
             },
             instancedMeshGraphics: {},
+            // One of its pre-encoded finishes (see pre_encoding_source.json).
             instancedMeshComposer: {
-                codecType: InstancedMeshCompositionCodecTypeEnumMap.Door,
-                codecVersion: 0,
+                codecType: InstancedMeshCompositionCodecTypeEnumMap.Indexed,
+                codecVersion: COMPOSITION_CODEC_VERSION,
                 generateDefaultParts: (obj: AddObjectSignal) => {
                     // Seeded from room and door id (not the viewer's id, which client-spawned objects
                     // carry; see ObjectFactory), so everyone sees the same door every session.
                     const hashCode = StringUtil.getHashCode(`${obj.roomID}/${obj.objectId}`);
-                    return DoorCompositionCodec.getRandomComposition(hashCode,
-                        ObjectScaleUtil.getObjectSize(obj.objectTypeIndex, obj.transform.scale));
+                    return CompositionMetadataUtil.decodeSeededIndexed("Door", 0, hashCode,
+                        COMPOSITION_CODEC_VERSION, ObjectScaleUtil.getObjectSize(obj.objectTypeIndex, obj.transform.scale));
                 },
+                // Straight on, as it stands in its wall.
+                thumbnailView: {yawDeg: 0, pitchDeg: 0},
             },
             // The name goes on the plate: the rect comes from the plate declaration, inset by its
             // moulding, slightly in front of its relief.

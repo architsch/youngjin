@@ -1,7 +1,12 @@
+import type ObjectTypeConfig from "../../../../object/types/objectTypeConfig/objectTypeConfig";
+
 // Layout of the per-type thumbnail atlases of pre-encoded compositions (see
 // CompositionThumbnailBuilder): the type's entries in PreEncodedCompositionIndexMap order, row by row.
 const CELL_SIZE = 128; // in pixels (cells are square)
 const NUM_COLS = 8;
+
+// For types that don't set their own thumbnail view: a true isometric view.
+const ISOMETRIC_VIEW = {yawDeg: 45, pitchDeg: Math.atan(1 / Math.SQRT2) * 180 / Math.PI};
 
 const CompositionThumbnailUtil =
 {
@@ -17,6 +22,10 @@ const CompositionThumbnailUtil =
     getAtlasPath: (objectType: string): string =>
     {
         return `instanced_mesh_composition/thumbnails/${objectType}.webp`;
+    },
+    getView: (config: ObjectTypeConfig): {yawDeg: number, pitchDeg: number} =>
+    {
+        return config.components.spawnedByAny?.instancedMeshComposer?.thumbnailView ?? ISOMETRIC_VIEW;
     },
 }
 

@@ -14,11 +14,13 @@ import ObjectScaleUtil from "../../../shared/object/util/objectScaleUtil";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import ObjectCategoryConfigMap from "../../../shared/object/maps/objectCategoryConfigMap";
 import LabelTextUtil from "../../../shared/object/util/labelTextUtil";
-import LabelTextStyle from "../../../shared/object/types/labelTextStyle";
 import LabelTextLayoutUtil from "../util/labelTextLayoutUtil";
 import TextureAtlasAllocator from "../../graphics/types/textureAtlasAllocator";
 import TextureAtlasRegion from "../../graphics/types/textureAtlasRegion";
+import FontMetrics from "../../graphics/types/fontMetrics";
+import FontMetricsUtil from "../../graphics/util/fontMetricsUtil";
 import { graphicsContextRestoredObservable } from "../../system/clientObservables";
+import fontDataUrl from "../../../../public/app/assets/resources/Tinos/Tinos-Regular-Latin.ttf";
 
 // An object's "Label" text, drawn onto a patch of the object in the scene (not an HTML overlay), so walls
 // occlude it. All labels in a room share one mesh and one atlas (one draw call). Each label holds a region
@@ -27,21 +29,10 @@ import { graphicsContextRestoredObservable } from "../../system/clientObservable
 // Inner margin of the text area, in world units.
 const PADDING = 0.025;
 
-// Measured once at this size and scaled, since text metrics scale linearly.
-const MEASURING_FONT_SIZE_PX = 64;
-
-const FONT_FAMILY_BY_FACE: Record<LabelTextStyle["fontFace"], string> = {
-    // Roman serif, as on brass plates and signwriting.
-    "serif": "'Times New Roman', Times, serif",
-    "sans-serif": "Arial, Helvetica, sans-serif",
-    "monospace": "'Courier New', Courier, monospace",
-};
-
-// Underline and strikethrough, in units of their text's font size: offsets from the baseline (down is
-// positive), and thickness.
-const UNDERLINE_OFFSET = 0.12;
-const STRIKETHROUGH_OFFSET = -0.28;
-const RULE_THICKNESS = 0.06;
+// A roman serif, as on brass plates and signwriting: Tinos (Times New Roman's widths), bundled rather than
+// left to each system's fonts, and measured from its own file (see FontMetricsUtil), so every browser
+// breaks and sizes a label's text alike. Named apart from any installed copy.
+const FONT_FAMILY = "LabelTextTinos";
 
 const NUM_ATLAS_CELLS_PER_SIDE = LABEL_ATLAS_SIZE / LABEL_ATLAS_CELL_SIZE;
 
@@ -95,8 +86,11 @@ export default class LabelText extends GameObjectComponent
 
     async onSpawn(): Promise<void>
     {
-        await this.instancedMeshGraphics.loadInstancedMesh(LABEL_GEOMETRY_ID,
-            LabelText.materialParams!, getMaxLabelsPerRoom(), true);
+        await Promise.all([
+            this.instancedMeshGraphics.loadInstancedMesh(LABEL_GEOMETRY_ID,
+                LabelText.materialParams!, getMaxLabelsPerRoom(), true),
+            loadFont(),
+        ]);
         spawnedLabelTexts.add(this);
         this.spawned = true;
         this.needsAllocation = true;
@@ -343,79 +337,42 @@ export default class LabelText extends GameObjectComponent
         const usableWidth = width - 2 * padding;
         const usableHeight = height - 2 * padding;
         const {autoSize, fontSize} = LabelTextUtil.getFont(this.gameObject.params);
-
-        // Setting the font is costly, so it is set only when it changes.
-        let currFont = "";
-        const useFont = (style: LabelTextStyle, sizePx: number) => {
-            const font = toCSSFont(style, sizePx);
-            if (font != currFont)
-            {
-                ctx.font = font;
-                currFont = font;
-            }
-        };
+        const metrics = fontMetrics!; // loaded before spawning
+        const measureWidth = (str: string) => FontMetricsUtil.measureWidth(metrics, str);
 
         const layout = LabelTextLayoutUtil.layOut(
-            LabelTextUtil.parseText(LabelTextUtil.getText(this.gameObject.params)),
-            usableWidth, usableHeight, autoSize, fontSize,
-            (str: string, style: LabelTextStyle) => {
-                useFont(style, MEASURING_FONT_SIZE_PX);
-                return style.scale * ctx.measureText(str).width / MEASURING_FONT_SIZE_PX;
-            });
+            FontMetricsUtil.replaceMissingChars(metrics, LabelTextUtil.getText(this.gameObject.params)),
+            usableWidth, usableHeight, autoSize, fontSize, measureWidth);
 
-        // Only coverage reaches the atlas, so any opaque ink will do; emoji keep just their silhouette.
+        // Only coverage reaches the atlas, so any opaque ink will do.
+        ctx.font = `${layout.fontSize}px ${FONT_FAMILY}, serif`;
         ctx.fillStyle = "#ffffff";
         ctx.textAlign = "left";
         ctx.textBaseline = "alphabetic";
 
-        // Centred when it fits; otherwise from the top, so what doesn't fit is cut off at the bottom.
-        const textHeight = layout.lines.reduce((sum, line) => sum + line.height, 0) * layout.fontSize;
-        let lineTop = padding + Math.max(0, 0.5 * (usableHeight - textHeight));
-        for (const line of layout.lines)
+        // Centred when it fits; otherwise from the top, so what doesn't fit is cut off at the bottom. The
+        // font's full height is centred in each line.
+        const lineHeight = layout.fontSize * LabelTextLayoutUtil.lineSpacing;
+        const top = padding + Math.max(0, 0.5 * (usableHeight - layout.lines.length * lineHeight));
+        const baselineOffset = 0.5 * (lineHeight
+            + layout.fontSize * (metrics.ascent - metrics.descent) / metrics.unitsPerEm);
+        for (let i = 0; i < layout.lines.length; ++i)
         {
+            const lineTop = top + i * lineHeight;
             if (lineTop >= height)
                 break;
-            const lineHeight = line.height * layout.fontSize;
-            const segments = line.segments.map(({text, style}) => {
-                const sizePx = style.scale * layout.fontSize;
-                useFont(style, sizePx);
-                return {text, style, sizePx, width: ctx.measureText(text).width};
-            });
-
-            // The line's largest lettering is centred in it, and the rest shares its baseline.
-            const largest = segments.reduce((a, b) => (b.sizePx > a.sizePx) ? b : a);
-            useFont(largest.style, largest.sizePx);
-            const metrics = ctx.measureText(largest.text);
-            const baseline = lineTop + 0.5 * (lineHeight + metrics.fontBoundingBoxAscent
-                - metrics.fontBoundingBoxDescent);
-
-            let x = 0.5 * (width - segments.reduce((sum, segment) => sum + segment.width, 0));
-            for (const segment of segments)
+            // Character by character at the font's own advances, so the browser's spacing can't stray from
+            // the layout's.
+            const line = layout.lines[i];
+            let x = 0.5 * (width - measureWidth(line) * layout.fontSize);
+            for (const char of line)
             {
-                useFont(segment.style, segment.sizePx);
-                ctx.fillText(segment.text, x, baseline);
-                const ruleThickness = RULE_THICKNESS * segment.sizePx;
-                if (segment.style.underline)
-                {
-                    ctx.fillRect(x, baseline + UNDERLINE_OFFSET * segment.sizePx - 0.5 * ruleThickness,
-                        segment.width, ruleThickness);
-                }
-                if (segment.style.strikethrough)
-                {
-                    ctx.fillRect(x, baseline + STRIKETHROUGH_OFFSET * segment.sizePx - 0.5 * ruleThickness,
-                        segment.width, ruleThickness);
-                }
-                x += segment.width;
+                ctx.fillText(char, x, lineTop + baselineOffset);
+                x += measureWidth(char) * layout.fontSize;
             }
-            lineTop += lineHeight;
         }
         return canvas;
     }
-}
-
-function toCSSFont(style: LabelTextStyle, sizePx: number): string
-{
-    return `${style.italic ? "italic " : ""}${style.bold ? "bold " : ""}${sizePx}px ${FONT_FAMILY_BY_FACE[style.fontFace]}`;
 }
 
 // Every object that can carry a label at once: each labeled category's room cap, counted once.
@@ -448,6 +405,32 @@ function getSharedCanvasContext(): CanvasRenderingContext2D
 }
 
 const spawnedLabelTexts: Set<LabelText> = new Set();
+
+let fontMetrics: FontMetrics | undefined;
+let fontLoading: Promise<void> | undefined;
+
+// Once for every label, from the bytes inlined in the bundle. Should the browser refuse the face, the text is
+// still laid out by its metrics, and drawn in a fallback serif.
+function loadFont(): Promise<void>
+{
+    if (fontLoading == undefined)
+    {
+        fontLoading = (async () => {
+            const base64 = fontDataUrl.slice(fontDataUrl.indexOf(",") + 1);
+            const bytes = Uint8Array.from(atob(base64), char => char.charCodeAt(0));
+            fontMetrics = FontMetricsUtil.parse(bytes.buffer);
+            try
+            {
+                document.fonts.add(await new FontFace(FONT_FAMILY, bytes).load());
+            }
+            catch (err)
+            {
+                console.error(`LabelText :: Failed to load the label font (${err})`);
+            }
+        })();
+    }
+    return fontLoading;
+}
 
 // Labels live only in a render target (GPU), so all of them redraw after a context restore (as
 // CanvasGameObject does).

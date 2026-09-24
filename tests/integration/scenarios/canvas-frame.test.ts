@@ -1,24 +1,24 @@
 /**
- * Canvas frames. A canvas composes one moulded wood board, a margin inside its footprint, from its own wood
- * inputs (frame and inner colors, band width, profile), which a user edits as a door's colors are edited;
- * the picture hangs inside the band, or where the board would be when its frame is off. The stored string
- * is untrusted, and rooms saved with bitmap frames (CanvasFrameCoords) are converted on load.
- * Covers: the Default codec's wood parts, the canvas codec, canvas defaults and permissions, the
- * ObjectGroup migration, the per-type pre-encoded table, and the thumbnail atlas layout.
+ * Canvas frames. A canvas shows one of its pre-encoded looks: the picture alone, over its whole footprint, or
+ * one moulded wood board over the footprint whose band frames the picture. An object stores only which look,
+ * checked against its type's own; the looks are framed panel strings, which decode as untrusted input like
+ * any composition. Rooms saved with bitmap frames (CanvasFrameCoords), or with finishes in the codecs canvases,
+ * labels and doors used to store their own, are converted on load.
+ * Covers: the Default codec's wood parts, the framed panel codec, a canvas's looks, defaults and permissions,
+ * the ObjectGroup migrations, the per-type pre-encoded table, and the thumbnail atlas layout.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import fc from "fast-check";
 
 import { DefaultCompositionCodec } from "../../../src/shared/graphics/mesh/composition/types/compositionCodec/defaultCompositionCodec";
-import { CanvasCompositionCodec } from "../../../src/shared/graphics/mesh/composition/types/compositionCodec/canvasCompositionCodec";
-import CanvasCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/canvasCompositionConstants";
+import { FramedPanelCompositionCodec } from "../../../src/shared/graphics/mesh/composition/types/compositionCodec/framedPanelCompositionCodec";
 import FramedPanelCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/framedPanelCompositionConstants";
 import MouldingCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/mouldingCompositionConstants";
-import MarginCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/marginCompositionConstants";
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionCodecType";
 import PreEncodedCompositionStringMap from "../../../src/shared/graphics/mesh/composition/maps/preEncodedCompositionStringMap";
 import PreEncodedCompositionIndexMap from "../../../src/shared/graphics/mesh/composition/maps/preEncodedCompositionIndexMap";
 import CompositionThumbnailUtil from "../../../src/shared/graphics/mesh/composition/util/compositionThumbnailUtil";
+import CompositionMetadataUtil from "../../../src/shared/graphics/mesh/composition/util/compositionMetadataUtil";
 import InstancedMeshCompositionPart from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
 import { InstancedMeshCompositionParams } from "../../../src/shared/graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
 import ColorUtil from "../../../src/shared/math/util/colorUtil";
@@ -28,6 +28,7 @@ import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfi
 import CanvasObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
 import ObjectScaleUtil from "../../../src/shared/object/util/objectScaleUtil";
 import { LAST_UNSCALED_OBJECT_GROUP_VERSION, writeLegacyObjectGroup } from "../helpers/legacyObjectGroup";
+import { getLooks } from "../helpers/composition";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import ObjectGroup from "../../../src/shared/object/types/objectGroup";
@@ -38,7 +39,6 @@ import ImageMapUtil from "../../../src/shared/graphics/image/util/imageMapUtil";
 import { COMPOSITION_PALETTE_NAME_BY_MATERIAL_ID, GEOMETRY_CODE_BY_ID, INSTANCE_COLORED_MATERIAL_IDS,
     INSTANCED_COLOR_MATERIAL_ID, INSTANCED_WOOD_MATERIAL_ID, MATERIAL_CODE_BY_ID,
     RELIEF_STEP, UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
-import { DOOR_CODEC_TYPE, PLAYER_CODEC_TYPE } from "../helpers/composition";
 
 const COMPOSITION_KEY = ObjectMetadataKeyEnumMap.InstancedMeshComposition;
 const FRAME_COORDS_KEY = ObjectMetadataKeyEnumMap.CanvasFrameCoords;
@@ -49,7 +49,10 @@ const DOOR_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Door");
 const CANVAS_CONFIG = CanvasObjectTypeConfig.components.spawnedByAny;
 const CANVAS_COMPOSER = CANVAS_CONFIG.instancedMeshComposer;
 
-// A canvas nobody has resized, which is what every case here but the resize one is about.
+// The types that show a framed panel: a canvas's picture or a label's text inside the band.
+const FRAMED_PANEL_TYPES = ["Canvas", "Label"];
+
+// A canvas nobody has resized, which is what every case here but the resize ones is about.
 function canvasBaseSize()
 {
     return ObjectScaleUtil.getObjectSize(CANVAS_TYPE_INDEX, UNIT_VEC3);
@@ -62,8 +65,7 @@ const SCALE_STEP = 0.125;
 const DEFAULT_CODEC_VERSION = 1;
 const DEFAULT_PREFIX = StringUtil.convertRawNumberToVisibleASCII(InstancedMeshCompositionCodecTypeEnumMap.Default)
     + StringUtil.convertRawNumberToVisibleASCII(DEFAULT_CODEC_VERSION);
-const CANVAS_PREFIX = StringUtil.convertRawNumberToVisibleASCII(CANVAS_COMPOSER.codecType)
-    + StringUtil.convertRawNumberToVisibleASCII(CANVAS_COMPOSER.codecVersion);
+const FRAMED_PANEL_PREFIX = CompositionMetadataUtil.getCodecPrefix(InstancedMeshCompositionCodecTypeEnumMap.FramedPanel, 0);
 
 // Authored the way the codec stores parts: colors from the material's palette, band width on a
 // thickness step, offset and scale on the quantization grid.
@@ -103,17 +105,18 @@ function decodeDefault(encoded: string): InstancedMeshCompositionPart[]
     return parts;
 }
 
-function decodeCanvas(encoded: string): {params: InstancedMeshCompositionParams, parts: InstancedMeshCompositionPart[]}
+function decodePanel(encoded: string, objectSize: Vec3 = canvasBaseSize()):
+    {params: InstancedMeshCompositionParams, parts: InstancedMeshCompositionPart[]}
 {
     const params: InstancedMeshCompositionParams = {};
     const parts: InstancedMeshCompositionPart[] = [];
-    CanvasCompositionCodec.decode(encoded, canvasBaseSize(), params, parts);
+    FramedPanelCompositionCodec.decode(encoded, objectSize, params, parts);
     return {params, parts};
 }
 
-function encodeCanvas(params: InstancedMeshCompositionParams): string
+function encodePanel(params: InstancedMeshCompositionParams): string
 {
-    return CANVAS_PREFIX + CanvasCompositionCodec.encode(params, []);
+    return FRAMED_PANEL_PREFIX + FramedPanelCompositionCodec.encode(params, []);
 }
 
 // The wood inputs alone (ids aside), for comparing finishes.
@@ -125,10 +128,15 @@ function finishOf(params: InstancedMeshCompositionParams)
 
 function canvas(objectId: string, metadata: {[key: number]: string} = {}): AddObjectSignal
 {
+    return objectOfType(CANVAS_TYPE_INDEX, objectId, metadata);
+}
+
+function objectOfType(objectTypeIndex: number, objectId: string, metadata: {[key: number]: string} = {}): AddObjectSignal
+{
     const encodableMetadata: {[key: number]: EncodableByteString} = {};
     for (const key of Object.keys(metadata))
         encodableMetadata[Number(key)] = new EncodableByteString(metadata[Number(key)]);
-    return new AddObjectSignal(ROOM_ID, "user-1", "User One", CANVAS_TYPE_INDEX, objectId,
+    return new AddObjectSignal(ROOM_ID, "user-1", "User One", objectTypeIndex, objectId,
         new ObjectTransform({x: 10.5, y: 2, z: 4.5}, {x: 0, y: 0, z: 1}, {...UNIT_VEC3}),
         encodableMetadata);
 }
@@ -146,9 +154,9 @@ function expectMoulded(part: InstancedMeshCompositionPart): void
     }
 }
 
-// A drawable canvas: one moulded board, with room inside its band for the picture, or
-// no parts at all when its frame is off.
-function expectDrawableCanvas(params: InstancedMeshCompositionParams, parts: InstancedMeshCompositionPart[]): void
+// A drawable panel: one moulded board, with room inside its band for the picture, or no parts at all
+// when there is no frame.
+function expectDrawablePanel(params: InstancedMeshCompositionParams, parts: InstancedMeshCompositionPart[]): void
 {
     expect(params.mouldingThickness).toBeGreaterThanOrEqual(MouldingCompositionConstants.minMouldingThickness);
     if (!params.framed)
@@ -295,44 +303,37 @@ describe("Default composition codec", () => {
     });
 });
 
-describe("canvas mesh composition", () => {
+describe("framed panel composition", () => {
     const paletteSize = ColorUtil.getPaletteSize("Timber");
-    const numThicknessSteps = Math.round((MouldingCompositionConstants.maxMouldingThickness
-        - MouldingCompositionConstants.minMouldingThickness) / MouldingCompositionConstants.mouldingThicknessStep) + 1;
 
-    const numMarginSteps = Math.round(MarginCompositionConstants.maxMargin / MarginCompositionConstants.marginStep) + 1;
-    const anyMargin = fc.integer({min: 0, max: numMarginSteps - 1})
-        .map(step => MarginCompositionConstants.fromMarginStep(step));
-
-    // Any finish the form can produce.
+    // Any finish the codec can store.
     const anyFinish = fc.record({
         frame: fc.integer({min: 0, max: paletteSize - 1}),
         inner: fc.integer({min: 0, max: paletteSize - 1}),
-        thicknessStep: fc.integer({min: 0, max: numThicknessSteps - 1}),
+        thicknessStep: fc.integer({min: 0, max: MouldingCompositionConstants.numThicknessSteps - 1}),
         convex: fc.boolean(),
-        margin: anyMargin,
-    }).map(({frame, inner, thicknessStep, convex, margin}) => ({
+    }).map(({frame, inner, thicknessStep, convex}) => ({
         colors: {frame: ColorUtil.paletteIndexToRGB("Timber", frame), inner: ColorUtil.paletteIndexToRGB("Timber", inner)},
-        mouldingThickness: MouldingCompositionConstants.minMouldingThickness
-            + thicknessStep * MouldingCompositionConstants.mouldingThicknessStep,
+        mouldingThickness: MouldingCompositionConstants.fromThicknessStep(thicknessStep),
         mouldingIsConvex: convex,
         framed: true,
-        margin,
     }));
 
-    // ─── Codec: round-trip & determinism ───────────────────────────────
+    // Any size a canvas can be resized to.
+    const scaling = CanvasObjectTypeConfig.scaling;
+    const numScales = Math.round((scaling.maxScale.x - scaling.minScale.x) / scaling.scaleStep.x) + 1;
+    const anyScale = fc.integer({min: 0, max: numScales - 1})
+        .map(step => scaling.minScale.x + step * scaling.scaleStep.x);
 
-    it("any finish the form can produce survives the round trip, and re-encodes to the same string", () => {
+    // ─── Codec: round-trip ─────────────────────────────────────────────
+
+    it("any finish survives the round trip, and re-encodes to the same string", () => {
         fc.assert(fc.property(anyFinish, (finish) => {
-            const encoded = encodeCanvas(finish);
-            const {params, parts} = decodeCanvas(encoded);
+            const encoded = encodePanel(finish);
+            const {params, parts} = decodePanel(encoded);
 
-            expect(params.colors).toEqual(finish.colors);
-            expect(params.mouldingThickness).toBeCloseTo(finish.mouldingThickness, 9);
-            expect(params.mouldingIsConvex).toBe(finish.mouldingIsConvex);
-            expect(params.framed).toBe(true);
-            expect(params.margin).toBe(finish.margin);
-            expect(encodeCanvas(params)).toBe(encoded);
+            expect(params).toEqual(finish);
+            expect(encodePanel(params)).toBe(encoded);
 
             // The board carries exactly these inputs: the band is the frame, inside it the inner color.
             expect(parts[0].mouldingColor).toEqual(finish.colors.frame);
@@ -342,88 +343,51 @@ describe("canvas mesh composition", () => {
         }), {numRuns: 200});
     });
 
-    it("a canvas with its frame off composes no parts, but keeps its finish for the frame to come back with", () => {
+    it("a panel without a frame composes no parts", () => {
         fc.assert(fc.property(anyFinish, (finish) => {
-            const encoded = encodeCanvas({...finish, framed: false});
-            const {params, parts} = decodeCanvas(encoded);
-
+            const {params, parts} = decodePanel(encodePanel({...finish, framed: false}));
             expect(params.framed).toBe(false);
             expect(parts).toHaveLength(0);
-            expect(finishOf(params)).toEqual(finishOf(finish));
-            expect(encodeCanvas(params)).toBe(encoded);
         }), {numRuns: 100});
-    });
-
-    it("a canvas storing nothing past the codec prefix is frameless, with a preset to turn the frame on with", () => {
-        const {params, parts} = decodeCanvas(CANVAS_PREFIX);
-        expect(params.framed).toBe(false);
-        expect(params.margin).toBe(0);
-        expect(parts).toHaveLength(0);
-        expect(finishOf(params)).toEqual(CanvasCompositionConstants.presets[0]);
-    });
-
-    it("a canvas stored before it had a margin keeps its finish, and is drawn over its whole footprint", () => {
-        fc.assert(fc.property(anyFinish, (finish) => {
-            const encoded = encodeCanvas(finish);
-            const {params, parts} = decodeCanvas(encoded.substring(0, encoded.length - 1));
-            expect(finishOf(params)).toEqual(finishOf(finish));
-            expect(params.framed).toBe(true);
-            expect(params.margin).toBe(0);
-            expect(parts[0].scale.x).toBe(canvasBaseSize().x);
-            expect(parts[0].scale.y).toBe(canvasBaseSize().y);
-        }), {numRuns: 50});
-    });
-
-    it("the same seed always yields the same canvas", () => {
-        fc.assert(fc.property(fc.integer(), (seed) => {
-            const a = CanvasCompositionCodec.getRandomComposition(seed, canvasBaseSize());
-            const b = CanvasCompositionCodec.getRandomComposition(seed, canvasBaseSize());
-            expect(encodeCanvas(b.params)).toBe(encodeCanvas(a.params));
-        }), {numRuns: 50});
-    });
-
-    it("every preset survives the quantization the codec applies, and no two presets are alike", () => {
-        // A preset off the palette or between width steps would decode to a different finish, so the
-        // form would never recognize it again.
-        const encodedPresets = new Set<string>();
-        for (const preset of CanvasCompositionConstants.presets)
-        {
-            const encoded = encodeCanvas({...preset, framed: true});
-            expect(finishOf(decodeCanvas(encoded).params)).toEqual(preset);
-            encodedPresets.add(encoded);
-        }
-        expect(encodedPresets.size).toBe(CanvasCompositionConstants.presets.length);
     });
 
     // ─── Codec: robustness against untrusted input ─────────────────────
 
-    it("decoding an arbitrary string never throws and still yields a drawable canvas", () => {
+    it("decoding an arbitrary string never throws and still yields a drawable panel", () => {
         fc.assert(fc.property(fc.string(), (garbage) => {
-            const {params, parts} = decodeCanvas(CANVAS_PREFIX + garbage);
-            expectDrawableCanvas(params, parts);
+            const {params, parts} = decodePanel(FRAMED_PANEL_PREFIX + garbage);
+            expectDrawablePanel(params, parts);
         }), {numRuns: 500});
     });
 
-    it("a truncated composition decodes to a drawable canvas", () => {
-        const encoded = encodeCanvas({...CanvasCompositionConstants.presets[0], framed: true});
+    it("a truncated look decodes to a drawable panel", () => {
+        const encoded = PreEncodedCompositionStringMap[getLooks("Canvas")[1].compositionIndex];
         for (let length = 0; length <= encoded.length; ++length)
         {
-            const {params, parts} = decodeCanvas(encoded.substring(0, length));
-            expectDrawableCanvas(params, parts);
+            const {params, parts} = decodePanel(encoded.substring(0, length));
+            expectDrawablePanel(params, parts);
         }
     });
 
-    it("even the widest band leaves room inside it for the picture", () => {
-        const {params, parts} = decodeCanvas(encodeCanvas({...CanvasCompositionConstants.presets[0],
-            mouldingThickness: MouldingCompositionConstants.maxMouldingThickness, framed: true}));
-        expectDrawableCanvas(params, parts);
+    it("even the widest band leaves room inside it at the smallest size of every framed type", () => {
+        for (const objectType of FRAMED_PANEL_TYPES)
+        {
+            const objectTypeIndex = ObjectTypeConfigMap.getIndexByType(objectType);
+            const smallest = ObjectScaleUtil.getObjectSize(objectTypeIndex,
+                ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex).scaling!.minScale);
+            const {params, parts} = decodePanel(encodePanel({colors: {frame: UNIT_VEC3, inner: UNIT_VEC3},
+                mouldingThickness: MouldingCompositionConstants.maxMouldingThickness, mouldingIsConvex: true,
+                framed: true}), smallest);
+            expectDrawablePanel(params, parts);
+            const inner = FramedPanelCompositionConstants.getInnerSize(params, smallest);
+            expect(Math.min(inner.x, inner.y), objectType).toBeGreaterThan(0);
+        }
     });
 
     // ─── Shape ─────────────────────────────────────────────────────────
 
     it("the board covers the canvas's footprint, just proud of the wall it hangs on", () => {
-        const {parts} = CanvasCompositionCodec.getRandomComposition(1, canvasBaseSize());
-        const [board] = parts;
+        const [board] = getLooks("Canvas", canvasBaseSize())[1].parts;
         expect(board.scale.x).toBe(CANVAS_CONFIG.collider.baseHitboxSize.sizeX);
         expect(board.scale.y).toBe(CANVAS_CONFIG.collider.baseHitboxSize.sizeY);
         expect(board.offset.x).toBe(0);
@@ -435,8 +399,8 @@ describe("canvas mesh composition", () => {
         const scale = CanvasObjectTypeConfig.scaling.maxScale;
         const stretched = ObjectScaleUtil.getObjectSize(CANVAS_TYPE_INDEX, scale);
 
-        const base = CanvasCompositionCodec.getRandomComposition(1, canvasBaseSize()).parts[0];
-        const big = CanvasCompositionCodec.getRandomComposition(1, stretched).parts[0];
+        const base = getLooks("Canvas", canvasBaseSize())[1].parts[0];
+        const big = getLooks("Canvas", stretched)[1].parts[0];
 
         expect(big.scale.x).toBe(CANVAS_CONFIG.collider.baseHitboxSize.sizeX * scale.x);
         expect(big.scale.y).toBe(CANVAS_CONFIG.collider.baseHitboxSize.sizeY * scale.y);
@@ -444,50 +408,61 @@ describe("canvas mesh composition", () => {
         expect(big.mouldingThickness).toBe(base.mouldingThickness);
     });
 
-    it("the board and the picture sit a margin inside the footprint, which gives way before the picture would vanish", () => {
-        const scaling = CanvasObjectTypeConfig.scaling;
-        const numScales = Math.round((scaling.maxScale.x - scaling.minScale.x) / scaling.scaleStep.x) + 1;
-        const anyScale = fc.integer({min: 0, max: numScales - 1})
-            .map(step => scaling.minScale.x + step * scaling.scaleStep.x);
+    it("the picture fills the inside of the band, or the whole footprint without a frame", () => {
         fc.assert(fc.property(anyFinish, fc.boolean(), anyScale, anyScale, (finish, framed, scaleX, scaleY) => {
             const size = ObjectScaleUtil.getObjectSize(CANVAS_TYPE_INDEX, {x: scaleX, y: scaleY, z: 1});
-            const params = {...finish, framed};
-            const parts: InstancedMeshCompositionPart[] = [];
-            CanvasCompositionCodec.decode(encodeCanvas(params), size, {}, parts);
-            const drawn = FramedPanelCompositionConstants.getDrawnSize(params, size);
+            const {params, parts} = decodePanel(encodePanel({...finish, framed}), size);
             const picture = FramedPanelCompositionConstants.getInnerSize(params, size);
-            if (framed)
-            {
-                expect(parts[0].scale.x).toBeCloseTo(drawn.x, 9);
-                expect(parts[0].scale.y).toBeCloseTo(drawn.y, 9);
-            }
+            const band = framed ? finish.mouldingThickness : 0;
             for (const axis of ["x", "y"] as const)
             {
-                expect(drawn[axis]).toBeLessThanOrEqual(size[axis] + 1e-9);
-                expect(picture[axis]).toBeGreaterThanOrEqual(MarginCompositionConstants.minInnerSize - 1e-9);
-                // Short of the margin only where the picture would otherwise shrink past its minimum.
-                if (drawn[axis] > size[axis] - 2 * finish.margin + 1e-9)
-                    expect(picture[axis]).toBeCloseTo(MarginCompositionConstants.minInnerSize, 9);
+                expect(picture[axis]).toBeCloseTo(size[axis] - 2 * band, 9);
+                if (framed)
+                    expect(parts[0].scale[axis]).toBeCloseTo(size[axis], 9);
             }
         }), {numRuns: 200});
+    });
+});
+
+describe("a canvas's looks", () => {
+    const looks = getLooks("Canvas");
+
+    it("the first is the picture alone, and every other a frame in a finish of its own", () => {
+        expect(looks[0].params.framed).toBe(false);
+        expect(looks[0].parts).toHaveLength(0);
+
+        const framed = looks.slice(1);
+        expect(framed.length).toBeGreaterThan(1);
+        for (const look of framed)
+        {
+            expect(look.params.framed).toBe(true);
+            expectDrawablePanel(look.params, look.parts);
+        }
+        expect(new Set(framed.map(look => JSON.stringify(finishOf(look.params)))).size).toBe(framed.length);
+    });
+
+    it("every look is written by the framed panel codec", () => {
+        for (const look of looks)
+            expect(PreEncodedCompositionStringMap[look.compositionIndex].startsWith(FRAMED_PANEL_PREFIX)).toBe(true);
     });
 
     // ─── The appearance a canvas falls back on ─────────────────────────
 
-    it("a canvas's default frame depends on where it hangs, is a preset, and varies across canvases", () => {
+    it("a canvas's default frame depends on where it hangs, is a framed look, and varies across canvases", () => {
         const a = CANVAS_COMPOSER.generateDefaultParts(canvas("same"));
         const b = CANVAS_COMPOSER.generateDefaultParts(canvas("same"));
-        expect(encodeCanvas(b.params)).toBe(encodeCanvas(a.params));
+        expect(b.params.compositionIndex).toBe(a.params.compositionIndex);
 
-        const finishes = new Set<string>();
+        const framedIndices = looks.slice(1).map(look => look.compositionIndex);
+        const chosen = new Set<number>();
         for (let i = 0; i < 40; ++i)
         {
             const {params, parts} = CANVAS_COMPOSER.generateDefaultParts(canvas(`canvas-${i}`));
-            expectDrawableCanvas(params, parts);
-            expect(CanvasCompositionConstants.presets).toContainEqual(finishOf(params));
-            finishes.add(encodeCanvas(params));
+            expect(framedIndices).toContain(params.compositionIndex);
+            expectDrawablePanel(params, parts);
+            chosen.add(params.compositionIndex);
         }
-        expect(finishes.size).toBeGreaterThan(1);
+        expect(chosen.size).toBeGreaterThan(1);
     });
 
     // ─── Permissions ───────────────────────────────────────────────────
@@ -500,43 +475,51 @@ describe("canvas mesh composition", () => {
 
         expect(setMetadata(ObjectMetadataKeyEnumMap.ImagePath, imagePath)).toBe(true);
         expect(setMetadata(ObjectMetadataKeyEnumMap.ImagePath, "no/such/image")).toBe(false);
-        expect(setMetadata(COMPOSITION_KEY, encodeCanvas({...CanvasCompositionConstants.presets[3], framed: true}))).toBe(true);
         expect(setMetadata(FRAME_COORDS_KEY, "0,0")).toBe(false);
         expect(setMetadata(ObjectMetadataKeyEnumMap.Label, "hello")).toBe(false);
+
+        // A frame only as one of its own looks: another type's builds parts a canvas can't place, and a
+        // spelled-out finish skips the list.
+        for (const look of looks)
+            expect(setMetadata(COMPOSITION_KEY, look.stored)).toBe(true);
+        expect(setMetadata(COMPOSITION_KEY, getLooks("Label")[1].stored)).toBe(false);
+        expect(setMetadata(COMPOSITION_KEY, PreEncodedCompositionStringMap[looks[1].compositionIndex])).toBe(false);
+        expect(setMetadata(COMPOSITION_KEY, "abc")).toBe(false);
     });
 
     // ─── Config coherence ──────────────────────────────────────────────
 
-    it("the canvas composes through a codec of its own", () => {
-        expect(CANVAS_COMPOSER.codecType).toBe(InstancedMeshCompositionCodecTypeEnumMap.Canvas);
-        // Sharing a codec with another type would let one decode the other's string.
-        expect(CANVAS_COMPOSER.codecType).not.toBe(DOOR_CODEC_TYPE);
-        expect(CANVAS_COMPOSER.codecType).not.toBe(PLAYER_CODEC_TYPE);
-        expect(CANVAS_COMPOSER.codecType).not.toBe(InstancedMeshCompositionCodecTypeEnumMap.Indexed);
+    it("a canvas stores an index to one of its looks", () => {
+        expect(CANVAS_COMPOSER.codecType).toBe(InstancedMeshCompositionCodecTypeEnumMap.Indexed);
     });
 });
 
-describe("bitmap frame migration", () => {
-    // Objects encoded now, with the format's version byte stamped back to the given version.
-    function decodeAsVersion(objects: AddObjectSignal[], version: number): ObjectGroup
+// Objects encoded now, with the format's version byte stamped back to the given version.
+function decodeAsVersion(objects: AddObjectSignal[], version: number): ObjectGroup
+{
+    const view = new Uint8Array(64 * 1024);
+    const writeState = new BufferState(view);
+    // Versions from before the scale are written in their own layout, not stamped onto a current one.
+    if (version > LAST_UNSCALED_OBJECT_GROUP_VERSION)
     {
-        const view = new Uint8Array(64 * 1024);
-        const writeState = new BufferState(view);
-        // Versions from before the scale are written in their own layout, not stamped onto a current one.
-        if (version > LAST_UNSCALED_OBJECT_GROUP_VERSION)
-        {
-            new ObjectGroup(objects).encodeWithParams(writeState, {});
-            view[0] = version;
-        }
-        else
-            writeLegacyObjectGroup(writeState, objects, version);
-        return ObjectGroup.decodeWithParams(new BufferState(view.subarray(0, writeState.byteIndex)), ROOM_ID) as ObjectGroup;
+        new ObjectGroup(objects).encodeWithParams(writeState, {});
+        view[0] = version;
     }
+    else
+        writeLegacyObjectGroup(writeState, objects, version);
+    return ObjectGroup.decodeWithParams(new BufferState(view.subarray(0, writeState.byteIndex)), ROOM_ID) as ObjectGroup;
+}
 
+describe("bitmap frame migration", () => {
     function migratedFrameOf(col: number, row: number): string
     {
         const group = decodeAsVersion([canvas("framed", {[FRAME_COORDS_KEY]: `${col},${row}`})], 2);
         return group.objectById["framed"].metadata[COMPOSITION_KEY]!.str;
+    }
+
+    function lookOf(stored: string)
+    {
+        return getLooks("Canvas").find(look => look.stored == stored);
     }
 
     it("a framed canvas gets a wood frame in place of its bitmap one, and keeps its picture", () => {
@@ -548,43 +531,23 @@ describe("bitmap frame migration", () => {
 
         expect(migrated.metadata[FRAME_COORDS_KEY]).toBeUndefined();
         expect(migrated.metadata[ObjectMetadataKeyEnumMap.ImagePath]?.str).toBe("1/1");
-        expect(migrated.metadata[COMPOSITION_KEY]!.str.startsWith(CANVAS_PREFIX)).toBe(true);
+        expect(lookOf(migrated.metadata[COMPOSITION_KEY]!.str)?.params.framed).toBe(true);
         expect(group.sourceFormatVersion).toBe(2);
     });
 
-    it("every old atlas cell becomes a canonical, drawable frame of its own", () => {
-        const frames = new Set<string>();
+    it("every old atlas cell becomes one of the canvas's frames", () => {
         for (let row = 0; row < 4; ++row)
         {
             for (let col = 0; col < 4; ++col)
-            {
-                const stored = migratedFrameOf(col, row);
-                const {params, parts} = decodeCanvas(stored);
-                expectDrawableCanvas(params, parts);
-                expect(params.framed).toBe(true);
-                expect(encodeCanvas(params)).toBe(stored);
-                frames.add(stored);
-            }
+                expect(lookOf(migratedFrameOf(col, row))?.params.framed, `cell ${col},${row}`).toBe(true);
         }
-        expect(frames.size).toBe(16);
     });
 
     it("cells keep their place in the atlas: the white marble stays pale, the carved dark wood dark", () => {
         // Guards the cell order (column first, row by row), which nothing else would notice going wrong.
-        const whiteMarble = decodeCanvas(migratedFrameOf(0, 0)).params;
-        const darkWood = decodeCanvas(migratedFrameOf(3, 3)).params;
+        const whiteMarble = lookOf(migratedFrameOf(0, 0))!.params;
+        const darkWood = lookOf(migratedFrameOf(3, 3))!.params;
         expect(luma(whiteMarble.colors.frame)).toBeGreaterThan(luma(darkWood.colors.frame) + 60);
-        expect(luma(whiteMarble.colors.inner)).toBeGreaterThan(luma(darkWood.colors.inner) + 60);
-    });
-
-    it("cells keep their border widths in order: the gold slimmest, then the plain, the jade, the carved", () => {
-        // The codec clamps band widths silently, so a range change the table isn't rescaled for would
-        // flatten every frame to one width.
-        const bandOf = (col: number, row: number) => decodeCanvas(migratedFrameOf(col, row)).params.mouldingThickness;
-        const gold = bandOf(1, 1), plain = bandOf(0, 0), jade = bandOf(2, 0), carved = bandOf(3, 3);
-        expect(gold).toBeLessThan(plain);
-        expect(plain).toBeLessThan(jade);
-        expect(jade).toBeLessThan(carved);
     });
 
     it("an unreadable frame is dropped, leaving the canvas its default frame", () => {
@@ -608,10 +571,121 @@ describe("bitmap frame migration", () => {
     });
 
     it("a current group is decoded untouched and reports its format as current", () => {
-        const framed = encodeCanvas({...CanvasCompositionConstants.presets[0], framed: true});
-        const group = decodeAsVersion([canvas("current", {[COMPOSITION_KEY]: framed})], ObjectGroup.latestFormatVersion);
+        const stored = getLooks("Canvas")[3].stored;
+        const group = decodeAsVersion([canvas("current", {[COMPOSITION_KEY]: stored})], ObjectGroup.latestFormatVersion);
         expect(group.sourceFormatVersion).toBe(ObjectGroup.latestFormatVersion);
-        expect(group.objectById["current"].metadata[COMPOSITION_KEY]?.str).toBe(framed);
+        expect(group.objectById["current"].metadata[COMPOSITION_KEY]?.str).toBe(stored);
+    });
+});
+
+/**
+ * Before their looks were a list, canvases, labels and doors each stored a finish of their own in a codec of
+ * their own (canvas 4, label 6, door 2, all at version 0). Each becomes the look nearest it.
+ */
+describe("finish migration", () => {
+    const LAST_OWN_FINISH_VERSION = 5;
+    const LEGACY_CODEC_TYPE_BY_OBJECT_TYPE: {[objectType: string]: number} = {Door: 2, Canvas: 4, Label: 6};
+    const MIN_BAND = 0.04;
+    const BAND_STEP = 0.02;
+    const NUM_BAND_STEPS = 7;
+    const CONVEX_FLAG = 1;
+    const FRAMED_FLAG = 2;
+
+    const char = (raw: number) => StringUtil.convertRawNumberToVisibleASCII(raw);
+    const paletteIndex = (color: Vec3) => ColorUtil.rgbToPaletteIndex("Timber", color);
+
+    // Frame and inner colors, the band step, and the flags, then (for later panels) the margin step.
+    function legacyPanel(objectType: string, finish: InstancedMeshCompositionParams, marginStep?: number): string
+    {
+        return char(LEGACY_CODEC_TYPE_BY_OBJECT_TYPE[objectType]) + char(0)
+            + char(paletteIndex(finish.colors.frame)) + char(paletteIndex(finish.colors.inner))
+            + char(Math.round((finish.mouldingThickness - MIN_BAND) / BAND_STEP))
+            + char((finish.mouldingIsConvex ? CONVEX_FLAG : 0) | (finish.framed ? FRAMED_FLAG : 0))
+            + (marginStep == undefined ? "" : char(marginStep));
+    }
+
+    // Timber, plate and knob.
+    function legacyDoor(colors: InstancedMeshCompositionParams["colors"]): string
+    {
+        return char(LEGACY_CODEC_TYPE_BY_OBJECT_TYPE.Door) + char(0)
+            + char(paletteIndex(colors.panel)) + char(paletteIndex(colors.label)) + char(paletteIndex(colors.knob));
+    }
+
+    function migrated(objectType: string, stored: string | undefined): string | undefined
+    {
+        const object = objectOfType(ObjectTypeConfigMap.getIndexByType(objectType), "object",
+            stored == undefined ? {} : {[COMPOSITION_KEY]: stored});
+        return decodeAsVersion([object], LAST_OWN_FINISH_VERSION).objectById["object"].metadata[COMPOSITION_KEY]?.str;
+    }
+
+    const anyPanelFinish = fc.record({
+        frame: fc.integer({min: 0, max: ColorUtil.getPaletteSize("Timber") - 1}),
+        inner: fc.integer({min: 0, max: ColorUtil.getPaletteSize("Timber") - 1}),
+        thicknessStep: fc.integer({min: 0, max: NUM_BAND_STEPS - 1}),
+        convex: fc.boolean(),
+    }).map(({frame, inner, thicknessStep, convex}) => ({
+        colors: {frame: ColorUtil.paletteIndexToRGB("Timber", frame), inner: ColorUtil.paletteIndexToRGB("Timber", inner)},
+        mouldingThickness: MIN_BAND + thicknessStep * BAND_STEP,
+        mouldingIsConvex: convex,
+    }));
+
+    it("a finish that is one of the looks on offer becomes that very look", () => {
+        for (const objectType of FRAMED_PANEL_TYPES)
+        {
+            for (const look of getLooks(objectType).filter(look => look.params.framed))
+                expect(migrated(objectType, legacyPanel(objectType, look.params)), objectType).toBe(look.stored);
+        }
+        for (const look of getLooks("Door"))
+            expect(migrated("Door", legacyDoor(look.params.colors))).toBe(look.stored);
+    });
+
+    it("an unframed canvas or label shows its frameless look, whatever finish it kept", () => {
+        for (const objectType of FRAMED_PANEL_TYPES)
+        {
+            const frameless = getLooks(objectType)[0].stored;
+            fc.assert(fc.property(anyPanelFinish, (finish) => {
+                expect(migrated(objectType, legacyPanel(objectType, {...finish, framed: false}))).toBe(frameless);
+            }), {numRuns: 30});
+            // Nothing past the prefix was frameless too.
+            expect(migrated(objectType, char(LEGACY_CODEC_TYPE_BY_OBJECT_TYPE[objectType]) + char(0))).toBe(frameless);
+        }
+    });
+
+    it("a finish of a canvas's or a label's own becomes one of its framed looks, whatever its margin", () => {
+        for (const objectType of FRAMED_PANEL_TYPES)
+        {
+            const framedLooks = getLooks(objectType).slice(1).map(look => look.stored);
+            fc.assert(fc.property(anyPanelFinish, fc.integer({min: 0, max: 4}), (finish, marginStep) => {
+                const withoutMargin = migrated(objectType, legacyPanel(objectType, {...finish, framed: true}));
+                expect(framedLooks).toContain(withoutMargin);
+                expect(migrated(objectType, legacyPanel(objectType, {...finish, framed: true}, marginStep)))
+                    .toBe(withoutMargin);
+            }), {numRuns: 30});
+        }
+    });
+
+    it("a finish a band step off a look on offer becomes that look", () => {
+        const maxBand = MIN_BAND + (NUM_BAND_STEPS - 1) * BAND_STEP;
+        for (const objectType of FRAMED_PANEL_TYPES)
+        {
+            for (const look of getLooks(objectType).filter(look => look.params.framed))
+            {
+                const thickness = look.params.mouldingThickness;
+                const nudged = (thickness + BAND_STEP <= maxBand + 1e-9) ? thickness + BAND_STEP : thickness - BAND_STEP;
+                expect(migrated(objectType, legacyPanel(objectType, {...look.params, mouldingThickness: nudged})),
+                    `${objectType} ${look.compositionIndex}`).toBe(look.stored);
+            }
+        }
+    });
+
+    it("a finish in any other codec is dropped, and an object that stored none is left without", () => {
+        for (const objectType of ["Canvas", "Label", "Door"])
+        {
+            expect(migrated(objectType, "&!Sa%\""), objectType).toBeUndefined();
+            expect(migrated(objectType, undefined), objectType).toBeUndefined();
+        }
+        // A door's finish on a canvas is another codec's too.
+        expect(migrated("Canvas", legacyDoor(getLooks("Door")[0].params.colors))).toBeUndefined();
     });
 });
 

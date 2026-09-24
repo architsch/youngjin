@@ -4,8 +4,7 @@ import App from "../../app";
 import ClientObjectManager from "../../object/clientObjectManager";
 import ClientVoxelManager from "../../voxel/clientVoxelManager";
 import CompositionMetadataUtil from "../../../shared/graphics/mesh/composition/util/compositionMetadataUtil";
-import DoorCompositionConstants from "../../../shared/graphics/mesh/composition/types/compositionConstants/doorCompositionConstants";
-import CanvasCompositionConstants from "../../../shared/graphics/mesh/composition/types/compositionConstants/canvasCompositionConstants";
+import PreEncodedCompositionIndexMap from "../../../shared/graphics/mesh/composition/maps/preEncodedCompositionIndexMap";
 import EncodableByteString from "../../../shared/networking/types/encodableByteString";
 import FreeCameraPose from "../../object/components/helpers/player/freeCameraPose";
 import GameObject from "../../object/types/gameObject";
@@ -35,7 +34,6 @@ import RoomLightingUtil from "../../graphics/light/util/roomLightingUtil";
 import RoomPrefs from "../../../shared/room/types/roomPrefs";
 import RoomPrefsUtil, { MAX_ROOM_PREFS_STEP } from "../../../shared/room/util/roomPrefsUtil";
 import { ColorPaletteMap } from "../../../shared/math/maps/colorPaletteMap";
-import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../shared/graphics/mesh/composition/types/instancedMeshCompositionCodecType";
 import { ObjectMetadata } from "../../../shared/object/types/objectMetadata";
 import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
@@ -323,6 +321,14 @@ function metadataFrom(entries: {[key: string]: string} | undefined): ObjectMetad
     return metadata;
 }
 
+// A type's pre-encoded looks as metadata by key name, in the order its chooser shows them.
+function getLookMetadataList(objectType: string, codecVersion: number): {InstancedMeshComposition: string}[]
+{
+    return (PreEncodedCompositionIndexMap[objectType] ?? []).map(compositionIndex => ({
+        InstancedMeshComposition: CompositionMetadataUtil.encodeIndexed(compositionIndex, codecVersion),
+    }));
+}
+
 const AutomationSetupUtil =
 {
     // Same gate as the read-only bridge (non-public deployments). It only changes this client's view.
@@ -583,27 +589,21 @@ const AutomationSetupUtil =
                 },
 
                 // Door finishes as ready-to-spread metadata. Explicit, because seeded random finishes
-                // often repeat across neighbouring doors. Same set as the customization form.
+                // often repeat across neighbouring doors. Same list as the finish chooser.
                 doorStyles: () =>
                 {
                     requireSandboxRoom("Listing the door finishes");
-                    return DoorCompositionConstants.presets.map(colors => ({
-                        InstancedMeshComposition: CompositionMetadataUtil.encode(
-                            InstancedMeshCompositionCodecTypeEnumMap.Door, 0, {colors}),
-                    }));
+                    return getLookMetadataList(DoorObjectTypeConfig.objectType,
+                        DoorObjectTypeConfig.components.spawnedByAny.instancedMeshComposer.codecVersion);
                 },
 
-                // Canvas frame presets as ready-to-spread metadata. Explicit for the same reason as the
-                // door finishes. Same set as the customization form.
+                // Canvas frames as ready-to-spread metadata, the first frameless. Explicit for the same
+                // reason as the door finishes. Same list as the frame chooser.
                 canvasFrameStyles: () =>
                 {
-                    requireSandboxRoom("Listing the canvas frame presets");
-                    const composer = CanvasObjectTypeConfig.components.spawnedByAny.instancedMeshComposer;
-                    // A preset is a finish only, so the frame is turned on here.
-                    return CanvasCompositionConstants.presets.map(preset => ({
-                        InstancedMeshComposition: CompositionMetadataUtil.encode(
-                            composer.codecType, composer.codecVersion, {...preset, framed: true, margin: 0}),
-                    }));
+                    requireSandboxRoom("Listing the canvas frames");
+                    return getLookMetadataList(CanvasObjectTypeConfig.objectType,
+                        CanvasObjectTypeConfig.components.spawnedByAny.instancedMeshComposer.codecVersion);
                 },
 
                 // Attaches a picture, door, lamp or label to a cell face (cell-addressed, like the walls). Spawned

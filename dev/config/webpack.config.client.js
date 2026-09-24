@@ -19,6 +19,11 @@ module.exports = {
                 },
                 exclude: /node_modules/,
             },
+            // Inlined as a data URL, so a font costs no request of its own (see LabelText).
+            {
+                test: /\.ttf$/,
+                type: 'asset/inline',
+            },
         ],
     },
     resolve: {
@@ -48,6 +53,12 @@ module.exports = {
                 },
                 misc: {
                     test: /[\\/]node_modules[\\/]/,
+                    name: 'vendor.misc',
+                    enforce: true,
+                },
+                // Bundled fonts change as rarely as the dependencies, so they ride in the same chunk.
+                fonts: {
+                    test: /\.ttf$/,
                     name: 'vendor.misc',
                     enforce: true,
                 },

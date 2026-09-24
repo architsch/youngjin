@@ -13,12 +13,10 @@ import { regularRoom, namedUser, usersInRoom } from "../helpers/scenarioPresets"
 import {
     encodePlayerComposition, decodePlayerComposition, playerCodecPrefix,
     PLAYER_CODEC_TYPE, PLAYER_CODEC_VERSION,
-    encodeDoorComposition, decodeDoorComposition, doorCodecPrefix, DOOR_CODEC_TYPE,
-    generateDefaultDoorComposition,
+    decodeDoorComposition, doorCodecPrefix, generateDefaultDoorComposition, getLooks,
 } from "../helpers/composition";
 import { PlayerCompositionCodec } from "../../../src/shared/graphics/mesh/composition/types/compositionCodec/playerCompositionCodec";
 import { DoorCompositionCodec } from "../../../src/shared/graphics/mesh/composition/types/compositionCodec/doorCompositionCodec";
-import DoorCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/doorCompositionConstants";
 import DoorObjectTypeConfig, { ENTRANCE_DOOR_OBJECT_ID } from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 
 import ColorUtil from "../../../src/shared/math/util/colorUtil";
@@ -313,56 +311,30 @@ describe("player mesh composition", () => {
 });
 
 /**
- * Door appearance: encoded like a player's, but derived for the door, so it's identical for every
- * player and every session.
+ * Door appearance: one of the door's pre-encoded finishes, each a door codec string over the single design.
+ * A door storing none is given one derived for the door, so it's identical for every player and every session.
  */
 describe("door mesh composition", () => {
+    const looks = getLooks("Door");
+    const composer = DoorObjectTypeConfig.components.spawnedByAny.instancedMeshComposer;
+
     beforeEach(() => {
         vi.spyOn(console, "error").mockImplementation(() => {});
         vi.spyOn(console, "warn").mockImplementation(() => {});
         vi.spyOn(console, "log").mockImplementation(() => {});
     });
 
-    // ─── Codec: round-trip & determinism ───────────────────────────────
+    // ─── Codec: round-trip ─────────────────────────────────────────────
 
-    it("a composition survives an encode/decode round-trip", () => {
-        const {params, parts} = DoorCompositionCodec.getRandomComposition(12345, UNIT_VEC3);
-        const encoded = doorCodecPrefix() + DoorCompositionCodec.encode(params, parts);
-
-        const decoded = decodeDoorComposition(encoded);
-
-        expect(decoded.params.colors).toEqual(params.colors);
-        expect(decoded.parts.length).toBe(parts.length);
-    });
-
-    it("the same seed always yields the same door", () => {
-        const a = DoorCompositionCodec.getRandomComposition(777, UNIT_VEC3);
-        const b = DoorCompositionCodec.getRandomComposition(777, UNIT_VEC3);
-
-        expect(DoorCompositionCodec.encode(a.params, a.parts))
-            .toBe(DoorCompositionCodec.encode(b.params, b.parts));
-    });
-
-    it("decoding is idempotent — re-encoding a decoded door reproduces the string", () => {
-        fc.assert(fc.property(fc.integer(), (seed) => {
-            const encoded = encodeDoorComposition(seed);
+    it("any finish survives the door codec's round trip, and re-encodes to the same string", () => {
+        const paletteIndex = fc.integer({min: 0, max: ColorUtil.getPaletteSize("Timber") - 1})
+            .map(index => ColorUtil.paletteIndexToRGB("Timber", index));
+        fc.assert(fc.property(paletteIndex, paletteIndex, paletteIndex, (panel, label, knob) => {
+            const encoded = doorCodecPrefix() + DoorCompositionCodec.encode({colors: {panel, label, knob}}, []);
             const decoded = decodeDoorComposition(encoded);
-            const reEncoded = doorCodecPrefix()
-                + DoorCompositionCodec.encode(decoded.params, decoded.parts);
-            expect(reEncoded).toBe(encoded);
+            expect(decoded.params.colors).toEqual({panel, label, knob});
+            expect(doorCodecPrefix() + DoorCompositionCodec.encode(decoded.params, decoded.parts)).toBe(encoded);
         }), {numRuns: 100});
-    });
-
-    it("every authored preset survives the palette the codec quantizes to", () => {
-        // Preset colors must land exactly on palette entries, or they decode to a different color.
-        for (const preset of DoorCompositionConstants.presets)
-        {
-            for (const color of Object.values(preset))
-            {
-                expect(ColorUtil.paletteIndexToRGB("Timber",
-                    ColorUtil.rgbToPaletteIndex("Timber", color))).toEqual(color);
-            }
-        }
     });
 
     it("every palette round-trips its own colors, and none outgrows what can name it", () => {
@@ -392,13 +364,25 @@ describe("door mesh composition", () => {
     });
 
     it("a truncated composition decodes to a drawable door", () => {
+        const finish = PreEncodedCompositionStringMap[looks[0].compositionIndex];
         for (let length = 0; length < 6; ++length)
         {
-            const partial = encodeDoorComposition(42).substring(0, 2 + length);
-            const decoded = decodeDoorComposition(partial);
+            const decoded = decodeDoorComposition(finish.substring(0, 2 + length));
             expectRenderableBody(decoded.params, decoded.parts);
             expectMouldedParts(decoded.parts);
         }
+    });
+
+    // ─── The finishes on offer ─────────────────────────────────────────
+
+    it("every finish on offer is a drawable door in a finish of its own", () => {
+        expect(looks.length).toBeGreaterThan(1);
+        for (const look of looks)
+        {
+            expectRenderableBody(look.params, look.parts);
+            expectMouldedParts(look.parts);
+        }
+        expect(new Set(looks.map(look => JSON.stringify(look.params.colors))).size).toBe(looks.length);
     });
 
     // ─── The appearance a door falls back on ───────────────────────────
@@ -407,23 +391,22 @@ describe("door mesh composition", () => {
         // Derived from the room and object only (not the viewing user), so everyone sees the same door.
         const a = generateDefaultDoorComposition("room-a", ENTRANCE_DOOR_OBJECT_ID);
         const b = generateDefaultDoorComposition("room-a", ENTRANCE_DOOR_OBJECT_ID);
-        expect(b.params.colors).toEqual(a.params.colors);
+        expect(b.params.compositionIndex).toBe(a.params.compositionIndex);
 
         // Across a spread of rooms, the doors must not all come out the same.
-        const finishes = new Set<string>();
+        const finishes = new Set<number>();
         for (let i = 0; i < 40; ++i)
-        {
-            const {params, parts} = generateDefaultDoorComposition(`room-${i}`, ENTRANCE_DOOR_OBJECT_ID);
-            finishes.add(DoorCompositionCodec.encode(params, parts));
-        }
+            finishes.add(generateDefaultDoorComposition(`room-${i}`, ENTRANCE_DOOR_OBJECT_ID).params.compositionIndex);
         expect(finishes.size).toBeGreaterThan(1);
     });
 
-    it("a door's default appearance is one of the authored presets", () => {
+    it("a door's default appearance is one of its finishes", () => {
+        const compositionIndices = looks.map(look => look.compositionIndex);
         for (let i = 0; i < 40; ++i)
         {
-            const {params} = generateDefaultDoorComposition(`room-${i}`, ENTRANCE_DOOR_OBJECT_ID);
-            expect(DoorCompositionConstants.presets).toContainEqual(params.colors);
+            const {params, parts} = generateDefaultDoorComposition(`room-${i}`, ENTRANCE_DOOR_OBJECT_ID);
+            expect(compositionIndices).toContain(params.compositionIndex);
+            expectRenderableBody(params, parts);
         }
     });
 
@@ -434,7 +417,7 @@ describe("door mesh composition", () => {
         const canReskin = (userType: number, roomType: number, ownedRoomID: string = "") =>
             DoorObjectTypeConfig.canUserSetObjectMetadata(
                 {id: "u", userType, ownedRoomID} as any, {id: "room", roomType} as any, {} as any,
-                {metadataKey: COMPOSITION_KEY, metadataValue: encodeDoorComposition(1)} as any);
+                {metadataKey: COMPOSITION_KEY, metadataValue: looks[1].stored} as any);
 
         expect(canReskin(UserTypeEnumMap.Admin, RoomTypeEnumMap.Hub)).toBe(true);
         expect(canReskin(UserTypeEnumMap.Member, RoomTypeEnumMap.Hub)).toBe(false);
@@ -443,17 +426,30 @@ describe("door mesh composition", () => {
         expect(canReskin(UserTypeEnumMap.Admin, RoomTypeEnumMap.Regular)).toBe(false);
     });
 
+    it("a door takes only one of its own finishes", () => {
+        // Another type's look builds parts a door can't place, and a spelled-out finish skips the list.
+        const canSet = (metadataValue: string) => DoorObjectTypeConfig.canUserSetObjectMetadata(
+            {id: "u", userType: UserTypeEnumMap.Admin} as any, {id: "room", roomType: RoomTypeEnumMap.Hub} as any,
+            {} as any, {metadataKey: COMPOSITION_KEY, metadataValue} as any);
+
+        for (const look of looks)
+            expect(canSet(look.stored)).toBe(true);
+        expect(canSet(getLooks("Canvas")[1].stored)).toBe(false);
+        expect(canSet(PreEncodedCompositionStringMap[looks[0].compositionIndex])).toBe(false);
+        expect(canSet(looks[0].stored + "!")).toBe(false);
+        expect(canSet("abc")).toBe(false);
+    });
+
     // ─── Config coherence ──────────────────────────────────────────────
 
-    it("the door object is configured with the codec these tests encode against", () => {
-        const encoded = encodeDoorComposition(0);
-        expect(encoded.startsWith(doorCodecPrefix())).toBe(true);
-        // A door and a player must not claim the same codec, or one would decode the other's string.
-        expect(DOOR_CODEC_TYPE).not.toBe(PLAYER_CODEC_TYPE);
+    it("a door stores an index to one of its finishes, each written by the door codec", () => {
+        expect(composer.codecType).toBe(InstancedMeshCompositionCodecTypeEnumMap.Indexed);
+        for (const look of looks)
+            expect(PreEncodedCompositionStringMap[look.compositionIndex].startsWith(doorCodecPrefix())).toBe(true);
     });
 
     it("every part of a door is drawn by a mesh that was sized for it", () => {
-        const {params, parts} = DoorCompositionCodec.getRandomComposition(1, UNIT_VEC3);
+        const {params, parts} = looks[0];
         // Regions are layered back to front to avoid z-fighting (see DoorCompositionConstants).
         expectRenderableBody(params, parts);
         expectMouldedParts(parts);
@@ -561,13 +557,17 @@ describe("indexed mesh composition", () => {
 
     // ─── The generated table ───────────────────────────────────────────
 
-    it("every pre-encoded composition decodes to parts the renderer can draw", () => {
+    it("every pre-encoded composition decodes to parts the renderer can draw, and only a frameless one to none", () => {
         // An empty (not yet built) table would make every indexed object draw nothing.
+        expect(PreEncodedCompositionStringMap.length).toBeGreaterThan(0);
         for (let index = 0; index < PreEncodedCompositionStringMap.length; ++index)
         {
             const encoded = indexedPrefix() + IndexedCodec.encode({compositionIndex: index}, []);
-            const {parts} = decodeIndexed(encoded);
-            expect(parts.length).toBeGreaterThan(0);
+            const {params, parts} = decodeIndexed(encoded);
+            if (params.framed === false)
+                expect(parts, `index ${index}`).toHaveLength(0);
+            else
+                expect(parts.length, `index ${index}`).toBeGreaterThan(0);
             for (const part of parts)
             {
                 expect(typeof part.geometryId).toBe("string");

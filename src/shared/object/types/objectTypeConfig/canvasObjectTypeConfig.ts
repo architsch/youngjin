@@ -1,6 +1,6 @@
 import ImageMapUtil from "../../../graphics/image/util/imageMapUtil";
-import { CanvasCompositionCodec } from "../../../graphics/mesh/composition/types/compositionCodec/canvasCompositionCodec";
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../graphics/mesh/composition/types/instancedMeshCompositionCodecType";
+import CompositionMetadataUtil from "../../../graphics/mesh/composition/util/compositionMetadataUtil";
 import StringUtil from "../../../math/util/stringUtil";
 import Room from "../../../room/types/room";
 import User from "../../../user/types/user";
@@ -17,6 +17,8 @@ import { ATTACHMENT_HITBOX_INSET, WALL_DIRECTIONS } from "../../../system/shared
 // size canvas images are fetched at.
 export const CANVAS_TEXTURE_SIZE = 2048; // in pixels (the texture is square)
 export const CANVAS_TEXTURE_CELL_SIZE = 256; // in pixels (each cell is square)
+
+const COMPOSITION_CODEC_VERSION = 0;
 
 // Metadata keys a user may write to a canvas; anything else is refused.
 const editableMetadataKeys = [
@@ -62,10 +64,14 @@ const CanvasObjectTypeConfig =
         if (!editableMetadataKeys.includes(signal.metadataKey))
             return false;
 
-        // The image must be one on offer; a composition is sanitized by ObjectMetadataEntryMap and decodes
-        // to a drawable canvas whatever it holds (see CanvasCompositionCodec).
+        // The image must be one on offer, and the frame one of a canvas's own looks.
         if (signal.metadataKey == ObjectMetadataKeyEnumMap.ImagePath)
             return ImageMapUtil.getImageMap("CanvasImageMap").hasImagePath(signal.metadataValue);
+        if (signal.metadataKey == ObjectMetadataKeyEnumMap.InstancedMeshComposition)
+        {
+            return CompositionMetadataUtil.isIndexedLookOf("Canvas", COMPOSITION_CODEC_VERSION,
+                signal.metadataValue);
+        }
 
         return true;
     },
@@ -83,15 +89,19 @@ const CanvasObjectTypeConfig =
                 maxClimbableHeight: 0,
             },
             instancedMeshGraphics: {},
+            // One of its pre-encoded looks, the first of which is frameless (see pre_encoding_source.json).
             instancedMeshComposer: {
-                codecType: InstancedMeshCompositionCodecTypeEnumMap.Canvas,
-                codecVersion: 0,
+                codecType: InstancedMeshCompositionCodecTypeEnumMap.Indexed,
+                codecVersion: COMPOSITION_CODEC_VERSION,
                 generateDefaultParts: (obj: AddObjectSignal) => {
-                    // Seeded from room and canvas id, so every client and session sees the same frame.
+                    // Seeded from room and canvas id, so every client and session sees the same frame. Never
+                    // the frameless look: a canvas nobody has dressed still gets a frame.
                     const hashCode = StringUtil.getHashCode(`${obj.roomID}/${obj.objectId}`);
-                    return CanvasCompositionCodec.getRandomComposition(hashCode,
-                        ObjectScaleUtil.getObjectSize(obj.objectTypeIndex, obj.transform.scale));
+                    return CompositionMetadataUtil.decodeSeededIndexed("Canvas", 1, hashCode,
+                        COMPOSITION_CODEC_VERSION, ObjectScaleUtil.getObjectSize(obj.objectTypeIndex, obj.transform.scale));
                 },
+                // Straight on, as it hangs.
+                thumbnailView: {yawDeg: 0, pitchDeg: 0},
             },
             orbitOccluder: {}, // A picture hanging on a wall stands in the orbit camera's way like the wall itself does.
         },

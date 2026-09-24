@@ -14,6 +14,10 @@ import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfi
 import ObjectScaleUtil from "../../../src/shared/object/util/objectScaleUtil";
 import LabelTextUtil from "../../../src/shared/object/util/labelTextUtil";
 import CanvasObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
+import LampObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/lampObjectTypeConfig";
+import StringUtil from "../../../src/shared/math/util/stringUtil";
+import { ColorPaletteMap } from "../../../src/shared/math/maps/colorPaletteMap";
+import CompositionMetadataUtil from "../../../src/shared/graphics/mesh/composition/util/compositionMetadataUtil";
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import ObjectGroup from "../../../src/shared/object/types/objectGroup";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
@@ -21,7 +25,7 @@ import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import EncodableByteString from "../../../src/shared/networking/types/encodableByteString";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
 import { MAX_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
-    COLLISION_LAYER_HEIGHT, UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
+    COLLISION_LAYER_HEIGHT, LIGHT_COLOR_PALETTE_NAME, UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
 
 const FIXTURE_DIR = path.join(__dirname, "../fixtures/legacyVoxelGrids");
 const ROOM_ID = "object-migration-room";
@@ -210,16 +214,18 @@ describe("object transform ranges and migration", () => {
         // On a wall, their bottom edges on the layer boundaries at 0.5 and 2.
         const tall = lamp("tall", {x: 10, y: 1.25, z: 4}, 1.5);
         const kept = lamp("kept", {x: 12, y: 2.5, z: 4}, 1);
+        // A canvas's own framed finish of the time: its codec, then frame, inner, band step and flags.
         const framedCanvas = canvas("canvas", 2.0);
-        framedCanvas.metadata = look();
+        framedCanvas.metadata = {[COMPOSITION_KEY]: new EncodableByteString("%!+5$$")};
 
         const blob = buildRoomBlob(encodeCurrentVoxelGrid(), [tall, kept, framedCanvas], LAST_FRAMED_LAMP_VERSION);
         const {objectGroup} = decodeRoomBlob(blob);
 
         for (const objectId of ["tall", "kept"])
             expect(objectGroup.objectById[objectId].metadata[COMPOSITION_KEY], objectId).toBeUndefined();
-        // Only lamps lost their looks.
-        expect(objectGroup.objectById["canvas"].metadata[COMPOSITION_KEY]?.str).toBe(look()[COMPOSITION_KEY].str);
+        // Only lamps lost their looks; a canvas keeps one of its own.
+        expect(CompositionMetadataUtil.isIndexedLookOf("Canvas", 0,
+            objectGroup.objectById["canvas"].metadata[COMPOSITION_KEY]?.str ?? "")).toBe(true);
 
         const shrunk = objectGroup.objectById["tall"].transform;
         expect(ObjectScaleUtil.sanitize(lampTypeIndex, shrunk.scale)).toEqual({x: 1, y: 1, z: 1});
@@ -229,6 +235,35 @@ describe("object transform ranges and migration", () => {
         const unchanged = objectGroup.objectById["kept"].transform;
         expect(ObjectScaleUtil.sanitize(lampTypeIndex, unchanged.scale)).toEqual({x: 1, y: 1, z: 1});
         expect(unchanged.pos.y).toBeCloseTo(2.5, 3);
+    });
+
+    it("carries a lamp's light color over to the nearest one the trimmed palette still offers", () => {
+        const LAST_SIX_SATURATION_LIGHT_VERSION = 5;
+        const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
+        const lightKey = ObjectMetadataKeyEnumMap.LightProperties;
+        const char = StringUtil.convertRawNumberToVisibleASCII;
+        const lamp = (objectId: string, lightProperties: string | undefined) => new AddObjectSignal(ROOM_ID,
+            "user-1", "User One", lampTypeIndex, objectId,
+            new ObjectTransform({x: 12, y: 2.5, z: 4}, {x: 0, y: 0, z: 1}, {...UNIT_VEC3}),
+            (lightProperties == undefined) ? {} : {[lightKey]: new EncodableByteString(lightProperties)});
+        // Color, intensity and range, one char each: a soft green that was dropped, and a pure blue that wasn't.
+        const blob = buildRoomBlob(encodeCurrentVoxelGrid(), [lamp("tinted", char(47) + char(8) + char(9)),
+            lamp("kept", char(87)), lamp("unset", undefined)], LAST_SIX_SATURATION_LIGHT_VERSION);
+        const {objectGroup} = decodeRoomBlob(blob);
+        const colorOf = (object: AddObjectSignal) =>
+            ColorPaletteMap[LIGHT_COLOR_PALETTE_NAME][LampObjectTypeConfig.util.getColorIndex(object)];
+
+        const tinted = objectGroup.objectById["tinted"];
+        expect(colorOf(tinted)).toBe("#c2ffc2");
+        expect(LampObjectTypeConfig.util.getIntensity(tinted)).toBe(8);
+        expect(LampObjectTypeConfig.util.getRange(tinted)).toBe(9);
+        expect(colorOf(objectGroup.objectById["kept"])).toBe("#0000ff");
+        expect(objectGroup.objectById["unset"].metadata[lightKey]).toBeUndefined();
+
+        // A current group is already in the trimmed palette's positions.
+        const {objectGroup: currentGroup} = decodeRoomBlob(
+            buildRoomBlob(encodeCurrentVoxelGrid(), [lamp("current", char(20))]));
+        expect(LampObjectTypeConfig.util.getColorIndex(currentGroup.objectById["current"])).toBe(20);
     });
 
     it("keeps a label's font size at the nearest one still on offer, and its Auto Size as it was", () => {

@@ -15,6 +15,7 @@ import Vec3 from "../../../../../shared/math/types/vec3";
 import ObjectScaleUtil from "../../../../../shared/object/util/objectScaleUtil";
 import { UNIT_VEC3 } from "../../../../../shared/system/sharedConstants";
 import ObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/objectTypeConfig";
+import ObjectTypeConfigMap from "../../../../../shared/object/maps/objectTypeConfigMap";
 
 export default class InstancedMeshComposition
 {
@@ -68,7 +69,7 @@ export default class InstancedMeshComposition
         ++this.revision;
         this.objectSize = getObjectSize(gameObject);
         const metadata = gameObject.params.metadata[ObjectMetadataKeyEnumMap.InstancedMeshComposition];
-        if (!metadata || !this.canDecode(metadata.str))
+        if (!metadata || !this.canDecode(metadata.str, gameObject))
         {
             const {params, parts} = getComposerConfig(gameObject).generateDefaultParts(gameObject.params);
             Object.assign(this.params, params);
@@ -83,12 +84,21 @@ export default class InstancedMeshComposition
         this.deriveParts(gameObject);
     }
 
-    private canDecode(str: string): boolean
+    private canDecode(str: string, gameObject: GameObject): boolean
     {
         const codecType = StringUtil.convertVisibleASCIIToRawNumber(str, 0, 0);
         if (codecType != this.codecType || !InstancedMeshCompositionCodecMap[codecType])
         {
             console.error(`InstancedMeshComposition::canDecode :: CodecType mismatch (expected: ${this.codecType}, decoded: ${codecType})`);
+            return false;
+        }
+        // Added objects' metadata is not checked by the server, and another type's entry builds parts and
+        // params this object can't place.
+        const objectType = ObjectTypeConfigMap.getConfigByIndex(gameObject.params.objectTypeIndex).objectType;
+        if (codecType == InstancedMeshCompositionCodecTypeEnumMap.Indexed
+            && !CompositionMetadataUtil.isIndexedLookOf(objectType, this.codecVersion, str))
+        {
+            console.error(`InstancedMeshComposition::canDecode :: Not one of the type's own looks (objectType: ${objectType}, str: ${str})`);
             return false;
         }
         const codecVersion = StringUtil.convertVisibleASCIIToRawNumber(str, 1, 0);

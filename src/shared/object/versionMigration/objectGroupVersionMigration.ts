@@ -3,7 +3,6 @@ import EncodableByteString from "../../networking/types/encodableByteString";
 import type ObjectGroup from "../types/objectGroup";
 import ObjectTransform from "../types/objectTransform";
 import DoorObjectTypeConfig from "../types/objectTypeConfig/doorObjectTypeConfig";
-import CanvasObjectTypeConfig from "../types/objectTypeConfig/canvasObjectTypeConfig";
 import ObjectTypeConfigMap from "../maps/objectTypeConfigMap";
 import ObjectScaleUtil from "../util/objectScaleUtil";
 import ObjectAttachmentUtil from "../util/objectAttachmentUtil";
@@ -11,11 +10,16 @@ import LabelTextUtil from "../util/labelTextUtil";
 import Geometry3DUtil from "../../math/util/geometry3DUtil";
 import NumUtil from "../../math/util/numUtil";
 import StringUtil from "../../math/util/stringUtil";
+import Vector3DUtil from "../../math/util/vector3DUtil";
 import Vec3 from "../../math/types/vec3";
 import { ObjectMetadataKeyEnumMap } from "../types/objectMetadataKey";
 import CompositionMetadataUtil from "../../graphics/mesh/composition/util/compositionMetadataUtil";
+import PreEncodedCompositionIndexMap from "../../graphics/mesh/composition/maps/preEncodedCompositionIndexMap";
 import FramedPanelCompositionParams from "../../graphics/mesh/composition/types/compositionParams/framedPanelCompositionParams";
+import DoorCompositionParams from "../../graphics/mesh/composition/types/compositionParams/doorCompositionParams";
+import { InstancedMeshCompositionParams } from "../../graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
 import ColorUtil from "../../math/util/colorUtil";
+import LightPaletteVersionMigration from "../../math/versionMigration/lightPaletteVersionMigration";
 import { COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL,
     INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, UNIT_VEC3 } from "../../system/sharedConstants";
 import BufferState from "../../networking/types/bufferState";
@@ -52,14 +56,34 @@ const LEGACY_LABEL_FONT_SIZE_STEP = 8;
 const LEGACY_NUM_LABEL_FONT_SIZE_STEPS = 31;
 const LEGACY_DEFAULT_LABEL_FONT_SIZE_STEP = 6;
 
+// A lamp's color, as a "Light" palette position in its LightProperties string's first character.
+const LEGACY_LIGHT_COLOR_CHAR_INDEX = 0;
+
+// Codecs doors, canvases and labels stored their own finishes through, before each became a choice of
+// pre-encoded looks. Every one was at version 0.
+const LEGACY_CODEC_TYPE_BY_OBJECT_TYPE: {[objectType: string]: number} = {Door: 2, Canvas: 4, Label: 6};
+
+// A canvas's or a label's band width, as the step its codec stored it at.
+const LEGACY_MIN_MOULDING_THICKNESS = 0.04;
+const LEGACY_MOULDING_THICKNESS_STEP = 0.02;
+const LEGACY_NUM_MOULDING_THICKNESS_STEPS = 7;
+
+// A canvas's or a label's flags char.
+const LEGACY_CONVEX_FLAG = 1;
+const LEGACY_FRAMED_FLAG = 2;
+
+// How far a stored finish reads from a look on offer: colors by RGB distance, and a band width step or a
+// flipped profile counting as much as a slight tint.
+const LEGACY_FINISH_BAND_STEP_WEIGHT = 16;
+const LEGACY_FINISH_PROFILE_WEIGHT = 16;
+
 // Bitmap canvas frames were cells of a square atlas, this many cells a side.
 const LEGACY_CANVAS_FRAME_ATLAS_CELLS_PER_SIDE = 4;
 
 // Each bitmap frame's look-alike in wood inputs, by atlas cell (row by row): frame and inner colors from
 // the "Timber" palette, band width and profile. The old borders came in four widths, each kept at the
-// nearest band width on offer, which caps the carved frames' (see CanvasCompositionConstants). Colors are
-// matched against how the wood material ages them, so saturated frames (the gold, the orange wood) come
-// out muted.
+// nearest band width on offer, which caps the carved frames'. Colors are matched against how the wood
+// material ages them, so saturated frames (the gold, the orange wood) come out muted.
 const LEGACY_CANVAS_FRAMES = [
     legacyCanvasFrame("#e6dcc8", "#f0e7d2", 0.12, true),  // white marble
     legacyCanvasFrame("#bdb59d", "#ded2b8", 0.12, false), // beige marble
@@ -108,7 +132,6 @@ const converters: ((objectGroup: ObjectGroup, roomID: string, sourceVoxelGridVer
     (objectGroup: ObjectGroup) => { // version 2 -> 3
         // Bitmap canvas frames became composed wood frames: an atlas cell becomes its look-alike.
         const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
-        const canvasComposer = CanvasObjectTypeConfig.components.spawnedByAny.instancedMeshComposer;
         for (const object of Object.values(objectGroup.objectById))
         {
             const frameCoords = object.metadata[ObjectMetadataKeyEnumMap.CanvasFrameCoords];
@@ -127,8 +150,7 @@ const converters: ((objectGroup: ObjectGroup, roomID: string, sourceVoxelGridVer
                 continue;
             const cellIndex = col + LEGACY_CANVAS_FRAME_ATLAS_CELLS_PER_SIDE * row;
             object.metadata[ObjectMetadataKeyEnumMap.InstancedMeshComposition] = new EncodableByteString(
-                CompositionMetadataUtil.encode(canvasComposer.codecType, canvasComposer.codecVersion,
-                    LEGACY_CANVAS_FRAMES[cellIndex]));
+                encodeLegacyFramedPanel(LEGACY_CODEC_TYPE_BY_OBJECT_TYPE.Canvas, LEGACY_CANVAS_FRAMES[cellIndex]));
         }
     },
     () => { // version 3 -> 4
@@ -183,6 +205,40 @@ const converters: ((objectGroup: ObjectGroup, roomID: string, sourceVoxelGridVer
                 LabelTextUtil.encodeFont(LabelTextUtil.getFont(object).autoSize,
                     LEGACY_MIN_LABEL_FONT_SIZE + step * LEGACY_LABEL_FONT_SIZE_STEP));
         }
+
+        // The "Light" palette was cut to a few temperatures and hues: a lamp's color becomes the nearest one
+        // left.
+        for (const object of Object.values(objectGroup.objectById))
+        {
+            const lightProperties = object.metadata[ObjectMetadataKeyEnumMap.LightProperties]?.str;
+            if (lightProperties == undefined)
+                continue;
+            object.metadata[ObjectMetadataKeyEnumMap.LightProperties] = new EncodableByteString(
+                LightPaletteVersionMigration.convertColorChar(lightProperties, LEGACY_LIGHT_COLOR_CHAR_INDEX));
+        }
+
+        // Doors, canvases and labels went from finishes of their own to a choice of pre-encoded looks: a
+        // stored finish becomes the look nearest it, and an unframed panel the frameless look. One stored in
+        // anything but its type's old codec is dropped, leaving the seeded default the composer showed.
+        for (const object of Object.values(objectGroup.objectById))
+        {
+            const stored = object.metadata[ObjectMetadataKeyEnumMap.InstancedMeshComposition]?.str;
+            const config = ObjectTypeConfigMap.getConfigByIndex(object.objectTypeIndex);
+            const legacyCodecType = LEGACY_CODEC_TYPE_BY_OBJECT_TYPE[config.objectType];
+            if (stored == undefined || legacyCodecType == undefined)
+                continue;
+
+            const compositionIndex = (StringUtil.convertVisibleASCIIToRawNumber(stored, 0) == legacyCodecType)
+                ? getNearestLook(config.objectType, stored) : undefined;
+            if (compositionIndex == undefined)
+            {
+                delete object.metadata[ObjectMetadataKeyEnumMap.InstancedMeshComposition];
+                continue;
+            }
+            object.metadata[ObjectMetadataKeyEnumMap.InstancedMeshComposition] = new EncodableByteString(
+                CompositionMetadataUtil.encodeIndexed(compositionIndex,
+                    config.components.spawnedByAny?.instancedMeshComposer?.codecVersion ?? 0));
+        }
     },
 ];
 
@@ -212,7 +268,92 @@ function legacyCanvasFrame(frame: string, inner: string, mouldingThickness: numb
     mouldingIsConvex: boolean): FramedPanelCompositionParams
 {
     return {colors: {frame: ColorUtil.hexToRGB(frame), inner: ColorUtil.hexToRGB(inner)},
-        mouldingThickness, mouldingIsConvex, framed: true, margin: 0};
+        mouldingThickness, mouldingIsConvex, framed: true};
+}
+
+// A canvas's or a label's finish as its own codec stored it: frame and inner colors as "Timber" palette
+// positions, the band width as a step, then the flags.
+function encodeLegacyFramedPanel(codecType: number, finish: FramedPanelCompositionParams): string
+{
+    const raws = [
+        ColorUtil.rgbToPaletteIndex("Timber", finish.colors.frame),
+        ColorUtil.rgbToPaletteIndex("Timber", finish.colors.inner),
+        Math.round((finish.mouldingThickness - LEGACY_MIN_MOULDING_THICKNESS) / LEGACY_MOULDING_THICKNESS_STEP),
+        (finish.mouldingIsConvex ? LEGACY_CONVEX_FLAG : 0) | (finish.framed ? LEGACY_FRAMED_FLAG : 0),
+    ];
+    return CompositionMetadataUtil.getCodecPrefix(codecType, 0)
+        + raws.map(raw => StringUtil.convertRawNumberToVisibleASCII(raw)).join("");
+}
+
+// Read as encodeLegacyFramedPanel writes it; a margin written after the flags is ignored. Nothing past the
+// prefix was frameless, and a string cut short before its flags kept a proud frame.
+function decodeLegacyFramedPanel(str: string): FramedPanelCompositionParams
+{
+    const read = (charIndex: number, fallback: number = 0) =>
+        StringUtil.convertVisibleASCIIToRawNumber(str, charIndex, fallback);
+    const flags = (str.length > 2) ? read(5, LEGACY_CONVEX_FLAG | LEGACY_FRAMED_FLAG) : 0;
+    return {
+        colors: {
+            frame: ColorUtil.paletteIndexToRGB("Timber", read(2)),
+            inner: ColorUtil.paletteIndexToRGB("Timber", read(3)),
+        },
+        mouldingThickness: LEGACY_MIN_MOULDING_THICKNESS + LEGACY_MOULDING_THICKNESS_STEP
+            * NumUtil.clampInRange(read(4), 0, LEGACY_NUM_MOULDING_THICKNESS_STEPS - 1),
+        mouldingIsConvex: (flags & LEGACY_CONVEX_FLAG) != 0,
+        framed: (flags & LEGACY_FRAMED_FLAG) != 0,
+    };
+}
+
+// A door's finish as its own codec stored it: timber, plate and knob as "Timber" palette positions.
+function decodeLegacyDoorFinish(str: string): DoorCompositionParams["colors"]
+{
+    const read = (charIndex: number) =>
+        ColorUtil.paletteIndexToRGB("Timber", StringUtil.convertVisibleASCIIToRawNumber(str, charIndex));
+    return {panel: read(2), label: read(3), knob: read(4)};
+}
+
+// The composition index of the type's look nearest the finish it stored in its old codec, if any is near.
+function getNearestLook(objectType: string, stored: string): number | undefined
+{
+    const distanceTo = (objectType == "Door")
+        ? getDoorFinishDistance.bind(null, decodeLegacyDoorFinish(stored))
+        : getPanelFinishDistance.bind(null, decodeLegacyFramedPanel(stored));
+    let nearest: number | undefined = undefined;
+    let nearestDistance = Infinity;
+    for (const compositionIndex of PreEncodedCompositionIndexMap[objectType] ?? [])
+    {
+        const look: InstancedMeshCompositionParams = {};
+        CompositionMetadataUtil.decodeIndexed(compositionIndex, 0, UNIT_VEC3, look, []);
+        const distance = distanceTo(look);
+        if (distance < nearestDistance)
+        {
+            nearest = compositionIndex;
+            nearestDistance = distance;
+        }
+    }
+    return nearest;
+}
+
+function getDoorFinishDistance(finish: DoorCompositionParams["colors"], look: DoorCompositionParams): number
+{
+    return Vector3DUtil.distSqr(finish.panel, look.colors.panel)
+        + Vector3DUtil.distSqr(finish.label, look.colors.label)
+        + Vector3DUtil.distSqr(finish.knob, look.colors.knob);
+}
+
+// An unframed finish matches only the frameless look, and a framed one only framed looks.
+function getPanelFinishDistance(finish: FramedPanelCompositionParams, look: FramedPanelCompositionParams): number
+{
+    if (finish.framed != look.framed)
+        return Infinity;
+    if (!finish.framed)
+        return 0;
+    const bandSteps = (finish.mouldingThickness - look.mouldingThickness) / LEGACY_MOULDING_THICKNESS_STEP;
+    const profileFlipped = finish.mouldingIsConvex != look.mouldingIsConvex;
+    return Vector3DUtil.distSqr(finish.colors.frame, look.colors.frame)
+        + Vector3DUtil.distSqr(finish.colors.inner, look.colors.inner)
+        + (bandSteps * LEGACY_FINISH_BAND_STEP_WEIGHT) ** 2
+        + (profileFlipped ? LEGACY_FINISH_PROFILE_WEIGHT ** 2 : 0);
 }
 
 export default ObjectGroupVersionMigration;

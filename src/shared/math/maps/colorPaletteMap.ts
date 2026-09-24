@@ -1,7 +1,8 @@
 export type ColorPaletteName = string;
 
 // Palettes. Colors are stored as palette positions (one visible-ASCII character, so at most 94 entries).
-// - Entries are only ever appended: reordering repaints every stored appearance.
+// - Entries are only ever appended: reordering or removing one repaints every stored appearance, unless
+//   every stored position is migrated with it (see LightPaletteVersionMigration).
 // - Each palette suits what is painted with it (toys and doors barely share colors).
 
 // Full-spectrum set; palettes copy it so additions to one never leak into another.
@@ -67,36 +68,14 @@ export const ColorPaletteMap: {[colorPaletteName: ColorPaletteName]: string[]} =
     "LabelColor": [...FULL_SPECTRUM_COLORS],
     // Light colors (lamps, ambient, head light). Index 0 is white, which unconfigured rooms read back.
     // All entries are full brightness (hue and tint only), since strength is a separate setting and
-    // light can only add. Long and finely graded, because lighting differences show across a whole
-    // room. Bands: white, color temperatures warm to cool, then twelve hues at six tint strengths
-    // (bounded by the 94-entry limit).
+    // light can only add. Few and far apart, roughly palest to most saturated.
     "Light": [
-        // Plain white — the identity, and the default (see above)
-        "#ffffff",
-        // Temperatures, warm to cool (candle to blue hour), weighted warm since lamp light is warm.
-        "#ff8220", "#ff8b2d", "#ff943a", "#ff9d46", "#ffa653", "#ffaf60",
-        "#ffb46b", "#ffc78f", "#ffd5aa", "#ffe0c0", "#ffe9d3", "#fff2e5",
-        "#fffaf5", "#f7f8ff", "#eaefff", "#dbe5ff", "#c8d8ff", "#b3caff",
-        // Each hue at six tint strengths, with wider steps toward the pure hue.
-        //
-        // Faint
-        "#ffe6e6", "#fff2e6", "#ffffe6", "#f2ffe6", "#e6ffe6", "#e6fff2",
-        "#e6ffff", "#e6f2ff", "#e6e6ff", "#f2e6ff", "#ffe6ff", "#ffe6f2",
-        // Pale
-        "#ffc2c2", "#ffe0c2", "#ffffc2", "#e0ffc2", "#c2ffc2", "#c2ffe0",
-        "#c2ffff", "#c2e0ff", "#c2c2ff", "#e0c2ff", "#ffc2ff", "#ffc2e0",
-        // Soft
-        "#ff9999", "#ffcc99", "#ffff99", "#ccff99", "#99ff99", "#99ffcc",
-        "#99ffff", "#99ccff", "#9999ff", "#cc99ff", "#ff99ff", "#ff99cc",
-        // Colored
-        "#ff6b6b", "#ffb56b", "#ffff6b", "#b5ff6b", "#6bff6b", "#6bffb5",
-        "#6bffff", "#6bb5ff", "#6b6bff", "#b56bff", "#ff6bff", "#ff6bb5",
-        // Strong
-        "#ff3838", "#ff9c38", "#ffff38", "#9cff38", "#38ff38", "#38ff9c",
-        "#38ffff", "#389cff", "#3838ff", "#9c38ff", "#ff38ff", "#ff389c",
-        // Pure
-        "#ff0000", "#ff8000", "#ffff00", "#80ff00", "#00ff00", "#00ff80",
-        "#00ffff", "#0080ff", "#0000ff", "#8000ff", "#ff00ff", "#ff0080",
+        "#ffffff", "#ffd5aa", "#fff2e5", "#ff93ff",
+        "#ffffc2", "#c2ffc2", "#c2ffff", "#c2e0ff",
+        "#c2c2ff", "#ffc2ff", "#ffb56b", "#6b6bff",
+        "#b56bff", "#ff8000", "#ffff00", "#ccff7b",
+        "#00ff00", "#74c9ff", "#00ffff", "#0080ff",
+        "#0000ff", "#8000ff", "#ff00ff", "#ff0080",
     ],
     // Fog colors (also the void past the walls). Index 0 is black, which unconfigured rooms read back.
     // Mostly dark, since pale fog white-washes the room; pale bands come last.

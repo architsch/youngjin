@@ -1,16 +1,17 @@
 /**
  * Label atlas and lettering: TextureAtlasAllocator (regions of a texture handed out and taken back, and the
- * guarantee that a room's labels always fit once packed largest first), and LabelTextLayoutUtil (fitting
- * text to a label, or cutting it off at a fixed size, over its line breaks and styles).
+ * guarantee that a room's labels always fit once packed largest first), LabelTextLayoutUtil (fitting text to
+ * a label, or cutting it off at a fixed size, over its line breaks), and FontMetricsUtil reading the bundled
+ * label font.
  */
 import { describe, it, expect } from "vitest";
 import fc from "fast-check";
+import fs from "fs";
+import path from "path";
 import TextureAtlasAllocator from "../../../src/client/graphics/types/textureAtlasAllocator";
 import TextureAtlasRegion from "../../../src/client/graphics/types/textureAtlasRegion";
+import FontMetricsUtil from "../../../src/client/graphics/util/fontMetricsUtil";
 import LabelTextLayoutUtil from "../../../src/client/object/util/labelTextLayoutUtil";
-import LabelTextLine from "../../../src/client/object/types/labelTextLine";
-import LabelTextUtil from "../../../src/shared/object/util/labelTextUtil";
-import LabelTextStyle from "../../../src/shared/object/types/labelTextStyle";
 import ObjectCategoryConfigMap from "../../../src/shared/object/maps/objectCategoryConfigMap";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 import ObjectScaleUtil from "../../../src/shared/object/util/objectScaleUtil";
@@ -141,54 +142,46 @@ describe("label atlas allocation", () => {
 });
 
 describe("label lettering layout", () => {
-    // A monospaced stand-in for the canvas: every character is half the font size wide.
+    // A monospaced stand-in for the font: every character is half the font size wide.
     const CHAR_WIDTH = 0.5;
-    const measureWidth = (str: string, style: LabelTextStyle) => Array.from(str).length * CHAR_WIDTH * style.scale;
+    const measureWidth = (str: string) => Array.from(str).length * CHAR_WIDTH;
     const lineSpacing = LabelTextLayoutUtil.lineSpacing;
 
     const layOut = (text: string, width: number, height: number, autoSize: boolean, fontSize: number) =>
-        LabelTextLayoutUtil.layOut(LabelTextUtil.parseText(text), width, height, autoSize, fontSize, measureWidth);
-    const textOf = (line: LabelTextLine) => line.segments.map(segment => segment.text).join("");
-    const widthOf = (line: LabelTextLine) =>
-        line.segments.reduce((sum, segment) => sum + measureWidth(segment.text, segment.style), 0);
-    const heightOf = (lines: LabelTextLine[]) => lines.reduce((sum, line) => sum + line.height, 0);
+        LabelTextLayoutUtil.layOut(text, width, height, autoSize, fontSize, measureWidth);
 
     const anyWord = fc.array(fc.constantFrom(..."abcdefghij".split("")), {minLength: 1, maxLength: 12})
         .map(chars => chars.join(""));
     const anyText = fc.array(anyWord, {minLength: 1, maxLength: 60}).map(words => words.join(" "));
     const anyBox = fc.record({width: fc.integer({min: 40, max: 900}), height: fc.integer({min: 20, max: 900})});
 
-    // Words each in a style or none, each followed by a space or a line break.
-    const anyStyledWords = fc.array(fc.tuple(anyWord,
-        fc.constantFrom("", "b", "i", "font size=1", "font size=7", "font size=+2"),
-        fc.constantFrom(" ", "\n")), {minLength: 1, maxLength: 40});
-    const toMarkup = (styledWords: [string, string, string][]) => styledWords.map(([word, tag, separator]) =>
-        (tag.length > 0 ? `<${tag}>${word}</${tag.split(" ")[0]}>` : word) + separator).join("");
+    // Words each followed by a space or a line break.
+    const anyBrokenText = fc.array(fc.tuple(anyWord, fc.constantFrom(" ", "\n")), {minLength: 1, maxLength: 40})
+        .map(words => words.map(([word, separator]) => word + separator).join(""));
 
     it("lays out nothing for text with no words", () => {
         expect(layOut("", 200, 100, true, 64).lines).toEqual([]);
         expect(layOut("   ", 200, 100, false, 64).lines).toEqual([]);
         expect(layOut("\n \n", 200, 100, true, 64).lines).toEqual([]);
-        expect(layOut("<b> </b>", 200, 100, false, 64).lines).toEqual([]);
     });
 
     it("fits the whole text when sizing it automatically, every word whole and in order", () => {
         fc.assert(fc.property(anyText, anyBox, (text, box) => {
             const {lines, fontSize} = layOut(text, box.width, box.height, true, 64);
-            expect(lines.map(textOf).join(" ")).toBe(text);
+            expect(lines.join(" ")).toBe(text);
             expect(lines.length * fontSize * lineSpacing).toBeLessThanOrEqual(box.height * (1 + 1e-9));
             for (const line of lines)
-                expect(widthOf(line) * fontSize).toBeLessThanOrEqual(box.width * (1 + 1e-9));
+                expect(measureWidth(line) * fontSize).toBeLessThanOrEqual(box.width * (1 + 1e-9));
         }), {numRuns: 300});
     });
 
-    it("fits styled text over its line breaks too, every word whole, in order, and in its own style", () => {
-        fc.assert(fc.property(anyStyledWords, anyBox, (styledWords, box) => {
-            const {lines, fontSize} = layOut(toMarkup(styledWords), box.width, box.height, true, 64);
-            expect(lines.flatMap(line => textOf(line).split(" "))).toEqual(styledWords.map(([word]) => word));
-            expect(heightOf(lines) * fontSize).toBeLessThanOrEqual(box.height * (1 + 1e-9));
+    it("fits text over its line breaks too, every word whole and in order", () => {
+        fc.assert(fc.property(anyBrokenText, anyBox, (text, box) => {
+            const {lines, fontSize} = layOut(text, box.width, box.height, true, 64);
+            expect(lines.flatMap(line => line.split(" "))).toEqual(text.trim().split(/\s+/));
+            expect(lines.length * fontSize * lineSpacing).toBeLessThanOrEqual(box.height * (1 + 1e-9));
             for (const line of lines)
-                expect(widthOf(line) * fontSize).toBeLessThanOrEqual(box.width * (1 + 1e-9));
+                expect(measureWidth(line) * fontSize).toBeLessThanOrEqual(box.width * (1 + 1e-9));
         }), {numRuns: 300});
     });
 
@@ -201,41 +194,27 @@ describe("label lettering layout", () => {
         // Greedy filling would give "one two three" and a lone "four".
         const width = "one two three".length * CHAR_WIDTH * 10;
         const {lines} = layOut("one two three four", width, 25, true, 64);
-        expect(lines.map(textOf)).toEqual(["one two", "three four"]);
+        expect(lines).toEqual(["one two", "three four"]);
     });
 
     it("starts a new line at every line break, keeping a blank line between lines but none at the ends", () => {
         for (const autoSize of [true, false])
         {
             const {lines} = layOut("\none\n\ntwo three\n", 1000, 1000, autoSize, 20);
-            expect(lines.map(textOf), `autoSize ${autoSize}`).toEqual(["one", "", "two three"]);
-            expect(lines[1].height).toBeCloseTo(lineSpacing, 9);
+            expect(lines, `autoSize ${autoSize}`).toEqual(["one", "", "two three"]);
         }
-    });
-
-    it("keeps a word whole across a change of style, drawing each part in its own and none of the markup", () => {
-        const {lines} = layOut("he<b>llo</b> <i>world</i>", 1000, 1000, false, 20);
-        expect(lines.map(line => line.segments.map(({text, style}) => [text, style.bold, style.italic])))
-            .toEqual([[["he", false, false], ["llo", true, false], [" ", false, false], ["world", false, true]]]);
-    });
-
-    it("makes each line as tall as its largest lettering", () => {
-        const {lines} = layOut("<font size=7>Big</font> deal\nsmall", 1000, 1000, false, 20);
-        expect(lines.map(textOf)).toEqual(["Big deal", "small"]);
-        expect(lines[0].height).toBeCloseTo(3 * lineSpacing, 9);
-        expect(lines[1].height).toBeCloseTo(lineSpacing, 9);
     });
 
     it("keeps a fixed size, fitting every line and cutting nothing out of the text", () => {
         fc.assert(fc.property(anyText, anyBox, fc.integer({min: 16, max: 256}), (text, box, fontSize) => {
             const layout = layOut(text, box.width, box.height, false, fontSize);
             expect(layout.fontSize).toBe(fontSize);
-            expect(layout.lines.map(textOf).join("").replace(/ /g, "")).toBe(text.replace(/ /g, ""));
+            expect(layout.lines.join("").replace(/ /g, "")).toBe(text.replace(/ /g, ""));
             for (const line of layout.lines)
             {
                 // A single character wider than the box is the one thing that can't be helped.
-                if (Array.from(textOf(line)).length > 1)
-                    expect(widthOf(line) * fontSize).toBeLessThanOrEqual(box.width + 1e-9);
+                if (Array.from(line).length > 1)
+                    expect(measureWidth(line) * fontSize).toBeLessThanOrEqual(box.width + 1e-9);
             }
         }), {numRuns: 300});
     });
@@ -244,15 +223,44 @@ describe("label lettering layout", () => {
         const word = "😀".repeat(40);
         const {lines} = layOut(word, 100, 400, false, 20);
         expect(lines.length).toBeGreaterThan(1);
-        expect(lines.map(textOf).join("")).toBe(word);
+        expect(lines.join("")).toBe(word);
         for (const line of lines)
-            expect(Array.from(textOf(line)).every(char => char == "😀")).toBe(true);
+            expect(Array.from(line).every(char => char == "😀")).toBe(true);
     });
 
     it("leaves what doesn't fit at a fixed size below the patch, for the caller to cut off", () => {
         const text = Array(128).fill("word").join(" ");
         const {lines, fontSize} = layOut(text, 200, 100, false, 32);
-        expect(heightOf(lines) * fontSize).toBeGreaterThan(100);
-        expect(textOf(lines[0])).toBe("word word"); // top-down, in order
+        expect(lines.length * fontSize * lineSpacing).toBeGreaterThan(100);
+        expect(lines[0]).toBe("word word"); // top-down, in order
+    });
+});
+
+describe("the label font", () => {
+    const file = fs.readFileSync(path.join(__dirname, "../../../public/app/assets/resources/Tinos/Tinos-Regular-Latin.ttf"));
+    const metrics = FontMetricsUtil.parse(file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength));
+    const advanceOf = (char: string) => metrics.advanceByCodePoint.get(char.codePointAt(0)!);
+
+    it("is read from the file's own tables, as fontTools reads them", () => {
+        expect(metrics.unitsPerEm).toBe(2048);
+        expect([metrics.ascent, metrics.descent]).toEqual([1825, 443]);
+        expect(metrics.advanceByCodePoint.size).toBe(321);
+        expect(["A", "W", " ", "é", "�"].map(advanceOf)).toEqual([1479, 1933, 512, 909, 1721]);
+        expect(metrics.missingAdvance).toBe(1593);
+    });
+
+    it("measures a string as its characters' advances added up, whatever it is split into", () => {
+        fc.assert(fc.property(fc.string({unit: fc.constantFrom(..."Tinos, café!".split(""))}), fc.nat(), (str, cut) => {
+            const at = cut % (str.length + 1);
+            expect(FontMetricsUtil.measureWidth(metrics, str) * metrics.unitsPerEm).toBe(
+                (FontMetricsUtil.measureWidth(metrics, str.slice(0, at))
+                    + FontMetricsUtil.measureWidth(metrics, str.slice(at))) * metrics.unitsPerEm);
+        }), {numRuns: 200});
+    });
+
+    it("draws what it lacks as U+FFFD, composing accents first and keeping whitespace for the layout", () => {
+        expect(FontMetricsUtil.replaceMissingChars(metrics, "Café ☕\n한글\tok"))
+            .toBe("Café �\n��\tok");
+        expect(FontMetricsUtil.replaceMissingChars(metrics, "Grand Library, № 😀")).toBe("Grand Library, � �");
     });
 });

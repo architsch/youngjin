@@ -24,7 +24,7 @@ const COMPOSER_CONFIGS = ObjectTypeConfigMap.getAllConfigs()
     .filter(config => config.components.spawnedByAny?.instancedMeshComposer != undefined);
 
 // An arbitrary stored composition for the type, decoded as its composer would decode it. Indexed types
-// draw from their own entries, the only indices their (uneditable) metadata holds.
+// draw from their own entries, the only indices their composers accept.
 function arbitraryParts(objectType: string): fc.Arbitrary<InstancedMeshCompositionPart[]>
 {
     const config = COMPOSER_CONFIGS.find(c => c.objectType == objectType)!;

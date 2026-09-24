@@ -32,14 +32,10 @@ import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import ColorUtil from "../../../src/shared/math/util/colorUtil";
 import StringUtil from "../../../src/shared/math/util/stringUtil";
 import ImageMapUtil from "../../../src/shared/graphics/image/util/imageMapUtil";
-import InstancedMeshCompositionPart from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
-import { InstancedMeshCompositionParams } from "../../../src/shared/graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionCodecType";
 import CompositionMetadataUtil from "../../../src/shared/graphics/mesh/composition/util/compositionMetadataUtil";
-import { LabelCompositionCodec } from "../../../src/shared/graphics/mesh/composition/types/compositionCodec/labelCompositionCodec";
-import LabelCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/labelCompositionConstants";
-import MouldingCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/mouldingCompositionConstants";
-import MarginCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/marginCompositionConstants";
+import FramedPanelCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/framedPanelCompositionConstants";
+import { getLooks } from "../helpers/composition";
 import { DOCUMENT_ID_MAX_LENGTH, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
     INSTANCED_WOOD_MATERIAL_ID, LABEL_COLOR_PALETTE_NAME, OBJECT_LABEL_MAX_LENGTH, OBJECT_MESSAGE_MAX_LENGTH,
     UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
@@ -179,7 +175,10 @@ describe("label permissions", () => {
                 expect(canSet(ObjectMetadataKeyEnumMap.Label, "Gallery")).toBe(true);
                 expect(canSet(ObjectMetadataKeyEnumMap.LabelColor, "3")).toBe(true);
                 expect(canSet(ObjectMetadataKeyEnumMap.LabelFont, LabelTextUtil.encodeFont(false, 96))).toBe(true);
-                expect(canSet(ObjectMetadataKeyEnumMap.InstancedMeshComposition, "abc")).toBe(true);
+                expect(canSet(ObjectMetadataKeyEnumMap.InstancedMeshComposition, getLooks("Label")[0].stored)).toBe(true);
+                // Only as one of its own looks.
+                expect(canSet(ObjectMetadataKeyEnumMap.InstancedMeshComposition, getLooks("Canvas")[1].stored)).toBe(false);
+                expect(canSet(ObjectMetadataKeyEnumMap.InstancedMeshComposition, "abc")).toBe(false);
 
                 expect(canSet(ObjectMetadataKeyEnumMap.ImagePath, "some/image")).toBe(false);
                 expect(canSet(ObjectMetadataKeyEnumMap.DestinationRoomId, "some-room")).toBe(false);
@@ -272,163 +271,75 @@ describe("a label's lettering", () => {
     });
 });
 
-describe("a label's markup", () => {
-    const styled = (text: string) => LabelTextUtil.parseText(text).map(({text, style}) => ({text,
-        styles: [style.bold && "b", style.italic && "i", style.underline && "u", style.strikethrough && "s"]
-            .filter(Boolean).join(""), scale: style.scale, fontFace: style.fontFace}));
-
-    it("styles only the tags it knows, leaving any other in the text as typed", () => {
-        expect(styled("<B>bold</b> <u><s>both</s></u> <script>alert(1)</script>")).toEqual([
-            {text: "bold", styles: "b", scale: 1, fontFace: "serif"},
-            {text: " ", styles: "", scale: 1, fontFace: "serif"},
-            {text: "both", styles: "us", scale: 1, fontFace: "serif"},
-            {text: " <script>alert(1)</script>", styles: "", scale: 1, fontFace: "serif"},
-        ]);
+describe("a label's name", () => {
+    it("is its text as read: whitespace between words one space, and none at the ends", () => {
+        expect(LabelTextUtil.toName(" Grand\n\n  Library\t")).toBe("Grand Library");
+        expect(LabelTextUtil.toName(" \n ")).toBe("");
     });
 
-    it("reads <font> sizes and faces as browsers do, and nothing else of it", () => {
-        const fontOf = (attributes: string) => styled(`<font ${attributes}>x</font>`)[0];
-        expect(fontOf("size=1").scale).toBe(0.625);
-        expect(fontOf("size=\"+1\"").scale).toBe(1.125);
-        expect(fontOf("size='-9'").scale).toBe(0.625);
-        expect(fontOf("size=99").scale).toBe(3);
-        expect(fontOf("size=big").scale).toBe(1);
-        expect(fontOf("face=\" Sans-Serif \"").fontFace).toBe("sans-serif");
-        expect(fontOf("face=Papyrus").fontFace).toBe("serif");
-        expect(fontOf("color=red style=\"x\" size=7 size=1")).toEqual(
-            {text: "x", styles: "", scale: 3, fontFace: "serif"});
-    });
-
-    it("closes what was opened inside a closing tag, and drops one with nothing to close", () => {
-        expect(styled("<b>a<i>b</b>c</i>d").map(({text, styles}) => [text, styles]))
-            .toEqual([["a", "b"], ["b", "bi"], ["cd", ""]]);
-    });
-
-    it("keeps an unclosed tag's style to the end, and reads a self-closed one as nothing", () => {
-        expect(styled("<i/>a<i>b").map(({text, styles}) => [text, styles])).toEqual([["a", ""], ["b", "i"]]);
-    });
-
-    it("writes out the characters of a tag's entities as text", () => {
-        expect(styled("&lt;b&gt;x&lt;/b&gt; &amp;amp; &copy;")).toEqual(
-            [{text: "<b>x</b> &amp; &copy;", styles: "", scale: 1, fontFace: "serif"}]);
-    });
-
-    it("takes no inherited property's name for a tag it knows", () => {
-        const text = "<constructor>x</constructor><toString>y<__proto__>";
-        expect(styled(text)).toEqual([{text, styles: "", scale: 1, fontFace: "serif"}]);
-    });
-
-    it("keeps every character of text that holds no markup", () => {
-        fc.assert(fc.property(fc.string().filter(str => !str.includes("<") && !str.includes("&")), (text) => {
-            expect(LabelTextUtil.parseText(text).map(span => span.text).join("")).toBe(text);
-        }), {numRuns: 300});
-    });
-
-    it("reads the longest malformed markup a label can hold at once", () => {
-        const start = performance.now();
-        LabelTextUtil.parseText(`<font${" a=1".repeat(OBJECT_LABEL_MAX_LENGTH / 4)}`);
-        LabelTextUtil.parseText("<b".repeat(OBJECT_LABEL_MAX_LENGTH / 2));
-        expect(performance.now() - start).toBeLessThan(100);
-    });
-
-    it("is named by its text as read: no markup, and whitespace between words one space", () => {
-        expect(LabelTextUtil.toName(" <b>Grand</b>\n\n  <font size=7>Library</font> ")).toBe("Grand Library");
-        expect(LabelTextUtil.toName("<i> </i>")).toBe("");
+    it("keeps any markup as typed, since none is read", () => {
+        expect(LabelTextUtil.toName("<b>Grand</b> &amp; Library")).toBe("<b>Grand</b> &amp; Library");
     });
 });
 
 describe("a label's plaque", () => {
     const composer = LabelObjectTypeConfig.components.spawnedByAny.instancedMeshComposer;
-    const prefix = CompositionMetadataUtil.getCodecPrefix(InstancedMeshCompositionCodecTypeEnumMap.Label, 0);
     const baseSize = ObjectScaleUtil.getObjectSize(labelTypeIndex, UNIT_VEC3);
-    const decode = (encoded: string) => {
-        const params: InstancedMeshCompositionParams = {};
-        const parts: InstancedMeshCompositionPart[] = [];
-        LabelCompositionCodec.decode(encoded, baseSize, params, parts);
-        return {params, parts};
-    };
-    const paletteSize = ColorUtil.getPaletteSize("Timber");
-    const anyLook = fc.record({
-        frame: fc.integer({min: 0, max: paletteSize - 1}),
-        inner: fc.integer({min: 0, max: paletteSize - 1}),
-        thickness: fc.integer({min: 0, max: MouldingCompositionConstants.numThicknessSteps - 1}),
-        convex: fc.boolean(),
-        framed: fc.boolean(),
-        margin: fc.integer({min: 0, max: Math.round(MarginCompositionConstants.maxMargin / MarginCompositionConstants.marginStep)}),
-    }).map(look => ({
-        colors: {frame: ColorUtil.paletteIndexToRGB("Timber", look.frame), inner: ColorUtil.paletteIndexToRGB("Timber", look.inner)},
-        mouldingThickness: MouldingCompositionConstants.fromThicknessStep(look.thickness),
-        mouldingIsConvex: look.convex,
-        framed: look.framed,
-        margin: MarginCompositionConstants.fromMarginStep(look.margin),
-    }));
+    const looks = getLooks("Label", baseSize);
 
-    it("composes through a codec of its own", () => {
-        expect(composer.codecType).toBe(InstancedMeshCompositionCodecTypeEnumMap.Label);
+    it("stores an index to one of its looks", () => {
+        expect(composer.codecType).toBe(InstancedMeshCompositionCodecTypeEnumMap.Indexed);
     });
 
-    it("keeps any look through a round trip, and re-encodes to the same string", () => {
-        fc.assert(fc.property(anyLook, (look) => {
-            const encoded = CompositionMetadataUtil.encode(InstancedMeshCompositionCodecTypeEnumMap.Label, 0, look);
-            const {params, parts} = decode(encoded);
-            expect(params).toEqual(look);
-            expect(CompositionMetadataUtil.encode(InstancedMeshCompositionCodecTypeEnumMap.Label, 0, params))
-                .toBe(encoded);
-            // A plaque is the board alone, its inside in the plaque color; without a frame there is nothing.
-            expect(parts).toHaveLength(look.framed ? 1 : 0);
-            if (look.framed)
-            {
-                expect(parts[0].materialId).toBe(INSTANCED_WOOD_MATERIAL_ID);
-                expect(parts[0].color).toEqual(look.colors.inner);
-                expect(parts[0].mouldingColor).toEqual(look.colors.frame);
-            }
-        }), {numRuns: 200});
+    it("offers lettering straight on the wall first, its text over the whole footprint", () => {
+        const [frameless] = looks;
+        expect(frameless.params.framed).toBe(false);
+        expect(frameless.parts).toHaveLength(0);
+        expect(FramedPanelCompositionConstants.getInnerSize(frameless.params, baseSize)).toEqual(
+            {x: baseSize.x, y: baseSize.y, z: 1});
     });
 
-    it("storing nothing is lettering straight on the wall", () => {
-        const {params, parts} = decode(prefix);
-        expect(params.framed).toBe(false);
-        expect(parts).toHaveLength(0);
+    it("offers every other look as a plaque in a finish of its own, with room inside its band for text", () => {
+        const plaques = looks.slice(1);
+        expect(plaques.length).toBeGreaterThan(1);
+        const smallest = ObjectScaleUtil.getObjectSize(labelTypeIndex, LabelObjectTypeConfig.scaling.minScale);
+        for (const {params, parts} of plaques)
+        {
+            // A plaque is the board alone, its inside in the plaque color.
+            expect(params.framed).toBe(true);
+            expect(parts).toHaveLength(1);
+            expect(parts[0].materialId).toBe(INSTANCED_WOOD_MATERIAL_ID);
+            expect(parts[0].color).toEqual(params.colors.inner);
+            expect(parts[0].mouldingColor).toEqual(params.colors.frame);
+            const inner = FramedPanelCompositionConstants.getInnerSize(params, smallest);
+            expect(Math.min(inner.x, inner.y)).toBeGreaterThan(0);
+        }
+        expect(new Set(plaques.map(look => JSON.stringify(look.params.colors) + look.params.mouldingThickness
+            + look.params.mouldingIsConvex)).size).toBe(plaques.length);
     });
 
-    it("starts as a framed preset that depends on where it hangs", () => {
+    it("starts as a plaque that depends on where it hangs", () => {
         const at = (objectId: string) => composer.generateDefaultParts(new AddObjectSignal("room", "user", "User",
             labelTypeIndex, objectId, new ObjectTransform({x: 1, y: 1, z: 1}, {x: 0, y: 0, z: -1}, {...UNIT_VEC3})));
-        expect(CompositionMetadataUtil.encode(composer.codecType, 0, at("same").params))
-            .toBe(CompositionMetadataUtil.encode(composer.codecType, 0, at("same").params));
+        expect(at("same").params.compositionIndex).toBe(at("same").params.compositionIndex);
 
-        const finishes = new Set<string>();
+        const plaqueIndices = looks.slice(1).map(look => look.compositionIndex);
+        const chosen = new Set<number>();
         for (let i = 0; i < 40; ++i)
         {
             const {params, parts} = at(`label-${i}`);
-            expect(params.framed).toBe(true);
+            expect(plaqueIndices).toContain(params.compositionIndex);
             expect(parts).toHaveLength(1);
-            finishes.add(CompositionMetadataUtil.encode(composer.codecType, 0, params));
+            chosen.add(params.compositionIndex);
         }
-        expect(finishes.size).toBeGreaterThan(1);
+        expect(chosen.size).toBeGreaterThan(1);
     });
 
-    it("every preset survives the codec's quantization, and no two are alike", () => {
-        const encoded = new Set<string>();
-        for (const preset of LabelCompositionConstants.presets)
-        {
-            const look = {...preset, framed: true, margin: 0};
-            const string = CompositionMetadataUtil.encode(InstancedMeshCompositionCodecTypeEnumMap.Label, 0, look);
-            expect(decode(string).params).toEqual(look);
-            encoded.add(string);
-        }
-        expect(encoded.size).toBe(LabelCompositionConstants.presets.length);
-    });
-
-    it("decodes whatever it is handed into a plaque that can be drawn", () => {
-        fc.assert(fc.property(fc.string({maxLength: 12}), (garbage) => {
-            expect(() => decode(prefix + garbage)).not.toThrow();
-            for (const part of decode(prefix + garbage).parts)
-            {
-                expect(part.scale.x).toBeGreaterThan(0);
-                expect(part.scale.y).toBeGreaterThan(0);
-            }
-        }), {numRuns: 300});
+    it("takes only one of its own looks", () => {
+        for (const look of looks)
+            expect(CompositionMetadataUtil.isIndexedLookOf("Label", composer.codecVersion, look.stored)).toBe(true);
+        for (const look of getLooks("Canvas"))
+            expect(CompositionMetadataUtil.isIndexedLookOf("Label", composer.codecVersion, look.stored)).toBe(false);
     });
 });
 

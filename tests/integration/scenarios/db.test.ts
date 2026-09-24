@@ -19,8 +19,11 @@ import DBMigrationWriteBackUtil from "../../../src/server/db/util/dbMigrationWri
 import DBUserVersionMigration from "../../../src/server/db/types/versionMigration/dbUserVersionMigration";
 import DBRoomVersionMigration from "../../../src/server/db/types/versionMigration/dbRoomVersionMigration";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
+import RoomPrefsUtil from "../../../src/shared/room/util/roomPrefsUtil";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
-import { TUTORIAL_SINGLE_PLAYER_MODE } from "../../../src/shared/system/sharedConstants";
+import { ColorPaletteMap } from "../../../src/shared/math/maps/colorPaletteMap";
+import StringUtil from "../../../src/shared/math/util/stringUtil";
+import { LIGHT_COLOR_PALETTE_NAME, TUTORIAL_SINGLE_PLAYER_MODE } from "../../../src/shared/system/sharedConstants";
 import { COLLECTION_ROOMS, COLLECTION_USERS, DB_MAX_WRITES_PER_COMMIT } from "../../../src/server/system/serverConstants";
 
 const USER_VERSION = DBUserVersionMigration.length;
@@ -771,6 +774,32 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
             expect(result.data[0].roomName).toBe("");
             // v5 -> v6 adds an empty atmosphere field, which decodes to the unconfigured look (see RoomPrefsUtil).
             expect(result.data[0].prefs).toBe("");
+        });
+
+        it("carries a room's light colors over to the nearest ones the trimmed palette still offers", async () => {
+            // v6 -> v7: the first two chars are "Light" palette positions (ambient, then head light); the rest
+            // is kept as it was. A soft green and a strong blue were dropped; a pure blue was kept.
+            const char = StringUtil.convertRawNumberToVisibleASCII;
+            await EmulatorDB.seed(COLLECTION_ROOMS, {
+                tinted: currentRoom({ version: 6, prefs: char(47) + char(75) + "rest" }),
+                kept: currentRoom({ version: 6, prefs: char(87) }),
+                unconfigured: currentRoom({ version: 6, prefs: "" }),
+            });
+
+            const result = await selectRooms().where("roomType", "==", RoomTypeEnumMap.Regular).run();
+            const prefsByID = Object.fromEntries(result.data.map(row => [row.id, row.prefs]));
+            const lightColors = (prefs: string) => {
+                const decoded = RoomPrefsUtil.decode(prefs);
+                return [decoded.ambientColorIndex, decoded.headLightColorIndex]
+                    .map(index => ColorPaletteMap[LIGHT_COLOR_PALETTE_NAME][index]);
+            };
+
+            expect(result.data.every(row => row.version === ROOM_VERSION)).toBe(true);
+            expect(lightColors(prefsByID.tinted)).toEqual(["#c2ffc2", "#6b6bff"]);
+            expect(prefsByID.tinted.substring(2)).toBe("rest");
+            expect(lightColors(prefsByID.kept)).toEqual(["#0000ff", "#ffffff"]);
+            expect(prefsByID.kept).toHaveLength(1);
+            expect(prefsByID.unconfigured).toBe("");
         });
 
         it("drops the id field that rooms written before the rule still carry", async () => {

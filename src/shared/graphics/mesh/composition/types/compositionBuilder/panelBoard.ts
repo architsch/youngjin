@@ -11,7 +11,7 @@ class PanelBoard_0 extends FramedPanelBuilder
     {
         const params = this.params as FramedPanelCompositionParams;
         if (params.framed)
-            this.addBoard(params.colors.inner ?? params.colors.frame);
+            this.addBoard(params.colors.inner);
         return this;
     }
 }

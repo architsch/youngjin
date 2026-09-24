@@ -1,7 +1,7 @@
-import { LabelCompositionCodec } from "../../../graphics/mesh/composition/types/compositionCodec/labelCompositionCodec";
 import { FRAMED_PANEL_BOARD_RELIEF,
     FRAMED_PANEL_CONTENT_LIFT } from "../../../graphics/mesh/composition/types/compositionConstants/framedPanelCompositionConstants";
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../graphics/mesh/composition/types/instancedMeshCompositionCodecType";
+import CompositionMetadataUtil from "../../../graphics/mesh/composition/util/compositionMetadataUtil";
 import StringUtil from "../../../math/util/stringUtil";
 import Room from "../../../room/types/room";
 import RoomValidationUtil from "../../../room/util/roomValidationUtil";
@@ -14,6 +14,8 @@ import SetObjectMetadataSignal from "../setObjectMetadataSignal";
 import SetObjectTransformSignal from "../setObjectTransformSignal";
 import ObjectScaleUtil from "../../util/objectScaleUtil";
 import ObjectTypeConfig from "./objectTypeConfig";
+
+const COMPOSITION_CODEC_VERSION = 0;
 
 // Metadata keys the room's superuser may write to a label; anything else is refused.
 const editableMetadataKeys = [
@@ -69,7 +71,12 @@ const LabelObjectTypeConfig =
         if (!RoomValidationUtil.isRoomSuperuser(user, room))
             return false;
 
-        // Values are sanitized by ObjectMetadataEntryMap; only the key is checked here.
+        // A look must be one of a label's own; other values are sanitized by ObjectMetadataEntryMap.
+        if (signal.metadataKey == ObjectMetadataKeyEnumMap.InstancedMeshComposition)
+        {
+            return CompositionMetadataUtil.isIndexedLookOf("Label", COMPOSITION_CODEC_VERSION,
+                signal.metadataValue);
+        }
         return editableMetadataKeys.includes(signal.metadataKey);
     },
     components: {
@@ -86,15 +93,19 @@ const LabelObjectTypeConfig =
                 maxClimbableHeight: 0,
             },
             instancedMeshGraphics: {},
+            // One of its pre-encoded looks, the first of which is frameless (see pre_encoding_source.json).
             instancedMeshComposer: {
-                codecType: InstancedMeshCompositionCodecTypeEnumMap.Label,
-                codecVersion: 0,
+                codecType: InstancedMeshCompositionCodecTypeEnumMap.Indexed,
+                codecVersion: COMPOSITION_CODEC_VERSION,
                 generateDefaultParts: (obj: AddObjectSignal) => {
-                    // Seeded from room and label id, so every client and session sees the same plaque.
+                    // Seeded from room and label id, so every client and session sees the same plaque. Never
+                    // the frameless look: a label nobody has dressed still gets a plaque.
                     const hashCode = StringUtil.getHashCode(`${obj.roomID}/${obj.objectId}`);
-                    return LabelCompositionCodec.getRandomComposition(hashCode,
-                        ObjectScaleUtil.getObjectSize(obj.objectTypeIndex, obj.transform.scale));
+                    return CompositionMetadataUtil.decodeSeededIndexed("Label", 1, hashCode,
+                        COMPOSITION_CODEC_VERSION, ObjectScaleUtil.getObjectSize(obj.objectTypeIndex, obj.transform.scale));
                 },
+                // Straight on, as it hangs.
+                thumbnailView: {yawDeg: 0, pitchDeg: 0},
             },
             // The whole footprint, in front of where the board would be; the board's band narrows it
             // (see LabelGameObject).

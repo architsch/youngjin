@@ -1,104 +1,58 @@
-import RandomNumberGenerator from "../../../../../math/types/randomNumberGenerator";
 import Vec3 from "../../../../../math/types/vec3";
 import ColorUtil from "../../../../../math/util/colorUtil";
 import StringUtil from "../../../../../math/util/stringUtil";
 import { InstancedMeshCompositionBuilderMap } from "../../maps/instancedMeshCompositionBuilderMap";
-import FramedPanelCompositionConstants from "../compositionConstants/framedPanelCompositionConstants";
-import MarginCompositionConstants from "../compositionConstants/marginCompositionConstants";
 import MouldingCompositionConstants from "../compositionConstants/mouldingCompositionConstants";
 import FramedPanelCompositionParams from "../compositionParams/framedPanelCompositionParams";
 import { InstancedMeshCompositionParams } from "../compositionParams/instancedMeshCompositionParams";
 import InstancedMeshCompositionPart from "../instancedMeshCompositionPart";
-import FramedPanelCodecStyle from "./framedPanelCodecStyle";
 import InstancedMeshCompositionCodec from "./instancedMeshCompositionCodec";
 
-// A framed panel's look (canvases, labels), one visible-ASCII char each: its colors as palette
-// positions, in the style's slot order; the band width (a step; see MouldingCompositionConstants); a flags
-// char holding the profile (proud or sunk) and whether the frame is shown; and the margin (a step; see
-// MarginCompositionConstants), last so a string written before it existed reads as none. A panel without a
-// frame still stores its finish, so turning the frame back on restores it. Untrusted on read: decoding
-// clamps and always yields a drawable panel.
+// A framed panel's look (canvases, labels), one visible-ASCII char each: the frame and inner colors as
+// palette positions, the band width (a step; see MouldingCompositionConstants), and a flags char holding
+// the profile (proud or sunk) and whether the frame is shown. Objects store only an index to one of these
+// (see IndexedCompositionCodec). Untrusted on read: decoding clamps and always yields a drawable panel.
 const CONVEX_FLAG = 1;
 const FRAMED_FLAG = 2;
 
-export default function createFramedPanelCodec(style: FramedPanelCodecStyle): InstancedMeshCompositionCodec
-{
-    const codec: InstancedMeshCompositionCodec = {
-        encode: (params: InstancedMeshCompositionParams,
-            parts: InstancedMeshCompositionPart[]): string =>
-        {
-            const arr: string[] = [];
-            for (const slot of style.colorSlots)
-                arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToPaletteIndex("Timber", params.colors[slot])));
-            arr.push(StringUtil.convertRawNumberToVisibleASCII(
-                MouldingCompositionConstants.toThicknessStep(params.mouldingThickness)));
-            arr.push(StringUtil.convertRawNumberToVisibleASCII(
-                (params.mouldingIsConvex ? CONVEX_FLAG : 0) | (params.framed ? FRAMED_FLAG : 0)));
-            arr.push(StringUtil.convertRawNumberToVisibleASCII(MarginCompositionConstants.toMarginStep(params.margin)));
-            return arr.join("");
-        },
-        decode: (strToDecode: string, objectSize: Vec3,
-            decodedParams: InstancedMeshCompositionParams,
-            decodedParts: InstancedMeshCompositionPart[]): void =>
-        {
-            let charOffset = 2; // First two chars are for the codec's type and version, respectively.
-            const base = getBaseParams(style);
-            Object.assign(decodedParams, base); // Filled in place, so that the caller's params object gets updated.
-            if (strToDecode.length > charOffset)
-            {
-                for (const slot of style.colorSlots)
-                {
-                    // paletteIndexToRGB clamps, so bad input still yields a real color.
-                    decodedParams.colors[slot] = ColorUtil.paletteIndexToRGB("Timber",
-                        StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++));
-                }
-                decodedParams.mouldingThickness = MouldingCompositionConstants.fromThicknessStep(
-                    StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++));
-                const flagsWhenMissing = (base.mouldingIsConvex ? CONVEX_FLAG : 0)
-                    | (style.framedWhenFlagsMissing ? FRAMED_FLAG : 0);
-                const flags = StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++, flagsWhenMissing);
-                decodedParams.mouldingIsConvex = (flags & CONVEX_FLAG) != 0;
-                decodedParams.framed = (flags & FRAMED_FLAG) != 0;
-                decodedParams.margin = MarginCompositionConstants.fromMarginStep(
-                    StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++, 0));
-            }
-            constructParts(style, decodedParams, decodedParts, objectSize);
-        },
-        getRandomComposition: (seed: number, objectSize: Vec3):
-            {params: InstancedMeshCompositionParams, parts: InstancedMeshCompositionPart[]} =>
-        {
-            const rand = new RandomNumberGenerator(seed);
-            const params = getBaseParams(style);
-            FramedPanelCompositionConstants.applyPreset(params,
-                style.presets[rand.randomInt(0, style.presets.length)]);
-            if (style.framedByDefault)
-                params.framed = true;
-
-            const parts: InstancedMeshCompositionPart[] = [];
-            constructParts(style, params, parts, objectSize);
-            return {params, parts};
-        },
-        getStructuralVariants: (): string[] =>
-        {
-            // Only the frame flag decides which parts are built.
-            return [false, true].map(framed => codec.encode({...getBaseParams(style), framed}, []));
-        },
-    };
-    return codec;
-}
-
-// The first preset, unframed with no margin where it doesn't say, so a frame turned on has a real finish to
-// come back with. A fresh copy, so edits to the result don't reach the preset.
-function getBaseParams(style: FramedPanelCodecStyle): FramedPanelCompositionParams
-{
-    const params: FramedPanelCompositionParams = {colors: {frame: {x: 0, y: 0, z: 0}},
-        mouldingThickness: 0, mouldingIsConvex: false, framed: false, margin: 0};
-    FramedPanelCompositionConstants.applyPreset(params, style.presets[0]);
-    return params;
-}
-
-function constructParts(style: FramedPanelCodecStyle, params: FramedPanelCompositionParams,
-    parts: InstancedMeshCompositionPart[], objectSize: Vec3)
-{
-    InstancedMeshCompositionBuilderMap[style.builderId](params, parts, objectSize).run();
+export const FramedPanelCompositionCodec: InstancedMeshCompositionCodec = {
+    encode: (params: InstancedMeshCompositionParams,
+        parts: InstancedMeshCompositionPart[]): string =>
+    {
+        const arr: string[] = [];
+        arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToPaletteIndex("Timber", params.colors.frame)));
+        arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToPaletteIndex("Timber", params.colors.inner)));
+        arr.push(StringUtil.convertRawNumberToVisibleASCII(
+            MouldingCompositionConstants.toThicknessStep(params.mouldingThickness)));
+        arr.push(StringUtil.convertRawNumberToVisibleASCII(
+            (params.mouldingIsConvex ? CONVEX_FLAG : 0) | (params.framed ? FRAMED_FLAG : 0)));
+        return arr.join("");
+    },
+    decode: (strToDecode: string, objectSize: Vec3,
+        decodedParams: InstancedMeshCompositionParams,
+        decodedParts: InstancedMeshCompositionPart[]): void =>
+    {
+        let charOffset = 2; // First two chars are for the codec's type and version, respectively.
+        // paletteIndexToRGB clamps, so bad input still yields a real color.
+        const frame = ColorUtil.paletteIndexToRGB("Timber", StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++));
+        const inner = ColorUtil.paletteIndexToRGB("Timber", StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++));
+        const mouldingThickness = MouldingCompositionConstants.fromThicknessStep(
+            StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++));
+        const flags = StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++);
+        const params: FramedPanelCompositionParams = {colors: {frame, inner}, mouldingThickness,
+            mouldingIsConvex: (flags & CONVEX_FLAG) != 0, framed: (flags & FRAMED_FLAG) != 0};
+        Object.assign(decodedParams, params); // Filled in place, so that the caller's params object gets updated.
+        InstancedMeshCompositionBuilderMap["PanelBoard_0"](decodedParams, decodedParts, objectSize).run();
+    },
+    getRandomComposition: (seed: number, objectSize: Vec3):
+        {params: InstancedMeshCompositionParams, parts: InstancedMeshCompositionPart[]} =>
+    {
+        // Its looks are authored ones, and a seeded default is one of those (see CompositionMetadataUtil).
+        throw new Error("FramedPanelCompositionCodec::getRandomComposition : NOT IMPLEMENTED");
+    },
+    getStructuralVariants: (): string[] =>
+    {
+        // Reached only through pre-encoded entries, which are its variants (see InstancedMeshCapacityBuilder).
+        throw new Error("FramedPanelCompositionCodec::getStructuralVariants : NOT IMPLEMENTED");
+    },
 }

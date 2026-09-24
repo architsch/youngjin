@@ -60,9 +60,10 @@ Concretely, it covers:
 ## Third-party material
 
 Some assets in this repository belong to neither category above: they are
-third-party works redistributed under their own terms. The texture packs under
-`public/app/assets/resources/` are the main example, and they are public domain.
-See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for the full list.
+third-party works redistributed under their own terms. The texture packs and the
+label font under `public/app/assets/resources/` are the main examples: the packs
+are public domain, and the font is under the SIL Open Font License. See
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for the full list.
 
 ## In short
 
