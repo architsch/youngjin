@@ -74,13 +74,13 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
 
     const canAddCanvas = getPlaceableAttachedObjectTransform(props.selection, canvasTypeIndex) !== null;
 
-    // Doors and labels: admin only, in rooms whose doors are theirs to lay (see RoomValidationUtil).
+    // Doors and labels: the room's superuser only (see RoomValidationUtil).
     const room = App.getCurrentRoom();
-    const canManageDoors = room != undefined &&
-        RoomValidationUtil.canUserManageDoors(App.getUser(), room);
-    const canAddDoor = canManageDoors &&
+    const isSuperuser = room != undefined &&
+        RoomValidationUtil.isRoomSuperuser(App.getUser(), room);
+    const canAddDoor = isSuperuser &&
         getPlaceableAttachedObjectTransform(props.selection, doorTypeIndex) !== null;
-    const canAddLabel = canManageDoors &&
+    const canAddLabel = isSuperuser &&
         getPlaceableAttachedObjectTransform(props.selection, labelTypeIndex) !== null;
 
     const canAddLamp = getPlaceableAttachedObjectTransform(props.selection, lampTypeIndex) !== null;
@@ -102,7 +102,7 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
                 });
             }}
         />
-        {canManageDoors && <IconButton id="addDoorButton" icon={<AddDoorIcon/>} size="md"
+        {isSuperuser && <IconButton id="addDoorButton" icon={<AddDoorIcon/>} size="md"
             disabled={!canAddDoor}
             onClick={() => {
                 // New doors lead nowhere and aren't default entrances until configured.
@@ -123,7 +123,7 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
                 });
             }}
         />
-        {canManageDoors && <IconButton id="addLabelButton" icon={<AddLabelIcon/>} size="md"
+        {isSuperuser && <IconButton id="addLabelButton" icon={<AddLabelIcon/>} size="md"
             disabled={!canAddLabel}
             onClick={() => {
                 // The plaque is derived from the new label's id (see LabelObjectTypeConfig).

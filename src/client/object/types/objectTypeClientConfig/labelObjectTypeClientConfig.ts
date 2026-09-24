@@ -10,7 +10,7 @@ const LabelObjectTypeClientConfig: ObjectTypeClientConfig =
     construct: (params: AddObjectSignal) => new LabelGameObject(params),
     selection: {
         canBeSelectedByUserInEditMode: (_gameObject, user, room) =>
-            RoomValidationUtil.canUserManageDoors(user, room),
+            RoomValidationUtil.isRoomSuperuser(user, room),
         editOptions: LabelEditOptions,
     },
 };

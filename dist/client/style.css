@@ -1296,6 +1296,9 @@
   .accent-green-600 {
     accent-color: var(--color-green-600);
   }
+  .opacity-30 {
+    opacity: 30%;
+  }
   .opacity-50 {
     opacity: 50%;
   }

@@ -1,7 +1,7 @@
 /**
  * Restricted zones (see @docs/gameplay/restricted_zone.md): full-height grid rectangles where only the
- * superuser (a hub's admin, a Regular room's owner) may edit voxels and persistent objects. Asserted as
- * the server enforces it: refusals go in as signals and come back as rollbacks.
+ * superuser (a hub's admin, a Regular room's owner, the sandbox's player) may edit voxels and persistent
+ * objects. Asserted as the server enforces it: refusals go in as signals and come back as rollbacks.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runScenario } from "../helpers/scenarioRunner";
@@ -13,6 +13,7 @@ import ServerRoomManager from "../../../src/server/room/serverRoomManager";
 import ServerUserManager from "../../../src/server/user/serverUserManager";
 import ServerVoxelManager from "../../../src/server/voxel/serverVoxelManager";
 import Room from "../../../src/shared/room/types/room";
+import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import User from "../../../src/shared/user/types/user";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
@@ -31,8 +32,8 @@ import AddVoxelBlockSignal from "../../../src/shared/voxel/types/update/addVoxel
 import RemoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/removeVoxelBlockSignal";
 import SetVoxelQuadTextureSignal from "../../../src/shared/voxel/types/update/setVoxelQuadTextureSignal";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
-import { COLLISION_LAYER_MIN, MAX_RESTRICTED_ZONES,
-    NUM_VOXEL_COLS, NUM_VOXEL_ROWS, UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
+import { COLLISION_LAYER_MIN, MAX_RESTRICTED_ZONES, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
+    SANDBOX_SINGLE_PLAYER_MODE, UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
 
 // Clear of the boundary walls and the door's wall.
 const ZONE = new RestrictedZone(8, 15, 8, 15);
@@ -335,6 +336,44 @@ describe("restricted zones", () => {
         });
     });
 
+    it("leaves a canvas on a zone's outer wall editable, and protects one on its inner side", async () => {
+        // A wall along the zone's west edge, tall enough for a canvas on either side of it.
+        const wallCol = ZONE.colMin;
+        const wall: {row: number, col: number, layer: number}[] = [];
+        for (let row = 9; row <= 11; ++row)
+            for (let layer = COLLISION_LAYER_MIN; layer < COLLISION_LAYER_MIN + 6; ++layer)
+                wall.push({row, col: wallCol, layer});
+
+        await runScenario({
+            name: "canvases on a zone's edge wall",
+            rooms: [{...EMPTY_HUB, voxels: wall}],
+            users: [userAtCenter("hub")],
+            assertions: () => {
+                const room = getRoom("hub");
+                drawZone(room, ZONE);
+
+                // The wall belongs to the zone, but what hangs on its outer face stands outside it.
+                const hang = (user: User, objectId: string, x: number, dirX: number) =>
+                    new AddObjectSignal(room.id, user.id, user.userName, canvasTypeIndex, objectId,
+                        new ObjectTransform({x, y: 1.5, z: 10}, {x: dirX, y: 0, z: 0}, {...UNIT_VEC3}));
+                const outer = hang(MEMBER, "outer-canvas", wallCol, -1);
+
+                expect(ObjectUpdateUtil.canAddObject(MEMBER, room, outer)).toBe(true);
+                expect(ObjectUpdateUtil.canAddObject(MEMBER, room,
+                    hang(MEMBER, "inner-canvas", wallCol + 1, 1))).toBe(false);
+                expect(ObjectUpdateUtil.canAddObject(ADMIN, room,
+                    hang(ADMIN, "inner-canvas", wallCol + 1, 1))).toBe(true);
+
+                room.objectGroup.addObject(outer);
+                expect(ObjectUpdateUtil.canSetObjectMetadata(MEMBER, room,
+                    new SetObjectMetadataSignal(room.id, outer.objectId,
+                        ObjectMetadataKeyEnumMap.ImagePath, CANVAS_IMAGE_PATH))).toBe(true);
+                expect(ObjectUpdateUtil.canRemoveObject(MEMBER, room,
+                    new RemoveObjectSignal(room.id, outer.objectId))).toBe(true);
+            },
+        });
+    });
+
     it("lets a player walk through a zone", async () => {
         await runScenario({
             name: "player inside a zone",
@@ -449,20 +488,21 @@ describe("restricted zones", () => {
         });
     });
 
-    it("keeps a user's role out of the question in a single-player room", async () => {
+    it("puts the sandbox's player above its zones, whatever their role", async () => {
         // Nobody else is in it, so there is nobody a zone could be protecting the room from.
         await runScenario({
-            name: "zones in a single-player room",
+            name: "zones in the sandbox",
             rooms: [EMPTY_HUB],
             users: [userAtCenter("hub")],
             assertions: () => {
                 const room = getRoom("hub");
-                const singlePlayer = Object.create(Object.getPrototypeOf(room),
+                const sandbox = Object.create(Object.getPrototypeOf(room),
                     Object.getOwnPropertyDescriptors(room)) as Room;
-                singlePlayer.roomType = 2; // RoomTypeEnumMap.SinglePlayer
-                drawZone(singlePlayer, ZONE);
+                sandbox.roomType = RoomTypeEnumMap.SinglePlayer;
+                sandbox.roomName = SANDBOX_SINGLE_PLAYER_MODE;
+                drawZone(sandbox, ZONE);
 
-                expect(RestrictedZoneUtil.blocksVoxelBlockEdit(MEMBER, singlePlayer, INSIDE.row, INSIDE.col)).toBe(false);
+                expect(RestrictedZoneUtil.blocksVoxelBlockEdit(MEMBER, sandbox, INSIDE.row, INSIDE.col)).toBe(false);
             },
         });
     });

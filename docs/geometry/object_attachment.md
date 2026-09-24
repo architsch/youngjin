@@ -38,9 +38,10 @@ The selected object is moved by dragging the inside of its selection outline (`O
 - A drag previews locally, and the server hears one transform, on release.
 
 ## Resizing
-A type with an `ObjectScalingConfig` is resized by the outline's corner handles, one step of its scale at a time.
+A type with an `ObjectScalingConfig` is resized by the outline's corner handles, one step of its scale at a time, unless its config turns the handles off.
 - The corner opposite the dragged one holds still. Vertically it holds exactly. Along a horizontal axis, where the centre can't always sit on the grid, it gives a quarter voxel toward the dragged side, or behind if only that fits.
 - A size that doesn't fit is refused, and the object keeps the last size that did.
+- A lamp has no handles. It comes in a few sizes, picked from its edit options and applied **where it stands** (`ObjectAttachmentUtil.getResizedInPlace`): the centre stays put across the face, except vertically, where the bottom edge does, so picking the earlier size puts it back exactly. The list offers only the sizes that fit there, asked by the same rule the server applies to the resulting transform.
 
 ## Removing the supporting block
-A block that holds up attached objects cannot be removed on its own. The user can instead remove the block together with its attachments after confirming, but only when the user may remove every one of those attachments. A door, for example, keeps its wall for any non-admin.
+A block that holds up attached objects cannot be removed on its own. The user can instead remove the block together with its attachments after confirming, but only when the user may remove every one of those attachments. A door, for example, keeps its wall for anyone but the room's superuser.

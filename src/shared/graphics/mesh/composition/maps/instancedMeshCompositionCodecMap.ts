@@ -5,7 +5,6 @@ import { DoorCompositionCodec } from "../types/compositionCodec/doorCompositionC
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../types/instancedMeshCompositionCodecType";
 import { IndexedCompositionCodec } from "../types/compositionCodec/indexedCompositionCodec";
 import { CanvasCompositionCodec } from "../types/compositionCodec/canvasCompositionCodec";
-import { LampCompositionCodec } from "../types/compositionCodec/lampCompositionCodec";
 import { LabelCompositionCodec } from "../types/compositionCodec/labelCompositionCodec";
 
 export const InstancedMeshCompositionCodecMap: {[codecType: number]: InstancedMeshCompositionCodec} = {
@@ -14,6 +13,5 @@ export const InstancedMeshCompositionCodecMap: {[codecType: number]: InstancedMe
     [InstancedMeshCompositionCodecTypeEnumMap.Door]: DoorCompositionCodec,
     [InstancedMeshCompositionCodecTypeEnumMap.Indexed]: IndexedCompositionCodec,
     [InstancedMeshCompositionCodecTypeEnumMap.Canvas]: CanvasCompositionCodec,
-    [InstancedMeshCompositionCodecTypeEnumMap.Lamp]: LampCompositionCodec,
     [InstancedMeshCompositionCodecTypeEnumMap.Label]: LabelCompositionCodec,
 }

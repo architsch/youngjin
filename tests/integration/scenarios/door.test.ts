@@ -1,6 +1,6 @@
 /**
- * Scenario tests: doors (admin world-building) — who may add, remove, move and edit them, how their
- * metadata is validated, and where arriving players spawn.
+ * Scenario tests: doors (the room superuser's world-building) — who may add, remove, move and edit them,
+ * how their metadata is validated, and where arriving players spawn.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runScenario } from "../helpers/scenarioRunner";
@@ -23,7 +23,6 @@ import { DoorTypeEnumMap } from "../../../src/shared/object/types/doorType";
 import EncodableByteString from "../../../src/shared/networking/types/encodableByteString";
 import Room from "../../../src/shared/room/types/room";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
-import RoomValidationUtil from "../../../src/shared/room/util/roomValidationUtil";
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import VoxelQuadsRuntimeMemory from "../../../src/shared/voxel/types/voxelQuadsRuntimeMemory";
 import ObjectGroup from "../../../src/shared/object/types/objectGroup";
@@ -41,14 +40,16 @@ const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 const DOOR_FOOTPRINT_HEIGHT =
     DoorObjectTypeConfig.components.spawnedByAny.collider.baseHitboxSize.sizeY;
 
-function makeUser(id: string, userType: number): User
+function makeUser(id: string, userType: number, ownedRoomID: string = ""): User
 {
-    return new User(id, `User_${id}`, userType, `${id}@test.com`, "");
+    return new User(id, `User_${id}`, userType, `${id}@test.com`, "", "", ownedRoomID);
 }
 
 const ADMIN = makeUser("an-admin", UserTypeEnumMap.Admin);
 const MEMBER = makeUser("a-member", UserTypeEnumMap.Member);
 const GUEST = makeUser("a-guest", UserTypeEnumMap.Guest);
+// Ownership is the user naming the room as their own.
+const OWNER = makeUser("an-owner", UserTypeEnumMap.Member, "regular");
 
 // A door on the boundary wall, well clear of the room's existing one.
 function makeDoorSignal(room: Room, sourceUser: User, objectId: string = "new-door"): AddObjectSignal
@@ -93,34 +94,36 @@ describe("door permissions", () => {
         });
     });
 
-    it("refuses a door in a regular room, even to an admin", async () => {
-        // Regular rooms keep their generated door; admins shape hubs only.
+    it("lets a regular room's owner hang a door there, and nobody else, not even an admin", async () => {
         await runScenario({
             name: "hanging a door in a regular room",
             rooms: [EMPTY_REGULAR],
             users: [userAtCenter("regular")],
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["regular"].room;
-                for (const user of [ADMIN, MEMBER])
-                {
-                    expect(ObjectUpdateUtil.canAddObject(user, room,
-                        makeDoorSignal(room, user))).toBe(false);
-                }
+                const canAdd = (user: User) => ObjectUpdateUtil.canAddObject(user, room, makeDoorSignal(room, user));
+
+                expect(canAdd(OWNER)).toBe(true);
+                for (const user of [ADMIN, MEMBER, GUEST])
+                    expect(canAdd(user)).toBe(false);
             },
         });
     });
 
-    it("lets an admin manage doors in the sandbox, but in no other single-player room", () => {
-        // The sandbox's edits stay local, so it stands in for a hub when trying out admin tools.
+    it("lets anyone manage doors in the sandbox, but nobody in any other single-player room", () => {
+        // The sandbox's player is its superuser, so door tools can be tried without a hub.
         const singlePlayerRoom = (name: string) => new Room(name, name, RoomTypeEnumMap.SinglePlayer, "", "",
             "default", "", new VoxelGrid([], new VoxelQuadsRuntimeMemory()), new ObjectGroup([]));
         const sandbox = singlePlayerRoom(SANDBOX_SINGLE_PLAYER_MODE);
         const tutorial = singlePlayerRoom(TUTORIAL_SINGLE_PLAYER_MODE);
+        const canRemoveDoor = (user: User, room: Room) =>
+            DoorObjectTypeConfig.canUserRemoveObject(user, room, makeDoorSignal(room, user));
 
-        expect(RoomValidationUtil.canUserManageDoors(ADMIN, sandbox)).toBe(true);
-        expect(RoomValidationUtil.canUserManageDoors(MEMBER, sandbox)).toBe(false);
-        expect(RoomValidationUtil.canUserManageDoors(GUEST, sandbox)).toBe(false);
-        expect(RoomValidationUtil.canUserManageDoors(ADMIN, tutorial)).toBe(false);
+        for (const user of [ADMIN, MEMBER, GUEST])
+        {
+            expect(canRemoveDoor(user, sandbox)).toBe(true);
+            expect(canRemoveDoor(user, tutorial)).toBe(false);
+        }
     });
 
     it("refuses a door hung under somebody else's name", async () => {

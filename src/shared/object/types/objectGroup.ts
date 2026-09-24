@@ -16,7 +16,7 @@ let temp_roomID = "";
 let temp_participantUserNameByID: { [userID: string]: string } = {};
 let temp_sourceVoxelGridVersion = 0;
 
-const latestVersion = 5;
+const latestVersion = 6;
 
 export default class ObjectGroup extends EncodableData
 {

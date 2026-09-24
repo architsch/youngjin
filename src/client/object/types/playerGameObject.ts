@@ -7,6 +7,8 @@ import InstancedMeshComposer from "../components/instancedMeshComposer";
 import SpeechBubble from "../components/speechBubble";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
+import AdminPrefsUtil from "../../../shared/object/util/adminPrefsUtil";
 
 const playerHalfHeightWithMargin = 0.5 * PLAYER_HEIGHT + 0.5;
 const playerRadiusWithMargin = PLAYER_RADIUS_XZ + 0.5;
@@ -17,6 +19,10 @@ export default class PlayerGameObject extends GameObject
 {
     private instancedMeshComposer: InstancedMeshComposer;
     private speechBubble: SpeechBubble;
+
+    // Cached from the AdminPrefs metadata, since the user's own visibility is recomputed per frame.
+    private ghostMode: boolean;
+    private tooCloseToCamera: boolean = false;
 
     constructor(params: AddObjectSignal)
     {
@@ -29,6 +35,10 @@ export default class PlayerGameObject extends GameObject
         this.speechBubble = this.components.speechBubble as SpeechBubble;
         if (!this.speechBubble)
             throw new Error("PlayerGameObject requires SpeechBubble component");
+
+        this.ghostMode = AdminPrefsUtil.getObjectPrefs(params).ghostMode;
+        // Before spawn, so a ghost is never drawn for a frame.
+        this.refreshOtherPlayerVisibility();
     }
 
     // Recomputed per frame, since the camera eases toward its pose (see refreshOwnVisibility).
@@ -38,26 +48,44 @@ export default class PlayerGameObject extends GameObject
             this.refreshOwnVisibility();
     }
 
-    // Hide other players who come too close, so they don't clip the camera. (The user's own body uses
-    // refreshOwnVisibility.)
+    // Other players who come too close are hidden, so they don't clip the camera.
     onPlayerProximityStart()
     {
-        if (!this.isMine())
-            this.instancedMeshComposer.setHidden(true);
+        this.tooCloseToCamera = true;
+        this.refreshOtherPlayerVisibility();
     }
-    // Once the other player is no longer too close to the user, show it again.
     onPlayerProximityEnd()
     {
-        if (!this.isMine())
-            this.instancedMeshComposer.setHidden(false);
+        this.tooCloseToCamera = false;
+        this.refreshOtherPlayerVisibility();
     }
 
-    // The user's own body (and bubble) is shown when no scripted step hides it, the mode isn't
-    // first-person and the camera isn't inside the body. The body is never hidden as an occluder (see
-    // OrbitOccluder), and orbiting one's own character shows it unless a step hides it.
+    onSetMetadata(key: ObjectMetadataKey, value: string)
+    {
+        super.onSetMetadata(key, value);
+        if (key !== ObjectMetadataKeyEnumMap.AdminPrefs)
+            return;
+        this.ghostMode = AdminPrefsUtil.getObjectPrefs(this.params).ghostMode;
+        this.refreshOtherPlayerVisibility();
+    }
+
+    // A ghost's body and bubble are hidden from everyone (see AdminPrefs). The user's own character uses
+    // refreshOwnVisibility instead.
+    private refreshOtherPlayerVisibility()
+    {
+        if (this.isMine())
+            return;
+        this.instancedMeshComposer.setHidden(this.ghostMode || this.tooCloseToCamera);
+        this.speechBubble.setHidden(this.ghostMode);
+    }
+
+    // The user's own body (and bubble) is shown when it isn't a ghost, no scripted step hides it, the mode
+    // isn't first-person and the camera isn't inside the body. The body is never hidden as an occluder
+    // (see OrbitOccluder), and orbiting one's own character shows it unless a step hides it.
     private refreshOwnVisibility()
     {
-        const hidden = myPlayerHiddenObservable.peek() ||
+        const hidden = this.ghostMode ||
+            myPlayerHiddenObservable.peek() ||
             cameraModeObservable.peek().type === "firstPerson" ||
             this.cameraIsInsideOwnBody();
         this.instancedMeshComposer.setHidden(hidden);

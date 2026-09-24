@@ -21,4 +21,6 @@ export const ObjectMetadataKeyEnumMap: Record<string, number> =
     // Label lettering: whether its size fits the text to the patch, and the size used when it doesn't (see
     // LabelTextUtil).
     LabelFont: 10,
+    // Preferences only an admin may set (see AdminPrefsUtil), e.g. a player's ghost mode.
+    AdminPrefs: 11,
 }

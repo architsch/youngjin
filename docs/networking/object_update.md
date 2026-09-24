@@ -37,3 +37,4 @@ Versions before the scale existed hold a shorter transform, so `ObjectGroupVersi
 
 ## Metadata
 `SetObjectMetadataSignal`. On failure, the server sends back the current server-side value.
+- A key may carry a permission rule of its own in `ObjectMetadataEntryMap`, which applies on every object on top of the type's rule (e.g. `AdminPrefs` is admin-only; see [admin.md](../gameplay/admin.md)). Stored player metadata the user may no longer set is not restored on join.

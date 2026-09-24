@@ -4,7 +4,7 @@ Reference: @src/shared/object/types/objectTypeConfig/doorObjectTypeConfig.ts , @
 
 A room's only entrances are its **doors**. A door is an attached object on a wall (see [object_attachment.md](object_attachment.md)) that is stored with the room and used by clicking it. No hole is cut behind a door: an attachment needs a solid wall, so room boundaries stay solid all the way round.
 
-Every multiplayer room is generated with exactly one door on a boundary wall. Regular rooms keep that single door. Hub doors are added and linked by admins (see [admin.md](../gameplay/admin.md)).
+Every multiplayer room is generated with exactly one door on a boundary wall. Doors are then added, linked and removed by the room's superuser: an admin in a Hub, the owner in a Regular room (see [restricted_zone.md](../gameplay/restricted_zone.md)).
 
 ## Door metadata
 Besides its appearance ([door_design.md](door_design.md)), a door stores:
@@ -25,5 +25,5 @@ The player starts inside the wall behind the door, facing the room, and `PlayerC
 ## Door behavior
 - **Collider**: a thin pass-through collider, since the wall behind it already blocks movement.
 - **Enter prompt**: shown only when the player is close, looking toward the door, in front of its face and has line of sight. The cheap checks run first. The line-of-sight check is needed because users may have built in front of the door.
-- **Click**: travels to the destination, or shows a "locked" notice. A door that points at the hubs hands the player to the balancer, which is also how the tutorial ends. For an admin in a Hub, a click selects the door in edit mode instead.
-- **Protection**: no cells are reserved around a door. Its wall block cannot be removed while the door hangs on it, and only admins may remove the door. Generation keeps its own block work off the floor in front of the entrance.
+- **Click**: travels to the destination, or shows a "locked" notice. A door that points at the hubs hands the player to the balancer, which is also how the tutorial ends. For the room's superuser, a click selects the door in edit mode instead.
+- **Protection**: no cells are reserved around a door. Its wall block cannot be removed while the door hangs on it, and only the room's superuser may remove the door. Generation keeps its own block work off the floor in front of the entrance.

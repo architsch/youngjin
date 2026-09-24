@@ -1,8 +1,8 @@
 /**
  * Attached objects: the frame each of the six facings lays an object out on, where a type may be attached
  * and what holds it there (walls, floors, ceilings, the storey slab), where a drag or a click puts it
- * (findPlacement) and at what size a new one goes up, and where a corner-handle resize puts it — its size,
- * which corner holds still, and when it refuses.
+ * (findPlacement) and at what size a new one goes up, where a corner-handle resize puts it — its size,
+ * which corner holds still, and when it refuses — and a resize where it stands (a lamp's sizes).
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runScenario } from "../helpers/scenarioRunner";
@@ -16,6 +16,8 @@ import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import RemoveObjectSignal from "../../../src/shared/object/types/removeObjectSignal";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import CanvasObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
+import LampObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/lampObjectTypeConfig";
+import SetObjectTransformSignal from "../../../src/shared/object/types/setObjectTransformSignal";
 import PhysicsColliderStateUtil from "../../../src/shared/physics/util/physicsColliderStateUtil";
 import Geometry3DUtil from "../../../src/shared/math/util/geometry3DUtil";
 import Vector3DUtil from "../../../src/shared/math/util/vector3DUtil";
@@ -126,7 +128,7 @@ describe("the frame an attached object is laid out on", () => {
     });
 
     it("gives a floor object a box flat on the floor, and a wall object one flat on the wall", () => {
-        const scale = {x: 1.5, y: 0.5, z: 1};
+        const scale = {x: 1, y: 0.5, z: 1};
         const size = ObjectScaleUtil.getObjectSize(lampTypeIndex, scale);
         for (const dir of [UP, DOWN, FACING])
         {
@@ -246,12 +248,14 @@ describe("where a drag or a click puts an attached object", () => {
                 FACING, UNIT_VEC3, accepts)!;
             expect(placed.pos.y + 0.5).toBeLessThanOrEqual(top + 1e-6);
 
-            // A single block's underside holds a lamp one cell across, and nothing bigger.
+            // A single block's underside holds a lamp one cell across, and its side, one layer tall, no
+            // lamp a whole cell tall.
             const underBlock = {x: BLOCK.col + 0.5, y: BLOCK_BOTTOM_Y, z: BLOCK.row + 0.5};
             expect(ObjectAttachmentUtil.findPlacement(room, lampTypeIndex, underBlock, DOWN, UNIT_VEC3, accepts))
                 .toBeDefined();
-            expect(ObjectAttachmentUtil.findPlacement(room, lampTypeIndex, underBlock, DOWN,
-                {x: 1.5, y: 1.5, z: 1}, accepts)).toBeUndefined();
+            const blockSide = {x: BLOCK.col, y: BLOCK_BOTTOM_Y + 0.5 * COLLISION_LAYER_HEIGHT, z: BLOCK.row + 0.5};
+            expect(ObjectAttachmentUtil.findPlacement(room, lampTypeIndex, blockSide, {x: -1, y: 0, z: 0},
+                UNIT_VEC3, accepts)).toBeUndefined();
         });
     });
 
@@ -389,7 +393,9 @@ describe("resizing an attached object by a corner", () => {
         });
     });
 
-    it("resizes a lamp on the floor, giving way by at most a quarter voxel along both of its axes", async () => {
+    it("resizes an object on the floor, giving way by at most a quarter voxel along both of its axes", async () => {
+        // Lamps are the only floor objects that scale; their edit options resize them, but the rule is the
+        // same for any type.
         await inTheRoom((user, room) => {
             const lamp = attachment(user, room, lampTypeIndex, "floor-lamp", {x: 3.5, y: 0, z: 3.5}, UP);
             const {right, up} = Geometry3DUtil.getAxisFacingBasis(UP);
@@ -397,8 +403,8 @@ describe("resizing an attached object by a corner", () => {
             {
                 const fixed = fixedCornerOf(lamp.transform, lampTypeIndex, corner);
                 const resized = ObjectAttachmentUtil.getResizeResult(room, lamp, lamp.transform, corner.x, corner.y,
-                    draggedTo(fixed, UP, corner, 1.5, 0.5))!;
-                expect(resized.scale).toEqual({x: 1.5, y: 0.5, z: 1});
+                    draggedTo(fixed, UP, corner, 0.5, 1))!;
+                expect(resized.scale).toEqual({x: 0.5, y: 1, z: 1});
                 expect(resized.dir).toEqual(UP);
                 expect(resized.pos.y).toBe(0);
 
@@ -425,6 +431,62 @@ describe("resizing an attached object by a corner", () => {
             expect(resized?.scale).toEqual(UNIT_VEC3);
             expect(resized?.pos.x).toBeCloseTo(door.transform.pos.x, 6);
             expect(resized?.pos.y).toBeCloseTo(door.transform.pos.y, 6);
+        });
+    });
+});
+
+describe("resizing an attached object where it stands", () => {
+    beforeEach(() => {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        vi.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    const lampSizes = LampObjectTypeConfig.util.getSizes();
+
+    it("keeps its centre across a floor, and its bottom edge on a wall, so going back puts it back exactly", async () => {
+        await inTheRoom((user, room) => {
+            const onFloor = new ObjectTransform({x: 3.5, y: 0, z: 3.5}, UP, {x: 1, y: 0.5, z: 1});
+            const onWall = new ObjectTransform({x: MIDDLE.x, y: 1.25, z: WALL_ROW}, FACING, {x: 1, y: 0.5, z: 1});
+            for (const start of [onFloor, onWall])
+            {
+                const startSize = ObjectScaleUtil.getObjectSize(lampTypeIndex, start.scale);
+                for (const scale of lampSizes)
+                {
+                    const label = `facing ${JSON.stringify(start.dir)}, at ${scale.x} x ${scale.y}`;
+                    const resized = ObjectAttachmentUtil.getResizedInPlace(lampTypeIndex, start, scale);
+                    expect(resized.scale, label).toEqual(scale);
+                    expect(resized.pos.x, label).toBeCloseTo(start.pos.x, 6);
+                    expect(resized.pos.z, label).toBeCloseTo(start.pos.z, 6);
+                    const size = ObjectScaleUtil.getObjectSize(lampTypeIndex, scale);
+                    if (start === onFloor)
+                        expect(resized.pos.y, label).toBeCloseTo(start.pos.y, 6);
+                    else
+                        expect(resized.pos.y - 0.5 * size.y, label).toBeCloseTo(start.pos.y - 0.5 * startSize.y, 6);
+                    expect(ObjectAttachmentUtil.canPlaceObject(room, "lamp", lampTypeIndex, resized), label).toBe(true);
+
+                    const back = ObjectAttachmentUtil.getResizedInPlace(lampTypeIndex, resized, start.scale);
+                    for (const axis of ["x", "y", "z"] as const)
+                        expect(back.pos[axis], label).toBeCloseTo(start.pos[axis], 6);
+                }
+            }
+        });
+    });
+
+    it("is refused, by the rule the server applies, at a size that doesn't fit where it stands", async () => {
+        await inTheRoom((user, room) => {
+            // On the side of the lone block, which is one layer tall: the short sizes fit, the tall ones don't.
+            const side = {x: BLOCK.col, y: BLOCK_BOTTOM_Y + 0.5 * COLLISION_LAYER_HEIGHT, z: BLOCK.row + 0.5};
+            const lamp = attachment(user, room, lampTypeIndex, "lamp", side, {x: -1, y: 0, z: 0},
+                {x: 1, y: 0.5, z: 1});
+            expect(ObjectUpdateUtil.addObject(user, room, lamp)).toBe(true);
+
+            for (const scale of lampSizes)
+            {
+                const resized = ObjectAttachmentUtil.getResizedInPlace(lampTypeIndex, lamp.transform, scale);
+                expect(ObjectUpdateUtil.canSetObjectTransform(user, room,
+                    new SetObjectTransformSignal(room.id, lamp.objectId, resized, true)), `${scale.x} x ${scale.y}`)
+                    .toBe(scale.y <= COLLISION_LAYER_HEIGHT);
+            }
         });
     });
 });

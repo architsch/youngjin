@@ -2,7 +2,7 @@
 
 Reference: @src/client/graphics/types/mesh/instancedMeshBinding.ts , @src/client/object/components/instancedMeshGraphics.ts , @src/client/object/components/instancedMeshComposer.ts , @src/client/object/components/helpers/mesh/instancedMeshComposition.ts , @src/shared/graphics/mesh/composition/types/compositionCodec/instancedMeshCompositionCodec.ts , @src/shared/graphics/mesh/composition/types/compositionBuilder/instancedMeshCompositionBuilder.ts , @src/server/ssg/builder/preEncodedCompositionBuilder.ts , @src/server/ssg/builder/instancedMeshCapacityBuilder.ts , @src/server/ssg/builder/compositionThumbnailBuilder.ts
 
-A `GameObject` can render itself as a set of simple parts borrowed from shared instanced meshes. The parts are described by its `InstancedMeshComposition` metadata string. Players, doors and the framed panels (canvases, lamps, labels) use this system.
+A `GameObject` can render itself as a set of simple parts borrowed from shared instanced meshes. The parts are described by its `InstancedMeshComposition` metadata string. Players, doors, lamps and the framed panels (canvases, labels) use this system.
 
 ![InstancedMeshComposition System Overview](figures/mesh_composition_1.jpg)
 
@@ -13,13 +13,13 @@ A `GameObject` can render itself as a set of simple parts borrowed from shared i
 - `InstancedMeshComposer` decodes the metadata into `InstancedMeshCompositionPart[]` through `InstancedMeshComposition`, then rents, transforms and returns instances to match.
 - An `InstancedMeshCompositionCodec` (selected by a prefix on the string) encodes and decodes the metadata. It uses `InstancedMeshCompositionBuilder` helpers to place parts.
 - A codec built around **parameters** (a player's slots, a door's colors, a framed panel's frame and margin) stores those and rebuilds its parts from them, so it can offer presets, seeded defaults and a bounded set of variants. `DefaultCompositionCodec` instead **spells out arbitrary parts**, and is what authored data is pre-encoded through.
-- What a part takes from the object rather than the composition (a lamp's glow, from its light) is filled in by the type's composer config after every decode, so no stored composition can override it.
+- What a part takes from the object rather than the composition (a lamp's glow color, from its light) is filled in by the type's composer config after every decode, so no stored composition can override it.
 - Decoding is given the object's current footprint (see [object_update.md](../networking/object_update.md)), so a resizable type's codec lays its parts out against the size rather than an authored constant. The size is not stored, so a resize is a re-decode, from the live parameters rather than the stored string so that an edit not yet saved survives it. Moves and resizes reach the composer through the object's transform notification (`GameObject.notifyTransformChanged`), which tells the two apart, since scale lives outside the three.js transform. A codec for a fixed-size type ignores it, `DefaultCompositionCodec` included — spelled-out parts are already the size they were authored at.
 - Meshes are shared across object types (doors and canvas frames are both wood), and whichever type loads a mesh first fixes its size, so each is created at its worst case from `InstancedMeshCapacityMap` (see below).
 - An object may draw its own content over a composed part, as a door's label sits on its plate.
-- Canvases, lamps and labels are **framed panels** (`FramedPanelCompositionConstants`): one moulded board, drawn a margin inside the footprint, whose band is the frame. What it frames (a picture, a glow, text) covers the surface inside the band, or what the board would when there is no frame. The board follows whatever the object has been resized to while the band keeps its width, because the wood material measures the band in world units; the margin and the inset are absolute for the same reason. Where the margin would leave nothing inside, the margin gives way rather than the band (`MarginCompositionConstants`).
+- Canvases and labels are **framed panels** (`FramedPanelCompositionConstants`): one moulded board, drawn a margin inside the footprint, whose band is the frame. What it frames (a picture, text) covers the surface inside the band, or what the board would when there is no frame. The board follows whatever the object has been resized to while the band keeps its width, because the wood material measures the band in world units; the margin and the inset are absolute for the same reason. Where the margin would leave nothing inside, the margin gives way rather than the band (`MarginCompositionConstants`).
 - The panel types share one stored layout and differ only in their color slots, presets and defaults, so each type's codec is one `createFramedPanelCodec` call and one panel (`CustomizeFramePanel`) edits them all.
-- A picture and a label's text are drawn by the object inside the band, re-placed whenever its composer rebuilds its parts (`InstancedMeshComposer.partsRebuiltObservable`). A lamp's glow is a composed part instead, offset in depth beyond the wood so the board never shows through it at an angle.
+- A picture and a label's text are drawn by the object inside the band, re-placed whenever its composer rebuilds its parts (`InstancedMeshComposer.partsRebuiltObservable`).
 
 ## Spelled-out parts
 `DefaultCompositionCodec` writes each part as one fixed-width word, with no separator: the leading character carries the geometry and material together, and the material is what says how many characters follow. The rest is the facing (one of the axis directions in `DIR_VEC_BY_CODE`), the offset, the scale, and the colors — stored as positions in the material's palette (`COMPOSITION_PALETTE_NAME_BY_MATERIAL_ID`), so an authored color outside that palette comes back as its nearest neighbour.
@@ -28,7 +28,8 @@ A `GameObject` can render itself as a set of simple parts borrowed from shared i
 - A string cut short (metadata is length-capped) drops the part it cuts rather than half-reading it, and an unreadable leading character ends the decode, since nothing after it can be located.
 
 ## Indexed compositions
-Metadata is stored and sent once per object, so a spelled-out composition is expensive. `IndexedCompositionCodec` is a **router**: the object stores only an index into `PreEncodedCompositionStringMap`, and the entry at that index (which carries its own codec prefix) is decoded by its own codec. No type uses it at present, so the table is empty.
+Metadata is stored and sent once per object, so a spelled-out composition is expensive. `IndexedCompositionCodec` is a **router**: the object stores only an index into `PreEncodedCompositionStringMap`, and the entry at that index (which carries its own codec prefix) is decoded by its own codec.
+- Lamps use it with one entry per size, and store no composition at all: a lamp's default parts are the entry for its current size, so its look can't disagree with its footprint. A resize re-decodes the live parameters, so the lamp points them at the new size's entry first (`LampGameObject`).
 - The table is generated at build time by `PreEncodedCompositionBuilder` (during SSG) from authored asset data, so a new variant is a data edit rather than new code.
 - Every entry belongs to one object type, and `PreEncodedCompositionIndexMap` lists each type's entries. Entries are append-only, because objects store their index.
 - The contents of an entry are not editable. An object whose look users edit gets a codec of its own instead (players, doors, framed panels).
@@ -46,6 +47,8 @@ Metadata is stored and sent once per object, so a spelled-out composition is exp
 ## Thumbnails
 `CompositionThumbnailBuilder` runs during SSG and draws every type's entries into one atlas per type (`CompositionThumbnailUtil`), which choosers display cell by cell.
 - It renders in headless Chromium with the game's own geometry and materials, through the same part-placement code as the game (`InstancedPartUtil`). Each type may set its camera angle in its composer config (isometric otherwise).
+- A type's entries share one framing, so entries of different sizes keep their proportions (a lamp's sizes read at a glance).
+- `CompositionThumbnailPanel` shows a type's atlas as a chooser; an entry its caller refuses (a lamp size that doesn't fit where it stands) is dimmed and can't be picked.
 - SwiftShader (CPU) rendering makes the output identical on every machine, so a committed atlas changes only when the look does.
 - In dev, a type whose entries are unchanged is skipped; a standalone SSG run always redraws, which is how shader changes reach the atlases.
 

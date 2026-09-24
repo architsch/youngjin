@@ -5,6 +5,10 @@ import ObjectTransform from "../types/objectTransform";
 import DoorObjectTypeConfig from "../types/objectTypeConfig/doorObjectTypeConfig";
 import CanvasObjectTypeConfig from "../types/objectTypeConfig/canvasObjectTypeConfig";
 import ObjectTypeConfigMap from "../maps/objectTypeConfigMap";
+import ObjectScaleUtil from "../util/objectScaleUtil";
+import ObjectAttachmentUtil from "../util/objectAttachmentUtil";
+import Geometry3DUtil from "../../math/util/geometry3DUtil";
+import Vec3 from "../../math/types/vec3";
 import { ObjectMetadataKeyEnumMap } from "../types/objectMetadataKey";
 import CompositionMetadataUtil from "../../graphics/mesh/composition/util/compositionMetadataUtil";
 import FramedPanelCompositionParams from "../../graphics/mesh/composition/types/compositionParams/framedPanelCompositionParams";
@@ -130,6 +134,28 @@ const converters: ((objectGroup: ObjectGroup, roomID: string, sourceVoxelGridVer
                 continue;
             const {scale} = object.transform;
             object.transform.scale = {x: scale.x, y: LEGACY_LAMP_HEIGHT, z: scale.z};
+        }
+    },
+    (objectGroup: ObjectGroup) => { // version 5 -> 6
+        // Lamps lost their frame and margin, and their look now follows their size: a stored look is
+        // dropped, and a lamp past the largest size shrinks to it where it stands, on the placement grid.
+        const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
+        for (const object of Object.values(objectGroup.objectById))
+        {
+            if (object.objectTypeIndex !== lampTypeIndex)
+                continue;
+            delete object.metadata[ObjectMetadataKeyEnumMap.InstancedMeshComposition];
+
+            // Its bottom edge holds on a wall, as in a resize where it stands (see
+            // ObjectAttachmentUtil.getResizedInPlace), measured at the size it was stored at, which the
+            // current limits no longer read back. A lamp's footprint is a unit square, so scale is size.
+            const {pos, dir, scale: storedScale} = object.transform;
+            const scale = ObjectScaleUtil.sanitize(lampTypeIndex, storedScale);
+            const {right, up} = Geometry3DUtil.getAxisFacingBasis(dir);
+            const heightOf = (size: Vec3) => Math.abs(right.y) * size.x + Math.abs(up.y) * size.y;
+            const heldPos = {...pos, y: pos.y + 0.5 * (heightOf(scale) - heightOf(storedScale))};
+            object.transform = ObjectAttachmentUtil.getResizedInPlace(lampTypeIndex,
+                new ObjectTransform(heldPos, dir, scale), scale);
         }
     },
 ];

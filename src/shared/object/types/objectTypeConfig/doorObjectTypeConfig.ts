@@ -31,7 +31,7 @@ export const ENTRANCE_DOOR_OBJECT_ID = "entrance_door";
 export const SPAWN_DIST_BEHIND_DOOR = 0.5;
 export const ENTRANCE_DIST_IN_FRONT_OF_DOOR = 0.5;
 
-// Metadata keys an admin may write to a door; anything else is refused.
+// Metadata keys the room's superuser may write to a door; anything else is refused.
 const editableMetadataKeys = [
     ObjectMetadataKeyEnumMap.InstancedMeshComposition,
     ObjectMetadataKeyEnumMap.Label,
@@ -42,7 +42,7 @@ const editableMetadataKeys = [
     ObjectMetadataKeyEnumMap.DoorType,
 ];
 
-// Doors connect rooms; laying one is admin-only, in hubs (see RoomValidationUtil.canUserManageDoors).
+// Doors connect rooms; only the room's superuser lays them (see RoomValidationUtil.isRoomSuperuser).
 const DoorObjectTypeConfig =
 {
     objectType: "Door",
@@ -53,7 +53,7 @@ const DoorObjectTypeConfig =
         allowedDirections: WALL_DIRECTIONS,
     },
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => {
-        if (!RoomValidationUtil.canUserManageDoors(user, room))
+        if (!RoomValidationUtil.isRoomSuperuser(user, room))
             return false;
 
         // Block spoofing attempts
@@ -63,10 +63,10 @@ const DoorObjectTypeConfig =
         return true;
     },
     canUserRemoveObject: (user: User, room: Room, obj: AddObjectSignal) => {
-        return RoomValidationUtil.canUserManageDoors(user, room);
+        return RoomValidationUtil.isRoomSuperuser(user, room);
     },
     canUserSetObjectTransform: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => {
-        if (!RoomValidationUtil.canUserManageDoors(user, room))
+        if (!RoomValidationUtil.isRoomSuperuser(user, room))
             return false;
 
         // A door is slid along the wall by a gizmo, which is a placement rather than a motion.
@@ -76,7 +76,7 @@ const DoorObjectTypeConfig =
         return true;
     },
     canUserSetObjectMetadata: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectMetadataSignal) => {
-        if (!RoomValidationUtil.canUserManageDoors(user, room))
+        if (!RoomValidationUtil.isRoomSuperuser(user, room))
             return false;
 
         // Values are sanitized by ObjectMetadataEntryMap; only the key is checked here.

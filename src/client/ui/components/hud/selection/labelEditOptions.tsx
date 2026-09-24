@@ -12,7 +12,7 @@ import EditOptionsProps from "../../../types/editOptionsProps";
 const TEXT_PANEL = "text";
 const FRAME_PANEL = "frame";
 
-// Admin tools for a selected label: remove, text, and frame. The text and frame bars stack above this row
+// Superuser tools for a selected label: remove, text, and frame. The text and frame bars stack above this row
 // (they belong to the label), one at a time.
 export default function LabelEditOptions(props: EditOptionsProps)
 {

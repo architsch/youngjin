@@ -7,4 +7,7 @@ export type ObjectScalingConfig = {
     minScale: Vec3,
     maxScale: Vec3,
     defaultScale: Vec3, // what a new one is added at; on the grid, within the limits
+    // Whether its selection outline's corner handles resize it (see ObjectAttachmentEditGizmos). Absent
+    // means they do; false for a type whose edit options offer its sizes instead (e.g. a lamp's).
+    cornerHandles?: boolean,
 };

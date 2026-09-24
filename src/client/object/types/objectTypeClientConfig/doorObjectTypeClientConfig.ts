@@ -10,7 +10,7 @@ const DoorObjectTypeClientConfig: ObjectTypeClientConfig =
     construct: (params: AddObjectSignal) => new DoorGameObject(params),
     selection: {
         canBeSelectedByUserInEditMode: (_gameObject, user, room) =>
-            RoomValidationUtil.canUserManageDoors(user, room),
+            RoomValidationUtil.isRoomSuperuser(user, room),
         editOptions: DoorEditOptions,
     },
 };

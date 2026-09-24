@@ -4,7 +4,7 @@ import FramedPanelCompositionParams from "../compositionParams/framedPanelCompos
 import FramedPanelPreset from "../compositionParams/framedPanelPreset";
 import MarginCompositionConstants from "./marginCompositionConstants";
 
-// The design canvases, lamps and labels share: one moulded board, drawn a margin inside the footprint (see
+// The design canvases and labels share: one moulded board, drawn a margin inside the footprint (see
 // MarginCompositionConstants), whose band is the frame. What it frames covers the surface inside the band,
 // or what the board would cover when there is no frame. The board follows whatever the object has been sized
 // to; the band keeps its width, because the wood material measures it in world units.

@@ -12,7 +12,7 @@ import InstancedMeshCompositionPart from "../instancedMeshCompositionPart";
 import FramedPanelCodecStyle from "./framedPanelCodecStyle";
 import InstancedMeshCompositionCodec from "./instancedMeshCompositionCodec";
 
-// A framed panel's look (canvases, lamps, labels), one visible-ASCII char each: its colors as palette
+// A framed panel's look (canvases, labels), one visible-ASCII char each: its colors as palette
 // positions, in the style's slot order; the band width (a step; see MouldingCompositionConstants); a flags
 // char holding the profile (proud or sunk) and whether the frame is shown; and the margin (a step; see
 // MarginCompositionConstants), last so a string written before it existed reads as none. A panel without a

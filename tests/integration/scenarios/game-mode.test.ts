@@ -93,6 +93,9 @@ import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import { createRoom, floorQuadIndexOf, isQuadVisible, quadIndexOf, voxelAt } from "../helpers/selectionHarness";
 import { createMockUser } from "../helpers/mockUser";
 import VoxelQuadInstanceUtil from "../../../src/client/voxel/util/voxelQuadInstanceUtil";
+import AdminPrefsUtil from "../../../src/shared/object/util/adminPrefsUtil";
+import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
+import EncodableByteString from "../../../src/shared/networking/types/encodableByteString";
 
 const ROOM_ID = "game-mode-room";
 
@@ -858,21 +861,36 @@ describe("only one thing at a time is selected", () => {
     });
 });
 
+/** Somebody's character, with its body and speech bubble reduced to whether each is hidden. */
+function makeCharacterOf(sourceUserID: string): {character: PlayerGameObject, shown: {body: boolean, bubble: boolean}}
+{
+    const shown = {body: true, bubble: true};
+    const character = Object.assign(Object.create(PlayerGameObject.prototype), {
+        params: { objectTypeIndex: ObjectTypeConfigMap.getIndexByType("Player"),
+            sourceUserID,
+            transform: unitTransform(10.5, 0.5 * PLAYER_HEIGHT, 10.5),
+            metadata: {} },
+        obj: new THREE.Object3D(),
+        components: {},
+        instancedMeshComposer: { setHidden: (hidden: boolean) => { shown.body = !hidden; } },
+        speechBubble: { setHidden: (hidden: boolean) => { shown.bubble = !hidden; } },
+    }) as PlayerGameObject;
+    character.obj.position.set(10.5, 0.5 * PLAYER_HEIGHT, 10.5);
+    return {character, shown};
+}
+
+/** Sets the character's ghost mode as a metadata change from the server would. */
+function setGhostMode(character: PlayerGameObject, ghostMode: boolean): void
+{
+    const value = AdminPrefsUtil.encode({ghostMode});
+    character.params.metadata[ObjectMetadataKeyEnumMap.AdminPrefs] = new EncodableByteString(value);
+    character.onSetMetadata(ObjectMetadataKeyEnumMap.AdminPrefs, value);
+}
+
 describe("the user's own character", () => {
-    /** The user's own character, with its body and speech bubble reduced to whether each is hidden. */
     function makeOwnCharacter(): {character: PlayerGameObject, shown: {body: boolean, bubble: boolean}}
     {
-        const shown = {body: true, bubble: true};
-        const character = Object.assign(Object.create(PlayerGameObject.prototype), {
-            params: { objectTypeIndex: ObjectTypeConfigMap.getIndexByType("Player"),
-                sourceUserID: App.getUser().id,
-                transform: unitTransform(10.5, 0.5 * PLAYER_HEIGHT, 10.5) },
-            obj: new THREE.Object3D(),
-            instancedMeshComposer: { setHidden: (hidden: boolean) => { shown.body = !hidden; } },
-            speechBubble: { setHidden: (hidden: boolean) => { shown.bubble = !hidden; } },
-        }) as PlayerGameObject;
-        character.obj.position.set(10.5, 0.5 * PLAYER_HEIGHT, 10.5);
-        return {character, shown};
+        return makeCharacterOf(App.getUser().id);
     }
 
     beforeEach(() => {
@@ -907,6 +925,50 @@ describe("the user's own character", () => {
 
         SinglePlayerActionMap["set_my_player_hidden"]({type: "set_my_player_hidden", hidden: false});
         character.update(0);
+        expect(shown).toEqual({body: true, bubble: true});
+    });
+
+    it("stays hidden, speech bubble and all, while in ghost mode, and shows again once it leaves", () => {
+        const {character, shown} = makeOwnCharacter();
+        setGhostMode(character, true);
+        character.update(0);
+        expect(shown).toEqual({body: false, bubble: false});
+
+        setGhostMode(character, false);
+        character.update(0);
+        expect(shown).toEqual({body: true, bubble: true});
+    });
+});
+
+describe("another player's character", () => {
+    it("is hidden, speech bubble and all, while in ghost mode, and shown again once it leaves", () => {
+        const {character, shown} = makeCharacterOf("someone-else");
+        setGhostMode(character, true);
+        expect(shown).toEqual({body: false, bubble: false});
+
+        setGhostMode(character, false);
+        expect(shown).toEqual({body: true, bubble: true});
+    });
+
+    it("stays hidden in ghost mode as it comes close to the camera and moves away", () => {
+        const {character, shown} = makeCharacterOf("someone-else");
+        setGhostMode(character, true);
+
+        character.onPlayerProximityStart();
+        expect(shown).toEqual({body: false, bubble: false});
+        character.onPlayerProximityEnd();
+        expect(shown).toEqual({body: false, bubble: false});
+    });
+
+    it("leaving ghost mode while too close to the camera shows only its speech bubble until it moves away", () => {
+        const {character, shown} = makeCharacterOf("someone-else");
+        setGhostMode(character, true);
+        character.onPlayerProximityStart();
+
+        setGhostMode(character, false);
+        expect(shown).toEqual({body: false, bubble: true});
+
+        character.onPlayerProximityEnd();
         expect(shown).toEqual({body: true, bubble: true});
     });
 });

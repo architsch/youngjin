@@ -32,7 +32,8 @@ export default class RestrictedZone extends EncodableData
                 z: 0.5 * (this.rowMax + this.rowMin + 1),
             },
             halfSize: {
-                // Inset horizontally, so the zone's outermost faces stay paintable.
+                // Inset horizontally, so the zone's outermost faces stay paintable, and the objects on
+                // them editable (an attached collider is thinner than the inset; see PhysicsColliderStateUtil).
                 x: 0.5 * (this.colMax - this.colMin + 1) - EDGE_MARGIN,
                 // Extended vertically to include the room's floor and ceiling tiles.
                 y: 0.5 * MAX_ROOM_Y + EDGE_MARGIN,

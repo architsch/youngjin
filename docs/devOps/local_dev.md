@@ -32,7 +32,7 @@ Use SIGINT or SIGTERM, never SIGKILL, which orphans the Java emulators. E2E runs
 | 4 | DevAdmin | Admin |
 
 ## Sandbox seats
-`?sandboxuser=<name>` opens the sandbox — an empty single-player room built on request — as a guest, and `?sandboxadmin=<name>` as an admin, which is the quick way to reach the door tools without a hub. Each name is its own reusable account, and these too are dev mode only. See [sandbox.md](../testing/playtest/sandbox.md).
+`?sandboxuser=<name>` opens the sandbox — an empty single-player room built on request — as a guest, and `?sandboxadmin=<name>` as an admin. Either player is the sandbox's superuser, so it is the quick way to reach the door and label tools without a hub. Each name is its own reusable account, and these too are dev mode only. See [sandbox.md](../testing/playtest/sandbox.md).
 
 ## Cookie reset across restarts
 The emulator DB is empty on every fresh start, but browser cookies persist. The server stamps each browser with a boot id (`thingspool_dev_boot_id` cookie) that matches a marker document in the emulated DB. After a full restart the marker is gone, so stale browsers have their auth cookies cleared. A hot reload keeps the marker, so sessions survive. Dev only.

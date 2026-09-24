@@ -7,6 +7,7 @@ import App from "../../../app";
 import RoomAPIClient from "../../../networking/client/roomAPIClient";
 import RoomListEntry from "../../../../shared/room/types/roomListEntry";
 import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
+import RoomValidationUtil from "../../../../shared/room/util/roomValidationUtil";
 import { notificationMessageObservable } from "../../../system/clientObservables";
 import { tryStartClientProcess, endClientProcess } from "../../../system/types/clientProcess";
 import Form from "./form";
@@ -109,7 +110,7 @@ export default function DestinationChooserForm({ initialDestinationRoomID, initi
         <hr/>
         <Spacer size="sm"/>
 
-        {/* The current room's id, so admins can tell it apart (and avoid self-pointing doors). */}
+        {/* The current room's id, so it can be told apart (and self-pointing doors avoided). */}
         <div className="flex flex-row items-center gap-1">
             <Text content="Current Room:" size="sm" additionalClassNames="shrink-0"/>
             <div className="yj-text-xs text-amber-300 min-w-0 text-left wrap-break-word">
@@ -117,8 +118,8 @@ export default function DestinationChooserForm({ initialDestinationRoomID, initi
             </div>
         </div>
 
-        <Button name="Create a New Hub" size="sm" color="green" additionalClassNames="shrink-0"
-            onClick={handleCreateHub}/>
+        {RoomValidationUtil.userIsAdmin(App.getUser()) && <Button name="Create a New Hub" size="sm"
+            color="green" additionalClassNames="shrink-0" onClick={handleCreateHub}/>}
     </Form>;
 }
 

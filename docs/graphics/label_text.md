@@ -26,5 +26,5 @@ Reference: @src/client/object/components/labelText.ts , @src/client/graphics/typ
 - Label text is long, so the room encoding allowance (`EncodingUtil`) is sized for every category at its cap with every label at its longest (tested).
 
 ## Who may edit
-- A door's label follows the door's rule, and `Label` objects follow the same one: admins, in Hubs and the dev sandbox (see [admin.md](../gameplay/admin.md)).
+- A door's label follows the door's rule, and `Label` objects follow the same one: the room's superuser (see [restricted_zone.md](../gameplay/restricted_zone.md)).
 - A door's label is also the name other doors look it up by (see [room_entrance.md](../geometry/room_entrance.md)).

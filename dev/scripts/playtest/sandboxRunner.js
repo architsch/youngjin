@@ -6,7 +6,7 @@
  *
  * Usage:
  *   node dev/scripts/playtest/sandboxRunner.js --serve                    (hold it open; see below)
- *   node dev/scripts/playtest/sandboxRunner.js --serve --admin            (as an admin, for the door tools)
+ *   node dev/scripts/playtest/sandboxRunner.js --serve --admin            (as an admin)
  *   node dev/scripts/playtest/sandboxRunner.js <script.js> [--out=dir] [--headed]
  *   node dev/scripts/playtest/sandboxRunner.js --probe                    (boot + dump the UI)
  *   node dev/scripts/playtest/sandboxRunner.js --serve --fresh-room [--room-type=hub] [--devuser=4]

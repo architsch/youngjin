@@ -1,13 +1,13 @@
 import NumUtil from "../../../../../math/util/numUtil";
 
-// How far inside its footprint a canvas or a lamp is drawn, on every side and in world units, so it
+// How far inside its footprint a canvas or a label is drawn, on every side and in world units, so it
 // doesn't depend on the object's size. The footprint, and so what the object claims of its face, stays
 // whole. Shared by the codecs that store one, as one stored step each.
 const MAX_MARGIN = 0.2;
 const MARGIN_STEP = 0.05;
 const NUM_MARGIN_STEPS = Math.round(MAX_MARGIN / MARGIN_STEP) + 1;
 
-// What the band surrounds (a picture, a glow) never shrinks below this; past it the margin gives way,
+// What the band surrounds (a picture, text) never shrinks below this; past it the margin gives way,
 // never the band.
 const MIN_INNER_SIZE = 0.1;
 

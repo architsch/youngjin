@@ -209,6 +209,10 @@ const ObjectUpdateUtil =
         if (obj == undefined)
             return false;
 
+        // Check if the key's own rule allows the user, whatever the object (e.g. admin-only keys).
+        if (!ObjectMetadataEntryMap.canUserSet(signal.metadataKey, user))
+            return false;
+
         // Check if the object passes the config's criteria.
         const config = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex);
         if (!config.canUserSetObjectMetadata(user, room, obj, signal))

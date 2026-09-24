@@ -13,7 +13,7 @@ import ObjectSelection from "../../../graphics/types/gizmo/objectSelection";
 import createDeferredSave from "../../util/deferredSave";
 import ScrollPanel from "./scrollPanel";
 
-// Edits a framed panel's look in place (a canvas, a lamp or a label), rebuilding it live: its presets, how
+// Edits a framed panel's look in place (a canvas or a label), rebuilding it live: its presets, how
 // far inside its footprint it is drawn, and its optional frame's wood inputs (see
 // FramedPanelCompositionConstants).
 export default function CustomizeFramePanel({ id, selection, colorSlots, presets, onClose }: Props)

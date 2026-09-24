@@ -7,13 +7,14 @@ A restricted zone is a rectangle on a room's floor plan that runs from floor to 
 ## Superuser
 - In a Hub, admins are the superusers (see [admin.md](admin.md)).
 - In a Regular room, the owner is the superuser.
-- In a single-player room, zones do not apply.
+- In the dev sandbox, its player is the superuser. Other single-player rooms have none; they are generated without zones and nobody can draw any.
+- The superuser also manages the room's doors and labels (see [room_entrance.md](../geometry/room_entrance.md)).
 
 ## Rules for everyone else
 Inside a zone, other users may not:
 - add, remove or move voxel blocks;
 - repaint faces, except the faces on the zone's outer boundary;
-- add, move (into or out of the zone) or remove persistent objects, or change what they show.
+- add, move (into or out of the zone) or remove persistent objects, or change what they show. Objects attached to the zone's outer boundary faces are outside the zone.
 
 Selecting things, entering edit mode and walking around are all still allowed. Anything already present when a zone is drawn stays.
 

@@ -19,7 +19,7 @@ import EditOptionsProps from "../../../types/editOptionsProps";
 const TEXT_PANEL = "text";
 const APPEARANCE_PANEL = "appearance";
 
-// Admin tools for a selected door: remove, name, destination, paint, default entrance. The name and
+// Superuser tools for a selected door: remove, name, destination, paint, default entrance. The name and
 // appearance bars stack above this row (they belong to the door), one at a time; the rest open as popups.
 export default function DoorEditOptions(props: EditOptionsProps)
 {

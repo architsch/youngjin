@@ -1,8 +1,8 @@
 import Vec3 from "../../../../../math/types/vec3";
 import { InstancedMeshCompositionParams } from "./instancedMeshCompositionParams";
 
-// A framed panel's look (canvases, lamps, labels): a moulded board's wood inputs and how far inside the
-// object's footprint it is drawn. What the board frames (a picture, a glow, text) is the type's own (see
+// A framed panel's look (canvases, labels): a moulded board's wood inputs and how far inside the object's
+// footprint it is drawn. What the board frames (a picture, text) is the type's own (see
 // FramedPanelCompositionConstants).
 export default interface FramedPanelCompositionParams extends InstancedMeshCompositionParams
 {

@@ -31,8 +31,8 @@ import ErrorUtil from "../../../../shared/system/util/errorUtil";
 
 // Moving and resizing the selected attached object by its selection outline: dragging inside it puts the
 // object on whichever voxel face the pointer is over (see ObjectAttachmentUtil.findPlacement), and dragging
-// a corner handle resizes it (types with an ObjectScalingConfig). The view holds still while a drag lasts
-// (see WorldSpaceSelectionUtil.holdOrbitTarget); edits preview locally and reach the server once, on
+// a corner handle resizes it (types whose ObjectScalingConfig has them). The view holds still while a drag
+// lasts (see WorldSpaceSelectionUtil.holdOrbitTarget); edits preview locally and reach the server once, on
 // release.
 
 const HANDLE_COLOR = "#ffff00";
@@ -116,7 +116,8 @@ function findTarget(): EditTarget | null
 
     // Asked of where it stands, so this comes down to whether this user may move it at all.
     const canMove = canApply(room, obj.objectId, obj.transform);
-    return {selection, canMove, canResize: canMove && config.scaling != undefined};
+    return {selection, canMove,
+        canResize: canMove && config.scaling != undefined && config.scaling.cornerHandles !== false};
 }
 
 function pick(ev: PointerEvent): {cursor: string, begin: () => GizmoDragHandler} | null

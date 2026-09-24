@@ -1,13 +1,14 @@
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../graphics/mesh/composition/types/instancedMeshCompositionCodecType";
 import { InstancedMeshCompositionParams } from "../../../graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
 import InstancedMeshCompositionPart from "../../../graphics/mesh/composition/types/instancedMeshCompositionPart";
-import { LampCompositionCodec } from "../../../graphics/mesh/composition/types/compositionCodec/lampCompositionCodec";
 import CompositionMetadataUtil from "../../../graphics/mesh/composition/util/compositionMetadataUtil";
+import PreEncodedCompositionIndexMap from "../../../graphics/mesh/composition/maps/preEncodedCompositionIndexMap";
 import { MAX_LAMP_INTENSITY, MAX_LAMP_RANGE, MIN_LAMP_INTENSITY,
     MIN_LAMP_RANGE } from "../../../graphics/light/util/lampLightUtil";
 import ColorUtil from "../../../math/util/colorUtil";
 import NumUtil from "../../../math/util/numUtil";
 import StringUtil from "../../../math/util/stringUtil";
+import Vec3 from "../../../math/types/vec3";
 import Room from "../../../room/types/room";
 import { ALL_FACE_DIRECTIONS, ATTACHMENT_HITBOX_INSET, INSTANCED_EMISSIVE_MATERIAL_ID,
     LIGHT_COLOR_PALETTE_NAME } from "../../../system/sharedConstants";
@@ -22,6 +23,15 @@ import { ObjectMetadataKeyEnumMap } from "../objectMetadataKey";
 
 const COMPOSITION_CODEC_VERSION = 0;
 
+// The sizes a lamp comes in, which are its whole scale grid (see scaling), in the order of its
+// pre-encoded looks: a glow of each size (see pre_encoding_source.json).
+const SIZES: Vec3[] = [
+    {x: 0.5, y: 0.5, z: 1},
+    {x: 1, y: 0.5, z: 1},
+    {x: 0.5, y: 1, z: 1},
+    {x: 1, y: 1, z: 1},
+];
+
 // Character positions in the stored string; never reorder.
 const COLOR_CHAR_INDEX = 0;
 const INTENSITY_CHAR_INDEX = 1;
@@ -33,10 +43,9 @@ const DEFAULT_COLOR_INDEX = 0;
 const DEFAULT_INTENSITY = 3;
 const DEFAULT_RANGE = 6;
 
-// The glow's color is derived from the light (see deriveParts), so it isn't part of the composition.
+// Only the light is editable; the look follows the size (see generateDefaultParts).
 const editableMetadataKeys = [
     ObjectMetadataKeyEnumMap.LightProperties,
-    ObjectMetadataKeyEnumMap.InstancedMeshComposition,
 ];
 
 // Lamps, on walls, floors or ceilings (see @docs/graphics/lighting.md). Anyone may edit them, subject to
@@ -47,14 +56,15 @@ const LampObjectTypeConfig =
     persistent: true,
     autoUnload: true,
     category: ObjectCategoryEnumMap.Lamp,
-    // Resized in half-voxel steps on its face; with no roll to turn it by, this is how it is shaped to
-    // suit whichever face it is on. Depth is the gap from the face and never changes. A new one is one
-    // layer tall, so the side of a lone block holds it.
+    // One of SIZES, picked from its edit options rather than by dragging a corner; with no roll to turn it
+    // by, this is how it is shaped to suit whichever face it is on. Depth is the gap from the face and
+    // never changes. A new one is one layer tall, so the side of a lone block holds it.
     scaling: {
         scaleStep: {x: 0.5, y: 0.5, z: 0},
         minScale: {x: 0.5, y: 0.5, z: 1},
-        maxScale: {x: 1.5, y: 1.5, z: 1},
+        maxScale: {x: 1, y: 1, z: 1},
         defaultScale: {x: 1, y: 0.5, z: 1},
+        cornerHandles: false,
     },
     attachment: {
         allowedDirections: ALL_FACE_DIRECTIONS,
@@ -70,7 +80,8 @@ const LampObjectTypeConfig =
         return true;
     },
     canUserSetObjectTransform: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => {
-        // A lamp is dragged from face to face by a gizmo, which is a placement rather than a motion.
+        // A lamp is dragged from face to face by a gizmo, or resized where it stands, which are placements
+        // rather than motions.
         if (!signal.ignorePhysics)
             return false;
 
@@ -83,8 +94,8 @@ const LampObjectTypeConfig =
     components: {
         spawnedByAny: {
             collider: {
-                // A unit square on its face; removing the block behind removes the lamp. The tested box
-                // is slightly inset (see PhysicsColliderStateUtil).
+                // A unit square on its face, so its scale is its size; removing the block behind removes
+                // the lamp. The tested box is slightly inset (see PhysicsColliderStateUtil).
                 baseHitboxSize: {
                     sizeX: 1,
                     sizeY: 1,
@@ -97,14 +108,14 @@ const LampObjectTypeConfig =
             },
             instancedMeshGraphics: {},
             instancedMeshComposer: {
-                codecType: InstancedMeshCompositionCodecTypeEnumMap.Lamp,
+                codecType: InstancedMeshCompositionCodecTypeEnumMap.Indexed,
                 codecVersion: COMPOSITION_CODEC_VERSION,
-                // Every lamp starts as the first preset, which is what the codec makes of nothing stored.
+                // The look of its size, which is never stored. A resize re-decodes the live params, so it
+                // points them at the new size's look first (see LampGameObject).
                 generateDefaultParts: (obj: AddObjectSignal) => {
                     const params: InstancedMeshCompositionParams = {};
                     const parts: InstancedMeshCompositionPart[] = [];
-                    LampCompositionCodec.decode(CompositionMetadataUtil.getCodecPrefix(
-                        InstancedMeshCompositionCodecTypeEnumMap.Lamp, COMPOSITION_CODEC_VERSION),
+                    CompositionMetadataUtil.decodeIndexed(getCompositionIndex(obj), COMPOSITION_CODEC_VERSION,
                         ObjectScaleUtil.getObjectSize(obj.objectTypeIndex, obj.transform.scale),
                         params, parts);
                     return {params, parts};
@@ -119,14 +130,28 @@ const LampObjectTypeConfig =
                             part.color = {...color};
                     }
                 },
+                // Straight on, so the sizes compare (a type's thumbnails share one framing).
+                thumbnailView: {yawDeg: 0, pitchDeg: 0},
             },
             orbitOccluder: {}, // Part of the face it is mounted on, as far as the orbit camera is concerned.
             lightSource: {},
         },
     },
-    // Encodes/decodes the stored light properties (quantities in one character each; see LampLightUtil).
-    // Decoding is total: missing characters default and out-of-range values clamp.
     util: {
+        // The look of the lamp's size, as a pre-encoded composition index.
+        getCompositionIndex,
+        // The scale a look is drawn at, or undefined if the composition index isn't one of a lamp's looks.
+        getScale: (compositionIndex: number): Vec3 | undefined =>
+        {
+            const size = SIZES[(PreEncodedCompositionIndexMap.Lamp ?? []).indexOf(compositionIndex)];
+            return size && {...size};
+        },
+        getSizes: (): Vec3[] =>
+        {
+            return SIZES.map(size => ({...size}));
+        },
+        // The stored light properties (quantities in one character each; see LampLightUtil). Decoding is
+        // total: missing characters default and out-of-range values clamp.
         getColorIndex: (obj: AddObjectSignal): number =>
         {
             return readColorIndex(getLightProperties(obj));
@@ -154,6 +179,14 @@ const LampObjectTypeConfig =
         },
     },
 } satisfies ObjectTypeConfig;
+
+// Read through the sanitized scale, as the collider is, so the look and the footprint always agree.
+function getCompositionIndex(obj: AddObjectSignal): number
+{
+    const scale = ObjectScaleUtil.sanitize(obj.objectTypeIndex, obj.transform.scale);
+    const sizeIndex = Math.max(0, SIZES.findIndex(size => size.x == scale.x && size.y == scale.y));
+    return PreEncodedCompositionIndexMap.Lamp?.[sizeIndex] ?? 0;
+}
 
 function encodeLightProperties(colorIndex: number, intensity: number, range: number): string
 {

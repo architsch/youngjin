@@ -1,6 +1,7 @@
 /**
  * Scenario tests: lamps (furniture anyone may install, under the same rules as pictures) — permissions,
- * metadata validation, a lamp's appearance always matching its light, and a floor lamp being walked over.
+ * metadata validation, a lamp's appearance always matching its light and its size, and a floor lamp being
+ * walked over.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import fc from "fast-check";
@@ -29,23 +30,15 @@ import ColorUtil from "../../../src/shared/math/util/colorUtil";
 import LampLightUtil, { MAX_LAMP_INTENSITY, MAX_LAMP_RANGE, MIN_LAMP_INTENSITY, MIN_LAMP_RANGE }
     from "../../../src/shared/graphics/light/util/lampLightUtil";
 import { COLLISION_LAYER_MIN, GRAVITY_SPEED, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL,
-    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, INSTANCED_EMISSIVE_MATERIAL_ID, INSTANCED_WOOD_MATERIAL_ID,
+    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, INSTANCED_EMISSIVE_MATERIAL_ID,
     LIGHT_COLOR_PALETTE_NAME, UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
 import { PLAYER_HEIGHT } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import PhysicsManager from "../../../src/shared/physics/physicsManager";
 import PhysicsColliderStateUtil from "../../../src/shared/physics/util/physicsColliderStateUtil";
 import ObjectScaleUtil from "../../../src/shared/object/util/objectScaleUtil";
 import Vec3 from "../../../src/shared/math/types/vec3";
-import InstancedMeshCompositionPart from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
-import CompositionMetadataUtil from "../../../src/shared/graphics/mesh/composition/util/compositionMetadataUtil";
-import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionCodecType";
-import { LampCompositionCodec } from "../../../src/shared/graphics/mesh/composition/types/compositionCodec/lampCompositionCodec";
-import LampCompositionConstants
-    from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/lampCompositionConstants";
-import MarginCompositionConstants
-    from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/marginCompositionConstants";
-import MouldingCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/mouldingCompositionConstants";
-import FramedPanelCompositionParams from "../../../src/shared/graphics/mesh/composition/types/compositionParams/framedPanelCompositionParams";
+import PreEncodedCompositionIndexMap from "../../../src/shared/graphics/mesh/composition/maps/preEncodedCompositionIndexMap";
+import PreEncodedCompositionStringMap from "../../../src/shared/graphics/mesh/composition/maps/preEncodedCompositionStringMap";
 
 const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
 const MAX_LAMPS_PER_ROOM = ObjectCategoryConfigMap.getMaxCountPerRoom(LampObjectTypeConfig.category);
@@ -284,7 +277,7 @@ describe("lamp permissions", () => {
         });
     });
 
-    it("refuses every metadata key but the light a lamp gives off and its look", async () => {
+    it("refuses every metadata key but the light a lamp gives off", async () => {
         await runScenario({
             name: "metadata a lamp does not answer to",
             rooms: [EMPTY_HUB],
@@ -299,8 +292,8 @@ describe("lamp permissions", () => {
                         new SetObjectMetadataSignal(room.id, lamp.objectId, key, value));
 
                 expect(canSet(ObjectMetadataKeyEnumMap.LightProperties, "!!")).toBe(true);
-                // Its margin and frame; the glow's color is derived from the light either way.
-                expect(canSet(ObjectMetadataKeyEnumMap.InstancedMeshComposition, "!!")).toBe(true);
+                // Its look follows its size, so it has none of its own to set.
+                expect(canSet(ObjectMetadataKeyEnumMap.InstancedMeshComposition, "!!")).toBe(false);
                 expect(canSet(ObjectMetadataKeyEnumMap.Label, "Lamp")).toBe(false);
                 expect(canSet(ObjectMetadataKeyEnumMap.ImagePath, "1/1")).toBe(false);
                 expect(canSet(ObjectMetadataKeyEnumMap.DestinationRoomId, "hub")).toBe(false);
@@ -419,119 +412,88 @@ describe("what a lamp gives off", () => {
             LampObjectTypeConfig.util.getRange(lampWith("")));
     });
 
-    it("draws the lamp in the color it lights the room with, whatever look it has", () => {
-        // The glow derives from the same setting as the light, so glow and light never disagree, and
-        // no stored look can override it.
+    it("draws the lamp in the color it lights the room with, at every size", () => {
+        // The glow derives from the same setting as the light, so glow and light never disagree; the
+        // pre-encoded looks hold only a placeholder.
         const composer = LampObjectTypeConfig.components.spawnedByAny.instancedMeshComposer;
-        const presetLooks = LampCompositionConstants.presets.map(preset =>
-            CompositionMetadataUtil.encode(composer.codecType, composer.codecVersion, preset));
+        const sizes = fc.constantFrom(...LampObjectTypeConfig.util.getSizes());
 
-        fc.assert(fc.property(colorIndices, intensities, ranges, fc.constantFrom(...presetLooks),
-            (colorIndex, intensity, range, look) => {
+        fc.assert(fc.property(colorIndices, intensities, ranges, sizes,
+            (colorIndex, intensity, range, size) => {
                 const lamp = lampWith(LampObjectTypeConfig.util.encodeLightProperties(
                     colorIndex, intensity, range));
+                lamp.transform.scale = size;
                 const lightColor = ColorUtil.paletteIndexToRGB(LIGHT_COLOR_PALETTE_NAME, colorIndex);
 
-                const {parts: defaultParts} = composer.generateDefaultParts(lamp);
-                const storedParts: InstancedMeshCompositionPart[] = [];
-                LampCompositionCodec.decode(look, UNIT_VEC3, {}, storedParts);
-
-                for (const parts of [defaultParts, storedParts])
-                {
-                    composer.deriveParts(lamp, parts);
-                    const glows = parts.filter(part => part.materialId == INSTANCED_EMISSIVE_MATERIAL_ID);
-                    expect(glows).toHaveLength(1);
-                    expect(glows[0].color).toEqual(lightColor);
-                }
+                const {parts} = composer.generateDefaultParts(lamp);
+                composer.deriveParts(lamp, parts);
+                const glows = parts.filter(part => part.materialId == INSTANCED_EMISSIVE_MATERIAL_ID);
+                expect(glows).toHaveLength(1);
+                expect(glows[0].color).toEqual(lightColor);
             }));
     });
 });
 
 describe("how a lamp looks", () => {
-    const lampSize = (scale: number) => ObjectScaleUtil.getObjectSize(lampTypeIndex, {x: scale, y: scale, z: 1});
-    const decode = (params: FramedPanelCompositionParams, size: Vec3) =>
+    const composer = LampObjectTypeConfig.components.spawnedByAny.instancedMeshComposer;
+    const sizes = LampObjectTypeConfig.util.getSizes();
+
+    function lampAt(scale: Vec3): AddObjectSignal
     {
-        const parts: InstancedMeshCompositionPart[] = [];
-        LampCompositionCodec.decode(CompositionMetadataUtil.encode(InstancedMeshCompositionCodecTypeEnumMap.Lamp,
-            0, params), size, {}, parts);
-        return {
-            glow: parts.find(part => part.materialId == INSTANCED_EMISSIVE_MATERIAL_ID)!,
-            board: parts.find(part => part.materialId == INSTANCED_WOOD_MATERIAL_ID),
-        };
-    };
-    const scaling = LampObjectTypeConfig.scaling;
-    const scales = fc.constantFrom(...[0, 1, 2].map(i => scaling.minScale.x + i * scaling.scaleStep.x));
-    const margins = fc.integer({min: 0, max: Math.round(MarginCompositionConstants.maxMargin
-        / MarginCompositionConstants.marginStep)}).map(step => MarginCompositionConstants.fromMarginStep(step));
-    const minGlowSize = MarginCompositionConstants.minInnerSize;
-    const thicknesses = fc.integer({min: 0, max: MouldingCompositionConstants.numThicknessSteps - 1})
-        .map(step => MouldingCompositionConstants.fromThicknessStep(step));
+        return new AddObjectSignal("room", "user", "User", lampTypeIndex, "lamp",
+            new ObjectTransform({x: 1, y: 1, z: 1}, {x: 0, y: 0, z: -1}, {...scale}), {});
+    }
 
-    it("starts as a bare glow over its whole footprint, the same as a lamp with nothing stored", () => {
-        const first = LampCompositionConstants.presets[0];
-        expect(first.framed).toBe(false);
-        expect(first.margin).toBe(0);
-
-        const lamp = new AddObjectSignal("room", "user", "User", lampTypeIndex, "lamp",
-            new ObjectTransform({x: 1, y: 1, z: 1}, {x: 0, y: 0, z: -1}, {x: 1.5, y: 0.5, z: 1}), {});
-        const {params, parts} = LampObjectTypeConfig.components.spawnedByAny.instancedMeshComposer
-            .generateDefaultParts(lamp);
-        expect(params.framed).toBe(false);
-        expect(params.margin).toBe(0);
-        expect(parts).toHaveLength(1);
-        expect(parts[0].materialId).toBe(INSTANCED_EMISSIVE_MATERIAL_ID);
-        const size = ObjectScaleUtil.getObjectSize(lampTypeIndex, lamp.transform.scale);
-        expect(parts[0].scale.x).toBeCloseTo(size.x, 6);
-        expect(parts[0].scale.y).toBeCloseTo(size.y, 6);
-    });
-
-    it("keeps its look through a round trip", () => {
-        for (const preset of LampCompositionConstants.presets)
+    it("comes in four sizes, which are every scale it may take, and is never resized by its corners", () => {
+        const scaling = LampObjectTypeConfig.scaling;
+        const onGrid: Vec3[] = [];
+        for (let y = scaling.minScale.y; y <= scaling.maxScale.y; y += scaling.scaleStep.y)
         {
-            const decoded: FramedPanelCompositionParams = {} as FramedPanelCompositionParams;
-            LampCompositionCodec.decode(CompositionMetadataUtil.encode(
-                InstancedMeshCompositionCodecTypeEnumMap.Lamp, 0, preset), UNIT_VEC3, decoded, []);
-            expect(decoded).toEqual(preset);
+            for (let x = scaling.minScale.x; x <= scaling.maxScale.x; x += scaling.scaleStep.x)
+                onGrid.push({x, y, z: scaling.minScale.z});
         }
+        expect(sizes).toHaveLength(4);
+        expect(sizes).toHaveLength(onGrid.length);
+        for (const scale of onGrid)
+            expect(sizes).toContainEqual(scale);
+        expect(sizes).toContainEqual(ObjectScaleUtil.getDefaultScale(lampTypeIndex));
+        expect(scaling.cornerHandles).toBe(false);
     });
 
-    it("draws inside its margin on every side, and never past its footprint", () => {
-        fc.assert(fc.property(scales, margins, fc.boolean(), thicknesses, (scale, margin, framed, thickness) => {
-            const size = lampSize(scale);
-            const {glow, board} = decode({...LampCompositionConstants.presets[1], framed, margin,
-                mouldingThickness: thickness}, size);
-            const drawn = board ?? glow;
-            for (const axis of ["x", "y"] as const)
-            {
-                expect(drawn.scale[axis]).toBeLessThanOrEqual(size[axis] + 1e-9);
-                // Short of the margin only where the glow would otherwise vanish.
-                if (drawn.scale[axis] > size[axis] - 2 * margin + 1e-9)
-                    expect(glow.scale[axis]).toBeCloseTo(minGlowSize, 6);
-            }
+    it("draws each size from a pre-encoded look of its own: a glow of exactly that size", () => {
+        const looks = PreEncodedCompositionIndexMap["Lamp"];
+        expect(looks).toHaveLength(sizes.length);
+        sizes.forEach((size, position) => {
+            const compositionIndex = looks[position];
+            expect(LampObjectTypeConfig.util.getScale(compositionIndex)).toEqual(size);
+            const lamp = lampAt(size);
+            expect(LampObjectTypeConfig.util.getCompositionIndex(lamp)).toBe(compositionIndex);
+
+            const {parts} = composer.generateDefaultParts(lamp);
+            expect(parts).toHaveLength(1);
+            expect(parts[0].materialId).toBe(INSTANCED_EMISSIVE_MATERIAL_ID);
+            expect(parts[0].scale.x).toBeCloseTo(size.x, 6);
+            expect(parts[0].scale.y).toBeCloseTo(size.y, 6);
+            expect(parts[0].offset.x).toBeCloseTo(0, 6);
+            expect(parts[0].offset.y).toBeCloseTo(0, 6);
+        });
+    });
+
+    it("draws the size its footprint is, whatever scale it was handed", () => {
+        // Read through the snapped scale, as the collider is (see ObjectScaleUtil).
+        const anyScale = fc.float({min: -1, max: 3, noNaN: true});
+        fc.assert(fc.property(anyScale, anyScale, (x, y) => {
+            const lamp = lampAt({x, y, z: 1});
+            const size = ObjectScaleUtil.getObjectSize(lampTypeIndex, lamp.transform.scale);
+            const [glow] = composer.generateDefaultParts(lamp).parts;
+            expect(glow.scale.x).toBeCloseTo(size.x, 6);
+            expect(glow.scale.y).toBeCloseTo(size.y, 6);
         }));
     });
 
-    it("keeps its band the width it was given, at any size and margin, and a glow inside it", () => {
-        fc.assert(fc.property(scales, margins, thicknesses, (scale, margin, thickness) => {
-            const {glow, board} = decode({...LampCompositionConstants.presets[1], framed: true, margin,
-                mouldingThickness: thickness}, lampSize(scale));
-            expect(board!.mouldingThickness).toBe(thickness);
-            expect(glow.scale.x).toBeCloseTo(board!.scale.x - 2 * thickness, 6);
-            expect(glow.scale.y).toBeCloseTo(board!.scale.y - 2 * thickness, 6);
-            expect(glow.scale.x).toBeGreaterThanOrEqual(minGlowSize - 1e-9);
-            expect(glow.scale.y).toBeGreaterThanOrEqual(minGlowSize - 1e-9);
-            // In front of the band, so the two never fight over depth.
-            expect(glow.offset.z).toBeGreaterThan(board!.offset.z);
-        }));
-    });
-
-    it("decodes whatever it is handed into a lamp that can be drawn", () => {
-        fc.assert(fc.property(fc.string({maxLength: 12}), (garbage) => {
-            const parts: InstancedMeshCompositionPart[] = [];
-            const prefix = CompositionMetadataUtil.getCodecPrefix(InstancedMeshCompositionCodecTypeEnumMap.Lamp, 0);
-            expect(() => LampCompositionCodec.decode(prefix + garbage, UNIT_VEC3, {}, parts)).not.toThrow();
-            expect(parts.filter(part => part.materialId == INSTANCED_EMISSIVE_MATERIAL_ID)).toHaveLength(1);
-        }));
+    it("knows no size for a look that isn't one of a lamp's", () => {
+        expect(LampObjectTypeConfig.util.getScale(-1)).toBeUndefined();
+        expect(LampObjectTypeConfig.util.getScale(PreEncodedCompositionStringMap.length)).toBeUndefined();
     });
 });
 

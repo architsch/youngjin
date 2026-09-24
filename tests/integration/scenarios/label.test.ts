@@ -47,14 +47,16 @@ import { DOCUMENT_ID_MAX_LENGTH, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIA
 const labelTypeIndex = ObjectTypeConfigMap.getIndexByType("Label");
 const MAX_LABELS_PER_ROOM = ObjectCategoryConfigMap.getMaxCountPerRoom(LabelObjectTypeConfig.category);
 
-function makeUser(id: string, userType: number): User
+function makeUser(id: string, userType: number, ownedRoomID: string = ""): User
 {
-    return new User(id, `User_${id}`, userType, `${id}@test.com`, "");
+    return new User(id, `User_${id}`, userType, `${id}@test.com`, "", "", ownedRoomID);
 }
 
 const ADMIN = makeUser("an-admin", UserTypeEnumMap.Admin);
 const MEMBER = makeUser("a-member", UserTypeEnumMap.Member);
 const GUEST = makeUser("a-guest", UserTypeEnumMap.Guest);
+// Ownership is the user naming the room as their own.
+const OWNER = makeUser("an-owner", UserTypeEnumMap.Member, "regular");
 
 // A stretch of boundary wall the filled-in labels never reach, so a cap refusal is the cap and not the wall.
 const CLEAR_COL_OFFSET = 5;
@@ -98,16 +100,20 @@ describe("label permissions", () => {
         });
     });
 
-    it("refuses a label in a regular room, even to an admin", async () => {
-        // The doors' rule: admins shape hubs only.
+    it("lets a regular room's owner put up a label there, and nobody else, not even an admin", async () => {
+        // The doors' rule: the room's superuser only.
         await runScenario({
             name: "putting up a label in a regular room",
             rooms: [EMPTY_REGULAR],
             users: [userAtCenter("regular")],
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["regular"].room;
-                for (const user of [ADMIN, MEMBER])
-                    expect(ObjectUpdateUtil.canAddObject(user, room, makeLabelSignal(room, user))).toBe(false);
+                const canAdd = (user: User) =>
+                    ObjectUpdateUtil.canAddObject(user, room, makeLabelSignal(room, user));
+
+                expect(canAdd(OWNER)).toBe(true);
+                for (const user of [ADMIN, MEMBER, GUEST])
+                    expect(canAdd(user)).toBe(false);
             },
         });
     });

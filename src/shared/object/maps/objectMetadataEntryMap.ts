@@ -8,6 +8,9 @@ import { ObjectMetadataKeyEnumMap } from "../types/objectMetadataKey";
 import { DoorTypeEnumMap } from "../types/doorType";
 import LampObjectTypeConfig from "../types/objectTypeConfig/lampObjectTypeConfig";
 import LabelTextUtil from "../util/labelTextUtil";
+import AdminPrefsUtil from "../util/adminPrefsUtil";
+import User from "../../user/types/user";
+import RoomValidationUtil from "../../room/util/roomValidationUtil";
 
 const doorTypeValues = Object.values(DoorTypeEnumMap);
 
@@ -58,6 +61,11 @@ const entries: {[key: number]: ObjectMetadataEntry} = {
     [ObjectMetadataKeyEnumMap.LabelFont]: {
         preprocessingMethod: (rawValue: string) => LabelTextUtil.canonicalizeFont(rawValue),
     },
+    // Likewise, through AdminPrefsUtil.
+    [ObjectMetadataKeyEnumMap.AdminPrefs]: {
+        preprocessingMethod: (rawValue: string) => AdminPrefsUtil.canonicalize(rawValue),
+        canUserSet: (user: User) => RoomValidationUtil.userIsAdmin(user),
+    },
 };
 
 const ObjectMetadataEntryMap =
@@ -72,6 +80,13 @@ const ObjectMetadataEntryMap =
         if (entry)
             return entry.preprocessingMethod(rawValue);
         return rawValue;
+    },
+    canUserSet: (metadataKey: number, user: User): boolean =>
+    {
+        const entry = entries[metadataKey];
+        if (entry && entry.canUserSet)
+            return entry.canUserSet(user);
+        return true;
     },
 }
 

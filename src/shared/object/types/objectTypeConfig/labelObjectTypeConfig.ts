@@ -15,7 +15,7 @@ import SetObjectTransformSignal from "../setObjectTransformSignal";
 import ObjectScaleUtil from "../../util/objectScaleUtil";
 import ObjectTypeConfig from "./objectTypeConfig";
 
-// Metadata keys an admin may write to a label; anything else is refused.
+// Metadata keys the room's superuser may write to a label; anything else is refused.
 const editableMetadataKeys = [
     ObjectMetadataKeyEnumMap.InstancedMeshComposition,
     ObjectMetadataKeyEnumMap.Label,
@@ -24,7 +24,7 @@ const editableMetadataKeys = [
 ];
 
 // A sign on a wall: text on a plaque, or straight on the wall without a frame. Placed and edited under the
-// doors' rule for now (see RoomValidationUtil.canUserManageDoors).
+// doors' rule for now (see RoomValidationUtil.isRoomSuperuser).
 const LabelObjectTypeConfig =
 {
     objectType: "Label",
@@ -35,7 +35,7 @@ const LabelObjectTypeConfig =
     // atlas (see LABEL_ATLAS_CELL_WORLD_SIZE). Depth is the wall gap and never changes.
     scaling: {
         scaleStep: {x: 0.5, y: 0.5, z: 0},
-        minScale: {x: 1, y: 1, z: 1},
+        minScale: {x: 0.5, y: 0.5, z: 1},
         maxScale: {x: 3.5, y: 3.5, z: 1},
         defaultScale: {x: 1, y: 1, z: 1},
     },
@@ -43,7 +43,7 @@ const LabelObjectTypeConfig =
         allowedDirections: WALL_DIRECTIONS,
     },
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => {
-        if (!RoomValidationUtil.canUserManageDoors(user, room))
+        if (!RoomValidationUtil.isRoomSuperuser(user, room))
             return false;
 
         // Block spoofing attempts
@@ -53,10 +53,10 @@ const LabelObjectTypeConfig =
         return true;
     },
     canUserRemoveObject: (user: User, room: Room, obj: AddObjectSignal) => {
-        return RoomValidationUtil.canUserManageDoors(user, room);
+        return RoomValidationUtil.isRoomSuperuser(user, room);
     },
     canUserSetObjectTransform: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => {
-        if (!RoomValidationUtil.canUserManageDoors(user, room))
+        if (!RoomValidationUtil.isRoomSuperuser(user, room))
             return false;
 
         // A label is dragged along the wall by a gizmo, which is a placement rather than a motion.
@@ -66,7 +66,7 @@ const LabelObjectTypeConfig =
         return true;
     },
     canUserSetObjectMetadata: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectMetadataSignal) => {
-        if (!RoomValidationUtil.canUserManageDoors(user, room))
+        if (!RoomValidationUtil.isRoomSuperuser(user, room))
             return false;
 
         // Values are sanitized by ObjectMetadataEntryMap; only the key is checked here.

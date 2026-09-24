@@ -429,17 +429,18 @@ describe("door mesh composition", () => {
 
     // ─── Permissions ───────────────────────────────────────────────────
 
-    it("a door is finished by an admin in a hub, and by nobody else anywhere", () => {
-        // Door appearance is admin world-building: hubs only, never a Regular room's own door.
-        const canReskin = (userType: number, roomType: number) =>
+    it("a door is finished by the room's superuser, and by nobody else", () => {
+        // Door appearance is world-building: an admin's in a hub, the owner's in a Regular room.
+        const canReskin = (userType: number, roomType: number, ownedRoomID: string = "") =>
             DoorObjectTypeConfig.canUserSetObjectMetadata(
-                {id: "u", userType} as any, {roomType} as any, {} as any,
+                {id: "u", userType, ownedRoomID} as any, {id: "room", roomType} as any, {} as any,
                 {metadataKey: COMPOSITION_KEY, metadataValue: encodeDoorComposition(1)} as any);
 
         expect(canReskin(UserTypeEnumMap.Admin, RoomTypeEnumMap.Hub)).toBe(true);
-        expect(canReskin(UserTypeEnumMap.Admin, RoomTypeEnumMap.Regular)).toBe(false);
         expect(canReskin(UserTypeEnumMap.Member, RoomTypeEnumMap.Hub)).toBe(false);
         expect(canReskin(UserTypeEnumMap.Guest, RoomTypeEnumMap.Hub)).toBe(false);
+        expect(canReskin(UserTypeEnumMap.Member, RoomTypeEnumMap.Regular, "room")).toBe(true);
+        expect(canReskin(UserTypeEnumMap.Admin, RoomTypeEnumMap.Regular)).toBe(false);
     });
 
     // ─── Config coherence ──────────────────────────────────────────────

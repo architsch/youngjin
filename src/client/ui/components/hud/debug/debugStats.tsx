@@ -10,6 +10,11 @@ import TextInput from "../../input/textInput";
 import UserAPIClient from "../../../../networking/client/userAPIClient";
 import PopupUtil from "../../../util/popupUtil";
 import GraphicsManager from "../../../../graphics/graphicsManager";
+import SocketsClient from "../../../../networking/client/socketsClient";
+import SetObjectMetadataSignal from "../../../../../shared/object/types/setObjectMetadataSignal";
+import { ObjectMetadataKeyEnumMap } from "../../../../../shared/object/types/objectMetadataKey";
+import AdminPrefsUtil from "../../../../../shared/object/util/adminPrefsUtil";
+import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
 
 export default function DebugStats({env}: Props)
 {
@@ -97,10 +102,12 @@ export default function DebugStats({env}: Props)
                         case "hide dummy-images": imageListChooserDebugEnabledObservable.set(false); break;
                         case "restart tutorial": void restartTutorial(); break;
                         // Temporary sign-in entry point until the app has a proper place for it.
-                        case "login": PopupUtil.openPopup({popupType: "authPrompt"}); break;
+                        case "login**": PopupUtil.openPopup({popupType: "authPrompt"}); break;
                         case "log": PopupUtil.openPopup({popupType: "consoleLog"}); break;
                         case "lose context": setWebGLContextLost(true); break;
                         case "restore context": setWebGLContextLost(false); break;
+                        case "ghost on": setGhostMode(true); break;
+                        case "ghost off": setGhostMode(false); break;
                         default: notificationMessageObservable.set("Unknown debug command."); break;
                     }
                     setState({...state, debugCommand: ""});
@@ -143,6 +150,33 @@ function setWebGLContextLost(lost: boolean): void
         loseContextExtension.loseContext();
     else
         loseContextExtension.restoreContext();
+}
+
+// "ghost on" / "ghost off" debug commands. Admin-only (also enforced server-side), and kept in the
+// player's AdminPrefs, which the server saves with the rest of its metadata. A single-player room has
+// no server to keep it.
+function setGhostMode(ghostMode: boolean): void
+{
+    const room = App.getCurrentRoom();
+    const myPlayer = ClientObjectManager.getMyPlayer();
+    if (!room || !myPlayer || room.roomType == RoomTypeEnumMap.SinglePlayer)
+    {
+        notificationMessageObservable.set("Ghost mode can only be changed in a multiplayer room.");
+        return;
+    }
+
+    const prefs = AdminPrefsUtil.getObjectPrefs(myPlayer.params);
+    prefs.ghostMode = ghostMode;
+    const key = ObjectMetadataKeyEnumMap.AdminPrefs;
+    const value = AdminPrefsUtil.encode(prefs);
+    if (!ClientObjectManager.setObjectMetadata(myPlayer.params.objectId, key, value))
+    {
+        notificationMessageObservable.set("Only an admin can use ghost mode.");
+        return;
+    }
+    SocketsClient.emitSetObjectMetadataSignal(
+        new SetObjectMetadataSignal(room.id, myPlayer.params.objectId, key, value));
+    notificationMessageObservable.set(ghostMode ? "Ghost mode is on." : "Ghost mode is off.");
 }
 
 const className = "flex flex-col justify-start absolute left-0 top-0 max-w-full max-h-1/5";

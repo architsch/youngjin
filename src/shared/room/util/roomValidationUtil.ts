@@ -17,8 +17,8 @@ const RoomValidationUtil =
     {
         return user.userType == UserTypeEnumMap.Admin;
     },
-    // The user above restricted zones (see @docs/gameplay/restricted_zone.md): admins in Hubs, the owner
-    // in Regular rooms, the player in single-player rooms.
+    // The user above restricted zones, who also manages doors and labels: admins in Hubs, the owner in
+    // Regular rooms, anyone in the dev sandbox (see @docs/gameplay/restricted_zone.md).
     isRoomSuperuser: (user: User, room: Room): boolean =>
     {
         switch (room.roomType)
@@ -28,19 +28,10 @@ const RoomValidationUtil =
             case RoomTypeEnumMap.Regular:
                 return RoomValidationUtil.userOwnsRoom(user, room);
             case RoomTypeEnumMap.SinglePlayer:
-                return true;
+                return room.roomName == SANDBOX_SINGLE_PLAYER_MODE;
             default:
                 return false;
         }
-    },
-    // Doors shape the world: admin-only, in Hubs (Regular rooms keep their generated door) and in the dev
-    // sandbox, whose edits stay local, so door tools can be tried without a hub.
-    canUserManageDoors: (user: User, room: Room): boolean =>
-    {
-        if (!RoomValidationUtil.userIsAdmin(user))
-            return false;
-        return room.roomType == RoomTypeEnumMap.Hub ||
-            (room.roomType == RoomTypeEnumMap.SinglePlayer && room.roomName == SANDBOX_SINGLE_PLAYER_MODE);
     },
 }
 

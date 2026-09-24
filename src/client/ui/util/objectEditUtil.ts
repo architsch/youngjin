@@ -4,6 +4,8 @@ import App from "../../app";
 import SocketsClient from "../../networking/client/socketsClient";
 import ClientObjectManager from "../../object/clientObjectManager";
 import SetObjectMetadataSignal from "../../../shared/object/types/setObjectMetadataSignal";
+import SetObjectTransformSignal from "../../../shared/object/types/setObjectTransformSignal";
+import ObjectTransform from "../../../shared/object/types/objectTransform";
 import RemoveObjectSignal from "../../../shared/object/types/removeObjectSignal";
 import ObjectUpdateUtil from "../../../shared/object/util/objectUpdateUtil";
 import { ObjectMetadataKey } from "../../../shared/object/types/objectMetadataKey";
@@ -69,6 +71,33 @@ const ObjectEditUtil =
             SocketsClient.emitSetObjectMetadataSignal(
                 new SetObjectMetadataSignal(room.id, objectId, metadataKey, metadataValue));
         }
+    },
+    // Transforms set by a tool are placements, which ignore physics (as a drag's do).
+    canSetObjectTransform: (selection: ObjectSelection, transform: ObjectTransform): boolean =>
+    {
+        const room = App.getCurrentRoom();
+        if (!room)
+            return false;
+
+        const objectId = selection.gameObject.params.objectId;
+        return ObjectUpdateUtil.canSetObjectTransform(App.getUser(), room,
+            new SetObjectTransformSignal(room.id, objectId, transform, true));
+    },
+    trySetObjectTransform: (selection: ObjectSelection, transform: ObjectTransform): void =>
+    {
+        if (!ObjectEditUtil.canSetObjectTransform(selection, transform))
+            return;
+
+        const room = App.getCurrentRoom()!;
+        const objectId = selection.gameObject.params.objectId;
+        const applied = ClientObjectManager.setObjectTransform(objectId, transform, true, false);
+        if (room.roomType != RoomTypeEnumMap.SinglePlayer)
+        {
+            SocketsClient.emitSetObjectTransformSignal(new SetObjectTransformSignal(room.id, objectId,
+                new ObjectTransform({...applied.pos}, {...applied.dir}, {...applied.scale}), true));
+        }
+        // Re-announced so the outline and the tools catch up with where and how big it now is.
+        objectSelectionObservable.notify();
     },
 }
 

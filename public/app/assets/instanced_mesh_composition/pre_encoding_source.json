@@ -1,3 +1,60 @@
 {
-    "compositions": []
+    "compositions": [
+        {
+            "comment": "[Index 0] 'Lamp' at 0.5 x 0.5. A lamp's looks are one glow per size, in the order of its sizes (see LampObjectTypeConfig). The '-1' color is set by the lamp from its light.",
+            "objectType": "Lamp",
+            "codecType": "Default",
+            "codecVersion": 1,
+            "parts": [{
+                "geometryId": "Square",
+                "materialId": "InstancedEmissive",
+                "dir": {"x": 0, "y": 0, "z": 1},
+                "offset": {"x": 0, "y": 0, "z": 0},
+                "scale": {"x": 0.5, "y": 0.5, "z": 1},
+                "color": {"x": -1, "y": -1, "z": -1}
+            }]
+        },
+        {
+            "comment": "[Index 1] 'Lamp' at 1 x 0.5.",
+            "objectType": "Lamp",
+            "codecType": "Default",
+            "codecVersion": 1,
+            "parts": [{
+                "geometryId": "Square",
+                "materialId": "InstancedEmissive",
+                "dir": {"x": 0, "y": 0, "z": 1},
+                "offset": {"x": 0, "y": 0, "z": 0},
+                "scale": {"x": 1, "y": 0.5, "z": 1},
+                "color": {"x": -1, "y": -1, "z": -1}
+            }]
+        },
+        {
+            "comment": "[Index 2] 'Lamp' at 0.5 x 1.",
+            "objectType": "Lamp",
+            "codecType": "Default",
+            "codecVersion": 1,
+            "parts": [{
+                "geometryId": "Square",
+                "materialId": "InstancedEmissive",
+                "dir": {"x": 0, "y": 0, "z": 1},
+                "offset": {"x": 0, "y": 0, "z": 0},
+                "scale": {"x": 0.5, "y": 1, "z": 1},
+                "color": {"x": -1, "y": -1, "z": -1}
+            }]
+        },
+        {
+            "comment": "[Index 3] 'Lamp' at 1 x 1.",
+            "objectType": "Lamp",
+            "codecType": "Default",
+            "codecVersion": 1,
+            "parts": [{
+                "geometryId": "Square",
+                "materialId": "InstancedEmissive",
+                "dir": {"x": 0, "y": 0, "z": 1},
+                "offset": {"x": 0, "y": 0, "z": 0},
+                "scale": {"x": 1, "y": 1, "z": 1},
+                "color": {"x": -1, "y": -1, "z": -1}
+            }]
+        }
+    ]
 }

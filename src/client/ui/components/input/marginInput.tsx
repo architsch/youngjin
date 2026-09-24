@@ -2,7 +2,7 @@ import Text from "../basic/text";
 import MarginCompositionConstants from "../../../../shared/graphics/mesh/composition/types/compositionConstants/marginCompositionConstants";
 import RangeInput from "./rangeInput";
 
-// How far inside its footprint a framed panel (a canvas, a lamp, a label) is drawn (see
+// How far inside its footprint a framed panel (a canvas or a label) is drawn (see
 // MarginCompositionConstants).
 export default function MarginInput(props: Props)
 {

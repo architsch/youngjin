@@ -227,6 +227,18 @@ const ObjectAttachmentUtil =
         }
         return undefined;
     },
+    // The object at another size where it stands, on the placement grid: its centre stays across the face,
+    // except vertically, where the bottom edge does (the edge the grid snaps), so going back to the
+    // earlier size puts it back exactly. Whether it fits there is canPlaceObject's to say.
+    getResizedInPlace: (objectTypeIndex: number, transform: ObjectTransform, scale: Vec3): ObjectTransform =>
+    {
+        const {right, up} = Geometry3DUtil.getAxisFacingBasis(transform.dir);
+        const heightOf = (size: Vec3) => Math.abs(right.y) * size.x + Math.abs(up.y) * size.y;
+        const grownBy = heightOf(ObjectScaleUtil.getObjectSize(objectTypeIndex, scale))
+            - heightOf(ObjectScaleUtil.getObjectSize(objectTypeIndex, transform.scale));
+        return getQuantizedTransform(objectTypeIndex, new ObjectTransform(
+            {...transform.pos, y: transform.pos.y + 0.5 * grownBy}, {...transform.dir}, {...scale}));
+    },
 }
 
 // Onto the placement grid: the face on its plane, the centre on the grid along X and Z, and the bottom edge

@@ -50,18 +50,24 @@ async function renderCompositionThumbnails(encodedCompositions: string[], cellSi
     scene.add(root);
     root.updateMatrixWorld();
 
-    const camera = new THREE.OrthographicCamera();
-    const results: string[] = [];
+    // One framing for the whole type, so its entries keep their sizes relative to each other.
+    const meshesList: THREE.InstancedMesh[][] = [];
+    const bounds = new THREE.Box3();
     for (const encoded of encodedCompositions)
     {
         const meshes = await buildMeshes(encoded, root);
-        const bounds = new THREE.Box3();
         for (const mesh of meshes)
-        {
-            scene.add(mesh);
             expandByInstances(bounds, mesh);
-        }
-        frameBounds(camera, bounds, viewDir);
+        meshesList.push(meshes);
+    }
+    const camera = new THREE.OrthographicCamera();
+    frameBounds(camera, bounds, viewDir);
+
+    const results: string[] = [];
+    for (const meshes of meshesList)
+    {
+        for (const mesh of meshes)
+            scene.add(mesh);
 
         activeRenderer.render(scene, camera);
         const pixels = new Uint8Array(size * size * 4);

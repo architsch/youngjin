@@ -7,6 +7,6 @@ export const InstancedMeshCompositionCodecTypeEnumMap: Record<string, number> =
     Door: 2,
     Indexed: 3,
     Canvas: 4,
-    Lamp: 5,
+    // 5 was lamps' framed look, before a lamp's look followed its size. Never reuse a stored value.
     Label: 6,
 }

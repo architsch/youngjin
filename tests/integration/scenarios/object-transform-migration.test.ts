@@ -17,6 +17,8 @@ import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import ObjectGroup from "../../../src/shared/object/types/objectGroup";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
+import EncodableByteString from "../../../src/shared/networking/types/encodableByteString";
+import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
 import { MAX_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
     COLLISION_LAYER_HEIGHT, UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
 
@@ -28,6 +30,7 @@ const SCRATCH_BUFFER_BYTES = 256 * 1024;
 const LEGACY_MAX_ROOM_Y = 4;
 
 const CANVAS_OBJECT_TYPE_INDEX = 2;
+const COMPOSITION_KEY = ObjectMetadataKeyEnumMap.InstancedMeshComposition;
 
 // Heights a painting was actually hung at in a one-storey room: eye level, and a little above it.
 const LEGACY_PLACED_HEIGHTS = [1.5, 2.0];
@@ -194,6 +197,37 @@ describe("object transform ranges and migration", () => {
             expect(ObjectScaleUtil.sanitize(CANVAS_OBJECT_TYPE_INDEX, objectGroup.objectById["canvas"].transform.scale))
                 .toEqual(UNIT_VEC3);
         }
+    });
+
+    it("drops a lamp's stored look, and shrinks one past the largest size where it stands", () => {
+        const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
+        const LAST_FRAMED_LAMP_VERSION = 5;
+        const look = () => ({[COMPOSITION_KEY]: new EncodableByteString("&!Sa%\"")});
+        const lamp = (objectId: string, pos: {x: number, y: number, z: number}, scale: number) =>
+            new AddObjectSignal(ROOM_ID, "user-1", "User One", lampTypeIndex, objectId,
+                new ObjectTransform(pos, {x: 0, y: 0, z: 1}, {x: scale, y: scale, z: 1}), look());
+        // On a wall, their bottom edges on the layer boundaries at 0.5 and 2.
+        const tall = lamp("tall", {x: 10, y: 1.25, z: 4}, 1.5);
+        const kept = lamp("kept", {x: 12, y: 2.5, z: 4}, 1);
+        const framedCanvas = canvas("canvas", 2.0);
+        framedCanvas.metadata = look();
+
+        const blob = buildRoomBlob(encodeCurrentVoxelGrid(), [tall, kept, framedCanvas], LAST_FRAMED_LAMP_VERSION);
+        const {objectGroup} = decodeRoomBlob(blob);
+
+        for (const objectId of ["tall", "kept"])
+            expect(objectGroup.objectById[objectId].metadata[COMPOSITION_KEY], objectId).toBeUndefined();
+        // Only lamps lost their looks.
+        expect(objectGroup.objectById["canvas"].metadata[COMPOSITION_KEY]?.str).toBe(look()[COMPOSITION_KEY].str);
+
+        const shrunk = objectGroup.objectById["tall"].transform;
+        expect(ObjectScaleUtil.sanitize(lampTypeIndex, shrunk.scale)).toEqual({x: 1, y: 1, z: 1});
+        expect(shrunk.pos.x).toBeCloseTo(10, 3);
+        expect(shrunk.pos.y - 0.5).toBeCloseTo(0.5, 3);
+
+        const unchanged = objectGroup.objectById["kept"].transform;
+        expect(ObjectScaleUtil.sanitize(lampTypeIndex, unchanged.scale)).toEqual({x: 1, y: 1, z: 1});
+        expect(unchanged.pos.y).toBeCloseTo(2.5, 3);
     });
 
     it("brings a resized object back at the size it was stored at, off the wire's coarser grid", () => {

@@ -103,7 +103,7 @@ claim to test, not text to read. In practice that means:
   sets, a seat no local run can take. **Nothing fails when this happens**; the gap shows up only as
   a session that has to reproduce a whole course of play to reach one case.
 
-  The worked example: door tools are admin-only, the sandbox opened only as a guest, and so every
+  The worked example: door tools were admin-only, the sandbox opened only as a guest, and so every
   admin case had to be played out in a generated hub or seeded on staging — until `?sandboxadmin=`
   and `--admin` closed it. Ask the same question of each script in turn, against the `src/` half of
   Step 1's diff: what did this batch add, and which of these could reach it today?

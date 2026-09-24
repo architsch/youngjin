@@ -9,6 +9,8 @@ export default function AtlasCellSprite(props: {
         flipRow: boolean,
         highlight: boolean, autoScrollToHighlight: boolean,
         additionalClassNames: string,
+        // Shown dimmed and not clickable.
+        disabled?: boolean,
         onClick?: () => void | Promise<void>,
     })
 {
@@ -16,6 +18,7 @@ export default function AtlasCellSprite(props: {
     const numRows = Math.floor(props.atlasHeight / props.atlasCellHeight);
 
     const highlightClasses = props.highlight ? `outline-4 outline-green-500 outline-offset-1` : "";
+    const disabledClasses = props.disabled ? "opacity-30 cursor-not-allowed" : "";
     const myRef: RefObject<HTMLDivElement | null> = useRef(null);
 
     useEffect(() => {
@@ -34,10 +37,12 @@ export default function AtlasCellSprite(props: {
     const displayRow = props.flipRow ? (numRows - props.atlasCellRow - 1) : props.atlasCellRow;
 
     // Inline styles, since these values are dynamic and Tailwind can't generate them.
-    return <div id={props.id} ref={myRef} onClick={props.onClick} style={{
+    // A div has no `disabled`, so it is declared via aria for assistive tech and automation.
+    return <div id={props.id} ref={myRef} aria-disabled={props.disabled}
+        onClick={props.disabled ? undefined : props.onClick} style={{
         aspectRatio: props.atlasCellWidth / props.atlasCellHeight,
         backgroundImage: `url(${props.atlasImageURL})`,
         backgroundSize: `${100 * numCols}% ${100 * numRows}%`,
         backgroundPosition: `-${100 * props.atlasCellCol}% -${100 * displayRow}%`,
-    }} className={`${props.additionalClassNames} ${highlightClasses}`}></div>;
+    }} className={`${props.additionalClassNames} ${highlightClasses} ${disabledClasses}`}></div>;
 }

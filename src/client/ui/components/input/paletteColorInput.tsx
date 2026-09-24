@@ -14,11 +14,17 @@ const PALETTE_COLUMNS_ON_VERTICAL_SCREEN = 2;
 const DISMISS_MOVEMENT_TOLERANCE = 8;
 
 // Palette contents depend on what is painted (see ColorPaletteMap).
-export default function PaletteColorInput({ paletteName, currValue, setColorIndex }: Props)
+export default function PaletteColorInput({ paletteName, currValue, setColorIndex, disabled = false }: Props)
 {
     const paletteSize = ColorUtil.getPaletteSize(paletteName);
 
     const [paletteOpen, setPaletteOpen] = useState(false);
+
+    // Disabling can come while the palette is open (e.g. a zone drawn over the edited object).
+    useEffect(() => {
+        if (disabled)
+            setPaletteOpen(false);
+    }, [disabled]);
     const [paletteStyle, setPaletteStyle] = useState<CSSProperties | undefined>(undefined);
     const [paletteColumns, setPaletteColumns] = useState(PALETTE_COLUMNS_ON_HORIZONTAL_SCREEN);
     const buttonRef = useRef<HTMLButtonElement>(null);
@@ -115,8 +121,9 @@ export default function PaletteColorInput({ paletteName, currValue, setColorInde
     return <>
         <button
             ref={buttonRef}
-            className="w-8 h-6 p-0 shrink-0 rounded-md cursor-pointer select-none touch-manipulation yj-surface-concave"
+            className="w-8 h-6 p-0 shrink-0 rounded-md cursor-pointer select-none touch-manipulation yj-surface-concave disabled:opacity-50 disabled:cursor-not-allowed"
             style={{backgroundColor: ColorUtil.rgbToHex(ColorUtil.paletteIndexToRGB(paletteName, currValue))}}
+            disabled={disabled}
             onClick={() => setPaletteOpen(prev => !prev)}
         />
         {paletteOpen &&
@@ -143,4 +150,5 @@ interface Props
     paletteName: ColorPaletteName; // which set of colors to offer (see ColorPaletteMap)
     currValue: number; // Position in that palette
     setColorIndex: (index: number) => void;
+    disabled?: boolean;
 }

@@ -1,13 +1,13 @@
 # Local Sandbox Playtest
 
-A quick playtest against the local dev server, in a room built for the purpose instead of one reached by playing. It covers what the [staging playtest](workflow.md) cannot: admin tools without promoting an account, and any arrangement of blocks, objects and zones stood up on request.
+A quick playtest against the local dev server, in a room built for the purpose instead of one reached by playing. It covers what the [staging playtest](workflow.md) cannot: superuser tools without promoting an account, and any arrangement of blocks, objects and zones stood up on request.
 
 Reference: @dev/scripts/playtest/sandboxRunner.js , @dev/scripts/lib/setup.js , @dev/scripts/lib/interact.js , @src/client/system/util/automationSetupUtil.ts
 
 ## The sandbox room
 - A dev-only single-player room: bare floor under a ceiling, a free camera, and a player who does not walk. Edits stay on the client and nothing is stored (see [single_player_mode.md](../../networking/single_player_mode.md)).
 - `?sandboxuser=<name>` opens it as a guest, `?sandboxadmin=<name>` as an admin. Each name is its own reusable account, dev mode only.
-- An admin there gets the door tools a hub gives (`RoomValidationUtil`). Room settings stay hidden, since the room is not stored — those need `--fresh-room` or the staging playtest.
+- Its player, guest or admin, is its superuser and gets the door and label tools a hub's admin has (`RoomValidationUtil`). Room settings stay hidden, since the room is not stored — those need `--fresh-room` or the staging playtest.
 - Build calls refuse to run in any other room, so they can never fake evidence a real room would have refused.
 
 ## Running
@@ -42,7 +42,7 @@ The bare `:4321/...` shorthand does not work under zsh. Ops share their names wi
 | `clearSandbox` | back to bare floor, between one test and the next |
 
 ## Traps
-- **Arrange with `setup`, act with `interact`.** Build calls skip the permission check, so a door hung by `addObject` proves nothing about an admin's door tools — reach those through `ensureEditMode`, a real surface click and `uiClick` on the control.
+- **Arrange with `setup`, act with `interact`.** Build calls skip the permission check, so a door hung by `addObject` proves nothing about the superuser's door tools — reach those through `ensureEditMode`, a real surface click and `uiClick` on the control.
 - Hang objects on the cells `stage` reports, not on one worked out by hand: naming the cell *in front* of a wall hangs the object in mid-air, and it reads as deliberate until the camera moves.
 - The room is lit by a light the camera carries, reaching as far as it is aimed, and past the built set there is only black.
 - A canvas fetches its picture over the network, so a frame taken straight after one goes up catches a blank placeholder.

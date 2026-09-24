@@ -10,6 +10,7 @@ import DBRoomUtil from "../db/util/dbRoomUtil";
 import DBUserUtil from "../db/util/dbUserUtil";
 import RemoveObjectSignal from "../../shared/object/types/removeObjectSignal";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
+import ObjectMetadataEntryMap from "../../shared/object/maps/objectMetadataEntryMap";
 
 const socketUserContexts: {[userID: string]: SocketUserContext} = {};
 const playerObjectByUserID: {[userID: string]: AddObjectSignal} = {};
@@ -75,10 +76,16 @@ const ServerUserManager =
         else
             socketRoomContext.addSocketUserContext(userID, socketUserContext);
 
-        // Create the user's player object
+        // Create the user's player object. Stored metadata outlives a change of user type (e.g. a demoted
+        // admin's prefs), so keys the user may no longer set are left out.
         const restoredMetadata: {[key: number]: EncodableByteString} = {};
         for (const key of Object.keys(playerMetadata))
-            restoredMetadata[parseInt(key)] = new EncodableByteString(playerMetadata[key]);
+        {
+            const metadataKey = parseInt(key);
+            if (!ObjectMetadataEntryMap.canUserSet(metadataKey, user))
+                continue;
+            restoredMetadata[metadataKey] = new EncodableByteString(playerMetadata[key]);
+        }
         const playerAddObjectSignal = new AddObjectSignal(
             roomID,
             user.id,
