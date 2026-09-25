@@ -53,9 +53,7 @@ either; a duplicate of the page defeats the point of linking to it.
 ## Voice
 
 **The house style is in [`../../../writing-style.md`](../../../writing-style.md), and it governs
-every line of copy this skill writes.** Read it before drafting. It is shared with `devlog-post` on
-purpose: the same reader meets both, and a second house style invented here would diverge from the
-first within a few revisions.
+every line of copy this skill writes.** Read it before drafting.
 
 The rules that catch this skill's copy most often are the ones about detail: no account of how a
 feature works, no interface walkthrough, and none of the trade vocabulary. The rule about naming

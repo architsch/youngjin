@@ -29,7 +29,6 @@ The ThingsPool source code is open source under the Apache License 2.0. It is bu
 - **DevOps**
     - [Local Development Guide](docs/devOps/local_dev.md)
     - [Firebase & Google Cloud](docs/devOps/firebase.md)
-    - [Release Train](docs/devOps/release_train.md)
     - [Acquisition Analytics](docs/devOps/analytics.md)
     - VPS Hosting Guide
         - [Basic Setup](docs/devOps/vps/basic-setup.md)

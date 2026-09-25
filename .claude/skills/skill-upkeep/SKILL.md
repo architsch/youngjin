@@ -1,6 +1,6 @@
 ---
 name: skill-upkeep
-description: Audit and repair this project's own development instructions and tooling — the skills under .claude, the shared writing-style page, the project rules in .claude/rules, the dev scripts under dev/scripts that run and drive the app, and the guideline pages in CLAUDE.md, docs/devOps and docs/testing — verifying every command, path, script flag, selector and factual claim still holds against the current codebase, fixing what has drifted, filling in what the app can now do and the tooling cannot reach, and tightening instructions that have proven ambiguous in practice. Use when a skill misbehaves or gives stale instructions, after changing a script a skill drives, when a dev script or setup guide has fallen behind the app, or as the first phase of the release-train workflow.
+description: Audit and repair this project's own development instructions and tooling — the skills under .claude, the house writing-style page, the project rules in .claude/rules, the dev scripts under dev/scripts that run and drive the app, and the guideline pages in CLAUDE.md, docs/devOps and docs/testing — verifying every command, path, script flag, selector and factual claim still holds against the current codebase, fixing what has drifted, filling in what the app can now do and the tooling cannot reach, and tightening instructions that have proven ambiguous in practice. Use when a skill misbehaves or gives stale instructions, after changing a script a skill drives, or when a dev script or setup guide has fallen behind the app.
 ---
 
 # Skill Upkeep
@@ -23,7 +23,7 @@ wrong once.
 
 ## Step 1 — Find what moved
 
-If a change set is in play (a release-train run, or a recent commit), start from it:
+If a change set is in play (unpushed commits, or uncommitted work), start from it:
 
 ```bash
 git diff origin/main...HEAD --stat -- dev/scripts src
@@ -49,11 +49,10 @@ long before this batch. `docs/plans/` is never touched, whatever a sweep here tu
 ([`../../rules/plan-documents.md`](../../rules/plan-documents.md)), and the other `/docs` pages —
 the subject maps — belong to `docs-and-tests-sync`, not here.
 
-`.claude/writing-style.md` sits outside the skills tree because two skills share it: `devlog-post`
-and `distribution-push` both write public copy against it. Audit it like any other file here, and
-treat a style rule that has migrated into one of those skills as drift to reverse — rules about
-*how* to write belong in the shared file, rules about what a particular piece must contain belong
-in the skill that owns it.
+`.claude/writing-style.md` is the house style that `distribution-push` writes public copy against.
+Audit it like any other file here, and treat a style rule that has migrated into that skill as drift
+to reverse — rules about *how* to write belong in the style page, rules about what a particular
+piece must contain belong in the skill that owns it.
 
 `.claude/rules/` holds the project invariants that CLAUDE.md states in short and delegates the
 reasoning for — room generation, the license files, plan documents. They are instructions like any
@@ -112,8 +111,7 @@ Fix what is broken, and close the gaps that are yours to close: the scripts unde
 the guideline pages are edited here. A gap that can only be closed inside `src/` — an automation
 bridge with no method for the new thing, a missing dev-only parameter — is a finding to report and,
 when the user asks for it, a change made with the file-editing tools like any other source change
-([`../../rules/source-edits.md`](../../rules/source-edits.md)). Inside a release-train run, `src/`
-is out of bounds entirely and the gap is reported, not closed.
+([`../../rules/source-edits.md`](../../rules/source-edits.md)).
 
 Where a claim can no longer be verified either way, say so in the report rather than deleting it.
 
@@ -177,7 +175,7 @@ instruction to read **several and imitate the pattern running through them**, no
 recent one.
 
 Length costs attention on every invocation. When a section is long and needed only sometimes, move it
-to `reference/` and link it — that is what the `devlog-post` skill's `reference/` files are for.
+to `reference/` and link it — that is what the `distribution-push` skill's `reference/` files are for.
 
 ## Step 4 — Check the frontmatter
 

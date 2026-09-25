@@ -49,11 +49,13 @@ error_page 502 503 504 /error/deploying.html;
 | Workflow | Purpose |
 |---|---|
 | `deploy-staging.yml` | build and deploy to staging on push to `main` |
+| `e2e-tests.yml` | run the E2E suite against staging after each staging deploy |
+| `static.yml` | publish the static site to GitHub Pages on push to `main` |
 | `promote-live.yml` | promote staging bundles to live |
 | `rollback-live.yml` | restore the previous live backup |
 | `restart-live.yml` / `restart-staging.yml` | restart in place without building |
 
-Workflows share a concurrency group per app, so they queue rather than interleave.
+Workflows share a concurrency group per app, so they queue rather than interleave. No workflow ships the Nginx config: a change to `dev/config/nginx_*.txt` needs `npm run nginx:update` by hand.
 
 ### Client bundles on disk
 Nginx serves the client straight off disk, never through Node.js. The build emits an entry bundle

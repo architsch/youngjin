@@ -192,8 +192,7 @@ post, it becomes a **repeatable** channel — a new post is a new reason to retu
 - **But they are not worthless.** They cost nothing, the dev-log posts are already written for them,
   they compound slowly with people who know the user, and they are the one channel that carries
   every release rather than one link once.
-- **Mechanics:** The user pastes a dev-log post's text and attaches its screenshots by hand. The
-  `devlog-post` skill's character budget exists for this.
+- **Mechanics:** The user pastes a dev-log post's text and attaches its screenshots by hand.
 - **Rules and gotchas:** Treat these as the baseline the other venues are measured against, never as
   the push itself. A run that reports "posted to LinkedIn" as its distribution work has not done
   any.

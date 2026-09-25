@@ -11,15 +11,12 @@ That single fact decides most of what follows: the natural unit of distribution 
 somebody clicks**, and venues are worth what they are worth according to how well they carry one.
 
 This skill covers both halves of that work — finding the venues and actually placing the app in them.
-It does not write the promotional content itself. `devlog-post` does that, and the division holds
-throughout: **`devlog-post` makes the material, `distribution-push` places it.** When a run needs a
-post that does not exist yet, say so and let the user invoke that skill; do not write a second,
-divergent description of the same feature here.
+It does not write dev-log posts. When a run needs a post that does not exist yet, say so and leave
+it to the user.
 
 What this skill does write is the copy each venue asks for — a title, a one-liner, a body at that
 venue's length. That copy obeys the same house style as everything else published in the user's
-name: [`../../writing-style.md`](../../writing-style.md), read before drafting. One style guide
-serves both skills, so neither invents its own register.
+name: [`../../writing-style.md`](../../writing-style.md), read before drafting.
 
 Those posts are not only a source of copy. **A published dev-log page is itself something worth
 linking to**, and for a good number of venues it is the better thing to link to — see below.

@@ -3,10 +3,9 @@
 The one style guide for everything this project publishes in the user's name to people outside it:
 dev-log posts, submission copy for a venue, a store description, a forum body, a directory entry.
 
-It is shared on purpose. Two skills write this kind of text — [`devlog-post`](skills/devlog-post/SKILL.md)
-and [`distribution-push`](skills/distribution-push/SKILL.md) — and a house style that exists in two
-copies becomes two house styles within a few revisions. **Rules about how to write live here. Rules
-about what a particular piece must contain live in the skill that owns it.**
+[`distribution-push`](skills/distribution-push/SKILL.md) writes against it, and so does anything
+else drafted in the user's name. **Rules about how to write live here. Rules about what a particular
+piece must contain live in the skill that owns it.**
 
 A skill may add rules on top of this page, and may name an explicit exception for a venue whose
 audience is unusual. It may not quietly write in a different register.
