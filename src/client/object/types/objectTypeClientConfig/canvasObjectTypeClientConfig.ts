@@ -10,6 +10,7 @@ const CanvasObjectTypeClientConfig: ObjectTypeClientConfig =
     selection: {
         canBeSelectedByUserInEditMode: (_gameObject, _user, _room) => true,
         editOptions: CanvasEditOptions,
+        editPanels: ["compositionThumbnail"],
     },
 };
 

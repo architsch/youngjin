@@ -13,7 +13,7 @@ export default function CompositionThumbnailPanel({ id, objectType, currentCompo
     const cellSize = CompositionThumbnailUtil.getCellSize();
     const atlasURL = `${App.getEnv().assets_url}/${CompositionThumbnailUtil.getAtlasPath(objectType)}`;
 
-    return <ScrollPanel id={id} onClose={onClose} additionalClassNames="m-2">
+    return <ScrollPanel id={id} onClose={onClose} overhang={true} additionalClassNames="m-2">
         {compositionIndices.map((compositionIndex, position) => {
             const cell = CompositionThumbnailUtil.getCell(position);
             const choosable = canChoose?.(compositionIndex) ?? true;
@@ -31,10 +31,15 @@ export default function CompositionThumbnailPanel({ id, objectType, currentCompo
                 highlight={compositionIndex === currentCompositionIndex}
                 autoScrollToHighlight={true}
                 // The margin leaves room for the highlight outline inside the scrolling row.
-                additionalClassNames={`w-16 m-1.5 shrink-0 rounded-md ${choosable ? "cursor-pointer" : ""}`}
+                additionalClassNames={`relative w-16 m-1.5 shrink-0 rounded-md ${choosable ? "cursor-pointer" : ""}`}
                 disabled={!choosable}
                 onClick={() => onChoose(compositionIndex)}
-            />;
+            >
+                {/* Straddles the panel's top edge, clear of the highlight outline and within ScrollPanel's overhang. */}
+                <span className="absolute -top-4 right-0 size-5 flex items-center justify-center rounded-full bg-gray-900 text-[12px] leading-none text-gray-300 pointer-events-none select-none">
+                    {position + 1}
+                </span>
+            </AtlasCellSprite>;
         })}
     </ScrollPanel>;
 }

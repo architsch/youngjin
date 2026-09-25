@@ -63,6 +63,8 @@ const FRAGMENT_PARS_GLSL = `
     const float WOOD_FIGURE_CONTRAST = 0.40;
     const vec3 WOOD_PATINA_TINT = vec3(0.94, 0.86, 0.72);
     const float WOOD_SATURATION = 0.42;
+    // Overall albedo scale (1.0 = as aged; the patina tint alone darkens by about 13%).
+    const float WOOD_BRIGHTNESS = 1.2;
 
     // The ring coordinate is warped instead of simulating a saw cut through a log. The arch field is
     // steep enough to fold the coordinate (closed loops = flatsawn arches) and is stretched along the
@@ -210,7 +212,7 @@ const COLOR_FRAGMENT_GLSL = `
     float woodColorEdge = max(fwidth(woodBandCoord), 0.0005);
     vec3 woodTimber = woodAge(mix(vWoodMoulding.rgb, diffuseColor.rgb,
         smoothstep(1.0 - 0.5 * woodColorEdge, 1.0 + 0.5 * woodColorEdge, woodBandCoord)));
-    diffuseColor.rgb = woodTimber * woodFigure
+    diffuseColor.rgb = WOOD_BRIGHTNESS * woodTimber * woodFigure
         * max(1.0 + woodCarve, WOOD_MIN_CARVE_SHADE);
 `;
 

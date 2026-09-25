@@ -5,8 +5,13 @@ import { InstancedMeshCompositionParams } from "../../../shared/graphics/mesh/co
 import InstancedMeshCompositionPart from "../../../shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
 import MaterialParamsMap from "../../../shared/graphics/material/maps/materialParamsMap";
 import InstancedMeshIdMap from "../../../shared/graphics/mesh/maps/instancedMeshIdMap";
+import CompositionThumbnailUtil from "../../../shared/graphics/mesh/composition/util/compositionThumbnailUtil";
+import HeadLightUtil from "../../../shared/graphics/light/util/headLightUtil";
+import RoomPrefsUtil from "../../../shared/room/util/roomPrefsUtil";
+import ColorUtil from "../../../shared/math/util/colorUtil";
 import StringUtil from "../../../shared/math/util/stringUtil";
-import { INSTANCE_COLORED_MATERIAL_IDS, INSTANCED_WOOD_MATERIAL_ID, UNIT_VEC3 } from "../../../shared/system/sharedConstants";
+import { INSTANCE_COLORED_MATERIAL_IDS, INSTANCED_WOOD_MATERIAL_ID, LIGHT_COLOR_PALETTE_NAME, UNIT_VEC3 }
+    from "../../../shared/system/sharedConstants";
 import GeometryFactory from "../factories/geometryFactory";
 import MaterialFactory from "../factories/materialFactory";
 import InstancedPartUtil from "../util/instancedPartUtil";
@@ -20,9 +25,8 @@ const SUPERSAMPLING = 2;
 // Room left around a composition within its cell.
 const FRAMING_MARGIN = 1.08;
 
-// Roughly an unconfigured room's light, with a key light from behind the viewer in place of the head light.
-const AMBIENT_INTENSITY = 1.3;
-const KEY_LIGHT_INTENSITY = 1.5;
+// Lit as an unconfigured room lights it (see GraphicsManager), so a thumbnail is as bright as the game.
+const unconfiguredPrefs = RoomPrefsUtil.decode("");
 
 const matrixTemp = new THREE.Matrix4();
 const boxTemp = new THREE.Box3();
@@ -38,13 +42,9 @@ export async function renderCompositionPixels(encodedCompositions: string[], cel
     const activeRenderer = getRenderer(size);
 
     const scene = new THREE.Scene();
-    scene.add(new THREE.AmbientLight(0xffffff, AMBIENT_INTENSITY));
     const yaw = THREE.MathUtils.degToRad(view.yawDeg);
     const pitch = THREE.MathUtils.degToRad(view.pitchDeg);
     const viewDir = new THREE.Vector3(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
-    const keyLight = new THREE.DirectionalLight(0xffffff, KEY_LIGHT_INTENSITY);
-    keyLight.position.copy(viewDir).add(new THREE.Vector3(-0.3, 0.4, 0));
-    scene.add(keyLight);
 
     const root = new THREE.Object3D();
     scene.add(root);
@@ -62,6 +62,7 @@ export async function renderCompositionPixels(encodedCompositions: string[], cel
     }
     const camera = new THREE.OrthographicCamera();
     frameBounds(camera, bounds, viewDir);
+    addLights(scene, bounds, viewDir);
 
     const results: Uint8Array[] = [];
     for (const meshes of meshesList)
@@ -199,6 +200,26 @@ function frameBounds(camera: THREE.OrthographicCamera, bounds: THREE.Box3, viewD
     camera.near = radius;
     camera.far = radius * 8;
     camera.updateProjectionMatrix();
+}
+
+// The room's ambient, and its head light where a viewer would stand (see CompositionThumbnailUtil).
+function addLights(scene: THREE.Scene, bounds: THREE.Box3, viewDir: THREE.Vector3): void
+{
+    scene.add(new THREE.AmbientLight(getLightPaletteColor(unconfiguredPrefs.ambientColorIndex),
+        RoomPrefsUtil.getAmbientIntensity(unconfiguredPrefs)));
+
+    const headLight = new THREE.PointLight(getLightPaletteColor(unconfiguredPrefs.headLightColorIndex),
+        HeadLightUtil.getIntensity(unconfiguredPrefs.headLightPowerStep),
+        HeadLightUtil.getDistance(unconfiguredPrefs.headLightRangeStep),
+        HeadLightUtil.getDecay(unconfiguredPrefs.headLightRangeStep));
+    headLight.position.copy(bounds.getCenter(new THREE.Vector3()))
+        .addScaledVector(viewDir, CompositionThumbnailUtil.getHeadLightDistance());
+    scene.add(headLight);
+}
+
+function getLightPaletteColor(index: number): THREE.Color
+{
+    return new THREE.Color(ColorUtil.rgbToHex(ColorUtil.paletteIndexToRGB(LIGHT_COLOR_PALETTE_NAME, index)));
 }
 
 function toBase64(bytes: Uint8Array): string

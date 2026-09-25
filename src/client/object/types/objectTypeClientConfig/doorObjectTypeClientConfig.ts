@@ -12,6 +12,7 @@ const DoorObjectTypeClientConfig: ObjectTypeClientConfig =
         canBeSelectedByUserInEditMode: (_gameObject, user, room) =>
             RoomValidationUtil.isRoomSuperuser(user, room),
         editOptions: DoorEditOptions,
+        editPanels: ["labelText", "compositionThumbnail"],
     },
 };
 

@@ -1,4 +1,4 @@
-import { RefObject, useEffect, useRef } from "react";
+import { ReactNode, RefObject, useEffect, useRef } from "react";
 
 export default function AtlasCellSprite(props: {
         id?: string,
@@ -12,6 +12,8 @@ export default function AtlasCellSprite(props: {
         // Shown dimmed and not clickable.
         disabled?: boolean,
         onClick?: () => void | Promise<void>,
+        // Drawn over the cell (e.g. a badge).
+        children?: ReactNode,
     })
 {
     const numCols = Math.floor(props.atlasWidth / props.atlasCellWidth);
@@ -44,5 +46,5 @@ export default function AtlasCellSprite(props: {
         backgroundImage: `url(${props.atlasImageURL})`,
         backgroundSize: `${100 * numCols}% ${100 * numRows}%`,
         backgroundPosition: `-${100 * props.atlasCellCol}% -${100 * displayRow}%`,
-    }} className={`${props.additionalClassNames} ${highlightClasses} ${disabledClasses}`}></div>;
+    }} className={`${props.additionalClassNames} ${highlightClasses} ${disabledClasses}`}>{props.children}</div>;
 }

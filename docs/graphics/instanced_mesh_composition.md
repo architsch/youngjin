@@ -51,10 +51,11 @@ Metadata is stored and sent once per object, so a spelled-out composition is exp
 ## Thumbnails
 `CompositionThumbnailBuilder` runs during SSG and draws every type's entries into one atlas per type (`CompositionThumbnailUtil`), which choosers display cell by cell.
 - It renders in headless Chromium with the game's own geometry and materials, through the same part-placement code as the game (`InstancedPartUtil`). Each type may set its camera angle in its composer config (isometric otherwise).
+- It lights them as an unconfigured room does: the room's default ambient and head light, with the head light a set viewing distance away (`CompositionThumbnailUtil`), so a thumbnail is as bright as the object seen from there in the game.
 - A type's entries share one framing, so entries of different sizes keep their proportions (a lamp's sizes read at a glance).
 - `CompositionThumbnailPanel` shows a type's atlas as a chooser (a lamp's sizes, a door's finishes, a framed panel's frames); an entry its caller refuses (a lamp size that doesn't fit where it stands) is dimmed and can't be picked.
 - SwiftShader (CPU) rendering makes the output identical on every machine, so a committed atlas changes only when the look does.
-- In dev, a type whose entries are unchanged is skipped; a standalone SSG run always redraws, which is how shader changes reach the atlases.
+- In dev, a type whose entries, view and head light distance are unchanged is skipped; a standalone SSG run always redraws, which is how shader changes reach the atlases.
 
 ## Hiding instances
 All instances of a mesh share one draw call, so a single instance is hidden by **parking it far outside the room**. Returned instances are parked the same way. Another system, such as the orbit occlusion hider, can temporarily hide an instance: `InstancedMeshBinding` buffers the owner's transforms while it is hidden and applies the latest one when it is shown again. Returning a hidden instance clears its hidden state.

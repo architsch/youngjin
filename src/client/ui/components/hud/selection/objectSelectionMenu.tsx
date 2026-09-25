@@ -2,20 +2,21 @@ import { useEffect, useState } from "react";
 import { objectSelectionObservable } from "../../../../system/clientObservables";
 import ObjectSelection from "../../../../graphics/types/gizmo/objectSelection";
 import ObjectTypeClientConfigMap from "../../../../object/maps/objectTypeClientConfigMap";
+import { EditPanel } from "../../../types/editPanel";
 
 // Raises the tool panel declared by the selected object's type (see ObjectTypeClientConfig).
 export default function ObjectSelectionMenu({ inEditMode }: Props)
 {
     // Read the selection on mount (it may have changed while hidden behind room settings, see
     // UIRoot), in the initial state so tools appear without a one-frame delay.
-    const [state, setState] = useState<{selection: ObjectSelection | null, openPanel: string | null}>(
+    const [state, setState] = useState<{selection: ObjectSelection | null, openPanel: EditPanel | null}>(
         () => ({selection: objectSelectionObservable.peek(), openPanel: null}));
 
     useEffect(() => {
         objectSelectionObservable.addListener("ui.objectSelection", selection => setState(prev => ({
             selection,
-            // Moving to another object of the same type keeps its sub-panel open; any other change closes it.
-            openPanel: isSameObjectType(prev.selection, selection) ? prev.openPanel : null,
+            // Moving to an object whose tools offer the same sub-panel keeps it open; any other change closes it.
+            openPanel: offersPanel(selection, prev.openPanel) ? prev.openPanel : null,
         })));
         return () => {
             objectSelectionObservable.removeListener("ui.objectSelection");
@@ -41,10 +42,13 @@ export default function ObjectSelectionMenu({ inEditMode }: Props)
     </div>;
 }
 
-function isSameObjectType(a: ObjectSelection | null, b: ObjectSelection | null): boolean
+function offersPanel(selection: ObjectSelection | null, panel: EditPanel | null): boolean
 {
-    return a != null && b != null &&
-        a.gameObject.params.objectTypeIndex == b.gameObject.params.objectTypeIndex;
+    if (!selection || !panel)
+        return false;
+    const editPanels = ObjectTypeClientConfigMap.getConfigByIndex(
+        selection.gameObject.params.objectTypeIndex).selection?.editPanels;
+    return editPanels != undefined && editPanels.includes(panel);
 }
 
 interface Props

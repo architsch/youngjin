@@ -99,7 +99,7 @@ export default class CompositionThumbnailBuilder
             .map(index => this.compositions.encodedStrings[index]);
         return crypto.createHash("sha256")
             .update(JSON.stringify({encodedCompositions, cellSize: CompositionThumbnailUtil.getCellSize(),
-                view: getView(objectType)}))
+                view: getView(objectType), headLightDistance: CompositionThumbnailUtil.getHeadLightDistance()}))
             .digest("hex");
     }
 }

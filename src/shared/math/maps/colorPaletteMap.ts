@@ -29,7 +29,7 @@ export const ColorPaletteMap: {[colorPaletteName: ColorPaletteName]: string[]} =
 {
     // The player's tin-toy colors.
     "Player": [...FULL_SPECTRUM_COLORS],
-    // Joinery (doors, canvas frames, furniture): timber, joinery paints, metal and bone. Kept mid-brightness because the
+    // Joinery (doors, canvas frames, furniture): timber, joinery paints, metal and bone. Mostly mid-brightness because the
     // moulded-timber material ages colors (see @docs/geometry/door_design.md). The vivid bands appended
     // later compensate for that aging, which would otherwise make muted colors read as uniform brown.
     "Timber": [
@@ -63,6 +63,8 @@ export const ColorPaletteMap: {[colorPaletteName: ColorPaletteName]: string[]} =
         "#c8102e", "#6b2233", "#c05621", "#d4a017", // pillar box, oxblood, burnt orange, mustard
         "#6b7f2e", "#1f4a2c", "#3f8f7a", "#1f7a7a", // olive, racing green, verdigris, teal
         "#1b4fa0", "#1c3b57", "#7a3b62", "#4a2545", // cobalt, prussian, plum, aubergine
+        // Neutrals, black to white, around the metal greys above.
+        "#000000", "#1a1a1a", "#333333", "#4d4d4d", "#b3b3b3", "#cccccc", "#e6e6e6", "#ffffff",
     ],
     // Label ink (see LabelText): the full spectrum, so it can contrast with any plate color.
     "LabelColor": [...FULL_SPECTRUM_COLORS],

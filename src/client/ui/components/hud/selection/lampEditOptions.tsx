@@ -22,8 +22,6 @@ import EditOptionsProps from "../../../types/editOptionsProps";
 const INTENSITY_LABELS = getLabels(MIN_LAMP_INTENSITY, MAX_LAMP_INTENSITY);
 const RANGE_LABELS = getLabels(MIN_LAMP_RANGE, MAX_LAMP_RANGE);
 
-const SIZE_PANEL = "size";
-
 // Lamp tools: remove, resize (to one of its sizes, where it stands), or change its light (one stored setting
 // that also colors the glow; intensity and range are separate dials, see LampLightUtil). The size list
 // stacks above this row.
@@ -47,7 +45,7 @@ export default function LampEditOptions(props: EditOptionsProps)
 
     // Recomputed each render; zone changes and resizes re-announce the selection (see ClientVoxelManager).
     const canEdit = canEditLamp(props.selection);
-    const choosingSize = props.openPanel == SIZE_PANEL;
+    const choosingSize = props.openPanel == "compositionThumbnail";
 
     // Full width, so the rows can scroll horizontally instead of growing.
     return <div className="flex flex-col gap-1 w-full">
@@ -67,7 +65,7 @@ export default function LampEditOptions(props: EditOptionsProps)
             <IconButton id="changeLampSizeButton" icon={<ResizeIcon/>} size="md"
                 disabled={!canEdit}
                 highlight={choosingSize && canEdit}
-                onClick={() => props.setOpenPanel(choosingSize ? null : SIZE_PANEL)}
+                onClick={() => props.setOpenPanel(choosingSize ? null : "compositionThumbnail")}
             />
             <div className="flex flex-row items-center gap-1 shrink-0">
                 <Text content="Color" size="sm" additionalClassNames="shrink-0"/>

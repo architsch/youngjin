@@ -13,8 +13,6 @@ import CanvasObjectTypeConfig from "../../../../../shared/object/types/objectTyp
 import SelectionToolRow from "./selectionToolRow";
 import EditOptionsProps from "../../../types/editOptionsProps";
 
-const FRAME_PANEL = "frame";
-
 // Canvas tools: remove, image, and frame (one of its looks, the first frameless). The frame list stacks above
 // this row (it belongs to the canvas).
 export default function CanvasEditOptions(props: EditOptionsProps)
@@ -22,7 +20,7 @@ export default function CanvasEditOptions(props: EditOptionsProps)
     const imagePathMetadata = props.selection.gameObject.params.metadata[ObjectMetadataKeyEnumMap.ImagePath];
     const initialImagePath = imagePathMetadata ? imagePathMetadata.str : "";
 
-    const customizingFrame = props.openPanel == FRAME_PANEL;
+    const customizingFrame = props.openPanel == "compositionThumbnail";
 
     // Recomputed each render; zone changes re-announce the selection (see ClientVoxelManager).
     const canEdit = canEditCanvas(props.selection);
@@ -56,7 +54,7 @@ export default function CanvasEditOptions(props: EditOptionsProps)
             <IconButton id="changeCanvasFrameButton" icon={<PictureFrameIcon/>} size="md"
                 disabled={!canEdit}
                 highlight={customizingFrame && canEdit}
-                onClick={() => props.setOpenPanel(customizingFrame ? null : FRAME_PANEL)}
+                onClick={() => props.setOpenPanel(customizingFrame ? null : "compositionThumbnail")}
             />
         </SelectionToolRow>
     </div>;

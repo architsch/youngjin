@@ -16,15 +16,12 @@ import CustomizeLabelTextPanel from "../../panel/customizeLabelTextPanel";
 import SelectionToolRow from "./selectionToolRow";
 import EditOptionsProps from "../../../types/editOptionsProps";
 
-const TEXT_PANEL = "text";
-const APPEARANCE_PANEL = "appearance";
-
 // Superuser tools for a selected door: remove, name, destination, finish, default entrance. The name bar and
 // the finish list stack above this row (they belong to the door), one at a time; the rest open as popups.
 export default function DoorEditOptions(props: EditOptionsProps)
 {
-    const customizingText = props.openPanel == TEXT_PANEL;
-    const customizing = props.openPanel == APPEARANCE_PANEL;
+    const customizingText = props.openPanel == "labelText";
+    const customizing = props.openPanel == "compositionThumbnail";
 
     // Full width, so the rows can scroll horizontally instead of growing.
     return <div className="flex flex-col gap-1 w-full">
@@ -47,7 +44,7 @@ export default function DoorEditOptions(props: EditOptionsProps)
             />
             <IconButton id="changeDoorLabelButton" icon={<TextCursorIcon/>} size="md"
                 highlight={customizingText}
-                onClick={() => props.setOpenPanel(customizingText ? null : TEXT_PANEL)}
+                onClick={() => props.setOpenPanel(customizingText ? null : "labelText")}
             />
             <IconButton id="changeDoorDestinationButton" icon={<DestinationIcon/>} size="md"
                 onClick={() => PopupUtil.openPopup({popupType: "doorDestination", params: {
@@ -63,7 +60,7 @@ export default function DoorEditOptions(props: EditOptionsProps)
             />
             <IconButton id="customizeDoorButton" icon={<PaintBrushIcon/>} size="md"
                 highlight={customizing}
-                onClick={() => props.setOpenPanel(customizing ? null : APPEARANCE_PANEL)}
+                onClick={() => props.setOpenPanel(customizing ? null : "compositionThumbnail")}
             />
             <IconButton id="doorSettingsButton" icon={<GearIcon/>} size="md"
                 onClick={() => PopupUtil.openPopup({popupType: "doorSettings", params: {

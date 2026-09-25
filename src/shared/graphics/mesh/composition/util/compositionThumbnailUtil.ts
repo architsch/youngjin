@@ -8,6 +8,10 @@ const NUM_COLS = 8;
 // For types that don't set their own thumbnail view: a true isometric view.
 const ISOMETRIC_VIEW = {yawDeg: 45, pitchDeg: Math.atan(1 / Math.SQRT2) * 180 / Math.PI};
 
+// World units between a composition and the head light it is drawn under (see compositionThumbnailRenderer.ts).
+// The head light fades with distance, so this sets how bright thumbnails are.
+const HEAD_LIGHT_DISTANCE = 4;
+
 const CompositionThumbnailUtil =
 {
     getCellSize: (): number => CELL_SIZE,
@@ -27,6 +31,7 @@ const CompositionThumbnailUtil =
     {
         return config.components.spawnedByAny?.instancedMeshComposer?.thumbnailView ?? ISOMETRIC_VIEW;
     },
+    getHeadLightDistance: (): number => HEAD_LIGHT_DISTANCE,
 }
 
 export default CompositionThumbnailUtil;

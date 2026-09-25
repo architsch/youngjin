@@ -9,15 +9,12 @@ import LabelObjectTypeConfig from "../../../../../shared/object/types/objectType
 import SelectionToolRow from "./selectionToolRow";
 import EditOptionsProps from "../../../types/editOptionsProps";
 
-const TEXT_PANEL = "text";
-const FRAME_PANEL = "frame";
-
 // Superuser tools for a selected label: remove, text, and frame (one of its looks, the first frameless). The
 // text bar and the frame list stack above this row (they belong to the label), one at a time.
 export default function LabelEditOptions(props: EditOptionsProps)
 {
-    const customizingText = props.openPanel == TEXT_PANEL;
-    const customizingFrame = props.openPanel == FRAME_PANEL;
+    const customizingText = props.openPanel == "labelText";
+    const customizingFrame = props.openPanel == "compositionThumbnail";
 
     // Full width, so the rows can scroll horizontally instead of growing.
     return <div className="flex flex-col gap-1 w-full">
@@ -39,11 +36,11 @@ export default function LabelEditOptions(props: EditOptionsProps)
             />
             <IconButton id="changeLabelTextButton" icon={<TextCursorIcon/>} size="md"
                 highlight={customizingText}
-                onClick={() => props.setOpenPanel(customizingText ? null : TEXT_PANEL)}
+                onClick={() => props.setOpenPanel(customizingText ? null : "labelText")}
             />
             <IconButton id="changeLabelFrameButton" icon={<PictureFrameIcon/>} size="md"
                 highlight={customizingFrame}
-                onClick={() => props.setOpenPanel(customizingFrame ? null : FRAME_PANEL)}
+                onClick={() => props.setOpenPanel(customizingFrame ? null : "compositionThumbnail")}
             />
         </SelectionToolRow>
     </div>;
