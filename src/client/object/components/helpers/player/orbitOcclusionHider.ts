@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import App from "../../../../app";
-import GameObject from "../../../types/gameObject";
+import GameObject from "../../../types/gameObject/gameObject";
 import ClientObjectManager from "../../../clientObjectManager";
 import MeshFactory from "../../../../graphics/factories/meshFactory";
 import CameraUtil from "../../../../graphics/util/cameraUtil";

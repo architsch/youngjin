@@ -5,6 +5,7 @@ import { STATIC_PAGE_ROOT_DIR, SRC_ROOT_DIR } from "../../system/serverConstants
 import ImageMap from "../../../shared/graphics/image/types/imageMap";
 import ImageMapSeed from "../../../shared/graphics/image/types/imageMapSeed";
 import ImageMapSubfolderInfo from "../../../shared/graphics/image/types/imageMapSubfolderInfo";
+import ImageMapSubfolderTab from "../../../shared/graphics/image/types/imageMapSubfolderTab";
 
 const WEBP_QUALITY = 80;
 const ASSETS_ROOT_PATH = `${STATIC_PAGE_ROOT_DIR}/app/assets`;
@@ -20,6 +21,7 @@ export default class ImageMapBuilder
     private readonly maxCols?: number;
     private readonly atlasImageName?: string;
     private readonly thumbnailSize?: number;
+    private readonly preservedScaleCellSize?: number;
 
     constructor(seed: ImageMapSeed)
     {
@@ -31,6 +33,7 @@ export default class ImageMapBuilder
         this.maxCols = seed.maxCols;
         this.atlasImageName = seed.atlasImageName;
         this.thumbnailSize = seed.thumbnailSize;
+        this.preservedScaleCellSize = seed.preservedScaleCellSize;
         if (this.thumbnailSize && this.atlasImageName)
             throw new Error(`Image map generation failed :: An atlas-based map cannot have thumbnails (mapName = ${this.mapName})`);
     }
@@ -38,19 +41,43 @@ export default class ImageMapBuilder
     async build(): Promise<void>
     {
         const manifestJSON = await FileUtil.read("manifest.json", this.imageRootPath);
-        const manifest = JSON.parse(manifestJSON) as {images: {path: string, author: string, title: string}[]};
-        
-        // Collect all images
+        // Other fields an image may carry (its title and author, source and license, for the notices) stay in the
+        // manifest.
+        const manifest = JSON.parse(manifestJSON) as {
+            images: {path: string, author: string, title: string, keywords?: string, preserveScale?: boolean,
+                disabled?: boolean}[],
+            subfolders?: ImageMapSubfolderTab[],
+        };
+
+        // Collect all images but the disabled ones, which are left out of the game while keeping their paths.
         const subfolderInfoByName: {[subfolderName: string]: ImageMapSubfolderInfo} = {};
         for (const image of manifest.images)
         {
-            const subfolderName = image.path.includes("/") ? image.path.split("/")[0] : "";
+            if (image.disabled === true)
+                continue;
+            const subfolderName = ImageMap.getSubfolderName(image.path);
             if (subfolderInfoByName[subfolderName] == undefined)
                 subfolderInfoByName[subfolderName] = {name: subfolderName, imageMetadataList: [], numGridCols: 0, numGridRows: 0};
             const info = subfolderInfoByName[subfolderName];
-            info.imageMetadataList.push({...image, coords: ""}); // 'coords' will be set inside the "buildGrid" method.
+            // 'coords' will be set inside the "buildGrid" method.
+            info.imageMetadataList.push({path: image.path,
+                keywords: normalizeKeywords(image.keywords ?? `${image.title},${image.author}`), coords: "",
+                preserveScale: image.preserveScale === true ? true : undefined});
         }
-        
+        if (Object.keys(subfolderInfoByName).length == 0)
+            throw new Error(`Image map generation failed :: Every image is disabled, and the game needs one (mapName = ${this.mapName})`);
+        // A tab whose images are all disabled is left out of the game with them.
+        const subfolderTabs = manifest.subfolders?.filter(tab => subfolderInfoByName[tab.name] != undefined);
+        if (manifest.subfolders)
+            this.validateSubfolderTabs(manifest.subfolders, manifest.images, subfolderInfoByName);
+
+        // An atlas map's images are cells of one file, not files of their own.
+        if (!this.atlasImageName)
+        {
+            for (const info of Object.values(subfolderInfoByName))
+                await this.readImageSizes(info);
+        }
+
         if (this.hasGrid)
         {
             // Build the grid (or, for an atlas-based map, adopt the pre-composed atlas's grid)
@@ -69,7 +96,46 @@ export default class ImageMapBuilder
                 await this.buildThumbnails(info);
         }
 
-        await this.writeMapFile(subfolderInfoByName);
+        await this.writeMapFile(subfolderInfoByName, subfolderTabs);
+    }
+
+    // Every tab must hold images (disabled or not), and every image must sit in a tab.
+    private validateSubfolderTabs(subfolderTabs: ImageMapSubfolderTab[], images: {path: string}[],
+        subfolderInfoByName: {[subfolderName: string]: ImageMapSubfolderInfo}): void
+    {
+        const tabNames = subfolderTabs.map(tab => tab.name);
+        for (const tabName of tabNames)
+        {
+            if (!images.some(image => ImageMap.getSubfolderName(image.path) == tabName))
+                throw new Error(`Image map generation failed :: Subfolder "${tabName}" is listed in the manifest but holds no images (mapName = ${this.mapName})`);
+        }
+        for (const subfolderName of Object.keys(subfolderInfoByName))
+        {
+            if (!tabNames.includes(subfolderName))
+                throw new Error(`Image map generation failed :: Subfolder "${subfolderName}" holds images but is not listed in the manifest's subfolders (mapName = ${this.mapName})`);
+        }
+    }
+
+    // Every image's size, which an image that keeps its scale must give in whole cells.
+    private async readImageSizes(subfolderInfo: ImageMapSubfolderInfo): Promise<void>
+    {
+        for (const imageMetadata of subfolderInfo.imageMetadataList)
+        {
+            const imageFile = ImageFileUtil.readImage(`${imageMetadata.path}.webp`, this.imageRootPath);
+            const fileMetadata = await imageFile?.metadata();
+            if (!fileMetadata?.width || !fileMetadata?.height)
+                throw new Error(`Image map generation failed :: Failed to read image (${this.imageRootPath}/${imageMetadata.path}.webp)`);
+            imageMetadata.width = fileMetadata.width;
+            imageMetadata.height = fileMetadata.height;
+            if (!imageMetadata.preserveScale)
+                continue;
+
+            const cellSize = this.preservedScaleCellSize;
+            if (cellSize == undefined)
+                throw new Error(`Image map generation failed :: Image "${imageMetadata.path}" keeps its scale, which no image in this map may (mapName = ${this.mapName})`);
+            if (fileMetadata.width % cellSize != 0 || fileMetadata.height % cellSize != 0)
+                throw new Error(`Image map generation failed :: Image "${imageMetadata.path}" keeps its scale, so its size (${fileMetadata.width}x${fileMetadata.height}) must be whole cells of ${cellSize}px (mapName = ${this.mapName})`);
+        }
     }
 
     // Writes a thumbnail beside each image (fit within the thumbnail size; unchanged if already smaller).
@@ -158,37 +224,61 @@ export default class ImageMapBuilder
         await ImageFileUtil.writeImage(`${subfolderInfo.name.length == 0 ? "" : `${subfolderInfo.name}/`}grid.webp`, gridImage, this.imageRootPath);
     }
 
-    private async writeMapFile(subfolderInfoByName: {[subfolderName: string]: ImageMapSubfolderInfo}): Promise<void>
+    private async writeMapFile(subfolderInfoByName: {[subfolderName: string]: ImageMapSubfolderInfo},
+        subfolderTabs?: ImageMapSubfolderTab[]): Promise<void>
     {
         const subfolderInfos = Object.values(subfolderInfoByName);
 
         const imageMetadataEntries =
             subfolderInfos.map(info =>
                 info.imageMetadataList.map(image =>
-                    `{path:"${image.path}",author:"${image.author}",title:"${image.title}"${image.coords ? `,coords:"${image.coords}"` : ""}}`)).flat().join(",");
+                    `{path:"${image.path}"`
+                    + (image.keywords ? `,keywords:${JSON.stringify(image.keywords)}` : "")
+                    + (image.coords ? `,coords:"${image.coords}"` : "")
+                    + (image.width ? `,width:${image.width},height:${image.height}` : "")
+                    + (image.preserveScale ? ",preserveScale:true" : "")
+                    + "}")).flat().join(",");
 
         const subfolderGridSizesEntries =
             subfolderInfos.map(info =>
                 `"${info.name}":{numCols:${info.numGridCols},numRows:${info.numGridRows}}`).join(",");
 
         // The constructor's optional trailing arguments, written out only as far as the last one given.
-        const atlasImageNameArg = this.atlasImageName ? `"${this.atlasImageName}"` : "undefined";
-        const optionalArgs = this.thumbnailSize ? `, ${atlasImageNameArg}, ${this.thumbnailSize}`
-            : this.atlasImageName ? `, ${atlasImageNameArg}` : "";
+        const optionalArgs: (string | undefined)[] = [
+            this.atlasImageName ? `"${this.atlasImageName}"` : undefined,
+            this.thumbnailSize ? `${this.thumbnailSize}` : undefined,
+            subfolderTabs ? "subfolderTabs" : undefined,
+        ];
+        while (optionalArgs.length > 0 && optionalArgs[optionalArgs.length - 1] == undefined)
+            optionalArgs.pop();
+        const optionalArgsText = optionalArgs.map(arg => `, ${arg ?? "undefined"}`).join("");
+
+        const subfolderTabsImport = subfolderTabs
+            ? `\nimport ImageMapSubfolderTab from "../types/imageMapSubfolderTab";` : "";
+        const subfolderTabsDeclaration = subfolderTabs
+            ? `\nconst subfolderTabs: ImageMapSubfolderTab[] = [${subfolderTabs.map(tab =>
+                `{name:"${tab.name}",title:"${tab.title}"}`).join(",")}]` : "";
 
         // NOTE: import paths below are relative to the generated file (MAPS_ROOT_PATH). Don't let IDE
         // refactors rewrite them.
         const text = `// THIS FILE IS AUTO-GENERATED BY ImageMapBuilder. DO NOT EDIT MANUALLY.
 import ImageMapUtil from "../util/imageMapUtil";
 import ImageMap from "../types/imageMap";
-import ImageMetadata from "../types/imageMetadata";
+import ImageMetadata from "../types/imageMetadata";${subfolderTabsImport}
 
 const imageMetadataList: ImageMetadata[] = [${imageMetadataEntries}]
-const subfolderGridSizes: {[subfolder: string]: {numCols: number, numRows: number}} = {${subfolderGridSizesEntries}}
+const subfolderGridSizes: {[subfolder: string]: {numCols: number, numRows: number}} = {${subfolderGridSizesEntries}}${subfolderTabsDeclaration}
 
-ImageMapUtil.setImageMap("${this.mapName}", new ImageMap("${this.rootDirName}", ${this.gridCellSize ?? "0"}, subfolderGridSizes, imageMetadataList${optionalArgs}));
+ImageMapUtil.setImageMap("${this.mapName}", new ImageMap("${this.rootDirName}", ${this.gridCellSize ?? "0"}, subfolderGridSizes, imageMetadataList${optionalArgsText}));
 `;
         const mapNameCamelCased = this.mapName[0].toLowerCase() + this.mapName.substring(1);
         await FileUtil.write(`${mapNameCamelCased}.ts`, text, MAPS_ROOT_PATH);
     }
+}
+
+// As ImageMetadata.keywords holds them: trimmed, lowercase, each once, joined by bare commas.
+function normalizeKeywords(keywords: string): string
+{
+    const words = keywords.split(",").map(word => word.trim().replace(/\s+/g, " ").toLowerCase());
+    return [...new Set(words.filter(word => word.length > 0))].join(",");
 }

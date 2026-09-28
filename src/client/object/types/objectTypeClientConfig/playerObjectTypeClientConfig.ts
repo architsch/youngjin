@@ -1,7 +1,7 @@
 import AddObjectSignal from "../../../../shared/object/types/addObjectSignal";
 import CustomizePlayerPanel from "../../../ui/components/panel/customizePlayerPanel";
 import ObjectTypeClientConfigMap from "../../maps/objectTypeClientConfigMap";
-import PlayerGameObject from "../playerGameObject";
+import PlayerGameObject from "../gameObject/playerGameObject";
 import ObjectTypeClientConfig from "./objectTypeClientConfig";
 
 const PlayerObjectTypeClientConfig: ObjectTypeClientConfig =

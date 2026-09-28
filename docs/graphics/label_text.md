@@ -1,6 +1,6 @@
 # Label Text
 
-Reference: @src/client/object/components/labelText.ts , @src/client/graphics/types/textureAtlasAllocator.ts , @src/client/object/util/labelTextLayoutUtil.ts , @src/client/graphics/util/fontMetricsUtil.ts , @src/shared/object/util/labelTextUtil.ts , @src/shared/object/types/objectTypeConfig/labelObjectTypeConfig.ts
+Reference: @src/client/object/components/labelText.ts , @src/client/graphics/types/texture/textureAtlas.ts , @src/client/graphics/util/textureAtlasLayoutUtil.ts , @src/client/object/util/labelTextLayoutUtil.ts , @src/client/graphics/util/fontMetricsUtil.ts , @src/shared/object/util/labelTextUtil.ts , @src/shared/object/types/objectTypeConfig/labelObjectTypeConfig.ts
 
 `LabelText` draws an object's `Label` metadata onto a patch of the object in the scene (not an HTML overlay), so walls occlude it. A door carries one on its plate; a `Label` object is a sign on a wall: text on a plaque, or straight on the wall without a frame.
 
@@ -11,7 +11,7 @@ Reference: @src/client/object/components/labelText.ts , @src/client/graphics/typ
 
 ## Atlas
 - Every label in a room shares one single-channel atlas and one instanced mesh (one draw call); each label's ink is its instance color.
-- A label holds a region of whole cells sized to its patch. A cell covers a fixed patch of world space, so text has the same density at any label size, and a font size means the same on every label.
+- Labels share `TextureAtlas` and its layout with pictures (see [texture.md](../geometry/texture.md)); a label is its own key, holding a region of whole cells sized to its patch. A cell covers a fixed patch of world space, so text has the same density at any label size, and a font size means the same on every label.
 - `TextureAtlasAllocator` hands regions out with contact-point packing: each goes where its border touches the most taken cells and atlas edges, so regions settle into flush blocks instead of leaving slivers.
 - Only a resize that changes a label's size in cells reallocates. Text, font, ink and frame edits redraw in place.
 - When fragmentation still leaves no room, every label is packed again from scratch, largest first, and redrawn. The room caps of the categories that carry labels (`ObjectCategoryConfigMap`) are chosen so that this always succeeds, even with every label at its largest (tested).

@@ -39,7 +39,7 @@ const LabelObjectTypeConfig =
         scaleStep: {x: 0.5, y: 0.5, z: 0},
         minScale: {x: 0.5, y: 0.5, z: 1},
         maxScale: {x: 3.5, y: 3.5, z: 1},
-        defaultScale: {x: 1, y: 1, z: 1},
+        getDefaultScale: () => ({x: 1, y: 1, z: 1}),
     },
     attachment: {
         allowedDirections: WALL_DIRECTIONS,

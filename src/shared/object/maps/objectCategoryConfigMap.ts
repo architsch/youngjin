@@ -10,9 +10,10 @@ const configByCategory: {[category: string]: ObjectCategoryConfig} =
     // Sizes the mesh instance pools (see InstancedMeshCapacityBuilder); also the room balancer's cap
     // (see RoomPickerUtil).
     [ObjectCategoryEnumMap.Player]: {maxCountPerRoom: 64},
-    // One cell of the room's shared canvas render target per canvas, which is an 8x8 grid of them (see
-    // CanvasObjectTypeConfig).
-    [ObjectCategoryEnumMap.Canvas]: {maxCountPerRoom: 64},
+    // Canvases and props together: enough to build shelves, aisles and machine fronts out of many images, and no
+    // more than the picture atlas they share always shows, each image drawn smaller if need be (see
+    // PictureGameObject). Also sizes the mesh instance pools (see InstancedMeshCapacityBuilder).
+    [ObjectCategoryEnumMap.Picture]: {maxCountPerRoom: 256},
     // Sizes the shared mesh instance pools (see InstancedMeshCapacityBuilder).
     [ObjectCategoryEnumMap.Door]: {maxCountPerRoom: 16},
     // Bounded by the mesh pool, propagation cost, clutter and stored size (the block map itself doesn't

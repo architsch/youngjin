@@ -4,6 +4,7 @@ import IconButton from "../../input/iconButton";
 import TrashIcon from "../../../svg/icons/trashIcon";
 import AddBlockIcon from "../../../svg/icons/addBlockIcon";
 import AddCanvasIcon from "../../../svg/icons/addCanvasIcon";
+import AddPropIcon from "../../../svg/icons/addPropIcon";
 import AddDoorIcon from "../../../svg/icons/addDoorIcon";
 import AddLampIcon from "../../../svg/icons/addLampIcon";
 import AddLabelIcon from "../../../svg/icons/addLabelIcon";
@@ -25,11 +26,14 @@ import ObjectSelection from "../../../../graphics/types/gizmo/objectSelection";
 import Vec3 from "../../../../../shared/math/types/vec3";
 import ErrorUtil from "../../../../../shared/system/util/errorUtil";
 import ImageMapUtil from "../../../../../shared/graphics/image/util/imageMapUtil";
+import ImageMetadata from "../../../../../shared/graphics/image/types/imageMetadata";
 import ClientVoxelManager from "../../../../voxel/clientVoxelManager";
 import VoxelUpdateUtil from "../../../../../shared/voxel/util/voxelUpdateUtil";
 import RemoveVoxelBlockSignal from "../../../../../shared/voxel/types/update/removeVoxelBlockSignal";
 import DoorObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
-import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS, STOREY_FLOOR_COLLISION_LAYER, UNIT_VEC3 } from "../../../../../shared/system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, DIR_VEC_BY_NAME, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS, STOREY_FLOOR_COLLISION_LAYER, UNIT_VEC3 } from "../../../../../shared/system/sharedConstants";
+import QuarterTurnsUtil from "../../../../../shared/object/util/quarterTurnsUtil";
+import PointerCoordUtil from "../../../../graphics/util/pointerCoordUtil";
 import AddVoxelBlockSignal from "../../../../../shared/voxel/types/update/addVoxelBlockSignal";
 import ObjectIdUtil from "../../../../../shared/object/util/objectIdUtil";
 import { clientFeatureFlagsObservable, notificationMessageObservable, voxelQuadSelectionObservable } from "../../../../system/clientObservables";
@@ -41,9 +45,14 @@ import NumUtil from "../../../../../shared/math/util/numUtil";
 import RoomValidationUtil from "../../../../../shared/room/util/roomValidationUtil";
 import { DoorTypeEnumMap } from "../../../../../shared/object/types/doorType";
 import LampObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/lampObjectTypeConfig";
+import CanvasObjectTypeConfig, { CANVAS_IMAGE_SUBFOLDER } from "../../../../../shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
+import PropObjectTypeConfig, { PROP_IMAGE_SUBFOLDER } from "../../../../../shared/object/types/objectTypeConfig/propObjectTypeConfig";
 import SelectionToolRow from "./selectionToolRow";
+import { ObjectMetadata } from "../../../../../shared/object/types/objectMetadata";
+import RandomNumberGenerator from "../../../../../shared/math/types/randomNumberGenerator";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
+const propTypeIndex = ObjectTypeConfigMap.getIndexByType("Prop");
 const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
 const labelTypeIndex = ObjectTypeConfigMap.getIndexByType("Label");
@@ -72,7 +81,10 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
         };
     }, []);
 
-    const canAddCanvas = getPlaceableAttachedObjectTransform(props.selection, canvasTypeIndex) !== null;
+    const canAddCanvas = getImages(CANVAS_IMAGE_SUBFOLDER).length > 0
+        && getPlaceableAttachedObjectTransform(props.selection, canvasTypeIndex) !== null;
+    const canAddProp = getPropImageScales(getUprightQuarterTurns(props.selection)).some(scale =>
+        getPlaceableAttachedObjectTransform(props.selection, propTypeIndex, scale) !== null);
 
     // Doors and labels: the room's superuser only (see RoomValidationUtil).
     const room = App.getCurrentRoom();
@@ -94,13 +106,11 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
             onClick={() => tryAddVoxelBlock(props.selection)}/>
         <IconButton id="addCanvasButton" icon={<AddCanvasIcon/>} size="md"
             disabled={!canAddCanvas}
-            onClick={() => {
-                const randomImagePath = ImageMapUtil.getImageMap("CanvasImageMap").getRandomImagePath();
-                // The frame is derived from the new canvas's id (see CanvasObjectTypeConfig).
-                tryAddObjectFromQuad(props.selection, canvasTypeIndex, {
-                    [ObjectMetadataKeyEnumMap.ImagePath]: new EncodableByteString(randomImagePath),
-                });
-            }}
+            onClick={() => tryAddCanvasFromQuad(props.selection)}
+        />
+        <IconButton id="addPropButton" icon={<AddPropIcon/>} size="md"
+            disabled={!canAddProp}
+            onClick={() => tryAddPropFromQuad(props.selection)}
         />
         {isSuperuser && <IconButton id="addDoorButton" icon={<AddDoorIcon/>} size="md"
             disabled={!canAddDoor}
@@ -136,9 +146,10 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
 }
 
 // Placement transform for an object attached to the clicked face, or null if its type can't face that way
-// or nothing on the face near the click takes it (see ObjectAttachmentUtil.findPlacement).
-function getPlaceableAttachedObjectTransform(selection: VoxelQuadSelection,
-    objectTypeIndex: number): ObjectTransform | null
+// or nothing on the face near the click takes it (see ObjectAttachmentUtil.findPlacement). At the scale a new one
+// takes, given the scales that find a placement, unless given one; checked with the metadata it will be added with.
+function getPlaceableAttachedObjectTransform(selection: VoxelQuadSelection, objectTypeIndex: number,
+    scale?: Vec3, metadata: ObjectMetadata = {}): ObjectTransform | null
 {
     if (clientFeatureFlagsObservable.has(FeatureFlag.DisableManualObjectAddition))
         return null;
@@ -148,31 +159,40 @@ function getPlaceableAttachedObjectTransform(selection: VoxelQuadSelection,
         return null;
     const user = App.getUser();
 
-    const voxel = selection.voxel;
-    const quadIndex = selection.quadIndex;
-    const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ } =
-        VoxelQueryUtil.getVoxelQuadTransformDimensions(voxel, quadIndex);
-    const dir: Vec3 = {x: dirX, y: dirY, z: dirZ};
+    const {center, dir} = getClickedFace(selection);
     if (!ObjectAttachmentUtil.allowsFacing(objectTypeIndex, dir))
         return null;
 
     const objectId = ObjectIdUtil.generateRandomObjectId();
     const accepts = (tr: ObjectTransform) => ObjectUpdateUtil.canAddObject(user, room,
-        new AddObjectSignal(room.id, user.id, user.userName, objectTypeIndex, objectId, tr));
-    const center = {x: voxel.col + 0.5 + offsetX, y: offsetY, z: voxel.row + 0.5 + offsetZ};
+        new AddObjectSignal(room.id, user.id, user.userName, objectTypeIndex, objectId, tr, metadata));
 
     // Doors stand on the storey floor, origin half a footprint up (see DoorObjectTypeConfig), rather than
     // wherever there is room near the click.
     if (objectTypeIndex == doorTypeIndex)
     {
-        const doorY = getDoorHeight(quadIndex);
+        const doorY = getDoorHeight(selection.quadIndex);
         if (doorY == undefined)
             return null;
         const tr = new ObjectTransform({...center, y: doorY}, dir, {...UNIT_VEC3});
         return accepts(tr) ? tr : null;
     }
-    return ObjectAttachmentUtil.findPlacement(room, objectTypeIndex, center, dir,
-        ObjectScaleUtil.getDefaultScale(objectTypeIndex), accepts) ?? null;
+    const place = (placedScale: Vec3) => ObjectAttachmentUtil.findPlacement(room, objectTypeIndex, center, dir,
+        placedScale, accepts);
+    return place(scale ?? ObjectScaleUtil.getDefaultScale(objectTypeIndex, fitting => place(fitting) != undefined))
+        ?? null;
+}
+
+// The clicked face's middle, and the way it faces.
+function getClickedFace(selection: VoxelQuadSelection): {center: Vec3, dir: Vec3}
+{
+    const voxel = selection.voxel;
+    const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ } =
+        VoxelQueryUtil.getVoxelQuadTransformDimensions(voxel, selection.quadIndex);
+    return {
+        center: {x: voxel.col + 0.5 + offsetX, y: offsetY, z: voxel.row + 0.5 + offsetZ},
+        dir: {x: dirX, y: dirY, z: dirZ},
+    };
 }
 
 function getDoorHeight(quadIndex: number): number | undefined
@@ -187,19 +207,86 @@ function getDoorHeight(quadIndex: number): number | undefined
     return floorY + 0.5 * DoorObjectTypeConfig.components.spawnedByAny.collider.baseHitboxSize.sizeY;
 }
 
-async function tryAddObjectFromQuad(selection: VoxelQuadSelection,
-    objectTypeIndex: number, metadata: {[key: number]: EncodableByteString})
+async function tryAddObjectFromQuad(selection: VoxelQuadSelection, objectTypeIndex: number,
+    metadata: ObjectMetadata)
+{
+    const tr = getPlaceableAttachedObjectTransform(selection, objectTypeIndex, undefined, metadata);
+    if (tr != null)
+        await addObject(objectTypeIndex, tr, metadata);
+}
+
+// A random painting in a random frame, at the size a new canvas takes where it goes (see CanvasObjectTypeConfig) and
+// upright as the user sees it (on a floor or ceiling too).
+async function tryAddCanvasFromQuad(selection: VoxelQuadSelection)
+{
+    const random = new RandomNumberGenerator();
+    const painting = random.pick(getImages(CANVAS_IMAGE_SUBFOLDER));
+    if (painting == undefined)
+        return;
+    await tryAddObjectFromQuad(selection, canvasTypeIndex, {
+        [ObjectMetadataKeyEnumMap.ImagePath]: new EncodableByteString(painting.path),
+        [ObjectMetadataKeyEnumMap.InstancedMeshComposition]: new EncodableByteString(
+            CanvasObjectTypeConfig.util.getRandomFramedLook(random)),
+        [ObjectMetadataKeyEnumMap.QuarterTurns]: new EncodableByteString(
+            QuarterTurnsUtil.encode(getUprightQuarterTurns(selection))),
+    });
+}
+
+// An everyday object at its image's own size, upright as the user sees it (on a floor or ceiling too): images are
+// tried in random order until one fits near the click.
+async function tryAddPropFromQuad(selection: VoxelQuadSelection)
+{
+    const quarterTurns = getUprightQuarterTurns(selection);
+    const random = new RandomNumberGenerator();
+    for (const image of random.shuffle([...getImages(PROP_IMAGE_SUBFOLDER)]))
+    {
+        const metadata: ObjectMetadata = {
+            [ObjectMetadataKeyEnumMap.ImagePath]: new EncodableByteString(image.path),
+            [ObjectMetadataKeyEnumMap.QuarterTurns]: new EncodableByteString(QuarterTurnsUtil.encode(quarterTurns)),
+        };
+        const tr = getPlaceableAttachedObjectTransform(selection, propTypeIndex,
+            PropObjectTypeConfig.util.getImageScale(image.path, quarterTurns), metadata);
+        if (tr != null)
+            return await addObject(propTypeIndex, tr, metadata);
+    }
+}
+
+// The sizes a prop's images pin it to, turned so, each once: a prop can be added wherever one of them fits.
+function getPropImageScales(quarterTurns: number): Vec3[]
+{
+    const scales = new Map<string, Vec3>();
+    for (const image of getImages(PROP_IMAGE_SUBFOLDER))
+    {
+        const scale = PropObjectTypeConfig.util.getImageScale(image.path, quarterTurns);
+        if (scale != undefined)
+            scales.set(`${scale.x},${scale.y}`, scale);
+    }
+    return [...scales.values()];
+}
+
+// The turn that shows content upright on the clicked face as the user sees it (see
+// QuarterTurnsUtil.pickQuarterTurnsOnScreen).
+function getUprightQuarterTurns(selection: VoxelQuadSelection): number
+{
+    const {center, dir} = getClickedFace(selection);
+    return QuarterTurnsUtil.pickQuarterTurnsOnScreen(center, DIR_VEC_BY_NAME["+y"], center, dir,
+        PointerCoordUtil.projectPoint);
+}
+
+// The picture map's images a canvas (paintings) or a prop (everyday objects) may show.
+function getImages(subfolder: string): ImageMetadata[]
+{
+    return ImageMapUtil.getImageMap("PictureImageMap").getImageMetadataListInSubfolder(subfolder);
+}
+
+async function addObject(objectTypeIndex: number, tr: ObjectTransform, metadata: ObjectMetadata)
 {
     try {
-        const tr = getPlaceableAttachedObjectTransform(selection, objectTypeIndex);
-        if (tr == null)
-            return;
-
         const room = App.getCurrentRoom()!;
         const user = App.getUser();
         const objectId = ObjectIdUtil.generateRandomObjectId();
         const signal = new AddObjectSignal(room.id, user.id, user.userName, objectTypeIndex, objectId, tr, metadata);
-        
+
         // Add the game object locally, and report it to the server if successful.
         const gameObject = ObjectFactory.createServerSideObject(signal);
         const success = await ClientObjectManager.addObject(gameObject);

@@ -24,7 +24,7 @@ import RemoveObjectSignal from "../../../src/shared/object/types/removeObjectSig
 import SetObjectTransformSignal from "../../../src/shared/object/types/setObjectTransformSignal";
 import SetObjectMetadataSignal from "../../../src/shared/object/types/setObjectMetadataSignal";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
-import "../../../src/shared/graphics/image/maps/canvasImageMap";
+import { FIXTURE_PICTURES, useFixturePictures } from "../helpers/pictureFixture";
 import RestrictedZone from "../../../src/shared/voxel/types/restrictedZone";
 import RestrictedZoneUtil from "../../../src/shared/voxel/util/restrictedZoneUtil";
 import SetRestrictedZonesSignal from "../../../src/shared/voxel/types/update/setRestrictedZonesSignal";
@@ -44,8 +44,9 @@ const OUTSIDE = {row: 20, col: 20};
 const LAYER = COLLISION_LAYER_MIN + 2;
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
-// Any authored CanvasImageMap entry passes the canvas rule.
-const CANVAS_IMAGE_PATH = "1/1";
+// Any painting in the picture map passes the canvas rule.
+useFixturePictures();
+const CANVAS_IMAGE_PATH = FIXTURE_PICTURES.painting;
 const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
 
 function makeUser(id: string, userType: number, ownedRoomID: string = ""): User

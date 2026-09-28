@@ -7,8 +7,9 @@ import CompositionMetadataUtil from "../../../shared/graphics/mesh/composition/u
 import PreEncodedCompositionIndexMap from "../../../shared/graphics/mesh/composition/maps/preEncodedCompositionIndexMap";
 import EncodableByteString from "../../../shared/networking/types/encodableByteString";
 import FreeCameraPose from "../../object/components/helpers/player/freeCameraPose";
-import GameObject from "../../object/types/gameObject";
+import GameObject from "../../object/types/gameObject/gameObject";
 import ImageMapUtil from "../../../shared/graphics/image/util/imageMapUtil";
+import ImageMap from "../../../shared/graphics/image/types/imageMap";
 import ObjectFactory from "../../object/factories/objectFactory";
 import ObjectIdUtil from "../../../shared/object/util/objectIdUtil";
 import ObjectMetadataEntryMap from "../../../shared/object/maps/objectMetadataEntryMap";
@@ -24,6 +25,7 @@ import Voxel from "../../../shared/voxel/types/voxel";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import DoorObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import CanvasObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
+import { PROP_IMAGE_SUBFOLDER } from "../../../shared/object/types/objectTypeConfig/propObjectTypeConfig";
 import { PLAYER_HEIGHT } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN,
     FOG_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME, MAX_RESTRICTED_ZONES, MAX_ROOM_Y,
@@ -589,12 +591,14 @@ const AutomationSetupUtil =
                     }));
                 },
 
-                // Available canvas pictures with authors.
+                // Available pictures with the keywords a search finds them by, and the type that shows each
+                // (paintings on a Canvas, everyday objects on a Prop).
                 pictures: () =>
                 {
                     requireSandboxRoom("Listing the pictures");
-                    return ImageMapUtil.getImageMap("CanvasImageMap").getImageMetadataList()
-                        .map(image => ({path: image.path, title: image.title, author: image.author}));
+                    return ImageMapUtil.getImageMap("PictureImageMap").getImageMetadataList()
+                        .map(image => ({path: image.path, keywords: image.keywords ?? "",
+                            type: (ImageMap.getSubfolderName(image.path) == PROP_IMAGE_SUBFOLDER) ? "Prop" : "Canvas"}));
                 },
 
                 // Door finishes as ready-to-spread metadata. Explicit, because seeded random finishes
@@ -615,7 +619,7 @@ const AutomationSetupUtil =
                         CanvasObjectTypeConfig.components.spawnedByAny.instancedMeshComposer.codecVersion);
                 },
 
-                // Attaches a picture, door, lamp or label to a cell face (cell-addressed, like the walls). Spawned
+                // Attaches a canvas, prop, door, lamp or label to a cell face (cell-addressed, like the walls). Spawned
                 // through the normal factory with normal metadata; only the permission check is skipped.
                 addObject: async (spec: {type: string, row: number, col: number,
                     collisionLayer?: number, face?: string, y?: number,
@@ -652,8 +656,13 @@ const AutomationSetupUtil =
                     const user = App.getUser();
                     const objectId = ObjectIdUtil.generateRandomObjectId();
                     const pos = {x: place.x, y, z: place.z};
+                    // At the size its metadata pins it to, if any (a prop), or else the size a new one takes on this spot.
+                    const metadata = metadataFrom(spec.metadata);
+                    const fitsHere = (scale: Vec3) => ObjectAttachmentUtil.canPlaceObject(room, objectId, objectTypeIndex,
+                        new ObjectTransform({...pos}, {...place.dir}, scale));
                     const transform = new ObjectTransform(pos, place.dir,
-                        ObjectScaleUtil.getDefaultScale(objectTypeIndex));
+                        ObjectScaleUtil.getFixedScale(objectTypeIndex, metadata)
+                            ?? ObjectScaleUtil.getDefaultScale(objectTypeIndex, fitsHere));
 
                     // The stricter photo check first, since it gives the more specific error.
                     const colliderState = PhysicsColliderStateUtil.getObjectColliderState(
@@ -682,7 +691,7 @@ const AutomationSetupUtil =
                     }
 
                     const signal = new AddObjectSignal(room.id, user.id, user.userName,
-                        objectTypeIndex, objectId, transform, metadataFrom(spec.metadata));
+                        objectTypeIndex, objectId, transform, metadata);
 
                     const gameObject = ObjectFactory.createServerSideObject(signal);
                     if (!await ClientObjectManager.addObject(gameObject, false))

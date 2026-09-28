@@ -57,7 +57,8 @@
 
 ### `/dev` - Development Configuration
 - **`/config`** - Webpack config files, tsconfig files, Nginx config files
-- **`/scripts`** - Helper scripts (e.g. dev-server with hot-reloading capability, secrets injector)
+- **`/scripts`** - Helper scripts (e.g. dev-server with hot-reloading capability, secrets injector, the composition and image map editors)
+- **`/assets`** - Full-resolution samples the image map editor keeps to remake pictures (what canvases and props show) at another size, the images of disabled entries, and the index of its source library, whose photos are gitignored (third-party photos; never shipped)
 
 ### `/docs` - Documents explaining technical details
 - **`/devOps`** - Local Development, VPS

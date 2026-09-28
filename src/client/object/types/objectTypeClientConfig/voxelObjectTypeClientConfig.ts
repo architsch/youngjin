@@ -1,6 +1,6 @@
 import AddObjectSignal from "../../../../shared/object/types/addObjectSignal";
 import ObjectTypeClientConfigMap from "../../maps/objectTypeClientConfigMap";
-import VoxelGameObject from "../voxelGameObject";
+import VoxelGameObject from "../gameObject/voxelGameObject";
 import ObjectTypeClientConfig from "./objectTypeClientConfig";
 
 // Voxels are never selected as objects: a click selects the face (VoxelQuadSelection), handled in

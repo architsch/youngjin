@@ -2,7 +2,7 @@ import AddObjectSignal from "../../../../shared/object/types/addObjectSignal";
 import RoomValidationUtil from "../../../../shared/room/util/roomValidationUtil";
 import LabelEditOptions from "../../../ui/components/hud/selection/labelEditOptions";
 import ObjectTypeClientConfigMap from "../../maps/objectTypeClientConfigMap";
-import LabelGameObject from "../labelGameObject";
+import LabelGameObject from "../gameObject/labelGameObject";
 import ObjectTypeClientConfig from "./objectTypeClientConfig";
 
 const LabelObjectTypeClientConfig: ObjectTypeClientConfig =

@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import GameObjectComponent from "./gameObjectComponent";
-import GameObject from "../types/gameObject";
+import GameObject from "../types/gameObject/gameObject";
 import InstancedMeshGraphics from "./instancedMeshGraphics";
 import CameraUtil from "../../graphics/util/cameraUtil";
 import NumUtil from "../../../shared/math/util/numUtil";

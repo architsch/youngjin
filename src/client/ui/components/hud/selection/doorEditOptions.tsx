@@ -5,7 +5,7 @@ import DestinationIcon from "../../../svg/icons/destinationIcon";
 import PaintBrushIcon from "../../../svg/icons/paintBrushIcon";
 import GearIcon from "../../../svg/icons/gearIcon";
 import DoorIcon from "../../../svg/icons/doorIcon";
-import DoorGameObject from "../../../../object/types/doorGameObject";
+import DoorGameObject from "../../../../object/types/gameObject/doorGameObject";
 import DoorObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import { DoorTypeEnumMap } from "../../../../../shared/object/types/doorType";
 import { ObjectMetadataKeyEnumMap } from "../../../../../shared/object/types/objectMetadataKey";

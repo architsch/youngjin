@@ -8,8 +8,8 @@ import { PLAYER_HEIGHT } from "../../../shared/object/types/objectTypeConfig/pla
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, UNIT_VEC3 } from "../../../shared/system/sharedConstants";
 import ClientObjectManager from "../clientObjectManager";
 import ObjectFactory from "../factories/objectFactory";
-import GameObject from "../types/gameObject";
-import VoxelGameObject from "../types/voxelGameObject";
+import GameObject from "../types/gameObject/gameObject";
+import VoxelGameObject from "../types/gameObject/voxelGameObject";
 
 const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
 const voxelTypeIndex = ObjectTypeConfigMap.getIndexByType("Voxel");

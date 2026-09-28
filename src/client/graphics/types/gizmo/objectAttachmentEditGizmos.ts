@@ -18,6 +18,9 @@ import ClientVoxelQueryUtil from "../../../voxel/util/clientVoxelQueryUtil";
 import AddObjectSignal from "../../../../shared/object/types/addObjectSignal";
 import ObjectTransform from "../../../../shared/object/types/objectTransform";
 import SetObjectTransformSignal from "../../../../shared/object/types/setObjectTransformSignal";
+import SetObjectMetadataSignal from "../../../../shared/object/types/setObjectMetadataSignal";
+import { ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
+import QuarterTurnsUtil from "../../../../shared/object/util/quarterTurnsUtil";
 import ObjectTypeConfigMap from "../../../../shared/object/maps/objectTypeConfigMap";
 import ObjectScaleUtil from "../../../../shared/object/util/objectScaleUtil";
 import ObjectUpdateUtil from "../../../../shared/object/util/objectUpdateUtil";
@@ -114,10 +117,12 @@ function findTarget(): EditTarget | null
     if (!obj)
         return null;
 
-    // Asked of where it stands, so this comes down to whether this user may move it at all.
+    // Asked of where it stands, so this comes down to whether this user may move it at all. One whose
+    // metadata pins its scale (see ObjectScalingConfig.getFixedScale) isn't resized by hand.
     const canMove = canApply(room, obj.objectId, obj.transform);
     return {selection, canMove,
-        canResize: canMove && config.scaling != undefined && config.scaling.cornerHandles !== false};
+        canResize: canMove && config.scaling != undefined && config.scaling.cornerHandles !== false
+            && ObjectScaleUtil.getFixedScale(obj.objectTypeIndex, obj.metadata) == undefined};
 }
 
 function pick(ev: PointerEvent): {cursor: string, begin: () => GizmoDragHandler} | null
@@ -179,6 +184,7 @@ function beginMove(selection: ObjectSelection, pressEv: PointerEvent): GizmoDrag
 {
     const objectId = selection.gameObject.params.objectId;
     const start = copyTransform(selection.gameObject.params.transform);
+    const startQuarterTurns = getTurnable(objectId) ? QuarterTurnsUtil.getQuarterTurns(selection.gameObject.params) : undefined;
     const grabOffset = getGrabOffset(start, pressEv);
     let lastRequest: string | null = null;
     let started = false;
@@ -207,14 +213,25 @@ function beginMove(selection: ObjectSelection, pressEv: PointerEvent): GizmoDrag
                 return;
             lastRequest = requestKey;
 
+            // From where the drag started, so the path taken doesn't matter. The whole object turns with its
+            // content, so an odd change of turn swaps its footprint (as the rotate tool does).
+            const quarterTurns = (startQuarterTurns == undefined) ? undefined : QuarterTurnsUtil.getMovedQuarterTurns(
+                start, startQuarterTurns, {pos: request.center, dir: request.dir}, PointerCoordUtil.projectPoint);
+            const turnedAcross = quarterTurns != undefined && Math.abs(quarterTurns - startQuarterTurns!) % 2 == 1;
+            const scale = turnedAcross ? {x: start.scale.y, y: start.scale.x, z: start.scale.z} : start.scale;
+
             const placed = ObjectAttachmentUtil.findPlacement(room, obj.objectTypeIndex, request.center, request.dir,
-                obj.transform.scale, (transform) => canApply(room, objectId, transform),
+                scale, (transform) => canApply(room, objectId, transform, quarterTurns),
                 request.onSameFace ? obj.transform.pos : undefined);
             if (placed != undefined && !transformsMatch(placed, obj.transform))
+            {
                 apply(objectId, placed);
+                if (quarterTurns != undefined)
+                    applyQuarterTurns(objectId, quarterTurns);
+            }
         },
-        onEnd: () => finishDrag(objectId, start, started, true),
-        onCancel: () => finishDrag(objectId, start, started, false),
+        onEnd: () => finishDrag(objectId, start, started, true, startQuarterTurns),
+        onCancel: () => finishDrag(objectId, start, started, false, startQuarterTurns),
     };
 }
 
@@ -313,8 +330,16 @@ function getMoveRequest(obj: AddObjectSignal, ev: PointerEvent, grabOffset: {x: 
 
 // Asked by the same rule the server applies (permissions, restricted zones, placement), so an edit that
 // won't take is refused quietly rather than logged as a failure.
-function canApply(room: Room, objectId: string, transform: ObjectTransform): boolean
+// With the turn the object will have there, when that differs from its own: asked as one edit, as release
+// sends it, since a turn can change the scale the object is pinned to (see ObjectScalingConfig.getFixedScale).
+function canApply(room: Room, objectId: string, transform: ObjectTransform, quarterTurns?: number): boolean
 {
+    const obj = room.objectById[objectId];
+    if (obj && quarterTurns != undefined && QuarterTurnsUtil.getQuarterTurns(obj) != quarterTurns)
+    {
+        return ObjectUpdateUtil.canSetObjectMetadata(App.getUser(), room, new SetObjectMetadataSignal(room.id,
+            objectId, ObjectMetadataKeyEnumMap.QuarterTurns, QuarterTurnsUtil.encode(quarterTurns), transform));
+    }
     return ObjectUpdateUtil.canSetObjectTransform(App.getUser(), room,
         new SetObjectTransformSignal(room.id, objectId, transform, true));
 }
@@ -325,9 +350,33 @@ function apply(objectId: string, transform: ObjectTransform): void
     ClientObjectManager.setObjectTransform(objectId, transform, true, false);
 }
 
-// keep: send the result; otherwise put the object back where it started. Only a drag that got past the
-// tap tolerance ever changed anything.
-function finishDrag(objectId: string, start: ObjectTransform, started: boolean, keep: boolean): void
+// Whether a move carries the object's content turn along (see QuarterTurnsUtil.getMovedQuarterTurns): only
+// for types this user may turn.
+function getTurnable(objectId: string): boolean
+{
+    const room = App.getCurrentRoom();
+    const obj = room?.objectById[objectId];
+    if (!room || !obj)
+        return false;
+    return ObjectUpdateUtil.canSetObjectMetadata(App.getUser(), room, new SetObjectMetadataSignal(room.id,
+        objectId, ObjectMetadataKeyEnumMap.QuarterTurns, QuarterTurnsUtil.encode(QuarterTurnsUtil.getQuarterTurns(obj))));
+}
+
+// Previews a turn locally, as apply does a transform.
+function applyQuarterTurns(objectId: string, quarterTurns: number): void
+{
+    const obj = App.getCurrentRoom()?.objectById[objectId];
+    if (obj && QuarterTurnsUtil.getQuarterTurns(obj) != quarterTurns)
+    {
+        ClientObjectManager.setObjectMetadata(objectId, ObjectMetadataKeyEnumMap.QuarterTurns,
+            QuarterTurnsUtil.encode(quarterTurns), false);
+    }
+}
+
+// keep: send the result; otherwise put the object back where it started, turned as it was. Only a drag that
+// got past the tap tolerance ever changed anything.
+function finishDrag(objectId: string, start: ObjectTransform, started: boolean, keep: boolean,
+    startQuarterTurns?: number): void
 {
     draggingObjectId = null;
     draggedCorner = null;
@@ -341,11 +390,26 @@ function finishDrag(objectId: string, start: ObjectTransform, started: boolean, 
         if (room && obj)
         {
             if (!keep)
-                ClientObjectManager.setObjectTransform(objectId, start, true, false);
-            else if (!transformsMatch(obj.transform, start) && room.roomType != RoomTypeEnumMap.SinglePlayer)
             {
-                SocketsClient.emitSetObjectTransformSignal(new SetObjectTransformSignal(
-                    room.id, objectId, copyTransform(obj.transform), true));
+                ClientObjectManager.setObjectTransform(objectId, start, true, false);
+                if (startQuarterTurns != undefined)
+                    applyQuarterTurns(objectId, startQuarterTurns);
+            }
+            else if (room.roomType != RoomTypeEnumMap.SinglePlayer)
+            {
+                // A move that turned the object is one edit, the turn carrying the transform (see
+                // SetObjectMetadataSignal.transform).
+                if (startQuarterTurns != undefined && QuarterTurnsUtil.getQuarterTurns(obj) != startQuarterTurns)
+                {
+                    SocketsClient.emitSetObjectMetadataSignal(new SetObjectMetadataSignal(room.id, objectId,
+                        ObjectMetadataKeyEnumMap.QuarterTurns, QuarterTurnsUtil.encode(QuarterTurnsUtil.getQuarterTurns(obj)),
+                        copyTransform(obj.transform)));
+                }
+                else if (!transformsMatch(obj.transform, start))
+                {
+                    SocketsClient.emitSetObjectTransformSignal(new SetObjectTransformSignal(
+                        room.id, objectId, copyTransform(obj.transform), true));
+                }
             }
         }
     }

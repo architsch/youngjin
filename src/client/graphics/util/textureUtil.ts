@@ -6,61 +6,29 @@ import GraphicsManager from "../graphicsManager";
 // shared quad pass. Regions are in texture coordinates (V up).
 const TextureUtil =
 {
-    // Draws an image fitted (aspect preserved) into a region, leaving the rest of the region transparent;
-    // an empty URL paints the placeholder color. regionAspect is the region's aspect ratio as shown, for a
-    // region stretched where it is shown (e.g. a texture cell on a quad of another shape). The optional
-    // source UV rect selects a sub-region (e.g. one atlas cell).
+    // Draws an image stretched over a region (its caller shaped the region; see TextureAtlasLayoutUtil); an
+    // empty URL paints the placeholder color. The image is loaded for the draw and let go after it. Skipped
+    // if shouldDraw says no once it has loaded (e.g. the region has changed hands meanwhile).
     drawImageOnRenderTarget: async (textureURL: string, renderTarget: THREE.WebGLRenderTarget,
         targetU1: number, targetV1: number, targetU2: number, targetV2: number,
-        regionAspect?: number,
-        sourceU1: number = 0, sourceV1: number = 0,
-        sourceU2: number = 1, sourceV2: number = 1,
-        unloadTextureAfterDraw: boolean = true): Promise<void> =>
+        shouldDraw?: () => boolean): Promise<void> =>
     {
-        // Load the texture
-
-        const texture = textureURL.length > 0
-            ? (await TextureFactory.loadSourceImageTexture(textureURL))
-            : placeholderTexture;
-
-        // Fit the texture inside the target region (see @docs/geometry/texture.md).
-
-        let u1 = targetU1;
-        let u2 = targetU2;
-        let v1 = targetV1;
-        let v2 = targetV2;
-
-        // As = Aspect Ratio of the Source Texture (its sampled sub-region, to be precise)
-        const As = (texture.image?.width && texture.image?.height)
-            ? (texture.image.width * (sourceU2 - sourceU1)) / (texture.image.height * (sourceV2 - sourceV1))
-            : 1.0;
-
-        // At = Aspect Ratio of the Target Region (as shown)
-        const At = regionAspect ?? (u2 - u1) / (v2 - v1);
-
-        if (As < At)
+        if (textureURL.length == 0)
         {
-            const du = (u2 - u1) * As / (2 * At);
-            const uAvg = (u1 + u2) / 2;
-            u1 = uAvg - du;
-            u2 = uAvg + du;
+            if (shouldDraw?.() !== false)
+                drawSourceTexture(placeholderTexture, renderTarget, targetU1, targetV1, targetU2, targetV2, 0, 0, 1, 1);
+            return;
         }
-        else if (As > At)
+        const texture = await acquireSourceTexture(textureURL);
+        try
         {
-            const dv = (v2 - v1) * At / (2 * As);
-            const vAvg = (v1 + v2) / 2;
-            v1 = vAvg - dv;
-            v2 = vAvg + dv;
+            if (shouldDraw?.() !== false)
+                drawSourceTexture(texture, renderTarget, targetU1, targetV1, targetU2, targetV2, 0, 0, 1, 1);
         }
-
-        // Render the texture. The region is cleared only now that the texture has loaded, so a redraw never
-        // leaves it empty for a while.
-
-        drawSourceTexture(transparentTexture, renderTarget, targetU1, targetV1, targetU2, targetV2, 0, 0, 1, 1);
-        drawSourceTexture(texture, renderTarget, u1, v1, u2, v2, sourceU1, sourceV1, sourceU2, sourceV2);
-
-        if (unloadTextureAfterDraw && textureURL.length > 0)
-            TextureFactory.unload(textureURL);
+        finally
+        {
+            releaseSourceTexture(textureURL, true);
+        }
     },
     // Draws a canvas covering the region as-is. No letterboxing (the caller shaped it) and no clear
     // needed, since the draw replaces rather than blends.
@@ -93,14 +61,44 @@ function getCanvasTexture(canvas: HTMLCanvasElement): THREE.Texture
     return canvasTexture;
 }
 
+// Source images held by draws in flight, so draws of one image at once share it and the last lets it go (the
+// factory caches one texture per path).
+const sourceTextureUses = new Map<string, {texture: Promise<THREE.Texture>, numUsers: number}>();
+
+async function acquireSourceTexture(textureURL: string): Promise<THREE.Texture>
+{
+    let use = sourceTextureUses.get(textureURL);
+    if (use == undefined)
+    {
+        use = {texture: TextureFactory.loadSourceImageTexture(textureURL), numUsers: 0};
+        sourceTextureUses.set(textureURL, use);
+    }
+    ++use.numUsers;
+    try
+    {
+        return await use.texture;
+    }
+    catch (err)
+    {
+        releaseSourceTexture(textureURL, false);
+        throw err;
+    }
+}
+
+function releaseSourceTexture(textureURL: string, loaded: boolean): void
+{
+    const use = sourceTextureUses.get(textureURL);
+    if (use == undefined || --use.numUsers > 0)
+        return;
+    sourceTextureUses.delete(textureURL);
+    if (loaded)
+        TextureFactory.unload(textureURL);
+}
+
 // 1x1 dark gray placeholder texture for when no image is available
 const placeholderData = new Uint8Array([40, 40, 40, 255]);
 const placeholderTexture = new THREE.DataTexture(placeholderData, 1, 1, THREE.RGBAFormat);
 placeholderTexture.needsUpdate = true;
-
-const transparentData = new Uint8Array([0, 0, 0, 0]);
-const transparentTexture = new THREE.DataTexture(transparentData, 1, 1, THREE.RGBAFormat);
-transparentTexture.needsUpdate = true;
 
 // Replaces the target region instead of blending, so transparent canvases don't mix with old contents.
 function createCopyMaterial(fragColorGLSL: string): THREE.RawShaderMaterial

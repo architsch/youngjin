@@ -4,7 +4,7 @@ Reference: @src/client/system/util/gameModeUtil.ts , @src/client/graphics/util/w
 
 A `GameMode` decides the camera behavior, whether the player can walk, and which tools are shown. `GameModeUtil` publishes the current mode, and everything mode-dependent observes it.
 
-- **Play mode**: first-person view, the player walks, and nothing can be selected. A click acts on the room (e.g. walking through a door).
+- **Play mode**: first-person view, the player walks, and nothing can be selected. A click acts on the room: a door walks through, and any other object runs its type's callback in `PlayModeClickCallbackMap`, picked by a metadata value (a prop's by its image).
 - **Edit mode**: the camera orbits the current selection, the player stands still, and the selection's editing tools are shown.
 
 The mode is stored separately from camera state, because the camera briefly has no target while one selection replaces another.

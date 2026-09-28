@@ -2,7 +2,7 @@ import { ComponentType } from "react";
 import AddObjectSignal from "../../../../shared/object/types/addObjectSignal";
 import Room from "../../../../shared/room/types/room";
 import User from "../../../../shared/user/types/user";
-import GameObject from "../gameObject";
+import GameObject from "../gameObject/gameObject";
 import EditOptionsProps from "../../../ui/types/editOptionsProps";
 import { EditPanel } from "../../../ui/types/editPanel";
 

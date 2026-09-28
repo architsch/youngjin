@@ -194,6 +194,12 @@ async function createInstancedMesh(meshId: string, geometryId: string, materialP
         outlineStrengthBufferAttrib.setUsage(THREE.DynamicDrawUsage);
         geometryClone.setAttribute("outlineStrength", outlineStrengthBufferAttrib);
     }
+    if ((materialParams as InstancedTexturePackMaterialParams).turnable)
+    {
+        const quarterTurnsBufferAttrib = new THREE.InstancedBufferAttribute(new Float32Array(maxNumInstances), 1);
+        quarterTurnsBufferAttrib.setUsage(THREE.DynamicDrawUsage);
+        geometryClone.setAttribute("uvQuarterTurns", quarterTurnsBufferAttrib);
+    }
 
     const newMesh = new THREE.InstancedMesh(geometryClone, material, maxNumInstances);
     // Before any instance is colored, so a precompiled program already reads the instance color.

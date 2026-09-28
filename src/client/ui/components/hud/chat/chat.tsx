@@ -11,7 +11,7 @@ import RoomRuntimeMemory from "../../../../../shared/room/types/roomRuntimeMemor
 import AsyncUtil from "../../../../../shared/system/util/asyncUtil";
 import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
 import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
-import GameObject from "../../../../object/types/gameObject";
+import GameObject from "../../../../object/types/gameObject/gameObject";
 
 export default function Chat({hide}: Props)
 {

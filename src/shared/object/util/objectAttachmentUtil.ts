@@ -13,9 +13,10 @@ import ObjectTransform from "../types/objectTransform";
 import ObjectTypeConfigMap from "../maps/objectTypeConfigMap";
 import ObjectScaleUtil from "./objectScaleUtil";
 
-// Placement of objects attached to a voxel face (see @docs/geometry/object_attachment.md). Positions snap
-// to half a voxel on X/Z and to one collision layer on Y, which is the same distance.
-const GRID_STEP = COLLISION_LAYER_HEIGHT;
+// Placement of objects attached to a voxel face (see @docs/geometry/object_attachment.md). Positions across
+// the face snap to a quarter voxel, so an object half a voxel across can sit flush with a block's edge; the
+// face itself lies on a block boundary.
+const GRID_STEP = 0.25;
 
 // Keeps a footprint edge lying on a block boundary out of the block beyond it.
 const EDGE_EPSILON = 0.01;
@@ -167,10 +168,8 @@ const ObjectAttachmentUtil =
         return partlyCovered;
     },
     // Where a resize puts the object when one corner is dragged to cornerPos: the nearest size its type
-    // allows, with the opposite corner of anchor (the object as the drag began) held still. Centres sit on
-    // a half-voxel grid along X and Z, so there an odd number of half-steps can hold that corner only to
-    // within a quarter voxel; it gives way toward the dragged side, or behind when only that fits. Undefined
-    // if that size fits no way. cornerSignX/Y: the dragged corner, +1 toward the face's right / up (see
+    // allows, with the opposite corner of anchor (the object as the drag began) held still. Undefined if that
+    // size doesn't fit there. cornerSignX/Y: the dragged corner, +1 toward the face's right / up (see
     // Geometry3DUtil.getAxisFacingBasis), -1 the other way.
     getResizeResult: (room: Room, obj: AddObjectSignal, anchor: ObjectTransform,
         cornerSignX: number, cornerSignY: number, cornerPos: Vec3): ObjectTransform | undefined =>
@@ -199,33 +198,10 @@ const ObjectAttachmentUtil =
             Vector3DUtil.scale(right, cornerSignX * 0.5 * size.x),
             Vector3DUtil.scale(up, cornerSignY * 0.5 * size.y)));
 
-        // Per axis of the face, where its centre may go. Along Y the bottom edge snaps instead, and heights
-        // are whole layers, so it holds exactly. Both roundings coincide when the corner can be held.
-        const candidatesAlong = (axis: Vec3, cornerSign: number): {component: "x" | "y" | "z", values: number[]} =>
-        {
-            const component = (axis.x != 0) ? "x" : (axis.y != 0) ? "y" : "z";
-            if (component == "y")
-                return {component, values: [ideal.y]};
-            const outward = cornerSign * axis[component];
-            return {component, values: [snapToGridToward(ideal[component], outward),
-                snapToGridToward(ideal[component], -outward)]};
-        };
-        const alongRight = candidatesAlong(right, cornerSignX);
-        const alongUp = candidatesAlong(up, cornerSignY);
-        for (const u of alongUp.values)
-        {
-            for (const r of alongRight.values)
-            {
-                const pos = {...ideal};
-                pos[alongRight.component] = r;
-                pos[alongUp.component] = u;
-                const candidate = getQuantizedTransform(objectTypeIndex,
-                    new ObjectTransform(pos, {...start.dir}, scale));
-                if (ObjectAttachmentUtil.canPlaceObject(room, obj.objectId, objectTypeIndex, candidate))
-                    return candidate;
-            }
-        }
-        return undefined;
+        // Every type's sizes come in half-voxel steps, so half of one is on the grid and the corner holds exactly.
+        const candidate = getQuantizedTransform(objectTypeIndex, new ObjectTransform(ideal, {...start.dir}, scale));
+        return ObjectAttachmentUtil.canPlaceObject(room, obj.objectId, objectTypeIndex, candidate)
+            ? candidate : undefined;
     },
     // The object at another size where it stands, on the placement grid: its centre stays across the face,
     // except vertically, where the bottom edge does (the edge the grid snaps), so going back to the
@@ -239,11 +215,42 @@ const ObjectAttachmentUtil =
         return getQuantizedTransform(objectTypeIndex, new ObjectTransform(
             {...transform.pos, y: transform.pos.y + 0.5 * grownBy}, {...transform.dir}, {...scale}));
     },
+    // The object at another size over where it stands, each way it may grow or shrink there, in the order to try
+    // them: along each of the face's axes it holds its lower edge (a wall's bottom, and its left along the face's
+    // right), then its upper edge, then its centre. On the placement grid; whether each fits is canPlaceObject's
+    // to say.
+    getResizeCandidates: (objectTypeIndex: number, transform: ObjectTransform, scale: Vec3): ObjectTransform[] =>
+    {
+        const start = getQuantizedTransform(objectTypeIndex, transform);
+        const {right, up} = Geometry3DUtil.getAxisFacingBasis(start.dir);
+        const fromSize = ObjectScaleUtil.getObjectSize(objectTypeIndex, start.scale);
+        const toSize = ObjectScaleUtil.getObjectSize(objectTypeIndex, scale);
+        const centreShifts = (from: number, to: number) => [0.5 * (to - from), -0.5 * (to - from), 0];
+
+        const candidates: ObjectTransform[] = [];
+        const seen = new Set<string>();
+        for (const alongUp of centreShifts(fromSize.y, toSize.y))
+        {
+            for (const alongRight of centreShifts(fromSize.x, toSize.x))
+            {
+                const candidate = getQuantizedTransform(objectTypeIndex, new ObjectTransform(Vector3DUtil.add(start.pos,
+                    Vector3DUtil.add(Vector3DUtil.scale(right, alongRight), Vector3DUtil.scale(up, alongUp))),
+                    {...start.dir}, {...scale}));
+                const key = `${candidate.pos.x},${candidate.pos.y},${candidate.pos.z}`;
+                if (!seen.has(key))
+                {
+                    seen.add(key);
+                    candidates.push(candidate);
+                }
+            }
+        }
+        return candidates;
+    },
 }
 
 // Onto the placement grid: the face on its plane, the centre on the grid along X and Z, and the bottom edge
-// on it along Y (snapping the centre would float odd-height objects off the floor). The facing snaps onto
-// its axis and the scale onto its steps, since both decide where the edges are.
+// on it along Y (so an object stands on the grid whatever its height). The facing snaps onto its axis and the
+// scale onto its steps, since both decide where the edges are.
 function getQuantizedTransform(objectTypeIndex: number, transform: ObjectTransform): ObjectTransform
 {
     const scale = ObjectScaleUtil.sanitize(objectTypeIndex, transform.scale);
@@ -256,7 +263,8 @@ function getQuantizedTransform(objectTypeIndex: number, transform: ObjectTransfo
         {
             // Walls stand on whole cells, floors and ceilings on whole layers.
             x: (normal.x != 0) ? Math.round(pos.x) : snapToGrid(pos.x),
-            y: (normal.y != 0) ? snapToGrid(pos.y) : snapToGrid(pos.y - halfHeight) + halfHeight,
+            y: (normal.y != 0) ? COLLISION_LAYER_HEIGHT * Math.round(pos.y / COLLISION_LAYER_HEIGHT)
+                : snapToGrid(pos.y - halfHeight) + halfHeight,
             z: (normal.z != 0) ? Math.round(pos.z) : snapToGrid(pos.z),
         },
         normal, scale);
@@ -339,14 +347,6 @@ function blockIsOpen(voxels: Voxel[], row: number, col: number, layer: number): 
 function snapToGrid(value: number): number
 {
     return GRID_STEP * Math.round(value / GRID_STEP);
-}
-
-// Onto the grid, rounding toward direction's side. The allowance keeps a value that is already on the grid,
-// give or take float error, where it is.
-function snapToGridToward(value: number, direction: number): number
-{
-    return GRID_STEP * (direction > 0
-        ? Math.ceil(value / GRID_STEP - 1e-6) : Math.floor(value / GRID_STEP + 1e-6));
 }
 
 export default ObjectAttachmentUtil;

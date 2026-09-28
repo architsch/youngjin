@@ -32,3 +32,6 @@ playwright/.cache/
 tests/e2e/.auth/
 # Playtest scratch (plans, results, screenshots, baselines)
 temp/
+# The image map editor's source photos (third-party originals); only their index is kept, to download them again
+/dev/assets/picture_sources/*
+!/dev/assets/picture_sources/index.json

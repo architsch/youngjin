@@ -9,6 +9,7 @@ import { DoorTypeEnumMap } from "../types/doorType";
 import LampObjectTypeConfig from "../types/objectTypeConfig/lampObjectTypeConfig";
 import LabelTextUtil from "../util/labelTextUtil";
 import AdminPrefsUtil from "../util/adminPrefsUtil";
+import QuarterTurnsUtil from "../util/quarterTurnsUtil";
 import User from "../../user/types/user";
 import RoomValidationUtil from "../../room/util/roomValidationUtil";
 
@@ -65,6 +66,10 @@ const entries: {[key: number]: ObjectMetadataEntry} = {
     [ObjectMetadataKeyEnumMap.AdminPrefs]: {
         preprocessingMethod: (rawValue: string) => AdminPrefsUtil.canonicalize(rawValue),
         canUserSet: (user: User) => RoomValidationUtil.userIsAdmin(user),
+    },
+    // Likewise, through QuarterTurnsUtil.
+    [ObjectMetadataKeyEnumMap.QuarterTurns]: {
+        preprocessingMethod: (rawValue: string) => QuarterTurnsUtil.canonicalize(rawValue),
     },
 };
 

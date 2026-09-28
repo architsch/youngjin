@@ -4,7 +4,7 @@ import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
 import App from "../../../../app";
 import SocketsClient from "../../../../networking/client/socketsClient";
 import ClientObjectManager from "../../../clientObjectManager";
-import GameObject from "../../../types/gameObject";
+import GameObject from "../../../types/gameObject/gameObject";
 import InstancedMeshCompositionPart from "../../../../../shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
 import { InstancedMeshCompositionCodecMap } from "../../../../../shared/graphics/mesh/composition/maps/instancedMeshCompositionCodecMap";
 import StringUtil from "../../../../../shared/math/util/stringUtil";

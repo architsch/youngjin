@@ -5,7 +5,8 @@
  * any composition. Rooms saved with bitmap frames (CanvasFrameCoords), or with finishes in the codecs canvases,
  * labels and doors used to store their own, are converted on load.
  * Covers: the Default codec's wood parts, the framed panel codec, a canvas's looks, defaults and permissions,
- * the ObjectGroup migrations, the per-type pre-encoded table, and the thumbnail atlas layout.
+ * its quarter-turns, the ObjectGroup migrations, the per-type pre-encoded table, and the thumbnail atlas layout.
+ * (The pictures a canvas shows are picture.test.ts's.)
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import fc from "fast-check";
@@ -26,6 +27,7 @@ import StringUtil from "../../../src/shared/math/util/stringUtil";
 import Vec3 from "../../../src/shared/math/types/vec3";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 import CanvasObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
+import SetObjectMetadataSignal from "../../../src/shared/object/types/setObjectMetadataSignal";
 import ObjectScaleUtil from "../../../src/shared/object/util/objectScaleUtil";
 import { LAST_UNSCALED_OBJECT_GROUP_VERSION, writeLegacyObjectGroup } from "../helpers/legacyObjectGroup";
 import { getLooks } from "../helpers/composition";
@@ -35,7 +37,10 @@ import ObjectGroup from "../../../src/shared/object/types/objectGroup";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
 import BufferState from "../../../src/shared/networking/types/bufferState";
 import EncodableByteString from "../../../src/shared/networking/types/encodableByteString";
-import ImageMapUtil from "../../../src/shared/graphics/image/util/imageMapUtil";
+import { FIXTURE_PICTURES, useFixturePictures } from "../helpers/pictureFixture";
+import QuarterTurnsUtil from "../../../src/shared/object/util/quarterTurnsUtil";
+import RandomNumberGenerator from "../../../src/shared/math/types/randomNumberGenerator";
+import ObjectMetadataEntryMap from "../../../src/shared/object/maps/objectMetadataEntryMap";
 import { COMPOSITION_PALETTE_NAME_BY_MATERIAL_ID, GEOMETRY_CODE_BY_ID, INSTANCE_COLORED_MATERIAL_IDS,
     INSTANCED_COLOR_MATERIAL_ID, INSTANCED_WOOD_MATERIAL_ID, MATERIAL_CODE_BY_ID,
     RELIEF_STEP, UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
@@ -465,32 +470,74 @@ describe("a canvas's looks", () => {
         expect(chosen.size).toBeGreaterThan(1);
     });
 
+    it("a canvas added by hand wears a random framed look", () => {
+        const framed = looks.slice(1).map(look => look.stored);
+        const random = new RandomNumberGenerator(7);
+        const chosen = new Set<string>();
+        for (let i = 0; i < 200; ++i)
+        {
+            const look = CanvasObjectTypeConfig.util.getRandomFramedLook(random);
+            expect(framed).toContain(look);
+            chosen.add(look);
+        }
+        expect(chosen.size).toBe(framed.length);
+    });
+
     // ─── Permissions ───────────────────────────────────────────────────
 
-    it("a user may change a canvas's picture and frame, and nothing else", () => {
-        const setMetadata = (metadataKey: number, metadataValue: string) =>
-            CanvasObjectTypeConfig.canUserSetObjectMetadata({id: "user-1"} as any, {objectById: {}} as any,
-                canvas("c") as any, {metadataKey, metadataValue} as any);
-        const imagePath = ImageMapUtil.getImageMap("CanvasImageMap").getRandomImagePath();
+    describe("with a painting to show", () => {
+        useFixturePictures();
 
-        expect(setMetadata(ObjectMetadataKeyEnumMap.ImagePath, imagePath)).toBe(true);
-        expect(setMetadata(ObjectMetadataKeyEnumMap.ImagePath, "no/such/image")).toBe(false);
-        expect(setMetadata(FRAME_COORDS_KEY, "0,0")).toBe(false);
-        expect(setMetadata(ObjectMetadataKeyEnumMap.Label, "hello")).toBe(false);
+        it("a user may change a canvas's painting, frame and quarter-turns, and nothing else", () => {
+            const setMetadata = (metadataKey: number, metadataValue: string) =>
+                CanvasObjectTypeConfig.canUserSetObjectMetadata({id: "user-1"} as any, {objectById: {}} as any,
+                    canvas("c") as any, {metadataKey, metadataValue} as any);
 
-        // A frame only as one of its own looks: another type's builds parts a canvas can't place, and a
-        // spelled-out finish skips the list.
-        for (const look of looks)
-            expect(setMetadata(COMPOSITION_KEY, look.stored)).toBe(true);
-        expect(setMetadata(COMPOSITION_KEY, getLooks("Label")[1].stored)).toBe(false);
-        expect(setMetadata(COMPOSITION_KEY, PreEncodedCompositionStringMap[looks[1].compositionIndex])).toBe(false);
-        expect(setMetadata(COMPOSITION_KEY, "abc")).toBe(false);
+            expect(setMetadata(ObjectMetadataKeyEnumMap.ImagePath, FIXTURE_PICTURES.painting)).toBe(true);
+            expect(setMetadata(ObjectMetadataKeyEnumMap.ImagePath, FIXTURE_PICTURES.square)).toBe(false);
+            expect(setMetadata(ObjectMetadataKeyEnumMap.ImagePath, "no/such/image")).toBe(false);
+            expect(setMetadata(ObjectMetadataKeyEnumMap.QuarterTurns, QuarterTurnsUtil.encode(1))).toBe(true);
+            expect(setMetadata(FRAME_COORDS_KEY, "0,0")).toBe(false);
+            expect(setMetadata(ObjectMetadataKeyEnumMap.Label, "hello")).toBe(false);
+
+            // A frame only as one of its own looks: another type's builds parts a canvas can't place, and a
+            // spelled-out finish skips the list.
+            for (const look of looks)
+                expect(setMetadata(COMPOSITION_KEY, look.stored)).toBe(true);
+            expect(setMetadata(COMPOSITION_KEY, getLooks("Label")[1].stored)).toBe(false);
+            expect(setMetadata(COMPOSITION_KEY, PreEncodedCompositionStringMap[looks[1].compositionIndex])).toBe(false);
+            expect(setMetadata(COMPOSITION_KEY, "abc")).toBe(false);
+        });
     });
 
     // ─── Config coherence ──────────────────────────────────────────────
 
     it("a canvas stores an index to one of its looks", () => {
         expect(CANVAS_COMPOSER.codecType).toBe(InstancedMeshCompositionCodecTypeEnumMap.Indexed);
+    });
+});
+
+describe("a canvas's quarter-turns", () => {
+    it("any stored value reads as one of four turns, and is kept as one character that reads the same", () => {
+        fc.assert(fc.property(fc.string(), (str) => {
+            const turns = QuarterTurnsUtil.decode(str);
+            expect([0, 1, 2, 3]).toContain(turns);
+            const kept = ObjectMetadataEntryMap.preprocess(ObjectMetadataKeyEnumMap.QuarterTurns, str);
+            expect(kept).toHaveLength(1);
+            expect(QuarterTurnsUtil.decode(kept)).toBe(turns);
+            expect(QuarterTurnsUtil.canonicalize(kept)).toBe(kept);
+        }));
+    });
+
+    it("a canvas with none is unturned, and four turns come back round", () => {
+        expect(QuarterTurnsUtil.getQuarterTurns(canvas("c"))).toBe(0);
+        for (let turns = 0; turns < 4; ++turns)
+        {
+            const turned = canvas("c", {[ObjectMetadataKeyEnumMap.QuarterTurns]: QuarterTurnsUtil.encode(turns)});
+            expect(QuarterTurnsUtil.getQuarterTurns(turned)).toBe(turns);
+        }
+        expect(QuarterTurnsUtil.encode(4)).toBe(QuarterTurnsUtil.encode(0));
+        expect(QuarterTurnsUtil.encode(-1)).toBe(QuarterTurnsUtil.encode(3));
     });
 });
 

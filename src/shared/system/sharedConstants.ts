@@ -212,6 +212,24 @@ export const LABEL_ATLAS_CELL_SIZE = 128; // in pixels (each cell is square)
 export const LABEL_ATLAS_CELL_WORLD_SIZE = 0.5; // in world units: the step labels are resized in
 export const LABEL_PIXELS_PER_WORLD_UNIT = LABEL_ATLAS_CELL_SIZE / LABEL_ATLAS_CELL_WORLD_SIZE;
 
+// Pictures (the images canvases and props show; see PictureGameObject)
+
+// The atlas every picture in a room is drawn into, one region per image. A cell is the unit an image that keeps
+// its scale is sized in (see ImageMetadata.preserveScale).
+export const PICTURE_ATLAS_SIZE = 2048; // in pixels (the atlas is square)
+export const PICTURE_ATLAS_CELL_SIZE = 128; // in pixels (each cell is square)
+export const PICTURE_ATLAS_CELL_WORLD_SIZE = 0.5; // in world units
+// The longest side of any image's region, however large what shows it: the size of the largest image that
+// keeps its scale.
+export const PICTURE_ATLAS_MAX_REGION_CELLS = 2;
+// The longest side of the thumbnails the image choosers show, which also serve regions no larger (so, being no
+// smaller than the largest region, every region).
+export const PICTURE_THUMBNAIL_SIZE = 256; // in pixels
+// Words that say nothing of an image by themselves: never an everyday object's keywords, and passed over in what
+// is typed into a search, so "sweet and sour" still finds "sweet, sour" (see ImageMetadata.keywords).
+export const PICTURE_SEARCH_FILLER_WORDS = ["a", "an", "the", "and", "or", "but", "nor", "of", "in", "on", "at", "to",
+    "for", "with", "from", "by", "off", "into", "onto", "no", "not"];
+
 // Voxel Grid
 
 export const NUM_VOXEL_ROWS = 32;

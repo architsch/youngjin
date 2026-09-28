@@ -1,4 +1,4 @@
-import GameObject from "../types/gameObject";
+import GameObject from "../types/gameObject/gameObject";
 import GameObjectComponent from "../components/gameObjectComponent";
 import { ObjectComponentConstructorMap } from "../maps/objectComponentConstructorMap";
 

@@ -1,5 +1,5 @@
 import GameObjectComponent from "./gameObjectComponent";
-import GameObject from "../types/gameObject";
+import GameObject from "../types/gameObject/gameObject";
 import InstancedMeshGraphics from "./instancedMeshGraphics";
 import InstancedTexturePackMaterialParams from "../../../shared/graphics/material/types/instancedTexturePackMaterialParams";
 import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
@@ -15,8 +15,11 @@ import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap
 import ObjectCategoryConfigMap from "../../../shared/object/maps/objectCategoryConfigMap";
 import LabelTextUtil from "../../../shared/object/util/labelTextUtil";
 import LabelTextLayoutUtil from "../util/labelTextLayoutUtil";
-import TextureAtlasAllocator from "../../graphics/types/textureAtlasAllocator";
-import TextureAtlasRegion from "../../graphics/types/textureAtlasRegion";
+import TextureAtlas from "../../graphics/types/texture/textureAtlas";
+import TextureAtlasHolder from "../../graphics/types/texture/textureAtlasHolder";
+import TextureAtlasRegion from "../../graphics/types/texture/textureAtlasRegion";
+import TexelRect from "../../graphics/types/texture/texelRect";
+import TextureAtlasLayoutUtil from "../../graphics/util/textureAtlasLayoutUtil";
 import FontMetrics from "../../graphics/types/fontMetrics";
 import FontMetricsUtil from "../../graphics/util/fontMetricsUtil";
 import { graphicsContextRestoredObservable } from "../../system/clientObservables";
@@ -36,19 +39,17 @@ const FONT_FAMILY = "LabelTextTinos";
 
 const NUM_ATLAS_CELLS_PER_SIDE = LABEL_ATLAS_SIZE / LABEL_ATLAS_CELL_SIZE;
 
-export default class LabelText extends GameObjectComponent
+export default class LabelText extends GameObjectComponent implements TextureAtlasHolder
 {
     private static materialParams: InstancedTexturePackMaterialParams | undefined;
     private static instancedMeshId: string;
-    private static atlasAllocator = new TextureAtlasAllocator(NUM_ATLAS_CELLS_PER_SIDE,
+    private static atlas = new TextureAtlas("the label atlas", NUM_ATLAS_CELLS_PER_SIDE,
         NUM_ATLAS_CELLS_PER_SIDE);
 
     private instancedMeshGraphics: InstancedMeshGraphics;
     private instanceId: number = -1;
+    // Where the text is drawn, as last told by the atlas (keyed by the object's id).
     private region: TextureAtlasRegion | undefined;
-    // The region's size this label asks for, kept for a repack (see repack).
-    private wantedNumCols: number = 0;
-    private wantedNumRows: number = 0;
     // The part of the patch the text keeps to, in world units, when the object narrows it.
     private contentSize: Vec2 | undefined;
 
@@ -102,7 +103,14 @@ export default class LabelText extends GameObjectComponent
         spawnedLabelTexts.delete(this);
         this.spawned = false;
         this.releaseInstance();
-        this.freeRegion();
+        LabelText.atlas.release(this.gameObject.params.objectId, this);
+        this.region = undefined;
+    }
+
+    onAtlasRegionChanged(region: TextureAtlasRegion | undefined): void
+    {
+        this.region = region;
+        this.needsPlacement = true;
     }
 
     onTransformChanged(resized: boolean): void
@@ -166,12 +174,16 @@ export default class LabelText extends GameObjectComponent
                 rgb.x, rgb.y, rgb.z);
         }
         if (this.needsDrawing)
-        {
-            this.needsDrawing = false;
-            this.instancedMeshGraphics.drawCanvasAtTexel(LabelText.instancedMeshId,
-                this.region.col * LABEL_ATLAS_CELL_SIZE, this.region.row * LABEL_ATLAS_CELL_SIZE,
-                this.renderTextToCanvas());
-        }
+            LabelText.atlas.invalidate(this.gameObject.params.objectId);
+    }
+
+    // The atlas's draw for this label (see TextureAtlasDraw), whenever its text needs drawing where it is.
+    private readonly drawText = (region: TextureAtlasRegion): void =>
+    {
+        this.needsDrawing = false;
+        const texels = this.getTextTexels(region);
+        this.instancedMeshGraphics.drawCanvasAtTexel(LabelText.instancedMeshId, texels.x, texels.y,
+            this.renderTextToCanvas(texels.width, texels.height));
     }
 
     // For when the atlas's contents were lost, not replaced (context restore, below).
@@ -205,63 +217,22 @@ export default class LabelText extends GameObjectComponent
         };
     }
 
-    // The text area in atlas pixels (the same density at any size), within the region.
-    private getTextAreaPixels(): {width: number, height: number}
+    // The text area in atlas texels (the same density at any size), within a region.
+    private getTextTexels(region: TextureAtlasRegion): TexelRect
     {
-        const size = this.contentSize ?? this.getPatch().size;
-        const toPixels = (worldSize: number, numCells: number) => Math.max(1,
-            Math.min(numCells * LABEL_ATLAS_CELL_SIZE, Math.round(worldSize * LABEL_PIXELS_PER_WORLD_UNIT)));
-        return {
-            width: toPixels(size.x, this.region!.numCols),
-            height: toPixels(size.y, this.region!.numRows),
-        };
+        return TextureAtlasLayoutUtil.getDensityTexels(this.contentSize ?? this.getPatch().size, region,
+            LABEL_ATLAS_CELL_SIZE, LABEL_PIXELS_PER_WORLD_UNIT);
     }
 
-    // Keeps the region when its size in cells still fits the patch.
+    // A region of the patch's size in whole cells; the atlas keeps the one it has while that size holds
+    // (and draws the text into a new one when it doesn't; see TextureAtlas).
     private allocateRegion(): void
     {
         const size = this.getPatch().size;
-        // Less a hair, so a patch of exactly n cells isn't rounded up to n + 1.
-        const numCols = Math.max(1, Math.ceil(size.x / LABEL_ATLAS_CELL_WORLD_SIZE - 1e-6));
-        const numRows = Math.max(1, Math.ceil(size.y / LABEL_ATLAS_CELL_WORLD_SIZE - 1e-6));
-        if (this.region != undefined && this.region.numCols == numCols && this.region.numRows == numRows)
-            return;
-
-        this.freeRegion();
-        this.wantedNumCols = numCols;
-        this.wantedNumRows = numRows;
-        this.region = LabelText.atlasAllocator.allocate(numCols, numRows);
-        if (this.region == undefined)
-            LabelText.repack();
-        this.needsPlacement = true;
-        this.needsDrawing = true;
-    }
-
-    private freeRegion(): void
-    {
-        if (this.region == undefined)
-            return;
-        LabelText.atlasAllocator.free(this.region);
-        this.region = undefined;
-    }
-
-    // Only reached when fragmentation leaves no room for a region (the room caps guarantee the space):
-    // every label is packed again from scratch, largest first, and redrawn where it lands.
-    private static repack(): void
-    {
-        console.warn("LabelText :: The label atlas is fragmented, so every label is being packed again");
-        LabelText.atlasAllocator.clear();
-        const labels = [...spawnedLabelTexts]
-            .filter(label => label.wantedNumCols > 0)
-            .sort((a, b) => b.wantedNumCols * b.wantedNumRows - a.wantedNumCols * a.wantedNumRows);
-        for (const label of labels)
-        {
-            label.region = LabelText.atlasAllocator.allocate(label.wantedNumCols, label.wantedNumRows);
-            if (label.region == undefined)
-                console.warn(`LabelText :: No room in the label atlas (objectId = ${label.gameObject.params.objectId})`);
-            label.needsPlacement = true;
-            label.needsDrawing = true;
-        }
+        LabelText.atlas.acquire(this.gameObject.params.objectId, this,
+            TextureAtlasLayoutUtil.getNumCells(size.x, LABEL_ATLAS_CELL_WORLD_SIZE),
+            TextureAtlasLayoutUtil.getNumCells(size.y, LABEL_ATLAS_CELL_WORLD_SIZE),
+            this.drawText);
     }
 
     private rentInstance(): boolean
@@ -287,17 +258,15 @@ export default class LabelText extends GameObjectComponent
     private place(): void
     {
         const patch = this.getPatch();
-        const size = this.contentSize ?? patch.size;
+        const {quadSize, texelRect} = TextureAtlasLayoutUtil.getLayout(this.contentSize ?? patch.size,
+            this.getTextTexels(this.region!), "fill", 0);
         this.instancedMeshGraphics.updateInstanceTransform(
             LabelText.instancedMeshId, this.instanceId,
             patch.pos.x, patch.pos.y, patch.pos.z,
             patch.dir.x, patch.dir.y, patch.dir.z,
-            size.x, size.y, 1);
-
-        const {width, height} = this.getTextAreaPixels();
+            quadSize.x, quadSize.y, 1);
         this.instancedMeshGraphics.updateInstanceTextureRect(LabelText.instancedMeshId, this.instanceId,
-            this.region!.col * LABEL_ATLAS_CELL_SIZE, this.region!.row * LABEL_ATLAS_CELL_SIZE,
-            width, height);
+            texelRect.x, texelRect.y, texelRect.width, texelRect.height);
     }
 
     // The object's chosen ink color, falling back to its type default.
@@ -317,9 +286,8 @@ export default class LabelText extends GameObjectComponent
     }
 
     // Renders the text onto a transparent canvas the size of the text area, one pixel per atlas texel.
-    private renderTextToCanvas(): HTMLCanvasElement
+    private renderTextToCanvas(width: number, height: number): HTMLCanvasElement
     {
-        const {width, height} = this.getTextAreaPixels();
         const ctx = getSharedCanvasContext();
         const canvas = ctx.canvas;
         if (canvas.width != width || canvas.height != height)
@@ -433,7 +401,7 @@ function loadFont(): Promise<void>
 }
 
 // Labels live only in a render target (GPU), so all of them redraw after a context restore (as
-// CanvasGameObject does).
+// PictureGameObject does).
 graphicsContextRestoredObservable.addListener("labelText", () => {
     spawnedLabelTexts.forEach((labelText) => labelText.redrawLostContents());
 });

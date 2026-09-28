@@ -1,7 +1,7 @@
 import AddObjectSignal from "../../../../shared/object/types/addObjectSignal";
 import LampEditOptions from "../../../ui/components/hud/selection/lampEditOptions";
 import ObjectTypeClientConfigMap from "../../maps/objectTypeClientConfigMap";
-import LampGameObject from "../lampGameObject";
+import LampGameObject from "../gameObject/lampGameObject";
 import ObjectTypeClientConfig from "./objectTypeClientConfig";
 
 const LampObjectTypeClientConfig: ObjectTypeClientConfig =

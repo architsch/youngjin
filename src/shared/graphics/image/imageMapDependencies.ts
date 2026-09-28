@@ -1,2 +1,2 @@
-import "./maps/canvasImageMap.ts";
+import "./maps/pictureImageMap.ts";
 import "./maps/voxelTexturePackImageMap.ts";

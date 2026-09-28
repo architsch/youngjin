@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import App from "../../../../app";
 import ClientObjectManager from "../../../../object/clientObjectManager";
 import { notificationMessageObservable, voxelQuadSelectionObservable } from "../../../../system/clientObservables";
-import { colliderDebugEnabledObservable, imageListChooserDebugEnabledObservable, roomListDebugEnabledObservable } from "../../../../../shared/system/sharedObservables";
+import { colliderDebugEnabledObservable, dummyImagesDebugEnabledObservable, roomListDebugEnabledObservable } from "../../../../../shared/system/sharedObservables";
 import VoxelQueryUtil from "../../../../../shared/voxel/util/voxelQueryUtil";
 import Button from "../../input/button";
 import ThingsPoolEnv from "../../../../system/types/thingsPoolEnv";
@@ -98,8 +98,8 @@ export default function DebugStats({env}: Props)
                         case "hide collider": colliderDebugEnabledObservable.set(false); break;
                         case "show dummy-rooms": roomListDebugEnabledObservable.set(true); break;
                         case "hide dummy-rooms": roomListDebugEnabledObservable.set(false); break;
-                        case "show dummy-images": imageListChooserDebugEnabledObservable.set(true); break;
-                        case "hide dummy-images": imageListChooserDebugEnabledObservable.set(false); break;
+                        case "show dummy-images": dummyImagesDebugEnabledObservable.set(true); break;
+                        case "hide dummy-images": dummyImagesDebugEnabledObservable.set(false); break;
                         case "restart tutorial": void restartTutorial(); break;
                         // Temporary sign-in entry point until the app has a proper place for it.
                         case "login**": PopupUtil.openPopup({popupType: "authPrompt"}); break;

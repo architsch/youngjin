@@ -24,6 +24,9 @@ export default class InstancedTexturePackMaterialParams extends MaterialParams
     // Set after construction: the texture keeps one channel of coverage and each instance supplies the
     // color (see InstancedMeshBinding.updateInstanceColor), e.g. lettering in one ink per label.
     coverageOnly: boolean;
+    // Set after construction: each instance turns what it samples by quarter turns (see
+    // InstancedMeshBinding.updateInstanceTextureTurns), e.g. a canvas's picture.
+    turnable: boolean;
 
     constructor(texturePath: string, textureWidth: number, textureHeight: number,
         textureGridCellWidth: number, textureGridCellHeight: number,
@@ -46,6 +49,7 @@ export default class InstancedTexturePackMaterialParams extends MaterialParams
         this.outlineColorHex = undefined;
         this.alphaCutout = false;
         this.coverageOnly = false;
+        this.turnable = false;
     }
 
     protected getDefaultMaterialId(): string

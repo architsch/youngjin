@@ -1,5 +1,5 @@
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
-import GameObject from "../types/gameObject";
+import GameObject from "../types/gameObject/gameObject";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
 import App from "../../app";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";

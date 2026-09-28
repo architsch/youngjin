@@ -13,7 +13,7 @@ import ImageMapBuilder from "./builder/imageMapBuilder";
 import CompositionThumbnailBuilder from "./builder/compositionThumbnailBuilder";
 import { ArcadeData } from "./data/arcadeData";
 import { LibraryData } from "./data/libraryData";
-import { CANVAS_TEXTURE_CELL_SIZE } from "../../shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
+import { ImageMapSeeds } from "./data/imageMapSeeds";
 // Capacities decode compositions, which needs the part builders registered.
 import "../../shared/graphics/mesh/composition/instancedMeshCompositionBuilderMapDependencies";
 
@@ -66,14 +66,8 @@ export default async function SSG(): Promise<void>
 
     // Generate Image Maps
 
-    await new ImageMapBuilder({
-        rootDirName: "voxel_texture_packs", mapName: "VoxelTexturePackImageMap",
-        hasGrid: true, gridCellSize: 256, maxCols: 2,
-    }).build();
-    await new ImageMapBuilder({
-        rootDirName: "canvas_images", mapName: "CanvasImageMap",
-        hasGrid: false, thumbnailSize: CANVAS_TEXTURE_CELL_SIZE,
-    }).build();
+    for (const seed of Object.values(ImageMapSeeds))
+        await new ImageMapBuilder(seed).build();
 
     // Generate Pre-Encoded Compositions, the mesh capacities they need, and their thumbnails
 

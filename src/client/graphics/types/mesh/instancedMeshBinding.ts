@@ -2,7 +2,7 @@ import * as THREE from "three";
 import MaterialParams from "../../../../shared/graphics/material/types/materialParams";
 import MeshFactory from "../../factories/meshFactory";
 import TextureFactory from "../../factories/textureFactory";
-import GameObject from "../../../object/types/gameObject";
+import GameObject from "../../../object/types/gameObject/gameObject";
 import InstancedTexturePackMaterialParams from "../../../../shared/graphics/material/types/instancedTexturePackMaterialParams";
 import TextureUtil from "../../util/textureUtil";
 import MeshDataUtil from "../../../../shared/graphics/mesh/util/meshDataUtil";
@@ -304,6 +304,25 @@ export default class InstancedMeshBinding
         markInstanceForUpload(uvSampleSizeBufferAttrib, instanceId);
     }
 
+    // Clockwise quarter turns of what the instance samples, as it is seen, for a material that turns (see
+    // InstancedTexturePackMaterialParams.turnable).
+    updateInstanceTextureTurns(gameObject: GameObject, instanceId: number, quarterTurns: number)
+    {
+        if (!this.instancedMesh)
+        {
+            console.error(`InstancedMesh hasn't been loaded yet (objectId = ${gameObject.params.objectId})`);
+            return;
+        }
+        const quarterTurnsAttrib = this.instancedMesh.geometry.getAttribute("uvQuarterTurns") as THREE.InstancedBufferAttribute;
+        if (!quarterTurnsAttrib)
+        {
+            console.error(`The material doesn't turn what it samples (objectId = ${gameObject.params.objectId})`);
+            return;
+        }
+        quarterTurnsAttrib.setX(instanceId, ((quarterTurns % 4) + 4) % 4);
+        markInstanceForUpload(quarterTurnsAttrib, instanceId);
+    }
+
     updateInstanceColor(gameObject: GameObject, instanceId: number,
         r: number, g: number, b: number)
     {
@@ -373,41 +392,17 @@ export default class InstancedMeshBinding
             u1 + canvas.width / params.textureWidth, v1 + canvas.height / params.textureHeight);
     }
 
-    // cellAspect is the cell's aspect ratio as shown, when the instance stretches it (see
-    // TextureUtil.drawImageOnRenderTarget). The optional source UV rect selects a sub-region (e.g. one
-    // atlas cell).
-    async drawImageAtIndex(textureIndex: number, imageURL: string, cellAspect?: number,
-        widthScale: number = 1, heightScale: number = 1,
-        sourceU1: number = 0, sourceV1: number = 0,
-        sourceU2: number = 1, sourceV2: number = 1,
-        unloadTextureAfterDraw: boolean = true)
+    // Draws an image stretched over a rect of texels, its bottom-left corner at the given texel (see
+    // TextureUtil.drawImageOnRenderTarget); an empty URL paints the placeholder. Skipped if shouldDraw says
+    // no once the image has loaded.
+    async drawImageAtTexel(texelX: number, texelY: number, texelWidth: number, texelHeight: number,
+        imageURL: string, shouldDraw?: () => boolean)
     {
-        const {u1, v1, u2, v2} = this.getTextureCellUVRect(textureIndex, widthScale, heightScale);
-        const regionAspect = cellAspect == undefined ? undefined : cellAspect * widthScale / heightScale;
+        const params = this.materialParams as InstancedTexturePackMaterialParams;
+        const u1 = texelX / params.textureWidth;
+        const v1 = texelY / params.textureHeight;
         await TextureUtil.drawImageOnRenderTarget(imageURL, this.getDynamicRenderTarget(),
-            u1, v1, u2, v2, regionAspect, sourceU1, sourceV1, sourceU2, sourceV2, unloadTextureAfterDraw);
-    }
-
-    // UV rect of an instance's texture cell, optionally a centered sub-region scaled by the given factors.
-    private getTextureCellUVRect(textureIndex: number, widthScale: number = 1, heightScale: number = 1):
-        {u1: number, v1: number, u2: number, v2: number}
-    {
-        const instancedTexturePackMaterialParams = this.materialParams as InstancedTexturePackMaterialParams;
-        const textureGridCellWidthScale = instancedTexturePackMaterialParams.textureGridCellWidth
-            / instancedTexturePackMaterialParams.textureWidth;
-        const textureGridCellHeightScale = instancedTexturePackMaterialParams.textureGridCellHeight
-            / instancedTexturePackMaterialParams.textureHeight;
-
-        const textureRow = Math.floor(textureIndex * textureGridCellWidthScale);
-        const textureCol = textureIndex % (1 / textureGridCellWidthScale);
-        const u1 = textureGridCellWidthScale * textureCol;
-        const v1 = textureGridCellHeightScale * textureRow;
-        const u2 = u1 + textureGridCellWidthScale;
-        const v2 = v1 + textureGridCellHeightScale;
-
-        const widthMargin = textureGridCellWidthScale * (1 - widthScale) * 0.5;
-        const heightMargin = textureGridCellHeightScale * (1 - heightScale) * 0.5;
-        return {u1: u1 + widthMargin, v1: v1 + heightMargin, u2: u2 - widthMargin, v2: v2 - heightMargin};
+            u1, v1, u1 + texelWidth / params.textureWidth, v1 + texelHeight / params.textureHeight, shouldDraw);
     }
 
     // Only exists for materials whose texture was created empty (see TextureFactory.loadDynamicEmptyTexture).

@@ -31,7 +31,7 @@ A `GameObject` can render itself as a set of simple parts borrowed from shared i
 ## Indexed compositions
 Metadata is stored and sent once per object, so a spelled-out composition is expensive. `IndexedCompositionCodec` is a **router**: the object stores only an index into `PreEncodedCompositionStringMap`, and the entry at that index (which carries its own codec prefix) is decoded by its own codec.
 - Lamps use it with one entry per size, and store no composition at all: a lamp's default parts are the entry for its current size, so its look can't disagree with its footprint. A resize re-decodes the live parameters, so the lamp points them at the new size's entry first (`LampGameObject`).
-- Doors, canvases and labels use it with one entry per look on offer, which users pick between. A framed panel's first look is the frameless one; an object storing none is given one of the others (any, for a door), seeded by its room and id so everyone sees the same.
+- Doors, canvases and labels use it with one entry per look on offer, which users pick between. A framed panel's first look is the frameless one; a canvas added by hand starts with a random frame, and an object storing none is given one of the others (any, for a door), seeded by its room and id so everyone sees the same.
 - A type accepts only its own entries, on the server and when decoding (`CompositionMetadataUtil.isIndexedLookOf`): another type's entry builds parts and parameters the object can't place.
 - The table is generated at build time by `PreEncodedCompositionBuilder` (during SSG) from authored asset data (`pre_encoding_source.json`), so a new look is a data edit rather than new code. An entry gives parts for `DefaultCompositionCodec` or parameters for any other codec, and every value it gives must survive that codec's round trip or the build fails.
 - `npm run compositionEditor` (@dev/scripts/compositionEditor) edits that source with every entry's thumbnail redrawn as it changes. It encodes through the build's own `PreEncodingSourceUtil` and draws with the build's thumbnail renderer, so what it shows, errors included, is what SSG will produce; it writes only the source, which SSG then turns into the tables and atlases.
@@ -45,7 +45,7 @@ Metadata is stored and sent once per object, so a spelled-out composition is exp
 - A type's appearances are the structural variants its codec lists (every distinct set of parts it can build), or its pre-encoded entries for indexed types. A new part type or variant must be reachable from that list. A resizable type is counted at its largest.
 - A cap is shared by its category's types (see `ObjectCategoryConfigMap`), so a category contributes its greediest type once rather than every type it holds.
 - Objects vary independently, so each mesh's maximum is taken on its own; the result is exact, not padded.
-- Only composed meshes are listed. Voxel quads, canvas pictures and labels size their own meshes from their room caps.
+- Only composed meshes are listed. Voxel quads, pictures (a canvas's or a prop's) and labels size their own meshes from their room caps.
 - The inputs are code, so an integration test fails when the committed table no longer matches; re-run SSG.
 
 ## Thumbnails

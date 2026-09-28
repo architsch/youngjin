@@ -49,7 +49,6 @@ export default function TexturePackPanel({ anchorElementId, onClose }: Props)
             <ImageChooser
                 id="changeTexturePackButton"
                 title="Change Texture Pack"
-                viewType="grid"
                 mapName="VoxelTexturePackImageMap"
                 initialChoicePath={texturePackPath}
                 onChoose={(path) => setTexture(path)}

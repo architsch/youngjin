@@ -1,4 +1,4 @@
-import GameObject from "../object/types/gameObject";
+import GameObject from "./types/gameObject/gameObject";
 import AddObjectSignal from "../../shared/object/types/addObjectSignal";
 import ObjectFactory from "./factories/objectFactory";
 import App from "../app";
@@ -11,7 +11,7 @@ import RemoveObjectSignal from "../../shared/object/types/removeObjectSignal";
 import SetObjectMetadataSignal from "../../shared/object/types/setObjectMetadataSignal";
 import SetObjectTransformSignal from "../../shared/object/types/setObjectTransformSignal";
 import PeriodicTransformReceiver from "./components/periodicTransformReceiver";
-import VoxelGameObject from "./types/voxelGameObject";
+import VoxelGameObject from "./types/gameObject/voxelGameObject";
 import { objectSelectionObservable } from "../system/clientObservables";
 import ObjectSelection from "../graphics/types/gizmo/objectSelection";
 import ObjectUpdateUtil from "../../shared/object/util/objectUpdateUtil";
@@ -101,7 +101,7 @@ const ClientObjectManager =
         else
             playerPos = ClientObjectUtil.getSingleModePlayerPosition(room);
 
-        // Nearest-first, so canvas images near the player load first.
+        // Nearest-first, so pictures near the player load first.
         const objects = Object.values(room.objectById);
         objects.sort((a, b) =>
         {
@@ -216,19 +216,28 @@ const ClientObjectManager =
             console.error(`ClientObjectManager.setObjectTransform :: GameObject not found (objectId = ${objectId})`);
         return result.transform;
     },
+    // With the transform the value needs, if it changes the scale the object is pinned to (see
+    // SetObjectMetadataSignal.transform).
     setObjectMetadata: (objectId: string, key: ObjectMetadataKey, value: string,
-        validate: boolean = true): boolean =>
+        validate: boolean = true, transform?: ObjectTransform): boolean =>
     {
         const user = App.getUser();
         const room = App.getCurrentRoom()!;
 
-        const signal = new SetObjectMetadataSignal(room.id, objectId, key, value);
+        const signal = new SetObjectMetadataSignal(room.id, objectId, key, value, transform);
         if (!ObjectUpdateUtil.setObjectMetadata(user, room, signal, validate))
             return false;
 
         const object = ClientObjectManager.getObjectById(objectId);
         if (object)
+        {
+            if (transform)
+            {
+                const applied = room.objectById[objectId].transform;
+                object.setObjectTransform(applied.pos, applied.dir);
+            }
             object.onSetMetadata(key, value);
+        }
         else
             console.error(`ClientObjectManager.setObjectMetadata :: GameObject not found (objectId = ${objectId})`);
 
@@ -291,7 +300,7 @@ const ClientObjectManager =
         if (!success)
             return;
         ClientObjectManager.setObjectMetadata(signal.objectId, signal.metadataKey,
-            signal.metadataValue, false);
+            signal.metadataValue, false, signal.transform);
     },
 }
 

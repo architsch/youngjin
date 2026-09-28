@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import GameObject from "../../../object/types/gameObject";
+import GameObject from "../../../object/types/gameObject/gameObject";
 import { clientFeatureFlagsObservable, gameModeObservable, objectSelectionObservable,
     roomChangedObservable, updateObservable } from "../../../system/clientObservables";
 import GraphicsManager from "../../graphicsManager";

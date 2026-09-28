@@ -7,7 +7,7 @@ import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import App from "../../../app";
 import GraphicsManager from "../../../graphics/graphicsManager";
-import VoxelGameObject from "../../../object/types/voxelGameObject";
+import VoxelGameObject from "../../../object/types/gameObject/voxelGameObject";
 import { orbitCameraAnglesObservable, orbitCameraZoomObservable,
     voxelQuadSelectionObservable } from "../../../system/clientObservables";
 import { ClientEventType } from "../../../system/types/clientEventType";

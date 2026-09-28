@@ -14,7 +14,7 @@ The source code and the machinery that builds and runs it:
 |---|---|
 | `src/` | client, server and shared TypeScript |
 | `views/` | EJS templates |
-| `dev/` | build configuration and helper scripts |
+| `dev/` | build configuration and helper scripts, but not the images in `dev/assets/`, which are copies of the game's pictures on the same terms as them (below) |
 | `tests/` | E2E and integration tests |
 | `docs/` | technical documentation |
 | `.github/` | workflows |
@@ -48,9 +48,9 @@ Concretely, it covers:
   under `public/ArtRaider/`, `public/HuntLand/`, `public/PoliceChase/`,
   `public/SpaceTown/` and `public/Water-vs-Fire/`.
 - **Dev-log prose and its screenshots** — `public/devlog-2026/` and later years.
-- **Original game artwork** — the textures, canvas images, character atlases,
+- **Original game artwork** — the textures, pictures, character atlases,
   icons and logos authored for ThingsPool under `public/app/assets/` and
-  `public/`, excluding the third-party packs listed below. This includes the
+  `public/`, excluding the third-party packs and photographs listed below. This includes the
   authored descriptions of that artwork as well as the images themselves —
   `public/app/assets/instanced_mesh_composition/`, which is the source the
   game's object appearances are composed from.
@@ -62,7 +62,13 @@ Concretely, it covers:
 Some assets in this repository belong to neither category above: they are
 third-party works redistributed under their own terms. The texture packs and the
 label font under `public/app/assets/resources/` are the main examples: the packs
-are public domain, and the font is under the SIL Open Font License. See
+are public domain, and the font is under the SIL Open Font License. So are the
+photographs of everyday objects in the pictures' subfolder `2/`, which ship
+under `public/app/assets/pictures/2/` once enabled and are parked under
+`dev/assets/disabled_pictures/2/` until then, and the full-resolution samples
+of them under `dev/assets/pictures/2/`, all used under the Unsplash License.
+(`dev/assets/pictures/1/` holds copies of the paintings under
+`public/app/assets/pictures/1/`, which keep those images' terms.) See
 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for the full list.
 
 ## In short

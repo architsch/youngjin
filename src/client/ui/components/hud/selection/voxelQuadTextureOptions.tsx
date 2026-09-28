@@ -5,7 +5,7 @@ import SocketsClient from "../../../../networking/client/socketsClient";
 import SetVoxelQuadTextureSignal from "../../../../../shared/voxel/types/update/setVoxelQuadTextureSignal";
 import App from "../../../../app";
 import ClientVoxelManager from "../../../../voxel/clientVoxelManager";
-import VoxelGameObject from "../../../../object/types/voxelGameObject";
+import VoxelGameObject from "../../../../object/types/gameObject/voxelGameObject";
 import useMouseDragScroll from "../../../util/mouseDragScroll";
 import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
 import VoxelUpdateUtil from "../../../../../shared/voxel/util/voxelUpdateUtil";

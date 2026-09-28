@@ -1,5 +1,5 @@
 import GameMode from "../types/gameMode";
-import GameObject from "../../object/types/gameObject";
+import GameObject from "../../object/types/gameObject/gameObject";
 import ObjectHit from "../../graphics/types/objectHit";
 import ObjectSelection from "../../graphics/types/gizmo/objectSelection";
 import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";

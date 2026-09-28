@@ -12,4 +12,8 @@ export default interface ImageMapSeed
     // Thumbnail longest side in px (undefined = none; atlas maps can't have them). Saves download,
     // decode and GPU upload for images shown small.
     thumbnailSize?: number;
+
+    // The cell (in px) an image that keeps its scale must be whole cells of (see ImageMetadata.preserveScale).
+    // Undefined for a map none of whose images may keep their scale.
+    preservedScaleCellSize?: number;
 }

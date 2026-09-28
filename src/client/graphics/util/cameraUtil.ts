@@ -2,7 +2,7 @@ import * as THREE from "three";
 import MeshFactory from "../factories/meshFactory";
 import GraphicsManager from "../graphicsManager";
 import PointerCoordUtil from "./pointerCoordUtil";
-import GameObject from "../../object/types/gameObject";
+import GameObject from "../../object/types/gameObject/gameObject";
 import ClientObjectManager from "../../object/clientObjectManager";
 import InstancedMeshBinding from "../types/mesh/instancedMeshBinding";
 import ClientVoxelQueryUtil from "../../voxel/util/clientVoxelQueryUtil";

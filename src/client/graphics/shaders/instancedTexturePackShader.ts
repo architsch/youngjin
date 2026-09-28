@@ -17,6 +17,20 @@ const VERTEX_PARS_GLSL = `
     attribute vec2 uvSampleSize;
 `;
 
+const TURN_VERTEX_PARS_GLSL = `
+    attribute float uvQuarterTurns;
+`;
+
+// Clockwise as the quad is seen: after one turn, the sampled rect's left edge runs along the quad's top.
+const TURN_VERTEX_GLSL = `
+    if (uvQuarterTurns > 2.5)
+        vMapUv = vec2(vMapUv.y, 1.0 - vMapUv.x);
+    else if (uvQuarterTurns > 1.5)
+        vMapUv = vec2(1.0 - vMapUv.x, 1.0 - vMapUv.y);
+    else if (uvQuarterTurns > 0.5)
+        vMapUv = vec2(1.0 - vMapUv.y, vMapUv.x);
+`;
+
 function vertexGLSL(uScale: number, vScale: number): string
 {
     return `
@@ -29,7 +43,8 @@ function vertexGLSL(uScale: number, vScale: number): string
 
 export default function installInstancedTexturePackShader(
     shader: THREE.WebGLProgramParametersWithUniforms,
-    uvScales: readonly [number, number], outlineColorHex: string | undefined, coverageOnly: boolean)
+    uvScales: readonly [number, number], outlineColorHex: string | undefined, coverageOnly: boolean,
+    turnable: boolean)
 {
     if (coverageOnly)
     {
@@ -43,11 +58,12 @@ export default function installInstancedTexturePackShader(
             `
         );
     }
-    shader.vertexShader = VERTEX_PARS_GLSL + shader.vertexShader;
+    shader.vertexShader = VERTEX_PARS_GLSL + (turnable ? TURN_VERTEX_PARS_GLSL : "") + shader.vertexShader;
     shader.vertexShader = shader.vertexShader.replace(
         "#include <uv_vertex>",
         `
         #include <uv_vertex>
+        ${turnable ? TURN_VERTEX_GLSL : ""}
         ${vertexGLSL(uvScales[0], uvScales[1])}
         `
     );

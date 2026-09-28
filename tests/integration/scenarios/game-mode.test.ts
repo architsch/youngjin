@@ -60,11 +60,11 @@ vi.mock("../../../src/client/object/clientObjectManager", () => ({
 import * as THREE from "three";
 import App from "../../../src/client/app";
 import GraphicsManager from "../../../src/client/graphics/graphicsManager";
-import GameObject from "../../../src/client/object/types/gameObject";
+import GameObject from "../../../src/client/object/types/gameObject/gameObject";
 import PlayerController from "../../../src/client/object/components/playerController";
 import PlayerCamera from "../../../src/client/object/components/helpers/player/playerCamera";
 import PlayerPointerInput from "../../../src/client/object/components/helpers/player/playerPointerInput";
-import VoxelGameObject from "../../../src/client/object/types/voxelGameObject";
+import VoxelGameObject from "../../../src/client/object/types/gameObject/voxelGameObject";
 import ObjectSelection from "../../../src/client/graphics/types/gizmo/objectSelection";
 import VoxelQuadSelection from "../../../src/client/graphics/types/gizmo/voxelQuadSelection";
 import WorldSpaceSelectionUtil from "../../../src/client/graphics/util/worldSpaceSelectionUtil";
@@ -74,7 +74,7 @@ import CameraUtil from "../../../src/client/graphics/util/cameraUtil";
 import MeshFactory from "../../../src/client/graphics/factories/meshFactory";
 import ClientObjectManager from "../../../src/client/object/clientObjectManager";
 import SinglePlayerActionMap from "../../../src/client/singlePlayer/maps/singlePlayerActionMap";
-import PlayerGameObject from "../../../src/client/object/types/playerGameObject";
+import PlayerGameObject from "../../../src/client/object/types/gameObject/playerGameObject";
 import { cameraModeObservable, clientFeatureFlagsObservable, editModeOpeningOverrideObservable,
     gameModeObservable, myPlayerHiddenObservable, notificationMessageObservable, objectSelectionObservable,
     orbitCameraDistanceRangeRequestObservable, orbitCameraTargetOverrideObservable,
@@ -199,8 +199,12 @@ function clickVoxel(row: number, col: number, quadIndex: number): void
     try
     {
         // A real VoxelGameObject, so the click is handled exactly as a real one.
-        const clicked = Object.assign(Object.create(VoxelGameObject.prototype),
-            { getVoxel: () => voxel }) as VoxelGameObject;
+        const voxelTypeIndex = ObjectTypeConfigMap.getIndexByType("Voxel");
+        const clicked = Object.assign(Object.create(VoxelGameObject.prototype), {
+            params: { objectTypeIndex: voxelTypeIndex, metadata: {} },
+            config: ObjectTypeConfigMap.getConfigByIndex(voxelTypeIndex),
+            getVoxel: () => voxel,
+        }) as VoxelGameObject;
         clicked.onClick(instanceId, new THREE.Vector3(col + 0.5, 0, row + 0.5));
     }
     finally

@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import GameObjectComponent from "./gameObjectComponent";
-import GameObject from "../types/gameObject";
+import GameObject from "../types/gameObject/gameObject";
 import { SIGNAL_BATCH_SEND_INTERVAL } from "../../../shared/system/sharedConstants";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
 

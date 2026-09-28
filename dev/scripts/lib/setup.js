@@ -232,24 +232,26 @@ const doorStyles = (page) => callSandbox(page, "doorStyles");
 const canvasFrameStyles = (page) => callSandbox(page, "canvasFrameStyles");
 
 /**
- * Attaches a picture, a door, a lamp or a label to a cell's face:
+ * Attaches a canvas, a prop, a door, a lamp or a label to a cell's face:
  *
  *   addObject({type: "Canvas", row, col, face: "-z", collisionLayer: 2, metadata: {ImagePath: "1/14"}})
+ *   addObject({type: "Prop", row, col, face: "-z", collisionLayer: 1, metadata: {ImagePath: "2/4"}})
  *   addObject({type: "Door", row, col, face: "+x", metadata: {Label: "Library"}})
  *   addObject({type: "Lamp", row, col, face: "+y", collisionLayer: -1})   // on the room's floor
  *   addObject({type: "Label", row, col, face: "-z", collisionLayer: 2, metadata: {Label: "Reading Room"}})
  *
  * `face` is `-x`, `+x`, `-z` or `+z` for a wall, where `collisionLayer` is the height on it, or `+y` / `-y`
  * for the top / underside of the block on `collisionLayer`; below the lowest layer is the room's floor, above
- * the highest its ceiling. Pictures, doors and labels go on walls only. A door ignores the layer and stands on the
- * floor unless given a `y`. Each goes up at the size the game adds it at (a lamp one layer tall; see
- * `resizeObject` for others). Metadata uses the game's key names; returns the object's id.
+ * the highest its ceiling. Doors and labels go on walls only. A door ignores the layer and stands on the floor
+ * unless given a `y`. Each goes up at the size the game adds it at (a lamp one layer tall; a canvas a whole block,
+ * or one layer where only that fits on the spot; a prop its image's size; see `resizeObject` for others). Metadata uses the game's key names (`pictures` lists the images, with
+ * the type that shows each); returns the object's id.
  */
 const addObject = (page, spec) => callSandbox(page, "addObject", spec);
 
 /**
- * Resizes a standing object, in multiples of its type's step (a canvas goes from 1 to its maxScale in
- * halves):
+ * Resizes a standing object, in multiples of its type's step (a canvas goes from 0.5 to its maxScale in
+ * halves; a prop showing an image is pinned to that image's size):
  *
  *   resizeObject({objectId, x: 2.5, y: 1.5})
  *

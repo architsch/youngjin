@@ -25,7 +25,6 @@ import MyRoomWelcomeForm from "./components/form/myRoomWelcomeForm";
 import { clientFeatureFlagsObservable, gameModeObservable, numActiveInputElementsObservable, popupStateObservable, roomChangedObservable } from "../system/clientObservables";
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import ImageGridChooserForm from "./components/form/imageGridChooserForm";
-import ImageListChooserForm from "./components/form/imageListChooserForm";
 import ConsoleLogForm from "./components/form/consoleLogForm";
 import ConfirmForm from "./components/form/confirmForm";
 import ExitPromptForm from "./components/form/exitPromptForm";
@@ -197,17 +196,11 @@ export default function UIRoot({ env, user }: UIRootProps)
                     <HubRoomWelcomeForm/>
                 </Popup>;
                 case "imageChooser": return <Popup key={i} showCloseButton={true}>
-                    {state.params.viewType === "list"
-                        ? <ImageListChooserForm
-                            mapName={state.params.mapName}
-                            initialChoicePath={state.params.initialChoicePath}
-                            onChoose={(path) => state.params.onChoose(path)}
-                        />
-                        : <ImageGridChooserForm
-                            mapName={state.params.mapName}
-                            initialChoicePath={state.params.initialChoicePath}
-                            onChoose={(path) => state.params.onChoose(path)}
-                        />}
+                    <ImageGridChooserForm
+                        mapName={state.params.mapName}
+                        initialChoicePath={state.params.initialChoicePath}
+                        onChoose={(path) => state.params.onChoose(path)}
+                    />
                 </Popup>;
                 case "consoleLog": return <Popup key={i} title="Console Log" showCloseButton={true}>
                     <ConsoleLogForm/>

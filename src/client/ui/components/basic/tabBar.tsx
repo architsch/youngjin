@@ -1,6 +1,6 @@
 import useMouseDragScroll from "../../util/mouseDragScroll";
 
-export default function TabBar({ tabNames, selectedTabName, onSelect }: Props)
+export default function TabBar({ tabNames, selectedTabName, onSelect, getTabLabel }: Props)
 {
     const onRefChange = useMouseDragScroll("horizontal", "grabWhileDragging");
 
@@ -18,7 +18,7 @@ export default function TabBar({ tabNames, selectedTabName, onSelect }: Props)
                 return <div key={`tab-${tabName}`}
                     className={`${baseClasses} ${stateClasses}`}
                     onClick={() => onSelect(tabName)}>
-                    {tabName}
+                    {getTabLabel ? getTabLabel(tabName) : tabName}
                 </div>;
             })}
         </div>
@@ -30,4 +30,5 @@ interface Props
     tabNames: string[];
     selectedTabName: string;
     onSelect: (tabName: string) => void;
+    getTabLabel?: (tabName: string) => string; // The name itself if absent.
 }

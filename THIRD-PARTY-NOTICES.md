@@ -47,6 +47,59 @@ The directory keeps `OFL.txt`, the authoritative terms, and a `README.md`
 recording how the subset was made. The OFL covers the font alone; the code that
 uses it stays under Apache-2.0.
 
+### Pictures from third parties
+
+The pictures listed below, under `public/app/assets/pictures/` (with their
+`.thumbnail.webp` copies), are photographs by the people their rows name,
+each used under the license its row names; an empty table means none ships. The
+[Unsplash License](https://unsplash.com/license) lets a photo be used,
+commercially or not, without permission or credit; not sold without significant
+modification, nor compiled into a service that competes with Unsplash. Every
+Unsplash photo here is a free one, not an Unsplash+ one.
+
+Each was sampled from its photo, and straightened, cut out of its background or
+retouched, in the image map editor (`npm run imageMapEditor`). The editor keeps
+each sample at full resolution under `dev/assets/pictures/2/` (never shipped),
+and writes this table from the map's manifest. A disabled entry's image is parked
+under `dev/assets/disabled_pictures/` and left out of this table, since it
+doesn't ship. Every sample and parked image keeps the photographer and license of
+the photo it came from, which the manifest names for each entry, enabled or not.
+The original photos are never committed; only their index,
+`dev/assets/picture_sources/index.json`, naming where each came from.
+The license grants no trademark or likeness rights, so prominent logos and brand
+plates were painted out; small incidental labels on goods remain.
+
+<!-- pictures:begin (written by the image map editor) -->
+| File | Title | Author | Source | License |
+|---|---|---|---|---|
+| `2/4.webp` | Pepperoni Pizza | Fernando Andrade | [_P76trHTWDE](https://unsplash.com/photos/pizza-with-pepperoni-and-ham-_P76trHTWDE) | Unsplash License |
+| `2/7.webp` | Boombox | Eric Nopanen | [8e0EHPUx3Mo](https://unsplash.com/photos/person-with-vintage-silver-boombox-8e0EHPUx3Mo) | Unsplash License |
+| `2/8.webp` | Tube Radio | Gayatri Pandkar | [Q1KJomEl70c](https://unsplash.com/photos/an-old-radio-sitting-on-top-of-a-wooden-table-Q1KJomEl70c) | Unsplash License |
+| `2/9.webp` | Portable TV | Diego González | [-I8lDurtfAo](https://unsplash.com/photos/grey-and-orange-crt-tv--I8lDurtfAo) | Unsplash License |
+| `2/11.webp` | Wall Clock | Ocean Ng | [L0xOtAnv94Y](https://unsplash.com/photos/round-analog-wall-clock-pointing-at-1009-L0xOtAnv94Y) | Unsplash License |
+| `2/19.webp` | Macintosh | Jason Leung | [VeUSCLJrLf4](https://unsplash.com/photos/turned-off-macintosh-monitor-VeUSCLJrLf4) | Unsplash License |
+| `2/27.webp` | Pendulum Clock Face | C | [G_YvG3ZIlkQ](https://unsplash.com/photos/an-old-wooden-clock-face-shows-the-time-G_YvG3ZIlkQ) | Unsplash License |
+| `2/33.webp` | Keyboard | Andrey Matveev | [yLG3Zog38tw](https://unsplash.com/photos/a-computer-keyboard-sitting-on-top-of-a-table-yLG3Zog38tw) | Unsplash License |
+| `2/40.webp` | Book Cubby | Wesley Tingey | [ghHUi-j_eko](https://unsplash.com/photos/full-bookshelf-ghHUi-j_eko) | Unsplash License |
+| `2/48.webp` | Vending Machine Keypad | Denny Müller | [In51lypcCDA](https://unsplash.com/photos/red-and-black-vending-machine-In51lypcCDA) | Unsplash License |
+| `2/52.webp` | Card Catalog Drawers | Erol Ahmed | [Y3KEBQlB1Zk](https://unsplash.com/photos/close-up-photography-of-brown-wooden-card-catalog-Y3KEBQlB1Zk) | Unsplash License |
+| `2/56.webp` | Dartboard | Simon Ray | [1Bdsg4xqdYs](https://unsplash.com/photos/a-dart-hitting-in-the-center-of-a-dartboard-on-a-wooden-wall-1Bdsg4xqdYs) | Unsplash License |
+| `2/57.webp` | Popcorn Sign | Rita Vicari | [kGGnJBw78Vo](https://unsplash.com/photos/popcorn-signage-kGGnJBw78Vo) | Unsplash License |
+| `2/58.webp` | Popcorn Machine Window | Vitya Lapatey | [Q-dusXpAH0I](https://unsplash.com/photos/popcorn-on-white-and-red-box-Q-dusXpAH0I) | Unsplash License |
+| `2/77.webp` | Bookshelf Speaker | Caleb Woods | [VVuRLhyTmXM](https://unsplash.com/photos/green-plant-on-brown-pot-VVuRLhyTmXM) | Unsplash License |
+| `2/85.webp` | Arch Vase Cubby | Kshiraj Vij | [xIJRwAaxwZo](https://unsplash.com/photos/various-decorative-objects-displayed-in-illuminated-cubbies-xIJRwAaxwZo) | Unsplash License |
+| `2/86.webp` | Vase Pair Cubby | Kshiraj Vij | [xIJRwAaxwZo](https://unsplash.com/photos/various-decorative-objects-displayed-in-illuminated-cubbies-xIJRwAaxwZo) | Unsplash License |
+| `2/87.webp` | Sculpture Cubby | Kshiraj Vij | [xIJRwAaxwZo](https://unsplash.com/photos/various-decorative-objects-displayed-in-illuminated-cubbies-xIJRwAaxwZo) | Unsplash License |
+| `2/88.webp` | Rack of Bread Rolls | Leslie Saunders | [1vhNkMq6_aM](https://unsplash.com/photos/a-group-of-pastries-in-a-fridge-1vhNkMq6_aM) | Unsplash License |
+| `2/96.webp` | Ornate Mirror | Luis Villasmil | [gzb4RKX-pdc](https://unsplash.com/photos/ornate-gold-frame-on-yellow-wall-gzb4RKX-pdc) | Unsplash License |
+| `2/99.webp` | No Smoking Plaque | Benjamin Lehman | [1wxXo58XOjk](https://unsplash.com/photos/a-bathroom-with-a-no-smoking-sign-on-the-wall-1wxXo58XOjk) | Unsplash License |
+| `2/116.webp` | Composition Notebook | Kelly Sikkema | [LtIqWwDs70s](https://unsplash.com/photos/black-and-white-frame-with-white-printer-paper-LtIqWwDs70s) | Unsplash License |
+| `2/131.webp` | Mechanical Keyboard | JL Cabrera | [p5rgceFiOH0](https://unsplash.com/photos/a-black-and-white-keyboard-with-red-keys-p5rgceFiOH0) | Unsplash License |
+| `2/148.webp` | No Unauthorized Access Sign | Waldemar Brandt | [Dae6gNfmOos](https://unsplash.com/photos/red-and-white-no-smoking-sign-Dae6gNfmOos) | Unsplash License |
+| `2/149.webp` | High Voltage Sign | Waldemar Brandt | [Dae6gNfmOos](https://unsplash.com/photos/red-and-white-no-smoking-sign-Dae6gNfmOos) | Unsplash License |
+| `2/150.webp` | Green Arrow Sign | Tasha Kostyuk | [UgPP50i3_5c](https://unsplash.com/photos/green-sign-with-white-arrow-pointing-left-on-brick-wall-UgPP50i3_5c) | Unsplash License |
+<!-- pictures:end -->
+
 ## Software dependencies
 
 Dependencies are resolved from npm at build time rather than vendored into this

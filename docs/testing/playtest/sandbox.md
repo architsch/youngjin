@@ -34,10 +34,10 @@ The bare `:4321/...` shorthand does not work under zsh. Ops share their names wi
 |---|---|
 | `stage` | four walls around a floor rectangle; returns each wall's cells and its inward face |
 | `addBlocks` / `removeBlocks` | a box of blocks, or a doorway cut through one already standing |
-| `addObject` / `removeObject` | a canvas, a door, a lamp or a label on a cell's face (walls, or a block's top or underside), at the size the game adds it at, by the game's own metadata keys |
+| `addObject` / `removeObject` | a canvas, a prop, a door, a lamp or a label on a cell's face (walls, or a block's top or underside), at the size the game adds it at, by the game's own metadata keys |
 | `resizeObject` | a standing object at another size, in multiples of its type's step; the placement rule still applies, and the size it ended up with is returned |
 | `restrictedZones` / `texturePack` / `roomLighting` | room-level state; each reports when called with nothing |
-| `palettes` / `pictures` / `doorStyles` / `canvasFrameStyles` | the values to build out of, as the game uses them |
+| `palettes` / `pictures` / `doorStyles` / `canvasFrameStyles` | the values to build out of, as the game uses them (each picture with the type that shows it) |
 | `camera` / `cameraPose` | where the free camera stands and what it aims at, in world coordinates |
 | `cameraMode` | `"firstPerson"` to walk the player (e.g. to test movement or the view on stairs), `"free"` to go back |
 | `clearSandbox` | back to bare floor, between one test and the next |
@@ -46,7 +46,7 @@ The bare `:4321/...` shorthand does not work under zsh. Ops share their names wi
 - **Arrange with `setup`, act with `interact`.** Build calls skip the permission check, so a door hung by `addObject` proves nothing about the superuser's door tools — reach those through `ensureEditMode`, a real surface click and `uiClick` on the control.
 - Hang objects on the cells `stage` reports, not on one worked out by hand: naming the cell *in front* of a wall hangs the object in mid-air, and it reads as deliberate until the camera moves.
 - The room is lit by a light the camera carries, reaching as far as it is aimed, and past the built set there is only black.
-- A canvas fetches its picture over the network, so a frame taken straight after one goes up catches a blank placeholder.
+- A canvas or prop fetches its picture over the network, so a frame taken straight after one goes up catches a blank placeholder.
 - Restricted-zone outlines are drawn in edit mode only; the zones themselves stand either way.
 - Selection does not move the free camera, so a composed view survives entering edit mode.
 - A drag that starts on the selected attached object's outline moves or resizes it rather than the view; a move follows the face under the pointer, so a drag can carry a lamp from a wall onto the floor. `bridge("selectionGizmo")` gives the points to drag from (its middle, and the outline's corners when it resizes), and `interact.orbit` starts beside the outline when it covers the canvas's middle.

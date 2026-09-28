@@ -116,7 +116,7 @@ async function createInstancedTexturePackMaterial(p: InstancedTexturePackMateria
     const uvScales = getUVScales(p.textureWidth, p.textureHeight,
         p.textureGridCellWidth, p.textureGridCellHeight);
     newMaterial.onBeforeCompile = (shader) =>
-        installInstancedTexturePackShader(shader, uvScales, p.outlineColorHex, p.coverageOnly);
+        installInstancedTexturePackShader(shader, uvScales, p.outlineColorHex, p.coverageOnly, p.turnable);
     return newMaterial;
 }
 

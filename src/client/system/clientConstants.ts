@@ -7,7 +7,7 @@ import VoxelBlockOffset from "../../shared/voxel/types/voxelBlockOffset";
 // Max pointer travel (CSS px) for a click rather than a drag. Touch gets a larger allowance, since
 // finger contact points wander.
 export const MOUSE_DRAG_THRESHOLD_PX = 4;
-export const TOUCH_DRAG_THRESHOLD_PX = 30;
+export const TOUCH_DRAG_THRESHOLD_PX = 40;
 
 // Edit mode
 

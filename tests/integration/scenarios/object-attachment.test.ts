@@ -1,8 +1,11 @@
 /**
  * Attached objects: the frame each of the six facings lays an object out on, where a type may be attached
  * and what holds it there (walls, floors, ceilings, the storey slab), where a drag or a click puts it
- * (findPlacement) and at what size a new one goes up, where a corner-handle resize puts it — its size,
- * which corner holds still, and when it refuses — and a resize where it stands (a lamp's sizes).
+ * (findPlacement, on its quarter-voxel grid) and at what size a new one goes up, where a corner-handle resize
+ * puts it — its size, the corner held still, and when it refuses — a resize where it stands (a lamp's sizes,
+ * a canvas's turn), the turn its content keeps when it moves to another face (QuarterTurnsUtil), and a prop
+ * pinned to the size of its image (a change of image or turn carrying the transform it needs, a new image's size
+ * taken whichever way there is room).
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runScenario } from "../helpers/scenarioRunner";
@@ -18,8 +21,14 @@ import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import CanvasObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
 import LampObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/lampObjectTypeConfig";
 import SetObjectTransformSignal from "../../../src/shared/object/types/setObjectTransformSignal";
+import SetObjectMetadataSignal from "../../../src/shared/object/types/setObjectMetadataSignal";
+import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
+import EncodableByteString from "../../../src/shared/networking/types/encodableByteString";
+import { FIXTURE_PICTURES, useFixturePictures } from "../helpers/pictureFixture";
+import PropObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/propObjectTypeConfig";
 import PhysicsColliderStateUtil from "../../../src/shared/physics/util/physicsColliderStateUtil";
 import Geometry3DUtil from "../../../src/shared/math/util/geometry3DUtil";
+import QuarterTurnsUtil from "../../../src/shared/object/util/quarterTurnsUtil";
 import Vector3DUtil from "../../../src/shared/math/util/vector3DUtil";
 import Room from "../../../src/shared/room/types/room";
 import User from "../../../src/shared/user/types/user";
@@ -28,6 +37,7 @@ import { ALL_FACE_DIRECTIONS, ATTACHMENT_HITBOX_INSET, COLLISION_LAYER_HEIGHT, M
     STOREY_FLOOR_COLLISION_LAYER, UNIT_VEC3, WALL_DIRECTIONS } from "../../../src/shared/system/sharedConstants";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
+const propTypeIndex = ObjectTypeConfigMap.getIndexByType("Prop");
 const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
 const scaling = CanvasObjectTypeConfig.scaling;
@@ -52,6 +62,7 @@ const SLAB_BOTTOM_Y = STOREY_FLOOR_COLLISION_LAYER * COLLISION_LAYER_HEIGHT;
 const BLOCK = {row: 20, col: 20, layer: 4};
 const BLOCK_TOP_Y = (BLOCK.layer + 1) * COLLISION_LAYER_HEIGHT;
 const BLOCK_BOTTOM_Y = BLOCK.layer * COLLISION_LAYER_HEIGHT;
+const BLOCK_CENTRE: Vec3 = {x: BLOCK.col + 0.5, y: BLOCK_BOTTOM_Y + 0.5 * COLLISION_LAYER_HEIGHT, z: BLOCK.row + 0.5};
 
 const CORNERS = [{x: -1, y: -1}, {x: 1, y: -1}, {x: 1, y: 1}, {x: -1, y: 1}];
 
@@ -171,17 +182,27 @@ describe("where an attached object may go", () => {
         });
     });
 
-    it("keeps pictures and doors on walls, even where a floor would hold them", async () => {
+    it("takes a canvas on any face that holds it, as the face of an everyday object", async () => {
         await inTheRoom((user, room) => {
-            for (const objectTypeIndex of [canvasTypeIndex, doorTypeIndex])
-            {
-                expect(fits(room, objectTypeIndex, {x: 3.5, y: 0, z: 3.5}, UP)).toBe(false);
-                expect(fits(room, objectTypeIndex, {x: 3.5, y: MAX_ROOM_Y, z: 3.5}, DOWN)).toBe(false);
-            }
+            const onBlock = {x: BLOCK.col + 0.5, z: BLOCK.row + 0.5};
+            expect(fits(room, canvasTypeIndex, {x: 3.5, y: 0, z: 3.5}, UP)).toBe(true);
+            expect(fits(room, canvasTypeIndex, {x: 3.5, y: MAX_ROOM_Y, z: 3.5}, DOWN)).toBe(true);
             expect(fits(room, canvasTypeIndex, MIDDLE, FACING)).toBe(true);
+            expect(fits(room, canvasTypeIndex, {...onBlock, y: BLOCK_TOP_Y}, UP)).toBe(true);
+            expect(fits(room, canvasTypeIndex, {...onBlock, y: BLOCK_BOTTOM_Y}, DOWN)).toBe(true);
 
             // The same rule the server applies to what a client sends.
             const onTheFloor = attachment(user, room, canvasTypeIndex, "on-the-floor", {x: 3.5, y: 0, z: 3.5}, UP);
+            expect(ObjectUpdateUtil.canAddObject(user, room, onTheFloor)).toBe(true);
+        });
+    });
+
+    it("keeps doors on walls, even where a floor would hold them", async () => {
+        await inTheRoom((user, room) => {
+            expect(fits(room, doorTypeIndex, {x: 3.5, y: 0, z: 3.5}, UP)).toBe(false);
+            expect(fits(room, doorTypeIndex, {x: 3.5, y: MAX_ROOM_Y, z: 3.5}, DOWN)).toBe(false);
+
+            const onTheFloor = attachment(user, room, doorTypeIndex, "on-the-floor", {x: 3.5, y: 0, z: 3.5}, UP);
             expect(ObjectUpdateUtil.canAddObject(user, room, onTheFloor)).toBe(false);
         });
     });
@@ -207,10 +228,29 @@ describe("where a drag or a click puts an attached object", () => {
     it("takes the spot asked for, on the placement grid", async () => {
         await inTheRoom((user, room) => {
             const accepts = (tr: ObjectTransform) => ObjectAttachmentUtil.canPlaceObject(room, "lamp", lampTypeIndex, tr);
-            const placed = ObjectAttachmentUtil.findPlacement(room, lampTypeIndex, {x: 3.7, y: 0, z: 3.9}, UP,
+            const placed = ObjectAttachmentUtil.findPlacement(room, lampTypeIndex, {x: 3.7, y: 0.1, z: 3.9}, UP,
                 UNIT_VEC3, accepts)!;
-            expect(placed.pos).toEqual({x: 3.5, y: 0, z: 4});
+            // Across the face in quarter-voxel steps, and on the face's own plane.
+            expect(placed.pos).toEqual({x: 3.75, y: 0, z: 4});
             expect(placed.dir).toEqual(UP);
+        });
+    });
+
+    it("sets an object half a voxel across flush with a block's edge, on a wall and on a floor", async () => {
+        await inTheRoom((user, room) => {
+            const half = {x: 0.5, y: 0.5, z: 1};
+            const accepts = (tr: ObjectTransform) => ObjectAttachmentUtil.canPlaceObject(room, "canvas", canvasTypeIndex, tr);
+            // Against the wall's left end, and in a cell's corner on the floor.
+            const wallEnd = WALL_COL_MIN;
+            const onWall = ObjectAttachmentUtil.findPlacement(room, canvasTypeIndex,
+                {x: wallEnd + 0.27, y: 1.24, z: WALL_ROW}, FACING, half, accepts)!;
+            expect(onWall.pos).toEqual({x: wallEnd + 0.25, y: 1.25, z: WALL_ROW});
+            const onFloor = ObjectAttachmentUtil.findPlacement(room, canvasTypeIndex, {x: 3.2, y: 0, z: 5.3}, UP,
+                half, accepts)!;
+            expect(onFloor.pos).toEqual({x: 3.25, y: 0, z: 5.25});
+            for (const placed of [onWall, onFloor])
+                expect(ObjectUpdateUtil.canAddObject(user, room, attachment(user, room, canvasTypeIndex, "flush",
+                    placed.pos, placed.dir, half))).toBe(true);
         });
     });
 
@@ -261,28 +301,58 @@ describe("where a drag or a click puts an attached object", () => {
 
     it("adds a new lamp at a size the side of a lone block holds, where a unit one finds no room", async () => {
         await inTheRoom((user, room) => {
-            const scale = ObjectScaleUtil.getDefaultScale(lampTypeIndex);
+            const scale = ObjectScaleUtil.getDefaultScale(lampTypeIndex, () => true);
             expect(scale).toEqual({x: 1, y: 0.5, z: 1});
             expect(ObjectScaleUtil.sanitize(lampTypeIndex, scale)).toEqual(scale);
 
             const accepts = (tr: ObjectTransform) => ObjectAttachmentUtil.canPlaceObject(room, "lamp", lampTypeIndex, tr);
-            const blockCentre = {x: BLOCK.col + 0.5, y: BLOCK_BOTTOM_Y + 0.5 * COLLISION_LAYER_HEIGHT, z: BLOCK.row + 0.5};
             for (const dir of WALL_DIRECTIONS)
             {
                 // One cell wide and one layer tall, with nothing above or below it.
-                const side = Vector3DUtil.add(blockCentre, Vector3DUtil.scale(dir, 0.5));
+                const side = Vector3DUtil.add(BLOCK_CENTRE, Vector3DUtil.scale(dir, 0.5));
                 const placed = ObjectAttachmentUtil.findPlacement(room, lampTypeIndex, side, dir, scale, accepts);
                 expect(placed, `facing ${JSON.stringify(dir)}`).toBeDefined();
-                expect(placed!.pos.y).toBeCloseTo(blockCentre.y, 6);
+                expect(placed!.pos.y).toBeCloseTo(BLOCK_CENTRE.y, 6);
                 expect(ObjectAttachmentUtil.findPlacement(room, lampTypeIndex, side, dir, UNIT_VEC3, accepts))
                     .toBeUndefined();
             }
         });
     });
 
+    it("adds a new canvas a whole block where one fits near the spot, up or down the wall, and one layer tall where not", async () => {
+        await inTheRoom((user, room) => {
+            // As adding one from a clicked face does: the first size the canvas takes that finds a placement.
+            const accepts = (tr: ObjectTransform) => ObjectAttachmentUtil.canPlaceObject(room, "canvas", canvasTypeIndex, tr);
+            const addedAt = (spot: Vec3, dir: Vec3) => {
+                const place = (scale: Vec3) => ObjectAttachmentUtil.findPlacement(room, canvasTypeIndex, spot, dir, scale,
+                    accepts);
+                return place(ObjectScaleUtil.getDefaultScale(canvasTypeIndex, scale => place(scale) != undefined))!;
+            };
+
+            // The wall's lowest and highest layers: a whole block centred on either would run off the wall.
+            const top = WALL_LAYERS * COLLISION_LAYER_HEIGHT;
+            const low = addedAt({x: MIDDLE.x, y: 0.5 * COLLISION_LAYER_HEIGHT, z: WALL_ROW}, FACING);
+            expect(low.scale).toEqual(UNIT_VEC3);
+            expect(low.pos.y).toBeCloseTo(0.5, 6);
+            const high = addedAt({x: MIDDLE.x, y: top - 0.5 * COLLISION_LAYER_HEIGHT, z: WALL_ROW}, FACING);
+            expect(high.scale).toEqual(UNIT_VEC3);
+            expect(high.pos.y).toBeCloseTo(top - 0.5, 6);
+
+            // The side of a lone block holds one layer.
+            for (const dir of WALL_DIRECTIONS)
+            {
+                const onSide = addedAt(Vector3DUtil.add(BLOCK_CENTRE, Vector3DUtil.scale(dir, 0.5)), dir);
+                expect(onSide.scale, `facing ${JSON.stringify(dir)}`).toEqual({x: 1, y: 0.5, z: 1});
+                expect(onSide.pos.y).toBeCloseTo(BLOCK_CENTRE.y, 6);
+            }
+
+            expect(addedAt({x: 3.5, y: 0, z: 3.5}, UP).scale).toEqual(UNIT_VEC3);
+        });
+    });
+
     it("adds every other type at unit scale unless it says otherwise", () => {
-        expect(ObjectScaleUtil.getDefaultScale(canvasTypeIndex)).toEqual(UNIT_VEC3);
-        expect(ObjectScaleUtil.getDefaultScale(doorTypeIndex)).toEqual(UNIT_VEC3);
+        for (const objectTypeIndex of [canvasTypeIndex, propTypeIndex, doorTypeIndex])
+            expect(ObjectScaleUtil.getDefaultScale(objectTypeIndex, () => true)).toEqual(UNIT_VEC3);
     });
 });
 
@@ -295,7 +365,6 @@ describe("resizing an attached object by a corner", () => {
     it("takes each size in turn from every corner, holding the opposite corner still", async () => {
         await inTheRoom((user, room) => {
             const canvas = attachment(user, room, canvasTypeIndex, "canvas", MIDDLE);
-            const {right} = Geometry3DUtil.getAxisFacingBasis(FACING);
 
             for (const corner of CORNERS)
             {
@@ -309,12 +378,8 @@ describe("resizing an attached object by a corner", () => {
                     expect(resized!.scale, label).toEqual({x: scale, y: scale, z: 1});
 
                     const nowFixed = fixedCornerOf(resized!, canvasTypeIndex, corner);
-                    // Height and bottom edge are on one grid, so vertically it holds exactly...
-                    expect(nowFixed.y, label).toBeCloseTo(fixed.y, 6);
-                    // ...and along the wall to within a quarter voxel, giving way toward the drag.
-                    const giveway = corner.x * Vector3DUtil.dot(Vector3DUtil.subtract(nowFixed, fixed), right);
-                    expect(giveway, label).toBeGreaterThanOrEqual(-1e-6);
-                    expect(giveway, label).toBeLessThanOrEqual(0.25 + 1e-6);
+                    for (const axis of ["x", "y", "z"] as const)
+                        expect(nowFixed[axis], label).toBeCloseTo(fixed[axis], 6);
                 }
             }
         });
@@ -329,9 +394,9 @@ describe("resizing an attached object by a corner", () => {
                 draggedTo(fixed, FACING, {x: 1, y: 1}, 1.5, 2))!;
             const size = ObjectScaleUtil.getObjectSize(canvasTypeIndex, resized.scale);
 
-            expect(2 * resized.pos.x % 1).toBeCloseTo(0, 6);
-            expect(2 * resized.pos.z % 1).toBeCloseTo(0, 6);
-            expect(2 * (resized.pos.y - 0.5 * size.y) % 1).toBeCloseTo(0, 6);
+            expect(4 * resized.pos.x % 1).toBeCloseTo(0, 6);
+            expect(resized.pos.z).toBe(WALL_ROW);
+            expect(4 * (resized.pos.y - 0.5 * size.y) % 1).toBeCloseTo(0, 6);
             expect(ObjectAttachmentUtil.canPlaceObject(room, "canvas", canvasTypeIndex, resized)).toBe(true);
         });
     });
@@ -352,15 +417,13 @@ describe("resizing an attached object by a corner", () => {
         });
     });
 
-    it("gives way behind the held corner when only that way fits, and refuses when neither does", async () => {
+    it("grows up to a neighbour's edge, and refuses a size that runs into it", async () => {
         await inTheRoom((user, room) => {
             const canvas = attachment(user, room, canvasTypeIndex, "canvas", MIDDLE);
             const {right} = Geometry3DUtil.getAxisFacingBasis(FACING);
             const fixed = fixedCornerOf(canvas.transform, canvasTypeIndex, {x: 1, y: -1});
-            const along = (v: Vec3) => Vector3DUtil.dot(v, right);
 
-            // A neighbour whose near edge sits exactly where a 2.5-wide canvas would reach from the held
-            // corner, so only the rounding that gives way behind keeps them clear of each other.
+            // A neighbour whose near edge sits exactly where a 2.5-wide canvas reaches from the held corner.
             const touching = attachment(user, room, canvasTypeIndex, "touching",
                 {...Vector3DUtil.add(fixed, Vector3DUtil.scale(right, 3)), y: MIDDLE.y});
             expect(ObjectUpdateUtil.addObject(user, room, touching)).toBe(true);
@@ -368,10 +431,9 @@ describe("resizing an attached object by a corner", () => {
             const widest = ObjectAttachmentUtil.getResizeResult(room, canvas, canvas.transform, 1, -1,
                 draggedTo(fixed, FACING, {x: 1, y: -1}, 2.5, 1))!;
             expect(widest?.scale.x).toBe(2.5);
-            const giveway = along(fixedCornerOf(widest, canvasTypeIndex, {x: 1, y: -1})) - along(fixed);
-            expect(giveway).toBeCloseTo(-0.25, 6);
+            expect(Vector3DUtil.distSqr(fixedCornerOf(widest, canvasTypeIndex, {x: 1, y: -1}), fixed)).toBeCloseTo(0, 6);
 
-            // A neighbour half a voxel nearer leaves 2.5 no room either way.
+            // A neighbour half a voxel nearer leaves 2.5 no room.
             expect(ObjectUpdateUtil.removeObject(user, room, new RemoveObjectSignal(room.id, "touching"))).toBe(true);
             const blocking = attachment(user, room, canvasTypeIndex, "blocking",
                 {...Vector3DUtil.add(fixed, Vector3DUtil.scale(right, 2.5)), y: MIDDLE.y});
@@ -393,12 +455,11 @@ describe("resizing an attached object by a corner", () => {
         });
     });
 
-    it("resizes an object on the floor, giving way by at most a quarter voxel along both of its axes", async () => {
+    it("resizes an object on the floor, holding the opposite corner along both of its axes", async () => {
         // Lamps are the only floor objects that scale; their edit options resize them, but the rule is the
         // same for any type.
         await inTheRoom((user, room) => {
             const lamp = attachment(user, room, lampTypeIndex, "floor-lamp", {x: 3.5, y: 0, z: 3.5}, UP);
-            const {right, up} = Geometry3DUtil.getAxisFacingBasis(UP);
             for (const corner of CORNERS)
             {
                 const fixed = fixedCornerOf(lamp.transform, lampTypeIndex, corner);
@@ -407,13 +468,7 @@ describe("resizing an attached object by a corner", () => {
                 expect(resized.scale).toEqual({x: 0.5, y: 1, z: 1});
                 expect(resized.dir).toEqual(UP);
                 expect(resized.pos.y).toBe(0);
-
-                const moved = Vector3DUtil.subtract(fixedCornerOf(resized, lampTypeIndex, corner), fixed);
-                for (const [axis, sign] of [[right, corner.x], [up, corner.y]] as const)
-                {
-                    const giveway = sign * Vector3DUtil.dot(moved, axis);
-                    expect(Math.abs(giveway)).toBeLessThanOrEqual(0.25 + 1e-6);
-                }
+                expect(Vector3DUtil.distSqr(fixedCornerOf(resized, lampTypeIndex, corner), fixed)).toBeCloseTo(0, 6);
             }
         });
     });
@@ -472,6 +527,34 @@ describe("resizing an attached object where it stands", () => {
         });
     });
 
+    // A canvas's rotate tool (see CanvasEditOptions): the footprint swaps where it stands.
+    it("turns a canvas where it stands, on a floor and on a wall, and turning it back puts it back exactly", async () => {
+        await inTheRoom((user, room) => {
+            const onFloor = new ObjectTransform({x: 4, y: 0, z: 3.5}, UP, {x: 2, y: 1, z: 1});
+            const onWall = new ObjectTransform({x: MIDDLE.x, y: 1.5, z: WALL_ROW}, FACING, {x: 2, y: 1, z: 1});
+            for (const start of [onFloor, onWall])
+            {
+                const label = `facing ${JSON.stringify(start.dir)}`;
+                const turned = ObjectAttachmentUtil.getResizedInPlace(canvasTypeIndex, start,
+                    {x: start.scale.y, y: start.scale.x, z: start.scale.z});
+                expect(turned.scale, label).toEqual({x: 1, y: 2, z: 1});
+                expect(ObjectAttachmentUtil.canPlaceObject(room, "canvas", canvasTypeIndex, turned), label).toBe(true);
+
+                const back = ObjectAttachmentUtil.getResizedInPlace(canvasTypeIndex, turned, start.scale);
+                expect(back.scale, label).toEqual(start.scale);
+                for (const axis of ["x", "y", "z"] as const)
+                    expect(back.pos[axis], label).toBeCloseTo(start.pos[axis], 6);
+            }
+
+            // The same rule the server applies to the turned transform the tool sends.
+            const canvas = attachment(user, room, canvasTypeIndex, "canvas", onFloor.pos, UP, onFloor.scale);
+            expect(ObjectUpdateUtil.addObject(user, room, canvas)).toBe(true);
+            const turned = ObjectAttachmentUtil.getResizedInPlace(canvasTypeIndex, canvas.transform, {x: 1, y: 2, z: 1});
+            expect(ObjectUpdateUtil.canSetObjectTransform(user, room,
+                new SetObjectTransformSignal(room.id, canvas.objectId, turned, true))).toBe(true);
+        });
+    });
+
     it("is refused, by the rule the server applies, at a size that doesn't fit where it stands", async () => {
         await inTheRoom((user, room) => {
             // On the side of the lone block, which is one layer tall: the short sizes fit, the tall ones don't.
@@ -487,6 +570,258 @@ describe("resizing an attached object where it stands", () => {
                     new SetObjectTransformSignal(room.id, lamp.objectId, resized, true)), `${scale.x} x ${scale.y}`)
                     .toBe(scale.y <= COLLISION_LAYER_HEIGHT);
             }
+        });
+    });
+});
+
+// A pinhole camera at eye looking at target, upright: where a world point falls on its image plane (x right,
+// y up), or null behind it. Turns are compared by screen direction only, so any such frame will do.
+function createProjection(eye: Vec3, target: Vec3): (point: Vec3) => {x: number, y: number} | null
+{
+    const forward = Vector3DUtil.normalize(Vector3DUtil.subtract(target, eye));
+    const right = Vector3DUtil.normalize(Vector3DUtil.cross(forward, {x: 0, y: 1, z: 0}));
+    const up = Vector3DUtil.cross(right, forward);
+    return (point) => {
+        const offset = Vector3DUtil.subtract(point, eye);
+        const depth = Vector3DUtil.dot(offset, forward);
+        return (depth > 0) ? {x: Vector3DUtil.dot(offset, right) / depth, y: Vector3DUtil.dot(offset, up) / depth} : null;
+    };
+}
+
+describe("the turn an attached object's content keeps when it moves", () => {
+    const DOWN: Vec3 = {x: 0, y: -1, z: 0};
+    const PICTURE: Vec3 = {x: 10, y: 1.5, z: 10};
+    // For a viewer standing in front of a wall facing dir, looking at it: a spot on the floor or ceiling
+    // between them, and a projection from where they stand.
+    const inFrontOf = (dir: Vec3, y: number) => ({x: PICTURE.x + 1.5 * dir.x, y, z: PICTURE.z + 1.5 * dir.z});
+    const viewer = (dir: Vec3, target: Vec3) => createProjection(
+        {x: PICTURE.x + 5 * dir.x, y: 1.5, z: PICTURE.z + 5 * dir.z}, target);
+    // An axis direction with its zeros unsigned, so the two ways of writing one compare equal.
+    const axis = (v: Vec3): Vec3 => ({x: v.x + 0, y: v.y + 0, z: v.z + 0});
+    const away = (dir: Vec3): Vec3 => axis(Vector3DUtil.scale(dir, -1));
+
+    it("lays a wall's picture on the floor with its top away from the viewer, whichever wall it hung on", () => {
+        for (const dir of WALL_DIRECTIONS)
+        {
+            const floor = inFrontOf(dir, 0);
+            const quarterTurns = QuarterTurnsUtil.getMovedQuarterTurns({pos: PICTURE, dir}, 0, {pos: floor, dir: UP},
+                viewer(dir, floor));
+            expect(axis(QuarterTurnsUtil.getContentUp(UP, quarterTurns)), JSON.stringify(dir)).toEqual(away(dir));
+        }
+    });
+
+    it("puts a wall's picture on the ceiling with its top toward the viewer, as seen looking up", () => {
+        for (const dir of WALL_DIRECTIONS)
+        {
+            const ceiling = inFrontOf(dir, 3);
+            const quarterTurns = QuarterTurnsUtil.getMovedQuarterTurns({pos: PICTURE, dir}, 0,
+                {pos: ceiling, dir: DOWN}, viewer(dir, ceiling));
+            expect(axis(QuarterTurnsUtil.getContentUp(DOWN, quarterTurns)), JSON.stringify(dir)).toEqual(axis(dir));
+        }
+    });
+
+    it("stands a floor's picture upright on a wall when it looked upright, and turned as it looked turned", () => {
+        for (const dir of WALL_DIRECTIONS)
+        {
+            const floor = inFrontOf(dir, 0);
+            const project = viewer(dir, floor);
+            // The turn that looks upright on the floor, as a wall's picture laid down gets (see above).
+            const upright = QuarterTurnsUtil.getMovedQuarterTurns({pos: PICTURE, dir}, 0, {pos: floor, dir: UP}, project);
+            for (let extraTurns = 0; extraTurns < 4; ++extraTurns)
+            {
+                expect(QuarterTurnsUtil.getMovedQuarterTurns({pos: floor, dir: UP}, (upright + extraTurns) % 4,
+                    {pos: PICTURE, dir}, project), `${JSON.stringify(dir)}, ${extraTurns}`).toBe(extraTurns);
+            }
+        }
+    });
+
+    it("keeps its turn on the same face, wherever it goes there and however it is seen", () => {
+        const project = createProjection({x: 3, y: 4, z: 2}, {x: 10, y: 0, z: 10});
+        for (const dir of [...WALL_DIRECTIONS, UP, DOWN])
+        {
+            for (let quarterTurns = 0; quarterTurns < 4; ++quarterTurns)
+            {
+                expect(QuarterTurnsUtil.getMovedQuarterTurns({pos: PICTURE, dir}, quarterTurns,
+                    {pos: {x: 14, y: 0.5, z: 7}, dir}, project)).toBe(quarterTurns);
+            }
+        }
+    });
+
+    it("starts upright for the viewer: on a wall unturned, and on a floor with its top away from them", () => {
+        for (const dir of WALL_DIRECTIONS)
+        {
+            const floor = inFrontOf(dir, 0);
+            const project = viewer(dir, floor);
+            expect(QuarterTurnsUtil.pickQuarterTurnsOnScreen(PICTURE, UP, PICTURE, dir, project)).toBe(0);
+            expect(axis(QuarterTurnsUtil.getContentUp(UP, QuarterTurnsUtil.pickQuarterTurnsOnScreen(floor, UP, floor, UP,
+                project)))).toEqual(away(dir));
+        }
+    });
+});
+
+describe("a prop", () => {
+    beforeEach(() => {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        vi.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    // Everyday objects of each size (the wide one isn't square, so a turn changes the size it needs), and a
+    // painting, which only a canvas shows, and at any size.
+    useFixturePictures();
+    const square = {path: FIXTURE_PICTURES.square}, wide = {path: FIXTURE_PICTURES.wide},
+        tall = {path: FIXTURE_PICTURES.tall};
+    const painting = {path: FIXTURE_PICTURES.painting};
+    const scaleOf = (image: {path: string}, quarterTurns: number = 0) =>
+        PropObjectTypeConfig.util.getImageScale(image.path, quarterTurns)!;
+
+    function showing(user: User, room: Room, objectTypeIndex: number, objectId: string, imagePath: string, scale: Vec3,
+        quarterTurns: number = 0): AddObjectSignal
+    {
+        const shown = attachment(user, room, objectTypeIndex, objectId, MIDDLE, FACING, scale);
+        shown.metadata[ObjectMetadataKeyEnumMap.ImagePath] = new EncodableByteString(imagePath);
+        shown.metadata[ObjectMetadataKeyEnumMap.QuarterTurns] = new EncodableByteString(
+            QuarterTurnsUtil.encode(quarterTurns));
+        return shown;
+    }
+
+    it("is added only at its image's size, turned with it, while a painting's canvas takes any", async () => {
+        await inTheRoom((user, room) => {
+            const canAdd = (shown: AddObjectSignal) => ObjectUpdateUtil.canAddObject(user, room, shown);
+            expect(canAdd(showing(user, room, propTypeIndex, "a", wide.path, scaleOf(wide, 0)))).toBe(true);
+            expect(canAdd(showing(user, room, propTypeIndex, "b", wide.path, scaleOf(wide, 1), 1))).toBe(true);
+            expect(canAdd(showing(user, room, propTypeIndex, "c", wide.path, scaleOf(wide, 1)))).toBe(false);
+            expect(canAdd(showing(user, room, propTypeIndex, "d", wide.path, UNIT_VEC3))).toBe(false);
+
+            // Down to half a block across.
+            expect(canAdd(showing(user, room, canvasTypeIndex, "e", painting.path, {x: 0.5, y: 0.5, z: 1}))).toBe(true);
+            expect(canAdd(showing(user, room, canvasTypeIndex, "f", painting.path, {x: 3.5, y: 2, z: 1}))).toBe(true);
+        });
+    });
+
+    it("is added showing any image that fits near the spot, up or down the wall, so a lone block's side takes only one a layer tall", async () => {
+        await inTheRoom((user, room) => {
+            // As adding one from a clicked face does: each image at its own size, with it as the prop's.
+            const addedAt = (image: {path: string}, spot: Vec3, dir: Vec3) => {
+                const accepts = (tr: ObjectTransform) => {
+                    const prop = attachment(user, room, propTypeIndex, "new", tr.pos, tr.dir, tr.scale);
+                    prop.metadata[ObjectMetadataKeyEnumMap.ImagePath] = new EncodableByteString(image.path);
+                    return ObjectUpdateUtil.canAddObject(user, room, prop);
+                };
+                return ObjectAttachmentUtil.findPlacement(room, propTypeIndex, spot, dir, scaleOf(image), accepts);
+            };
+
+            // The wall's lowest layer: every size, shifted up as far as it needs.
+            const lowest = {x: MIDDLE.x, y: 0.5 * COLLISION_LAYER_HEIGHT, z: WALL_ROW};
+            for (const image of [square, wide, tall])
+                expect(addedAt(image, lowest, FACING), image.path).toBeDefined();
+
+            for (const dir of WALL_DIRECTIONS)
+            {
+                const side = Vector3DUtil.add(BLOCK_CENTRE, Vector3DUtil.scale(dir, 0.5));
+                expect(addedAt(wide, side, dir)).toBeDefined();
+                expect(addedAt(square, side, dir)).toBeUndefined();
+                expect(addedAt(tall, side, dir)).toBeUndefined();
+            }
+        });
+    });
+
+    it("moves, but is never resized", async () => {
+        await inTheRoom((user, room) => {
+            const prop = showing(user, room, propTypeIndex, "prop", wide.path, scaleOf(wide, 0));
+            expect(ObjectUpdateUtil.addObject(user, room, prop)).toBe(true);
+            const canMoveTo = (transform: ObjectTransform) => ObjectUpdateUtil.canSetObjectTransform(user, room,
+                new SetObjectTransformSignal(room.id, prop.objectId, transform, true));
+
+            const moved = new ObjectTransform({...MIDDLE, x: MIDDLE.x + 1}, {...FACING}, scaleOf(wide, 0));
+            expect(canMoveTo(moved)).toBe(true);
+            for (const scale of [scaleOf(wide, 1), UNIT_VEC3, {x: 0.5, y: 0.5, z: 1}])
+                expect(canMoveTo(ObjectAttachmentUtil.getResizedInPlace(propTypeIndex, prop.transform, scale)))
+                    .toBe(false);
+        });
+    });
+
+    it("changes image or turn only together with the size that needs, as one edit", async () => {
+        await inTheRoom((user, room) => {
+            const prop = showing(user, room, propTypeIndex, "prop", square.path, scaleOf(square));
+            expect(ObjectUpdateUtil.addObject(user, room, prop)).toBe(true);
+            const signal = (key: number, value: string, transform?: ObjectTransform) =>
+                new SetObjectMetadataSignal(room.id, prop.objectId, key, value, transform);
+            const stored = () => room.objectById[prop.objectId];
+
+            // To the wide object: its size comes with it.
+            expect(ObjectUpdateUtil.canSetObjectMetadata(user, room,
+                signal(ObjectMetadataKeyEnumMap.ImagePath, wide.path))).toBe(false);
+            const resized = ObjectAttachmentUtil.getResizedInPlace(propTypeIndex, stored().transform, scaleOf(wide, 0));
+            expect(ObjectUpdateUtil.setObjectMetadata(user, room,
+                signal(ObjectMetadataKeyEnumMap.ImagePath, wide.path, resized))).toBe(true);
+            expect(stored().transform.scale).toEqual(ObjectScaleUtil.sanitize(propTypeIndex, scaleOf(wide, 0)));
+
+            // A quarter-turn swaps its size, since it isn't square.
+            const turn = QuarterTurnsUtil.encode(1);
+            expect(ObjectUpdateUtil.canSetObjectMetadata(user, room,
+                signal(ObjectMetadataKeyEnumMap.QuarterTurns, turn))).toBe(false);
+            const turned = ObjectAttachmentUtil.getResizedInPlace(propTypeIndex, stored().transform, scaleOf(wide, 1));
+            expect(ObjectUpdateUtil.setObjectMetadata(user, room,
+                signal(ObjectMetadataKeyEnumMap.QuarterTurns, turn, turned))).toBe(true);
+            expect(stored().transform.scale).toEqual(ObjectScaleUtil.sanitize(propTypeIndex, scaleOf(wide, 1)));
+
+            // A transform that doesn't fit where it goes is refused with its value (see below for the ways a
+            // change of image is tried).
+            const offTheWall = new ObjectTransform({x: 60, y: 1, z: 60}, {...FACING}, scaleOf(wide, 0));
+            expect(ObjectUpdateUtil.canSetObjectMetadata(user, room,
+                signal(ObjectMetadataKeyEnumMap.QuarterTurns, QuarterTurnsUtil.encode(0), offTheWall))).toBe(false);
+
+            // A painting is no prop's, at any size.
+            expect(ObjectUpdateUtil.canSetObjectMetadata(user, room,
+                signal(ObjectMetadataKeyEnumMap.ImagePath, painting.path))).toBe(false);
+        });
+    });
+
+    it("takes a new image's size whichever way there is room where it stands, holding one of its edges", async () => {
+        await inTheRoom((user, room) => {
+            const wallTop = WALL_LAYERS * COLLISION_LAYER_HEIGHT;
+            const wallLeft = WALL_COL_MIN, wallRight = WALL_COL_MIN + WALL_COLS;
+
+            const hung = (objectId: string, image: {path: string}, pos: Vec3) => {
+                const prop = attachment(user, room, propTypeIndex, objectId, pos, FACING, scaleOf(image));
+                prop.metadata[ObjectMetadataKeyEnumMap.ImagePath] = new EncodableByteString(image.path);
+                expect(ObjectUpdateUtil.addObject(user, room, prop), objectId).toBe(true);
+                return prop;
+            };
+            const accepts = (prop: AddObjectSignal, image: {path: string}, transform: ObjectTransform) =>
+                ObjectUpdateUtil.canSetObjectMetadata(user, room, new SetObjectMetadataSignal(room.id, prop.objectId,
+                    ObjectMetadataKeyEnumMap.ImagePath, image.path, transform));
+            // The first way the image chooser would send it (see PropEditOptions), as the server checks it.
+            const changed = (prop: AddObjectSignal, image: {path: string}) => ObjectAttachmentUtil.getResizeCandidates(
+                propTypeIndex, prop.transform, scaleOf(image)).find(transform => accepts(prop, image, transform))!;
+            const extent = (tr: ObjectTransform) => {
+                const size = ObjectScaleUtil.getObjectSize(propTypeIndex, tr.scale);
+                return {left: tr.pos.x - 0.5 * size.x, right: tr.pos.x + 0.5 * size.x,
+                    bottom: tr.pos.y - 0.5 * size.y, top: tr.pos.y + 0.5 * size.y};
+            };
+            const inPlaceFits = (prop: AddObjectSignal, image: {path: string}) => accepts(prop, image,
+                ObjectAttachmentUtil.getResizedInPlace(propTypeIndex, prop.transform, scaleOf(image)));
+
+            // Up from its bottom edge where there is room, and down from its top edge at the top of the wall.
+            const low = changed(hung("low", wide, {x: 12, y: 0.25, z: WALL_ROW}), square);
+            expect(extent(low)).toEqual({left: 11.5, right: 12.5, bottom: 0, top: 1});
+            const atTop = hung("atTop", wide, {x: 12, y: wallTop - 0.25, z: WALL_ROW});
+            expect(inPlaceFits(atTop, square)).toBe(false);
+            expect(extent(changed(atTop, square))).toEqual({left: 11.5, right: 12.5, bottom: wallTop - 1, top: wallTop});
+
+            // Across from whichever end of the wall it stands at.
+            for (const [objectId, x] of [["atLeft", wallLeft + 0.25], ["atRight", wallRight - 0.25]] as const)
+            {
+                const prop = hung(objectId, tall, {x, y: 3, z: WALL_ROW});
+                expect(inPlaceFits(prop, square), objectId).toBe(false);
+                const grown = extent(changed(prop, square));
+                expect(grown, objectId).toEqual({left: (x < 12) ? wallLeft : wallRight - 1,
+                    right: (x < 12) ? wallLeft + 1 : wallRight, bottom: 2.5, top: 3.5});
+            }
+
+            // Shrinking holds its bottom edge, as growing back does, so the two round-trip.
+            const shrunk = changed(hung("shrinking", square, {x: 9.5, y: 3, z: WALL_ROW}), wide);
+            expect(extent(shrunk)).toEqual({left: 9, right: 10, bottom: 2.5, top: 3});
         });
     });
 });

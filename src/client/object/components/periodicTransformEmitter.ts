@@ -3,7 +3,7 @@ import SetObjectTransformSignal from "../../../shared/object/types/setObjectTran
 import SocketsClient from "../../networking/client/socketsClient";
 import GameObjectComponent from "./gameObjectComponent";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
-import GameObject from "../types/gameObject";
+import GameObject from "../types/gameObject/gameObject";
 import { SIGNAL_BATCH_SEND_INTERVAL } from "../../../shared/system/sharedConstants";
 import App from "../../app";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";

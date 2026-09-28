@@ -2,6 +2,7 @@ import Vec3 from "../../math/types/vec3";
 import NumUtil from "../../math/util/numUtil";
 import { UNIT_VEC3 } from "../../system/sharedConstants";
 import ObjectTypeConfigMap from "../maps/objectTypeConfigMap";
+import { ObjectMetadata } from "../types/objectMetadata";
 
 // The only way to read an object's scale, and the only way to ask how big one actually is.
 //
@@ -24,11 +25,28 @@ const ObjectScaleUtil =
             z: snap(scale.z, scaling.scaleStep.z, scaling.minScale.z, scaling.maxScale.z),
         };
     },
-    // The scale a new object of the type is added at: unit for a type that declares no scaling.
-    getDefaultScale: (objectTypeIndex: number): Vec3 =>
+    // The scale a new object of the type is added at, given which scales fit where it goes (see
+    // ObjectScalingConfig.getDefaultScale): unit for a type that declares no scaling.
+    getDefaultScale: (objectTypeIndex: number, fits: (scale: Vec3) => boolean): Vec3 =>
     {
         const scaling = ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex).scaling;
-        return {...(scaling?.defaultScale ?? UNIT_VEC3)};
+        return {...(scaling?.getDefaultScale(fits) ?? UNIT_VEC3)};
+    },
+    // The scale the metadata pins the object to (see ObjectScalingConfig.getFixedScale), on the type's grid;
+    // undefined when it may take any.
+    getFixedScale: (objectTypeIndex: number, metadata: ObjectMetadata): Vec3 | undefined =>
+    {
+        const fixedScale = ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex).scaling?.getFixedScale?.(metadata);
+        return fixedScale ? ObjectScaleUtil.sanitize(objectTypeIndex, fixedScale) : undefined;
+    },
+    // Whether an object with this metadata may have this scale: any, unless the metadata pins it.
+    allowsScale: (objectTypeIndex: number, metadata: ObjectMetadata, scale: Vec3): boolean =>
+    {
+        const fixedScale = ObjectScaleUtil.getFixedScale(objectTypeIndex, metadata);
+        if (!fixedScale)
+            return true;
+        const sanitized = ObjectScaleUtil.sanitize(objectTypeIndex, scale);
+        return sanitized.x == fixedScale.x && sanitized.y == fixedScale.y && sanitized.z == fixedScale.z;
     },
     // The object's footprint in world units: its collider's base size at the given scale, which is
     // sanitized on the way through. A type with no collider declares no footprint and reads as a unit cube.

@@ -118,17 +118,19 @@ describe("object scenarios", () => {
                 const room = ServerRoomManager.roomRuntimeMemories[roomID].room;
                 const scaling = CanvasObjectTypeConfig.scaling;
 
-                // On the boundary wall, where a canvas has something to hang from.
+                // On the boundary wall, where a canvas has something to hang from, high enough that the largest
+                // size clears the floor.
                 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
+                const pos = {x: 16.5, y: 0.5 * scaling.maxScale.y, z: 1};
                 const canvas = new AddObjectSignal(roomID, user.id, user.userName,
                     canvasTypeIndex, "sized-canvas",
-                    new ObjectTransform({x: 16.5, y: 1.5, z: 1}, {x: 0, y: 0, z: 1}, {...UNIT_VEC3}), {});
+                    new ObjectTransform({...pos}, {x: 0, y: 0, z: 1}, {...UNIT_VEC3}), {});
                 expect(ObjectUpdateUtil.addObject(user, room, canvas)).toBe(true);
 
                 const askFor = (scale: Vec3) => {
                     ServerObjectManager.onSetObjectTransformSignalReceived(users[0].socketUserContext,
                         new SetObjectTransformSignal(roomID, "sized-canvas",
-                            new ObjectTransform({x: 16.5, y: 1.5, z: 1}, {x: 0, y: 0, z: 1}, scale), true));
+                            new ObjectTransform({...pos}, {x: 0, y: 0, z: 1}, scale), true));
                     return room.objectById["sized-canvas"].transform.scale;
                 };
 

@@ -4,6 +4,8 @@
  * the longest text anyone can write, still fitting the encoding buffer.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import fs from "fs";
+import path from "path";
 import fc from "fast-check";
 import { runScenario } from "../helpers/scenarioRunner";
 import { EMPTY_HUB, EMPTY_REGULAR, userAtCenter } from "../helpers/scenarioPresets";
@@ -31,11 +33,12 @@ import User from "../../../src/shared/user/types/user";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import ColorUtil from "../../../src/shared/math/util/colorUtil";
 import StringUtil from "../../../src/shared/math/util/stringUtil";
-import ImageMapUtil from "../../../src/shared/graphics/image/util/imageMapUtil";
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionCodecType";
 import CompositionMetadataUtil from "../../../src/shared/graphics/mesh/composition/util/compositionMetadataUtil";
 import FramedPanelCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/framedPanelCompositionConstants";
 import { getLooks } from "../helpers/composition";
+import { useFixturePictures } from "../helpers/pictureFixture";
+import ImageMapUtil from "../../../src/shared/graphics/image/util/imageMapUtil";
 import { DOCUMENT_ID_MAX_LENGTH, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
     INSTANCED_WOOD_MATERIAL_ID, LABEL_COLOR_PALETTE_NAME, OBJECT_LABEL_MAX_LENGTH, OBJECT_MESSAGE_MAX_LENGTH,
     UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
@@ -346,10 +349,14 @@ describe("a label's plaque", () => {
 describe("a room full of the longest text", () => {
     // Four bytes each in UTF-8, the most a character can take.
     const longest = (numCharacters: number) => "😀".repeat(numCharacters);
+    // So each type that shows pictures has one on offer, whichever of the shipped ones are enabled.
+    useFixturePictures();
 
     it("fits the encoding buffer with every category at its cap", () => {
-        const longestImagePath = ImageMapUtil.getImageMap("CanvasImageMap").getImageMetadataList()
-            .map(metadata => metadata.path).reduce((a, b) => (a.length >= b.length) ? a : b);
+        // Any path the manifest has given, since a stored canvas or prop keeps naming a disabled image.
+        const manifest = JSON.parse(fs.readFileSync(path.join(__dirname,
+            "../../../public/app/assets/pictures/manifest.json"), "utf8")) as {images: {path: string}[]};
+        const longestImagePath = manifest.images.map(image => image.path).reduce((a, b) => (a.length >= b.length) ? a : b);
         // Every string as long as it can be stored (compositions as their codec writes them).
         const longestMetadata: {[key: number]: string} = {
             [ObjectMetadataKeyEnumMap.SentMessage]: longest(OBJECT_MESSAGE_MAX_LENGTH),
@@ -365,12 +372,18 @@ describe("a room full of the longest text", () => {
         };
         // Asked of an admin in a hub, who may write the most.
         const hub = {roomType: RoomTypeEnumMap.Hub} as Room;
-        const canHold = (config: ReturnType<typeof ObjectTypeConfigMap.getConfigByIndex>, key: number) => {
+        const canHoldValue = (config: ReturnType<typeof ObjectTypeConfigMap.getConfigByIndex>, key: number,
+            value: string) => {
             const obj = new AddObjectSignal("room", ADMIN.id, ADMIN.userName, 0, "x",
                 new ObjectTransform({...UNIT_VEC3}, {x: 0, y: 0, z: -1}, {...UNIT_VEC3}));
-            return config.canUserSetObjectMetadata(ADMIN, hub, obj,
-                new SetObjectMetadataSignal("room", "x", key, longestMetadata[key]));
+            return config.canUserSetObjectMetadata(ADMIN, hub, obj, new SetObjectMetadataSignal("room", "x", key, value));
         };
+        // A type that shows any of the pictures stands for one showing the longest path (of either subfolder).
+        const canHold = (config: ReturnType<typeof ObjectTypeConfigMap.getConfigByIndex>, key: number) =>
+            (key == ObjectMetadataKeyEnumMap.ImagePath)
+                ? ImageMapUtil.getImageMap("PictureImageMap").getImageMetadataList().some(image =>
+                    canHoldValue(config, key, image.path))
+                : canHoldValue(config, key, longestMetadata[key]);
 
         const objects: AddObjectSignal[] = [];
         for (const config of ObjectTypeConfigMap.getAllConfigs())

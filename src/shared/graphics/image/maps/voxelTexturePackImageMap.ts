@@ -3,7 +3,7 @@ import ImageMapUtil from "../util/imageMapUtil";
 import ImageMap from "../types/imageMap";
 import ImageMetadata from "../types/imageMetadata";
 
-const imageMetadataList: ImageMetadata[] = [{path:"default",author:"",title:"default",coords:",0,0"},{path:"country",author:"",title:"country",coords:",1,0"},{path:"garden",author:"",title:"garden",coords:",0,1"},{path:"aqua",author:"",title:"aqua",coords:",1,1"},{path:"inferno",author:"",title:"inferno",coords:",0,2"},{path:"prison",author:"",title:"prison",coords:",1,2"}]
+const imageMetadataList: ImageMetadata[] = [{path:"default",keywords:"default",coords:",0,0",width:1024,height:1024},{path:"country",keywords:"country",coords:",1,0",width:1024,height:1024},{path:"garden",keywords:"garden",coords:",0,1",width:1024,height:1024},{path:"aqua",keywords:"aqua",coords:",1,1",width:1024,height:1024},{path:"inferno",keywords:"inferno",coords:",0,2",width:1024,height:1024},{path:"prison",keywords:"prison",coords:",1,2",width:1024,height:1024}]
 const subfolderGridSizes: {[subfolder: string]: {numCols: number, numRows: number}} = {"":{numCols:2,numRows:3}}
 
 ImageMapUtil.setImageMap("VoxelTexturePackImageMap", new ImageMap("voxel_texture_packs", 256, subfolderGridSizes, imageMetadataList));

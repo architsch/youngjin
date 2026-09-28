@@ -6,7 +6,7 @@ export const ObjectCategoryEnumMap: Record<string, ObjectCategory> =
 {
     Voxel: "Voxel",
     Player: "Player",
-    Canvas: "Canvas",
+    Picture: "Picture", // canvases and props
     Door: "Door",
     Lamp: "Lamp",
     Label: "Label",

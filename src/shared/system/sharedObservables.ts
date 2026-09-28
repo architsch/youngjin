@@ -28,8 +28,8 @@ export const colliderDebugEnabledObservable = new Observable<boolean>(false);
 // Fills DestinationChooserForm with dummy entries to test scrolling.
 export const roomListDebugEnabledObservable = new Observable<boolean>(false);
 
-// Fills ImageListChooserForm with dummy entries to test pagination and scrolling.
-export const imageListChooserDebugEnabledObservable = new Observable<boolean>(false);
+// Fills ImageMapThumbnailPanel with dummy entries to test pagination and scrolling.
+export const dummyImagesDebugEnabledObservable = new Observable<boolean>(false);
 
 // Collider debug boxes by id (tryAdd / tryRemove).
 export const colliderDebugBoxMap = new ObservableMap<ColliderDebugBox>();

@@ -5,6 +5,7 @@ import ObjectUpdateUtil from "../../shared/object/util/objectUpdateUtil";
 import SocketUserContext from "../sockets/types/socketUserContext";
 import ServerRoomManager from "../room/serverRoomManager";
 import SetObjectTransformSignal from "../../shared/object/types/setObjectTransformSignal";
+import ObjectTransform from "../../shared/object/types/objectTransform";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 
 let nonPersistentObjectIdCounter = 0;
@@ -106,9 +107,12 @@ const ServerObjectManager =
             console.error(`onSetObjectMetadataSignalReceived :: Failed (objectId = ${signal.objectId})`);
             const originalMetadata = obj.metadata[signal.metadataKey];
             const originalMetadataValue = originalMetadata ? originalMetadata.str : "";
+            // The sender applied the transform it sent too, so that is put back as well.
+            const originalTransform = signal.transform ? new ObjectTransform({...obj.transform.pos},
+                {...obj.transform.dir}, {...obj.transform.scale}) : undefined;
             socketUserContext.addPendingSignalToUser("setObjectMetadataSignal",
                 new SetObjectMetadataSignal(room.id, obj.objectId, signal.metadataKey,
-                    originalMetadataValue));
+                    originalMetadataValue, originalTransform));
             return;
         }
 

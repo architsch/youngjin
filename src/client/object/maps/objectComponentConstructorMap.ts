@@ -6,7 +6,7 @@ import PeriodicTransformEmitter from "../components/periodicTransformEmitter";
 import PeriodicTransformReceiver from "../components/periodicTransformReceiver";
 import PlayerProximityDetector from "../components/playerProximityDetector";
 import SpeechBubble from "../components/speechBubble";
-import GameObject from "../types/gameObject";
+import GameObject from "../types/gameObject/gameObject";
 import Collider from "../components/collider";
 import EasingMotion from "../components/easingMotion";
 import InstancedMeshComposer from "../components/instancedMeshComposer";

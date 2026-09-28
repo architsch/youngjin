@@ -1,0 +1,6101 @@
+{
+    "retiredPaths": [],
+    "recipes": {
+        "1/1": {
+            "sourceSha1": "84b4adaf52c0007a66c394fec1ea861792f9d506",
+            "sourceFileName": "1_1.webp",
+            "corners": [
+                [
+                    0,
+                    0
+                ],
+                [
+                    1,
+                    0
+                ],
+                [
+                    1,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": false,
+                "longSide": 800
+            },
+            "adjust": {
+                "brightness": 24,
+                "contrast": 43,
+                "saturation": 0,
+                "hue": 0,
+                "warmth": 0,
+                "sharpness": 0
+            }
+        },
+        "1/2": {
+            "sourceSha1": "52a5bb95fc4d8e58b0f50937c11caa5d7ef51ee0",
+            "sourceFileName": "1_2.webp",
+            "corners": [
+                [
+                    0,
+                    0
+                ],
+                [
+                    1,
+                    0
+                ],
+                [
+                    1,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": false,
+                "longSide": 800
+            },
+            "adjust": {
+                "brightness": 0,
+                "contrast": 26,
+                "saturation": 0,
+                "hue": 0,
+                "warmth": 0,
+                "sharpness": 0
+            }
+        },
+        "1/3": {
+            "sourceSha1": "e413bb02b2a9fd9c262d4dc351cdcdd9272d7e54",
+            "sourceFileName": "1_3.webp",
+            "corners": [
+                [
+                    0,
+                    0
+                ],
+                [
+                    1,
+                    0
+                ],
+                [
+                    1,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": false,
+                "longSide": 800
+            },
+            "adjust": {
+                "brightness": 0,
+                "contrast": 20,
+                "saturation": 15,
+                "hue": 0,
+                "warmth": 0,
+                "sharpness": 0
+            }
+        },
+        "1/4": {
+            "sourceSha1": "849b770bf767f277554f3d2da51bd884c1377ef7",
+            "sourceFileName": "1_4.webp",
+            "corners": [
+                [
+                    0,
+                    0
+                ],
+                [
+                    1,
+                    0
+                ],
+                [
+                    1,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": false,
+                "longSide": 800
+            },
+            "adjust": {
+                "brightness": -9,
+                "contrast": 18,
+                "saturation": 0,
+                "hue": 0,
+                "warmth": 12,
+                "sharpness": 0
+            }
+        },
+        "1/5": {
+            "sourceSha1": "ce29c6976d02dfecda8d3ce2a1c5dc32c4e37b59",
+            "sourceFileName": "1_5.webp",
+            "corners": [
+                [
+                    0,
+                    0
+                ],
+                [
+                    1,
+                    0
+                ],
+                [
+                    1,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": false,
+                "longSide": 800
+            },
+            "adjust": {
+                "brightness": 60,
+                "contrast": 33,
+                "saturation": 34,
+                "hue": 0,
+                "warmth": 8,
+                "sharpness": 0
+            }
+        },
+        "1/6": {
+            "sourceSha1": "2d2490848c65c1a083075c36e01e56ff6719970f",
+            "sourceFileName": "1_6.webp",
+            "corners": [
+                [
+                    0,
+                    0
+                ],
+                [
+                    1,
+                    0
+                ],
+                [
+                    1,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": false,
+                "longSide": 800
+            },
+            "adjust": {
+                "brightness": 77,
+                "contrast": 34,
+                "saturation": 24,
+                "hue": 0,
+                "warmth": 0,
+                "sharpness": 0
+            }
+        },
+        "1/7": {
+            "sourceSha1": "8569f63beb3f083f311227bab709abb62b24b777",
+            "sourceFileName": "1_7.webp",
+            "corners": [
+                [
+                    0,
+                    0
+                ],
+                [
+                    1,
+                    0
+                ],
+                [
+                    1,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": false,
+                "longSide": 500
+            },
+            "adjust": {
+                "brightness": 26,
+                "contrast": 29,
+                "saturation": 0,
+                "hue": 0,
+                "warmth": 0,
+                "sharpness": 0
+            }
+        },
+        "1/8": {
+            "sourceSha1": "ea68d1e3bc826c09c7cd8c840a1d1dba2662c96e",
+            "sourceFileName": "1_8.webp",
+            "corners": [
+                [
+                    0,
+                    0
+                ],
+                [
+                    1,
+                    0
+                ],
+                [
+                    1,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": false,
+                "longSide": 800
+            },
+            "adjust": {
+                "brightness": 85,
+                "contrast": 56,
+                "saturation": 0,
+                "hue": 0,
+                "warmth": 0,
+                "sharpness": 0
+            }
+        },
+        "1/9": {
+            "sourceSha1": "56af8d08c789cdaed0c4d2b570844f74169e61ec",
+            "sourceFileName": "1_9.webp",
+            "corners": [
+                [
+                    0,
+                    0
+                ],
+                [
+                    1,
+                    0
+                ],
+                [
+                    1,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": false,
+                "longSide": 800
+            },
+            "adjust": {
+                "brightness": 35,
+                "contrast": 63,
+                "saturation": 0,
+                "hue": 0,
+                "warmth": 0,
+                "sharpness": 0
+            }
+        },
+        "1/10": {
+            "sourceSha1": "60614917b6d7639d1fade7a17863e72d0f344665",
+            "sourceFileName": "1_10.webp",
+            "corners": [
+                [
+                    0,
+                    0
+                ],
+                [
+                    1,
+                    0
+                ],
+                [
+                    1,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": false,
+                "longSide": 800
+            },
+            "adjust": {
+                "brightness": 70,
+                "contrast": 41,
+                "saturation": 49,
+                "hue": 0,
+                "warmth": 0,
+                "sharpness": 0
+            }
+        },
+        "1/11": {
+            "sourceSha1": "4a1d152695e7141002262c2eb0bf42b9ae1ec3c0",
+            "sourceFileName": "1_11.webp",
+            "corners": [
+                [
+                    0,
+                    0
+                ],
+                [
+                    1,
+                    0
+                ],
+                [
+                    1,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": false,
+                "longSide": 800
+            },
+            "adjust": {
+                "brightness": 65,
+                "contrast": 46,
+                "saturation": 0,
+                "hue": 0,
+                "warmth": 0,
+                "sharpness": 0
+            }
+        },
+        "1/12": {
+            "sourceSha1": "263b30d8b10f09f9ae32836e8e0d15a2f4c25c7a",
+            "sourceFileName": "1_12.webp",
+            "corners": [
+                [
+                    0,
+                    0
+                ],
+                [
+                    1,
+                    0
+                ],
+                [
+                    1,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": false,
+                "longSide": 800
+            },
+            "adjust": {
+                "brightness": 4,
+                "contrast": 32,
+                "saturation": 4,
+                "hue": 0,
+                "warmth": 37,
+                "sharpness": 0
+            }
+        },
+        "1/13": {
+            "sourceSha1": "4df4ad995d1f8b41fcacaa47c05e4b8943289dac",
+            "sourceFileName": "1_13.webp",
+            "corners": [
+                [
+                    0,
+                    0
+                ],
+                [
+                    1,
+                    0
+                ],
+                [
+                    1,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": false,
+                "longSide": 800
+            },
+            "adjust": {
+                "brightness": 63,
+                "contrast": 51,
+                "saturation": 0,
+                "hue": 0,
+                "warmth": 0,
+                "sharpness": 0
+            }
+        },
+        "1/14": {
+            "sourceSha1": "dc3b4d9a66476606c4884a1fde2175d8b03ae3b4",
+            "sourceFileName": "1_14.webp",
+            "corners": [
+                [
+                    0,
+                    0
+                ],
+                [
+                    1,
+                    0
+                ],
+                [
+                    1,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": false,
+                "longSide": 1239
+            },
+            "adjust": {
+                "brightness": 41,
+                "contrast": 31,
+                "saturation": 0,
+                "hue": 0,
+                "warmth": 0,
+                "sharpness": 0
+            }
+        },
+        "1/15": {
+            "sourceSha1": "a459bbe9574931c01c8aa76e84c43963fbaea80f",
+            "sourceFileName": "1_15.webp",
+            "corners": [
+                [
+                    0,
+                    0
+                ],
+                [
+                    1,
+                    0
+                ],
+                [
+                    1,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": false,
+                "longSide": 800
+            },
+            "adjust": {
+                "brightness": 77,
+                "contrast": 42,
+                "saturation": 41,
+                "hue": 0,
+                "warmth": 0,
+                "sharpness": 0
+            }
+        },
+        "1/16": {
+            "sourceSha1": "a2569b918d76f6298e56e28f14762c80014cb119",
+            "sourceFileName": "1_16.webp",
+            "corners": [
+                [
+                    0,
+                    0
+                ],
+                [
+                    1,
+                    0
+                ],
+                [
+                    1,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": false,
+                "longSide": 800
+            },
+            "adjust": {
+                "brightness": 53,
+                "contrast": 33,
+                "saturation": 0,
+                "hue": 0,
+                "warmth": 37,
+                "sharpness": 0
+            }
+        },
+        "1/17": {
+            "sourceSha1": "b504de4584931586a4ac66d0e3c94d6035a8f23f",
+            "sourceFileName": "1_17.webp",
+            "corners": [
+                [
+                    0,
+                    0
+                ],
+                [
+                    1,
+                    0
+                ],
+                [
+                    1,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": false,
+                "longSide": 800
+            },
+            "adjust": {
+                "brightness": -14,
+                "contrast": 59,
+                "saturation": 0,
+                "hue": 0,
+                "warmth": 0,
+                "sharpness": 0
+            }
+        },
+        "1/18": {
+            "sourceSha1": "1a42de202dea0c74aeab6046ab2216e38b53bd46",
+            "sourceFileName": "1_18.webp",
+            "corners": [
+                [
+                    0,
+                    0
+                ],
+                [
+                    1,
+                    0
+                ],
+                [
+                    1,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": false,
+                "longSide": 800
+            },
+            "adjust": {
+                "brightness": 50,
+                "contrast": 47,
+                "saturation": 36,
+                "hue": 0,
+                "warmth": 0,
+                "sharpness": 0
+            }
+        },
+        "1/19": {
+            "sourceSha1": "baf70e59dafff25d8d6ad19e8d59b9147d1324d3",
+            "sourceFileName": "1_19.webp",
+            "corners": [
+                [
+                    0,
+                    0
+                ],
+                [
+                    1,
+                    0
+                ],
+                [
+                    1,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": false,
+                "longSide": 800
+            },
+            "adjust": {
+                "brightness": 28,
+                "contrast": 49,
+                "saturation": 0,
+                "hue": 0,
+                "warmth": 0,
+                "sharpness": 0
+            }
+        },
+        "1/20": {
+            "sourceSha1": "3c3e96c033d1ff096fc50be4b48561e0367c632d",
+            "sourceFileName": "1_20.webp",
+            "corners": [
+                [
+                    0,
+                    0
+                ],
+                [
+                    1,
+                    0
+                ],
+                [
+                    1,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": false,
+                "longSide": 800
+            },
+            "adjust": {
+                "brightness": 59,
+                "contrast": 58,
+                "saturation": 5,
+                "hue": 0,
+                "warmth": 6,
+                "sharpness": 0
+            }
+        },
+        "1/21": {
+            "sourceSha1": "58b793bd5492725743c353e0d0724c33ceaf168e",
+            "sourceFileName": "1_21.webp",
+            "corners": [
+                [
+                    0,
+                    0
+                ],
+                [
+                    1,
+                    0
+                ],
+                [
+                    1,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": false,
+                "longSide": 800
+            },
+            "adjust": {
+                "brightness": 72,
+                "contrast": 48,
+                "saturation": 30,
+                "hue": 0,
+                "warmth": 0,
+                "sharpness": 0
+            }
+        },
+        "1/22": {
+            "sourceSha1": "77aec846e32bc1063821bda3c8877ee35b24b5ae",
+            "sourceFileName": "1_22.webp",
+            "corners": [
+                [
+                    0,
+                    0
+                ],
+                [
+                    1,
+                    0
+                ],
+                [
+                    1,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": false,
+                "longSide": 800
+            },
+            "adjust": {
+                "brightness": 34,
+                "contrast": 49,
+                "saturation": 8,
+                "hue": 0,
+                "warmth": 28,
+                "sharpness": 0
+            }
+        },
+        "1/23": {
+            "sourceSha1": "22b90c19b235b4cc421c9eabcba78cdb1e0fc023",
+            "sourceFileName": "1_23.webp",
+            "corners": [
+                [
+                    0,
+                    0
+                ],
+                [
+                    1,
+                    0
+                ],
+                [
+                    1,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": false,
+                "longSide": 800
+            },
+            "adjust": {
+                "brightness": 46,
+                "contrast": 50,
+                "saturation": 30,
+                "hue": 0,
+                "warmth": 0,
+                "sharpness": 0
+            }
+        },
+        "1/24": {
+            "sourceSha1": "efb25161e01623e77e8a9e6c7e5ea6851710717a",
+            "sourceFileName": "1_24.webp",
+            "corners": [
+                [
+                    0,
+                    0
+                ],
+                [
+                    1,
+                    0
+                ],
+                [
+                    1,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": false,
+                "longSide": 800
+            },
+            "adjust": {
+                "brightness": 60,
+                "contrast": 40,
+                "saturation": 20,
+                "hue": 0,
+                "warmth": 30,
+                "sharpness": 0
+            }
+        },
+        "1/25": {
+            "sourceSha1": "e4e14448f322fa224d496cb1346eefa6efaf2967",
+            "sourceFileName": "1_25.webp",
+            "corners": [
+                [
+                    0,
+                    0
+                ],
+                [
+                    1,
+                    0
+                ],
+                [
+                    1,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": false,
+                "longSide": 800
+            },
+            "adjust": {
+                "brightness": 50,
+                "contrast": 30,
+                "saturation": 30,
+                "hue": 0,
+                "warmth": 0,
+                "sharpness": 0
+            }
+        },
+        "2/1": {
+            "sourceSha1": "b38cb41cb8e32de44d8432a405c2afa7b19230b1",
+            "sourceFileName": "dvULgNPJPak.jpg",
+            "corners": [
+                [
+                    0.10625,
+                    0.28116213683223995
+                ],
+                [
+                    0.41875,
+                    0.28116213683223995
+                ],
+                [
+                    0.41875,
+                    0.5154639175257731
+                ],
+                [
+                    0.10625,
+                    0.5154639175257731
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/2": {
+            "sourceSha1": "b38cb41cb8e32de44d8432a405c2afa7b19230b1",
+            "sourceFileName": "dvULgNPJPak.jpg",
+            "corners": [
+                [
+                    0.5625,
+                    0.28116213683223995
+                ],
+                [
+                    0.871875,
+                    0.28116213683223995
+                ],
+                [
+                    0.871875,
+                    0.7450796626054358
+                ],
+                [
+                    0.5625,
+                    0.7450796626054358
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/3": {
+            "sourceSha1": "3c80a0f485b376246df503a36cbab07d60b9b384",
+            "sourceFileName": "aPoF91L-n6k.jpg",
+            "corners": [
+                [
+                    0.2839737582005623,
+                    0.5075
+                ],
+                [
+                    0.6935332708528584,
+                    0.5075
+                ],
+                [
+                    0.6935332708528584,
+                    0.780625
+                ],
+                [
+                    0.2839737582005623,
+                    0.780625
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/4": {
+            "sourceSha1": "e2092ed7b082c5f56264715bf296657fe1de3572",
+            "sourceFileName": "_P76trHTWDE.jpg",
+            "corners": [
+                [
+                    0,
+                    0
+                ],
+                [
+                    1,
+                    0
+                ],
+                [
+                    1,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "background": {
+                "fromBorder": true,
+                "seeds": [],
+                "tolerance": 45,
+                "step": 5.5,
+                "keepLargest": true
+            },
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            },
+            "adjust": {
+                "brightness": 0,
+                "contrast": 0,
+                "saturation": 0,
+                "hue": 0,
+                "warmth": 0,
+                "sharpness": 0
+            }
+        },
+        "2/5": {
+            "sourceSha1": "07e617bc6d0f054a2eb4c946a167fef6f196e494",
+            "sourceFileName": "NIJuEQw0RKg.jpg",
+            "corners": [
+                [
+                    0.278125,
+                    0.45173383317713217
+                ],
+                [
+                    0.6875,
+                    0.45173383317713217
+                ],
+                [
+                    0.6875,
+                    0.7586691658856607
+                ],
+                [
+                    0.278125,
+                    0.7586691658856607
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/6": {
+            "sourceSha1": "07e617bc6d0f054a2eb4c946a167fef6f196e494",
+            "sourceFileName": "NIJuEQw0RKg.jpg",
+            "corners": [
+                [
+                    0.273125,
+                    0.12933458294283037
+                ],
+                [
+                    0.693125,
+                    0.12933458294283037
+                ],
+                [
+                    0.693125,
+                    0.7591377694470478
+                ],
+                [
+                    0.273125,
+                    0.7591377694470478
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/7": {
+            "sourceSha1": "70f2c580c1f2b7cafbfd5fbf11bd8ae3af38bd10",
+            "sourceFileName": "8e0EHPUx3Mo.jpg",
+            "corners": [
+                [
+                    0.0575,
+                    0.5408450704225352
+                ],
+                [
+                    0.5225,
+                    0.5408450704225352
+                ],
+                [
+                    0.5225,
+                    0.8901408450704226
+                ],
+                [
+                    0.0575,
+                    0.8901408450704226
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            },
+            "adjust": {
+                "brightness": 15,
+                "contrast": 15,
+                "saturation": 30,
+                "hue": 0,
+                "warmth": -15,
+                "sharpness": 0
+            }
+        },
+        "2/8": {
+            "sourceSha1": "f3b50a6f51851d74f4aa3b65ed82b931663ba6af",
+            "sourceFileName": "Q1KJomEl70c.jpg",
+            "corners": [
+                [
+                    0.15099727746212122,
+                    0.1771177117711771
+                ],
+                [
+                    0.849969420770202,
+                    0.1771177117711771
+                ],
+                [
+                    0.849969420770202,
+                    0.7991377273801087
+                ],
+                [
+                    0.15099727746212122,
+                    0.7991377273801087
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/9": {
+            "sourceSha1": "69ea25b6b0b0ef0582b9de082d2559e10fb64f73",
+            "sourceFileName": "-I8lDurtfAo.jpg",
+            "corners": [
+                [
+                    0.23891749526515152,
+                    0.2170475752230488
+                ],
+                [
+                    0.9038184580176768,
+                    0.2170475752230488
+                ],
+                [
+                    0.9038184580176768,
+                    0.7859690160288366
+                ],
+                [
+                    0.23891749526515152,
+                    0.7859690160288366
+                ]
+            ],
+            "retouches": [
+                [
+                    0.8075629340277778,
+                    0.26088401462279825,
+                    0.03200954861111105,
+                    0.021212005010609214
+                ]
+            ],
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0,
+                        0,
+                        1,
+                        1
+                    ],
+                    "radius": 0.03
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2,
+                "align": [
+                    0.5,
+                    1
+                ]
+            },
+            "adjust": {
+                "brightness": 0,
+                "contrast": 0,
+                "saturation": 0,
+                "hue": 0,
+                "warmth": 0,
+                "sharpness": 0
+            }
+        },
+        "2/10": {
+            "sourceSha1": "9bd8100ddb533252af660c7b3c9ec32d44d97048",
+            "sourceFileName": "3oDQKoKPMng.jpg",
+            "corners": [
+                [
+                    0.010625,
+                    0
+                ],
+                [
+                    0.98875,
+                    0
+                ],
+                [
+                    0.98875,
+                    1
+                ],
+                [
+                    0.010625,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            },
+            "selections": [
+                {
+                    "shape": "ellipse",
+                    "rect": [
+                        0.04900386872647841,
+                        0.40477693602693615,
+                        0.4856633418427771,
+                        0.48183659511784505
+                    ],
+                    "radius": 0
+                },
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0.23825565176198113,
+                        0.3431976010101011,
+                        0.46373397899834196,
+                        0.36595117845117847
+                    ],
+                    "radius": 0
+                }
+            ]
+        },
+        "2/11": {
+            "sourceSha1": "d6ab4dd8c272cbffc4a02234030f2eeedad9e1a8",
+            "sourceFileName": "L0xOtAnv94Y.jpg",
+            "corners": [
+                [
+                    0.220625,
+                    0.07497656982193064
+                ],
+                [
+                    0.785625,
+                    0.07497656982193064
+                ],
+                [
+                    0.785625,
+                    0.922211808809747
+                ],
+                [
+                    0.220625,
+                    0.922211808809747
+                ]
+            ],
+            "retouches": [],
+            "background": {
+                "fromBorder": true,
+                "seeds": [],
+                "tolerance": 12,
+                "step": 3.5,
+                "keepLargest": true
+            },
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            },
+            "selections": [
+                {
+                    "radius": 0,
+                    "shape": "ellipse",
+                    "rect": [
+                        0.14005705346461764,
+                        0.13713304924242423,
+                        0.7289368862480117,
+                        0.7388731060606061
+                    ]
+                }
+            ]
+        },
+        "2/12": {
+            "sourceSha1": "91d3864bc5e584b4134a160a93b2cee422d96c76",
+            "sourceFileName": "WtxE9xb0vQU.jpg",
+            "corners": [
+                [
+                    0.0275,
+                    0.1162136832239925
+                ],
+                [
+                    0.976875,
+                    0.1162136832239925
+                ],
+                [
+                    0.976875,
+                    0.8772258669165885
+                ],
+                [
+                    0.0275,
+                    0.8772258669165885
+                ]
+            ],
+            "retouches": [
+                [
+                    0.041740625,
+                    0.13143392689784442,
+                    0.232596875,
+                    0.08371134020618556
+                ]
+            ],
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0,
+                        0,
+                        1,
+                        1
+                    ],
+                    "radius": 0.03
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/13": {
+            "sourceSha1": "9ae926be87e74e77c1be25ec2d3b6275df294aee",
+            "sourceFileName": "lm9dCs6PhQs.jpg",
+            "corners": [
+                [
+                    0.49375,
+                    0.0625
+                ],
+                [
+                    0.996875,
+                    0.0625
+                ],
+                [
+                    0.996875,
+                    0.7916666666666666
+                ],
+                [
+                    0.49375,
+                    0.7916666666666666
+                ]
+            ],
+            "retouches": [
+                [
+                    0.7005849510732324,
+                    0.7614123774509803,
+                    0.08651949179292928,
+                    0.01789726307189543
+                ]
+            ],
+            "adjust": {
+                "brightness": 0,
+                "contrast": 0,
+                "saturation": -20,
+                "hue": 0,
+                "warmth": -30,
+                "sharpness": 0
+            },
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/14": {
+            "sourceSha1": "9ae926be87e74e77c1be25ec2d3b6275df294aee",
+            "sourceFileName": "lm9dCs6PhQs.jpg",
+            "corners": [
+                [
+                    0.0375,
+                    0.05
+                ],
+                [
+                    0.465625,
+                    0.05
+                ],
+                [
+                    0.465625,
+                    0.33541666666666664
+                ],
+                [
+                    0.0375,
+                    0.33541666666666664
+                ]
+            ],
+            "retouches": [
+                [
+                    0.20875000000000002,
+                    0.24122916666666666,
+                    0.0770625,
+                    0.028541666666666667
+                ]
+            ],
+            "adjust": {
+                "brightness": 0,
+                "contrast": 0,
+                "saturation": -20,
+                "hue": 0,
+                "warmth": -30,
+                "sharpness": 0
+            },
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/15": {
+            "sourceSha1": "275942076e492d367e505ef2e1582259892ad867",
+            "sourceFileName": "GWhqmo8uz24.jpg",
+            "corners": [
+                [
+                    0.13583333333333333,
+                    0.5475
+                ],
+                [
+                    0.8833333333333333,
+                    0.5475
+                ],
+                [
+                    0.8833333333333333,
+                    0.904375
+                ],
+                [
+                    0.13583333333333333,
+                    0.904375
+                ]
+            ],
+            "retouches": [
+                [
+                    0.7413083333333333,
+                    0.8544125,
+                    0.1196,
+                    0.024981250000000007
+                ]
+            ],
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0,
+                        0,
+                        1,
+                        1
+                    ],
+                    "radius": 0.04
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/16": {
+            "sourceSha1": "f2854677d49bd90ba9d9fb05c2bd863a6f011763",
+            "sourceFileName": "QErbOGxDzDE.jpg",
+            "corners": [
+                [
+                    0.215,
+                    0.1246485473289597
+                ],
+                [
+                    0.724375,
+                    0.1246485473289597
+                ],
+                [
+                    0.724375,
+                    0.8884723523898782
+                ],
+                [
+                    0.215,
+                    0.8884723523898782
+                ]
+            ],
+            "retouches": [],
+            "background": {
+                "fromBorder": true,
+                "seeds": [],
+                "tolerance": 12,
+                "step": 4,
+                "keepLargest": true
+            },
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/17": {
+            "sourceSha1": "d3757b01b3b9a5d10b3e08ddb039de829b2d8353",
+            "sourceFileName": "ZLqk2cZ_HUY.jpg",
+            "corners": [
+                [
+                    0.2175,
+                    0.36916666666666664
+                ],
+                [
+                    0.83625,
+                    0.36916666666666664
+                ],
+                [
+                    0.83625,
+                    0.9016666666666666
+                ],
+                [
+                    0.2175,
+                    0.9016666666666666
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0,
+                        0,
+                        1,
+                        1
+                    ],
+                    "radius": 0.05
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/18": {
+            "sourceSha1": "df6f51567828b727cb5d703145f9dd7d064e110f",
+            "sourceFileName": "5tuU44e_2e0.jpg",
+            "corners": [
+                [
+                    0.070625,
+                    0.10871602624179943
+                ],
+                [
+                    0.93875,
+                    0.10871602624179943
+                ],
+                [
+                    0.93875,
+                    0.8903467666354264
+                ],
+                [
+                    0.070625,
+                    0.8903467666354264
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0,
+                        0,
+                        1,
+                        1
+                    ],
+                    "radius": 0.02
+                }
+            ],
+            "adjust": {
+                "brightness": 0,
+                "contrast": 0,
+                "saturation": 0,
+                "hue": 0,
+                "warmth": 20,
+                "sharpness": 0
+            },
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/19": {
+            "sourceSha1": "fa2be25d6f80764317871cda0594b9a667191752",
+            "sourceFileName": "VeUSCLJrLf4.jpg",
+            "corners": [
+                [
+                    0.06393888840108879,
+                    0.08580959520239877
+                ],
+                [
+                    0.939248397576609,
+                    0.08580959520239877
+                ],
+                [
+                    0.939248397576609,
+                    0.6673713924287856
+                ],
+                [
+                    0.06393888840108879,
+                    0.6673713924287856
+                ]
+            ],
+            "retouches": [
+                [
+                    0.12358950328022494,
+                    0.6353,
+                    0.08819119025304593,
+                    0.0626625
+                ]
+            ],
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0,
+                        0,
+                        1,
+                        1
+                    ],
+                    "radius": 0.04
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/20": {
+            "sourceSha1": "5d0c1f1da2a8f093bb5bc1452da0d8d240b52836",
+            "sourceFileName": "LqvEdaJVSxw.jpg",
+            "corners": [
+                [
+                    0,
+                    0.00937207122774133
+                ],
+                [
+                    1,
+                    0.00937207122774133
+                ],
+                [
+                    1,
+                    0.7591377694470478
+                ],
+                [
+                    0,
+                    0.7591377694470478
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/21": {
+            "sourceSha1": "09c60446000459e03f9d40caffe5aa9068814e26",
+            "sourceFileName": "7OexiSSFdbg.jpg",
+            "corners": [
+                [
+                    0.11,
+                    0.1717902350813743
+                ],
+                [
+                    0.59875,
+                    0.1717902350813743
+                ],
+                [
+                    0.59875,
+                    0.8788426763110307
+                ],
+                [
+                    0.11,
+                    0.8788426763110307
+                ]
+            ],
+            "retouches": [
+                [
+                    0.3103875,
+                    0.6773327305605785,
+                    0.048875,
+                    0.028282097649186256
+                ],
+                [
+                    0.20775,
+                    0.36622965641952987,
+                    0.25903750000000003,
+                    0.30049728752260396
+                ]
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/22": {
+            "sourceSha1": "09c60446000459e03f9d40caffe5aa9068814e26",
+            "sourceFileName": "7OexiSSFdbg.jpg",
+            "corners": [
+                [
+                    0.605,
+                    0.40325497287522605
+                ],
+                [
+                    0.91375,
+                    0.40325497287522605
+                ],
+                [
+                    0.91375,
+                    0.7215189873417721
+                ],
+                [
+                    0.605,
+                    0.7215189873417721
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0,
+                        0,
+                        1,
+                        1
+                    ],
+                    "radius": 0.02
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/23": {
+            "sourceSha1": "d931dffa8689b0979f48a8d299d375f4ce75d997",
+            "sourceFileName": "K-BMOC8_GO4.jpg",
+            "corners": [
+                [
+                    0.21753607103218647,
+                    0.305
+                ],
+                [
+                    0.7702552719200888,
+                    0.305
+                ],
+                [
+                    0.7702552719200888,
+                    0.875
+                ],
+                [
+                    0.21753607103218647,
+                    0.875
+                ]
+            ],
+            "retouches": [
+                [
+                    0.3004439511653718,
+                    0.3335,
+                    0.0718534961154273,
+                    0.0342
+                ],
+                [
+                    0.6154938956714762,
+                    0.4931,
+                    0.08843507214206436,
+                    0.04560000000000001
+                ]
+            ],
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0,
+                        0,
+                        1,
+                        1
+                    ],
+                    "radius": 0.02
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 1,
+                "numRows": 2,
+                "align": [
+                    0.5,
+                    1
+                ]
+            }
+        },
+        "2/24": {
+            "sourceSha1": "c8ad6688d291b2a54965975327ba9ea7beff69cd",
+            "sourceFileName": "k4Of-gj-HBM.jpg",
+            "corners": [
+                [
+                    0.05,
+                    0.09375
+                ],
+                [
+                    0.9541666666666667,
+                    0.09375
+                ],
+                [
+                    0.9541666666666667,
+                    0.771875
+                ],
+                [
+                    0.05,
+                    0.771875
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/25": {
+            "sourceSha1": "5157317b4f7a28e622eec038a880fa7419a67e10",
+            "sourceFileName": "dIrSAyhCDa0.jpg",
+            "corners": [
+                [
+                    0.305,
+                    0.01717557251908397
+                ],
+                [
+                    0.63625,
+                    0.01717557251908397
+                ],
+                [
+                    0.63625,
+                    0.5229007633587787
+                ],
+                [
+                    0.305,
+                    0.5229007633587787
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/26": {
+            "sourceSha1": "5157317b4f7a28e622eec038a880fa7419a67e10",
+            "sourceFileName": "dIrSAyhCDa0.jpg",
+            "corners": [
+                [
+                    0.305,
+                    0.49427480916030536
+                ],
+                [
+                    0.63625,
+                    0.49427480916030536
+                ],
+                [
+                    0.63625,
+                    1
+                ],
+                [
+                    0.305,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/27": {
+            "sourceSha1": "633ac692b48ea6fcd268637042edc70db2022360",
+            "sourceFileName": "G_YvG3ZIlkQ.jpg",
+            "corners": [
+                [
+                    0.277960266729798,
+                    0.022486468545751634
+                ],
+                [
+                    0.9431127683080809,
+                    0.022486468545751634
+                ],
+                [
+                    0.9431127683080809,
+                    0.8968418096405228
+                ],
+                [
+                    0.277960266729798,
+                    0.8968418096405228
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/28": {
+            "sourceSha1": "1b768c10c76ff21397c53770fae4fc421afea9d4",
+            "sourceFileName": "w-uDTP5ACc0.jpg",
+            "corners": [
+                [
+                    0.05051369863013699,
+                    0
+                ],
+                [
+                    0.949486301369863,
+                    0
+                ],
+                [
+                    0.949486301369863,
+                    0.65625
+                ],
+                [
+                    0.05051369863013699,
+                    0.65625
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/29": {
+            "sourceSha1": "cee8ac55284e1d788a711491a08b6b5ddd5cd148",
+            "sourceFileName": "3gX0VUxKekU.jpg",
+            "corners": [
+                [
+                    0,
+                    0.008840864440078585
+                ],
+                [
+                    0.625,
+                    0.008840864440078585
+                ],
+                [
+                    0.625,
+                    0.9911591355599214
+                ],
+                [
+                    0,
+                    0.9911591355599214
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/30": {
+            "sourceSha1": "01ecc39331be98d2e29a806aea0b8b702ebc08d5",
+            "sourceFileName": "rDrGfuplEm8.jpg",
+            "corners": [
+                [
+                    0.44393382352941174,
+                    0.070625
+                ],
+                [
+                    0.9485294117647058,
+                    0.070625
+                ],
+                [
+                    0.9485294117647058,
+                    0.645
+                ],
+                [
+                    0.44393382352941174,
+                    0.645
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0,
+                        0,
+                        1,
+                        1
+                    ],
+                    "radius": 0.06
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 1,
+                "numRows": 2
+            }
+        },
+        "2/31": {
+            "sourceSha1": "5d1f3f1ff9f064b04a8635cc65c556752d2ef97d",
+            "sourceFileName": "R4Hv6RnF05Q.jpg",
+            "corners": [
+                [
+                    0.075,
+                    0.10555555555555556
+                ],
+                [
+                    0.93125,
+                    0.10555555555555556
+                ],
+                [
+                    0.93125,
+                    0.8666666666666667
+                ],
+                [
+                    0.075,
+                    0.8666666666666667
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/32": {
+            "sourceSha1": "8a07321165e54f31dfc209e377590cd129086906",
+            "sourceFileName": "0bzRtF2fs74.jpg",
+            "corners": [
+                [
+                    0,
+                    0.15625
+                ],
+                [
+                    1,
+                    0.15625
+                ],
+                [
+                    1,
+                    0.790625
+                ],
+                [
+                    0,
+                    0.790625
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/33": {
+            "sourceSha1": "0fba9e37a432f0e10a2565442e50ef903a2af1c0",
+            "sourceFileName": "yLG3Zog38tw.jpg",
+            "corners": [
+                [
+                    0.0425,
+                    0.2775
+                ],
+                [
+                    0.961875,
+                    0.2775
+                ],
+                [
+                    0.961875,
+                    0.7016666666666667
+                ],
+                [
+                    0.0425,
+                    0.7016666666666667
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0,
+                        0,
+                        1,
+                        1
+                    ],
+                    "radius": 0.02
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/34": {
+            "sourceSha1": "9cca2d77b309eb024899339ba4067a2093dd479b",
+            "sourceFileName": "-5paXZX8lWk.jpg",
+            "corners": [
+                [
+                    0,
+                    0
+                ],
+                [
+                    1,
+                    0
+                ],
+                [
+                    1,
+                    0.8888888888888888
+                ],
+                [
+                    0,
+                    0.8888888888888888
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/35": {
+            "sourceSha1": "0f1db6c2404620a00133e5bbdf26295f953fa009",
+            "sourceFileName": "WximLTzm94E.jpg",
+            "corners": [
+                [
+                    0.356875,
+                    0.20676691729323307
+                ],
+                [
+                    0.63375,
+                    0.20676691729323307
+                ],
+                [
+                    0.63375,
+                    0.47368421052631576
+                ],
+                [
+                    0.356875,
+                    0.47368421052631576
+                ]
+            ],
+            "retouches": [
+                [
+                    0.45378125,
+                    0.4443233082706767,
+                    0.08306250000000001,
+                    0.029360902255639094
+                ]
+            ],
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0,
+                        0,
+                        1,
+                        1
+                    ],
+                    "radius": 0.03
+                }
+            ],
+            "adjust": {
+                "brightness": 0,
+                "contrast": 10,
+                "saturation": 0,
+                "hue": 0,
+                "warmth": -10,
+                "sharpness": 0
+            },
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/36": {
+            "sourceSha1": "f3b7e0d90246a4859c18f289f3a0bbe1d10c8df4",
+            "sourceFileName": "-wFuqb8tuoU.jpg",
+            "corners": [
+                [
+                    0.63125,
+                    0.06554307116104868
+                ],
+                [
+                    0.9,
+                    0.06554307116104868
+                ],
+                [
+                    0.9,
+                    0.26685393258426965
+                ],
+                [
+                    0.63125,
+                    0.26685393258426965
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/37": {
+            "sourceSha1": "f3b7e0d90246a4859c18f289f3a0bbe1d10c8df4",
+            "sourceFileName": "-wFuqb8tuoU.jpg",
+            "corners": [
+                [
+                    0.5475,
+                    0.26217228464419473
+                ],
+                [
+                    0.8225,
+                    0.26217228464419473
+                ],
+                [
+                    0.8225,
+                    0.4681647940074906
+                ],
+                [
+                    0.5475,
+                    0.4681647940074906
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/38": {
+            "sourceSha1": "f3b7e0d90246a4859c18f289f3a0bbe1d10c8df4",
+            "sourceFileName": "-wFuqb8tuoU.jpg",
+            "corners": [
+                [
+                    0.253125,
+                    0.26685393258426965
+                ],
+                [
+                    0.521875,
+                    0.26685393258426965
+                ],
+                [
+                    0.521875,
+                    0.4681647940074906
+                ],
+                [
+                    0.253125,
+                    0.4681647940074906
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/39": {
+            "sourceSha1": "f3b7e0d90246a4859c18f289f3a0bbe1d10c8df4",
+            "sourceFileName": "-wFuqb8tuoU.jpg",
+            "corners": [
+                [
+                    0.5475,
+                    0.4681647940074906
+                ],
+                [
+                    0.81625,
+                    0.4681647940074906
+                ],
+                [
+                    0.81625,
+                    0.6694756554307116
+                ],
+                [
+                    0.5475,
+                    0.6694756554307116
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/40": {
+            "sourceSha1": "1e4465744aabaf29a37c706dc6d39ec3a708d23f",
+            "sourceFileName": "ghHUi-j_eko.jpg",
+            "corners": [
+                [
+                    0.390625,
+                    0.22305529522024367
+                ],
+                [
+                    0.603125,
+                    0.22305529522024367
+                ],
+                [
+                    0.603125,
+                    0.5417057169634489
+                ],
+                [
+                    0.390625,
+                    0.5417057169634489
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/41": {
+            "sourceSha1": "1e4465744aabaf29a37c706dc6d39ec3a708d23f",
+            "sourceFileName": "ghHUi-j_eko.jpg",
+            "corners": [
+                [
+                    0.6,
+                    0.5417057169634489
+                ],
+                [
+                    0.8125,
+                    0.5417057169634489
+                ],
+                [
+                    0.8125,
+                    0.8603561387066542
+                ],
+                [
+                    0.6,
+                    0.8603561387066542
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/42": {
+            "sourceSha1": "fadab37b6e5e4c64b215059a1fb1240dfc200556",
+            "sourceFileName": "D6Tu_L3chLE.jpg",
+            "corners": [
+                [
+                    0.3825,
+                    0.16666666666666666
+                ],
+                [
+                    0.535625,
+                    0.16666666666666666
+                ],
+                [
+                    0.535625,
+                    0.37083333333333335
+                ],
+                [
+                    0.3825,
+                    0.37083333333333335
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/43": {
+            "sourceSha1": "fadab37b6e5e4c64b215059a1fb1240dfc200556",
+            "sourceFileName": "D6Tu_L3chLE.jpg",
+            "corners": [
+                [
+                    0.53875,
+                    0.16666666666666666
+                ],
+                [
+                    0.691875,
+                    0.16666666666666666
+                ],
+                [
+                    0.691875,
+                    0.37083333333333335
+                ],
+                [
+                    0.53875,
+                    0.37083333333333335
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/44": {
+            "sourceSha1": "fadab37b6e5e4c64b215059a1fb1240dfc200556",
+            "sourceFileName": "D6Tu_L3chLE.jpg",
+            "corners": [
+                [
+                    0.7,
+                    0.365
+                ],
+                [
+                    0.853125,
+                    0.365
+                ],
+                [
+                    0.853125,
+                    0.5691666666666667
+                ],
+                [
+                    0.7,
+                    0.5691666666666667
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/45": {
+            "sourceSha1": "fadab37b6e5e4c64b215059a1fb1240dfc200556",
+            "sourceFileName": "D6Tu_L3chLE.jpg",
+            "corners": [
+                [
+                    0.384375,
+                    0.5516666666666666
+                ],
+                [
+                    0.5375,
+                    0.5516666666666666
+                ],
+                [
+                    0.5375,
+                    0.7558333333333334
+                ],
+                [
+                    0.384375,
+                    0.7558333333333334
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/46": {
+            "sourceSha1": "f685a0ac5ec2e6c76c43a9e38e8c304aa496014a",
+            "sourceFileName": "In51lypcCDA.jpg",
+            "corners": [
+                [
+                    0.23898781630740393,
+                    0.15625
+                ],
+                [
+                    0.5042174320524836,
+                    0.15625
+                ],
+                [
+                    0.5042174320524836,
+                    0.333125
+                ],
+                [
+                    0.23898781630740393,
+                    0.333125
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/47": {
+            "sourceSha1": "f685a0ac5ec2e6c76c43a9e38e8c304aa496014a",
+            "sourceFileName": "In51lypcCDA.jpg",
+            "corners": [
+                [
+                    0.2436738519212746,
+                    0.59375
+                ],
+                [
+                    0.5089034676663543,
+                    0.59375
+                ],
+                [
+                    0.5089034676663543,
+                    0.770625
+                ],
+                [
+                    0.2436738519212746,
+                    0.770625
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/48": {
+            "sourceSha1": "f685a0ac5ec2e6c76c43a9e38e8c304aa496014a",
+            "sourceFileName": "In51lypcCDA.jpg",
+            "corners": [
+                [
+                    0.6701030927835051,
+                    0.35
+                ],
+                [
+                    0.8022492970946579,
+                    0.35
+                ],
+                [
+                    0.8022492970946579,
+                    0.52625
+                ],
+                [
+                    0.6701030927835051,
+                    0.52625
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 1,
+                "numRows": 2
+            }
+        },
+        "2/49": {
+            "sourceSha1": "2f7c2be1c8c467af9b1785026eb3898fa07660a0",
+            "sourceFileName": "5HgdQjUdYpc.jpg",
+            "corners": [
+                [
+                    0.5,
+                    0.025
+                ],
+                [
+                    0.8558333333333333,
+                    0.025
+                ],
+                [
+                    0.8558333333333333,
+                    0.291875
+                ],
+                [
+                    0.5,
+                    0.291875
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/50": {
+            "sourceSha1": "2f7c2be1c8c467af9b1785026eb3898fa07660a0",
+            "sourceFileName": "5HgdQjUdYpc.jpg",
+            "corners": [
+                [
+                    0.4,
+                    0.35625
+                ],
+                [
+                    0.7558333333333334,
+                    0.35625
+                ],
+                [
+                    0.7558333333333334,
+                    0.623125
+                ],
+                [
+                    0.4,
+                    0.623125
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/51": {
+            "sourceSha1": "2f7c2be1c8c467af9b1785026eb3898fa07660a0",
+            "sourceFileName": "5HgdQjUdYpc.jpg",
+            "corners": [
+                [
+                    0.49166666666666664,
+                    0.63125
+                ],
+                [
+                    0.8475,
+                    0.63125
+                ],
+                [
+                    0.8475,
+                    0.898125
+                ],
+                [
+                    0.49166666666666664,
+                    0.898125
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/52": {
+            "sourceSha1": "715c6e06a402b23a1743b38d078b57ec76ca5d69",
+            "sourceFileName": "Y3KEBQlB1Zk.jpg",
+            "corners": [
+                [
+                    0.14247074755948846,
+                    0.19602113005997002
+                ],
+                [
+                    0.6421634910878918,
+                    0.19602113005997002
+                ],
+                [
+                    0.6421634910878918,
+                    0.517540292353823
+                ],
+                [
+                    0.14247074755948846,
+                    0.517540292353823
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/53": {
+            "sourceSha1": "44256aebe98a692fb3f2646634ff9213e2d1a859",
+            "sourceFileName": "UJN_XAg0ECI.jpg",
+            "corners": [
+                [
+                    0.09375,
+                    0.3010033444816054
+                ],
+                [
+                    0.9,
+                    0.3010033444816054
+                ],
+                [
+                    0.9,
+                    0.8403010033444817
+                ],
+                [
+                    0.09375,
+                    0.8403010033444817
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/54": {
+            "sourceSha1": "820ccaa59f562be5360f0969d256419a691b88c3",
+            "sourceFileName": "jQefZnin_hA.jpg",
+            "corners": [
+                [
+                    0.20834290155623467,
+                    0.5707927286356822
+                ],
+                [
+                    0.5556782250799315,
+                    0.5707927286356822
+                ],
+                [
+                    0.5556782250799315,
+                    0.8045176630434783
+                ],
+                [
+                    0.20834290155623467,
+                    0.8045176630434783
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/55": {
+            "sourceSha1": "2c8dc6c052381735fc4afe6f27926631bf2b4345",
+            "sourceFileName": "yrdMFzX6Hu4.jpg",
+            "corners": [
+                [
+                    0.13181019332161686,
+                    0.153125
+                ],
+                [
+                    0.7996485061511424,
+                    0.153125
+                ],
+                [
+                    0.7996485061511424,
+                    0.628125
+                ],
+                [
+                    0.13181019332161686,
+                    0.628125
+                ]
+            ],
+            "retouches": [
+                [
+                    0.1852372583479789,
+                    0.15787500000000002,
+                    0.3339191564147628,
+                    0.0285
+                ]
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/56": {
+            "sourceSha1": "7599d5d6280a2460c3d89004e8114b61aadda0de",
+            "sourceFileName": "1Bdsg4xqdYs.jpg",
+            "corners": [
+                [
+                    0.28907729640151514,
+                    0.17795419052576783
+                ],
+                [
+                    0.6928908222853535,
+                    0.17795419052576783
+                ],
+                [
+                    0.6928908222853535,
+                    0.9156342182890855
+                ],
+                [
+                    0.28907729640151514,
+                    0.9156342182890855
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "ellipse",
+                    "rect": [
+                        0.02429957324992699,
+                        0.02712015993265986,
+                        0.962593103082673,
+                        0.9518821022727273
+                    ],
+                    "radius": 0
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/57": {
+            "sourceSha1": "fe2239786b02498a616bc86b7372526b41f6380e",
+            "sourceFileName": "kGGnJBw78Vo.jpg",
+            "corners": [
+                [
+                    0.2325,
+                    0.2992621527777778
+                ],
+                [
+                    0.7729344223484849,
+                    0.2992621527777778
+                ],
+                [
+                    0.7729344223484849,
+                    0.9573950674019608
+                ],
+                [
+                    0.2325,
+                    0.9573950674019608
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2,
+                "margin": [
+                    0.1,
+                    0
+                ]
+            },
+            "background": {
+                "fromBorder": true,
+                "seeds": [],
+                "tolerance": 0,
+                "step": 4,
+                "keepLargest": true
+            }
+        },
+        "2/58": {
+            "sourceSha1": "c58fa59150acd293354c2cba1442c6aa14d696b9",
+            "sourceFileName": "Q-dusXpAH0I.jpg",
+            "corners": [
+                [
+                    0.1,
+                    0.35
+                ],
+                [
+                    0.9,
+                    0.35
+                ],
+                [
+                    0.9,
+                    0.99
+                ],
+                [
+                    0.1,
+                    0.99
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/59": {
+            "sourceSha1": "ea1c0432109badcf34f64ac538308209e915c8eb",
+            "sourceFileName": "XH6YsRWX-GA.jpg",
+            "corners": [
+                [
+                    0.4582651391162029,
+                    0.43125
+                ],
+                [
+                    0.9042553191489362,
+                    0.43125
+                ],
+                [
+                    0.9042553191489362,
+                    0.771875
+                ],
+                [
+                    0.4582651391162029,
+                    0.771875
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/60": {
+            "sourceSha1": "a8a56a2be825de3a35a8299a8598aad3abd00560",
+            "sourceFileName": "eXYSP_59bYM.jpg",
+            "corners": [
+                [
+                    0.23617619493908154,
+                    0.37375
+                ],
+                [
+                    0.4629803186504217,
+                    0.37375
+                ],
+                [
+                    0.4629803186504217,
+                    0.525
+                ],
+                [
+                    0.23617619493908154,
+                    0.525
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/61": {
+            "sourceSha1": "a8a56a2be825de3a35a8299a8598aad3abd00560",
+            "sourceFileName": "eXYSP_59bYM.jpg",
+            "corners": [
+                [
+                    0.24554826616682288,
+                    0.5375
+                ],
+                [
+                    0.4723523898781631,
+                    0.5375
+                ],
+                [
+                    0.4723523898781631,
+                    0.68875
+                ],
+                [
+                    0.24554826616682288,
+                    0.68875
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/62": {
+            "sourceSha1": "0e9fa7ad5e223e871391b7d699e77a8f4dc95811",
+            "sourceFileName": "wJehzgG9uyM.jpg",
+            "corners": [
+                [
+                    0.153125,
+                    0.2833333333333333
+                ],
+                [
+                    0.521875,
+                    0.2833333333333333
+                ],
+                [
+                    0.521875,
+                    0.775
+                ],
+                [
+                    0.153125,
+                    0.775
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/63": {
+            "sourceSha1": "7fca63ab4f715bad35f358b55008f2ad2e96a52d",
+            "sourceFileName": "CMmyYQmgFes.jpg",
+            "corners": [
+                [
+                    0.184019668100799,
+                    0.15431385869565217
+                ],
+                [
+                    0.8253841425937308,
+                    0.15431385869565217
+                ],
+                [
+                    0.8253841425937308,
+                    0.5928246814092953
+                ],
+                [
+                    0.184019668100799,
+                    0.5928246814092953
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/64": {
+            "sourceSha1": "6f7461131162f4107de4e46df9b3db98deb2e32c",
+            "sourceFileName": "NNcWs5nfjXA.jpg",
+            "corners": [
+                [
+                    0.3,
+                    0.07497656982193064
+                ],
+                [
+                    0.85,
+                    0.07497656982193064
+                ],
+                [
+                    0.85,
+                    0.8997188378631678
+                ],
+                [
+                    0.3,
+                    0.8997188378631678
+                ]
+            ],
+            "retouches": [
+                [
+                    0.6575,
+                    0.14920337394564198,
+                    0.14300000000000002,
+                    0.0577319587628866
+                ],
+                [
+                    0.7125,
+                    0.7760074976569822,
+                    0.066,
+                    0.0288659793814433
+                ],
+                [
+                    0.40725,
+                    0.23580131208997185,
+                    0.038500000000000006,
+                    0.3958762886597938
+                ]
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/65": {
+            "sourceSha1": "b3e6d0c6aa03559650e6bc79e9227c49d1521f2e",
+            "sourceFileName": "591tidUx4CE.jpg",
+            "corners": [
+                [
+                    0.028116213683223992,
+                    0.121875
+                ],
+                [
+                    0.9878163074039362,
+                    0.121875
+                ],
+                [
+                    0.9878163074039362,
+                    0.761875
+                ],
+                [
+                    0.028116213683223992,
+                    0.761875
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/66": {
+            "sourceSha1": "199a979eb423b8ee8ad90bc3333c6f1e595d4cbf",
+            "sourceFileName": "kI30WCtbDg8.jpg",
+            "corners": [
+                [
+                    0.028116213683223992,
+                    0.5
+                ],
+                [
+                    0.44048734770384257,
+                    0.5
+                ],
+                [
+                    0.44048734770384257,
+                    0.775
+                ],
+                [
+                    0.028116213683223992,
+                    0.775
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/67": {
+            "sourceSha1": "199a979eb423b8ee8ad90bc3333c6f1e595d4cbf",
+            "sourceFileName": "kI30WCtbDg8.jpg",
+            "corners": [
+                [
+                    0.5201499531396439,
+                    0.2625
+                ],
+                [
+                    0.9325210871602624,
+                    0.2625
+                ],
+                [
+                    0.9325210871602624,
+                    0.5375
+                ],
+                [
+                    0.5201499531396439,
+                    0.5375
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/68": {
+            "sourceSha1": "94a379a484dc9d95a25d0ee3b4d9d83c17bbda4f",
+            "sourceFileName": "B3cqR6OZOWU.jpg",
+            "corners": [
+                [
+                    0.2625,
+                    0.15745079662605435
+                ],
+                [
+                    0.7375,
+                    0.15745079662605435
+                ],
+                [
+                    0.7375,
+                    0.5135895032802249
+                ],
+                [
+                    0.2625,
+                    0.5135895032802249
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/69": {
+            "sourceSha1": "94a379a484dc9d95a25d0ee3b4d9d83c17bbda4f",
+            "sourceFileName": "B3cqR6OZOWU.jpg",
+            "corners": [
+                [
+                    0.2625,
+                    0.5998125585754451
+                ],
+                [
+                    0.7375,
+                    0.5998125585754451
+                ],
+                [
+                    0.7375,
+                    0.9559512652296157
+                ],
+                [
+                    0.2625,
+                    0.9559512652296157
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/70": {
+            "sourceSha1": "734d0a8503e1fa503823d683a7cabf4919990d54",
+            "sourceFileName": "zIvpk0KvUm4.jpg",
+            "corners": [
+                [
+                    0.125,
+                    0
+                ],
+                [
+                    0.789375,
+                    0
+                ],
+                [
+                    0.789375,
+                    1
+                ],
+                [
+                    0.125,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/71": {
+            "sourceSha1": "d048c87e80827291d853b34624e7f0edef874d9e",
+            "sourceFileName": "dSvBSp4jgX8.jpg",
+            "corners": [
+                [
+                    0.23898781630740393,
+                    0.375
+                ],
+                [
+                    0.5060918462980318,
+                    0.375
+                ],
+                [
+                    0.5060918462980318,
+                    0.553125
+                ],
+                [
+                    0.23898781630740393,
+                    0.553125
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/72": {
+            "sourceSha1": "d048c87e80827291d853b34624e7f0edef874d9e",
+            "sourceFileName": "dSvBSp4jgX8.jpg",
+            "corners": [
+                [
+                    0.23898781630740393,
+                    0.728125
+                ],
+                [
+                    0.5060918462980318,
+                    0.728125
+                ],
+                [
+                    0.5060918462980318,
+                    0.90625
+                ],
+                [
+                    0.23898781630740393,
+                    0.90625
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/73": {
+            "sourceSha1": "c9d42e97dd35d3bd940f5a20a59f2643a8b0588b",
+            "sourceFileName": "G9dTk2zOB54.jpg",
+            "corners": [
+                [
+                    0.2125,
+                    0.1939252336448598
+                ],
+                [
+                    0.64375,
+                    0.1939252336448598
+                ],
+                [
+                    0.64375,
+                    1
+                ],
+                [
+                    0.2125,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/74": {
+            "sourceSha1": "b651e2f5bb3caae4ca3efd6db60159b265ae1476",
+            "sourceFileName": "LN-JxcCkT30.jpg",
+            "corners": [
+                [
+                    0.2511715089034677,
+                    0.28125
+                ],
+                [
+                    0.8086311353059971,
+                    0.28125
+                ],
+                [
+                    0.8086311353059971,
+                    0.658797554347826
+                ],
+                [
+                    0.2511715089034677,
+                    0.658797554347826
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/75": {
+            "sourceSha1": "6285d4cde340ab9a7379c51dae1690fdb8a7d569",
+            "sourceFileName": "BennChSNwUQ.jpg",
+            "corners": [
+                [
+                    0.1780693533270853,
+                    0.175
+                ],
+                [
+                    0.8247422680412371,
+                    0.175
+                ],
+                [
+                    0.8247422680412371,
+                    0.390625
+                ],
+                [
+                    0.1780693533270853,
+                    0.390625
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/76": {
+            "sourceSha1": "6285d4cde340ab9a7379c51dae1690fdb8a7d569",
+            "sourceFileName": "BennChSNwUQ.jpg",
+            "corners": [
+                [
+                    0.1780693533270853,
+                    0.4625
+                ],
+                [
+                    0.8247422680412371,
+                    0.4625
+                ],
+                [
+                    0.8247422680412371,
+                    0.89375
+                ],
+                [
+                    0.1780693533270853,
+                    0.89375
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/77": {
+            "sourceSha1": "3b2a03b736ee233a78aa83403715a1873b23eeeb",
+            "sourceFileName": "VVuRLhyTmXM.jpg",
+            "corners": [
+                [
+                    0.5201499531396439,
+                    0.359375
+                ],
+                [
+                    0.9372071227741331,
+                    0.359375
+                ],
+                [
+                    0.9372071227741331,
+                    0.828125
+                ],
+                [
+                    0.5201499531396439,
+                    0.828125
+                ]
+            ],
+            "retouches": [
+                [
+                    0.6619493908153702,
+                    0.8046875,
+                    0.13345829428303657,
+                    0.01875
+                ]
+            ],
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0,
+                        0,
+                        1,
+                        1
+                    ],
+                    "radius": 0.05
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 1,
+                "numRows": 2,
+                "align": [
+                    0.5,
+                    1
+                ]
+            }
+        },
+        "2/78": {
+            "sourceSha1": "0eaea4354838f7953fa8509c0868df6aeef7e6a0",
+            "sourceFileName": "ui79XsmHTos.jpg",
+            "corners": [
+                [
+                    0.3450009864267675,
+                    0.15532834522714375
+                ],
+                [
+                    0.8794290561868686,
+                    0.15532834522714375
+                ],
+                [
+                    0.8794290561868686,
+                    0.9102216289151093
+                ],
+                [
+                    0.3450009864267675,
+                    0.9102216289151093
+                ]
+            ],
+            "retouches": [],
+            "background": {
+                "fromBorder": true,
+                "seeds": [],
+                "tolerance": 12,
+                "step": 4,
+                "keepLargest": true
+            },
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            },
+            "selections": [
+                {
+                    "shape": "ellipse",
+                    "rect": [
+                        0.09940886333217672,
+                        0.09835332491582484,
+                        0.8101298765676894,
+                        0.8453874684343435
+                    ],
+                    "radius": 0
+                }
+            ]
+        },
+        "2/79": {
+            "sourceSha1": "bf8bd2f6ca0454563ef1078341ab709d7289f072",
+            "sourceFileName": "N23rmTcf0NA.jpg",
+            "corners": [
+                [
+                    0.014058106841611996,
+                    0.18125
+                ],
+                [
+                    0.7169634489222118,
+                    0.18125
+                ],
+                [
+                    0.7169634489222118,
+                    0.65
+                ],
+                [
+                    0.014058106841611996,
+                    0.65
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/80": {
+            "sourceSha1": "c50cd9e6b7e7a72eaa9d1ffe8960fc74a28d7e64",
+            "sourceFileName": "YX6J7hsYvXQ.jpg",
+            "corners": [
+                [
+                    0,
+                    0.04217432052483599
+                ],
+                [
+                    1,
+                    0.04217432052483599
+                ],
+                [
+                    1,
+                    0.7919400187441424
+                ],
+                [
+                    0,
+                    0.7919400187441424
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/81": {
+            "sourceSha1": "cc12f6c7102bd73d3af4a64fbb4e3e795fb4b90d",
+            "sourceFileName": "2JEPY_XDHdE.jpg",
+            "corners": [
+                [
+                    0.26125,
+                    0.2736644798500469
+                ],
+                [
+                    0.5675,
+                    0.2736644798500469
+                ],
+                [
+                    0.5675,
+                    0.7328959700093721
+                ],
+                [
+                    0.26125,
+                    0.7328959700093721
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/82": {
+            "sourceSha1": "4ad776b5c90ca3ba9347ff97d155cb646882c239",
+            "sourceFileName": "lVL86Miltr8.jpg",
+            "corners": [
+                [
+                    0.009375,
+                    0.06279287722586692
+                ],
+                [
+                    0.634375,
+                    0.06279287722586692
+                ],
+                [
+                    0.634375,
+                    1
+                ],
+                [
+                    0.009375,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/83": {
+            "sourceSha1": "5711b2b7b480143d416d7ba1d4eb6fc06def81a0",
+            "sourceFileName": "JYFPKCo923A.jpg",
+            "corners": [
+                [
+                    0.29375,
+                    0.08333333333333333
+                ],
+                [
+                    0.575,
+                    0.08333333333333333
+                ],
+                [
+                    0.575,
+                    0.4583333333333333
+                ],
+                [
+                    0.29375,
+                    0.4583333333333333
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/84": {
+            "sourceSha1": "73e82680308c5815eb1502a243450dd6f2a6c337",
+            "sourceFileName": "p5XNx-63Emc.jpg",
+            "corners": [
+                [
+                    0.1640112464854733,
+                    0.0125
+                ],
+                [
+                    0.6982193064667291,
+                    0.0125
+                ],
+                [
+                    0.6982193064667291,
+                    0.36875
+                ],
+                [
+                    0.1640112464854733,
+                    0.36875
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/85": {
+            "sourceSha1": "4d4bdca08715b4ba776c00aee46f529d064df9b3",
+            "sourceFileName": "xIJRwAaxwZo.jpg",
+            "corners": [
+                [
+                    0.3425,
+                    0.109375
+                ],
+                [
+                    0.53,
+                    0.109375
+                ],
+                [
+                    0.53,
+                    0.421875
+                ],
+                [
+                    0.3425,
+                    0.421875
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/86": {
+            "sourceSha1": "4d4bdca08715b4ba776c00aee46f529d064df9b3",
+            "sourceFileName": "xIJRwAaxwZo.jpg",
+            "corners": [
+                [
+                    0.3425,
+                    0.4114583333333333
+                ],
+                [
+                    0.53,
+                    0.4114583333333333
+                ],
+                [
+                    0.53,
+                    0.7239583333333334
+                ],
+                [
+                    0.3425,
+                    0.7239583333333334
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/87": {
+            "sourceSha1": "4d4bdca08715b4ba776c00aee46f529d064df9b3",
+            "sourceFileName": "xIJRwAaxwZo.jpg",
+            "corners": [
+                [
+                    0.53625,
+                    0.109375
+                ],
+                [
+                    0.72375,
+                    0.109375
+                ],
+                [
+                    0.72375,
+                    0.421875
+                ],
+                [
+                    0.53625,
+                    0.421875
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/88": {
+            "sourceSha1": "d7f8a7cedf90b6421676e4a59d95769470a00841",
+            "sourceFileName": "1vhNkMq6_aM.jpg",
+            "corners": [
+                [
+                    0.07482735747244267,
+                    0.2955397301349325
+                ],
+                [
+                    0.7247347200186315,
+                    0.2955397301349325
+                ],
+                [
+                    0.7247347200186315,
+                    0.7690803035982009
+                ],
+                [
+                    0.07482735747244267,
+                    0.7690803035982009
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/89": {
+            "sourceSha1": "0a1b1f749c1187d1ad0d3ea9781eb2fae349c578",
+            "sourceFileName": "Ot2iTXgC6fY.jpg",
+            "corners": [
+                [
+                    0.158125,
+                    0.5118110236220472
+                ],
+                [
+                    0.37375,
+                    0.5118110236220472
+                ],
+                [
+                    0.37375,
+                    0.7587687902648532
+                ],
+                [
+                    0.158125,
+                    0.7587687902648532
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/90": {
+            "sourceSha1": "0a1b1f749c1187d1ad0d3ea9781eb2fae349c578",
+            "sourceFileName": "Ot2iTXgC6fY.jpg",
+            "corners": [
+                [
+                    0.5,
+                    0.8052970651395849
+                ],
+                [
+                    0.704375,
+                    0.8052970651395849
+                ],
+                [
+                    0.704375,
+                    0.9223335719398712
+                ],
+                [
+                    0.5,
+                    0.9223335719398712
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/91": {
+            "sourceSha1": "d048c87e80827291d853b34624e7f0edef874d9e",
+            "sourceFileName": "dSvBSp4jgX8.jpg",
+            "corners": [
+                [
+                    0.28116213683223995,
+                    0.54375
+                ],
+                [
+                    0.5482661668228679,
+                    0.54375
+                ],
+                [
+                    0.5482661668228679,
+                    0.721875
+                ],
+                [
+                    0.28116213683223995,
+                    0.721875
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/92": {
+            "sourceSha1": "c9d42e97dd35d3bd940f5a20a59f2643a8b0588b",
+            "sourceFileName": "G9dTk2zOB54.jpg",
+            "corners": [
+                [
+                    0,
+                    0.05841121495327103
+                ],
+                [
+                    0.1875,
+                    0.05841121495327103
+                ],
+                [
+                    0.1875,
+                    0.4088785046728972
+                ],
+                [
+                    0,
+                    0.4088785046728972
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/93": {
+            "sourceSha1": "6b812e49a1ce1ca41fbfdf4d05fd0389363da607",
+            "sourceFileName": "vd1IhCFH1Ro.jpg",
+            "corners": [
+                [
+                    0.08622305529522024,
+                    0.28625
+                ],
+                [
+                    0.5407685098406748,
+                    0.28625
+                ],
+                [
+                    0.5407685098406748,
+                    0.458125
+                ],
+                [
+                    0.08622305529522024,
+                    0.458125
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0,
+                        0,
+                        1,
+                        1
+                    ],
+                    "radius": 0.03
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/94": {
+            "sourceSha1": "6b812e49a1ce1ca41fbfdf4d05fd0389363da607",
+            "sourceFileName": "vd1IhCFH1Ro.jpg",
+            "corners": [
+                [
+                    0.5623242736644799,
+                    0.46875
+                ],
+                [
+                    0.9625117150890347,
+                    0.46875
+                ],
+                [
+                    0.9625117150890347,
+                    0.6021875
+                ],
+                [
+                    0.5623242736644799,
+                    0.6021875
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/95": {
+            "sourceSha1": "6b812e49a1ce1ca41fbfdf4d05fd0389363da607",
+            "sourceFileName": "vd1IhCFH1Ro.jpg",
+            "corners": [
+                [
+                    0.5651358950328023,
+                    0.20625
+                ],
+                [
+                    0.9681349578256795,
+                    0.20625
+                ],
+                [
+                    0.9681349578256795,
+                    0.475
+                ],
+                [
+                    0.5651358950328023,
+                    0.475
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/96": {
+            "sourceSha1": "6d44b19df907b1559dad968f9c18d6344f6bdc8b",
+            "sourceFileName": "gzb4RKX-pdc.jpg",
+            "corners": [
+                [
+                    0.20412844036697247,
+                    0.1825
+                ],
+                [
+                    0.7816456376415967,
+                    0.1825
+                ],
+                [
+                    0.7816456376415967,
+                    0.6475531765367316
+                ],
+                [
+                    0.20412844036697247,
+                    0.6475531765367316
+                ]
+            ],
+            "retouches": [],
+            "background": {
+                "fromBorder": true,
+                "seeds": [],
+                "tolerance": 12,
+                "step": 4,
+                "keepLargest": true
+            },
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/97": {
+            "sourceSha1": "ff0074d31dd2a32ffa9b13dc4ad52f77bd629732",
+            "sourceFileName": "h6xNSDlgciU.jpg",
+            "corners": [
+                [
+                    0.24716981132075472,
+                    0.403125
+                ],
+                [
+                    0.7566037735849057,
+                    0.403125
+                ],
+                [
+                    0.7566037735849057,
+                    0.740625
+                ],
+                [
+                    0.24716981132075472,
+                    0.740625
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/98": {
+            "sourceSha1": "6230eb2c3f4a8fb9897841ec5154fe5fca499a16",
+            "sourceFileName": "ybyCGhe2HHI.jpg",
+            "corners": [
+                [
+                    0.285,
+                    0.325
+                ],
+                [
+                    0.705,
+                    0.325
+                ],
+                [
+                    0.705,
+                    0.4680937167199148
+                ],
+                [
+                    0.285,
+                    0.4680937167199148
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/99": {
+            "sourceSha1": "04497579868059741ecba8b9acaa166d1692b446",
+            "sourceFileName": "1wxXo58XOjk.jpg",
+            "corners": [
+                [
+                    0.1025,
+                    0.4115
+                ],
+                [
+                    0.45749999999999996,
+                    0.4115
+                ],
+                [
+                    0.45749999999999996,
+                    0.6485
+                ],
+                [
+                    0.1025,
+                    0.6485
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0.06212394507129418,
+                        0.1960621843434343,
+                        0.8796492567772173,
+                        0.6199378156565657
+                    ],
+                    "radius": 0.02
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            },
+            "adjust": {
+                "brightness": 25,
+                "contrast": 0,
+                "saturation": 29,
+                "hue": 0,
+                "warmth": 0,
+                "sharpness": 0
+            }
+        },
+        "2/100": {
+            "sourceSha1": "6db287f94a3b0324ca1621b56a9711a96eb28165",
+            "sourceFileName": "9LnqAaMnUL8.jpg",
+            "corners": [
+                [
+                    0.18,
+                    0
+                ],
+                [
+                    0.8467,
+                    0
+                ],
+                [
+                    0.8467,
+                    1
+                ],
+                [
+                    0.18,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/101": {
+            "sourceSha1": "6026b32db7018945192598305190bcc887ecb611",
+            "sourceFileName": "lRoX0shwjUQ.jpg",
+            "corners": [
+                [
+                    0.163,
+                    0.21
+                ],
+                [
+                    0.681,
+                    0.21
+                ],
+                [
+                    0.681,
+                    0.583079880552445
+                ],
+                [
+                    0.163,
+                    0.583079880552445
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/102": {
+            "sourceSha1": "95da6a56b6ca7c8ae4449678136f390ab94b9c9c",
+            "sourceFileName": "Ho4ymAUhBFs.jpg",
+            "corners": [
+                [
+                    0.36455374053030304,
+                    0.028643814773347112
+                ],
+                [
+                    0.8387784090909091,
+                    0.028643814773347112
+                ],
+                [
+                    0.8387784090909091,
+                    0.7735552493325295
+                ],
+                [
+                    0.36455374053030304,
+                    0.7735552493325295
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2,
+                "margin": [
+                    0.13,
+                    0.13
+                ]
+            },
+            "background": {
+                "fromBorder": true,
+                "seeds": [],
+                "tolerance": 0,
+                "step": 4,
+                "keepLargest": true
+            }
+        },
+        "2/103": {
+            "sourceSha1": "5422c844d33f54078a86ec7de069db6859400d0b",
+            "sourceFileName": "pO0pdJn6QPk.jpg",
+            "corners": [
+                [
+                    0.605,
+                    0.355
+                ],
+                [
+                    0.8999999999999999,
+                    0.355
+                ],
+                [
+                    0.8999999999999999,
+                    0.7975
+                ],
+                [
+                    0.605,
+                    0.7975
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/104": {
+            "sourceSha1": "714f8b3294ff6fd80f22b2fa0b26844569469328",
+            "sourceFileName": "7WXsn8Rof-8.jpg",
+            "corners": [
+                [
+                    0.02,
+                    0.228
+                ],
+                [
+                    0.986,
+                    0.228
+                ],
+                [
+                    0.986,
+                    0.952
+                ],
+                [
+                    0.02,
+                    0.952
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0.135,
+                        0.134,
+                        0.73,
+                        0.732
+                    ],
+                    "radius": 0.01
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/105": {
+            "sourceSha1": "3a0ca069186843e361bf44a282c3af547f1cdf74",
+            "sourceFileName": "IqfceUqv590.jpg",
+            "corners": [
+                [
+                    0.018,
+                    0.197
+                ],
+                [
+                    0.538,
+                    0.197
+                ],
+                [
+                    0.538,
+                    0.543687866927593
+                ],
+                [
+                    0.018,
+                    0.543687866927593
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/106": {
+            "sourceSha1": "2daac001867374f0b2ffe922806120229c9e987b",
+            "sourceFileName": "uzw4MvfG5ps.jpg",
+            "corners": [
+                [
+                    0.12,
+                    0.205
+                ],
+                [
+                    0.52,
+                    0.205
+                ],
+                [
+                    0.52,
+                    0.4716666666666667
+                ],
+                [
+                    0.12,
+                    0.4716666666666667
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/107": {
+            "sourceSha1": "2daac001867374f0b2ffe922806120229c9e987b",
+            "sourceFileName": "uzw4MvfG5ps.jpg",
+            "corners": [
+                [
+                    0.515,
+                    0.528
+                ],
+                [
+                    0.915,
+                    0.528
+                ],
+                [
+                    0.915,
+                    0.7946666666666666
+                ],
+                [
+                    0.515,
+                    0.7946666666666666
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/108": {
+            "sourceSha1": "1fa2ab9ddd2048cedbbe21a5fdf8f7825e0a98f8",
+            "sourceFileName": "f3Ug9b50KwI.jpg",
+            "corners": [
+                [
+                    0.231,
+                    0.065
+                ],
+                [
+                    0.8039999999999999,
+                    0.065
+                ],
+                [
+                    0.8039999999999999,
+                    0.49471314638538716
+                ],
+                [
+                    0.231,
+                    0.49471314638538716
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/109": {
+            "sourceSha1": "f9ae289389db41e2fa660429fb2ccb25e092e338",
+            "sourceFileName": "7EhAf2dBthg.jpg",
+            "corners": [
+                [
+                    0,
+                    0.15
+                ],
+                [
+                    1,
+                    0.15
+                ],
+                [
+                    1,
+                    0.7839699074074075
+                ],
+                [
+                    0,
+                    0.7839699074074075
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/110": {
+            "sourceSha1": "52a97293b877e5ba986901f67986aa571be08a9f",
+            "sourceFileName": "PcS2mgh_hUA.jpg",
+            "corners": [
+                [
+                    0.4335,
+                    0.4
+                ],
+                [
+                    0.7264999999999999,
+                    0.4
+                ],
+                [
+                    0.7264999999999999,
+                    0.487799771949829
+                ],
+                [
+                    0.4335,
+                    0.487799771949829
+                ]
+            ],
+            "retouches": [],
+            "background": {
+                "fromBorder": true,
+                "seeds": [],
+                "tolerance": 8,
+                "step": 3,
+                "keepLargest": false
+            },
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/111": {
+            "sourceSha1": "15aac024691bee5b8aef5b933b4f6f8e29c87319",
+            "sourceFileName": "Ih32pz1tMis.jpg",
+            "corners": [
+                [
+                    0.07829348169191912,
+                    0
+                ],
+                [
+                    0.880474668560606,
+                    0
+                ],
+                [
+                    0.880474668560606,
+                    1
+                ],
+                [
+                    0.07829348169191912,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "background": {
+                "fromBorder": true,
+                "seeds": [],
+                "tolerance": 8,
+                "step": 2,
+                "keepLargest": false
+            },
+            "alphaEdits": [
+                {
+                    "kind": "erase",
+                    "radius": 0.13,
+                    "points": [
+                        [
+                            0.2,
+                            0.1
+                        ],
+                        [
+                            0.39,
+                            0.1
+                        ]
+                    ]
+                },
+                {
+                    "kind": "erase",
+                    "radius": 0.16,
+                    "points": [
+                        [
+                            0.66,
+                            0.1
+                        ],
+                        [
+                            0.93,
+                            0.12
+                        ]
+                    ]
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/112": {
+            "sourceSha1": "ebc360a05cc24110c8e807eda92abfe9674fa63a",
+            "sourceFileName": "sRVHOiBdjiU.jpg",
+            "corners": [
+                [
+                    0,
+                    0.525
+                ],
+                [
+                    0.547,
+                    0.525
+                ],
+                [
+                    0.547,
+                    0.93525
+                ],
+                [
+                    0,
+                    0.93525
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "ellipse",
+                    "rect": [
+                        0.155,
+                        0,
+                        0.503,
+                        1
+                    ],
+                    "radius": 0
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/113": {
+            "sourceSha1": "5c8797b47b352308c3a405af93abc0619daef705",
+            "sourceFileName": "vw7cL9CyvlE.jpg",
+            "corners": [
+                [
+                    0,
+                    0.16
+                ],
+                [
+                    1,
+                    0.16
+                ],
+                [
+                    1,
+                    0.8266666666666667
+                ],
+                [
+                    0,
+                    0.8266666666666667
+                ]
+            ],
+            "retouches": [
+                [
+                    0.715,
+                    0.3,
+                    0.145,
+                    0.15
+                ]
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/114": {
+            "sourceSha1": "46af5932344d000b67cd7740916541f1e7f26181",
+            "sourceFileName": "Hx-4TbpsoIw.jpg",
+            "corners": [
+                [
+                    0,
+                    0.157
+                ],
+                [
+                    1,
+                    0.157
+                ],
+                [
+                    1,
+                    0.8239923783466876
+                ],
+                [
+                    0,
+                    0.8239923783466876
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0.2,
+                        0.14,
+                        0.585,
+                        0.722
+                    ],
+                    "radius": 0
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/115": {
+            "sourceSha1": "ea5c2732dded7cb46cc57ad73094b208cc650bf0",
+            "sourceFileName": "2_BrZ3AJ_78.jpg",
+            "corners": [
+                [
+                    0.27,
+                    0.19
+                ],
+                [
+                    0.73,
+                    0.19
+                ],
+                [
+                    0.73,
+                    0.8036485097636177
+                ],
+                [
+                    0.27,
+                    0.8036485097636177
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0.13,
+                        0.233,
+                        0.74,
+                        0.534
+                    ],
+                    "radius": 0.03
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 1,
+                "numRows": 2
+            }
+        },
+        "2/116": {
+            "sourceSha1": "9f5e2088d7bea4696cb1603725c59dec8a08c472",
+            "sourceFileName": "LtIqWwDs70s.jpg",
+            "corners": [
+                [
+                    0.0855,
+                    0
+                ],
+                [
+                    0.7522,
+                    0
+                ],
+                [
+                    0.7522,
+                    1
+                ],
+                [
+                    0.0855,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0.229,
+                        0.207,
+                        0.542,
+                        0.718
+                    ],
+                    "radius": 0.015
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/117": {
+            "sourceSha1": "4f7657430ab56c3f6dec9685dbff267ab09d5f12",
+            "sourceFileName": "hLM6EJesBHY.jpg",
+            "corners": [
+                [
+                    0.295,
+                    0.633
+                ],
+                [
+                    0.645,
+                    0.633
+                ],
+                [
+                    0.645,
+                    0.9210127494456762
+                ],
+                [
+                    0.295,
+                    0.9210127494456762
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0.257,
+                        0.128,
+                        0.486,
+                        0.744
+                    ],
+                    "radius": 0.04
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/118": {
+            "sourceSha1": "4f7657430ab56c3f6dec9685dbff267ab09d5f12",
+            "sourceFileName": "hLM6EJesBHY.jpg",
+            "corners": [
+                [
+                    0,
+                    0.2815
+                ],
+                [
+                    0.175,
+                    0.2815
+                ],
+                [
+                    0.175,
+                    0.8575254988913524
+                ],
+                [
+                    0,
+                    0.8575254988913524
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0.086,
+                        0.214,
+                        0.8,
+                        0.572
+                    ],
+                    "radius": 0.05
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 1,
+                "numRows": 2
+            }
+        },
+        "2/119": {
+            "sourceSha1": "7fb5cb1633384028d81ce978a5cdc6f1a414aa5d",
+            "sourceFileName": "rwu15ZJvQvM.jpg",
+            "corners": [
+                [
+                    0.11362156723484848,
+                    0.07164901099532053
+                ],
+                [
+                    0.5089715514520202,
+                    0.07164901099532053
+                ],
+                [
+                    0.5089715514520202,
+                    0.9027789739614733
+                ],
+                [
+                    0.11362156723484848,
+                    0.9027789739614733
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0.008951123730157337,
+                        0.034663036616161505,
+                        0.9910488762698427,
+                        0.9455492424242425
+                    ],
+                    "radius": 0.12
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 1,
+                "numRows": 2
+            },
+            "rotation": 0.7
+        },
+        "2/120": {
+            "sourceSha1": "7fb5cb1633384028d81ce978a5cdc6f1a414aa5d",
+            "sourceFileName": "rwu15ZJvQvM.jpg",
+            "corners": [
+                [
+                    0.5075215041035354,
+                    0.08673527976344271
+                ],
+                [
+                    0.8847952178030303,
+                    0.08673527976344271
+                ],
+                [
+                    0.8847952178030303,
+                    0.9021545660724026
+                ],
+                [
+                    0.5075215041035354,
+                    0.9021545660724026
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0,
+                        0.029928188131312882,
+                        1,
+                        0.9421164772727277
+                    ],
+                    "radius": 0.12
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 1,
+                "numRows": 2
+            },
+            "rotation": -1.1
+        },
+        "2/121": {
+            "sourceSha1": "2efcebe1829738f367b5c243feafc4bc962110bd",
+            "sourceFileName": "mARMLhaEY90.jpg",
+            "corners": [
+                [
+                    0.215,
+                    0.43
+                ],
+                [
+                    0.515,
+                    0.43
+                ],
+                [
+                    0.515,
+                    0.732474690663667
+                ],
+                [
+                    0.215,
+                    0.732474690663667
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "ellipse",
+                    "rect": [
+                        0.25,
+                        0.231,
+                        0.5,
+                        0.529
+                    ],
+                    "radius": 0
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/122": {
+            "sourceSha1": "2efcebe1829738f367b5c243feafc4bc962110bd",
+            "sourceFileName": "mARMLhaEY90.jpg",
+            "corners": [
+                [
+                    0.495,
+                    0.583
+                ],
+                [
+                    0.765,
+                    0.583
+                ],
+                [
+                    0.765,
+                    0.7191136107986501
+                ],
+                [
+                    0.495,
+                    0.7191136107986501
+                ]
+            ],
+            "retouches": [],
+            "background": {
+                "fromBorder": true,
+                "seeds": [],
+                "tolerance": 32,
+                "step": 12,
+                "keepLargest": false
+            },
+            "alphaEdits": [
+                {
+                    "kind": "erase",
+                    "radius": 0.12,
+                    "points": [
+                        [
+                            0.98,
+                            0.05
+                        ],
+                        [
+                            0.99,
+                            0.5
+                        ]
+                    ]
+                },
+                {
+                    "kind": "erase",
+                    "radius": 0.07,
+                    "points": [
+                        [
+                            0.35,
+                            0.97
+                        ],
+                        [
+                            0.7,
+                            0.97
+                        ]
+                    ]
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/123": {
+            "sourceSha1": "14cd2e4fe0ea3bd33e079cfb77f3259a4d235049",
+            "sourceFileName": "H6yXLfZDrjM.jpg",
+            "corners": [
+                [
+                    0.135,
+                    0.287
+                ],
+                [
+                    0.61,
+                    0.287
+                ],
+                [
+                    0.61,
+                    0.9994999999999998
+                ],
+                [
+                    0.135,
+                    0.9994999999999998
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0.105,
+                        0.25,
+                        0.78,
+                        0.61
+                    ],
+                    "radius": 0.03
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/124": {
+            "sourceSha1": "c948978693674b41d33a933cf8214bc7c4d6ce2e",
+            "sourceFileName": "QFQx9s0sVsc.jpg",
+            "corners": [
+                [
+                    0.0075,
+                    0.0925
+                ],
+                [
+                    0.3075,
+                    0.0925
+                ],
+                [
+                    0.3075,
+                    0.5425764915859255
+                ],
+                [
+                    0.0075,
+                    0.5425764915859255
+                ]
+            ],
+            "retouches": [],
+            "background": {
+                "fromBorder": true,
+                "seeds": [],
+                "tolerance": 22,
+                "step": 8,
+                "keepLargest": true
+            },
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0.05,
+                        0.08,
+                        0.79,
+                        0.82
+                    ],
+                    "radius": 0.15
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/125": {
+            "sourceSha1": "117c3877daaee7bd97bdc56fd9e1f451dc638370",
+            "sourceFileName": "86Wwvs0rtgE.jpg",
+            "corners": [
+                [
+                    0.2335,
+                    0.19
+                ],
+                [
+                    0.5265,
+                    0.19
+                ],
+                [
+                    0.5265,
+                    0.6295321907273127
+                ],
+                [
+                    0.2335,
+                    0.6295321907273127
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "ellipse",
+                    "rect": [
+                        0.159,
+                        0.159,
+                        0.682,
+                        0.682
+                    ],
+                    "radius": 0
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/126": {
+            "sourceSha1": "117c3877daaee7bd97bdc56fd9e1f451dc638370",
+            "sourceFileName": "86Wwvs0rtgE.jpg",
+            "corners": [
+                [
+                    0.151,
+                    0.44
+                ],
+                [
+                    0.44399999999999995,
+                    0.44
+                ],
+                [
+                    0.44399999999999995,
+                    0.8795321907273127
+                ],
+                [
+                    0.151,
+                    0.8795321907273127
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "ellipse",
+                    "rect": [
+                        0.235,
+                        0.25,
+                        0.53,
+                        0.5
+                    ],
+                    "radius": 0
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/127": {
+            "sourceSha1": "117c3877daaee7bd97bdc56fd9e1f451dc638370",
+            "sourceFileName": "86Wwvs0rtgE.jpg",
+            "corners": [
+                [
+                    0.5285,
+                    0.06
+                ],
+                [
+                    0.8214999999999999,
+                    0.06
+                ],
+                [
+                    0.8214999999999999,
+                    0.4995321907273127
+                ],
+                [
+                    0.5285,
+                    0.4995321907273127
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "ellipse",
+                    "rect": [
+                        0.142,
+                        0.136,
+                        0.717,
+                        0.727
+                    ],
+                    "radius": 0
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/128": {
+            "sourceSha1": "6ce9413013466ce21e8344ef527758a3c1b8b282",
+            "sourceFileName": "2HaXfY-oK3g.jpg",
+            "corners": [
+                [
+                    0,
+                    0.125
+                ],
+                [
+                    1,
+                    0.125
+                ],
+                [
+                    1,
+                    0.875
+                ],
+                [
+                    0,
+                    0.875
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/129": {
+            "sourceSha1": "bd330f68bf92c91ea3cd8b40adc0c2285c226e07",
+            "sourceFileName": "TC3qJxz0uv4.jpg",
+            "corners": [
+                [
+                    0.065,
+                    0.15
+                ],
+                [
+                    0.925,
+                    0.15
+                ],
+                [
+                    0.925,
+                    0.915
+                ],
+                [
+                    0.065,
+                    0.915
+                ]
+            ],
+            "retouches": [
+                [
+                    0.7874000000000001,
+                    0.237975,
+                    0.08600000000000002,
+                    0.07650000000000001
+                ],
+                [
+                    0.20690000000000003,
+                    0.2418,
+                    0.5246000000000001,
+                    0.07650000000000001
+                ]
+            ],
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0,
+                        0,
+                        1,
+                        1
+                    ],
+                    "radius": 0.1
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 1,
+                "numRows": 2
+            }
+        },
+        "2/130": {
+            "sourceSha1": "80799650375f296ca4e1b5f232513ea2ca8f2f25",
+            "sourceFileName": "06nHHMyhl4w.jpg",
+            "corners": [
+                [
+                    0.574,
+                    0.152
+                ],
+                [
+                    0.956,
+                    0.152
+                ],
+                [
+                    0.956,
+                    0.67752791549903
+                ],
+                [
+                    0.574,
+                    0.67752791549903
+                ]
+            ],
+            "retouches": [
+                [
+                    0.79938,
+                    0.5619117740892434,
+                    0.08022,
+                    0.01786794912696702
+                ],
+                [
+                    0.719924,
+                    0.5829328907092046,
+                    0.150126,
+                    0.02364875619745635
+                ]
+            ],
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0.205,
+                        0.091,
+                        0.661,
+                        0.818
+                    ],
+                    "radius": 0.02
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 1,
+                "numRows": 2
+            }
+        },
+        "2/131": {
+            "sourceSha1": "9001756884cc826104cd17d7e49d70f8e5fc8db0",
+            "sourceFileName": "p5rgceFiOH0.jpg",
+            "corners": [
+                [
+                    0.025,
+                    0.1595
+                ],
+                [
+                    0.966,
+                    0.1595
+                ],
+                [
+                    0.966,
+                    0.8653203709243193
+                ],
+                [
+                    0.025,
+                    0.8653203709243193
+                ]
+            ],
+            "retouches": [],
+            "background": {
+                "fromBorder": true,
+                "seeds": [],
+                "tolerance": 10,
+                "step": 4,
+                "keepLargest": true
+            },
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/132": {
+            "sourceSha1": "c0bf12a3667f44a807b3f57328d4487b09267aac",
+            "sourceFileName": "0q5TNpVZF_M.jpg",
+            "corners": [
+                [
+                    0.555,
+                    0.39
+                ],
+                [
+                    0.7450000000000001,
+                    0.39
+                ],
+                [
+                    0.7450000000000001,
+                    0.5166519208381839
+                ],
+                [
+                    0.555,
+                    0.5166519208381839
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/133": {
+            "sourceSha1": "5c4f74a51e50ea68d14215faee334775d076e3ff",
+            "sourceFileName": "DUK3g0D_e04.jpg",
+            "corners": [
+                [
+                    0.035,
+                    0.13
+                ],
+                [
+                    0.9650000000000001,
+                    0.13
+                ],
+                [
+                    0.9650000000000001,
+                    0.88
+                ],
+                [
+                    0.035,
+                    0.88
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0,
+                        0,
+                        1,
+                        1
+                    ],
+                    "radius": 0.12
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 1,
+                "numRows": 2
+            }
+        },
+        "2/134": {
+            "sourceSha1": "e6a486315b98e240b574d3851902f6586dc35378",
+            "sourceFileName": "M0Mou1-UwIs.jpg",
+            "corners": [
+                [
+                    0.1,
+                    0.4
+                ],
+                [
+                    0.868,
+                    0.4
+                ],
+                [
+                    0.868,
+                    0.9760637238632592
+                ],
+                [
+                    0.1,
+                    0.9760637238632592
+                ]
+            ],
+            "retouches": [
+                [
+                    0.490144,
+                    0.44493297046133423,
+                    0.095232,
+                    0.044932970461334217
+                ],
+                [
+                    0.6399039999999999,
+                    0.4201622303352141,
+                    0.159744,
+                    0.0748882841022237
+                ]
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/135": {
+            "sourceSha1": "b1a6d7bd76a7d6f3312a7bd4e1b62bdfddd0a70d",
+            "sourceFileName": "lWQUQQ7O9R0.jpg",
+            "corners": [
+                [
+                    0.28,
+                    0.2005
+                ],
+                [
+                    0.88,
+                    0.2005
+                ],
+                [
+                    0.88,
+                    0.6243095238095238
+                ],
+                [
+                    0.28,
+                    0.6243095238095238
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "ellipse",
+                    "rect": [
+                        0.25,
+                        0.258,
+                        0.5,
+                        0.484
+                    ],
+                    "radius": 0
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/136": {
+            "sourceSha1": "bd605cbcb20319701c6c43f35bd19e527c3ee9a9",
+            "sourceFileName": "G3oLwnxlQUA.jpg",
+            "corners": [
+                [
+                    0.17946385732323222,
+                    0
+                ],
+                [
+                    0.5808672664141414,
+                    0
+                ],
+                [
+                    0.5808672664141414,
+                    0.6813197688227377
+                ],
+                [
+                    0.17946385732323222,
+                    0.6813197688227377
+                ]
+            ],
+            "retouches": [],
+            "output": {
+                "preserveScale": true,
+                "numCols": 1,
+                "numRows": 2
+            }
+        },
+        "2/137": {
+            "sourceSha1": "8d6b44b15eb458620d54f0303efa40481abfda95",
+            "sourceFileName": "Q9yr-cvJr30.jpg",
+            "corners": [
+                [
+                    0.1875,
+                    0.34
+                ],
+                [
+                    0.6275,
+                    0.34
+                ],
+                [
+                    0.6275,
+                    1
+                ],
+                [
+                    0.1875,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "ellipse",
+                    "rect": [
+                        0.22,
+                        0.385,
+                        0.56,
+                        0.545
+                    ],
+                    "radius": 0
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/138": {
+            "sourceSha1": "8d6b44b15eb458620d54f0303efa40481abfda95",
+            "sourceFileName": "Q9yr-cvJr30.jpg",
+            "corners": [
+                [
+                    0.485,
+                    0
+                ],
+                [
+                    0.925,
+                    0
+                ],
+                [
+                    0.925,
+                    0.66
+                ],
+                [
+                    0.485,
+                    0.66
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "ellipse",
+                    "rect": [
+                        0.284,
+                        0.19,
+                        0.432,
+                        0.446
+                    ],
+                    "radius": 0
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/139": {
+            "sourceSha1": "ca9a0b49f3da9384afceef992bbc1dfc7cb364f7",
+            "sourceFileName": "GH9kBVZJC_4.jpg",
+            "corners": [
+                [
+                    0,
+                    0.033
+                ],
+                [
+                    0.637,
+                    0.033
+                ],
+                [
+                    0.637,
+                    0.45766666666666667
+                ],
+                [
+                    0,
+                    0.45766666666666667
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "ellipse",
+                    "rect": [
+                        0.157,
+                        0.165,
+                        0.675,
+                        0.671
+                    ],
+                    "radius": 0
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/140": {
+            "sourceSha1": "ca9a0b49f3da9384afceef992bbc1dfc7cb364f7",
+            "sourceFileName": "GH9kBVZJC_4.jpg",
+            "corners": [
+                [
+                    0.363,
+                    0.189
+                ],
+                [
+                    1,
+                    0.189
+                ],
+                [
+                    1,
+                    0.6136666666666666
+                ],
+                [
+                    0.363,
+                    0.6136666666666666
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "ellipse",
+                    "rect": [
+                        0.231,
+                        0.144,
+                        0.722,
+                        0.713
+                    ],
+                    "radius": 0
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/141": {
+            "sourceSha1": "ca9a0b49f3da9384afceef992bbc1dfc7cb364f7",
+            "sourceFileName": "GH9kBVZJC_4.jpg",
+            "corners": [
+                [
+                    0,
+                    0.361
+                ],
+                [
+                    0.637,
+                    0.361
+                ],
+                [
+                    0.637,
+                    0.7856666666666666
+                ],
+                [
+                    0,
+                    0.7856666666666666
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "ellipse",
+                    "rect": [
+                        0.078,
+                        0.12,
+                        0.762,
+                        0.76
+                    ],
+                    "radius": 0
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/142": {
+            "sourceSha1": "ca9a0b49f3da9384afceef992bbc1dfc7cb364f7",
+            "sourceFileName": "GH9kBVZJC_4.jpg",
+            "corners": [
+                [
+                    0.363,
+                    0.52
+                ],
+                [
+                    1,
+                    0.52
+                ],
+                [
+                    1,
+                    0.9446666666666667
+                ],
+                [
+                    0.363,
+                    0.9446666666666667
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "ellipse",
+                    "rect": [
+                        0.278,
+                        0.13,
+                        0.714,
+                        0.742
+                    ],
+                    "radius": 0
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/143": {
+            "sourceSha1": "4df59d31c48a86cee3b036deca051e8e64142691",
+            "sourceFileName": "2s2gd-EgrO4.jpg",
+            "corners": [
+                [
+                    0.073,
+                    0.3575
+                ],
+                [
+                    0.417,
+                    0.3575
+                ],
+                [
+                    0.417,
+                    0.8734999999999999
+                ],
+                [
+                    0.073,
+                    0.8734999999999999
+                ]
+            ],
+            "retouches": [],
+            "background": {
+                "fromBorder": true,
+                "seeds": [],
+                "tolerance": 10,
+                "step": 4,
+                "keepLargest": true
+            },
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0.12,
+                        0.155,
+                        0.76,
+                        0.845
+                    ],
+                    "radius": 0
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/144": {
+            "sourceSha1": "4df59d31c48a86cee3b036deca051e8e64142691",
+            "sourceFileName": "2s2gd-EgrO4.jpg",
+            "corners": [
+                [
+                    0.293,
+                    0.484
+                ],
+                [
+                    0.637,
+                    0.484
+                ],
+                [
+                    0.637,
+                    1
+                ],
+                [
+                    0.293,
+                    1
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "ellipse",
+                    "rect": [
+                        0.238,
+                        0.447,
+                        0.524,
+                        0.514
+                    ],
+                    "radius": 0
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/145": {
+            "sourceSha1": "4df59d31c48a86cee3b036deca051e8e64142691",
+            "sourceFileName": "2s2gd-EgrO4.jpg",
+            "corners": [
+                [
+                    0.2955,
+                    0.444
+                ],
+                [
+                    0.6395,
+                    0.444
+                ],
+                [
+                    0.6395,
+                    0.702
+                ],
+                [
+                    0.2955,
+                    0.702
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "ellipse",
+                    "rect": [
+                        0.318,
+                        0.159,
+                        0.364,
+                        0.678
+                    ],
+                    "radius": 0
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 1
+            }
+        },
+        "2/146": {
+            "sourceSha1": "88ea80016b0165f0403d9d04f09b68540a621754",
+            "sourceFileName": "-A0-2phS5fo.jpg",
+            "corners": [
+                [
+                    0.276,
+                    0.19
+                ],
+                [
+                    0.7290000000000001,
+                    0.19
+                ],
+                [
+                    0.7290000000000001,
+                    0.8696601838755305
+                ],
+                [
+                    0.276,
+                    0.8696601838755305
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "ellipse",
+                    "rect": [
+                        0.01,
+                        0,
+                        0.98,
+                        1
+                    ],
+                    "radius": 0
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/147": {
+            "sourceSha1": "999d6234037b888ffb85b8a2a6fb9d830cf111f9",
+            "sourceFileName": "_HwEGoJKsaM.jpg",
+            "corners": [
+                [
+                    0.193,
+                    0.0555
+                ],
+                [
+                    0.8979999999999999,
+                    0.0555
+                ],
+                [
+                    0.8979999999999999,
+                    0.9946651865008881
+                ],
+                [
+                    0.193,
+                    0.9946651865008881
+                ]
+            ],
+            "retouches": [
+                [
+                    0.56524,
+                    0.2696296625222025,
+                    0.06485999999999999,
+                    0.04038410301953819
+                ]
+            ],
+            "background": {
+                "fromBorder": true,
+                "seeds": [],
+                "tolerance": 12,
+                "step": 4,
+                "keepLargest": true
+            },
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/148": {
+            "sourceSha1": "600bd03c1b8b4f50f26dafedaca3b1b0cf472c98",
+            "sourceFileName": "Dae6gNfmOos.jpg",
+            "corners": [
+                [
+                    0.192,
+                    0.026
+                ],
+                [
+                    0.798,
+                    0.026
+                ],
+                [
+                    0.798,
+                    0.48257534246575345
+                ],
+                [
+                    0.192,
+                    0.48257534246575345
+                ]
+            ],
+            "retouches": [],
+            "background": {
+                "fromBorder": true,
+                "seeds": [],
+                "tolerance": 16,
+                "step": 5,
+                "keepLargest": true
+            },
+            "selections": [
+                {
+                    "shape": "ellipse",
+                    "rect": [
+                        0,
+                        0,
+                        1,
+                        1
+                    ],
+                    "radius": 0
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2,
+                "margin": [
+                    0.05,
+                    0.05
+                ]
+            }
+        },
+        "2/149": {
+            "sourceSha1": "600bd03c1b8b4f50f26dafedaca3b1b0cf472c98",
+            "sourceFileName": "Dae6gNfmOos.jpg",
+            "corners": [
+                [
+                    0.21,
+                    0.495
+                ],
+                [
+                    0.8099999999999999,
+                    0.495
+                ],
+                [
+                    0.8099999999999999,
+                    0.9470547945205479
+                ],
+                [
+                    0.21,
+                    0.9470547945205479
+                ]
+            ],
+            "retouches": [],
+            "background": {
+                "fromBorder": true,
+                "seeds": [],
+                "tolerance": 30,
+                "step": 12,
+                "keepLargest": true
+            },
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        },
+        "2/150": {
+            "sourceSha1": "8ec201f5c49e49a911c2ce3a2ec32666043c0477",
+            "sourceFileName": "UgPP50i3_5c.jpg",
+            "corners": [
+                [
+                    0.199,
+                    0.2975
+                ],
+                [
+                    0.806,
+                    0.2975
+                ],
+                [
+                    0.806,
+                    0.75275
+                ],
+                [
+                    0.199,
+                    0.75275
+                ]
+            ],
+            "retouches": [],
+            "selections": [
+                {
+                    "shape": "rect",
+                    "rect": [
+                        0.125,
+                        0.13954650673400676,
+                        0.7461069023569025,
+                        0.7344534932659933
+                    ],
+                    "radius": 0.01
+                }
+            ],
+            "output": {
+                "preserveScale": true,
+                "numCols": 2,
+                "numRows": 2
+            }
+        }
+    }
+}

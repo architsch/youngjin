@@ -37,6 +37,10 @@ const ObjectUpdateUtil =
         if (!config.canUserAddObject(user, room, obj))
             return false;
 
+        // Check if its metadata pins its scale to another (see ObjectScalingConfig.getFixedScale).
+        if (!ObjectScaleUtil.allowsScale(obj.objectTypeIndex, obj.metadata, obj.transform.scale))
+            return false;
+
         // Check if the room already holds as many of the object's category as it may. The cap belongs to
         // the category, so every type in one spends it together (see ObjectCategoryConfigMap).
         const maxCountPerRoom = ObjectCategoryConfigMap.getConfig(config.category).maxCountPerRoom;
@@ -127,23 +131,11 @@ const ObjectUpdateUtil =
         if (obj == undefined)
             return false;
 
-        // Check if the object passes the config's criteria.
-        const config = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex);
-        if (!config.canUserSetObjectTransform(user, room, obj, signal))
+        // Check if its metadata pins its scale to another (see ObjectScalingConfig.getFixedScale).
+        if (!ObjectScaleUtil.allowsScale(obj.objectTypeIndex, obj.metadata, signal.transform.scale))
             return false;
 
-        const target = ObjectUpdateUtil.getSanitizedTargetTransform(obj, signal);
-
-        // Check both source and destination, or objects could be dragged out of a zone and then removed.
-        if (RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex, obj.transform) ||
-            RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex, target))
-            return false;
-
-        // Check that the object is placeable where it is going, at the size it is going to be. The
-        // request is the client's, so the destination is what has to hold up, not where it stands now.
-        if (config.attachment)
-            return ObjectAttachmentUtil.canPlaceObject(room, obj.objectId, obj.objectTypeIndex, target);
-        return true;
+        return canMoveTo(user, room, obj, signal);
     },
     // What the signal is allowed to mean: its position and facing, with the scale snapped onto the
     // type's own grid (see ObjectScaleUtil). A scale is never taken as sent — quantization leaves the
@@ -222,7 +214,17 @@ const ObjectUpdateUtil =
         if (RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex, obj.transform))
             return false;
 
-        return true;
+        // A transform sent along is checked as a move would be.
+        const transformSignal = getTransformSignal(signal);
+        if (transformSignal && !canMoveTo(user, room, obj, transformSignal))
+            return false;
+
+        // Check if the object as it will be has a scale its metadata allows (see
+        // ObjectScalingConfig.getFixedScale).
+        const metadata = {...obj.metadata, [signal.metadataKey]: new EncodableByteString(
+            ObjectMetadataEntryMap.preprocess(signal.metadataKey, signal.metadataValue))};
+        return ObjectScaleUtil.allowsScale(obj.objectTypeIndex, metadata,
+            (signal.transform ?? obj.transform).scale);
     },
     setObjectMetadata(user: User, room: Room,
         signal: SetObjectMetadataSignal, validate: boolean = true): boolean
@@ -236,10 +238,43 @@ const ObjectUpdateUtil =
         const obj = room.objectById[signal.objectId];
         obj.metadata[signal.metadataKey] = new EncodableByteString(
             ObjectMetadataEntryMap.preprocess(signal.metadataKey, signal.metadataValue));
-        
+
+        // And the transform that came with it, already checked as a move.
+        const transformSignal = getTransformSignal(signal);
+        if (transformSignal)
+            ObjectUpdateUtil.setObjectTransform(user, room, transformSignal, false);
+
         markRoomAsDirtyIfPersistent(room, obj);
         return true;
     },
+}
+
+// Whether the object may go where the signal takes it: the type's own rule, restricted zones at both ends,
+// and a face to rest on at the size it is going to be.
+function canMoveTo(user: User, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal): boolean
+{
+    const config = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex);
+    if (!config.canUserSetObjectTransform(user, room, obj, signal))
+        return false;
+
+    const target = ObjectUpdateUtil.getSanitizedTargetTransform(obj, signal);
+
+    // Check both source and destination, or objects could be dragged out of a zone and then removed.
+    if (RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex, obj.transform) ||
+        RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex, target))
+        return false;
+
+    // The request is the client's, so the destination is what has to hold up, not where it stands now.
+    if (config.attachment)
+        return ObjectAttachmentUtil.canPlaceObject(room, obj.objectId, obj.objectTypeIndex, target);
+    return true;
+}
+
+// A metadata signal's transform, as the placement it is (see SetObjectMetadataSignal.transform).
+function getTransformSignal(signal: SetObjectMetadataSignal): SetObjectTransformSignal | undefined
+{
+    return signal.transform
+        ? new SetObjectTransformSignal(signal.roomID, signal.objectId, signal.transform, true) : undefined;
 }
 
 function markRoomAsDirtyIfPersistent(room: Room, obj: AddObjectSignal): void

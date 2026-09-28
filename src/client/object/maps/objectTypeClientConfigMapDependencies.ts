@@ -4,3 +4,4 @@ import "../types/objectTypeClientConfig/canvasObjectTypeClientConfig.ts";
 import "../types/objectTypeClientConfig/doorObjectTypeClientConfig.ts";
 import "../types/objectTypeClientConfig/lampObjectTypeClientConfig.ts";
 import "../types/objectTypeClientConfig/labelObjectTypeClientConfig.ts";
+import "../types/objectTypeClientConfig/propObjectTypeClientConfig.ts";

@@ -1,5 +1,6 @@
-import { imageListChooserDebugEnabledObservable } from "../../../system/sharedObservables";
+import { dummyImagesDebugEnabledObservable } from "../../../system/sharedObservables";
 import ImageMetadata from "./imageMetadata";
+import ImageMapSubfolderTab from "./imageMapSubfolderTab";
 
 export default class ImageMap
 {
@@ -14,8 +15,6 @@ export default class ImageMap
 
     private imageMetadataByCoords: {[coords: string]: ImageMetadata} = {};
     private imageMetadataByPath: {[path: string]: ImageMetadata} = {};
-    private imageMetadataByAuthor: {[author: string]: ImageMetadata} = {};
-    private imageMetadataByTitle: {[title: string]: ImageMetadata} = {};
 
     private imageMetadataList: ImageMetadata[];
 
@@ -26,11 +25,15 @@ export default class ImageMap
     // Thumbnail longest side in px, or 0 for none (see ImageMapSeed.thumbnailSize).
     private thumbnailSize: number;
 
+    // The subfolders' tab order and titles, if the manifest gives them.
+    private subfolderTabs?: ImageMapSubfolderTab[];
+
     constructor(rootDirName: string, gridCellSize: number,
         subfolderGridSizes: {[subfolderName: string]: {numCols: number, numRows: number}},
         imageMetadataList: ImageMetadata[],
         atlasImageName?: string,
-        thumbnailSize: number = 0)
+        thumbnailSize: number = 0,
+        subfolderTabs?: ImageMapSubfolderTab[])
     {
         this.rootDirName = rootDirName;
         this.gridCellSize = gridCellSize;
@@ -38,14 +41,13 @@ export default class ImageMap
         this.imageMetadataList = imageMetadataList;
         this.atlasImageName = atlasImageName;
         this.thumbnailSize = thumbnailSize;
+        this.subfolderTabs = subfolderTabs;
 
         for (const imageMetadata of imageMetadataList)
         {
             if (imageMetadata.coords)
                 this.imageMetadataByCoords[imageMetadata.coords] = imageMetadata;
             this.imageMetadataByPath[imageMetadata.path] = imageMetadata;
-            this.imageMetadataByAuthor[imageMetadata.author] = imageMetadata;
-            this.imageMetadataByTitle[imageMetadata.title] = imageMetadata;
         }
     }
 
@@ -66,6 +68,10 @@ export default class ImageMap
     {
         return this.imageMetadataByPath[path] != undefined;
     }
+    hasImagePathInSubfolder(path: string, subfolderName: string): boolean
+    {
+        return this.hasImagePath(path) && ImageMap.getSubfolderName(path) == subfolderName;
+    }
 
     getImageMetadataByPath(path: string): ImageMetadata
     {
@@ -75,14 +81,6 @@ export default class ImageMap
     {
         return this.imageMetadataByCoords[coords];
     }
-    getImageMetadataByAuthor(author: string): ImageMetadata
-    {
-        return this.imageMetadataByAuthor[author];
-    }
-    getImageMetadataByTitle(title: string): ImageMetadata
-    {
-        return this.imageMetadataByTitle[title];
-    }
     getImagePathByRawCoords(subfolderName: string, col: number, row: number): string
     {
         return this.getImageMetadataByCoords(`${subfolderName},${col},${row}`).path;
@@ -91,19 +89,30 @@ export default class ImageMap
     {
         return this.imageMetadataList[0].path;
     }
-    getRandomImagePath(): string
-    {
-        return this.imageMetadataList[Math.floor(Math.random() * this.imageMetadataList.length)].path;
-    }
     getImageMetadataList(): ImageMetadata[]
     {
         return this.imageMetadataList;
+    }
+    getImageMetadataListInSubfolder(subfolderName: string): ImageMetadata[]
+    {
+        return this.imageMetadataList.filter(metadata => ImageMap.getSubfolderName(metadata.path) == subfolderName);
+    }
+    // "" for a path outside any subfolder.
+    static getSubfolderName(path: string): string
+    {
+        const slashIndex = path.indexOf("/");
+        return (slashIndex < 0) ? "" : path.substring(0, slashIndex);
     }
 
     // path: relative to the root directory (rootDirName under the assets URL), without extension.
     getImageURLByPath(assetsURL: string, path: string): string
     {
         return this.getFileURLByPath(assetsURL, path, "");
+    }
+    // 0 when the map has no thumbnails.
+    getThumbnailSize(): number
+    {
+        return this.thumbnailSize;
     }
     // Falls back to the full image when the map has no thumbnails.
     getThumbnailURLByPath(assetsURL: string, path: string): string
@@ -113,7 +122,7 @@ export default class ImageMap
     }
     private getFileURLByPath(assetsURL: string, path: string, pathSuffix: string): string
     {
-        if (imageListChooserDebugEnabledObservable.peek())
+        if (dummyImagesDebugEnabledObservable.peek())
             return `${assetsURL}/${this.rootDirName}/1/1${pathSuffix}.webp`;
         if (path.length <= 0)
             return "";
@@ -137,8 +146,15 @@ export default class ImageMap
         return `${assetsURL}/${this.rootDirName}/${subfolderName}/grid.webp`;
     }
 
+    // In the manifest's tab order if it gives one.
     getSubfolderNames(): string[]
     {
+        if (this.subfolderTabs)
+            return this.subfolderTabs.map(tab => tab.name);
         return Object.keys(this.subfolderGridSizes);
+    }
+    getSubfolderTitle(subfolderName: string): string
+    {
+        return this.subfolderTabs?.find(tab => tab.name == subfolderName)?.title ?? subfolderName;
     }
 }

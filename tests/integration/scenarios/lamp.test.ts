@@ -456,7 +456,7 @@ describe("how a lamp looks", () => {
         expect(sizes).toHaveLength(onGrid.length);
         for (const scale of onGrid)
             expect(sizes).toContainEqual(scale);
-        expect(sizes).toContainEqual(ObjectScaleUtil.getDefaultScale(lampTypeIndex));
+        expect(sizes).toContainEqual(ObjectScaleUtil.getDefaultScale(lampTypeIndex, () => true));
         expect(scaling.cornerHandles).toBe(false);
     });
 

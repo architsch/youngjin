@@ -19,7 +19,7 @@ export default class DoorCompositionBuilder extends InstancedMeshCompositionBuil
         this.addPartRelativeToBase({
             geometryId: DOOR_GEOMETRY_ID,
             materialId: INSTANCED_WOOD_MATERIAL_ID,
-            // Faces local forward; the object's rotation carries the wall facing (as in CanvasGameObject).
+            // Faces local forward; the object's rotation carries the wall facing (as in PictureGameObject).
             dir: BACKWARD_DIR,
             offset: {
                 x: mirrored ? -region.offset.x : region.offset.x,

@@ -11,44 +11,52 @@ import ObjectTypeConfig from "./objectTypeConfig";
 import ObjectScaleUtil from "../../util/objectScaleUtil";
 import SetObjectMetadataSignal from "../../types/setObjectMetadataSignal";
 import SetObjectTransformSignal from "../../types/setObjectTransformSignal";
-import { ATTACHMENT_HITBOX_INSET, WALL_DIRECTIONS } from "../../../system/sharedConstants";
+import { ALL_FACE_DIRECTIONS, ATTACHMENT_HITBOX_INSET } from "../../../system/sharedConstants";
+import PreEncodedCompositionIndexMap from "../../../graphics/mesh/composition/maps/preEncodedCompositionIndexMap";
+import RandomNumberGenerator from "../../../math/types/randomNumberGenerator";
+import Vec3 from "../../../math/types/vec3";
 
-// Shared render target for all canvases in a room, one cell each. The cell size is also the thumbnail
-// size canvas images are fetched at.
-export const CANVAS_TEXTURE_SIZE = 2048; // in pixels (the texture is square)
-export const CANVAS_TEXTURE_CELL_SIZE = 256; // in pixels (each cell is square)
+// The picture map's subfolder of paintings, the only images a canvas shows.
+export const CANVAS_IMAGE_SUBFOLDER = "1";
 
 const COMPOSITION_CODEC_VERSION = 0;
+
+// The sizes a new canvas tries, in order: a whole block, then one layer tall (all the side of a lone block holds).
+const START_SCALES: Vec3[] = [{x: 1, y: 1, z: 1}, {x: 1, y: 0.5, z: 1}];
 
 // Metadata keys a user may write to a canvas; anything else is refused.
 const editableMetadataKeys = [
     ObjectMetadataKeyEnumMap.ImagePath,
     ObjectMetadataKeyEnumMap.InstancedMeshComposition,
+    ObjectMetadataKeyEnumMap.QuarterTurns,
 ];
 
-// This object represents a canvas (image) that can be exhibited in the room (like a painting in an art gallery).
+// This object represents a painting on any face of the room, fitted to whatever size the canvas is, in a frame
+// or not. An everyday object's face is a prop instead (see PropObjectTypeConfig).
 const CanvasObjectTypeConfig =
 {
     objectType: "Canvas",
     persistent: true,
     autoUnload: true,
-    category: ObjectCategoryEnumMap.Canvas,
-    // Resized in half-voxel steps along the wall. Depth is the wall gap and never changes.
+    category: ObjectCategoryEnumMap.Picture,
+    // Resized in half-voxel steps across its face. Depth is the gap from the face and never changes.
     scaling: {
         scaleStep: {x: 0.5, y: 0.5, z: 0},
-        minScale: {x: 1, y: 1, z: 1},
+        minScale: {x: 0.5, y: 0.5, z: 1},
         maxScale: {x: 3.5, y: 3.5, z: 1},
-        defaultScale: {x: 1, y: 1, z: 1},
+        getDefaultScale: (fits: (scale: Vec3) => boolean): Vec3 => START_SCALES.find(fits) ?? START_SCALES[0],
     },
     attachment: {
-        allowedDirections: WALL_DIRECTIONS,
+        allowedDirections: ALL_FACE_DIRECTIONS,
     },
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => {
         // Block spoofing attempts
         if (obj.sourceUserID != user.id)
             return false;
 
-        return true;
+        // An image it comes with must be one on offer to a canvas, as when it is set later.
+        const imagePath = obj.metadata[ObjectMetadataKeyEnumMap.ImagePath]?.str;
+        return imagePath == undefined || isCanvasImage(imagePath);
     },
     canUserRemoveObject: (user: User, room: Room, obj: AddObjectSignal) => {
         return true;
@@ -64,9 +72,9 @@ const CanvasObjectTypeConfig =
         if (!editableMetadataKeys.includes(signal.metadataKey))
             return false;
 
-        // The image must be one on offer, and the frame one of a canvas's own looks.
+        // The image must be a painting on offer, and the frame one of a canvas's own looks.
         if (signal.metadataKey == ObjectMetadataKeyEnumMap.ImagePath)
-            return ImageMapUtil.getImageMap("CanvasImageMap").hasImagePath(signal.metadataValue);
+            return isCanvasImage(signal.metadataValue);
         if (signal.metadataKey == ObjectMetadataKeyEnumMap.InstancedMeshComposition)
         {
             return CompositionMetadataUtil.isIndexedLookOf("Canvas", COMPOSITION_CODEC_VERSION,
@@ -103,9 +111,24 @@ const CanvasObjectTypeConfig =
                 // Straight on, as it hangs.
                 thumbnailView: {yawDeg: 0, pitchDeg: 0},
             },
-            orbitOccluder: {}, // A picture hanging on a wall stands in the orbit camera's way like the wall itself does.
+            orbitOccluder: {}, // Part of the face it is on, as far as the orbit camera is concerned.
+        },
+    },
+    util: {
+        // Any look after the first (which has no frame; see pre_encoding_source.json): what a canvas added by
+        // hand wears.
+        getRandomFramedLook: (random: RandomNumberGenerator): string =>
+        {
+            const looks = PreEncodedCompositionIndexMap.Canvas ?? [];
+            return CompositionMetadataUtil.encodeIndexed(looks[random.randomInt(1, looks.length)] ?? 0,
+                COMPOSITION_CODEC_VERSION);
         },
     },
 } satisfies ObjectTypeConfig;
+
+function isCanvasImage(imagePath: string): boolean
+{
+    return ImageMapUtil.getImageMap("PictureImageMap").hasImagePathInSubfolder(imagePath, CANVAS_IMAGE_SUBFOLDER);
+}
 
 export default CanvasObjectTypeConfig;

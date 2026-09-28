@@ -1,8 +1,12 @@
 import * as THREE from "three";
 import GraphicsManager from "../graphicsManager";
+import Vec2 from "../../../shared/math/types/vec2";
+import Vec3 from "../../../shared/math/types/vec3";
 
 const canvasSizeTemp: THREE.Vector2 = new THREE.Vector2();
 const projectionTemp: THREE.Vector3 = new THREE.Vector3();
+const pointTemp: THREE.Vector3 = new THREE.Vector3();
+const clientTemp: THREE.Vector2 = new THREE.Vector2();
 
 // Conversions between canvas NDC (for raycasts) and CSS pixels (for pointer travel).
 
@@ -29,6 +33,13 @@ const PointerCoordUtil =
         outVec.x = rect.left + ((projectionTemp.x + 1) / 2) * rect.width;
         outVec.y = rect.top + ((1 - projectionTemp.y) / 2) * rect.height;
         return outVec;
+    },
+
+    // worldToClient for plain values (e.g. for QuarterTurnsUtil.pickQuarterTurnsOnScreen).
+    projectPoint: (point: Vec3): Vec2 | null =>
+    {
+        const client = PointerCoordUtil.worldToClient(pointTemp.set(point.x, point.y, point.z), clientTemp);
+        return (client == null) ? null : {x: client.x, y: client.y};
     },
 
     // NDC axes are normalized per canvas edge, so scale by half the canvas size to get CSS pixels.

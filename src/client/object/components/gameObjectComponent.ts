@@ -1,4 +1,4 @@
-import GameObject from "../types/gameObject";
+import GameObject from "../types/gameObject/gameObject";
 import { ObjectMetadataKey } from "../../../shared/object/types/objectMetadataKey";
 
 // A new component type needs: a GameObjectComponent subclass, an ObjectComponentConstructorMap entry,

@@ -6,7 +6,7 @@ import PointerCoordUtil from "../../graphics/util/pointerCoordUtil";
 import ObjectAttachmentEditGizmos from "../../graphics/types/gizmo/objectAttachmentEditGizmos";
 import WorldSpaceSelectionUtil from "../../graphics/util/worldSpaceSelectionUtil";
 import ClientObjectManager from "../../object/clientObjectManager";
-import GameObject from "../../object/types/gameObject";
+import GameObject from "../../object/types/gameObject/gameObject";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";

@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import GameObject from "../../../object/types/gameObject";
+import GameObject from "../../../object/types/gameObject/gameObject";
 
 // A potential occluder being weighed by how much of the target it covers. Represents a whole game
 // object, since multi-part objects are hidden as a whole.

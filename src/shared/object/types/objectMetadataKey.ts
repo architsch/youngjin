@@ -23,4 +23,7 @@ export const ObjectMetadataKeyEnumMap: Record<string, number> =
     LabelFont: 10,
     // Preferences only an admin may set (see AdminPrefsUtil), e.g. a player's ghost mode.
     AdminPrefs: 11,
+    // Clockwise quarter-turns of a flat object's content about its facing, as seen from the front (see
+    // QuarterTurnsUtil). Generic, so any flat type may read it.
+    QuarterTurns: 12,
 }
