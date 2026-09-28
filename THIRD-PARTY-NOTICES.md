@@ -93,8 +93,12 @@ plates were painted out; small incidental labels on goods remain.
 | `2/88.webp` | Rack of Bread Rolls | Leslie Saunders | [1vhNkMq6_aM](https://unsplash.com/photos/a-group-of-pastries-in-a-fridge-1vhNkMq6_aM) | Unsplash License |
 | `2/96.webp` | Ornate Mirror | Luis Villasmil | [gzb4RKX-pdc](https://unsplash.com/photos/ornate-gold-frame-on-yellow-wall-gzb4RKX-pdc) | Unsplash License |
 | `2/99.webp` | No Smoking Plaque | Benjamin Lehman | [1wxXo58XOjk](https://unsplash.com/photos/a-bathroom-with-a-no-smoking-sign-on-the-wall-1wxXo58XOjk) | Unsplash License |
+| `2/101.webp` | Library Card Catalog | Jan Antonin Kolar | [lRoX0shwjUQ](https://unsplash.com/photos/brown-wooden-drawer-lRoX0shwjUQ) | Unsplash License |
 | `2/116.webp` | Composition Notebook | Kelly Sikkema | [LtIqWwDs70s](https://unsplash.com/photos/black-and-white-frame-with-white-printer-paper-LtIqWwDs70s) | Unsplash License |
+| `2/127.webp` | Grilled Vegetables with Feta | oh_ja_that_oke | [86Wwvs0rtgE](https://unsplash.com/photos/a-table-topped-with-plates-of-food-and-utensils-86Wwvs0rtgE) | Unsplash License |
 | `2/131.webp` | Mechanical Keyboard | JL Cabrera | [p5rgceFiOH0](https://unsplash.com/photos/a-black-and-white-keyboard-with-red-keys-p5rgceFiOH0) | Unsplash License |
+| `2/139.webp` | Pork Terrine | Geoffrey Moffett | [GH9kBVZJC_4](https://unsplash.com/photos/several-gourmet-dishes-are-artfully-presented-on-a-table-GH9kBVZJC_4) | Unsplash License |
+| `2/141.webp` | Seared Scallops | Geoffrey Moffett | [GH9kBVZJC_4](https://unsplash.com/photos/several-gourmet-dishes-are-artfully-presented-on-a-table-GH9kBVZJC_4) | Unsplash License |
 | `2/148.webp` | No Unauthorized Access Sign | Waldemar Brandt | [Dae6gNfmOos](https://unsplash.com/photos/red-and-white-no-smoking-sign-Dae6gNfmOos) | Unsplash License |
 | `2/149.webp` | High Voltage Sign | Waldemar Brandt | [Dae6gNfmOos](https://unsplash.com/photos/red-and-white-no-smoking-sign-Dae6gNfmOos) | Unsplash License |
 | `2/150.webp` | Green Arrow Sign | Tasha Kostyuk | [UgPP50i3_5c](https://unsplash.com/photos/green-sign-with-white-arrow-pointing-left-on-brick-wall-UgPP50i3_5c) | Unsplash License |
@@ -135,8 +139,12 @@ preserving the `NOTICE` file of any Apache-2.0 dependency that ships one.
 To regenerate a current inventory, including transitive dependencies:
 
 ```bash
-npx license-checker --production --summary
+npx license-checker --summary
 ```
+
+Development dependencies included: the packages the client is built from (three,
+react, socket.io-client, tailwindcss) are among them, since only the build needs
+them installed, yet they ship inside the client bundle.
 
 ## Fonts
 

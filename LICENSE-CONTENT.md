@@ -63,11 +63,13 @@ Some assets in this repository belong to neither category above: they are
 third-party works redistributed under their own terms. The texture packs and the
 label font under `public/app/assets/resources/` are the main examples: the packs
 are public domain, and the font is under the SIL Open Font License. So are the
-photographs of everyday objects in the pictures' subfolder `2/`, which ship
+photographs of everyday objects in the pictures' subfolder `2/` whose entries in
+`public/app/assets/pictures/manifest.json` name a source and license, which ship
 under `public/app/assets/pictures/2/` once enabled and are parked under
 `dev/assets/disabled_pictures/2/` until then, and the full-resolution samples
 of them under `dev/assets/pictures/2/`, all used under the Unsplash License.
-(`dev/assets/pictures/1/` holds copies of the paintings under
+The other photographs in `2/` are ThingsPool's own, covered above as original
+game artwork. (`dev/assets/pictures/1/` holds copies of the paintings under
 `public/app/assets/pictures/1/`, which keep those images' terms.) See
 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for the full list.
 

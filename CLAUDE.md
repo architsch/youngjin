@@ -34,7 +34,6 @@
   
 - **`/shared`** - Code shared between client and server
   - `/graphics` - Shared graphics data (image maps, material params, and the instanced mesh composition system with its codecs and builders)
-  - `/localization` - Localization utilities
   - `/math` - Math utilities (vectors, geometry, etc.)
   - `/networking` - Data encoding/decoding utilities and Socket.IO signal type configs
   - `/object` - Game object types, configs, and shared update logic (ObjectUpdateUtil)
@@ -42,7 +41,7 @@
   - `/room` - Room types and generators
   - `/singlePlayer` - Single-player room configs and types (SinglePlayerModeConfig — the room's layout and how it is built, which the server generates too)
   - `/system` - Shared observables, constants, logging, and error handling
-  - `/user` - User types and validators
+  - `/user` - User types
   - `/voxel` - Voxel/block system (3D world building)
 
 ### `/views` - EJS templates for both static and SSR pages

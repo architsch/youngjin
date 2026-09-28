@@ -4,7 +4,8 @@
 # The build runs on a GitHub-hosted runner and only its output is shipped to the VPS, which has
 # under 1 GB of RAM — not enough to webpack the client bundle without leaning on swap. The VPS
 # job installs runtime dependencies (the server bundle externalizes node_modules) and restarts
-# the process; it never compiles.
+# the process; it never compiles. It checks out only the files it runs or serves: the static
+# site's pages and assets are GitHub Pages' to serve, and never reach the VPS.
 name: Deploy to Staging
 
 on:
@@ -53,9 +54,9 @@ jobs:
 
     steps:
     - name: Preserve live bundles before checkout
-      # Checkout cleans the working tree, gitignored files included, which is every copy the
-      # promote/rollback flow owns. The client is a set of chunks whose names change as the build
-      # does, so whole groups are moved rather than named files. Backups are carried across too:
+      # The workspace is emptied before checkout (below), gitignored files included, which is every
+      # copy the promote/rollback flow owns. The client is a set of chunks whose names change as the
+      # build does, so whole groups are moved rather than named files. Backups are carried across too:
       # without them a rollback is impossible from the moment staging is next deployed.
       run: |
         rm -rf /tmp/thingspool-live-bundles
@@ -63,10 +64,43 @@ jobs:
         cp dist/server/*.live.* dist/server/*.backup.* /tmp/thingspool-live-bundles/server/ 2>/dev/null || true
         cp dist/client/*.live.* dist/client/*.backup.* /tmp/thingspool-live-bundles/client/ 2>/dev/null || true
 
+    - name: Empty the workspace
+      # So checkout clones afresh and the VPS keeps nothing it doesn't use: no file a fuller checkout
+      # left behind, and no earlier commit's objects in .git. node_modules goes too, which `npm ci`
+      # would remove anyway before installing.
+      run: find "${GITHUB_WORKSPACE:?}" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+
     - uses: actions/checkout@v4
+      with:
+        # Only what the VPS runs or serves: the install, the app's entry and the scripts the workflows
+        # run here, the templates the server renders (the game page and the admin console), and the page
+        # Nginx shows while the app restarts. dist/ comes from the build artifact. Sparse checkout also
+        # fetches the blobs of these files alone. A file the server starts reading must be added here;
+        # the game page check after the restart fails without it.
+        sparse-checkout-cone-mode: false
+        sparse-checkout: |
+          /package.json
+          /package-lock.json
+          /.nvmrc
+          /ecosystem.config.js
+          /dev/scripts/bootstrap.js
+          /dev/scripts/promoteBundles.js
+          /dev/scripts/assertRuntimeNodeVersion.js
+          /views/page/dynamic/
+          /views/page/development/console.ejs
+          /views/partial/common/header_min.ejs
+          /views/partial/common/footer_min.ejs
+          /views/partial/common/ogTags.ejs
+          /views/partial/common/googleAnalytics.ejs
+          /public/error/deploying.html
 
     - name: Restore live bundles after checkout
+      # dist/ isn't checked out, so its directories are made first. They and public/error/ are made
+      # anew each deploy, so Nginx, reading as another user, is let through them here (see
+      # basic-setup.md's note on permissions).
       run: |
+        mkdir -p dist/server dist/client
+        chmod o+x dist dist/client public public/error
         cp /tmp/thingspool-live-bundles/server/* dist/server/ 2>/dev/null || true
         cp /tmp/thingspool-live-bundles/client/* dist/client/ 2>/dev/null || true
         rm -rf /tmp/thingspool-live-bundles
@@ -79,23 +113,25 @@ jobs:
 
     - name: Install dependencies
       # Runtime dependencies only — nothing is compiled here. The server bundle is built with
-      # webpack-node-externals, so it require()s these from node_modules at run time.
-      run: npm ci
+      # webpack-node-externals, so it require()s these from node_modules at run time. Build and test
+      # tools, and the packages the client is built from, are devDependencies and never reach the VPS
+      # (package.json's prepare script tolerates husky's absence).
+      run: npm ci --omit=dev
 
     - name: Remove sharp before runtime
       # `sharp` is an optional dep used only by the local SSG image-map step, which never runs on
       # the VPS (SKIP_SSG=true in prod). Its prebuilt linux-x64 binary also requires an x86-64-v2
       # CPU the VPS does not have, so leaving it on disk is a loaded gun if anything ever
-      # require()s it.
+      # require()s it. Its native binaries, in @img/, go with it; nothing else uses them.
       #
       # Do NOT use `npm prune --omit=optional` here: that prunes optional deps tree-wide,
       # including `@google-cloud/firestore` (an optionalDependency of `firebase-admin` that we
       # very much DO need at runtime).
-      run: rm -rf node_modules/sharp
+      run: rm -rf node_modules/sharp node_modules/@img
 
     - name: Download build output
-      # Overwrites the bundles that came from the checkout with the ones just built from this
-      # commit. Extraction adds and replaces files, so the restored live bundles are left alone.
+      # The bundles just built from this commit (the checkout has none). Extraction adds and
+      # replaces files, so the restored live bundles are left alone.
       uses: actions/download-artifact@v4
       with:
         name: dist
@@ -111,6 +147,21 @@ jobs:
       run: |
         sleep 5
         pm2 status staging
+
+    - name: Verify the game page renders
+      # The checkout holds only the files listed above, so one the server reads unlisted fails here:
+      # health once the process is listening, then the game page, whose templates are read from
+      # views/ as it renders. curl's user agent counts as a bot's, so no guest account is made.
+      run: |
+        for attempt in $(seq 1 30); do
+          if curl -fsS --max-time 5 -o /dev/null http://127.0.0.1:3001/health; then
+            curl -fsS --max-time 10 -o /dev/null -w 'Game page -> %{http_code}\n' http://127.0.0.1:3001/ && exit 0
+            break
+          fi
+          sleep 2
+        done
+        pm2 logs staging --lines 50 --nostream || true
+        exit 1
 
     - name: Verify runtime Node.js version
       run: node dev/scripts/assertRuntimeNodeVersion.js staging
