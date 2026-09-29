@@ -7,6 +7,7 @@ import { NO_ADJUST } from "../../core/colorAdjustUtil";
 import { MAX_MARGIN } from "../../core/sampleRenderUtil";
 import ImageMapSubfolderTab from "../../../../../src/shared/graphics/image/types/imageMapSubfolderTab";
 import ImageMapCategory from "../../../../../src/shared/graphics/image/types/imageMapCategory";
+import ImageMap from "../../../../../src/shared/graphics/image/types/imageMap";
 import SliderRow from "./sliderRow";
 
 // The long side, in pixels, of an image fitted to its canvas.
@@ -61,7 +62,7 @@ export default function EntryForm(props: Props)
                 const author = ev.target.value;
                 onDraftChange(d => ({...d, author}), "author");
             }}/></label>
-            <label title="What a search in the game finds it by: single words, as a search finds each word typed anywhere in them (so one inside another, like pepper in bell pepper, is dropped on saving, as are filler words like and or of, which a search passes over). A painting leaves them out, to be found by its title and author; an everyday object names what it shows, most important first, since the chooser sets images side by side by the keywords they share, the first counting most: the categories it belongs in (moved to the front on saving), then its kind, which is what the image shows as a whole (clock; plate, dish for food served on one; crate), then what it holds, then the rest. Every image of a kind names the same categories in the same order and the same kind word, so they sit together">
+            <label title="What a search in the game finds it by: single words, as a search finds each word typed anywhere in them (so one inside another, like pepper in bell pepper, is dropped on saving, as are filler words like and or of, which a search passes over). A painting leaves them out, to be found by its title and author; an everyday object names what it shows, most important first, since the chooser sets images side by side by the keywords they share, the first counting most: the categories it belongs in, each marked with a * (kitchen*; moved to the front on saving, and left out of that ordering), then its kind, which is what the image shows as a whole (clock; screen; plate, dish for food served on one; crate), then what it holds, then the rest. Every image of a kind leads with the same kind word, so they sit together">
                 Keywords<input value={draft.keywords} placeholder="Comma-separated; none: its title and author"
                     onChange={ev => {
                         const keywords = ev.target.value;
@@ -208,11 +209,15 @@ export default function EntryForm(props: Props)
     </section>;
 }
 
-// The categories typed keywords name, as the game's tabs call them; "" for none.
+// The categories typed keywords name as such, as the game's tabs call them, and any marked word naming no tab (a slip
+// that would leave the image out of it); "" for none.
 function getCategoryTitles(keywords: string, categories: ImageMapCategory[]): string
 {
-    const words = keywords.toLowerCase().split(/[\s,]+/);
-    return categories.filter(category => words.includes(category.name)).map(category => category.title).join(", ");
+    const marked = keywords.toLowerCase().split(/[\s,]+/).filter(word => word.endsWith(ImageMap.CATEGORY_MARK))
+        .map(word => word.slice(0, -ImageMap.CATEGORY_MARK.length));
+    const titles = categories.filter(category => marked.includes(category.name)).map(category => category.title);
+    const unknown = marked.filter(name => !categories.some(category => category.name == name));
+    return [...titles, ...unknown.map(name => `"${name}${ImageMap.CATEGORY_MARK}" is no tab`)].join(", ");
 }
 
 function toCells(worldSize: number, cellWorldSize: number): number

@@ -5,8 +5,8 @@ export default interface ImageMetadata
 
     // What a search finds it by: lowercase, comma-separated (one string ships smaller than an array). Its title and
     // author, which stay in the manifest, when it names none of its own. Most important first, as a chooser groups
-    // alike images by them, the first counting most (see ImageChoiceUtil): the categories it is browsed under lead
-    // (see ImageMapSubfolderTab.categories).
+    // alike images by them, the first counting most (see ImageChoiceUtil); the categories it is browsed under lead,
+    // marked as such (ImageMap.CATEGORY_MARK), and are left out of that.
     keywords?: string;
 
     // {subfolderName},{col},{row} (subfolderName is "" without subfolders).

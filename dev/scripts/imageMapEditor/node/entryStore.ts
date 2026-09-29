@@ -18,7 +18,7 @@ import ImageProcessingUtil from "../core/imageProcessingUtil";
 import SourceLibrary from "./sourceLibrary";
 import { PICTURE_ATLAS_CELL_SIZE, PICTURE_SEARCH_FILLER_WORDS } from "../../../../src/shared/system/sharedConstants";
 import ImageMapSubfolderTab from "../../../../src/shared/graphics/image/types/imageMapSubfolderTab";
-import ImageMapCategory from "../../../../src/shared/graphics/image/types/imageMapCategory";
+import ImageMap from "../../../../src/shared/graphics/image/types/imageMap";
 
 const GAME_IMAGE_QUALITY = 80;
 const SAMPLE_QUALITY = 90;
@@ -91,9 +91,7 @@ export default class EntryStore
         }
 
         const preserveScale = request.recipe?.output.preserveScale ?? existing?.preserveScale;
-        const categories = state.subfolders.find(subfolder => subfolder.name == EntryPathUtil.getSubfolder(entryPath))
-            ?.categories ?? [];
-        const keywords = putCategoriesFirst(normalizeKeywords(request.fields.keywords ?? ""), categories);
+        const keywords = putCategoriesFirst(normalizeKeywords(request.fields.keywords ?? ""));
         const entry: ImageEntry = {
             path: entryPath,
             author: request.fields.author.trim(),
@@ -349,12 +347,11 @@ function normalizeKeywords(keywords: string): string
     return words.filter(word => !words.some(other => other != word && other.includes(word))).join(", ");
 }
 
-// The words naming the tab's categories first, as typed, then the rest: the categories are the most important words
-// an entry has (see ImageMetadata.keywords).
-function putCategoriesFirst(keywords: string, categories: ImageMapCategory[]): string
+// The words marked as categories first, as typed, then the rest (see ImageMetadata.keywords).
+function putCategoriesFirst(keywords: string): string
 {
     const words = keywords.split(", ").filter(word => word.length > 0);
-    const named = words.filter(word => categories.some(category => category.name == word));
+    const named = words.filter(word => word.endsWith(ImageMap.CATEGORY_MARK));
     return [...named, ...words.filter(word => !named.includes(word))].join(", ");
 }
 

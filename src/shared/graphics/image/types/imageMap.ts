@@ -13,6 +13,10 @@ export default class ImageMap
     static readonly ALL_TAB = "all";
     static readonly MISC_TAB = "misc";
 
+    // Ends a keyword naming one of its subfolder's categories ("kitchen*"). Such a keyword only files the image under
+    // that tab: it plays no part in ordering images, so a kind of thing sits together whatever places it belongs in.
+    static readonly CATEGORY_MARK = "*";
+
     private rootDirName: string;
     private gridCellSize: number; // in pixels
 

@@ -1,6 +1,6 @@
 ---
 name: image-map-sampling
-description: Turn a list of source photo URLs (usually Unsplash pages) into picture map entries (the everyday objects props show, or paintings for canvases) — add the photos to the image map editor's source library, survey each one with a grid, plan samples that read well as flat pictures at the game's scale, cut them out of their backgrounds, straighten, retouch and color-correct them, write the keywords a search finds each by (its categories first, the kinds of place it belongs in, then its kind), and save them as disabled entries for the user to review. Use when the user hands over image URLs to be sampled into the picture map.
+description: Turn a list of source photo URLs (usually Unsplash pages) into picture map entries (the everyday objects props show, or paintings for canvases) — add the photos to the image map editor's source library, survey each one with a grid, plan samples that read well as flat pictures at the game's scale, cut them out of their backgrounds, straighten, retouch and color-correct them, write the keywords a search finds each by (first the kinds of place it belongs in, marked as its categories, then its kind), and save them as disabled entries for the user to review. Use when the user hands over image URLs to be sampled into the picture map.
 ---
 
 # Image Map Sampling
@@ -66,15 +66,16 @@ needs them (`--save-samples` refuses one without); a painting has none, since it
 Write them from the sample as it came out, not from the photo or the title.
 
 - **One comma-separated string** of lowercase single words, 6–12 of them, most important first:
-  `"commercial, kitchen, crate, pepper, bell, red, vegetable, produce, market, grocery"`.
+  `"commercial*, kitchen*, crate, pepper, bell, red, vegetable, produce, market, grocery"`.
 - **The order is how alike images end up side by side.** The chooser orders images by the keywords they share, a
-  keyword counting for less the later it comes (the first outweighs the rest together). So lead with its categories
-  (see Categories), then its **kind**: what the image shows as a whole, in the word every image of that kind uses in
-  that place. That is the thing itself (`clock`, `television`, `oven`, `vending, machine`, `sign`), or what holds the
-  rest (`plate, dish` for food served on one; `bowl`, `tray`, `board`, `crate`, `bottle`, `pantry, shelf`,
-  `bookshelf` for a row of books). Before choosing a kind word, look up the kinds the manifest already uses and reuse
-  the same word. Then what it holds, then the words below. A plated steak starts `kitchen, plate, dish, steak, meat`,
-  which puts it among the plated dishes, not among the steaks and hams on boards.
+  keyword counting for less the later it comes (the first outweighs the rest together), leaving out the categories.
+  So lead with its categories, marked (see Categories), then its **kind**: what the image shows as a whole, in the
+  word every image of that kind uses right after its categories. That is the thing itself (`clock`, `screen` for a
+  TV or a computer's monitor, `oven`, `vending, machine`, `sign`), or what holds the rest (`plate, dish` for food
+  served on one; `bowl`, `tray`, `board`, `crate`, `bottle`, `pantry, shelf`, `bookshelf` for a row of books).
+  Before choosing a kind word, look up the kinds the manifest already uses and reuse the same word. Then what it
+  holds, then the words below. A plated steak starts `kitchen*, plate, dish, steak, meat`, which puts it among the
+  plated dishes, not among the steaks and hams on boards.
 - **No keyword inside another.** A search matches each word typed anywhere in the keywords, so a keyword found
   inside another finds nothing the longer one doesn't: `bell pepper, pepper` is `bell, pepper`,
   `bookshelf, book, shelf` is `bookshelf`, `payphone, phone` is `payphone`. Split a phrase into its words (a
@@ -105,13 +106,14 @@ belongs in; read the manifest for the current list:
 | `commercial` | Vending machines, shopping aisles, fridges, cash registers, bookshelves, public fixtures |
 | `industrial` | Industrial equipment, workshop signs |
 
-A category is simply a keyword. An image is under every tab its keywords name, so name each place it usually belongs
-in (one or two, most typical first) at the front of its keywords. **Every image of a kind names the same categories in
-the same order** (both clocks are `living, office, clock`): the leading keywords outweigh the rest, so a clock led by
-other categories would sit among other things, far from the other clock. `picture.test.ts` checks this. So look up the
-categories its kind already has before choosing. Name none for something no category fits, which the chooser shows
-under Misc. Don't let a category word slip in as an ordinary keyword ("post office" boxes would land under Office).
-`--save-samples` and the editor move the category words to the front on saving. A painting has none.
+A category is a keyword marked with `*` at its end (`ImageMap.CATEGORY_MARK`): `kitchen*`. An image is under every tab
+its keywords name that way, so put each place it usually belongs in (one or two, most typical first) at the front of
+its keywords. The chooser leaves categories out when it orders images, so choose them by where the thing belongs
+alone. A TV is `living*` and a computer `office*`, and their shared kind word `screen` still sets them side by side.
+Unmarked, a category's name is an ordinary word: the post office boxes keep `office` without landing under Office.
+Name none for something no category fits, which the chooser shows under Misc. `--save-samples` and the editor move
+the marked words to the front on saving. `picture.test.ts` fails on a marked word naming no tab (a slip that would
+silently leave the image out of it). A painting has none.
 
 ## Steps
 
@@ -134,17 +136,17 @@ under Misc. Don't let a category word slip in as an ordinary keyword ("post offi
    ```json
    [
      {"source": "aPoF91L-n6k", "subfolder": "2", "title": "Oven",
-      "keywords": "kitchen, oven, stove, cooker, appliance, stainless, steel, metal, drawer, baking",
+      "keywords": "kitchen*, oven, stove, cooker, appliance, stainless, steel, metal, drawer, baking",
       "cells": [2, 2], "rect": [0.284, 0.507, 0.41]},
      {"source": "L0xOtAnv94Y", "subfolder": "2", "title": "Wall Clock",
-      "keywords": "living, office, clock, wall, time, hour, minute, round, white", "cells": [2, 2],
+      "keywords": "living*, office*, clock, wall, time, hour, minute, round, white", "cells": [2, 2],
       "rect": [0.221, 0.075, 0.565], "background": {"fromBorder": true, "seeds": [], "tolerance": 12,
       "step": 4, "keepLargest": true}},
      {"source": "1Bdsg4xqdYs", "subfolder": "2", "title": "Dartboard",
-      "keywords": "living, dartboard, game, target, bullseye, pub, bar, sport, round", "cells": [2, 2],
+      "keywords": "living*, dartboard, game, target, bullseye, pub, bar, sport, round", "cells": [2, 2],
       "rect": [0.35, 0.288, 0.29], "selections": [{"shape": "ellipse", "rect": [0, 0, 1, 1], "radius": 0}]},
      {"source": "-I8lDurtfAo", "subfolder": "2", "title": "Portable TV",
-      "keywords": "living, television, tv, portable, screen, retro, vintage, orange, knob", "cells": [2, 2],
+      "keywords": "living*, screen, television, tv, portable, retro, vintage, orange, knob", "cells": [2, 2],
       "rect": [0.235, 0.207, 0.671, 0.583], "selections": [{"shape": "rect", "rect": [0, 0, 1, 1], "radius": 0.03}],
       "retouches": [[0.83, 0.05, 0.15, 0.16]], "align": [0.5, 1]}
    ]

@@ -8,8 +8,8 @@ import { PICTURE_SEARCH_FILLER_WORDS } from "../../../shared/system/sharedConsta
 // and a search.
 const ImageChoiceUtil =
 {
-    // Every image in one of the map's subfolders, ordered so alike images sit together (see orderByKeywords). As an
-    // image's categories lead its keywords, those it shares a category with come first.
+    // Every image in one of the map's subfolders, ordered so alike images sit together whatever categories they are in
+    // (see orderByKeywords): one order, which a category tab only narrows.
     getItems: (imageMap: ImageMap, subfolderName: string): ImageMetadata[] =>
     {
         return orderByKeywords(dummyImagesDebugEnabledObservable.peek()
@@ -31,15 +31,16 @@ const ImageChoiceUtil =
         const categories = imageMap.getSubfolderCategories(subfolderName);
         return items.filter(item => isInTab(categories, item, tab));
     },
-    // The tab to open on for an image: the category its foremost keyword names, or Misc if that is no category (they
-    // come first). All when the map doesn't hold it, or its subfolder lists no categories.
+    // The tab to open on for an image: the category its foremost keyword names, or Misc if that names none (the
+    // categories come first). All when the map doesn't hold it, or its subfolder lists no categories.
     getFirstCategoryTab: (imageMap: ImageMap, subfolderName: string, path: string): string =>
     {
         const categories = imageMap.getSubfolderCategories(subfolderName);
         if (categories.length == 0 || !imageMap.hasImagePathInSubfolder(path, subfolderName))
             return ImageMap.ALL_TAB;
         const foremost = (imageMap.getImageMetadataByPath(path).keywords ?? "").split(",")[0];
-        return categories.some(category => category.name == foremost) ? foremost : ImageMap.MISC_TAB;
+        return categories.find(category => category.name + ImageMap.CATEGORY_MARK == foremost)?.name
+            ?? ImageMap.MISC_TAB;
     },
     // The images whose keywords hold every word typed, anywhere in them (so "red crate" finds "crate,red,pepper"),
     // but for filler words ("and", "of"), which keywords leave out.
@@ -54,22 +55,27 @@ const ImageChoiceUtil =
     },
 }
 
-// Under each category its keywords name, or Misc when they name none.
+// Under each category its keywords name as one, or Misc when they name none.
 function isInTab(categories: ImageMapCategory[], image: ImageMetadata, tab: string): boolean
 {
     if (tab == ImageMap.ALL_TAB)
         return true;
     const words = (image.keywords ?? "").split(",");
-    return (tab == ImageMap.MISC_TAB) ? !categories.some(category => words.includes(category.name)) : words.includes(tab);
+    return (tab == ImageMap.MISC_TAB)
+        ? !categories.some(category => words.includes(category.name + ImageMap.CATEGORY_MARK))
+        : words.includes(tab + ImageMap.CATEGORY_MARK);
 }
 
-// Alike images next to each other: clustered by the keywords they share (average linkage), each merge joining the two
-// runs at their most alike ends. Alphabetical first, so the result doesn't depend on the order the images came in.
+// Alike images next to each other: clustered by the keywords they share but for their categories (average linkage),
+// each merge joining the two runs at their most alike ends. Alphabetical first, so the result doesn't depend on the
+// order the images came in.
 function orderByKeywords(images: ImageMetadata[]): ImageMetadata[]
 {
-    const sorted = [...images].sort((a, b) => collator.compare(a.keywords ?? "", b.keywords ?? "")
+    const describe = (image: ImageMetadata) => (image.keywords ?? "").split(",")
+        .filter(word => !word.endsWith(ImageMap.CATEGORY_MARK)).join(",");
+    const sorted = [...images].sort((a, b) => collator.compare(describe(a), describe(b))
         || collator.compare(a.path, b.path));
-    const vectors = sorted.map(image => toKeywordVector(image.keywords ?? ""));
+    const vectors = sorted.map(image => toKeywordVector(describe(image)));
     const similarity = vectors.map(a => vectors.map(b => dot(a, b)));
     // Between clusters, kept under the id of the one a merge keeps.
     const linkage = similarity.map(row => [...row]);
