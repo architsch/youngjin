@@ -1,9 +1,10 @@
 /**
  * Scenario tests: play vs. edit mode (see @docs/gameplay/game_mode.md). Play mode picks nothing and keeps
- * the eye camera; edit mode starts on a scripted step's pick, else on what the camera faces within reach
- * (straight ahead, then tilted toward the ground), else on the user's character, and a selection orbits
- * the camera. Browser-bound client modules are stubbed, and so is the view's raycast wherever edit mode
- * is entered; generation, selection, framing and the raycast itself run for real.
+ * the eye camera, which a click pitches toward what it hit; edit mode starts on a scripted step's pick,
+ * else on what the camera faces within reach (straight ahead, then tilted toward the ground), else on the
+ * user's character, and a selection orbits the camera. Browser-bound client modules are stubbed, and so
+ * is the view's raycast wherever edit mode is entered; generation, selection, framing and the raycast
+ * itself run for real.
  */
 import { describe, it, expect, beforeEach, afterEach, vi, Mock } from "vitest";
 
@@ -98,6 +99,9 @@ import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objec
 import EncodableByteString from "../../../src/shared/networking/types/encodableByteString";
 
 const ROOM_ID = "game-mode-room";
+
+// The stand-in player is never moved by physics, so there is nothing for the camera to trail.
+const NO_IMPOSED_DISPLACEMENT = {x: 0, y: 0, z: 0};
 
 let room: Room;
 
@@ -259,6 +263,219 @@ describe("play mode", () => {
         expect(ObjectSelection.trySelect(makeCharacter())).toBe(false);
 
         expect(WorldSpaceSelectionUtil.isAnythingSelected()).toBe(false);
+    });
+});
+
+describe("a click in play mode", () => {
+    // Straight ahead of the user, who faces the boundary wall along row 0 (the plane z = 1): a floor tile,
+    // and a spot high up on that wall (below the storey above).
+    const FLOOR_POINT = new THREE.Vector3(10.5, 0, 5.5);
+    const HIGH_WALL_POINT = new THREE.Vector3(10.5, 3, 1);
+
+    // A frame short enough that the camera only makes part of its turn.
+    const SHORT_FRAME = 0.05;
+
+    // Walking speeds, per second, either side of lookMaxSpeed (see FirstPersonCameraPose): one a look lasts
+    // through, and one that ends it.
+    const SLOW_WALK = 1;
+    const BRISK_WALK = 5;
+
+    // Lifted this far off the floor, the user falls, with the storey above still well overhead.
+    const FALL_HEIGHT = 0.8;
+
+    let player: THREE.Object3D;
+    let controller: PlayerController;
+    let pointerInput: {dragDelta: THREE.Vector2, viewScale: number, clickedPoint: THREE.Vector3 | undefined};
+    let playerCamera: PlayerCamera;
+
+    /** One frame, long enough for the camera to ease all the way to its pose, with a click's hit if given. */
+    function frame(clickedPoint?: THREE.Vector3): void
+    {
+        pointerInput.clickedPoint = clickedPoint;
+        playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT);
+    }
+
+    /** How far up the view a point shows, in NDC: 0 is the middle. */
+    function screenYOf(point: THREE.Vector3): number
+    {
+        player.updateMatrixWorld(true);
+        return point.clone().project(GraphicsManager.getCamera()).y;
+    }
+
+    /** The camera's pitch, looking up being positive. */
+    function pitch(): number
+    {
+        return Math.asin(GraphicsManager.getCamera().getWorldDirection(new THREE.Vector3()).y);
+    }
+
+    /** One frame in which the camera makes only part of its turn, with a click's hit if given. */
+    function shortFrame(clickedPoint?: THREE.Vector3): void
+    {
+        pointerInput.clickedPoint = clickedPoint;
+        playerCamera.update(SHORT_FRAME, controller, NO_IMPOSED_DISPLACEMENT);
+    }
+
+    /** The user walking straight ahead (toward -z, the way he faces) at a speed, per second, for a while. */
+    function walkAhead(speed: number, seconds: number): void
+    {
+        for (let frames = Math.round(seconds / SHORT_FRAME); frames > 0; frames--)
+        {
+            player.position.z -= speed * SHORT_FRAME;
+            shortFrame();
+        }
+    }
+
+    /** How far the camera turns in each of two short frames, a click's hit arriving with the first if given. */
+    function turnsInTwoShortFrames(clickedPoint?: THREE.Vector3): number[]
+    {
+        const camera = GraphicsManager.getCamera();
+        const turns: number[] = [];
+        for (const hit of [clickedPoint, undefined])
+        {
+            const before = camera.quaternion.clone();
+            shortFrame(hit);
+            turns.push(before.angleTo(camera.quaternion));
+        }
+        return turns;
+    }
+
+    /** The camera's usual pace: the share of its turn to look down a fall that it makes in one short frame. */
+    function usualShareTurned(): number
+    {
+        const camera = GraphicsManager.getCamera();
+        const start = camera.quaternion.clone();
+        player.position.y += FALL_HEIGHT;
+        shortFrame();
+        const turned = start.angleTo(camera.quaternion);
+        frame();
+        const share = turned / start.angleTo(camera.quaternion);
+
+        player.position.y -= FALL_HEIGHT;
+        frame();
+        return share;
+    }
+
+    beforeEach(() => {
+        player = new THREE.Object3D();
+        player.position.set(10.5, 0.5 * PLAYER_HEIGHT, 10.5);
+        controller = { gameObject: { obj: player, position: player.position } } as unknown as PlayerController;
+        pointerInput = {dragDelta: new THREE.Vector2(), viewScale: 1, clickedPoint: undefined};
+        playerCamera = new PlayerCamera();
+        playerCamera.onSpawn(controller, pointerInput as unknown as PlayerPointerInput);
+        frame();
+    });
+
+    afterEach(() => {
+        playerCamera.onDespawn(controller);
+        player.remove(GraphicsManager.getCamera());
+    });
+
+    it("looks down at what it hit below eye level, and up at what it hit above, until it shows level with the middle of the view", () => {
+        const roomPitch = pitch();
+
+        frame(FLOOR_POINT);
+        expect(pitch()).toBeLessThan(roomPitch);
+        expect(screenYOf(FLOOR_POINT)).toBeCloseTo(0, 6);
+
+        frame(HIGH_WALL_POINT);
+        expect(pitch()).toBeGreaterThan(roomPitch);
+        expect(screenYOf(HIGH_WALL_POINT)).toBeCloseTo(0, 6);
+    });
+
+    it("holds the look while the user turns in place", () => {
+        frame(FLOOR_POINT);
+        const lookPitch = pitch();
+
+        player.rotateY(1);
+        frame();
+
+        expect(pitch()).toBeCloseTo(lookPitch, 6);
+    });
+
+    it("keeps looking at what it hit while the user walks up to it slowly", () => {
+        frame(FLOOR_POINT);
+        const lookFromAfar = pitch();
+
+        walkAhead(SLOW_WALK, 1);
+        frame();
+
+        expect(pitch()).toBeLessThan(lookFromAfar);
+        expect(screenYOf(FLOOR_POINT)).toBeCloseTo(0, 6);
+    });
+
+    it("holds the look through a push, which is physics moving the user rather than him walking", () => {
+        frame(FLOOR_POINT);
+
+        const push = {x: 0, y: 0, z: -BRISK_WALK * SHORT_FRAME};
+        player.position.z += push.z;
+        pointerInput.clickedPoint = undefined;
+        playerCamera.update(SHORT_FRAME, controller, push);
+        frame();
+
+        // Still trailing the push by a hair (see PlayerCamera).
+        expect(screenYOf(FLOOR_POINT)).toBeCloseTo(0, 4);
+    });
+
+    it("lets the look go once the user walks briskly, and doesn't bring it back when he stops", () => {
+        // Where the room alone pitches the camera, one brisk step ahead.
+        const start = player.position.clone();
+        walkAhead(BRISK_WALK, SHORT_FRAME);
+        frame();
+        const roomPitchAhead = pitch();
+        player.position.copy(start);
+        frame();
+
+        frame(FLOOR_POINT);
+        walkAhead(BRISK_WALK, SHORT_FRAME);
+        frame();
+
+        expect(pitch()).toBeCloseTo(roomPitchAhead, 6);
+    });
+
+    it("lets the look go when the user falls, though physics rather than walking moved him", () => {
+        const roomPitch = pitch();
+        frame(FLOOR_POINT);
+
+        player.position.y += FALL_HEIGHT;
+        frame();
+        player.position.y -= FALL_HEIGHT;
+        frame();
+
+        expect(pitch()).toBeCloseTo(roomPitch, 6);
+    });
+
+    it("lets the look go when edit mode takes the camera away, rather than going back to it after", () => {
+        const roomPitch = pitch();
+        frame(FLOOR_POINT);
+
+        GameModeUtil.enterEditMode(makeCharacter());
+        frame();
+        expect(cameraModeObservable.peek().type).toBe("orbit");
+        GameModeUtil.exitEditMode();
+        frame();
+
+        expect(pitch()).toBeCloseTo(roomPitch, 6);
+    });
+
+    it("turns to what it hit, and back once the user walks off, setting off gently rather than at full speed", () => {
+        const toLook = turnsInTwoShortFrames(FLOOR_POINT);
+        frame();
+        player.position.x += BRISK_WALK * SHORT_FRAME;
+        const back = turnsInTwoShortFrames();
+
+        // A turn that set off at full speed would turn furthest in its first frame.
+        expect(toLook[1]).toBeGreaterThan(toLook[0]);
+        expect(back[1]).toBeGreaterThan(back[0]);
+    });
+
+    it("turns at the usual pace again once it has settled back from the look", () => {
+        const usualShare = usualShareTurned();
+        frame(FLOOR_POINT);
+        player.position.x += BRISK_WALK * SHORT_FRAME;
+        shortFrame();
+        frame();
+
+        expect(usualShareTurned()).toBeCloseTo(usualShare, 6);
     });
 });
 
@@ -455,9 +672,6 @@ describe("the camera as edit mode opens", () => {
 
     // How near to and far from the framed block a step might ask the camera to be.
     const DISTANCE_RANGE = {min: 2.5, max: 6};
-
-    // The stand-in player is never moved by physics, so there is nothing for the camera to trail.
-    const NO_IMPOSED_DISPLACEMENT = {x: 0, y: 0, z: 0};
 
     /**
      * Opens edit mode on the boundary wall's face in front of a user standing at (x, z), letting the real

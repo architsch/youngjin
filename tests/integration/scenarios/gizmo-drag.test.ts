@@ -1,9 +1,11 @@
 /**
  * Canvas pointer arbitration between gizmo drags and the camera (PlayerPointerInput + GizmoDragUtil):
  * a press a gizmo takes never turns the view or reads as a tap on the world, the gizmo is fed the
- * pointer only once it is a drag, and everything else reaches the camera as before.
+ * pointer only once it is a drag, everything else reaches the camera as before, and a play-mode tap on
+ * the world hands the camera where it hit.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import * as THREE from "three";
 
 // A stand-in canvas that records its listeners, so events can be fired at them directly.
 const canvasListeners: {[type: string]: (ev: any) => void} = {};
@@ -31,7 +33,9 @@ import PlayerPointerInput from "../../../src/client/object/components/helpers/pl
 import PlayerController from "../../../src/client/object/components/playerController";
 import GizmoDragUtil from "../../../src/client/graphics/util/gizmoDragUtil";
 import CameraUtil from "../../../src/client/graphics/util/cameraUtil";
+import type GameObject from "../../../src/client/object/types/gameObject/gameObject";
 import { MOUSE_DRAG_THRESHOLD_PX } from "../../../src/client/system/clientConstants";
+import { gameModeObservable } from "../../../src/client/system/clientObservables";
 
 // A gizmo occupying the left of the canvas.
 const GIZMO_EDGE_X = 100;
@@ -133,6 +137,61 @@ describe("a press anywhere else", () => {
         fire("click", 400, 300);
 
         expect(CameraUtil.castFromPointer).toHaveBeenCalledOnce();
+    });
+});
+
+describe("a tap on the world", () => {
+    const HIT_POINT = new THREE.Vector3(1, 2, 3);
+    const clickedObject = {onClick: vi.fn()};
+
+    /** A tap whose cast hits HIT_POINT, on clickedObject unless told it hit a gizmo (no object). */
+    function tapOnWorld(hitsObject: boolean = true): void
+    {
+        vi.mocked(CameraUtil.castFromPointer).mockReturnValueOnce(
+            {point: HIT_POINT.clone(), instanceId: 4} as unknown as THREE.Intersection);
+        if (hitsObject)
+            vi.mocked(CameraUtil.getObjectFromIntersection).mockReturnValueOnce(clickedObject as unknown as GameObject);
+
+        fire("pointerdown", 400, 300, {buttons: 1});
+        fire("pointerup", 400, 300);
+        fire("click", 400, 300);
+    }
+
+    beforeEach(() => {
+        clickedObject.onClick.mockClear();
+        gameModeObservable.set("play");
+    });
+
+    afterEach(() => {
+        gameModeObservable.set("play");
+    });
+
+    it("hands the camera where it hit in play mode, for the next frame only", () => {
+        tapOnWorld();
+        expect(input.clickedPoint, "not before the frame reads the input").toBeUndefined();
+
+        input.update(1 / 60, controller);
+        expect(input.clickedPoint).toEqual(HIT_POINT);
+        expect(clickedObject.onClick).toHaveBeenCalledOnce();
+
+        input.update(1 / 60, controller);
+        expect(input.clickedPoint).toBeUndefined();
+    });
+
+    it("hands the camera nothing in edit mode, where a click selects", () => {
+        gameModeObservable.set("edit");
+        tapOnWorld();
+        input.update(1 / 60, controller);
+
+        expect(input.clickedPoint).toBeUndefined();
+        expect(clickedObject.onClick).toHaveBeenCalledOnce();
+    });
+
+    it("hands the camera nothing for a gizmo, which is neither a voxel quad nor an object", () => {
+        tapOnWorld(false);
+        input.update(1 / 60, controller);
+
+        expect(input.clickedPoint).toBeUndefined();
     });
 });
 

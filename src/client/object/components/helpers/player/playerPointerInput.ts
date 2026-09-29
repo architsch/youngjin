@@ -5,6 +5,7 @@ import CameraUtil from "../../../../graphics/util/cameraUtil";
 import PointerDragInput from "./pointer/pointerDragInput";
 import PointerZoomInput from "./pointer/pointerZoomInput";
 import GizmoDragUtil from "../../../../graphics/util/gizmoDragUtil";
+import { gameModeObservable } from "../../../../system/clientObservables";
 
 // Arbitrates canvas pointer gestures regardless of camera mode: gizmo drags (GizmoDragUtil, offered
 // every press first), PointerDragInput (one held pointer), PointerZoomInput (pinch/wheel), and taps,
@@ -16,6 +17,10 @@ export default class PlayerPointerInput
     private dragInput: PointerDragInput = new PointerDragInput();
     private zoomInput: PointerZoomInput = new PointerZoomInput();
 
+    // Clicks arrive between frames, so the latest waits here for the next update to publish it.
+    private pendingClickedPoint: THREE.Vector3 | undefined;
+    private frameClickedPoint: THREE.Vector3 | undefined;
+
     // The pointer's movement since the previous frame while a drag is ongoing (in CSS pixels).
     get dragDelta(): THREE.Vector2
     {
@@ -26,6 +31,12 @@ export default class PlayerPointerInput
     get viewScale(): number
     {
         return this.zoomInput.viewScale;
+    }
+
+    // Where a play-mode click since the previous frame hit a voxel quad or object (world space), if one did.
+    get clickedPoint(): THREE.Vector3 | undefined
+    {
+        return this.frameClickedPoint;
     }
 
     onSpawn(controller: PlayerController): void
@@ -74,6 +85,8 @@ export default class PlayerPointerInput
     {
         this.dragInput.update(controller);
         this.zoomInput.update();
+        this.frameClickedPoint = this.pendingClickedPoint;
+        this.pendingClickedPoint = undefined;
     }
 
     private onPointerPress(ev: PointerEvent): void
@@ -147,8 +160,13 @@ export default class PlayerPointerInput
 
         // Gizmos belong to no object.
         const gameObject = CameraUtil.getObjectFromIntersection(intersection);
-        if (gameObject != undefined)
-            gameObject.onClick(intersection.instanceId ?? -1, intersection.point);
+        if (gameObject == undefined)
+            return;
+
+        // In play mode, the eye camera pitches toward the hit (see FirstPersonCameraPose).
+        if (gameModeObservable.peek() == "play")
+            this.pendingClickedPoint = intersection.point.clone();
+        gameObject.onClick(intersection.instanceId ?? -1, intersection.point);
     }
 
     // For gestures whose end will never arrive (lost focus, player removed).

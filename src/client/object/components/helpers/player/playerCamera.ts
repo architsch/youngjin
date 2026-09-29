@@ -92,6 +92,9 @@ export default class PlayerCamera
         if (distanceRangeRequest != null)
             orbitCameraDistanceRangeRequestObservable.set(null);
 
+        if (mode.type !== "firstPerson")
+            this.firstPersonPose.releaseLook();
+
         let interpRate: number;
 
         if (mode.type === "orbit")
@@ -126,6 +129,7 @@ export default class PlayerCamera
                 this.orbitTarget = undefined;
             }
             interpRate = this.firstPersonPose.updatePose(deltaTime, controller, this.camera!,
+                this.pointerInput!.clickedPoint, imposedDisplacement,
                 this.positionInterpTarget, this.quaternionInterpTarget);
         }
         else if (mode.type == "free")
