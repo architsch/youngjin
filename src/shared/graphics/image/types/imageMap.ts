@@ -1,11 +1,17 @@
 import { dummyImagesDebugEnabledObservable } from "../../../system/sharedObservables";
 import ImageMetadata from "./imageMetadata";
 import ImageMapSubfolderTab from "./imageMapSubfolderTab";
+import ImageMapCategory from "./imageMapCategory";
 
 export default class ImageMap
 {
     // What an image's path is followed by in its thumbnail's (see ImageMapSeed.thumbnailSize).
     static readonly THUMBNAIL_PATH_SUFFIX = ".thumbnail";
+
+    // The category tabs a chooser adds to a subfolder's own: every image, and those naming none of its categories. No
+    // category may take either name.
+    static readonly ALL_TAB = "all";
+    static readonly MISC_TAB = "misc";
 
     private rootDirName: string;
     private gridCellSize: number; // in pixels
@@ -156,5 +162,10 @@ export default class ImageMap
     getSubfolderTitle(subfolderName: string): string
     {
         return this.subfolderTabs?.find(tab => tab.name == subfolderName)?.title ?? subfolderName;
+    }
+    // In tab order; none if the manifest lists none.
+    getSubfolderCategories(subfolderName: string): ImageMapCategory[]
+    {
+        return this.subfolderTabs?.find(tab => tab.name == subfolderName)?.categories ?? [];
     }
 }

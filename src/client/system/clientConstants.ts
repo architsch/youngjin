@@ -21,6 +21,10 @@ export const EDIT_MODE_OPENING_TILT = THREE.MathUtils.degToRad(15);
 // How long a notification message stays on screen (in milliseconds).
 export const NOTIFICATION_DURATION_MS = 3000;
 
+// Whether the image chooser offers its category tabs (see ImageMapThumbnailPanel). False hides them, and every
+// image is shown as if All were picked.
+export const IMAGE_CATEGORY_TABS_ENABLED = false;
+
 // three.js
 
 export const DIRECTION_VECTORS: {[key: string]: THREE.Vector3} = {

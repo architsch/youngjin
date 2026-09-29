@@ -114,6 +114,22 @@ export default class ImageMapBuilder
             if (!tabNames.includes(subfolderName))
                 throw new Error(`Image map generation failed :: Subfolder "${subfolderName}" holds images but is not listed in the manifest's subfolders (mapName = ${this.mapName})`);
         }
+        // A category's name is the keyword that puts an image in it: one lowercase word, none inside another (the
+        // editor drops a keyword found inside another), and no name a chooser tab of its own takes.
+        for (const tab of subfolderTabs)
+        {
+            const names = (tab.categories ?? []).map(category => category.name);
+            for (const category of tab.categories ?? [])
+            {
+                if (!/^[a-z0-9]+$/.test(category.name) || !category.title)
+                    throw new Error(`Image map generation failed :: A category of subfolder "${tab.name}" needs a title and a name of one lowercase word, not "${category.name}" (mapName = ${this.mapName})`);
+                if (category.name == ImageMap.ALL_TAB || category.name == ImageMap.MISC_TAB)
+                    throw new Error(`Image map generation failed :: Subfolder "${tab.name}" lists a category named "${category.name}", which a chooser keeps for its own tab (mapName = ${this.mapName})`);
+                const other = names.find((name, index) => index != names.indexOf(category.name) && name.includes(category.name));
+                if (other != undefined)
+                    throw new Error(`Image map generation failed :: Subfolder "${tab.name}" lists the category "${category.name}" ${other == category.name ? "twice" : `inside "${other}"`} (mapName = ${this.mapName})`);
+            }
+        }
     }
 
     // Every image's size, which an image that keeps its scale must give in whole cells.
@@ -257,7 +273,10 @@ export default class ImageMapBuilder
             ? `\nimport ImageMapSubfolderTab from "../types/imageMapSubfolderTab";` : "";
         const subfolderTabsDeclaration = subfolderTabs
             ? `\nconst subfolderTabs: ImageMapSubfolderTab[] = [${subfolderTabs.map(tab =>
-                `{name:"${tab.name}",title:"${tab.title}"}`).join(",")}]` : "";
+                `{name:"${tab.name}",title:"${tab.title}"`
+                + (tab.categories ? `,categories:[${tab.categories.map(category =>
+                    `{name:${JSON.stringify(category.name)},title:${JSON.stringify(category.title)}}`).join(",")}]` : "")
+                + "}").join(",")}]` : "";
 
         // NOTE: import paths below are relative to the generated file (MAPS_ROOT_PATH). Don't let IDE
         // refactors rewrite them.

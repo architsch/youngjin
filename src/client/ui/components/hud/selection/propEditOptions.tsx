@@ -3,7 +3,7 @@ import IconButton from "../../input/iconButton";
 import TrashIcon from "../../../svg/icons/trashIcon";
 import { ObjectMetadataKeyEnumMap } from "../../../../../shared/object/types/objectMetadataKey";
 import ObjectEditUtil from "../../../util/objectEditUtil";
-import PictureIcon from "../../../svg/icons/pictureIcon";
+import ShoppingCartIcon from "../../../svg/icons/shoppingCartIcon";
 import ImageMapThumbnailPanel from "../../panel/imageMapThumbnailPanel";
 import PropObjectTypeConfig, { PROP_IMAGE_SUBFOLDER } from "../../../../../shared/object/types/objectTypeConfig/propObjectTypeConfig";
 import SelectionToolRow from "./selectionToolRow";
@@ -15,7 +15,7 @@ import ObjectScaleUtil from "../../../../../shared/object/util/objectScaleUtil";
 import ObjectTransform from "../../../../../shared/object/types/objectTransform";
 
 // Prop tools: remove, image, and a clockwise quarter-turn. The image list stacks above this row (it belongs to the
-// prop), and while it is up its search bar takes this row's place.
+// prop).
 export default function PropEditOptions(props: EditOptionsProps)
 {
     const imagePathMetadata = props.selection.gameObject.params.metadata[ObjectMetadataKeyEnumMap.ImagePath];
@@ -29,30 +29,32 @@ export default function PropEditOptions(props: EditOptionsProps)
 
     // Full width, so the rows can scroll horizontally instead of growing.
     return <div className="flex flex-col gap-1 w-full">
-        {choosingImage && canEdit ? <ImageMapThumbnailPanel
+        {choosingImage && canEdit && <ImageMapThumbnailPanel
             id="propImageOptions"
             searchInputId="propImageSearchInput"
-            searchPlaceholder="Search by keyword"
+            searchPlaceholder="Search"
             mapName="PictureImageMap"
             subfolder={PROP_IMAGE_SUBFOLDER}
             currentPath={imagePath}
             canChoose={path => findResizedForImage(props.selection, path) != null}
             onChoose={path => trySetImage(props.selection, path)}
             onClose={() => props.setOpenPanel(null)}
-        /> : <SelectionToolRow>
+        />}
+        <SelectionToolRow>
             <IconButton icon={<TrashIcon/>} size="md" color="red"
                 disabled={!ObjectEditUtil.canRemoveObject(props.selection)}
                 onClick={() => ObjectEditUtil.openRemoveConfirmPopup(props.selection, "Want to remove this?")}
             />
-            <IconButton id="changePropImageButton" icon={<PictureIcon/>} size="md"
+            <IconButton id="changePropImageButton" icon={<ShoppingCartIcon/>} size="md"
                 disabled={!canEdit}
-                onClick={() => props.setOpenPanel("imageMapThumbnail")}
+                highlight={choosingImage && canEdit}
+                onClick={() => props.setOpenPanel(choosingImage ? null : "imageMapThumbnail")}
             />
             <IconButton id="rotatePropButton" icon={<RotateClockwiseIcon/>} size="md"
                 disabled={!canEdit || !ObjectEditUtil.canQuarterTurn(props.selection)}
                 onClick={() => ObjectEditUtil.tryQuarterTurn(props.selection)}
             />
-        </SelectionToolRow>}
+        </SelectionToolRow>
     </div>;
 }
 

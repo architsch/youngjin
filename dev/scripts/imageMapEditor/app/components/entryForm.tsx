@@ -5,6 +5,8 @@ import IMAGE_LICENSES from "../../core/imageLicenses";
 import RecipeBackground from "../../core/recipeBackground";
 import { NO_ADJUST } from "../../core/colorAdjustUtil";
 import { MAX_MARGIN } from "../../core/sampleRenderUtil";
+import ImageMapSubfolderTab from "../../../../../src/shared/graphics/image/types/imageMapSubfolderTab";
+import ImageMapCategory from "../../../../../src/shared/graphics/image/types/imageMapCategory";
 import SliderRow from "./sliderRow";
 
 // The long side, in pixels, of an image fitted to its canvas.
@@ -31,6 +33,7 @@ const ADJUSTMENTS: {key: keyof RecipeAdjust, label: string, min: number, max: nu
 export default function EntryForm(props: Props)
 {
     const { draft, subfolders, onDraftChange } = props;
+    const categories = subfolders.find(subfolder => subfolder.name == draft.subfolder)?.categories ?? [];
     const recipe = draft.recipe;
     const setRecipe = (update: (r: ImageRecipe) => ImageRecipe, key?: string) =>
         onDraftChange(d => ({...d, recipe: update(d.recipe)}), key);
@@ -58,12 +61,14 @@ export default function EntryForm(props: Props)
                 const author = ev.target.value;
                 onDraftChange(d => ({...d, author}), "author");
             }}/></label>
-            <label title="What a search in the game finds it by: single words, as a search finds each word typed anywhere in them (so one inside another, like pepper in bell pepper, is dropped on saving, as are filler words like and or of, which a search passes over). A painting leaves them out, to be found by its title and author; an everyday object names what it shows">
+            <label title="What a search in the game finds it by: single words, as a search finds each word typed anywhere in them (so one inside another, like pepper in bell pepper, is dropped on saving, as are filler words like and or of, which a search passes over). A painting leaves them out, to be found by its title and author; an everyday object names what it shows, most important first, since the chooser sets images side by side by the keywords they share, the first counting most: the categories it belongs in (moved to the front on saving), then its kind, which is what the image shows as a whole (clock; plate, dish for food served on one; crate), then what it holds, then the rest. Every image of a kind names the same categories in the same order and the same kind word, so they sit together">
                 Keywords<input value={draft.keywords} placeholder="Comma-separated; none: its title and author"
                     onChange={ev => {
                         const keywords = ev.target.value;
                         onDraftChange(d => ({...d, keywords}), "keywords");
                     }}/></label>
+            {categories.length > 0 && <span className="panel-note">
+                In the game's tabs: {getCategoryTitles(draft.keywords, categories) || "Misc (it names none of them)"}</span>}
             <label>Source<input value={draft.source} placeholder="The page it came from" onChange={ev => {
                 const source = ev.target.value;
                 onDraftChange(d => ({...d, source}), "source");
@@ -203,6 +208,13 @@ export default function EntryForm(props: Props)
     </section>;
 }
 
+// The categories typed keywords name, as the game's tabs call them; "" for none.
+function getCategoryTitles(keywords: string, categories: ImageMapCategory[]): string
+{
+    const words = keywords.toLowerCase().split(/[\s,]+/);
+    return categories.filter(category => words.includes(category.name)).map(category => category.title).join(", ");
+}
+
 function toCells(worldSize: number, cellWorldSize: number): number
 {
     return Math.max(1, Math.round(worldSize / cellWorldSize));
@@ -222,7 +234,7 @@ function clampMargin(percent: number): number
 interface Props
 {
     draft: Draft;
-    subfolders: {name: string, title: string}[];
+    subfolders: ImageMapSubfolderTab[];
     onDraftChange: (update: (draft: Draft) => Draft, coalesceKey?: string) => void;
     // What the background fill is when turned back on (see EditorApp).
     startBackground: RecipeBackground;

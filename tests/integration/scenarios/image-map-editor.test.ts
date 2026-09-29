@@ -8,8 +8,9 @@
  * across held, a knob to turn it), color adjustments, the source library (photos kept
  * once, an index by name, none dropped while in use, Unsplash links), the paths new entries take (never one
  * used before), an entry with no recipe taken in as its own image, disabled entries (their image parked where it
- * doesn't ship, and out of the notices), the batch commands (sample orders made recipes, saved as disabled entries,
- * sources surveyed with a grid), and the builder leaving out a tab whose images are all disabled.
+ * doesn't ship, and out of the notices), the batch commands (sample orders made recipes, saved as disabled entries
+ * with the keywords naming their tab's categories first, sources surveyed with a grid), and the builder leaving out
+ * a tab whose images are all disabled.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import fs from "fs";
@@ -637,6 +638,41 @@ describe("a batch of samples", () => {
             fs.writeFileSync(planPath, JSON.stringify([{source: url, subfolder: "2", title: "Bare Crate", keywords: " ",
                 cells: [2, 2], rect: [0, 0, 0.5]}]));
             await expect(BatchCommands.saveSamples(store, planPath)).rejects.toThrow(/Bare Crate.*keywords/);
+        }
+        finally
+        {
+            fs.rmSync(dir, {recursive: true, force: true});
+        }
+    });
+
+    it("puts the keywords naming its tab's categories first, as typed, and keeps the tab's list", async () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), "entry-store-"));
+        try
+        {
+            const paths = pathsIn(dir);
+            fs.mkdirSync(paths.imagesDir, {recursive: true});
+            const categories = [{name: "store", title: "Store"}, {name: "kitchen", title: "Kitchen"}];
+            fs.writeFileSync(path.join(paths.imagesDir, "manifest.json"),
+                JSON.stringify({subfolders: [{name: "2", title: "Objects", categories}], images: []}));
+            fs.writeFileSync(paths.noticesPath,
+                "# Notices\n<!-- pictures:begin (written by the image map editor) -->\n<!-- pictures:end -->\n");
+            const store = new EntryStore(paths);
+            const url = "https://unsplash.com/photos/a-crate-of-apples-abcdefghijk";
+            await store.library.add(await sharp({create: {width: 400, height: 200, channels: 3,
+                background: {r: 160, g: 40, b: 30}}}).png().toBuffer(), "abcdefghijk.jpg",
+                {url, author: "Someone", license: "Unsplash License"});
+            const planPath = path.join(dir, "plan.json");
+            fs.writeFileSync(planPath, JSON.stringify([
+                {source: url, subfolder: "2", title: "Crate", keywords: "crate, apple, kitchen, market, store",
+                    cells: [2, 2], rect: [0, 0, 0.5]},
+                {source: url, subfolder: "2", title: "Crate Side", keywords: "crate, apple", cells: [1, 2],
+                    rect: [0.5, 0, 0.25]},
+            ]));
+
+            expect(await BatchCommands.saveSamples(store, planPath)).toEqual(["2/1", "2/2"]);
+            expect(store.readState().entries.map(entry => entry.keywords))
+                .toEqual(["kitchen, store, crate, apple, market", "crate, apple"]);
+            expect(store.readState().subfolders[0].categories).toEqual(categories);
         }
         finally
         {

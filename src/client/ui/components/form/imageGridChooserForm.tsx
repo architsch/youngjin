@@ -46,7 +46,8 @@ export default function ImageGridChooserForm({mapName, initialChoicePath, onChoo
         {selectedSubfolderName.length > 0 && <TabBar
             tabNames={imageMap.getSubfolderNames()}
             selectedTabName={selectedSubfolderName}
-            onSelect={onSelectSubfolder}/>}
+            onSelect={onSelectSubfolder}
+            additionalClassNames="shrink-0"/>}
 
         <ImageGrid
             imageURL={imageMap.getGridImageURL(App.getEnv().assets_url, selectedSubfolderName)}

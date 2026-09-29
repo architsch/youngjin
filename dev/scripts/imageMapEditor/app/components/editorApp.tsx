@@ -298,7 +298,7 @@ export default function EditorApp()
                 setStatus("");
                 return;
             }
-            // With its keywords as the manifest now holds them (tidied into single words, lowercase).
+            // With its keywords as the manifest now holds them (tidied into single words, lowercase, categories first).
             const saved = {...draft, path: result.path,
                 keywords: result.state.entries.find(entry => entry.path == result.path)?.keywords ?? ""};
             setState(result.state);

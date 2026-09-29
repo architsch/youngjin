@@ -13,7 +13,8 @@ export default interface SampleOrder
     source: string;
     subfolder: string;
     title: string;
-    // What a search finds it by, comma-separated (see ImageEntry): needed with cells, left out for a painting.
+    // What a search finds it by, comma-separated, its categories first (see ImageEntry): needed with cells, left out
+    // for a painting.
     keywords?: string;
     // Cells across and down, for an image that keeps its scale; or the long side in pixels of one fitted to its
     // canvas. One of the two.

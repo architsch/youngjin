@@ -3,11 +3,15 @@
  * subfolder), fitted to whatever size it is; a prop shows an everyday object (the Objects subfolder), with no frame,
  * pinned to the image's own size. Paths name their subfolder, so each type accepts only its own.
  * Covers: the map's tabs and which type each serves, a tab left out while all its images are disabled, everyday
- * objects at their own scale in whole cells, disabled images left out of the built map, a recipe and sample for
- * every image, the notices naming every third party's image that ships; what a search finds an image by (a painting
- * by its title and author, an everyday object by single-word keywords of its own, none inside another and none a
- * filler word) and the map shipping nothing else of either, and the search itself (every word typed but filler
- * words, as typed or singular); which images a canvas and a prop accept
+ * objects at their own scale in whole cells, disabled images left out of the built map, the categories built as the
+ * manifest lists them and named by an image's leading keywords, the same ones leading every image of a kind, a
+ * recipe and sample for every image, the notices
+ * naming every third party's image that ships; what a search finds an image by (a painting by its title and author,
+ * an everyday object by single-word keywords of its own, none inside another and none a filler word) and the map
+ * shipping nothing else of either, the search itself (every word typed but filler words, as typed or singular), the
+ * order images are offered in (alike ones together, leading keywords first) and the category tabs (an image under
+ * each category it names, Misc for none, opening on the current image's first); which images a canvas and a prop
+ * accept
  * (when set, and when added with one), what else a user may write to a prop, a prop's lack of a frame, the size its
  * image pins it to (and a canvas's freedom from any), the metadata signal carrying that size, and the play-mode
  * click map naming only props' images.
@@ -50,8 +54,8 @@ describe("the picture map", () => {
     const imageMap = ImageMapUtil.getImageMap("PictureImageMap");
 
     it("holds everyday objects, which props show, and paintings, which canvases show, and nothing else", () => {
-        expect(readManifest().subfolders).toEqual([{name: PROP_IMAGE_SUBFOLDER, title: "Objects"},
-            {name: CANVAS_IMAGE_SUBFOLDER, title: "Arts"}]);
+        expect(readManifest().subfolders.map(tab => ({name: tab.name, title: tab.title}))).toEqual([
+            {name: PROP_IMAGE_SUBFOLDER, title: "Objects"}, {name: CANVAS_IMAGE_SUBFOLDER, title: "Arts"}]);
         for (const image of readManifest().images)
             expect([PROP_IMAGE_SUBFOLDER, CANVAS_IMAGE_SUBFOLDER], image.path).toContain(ImageMap.getSubfolderName(image.path));
     });
@@ -97,6 +101,48 @@ describe("the picture map", () => {
             manifest.images.filter(image => !image.disabled).map(image => image.path));
     });
 
+    it("builds each tab's categories as the manifest lists them", () => {
+        const manifest = readManifest();
+        for (const tab of manifest.subfolders.filter(tab => imageMap.getSubfolderNames().includes(tab.name)))
+            expect(imageMap.getSubfolderCategories(tab.name), tab.name).toEqual(tab.categories ?? []);
+    });
+
+    // Disabled ones too. An image's kind is its first keyword after its categories (a clock's "clock"): leading with
+    // other categories would set it among other things, apart from its own kind (see ImageChoiceUtil).
+    it("leads every image of a kind with the same categories, so they sit side by side", () => {
+        const manifest = readManifest();
+        for (const tab of manifest.subfolders)
+        {
+            const names = (tab.categories ?? []).map(category => category.name);
+            const firstByKind: {[kind: string]: {path: string, categories: string}} = {};
+            for (const image of manifest.images.filter(image => ImageMap.getSubfolderName(image.path) == tab.name))
+            {
+                const words = (image.keywords ?? "").split(",").map(word => word.trim());
+                const kind = words.find(word => !names.includes(word)) ?? "";
+                const categories = words.slice(0, words.indexOf(kind)).join(", ");
+                const first = firstByKind[kind] ??= {path: image.path, categories};
+                expect(categories, `${image.path}'s "${kind}" after other categories than ${first.path}'s`)
+                    .toBe(first.categories);
+            }
+        }
+    });
+
+    // Disabled ones too, so each is ready to be enabled.
+    it("names an image's categories by its leading keywords, before any other", () => {
+        const manifest = readManifest();
+        for (const tab of manifest.subfolders)
+        {
+            const names = (tab.categories ?? []).map(category => category.name);
+            for (const image of manifest.images.filter(image => ImageMap.getSubfolderName(image.path) == tab.name))
+            {
+                const words = (image.keywords ?? "").split(",").map(word => word.trim());
+                const led = words.findIndex(word => !names.includes(word));
+                expect(words.slice(led < 0 ? words.length : led).filter(word => names.includes(word)), image.path)
+                    .toEqual([]);
+            }
+        }
+    });
+
     // One rule for every tab: the editor edits any entry, painting or everyday object, from its recipe.
     it("keeps a recipe and a full-resolution sample for every image, in every tab", () => {
         const recipes = JSON.parse(fs.readFileSync(path.join(__dirname,
@@ -127,9 +173,14 @@ describe("the picture map", () => {
             for (const text of [image.title, image.author, `(${image.source})`, image.license!])
                 expect(row, image.path).toContain(text);
         }
-        // Every everyday object is someone else's photo.
+        // An everyday object is someone else's photo, with both its source and license, or ThingsPool's own, with
+        // neither (see LICENSE-CONTENT.md).
         for (const image of manifest.images.filter(other => ImageMap.getSubfolderName(other.path) == PROP_IMAGE_SUBFOLDER))
-            expect(image.source && image.license, image.path).toBeTruthy();
+        {
+            expect(!!image.source, image.path).toBe(!!image.license);
+            if (!image.source)
+                expect(image.author, image.path).toBe("thingspool");
+        }
     });
 
     // Disabled ones too, so each is ready to be enabled.
@@ -190,6 +241,74 @@ describe("the picture map", () => {
         expect(find("pepper monet")).toEqual([]);
         // Too short a word to take a letter off: "bus" is not "bu".
         expect(find("bus")).toEqual([]);
+    });
+
+    it("offers a tab for each category its images name, each image under every one it names and Misc for the rest", () => {
+        const map = new ImageMap("pictures", 0, {}, [{path: "2/1", keywords: "kitchen,dining,plate,bread"},
+            {path: "2/2", keywords: "kitchen,oven,stove"}, {path: "2/3", keywords: "dining,plate,steak"},
+            {path: "2/4", keywords: "sock,clothes"}, {path: "1/1", keywords: "apollo and daphne,john singer sargent"}],
+            undefined, 0, [{name: "2", title: "Objects", categories: [{name: "kitchen", title: "Kitchen"},
+                {name: "dining", title: "Dining Room"}, {name: "bedroom", title: "Bedroom"}]}, {name: "1", title: "Arts"}]);
+        // One order, sharing a category counting most: the bread plate, in both, sits between the two it shares one with.
+        const items = ImageChoiceUtil.getItems(map, "2");
+        expect(items.map(item => item.path)).toEqual(["2/3", "2/1", "2/2", "2/4"]);
+
+        // Bedroom holds none, so it offers no tab.
+        expect(ImageChoiceUtil.getCategoryTabs(map, "2", items)).toEqual([ImageMap.ALL_TAB, "kitchen", "dining",
+            ImageMap.MISC_TAB]);
+        const inTab = (tab: string) => ImageChoiceUtil.getItemsInTab(map, "2", items, tab).map(item => item.path);
+        expect(inTab("kitchen")).toEqual(["2/1", "2/2"]);
+        expect(inTab("dining")).toEqual(["2/3", "2/1"]);
+        expect(inTab(ImageMap.MISC_TAB)).toEqual(["2/4"]);
+        expect(inTab(ImageMap.ALL_TAB)).toEqual(["2/3", "2/1", "2/2", "2/4"]);
+        // A subfolder listing no categories offers no tabs.
+        expect(ImageChoiceUtil.getCategoryTabs(map, "1", ImageChoiceUtil.getItems(map, "1"))).toEqual([]);
+    });
+
+    it("opens on the category an image's foremost keyword names, Misc if it names none, All if it can't tell", () => {
+        const map = new ImageMap("pictures", 0, {}, [{path: "2/1", keywords: "kitchen,dining,plate,bread"},
+            {path: "2/2", keywords: "sock,clothes"}, {path: "1/1", keywords: "apollo and daphne,john singer sargent"}],
+            undefined, 0, [{name: "2", title: "Objects", categories: [{name: "kitchen", title: "Kitchen"},
+                {name: "dining", title: "Dining Room"}]}, {name: "1", title: "Arts"}]);
+        expect(ImageChoiceUtil.getFirstCategoryTab(map, "2", "2/1")).toBe("kitchen");
+        expect(ImageChoiceUtil.getFirstCategoryTab(map, "2", "2/2")).toBe(ImageMap.MISC_TAB);
+        // An image the map doesn't hold (say, disabled since it was set), and a subfolder listing no categories.
+        expect(ImageChoiceUtil.getFirstCategoryTab(map, "2", "2/9")).toBe(ImageMap.ALL_TAB);
+        expect(ImageChoiceUtil.getFirstCategoryTab(map, "1", "1/1")).toBe(ImageMap.ALL_TAB);
+    });
+
+    it("orders a subfolder so alike images sit together, whatever order the map lists them in", () => {
+        const kitchen = ["oven,stove,kitchen,appliance", "toaster,oven,kitchen,appliance", "microwave,oven,kitchen,appliance"];
+        const audio = ["loudspeaker,audio,music,speaker", "amplifier,audio,music", "radio,audio,music,vintage"];
+        const books = ["book,library,shelf", "bookshelf,book,library", "notebook,paper,book"];
+        const images = [...kitchen, ...audio, ...books].map((keywords, index) => ({path: `2/${index + 1}`, keywords}));
+        const order = (listed: typeof images) =>
+            ImageChoiceUtil.getItems(new ImageMap("pictures", 0, {}, listed), "2").map(item => item.keywords!);
+
+        // Alphabetically, the three would interleave.
+        const ordered = order(images);
+        for (const group of [kitchen, audio, books])
+        {
+            const places = group.map(keywords => ordered.indexOf(keywords)).sort((a, b) => a - b);
+            expect(places[places.length - 1] - places[0], group[0]).toBe(group.length - 1);
+        }
+        expect(order([...images].reverse())).toEqual(ordered);
+    });
+
+    it("sets images side by side by their leading keywords before the ones after", () => {
+        const others = ["board,steak,meat,beef", "bowl,salad,lettuce,green", "tray,oyster,seafood,ice"];
+        const platedPlaces = (plated: string[]) => {
+            const images = [...plated, ...others].map((keywords, index) => ({path: `2/${index + 1}`, keywords}));
+            const ordered = ImageChoiceUtil.getItems(new ImageMap("pictures", 0, {}, images), "2")
+                .map(item => item.keywords!);
+            return plated.map(keywords => ordered.indexOf(keywords)).sort((a, b) => a - b);
+        };
+        // Led by what they are as a whole, the plated dishes sit together; led by what's on them, each goes to its
+        // twin on a board, in a bowl or on a tray.
+        const led = platedPlaces(["plate,dish,steak,meat", "plate,dish,salad,lettuce", "plate,dish,oyster,seafood"]);
+        expect(led[2] - led[0]).toBe(2);
+        const trailed = platedPlaces(["steak,meat,plate,dish", "salad,lettuce,plate,dish", "oyster,seafood,plate,dish"]);
+        expect(trailed[2] - trailed[0]).toBeGreaterThan(2);
     });
 });
 

@@ -1,81 +1,66 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import App from "../../../app";
+import ImageMap from "../../../../shared/graphics/image/types/imageMap";
 import ImageMapUtil from "../../../../shared/graphics/image/util/imageMapUtil";
 import ImageChoiceUtil from "../../util/imageChoiceUtil";
-import Text from "../basic/text";
+import { IMAGE_CATEGORY_TABS_ENABLED } from "../../../system/clientConstants";
+import TabBar from "../basic/tabBar";
 import TextInput from "../input/textInput";
-import ScrollPanel from "./scrollPanel";
+import ThumbnailPanel from "./thumbnailPanel";
 
-// Picks an image of one of an image map's subfolders from its thumbnails: one shuffled row, the current image
-// first, narrowed by the search bar beneath it by the images' keywords (see ImageChoiceUtil). Thumbnails are added
-// a page at a time as the row is scrolled to its end. An image canChoose refuses is shown dimmed and can't be picked.
+// Picks an image of one of an image map's subfolders from its thumbnails (see ThumbnailPanel), alike images together
+// (see ImageChoiceUtil). A category tab and the search bar, beside the close button, narrow the row together; the
+// panel opens on the current image's own category.
 export default function ImageMapThumbnailPanel({ id, searchInputId, searchPlaceholder, mapName, subfolder,
     currentPath, canChoose, onChoose, onClose }: Props)
 {
     const imageMap = ImageMapUtil.getImageMap(mapName);
     const assetsURL = App.getEnv().assets_url;
+    const [categoryTab, setCategoryTab] = useState<string>(() =>
+        ImageChoiceUtil.getFirstCategoryTab(imageMap, subfolder, currentPath));
     const [searchInput, setSearchInput] = useState<string>("");
 
-    // Shuffled once, so the row holds still while images are tried from it.
-    const allItems = useMemo(() => ImageChoiceUtil.getShuffledItems(imageMap, subfolder, currentPath),
-        [mapName, subfolder]);
-    const filteredItems = useMemo(() => ImageChoiceUtil.getFilteredItems(allItems, searchInput),
-        [allItems, searchInput]);
-    const [pageIndex, setPageIndex] = useState<number>(0);
-    const pageItems = ImageChoiceUtil.getPageItems(filteredItems, pageIndex);
-    const hasMore = ImageChoiceUtil.hasMore(filteredItems, pageIndex);
+    // Memoized, as a new list of choices scrolls the row back to the current image (see ThumbnailPanel).
+    const allItems = useMemo(() => ImageChoiceUtil.getItems(imageMap, subfolder), [mapName, subfolder]);
+    const categoryTabs = useMemo(() => IMAGE_CATEGORY_TABS_ENABLED
+        ? ImageChoiceUtil.getCategoryTabs(imageMap, subfolder, allItems) : [], [allItems]);
+    // All when the tabs are off, or none of them is the one picked.
+    const shownTab = categoryTabs.includes(categoryTab) ? categoryTab : ImageMap.ALL_TAB;
+    const paths = useMemo(() => ImageChoiceUtil.getFilteredItems(
+        ImageChoiceUtil.getItemsInTab(imageMap, subfolder, allItems, shownTab), searchInput)
+        .map(metadata => metadata.path), [allItems, shownTab, searchInput]);
 
-    // A new search starts again from the row's first page, scrolled to its start.
-    const firstRef = useRef<HTMLDivElement>(null);
-    useEffect(() => {
-        setPageIndex(0);
-        firstRef.current?.scrollIntoView({ inline: "nearest", block: "nearest" });
-    }, [filteredItems]);
+    const categories = imageMap.getSubfolderCategories(subfolder);
+    const getTabLabel = (tab: string) => (tab == ImageMap.ALL_TAB) ? "All" : (tab == ImageMap.MISC_TAB) ? "Misc"
+        : categories.find(category => category.name == tab)?.title ?? tab;
 
-    // Observed afresh after every page, so an end still in view once a page is added asks for the next.
-    const endRef = useRef<HTMLDivElement>(null);
-    useEffect(() => {
-        const end = endRef.current;
-        if (!end || !hasMore)
-            return;
-        const observer = new IntersectionObserver(entries => {
-            if (entries.some(entry => entry.isIntersecting))
-                setPageIndex(p => p + 1);
-        });
-        observer.observe(end);
-        return () => observer.disconnect();
-    }, [pageItems.length, hasMore]);
-
-    return <>
-        <ScrollPanel id={id} onClose={onClose} additionalClassNames="m-2">
-            {filteredItems.length == 0 && <Text content="No images match your search." size="sm"
-                additionalClassNames="self-center shrink-0"/>}
-            {pageItems.map((metadata, position) => {
-                const choosable = canChoose(metadata.path);
-                const highlightClassNames = (metadata.path === currentPath)
-                    ? "outline-4 outline-green-500 outline-offset-1" : "";
-                // The margin leaves room for the highlight outline inside the scrolling row.
-                return <div key={metadata.path} id={`${id}.${position}`} ref={position == 0 ? firstRef : undefined}
-                    aria-disabled={!choosable}
-                    onClick={choosable ? () => onChoose(metadata.path) : undefined}
-                    className={`size-20 m-1.5 shrink-0 flex items-center justify-center rounded-md bg-gray-800 ${highlightClassNames} ${choosable ? "cursor-pointer" : "opacity-30 cursor-not-allowed"}`}
-                >
-                    {/* Not draggable, so dragging across the row scrolls it. */}
-                    <img src={imageMap.getThumbnailURLByPath(assetsURL, metadata.path)} alt=""
-                        draggable={false} className="max-w-full max-h-full object-contain pointer-events-none select-none"/>
-                </div>;
-            })}
-            {hasMore && <div ref={endRef} className="w-px shrink-0"/>}
-        </ScrollPanel>
-        {/* Where the tools it was opened from were, as wide as the screen allows up to a comfortable length. */}
-        <TextInput id={searchInputId} size="sm" placeholder={searchPlaceholder} currValue={searchInput}
-            setTextInput={setSearchInput} additionalClassNames="w-full max-w-lg h-10"/>
-    </>;
+    return <ThumbnailPanel
+        id={id}
+        choices={paths}
+        current={currentPath}
+        canChoose={canChoose}
+        onChoose={onChoose}
+        // Not draggable, so dragging across the row scrolls it.
+        renderThumbnail={path => <img src={imageMap.getThumbnailURLByPath(assetsURL, path)} alt="" draggable={false}
+            className="max-w-full max-h-full object-contain pointer-events-none select-none"/>}
+        thumbnailClassNames="size-20 flex items-center justify-center bg-gray-800"
+        emptyText="No images match your search."
+        // As tall as the close button. The tabs give way first on a narrow screen, scrolling instead.
+        closeRowContent={<>
+            <TextInput id={searchInputId} size="sm" placeholder={searchPlaceholder} currValue={searchInput}
+                setTextInput={setSearchInput} additionalClassNames="flex-1 min-w-32 max-w-xs h-7.5"/>
+            {categoryTabs.length > 0 && <TabBar id={`${id}Categories`} size="sm" tabNames={categoryTabs}
+                selectedTabName={shownTab} onSelect={setCategoryTab} getTabLabel={getTabLabel}
+                additionalClassNames="min-w-0 pointer-events-auto"/>}
+        </>}
+        onClose={onClose}
+    />;
 }
 
 interface Props
 {
-    // Lets automation address the panel, and each thumbnail by its position in the row (e.g. "canvasImageOptions.0").
+    // Lets automation address the panel, each thumbnail by its position in the row (e.g. "canvasImageOptions.0"), and
+    // each category tab by its name (e.g. "propImageOptionsCategories.food").
     id: string;
     searchInputId: string;
     // What the keywords hold, which differs by subfolder (a painting's are its title and author).

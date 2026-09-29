@@ -91,7 +91,6 @@ plates were painted out; small incidental labels on goods remain.
 | `2/86.webp` | Vase Pair Cubby | Kshiraj Vij | [xIJRwAaxwZo](https://unsplash.com/photos/various-decorative-objects-displayed-in-illuminated-cubbies-xIJRwAaxwZo) | Unsplash License |
 | `2/87.webp` | Sculpture Cubby | Kshiraj Vij | [xIJRwAaxwZo](https://unsplash.com/photos/various-decorative-objects-displayed-in-illuminated-cubbies-xIJRwAaxwZo) | Unsplash License |
 | `2/88.webp` | Rack of Bread Rolls | Leslie Saunders | [1vhNkMq6_aM](https://unsplash.com/photos/a-group-of-pastries-in-a-fridge-1vhNkMq6_aM) | Unsplash License |
-| `2/96.webp` | Ornate Mirror | Luis Villasmil | [gzb4RKX-pdc](https://unsplash.com/photos/ornate-gold-frame-on-yellow-wall-gzb4RKX-pdc) | Unsplash License |
 | `2/99.webp` | No Smoking Plaque | Benjamin Lehman | [1wxXo58XOjk](https://unsplash.com/photos/a-bathroom-with-a-no-smoking-sign-on-the-wall-1wxXo58XOjk) | Unsplash License |
 | `2/101.webp` | Library Card Catalog | Jan Antonin Kolar | [lRoX0shwjUQ](https://unsplash.com/photos/brown-wooden-drawer-lRoX0shwjUQ) | Unsplash License |
 | `2/116.webp` | Composition Notebook | Kelly Sikkema | [LtIqWwDs70s](https://unsplash.com/photos/black-and-white-frame-with-white-printer-paper-LtIqWwDs70s) | Unsplash License |

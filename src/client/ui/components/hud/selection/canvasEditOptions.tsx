@@ -12,8 +12,7 @@ import EditOptionsProps from "../../../types/editOptionsProps";
 import RotateClockwiseIcon from "../../../svg/icons/rotateClockwiseIcon";
 
 // Canvas tools: remove, painting, frame (one of its looks, the first frameless), and a clockwise quarter-turn. The
-// painting and frame lists stack above this row (they belong to the canvas), one at a time; while the painting list
-// is up, its search bar takes this row's place.
+// painting and frame lists stack above this row (they belong to the canvas), one at a time.
 export default function CanvasEditOptions(props: EditOptionsProps)
 {
     const imagePathMetadata = props.selection.gameObject.params.metadata[ObjectMetadataKeyEnumMap.ImagePath];
@@ -28,7 +27,7 @@ export default function CanvasEditOptions(props: EditOptionsProps)
 
     // Full width, so the rows can scroll horizontally instead of growing.
     return <div className="flex flex-col gap-1 w-full">
-        {choosingImage && canEdit ? <ImageMapThumbnailPanel
+        {choosingImage && canEdit && <ImageMapThumbnailPanel
             id="canvasImageOptions"
             searchInputId="canvasImageSearchInput"
             searchPlaceholder="Search by title or author"
@@ -38,33 +37,33 @@ export default function CanvasEditOptions(props: EditOptionsProps)
             canChoose={path => ObjectEditUtil.canSetObjectMetadata(props.selection, ObjectMetadataKeyEnumMap.ImagePath, path)}
             onChoose={path => ObjectEditUtil.trySetObjectMetadata(props.selection, ObjectMetadataKeyEnumMap.ImagePath, path)}
             onClose={() => props.setOpenPanel(null)}
-        /> : <>
-            {customizingFrame && canEdit && <CompositionThumbnailPanel
-                id="customizeCanvasOptions"
-                objectType={CanvasObjectTypeConfig.objectType}
-                currentCompositionIndex={ObjectEditUtil.getCompositionIndex(props.selection)}
-                onChoose={(compositionIndex) => ObjectEditUtil.trySetCompositionIndex(props.selection, compositionIndex)}
-                onClose={() => props.setOpenPanel(null)}
-            />}
-            <SelectionToolRow>
-                <IconButton icon={<TrashIcon/>} size="md" color="red"
-                    disabled={!ObjectEditUtil.canRemoveObject(props.selection)}
-                    onClick={() => ObjectEditUtil.openRemoveConfirmPopup(props.selection, "Want to remove this?")}
-                />
-                <IconButton id="changeCanvasImageButton" icon={<PictureIcon/>} size="md"
-                    disabled={!canEdit}
-                    onClick={() => props.setOpenPanel("imageMapThumbnail")}
-                />
-                <IconButton id="changeCanvasFrameButton" icon={<PictureFrameIcon/>} size="md"
-                    disabled={!canEdit}
-                    highlight={customizingFrame && canEdit}
-                    onClick={() => props.setOpenPanel(customizingFrame ? null : "compositionThumbnail")}
-                />
-                <IconButton id="rotateCanvasButton" icon={<RotateClockwiseIcon/>} size="md"
-                    disabled={!canEdit || !ObjectEditUtil.canQuarterTurn(props.selection)}
-                    onClick={() => ObjectEditUtil.tryQuarterTurn(props.selection)}
-                />
-            </SelectionToolRow>
-        </>}
+        />}
+        {customizingFrame && canEdit && <CompositionThumbnailPanel
+            id="customizeCanvasOptions"
+            objectType={CanvasObjectTypeConfig.objectType}
+            currentCompositionIndex={ObjectEditUtil.getCompositionIndex(props.selection)}
+            onChoose={(compositionIndex) => ObjectEditUtil.trySetCompositionIndex(props.selection, compositionIndex)}
+            onClose={() => props.setOpenPanel(null)}
+        />}
+        <SelectionToolRow>
+            <IconButton icon={<TrashIcon/>} size="md" color="red"
+                disabled={!ObjectEditUtil.canRemoveObject(props.selection)}
+                onClick={() => ObjectEditUtil.openRemoveConfirmPopup(props.selection, "Want to remove this?")}
+            />
+            <IconButton id="changeCanvasImageButton" icon={<PictureIcon/>} size="md"
+                disabled={!canEdit}
+                highlight={choosingImage && canEdit}
+                onClick={() => props.setOpenPanel(choosingImage ? null : "imageMapThumbnail")}
+            />
+            <IconButton id="changeCanvasFrameButton" icon={<PictureFrameIcon/>} size="md"
+                disabled={!canEdit}
+                highlight={customizingFrame && canEdit}
+                onClick={() => props.setOpenPanel(customizingFrame ? null : "compositionThumbnail")}
+            />
+            <IconButton id="rotateCanvasButton" icon={<RotateClockwiseIcon/>} size="md"
+                disabled={!canEdit || !ObjectEditUtil.canQuarterTurn(props.selection)}
+                onClick={() => ObjectEditUtil.tryQuarterTurn(props.selection)}
+            />
+        </SelectionToolRow>
     </div>;
 }

@@ -10,8 +10,8 @@ import ClosablePanelUtil from "../../util/closablePanelUtil";
 // another panel (anchorElementId) instead hangs just above that toggle, right-aligned to it within the
 // screen. With onClose it gets a close button and joins the back-gesture stack (see ClosablePanelUtil).
 
-export default function ScrollPanel({ children, id, onClose, anchorElementId, size = "md", overhang = false,
-    additionalClassNames = "" }: Props)
+export default function ScrollPanel({ children, id, onClose, closeRowContent, anchorElementId, size = "md",
+    overhang = false, additionalClassNames = "" }: Props)
 {
     const onRefChange = useMouseDragScroll("horizontal", "alwaysGrab");
     const anchorRect = useTrackedElementRect(anchorElementId ?? null);
@@ -33,8 +33,14 @@ export default function ScrollPanel({ children, id, onClose, anchorElementId, si
     // contents up to the column's width, past which the row scrolls (children are shrink-0; see
     // SelectionToolRow). Fitting the column instead would let an owner's margins overflow.
     const rowClassNames = "flex flex-row items-stretch gap-3";
+    const closeButton = closable && <IconButton icon={<CloseIcon/>} size="sm" onClick={() => onCloseRef.current?.()}/>;
     const panel = <div className={`flex flex-col gap-1 items-start min-w-0 ${anchored ? "w-fit max-w-full shrink-0" : ""} ${additionalClassNames}`}>
-        {closable && <IconButton icon={<CloseIcon/>} size="sm" onClick={() => onCloseRef.current?.()}/>}
+        {closeRowContent
+            ? <div className="flex flex-row items-center gap-3 w-full">
+                {closeButton}
+                {closeRowContent}
+            </div>
+            : closeButton}
         <div id={id} className={`p-2 flex flex-col w-fit max-w-full ${maxHeightClassNames[size]} bg-gray-700 rounded-lg pointer-events-auto yj-surface-convex`}>
             {overhang
                 // The scroller clips, so it reaches up past the panel's edge; only the row inside it takes
@@ -86,6 +92,8 @@ interface Props
     id?: string;
     // Adds a close button and back-gesture support.
     onClose?: () => void;
+    // Follows the close button on its row (e.g. a search bar).
+    closeRowContent?: ReactNode;
     // Toggle to hang from (see above).
     anchorElementId?: string;
     size?: "md" | "lg";

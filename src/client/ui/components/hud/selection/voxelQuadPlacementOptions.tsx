@@ -112,16 +112,6 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
             disabled={!canAddProp}
             onClick={() => tryAddPropFromQuad(props.selection)}
         />
-        {isSuperuser && <IconButton id="addDoorButton" icon={<AddDoorIcon/>} size="md"
-            disabled={!canAddDoor}
-            onClick={() => {
-                // New doors lead nowhere and aren't default entrances until configured.
-                tryAddObjectFromQuad(props.selection, doorTypeIndex, {
-                    [ObjectMetadataKeyEnumMap.DoorType]:
-                        new EncodableByteString(`${DoorTypeEnumMap.CustomEntrance}`),
-                });
-            }}
-        />}
         <IconButton id="addLampButton" icon={<AddLampIcon/>} size="md"
             disabled={!canAddLamp}
             onClick={() => {
@@ -139,6 +129,16 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
                 // The plaque is derived from the new label's id (see LabelObjectTypeConfig).
                 tryAddObjectFromQuad(props.selection, labelTypeIndex, {
                     [ObjectMetadataKeyEnumMap.Label]: new EncodableByteString(NEW_LABEL_TEXT),
+                });
+            }}
+        />}
+        {isSuperuser && <IconButton id="addDoorButton" icon={<AddDoorIcon/>} size="md"
+            disabled={!canAddDoor}
+            onClick={() => {
+                // New doors lead nowhere and aren't default entrances until configured.
+                tryAddObjectFromQuad(props.selection, doorTypeIndex, {
+                    [ObjectMetadataKeyEnumMap.DoorType]:
+                        new EncodableByteString(`${DoorTypeEnumMap.CustomEntrance}`),
                 });
             }}
         />}

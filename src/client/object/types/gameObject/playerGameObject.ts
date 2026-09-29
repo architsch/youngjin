@@ -10,8 +10,8 @@ import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../../shared/object/types
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
 import AdminPrefsUtil from "../../../../shared/object/util/adminPrefsUtil";
 
-const playerHalfHeightWithMargin = 0.5 * PLAYER_HEIGHT + 0.5;
-const playerRadiusWithMargin = PLAYER_RADIUS_XZ + 0.5;
+const playerHalfHeightWithMargin = 0.5 * PLAYER_HEIGHT + 1;
+const playerRadiusWithMargin = PLAYER_RADIUS_XZ + 1;
 
 const vector3Temp = new THREE.Vector3();
 
