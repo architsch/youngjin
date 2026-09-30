@@ -1,6 +1,7 @@
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y, NUM_COLLISION_LAYERS, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_ROOM, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, COLLISION_LAYER_NULL } from "../../system/sharedConstants";
 import Voxel from "../types/voxel";
 import VoxelQuadTransformDimensions from "../types/voxelQuadTransformDimensions";
+import Vec3 from "../../math/types/vec3";
 
 const VoxelQueryUtil =
 {
@@ -93,6 +94,28 @@ const VoxelQueryUtil =
         if (voxel == undefined)
             return true;
         return VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer);
+    },
+
+    // How far from origin, along an axis direction, the first occupied block begins: 0 if origin is inside
+    // one, Infinity if none begins within maxDistance. A grid walk, one block at a time.
+    getDistanceToOccupiedBlock(voxels: Voxel[], origin: Vec3, axisDir: Vec3, maxDistance: number): number
+    {
+        const axis: "x" | "y" | "z" = (axisDir.x != 0) ? "x" : (axisDir.y != 0) ? "y" : "z";
+        const sign = Math.sign(axisDir[axis]);
+        const blockSize = (axis === "y") ? COLLISION_LAYER_HEIGHT : 1;
+        const start = origin[axis] / blockSize;
+        const probe: Vec3 = {x: origin.x, y: origin.y, z: origin.z};
+        for (let block = Math.floor(start); ; block += sign)
+        {
+            // Where this block's near face lies ahead of the origin.
+            const distance = Math.max(0, ((sign > 0) ? block - start : start - (block + 1)) * blockSize);
+            if (distance > maxDistance)
+                return Infinity;
+            probe[axis] = (block + 0.5) * blockSize;
+            if (VoxelQueryUtil.isVoxelBlockOccupied(voxels, VoxelQueryUtil.getVoxelRowFromWorldZ(probe.z),
+                VoxelQueryUtil.getVoxelColFromWorldX(probe.x), VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(probe.y)))
+                return distance;
+        }
     },
 
     // Get quadIndex from properties

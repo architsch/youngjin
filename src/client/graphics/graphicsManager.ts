@@ -123,6 +123,12 @@ const GraphicsManager =
     {
         return scene;
     },
+    // Whether adaptive resolution has nothing left to give (see updatePixelRatio), so other costs should
+    // yield instead (e.g. particle density).
+    isResolutionAtFloor: (): boolean =>
+    {
+        return currPixelRatio <= minPixelRatio + pixelRatioMinChange;
+    },
     getCamera: (): THREE.PerspectiveCamera =>
     {
         return camera;

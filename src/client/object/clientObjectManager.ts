@@ -12,7 +12,7 @@ import SetObjectMetadataSignal from "../../shared/object/types/setObjectMetadata
 import SetObjectTransformSignal from "../../shared/object/types/setObjectTransformSignal";
 import PeriodicTransformReceiver from "./components/periodicTransformReceiver";
 import VoxelGameObject from "./types/gameObject/voxelGameObject";
-import { objectSelectionObservable } from "../system/clientObservables";
+import { objectEditObservable, objectSelectionObservable } from "../system/clientObservables";
 import ObjectSelection from "../graphics/types/gizmo/objectSelection";
 import ObjectUpdateUtil from "../../shared/object/util/objectUpdateUtil";
 import Vec3 from "../../shared/math/types/vec3";
@@ -162,6 +162,9 @@ const ClientObjectManager =
             await object.onSpawn();
             // Counts toward the loading bar during a room load; a no-op otherwise.
             RoomLoadProgressUtil.reportUnitSpawned();
+            // The user's own edit. Room loads never validate; remote edits announce themselves on arrival.
+            if (validate)
+                objectEditObservable.set({kind: "add", object: object.params});
             return true;
         }
         else
@@ -188,6 +191,8 @@ const ClientObjectManager =
             if (object.params.objectTypeIndex === playerTypeIndex)
                 delete playerByUserID[object.params.sourceUserID];
             await object.onDespawn(); // Asynchronous despawning process must be called AFTER unregistering the object, since the per-frame update call may still unexpectedly access the object while it is being partially torn down.
+            if (validate)
+                objectEditObservable.set({kind: "remove", object: object.params});
             return true;
         }
         else
@@ -256,7 +261,8 @@ const ClientObjectManager =
         if (!success)
             return;
         const gameObject = ObjectFactory.createServerSideObject(signal);
-        await ClientObjectManager.addObject(gameObject, false);
+        if (await ClientObjectManager.addObject(gameObject, false))
+            objectEditObservable.set({kind: "add", object: gameObject.params});
     },
     // Despawns once the object's room is available.
     onRemoveObjectSignalReceived: async (signal: RemoveObjectSignal) => {
@@ -271,7 +277,9 @@ const ClientObjectManager =
             ObjectSelection.unselect();
             VoxelQuadSelection.trySelectBestQuadNearby(sel.gameObject.params.transform.pos);
         }
-        await ClientObjectManager.removeObject(signal.objectId, false);
+        const removed = ClientObjectManager.getObjectById(signal.objectId);
+        if (await ClientObjectManager.removeObject(signal.objectId, false) && removed)
+            objectEditObservable.set({kind: "remove", object: removed.params});
     },
     onSetObjectTransformSignalReceived: async (signal: SetObjectTransformSignal) => {
         // Deferred handling only for non-physics updates (for performance).

@@ -68,6 +68,7 @@ The ThingsPool source code is open source under the Apache License 2.0. It is bu
     - [Label Text](docs/graphics/label_text.md)
     - [Lighting](docs/graphics/lighting.md)
     - [Materials and Shaders](docs/graphics/materials_and_shaders.md)
+    - [Particles and Animated Sprites](docs/graphics/particles.md)
 
 - **Testing**
     - E2E Tests

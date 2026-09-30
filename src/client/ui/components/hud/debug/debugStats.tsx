@@ -15,11 +15,13 @@ import SetObjectMetadataSignal from "../../../../../shared/object/types/setObjec
 import { ObjectMetadataKeyEnumMap } from "../../../../../shared/object/types/objectMetadataKey";
 import AdminPrefsUtil from "../../../../../shared/object/util/adminPrefsUtil";
 import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
+import ParticleSystem from "../../../../graphics/particle/particleSystem";
+import ParticleDebugUtil from "../../../../graphics/particle/util/particleDebugUtil";
 
 export default function DebugStats({env}: Props)
 {
     const [state, setState] = useState<DebugStatsState>({
-        display: false, fpsDesc: "?", playerPosDesc: "?", voxelDesc: "",
+        display: false, fpsDesc: "?", playerPosDesc: "?", particleDesc: "?", voxelDesc: "",
         voxelQuadSelectionDesc: "", debugCommand: "",
     });
 
@@ -38,6 +40,12 @@ export default function DebugStats({env}: Props)
                 z = myPlayer.position.z.toFixed(3);
             }
             const playerPosDesc = `(${x}, ${y}, ${z})`;
+
+            // Draw calls are the last frame's (the renderer resets its count per render).
+            const particleStats = ParticleSystem.getStats();
+            const particleDesc = `${particleStats.particles} particles, ${particleStats.sprites} sprites, ` +
+                `${particleStats.overwrites} overwritten, draw calls: ` +
+                `${GraphicsManager.getGameRenderer().info.render.calls}`;
 
             let voxelDesc = "";
             let voxelQuadSelectionDesc = "";
@@ -58,7 +66,7 @@ export default function DebugStats({env}: Props)
                 voxelDesc = `(row: ${v.row}, col: ${v.col}, collisionLayerMask: ${v.collisionLayerMask.toString(2)})`;
                 voxelQuadSelectionDesc = `(row: ${row}, col: ${col}, quad: (${orientation}${facingAxis} at layer ${collisionLayer}), texture: ${textureIndex})`;
             }
-            setState(prev => ({...prev, fpsDesc, playerPosDesc, voxelDesc, voxelQuadSelectionDesc}));
+            setState(prev => ({...prev, fpsDesc, playerPosDesc, particleDesc, voxelDesc, voxelQuadSelectionDesc}));
         }, 250);
 
         return () => clearInterval(interval); // stop the clock
@@ -82,6 +90,7 @@ export default function DebugStats({env}: Props)
         {state.display && <div className="m-0 p-1 text-xs text-gray-400 text-nowrap bg-black overflow-auto pointer-events-auto rounded-md">
             Server: {env.serverType}{env.gitCommit ? ` (${env.gitCommit})` : ""}, FPS: {state.fpsDesc}, Position: {state.playerPosDesc}
             <br/>User: {JSON.stringify(App.getUser())}
+            <br/>Particles: {state.particleDesc}
             {voxelDescLine}
             {voxelQuadSelectionDescLine}
             <br/>
@@ -108,7 +117,10 @@ export default function DebugStats({env}: Props)
                         case "restore context": setWebGLContextLost(false); break;
                         case "ghost on": setGhostMode(true); break;
                         case "ghost off": setGhostMode(false); break;
-                        default: notificationMessageObservable.set("Unknown debug command."); break;
+                        default:
+                            notificationMessageObservable.set(
+                                ParticleDebugUtil.tryRunCommand(command) ?? "Unknown debug command.");
+                            break;
                     }
                     setState({...state, debugCommand: ""});
                 }}/>
@@ -186,6 +198,7 @@ interface DebugStatsState
     display: boolean;
     fpsDesc: string;
     playerPosDesc: string;
+    particleDesc: string;
     voxelDesc: string;
     voxelQuadSelectionDesc: string;
     debugCommand: string;

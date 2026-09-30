@@ -1,4 +1,5 @@
-import { objectSelectionObservable, texturePackURLObservable, voxelQuadSelectionObservable } from "../system/clientObservables";
+import { objectSelectionObservable, roomShapeChangedObservable, texturePackURLObservable, voxelBlockEditObservable,
+    voxelQuadSelectionObservable } from "../system/clientObservables";
 import MoveVoxelBlockSignal from "../../shared/voxel/types/update/moveVoxelBlockSignal";
 import Room from "../../shared/room/types/room";
 import ClientObjectManager from "../object/clientObjectManager";
@@ -65,7 +66,10 @@ const ClientVoxelManager =
         const success = VoxelUpdateUtil.addVoxelBlock(App.getUser(), room.voxelGrid.voxels,
             quadIndex, quadTextureIndicesWithinLayer, validate ? room : undefined);
         if (success)
-            onRoomShapeChanged();
+        {
+            onRoomShapeChanged(room);
+            voxelBlockEditObservable.set({kind: "add", quadIndex});
+        }
         if (success && validate)
             ClientEventHistoryUtil.add(new ClientEvent(ClientEventType.ManuallyAddedVoxelBlock));
         return success;
@@ -86,7 +90,7 @@ const ClientVoxelManager =
                 }
             }
         }
-        onRoomShapeChanged();
+        onRoomShapeChanged(room);
         return true;
     },
     removeVoxelBlock: (room: Room, quadIndex: number,
@@ -95,7 +99,10 @@ const ClientVoxelManager =
         const success = VoxelUpdateUtil.removeVoxelBlock(App.getUser(), room.voxelGrid.voxels,
             quadIndex, validate ? room : undefined);
         if (success)
-            onRoomShapeChanged();
+        {
+            onRoomShapeChanged(room);
+            voxelBlockEditObservable.set({kind: "remove", quadIndex});
+        }
         if (success && validate)
             ClientEventHistoryUtil.add(new ClientEvent(ClientEventType.ManuallyRemovedVoxelBlock));
         return success;
@@ -116,7 +123,7 @@ const ClientVoxelManager =
                 }
             }
         }
-        onRoomShapeChanged();
+        onRoomShapeChanged(room);
         return true;
     },
     moveVoxelBlock: (room: Room, quadIndex: number,
@@ -126,7 +133,10 @@ const ClientVoxelManager =
         const success = VoxelUpdateUtil.moveVoxelBlock(App.getUser(), room.voxelGrid.voxels,
             quadIndex, rowOffset, colOffset, collisionLayerOffset, validate ? room : undefined);
         if (success)
-            onRoomShapeChanged();
+        {
+            onRoomShapeChanged(room);
+            voxelBlockEditObservable.set({kind: "move", quadIndex});
+        }
         return success;
     },
     setVoxelQuadTexture: (room: Room, quadIndex: number, textureIndex: number,
@@ -134,6 +144,8 @@ const ClientVoxelManager =
     {
         const success = VoxelUpdateUtil.setVoxelQuadTexture(App.getUser(), room.voxelGrid.voxels,
             quadIndex, textureIndex, validate ? room : undefined);
+        if (success)
+            voxelBlockEditObservable.set({kind: "retexture", quadIndex});
         if (success && validate)
             ClientEventHistoryUtil.add(new ClientEvent(ClientEventType.ManuallyChangedVoxelQuadTexture));
         return success;
@@ -229,9 +241,10 @@ function refreshSelections()
 }
 
 // Solid block changes invalidate lighting. Recomputation happens once on the next frame.
-function onRoomShapeChanged()
+function onRoomShapeChanged(room: Room)
 {
     GraphicsManager.getLightBlockMap().requestRecomputation();
+    roomShapeChangedObservable.set(room.id);
 }
 
 async function onVoxelQuadChange(change: VoxelQuadChange): Promise<void>

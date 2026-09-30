@@ -46,5 +46,7 @@ type SinglePlayerAction =
     | {type: "object_bounce", objectId: string, durationSeconds: SinglePlayerParam<number>,
         positionOffset?: SinglePlayerParam<Vec3>, rotationOffset?: SinglePlayerParam<Vec3>,
         scaleMultiplier?: SinglePlayerParam<Vec3>, oscillations?: SinglePlayerParam<number>}
+    | {type: "play_vfx", effect: string, position: SinglePlayerParam<Vec3>,
+        direction?: SinglePlayerParam<Vec3>, scale?: SinglePlayerParam<number>}
 
 export default SinglePlayerAction;

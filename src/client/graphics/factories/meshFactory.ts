@@ -90,6 +90,33 @@ const MeshFactory =
         }
         return ongoingLoad;
     },
+    // A quad drawn once per instance of the given interleaved attributes (see ParticleBatch). Its instances
+    // may be anywhere, so it is never frustum-culled, and it is never raycast: rays would only find its base
+    // quad at the room's origin.
+    loadParticleBatchMesh: async (meshId: string, materialParams: MaterialParams,
+        instanceAttributes: {[name: string]: THREE.InterleavedBufferAttribute}): Promise<THREE.Mesh> =>
+    {
+        const loadedMesh = loadedMeshes[meshId];
+        if (loadedMesh != undefined)
+            return loadedMesh;
+
+        // Shares the unit quad's own attributes.
+        const quad = await GeometryFactory.load("Square");
+        const geometry = new THREE.InstancedBufferGeometry();
+        for (const name of ["position", "normal", "uv"])
+            geometry.setAttribute(name, quad.getAttribute(name));
+        for (const name in instanceAttributes)
+            geometry.setAttribute(name, instanceAttributes[name]);
+        geometry.instanceCount = 0;
+
+        const newMesh = new THREE.Mesh(geometry, await MaterialFactory.load(materialParams));
+        newMesh.name = meshId;
+        newMesh.frustumCulled = false;
+        newMesh.raycast = () => {};
+        GraphicsManager.addObjectToSceneIfNotAlreadyAdded(newMesh);
+        loadedMeshes[meshId] = newMesh;
+        return newMesh;
+    },
     // Undefined when the pool is exhausted; the caller leaves the part undrawn and retries later.
     rentInstanceId: (meshId: string): number | undefined =>
     {

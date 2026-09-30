@@ -11,6 +11,9 @@ import { ObjectAttachmentConfig } from "../objectAttachmentConfig";
 import AddObjectSignal from "../addObjectSignal";
 import SetObjectMetadataSignal from "../setObjectMetadataSignal";
 import SetObjectTransformSignal from "../setObjectTransformSignal";
+import { ObjectMetadata } from "../objectMetadata";
+import AnimatedSpriteDescriptor from "../../../graphics/particle/types/animatedSpriteDescriptor";
+import ParticleEmitterDescriptor from "../../../graphics/particle/types/particleEmitterDescriptor";
 
 export default interface ObjectTypeConfig
 {
@@ -73,6 +76,17 @@ export default interface ObjectTypeConfig
             lightSource?: {},
             // On every copy, including the owner's own character.
             easingMotion?: {},
+            // A persistent animated sprite on the object's face (see AnimatedSprite): what every object of the
+            // type shows, and what one object changes of it, from its own metadata.
+            animatedSprite?: {
+                baseline: AnimatedSpriteDescriptor,
+                getOverride?: (metadata: ObjectMetadata) => Partial<AnimatedSpriteDescriptor> | undefined,
+            },
+            // A stream of particles out of the object's face (see ParticleEmitter), likewise.
+            particleEmitter?: {
+                baseline: ParticleEmitterDescriptor,
+                getOverride?: (metadata: ObjectMetadata) => Partial<ParticleEmitterDescriptor> | undefined,
+            },
         },
         spawnedByMe?: {
             playerController?: {},

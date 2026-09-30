@@ -3,6 +3,7 @@ import App from "../../app";
 import VoxelQuadSelection from "../../graphics/types/gizmo/voxelQuadSelection";
 import ClientObjectManager from "../../object/clientObjectManager";
 import EasingMotion from "../../object/components/easingMotion";
+import ParticleSystem from "../../graphics/particle/particleSystem";
 import { cameraModeObservable, clientFeatureFlagsObservable, downwardArrowTargetObservable, editModeOpeningOverrideObservable, headlineMessageObservable, myPlayerHiddenObservable, navigationArrowTargetObservable, orbitCameraDistanceRangeRequestObservable, orbitCameraTargetOverrideObservable, orbitCameraViewRequestObservable, screenArrowTargetObservable, screenDiagramObservable, screenOutlineCapsuleTargetObservable, screenOutlineRectTargetObservable, voxelQuadHighlightObservable, voxelQuadSelectionObservable, voxelQuadSelectionRestrictionObservable } from "../../system/clientObservables";
 import ClientVoxelManager from "../../voxel/clientVoxelManager";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
@@ -170,6 +171,11 @@ const SinglePlayerActionMap: {
             scaleMultiplier: action.scaleMultiplier?.(),
             oscillations: action.oscillations?.(),
         });
+    },
+    "play_vfx": (action) => // Plays a one-shot particle effect (see ParticleEffectConfigMap) at a point, e.g. to mark a step done.
+    {
+        ParticleSystem.play(action.effect, action.position(),
+            {direction: action.direction?.(), scale: action.scale?.()});
     },
 }
 

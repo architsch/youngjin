@@ -13,6 +13,7 @@
 | `npm run devclient` / `devserver` / `devcss` | one part only |
 | `npm run imageMapEditor` | edit the picture map (what canvases and props show) from samples of photos in its source library (`dev/assets/picture_sources/`, added in its Sources tab by file or address), at `http://127.0.0.1:3200`; `-- --workspace <dir>` edits a scratch copy with its own library, `-- --render-samples` / `--render-game-images` / `--contact-sheet` run without the page, as do `--add-sources <url> ...` / `--survey [<source>[:x,y,w,h] ...]` / `--save-samples <plan.json>` (batch sampling, saved disabled; see the `image-map-sampling` skill and [image_map.md](../graphics/image_map.md)) |
 | `npm run compositionEditor` | edit `pre_encoding_source.json` with live thumbnails, at `http://127.0.0.1:3100` (see [instanced_mesh_composition.md](../graphics/instanced_mesh_composition.md#indexed-compositions)) |
+| `npm run particleEffectEditor` | edit `particleEffects.json` (the particle effects) with a live preview, at `http://127.0.0.1:3300`; `-- --source <path>` edits a copy instead (see [particles.md](../graphics/particles.md)) |
 
 Open `http://127.0.0.1:3000`. Stop with `Ctrl+C`, then run `npm stop`.
 

@@ -13,6 +13,8 @@ import InstancedMeshComposer from "../components/instancedMeshComposer";
 import LabelText from "../components/labelText";
 import OrbitOccluder from "../components/orbitOccluder";
 import LightSource from "../components/lightSource";
+import AnimatedSprite from "../components/animatedSprite";
+import ParticleEmitter from "../components/particleEmitter";
 
 export const ObjectComponentConstructorMap: {[componentType: string]:
     (parentObject: GameObject, componentConfig: {[key: string]: any}) => GameObjectComponent} =
@@ -43,4 +45,8 @@ export const ObjectComponentConstructorMap: {[componentType: string]:
         new LabelText(parentObject, componentConfig),
     "lightSource": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
         new LightSource(parentObject, componentConfig),
+    "animatedSprite": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
+        new AnimatedSprite(parentObject, componentConfig),
+    "particleEmitter": (parentObject: GameObject, componentConfig: {[key: string]: any}): GameObjectComponent =>
+        new ParticleEmitter(parentObject, componentConfig),
 }

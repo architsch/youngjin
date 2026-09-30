@@ -18,6 +18,8 @@ import "./graphics/types/gizmo/colliderDebugGizmo";
 import "./graphics/types/gizmo/objectAttachmentEditGizmos"; // Side-effect: lets the selected attached object be dragged and resized by its outline
 import "./voxel/util/restrictedZoneOutlineUtil"; // Side-effect: keeps the outlines on the room's restricted zones up to date
 import { preloadGenericWorldSpaceGizmos } from "./graphics/types/gizmo/genericWorldSpaceGizmos"; // Side-effect: registers world-space gizmos that are used for general purposes; also exposes a pre-load hook
+import "./graphics/particle/util/particleTriggerUtil"; // Side-effect: plays the effects gameplay events call for
+import ParticleSystem from "./graphics/particle/particleSystem";
 import RoomTexturePackChangedSignal from "../shared/room/types/roomTexturePackChangedSignal";
 import RoomPrefsChangedSignal from "../shared/room/types/roomPrefsChangedSignal";
 import RoomLightingUtil from "./graphics/light/util/roomLightingUtil";
@@ -163,6 +165,8 @@ async function loadRoom(roomRuntimeMemory: RoomRuntimeMemory)
 
     RoomLoadProgressUtil.enterPhase("loadingGraphics");
     await GraphicsManager.load(update);
+    // Before any object spawns, since objects may own sprites and emitters.
+    await ParticleSystem.load();
     // Before the first frame, so the room isn't lit like the previous one.
     RoomLightingUtil.applyRoomLighting(currentRoom.prefs);
     PhysicsManager.load(roomRuntimeMemory);
@@ -182,6 +186,8 @@ async function unloadCurrentRoom()
 
     ClientVoxelManager.unload();
     await ClientObjectManager.unload();
+    // After the objects have released their sprites and emitters.
+    ParticleSystem.unload();
     PhysicsManager.unload(currentRoom.id);
     await GraphicsManager.unload();
 
@@ -199,6 +205,7 @@ function update()
         deltaTimePending -= deltaTime;
 
         ClientObjectManager.update(deltaTime);
+        ParticleSystem.update(deltaTime);
         GraphicsManager.update();
         SinglePlayerManager.update(deltaTime);
         updateObservable.set(deltaTime);

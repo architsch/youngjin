@@ -9,7 +9,10 @@ import InstancedColorMaterialParams from "../../../shared/graphics/material/type
 import InstancedTinMaterialParams from "../../../shared/graphics/material/types/instancedTinMaterialParams";
 import InstancedWoodMaterialParams from "../../../shared/graphics/material/types/instancedWoodMaterialParams";
 import InstancedEmissiveMaterialParams from "../../../shared/graphics/material/types/instancedEmissiveMaterialParams";
+import InstancedParticleMaterialParams from "../../../shared/graphics/material/types/instancedParticleMaterialParams";
 import LightBlockMapMaterialUtil from "../light/util/lightBlockMapMaterialUtil";
+import ParticleMaterialUtil from "../particle/util/particleMaterialUtil";
+import installParticleShader from "../shaders/particleShader";
 import AtmosphereMaterialUtil from "../util/atmosphereMaterialUtil";
 import INSTANCE_COLOR_FRAGMENT_GLSL from "../shaders/instanceColorGLSL";
 import installInstancedTexturePackShader, { getUVScales }
@@ -49,6 +52,15 @@ export const MaterialConstructorMap: { [materialType: string]:
     {
         return AtmosphereMaterialUtil.addFogNoise(
             createInstancedEmissiveMaterial(params as InstancedEmissiveMaterialParams));
+    },
+    // Solid sprites are surfaces, lit like any other; blended particles are air, which isn't.
+    "InstancedParticle": async (params: MaterialParams) =>
+    {
+        const p = params as InstancedParticleMaterialParams;
+        const material = createInstancedParticleMaterial(p);
+        return (p.renderState === "solid")
+            ? AtmosphereMaterialUtil.addFogNoise(LightBlockMapMaterialUtil.addSampling(material))
+            : AtmosphereMaterialUtil.addFogNoise(material);
     },
     "Sprite": async (params: MaterialParams) =>
     {
@@ -141,6 +153,40 @@ function createInstancedEmissiveMaterial(p: InstancedEmissiveMaterialParams): TH
     newMaterial.polygonOffsetUnits = -2;
     newMaterial.onBeforeCompile = installInstanceColorShader;
     return newMaterial;
+}
+
+// A particle batch (see ParticleBatch): premultiplied translucency that never writes depth, or a cut-out
+// surface that does.
+function createInstancedParticleMaterial(p: InstancedParticleMaterialParams): THREE.Material
+{
+    let material: THREE.MeshBasicMaterial | THREE.MeshPhongMaterial;
+    if (p.renderState === "solid")
+    {
+        material = new THREE.MeshPhongMaterial();
+        material.alphaTest = 0.5;
+        // Smooth cut-out edges from the MSAA samples, rather than stair steps that crawl as a sprite turns.
+        material.alphaToCoverage = true;
+    }
+    else
+    {
+        material = new THREE.MeshBasicMaterial();
+        material.transparent = true;
+        material.depthWrite = false;
+        material.blending = THREE.CustomBlending;
+        material.blendSrc = THREE.OneFactor;
+        material.blendDst = THREE.OneMinusSrcAlphaFactor;
+        // Visible from either side, but drawn once: three.js otherwise draws transparent double-sided
+        // materials twice.
+        material.side = THREE.DoubleSide;
+        material.forceSinglePass = true;
+    }
+    material.map = ParticleMaterialUtil.getAtlasTexture();
+    material.onBeforeCompile = (shader) =>
+    {
+        ParticleMaterialUtil.bindUniforms(shader);
+        installParticleShader(shader, p.renderState);
+    };
+    return material;
 }
 
 function createInstancedTinMaterial(p: InstancedTinMaterialParams): THREE.Material

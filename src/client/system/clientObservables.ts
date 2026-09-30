@@ -12,6 +12,7 @@ import PopupState from "../ui/types/popupState";
 import CoachMark from "../ui/types/coachMark";
 import CameraMode from "../graphics/types/cameraMode";
 import { FeatureFlag } from "../../shared/system/types/featureFlag";
+import AddObjectSignal from "../../shared/object/types/addObjectSignal";
 
 // Core Observables
 
@@ -29,6 +30,20 @@ export const connectionStateObservable = new Observable<string>();
 
 // Fires when the current room has fully loaded.
 export const roomChangedObservable = new Observable<RoomRuntimeMemory>();
+
+// Gameplay events: what an edit did, for whatever presents it (see ParticleTriggerUtil). They fire for local,
+// remote and rolled-back edits, never for a room loading or unloading. Never peek() one: it holds the last
+// event.
+
+// A voxel block added, removed, moved or retextured.
+export const voxelBlockEditObservable = new Observable<{kind: "add" | "remove" | "move" | "retexture",
+    quadIndex: number}>();
+
+// An object added or removed, including players joining and leaving.
+export const objectEditObservable = new Observable<{kind: "add" | "remove", object: AddObjectSignal}>();
+
+// Fires with the room's id whenever its occupied blocks change, including scripted chunk edits.
+export const roomShapeChangedObservable = new Observable<string>("");
 
 // Graphics & UI Observables
 

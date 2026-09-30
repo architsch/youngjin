@@ -46,9 +46,11 @@ const TextureFactory =
         return newTexture;
     },
     // A texture whose image is drawn onto a 2D canvas at load time (e.g. a procedurally
-    // generated sprite). Cached by textureId, and disposed via unload/unloadAll like any other.
+    // generated sprite). Cached by textureId, and disposed via unload/unloadAll like any other. sRGB and
+    // straight alpha unless told otherwise.
     loadCanvasTexture: (textureId: string, width: number, height: number,
-        draw: (ctx: CanvasRenderingContext2D, width: number, height: number) => void): THREE.Texture =>
+        draw: (ctx: CanvasRenderingContext2D, width: number, height: number) => void,
+        options?: {colorSpace?: THREE.ColorSpace, premultiplyAlpha?: boolean}): THREE.Texture =>
     {
         const loadedTexture = loadedTextures[textureId];
         if (loadedTexture != undefined)
@@ -63,7 +65,8 @@ const TextureFactory =
         draw(ctx, width, height);
 
         const newTexture = new THREE.CanvasTexture(canvas);
-        newTexture.colorSpace = THREE.SRGBColorSpace;
+        newTexture.colorSpace = options?.colorSpace ?? THREE.SRGBColorSpace;
+        newTexture.premultiplyAlpha = options?.premultiplyAlpha ?? false;
         loadedTextures[textureId] = newTexture;
         return newTexture;
     },
