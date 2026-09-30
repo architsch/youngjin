@@ -16,5 +16,8 @@ export default interface ObjectTypeClientConfig
         canBeSelectedByUserInEditMode: (gameObject: GameObject, user: User, room: Room) => boolean;
         editOptions?: ComponentType<EditOptionsProps>;
         editPanels?: EditPanel[]; // The sub-panels editOptions can raise.
+        // One of editPanels, raised as soon as the object is added from a selected face: what is left to pick of its
+        // look after what was picked before adding it (see VoxelQuadPlacementOptions).
+        installPanel?: EditPanel;
     };
 }

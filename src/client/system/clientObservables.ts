@@ -60,6 +60,11 @@ export const graphicsContextRestoredObservable = new Observable<number>(0);
 // Selected object (including the user's own character), or null.
 export const objectSelectionObservable = new Observable<ObjectSelection | null>(null);
 
+// Fires with the id of an object this user has just added from a selected face and selected (see
+// VoxelQuadPlacementOptions), whose tools then open on what is left to pick of its look (see
+// ObjectTypeClientConfig). Never peek() it: it holds the last one.
+export const objectInstalledObservable = new Observable<string>("");
+
 // Current game mode (see GameModeUtil). Stored separately from camera state, which can briefly lack a
 // target during selection swaps.
 export const gameModeObservable = new Observable<GameMode>("play");

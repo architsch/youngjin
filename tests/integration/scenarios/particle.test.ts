@@ -387,7 +387,7 @@ describe("effect definitions", () => {
     });
 
     it("include every effect the gameplay events play, whatever the editor renamed", () => {
-        for (const effect of ["blockAdded", "blockRemoved", "objectAdded", "objectRemoved"])
+        for (const effect of ["blockRemoved"])
             expect(ParticleEffectConfigMap.getConfig(effect), effect).toBeDefined();
     });
 

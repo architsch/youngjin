@@ -39,7 +39,6 @@ import BufferState from "../../../src/shared/networking/types/bufferState";
 import EncodableByteString from "../../../src/shared/networking/types/encodableByteString";
 import { FIXTURE_PICTURES, useFixturePictures } from "../helpers/pictureFixture";
 import QuarterTurnsUtil from "../../../src/shared/object/util/quarterTurnsUtil";
-import RandomNumberGenerator from "../../../src/shared/math/types/randomNumberGenerator";
 import ObjectMetadataEntryMap from "../../../src/shared/object/maps/objectMetadataEntryMap";
 import { COMPOSITION_PALETTE_NAME_BY_MATERIAL_ID, GEOMETRY_CODE_BY_ID, INSTANCE_COLORED_MATERIAL_IDS,
     INSTANCED_COLOR_MATERIAL_ID, INSTANCED_WOOD_MATERIAL_ID, MATERIAL_CODE_BY_ID,
@@ -470,17 +469,8 @@ describe("a canvas's looks", () => {
         expect(chosen.size).toBeGreaterThan(1);
     });
 
-    it("a canvas added by hand wears a random framed look", () => {
-        const framed = looks.slice(1).map(look => look.stored);
-        const random = new RandomNumberGenerator(7);
-        const chosen = new Set<string>();
-        for (let i = 0; i < 200; ++i)
-        {
-            const look = CanvasObjectTypeConfig.util.getRandomFramedLook(random);
-            expect(framed).toContain(look);
-            chosen.add(look);
-        }
-        expect(chosen.size).toBe(framed.length);
+    it("a canvas added by hand wears the frameless look until its frame is picked", () => {
+        expect(CanvasObjectTypeConfig.util.getFramelessLook()).toBe(looks[0].stored);
     });
 
     // ─── Permissions ───────────────────────────────────────────────────

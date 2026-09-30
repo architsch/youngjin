@@ -8,4 +8,7 @@ export default interface EditOptionsProps
     // object whose type declares the same panel (see ObjectTypeClientConfig).
     openPanel: EditPanel | null;
     setOpenPanel: (panel: EditPanel | null) => void;
+    // The open panel is the one the object was just added with (see ObjectTypeClientConfig.installPanel): nothing in
+    // it shows as picked yet, and a pick closes it.
+    installing: boolean;
 }

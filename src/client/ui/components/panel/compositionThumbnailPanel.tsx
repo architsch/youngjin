@@ -49,10 +49,12 @@ export default function CompositionThumbnailPanel({ id, objectType, currentCompo
 
 interface Props
 {
-    // Lets automation address the panel, and each thumbnail by its position (e.g. "lampSizeOptions.0").
+    // Lets automation address the panel, and each thumbnail by its position (e.g. "lampSizeOptions.0"). Panels
+    // choosing the same thing share one.
     id: string;
     objectType: string;
-    currentCompositionIndex: number;
+    // Absent when nothing is chosen yet (e.g. for an object about to be added).
+    currentCompositionIndex?: number;
     // Absent means every one may be picked.
     canChoose?: (compositionIndex: number) => boolean;
     onChoose: (compositionIndex: number) => void;

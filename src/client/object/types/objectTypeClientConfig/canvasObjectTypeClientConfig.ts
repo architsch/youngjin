@@ -11,6 +11,8 @@ const CanvasObjectTypeClientConfig: ObjectTypeClientConfig =
         canBeSelectedByUserInEditMode: (_gameObject, _user, _room) => true,
         editOptions: CanvasEditOptions,
         editPanels: ["compositionThumbnail", "imageMapThumbnail"],
+        // Its frame, once its painting is picked.
+        installPanel: "compositionThumbnail",
     },
 };
 

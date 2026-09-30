@@ -37,7 +37,7 @@ The selected object is moved by dragging the inside of its selection outline (`O
 - Where it doesn't fit (`ObjectAttachmentUtil`), it slides back toward where it stood on the same face, or takes the nearest spot within half its footprint on another. Failing both, it stays put.
 - Among the spots it would take, one whose whole face is in the open wins over a partly covered one, so a spot snapped half into the foot of a wall gives way to one beside it. A partly covered spot is still valid, and still taken when nothing clear is near.
 - Adding an object from a selected face uses the same search. A door instead stands on the storey floor.
-- A new object's size is its type's to choose, given which sizes that search finds a place for (`ObjectScalingConfig.getDefaultScale`). A canvas is a whole block wherever one fits, shifted up or down a wall if need be, and one layer tall where not (the side of a lone block). A prop takes a random image among those whose size fits.
+- A new object's size is its type's to choose, given which sizes that search finds a place for (`ObjectScalingConfig.getDefaultScale`). A canvas is a whole block wherever one fits, shifted up or down a wall if need be, and one layer tall where not (the side of a lone block). A prop's size is its image's and a lamp's is picked, both as they are added; the chooser dims those the search finds no place for.
 - A drag previews locally, and the server hears one transform, on release.
 
 ## Resizing

@@ -56,9 +56,9 @@ const LampObjectTypeConfig =
     persistent: true,
     autoUnload: true,
     category: ObjectCategoryEnumMap.Lamp,
-    // One of SIZES, picked from its edit options rather than by dragging a corner; with no roll to turn it
-    // by, this is how it is shaped to suit whichever face it is on. Depth is the gap from the face and
-    // never changes. A new one is one layer tall, so the side of a lone block holds it.
+    // One of SIZES, picked as it is added and later from its edit options rather than by dragging a corner;
+    // with no roll to turn it by, this is how it is shaped to suit whichever face it is on. Depth is the gap
+    // from the face and never changes. By default one layer tall, so the side of a lone block holds it.
     scaling: {
         scaleStep: {x: 0.5, y: 0.5, z: 0},
         minScale: {x: 0.5, y: 0.5, z: 1},

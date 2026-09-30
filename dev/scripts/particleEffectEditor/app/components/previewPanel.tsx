@@ -12,7 +12,7 @@ import WaveformControl from "./waveformControl";
 const SPEED_LABELS: {[speed: string]: string} = {"1": "1×", "0.5": "½×", "0.25": "¼×", "0.1": "⅒×"};
 const SCENE_LABELS: {[scene in PreviewScene]: string} = {block: "Block", floor: "Floor", wall: "Wall", air: "Air"};
 const SCENE_NOTES: {[scene in PreviewScene]: string} = {
-    block: "At a block's middle with the block standing there, as a block just added plays its effect.",
+    block: "At a block's middle with the block standing there.",
     floor: "At a block's middle over bare floor, as a block just removed plays its effect.",
     wall: "Just out of a wall and facing away from it, as an object on a wall plays its effect.",
     air: "Well above the floor, facing up.",

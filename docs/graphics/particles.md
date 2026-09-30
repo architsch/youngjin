@@ -2,7 +2,7 @@
 
 Reference: @src/client/graphics/particle/particleSystem.ts , @src/client/graphics/particle/types/particleBatch.ts , @src/client/graphics/shaders/particleShader.ts , @src/client/graphics/shaders/waveformGLSL.ts , @src/shared/math/util/waveformUtil.ts , @src/client/graphics/particle/maps/particleEffects.json , @src/client/graphics/particle/util/particleEffectConfigUtil.ts , @src/client/graphics/particle/maps/spriteConfigMap.ts , @src/client/graphics/particle/util/particleTriggerUtil.ts , @src/client/object/components/animatedSprite.ts , @src/client/object/components/particleEmitter.ts , @dev/scripts/particleEffectEditor/server.js
 
-`ParticleSystem` draws transient particles (puffs, sparks, wind) and persistent animated sprites (a fan's blades, a flame). They are only visuals: nothing in gameplay reads them.
+`ParticleSystem` draws transient particles (debris, sparks, wind) and persistent animated sprites (a fan's blades, a flame). They are only visuals: nothing in gameplay reads them.
 
 ## Stateless on the GPU
 - The CPU writes a particle's starting state once. The vertex shader computes everything after its birth from the clock: closed-form motion under gravity and drag, curves over its life, turbulence from the shared noise. CPU cost follows what spawns, not what is alive.

@@ -1,4 +1,4 @@
-import { useEffect, useReducer } from "react";
+import { ReactNode, useEffect, useReducer, useState } from "react";
 import VoxelQuadSelection from "../../../../graphics/types/gizmo/voxelQuadSelection";
 import IconButton from "../../input/iconButton";
 import TrashIcon from "../../../svg/icons/trashIcon";
@@ -36,7 +36,8 @@ import QuarterTurnsUtil from "../../../../../shared/object/util/quarterTurnsUtil
 import PointerCoordUtil from "../../../../graphics/util/pointerCoordUtil";
 import AddVoxelBlockSignal from "../../../../../shared/voxel/types/update/addVoxelBlockSignal";
 import ObjectIdUtil from "../../../../../shared/object/util/objectIdUtil";
-import { clientFeatureFlagsObservable, notificationMessageObservable, voxelQuadSelectionObservable } from "../../../../system/clientObservables";
+import { clientFeatureFlagsObservable, notificationMessageObservable, objectInstalledObservable,
+    voxelQuadSelectionObservable } from "../../../../system/clientObservables";
 import Room from "../../../../../shared/room/types/room";
 import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
 import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
@@ -45,11 +46,15 @@ import NumUtil from "../../../../../shared/math/util/numUtil";
 import RoomValidationUtil from "../../../../../shared/room/util/roomValidationUtil";
 import { DoorTypeEnumMap } from "../../../../../shared/object/types/doorType";
 import LampObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/lampObjectTypeConfig";
+import LabelObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/labelObjectTypeConfig";
 import CanvasObjectTypeConfig, { CANVAS_IMAGE_SUBFOLDER } from "../../../../../shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
 import PropObjectTypeConfig, { PROP_IMAGE_SUBFOLDER } from "../../../../../shared/object/types/objectTypeConfig/propObjectTypeConfig";
 import SelectionToolRow from "./selectionToolRow";
 import { ObjectMetadata } from "../../../../../shared/object/types/objectMetadata";
-import RandomNumberGenerator from "../../../../../shared/math/types/randomNumberGenerator";
+import ImageMapThumbnailPanel from "../../panel/imageMapThumbnailPanel";
+import CompositionThumbnailPanel from "../../panel/compositionThumbnailPanel";
+import CompositionMetadataUtil from "../../../../../shared/graphics/mesh/composition/util/compositionMetadataUtil";
+import PreEncodedCompositionIndexMap from "../../../../../shared/graphics/mesh/composition/maps/preEncodedCompositionIndexMap";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 const propTypeIndex = ObjectTypeConfigMap.getIndexByType("Prop");
@@ -67,9 +72,13 @@ const placementFeatureFlags = [
     FeatureFlag.DisableManualObjectAddition,
 ];
 
+// Face tools: remove or add a block, or add an object. An object's look is picked first, from a chooser that stacks
+// above this row, and the pick adds it.
 export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSelection})
 {
     const [, forceRefresh] = useReducer((x: number) => x + 1, 0);
+    // The type whose chooser is open.
+    const [choosingTypeIndex, setChoosingTypeIndex] = useState<number | null>(null);
 
     // Re-render this menu only when the feature flags it depends on change (e.g. tutorial steps).
     useEffect(() => {
@@ -83,8 +92,11 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
 
     const canAddCanvas = getImages(CANVAS_IMAGE_SUBFOLDER).length > 0
         && getPlaceableAttachedObjectTransform(props.selection, canvasTypeIndex) !== null;
-    const canAddProp = getPropImageScales(getUprightQuarterTurns(props.selection)).some(scale =>
-        getPlaceableAttachedObjectTransform(props.selection, propTypeIndex, scale) !== null);
+    const propImageFits = getPropImageFits(props.selection);
+    const canAddProp = getImages(PROP_IMAGE_SUBFOLDER).some(image => propImageFits(image.path));
+    const lampSizeFits = (compositionIndex: number) => getPlaceableAttachedObjectTransform(props.selection,
+        lampTypeIndex, LampObjectTypeConfig.util.getScale(compositionIndex)) !== null;
+    const canAddLamp = (PreEncodedCompositionIndexMap.Lamp ?? []).some(lampSizeFits);
 
     // Doors and labels: the room's superuser only (see RoomValidationUtil).
     const room = App.getCurrentRoom();
@@ -95,54 +107,70 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
     const canAddLabel = isSuperuser &&
         getPlaceableAttachedObjectTransform(props.selection, labelTypeIndex) !== null;
 
-    const canAddLamp = getPlaceableAttachedObjectTransform(props.selection, lampTypeIndex) !== null;
+    // A chooser shows only while its type can be added to the selected face. A pick closes it at once, so a second
+    // click can't add another while the first goes up.
+    const canAdd = new Map([[canvasTypeIndex, canAddCanvas], [propTypeIndex, canAddProp], [lampTypeIndex, canAddLamp],
+        [labelTypeIndex, canAddLabel], [doorTypeIndex, canAddDoor]]);
+    const choosing = (choosingTypeIndex != null && canAdd.get(choosingTypeIndex)) ? choosingTypeIndex : null;
+    const close = () => setChoosingTypeIndex(null);
+    const addButton = (id: string, icon: ReactNode, objectTypeIndex: number) => <IconButton id={id} icon={icon}
+        size="md" disabled={!canAdd.get(objectTypeIndex)} highlight={choosing == objectTypeIndex}
+        onClick={() => setChoosingTypeIndex((choosing == objectTypeIndex) ? null : objectTypeIndex)}/>;
 
-    return <SelectionToolRow>
-        <IconButton id="removeVoxelBlockButton" icon={<TrashIcon/>} size="md" color="red"
-            disabled={!canRemoveVoxelBlock(props.selection)}
-            onClick={() => tryRemoveVoxelBlock(props.selection)}/>
-        <IconButton id="addVoxelBlockButton" icon={<AddBlockIcon/>} size="md"
-            disabled={!canAddVoxelBlock(props.selection)}
-            onClick={() => tryAddVoxelBlock(props.selection)}/>
-        <IconButton id="addCanvasButton" icon={<AddCanvasIcon/>} size="md"
-            disabled={!canAddCanvas}
-            onClick={() => tryAddCanvasFromQuad(props.selection)}
-        />
-        <IconButton id="addPropButton" icon={<AddPropIcon/>} size="md"
-            disabled={!canAddProp}
-            onClick={() => tryAddPropFromQuad(props.selection)}
-        />
-        <IconButton id="addLampButton" icon={<AddLampIcon/>} size="md"
-            disabled={!canAddLamp}
-            onClick={() => {
-                // New lamps use default light settings, the first preset's look, and the default size
-                // (see LampObjectTypeConfig).
-                tryAddObjectFromQuad(props.selection, lampTypeIndex, {
-                    [ObjectMetadataKeyEnumMap.LightProperties]:
-                        new EncodableByteString(LampObjectTypeConfig.util.getDefaultLightProperties()),
-                });
-            }}
-        />
-        {isSuperuser && <IconButton id="addLabelButton" icon={<AddLabelIcon/>} size="md"
-            disabled={!canAddLabel}
-            onClick={() => {
-                // The plaque is derived from the new label's id (see LabelObjectTypeConfig).
-                tryAddObjectFromQuad(props.selection, labelTypeIndex, {
-                    [ObjectMetadataKeyEnumMap.Label]: new EncodableByteString(NEW_LABEL_TEXT),
-                });
-            }}
+    // Full width, so the rows can scroll horizontally instead of growing.
+    return <div className="flex flex-col gap-1 w-full">
+        {choosing == canvasTypeIndex && <ImageMapThumbnailPanel
+            id="canvasImageOptions"
+            searchInputId="canvasImageSearchInput"
+            searchPlaceholder="Search by title or author"
+            mapName="PictureImageMap"
+            subfolder={CANVAS_IMAGE_SUBFOLDER}
+            onChoose={path => { close(); tryAddCanvasFromQuad(props.selection, path); }}
+            onClose={close}
         />}
-        {isSuperuser && <IconButton id="addDoorButton" icon={<AddDoorIcon/>} size="md"
-            disabled={!canAddDoor}
-            onClick={() => {
-                // New doors lead nowhere and aren't default entrances until configured.
-                tryAddObjectFromQuad(props.selection, doorTypeIndex, {
-                    [ObjectMetadataKeyEnumMap.DoorType]:
-                        new EncodableByteString(`${DoorTypeEnumMap.CustomEntrance}`),
-                });
-            }}
+        {choosing == propTypeIndex && <ImageMapThumbnailPanel
+            id="propImageOptions"
+            searchInputId="propImageSearchInput"
+            searchPlaceholder="Search"
+            mapName="PictureImageMap"
+            subfolder={PROP_IMAGE_SUBFOLDER}
+            canChoose={propImageFits}
+            onChoose={path => { close(); tryAddPropFromQuad(props.selection, path); }}
+            onClose={close}
         />}
-    </SelectionToolRow>;
+        {choosing == lampTypeIndex && <CompositionThumbnailPanel
+            id="lampSizeOptions"
+            objectType={LampObjectTypeConfig.objectType}
+            canChoose={lampSizeFits}
+            onChoose={compositionIndex => { close(); tryAddLampFromQuad(props.selection, compositionIndex); }}
+            onClose={close}
+        />}
+        {choosing == labelTypeIndex && <CompositionThumbnailPanel
+            id="customizeLabelOptions"
+            objectType={LabelObjectTypeConfig.objectType}
+            onChoose={compositionIndex => { close(); tryAddLabelFromQuad(props.selection, compositionIndex); }}
+            onClose={close}
+        />}
+        {choosing == doorTypeIndex && <CompositionThumbnailPanel
+            id="customizeDoorOptions"
+            objectType={DoorObjectTypeConfig.objectType}
+            onChoose={compositionIndex => { close(); tryAddDoorFromQuad(props.selection, compositionIndex); }}
+            onClose={close}
+        />}
+        <SelectionToolRow>
+            <IconButton id="removeVoxelBlockButton" icon={<TrashIcon/>} size="md" color="red"
+                disabled={!canRemoveVoxelBlock(props.selection)}
+                onClick={() => tryRemoveVoxelBlock(props.selection)}/>
+            <IconButton id="addVoxelBlockButton" icon={<AddBlockIcon/>} size="md"
+                disabled={!canAddVoxelBlock(props.selection)}
+                onClick={() => tryAddVoxelBlock(props.selection)}/>
+            {addButton("addCanvasButton", <AddCanvasIcon/>, canvasTypeIndex)}
+            {addButton("addPropButton", <AddPropIcon/>, propTypeIndex)}
+            {addButton("addLampButton", <AddLampIcon/>, lampTypeIndex)}
+            {isSuperuser && addButton("addLabelButton", <AddLabelIcon/>, labelTypeIndex)}
+            {isSuperuser && addButton("addDoorButton", <AddDoorIcon/>, doorTypeIndex)}
+        </SelectionToolRow>
+    </div>;
 }
 
 // Placement transform for an object attached to the clicked face, or null if its type can't face that way
@@ -208,60 +236,88 @@ function getDoorHeight(quadIndex: number): number | undefined
 }
 
 async function tryAddObjectFromQuad(selection: VoxelQuadSelection, objectTypeIndex: number,
-    metadata: ObjectMetadata)
+    metadata: ObjectMetadata, scale?: Vec3)
 {
-    const tr = getPlaceableAttachedObjectTransform(selection, objectTypeIndex, undefined, metadata);
+    const tr = getPlaceableAttachedObjectTransform(selection, objectTypeIndex, scale, metadata);
     if (tr != null)
         await addObject(objectTypeIndex, tr, metadata);
 }
 
-// A random painting in a random frame, at the size a new canvas takes where it goes (see CanvasObjectTypeConfig) and
+// Frameless until its frame is picked, at the size a new canvas takes where it goes (see CanvasObjectTypeConfig) and
 // upright as the user sees it (on a floor or ceiling too).
-async function tryAddCanvasFromQuad(selection: VoxelQuadSelection)
+async function tryAddCanvasFromQuad(selection: VoxelQuadSelection, imagePath: string)
 {
-    const random = new RandomNumberGenerator();
-    const painting = random.pick(getImages(CANVAS_IMAGE_SUBFOLDER));
-    if (painting == undefined)
-        return;
     await tryAddObjectFromQuad(selection, canvasTypeIndex, {
-        [ObjectMetadataKeyEnumMap.ImagePath]: new EncodableByteString(painting.path),
+        [ObjectMetadataKeyEnumMap.ImagePath]: new EncodableByteString(imagePath),
         [ObjectMetadataKeyEnumMap.InstancedMeshComposition]: new EncodableByteString(
-            CanvasObjectTypeConfig.util.getRandomFramedLook(random)),
+            CanvasObjectTypeConfig.util.getFramelessLook()),
         [ObjectMetadataKeyEnumMap.QuarterTurns]: new EncodableByteString(
             QuarterTurnsUtil.encode(getUprightQuarterTurns(selection))),
     });
 }
 
-// An everyday object at its image's own size, upright as the user sees it (on a floor or ceiling too): images are
-// tried in random order until one fits near the click.
-async function tryAddPropFromQuad(selection: VoxelQuadSelection)
+// An everyday object at its image's own size, upright as the user sees it (on a floor or ceiling too).
+async function tryAddPropFromQuad(selection: VoxelQuadSelection, imagePath: string)
 {
     const quarterTurns = getUprightQuarterTurns(selection);
-    const random = new RandomNumberGenerator();
-    for (const image of random.shuffle([...getImages(PROP_IMAGE_SUBFOLDER)]))
-    {
-        const metadata: ObjectMetadata = {
-            [ObjectMetadataKeyEnumMap.ImagePath]: new EncodableByteString(image.path),
-            [ObjectMetadataKeyEnumMap.QuarterTurns]: new EncodableByteString(QuarterTurnsUtil.encode(quarterTurns)),
-        };
-        const tr = getPlaceableAttachedObjectTransform(selection, propTypeIndex,
-            PropObjectTypeConfig.util.getImageScale(image.path, quarterTurns), metadata);
-        if (tr != null)
-            return await addObject(propTypeIndex, tr, metadata);
-    }
+    await tryAddObjectFromQuad(selection, propTypeIndex, getPropMetadata(imagePath, quarterTurns),
+        PropObjectTypeConfig.util.getImageScale(imagePath, quarterTurns));
 }
 
-// The sizes a prop's images pin it to, turned so, each once: a prop can be added wherever one of them fits.
-function getPropImageScales(quarterTurns: number): Vec3[]
+// At the size of the look picked, with default light settings (see LampObjectTypeConfig).
+async function tryAddLampFromQuad(selection: VoxelQuadSelection, compositionIndex: number)
 {
-    const scales = new Map<string, Vec3>();
-    for (const image of getImages(PROP_IMAGE_SUBFOLDER))
-    {
-        const scale = PropObjectTypeConfig.util.getImageScale(image.path, quarterTurns);
-        if (scale != undefined)
-            scales.set(`${scale.x},${scale.y}`, scale);
-    }
-    return [...scales.values()];
+    await tryAddObjectFromQuad(selection, lampTypeIndex, {
+        [ObjectMetadataKeyEnumMap.LightProperties]:
+            new EncodableByteString(LampObjectTypeConfig.util.getDefaultLightProperties()),
+    }, LampObjectTypeConfig.util.getScale(compositionIndex));
+}
+
+async function tryAddLabelFromQuad(selection: VoxelQuadSelection, compositionIndex: number)
+{
+    const look = CompositionMetadataUtil.encodeIndexed(compositionIndex,
+        LabelObjectTypeConfig.components.spawnedByAny.instancedMeshComposer.codecVersion);
+    await tryAddObjectFromQuad(selection, labelTypeIndex, {
+        [ObjectMetadataKeyEnumMap.Label]: new EncodableByteString(NEW_LABEL_TEXT),
+        [ObjectMetadataKeyEnumMap.InstancedMeshComposition]: new EncodableByteString(look),
+    });
+}
+
+// New doors lead nowhere and aren't default entrances until configured.
+async function tryAddDoorFromQuad(selection: VoxelQuadSelection, compositionIndex: number)
+{
+    const look = CompositionMetadataUtil.encodeIndexed(compositionIndex,
+        DoorObjectTypeConfig.components.spawnedByAny.instancedMeshComposer.codecVersion);
+    await tryAddObjectFromQuad(selection, doorTypeIndex, {
+        [ObjectMetadataKeyEnumMap.DoorType]: new EncodableByteString(`${DoorTypeEnumMap.CustomEntrance}`),
+        [ObjectMetadataKeyEnumMap.InstancedMeshComposition]: new EncodableByteString(look),
+    });
+}
+
+// Whether a prop showing an image fits near the click, at the size the image pins it to: asked once per size, as
+// images share a handful of them.
+function getPropImageFits(selection: VoxelQuadSelection): (imagePath: string) => boolean
+{
+    const quarterTurns = getUprightQuarterTurns(selection);
+    const fitsBySize = new Map<string, boolean>();
+    return (imagePath: string) => {
+        const scale = PropObjectTypeConfig.util.getImageScale(imagePath, quarterTurns);
+        const size = scale ? `${scale.x},${scale.y}` : "";
+        if (!fitsBySize.has(size))
+        {
+            fitsBySize.set(size, getPlaceableAttachedObjectTransform(selection, propTypeIndex, scale,
+                getPropMetadata(imagePath, quarterTurns)) !== null);
+        }
+        return fitsBySize.get(size)!;
+    };
+}
+
+function getPropMetadata(imagePath: string, quarterTurns: number): ObjectMetadata
+{
+    return {
+        [ObjectMetadataKeyEnumMap.ImagePath]: new EncodableByteString(imagePath),
+        [ObjectMetadataKeyEnumMap.QuarterTurns]: new EncodableByteString(QuarterTurnsUtil.encode(quarterTurns)),
+    };
 }
 
 // The turn that shows content upright on the clicked face as the user sees it (see
@@ -295,7 +351,8 @@ async function addObject(objectTypeIndex: number, tr: ObjectTransform, metadata:
             if (room.roomType != RoomTypeEnumMap.SinglePlayer)
                 SocketsClient.emitAddObjectSignal(signal);
             VoxelQuadSelection.unselect();
-            ObjectSelection.trySelect(gameObject);
+            if (ObjectSelection.trySelect(gameObject))
+                objectInstalledObservable.set(objectId);
         }
     } catch (err) {
         console.error(`Exception while trying to add an object from a voxelQuad :: Error: ${ErrorUtil.getErrorMessage(err)}`);

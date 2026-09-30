@@ -54,7 +54,7 @@ Rebuild requests (a lamp changed, block work edited) are batched and handled onc
 
 ## Lamps
 - A lamp is an attached object that may go on any face: a wall, a floor or a ceiling (see [object_attachment.md](../geometry/object_attachment.md)). Anyone may edit lamps, subject to restricted zones, and every kind of lamp shares one capped count per room (see [object_update.md](../networking/object_update.md)).
-- It comes in a few fixed sizes, picked from thumbnails to suit whichever face it is on. A new lamp is one layer tall, so that the side of a lone block holds it.
+- It comes in a few fixed sizes, picked from thumbnails as it is added and later to suit whichever face it is on.
 - Its look is a glow over its whole footprint, drawn with the **unlit** material (shared with the player's face, and not lit by the field). Each size has its own pre-encoded look, and the lamp draws the one for its size, so nothing about the look is stored (see [instanced_mesh_composition.md](instanced_mesh_composition.md)).
 - The glow's color is derived from its light.
 - Its light originates in the **block in front of its face**, because the fill stops immediately in a solid block.

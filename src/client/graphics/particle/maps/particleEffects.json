@@ -1,50 +1,8 @@
 {
     "effects": {
-        "blockAdded": {
-            "note": "A block settling into place: a puff bursting out of its faces and resting on the floor.",
-            "layers": [
-                {
-                    "sprite": "puff",
-                    "additiveness": 0.1,
-                    "burst": 28,
-                    "spawnHalfSize": {"x": 0.5, "y": 0.5, "z": 0.25},
-                    "spawnOnSurface": true,
-                    "launch": "radial",
-                    "spread": 0.4,
-                    "speed": [2.5, 6.5],
-                    "lifetime": [0.4, 0.65],
-                    "size": [0.75, 1.1],
-                    "spin": [-2.5, 2.5],
-                    "gravity": -0.5,
-                    "drag": 9,
-                    "landing": true,
-                    "sizeCurve": [0.45, 0.85, 1, 1.08, 1.13, 1.16, 1.15, 1.05],
-                    "alphaCurve": [1, 1, 0.9, 0.72, 0.5, 0.3, 0.12, 0],
-                    "colorCurve": ["#f4f0e8", "#e2dbcf"]
-                }
-            ]
-        },
         "blockRemoved": {
-            "note": "A block broken apart: a puff bursting where it stood, and chips flung out onto the floor.",
+            "note": "A block broken apart: chips flung out onto the floor.",
             "layers": [
-                {
-                    "sprite": "puff",
-                    "additiveness": 0.1,
-                    "burst": 30,
-                    "spawnHalfSize": {"x": 0.45, "y": 0.45, "z": 0.2},
-                    "launch": "radial",
-                    "spread": 0.4,
-                    "speed": [2.5, 7],
-                    "lifetime": [0.4, 0.7],
-                    "size": [0.8, 1.2],
-                    "spin": [-2.5, 2.5],
-                    "gravity": -0.5,
-                    "drag": 9,
-                    "landing": true,
-                    "sizeCurve": [0.45, 0.85, 1, 1.08, 1.13, 1.16, 1.15, 1.05],
-                    "alphaCurve": [1, 1, 0.9, 0.72, 0.5, 0.3, 0.12, 0],
-                    "colorCurve": ["#efeae1", "#d8d0c3"]
-                },
                 {
                     "sprite": "chip",
                     "burst": 8,
@@ -63,83 +21,24 @@
                 }
             ]
         },
-        "objectAdded": {
-            "note": "An object appearing: a puff bursting out of its face.",
-            "layers": [
-                {
-                    "sprite": "puff",
-                    "additiveness": 0.1,
-                    "burst": 24,
-                    "spawnHalfSize": {"x": 0.45, "y": 0.45, "z": 0.05},
-                    "launch": "forward",
-                    "spread": 1.3,
-                    "speed": [2, 5.5],
-                    "lifetime": [0.35, 0.6],
-                    "size": [0.65, 1],
-                    "spin": [-2.5, 2.5],
-                    "gravity": -0.5,
-                    "drag": 9,
-                    "landing": true,
-                    "sizeCurve": [0.45, 0.85, 1, 1.08, 1.13, 1.16, 1.15, 1.05],
-                    "alphaCurve": [1, 1, 0.9, 0.72, 0.5, 0.3, 0.12, 0],
-                    "colorCurve": ["#f7f4ee", "#e8e2d8"]
-                }
-            ]
-        },
-        "objectRemoved": {
-            "note": "An object taken away: a puff bursting where it was.",
-            "layers": [
-                {
-                    "sprite": "puff",
-                    "additiveness": 0.1,
-                    "burst": 24,
-                    "spawnHalfSize": {"x": 0.45, "y": 0.45, "z": 0.05},
-                    "launch": "forward",
-                    "spread": 1.3,
-                    "speed": [2, 5.5],
-                    "lifetime": [0.35, 0.6],
-                    "size": [0.65, 1],
-                    "spin": [-2.5, 2.5],
-                    "gravity": -0.5,
-                    "drag": 9,
-                    "landing": true,
-                    "sizeCurve": [0.45, 0.85, 1, 1.08, 1.13, 1.16, 1.15, 1.05],
-                    "alphaCurve": [1, 1, 0.9, 0.72, 0.5, 0.3, 0.12, 0],
-                    "colorCurve": ["#efeae1", "#d8d0c3"]
-                }
-            ]
-        },
         "wind": {
-            "note": "A stream of air out of a face: streaks along the flow and faint dust carried with it.",
+            "note": "A stream of air out of a face: a rapid jet of puffs that swell and thin out as they go, like steam from a kettle.",
             "layers": [
                 {
-                    "sprite": "streak",
-                    "orientation": "velocity",
-                    "stretch": 0.5,
-                    "rate": 26,
-                    "spawnHalfSize": {"x": 0.4, "y": 0.4, "z": 0.02},
-                    "spread": 0.08,
-                    "speed": [7.2, 9.2],
-                    "lifetime": [0.9, 1.2],
-                    "size": [0.17, 0.38],
-                    "drag": 0.4,
-                    "turbulence": 0.12,
-                    "alphaCurve": [0, 0.35, 0.35, 0],
-                    "colorCurve": ["#f2f6fa"]
-                },
-                {
-                    "sprite": "softDot",
-                    "lit": true,
-                    "rate": 10,
-                    "spawnHalfSize": {"x": 0.45, "y": 0.45, "z": 0.02},
-                    "spread": 0.1,
-                    "speed": [5.3, 7.2],
-                    "lifetime": [1, 1.3],
-                    "size": [0.15, 0.38],
-                    "drag": 0.4,
-                    "turbulence": 0.2,
-                    "alphaCurve": [0, 0.5, 0.5, 0],
-                    "colorCurve": ["#e6e0d4"]
+                    "sprite": "puff",
+                    "additiveness": 0.15,
+                    "rate": 110,
+                    "spawnHalfSize": {"x": 0.1, "y": 0.1, "z": 0.02},
+                    "spread": 0.18,
+                    "speed": [4.6, 5.8],
+                    "lifetime": [0.95, 1.2],
+                    "size": [0.42, 0.56],
+                    "spin": [-1.2, 1.2],
+                    "drag": 0.6,
+                    "turbulence": 0.95,
+                    "sizeCurve": [0.7, 1.1, 1.5, 1.85, 2.15, 2.45, 2.7, 2.9],
+                    "alphaCurve": [0.55, 0.6, 0.5, 0.38, 0.27, 0.17, 0.08, 0],
+                    "colorCurve": ["#f7f9fb", "#dfe5eb"]
                 }
             ]
         },

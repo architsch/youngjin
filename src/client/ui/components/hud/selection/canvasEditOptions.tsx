@@ -41,8 +41,12 @@ export default function CanvasEditOptions(props: EditOptionsProps)
         {customizingFrame && canEdit && <CompositionThumbnailPanel
             id="customizeCanvasOptions"
             objectType={CanvasObjectTypeConfig.objectType}
-            currentCompositionIndex={ObjectEditUtil.getCompositionIndex(props.selection)}
-            onChoose={(compositionIndex) => ObjectEditUtil.trySetCompositionIndex(props.selection, compositionIndex)}
+            currentCompositionIndex={props.installing ? undefined : ObjectEditUtil.getCompositionIndex(props.selection)}
+            onChoose={(compositionIndex) => {
+                ObjectEditUtil.trySetCompositionIndex(props.selection, compositionIndex);
+                if (props.installing)
+                    props.setOpenPanel(null);
+            }}
             onClose={() => props.setOpenPanel(null)}
         />}
         <SelectionToolRow>

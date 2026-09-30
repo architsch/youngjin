@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useRef } from "react";
+import { ReactNode, RefObject, useCallback, useEffect, useRef } from "react";
 import IconButton from "../input/iconButton";
 import CloseIcon from "../../svg/icons/closeIcon";
 import useMouseDragScroll from "../../util/mouseDragScroll";
@@ -11,9 +11,14 @@ import ClosablePanelUtil from "../../util/closablePanelUtil";
 // screen. With onClose it gets a close button and joins the back-gesture stack (see ClosablePanelUtil).
 
 export default function ScrollPanel({ children, id, onClose, closeRowContent, anchorElementId, size = "md",
-    overhang = false, additionalClassNames = "" }: Props)
+    overhang = false, scrollerRef, onScroll, additionalClassNames = "" }: Props)
 {
     const onRefChange = useMouseDragScroll("horizontal", "alwaysGrab");
+    const setScroller = useCallback((node: HTMLDivElement | null) => {
+        onRefChange(node);
+        if (scrollerRef)
+            scrollerRef.current = node;
+    }, [onRefChange, scrollerRef]);
     const anchorRect = useTrackedElementRect(anchorElementId ?? null);
     const anchored = anchorElementId != undefined;
 
@@ -45,12 +50,14 @@ export default function ScrollPanel({ children, id, onClose, closeRowContent, an
             {overhang
                 // The scroller clips, so it reaches up past the panel's edge; only the row inside it takes
                 // pointer input, which keeps that extra room click-through.
-                ? <div ref={onRefChange} className="w-full min-h-0 -mt-6 pt-6 overflow-auto no-scrollbar pointer-events-none">
+                ? <div ref={setScroller} onScroll={onScroll}
+                    className="w-full min-h-0 -mt-6 pt-6 overflow-auto no-scrollbar pointer-events-none">
                     <div className={`${rowClassNames} w-max pointer-events-auto`}>
                         {children}
                     </div>
                 </div>
-                : <div ref={onRefChange} className={`${rowClassNames} w-full min-h-0 overflow-auto no-scrollbar`}>
+                : <div ref={setScroller} onScroll={onScroll}
+                    className={`${rowClassNames} w-full min-h-0 overflow-auto no-scrollbar`}>
                     {children}
                 </div>}
         </div>
@@ -99,5 +106,8 @@ interface Props
     size?: "md" | "lg";
     // Lets children stick out over the panel's top edge (e.g. entry badges) without making it taller.
     overhang?: boolean;
+    // The element that scrolls, and a call each time it does (e.g. to keep where it stands; see ThumbnailPanel).
+    scrollerRef?: RefObject<HTMLDivElement | null>;
+    onScroll?: () => void;
     additionalClassNames?: string;
 }

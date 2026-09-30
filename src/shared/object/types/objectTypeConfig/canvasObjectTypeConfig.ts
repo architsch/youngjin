@@ -13,7 +13,6 @@ import SetObjectMetadataSignal from "../../types/setObjectMetadataSignal";
 import SetObjectTransformSignal from "../../types/setObjectTransformSignal";
 import { ALL_FACE_DIRECTIONS, ATTACHMENT_HITBOX_INSET } from "../../../system/sharedConstants";
 import PreEncodedCompositionIndexMap from "../../../graphics/mesh/composition/maps/preEncodedCompositionIndexMap";
-import RandomNumberGenerator from "../../../math/types/randomNumberGenerator";
 import Vec3 from "../../../math/types/vec3";
 
 // The picture map's subfolder of paintings, the only images a canvas shows.
@@ -115,12 +114,11 @@ const CanvasObjectTypeConfig =
         },
     },
     util: {
-        // Any look after the first (which has no frame; see pre_encoding_source.json): what a canvas added by
-        // hand wears.
-        getRandomFramedLook: (random: RandomNumberGenerator): string =>
+        // The first look, which has no frame (see pre_encoding_source.json): what a canvas added by hand wears until
+        // its frame is picked.
+        getFramelessLook: (): string =>
         {
-            const looks = PreEncodedCompositionIndexMap.Canvas ?? [];
-            return CompositionMetadataUtil.encodeIndexed(looks[random.randomInt(1, looks.length)] ?? 0,
+            return CompositionMetadataUtil.encodeIndexed(PreEncodedCompositionIndexMap.Canvas?.[0] ?? 0,
                 COMPOSITION_CODEC_VERSION);
         },
     },

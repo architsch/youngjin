@@ -795,6 +795,9 @@
   .resize-none {
     resize: none;
   }
+  .scroll-ml-1\.5 {
+    scroll-margin-left: calc(var(--spacing) * 1.5);
+  }
   .flex-col {
     flex-direction: column;
   }

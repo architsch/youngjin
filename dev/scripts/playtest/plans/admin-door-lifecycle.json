@@ -42,6 +42,11 @@
     {
       "type": "uiClick",
       "elementId": "addDoorButton",
+      "settleMs": 800
+    },
+    {
+      "type": "uiClick",
+      "elementId": "customizeDoorOptions\\.0",
       "settleMs": 2500
     },
     {
