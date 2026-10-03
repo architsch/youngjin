@@ -10,7 +10,7 @@ import GraphicsManager from "./graphics/graphicsManager";
 import PhysicsManager from "../shared/physics/physicsManager";
 import Room from "../shared/room/types/room";
 import { RoomTypeEnumMap } from "../shared/room/types/roomType";
-import { endClientProcess, ongoingClientProcessExists } from "./system/types/clientProcess";
+import { endClientProcess, ongoingClientProcessExists, tryStartClientProcess } from "./system/types/clientProcess";
 import User from "../shared/user/types/user";
 import { roomChangedObservable, updateObservable, singlePlayerObservable, notificationMessageObservable } from "./system/clientObservables";
 import { roomPrefsChangedObservable } from "../shared/system/sharedObservables";
@@ -39,6 +39,8 @@ let user: User;
 let prevTime: number;
 let deltaTimePending: number;
 let currentRoom: Room | undefined;
+// The room change under way, which the next one waits for (see onRoomChangedSignalReceived).
+let lastRoomChange: Promise<void> = Promise.resolve();
 
 const tickTimeQueue: number[] = [];
 
@@ -48,13 +50,18 @@ const App =
     {
         env = newEnv;
         user = User.fromString(env.userString);
-        // Single-player mode is driven by the joined room (see onRoomChangedSignalReceived), not by
+        // Single-player mode is driven by the joined room (see changeRoom), not by
         // this page-embedded flag, which can disagree with the socket's user.
         singlePlayerObservable.set({mode: "", step: ""});
     },
     getEnv: (): ThingsPoolEnv =>
     {
         return env;
+    },
+    // The live server's client, rather than staging's or a dev server's (see IS_PUBLIC_SITE).
+    isPublicSite: (): boolean =>
+    {
+        return env.mode != "dev" && env.serverType != "Staging";
     },
     getUser: (): User =>
     {
@@ -91,49 +98,13 @@ const App =
     {
         return currentRoom!.voxelGrid.quadsMem.quads;
     },
-    // Unloads the previous room (if any) and loads the new one.
-    onRoomChangedSignalReceived: async (roomChangedSignal: RoomChangedSignal) =>
+    // Rooms change one at a time: the server can send one nobody asked for (see
+    // ServerRoomManager.loadRoomFile), and it may arrive while another is still loading.
+    onRoomChangedSignalReceived: (roomChangedSignal: RoomChangedSignal): Promise<void> =>
     {
-        if (currentRoom != undefined)
-        {
-            RoomLoadProgressUtil.enterPhase("unloadingRoom");
-            await unloadCurrentRoom();
-        }
-        await loadRoom(roomChangedSignal.roomRuntimeMemory);
-
-        // Disposes the previous room's gizmos so the pre-load below recreates them.
-        roomChangedObservable.set(roomChangedSignal.roomRuntimeMemory);
-
-        // Precompile shaders and create gizmos behind the loading screen. Failure only loses the
-        // optimization, so it mustn't block loading.
-        RoomLoadProgressUtil.enterPhase("compilingShaders");
-        try
-        {
-            await preloadGenericWorldSpaceGizmos();
-            await GraphicsManager.precompileSceneShaders();
-        }
-        catch (err)
-        {
-            console.error("Failed to pre-load world-space gizmo shaders.", err);
-        }
-
-        endClientProcess("roomChange");
-
-        // Remove superfluous trailing parts of the URL
-        window.history.replaceState(null, "", "/");
-
-        // The joined room decides whether single-player runs (its roomName is the mode id).
-        const joinedRoom = roomChangedSignal.roomRuntimeMemory.room;
-        if (joinedRoom.roomType == RoomTypeEnumMap.SinglePlayer)
-        {
-            singlePlayerObservable.set({mode: joinedRoom.roomName, step: "initial"});
-        }
-        else
-        {
-            // Ends any single-player experience we just left (tears down UI/flags, tells the server).
-            // No-op otherwise.
-            SinglePlayerManager.finishSinglePlayerMode();
-        }
+        const roomChange = lastRoomChange.then(() => changeRoom(roomChangedSignal));
+        lastRoomChange = roomChange.catch(() => {}); // A failed change must not hold up the next.
+        return roomChange;
     },
     // Releases the loading indicator and explains why the user stays put.
     onRoomChangeRejectedSignalReceived: (roomChangeRejectedSignal: RoomChangeRejectedSignal) =>
@@ -152,6 +123,54 @@ function getRoomChangeRejectionMessage(reason: RoomChangeRejectionReason): strin
             return "This room is full. Please try another one.";
         default:
             return "Failed to enter the room. Please try again.";
+    }
+}
+
+// Unloads the previous room (if any) and loads the new one.
+async function changeRoom(roomChangedSignal: RoomChangedSignal)
+{
+    // Whoever asked for the room has put up the loading screen already; an unasked one puts it up here.
+    tryStartClientProcess("roomChange", 1, 0);
+
+    if (currentRoom != undefined)
+    {
+        RoomLoadProgressUtil.enterPhase("unloadingRoom");
+        await unloadCurrentRoom();
+    }
+    await loadRoom(roomChangedSignal.roomRuntimeMemory);
+
+    // Disposes the previous room's gizmos so the pre-load below recreates them.
+    roomChangedObservable.set(roomChangedSignal.roomRuntimeMemory);
+
+    // Precompile shaders and create gizmos behind the loading screen. Failure only loses the
+    // optimization, so it mustn't block loading.
+    RoomLoadProgressUtil.enterPhase("compilingShaders");
+    try
+    {
+        await preloadGenericWorldSpaceGizmos();
+        await GraphicsManager.precompileSceneShaders();
+    }
+    catch (err)
+    {
+        console.error("Failed to pre-load world-space gizmo shaders.", err);
+    }
+
+    endClientProcess("roomChange");
+
+    // Remove superfluous trailing parts of the URL
+    window.history.replaceState(null, "", "/");
+
+    // The joined room decides whether single-player runs (its roomName is the mode id).
+    const joinedRoom = roomChangedSignal.roomRuntimeMemory.room;
+    if (joinedRoom.roomType == RoomTypeEnumMap.SinglePlayer)
+    {
+        singlePlayerObservable.set({mode: joinedRoom.roomName, step: "initial"});
+    }
+    else
+    {
+        // Ends any single-player experience we just left (tears down UI/flags, tells the server).
+        // No-op otherwise.
+        SinglePlayerManager.finishSinglePlayerMode();
     }
 }
 

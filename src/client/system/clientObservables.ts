@@ -65,6 +65,11 @@ export const objectSelectionObservable = new Observable<ObjectSelection | null>(
 // ObjectTypeClientConfig). Never peek() it: it holds the last one.
 export const objectInstalledObservable = new Observable<string>("");
 
+// What an automatic selection falls back on when no voxel quad near will do (see VoxelQuadSelection): selects an
+// object near the position and returns whether it did. Set by ClientObjectManager, which the selection can't
+// import without a cycle through GameObject.
+export const nearbyObjectSelectorObservable = new Observable<((position: Vec3) => boolean) | null>(null);
+
 // Current game mode (see GameModeUtil). Stored separately from camera state, which can briefly lack a
 // target during selection swaps.
 export const gameModeObservable = new Observable<GameMode>("play");

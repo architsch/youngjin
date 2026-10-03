@@ -55,7 +55,8 @@ export default function ImageGridChooserForm({mapName, initialChoicePath, onChoo
             selectedRow={selectedRow}
             numCols={imageMap.getNumGridCols(selectedSubfolderName)}
             numRows={imageMap.getNumGridRows(selectedSubfolderName)}
-            cellSize={imageMap.getGridCellSize()}
+            cellWidth={imageMap.getGridCellSize()}
+            cellHeight={imageMap.getGridCellHeight()}
             onSelect={(col, row) => { setSelectedCol(col); setSelectedRow(row); }}/>
 
         <div className="sticky bottom-0 -mx-5 -mb-5 px-5 py-3 bg-gray-600 rounded-b-lg flex flex-row items-center justify-center gap-2">

@@ -69,7 +69,9 @@ under `public/app/assets/pictures/2/` once enabled and are parked under
 `dev/assets/disabled_pictures/2/` until then, and the full-resolution samples
 of them under `dev/assets/pictures/2/`, all used under the Unsplash License.
 The other photographs in `2/` are ThingsPool's own, covered above as original
-game artwork. (`dev/assets/pictures/1/` holds copies of the paintings under
+game artwork, as are the photographs in `1/` whose entries name thingspool as
+their author, with their samples and parked copies under `dev/assets/`.
+(`dev/assets/pictures/1/` also holds copies of the paintings under
 `public/app/assets/pictures/1/`, which keep those images' terms.) See
 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for the full list.
 

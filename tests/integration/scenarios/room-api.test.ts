@@ -1,11 +1,14 @@
 /**
- * Integration tests: room API routes (/create_room, /change_room_texture, /change_room_prefs), called
- * directly with mock Express objects and a mocked DB.
+ * Integration tests: room API routes (/create_room, /change_room_texture, /change_room_prefs,
+ * /load_room_file), called directly with mock Express objects and a mocked DB.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import User from "../../../src/shared/user/types/user";
+import RoomFile from "../../../src/shared/room/types/roomFile";
+import EncodingUtil from "../../../src/shared/networking/util/encodingUtil";
+import { createTestRoom } from "../helpers/roomContent";
 
 // ─── Mock DB modules ──────────────────────────────────────────────────────
 
@@ -16,7 +19,14 @@ const mockGetRoomContent = vi.fn();
 const mockGetDBRoom = vi.fn();
 const mockChangeRoomTexturePackPath = vi.fn();
 const mockChangeRoomPrefs = vi.fn();
+const mockLoadRoomFile = vi.fn();
 const mockSearchUsersWithUserName = vi.fn();
+
+// Which room each user stands in, and the rooms held in memory, as ServerRoomManager keeps them.
+const mockRoomManagerState = vi.hoisted(() => ({
+    currentRoomIDByUserID: {} as {[userID: string]: string},
+    roomRuntimeMemories: {} as {[roomID: string]: {room: any}},
+}));
 
 vi.mock("../../../src/server/db/util/dbUserUtil", () => ({
     default: {
@@ -76,6 +86,9 @@ vi.mock("../../../src/server/room/serverRoomManager", () => ({
             mockChangeRoomPrefs(_room, _prefs);
             return true;
         }),
+        currentRoomIDByUserID: mockRoomManagerState.currentRoomIDByUserID,
+        roomRuntimeMemories: mockRoomManagerState.roomRuntimeMemories,
+        loadRoomFile: (...args: any[]) => mockLoadRoomFile(...args),
     },
 }));
 
@@ -104,6 +117,16 @@ vi.mock("../../../src/server/user/util/userIdentificationUtil", () => ({
                 res.status(401).send("Unauthorized");
             }
         },
+        // As the real one: the identified user has to be an admin.
+        identifyAdmin: async (req: any, res: any, next: () => void) => {
+            if (!req.userString) {
+                res.status(401).send("Unauthorized");
+            } else if (User.fromString(req.userString).userType !== UserTypeEnumMap.Admin) {
+                res.status(403).send("User doesn't satisfy the pass-condition.");
+            } else {
+                next();
+            }
+        },
     },
 }));
 
@@ -124,10 +147,11 @@ import express from "express";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
-function createMockReqRes(user: User, body: any = {}) {
+function createMockReqRes(user: User, body: any = {}, query: any = {}) {
     const req: any = {
         userString: user.toString(),
         body,
+        query,
         cookies: {},
         ip: "127.0.0.1",
         headers: { "user-agent": "test" },
@@ -151,8 +175,9 @@ async function callRoute(
     path: string,
     user: User,
     body: any = {},
+    query: any = {},
 ): Promise<{ statusCode: number; body: any; jsonBody: any }> {
-    const { req, res } = createMockReqRes(user, body);
+    const { req, res } = createMockReqRes(user, body, query);
 
     // Find the matching route handler in the router
     const app = express();
@@ -465,5 +490,133 @@ describe("room API: change room lighting (Scenario 10)", () => {
 
         expect(res.statusCode).toBe(403);
         expect(mockChangeRoomPrefs).not.toHaveBeenCalled();
+    });
+});
+
+describe("room API: load room file", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        vi.spyOn(console, "warn").mockImplementation(() => {});
+        vi.spyOn(console, "log").mockImplementation(() => {});
+
+        for (const userID in mockRoomManagerState.currentRoomIDByUserID)
+            delete mockRoomManagerState.currentRoomIDByUserID[userID];
+        for (const roomID in mockRoomManagerState.roomRuntimeMemories)
+            delete mockRoomManagerState.roomRuntimeMemories[roomID];
+        mockLoadRoomFile.mockResolvedValue(true);
+    });
+
+    const makeAdmin = (ownedRoomID: string = "") =>
+        new User("admin-1", "Admin", UserTypeEnumMap.Admin, "a@test.com", "", "", ownedRoomID);
+
+    // A room file as a client sends one: the request's whole body.
+    function makeRoomFileBody(): Buffer
+    {
+        const bufferState = EncodingUtil.startEncoding();
+        RoomFile.fromRoom(createTestRoom("saved-room", "", RoomTypeEnumMap.Hub)).encode(bufferState);
+        return Buffer.from(EncodingUtil.endEncoding(bufferState));
+    }
+
+    // Stands the user in a loaded room of the given type and owner.
+    function standIn(user: User, roomID: string, roomType: number, ownerUserID: string = "")
+    {
+        mockRoomManagerState.currentRoomIDByUserID[user.id] = roomID;
+        mockRoomManagerState.roomRuntimeMemories[roomID] =
+            { room: createTestRoom(roomID, "", roomType, ownerUserID) };
+    }
+
+    it("an admin can load a file over the hub he stands in", async () => {
+        const admin = makeAdmin();
+        standIn(admin, "some-hub", RoomTypeEnumMap.Hub);
+
+        const res = await callRoute("post", "/load_room_file", admin, makeRoomFileBody(), { roomID: "some-hub" });
+
+        expect(res.statusCode).toBe(200);
+        expect(mockLoadRoomFile).toHaveBeenCalledExactlyOnceWith("some-hub", expect.any(RoomFile));
+
+        // Read for the room it is loaded into, not the one it was saved from.
+        const roomFile = mockLoadRoomFile.mock.calls[0][1] as RoomFile;
+        const objects = Object.values(roomFile.objectGroup.objectById);
+        expect(objects.length).toBeGreaterThan(0);
+        for (const obj of objects)
+            expect(obj.roomID).toBe("some-hub");
+    });
+
+    it("an admin can load a file over his own room", async () => {
+        const admin = makeAdmin("my-room");
+        standIn(admin, "my-room", RoomTypeEnumMap.Regular, admin.id);
+
+        const res = await callRoute("post", "/load_room_file", admin, makeRoomFileBody(), { roomID: "my-room" });
+
+        expect(res.statusCode).toBe(200);
+        expect(mockLoadRoomFile).toHaveBeenCalledExactlyOnceWith("my-room", expect.any(RoomFile));
+    });
+
+    it("a member cannot load a file, even over his own room", async () => {
+        const owner = new User("owner-1", "Owner", UserTypeEnumMap.Member, "owner@test.com", "", "", "my-room");
+        standIn(owner, "my-room", RoomTypeEnumMap.Regular, owner.id);
+
+        const res = await callRoute("post", "/load_room_file", owner, makeRoomFileBody(), { roomID: "my-room" });
+
+        expect(res.statusCode).toBe(403);
+        expect(mockLoadRoomFile).not.toHaveBeenCalled();
+    });
+
+    it("an admin cannot load a file over somebody else's private room", async () => {
+        const admin = makeAdmin();
+        standIn(admin, "my-room", RoomTypeEnumMap.Regular, "owner-1");
+
+        const res = await callRoute("post", "/load_room_file", admin, makeRoomFileBody(), { roomID: "my-room" });
+
+        expect(res.statusCode).toBe(403);
+        expect(mockLoadRoomFile).not.toHaveBeenCalled();
+    });
+
+    it("an admin cannot load a file over a room he is not in", async () => {
+        const admin = makeAdmin();
+        standIn(admin, "some-hub", RoomTypeEnumMap.Hub);
+        mockRoomManagerState.roomRuntimeMemories["other-hub"] =
+            { room: createTestRoom("other-hub", "", RoomTypeEnumMap.Hub) };
+
+        const res = await callRoute("post", "/load_room_file", admin, makeRoomFileBody(), { roomID: "other-hub" });
+
+        expect(res.statusCode).toBe(409);
+        expect(mockLoadRoomFile).not.toHaveBeenCalled();
+    });
+
+    it("request that names no room is rejected", async () => {
+        const admin = makeAdmin();
+        standIn(admin, "some-hub", RoomTypeEnumMap.Hub);
+
+        const res = await callRoute("post", "/load_room_file", admin, makeRoomFileBody());
+
+        expect(res.statusCode).toBe(400);
+        expect(res.body).toContain("roomID");
+        expect(mockLoadRoomFile).not.toHaveBeenCalled();
+    });
+
+    it("a body that is not a room file is rejected", async () => {
+        const admin = makeAdmin();
+        standIn(admin, "some-hub", RoomTypeEnumMap.Hub);
+
+        // Some other file, a room file cut short, and a body that is no file at all.
+        const wholeFile = makeRoomFileBody();
+        for (const body of [Buffer.from("not a room"), wholeFile.subarray(0, wholeFile.length - 1), {}])
+        {
+            const res = await callRoute("post", "/load_room_file", admin, body, { roomID: "some-hub" });
+            expect(res.statusCode).toBe(400);
+        }
+        expect(mockLoadRoomFile).not.toHaveBeenCalled();
+    });
+
+    it("reports a load the server could not carry out", async () => {
+        const admin = makeAdmin();
+        standIn(admin, "some-hub", RoomTypeEnumMap.Hub);
+        mockLoadRoomFile.mockResolvedValue(false);
+
+        const res = await callRoute("post", "/load_room_file", admin, makeRoomFileBody(), { roomID: "some-hub" });
+
+        expect(res.statusCode).toBe(500);
     });
 });

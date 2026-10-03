@@ -9,7 +9,7 @@ Reference: @src/shared/voxel/types/voxel.ts , @src/shared/voxel/types/voxelGrid.
 - The room is tall enough for two storeys. A storey is not built into the grid. It is just a slab of blocks placed one layer below mid-height, so both storeys get equal headroom. Leaving the slab out opens a tall space. Tops of caps are not drawn, so a camera above the room sees inside it.
 
 ## Quads
-- Each cell has textured **quads**: wall quads (±x, ±z) for every layer, and floor/ceiling quads (±y). A quad stores a visibility flag and a texture index.
+- Each cell has textured **quads**: wall quads (±x, ±z) for every layer, and floor/ceiling quads (±y). A quad stores a visibility flag and a texture index, which names a cell of the room's texture pack atlas (see [texture.md](texture.md#voxel-texture-packs)).
 - A face is drawn only where a solid block meets an open one.
 - Wall quads span one layer's height. Floor and ceiling quads span a whole cell.
 

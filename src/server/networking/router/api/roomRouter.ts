@@ -13,6 +13,11 @@ import HubRoomUtil from "../../../room/util/hubRoomUtil";
 import RoomListEntry from "../../../../shared/room/types/roomListEntry";
 import DBRoom from "../../../db/types/row/dbRoom";
 import Room from "../../../../shared/room/types/room";
+import RoomFile from "../../../../shared/room/types/roomFile";
+import RoomValidationUtil from "../../../../shared/room/util/roomValidationUtil";
+import BufferState from "../../../../shared/networking/types/bufferState";
+import { MAX_ENCODED_OBJECTS_BYTES } from "../../../../shared/networking/util/encodingUtil";
+import { MAX_ENCODED_VOXEL_GRID_BYTES } from "../../../../shared/system/sharedConstants";
 
 const RoomRouter = express.Router();
 
@@ -20,6 +25,8 @@ const RoomRouter = express.Router();
 const ROOM_LIST_PAGE_SIZE = 10;
 // Search scan cap: Firestore has no substring queries, so search filters a paged scan in memory.
 const ROOM_SEARCH_MAX_SCAN = 500;
+// A room file is written through the encoding buffer (see EncodingUtil), so none is longer than it.
+const MAX_ROOM_FILE_BYTES = MAX_ENCODED_VOXEL_GRID_BYTES + MAX_ENCODED_OBJECTS_BYTES;
 
 // Regular rooms: a member's one owned room. Hubs: admin-only world-building.
 RoomRouter.post("/create_room", UserIdentificationUtil.identifyRegisteredUser, async (req: Request, res: Response): Promise<void> => {
@@ -127,6 +134,62 @@ RoomRouter.post("/change_room_prefs", UserIdentificationUtil.identifyRegisteredU
     }
 
     res.status(200).send("Room lighting updated.");
+});
+
+// Overwrites the room the caller stands in with a room file, sent as the request's body (see RoomFile).
+// An admin's alone, and only in a room that admin is the superuser of.
+RoomRouter.post("/load_room_file", UserIdentificationUtil.identifyAdmin,
+    express.raw({ type: "application/octet-stream", limit: MAX_ROOM_FILE_BYTES }),
+    async (req: Request, res: Response): Promise<void> => {
+    const user = User.fromString((req as any).userString);
+
+    const roomID = req.query.roomID;
+    if (typeof roomID !== "string" || roomID.length === 0)
+    {
+        res.status(400).send("Missing or invalid roomID.");
+        return;
+    }
+
+    // The room the caller is in, which is therefore loaded.
+    const roomRuntimeMemory = (ServerRoomManager.currentRoomIDByUserID[user.id] === roomID)
+        ? ServerRoomManager.roomRuntimeMemories[roomID] : undefined;
+    if (!roomRuntimeMemory)
+    {
+        res.status(409).send("You are not in this room.");
+        return;
+    }
+    if (!RoomValidationUtil.isRoomSuperuser(user, roomRuntimeMemory.room))
+    {
+        res.status(403).send("You may only load a file over a hub or your own room.");
+        return;
+    }
+
+    if (!Buffer.isBuffer(req.body) || req.body.length === 0)
+    {
+        res.status(400).send("Missing room file.");
+        return;
+    }
+
+    let roomFile: RoomFile;
+    try
+    {
+        roomFile = RoomFile.decodeWithParams(new BufferState(new Uint8Array(req.body)), roomID) as RoomFile;
+    }
+    catch (err)
+    {
+        console.warn(`RoomRouter :: Refused a room file (userID = ${user.id}, roomID = ${roomID}) :: ${err instanceof Error ? err.message : err}`);
+        res.status(400).send("Not a room file this server can read.");
+        return;
+    }
+
+    const success = await ServerRoomManager.loadRoomFile(roomID, roomFile);
+    if (!success)
+    {
+        res.status(500).send("Failed to load the room file.");
+        return;
+    }
+
+    res.status(200).send("Room file loaded.");
 });
 
 // Offset-paginated room list. The client hides entries it pins separately.

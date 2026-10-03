@@ -1,5 +1,5 @@
-// One image of the map, as its manifest lists it (the builder reads path, author, title, keywords, preserveScale and
-// disabled).
+// One image of the map, as its manifest lists it (the builder reads path, author, title, keywords, preserveScale,
+// disabled and staging).
 export default interface ImageEntry
 {
     path: string;
@@ -18,4 +18,7 @@ export default interface ImageEntry
     // Left out of the built map, so out of the game, while keeping its path; its game image is parked where it
     // doesn't ship (see EditorPaths.disabledImagesDir).
     disabled?: boolean;
+    // Built and shipped like an enabled one, but offered only off the live server (see ImageMetadata.staging); never
+    // disabled too.
+    staging?: boolean;
 }

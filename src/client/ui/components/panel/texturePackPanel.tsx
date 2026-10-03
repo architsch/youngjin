@@ -4,6 +4,7 @@ import RoomAPIClient from "../../../networking/client/roomAPIClient";
 import { notificationMessageObservable } from "../../../system/clientObservables";
 import { tryStartClientProcess, endClientProcess } from "../../../system/types/clientProcess";
 import ImageMapUtil from "../../../../shared/graphics/image/util/imageMapUtil";
+import { NUM_VOXEL_TEXTURE_COLS, NUM_VOXEL_TEXTURE_ROWS } from "../../../../shared/system/sharedConstants";
 import Image from "../basic/image/image";
 import ImageChooser from "../input/imageChooser";
 import TooltipButton from "../input/tooltipButton";
@@ -45,7 +46,7 @@ export default function TexturePackPanel({ anchorElementId, onClose }: Props)
         <div className="flex flex-row items-center gap-2 shrink-0">
             {texturePackPath.length > 0 && <Image
                 src={ImageMapUtil.getImageMap("VoxelTexturePackImageMap").getImageURLByPath(App.getEnv().assets_url, texturePackPath)}
-                size="md" alt="Texture preview"/>}
+                size="md" aspectRatio={NUM_VOXEL_TEXTURE_COLS / NUM_VOXEL_TEXTURE_ROWS} alt="Texture preview"/>}
             <ImageChooser
                 id="changeTexturePackButton"
                 title="Change Texture Pack"

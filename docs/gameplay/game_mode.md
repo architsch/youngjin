@@ -18,10 +18,15 @@ The mode is stored separately from camera state, because the camera briefly has 
 - A single-player step can also pick the voxel quad edit mode opens on, in place of the look. The pick is made when the mode opens, and falls back to the look if it can't be selected.
 
 ## Selection
-- A selection is a single voxel quad or object. Nothing is selected in play mode, and something is always selected in edit mode. When the selected thing is removed, the selection moves to something nearby.
+- A selection is a single voxel quad or object. Nothing is selected in play mode, and something is always selected in edit mode.
+- When the selected thing is removed or hidden, or a block is added or removed, the selection moves on by one search (`VoxelQuadSelection`), starting from where the edit points:
+  - the nearest voxel quad that is near enough and clear enough of attached objects (`AUTO_SELECTION_MAX_DISTANCE`, `AUTO_SELECTION_MIN_COVERAGE_FREE_RATIO`);
+  - with none, an attached object near there that the user may select (`nearbyObjectSelectorObservable`);
+  - failing that, whatever quad is left, the clear enough first.
 - Clicking the current selection or an unselectable spot keeps the current selection.
 - Each object type declares its selection behavior in `ObjectTypeClientConfig`: who may select it, the tool panel it opens, and whether it can be dragged along walls by its outline. Every selection also requires edit mode and reach. A refused click passes through silently.
 - A sub-panel opened from those tools (see `EditOptionsProps`) stays open while clicks move the selection to any object whose type declares the same panel, whatever its type; selecting anything else closes it.
-- A face's tools add an object only once its look is picked: its add button raises a chooser (a canvas's painting, a prop's image, a lamp's size, a label's frame, a door's finish), and a pick adds the object and selects it; closing the chooser adds nothing. A type with more to pick then opens on that panel (`ObjectTypeClientConfig.installPanel`: a canvas's frame, frameless unless picked), which a pick closes, as does selecting anything else.
+- A face's tools add an object only once its look is picked: its add button raises a chooser (a canvas's painting, a prop's image, a lamp's size, a label's frame, a door's finish), and a pick adds the object; closing the chooser adds nothing. A type with more to pick is then selected and opens on that panel (`ObjectTypeClientConfig.installPanel`: a canvas's frame, frameless unless picked), which closing it or selecting anything else ends.
+- The pick that completes a new object's look moves the selection on by the same search, so the next can be added at once from a face near it; where no face will do, the object itself ends up selected. `DISABLE_AUTO_SELECTION_ON_OBJECT_INSTALLATION` keeps it selected always. Picks made for an object selected later keep it selected.
 - A chooser with nothing picked yet opens on the tab and at the place where the last one for the same thing was left, edits included (see `ThumbnailPanel`); the first time, on All and at the start.
 - The outline and camera framing come from the object's collider at the object's own size. Anyone who may select an object may also move it, dragging inside the outline, and resize it by the outline's corners if its type scales that way; a lamp instead picks one of its sizes from its tools (see [object_attachment.md](../geometry/object_attachment.md)). Each placement is validated as it previews, and the result is sent once, on release.

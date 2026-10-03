@@ -19,4 +19,8 @@ export default interface ImageMetadata
     // Shown at its own size rather than fitted to what shows it: whole cells of the map's
     // preservedScaleCellSize (see ImageMapSeed), each a fixed patch of the world, and cut off where it overflows.
     preserveScale?: boolean;
+
+    // Built and shipped like any other image, but offered only off the live server, to be tried in the game before
+    // everyone can choose it (see ImageChoiceUtil).
+    staging?: boolean;
 }

@@ -1,9 +1,10 @@
 /**
  * Scenario tests: voxelQuad auto-reselection. When a selection is interrupted (the user's own edit,
- * another client's edit, or the selected object going away), a nearby visible quad is selected instead.
+ * another client's edit, or the selected object going away), or an added object is complete, a nearby visible
+ * quad is selected instead: the nearest that is near and clear enough of objects, else an object near there.
  * Browser-bound client modules are stubbed; generation, update rules and the search run for real.
  */
-import { describe, it, expect, beforeEach, vi, Mock } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi, Mock, MockInstance } from "vitest";
 
 vi.mock("../../../src/client/graphics/graphicsManager", async () => {
     const THREE = await import("three");
@@ -39,11 +40,15 @@ vi.mock("../../../src/client/graphics/types/gizmo/generic/worldSpaceOutlineRect"
     },
 }));
 
+import * as THREE from "three";
 import App from "../../../src/client/app";
 import GraphicsManager from "../../../src/client/graphics/graphicsManager";
+import GameObject from "../../../src/client/object/types/gameObject/gameObject";
+import ObjectSelection from "../../../src/client/graphics/types/gizmo/objectSelection";
 import VoxelQuadSelection from "../../../src/client/graphics/types/gizmo/voxelQuadSelection";
 import ClientVoxelManager from "../../../src/client/voxel/clientVoxelManager";
-import { clientFeatureFlagsObservable, gameModeObservable, roomChangedObservable,
+import ClientObjectManager from "../../../src/client/object/clientObjectManager";
+import { clientFeatureFlagsObservable, gameModeObservable, objectSelectionObservable, roomChangedObservable,
     voxelQuadSelectionObservable,
     voxelQuadSelectionRestrictionObservable } from "../../../src/client/system/clientObservables";
 import WorldSpaceSelectionUtil from "../../../src/client/graphics/util/worldSpaceSelectionUtil";
@@ -56,12 +61,19 @@ import RemoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/remov
 import MoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/moveVoxelBlockSignal";
 import SetVoxelQuadTextureSignal from "../../../src/shared/voxel/types/update/setVoxelQuadTextureSignal";
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
+import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
+import ObjectUpdateUtil from "../../../src/shared/object/util/objectUpdateUtil";
+import ObjectAttachmentUtil from "../../../src/shared/object/util/objectAttachmentUtil";
+import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
+import RemoveObjectSignal from "../../../src/shared/object/types/removeObjectSignal";
+import ObjectTransform from "../../../src/shared/object/types/objectTransform";
+import Vec3 from "../../../src/shared/math/types/vec3";
 import Room from "../../../src/shared/room/types/room";
 import RoomRuntimeMemory from "../../../src/shared/room/types/roomRuntimeMemory";
 import { createEditingUser } from "../helpers/mockUser";
 import {
     buildPillar, ceilingQuadIndexOf, createRoom, currentSelection, floorQuadIndexOf, forceSelect,
-    isQuadVisible, quadIndexOf, userAddsBlockAt, userRemovesBlockAt, voxelAt,
+    isQuadVisible, quadIndexOf, SelectionSnapshot, userAddsBlockAt, userRemovesBlockAt, voxelAt,
 } from "../helpers/selectionHarness";
 
 // The acting user (editing utilities require one).
@@ -106,6 +118,7 @@ beforeEach(() => {
     // Selections exist only in edit mode (see GameModeUtil).
     gameModeObservable.set("edit");
     voxelQuadSelectionObservable.set(null);
+    objectSelectionObservable.set(null);
     // A hub, so anyone may build; an acting user is still required.
     (App.getUser as Mock).mockReturnValue(actingUser);
     useRoom(createRoom(ROOM_ID));
@@ -475,6 +488,190 @@ describe("reselection after the selected object goes away", () => {
         // (wall attachments can't be placed outside the room).
         expect(VoxelQuadSelection.trySelectBestQuadNearby({x: NUM_VOXEL_COLS, y: 1.25, z: 10.5})).toBe(false);
         expect(VoxelQuadSelection.trySelectBestQuadNearby({x: 10.5, y: 1.25, z: NUM_VOXEL_ROWS})).toBe(false);
+    });
+});
+
+// ─── What a search settles on ───────────────────────────────────────────────
+// Every automatic selection looks around alike: for the nearest quad that is near and at least half clear of
+// attached objects; with none such, for an object near there; failing that, for whatever quad is left.
+
+const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
+
+/** A canvas (a cell across and two layers tall unless given a size), added the way a user's own is. */
+function addCanvas(pos: Vec3, dir: Vec3, scale: Vec3 = {x: 1, y: 1, z: 1}): AddObjectSignal
+{
+    const canvas = new AddObjectSignal(room.id, actingUser.id, actingUser.userName, canvasTypeIndex, "canvas",
+        new ObjectTransform(pos, dir, scale), {});
+    expect(ObjectUpdateUtil.addObject(actingUser, room, canvas)).toBe(true);
+    return canvas;
+}
+
+/** On the +x face of a pillar at (10, 5), its middle at the given height, with the camera looking straight at it. */
+function hangCanvasOnPillar(y: number = 1.5): AddObjectSignal
+{
+    buildPillar(room, 10, 5);
+    placeCameraAt(12, 1.5, 10.5);
+    return addCanvas({x: 6, y, z: 10.5}, {x: 1, y: 0, z: 0});
+}
+
+/** Over the whole of a wall three cells long, from layer 2 to layer 5: every face of it within reach. */
+function coverWallWithCanvas(): AddObjectSignal
+{
+    for (const row of [9, 10, 11])
+        buildPillar(room, row, 5);
+    placeCameraAt(12, 1.5, 10.5);
+    return addCanvas({x: 6, y: 2, z: 10.5}, {x: 1, y: 0, z: 0}, {x: 3, y: 2, z: 1});
+}
+
+function coverageOf(selection: SelectionSnapshot): number
+{
+    return ObjectAttachmentUtil.getVoxelQuadCoverage(room, selection.quadIndex);
+}
+
+/** Where on the pillar's +x face the selection stands, as its layer. */
+function expectPillarFaceSelected(layer: number): SelectionSnapshot
+{
+    const after = currentSelection(room)!;
+    expect([after.row, after.col, `${after.orientation}${after.axis}`, after.layer]).toEqual([10, 5, "+x", layer]);
+    expect(after.visible).toBe(true);
+    return after;
+}
+
+/** The object as the client holds it: only what selecting one reads of it. */
+function gameObjectOf(object: AddObjectSignal, selectable: boolean = true): GameObject
+{
+    const pos = object.transform.pos;
+    return {
+        params: object,
+        position: new THREE.Vector3(pos.x, pos.y, pos.z),
+        quaternion: new THREE.Quaternion(),
+        canBeSelected: () => selectable,
+    } as unknown as GameObject;
+}
+
+// A selection's outline is made on first use, and it takes over from the other kind only once made.
+const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+
+describe("what an automatic selection settles on", () => {
+    let objectLookup: MockInstance | undefined;
+
+    /** Makes the client hold these objects, as it does once they are spawned. */
+    function clientHolds(...gameObjects: GameObject[])
+    {
+        objectLookup = vi.spyOn(ClientObjectManager, "getObjectById").mockImplementation(
+            objectId => gameObjects.find(gameObject => gameObject.params.objectId == objectId));
+    }
+
+    afterEach(() => {
+        objectLookup?.mockRestore();
+        objectLookup = undefined;
+    });
+
+    it("passes over a face an object mostly covers for one right by it", () => {
+        // Over layers 2 and 3, whole.
+        const canvas = hangCanvasOnPillar();
+
+        expect(VoxelQuadSelection.trySelectBestQuadNearby(canvas.transform.pos)).toBe(true);
+
+        // Straight above the canvas, on the same side of the pillar.
+        expect(coverageOf(expectPillarFaceSelected(4))).toBe(0);
+    });
+
+    it("counts a face up to half covered as clear, so the nearer of them wins", () => {
+        // Over layer 2, and half of layers 1 and 3.
+        const canvas = hangCanvasOnPillar(1.25);
+
+        expect(VoxelQuadSelection.trySelectBestQuadNearby(canvas.transform.pos)).toBe(true);
+
+        // Not the face it covers whole, which is as near; nor a clear one further off.
+        expect(coverageOf(expectPillarFaceSelected(3))).toBe(0.5);
+    });
+
+    it("takes the face an object lay on once the room no longer holds the object", () => {
+        // As the removal handlers ask: after the object has left the room, so its own face counts as clear.
+        const canvas = hangCanvasOnPillar();
+        expect(ObjectUpdateUtil.removeObject(actingUser, room, new RemoveObjectSignal(room.id, canvas.objectId)))
+            .toBe(true);
+
+        expect(VoxelQuadSelection.trySelectBestQuadNearby(canvas.transform.pos)).toBe(true);
+
+        expectPillarFaceSelected(3);
+    });
+
+    it("holds a quad asked for by name to the same test as the rest", () => {
+        // A lone block with a canvas lying on its top.
+        buildPillar(room, 10, 5, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
+        const top = quadIndexOf(10, 5, "y", "+", COLLISION_LAYER_MIN);
+        addCanvas({x: 5.5, y: 0.5, z: 10.5}, {x: 0, y: 1, z: 0});
+
+        expect(VoxelQuadSelection.trySelectBestQuad(voxelAt(room, 10, 5), top)).toBe(true);
+
+        // One of the block's sides, rather than the top the canvas covers.
+        const after = currentSelection(room)!;
+        expect(after.quadIndex).not.toBe(top);
+        expect([after.row, after.col, after.layer]).toEqual([10, 5, COLLISION_LAYER_MIN]);
+        expect(coverageOf(after)).toBe(0);
+    });
+
+    it("takes an object near there when no quad near is clear enough", async () => {
+        const canvas = coverWallWithCanvas();
+        const gameObject = gameObjectOf(canvas);
+        clientHolds(gameObject);
+
+        // The wall's far side and the floor are clear, but out of reach.
+        expect(VoxelQuadSelection.trySelectBestQuadNearby(canvas.transform.pos)).toBe(true);
+        await settle();
+
+        expect(objectSelectionObservable.peek()?.gameObject).toBe(gameObject);
+        expect(VoxelQuadSelection.isSelected()).toBe(false);
+    });
+
+    it("takes a quad further off, a clear one first, when the user may select no object near there", async () => {
+        const canvas = coverWallWithCanvas();
+        clientHolds(gameObjectOf(canvas, false));
+
+        expect(VoxelQuadSelection.trySelectBestQuadNearby(canvas.transform.pos)).toBe(true);
+        await settle();
+
+        expect(ObjectSelection.isSelected()).toBe(false);
+        // Not one of the faces the canvas covers, near as they are.
+        const after = currentSelection(room)!;
+        expect(coverageOf(after)).toBe(0);
+        expect(after.visible).toBe(true);
+    });
+});
+
+// ─── Going on from an object just added ─────────────────────────────────────
+// Once a new object's look is complete, the selection leaves it for a face near it (see
+// VoxelQuadPlacementOptions).
+
+describe("reselection once an added object is complete", () => {
+    it("takes the selection over from the object", async () => {
+        const canvas = hangCanvasOnPillar();
+        // Selected, as a canvas is while its frame is picked (see ObjectSelectionMenu).
+        expect(ObjectSelection.trySelect(gameObjectOf(canvas))).toBe(true);
+        await settle();
+        expect(ObjectSelection.isSelected()).toBe(true);
+
+        expect(VoxelQuadSelection.trySelectBestQuadNearby(canvas.transform.pos)).toBe(true);
+        await settle();
+
+        expect(ObjectSelection.isSelected()).toBe(false);
+        expectPillarFaceSelected(4);
+    });
+
+    it("leaves the selection on the object while a step holds the selection of faces still", async () => {
+        const canvas = hangCanvasOnPillar();
+        const gameObject = gameObjectOf(canvas);
+        expect(ObjectSelection.trySelect(gameObject)).toBe(true);
+        await settle();
+        clientFeatureFlagsObservable.tryAdd(FeatureFlag.DisableVoxelQuadSelectionChange);
+
+        expect(VoxelQuadSelection.trySelectBestQuadNearby(canvas.transform.pos)).toBe(false);
+        await settle();
+
+        expect(objectSelectionObservable.peek()?.gameObject).toBe(gameObject);
+        expect(VoxelQuadSelection.isSelected()).toBe(false);
     });
 });
 

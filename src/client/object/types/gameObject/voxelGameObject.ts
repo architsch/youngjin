@@ -10,7 +10,9 @@ import InstancedTexturePackMaterialParams from "../../../../shared/graphics/mate
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import ClientVoxelQueryUtil from "../../../voxel/util/clientVoxelQueryUtil";
 import VoxelQuadInstanceUtil from "../../../voxel/util/voxelQuadInstanceUtil";
-import { NUM_VOXEL_QUADS_PER_VOXEL, MAX_VISIBLE_VOXEL_QUADS_PER_ROOM, VOXEL_TEXTURE_PACK_MATERIAL_ID, VOXEL_QUAD_GEOMETRY_ID } from "../../../../shared/system/sharedConstants";
+import { NUM_VOXEL_QUADS_PER_VOXEL, MAX_VISIBLE_VOXEL_QUADS_PER_ROOM, VOXEL_TEXTURE_PACK_MATERIAL_ID, VOXEL_QUAD_GEOMETRY_ID,
+    NUM_PACK_VOXEL_TEXTURES, NUM_VOXEL_TEXTURE_COLS, NUM_VOXEL_TEXTURE_ROWS, PROCEDURAL_VOXEL_TEXTURE_MARGIN,
+    VOXEL_TEXTURE_CELL_SIZE } from "../../../../shared/system/sharedConstants";
 import AddObjectSignal from "../../../../shared/object/types/addObjectSignal";
 import { gameModeObservable, notificationMessageObservable, texturePackURLObservable } from "../../../system/clientObservables";
 import GraphicsManager from "../../../graphics/graphicsManager";
@@ -40,7 +42,9 @@ export default class VoxelGameObject extends GameObject
         const currentTexturePackURL = texturePackURLObservable.peek();
         if (VoxelGameObject.materialParams?.texturePath !== currentTexturePackURL)
         {
-            VoxelGameObject.materialParams = new InstancedTexturePackMaterialParams(currentTexturePackURL, 1024, 1024, 128, 128, "staticImageFromPath");
+            VoxelGameObject.materialParams = new InstancedTexturePackMaterialParams(currentTexturePackURL,
+                NUM_VOXEL_TEXTURE_COLS * VOXEL_TEXTURE_CELL_SIZE, NUM_VOXEL_TEXTURE_ROWS * VOXEL_TEXTURE_CELL_SIZE,
+                VOXEL_TEXTURE_CELL_SIZE, VOXEL_TEXTURE_CELL_SIZE, "staticImageFromPath");
             // Restricted zone outlines are drawn by the voxel material (see RestrictedZoneOutlineUtil).
             VoxelGameObject.materialParams.outlineColorHex = RESTRICTED_ZONE_OUTLINE_COLOR;
             // A fixed material id lets texture packs swap in place (see InstancedMeshBinding).
@@ -186,10 +190,17 @@ export default class VoxelGameObject extends GameObject
 
         const sampleOffsetX = (scaleX < 1) ? (((v.row + v.col) % 2) * scaleX) : 0; // [0,1]
         const sampleOffsetY = (scaleY < 1 && collisionLayer % 2 == 0) ? scaleY : 0; // [0,1]
-        const sampleScaleX = scaleX; // [0,1]
-        const sampleScaleY = scaleY; // [0,1]
 
-        this.instancedMeshGraphics.updateInstanceTextureUV(ClientVoxelQueryUtil.getVoxelInstancedMeshId(), instanceId,
-            quad & 0b01111111, sampleOffsetX, sampleOffsetY, sampleScaleX, sampleScaleY);
+        // What tiles of the texture's cell: all of a pack's own, and what is inside a procedural one's margin
+        // (see PROCEDURAL_VOXEL_TEXTURE_MARGIN). The quad shows its share of that, in whole texels.
+        const textureIndex = quad & 0b01111111;
+        const margin = (textureIndex < NUM_PACK_VOXEL_TEXTURES) ? 0 : PROCEDURAL_VOXEL_TEXTURE_MARGIN;
+        const tileSize = VOXEL_TEXTURE_CELL_SIZE - 2 * margin;
+        const cellX = (textureIndex % NUM_VOXEL_TEXTURE_COLS) * VOXEL_TEXTURE_CELL_SIZE;
+        const cellY = Math.floor(textureIndex / NUM_VOXEL_TEXTURE_COLS) * VOXEL_TEXTURE_CELL_SIZE;
+
+        this.instancedMeshGraphics.updateInstanceTextureRect(ClientVoxelQueryUtil.getVoxelInstancedMeshId(), instanceId,
+            cellX + margin + sampleOffsetX * tileSize, cellY + margin + sampleOffsetY * tileSize,
+            scaleX * tileSize, scaleY * tileSize);
     }
 }

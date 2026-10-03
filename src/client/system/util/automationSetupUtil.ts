@@ -39,7 +39,6 @@ import { ColorPaletteMap } from "../../../shared/math/maps/colorPaletteMap";
 import { ObjectMetadata } from "../../../shared/object/types/objectMetadata";
 import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
-import ThingsPoolEnv from "../types/thingsPoolEnv";
 import { cameraModeObservable, orbitCameraAnglesObservable, orbitCameraTargetOverrideObservable,
     orbitCameraViewRequestObservable, orbitCameraZoomObservable } from "../clientObservables";
 
@@ -334,9 +333,9 @@ function getLookMetadataList(objectType: string, codecVersion: number): {Instanc
 const AutomationSetupUtil =
 {
     // Same gate as the read-only bridge (non-public deployments). It only changes this client's view.
-    install: (env: ThingsPoolEnv): void =>
+    install: (): void =>
     {
-        if (env.mode != "dev" && env.serverType != "Staging")
+        if (App.isPublicSite())
             return;
 
         (window as any).__thingspool_setup = {

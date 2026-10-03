@@ -177,10 +177,13 @@ async function tryRemoveObject(selection: ObjectSelection)
     const room = App.getCurrentRoom()!;
     const objectId = selection.gameObject.params.objectId;
 
-    // Removed locally, then reported to the server if that succeeded.
+    // Removed locally, then reported to the server if that succeeded. The selection moves on once the room no
+    // longer holds the object (removeObject sees to that before it first waits), so the face it leaves counts as
+    // clear.
     ObjectSelection.unselect();
+    const removal = ClientObjectManager.removeObject(objectId);
     VoxelQuadSelection.trySelectBestQuadNearby(selection.gameObject.params.transform.pos);
-    const success = await ClientObjectManager.removeObject(objectId);
+    const success = await removal;
     if (success && room.roomType != RoomTypeEnumMap.SinglePlayer)
         SocketsClient.emitRemoveObjectSignal(new RemoveObjectSignal(room.id, objectId));
 }

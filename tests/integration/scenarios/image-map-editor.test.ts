@@ -2,15 +2,16 @@
  * The image map editor's processing core (dev/scripts/imageMapEditor/core): sampling a quad of a source
  * (straightened, at its own shape, turned to undo a tilt), the game image fitted into its cells with margins
  * (placed as aligned, smaller for a margin kept clear), taking a background out (from the border, following its
- * shading, or clicked seeds, keeping the largest piece), erasing by hand (brush strokes and a clicked color),
+ * shading, or clicked seeds, keeping the largest piece), erasing by hand (brush strokes and a clicked color's patch),
  * cutting to selections (rectangles, rounded or not, or ellipses, turned or not, together with the rest and each
- * other, or filling outside with a color) and reshaping one by hand (handles on its own turned axes, the side
- * across held, a knob to turn it), color adjustments, the source library (photos kept
- * once, an index by name, none dropped while in use, Unsplash links), the paths new entries take (never one
- * used before), an entry with no recipe taken in as its own image, disabled entries (their image parked where it
- * doesn't ship, and out of the notices), the batch commands (sample orders made recipes, saved as disabled entries
- * with the keywords marked as categories first, sources surveyed with a grid), and the builder leaving out
- * a tab whose images are all disabled.
+ * other, or filling outside with a color), reshaping one by hand (handles on its own turned axes and at its middle,
+ * the side across held, a knob to turn it) and picking one of several by a click, color adjustments, the source library (photos kept once, dated by their first
+ * adding, an index by name, none dropped while in use, nothing left of a deleted one, Unsplash links), the paths new
+ * entries take (never one used before), an entry with no recipe taken in as its own image, disabled entries (their
+ * image parked where it doesn't ship, and out of the notices), the batch commands (sample orders made recipes, saved
+ * as disabled entries with the keywords marked as categories first, files of this machine taken as sources and one's
+ * own pictures saved with no source or license, sources surveyed with a grid), and the builder leaving out a tab
+ * whose images are all disabled.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import fs from "fs";
@@ -32,6 +33,7 @@ import { NO_ADJUST } from "../../../dev/scripts/imageMapEditor/core/colorAdjustU
 import SampleRenderUtil, { MAX_MARGIN } from "../../../dev/scripts/imageMapEditor/core/sampleRenderUtil";
 import SelectionGeometryUtil from "../../../dev/scripts/imageMapEditor/core/selectionGeometryUtil";
 import RecipeSelection from "../../../dev/scripts/imageMapEditor/core/recipeSelection";
+import RecipeAlphaEdit from "../../../dev/scripts/imageMapEditor/core/recipeAlphaEdit";
 import EntryPathUtil from "../../../dev/scripts/imageMapEditor/core/entryPathUtil";
 import SampleOrderUtil from "../../../dev/scripts/imageMapEditor/core/sampleOrderUtil";
 import BatchCommands from "../../../dev/scripts/imageMapEditor/node/batchCommands";
@@ -299,13 +301,15 @@ describe("reshaping a selection by hand", () => {
     const handleAt = (selection: RecipeSelection, handle: string) => SelectionGeometryUtil.getHandles(selection,
         width, height, 10).find(other => other.handle == handle)!.point.map(value => +value.toFixed(6));
 
-    it("puts its handles on its own sides and corners, and the knob above its top, all turned with it", () => {
+    it("puts its handles on its own sides and corners, the knob above its top and the one to move it by at its middle, all turned with it", () => {
         expect(handleAt(box, "n")).toEqual([100, 30]);
         expect(handleAt(box, "se")).toEqual([140, 70]);
         expect(handleAt(box, "turn")).toEqual([100, 20]);
+        expect(handleAt(box, "move")).toEqual([100, 50]);
         // Turned a quarter clockwise, its top faces right.
         expect(handleAt({...box, angle: 90}, "n")).toEqual([120, 50]);
         expect(handleAt({...box, angle: 90}, "turn")).toEqual([130, 50]);
+        expect(handleAt({...box, angle: 90}, "move")).toEqual([100, 50]);
         // Where above its top would be off the sample, the knob stands below it instead, still toward its up.
         const whole: RecipeSelection = {shape: "rect", rect: [0, 0, 1, 1], radius: 0};
         expect(handleAt(whole, "turn")).toEqual([100, 10]);
@@ -333,6 +337,27 @@ describe("reshaping a selection by hand", () => {
         expect(SelectionGeometryUtil.turnToward(box, [150, 45], width, height, true).angle).toBe(90);
         expect(SelectionGeometryUtil.move(box, 0.5, -0.1).rect.map(value => +value.toFixed(6))).toEqual([0.8, 0.2, 0.4, 0.4]);
     });
+
+    it("picks by a click the topmost selection under it, the next one down on clicking again, and none where none is", () => {
+        // The whole sample, the box within it, and an ellipse over the box's right half and beyond.
+        const whole: RecipeSelection = {shape: "rect", rect: [0, 0, 1, 1], radius: 0};
+        const ellipse: RecipeSelection = {shape: "ellipse", rect: [0.5, 0.3, 0.4, 0.4], radius: 0};
+        const pick = (selections: RecipeSelection[], point: [number, number], picked?: number) =>
+            SelectionGeometryUtil.pickAt(selections, point, width, height, picked);
+        // Where all three overlap, the latest first, then down through them and round again.
+        expect(pick([whole, box, ellipse], [120, 50])).toBe(2);
+        expect(pick([whole, box, ellipse], [120, 50], 2)).toBe(1);
+        expect(pick([whole, box, ellipse], [120, 50], 1)).toBe(0);
+        expect(pick([whole, box, ellipse], [120, 50], 0)).toBe(2);
+        // Where the one picked isn't, the topmost that is; where only it is, it stays picked.
+        expect(pick([whole, box, ellipse], [70, 50], 2)).toBe(1);
+        expect(pick([whole, box, ellipse], [10, 10], 1)).toBe(0);
+        expect(pick([whole, box, ellipse], [10, 10], 0)).toBe(0);
+        // Just outside the ellipse's curve, though inside its bounds.
+        expect(pick([box, ellipse], [175, 32], 1)).toBeUndefined();
+        expect(pick([box, ellipse], [10, 10], 0)).toBeUndefined();
+        expect(pick([], [10, 10])).toBeUndefined();
+    });
 });
 
 describe("taking parts out by hand", () => {
@@ -352,13 +377,29 @@ describe("taking parts out by hand", () => {
         expect(pixel(restored, 30, 25)[3]).toBe(0);
     });
 
-    it("erases every pixel of a clicked color, even ones apart from it", () => {
+    it("erases the patch of a clicked color as far as it reaches, and leaves the same color apart from it", () => {
         const dotted = paint(100, 50, (x, y) => ((x < 20 || x >= 80) && y < 10) ? [220, 20, 20] : [20, 120, 220]);
         const erased = SampleRenderUtil.renderSample(dotted, recipe({alphaEdits: [
             {kind: "eraseColor", point: [0.05, 0.05], tolerance: 5}]}), 100);
         expect(pixel(erased, 5, 5)[3]).toBe(0);
-        expect(pixel(erased, 90, 5)[3]).toBe(0);
+        expect(pixel(erased, 19, 9)[3]).toBe(0);
+        expect(pixel(erased, 90, 5)[3]).toBe(255);
         expect(pixel(erased, 50, 5)[3]).toBe(255);
+    });
+
+    it("stops a clicked color's patch at what is already taken out, and takes nothing from a click there", () => {
+        // A stroke down the middle parts the sample in two.
+        const stroke: RecipeAlphaEdit = {kind: "erase", radius: 0.1, points: [[0.5, 0], [0.5, 1]]};
+        const parted = SampleRenderUtil.renderSample(plain, recipe({alphaEdits: [
+            stroke, {kind: "eraseColor", point: [0.1, 0.5], tolerance: 5}]}), 100);
+        expect(pixel(parted, 10, 25)[3]).toBe(0);
+        expect(pixel(parted, 40, 49)[3]).toBe(0);
+        expect(pixel(parted, 90, 25)[3]).toBe(255);
+
+        const clickedOut = SampleRenderUtil.renderSample(plain, recipe({alphaEdits: [
+            stroke, {kind: "eraseColor", point: [0.5, 0.5], tolerance: 5}]}), 100);
+        expect(pixel(clickedOut, 10, 25)[3]).toBe(255);
+        expect(pixel(clickedOut, 90, 25)[3]).toBe(255);
     });
 });
 
@@ -406,15 +447,19 @@ describe("the source library", () => {
     const png = (r: number, width: number, height: number) =>
         sharp({create: {width, height, channels: 3, background: {r, g: 0, b: 0}}}).png().toBuffer();
 
-    it("keeps each photo once, listed by name with where it came from, and never drops one an entry uses", async () => {
+    it("keeps each photo once, listed by name with where it came from and when it was first added, and never drops one an entry uses", async () => {
         const dir = fs.mkdtempSync(path.join(os.tmpdir(), "source-library-"));
         try
         {
+            vi.useFakeTimers({toFake: ["Date"]});
             const library = libraryIn(dir);
+            vi.setSystemTime(new Date("2026-09-27T05:00:00.000Z"));
             const zebra = await library.add(await png(10, 30, 20), "zebra.png", {url: "https://example.com/z.png"});
+            vi.setSystemTime(new Date("2026-09-28T05:00:00.000Z"));
             const apple = await library.add(await png(200, 8, 12), "apple.png");
             expect(await library.add(await png(10, 30, 20), "again.png")).toEqual(zebra);
-            expect(library.list().map(source => source.fileName)).toEqual(["apple.png", "zebra.png"]);
+            expect(library.list().map(source => [source.fileName, source.addedAt])).toEqual(
+                [["apple.png", "2026-09-28T05:00:00.000Z"], ["zebra.png", "2026-09-27T05:00:00.000Z"]]);
             expect([apple.width, apple.height]).toEqual([8, 12]);
             // One line per source in the committed index.
             expect(fs.readFileSync(library.getIndexPath(), "utf8").split("\n").filter(line => line.includes("sha1")))
@@ -428,6 +473,7 @@ describe("the source library", () => {
         }
         finally
         {
+            vi.useRealTimers();
             fs.rmSync(dir, {recursive: true, force: true});
         }
     });
@@ -556,6 +602,50 @@ describe("a disabled entry", () => {
     });
 });
 
+describe("a staging entry", () => {
+    it("ships its game image and keeps its notices row as an enabled one does, and is never disabled too", async () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), "entry-store-"));
+        try
+        {
+            const paths = pathsIn(dir);
+            fs.mkdirSync(paths.imagesDir, {recursive: true});
+            fs.writeFileSync(path.join(paths.imagesDir, "manifest.json"),
+                JSON.stringify({subfolders: [{name: "2", title: "Objects"}], images: []}));
+            fs.writeFileSync(paths.noticesPath,
+                "# Notices\n<!-- pictures:begin (written by the image map editor) -->\n<!-- pictures:end -->\n");
+            const store = new EntryStore(paths);
+            const photo = await store.library.add(await sharp({create: {width: 40, height: 40, channels: 3,
+                background: {r: 90, g: 120, b: 30}}}).png().toBuffer(), "photo.png");
+            const fields = {title: "Crate", author: "Someone", source: "https://example.com/crate", license: "CC0 1.0"};
+            const save = (status: {disabled?: boolean, staging?: boolean}, isNew = false) => store.saveEntry({
+                path: isNew ? undefined : "2/1", subfolder: "2", fields: {...fields, ...status},
+                recipe: isNew ? recipe({sourceSha1: photo.sha1, output: {preserveScale: true, numCols: 2, numRows: 2}})
+                    : undefined,
+                baseHash: store.readState().hash});
+            const shipped = path.join(paths.imagesDir, "2/1.webp");
+            const noticeRows = () => fs.readFileSync(paths.noticesPath, "utf8").split("\n").filter(line => line.startsWith("| `"));
+            const status = () => [store.readState().entries[0].disabled, store.readState().entries[0].staging];
+
+            expect(await save({staging: true}, true)).toBe("2/1");
+            expect(status()).toEqual([undefined, true]);
+            expect(fs.readFileSync(path.join(paths.imagesDir, "manifest.json"), "utf8")).toContain(`"staging": true`);
+            expect(fs.existsSync(shipped)).toBe(true);
+            expect(noticeRows()).toHaveLength(1);
+
+            await expect(save({disabled: true, staging: true})).rejects.toThrow(/either disabled or staging/);
+            await save({disabled: true});
+            expect(status()).toEqual([true, undefined]);
+            await save({});
+            expect(status()).toEqual([undefined, undefined]);
+            expect(fs.existsSync(shipped)).toBe(true);
+        }
+        finally
+        {
+            fs.rmSync(dir, {recursive: true, force: true});
+        }
+    });
+});
+
 describe("a sample order", () => {
     const source = {sha1: "s", fileName: "s.jpg", width: 200, height: 100};
 
@@ -628,7 +718,7 @@ describe("a batch of samples", () => {
             expect(await BatchCommands.saveSamples(store, planPath)).toEqual(["2/1", "2/2"]);
             expect(entries().map(entry => entry.disabled)).toEqual([true, true]);
 
-            // A photo the library doesn't know the origin of can't be sampled this way.
+            // A photo the library knows neither the origin nor the author of can't be sampled this way.
             const unknown = await store.library.add(await sharp({create: {width: 20, height: 20, channels: 3,
                 background: {r: 0, g: 0, b: 0}}}).png().toBuffer(), "mine.png");
             fs.writeFileSync(planPath, JSON.stringify([{source: unknown.sha1, subfolder: "2", title: "Mine", keywords: "mine",
@@ -638,6 +728,59 @@ describe("a batch of samples", () => {
             fs.writeFileSync(planPath, JSON.stringify([{source: url, subfolder: "2", title: "Bare Crate", keywords: " ",
                 cells: [2, 2], rect: [0, 0, 0.5]}]));
             await expect(BatchCommands.saveSamples(store, planPath)).rejects.toThrow(/Bare Crate.*keywords/);
+        }
+        finally
+        {
+            fs.rmSync(dir, {recursive: true, force: true});
+        }
+    });
+
+    it("takes files of this machine as sources too: one's own by its author alone, saved with no source or license", async () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), "entry-store-"));
+        try
+        {
+            const paths = pathsIn(dir);
+            fs.mkdirSync(paths.imagesDir, {recursive: true});
+            fs.writeFileSync(path.join(paths.imagesDir, "manifest.json"),
+                JSON.stringify({subfolders: [{name: "2", title: "Objects"}, {name: "1", title: "Arts"}], images: []}));
+            fs.writeFileSync(paths.noticesPath,
+                "# Notices\n<!-- pictures:begin (written by the image map editor) -->\n<!-- pictures:end -->\n");
+            const store = new EntryStore(paths);
+            const write = async (name: string, r: number) => {
+                const file = path.join(dir, name);
+                fs.writeFileSync(file, await sharp({create: {width: 40, height: 40, channels: 3, background: {r, g: 60, b: 90}}})
+                    .png().toBuffer());
+                return file;
+            };
+            const own = await write("slippers.png", 120);
+            const cutOut = await write("someone-abcdefghijk-unsplash.png", 200);
+            const url = "https://unsplash.com/photos/a-coffee-machine-abcdefghijk";
+
+            await BatchCommands.addSources(store, [own], {author: "thingspool"});
+            await BatchCommands.addSources(store, [cutOut], {url, author: "Someone", license: "Unsplash License"});
+            // Kept once, however often it is added.
+            await BatchCommands.addSources(store, [own], {author: "thingspool"});
+            expect(store.library.list().map(source => [source.fileName, source.url, source.author, source.license])).toEqual([
+                ["slippers.png", undefined, "thingspool", undefined],
+                ["someone-abcdefghijk-unsplash.png", url, "Someone", "Unsplash License"]]);
+            // Someone else's photo is used under a license on offer, and says where it came from.
+            await expect(BatchCommands.addSources(store, [own], {license: "Unsplash License"})).rejects.toThrow(/--url/);
+            await expect(BatchCommands.addSources(store, [own], {url, license: "All rights reserved"}))
+                .rejects.toThrow(/not a license on offer/);
+
+            // Named by its file, or as a photo is, by the address it was made from.
+            const planPath = path.join(dir, "plan.json");
+            fs.writeFileSync(planPath, JSON.stringify([
+                {source: "slippers.png", subfolder: "2", title: "Slippers", keywords: "slipper, shoe, wool", cells: [2, 2],
+                    rect: [0, 0, 1]},
+                {source: "abcdefghijk", subfolder: "2", title: "Coffee Machine", keywords: "coffee, machine, steel",
+                    cells: [2, 2], rect: [0, 0, 1]},
+                {source: "slippers.png", subfolder: "1", title: "Slippers at Dusk", longSide: 32, rect: [0, 0, 1, 1]},
+            ]));
+            expect(await BatchCommands.saveSamples(store, planPath)).toEqual(["2/1", "2/2", "1/1"]);
+            expect(store.readState().entries.map(entry => [entry.path, entry.author, entry.source, entry.license, entry.disabled]))
+                .toEqual([["2/1", "thingspool", undefined, undefined, true], ["2/2", "Someone", url, "Unsplash License", true],
+                    ["1/1", "thingspool", undefined, undefined, true]]);
         }
         finally
         {
@@ -681,7 +824,7 @@ describe("a batch of samples", () => {
         }
     });
 
-    it("surveys a source, or a part of it, with a grid at a size to plan by", async () => {
+    it("surveys a source, or a part of it, with a grid at a size to plan by, all of which goes with the source", async () => {
         const dir = fs.mkdtempSync(path.join(os.tmpdir(), "entry-store-"));
         try
         {
@@ -698,6 +841,15 @@ describe("a batch of samples", () => {
             const [part] = await BatchCommands.writeSurveys(store, [`${source.sha1}:0.5,0.5,0.25,0.5`]);
             // 75 by 100 pixels of the source.
             expect(await sharp(part).metadata()).toMatchObject({width: 1200, height: 1600});
+
+            // Deleted, it leaves nothing: its photo, thumbnail and surveys, its line in the index, or a decoded copy
+            // a save could still render from.
+            await store.library.getThumbnail(source.sha1);
+            store.library.delete(source.sha1, []);
+            expect(fs.readdirSync(dir, {recursive: true}).map(String)
+                .filter(file => file.includes(source.sha1) || file.includes("abcdefghijk"))).toEqual([]);
+            expect(fs.readFileSync(store.library.getIndexPath(), "utf8")).not.toContain(source.sha1);
+            await expect(store.library.decode(source.sha1)).rejects.toThrow(/isn't on this machine/);
         }
         finally
         {
@@ -708,7 +860,7 @@ describe("a batch of samples", () => {
 
 describe("building a map", () => {
     // The builder reads and writes under the directory the build was started in (PWD), as SSG runs it.
-    async function build(images: {path: string, disabled?: boolean, title?: string, author?: string,
+    async function build(images: {path: string, disabled?: boolean, staging?: boolean, title?: string, author?: string,
         keywords?: string}[]): Promise<string>
     {
         const dir = fs.mkdtempSync(path.join(os.tmpdir(), "image-map-"));
@@ -744,6 +896,14 @@ describe("building a map", () => {
         expect(built).not.toContain(`b/1`);
         expect(built).toContain(`const subfolderTabs: ImageMapSubfolderTab[] = [{name:"a",title:"A"}]`);
         await expect(build([{path: "a/1", disabled: true}, {path: "b/1", disabled: true}])).rejects.toThrow(/Every image is disabled/);
+    });
+
+    it("builds a staging image as any other, marked as one, and refuses one that is disabled too", async () => {
+        const built = await build([{path: "a/1"}, {path: "a/2", staging: true}, {path: "b/1"}]);
+        expect(built).toMatch(/\{path:"a\/2",[^}]*,staging:true\}/);
+        expect(built).not.toMatch(/\{path:"a\/1",[^}]*staging/);
+        await expect(build([{path: "a/1", disabled: true, staging: true}, {path: "b/1"}]))
+            .rejects.toThrow(/both disabled and staging/);
     });
 
     it("ships an image's keywords packed tight, its title and author in their place when it names none, and neither else", async () => {

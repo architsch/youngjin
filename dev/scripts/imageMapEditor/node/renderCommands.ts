@@ -113,7 +113,7 @@ const RenderCommands =
 
             const output = state.recipeFile.recipes[entry.path]?.output;
             const size = output?.preserveScale ? ` (${output.numCols}x${output.numRows})` : "";
-            const label = `${entry.path} ${entry.title}${size}${entry.disabled ? " (disabled)" : ""}`;
+            const label = `${entry.path} ${entry.title}${size}${entry.disabled ? " (disabled)" : entry.staging ? " (staging)" : ""}`;
             const svg = `<svg width="${SHEET_CELL}" height="${SHEET_LABEL_HEIGHT}"><rect width="100%" height="100%" fill="#222"/>`
                 + `<text x="6" y="23" font-family="sans-serif" font-size="14" fill="#fff">${escapeXml(label)}</text></svg>`;
             composites.push({input: Buffer.from(svg), left, top: top + SHEET_CELL});

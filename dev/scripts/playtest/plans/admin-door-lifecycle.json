@@ -52,6 +52,21 @@
     {
       "type": "expectSelection",
       "selection": {
+        "voxelQuad": true
+      }
+    },
+    {
+      "type": "clickObject",
+      "target": {
+        "objectType": "Door",
+        "metadata": {
+          "DoorType": "1"
+        }
+      }
+    },
+    {
+      "type": "expectSelection",
+      "selection": {
         "objectType": "Door",
         "metadata": {
           "DoorType": "1"

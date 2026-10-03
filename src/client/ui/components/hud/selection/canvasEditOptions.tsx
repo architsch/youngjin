@@ -2,6 +2,8 @@ import IconButton from "../../input/iconButton";
 import TrashIcon from "../../../svg/icons/trashIcon";
 import { ObjectMetadataKeyEnumMap } from "../../../../../shared/object/types/objectMetadataKey";
 import ObjectEditUtil from "../../../util/objectEditUtil";
+import VoxelQuadSelection from "../../../../graphics/types/gizmo/voxelQuadSelection";
+import { DISABLE_AUTO_SELECTION_ON_OBJECT_INSTALLATION } from "../../../../system/clientConstants";
 import PictureIcon from "../../../svg/icons/pictureIcon";
 import PictureFrameIcon from "../../../svg/icons/pictureFrameIcon";
 import CompositionThumbnailPanel from "../../panel/compositionThumbnailPanel";
@@ -44,8 +46,14 @@ export default function CanvasEditOptions(props: EditOptionsProps)
             currentCompositionIndex={props.installing ? undefined : ObjectEditUtil.getCompositionIndex(props.selection)}
             onChoose={(compositionIndex) => {
                 ObjectEditUtil.trySetCompositionIndex(props.selection, compositionIndex);
+                // The pick that completes a canvas just added: the selection leaves it for a face near it (see
+                // VoxelQuadPlacementOptions).
                 if (props.installing)
+                {
                     props.setOpenPanel(null);
+                    if (!DISABLE_AUTO_SELECTION_ON_OBJECT_INSTALLATION)
+                        VoxelQuadSelection.trySelectBestQuadNearby(props.selection.gameObject.params.transform.pos);
+                }
             }}
             onClose={() => props.setOpenPanel(null)}
         />}

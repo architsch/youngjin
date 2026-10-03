@@ -135,6 +135,20 @@ const DBRoomUtil =
             .run();
         return result.success;
     },
+    // The texture pack and the prefs in one write, so the row never holds one without the other.
+    changeRoomSettings: async (room: Room, newTexturePackPath: string, newPrefs: string): Promise<boolean> =>
+    {
+        LogUtil.log("DBRoomUtil.changeRoomSettings", {roomID: room.id, newTexturePackPath, newPrefs}, "low", "info");
+        const result = await new DBQuery<DBRow>()
+            .update(COLLECTION_ROOMS)
+            .set({
+                texturePackPath: newTexturePackPath,
+                prefs: newPrefs,
+            })
+            .where("id", "==", room.id)
+            .run();
+        return result.success;
+    },
 }
 
 async function getRoomFromDBRoom(dbRoom: DBRoom): Promise<Room | null>

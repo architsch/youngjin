@@ -8,7 +8,8 @@
 //        npm run imageMapEditor -- --render-samples [<path> ...]      samples made again from their recipes
 //        npm run imageMapEditor -- --render-game-images               game images made again from their samples
 //        npm run imageMapEditor -- --contact-sheet [<subfolder or path> ...]  entries on one sheet, for review
-//        npm run imageMapEditor -- --add-sources <url> ...            photos added to the source library
+//        npm run imageMapEditor -- --add-sources <url or file> ...    photos added to the source library; a file as
+//            one's own by --author <name>, or with the --url, --author and --license of the photo it was made from
 //        npm run imageMapEditor -- --survey [<source>[:x,y,w,h] ...]  photos (or parts) drawn with a grid to plan by
 //        npm run imageMapEditor -- --save-samples <plan.json>         planned samples saved as disabled entries
 // (The last three serve the image-map-sampling skill; see .claude/skills/image-map-sampling.)

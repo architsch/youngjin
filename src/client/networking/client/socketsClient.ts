@@ -35,7 +35,11 @@ let pollingForServer = false;
 
 const incomingSignalHandlers: {[signalType: string]: (data: EncodableData) => void} = {
     "roomChangedSignal": (data: EncodableData) =>
-        App.onRoomChangedSignalReceived(data as RoomChangedSignal),
+    {
+        // The room arriving is what ends the wait a "roomReloadStarted" began.
+        endReconnectWait();
+        App.onRoomChangedSignalReceived(data as RoomChangedSignal);
+    },
     "roomChangeRejectedSignal": (data: EncodableData) =>
         App.onRoomChangeRejectedSignalReceived(data as RoomChangeRejectedSignal),
     "addObjectSignal": (data: EncodableData) =>
@@ -89,9 +93,7 @@ const SocketsClient =
 
         socket.on("connect", () => {
             console.log(`Successfully connected to socket server (transport: ${socket.io.engine.transport.name})`);
-            connectionStateObservable.set("connected");
-            if (ongoingClientProcessExists("reconnect"))
-                endClientProcess("reconnect");
+            endReconnectWait();
             if (hasConnectedBefore)
             {
                 // Start a roomChange process so the server's auto-join (roomChangedSignal) can complete.
@@ -107,10 +109,13 @@ const SocketsClient =
             window.location.href = url;
         });
 
+        // The server is overwriting the room with its users still in it (see
+        // ServerRoomManager.loadRoomFile), and sends the room again once it is done.
+        socket.on("roomReloadStarted", beginReconnectWait);
+
         socket.on("disconnect", (reason) => {
             console.warn(`Socket disconnected (reason: ${reason})`);
-            connectionStateObservable.set("reconnecting");
-            tryStartClientProcess("reconnect", 1, 0);
+            beginReconnectWait();
 
             if (reason === "io server disconnect")
             {
@@ -199,6 +204,20 @@ const SocketsClient =
     {
         emitWhenReady("setObjectMetadataSignal", params);
     },
+}
+
+// The "Reconnecting..." wait: for a lost connection, or for a room the server is reloading.
+function beginReconnectWait()
+{
+    connectionStateObservable.set("reconnecting");
+    tryStartClientProcess("reconnect", 1, 0);
+}
+
+function endReconnectWait()
+{
+    connectionStateObservable.set("connected");
+    if (ongoingClientProcessExists("reconnect"))
+        endClientProcess("reconnect");
 }
 
 function emitWhenReady(signalType: string, signalData: EncodableData,

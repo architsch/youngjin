@@ -94,6 +94,16 @@ vi.mock("../../../src/server/db/util/dbRoomUtil", () => ({
             }
             return true;
         }),
+        changeRoomSettings: vi.fn(async (room: any, newTexturePackPath: string, newPrefs: string) => {
+            if (_latencyConfig.enabled) await _randomDelay();
+            const entry = _roomStore[room.id];
+            if (entry)
+            {
+                entry.texturePackPath = newTexturePackPath;
+                entry.prefs = newPrefs;
+            }
+            return true;
+        }),
     },
 }));
 

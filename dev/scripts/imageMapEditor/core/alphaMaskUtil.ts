@@ -147,13 +147,32 @@ function applyEdit(keep: Uint8Array, width: number, height: number, lab: Float32
 {
     if (edit.kind == "eraseColor")
     {
-        const index = clamp(Math.floor(edit.point[1] * height), 0, height - 1) * width
+        const start = clamp(Math.floor(edit.point[1] * height), 0, height - 1) * width
             + clamp(Math.floor(edit.point[0] * width), 0, width - 1);
-        const color = lab!.slice(index * 3, index * 3 + 3);
-        for (let i = 0; i < keep.length; ++i)
+        const color = lab!.slice(start * 3, start * 3 + 3);
+        // Taking a pixel out also marks it reached, so each is stacked once.
+        const stack = new Int32Array(keep.length);
+        let top = 0;
+        const visit = (index: number) => {
+            if (keep[index] && LabColorUtil.distanceTo(lab!, index, color, 0) <= edit.tolerance)
+            {
+                keep[index] = 0;
+                stack[top++] = index;
+            }
+        };
+        visit(start);
+        while (top > 0)
         {
-            if (LabColorUtil.distanceTo(lab!, i, color, 0) <= edit.tolerance)
-                keep[i] = 0;
+            const index = stack[--top];
+            const x = index % width;
+            if (x > 0)
+                visit(index - 1);
+            if (x < width - 1)
+                visit(index + 1);
+            if (index >= width)
+                visit(index - width);
+            if (index < keep.length - width)
+                visit(index + width);
         }
         return;
     }

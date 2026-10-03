@@ -1,8 +1,8 @@
 import RecipeSelection from "./recipeSelection";
 
-// A handle of a selection's outline: a side or corner to resize it by (named by compass point, in its own turned
-// axes), or the knob above it to turn it by.
-export type SelectionHandle = "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | "nw" | "turn";
+// A handle of a selection: a side or corner of its outline to resize it by (named by compass point, in its own
+// turned axes), the knob above it to turn it by, or the one at its middle to move it by.
+export type SelectionHandle = "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | "nw" | "turn" | "move";
 
 // Each resize handle's place on the outline, as signs of the selection's own axes (y down).
 const HANDLE_SIGNS: {[handle: string]: [number, number]} = {
@@ -18,8 +18,8 @@ const FREE_TURN_STEP = 0.5;
 // and its turn in radians, clockwise.
 type SelectionFrame = {cx: number, cy: number, halfWidth: number, halfHeight: number, angle: number};
 
-// Where a selection lies in a sample of the given size, in that sample's pixels, and how it is reshaped by hand.
-// The turn is taken in pixels, so it holds whatever the sample's shape.
+// Where a selection lies in a sample of the given size, in that sample's pixels, how it is reshaped by hand, and
+// which of several a click picks. The turn is taken in pixels, so it holds whatever the sample's shape.
 const SelectionGeometryUtil =
 {
     getFrame: (selection: RecipeSelection, width: number, height: number): SelectionFrame =>
@@ -69,7 +69,8 @@ const SelectionGeometryUtil =
 
     // Where each handle is, in pixels. The turning knob stands turnOffset pixels above the top side, or as far below
     // it where above would be off the sample (and so out of the pointer's reach); either way it points away from the
-    // middle along the selection's up.
+    // middle along the selection's up. Those on the outline come first, so they are the ones taken where a small
+    // selection's handles crowd together.
     getHandles: (selection: RecipeSelection, width: number, height: number,
         turnOffset: number): {handle: SelectionHandle, point: [number, number]}[] =>
     {
@@ -81,19 +82,30 @@ const SelectionGeometryUtil =
         const onSample = outside[0] >= 0 && outside[0] <= width && outside[1] >= 0 && outside[1] <= height;
         handles.push({handle: "turn", point: onSample ? outside
             : toSample(frame, 0, -Math.max(frame.halfHeight - turnOffset, frame.halfHeight / 2))});
+        handles.push({handle: "move", point: [frame.cx, frame.cy]});
         return handles;
     },
 
     // The screen direction a resize handle faces once turned, in degrees clockwise from east, for its cursor.
-    getHandleDirection: (selection: RecipeSelection, handle: Exclude<SelectionHandle, "turn">): number =>
+    getHandleDirection: (selection: RecipeSelection, handle: Exclude<SelectionHandle, "turn" | "move">): number =>
     {
         const [su, sv] = HANDLE_SIGNS[handle];
         return Math.atan2(sv, su) * 180 / Math.PI + (selection.angle ?? 0);
     },
 
+    // Which selection a click at a point (in pixels) picks: the topmost (latest) one under it, or, where the one
+    // picked is under it too, the next one down, so clicks go through all that overlap there. None where none is.
+    pickAt: (selections: RecipeSelection[], point: [number, number], width: number, height: number,
+        picked: number | undefined): number | undefined =>
+    {
+        const under = selections.map((_, index) => index).reverse().filter(index =>
+            SelectionGeometryUtil.getTest(selections[index], width, height)(point[0], point[1]));
+        return (under.length == 0) ? undefined : under[(under.indexOf(picked ?? -1) + 1) % under.length];
+    },
+
     // Resized by dragging a handle to a point (in pixels): the side or corner across from it stays put. With
     // keepShape, a corner keeps the selection's proportions.
-    resize: (selection: RecipeSelection, handle: Exclude<SelectionHandle, "turn">, point: [number, number],
+    resize: (selection: RecipeSelection, handle: Exclude<SelectionHandle, "turn" | "move">, point: [number, number],
         width: number, height: number, keepShape: boolean): RecipeSelection =>
     {
         const frame = SelectionGeometryUtil.getFrame(selection, width, height);

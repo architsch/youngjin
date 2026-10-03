@@ -27,7 +27,7 @@ A multiplayer room is laid out from a random seed when the server creates it. Th
 - An upper storey reuses an area's footprint and exists only if a stairwell fits: a flight several cells wide, one layer taller per step, with the landing cell left uncarved and a ring of floor around it. A recipe can require at least one area large enough for stairs.
 
 ### Texture packs and palettes
-- A texture index only has meaning within its texture pack, so generation picks the pack together with its palettes from `RoomPaletteMap`, and only ever assigns whole palettes.
+- A pack's own texture indices only have meaning within that pack, so generation picks the pack together with its palettes from `RoomPaletteMap`, and only ever assigns whole palettes. Palettes name a pack's own textures; the procedural ones every pack shares (see [texture.md](texture.md#voxel-texture-packs)) are in none.
 - A pack with no curated palettes is never generated. A new pack needs palettes.
 - `RoomPaletteSelectionParams` declares which packs and palettes a room may draw from. A room offered many is decorated area by area. Regular rooms are offered one palette and come out plain. Hubs draw a random pack.
 

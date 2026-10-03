@@ -21,6 +21,9 @@ import SinglePlayerModeConfigMap from "../../shared/singlePlayer/maps/singlePlay
 import VoxelGrid from "../../shared/voxel/types/voxelGrid";
 import VoxelQuadsRuntimeMemory from "../../shared/voxel/types/voxelQuadsRuntimeMemory";
 import ObjectGroup from "../../shared/object/types/objectGroup";
+import AddObjectSignal from "../../shared/object/types/addObjectSignal";
+import ObjectTypeConfigMap from "../../shared/object/maps/objectTypeConfigMap";
+import RoomFile from "../../shared/room/types/roomFile";
 import UserRoomChangeResult from "./types/userRoomChangeResult";
 import RoomPickerUtil from "./util/roomPickerUtil";
 import HubRoomUtil from "./util/hubRoomUtil";
@@ -29,6 +32,8 @@ const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
 const socketRoomContexts: {[roomID: string]: SocketRoomContext} = {};
 const currentRoomIDByUserID: {[userID: string]: string} = {};
 const pendingLoads: {[roomID: string]: Promise<RoomRuntimeMemory | null>} = {};
+// Rooms a room file is being loaded over, which take one at a time (see loadRoomFile).
+const roomIDsTakingRoomFile = new Set<string>();
 
 const ServerRoomManager =
 {
@@ -301,6 +306,88 @@ const ServerRoomManager =
 
         return true;
     },
+    // Overwrites a loaded room with a room file's contents and settings, in place: its users stay in it,
+    // waiting as for a lost connection until the room is sent to them again (see SocketsClient).
+    loadRoomFile: async (roomID: string, roomFile: RoomFile): Promise<boolean> =>
+    {
+        const roomRuntimeMemory = roomRuntimeMemories[roomID];
+        if (!roomRuntimeMemory || roomIDsTakingRoomFile.has(roomID))
+            return false;
+        const room = roomRuntimeMemory.room;
+
+        if (!ImageMapUtil.getImageMap("VoxelTexturePackImageMap").hasImagePath(roomFile.texturePackPath))
+            return false;
+
+        // The file decides how the room looks; where it stands among the hubs stays its own.
+        const prefs = RoomPrefsUtil.encode({...RoomPrefsUtil.decode(roomFile.prefs),
+            initialJoinPriority: RoomPrefsUtil.decode(room.prefs).initialJoinPriority});
+
+        // A Regular room unloads if it empties while a write below is awaited.
+        const isStillLoaded = () => roomRuntimeMemories[roomID] == roomRuntimeMemory;
+
+        roomIDsTakingRoomFile.add(roomID);
+        for (const socketUserContext of Object.values(socketRoomContexts[roomID].getUserContexts()))
+            socketUserContext.socket.emit("roomReloadStarted");
+
+        try
+        {
+            // Settings first: nothing retries this write, so its failure has to leave the room as it was.
+            if (!await DBRoomUtil.changeRoomSettings(room, roomFile.texturePackPath, prefs))
+                return false;
+
+            applyRoomFile(room, roomFile, prefs);
+            if (isStillLoaded())
+            {
+                PhysicsManager.unload(roomID);
+                PhysicsManager.load(roomRuntimeMemory);
+            }
+
+            // Stored at once; a failed save is left dirty for the auto-save to retry.
+            const saved = await DBRoomUtil.saveRoomContent(room);
+            room.dirty = !saved;
+            if (saved)
+                roomRuntimeMemory.lastSavedTimeInMillis = Date.now();
+            return saved;
+        }
+        finally
+        {
+            roomIDsTakingRoomFile.delete(roomID);
+
+            // Changed or not, the room is sent whole, so whatever was queued before it is dropped.
+            if (isStillLoaded())
+            {
+                for (const socketUserContext of Object.values(socketRoomContexts[roomID].getUserContexts()))
+                {
+                    socketUserContext.clearAllPendingSignalsToUser();
+                    socketUserContext.addPendingSignalToUser("roomChangedSignal",
+                        new RoomChangedSignal(roomRuntimeMemory));
+                }
+            }
+        }
+    },
+}
+
+// Replaces everything a room file holds of the room. The objects that never persist (its players) stay.
+function applyRoomFile(room: Room, roomFile: RoomFile, prefs: string): void
+{
+    const isPersistent = (obj: AddObjectSignal) =>
+        ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).persistent;
+
+    room.voxelGrid = roomFile.voxelGrid;
+    room.objectGroup = new ObjectGroup([
+        ...Object.values(roomFile.objectGroup.objectById).filter(isPersistent),
+        ...Object.values(room.objectById).filter(obj => !isPersistent(obj)),
+    ]);
+    room.texturePackPath = roomFile.texturePackPath;
+    room.prefs = prefs;
+
+    // Where a player stood means nothing in the new room, so each arrives in it again.
+    const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
+    for (const obj of Object.values(room.objectById))
+    {
+        if (obj.objectTypeIndex == playerTypeIndex)
+            obj.transform = SpawnHotspotUtil.pickSpawnTransform(room, "");
+    }
 }
 
 // Routes a user whose destination was unusable to a hub with space; the reason is reported if none can.

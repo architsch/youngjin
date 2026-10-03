@@ -9,7 +9,8 @@ import RecipeAdjust from "./recipeAdjust";
 // sample.
 export default interface SampleOrder
 {
-    // The source in the library: its page's address, its Unsplash id, or its sha1.
+    // The source in the library: its page's address, its Unsplash id, its sha1, or, for one added from a file, its
+    // file name.
     source: string;
     subfolder: string;
     title: string;

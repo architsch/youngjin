@@ -14,5 +14,7 @@ export default interface Draft
     // "" for original artwork (see IMAGE_LICENSES).
     license: string;
     disabled: boolean;
+    // Never with disabled (see ImageEntry.staging).
+    staging: boolean;
     recipe: ImageRecipe;
 }

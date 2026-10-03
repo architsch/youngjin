@@ -14,3 +14,14 @@ Where content goes on the quad showing it is one layout (@src/client/graphics/ut
 A picture's image is one region per ImagePath, shared by every canvas or prop showing it (`PictureGameObject`): a fitted image's region follows the largest picture showing it (up to the cap), a preserved one is its own cells. QuarterTurns turns what the quad samples, in the shader, so a turn, a resize or a frame change moves texture coordinates and never redraws.
 
 The picture material discards transparent texels, so a canvas's board, or the face behind a prop or a frameless canvas, shows through an image's own transparent pixels, e.g. an object cut out of its photo's background.
+
+## Voxel texture packs
+
+Reference: @src/server/ssg/builder/voxelTexturePackBuilder.ts , @src/server/ssg/util/proceduralTextureUtil.ts , @src/server/ssg/data/proceduralVoxelTextures.ts , @src/client/object/types/gameObject/voxelGameObject.ts
+
+A room's voxel quads all draw from one static atlas, its texture pack's: a grid of square cells, which a quad's texture index counts from the bottom-left.
+- The lowest rows are the pack's own image. Above them are rows of **procedural** cells, the same in every pack (metals, raw and painted concrete). SSG draws those rows into a lossless image of their own beside the packs, attaches it to each pack's image, and writes the result as the pack's augmented copy, which is what the game loads (see [image_map.md](../graphics/image_map.md)). The pack's own image is never rewritten.
+- A procedural texture is drawn from its spec and a seed alone, so every build writes the same pixels, and every pattern in it wraps at the edges it tiles at. The list is append-only, since stored quads name their texture by index.
+- An ordinary SSG run draws the rows only while their image is missing, and builds an atlas only when it is older than its pack's image or the rows. A full run (`MODE=ssg`) redoes both, so **a change to how the textures are drawn shows up only then**, or once the rows' image is deleted.
+- The atlas is lossy, so color bleeds between neighbouring cells across their outermost texels. A procedural cell therefore tiles inside a **margin** of its own continuation (`PROCEDURAL_VOXEL_TEXTURE_MARGIN`), which quads leave out, so a flat color shows no line where it repeats. A pack's own cells tile at their full size, and its top line of pixels is repeated into the margin above it, so its top cells keep the upper edge they have in its own image.
+- A quad shows whole texels of what tiles in its cell, sampled from texel centre to texel centre so filtering never reads the next cell: all of it on a full face, and half on a wall layer, the halves alternating so two layers show the whole.

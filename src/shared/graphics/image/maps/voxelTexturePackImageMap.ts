@@ -3,7 +3,7 @@ import ImageMapUtil from "../util/imageMapUtil";
 import ImageMap from "../types/imageMap";
 import ImageMetadata from "../types/imageMetadata";
 
-const imageMetadataList: ImageMetadata[] = [{path:"default",keywords:"default",coords:",0,0",width:1024,height:1024},{path:"country",keywords:"country",coords:",1,0",width:1024,height:1024},{path:"garden",keywords:"garden",coords:",0,1",width:1024,height:1024},{path:"aqua",keywords:"aqua",coords:",1,1",width:1024,height:1024},{path:"inferno",keywords:"inferno",coords:",0,2",width:1024,height:1024},{path:"prison",keywords:"prison",coords:",1,2",width:1024,height:1024}]
+const imageMetadataList: ImageMetadata[] = [{path:"default",keywords:"default",coords:",0,0",width:1024,height:1280},{path:"country",keywords:"country",coords:",1,0",width:1024,height:1280},{path:"garden",keywords:"garden",coords:",0,1",width:1024,height:1280},{path:"aqua",keywords:"aqua",coords:",1,1",width:1024,height:1280},{path:"inferno",keywords:"inferno",coords:",0,2",width:1024,height:1280},{path:"prison",keywords:"prison",coords:",1,2",width:1024,height:1280}]
 const subfolderGridSizes: {[subfolder: string]: {numCols: number, numRows: number}} = {"":{numCols:2,numRows:3}}
 
-ImageMapUtil.setImageMap("VoxelTexturePackImageMap", new ImageMap("voxel_texture_packs", 256, subfolderGridSizes, imageMetadataList));
+ImageMapUtil.setImageMap("VoxelTexturePackImageMap", new ImageMap("voxel_texture_packs", 256, subfolderGridSizes, imageMetadataList, undefined, undefined, undefined, 320, "_augmented"));

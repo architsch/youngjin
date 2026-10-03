@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import ImageMap from "../../shared/graphics/image/types/imageMap";
 import { COLLISION_LAYER_HEIGHT } from "../../shared/system/sharedConstants";
 import VoxelBlockOffset from "../../shared/voxel/types/voxelBlockOffset";
 
@@ -16,6 +17,16 @@ export const TOUCH_DRAG_THRESHOLD_PX = 40;
 export const EDIT_MODE_OPENING_REACH = 8;
 export const EDIT_MODE_OPENING_TILT = THREE.MathUtils.degToRad(15);
 
+// True keeps a newly added object selected once its look is complete. False hands the selection to a face near it,
+// for the next to be added from (see VoxelQuadPlacementOptions).
+export const DISABLE_AUTO_SELECTION_ON_OBJECT_INSTALLATION = true;
+
+// What an automatic selection asks of a voxel quad (see VoxelQuadSelection): to lie no further than this from where
+// it looks, with at least this share of its face clear of attached objects. With no such quad, it takes an object
+// within the same distance instead.
+export const AUTO_SELECTION_MAX_DISTANCE = 1.5;
+export const AUTO_SELECTION_MIN_COVERAGE_FREE_RATIO = 0.5;
+
 // UI
 
 // How long a notification message stays on screen (in milliseconds).
@@ -23,7 +34,13 @@ export const NOTIFICATION_DURATION_MS = 3000;
 
 // Whether the image chooser offers its category tabs (see ImageMapThumbnailPanel). False hides them, and every
 // image is shown as if All were picked.
-export const IMAGE_CATEGORY_TABS_ENABLED = false;
+export const IMAGE_CATEGORY_TABS_ENABLED = true;
+
+// The order the image chooser's All tab lays images out in, category by category (see ImageChoiceUtil); a category's
+// own tab is not ordered by it. An image under several goes with the one listed last, and one under none with
+// ImageMap.MISC_TAB; the images of a category left out come first, as one run.
+export const IMAGE_ALL_TAB_CATEGORY_ORDER: readonly string[] = ["living", "kitchen", "bathroom", "office",
+    "commercial", "industrial", "accessory", ImageMap.MISC_TAB];
 
 // three.js
 

@@ -141,6 +141,16 @@ export const mockDBRoomUtil = {
             stored.prefs = newPrefs;
         return true;
     }),
+    changeRoomSettings: vi.fn(async (room: Room, newTexturePackPath: string, newPrefs: string): Promise<boolean> =>
+    {
+        const stored = roomStore[room.id];
+        if (stored)
+        {
+            stored.texturePackPath = newTexturePackPath;
+            stored.prefs = newPrefs;
+        }
+        return true;
+    }),
 };
 
 // ─── Mock: DBSearchUtil ──────────────────────────────────────────────────────

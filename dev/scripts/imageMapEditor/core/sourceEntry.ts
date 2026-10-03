@@ -11,4 +11,6 @@ export default interface SourceEntry
     url?: string;
     author?: string;
     license?: string;
+    // When it was first added (ISO 8601): the index lists sources by name, so nothing else tells.
+    addedAt: string;
 }

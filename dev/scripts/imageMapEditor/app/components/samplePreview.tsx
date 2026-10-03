@@ -19,16 +19,19 @@ const TOOLS: {tool: SampleTool, label: string, title: string}[] = [
     {tool: "mark", label: "Mark background", title: "Click the background to fill it out from there (Alt-click undoes a mark)"},
     {tool: "erase", label: "Erase", title: "Brush over what to take out"},
     {tool: "restore", label: "Restore", title: "Brush over what to bring back"},
-    {tool: "eraseColor", label: "Erase color", title: "Click a color to take it out wherever it is"},
-    {tool: "select", label: "Select", title: "Drag out a selection to keep, as a rectangle or an ellipse (Shift: a square or a circle). "
-        + "Click one to pick it; drag inside it to move it, its handles to resize it (Shift keeps its shape) and the knob above it to turn it (Shift: in steps)"},
+    {tool: "eraseColor", label: "Erase color", title: "Click a patch of one color to take it out, as far as that color "
+        + "reaches from there (the same color elsewhere stays)"},
+    {tool: "select", label: "Select", title: "Drag out a selection to keep, as a rectangle or an ellipse (Shift: a square or a circle), "
+        + "over another one too: only where they all overlap is kept. Click one to pick it (again for the next one under the pointer; "
+        + "outside them all for none); drag the handle at its middle to move it, those on its sides and corners to resize it "
+        + "(Shift keeps its shape) and the knob above it to turn it (Shift: in steps)"},
 ];
 const WHOLE_SAMPLE: RecipeSelection["rect"] = [0, 0, 1, 1];
 const FALLBACK_FILL = "#ffffff";
 
 // The sample as the recipe makes it, on a checkerboard so what is taken out shows (or tinted, with "Show removed"),
-// and the tools that take things out of it: background marks for the fill, the fill's thresholds, brushes, a color
-// taken out everywhere, and the selections it is cut to, listed so one can be picked and set. Magnified in the
+// and the tools that take things out of it: background marks for the fill, the fill's thresholds, brushes, a patch
+// of one color taken out, and the selections it is cut to, listed so one can be picked and set. Magnified in the
 // middle panel on asking (see SampleView). Beside it, the game image at its own pixels.
 export default function SamplePreview(props: Props)
 {

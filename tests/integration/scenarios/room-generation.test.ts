@@ -25,7 +25,7 @@ import {
     COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, GRAVITY_SPEED,
     HUB_ROOM_ID_KEYWORD,
     INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
-    NUM_COLLISION_LAYERS_PER_STOREY, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
+    NUM_COLLISION_LAYERS_PER_STOREY, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, NUM_VOXEL_TEXTURES,
     STOREY_FLOOR_COLLISION_LAYER, UNIT_VEC3,
 } from "../../../src/shared/system/sharedConstants";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
@@ -563,7 +563,6 @@ describe("every generated multiplayer room", () => {
 
     it("keeps every palette within the reach of a texture pack atlas", () => {
         // A palette index past the atlas grid renders nothing.
-        const NUM_TEXTURES_PER_PACK = 64;
         for (const texturePackPath of RoomPaletteMap.getTexturePackPaths())
         {
             const palettes = RoomPaletteMap.getPalettes(texturePackPath);
@@ -575,7 +574,7 @@ describe("every generated multiplayer room", () => {
                     expect(textureIndex, `${texturePackPath} :: texture ${textureIndex}`)
                         .toBeGreaterThanOrEqual(0);
                     expect(textureIndex, `${texturePackPath} :: texture ${textureIndex}`)
-                        .toBeLessThan(NUM_TEXTURES_PER_PACK);
+                        .toBeLessThan(NUM_VOXEL_TEXTURES);
                 }
             }
         }

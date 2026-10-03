@@ -25,7 +25,7 @@ async function send(method: "GET" | "POST" | "PUT" | "DELETE",
 {
     try {
         const headers: Record<string, string> = {...requestConfig?.headers};
-        let body: string | undefined = undefined;
+        let body: string | Blob | undefined = undefined;
 
         // Only a request that carries data declares a JSON body. Google's OAuth token endpoint is
         // POSTed with its parameters in the query string, and rejects one that claims to have a body.
@@ -33,6 +33,11 @@ async function send(method: "GET" | "POST" | "PUT" | "DELETE",
         {
             body = JSON.stringify(requestConfig.data);
             headers["Content-Type"] = "application/json";
+        }
+        else if (requestConfig?.file != undefined)
+        {
+            body = requestConfig.file;
+            headers["Content-Type"] = "application/octet-stream";
         }
 
         const response = await fetch(url, {method, headers, body, credentials: "same-origin"});
@@ -64,6 +69,8 @@ async function readBody(response: Response): Promise<any>
 export interface RestAPIRequestConfig
 {
     data?: any;
+    // Sent as the body itself, byte for byte, when there is no data.
+    file?: Blob;
     headers?: Record<string, string>;
 }
 

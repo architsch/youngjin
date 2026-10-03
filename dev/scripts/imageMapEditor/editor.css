@@ -70,8 +70,11 @@ button, input, select { font: inherit; color: inherit; }
 
 .editor.loading { display: flex; align-items: center; justify-content: center; color: var(--text-muted); }
 
+/* In the row that takes what the header and the banners leave, whichever of them show: placed after them in turn,
+   it would land in a row as tall as its own content, and stop short of the window under a short list. */
 .workspace {
     display: grid;
+    grid-row: 4;
     grid-template-columns: 260px minmax(0, 1fr) 420px;
     min-height: 0;
 }
@@ -177,7 +180,7 @@ button, input, select { font: inherit; color: inherit; }
     min-height: 0;
 }
 
-.entry-list .new-entry, .source-library .add-files { flex: none; }
+.entry-list .new-entry, .entry-list .entry-search, .source-library .add-files { flex: none; }
 
 .picking-note {
     display: flex;
@@ -192,14 +195,14 @@ button, input, select { font: inherit; color: inherit; }
 }
 
 .add-by-url { display: flex; flex: none; gap: 6px; }
-.add-by-url input {
-    flex: 1;
+.add-by-url input, .entry-search {
     min-width: 0;
     padding: 4px 6px;
     border: 1px solid var(--border-strong);
     border-radius: 5px;
     background: var(--surface);
 }
+.add-by-url input { flex: 1; }
 
 .source-grid {
     display: flex;
@@ -239,6 +242,34 @@ button, input, select { font: inherit; color: inherit; }
 .source-url a { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--accent); }
 .source-url .button { flex: none; }
 .source-actions { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.source-usage { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.source-usage .button { flex: none; }
+.source-usage .source-caption { min-width: 0; }
+
+.source-options { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 8px; }
+.source-options select {
+    min-width: 0;
+    padding: 4px 6px;
+    border: 1px solid var(--border-strong);
+    border-radius: 5px;
+    background: var(--surface);
+}
+.source-options label.checkbox { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+
+/* A source's entries (see SourceUsageDialog). */
+.usage-dialog {
+    width: min(640px, calc(100vw - 48px));
+    max-height: min(560px, calc(100vh - 48px));
+    padding: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+}
+.usage-dialog[open] { display: flex; flex-direction: column; }
+.usage-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
+.usage-dialog .panel-toolbar .button { margin-left: auto; }
+.usage-dialog .entry-grid { grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); padding: 10px; }
 
 .entry-grid {
     display: grid;
@@ -288,6 +319,7 @@ button, input, select { font: inherit; color: inherit; }
     font-size: 10px;
     font-weight: 600;
 }
+.entry-tag.staging { background: var(--warning); color: var(--surface); }
 
 /* Panels */
 
@@ -312,6 +344,8 @@ button, input, select { font: inherit; color: inherit; }
 
 .source-view.placeholder { gap: 16px; }
 
+/* What is drawn over the picture (handles, outlines, a brush) may reach past it, but never past its stage, or it
+   would make the page or the panel scroll. */
 .source-stage, .sample-stage {
     display: flex;
     flex: 1;
@@ -319,9 +353,11 @@ button, input, select { font: inherit; color: inherit; }
     justify-content: center;
     min-height: 0;
     padding: 12px;
+    overflow: hidden;
 }
 
-.source-frame, .sample-frame { position: relative; }
+/* The size it is given (see useFitSize), never squeezed to fit. */
+.source-frame, .sample-frame { position: relative; flex: none; }
 .source-canvas, .sample-frame canvas { display: block; width: 100%; height: 100%; }
 
 .source-overlay { position: absolute; inset: 0; touch-action: none; }
@@ -416,7 +452,6 @@ button, input, select { font: inherit; color: inherit; }
 .pane-divider:hover, .pane-divider:focus-visible { background: var(--handle); outline: none; }
 .sample-frame { touch-action: none; }
 .sample-frame.tool-mark, .sample-frame.tool-eraseColor, .sample-frame.tool-select { cursor: crosshair; }
-.sample-frame.tool-select.over-selection { cursor: move; }
 .sample-frame.tool-erase, .sample-frame.tool-restore { cursor: none; }
 .sample-frame svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
 .sample-preview .panel-toolbar { flex-wrap: wrap; row-gap: 6px; }
@@ -433,6 +468,7 @@ button, input, select { font: inherit; color: inherit; }
 .selection-stalk { stroke: var(--handle); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
 .selection-handle { fill: var(--handle); stroke: #000; stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
 .selection-handle.turn { fill: #fff; }
+.selection-move-mark { fill: none; stroke: #000; stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
 .selection-list { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
 .selection-list li { display: flex; align-items: center; gap: 8px; padding: 2px 4px 2px 8px; border: 1px solid var(--border); border-radius: 5px; cursor: pointer; }
 .selection-list li.focused { border-color: var(--handle); background: var(--accent-soft); }
@@ -441,6 +477,9 @@ button, input, select { font: inherit; color: inherit; }
 
 .sample-tools { display: flex; flex-direction: column; gap: 4px; padding: 6px 12px 0; }
 .slider-row { display: flex; align-items: center; gap: 8px; }
+/* A row of buttons too long for the panel wraps, instead of squeezing its choices out of sight. */
+.sample-tools .slider-row { flex-wrap: wrap; }
+.slider-row .segmented { flex: none; }
 .slider-row input[type="range"] { flex: 1; min-width: 60px; }
 .slider-label { flex: none; width: 92px; }
 .slider-row label.checkbox { display: flex; flex-direction: row; align-items: center; gap: 6px; }

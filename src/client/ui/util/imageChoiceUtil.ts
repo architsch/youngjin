@@ -1,20 +1,27 @@
 import ImageMap from "../../../shared/graphics/image/types/imageMap";
 import ImageMapCategory from "../../../shared/graphics/image/types/imageMapCategory";
 import ImageMetadata from "../../../shared/graphics/image/types/imageMetadata";
+import PictureSearchUtil from "../../../shared/graphics/image/util/pictureSearchUtil";
 import { dummyImagesDebugEnabledObservable } from "../../../shared/system/sharedObservables";
-import { PICTURE_SEARCH_FILLER_WORDS } from "../../../shared/system/sharedConstants";
+import { IMAGE_ALL_TAB_CATEGORY_ORDER } from "../../system/clientConstants";
 
-// The images offered to choose from (see ImageMapThumbnailPanel): alike ones together, and narrowed by a category tab
-// and a search.
+// The images offered to choose from (see ImageMapThumbnailPanel): alike ones together, narrowed by a category tab
+// and a search, and under All laid out category by category.
 const ImageChoiceUtil =
 {
-    // Every image in one of the map's subfolders, ordered so alike images sit together whatever categories they are in
-    // (see orderByKeywords): one order, which a category tab only narrows.
-    getItems: (imageMap: ImageMap, subfolderName: string): ImageMetadata[] =>
+    // Every image in one of the map's subfolders that may be chosen: a staging one only withStaging, as off the live
+    // server (see App.isPublicSite).
+    getOffered: (imageMap: ImageMap, subfolderName: string, withStaging: boolean): ImageMetadata[] =>
+    {
+        return imageMap.getImageMetadataListInSubfolder(subfolderName).filter(image => withStaging || !image.staging);
+    },
+    // Those, ordered so alike images sit together whatever categories they are in (see orderByKeywords): one order,
+    // which a category's tab only narrows.
+    getItems: (imageMap: ImageMap, subfolderName: string, withStaging: boolean): ImageMetadata[] =>
     {
         return orderByKeywords(dummyImagesDebugEnabledObservable.peek()
             ? getDummyImageList()
-            : imageMap.getImageMetadataListInSubfolder(subfolderName));
+            : ImageChoiceUtil.getOffered(imageMap, subfolderName, withStaging));
     },
     // All, then each category holding any of the images, and Misc if any names none of them; no tabs for a subfolder
     // listing no categories.
@@ -26,9 +33,14 @@ const ImageChoiceUtil =
         const tabs = [...categories.map(category => category.name), ImageMap.MISC_TAB];
         return [ImageMap.ALL_TAB, ...tabs.filter(tab => items.some(item => isInTab(categories, item, tab)))];
     },
-    getItemsInTab: (imageMap: ImageMap, subfolderName: string, items: ImageMetadata[], tab: string): ImageMetadata[] =>
+    // What a tab shows of them: a category's own, in the order they came in; under All, every one, laid out category
+    // by category (see orderByCategory).
+    getItemsInTab: (imageMap: ImageMap, subfolderName: string, items: ImageMetadata[], tab: string,
+        categoryOrder: readonly string[] = IMAGE_ALL_TAB_CATEGORY_ORDER): ImageMetadata[] =>
     {
         const categories = imageMap.getSubfolderCategories(subfolderName);
+        if (tab == ImageMap.ALL_TAB)
+            return orderByCategory(categories, items, categoryOrder);
         return items.filter(item => isInTab(categories, item, tab));
     },
     // The tab to open on for an image: the category its foremost keyword names, or Misc if that names none (the
@@ -42,16 +54,12 @@ const ImageChoiceUtil =
         return categories.find(category => category.name + ImageMap.CATEGORY_MARK == foremost)?.name
             ?? ImageMap.MISC_TAB;
     },
-    // The images whose keywords hold every word typed, anywhere in them (so "red crate" finds "crate,red,pepper"),
-    // but for filler words ("and", "of"), which keywords leave out.
+    // The images whose keywords hold every word typed (see PictureSearchUtil). A staging image is found by "staging"
+    // too.
     getFilteredItems: (allItems: ImageMetadata[],
         searchInput: string): ImageMetadata[] =>
     {
-        const terms = searchInput.toLowerCase().split(/[\s,]+/)
-            .filter(term => term.length > 0 && !PICTURE_SEARCH_FILLER_WORDS.includes(term));
-        if (terms.length === 0)
-            return allItems;
-        return allItems.filter(metadata => terms.every(term => isFound(metadata.keywords ?? "", term)));
+        return PictureSearchUtil.filter(allItems, searchInput, getSearchedWords);
     },
 }
 
@@ -64,6 +72,29 @@ function isInTab(categories: ImageMapCategory[], image: ImageMetadata, tab: stri
     return (tab == ImageMap.MISC_TAB)
         ? !categories.some(category => words.includes(category.name + ImageMap.CATEGORY_MARK))
         : words.includes(tab + ImageMap.CATEGORY_MARK);
+}
+
+// A run of images for each tab in the order given, alike images together within it (see orderByKeywords). An image
+// under several categories goes with the one listed last (Misc when it is under none), and those under none listed
+// come first, as one run.
+function orderByCategory(categories: ImageMapCategory[], images: ImageMetadata[],
+    categoryOrder: readonly string[]): ImageMetadata[]
+{
+    if (categories.length == 0)
+        return images;
+    const tabs = [...categories.map(category => category.name), ImageMap.MISC_TAB];
+    const runs = new Map<number, ImageMetadata[]>();
+    for (const image of images)
+    {
+        const place = Math.max(...tabs.filter(tab => isInTab(categories, image, tab))
+            .map(tab => categoryOrder.indexOf(tab)));
+        const run = runs.get(place);
+        if (run != undefined)
+            run.push(image);
+        else
+            runs.set(place, [image]);
+    }
+    return [...runs.keys()].sort((a, b) => a - b).flatMap(place => orderByKeywords(runs.get(place)!));
 }
 
 // Alike images next to each other: clustered by the keywords they share but for their categories (average linkage),
@@ -139,15 +170,12 @@ function dot(a: Map<string, number>, b: Map<string, number>): number
 // Fixed to one locale, so every client orders alike; numeric, so "2/9" comes before "2/10".
 const collator = new Intl.Collator("en", {numeric: true});
 
-// As typed, or as its singular, since keywords are singular ("peppers", "boxes"); too short a word is left as is,
-// or it would find far too much.
-function isFound(keywords: string, term: string): boolean
+// Found by a search as though it were one of every staging image's keywords, so it lists them all.
+const STAGING_SEARCH_WORD = "staging";
+
+function getSearchedWords(image: ImageMetadata): string
 {
-    if (keywords.includes(term))
-        return true;
-    if (term.length <= 3 || !term.endsWith("s"))
-        return false;
-    return keywords.includes(term.slice(0, -1)) || (term.endsWith("es") && keywords.includes(term.slice(0, -2)));
+    return image.staging ? `${image.keywords ?? ""},${STAGING_SEARCH_WORD}` : (image.keywords ?? "");
 }
 
 // Dummy total for testing pagination in debug mode.

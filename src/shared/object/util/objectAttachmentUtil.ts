@@ -111,6 +111,48 @@ const ObjectAttachmentUtil =
         }
         return objectIds;
     },
+    // How much of a face the attached objects lying on it cover, from 0 (none) to 1 (all of it): a block's face,
+    // or the room's own floor or ceiling over a cell.
+    getVoxelQuadCoverage: (room: Room, quadIndex: number): number =>
+    {
+        const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
+        const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
+        const voxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, col);
+        if (!voxel)
+            return 0;
+        const dims = VoxelQueryUtil.getVoxelQuadTransformDimensions(voxel, quadIndex, true);
+        const normal: Vec3 = {x: dims.dirX, y: dims.dirY, z: dims.dirZ};
+        const center: Vec3 = {x: col + 0.5 + dims.offsetX, y: dims.offsetY, z: row + 0.5 + dims.offsetZ};
+        // Flat on its plane, as a footprint is.
+        const half: Vec3 = {
+            x: (normal.x != 0) ? 0 : 0.5,
+            y: (normal.y != 0) ? 0 : 0.5 * COLLISION_LAYER_HEIGHT,
+            z: (normal.z != 0) ? 0 : 0.5,
+        };
+        const faceMin = Vector3DUtil.subtract(center, half);
+        const faceMax = Vector3DUtil.add(center, half);
+        const axesAcross = (["x", "y", "z"] as const).filter(axis => normal[axis] == 0);
+
+        let coveredArea = 0;
+        for (const object of Object.values(room.objectById))
+        {
+            if (!ObjectTypeConfigMap.getConfigByIndex(object.objectTypeIndex).attachment)
+                continue;
+            // On the placement grid a facing is exactly its axis and a face exactly on its plane, whatever the
+            // stored transform decoded to.
+            const tr = getQuantizedTransform(object.objectTypeIndex, object.transform);
+            if (!Vector3DUtil.equal(tr.dir, normal) ||
+                Vector3DUtil.dot(normal, Vector3DUtil.subtract(tr.pos, center)) != 0)
+            {
+                continue;
+            }
+            const bounds = getFootprintBounds(object.objectTypeIndex, tr);
+            coveredArea += axesAcross.reduce((area, axis) => area * Math.max(0,
+                Math.min(faceMax[axis], bounds.max[axis]) - Math.max(faceMin[axis], bounds.min[axis])), 1);
+        }
+        const faceArea = axesAcross.reduce((area, axis) => area * 2 * half[axis], 1);
+        return Math.min(1, coveredArea / faceArea);
+    },
     // Where an object of this size and facing goes when asked to be centred on center (a point on its
     // face). The spots tried, in order: that spot on the placement grid; then, given from (where the object
     // stands on the same face), the spots on the way back there; otherwise the spots within half the

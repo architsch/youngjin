@@ -8,6 +8,7 @@ Admin is a user type that is granted manually in the database. Admins decide by 
 - Acting as a hub's superuser (see [restricted_zone.md](restricted_zone.md)). That covers its doors — adding, moving, removing, labeling, linking and coloring them (see [door_design.md](../geometry/door_design.md)) — its labels (see [label_text.md](../graphics/label_text.md)), its texture pack, room settings and restricted zones. A Regular room's owner has the same standing in their own room, as does any player in the dev sandbox (see [sandbox.md](../testing/playtest/sandbox.md)).
 - Creating a new hub. The server otherwise creates one only when every hub is full.
 - Ordering the hubs, by setting each one's join priority (see [room_population.md](../networking/room_population.md)).
+- Saving a room to a file and loading one over it, in any room the admin is the superuser of (see [my_room.md](../networking/my_room.md#room-files)).
 - Ghost mode: the admin's own character, body and speech bubble alike, is drawn for nobody, the admin included. Only drawing is affected; the character still moves and collides as usual.
 
 In all other respects an admin edits like any user.

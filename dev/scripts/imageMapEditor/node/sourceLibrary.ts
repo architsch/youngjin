@@ -14,6 +14,9 @@ const THUMBNAIL_SIZE = 256;
 // Sources kept decoded, the one being edited first; a save renders from it (see EntryStore.saveEntry).
 const MAX_DECODED = 2;
 const UNSPLASH_LICENSE = "Unsplash License";
+// What follows a source's name in the file name of one of its surveys: nothing for the whole of it, or the part's
+// x, y, width and height (see getSurveyPath).
+const SURVEY_SUFFIX_PATTERN = /^((_\d+\.\d{3}){4})?\.jpg$/;
 
 // The photos entries are sampled from, each stored by the hash of its bytes (which recipes name it by) and listed
 // in an index with where it came from. The photos are gitignored and the index is not, so a photo missing on
@@ -35,7 +38,7 @@ export default class SourceLibrary
     }
 
     // Kept once, however often it is added; what is known of it is filled in from what is given.
-    async add(bytes: Buffer, fileName: string, known: Omit<SourceEntry, "sha1" | "fileName" | "width" | "height"> = {}):
+    async add(bytes: Buffer, fileName: string, known: Pick<SourceEntry, "url" | "author" | "license"> = {}):
         Promise<SourceEntry>
     {
         const sha1 = crypto.createHash("sha1").update(bytes).digest("hex");
@@ -60,6 +63,7 @@ export default class SourceLibrary
             url: existing?.url ?? known.url,
             author: existing?.author || known.author,
             license: existing?.license || known.license,
+            addedAt: existing?.addedAt ?? new Date().toISOString(),
         };
         this.writeIndex([...sources.filter(source => source.sha1 != sha1), entry]);
         return entry;
@@ -127,16 +131,31 @@ export default class SourceLibrary
         return fs.readFileSync(thumbnailPath);
     }
 
-    // Refused while an entry is sampled from it.
+    // Where a survey of it, or of a part of it (in fractions), is drawn (see BatchCommands.writeSurveys): named by its
+    // Unsplash id, or else the start of its sha1.
+    getSurveyPath(source: SourceEntry, region: [number, number, number, number]): string
+    {
+        const name = (source.url != undefined ? SourceUrlUtil.getUnsplashId(source.url) : undefined)
+            ?? source.sha1.slice(0, 12);
+        const partName = (region[2] < 1 || region[3] < 1) ? `_${region.map(value => value.toFixed(3)).join("_")}` : "";
+        return path.join(this.paths.workDir, "survey", `${name}${partName}.jpg`);
+    }
+
+    // Refused while an entry is sampled from it. Its thumbnail and surveys go with it, and its decoded copy, which a
+    // save would otherwise still render from.
     delete(sha1: string, usedBy: string[]): void
     {
         if (usedBy.length > 0)
             throw new RequestError(`It is the source of ${usedBy.join(", ")}`);
+        const source = this.list().find(other => other.sha1 == sha1);
         const filePath = this.findFile(sha1);
         if (filePath != undefined && path.dirname(filePath) == this.paths.sourcesDir)
             fs.rmSync(filePath);
+        this.decoded.delete(sha1);
         fs.rmSync(path.join(this.paths.workDir, "source_thumbnails", `${sha1}.webp`), {force: true});
-        this.writeIndex(this.list().filter(source => source.sha1 != sha1));
+        if (source != undefined)
+            this.deleteSurveys(source);
+        this.writeIndex(this.list().filter(other => other.sha1 != sha1));
     }
 
     // Upright (as its EXIF says), at no more than the working size; the last few are kept decoded.
@@ -161,6 +180,20 @@ export default class SourceLibrary
     getIndexPath(): string
     {
         return path.join(this.paths.sourcesDir, INDEX_FILE_NAME);
+    }
+
+    private deleteSurveys(source: SourceEntry): void
+    {
+        const whole = this.getSurveyPath(source, [0, 0, 1, 1]);
+        const surveyDir = path.dirname(whole);
+        const name = path.basename(whole, ".jpg");
+        if (!fs.existsSync(surveyDir))
+            return;
+        for (const fileName of fs.readdirSync(surveyDir))
+        {
+            if (fileName.startsWith(name) && SURVEY_SUFFIX_PATTERN.test(fileName.substring(name.length)))
+                fs.rmSync(path.join(surveyDir, fileName));
+        }
     }
 
     // One source per line, by file name, so adding one is one line of the diff.

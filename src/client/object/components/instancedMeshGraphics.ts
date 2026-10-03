@@ -84,15 +84,6 @@ export default class InstancedMeshGraphics extends GameObjectComponent
             offsetX, offsetY, offsetZ, dirX, dirY, dirZ, xScale, yScale, zScale);
     }
 
-    updateInstanceTextureUV(instancedMeshId: string, instanceId: number, textureIndex: number,
-        sampleOffsetX: number = 0, sampleOffsetY: number = 0,
-        sampleScaleX: number = 1, sampleScaleY: number = 1)
-    {
-        bindingMap[instancedMeshId].updateInstanceTextureUV(
-            this.gameObject, instanceId, textureIndex,
-            sampleOffsetX, sampleOffsetY, sampleScaleX, sampleScaleY);
-    }
-
     // See InstancedMeshBinding.updateInstanceTextureRect.
     updateInstanceTextureRect(instancedMeshId: string, instanceId: number,
         texelX: number, texelY: number, texelWidth: number, texelHeight: number)

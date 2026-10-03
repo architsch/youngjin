@@ -17,7 +17,8 @@ export default interface ObjectTypeClientConfig
         editOptions?: ComponentType<EditOptionsProps>;
         editPanels?: EditPanel[]; // The sub-panels editOptions can raise.
         // One of editPanels, raised as soon as the object is added from a selected face: what is left to pick of its
-        // look after what was picked before adding it (see VoxelQuadPlacementOptions).
+        // look after what was picked before adding it (see VoxelQuadPlacementOptions). A type with none is complete
+        // as added, and isn't selected (unless DISABLE_AUTO_SELECTION_ON_OBJECT_INSTALLATION).
         installPanel?: EditPanel;
     };
 }

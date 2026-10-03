@@ -4,7 +4,8 @@
 type RecipeAlphaEdit =
     // A brush stroke through the points: takes out, or brings back, what it covers.
     | {kind: "erase" | "restore", radius: number, points: [number, number][]}
-    // Takes out every pixel close (CIELAB distance) to the color at the point, anywhere in the sample.
+    // Takes out the patch of color at the point: what a fill reaches from it through pixels that are still kept and
+    // close (CIELAB distance) to the color there.
     | {kind: "eraseColor", point: [number, number], tolerance: number};
 
 export default RecipeAlphaEdit;

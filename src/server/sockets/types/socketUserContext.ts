@@ -89,6 +89,17 @@ export default class SocketUserContext
         return true;
     }
 
+    // Drops what is queued, for when the signal queued next replaces all of it (see
+    // ServerRoomManager.loadRoomFile).
+    clearAllPendingSignalsToUser()
+    {
+        for (const pendingSignals of this.pendingSignalsToUserByTypeIndex)
+        {
+            if (pendingSignals)
+                pendingSignals.length = 0;
+        }
+    }
+
     processAllPendingSignalsToUser()
     {
         const bufferState = EncodingUtil.startEncoding();

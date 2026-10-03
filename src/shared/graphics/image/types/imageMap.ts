@@ -13,12 +13,14 @@ export default class ImageMap
     static readonly ALL_TAB = "all";
     static readonly MISC_TAB = "misc";
 
-    // Ends a keyword naming one of its subfolder's categories ("kitchen*"). Such a keyword only files the image under
-    // that tab: it plays no part in ordering images, so a kind of thing sits together whatever places it belongs in.
+    // Ends a keyword naming one of its subfolder's categories ("kitchen*"). Such a keyword files the image under that
+    // tab, and sets which run it is in under All; it is left out when alike images are set side by side (see
+    // ImageChoiceUtil), so there a kind of thing sits together whatever places it belongs in.
     static readonly CATEGORY_MARK = "*";
 
     private rootDirName: string;
     private gridCellSize: number; // in pixels
+    private gridCellHeight?: number; // in pixels, for cells that aren't square (see ImageMapSeed.gridCellHeight)
 
     // (subfolderName == "") if there is no subfolder.
     private subfolderGridSizes: {[subfolderName: string]: {numCols: number, numRows: number}};
@@ -38,20 +40,28 @@ export default class ImageMap
     // The subfolders' tab order and titles, if the manifest gives them.
     private subfolderTabs?: ImageMapSubfolderTab[];
 
+    // What an image's path is followed by in the file the game loads for it, or "" if that is the image's own file
+    // (see ImageMapSeed.augmentedPathSuffix).
+    private augmentedPathSuffix: string;
+
     constructor(rootDirName: string, gridCellSize: number,
         subfolderGridSizes: {[subfolderName: string]: {numCols: number, numRows: number}},
         imageMetadataList: ImageMetadata[],
         atlasImageName?: string,
         thumbnailSize: number = 0,
-        subfolderTabs?: ImageMapSubfolderTab[])
+        subfolderTabs?: ImageMapSubfolderTab[],
+        gridCellHeight?: number,
+        augmentedPathSuffix: string = "")
     {
         this.rootDirName = rootDirName;
         this.gridCellSize = gridCellSize;
+        this.gridCellHeight = gridCellHeight;
         this.subfolderGridSizes = subfolderGridSizes;
         this.imageMetadataList = imageMetadataList;
         this.atlasImageName = atlasImageName;
         this.thumbnailSize = thumbnailSize;
         this.subfolderTabs = subfolderTabs;
+        this.augmentedPathSuffix = augmentedPathSuffix;
 
         for (const imageMetadata of imageMetadataList)
         {
@@ -64,6 +74,10 @@ export default class ImageMap
     getGridCellSize(): number
     {
         return this.gridCellSize;
+    }
+    getGridCellHeight(): number
+    {
+        return this.gridCellHeight ?? this.gridCellSize;
     }
     getNumGridCols(subfolderName: string): number
     {
@@ -117,7 +131,7 @@ export default class ImageMap
     // path: relative to the root directory (rootDirName under the assets URL), without extension.
     getImageURLByPath(assetsURL: string, path: string): string
     {
-        return this.getFileURLByPath(assetsURL, path, "");
+        return this.getFileURLByPath(assetsURL, path, this.augmentedPathSuffix);
     }
     // 0 when the map has no thumbnails.
     getThumbnailSize(): number
@@ -128,7 +142,7 @@ export default class ImageMap
     getThumbnailURLByPath(assetsURL: string, path: string): string
     {
         return this.getFileURLByPath(assetsURL, path,
-            (this.thumbnailSize > 0) ? ImageMap.THUMBNAIL_PATH_SUFFIX : "");
+            (this.thumbnailSize > 0) ? ImageMap.THUMBNAIL_PATH_SUFFIX : this.augmentedPathSuffix);
     }
     private getFileURLByPath(assetsURL: string, path: string, pathSuffix: string): string
     {

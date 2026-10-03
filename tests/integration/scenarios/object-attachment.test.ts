@@ -30,6 +30,7 @@ import PhysicsColliderStateUtil from "../../../src/shared/physics/util/physicsCo
 import Geometry3DUtil from "../../../src/shared/math/util/geometry3DUtil";
 import QuarterTurnsUtil from "../../../src/shared/object/util/quarterTurnsUtil";
 import Vector3DUtil from "../../../src/shared/math/util/vector3DUtil";
+import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import Room from "../../../src/shared/room/types/room";
 import User from "../../../src/shared/user/types/user";
 import Vec3 from "../../../src/shared/math/types/vec3";
@@ -215,6 +216,74 @@ describe("where an attached object may go", () => {
             const canvasAt = (bottomY: number) => ({x: MIDDLE.x, y: bottomY + 0.5 * height, z: WALL_ROW});
             expect(fits(room, canvasTypeIndex, canvasAt(0), FACING)).toBe(true);
             expect(fits(room, canvasTypeIndex, canvasAt(-COLLISION_LAYER_HEIGHT), FACING)).toBe(false);
+        });
+    });
+});
+
+describe("how much of a face attached objects cover", () => {
+    beforeEach(() => {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        vi.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    // The wall's own face over one cell and layer.
+    const wallFace = (col: number, layer: number) => VoxelQueryUtil.getVoxelQuadIndex(WALL_ROW, col, "z", "-", layer);
+    const coverage = (room: Room, quadIndex: number) => ObjectAttachmentUtil.getVoxelQuadCoverage(room, quadIndex);
+
+    it("is the share of the face under what lies on it, and nothing for what only meets its edge", async () => {
+        await inTheRoom((user, room) => {
+            expect(coverage(room, wallFace(9, 2))).toBe(0);
+
+            // A canvas a cell across and two layers tall.
+            expect(ObjectUpdateUtil.addObject(user, room, attachment(user, room, canvasTypeIndex, "whole",
+                {x: 9.5, y: 1.5, z: WALL_ROW}))).toBe(true);
+            expect(coverage(room, wallFace(9, 2))).toBe(1);
+            expect(coverage(room, wallFace(9, 3))).toBe(1);
+            for (const [col, layer] of [[8, 2], [10, 3], [9, 1], [9, 4]])
+                expect(coverage(room, wallFace(col, layer)), `col ${col}, layer ${layer}`).toBe(0);
+
+            // One half a cell across and a layer tall, in a face's corner.
+            expect(ObjectUpdateUtil.addObject(user, room, attachment(user, room, canvasTypeIndex, "half",
+                {x: 12.25, y: 1.25, z: WALL_ROW}, FACING, {x: 0.5, y: 0.5, z: 1}))).toBe(true);
+            expect(coverage(room, wallFace(12, 2))).toBe(0.5);
+        });
+    });
+
+    it("counts only what lies on that very face", async () => {
+        await inTheRoom((user, room) => {
+            const floorTile = (row: number, col: number) => VoxelQueryUtil.getFloorVoxelQuadIndex(row, col);
+            const blockFace = (axis: "x" | "y", orientation: "-" | "+") =>
+                VoxelQueryUtil.getVoxelQuadIndex(BLOCK.row, BLOCK.col, axis, orientation, BLOCK.layer);
+
+            // At the wall's foot, and on the floor tile in front of it.
+            expect(ObjectUpdateUtil.addObject(user, room, attachment(user, room, canvasTypeIndex, "on-the-wall",
+                {x: 16.5, y: 0.5, z: WALL_ROW}))).toBe(true);
+            expect(coverage(room, wallFace(16, 0))).toBe(1);
+            expect(coverage(room, floorTile(WALL_ROW - 1, 16))).toBe(0);
+            expect(ObjectUpdateUtil.addObject(user, room, attachment(user, room, canvasTypeIndex, "on-the-floor",
+                {x: 15.5, y: 0, z: WALL_ROW - 0.5}, UP))).toBe(true);
+            expect(coverage(room, floorTile(WALL_ROW - 1, 15))).toBe(1);
+            expect(coverage(room, wallFace(15, 0))).toBe(0);
+
+            // On the floating block's top: not its side, its underside, or the floor below it.
+            expect(ObjectUpdateUtil.addObject(user, room, attachment(user, room, canvasTypeIndex, "on-the-block",
+                {x: BLOCK.col + 0.5, y: BLOCK_TOP_Y, z: BLOCK.row + 0.5}, UP))).toBe(true);
+            expect(coverage(room, blockFace("y", "+"))).toBe(1);
+            expect(coverage(room, blockFace("y", "-"))).toBe(0);
+            expect(coverage(room, blockFace("x", "+"))).toBe(0);
+            expect(coverage(room, floorTile(BLOCK.row, BLOCK.col))).toBe(0);
+        });
+    });
+
+    it("reads a stored transform as where it stands on the grid, though it decodes a little off it", async () => {
+        await inTheRoom((user, room) => {
+            // As a canvas at (14.5, 1.5) on the wall comes back off the wire (see ObjectTransform).
+            expect(ObjectUpdateUtil.addObject(user, room, attachment(user, room, canvasTypeIndex, "decoded",
+                {x: 14.4996, y: 1.4996, z: WALL_ROW - 0.0004}, {x: -0.0000153, y: -0.0000153, z: -0.99998}))).toBe(true);
+            expect(coverage(room, wallFace(14, 2))).toBe(1);
+            expect(coverage(room, wallFace(14, 3))).toBe(1);
+            expect(coverage(room, wallFace(13, 2))).toBe(0);
+            expect(coverage(room, wallFace(14, 1))).toBe(0);
         });
     });
 });

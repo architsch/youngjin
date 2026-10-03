@@ -87,11 +87,15 @@ export default function EntryForm(props: Props)
             }}>
                 {subfolders.map(subfolder => <option key={subfolder.name} value={subfolder.name}>{subfolder.title}</option>)}
             </select></label>}
-            <label className="checkbox" title="Kept, with its number, but left out of the built map; its image doesn't ship until it is enabled again">
-                <input type="checkbox" checked={draft.disabled} onChange={ev => {
-                    const disabled = ev.target.checked;
-                    onDraftChange(d => ({...d, disabled}));
-                }}/>Disabled (left out of the game)</label>
+            <label title="Enabled: in the game for everyone. Staging: built and shipped like an enabled one, but offered only on the staging and dev servers, to be tried in the game first (tagged in red with its number there, and all listed by a search for staging). Disabled: kept, with its number, but left out of the built map; its image doesn't ship until it is enabled or staged again">
+                Status<select value={draft.disabled ? "disabled" : draft.staging ? "staging" : "enabled"} onChange={ev => {
+                    const status = ev.target.value;
+                    onDraftChange(d => ({...d, disabled: status == "disabled", staging: status == "staging"}));
+                }}>
+                    <option value="enabled">Enabled</option>
+                    <option value="staging">Staging (not on the live server)</option>
+                    <option value="disabled">Disabled (left out of the game)</option>
+                </select></label>
         </fieldset>
 
         <fieldset>

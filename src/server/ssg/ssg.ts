@@ -10,6 +10,7 @@ import ErrorPageBuilder from "./builder/page/errorPageBuilder";
 import PreEncodedCompositionBuilder from "./builder/preEncodedCompositionBuilder";
 import InstancedMeshCapacityBuilder from "./builder/instancedMeshCapacityBuilder";
 import ImageMapBuilder from "./builder/imageMapBuilder";
+import VoxelTexturePackBuilder from "./builder/voxelTexturePackBuilder";
 import CompositionThumbnailBuilder from "./builder/compositionThumbnailBuilder";
 import { ArcadeData } from "./data/arcadeData";
 import { LibraryData } from "./data/libraryData";
@@ -64,8 +65,9 @@ export default async function SSG(): Promise<void>
 
     await FileUtil.write("style.css", styleDictionary);
 
-    // Generate Image Maps
+    // Generate Image Maps (after the voxel texture packs' atlases, which their map is made of)
 
+    await new VoxelTexturePackBuilder(process.env.MODE == "ssg").build();
     for (const seed of Object.values(ImageMapSeeds))
         await new ImageMapBuilder(seed).build();
 

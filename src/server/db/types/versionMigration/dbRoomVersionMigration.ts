@@ -5,6 +5,8 @@ import LightPaletteVersionMigration from "../../../../shared/math/versionMigrati
 // The prefs string's "Light" palette positions: the ambient color, then the head light's (see RoomPrefsUtil).
 const LEGACY_PREFS_LIGHT_COLOR_CHAR_INDICES = [0, 1];
 
+// A step that changes what a stored texturePackPath or prefs means needs a RoomFile version too: room
+// files carry both, dated only by their own version.
 const DBRoomVersionMigration: DBVersionMigration = [
     // v0 -> v1: introduce ownerUserName (denormalized for room listings).
     async (row: any) => {

@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import sharp from "sharp";
 import EntryStore from "./entryStore";
+import IMAGE_LICENSES from "../core/imageLicenses";
 import SampleOrder from "../core/sampleOrder";
 import SampleOrderUtil from "../core/sampleOrderUtil";
 import SourceEntry from "../core/sourceEntry";
@@ -17,16 +18,33 @@ const SURVEY_LONG_SIDE = 1600;
 const SURVEY_STEPS = [0.002, 0.005, 0.01, 0.02, 0.05];
 
 // The editor's commands for sampling many photos at once (see .claude/skills/image-map-sampling): photos added to
-// the library by their addresses, drawn with a grid to plan samples by, and the planned samples saved as entries,
-// each disabled until it is reviewed.
+// the library by their addresses or from files, drawn with a grid to plan samples by, and the planned samples saved
+// as entries, each disabled until it is reviewed.
 const BatchCommands =
 {
-    addSources: async (store: EntryStore, urls: string[]): Promise<void> =>
+    // Each a photo's address, or a file on this machine. A file is whose fileOrigin says: a picture of one's own
+    // names its author alone; one made from someone else's photo (a cut-out of it, say) names that photo's address,
+    // author and license. An address says its own.
+    addSources: async (store: EntryStore, urls: string[],
+        fileOrigin: Pick<SourceEntry, "url" | "author" | "license"> = {}): Promise<void> =>
     {
+        if ((fileOrigin.url == undefined) != (fileOrigin.license == undefined))
+            throw new Error("A file made from someone else's photo needs both that photo's --url and its --license");
+        if (fileOrigin.license != undefined && !IMAGE_LICENSES.includes(fileOrigin.license))
+            throw new Error(`"${fileOrigin.license}" is not a license on offer: ${IMAGE_LICENSES.join(", ")}`);
+
         const failed: string[] = [];
         let downloaded = false;
         for (const url of urls)
         {
+            if (fs.existsSync(url) && fs.statSync(url).isFile())
+            {
+                const numKnown = store.library.list().length;
+                const added = await store.library.add(fs.readFileSync(url), path.basename(url), fileOrigin);
+                console.log(`${url}: ${store.library.list().length > numKnown ? "added" : "already in the library as"} `
+                    + `${added.sha1.slice(0, 8)}, ${added.width}x${added.height}, by ${added.author ?? "(unknown)"}`);
+                continue;
+            }
             const known = findSource(store.library.list(), url);
             if (known != undefined)
             {
@@ -82,8 +100,6 @@ const BatchCommands =
             : sources.filter(source => !recipes.some(recipe => recipe.sourceSha1 == source.sha1))
                 .map(source => ({source, region: [0, 0, 1, 1] as [number, number, number, number]}));
 
-        const outDir = path.join(store.paths.workDir, "survey");
-        fs.mkdirSync(outDir, {recursive: true});
         const written: string[] = [];
         for (const {source, region} of requests)
         {
@@ -120,8 +136,8 @@ const BatchCommands =
             drawLines(ry, rh, outHeight, false);
             const svg = `<svg width="${outWidth}" height="${outHeight}" xmlns="http://www.w3.org/2000/svg">${lines}</svg>`;
 
-            const partName = (rw < 1 || rh < 1) ? `_${region.map(value => value.toFixed(3)).join("_")}` : "";
-            const outPath = path.join(outDir, `${getSourceName(source)}${partName}.jpg`);
+            const outPath = store.library.getSurveyPath(source, region);
+            fs.mkdirSync(path.dirname(outPath), {recursive: true});
             await sharp(Buffer.from(image.data.buffer, image.data.byteOffset, image.data.byteLength),
                 {raw: {width: image.width, height: image.height, channels: 4}})
                 .extract({left, top, width, height})
@@ -148,8 +164,13 @@ const BatchCommands =
             const source = findSource(store.library.list(), order.source);
             if (source == undefined)
                 throw new Error(`"${order.title}": ${order.source} is not in the library (add it with --add-sources)`);
-            if (!source.url || !source.license)
-                throw new Error(`"${order.title}": the library doesn't say where ${source.fileName} came from, or under what license`);
+            // A picture of one's own names its author and neither of the other two (see ImageEntry).
+            const isOwn = !source.url && !source.license && !!source.author;
+            if (!isOwn && (!source.url || !source.license))
+            {
+                throw new Error(`"${order.title}": the library doesn't say where ${source.fileName} came from and `
+                    + `under what license, or whose own picture it is`);
+            }
             if (order.cells != undefined && !order.keywords?.trim())
                 throw new Error(`"${order.title}": an everyday object needs keywords, which a search finds it by`);
 
@@ -157,8 +178,8 @@ const BatchCommands =
             const entryPath = await store.saveEntry({
                 path: order.path,
                 subfolder: order.subfolder,
-                fields: {title: order.title, author: source.author ?? "", keywords: order.keywords, source: source.url,
-                    license: source.license, disabled: true},
+                fields: {title: order.title, author: source.author ?? "", keywords: order.keywords,
+                    ...(isOwn ? {} : {source: source.url, license: source.license}), disabled: true},
                 recipe: SampleOrderUtil.toRecipe(order, source),
                 baseHash: state.hash,
             });
@@ -175,7 +196,8 @@ const BatchCommands =
     },
 }
 
-// By its sha1, by its Unsplash id or page address, or by any other address it was added from.
+// By its sha1, by its Unsplash id or page address, by any other address it was added from, or by its file name
+// where only one has it (a file added from this machine has no address).
 function findSource(sources: SourceEntry[], key: string): SourceEntry | undefined
 {
     if (/^[0-9a-f]{40}$/.test(key))
@@ -189,8 +211,12 @@ function findSource(sources: SourceEntry[], key: string): SourceEntry | undefine
     {
         // Not an address, so an Unsplash id.
     }
-    return sources.find(source => source.url != undefined && (source.url == key
+    const byAddress = sources.find(source => source.url != undefined && (source.url == key
         || (unsplashId != undefined && SourceUrlUtil.getUnsplashId(source.url) == unsplashId)));
+    if (byAddress != undefined)
+        return byAddress;
+    const named = sources.filter(source => source.fileName == key);
+    return (named.length == 1) ? named[0] : undefined;
 }
 
 function splitRegion(name: string): [string, [number, number, number, number]]
@@ -203,11 +229,6 @@ function splitRegion(name: string): [string, [number, number, number, number]]
         || region[0] + region[2] > 1.0001 || region[1] + region[3] > 1.0001)
         throw new Error(`${name}: the part x,y,w,h must lie within the source, in fractions`);
     return [match[1], region];
-}
-
-function getSourceName(source: SourceEntry): string
-{
-    return (source.url != undefined ? SourceUrlUtil.getUnsplashId(source.url) : undefined) ?? source.sha1.slice(0, 12);
 }
 
 function wait(ms: number): Promise<void>

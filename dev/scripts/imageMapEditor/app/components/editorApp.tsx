@@ -13,7 +13,9 @@ import PixelUtil from "../util/pixelUtil";
 import Draft from "../types/draft";
 import LoadedSource from "../types/loadedSource";
 import SampleToolSettings from "../types/sampleToolSettings";
+import SourceSort from "../types/sourceSort";
 import EditorState from "../../core/editorState";
+import ImageEntry from "../../core/imageEntry";
 import ImageRecipe from "../../core/imageRecipe";
 import RecipeBackground from "../../core/recipeBackground";
 import RecipeOutput from "../../core/recipeOutput";
@@ -43,6 +45,9 @@ export default function EditorApp()
     const [savedDraftJSON, setSavedDraftJSON] = useState("null");
     const [source, setSource] = useState<LoadedSource>();
     const [leftTab, setLeftTab] = useState<"entries" | "sources">("entries");
+    const [entrySearch, setEntrySearch] = useState("");
+    const [sourceSort, setSourceSort] = useState<SourceSort>("added");
+    const [unusedSourcesOnly, setUnusedSourcesOnly] = useState(false);
     const [pickingSource, setPickingSource] = useState(false);
     const [keepRectangle, setKeepRectangle] = useState(true);
     // What the middle panel shows: the source with its quad, or the sample magnified.
@@ -170,9 +175,11 @@ export default function EditorApp()
             return setError(`${path} has no recipe yet: restart the editor, which takes it in as its own image.`);
         const opened: Draft = {path, subfolder: path.substring(0, path.indexOf("/")), title: entry.title,
             author: entry.author, keywords: entry.keywords ?? "", source: entry.source ?? "", license: entry.license ?? "",
-            disabled: entry.disabled === true, recipe};
+            disabled: entry.disabled === true, staging: entry.staging === true, recipe};
         resetDraft(opened);
         setSavedDraftJSON(JSON.stringify(opened));
+        // Opened from a source's entries, it may be in another tab.
+        setSubfolder(opened.subfolder);
         setPickingSource(false);
         setError(undefined);
     };
@@ -190,7 +197,7 @@ export default function EditorApp()
             return;
         const tabEntry = state.entries.find(entry => entry.path.startsWith(`${subfolder}/`));
         const opened: Draft = {path: undefined, subfolder, title: "", author: library.author ?? "", keywords: "",
-            source: library.url ?? "", license: library.license ?? "", disabled: false,
+            source: library.url ?? "", license: library.license ?? "", disabled: false, staging: false,
             recipe: newRecipe(library, tabEntry == undefined || tabEntry.preserveScale === true)};
         resetDraft(opened);
         setSavedDraftJSON("null");
@@ -287,7 +294,7 @@ export default function EditorApp()
                 path: asNew ? undefined : draft.path,
                 subfolder: draft.subfolder,
                 fields: {title: draft.title, author: draft.author, keywords: draft.keywords, source: draft.source,
-                    license: draft.license, disabled: draft.disabled},
+                    license: draft.license, disabled: draft.disabled, staging: draft.staging},
                 recipe: sendsRecipe ? draft.recipe : undefined,
                 baseHash: state.hash,
             });
@@ -385,9 +392,13 @@ export default function EditorApp()
         commitDraft(d => ({...d, recipe: update(d.recipe)}), coalesceKey);
     const startBackground = turnedOffRef.current.background ?? DEFAULT_BACKGROUND;
     const startStep = turnedOffRef.current.step ?? DEFAULT_STEP;
-    const usage: {[sha1: string]: string[]} = {};
-    for (const [entryPath, entryRecipe] of Object.entries(state.recipeFile.recipes))
-        (usage[entryRecipe.sourceSha1] ??= []).push(entryPath);
+    const usage: {[sha1: string]: ImageEntry[]} = {};
+    for (const entry of state.entries)
+    {
+        const entryRecipe = state.recipeFile.recipes[entry.path];
+        if (entryRecipe != undefined)
+            (usage[entryRecipe.sourceSha1] ??= []).push(entry);
+    }
     const output = recipe?.output;
     const gameImage = preview?.gameImage;
     const magnified = middleView == "sample" && preview != undefined && recipe != undefined && currentSource != undefined;
@@ -440,14 +451,19 @@ export default function EditorApp()
                         onClick={() => setLeftTab("sources")}>Sources ({state.sources.length})</button>
                 </div>
                 {leftTab == "entries"
-                    ? <EntryList state={state} subfolder={subfolder} selectedPath={draft?.path}
-                        onSelectSubfolder={setSubfolder} onSelect={openEntry} onOpenFile={file => addFiles([file], true)}/>
-                    : <SourceLibraryPanel sources={state.sources} usage={usage} currentSha1={recipe?.sourceSha1}
+                    ? <EntryList state={state} subfolder={subfolder} selectedPath={draft?.path} search={entrySearch}
+                        onSelectSubfolder={setSubfolder} onSearchChange={setEntrySearch} onSelect={openEntry}
+                        onOpenFile={file => addFiles([file], true)}/>
+                    : <SourceLibraryPanel sources={state.sources} usage={usage} imageVersion={state.hash}
+                        currentSha1={recipe?.sourceSha1} openPath={draft?.path}
                         canUseForEntry={draft != undefined} picking={pickingSource}
                         openEntryLabel={draft?.path ?? "the new entry"}
+                        sort={sourceSort} unusedOnly={unusedSourcesOnly}
+                        onSortChange={setSourceSort} onUnusedOnlyChange={setUnusedSourcesOnly}
                         onCancelPicking={() => setPickingSource(false)}
                         onAddFiles={files => addFiles(files, false)} onAddUrl={addFromUrl}
-                        onNewEntry={startEntryFromSource} onUseForEntry={useSourceForEntry} onDelete={deleteSource}/>}
+                        onNewEntry={startEntryFromSource} onUseForEntry={useSourceForEntry} onDelete={deleteSource}
+                        onOpenEntry={openEntry}/>}
             </aside>
             {draft == undefined
                 ? <div className="placeholder">Pick an entry, or start one from a photo in the Sources tab.</div>

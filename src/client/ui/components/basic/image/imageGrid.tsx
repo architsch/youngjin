@@ -2,7 +2,7 @@ import useMouseDragScroll from "../../../util/mouseDragScroll";
 import AtlasCellSprite from "./atlasCellSprite";
 
 export default function ImageGrid({
-    imageURL, selectedCol, selectedRow, numCols, numRows, cellSize, onSelect}: Props)
+    imageURL, selectedCol, selectedRow, numCols, numRows, cellWidth, cellHeight, onSelect}: Props)
 {
     const onRefChange = useMouseDragScroll("vertical", "grabWhileDragging");
     const gridCoordsList: {col: number, row: number}[] = []
@@ -16,7 +16,7 @@ export default function ImageGrid({
 
     const cellGap = 8; // gap-2 = 0.5rem
     const containerPadding = 8; // p-2 = 0.5rem
-    const naturalWidth = numCols * cellSize + (numCols - 1) * cellGap + containerPadding * 2;
+    const naturalWidth = numCols * cellWidth + (numCols - 1) * cellGap + containerPadding * 2;
 
     const gridClassNames = "grid gap-2 m-2 p-2 max-h-[60vh] overflow-y-auto pointer-events-auto rounded-md";
     // Inline column template (Tailwind can't resolve dynamic class names). width sets the natural
@@ -33,10 +33,10 @@ export default function ImageGrid({
             return <AtlasCellSprite
                 key={`imageGrid.select.${gridCoords.col}.${gridCoords.row}`}
                 atlasImageURL={imageURL}
-                atlasWidth={cellSize * numCols}
-                atlasHeight={cellSize * numRows}
-                atlasCellWidth={cellSize}
-                atlasCellHeight={cellSize}
+                atlasWidth={cellWidth * numCols}
+                atlasHeight={cellHeight * numRows}
+                atlasCellWidth={cellWidth}
+                atlasCellHeight={cellHeight}
                 atlasCellCol={gridCoords.col}
                 atlasCellRow={gridCoords.row}
                 flipRow={false}
@@ -56,6 +56,7 @@ interface Props
     selectedRow: number;
     numCols: number;
     numRows: number;
-    cellSize: number;
+    cellWidth: number;
+    cellHeight: number;
     onSelect: (col: number, row: number) => void;
 }

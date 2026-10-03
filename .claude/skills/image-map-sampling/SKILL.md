@@ -1,25 +1,28 @@
 ---
 name: image-map-sampling
-description: Turn a list of source photo URLs (usually Unsplash pages) into picture map entries (the everyday objects props show, or paintings for canvases) — add the photos to the image map editor's source library, survey each one with a grid, plan samples that read well as flat pictures at the game's scale, cut them out of their backgrounds, straighten, retouch and color-correct them, write the keywords a search finds each by (first the kinds of place it belongs in, marked as its categories, then its kind), and save them as disabled entries for the user to review. Use when the user hands over image URLs to be sampled into the picture map.
+description: Turn source photos (a list of URLs, usually Unsplash pages, or picture files, the user's own or ones prepared from a photo) into picture map entries (the everyday objects props show, or paintings for canvases) — add the photos to the image map editor's source library, survey each one with a grid, plan samples that read well as flat pictures at the game's scale, cut them out of their backgrounds, straighten, retouch and color-correct them, write the keywords a search finds each by (first the kinds of place it belongs in, marked as its categories, then its kind), and save them as disabled entries for the user to review. Use when the user hands over image URLs or picture files to be sampled into the picture map.
 ---
 
 # Image Map Sampling
 
 Turns photos into entries of the picture map (`public/app/assets/pictures/manifest.json`) through the
 image map editor's own pipeline (`dev/scripts/imageMapEditor`, see its `server.js` for every command). This skill
-only proposes entries: **the user reviews each one and enables what they keep.**
+only proposes entries: **the user reviews each one and stages or enables what they keep.**
 
 ## Hard rules
 
-- **Every entry made here is disabled.** `--save-samples` saves it so, every time. Never enable an entry, and
-  never touch one this batch didn't make, unless the user asks.
+- **Every entry made here is disabled.** `--save-samples` saves it so, every time. Never enable or stage an entry
+  (a staging one is built and ships too, offered only off the live server), and never touch one this batch didn't
+  make, unless the user asks.
 - **Never delete or renumber an entry.** A stored canvas or prop names its image by path, so a path is never reused.
 - **Only photos whose terms are on offer** (`IMAGE_LICENSES` in `dev/scripts/imageMapEditor/core/imageLicenses.ts`;
-  on Unsplash, the free photos). A download Unsplash refuses (403, an Unsplash+ photo) is skipped and reported,
-  never swapped for a lookalike.
+  on Unsplash, the free photos), **or pictures the user says are their own.** A download Unsplash refuses (403, an
+  Unsplash+ photo) is skipped and reported, never swapped for a lookalike. Their own picture can still show someone
+  else's work or likeness (a sculpture, a branded product, a passer-by's face): crop or paint it out where that
+  leaves the picture whole, and report what is left for them to decide.
 - The photos themselves are gitignored (only `dev/assets/picture_sources/index.json` is committed); an
-  entry's sample and parked game image are committed with it. `THIRD-PARTY-NOTICES.md` lists only enabled
-  entries, and the editor rewrites that table itself.
+  entry's sample and parked game image are committed with it. `THIRD-PARTY-NOTICES.md` lists only the entries
+  that ship (enabled or staging), and the editor rewrites that table itself.
 - Changes under `src/` (the click map) go through Edit, never a script.
 
 ## Scale
@@ -37,6 +40,12 @@ Estimate centimeters per pixel from something of known size in the photo: a drin
 bottle 30 cm, a 12″ record 30 cm, a dartboard 45 cm, a book spine 20–25 cm, a keyboard key pitch 19 mm, a
 dinner plate 26 cm, a playing card 6.3 × 8.8 cm, a brick 21.5 × 6.5 cm, an A4 sheet 21 × 29.7 cm, a wall
 socket plate 8 × 8 cm, a door 80 cm wide, a stop sign 75 cm across.
+
+A picture the user prepared on a canvas of a cell shape (512 × 512, 512 × 256 or 256 × 512 px, the thing set in
+see-through margins) already says its scale and where it sits: sample the whole canvas (`"rect": [0, 0, 1, 1]`).
+One cropped close to the thing has no scale of its own, so give it one with `margin` like any cut-out; a fixture
+or appliance larger than a block's face (a sink, a toilet) is fitted whole, as their canvases of such things are (a
+washer's door, a range hood).
 
 ## What makes a good sample
 
@@ -95,7 +104,7 @@ Write them from the sample as it came out, not from the photo or the title.
 ## Categories
 
 The Objects tab's categories (`categories` on its subfolder in the manifest) are the kinds of place a thing usually
-belongs in; read the manifest for the current list:
+belongs in, and one for accessories; read the manifest for the current list:
 
 | Category | For |
 |---|---|
@@ -105,11 +114,16 @@ belongs in; read the manifest for the current list:
 | `office` | Computers, calculators, notebooks, cabinets |
 | `commercial` | Vending machines, shopping aisles, fridges, cash registers, bookshelves, public fixtures |
 | `industrial` | Industrial equipment, workshop signs |
+| `accessory` | Small things worn, carried or held: bags, shoes, gloves, remotes, swimming gear |
 
 A category is a keyword marked with `*` at its end (`ImageMap.CATEGORY_MARK`): `kitchen*`. An image is under every tab
 its keywords name that way, so put each place it usually belongs in (one or two, most typical first) at the front of
-its keywords. The chooser leaves categories out when it orders images, so choose them by where the thing belongs
-alone. A TV is `living*` and a computer `office*`, and their shared kind word `screen` still sets them side by side.
+its keywords. An accessory leads with `accessory*`, then a place it clearly belongs in, if any (`accessory*, kitchen*`
+for oven mitts). The chooser leaves categories out when it sets alike images side by side, so choose them by where
+the thing belongs alone. A TV is `living*` and a computer `office*`, and under a tab holding both, their shared kind
+word `screen` still sets them side by side. The All tab lays images out category by category, in the order of
+`IMAGE_ALL_TAB_CATEGORY_ORDER` (`src/client/system/clientConstants.ts`), an image under several going with the one
+listed last: accessories are listed after every place, so one that also names a place still sits among them.
 Unmarked, a category's name is an ordinary word: the post office boxes keep `office` without landing under Office.
 Name none for something no category fits, which the chooser shows under Misc. `--save-samples` and the editor move
 the marked words to the front on saving. `picture.test.ts` fails on a marked word naming no tab (a slip that would
@@ -124,11 +138,22 @@ silently leave the image out of it). A painting has none.
    drops accents and capitals: where a name probably lost them (Czech, Polish, Spanish, …), check the photo's
    page and correct `author` in `dev/assets/picture_sources/index.json` before saving, since entries take
    it from there.
+   **Picture files** go in by their paths (from the repository's root), each run saying whose they are:
+   - The user's own: `--add-sources <file> ... --author thingspool`. Such an entry names no source or license, and
+     `picture.test.ts` holds its author to that name.
+   - One made from someone else's photo (a cut-out prepared with `image-upscale-remap`):
+     `--add-sources <file> --url <the photo's page> --author "<name>" --license "Unsplash License"`. Read the
+     page first: the photo is a free one, and the author is as written there.
+
+   A file added with neither is refused by `--save-samples`, which won't guess whose it is. A file's source is
+   named in a survey or a plan by its file name.
 2. **Survey.**
    `npm run imageMapEditor -- --survey` draws every source no entry is sampled from yet at 1600 px with a grid
    in fractions of the photo, to `temp/image_map_editor/survey/<id>.jpg`. Read each one. For precise edges on a
    small object, survey just that part (the grid keeps the photo's fractions):
    `npm run imageMapEditor -- --survey <id>:x,y,w,h`
+   A picture already cut out hides what is faint in it on the survey's gray: look for stray marks around the thing
+   (a leftover outline, specks), and take them out with `alphaEdits` strokes that keep clear of it.
 3. **Plan** the samples in `temp/image_map_editor/batches/<name>.json`, an array of `SampleOrder`
    (`dev/scripts/imageMapEditor/core/sampleOrder.ts`). Positions in the photo are fractions, as the survey is
    labeled; positions inside the sample (`retouches`, and those in `background`, `selections` and `alphaEdits`) are
@@ -152,14 +177,24 @@ silently leave the image out of it). A painting has none.
    ]
    ```
    - `rect` is `[x, y, w]` (height from the cells' shape) or `[x, y, w, h]`; `corners` replaces it for a
-     slanted face. `rotation` is degrees clockwise.
+     slanted face. `rotation` is degrees clockwise, about the rect's middle: a thing whose top leans left is stood
+     up by a positive one, and the rect is the thing's upright size, not the room it takes while leaning.
+   - `retouches` paint each rect over with a blend of the pixels just outside its four edges, alpha included. Set
+     one on the thing's own surface with clean surface all around it: an edge on the mark itself smears the mark
+     in, and one on a cut-out's outline bleeds its transparency in. A print that runs to a thing's outline can't
+     be painted out this way; say so and leave it. An opaque sample smaller than its cells has its margins filled
+     with its edge color: a `selections` rect over all of it with a small `radius` keeps them see-through.
+   - Two entries from one source that differ only in color (a blue thing in pink and green) are the same order
+     with another title, color keyword and `adjust.hue`.
    - `background` flood-fills from the border (`fromBorder`) and/or clicked `seeds`, within `tolerance` of the
      start's color and `step` of its neighbor's (CIELAB), keeping the largest piece. See
      `core/recipeBackground.ts`.
    - `selections` cut to rectangles (corners rounded by `radius`, a fraction of the shorter side) or ellipses,
      each turned `angle` degrees clockwise about its middle; outside any goes transparent, or its `fill` color
      (so a square and the same square at 45° cut an octagon, a stop sign). `alphaEdits` erase or restore by
-     brush, or erase a color. See `core/recipeSelection.ts`, `core/recipeAlphaEdit.ts`.
+     brush, or erase the patch of one color at a point: a fill from it, so each pocket of backdrop closed in by
+     the thing (inside a handle's loop) takes a point of its own. See `core/recipeSelection.ts`,
+     `core/recipeAlphaEdit.ts`.
    - With `cells`: `align` is where the sample sits in the room its cells leave, across and down, 0 (left, top)
      to 1 (right, bottom), centred when absent; `margin` keeps that share of the width and height clear besides.
    - `adjust`: brightness, contrast, saturation and warmth from -100 to 100, hue in degrees, sharpness 0–100.
@@ -182,5 +217,5 @@ silently leave the image out of it). A painting has none.
    only when none fits.
 6. **Report** to the user: each entry (path, title, keywords, source), the photos skipped and why, and
    any author names still worth checking. They review in the editor (`npm run imageMapEditor`, where disabled
-   entries show dimmed and keywords can be edited, with the tabs they put it in shown beneath), enable the keepers,
-   and run `npm run beforeCommit` before committing.
+   entries show dimmed and keywords can be edited, with the tabs they put it in shown beneath), stage the keepers
+   to try them in the game on staging or enable them, and run `npm run beforeCommit` before committing.

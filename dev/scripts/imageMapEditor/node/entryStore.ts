@@ -100,6 +100,7 @@ export default class EntryStore
             ...(preserveScale ? {preserveScale: true} : {}),
             ...(request.fields.license ? {source: request.fields.source!.trim(), license: request.fields.license} : {}),
             ...(disabled ? {disabled: true} : {}),
+            ...(request.fields.staging === true ? {staging: true} : {}),
         };
         const entries = existing
             ? state.entries.map(other => (other.path == entryPath) ? entry : other)
@@ -290,6 +291,8 @@ export default class EntryStore
                 fields.push(`"source": ${JSON.stringify(entry.source)}`, `"license": ${JSON.stringify(entry.license)}`);
             if (entry.disabled)
                 fields.push(`"disabled": true`);
+            if (entry.staging)
+                fields.push(`"staging": true`);
             return `        {${fields.join(", ")}}`;
         }).join(",\n"));
         lines.push(`    ]`);
@@ -335,6 +338,8 @@ function validateFields(fields: SaveEntryRequest["fields"]): void
         throw new RequestError(`"${fields.license}" is not a license on offer: ${IMAGE_LICENSES.join(", ")}`);
     if (fields.license && !fields.source?.trim())
         throw new RequestError("An image under a third party's license needs the address it came from");
+    if (fields.disabled && fields.staging)
+        throw new RequestError("An entry is either disabled or staging, not both");
 }
 
 // Lowercase single words, leaving out filler words (which a search passes over) and any found inside another: a

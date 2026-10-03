@@ -19,7 +19,7 @@ App.setEnv(env);
 // Automation surfaces for playtests and screen capture: one only reports, the other only arranges.
 // Installed before the first room, and not on the public site (see AutomationBridgeUtil).
 AutomationBridgeUtil.install(env);
-AutomationSetupUtil.install(env);
+AutomationSetupUtil.install();
 
 SocketsClient.init(env); // Starting establishing a socket connection.
 UIManager.load(env, App.getUser()); // Initialize the UI system.

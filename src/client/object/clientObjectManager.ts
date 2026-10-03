@@ -12,7 +12,8 @@ import SetObjectMetadataSignal from "../../shared/object/types/setObjectMetadata
 import SetObjectTransformSignal from "../../shared/object/types/setObjectTransformSignal";
 import PeriodicTransformReceiver from "./components/periodicTransformReceiver";
 import VoxelGameObject from "./types/gameObject/voxelGameObject";
-import { objectEditObservable, objectSelectionObservable } from "../system/clientObservables";
+import { nearbyObjectSelectorObservable, objectEditObservable, objectSelectionObservable } from "../system/clientObservables";
+import { AUTO_SELECTION_MAX_DISTANCE } from "../system/clientConstants";
 import ObjectSelection from "../graphics/types/gizmo/objectSelection";
 import ObjectUpdateUtil from "../../shared/object/util/objectUpdateUtil";
 import Vec3 from "../../shared/math/types/vec3";
@@ -46,6 +47,34 @@ const ClientObjectManager =
             return playerByUserID[user.id];
         console.error(`Failed to fetch the user data (env = ${JSON.stringify(App.getEnv())})`);
         return undefined;
+    },
+    // Selects the attached object nearest a position that this user may select, no further off than
+    // AUTO_SELECTION_MAX_DISTANCE, and returns whether it did (see nearbyObjectSelectorObservable).
+    trySelectObjectNear: (position: Vec3): boolean =>
+    {
+        const room = App.getCurrentRoom();
+        if (!room)
+            return false;
+
+        const nearby: {objectId: string, distance: number}[] = [];
+        for (const object of Object.values(room.objectById))
+        {
+            if (!ObjectTypeConfigMap.getConfigByIndex(object.objectTypeIndex).attachment)
+                continue;
+            const pos = object.transform.pos;
+            const distance = Math.hypot(pos.x - position.x, pos.y - position.y, pos.z - position.z);
+            if (distance <= AUTO_SELECTION_MAX_DISTANCE)
+                nearby.push({objectId: object.objectId, distance});
+        }
+        nearby.sort((a, b) => a.distance - b.distance);
+
+        for (const {objectId} of nearby)
+        {
+            const gameObject = ClientObjectManager.getObjectById(objectId);
+            if (gameObject?.canBeSelected() && ObjectSelection.trySelect(gameObject))
+                return true;
+        }
+        return false;
     },
     update: (deltaTime: number) =>
     {
@@ -272,13 +301,16 @@ const ClientObjectManager =
             return;
         // If the removed object was selected, unselect it.
         const sel = objectSelectionObservable.peek();
-        if (sel && sel.gameObject.params.objectId === signal.objectId)
-        {
+        const selected = (sel?.gameObject.params.objectId === signal.objectId) ? sel : null;
+        if (selected)
             ObjectSelection.unselect();
-            VoxelQuadSelection.trySelectBestQuadNearby(sel.gameObject.params.transform.pos);
-        }
         const removed = ClientObjectManager.getObjectById(signal.objectId);
-        if (await ClientObjectManager.removeObject(signal.objectId, false) && removed)
+        const removal = ClientObjectManager.removeObject(signal.objectId, false);
+        // The selection moves on once the room no longer holds the object (removeObject sees to that before it
+        // first waits), so the face it leaves counts as clear.
+        if (selected)
+            VoxelQuadSelection.trySelectBestQuadNearby(selected.gameObject.params.transform.pos);
+        if (await removal && removed)
             objectEditObservable.set({kind: "remove", object: removed.params});
     },
     onSetObjectTransformSignalReceived: async (signal: SetObjectTransformSignal) => {
@@ -335,5 +367,7 @@ const resyncVoxelsToCurrentGrid = (room: Room): void =>
 
 const waitUntilSignalProcessingReady = (signalType: string, successCond: () => boolean): Promise<boolean> =>
     AsyncUtil.waitUntilSuccess(successCond, SignalTypeConfigMap.getConfigByType(signalType).maxClientSideReceptionPeriod)
+
+nearbyObjectSelectorObservable.set(ClientObjectManager.trySelectObjectNear);
 
 export default ClientObjectManager;

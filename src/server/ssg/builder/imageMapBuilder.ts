@@ -18,10 +18,12 @@ export default class ImageMapBuilder
     private readonly mapName: string;
     private readonly hasGrid: boolean;
     private readonly gridCellSize?: number;
+    private readonly gridCellHeight?: number;
     private readonly maxCols?: number;
     private readonly atlasImageName?: string;
     private readonly thumbnailSize?: number;
     private readonly preservedScaleCellSize?: number;
+    private readonly augmentedPathSuffix: string;
 
     constructor(seed: ImageMapSeed)
     {
@@ -30,10 +32,12 @@ export default class ImageMapBuilder
         this.mapName = seed.mapName;
         this.hasGrid = seed.hasGrid;
         this.gridCellSize = seed.gridCellSize;
+        this.gridCellHeight = seed.gridCellHeight;
         this.maxCols = seed.maxCols;
         this.atlasImageName = seed.atlasImageName;
         this.thumbnailSize = seed.thumbnailSize;
         this.preservedScaleCellSize = seed.preservedScaleCellSize;
+        this.augmentedPathSuffix = seed.augmentedPathSuffix ?? "";
         if (this.thumbnailSize && this.atlasImageName)
             throw new Error(`Image map generation failed :: An atlas-based map cannot have thumbnails (mapName = ${this.mapName})`);
     }
@@ -45,7 +49,7 @@ export default class ImageMapBuilder
         // manifest.
         const manifest = JSON.parse(manifestJSON) as {
             images: {path: string, author: string, title: string, keywords?: string, preserveScale?: boolean,
-                disabled?: boolean}[],
+                disabled?: boolean, staging?: boolean}[],
             subfolders?: ImageMapSubfolderTab[],
         };
 
@@ -53,6 +57,8 @@ export default class ImageMapBuilder
         const subfolderInfoByName: {[subfolderName: string]: ImageMapSubfolderInfo} = {};
         for (const image of manifest.images)
         {
+            if (image.disabled === true && image.staging === true)
+                throw new Error(`Image map generation failed :: Image "${image.path}" is both disabled and staging (mapName = ${this.mapName})`);
             if (image.disabled === true)
                 continue;
             const subfolderName = ImageMap.getSubfolderName(image.path);
@@ -62,7 +68,8 @@ export default class ImageMapBuilder
             // 'coords' will be set inside the "buildGrid" method.
             info.imageMetadataList.push({path: image.path,
                 keywords: normalizeKeywords(image.keywords ?? `${image.title},${image.author}`), coords: "",
-                preserveScale: image.preserveScale === true ? true : undefined});
+                preserveScale: image.preserveScale === true ? true : undefined,
+                staging: image.staging === true ? true : undefined});
         }
         if (Object.keys(subfolderInfoByName).length == 0)
             throw new Error(`Image map generation failed :: Every image is disabled, and the game needs one (mapName = ${this.mapName})`);
@@ -132,15 +139,23 @@ export default class ImageMapBuilder
         }
     }
 
+    // The file the game loads for an image: its own, or the augmented copy of it (see
+    // ImageMapSeed.augmentedPathSuffix).
+    private getGameImageFileName(path: string): string
+    {
+        return `${path}${this.augmentedPathSuffix}.webp`;
+    }
+
     // Every image's size, which an image that keeps its scale must give in whole cells.
     private async readImageSizes(subfolderInfo: ImageMapSubfolderInfo): Promise<void>
     {
         for (const imageMetadata of subfolderInfo.imageMetadataList)
         {
-            const imageFile = ImageFileUtil.readImage(`${imageMetadata.path}.webp`, this.imageRootPath);
+            const fileName = this.getGameImageFileName(imageMetadata.path);
+            const imageFile = ImageFileUtil.readImage(fileName, this.imageRootPath);
             const fileMetadata = await imageFile?.metadata();
             if (!fileMetadata?.width || !fileMetadata?.height)
-                throw new Error(`Image map generation failed :: Failed to read image (${this.imageRootPath}/${imageMetadata.path}.webp)`);
+                throw new Error(`Image map generation failed :: Failed to read image (${this.imageRootPath}/${fileName})`);
             imageMetadata.width = fileMetadata.width;
             imageMetadata.height = fileMetadata.height;
             if (!imageMetadata.preserveScale)
@@ -159,9 +174,10 @@ export default class ImageMapBuilder
     {
         for (const imageMetadata of subfolderInfo.imageMetadataList)
         {
-            const imageFile = ImageFileUtil.readImage(`${imageMetadata.path}.webp`, this.imageRootPath);
+            const fileName = this.getGameImageFileName(imageMetadata.path);
+            const imageFile = ImageFileUtil.readImage(fileName, this.imageRootPath);
             if (!imageFile)
-                throw new Error(`Image map generation failed :: Failed to read image (${this.imageRootPath}/${imageMetadata.path}.webp)`);
+                throw new Error(`Image map generation failed :: Failed to read image (${this.imageRootPath}/${fileName})`);
             const thumbnail = imageFile
                 .resize(this.thumbnailSize, this.thumbnailSize, { fit: "inside", withoutEnlargement: true })
                 .webp({ quality: WEBP_QUALITY });
@@ -204,8 +220,10 @@ export default class ImageMapBuilder
         const numImages = subfolderInfo.imageMetadataList.length;
         const numCols = numImages === 0 ? 0 : Math.min(this.maxCols!, numImages);
         const numRows = numImages === 0 ? 0 : Math.ceil(numImages / numCols);
-        const gridWidth = numCols === 0 ? 0 : numCols * this.gridCellSize!;
-        const gridHeight = numRows === 0 ? 0 : numRows * this.gridCellSize!;
+        const cellWidth = this.gridCellSize!;
+        const cellHeight = this.gridCellHeight ?? cellWidth;
+        const gridWidth = numCols === 0 ? 0 : numCols * cellWidth;
+        const gridHeight = numRows === 0 ? 0 : numRows * cellHeight;
 
         const composites: sharp.OverlayOptions[] = [];
         let col = 0, row = 0, maxCol = 0, maxRow = 0;
@@ -214,14 +232,15 @@ export default class ImageMapBuilder
         {
             imageMetadata.coords = `${subfolderInfo.name},${col},${row}`;
 
-            const imageFile = ImageFileUtil.readImage(`${imageMetadata.path}.webp`, this.imageRootPath);
+            const fileName = this.getGameImageFileName(imageMetadata.path);
+            const imageFile = ImageFileUtil.readImage(fileName, this.imageRootPath);
             if (!imageFile)
-                throw new Error(`Image map generation failed :: Failed to read image (${this.imageRootPath}/${imageMetadata.path}.webp)`);
+                throw new Error(`Image map generation failed :: Failed to read image (${this.imageRootPath}/${fileName})`);
             const imageBuffer = await (imageFile
-                .resize(this.gridCellSize, this.gridCellSize, { fit: "cover" })
+                .resize(cellWidth, cellHeight, { fit: "cover" })
                 .toBuffer());
-            
-            composites.push({input: imageBuffer, left: col * this.gridCellSize!, top: row * this.gridCellSize!});
+
+            composites.push({input: imageBuffer, left: col * cellWidth, top: row * cellHeight});
             if (col > maxCol)
                 maxCol = col;
             if (row > maxRow)
@@ -253,6 +272,7 @@ export default class ImageMapBuilder
                     + (image.coords ? `,coords:"${image.coords}"` : "")
                     + (image.width ? `,width:${image.width},height:${image.height}` : "")
                     + (image.preserveScale ? ",preserveScale:true" : "")
+                    + (image.staging ? ",staging:true" : "")
                     + "}")).flat().join(",");
 
         const subfolderGridSizesEntries =
@@ -264,6 +284,8 @@ export default class ImageMapBuilder
             this.atlasImageName ? `"${this.atlasImageName}"` : undefined,
             this.thumbnailSize ? `${this.thumbnailSize}` : undefined,
             subfolderTabs ? "subfolderTabs" : undefined,
+            this.gridCellHeight ? `${this.gridCellHeight}` : undefined,
+            this.augmentedPathSuffix ? `"${this.augmentedPathSuffix}"` : undefined,
         ];
         while (optionalArgs.length > 0 && optionalArgs[optionalArgs.length - 1] == undefined)
             optionalArgs.pop();

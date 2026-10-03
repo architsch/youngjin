@@ -16,6 +16,7 @@ import { ObjectMetadataKeyEnumMap } from "../../../../../shared/object/types/obj
 import EncodableByteString from "../../../../../shared/networking/types/encodableByteString";
 import ObjectUpdateUtil from "../../../../../shared/object/util/objectUpdateUtil";
 import ObjectFactory from "../../../../object/factories/objectFactory";
+import ObjectTypeClientConfigMap from "../../../../object/maps/objectTypeClientConfigMap";
 import ClientObjectManager from "../../../../object/clientObjectManager";
 import AddObjectSignal from "../../../../../shared/object/types/addObjectSignal";
 import RemoveObjectSignal from "../../../../../shared/object/types/removeObjectSignal";
@@ -27,6 +28,7 @@ import Vec3 from "../../../../../shared/math/types/vec3";
 import ErrorUtil from "../../../../../shared/system/util/errorUtil";
 import ImageMapUtil from "../../../../../shared/graphics/image/util/imageMapUtil";
 import ImageMetadata from "../../../../../shared/graphics/image/types/imageMetadata";
+import ImageChoiceUtil from "../../../util/imageChoiceUtil";
 import ClientVoxelManager from "../../../../voxel/clientVoxelManager";
 import VoxelUpdateUtil from "../../../../../shared/voxel/util/voxelUpdateUtil";
 import RemoveVoxelBlockSignal from "../../../../../shared/voxel/types/update/removeVoxelBlockSignal";
@@ -38,6 +40,7 @@ import AddVoxelBlockSignal from "../../../../../shared/voxel/types/update/addVox
 import ObjectIdUtil from "../../../../../shared/object/util/objectIdUtil";
 import { clientFeatureFlagsObservable, notificationMessageObservable, objectInstalledObservable,
     voxelQuadSelectionObservable } from "../../../../system/clientObservables";
+import { DISABLE_AUTO_SELECTION_ON_OBJECT_INSTALLATION } from "../../../../system/clientConstants";
 import Room from "../../../../../shared/room/types/room";
 import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
 import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
@@ -329,10 +332,11 @@ function getUprightQuarterTurns(selection: VoxelQuadSelection): number
         PointerCoordUtil.projectPoint);
 }
 
-// The picture map's images a canvas (paintings) or a prop (everyday objects) may show.
+// The picture map's images a canvas (paintings) or a prop (everyday objects) may be added with, as its chooser
+// offers them.
 function getImages(subfolder: string): ImageMetadata[]
 {
-    return ImageMapUtil.getImageMap("PictureImageMap").getImageMetadataListInSubfolder(subfolder);
+    return ImageChoiceUtil.getOffered(ImageMapUtil.getImageMap("PictureImageMap"), subfolder, !App.isPublicSite());
 }
 
 async function addObject(objectTypeIndex: number, tr: ObjectTransform, metadata: ObjectMetadata)
@@ -351,6 +355,14 @@ async function addObject(objectTypeIndex: number, tr: ObjectTransform, metadata:
             if (room.roomType != RoomTypeEnumMap.SinglePlayer)
                 SocketsClient.emitAddObjectSignal(signal);
             VoxelQuadSelection.unselect();
+            // Complete as added, it leaves the selection on a face near it, to add the next from. With more to pick,
+            // or with no face to take the selection, it is selected instead.
+            const installPanel = ObjectTypeClientConfigMap.getConfigByIndex(objectTypeIndex).selection?.installPanel;
+            if (!installPanel && !DISABLE_AUTO_SELECTION_ON_OBJECT_INSTALLATION
+                && VoxelQuadSelection.trySelectBestQuadNearby(gameObject.params.transform.pos))
+            {
+                return;
+            }
             if (ObjectSelection.trySelect(gameObject))
                 objectInstalledObservable.set(objectId);
         }

@@ -230,6 +230,20 @@ export const PICTURE_THUMBNAIL_SIZE = 256; // in pixels
 export const PICTURE_SEARCH_FILLER_WORDS = ["a", "an", "the", "and", "or", "but", "nor", "of", "in", "on", "at", "to",
     "for", "with", "from", "by", "off", "into", "onto", "no", "not"];
 
+// Voxel Textures (the cells of a room's texture pack, which its voxel quads show)
+
+// A pack's atlas as the game loads it: the pack's own image under rows SSG draws, the same for every pack (see
+// VoxelTexturePackBuilder). A quad's textureIndex counts cells from the atlas's bottom-left, row by row.
+export const VOXEL_TEXTURE_CELL_SIZE = 128; // in pixels (each cell is square)
+export const NUM_VOXEL_TEXTURE_COLS = 8;
+export const NUM_VOXEL_TEXTURE_ROWS = 10;
+export const NUM_VOXEL_TEXTURES = NUM_VOXEL_TEXTURE_COLS * NUM_VOXEL_TEXTURE_ROWS; // 80
+// The first of them are the pack's own; the rest are the procedural ones.
+export const NUM_PACK_VOXEL_TEXTURES = 64;
+// A procedural cell tiles inside a margin of its own continuation, which quads leave out: the atlas's lossy color
+// bleeds between cells across their outermost texels, and would show as a line wherever a flat color repeats.
+export const PROCEDURAL_VOXEL_TEXTURE_MARGIN = 8; // in pixels
+
 // Voxel Grid
 
 export const NUM_VOXEL_ROWS = 32;

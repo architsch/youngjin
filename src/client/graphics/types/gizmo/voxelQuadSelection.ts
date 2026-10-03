@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import Voxel from "../../../../shared/voxel/types/voxel";
-import { clientFeatureFlagsObservable, gameModeObservable, roomChangedObservable, voxelQuadSelectionObservable, voxelQuadSelectionRestrictionObservable } from "../../../system/clientObservables";
+import { clientFeatureFlagsObservable, gameModeObservable, nearbyObjectSelectorObservable, roomChangedObservable, voxelQuadSelectionObservable, voxelQuadSelectionRestrictionObservable } from "../../../system/clientObservables";
 import GraphicsManager from "../../graphicsManager";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
@@ -12,6 +12,8 @@ import VoxelQuadTransformDimensions from "../../../../shared/voxel/types/voxelQu
 import App from "../../../app";
 import Vec3 from "../../../../shared/math/types/vec3";
 import NumUtil from "../../../../shared/math/util/numUtil";
+import ObjectAttachmentUtil from "../../../../shared/object/util/objectAttachmentUtil";
+import { AUTO_SELECTION_MAX_DISTANCE, AUTO_SELECTION_MIN_COVERAGE_FREE_RATIO } from "../../../system/clientConstants";
 
 const tempPos = new THREE.Vector3();
 const tempPos2 = new THREE.Vector3();
@@ -53,12 +55,11 @@ export default class VoxelQuadSelection
         return VoxelQuadSelection.trySelectBestQuad(idealVoxel, idealQuadIndex);
     }
 
+    // Selects the nearest of the visible quads around the ideal one, itself included, that is near and clear enough
+    // (see AUTO_SELECTION_MAX_DISTANCE). With none such, an object near there instead; failing that, the nearest
+    // quad left, the clear enough first.
     static trySelectBestQuad(idealVoxel: Voxel, idealQuadIndex: number): boolean
     {
-        if (VoxelQuadSelection.trySelect(idealVoxel, idealQuadIndex))
-            return true;
-
-        // If selecting the ideal voxelQuad failed, try selecting the best alternative (e.g. nearest voxelQuad).
         const idealDims = VoxelQueryUtil.getVoxelQuadTransformDimensions(idealVoxel, idealQuadIndex, true);
         const idealCollisionLayer = getCollisionLayerToSearchAround(idealQuadIndex);
         const minCollisionLayer = Math.max(idealCollisionLayer-1, COLLISION_LAYER_MIN);
@@ -103,7 +104,7 @@ export default class VoxelQuadSelection
                 b.dims.offsetY,
                 b.voxel.row + 0.5 + b.dims.offsetZ
             );
-            
+
             const aDistFromIdealQuad = idealQuadPos.distanceTo(aPos);
             const bDistFromIdealQuad = idealQuadPos.distanceTo(bPos);
             const aDistFromCamera = cameraPos.distanceTo(aPos);
@@ -116,10 +117,35 @@ export default class VoxelQuadSelection
             return aDistScore - bDistScore;
         });
 
+        const isNearEnough = (candidate: VoxelQuadSelectionCandidate) => idealQuadPos.distanceTo(tempPos3.set(
+            candidate.voxel.col + 0.5 + candidate.dims.offsetX,
+            candidate.dims.offsetY,
+            candidate.voxel.row + 0.5 + candidate.dims.offsetZ)) <= AUTO_SELECTION_MAX_DISTANCE;
+        // Read off every object in the room, so worked out only for the candidates it is asked of.
+        const isClearEnough = (candidate: VoxelQuadSelectionCandidate) => candidate.clearEnough ??=
+            1 - ObjectAttachmentUtil.getVoxelQuadCoverage(room, candidate.quadIndex)
+                >= AUTO_SELECTION_MIN_COVERAGE_FREE_RATIO;
+
         for (const candidate of candidates)
         {
-            if (VoxelQuadSelection.trySelect(candidate.voxel, candidate.quadIndex))
+            if (isNearEnough(candidate) && isClearEnough(candidate)
+                && VoxelQuadSelection.trySelect(candidate.voxel, candidate.quadIndex))
+            {
                 return true;
+            }
+        }
+        if (nearbyObjectSelectorObservable.peek()?.(idealQuadPos))
+            return true;
+        for (const clearEnough of [true, false])
+        {
+            for (const candidate of candidates)
+            {
+                if (isClearEnough(candidate) == clearEnough
+                    && VoxelQuadSelection.trySelect(candidate.voxel, candidate.quadIndex))
+                {
+                    return true;
+                }
+            }
         }
         return false;
     }
@@ -249,4 +275,6 @@ interface VoxelQuadSelectionCandidate
     voxel: Voxel,
     quadIndex: number,
     dims: VoxelQuadTransformDimensions,
+    // Whether enough of it is clear of attached objects, once asked (see VoxelQuadSelection.trySelectBestQuad).
+    clearEnough?: boolean,
 }

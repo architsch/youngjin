@@ -244,42 +244,9 @@ export default class InstancedMeshBinding
         markInstanceForUpload(this.instancedMesh!.instanceMatrix, instanceId);
     }
 
-    // Sample offsets and scales are normalized numbers in range [0,1], corresponding to the full range of pixels covered by the texture's sampling window.
-    updateInstanceTextureUV(gameObject: GameObject, instanceId: number, textureIndex: number,
-        sampleOffsetX: number = 0, sampleOffsetY: number = 0,
-        sampleScaleX: number = 1, sampleScaleY: number = 1)
-    {
-        if (!this.instancedMesh)
-        {
-            console.error(`InstancedMesh hasn't been loaded yet (objectId = ${gameObject.params.objectId})`);
-            return;
-        }
-        const instancedTexturePackMaterialParams = this.materialParams as InstancedTexturePackMaterialParams;
-        const w = instancedTexturePackMaterialParams.textureWidth;
-        const h = instancedTexturePackMaterialParams.textureHeight;
-        const cw = instancedTexturePackMaterialParams.textureGridCellWidth;
-        const ch = instancedTexturePackMaterialParams.textureGridCellHeight;
-
-        const textureGridCellWidthScale = cw / w;
-        const textureGridCellHeightScale = ch / h;
-
-        const uvStartBufferAttrib = this.instancedMesh.geometry.getAttribute("uvStart") as THREE.InstancedBufferAttribute;
-        // (0.5 / cw) = pixel-bleeding prevention shift
-        const uStart = textureGridCellWidthScale
-            * ((0.5 / cw) + textureIndex % (1 / textureGridCellWidthScale) + sampleOffsetX);
-        // (0.5 / ch) = pixel-bleeding prevention shift
-        const vStart = textureGridCellHeightScale
-            * ((0.5 / ch) + Math.floor(textureIndex * textureGridCellWidthScale) + sampleOffsetY);
-        uvStartBufferAttrib.setXY(instanceId, uStart, vStart);
-        markInstanceForUpload(uvStartBufferAttrib, instanceId);
-
-        const uvSampleSizeBufferAttrib = this.instancedMesh.geometry.getAttribute("uvSampleSize") as THREE.InstancedBufferAttribute;
-        uvSampleSizeBufferAttrib.setXY(instanceId, sampleScaleX, sampleScaleY);
-        markInstanceForUpload(uvSampleSizeBufferAttrib, instanceId);
-    }
-
-    // As updateInstanceTextureUV, for any rect of texels rather than one whole cell (e.g. a region of
-    // cells, or part of one; see TextureAtlasAllocator). In texels from the texture's bottom-left.
+    // The rect of texels the instance shows (e.g. a cell, a region of cells, or part of one), from the centre of
+    // its first texel to the centre of its last, so filtering never reads past it. In texels from the texture's
+    // bottom-left.
     updateInstanceTextureRect(gameObject: GameObject, instanceId: number,
         texelX: number, texelY: number, texelWidth: number, texelHeight: number)
     {
@@ -290,7 +257,6 @@ export default class InstancedMeshBinding
         }
         const params = this.materialParams as InstancedTexturePackMaterialParams;
 
-        // Half a texel in on every edge, as for a cell.
         const uvStartBufferAttrib = this.instancedMesh.geometry.getAttribute("uvStart") as THREE.InstancedBufferAttribute;
         uvStartBufferAttrib.setXY(instanceId,
             (texelX + 0.5) / params.textureWidth, (texelY + 0.5) / params.textureHeight);

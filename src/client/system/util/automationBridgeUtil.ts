@@ -115,10 +115,10 @@ function whatIsOnTopAt(clientX: number, clientY: number): Record<string, unknown
 
 const AutomationBridgeUtil =
 {
-    // Only on non-public deployments (see IS_PUBLIC_SITE).
+    // Only on non-public deployments.
     install: (env: ThingsPoolEnv): void =>
     {
-        if (env.mode != "dev" && env.serverType != "Staging")
+        if (App.isPublicSite())
             return;
 
         (window as any).__thingspool_automation = {

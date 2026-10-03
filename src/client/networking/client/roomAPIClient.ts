@@ -21,6 +21,12 @@ const RoomAPIClient =
     {
         return await RestAPI.post(getURL("change_room_prefs"), { data: { prefs, roomID } });
     },
+    // Overwrites the named room with a room file (see RoomFile), which only an admin standing in the
+    // room may do.
+    loadRoomFile: async (file: Blob, roomID: string): Promise<RestAPIResponse> =>
+    {
+        return await RestAPI.post(getURL(`load_room_file?roomID=${encodeURIComponent(roomID)}`), { file });
+    },
     getHubRoomListEntries: async (): Promise<RestAPIResponse> =>
     {
         return await RestAPI.post(getURL("get_hub_room_list_entries"));

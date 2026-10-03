@@ -49,8 +49,9 @@ async function main(): Promise<void>
     {
         const urls = readList(args, "--add-sources");
         if (urls == undefined)
-            throw new Error("--add-sources needs the addresses of the photos to add");
-        await BatchCommands.addSources(store, urls);
+            throw new Error("--add-sources needs the photos to add: their addresses, or files on this machine");
+        await BatchCommands.addSources(store, urls, {url: readValue(args, "--url"),
+            author: readValue(args, "--author"), license: readValue(args, "--license")});
         return;
     }
     if (args.includes("--survey"))
