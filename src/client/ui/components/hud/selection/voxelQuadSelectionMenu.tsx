@@ -21,9 +21,11 @@ export default function VoxelQuadSelectionMenu()
 
     if (state.selection)
     {
+        // The texture strip stands down with the placement tools for a chooser (see VoxelQuadPlacementOptions).
         return <div className="flex flex-col gap-1 p-2 max-w-full h-fit overflow-hidden">
-            <VoxelQuadPlacementOptions selection={state.selection}/>
-            <VoxelQuadTextureOptions selection={state.selection}/>
+            <VoxelQuadPlacementOptions selection={state.selection}>
+                <VoxelQuadTextureOptions selection={state.selection}/>
+            </VoxelQuadPlacementOptions>
         </div>;
     }
     else

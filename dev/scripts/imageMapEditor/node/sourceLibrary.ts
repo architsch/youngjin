@@ -38,8 +38,8 @@ export default class SourceLibrary
     }
 
     // Kept once, however often it is added; what is known of it is filled in from what is given.
-    async add(bytes: Buffer, fileName: string, known: Pick<SourceEntry, "url" | "author" | "license"> = {}):
-        Promise<SourceEntry>
+    async add(bytes: Buffer, fileName: string,
+        known: Pick<SourceEntry, "url" | "author" | "license" | "preparedFrom"> = {}): Promise<SourceEntry>
     {
         const sha1 = crypto.createHash("sha1").update(bytes).digest("hex");
         const metadata = await sharp(bytes).metadata().catch(() => undefined);
@@ -64,6 +64,7 @@ export default class SourceLibrary
             author: existing?.author || known.author,
             license: existing?.license || known.license,
             addedAt: existing?.addedAt ?? new Date().toISOString(),
+            preparedFrom: existing?.preparedFrom ?? known.preparedFrom,
         };
         this.writeIndex([...sources.filter(source => source.sha1 != sha1), entry]);
         return entry;
@@ -132,11 +133,11 @@ export default class SourceLibrary
     }
 
     // Where a survey of it, or of a part of it (in fractions), is drawn (see BatchCommands.writeSurveys): named by its
-    // Unsplash id, or else the start of its sha1.
+    // Unsplash id, or else the start of its sha1 (as one preprocessed from a photo is, which has that photo's id).
     getSurveyPath(source: SourceEntry, region: [number, number, number, number]): string
     {
-        const name = (source.url != undefined ? SourceUrlUtil.getUnsplashId(source.url) : undefined)
-            ?? source.sha1.slice(0, 12);
+        const name = ((source.url != undefined && source.preparedFrom == undefined)
+            ? SourceUrlUtil.getUnsplashId(source.url) : undefined) ?? source.sha1.slice(0, 12);
         const partName = (region[2] < 1 || region[3] < 1) ? `_${region.map(value => value.toFixed(3)).join("_")}` : "";
         return path.join(this.paths.workDir, "survey", `${name}${partName}.jpg`);
     }

@@ -20,6 +20,13 @@ type GameImageLayout = {width: number, height: number, content: {x: number, y: n
 // is everything but the game image's size: retouched, straightened, cut out, colored and cut to its selection.
 const SampleRenderUtil =
 {
+    // The size a source of the given size is worked at: its own, no longer than MAX_SOURCE_SIDE.
+    getWorkedSourceSize: (width: number, height: number): {width: number, height: number} =>
+    {
+        const scale = Math.min(1, MAX_SOURCE_SIDE / Math.max(width, height));
+        return {width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale))};
+    },
+
     // The quad's own size and shape in the source's pixels, no longer than maxSide.
     getSampleSize: (sourceWidth: number, sourceHeight: number, recipe: ImageRecipe,
         maxSide: number = MAX_SAMPLE_SIDE): {width: number, height: number} =>
@@ -64,7 +71,7 @@ const SampleRenderUtil =
             ColorAdjustUtil.adjust(sample, recipe.adjust);
         // After the color changes, so the fill is the color chosen.
         if (recipe.selections != undefined)
-            AlphaMaskUtil.fillOutside(sample, recipe.selections);
+            AlphaMaskUtil.applySelectionFills(sample, recipe.selections);
         return {sample, keep};
     },
 
@@ -83,8 +90,8 @@ const SampleRenderUtil =
     },
 
     // An image that keeps its scale is its cells at cellSize each, with the whole sample fitted inside what its
-    // margin leaves, and placed in the rest as aligned (see ImageProcessingUtil.getMarginColor for what fills it);
-    // any other is the sample's own shape at longSide.
+    // margin leaves (or stretched to fill that), and placed in the rest as aligned (see
+    // ImageProcessingUtil.getMarginColor for what fills it); any other is the sample's own shape at longSide.
     getGameImageLayout: (output: RecipeOutput, sampleWidth: number, sampleHeight: number,
         cellSize: number): GameImageLayout =>
     {
@@ -99,9 +106,10 @@ const SampleRenderUtil =
         const height = output.numRows * cellSize;
         const [marginX, marginY] = (output.margin ?? [0, 0]).map(value => clamp(value, 0, MAX_MARGIN));
         const [alignX, alignY] = (output.align ?? [0.5, 0.5]).map(value => clamp(value, 0, 1));
-        const scale = Math.min(width * (1 - marginX) / sampleWidth, height * (1 - marginY) / sampleHeight);
-        const contentWidth = Math.min(width, Math.max(1, Math.round(sampleWidth * scale)));
-        const contentHeight = Math.min(height, Math.max(1, Math.round(sampleHeight * scale)));
+        const roomWidth = width * (1 - marginX), roomHeight = height * (1 - marginY);
+        const scale = Math.min(roomWidth / sampleWidth, roomHeight / sampleHeight);
+        const contentWidth = clamp(Math.round(output.stretch ? roomWidth : sampleWidth * scale), 1, width);
+        const contentHeight = clamp(Math.round(output.stretch ? roomHeight : sampleHeight * scale), 1, height);
         return {width, height, content: {x: Math.floor((width - contentWidth) * alignX),
             y: Math.floor((height - contentHeight) * alignY), width: contentWidth, height: contentHeight}};
     },

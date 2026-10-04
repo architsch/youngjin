@@ -2,7 +2,9 @@
 // this machine (straightened,
 // retouched, cut out of their background) and makes them the map's entries, writing their game images,
 // full-resolution samples, manifest entries, recipes and notices rows, and rebuilding the map (see node/ and
-// app/). This file only bundles node/main.ts, so the tool is written in TypeScript and shares the game's code.
+// app/). A source can first be preprocessed into another there, with the picture preparation tool's steps (see
+// ../imagePrep): a cut-out uses that tool's model, fetched into temp/image_prep/tools on first use, once allowed.
+// This file only bundles node/main.ts, so the tool is written in TypeScript and shares the game's code.
 //
 // Usage: npm run imageMapEditor [-- --port <port>] [-- --workspace <dir>]
 //        npm run imageMapEditor -- --render-samples [<path> ...]      samples made again from their recipes

@@ -22,7 +22,8 @@ const TOOLS: {tool: SampleTool, label: string, title: string}[] = [
     {tool: "eraseColor", label: "Erase color", title: "Click a patch of one color to take it out, as far as that color "
         + "reaches from there (the same color elsewhere stays)"},
     {tool: "select", label: "Select", title: "Drag out a selection to keep, as a rectangle or an ellipse (Shift: a square or a circle), "
-        + "over another one too: only where they all overlap is kept. Click one to pick it (again for the next one under the pointer; "
+        + "over another one too: only where they all overlap is kept. One set to apply to its inside is a hole in the rest instead. "
+        + "Click one to pick it (again for the next one under the pointer; "
         + "outside them all for none); drag the handle at its middle to move it, those on its sides and corners to resize it "
         + "(Shift keeps its shape) and the knob above it to turn it (Shift: in steps)"},
 ];
@@ -133,12 +134,12 @@ export default function SamplePreview(props: Props)
                     }}>Clear all</button>}
             </div>}
             {selections.length > 0 && <ol className="selection-list"
-                title="Each takes out (or fills) what lies outside it, together with the others">
+                title="Each takes out (or fills) what lies outside it, or inside it if set to, together with the others">
                 {selections.map((other, i) => <li key={i} className={i == focused ? "focused" : ""}
                     onClick={() => onFocusSelection(i == focused ? undefined : i)}>
                     <span className="selection-name">{i + 1}. {other.shape == "rect" ? "Rectangle" : "Ellipse"}
                         {other.angle ? `, turned ${formatDegrees(other.angle)}°` : ""}</span>
-                    <span className="panel-note">{other.fill != undefined ? "fills outside" : "takes out outside"}</span>
+                    <span className="panel-note">{other.fill != undefined ? "fills" : "takes out"} {getSide(other)}</span>
                     <button type="button" className="button small" title="Remove this selection"
                         onClick={ev => {
                             ev.stopPropagation();
@@ -154,8 +155,18 @@ export default function SamplePreview(props: Props)
                 value={selection.angle ?? 0} defaultValue={0}
                 title="How far the selection is turned clockwise about its middle (or drag the knob above it)"
                 onChange={angle => setSelection(s => ({...s, angle: angle || undefined}), "selectionAngle")}/>}
-            {selection != undefined && <div className="slider-row" title="What becomes of what lies outside the selection">
-                <span className="slider-label">Outside</span>
+            {selection != undefined && <div className="slider-row"
+                title="Which side of the selection is taken out or filled: what lies outside it, so it is what is kept, or what lies inside it, so it is a hole in the rest">
+                <span className="slider-label">Applies to</span>
+                <div className="segmented">
+                    <button type="button" className={selection.inverted ? "" : "active"}
+                        onClick={() => setSelection(s => ({...s, inverted: undefined}))}>Outside</button>
+                    <button type="button" className={selection.inverted ? "active" : ""}
+                        onClick={() => setSelection(s => ({...s, inverted: true}))}>Inside</button>
+                </div>
+            </div>}
+            {selection != undefined && <div className="slider-row" title={`What becomes of what lies ${getSide(selection)} the selection`}>
+                <span className="slider-label">{selection.inverted ? "Inside" : "Outside"}</span>
                 <div className="segmented">
                     <button type="button" className={selection.fill == undefined ? "active" : ""}
                         onClick={() => setSelection(s => ({...s, fill: undefined}))}>See-through</button>
@@ -195,6 +206,12 @@ function getEdgeColor(image: RgbaImage): string
 {
     const [r, g, b, a] = ImageProcessingUtil.getMarginColor(image);
     return (a == 0) ? FALLBACK_FILL : `#${[r, g, b].map(value => Math.round(value).toString(16).padStart(2, "0")).join("")}`;
+}
+
+// The side of its outline a selection takes out or fills.
+function getSide(selection: RecipeSelection): string
+{
+    return selection.inverted ? "inside" : "outside";
 }
 
 function formatDegrees(degrees: number): string

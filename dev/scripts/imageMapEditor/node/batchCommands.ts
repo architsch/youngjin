@@ -197,7 +197,8 @@ const BatchCommands =
 }
 
 // By its sha1, by its Unsplash id or page address, by any other address it was added from, or by its file name
-// where only one has it (a file added from this machine has no address).
+// where only one has it (a file added from this machine has no address). An address names the photo itself, never
+// a source preprocessed from it, which carries the same one.
 function findSource(sources: SourceEntry[], key: string): SourceEntry | undefined
 {
     if (/^[0-9a-f]{40}$/.test(key))
@@ -211,8 +212,8 @@ function findSource(sources: SourceEntry[], key: string): SourceEntry | undefine
     {
         // Not an address, so an Unsplash id.
     }
-    const byAddress = sources.find(source => source.url != undefined && (source.url == key
-        || (unsplashId != undefined && SourceUrlUtil.getUnsplashId(source.url) == unsplashId)));
+    const byAddress = sources.find(source => source.url != undefined && source.preparedFrom == undefined
+        && (source.url == key || (unsplashId != undefined && SourceUrlUtil.getUnsplashId(source.url) == unsplashId)));
     if (byAddress != undefined)
         return byAddress;
     const named = sources.filter(source => source.fileName == key);

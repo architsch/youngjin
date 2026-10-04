@@ -1,23 +1,31 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
 import Text from "../basic/text";
 import ScrollPanel from "./scrollPanel";
+import useThumbnailReorder from "../../util/thumbnailReorder";
 
 // A closable row of thumbnails to pick one of (see CompositionThumbnailPanel, ImageMapThumbnailPanel). New choices
 // scroll it to the current one (outlined) or, with none current, to where the last panel of its id was left, or to
 // its start if they leave that out; it grows a page at a time as it is scrolled to its end. A choice canChoose
-// refuses is shown dimmed and can't be picked.
+// refuses is shown dimmed and can't be picked. With onReorder, its thumbnails can be rearranged by hand (see
+// useThumbnailReorder), which leaves it where it stands; with onPickUp and onLetGo, the owner hears of each one
+// picked up and let go.
 export default function ThumbnailPanel<K extends string | number>({ id, choices, current, canChoose, onChoose,
-    renderThumbnail, thumbnailClassNames, emptyText, closeRowContent, overhang = false, onClose }: Props<K>)
+    onReorder, onPickUp, onLetGo, canMove, renderThumbnail, thumbnailClassNames, emptyText, closeRowContent,
+    overhang = false, onClose }: Props<K>)
 {
     const [placeLeft] = useState(() => (current === undefined) ? placesLeft.get(id) as K | undefined : undefined);
     const anchor = current ?? placeLeft;
-    const scrollTarget = Math.max((anchor === undefined) ? -1 : choices.indexOf(anchor), 0);
+    const getScrollTarget = (row: K[]) => Math.max((anchor === undefined) ? -1 : row.indexOf(anchor), 0);
+    const scrollTarget = getScrollTarget(choices);
 
     // Enough pages to reach the thumbnail scrolled to, and a page past a place left, so it can be scrolled to the start
     // of the view; plus those added by scrolling to the end (none for new choices).
     const [numAddedPages, setNumAddedPages] = useState<number>(0);
-    const numNeeded = scrollTarget + 1 + ((current === undefined && scrollTarget > 0) ? PAGE_SIZE : 0);
-    const numShown = (Math.ceil(numNeeded / PAGE_SIZE) + numAddedPages) * PAGE_SIZE;
+    const getNumPagesNeeded = (row: K[]) => {
+        const target = getScrollTarget(row);
+        return Math.ceil((target + 1 + ((current === undefined && target > 0) ? PAGE_SIZE : 0)) / PAGE_SIZE);
+    };
+    const numShown = (getNumPagesNeeded(choices) + numAddedPages) * PAGE_SIZE;
     const shownChoices = choices.slice(0, numShown);
     const hasMore = numShown < choices.length;
 
@@ -45,12 +53,34 @@ export default function ThumbnailPanel<K extends string | number>({ id, choices,
             placesLeft.delete(id);
     };
 
+    // The row as a thumbnail dropped elsewhere leaves it, which the owner is to give back as its choices.
+    const rearrangedRef = useRef<K[] | null>(null);
+    const canPickUp = onReorder != undefined || onPickUp != undefined;
+    const holdThumbnail = useThumbnailReorder(id, scrollerRef, canPickUp ? position => {
+        onPickUp?.(choices[position]);
+        return onReorder != undefined && (canMove?.(choices[position]) ?? true);
+    } : undefined, onReorder && ((from, to) => {
+        const rearranged = [...choices];
+        rearranged.splice(to, 0, ...rearranged.splice(from, 1));
+        rearrangedRef.current = rearranged;
+        // As many pages as now, wherever the thumbnail scrolled to ends up.
+        setNumAddedPages(Math.max(numShown / PAGE_SIZE - getNumPagesNeeded(rearranged), 0));
+        onReorder(choices[from], to);
+    }), onLetGo);
+
     const scrollTargetRef = useRef<HTMLDivElement>(null);
     useEffect(() => {
-        setNumAddedPages(0);
-        // Both axes given: leaving one at its default scrolls every scrollable ancestor (see AtlasCellSprite). A place
-        // left goes back to the start of the view, where it was.
-        scrollTargetRef.current?.scrollIntoView({ inline: (current === undefined) ? "start" : "center", block: "nearest" });
+        const rearranged = rearrangedRef.current;
+        rearrangedRef.current = null;
+        // The same choices rearranged by hand stay where they stand.
+        if (rearranged == null || rearranged.length != choices.length
+            || rearranged.some((choice, position) => choice !== choices[position]))
+        {
+            setNumAddedPages(0);
+            // Both axes given: leaving one at its default scrolls every scrollable ancestor (see AtlasCellSprite). A
+            // place left goes back to the start of the view, where it was.
+            scrollTargetRef.current?.scrollIntoView({ inline: (current === undefined) ? "start" : "center", block: "nearest" });
+        }
         rememberPlace();
     }, [choices]);
 
@@ -69,7 +99,7 @@ export default function ThumbnailPanel<K extends string | number>({ id, choices,
     }, [shownChoices.length, hasMore]);
 
     return <ScrollPanel id={id} onClose={onClose} closeRowContent={closeRowContent} overhang={overhang}
-        scrollerRef={scrollerRef} onScroll={rememberPlace} additionalClassNames="m-2">
+        scrollerRef={scrollerRef} onScroll={rememberPlace}>
         {choices.length == 0 && <>
             {emptyText && <Text content={emptyText} size="sm" additionalClassNames="self-center shrink-0"/>}
             {/* An unseen tile of no width, so the row stays as tall as with thumbnails in it. */}
@@ -84,6 +114,7 @@ export default function ThumbnailPanel<K extends string | number>({ id, choices,
             return <div key={choice} id={`${id}.${position}`} ref={position == scrollTarget ? scrollTargetRef : undefined}
                 aria-disabled={!choosable}
                 onClick={choosable ? () => onChoose(choice) : undefined}
+                onPointerDown={canPickUp ? event => holdThumbnail(event, position) : undefined}
                 className={`${thumbnailClassNames} m-1.5 scroll-ml-1.5 shrink-0 rounded-md ${highlightClassNames} ${choosable ? "cursor-pointer" : "opacity-30 cursor-not-allowed"}`}
             >
                 {renderThumbnail(choice, position)}
@@ -111,6 +142,15 @@ interface Props<K>
     // Absent means every one may be picked.
     canChoose?: (choice: K) => boolean;
     onChoose: (choice: K) => void;
+    // A thumbnail was dropped at another position of the row, which the owner gives back as its choices so
+    // rearranged. Absent means the row can't be rearranged.
+    onReorder?: (choice: K, position: number) => void;
+    // A thumbnail was held still long enough to be picked up, whether or not it may then be moved.
+    onPickUp?: (choice: K) => void;
+    // The one picked up was let go, moved or not.
+    onLetGo?: () => void;
+    // Absent means every one may be moved. One that may not is picked up all the same, and stays where it is.
+    canMove?: (choice: K) => boolean;
     // What a thumbnail shows, inside a tile of thumbnailClassNames.
     renderThumbnail: (choice: K, position: number) => ReactNode;
     thumbnailClassNames: string;

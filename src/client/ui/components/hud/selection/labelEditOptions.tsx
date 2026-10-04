@@ -10,11 +10,12 @@ import SelectionToolRow from "./selectionToolRow";
 import EditOptionsProps from "../../../types/editOptionsProps";
 
 // Superuser tools for a selected label: remove, text, and frame (one of its looks, the first frameless). The
-// text bar and the frame list stack above this row (they belong to the label), one at a time.
+// text bar and the frame list take this row's place until closed (they belong to the label), one at a time.
 export default function LabelEditOptions(props: EditOptionsProps)
 {
     const customizingText = props.openPanel == "labelText";
     const customizingFrame = props.openPanel == "compositionThumbnail";
+    const toolsShown = !customizingText && !customizingFrame;
 
     // Full width, so the rows can scroll horizontally instead of growing.
     return <div className="flex flex-col gap-1 w-full">
@@ -29,19 +30,17 @@ export default function LabelEditOptions(props: EditOptionsProps)
             onChoose={(compositionIndex) => ObjectEditUtil.trySetCompositionIndex(props.selection, compositionIndex)}
             onClose={() => props.setOpenPanel(null)}
         />}
-        <SelectionToolRow>
+        {toolsShown && <SelectionToolRow>
             <IconButton id="removeLabelButton" icon={<TrashIcon/>} size="md" color="red"
                 disabled={!ObjectEditUtil.canRemoveObject(props.selection)}
                 onClick={() => ObjectEditUtil.openRemoveConfirmPopup(props.selection, "Want to remove this label?")}
             />
             <IconButton id="changeLabelTextButton" icon={<TextCursorIcon/>} size="md"
-                highlight={customizingText}
-                onClick={() => props.setOpenPanel(customizingText ? null : "labelText")}
+                onClick={() => props.setOpenPanel("labelText")}
             />
             <IconButton id="changeLabelFrameButton" icon={<PictureFrameIcon/>} size="md"
-                highlight={customizingFrame}
-                onClick={() => props.setOpenPanel(customizingFrame ? null : "compositionThumbnail")}
+                onClick={() => props.setOpenPanel("compositionThumbnail")}
             />
-        </SelectionToolRow>
+        </SelectionToolRow>}
     </div>;
 }

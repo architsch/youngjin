@@ -5,6 +5,9 @@ type RecipeOutput =
         preserveScale: true,
         numCols: number,
         numRows: number,
+        // The sample resized to fill its cells (what its margin leaves of them), whatever its own shape, rather than
+        // fitted inside them at that shape with room left beside it. Absent: fitted.
+        stretch?: boolean,
         // Where the sample sits in the room its cells leave around it, across and down: from 0 (left, top) to 1
         // (right, bottom). Absent: in the middle.
         align?: [number, number],

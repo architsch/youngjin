@@ -31,6 +31,13 @@ export default class VoxelGameObject extends GameObject
 
     private voxel: Voxel | undefined;
 
+    // How much of a texture's cell, all round, is no part of what tiles: none of a pack's own (see
+    // PROCEDURAL_VOXEL_TEXTURE_MARGIN). Whatever shows the texture leaves it out.
+    static getTextureMargin(textureIndex: number): number
+    {
+        return (textureIndex < NUM_PACK_VOXEL_TEXTURES) ? 0 : PROCEDURAL_VOXEL_TEXTURE_MARGIN;
+    }
+
     constructor(params: AddObjectSignal)
     {
         super(params);
@@ -194,7 +201,7 @@ export default class VoxelGameObject extends GameObject
         // What tiles of the texture's cell: all of a pack's own, and what is inside a procedural one's margin
         // (see PROCEDURAL_VOXEL_TEXTURE_MARGIN). The quad shows its share of that, in whole texels.
         const textureIndex = quad & 0b01111111;
-        const margin = (textureIndex < NUM_PACK_VOXEL_TEXTURES) ? 0 : PROCEDURAL_VOXEL_TEXTURE_MARGIN;
+        const margin = VoxelGameObject.getTextureMargin(textureIndex);
         const tileSize = VOXEL_TEXTURE_CELL_SIZE - 2 * margin;
         const cellX = (textureIndex % NUM_VOXEL_TEXTURE_COLS) * VOXEL_TEXTURE_CELL_SIZE;
         const cellY = Math.floor(textureIndex / NUM_VOXEL_TEXTURE_COLS) * VOXEL_TEXTURE_CELL_SIZE;

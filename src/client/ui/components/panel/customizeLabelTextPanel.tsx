@@ -30,7 +30,7 @@ export default function CustomizeLabelTextPanel({ selection, onClose }: Props)
             LabelTextUtil.encodeFont(autoSize, fontSize));
     };
 
-    return <ScrollPanel id="customizeLabelTextOptions" onClose={onClose} additionalClassNames="m-2">
+    return <ScrollPanel id="customizeLabelTextOptions" onClose={onClose}>
         <TextInput
             id="labelTextInput"
             size="sm"

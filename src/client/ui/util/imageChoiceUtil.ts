@@ -1,12 +1,14 @@
 import ImageMap from "../../../shared/graphics/image/types/imageMap";
 import ImageMapCategory from "../../../shared/graphics/image/types/imageMapCategory";
+import ImageMapSettings from "../../../shared/graphics/image/types/imageMapSettings";
 import ImageMetadata from "../../../shared/graphics/image/types/imageMetadata";
+import ImageMapSettingsUtil from "../../../shared/graphics/image/util/imageMapSettingsUtil";
 import PictureSearchUtil from "../../../shared/graphics/image/util/pictureSearchUtil";
 import { dummyImagesDebugEnabledObservable } from "../../../shared/system/sharedObservables";
-import { IMAGE_ALL_TAB_CATEGORY_ORDER } from "../../system/clientConstants";
 
-// The images offered to choose from (see ImageMapThumbnailPanel): alike ones together, narrowed by a category tab
-// and a search, and under All laid out category by category.
+// The images offered to choose from (see ImageMapThumbnailPanel): in the order their map lists them in, narrowed by
+// a category tab and a search. An admin may rearrange them, file each under other categories, and change what
+// categories there are.
 const ImageChoiceUtil =
 {
     // Every image in one of the map's subfolders that may be chosen: a staging one only withStaging, as off the live
@@ -15,32 +17,30 @@ const ImageChoiceUtil =
     {
         return imageMap.getImageMetadataListInSubfolder(subfolderName).filter(image => withStaging || !image.staging);
     },
-    // Those, ordered so alike images sit together whatever categories they are in (see orderByKeywords): one order,
-    // which a category's tab only narrows.
+    // Those, in order (see ImageMetadata.order): one order, which a tab or a search only narrows.
     getItems: (imageMap: ImageMap, subfolderName: string, withStaging: boolean): ImageMetadata[] =>
     {
-        return orderByKeywords(dummyImagesDebugEnabledObservable.peek()
-            ? getDummyImageList()
-            : ImageChoiceUtil.getOffered(imageMap, subfolderName, withStaging));
+        if (dummyImagesDebugEnabledObservable.peek())
+            return getDummyImageList();
+        return ImageChoiceUtil.getOffered(imageMap, subfolderName, withStaging).sort(compareOrder);
     },
     // All, then each category holding any of the images, and Misc if any names none of them; no tabs for a subfolder
-    // listing no categories.
-    getCategoryTabs: (imageMap: ImageMap, subfolderName: string, items: ImageMetadata[]): string[] =>
+    // listing no categories. keptTab stays though it holds none (see getRow), as does every category withEmpty,
+    // for an admin to file images under or do away with.
+    getCategoryTabs: (imageMap: ImageMap, subfolderName: string, items: ImageMetadata[], keptTab?: string,
+        withEmpty: boolean = false): string[] =>
     {
         const categories = imageMap.getSubfolderCategories(subfolderName);
         if (categories.length == 0)
             return [];
         const tabs = [...categories.map(category => category.name), ImageMap.MISC_TAB];
-        return [ImageMap.ALL_TAB, ...tabs.filter(tab => items.some(item => isInTab(categories, item, tab)))];
+        return [ImageMap.ALL_TAB, ...tabs.filter(tab => tab == keptTab || (withEmpty && tab != ImageMap.MISC_TAB)
+            || items.some(item => isInTab(categories, item, tab)))];
     },
-    // What a tab shows of them: a category's own, in the order they came in; under All, every one, laid out category
-    // by category (see orderByCategory).
-    getItemsInTab: (imageMap: ImageMap, subfolderName: string, items: ImageMetadata[], tab: string,
-        categoryOrder: readonly string[] = IMAGE_ALL_TAB_CATEGORY_ORDER): ImageMetadata[] =>
+    // What a tab shows of them, in the order they came in: a category's own, or every one under All.
+    getItemsInTab: (imageMap: ImageMap, subfolderName: string, items: ImageMetadata[], tab: string): ImageMetadata[] =>
     {
         const categories = imageMap.getSubfolderCategories(subfolderName);
-        if (tab == ImageMap.ALL_TAB)
-            return orderByCategory(categories, items, categoryOrder);
         return items.filter(item => isInTab(categories, item, tab));
     },
     // The tab to open on for an image: the category its foremost keyword names, or Misc if that names none (the
@@ -61,6 +61,109 @@ const ImageChoiceUtil =
     {
         return PictureSearchUtil.filter(allItems, searchInput, getSearchedWords);
     },
+    // Rearranges the one order so that an image comes at a place of a row narrowed from it (a tab's, a search's):
+    // right before the image the row then shows after it, or right after the row's last. Every other image of its
+    // subfolder, in the row or not, keeps its place among the rest.
+    moveItem: (imageMap: ImageMap, rowPaths: string[], path: string, position: number): void =>
+    {
+        const row = rowPaths.filter(other => other != path);
+        row.splice(position, 0, path);
+        const next = row[position + 1], previous = row[position - 1];
+        if (next == undefined && previous == undefined)
+            return;
+
+        const moved = imageMap.getImageMetadataByPath(path);
+        const ordered = imageMap.getImageMetadataListInSubfolder(ImageMap.getSubfolderName(path)).sort(compareOrder);
+        // The subfolder's own places in the map's order, handed out again.
+        const places = ordered.map(image => image.order);
+        const rest = ordered.filter(image => image != moved);
+        const place = (next != undefined) ? rest.findIndex(image => image.path == next)
+            : rest.findIndex(image => image.path == previous) + 1;
+        rest.splice(place, 0, moved);
+        rest.forEach((image, index) => image.order = places[index]);
+    },
+    // The row a chooser shows of the images: those it is narrowed to, and with them those kept in it though they
+    // are narrowed out (an admin having filed them under other categories since), in the order they come in.
+    getRow: (items: ImageMetadata[], narrowed: ImageMetadata[], keptPaths: string[]): ImageMetadata[] =>
+    {
+        if (keptPaths.length == 0)
+            return narrowed;
+        const shown = new Set([...narrowed.map(item => item.path), ...keptPaths]);
+        return items.filter(item => shown.has(item.path));
+    },
+    // The categories an image is filed under, in order: the first is the tab a chooser opens on for it.
+    getCategories: (imageMap: ImageMap, path: string): string[] =>
+    {
+        return ImageMap.getCategories(imageMap.getImageMetadataByPath(path).keywords);
+    },
+    // Files it under these instead, for every chooser of the map.
+    setCategories: (imageMap: ImageMap, path: string, categories: string[]): void =>
+    {
+        const image = imageMap.getImageMetadataByPath(path);
+        image.keywords = ImageMap.withCategories(image.keywords, categories);
+    },
+    // Lists a category after a subfolder's others, for every chooser of the map. Returns why it can't be, if it
+    // can't (see ImageMapSettingsUtil.getCategoryProblem).
+    addCategory: (imageMap: ImageMap, subfolderName: string, category: ImageMapCategory): string | undefined =>
+    {
+        const categories = imageMap.getSubfolderCategories(subfolderName);
+        const problem = ImageMapSettingsUtil.getCategoryProblem(category, categories);
+        if (problem == undefined)
+            imageMap.setSubfolderCategories(subfolderName, [...categories, category]);
+        return problem;
+    },
+    // Makes one of a subfolder's categories another, in its place, every image filed under it following. Returns
+    // why it can't be, if it can't.
+    renameCategory: (imageMap: ImageMap, subfolderName: string, name: string,
+        category: ImageMapCategory): string | undefined =>
+    {
+        const categories = imageMap.getSubfolderCategories(subfolderName);
+        const problem = ImageMapSettingsUtil.getCategoryProblem(category, categories.filter(other => other.name != name));
+        if (problem != undefined)
+            return problem;
+        imageMap.setSubfolderCategories(subfolderName, categories.map(other => (other.name == name) ? category : other));
+        if (category.name != name)
+            refile(imageMap, subfolderName, name, category.name);
+        return undefined;
+    },
+    // Does away with one of a subfolder's categories, taking every image filed under it out of it.
+    removeCategory: (imageMap: ImageMap, subfolderName: string, name: string): void =>
+    {
+        imageMap.setSubfolderCategories(subfolderName,
+            imageMap.getSubfolderCategories(subfolderName).filter(other => other.name != name));
+        refile(imageMap, subfolderName, name);
+    },
+    // The categories, the order and each image's own categories as the settings file holds them, for an admin to
+    // save over that file's (see AdminAssetSettings).
+    getSettings: (imageMap: ImageMap): ImageMapSettings =>
+    {
+        const categoryTabsBySubfolder: {[subfolderName: string]: ImageMapCategory[]} = {};
+        for (const subfolderName of imageMap.getSubfolderNames())
+            categoryTabsBySubfolder[subfolderName] = imageMap.getSubfolderCategories(subfolderName);
+        return ImageMapSettingsUtil.fromImages([...imageMap.getImageMetadataList()].sort(compareOrder),
+            categoryTabsBySubfolder);
+    },
+}
+
+// Files every image of a subfolder that is under a category, offered or not, under another in its place, or takes
+// it out of that one when given no other.
+function refile(imageMap: ImageMap, subfolderName: string, name: string, replacement?: string): void
+{
+    for (const image of imageMap.getImageMetadataListInSubfolder(subfolderName))
+    {
+        const filedUnder = ImageMap.getCategories(image.keywords);
+        if (!filedUnder.includes(name))
+            continue;
+        image.keywords = ImageMap.withCategories(image.keywords, (replacement != undefined)
+            ? filedUnder.map(other => (other == name) ? replacement : other)
+            : filedUnder.filter(other => other != name));
+    }
+}
+
+// One a map never registered has no place of its own, and keeps the one it came in.
+function compareOrder(a: ImageMetadata, b: ImageMetadata): number
+{
+    return (a.order ?? 0) - (b.order ?? 0);
 }
 
 // Under each category its keywords name as one, or Misc when they name none.
@@ -73,102 +176,6 @@ function isInTab(categories: ImageMapCategory[], image: ImageMetadata, tab: stri
         ? !categories.some(category => words.includes(category.name + ImageMap.CATEGORY_MARK))
         : words.includes(tab + ImageMap.CATEGORY_MARK);
 }
-
-// A run of images for each tab in the order given, alike images together within it (see orderByKeywords). An image
-// under several categories goes with the one listed last (Misc when it is under none), and those under none listed
-// come first, as one run.
-function orderByCategory(categories: ImageMapCategory[], images: ImageMetadata[],
-    categoryOrder: readonly string[]): ImageMetadata[]
-{
-    if (categories.length == 0)
-        return images;
-    const tabs = [...categories.map(category => category.name), ImageMap.MISC_TAB];
-    const runs = new Map<number, ImageMetadata[]>();
-    for (const image of images)
-    {
-        const place = Math.max(...tabs.filter(tab => isInTab(categories, image, tab))
-            .map(tab => categoryOrder.indexOf(tab)));
-        const run = runs.get(place);
-        if (run != undefined)
-            run.push(image);
-        else
-            runs.set(place, [image]);
-    }
-    return [...runs.keys()].sort((a, b) => a - b).flatMap(place => orderByKeywords(runs.get(place)!));
-}
-
-// Alike images next to each other: clustered by the keywords they share but for their categories (average linkage),
-// each merge joining the two runs at their most alike ends. Alphabetical first, so the result doesn't depend on the
-// order the images came in.
-function orderByKeywords(images: ImageMetadata[]): ImageMetadata[]
-{
-    const describe = (image: ImageMetadata) => (image.keywords ?? "").split(",")
-        .filter(word => !word.endsWith(ImageMap.CATEGORY_MARK)).join(",");
-    const sorted = [...images].sort((a, b) => collator.compare(describe(a), describe(b))
-        || collator.compare(a.path, b.path));
-    const vectors = sorted.map(image => toKeywordVector(describe(image)));
-    const similarity = vectors.map(a => vectors.map(b => dot(a, b)));
-    // Between clusters, kept under the id of the one a merge keeps.
-    const linkage = similarity.map(row => [...row]);
-    const clusters = sorted.map((_, index) => ({id: index, run: [index]}));
-    while (clusters.length > 1)
-    {
-        // The most alike pair; the first found on a tie, so the order is the same every time.
-        let bestA = 0, bestB = 1;
-        for (let a = 0; a < clusters.length; ++a)
-        {
-            for (let b = a + 1; b < clusters.length; ++b)
-            {
-                if (linkage[clusters[a].id][clusters[b].id] > linkage[clusters[bestA].id][clusters[bestB].id])
-                    [bestA, bestB] = [a, b];
-            }
-        }
-        const clusterA = clusters[bestA], clusterB = clusters[bestB];
-        const [runA, runB] = [clusterA.run, clusterB.run];
-        let run = [...runA, ...runB];
-        for (const [first, second] of [[[...runA].reverse(), runB], [runA, [...runB].reverse()],
-            [[...runA].reverse(), [...runB].reverse()]])
-        {
-            if (similarity[first[first.length - 1]][second[0]] > similarity[run[runA.length - 1]][run[runA.length]])
-                run = [...first, ...second];
-        }
-        for (const other of clusters)
-        {
-            if (other == clusterA || other == clusterB)
-                continue;
-            const average = (runA.length * linkage[clusterA.id][other.id] + runB.length * linkage[clusterB.id][other.id])
-                / (runA.length + runB.length);
-            linkage[clusterA.id][other.id] = linkage[other.id][clusterA.id] = average;
-        }
-        clusters[bestA] = {id: clusterA.id, run};
-        clusters.splice(bestB, 1);
-    }
-    return (clusters[0]?.run ?? []).map(index => sorted[index]);
-}
-
-// Each keyword weighted by its place, as keywords go most important first (the first outweighs the rest together),
-// and scaled to unit length so a long list doesn't outweigh a short one.
-function toKeywordVector(keywords: string): Map<string, number>
-{
-    const vector = new Map<string, number>();
-    keywords.split(",").map(word => word.trim()).filter(word => word.length > 0)
-        .forEach((word, place) => vector.set(word, 1 / (place + 1)));
-    const length = Math.hypot(...vector.values()) || 1;
-    for (const [word, weight] of vector)
-        vector.set(word, weight / length);
-    return vector;
-}
-
-function dot(a: Map<string, number>, b: Map<string, number>): number
-{
-    let sum = 0;
-    for (const [word, weight] of a)
-        sum += weight * (b.get(word) ?? 0);
-    return sum;
-}
-
-// Fixed to one locale, so every client orders alike; numeric, so "2/9" comes before "2/10".
-const collator = new Intl.Collator("en", {numeric: true});
 
 // Found by a search as though it were one of every staging image's keywords, so it lists them all.
 const STAGING_SEARCH_WORD = "staging";

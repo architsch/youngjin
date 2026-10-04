@@ -91,7 +91,7 @@ export default class EntryStore
         }
 
         const preserveScale = request.recipe?.output.preserveScale ?? existing?.preserveScale;
-        const keywords = putCategoriesFirst(normalizeKeywords(request.fields.keywords ?? ""));
+        const keywords = normalizeKeywords(request.fields.keywords ?? "");
         const entry: ImageEntry = {
             path: entryPath,
             author: request.fields.author.trim(),
@@ -271,12 +271,9 @@ export default class EntryStore
         if (subfolders.length > 0)
         {
             lines.push(`    "subfolders": [`);
-            lines.push(subfolders.map(subfolder => {
-                const categories = subfolder.categories?.map(category =>
-                    `{"name": ${JSON.stringify(category.name)}, "title": ${JSON.stringify(category.title)}}`);
-                return `        {"name": ${JSON.stringify(subfolder.name)}, "title": ${JSON.stringify(subfolder.title)}`
-                    + (categories ? `, "categories": [${categories.join(", ")}]` : "") + "}";
-            }).join(",\n"));
+            // Their categories are the admin's to list (see ImageMapSettings).
+            lines.push(subfolders.map(subfolder =>
+                `        {"name": ${JSON.stringify(subfolder.name)}, "title": ${JSON.stringify(subfolder.title)}}`).join(",\n"));
             lines.push(`    ],`);
         }
         lines.push(`    "images": [`);
@@ -340,6 +337,13 @@ function validateFields(fields: SaveEntryRequest["fields"]): void
         throw new RequestError("An image under a third party's license needs the address it came from");
     if (fields.disabled && fields.staging)
         throw new RequestError("An entry is either disabled or staging, not both");
+    // The builder refuses one too (see ImageMapBuilder).
+    const marked = (fields.keywords ?? "").split(/[\s,]+/).find(word => word.endsWith(ImageMap.CATEGORY_MARK));
+    if (marked != undefined)
+    {
+        throw new RequestError(`"${marked}" is marked as a category, and an image's categories are set in the game by `
+            + `an admin, not among its keywords`);
+    }
 }
 
 // Lowercase single words, leaving out filler words (which a search passes over) and any found inside another: a
@@ -350,14 +354,6 @@ function normalizeKeywords(keywords: string): string
     const words = [...new Set(keywords.toLowerCase().split(/[\s,]+/)
         .filter(word => word.length > 0 && !PICTURE_SEARCH_FILLER_WORDS.includes(word)))];
     return words.filter(word => !words.some(other => other != word && other.includes(word))).join(", ");
-}
-
-// The words marked as categories first, as typed, then the rest (see ImageMetadata.keywords).
-function putCategoriesFirst(keywords: string): string
-{
-    const words = keywords.split(", ").filter(word => word.length > 0);
-    const named = words.filter(word => word.endsWith(ImageMap.CATEGORY_MARK));
-    return [...named, ...words.filter(word => !named.includes(word))].join(", ");
 }
 
 // A photo's id on Unsplash, whose page URLs end in it; the site's name otherwise.

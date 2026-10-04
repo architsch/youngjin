@@ -1,5 +1,5 @@
 import RgbaImage from "../core/rgbaImage";
-import SampleRenderUtil, { MAX_SOURCE_SIDE } from "../core/sampleRenderUtil";
+import SampleRenderUtil from "../core/sampleRenderUtil";
 import PreviewMessage from "./types/previewMessage";
 import PreviewResult from "./types/previewResult";
 
@@ -52,9 +52,7 @@ async function load(sha1: string, url: string): Promise<void>
         if (!response.ok)
             throw new Error(`${response.status} ${response.statusText}`);
         const bitmap = await createImageBitmap(await response.blob(), {imageOrientation: "from-image"});
-        const scale = Math.min(1, MAX_SOURCE_SIDE / Math.max(bitmap.width, bitmap.height));
-        const width = Math.max(1, Math.round(bitmap.width * scale));
-        const height = Math.max(1, Math.round(bitmap.height * scale));
+        const {width, height} = SampleRenderUtil.getWorkedSourceSize(bitmap.width, bitmap.height);
         const context = new OffscreenCanvas(width, height).getContext("2d", {willReadFrequently: true})!;
         context.imageSmoothingQuality = "high";
         context.drawImage(bitmap, 0, 0, width, height);

@@ -17,11 +17,13 @@ import SelectionToolRow from "./selectionToolRow";
 import EditOptionsProps from "../../../types/editOptionsProps";
 
 // Superuser tools for a selected door: remove, name, destination, finish, default entrance. The name bar and
-// the finish list stack above this row (they belong to the door), one at a time; the rest open as popups.
+// the finish list take this row's place until closed (they belong to the door), one at a time; the rest open as
+// popups.
 export default function DoorEditOptions(props: EditOptionsProps)
 {
     const customizingText = props.openPanel == "labelText";
     const customizing = props.openPanel == "compositionThumbnail";
+    const toolsShown = !customizingText && !customizing;
 
     // Full width, so the rows can scroll horizontally instead of growing.
     return <div className="flex flex-col gap-1 w-full">
@@ -36,15 +38,14 @@ export default function DoorEditOptions(props: EditOptionsProps)
             onChoose={(compositionIndex) => ObjectEditUtil.trySetCompositionIndex(props.selection, compositionIndex)}
             onClose={() => props.setOpenPanel(null)}
         />}
-        <SelectionToolRow>
+        {toolsShown && <SelectionToolRow>
             <IconButton id="removeDoorButton" icon={<TrashIcon/>} size="md" color="red"
                 disabled={!ObjectEditUtil.canRemoveObject(props.selection)}
                 onClick={() => ObjectEditUtil.openRemoveConfirmPopup(props.selection,
                     "Want to remove this door?")}
             />
             <IconButton id="changeDoorLabelButton" icon={<TextCursorIcon/>} size="md"
-                highlight={customizingText}
-                onClick={() => props.setOpenPanel(customizingText ? null : "labelText")}
+                onClick={() => props.setOpenPanel("labelText")}
             />
             <IconButton id="changeDoorDestinationButton" icon={<DestinationIcon/>} size="md"
                 onClick={() => PopupUtil.openPopup({popupType: "doorDestination", params: {
@@ -59,8 +60,7 @@ export default function DoorEditOptions(props: EditOptionsProps)
                 }})}
             />
             <IconButton id="customizeDoorButton" icon={<PaintBrushIcon/>} size="md"
-                highlight={customizing}
-                onClick={() => props.setOpenPanel(customizing ? null : "compositionThumbnail")}
+                onClick={() => props.setOpenPanel("compositionThumbnail")}
             />
             <IconButton id="doorSettingsButton" icon={<GearIcon/>} size="md"
                 onClick={() => PopupUtil.openPopup({popupType: "doorSettings", params: {
@@ -77,6 +77,6 @@ export default function DoorEditOptions(props: EditOptionsProps)
             <IconButton id="enterDoorButton" icon={<DoorIcon/>} size="md" color="green"
                 onClick={() => (props.selection.gameObject as DoorGameObject).enter()}
             />
-        </SelectionToolRow>
+        </SelectionToolRow>}
     </div>;
 }

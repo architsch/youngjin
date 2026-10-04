@@ -128,6 +128,9 @@ export const ALL_FACE_DIRECTIONS: Vec3[] = [
 
 // Graphics
 
+// The file at the assets' root holding what an admin sets about them by hand (see AdminAssetSettings).
+export const ADMIN_ASSET_SETTINGS_FILE_NAME = "adminAssetSettings.json";
+
 // Three.js lookAt's forward (-Z); composition part dirs are authored against it.
 export const FORWARD_DIR: Vec3 = {x: 0, y: 0, z: -1};
 export const BACKWARD_DIR: Vec3 = {x: 0, y: 0, z: 1};

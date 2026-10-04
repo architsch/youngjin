@@ -1,6 +1,7 @@
 /**
  * Voxel texture packs: the procedural textures SSG adds to every pack (one for each cell past a pack's own, the
- * same pixels on every draw, averaging to their color, as continuous across the edge they tile at as inside, in
+ * same pixels on every draw, averaging to their color, a metal's shine in streaks all over it and never a broad
+ * sheen, no part of a painted wall flat, as continuous across the edge they tile at as inside, in
  * a margin of their own continuation), the atlas the builder writes (the pack's image left as it is, its cells
  * kept where they were under the procedural rows, each of those at its texture index, another size refused),
  * the packs' image map made of those atlases, what a build redoes (the rows kept as an image of their own and
@@ -98,6 +99,25 @@ function meanColor(pixels: Uint8Array, imageWidth: number, left: number, top: nu
         }
     }
     return sum.map(value => value / (width * height));
+}
+
+// The least, mean and greatest brightness (the mean of a pixel's channels) in a rect of a tile.
+function brightnessIn(tile: Uint8Array, left: number, top: number, width: number, height: number):
+    {min: number, mean: number, max: number}
+{
+    let min = Infinity, max = -Infinity, sum = 0;
+    for (let y = top; y < top + height; ++y)
+    {
+        for (let x = left; x < left + width; ++x)
+        {
+            const i = (y * TILE + x) * 3;
+            const brightness = (tile[i] + tile[i + 1] + tile[i + 2]) / 3;
+            min = Math.min(min, brightness);
+            max = Math.max(max, brightness);
+            sum += brightness;
+        }
+    }
+    return {min, mean: sum / (width * height), max};
 }
 
 // How far two images of the same size are apart, as the mean difference of a channel.
@@ -224,6 +244,60 @@ describe("procedural voxel textures", () => {
                 expect(Math.abs(mean[channel] - wanted), `texture ${index} (${spec.colorHex}), channel ${channel}`)
                     .toBeLessThan(1);
             });
+        });
+    });
+
+    it("give a metal bright streaks all over, and no sheen broad enough to show where it repeats", () => {
+        const QUARTER = TILE / 4;
+        const metals = ProceduralVoxelTextures.map((spec, index) => ({spec, index}))
+            .filter(({spec}) => spec.surface == "metal");
+        expect(metals.length).toBeGreaterThan(0);
+
+        for (const {spec, index} of metals)
+        {
+            const tile = ProceduralTextureUtil.generateCell(spec, TILE, 0, index);
+            const overall = brightnessIn(tile, 0, 0, TILE, TILE).mean;
+            for (let i = 0; i < 4; ++i)
+            {
+                // What a sheen would brighten or dim together: a band the whole height or the whole width, and
+                // a quarter of each.
+                const where = `texture ${index} (${spec.colorHex}), quarter ${i}`;
+                expect(Math.abs(brightnessIn(tile, i * QUARTER, 0, QUARTER, TILE).mean - overall), where)
+                    .toBeLessThan(1);
+                expect(Math.abs(brightnessIn(tile, 0, i * QUARTER, TILE, QUARTER).mean - overall), where)
+                    .toBeLessThan(1);
+                for (let j = 0; j < 4; ++j)
+                {
+                    const part = brightnessIn(tile, i * QUARTER, j * QUARTER, QUARTER, QUARTER);
+                    expect(Math.abs(part.mean - overall), `${where}, ${j}`).toBeLessThan(2);
+                    expect(part.max - overall, `${where}, ${j}`).toBeGreaterThan(12);
+                }
+            }
+        }
+    });
+
+    it("leave no part of a painted wall flat", () => {
+        // In patches a few pores across: with pores all over, the flattest holds at least half the detail of a
+        // typical one.
+        const PATCH = 8;
+        expect(TILE % PATCH).toBe(0);
+
+        ProceduralVoxelTextures.forEach((spec, index) => {
+            if (spec.surface != "paintedConcrete")
+                return;
+            const tile = ProceduralTextureUtil.generateCell(spec, TILE, 0, index);
+            const ranges: number[] = [];
+            for (let top = 0; top < TILE; top += PATCH)
+            {
+                for (let left = 0; left < TILE; left += PATCH)
+                {
+                    const patch = brightnessIn(tile, left, top, PATCH, PATCH);
+                    ranges.push(patch.max - patch.min);
+                }
+            }
+            ranges.sort((a, b) => a - b);
+            expect(ranges[0], `texture ${index} (${spec.colorHex})`)
+                .toBeGreaterThanOrEqual(0.5 * ranges[ranges.length >> 1]);
         });
     });
 

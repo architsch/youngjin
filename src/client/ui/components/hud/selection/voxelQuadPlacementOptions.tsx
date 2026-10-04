@@ -75,9 +75,9 @@ const placementFeatureFlags = [
     FeatureFlag.DisableManualObjectAddition,
 ];
 
-// Face tools: remove or add a block, or add an object. An object's look is picked first, from a chooser that stacks
-// above this row, and the pick adds it.
-export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSelection})
+// Face tools: remove or add a block, or add an object. An object's look is picked first, from a chooser that takes
+// the place of this row and of the face's other tools (its children) until it is closed, and the pick adds it.
+export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSelection, children?: ReactNode})
 {
     const [, forceRefresh] = useReducer((x: number) => x + 1, 0);
     // The type whose chooser is open.
@@ -110,15 +110,14 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
     const canAddLabel = isSuperuser &&
         getPlaceableAttachedObjectTransform(props.selection, labelTypeIndex) !== null;
 
-    // A chooser shows only while its type can be added to the selected face. A pick closes it at once, so a second
-    // click can't add another while the first goes up.
+    // A chooser shows only while its type can be added to the selected face, and the tools stand down for it. A pick
+    // closes it at once, so a second click can't add another while the first goes up.
     const canAdd = new Map([[canvasTypeIndex, canAddCanvas], [propTypeIndex, canAddProp], [lampTypeIndex, canAddLamp],
         [labelTypeIndex, canAddLabel], [doorTypeIndex, canAddDoor]]);
     const choosing = (choosingTypeIndex != null && canAdd.get(choosingTypeIndex)) ? choosingTypeIndex : null;
     const close = () => setChoosingTypeIndex(null);
     const addButton = (id: string, icon: ReactNode, objectTypeIndex: number) => <IconButton id={id} icon={icon}
-        size="md" disabled={!canAdd.get(objectTypeIndex)} highlight={choosing == objectTypeIndex}
-        onClick={() => setChoosingTypeIndex((choosing == objectTypeIndex) ? null : objectTypeIndex)}/>;
+        size="md" disabled={!canAdd.get(objectTypeIndex)} onClick={() => setChoosingTypeIndex(objectTypeIndex)}/>;
 
     // Full width, so the rows can scroll horizontally instead of growing.
     return <div className="flex flex-col gap-1 w-full">
@@ -160,7 +159,7 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
             onChoose={compositionIndex => { close(); tryAddDoorFromQuad(props.selection, compositionIndex); }}
             onClose={close}
         />}
-        <SelectionToolRow>
+        {choosing == null && <SelectionToolRow>
             <IconButton id="removeVoxelBlockButton" icon={<TrashIcon/>} size="md" color="red"
                 disabled={!canRemoveVoxelBlock(props.selection)}
                 onClick={() => tryRemoveVoxelBlock(props.selection)}/>
@@ -172,7 +171,8 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
             {addButton("addLampButton", <AddLampIcon/>, lampTypeIndex)}
             {isSuperuser && addButton("addLabelButton", <AddLabelIcon/>, labelTypeIndex)}
             {isSuperuser && addButton("addDoorButton", <AddDoorIcon/>, doorTypeIndex)}
-        </SelectionToolRow>
+        </SelectionToolRow>}
+        {choosing == null && props.children}
     </div>;
 }
 

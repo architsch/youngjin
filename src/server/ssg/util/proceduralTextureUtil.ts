@@ -6,10 +6,13 @@ import ProceduralTextureSpec from "../types/proceduralTextureSpec";
 // Draws textures from a spec and a seed alone, so a build redraws the same pixels every time. Every pattern
 // wraps at the texture's edges, which is what lets it tile without a seam.
 
-// Strengths are shares of full brightness, radii are in pixels, and gloss is in color levels.
-const METAL_PARAMS = {sheen: 0.04, peakFrom: 0.1, peak: 0.1, lines: 0.055, lineBandRadius: 3};
+// Strengths are shares of full brightness, lengths, thicknesses and radii are in pixels, and gloss is in color
+// levels.
+const METAL_PARAMS = {lines: 0.04, streakCols: 3, streakRows: 50, streakMinLength: 24, streakMaxLength: 110,
+    streakMinThickness: 0.6, streakMaxThickness: 1.4, streakMinStrength: 0.45, streaks: 0.19, bandRadius: 4,
+    gloss: 135};
 const CONCRETE_PARAMS = {
-    paintedConcrete: {broadRelief: 0.14, fineCells: 12, fineRelief: 0.05, poresPerSide: 13, poreMinRadius: 0.3,
+    paintedConcrete: {broadRelief: 0.14, fineCells: 12, fineRelief: 0.05, poresPerSide: 30, poreMinRadius: 0.3,
         poreMaxRadius: 0.9, poreRelief: 0.07, poreShadow: 0.07, mottle: 0.03, grain: 0.012, tint: 0, gloss: 130},
     rawConcrete: {broadRelief: 0.12, fineCells: 16, fineRelief: 0.06, poresPerSide: 15, poreMinRadius: 0.3,
         poreMaxRadius: 1.5, poreRelief: 0.12, poreShadow: 0.16, mottle: 0.09, grain: 0.035, tint: 0.012, gloss: 0},
@@ -46,15 +49,20 @@ function drawTile(spec: ProceduralTextureSpec, size: number, seed: number): Uint
         : drawConcrete(rand, size, color, CONCRETE_PARAMS[spec.surface]);
 }
 
-// Brushed along x: fine lines of even strength, under the faint broad sheen of what a polished surface reflects.
+// Brushed along x: a fine line to every row, under thin bright streaks where the grooves catch the light. All of
+// its shine is in those: a sheen any broader would show as a pattern where the texture repeats.
 function drawMetal(rand: RandomNumberGenerator, size: number, color: Vec3): Uint8Array
 {
     const params = METAL_PARAMS;
     // A line to a row of pixels, running the whole width and changing only slowly along it.
-    const rows = sumLayers(rand, size, [[1, size, 0.6], [2, size, 0.4]], valueNoise);
-    const sheen = sumLayers(rand, size, [[1, 1, 0.5], [2, 1, 0.35], [3, 2, 0.15]], gradientNoise);
+    const lines = sumLayers(rand, size, [[1, size, 0.6], [2, size, 0.4]], valueNoise);
+    const streaks = drawStreaks(rand, size, params);
+    const shine = new Float32Array(size * size);
+    for (let i = 0; i < shine.length; ++i)
+        shine[i] = lines[i] * params.lines + streaks[i] * params.streaks;
 
     const brightness = new Float32Array(size * size);
+    const gloss = new Float32Array(size * size);
     for (let y = 0; y < size; ++y)
     {
         for (let x = 0; x < size; ++x)
@@ -63,15 +71,55 @@ function drawMetal(rand: RandomNumberGenerator, size: number, color: Vec3): Uint
             // Less the average of the rows around it: random rows also drift in broad bands, which would stand
             // out where the texture repeats.
             let nearby = 0;
-            for (let offset = -params.lineBandRadius; offset <= params.lineBandRadius; ++offset)
-                nearby += rows[wrap(y + offset, size) * size + x];
-            const line = rows[i] - nearby / (2 * params.lineBandRadius + 1);
-            // The sheen's peak brightens a little faster than the rest dims.
-            const peak = Math.max(0, sheen[i] - params.peakFrom);
-            brightness[i] = 1 + sheen[i] * params.sheen + peak * peak * params.peak + line * params.lines;
+            for (let offset = -params.bandRadius; offset <= params.bandRadius; ++offset)
+                nearby += shine[wrap(y + offset, size) * size + x];
+            const value = shine[i] - nearby / (2 * params.bandRadius + 1);
+            brightness[i] = 1 + value;
+            // Partly added rather than multiplied, so that a dark metal shines too.
+            gloss[i] = value * params.gloss;
         }
     }
-    return toPixels(color, brightness);
+    return toPixels(color, brightness, gloss);
+}
+
+// How bright each pixel is with the streak along x that crosses it, [0,1]. One streak to a cell of a grid, anywhere
+// within it (spread evenly, as the pores are), fading towards both its ends.
+function drawStreaks(rand: RandomNumberGenerator, size: number, params: typeof METAL_PARAMS): Float32Array
+{
+    const streaks = new Float32Array(size * size);
+    const spacingX = size / params.streakCols;
+    const spacingY = size / params.streakRows;
+    for (let row = 0; row < params.streakRows; ++row)
+    {
+        for (let col = 0; col < params.streakCols; ++col)
+        {
+            const centerX = (col + rand.randomFloat(0, 1)) * spacingX;
+            const centerY = (row + rand.randomFloat(0, 1)) * spacingY;
+            const halfLength = rand.randomFloat(params.streakMinLength, params.streakMaxLength) / 2;
+            const halfThickness = rand.randomFloat(params.streakMinThickness, params.streakMaxThickness) / 2;
+            const strength = rand.randomFloat(params.streakMinStrength, 1);
+            const reachX = Math.ceil(halfLength);
+            const reachY = Math.ceil(halfThickness + 1);
+            for (let dy = -reachY; dy <= reachY; ++dy)
+            {
+                const y = Math.floor(centerY) + dy;
+                // Its edge fades over a pixel, so one thinner than a row of pixels is fainter rather than narrower.
+                const across = Math.min(1, halfThickness + 0.5 - Math.abs(y + 0.5 - centerY));
+                if (across <= 0)
+                    continue;
+                for (let dx = -reachX; dx <= reachX; ++dx)
+                {
+                    const x = Math.floor(centerX) + dx;
+                    const along = 1 - ((x + 0.5 - centerX) / halfLength) ** 2;
+                    if (along <= 0)
+                        continue;
+                    const i = wrap(y, size) * size + wrap(x, size);
+                    streaks[i] = Math.max(streaks[i], strength * across * along * along * along);
+                }
+            }
+        }
+    }
+    return streaks;
 }
 
 // A height field (broad unevenness, a fine texture, pores) lit from the upper left, over a mottled surface.

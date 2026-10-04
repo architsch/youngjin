@@ -85,7 +85,7 @@
     },
     {
       "type": "uiClick",
-      "elementId": "changeDoorLabelButton",
+      "elementId": "customizeLabelTextOptionsClose",
       "settleMs": 400
     },
     {

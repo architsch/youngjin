@@ -26,6 +26,18 @@ const ImageProcessingUtil =
         return {width: image.width, height: image.height, data: new Uint8ClampedArray(image.data)};
     },
 
+    // The part of the image at (x, y), width by height, in pixels and within it.
+    crop: (image: RgbaImage, x: number, y: number, width: number, height: number): RgbaImage =>
+    {
+        const result = ImageProcessingUtil.createImage(width, height);
+        for (let row = 0; row < height; ++row)
+        {
+            const from = ((y + row) * image.width + x) * 4;
+            result.data.set(image.data.subarray(from, from + width * 4), row * width * 4);
+        }
+        return result;
+    },
+
     // Samples the quad (corners in the source's pixels: top-left, top-right, bottom-right, bottom-left) onto a
     // width x height image, straightening it (a projective map) and turning the picture clockwise by rotation
     // degrees about its middle. A turned picture's corners show more of the source; past the source's edge its

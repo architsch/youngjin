@@ -10,6 +10,7 @@ import useMouseDragScroll from "../../../util/mouseDragScroll";
 import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
 import VoxelUpdateUtil from "../../../../../shared/voxel/util/voxelUpdateUtil";
 import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
+import { NUM_PACK_VOXEL_TEXTURES } from "../../../../../shared/system/sharedConstants";
 import { useEffect, useReducer } from "react";
 
 export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSelection})
@@ -46,9 +47,11 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
     const selectedTextureCol = selectedTextureIndex % numCols;
     const selectedTextureRow = Math.floor(selectedTextureIndex / numCols);
 
+    // The procedural textures (the atlas's top rows) are shown first, then the pack's own. A texture's place
+    // here is not its index, which is what a quad stores.
     const textureIndices = new Array<number>(numRows * numCols);
-    for (let textureIndex = 0; textureIndex < textureIndices.length; ++textureIndex)
-        textureIndices[textureIndex] = textureIndex;
+    for (let i = 0; i < textureIndices.length; ++i)
+        textureIndices[i] = (NUM_PACK_VOXEL_TEXTURES + i) % textureIndices.length;
 
     const additionalClassNames = "min-h-14 max-h-14 sm:min-h-13 sm:max-h-13 md:min-h-12 md:max-h-12 lg:min-h-11 lg:max-h-11"
         + (disabled ? " cursor-not-allowed" : "");
@@ -89,6 +92,7 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
                 atlasCellHeight={materialParams.textureGridCellHeight}
                 atlasCellCol={col}
                 atlasCellRow={row}
+                atlasCellMargin={VoxelGameObject.getTextureMargin(textureIndex)}
                 flipRow={true}
                 highlight={col == selectedTextureCol && row == selectedTextureRow}
                 autoScrollToHighlight={true}

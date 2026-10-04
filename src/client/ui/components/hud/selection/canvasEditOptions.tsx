@@ -14,7 +14,7 @@ import EditOptionsProps from "../../../types/editOptionsProps";
 import RotateClockwiseIcon from "../../../svg/icons/rotateClockwiseIcon";
 
 // Canvas tools: remove, painting, frame (one of its looks, the first frameless), and a clockwise quarter-turn. The
-// painting and frame lists stack above this row (they belong to the canvas), one at a time.
+// painting and frame lists take this row's place until closed (they belong to the canvas), one at a time.
 export default function CanvasEditOptions(props: EditOptionsProps)
 {
     const imagePathMetadata = props.selection.gameObject.params.metadata[ObjectMetadataKeyEnumMap.ImagePath];
@@ -26,6 +26,7 @@ export default function CanvasEditOptions(props: EditOptionsProps)
     // Recomputed each render; zone changes re-announce the selection (see ClientVoxelManager). Choosers are
     // disabled as a whole.
     const canEdit = ObjectEditUtil.canEditObject(props.selection);
+    const toolsShown = !(canEdit && (choosingImage || customizingFrame));
 
     // Full width, so the rows can scroll horizontally instead of growing.
     return <div className="flex flex-col gap-1 w-full">
@@ -57,25 +58,23 @@ export default function CanvasEditOptions(props: EditOptionsProps)
             }}
             onClose={() => props.setOpenPanel(null)}
         />}
-        <SelectionToolRow>
+        {toolsShown && <SelectionToolRow>
             <IconButton icon={<TrashIcon/>} size="md" color="red"
                 disabled={!ObjectEditUtil.canRemoveObject(props.selection)}
                 onClick={() => ObjectEditUtil.openRemoveConfirmPopup(props.selection, "Want to remove this?")}
             />
             <IconButton id="changeCanvasImageButton" icon={<PictureIcon/>} size="md"
                 disabled={!canEdit}
-                highlight={choosingImage && canEdit}
-                onClick={() => props.setOpenPanel(choosingImage ? null : "imageMapThumbnail")}
+                onClick={() => props.setOpenPanel("imageMapThumbnail")}
             />
             <IconButton id="changeCanvasFrameButton" icon={<PictureFrameIcon/>} size="md"
                 disabled={!canEdit}
-                highlight={customizingFrame && canEdit}
-                onClick={() => props.setOpenPanel(customizingFrame ? null : "compositionThumbnail")}
+                onClick={() => props.setOpenPanel("compositionThumbnail")}
             />
             <IconButton id="rotateCanvasButton" icon={<RotateClockwiseIcon/>} size="md"
                 disabled={!canEdit || !ObjectEditUtil.canQuarterTurn(props.selection)}
                 onClick={() => ObjectEditUtil.tryQuarterTurn(props.selection)}
             />
-        </SelectionToolRow>
+        </SelectionToolRow>}
     </div>;
 }

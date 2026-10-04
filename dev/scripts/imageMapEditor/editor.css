@@ -180,7 +180,7 @@ button, input, select { font: inherit; color: inherit; }
     min-height: 0;
 }
 
-.entry-list .new-entry, .entry-list .entry-search, .source-library .add-files { flex: none; }
+.entry-list .new-entry, .left-column .list-search, .source-library .add-files { flex: none; }
 
 .picking-note {
     display: flex;
@@ -195,7 +195,7 @@ button, input, select { font: inherit; color: inherit; }
 }
 
 .add-by-url { display: flex; flex: none; gap: 6px; }
-.add-by-url input, .entry-search {
+.add-by-url input, .list-search {
     min-width: 0;
     padding: 4px 6px;
     border: 1px solid var(--border-strong);
@@ -267,7 +267,7 @@ button, input, select { font: inherit; color: inherit; }
     color: var(--text);
 }
 .usage-dialog[open] { display: flex; flex-direction: column; }
-.usage-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
+.usage-dialog::backdrop, .prep-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 .usage-dialog .panel-toolbar .button { margin-left: auto; }
 .usage-dialog .entry-grid { grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); padding: 10px; }
 
@@ -343,10 +343,11 @@ button, input, select { font: inherit; color: inherit; }
 }
 
 .source-view.placeholder { gap: 16px; }
+.source-view .panel-toolbar { flex-wrap: wrap; row-gap: 6px; }
 
 /* What is drawn over the picture (handles, outlines, a brush) may reach past it, but never past its stage, or it
    would make the page or the panel scroll. */
-.source-stage, .sample-stage {
+.sample-stage {
     display: flex;
     flex: 1;
     align-items: center;
@@ -356,12 +357,17 @@ button, input, select { font: inherit; color: inherit; }
     overflow: hidden;
 }
 
-/* The size it is given (see useFitSize), never squeezed to fit. */
+/* The size it is given (see useFitSize, useZoomStage), never squeezed to fit. */
 .source-frame, .sample-frame { position: relative; flex: none; }
 .source-canvas, .sample-frame canvas { display: block; width: 100%; height: 100%; }
+/* The photo itself, over its small copy (see SourceView). */
+.source-detail { position: absolute; inset: 0; width: 100%; height: 100%; user-select: none; }
+.source-frame.pixelated canvas, .source-frame.pixelated img { image-rendering: pixelated; }
 
+/* A drag from outside the quad pans, as one with Space held does anywhere. */
 .source-overlay { position: absolute; inset: 0; touch-action: none; }
-.source-overlay.mode-sample { cursor: move; }
+.source-overlay.mode-sample, .source-overlay.mode-pan { cursor: grab; }
+.source-overlay.mode-sample .quad { pointer-events: fill; cursor: move; }
 .source-overlay.mode-retouch { cursor: crosshair; }
 .source-overlay svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
 
@@ -462,7 +468,7 @@ button, input, select { font: inherit; color: inherit; }
 .stroke.erase { stroke: #ff005a; }
 .stroke.restore { stroke: #2fd06a; }
 .brush-cursor { fill: none; stroke: #fff; stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
-.selection-outside { fill: rgba(20, 24, 40, 0.45); }
+.selection-taken { fill: rgba(20, 24, 40, 0.45); }
 .selection-outline { fill: none; stroke: #fff; stroke-width: 1.5px; stroke-dasharray: 5 4; vector-effect: non-scaling-stroke; opacity: 0.6; }
 .selection-outline.focused { stroke: var(--handle); stroke-width: 2px; opacity: 1; }
 .selection-stalk { stroke: var(--handle); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
@@ -548,11 +554,19 @@ button, input, select { font: inherit; color: inherit; }
     min-width: 0;
     min-height: 0;
 }
-.sample-view .panel-toolbar .zoom-controls { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+.sample-frame.tool-pan { cursor: grab; }
+.sample-frame.pixelated canvas { image-rendering: pixelated; }
+.panel-hint { padding: 4px 10px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 11px; }
+
+/* A picture shown at any zoom (see useZoomStage): the stage scrolls, and its content centres the picture's frame
+   while there is room around it. */
+.panel-toolbar .zoom-controls { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+.panel-toolbar .zoom-controls + .segmented { margin-left: 0; }
 .zoom-level { min-width: 48px; text-align: center; font-variant-numeric: tabular-nums; font-size: 12px; }
-.sample-view-stage { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; }
-.sample-view-stage.panning, .sample-view-stage.panning .sample-frame { cursor: grabbing; }
-.sample-view-content {
+.zoom-stage { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; }
+.zoom-stage.panning, .zoom-stage.panning .sample-frame, .zoom-stage.panning .source-overlay,
+.zoom-stage.panning .prep-frame { cursor: grabbing; }
+.zoom-content {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -561,6 +575,90 @@ button, input, select { font: inherit; color: inherit; }
     min-height: 100%;
     width: max-content;
 }
-.sample-frame.tool-pan { cursor: grab; }
-.sample-frame.pixelated canvas { image-rendering: pixelated; }
-.panel-hint { padding: 4px 10px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 11px; }
+
+/* A source preprocessed into another (see PreprocessDialog): the source on a zoom stage, and what is asked of it
+   beside it. */
+.prep-dialog {
+    width: calc(100vw - 48px);
+    max-width: 1500px;
+    height: calc(100vh - 48px);
+    max-height: none;
+    padding: 0;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+}
+.prep-dialog[open] { display: flex; flex-direction: column; }
+.prep-dialog > .panel-toolbar { flex: none; }
+.prep-body { display: grid; flex: 1; grid-template-columns: minmax(0, 1fr) 400px; min-height: 0; }
+.prep-stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--bg); }
+.prep-side { border-left: 1px solid var(--border); }
+
+.prep-frame { position: relative; flex: none; touch-action: none; }
+.prep-frame img, .prep-frame svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    user-select: none;
+}
+.prep-frame svg { overflow: visible; }
+.prep-frame.pixelated img:first-of-type { image-rendering: pixelated; }
+.prep-frame.tool-none, .prep-frame.tool-pan { cursor: grab; }
+.prep-frame.tool-box, .prep-frame.tool-on, .prep-frame.tool-off, .prep-frame.tool-circle,
+.prep-frame.tool-outline { cursor: crosshair; }
+
+/* A cut-out's parts, the one picked standing out: a box around a part kept in green, around one taken out in red,
+   and a point on the thing as a green dot, one off it as a red cross. */
+.prep-box { position: absolute; border: 2px dashed #40ff70; opacity: 0.5; pointer-events: none; }
+.prep-box.dropped { border-color: #ff5040; }
+.prep-box-label {
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding: 0 4px;
+    background: #40ff70;
+    color: #000;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 14px;
+}
+.prep-box.dropped .prep-box-label { background: #ff5040; }
+.prep-point {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    margin: -7px 0 0 -7px;
+    border: 2px solid #000;
+    border-radius: 50%;
+    background: #40ff70;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 9px;
+    text-align: center;
+    opacity: 0.5;
+    pointer-events: none;
+}
+.prep-point.off { background: #ff5040; }
+/* Around something round, in white, apart from the face's corners. */
+.prep-point.round { background: #fff; }
+.prep-box.focused, .prep-point.focused { opacity: 1; }
+.prep-ellipse {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 1.5px;
+    stroke-dasharray: 6 4;
+    vector-effect: non-scaling-stroke;
+}
+
+.prep-result { align-self: flex-start; max-width: 100%; }
+.prep-result img { display: block; max-width: 100%; max-height: 260px; }
+.prep-notes {
+    margin: 0;
+    color: var(--text-muted);
+    font: 11px/1.5 ui-monospace, Menlo, monospace;
+    white-space: pre-wrap;
+}

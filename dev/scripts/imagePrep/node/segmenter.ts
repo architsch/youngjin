@@ -123,6 +123,12 @@ export default class Segmenter
         return {logits: kept.slice(0, cells), score: scores[best]};
     };
 
+    // Whether the model, and what runs it, are on this machine already: if not, the first mask asked for fetches them.
+    isInstalled(): boolean
+    {
+        return fs.existsSync(this.getRuntimeMarker()) && this.getModelPaths().every(file => fs.existsSync(file));
+    }
+
     // Lets the model go, if it was ever loaded. Its threads outlive the last mask otherwise, and now and then
     // bring the process down as it exits.
     async release(): Promise<void>
@@ -192,8 +198,8 @@ export default class Segmenter
     // Returns ONNX Runtime, fetching it the first time: of the builds its package holds, this machine's alone.
     private async installRuntime(): Promise<Runtime>
     {
-        const dir = path.join(this.toolDir, "onnxruntime");
-        const installed = path.join(dir, `${RUNTIME_VERSION}.installed`);
+        const installed = this.getRuntimeMarker();
+        const dir = path.dirname(installed);
         if (!fs.existsSync(installed))
         {
             console.log(`Fetching ONNX Runtime (MIT, about 115 MB) into ${dir}`);
@@ -227,8 +233,8 @@ export default class Segmenter
     // Returns where the model's two halves are, fetching them the first time.
     private async installModel(): Promise<string[]>
     {
-        const dir = path.join(this.toolDir, "sam2");
-        const files = MODEL_FILES.map(file => path.join(dir, file.name));
+        const files = this.getModelPaths();
+        const dir = path.dirname(files[0]);
         if (files.every(file => fs.existsSync(file)))
             return files;
         console.log(`Fetching Segment Anything 2 (Apache-2.0, about 910 MB) into ${dir}`);
@@ -239,6 +245,17 @@ export default class Segmenter
                 await fetchFile(`${MODEL_URL}/${MODEL_FILES[i].name}`, MODEL_FILES[i].sha256, files[i]);
         }
         return files;
+    }
+
+    // Written once ONNX Runtime is unpacked whole.
+    private getRuntimeMarker(): string
+    {
+        return path.join(this.toolDir, "onnxruntime", `${RUNTIME_VERSION}.installed`);
+    }
+
+    private getModelPaths(): string[]
+    {
+        return MODEL_FILES.map(file => path.join(this.toolDir, "sam2", file.name));
     }
 }
 

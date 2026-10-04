@@ -72,6 +72,7 @@ plates were painted out; small incidental labels on goods remain.
 <!-- pictures:begin (written by the image map editor) -->
 | File | Title | Author | Source | License |
 |---|---|---|---|---|
+| `2/3.webp` | Oven | Erik Mclean | [aPoF91L-n6k](https://unsplash.com/photos/white-and-black-gas-range-oven-aPoF91L-n6k) | Unsplash License |
 | `2/4.webp` | Pepperoni Pizza | Fernando Andrade | [_P76trHTWDE](https://unsplash.com/photos/pizza-with-pepperoni-and-ham-_P76trHTWDE) | Unsplash License |
 | `2/7.webp` | Boombox | Eric Nopanen | [8e0EHPUx3Mo](https://unsplash.com/photos/person-with-vintage-silver-boombox-8e0EHPUx3Mo) | Unsplash License |
 | `2/8.webp` | Tube Radio | Gayatri Pandkar | [Q1KJomEl70c](https://unsplash.com/photos/an-old-radio-sitting-on-top-of-a-wooden-table-Q1KJomEl70c) | Unsplash License |
@@ -209,7 +210,9 @@ react, socket.io-client, tailwindcss) are among them, since only the build needs
 them installed, yet they ship inside the client bundle.
 
 The picture preparation script (`npm run imagePrep`) fetches three things on
-first use rather than at install, into the gitignored `temp/`. None is a
+first use rather than at install, into the gitignored `temp/`; the image map
+editor fetches the two that cut a thing out, likewise, when a source is first
+preprocessed that way. None is a
 dependency in `package.json`, and none is ever committed, bundled or shipped;
 their licenses cover the programs and models and set no terms on the pictures
 made with them.

@@ -1,10 +1,15 @@
 import path from "path";
+import { existsSync } from "fs";
 import fs from "fs/promises";
 import { STATIC_PAGE_ROOT_DIR } from "../../system/serverConstants";
 import LogUtil from "../../../shared/system/util/logUtil";
 
 const FileUtil =
 {
+    exists: (relativeFilePath: string, rootDir?: string): boolean =>
+    {
+        return existsSync(FileUtil.getAbsoluteFilePath(relativeFilePath, rootDir));
+    },
     read: async (relativeFilePath: string, rootDir?: string): Promise<string> =>
     {
         try {

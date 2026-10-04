@@ -2,14 +2,20 @@ import sharp from "sharp";
 import FileUtil from "../util/fileUtil";
 import ImageFileUtil from "../util/imageFileUtil";
 import { STATIC_PAGE_ROOT_DIR, SRC_ROOT_DIR } from "../../system/serverConstants";
+import { ADMIN_ASSET_SETTINGS_FILE_NAME } from "../../../shared/system/sharedConstants";
 import ImageMap from "../../../shared/graphics/image/types/imageMap";
+import ImageMapCategory from "../../../shared/graphics/image/types/imageMapCategory";
 import ImageMapSeed from "../../../shared/graphics/image/types/imageMapSeed";
+import ImageMapSettings from "../../../shared/graphics/image/types/imageMapSettings";
 import ImageMapSubfolderInfo from "../../../shared/graphics/image/types/imageMapSubfolderInfo";
 import ImageMapSubfolderTab from "../../../shared/graphics/image/types/imageMapSubfolderTab";
+import ImageMapSettingsUtil from "../../../shared/graphics/image/util/imageMapSettingsUtil";
 
 const WEBP_QUALITY = 80;
 const ASSETS_ROOT_PATH = `${STATIC_PAGE_ROOT_DIR}/app/assets`;
 const MAPS_ROOT_PATH = `${SRC_ROOT_DIR}/shared/graphics/image/maps`;
+
+const IMAGE_INDEX_PATTERN = /^(0|[1-9]\d*)$/;
 
 export default class ImageMapBuilder
 {
@@ -52,6 +58,11 @@ export default class ImageMapBuilder
                 disabled?: boolean, staging?: boolean}[],
             subfolders?: ImageMapSubfolderTab[],
         };
+        const settings = await this.readSettings();
+        // The categories of a subfolder the manifest lists as a tab: the settings list them, and no other has any.
+        const getCategories = (subfolderName: string): ImageMapCategory[] =>
+            manifest.subfolders?.some(tab => tab.name == subfolderName)
+                ? settings?.categoryTabsBySubfolder[subfolderName] ?? [] : [];
 
         // Collect all images but the disabled ones, which are left out of the game while keeping their paths.
         const subfolderInfoByName: {[subfolderName: string]: ImageMapSubfolderInfo} = {};
@@ -65,18 +76,33 @@ export default class ImageMapBuilder
             if (subfolderInfoByName[subfolderName] == undefined)
                 subfolderInfoByName[subfolderName] = {name: subfolderName, imageMetadataList: [], numGridCols: 0, numGridRows: 0};
             const info = subfolderInfoByName[subfolderName];
+            // Only the categories its subfolder lists.
+            const listed = getCategories(subfolderName);
+            const categories = (settings ? ImageMapSettingsUtil.getCategories(settings, image.path) : [])
+                .filter(name => listed.some(category => category.name == name));
             // 'coords' will be set inside the "buildGrid" method.
             info.imageMetadataList.push({path: image.path,
-                keywords: normalizeKeywords(image.keywords ?? `${image.title},${image.author}`), coords: "",
+                keywords: this.getKeywords(image, categories), coords: "",
                 preserveScale: image.preserveScale === true ? true : undefined,
                 staging: image.staging === true ? true : undefined});
         }
         if (Object.keys(subfolderInfoByName).length == 0)
             throw new Error(`Image map generation failed :: Every image is disabled, and the game needs one (mapName = ${this.mapName})`);
-        // A tab whose images are all disabled is left out of the game with them.
-        const subfolderTabs = manifest.subfolders?.filter(tab => subfolderInfoByName[tab.name] != undefined);
         if (manifest.subfolders)
             this.validateSubfolderTabs(manifest.subfolders, manifest.images, subfolderInfoByName);
+        // A tab whose images are all disabled is left out of the game with them.
+        const subfolderTabs = manifest.subfolders?.filter(tab => subfolderInfoByName[tab.name] != undefined)
+            .map((tab): ImageMapSubfolderTab => {
+                const categories = getCategories(tab.name);
+                return {name: tab.name, title: tab.title, ...(categories.length > 0 ? {categories} : {})};
+            });
+
+        // Before the grid, whose cells follow the list.
+        if (settings)
+        {
+            for (const info of Object.values(subfolderInfoByName))
+                info.imageMetadataList = ImageMapSettingsUtil.sort(info.imageMetadataList, settings);
+        }
 
         // An atlas map's images are cells of one file, not files of their own.
         if (!this.atlasImageName)
@@ -106,7 +132,8 @@ export default class ImageMapBuilder
         await this.writeMapFile(subfolderInfoByName, subfolderTabs);
     }
 
-    // Every tab must hold images (disabled or not), and every image must sit in a tab.
+    // Every tab must hold images (disabled or not), and every image must sit in a tab. Only the settings list a
+    // tab's categories.
     private validateSubfolderTabs(subfolderTabs: ImageMapSubfolderTab[], images: {path: string}[],
         subfolderInfoByName: {[subfolderName: string]: ImageMapSubfolderInfo}): void
     {
@@ -121,22 +148,91 @@ export default class ImageMapBuilder
             if (!tabNames.includes(subfolderName))
                 throw new Error(`Image map generation failed :: Subfolder "${subfolderName}" holds images but is not listed in the manifest's subfolders (mapName = ${this.mapName})`);
         }
-        // A category's name is the keyword that puts an image in it: one lowercase word, none inside another (the
-        // editor drops a keyword found inside another), and no name a chooser tab of its own takes.
-        for (const tab of subfolderTabs)
+        const withCategories = subfolderTabs.find(tab => tab.categories != undefined);
+        if (withCategories != undefined)
+            throw new Error(`Image map generation failed :: Subfolder "${withCategories.name}" lists categories in the manifest, which only ${ADMIN_ASSET_SETTINGS_FILE_NAME} does (mapName = ${this.mapName})`);
+    }
+
+    // What the map ships of an image's description: the categories it is filed under, marked, then its own keywords,
+    // or its title and author when it names none. Only the settings file an image under a category.
+    private getKeywords(image: {path: string, author: string, title: string, keywords?: string}, categories: string[]): string
+    {
+        const words = normalizeKeywords(image.keywords ?? `${image.title},${image.author}`);
+        const marked = words.find(word => word.endsWith(ImageMap.CATEGORY_MARK));
+        if (marked != undefined)
+            throw new Error(`Image map generation failed :: Image "${image.path}" marks its keyword "${marked}" as a category, which only ${ADMIN_ASSET_SETTINGS_FILE_NAME} does (mapName = ${this.mapName})`);
+        // A category's name need not be said again.
+        return ImageMap.withCategories(words.filter(word => !categories.includes(word)).join(","), categories);
+    }
+
+    // The map's own part of the admin's settings, if they hold one (see AdminAssetSettings). It may name images the
+    // map doesn't hold (disabled or deleted since), but nothing that is no category, image number or category
+    // name, and none twice.
+    private async readSettings(): Promise<ImageMapSettings | undefined>
+    {
+        if (!FileUtil.exists(ADMIN_ASSET_SETTINGS_FILE_NAME, ASSETS_ROOT_PATH))
+            return undefined;
+        const mapKey = ImageMapSettingsUtil.getMapKey(this.mapName);
+        const fail = (problem: string) =>
+            new Error(`Image map generation failed :: ${ADMIN_ASSET_SETTINGS_FILE_NAME} ${problem} (mapName = ${this.mapName})`);
+        const isRecord = (value: unknown): value is {[key: string]: unknown} =>
+            typeof value == "object" && value != null && !Array.isArray(value);
+
+        let file: unknown;
+        try
         {
-            const names = (tab.categories ?? []).map(category => category.name);
-            for (const category of tab.categories ?? [])
+            file = JSON.parse(await FileUtil.read(ADMIN_ASSET_SETTINGS_FILE_NAME, ASSETS_ROOT_PATH));
+        }
+        catch
+        {
+            throw fail("is not valid JSON");
+        }
+        if (!isRecord(file))
+            throw fail("holds no settings");
+        const settings = file[mapKey];
+        if (settings == undefined)
+            return undefined;
+        if (!isRecord(settings) || !isRecord(settings.categoryTabsBySubfolder))
+            throw fail(`holds no "categoryTabsBySubfolder" under "${mapKey}"`);
+        if (!isRecord(settings.orderedIndicesBySubfolder))
+            throw fail(`holds no "orderedIndicesBySubfolder" under "${mapKey}"`);
+        if (!isRecord(settings.categoriesBySubfolderAndIndex))
+            throw fail(`holds no "categoriesBySubfolderAndIndex" under "${mapKey}"`);
+
+        for (const [subfolderName, categories] of Object.entries(settings.categoryTabsBySubfolder))
+        {
+            if (!Array.isArray(categories) || !categories.every(category =>
+                isRecord(category) && typeof category.name == "string" && typeof category.title == "string"))
+                throw fail(`lists something other than categories, each a name and a title, under "${subfolderName}"`);
+            (categories as ImageMapCategory[]).forEach((category, place) => {
+                const problem = ImageMapSettingsUtil.getCategoryProblem(category, categories.slice(0, place));
+                if (problem != undefined)
+                    throw fail(`lists a category under "${subfolderName}" that can't be one: ${problem}`);
+            });
+        }
+        for (const [subfolderName, indices] of Object.entries(settings.orderedIndicesBySubfolder))
+        {
+            if (!Array.isArray(indices) || !indices.every(index => Number.isInteger(index) && index >= 0))
+                throw fail(`lists something other than image numbers under "${subfolderName}"`);
+            const repeated = indices.find((index, place) => indices.indexOf(index) != place);
+            if (repeated != undefined)
+                throw fail(`lists image ${repeated} twice under "${subfolderName}"`);
+        }
+        for (const [subfolderName, categoriesByIndex] of Object.entries(settings.categoriesBySubfolderAndIndex))
+        {
+            if (!isRecord(categoriesByIndex) || !Object.keys(categoriesByIndex).every(index => IMAGE_INDEX_PATTERN.test(index)))
+                throw fail(`files something other than image numbers under categories in "${subfolderName}"`);
+            for (const [index, categories] of Object.entries(categoriesByIndex))
             {
-                if (!/^[a-z0-9]+$/.test(category.name) || !category.title)
-                    throw new Error(`Image map generation failed :: A category of subfolder "${tab.name}" needs a title and a name of one lowercase word, not "${category.name}" (mapName = ${this.mapName})`);
-                if (category.name == ImageMap.ALL_TAB || category.name == ImageMap.MISC_TAB)
-                    throw new Error(`Image map generation failed :: Subfolder "${tab.name}" lists a category named "${category.name}", which a chooser keeps for its own tab (mapName = ${this.mapName})`);
-                const other = names.find((name, index) => index != names.indexOf(category.name) && name.includes(category.name));
-                if (other != undefined)
-                    throw new Error(`Image map generation failed :: Subfolder "${tab.name}" lists the category "${category.name}" ${other == category.name ? "twice" : `inside "${other}"`} (mapName = ${this.mapName})`);
+                if (!Array.isArray(categories)
+                    || !categories.every(category => typeof category == "string" && ImageMapSettingsUtil.isCategoryName(category)))
+                    throw fail(`files image ${index} of "${subfolderName}" under something other than category names`);
+                const repeated = categories.find((category, place) => categories.indexOf(category) != place);
+                if (repeated != undefined)
+                    throw fail(`files image ${index} of "${subfolderName}" under "${repeated}" twice`);
             }
         }
+        return settings as unknown as ImageMapSettings;
     }
 
     // The file the game loads for an image: its own, or the augmented copy of it (see
@@ -312,14 +408,13 @@ const subfolderGridSizes: {[subfolder: string]: {numCols: number, numRows: numbe
 
 ImageMapUtil.setImageMap("${this.mapName}", new ImageMap("${this.rootDirName}", ${this.gridCellSize ?? "0"}, subfolderGridSizes, imageMetadataList${optionalArgsText}));
 `;
-        const mapNameCamelCased = this.mapName[0].toLowerCase() + this.mapName.substring(1);
-        await FileUtil.write(`${mapNameCamelCased}.ts`, text, MAPS_ROOT_PATH);
+        await FileUtil.write(`${ImageMapSettingsUtil.getMapKey(this.mapName)}.ts`, text, MAPS_ROOT_PATH);
     }
 }
 
-// As ImageMetadata.keywords holds them: trimmed, lowercase, each once, joined by bare commas.
-function normalizeKeywords(keywords: string): string
+// As ImageMetadata.keywords holds them: trimmed, lowercase, each once.
+function normalizeKeywords(keywords: string): string[]
 {
     const words = keywords.split(",").map(word => word.trim().replace(/\s+/g, " ").toLowerCase());
-    return [...new Set(words.filter(word => word.length > 0))].join(",");
+    return [...new Set(words.filter(word => word.length > 0))];
 }

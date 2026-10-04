@@ -36,7 +36,7 @@ export default function EntryList({ state, subfolder, selectedPath, search, onSe
                     onOpenFile(file);
             }}/>
         </label>
-        <input type="search" className="entry-search" value={search} placeholder="Search by title, author or keyword"
+        <input type="search" className="list-search" value={search} placeholder="Search by title, author or keyword"
             onChange={ev => onSearchChange(ev.target.value)}/>
         {searching && entries.length == 0 && <div className="panel-note">No entry in this tab matches the search.</div>}
         <div className="entry-grid">

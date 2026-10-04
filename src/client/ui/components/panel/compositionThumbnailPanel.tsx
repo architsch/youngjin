@@ -41,7 +41,7 @@ export default function CompositionThumbnailPanel({ id, objectType, currentCompo
                 </span>
             </>;
         }}
-        thumbnailClassNames="relative w-16"
+        thumbnailClassNames="relative w-15"
         overhang={true}
         onClose={onClose}
     />;

@@ -14,8 +14,7 @@ export default class ImageMap
     static readonly MISC_TAB = "misc";
 
     // Ends a keyword naming one of its subfolder's categories ("kitchen*"). Such a keyword files the image under that
-    // tab, and sets which run it is in under All; it is left out when alike images are set side by side (see
-    // ImageChoiceUtil), so there a kind of thing sits together whatever places it belongs in.
+    // tab (see ImageChoiceUtil).
     static readonly CATEGORY_MARK = "*";
 
     private rootDirName: string;
@@ -40,6 +39,10 @@ export default class ImageMap
     // The subfolders' tab order and titles, if the manifest gives them.
     private subfolderTabs?: ImageMapSubfolderTab[];
 
+    // The categories each subfolder's images are browsed by, in tab order, which an admin may change (see
+    // ImageChoiceUtil).
+    private subfolderCategories: {[subfolderName: string]: ImageMapCategory[]} = {};
+
     // What an image's path is followed by in the file the game loads for it, or "" if that is the image's own file
     // (see ImageMapSeed.augmentedPathSuffix).
     private augmentedPathSuffix: string;
@@ -62,6 +65,8 @@ export default class ImageMap
         this.thumbnailSize = thumbnailSize;
         this.subfolderTabs = subfolderTabs;
         this.augmentedPathSuffix = augmentedPathSuffix;
+        for (const tab of subfolderTabs ?? [])
+            this.subfolderCategories[tab.name] = tab.categories ?? [];
 
         for (const imageMetadata of imageMetadataList)
         {
@@ -127,6 +132,18 @@ export default class ImageMap
         const slashIndex = path.indexOf("/");
         return (slashIndex < 0) ? "" : path.substring(0, slashIndex);
     }
+    // The categories an image's keywords name (see CATEGORY_MARK), in the order they come.
+    static getCategories(keywords: string | undefined): string[]
+    {
+        return (keywords ?? "").split(",").filter(word => word.endsWith(ImageMap.CATEGORY_MARK))
+            .map(word => word.slice(0, -ImageMap.CATEGORY_MARK.length));
+    }
+    // Those keywords naming these categories instead, ahead of the rest.
+    static withCategories(keywords: string | undefined, categories: string[]): string
+    {
+        const rest = (keywords ?? "").split(",").filter(word => word.length > 0 && !word.endsWith(ImageMap.CATEGORY_MARK));
+        return [...categories.map(category => category + ImageMap.CATEGORY_MARK), ...rest].join(",");
+    }
 
     // path: relative to the root directory (rootDirName under the assets URL), without extension.
     getImageURLByPath(assetsURL: string, path: string): string
@@ -181,9 +198,13 @@ export default class ImageMap
     {
         return this.subfolderTabs?.find(tab => tab.name == subfolderName)?.title ?? subfolderName;
     }
-    // In tab order; none if the manifest lists none.
+    // In tab order; none for a subfolder that lists none.
     getSubfolderCategories(subfolderName: string): ImageMapCategory[]
     {
-        return this.subfolderTabs?.find(tab => tab.name == subfolderName)?.categories ?? [];
+        return this.subfolderCategories[subfolderName] ?? [];
+    }
+    setSubfolderCategories(subfolderName: string, categories: ImageMapCategory[]): void
+    {
+        this.subfolderCategories[subfolderName] = categories;
     }
 }

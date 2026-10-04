@@ -17,6 +17,13 @@ import AdminPrefsUtil from "../../../../../shared/object/util/adminPrefsUtil";
 import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
 import ParticleSystem from "../../../../graphics/particle/particleSystem";
 import ParticleDebugUtil from "../../../../graphics/particle/util/particleDebugUtil";
+import RoomValidationUtil from "../../../../../shared/room/util/roomValidationUtil";
+import { ADMIN_ASSET_SETTINGS_FILE_NAME } from "../../../../../shared/system/sharedConstants";
+import AdminAssetSettings from "../../../../../shared/system/types/adminAssetSettings";
+import ImageMapUtil from "../../../../../shared/graphics/image/util/imageMapUtil";
+import ImageMapSettingsUtil from "../../../../../shared/graphics/image/util/imageMapSettingsUtil";
+import ImageChoiceUtil from "../../../util/imageChoiceUtil";
+import LocalFileUtil from "../../../../system/util/localFileUtil";
 
 export default function DebugStats({env}: Props)
 {
@@ -117,6 +124,7 @@ export default function DebugStats({env}: Props)
                         case "restore context": setWebGLContextLost(false); break;
                         case "ghost on": setGhostMode(true); break;
                         case "ghost off": setGhostMode(false); break;
+                        case "eaas": void exportAdminAssetSettings(); break;
                         default:
                             notificationMessageObservable.set(
                                 ParticleDebugUtil.tryRunCommand(command) ?? "Unknown debug command.");
@@ -189,6 +197,33 @@ function setGhostMode(ghostMode: boolean): void
     SocketsClient.emitSetObjectMetadataSignal(
         new SetObjectMetadataSignal(room.id, myPlayer.params.objectId, key, value));
     notificationMessageObservable.set(ghostMode ? "Ghost mode is on." : "Ghost mode is off.");
+}
+
+// "eaas" debug command (export admin asset settings). Admin-only, as is setting them (see ImageMapThumbnailPanel):
+// saves the picture map's order and categories as they stand now, as the settings file, to be put in that file's
+// place and built into the game (see AdminAssetSettings).
+async function exportAdminAssetSettings(): Promise<void>
+{
+    if (!RoomValidationUtil.userIsAdmin(App.getUser()))
+    {
+        notificationMessageObservable.set("Only an admin can export the admin asset settings.");
+        return;
+    }
+
+    const mapName = "PictureImageMap";
+    const settings: AdminAssetSettings = {
+        [ImageMapSettingsUtil.getMapKey(mapName)]: ImageChoiceUtil.getSettings(ImageMapUtil.getImageMap(mapName))};
+    const bytes = new TextEncoder().encode(ImageMapSettingsUtil.serializeFile(settings));
+    try
+    {
+        if (await LocalFileUtil.save(bytes.buffer, ADMIN_ASSET_SETTINGS_FILE_NAME, ".json", "Admin asset settings"))
+            notificationMessageObservable.set("Admin asset settings saved!");
+    }
+    catch (err)
+    {
+        console.error("Failed to save the admin asset settings to a file.", err);
+        notificationMessageObservable.set("Failed to save the admin asset settings.");
+    }
 }
 
 const className = "flex flex-col justify-start absolute left-0 top-0 max-w-full max-h-1/5";

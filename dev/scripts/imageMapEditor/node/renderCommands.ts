@@ -41,6 +41,11 @@ const RenderCommands =
             }
             else if (store.library.findFile(recipe.sourceSha1) == undefined)
             {
+                if (store.library.list().find(source => source.sha1 == recipe.sourceSha1)?.preparedFrom != undefined)
+                {
+                    throw new Error(`The source of "${entryPath}" was preprocessed from a photo and isn't on this machine: `
+                        + "the address it carries gives that photo, not it");
+                }
                 if (!entry.source)
                     throw new Error(`The source of "${entryPath}" isn't on this machine, and the entry doesn't say where it came from`);
                 const downloaded = await store.library.addFromUrl(entry.source);

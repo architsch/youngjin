@@ -194,7 +194,7 @@ export default function SampleCanvas(props: Props)
 
     const radiusPixels = settings.brushRadius / 100 * shorterSide;
     // With the selection tool, every selection outlined (as it will be, while one is dragged), the focused one with
-    // what lies outside it shaded, and its handles.
+    // the side it takes shaded, and its handles.
     const shownSelections = selections.map((selection, i) =>
         (selectionDrag != null && selectionDrag.kind != "draw" && selectionDrag.index == i) ? selectionDrag.current : selection);
     const drawing = (selectionDrag?.kind == "draw" && selectionDrag.dragged) ? selectionDrag.current : undefined;
@@ -218,8 +218,8 @@ export default function SampleCanvas(props: Props)
             {brushing && !panning && hover != null && <circle className="brush-cursor" r={radiusPixels}
                 cx={hover[0] * shown.width} cy={hover[1] * shown.height}/>}
             {selecting && <>
-                {highlighted != undefined && <path className="selection-outside" fillRule="evenodd"
-                    d={`M0 0H${shown.width}V${shown.height}H0Z ${pathOf(highlighted)}`}/>}
+                {highlighted != undefined && <path className="selection-taken" fillRule="evenodd"
+                    d={`${highlighted.inverted ? "" : `M0 0H${shown.width}V${shown.height}H0Z `}${pathOf(highlighted)}`}/>}
                 {shownSelections.map((selection, i) => <path key={i}
                     className={`selection-outline${(i == focused && drawing == undefined) ? " focused" : ""}`} d={pathOf(selection)}/>)}
                 {drawing != undefined && <path className="selection-outline focused" d={pathOf(drawing)}/>}

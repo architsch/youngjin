@@ -1,5 +1,4 @@
 import * as THREE from "three";
-import ImageMap from "../../shared/graphics/image/types/imageMap";
 import { COLLISION_LAYER_HEIGHT } from "../../shared/system/sharedConstants";
 import VoxelBlockOffset from "../../shared/voxel/types/voxelBlockOffset";
 
@@ -36,11 +35,21 @@ export const NOTIFICATION_DURATION_MS = 3000;
 // image is shown as if All were picked.
 export const IMAGE_CATEGORY_TABS_ENABLED = true;
 
-// The order the image chooser's All tab lays images out in, category by category (see ImageChoiceUtil); a category's
-// own tab is not ordered by it. An image under several goes with the one listed last, and one under none with
-// ImageMap.MISC_TAB; the images of a category left out come first, as one run.
-export const IMAGE_ALL_TAB_CATEGORY_ORDER: readonly string[] = ["living", "kitchen", "bathroom", "office",
-    "commercial", "industrial", "accessory", ImageMap.MISC_TAB];
+// Whether an admin can rearrange the image chooser's thumbnails by hand, holding one and dragging it along the row
+// (see ImageMapThumbnailPanel). False leaves every row as its map lists it, for an admin as for everyone else.
+export const IMAGE_THUMBNAIL_REORDER_ENABLED = true;
+
+// Whether an admin can set the categories an image is filed under, in a bar that comes up over the image chooser
+// once one of its thumbnails is picked up (see ImageCategoryBar). False leaves every image under those built in.
+export const IMAGE_CATEGORY_EDIT_ENABLED = true;
+
+// Whether an admin can add, rename and delete the image chooser's categories, with the buttons beside its category
+// tabs (see ImageMapThumbnailPanel). False leaves the categories as those built in.
+export const IMAGE_CATEGORY_TAB_EDIT_ENABLED = true;
+
+// How long a thumbnail is held still before it is picked up (in milliseconds; see useThumbnailReorder). A quicker
+// drag scrolls the row instead, and a quicker release is a click.
+export const THUMBNAIL_REORDER_HOLD_MS = 300;
 
 // three.js
 

@@ -5,7 +5,10 @@ import EntryStore from "./entryStore";
 import ConflictError from "./conflictError";
 import RequestError from "./requestError";
 import MapRebuilder from "./mapRebuilder";
+import SourcePreprocessor from "./sourcePreprocessor";
+import MissingToolsError from "./missingToolsError";
 import SaveEntryRequest from "../core/saveEntryRequest";
+import SourcePrep from "../core/sourcePrep";
 
 // Loopback only: the server writes into the repository.
 const HOST = "127.0.0.1";
@@ -38,6 +41,7 @@ export default async function serveEditor(store: EntryStore, port: number): Prom
             console.log(`Map rebuilt (${new Date().toLocaleTimeString()})`);
         broadcast("map", {error: error ?? null});
     });
+    const preprocessor = new SourcePreprocessor(store.library, store.paths.repoRoot);
 
     // The page's script, and its previews' worker (see app/previewWorker.ts).
     let bundle = {code: "", workerCode: "", ok: false};
@@ -151,6 +155,20 @@ export default async function serveEditor(store: EntryStore, port: number): Prom
             broadcast("state", {});
             return sendJSON(res, 200, added);
         }
+        // A source preprocessed into another (see SourcePreprocessor): previewed, or added to the library.
+        const preparedMatch = /^\/api\/sources\/([0-9a-f]{40})\/prepared(\/preview)?$/.exec(url.pathname);
+        if (req.method === "POST" && preparedMatch)
+        {
+            if (!(req.headers["content-type"] ?? "").startsWith("application/json"))
+                return sendText(res, 415, "Expected application/json");
+            const {prep, fetchTools} = JSON.parse((await readBody(req)).toString("utf8")) as
+                {prep: SourcePrep, fetchTools?: boolean};
+            if (preparedMatch[2])
+                return sendJSON(res, 200, await preprocessor.preview(preparedMatch[1], prep, fetchTools === true));
+            const added = await preprocessor.add(preparedMatch[1], prep, fetchTools === true);
+            broadcast("state", {});
+            return sendJSON(res, 200, added);
+        }
         const sourceMatch = /^\/api\/sources\/([0-9a-f]{40})(\/thumbnail)?$/.exec(url.pathname);
         if (req.method === "GET" && sourceMatch && sourceMatch[2])
         {
@@ -195,6 +213,9 @@ export default async function serveEditor(store: EntryStore, port: number): Prom
                 return sendJSON(res, 409, {state: err.state});
             if (err instanceof RequestError)
                 return sendText(res, 400, err.message);
+            // Asked again with leave to fetch them, if the page's user gives it.
+            if (err instanceof MissingToolsError)
+                return sendText(res, 428, err.message);
             console.error(err);
             if (!res.headersSent)
                 sendText(res, 500, err instanceof Error ? err.message : String(err));
@@ -213,7 +234,7 @@ export default async function serveEditor(store: EntryStore, port: number): Prom
     });
 
     const shutDown = () => {
-        buildContext.dispose().finally(() => process.exit(0));
+        Promise.allSettled([buildContext.dispose(), preprocessor.release()]).finally(() => process.exit(0));
     };
     process.on("SIGINT", shutDown);
     process.on("SIGTERM", shutDown);

@@ -14,10 +14,11 @@ const SampleOrderUtil =
         const fail = (reason: string) => { throw new Error(`"${order.title}": ${reason}`); };
         if ((order.cells == undefined) == (order.longSide == undefined))
             fail("give cells or longSide, one of the two");
-        if (order.cells == undefined && (order.align != undefined || order.margin != undefined))
-            fail("align and margin place a sample in its cells, so they need cells");
+        if (order.cells == undefined && (order.align != undefined || order.margin != undefined || order.stretch))
+            fail("align, margin and stretch place a sample in its cells, so they need cells");
         const output: RecipeOutput = (order.cells != undefined)
             ? {preserveScale: true, numCols: order.cells[0], numRows: order.cells[1],
+                ...(order.stretch ? {stretch: true} : {}),
                 ...(order.align ? {align: order.align} : {}), ...(order.margin ? {margin: order.margin} : {})}
             : {preserveScale: false, longSide: order.longSide!};
 

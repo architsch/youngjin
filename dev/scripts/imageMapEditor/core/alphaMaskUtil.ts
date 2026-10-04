@@ -11,13 +11,14 @@ import SelectionGeometryUtil from "./selectionGeometryUtil";
 const BORDER_WINDOW_FRACTION = 0.1;
 
 // What of a sample is kept (see ImageRecipe): its background taken out and edited by hand, then cut to the
-// selections. A pixel outside any see-through selection is taken out, whatever else would keep it (so two
-// selections cut out where they overlap: a square and the same square turned by 45° make an octagon); one outside a
-// selection that fills, and inside every see-through one, is filled.
+// selections. A selection takes the pixels outside it, or those inside it if inverted. A pixel any see-through
+// selection takes is taken out, whatever else would keep it (so two selections cut out where they overlap: a square
+// and the same square turned by 45° make an octagon); one a selection that fills takes, and no see-through one does,
+// is filled.
 const AlphaMaskUtil =
 {
     // One per pixel, 1 where kept; undefined when the recipe takes nothing out. Colors are compared as the sample
-    // is before any color adjustment. What is to be filled is kept (see fillOutside).
+    // is before any color adjustment. What is to be filled is kept (see applySelectionFills).
     getKeepMask: (sample: RgbaImage, recipe: ImageRecipe): Uint8Array | undefined =>
     {
         const edits = recipe.alphaEdits ?? [];
@@ -46,7 +47,7 @@ const AlphaMaskUtil =
                 for (let x = 0; x < width; ++x)
                 {
                     const outcome = getOutcome(tests, x, y);
-                    if (outcome != "inside")
+                    if (outcome != "kept")
                         keep[y * width + x] = (outcome == "takenOut") ? 0 : 1;
                 }
             }
@@ -54,9 +55,9 @@ const AlphaMaskUtil =
         return keep;
     },
 
-    // What lies outside a selection that fills (and inside every see-through one) becomes its fill color, opaque:
-    // the last such selection's in the list, where several reach a pixel.
-    fillOutside: (image: RgbaImage, selections: RecipeSelection[]): void =>
+    // What a selection that fills takes (and no see-through one does) becomes its fill color, opaque: the last such
+    // selection's in the list, where several take a pixel.
+    applySelectionFills: (image: RgbaImage, selections: RecipeSelection[]): void =>
     {
         if (!selections.some(selection => selection.fill != undefined))
             return;
@@ -66,7 +67,7 @@ const AlphaMaskUtil =
             for (let x = 0; x < image.width; ++x)
             {
                 const outcome = getOutcome(tests, x, y);
-                if (outcome != "inside" && outcome != "takenOut")
+                if (outcome != "kept" && outcome != "takenOut")
                     image.data.set(outcome, (y * image.width + x) * 4);
             }
         }
@@ -305,28 +306,31 @@ function keepLargestForeground(background: Uint8Array, width: number, height: nu
     }
 }
 
-// Each selection's test of whether a pixel's centre lies inside it, with the color it fills outside with, if any.
-function getSelectionTests(selections: RecipeSelection[], width: number,
-    height: number): {inside: (x: number, y: number) => boolean, fill?: [number, number, number, number]}[]
+// Each selection's test of whether a pixel's centre lies inside it, whether that is the side it takes, and the color
+// it fills what it takes with, if any.
+function getSelectionTests(selections: RecipeSelection[], width: number, height: number): {
+    inside: (x: number, y: number) => boolean, inverted: boolean, fill?: [number, number, number, number]}[]
 {
     return selections.map(selection => ({inside: SelectionGeometryUtil.getTest(selection, width, height),
+        inverted: selection.inverted === true,
         fill: (selection.fill != undefined) ? parseHexColor(selection.fill) : undefined}));
 }
 
 // What the selections make of a pixel: kept as it is, taken out, or filled with a color.
 function getOutcome(tests: ReturnType<typeof getSelectionTests>, x: number,
-    y: number): "inside" | "takenOut" | [number, number, number, number]
+    y: number): "kept" | "takenOut" | [number, number, number, number]
 {
     let fill: [number, number, number, number] | undefined;
     for (const test of tests)
     {
-        if (test.inside(x + 0.5, y + 0.5))
+        // On the side this selection leaves alone.
+        if (test.inside(x + 0.5, y + 0.5) != test.inverted)
             continue;
         if (test.fill == undefined)
             return "takenOut";
         fill = test.fill;
     }
-    return fill ?? "inside";
+    return fill ?? "kept";
 }
 
 function parseHexColor(hex: string): [number, number, number, number]

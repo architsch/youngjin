@@ -5,27 +5,34 @@
  * Covers: the map's tabs and which type each serves, a tab left out while all its images are disabled, everyday
  * objects at their own scale in whole cells, disabled images left out of the built map and staging ones marked in it
  * (offered only off the live server, tabs and all, and every one found by a search for "staging"), the categories built as the
- * manifest lists them and named by an image's leading keywords (marked, and only listed ones), a recipe and sample
- * for every image, the notices naming every third party's image that ships; what a search finds an image by (a
- * painting by its title and author, an everyday object by single-word keywords of its own, none inside another and
- * none a filler word) and the map shipping nothing else of either, the search itself (every word typed but filler
- * words, as typed or singular), the order images are offered in (alike ones together, leading keywords first,
- * categories aside) and the category tabs (an image under each category it names, Misc for none, opening on the
- * current image's first; All laid out category by category in a preset order, which names only the map's own
- * categories); which images a canvas and a prop accept (when set, and when added with one), what else a
- * user may write to a prop, a prop's lack of a frame, the size its image pins it to (and a canvas's freedom from
- * any), the metadata signal carrying that size, and the play-mode click map naming only props' images.
+ * admin's settings list them (the manifest listing none), each image filed under those the settings give it (only
+ * listed ones, built in as marked keywords ahead of its own), a recipe and sample for every image, the notices naming every third party's
+ * image that ships; what a search finds an image by (a painting by its title and author, an everyday object by
+ * single-word keywords of its own, none inside another, none a filler word and none marked as a category) and the
+ * map shipping nothing else of either, the search itself (every word typed but filler words, as typed or singular),
+ * the order images are offered in (as the map lists them, which the admin's settings set, the images they leave out
+ * first; one order, which a tab or a search only narrows), an admin's rearranging of it (an image put at its place
+ * in the row shown, every other left where it was among the rest), filing of an image under other categories
+ * (kept in the row it was picked up in, with the tab it left) and adding, renaming and deleting of a category (one
+ * that can't be a category refused, the images filed under it following), all written back as the settings file
+ * holds them, and the category tabs (an image under each category it names, Misc for none, opening on the current
+ * image's first, those holding nothing shown only to one who can edit them); which images a canvas and a prop accept (when set, and when added with one), what else a user may write
+ * to a prop, a prop's lack of a frame, the size its image pins it to (and a canvas's freedom from any), the
+ * metadata signal carrying that size, and the play-mode click map naming only props' images.
  */
 import { describe, it, expect } from "vitest";
+import fc from "fast-check";
 import fs from "fs";
 import path from "path";
 import sharp from "sharp";
 import PlayModeClickCallbackMap from "../../../src/client/object/maps/playModeClickCallbackMap";
 import ImageChoiceUtil from "../../../src/client/ui/util/imageChoiceUtil";
-import { IMAGE_ALL_TAB_CATEGORY_ORDER } from "../../../src/client/system/clientConstants";
 import IMAGE_LICENSES from "../../../dev/scripts/imageMapEditor/core/imageLicenses";
 import ImageMapUtil from "../../../src/shared/graphics/image/util/imageMapUtil";
+import ImageMapSettingsUtil from "../../../src/shared/graphics/image/util/imageMapSettingsUtil";
 import ImageMap from "../../../src/shared/graphics/image/types/imageMap";
+import ImageMapSettings from "../../../src/shared/graphics/image/types/imageMapSettings";
+import ImageMetadata from "../../../src/shared/graphics/image/types/imageMetadata";
 import ImageMapSubfolderTab from "../../../src/shared/graphics/image/types/imageMapSubfolderTab";
 import PreEncodedCompositionIndexMap from "../../../src/shared/graphics/mesh/composition/maps/preEncodedCompositionIndexMap";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
@@ -41,18 +48,27 @@ import BufferState from "../../../src/shared/networking/types/bufferState";
 import EncodableByteString from "../../../src/shared/networking/types/encodableByteString";
 import { FIXTURE_PICTURES, useFixturePictures } from "../helpers/pictureFixture";
 import CompositionMetadataUtil from "../../../src/shared/graphics/mesh/composition/util/compositionMetadataUtil";
-import { PICTURE_ATLAS_CELL_SIZE, PICTURE_ATLAS_CELL_WORLD_SIZE, PICTURE_ATLAS_MAX_REGION_CELLS,
-    PICTURE_SEARCH_FILLER_WORDS, UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
+import { ADMIN_ASSET_SETTINGS_FILE_NAME, PICTURE_ATLAS_CELL_SIZE, PICTURE_ATLAS_CELL_WORLD_SIZE,
+    PICTURE_ATLAS_MAX_REGION_CELLS, PICTURE_SEARCH_FILLER_WORDS, UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
 
 const ROOM_ID = "picture-room";
 const USER = {id: "user-1"} as any;
-const PICTURES_DIR = path.join(__dirname, "../../../public/app/assets/pictures");
+const ASSETS_DIR = path.join(__dirname, "../../../public/app/assets");
+const PICTURES_DIR = path.join(ASSETS_DIR, "pictures");
 const DISABLED_PICTURES_DIR = path.join(__dirname, "../../../dev/assets/disabled_pictures");
 const CANVAS_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Canvas");
 const PROP_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Prop");
 
 describe("the picture map", () => {
     const imageMap = ImageMapUtil.getImageMap("PictureImageMap");
+    const inOrder = (images: {path: string}[]) => images.map(image => image.path);
+    // A map of its own under a name of its own, registered as the game's are: that is what gives its images their
+    // places (see ImageMapUtil.setImageMap).
+    const register = (images: ImageMetadata[], subfolderTabs?: ImageMapSubfolderTab[]): ImageMap => {
+        const map = new ImageMap("pictures", 0, {}, images.map(image => ({...image})), undefined, 0, subfolderTabs);
+        ImageMapUtil.setImageMap("OrderTestImageMap", map);
+        return map;
+    };
 
     it("holds everyday objects, which props show, and paintings, which canvases show, and nothing else", () => {
         expect(readManifest().subfolders.map(tab => ({name: tab.name, title: tab.title}))).toEqual([
@@ -108,27 +124,61 @@ describe("the picture map", () => {
         expect(manifest.images.filter(image => image.disabled && image.staging).map(image => image.path)).toEqual([]);
     });
 
-    it("builds each tab's categories as the manifest lists them", () => {
+    // Settings put in place without a build after them would leave the game showing the old order.
+    it("lists each subfolder's images in the order the admin's settings give, those they leave out first", () => {
         const manifest = readManifest();
-        for (const tab of manifest.subfolders.filter(tab => imageMap.getSubfolderNames().includes(tab.name)))
-            expect(imageMap.getSubfolderCategories(tab.name), tab.name).toEqual(tab.categories ?? []);
+        const settings = readSettings();
+        const tabNames = manifest.subfolders.map(tab => tab.name);
+        for (const [subfolderName, indices] of Object.entries(settings.orderedIndicesBySubfolder))
+        {
+            expect(tabNames).toContain(subfolderName);
+            expect(new Set(indices).size, subfolderName).toBe(indices.length);
+            expect(indices.every(index => Number.isInteger(index) && index >= 0), subfolderName).toBe(true);
+        }
+        const inSubfolder = (images: {path: string}[], subfolderName: string) => images.map(image => image.path)
+            .filter(imagePath => ImageMap.getSubfolderName(imagePath) == subfolderName);
+        const ordered = ImageMapSettingsUtil.sort(manifest.images.filter(image => !image.disabled), settings);
+        for (const subfolderName of imageMap.getSubfolderNames())
+        {
+            expect(inSubfolder(imageMap.getImageMetadataList(), subfolderName), subfolderName)
+                .toEqual(inSubfolder(ordered, subfolderName));
+        }
     });
 
-    // Disabled ones too, so each is ready to be enabled. A marked word naming no tab would silently leave the image out
-    // of the tab it was meant for.
-    it("names an image's categories by its leading keywords, marked, and only ones its tab lists", () => {
+    it("builds each tab's categories as the admin's settings list them, the manifest listing none", () => {
         const manifest = readManifest();
+        const settings = readSettings();
         for (const tab of manifest.subfolders)
+            expect(tab, tab.name).not.toHaveProperty("categories");
+        for (const tab of manifest.subfolders.filter(tab => imageMap.getSubfolderNames().includes(tab.name)))
+            expect(imageMap.getSubfolderCategories(tab.name), tab.name).toEqual(settings.categoryTabsBySubfolder[tab.name] ?? []);
+        // Each can be a category beside those listed before it.
+        for (const [subfolderName, categories] of Object.entries(settings.categoryTabsBySubfolder))
         {
-            const names = (tab.categories ?? []).map(category => category.name + ImageMap.CATEGORY_MARK);
-            for (const image of manifest.images.filter(image => ImageMap.getSubfolderName(image.path) == tab.name))
+            expect(manifest.subfolders.map(tab => tab.name)).toContain(subfolderName);
+            categories.forEach((category, place) => expect(ImageMapSettingsUtil.getCategoryProblem(category,
+                categories.slice(0, place)), `${subfolderName}: ${category.name}`).toBeUndefined());
+        }
+    });
+
+    // A category naming no tab (a slip in a hand edit) would silently leave the image out of the tab it was meant
+    // for; and settings put in place without a build after them would leave the game filing images as before.
+    it("files each image under the categories the admin's settings give it, which name only ones its tab lists", () => {
+        const settings = readSettings();
+        for (const [subfolderName, categoriesByIndex] of Object.entries(settings.categoriesBySubfolderAndIndex))
+        {
+            const listed = (settings.categoryTabsBySubfolder[subfolderName] ?? []).map(category => category.name);
+            for (const [index, categories] of Object.entries(categoriesByIndex))
             {
-                const words = (image.keywords ?? "").split(",").map(word => word.trim());
-                const marked = words.filter(word => word.endsWith(ImageMap.CATEGORY_MARK));
-                expect(words.slice(0, marked.length), image.path).toEqual(marked);
-                for (const word of marked)
-                    expect(names, `${image.path}: ${word}`).toContain(word);
+                expect(new Set(categories).size, `${subfolderName}/${index}`).toBe(categories.length);
+                for (const category of categories)
+                    expect(listed, `${subfolderName}/${index}: ${category}`).toContain(category);
             }
+        }
+        for (const image of imageMap.getImageMetadataList())
+        {
+            expect(ImageMap.getCategories(image.keywords), image.path)
+                .toEqual(ImageMapSettingsUtil.getCategories(settings, image.path));
         }
     });
 
@@ -188,16 +238,22 @@ describe("the picture map", () => {
             const words = split(image.keywords ?? "");
             expect(words.length, image.path).toBeGreaterThanOrEqual(3);
             expect(words, image.path).not.toContain(image.author.toLowerCase());
-            // Single words, none inside another (which a search would find anyway) and none a filler word (which a
-            // search passes over).
+            // Single words, none inside another (which a search would find anyway), none a filler word (which a
+            // search passes over), and none marked as a category (which only the admin's settings do).
             for (const word of words)
             {
                 expect(word, image.path).toMatch(/^\S+$/);
+                expect(word.endsWith(ImageMap.CATEGORY_MARK), `${image.path}: ${word}`).toBe(false);
                 expect(PICTURE_SEARCH_FILLER_WORDS, `${image.path}: ${word}`).not.toContain(word);
                 expect(words.filter(other => other != word && other.includes(word)), `${image.path}: ${word}`).toEqual([]);
             }
+            // Built in behind the categories it is filed under, but for a word one of those already says.
             if (built)
-                expect(built.keywords, image.path).toBe(words.join(","));
+            {
+                const categories = ImageMap.getCategories(built.keywords);
+                expect(built.keywords, image.path).toBe(ImageMap.withCategories(
+                    words.filter(word => !categories.includes(word)).join(","), categories));
+            }
         }
     });
 
@@ -263,80 +319,276 @@ describe("the picture map", () => {
             {path: "1/1", keywords: "apollo and daphne,john singer sargent"}],
             undefined, 0, [{name: "2", title: "Objects", categories: [{name: "kitchen", title: "Kitchen"},
                 {name: "dining", title: "Dining Room"}, {name: "bedroom", title: "Bedroom"}]}, {name: "1", title: "Arts"}]);
-        // One order, categories aside: the two plates sit together though only one is in the kitchen.
         const items = ImageChoiceUtil.getItems(map, "2", true);
-        expect(items.map(item => item.path)).toEqual(["2/2", "2/1", "2/3", "2/4"]);
+        expect(items.map(item => item.path)).toEqual(["2/1", "2/2", "2/3", "2/4"]);
 
         // Bedroom holds none, as a keyword unmarked is only a word, so it offers no tab.
         expect(ImageChoiceUtil.getCategoryTabs(map, "2", items)).toEqual([ImageMap.ALL_TAB, "kitchen", "dining",
             ImageMap.MISC_TAB]);
         const inTab = (tab: string) => ImageChoiceUtil.getItemsInTab(map, "2", items, tab).map(item => item.path);
-        expect(inTab("kitchen")).toEqual(["2/2", "2/1"]);
+        expect(inTab("kitchen")).toEqual(["2/1", "2/2"]);
         expect(inTab("dining")).toEqual(["2/1", "2/3"]);
         expect(inTab(ImageMap.MISC_TAB)).toEqual(["2/4"]);
-        expect(inTab(ImageMap.ALL_TAB).sort()).toEqual(["2/1", "2/2", "2/3", "2/4"]);
+        expect(inTab(ImageMap.ALL_TAB)).toEqual(["2/1", "2/2", "2/3", "2/4"]);
         // A subfolder listing no categories offers no tabs, and All is the one order.
         const paintings = ImageChoiceUtil.getItems(map, "1", true);
         expect(ImageChoiceUtil.getCategoryTabs(map, "1", paintings)).toEqual([]);
         expect(ImageChoiceUtil.getItemsInTab(map, "1", paintings, ImageMap.ALL_TAB)).toEqual(paintings);
     });
 
-    it("lays All out category by category in a preset order, and leaves a category's own tab in the one order", () => {
-        const images = [{path: "2/1", keywords: "living*,screen,television"}, {path: "2/2", keywords: "office*,screen,computer"},
-            {path: "2/3", keywords: "accessory*,office*,calculator,math"}, {path: "2/4", keywords: "accessory*,shoe,slipper"},
-            {path: "2/5", keywords: "sock,clothes"}, {path: "2/6", keywords: "office*,notebook,paper"},
-            {path: "2/7", keywords: "living*,radio,music"}, {path: "2/8", keywords: "garden*,hose,water"},
-            {path: "2/9", keywords: "living*,screen,projector"}];
-        const map = new ImageMap("pictures", 0, {}, images, undefined, 0, [{name: "2", title: "Objects", categories: [
-            {name: "living", title: "Living"}, {name: "office", title: "Office"}, {name: "accessory", title: "Accessory"},
-            {name: "garden", title: "Garden"}]}]);
+    it("offers a subfolder's images in the order the map lists them in, which a tab or a search only narrows", () => {
+        const map = register([{path: "2/5", keywords: "kitchen*,oven,stove"}, {path: "1/2", keywords: "ground swell"},
+            {path: "2/1", keywords: "office*,screen,computer", staging: true}, {path: "2/9", keywords: "kitchen*,plate,oven"},
+            {path: "1/7", keywords: "lenna"}, {path: "2/3", keywords: "sock,clothes"}],
+            [{name: "2", title: "Objects", categories: [{name: "kitchen", title: "Kitchen"}, {name: "office", title: "Office"}]},
+                {name: "1", title: "Arts"}]);
+        // Each image's place is its index in the list, whatever its path or keywords.
+        expect(map.getImageMetadataList().map(image => image.order)).toEqual([0, 1, 2, 3, 4, 5]);
         const items = ImageChoiceUtil.getItems(map, "2", true);
-        const inTab = (tab: string, order: string[]) =>
-            ImageChoiceUtil.getItemsInTab(map, "2", items, tab, order).map(item => item.path);
-        // Each run as its images would be ordered alone.
-        const alone = (paths: string[]) => ImageChoiceUtil.getItems(new ImageMap("pictures", 0, {},
-            images.filter(image => paths.includes(image.path))), "2", true).map(item => item.path);
+        expect(inOrder(items)).toEqual(["2/5", "2/1", "2/9", "2/3"]);
+        expect(inOrder(ImageChoiceUtil.getItems(map, "2", false))).toEqual(["2/5", "2/9", "2/3"]);
+        expect(inOrder(ImageChoiceUtil.getItems(map, "1", true))).toEqual(["1/2", "1/7"]);
 
-        // A run per tab in the order given: an image under several goes with the last listed, one under none with
-        // Misc, and those of a category left out come first.
-        expect(inTab(ImageMap.ALL_TAB, ["living", "office", ImageMap.MISC_TAB, "accessory"])).toEqual([
-            ["2/8"], ["2/1", "2/7", "2/9"], ["2/2", "2/6"], ["2/5"], ["2/3", "2/4"]].flatMap(alone));
-        expect(inTab(ImageMap.ALL_TAB, ["accessory", "office", "living"])).toEqual([
-            ["2/5", "2/8"], ["2/4"], ["2/2", "2/3", "2/6"], ["2/1", "2/7", "2/9"]].flatMap(alone));
-        // No order given, it is the one order, in which the screens sit together whatever their places.
-        expect(inTab(ImageMap.ALL_TAB, [])).toEqual(items.map(item => item.path));
-        const screens = ["2/1", "2/2", "2/9"].map(path => items.findIndex(item => item.path == path)).sort((a, b) => a - b);
-        expect(screens[2] - screens[0]).toBe(2);
-        // Whatever the order, a category's own tab only narrows the one order.
-        for (const order of [["living", "office", ImageMap.MISC_TAB, "accessory"], ["accessory", "office", "living"], []])
+        expect(inOrder(ImageChoiceUtil.getItemsInTab(map, "2", items, ImageMap.ALL_TAB))).toEqual(inOrder(items));
+        expect(inOrder(ImageChoiceUtil.getItemsInTab(map, "2", items, "kitchen"))).toEqual(["2/5", "2/9"]);
+        expect(inOrder(ImageChoiceUtil.getItemsInTab(map, "2", items, ImageMap.MISC_TAB))).toEqual(["2/3"]);
+        expect(inOrder(ImageChoiceUtil.getFilteredItems(items, "oven"))).toEqual(["2/5", "2/9"]);
+    });
+
+    it("puts a rearranged image at its place in the row shown, and leaves every other where it was among the rest", () => {
+        const images = ["2/1", "1/1", "2/2", "2/3", "1/2", "2/4", "2/5", "2/6"].map(imagePath => ({path: imagePath}));
+        const order = (map: ImageMap, subfolderName: string) => inOrder(ImageChoiceUtil.getItems(map, subfolderName, true));
+
+        // The whole row: where it is dropped.
+        let map = register(images);
+        ImageChoiceUtil.moveItem(map, order(map, "2"), "2/2", 4);
+        expect(order(map, "2")).toEqual(["2/1", "2/3", "2/4", "2/5", "2/2", "2/6"]);
+        ImageChoiceUtil.moveItem(map, order(map, "2"), "2/6", 0);
+        expect(order(map, "2")).toEqual(["2/6", "2/1", "2/3", "2/4", "2/5", "2/2"]);
+        // The other subfolder is none of its business, and the places handed out are still the list's.
+        expect(order(map, "1")).toEqual(["1/1", "1/2"]);
+        expect(map.getImageMetadataList().map(image => image.order!).sort((a, b) => a - b)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+
+        // A row narrowed to some (a tab's, a search's): right before the one it then shows after it.
+        map = register(images);
+        ImageChoiceUtil.moveItem(map, ["2/2", "2/4", "2/6"], "2/6", 1);
+        expect(order(map, "2")).toEqual(["2/1", "2/2", "2/3", "2/6", "2/4", "2/5"]);
+        // At the row's end: right after its last.
+        map = register(images);
+        ImageChoiceUtil.moveItem(map, ["2/2", "2/4", "2/6"], "2/2", 2);
+        expect(order(map, "2")).toEqual(["2/1", "2/3", "2/4", "2/5", "2/6", "2/2"]);
+        // A row of one has nowhere else to put it.
+        map = register(images);
+        ImageChoiceUtil.moveItem(map, ["2/4"], "2/4", 0);
+        expect(order(map, "2")).toEqual(["2/1", "2/2", "2/3", "2/4", "2/5", "2/6"]);
+    });
+
+    it("keeps to that whatever row is shown and wherever the image is dropped in it", () => {
+        fc.assert(fc.property(fc.uniqueArray(fc.integer({min: 1, max: 99}), {minLength: 2, maxLength: 24}),
+            fc.array(fc.boolean(), {minLength: 24, maxLength: 24}), fc.nat(), fc.nat(), (numbers, shown, from, to) => {
+            // Paintings among them, as a map's list holds its subfolders'.
+            const map = register(numbers.flatMap(number => [{path: `2/${number}`}, {path: `1/${number}`}]));
+            const before = inOrder(ImageChoiceUtil.getItems(map, "2", true));
+            const row = before.filter((_, index) => shown[index]);
+            fc.pre(row.length >= 2 && from % row.length != to % row.length);
+            const moved = row[from % row.length];
+            const rearranged = row.filter(imagePath => imagePath != moved);
+            rearranged.splice(to % row.length, 0, moved);
+
+            ImageChoiceUtil.moveItem(map, row, moved, to % row.length);
+            const after = inOrder(ImageChoiceUtil.getItems(map, "2", true));
+            expect(after.filter(imagePath => row.includes(imagePath))).toEqual(rearranged);
+            expect(after.filter(imagePath => imagePath != moved)).toEqual(before.filter(imagePath => imagePath != moved));
+            const next = rearranged[rearranged.indexOf(moved) + 1];
+            if (next != undefined)
+                expect(after[after.indexOf(moved) + 1]).toBe(next);
+            else
+                expect(after[after.indexOf(moved) - 1]).toBe(rearranged[rearranged.length - 2]);
+            expect(inOrder(ImageChoiceUtil.getItems(map, "1", true))).toEqual(numbers.map(number => `1/${number}`));
+        }));
+    });
+
+    it("files an image under the categories an admin sets, and keeps one picked up in its row though it leaves the tab", () => {
+        const map = register([{path: "2/1", keywords: "kitchen*,oven"}, {path: "2/2", keywords: "kitchen*,office*,kettle"},
+            {path: "2/3", keywords: "sock"}],
+            [{name: "2", title: "Objects", categories: [{name: "kitchen", title: "Kitchen"}, {name: "office", title: "Office"}]}]);
+        const items = () => ImageChoiceUtil.getItems(map, "2", true);
+        const inTab = (tab: string) => inOrder(ImageChoiceUtil.getItemsInTab(map, "2", items(), tab));
+        expect(ImageChoiceUtil.getCategories(map, "2/2")).toEqual(["kitchen", "office"]);
+        expect(ImageChoiceUtil.getCategories(map, "2/3")).toEqual([]);
+
+        // Taken out of a tab, and put under others, the first being the one a chooser opens on.
+        ImageChoiceUtil.setCategories(map, "2/1", []);
+        ImageChoiceUtil.setCategories(map, "2/3", ["office", "kitchen"]);
+        expect(map.getImageMetadataByPath("2/1").keywords).toBe("oven");
+        expect(map.getImageMetadataByPath("2/3").keywords).toBe("office*,kitchen*,sock");
+        expect(inTab("kitchen")).toEqual(["2/2", "2/3"]);
+        expect(inTab("office")).toEqual(["2/2", "2/3"]);
+        expect(inTab(ImageMap.MISC_TAB)).toEqual(["2/1"]);
+        expect(ImageChoiceUtil.getFirstCategoryTab(map, "2", "2/3")).toBe("office");
+        expect(ImageChoiceUtil.getFirstCategoryTab(map, "2", "2/1")).toBe(ImageMap.MISC_TAB);
+
+        // The row it was picked up in keeps it, in its place, until the row is narrowed anew.
+        const narrowed = ImageChoiceUtil.getItemsInTab(map, "2", items(), "kitchen");
+        expect(inOrder(ImageChoiceUtil.getRow(items(), narrowed, ["2/1"]))).toEqual(["2/1", "2/2", "2/3"]);
+        expect(inOrder(ImageChoiceUtil.getRow(items(), narrowed, ["2/3"]))).toEqual(["2/2", "2/3"]);
+        expect(ImageChoiceUtil.getRow(items(), narrowed, [])).toBe(narrowed);
+        // And a tab emptied that way stays for as long.
+        ImageChoiceUtil.setCategories(map, "2/2", ["kitchen"]);
+        ImageChoiceUtil.setCategories(map, "2/3", ["kitchen"]);
+        expect(ImageChoiceUtil.getCategoryTabs(map, "2", items())).toEqual([ImageMap.ALL_TAB, "kitchen", ImageMap.MISC_TAB]);
+        expect(ImageChoiceUtil.getCategoryTabs(map, "2", items(), "office"))
+            .toEqual([ImageMap.ALL_TAB, "kitchen", "office", ImageMap.MISC_TAB]);
+    });
+
+    it("names an image's categories ahead of its other keywords, whatever they are set to", () => {
+        const names = fc.uniqueArray(fc.stringMatching(/^[a-z0-9]{1,8}$/), {maxLength: 5});
+        fc.assert(fc.property(names, names, names, (before, after, others) => {
+            const keywords = ImageMap.withCategories(others.join(","), before);
+            expect(ImageMap.getCategories(keywords)).toEqual(before);
+            const changed = ImageMap.withCategories(keywords, after);
+            expect(ImageMap.getCategories(changed)).toEqual(after);
+            expect(changed).toBe([...after.map(name => name + ImageMap.CATEGORY_MARK), ...others].join(","));
+        }));
+        expect(ImageMap.getCategories(undefined)).toEqual([]);
+        expect(ImageMap.withCategories(undefined, [])).toBe("");
+    });
+
+    it("says why a category can't be one, and names one by its title's letters and digits", () => {
+        expect(ImageMapSettingsUtil.toCategory("  Dining   Room! ")).toEqual({name: "diningroom", title: "Dining Room!"});
+        const others = [{name: "bathroom", title: "Bathroom"}, {name: "office", title: "Office"}];
+        const problem = (title: string) => ImageMapSettingsUtil.getCategoryProblem(ImageMapSettingsUtil.toCategory(title), others);
+        expect(problem("Kitchen")).toBeUndefined();
+        expect(problem("   ")).toMatch(/needs a title/);
+        expect(problem("★")).toMatch(/needs a letter or a digit/);
+        // The two tabs every chooser has, a name another has, and one inside another's or holding another's.
+        expect(problem("All")).toMatch(/"all" is a tab every chooser has of its own/);
+        expect(problem("MISC")).toMatch(/"misc" is a tab every chooser has of its own/);
+        expect(problem("Bath Room")).toMatch(/already a category named "bathroom"/);
+        expect(problem("Bath")).toMatch(/"bath" is inside "bathroom"/);
+        expect(problem("Home Office")).toMatch(/"office", another category's name, is inside "homeoffice"/);
+        // A name the settings file gives is held to the same.
+        expect(ImageMapSettingsUtil.getCategoryProblem({name: "Dining Room", title: "Dining Room"}, others))
+            .toMatch(/one word of lowercase letters and digits, not "Dining Room"/);
+        fc.assert(fc.property(fc.string(), title => {
+            const name = ImageMapSettingsUtil.toCategory(title).name;
+            expect(name == "" || ImageMapSettingsUtil.isCategoryName(name)).toBe(true);
+        }));
+    });
+
+    it("adds, renames and deletes a category for an admin, the images filed under it following", () => {
+        const kitchen = {name: "kitchen", title: "Kitchen"}, office = {name: "office", title: "Office"};
+        const map = register([{path: "2/1", keywords: "kitchen*,oven"},
+            {path: "2/2", keywords: "office*,kitchen*,kettle", staging: true}, {path: "2/3", keywords: "sock"},
+            {path: "1/1", keywords: "kitchen*,still life"}],
+            [{name: "2", title: "Objects", categories: [kitchen, office]}, {name: "1", title: "Arts"}]);
+        const keywords = () => map.getImageMetadataList().map(image => image.keywords);
+        const names = (subfolderName: string) => map.getSubfolderCategories(subfolderName).map(category => category.name);
+
+        // Added after the others, unless it can't be one beside them.
+        const dining = ImageMapSettingsUtil.toCategory("Dining Room");
+        expect(ImageChoiceUtil.addCategory(map, "2", dining)).toBeUndefined();
+        expect(map.getSubfolderCategories("2")).toEqual([kitchen, office, dining]);
+        expect(ImageChoiceUtil.addCategory(map, "2", ImageMapSettingsUtil.toCategory("KITCHEN"))).toMatch(/already a category/);
+        expect(names("2")).toEqual(["kitchen", "office", "diningroom"]);
+        // Holding nothing yet, its tab is shown only to one who can edit the tabs.
+        const items = ImageChoiceUtil.getItems(map, "2", true);
+        expect(ImageChoiceUtil.getCategoryTabs(map, "2", items)).toEqual([ImageMap.ALL_TAB, "kitchen", "office", ImageMap.MISC_TAB]);
+        expect(ImageChoiceUtil.getCategoryTabs(map, "2", items, undefined, true))
+            .toEqual([ImageMap.ALL_TAB, "kitchen", "office", "diningroom", ImageMap.MISC_TAB]);
+        // A subfolder with none can be given its first.
+        expect(ImageChoiceUtil.addCategory(map, "1", ImageMapSettingsUtil.toCategory("Landscape"))).toBeUndefined();
+        expect(names("1")).toEqual(["landscape"]);
+
+        // Renamed in its place, every image under it following, offered or not; the other subfolder's are not its own.
+        expect(ImageChoiceUtil.renameCategory(map, "2", "kitchen", ImageMapSettingsUtil.toCategory("Galley"))).toBeUndefined();
+        expect(names("2")).toEqual(["galley", "office", "diningroom"]);
+        expect(keywords()).toEqual(["galley*,oven", "office*,galley*,kettle", "sock", "kitchen*,still life"]);
+        // To a title naming it the same, no image is touched; to a name another has, nothing is.
+        expect(ImageChoiceUtil.renameCategory(map, "2", "galley", {name: "galley", title: "The Galley"})).toBeUndefined();
+        expect(map.getSubfolderCategories("2")[0]).toEqual({name: "galley", title: "The Galley"});
+        expect(ImageChoiceUtil.renameCategory(map, "2", "galley", ImageMapSettingsUtil.toCategory("Office"))).toMatch(/already a category/);
+        expect(keywords()).toEqual(["galley*,oven", "office*,galley*,kettle", "sock", "kitchen*,still life"]);
+
+        // Deleted, it is gone from the list and from every image.
+        ImageChoiceUtil.removeCategory(map, "2", "galley");
+        expect(names("2")).toEqual(["office", "diningroom"]);
+        expect(keywords()).toEqual(["oven", "office*,kettle", "sock", "kitchen*,still life"]);
+        expect(inOrder(ImageChoiceUtil.getItemsInTab(map, "2", items, ImageMap.MISC_TAB))).toEqual(["2/1", "2/3"]);
+        // And what is saved says so.
+        expect(ImageChoiceUtil.getSettings(map).categoryTabsBySubfolder)
+            .toEqual({"2": [office, dining], "1": [{name: "landscape", title: "Landscape"}]});
+    });
+
+    it("writes the settings back as their file holds them: each subfolder on a line, its images in the order shown", () => {
+        const kitchen = {name: "kitchen", title: "Kitchen"}, office = {name: "office", title: "Office"};
+        const map = register([{path: "2/5", keywords: "kitchen*,oven"}, {path: "1/2"},
+            {path: "2/1", keywords: "office*,kitchen*,screen"}, {path: `${PROP_IMAGE_SUBFOLDER}/fixture-square`},
+            {path: "1/7"}, {path: "2/30", keywords: "sock"}],
+            [{name: "2", title: "Objects", categories: [kitchen, office]}, {name: "1", title: "Arts"}]);
+        ImageChoiceUtil.moveItem(map, ["2/5", "2/1", "2/30"], "2/30", 0);
+        ImageChoiceUtil.setCategories(map, "2/30", ["office"]);
+        // One whose path ends in no number can't be listed.
+        const settings = ImageChoiceUtil.getSettings(map);
+        expect(settings).toEqual({categoryTabsBySubfolder: {"1": [], "2": [kitchen, office]},
+            orderedIndicesBySubfolder: {"1": [2, 7], "2": [30, 5, 1]},
+            categoriesBySubfolderAndIndex: {"1": {"2": [], "7": []},
+                "2": {"30": ["office"], "5": ["kitchen"], "1": ["office", "kitchen"]}}});
+        expect(ImageMapSettingsUtil.getMapKey("OrderTestImageMap")).toBe("orderTestImageMap");
+        const text = ImageMapSettingsUtil.serializeFile({orderTestImageMap: settings});
+        expect(text).toBe(`{\n    "orderTestImageMap": {\n        "categoryTabsBySubfolder": {\n            "1": [],\n`
+            + `            "2": [{"name": "kitchen", "title": "Kitchen"}, {"name": "office", "title": "Office"}]\n        },\n`
+            + `        "orderedIndicesBySubfolder": {\n`
+            + `            "1": [2, 7],\n            "2": [30, 5, 1]\n        },\n`
+            + `        "categoriesBySubfolderAndIndex": {\n            "1": {"2": [], "7": []},\n`
+            + `            "2": {"30": ["office"], "5": ["kitchen"], "1": ["office", "kitchen"]}\n        }\n    }\n}\n`);
+        expect(JSON.parse(text)).toEqual({orderTestImageMap: settings});
+
+        // The picture map's own, put in the settings file's place and built, give the map as it is offered now.
+        const own = ImageChoiceUtil.getSettings(imageMap);
+        const rebuilt = ImageMapSettingsUtil.sort(readManifest().images.filter(image => !image.disabled), own);
+        for (const subfolderName of imageMap.getSubfolderNames())
         {
-            expect(inTab("office", order)).toEqual(items.map(item => item.path).filter(path =>
-                ["2/2", "2/3", "2/6"].includes(path)));
+            expect(inOrder(rebuilt).filter(imagePath => ImageMap.getSubfolderName(imagePath) == subfolderName), subfolderName)
+                .toEqual(inOrder(ImageChoiceUtil.getItems(imageMap, subfolderName, true)));
         }
+        for (const image of imageMap.getImageMetadataList())
+            expect(ImageMapSettingsUtil.getCategories(own, image.path), image.path).toEqual(ImageMap.getCategories(image.keywords));
+        // Untouched, they are the file's own, but for what that says of images the map doesn't hold.
+        const file = readSettings();
+        expect(own.categoryTabsBySubfolder).toEqual(file.categoryTabsBySubfolder);
+        expect(own.orderedIndicesBySubfolder).toEqual(file.orderedIndicesBySubfolder);
+        for (const [subfolderName, categoriesByIndex] of Object.entries(own.categoriesBySubfolderAndIndex))
+            expect(file.categoriesBySubfolderAndIndex[subfolderName], subfolderName).toMatchObject(categoriesByIndex);
     });
 
-    // A name that is none of them would silently order nothing.
-    it("orders All by the picture map's own categories and Misc, each named once", () => {
-        const names = [...readManifest().subfolders.flatMap(tab => (tab.categories ?? []).map(category => category.name)),
-            ImageMap.MISC_TAB];
-        expect(new Set(IMAGE_ALL_TAB_CATEGORY_ORDER).size).toBe(IMAGE_ALL_TAB_CATEGORY_ORDER.length);
-        for (const name of IMAGE_ALL_TAB_CATEGORY_ORDER)
-            expect(names, name).toContain(name);
-    });
+    it("applies settings to a list: each subfolder's images in the order listed, those left out first", () => {
+        const images = ["1/1", "2/1", "2/2", "1/2", "2/3", "2/4", "1/3"].map(imagePath => ({path: imagePath}));
+        const ordered = (orderedIndicesBySubfolder: {[subfolderName: string]: number[]}) => inOrder(ImageMapSettingsUtil
+            .sort(images, {categoryTabsBySubfolder: {}, orderedIndicesBySubfolder, categoriesBySubfolderAndIndex: {}}));
+        // 99 names no image, and subfolder 9 none either: both are passed over. Subfolder 1 is not listed at all.
+        expect(ordered({"2": [3, 99, 1], "9": [1]})).toEqual(["1/1", "2/2", "2/4", "1/2", "2/3", "2/1", "1/3"]);
+        expect(ordered({})).toEqual(inOrder(images));
+        // An image left out is under no category.
+        const settings = {categoryTabsBySubfolder: {}, orderedIndicesBySubfolder: {},
+            categoriesBySubfolderAndIndex: {"2": {"3": ["kitchen", "office"]}}};
+        expect(ImageMapSettingsUtil.getCategories(settings, "2/3")).toEqual(["kitchen", "office"]);
+        expect(ImageMapSettingsUtil.getCategories(settings, "2/4")).toEqual([]);
+        expect(ImageMapSettingsUtil.getCategories(settings, "1/3")).toEqual([]);
 
-    it("orders images leaving their categories out, so a kind sits together whatever places it belongs in", () => {
-        const order = (keywords: string[]) => ImageChoiceUtil.getItems(new ImageMap("pictures", 0, {},
-            keywords.map((words, index) => ({path: `2/${index + 1}`, keywords: words}))), "2", true).map(item => item.path);
-        // Two TVs in the living room and a computer's screen in the office, among others of those places.
-        const screens = order(["living*,screen,television,tv", "office*,keyboard,computer,typing",
-            "living*,radio,music,dial", "office*,screen,computer,monitor", "living*,screen,television,retro",
-            "office*,notebook,paper,writing"]);
-        const places = ["2/1", "2/4", "2/5"].map(path => screens.indexOf(path)).sort((a, b) => a - b);
-        expect(places[2] - places[0]).toBe(2);
-        // The same, with the places swapped round.
-        expect(order(["office*,screen,television,tv", "living*,keyboard,computer,typing", "office*,radio,music,dial",
-            "living*,screen,computer,monitor", "office*,screen,television,retro", "living*,notebook,paper,writing"]))
-            .toEqual(screens);
+        // What a chooser's images are written back as puts a list in that order again, however it came.
+        const numbered = fc.uniqueArray(fc.tuple(fc.constantFrom("1", "2", "3"), fc.integer({min: 0, max: 60}))
+            .map(([subfolderName, number]) => `${subfolderName}/${number}`), {maxLength: 30});
+        fc.assert(fc.property(numbered.chain(ordered => fc.tuple(fc.constant(ordered),
+            fc.shuffledSubarray(ordered, {minLength: ordered.length}))), ([ordered, shuffled]) => {
+            const sorted = inOrder(ImageMapSettingsUtil.sort(shuffled.map(imagePath => ({path: imagePath})),
+                ImageMapSettingsUtil.fromImages(ordered.map(imagePath => ({path: imagePath})), {})));
+            for (const subfolderName of ["1", "2", "3"])
+            {
+                const inSubfolder = (list: string[]) => list.filter(imagePath => ImageMap.getSubfolderName(imagePath) == subfolderName);
+                expect(inSubfolder(sorted)).toEqual(inSubfolder(ordered));
+            }
+        }));
     });
 
     it("opens on the category an image's foremost keyword names, Misc if it names none, All if it can't tell", () => {
@@ -352,40 +604,6 @@ describe("the picture map", () => {
         // An image the map doesn't hold (say, disabled since it was set), and a subfolder listing no categories.
         expect(ImageChoiceUtil.getFirstCategoryTab(map, "2", "2/9")).toBe(ImageMap.ALL_TAB);
         expect(ImageChoiceUtil.getFirstCategoryTab(map, "1", "1/1")).toBe(ImageMap.ALL_TAB);
-    });
-
-    it("orders a subfolder so alike images sit together, whatever order the map lists them in", () => {
-        const kitchen = ["oven,stove,kitchen,appliance", "toaster,oven,kitchen,appliance", "microwave,oven,kitchen,appliance"];
-        const audio = ["loudspeaker,audio,music,speaker", "amplifier,audio,music", "radio,audio,music,vintage"];
-        const books = ["book,library,shelf", "bookshelf,book,library", "notebook,paper,book"];
-        const images = [...kitchen, ...audio, ...books].map((keywords, index) => ({path: `2/${index + 1}`, keywords}));
-        const order = (listed: typeof images) =>
-            ImageChoiceUtil.getItems(new ImageMap("pictures", 0, {}, listed), "2", true).map(item => item.keywords!);
-
-        // Alphabetically, the three would interleave.
-        const ordered = order(images);
-        for (const group of [kitchen, audio, books])
-        {
-            const places = group.map(keywords => ordered.indexOf(keywords)).sort((a, b) => a - b);
-            expect(places[places.length - 1] - places[0], group[0]).toBe(group.length - 1);
-        }
-        expect(order([...images].reverse())).toEqual(ordered);
-    });
-
-    it("sets images side by side by their leading keywords before the ones after", () => {
-        const others = ["board,steak,meat,beef", "bowl,salad,lettuce,green", "tray,oyster,seafood,ice"];
-        const platedPlaces = (plated: string[]) => {
-            const images = [...plated, ...others].map((keywords, index) => ({path: `2/${index + 1}`, keywords}));
-            const ordered = ImageChoiceUtil.getItems(new ImageMap("pictures", 0, {}, images), "2", true)
-                .map(item => item.keywords!);
-            return plated.map(keywords => ordered.indexOf(keywords)).sort((a, b) => a - b);
-        };
-        // Led by what they are as a whole, the plated dishes sit together; led by what's on them, each goes to its
-        // twin on a board, in a bowl or on a tray.
-        const led = platedPlaces(["plate,dish,steak,meat", "plate,dish,salad,lettuce", "plate,dish,oyster,seafood"]);
-        expect(led[2] - led[0]).toBe(2);
-        const trailed = platedPlaces(["steak,meat,plate,dish", "salad,lettuce,plate,dish", "oyster,seafood,plate,dish"]);
-        expect(trailed[2] - trailed[0]).toBeGreaterThan(2);
     });
 });
 
@@ -538,4 +756,11 @@ function readManifest(): {subfolders: ImageMapSubfolderTab[], images: {path: str
     keywords?: string, preserveScale?: boolean, source?: string, license?: string, disabled?: boolean, staging?: boolean}[]}
 {
     return JSON.parse(fs.readFileSync(path.join(PICTURES_DIR, "manifest.json"), "utf8"));
+}
+
+// The picture map's own part of the admin's settings.
+function readSettings(): ImageMapSettings
+{
+    return JSON.parse(fs.readFileSync(path.join(ASSETS_DIR, ADMIN_ASSET_SETTINGS_FILE_NAME), "utf8"))
+        [ImageMapSettingsUtil.getMapKey("PictureImageMap")];
 }

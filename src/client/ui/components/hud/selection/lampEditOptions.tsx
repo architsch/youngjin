@@ -24,7 +24,7 @@ const RANGE_LABELS = getLabels(MIN_LAMP_RANGE, MAX_LAMP_RANGE);
 
 // Lamp tools: remove, resize (to one of its sizes, where it stands), or change its light (one stored setting
 // that also colors the glow; intensity and range are separate dials, see LampLightUtil). The size list
-// stacks above this row.
+// takes this row's place until closed.
 export default function LampEditOptions(props: EditOptionsProps)
 {
     const obj = props.selection.gameObject.params;
@@ -46,6 +46,7 @@ export default function LampEditOptions(props: EditOptionsProps)
     // Recomputed each render; zone changes and resizes re-announce the selection (see ClientVoxelManager).
     const canEdit = canEditLamp(props.selection);
     const choosingSize = props.openPanel == "compositionThumbnail";
+    const toolsShown = !(canEdit && choosingSize);
 
     // Full width, so the rows can scroll horizontally instead of growing.
     return <div className="flex flex-col gap-1 w-full">
@@ -57,15 +58,14 @@ export default function LampEditOptions(props: EditOptionsProps)
             onChoose={(compositionIndex) => tryResize(props.selection, compositionIndex)}
             onClose={() => props.setOpenPanel(null)}
         />}
-        <SelectionToolRow>
+        {toolsShown && <SelectionToolRow>
             <IconButton icon={<TrashIcon/>} size="md" color="red"
                 disabled={!ObjectEditUtil.canRemoveObject(props.selection)}
                 onClick={() => ObjectEditUtil.openRemoveConfirmPopup(props.selection, "Want to remove this?")}
             />
             <IconButton id="changeLampSizeButton" icon={<ResizeIcon/>} size="md"
                 disabled={!canEdit}
-                highlight={choosingSize && canEdit}
-                onClick={() => props.setOpenPanel(choosingSize ? null : "compositionThumbnail")}
+                onClick={() => props.setOpenPanel("compositionThumbnail")}
             />
             <div className="flex flex-row items-center gap-1 shrink-0">
                 <Text content="Color" size="sm" additionalClassNames="shrink-0"/>
@@ -96,7 +96,7 @@ export default function LampEditOptions(props: EditOptionsProps)
                     disabled={!canEdit}
                 />
             </div>
-        </SelectionToolRow>
+        </SelectionToolRow>}
     </div>;
 }
 

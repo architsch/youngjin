@@ -1,17 +1,22 @@
 /**
  * The image map editor's processing core (dev/scripts/imageMapEditor/core): sampling a quad of a source
  * (straightened, at its own shape, turned to undo a tilt), the game image fitted into its cells with margins
- * (placed as aligned, smaller for a margin kept clear), taking a background out (from the border, following its
- * shading, or clicked seeds, keeping the largest piece), erasing by hand (brush strokes and a clicked color's patch),
- * cutting to selections (rectangles, rounded or not, or ellipses, turned or not, together with the rest and each
- * other, or filling outside with a color), reshaping one by hand (handles on its own turned axes and at its middle,
+ * (placed as aligned, smaller for a margin kept clear) or stretched to fill them, taking a background out (from the
+ * border, following its shading, or clicked seeds, keeping the largest piece), erasing by hand (brush strokes and a
+ * clicked color's patch), cutting to selections (rectangles, rounded or not, or ellipses, turned or not, together
+ * with the rest and each other, or filling outside with a color; an inverted one taking out or filling what lies
+ * inside it instead), reshaping one by hand (handles on its own turned axes and at its middle,
  * the side across held, a knob to turn it) and picking one of several by a click, color adjustments, the source library (photos kept once, dated by their first
- * adding, an index by name, none dropped while in use, nothing left of a deleted one, Unsplash links), the paths new
+ * adding, an index by name, none dropped while in use, nothing left of a deleted one, Unsplash links), a source
+ * preprocessed into another beside it (cut out by a stand-in for the model, squared by corners placed on the source,
+ * previewed, kept once, refused where it can't be made or its model would first be fetched), the paths new
  * entries take (never one used before), an entry with no recipe taken in as its own image, disabled entries (their
  * image parked where it doesn't ship, and out of the notices), the batch commands (sample orders made recipes, saved
- * as disabled entries with the keywords marked as categories first, files of this machine taken as sources and one's
- * own pictures saved with no source or license, sources surveyed with a grid), and the builder leaving out a tab
- * whose images are all disabled.
+ * as disabled entries, a keyword marked as a category refused and no tab's categories written, files of this
+ * machine taken as sources and one's own pictures saved with no source or license, sources surveyed with a grid), and
+ * the builder leaving out a tab whose images are all disabled, giving each tab the categories the admin's settings
+ * list, and listing each subfolder's images in the order those settings give, each under the categories they file
+ * it under.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import fs from "fs";
@@ -37,7 +42,13 @@ import RecipeAlphaEdit from "../../../dev/scripts/imageMapEditor/core/recipeAlph
 import EntryPathUtil from "../../../dev/scripts/imageMapEditor/core/entryPathUtil";
 import SampleOrderUtil from "../../../dev/scripts/imageMapEditor/core/sampleOrderUtil";
 import BatchCommands from "../../../dev/scripts/imageMapEditor/node/batchCommands";
+import SourcePreprocessor from "../../../dev/scripts/imageMapEditor/node/sourcePreprocessor";
+import MissingToolsError from "../../../dev/scripts/imageMapEditor/node/missingToolsError";
+import SourceEntry from "../../../dev/scripts/imageMapEditor/core/sourceEntry";
+import SourcePrep from "../../../dev/scripts/imageMapEditor/core/sourcePrep";
+import MaskFinder from "../../../dev/scripts/imagePrep/core/maskFinder";
 import ImageMapBuilder from "../../../src/server/ssg/builder/imageMapBuilder";
+import { ADMIN_ASSET_SETTINGS_FILE_NAME } from "../../../src/shared/system/sharedConstants";
 
 // An opaque image painted by a function of each pixel's position.
 function paint(width: number, height: number, color: (x: number, y: number) => [number, number, number]): RgbaImage
@@ -142,6 +153,26 @@ describe("the game image made from a sample", () => {
         expect(extreme.content.width).toBeGreaterThanOrEqual(Math.round(128 * (1 - MAX_MARGIN)));
         expect(extreme.content.x + extreme.content.width).toBe(128);
         expect(extreme.content.y).toBe(0);
+    });
+
+    it("stretches the sample to fill its cells on asking, whatever its shape, or what a margin leaves of them", () => {
+        const stretched = {...keepingScale, stretch: true};
+        expect(SampleRenderUtil.getGameImageLayout(stretched, 200, 100, 64).content)
+            .toEqual({x: 0, y: 0, width: 128, height: 128});
+        expect(SampleRenderUtil.getGameImageLayout(stretched, 50, 100, 64).content)
+            .toEqual({x: 0, y: 0, width: 128, height: 128});
+        // Each way by its own margin, and placed in the room that leaves.
+        expect(SampleRenderUtil.getGameImageLayout({...stretched, margin: [0.5, 0.25], align: [1, 0]}, 200, 100, 64).content)
+            .toEqual({x: 64, y: 0, width: 64, height: 96});
+
+        // Red above blue, twice as wide as tall: each half reaches its edge of the cells, with no margin between.
+        const halves = paint(200, 100, (_, y) => (y < 50) ? [200, 0, 0] : [0, 0, 200]);
+        const gameImage = SampleRenderUtil.renderGameImage(halves, recipe({output: stretched}), 64);
+        expect([gameImage.width, gameImage.height]).toEqual([128, 128]);
+        expect([pixel(gameImage, 64, 2), pixel(gameImage, 64, 125)]).toEqual([[200, 0, 0, 255], [0, 0, 200, 255]]);
+        // Fitted, the same rows are margin, in the color of the sample's edges.
+        const fitted = SampleRenderUtil.renderGameImage(halves, recipe({output: keepingScale}), 64);
+        expect(pixel(fitted, 64, 2)).toEqual(pixel(fitted, 64, 125));
     });
 
     it("fills the margins with the sample's edge color, or leaves them see-through if any of it is", () => {
@@ -286,6 +317,26 @@ describe("cutting a sample to a selection", () => {
         const cut = SampleRenderUtil.renderSample(scene, recipe({selections: [{...outer, fill: undefined}, inner]}), 60);
         expect(alpha(cut, 2, 2)).toBe(0);
         expect(pixel(cut, 10, 10)).toEqual([0, 0, 255, 255]);
+    });
+
+    it("takes out what lies inside an inverted selection instead, a hole in what the others keep, or fills it", () => {
+        const hole: RecipeSelection = {shape: "rect", rect: [0.25, 0.25, 0.5, 0.5], radius: 0, inverted: true};
+        const holed = SampleRenderUtil.renderSample(scene, recipe({selections: [hole]}), 60);
+        // Its middle, just inside its corner, just outside its side, and the sample's corner.
+        expect([alpha(holed, 30, 30), alpha(holed, 16, 16), alpha(holed, 14, 30), alpha(holed, 2, 2)])
+            .toEqual([0, 0, 255, 255]);
+
+        // With an ordinary one, what that keeps less the hole: a ring.
+        const ring = SampleRenderUtil.renderSample(scene, recipe({selections: [
+            {shape: "ellipse", rect: [0, 0, 1, 1], radius: 0},
+            {shape: "ellipse", rect: [0.25, 0.25, 0.5, 0.5], radius: 0, inverted: true}]}), 60);
+        expect([alpha(ring, 30, 30), alpha(ring, 30, 5), alpha(ring, 1, 1)]).toEqual([0, 255, 0]);
+
+        // Filled, it is a patch of the color over what was there, the rest as it was; and nothing is taken out.
+        const filling: RecipeSelection = {...hole, fill: "#1080f0"};
+        const patched = SampleRenderUtil.renderSample(scene, recipe({selections: [filling]}), 60);
+        expect([pixel(patched, 30, 30), pixel(patched, 5, 5)]).toEqual([[16, 128, 240, 255], [200, 200, 200, 255]]);
+        expect(AlphaMaskUtil.getKeepMask(scene, recipe({selections: [filling]}))).toBeUndefined();
     });
 });
 
@@ -490,6 +541,184 @@ describe("the source library", () => {
     });
 });
 
+describe("preprocessing a source", () => {
+    // A green backdrop 400 by 300 with a red slab on it, 200 by 100, which the stand-in for the model finds in
+    // whatever frame it is shown: how far inside the slab each cell of its grid lies, as steep as the model's masks.
+    const scene = paint(400, 300, (x, y) => (x >= 100 && x < 300 && y >= 100 && y < 200) ? [220, 40, 40] : [20, 200, 20]);
+    const GRID = 64;
+    const findSlab: MaskFinder = async (_, [left, top, width, height]) => {
+        const logits = new Float32Array(GRID * GRID);
+        const cell = Math.max(width, height) / GRID;
+        for (let row = 0; row < GRID; ++row)
+        {
+            for (let column = 0; column < GRID; ++column)
+            {
+                const x = left + (column + 0.5) / GRID * width, y = top + (row + 0.5) / GRID * height;
+                const depth = Math.min(x - 100, 300 - x, y - 100, 200 - y);
+                logits[row * GRID + column] = Math.max(-20, Math.min(20, 12 * depth / cell));
+            }
+        }
+        return {logits, score: 0.97};
+    };
+    const url = "https://unsplash.com/photos/a-red-slab-abcdefghijk";
+    const cutOut: SourcePrep["cutOut"] = [{rect: [0.2, 0.3, 0.6, 0.4], on: [[0.5, 0.5]]}];
+
+    // A workspace whose library holds the scene, as a photo downloaded from its page.
+    async function setUp(dir: string): Promise<{store: EntryStore, photo: SourceEntry}>
+    {
+        const store = new EntryStore(pathsIn(dir));
+        fs.mkdirSync(store.paths.imagesDir, {recursive: true});
+        fs.writeFileSync(path.join(store.paths.imagesDir, "manifest.json"),
+            JSON.stringify({subfolders: [{name: "2", title: "Objects"}], images: []}));
+        fs.writeFileSync(store.paths.noticesPath,
+            "# Notices\n<!-- pictures:begin (written by the image map editor) -->\n<!-- pictures:end -->\n");
+        const photo = await store.library.add(await sharp(Buffer.from(scene.data.buffer),
+            {raw: {width: scene.width, height: scene.height, channels: 4}}).png().toBuffer(), "slab.png",
+            {url, author: "Someone", license: "Unsplash License"});
+        return {store, photo};
+    }
+
+    it("previews what it is cut out into without adding it, then adds it beside the source, with where that came from and how it was made", async () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), "source-prep-"));
+        try
+        {
+            const {store, photo} = await setUp(dir);
+            const preprocessor = new SourcePreprocessor(store.library, dir, findSlab);
+
+            const preview = await preprocessor.preview(photo.sha1, {cutOut});
+            // Trimmed to the slab, with a tint to lay over the source where the rest is taken away.
+            expect(Math.abs(preview.width - 200)).toBeLessThanOrEqual(3);
+            expect(Math.abs(preview.height - 100)).toBeLessThanOrEqual(3);
+            expect([preview.image, preview.cutAway].every(image => image!.startsWith("data:image/webp;base64,"))).toBe(true);
+            expect(preview.notes[0]).toMatch(/^cut out: part 1 at x 0\.2\d\d-0\.7\d\d, y 0\.3\d\d-0\.6\d\d, scored 0\.97/);
+            expect(store.library.list()).toHaveLength(1);
+
+            const added = await preprocessor.add(photo.sha1, {cutOut});
+            expect(added.fileName).toBe("slab_cut_out.png");
+            expect([added.width, added.height]).toEqual([preview.width, preview.height]);
+            expect([added.url, added.author, added.license]).toEqual([url, "Someone", "Unsplash License"]);
+            expect(added.preparedFrom).toEqual({sha1: photo.sha1, prep: {cutOut}});
+            expect(store.library.list().map(source => source.fileName).sort()).toEqual(["slab.png", "slab_cut_out.png"]);
+            const decoded = await store.library.decode(added.sha1);
+            expect(pixel(decoded, 100, 50)).toEqual([220, 40, 40, 255]);
+            expect((await store.library.decode(photo.sha1)).width).toBe(400);
+            // The same picture made again is the same source, kept once (tidying drops nothing here); another made
+            // by the same steps takes a name of its own.
+            expect((await preprocessor.add(photo.sha1, {cutOut, tidy: true})).sha1).toBe(added.sha1);
+            const whole: [number, number][] = [[0, 0], [1, 0], [1, 1], [0, 1]];
+            expect((await preprocessor.add(photo.sha1, {square: {corners: whole, aspect: 2}})).fileName).toBe("slab_squared.png");
+            expect((await preprocessor.add(photo.sha1, {square: {corners: whole, aspect: 1}})).fileName).toBe("slab_squared_2.png");
+            expect(store.library.list()).toHaveLength(4);
+        }
+        finally
+        {
+            fs.rmSync(dir, {recursive: true, force: true});
+        }
+    });
+
+    it("takes a face's corners where they lie on the source, though the cut-out is trimmed before it is squared", async () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), "source-prep-"));
+        try
+        {
+            const {store, photo} = await setUp(dir);
+            const preprocessor = new SourcePreprocessor(store.library, dir, findSlab);
+            // The slab's own corners, squared to as tall as it is wide: placed on the trimmed cut-out instead, they
+            // would take a part of the slab half that size.
+            const squared = await preprocessor.add(photo.sha1, {cutOut,
+                square: {corners: [[0.25, 1 / 3], [0.75, 1 / 3], [0.75, 2 / 3], [0.25, 2 / 3]], aspect: 1}});
+            expect(squared.fileName).toBe("slab_cut_out_squared.png");
+            expect(Math.abs(squared.width - 200)).toBeLessThanOrEqual(3);
+            expect(Math.abs(squared.height - 200)).toBeLessThanOrEqual(3);
+            const decoded = await store.library.decode(squared.sha1);
+            expect(pixel(decoded, 100, 100)).toEqual([220, 40, 40, 255]);
+
+            // Reshaping alone leaves the picture whole: its long side keeps its sharpness, and the other follows.
+            const stretched = await preprocessor.preview(photo.sha1, {square: {corners: [[0, 0], [1, 0], [1, 1], [0, 1]], aspect: 2}});
+            expect([stretched.width, stretched.height, stretched.cutAway]).toEqual([600, 300, undefined]);
+            expect(stretched.notes).toEqual([expect.stringMatching(/^squared: .* 2\.000 wide per high, as given/)]);
+        }
+        finally
+        {
+            fs.rmSync(dir, {recursive: true, force: true});
+        }
+    });
+
+    it("refuses what can't be made, saying why, and a cut-out whose model would first be fetched, until that is allowed", async () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), "source-prep-"));
+        try
+        {
+            const {store, photo} = await setUp(dir);
+            const preprocessor = new SourcePreprocessor(store.library, dir, findSlab);
+            await expect(preprocessor.preview(photo.sha1, {})).rejects.toThrow(/Nothing is asked of it/);
+            await expect(preprocessor.add(photo.sha1, {round: {outline: [[0.1, 0.1]]}}))
+                .rejects.toThrow(/slab\.png: round takes five points or more/);
+            await expect(preprocessor.preview("0".repeat(40), {cutOut})).rejects.toThrow(/not in the library/);
+            expect(store.library.list()).toHaveLength(1);
+
+            // With no stand-in, and no model under this workspace's own root.
+            const modelless = new SourcePreprocessor(store.library, dir);
+            await expect(modelless.preview(photo.sha1, {cutOut})).rejects.toBeInstanceOf(MissingToolsError);
+            await expect(modelless.add(photo.sha1, {cutOut})).rejects.toThrow(/Segment Anything 2.*Fetch them/);
+            // Reshaping takes no model.
+            expect((await modelless.preview(photo.sha1, {square: {corners: [[0, 0], [1, 0], [1, 1], [0, 1]]}})).width).toBe(400);
+        }
+        finally
+        {
+            fs.rmSync(dir, {recursive: true, force: true});
+        }
+    });
+
+    it("is sampled like any other source; lost, it isn't looked for at the photo's address it carries", async () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), "source-prep-"));
+        try
+        {
+            vi.spyOn(console, "log").mockImplementation(() => {});
+            const {store, photo} = await setUp(dir);
+            const added = await new SourcePreprocessor(store.library, dir, findSlab).add(photo.sha1, {cutOut});
+            const entryPath = await store.saveEntry({path: undefined, subfolder: "2",
+                fields: {title: "Slab", author: added.author!, source: added.url, license: added.license},
+                recipe: recipe({sourceSha1: added.sha1, output: {preserveScale: true, numCols: 2, numRows: 2}}),
+                baseHash: store.readState().hash});
+            // The slab across its cells, with see-through room above and below it.
+            const {data, info} = await sharp(store.getGameImagePath(entryPath, false)).ensureAlpha().raw()
+                .toBuffer({resolveWithObject: true});
+            expect([info.width, info.height]).toEqual([256, 256]);
+            expect([data[(128 * 256 + 128) * 4 + 3], data[(10 * 256 + 128) * 4 + 3]]).toEqual([255, 0]);
+
+            fs.rmSync(store.library.findFile(added.sha1)!);
+            await expect(RenderCommands.renderSamples(store, [entryPath])).rejects.toThrow(/was preprocessed from a photo/);
+        }
+        finally
+        {
+            vi.restoreAllMocks();
+            fs.rmSync(dir, {recursive: true, force: true});
+        }
+    });
+
+    it("leaves a photo's address to the photo itself: one preprocessed from it is named by its file, and surveyed apart", async () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), "source-prep-"));
+        try
+        {
+            vi.spyOn(console, "log").mockImplementation(() => {});
+            const {store, photo} = await setUp(dir);
+            const added = await new SourcePreprocessor(store.library, dir, findSlab).add(photo.sha1, {cutOut});
+
+            const [ofPhoto] = await BatchCommands.writeSurveys(store, [url]);
+            const [ofAdded] = await BatchCommands.writeSurveys(store, ["slab_cut_out.png"]);
+            expect(path.basename(ofPhoto)).toBe("abcdefghijk.jpg");
+            expect(path.basename(ofAdded)).toBe(`${added.sha1.slice(0, 12)}.jpg`);
+            // The photo's shape, and the slab's.
+            expect((await sharp(ofPhoto).metadata()).height).toBe(1200);
+            expect(Math.abs((await sharp(ofAdded).metadata()).height! - 800)).toBeLessThanOrEqual(20);
+        }
+        finally
+        {
+            vi.restoreAllMocks();
+            fs.rmSync(dir, {recursive: true, force: true});
+        }
+    });
+});
+
 describe("paths of new entries", () => {
     const entries = [{path: "2/1", author: "", title: ""}, {path: "2/4", author: "", title: ""}, {path: "1/9", author: "", title: ""}];
 
@@ -662,6 +891,9 @@ describe("a sample order", () => {
         expect(SampleOrderUtil.toRecipe({source: "s", subfolder: "2", title: "Crate", cells: [2, 2], rect: [0, 0, 0.5],
             align: [0, 1], margin: [0.2, 0]}, source).output)
             .toEqual({preserveScale: true, numCols: 2, numRows: 2, align: [0, 1], margin: [0.2, 0]});
+        // Stretched to fill them as asked, whatever shape its rect has.
+        expect(SampleOrderUtil.toRecipe({source: "s", subfolder: "2", title: "Crate", cells: [2, 2], rect: [0, 0, 1, 1],
+            stretch: true}, source).output).toEqual({preserveScale: true, numCols: 2, numRows: 2, stretch: true});
     });
 
     it("refuses one that runs past the source, or doesn't say how big to make it", () => {
@@ -671,6 +903,8 @@ describe("a sample order", () => {
             rect: [0, 0, 0.5, 0.5]}, source)).toThrow(/cells or longSide/);
         expect(() => SampleOrderUtil.toRecipe({source: "s", subfolder: "1", title: "Harbor", longSide: 640,
             rect: [0, 0, 1, 1], align: [0, 0]}, source)).toThrow(/need cells/);
+        expect(() => SampleOrderUtil.toRecipe({source: "s", subfolder: "1", title: "Harbor", longSide: 640,
+            rect: [0, 0, 1, 1], stretch: true}, source)).toThrow(/need cells/);
     });
 });
 
@@ -788,12 +1022,60 @@ describe("a batch of samples", () => {
         }
     });
 
-    it("puts the keywords marked as categories first, as typed, and keeps the tab's list", async () => {
+    it("saves a sample stretched to fill its cells where its order asks, and fitted inside them otherwise", async () => {
         const dir = fs.mkdtempSync(path.join(os.tmpdir(), "entry-store-"));
         try
         {
             const paths = pathsIn(dir);
             fs.mkdirSync(paths.imagesDir, {recursive: true});
+            fs.writeFileSync(path.join(paths.imagesDir, "manifest.json"),
+                JSON.stringify({subfolders: [{name: "2", title: "Objects"}], images: []}));
+            fs.writeFileSync(paths.noticesPath,
+                "# Notices\n<!-- pictures:begin (written by the image map editor) -->\n<!-- pictures:end -->\n");
+            const store = new EntryStore(paths);
+            // Twice as wide as tall, red above blue.
+            const banner = paint(80, 40, (_, y) => (y < 20) ? [220, 0, 0] : [0, 0, 220]);
+            await store.library.add(await sharp(Buffer.from(banner.data.buffer), {raw: {width: 80, height: 40, channels: 4}})
+                .png().toBuffer(), "banner.png", {author: "thingspool"});
+            const planPath = path.join(dir, "plan.json");
+            const order = {source: "banner.png", subfolder: "2", title: "Banner", keywords: "banner", cells: [2, 2],
+                rect: [0, 0, 1, 1]};
+            fs.writeFileSync(planPath, JSON.stringify([order, {...order, title: "Tall Banner", stretch: true}]));
+
+            expect(await BatchCommands.saveSamples(store, planPath)).toEqual(["2/1", "2/2"]);
+            expect(store.readState().recipeFile.recipes["2/2"].output)
+                .toEqual({preserveScale: true, numCols: 2, numRows: 2, stretch: true});
+            // The red and blue of a game image's top and bottom rows, at its middle across.
+            const ends = async (entryPath: string) => {
+                const {data, info} = await sharp(store.getGameImagePath(entryPath, true)).ensureAlpha().raw()
+                    .toBuffer({resolveWithObject: true});
+                expect([info.width, info.height]).toEqual([256, 256]);
+                const at = (y: number) => (y * info.width + info.width / 2) * 4;
+                return [data[at(4)], data[at(4) + 2], data[at(251)], data[at(251) + 2]];
+            };
+            // Fitted, both rows are margin, in the one color of the sample's edges; stretched, they are the picture's own.
+            const fitted = await ends("2/1");
+            expect(Math.abs(fitted[0] - fitted[2])).toBeLessThan(20);
+            expect(Math.abs(fitted[1] - fitted[3])).toBeLessThan(20);
+            const stretched = await ends("2/2");
+            expect(stretched[0]).toBeGreaterThan(180);
+            expect(stretched[1]).toBeLessThan(60);
+            expect(stretched[2]).toBeLessThan(60);
+            expect(stretched[3]).toBeGreaterThan(180);
+        }
+        finally
+        {
+            fs.rmSync(dir, {recursive: true, force: true});
+        }
+    });
+
+    it("refuses a keyword marked as a category, which only an admin sets in the game, and writes no tab's categories", async () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), "entry-store-"));
+        try
+        {
+            const paths = pathsIn(dir);
+            fs.mkdirSync(paths.imagesDir, {recursive: true});
+            // As a manifest of before listed them: they are the admin's settings' to list now.
             const categories = [{name: "store", title: "Store"}, {name: "kitchen", title: "Kitchen"}];
             fs.writeFileSync(path.join(paths.imagesDir, "manifest.json"),
                 JSON.stringify({subfolders: [{name: "2", title: "Objects", categories}], images: []}));
@@ -806,17 +1088,20 @@ describe("a batch of samples", () => {
                 {url, author: "Someone", license: "Unsplash License"});
             const planPath = path.join(dir, "plan.json");
             fs.writeFileSync(planPath, JSON.stringify([
-                {source: url, subfolder: "2", title: "Crate", keywords: "crate, apple, kitchen*, market, store*",
+                {source: url, subfolder: "2", title: "Crate", keywords: "crate, apple, kitchen*, market",
                     cells: [2, 2], rect: [0, 0, 0.5]},
-                // Unmarked, a category's name is only a word, and stays where it is.
+            ]));
+            await expect(BatchCommands.saveSamples(store, planPath)).rejects.toThrow(/"kitchen\*" is marked as a category/);
+            expect(store.readState().entries).toEqual([]);
+
+            // Unmarked, a category's name is only a word, and stays where it is.
+            fs.writeFileSync(planPath, JSON.stringify([
                 {source: url, subfolder: "2", title: "Crate Side", keywords: "crate, apple, store", cells: [1, 2],
                     rect: [0.5, 0, 0.25]},
             ]));
-
-            expect(await BatchCommands.saveSamples(store, planPath)).toEqual(["2/1", "2/2"]);
-            expect(store.readState().entries.map(entry => entry.keywords))
-                .toEqual(["kitchen*, store*, crate, apple, market", "crate, apple, store"]);
-            expect(store.readState().subfolders[0].categories).toEqual(categories);
+            expect(await BatchCommands.saveSamples(store, planPath)).toEqual(["2/1"]);
+            expect(store.readState().entries.map(entry => entry.keywords)).toEqual(["crate, apple, store"]);
+            expect(store.readState().subfolders).toEqual([{name: "2", title: "Objects"}]);
         }
         finally
         {
@@ -859,9 +1144,11 @@ describe("a batch of samples", () => {
 });
 
 describe("building a map", () => {
-    // The builder reads and writes under the directory the build was started in (PWD), as SSG runs it.
+    // The builder reads and writes under the directory the build was started in (PWD), as SSG runs it. The admin's
+    // settings are put at the assets' root as given: the file's text, or what it holds.
     async function build(images: {path: string, disabled?: boolean, staging?: boolean, title?: string, author?: string,
-        keywords?: string}[]): Promise<string>
+        keywords?: string}[], settings?: unknown,
+        subfolders: unknown[] = [{name: "a", title: "A"}, {name: "b", title: "B"}]): Promise<string>
     {
         const dir = fs.mkdtempSync(path.join(os.tmpdir(), "image-map-"));
         const startedIn = process.env.PWD;
@@ -870,9 +1157,13 @@ describe("building a map", () => {
             const root = path.join(dir, "public/app/assets/test_images");
             fs.mkdirSync(root, {recursive: true});
             fs.mkdirSync(path.join(dir, "src/shared/graphics/image/maps"), {recursive: true});
-            fs.writeFileSync(path.join(root, "manifest.json"), JSON.stringify({
-                subfolders: [{name: "a", title: "A"}, {name: "b", title: "B"}],
+            fs.writeFileSync(path.join(root, "manifest.json"), JSON.stringify({subfolders,
                 images: images.map(image => ({author: "", title: image.path, ...image}))}));
+            if (settings != undefined)
+            {
+                fs.writeFileSync(path.join(dir, "public/app/assets", ADMIN_ASSET_SETTINGS_FILE_NAME),
+                    (typeof settings == "string") ? settings : JSON.stringify(settings));
+            }
             for (const image of images)
             {
                 fs.mkdirSync(path.dirname(path.join(root, `${image.path}.webp`)), {recursive: true});
@@ -912,5 +1203,81 @@ describe("building a map", () => {
         expect(built).toContain(`{path:"a/1",keywords:"crate,red pepper",width:8`);
         expect(built).toContain(`{path:"b/1",keywords:"harbor,at dusk,a \\"painter\\"",width:8`);
         expect(built).not.toMatch(/\b(title|author):"(Crate|Someone|Harbor)/);
+    });
+
+    it("lists each subfolder's images in the order the admin's settings give, those they leave out first, and refuses settings that give no order", async () => {
+        const images = [{path: "a/1"}, {path: "a/2"}, {path: "a/3", disabled: true}, {path: "a/4"}, {path: "b/1"}, {path: "b/2"}];
+        const listed = (built: string) => [...built.matchAll(/\{path:"([^"]+)"/g)].map(match => match[1]);
+        const ordered = (orderedIndicesBySubfolder: unknown) => build(images,
+            {testImageMap: {categoryTabsBySubfolder: {}, orderedIndicesBySubfolder, categoriesBySubfolderAndIndex: {}}});
+        // With no file, or one with nothing for this map, as the manifest lists them.
+        expect(listed(await build(images))).toEqual(["a/1", "a/2", "a/4", "b/1", "b/2"]);
+        expect(listed(await build(images, {otherImageMap: {orderedIndicesBySubfolder: {a: [4, 1]}}})))
+            .toEqual(["a/1", "a/2", "a/4", "b/1", "b/2"]);
+        // They leave a/2 out, so that comes first. They may list what the map doesn't hold: an image disabled (a/3)
+        // or gone (a/9), and a subfolder with none (c).
+        expect(listed(await ordered({a: [4, 3, 9, 1], c: [1]}))).toEqual(["a/2", "a/4", "a/1", "b/1", "b/2"]);
+        expect(listed(await ordered({b: [2, 1]}))).toEqual(["a/1", "a/2", "a/4", "b/2", "b/1"]);
+
+        await expect(build(images, "{")).rejects.toThrow(/adminAssetSettings\.json is not valid JSON/);
+        await expect(build(images, "[]")).rejects.toThrow(/adminAssetSettings\.json holds no settings/);
+        await expect(build(images, {testImageMap: {}})).rejects.toThrow(/holds no "categoryTabsBySubfolder" under "testImageMap"/);
+        await expect(build(images, {testImageMap: {categoryTabsBySubfolder: {}}}))
+            .rejects.toThrow(/holds no "orderedIndicesBySubfolder" under "testImageMap"/);
+        await expect(build(images, {testImageMap: {categoryTabsBySubfolder: {}, orderedIndicesBySubfolder: {}}}))
+            .rejects.toThrow(/holds no "categoriesBySubfolderAndIndex" under "testImageMap"/);
+        await expect(ordered({a: [1, "4"]})).rejects.toThrow(/other than image numbers under "a"/);
+        await expect(ordered({a: [1, 4, 1]})).rejects.toThrow(/lists image 1 twice under "a"/);
+    });
+
+    it("builds each tab's categories as the admin's settings list them, and refuses any that can't be categories or that the manifest lists", async () => {
+        const images = [{path: "a/1"}, {path: "b/1"}];
+        const kitchen = {name: "kitchen", title: "Kitchen"}, dining = {name: "diningroom", title: "Dining Room"};
+        const listing = (categoryTabsBySubfolder: unknown) => build(images,
+            {testImageMap: {categoryTabsBySubfolder, orderedIndicesBySubfolder: {}, categoriesBySubfolderAndIndex: {}}});
+        // In the order listed; a tab left out, or one listing none, has none, and a subfolder that is no tab (c) is
+        // passed over.
+        expect(await listing({a: [kitchen, dining], b: [], c: [kitchen]})).toContain(`const subfolderTabs: ImageMapSubfolderTab[] = `
+            + `[{name:"a",title:"A",categories:[{name:"kitchen",title:"Kitchen"},{name:"diningroom",title:"Dining Room"}]},{name:"b",title:"B"}]`);
+        expect(await listing({})).toContain(`const subfolderTabs: ImageMapSubfolderTab[] = [{name:"a",title:"A"},{name:"b",title:"B"}]`);
+
+        await expect(listing({a: "kitchen"})).rejects.toThrow(/lists something other than categories, each a name and a title, under "a"/);
+        await expect(listing({a: [{name: "kitchen"}]})).rejects.toThrow(/lists something other than categories, each a name and a title, under "a"/);
+        const refused = (categories: unknown[]) => expect(listing({a: categories})).rejects;
+        await refused([{name: "Kitchen", title: "Kitchen"}]).toThrow(/a category under "a" that can't be one: A category's name is one word/);
+        await refused([{name: "kitchen", title: ""}]).toThrow(/can't be one: A category needs a title/);
+        await refused([{name: "all", title: "All"}]).toThrow(/can't be one: "all" is a tab every chooser has of its own/);
+        await refused([kitchen, {name: "kitchen", title: "Galley"}]).toThrow(/can't be one: There is already a category named "kitchen"/);
+        await refused([dining, {name: "dining", title: "Dining"}]).toThrow(/can't be one: "dining" is inside "diningroom"/);
+        // The manifest lists none of its own.
+        await expect(build(images, undefined, [{name: "a", title: "A", categories: [kitchen]}, {name: "b", title: "B"}]))
+            .rejects.toThrow(/Subfolder "a" lists categories in the manifest, which only adminAssetSettings\.json does/);
+    });
+
+    it("files each image under the categories the admin's settings give it, marked ahead of its own keywords, and refuses any that are no categories", async () => {
+        const images = [{path: "a/1"}, {path: "a/2", keywords: "Kitchen, sink"}, {path: "a/3", disabled: true},
+            {path: "a/4"}, {path: "b/1"}];
+        const categoryTabsBySubfolder = {a: [{name: "kitchen", title: "Kitchen"}, {name: "office", title: "Office"}]};
+        const filed = (categoriesBySubfolderAndIndex: unknown, shown: {path: string, keywords?: string}[] = images) =>
+            build(shown, {testImageMap: {categoryTabsBySubfolder, orderedIndicesBySubfolder: {}, categoriesBySubfolderAndIndex}});
+        const keywords = (built: string) => Object.fromEntries([...built.matchAll(/\{path:"([^"]+)",keywords:"([^"]*)"/g)]
+            .map(match => [match[1], match[2]]));
+
+        // An image they leave out is under none, and names what it did. A word a category already says is not said
+        // twice. They may name what the map doesn't hold (a/3, a/9, c), and a category its subfolder doesn't list
+        // (garden, and any under b), which is passed over.
+        expect(keywords(await filed({a: {"1": ["office", "kitchen"], "2": ["kitchen", "garden"], "3": ["office"],
+            "9": ["office"]}, b: {"1": ["kitchen"]}, c: {"1": ["office"]}})))
+            .toEqual({"a/1": "office*,kitchen*,a/1", "a/2": "kitchen*,sink", "a/4": "a/4", "b/1": "b/1"});
+        expect(keywords(await build(images))).toEqual({"a/1": "a/1", "a/2": "kitchen,sink", "a/4": "a/4", "b/1": "b/1"});
+
+        // Only the settings mark a keyword as a category.
+        await expect(filed({}, [{path: "a/1", keywords: "kitchen*, sink"}]))
+            .rejects.toThrow(/Image "a\/1" marks its keyword "kitchen\*" as a category/);
+        await expect(filed({a: ["kitchen"]})).rejects.toThrow(/other than image numbers under categories in "a"/);
+        await expect(filed({a: {"01": ["kitchen"]}})).rejects.toThrow(/other than image numbers under categories in "a"/);
+        await expect(filed({a: {"1": "kitchen"}})).rejects.toThrow(/files image 1 of "a" under something other than category names/);
+        await expect(filed({a: {"1": ["Kitchen"]}})).rejects.toThrow(/files image 1 of "a" under something other than category names/);
+        await expect(filed({a: {"1": ["kitchen", "office", "kitchen"]}})).rejects.toThrow(/files image 1 of "a" under "kitchen" twice/);
     });
 });

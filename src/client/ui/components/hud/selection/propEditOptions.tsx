@@ -14,8 +14,8 @@ import ObjectAttachmentUtil from "../../../../../shared/object/util/objectAttach
 import ObjectScaleUtil from "../../../../../shared/object/util/objectScaleUtil";
 import ObjectTransform from "../../../../../shared/object/types/objectTransform";
 
-// Prop tools: remove, image, and a clockwise quarter-turn. The image list stacks above this row (it belongs to the
-// prop).
+// Prop tools: remove, image, and a clockwise quarter-turn. The image list takes this row's place until closed (it
+// belongs to the prop).
 export default function PropEditOptions(props: EditOptionsProps)
 {
     const imagePathMetadata = props.selection.gameObject.params.metadata[ObjectMetadataKeyEnumMap.ImagePath];
@@ -26,6 +26,7 @@ export default function PropEditOptions(props: EditOptionsProps)
     // Recomputed each render; zone changes re-announce the selection (see ClientVoxelManager). Choosers are
     // disabled as a whole.
     const canEdit = ObjectEditUtil.canEditObject(props.selection);
+    const toolsShown = !(canEdit && choosingImage);
 
     // Full width, so the rows can scroll horizontally instead of growing.
     return <div className="flex flex-col gap-1 w-full">
@@ -40,21 +41,20 @@ export default function PropEditOptions(props: EditOptionsProps)
             onChoose={path => trySetImage(props.selection, path)}
             onClose={() => props.setOpenPanel(null)}
         />}
-        <SelectionToolRow>
+        {toolsShown && <SelectionToolRow>
             <IconButton icon={<TrashIcon/>} size="md" color="red"
                 disabled={!ObjectEditUtil.canRemoveObject(props.selection)}
                 onClick={() => ObjectEditUtil.openRemoveConfirmPopup(props.selection, "Want to remove this?")}
             />
             <IconButton id="changePropImageButton" icon={<ShoppingCartIcon/>} size="md"
                 disabled={!canEdit}
-                highlight={choosingImage && canEdit}
-                onClick={() => props.setOpenPanel(choosingImage ? null : "imageMapThumbnail")}
+                onClick={() => props.setOpenPanel("imageMapThumbnail")}
             />
             <IconButton id="rotatePropButton" icon={<RotateClockwiseIcon/>} size="md"
                 disabled={!canEdit || !ObjectEditUtil.canQuarterTurn(props.selection)}
                 onClick={() => ObjectEditUtil.tryQuarterTurn(props.selection)}
             />
-        </SelectionToolRow>
+        </SelectionToolRow>}
     </div>;
 }
 

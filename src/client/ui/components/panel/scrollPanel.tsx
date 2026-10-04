@@ -38,7 +38,8 @@ export default function ScrollPanel({ children, id, onClose, closeRowContent, an
     // contents up to the column's width, past which the row scrolls (children are shrink-0; see
     // SelectionToolRow). Fitting the column instead would let an owner's margins overflow.
     const rowClassNames = "flex flex-row items-stretch gap-3";
-    const closeButton = closable && <IconButton icon={<CloseIcon/>} size="sm" onClick={() => onCloseRef.current?.()}/>;
+    const closeButton = closable && <IconButton id={id ? `${id}Close` : undefined} icon={<CloseIcon/>} size="sm"
+        onClick={() => onCloseRef.current?.()}/>;
     const panel = <div className={`flex flex-col gap-1 items-start min-w-0 ${anchored ? "w-fit max-w-full shrink-0" : ""} ${additionalClassNames}`}>
         {closeRowContent
             ? <div className="flex flex-row items-center gap-3 w-full">
@@ -95,7 +96,8 @@ const SCREEN_MARGIN_PX = 8;
 interface Props
 {
     children: ReactNode;
-    // The panel body's DOM id (for tutorial steps and coach marks).
+    // The panel body's DOM id (for tutorial steps and coach marks). Its close button's is the same followed by
+    // "Close" (e.g. "lampSizeOptionsClose"), for automation.
     id?: string;
     // Adds a close button and back-gesture support.
     onClose?: () => void;

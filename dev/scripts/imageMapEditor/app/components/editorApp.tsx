@@ -48,6 +48,7 @@ export default function EditorApp()
     const [entrySearch, setEntrySearch] = useState("");
     const [sourceSort, setSourceSort] = useState<SourceSort>("added");
     const [unusedSourcesOnly, setUnusedSourcesOnly] = useState(false);
+    const [sourceSearch, setSourceSearch] = useState("");
     const [pickingSource, setPickingSource] = useState(false);
     const [keepRectangle, setKeepRectangle] = useState(true);
     // What the middle panel shows: the source with its quad, or the sample magnified.
@@ -136,7 +137,9 @@ export default function EditorApp()
     const recoverSource = async (lost: Draft) => {
         const lostRecipe = lost.recipe;
         const entry = stateRef.current?.entries.find(other => other.path == lost.path);
-        if (entry?.source)
+        // One preprocessed from a photo carries that photo's address, which gives the photo and never it.
+        const preprocessed = stateRef.current?.sources.find(other => other.sha1 == lostRecipe.sourceSha1)?.preparedFrom != undefined;
+        if (entry?.source && !preprocessed)
         {
             const downloaded = await EditorApi.downloadSource(entry.source).catch(() => undefined);
             if (downloaded != undefined && downloaded.sha1 == lostRecipe.sourceSha1)
@@ -305,7 +308,7 @@ export default function EditorApp()
                 setStatus("");
                 return;
             }
-            // With its keywords as the manifest now holds them (tidied into single words, lowercase, categories first).
+            // With its keywords as the manifest now holds them (tidied into single words, lowercase).
             const saved = {...draft, path: result.path,
                 keywords: result.state.entries.find(entry => entry.path == result.path)?.keywords ?? ""};
             setState(result.state);
@@ -355,7 +358,9 @@ export default function EditorApp()
 
     useEffect(() => {
         const onKeyDown = (ev: KeyboardEvent) => {
-            if (!(ev.metaKey || ev.ctrlKey) || (ev.target as HTMLElement).tagName == "INPUT")
+            // A dialog over the page has its own keys, and the entry under it is out of sight.
+            if (!(ev.metaKey || ev.ctrlKey) || (ev.target as HTMLElement).tagName == "INPUT"
+                || document.querySelector("dialog[open]") != null)
                 return;
             const key = ev.key.toLowerCase();
             if (key == "z")
@@ -458,11 +463,13 @@ export default function EditorApp()
                         currentSha1={recipe?.sourceSha1} openPath={draft?.path}
                         canUseForEntry={draft != undefined} picking={pickingSource}
                         openEntryLabel={draft?.path ?? "the new entry"}
-                        sort={sourceSort} unusedOnly={unusedSourcesOnly}
+                        sort={sourceSort} unusedOnly={unusedSourcesOnly} search={sourceSearch}
                         onSortChange={setSourceSort} onUnusedOnlyChange={setUnusedSourcesOnly}
+                        onSearchChange={setSourceSearch}
                         onCancelPicking={() => setPickingSource(false)}
                         onAddFiles={files => addFiles(files, false)} onAddUrl={addFromUrl}
                         onNewEntry={startEntryFromSource} onUseForEntry={useSourceForEntry} onDelete={deleteSource}
+                        onPreprocessed={added => setStatus(`Added ${added.fileName} to the library`)}
                         onOpenEntry={openEntry}/>}
             </aside>
             {draft == undefined

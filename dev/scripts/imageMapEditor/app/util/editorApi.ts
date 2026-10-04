@@ -1,6 +1,8 @@
 import EditorState from "../../core/editorState";
 import SaveEntryRequest from "../../core/saveEntryRequest";
 import SourceEntry from "../../core/sourceEntry";
+import SourcePrep from "../../core/sourcePrep";
+import PrepPreview from "../../core/prepPreview";
 
 // The editor's server (see node/editorServer.ts).
 const EditorApi =
@@ -46,6 +48,25 @@ const EditorApi =
     deleteSource: async (sha1: string): Promise<{state: EditorState}> =>
     {
         return (await request(`/api/sources/${sha1}`, {method: "DELETE"})).json();
+    },
+
+    // What a source would be preprocessed into (see SourcePreprocessor). needsTools: cutting out would first fetch
+    // its model, which fetchTools allows; it is the question to put to the user.
+    previewPreparedSource: async (sha1: string, prep: SourcePrep, fetchTools: boolean):
+        Promise<PrepPreview | {needsTools: string}> =>
+    {
+        const response = await request(`/api/sources/${sha1}/prepared/preview`, {method: "POST",
+            headers: {"Content-Type": "application/json"}, body: JSON.stringify({prep, fetchTools})}, [428]);
+        return (response.status == 428) ? {needsTools: await response.text()} : response.json();
+    },
+
+    // The source preprocessed and added to the library beside it; refused as a preview is.
+    addPreparedSource: async (sha1: string, prep: SourcePrep, fetchTools: boolean):
+        Promise<SourceEntry | {needsTools: string}> =>
+    {
+        const response = await request(`/api/sources/${sha1}/prepared`, {method: "POST",
+            headers: {"Content-Type": "application/json"}, body: JSON.stringify({prep, fetchTools})}, [428]);
+        return (response.status == 428) ? {needsTools: await response.text()} : response.json();
     },
 
     // Undefined if it isn't on this machine.

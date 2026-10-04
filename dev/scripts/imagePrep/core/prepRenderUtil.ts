@@ -200,7 +200,8 @@ function makeRound(picture: RgbaImage, round: PrepRound, notes: string[]): RgbaI
         + `${(ellipse.angle * 180 / Math.PI % 180).toFixed(1)} degrees; stretched ${stretch.toFixed(3)} across it`);
     // The picture's frame came out a slanted one: what is left see-through around the object is cut away.
     const bounds = CutoutUtil.getBounds(result);
-    return (bounds == undefined) ? result : crop(result, bounds.x, bounds.y, bounds.width, bounds.height);
+    return (bounds == undefined) ? result
+        : ImageProcessingUtil.crop(result, bounds.x, bounds.y, bounds.width, bounds.height);
 }
 
 // The quad (in the picture's pixels) sampled onto a width x height image. Where it reaches past the picture the
@@ -229,7 +230,8 @@ function cutToKept(image: RgbaImage, keep: PrepKeep): RgbaImage
     const [x, y, w, h] = keep.rect;
     const left = clamp(Math.round(x * image.width), 0, image.width - 1);
     const top = clamp(Math.round(y * image.height), 0, image.height - 1);
-    const result = crop(image, left, top, clamp(Math.round((x + w) * image.width), left + 1, image.width) - left,
+    const result = ImageProcessingUtil.crop(image, left, top,
+        clamp(Math.round((x + w) * image.width), left + 1, image.width) - left,
         clamp(Math.round((y + h) * image.height), top + 1, image.height) - top);
     for (let row = 0; row < result.height; ++row)
     {
@@ -286,17 +288,6 @@ function validateCover(cover: PrepCover): void
     const [fromX, fromY] = cover.from;
     if (Math.abs(fromX - x) < w && Math.abs(fromY - y) < h)
         throw new Error("a part covered takes its surface from elsewhere: its source lies over it");
-}
-
-function crop(image: RgbaImage, x: number, y: number, width: number, height: number): RgbaImage
-{
-    const result = ImageProcessingUtil.createImage(width, height);
-    for (let row = 0; row < height; ++row)
-    {
-        const from = ((y + row) * image.width + x) * 4;
-        result.data.set(image.data.subarray(from, from + width * 4), row * width * 4);
-    }
-    return result;
 }
 
 // Positions as fractions of the picture, on it or no further off it than a corner it cuts off would be.

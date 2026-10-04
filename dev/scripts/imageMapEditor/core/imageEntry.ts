@@ -6,9 +6,9 @@ export default interface ImageEntry
     author: string;
     title: string;
     // What a search finds it by: lowercase single words, comma-separated, none found inside another and none a filler
-    // word (see PICTURE_SEARCH_FILLER_WORDS), most important first, its categories leading (see
-    // ImageMetadata.keywords). Absent, it is found by its title and author, as a painting is; an everyday object names
-    // its own.
+    // word (see PICTURE_SEARCH_FILLER_WORDS). Absent, it is found by its title and author, as a painting is; an
+    // everyday object names its own. None is marked as a category: those are the admin's to set (see
+    // ImageMapSettings).
     keywords?: string;
     preserveScale?: boolean;
     // Where a third party's image came from, and the terms it is used under (see IMAGE_LICENSES); both absent

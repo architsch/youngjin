@@ -1,16 +1,21 @@
 import { useState } from "react";
 import ImageEntry from "../../core/imageEntry";
 import SourceEntry from "../../core/sourceEntry";
+import SourcePrep from "../../core/sourcePrep";
 import SourceSort from "../types/sourceSort";
 import EditorApi from "../util/editorApi";
 import SourceUsageDialog from "./sourceUsageDialog";
+import PreprocessDialog from "./preprocessDialog";
+import PictureSearchUtil from "../../../../../src/shared/graphics/image/util/pictureSearchUtil";
 
 // How long a copied address's button says so.
 const COPIED_NOTE_MS = 1500;
 
 // The source library: photos added from this machine (picked, or dropped anywhere on the panel) or by their address
-// (shown, to open or copy), each started as a new entry, or taken as the source of the open one. While picking, it
-// is open for the latter. Each shows how many entries are sampled from it; the count opens a list of them.
+// (shown, to open or copy), each started as a new entry, taken as the source of the open one, or preprocessed into
+// another source (see PreprocessDialog). While picking, it is open for the second. Each shows how many entries are
+// sampled from it; the count opens a list of them. A search narrows them by their names, addresses and authors, and
+// by what the entries sampled from them are found by (see PictureSearchUtil).
 export default function SourceLibraryPanel(props: Props)
 {
     const [url, setUrl] = useState("");
@@ -19,6 +24,8 @@ export default function SourceLibraryPanel(props: Props)
     const [copiedSha1, setCopiedSha1] = useState<string>();
     // The source whose entries are listed.
     const [listedSha1, setListedSha1] = useState<string>();
+    // The source being preprocessed, and what its dialog starts from.
+    const [preprocessed, setPreprocessed] = useState<{sha1: string, startPrep?: SourcePrep}>();
 
     const copyUrl = async (source: SourceEntry) => {
         await navigator.clipboard.writeText(source.url!);
@@ -42,9 +49,20 @@ export default function SourceLibraryPanel(props: Props)
     };
 
     const usedBy = (source: SourceEntry) => props.usage[source.sha1] ?? [];
-    const sources = props.sources.filter(source => !props.unusedOnly || usedBy(source).length == 0)
+    const find = (sha1: string | undefined) => props.sources.find(source => source.sha1 == sha1);
+    const found = PictureSearchUtil.filter(props.sources, props.search, source =>
+        [source.fileName, source.url, source.author, find(source.preparedFrom?.sha1)?.fileName,
+            ...usedBy(source).flatMap(entry => [entry.path, entry.title, entry.keywords])].join(","));
+    const sources = found.filter(source => !props.unusedOnly || usedBy(source).length == 0)
         .sort((a, b) => compareSources(props.sort, a, b, source => usedBy(source).length));
-    const listedSource = props.sources.find(source => source.sha1 == listedSha1);
+    const listedSource = find(listedSha1);
+    const preprocessedSource = find(preprocessed?.sha1);
+    // One made from another in the library is preprocessed by changing how that was done.
+    const preprocess = (source: SourceEntry) => {
+        const origin = find(source.preparedFrom?.sha1);
+        setPreprocessed((origin != undefined && !missing.has(origin.sha1))
+            ? {sha1: origin.sha1, startPrep: source.preparedFrom!.prep} : {sha1: source.sha1});
+    };
     return <div className="source-library"
         onDragOver={ev => ev.preventDefault()}
         onDrop={ev => {
@@ -84,13 +102,18 @@ export default function SourceLibraryPanel(props: Props)
                 Unused only
             </label>
         </div>
+        <input type="search" className="list-search" value={props.search}
+            placeholder="Search by name, author or entry" onChange={ev => props.onSearchChange(ev.target.value)}
+            title="Finds sources by their names, addresses and authors, and by the titles and keywords of the entries sampled from them"/>
         <div className="source-grid">
             {sources.length == 0 && <div className="panel-note">
-                {props.sources.length == 0 ? "No sources yet." : "Every source is used by an entry."}</div>}
+                {props.sources.length == 0 ? "No sources yet."
+                    : found.length == 0 ? "No source matches the search." : "Every source found is used by an entry."}</div>}
             {sources.map(source => {
                 const entries = usedBy(source);
                 const isCurrent = source.sha1 == props.currentSha1;
                 const addedAt = new Date(source.addedAt);
+                const origin = find(source.preparedFrom?.sha1);
                 return <div key={source.sha1} className={`source-card${isCurrent ? " selected" : ""}`}>
                     <div className="source-thumbnail">
                         {missing.has(source.sha1)
@@ -107,6 +130,8 @@ export default function SourceLibraryPanel(props: Props)
                             onClick={() => void copyUrl(source)}>{copiedSha1 == source.sha1 ? "Copied" : "Copy"}</button>
                     </div>}
                     {source.author && <div className="source-caption muted">{source.author}{source.license ? `, ${source.license}` : ""}</div>}
+                    {source.preparedFrom != undefined && <div className="source-caption muted"
+                        title={origin?.fileName}>Preprocessed from {origin?.fileName ?? "a source no longer in the library"}</div>}
                     <div className="source-usage">
                         <button type="button" className="button small" disabled={entries.length == 0}
                             title="List the entries sampled from it" onClick={() => setListedSha1(source.sha1)}>
@@ -128,6 +153,11 @@ export default function SourceLibraryPanel(props: Props)
                                     onClick={() => props.onUseForEntry(source)}>Use for this entry</button>}
                                 <button type="button" className="button small" onClick={() => props.onNewEntry(source)}>
                                     New entry</button>
+                                <button type="button" className="button small" onClick={() => preprocess(source)}
+                                    title={(origin != undefined)
+                                        ? `Change how it was made from ${origin.fileName}, as another source`
+                                        : "Cut a thing out of its background, or square up or make round what is seen at "
+                                            + "an angle, as another source"}>Preprocess…</button>
                             </>}
                         <button type="button" className="button small danger" disabled={entries.length > 0 || isCurrent}
                             title={entries.length > 0 ? "An entry is sampled from it"
@@ -144,6 +174,9 @@ export default function SourceLibraryPanel(props: Props)
                 setListedSha1(undefined);
             }}
             onClose={() => setListedSha1(undefined)}/>}
+        {preprocessedSource != undefined && <PreprocessDialog source={preprocessedSource}
+            startPrep={preprocessed!.startPrep} onAdded={props.onPreprocessed}
+            onClose={() => setPreprocessed(undefined)}/>}
     </div>;
 }
 
@@ -173,13 +206,17 @@ interface Props
     // Kept by the app, so they last while the Entries tab is shown.
     sort: SourceSort;
     unusedOnly: boolean;
+    search: string;
     onSortChange: (sort: SourceSort) => void;
     onUnusedOnlyChange: (unusedOnly: boolean) => void;
+    onSearchChange: (search: string) => void;
     onCancelPicking: () => void;
     onAddFiles: (files: File[]) => void;
     onAddUrl: (url: string) => Promise<void>;
     onNewEntry: (source: SourceEntry) => void;
     onUseForEntry: (source: SourceEntry) => void;
+    // A source was made from another and added to the library.
+    onPreprocessed: (added: SourceEntry) => void;
     onDelete: (source: SourceEntry) => void;
     onOpenEntry: (path: string) => void;
 }

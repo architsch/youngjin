@@ -6,8 +6,6 @@ import RecipeBackground from "../../core/recipeBackground";
 import { NO_ADJUST } from "../../core/colorAdjustUtil";
 import { MAX_MARGIN } from "../../core/sampleRenderUtil";
 import ImageMapSubfolderTab from "../../../../../src/shared/graphics/image/types/imageMapSubfolderTab";
-import ImageMapCategory from "../../../../../src/shared/graphics/image/types/imageMapCategory";
-import ImageMap from "../../../../../src/shared/graphics/image/types/imageMap";
 import SliderRow from "./sliderRow";
 
 // The long side, in pixels, of an image fitted to its canvas.
@@ -34,7 +32,6 @@ const ADJUSTMENTS: {key: keyof RecipeAdjust, label: string, min: number, max: nu
 export default function EntryForm(props: Props)
 {
     const { draft, subfolders, onDraftChange } = props;
-    const categories = subfolders.find(subfolder => subfolder.name == draft.subfolder)?.categories ?? [];
     const recipe = draft.recipe;
     const setRecipe = (update: (r: ImageRecipe) => ImageRecipe, key?: string) =>
         onDraftChange(d => ({...d, recipe: update(d.recipe)}), key);
@@ -62,14 +59,12 @@ export default function EntryForm(props: Props)
                 const author = ev.target.value;
                 onDraftChange(d => ({...d, author}), "author");
             }}/></label>
-            <label title="What a search in the game finds it by: single words, as a search finds each word typed anywhere in them (so one inside another, like pepper in bell pepper, is dropped on saving, as are filler words like and or of, which a search passes over). A painting leaves them out, to be found by its title and author; an everyday object names what it shows, most important first, since the chooser sets images side by side by the keywords they share, the first counting most: the categories it belongs in, each marked with a * (kitchen*; moved to the front on saving, and left out of that ordering), then its kind, which is what the image shows as a whole (clock; screen; plate, dish for food served on one; crate), then what it holds, then the rest. Every image of a kind leads with the same kind word, so they sit together">
+            <label title="What a search in the game finds it by: single words, as a search finds each word typed anywhere in them (so one inside another, like pepper in bell pepper, is dropped on saving, as are filler words like and or of, which a search passes over). A painting leaves them out, to be found by its title and author; an everyday object names what it shows: its kind, which is what the image shows as a whole (clock; screen; plate, dish for food served on one; crate), in the word every image of that kind uses so one search finds them all, then what it holds, then the rest. The categories it is filed under are not among them: an admin sets those in the game">
                 Keywords<input value={draft.keywords} placeholder="Comma-separated; none: its title and author"
                     onChange={ev => {
                         const keywords = ev.target.value;
                         onDraftChange(d => ({...d, keywords}), "keywords");
                     }}/></label>
-            {categories.length > 0 && <span className="panel-note">
-                In the game's tabs: {getCategoryTitles(draft.keywords, categories) || "Misc (it names none of them)"}</span>}
             <label>Source<input value={draft.source} placeholder="The page it came from" onChange={ev => {
                 const source = ev.target.value;
                 onDraftChange(d => ({...d, source}), "source");
@@ -87,7 +82,7 @@ export default function EntryForm(props: Props)
             }}>
                 {subfolders.map(subfolder => <option key={subfolder.name} value={subfolder.name}>{subfolder.title}</option>)}
             </select></label>}
-            <label title="Enabled: in the game for everyone. Staging: built and shipped like an enabled one, but offered only on the staging and dev servers, to be tried in the game first (tagged in red with its number there, and all listed by a search for staging). Disabled: kept, with its number, but left out of the built map; its image doesn't ship until it is enabled or staged again">
+            <label title="Enabled: in the game for everyone. Staging: built and shipped like an enabled one, but offered only on the staging and dev servers, to be tried in the game first (all listed there by a search for staging). Those servers tag every image with its number, red if staging and black if enabled. Disabled: kept, with its number, but left out of the built map; its image doesn't ship until it is enabled or staged again">
                 Status<select value={draft.disabled ? "disabled" : draft.staging ? "staging" : "enabled"} onChange={ev => {
                     const status = ev.target.value;
                     onDraftChange(d => ({...d, disabled: status == "disabled", staging: status == "staging"}));
@@ -133,8 +128,19 @@ export default function EntryForm(props: Props)
                             }}/></label>
                         <span className="panel-note">{recipe.output.numCols * props.cellWorldSize} x {recipe.output.numRows
                             * props.cellWorldSize} units, {recipe.output.numCols * props.cellSize} x {recipe.output.numRows
-                            * props.cellSize} px; the sample is fitted inside</span>
+                            * props.cellSize} px; the sample is {recipe.output.stretch ? "stretched to fill them"
+                            : "fitted inside"}</span>
                     </div>
+                    <label className="checkbox" title="Resizes the sample to fill its cells exactly, wider or taller than it is, instead of fitting it inside them at its own shape and leaving room beside it. With an extra margin, it fills what that leaves">
+                        <input type="checkbox" checked={recipe.output.stretch === true} onChange={ev => {
+                            const stretch = ev.target.checked;
+                            setRecipe(r => {
+                                if (!r.output.preserveScale)
+                                    return r;
+                                const {stretch: _, ...rest} = r.output;
+                                return {...r, output: stretch ? {...rest, stretch} : rest};
+                            });
+                        }}/>Stretch the sample to fill its cells</label>
                     <SliderRow label="Place across" min={0} max={100} step={1} unit="%" defaultValue={50}
                         value={Math.round((recipe.output.align?.[0] ?? 0.5) * 100)}
                         title="Where the sample sits across the room its cells leave beside it: 0 at the left, 100 at the right"
@@ -211,17 +217,6 @@ export default function EntryForm(props: Props)
             </div>
         </fieldset>
     </section>;
-}
-
-// The categories typed keywords name as such, as the game's tabs call them, and any marked word naming no tab (a slip
-// that would leave the image out of it); "" for none.
-function getCategoryTitles(keywords: string, categories: ImageMapCategory[]): string
-{
-    const marked = keywords.toLowerCase().split(/[\s,]+/).filter(word => word.endsWith(ImageMap.CATEGORY_MARK))
-        .map(word => word.slice(0, -ImageMap.CATEGORY_MARK.length));
-    const titles = categories.filter(category => marked.includes(category.name)).map(category => category.title);
-    const unknown = marked.filter(name => !categories.some(category => category.name == name));
-    return [...titles, ...unknown.map(name => `"${name}${ImageMap.CATEGORY_MARK}" is no tab`)].join(", ");
 }
 
 function toCells(worldSize: number, cellWorldSize: number): number
