@@ -143,6 +143,23 @@ const ImageChoiceUtil =
         return ImageMapSettingsUtil.fromImages([...imageMap.getImageMetadataList()].sort(compareOrder),
             categoryTabsBySubfolder);
     },
+    // getSettings the other way: offers the map as built with these settings, whatever was set before. A subfolder
+    // they leave out lists no categories; an image they leave out is under none, and comes before those they list.
+    applySettings: (imageMap: ImageMap, settings: ImageMapSettings): void =>
+    {
+        for (const subfolderName of imageMap.getSubfolderNames())
+            imageMap.setSubfolderCategories(subfolderName, settings.categoryTabsBySubfolder[subfolderName] ?? []);
+        const images = imageMap.getImageMetadataList();
+        for (const image of images)
+        {
+            // Only the categories its subfolder lists.
+            const listed = imageMap.getSubfolderCategories(ImageMap.getSubfolderName(image.path));
+            image.keywords = ImageMap.withCategories(image.keywords, ImageMapSettingsUtil.getCategories(settings, image.path)
+                .filter(name => listed.some(category => category.name == name)));
+        }
+        // The map's list is as built, so its places are handed out again from there.
+        ImageMapSettingsUtil.sort(images, settings).forEach((image, place) => image.order = place);
+    },
 }
 
 // Files every image of a subfolder that is under a category, offered or not, under another in its place, or takes

@@ -574,6 +574,9 @@ button, input, select { font: inherit; color: inherit; }
     min-width: 100%;
     min-height: 100%;
     width: max-content;
+    /* A handle far past the picture (a tilted area's corner) is cut off, not scrolled to: room for it would
+       resize the stage, and with it the picture. */
+    overflow: clip;
 }
 
 /* A source preprocessed into another (see PreprocessDialog): the source on a zoom stage, and what is asked of it

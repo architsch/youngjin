@@ -10,7 +10,7 @@ Admin is a user type that is granted manually in the database. Admins decide by 
 - Ordering the hubs, by setting each one's join priority (see [room_population.md](../networking/room_population.md)).
 - Saving a room to a file and loading one over it, in any room the admin is the superuser of (see [my_room.md](../networking/my_room.md#room-files)).
 - Ghost mode: the admin's own character, body and speech bubble alike, is drawn for nobody, the admin included. Only drawing is affected; the character still moves and collides as usual.
-- Setting how the image choosers offer pictures: rearranging a chooser's thumbnails, setting the categories each is filed under, and adding, renaming and deleting the categories themselves, by hand, and saving it all as the admin's settings file (see [image_map.md](../graphics/image_map.md#chooser-ui)).
+- Setting how the image choosers offer pictures: rearranging a chooser's thumbnails, setting the categories each is filed under, and adding, renaming and deleting the categories themselves, by hand, saving it all as the admin's settings file, and taking a saved file back to go on from (see [image_map.md](../graphics/image_map.md#chooser-ui)).
 
 In all other respects an admin edits like any user.
 
@@ -21,10 +21,10 @@ An object's admin-only settings live in its `AdminPrefs` metadata, one base-94 c
 - `RoomValidationUtil` answers both "is this user an admin" and "is this user the room's superuser". Door and label operations run the superuser check on the client and the server.
 - `AdminPrefs` is admin-only on any object, by its own rule in `ObjectMetadataEntryMap`; a player may change it only on their own character. A saved value is restored only if the user is still an admin, so a demotion also clears ghost mode.
 - Admin HTTP routes re-read the user type from the database on every request (`UserIdentificationUtil`), so the client's claims are never trusted.
-- Rearranging and filing pictures, and editing their categories, are checked on the client alone: they change nothing but that client's own choosers, and reach everyone only through a settings file built into the game.
+- Rearranging and filing pictures, editing their categories, and taking a settings file back are checked on the client alone: they change nothing but that client's own choosers, and reach everyone only through a settings file built into the game.
 
 ## Door semantics
 See [room_entrance.md](../geometry/room_entrance.md). A door's label is the name that the destination room looks up on arrival. A door with no destination, or one that points at its own room, is locked.
 
 ## UI
-There is no separate admin mode. In hubs, admins see the superuser's tools: adding a door or a label to a selected wall, selecting doors and labels in edit mode, and room settings. Only admins are offered a new hub in the door destination chooser. Ghost mode is switched with the `ghost on` and `ghost off` commands in the debug panel's command input, where `eaas` (export admin asset settings) saves the choosers' order and categories. Locally, a dev admin is available through `?devuser=` or `?sandboxadmin=` (see [local_dev.md](../devOps/local_dev.md)).
+There is no separate admin mode. In hubs, admins see the superuser's tools: adding a door or a label to a selected wall, selecting doors and labels in edit mode, and room settings. Only admins are offered a new hub in the door destination chooser. Ghost mode is switched with the `ghost on` and `ghost off` commands in the debug panel's command input, where `eaas` (export admin asset settings) saves the choosers' order and categories and `iaas` (import) takes a saved file back. Locally, a dev admin is available through `?devuser=` or `?sandboxadmin=` (see [local_dev.md](../devOps/local_dev.md)).

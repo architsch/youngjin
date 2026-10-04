@@ -15,8 +15,6 @@ const WEBP_QUALITY = 80;
 const ASSETS_ROOT_PATH = `${STATIC_PAGE_ROOT_DIR}/app/assets`;
 const MAPS_ROOT_PATH = `${SRC_ROOT_DIR}/shared/graphics/image/maps`;
 
-const IMAGE_INDEX_PATTERN = /^(0|[1-9]\d*)$/;
-
 export default class ImageMapBuilder
 {
     private readonly rootDirName: string;
@@ -165,74 +163,16 @@ export default class ImageMapBuilder
         return ImageMap.withCategories(words.filter(word => !categories.includes(word)).join(","), categories);
     }
 
-    // The map's own part of the admin's settings, if they hold one (see AdminAssetSettings). It may name images the
-    // map doesn't hold (disabled or deleted since), but nothing that is no category, image number or category
-    // name, and none twice.
+    // The map's own part of the admin's settings, if they hold one (see ImageMapSettingsUtil.parseFile).
     private async readSettings(): Promise<ImageMapSettings | undefined>
     {
         if (!FileUtil.exists(ADMIN_ASSET_SETTINGS_FILE_NAME, ASSETS_ROOT_PATH))
             return undefined;
-        const mapKey = ImageMapSettingsUtil.getMapKey(this.mapName);
-        const fail = (problem: string) =>
-            new Error(`Image map generation failed :: ${ADMIN_ASSET_SETTINGS_FILE_NAME} ${problem} (mapName = ${this.mapName})`);
-        const isRecord = (value: unknown): value is {[key: string]: unknown} =>
-            typeof value == "object" && value != null && !Array.isArray(value);
-
-        let file: unknown;
-        try
-        {
-            file = JSON.parse(await FileUtil.read(ADMIN_ASSET_SETTINGS_FILE_NAME, ASSETS_ROOT_PATH));
-        }
-        catch
-        {
-            throw fail("is not valid JSON");
-        }
-        if (!isRecord(file))
-            throw fail("holds no settings");
-        const settings = file[mapKey];
-        if (settings == undefined)
-            return undefined;
-        if (!isRecord(settings) || !isRecord(settings.categoryTabsBySubfolder))
-            throw fail(`holds no "categoryTabsBySubfolder" under "${mapKey}"`);
-        if (!isRecord(settings.orderedIndicesBySubfolder))
-            throw fail(`holds no "orderedIndicesBySubfolder" under "${mapKey}"`);
-        if (!isRecord(settings.categoriesBySubfolderAndIndex))
-            throw fail(`holds no "categoriesBySubfolderAndIndex" under "${mapKey}"`);
-
-        for (const [subfolderName, categories] of Object.entries(settings.categoryTabsBySubfolder))
-        {
-            if (!Array.isArray(categories) || !categories.every(category =>
-                isRecord(category) && typeof category.name == "string" && typeof category.title == "string"))
-                throw fail(`lists something other than categories, each a name and a title, under "${subfolderName}"`);
-            (categories as ImageMapCategory[]).forEach((category, place) => {
-                const problem = ImageMapSettingsUtil.getCategoryProblem(category, categories.slice(0, place));
-                if (problem != undefined)
-                    throw fail(`lists a category under "${subfolderName}" that can't be one: ${problem}`);
-            });
-        }
-        for (const [subfolderName, indices] of Object.entries(settings.orderedIndicesBySubfolder))
-        {
-            if (!Array.isArray(indices) || !indices.every(index => Number.isInteger(index) && index >= 0))
-                throw fail(`lists something other than image numbers under "${subfolderName}"`);
-            const repeated = indices.find((index, place) => indices.indexOf(index) != place);
-            if (repeated != undefined)
-                throw fail(`lists image ${repeated} twice under "${subfolderName}"`);
-        }
-        for (const [subfolderName, categoriesByIndex] of Object.entries(settings.categoriesBySubfolderAndIndex))
-        {
-            if (!isRecord(categoriesByIndex) || !Object.keys(categoriesByIndex).every(index => IMAGE_INDEX_PATTERN.test(index)))
-                throw fail(`files something other than image numbers under categories in "${subfolderName}"`);
-            for (const [index, categories] of Object.entries(categoriesByIndex))
-            {
-                if (!Array.isArray(categories)
-                    || !categories.every(category => typeof category == "string" && ImageMapSettingsUtil.isCategoryName(category)))
-                    throw fail(`files image ${index} of "${subfolderName}" under something other than category names`);
-                const repeated = categories.find((category, place) => categories.indexOf(category) != place);
-                if (repeated != undefined)
-                    throw fail(`files image ${index} of "${subfolderName}" under "${repeated}" twice`);
-            }
-        }
-        return settings as unknown as ImageMapSettings;
+        const {settings, problem} = ImageMapSettingsUtil.parseFile(
+            await FileUtil.read(ADMIN_ASSET_SETTINGS_FILE_NAME, ASSETS_ROOT_PATH), ImageMapSettingsUtil.getMapKey(this.mapName));
+        if (problem != undefined)
+            throw new Error(`Image map generation failed :: ${ADMIN_ASSET_SETTINGS_FILE_NAME} ${problem} (mapName = ${this.mapName})`);
+        return settings;
     }
 
     // The file the game loads for an image: its own, or the augmented copy of it (see

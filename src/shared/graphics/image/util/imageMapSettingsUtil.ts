@@ -3,8 +3,12 @@ import ImageMapCategory from "../types/imageMapCategory";
 import ImageMapSettings from "../types/imageMapSettings";
 import AdminAssetSettings from "../../../system/types/adminAssetSettings";
 
+// The number an image's path ends in, as the settings name it.
+const IMAGE_INDEX_PATTERN = /^(0|[1-9]\d*)$/;
+
 // An image map's admin settings both ways (see ImageMapSettings): applied to its images as the map is built, and
-// written from the images as a chooser offers them. What may be a category is one rule for the build and the game.
+// written from the images as a chooser offers them. What may be a category, and what a settings file may hold, is
+// one rule for the build and the game.
 const ImageMapSettingsUtil =
 {
     // What a map's settings go by in the settings file: the name of its module.
@@ -90,7 +94,7 @@ const ImageMapSettingsUtil =
         {
             const subfolderName = ImageMap.getSubfolderName(image.path);
             const index = toIndex(subfolderName, image.path);
-            if (!/^(0|[1-9]\d*)$/.test(index))
+            if (!IMAGE_INDEX_PATTERN.test(index))
                 continue;
             (settings.orderedIndicesBySubfolder[subfolderName] ??= []).push(Number(index));
             (settings.categoriesBySubfolderAndIndex[subfolderName] ??= {})[index] = ImageMap.getCategories(image.keywords);
@@ -129,6 +133,81 @@ const ImageMapSettingsUtil =
         });
         return `{\n${sections.join(",\n")}\n}\n`;
     },
+    // A map's own part of a settings file, from the file's text: its settings, neither if the file holds no part for
+    // it, or the problem that keeps the file from being used, worded to follow the file's name. A part may name
+    // images the map doesn't hold (disabled or deleted since), but nothing that is no category, image number or
+    // category name, and none twice.
+    parseFile: (text: string, mapKey: string): {settings?: ImageMapSettings, problem?: string} =>
+    {
+        let file: unknown;
+        try
+        {
+            file = JSON.parse(text);
+        }
+        catch
+        {
+            return {problem: "is not valid JSON"};
+        }
+        if (!isRecord(file))
+            return {problem: "holds no settings"};
+        const settings = file[mapKey];
+        if (settings == undefined)
+            return {};
+        const problem = getSettingsProblem(settings, mapKey);
+        return (problem != undefined) ? {problem} : {settings: settings as ImageMapSettings};
+    },
+}
+
+function isRecord(value: unknown): value is {[key: string]: unknown}
+{
+    return typeof value == "object" && value != null && !Array.isArray(value);
+}
+
+// Why a settings file's part for a map can't be that map's settings (see parseFile), or nothing if it can.
+function getSettingsProblem(settings: unknown, mapKey: string): string | undefined
+{
+    if (!isRecord(settings) || !isRecord(settings.categoryTabsBySubfolder))
+        return `holds no "categoryTabsBySubfolder" under "${mapKey}"`;
+    if (!isRecord(settings.orderedIndicesBySubfolder))
+        return `holds no "orderedIndicesBySubfolder" under "${mapKey}"`;
+    if (!isRecord(settings.categoriesBySubfolderAndIndex))
+        return `holds no "categoriesBySubfolderAndIndex" under "${mapKey}"`;
+
+    for (const [subfolderName, categories] of Object.entries(settings.categoryTabsBySubfolder))
+    {
+        if (!Array.isArray(categories) || !categories.every(category =>
+            isRecord(category) && typeof category.name == "string" && typeof category.title == "string"))
+            return `lists something other than categories, each a name and a title, under "${subfolderName}"`;
+        for (let place = 0; place < categories.length; ++place)
+        {
+            const problem = ImageMapSettingsUtil.getCategoryProblem(categories[place], categories.slice(0, place));
+            if (problem != undefined)
+                return `lists a category under "${subfolderName}" that can't be one: ${problem}`;
+        }
+    }
+    for (const [subfolderName, indices] of Object.entries(settings.orderedIndicesBySubfolder))
+    {
+        if (!Array.isArray(indices) || !indices.every(index => Number.isInteger(index) && index >= 0))
+            return `lists something other than image numbers under "${subfolderName}"`;
+        const repeated = indices.find((index, place) => indices.indexOf(index) != place);
+        if (repeated != undefined)
+            return `lists image ${repeated} twice under "${subfolderName}"`;
+    }
+    for (const [subfolderName, categoriesByIndex] of Object.entries(settings.categoriesBySubfolderAndIndex))
+    {
+        if (!isRecord(categoriesByIndex) || !Object.keys(categoriesByIndex).every(index => IMAGE_INDEX_PATTERN.test(index)))
+            return `files something other than image numbers under categories in "${subfolderName}"`;
+        for (const [index, categories] of Object.entries(categoriesByIndex))
+        {
+            if (!Array.isArray(categories)
+                || !categories.every(category => typeof category == "string" && ImageMapSettingsUtil.isCategoryName(category)))
+                return `files image ${index} of "${subfolderName}" under something other than category names`;
+            const repeated = categories.find((category, place) => categories.indexOf(category) != place);
+            if (repeated != undefined)
+                return `files image ${index} of "${subfolderName}" under "${repeated}" twice`;
+        }
+    }
+    return undefined;
 }
 
 function toPath(subfolderName: string, index: string): string

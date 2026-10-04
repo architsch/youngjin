@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import App from "../../../../app";
 import ClientObjectManager from "../../../../object/clientObjectManager";
-import { notificationMessageObservable, voxelQuadSelectionObservable } from "../../../../system/clientObservables";
+import { imageMapSettingsAppliedObservable, notificationMessageObservable, voxelQuadSelectionObservable } from "../../../../system/clientObservables";
 import { colliderDebugEnabledObservable, dummyImagesDebugEnabledObservable, roomListDebugEnabledObservable } from "../../../../../shared/system/sharedObservables";
 import VoxelQueryUtil from "../../../../../shared/voxel/util/voxelQueryUtil";
 import Button from "../../input/button";
@@ -125,6 +125,7 @@ export default function DebugStats({env}: Props)
                         case "ghost on": setGhostMode(true); break;
                         case "ghost off": setGhostMode(false); break;
                         case "eaas": void exportAdminAssetSettings(); break;
+                        case "iaas": void importAdminAssetSettings(); break;
                         default:
                             notificationMessageObservable.set(
                                 ParticleDebugUtil.tryRunCommand(command) ?? "Unknown debug command.");
@@ -210,7 +211,7 @@ async function exportAdminAssetSettings(): Promise<void>
         return;
     }
 
-    const mapName = "PictureImageMap";
+    const mapName = ADMIN_SET_IMAGE_MAP_NAME;
     const settings: AdminAssetSettings = {
         [ImageMapSettingsUtil.getMapKey(mapName)]: ImageChoiceUtil.getSettings(ImageMapUtil.getImageMap(mapName))};
     const bytes = new TextEncoder().encode(ImageMapSettingsUtil.serializeFile(settings));
@@ -225,6 +226,46 @@ async function exportAdminAssetSettings(): Promise<void>
         notificationMessageObservable.set("Failed to save the admin asset settings.");
     }
 }
+
+// "iaas" debug command (import admin asset settings), "eaas" the other way. Admin-only: takes a settings file saved
+// earlier and offers the picture map by it, on this client until the page is left, so work on the settings is picked
+// up where it was last saved. A file that can't be used (see ImageMapSettingsUtil.parseFile) changes nothing.
+async function importAdminAssetSettings(): Promise<void>
+{
+    if (!RoomValidationUtil.userIsAdmin(App.getUser()))
+    {
+        notificationMessageObservable.set("Only an admin can import the admin asset settings.");
+        return;
+    }
+
+    const file = await LocalFileUtil.pick(".json");
+    if (!file)
+        return;
+    const mapName = ADMIN_SET_IMAGE_MAP_NAME;
+    const mapKey = ImageMapSettingsUtil.getMapKey(mapName);
+    try
+    {
+        const {settings, problem} = ImageMapSettingsUtil.parseFile(await file.text(), mapKey);
+        if (settings == undefined)
+        {
+            // A category's problem ends the sentence itself.
+            const refusal = `${file.name} ${problem ?? `holds nothing under "${mapKey}"`}`;
+            notificationMessageObservable.set(refusal.endsWith(".") ? refusal : `${refusal}.`);
+            return;
+        }
+        ImageChoiceUtil.applySettings(ImageMapUtil.getImageMap(mapName), settings);
+        imageMapSettingsAppliedObservable.set(mapName);
+        notificationMessageObservable.set("Admin asset settings loaded!");
+    }
+    catch (err)
+    {
+        console.error("Failed to load the admin asset settings from a file.", err);
+        notificationMessageObservable.set("Failed to load the admin asset settings.");
+    }
+}
+
+// The image map whose settings an admin sets in the game: the one "eaas" saves and "iaas" takes back.
+const ADMIN_SET_IMAGE_MAP_NAME = "PictureImageMap";
 
 const className = "flex flex-col justify-start absolute left-0 top-0 max-w-full max-h-1/5";
 

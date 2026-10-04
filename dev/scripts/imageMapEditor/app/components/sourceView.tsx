@@ -11,15 +11,17 @@ const MIN_RETOUCH_SIZE = 0.004;
 
 type Drag =
     | {kind: "corner", index: number, id: number}
-    | {kind: "move", start: [number, number], corners: [number, number][], id: number}
+    // As it began: the quad's corners, and what was shown of it, which the source bounds.
+    | {kind: "move", start: [number, number], corners: [number, number][], shown: [number, number][], id: number}
     | {kind: "retouch", start: [number, number]};
 
 let nextDragId = 0;
 
 // The source photo on a zoom stage (see useZoomStage), with the quad sampled from it (dragged by its corners, or
-// moved whole from inside; outlined again where a tilt turns what it takes) and the rects painted over before
-// sampling (drawn in "Retouch"). A drag from outside the quad pans. Zoomed in, the photo itself is drawn over its
-// small copy, which has no more detail to show.
+// moved whole from inside) and the rects painted over before sampling (drawn in "Retouch"). Kept a rectangle, the
+// quad is shown and shaped as what it takes, turned by its tilt; otherwise as its own corners, outlined again where
+// a tilt turns what it takes. A drag from outside it pans. Zoomed in, the photo itself is drawn over its small
+// copy, which has no more detail to show.
 export default function SourceView({ source, recipe, keepRectangle, viewSwitch, onChange, onChangeSource }: Props)
 {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -50,6 +52,10 @@ export default function SourceView({ source, recipe, keepRectangle, viewSwitch, 
         return [clamp01((ev.clientX - rect.left) / rect.width), clamp01((ev.clientY - rect.top) / rect.height)];
     };
 
+    // What the sample takes, and what the quad is shown and shaped as: that, if kept a rectangle, or its own corners.
+    const sampled = SampleRenderUtil.getSampledOutline(source.width, source.height, recipe);
+    const shown = keepRectangle ? sampled : recipe.corners;
+
     // A press it doesn't take (another button, with Space held, or outside the quad) is the stage's, which pans.
     const onPointerDown = (ev: React.PointerEvent) => {
         if (ev.button != 0 || stage.spaceHeld)
@@ -60,8 +66,8 @@ export default function SourceView({ source, recipe, keepRectangle, viewSwitch, 
             dragRef.current = {kind: "corner", index: Number(cornerIndex), id: nextDragId++};
         else if (mode == "retouch")
             dragRef.current = {kind: "retouch", start: point};
-        else if (isInsidePolygon(recipe.corners, point))
-            dragRef.current = {kind: "move", start: point, corners: recipe.corners, id: nextDragId++};
+        else if (isInsidePolygon(shown, point))
+            dragRef.current = {kind: "move", start: point, corners: recipe.corners, shown, id: nextDragId++};
         else
             return;
         ev.stopPropagation();
@@ -75,15 +81,17 @@ export default function SourceView({ source, recipe, keepRectangle, viewSwitch, 
         const [x, y] = toFraction(ev);
         if (drag.kind == "corner")
         {
-            onChange(r => ({...r, corners: moveCorner(r.corners, drag.index, x, y, keepRectangle)}), `drag-${drag.id}`);
+            onChange(r => ({...r, corners: keepRectangle
+                ? SampleRenderUtil.moveOutlineCorner(source.width, source.height, r, drag.index, [x, y])
+                : r.corners.map((corner, i) => (i == drag.index) ? [x, y] : corner)}), `drag-${drag.id}`);
         }
         else if (drag.kind == "move")
         {
-            // As far as keeps every corner on the source.
-            const xs = drag.corners.map(c => c[0]);
-            const ys = drag.corners.map(c => c[1]);
-            const dx = Math.min(1 - Math.max(...xs), Math.max(-Math.min(...xs), x - drag.start[0]));
-            const dy = Math.min(1 - Math.max(...ys), Math.max(-Math.min(...ys), y - drag.start[1]));
+            // As far as keeps it on the source, or no further off it than a tilt already takes it.
+            const xs = drag.shown.map(c => c[0]);
+            const ys = drag.shown.map(c => c[1]);
+            const dx = clamp(x - drag.start[0], Math.min(0, -Math.min(...xs)), Math.max(0, 1 - Math.max(...xs)));
+            const dy = clamp(y - drag.start[1], Math.min(0, -Math.min(...ys)), Math.max(0, 1 - Math.max(...ys)));
             onChange(r => ({...r, corners: drag.corners.map(([cx, cy]) => [cx + dx, cy + dy])}), `drag-${drag.id}`);
         }
         else
@@ -104,9 +112,7 @@ export default function SourceView({ source, recipe, keepRectangle, viewSwitch, 
         setDrawnRect(null);
     };
 
-    const quadPoints = recipe.corners.map(([x, y]) => `${x},${y}`).join(" ");
-    const sampledPoints = recipe.rotation ? SampleRenderUtil.getSampledOutline(source.width, source.height, recipe)
-        .map(([x, y]) => `${x},${y}`).join(" ") : undefined;
+    const toPoints = (corners: [number, number][]) => corners.map(([x, y]) => `${x},${y}`).join(" ");
     return <section className="source-view">
         <div className="panel-toolbar">
             {viewSwitch}
@@ -133,8 +139,9 @@ export default function SourceView({ source, recipe, keepRectangle, viewSwitch, 
                         onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}
                         onPointerCancel={onPointerUp}>
                         <svg viewBox="0 0 1 1" preserveAspectRatio="none">
-                            <polygon points={quadPoints} className="quad"/>
-                            {sampledPoints != undefined && <polygon points={sampledPoints} className="sampled-outline"/>}
+                            <polygon points={toPoints(shown)} className="quad"/>
+                            {!keepRectangle && !!recipe.rotation
+                                && <polygon points={toPoints(sampled)} className="sampled-outline"/>}
                         </svg>
                         {recipe.retouches.map((rect, i) => <div key={i} className="retouch-rect" style={toStyle(rect)}>
                             <button type="button" className="retouch-remove" title="Remove this retouch"
@@ -142,7 +149,7 @@ export default function SourceView({ source, recipe, keepRectangle, viewSwitch, 
                                 onClick={() => onChange(r => ({...r, retouches: r.retouches.filter((_, j) => j != i)}))}>×</button>
                         </div>)}
                         {drawnRect != null && <div className="retouch-rect drawing" style={toStyle(drawnRect)}/>}
-                        {recipe.corners.map(([x, y], i) => <div key={i} data-corner={i} className="corner-handle"
+                        {shown.map(([x, y], i) => <div key={i} data-corner={i} className="corner-handle"
                             style={{left: `${x * 100}%`, top: `${y * 100}%`}}/>)}
                     </div>
                 </div>
@@ -151,23 +158,6 @@ export default function SourceView({ source, recipe, keepRectangle, viewSwitch, 
         <div className="panel-hint">Wheel to zoom. Drag with the middle button, or hold Space, to pan
             (or just drag from outside the sampled area).</div>
     </section>;
-}
-
-// A rectangle stays one: the corners beside the moved one follow it.
-function moveCorner(corners: [number, number][], index: number, x: number, y: number,
-    keepRectangle: boolean): [number, number][]
-{
-    const moved = corners.map(corner => [...corner] as [number, number]);
-    moved[index] = [x, y];
-    if (keepRectangle)
-    {
-        // Corners go clockwise from the top-left, so the one after shares y on the top and bottom edges.
-        const sharesY = (index % 2 == 0) ? (index + 1) % 4 : (index + 3) % 4;
-        const sharesX = (index % 2 == 0) ? (index + 3) % 4 : (index + 1) % 4;
-        moved[sharesY][1] = y;
-        moved[sharesX][0] = x;
-    }
-    return moved;
 }
 
 function isInsidePolygon(points: [number, number][], [x, y]: [number, number]): boolean
@@ -190,7 +180,12 @@ function toStyle([x, y, width, height]: [number, number, number, number]): React
 
 function clamp01(value: number): number
 {
-    return Math.min(1, Math.max(0, value));
+    return clamp(value, 0, 1);
+}
+
+function clamp(value: number, min: number, max: number): number
+{
+    return Math.min(max, Math.max(min, value));
 }
 
 interface Props

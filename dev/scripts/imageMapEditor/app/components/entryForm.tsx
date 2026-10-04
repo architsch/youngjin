@@ -10,7 +10,7 @@ import SliderRow from "./sliderRow";
 
 // The long side, in pixels, of an image fitted to its canvas.
 export const DEFAULT_LONG_SIDE = 800;
-const MAX_TILT = 15; // in degrees, either way
+const MAX_TILT = 180; // in degrees, either way: half a turn, so any way up
 
 // The sizes everyday objects are made at, in world units: a block's face, or half of one either way.
 const SIZE_PRESETS: {label: string, width: number, height: number}[] = [
@@ -171,7 +171,7 @@ export default function EntryForm(props: Props)
                 onChange={ev => props.setKeepRectangle(ev.target.checked)}/>Keep it a rectangle (off: straighten a
                 face seen at an angle)</label>
             <SliderRow label="Tilt" min={-MAX_TILT} max={MAX_TILT} step={0.1} value={recipe.rotation ?? 0} unit="°"
-                defaultValue={0} title="Turn the picture clockwise within the quad, to straighten a tilted photo"
+                defaultValue={0} title="Turn the picture clockwise, by up to half a turn either way: to straighten a tilted photo, or to stand up a thing that lies on its side or upside down. The area sampled turns the other way on the source, about its middle"
                 onChange={rotation => setRecipe(r => ({...r, rotation: rotation || undefined}), "rotation")}/>
             <div className="row">
                 <button type="button" className="button small" onClick={() =>

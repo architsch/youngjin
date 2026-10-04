@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import App from "../../../app";
 import ImageMap from "../../../../shared/graphics/image/types/imageMap";
 import ImageMapUtil from "../../../../shared/graphics/image/util/imageMapUtil";
@@ -7,7 +7,7 @@ import ImageChoiceUtil from "../../util/imageChoiceUtil";
 import PopupUtil from "../../util/popupUtil";
 import { IMAGE_CATEGORY_EDIT_ENABLED, IMAGE_CATEGORY_TAB_EDIT_ENABLED, IMAGE_CATEGORY_TABS_ENABLED,
     IMAGE_THUMBNAIL_REORDER_ENABLED } from "../../../system/clientConstants";
-import { notificationMessageObservable } from "../../../system/clientObservables";
+import { imageMapSettingsAppliedObservable, notificationMessageObservable } from "../../../system/clientObservables";
 import { dummyImagesDebugEnabledObservable } from "../../../../shared/system/sharedObservables";
 import RoomValidationUtil from "../../../../shared/room/util/roomValidationUtil";
 import TabBar from "../basic/tabBar";
@@ -27,8 +27,8 @@ import ThumbnailPanel from "./thumbnailPanel";
 // was left on. Off the live server it offers staging images too, and tags every image with its number, red for a
 // staging one and black for an enabled one. An admin can rearrange the row by hand, set the categories of an image
 // picked up (see ImageCategoryBar), and add, delete and rename the categories themselves with the buttons beside
-// their tabs, for every chooser of the map until the page is left (the "eaas" debug command saves it all to keep;
-// see DebugStats).
+// their tabs, for every chooser of the map until the page is left (the "eaas" debug command saves it all to keep,
+// and "iaas" takes a saved one back; see DebugStats).
 export default function ImageMapThumbnailPanel({ id, searchInputId, searchPlaceholder, mapName, subfolder,
     currentPath, canChoose, onChoose, onClose }: Props)
 {
@@ -55,6 +55,18 @@ export default function ImageMapThumbnailPanel({ id, searchInputId, searchPlaceh
         setKeptPaths([]);
         setNaming(null);
     };
+
+    // The map's settings set whole while the panel is open: an edit like its own, narrowing the row anew.
+    const listenerKey = `ui.imageMapThumbnailPanel.${useId()}`;
+    useEffect(() => {
+        imageMapSettingsAppliedObservable.addListener(listenerKey, appliedMapName => {
+            if (appliedMapName != mapName)
+                return;
+            narrowAnew();
+            setNumEdits(count => count + 1);
+        });
+        return () => imageMapSettingsAppliedObservable.removeListener(listenerKey);
+    }, [mapName]);
 
     const categories = imageMap.getSubfolderCategories(subfolder);
     // The dummy images stand in for the map's, and have neither an order nor categories of their own.

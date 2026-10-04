@@ -12,6 +12,8 @@ export const MAX_SAMPLE_SIDE = 2048; // in pixels
 export const MAX_SOURCE_SIDE = 4096; // in pixels
 // The most of a game image's width or height its margin may keep clear (see RecipeOutput.margin).
 export const MAX_MARGIN = 0.9;
+// A quad reshaped by hand as a rectangle keeps at least this, in the source's pixels, across and down.
+const MIN_QUAD_SIDE = 1;
 
 // Where a sample goes in its game image (see getGameImageLayout).
 type GameImageLayout = {width: number, height: number, content: {x: number, y: number, width: number, height: number}};
@@ -31,11 +33,9 @@ const SampleRenderUtil =
     getSampleSize: (sourceWidth: number, sourceHeight: number, recipe: ImageRecipe,
         maxSide: number = MAX_SAMPLE_SIDE): {width: number, height: number} =>
     {
-        const [c0, c1, c2, c3] = toPixels(recipe.corners, sourceWidth, sourceHeight);
-        const quadWidth = Math.max(1, 0.5 * (distance(c0, c1) + distance(c3, c2)));
-        const quadHeight = Math.max(1, 0.5 * (distance(c0, c3) + distance(c1, c2)));
-        const scale = Math.min(1, maxSide / Math.max(quadWidth, quadHeight));
-        return {width: Math.max(1, Math.round(quadWidth * scale)), height: Math.max(1, Math.round(quadHeight * scale))};
+        const quad = getQuadSize(toPixels(recipe.corners, sourceWidth, sourceHeight));
+        const scale = Math.min(1, maxSide / Math.max(quad.width, quad.height));
+        return {width: Math.max(1, Math.round(quad.width * scale)), height: Math.max(1, Math.round(quad.height * scale))};
     },
 
     // The source may be at any resolution, since the recipe's positions are fractions of it; maxSide lower than
@@ -76,17 +76,46 @@ const SampleRenderUtil =
     },
 
     // Where the region the sample was taken from lies on the source, as fractions of it: the quad itself, or the
-    // part of the source a turned picture shows.
+    // part of the source a turned picture shows, its corners in the sample's order (top-left first).
     getSampledOutline: (sourceWidth: number, sourceHeight: number, recipe: ImageRecipe): [number, number][] =>
     {
         if (!recipe.rotation)
             return recipe.corners;
         const corners = toPixels(recipe.corners, sourceWidth, sourceHeight);
-        const {width, height} = SampleRenderUtil.getSampleSize(sourceWidth, sourceHeight, recipe, Infinity);
+        // At the quad's own size, not a sample's whole pixels, so a rectangle's outline is that rectangle turned.
+        const {width, height} = getQuadSize(corners);
         return [[0, 0], [width, 0], [width, height], [0, height]].map(([x, y]) => {
             const [sx, sy] = ImageProcessingUtil.mapSampleToSource(corners, width, height, recipe.rotation!, x, y);
             return [sx / sourceWidth, sy / sourceHeight];
         });
+    },
+
+    // A rectangle reshaped by what it takes: its quad once the corner of that index of its sampled outline (see
+    // getSampledOutline) is dragged to a point (fractions of the source), the one across from it staying where it
+    // is. It keeps its tilt and which way round it lies, so a corner stops short of the sides across from it.
+    moveOutlineCorner: (sourceWidth: number, sourceHeight: number, recipe: ImageRecipe, index: number,
+        point: [number, number]): [number, number][] =>
+    {
+        const radians = (recipe.rotation ?? 0) * Math.PI / 180;
+        const cos = Math.cos(radians), sin = Math.sin(radians);
+        const [c0, c1, , c3] = recipe.corners;
+        // Which way the quad's own axes run on the source: mirrored, it turns the other way.
+        const signX = (c1[0] < c0[0]) ? -1 : 1, signY = (c3[1] < c0[1]) ? -1 : 1;
+        // Where the corner lies in the sample from the one across: right of it or left, below it or above.
+        const sideX = (index == 1 || index == 2) ? 1 : -1, sideY = (index >= 2) ? 1 : -1;
+        const across = SampleRenderUtil.getSampledOutline(sourceWidth, sourceHeight, recipe)[(index + 2) % 4];
+
+        // The diagonal between the two, turned back into the sample's axes.
+        const dx = signX * (point[0] - across[0]) * sourceWidth, dy = signY * (point[1] - across[1]) * sourceHeight;
+        const width = Math.max(MIN_QUAD_SIDE, sideX * (dx * cos - dy * sin));
+        const height = Math.max(MIN_QUAD_SIDE, sideY * (dx * sin + dy * cos));
+        // Half of it from the corner across, turned onto the source again, is the middle.
+        const a = 0.5 * sideX * width, b = 0.5 * sideY * height;
+        const middleX = across[0] * sourceWidth + signX * (a * cos + b * sin);
+        const middleY = across[1] * sourceHeight + signY * (b * cos - a * sin);
+        const halfX = 0.5 * signX * width, halfY = 0.5 * signY * height;
+        return [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([x, y]) =>
+            [(middleX + x * halfX) / sourceWidth, (middleY + y * halfY) / sourceHeight]);
     },
 
     // An image that keeps its scale is its cells at cellSize each, with the whole sample fitted inside what its
@@ -138,6 +167,13 @@ const SampleRenderUtil =
 function toPixels(points: [number, number][], width: number, height: number): [number, number][]
 {
     return points.map(([x, y]) => [x * width, y * height]);
+}
+
+// A quad's own width and height (corners in pixels): the mean of its opposite sides, a pixel at least.
+function getQuadSize([c0, c1, c2, c3]: [number, number][]): {width: number, height: number}
+{
+    return {width: Math.max(1, 0.5 * (distance(c0, c1) + distance(c3, c2))),
+        height: Math.max(1, 0.5 * (distance(c0, c3) + distance(c1, c2)))};
 }
 
 function distance(a: [number, number], b: [number, number]): number

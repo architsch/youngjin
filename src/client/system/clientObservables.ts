@@ -150,6 +150,10 @@ export const orbitCameraDistanceRangeRequestObservable =
 // This observable notifies its listeners whenever ChatTextInput's input text changes.
 export const chatTextInputObservable = new Observable<string>("");
 
+// Fires with an image map's name when its admin settings are set whole (see DebugStats' "iaas"), for a chooser open
+// at the time to show them.
+export const imageMapSettingsAppliedObservable = new Observable<string>("");
+
 // User State Observables
 
 // Current texture pack URL. "" = none applied yet, so the first real URL registers as a change.

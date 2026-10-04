@@ -1,6 +1,7 @@
 /**
  * The image map editor's processing core (dev/scripts/imageMapEditor/core): sampling a quad of a source
- * (straightened, at its own shape, turned to undo a tilt), the game image fitted into its cells with margins
+ * (straightened, at its own shape, turned by a tilt of up to half a turn), a rectangle reshaped by the corners of
+ * what it takes, tilted or not, the game image fitted into its cells with margins
  * (placed as aligned, smaller for a margin kept clear) or stretched to fill them, taking a background out (from the
  * border, following its shading, or clicked seeds, keeping the largest piece), erasing by hand (brush strokes and a
  * clicked color's patch), cutting to selections (rectangles, rounded or not, or ellipses, turned or not, together
@@ -19,6 +20,7 @@
  * it under.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import fc from "fast-check";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -118,6 +120,89 @@ describe("sampling a source", () => {
         const outline = SampleRenderUtil.getSampledOutline(100, 100, recipe({rotation: 45}));
         expect(Math.min(...outline.map(([u]) => u))).toBeLessThan(0);
         expect(SampleRenderUtil.getSampledOutline(100, 100, recipe({}))).toEqual(recipe({}).corners);
+    });
+
+    it("turns it as far as half a turn, either way, which stands the picture on its head", () => {
+        for (const rotation of [180, -180])
+        {
+            const sample = SampleRenderUtil.renderSample(quadrants, recipe({rotation}), 20);
+            expect(pixel(sample, 2, 2)).toEqual([255, 255, 0, 255]);
+            expect(pixel(sample, 17, 2)).toEqual([0, 0, 255, 255]);
+            expect(pixel(sample, 17, 17)).toEqual([255, 0, 0, 255]);
+            expect(pixel(sample, 2, 17)).toEqual([0, 255, 0, 255]);
+        }
+    });
+
+    it("takes, tilted, the quad's own rectangle turned the other way about its middle, measured in the source's pixels", () => {
+        // 60 px by 20 px about the middle of a source twice as wide as it is tall, turned a quarter: the sample
+        // keeps that shape, and takes the 20 px by 60 px there, its top-left corner from the bottom-left.
+        const turned = recipe({corners: [[0.35, 0.4], [0.65, 0.4], [0.65, 0.6], [0.35, 0.6]], rotation: 90});
+        expect(SampleRenderUtil.getSampleSize(200, 100, turned)).toEqual({width: 60, height: 20});
+        const outline = SampleRenderUtil.getSampledOutline(200, 100, turned);
+        [[0.45, 0.8], [0.45, 0.2], [0.55, 0.2], [0.55, 0.8]].forEach(([u, v], i) => {
+            expect(outline[i][0]).toBeCloseTo(u, 9);
+            expect(outline[i][1]).toBeCloseTo(v, 9);
+        });
+    });
+});
+
+describe("reshaping a sampled rectangle by hand", () => {
+    // Twice as wide as it is tall, so a turn measured in anything but pixels would show.
+    const WIDTH = 400, HEIGHT = 200;
+    const outlineOf = (shaped: ImageRecipe) => SampleRenderUtil.getSampledOutline(WIDTH, HEIGHT, shaped);
+    const drag = (shaped: ImageRecipe, index: number, point: [number, number]): ImageRecipe =>
+        ({...shaped, corners: SampleRenderUtil.moveOutlineCorner(WIDTH, HEIGHT, shaped, index, point)});
+    const expectCorners = (corners: [number, number][], expected: number[][]) => expected.forEach(([u, v], i) => {
+        expect(corners[i][0]).toBeCloseTo(u, 9);
+        expect(corners[i][1]).toBeCloseTo(v, 9);
+    });
+
+    it("takes a dragged corner to the pointer and the two beside it along, holding the one across", () => {
+        const untilted = recipe({corners: [[0.2, 0.2], [0.6, 0.2], [0.6, 0.7], [0.2, 0.7]]});
+        expectCorners(drag(untilted, 0, [0.1, 0.3]).corners, [[0.1, 0.3], [0.6, 0.3], [0.6, 0.7], [0.1, 0.7]]);
+        expectCorners(drag(untilted, 2, [0.9, 0.5]).corners, [[0.2, 0.2], [0.9, 0.2], [0.9, 0.5], [0.2, 0.5]]);
+    });
+
+    it("shapes a tilted one by the corners of what it takes, along its own turned sides", () => {
+        // 100 px by 60 px about (200, 100), turned a quarter: it takes 60 px by 100 px, the sample's top-right corner
+        // from that area's top-left. Dragged up and left, the area grows to 80 px by 120 px, its bottom-right held.
+        const turned = recipe({corners: [[0.375, 0.35], [0.625, 0.35], [0.625, 0.65], [0.375, 0.65]], rotation: 90});
+        expectCorners(outlineOf(turned), [[0.425, 0.75], [0.425, 0.25], [0.575, 0.25], [0.575, 0.75]]);
+        const reshaped = drag(turned, 1, [0.375, 0.15]);
+        expectCorners(outlineOf(reshaped), [[0.375, 0.75], [0.375, 0.15], [0.575, 0.15], [0.575, 0.75]]);
+        // The quad itself is the sample's shape, 120 px by 80 px, about the area's new middle.
+        expectCorners(reshaped.corners, [[0.325, 0.25], [0.625, 0.25], [0.625, 0.65], [0.325, 0.65]]);
+        expect(SampleRenderUtil.getSampleSize(WIDTH, HEIGHT, reshaped)).toEqual({width: 120, height: 80});
+    });
+
+    it("stops a corner a pixel short of the sides across from it, rather than turn the rectangle inside out", () => {
+        const turned = recipe({corners: [[0.375, 0.35], [0.625, 0.35], [0.625, 0.65], [0.375, 0.65]], rotation: 90});
+        const collapsed = drag(turned, 1, [0.9, 0.95]);
+        expect(SampleRenderUtil.getSampleSize(WIDTH, HEIGHT, collapsed)).toEqual({width: 1, height: 1});
+        expectCorners([outlineOf(collapsed)[3]], [outlineOf(turned)[3]]);
+    });
+
+    it("keeps to that whatever the tilt, the corner and the way round the rectangle lies", () => {
+        const fraction = fc.double({min: 0, max: 1, noNaN: true});
+        fc.assert(fc.property(fc.double({min: -180, max: 180, noNaN: true}), fc.nat(3), fraction, fraction,
+            fc.boolean(), fc.boolean(), (rotation, index, x, y, mirrored, upsideDown) => {
+            const [left, right] = mirrored ? [0.7, 0.3] : [0.3, 0.7];
+            const [top, bottom] = upsideDown ? [0.8, 0.4] : [0.4, 0.8];
+            const before = recipe({corners: [[left, top], [right, top], [right, bottom], [left, bottom]], rotation});
+            const after = drag(before, index, [x, y]);
+
+            // Still a rectangle along the source's axes, lying the same way round.
+            const [c0, c1, c2, c3] = after.corners;
+            expectCorners([[c1[0], c1[1]], [c3[0], c3[1]]], [[c2[0], c0[1]], [c0[0], c2[1]]]);
+            expect(c1[0] < c0[0]).toBe(mirrored);
+            expect(c3[1] < c0[1]).toBe(upsideDown);
+            const across = (index + 2) % 4;
+            expectCorners([outlineOf(after)[across]], [outlineOf(before)[across]]);
+            // At the pointer, unless that lies past a side across from it.
+            const stopped = Math.abs(c1[0] - c0[0]) * WIDTH < 1 + 1e-6 || Math.abs(c3[1] - c0[1]) * HEIGHT < 1 + 1e-6;
+            if (!stopped)
+                expectCorners([outlineOf(after)[index]], [[x, y]]);
+        }));
     });
 });
 

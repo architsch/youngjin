@@ -15,7 +15,7 @@
  * in the row shown, every other left where it was among the rest), filing of an image under other categories
  * (kept in the row it was picked up in, with the tab it left) and adding, renaming and deleting of a category (one
  * that can't be a category refused, the images filed under it following), all written back as the settings file
- * holds them, and the category tabs (an image under each category it names, Misc for none, opening on the current
+ * holds them, a saved file's settings read and taken back as a build with them would give, and the category tabs (an image under each category it names, Misc for none, opening on the current
  * image's first, those holding nothing shown only to one who can edit them); which images a canvas and a prop accept (when set, and when added with one), what else a user may write
  * to a prop, a prop's lack of a frame, the size its image pins it to (and a canvas's freedom from any), the
  * metadata signal carrying that size, and the play-mode click map naming only props' images.
@@ -560,6 +560,72 @@ describe("the picture map", () => {
         expect(own.orderedIndicesBySubfolder).toEqual(file.orderedIndicesBySubfolder);
         for (const [subfolderName, categoriesByIndex] of Object.entries(own.categoriesBySubfolderAndIndex))
             expect(file.categoriesBySubfolderAndIndex[subfolderName], subfolderName).toMatchObject(categoriesByIndex);
+    });
+
+    it("reads a map's part of a settings file, none where the file holds none, and says why a file can't be used", () => {
+        const text = fs.readFileSync(path.join(ASSETS_DIR, ADMIN_ASSET_SETTINGS_FILE_NAME), "utf8");
+        expect(ImageMapSettingsUtil.parseFile(text, "pictureImageMap")).toEqual({settings: readSettings()});
+        expect(ImageMapSettingsUtil.parseFile(text, "otherImageMap")).toEqual({});
+        expect(ImageMapSettingsUtil.parseFile("{", "pictureImageMap")).toEqual({problem: "is not valid JSON"});
+        expect(ImageMapSettingsUtil.parseFile("[]", "pictureImageMap")).toEqual({problem: "holds no settings"});
+        // Nothing of a part that can't be used is given (the builder's own tests go through every such problem).
+        expect(ImageMapSettingsUtil.parseFile(JSON.stringify({pictureImageMap: {categoryTabsBySubfolder: {},
+            orderedIndicesBySubfolder: {"2": [3, 3]}, categoriesBySubfolderAndIndex: {}}}), "pictureImageMap"))
+            .toEqual({problem: `lists image 3 twice under "2"`});
+    });
+
+    it("takes saved settings back as a build with them would: the categories, each image's own and the order, whatever was set before", () => {
+        const kitchen = {name: "kitchen", title: "Kitchen"}, office = {name: "office", title: "Office"};
+        const dining = {name: "dining", title: "Dining Room"};
+        const tabs = [{name: "2", title: "Objects", categories: [kitchen, office]}, {name: "1", title: "Arts"}];
+        const map = register([{path: "2/5", keywords: "kitchen*,oven"}, {path: "1/2", keywords: "ground swell"},
+            {path: "2/1", keywords: "office*,kitchen*,screen"}, {path: "1/7", keywords: "lenna"},
+            {path: "2/30", keywords: "sock"}, {path: "2/8", keywords: "kettle"}], tabs);
+        ImageChoiceUtil.moveItem(map, ["2/5", "2/1", "2/30", "2/8"], "2/8", 0);
+
+        // They leave 5 and 8 out, which come first as the map lists them (not as rearranged) and are under no
+        // category. 99 names no image and 9 no subfolder; kitchen is no longer listed, so 1 is under office alone.
+        ImageChoiceUtil.applySettings(map, {categoryTabsBySubfolder: {"2": [office, dining], "9": [kitchen]},
+            orderedIndicesBySubfolder: {"2": [30, 99, 1], "9": [1]},
+            categoriesBySubfolderAndIndex: {"2": {"30": ["dining", "office"], "1": ["kitchen", "office"], "99": ["office"]}}});
+        expect(map.getSubfolderCategories("2")).toEqual([office, dining]);
+        expect(map.getSubfolderCategories("1")).toEqual([]);
+        expect(inOrder(ImageChoiceUtil.getItems(map, "2", true))).toEqual(["2/5", "2/8", "2/30", "2/1"]);
+        expect(inOrder(ImageChoiceUtil.getItems(map, "1", true))).toEqual(["1/2", "1/7"]);
+        expect(Object.fromEntries(map.getImageMetadataList().map(image => [image.path, image.keywords]))).toEqual({
+            "2/5": "oven", "1/2": "ground swell", "2/1": "office*,screen", "1/7": "lenna",
+            "2/30": "dining*,office*,sock", "2/8": "kettle"});
+        // The places handed out are still the list's, each subfolder keeping its own.
+        expect(map.getImageMetadataList().map(image => image.order)).toEqual([0, 1, 5, 3, 4, 2]);
+
+        // Whatever an admin's edits, saved to a file and taken back by the map as built, they are there again.
+        const offered = (shown: ImageMap) => ({
+            categories: ["2", "1"].map(subfolderName => shown.getSubfolderCategories(subfolderName)),
+            images: shown.getImageMetadataList().map(image => [image.path, image.keywords ?? "", image.order])});
+        fc.assert(fc.property(fc.uniqueArray(fc.integer({min: 1, max: 99}), {minLength: 1, maxLength: 12}),
+            fc.array(fc.tuple(fc.nat(), fc.nat(), fc.shuffledSubarray(["kitchen", "office", "dining"])), {maxLength: 12}),
+            fc.boolean(), (numbers, edits, withoutOffice) => {
+            const images = numbers.flatMap(number => [{path: `2/${number}`, keywords: `thing${number}`}, {path: `1/${number}`}]);
+            const edited = register(images, tabs);
+            expect(ImageChoiceUtil.addCategory(edited, "2", dining)).toBeUndefined();
+            for (const [from, to, categories] of edits)
+            {
+                const row = inOrder(ImageChoiceUtil.getItems(edited, "2", true));
+                ImageChoiceUtil.moveItem(edited, row, row[from % row.length], to % row.length);
+                ImageChoiceUtil.setCategories(edited, row[from % row.length], categories);
+            }
+            if (withoutOffice)
+                ImageChoiceUtil.removeCategory(edited, "2", "office");
+            const saved = ImageChoiceUtil.getSettings(edited);
+
+            const fresh = register(images, tabs);
+            const {settings, problem} = ImageMapSettingsUtil.parseFile(
+                ImageMapSettingsUtil.serializeFile({orderTestImageMap: saved}), "orderTestImageMap");
+            expect(problem).toBeUndefined();
+            ImageChoiceUtil.applySettings(fresh, settings!);
+            expect(offered(fresh)).toEqual(offered(edited));
+            expect(ImageChoiceUtil.getSettings(fresh)).toEqual(saved);
+        }));
     });
 
     it("applies settings to a list: each subfolder's images in the order listed, those left out first", () => {

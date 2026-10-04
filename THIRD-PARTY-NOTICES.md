@@ -78,10 +78,8 @@ plates were painted out; small incidental labels on goods remain.
 | `2/8.webp` | Tube Radio | Gayatri Pandkar | [Q1KJomEl70c](https://unsplash.com/photos/an-old-radio-sitting-on-top-of-a-wooden-table-Q1KJomEl70c) | Unsplash License |
 | `2/9.webp` | Portable TV | Diego González | [-I8lDurtfAo](https://unsplash.com/photos/grey-and-orange-crt-tv--I8lDurtfAo) | Unsplash License |
 | `2/11.webp` | Wall Clock | Ocean Ng | [L0xOtAnv94Y](https://unsplash.com/photos/round-analog-wall-clock-pointing-at-1009-L0xOtAnv94Y) | Unsplash License |
-| `2/16.webp` | Tiny Metal TV | Jason Leung | [QErbOGxDzDE](https://unsplash.com/photos/brown-and-black-digital-device-QErbOGxDzDE) | Unsplash License |
 | `2/19.webp` | Macintosh | Jason Leung | [VeUSCLJrLf4](https://unsplash.com/photos/turned-off-macintosh-monitor-VeUSCLJrLf4) | Unsplash License |
 | `2/20.webp` | Volt and Ampere Meters | Ronald Crow | [LqvEdaJVSxw](https://unsplash.com/photos/a-close-up-of-a-radio-with-volts-and-ammeters-LqvEdaJVSxw) | Unsplash License |
-| `2/23.webp` | Beige PC Tower | Lennon Cheng | [K-BMOC8_GO4](https://unsplash.com/photos/white-and-black-computer-tower-K-BMOC8_GO4) | Unsplash License |
 | `2/27.webp` | Pendulum Clock Face | C | [G_YvG3ZIlkQ](https://unsplash.com/photos/an-old-wooden-clock-face-shows-the-time-G_YvG3ZIlkQ) | Unsplash License |
 | `2/30.webp` | Payphone | Waldemar Brandt | [rDrGfuplEm8](https://unsplash.com/photos/red-telephone-on-yellow-paper-rDrGfuplEm8) | Unsplash License |
 | `2/33.webp` | Keyboard | Andrey Matveev | [yLG3Zog38tw](https://unsplash.com/photos/a-computer-keyboard-sitting-on-top-of-a-table-yLG3Zog38tw) | Unsplash License |
@@ -94,11 +92,14 @@ plates were painted out; small incidental labels on goods remain.
 | `2/48.webp` | Vending Machine Keypad | Denny Müller | [In51lypcCDA](https://unsplash.com/photos/red-and-black-vending-machine-In51lypcCDA) | Unsplash License |
 | `2/50.webp` | Snack Bar Spirals | Estera | [5HgdQjUdYpc](https://unsplash.com/photos/assorted-food-packs-on-shelf-5HgdQjUdYpc) | Unsplash License |
 | `2/52.webp` | Card Catalog Drawers | Erol Ahmed | [Y3KEBQlB1Zk](https://unsplash.com/photos/close-up-photography-of-brown-wooden-card-catalog-Y3KEBQlB1Zk) | Unsplash License |
+| `2/53.webp` | Cassette Rack | Jon Tyson | [UJN_XAg0ECI](https://unsplash.com/photos/pile-of-assorted-title-case-lot-UJN_XAg0ECI) | Unsplash License |
+| `2/54.webp` | Wood Stove Fire | Juan Gomez | [jQefZnin_hA](https://unsplash.com/photos/casserole-on-black-firewood-stove-jQefZnin_hA) | Unsplash License |
 | `2/56.webp` | Dartboard | Simon Ray | [1Bdsg4xqdYs](https://unsplash.com/photos/a-dart-hitting-in-the-center-of-a-dartboard-on-a-wooden-wall-1Bdsg4xqdYs) | Unsplash License |
 | `2/57.webp` | Popcorn Sign | Rita Vicari | [kGGnJBw78Vo](https://unsplash.com/photos/popcorn-signage-kGGnJBw78Vo) | Unsplash License |
 | `2/58.webp` | Popcorn Machine Window | Vitya Lapatey | [Q-dusXpAH0I](https://unsplash.com/photos/popcorn-on-white-and-red-box-Q-dusXpAH0I) | Unsplash License |
 | `2/63.webp` | Candy Dispenser | Erik Mclean | [CMmyYQmgFes](https://unsplash.com/photos/assorted-candies-in-black-plastic-container-CMmyYQmgFes) | Unsplash License |
 | `2/69.webp` | Fridge Shelf of Orange Soda | Onur Burak Akin | [B3cqR6OZOWU](https://unsplash.com/photos/a-refrigerator-filled-with-lots-of-green-and-yellow-bottles-B3cqR6OZOWU) | Unsplash License |
+| `2/74.webp` | Emergency Call Box | Yucel M | [LN-JxcCkT30](https://unsplash.com/photos/text-LN-JxcCkT30) | Unsplash License |
 | `2/77.webp` | Bookshelf Speaker | Caleb Woods | [VVuRLhyTmXM](https://unsplash.com/photos/green-plant-on-brown-pot-VVuRLhyTmXM) | Unsplash License |
 | `2/78.webp` | Vinyl Record | Markus Spiske | [ui79XsmHTos](https://unsplash.com/photos/vinyl-record-on-white-surface-ui79XsmHTos) | Unsplash License |
 | `2/85.webp` | Arch Vase Cubby | Kshiraj Vij | [xIJRwAaxwZo](https://unsplash.com/photos/various-decorative-objects-displayed-in-illuminated-cubbies-xIJRwAaxwZo) | Unsplash License |
@@ -114,8 +115,6 @@ plates were painted out; small incidental labels on goods remain.
 | `2/102.webp` | Cutlery Drawer | Orgalux | [Ho4ymAUhBFs](https://unsplash.com/photos/a-cabinet-with-utensils-and-spoons-in-it-Ho4ymAUhBFs) | Unsplash License |
 | `2/103.webp` | Rusty Drawers | Ries Bosch | [pO0pdJn6QPk](https://unsplash.com/photos/an-old-desk-with-a-sink-and-a-stool-pO0pdJn6QPk) | Unsplash License |
 | `2/104.webp` | Mini Drawer Cabinet | Merylove Art | [7WXsn8Rof-8](https://unsplash.com/photos/two-maroon-sewing-threads-on-cube-shelf-7WXsn8Rof-8) | Unsplash License |
-| `2/106.webp` | Cubbies of Folded Socks | H&CO | [uzw4MvfG5ps](https://unsplash.com/photos/white-and-yellow-textiles-on-brown-wooden-shelf-uzw4MvfG5ps) | Unsplash License |
-| `2/107.webp` | Cubbies of Brown and Yellow Socks | H&CO | [uzw4MvfG5ps](https://unsplash.com/photos/white-and-yellow-textiles-on-brown-wooden-shelf-uzw4MvfG5ps) | Unsplash License |
 | `2/108.webp` | Post Office Box Doors | Joel Dunn | [f3Ug9b50KwI](https://unsplash.com/photos/black-and-white-abstract-painting-f3Ug9b50KwI) | Unsplash License |
 | `2/109.webp` | Parts Organizer Drawers | Raymond Rasmusson | [7EhAf2dBthg](https://unsplash.com/photos/plastic-organizer-with-labels-7EhAf2dBthg) | Unsplash License |
 | `2/111.webp` | Cards, Dice and Chips | James Nilsson | [Ih32pz1tMis](https://unsplash.com/photos/playing-cards-and-dice-on-a-black-background-Ih32pz1tMis) | Unsplash License |
@@ -145,7 +144,6 @@ plates were painted out; small incidental labels on goods remain.
 | `2/148.webp` | No Unauthorized Access Sign | Waldemar Brandt | [Dae6gNfmOos](https://unsplash.com/photos/red-and-white-no-smoking-sign-Dae6gNfmOos) | Unsplash License |
 | `2/149.webp` | High Voltage Sign | Waldemar Brandt | [Dae6gNfmOos](https://unsplash.com/photos/red-and-white-no-smoking-sign-Dae6gNfmOos) | Unsplash License |
 | `2/150.webp` | Green Arrow Sign | Tasha Kostyuk | [UgPP50i3_5c](https://unsplash.com/photos/green-sign-with-white-arrow-pointing-left-on-brick-wall-UgPP50i3_5c) | Unsplash License |
-| `2/157.webp` | Gas Stove Burner | Vishal Dhanda | [tLGIrv8ZiN8](https://unsplash.com/photos/a-frying-pan-filled-with-food-on-top-of-a-stove-tLGIrv8ZiN8) | Unsplash License |
 | `2/158.webp` | Bread Pakora Frying in a Pan | Vishal Dhanda | [tLGIrv8ZiN8](https://unsplash.com/photos/a-frying-pan-filled-with-food-on-top-of-a-stove-tLGIrv8ZiN8) | Unsplash License |
 | `2/161.webp` | Carton of Brown Eggs | Fabrizio Bucella | [8-V0kdrwNs4](https://unsplash.com/photos/six-brown-fowl-eggs-in-tray-8-V0kdrwNs4) | Unsplash License |
 | `2/162.webp` | Pizza Meats on a Cutting Board | Rudy Issa | [KVacTm0QeEA](https://unsplash.com/photos/sliced-meat-on-white-ceramic-plate-KVacTm0QeEA) | Unsplash License |
