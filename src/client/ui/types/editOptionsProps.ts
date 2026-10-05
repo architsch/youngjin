@@ -4,12 +4,12 @@ import { EditPanel } from "./editPanel";
 export default interface EditOptionsProps
 {
     selection: ObjectSelection;
-    // Held by ObjectSelectionMenu rather than the tools, so it stays open while the selection moves to any
-    // object whose type declares the same panel (see ObjectTypeClientConfig).
+    // The one of the type's sub-panels shown beneath the tools, or null for a type that declares none (see
+    // ObjectTypeClientConfig). Held by ObjectSelectionMenu rather than the tools, so it stays up while the selection
+    // moves to any object whose type declares the same panel.
     openPanel: EditPanel | null;
-    setOpenPanel: (panel: EditPanel | null) => void;
-    // The open panel is the one the object was just added with (see ObjectTypeClientConfig.installPanel): nothing in
-    // it shows as picked yet, and a pick closes it and moves the selection to a face near the object (unless
-    // DISABLE_AUTO_SELECTION_ON_OBJECT_INSTALLATION).
+    setOpenPanel: (panel: EditPanel) => void;
+    // The object was just added from the chooser the open panel shows (see VoxelQuadPlacementOptions), which the panel
+    // carries on from where it was left. Ends once the tools show another panel, or another object is selected.
     installing: boolean;
 }

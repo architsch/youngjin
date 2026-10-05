@@ -22,23 +22,23 @@ import ImageCategoryNameBar from "./imageCategoryNameBar";
 import ThumbnailPanel from "./thumbnailPanel";
 
 // Picks an image of one of an image map's subfolders from its thumbnails (see ThumbnailPanel), in the order the map
-// lists them in (see ImageChoiceUtil). A category tab and the search bar, beside the close button, narrow the row
-// together; the panel opens on the current image's own category, or with none on the tab the last panel of its id
-// was left on. Off the live server it offers staging images too, and tags every image with its number, red for a
-// staging one and black for an enabled one. An admin can rearrange the row by hand, set the categories of an image
-// picked up (see ImageCategoryBar), and add, delete and rename the categories themselves with the buttons beside
-// their tabs, for every chooser of the map until the page is left (the "eaas" debug command saves it all to keep,
-// and "iaas" takes a saved one back; see DebugStats).
+// lists them in (see ImageChoiceUtil). A category tab and the search bar, over the row, narrow it together; the
+// panel opens on the current image's own category, or with none (or when resumed) on the tab the last panel of its
+// id was left on, one resumed with that panel's search too. Off the live server it offers staging images too, and
+// tags every image with its number, red for a staging one and black for an enabled one. An admin can rearrange the
+// row by hand, set the categories of an image picked up (see ImageCategoryBar), and add, delete and rename the
+// categories themselves with the buttons beside their tabs, for every chooser of the map until the page is left
+// (the "eaas" debug command saves it all to keep, and "iaas" takes a saved one back; see DebugStats).
 export default function ImageMapThumbnailPanel({ id, searchInputId, searchPlaceholder, mapName, subfolder,
-    currentPath, canChoose, onChoose, onClose }: Props)
+    currentPath, resumed = false, canChoose, onChoose }: Props)
 {
     const imageMap = ImageMapUtil.getImageMap(mapName);
     const assetsURL = App.getEnv().assets_url;
     const offLiveServer = !App.isPublicSite();
-    const [categoryTab, setCategoryTab] = useState<string>(() => (currentPath !== undefined)
+    const [categoryTab, setCategoryTab] = useState<string>(() => (currentPath !== undefined && !resumed)
         ? ImageChoiceUtil.getFirstCategoryTab(imageMap, subfolder, currentPath)
         : tabsLeft.get(id) ?? ImageMap.ALL_TAB);
-    const [searchInput, setSearchInput] = useState<string>("");
+    const [searchInput, setSearchInput] = useState<string>(() => resumed ? searchesLeft.get(id) ?? "" : "");
     // Each one changes what the images are offered as: the order they come in, what one is filed under, or the
     // categories there are.
     const [numEdits, setNumEdits] = useState<number>(0);
@@ -102,7 +102,8 @@ export default function ImageMapThumbnailPanel({ id, searchInputId, searchPlaceh
 
     useEffect(() => {
         tabsLeft.set(id, shownTab);
-    }, [shownTab]);
+        searchesLeft.set(id, searchInput);
+    }, [shownTab, searchInput]);
 
     const getTabLabel = (tab: string) => (tab == ImageMap.ALL_TAB) ? "All" : (tab == ImageMap.MISC_TAB) ? "Misc"
         : categories.find(category => category.name == tab)?.title ?? tab;
@@ -182,6 +183,7 @@ export default function ImageMapThumbnailPanel({ id, searchInputId, searchPlaceh
             id={id}
             choices={paths}
             current={currentPath}
+            resumed={resumed}
             canChoose={canChoose}
             onChoose={onChoose}
             onReorder={canRearrange ? (path, position) => {
@@ -220,7 +222,7 @@ export default function ImageMapThumbnailPanel({ id, searchInputId, searchPlaceh
             }}
             thumbnailClassNames="relative size-18 flex items-center justify-center bg-gray-800"
             emptyText={(searchInput.trim().length > 0) ? "No images match your search." : "No images here."}
-            // As tall as the close button. The tabs give way first on a narrow screen, scrolling instead.
+            // One row, as tall as its buttons. The tabs give way first on a narrow screen, scrolling instead.
             closeRowContent={<>
                 <TextInput id={searchInputId} size="sm" placeholder={searchPlaceholder} currValue={searchInput}
                     setTextInput={input => {
@@ -244,13 +246,14 @@ export default function ImageMapThumbnailPanel({ id, searchInputId, searchPlaceh
                         onClick={() => startNaming((naming?.renamed != undefined) ? null : {renamed: shownTab})}/>
                 </>}
             </>}
-            onClose={onClose}
         />
     </>;
 }
 
-// The category tab each panel was last left on, by id, for as long as the app runs (see ThumbnailPanel).
+// The category tab each panel was last left on, and the search it was left with, by id, for as long as the app runs
+// (see ThumbnailPanel).
 const tabsLeft = new Map<string, string>();
+const searchesLeft = new Map<string, string>();
 
 interface Props
 {
@@ -265,7 +268,8 @@ interface Props
     subfolder: string;
     // Absent when nothing is chosen yet (e.g. for an object about to be added).
     currentPath?: string;
+    // Carries on from the last panel of its id (see ThumbnailPanel).
+    resumed?: boolean;
     canChoose?: (path: string) => boolean;
     onChoose: (path: string) => void;
-    onClose: () => void;
 }

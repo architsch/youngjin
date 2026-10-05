@@ -2,7 +2,6 @@ import { useState } from "react";
 import ObjectSelection from "../../../../graphics/types/gizmo/objectSelection";
 import IconButton from "../../input/iconButton";
 import TrashIcon from "../../../svg/icons/trashIcon";
-import PaletteColorInput from "../../input/paletteColorInput";
 import StepperInput from "../../input/stepperInput";
 import SelectionToolRow from "./selectionToolRow";
 import Text from "../../basic/text";
@@ -15,6 +14,8 @@ import { MAX_LAMP_INTENSITY, MAX_LAMP_RANGE, MIN_LAMP_INTENSITY,
 import { LIGHT_COLOR_PALETTE_NAME } from "../../../../../shared/system/sharedConstants";
 import ObjectEditUtil from "../../../util/objectEditUtil";
 import ResizeIcon from "../../../svg/icons/resizeIcon";
+import PaletteIcon from "../../../svg/icons/paletteIcon";
+import ColorPaletteThumbnailPanel from "../../panel/colorPaletteThumbnailPanel";
 import CompositionThumbnailPanel from "../../panel/compositionThumbnailPanel";
 import EditOptionsProps from "../../../types/editOptionsProps";
 
@@ -23,8 +24,8 @@ const INTENSITY_LABELS = getLabels(MIN_LAMP_INTENSITY, MAX_LAMP_INTENSITY);
 const RANGE_LABELS = getLabels(MIN_LAMP_RANGE, MAX_LAMP_RANGE);
 
 // Lamp tools: remove, resize (to one of its sizes, where it stands), or change its light (one stored setting
-// that also colors the glow; intensity and range are separate dials, see LampLightUtil). The size list
-// takes this row's place until closed.
+// that also colors the glow; intensity and range are separate dials, see LampLightUtil). The size and color
+// buttons are toggles, each showing its list beneath this row, one at a time.
 export default function LampEditOptions(props: EditOptionsProps)
 {
     const obj = props.selection.gameObject.params;
@@ -43,39 +44,25 @@ export default function LampEditOptions(props: EditOptionsProps)
             LampObjectTypeConfig.util.encodeLightProperties(next.colorIndex, next.intensity, next.range));
     };
 
-    // Recomputed each render; zone changes and resizes re-announce the selection (see ClientVoxelManager).
+    // Recomputed each render; zone changes and resizes re-announce the selection (see ClientVoxelManager). A list
+    // stays up where the lamp can't be edited, with nothing in it to pick.
     const canEdit = canEditLamp(props.selection);
-    const choosingSize = props.openPanel == "compositionThumbnail";
-    const toolsShown = !(canEdit && choosingSize);
 
     // Full width, so the rows can scroll horizontally instead of growing.
     return <div className="flex flex-col gap-1 w-full">
-        {choosingSize && canEdit && <CompositionThumbnailPanel
-            id="lampSizeOptions"
-            objectType={LampObjectTypeConfig.objectType}
-            currentCompositionIndex={LampObjectTypeConfig.util.getCompositionIndex(obj)}
-            canChoose={(compositionIndex) => canResize(props.selection, compositionIndex)}
-            onChoose={(compositionIndex) => tryResize(props.selection, compositionIndex)}
-            onClose={() => props.setOpenPanel(null)}
-        />}
-        {toolsShown && <SelectionToolRow>
+        <SelectionToolRow>
             <IconButton icon={<TrashIcon/>} size="md" color="red" shortcutKey="Delete"
                 disabled={!ObjectEditUtil.canRemoveObject(props.selection)}
                 onClick={() => ObjectEditUtil.openRemoveConfirmPopup(props.selection, "Want to remove this?")}
             />
             <IconButton id="changeLampSizeButton" icon={<ResizeIcon/>} size="md"
-                disabled={!canEdit}
+                highlight={props.openPanel == "compositionThumbnail"}
                 onClick={() => props.setOpenPanel("compositionThumbnail")}
             />
-            <div className="flex flex-row items-center gap-1 shrink-0">
-                <Text content="Color" size="sm" additionalClassNames="shrink-0"/>
-                <PaletteColorInput
-                    paletteName={LIGHT_COLOR_PALETTE_NAME}
-                    currValue={light.colorIndex}
-                    setColorIndex={(index) => apply(next => next.colorIndex = index)}
-                    disabled={!canEdit}
-                />
-            </div>
+            <IconButton id="changeLampColorButton" icon={<PaletteIcon/>} size="md"
+                highlight={props.openPanel == "colorPaletteThumbnail"}
+                onClick={() => props.setOpenPanel("colorPaletteThumbnail")}
+            />
             <div className="flex flex-row items-center gap-1 shrink-0">
                 <Text content="Intensity" size="sm" additionalClassNames="shrink-0"/>
                 <StepperInput
@@ -96,7 +83,22 @@ export default function LampEditOptions(props: EditOptionsProps)
                     disabled={!canEdit}
                 />
             </div>
-        </SelectionToolRow>}
+        </SelectionToolRow>
+        {props.openPanel == "compositionThumbnail" && <CompositionThumbnailPanel
+            id="lampSizeOptions"
+            objectType={LampObjectTypeConfig.objectType}
+            currentCompositionIndex={LampObjectTypeConfig.util.getCompositionIndex(obj)}
+            resumed={props.installing}
+            canChoose={(compositionIndex) => canResize(props.selection, compositionIndex)}
+            onChoose={(compositionIndex) => tryResize(props.selection, compositionIndex)}
+        />}
+        {props.openPanel == "colorPaletteThumbnail" && <ColorPaletteThumbnailPanel
+            id="lampColorOptions"
+            paletteName={LIGHT_COLOR_PALETTE_NAME}
+            currentColorIndex={light.colorIndex}
+            canChoose={() => canEdit}
+            onChoose={(colorIndex) => apply(next => next.colorIndex = colorIndex)}
+        />}
     </div>;
 }
 

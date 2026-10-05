@@ -493,6 +493,10 @@
     width: calc(var(--spacing) * 18);
     height: calc(var(--spacing) * 18);
   }
+  .size-full {
+    width: 100%;
+    height: 100%;
+  }
   .h-1 {
     height: calc(var(--spacing) * 1);
   }
@@ -534,6 +538,9 @@
   }
   .h-17 {
     height: calc(var(--spacing) * 17);
+  }
+  .h-18 {
+    height: calc(var(--spacing) * 18);
   }
   .h-24 {
     height: calc(var(--spacing) * 24);
@@ -944,6 +951,12 @@
   }
   .border-black {
     border-color: var(--color-black);
+  }
+  .border-black\/40 {
+    border-color: color-mix(in srgb, #000 40%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      border-color: color-mix(in oklab, var(--color-black) 40%, transparent);
+    }
   }
   .border-gray-600 {
     border-color: var(--color-gray-600);

@@ -102,7 +102,7 @@ interface Props
     id?: string;
     // Adds a close button and back-gesture support.
     onClose?: () => void;
-    // Follows the close button on its row (e.g. a search bar).
+    // A row over the panel (e.g. a search bar), which follows the close button if there is one.
     closeRowContent?: ReactNode;
     // Toggle to hang from (see above).
     anchorElementId?: string;

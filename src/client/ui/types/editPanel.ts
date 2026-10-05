@@ -1,3 +1,4 @@
-// A sub-panel raised from an object's edit options, named by the panel it shows (CompositionThumbnailPanel,
-// CustomizeLabelTextPanel, ImageMapThumbnailPanel) so it can stay open across objects of different types.
-export type EditPanel = "compositionThumbnail" | "labelText" | "imageMapThumbnail";
+// A sub-panel shown beneath an object's edit options, named by the panel it shows (ColorPaletteThumbnailPanel,
+// CompositionThumbnailPanel, CustomizeLabelTextPanel, ImageMapThumbnailPanel) so it can stay up across objects of
+// different types.
+export type EditPanel = "colorPaletteThumbnail" | "compositionThumbnail" | "labelText" | "imageMapThumbnail";

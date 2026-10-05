@@ -3,33 +3,35 @@ import Text from "../basic/text";
 import ScrollPanel from "./scrollPanel";
 import useThumbnailReorder from "../../util/thumbnailReorder";
 
-// A closable row of thumbnails to pick one of (see CompositionThumbnailPanel, ImageMapThumbnailPanel). New choices
-// scroll it to the current one (outlined) or, with none current, to where the last panel of its id was left, or to
-// its start if they leave that out; it grows a page at a time as it is scrolled to its end. A choice canChoose
-// refuses is shown dimmed and can't be picked. With onReorder, its thumbnails can be rearranged by hand (see
-// useThumbnailReorder), which leaves it where it stands; with onPickUp and onLetGo, the owner hears of each one
-// picked up and let go.
-export default function ThumbnailPanel<K extends string | number>({ id, choices, current, canChoose, onChoose,
-    onReorder, onPickUp, onLetGo, canMove, renderThumbnail, thumbnailClassNames, emptyText, closeRowContent,
-    overhang = false, onClose }: Props<K>)
+// A row of thumbnails to pick one of (see ColorPaletteThumbnailPanel, CompositionThumbnailPanel,
+// ImageMapThumbnailPanel). New choices scroll it to the current one (outlined) or, with none current or when
+// resumed, to where the last panel of its id was left, or to its start if they leave that out; it grows a page at a
+// time as it is scrolled to its end. A choice canChoose refuses is shown dimmed and can't be picked. With onReorder,
+// its thumbnails can be rearranged by hand (see useThumbnailReorder), which leaves it where it stands; with onPickUp
+// and onLetGo, the owner hears of each one picked up and let go.
+export default function ThumbnailPanel<K extends string | number>({ id, choices, current, resumed = false, canChoose,
+    onChoose, onReorder, onPickUp, onLetGo, canMove, renderThumbnail, thumbnailClassNames, emptyText, closeRowContent,
+    overhang = false }: Props<K>)
 {
-    const [placeLeft] = useState(() => (current === undefined) ? placesLeft.get(id) as K | undefined : undefined);
-    const anchor = current ?? placeLeft;
+    const [placeLeft] = useState(() => (current === undefined || resumed)
+        ? placesLeft.get(id) as {choice: K, offset: number} | undefined : undefined);
+    const anchor = placeLeft ? placeLeft.choice : current;
     const getScrollTarget = (row: K[]) => Math.max((anchor === undefined) ? -1 : row.indexOf(anchor), 0);
     const scrollTarget = getScrollTarget(choices);
 
-    // Enough pages to reach the thumbnail scrolled to, and a page past a place left, so it can be scrolled to the start
-    // of the view; plus those added by scrolling to the end (none for new choices).
+    // Enough pages to reach the thumbnail scrolled to, and a page past a place left, so it can be scrolled to where it
+    // stood in the view; plus those added by scrolling to the end (none for new choices).
     const [numAddedPages, setNumAddedPages] = useState<number>(0);
     const getNumPagesNeeded = (row: K[]) => {
         const target = getScrollTarget(row);
-        return Math.ceil((target + 1 + ((current === undefined && target > 0) ? PAGE_SIZE : 0)) / PAGE_SIZE);
+        return Math.ceil((target + 1 + ((placeLeft !== undefined && target > 0) ? PAGE_SIZE : 0)) / PAGE_SIZE);
     };
     const numShown = (getNumPagesNeeded(choices) + numAddedPages) * PAGE_SIZE;
     const shownChoices = choices.slice(0, numShown);
     const hasMore = numShown < choices.length;
 
-    // Where the row stands, as its first thumbnail at least half in view, kept for the next panel of this id.
+    // Where the row stands, as its first thumbnail at least half in view and how far in that one is, kept for the
+    // next panel of this id.
     const scrollerRef = useRef<HTMLDivElement>(null);
     const rememberPlace = () => {
         const scroller = scrollerRef.current;
@@ -47,8 +49,9 @@ export default function ThumbnailPanel<K extends string | number>({ id, choices,
             else
                 high = mid;
         }
-        if (low < shownChoices.length)
-            placesLeft.set(id, shownChoices[low]);
+        const rect = document.getElementById(`${id}.${low}`)?.getBoundingClientRect();
+        if (low < shownChoices.length && rect)
+            placesLeft.set(id, {choice: shownChoices[low], offset: rect.left - left});
         else
             placesLeft.delete(id);
     };
@@ -77,9 +80,15 @@ export default function ThumbnailPanel<K extends string | number>({ id, choices,
             || rearranged.some((choice, position) => choice !== choices[position]))
         {
             setNumAddedPages(0);
-            // Both axes given: leaving one at its default scrolls every scrollable ancestor (see AtlasCellSprite). A
-            // place left goes back to the start of the view, where it was.
-            scrollTargetRef.current?.scrollIntoView({ inline: (current === undefined) ? "start" : "center", block: "nearest" });
+            const scroller = scrollerRef.current, target = scrollTargetRef.current;
+            // Both axes given: leaving one at its default scrolls every scrollable ancestor (see AtlasCellSprite).
+            target?.scrollIntoView({ inline: (placeLeft || current === undefined) ? "start" : "center", block: "nearest" });
+            // A place left goes back to where it stood in the view.
+            if (scroller && target && placeLeft && choices[scrollTarget] === placeLeft.choice)
+            {
+                scroller.scrollLeft += target.getBoundingClientRect().left - scroller.getBoundingClientRect().left
+                    - placeLeft.offset;
+            }
         }
         rememberPlace();
     }, [choices]);
@@ -98,7 +107,7 @@ export default function ThumbnailPanel<K extends string | number>({ id, choices,
         return () => observer.disconnect();
     }, [shownChoices.length, hasMore]);
 
-    return <ScrollPanel id={id} onClose={onClose} closeRowContent={closeRowContent} tight={true} overhang={overhang}
+    return <ScrollPanel id={id} closeRowContent={closeRowContent} tight={true} overhang={overhang}
         scrollerRef={scrollerRef} onScroll={rememberPlace}>
         {choices.length == 0 && <>
             {emptyText && <Text content={emptyText} size="sm" additionalClassNames="self-center shrink-0"/>}
@@ -127,7 +136,7 @@ export default function ThumbnailPanel<K extends string | number>({ id, choices,
 const PAGE_SIZE = 30;
 
 // Where each panel's row was last left, by id, for as long as the app runs.
-const placesLeft = new Map<string, string | number>();
+const placesLeft = new Map<string, {choice: string | number, offset: number}>();
 
 interface Props<K>
 {
@@ -138,6 +147,9 @@ interface Props<K>
     choices: K[];
     // Absent when nothing is chosen yet (e.g. for an object about to be added).
     current?: K;
+    // Carries on from the last panel of its id (e.g. the one its object was just added from): it opens where that one
+    // was left, not on the current choice.
+    resumed?: boolean;
     // Absent means every one may be picked.
     canChoose?: (choice: K) => boolean;
     onChoose: (choice: K) => void;
@@ -158,5 +170,4 @@ interface Props<K>
     closeRowContent?: ReactNode;
     // Lets thumbnails stick out over the panel's top edge (see ScrollPanel).
     overhang?: boolean;
-    onClose: () => void;
 }

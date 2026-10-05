@@ -1,7 +1,6 @@
 import { useState } from "react";
 import Text from "../basic/text";
 import TextInput from "../input/textInput";
-import PaletteColorInput from "../input/paletteColorInput";
 import Checkbox from "../input/checkbox";
 import StepperInput from "../input/stepperInput";
 import ObjectSelection from "../../../graphics/types/gizmo/objectSelection";
@@ -9,19 +8,18 @@ import ObjectEditUtil from "../../util/objectEditUtil";
 import LabelTextUtil from "../../../../shared/object/util/labelTextUtil";
 import StringUtil from "../../../../shared/math/util/stringUtil";
 import { ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
-import { LABEL_COLOR_PALETTE_NAME, OBJECT_LABEL_MAX_LENGTH } from "../../../../shared/system/sharedConstants";
+import { OBJECT_LABEL_MAX_LENGTH } from "../../../../shared/system/sharedConstants";
 import ScrollPanel from "./scrollPanel";
 
 const FONT_SIZE_LABELS = LabelTextUtil.fontSizes.map(String);
 
-// Edits the lettering of any object with LabelText (a door's plate, a label): its text, color and size.
-// Each change is saved as it is made.
-export default function CustomizeLabelTextPanel({ selection, onClose }: Props)
+// Edits the lettering of any object with LabelText (a door's plate, a label): its text and size. Each change is
+// saved as it is made.
+export default function CustomizeLabelTextPanel({ selection }: Props)
 {
     // Held here rather than read back, since the stored text is trimmed (see ObjectMetadataEntryMap) and a
     // space or line break typed at the end has to stay in the field.
     const [text, setText] = useState(() => LabelTextUtil.getText(selection.gameObject.params));
-    const [colorIndex, setColorIndex] = useState(() => LabelTextUtil.getColorIndex(selection.gameObject.params));
     const [font, setFont] = useState(() => LabelTextUtil.getFont(selection.gameObject.params));
 
     const applyFont = (autoSize: boolean, fontSize: number) => {
@@ -30,7 +28,7 @@ export default function CustomizeLabelTextPanel({ selection, onClose }: Props)
             LabelTextUtil.encodeFont(autoSize, fontSize));
     };
 
-    return <ScrollPanel id="customizeLabelTextOptions" onClose={onClose}>
+    return <ScrollPanel id="customizeLabelTextOptions">
         <TextInput
             id="labelTextInput"
             size="sm"
@@ -45,18 +43,6 @@ export default function CustomizeLabelTextPanel({ selection, onClose }: Props)
             maxVisibleLines={4}
             additionalClassNames="w-56 shrink-0 self-center"
         />
-        <div className="w-px self-stretch shrink-0 bg-gray-500"/>
-        <div className="flex flex-row items-center gap-1 shrink-0">
-            <Text content="Color" size="sm"/>
-            <PaletteColorInput
-                paletteName={LABEL_COLOR_PALETTE_NAME}
-                currValue={colorIndex}
-                setColorIndex={(index: number) => {
-                    setColorIndex(index);
-                    ObjectEditUtil.trySetObjectMetadata(selection, ObjectMetadataKeyEnumMap.LabelColor, `${index}`);
-                }}
-            />
-        </div>
         <div className="w-px self-stretch shrink-0 bg-gray-500"/>
         <Checkbox label="Auto Size" size="sm" checked={font.autoSize}
             onChange={(checked: boolean) => applyFont(checked, font.fontSize)} additionalClassNames="shrink-0"/>
@@ -77,5 +63,4 @@ export default function CustomizeLabelTextPanel({ selection, onClose }: Props)
 interface Props
 {
     selection: ObjectSelection;
-    onClose: () => void;
 }

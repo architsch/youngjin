@@ -50,12 +50,6 @@
       "settleMs": 2500
     },
     {
-      "type": "expectSelection",
-      "selection": {
-        "voxelQuad": true
-      }
-    },
-    {
       "type": "clickObject",
       "target": {
         "objectType": "Door",
@@ -82,11 +76,6 @@
       "type": "fill",
       "selector": "#labelTextInput",
       "text": "Attic"
-    },
-    {
-      "type": "uiClick",
-      "elementId": "customizeLabelTextOptionsClose",
-      "settleMs": 400
     },
     {
       "type": "expectSelection",

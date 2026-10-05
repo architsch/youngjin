@@ -14,47 +14,43 @@ import ObjectAttachmentUtil from "../../../../../shared/object/util/objectAttach
 import ObjectScaleUtil from "../../../../../shared/object/util/objectScaleUtil";
 import ObjectTransform from "../../../../../shared/object/types/objectTransform";
 
-// Prop tools: remove, image, and a clockwise quarter-turn. The image list takes this row's place until closed (it
-// belongs to the prop).
+// Prop tools: remove, image, and a clockwise quarter-turn. The image button is a toggle, showing its list beneath
+// this row.
 export default function PropEditOptions(props: EditOptionsProps)
 {
     const imagePathMetadata = props.selection.gameObject.params.metadata[ObjectMetadataKeyEnumMap.ImagePath];
     const imagePath = imagePathMetadata ? imagePathMetadata.str : "";
 
-    const choosingImage = props.openPanel == "imageMapThumbnail";
-
-    // Recomputed each render; zone changes re-announce the selection (see ClientVoxelManager). Choosers are
-    // disabled as a whole.
+    // Recomputed each render; zone changes re-announce the selection (see ClientVoxelManager).
     const canEdit = ObjectEditUtil.canEditObject(props.selection);
-    const toolsShown = !(canEdit && choosingImage);
 
     // Full width, so the rows can scroll horizontally instead of growing.
     return <div className="flex flex-col gap-1 w-full">
-        {choosingImage && canEdit && <ImageMapThumbnailPanel
-            id="propImageOptions"
-            searchInputId="propImageSearchInput"
-            searchPlaceholder="Search"
-            mapName="PictureImageMap"
-            subfolder={PROP_IMAGE_SUBFOLDER}
-            currentPath={imagePath}
-            canChoose={path => findResizedForImage(props.selection, path) != null}
-            onChoose={path => trySetImage(props.selection, path)}
-            onClose={() => props.setOpenPanel(null)}
-        />}
-        {toolsShown && <SelectionToolRow>
+        <SelectionToolRow>
             <IconButton icon={<TrashIcon/>} size="md" color="red" shortcutKey="Delete"
                 disabled={!ObjectEditUtil.canRemoveObject(props.selection)}
                 onClick={() => ObjectEditUtil.openRemoveConfirmPopup(props.selection, "Want to remove this?")}
             />
             <IconButton id="changePropImageButton" icon={<ShoppingCartIcon/>} size="md"
-                disabled={!canEdit}
+                highlight={props.openPanel == "imageMapThumbnail"}
                 onClick={() => props.setOpenPanel("imageMapThumbnail")}
             />
             <IconButton id="rotatePropButton" icon={<RotateClockwiseIcon/>} size="md"
                 disabled={!canEdit || !ObjectEditUtil.canQuarterTurn(props.selection)}
                 onClick={() => ObjectEditUtil.tryQuarterTurn(props.selection)}
             />
-        </SelectionToolRow>}
+        </SelectionToolRow>
+        {props.openPanel == "imageMapThumbnail" && <ImageMapThumbnailPanel
+            id="propImageOptions"
+            searchInputId="propImageSearchInput"
+            searchPlaceholder="Search"
+            mapName="PictureImageMap"
+            subfolder={PROP_IMAGE_SUBFOLDER}
+            currentPath={imagePath}
+            resumed={props.installing}
+            canChoose={path => findResizedForImage(props.selection, path) != null}
+            onChoose={path => trySetImage(props.selection, path)}
+        />}
     </div>;
 }
 

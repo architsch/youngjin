@@ -16,8 +16,8 @@ export const TOUCH_DRAG_THRESHOLD_PX = 40;
 export const EDIT_MODE_OPENING_REACH = 8;
 export const EDIT_MODE_OPENING_TILT = THREE.MathUtils.degToRad(15);
 
-// True keeps a newly added object selected once its look is complete. False hands the selection to a face near it,
-// for the next to be added from (see VoxelQuadPlacementOptions).
+// True keeps a newly added object selected, its tools carrying on from the chooser it was picked in. False hands the
+// selection to a face near it, for the next to be added from (see VoxelQuadPlacementOptions).
 export const DISABLE_AUTO_SELECTION_ON_OBJECT_INSTALLATION = true;
 
 // What an automatic selection asks of a voxel quad (see VoxelQuadSelection): to lie no further than this from where
