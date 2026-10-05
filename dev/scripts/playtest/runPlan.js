@@ -171,8 +171,7 @@ async function runPlan(plan)
                     }
 
                     await skip.click();
-                    await page.locator("#uiRoot").getByText("Yes", { exact: true })
-                        .click({ timeout: 10_000 });
+                    await Interact.ui.confirm(page, { timeout: 10_000 });
                     // Leaving the tutorial hands the player to a hub, which is a room change.
                     await page.locator("#uiRoot").getByText("Loading...", { exact: true })
                         .waitFor({ state: "hidden", timeout: 45_000 }).catch(() => {});
@@ -226,6 +225,13 @@ async function runPlan(plan)
                     const target = page.locator(action.selector).nth(action.nth || 0);
                     await target.click({ timeout: action.timeout || 10_000 });
                     if (action.settleMs) await sleep(action.settleMs);
+                    break;
+                }
+
+                case "confirm":
+                {
+                    // A confirm popup's Yes, which a plain "click" would reach too soon (see Interact.ui.confirm).
+                    await Interact.ui.confirm(page, { timeout: action.timeout, settleMs: action.settleMs });
                     break;
                 }
 

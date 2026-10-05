@@ -11,7 +11,7 @@ import ClosablePanelUtil from "../../util/closablePanelUtil";
 // screen. With onClose it gets a close button and joins the back-gesture stack (see ClosablePanelUtil).
 
 export default function ScrollPanel({ children, id, onClose, closeRowContent, anchorElementId, size = "md",
-    overhang = false, scrollerRef, onScroll, additionalClassNames = "" }: Props)
+    tight = false, overhang = false, scrollerRef, onScroll, additionalClassNames = "" }: Props)
 {
     const onRefChange = useMouseDragScroll("horizontal", "alwaysGrab");
     const setScroller = useCallback((node: HTMLDivElement | null) => {
@@ -36,8 +36,9 @@ export default function ScrollPanel({ children, id, onClose, closeRowContent, an
 
     // Close button sits above the panel, so the panel is only as tall as its controls. The body fits its
     // contents up to the column's width, past which the row scrolls (children are shrink-0; see
-    // SelectionToolRow). Fitting the column instead would let an owner's margins overflow.
-    const rowClassNames = "flex flex-row items-stretch gap-3";
+    // SelectionToolRow). Fitting the column instead would let an owner's margins overflow. A tight row
+    // holds the panel's padding itself, so it scrolls under it.
+    const rowClassNames = `flex flex-row items-stretch ${tight ? "gap-2 p-2" : "gap-3"}`;
     const closeButton = closable && <IconButton id={id ? `${id}Close` : undefined} icon={<CloseIcon/>} size="sm"
         onClick={() => onCloseRef.current?.()}/>;
     const panel = <div className={`flex flex-col gap-1 items-start min-w-0 ${anchored ? "w-fit max-w-full shrink-0" : ""} ${additionalClassNames}`}>
@@ -47,7 +48,7 @@ export default function ScrollPanel({ children, id, onClose, closeRowContent, an
                 {closeRowContent}
             </div>
             : closeButton}
-        <div id={id} className={`p-2 flex flex-col w-fit max-w-full ${maxHeightClassNames[size]} bg-gray-700 rounded-lg pointer-events-auto yj-surface-convex`}>
+        <div id={id} className={`${tight ? "" : "p-2"} flex flex-col w-fit max-w-full ${maxHeightClassNames[size]} bg-gray-700 rounded-lg pointer-events-auto yj-surface-convex`}>
             {overhang
                 // The scroller clips, so it reaches up past the panel's edge; only the row inside it takes
                 // pointer input, which keeps that extra room click-through.
@@ -106,6 +107,9 @@ interface Props
     // Toggle to hang from (see above).
     anchorElementId?: string;
     size?: "md" | "lg";
+    // Stands the children closer together and scrolls them under the panel's padding, not inside it, so
+    // what one draws around itself (e.g. a highlight outline) isn't clipped.
+    tight?: boolean;
     // Lets children stick out over the panel's top edge (e.g. entry badges) without making it taller.
     overhang?: boolean;
     // The element that scrolls, and a call each time it does (e.g. to keep where it stands; see ThumbnailPanel).

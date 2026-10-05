@@ -39,7 +39,7 @@ export default function DoorEditOptions(props: EditOptionsProps)
             onClose={() => props.setOpenPanel(null)}
         />}
         {toolsShown && <SelectionToolRow>
-            <IconButton id="removeDoorButton" icon={<TrashIcon/>} size="md" color="red"
+            <IconButton id="removeDoorButton" icon={<TrashIcon/>} size="md" color="red" shortcutKey="Delete"
                 disabled={!ObjectEditUtil.canRemoveObject(props.selection)}
                 onClick={() => ObjectEditUtil.openRemoveConfirmPopup(props.selection,
                     "Want to remove this door?")}

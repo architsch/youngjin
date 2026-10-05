@@ -1,9 +1,10 @@
 import { useEffect, useRef } from "react";
 import { CloseGestureKind } from "../types/closeGestureKind";
+import KeyPressUtil from "./keyPressUtil";
 
-// Calls back on any "go back / close" signal (Escape, Android Back, iOS edge swipe, browser back
-// controls), consuming it so the page isn't left, and reports which kind arrived. Exiting the app is
-// the caller's decision.
+// Calls back on any "go back / close" signal (Escape or the Backspace that stands in for it, Android Back,
+// iOS edge swipe, browser back controls), consuming it so the page isn't left, and reports which kind
+// arrived. Exiting the app is the caller's decision.
 export default function useCloseGesture(
     onCloseGesture: (kind: CloseGestureKind) => void): void
 {
@@ -56,8 +57,18 @@ export default function useCloseGesture(
         let watcher: CloseWatcher | undefined;
         let lastEscapeKeyDownTime = 0;
         const onKeyDown = (ev: KeyboardEvent) => {
-            if (ev.key != "Escape")
+            if (!KeyPressUtil.isEscape(ev))
                 return;
+            // Backspace standing in for Escape draws no close request. It is kept from going back a page (where a
+            // browser still has it do so), and a slider that merely has focus gives the keyboard up to it.
+            if (ev.key != "Escape")
+            {
+                ev.preventDefault();
+                if (document.activeElement instanceof HTMLInputElement)
+                    document.activeElement.blur();
+                onCloseGestureRef.current("escape");
+                return;
+            }
             lastEscapeKeyDownTime = Date.now();
             if (!closeWatcherSupported)
                 onCloseGestureRef.current("escape");

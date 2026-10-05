@@ -78,6 +78,7 @@ plates were painted out; small incidental labels on goods remain.
 | `2/8.webp` | Tube Radio | Gayatri Pandkar | [Q1KJomEl70c](https://unsplash.com/photos/an-old-radio-sitting-on-top-of-a-wooden-table-Q1KJomEl70c) | Unsplash License |
 | `2/9.webp` | Portable TV | Diego González | [-I8lDurtfAo](https://unsplash.com/photos/grey-and-orange-crt-tv--I8lDurtfAo) | Unsplash License |
 | `2/11.webp` | Wall Clock | Ocean Ng | [L0xOtAnv94Y](https://unsplash.com/photos/round-analog-wall-clock-pointing-at-1009-L0xOtAnv94Y) | Unsplash License |
+| `2/12.webp` | Microwave | Erik Mclean | [WtxE9xb0vQU](https://unsplash.com/photos/white-microwave-oven-turned-off-WtxE9xb0vQU) | Unsplash License |
 | `2/19.webp` | Macintosh | Jason Leung | [VeUSCLJrLf4](https://unsplash.com/photos/turned-off-macintosh-monitor-VeUSCLJrLf4) | Unsplash License |
 | `2/20.webp` | Volt and Ampere Meters | Ronald Crow | [LqvEdaJVSxw](https://unsplash.com/photos/a-close-up-of-a-radio-with-volts-and-ammeters-LqvEdaJVSxw) | Unsplash License |
 | `2/27.webp` | Pendulum Clock Face | C | [G_YvG3ZIlkQ](https://unsplash.com/photos/an-old-wooden-clock-face-shows-the-time-G_YvG3ZIlkQ) | Unsplash License |
@@ -102,6 +103,7 @@ plates were painted out; small incidental labels on goods remain.
 | `2/74.webp` | Emergency Call Box | Yucel M | [LN-JxcCkT30](https://unsplash.com/photos/text-LN-JxcCkT30) | Unsplash License |
 | `2/77.webp` | Bookshelf Speaker | Caleb Woods | [VVuRLhyTmXM](https://unsplash.com/photos/green-plant-on-brown-pot-VVuRLhyTmXM) | Unsplash License |
 | `2/78.webp` | Vinyl Record | Markus Spiske | [ui79XsmHTos](https://unsplash.com/photos/vinyl-record-on-white-surface-ui79XsmHTos) | Unsplash License |
+| `2/79.webp` | Leather-Bound Proceedings | Erol Ahmed | [N23rmTcf0NA](https://unsplash.com/photos/assorted-title-book-lot-N23rmTcf0NA) | Unsplash License |
 | `2/85.webp` | Arch Vase Cubby | Kshiraj Vij | [xIJRwAaxwZo](https://unsplash.com/photos/various-decorative-objects-displayed-in-illuminated-cubbies-xIJRwAaxwZo) | Unsplash License |
 | `2/86.webp` | Vase Pair Cubby | Kshiraj Vij | [xIJRwAaxwZo](https://unsplash.com/photos/various-decorative-objects-displayed-in-illuminated-cubbies-xIJRwAaxwZo) | Unsplash License |
 | `2/87.webp` | Sculpture Cubby | Kshiraj Vij | [xIJRwAaxwZo](https://unsplash.com/photos/various-decorative-objects-displayed-in-illuminated-cubbies-xIJRwAaxwZo) | Unsplash License |

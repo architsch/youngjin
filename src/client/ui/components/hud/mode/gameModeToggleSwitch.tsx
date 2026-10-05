@@ -5,9 +5,10 @@ import ClientObjectManager from "../../../../object/clientObjectManager";
 import CameraUtil from "../../../../graphics/util/cameraUtil";
 import { clientFeatureFlagsObservable, gameModeObservable } from "../../../../system/clientObservables";
 import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
+import useShortcutKey from "../../../util/shortcutKey";
 
-// Play/edit switch (see GameModeUtil). Outlined to read over the scene. Greyed out, not hidden, while
-// a step locks the mode.
+// Play/edit switch (see GameModeUtil), which M ("mode") clicks too. Outlined to read over the scene. Greyed out,
+// not hidden, while a step locks the mode.
 
 export default function GameModeToggleSwitch()
 {
@@ -41,6 +42,7 @@ export default function GameModeToggleSwitch()
                 GameModeUtil.enterEditMode(myPlayer, CameraUtil.getObjectsAlongLineOfSight);
         }
     };
+    useShortcutKey("M", onClick, canChangeGameMode);
 
     // A div, so its role and state are declared for assistive tech.
     return <div

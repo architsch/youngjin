@@ -272,8 +272,8 @@
   .inset-x-0 {
     inset-inline: calc(var(--spacing) * 0);
   }
-  .-top-4 {
-    top: calc(var(--spacing) * -4);
+  .-top-3 {
+    top: calc(var(--spacing) * -3);
   }
   .top-\(--yj-headline-height\,0px\) {
     top: var(--yj-headline-height,0px);
@@ -364,9 +364,6 @@
   }
   .m-1 {
     margin: calc(var(--spacing) * 1);
-  }
-  .m-1\.5 {
-    margin: calc(var(--spacing) * 1.5);
   }
   .m-2 {
     margin: calc(var(--spacing) * 2);
@@ -491,6 +488,10 @@
   .size-15 {
     width: calc(var(--spacing) * 15);
     height: calc(var(--spacing) * 15);
+  }
+  .size-18 {
+    width: calc(var(--spacing) * 18);
+    height: calc(var(--spacing) * 18);
   }
   .h-1 {
     height: calc(var(--spacing) * 1);
@@ -624,11 +625,11 @@
   .w-14 {
     width: calc(var(--spacing) * 14);
   }
-  .w-15 {
-    width: calc(var(--spacing) * 15);
-  }
   .w-16 {
     width: calc(var(--spacing) * 16);
+  }
+  .w-18 {
+    width: calc(var(--spacing) * 18);
   }
   .w-28 {
     width: calc(var(--spacing) * 28);
@@ -791,8 +792,8 @@
   .resize-none {
     resize: none;
   }
-  .scroll-ml-1\.5 {
-    scroll-margin-left: calc(var(--spacing) * 1.5);
+  .scroll-ml-2 {
+    scroll-margin-left: calc(var(--spacing) * 2);
   }
   .flex-col {
     flex-direction: column;

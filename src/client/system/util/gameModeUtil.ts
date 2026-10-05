@@ -10,9 +10,9 @@ import { FeatureFlag } from "../../../shared/system/types/featureFlag";
 import { EDIT_MODE_OPENING_REACH, EDIT_MODE_OPENING_TILT } from "../clientConstants";
 
 // Owns the current game mode (see @docs/gameplay/game_mode.md). Followers watch gameModeObservable.
-// Edit mode is entered only via the top-bar switch (opening on what the camera faces) and left via the
-// switch or the back gesture. It's open to everyone; permissions are checked per edit. Every crossing
-// checks canChangeGameMode, since the back gesture bypasses the switch.
+// Edit mode is entered and left only via the top-bar switch (opening on what the camera faces); a back
+// gesture does not close it. It's open to everyone; permissions are checked per edit. Every crossing checks
+// canChangeGameMode, so a lock never rests on the switch alone.
 
 const GameModeUtil =
 {
@@ -26,7 +26,7 @@ const GameModeUtil =
         return gameModeObservable.peek() == "edit";
     },
 
-    // False while a scripted step locks the mode (enforced here so Escape can't bypass it).
+    // False while a scripted step locks the mode.
     canChangeGameMode: (): boolean =>
     {
         return !clientFeatureFlagsObservable.has(FeatureFlag.DisableGameModeTransition);

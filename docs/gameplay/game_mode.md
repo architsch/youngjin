@@ -1,6 +1,6 @@
 # Game Mode
 
-Reference: @src/client/system/util/gameModeUtil.ts , @src/client/graphics/util/worldSpaceSelectionUtil.ts , @src/client/object/types/objectTypeClientConfig/objectTypeClientConfig.ts , @src/client/ui/util/closablePanelUtil.ts
+Reference: @src/client/system/util/gameModeUtil.ts , @src/client/graphics/util/worldSpaceSelectionUtil.ts , @src/client/object/types/objectTypeClientConfig/objectTypeClientConfig.ts , @src/client/ui/util/closablePanelUtil.ts , @src/client/ui/util/shortcutKeyUtil.ts
 
 A `GameMode` decides the camera behavior, whether the player can walk, and which tools are shown. `GameModeUtil` publishes the current mode, and everything mode-dependent observes it.
 
@@ -11,7 +11,9 @@ The mode is stored separately from camera state, because the camera briefly has 
 
 ## Switching
 - Edit mode can only be entered through the top-bar toggle. It opens on the nearest voxel quad or object in the middle of the view that can be selected, within a limited reach, looking past objects that refuse (e.g. other players) but never through a room surface. If there is none, the same look is tried again tilted toward the ground. If that finds nothing either, it opens on the user's own character, even past a step's selection lock.
-- It is left through the toggle or the back gesture (Escape / device Back). The back gesture closes popups and closable panels first (`ClosablePanelUtil`). Leaving clears the selection.
+- It is left only through the toggle, which clears the selection. The back gesture (Escape, Backspace outside a text field, device Back) closes popups and closable panels (`ClosablePanelUtil`), an open color palette before whatever it is open over, and never the mode.
+- Shortcut keys stand for clicks on the controls that declare them (`ShortcutKeyUtil`): M on the toggle, Delete on the selection tools' remove button, Enter on a popup's answer (a confirm popup's Yes, a welcome popup's OK). A press reaches its control only where a click could: Enter while its popup is on top; the others not under a popup or while a text field has the keyboard, and Delete not with a panel open over the tools.
+- A confirm popup takes no Yes, clicked or keyed, for a moment after it appears (`CONFIRM_ARMING_DELAY_MS`), and shows no sign of it.
 - Selecting or deselecting never changes the mode.
 - Edit mode is open to everyone. Permissions are checked per edit (see [restricted_zone.md](restricted_zone.md)).
 - A single-player step can lock the mode (see [single_player_mode.md](../networking/single_player_mode.md)). The lock is checked in `GameModeUtil`, so every way of switching respects it.

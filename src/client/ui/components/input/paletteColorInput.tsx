@@ -3,6 +3,8 @@ import ColorUtil from "../../../../shared/math/util/colorUtil";
 import { ColorPaletteName } from "../../../../shared/math/maps/colorPaletteMap";
 import { numActiveInputElementsObservable } from "../../../system/clientObservables";
 import useMouseDragScroll from "../../util/mouseDragScroll";
+import ClosablePanelUtil from "../../util/closablePanelUtil";
+import KeyPressUtil from "../../util/keyPressUtil";
 
 const PALETTE_GAP = 4; // Space kept between the button and the palette above it
 const SCREEN_MARGIN = 8; // Space kept between the palette and the screen edges
@@ -38,11 +40,17 @@ export default function PaletteColorInput({ paletteName, currValue, setColorInde
     useEffect(() => {
         if (!paletteOpen)
             return;
-        // Counts as an active input while open; Escape closes it.
+        // Counts as an active input while open, and as a panel open over the controls around it (see
+        // ClosablePanelUtil); Escape closes it.
         numActiveInputElementsObservable.change(n => n + 1);
+        const panelToken = ClosablePanelUtil.register(() => setPaletteOpen(false));
         const onKeyDown = (ev: KeyboardEvent) => {
-            if (ev.key == "Escape")
-                setPaletteOpen(false);
+            if (!KeyPressUtil.isEscape(ev))
+                return;
+            // Kept from the browser, whose own close request would go on to close what the palette is open over
+            // (see useCloseGesture).
+            ev.preventDefault();
+            setPaletteOpen(false);
         };
         // An outside press closes the palette only if it didn't travel (a drag orbits the camera).
         // The toggle button counts as inside.
@@ -69,6 +77,7 @@ export default function PaletteColorInput({ paletteName, currValue, setColorInde
         window.addEventListener("pointercancel", onPointerCancel, true);
         return () => {
             numActiveInputElementsObservable.change(n => n - 1);
+            ClosablePanelUtil.unregister(panelToken);
             window.removeEventListener("keydown", onKeyDown);
             window.removeEventListener("pointerdown", onPointerDown, true);
             window.removeEventListener("pointerup", onPointerUp, true);

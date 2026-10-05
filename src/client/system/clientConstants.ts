@@ -31,6 +31,10 @@ export const AUTO_SELECTION_MIN_COVERAGE_FREE_RATIO = 0.5;
 // How long a notification message stays on screen (in milliseconds).
 export const NOTIFICATION_DURATION_MS = 3000;
 
+// How long a confirm popup's Yes takes no click or key press once the popup comes up (in milliseconds; see
+// ConfirmForm).
+export const CONFIRM_ARMING_DELAY_MS = 500;
+
 // Whether the image chooser offers its category tabs (see ImageMapThumbnailPanel). False hides them, and every
 // image is shown as if All were picked.
 export const IMAGE_CATEGORY_TABS_ENABLED = true;

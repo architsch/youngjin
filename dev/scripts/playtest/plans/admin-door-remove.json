@@ -39,8 +39,7 @@
       "settleMs": 800
     },
     {
-      "type": "click",
-      "selector": "#uiRoot >> text=Yes",
+      "type": "confirm",
       "settleMs": 2000
     },
     {

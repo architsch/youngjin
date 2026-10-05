@@ -554,12 +554,21 @@ describe("the picture map", () => {
         }
         for (const image of imageMap.getImageMetadataList())
             expect(ImageMapSettingsUtil.getCategories(own, image.path), image.path).toEqual(ImageMap.getCategories(image.keywords));
-        // Untouched, they are the file's own, but for what that says of images the map doesn't hold.
+        // Untouched, they are the file's own for the images it names: one it leaves out comes before those it lists
+        // and is under no category, and what it says of images the map doesn't hold is passed over.
         const file = readSettings();
         expect(own.categoryTabsBySubfolder).toEqual(file.categoryTabsBySubfolder);
-        expect(own.orderedIndicesBySubfolder).toEqual(file.orderedIndicesBySubfolder);
+        for (const [subfolderName, indices] of Object.entries(own.orderedIndicesBySubfolder))
+        {
+            const listed = (file.orderedIndicesBySubfolder[subfolderName] ?? []).filter(index => indices.includes(index));
+            expect(indices, subfolderName).toEqual([...indices.filter(index => !listed.includes(index)), ...listed]);
+        }
         for (const [subfolderName, categoriesByIndex] of Object.entries(own.categoriesBySubfolderAndIndex))
-            expect(file.categoriesBySubfolderAndIndex[subfolderName], subfolderName).toMatchObject(categoriesByIndex);
+        {
+            const filed = file.categoriesBySubfolderAndIndex[subfolderName] ?? {};
+            for (const [index, categories] of Object.entries(categoriesByIndex))
+                expect(categories, `${subfolderName}/${index}`).toEqual(filed[index] ?? []);
+        }
     });
 
     it("reads a map's part of a settings file, none where the file holds none, and says why a file can't be used", () => {

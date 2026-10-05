@@ -218,7 +218,7 @@ export default function ImageMapThumbnailPanel({ id, searchInputId, searchPlaceh
                     </span>}
                 </>;
             }}
-            thumbnailClassNames="relative size-15 flex items-center justify-center bg-gray-800"
+            thumbnailClassNames="relative size-18 flex items-center justify-center bg-gray-800"
             emptyText={(searchInput.trim().length > 0) ? "No images match your search." : "No images here."}
             // As tall as the close button. The tabs give way first on a narrow screen, scrolling instead.
             closeRowContent={<>

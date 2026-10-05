@@ -617,7 +617,7 @@ describe("entering edit mode", () => {
     });
 
     it("is not left by a second click on the block being edited", () => {
-        // The mode is left via the switch or back gesture, not by clicking the edited thing.
+        // The mode is left via the switch, not by clicking the edited thing.
         GameModeUtil.enterEditMode(makeCharacter());
         const quadIndex = floorQuadIndexOf(10, 10);
         selectQuad(10, 10, quadIndex);
@@ -980,13 +980,13 @@ describe("a gizmo drag holding the view", () => {
 });
 
 describe("a scripted step holding the user in his mode", () => {
-    // The hold applies to the crossing itself, so every exit (including the back gesture) obeys it.
+    // The hold applies to the crossing itself, not only to the switch that asks for it.
     it("keeps the way out shut", () => {
         GameModeUtil.enterEditMode(makeCharacter());
         selectQuad(10, 10, floorQuadIndexOf(10, 10));
         clientFeatureFlagsObservable.tryAdd(FeatureFlag.DisableGameModeTransition);
 
-        GameModeUtil.exitEditMode(); // What the switch and the back gesture both come down to.
+        GameModeUtil.exitEditMode(); // What the switch comes down to.
 
         expect(GameModeUtil.isInEditMode()).toBe(true);
         expect(VoxelQuadSelection.isSelected()).toBe(true);

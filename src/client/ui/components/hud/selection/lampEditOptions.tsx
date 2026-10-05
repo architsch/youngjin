@@ -59,7 +59,7 @@ export default function LampEditOptions(props: EditOptionsProps)
             onClose={() => props.setOpenPanel(null)}
         />}
         {toolsShown && <SelectionToolRow>
-            <IconButton icon={<TrashIcon/>} size="md" color="red"
+            <IconButton icon={<TrashIcon/>} size="md" color="red" shortcutKey="Delete"
                 disabled={!ObjectEditUtil.canRemoveObject(props.selection)}
                 onClick={() => ObjectEditUtil.openRemoveConfirmPopup(props.selection, "Want to remove this?")}
             />

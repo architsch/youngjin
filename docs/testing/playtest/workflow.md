@@ -56,7 +56,7 @@ A real browser and socket. Data assertions use the page's authenticated request 
 | Data | `listRooms`, `searchRooms`, `hubEntries`, `myRoomEntry` |
 | Placement | `place`, `vantage`, `look`, `pose`, `standingSpots` |
 | World | `objects`, `clickObject`, `clickSurface`, `clickSurfaceUntilEnabled`, `orbit`, `zoom`, `walk`, `expectSelection` |
-| UI | `enterEditMode`, `ensureEditMode`, `exitEditMode`, `uiClick`, `expectDisabled`, `click`, `fill`, `expect`, `say` |
+| UI | `enterEditMode`, `ensureEditMode`, `exitEditMode`, `uiClick`, `expectDisabled`, `click`, `confirm`, `fill`, `expect`, `say` |
 
 - `start` accepts `ref` (an analytics cohort tag) and `devUser` (local dev mode only).
 - `sessionFile` persists cookies between plans. It is written even when actions fail.
@@ -73,9 +73,10 @@ Both are installed only on non-public deployments. **Arrange with one, act with 
 ### Driving the 3D world
 - The orbit camera and editing tools exist only in edit mode, which is entered through the top-bar toggle.
 - `clickObject` matches by id, type or metadata (e.g. `{"objectType": "Door", "metadata": {"Label": "Attic"}}`) and walks into reach first. `expectSelection` confirms that the click landed.
-- Silent failures (out of reach, occluded, covered by the HUD) are reported explicitly. Expected quirks: culled surfaces refuse selection, so candidates are tried in turn. Tapping the current selection drops it, which exits edit mode; `ensureEditMode` restores it.
+- Silent failures (out of reach, occluded, covered by the HUD) are reported explicitly. Expected quirk: culled surfaces refuse selection, so candidates are tried in turn.
 - `clickSurfaceUntilEnabled` selects surfaces until a named control becomes enabled, widening the view and moving between rounds. Its report separates "nowhere valid" from "the tool is broken".
 - HUD controls are `div`s with `aria-disabled`, so use `uiClick` and `expectDisabled` rather than raw DOM clicks.
+- Answer a confirm popup with `confirm`, not a `click` on Yes: Yes takes no click for the popup's first moment and shows no sign of it.
 
 ## Acquisition-analytics check
 The only end-to-end test of [analytics](../../devOps/analytics.md). Tag the start action as `{ "type": "start", "ref": "playtest-<runID>" }`, then run `stagingAdmin.js verify-funnel --run <runID>`.

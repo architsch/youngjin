@@ -98,24 +98,23 @@ export default function ThumbnailPanel<K extends string | number>({ id, choices,
         return () => observer.disconnect();
     }, [shownChoices.length, hasMore]);
 
-    return <ScrollPanel id={id} onClose={onClose} closeRowContent={closeRowContent} overhang={overhang}
+    return <ScrollPanel id={id} onClose={onClose} closeRowContent={closeRowContent} tight={true} overhang={overhang}
         scrollerRef={scrollerRef} onScroll={rememberPlace}>
         {choices.length == 0 && <>
             {emptyText && <Text content={emptyText} size="sm" additionalClassNames="self-center shrink-0"/>}
             {/* An unseen tile of no width, so the row stays as tall as with thumbnails in it. */}
-            <div aria-hidden className={`${thumbnailClassNames} m-1.5 shrink-0 invisible`}
-                style={{width: 0, marginLeft: 0, marginRight: 0}}/>
+            <div aria-hidden className={`${thumbnailClassNames} shrink-0 invisible`} style={{width: 0}}/>
         </>}
         {shownChoices.map((choice, position) => {
             const choosable = canChoose?.(choice) ?? true;
             const highlightClassNames = (choice === current) ? "outline-4 outline-green-500 outline-offset-1" : "";
-            // The margin leaves room for the highlight outline inside the scrolling row, and a thumbnail scrolled to
-            // the start keeps it.
+            // The row's padding and gaps are the highlight outline's room (see ScrollPanel), and a thumbnail scrolled
+            // to the start stands as far in as the first one does.
             return <div key={choice} id={`${id}.${position}`} ref={position == scrollTarget ? scrollTargetRef : undefined}
                 aria-disabled={!choosable}
                 onClick={choosable ? () => onChoose(choice) : undefined}
                 onPointerDown={canPickUp ? event => holdThumbnail(event, position) : undefined}
-                className={`${thumbnailClassNames} m-1.5 scroll-ml-1.5 shrink-0 rounded-md ${highlightClassNames} ${choosable ? "cursor-pointer" : "opacity-30 cursor-not-allowed"}`}
+                className={`${thumbnailClassNames} scroll-ml-2 shrink-0 rounded-md ${highlightClassNames} ${choosable ? "cursor-pointer" : "opacity-30 cursor-not-allowed"}`}
             >
                 {renderThumbnail(choice, position)}
             </div>;

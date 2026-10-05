@@ -1,7 +1,11 @@
 import { ReactNode } from "react";
+import { ShortcutKey } from "../../types/shortcutKey";
+import useShortcutKey from "../../util/shortcutKey";
 
-export default function IconButton({icon, size = "md", color = "gray", disabled = false, highlight = false, onClick, additionalClassNames = "", id }: Props)
+export default function IconButton({icon, size = "md", color = "gray", disabled = false, highlight = false, onClick, shortcutKey, additionalClassNames = "", id }: Props)
 {
+    useShortcutKey(shortcutKey, onClick, !disabled);
+
     // A div has no `disabled`, so declare it via aria for assistive tech and automation.
     return <div
         id={id}
@@ -40,6 +44,8 @@ interface Props
     // Marks the button as currently active — e.g. a toggle whose target is open.
     highlight?: boolean;
     onClick: () => void;
+    // A key whose press stands for a click on the button (see ShortcutKeyUtil).
+    shortcutKey?: ShortcutKey;
     additionalClassNames?: string;
     id?: string;
 }

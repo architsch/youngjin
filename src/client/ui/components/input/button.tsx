@@ -1,5 +1,10 @@
-export default function Button({name, size = "md", color = "gray", disabled = false, highlight = false, onClick, additionalClassNames = "", id }: Props)
+import { ShortcutKey } from "../../types/shortcutKey";
+import useShortcutKey from "../../util/shortcutKey";
+
+export default function Button({name, size = "md", color = "gray", disabled = false, highlight = false, onClick, shortcutKey, additionalClassNames = "", id }: Props)
 {
+    useShortcutKey(shortcutKey, onClick, !disabled);
+
     // Stated as well as drawn — see iconButton.tsx, which carries the reasoning for both.
     return <div
         id={id}
@@ -39,6 +44,8 @@ interface Props
     // Marks the button as currently active — e.g. a toggle whose target is open.
     highlight?: boolean;
     onClick: () => void;
+    // A key whose press stands for a click on the button (see ShortcutKeyUtil).
+    shortcutKey?: ShortcutKey;
     additionalClassNames?: string;
     id?: string;
 }

@@ -35,13 +35,14 @@ export default function CompositionThumbnailPanel({ id, objectType, currentCompo
                     autoScrollToHighlight={false}
                     additionalClassNames="w-full rounded-md"
                 />
-                {/* Straddles the panel's top edge, clear of the highlight outline and within ScrollPanel's overhang. */}
-                <span className="absolute -top-4 right-0 size-5 flex items-center justify-center rounded-full bg-gray-900 text-[12px] leading-none text-gray-300 pointer-events-none select-none">
+                {/* Straddles the panel's top edge, clear of the highlight outline and of the close button above it,
+                    within ScrollPanel's overhang. */}
+                <span className="absolute -top-3 right-0 size-5 flex items-center justify-center rounded-full bg-gray-900 text-[12px] leading-none text-gray-300 pointer-events-none select-none">
                     {position + 1}
                 </span>
             </>;
         }}
-        thumbnailClassNames="relative w-15"
+        thumbnailClassNames="relative w-18"
         overhang={true}
         onClose={onClose}
     />;

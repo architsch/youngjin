@@ -31,7 +31,7 @@ export default function LabelEditOptions(props: EditOptionsProps)
             onClose={() => props.setOpenPanel(null)}
         />}
         {toolsShown && <SelectionToolRow>
-            <IconButton id="removeLabelButton" icon={<TrashIcon/>} size="md" color="red"
+            <IconButton id="removeLabelButton" icon={<TrashIcon/>} size="md" color="red" shortcutKey="Delete"
                 disabled={!ObjectEditUtil.canRemoveObject(props.selection)}
                 onClick={() => ObjectEditUtil.openRemoveConfirmPopup(props.selection, "Want to remove this label?")}
             />

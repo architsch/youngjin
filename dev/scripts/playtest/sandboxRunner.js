@@ -457,7 +457,7 @@ async function leaveTutorial(page)
 
     console.log("[sandbox] Session started in the tutorial — skipping it.");
     await skipButton.click();
-    await page.locator("#uiRoot").getByText("Yes", { exact: true }).first().click();
+    await Interact.ui.confirm(page);
     await waitForGameReady(page);
 }
 

@@ -31,11 +31,11 @@ import ExitPromptForm from "./components/form/exitPromptForm";
 import { FeatureFlag } from "../../shared/system/types/featureFlag";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 import useCloseGesture from "./util/closeGesture";
+import useShortcutKeyListener from "./util/shortcutKeyListener";
 import PopupUtil from "./util/popupUtil";
 import ClosablePanelUtil from "./util/closablePanelUtil";
 import ExitConfirmationUtil from "./util/exitConfirmationUtil";
 import GameMode from "../system/types/gameMode";
-import GameModeUtil from "../system/util/gameModeUtil";
 import FTUEUtil from "./util/ftueUtil";
 import { FTUEElementCodeEnumMap } from "./types/ftueElementCode";
 import HubRoomWelcomeForm from "./components/form/hubRoomWelcomeForm";
@@ -104,14 +104,14 @@ export default function UIRoot({ env, user }: UIRootProps)
             : `${env.static_server_url}#other-works`;
     };
 
-    // Back gestures close the topmost thing: a popup, then a panel (see ClosablePanelUtil), then edit
-    // mode. With nothing to close, a second back gesture leaves the page.
+    // Back gestures close the topmost thing: a popup, then a panel (see ClosablePanelUtil). With nothing to
+    // close, a second back gesture leaves the page. Edit mode is not theirs to close (see GameModeUtil).
     useCloseGesture((kind) => {
         // Escape is first handled by a focused input (blur, palette close); back gestures aren't.
         if (kind == "escape" && numActiveInputElementsObservable.peek() > 0)
             return;
 
-        if (popupStack.length == 0 && !ClosablePanelUtil.hasOpenPanel() && !inEditMode)
+        if (popupStack.length == 0 && !ClosablePanelUtil.hasOpenPanel())
         {
             // Nothing to close: back leaves only on the second press.
             if (kind == "back")
@@ -124,12 +124,12 @@ export default function UIRoot({ env, user }: UIRootProps)
 
         if (popupStack.length > 0)
             PopupUtil.closePopup();
-        else if (ClosablePanelUtil.hasOpenPanel())
+        else
             ClosablePanelUtil.closeTopmost();
-        else // Leaves edit mode itself (not just the selection). If a step locks the mode, the
-             // gesture is still consumed.
-            GameModeUtil.exitEditMode();
     });
+
+    // Shortcut keys click their controls only where a click could reach them, which the popup on top decides.
+    useShortcutKeyListener(popupStack[popupStack.length - 1]?.popupType);
 
     const isRoomLoaded = roomRuntimeMemory != undefined;
     const isMultiplayerRoomLoaded = isRoomLoaded &&

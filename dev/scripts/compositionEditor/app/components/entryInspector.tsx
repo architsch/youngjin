@@ -7,7 +7,7 @@ import PartsEditor from "./partsEditor";
 import ThumbnailCanvas from "./thumbnailCanvas";
 
 const LARGE_PREVIEW_SIZE = 256;
-const IN_GAME_PREVIEW_SIZE = 60; // what CompositionThumbnailPanel shows
+const IN_GAME_PREVIEW_SIZE = 72; // what CompositionThumbnailPanel shows
 // An entry is never indexed itself (see PreEncodingSourceUtil).
 const CODEC_TYPES = Object.keys(InstancedMeshCompositionCodecTypeEnumMap).filter(codecType => codecType != "Indexed");
 const DEFAULT_CODEC_TYPE = "Default";

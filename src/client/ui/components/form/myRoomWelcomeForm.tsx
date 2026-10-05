@@ -10,6 +10,6 @@ export default function MyRoomWelcomeForm()
         <Text content="This is your room!" size="lg"/>
         <Text content="Build whatever you like in here." size="sm"/>
         <Spacer size="sm"/>
-        <Button name="OK" size="md" color="green" onClick={PopupUtil.closePopup}/>
+        <Button name="OK" size="md" color="green" shortcutKey="Enter" onClick={PopupUtil.closePopup}/>
     </Form>
 }

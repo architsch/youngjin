@@ -28,7 +28,7 @@ node dev/scripts/playtest/sandboxRunner.js --serve --fresh-room [--room-type=hub
 ```
 curl -s -X POST http://127.0.0.1:4321/do -d '{"op":"stage","args":[{"row":14,"col":14,"rows":9,"cols":11,"layers":8,"wallTextureIndex":45,"floorTextureIndex":14,"open":["-z"]}]}'
 ```
-The bare `:4321/...` shorthand does not work under zsh. Ops share their names with what a script's `run(ctx)` calls, so a sequence that works transcribes into a script line for line. A script exports `{slug?, run(ctx)}`; `ctx` carries `shot`, `clickId`, `clickText`, `describeUI`, `hideHUD`, plus `setup` and `interact`. Keep scratch scripts outside the repo — the dev server watches `dev/` apart from its ignored directories, and a write there restarts it mid-run.
+The bare `:4321/...` shorthand does not work under zsh. Ops share their names with what a script's `run(ctx)` calls, so a sequence that works transcribes into a script line for line. A script exports `{slug?, run(ctx)}`; `ctx` carries `shot`, `clickId`, `clickText`, `describeUI`, `hideHUD`, plus `setup` and `interact`. Answer a confirm popup with `ui.confirm`, not `clickText`: its Yes takes no click for the popup's first moment and shows no sign of it. Keep scratch scripts outside the repo — the dev server watches `dev/` apart from its ignored directories, and a write there restarts it mid-run.
 
 | Build op | Stands up |
 |---|---|

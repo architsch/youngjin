@@ -560,6 +560,10 @@ async function waitForSelection(page, predicate, options = {})
 // Selection-driven DOM with stable ids: no aiming needed, but controls mount, unmount and disable with
 // the selection, so clicks wait and check.
 
+// How long a confirm popup is left up before its Yes is clicked: longer than CONFIRM_ARMING_DELAY_MS (see
+// clientConstants.ts).
+const CONFIRM_POPUP_WAIT_MS = 1000;
+
 const ui =
 {
     locator: (page, elementId) => page.locator(`#${elementId}`),
@@ -576,6 +580,21 @@ const ui =
         if (await locator.count() === 0) return false;
         if (!(await locator.isEnabled())) return false; // Real form controls still answer here.
         return (await locator.getAttribute("aria-disabled")) !== "true";
+    },
+
+    // Answers a confirm popup with Yes. Yes takes no click for the popup's first moment and looks no different
+    // meanwhile (see ConfirmForm), so that moment is waited out; the popup closing is what says the click was taken.
+    async confirm(page, options = {})
+    {
+        const yes = page.locator("#uiRoot").getByText("Yes", {exact: true}).last();
+        await yes.waitFor({state: "visible", timeout: options.timeout ?? 10_000});
+        await sleep(CONFIRM_POPUP_WAIT_MS);
+        await yes.click();
+        await yes.waitFor({state: "hidden", timeout: 5000}).catch(() => {
+            throw new Error("The confirm popup stayed up after Yes was clicked — its delay " +
+                "(CONFIRM_ARMING_DELAY_MS) may have outgrown the wait before the click.");
+        });
+        await sleep(options.settleMs ?? 250);
     },
 
     // A disabled control is the app refusing (usually what's under test), so it's reported as such.
