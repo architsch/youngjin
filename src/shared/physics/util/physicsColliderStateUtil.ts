@@ -9,8 +9,10 @@ import type ObjectTransform from "../../object/types/objectTransform";
 import { ColliderConfig } from "../types/colliderConfig";
 import PhysicsDebugUtil from "./physicsDebugUtil";
 import PhysicsRoom from "../types/physicsRoom";
+import Voxel from "../../voxel/types/voxel";
+import VoxelQueryUtil from "../../voxel/util/voxelQueryUtil";
 import { ATTACHMENT_HITBOX_INSET, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
-    VOXEL_BLOCK_HITBOX_HALFSIZE } from "../../system/sharedConstants";
+    VOXEL_BLOCK_SHAPE_EMPTY } from "../../system/sharedConstants";
 
 // Sequentially recycle each of the sets in the array (because there may be a function which uses multiple sets simultaneously).
 let colliderStatesTempNextIndex = 0;
@@ -28,14 +30,12 @@ const voxelBlockColliderConfig: ColliderConfig = {
 
 const PhysicsColliderStateUtil =
 {
-    getVoxelBlockColliderState: (row: number, col: number, collisionLayer: number): ColliderState =>
+    // A block's collider: its box as its shape leaves it (see VoxelQueryUtil.getVoxelBlockBox).
+    getVoxelBlockColliderState: (voxels: Voxel[], row: number, col: number, collisionLayer: number): ColliderState =>
     {
-        const centerY = collisionLayer * 0.5 + 0.25;
         const state: ColliderState = {
-            hitbox: {
-                center: {x: 0.5 + col, y: centerY, z: 0.5 + row},
-                halfSize: VOXEL_BLOCK_HITBOX_HALFSIZE,
-            },
+            hitbox: VoxelQueryUtil.getVoxelBlockBox(row, col, collisionLayer,
+                VoxelQueryUtil.getVoxelBlockShapeAt(voxels, row, col, collisionLayer)),
             colliderConfig: voxelBlockColliderConfig
         };
         PhysicsDebugUtil.tryShowColliderBox("voxelBlock", state, "#ffff00");
@@ -76,6 +76,10 @@ const PhysicsColliderStateUtil =
         const maxCol = Math.min(NUM_VOXEL_COLS-1, Math.floor(maxX));
         const minRow = Math.max(0, Math.floor(minZ));
         const maxRow = Math.min(NUM_VOXEL_ROWS-1, Math.floor(maxZ));
+        const minLayer = Math.max(COLLISION_LAYER_MIN,
+            VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(hitbox.center.y - hitbox.halfSize.y));
+        const maxLayer = Math.min(COLLISION_LAYER_MAX,
+            VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(hitbox.center.y + hitbox.halfSize.y));
 
         const set = colliderStatesTemp[colliderStatesTempNextIndex];
         colliderStatesTempNextIndex = (colliderStatesTempNextIndex + 1) % colliderStatesTemp.length;
@@ -95,17 +99,17 @@ const PhysicsColliderStateUtil =
             for (let col = minCol; col <= maxCol; ++col)
             {
                 const physicsVoxel = physicsRoom.voxels[row * NUM_VOXEL_COLS + col];
-                const voxelMask = physicsVoxel.voxel.collisionLayerMask;
+                // A voxel's blocks are contiguous (see VoxelQueryUtil.getVoxelBlockIndex).
+                const blockShapes = physicsVoxel.voxel.quadsMem.blockShapes;
+                const firstBlockIndex = VoxelQueryUtil.getVoxelBlockIndex(row, col, COLLISION_LAYER_MIN);
 
                 // Voxel-block hitboxes
-                for (let layer = COLLISION_LAYER_MIN; layer <= COLLISION_LAYER_MAX; ++layer)
+                for (let layer = minLayer; layer <= maxLayer; ++layer)
                 {
-                    if ((voxelMask & (1 << layer)) !== 0)
+                    const shape = blockShapes[firstBlockIndex + layer - COLLISION_LAYER_MIN];
+                    if (shape != VOXEL_BLOCK_SHAPE_EMPTY)
                     {
-                        const voxelBlockHitbox = {
-                            center: {x: col+0.5, y: 0.25 + 0.5*layer, z: row+0.5},
-                            halfSize: VOXEL_BLOCK_HITBOX_HALFSIZE
-                        };
+                        const voxelBlockHitbox = VoxelQueryUtil.getVoxelBlockBox(row, col, layer, shape);
                         if (Geometry3DUtil.AABBsOverlap(hitbox, voxelBlockHitbox))
                             set.add({hitbox: voxelBlockHitbox, colliderConfig: voxelBlockColliderConfig});
                     }

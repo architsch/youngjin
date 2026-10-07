@@ -12,7 +12,7 @@ A restricted zone is a rectangle on a room's floor plan that runs from floor to 
 
 ## Rules for everyone else
 Inside a zone, other users may not:
-- add, remove or move voxel blocks;
+- add, remove, move or reshape voxel blocks;
 - repaint faces, except the faces on the zone's outer boundary;
 - add, move (into or out of the zone) or remove persistent objects, or change what they show. Objects attached to the zone's outer boundary faces are outside the zone.
 

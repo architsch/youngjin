@@ -173,12 +173,45 @@ async function orbit(page, dx, dy, options = {})
     await sleep(150);
 }
 
+// Drags the pointer from one viewport point to another in small steps, as a hand does: for a gesture the
+// selection's outline takes (see the `selectionGizmo` op), which goes by where the pointer is, not by how
+// far it has travelled. `via` are points to pass through on the way.
+async function dragBetween(page, from, to, options = {})
+{
+    const stepsPerLeg = options.steps ?? 12;
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    let leg = from;
+    for (const next of [...(options.via ?? []), to])
+    {
+        for (let step = 1; step <= stepsPerLeg; step++)
+        {
+            await page.mouse.move(leg.x + ((next.x - leg.x) * step) / stepsPerLeg,
+                leg.y + ((next.y - leg.y) * step) / stepsPerLeg);
+            await sleep(16);
+        }
+        leg = next;
+    }
+    if (options.hold !== true)
+        await page.mouse.up();
+    await sleep(150);
+}
+
+// Ends a drag that `dragBetween` was told to `hold`, to look at the room while it lasted. (Pressing again
+// instead would abandon the drag: a new press takes the canvas from whatever held it.)
+async function releaseDrag(page)
+{
+    await page.mouse.up();
+    await sleep(150);
+}
+
 // Pointer travel (px) kept between a drag's start and the selection outline's corners.
 const ORBIT_CLEARANCE_PX = 40;
 
-// The canvas's middle, unless the selected object's outline covers it: in edit mode the orbit frames the
-// selection there, and a drag that starts on the outline moves the object instead of the view. Then it
-// starts midway between the outline and whichever canvas edge leaves the most room.
+// The canvas's middle, unless the selection's outline covers it: in edit mode the orbit frames the
+// selection there, and a drag that starts on the outline can move the selected object, or take a handle
+// of the selected face, instead of turning the view. Then it starts midway between the outline and
+// whichever canvas edge leaves the most room.
 async function orbitStartPoint(page, canvas)
 {
     const middle = {x: canvas.left + canvas.width / 2, y: canvas.top + canvas.height / 2};
@@ -359,7 +392,27 @@ async function clickObject(page, target, options = {})
     if (problem != null)
         throw new Error(`Cannot click ${JSON.stringify(target)} — it is ${problem}.`);
 
-    const hit = await call(page, "probe", report.screen.x, report.screen.y);
+    let aim = report.screen;
+    let hit = await call(page, "probe", aim.x, aim.y);
+    // A click goes through a picture where its image is see-through, which a prop's can be at its very
+    // middle: aim then at the nearest point of it a click does reach.
+    if (hit != null && hit.overCanvas && hit.objectId !== report.objectId)
+    {
+        let point = null;
+        try
+        {
+            point = await call(page, "clickPoint", report.objectId);
+        }
+        catch
+        {
+            // A build from before the op, where a click meets a picture all over.
+        }
+        if (point != null)
+        {
+            aim = point;
+            hit = await call(page, "probe", aim.x, aim.y);
+        }
+    }
     if (hit == null)
         throw new Error(`Aimed at ${JSON.stringify(target)} but the pixel is over nothing.`);
     if (!hit.overCanvas)
@@ -377,8 +430,8 @@ async function clickObject(page, target, options = {})
 
     // `select: false` for clicks not meant to select (walking through a door).
     const tapped = options.select === false
-        ? (await tap(page, report.screen.x, report.screen.y), {})
-        : await tapToSelect(page, report.screen.x, report.screen.y);
+        ? (await tap(page, aim.x, aim.y), {})
+        : await tapToSelect(page, aim.x, aim.y);
     return { ...report, ...tapped };
 }
 
@@ -625,7 +678,7 @@ module.exports = {
     BRIDGE,
     hasBridge, waitForBridge, waitForRoom, call,
     find, findAll, diagnose,
-    tap, tapToSelect, orbit, zoom, walk, approach,
+    tap, tapToSelect, orbit, dragBetween, releaseDrag, zoom, walk, approach,
     gameMode, waitForGameMode, ensureEditMode,
     clickObject, clickSurface, clickSurfaceUntilEnabled, waitForSelection,
     ui, sleep,

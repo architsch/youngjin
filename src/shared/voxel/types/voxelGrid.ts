@@ -1,13 +1,13 @@
 import Voxel from "./voxel";
 import BufferState from "../../networking/types/bufferState";
 import EncodableData from "../../networking/types/encodableData"
-import { FULL_COLLISION_LAYER_MASK, MAX_RESTRICTED_ZONES, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
+import { MAX_RESTRICTED_ZONES, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, VOXEL_BLOCK_SHAPE_WHOLE } from "../../system/sharedConstants";
 import VoxelQuadsRuntimeMemory from "./voxelQuadsRuntimeMemory";
 import EncodableRawByteNumber from "../../networking/types/encodableRawByteNumber";
 import RestrictedZone from "./restrictedZone";
 import VoxelGridVersionMigration from "../versionMigration/voxelGridVersionMigration";
 
-const latestVersion = 4;
+const latestVersion = 6;
 
 export default class VoxelGrid extends EncodableData
 {
@@ -37,13 +37,12 @@ export default class VoxelGrid extends EncodableData
     {
         const voxels = new Array<Voxel>(NUM_VOXEL_ROWS * NUM_VOXEL_COLS);
         const quadsMem = new VoxelQuadsRuntimeMemory();
+        // Start fully solid; generation carves the room out.
+        quadsMem.blockShapes.fill(VOXEL_BLOCK_SHAPE_WHOLE);
         for (let row = 0; row < NUM_VOXEL_ROWS; ++row)
         {
             for (let col = 0; col < NUM_VOXEL_COLS; ++col)
-            {
-                // Start fully solid; generation carves the room out.
-                voxels[row * NUM_VOXEL_COLS + col] = new Voxel(quadsMem, row, col, FULL_COLLISION_LAYER_MASK);
-            }
+                voxels[row * NUM_VOXEL_COLS + col] = new Voxel(quadsMem, row, col);
         }
         // No zones: a zone is a per-room owner decision generation can't make (see
         // @docs/geometry/room_generation.md).

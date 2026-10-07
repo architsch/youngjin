@@ -11,7 +11,7 @@ import {
     parallel, enableLatency, disableLatency, buildColumn,
     disconnectWithSave,
 } from "../helpers/scenarioPresets";
-import { checkStructuralInvariants, checkObjectTransformConsistency } from "../helpers/invariants";
+import { checkStructuralInvariants, checkObjectTransformConsistency, getPendingSignals } from "../helpers/invariants";
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
 import ServerUserManager from "../../../src/server/user/serverUserManager";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
@@ -164,7 +164,7 @@ describe("race condition scenarios", () => {
                     const roomMem = ServerRoomManager.roomRuntimeMemories["voxel-race"];
                     const voxel = VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 10, 10)!;
                     // Exactly one block should be at this position
-                    expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, 0)).toBe(true);
+                    expect(VoxelQueryUtil.isVoxelBlockPresent(voxel, 0)).toBe(true);
                 },
             });
         });
@@ -195,6 +195,46 @@ describe("race condition scenarios", () => {
             });
         });
 
+        it("one user takes a block away while another moves or reshapes it: both end up told the truth", async () => {
+            const quadIndexAt = (row: number, col: number) => VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, 0);
+            await runScenario({
+                name: "concurrent remove and move of the same block",
+                rooms: [hubRoom("mv-race")],
+                users: [
+                    userAt(5, 5, "mv-race"),
+                    userAt(25, 25, "mv-race"),
+                ],
+                actions: [
+                    { type: "addVoxel", userIndex: 0, row: 15, col: 15, layer: 0 },
+                    // User 0's removal arrives first; user 1 had the block on screen and moved it, then
+                    // shrank what they took to be the block where they had put it.
+                    { type: "removeVoxel", userIndex: 0, row: 15, col: 15, layer: 0 },
+                    { type: "moveVoxel", userIndex: 1, row: 15, col: 15, layer: 0, dRow: 0, dCol: 1, dLayer: 0 },
+                    { type: "reshapeVoxel", userIndex: 1, row: 15, col: 16, layer: 0, shape: 0b0101 },
+                ],
+                assertions: ({ users }) => {
+                    const voxels = ServerRoomManager.roomRuntimeMemories["mv-race"].room.voxelGrid.voxels;
+                    expect(VoxelQueryUtil.isVoxelBlockPresentAt(voxels, 15, 15, 0)).toBe(false);
+                    expect(VoxelQueryUtil.isVoxelBlockPresentAt(voxels, 15, 16, 0)).toBe(false);
+
+                    // User 1 is told that neither cell holds a block, which undoes the block their own copy
+                    // set down in the second one (a reversed move would have put one back in the first).
+                    const removals = getPendingSignals(users[1], "removeVoxelBlockSignal")
+                        .map(signal => signal.quadIndex);
+                    expect(removals).toEqual([
+                        quadIndexAt(15, 15), // user 0's removal, relayed
+                        quadIndexAt(15, 15), quadIndexAt(15, 16), // the refused move
+                        quadIndexAt(15, 16), // the refused reshape
+                    ]);
+                    expect(getPendingSignals(users[1], "addVoxelBlockSignal").length).toBe(1);
+
+                    // User 0 hears nothing of what was refused.
+                    for (const signalType of ["moveVoxelBlockSignal", "setVoxelBlockShapeSignal", "addVoxelBlockSignal"])
+                        expect(getPendingSignals(users[0], signalType).length, signalType).toBe(0);
+                },
+            });
+        });
+
         it("many users editing adjacent blocks concurrently", async () => {
             await runScenario({
                 name: "concurrent adjacent voxel edits",
@@ -214,7 +254,7 @@ describe("race condition scenarios", () => {
                     for (const [r, c] of [[10,10],[10,11],[11,10],[11,11]])
                     {
                         const voxel = VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, r, c)!;
-                        if (VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, 0))
+                        if (VoxelQueryUtil.isVoxelBlockPresent(voxel, 0))
                             count++;
                     }
                     expect(count).toBe(4); // All should succeed since they're at different positions

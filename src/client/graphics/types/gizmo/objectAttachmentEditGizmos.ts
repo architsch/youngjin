@@ -1,16 +1,14 @@
 import * as THREE from "three";
 import ObjectSelection from "./objectSelection";
-import { gameModeObservable, objectSelectionObservable, roomChangedObservable,
-    updateObservable } from "../../../system/clientObservables";
+import { gameModeObservable, objectSelectionObservable,
+    roomChangedObservable } from "../../../system/clientObservables";
 import GameModeUtil from "../../../system/util/gameModeUtil";
-import GraphicsManager from "../../graphicsManager";
-import WorldSpaceHandle from "./generic/worldSpaceHandle";
 import WorldSpaceOutlineRect from "./generic/worldSpaceOutlineRect";
-import GizmoDragHandler from "./drag/gizmoDragHandler";
-import GizmoDragUtil from "../../util/gizmoDragUtil";
+import SelectionEditDrag from "./drag/selectionEditDrag";
+import SelectionEditGizmoProvider from "./drag/selectionEditGizmoProvider";
+import SelectionEditGizmoUtil from "../../util/selectionEditGizmoUtil";
 import CameraUtil from "../../util/cameraUtil";
 import PointerCoordUtil from "../../util/pointerCoordUtil";
-import WorldSpaceSelectionUtil from "../../util/worldSpaceSelectionUtil";
 import App from "../../../app";
 import SocketsClient from "../../../networking/client/socketsClient";
 import ClientObjectManager from "../../../object/clientObjectManager";
@@ -30,21 +28,11 @@ import Vector3DUtil from "../../../../shared/math/util/vector3DUtil";
 import Room from "../../../../shared/room/types/room";
 import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
 import Vec3 from "../../../../shared/math/types/vec3";
-import ErrorUtil from "../../../../shared/system/util/errorUtil";
 
-// Moving and resizing the selected attached object by its selection outline: dragging inside it puts the
-// object on whichever voxel face the pointer is over (see ObjectAttachmentUtil.findPlacement), and dragging
-// a corner handle resizes it (types whose ObjectScalingConfig has them). The view holds still while a drag
-// lasts (see WorldSpaceSelectionUtil.holdOrbitTarget); edits preview locally and reach the server once, on
-// release.
-
-const HANDLE_COLOR = "#ffff00";
-const HANDLE_DIAMETER_PX = 18; // on screen, at any distance
-
-// How close to a handle's middle a press takes hold of it, in CSS px; wider for a finger. Keep them at
-// least half of HANDLE_DIAMETER_PX, or pressing the handle's edge won't grab it.
-const MOUSE_HANDLE_REACH_PX = 14;
-const TOUCH_HANDLE_REACH_PX = 28;
+// Moving and resizing the selected attached object by its selection outline (see SelectionEditGizmoUtil):
+// dragging inside it puts the object on whichever voxel face the pointer is over (see
+// ObjectAttachmentUtil.findPlacement), and dragging a corner handle resizes it (types whose
+// ObjectScalingConfig has them). Edits preview locally and reach the server once, on release.
 
 // Which way each handle's corner lies from the middle, along the face's right and up (see
 // Geometry3DUtil.getAxisFacingBasis).
@@ -58,44 +46,60 @@ type EditTarget = {selection: ObjectSelection, canMove: boolean, canResize: bool
 // The selection, when it is an attached object this user may drag (refreshed on every re-announcement).
 let target: EditTarget | null = null;
 
-let handles: WorldSpaceHandle[] = [];
-let handlesPromise: Promise<void> | null = null;
+// The object the drag under way began on; left as it was once that drag is over.
+let draggedObjectId: string | null = null;
 
-let draggingObjectId: string | null = null;
-let draggedCorner: {x: number, y: number} | null = null;
+// The outline's corners, where the handles sit; placed whenever they are asked for.
+const outlineCorners = CORNERS.map(corner => ({id: `${corner.x},${corner.y}`, corner, position: new THREE.Vector3()}));
+const noHandles: {id: string, position: THREE.Vector3}[] = [];
 
 const rayTemp = new THREE.Ray();
 const planeTemp = new THREE.Plane();
 const hitTemp = new THREE.Vector3();
 const cornerTemp = new THREE.Vector3();
-const normalTemp = new THREE.Vector3();
-const pointTemp = new THREE.Vector3();
-const screenTemp = new THREE.Vector2();
 const middleScreenTemp = new THREE.Vector2();
 
-const ObjectAttachmentEditGizmos =
+const ObjectAttachmentEditGizmos: SelectionEditGizmoProvider =
 {
-    // Where the selection can be taken hold of, in the viewport coordinates a real drag starts from: its
-    // middle (to move it) and the outline's corners (to resize it, when canResize). Null when there is
-    // nothing this user may drag. For automation, which drives drags as the player would.
-    getGrabPoints: (): {middle: {x: number, y: number} | null,
-        corners: {corner: {x: number, y: number}, x: number, y: number}[], canResize: boolean} | null =>
+    getHandles: () =>
+    {
+        if (target == null || !target.canResize)
+            return noHandles;
+        return placeOutlineCorners(target.selection);
+    },
+
+    pickHandle: (handleIndex: number, ev: PointerEvent, handleScreen: {x: number, y: number}) =>
+    {
+        const selection = target!.selection;
+        const corner = CORNERS[handleIndex];
+        // The cursor's arrow runs along the screen diagonal the handle sits on.
+        const middle = PointerCoordUtil.worldToClient(selection.gameObject.position, middleScreenTemp);
+        const rising = middle != null && ((handleScreen.x > middle.x) == (handleScreen.y < middle.y));
+        return {cursor: rising ? "nesw-resize" : "nwse-resize",
+            begin: () => beginResize(selection, ev, corner, outlineCorners[handleIndex].id)};
+    },
+
+    // The inside of the outline, measured on the plane of the object's face.
+    pickBody: (ev: PointerEvent) =>
     {
         if (target == null || !target.canMove)
             return null;
         const selection = target.selection;
-
-        const middle = PointerCoordUtil.worldToClient(selection.gameObject.position, screenTemp);
-        const corners: {corner: {x: number, y: number}, x: number, y: number}[] = [];
-        const middlePoint = middle == null ? null : {x: middle.x, y: middle.y};
-        for (const corner of CORNERS)
+        const params = selection.gameObject.params;
+        const size = ObjectScaleUtil.getObjectSize(params.objectTypeIndex, params.transform.scale);
+        if (!SelectionEditGizmoUtil.isPointerOnFaceRect(ev, selection.gameObject.position, params.transform.dir,
+            WorldSpaceOutlineRect.getEdgeOffset(size.x), WorldSpaceOutlineRect.getEdgeOffset(size.y)))
         {
-            const screen = PointerCoordUtil.worldToClient(getHandlePosition(selection, corner, cornerTemp),
-                screenTemp);
-            if (screen != null)
-                corners.push({corner: {...corner}, x: screen.x, y: screen.y});
+            return null;
         }
-        return {middle: middlePoint, corners, canResize: target.canResize};
+        return {cursor: "move", begin: () => beginMove(selection, ev)};
+    },
+
+    getOutline: () =>
+    {
+        if (target == null || !target.canMove)
+            return null;
+        return {middle: target.selection.gameObject.position, corners: placeOutlineCorners(target.selection)};
     },
 }
 
@@ -125,70 +129,19 @@ function findTarget(): EditTarget | null
             && ObjectScaleUtil.getFixedScale(obj.objectTypeIndex, obj.metadata) == undefined};
 }
 
-function pick(ev: PointerEvent): {cursor: string, begin: () => GizmoDragHandler} | null
-{
-    const current = target;
-    if (current == null || !current.canMove)
-        return null;
-    const selection = current.selection;
-
-    // Handles first: they sit on the outline's corners, overlapping the inside.
-    if (current.canResize)
-    {
-        const reachPx = (ev.pointerType === "mouse") ? MOUSE_HANDLE_REACH_PX : TOUCH_HANDLE_REACH_PX;
-        let nearest: {corner: {x: number, y: number}, distSq: number, x: number, y: number} | null = null;
-        for (const corner of CORNERS)
-        {
-            const screen = PointerCoordUtil.worldToClient(getHandlePosition(selection, corner, cornerTemp),
-                screenTemp);
-            if (screen == null)
-                continue;
-            const distSq = (screen.x - ev.clientX) ** 2 + (screen.y - ev.clientY) ** 2;
-            if (distSq <= reachPx * reachPx && (nearest == null || distSq < nearest.distSq))
-                nearest = {corner, distSq, x: screen.x, y: screen.y};
-        }
-        if (nearest != null)
-        {
-            // The cursor's arrow runs along the screen diagonal the handle sits on.
-            const middle = PointerCoordUtil.worldToClient(selection.gameObject.position, middleScreenTemp);
-            const rising = middle != null && ((nearest.x > middle.x) == (nearest.y < middle.y));
-            const corner = nearest.corner;
-            return {cursor: rising ? "nesw-resize" : "nwse-resize",
-                begin: () => beginResize(selection, ev, corner)};
-        }
-    }
-
-    // The inside of the outline, measured on the plane of the object's face.
-    const params = selection.gameObject.params;
-    const plane = getFacePlane(params.transform, selection.gameObject.position, planeTemp);
-    CameraUtil.getPointerRay(ev, rayTemp);
-    if (rayTemp.direction.dot(plane.normal) >= 0 || rayTemp.intersectPlane(plane, hitTemp) == null)
-        return null;
-    const size = ObjectScaleUtil.getObjectSize(params.objectTypeIndex, params.transform.scale);
-    const {right, up} = Geometry3DUtil.getAxisFacingBasis(params.transform.dir);
-    hitTemp.sub(selection.gameObject.position);
-    if (Math.abs(hitTemp.dot(pointTemp.set(right.x, right.y, right.z))) > WorldSpaceOutlineRect.getEdgeOffset(size.x) ||
-        Math.abs(hitTemp.dot(pointTemp.set(up.x, up.y, up.z))) > WorldSpaceOutlineRect.getEdgeOffset(size.y))
-    {
-        return null;
-    }
-    return {cursor: "move", begin: () => beginMove(selection, ev)};
-}
-
 // ─── Drags ──────────────────────────────────────────────────────────────
 
 // The object goes to the face under the pointer, keeping under it the spot it was taken hold of while it
 // stays on the same face. Where the object can't go, it slides back toward where it stood along that face,
 // or tries the spots around the pointer on another one.
-function beginMove(selection: ObjectSelection, pressEv: PointerEvent): GizmoDragHandler
+function beginMove(selection: ObjectSelection, pressEv: PointerEvent): SelectionEditDrag
 {
     const objectId = selection.gameObject.params.objectId;
     const start = copyTransform(selection.gameObject.params.transform);
     const startQuarterTurns = getTurnable(objectId) ? QuarterTurnsUtil.getQuarterTurns(selection.gameObject.params) : undefined;
     const grabOffset = getGrabOffset(start, pressEv);
     let lastRequest: string | null = null;
-    let started = false;
-    draggingObjectId = objectId;
+    draggedObjectId = objectId;
 
     return {
         onMove: (ev: PointerEvent) =>
@@ -197,11 +150,6 @@ function beginMove(selection: ObjectSelection, pressEv: PointerEvent): GizmoDrag
             const obj = room?.objectById[objectId];
             if (!room || !obj)
                 return;
-            if (!started)
-            {
-                started = true;
-                WorldSpaceSelectionUtil.holdOrbitTarget();
-            }
 
             const request = getMoveRequest(obj, ev, grabOffset);
             if (request == undefined)
@@ -230,41 +178,35 @@ function beginMove(selection: ObjectSelection, pressEv: PointerEvent): GizmoDrag
                     applyQuarterTurns(objectId, quarterTurns);
             }
         },
-        onEnd: () => finishDrag(objectId, start, started, true, startQuarterTurns),
-        onCancel: () => finishDrag(objectId, start, started, false, startQuarterTurns),
+        onFinish: (keep: boolean) => finishDrag(objectId, start, keep, startQuarterTurns),
+        onReleased: () => reannounce(objectId),
     };
 }
 
 // The dragged corner follows the pointer, offset by where on the handle it took hold, and the opposite
 // corner stays where it was (see ObjectAttachmentUtil.getResizeResult).
 function beginResize(selection: ObjectSelection, pressEv: PointerEvent,
-    corner: {x: number, y: number}): GizmoDragHandler
+    corner: {x: number, y: number}, handleId: string): SelectionEditDrag
 {
     const objectId = selection.gameObject.params.objectId;
     const start = copyTransform(selection.gameObject.params.transform);
-    const plane = getFacePlane(start, start.pos, new THREE.Plane());
+    const plane = SelectionEditGizmoUtil.getFacePlane(start.dir, start.pos, new THREE.Plane());
     const grabOffset = new THREE.Vector3();
-    if (hitPlane(pressEv, plane, grabOffset))
+    if (SelectionEditGizmoUtil.getPointerOnPlane(pressEv, plane, grabOffset))
         grabOffset.sub(getObjectCorner(selection.gameObject.params.objectTypeIndex, start, corner, cornerTemp));
     else
         grabOffset.set(0, 0, 0);
-    let started = false;
-    draggingObjectId = objectId;
-    draggedCorner = corner;
+    draggedObjectId = objectId;
 
     return {
+        handleId,
         onMove: (ev: PointerEvent) =>
         {
             const room = App.getCurrentRoom();
             const obj = room?.objectById[objectId];
             if (!room || !obj)
                 return;
-            if (!started)
-            {
-                started = true;
-                WorldSpaceSelectionUtil.holdOrbitTarget();
-            }
-            if (!hitPlane(ev, plane, hitTemp))
+            if (!SelectionEditGizmoUtil.getPointerOnPlane(ev, plane, hitTemp))
                 return;
 
             hitTemp.sub(grabOffset);
@@ -276,16 +218,16 @@ function beginResize(selection: ObjectSelection, pressEv: PointerEvent,
                 apply(objectId, resized);
             }
         },
-        onEnd: () => finishDrag(objectId, start, started, true),
-        onCancel: () => finishDrag(objectId, start, started, false),
+        onFinish: (keep: boolean) => finishDrag(objectId, start, keep),
+        onReleased: () => reannounce(objectId),
     };
 }
 
 // Where on the object the press took hold of it, along its face's right and up.
 function getGrabOffset(transform: ObjectTransform, pressEv: PointerEvent): {x: number, y: number}
 {
-    const plane = getFacePlane(transform, transform.pos, planeTemp);
-    if (!hitPlane(pressEv, plane, hitTemp))
+    const plane = SelectionEditGizmoUtil.getFacePlane(transform.dir, transform.pos, planeTemp);
+    if (!SelectionEditGizmoUtil.getPointerOnPlane(pressEv, plane, hitTemp))
         return {x: 0, y: 0};
     const {right, up} = Geometry3DUtil.getAxisFacingBasis(transform.dir);
     const offset = Vector3DUtil.subtract(hitTemp, transform.pos);
@@ -311,7 +253,7 @@ function getMoveRequest(obj: AddObjectSignal, ev: PointerEvent, grabOffset: {x: 
     }
     else
     {
-        const plane = getFacePlane(obj.transform, obj.transform.pos, planeTemp);
+        const plane = SelectionEditGizmoUtil.getFacePlane(obj.transform.dir, obj.transform.pos, planeTemp);
         if (rayTemp.direction.dot(plane.normal) >= 0 || rayTemp.intersectPlane(plane, hitTemp) == null)
             return undefined;
         point = {x: hitTemp.x, y: hitTemp.y, z: hitTemp.z};
@@ -373,79 +315,50 @@ function applyQuarterTurns(objectId: string, quarterTurns: number): void
     }
 }
 
-// keep: send the result; otherwise put the object back where it started, turned as it was. Only a drag that
-// got past the tap tolerance ever changed anything.
-function finishDrag(objectId: string, start: ObjectTransform, started: boolean, keep: boolean,
-    startQuarterTurns?: number): void
+// keep: send the result; otherwise put the object back where it started, turned as it was.
+function finishDrag(objectId: string, start: ObjectTransform, keep: boolean, startQuarterTurns?: number): void
 {
-    draggingObjectId = null;
-    draggedCorner = null;
-    if (!started)
+    const room = App.getCurrentRoom();
+    const obj = room?.objectById[objectId];
+    if (!room || !obj)
         return;
 
-    try
+    if (!keep)
     {
-        const room = App.getCurrentRoom();
-        const obj = room?.objectById[objectId];
-        if (room && obj)
+        ClientObjectManager.setObjectTransform(objectId, start, true, false);
+        if (startQuarterTurns != undefined)
+            applyQuarterTurns(objectId, startQuarterTurns);
+    }
+    else if (room.roomType != RoomTypeEnumMap.SinglePlayer)
+    {
+        // A move that turned the object is one edit, the turn carrying the transform (see
+        // SetObjectMetadataSignal.transform).
+        if (startQuarterTurns != undefined && QuarterTurnsUtil.getQuarterTurns(obj) != startQuarterTurns)
         {
-            if (!keep)
-            {
-                ClientObjectManager.setObjectTransform(objectId, start, true, false);
-                if (startQuarterTurns != undefined)
-                    applyQuarterTurns(objectId, startQuarterTurns);
-            }
-            else if (room.roomType != RoomTypeEnumMap.SinglePlayer)
-            {
-                // A move that turned the object is one edit, the turn carrying the transform (see
-                // SetObjectMetadataSignal.transform).
-                if (startQuarterTurns != undefined && QuarterTurnsUtil.getQuarterTurns(obj) != startQuarterTurns)
-                {
-                    SocketsClient.emitSetObjectMetadataSignal(new SetObjectMetadataSignal(room.id, objectId,
-                        ObjectMetadataKeyEnumMap.QuarterTurns, QuarterTurnsUtil.encode(QuarterTurnsUtil.getQuarterTurns(obj)),
-                        copyTransform(obj.transform)));
-                }
-                else if (!transformsMatch(obj.transform, start))
-                {
-                    SocketsClient.emitSetObjectTransformSignal(new SetObjectTransformSignal(
-                        room.id, objectId, copyTransform(obj.transform), true));
-                }
-            }
+            SocketsClient.emitSetObjectMetadataSignal(new SetObjectMetadataSignal(room.id, objectId,
+                ObjectMetadataKeyEnumMap.QuarterTurns, QuarterTurnsUtil.encode(QuarterTurnsUtil.getQuarterTurns(obj)),
+                copyTransform(obj.transform)));
+        }
+        else if (!transformsMatch(obj.transform, start))
+        {
+            SocketsClient.emitSetObjectTransformSignal(new SetObjectTransformSignal(
+                room.id, objectId, copyTransform(obj.transform), true));
         }
     }
-    catch (err)
+}
+
+// Re-announced once a drag is over, so the outline, menu and permissions catch up, unless it ended because
+// the selection moved on.
+function reannounce(objectId: string): void
+{
+    if (GameModeUtil.isInEditMode() &&
+        objectSelectionObservable.peek()?.gameObject.params.objectId === objectId)
     {
-        console.error(`Exception while finishing an attached object drag :: Error: ${ErrorUtil.getErrorMessage(err)}`);
-    }
-    finally
-    {
-        WorldSpaceSelectionUtil.releaseOrbitTarget();
-        // Re-announced so the outline, menu and permissions catch up, unless the drag ended because the
-        // selection moved on.
-        if (GameModeUtil.isInEditMode() &&
-            objectSelectionObservable.peek()?.gameObject.params.objectId === objectId)
-        {
-            objectSelectionObservable.notify();
-        }
+        objectSelectionObservable.notify();
     }
 }
 
 // ─── Geometry ───────────────────────────────────────────────────────────
-
-// The plane of the object's face, through the given point. The facing is snapped onto its axis, as a
-// stored one decodes a little off it.
-function getFacePlane(transform: ObjectTransform, point: Vec3, out: THREE.Plane): THREE.Plane
-{
-    const {normal} = Geometry3DUtil.getAxisFacingBasis(transform.dir);
-    normalTemp.set(normal.x, normal.y, normal.z);
-    return out.setFromNormalAndCoplanarPoint(normalTemp, pointTemp.set(point.x, point.y, point.z));
-}
-
-function hitPlane(ev: PointerEvent, plane: THREE.Plane, out: THREE.Vector3): boolean
-{
-    CameraUtil.getPointerRay(ev, rayTemp);
-    return rayTemp.intersectPlane(plane, out) != null;
-}
 
 // A corner of the object's own footprint.
 function getObjectCorner(objectTypeIndex: number, transform: ObjectTransform,
@@ -454,13 +367,16 @@ function getObjectCorner(objectTypeIndex: number, transform: ObjectTransform,
     return offsetAlongFace(objectTypeIndex, transform, transform.pos, corner, (size) => 0.5 * size, out);
 }
 
-// A corner of the selection outline, which is where its handle sits.
-function getHandlePosition(selection: ObjectSelection, corner: {x: number, y: number},
-    out: THREE.Vector3): THREE.Vector3
+// Puts each corner of the selection outline where it now is, and returns them.
+function placeOutlineCorners(selection: ObjectSelection): typeof outlineCorners
 {
     const params = selection.gameObject.params;
-    return offsetAlongFace(params.objectTypeIndex, params.transform, selection.gameObject.position, corner,
-        WorldSpaceOutlineRect.getEdgeOffset, out);
+    for (const outlineCorner of outlineCorners)
+    {
+        offsetAlongFace(params.objectTypeIndex, params.transform, selection.gameObject.position, outlineCorner.corner,
+            WorldSpaceOutlineRect.getEdgeOffset, outlineCorner.position);
+    }
+    return outlineCorners;
 }
 
 // From center toward a corner, by reach(size) along the face's right and up, for the object's current size.
@@ -491,69 +407,27 @@ function nearlyEqual(a: Vec3, b: Vec3): boolean
     return Math.abs(a.x - b.x) < 1e-6 && Math.abs(a.y - b.y) < 1e-6 && Math.abs(a.z - b.z) < 1e-6;
 }
 
-// ─── Handles ────────────────────────────────────────────────────────────
-
-function ensureHandles(): Promise<void>
-{
-    handlesPromise ??= (async () => {
-        const scene = GraphicsManager.getScene();
-        for (let i = 0; i < CORNERS.length; ++i)
-        {
-            const handle = await WorldSpaceHandle.create(HANDLE_COLOR, HANDLE_DIAMETER_PX);
-            handle.addToParent(scene);
-            handles.push(handle);
-        }
-    })();
-    return handlesPromise;
-}
+// ─── Wiring ─────────────────────────────────────────────────────────────
+// (A drag is ended on leaving edit mode or the room by SelectionEditGizmoUtil.)
 
 function refresh(): void
 {
     target = findTarget();
-    if (target?.canResize)
-        void ensureHandles();
 }
 
-function abandonDrag(): void
-{
-    if (draggingObjectId != null)
-        GizmoDragUtil.cancel();
-}
-
-// ─── Wiring ─────────────────────────────────────────────────────────────
-
-GizmoDragUtil.addSource("objectAttachmentEditGizmos", {pick});
+SelectionEditGizmoUtil.addProvider("object", ObjectAttachmentEditGizmos);
 
 objectSelectionObservable.addListener("objectAttachmentEditGizmos", (selection: ObjectSelection | null) => {
     // A drag belongs to the object it began on.
-    if (draggingObjectId != null && selection?.gameObject.params.objectId !== draggingObjectId)
-        abandonDrag();
+    if (SelectionEditGizmoUtil.isDragging("object") && selection?.gameObject.params.objectId !== draggedObjectId)
+        SelectionEditGizmoUtil.abandonDrag("object");
     refresh();
 });
 
-gameModeObservable.addListener("objectAttachmentEditGizmos", () => {
-    if (!GameModeUtil.isInEditMode())
-        abandonDrag();
-    refresh();
-});
+gameModeObservable.addListener("objectAttachmentEditGizmos", refresh);
 
 roomChangedObservable.addListener("objectAttachmentEditGizmos", () => {
-    abandonDrag();
     target = null;
-});
-
-updateObservable.addListener("objectAttachmentEditGizmos", () => {
-    const shown = target != null && target.canResize ? target.selection : null;
-    for (let i = 0; i < handles.length; ++i)
-    {
-        const handle = handles[i];
-        handle.setVisible(shown != null);
-        if (shown == null)
-            continue;
-        handle.setPosition(getHandlePosition(shown, CORNERS[i], cornerTemp));
-        handle.setHighlighted(draggedCorner === CORNERS[i]);
-        handle.update();
-    }
 });
 
 export default ObjectAttachmentEditGizmos;

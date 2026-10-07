@@ -123,7 +123,7 @@ function getSelectedFace(): {center: Vec3, dir: Vec3, size: number} | undefined
     if (selection == null)
         return undefined;
     const voxel = selection.voxel;
-    const d = VoxelQueryUtil.getVoxelQuadTransformDimensions(voxel, selection.quadIndex);
+    const d = selection.getTransformDimensions();
     return {
         center: {x: voxel.col + 0.5 + d.offsetX, y: d.offsetY, z: voxel.row + 0.5 + d.offsetZ},
         dir: {x: d.dirX, y: d.dirY, z: d.dirZ},

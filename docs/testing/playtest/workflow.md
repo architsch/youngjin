@@ -72,7 +72,7 @@ Both are installed only on non-public deployments. **Arrange with one, act with 
 
 ### Driving the 3D world
 - The orbit camera and editing tools exist only in edit mode, which is entered through the top-bar toggle.
-- `clickObject` matches by id, type or metadata (e.g. `{"objectType": "Door", "metadata": {"Label": "Attic"}}`) and walks into reach first. `expectSelection` confirms that the click landed.
+- `clickObject` matches by id, type or metadata (e.g. `{"objectType": "Door", "metadata": {"Label": "Attic"}}`) and walks into reach first. It aims at the object's middle, or, where a click goes through that (a prop whose image is see-through there), at the nearest point one reaches it. `expectSelection` confirms that the click landed.
 - Silent failures (out of reach, occluded, covered by the HUD) are reported explicitly. Expected quirk: culled surfaces refuse selection, so candidates are tried in turn.
 - `clickSurfaceUntilEnabled` selects surfaces until a named control becomes enabled, widening the view and moving between rounds. Its report separates "nowhere valid" from "the tool is broken".
 - HUD controls are `div`s with `aria-disabled`, so use `uiClick` and `expectDisabled` rather than raw DOM clicks.

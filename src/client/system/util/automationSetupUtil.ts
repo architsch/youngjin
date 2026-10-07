@@ -30,7 +30,9 @@ import { PLAYER_HEIGHT } from "../../../shared/object/types/objectTypeConfig/pla
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN,
     FOG_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME, MAX_RESTRICTED_ZONES, MAX_ROOM_Y,
     NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS,
-    SANDBOX_SINGLE_PLAYER_MODE } from "../../../shared/system/sharedConstants";
+    SANDBOX_SINGLE_PLAYER_MODE, VOXEL_BLOCK_SHAPE_EMPTY,
+    VOXEL_BLOCK_SHAPE_WHOLE, VOXEL_SUB_BLOCK_SIZE } from "../../../shared/system/sharedConstants";
+import VoxelBlockShapeUtil from "../../../shared/voxel/util/voxelBlockShapeUtil";
 import ObjectScaleUtil from "../../../shared/object/util/objectScaleUtil";
 import RoomLightingUtil from "../../graphics/light/util/roomLightingUtil";
 import RoomPrefs from "../../../shared/room/types/roomPrefs";
@@ -85,18 +87,18 @@ function standingHeight(collisionLayer: number): number
     return 0.5 * PLAYER_HEIGHT + (collisionLayer - COLLISION_LAYER_MIN) * COLLISION_LAYER_HEIGHT;
 }
 
-// Headroom from this layer up, plus support (room floor or a block).
+// Headroom from this layer up, plus support (room floor or a whole block, so the footing is the cell's own).
 function canStandAt(voxel: Voxel, collisionLayer: number): boolean
 {
     if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer + PLAYER_LAYER_COUNT - 1 > COLLISION_LAYER_MAX)
         return false;
     if (collisionLayer > COLLISION_LAYER_MIN &&
-        !VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer - 1))
+        !VoxelQueryUtil.isVoxelBlockWhole(voxel, collisionLayer - 1))
         return false;
 
     for (let layer = collisionLayer; layer < collisionLayer + PLAYER_LAYER_COUNT; ++layer)
     {
-        if (VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, layer))
+        if (VoxelQueryUtil.isVoxelBlockPresent(voxel, layer))
             return false;
     }
     return true;
@@ -222,7 +224,7 @@ const QUAD_FACES: {[face: string]: {axis: "x" | "y" | "z", orientation: "-" | "+
 // Attachment position and facing on a cell face, from the grid's own math (matches click placement).
 // ignoreVisibility, because sets are often dressed before the wall behind goes up. A top face below the
 // lowest layer is the room's floor, and a bottom face above the highest is its ceiling.
-function faceTransformOf(voxel: Voxel, face: string, collisionLayer: number)
+function faceTransformOf(voxels: Voxel[], voxel: Voxel, face: string, collisionLayer: number)
 {
     const side = QUAD_FACES[face];
     if (side == undefined)
@@ -240,7 +242,7 @@ function faceTransformOf(voxel: Voxel, face: string, collisionLayer: number)
     if (quadIndex < 0)
         throw new Error(`Cell [row ${voxel.row}, col ${voxel.col}] has no "${face}" face on layer ${collisionLayer}.`);
 
-    const dimensions = VoxelQueryUtil.getVoxelQuadTransformDimensions(voxel, quadIndex, true);
+    const dimensions = VoxelQueryUtil.getVoxelQuadTransformDimensions(voxels, quadIndex, true);
     return {
         x: voxel.col + 0.5 + dimensions.offsetX,
         y: dimensions.offsetY,
@@ -270,33 +272,40 @@ function doorFloorY(voxels: Voxel[], row: number, col: number, face: string): nu
     return undefined;
 }
 
-// Blocks covering any part of an attachment's face, one block out from it. Stricter than the game's rule
-// (partly clear is fine for building, bad for a photo). Returns the blockers so the caller can move.
+// Blocks covering any part of an attachment's face, one sub-block out from it (a shrunk block's inner face
+// looks into its own cell). Stricter than the game's rule (partly clear is fine for building, bad for a
+// photo). Returns the blockers so the caller can move.
 function blockersInFrontOf(voxels: Voxel[], colliderState: {hitbox: {center: Vec3, halfSize: Vec3}},
     dir: Vec3): {row: number, col: number, layer: number}[]
 {
     const {center, halfSize} = colliderState.hitbox;
     const {normal} = Geometry3DUtil.getAxisFacingBasis(dir);
-    // Along the facing, the block just in front; across it, every block the face spans.
-    const range = (toIndex: (v: number) => number, axis: "x" | "y" | "z") => (normal[axis] != 0)
-        ? {first: toIndex(center[axis] + 0.01 * normal[axis]), last: toIndex(center[axis] + 0.01 * normal[axis])}
-        : {first: toIndex(center[axis] - halfSize[axis] + 0.01), last: toIndex(center[axis] + halfSize[axis] - 0.01)};
-    const cols = range(VoxelQueryUtil.getVoxelColFromWorldX, "x");
-    const layers = range(VoxelQueryUtil.getVoxelCollisionLayerFromWorldY, "y");
-    const rows = range(VoxelQueryUtil.getVoxelRowFromWorldZ, "z");
+    // Along the facing, the sub-block just in front; across it, every sub-block the face spans.
+    const range = (size: number, axis: "x" | "y" | "z") => (normal[axis] != 0)
+        ? {first: Math.floor((center[axis] + 0.01 * normal[axis]) / size),
+            last: Math.floor((center[axis] + 0.01 * normal[axis]) / size)}
+        : {first: Math.floor((center[axis] - halfSize[axis] + 0.01) / size),
+            last: Math.floor((center[axis] + halfSize[axis] - 0.01) / size)};
+    const subCols = range(VOXEL_SUB_BLOCK_SIZE, "x");
+    const layers = range(COLLISION_LAYER_HEIGHT, "y");
+    const subRows = range(VOXEL_SUB_BLOCK_SIZE, "z");
 
     const blockers: {row: number, col: number, layer: number}[] = [];
-    for (let row = rows.first; row <= rows.last; ++row)
+    for (let subRow = subRows.first; subRow <= subRows.last; ++subRow)
     {
-        for (let col = cols.first; col <= cols.last; ++col)
+        for (let subCol = subCols.first; subCol <= subCols.last; ++subCol)
         {
+            const row = Math.floor(0.5 * subRow), col = Math.floor(0.5 * subCol);
             const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);
             if (voxel == undefined)
                 continue;
             for (let layer = Math.max(COLLISION_LAYER_MIN, layers.first);
                 layer <= Math.min(COLLISION_LAYER_MAX, layers.last); ++layer)
             {
-                if (VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, layer))
+                // The middle of the sub-block, across its cell.
+                const fillsSubBlock = VoxelBlockShapeUtil.containsPoint(VoxelQueryUtil.getVoxelBlockShape(voxel, layer),
+                    0.5 * (subCol - 2 * col + 0.5), 0.5 * (subRow - 2 * row + 0.5));
+                if (fillsSubBlock && !blockers.some(b => b.row == row && b.col == col && b.layer == layer))
                     blockers.push({row, col, layer});
             }
         }
@@ -515,16 +524,24 @@ const AutomationSetupUtil =
                     return cameraModeObservable.peek().type;
                 },
 
-                // Adds a box of blocks in one texture (corner cell + size). No permission validation.
+                // Adds a box of blocks in one texture (corner cell + size), each of one shape (see
+                // VoxelBlockShapeUtil), whole unless given. No permission validation.
                 addBlocks: (region: {row: number, col: number, collisionLayer: number,
-                    rows?: number, cols?: number, layers?: number, textureIndex?: number}) =>
+                    rows?: number, cols?: number, layers?: number, textureIndex?: number, shape?: number}) =>
                 {
                     const room = requireSandboxRoom("Standing blocks up");
+                    const shape = region.shape ?? VOXEL_BLOCK_SHAPE_WHOLE;
+                    if (shape == VOXEL_BLOCK_SHAPE_EMPTY || !VoxelBlockShapeUtil.isValid(shape))
+                    {
+                        throw new Error(`${region.shape} is not a shape a block can have: one bit per quarter of ` +
+                            `the cell (1 = low x and z, 2 = high x, 4 = high z, 8 = both high), set where the ` +
+                            `block fills it, for the whole cell (15), a half (3, 12, 5, 10) or a quarter.`);
+                    }
                     const box = regionOf(region);
                     ClientVoxelManager.addVoxelBlocksByChunk(room, box.rowStart, box.colStart,
                         box.numRows, box.numCols, box.layerStart, box.layerEnd,
-                        uniformFaces(region.textureIndex ?? 0), false);
-                    return box;
+                        uniformFaces(region.textureIndex ?? 0), false, shape);
+                    return {...box, shape};
                 },
 
                 // Takes the same kind of box away again.
@@ -632,7 +649,7 @@ const AutomationSetupUtil =
                     const objectTypeIndex = ObjectTypeConfigMap.getIndexByType(spec.type);
                     const collisionLayer = spec.collisionLayer ?? COLLISION_LAYER_MIN;
                     const face = spec.face ?? "-z";
-                    const place = faceTransformOf(voxel, face, collisionLayer);
+                    const place = faceTransformOf(room.voxelGrid.voxels, voxel, face, collisionLayer);
 
                     // Doors stand on the floor; origin is half a doorway up (collider-centred). `y` overrides.
                     const isDoor = spec.type == "Door";

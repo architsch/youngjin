@@ -1,13 +1,15 @@
 import * as THREE from "three";
 import Voxel from "../../../../shared/voxel/types/voxel";
-import { clientFeatureFlagsObservable, gameModeObservable, nearbyObjectSelectorObservable, roomChangedObservable, voxelQuadSelectionObservable, voxelQuadSelectionRestrictionObservable } from "../../../system/clientObservables";
+import { clientFeatureFlagsObservable, gameModeObservable, nearbyObjectSelectorObservable, roomChangedObservable, updateObservable, voxelQuadSelectionObservable, voxelQuadSelectionRestrictionObservable } from "../../../system/clientObservables";
 import GraphicsManager from "../../graphicsManager";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_QUADS_PER_ROOM } from "../../../../shared/system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_QUADS_PER_ROOM } from "../../../../shared/system/sharedConstants";
 import WorldSpaceSelectionUtil from "../../util/worldSpaceSelectionUtil";
 import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
 import WorldSpaceOutlineRect from "./generic/worldSpaceOutlineRect";
+import WorldSpaceWireBox from "./generic/worldSpaceWireBox";
+import ErrorUtil from "../../../../shared/system/util/errorUtil";
 import VoxelQuadTransformDimensions from "../../../../shared/voxel/types/voxelQuadTransformDimensions";
 import App from "../../../app";
 import Vec3 from "../../../../shared/math/types/vec3";
@@ -38,6 +40,14 @@ export default class VoxelQuadSelection
         return voxelQuadSelectionObservable.peek() != null;
     }
 
+    // Where the quad is drawn in the current room, which is out of sight while it isn't drawn there
+    // (see VoxelQueryUtil.getVoxelQuadTransformDimensions).
+    getTransformDimensions(): VoxelQuadTransformDimensions
+    {
+        return VoxelQueryUtil.getVoxelQuadTransformDimensions(
+            App.getCurrentRoom()?.voxelGrid.voxels ?? [], this.quadIndex);
+    }
+
     static trySelectBestQuadNearby(position: Vec3): boolean
     {
         const room = App.getCurrentRoom();
@@ -60,15 +70,15 @@ export default class VoxelQuadSelection
     // quad left, the clear enough first.
     static trySelectBestQuad(idealVoxel: Voxel, idealQuadIndex: number): boolean
     {
-        const idealDims = VoxelQueryUtil.getVoxelQuadTransformDimensions(idealVoxel, idealQuadIndex, true);
-        const idealCollisionLayer = getCollisionLayerToSearchAround(idealQuadIndex);
-        const minCollisionLayer = Math.max(idealCollisionLayer-1, COLLISION_LAYER_MIN);
-        const maxCollisionLayer = Math.min(idealCollisionLayer+1, COLLISION_LAYER_MAX);
-        const candidates: VoxelQuadSelectionCandidate[] = [];
         const room = App.getCurrentRoom();
         if (!room)
             return false;
         const voxels = room.voxelGrid.voxels;
+        const idealDims = VoxelQueryUtil.getVoxelQuadTransformDimensions(voxels, idealQuadIndex, true);
+        const idealCollisionLayer = getCollisionLayerToSearchAround(idealQuadIndex);
+        const minCollisionLayer = Math.max(idealCollisionLayer-1, COLLISION_LAYER_MIN);
+        const maxCollisionLayer = Math.min(idealCollisionLayer+1, COLLISION_LAYER_MAX);
+        const candidates: VoxelQuadSelectionCandidate[] = [];
         for (let row = idealVoxel.row-1; row <= idealVoxel.row+1; ++row)
         {
             for (let col = idealVoxel.col-1; col <= idealVoxel.col+1; ++col)
@@ -77,8 +87,8 @@ export default class VoxelQuadSelection
                 if (!voxel)
                     continue;
                 for (let collisionLayer = minCollisionLayer; collisionLayer <= maxCollisionLayer; ++collisionLayer)
-                    addVoxelQuadSelectionCandidatesFromLayer(voxel, collisionLayer, candidates);
-                addVoxelQuadSelectionCandidatesFromLayer(voxel, COLLISION_LAYER_NULL, candidates);
+                    addVoxelQuadSelectionCandidatesFromLayer(voxels, voxel, collisionLayer, candidates);
+                addVoxelQuadSelectionCandidatesFromLayer(voxels, voxel, COLLISION_LAYER_NULL, candidates);
             }
         }
         const camera = GraphicsManager.getCamera();
@@ -170,7 +180,8 @@ export default class VoxelQuadSelection
         // Invalid or invisible quads are refused without dropping the current selection.
         if (quadIndex < 0 || quadIndex >= NUM_VOXEL_QUADS_PER_ROOM)
             return false;
-        if ((voxel.quadsMem.quads[quadIndex] & 0b10000000) == 0)
+        const room = App.getCurrentRoom();
+        if (!room || !VoxelQueryUtil.isVoxelQuadVisible(room.voxelGrid.voxels, quadIndex))
             return false;
 
         // Re-clicking the selection keeps it (see ObjectSelection.trySelect).
@@ -199,6 +210,69 @@ export default class VoxelQuadSelection
 
 let selectionOutline: WorldSpaceOutlineRect | null = null;
 
+// The whole cell layer of the selected face's block, drawn so that it is plain which cell the block stands
+// in, however little of it the block fills. Made when first wanted, and asked for only once.
+let blockCellWireBox: WorldSpaceWireBox | null = null;
+let blockCellWireBoxRequested = false;
+
+function refreshSelectionOutline(selection: VoxelQuadSelection)
+{
+    if (!selectionOutline)
+        return;
+
+    const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ } =
+        selection.getTransformDimensions();
+
+    tempPos.set(selection.voxel.col + 0.5 + offsetX, offsetY, selection.voxel.row + 0.5 + offsetZ);
+    tempDir.set(dirX, dirY, dirZ);
+    tempScale.set(scaleX, scaleY, scaleZ);
+    selectionOutline.setTransform(tempPos, tempDir, tempScale);
+
+    refreshBlockCellWireBox(selection);
+}
+
+function refreshBlockCellWireBox(selection: VoxelQuadSelection)
+{
+    // (The room's own floor and ceiling are no block's faces.)
+    const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(selection.quadIndex);
+    const isBlockFace = collisionLayer >= COLLISION_LAYER_MIN && collisionLayer <= COLLISION_LAYER_MAX &&
+        VoxelQueryUtil.isVoxelBlockPresent(selection.voxel, collisionLayer);
+    if (!isBlockFace)
+    {
+        blockCellWireBox?.setVisible(false);
+        return;
+    }
+    if (blockCellWireBox == null)
+    {
+        requestBlockCellWireBox();
+        return;
+    }
+
+    tempPos.set(selection.voxel.col + 0.5, VoxelQueryUtil.getWorldYAtVoxelCollisionLayerCenter(collisionLayer),
+        selection.voxel.row + 0.5);
+    tempScale.set(1, COLLISION_LAYER_HEIGHT, 1);
+    blockCellWireBox.setBox(tempPos, tempScale);
+    blockCellWireBox.setVisible(true);
+}
+
+function requestBlockCellWireBox()
+{
+    if (blockCellWireBoxRequested)
+        return;
+    blockCellWireBoxRequested = true;
+
+    WorldSpaceWireBox.create("#00ff00").then(wireBox => {
+        wireBox.addToParent(GraphicsManager.getScene());
+        blockCellWireBox = wireBox;
+
+        const selection = voxelQuadSelectionObservable.peek();
+        if (selection)
+            refreshBlockCellWireBox(selection);
+    }).catch(err => {
+        console.error(`Failed to make the selected block's cell wireframe :: Error: ${ErrorUtil.getErrorMessage(err)}`);
+    });
+}
+
 voxelQuadSelectionObservable.addListener("voxelQuadSelection", async (selection: VoxelQuadSelection | null) => {
     if (selection)
     {
@@ -209,13 +283,7 @@ voxelQuadSelectionObservable.addListener("voxelQuadSelection", async (selection:
             selectionOutline.addToParent(GraphicsManager.getScene());
         }
 
-        const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ } =
-            VoxelQueryUtil.getVoxelQuadTransformDimensions(selection.voxel, selection.quadIndex);
-
-        tempPos.set(selection.voxel.col + 0.5 + offsetX, offsetY, selection.voxel.row + 0.5 + offsetZ);
-        tempDir.set(dirX, dirY, dirZ);
-        tempScale.set(scaleX, scaleY, scaleZ);
-        selectionOutline.setTransform(tempPos, tempDir, tempScale);
+        refreshSelectionOutline(selection);
         selectionOutline.setVisible(true);
 
         WorldSpaceSelectionUtil.unselectOthers("voxelQuad");
@@ -223,7 +291,15 @@ voxelQuadSelectionObservable.addListener("voxelQuadSelection", async (selection:
     else
     {
         selectionOutline?.setVisible(false);
+        blockCellWireBox?.setVisible(false);
     }
+});
+
+// Refreshed every frame, since the selected face changes with its block's shape (see VoxelQuadEditGizmos).
+updateObservable.addListener("voxelQuadSelection", (_deltaTime: number) => {
+    const selection = voxelQuadSelectionObservable.peek();
+    if (selection && selectionOutline?.isVisible())
+        refreshSelectionOutline(selection);
 });
 
 // Forced: a room change overrides any selection lock from a scripted step.
@@ -248,7 +324,7 @@ function getCollisionLayerToSearchAround(quadIndex: number): number
         : COLLISION_LAYER_MAX; // the ceiling, which faces downward
 }
 
-function addVoxelQuadSelectionCandidatesFromLayer(voxel: Voxel, collisionLayer: number,
+function addVoxelQuadSelectionCandidatesFromLayer(voxels: Voxel[], voxel: Voxel, collisionLayer: number,
     candidates: VoxelQuadSelectionCandidate[])
 {
     const numQuadsInLayer = (collisionLayer == COLLISION_LAYER_NULL)
@@ -261,10 +337,10 @@ function addVoxelQuadSelectionCandidatesFromLayer(voxel: Voxel, collisionLayer: 
             voxel.row, voxel.col, collisionLayer);
         const quadIndex = firstIndex + quadIndexOffset;
         // Register the quad as a candidate only if it is visible.
-        if ((voxel.quadsMem.quads[quadIndex] & 0b10000000) != 0)
+        if (VoxelQueryUtil.isVoxelQuadVisible(voxels, quadIndex))
         {
             const dims = VoxelQueryUtil.getVoxelQuadTransformDimensions(
-                voxel, quadIndex);
+                voxels, quadIndex, true);
             candidates.push({voxel, quadIndex, dims});
         }
     }

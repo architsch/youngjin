@@ -33,7 +33,7 @@ The bare `:4321/...` shorthand does not work under zsh. Ops share their names wi
 | Build op | Stands up |
 |---|---|
 | `stage` | four walls around a floor rectangle; returns each wall's cells and its inward face |
-| `addBlocks` / `removeBlocks` | a box of blocks, or a doorway cut through one already standing |
+| `addBlocks` / `removeBlocks` | a box of blocks, each whole or of the `shape` given (a half or a quarter of its cell), or a doorway cut through one already standing |
 | `addObject` / `removeObject` | a canvas, a prop, a door, a lamp or a label on a cell's face (walls, or a block's top or underside), at its type's default size (a prop at its image's), by the game's own metadata keys |
 | `resizeObject` | a standing object at another size, in multiples of its type's step; the placement rule still applies, and the size it ended up with is returned |
 | `restrictedZones` / `texturePack` / `roomLighting` | room-level state; each reports when called with nothing |
@@ -47,6 +47,10 @@ The bare `:4321/...` shorthand does not work under zsh. Ops share their names wi
 - Hang objects on the cells `stage` reports, not on one worked out by hand: naming the cell *in front* of a wall hangs the object in mid-air, and it reads as deliberate until the camera moves.
 - The room is lit by a light the camera carries, reaching as far as it is aimed, and past the built set there is only black.
 - A canvas or prop fetches its picture over the network, so a frame taken straight after one goes up catches a blank placeholder.
+- A click goes through a prop wherever its image is see-through, its middle included, and selects the face behind. `interact.clickObject` aims where it doesn't, and `bridge("clickPoint", objectId)` gives that pixel to a script that clicks by hand.
 - Restricted-zone outlines are drawn in edit mode only; the zones themselves stand either way.
 - Selection does not move the free camera, so a composed view survives entering edit mode.
-- A drag that starts on the selected attached object's outline moves or resizes it rather than the view; a move follows the face under the pointer, so a drag can carry a lamp from a wall onto the floor. `bridge("selectionGizmo")` gives the points to drag from (its middle, and the outline's corners when it resizes), and `interact.orbit` starts beside the outline when it covers the canvas's middle.
+- A drag that the selection's outline takes edits the selection rather than turning the view. An attached object moves by its inside (following the face under the pointer, so a drag can carry a lamp from a wall onto the floor) and resizes by its corners; a block face only reshapes its block, by the handles on its edges, and a drag from its inside turns the view. `bridge("selectionGizmo")` gives the points to drag from (the `kind`, the middle, the outline's `corners`, and the `handles` by `id`), `interact.dragBetween` drags between two of them, and `interact.orbit` starts beside the outline when it covers the canvas's middle.
+- Read `selectionGizmo` only once the orbit camera has come to rest (after an `orbit`, a `zoom` or a new selection): its points are where things show now, and a press on a stale one lands beside the handle and turns the view instead.
+- `dragBetween` with `hold: true` leaves the pointer down, to look at the room mid-drag; end it with `interact.releaseDrag`. A second press would abandon the drag instead.
+- `bridge("selection")` names a selected face's `facing` and its block's `shape`, and `bridge("blockShape", row, col, collisionLayer)` reads any block's.

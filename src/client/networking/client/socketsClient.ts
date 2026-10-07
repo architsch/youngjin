@@ -16,6 +16,7 @@ import { connectionStateObservable } from "../../system/clientObservables";
 import { tryStartClientProcess, endClientProcess, ongoingClientProcessExists } from "../../system/types/clientProcess";
 import BufferState from "../../../shared/networking/types/bufferState";
 import SetVoxelQuadTextureSignal from "../../../shared/voxel/types/update/setVoxelQuadTextureSignal";
+import SetVoxelBlockShapeSignal from "../../../shared/voxel/types/update/setVoxelBlockShapeSignal";
 import SetRestrictedZonesSignal from "../../../shared/voxel/types/update/setRestrictedZonesSignal";
 import RemoveVoxelBlockSignal from "../../../shared/voxel/types/update/removeVoxelBlockSignal";
 import AddVoxelBlockSignal from "../../../shared/voxel/types/update/addVoxelBlockSignal";
@@ -56,6 +57,8 @@ const incomingSignalHandlers: {[signalType: string]: (data: EncodableData) => vo
         ClientVoxelManager.onMoveVoxelBlockSignalReceived(data as MoveVoxelBlockSignal),
     "removeVoxelBlockSignal": (data: EncodableData) =>
         ClientVoxelManager.onRemoveVoxelBlockSignalReceived(data as RemoveVoxelBlockSignal),
+    "setVoxelBlockShapeSignal": (data: EncodableData) =>
+        ClientVoxelManager.onSetVoxelBlockShapeSignalReceived(data as SetVoxelBlockShapeSignal),
     "setVoxelQuadTextureSignal": (data: EncodableData) =>
         ClientVoxelManager.onSetVoxelQuadTextureSignalReceived(data as SetVoxelQuadTextureSignal),
     "setRestrictedZonesSignal": (data: EncodableData) =>
@@ -183,6 +186,10 @@ const SocketsClient =
     emitRemoveVoxelBlockSignal: (params: RemoveVoxelBlockSignal) =>
     {
         emitWhenReady("removeVoxelBlockSignal", params);
+    },
+    emitSetVoxelBlockShapeSignal: (params: SetVoxelBlockShapeSignal) =>
+    {
+        emitWhenReady("setVoxelBlockShapeSignal", params);
     },
     emitSetVoxelQuadTextureSignal: (params: SetVoxelQuadTextureSignal) =>
     {

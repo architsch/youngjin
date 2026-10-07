@@ -6,7 +6,8 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import fc from "fast-check";
 import { harness, ConnectedUser } from "../helpers/serverHarness";
 import { Action, ActionWeights, buildActionArbitrary, executeAction } from "../helpers/actions";
-import { checkStructuralInvariants, checkObjectTransformConsistency, checkCleanState } from "../helpers/invariants";
+import { checkStructuralInvariants, checkObjectTransformConsistency, checkCleanState,
+    getPendingSignals } from "../helpers/invariants";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
 import ServerUserManager from "../../../src/server/user/serverUserManager";
@@ -15,6 +16,7 @@ import RoomVolume from "../../../src/shared/room/generation/types/roomVolume";
 import RoomVolumeUtil from "../../../src/shared/room/generation/util/roomVolumeUtil";
 import NumUtil from "../../../src/shared/math/util/numUtil";
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
+import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 
 // ─── Weight Profiles ────────────────────────────────────────────────────────
 
@@ -60,7 +62,8 @@ const PROFILES: TestProfile[] = [
     },
     {
         name: "voxel-mixed",
-        weights: { connect: 2, disconnect: 1, joinRoom: 2, moveObject: 1, addVoxel: 3, removeVoxel: 2, moveVoxel: 2, setVoxelTexture: 2 },
+        weights: { connect: 2, disconnect: 1, joinRoom: 2, moveObject: 1, addVoxel: 3, removeVoxel: 2, moveVoxel: 2,
+            reshapeVoxel: 3, setVoxelTexture: 2 },
         maxUsers: 6, maxActions: 40, numRuns: 20,
     },
     {
@@ -296,6 +299,218 @@ describe("property-based: gameplay state persistence", () => {
     });
 });
 
+// ─── Block edits against a model ────────────────────────────────────────────
+// The rules of block edits restated without the shared code that enforces them, so a fault there has no
+// second place to hide in. The model knows only cells, shapes and textures: no zone is drawn and nothing
+// hangs on these blocks.
+
+describe("property-based: block edits against a model", () => {
+    const ROOM_ID = "block-model";
+    // A corner of the room's hollow, small enough for edits to keep meeting each other's blocks; moves may
+    // carry a block one cell out of it, so the cells around it are watched too.
+    const EDITED = {rows: [10, 11], cols: [10, 11], layers: [0, 1]};
+    const WATCHED = {rows: [9, 10, 11, 12], cols: [9, 10, 11, 12], layers: [0, 1, 2]};
+    const BLOCK_SIGNALS = ["addVoxelBlockSignal", "removeVoxelBlockSignal", "moveVoxelBlockSignal",
+        "setVoxelBlockShapeSignal"];
+
+    interface Cell { row: number; col: number; layer: number }
+    interface ModelBlock { shape: number; textures: number[] }
+
+    const keyOf = (cell: Cell) => `${cell.row},${cell.col},${cell.layer}`;
+    const quadIndexOf = (cell: Cell) => VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(cell.row, cell.col, cell.layer);
+
+    // The halves of its cell a shape reaches into, along each axis (bit = x half + 2 * z half).
+    function halvesOf(shape: number): {x: Set<number>, z: Set<number>, count: number}
+    {
+        const halves = {x: new Set<number>(), z: new Set<number>(), count: 0};
+        for (let bit = 0; bit < 4; ++bit)
+        {
+            if ((shape & (1 << bit)) == 0)
+                continue;
+            halves.x.add(bit & 1);
+            halves.z.add(bit >> 1);
+            ++halves.count;
+        }
+        return halves;
+    }
+    // A block is a rectangle of sub-blocks: every one in the halves it reaches into is there.
+    function isBlockShape(shape: number): boolean
+    {
+        if (!Number.isInteger(shape) || shape < 1 || shape > 15)
+            return false;
+        const halves = halvesOf(shape);
+        return halves.count == halves.x.size * halves.z.size;
+    }
+
+    // Applies an edit to the model by the rules, and returns whether they allow it and which cell layers
+    // the server owes the truth about if they don't.
+    function applyToModel(model: Map<string, ModelBlock>, edit: Action): {accepted: boolean, touched: Cell[]}
+    {
+        if (edit.type != "addVoxel" && edit.type != "removeVoxel" && edit.type != "moveVoxel" &&
+            edit.type != "reshapeVoxel")
+        {
+            throw new Error(`Not a block edit (${edit.type})`);
+        }
+        const cell = {row: edit.row, col: edit.col, layer: edit.layer};
+        const block = model.get(keyOf(cell));
+        switch (edit.type)
+        {
+            case "addVoxel":
+            {
+                const shape = edit.shape ?? 0b1111;
+                if (block || !isBlockShape(shape))
+                    return {accepted: false, touched: [cell]};
+                model.set(keyOf(cell), {shape, textures: [...edit.textures!]});
+                return {accepted: true, touched: [cell]};
+            }
+            case "removeVoxel":
+                if (!block)
+                    return {accepted: false, touched: [cell]};
+                model.delete(keyOf(cell));
+                return {accepted: true, touched: [cell]};
+            case "reshapeVoxel":
+                if (!block || !isBlockShape(edit.shape))
+                    return {accepted: false, touched: [cell]};
+                block.shape = edit.shape;
+                return {accepted: true, touched: [cell]};
+            case "moveVoxel":
+            {
+                const target = {row: cell.row + edit.dRow, col: cell.col + edit.dCol, layer: cell.layer + edit.dLayer};
+                // (Below the lowest layer is no cell layer, so there is nothing to say of it.)
+                const touched = (target.layer < 0) ? [cell] : [cell, target];
+                if (!block || target.layer < 0 || model.has(keyOf(target)))
+                    return {accepted: false, touched};
+                // It goes as it is: its shape and its textures.
+                model.delete(keyOf(cell));
+                model.set(keyOf(target), block);
+                return {accepted: true, touched};
+            }
+        }
+    }
+
+    const anyCell = fc.record({row: fc.constantFrom(...EDITED.rows), col: fc.constantFrom(...EDITED.cols),
+        layer: fc.constantFrom(...EDITED.layers)});
+    // Mostly shapes a block can have, so that edits are taken often enough to build on one another.
+    const anyShape = fc.oneof(
+        {weight: 5, arbitrary: fc.constantFrom(0b1111, 0b0101, 0b1010, 0b0011, 0b1100, 1, 2, 4, 8)},
+        {weight: 1, arbitrary: fc.integer({min: 0, max: 255})});
+    const anyTexture = fc.integer({min: 0, max: 127});
+    const anyOffset = fc.constantFrom(-1, 0, 1);
+    const anyEdit: fc.Arbitrary<Action> = fc.oneof(
+        {weight: 3, arbitrary: fc.tuple(anyCell, anyShape,
+            fc.tuple(anyTexture, anyTexture, anyTexture, anyTexture, anyTexture, anyTexture)).map<Action>(
+            ([cell, shape, textures]) => ({type: "addVoxel", userIndex: 0, ...cell, shape, textures}))},
+        {weight: 1, arbitrary: anyCell.map<Action>(cell => ({type: "removeVoxel", userIndex: 0, ...cell}))},
+        {weight: 3, arbitrary: fc.tuple(anyCell, anyShape).map<Action>(
+            ([cell, shape]) => ({type: "reshapeVoxel", userIndex: 0, ...cell, shape}))},
+        {weight: 3, arbitrary: fc.tuple(anyCell, anyOffset, anyOffset, anyOffset).map<Action>(
+            ([cell, dRow, dCol, dLayer]) => ({type: "moveVoxel", userIndex: 0, ...cell, dRow, dCol, dLayer}))});
+
+    beforeEach(() => {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        vi.spyOn(console, "warn").mockImplementation(() => {});
+        vi.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    it("the server holds what the rules say, tells the others each edit it takes and the sender the truth of each it refuses", async () => {
+        // How often the rules took and refused each kind of edit, over every run.
+        const outcomes: {[editType: string]: {taken: number, refused: number}} = {};
+        await fc.assert(
+            // (Long runs of edits: only blocks already standing can be moved, reshaped or taken away.)
+            fc.asyncProperty(fc.array(anyEdit, {minLength: 30, maxLength: 80, size: "max"}), async (edits) => {
+                harness.reset();
+                harness.seedRoom(ROOM_ID, RoomTypeEnumMap.Hub);
+                const users: ConnectedUser[] = [];
+                for (let userIndex = 0; userIndex < 2; ++userIndex)
+                {
+                    await executeAction({type: "connect"}, users);
+                    await executeAction({type: "joinRoom", userIndex, roomID: ROOM_ID}, users);
+                }
+                const [sender, observer] = users;
+                const grid = ServerRoomManager.roomRuntimeMemories[ROOM_ID].room.voxelGrid;
+                const model = new Map<string, ModelBlock>();
+
+                for (const edit of edits)
+                {
+                    for (const user of users)
+                        user.socketUserContext.clearAllPendingSignalsToUser();
+                    const {accepted, touched} = applyToModel(model, edit);
+                    outcomes[edit.type] ??= {taken: 0, refused: 0};
+                    ++outcomes[edit.type][accepted ? "taken" : "refused"];
+                    await executeAction(edit, users);
+                    const context = `${JSON.stringify(edit)} (${accepted ? "taken" : "refused"} by the rules)`;
+
+                    // The server's blocks are the model's.
+                    for (const row of WATCHED.rows) for (const col of WATCHED.cols) for (const layer of WATCHED.layers)
+                    {
+                        const block = model.get(keyOf({row, col, layer}));
+                        expect(VoxelQueryUtil.getVoxelBlockShapeAt(grid.voxels, row, col, layer),
+                            `shape at ${row},${col},${layer} after ${context}`).toBe(block?.shape ?? 0);
+                        if (block)
+                        {
+                            const first = quadIndexOf({row, col, layer});
+                            expect(Array.from(grid.quadsMem.quads.subarray(first, first + 6)),
+                                `textures at ${row},${col},${layer} after ${context}`).toEqual(block.textures);
+                        }
+                    }
+
+                    const sent = (user: ConnectedUser) => Object.fromEntries(BLOCK_SIGNALS.map(signalType =>
+                        [signalType, getPendingSignals(user, signalType)]));
+                    const nothing = Object.fromEntries(BLOCK_SIGNALS.map(signalType => [signalType, []]));
+                    if (accepted)
+                    {
+                        // Told to the others exactly as it was sent, and never echoed.
+                        expect(sent(sender), `echo of ${context}`).toEqual(nothing);
+                        const relayed = sent(observer);
+                        const relayedType = {addVoxel: "addVoxelBlockSignal", removeVoxel: "removeVoxelBlockSignal",
+                            moveVoxel: "moveVoxelBlockSignal", reshapeVoxel: "setVoxelBlockShapeSignal"}[
+                            edit.type as "addVoxel" | "removeVoxel" | "moveVoxel" | "reshapeVoxel"];
+                        for (const signalType of BLOCK_SIGNALS)
+                        {
+                            expect(relayed[signalType].length, `${signalType} relayed for ${context}`)
+                                .toBe(signalType == relayedType ? 1 : 0);
+                        }
+                        expect(relayed[relayedType][0].quadIndex).toBe(quadIndexOf(touched[0]));
+                    }
+                    else
+                    {
+                        // Answered with what each cell layer it touched holds, and kept from the others.
+                        expect(sent(observer), `relay of ${context}`).toEqual(nothing);
+                        const answered = sent(sender);
+                        const held = touched.filter(cell => model.has(keyOf(cell)));
+                        const empty = touched.filter(cell => !model.has(keyOf(cell)));
+                        expect(answered["addVoxelBlockSignal"].map(signal =>
+                            [signal.quadIndex, signal.shape, signal.quadTextureIndicesWithinLayer]),
+                            `blocks answered for ${context}`).toEqual(held.map(cell =>
+                            [quadIndexOf(cell), model.get(keyOf(cell))!.shape, model.get(keyOf(cell))!.textures]));
+                        expect(answered["removeVoxelBlockSignal"].map(signal => signal.quadIndex),
+                            `empty cells answered for ${context}`).toEqual(empty.map(quadIndexOf));
+                        expect(answered["moveVoxelBlockSignal"].length + answered["setVoxelBlockShapeSignal"].length)
+                            .toBe(0);
+                    }
+                }
+
+                // (Among them: the room, shrunk blocks and all, reads back from its own encoding.)
+                checkStructuralInvariants(users);
+
+                for (const user of users)
+                {
+                    try { await harness.disconnectUser(user, false); }
+                    catch { /* cleanup */ }
+                }
+            }),
+            { numRuns: 40, verbose: 1 }
+        );
+
+        // The property says nothing unless edits of every kind went both ways.
+        for (const editType of ["addVoxel", "removeVoxel", "moveVoxel", "reshapeVoxel"])
+        {
+            expect(outcomes[editType]?.taken ?? 0, `${editType} edits taken`).toBeGreaterThan(10);
+            expect(outcomes[editType]?.refused ?? 0, `${editType} edits refused`).toBeGreaterThan(10);
+        }
+    });
+});
+
 // ─── Room volume geometry ───────────────────────────────────────────────────
 // The pure arithmetic room generation is built on, so a fault here affects every room.
 
@@ -400,7 +615,7 @@ describe("room volume geometry", () => {
                 for (const volume of order)
                     RoomVolumeUtil.carveOutVolume(grid.voxels, volume);
                 return {
-                    masks: grid.voxels.map(v => v.collisionLayerMask).join(","),
+                    masks: grid.voxels.map(v => VoxelQueryUtil.getVoxelBlockLayerMask(v)).join(","),
                     quads: Array.from(grid.quadsMem.quads).join(","),
                 };
             };

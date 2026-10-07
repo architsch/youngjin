@@ -8,6 +8,11 @@ import PhysicsManager from "../../../src/shared/physics/physicsManager";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import SignalTypeConfigMap from "../../../src/shared/networking/maps/signalTypeConfigMap";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
+import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
+import VoxelBlockShapeUtil from "../../../src/shared/voxel/util/voxelBlockShapeUtil";
+import BufferState from "../../../src/shared/networking/types/bufferState";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN,
+    NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../../src/shared/system/sharedConstants";
 
 // ─── Core Structural Invariants ────────────────────────────────────────────
 
@@ -21,6 +26,7 @@ export function checkStructuralInvariants(connectedUsers: ConnectedUser[]): void
     checkObjectOwnership();
     checkNoUserInMultipleRooms();
     checkPlayerObjectsExist();
+    checkVoxelGridConsistency();
 }
 
 /** Invariant 1: ServerUserManager user count matches tracked array. */
@@ -240,6 +246,78 @@ export function checkRoomOwnershipConsistency(): void
         expect(ownerContext.user.ownedRoomID,
             `Owner ${ownerID} of room ${roomID} should name it as his own`).toBe(roomID);
     }
+}
+
+/**
+ * Invariant 12: every loaded room's voxel grid is one a room can be saved as and read back from. Each
+ * block's shape is one a block can have (or none), the quads hold texture indices alone (a block's shape
+ * is kept apart from them until the room is encoded), and the grid's own encoding reads back as itself.
+ */
+export function checkVoxelGridConsistency(): void
+{
+    for (const [roomID, roomMem] of Object.entries(ServerRoomManager.roomRuntimeMemories))
+    {
+        const grid = roomMem.room.voxelGrid;
+        const {quads, blockShapes} = grid.quadsMem;
+
+        // Counted rather than asserted one by one: a grid has hundreds of thousands of each.
+        let numInvalidShapes = 0;
+        for (let i = 0; i < blockShapes.length; ++i)
+        {
+            if (!VoxelBlockShapeUtil.isValid(blockShapes[i]))
+                ++numInvalidShapes;
+        }
+        expect(numInvalidShapes, `Room ${roomID} holds block shapes no block can have`).toBe(0);
+
+        let numQuadsWithSpareBit = 0;
+        for (let i = 0; i < quads.length; ++i)
+        {
+            if (quads[i] & 0b10000000)
+                ++numQuadsWithSpareBit;
+        }
+        expect(numQuadsWithSpareBit, `Room ${roomID} holds quads with their spare bit set`).toBe(0);
+
+        const encoded = new BufferState(encodedGridBytes);
+        grid.encode(encoded);
+        const decoded = VoxelGrid.decode(new BufferState(encodedGridBytes.slice(0, encoded.byteIndex))) as VoxelGrid;
+        expect(buffersMatch(decoded.quadsMem.blockShapes, blockShapes),
+            `Room ${roomID}'s block shapes changed when stored and read back`).toBe(true);
+        expect(buffersMatch(decoded.quadsMem.quads, storedQuadsOf(grid)),
+            `Room ${roomID}'s quads changed when stored and read back`).toBe(true);
+    }
+}
+
+// Room for any grid's encoding (see Voxel for the layout).
+const encodedGridBytes = new Uint8Array(1024 * 1024);
+
+// What a grid's quads read back as: only a layer holding a block is stored, so the faces of the others
+// come back unpainted.
+function storedQuadsOf(grid: VoxelGrid): Uint8Array
+{
+    const stored = grid.quadsMem.quads.slice();
+    for (const voxel of grid.voxels)
+    {
+        for (let layer = COLLISION_LAYER_MIN; layer <= COLLISION_LAYER_MAX; ++layer)
+        {
+            if (VoxelQueryUtil.isVoxelBlockPresent(voxel, layer))
+                continue;
+            const first = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(voxel.row, voxel.col, layer);
+            stored.fill(0, first, first + NUM_VOXEL_QUADS_PER_COLLISION_LAYER);
+        }
+    }
+    return stored;
+}
+
+function buffersMatch(a: Uint8Array, b: Uint8Array): boolean
+{
+    if (a.length != b.length)
+        return false;
+    for (let i = 0; i < a.length; ++i)
+    {
+        if (a[i] != b[i])
+            return false;
+    }
+    return true;
 }
 
 // ─── Clean State Invariants ────────────────────────────────────────────────

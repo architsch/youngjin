@@ -31,9 +31,11 @@ import SetRestrictedZonesSignal from "../../../src/shared/voxel/types/update/set
 import AddVoxelBlockSignal from "../../../src/shared/voxel/types/update/addVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/removeVoxelBlockSignal";
 import SetVoxelQuadTextureSignal from "../../../src/shared/voxel/types/update/setVoxelQuadTextureSignal";
+import SetVoxelBlockShapeSignal from "../../../src/shared/voxel/types/update/setVoxelBlockShapeSignal";
+import MoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/moveVoxelBlockSignal";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import { COLLISION_LAYER_MIN, MAX_RESTRICTED_ZONES, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
-    SANDBOX_SINGLE_PLAYER_MODE, UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
+    SANDBOX_SINGLE_PLAYER_MODE, UNIT_VEC3, VOXEL_BLOCK_SHAPE_WHOLE } from "../../../src/shared/system/sharedConstants";
 
 // Clear of the boundary walls and the door's wall.
 const ZONE = new RestrictedZone(8, 15, 8, 15);
@@ -84,7 +86,7 @@ function blockQuadIndex(row: number, col: number, layer: number = LAYER): number
 function blockIsThere(room: Room, row: number, col: number, layer: number = LAYER): boolean
 {
     const voxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, col)!;
-    return VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, layer);
+    return VoxelQueryUtil.isVoxelBlockPresent(voxel, layer);
 }
 
 // Only the collider's position matters, not whether a canvas could really hang there.
@@ -187,6 +189,72 @@ describe("restricted zones", () => {
                 expect(blockIsThere(room, INSIDE.row, INSIDE.col)).toBe(true);
                 expect(getPendingSignals(users[0], "addVoxelBlockSignal").length)
                     .toBeGreaterThanOrEqual(1);
+            },
+        });
+    });
+
+    it("refuses an ordinary user's reshape or move inside a zone, and answers with the block as it is", async () => {
+        const LOW_X_HALF = 0b0101;
+        await runScenario({
+            name: "block reshaped and moved inside a zone",
+            rooms: [EMPTY_HUB],
+            users: [userAtCenter("hub")],
+            assertions: ({users}) => {
+                const room = getRoom("hub");
+                const inside = blockQuadIndex(INSIDE.row, INSIDE.col);
+                const outside = blockQuadIndex(OUTSIDE.row, OUTSIDE.col);
+                for (const quadIndex of [inside, outside])
+                {
+                    ServerVoxelManager.onAddVoxelBlockSignalReceived(users[0].socketUserContext,
+                        new AddVoxelBlockSignal(room.id, quadIndex, [0, 0, 0, 0, 0, 0]));
+                }
+                drawZone(room, ZONE);
+                room.dirty = false;
+                const shapeOf = (quadIndex: number) => VoxelQueryUtil.getVoxelBlockShapeAt(room.voxelGrid.voxels,
+                    VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex), VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex),
+                    LAYER);
+
+                // Shrinking a block inside the zone, moving it within the zone, and moving it out.
+                ServerVoxelManager.onSetVoxelBlockShapeSignalReceived(users[0].socketUserContext,
+                    new SetVoxelBlockShapeSignal(room.id, inside, LOW_X_HALF));
+                ServerVoxelManager.onMoveVoxelBlockSignalReceived(users[0].socketUserContext,
+                    new MoveVoxelBlockSignal(room.id, inside, 1, 0, 0));
+                ServerVoxelManager.onMoveVoxelBlockSignalReceived(users[0].socketUserContext,
+                    new MoveVoxelBlockSignal(room.id, inside, ZONE.rowMax + 1 - INSIDE.row, 0, 0));
+                // Moving a block in from outside puts a block inside the zone just as adding one would.
+                ServerVoxelManager.onMoveVoxelBlockSignalReceived(users[0].socketUserContext,
+                    new MoveVoxelBlockSignal(room.id, outside, INSIDE.row + 1 - OUTSIDE.row,
+                        INSIDE.col - OUTSIDE.col, 0));
+
+                expect(shapeOf(inside)).toBe(VOXEL_BLOCK_SHAPE_WHOLE);
+                expect(shapeOf(outside)).toBe(VOXEL_BLOCK_SHAPE_WHOLE);
+                expect(blockIsThere(room, INSIDE.row + 1, INSIDE.col)).toBe(false);
+                expect(blockIsThere(room, ZONE.rowMax + 1, INSIDE.col)).toBe(false);
+                expect(room.dirty).toBe(false);
+
+                // Each refusal is answered with what its cells hold: the block whole where it was, and
+                // nothing where it was sent.
+                expect(getPendingSignals(users[0], "addVoxelBlockSignal")
+                    .map(signal => [signal.quadIndex, signal.shape])).toEqual([
+                    [inside, VOXEL_BLOCK_SHAPE_WHOLE], [inside, VOXEL_BLOCK_SHAPE_WHOLE],
+                    [inside, VOXEL_BLOCK_SHAPE_WHOLE], [outside, VOXEL_BLOCK_SHAPE_WHOLE]]);
+                expect(getPendingSignals(users[0], "removeVoxelBlockSignal").map(signal => signal.quadIndex))
+                    .toEqual([blockQuadIndex(INSIDE.row + 1, INSIDE.col), blockQuadIndex(ZONE.rowMax + 1, INSIDE.col),
+                        blockQuadIndex(INSIDE.row + 1, INSIDE.col)]);
+
+                // Outside the zone the same user shapes and moves blocks as they like.
+                ServerVoxelManager.onSetVoxelBlockShapeSignalReceived(users[0].socketUserContext,
+                    new SetVoxelBlockShapeSignal(room.id, outside, LOW_X_HALF));
+                expect(shapeOf(outside)).toBe(LOW_X_HALF);
+                ServerVoxelManager.onMoveVoxelBlockSignalReceived(users[0].socketUserContext,
+                    new MoveVoxelBlockSignal(room.id, outside, 1, 0, 0));
+                expect(shapeOf(blockQuadIndex(OUTSIDE.row + 1, OUTSIDE.col))).toBe(LOW_X_HALF);
+
+                // And an admin does inside it.
+                becomeAdmin(users[0]);
+                ServerVoxelManager.onSetVoxelBlockShapeSignalReceived(users[0].socketUserContext,
+                    new SetVoxelBlockShapeSignal(room.id, inside, LOW_X_HALF));
+                expect(shapeOf(inside)).toBe(LOW_X_HALF);
             },
         });
     });

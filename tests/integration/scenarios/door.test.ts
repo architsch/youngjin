@@ -35,7 +35,8 @@ import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN,
     LABEL_COLOR_PALETTE_NAME, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL,
     INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, NUM_VOXEL_COLS,
     NUM_VOXEL_ROWS, OBJECT_LABEL_MAX_LENGTH, SANDBOX_SINGLE_PLAYER_MODE,
-    TUTORIAL_SINGLE_PLAYER_MODE, UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
+    TUTORIAL_SINGLE_PLAYER_MODE, UNIT_VEC3, VOXEL_BLOCK_SHAPE_WHOLE } from "../../../src/shared/system/sharedConstants";
+import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 
 const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 const DOOR_FOOTPRINT_HEIGHT =
@@ -337,6 +338,40 @@ describe("placing a door on its wall", () => {
                     new ObjectTransform({...door.transform.pos, y: spawnedY - COLLISION_LAYER_HEIGHT},
                         door.transform.dir, door.transform.scale))).toBe(false);
                 expect(placeAt(spawnedY - 0.2)!.pos.y).toBeCloseTo(spawnedY, 6);
+            },
+        });
+    });
+});
+
+describe("the wall a door needs", () => {
+    beforeEach(() => {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        vi.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    it("is whole blocks all the way behind it, since arrivals stand in the wall's own cell", async () => {
+        await runScenario({
+            name: "door on a shrunk wall",
+            rooms: [EMPTY_HUB],
+            users: [userAtCenter("hub")],
+            assertions: () => {
+                const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
+                const door = makeDoorSignal(room, ADMIN);
+                const fits = () => ObjectAttachmentUtil.canPlaceObject(room, door.objectId, doorTypeIndex, door.transform);
+                expect(fits()).toBe(true);
+
+                // One block of the wall behind it, cut down to each half in turn: the half the door hangs
+                // on would hold a picture, but not a door.
+                const wallCol = Math.floor(door.transform.pos.x);
+                const blockIndex = VoxelQueryUtil.getVoxelBlockIndex(INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, wallCol,
+                    COLLISION_LAYER_MIN + 1);
+                for (const half of [0b0011, 0b1100, 0b0101, 0b1010])
+                {
+                    room.voxelGrid.quadsMem.blockShapes[blockIndex] = half;
+                    expect(fits(), `with a block behind it cut to ${half}`).toBe(false);
+                }
+                room.voxelGrid.quadsMem.blockShapes[blockIndex] = VOXEL_BLOCK_SHAPE_WHOLE;
+                expect(fits()).toBe(true);
             },
         });
     });

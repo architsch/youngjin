@@ -16,12 +16,13 @@ import { Action } from "../helpers/actions";
 const TOP_FACE_OFFSET = VoxelQueryUtil.getVoxelQuadIndex(10, 10, "y", "+", 0) -
     VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(10, 10, 0);
 
-// Every voxel operation there is, made by one user: a block is built, painted, moved and taken down.
+// Every voxel operation there is, made by one user: a block is built, painted, shrunk, moved and taken down.
 function allVoxelOperations(userIndex: number): Action[]
 {
     return [
         { type: "addVoxel", userIndex, row: 10, col: 10, layer: 0 },
         { type: "setVoxelTexture", userIndex, row: 10, col: 10, layer: 0, quadOffset: TOP_FACE_OFFSET, textureIndex: 3 },
+        { type: "reshapeVoxel", userIndex, row: 10, col: 10, layer: 0, shape: 0b0101 },
         { type: "addVoxel", userIndex, row: 11, col: 11, layer: 0 },
         { type: "moveVoxel", userIndex, row: 11, col: 11, layer: 0, dRow: 1, dCol: 0, dLayer: 0 },
         { type: "removeVoxel", userIndex, row: 10, col: 10, layer: 0 },
@@ -36,9 +37,9 @@ function expectAllVoxelOperationsTaken(user: Parameters<typeof getPendingSignals
 
     const voxels = ServerRoomManager.roomRuntimeMemories[roomID].room.voxelGrid.voxels;
     // Built and then taken down again...
-    expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(VoxelQueryUtil.getVoxel(voxels, 10, 10)!, 0)).toBe(false);
+    expect(VoxelQueryUtil.isVoxelBlockPresent(VoxelQueryUtil.getVoxel(voxels, 10, 10)!, 0)).toBe(false);
     // ...and built and then moved away.
-    expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(VoxelQueryUtil.getVoxel(voxels, 11, 11)!, 0)).toBe(false);
+    expect(VoxelQueryUtil.isVoxelBlockPresent(VoxelQueryUtil.getVoxel(voxels, 11, 11)!, 0)).toBe(false);
 }
 
 describe("extended permission scenarios", () => {
@@ -100,9 +101,9 @@ describe("extended permission scenarios", () => {
                 expect(RoomValidationUtil.userOwnsRoom(users[0].user, roomB.room)).toBe(false);
 
                 const v1 = VoxelQueryUtil.getVoxel(roomA.room.voxelGrid.voxels, 10, 10)!;
-                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(v1, 0)).toBe(true);
+                expect(VoxelQueryUtil.isVoxelBlockPresent(v1, 0)).toBe(true);
                 const v2 = VoxelQueryUtil.getVoxel(roomB.room.voxelGrid.voxels, 11, 11)!;
-                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(v2, 0)).toBe(true);
+                expect(VoxelQueryUtil.isVoxelBlockPresent(v2, 0)).toBe(true);
             },
         });
     });

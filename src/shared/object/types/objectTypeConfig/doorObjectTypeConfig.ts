@@ -53,6 +53,8 @@ const DoorObjectTypeConfig =
     category: ObjectCategoryEnumMap.Door,
     attachment: {
         allowedDirections: WALL_DIRECTIONS,
+        // Arrivals stand in the wall cell behind the door (see SPAWN_DIST_BEHIND_DOOR).
+        wholeBlocksOnly: true,
     },
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => {
         if (!RoomValidationUtil.isRoomSuperuser(user, room))

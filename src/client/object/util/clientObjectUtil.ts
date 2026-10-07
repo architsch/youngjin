@@ -44,7 +44,7 @@ const ClientObjectUtil =
                     {...UNIT_VEC3}
                 )
             );
-            (gameObject as VoxelGameObject).setVoxel(voxel);
+            (gameObject as VoxelGameObject).setVoxel(voxel, room.voxelGrid.voxels);
             await ClientObjectManager.addObject(gameObject, false, false);
         }
     },

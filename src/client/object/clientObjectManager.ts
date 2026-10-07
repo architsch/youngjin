@@ -360,7 +360,7 @@ const resyncVoxelsToCurrentGrid = (room: Room): void =>
             console.error(`resyncVoxelsToCurrentGrid :: voxel not found in new room (row = ${cell.row}, col = ${cell.col})`);
             continue;
         }
-        voxelObj.setVoxel(newVoxel);
+        voxelObj.setVoxel(newVoxel, room.voxelGrid.voxels);
         voxelObj.refreshAllQuads();
     }
 }

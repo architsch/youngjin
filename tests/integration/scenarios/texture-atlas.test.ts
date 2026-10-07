@@ -3,14 +3,47 @@
  * and the guarantee that a room's labels always fit once packed largest first), TextureAtlas (content shared
  * by key, sized for its largest holder up to the atlas's cap, drawn before it is shown, and shrunk rather than
  * left out when full),
- * TextureAtlasLayoutUtil (how content in a region is laid on a quad), LabelTextLayoutUtil (fitting text to a
- * label, or cutting it off at a fixed size, over its line breaks), and FontMetricsUtil reading the bundled
- * label font.
+ * TextureAtlasLayoutUtil (how content in a region is laid on a quad), what a cut-out picture draws at a point of
+ * its quad (InstancedMeshBinding asking the atlas, which a stand-in answers for), LabelTextLayoutUtil (fitting
+ * text to a label, or cutting it off at a fixed size, over its line breaks), and FontMetricsUtil reading the
+ * bundled label font.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+
+// The picture atlas is drawn on the GPU alone: this answers for reading it back (see
+// TextureUtil.readAlphaOnRenderTarget), with whatever opacity a test paints.
+const atlasOnGPU = vi.hoisted(() => ({
+    alphaAt: (_texelX: number, _texelY: number): number => 255,
+    readFails: false,
+    readTexels: [] as {x: number, y: number}[],
+}));
+
+vi.mock("../../../src/client/graphics/graphicsManager", () => ({
+    default: {
+        getGameRenderer: () => ({
+            readRenderTargetPixels(_renderTarget: unknown, x: number, y: number, width: number, height: number,
+                buffer: Uint8Array)
+            {
+                for (let row = 0; row < height; ++row)
+                {
+                    for (let col = 0; col < width; ++col)
+                    {
+                        atlasOnGPU.readTexels.push({x: x + col, y: y + row});
+                        if (!atlasOnGPU.readFails)
+                            buffer[(row * width + col) * 4 + 3] = atlasOnGPU.alphaAt(x + col, y + row);
+                    }
+                }
+            },
+        }),
+    },
+}));
+
+import * as THREE from "three";
 import fc from "fast-check";
 import fs from "fs";
 import path from "path";
+import InstancedMeshBinding from "../../../src/client/graphics/types/mesh/instancedMeshBinding";
+import InstancedTexturePackMaterialParams from "../../../src/shared/graphics/material/types/instancedTexturePackMaterialParams";
 import TextureAtlasAllocator from "../../../src/client/graphics/types/texture/textureAtlasAllocator";
 import TextureAtlasRegion from "../../../src/client/graphics/types/texture/textureAtlasRegion";
 import TextureAtlas from "../../../src/client/graphics/types/texture/textureAtlas";
@@ -397,6 +430,135 @@ describe("texture atlas layout", () => {
             expect(fitted.width == region.numCols * 64 || fitted.height == region.numRows * 64).toBe(true);
             expect(Math.abs(fitted.width - fitted.height * aspect)).toBeLessThanOrEqual(Math.max(1, aspect));
         }));
+    });
+});
+
+describe("what a cut-out picture draws at a point of its quad", () => {
+    // An image's texels in the picture atlas: two cells by one.
+    const IMAGE: TexelRect = {x: 3 * PICTURE_ATLAS_CELL_SIZE, y: 5 * PICTURE_ATLAS_CELL_SIZE,
+        width: 2 * PICTURE_ATLAS_CELL_SIZE, height: PICTURE_ATLAS_CELL_SIZE};
+    const owner = {params: {objectId: "picture"}} as Parameters<InstancedMeshBinding["updateInstanceTextureRect"]>[0];
+
+    function atlasTexture(format: THREE.PixelFormat = THREE.RGBAFormat): THREE.Texture
+    {
+        return new THREE.WebGLRenderTarget(PICTURE_ATLAS_SIZE, PICTURE_ATLAS_SIZE, {format}).texture;
+    }
+
+    /** One instance drawing a rect of the picture atlas, turned, through a material that cuts out at a threshold. */
+    function instanceShowing(texels: TexelRect, quarterTurns: number = 0, alphaTest: number = 0.5,
+        map: THREE.Texture = atlasTexture()): InstancedMeshBinding
+    {
+        const geometry = new THREE.PlaneGeometry();
+        geometry.setAttribute("uvStart", new THREE.InstancedBufferAttribute(new Float32Array(2), 2));
+        geometry.setAttribute("uvSampleSize", new THREE.InstancedBufferAttribute(new Float32Array(2), 2));
+        geometry.setAttribute("uvQuarterTurns", new THREE.InstancedBufferAttribute(new Float32Array(1), 1));
+        const binding = new InstancedMeshBinding(new InstancedTexturePackMaterialParams("atlas",
+            PICTURE_ATLAS_SIZE, PICTURE_ATLAS_SIZE, PICTURE_ATLAS_CELL_SIZE, PICTURE_ATLAS_CELL_SIZE, "dynamicEmpty"),
+            "Square", 1, false);
+        binding.instancedMesh = new THREE.InstancedMesh(geometry, new THREE.MeshPhongMaterial({map, alphaTest}), 1);
+        binding.updateInstanceTextureRect(owner, 0, texels.x, texels.y, texels.width, texels.height);
+        binding.updateInstanceTextureTurns(owner, 0, quarterTurns);
+        return binding;
+    }
+
+    const drawnAt = (binding: InstancedMeshBinding, u: number, v: number) =>
+        binding.instanceIsDrawnAt(0, new THREE.Vector2(u, v));
+
+    // Where across a rect's width the middle of a texel column is sampled (a rect is sampled from the centre
+    // of its first texel to the centre of its last).
+    const uOfColumn = (texels: TexelRect, column: number) => (column - texels.x) / (texels.width - 1);
+
+    beforeEach(() => {
+        atlasOnGPU.alphaAt = () => 255;
+        atlasOnGPU.readFails = false;
+        atlasOnGPU.readTexels.length = 0;
+    });
+
+    it("draws where its image is opaque and nothing where it is see-through, whichever part of the image it shows", () => {
+        // The image's left half is opaque.
+        atlasOnGPU.alphaAt = (x) => (x < IMAGE.x + IMAGE.width / 2) ? 255 : 0;
+
+        const whole = instanceShowing(IMAGE);
+        expect(drawnAt(whole, 0.25, 0.5)).toBe(true);
+        expect(drawnAt(whole, 0.75, 0.5)).toBe(false);
+
+        // On an area half as wide, the picture shows the image's middle, so the opaque half ends at its own.
+        const {texelRect} = TextureAtlasLayoutUtil.getLayout({x: 0.5, y: 0.5}, IMAGE, "preserve", 0, {x: 1, y: 0.5});
+        const middle = instanceShowing(texelRect);
+        expect(drawnAt(middle, 0, 0.5)).toBe(true);
+        expect(drawnAt(middle, 0.45, 0.5)).toBe(true);
+        expect(drawnAt(middle, 0.55, 0.5)).toBe(false);
+    });
+
+    it("turns with the picture, clockwise as it is seen", () => {
+        // Only the image's bottom-left quarter is opaque.
+        atlasOnGPU.alphaAt = (x, y) => (x < IMAGE.x + IMAGE.width / 2 && y < IMAGE.y + IMAGE.height / 2) ? 255 : 0;
+
+        const quarters = {bottomLeft: [0.25, 0.25], topLeft: [0.25, 0.75], topRight: [0.75, 0.75], bottomRight: [0.75, 0.25]};
+        const shownIn = ["bottomLeft", "topLeft", "topRight", "bottomRight"];
+        for (let quarterTurns = 0; quarterTurns < 4; ++quarterTurns)
+        {
+            const picture = instanceShowing(IMAGE, quarterTurns);
+            for (const [name, [u, v]] of Object.entries(quarters))
+                expect(drawnAt(picture, u, v), `${quarterTurns} turns, ${name}`).toBe(name == shownIn[quarterTurns]);
+        }
+    });
+
+    it("blends the texels around the point as the atlas's filter does", () => {
+        // Opaque up to a column, half faded in the next, see-through from there on.
+        const column = IMAGE.x + 40;
+        atlasOnGPU.alphaAt = (x) => (x <= column) ? 255 : (x == column + 1) ? 100 : 0;
+        const picture = instanceShowing(IMAGE);
+
+        // Nearer the faded texel's centre than the opaque one's, where the blend of the two is still dense enough.
+        expect(drawnAt(picture, uOfColumn(IMAGE, column + 0.7), 0.5)).toBe(true);
+        expect(drawnAt(picture, uOfColumn(IMAGE, column + 1), 0.5)).toBe(false);
+        expect(drawnAt(picture, uOfColumn(IMAGE, column + 1.4), 0.5)).toBe(false);
+    });
+
+    it("cuts out at the material's own threshold", () => {
+        atlasOnGPU.alphaAt = () => 128;
+        expect(drawnAt(instanceShowing(IMAGE), 0.5, 0.5)).toBe(true);
+        atlasOnGPU.alphaAt = () => 127;
+        expect(drawnAt(instanceShowing(IMAGE), 0.5, 0.5)).toBe(false);
+        expect(drawnAt(instanceShowing(IMAGE, 0, 0.25), 0.5, 0.5)).toBe(true);
+    });
+
+    it("reads no texel outside the atlas, even at its very corners", () => {
+        const last = PICTURE_ATLAS_SIZE - 1;
+        atlasOnGPU.alphaAt = (x, y) => ((x == 0 && y == 0) || (x == last && y == last)) ? 255 : 0;
+        const cell = PICTURE_ATLAS_CELL_SIZE;
+
+        expect(drawnAt(instanceShowing({x: 0, y: 0, width: cell, height: cell}), 0, 0)).toBe(true);
+        expect(drawnAt(instanceShowing({x: PICTURE_ATLAS_SIZE - cell, y: PICTURE_ATLAS_SIZE - cell, width: cell, height: cell}),
+            1, 1)).toBe(true);
+        expect(atlasOnGPU.readTexels.length).toBeGreaterThan(0);
+        for (const texel of atlasOnGPU.readTexels)
+        {
+            expect(texel.x >= 0 && texel.x <= last, `x = ${texel.x}`).toBe(true);
+            expect(texel.y >= 0 && texel.y <= last, `y = ${texel.y}`).toBe(true);
+        }
+    });
+
+    it("takes anything that is no cut-out drawn at runtime as drawn all over, without reading anything back", () => {
+        atlasOnGPU.alphaAt = () => 0;
+
+        expect(drawnAt(instanceShowing(IMAGE, 0, 0), 0.5, 0.5), "a material that cuts nothing out").toBe(true);
+        expect(drawnAt(instanceShowing(IMAGE, 0, 0.5, new THREE.Texture()), 0.5, 0.5), "an image loaded as it is").toBe(true);
+        expect(drawnAt(instanceShowing(IMAGE, 0, 0.5, atlasTexture(THREE.RedFormat)), 0.5, 0.5), "coverage alone").toBe(true);
+        const unloaded = new InstancedMeshBinding(new InstancedTexturePackMaterialParams("atlas",
+            PICTURE_ATLAS_SIZE, PICTURE_ATLAS_SIZE, PICTURE_ATLAS_CELL_SIZE, PICTURE_ATLAS_CELL_SIZE, "dynamicEmpty"),
+            "Square", 1, false);
+        expect(drawnAt(unloaded, 0.5, 0.5), "a mesh not loaded yet").toBe(true);
+        expect(atlasOnGPU.readTexels).toEqual([]);
+    });
+
+    it("takes a cut-out as drawn where the atlas can't be read back", () => {
+        atlasOnGPU.alphaAt = () => 0;
+        atlasOnGPU.readFails = true;
+
+        expect(drawnAt(instanceShowing(IMAGE), 0.5, 0.5)).toBe(true);
+        expect(atlasOnGPU.readTexels.length).toBeGreaterThan(0);
     });
 });
 

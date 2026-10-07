@@ -54,7 +54,7 @@ import { clientFeatureFlagsObservable, gameModeObservable, objectSelectionObserv
 import WorldSpaceSelectionUtil from "../../../src/client/graphics/util/worldSpaceSelectionUtil";
 import { FeatureFlag } from "../../../src/shared/system/types/featureFlag";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
-    NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../../src/shared/system/sharedConstants";
+    NUM_VOXEL_QUADS_PER_COLLISION_LAYER, VOXEL_BLOCK_SHAPE_WHOLE } from "../../../src/shared/system/sharedConstants";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import AddVoxelBlockSignal from "../../../src/shared/voxel/types/update/addVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/removeVoxelBlockSignal";
@@ -172,6 +172,67 @@ describe("reselection after the user's own voxel edit", () => {
         const after = currentSelection(room)!;
         expect(after.layer).toBe(COLLISION_LAYER_MAX);
         expect(after.visible).toBe(true);
+    });
+
+    it("keeps the selection on a thin wall as it is carried on from its end", () => {
+        // A wall half a cell thick, running along x.
+        const LOW_Z_HALF = 0b0011;
+        VoxelUpdateUtil.addVoxelBlock(actingUser, room.voxelGrid.voxels, quadIndexOf(10, 5, "y", "+", COLLISION_LAYER_MIN),
+            WALL_TEXTURES, room, LOW_Z_HALF);
+        const end = quadIndexOf(10, 5, "x", "+", COLLISION_LAYER_MIN);
+
+        expect(userAddsBlockAt(room, forceSelect(room, end))).toBe(true);
+
+        // The next stretch of wall is as thin, and its own end takes the selection over.
+        expect(VoxelQueryUtil.getVoxelBlockShapeAt(room.voxelGrid.voxels, 10, 6, COLLISION_LAYER_MIN)).toBe(LOW_Z_HALF);
+        const after = currentSelection(room)!;
+        expect([after.row, after.col, after.axis, after.orientation, after.visible]).toEqual([10, 6, "x", "+", true]);
+    });
+
+    it("keeps the selection on the same face of a shrunk block as it grows out from it", () => {
+        const LOW_Z_HALF = 0b0011;
+        VoxelUpdateUtil.addVoxelBlock(actingUser, room.voxelGrid.voxels, quadIndexOf(10, 5, "y", "+", COLLISION_LAYER_MIN),
+            WALL_TEXTURES, room, LOW_Z_HALF);
+        // Its broad face in the middle of the cell: no cell layer lies beyond it to take another block.
+        const inner = quadIndexOf(10, 5, "z", "+", COLLISION_LAYER_MIN);
+        expect(isQuadVisible(room, inner)).toBe(true);
+
+        expect(userAddsBlockAt(room, forceSelect(room, inner))).toBe(true);
+
+        expect(VoxelQueryUtil.getVoxelBlockShapeAt(room.voxelGrid.voxels, 10, 5, COLLISION_LAYER_MIN))
+            .toBe(VOXEL_BLOCK_SHAPE_WHOLE);
+        expect(VoxelQueryUtil.isVoxelBlockPresentAt(room.voxelGrid.voxels, 11, 5, COLLISION_LAYER_MIN)).toBe(false);
+        const after = currentSelection(room)!;
+        expect(after.quadIndex).toBe(inner);
+        expect(after.visible).toBe(true);
+    });
+
+    it("moves the selection on when a shrunk block grows up against its neighbour", () => {
+        const LOW_Z_HALF = 0b0011;
+        VoxelUpdateUtil.addVoxelBlock(actingUser, room.voxelGrid.voxels, quadIndexOf(10, 5, "y", "+", COLLISION_LAYER_MIN),
+            WALL_TEXTURES, room, LOW_Z_HALF);
+        buildPillar(room, 11, 5, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
+        const inner = quadIndexOf(10, 5, "z", "+", COLLISION_LAYER_MIN);
+
+        expect(userAddsBlockAt(room, forceSelect(room, inner))).toBe(true);
+
+        // Grown whole, the face lies against the next block and no longer shows.
+        expect(isQuadVisible(room, inner)).toBe(false);
+        expectSomethingVisibleIsSelected();
+    });
+
+    it("adds nothing against a face whose cell beyond holds a block already, however little of it that block fills", () => {
+        const HIGH_X_HALF = 0b1010;
+        buildPillar(room, 10, 5, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
+        VoxelUpdateUtil.addVoxelBlock(actingUser, room.voxelGrid.voxels, quadIndexOf(10, 6, "y", "+", COLLISION_LAYER_MIN),
+            WALL_TEXTURES, room, HIGH_X_HALF);
+        // The whole block's face looks across half a cell of open floor at the half block.
+        const facing = quadIndexOf(10, 5, "x", "+", COLLISION_LAYER_MIN);
+        expect(isQuadVisible(room, facing)).toBe(true);
+
+        expect(userAddsBlockAt(room, forceSelect(room, facing))).toBe(false);
+        expect(currentSelection(room)!.quadIndex).toBe(facing);
+        expect(VoxelQueryUtil.getVoxelBlockShapeAt(room.voxelGrid.voxels, 10, 6, COLLISION_LAYER_MIN)).toBe(HIGH_X_HALF);
     });
 
     it("keeps a selection after removing the block whose wall face was selected", () => {
@@ -374,6 +435,38 @@ describe("reselection after another client's voxel edit", () => {
             new MoveVoxelBlockSignal(ROOM_ID, quadIndex, 0, 2, 0));
 
         expect(isQuadVisible(room, quadIndex)).toBe(false);
+        expectSomethingVisibleIsSelected();
+    });
+
+    it("takes the server's answer to a refused edit: the block as the server holds it, or none", async () => {
+        // The user shrank a block the server would not let them touch: their own copy is half a block,
+        // repainted, and the answer is the block whole in its own textures (see ServerVoxelManager).
+        const HALF = 0b0101;
+        buildPillar(room, 10, 5, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
+        const first = quadIndexOf(10, 5, "y", "-", COLLISION_LAYER_MIN);
+        VoxelUpdateUtil.setVoxelBlockShape(undefined, room.voxelGrid.voxels, first, HALF);
+        forceSelect(room, quadIndexOf(10, 5, "y", "+", COLLISION_LAYER_MIN));
+
+        await ClientVoxelManager.onAddVoxelBlockSignalReceived(
+            new AddVoxelBlockSignal(ROOM_ID, first, [7, 6, 5, 4, 3, 2], VOXEL_BLOCK_SHAPE_WHOLE));
+        expect(VoxelQueryUtil.getVoxelBlockShapeAt(room.voxelGrid.voxels, 10, 5, COLLISION_LAYER_MIN))
+            .toBe(VOXEL_BLOCK_SHAPE_WHOLE);
+        expect(Array.from(room.voxelQuads.subarray(first, first + 6))).toEqual([7, 6, 5, 4, 3, 2]);
+        // The same face is still there to be selected.
+        expect(currentSelection(room)!.quadIndex).toBe(quadIndexOf(10, 5, "y", "+", COLLISION_LAYER_MIN));
+
+        // And the other way about: a block of another shape than the user's copy has.
+        await ClientVoxelManager.onAddVoxelBlockSignalReceived(
+            new AddVoxelBlockSignal(ROOM_ID, first, [7, 6, 5, 4, 3, 2], HALF));
+        expect(VoxelQueryUtil.getVoxelBlockShapeAt(room.voxelGrid.voxels, 10, 5, COLLISION_LAYER_MIN)).toBe(HALF);
+        expectSomethingVisibleIsSelected();
+
+        // A block the user put up where the server holds none is taken away again, and taking away one
+        // that is not there (the answer to a move whose block was gone) changes nothing.
+        await ClientVoxelManager.onRemoveVoxelBlockSignalReceived(new RemoveVoxelBlockSignal(ROOM_ID, first));
+        expect(VoxelQueryUtil.isVoxelBlockPresentAt(room.voxelGrid.voxels, 10, 5, COLLISION_LAYER_MIN)).toBe(false);
+        await ClientVoxelManager.onRemoveVoxelBlockSignalReceived(new RemoveVoxelBlockSignal(ROOM_ID, first));
+        expect(VoxelQueryUtil.isVoxelBlockPresentAt(room.voxelGrid.voxels, 10, 5, COLLISION_LAYER_MIN)).toBe(false);
         expectSomethingVisibleIsSelected();
     });
 

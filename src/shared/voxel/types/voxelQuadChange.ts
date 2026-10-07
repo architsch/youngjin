@@ -19,9 +19,8 @@ export default class VoxelQuadChange
         const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(this.quadIndex);
         const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(this.quadIndex);
         const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(this.quadIndex);
-        const showQuad = (this.newQuad & 0b10000000) != 0;
         const textureIndex = this.newQuad & 0b01111111;
-        return `(${row},${col}) ${orientation}${facingAxis} at ${collisionLayer} ---> ${showQuad ? "show" : "hide"} texture ${textureIndex}
+        return `(${row},${col}) ${orientation}${facingAxis} at ${collisionLayer} ---> texture ${textureIndex}
     Result: ${this.voxelQuadsResultSnapshot || "(?)"}`;
     }
 }

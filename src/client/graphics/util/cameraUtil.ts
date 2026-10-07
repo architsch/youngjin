@@ -5,12 +5,14 @@ import PointerCoordUtil from "./pointerCoordUtil";
 import GameObject from "../../object/types/gameObject/gameObject";
 import ClientObjectManager from "../../object/clientObjectManager";
 import InstancedMeshBinding from "../types/mesh/instancedMeshBinding";
+import InstancedMeshGraphics from "../../object/components/instancedMeshGraphics";
 import ClientVoxelQueryUtil from "../../voxel/util/clientVoxelQueryUtil";
 import ObjectHit from "../types/objectHit";
 import { NEAR_EPSILON } from "../../../shared/system/sharedConstants";
 
 // All client raycasts. castBetweenPoints skips the voxel mesh (three.js tests every instance; the
-// voxel grid walk in ClientVoxelQueryUtil is far cheaper). The casts through the view include it.
+// voxel grid walk in ClientVoxelQueryUtil is far cheaper). The casts through the view include it, and
+// carry on through a cut-out where nothing of it is drawn (see hitIsDrawn).
 
 const raycaster: THREE.Raycaster = new THREE.Raycaster();
 const ndcTemp: THREE.Vector2 = new THREE.Vector2();
@@ -59,23 +61,23 @@ const CameraUtil =
         return out.copy(raycaster.ray);
     },
 
-    // Frontmost hit under the pointer. Valid until the next cast (the array is reused).
+    // Frontmost drawn hit under the pointer. Valid until the next cast (the array is reused).
     castFromPointer: (ev: PointerEvent): THREE.Intersection | undefined =>
     {
         PointerCoordUtil.getNDC(ev, ndcTemp);
-        return castThroughView(ndcTemp, Infinity)[0];
+        return castThroughView(ndcTemp, Infinity).find(hitIsDrawn);
     },
 
     // The objects the camera's line of sight (the middle of the view) meets within maxDistance, nearest
-    // first. The line can be tilted toward the ground by pitchDownAngle (radians), stopping at straight
-    // down. Gizmos belong to no object, so they're left out.
+    // first, where they are drawn. The line can be tilted toward the ground by pitchDownAngle (radians),
+    // stopping at straight down. Gizmos belong to no object, so they're left out.
     getObjectsAlongLineOfSight: (maxDistance: number, pitchDownAngle: number = 0): ObjectHit[] =>
     {
         const hits: ObjectHit[] = [];
         for (const intersection of castThroughView(ndcTemp.set(0, 0), maxDistance, pitchDownAngle))
         {
             const gameObject = CameraUtil.getObjectFromIntersection(intersection);
-            if (gameObject != undefined)
+            if (gameObject != undefined && hitIsDrawn(intersection))
                 hits.push({gameObject, instanceId: intersection.instanceId ?? -1});
         }
         return hits;
@@ -136,6 +138,14 @@ function castThroughView(ndc: THREE.Vector2, far: number, pitchDownAngle: number
     intersectionsTemp.length = 0;
     raycaster.intersectObjects(MeshFactory.getMeshes(), true, intersectionsTemp);
     return intersectionsTemp;
+}
+
+// Whether anything is drawn where a ray met a surface: a cut-out draws nothing at its see-through texels. Costs
+// a GPU read (see InstancedMeshBinding.instanceIsDrawnAt), so only one-off casts ask, never castBetweenPoints.
+function hitIsDrawn(intersection: THREE.Intersection): boolean
+{
+    return intersection.instanceId == undefined || intersection.uv == undefined ||
+        InstancedMeshGraphics.instanceIsDrawnAt(intersection.object.name, intersection.instanceId, intersection.uv);
 }
 
 // Tilts a unit direction toward -y, keeping its heading.

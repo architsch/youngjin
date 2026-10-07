@@ -5,9 +5,10 @@ import PhysicsColliderStateUtil from "../../physics/util/physicsColliderStateUti
 import PhysicsObjectUtil from "../../physics/util/physicsObjectUtil";
 import Room from "../../room/types/room";
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y, NUM_VOXEL_COLS,
-    NUM_VOXEL_ROWS } from "../../system/sharedConstants";
+    NUM_VOXEL_ROWS, VOXEL_BLOCK_SHAPE_WHOLE } from "../../system/sharedConstants";
 import VoxelQueryUtil from "../../voxel/util/voxelQueryUtil";
 import Voxel from "../../voxel/types/voxel";
+import VoxelBlockShapeOverride from "../../voxel/types/voxelBlockShapeOverride";
 import AddObjectSignal from "../types/addObjectSignal";
 import ObjectTransform from "../types/objectTransform";
 import ObjectTypeConfigMap from "../maps/objectTypeConfigMap";
@@ -15,10 +16,13 @@ import ObjectScaleUtil from "./objectScaleUtil";
 
 // Placement of objects attached to a voxel face (see @docs/geometry/object_attachment.md). Positions across
 // the face snap to a quarter voxel, so an object half a voxel across can sit flush with a block's edge; the
-// face itself lies on a block boundary.
+// face itself lies on the side of a cell or across its middle, where a shrunk block's face can be. What
+// lies behind and in front of it is asked of sub-blocks, the half cells a block's shape is made of (see
+// VoxelBlockShapeUtil).
 const GRID_STEP = 0.25;
+const FACE_PLANE_STEP = 0.5;
 
-// Keeps a footprint edge lying on a block boundary out of the block beyond it.
+// Keeps a footprint edge lying on a sub-block boundary out of the sub-block beyond it.
 const EDGE_EPSILON = 0.01;
 
 const ObjectAttachmentUtil =
@@ -32,15 +36,17 @@ const ObjectAttachmentUtil =
         const {normal} = Geometry3DUtil.getAxisFacingBasis(dir);
         return attachment.allowedDirections.some(allowed => Vector3DUtil.dot(allowed, normal) > 0.5);
     },
+    // blockShapeOverride: a block to take as having another shape, to ask whether the object would still
+    // have its place if it did.
     canPlaceObject: (room: Room, objectId: string, objectTypeIndex: number,
-        transform: ObjectTransform): boolean =>
+        transform: ObjectTransform, blockShapeOverride?: VoxelBlockShapeOverride): boolean =>
     {
         if (!ObjectAttachmentUtil.allowsFacing(objectTypeIndex, transform.dir))
             return false;
         const tr = getQuantizedTransform(objectTypeIndex, transform);
         const bounds = getFootprintBounds(objectTypeIndex, tr);
 
-        // The whole footprint, not just its centre, since the block scans below stop at the room's edge.
+        // The whole footprint, not just its centre, since the scans below stop at the room's edge.
         // The face itself may lie on the room's floor or ceiling.
         if (bounds.min.x < 0 || bounds.max.x > NUM_VOXEL_COLS ||
             bounds.min.y < 0 || bounds.max.y > MAX_ROOM_Y ||
@@ -49,19 +55,20 @@ const ObjectAttachmentUtil =
             return false;
         }
 
-        // Every block behind it is solid (it is supported), and at least one in front is open (it is not
-        // buried).
+        // Every sub-block behind it is solid (it is supported), and at least one in front is open (it is
+        // not buried). A type that needs whole blocks is supported by those alone.
         const voxels = room.voxelGrid.voxels;
+        const wholeBlocksOnly = needsWholeBlocks(objectTypeIndex);
         let supported = true;
-        forEachBlockBeside(tr, bounds, -1, (row, col, layer) => {
-            supported = blockIsSolid(voxels, row, col, layer);
+        forEachSubBlockBeside(tr, bounds, -1, (subRow, subCol, layer) => {
+            supported = subBlockIsSolid(voxels, subRow, subCol, layer, wholeBlocksOnly, blockShapeOverride);
             return supported;
         });
         if (!supported)
             return false;
         let exposed = false;
-        forEachBlockBeside(tr, bounds, 1, (row, col, layer) => {
-            exposed = blockIsOpen(voxels, row, col, layer);
+        forEachSubBlockBeside(tr, bounds, 1, (subRow, subCol, layer) => {
+            exposed = subBlockIsOpen(voxels, subRow, subCol, layer, blockShapeOverride);
             return !exposed;
         });
         if (!exposed)
@@ -88,10 +95,12 @@ const ObjectAttachmentUtil =
         const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
         const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
         const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
-        const voxelPos: Vec3 = {x: col + 0.5, y: 0.25 + collisionLayer*0.5, z: row + 0.5};
 
         const objectIds: string[] = [];
-        const voxelBlockColliderState = PhysicsColliderStateUtil.getVoxelBlockColliderState(row, col, collisionLayer);
+        const voxelBlockColliderState = PhysicsColliderStateUtil.getVoxelBlockColliderState(
+            room.voxelGrid.voxels, row, col, collisionLayer);
+        // The block's own middle, which an object on a shrunk block's inner face is still clear of.
+        const voxelPos = voxelBlockColliderState.hitbox.center;
         const collidingObjects = PhysicsObjectUtil.getObjectsCollidingWith3DVolume(room.id, voxelBlockColliderState);
         for (const collidingObject of Object.values(collidingObjects))
         {
@@ -120,14 +129,15 @@ const ObjectAttachmentUtil =
         const voxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, col);
         if (!voxel)
             return 0;
-        const dims = VoxelQueryUtil.getVoxelQuadTransformDimensions(voxel, quadIndex, true);
+        const dims = VoxelQueryUtil.getVoxelQuadTransformDimensions(room.voxelGrid.voxels, quadIndex, true);
         const normal: Vec3 = {x: dims.dirX, y: dims.dirY, z: dims.dirZ};
         const center: Vec3 = {x: col + 0.5 + dims.offsetX, y: dims.offsetY, z: row + 0.5 + dims.offsetZ};
-        // Flat on its plane, as a footprint is.
+        // Flat on its plane, as a footprint is, and as large as the face (a shrunk block's is smaller).
+        const {right, up} = Geometry3DUtil.getAxisFacingBasis(normal);
         const half: Vec3 = {
-            x: (normal.x != 0) ? 0 : 0.5,
-            y: (normal.y != 0) ? 0 : 0.5 * COLLISION_LAYER_HEIGHT,
-            z: (normal.z != 0) ? 0 : 0.5,
+            x: 0.5 * (Math.abs(right.x) * dims.scaleX + Math.abs(up.x) * dims.scaleY),
+            y: 0.5 * (Math.abs(right.y) * dims.scaleX + Math.abs(up.y) * dims.scaleY),
+            z: 0.5 * (Math.abs(right.z) * dims.scaleX + Math.abs(up.z) * dims.scaleY),
         };
         const faceMin = Vector3DUtil.subtract(center, half);
         const faceMax = Vector3DUtil.add(center, half);
@@ -301,15 +311,24 @@ function getQuantizedTransform(objectTypeIndex: number, transform: ObjectTransfo
     const halfHeight = 0.5 * (Math.abs(right.y) * size.x + Math.abs(up.y) * size.y);
     const pos = transform.pos;
 
+    // A wall's face lies on the side of a cell or across its middle (only on the side, for a type that
+    // needs whole blocks); a floor's or a ceiling's lies on a whole layer.
+    const planeStep = needsWholeBlocks(objectTypeIndex) ? 1 : FACE_PLANE_STEP;
+    const snapToWallPlane = (value: number) => planeStep * Math.round(value / planeStep);
+
     return new ObjectTransform(
         {
-            // Walls stand on whole cells, floors and ceilings on whole layers.
-            x: (normal.x != 0) ? Math.round(pos.x) : snapToGrid(pos.x),
+            x: (normal.x != 0) ? snapToWallPlane(pos.x) : snapToGrid(pos.x),
             y: (normal.y != 0) ? COLLISION_LAYER_HEIGHT * Math.round(pos.y / COLLISION_LAYER_HEIGHT)
                 : snapToGrid(pos.y - halfHeight) + halfHeight,
-            z: (normal.z != 0) ? Math.round(pos.z) : snapToGrid(pos.z),
+            z: (normal.z != 0) ? snapToWallPlane(pos.z) : snapToGrid(pos.z),
         },
         normal, scale);
+}
+
+function needsWholeBlocks(objectTypeIndex: number): boolean
+{
+    return ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex).attachment?.wholeBlocksOnly === true;
 }
 
 // The footprint's extent in the world: its face, flat on its plane.
@@ -325,10 +344,11 @@ function getFootprintBounds(objectTypeIndex: number, tr: ObjectTransform): {min:
     return {min: Vector3DUtil.subtract(tr.pos, half), max: Vector3DUtil.add(tr.pos, half)};
 }
 
-// Visits the blocks one step to the given side of the face (+1: in front, -1: behind) across the footprint,
-// until visit returns false. Coordinates are unclamped, so blocks beyond the room are visited too.
-function forEachBlockBeside(tr: ObjectTransform, bounds: {min: Vec3, max: Vec3}, side: number,
-    visit: (row: number, col: number, layer: number) => boolean): void
+// Visits the sub-blocks one step to the given side of the face (+1: in front, -1: behind) across the
+// footprint, until visit returns false. A sub-block is named by its half cell along z and x, and its layer.
+// Coordinates are unclamped, so sub-blocks beyond the room are visited too.
+function forEachSubBlockBeside(tr: ObjectTransform, bounds: {min: Vec3, max: Vec3}, side: number,
+    visit: (subRow: number, subCol: number, layer: number) => boolean): void
 {
     const {normal} = Geometry3DUtil.getAxisFacingBasis(tr.dir);
     const reach = side * EDGE_EPSILON;
@@ -336,54 +356,75 @@ function forEachBlockBeside(tr: ObjectTransform, bounds: {min: Vec3, max: Vec3},
         (facing != 0)
             ? {first: toIndex(pos + reach * facing), last: toIndex(pos + reach * facing)}
             : {first: toIndex(min + EDGE_EPSILON), last: toIndex(max - EDGE_EPSILON)};
+    const toHalfCell = (v: number) => Math.floor(2 * v);
 
-    const cols = range(VoxelQueryUtil.getVoxelColFromWorldX, normal.x, tr.pos.x, bounds.min.x, bounds.max.x);
+    const subCols = range(toHalfCell, normal.x, tr.pos.x, bounds.min.x, bounds.max.x);
     const layers = range(VoxelQueryUtil.getVoxelCollisionLayerFromWorldY, normal.y, tr.pos.y,
         bounds.min.y, bounds.max.y);
-    const rows = range(VoxelQueryUtil.getVoxelRowFromWorldZ, normal.z, tr.pos.z, bounds.min.z, bounds.max.z);
+    const subRows = range(toHalfCell, normal.z, tr.pos.z, bounds.min.z, bounds.max.z);
 
-    for (let row = rows.first; row <= rows.last; ++row)
+    for (let subRow = subRows.first; subRow <= subRows.last; ++subRow)
     {
-        for (let col = cols.first; col <= cols.last; ++col)
+        for (let subCol = subCols.first; subCol <= subCols.last; ++subCol)
         {
             for (let layer = layers.first; layer <= layers.last; ++layer)
             {
-                if (!visit(row, col, layer))
+                if (!visit(subRow, subCol, layer))
                     return;
             }
         }
     }
 }
 
-// Whether every block in front of a (quantized) placement is open, not just one.
+// Whether every sub-block in front of a (quantized) placement is open, not just one.
 function faceIsClear(voxels: Voxel[], objectTypeIndex: number, tr: ObjectTransform): boolean
 {
     let clear = true;
-    forEachBlockBeside(tr, getFootprintBounds(objectTypeIndex, tr), 1, (row, col, layer) => {
-        clear = blockIsOpen(voxels, row, col, layer);
+    forEachSubBlockBeside(tr, getFootprintBounds(objectTypeIndex, tr), 1, (subRow, subCol, layer) => {
+        clear = subBlockIsOpen(voxels, subRow, subCol, layer);
         return clear;
     });
     return clear;
 }
 
-// Beyond the layer range is the room's own floor or ceiling; beyond the grid is nothing to rest on.
-function blockIsSolid(voxels: Voxel[], row: number, col: number, layer: number): boolean
+// Whether a sub-block is part of a block (of a whole one, if only those count). Beyond the layer range is
+// the room's own floor or ceiling; beyond the grid is nothing to rest on.
+function subBlockIsSolid(voxels: Voxel[], subRow: number, subCol: number, layer: number,
+    wholeBlocksOnly: boolean, blockShapeOverride?: VoxelBlockShapeOverride): boolean
 {
-    const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);
+    const voxel = VoxelQueryUtil.getVoxel(voxels, subRow >> 1, subCol >> 1);
     if (!voxel)
         return false;
     if (layer < COLLISION_LAYER_MIN || layer > COLLISION_LAYER_MAX)
         return true;
-    return VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, layer);
+    const shape = getBlockShape(voxel, layer, blockShapeOverride);
+    return wholeBlocksOnly ? (shape == VOXEL_BLOCK_SHAPE_WHOLE) : shapeFillsSubBlock(shape, subRow, subCol);
 }
 
-// Inside the room and empty.
-function blockIsOpen(voxels: Voxel[], row: number, col: number, layer: number): boolean
+// Inside the room and no part of a block.
+function subBlockIsOpen(voxels: Voxel[], subRow: number, subCol: number, layer: number,
+    blockShapeOverride?: VoxelBlockShapeOverride): boolean
 {
-    const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);
+    const voxel = VoxelQueryUtil.getVoxel(voxels, subRow >> 1, subCol >> 1);
     if (!voxel || layer < COLLISION_LAYER_MIN || layer > COLLISION_LAYER_MAX)
         return false;
-    return !VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, layer);
+    return !shapeFillsSubBlock(getBlockShape(voxel, layer, blockShapeOverride), subRow, subCol);
+}
+
+function getBlockShape(voxel: Voxel, layer: number, blockShapeOverride?: VoxelBlockShapeOverride): number
+{
+    if (blockShapeOverride != undefined && blockShapeOverride.row == voxel.row &&
+        blockShapeOverride.col == voxel.col && blockShapeOverride.collisionLayer == layer)
+    {
+        return blockShapeOverride.shape;
+    }
+    return VoxelQueryUtil.getVoxelBlockShape(voxel, layer);
+}
+
+// A shape's bit for a sub-block is its half along x plus twice its half along z (see VOXEL_BLOCK_SHAPE_EMPTY).
+function shapeFillsSubBlock(shape: number, subRow: number, subCol: number): boolean
+{
+    return (shape & (1 << ((subCol & 1) + 2 * (subRow & 1)))) != 0;
 }
 
 function snapToGrid(value: number): number

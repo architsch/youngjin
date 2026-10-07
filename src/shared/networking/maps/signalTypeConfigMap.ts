@@ -12,6 +12,7 @@ import AddVoxelBlockSignal from "../../voxel/types/update/addVoxelBlockSignal";
 import MoveVoxelBlockSignal from "../../voxel/types/update/moveVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../voxel/types/update/removeVoxelBlockSignal";
 import SetVoxelQuadTextureSignal from "../../voxel/types/update/setVoxelQuadTextureSignal";
+import SetVoxelBlockShapeSignal from "../../voxel/types/update/setVoxelBlockShapeSignal";
 import SetRestrictedZonesSignal from "../../voxel/types/update/setRestrictedZonesSignal";
 import BufferState from "../types/bufferState";
 import SignalTypeConfig from "../types/signalTypeConfig";
@@ -101,6 +102,13 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
         minClientToServerSendInterval: 0,
         maxClientSideReceptionPeriod: 2000,
         decode: (bufferState: BufferState) => MoveVoxelBlockSignal.decode(bufferState),
+    }],
+    [16, { // Bidirectional (client <-> server)
+        // Client gives a block another shape where it stands; the server validates and relays.
+        signalType: "setVoxelBlockShapeSignal",
+        minClientToServerSendInterval: 0,
+        maxClientSideReceptionPeriod: 2000,
+        decode: (bufferState: BufferState) => SetVoxelBlockShapeSignal.decode(bufferState),
     }],
     [9, { // Bidirectional (client <-> server)
         // Client sets a quad texture; the server validates and relays.

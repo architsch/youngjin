@@ -57,7 +57,8 @@ const MeshFactory =
             return loaded;
 
         const edgesGeometry = await GeometryFactory.load(geometryId, "edges");
-        const material = new THREE.LineBasicMaterial({ color: colorHex, depthTest });
+        // Not fogged: these lines are overlays, not part of the room.
+        const material = new THREE.LineBasicMaterial({ color: colorHex, depthTest, fog: false });
         const lineSegments = new THREE.LineSegments(edgesGeometry, material);
         loadedLineSegments[id] = lineSegments;
         return lineSegments;

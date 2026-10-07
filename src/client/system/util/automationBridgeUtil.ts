@@ -3,13 +3,17 @@ import App from "../../app";
 import GraphicsManager from "../../graphics/graphicsManager";
 import CameraUtil from "../../graphics/util/cameraUtil";
 import PointerCoordUtil from "../../graphics/util/pointerCoordUtil";
-import ObjectAttachmentEditGizmos from "../../graphics/types/gizmo/objectAttachmentEditGizmos";
+import SelectionEditGizmoUtil from "../../graphics/util/selectionEditGizmoUtil";
 import WorldSpaceSelectionUtil from "../../graphics/util/worldSpaceSelectionUtil";
 import ClientObjectManager from "../../object/clientObjectManager";
 import GameObject from "../../object/types/gameObject/gameObject";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
+import ObjectScaleUtil from "../../../shared/object/util/objectScaleUtil";
+import Geometry3DUtil from "../../../shared/math/util/geometry3DUtil";
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
+import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN } from "../../../shared/system/sharedConstants";
 import RoomPrefsUtil from "../../../shared/room/util/roomPrefsUtil";
 import ThingsPoolEnv from "../types/thingsPoolEnv";
 import { gameModeObservable, objectSelectionObservable,
@@ -23,7 +27,11 @@ import { gameModeObservable, objectSelectionObservable,
 
 const objectWorldTemp = new THREE.Vector3();
 const cameraWorldTemp = new THREE.Vector3();
+const facePointTemp = new THREE.Vector3();
 const screenTemp = new THREE.Vector2();
+
+// Points per side of the grid findClickPoint tries over a face (odd, so that the middle is one of them).
+const CLICK_POINT_GRID_SIDE = 9;
 
 const metadataNameByKey: {[key: number]: string} = {};
 for (const [name, key] of Object.entries(ObjectMetadataKeyEnumMap))
@@ -34,6 +42,13 @@ function toScreen(worldPosition: THREE.Vector3): {x: number, y: number} | null
 {
     const screen = PointerCoordUtil.worldToClient(worldPosition, screenTemp);
     return screen == null ? null : {x: screen.x, y: screen.y};
+}
+
+// The layer of the block a quad is a face of; null for the room's own floor or ceiling.
+function getBlockLayer(quadIndex: number): number | null
+{
+    const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+    return (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX) ? null : collisionLayer;
 }
 
 function getObjectType(gameObject: GameObject): string
@@ -96,6 +111,42 @@ function probeAt(clientX: number, clientY: number): Record<string, unknown> | nu
         withinSelectRange: true,
         ...whatIsOnTopAt(clientX, clientY),
     };
+}
+
+// Where a click would reach the object: its middle, or else the nearest of a grid of points over an attached
+// object's face, since a click goes through a picture where its image is see-through (see CameraUtil). Null
+// if a click reaches it at none of them.
+function findClickPoint(gameObject: GameObject): {x: number, y: number} | null
+{
+    const params = gameObject.params;
+    const attached = ObjectTypeConfigMap.getConfigByIndex(params.objectTypeIndex).attachment != undefined;
+    const size = ObjectScaleUtil.getObjectSize(params.objectTypeIndex, params.transform.scale);
+    const {right, up} = Geometry3DUtil.getAxisFacingBasis(params.transform.dir);
+
+    // Across the face along its right and up, as shares of its size, nearest the middle first.
+    const numPerSide = attached ? CLICK_POINT_GRID_SIDE : 1;
+    const offsets: {x: number, y: number}[] = [];
+    for (let i = 0; i < numPerSide * numPerSide; ++i)
+    {
+        offsets.push({x: ((i % numPerSide) + 0.5) / numPerSide - 0.5,
+            y: (Math.floor(i / numPerSide) + 0.5) / numPerSide - 0.5});
+    }
+    offsets.sort((a, b) => (a.x * a.x + a.y * a.y) - (b.x * b.x + b.y * b.y));
+
+    gameObject.obj.getWorldPosition(objectWorldTemp);
+    for (const offset of offsets)
+    {
+        const alongRight = offset.x * size.x;
+        const alongUp = offset.y * size.y;
+        const screen = toScreen(facePointTemp.set(
+            objectWorldTemp.x + right.x * alongRight + up.x * alongUp,
+            objectWorldTemp.y + right.y * alongRight + up.y * alongUp,
+            objectWorldTemp.z + right.z * alongRight + up.z * alongUp));
+        const hit = (screen == null) ? null : probeAt(screen.x, screen.y);
+        if (hit != null && hit.objectId === params.objectId && hit.overCanvas)
+            return screen;
+    }
+    return null;
 }
 
 // Which DOM element would actually receive a click at this pixel (the HUD, popups and CSS2D elements
@@ -192,6 +243,14 @@ const AutomationBridgeUtil =
             // Explains a no-op click: wrong target, nothing, or out of reach.
             probe: (clientX: number, clientY: number) => probeAt(clientX, clientY),
 
+            // A pixel to click an object at (see findClickPoint), since its middle is not always one. Null if
+            // there is none, or no such object.
+            clickPoint: (objectId: string) =>
+            {
+                const gameObject = ClientObjectManager.getObjectById(objectId);
+                return gameObject == undefined ? null : findClickPoint(gameObject);
+            },
+
             // probe across a grid of the view in one round trip, for finding somewhere to aim.
             probeGrid: (options?: {cols?: number, rows?: number, margin?: number}) =>
             {
@@ -224,17 +283,37 @@ const AutomationBridgeUtil =
                     // The user's character is reported as an ordinary object of its type.
                     object: objectSelection == null ? null
                         : describeObject(objectSelection.gameObject),
+                    // facing: the way the face looks ("+x", "-y", …). shape: its block's (see blockShape), or
+                    // null for the room's own floor or ceiling, which is no block's face.
                     voxelQuad: quadSelection == null ? null : {
                         col: quadSelection.voxel.col,
                         row: quadSelection.voxel.row,
                         quadIndex: quadSelection.quadIndex,
+                        collisionLayer: getBlockLayer(quadSelection.quadIndex),
+                        facing: VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadSelection.quadIndex) +
+                            VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadSelection.quadIndex),
+                        shape: getBlockLayer(quadSelection.quadIndex) == null ? null : VoxelQueryUtil.getVoxelBlockShape(
+                            quadSelection.voxel, getBlockLayer(quadSelection.quadIndex)!),
                     },
                 };
             },
 
-            // Where the selected attached object can be dragged from: its middle moves it, a corner resizes
-            // it (when canResize). Null when the selection is nothing this user may drag.
-            selectionGizmo: () => ObjectAttachmentEditGizmos.getGrabPoints(),
+            // The shape of the block in a cell layer (see VoxelBlockShapeUtil): one bit per quarter of the
+            // cell that the block fills, so 0 for no block and 15 for a whole one.
+            blockShape: (row: number, col: number, collisionLayer: number) =>
+            {
+                const room = App.getCurrentRoom();
+                if (room == undefined || VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, col) == undefined ||
+                    collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
+                {
+                    return null;
+                }
+                return VoxelQueryUtil.getVoxelBlockShapeAt(room.voxelGrid.voxels, row, col, collisionLayer);
+            },
+
+            // Where the selection can be dragged from: an object's middle moves it, and a handle resizes the
+            // selection (when canResize). Null when the selection is nothing this user may drag.
+            selectionGizmo: () => SelectionEditGizmoUtil.getGrabPoints(),
 
             // Camera position, selection reach, and canvas rect.
             camera: () =>

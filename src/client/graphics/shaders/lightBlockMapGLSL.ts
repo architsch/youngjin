@@ -1,4 +1,4 @@
-import { COLLISION_LAYER_HEIGHT, MAX_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS }
+import { MAX_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, VOXEL_SUB_BLOCK_SIZE }
     from "../../../shared/system/sharedConstants";
 import { LIGHT_BLOCK_MAP_AMBIENT_SHARE, LIGHT_BLOCK_MAP_MAX_BRIGHTNESS }
     from "../../system/clientConstants";
@@ -6,10 +6,9 @@ import { LIGHT_BLOCK_MAP_AMBIENT_SHARE, LIGHT_BLOCK_MAP_MAX_BRIGHTNESS }
 // Samples the light block map (see LightBlockMap) and adds it to a lit material's lighting. Names
 // are prefixed to avoid colliding with three.js chunks.
 
-// Samples are pushed half a block along the normal so a one-block wall doesn't bleed light from its
-// lit side onto its dark side.
-const HALF_BLOCK_GLSL =
-    `vec3(0.5, ${(0.5 * COLLISION_LAYER_HEIGHT).toFixed(4)}, 0.5)`;
+// Samples are pushed half a sub-block along the normal, to the middle of the sub-blocks a face looks
+// into, so a wall one sub-block thick doesn't bleed light from its lit side onto its dark side.
+const HALF_SUB_BLOCK_GLSL = (0.5 * VOXEL_SUB_BLOCK_SIZE).toFixed(4);
 
 export const LIGHT_BLOCK_MAP_PARS_GLSL = `
     varying vec3 vLightBlockMapWorldPos;
@@ -26,7 +25,7 @@ export const LIGHT_BLOCK_MAP_SAMPLE_PARS_GLSL = `
     // Under this filtered openness the sample sits inside a wall, where there is no light to read.
     const float LIGHT_BLOCK_MAP_MIN_OPENNESS = 0.004;
 
-    // Texture axes are (layer, col, row), following the block index layout.
+    // Texture axes are (layer, sub-column, sub-row), following the sub-block index layout.
     vec3 lightBlockMapWorldToUVW(vec3 worldPos)
     {
         return vec3(
@@ -70,7 +69,7 @@ export const LIGHT_BLOCK_MAP_FRAGMENT_PARS_GLSL = `
         directionalShare = 0.0;
 
         vec3 samplePos = vLightBlockMapWorldPos +
-            vLightBlockMapWorldNormal * ${HALF_BLOCK_GLSL};
+            vLightBlockMapWorldNormal * ${HALF_SUB_BLOCK_GLSL};
 
         float openness;
         vec3 lit = lightBlockMapLightAt(samplePos, openness);

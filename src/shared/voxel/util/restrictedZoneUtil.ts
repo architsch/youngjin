@@ -51,7 +51,7 @@ const RestrictedZoneUtil =
             return false;
 
         // Visibility ignored; it doesn't affect zone membership.
-        const dimensions = VoxelQueryUtil.getVoxelQuadTransformDimensions(voxel, quadIndex, true);
+        const dimensions = VoxelQueryUtil.getVoxelQuadTransformDimensions(room.voxelGrid.voxels, quadIndex, true);
         const point: Vec3 = {
             x: col + 0.5 + dimensions.offsetX,
             y: dimensions.offsetY,

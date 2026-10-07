@@ -92,9 +92,6 @@ export const COLLISION_LAYER_NULL = 16;
 export const COLLISION_LAYER_MIN = COLLISION_LAYER_00_TO_05;
 export const COLLISION_LAYER_MAX = COLLISION_LAYER_75_TO_80;
 
-// Mask of a voxel solid from floor to ceiling (also the maximum mask value).
-export const FULL_COLLISION_LAYER_MASK = (1 << NUM_COLLISION_LAYERS) - 1;
-
 export const NUM_COLLISION_LAYERS_PER_STOREY = 7;
 
 // This is the layer between the first and second storeys (assuming that the room is divided into two storeys).
@@ -255,6 +252,18 @@ export const NUM_VOXEL_COLS = 32;
 // Voxel blocks per room (one layer of one voxel); the buffer size for whole-volume computations.
 export const NUM_VOXEL_BLOCKS = NUM_VOXEL_ROWS * NUM_VOXEL_COLS * NUM_COLLISION_LAYERS;
 
+// A block's shape: which of its cell layer's four half-cell sub-blocks it fills, one bit each
+// (bit = x half + 2 * z half). Only rectangles are shapes (see VoxelBlockShapeUtil).
+export const VOXEL_BLOCK_SHAPE_EMPTY = 0b0000;
+export const VOXEL_BLOCK_SHAPE_WHOLE = 0b1111;
+
+// Sub-blocks along the room's two sides and in all of it: the grid for what has to be worked out as finely
+// as block shapes go (see LightBlockMap). A sub-block is a cube, half a cell across and one layer tall.
+export const NUM_VOXEL_SUB_ROWS = 2 * NUM_VOXEL_ROWS;
+export const NUM_VOXEL_SUB_COLS = 2 * NUM_VOXEL_COLS;
+export const NUM_VOXEL_SUB_BLOCKS = NUM_VOXEL_SUB_ROWS * NUM_VOXEL_SUB_COLS * NUM_COLLISION_LAYERS;
+export const VOXEL_SUB_BLOCK_SIZE = 0.5;
+
 export const NUM_VOXEL_QUADS_PER_COLLISION_LAYER = 6; // corresponding to 6 sides of a 3D box: [-y, +y, -x, +x, -z, +z]
 export const NUM_VOXEL_QUADS_PER_VOXEL =
     (NUM_VOXEL_QUADS_PER_COLLISION_LAYER * NUM_COLLISION_LAYERS) + 2; // 2 is for the floor and ceiling quads, which sit outside of the collision layers (They belong to "COLLISION_LAYER_NULL").
@@ -277,14 +286,11 @@ export const MAX_ENCODED_VOXEL_GRID_BYTES = 1 /* format version */ +
     1 /* how many restricted zones follow */ +
     MAX_RESTRICTED_ZONES * ENCODED_RESTRICTED_ZONE_BYTES;
 
-// Upper bound on simultaneously visible quads (the voxel mesh's size; see VoxelQuadInstanceUtil): one per
-// solid/open boundary, so no room layout can exceed it.
-export const MAX_VISIBLE_VOXEL_QUADS_PER_ROOM =
-    (NUM_COLLISION_LAYERS + 1) * NUM_VOXEL_ROWS * NUM_VOXEL_COLS +
-    (NUM_VOXEL_COLS - 1) * NUM_VOXEL_ROWS * NUM_COLLISION_LAYERS +
-    (NUM_VOXEL_ROWS - 1) * NUM_VOXEL_COLS * NUM_COLLISION_LAYERS; // 49152
-
-export const VOXEL_BLOCK_HITBOX_HALFSIZE = {x: 0.5, y: 0.5 * COLLISION_LAYER_HEIGHT, z: 0.5};
+// Upper bound on simultaneously visible quads (the voxel mesh's size; see VoxelQuadInstanceUtil). Shrunk
+// blocks can show nearly every quad there is: quarters standing in opposite corners of their cells from
+// one layer to the next hide nothing of each other. So the mesh is sized for every quad. Only buffers pay
+// for that, since an instance that was never lent is not drawn.
+export const MAX_VISIBLE_VOXEL_QUADS_PER_ROOM = NUM_VOXEL_QUADS_PER_ROOM;
 
 // Room Population
 

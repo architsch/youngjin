@@ -1,6 +1,4 @@
 import * as THREE from "three";
-import { COLLISION_LAYER_HEIGHT } from "../../shared/system/sharedConstants";
-import VoxelBlockOffset from "../../shared/voxel/types/voxelBlockOffset";
 
 // Pointer interaction
 
@@ -68,20 +66,9 @@ export const DIRECTION_VECTORS: {[key: string]: THREE.Vector3} = {
 
 // Lighting
 
-// Light spread directions with world step lengths (see VoxelBlockOffset), in the order
-// [-col, +col, -row, +row, -layer, +layer].
-export const VOXEL_BLOCK_NEIGHBOR_OFFSETS: readonly VoxelBlockOffset[] = [
-    { rowOffset:  0, colOffset: -1, collisionLayerOffset:  0, worldDistance: 1 },
-    { rowOffset:  0, colOffset: +1, collisionLayerOffset:  0, worldDistance: 1 },
-    { rowOffset: -1, colOffset:  0, collisionLayerOffset:  0, worldDistance: 1 },
-    { rowOffset: +1, colOffset:  0, collisionLayerOffset:  0, worldDistance: 1 },
-    { rowOffset:  0, colOffset:  0, collisionLayerOffset: -1, worldDistance: COLLISION_LAYER_HEIGHT },
-    { rowOffset:  0, colOffset:  0, collisionLayerOffset: +1, worldDistance: COLLISION_LAYER_HEIGHT },
-];
-
-// Minimum light distance (half a block): treats lights as having size, since point falloff at the
-// light's own block would spike and clip.
-export const LIGHT_SOURCE_MIN_DISTANCE = 0.5;
+// Minimum light distance: treats lights as having size (three quarters of a block), since point falloff
+// near the light would spike and clip.
+export const LIGHT_SOURCE_MIN_DISTANCE = 0.75;
 
 // Brightness mapped to the top of the light texture's range (the room's exposure). Set high so bright
 // lamps have headroom; the sqrt encoding (see LightBlockMap) takes that precision from the bright end.

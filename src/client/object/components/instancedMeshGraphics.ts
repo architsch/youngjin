@@ -1,3 +1,4 @@
+import * as THREE from "three";
 import GameObjectComponent from "./gameObjectComponent";
 import MaterialParams from "../../../shared/graphics/material/types/materialParams";
 import InstancedMeshBinding from "../../graphics/types/mesh/instancedMeshBinding";
@@ -29,6 +30,13 @@ export default class InstancedMeshGraphics extends GameObjectComponent
     static instanceIsHidden(instancedMeshId: string, instanceId: number): boolean
     {
         return bindingMap[instancedMeshId]?.instanceIsHidden(instanceId) === true;
+    }
+
+    // See InstancedMeshBinding.instanceIsDrawnAt. Addressed by mesh, as a raycast's hit is. True if the binding
+    // doesn't exist yet.
+    static instanceIsDrawnAt(instancedMeshId: string, instanceId: number, uv: THREE.Vector2): boolean
+    {
+        return bindingMap[instancedMeshId]?.instanceIsDrawnAt(instanceId, uv) !== false;
     }
 
     // Addressed by mesh because room-wide sweeps set it (see RestrictedZoneOutlineUtil). No-op before

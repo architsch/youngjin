@@ -1,7 +1,6 @@
 import { voxelQuadChangeObservable } from "../../system/sharedObservables";
 import Voxel from "../types/voxel";
 import VoxelQuadChange from "../types/voxelQuadChange";
-import VoxelQueryUtil from "./voxelQueryUtil";
 
 let debugEnabled = false;
 
@@ -12,26 +11,27 @@ const VoxelQuadUpdateUtil =
         debugEnabled = enabled;
     },
 
-    setVoxelQuadVisible(visible: boolean, voxel: Voxel,
-        facingAxis: "x" | "y" | "z", orientation: "-" | "+", collisionLayer: number,
-        textureIndex: number = -1): boolean // (textureIndex == -1) if the quad's textureIndex should stay the same as before
+    // Writes a quad's texture. Returns whether that changed it, having announced the quad if so.
+    setVoxelQuadTexture(voxel: Voxel, quadIndex: number, textureIndex: number): boolean
     {
-        const quadIndex = VoxelQueryUtil.getVoxelQuadIndex(voxel.row, voxel.col, facingAxis, orientation, collisionLayer);
-        const oldQuad = voxel.quadsMem.quads[quadIndex];
-        const newTextureIndex = (textureIndex >= 0) ? textureIndex : (oldQuad & 0b01111111);
-        const newQuad = (newTextureIndex & 0b01111111) | (visible ? 0b10000000 : 0b00000000);
-
-        if (newQuad == oldQuad)
+        const newQuad = textureIndex & 0b01111111;
+        if (newQuad == voxel.quadsMem.quads[quadIndex])
             return false; // no change
 
         voxel.quadsMem.quads[quadIndex] = newQuad;
+        VoxelQuadUpdateUtil.announceVoxelQuadChange(voxel, quadIndex);
+        return true;
+    },
 
-        const change = new VoxelQuadChange(quadIndex, newQuad);
+    // Announces a quad to be drawn again: one whose texture changed, or which a block added or removed
+    // beside it has just covered or uncovered (see VoxelQueryUtil.isVoxelQuadVisible).
+    announceVoxelQuadChange(voxel: Voxel, quadIndex: number)
+    {
+        const change = new VoxelQuadChange(quadIndex, voxel.quadsMem.quads[quadIndex]);
         if (debugEnabled)
             change.voxelQuadsResultSnapshot = String(voxel);
 
         voxelQuadChangeObservable.set(change);
-        return true;
     },
 };
 

@@ -31,6 +31,7 @@ const TURN_VERTEX_GLSL = `
         vMapUv = vec2(1.0 - vMapUv.y, vMapUv.x);
 `;
 
+// This and the turn before it are repeated on the CPU (see getSampledUV).
 function vertexGLSL(uScale: number, vScale: number): string
 {
     return `
@@ -79,4 +80,26 @@ export function getUVScales(textureWidth: number, textureHeight: number,
         (cellWidth / textureWidth) * ((cellWidth - 1) / cellWidth),
         (cellHeight / textureHeight) * ((cellHeight - 1) / cellHeight),
     ];
+}
+
+// Where in the texture (in UV) an instance samples at a point of its quad: the vertex stage's mapping, which
+// this must follow (see TURN_VERTEX_GLSL and vertexGLSL).
+export function getSampledUV(geometry: THREE.BufferGeometry, instanceId: number, quadUV: THREE.Vector2,
+    uvScales: readonly [number, number], out: THREE.Vector2): THREE.Vector2
+{
+    const quarterTurns = geometry.getAttribute("uvQuarterTurns")?.getX(instanceId) ?? 0;
+    if (quarterTurns > 2.5)
+        out.set(quadUV.y, 1 - quadUV.x);
+    else if (quarterTurns > 1.5)
+        out.set(1 - quadUV.x, 1 - quadUV.y);
+    else if (quarterTurns > 0.5)
+        out.set(1 - quadUV.y, quadUV.x);
+    else
+        out.copy(quadUV);
+
+    const uvStart = geometry.getAttribute("uvStart");
+    const uvSampleSize = geometry.getAttribute("uvSampleSize");
+    return out.set(
+        uvStart.getX(instanceId) + uvSampleSize.getX(instanceId) * out.x * uvScales[0],
+        uvStart.getY(instanceId) + uvSampleSize.getY(instanceId) * out.y * uvScales[1]);
 }

@@ -55,6 +55,7 @@ import ImageMapBuilder from "../../../src/server/ssg/builder/imageMapBuilder";
 import ImageMapUtil from "../../../src/shared/graphics/image/util/imageMapUtil";
 import ColorUtil from "../../../src/shared/math/util/colorUtil";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
+import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import InstancedTexturePackMaterialParams from "../../../src/shared/graphics/material/types/instancedTexturePackMaterialParams";
 import VoxelGameObject from "../../../src/client/object/types/gameObject/voxelGameObject";
@@ -64,8 +65,8 @@ import InstancedMeshBinding from "../../../src/client/graphics/types/mesh/instan
 import TexelRect from "../../../src/client/graphics/types/texture/texelRect";
 import { getUVScales } from "../../../src/client/graphics/shaders/instancedTexturePackShader";
 import { createTestRoom } from "../helpers/roomContent";
-import { NUM_PACK_VOXEL_TEXTURES, NUM_VOXEL_TEXTURES, NUM_VOXEL_TEXTURE_COLS, NUM_VOXEL_TEXTURE_ROWS,
-    PROCEDURAL_VOXEL_TEXTURE_MARGIN, VOXEL_TEXTURE_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_PACK_VOXEL_TEXTURES, NUM_VOXEL_TEXTURES, NUM_VOXEL_TEXTURE_COLS,
+    NUM_VOXEL_TEXTURE_ROWS, PROCEDURAL_VOXEL_TEXTURE_MARGIN, VOXEL_TEXTURE_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 
 const CELL = VOXEL_TEXTURE_CELL_SIZE;
 const MARGIN = PROCEDURAL_VOXEL_TEXTURE_MARGIN;
@@ -562,20 +563,32 @@ describe("the shipped packs", () => {
 describe("the texels a quad shows of its texture", () => {
     const ROW = 10, COL = 10;
     const room = createTestRoom("texels", "texels", RoomTypeEnumMap.Hub);
-    const voxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, ROW, COL)!;
+    const voxels = room.voxelGrid.voxels;
+    const voxel = VoxelQueryUtil.getVoxel(voxels, ROW, COL)!;
 
     // A floor, which shows a whole cell, and a wall's two kinds of layer, which show half of one each.
     const floorQuad = VoxelQueryUtil.getFloorVoxelQuadIndex(ROW, COL);
     const evenLayerWallQuad = VoxelQueryUtil.getVoxelQuadIndex(ROW, COL, "x", "+", 2);
     const oddLayerWallQuad = VoxelQueryUtil.getVoxelQuadIndex(ROW, COL, "x", "+", 3);
 
+    // All three are drawn: the cell is open down to its floor but for two blocks hanging over it, and so
+    // is the cell those blocks' faces look into.
+    for (let layer = COLLISION_LAYER_MIN; layer <= COLLISION_LAYER_MAX; ++layer)
+    {
+        for (const col of [COL, COL + 1])
+            VoxelUpdateUtil.removeVoxelBlock(undefined, voxels, VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(ROW, col, layer));
+    }
+    for (const layer of [2, 3])
+        VoxelUpdateUtil.addVoxelBlock(undefined, voxels, VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(ROW, COL, layer));
+
     // As a real VoxelGameObject maps a quad wearing the texture.
     function shownTexels(quadIndex: number, textureIndex: number): TexelRect
     {
-        room.voxelQuads[quadIndex] = 0b10000000 | textureIndex;
+        room.voxelQuads[quadIndex] = textureIndex;
         let shown: TexelRect | undefined;
         const gameObject = Object.assign(Object.create(VoxelGameObject.prototype), {
             voxel,
+            voxels,
             instancedMeshGraphics: {
                 rentInstanceFromPool: () => 0,
                 updateInstanceTransform: () => {},
@@ -636,6 +649,57 @@ describe("the texels a quad shows of its texture", () => {
             expect(lower.y, `texture ${textureIndex}`).toBe(whole.y);
             expect(upper.y, `texture ${textureIndex}`).toBe(lower.y + lower.height);
             expect(upper.y + upper.height, `texture ${textureIndex}`).toBe(whole.y + whole.height);
+        }
+    });
+
+    it("shows a shrunk block's faces the part of the cell they lie over, two halves making up the whole", () => {
+        const textureIndex = 45; // column 5 of row 5
+        const cellX = 5 * CELL, cellY = 5 * CELL, HALF = CELL / 2;
+        const LAYER = 3; // an odd layer, whose walls show the lower half of the cell
+        const LOW_X = 0b0101, HIGH_X = 0b1010, LOW_Z = 0b0011, HIGH_Z = 0b1100;
+
+        const shapes = room.voxelGrid.quadsMem.blockShapes;
+        const blockIndex = VoxelQueryUtil.getVoxelBlockIndex(ROW, COL, LAYER);
+        const shapeBefore = shapes[blockIndex];
+        const shownBy = (shape: number, axis: "x" | "y" | "z", orientation: "-" | "+") => {
+            shapes[blockIndex] = shape;
+            return shownTexels(VoxelQueryUtil.getVoxelQuadIndex(ROW, COL, axis, orientation, LAYER), textureIndex);
+        };
+        try
+        {
+            // Seen from in front, a face on the +z side reads along +x, and one on the -z side along -x.
+            expect(shownBy(LOW_X, "z", "+")).toEqual({x: cellX, y: cellY, width: HALF, height: HALF});
+            expect(shownBy(HIGH_X, "z", "+")).toEqual({x: cellX + HALF, y: cellY, width: HALF, height: HALF});
+            expect(shownBy(LOW_X, "z", "-")).toEqual({x: cellX + HALF, y: cellY, width: HALF, height: HALF});
+            expect(shownBy(HIGH_X, "z", "-")).toEqual({x: cellX, y: cellY, width: HALF, height: HALF});
+
+            // One on the +x side reads along -z, and one on the -x side along +z.
+            expect(shownBy(LOW_Z, "x", "+")).toEqual({x: cellX + HALF, y: cellY, width: HALF, height: HALF});
+            expect(shownBy(HIGH_Z, "x", "+")).toEqual({x: cellX, y: cellY, width: HALF, height: HALF});
+            expect(shownBy(LOW_Z, "x", "-")).toEqual({x: cellX, y: cellY, width: HALF, height: HALF});
+            expect(shownBy(HIGH_Z, "x", "-")).toEqual({x: cellX + HALF, y: cellY, width: HALF, height: HALF});
+
+            // The face in the middle of the cell is as wide as a whole block's.
+            expect(shownBy(LOW_X, "x", "+")).toEqual({x: cellX, y: cellY, width: CELL, height: HALF});
+
+            // A top reads along +x and, up the tile, along -z.
+            expect(shownBy(LOW_X, "y", "+")).toEqual({x: cellX, y: cellY, width: HALF, height: CELL});
+            expect(shownBy(HIGH_X, "y", "+")).toEqual({x: cellX + HALF, y: cellY, width: HALF, height: CELL});
+            expect(shownBy(LOW_Z, "y", "+")).toEqual({x: cellX, y: cellY + HALF, width: CELL, height: HALF});
+            expect(shownBy(HIGH_Z, "y", "+")).toEqual({x: cellX, y: cellY, width: CELL, height: HALF});
+            expect(shownBy(0b0001, "y", "+")).toEqual({x: cellX, y: cellY + HALF, width: HALF, height: HALF});
+            expect(shownBy(0b1000, "y", "+")).toEqual({x: cellX + HALF, y: cellY, width: HALF, height: HALF});
+
+            // A procedural cell is shared out the same way, inside its margin.
+            const procedural = NUM_PACK_VOXEL_TEXTURES + 6;
+            const tileX = 6 * CELL + MARGIN, tileY = NUM_PACK_VOXEL_TEXTURES / NUM_VOXEL_TEXTURE_COLS * CELL + MARGIN;
+            shapes[blockIndex] = HIGH_X;
+            expect(shownTexels(VoxelQueryUtil.getVoxelQuadIndex(ROW, COL, "z", "+", LAYER), procedural))
+                .toEqual({x: tileX + TILE / 2, y: tileY, width: TILE / 2, height: TILE / 2});
+        }
+        finally
+        {
+            shapes[blockIndex] = shapeBefore;
         }
     });
 

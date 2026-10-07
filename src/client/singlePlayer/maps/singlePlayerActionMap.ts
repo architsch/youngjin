@@ -201,7 +201,7 @@ function resolveVoxelQuad(quadIndex: number): VoxelQuadSelection | null
         console.error(`SinglePlayerActionMap :: Voxel doesn't exist (row = ${row}, col = ${col})`);
         return null;
     }
-    if ((voxel.quadsMem.quads[quadIndex] & 0b10000000) == 0)
+    if (!VoxelQueryUtil.isVoxelQuadVisible(room.voxelGrid.voxels, quadIndex))
     {
         // An invisible quad can't be acted on or pointed at.
         console.error(`SinglePlayerActionMap :: Voxel-quad is not visible (row = ${row}, col = ${col})`);

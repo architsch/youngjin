@@ -517,11 +517,15 @@ async function cleanupAcquisition(db)
 // tests/integration/scenarios/voxel-grid-migration.test.ts instead.
 const CONTENT_FILE = "content.bin";
 
-// Voxel-grid format version -> decoder. Versions sharing a decoder share a body layout.
+// Voxel-grid format version -> decoder. Versions sharing a decoder share a body layout. Versions 4 and 5
+// share one though they differ in the spare bit of each quad (drawn in 4, unused in 5): a version-5 body
+// stamped as 4 reads back the same room. Version 6 is laid out like them, but spells block shapes with
+// that bit, so a room holding a shrunk block is no version-5 room and the downgrade is refused.
 const VOXEL_GRID_DECODER_BY_VERSION = {
     0: "decodeHalfHeightFormat", 1: "decodeHalfHeightFormat",
     2: "decodeVoxelsOnlyFormat", 3: "decodeVoxelsOnlyFormat",
-    4: "VoxelGrid's decodeBody",
+    4: "decodeVoxelsAndZonesFormat", 5: "decodeVoxelsAndZonesFormat",
+    6: "VoxelGrid's decodeBody",
 };
 
 function contentPath(roomID) { return `${collection("rooms")}/${roomID}/${CONTENT_FILE}`; }

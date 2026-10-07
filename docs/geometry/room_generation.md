@@ -33,6 +33,7 @@ A multiplayer room is laid out from a random seed when the server creates it. Th
 
 ### Contents
 - Decorative blocks are placed on area floors: never floating, never on keep-clear stretches, and away from area edges.
+- Every generated block is a whole one. A block's shape (see [voxel_grid.md](voxel_grid.md)) is a judgement about one piece of building, such as a thin wall or a rail, which nothing a generator plans stands in for, so shrinking blocks is left to whoever furnishes the room.
 - The only object placed is the **entrance door**. It sits on a boundary wall, points at the hubs, and is placed after carving. Its entrance area is planned first, and the floor in front of it is kept clear.
 - Generated rooms have no restricted zones.
 

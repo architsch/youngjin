@@ -221,7 +221,7 @@ describe("single-player room generation", () => {
                 {
                     const voxel = VoxelQueryUtil.getVoxel(voxelGrid.voxels, row, col);
                     expect(voxel).toBeDefined();
-                    expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel!, COLLISION_LAYER_MIN)).toBe(true);
+                    expect(VoxelQueryUtil.isVoxelBlockPresent(voxel!, COLLISION_LAYER_MIN)).toBe(true);
                 }
             }
         }
@@ -230,7 +230,7 @@ describe("single-player room generation", () => {
         const floorVoxel = VoxelQueryUtil.getVoxel(voxelGrid.voxels,
             Math.floor(m.hotspots.floor.z), Math.floor(m.hotspots.floor.x));
         expect(floorVoxel).toBeDefined();
-        expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(floorVoxel!, COLLISION_LAYER_MIN)).toBe(false);
+        expect(VoxelQueryUtil.isVoxelBlockPresent(floorVoxel!, COLLISION_LAYER_MIN)).toBe(false);
 
         // The two the tutorial addresses by name.
         expect(objectGroup.objectById["npc"]).toBeDefined();
@@ -288,14 +288,14 @@ describe("single-player room generation", () => {
             for (let col = 0; col < NUM_VOXEL_COLS; ++col)
             {
                 const voxel = VoxelQueryUtil.getVoxel(voxelGrid.voxels, row, col)!;
-                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, STOREY_FLOOR_COLLISION_LAYER),
+                expect(VoxelQueryUtil.isVoxelBlockPresent(voxel, STOREY_FLOOR_COLLISION_LAYER),
                     `(${row},${col}) has nothing over it`).toBe(true);
 
                 for (let layer = STOREY_FLOOR_COLLISION_LAYER; layer <= COLLISION_LAYER_MAX; ++layer)
                 {
                     const topQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(row, col, "y", "+", layer);
-                    expect(voxelGrid.quadsMem.quads[topQuadIndex] & 0b10000000,
-                        `(${row},${col}) draws a lid over the room at layer ${layer}`).toBe(0);
+                    expect(VoxelQueryUtil.isVoxelQuadVisible(voxelGrid.voxels, topQuadIndex),
+                        `(${row},${col}) draws a lid over the room at layer ${layer}`).toBe(false);
                 }
             }
         }
@@ -369,7 +369,7 @@ describe("tutorial edit mode opening", () => {
 
         expect({row: quad.row, col: quad.col, facing: quad.facing})
             .toEqual({row: m.volumes.room1.rowMin - 1, col, facing: "+z"});
-        expect(room.voxelGrid.quadsMem.quads[quadIndex] & 0b10000000, "the face is not drawn").not.toBe(0);
+        expect(VoxelQueryUtil.isVoxelQuadVisible(room.voxelGrid.voxels, quadIndex), "the face is not drawn").toBe(true);
 
         // About a block's height below the eye.
         const drop = EYE_Y - VoxelQueryUtil.getWorldYAtVoxelCollisionLayerCenter(quad.collisionLayer);
@@ -449,7 +449,8 @@ describe("tutorial edit mode opening", () => {
             (highlight as Extract<SinglePlayerAction, {type: "gizmo_voxel_quad_outline_rect"}>).quadIndex();
         expect(describeQuad(targetQuadIndex)).toEqual(
             {row: openedOnRow - 1, col: wall.colMin, collisionLayer: COLLISION_LAYER_MIN + 2, facing: "-x"});
-        expect(room.voxelGrid.quadsMem.quads[targetQuadIndex] & 0b10000000, "the marked face is not drawn").not.toBe(0);
+        expect(VoxelQueryUtil.isVoxelQuadVisible(room.voxelGrid.voxels, targetQuadIndex), "the marked face is not drawn")
+            .toBe(true);
 
         // And nothing else in the room may be picked instead of it.
         const restriction = steps["select_block"].actionsOnStart
@@ -476,8 +477,8 @@ describe("tutorial edit mode opening", () => {
         // Which is a face the built block really draws, covering the wall's.
         const builtRoom = RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
         expect(VoxelUpdateUtil.addVoxelBlock(undefined, builtRoom.voxelGrid.voxels, builtQuadIndex)).toBe(true);
-        expect(builtRoom.voxelGrid.quadsMem.quads[builtQuadIndex] & 0b10000000).not.toBe(0);
-        expect(builtRoom.voxelGrid.quadsMem.quads[targetQuadIndex] & 0b10000000).toBe(0);
+        expect(VoxelQueryUtil.isVoxelQuadVisible(builtRoom.voxelGrid.voxels, builtQuadIndex)).toBe(true);
+        expect(VoxelQueryUtil.isVoxelQuadVisible(builtRoom.voxelGrid.voxels, targetQuadIndex)).toBe(false);
 
         expect(selectedAtEndOf("remove_block")).toBe(targetQuadIndex);
     });

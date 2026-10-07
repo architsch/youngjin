@@ -1,11 +1,11 @@
 import BufferState from "../../networking/types/bufferState";
-import { COLLISION_LAYER_NULL, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_RESTRICTED_ZONES, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS, VOXEL_BLOCK_SHAPE_EMPTY, VOXEL_BLOCK_SHAPE_WHOLE } from "../../system/sharedConstants";
+import RestrictedZone from "../types/restrictedZone";
 import Voxel from "../types/voxel";
 // Type-only: VoxelGrid imports this module, so a value import would be an import cycle.
 import type VoxelGrid from "../types/voxelGrid";
 import VoxelQuadsRuntimeMemory from "../types/voxelQuadsRuntimeMemory";
 import VoxelQueryUtil from "../util/voxelQueryUtil";
-import VoxelQuadUpdateUtil from "../util/voxelQuadUpdateUtil";
 import VoxelUpdateUtil from "../util/voxelUpdateUtil";
 import { RoomVolumeConstructorMap } from "../../room/generation/maps/roomVolumeConstructorMap";
 
@@ -14,12 +14,17 @@ import { RoomVolumeConstructorMap } from "../../room/generation/maps/roomVolumeC
 const LEGACY_NUM_COLLISION_LAYERS = 8;
 const LEGACY_COLLISION_LAYER_MAX = LEGACY_NUM_COLLISION_LAYERS - 1;
 
+// The bit of a quad that said whether it was drawn, while that was stored.
+const LEGACY_QUAD_VISIBLE_BIT = 0b10000000;
+
 // Index N reads version N's layout into an empty grid.
 const decoders: ((bufferState: BufferState, voxelGrid: VoxelGrid) => void)[] = [
     decodeHalfHeightFormat, // version 0 (same binary layout as version 1)
     decodeHalfHeightFormat, // version 1
     decodeVoxelsOnlyFormat, // version 2
     decodeVoxelsOnlyFormat, // version 3 (same binary layout as version 2)
+    decodeVoxelsAndZonesFormat, // version 4
+    decodeVoxelsAndZonesFormat, // version 5 (same binary layout as version 4)
 ];
 
 // Index N converts version N to N+1, in place.
@@ -65,10 +70,6 @@ const converters: ((voxelGrid: VoxelGrid) => void)[] = [
                 VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(voxel.row, voxel.col,
                     LEGACY_NUM_COLLISION_LAYERS),
                 new Array<number>(NUM_VOXEL_QUADS_PER_COLLISION_LAYER).fill(ceilingTextureIndex));
-
-            // The room's ceiling now covers an empty storey, so every ceiling cell is visible.
-            VoxelQuadUpdateUtil.setVoxelQuadVisible(true, voxel, "y", "-", COLLISION_LAYER_NULL,
-                ceilingTextureIndex);
         }
     },
     (voxelGrid: VoxelGrid) => { // version 2 -> 3
@@ -91,6 +92,17 @@ const converters: ((voxelGrid: VoxelGrid) => void)[] = [
     },
     () => { // version 3 -> 4
         // Restricted zones added; older rooms get none.
+    },
+    (voxelGrid: VoxelGrid) => { // version 4 -> 5
+        // Whether a quad is drawn stopped being stored (see VoxelQueryUtil.isVoxelQuadVisible), which
+        // leaves its bit unused and zero.
+        const quads = voxelGrid.quadsMem.quads;
+        for (let i = 0; i < quads.length; ++i)
+            quads[i] &= ~LEGACY_QUAD_VISIBLE_BIT;
+    },
+    () => { // version 5 -> 6
+        // Blocks gained shapes, stored in the bit version 5 left unused (see Voxel). Older rooms hold
+        // whole blocks only, as their readers leave them.
     },
 ];
 
@@ -116,7 +128,7 @@ function getNeighbouringWallTextureIndices(voxelGrid: VoxelGrid, row: number, co
     for (const neighbour of neighbours)
     {
         const voxel = VoxelQueryUtil.getVoxel(voxelGrid.voxels, neighbour.row, neighbour.col);
-        if (!voxel || !VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer))
+        if (!voxel || !VoxelQueryUtil.isVoxelBlockPresent(voxel, collisionLayer))
             continue;
 
         const textureIndices = new Array<number>(NUM_VOXEL_QUADS_PER_COLLISION_LAYER);
@@ -140,11 +152,22 @@ function addLegacyCornerWall(voxels: Voxel[], row: number, col: number,
     }
 }
 
-// Voxels as the current format writes them, with no restricted zones after them.
+// Full-height voxels (see decodeFullHeightVoxel), with no restricted zones after them.
 function decodeVoxelsOnlyFormat(bufferState: BufferState, voxelGrid: VoxelGrid): void
 {
-    decodeVoxels(bufferState, voxelGrid,
-        (bs, quadsMem, row, col) => Voxel.decodeWithParams(bs, quadsMem, row, col) as Voxel);
+    decodeVoxels(bufferState, voxelGrid, decodeFullHeightVoxel);
+}
+
+// Full-height voxels, then the restricted zones.
+function decodeVoxelsAndZonesFormat(bufferState: BufferState, voxelGrid: VoxelGrid): void
+{
+    decodeVoxelsOnlyFormat(bufferState, voxelGrid);
+
+    const numZones = bufferState.view[bufferState.byteIndex++];
+    if (numZones > MAX_RESTRICTED_ZONES)
+        throw new Error(`Decoded restricted zone count is out of range (numZones = ${numZones})`);
+    for (let i = 0; i < numZones; ++i)
+        voxelGrid.restrictedZones.push(RestrictedZone.decode(bufferState) as RestrictedZone);
 }
 
 // One mask byte and 8 layers per cell, decoded into current quad memory with an empty upper half.
@@ -173,15 +196,43 @@ function decodeHalfHeightVoxel(bufferState: BufferState, quadsMem: VoxelQuadsRun
 
     const collisionLayerMask = bufferState.view[bufferState.byteIndex++]; // one byte, hence eight layers
 
-    for (let collisionLayer = 0; collisionLayer <= LEGACY_COLLISION_LAYER_MAX; ++collisionLayer)
+    // Upper layers stay empty (freshly allocated memory).
+    decodeMaskedLayers(bufferState, quadsMem, row, col, collisionLayerMask, LEGACY_COLLISION_LAYER_MAX);
+    return new Voxel(quadsMem, row, col);
+}
+
+// A voxel as versions 2 to 5 wrote it: its ceiling and floor quads, a two-byte mask of the layers holding
+// a block, then the six quads of each of those layers.
+function decodeFullHeightVoxel(bufferState: BufferState, quadsMem: VoxelQuadsRuntimeMemory,
+    row: number, col: number): Voxel
+{
+    const quads = quadsMem.quads;
+
+    quads[VoxelQueryUtil.getCeilingVoxelQuadIndex(row, col)] = bufferState.view[bufferState.byteIndex++];
+    quads[VoxelQueryUtil.getFloorVoxelQuadIndex(row, col)] = bufferState.view[bufferState.byteIndex++];
+
+    const collisionLayerMaskLowByte = bufferState.view[bufferState.byteIndex++];
+    const collisionLayerMaskHighByte = bufferState.view[bufferState.byteIndex++];
+
+    decodeMaskedLayers(bufferState, quadsMem, row, col,
+        collisionLayerMaskLowByte | (collisionLayerMaskHighByte << 8), COLLISION_LAYER_MAX);
+    return new Voxel(quadsMem, row, col);
+}
+
+// The layers of a voxel as every version up to 5 wrote them: six quad bytes for each layer the mask names,
+// from the lowest up, each holding a whole block (no other kind existed).
+function decodeMaskedLayers(bufferState: BufferState, quadsMem: VoxelQuadsRuntimeMemory,
+    row: number, col: number, collisionLayerMask: number, collisionLayerMax: number): void
+{
+    for (let collisionLayer = COLLISION_LAYER_MIN; collisionLayer <= collisionLayerMax; ++collisionLayer)
     {
         const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, collisionLayer);
-        const layerIsOccupied = ((1 << collisionLayer) & collisionLayerMask) != 0;
+        const layerHoldsBlock = ((1 << collisionLayer) & collisionLayerMask) != 0;
         for (let i = startIndex; i < startIndex + NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
-            quads[i] = layerIsOccupied ? bufferState.view[bufferState.byteIndex++] : 0;
+            quadsMem.quads[i] = layerHoldsBlock ? bufferState.view[bufferState.byteIndex++] : 0;
+        quadsMem.blockShapes[VoxelQueryUtil.getVoxelBlockIndex(row, col, collisionLayer)] =
+            layerHoldsBlock ? VOXEL_BLOCK_SHAPE_WHOLE : VOXEL_BLOCK_SHAPE_EMPTY;
     }
-    // Upper layers stay empty (freshly allocated memory).
-    return new Voxel(quadsMem, row, col, collisionLayerMask);
 }
 
 export default VoxelGridVersionMigration;

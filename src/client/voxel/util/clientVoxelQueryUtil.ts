@@ -5,10 +5,13 @@ import Voxel from "../../../shared/voxel/types/voxel";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
 import VoxelQuadInstanceUtil from "./voxelQuadInstanceUtil";
+import AABB3 from "../../../shared/math/types/aabb3";
 import Vec3 from "../../../shared/math/types/vec3";
+import Geometry3DUtil from "../../../shared/math/util/geometry3DUtil";
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y, NEAR_EPSILON,
     NUM_COLLISION_LAYERS, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS,
-    VOXEL_QUAD_GEOMETRY_ID, VOXEL_TEXTURE_PACK_MATERIAL_ID } from "../../../shared/system/sharedConstants";
+    VOXEL_BLOCK_SHAPE_EMPTY, VOXEL_BLOCK_SHAPE_WHOLE, VOXEL_QUAD_GEOMETRY_ID, VOXEL_TEXTURE_PACK_MATERIAL_ID }
+    from "../../../shared/system/sharedConstants";
 
 // Queries about the room as drawn (vs. VoxelQueryUtil's stored grid): blocks hidden by the orbit camera
 // are still solid but not visible (see OrbitOcclusionHider). Always about the single current room.
@@ -28,10 +31,15 @@ const ROOM_BOX_MARGIN = 1;
 // Reach for the open-space measure (see getOpenSpaceDropAhead).
 const openSpaceReach = 5; // in world units
 
+// How near a block's box a point counts as lying on it (see getShrunkBlockEntry).
+const ON_FACE_TOLERANCE = 0.01;
+
 const blockCenterTemp = new THREE.Vector3();
 const roomBoxTemp = new THREE.Box3();
 const segmentStartTemp = new THREE.Vector3();
 const segmentEndTemp = new THREE.Vector3();
+// A segment's start as a box of no size, to cast it against a block's box (see Geometry3DUtil).
+const segmentStartBoxTemp: AABB3 = {center: {x: 0, y: 0, z: 0}, halfSize: {x: 0, y: 0, z: 0}};
 
 const ClientVoxelQueryUtil =
 {
@@ -41,17 +49,17 @@ const ClientVoxelQueryUtil =
     },
 
     // Whether drawn room geometry lies between two points. Walks blocks along the segment (raycasting
-    // the voxel mesh would test every instance). Start and end blocks are excluded (a camera inside a
-    // wall isn't blinded; the target's own block doesn't hide it). A block stops the segment only if
-    // the face it enters through is drawn, so the rock around the room — solid but with nothing drawn
-    // on the outside — lets the segment through, just as it lets the eye through.
+    // the voxel mesh would test every instance). A block an end of the segment lies inside is excluded
+    // (a camera inside a wall isn't blinded; the target's own block doesn't hide it). A block stops the
+    // segment only if the face it enters through is drawn, so the rock around the room — solid but with
+    // nothing drawn on the outside — lets the segment through, just as it lets the eye through.
     lineSegmentIsBlockedByDrawnVoxelBlock(from: THREE.Vector3, to: THREE.Vector3): boolean
     {
         const room = App.getCurrentRoom();
         if (room == undefined)
             return false;
         const voxels = room.voxelGrid.voxels;
-        return walkBlocks(from, to, (row, col, collisionLayer, entryAxis, entryOrientation) =>
+        return walkBlocks(voxels, from, to, (row, col, collisionLayer, entryAxis, entryOrientation) =>
             voxelBlockFaceIsDrawn(voxels, row, col, collisionLayer, entryAxis, entryOrientation));
     },
 
@@ -77,8 +85,8 @@ const ClientVoxelQueryUtil =
         ray.at(span.exit, segmentEndTemp);
 
         let hit: {point: Vec3, normal: Vec3} | undefined = undefined;
-        walkBlocks(segmentStartTemp, segmentEndTemp, (row, col, collisionLayer, entryAxis, entryOrientation,
-            along) =>
+        walkBlocks(voxels, segmentStartTemp, segmentEndTemp, (row, col, collisionLayer, entryAxis,
+            entryOrientation, along) =>
         {
             if (!voxelBlockFaceIsDrawn(voxels, row, col, collisionLayer, entryAxis, entryOrientation))
                 return false;
@@ -106,13 +114,8 @@ const ClientVoxelQueryUtil =
 
         // An eye buried in solid rock — an arrival still standing in the wall behind its door — has no
         // open space to measure, and its sight lines would leave through buried faces (see above).
-        if (VoxelQueryUtil.isVoxelBlockOccupied(voxels,
-            VoxelQueryUtil.getVoxelRowFromWorldZ(viewPosition.z),
-            VoxelQueryUtil.getVoxelColFromWorldX(viewPosition.x),
-            VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(viewPosition.y)))
-        {
+        if (VoxelQueryUtil.isPointInVoxelBlock(voxels, viewPosition))
             return 0;
-        }
 
         const forwardLength = Math.hypot(forwardDir.x, forwardDir.z);
         if (forwardLength < NEAR_EPSILON)
@@ -182,7 +185,7 @@ function getVisibleDropBelow(voxel: Voxel, row: number, col: number, viewPositio
         if (blockCenterY >= standingLevelY)
             break;
 
-        if (VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer))
+        if (VoxelQueryUtil.isVoxelBlockPresent(voxel, collisionLayer))
             continue;
 
         // Block centre is precise enough, given the neighbourhood average.
@@ -195,14 +198,17 @@ function getVisibleDropBelow(voxel: Voxel, row: number, col: number, viewPositio
     return 0;
 }
 
-// Walks the blocks a segment passes through after from's own, handing visit each one with the face it is
-// entered through (the face looking back the way the segment came) and how far along the segment that is,
-// from 0 to 1. Stops before to's block, or when visit returns true, which the walk then returns.
-function walkBlocks(from: THREE.Vector3, to: THREE.Vector3,
+// Walks the cell layers a segment passes through, handing visit each block it comes upon with the face it
+// is entered through (the face looking back the way the segment came) and how far along the segment that
+// is, from 0 to 1. A cell layer is taken for a whole block, entered where the segment crosses into it; a
+// shrunk block is entered where the segment meets its own box, if it does (see getShrunkBlockEntry). The
+// cell layers the segment starts and ends in are handed over only for a shrunk block standing clear of
+// that end. Stops when visit returns true, which the walk then returns.
+function walkBlocks(voxels: Voxel[], from: THREE.Vector3, to: THREE.Vector3,
     visit: (row: number, col: number, collisionLayer: number, entryAxis: "x" | "y" | "z",
         entryOrientation: "-" | "+", along: number) => boolean): boolean
 {
-    // A block of the walk is one collision layer of one voxel: a unit square in XZ, one layer tall.
+    // A step of the walk is one collision layer of one voxel: a unit square in XZ, one layer tall.
     let col = VoxelQueryUtil.getVoxelColFromWorldX(from.x);
     let row = VoxelQueryUtil.getVoxelRowFromWorldZ(from.z);
     let collisionLayer = VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(from.y);
@@ -230,7 +236,15 @@ function walkBlocks(from: THREE.Vector3, to: THREE.Vector3,
             : (from.y - collisionLayer * COLLISION_LAYER_HEIGHT)) / absDy)
         : Infinity;
 
-    // The segment ends in the block it starts in, so there is no block in between to speak of.
+    const visitShrunkBlock = (): boolean =>
+    {
+        const entry = getShrunkBlockEntry(voxels, row, col, collisionLayer, from, to);
+        return entry != undefined && visit(row, col, collisionLayer, entry.axis, entry.orientation, entry.along);
+    };
+
+    if (visitShrunkBlock())
+        return true;
+    // The segment ends in the cell layer it starts in, so there is none in between to speak of.
     if (col === endCol && row === endRow && collisionLayer === endCollisionLayer)
         return false;
 
@@ -268,15 +282,60 @@ function walkBlocks(from: THREE.Vector3, to: THREE.Vector3,
         if (boundaryCrossed >= 1)
             return false; // Stepped past the end itself, which the block test below may have missed.
 
-        // Check arrival before judging the block, since attached objects often sit exactly on a
+        // Check arrival before judging a whole block, since attached objects often sit exactly on a
         // boundary and may round into the block behind them.
         if (col === endCol && row === endRow && collisionLayer === endCollisionLayer)
-            return false;
+            return visitShrunkBlock();
 
-        if (visit(row, col, collisionLayer, entryAxis, (entryStep > 0) ? "-" : "+", boundaryCrossed))
+        if (blockIsShrunk(voxels, row, col, collisionLayer))
+        {
+            if (visitShrunkBlock())
+                return true;
+        }
+        else if (visit(row, col, collisionLayer, entryAxis, (entryStep > 0) ? "-" : "+", boundaryCrossed))
             return true;
     }
     return false;
+}
+
+// Whether a cell layer of the room holds a block that fills only part of it.
+function blockIsShrunk(voxels: Voxel[], row: number, col: number, collisionLayer: number): boolean
+{
+    // (Outside the room and beyond its layers lies rock, which comes back whole.)
+    const shape = VoxelQueryUtil.getVoxelBlockShapeAt(voxels, row, col, collisionLayer);
+    return shape != VOXEL_BLOCK_SHAPE_EMPTY && shape != VOXEL_BLOCK_SHAPE_WHOLE;
+}
+
+// Where a segment enters the box of the shrunk block in a cell layer: the face of the box it comes in by,
+// and how far along the segment that is. Undefined if the cell layer holds no shrunk block, if the segment
+// misses the box, or if either end of the segment lies in the box or on it: an end inside is not shut in by
+// its own block (see lineSegmentIsBlockedByDrawnVoxelBlock), and one on a face, as an attached object's is,
+// may have been stored a hair inside.
+function getShrunkBlockEntry(voxels: Voxel[], row: number, col: number, collisionLayer: number,
+    from: THREE.Vector3, to: THREE.Vector3): {axis: "x" | "y" | "z", orientation: "-" | "+", along: number} | undefined
+{
+    if (!blockIsShrunk(voxels, row, col, collisionLayer))
+        return undefined;
+    const box = VoxelQueryUtil.getVoxelBlockBox(row, col, collisionLayer,
+        VoxelQueryUtil.getVoxelBlockShapeAt(voxels, row, col, collisionLayer));
+    if (pointIsInOrOnBox(from, box) || pointIsInOrOnBox(to, box))
+        return undefined;
+
+    segmentStartBoxTemp.center.x = from.x;
+    segmentStartBoxTemp.center.y = from.y;
+    segmentStartBoxTemp.center.z = from.z;
+    const {hitRayScale, hitNormal} = Geometry3DUtil.castAABBAgainstAABB(segmentStartBoxTemp, to, box);
+    if (hitNormal == undefined)
+        return undefined;
+    const axis = (hitNormal.x != 0) ? "x" : (hitNormal.y != 0) ? "y" : "z";
+    return {axis, orientation: (hitNormal[axis] > 0) ? "+" : "-", along: hitRayScale};
+}
+
+function pointIsInOrOnBox(point: THREE.Vector3, box: AABB3): boolean
+{
+    return Math.abs(point.x - box.center.x) <= box.halfSize.x + ON_FACE_TOLERANCE &&
+        Math.abs(point.y - box.center.y) <= box.halfSize.y + ON_FACE_TOLERANCE &&
+        Math.abs(point.z - box.center.z) <= box.halfSize.z + ON_FACE_TOLERANCE;
 }
 
 // Where along the ray (in ray lengths) it enters and leaves the box, from its origin at the earliest.
@@ -329,7 +388,7 @@ function voxelBlockFaceIsDrawn(voxels: Voxel[], row: number, col: number, collis
     }
 
     const quadIndex = VoxelQueryUtil.getVoxelQuadIndex(row, col, facingAxis, orientation, collisionLayer);
-    if ((voxel.quadsMem.quads[quadIndex] & 0b10000000) == 0)
+    if (!VoxelQueryUtil.isVoxelQuadVisible(voxels, quadIndex))
         return false; // Nothing drawn on that side, so nothing there to stop the line.
 
     return !quadIsTakenOutOfSight(quadIndex);

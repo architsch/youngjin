@@ -141,7 +141,8 @@ const RoomVolumeUtil =
     },
 
     // Carves a volume from the (initially solid) grid in two passes: remove blocks, then finish the
-    // enclosing faces based on what is still solid. This makes carving order-independent.
+    // enclosing faces. Which of them are drawn follows from what is still solid, so carving is
+    // order-independent.
     carveOutVolume(voxels: Voxel[], volume: RoomVolume): void
     {
         if (!volumeCanBeApplied("carveOutVolume", volume) || !volume.palette)
@@ -252,8 +253,8 @@ function fitCentered(range: [number, number], maxLength: number): [number, numbe
     return [Math.floor(0.5 * (range[0] + range[1] - length + 1)), length];
 }
 
-// Finishes one enclosing face; drawn only if the enclosing block is solid (outside the layer range
-// counts as solid, so room floors and ceilings are drawn).
+// Finishes one enclosing face. It is drawn only if the enclosing block is solid, and outside the layer
+// range it is the room's own floor or ceiling (see VoxelQueryUtil.isVoxelQuadVisible).
 function paintEnclosingFace(voxels: Voxel[], row: number, col: number,
     facingAxis: "x" | "y" | "z", orientation: "-" | "+", collisionLayer: number,
     textureIndex: number): void
@@ -262,10 +263,8 @@ function paintEnclosingFace(voxels: Voxel[], row: number, col: number,
     if (voxel == undefined)
         return; // outside the room, where there is no face to finish
 
-    // Not setVoxelQuadTexture, which forces visibility; faces over carved blocks must stay undrawn.
-    VoxelQuadUpdateUtil.setVoxelQuadVisible(
-        VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer),
-        voxel, facingAxis, orientation, getQuadCollisionLayer(collisionLayer), textureIndex);
+    VoxelQuadUpdateUtil.setVoxelQuadTexture(voxel, VoxelQueryUtil.getVoxelQuadIndex(
+        row, col, facingAxis, orientation, getQuadCollisionLayer(collisionLayer)), textureIndex);
 }
 
 // Room floor and ceiling faces share one layer position.

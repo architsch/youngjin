@@ -70,7 +70,7 @@ export default function DebugStats({env}: Props)
                 const quad = App.getVoxelQuads()[quadIndex];
                 const textureIndex = quad & 0b01111111;
 
-                voxelDesc = `(row: ${v.row}, col: ${v.col}, collisionLayerMask: ${v.collisionLayerMask.toString(2)})`;
+                voxelDesc = `(row: ${v.row}, col: ${v.col}, layers with a block: ${VoxelQueryUtil.getVoxelBlockLayerMask(v).toString(2)})`;
                 voxelQuadSelectionDesc = `(row: ${row}, col: ${col}, quad: (${orientation}${facingAxis} at layer ${collisionLayer}), texture: ${textureIndex})`;
             }
             setState(prev => ({...prev, fpsDesc, playerPosDesc, particleDesc, voxelDesc, voxelQuadSelectionDesc}));

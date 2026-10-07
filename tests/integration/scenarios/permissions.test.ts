@@ -35,7 +35,7 @@ describe("permission scenarios", () => {
                 // ...and standing in the room.
                 const roomMem = ServerRoomManager.roomRuntimeMemories["vis-room"];
                 const voxel = VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 10, 10)!;
-                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, 0)).toBe(true);
+                expect(VoxelQueryUtil.isVoxelBlockPresent(voxel, 0)).toBe(true);
             },
         });
     });
@@ -51,7 +51,7 @@ describe("permission scenarios", () => {
             assertions: () => {
                 const roomMem = ServerRoomManager.roomRuntimeMemories["hub-perm"];
                 const voxel = VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 10, 10)!;
-                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, 0)).toBe(true);
+                expect(VoxelQueryUtil.isVoxelBlockPresent(voxel, 0)).toBe(true);
             },
         });
     });
@@ -73,7 +73,7 @@ describe("permission scenarios", () => {
                 // Block should be present
                 const roomMem = ServerRoomManager.roomRuntimeMemories["owner-room"];
                 const voxel = VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 10, 10)!;
-                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, 0)).toBe(true);
+                expect(VoxelQueryUtil.isVoxelBlockPresent(voxel, 0)).toBe(true);
             },
         });
     });

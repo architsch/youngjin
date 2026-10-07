@@ -183,7 +183,9 @@ async function cameraMode(page, type, options = {})
 
 /**
  * Stands a box of blocks: a corner cell (`row`, `col`, `collisionLayer`) and a size (`rows`, `cols`,
- * `layers`, each defaulting to one), finished in `textureIndex` of the room's pack.
+ * `layers`, each defaulting to one), finished in `textureIndex` of the room's pack. Each fills its whole
+ * cell unless given a `shape`: one bit per quarter of the cell it fills (1 = low x and z, 2 = high x,
+ * 4 = high z, 8 = both high), so 5 and 10 are the halves across x, 3 and 12 those across z.
  */
 const addBlocks = (page, region) => callSandbox(page, "addBlocks", region);
 

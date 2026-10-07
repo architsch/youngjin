@@ -60,7 +60,7 @@ export function ceilingQuadIndexOf(row: number, col: number): number
 
 export function isQuadVisible(room: Room, quadIndex: number): boolean
 {
-    return (room.voxelQuads[quadIndex] & 0b10000000) != 0;
+    return VoxelQueryUtil.isVoxelQuadVisible(room.voxelGrid.voxels, quadIndex);
 }
 
 /** Selects a quad outright, bypassing the "select the same quad twice unselects it" rule. */
@@ -114,46 +114,40 @@ export function buildPillar(room: Room, row: number, col: number,
 // ─── Mirrors of the placement menu's handlers ─────────────────────────────
 // Reproduces voxelQuadPlacementOptions.tsx's module-private handler sequences; keep in step.
 
-/** What the "add block" button does: place a block against the selected face, then reselect. */
+/**
+ * What the "add block" button does: place a block against the selected face, or grow the selected block
+ * out to its cell's side, then reselect (see VoxelQueryUtil.getVoxelBlockAddTarget).
+ */
 export function userAddsBlockAt(room: Room, selection: VoxelQuadSelection): boolean
 {
-    const voxel = selection.voxel;
-    const quadIndex = selection.quadIndex;
-    const axis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
-    const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex);
-    const layer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
-
-    let newRow = voxel.row;
-    let newCol = voxel.col;
-    if (axis == "z")
-        newRow += (orientation == "+") ? 1 : -1;
-    else if (axis == "x")
-        newCol += (orientation == "+") ? 1 : -1;
-
-    let newLayer = layer;
-    if (axis == "y")
-    {
-        if (layer < COLLISION_LAYER_MIN || layer > COLLISION_LAYER_MAX)
-            newLayer = (orientation == "+") ? COLLISION_LAYER_MIN : COLLISION_LAYER_MAX;
-        else
-            newLayer += (orientation == "+") ? 1 : -1;
-    }
-
-    const textures = new Array<number>(NUM_VOXEL_QUADS_PER_COLLISION_LAYER);
-    const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(voxel.row, voxel.col, layer);
-    for (let i = startIndex; i < startIndex + NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
-        textures[i - startIndex] = room.voxelQuads[i] & 0b01111111;
-
-    const idealQuadIndex = quadIndexOf(newRow, newCol, axis, orientation, newLayer);
-    if (!VoxelUpdateUtil.addVoxelBlock(actingUser, room.voxelGrid.voxels,
-        idealQuadIndex, textures, room))
-    {
+    const target = VoxelQueryUtil.getVoxelBlockAddTarget(room.voxelGrid.voxels, selection.quadIndex);
+    if (!target)
         return false;
+
+    if (target.grows)
+    {
+        if (!VoxelUpdateUtil.setVoxelBlockShape(actingUser, room.voxelGrid.voxels, target.quadIndex, target.shape, room))
+            return false;
+    }
+    else
+    {
+        const textures = new Array<number>(NUM_VOXEL_QUADS_PER_COLLISION_LAYER);
+        const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(selection.voxel.row, selection.voxel.col,
+            VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(selection.quadIndex));
+        for (let i = startIndex; i < startIndex + NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
+            textures[i - startIndex] = room.voxelQuads[i] & 0b01111111;
+
+        if (!VoxelUpdateUtil.addVoxelBlock(actingUser, room.voxelGrid.voxels, target.quadIndex, textures, room,
+            target.shape))
+        {
+            return false;
+        }
     }
     VoxelQuadSelection.unselect();
-    const idealVoxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, newRow, newCol);
-    if (idealVoxel)
-        VoxelQuadSelection.trySelectBestQuad(idealVoxel, idealQuadIndex);
+    const targetVoxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels,
+        VoxelQueryUtil.getVoxelRowFromQuadIndex(target.quadIndex), VoxelQueryUtil.getVoxelColFromQuadIndex(target.quadIndex));
+    if (targetVoxel)
+        VoxelQuadSelection.trySelectBestQuad(targetVoxel, target.quadIndex);
     return true;
 }
 

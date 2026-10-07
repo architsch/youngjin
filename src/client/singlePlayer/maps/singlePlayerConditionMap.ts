@@ -53,7 +53,7 @@ const SinglePlayerConditionMap: {
             const voxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels,
                 condition.row(), condition.col());
             result = voxel != undefined &&
-                VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, condition.collisionLayer());
+                VoxelQueryUtil.isVoxelBlockPresent(voxel, condition.collisionLayer());
         }
         return condition.negate ? !result : result;
     },

@@ -161,8 +161,8 @@ function getSelectionOrbitFraming(): {target: AABB3, minDistance?: number} | nul
                 halfSize: {x: 0.5, y: 0, z: 0.5},
             }, minDistance: SELECTION_ORBIT_MIN_DISTANCE};
         }
-        return {target: PhysicsColliderStateUtil.getVoxelBlockColliderState(
-            voxel.row, voxel.col, collisionLayer).hitbox, minDistance: SELECTION_ORBIT_MIN_DISTANCE};
+        return {target: VoxelQueryUtil.getVoxelBlockBox(voxel.row, voxel.col, collisionLayer,
+            VoxelQueryUtil.getVoxelBlockShape(voxel, collisionLayer)), minDistance: SELECTION_ORBIT_MIN_DISTANCE};
     }
 
     const objectSelection = objectSelectionObservable.peek();

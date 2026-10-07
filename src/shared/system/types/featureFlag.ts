@@ -14,4 +14,6 @@ export enum FeatureFlag
     UseFallbackChatMessage,
     // Locks the current game mode; both transitions are refused (see GameModeUtil).
     DisableGameModeTransition,
+    // No resizing the selected block by its outline (see VoxelQuadEditGizmos).
+    DisableManualVoxelBlockResize,
 }

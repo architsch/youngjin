@@ -131,7 +131,7 @@ function encodeString(str: string): number[]
 
 function isBlockSolid(voxelGrid: VoxelGrid, row: number, col: number, collisionLayer: number): boolean
 {
-    return VoxelQueryUtil.isVoxelCollisionLayerOccupied(
+    return VoxelQueryUtil.isVoxelBlockPresent(
         VoxelQueryUtil.getVoxel(voxelGrid.voxels, row, col)!, collisionLayer);
 }
 

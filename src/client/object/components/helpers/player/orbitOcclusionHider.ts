@@ -14,13 +14,14 @@ import Vec3 from "../../../../../shared/math/types/vec3";
 import Geometry3DUtil from "../../../../../shared/math/util/geometry3DUtil";
 import Voxel from "../../../../../shared/voxel/types/voxel";
 import VoxelQueryUtil from "../../../../../shared/voxel/util/voxelQueryUtil";
+import VoxelBlockShapeUtil from "../../../../../shared/voxel/util/voxelBlockShapeUtil";
 import ClientVoxelQueryUtil from "../../../../voxel/util/clientVoxelQueryUtil";
 import VoxelQuadInstanceUtil from "../../../../voxel/util/voxelQuadInstanceUtil";
 import PhysicsColliderStateUtil from "../../../../../shared/physics/util/physicsColliderStateUtil";
 import { DIRECTION_VECTORS } from "../../../../system/clientConstants";
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y, NEAR_EPSILON,
     NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS,
-    VOXEL_BLOCK_HITBOX_HALFSIZE } from "../../../../../shared/system/sharedConstants";
+    VOXEL_BLOCK_SHAPE_EMPTY } from "../../../../../shared/system/sharedConstants";
 
 // Hides whatever blocks the orbit camera's view of its target (see @docs/graphics/camera_control.md).
 // - Only objects with an OrbitOccluder (room fabric) and voxel blocks are hidden; characters and
@@ -84,7 +85,6 @@ const protectedNeighborhood: AABB3 = {
 // The region nothing may be hidden from (see setProtectedRegion).
 let protectedRegion: AABB3 = targetBox;
 
-const blockBoxTemp: AABB3 = {center: {x: 0, y: 0, z: 0}, halfSize: VOXEL_BLOCK_HITBOX_HALFSIZE};
 // The room's floor and ceiling are flat tiles, carrying no thickness of their own.
 const tileBoxTemp: AABB3 = {center: {x: 0, y: 0, z: 0}, halfSize: {x: 0.5, y: 0, z: 0.5}};
 
@@ -297,7 +297,7 @@ function setProtectedRegion(target: AABB3, voxels: Voxel[] | undefined): void
     const col = VoxelQueryUtil.getVoxelColFromWorldX(target.center.x);
     const row = VoxelQueryUtil.getVoxelRowFromWorldZ(target.center.z);
     const collisionLayer = VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(target.center.y);
-    if (!blockIsSolid(voxels, row, col, collisionLayer))
+    if (!pointIsInBlock(voxels, target.center.x, target.center.y, target.center.z))
     {
         protectedRegion = targetBox;
         return;
@@ -309,16 +309,19 @@ function setProtectedRegion(target: AABB3, voxels: Voxel[] | undefined): void
     protectedRegion = protectedNeighborhood;
 }
 
-// Outside the room counts as open.
-function blockIsSolid(voxels: Voxel[] | undefined,
-    row: number, col: number, collisionLayer: number): boolean
+// Whether a point lies inside a block of the room. Outside the room counts as open.
+function pointIsInBlock(voxels: Voxel[] | undefined, x: number, y: number, z: number): boolean
 {
+    const collisionLayer = VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(y);
     if (voxels == undefined ||
         collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
         return false;
 
+    const row = VoxelQueryUtil.getVoxelRowFromWorldZ(z);
+    const col = VoxelQueryUtil.getVoxelColFromWorldX(x);
     const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);
-    return voxel != undefined && VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer);
+    return voxel != undefined && VoxelBlockShapeUtil.containsPoint(
+        VoxelQueryUtil.getVoxelBlockShape(voxel, collisionLayer), x - col, z - row);
 }
 
 // Per-type OrbitOccluder declaration; object-less geometry is never hidden.
@@ -373,16 +376,15 @@ function collectQuadIndicesInTheWayOfVoxel(voxel: Voxel, row: number, col: numbe
     // A blocking block hides all its faces, for a clean opening.
     for (let collisionLayer = COLLISION_LAYER_MIN; collisionLayer <= COLLISION_LAYER_MAX; ++collisionLayer)
     {
-        if (!VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer))
+        const shape = VoxelQueryUtil.getVoxelBlockShape(voxel, collisionLayer);
+        if (shape == VOXEL_BLOCK_SHAPE_EMPTY)
             continue;
 
-        blockBoxTemp.center.x = col + 0.5;
-        blockBoxTemp.center.y = VoxelQueryUtil.getWorldYAtVoxelCollisionLayerCenter(collisionLayer);
-        blockBoxTemp.center.z = row + 0.5;
+        const blockBox = VoxelQueryUtil.getVoxelBlockBox(row, col, collisionLayer, shape);
         // Part of what the orbit is looking at, rather than something in its way.
-        if (Geometry3DUtil.AABBsOverlap(protectedRegion, blockBoxTemp))
+        if (Geometry3DUtil.AABBsOverlap(protectedRegion, blockBox))
             continue;
-        if (!boxIsInTheWay(blockBoxTemp))
+        if (!boxIsInTheWay(blockBox))
             continue;
 
         const firstQuadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, collisionLayer);
@@ -509,17 +511,17 @@ function placeSampleOnTarget(sample: THREE.Vector3, voxels: Voxel[] | undefined)
 // unprotected wall still counts, since clearing that wall is the point.
 function faceIsExposed(sample: THREE.Vector3, faceNormal: Vec3, voxels: Voxel[] | undefined): boolean
 {
-    const col = VoxelQueryUtil.getVoxelColFromWorldX(sample.x + faceNormal.x * exposureProbeDist);
-    const row = VoxelQueryUtil.getVoxelRowFromWorldZ(sample.z + faceNormal.z * exposureProbeDist);
-    const collisionLayer = VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(
-        sample.y + faceNormal.y * exposureProbeDist);
-    if (!blockIsSolid(voxels, row, col, collisionLayer))
+    const x = sample.x + faceNormal.x * exposureProbeDist;
+    const y = sample.y + faceNormal.y * exposureProbeDist;
+    const z = sample.z + faceNormal.z * exposureProbeDist;
+    if (voxels == undefined || !pointIsInBlock(voxels, x, y, z))
         return true;
 
-    blockBoxTemp.center.x = col + 0.5;
-    blockBoxTemp.center.y = VoxelQueryUtil.getWorldYAtVoxelCollisionLayerCenter(collisionLayer);
-    blockBoxTemp.center.z = row + 0.5;
-    return !Geometry3DUtil.AABBsOverlap(protectedRegion, blockBoxTemp);
+    const row = VoxelQueryUtil.getVoxelRowFromWorldZ(z);
+    const col = VoxelQueryUtil.getVoxelColFromWorldX(x);
+    const collisionLayer = VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(y);
+    return !Geometry3DUtil.AABBsOverlap(protectedRegion, VoxelQueryUtil.getVoxelBlockBox(row, col, collisionLayer,
+        VoxelQueryUtil.getVoxelBlockShapeAt(voxels, row, col, collisionLayer)));
 }
 
 // Half-width of the target along a camera axis (world-axis half-sizes would over-aim at edge-on

@@ -220,6 +220,126 @@ describe("where an attached object may go", () => {
     });
 });
 
+describe("what a shrunk block holds", () => {
+    beforeEach(() => {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        vi.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    // Sub-blocks by bit: (x half, z half) = (0, 0), (1, 0), (0, 1), (1, 1).
+    const LOW_X_HALF = 0b0101, HIGH_X_HALF = 0b1010, LOW_Z_HALF = 0b0011, HIGH_Z_HALF = 0b1100;
+    const HALF_CANVAS = {x: 0.5, y: 0.5, z: 1}; // half a cell across, one layer tall
+    const BLOCK_MIDDLE_Y = BLOCK_BOTTOM_Y + 0.5 * COLLISION_LAYER_HEIGHT;
+    const PLUS_X: Vec3 = {x: 1, y: 0, z: 0}, MINUS_X: Vec3 = {x: -1, y: 0, z: 0}, PLUS_Z: Vec3 = {x: 0, y: 0, z: 1};
+
+    function setShape(room: Room, block: {row: number, col: number, layer: number}, shape: number): void
+    {
+        room.voxelGrid.quadsMem.blockShapes[
+            VoxelQueryUtil.getVoxelBlockIndex(block.row, block.col, block.layer)] = shape;
+    }
+
+    it("is what lies on a face of it, the face across the middle of its cell among them", async () => {
+        await inTheRoom((user, room) => {
+            setShape(room, BLOCK, LOW_X_HALF); // filling x from the cell's side to its middle
+            const innerFaceX = BLOCK.col + 0.5;
+            const onInnerFace = {x: innerFaceX, y: BLOCK_MIDDLE_Y, z: BLOCK.row + 0.25};
+
+            // Hung on the inner face, looking out over the half that was cut away.
+            expect(fits(room, canvasTypeIndex, onInnerFace, PLUS_X, HALF_CANVAS)).toBe(true);
+            expect(ObjectUpdateUtil.canAddObject(user, room, attachment(user, room, canvasTypeIndex, "inner",
+                onInnerFace, PLUS_X, HALF_CANVAS))).toBe(true);
+            // Not on the same plane looking the other way, with open air behind it...
+            expect(fits(room, canvasTypeIndex, onInnerFace, MINUS_X, HALF_CANVAS)).toBe(false);
+            // ...nor on the cell's side, where the block's face was before it shrank.
+            expect(fits(room, canvasTypeIndex, {...onInnerFace, x: BLOCK.col + 1}, PLUS_X, HALF_CANVAS)).toBe(false);
+            // Its other side face is where it always was.
+            expect(fits(room, canvasTypeIndex, {...onInnerFace, x: BLOCK.col}, MINUS_X, HALF_CANVAS)).toBe(true);
+        });
+    });
+
+    it("is nothing that reaches past the part of the cell it fills", async () => {
+        await inTheRoom((user, room) => {
+            setShape(room, BLOCK, LOW_X_HALF);
+            const onEnd = (x: number) => ({x: BLOCK.col + x, y: BLOCK_MIDDLE_Y, z: BLOCK.row + 1});
+            const onTop = (x: number) => ({x: BLOCK.col + x, y: BLOCK_TOP_Y, z: BLOCK.row + 0.25});
+
+            // Its end, now half a cell wide: over the half it fills, not beside it, nor astride the two.
+            expect(fits(room, canvasTypeIndex, onEnd(0.25), PLUS_Z, HALF_CANVAS)).toBe(true);
+            expect(fits(room, canvasTypeIndex, onEnd(0.75), PLUS_Z, HALF_CANVAS)).toBe(false);
+            expect(fits(room, canvasTypeIndex, onEnd(0.5), PLUS_Z, HALF_CANVAS)).toBe(false);
+            expect(fits(room, canvasTypeIndex, onEnd(0.5), PLUS_Z, {x: 1, y: 0.5, z: 1})).toBe(false);
+
+            // Its top, likewise.
+            expect(fits(room, canvasTypeIndex, onTop(0.25), UP, HALF_CANVAS)).toBe(true);
+            expect(fits(room, canvasTypeIndex, onTop(0.75), UP, HALF_CANVAS)).toBe(false);
+            expect(fits(room, canvasTypeIndex, onTop(0.5), UP, HALF_CANVAS)).toBe(false);
+        });
+    });
+
+    it("is found again by the block, and counted against the face it lies on", async () => {
+        await inTheRoom((user, room) => {
+            setShape(room, BLOCK, LOW_X_HALF);
+            const blockQuad = (axis: "x" | "z", orientation: "-" | "+") =>
+                VoxelQueryUtil.getVoxelQuadIndex(BLOCK.row, BLOCK.col, axis, orientation, BLOCK.layer);
+
+            expect(ObjectUpdateUtil.addObject(user, room, attachment(user, room, canvasTypeIndex, "inner",
+                {x: BLOCK.col + 0.5, y: BLOCK_MIDDLE_Y, z: BLOCK.row + 0.25}, PLUS_X, HALF_CANVAS))).toBe(true);
+            expect(ObjectUpdateUtil.addObject(user, room, attachment(user, room, canvasTypeIndex, "end",
+                {x: BLOCK.col + 0.25, y: BLOCK_MIDDLE_Y, z: BLOCK.row + 1}, PLUS_Z, HALF_CANVAS))).toBe(true);
+
+            expect(ObjectAttachmentUtil.getObjectIdsAttachedToVoxelBlock(room, blockQuad("x", "+")).sort())
+                .toEqual(["end", "inner"]);
+            // The inner face is a cell long, the end half a cell: one canvas covers half of the first, all of the second.
+            expect(ObjectAttachmentUtil.getVoxelQuadCoverage(room, blockQuad("x", "+"))).toBe(0.5);
+            expect(ObjectAttachmentUtil.getVoxelQuadCoverage(room, blockQuad("z", "+"))).toBe(1);
+            expect(ObjectAttachmentUtil.getVoxelQuadCoverage(room, blockQuad("x", "-"))).toBe(0);
+        });
+    });
+
+    it("can be asked of a block as if it had another shape, without giving it one", async () => {
+        await inTheRoom((user, room) => {
+            const onSide = new ObjectTransform({x: BLOCK.col + 1, y: BLOCK_MIDDLE_Y, z: BLOCK.row + 0.25},
+                PLUS_X, HALF_CANVAS);
+            const as = (shape: number) => ({row: BLOCK.row, col: BLOCK.col, collisionLayer: BLOCK.layer, shape});
+
+            expect(ObjectAttachmentUtil.canPlaceObject(room, "canvas", canvasTypeIndex, onSide)).toBe(true);
+            // Shrunk away from that side it would be left in the air; shrunk toward it, it would not.
+            expect(ObjectAttachmentUtil.canPlaceObject(room, "canvas", canvasTypeIndex, onSide, as(LOW_X_HALF))).toBe(false);
+            expect(ObjectAttachmentUtil.canPlaceObject(room, "canvas", canvasTypeIndex, onSide, as(HIGH_X_HALF))).toBe(true);
+            expect(ObjectAttachmentUtil.canPlaceObject(room, "canvas", canvasTypeIndex, onSide, as(0))).toBe(false);
+            expect(VoxelQueryUtil.isVoxelBlockWholeAt(room.voxelGrid.voxels, BLOCK.row, BLOCK.col, BLOCK.layer)).toBe(true);
+        });
+    });
+
+    it("is never a door, which needs whole blocks behind it on the side of their cells", async () => {
+        await inTheRoom((user, room) => {
+            const doorSize = ObjectScaleUtil.getObjectSize(doorTypeIndex, UNIT_VEC3);
+            const DOOR_COL = 9;
+            const doorAt = (z: number) => ({x: DOOR_COL + 0.5 * doorSize.x, y: 0.5 * doorSize.y, z});
+            const numDoorCols = Math.ceil(doorSize.x);
+            const shrinkWallBehindDoor = (shape: number) => {
+                for (let col = DOOR_COL; col < DOOR_COL + numDoorCols; ++col)
+                {
+                    for (let layer = 0; layer < WALL_LAYERS; ++layer)
+                        setShape(room, {row: WALL_ROW, col, layer}, shape);
+                }
+            };
+            expect(fits(room, doorTypeIndex, doorAt(WALL_ROW), FACING)).toBe(true);
+
+            // The wall thinned from behind still lies against the door's plane, and holds a canvas there; not a door.
+            shrinkWallBehindDoor(LOW_Z_HALF);
+            expect(fits(room, canvasTypeIndex, {x: DOOR_COL + 0.5, y: 1, z: WALL_ROW}, FACING)).toBe(true);
+            expect(fits(room, doorTypeIndex, doorAt(WALL_ROW), FACING)).toBe(false);
+
+            // Thinned from in front, its face is across the middle of its cells: a canvas hangs there, a door nowhere.
+            shrinkWallBehindDoor(HIGH_Z_HALF);
+            expect(fits(room, canvasTypeIndex, {x: DOOR_COL + 0.5, y: 1, z: WALL_ROW + 0.5}, FACING)).toBe(true);
+            expect(fits(room, doorTypeIndex, doorAt(WALL_ROW + 0.5), FACING)).toBe(false);
+            expect(fits(room, doorTypeIndex, doorAt(WALL_ROW), FACING)).toBe(false);
+        });
+    });
+});
+
 describe("how much of a face attached objects cover", () => {
     beforeEach(() => {
         vi.spyOn(console, "error").mockImplementation(() => {});

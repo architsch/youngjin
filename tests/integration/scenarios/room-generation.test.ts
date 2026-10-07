@@ -26,7 +26,8 @@ import {
     HUB_ROOM_ID_KEYWORD,
     INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
     NUM_COLLISION_LAYERS_PER_STOREY, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, NUM_VOXEL_TEXTURES,
-    STOREY_FLOOR_COLLISION_LAYER, UNIT_VEC3,
+    SANDBOX_SINGLE_PLAYER_MODE, STOREY_FLOOR_COLLISION_LAYER, TUTORIAL_SINGLE_PLAYER_MODE, UNIT_VEC3,
+    VOXEL_BLOCK_SHAPE_EMPTY, VOXEL_BLOCK_SHAPE_WHOLE,
 } from "../../../src/shared/system/sharedConstants";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 
@@ -39,7 +40,7 @@ const PLAYER_LAYER_MASK = 0b00011111;
 function isWalkable(voxelGrid: VoxelGrid, row: number, col: number): boolean
 {
     const voxel = VoxelQueryUtil.getVoxel(voxelGrid.voxels, row, col);
-    return !!voxel && (voxel.collisionLayerMask & PLAYER_LAYER_MASK) == 0;
+    return !!voxel && (VoxelQueryUtil.getVoxelBlockLayerMask(voxel) & PLAYER_LAYER_MASK) == 0;
 }
 
 const DOOR_OBJECT_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Door");
@@ -81,7 +82,7 @@ function texturesUsedIn(voxelGrid: VoxelGrid): Set<number>
     const quads = voxelGrid.quadsMem.quads;
     for (let i = 0; i < quads.length; ++i)
     {
-        if ((quads[i] & 0b10000000) != 0)
+        if (VoxelQueryUtil.isVoxelQuadVisible(voxelGrid.voxels, i))
             used.add(quads[i] & 0b01111111);
     }
     return used;
@@ -113,7 +114,7 @@ function layerIsSolid(voxelGrid: VoxelGrid, row: number, col: number, layer: num
     const voxel = VoxelQueryUtil.getVoxel(voxelGrid.voxels, row, col);
     if (!voxel)
         return true; // outside the room, which is as solid as anything gets
-    return VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, layer);
+    return VoxelQueryUtil.isVoxelBlockPresent(voxel, layer);
 }
 
 /** Whether a player standing on top of the given layer of this cell fits, and has ground under him. */
@@ -473,6 +474,31 @@ describe("every generated multiplayer room", () => {
                     }
                 }
             }
+        }
+    });
+
+    it("builds in whole blocks only", () => {
+        // A block's shape is a judgement about one particular piece of building, which nothing a generator
+        // knows stands in for (see room_generation.md): generated rooms leave shrinking blocks to whoever
+        // furnishes them. The single-player rooms, built from their mode's own layout, are no different.
+        const generated: {name: string, voxelGrid: VoxelGrid}[] = [];
+        for (const {name, roomType} of MULTIPLAYER_ROOM_TYPES)
+        {
+            for (const seed of SEEDS)
+                generated.push({name: `${name} seed ${seed}`, voxelGrid: generateFromSeed(seed, roomType).voxelGrid});
+        }
+        for (const mode of [TUTORIAL_SINGLE_PLAYER_MODE, SANDBOX_SINGLE_PLAYER_MODE])
+        {
+            generated.push({name: mode,
+                voxelGrid: RoomGenerationUtil.generateRoom(mode, RoomTypeEnumMap.SinglePlayer).voxelGrid});
+        }
+
+        for (const {name, voxelGrid} of generated)
+        {
+            // (The sandbox is a bare floor, with no block in it at all.)
+            const shrunk = [...new Set(voxelGrid.quadsMem.blockShapes)]
+                .filter(shape => shape != VOXEL_BLOCK_SHAPE_EMPTY && shape != VOXEL_BLOCK_SHAPE_WHOLE);
+            expect(shrunk, name).toEqual([]);
         }
     });
 

@@ -46,7 +46,7 @@ export default class RoomPropPlacer
 
                     // Requires the area's own floor under the stack (nothing floats).
                     const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);
-                    if (!voxel || !VoxelQueryUtil.isVoxelCollisionLayerOccupied(
+                    if (!voxel || !VoxelQueryUtil.isVoxelBlockWhole(
                         voxel, area.collisionLayerMin - 1))
                     {
                         continue;

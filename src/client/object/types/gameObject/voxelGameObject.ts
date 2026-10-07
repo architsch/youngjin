@@ -8,6 +8,8 @@ import VoxelQuadChange from "../../../../shared/voxel/types/voxelQuadChange";
 import App from "../../../app";
 import InstancedTexturePackMaterialParams from "../../../../shared/graphics/material/types/instancedTexturePackMaterialParams";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
+import VoxelQuadTransformDimensions from "../../../../shared/voxel/types/voxelQuadTransformDimensions";
+import Geometry3DUtil from "../../../../shared/math/util/geometry3DUtil";
 import ClientVoxelQueryUtil from "../../../voxel/util/clientVoxelQueryUtil";
 import VoxelQuadInstanceUtil from "../../../voxel/util/voxelQuadInstanceUtil";
 import { NUM_VOXEL_QUADS_PER_VOXEL, MAX_VISIBLE_VOXEL_QUADS_PER_ROOM, VOXEL_TEXTURE_PACK_MATERIAL_ID, VOXEL_QUAD_GEOMETRY_ID,
@@ -30,6 +32,8 @@ export default class VoxelGameObject extends GameObject
     static materialParams: InstancedTexturePackMaterialParams | undefined; // Caching mechanism to minimize computational burden (by preventing repetitive initialization of params)
 
     private voxel: Voxel | undefined;
+    // The grid the voxel stands in, whose blocks decide which of its quads are drawn.
+    private voxels: Voxel[] | undefined;
 
     // How much of a texture's cell, all round, is no part of what tiles: none of a pack's own (see
     // PROCEDURAL_VOXEL_TEXTURE_MARGIN). Whatever shows the texture leaves it out.
@@ -102,9 +106,10 @@ export default class VoxelGameObject extends GameObject
         return this.voxel;
     }
 
-    setVoxel(voxel: Voxel): void
+    setVoxel(voxel: Voxel, voxels: Voxel[]): void
     {
         this.voxel = voxel;
+        this.voxels = voxels;
         voxel.setGameObjectId(this.params.objectId);
     }
 
@@ -141,11 +146,10 @@ export default class VoxelGameObject extends GameObject
     // Rents an instance for a newly visible quad, returns it for a hidden one, or keeps it.
     updateVoxelQuadInstance(quadIndex: number)
     {
-        if (this.voxel == undefined)
+        if (this.voxel == undefined || this.voxels == undefined)
             throw new Error(`Voxel hasn't been defined yet.`);
 
-        const quad = this.voxel.quadsMem.quads[quadIndex];
-        if ((quad & 0b10000000) == 0) // The quad is not drawn, so it holds nothing to draw it with.
+        if (!VoxelQueryUtil.isVoxelQuadVisible(this.voxels, quadIndex)) // The quad is not drawn, so it holds nothing to draw it with.
         {
             this.releaseVoxelQuadInstance(quadIndex);
             return;
@@ -162,10 +166,11 @@ export default class VoxelGameObject extends GameObject
             VoxelQuadInstanceUtil.bind(quadIndex, instanceId);
         }
 
-        const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ } = VoxelQueryUtil.getVoxelQuadTransformDimensions(this.voxel, quadIndex);
+        const dims = VoxelQueryUtil.getVoxelQuadTransformDimensions(this.voxels, quadIndex, true);
+        const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ } = dims;
         this.instancedMeshGraphics.updateInstanceTransform(instancedMeshId, instanceId,
             offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ);
-        this.updateTextureUV(quadIndex, instanceId, quad, scaleX, scaleY);
+        this.updateTextureUV(quadIndex, instanceId, this.voxel.quadsMem.quads[quadIndex], dims);
         // Set on every update: a recycled instance may still carry another quad's outline.
         InstancedMeshGraphics.setInstanceOutline(instancedMeshId, instanceId,
             RestrictedZoneOutlineUtil.getOutlineStrength(quadIndex));
@@ -190,13 +195,19 @@ export default class VoxelGameObject extends GameObject
     }
 
     private updateTextureUV(quadIndex: number, instanceId: number, quad: number,
-        scaleX: number, scaleY: number)
+        dims: VoxelQuadTransformDimensions)
     {
-        const v = this.voxel!;
-        const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+        const { scaleX, scaleY } = dims;
 
-        const sampleOffsetX = (scaleX < 1) ? (((v.row + v.col) % 2) * scaleX) : 0; // [0,1]
-        const sampleOffsetY = (scaleY < 1 && collisionLayer % 2 == 0) ? scaleY : 0; // [0,1]
+        // The quad shows the part of the tile it lies over, so the faces of shrunk blocks side by side make
+        // up one tile between them: across, from where it starts in its cell along its own right. Up a wall,
+        // a layer shows half a tile, the halves alternating so two layers show the whole; a floor or
+        // ceiling goes by where it starts along its own up.
+        const {right, up} = Geometry3DUtil.getAxisFacingBasis({x: dims.dirX, y: dims.dirY, z: dims.dirZ});
+        const sampleOffsetX = 0.5 + dims.offsetX * right.x + dims.offsetZ * right.z - 0.5 * scaleX; // [0,1]
+        const sampleOffsetY = (VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex) == "y")
+            ? 0.5 + dims.offsetX * up.x + dims.offsetZ * up.z - 0.5 * scaleY
+            : ((VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex) % 2 == 0) ? scaleY : 0); // [0,1]
 
         // What tiles of the texture's cell: all of a pack's own, and what is inside a procedural one's margin
         // (see PROCEDURAL_VOXEL_TEXTURE_MARGIN). The quad shows its share of that, in whole texels.

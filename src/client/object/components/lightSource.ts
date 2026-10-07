@@ -5,15 +5,16 @@ import LampLightUtil from "../../../shared/graphics/light/util/lampLightUtil";
 import Geometry3DUtil from "../../../shared/math/util/geometry3DUtil";
 import LampObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/lampObjectTypeConfig";
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
-import { COLLISION_LAYER_HEIGHT, LIGHT_COLOR_PALETTE_NAME } from "../../../shared/system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, LIGHT_COLOR_PALETTE_NAME, VOXEL_SUB_BLOCK_SIZE }
+    from "../../../shared/system/sharedConstants";
 import GraphicsManager from "../../graphics/graphicsManager";
 import GameObjectComponent from "./gameObjectComponent";
 
 const colorTemp = new THREE.Color();
 
 // Registers an object's light with the light block map (data, not a THREE light; see LightBlockMap).
-// The light is placed in the block in front of the object: an attached object's origin sits on its face,
-// and propagation from a solid block lights nothing.
+// The light is placed in front of the object: an attached object's origin sits on its face, and
+// propagation from inside a block lights nothing.
 export default class LightSource extends GameObjectComponent
 {
     async onSpawn(): Promise<void>
@@ -39,7 +40,7 @@ export default class LightSource extends GameObjectComponent
     {
         const {pos, dir} = this.gameObject.params.transform;
         GraphicsManager.getLightBlockMap().setLightSourcePosition(
-            this.gameObject.params.objectId, getLightWorldPos(pos, dir));
+            this.gameObject.params.objectId, getLightWorldPos(pos, dir), getLightOutletPos(pos, dir));
     }
 
     private registerLight()
@@ -55,6 +56,7 @@ export default class LightSource extends GameObjectComponent
 
         GraphicsManager.getLightBlockMap().addLightSource(obj.objectId, {
             worldPos: getLightWorldPos(obj.transform.pos, obj.transform.dir),
+            outletPos: getLightOutletPos(obj.transform.pos, obj.transform.dir),
             colorR: colorTemp.r * intensity,
             colorG: colorTemp.g * intensity,
             colorB: colorTemp.b * intensity,
@@ -65,14 +67,26 @@ export default class LightSource extends GameObjectComponent
 
 }
 
-// Half a block out along the facing, which is the centre of the block in front of a face: a cell is one
-// unit across but only one layer tall.
+// Where the light is measured from: the middle of the cell layer that a face on its cell's side looks into,
+// so half a cell out from a wall but half a layer from a floor or a ceiling. Lamp ranges are tuned to it.
 function getLightWorldPos(pos: Vec3, dir: Vec3): Vec3
+{
+    return getPosInFront(pos, dir, 0.5, 0.5 * COLLISION_LAYER_HEIGHT);
+}
+
+// Where the light comes out: the middle of the sub-blocks right in front of the face, whichever face it
+// is (a shrunk block's across the middle of its cell included).
+function getLightOutletPos(pos: Vec3, dir: Vec3): Vec3
+{
+    return getPosInFront(pos, dir, 0.5 * VOXEL_SUB_BLOCK_SIZE, 0.5 * VOXEL_SUB_BLOCK_SIZE);
+}
+
+function getPosInFront(pos: Vec3, dir: Vec3, reachAlongXZ: number, reachAlongY: number): Vec3
 {
     const {normal} = Geometry3DUtil.getAxisFacingBasis(dir);
     return {
-        x: pos.x + 0.5 * normal.x,
-        y: pos.y + 0.5 * COLLISION_LAYER_HEIGHT * normal.y,
-        z: pos.z + 0.5 * normal.z,
+        x: pos.x + reachAlongXZ * normal.x,
+        y: pos.y + reachAlongY * normal.y,
+        z: pos.z + reachAlongXZ * normal.z,
     };
 }

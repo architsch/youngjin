@@ -1,6 +1,9 @@
-import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y, NUM_COLLISION_LAYERS, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_ROOM, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, COLLISION_LAYER_NULL } from "../../system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y, NUM_COLLISION_LAYERS, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, NUM_VOXEL_SUB_COLS, NUM_VOXEL_QUADS_PER_VOXEL, NUM_VOXEL_QUADS_PER_ROOM, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, COLLISION_LAYER_NULL, VOXEL_BLOCK_SHAPE_EMPTY, VOXEL_BLOCK_SHAPE_WHOLE } from "../../system/sharedConstants";
 import Voxel from "../types/voxel";
 import VoxelQuadTransformDimensions from "../types/voxelQuadTransformDimensions";
+import VoxelBlockAddTarget from "../types/voxelBlockAddTarget";
+import VoxelBlockShapeUtil from "./voxelBlockShapeUtil";
+import AABB3 from "../../math/types/aabb3";
 import Vec3 from "../../math/types/vec3";
 
 const VoxelQueryUtil =
@@ -37,28 +40,87 @@ const VoxelQueryUtil =
         return (collisionLayer + 0.5) * COLLISION_LAYER_HEIGHT;
     },
 
-    // Physics
+    // Voxel blocks: one layer of one voxel, holding a block of some shape or none (see
+    // VoxelBlockShapeUtil). A block is asked about in one of three ways: whether there is one, whether it
+    // is a whole one, or whether a given point lies inside it. Beyond the layer range and outside the
+    // grid lies solid rock, which counts as whole blocks, so grid walks stop at the floor, ceiling and
+    // boundary.
 
-    isVoxelCollisionLayerOccupied(voxel: Voxel, collisionLayer: number): boolean
+    getVoxelBlockShape(voxel: Voxel, collisionLayer: number): number
     {
         if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
-            return true;
-        return (voxel.collisionLayerMask & (1 << collisionLayer)) != 0;
+            return VOXEL_BLOCK_SHAPE_WHOLE;
+        return voxel.quadsMem.blockShapes[
+            VoxelQueryUtil.getVoxelBlockIndex(voxel.row, voxel.col, collisionLayer)];
     },
 
-    // Returns COLLISION_LAYER_NULL if no layer is occupied
-    getHighestOccupiedVoxelCollisionLayer(voxel: Voxel): number
+    getVoxelBlockShapeAt(voxels: Voxel[], row: number, col: number, collisionLayer: number): number
     {
-        for (let layer = COLLISION_LAYER_MAX; layer >= COLLISION_LAYER_MIN; --layer)
-        {
-            if ((voxel.collisionLayerMask & (1 << layer)) != 0)
-                return layer;
-        }
-        return COLLISION_LAYER_NULL;
+        const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);
+        if (voxel == undefined)
+            return VOXEL_BLOCK_SHAPE_WHOLE;
+        return VoxelQueryUtil.getVoxelBlockShape(voxel, collisionLayer);
     },
 
-    // Voxel blocks: one layer of one voxel. Index order is layer fastest, then column, then row, so a
-    // voxel's layers are contiguous.
+    isVoxelBlockPresent(voxel: Voxel, collisionLayer: number): boolean
+    {
+        return VoxelQueryUtil.getVoxelBlockShape(voxel, collisionLayer) != VOXEL_BLOCK_SHAPE_EMPTY;
+    },
+
+    isVoxelBlockPresentAt(voxels: Voxel[], row: number, col: number, collisionLayer: number): boolean
+    {
+        return VoxelQueryUtil.getVoxelBlockShapeAt(voxels, row, col, collisionLayer) != VOXEL_BLOCK_SHAPE_EMPTY;
+    },
+
+    isVoxelBlockWhole(voxel: Voxel, collisionLayer: number): boolean
+    {
+        return VoxelQueryUtil.getVoxelBlockShape(voxel, collisionLayer) == VOXEL_BLOCK_SHAPE_WHOLE;
+    },
+
+    isVoxelBlockWholeAt(voxels: Voxel[], row: number, col: number, collisionLayer: number): boolean
+    {
+        return VoxelQueryUtil.getVoxelBlockShapeAt(voxels, row, col, collisionLayer) == VOXEL_BLOCK_SHAPE_WHOLE;
+    },
+
+    isPointInVoxelBlock(voxels: Voxel[], point: Vec3): boolean
+    {
+        const row = VoxelQueryUtil.getVoxelRowFromWorldZ(point.z);
+        const col = VoxelQueryUtil.getVoxelColFromWorldX(point.x);
+        return VoxelBlockShapeUtil.containsPoint(VoxelQueryUtil.getVoxelBlockShapeAt(voxels, row, col,
+            VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(point.y)), point.x - col, point.z - row);
+    },
+
+    // The layers of a voxel that hold a block, one bit each from the lowest layer up.
+    getVoxelBlockLayerMask(voxel: Voxel): number
+    {
+        let mask = 0;
+        for (let layer = COLLISION_LAYER_MIN; layer <= COLLISION_LAYER_MAX; ++layer)
+        {
+            if (VoxelQueryUtil.isVoxelBlockPresent(voxel, layer))
+                mask |= (1 << layer);
+        }
+        return mask;
+    },
+
+    // The box in the world of a block of the given shape; the empty shape's is its whole cell layer.
+    getVoxelBlockBox(row: number, col: number, collisionLayer: number, shape: number): AABB3
+    {
+        const bounds = VoxelBlockShapeUtil.getBounds(shape);
+        return {
+            center: {
+                x: col + 0.5 * (bounds.minX + bounds.maxX),
+                y: VoxelQueryUtil.getWorldYAtVoxelCollisionLayerCenter(collisionLayer),
+                z: row + 0.5 * (bounds.minZ + bounds.maxZ),
+            },
+            halfSize: {
+                x: 0.5 * (bounds.maxX - bounds.minX),
+                y: 0.5 * COLLISION_LAYER_HEIGHT,
+                z: 0.5 * (bounds.maxZ - bounds.minZ),
+            },
+        };
+    },
+
+    // Index order is layer fastest, then column, then row, so a voxel's layers are contiguous.
 
     getVoxelBlockIndex(row: number, col: number, collisionLayer: number): number
     {
@@ -87,17 +149,16 @@ const VoxelQueryUtil =
             collisionLayer >= COLLISION_LAYER_MIN && collisionLayer <= COLLISION_LAYER_MAX;
     },
 
-    // Out-of-grid blocks count as occupied, so grid walks stop at the floor, ceiling and boundary.
-    isVoxelBlockOccupied(voxels: Voxel[], row: number, col: number, collisionLayer: number): boolean
+    // Sub-blocks (see NUM_VOXEL_SUB_BLOCKS) are indexed in the same order, by their half cell along z and x:
+    // a block's sub-block for bit b of its shape is at twice its row plus b >> 1, twice its column plus b & 1.
+    getVoxelSubBlockIndex(subRow: number, subCol: number, collisionLayer: number): number
     {
-        const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);
-        if (voxel == undefined)
-            return true;
-        return VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer);
+        return (subRow * NUM_VOXEL_SUB_COLS + subCol) * NUM_COLLISION_LAYERS + collisionLayer;
     },
 
-    // How far from origin, along an axis direction, the first occupied block begins: 0 if origin is inside
-    // one, Infinity if none begins within maxDistance. A grid walk, one block at a time.
+    // How far from origin, along an axis direction, the first cell layer holding a block begins: 0 if
+    // origin is inside one, Infinity if none begins within maxDistance. A grid walk, one cell layer at a
+    // time, so a shrunk block counts as its whole cell layer.
     getDistanceToOccupiedBlock(voxels: Voxel[], origin: Vec3, axisDir: Vec3, maxDistance: number): number
     {
         const axis: "x" | "y" | "z" = (axisDir.x != 0) ? "x" : (axisDir.y != 0) ? "y" : "z";
@@ -112,7 +173,7 @@ const VoxelQueryUtil =
             if (distance > maxDistance)
                 return Infinity;
             probe[axis] = (block + 0.5) * blockSize;
-            if (VoxelQueryUtil.isVoxelBlockOccupied(voxels, VoxelQueryUtil.getVoxelRowFromWorldZ(probe.z),
+            if (VoxelQueryUtil.isVoxelBlockPresentAt(voxels, VoxelQueryUtil.getVoxelRowFromWorldZ(probe.z),
                 VoxelQueryUtil.getVoxelColFromWorldX(probe.x), VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(probe.y)))
                 return distance;
         }
@@ -215,25 +276,94 @@ const VoxelQueryUtil =
         return voxelIndex % NUM_VOXEL_COLS;
     },
 
+    // Visibility
+
+    // Whether a quad is drawn, which is never stored: a block's face shows unless the block it looks at
+    // covers all of it (see VoxelBlockShapeUtil.showsFace). Out-of-grid blocks count as whole, so the
+    // room's outer shell is never drawn (it would hide the room from an orbit camera outside the walls),
+    // nor the tops of its caps.
+    isVoxelQuadVisible(voxels: Voxel[], quadIndex: number): boolean
+    {
+        const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
+        const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
+        const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
+        const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex);
+        const step = (orientation == "+") ? 1 : -1;
+
+        // The room's floor and ceiling are the faces of the solid beyond the layer range.
+        let collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+        if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
+            collisionLayer = (step > 0) ? COLLISION_LAYER_MIN - 1 : COLLISION_LAYER_MAX + 1;
+
+        const shape = VoxelQueryUtil.getVoxelBlockShapeAt(voxels, row, col, collisionLayer);
+        if (shape == VOXEL_BLOCK_SHAPE_EMPTY)
+            return false;
+        return VoxelBlockShapeUtil.showsFace(shape, VoxelQueryUtil.getVoxelBlockShapeAt(voxels,
+            row + ((facingAxis == "z") ? step : 0),
+            col + ((facingAxis == "x") ? step : 0),
+            collisionLayer + ((facingAxis == "y") ? step : 0)), facingAxis, orientation);
+    },
+
+    // What adding a block on a face comes to. On a face at its cell's side, and on the room's own floor
+    // or ceiling, a block goes into the cell layer beyond: as wide as the face, as deep as that cell. A
+    // face that stops short of its cell's side has its own block grown out to that side instead, since a
+    // cell layer holds one block. Undefined where there is no cell layer beyond.
+    getVoxelBlockAddTarget(voxels: Voxel[], quadIndex: number): VoxelBlockAddTarget | undefined
+    {
+        const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
+        const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
+        const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
+        const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex);
+        const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+        const isBlockFace = collisionLayer >= COLLISION_LAYER_MIN && collisionLayer <= COLLISION_LAYER_MAX;
+        const step = (orientation == "+") ? 1 : -1;
+
+        const faceShape = isBlockFace ? VoxelQueryUtil.getVoxelBlockShapeAt(voxels, row, col, collisionLayer)
+            : VOXEL_BLOCK_SHAPE_WHOLE;
+        const shape = VoxelBlockShapeUtil.stretchAlong(faceShape, facingAxis);
+        if (isBlockFace && VoxelBlockShapeUtil.getSideMask(faceShape, facingAxis, orientation) == 0)
+            return {quadIndex, shape, grows: true};
+
+        let newCollisionLayer = collisionLayer;
+        if (facingAxis == "y")
+            newCollisionLayer = isBlockFace ? collisionLayer + step
+                : ((orientation == "+") ? COLLISION_LAYER_MIN : COLLISION_LAYER_MAX);
+        if (newCollisionLayer < COLLISION_LAYER_MIN || newCollisionLayer > COLLISION_LAYER_MAX)
+            return undefined;
+
+        const targetQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(row + ((facingAxis == "z") ? step : 0),
+            col + ((facingAxis == "x") ? step : 0), facingAxis, orientation, newCollisionLayer);
+        return (targetQuadIndex < 0) ? undefined : {quadIndex: targetQuadIndex, shape, grows: false};
+    },
+
     // Get transform dimensions from properties
 
-    getVoxelQuadTransformDimensions(voxel: Voxel, quadIndex: number, ignoreVisibility: boolean = false): VoxelQuadTransformDimensions
+    // Where a quad lies and how large it is: its block's face, as the block's shape leaves it. scaleX and
+    // scaleY run along the face's right and up (see Geometry3DUtil.getAxisFacingBasis).
+    getVoxelQuadTransformDimensions(voxels: Voxel[], quadIndex: number, ignoreVisibility: boolean = false): VoxelQuadTransformDimensions
     {
-        const quad = voxel.quadsMem.quads[quadIndex];
-        if (!ignoreVisibility && (quad & 0b10000000) == 0) // quad is hidden
+        if (!ignoreVisibility && !VoxelQueryUtil.isVoxelQuadVisible(voxels, quadIndex)) // quad is hidden
             return { offsetX: 0, offsetY: -9999, offsetZ: 0, dirX: 0, dirY: -1, dirZ: 0, scaleX: 1, scaleY: 1, scaleZ: 1 };
 
         const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
         const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex);
         const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+        const isBlockFace = collisionLayer >= COLLISION_LAYER_MIN && collisionLayer <= COLLISION_LAYER_MAX;
 
-        let offsetX = 0, offsetY = 0, offsetZ = 0,
+        // The room's own floor and ceiling span their whole cell, as an empty layer's faces would.
+        const bounds = VoxelBlockShapeUtil.getBounds(!isBlockFace ? VOXEL_BLOCK_SHAPE_WHOLE
+            : VoxelQueryUtil.getVoxelBlockShapeAt(voxels,
+                VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex),
+                VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex), collisionLayer));
+        const sizeX = bounds.maxX - bounds.minX;
+        const sizeZ = bounds.maxZ - bounds.minZ;
+
+        // Offsets across the cell are from its middle.
+        let offsetX = 0.5 * (bounds.minX + bounds.maxX) - 0.5, offsetY = 0,
+            offsetZ = 0.5 * (bounds.minZ + bounds.maxZ) - 0.5,
             dirX = 0, dirY = 0, dirZ = 0, scaleX = 1, scaleY = COLLISION_LAYER_HEIGHT, scaleZ = 1;
 
-        if (facingAxis == "y")
-            scaleY = 1;
-
-        if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
+        if (!isBlockFace)
         {
             offsetY = (orientation == "+") ? 0 : MAX_ROOM_Y; // floor or ceiling
         }
@@ -251,16 +381,20 @@ const VoxelQueryUtil =
         switch (facingAxis)
         {
             case "x":
-                if (orientation == "+") { dirX = 1; dirY = 0; dirZ = 0; offsetX += 0.5; }
-                else { dirX = -1; dirY = 0; dirZ = 0; offsetX -= 0.5; }
+                if (orientation == "+") { dirX = 1; dirY = 0; dirZ = 0; offsetX = bounds.maxX - 0.5; }
+                else { dirX = -1; dirY = 0; dirZ = 0; offsetX = bounds.minX - 0.5; }
+                scaleX = sizeZ;
                 break;
             case "y":
                 if (orientation == "+") { dirX = 0; dirY = 1; dirZ = 0; }
                 else { dirX = 0; dirY = -1; dirZ = 0; }
+                scaleX = sizeX;
+                scaleY = sizeZ;
                 break;
             case "z":
-                if (orientation == "+") { dirX = 0; dirY = 0; dirZ = 1; offsetZ += 0.5; }
-                else { dirX = 0; dirY = 0; dirZ = -1; offsetZ -= 0.5; }
+                if (orientation == "+") { dirX = 0; dirY = 0; dirZ = 1; offsetZ = bounds.maxZ - 0.5; }
+                else { dirX = 0; dirY = 0; dirZ = -1; offsetZ = bounds.minZ - 0.5; }
+                scaleX = sizeX;
                 break;
             default:
                 throw new Error(`Unknown facingAxis (${facingAxis})`);

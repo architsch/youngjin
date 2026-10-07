@@ -151,8 +151,8 @@ describe("state persistence scenarios", () => {
 
         const roomMem = ServerRoomManager.roomRuntimeMemories["voxel-persist"];
         const voxel = VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 10, 10)!;
-        expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, 0)).toBe(true);
-        expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, 2)).toBe(true);
+        expect(VoxelQueryUtil.isVoxelBlockPresent(voxel, 0)).toBe(true);
+        expect(VoxelQueryUtil.isVoxelBlockPresent(voxel, 2)).toBe(true);
     });
 
     it("voxel blocks placed by one user are visible to newly joined user", async () => {
@@ -170,8 +170,8 @@ describe("state persistence scenarios", () => {
             assertions: () => {
                 const roomMem = ServerRoomManager.roomRuntimeMemories["voxel-vis"];
                 const v0 = VoxelQueryUtil.getVoxel(roomMem.room.voxelGrid.voxels, 15, 15)!;
-                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(v0, 0)).toBe(true);
-                expect(VoxelQueryUtil.isVoxelCollisionLayerOccupied(v0, 1)).toBe(true);
+                expect(VoxelQueryUtil.isVoxelBlockPresent(v0, 0)).toBe(true);
+                expect(VoxelQueryUtil.isVoxelBlockPresent(v0, 1)).toBe(true);
             },
         });
     });

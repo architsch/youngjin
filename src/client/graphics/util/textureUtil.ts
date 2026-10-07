@@ -1,9 +1,12 @@
 import * as THREE from "three";
 import TextureFactory from "../factories/textureFactory";
 import GraphicsManager from "../graphicsManager";
+import NumUtil from "../../../shared/math/util/numUtil";
+
+const texelsTemp = new Uint8Array(2 * 2 * 4);
 
 // Draws images or canvases onto dynamic textures (see TextureFactory.loadDynamicEmptyTexture) via one
-// shared quad pass. Regions are in texture coordinates (V up).
+// shared quad pass, and reads their opacity back. Regions are in texture coordinates (V up).
 const TextureUtil =
 {
     // Draws an image stretched over a region (its caller shaped the region; see TextureAtlasLayoutUtil); an
@@ -37,6 +40,27 @@ const TextureUtil =
     {
         drawSourceTexture(getCanvasTexture(canvas), renderTarget,
             targetU1, targetV1, targetU2, targetV2, 0, 0, 1, 1);
+    },
+    // The opacity (0 to 1) a linearly filtered sample of a dynamic texture has at a point, in texels from its
+    // bottom-left corner. Read back from the GPU, which waits for every draw issued before it: for a one-off
+    // question (a click), never per frame. Opaque where there is nothing to read (no alpha channel, or a
+    // read that fails, e.g. on a lost context).
+    readAlphaOnRenderTarget: (renderTarget: THREE.WebGLRenderTarget, texelX: number, texelY: number): number =>
+    {
+        if (renderTarget.texture.format !== THREE.RGBAFormat)
+            return 1;
+
+        // The four texels the filter blends, whose centres lie half a texel in from their corners.
+        const x0 = NumUtil.clampInRange(Math.floor(texelX - 0.5), 0, renderTarget.width - 2);
+        const y0 = NumUtil.clampInRange(Math.floor(texelY - 0.5), 0, renderTarget.height - 2);
+        const weightX = NumUtil.clampInRange(texelX - 0.5 - x0, 0, 1);
+        const weightY = NumUtil.clampInRange(texelY - 0.5 - y0, 0, 1);
+
+        texelsTemp.fill(255);
+        GraphicsManager.getGameRenderer().readRenderTargetPixels(renderTarget, x0, y0, 2, 2, texelsTemp);
+        const lower = texelsTemp[3] * (1 - weightX) + texelsTemp[7] * weightX;
+        const upper = texelsTemp[11] * (1 - weightX) + texelsTemp[15] * weightX;
+        return (lower * (1 - weightY) + upper * weightY) / 255;
     },
 }
 

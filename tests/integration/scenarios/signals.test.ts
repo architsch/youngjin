@@ -64,23 +64,52 @@ describe("signal emission scenarios", () => {
         });
     });
 
-    it("failed voxel operation sends rollback unicast to sender only", async () => {
+    it("a refused voxel operation is answered to its sender alone, with what the cell really holds", async () => {
+        const LOW_X_HALF = 0b0101;
+        const quadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(10, 10, 0);
         await runScenario({
-            name: "voxel rollback unicast",
+            name: "voxel refusal unicast",
             rooms: [hubRoom("rollback-hub")],
             users: usersInRoom(2, "rollback-hub"),
             actions: [
-                // Add a block, then try to add again at same position (should fail)
+                // A block goes up, then the same user tries to put another in its place (refused).
+                { type: "addVoxel", userIndex: 0, row: 10, col: 10, layer: 0, textures: [1, 2, 3, 4, 5, 6],
+                    shape: LOW_X_HALF },
                 { type: "addVoxel", userIndex: 0, row: 10, col: 10, layer: 0 },
-                { type: "addVoxel", userIndex: 0, row: 10, col: 10, layer: 0 }, // duplicate
             ],
             assertions: ({ users }) => {
-                // Sender should have received a rollback (removeVoxelBlockSignal)
-                const u0Rollback = getPendingSignals(users[0], "removeVoxelBlockSignal");
-                expect(u0Rollback.length).toBeGreaterThanOrEqual(1);
-                // Other user should NOT have received the rollback
-                const u1Rollback = getPendingSignals(users[1], "removeVoxelBlockSignal");
-                expect(u1Rollback.length).toBe(0);
+                // The sender is told of the block the server holds there, which their own copy is replaced
+                // by: an accepted edit is never echoed, so this is the answer to the refused one.
+                const answers = getPendingSignals(users[0], "addVoxelBlockSignal");
+                expect(answers.length).toBe(1);
+                expect(answers[0]).toMatchObject({quadIndex, shape: LOW_X_HALF,
+                    quadTextureIndicesWithinLayer: [1, 2, 3, 4, 5, 6]});
+                expect(getPendingSignals(users[0], "removeVoxelBlockSignal").length).toBe(0);
+
+                // The other user heard of the block once, and nothing of the refusal.
+                expect(getPendingSignals(users[1], "addVoxelBlockSignal").length).toBe(1);
+                expect(getPendingSignals(users[1], "removeVoxelBlockSignal").length).toBe(0);
+            },
+        });
+    });
+
+    it("a refused voxel operation on an empty cell is answered with its removal", async () => {
+        const quadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(10, 10, 0);
+        await runScenario({
+            name: "voxel refusal on an empty cell",
+            rooms: [hubRoom("rollback-hub")],
+            users: usersInRoom(2, "rollback-hub"),
+            actions: [
+                // Nothing stands there to reshape, move or take away.
+                { type: "reshapeVoxel", userIndex: 0, row: 10, col: 10, layer: 0, shape: 0b0101 },
+                { type: "removeVoxel", userIndex: 0, row: 10, col: 10, layer: 0 },
+            ],
+            assertions: ({ users }) => {
+                const answers = getPendingSignals(users[0], "removeVoxelBlockSignal");
+                expect(answers.map(answer => answer.quadIndex)).toEqual([quadIndex, quadIndex]);
+                expect(getPendingSignals(users[0], "addVoxelBlockSignal").length).toBe(0);
+                for (const signalType of ["removeVoxelBlockSignal", "addVoxelBlockSignal", "setVoxelBlockShapeSignal"])
+                    expect(getPendingSignals(users[1], signalType).length, signalType).toBe(0);
             },
         });
     });

@@ -37,6 +37,7 @@ import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, DIR_V
 import QuarterTurnsUtil from "../../../../../shared/object/util/quarterTurnsUtil";
 import PointerCoordUtil from "../../../../graphics/util/pointerCoordUtil";
 import AddVoxelBlockSignal from "../../../../../shared/voxel/types/update/addVoxelBlockSignal";
+import SetVoxelBlockShapeSignal from "../../../../../shared/voxel/types/update/setVoxelBlockShapeSignal";
 import ObjectIdUtil from "../../../../../shared/object/util/objectIdUtil";
 import { clientFeatureFlagsObservable, notificationMessageObservable, objectInstalledObservable,
     voxelQuadSelectionObservable } from "../../../../system/clientObservables";
@@ -218,8 +219,7 @@ function getPlaceableAttachedObjectTransform(selection: VoxelQuadSelection, obje
 function getClickedFace(selection: VoxelQuadSelection): {center: Vec3, dir: Vec3}
 {
     const voxel = selection.voxel;
-    const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ } =
-        VoxelQueryUtil.getVoxelQuadTransformDimensions(voxel, selection.quadIndex);
+    const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ } = selection.getTransformDimensions();
     return {
         center: {x: voxel.col + 0.5 + offsetX, y: offsetY, z: voxel.row + 0.5 + offsetZ},
         dir: {x: dirX, y: dirY, z: dirZ},
@@ -380,30 +380,13 @@ function canAddVoxelBlock(selection: VoxelQuadSelection): boolean
     if (!room)
         return false;
 
-    const voxel = selection.voxel;
-    const quadIndex = selection.quadIndex;
-    const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
-    const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex);
-    const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
-
-    let newRow = voxel.row;
-    let newCol = voxel.col;
-    if (facingAxis == "z")
-        newRow += (orientation == "+") ? 1 : -1;
-    else if (facingAxis == "x")
-        newCol += (orientation == "+") ? 1 : -1;
-
-    let newCollisionLayer = collisionLayer;
-    if (facingAxis == "y")
-    {
-        if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
-            newCollisionLayer = (orientation == "+") ? COLLISION_LAYER_MIN : COLLISION_LAYER_MAX;
-        else
-            newCollisionLayer += (orientation == "+") ? 1 : -1;
-    }
-
-    const targetQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(newRow, newCol, facingAxis, orientation, newCollisionLayer);
-    return VoxelUpdateUtil.canAddVoxelBlock(App.getUser(), room, targetQuadIndex);
+    // (See VoxelQueryUtil.getVoxelBlockAddTarget for what the button does on which face.)
+    const target = VoxelQueryUtil.getVoxelBlockAddTarget(room.voxelGrid.voxels, selection.quadIndex);
+    if (!target)
+        return false;
+    return target.grows
+        ? VoxelUpdateUtil.canSetVoxelBlockShape(App.getUser(), room, target.quadIndex, target.shape)
+        : VoxelUpdateUtil.canAddVoxelBlock(App.getUser(), room, target.quadIndex, target.shape);
 }
 
 function tryAddVoxelBlock(selection: VoxelQuadSelection)
@@ -412,43 +395,40 @@ function tryAddVoxelBlock(selection: VoxelQuadSelection)
         return;
 
     const room = App.getCurrentRoom()!;
-    const voxel = selection.voxel;
-    const quadIndex = selection.quadIndex;
-    const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
-    const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex);
-    const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+    const target = VoxelQueryUtil.getVoxelBlockAddTarget(room.voxelGrid.voxels, selection.quadIndex)!;
+    const isMultiPlayer = room.roomType != RoomTypeEnumMap.SinglePlayer;
 
-    let newRow = voxel.row;
-    let newCol = voxel.col;
-    if (facingAxis == "z")
-        newRow += (orientation == "+") ? 1 : -1;
-    else if (facingAxis == "x")
-        newCol += (orientation == "+") ? 1 : -1;
-
-    let newCollisionLayer = collisionLayer;
-    if (facingAxis == "y")
+    if (target.grows)
     {
-        if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
-            newCollisionLayer = (orientation == "+") ? COLLISION_LAYER_MIN : COLLISION_LAYER_MAX;
-        else
-            newCollisionLayer += (orientation == "+") ? 1 : -1;
+        if (!ClientVoxelManager.setVoxelBlockShape(room, target.quadIndex, target.shape))
+            return;
+        if (isMultiPlayer)
+            SocketsClient.emitSetVoxelBlockShapeSignal(new SetVoxelBlockShapeSignal(room.id, target.quadIndex, target.shape));
+    }
+    else
+    {
+        // A new block takes the textures of the one it is built from.
+        const quadTextureIndicesWithinLayer = new Array<number>(NUM_VOXEL_QUADS_PER_COLLISION_LAYER);
+        const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(selection.voxel.row, selection.voxel.col,
+            VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(selection.quadIndex));
+        for (let i = startIndex; i < startIndex + NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
+            quadTextureIndicesWithinLayer[i - startIndex] = App.getVoxelQuads()[i] & 0b01111111;
+
+        if (!ClientVoxelManager.addVoxelBlock(room, target.quadIndex, quadTextureIndicesWithinLayer, true, target.shape))
+            return;
+        if (isMultiPlayer)
+        {
+            SocketsClient.emitAddVoxelBlockSignal(new AddVoxelBlockSignal(room.id, target.quadIndex,
+                quadTextureIndicesWithinLayer, target.shape));
+        }
     }
 
-    const quadTextureIndicesWithinLayer = new Array<number>(NUM_VOXEL_QUADS_PER_COLLISION_LAYER);
-    const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(voxel.row, voxel.col, collisionLayer);
-    for (let i = startIndex; i < startIndex + NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
-        quadTextureIndicesWithinLayer[i - startIndex] = App.getVoxelQuads()[i] & 0b01111111;
-
-    const idealQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(newRow, newCol, facingAxis, orientation, newCollisionLayer);
-    if (ClientVoxelManager.addVoxelBlock(room, idealQuadIndex, quadTextureIndicesWithinLayer))
-    {
-        VoxelQuadSelection.unselect();
-        const idealVoxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, newRow, newCol);
-        if (idealVoxel)
-            VoxelQuadSelection.trySelectBestQuad(idealVoxel, idealQuadIndex);
-        if (room.roomType != RoomTypeEnumMap.SinglePlayer)
-            SocketsClient.emitAddVoxelBlockSignal(new AddVoxelBlockSignal(room.id, idealQuadIndex, quadTextureIndicesWithinLayer));
-    }
+    // The same face of the block the edit made or grew, or the nearest one that shows if it is covered.
+    VoxelQuadSelection.unselect();
+    const targetVoxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels,
+        VoxelQueryUtil.getVoxelRowFromQuadIndex(target.quadIndex), VoxelQueryUtil.getVoxelColFromQuadIndex(target.quadIndex));
+    if (targetVoxel)
+        VoxelQuadSelection.trySelectBestQuad(targetVoxel, target.quadIndex);
 }
 
 // Attachments don't disable removal; the user is warned and they are removed with the block.

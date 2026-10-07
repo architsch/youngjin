@@ -222,6 +222,109 @@ describe("Seeing past the room's own geometry", () => {
     });
 });
 
+describe("Shrunk blocks along a line", () => {
+    // A cell in the open floor, whose lowest layers hold the lower-x half of a block: a thin wall standing
+    // against the cell's lower-x side and leaving its other half open.
+    const ROW = 12, COL = 12, WALL_LAYERS = 4;
+    const LOW_X_HALF = 0b0101, LOW_X_LOW_Z_QUARTER = 0b0001;
+    const EYE_HEIGHT = 0.75; // inside the wall's second layer
+
+    function standShape(shape: number): void
+    {
+        for (let layer = COLLISION_LAYER_MIN; layer < COLLISION_LAYER_MIN + WALL_LAYERS; ++layer)
+            room.voxelGrid.quadsMem.blockShapes[VoxelQueryUtil.getVoxelBlockIndex(ROW, COL, layer)] = shape;
+    }
+
+    function at(x: number, z: number, y: number = EYE_HEIGHT): THREE.Vector3
+    {
+        return new THREE.Vector3(COL + x, y, ROW + z);
+    }
+
+    function firstFace(from: THREE.Vector3, to: THREE.Vector3)
+    {
+        return ClientVoxelQueryUtil.getFirstDrawnFaceAlongRay(
+            new THREE.Ray(from, to.clone().sub(from).normalize()));
+    }
+
+    it("is stopped by a thin wall standing in the way", () => {
+        standShape(LOW_X_HALF);
+        expect(isBlocked(at(-2, 0.5), at(2.5, 0.5))).toBe(true);
+        expect(isBlocked(at(2.5, 0.5), at(-2, 0.5))).toBe(true);
+    });
+
+    it("passes through the half of the cell the wall leaves open", () => {
+        standShape(LOW_X_HALF);
+        expect(isBlocked(at(0.75, -3), at(0.75, 4))).toBe(false);
+        // The same line through the half the wall fills is stopped.
+        expect(isBlocked(at(0.25, -3), at(0.25, 4))).toBe(true);
+    });
+
+    it("is stopped by a thin wall in the viewer's own cell, but not when looking away from it", () => {
+        standShape(LOW_X_HALF);
+        const inOpenHalf = at(0.75, 0.5);
+        expect(isBlocked(inOpenHalf, at(-2, 0.5))).toBe(true);
+        expect(isBlocked(inOpenHalf, at(3, 0.5))).toBe(false);
+    });
+
+    it("is stopped by a thin wall in the target's own cell, when the target is on its far side", () => {
+        standShape(LOW_X_HALF);
+        const inOpenHalf = at(0.75, 0.5);
+        expect(isBlocked(at(-2, 0.5), inOpenHalf)).toBe(true);
+        expect(isBlocked(at(3, 0.5), inOpenHalf)).toBe(false);
+    });
+
+    it("does not hide what hangs on the wall's inner face behind the wall itself", () => {
+        standShape(LOW_X_HALF);
+        // On the face in the middle of the cell, and a hair inside it, as a stored coordinate can come back.
+        for (const x of [0.5, 0.4995])
+            expect(isBlocked(at(3, 0.5), at(x, 0.5)), `at ${x}`).toBe(false);
+    });
+
+    it("is stopped by a post between two points of the post's own cell", () => {
+        standShape(LOW_X_LOW_Z_QUARTER);
+        expect(isBlocked(at(0.75, 0.1), at(0.1, 0.75))).toBe(true); // across the post's corner
+        expect(isBlocked(at(0.75, 0.1), at(0.75, 0.9))).toBe(false); // past it
+    });
+
+    it("meets the wall's inner face in the middle of the cell, and its outer face on the cell's side", () => {
+        standShape(LOW_X_HALF);
+
+        const inner = firstFace(at(3, 0.5), at(-2, 0.5))!;
+        expect(inner.point.x).toBeCloseTo(COL + 0.5, 6);
+        expect(inner.normal).toEqual({x: 1, y: 0, z: 0});
+
+        const outer = firstFace(at(-2, 0.5), at(3, 0.5))!;
+        expect(outer.point.x).toBeCloseTo(COL, 6);
+        expect(outer.normal).toEqual({x: -1, y: 0, z: 0});
+
+        // Its end, which is half a cell wide: met over the half the wall fills, missed beside it.
+        const end = firstFace(at(0.25, 4), at(0.25, -3))!;
+        expect(end.point.z).toBeCloseTo(ROW + 1, 6);
+        expect(end.normal).toEqual({x: 0, y: 0, z: 1});
+        const beside = firstFace(at(0.75, 4), at(0.75, -3))!;
+        expect(beside.point.z).toBeLessThan(ROW - 1); // on past the wall's cell
+    });
+
+    it("meets the wall's top over the half it fills, and the room's floor beside it", () => {
+        standShape(LOW_X_HALF);
+        const top = firstFace(at(0.25, 0.5, 3), at(0.25, 0.5, -1))!;
+        expect(top.point.y).toBeCloseTo(WALL_LAYERS * COLLISION_LAYER_HEIGHT, 6);
+        expect(top.normal).toEqual({x: 0, y: 1, z: 0});
+
+        const floor = firstFace(at(0.75, 0.5, 3), at(0.75, 0.5, -1))!;
+        expect(floor.point.y).toBeCloseTo(0, 6);
+        expect(floor.normal).toEqual({x: 0, y: 1, z: 0});
+    });
+
+    it("judges a whole block as before, by the side of its cell the line crosses", () => {
+        standShape(0b1111);
+        expect(isBlocked(at(-2, 0.5), at(2.5, 0.5))).toBe(true);
+        const face = firstFace(at(3, 0.5), at(-2, 0.5))!;
+        expect(face.point.x).toBeCloseTo(COL + 1, 6);
+        expect(face.normal).toEqual({x: 1, y: 0, z: 0});
+    });
+});
+
 describe("The drop the first-person camera pitches by", () => {
     // The upper storey's lowest layer, and the floor a player stands on there.
     const UPPER_STOREY_LAYER = STOREY_FLOOR_COLLISION_LAYER + 1;

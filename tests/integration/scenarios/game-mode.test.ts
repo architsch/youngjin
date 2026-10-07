@@ -2,11 +2,12 @@
  * Scenario tests: play vs. edit mode (see @docs/gameplay/game_mode.md). Play mode picks nothing and keeps
  * the eye camera, which a click pitches toward what it hit; edit mode starts on a scripted step's pick,
  * else on what the camera faces within reach (straight ahead, then tilted toward the ground), else on the
- * user's character, and a selection orbits the camera. Browser-bound client modules are stubbed, and so
+ * user's character, and a selection orbits the camera. That look, like a click, passes through a picture
+ * where it draws nothing. Browser-bound client modules are stubbed, and so
  * is the view's raycast wherever edit mode is entered; generation, selection, framing and the raycast
  * itself run for real.
  */
-import { describe, it, expect, beforeEach, afterEach, vi, Mock } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi, Mock, MockInstance } from "vitest";
 
 vi.mock("../../../src/client/graphics/graphicsManager", async () => {
     const THREE = await import("three");
@@ -15,7 +16,9 @@ vi.mock("../../../src/client/graphics/graphicsManager", async () => {
     // Voxel edits invalidate the light map (see LightBlockMap); a stub suffices.
     const lightBlockMap = { requestRecomputation() {}, resetForRoom(_voxels?: unknown) {},
         getNearbyLightAt(_worldPos: unknown, out: any) { return out.setRGB(0, 0, 0); } };
-    return { default: { getCamera: () => camera, getScene: () => scene,
+    // Where a pointer event's coordinates are measured from (see PointerCoordUtil).
+    const canvas = { getBoundingClientRect: () => ({left: 0, top: 0, width: 800, height: 600}) };
+    return { default: { getCamera: () => camera, getScene: () => scene, getGameCanvas: () => canvas,
         getLightBlockMap: () => lightBlockMap,
         setViewReferenceOffset: () => {}, setPointLightSurroundings: () => {},
         setRoomLightingPrefs: () => {} } };
@@ -73,6 +76,9 @@ import ObjectHit from "../../../src/client/graphics/types/objectHit";
 import GameModeUtil from "../../../src/client/system/util/gameModeUtil";
 import CameraUtil from "../../../src/client/graphics/util/cameraUtil";
 import MeshFactory from "../../../src/client/graphics/factories/meshFactory";
+import InstancedMeshBinding from "../../../src/client/graphics/types/mesh/instancedMeshBinding";
+import InstancedMeshGraphics from "../../../src/client/object/components/instancedMeshGraphics";
+import InstancedColorMaterialParams from "../../../src/shared/graphics/material/types/instancedColorMaterialParams";
 import ClientObjectManager from "../../../src/client/object/clientObjectManager";
 import SinglePlayerActionMap from "../../../src/client/singlePlayer/maps/singlePlayerActionMap";
 import PlayerGameObject from "../../../src/client/object/types/gameObject/playerGameObject";
@@ -85,7 +91,7 @@ import { FeatureFlag } from "../../../src/shared/system/types/featureFlag";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN,
-    UNIT_VEC3, VOXEL_BLOCK_HITBOX_HALFSIZE } from "../../../src/shared/system/sharedConstants";
+    UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import Room from "../../../src/shared/room/types/room";
@@ -710,8 +716,7 @@ describe("the camera as edit mode opens", () => {
 
             const blockCenter = new THREE.Vector3(wallCol + 0.5,
                 VoxelQueryUtil.getWorldYAtVoxelCollisionLayerCenter(eyeLayer), WALL_ROW + 0.5);
-            const blockSize = new THREE.Vector3(VOXEL_BLOCK_HITBOX_HALFSIZE.x, VOXEL_BLOCK_HITBOX_HALFSIZE.y,
-                VOXEL_BLOCK_HITBOX_HALFSIZE.z).multiplyScalar(2);
+            const blockSize = new THREE.Vector3(1, COLLISION_LAYER_HEIGHT, 1); // a whole block's
             return {before, after: GraphicsManager.getCamera().getWorldPosition(new THREE.Vector3()),
                 block: new THREE.Box3().setFromCenterAndSize(blockCenter, blockSize)};
         }
@@ -853,6 +858,99 @@ describe("the line of sight edit mode looks along", () => {
         objectAt("behind", aheadOfEye(1.5, steepPitchDown + EDIT_MODE_OPENING_TILT));
 
         expect(objectsMet(EDIT_MODE_OPENING_REACH, EDIT_MODE_OPENING_TILT)).toEqual([below]);
+    });
+
+    // A picture is cut out of its quad, and what it draws at a point is the atlas's to say (see
+    // texture-atlas.test.ts); here that answer is given, and the casts are watched for what they make of it.
+    describe("through a picture", () => {
+        // The middle of the view, which the line of sight runs through, as a pointer event names it.
+        const MIDDLE_OF_VIEW = {clientX: 400, clientY: 300} as unknown as PointerEvent;
+        const PICTURE_SIDE = 0.4;
+
+        let numPictures = 0;
+        let pictureMeshName = "";
+
+        /** A picture facing the eye at a point: one instance of an instanced quad, owned by an object of its own. */
+        function pictureAt(objectId: string, position: THREE.Vector3): GameObject
+        {
+            const mesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(PICTURE_SIDE, PICTURE_SIDE),
+                new THREE.MeshBasicMaterial(), 1);
+            mesh.name = pictureMeshName = `picture-mesh-${++numPictures}`; // Owners are kept by mesh name.
+            mesh.setMatrixAt(0, new THREE.Matrix4().setPosition(position.clone().add(OFF_SEAM)));
+            meshes.push(mesh);
+
+            const gameObject = { params: { objectId } } as unknown as GameObject;
+            const binding = new InstancedMeshBinding(new InstancedColorMaterialParams(), "Square", 1, false);
+            binding.instancedMesh = mesh;
+            binding.reserveInstance(gameObject, 0);
+            return gameObject;
+        }
+
+        function objectClicked(): GameObject | undefined
+        {
+            const hit = CameraUtil.castFromPointer(MIDDLE_OF_VIEW);
+            return hit && CameraUtil.getObjectFromIntersection(hit);
+        }
+
+        // What is asked of a picture, answered by the game itself unless a test answers for it.
+        let isDrawn: MockInstance<typeof InstancedMeshGraphics.instanceIsDrawnAt>;
+
+        beforeEach(() => {
+            isDrawn = vi.spyOn(InstancedMeshGraphics, "instanceIsDrawnAt");
+        });
+
+        afterEach(() => {
+            isDrawn.mockRestore();
+        });
+
+        it("passes where the picture draws nothing, to what stands behind it, as a click there does", () => {
+            pictureAt("picture", aheadOfEye(2));
+            const behind = objectAt("behind", aheadOfEye(3));
+            isDrawn.mockReturnValue(false);
+
+            expect(objectsMet(EDIT_MODE_OPENING_REACH, 0)).toEqual([behind]);
+            expect(objectClicked()).toBe(behind);
+
+            // Asked of the instance met, at the point of its quad the line runs through.
+            const [meshName, instanceId, uv] = isDrawn.mock.calls[0];
+            expect([meshName, instanceId]).toEqual([pictureMeshName, 0]);
+            expect(uv.x).toBeCloseTo(0.5 - OFF_SEAM.x / PICTURE_SIDE, 5);
+            expect(uv.y).toBeCloseTo(0.5 - OFF_SEAM.y / PICTURE_SIDE, 5);
+        });
+
+        it("stops at the picture where it draws something, as a click there does", () => {
+            const picture = pictureAt("picture", aheadOfEye(2));
+            const behind = objectAt("behind", aheadOfEye(3));
+            isDrawn.mockReturnValue(true);
+
+            expect(objectsMet(EDIT_MODE_OPENING_REACH, 0)).toEqual([picture, behind]);
+            expect(objectClicked()).toBe(picture);
+        });
+
+        it("takes an instanced mesh nothing says otherwise of as drawn all over", () => {
+            const picture = pictureAt("picture", aheadOfEye(2));
+            const behind = objectAt("behind", aheadOfEye(3));
+
+            expect(objectsMet(EDIT_MODE_OPENING_REACH, 0)).toEqual([picture, behind]);
+            expect(objectClicked()).toBe(picture);
+        });
+
+        // Asking reads the atlas back from the GPU, which a cast made every frame must never do.
+        it("is not asked what it draws by a cast between two points, which it stands in the way of all over", () => {
+            pictureAt("picture", aheadOfEye(2));
+            isDrawn.mockReturnValue(false);
+            const getMeshesExcept = vi.spyOn(MeshFactory, "getMeshesExcept").mockImplementation((_excludedMeshId, out) => {
+                out.length = 0;
+                out.push(...meshes);
+                return out;
+            });
+
+            const hits = CameraUtil.castBetweenPoints(EYE, aheadOfEye(3), []);
+            getMeshesExcept.mockRestore();
+
+            expect(hits.map(hit => hit.object.name)).toEqual([pictureMeshName]);
+            expect(isDrawn).not.toHaveBeenCalled();
+        });
     });
 });
 

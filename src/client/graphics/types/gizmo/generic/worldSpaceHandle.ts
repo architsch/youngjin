@@ -19,7 +19,7 @@ export default class WorldSpaceHandle
     private constructor(geometry: THREE.BufferGeometry, color: string, diameterPx: number)
     {
         this.material = new THREE.MeshBasicMaterial({
-            color, depthTest: false, depthWrite: false, transparent: true});
+            color, depthTest: false, depthWrite: false, transparent: true, fog: false});
         this.disc = new THREE.Mesh(geometry, this.material);
         // Above the selection outline's lines (see WorldSpaceOutlineRect), which it sits on.
         this.disc.renderOrder = 10000;

@@ -7,9 +7,11 @@ import InstancedTexturePackMaterialParams from "../../../../shared/graphics/mate
 import TextureUtil from "../../util/textureUtil";
 import MeshDataUtil from "../../../../shared/graphics/mesh/util/meshDataUtil";
 import InstancedPartUtil from "../../util/instancedPartUtil";
+import { getSampledUV, getUVScales } from "../../shaders/instancedTexturePackShader";
 
 const matrixTemp = new THREE.Matrix4();
 const sphereTemp = new THREE.Sphere();
+const uvTemp = new THREE.Vector2();
 
 // Hidden instances are parked far below the room (instances share the mesh's visibility flag).
 const HIDDEN_INSTANCE_Y = -9999;
@@ -287,6 +289,24 @@ export default class InstancedMeshBinding
         }
         quarterTurnsAttrib.setX(instanceId, ((quarterTurns % 4) + 4) % 4);
         markInstanceForUpload(quarterTurnsAttrib, instanceId);
+    }
+
+    // Whether the instance draws anything at a point of its quad (in the quad's own UV): a cut-out draws nothing
+    // where its texture is see-through (see InstancedTexturePackMaterialParams.alphaCutout). Costs a GPU read
+    // (see TextureUtil.readAlphaOnRenderTarget), so it is for one-off questions only.
+    instanceIsDrawnAt(instanceId: number, uv: THREE.Vector2): boolean
+    {
+        const material = this.instancedMesh?.material as THREE.MeshPhongMaterial | undefined;
+        const renderTarget = material?.map?.renderTarget;
+        // Only a cut-out drawn at runtime has texels to read back.
+        if (!material || !renderTarget || material.alphaTest <= 0)
+            return true;
+
+        const params = this.materialParams as InstancedTexturePackMaterialParams;
+        getSampledUV(this.instancedMesh!.geometry, instanceId, uv, getUVScales(params.textureWidth,
+            params.textureHeight, params.textureGridCellWidth, params.textureGridCellHeight), uvTemp);
+        return TextureUtil.readAlphaOnRenderTarget(renderTarget as THREE.WebGLRenderTarget,
+            uvTemp.x * params.textureWidth, uvTemp.y * params.textureHeight) >= material.alphaTest;
     }
 
     updateInstanceColor(gameObject: GameObject, instanceId: number,

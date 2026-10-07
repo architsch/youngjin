@@ -4,7 +4,6 @@ import WorldSpaceArrow from "./generic/worldSpaceArrow";
 import WorldSpaceSpriteArrow from "./generic/worldSpaceSpriteArrow";
 import WorldSpaceOutlineRect from "./generic/worldSpaceOutlineRect";
 import VoxelQuadSelection from "./voxelQuadSelection";
-import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import CameraUtil from "../../util/cameraUtil";
 import { downwardArrowTargetObservable, navigationArrowTargetObservable, roomChangedObservable, updateObservable, voxelQuadHighlightObservable } from "../../../system/clientObservables";
@@ -98,7 +97,7 @@ voxelQuadHighlightObservable.addListener("genericWorldSpaceGizmos", async (selec
     outlineTarget = selection;
     if (selection)
     {
-        const d = VoxelQueryUtil.getVoxelQuadTransformDimensions(selection.voxel, selection.quadIndex);
+        const d = selection.getTransformDimensions();
         outlinePos.set(selection.voxel.col + 0.5 + d.offsetX, d.offsetY, selection.voxel.row + 0.5 + d.offsetZ);
         outlineDir.set(d.dirX, d.dirY, d.dirZ);
         outlineScale.set(d.scaleX, d.scaleY, d.scaleZ);

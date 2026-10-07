@@ -1,6 +1,6 @@
 # Game Mode
 
-Reference: @src/client/system/util/gameModeUtil.ts , @src/client/graphics/util/worldSpaceSelectionUtil.ts , @src/client/object/types/objectTypeClientConfig/objectTypeClientConfig.ts , @src/client/ui/util/closablePanelUtil.ts , @src/client/ui/util/shortcutKeyUtil.ts
+Reference: @src/client/system/util/gameModeUtil.ts , @src/client/graphics/util/worldSpaceSelectionUtil.ts , @src/client/graphics/util/selectionEditGizmoUtil.ts , @src/client/graphics/types/gizmo/voxelQuadEditGizmos.ts , @src/client/object/types/objectTypeClientConfig/objectTypeClientConfig.ts , @src/client/ui/util/closablePanelUtil.ts , @src/client/ui/util/shortcutKeyUtil.ts
 
 A `GameMode` decides the camera behavior, whether the player can walk, and which tools are shown. `GameModeUtil` publishes the current mode, and everything mode-dependent observes it.
 
@@ -10,7 +10,7 @@ A `GameMode` decides the camera behavior, whether the player can walk, and which
 The mode is stored separately from camera state, because the camera briefly has no target while one selection replaces another.
 
 ## Switching
-- Edit mode can only be entered through the top-bar toggle. It opens on the nearest voxel quad or object in the middle of the view that can be selected, within a limited reach, looking past objects that refuse (e.g. other players) but never through a room surface. If there is none, the same look is tried again tilted toward the ground. If that finds nothing either, it opens on the user's own character, even past a step's selection lock.
+- Edit mode can only be entered through the top-bar toggle. It opens on the nearest voxel quad or object in the middle of the view that can be selected, within a limited reach, looking past objects that refuse (e.g. other players) and through a picture where its image is see-through, but never through a room surface. If there is none, the same look is tried again tilted toward the ground. If that finds nothing either, it opens on the user's own character, even past a step's selection lock.
 - It is left only through the toggle, which clears the selection. The back gesture (Escape, Backspace outside a text field, device Back) closes popups and closable panels (`ClosablePanelUtil`), an open color palette before whatever it is open over, and never the mode.
 - Shortcut keys stand for clicks on the controls that declare them (`ShortcutKeyUtil`): M on the toggle, Delete on the selection tools' remove button, Enter on a popup's answer (a confirm popup's Yes, a welcome popup's OK). A press reaches its control only where a click could: Enter while its popup is on top; the others not under a popup or while a text field has the keyboard, and Delete not with a panel open over the tools.
 - A confirm popup takes no Yes, clicked or keyed, for a moment after it appears (`CONFIRM_ARMING_DELAY_MS`), and shows no sign of it.
@@ -26,9 +26,18 @@ The mode is stored separately from camera state, because the camera briefly has 
   - with none, an attached object near there that the user may select (`nearbyObjectSelectorObservable`);
   - failing that, whatever quad is left, the clear enough first.
 - Clicking the current selection or an unselectable spot keeps the current selection.
+- A click takes the nearest thing **drawn** under it. Where a picture's image is see-through (around the object in a prop's), it goes on to what shows there: the face behind a prop, a canvas's board (see [texture.md](../geometry/texture.md)). The selected object's outline still takes every press inside it, so a prop is dragged by its see-through parts too.
 - Each object type declares its selection behavior in `ObjectTypeClientConfig`: who may select it, the tool panel it opens, and whether it can be dragged along walls by its outline. Every selection also requires edit mode and reach. A refused click passes through silently.
 - A sub-panel opened from those tools (see `EditOptionsProps`) takes their place until it is closed. It stays open while clicks move the selection to any object whose type declares the same panel, whatever its type; selecting anything else closes it.
 - A face's tools add an object only once its look is picked: its add button raises a chooser in their place (a canvas's painting, a prop's image, a lamp's size, a label's frame, a door's finish), and a pick adds the object; closing the chooser adds nothing. A type with more to pick is then selected and opens on that panel (`ObjectTypeClientConfig.installPanel`: a canvas's frame, frameless unless picked), which closing it or selecting anything else ends.
 - The pick that completes a new object's look moves the selection on by the same search, so the next can be added at once from a face near it; where no face will do, the object itself ends up selected. `DISABLE_AUTO_SELECTION_ON_OBJECT_INSTALLATION` keeps it selected always. Picks made for an object selected later keep it selected.
 - A chooser with nothing picked yet opens on the tab and at the place where the last one for the same thing was left, edits included (see `ThumbnailPanel`); the first time, on All and at the start.
 - The outline and camera framing come from the object's collider at the object's own size. Anyone who may select an object may also move it, dragging inside the outline, and resize it by the outline's corners if its type scales that way; a lamp instead picks one of its sizes from its tools (see [object_attachment.md](../geometry/object_attachment.md)). Each placement is validated as it previews, and the result is sent once, on release.
+
+## Editing a block by its outline
+- A press the selection's outline takes is a gizmo's, not the camera's (`GizmoDragUtil`). `SelectionEditGizmoUtil` owns what every kind of selection shares: the handles, which of them a press takes, and holding the view still while a drag lasts. Each kind supplies its own handles and drags (`SelectionEditGizmoProvider`).
+- A selected block face has a handle on each edge that is a bound of its block across XZ: the side edges of a wall face, all four of a top or bottom face. A handle carries its bound between the cell's side and mid-cell, and shows only where the bound has another place to go.
+- The face itself takes no press, so a drag that starts on it turns the view. A block is reshaped where it stands, never dragged elsewhere.
+- The whole cell layer of the selected face's block is drawn as a thin wireframe (`VoxelQuadSelection`), whole block or shrunk, so it is plain which cell a shrunk block belongs to.
+- A reshape that hides the selected face sends the selection to another face of the same block.
+- The handles are not offered on the room's own floor and ceiling, where the user may not edit the block, or while a step holds the selection or sets `FeatureFlag.DisableManualVoxelBlockResize`.

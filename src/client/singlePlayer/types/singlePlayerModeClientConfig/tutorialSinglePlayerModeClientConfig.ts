@@ -84,6 +84,8 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                     {type: "feature_flag", flag: FeatureFlag.DisableObjectSelectionChange, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockAddition, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockRemoval, enable: true},
+                    // The whole way through: no step here has a block resized.
+                    {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockResize, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelQuadTextureChange, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualObjectAddition, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableGameModeTransition, enable: true},
@@ -503,14 +505,14 @@ function pickWallQuadAhead(fallbackQuadIndex: number): number
         const voxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, col);
         if (!voxel)
             break; // Left the room without meeting a block.
-        if (!VoxelQueryUtil.isVoxelCollisionLayerOccupied(voxel, collisionLayer))
+        if (!VoxelQueryUtil.isVoxelBlockPresent(voxel, collisionLayer))
             continue;
 
         // The face turned back toward the camera.
         const quadIndex = crossesCol
             ? VoxelQueryUtil.getVoxelQuadIndex(row, col, "x", (dirX > 0) ? "-" : "+", collisionLayer)
             : VoxelQueryUtil.getVoxelQuadIndex(row, col, "z", (dirZ > 0) ? "-" : "+", collisionLayer);
-        return ((voxel.quadsMem.quads[quadIndex] & 0b10000000) != 0) ? quadIndex : fallbackQuadIndex;
+        return VoxelQueryUtil.isVoxelQuadVisible(room.voxelGrid.voxels, quadIndex) ? quadIndex : fallbackQuadIndex;
     }
     return fallbackQuadIndex;
 }
@@ -557,7 +559,7 @@ function pickQuadBeside(quadIndex: number): number
             continue;
         const candidateQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(candidate.row, candidate.col,
             facingAxis, orientation, candidate.collisionLayer);
-        if (candidateQuadIndex >= 0 && (voxel.quadsMem.quads[candidateQuadIndex] & 0b10000000) != 0)
+        if (candidateQuadIndex >= 0 && VoxelQueryUtil.isVoxelQuadVisible(room.voxelGrid.voxels, candidateQuadIndex))
             return candidateQuadIndex;
     }
     return quadIndex;
@@ -566,14 +568,13 @@ function pickQuadBeside(quadIndex: number): number
 // What the arrow marking a face points at: the middle of the face itself, raised a little.
 function getQuadArrowTarget(quadIndex: number): THREE.Vector3
 {
-    const room = App.getCurrentRoom();
+    const voxels = App.getCurrentRoom()?.voxelGrid.voxels;
     const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
     const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
-    const voxel = room ? VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, col) : undefined;
-    if (!voxel)
+    if (!voxels || !VoxelQueryUtil.getVoxel(voxels, row, col))
         return quadArrowTargetTemp.set(col + 0.5, QUAD_ARROW_LIFT, row + 0.5);
 
-    const d = VoxelQueryUtil.getVoxelQuadTransformDimensions(voxel, quadIndex);
+    const d = VoxelQueryUtil.getVoxelQuadTransformDimensions(voxels, quadIndex);
     return quadArrowTargetTemp.set(col + 0.5 + d.offsetX, d.offsetY + QUAD_ARROW_LIFT,
         row + 0.5 + d.offsetZ);
 }

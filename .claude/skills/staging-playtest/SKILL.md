@@ -124,20 +124,23 @@ Four things to get right:
   current is only half the assertion; `verify-migration` also reports whether that copy survived
   in storage, which is what a write-back storing the row as the reader had it would leave behind.
 
-### The VoxelGrid decoder chain is no longer seedable at the current version — read it, do not manufacture it
+### The VoxelGrid decoder chain cannot be seeded from a current room — read the rest, do not manufacture it
 
 `downgrade-content` rewrites byte 0 of a room's content blob and nothing else. That is a legitimate
-way to manufacture an old room only between versions that share a body layout, and the current
-version does **not** share one with the versions before it — it encodes each voxel differently. A
-blob whose header was flipped across that boundary describes itself with one layout and is written
-in another. The server does not read that as an old room; it reads it as a corrupt one, and anything
-it then logs is a fact about a corrupt blob rather than about the migration path.
+way to manufacture an old room only between versions whose bodies mean the same thing byte for byte.
+The current version's means something no earlier one's does: it lays a room out as the two before it
+did, but spells each block's shape in the bit of a quad that they put to other uses or to none, so a
+room holding a shrunk block is no older version's room. A blob whose header was flipped across such
+a boundary describes itself one way and is written another. The server does not read that as an old
+room; it reads it as a corrupt one, or as a room whose blocks have all silently grown whole, and
+anything it then logs is a fact about that blob rather than about the migration path.
 
-The tool now refuses that case rather than writing it: a downgrade across a change of decoder exits
-with an error naming both decoders, and only a downgrade within one is carried out. So you cannot
-manufacture the current version's migration path, and you no longer have to remember not to.
+The tool refuses that case rather than writing it: a downgrade across decoders exits with an error
+naming both, and only a downgrade within one is carried out. The one it still allows is of a room
+stored one version back, to the version before that. It is read and converted as an old room, but it
+is a thin test of that conversion: the bit the conversion drops was never set in it.
 
-What replaces it costs nothing, because staging supplies it for free. **A room that has not been
+What tests it in earnest costs nothing, because staging supplies it for free. **A room that has not been
 saved since the format changed is still stored at the old version**, which makes it a genuine
 fixture that no seeding could produce. So:
 
