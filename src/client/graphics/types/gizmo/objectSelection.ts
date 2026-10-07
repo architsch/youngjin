@@ -1,7 +1,8 @@
 import * as THREE from "three";
 import GameObject from "../../../object/types/gameObject/gameObject";
 import { clientFeatureFlagsObservable, gameModeObservable, objectSelectionObservable,
-    roomChangedObservable, updateObservable } from "../../../system/clientObservables";
+    roomChangedObservable, selectionEditBlockedObservable, updateObservable } from "../../../system/clientObservables";
+import { SELECTION_BLOCKED_COLOR, SELECTION_COLOR } from "../../../system/clientConstants";
 import GraphicsManager from "../../graphicsManager";
 import ObjectTypeConfigMap from "../../../../shared/object/maps/objectTypeConfigMap";
 import ObjectScaleUtil from "../../../../shared/object/util/objectScaleUtil";
@@ -115,7 +116,7 @@ objectSelectionObservable.addListener("objectSelection", async (selection: Objec
     // Initialize the outline if it hasn't been initialized yet.
     if (selectionOutline == null)
     {
-        selectionOutline = await WorldSpaceOutlineRect.create("#00ff00");
+        selectionOutline = await WorldSpaceOutlineRect.create(SELECTION_COLOR);
         selectionOutline.addToParent(GraphicsManager.getScene());
     }
 
@@ -123,6 +124,10 @@ objectSelectionObservable.addListener("objectSelection", async (selection: Objec
     selectionOutline.setVisible(true);
 
     WorldSpaceSelectionUtil.unselectOthers("object");
+});
+
+selectionEditBlockedObservable.addListener("objectSelection", (blocked: boolean) => {
+    selectionOutline?.setColor(blocked ? SELECTION_BLOCKED_COLOR : SELECTION_COLOR);
 });
 
 // Refreshed every frame, since a selected object can still move or change size (gizmo drags, falling).

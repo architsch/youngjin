@@ -20,8 +20,10 @@ export default class WorldSpaceWireBox
 
     static async create(color: string): Promise<WorldSpaceWireBox>
     {
-        // A copy to place: the factory's own is shared, as its geometry and material still are.
-        return new WorldSpaceWireBox((await MeshFactory.loadLineSegments("Box", color)).clone());
+        // A copy to place and to color: the factory's own is shared, as its geometry still is.
+        const lines = (await MeshFactory.loadLineSegments("Box", color)).clone();
+        lines.material = (lines.material as THREE.LineBasicMaterial).clone();
+        return new WorldSpaceWireBox(lines);
     }
 
     addToParent(parent: THREE.Object3D): void
@@ -38,5 +40,10 @@ export default class WorldSpaceWireBox
     {
         this.lines.position.copy(center);
         this.lines.scale.copy(size);
+    }
+
+    setColor(color: string): void
+    {
+        (this.lines.material as THREE.LineBasicMaterial).color.set(color);
     }
 }

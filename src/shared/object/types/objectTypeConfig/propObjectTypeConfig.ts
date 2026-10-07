@@ -46,6 +46,7 @@ const PropObjectTypeConfig =
     },
     attachment: {
         allowedDirections: ALL_FACE_DIRECTIONS,
+        turnsToFit: true,
     },
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => {
         // Block spoofing attempts

@@ -65,6 +65,10 @@ export const graphicsContextRestoredObservable = new Observable<number>(0);
 // Selected object (including the user's own character), or null.
 export const objectSelectionObservable = new Observable<ObjectSelection | null>(null);
 
+// Whether the drag of the selection's outline under way asks for what the selection can't do (see
+// SelectionEditGizmoUtil): its outline and handles show red meanwhile.
+export const selectionEditBlockedObservable = new Observable<boolean>(false);
+
 // Fires with the id of an object this user has just added from a selected face and selected (see
 // VoxelQuadPlacementOptions), whose tools then open on what is left to pick of its look, or carry on from the chooser
 // it was picked in (see EditOptionsProps). Never peek() it: it holds the last one.

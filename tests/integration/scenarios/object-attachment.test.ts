@@ -3,7 +3,8 @@
  * and what holds it there (walls, floors, ceilings, the storey slab), where a drag or a click puts it
  * (findPlacement, on its quarter-voxel grid) and at what size a new one goes up, where a corner-handle resize
  * puts it — its size, the corner held still, and when it refuses — a resize where it stands (a lamp's sizes,
- * a canvas's turn), the turn its content keeps when it moves to another face (QuarterTurnsUtil), and a prop
+ * a canvas's turn), the ways a quarter-turn is tried where the object stands (in place, then a grid step
+ * from there), the turn its content keeps when it moves to another face (QuarterTurnsUtil), and a prop
  * pinned to the size of its image (a change of image or turn carrying the transform it needs, a new image's size
  * taken whichever way there is room).
  */
@@ -606,6 +607,25 @@ describe("resizing an attached object by a corner", () => {
         });
     });
 
+    it("measures the size a corner asks for as it is, and takes the nearest its type allows from the corner held", async () => {
+        await inTheRoom((user, room) => {
+            const canvas = attachment(user, room, canvasTypeIndex, "canvas", MIDDLE);
+            const corner = {x: 1, y: 1};
+            const fixed = fixedCornerOf(canvas.transform, canvasTypeIndex, corner);
+
+            // Off the steps one way, past the largest the other.
+            const asked = ObjectAttachmentUtil.getResizeScale(canvasTypeIndex, canvas.transform, corner.x, corner.y,
+                draggedTo(fixed, FACING, corner, 1.3, 50));
+            expect(asked.x).toBeCloseTo(1.3, 6);
+            expect(asked.y).toBeCloseTo(50, 6);
+
+            const resized = ObjectAttachmentUtil.getResizedFromCorner(canvasTypeIndex, canvas.transform,
+                corner.x, corner.y, asked);
+            expect(resized.scale).toEqual({x: 1.5, y: scaling.maxScale.y, z: 1});
+            expect(Vector3DUtil.distSqr(fixedCornerOf(resized, canvasTypeIndex, corner), fixed)).toBeCloseTo(0, 6);
+        });
+    });
+
     it("grows up to a neighbour's edge, and refuses a size that runs into it", async () => {
         await inTheRoom((user, room) => {
             const canvas = attachment(user, room, canvasTypeIndex, "canvas", MIDDLE);
@@ -759,6 +779,82 @@ describe("resizing an attached object where it stands", () => {
                     new SetObjectTransformSignal(room.id, lamp.objectId, resized, true)), `${scale.x} x ${scale.y}`)
                     .toBe(scale.y <= COLLISION_LAYER_HEIGHT);
             }
+        });
+    });
+});
+
+// A canvas's or prop's rotate tool (see ObjectEditUtil): the footprint swaps where it stands, or a grid step
+// from there where it only fits so.
+describe("turning an attached object a quarter where it stands", () => {
+    beforeEach(() => {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        vi.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    const WALL_TOP = WALL_LAYERS * COLLISION_LAYER_HEIGHT;
+    const wide = {x: 1, y: 0.5, z: 1}, tall = {x: 0.5, y: 1, z: 1};
+    const candidates = (transform: ObjectTransform) =>
+        ObjectAttachmentUtil.getQuarterTurnCandidates(canvasTypeIndex, transform);
+    const fitsAt = (room: Room, transform: ObjectTransform) =>
+        ObjectAttachmentUtil.canPlaceObject(room, "canvas", canvasTypeIndex, transform);
+    // The way the tool takes: the first the placement rule accepts.
+    const turned = (room: Room, transform: ObjectTransform) => candidates(transform).find(way => fitsAt(room, way));
+    const places = (ways: ObjectTransform[]) => ways.map(way => [way.pos.x, way.pos.y, way.pos.z]);
+
+    it("is tried in place first, so an object with room around it turns as it does by resizing where it stands", async () => {
+        await inTheRoom((user, room) => {
+            const onFloor = new ObjectTransform({x: 4, y: 0, z: 3.5}, UP, {x: 2, y: 1, z: 1});
+            const onWall = new ObjectTransform({x: MIDDLE.x, y: 1.5, z: WALL_ROW}, FACING, {x: 2, y: 1, z: 1});
+            for (const start of [onFloor, onWall])
+            {
+                const inPlace = ObjectAttachmentUtil.getResizedInPlace(canvasTypeIndex, start, {x: 1, y: 2, z: 1});
+                expect(candidates(start)[0]).toEqual(inPlace);
+                expect(turned(room, start)).toEqual(inPlace);
+            }
+        });
+    });
+
+    it("is then tried about its centre and a grid step either way along the face's up, then in place a grid step either side across", () => {
+        // On a floor, where in place is about its centre: up runs along -z, and right along +x.
+        const onFloor = candidates(new ObjectTransform({x: 3.5, y: 0, z: 3.75}, UP, wide));
+        expect(places(onFloor)).toEqual([[3.5, 0, 3.75], [3.5, 0, 4], [3.5, 0, 3.5], [3.25, 0, 3.75], [3.75, 0, 3.75]]);
+
+        // On a wall facing -z, where in place keeps the bottom edge: right runs along -x.
+        const onWall = candidates(new ObjectTransform({x: 12, y: 1.25, z: WALL_ROW}, FACING, wide));
+        expect(places(onWall)).toEqual([[12, 1.5, WALL_ROW], [12, 1.25, WALL_ROW], [12, 1, WALL_ROW],
+            [12.25, 1.5, WALL_ROW], [11.75, 1.5, WALL_ROW]]);
+        for (const way of [...onFloor, ...onWall])
+            expect(way.scale).toEqual(tall);
+    });
+
+    it("takes the first way that fits where the object can't turn in place", async () => {
+        await inTheRoom((user, room) => {
+            // Along one half of the lone block's top: along the whole of it, across its middle.
+            const onBlock = new ObjectTransform({x: BLOCK.col + 0.5, y: BLOCK_TOP_Y, z: BLOCK.row + 0.75}, UP, wide);
+            expect(fitsAt(room, onBlock)).toBe(true);
+            expect(fitsAt(room, candidates(onBlock)[0])).toBe(false);
+            expect(turned(room, onBlock)).toEqual(
+                new ObjectTransform({x: BLOCK.col + 0.5, y: BLOCK_TOP_Y, z: BLOCK.row + 0.5}, UP, tall));
+
+            // At the top of the wall: its top edge kept, instead of its bottom.
+            const atTop = new ObjectTransform({x: 12, y: WALL_TOP - 0.25, z: WALL_ROW}, FACING, wide);
+            expect(fitsAt(room, candidates(atTop)[0])).toBe(false);
+            expect(turned(room, atTop)).toEqual(new ObjectTransform({x: 12, y: WALL_TOP - 0.5, z: WALL_ROW}, FACING, tall));
+
+            // At an end of the wall: a grid step along it, on the bottom edge it had.
+            const atEnd = new ObjectTransform({x: WALL_COL_MIN + 0.25, y: 1.5, z: WALL_ROW}, FACING, tall);
+            expect(fitsAt(room, candidates(atEnd)[0])).toBe(false);
+            expect(turned(room, atEnd)).toEqual(
+                new ObjectTransform({x: WALL_COL_MIN + 0.5, y: 1.25, z: WALL_ROW}, FACING, wide));
+        });
+    });
+
+    it("finds no way where the object fits turned nowhere within a grid step", async () => {
+        await inTheRoom((user, room) => {
+            // On the side of the lone block, which is one layer tall.
+            const onSide = new ObjectTransform({x: BLOCK.col + 0.5, y: BLOCK_CENTRE.y, z: BLOCK.row}, FACING, wide);
+            expect(fitsAt(room, onSide)).toBe(true);
+            expect(turned(room, onSide)).toBeUndefined();
         });
     });
 });

@@ -21,8 +21,13 @@ export const DISABLE_AUTO_SELECTION_ON_OBJECT_INSTALLATION = true;
 // Where the selection tools show a sub-panel (an object's, see EditOptionsProps; a face's chooser, see
 // VoxelQuadPlacementOptions). True shows it beneath the tool row, whose buttons toggle between panels that have no
 // close button: an object's tools always show one, and a new object's carry on from the chooser it was picked in.
-// False raises it in the tool row's place until it is closed, and a new canvas opens on its frame list.
+// False raises it in the tool row's place until it is closed. A new canvas's tools open on its frame list either way.
 export const SUB_PANELS_BENEATH_SELECTION_TOOLS = true;
+
+// The selection's outline, and what it and its handles turn while a drag of them is blocked (see
+// selectionEditBlockedObservable).
+export const SELECTION_COLOR = "#00ff00";
+export const SELECTION_BLOCKED_COLOR = "#ff0000";
 
 // What an automatic selection asks of a voxel quad (see VoxelQuadSelection): to lie no further than this from where
 // it looks, with at least this share of its face clear of attached objects. With no such quad, it takes an object

@@ -28,12 +28,12 @@ export default function ObjectSelectionMenu({ inEditMode }: Props)
             const params = prev.selection?.gameObject.params;
             if (params?.objectId != objectId)
                 return prev;
-            // Beneath the tools, the panel already showing carries on from the chooser. In their place, the type's
-            // install panel is raised, if it has one.
-            if (SUB_PANELS_BENEATH_SELECTION_TOOLS)
-                return {...prev, installing: true};
+            // The type's install panel is raised, if it has one: beneath the tools as any other of its panels. With
+            // none, the panel already showing there carries on from the chooser.
             const installPanel = ObjectTypeClientConfigMap.getConfigByIndex(params.objectTypeIndex)
                 .selection?.installPanel;
+            if (SUB_PANELS_BENEATH_SELECTION_TOOLS)
+                return installPanel ? {...prev, openPanel: installPanel} : {...prev, installing: true};
             return installPanel ? {...prev, openPanel: installPanel, installing: true} : prev;
         }));
         return () => {

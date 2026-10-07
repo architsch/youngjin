@@ -9,8 +9,9 @@ import App from "../../../app";
 import SocketsClient from "../../../networking/client/socketsClient";
 import ClientVoxelManager from "../../../voxel/clientVoxelManager";
 import GameModeUtil from "../../../system/util/gameModeUtil";
-import { clientFeatureFlagsObservable, gameModeObservable, roomChangedObservable, voxelBlockPreviewObservable,
-    voxelQuadSelectionObservable, voxelQuadSelectionRestrictionObservable } from "../../../system/clientObservables";
+import { clientFeatureFlagsObservable, gameModeObservable, objectEditObservable, roomChangedObservable,
+    voxelBlockPreviewObservable, voxelQuadSelectionObservable,
+    voxelQuadSelectionRestrictionObservable } from "../../../system/clientObservables";
 import Room from "../../../../shared/room/types/room";
 import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
@@ -31,6 +32,9 @@ import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
 // How far past halfway between its two places the pointer has to carry a bound before it goes over, as a
 // share of the cell, so that it doesn't flutter there.
 const RESIZE_DEAD_BAND = 0.05;
+
+// Half the way between two places a bound could lie in (a cell's sides and mid-cells), as a share of the cell.
+const HALFWAY_TO_NEXT_PLACE = 0.25;
 
 // Scripted steps that keep the room's blocks or the selection as they are (a reshape can hide the selected
 // face, which sends the selection to another of the block's).
@@ -59,6 +63,10 @@ const boundHandles: {id: string, axis: "x" | "z", orientation: "-" | "+", positi
 ];
 const shownHandles: typeof boundHandles = [];
 
+// The bounds whose other place leaves the block a shape it may take as the room stands (see
+// VoxelUpdateUtil.canSetVoxelBlockShape); refreshed with the target, and when an object comes or goes.
+const allowedBoundIds = new Set<string>();
+
 const outlineCorners = [{x: -1, y: -1}, {x: 1, y: -1}, {x: 1, y: 1}, {x: -1, y: 1}]
     .map(corner => ({corner, position: new THREE.Vector3()}));
 
@@ -70,7 +78,8 @@ const screenTemp = new THREE.Vector2();
 const VoxelQuadEditGizmos: SelectionEditGizmoProvider =
 {
     // On the edges of the outline that are bounds of the block along x or z, which are those across the way
-    // the face looks, and of those on the ones that have another place to go.
+    // the face looks, and of those on the ones that have another place they may go (or are held, so that a
+    // handle never goes from under a drag).
     getHandles: () =>
     {
         shownHandles.length = 0;
@@ -82,9 +91,12 @@ const VoxelQuadEditGizmos: SelectionEditGizmoProvider =
         const shape = getBlockShape(target);
         const bounds = VoxelBlockShapeUtil.getBounds(shape);
         const {center} = getFace(room, target);
+        const heldId = SelectionEditGizmoUtil.getHeldHandleId("voxelQuad");
         for (const handle of boundHandles)
         {
             if (handle.axis == facingAxis || getResizedShape(shape, handle.axis, handle.orientation) == VOXEL_BLOCK_SHAPE_EMPTY)
+                continue;
+            if (!allowedBoundIds.has(handle.id) && handle.id != heldId)
                 continue;
             const size = (handle.axis == "x") ? bounds.maxX - bounds.minX : bounds.maxZ - bounds.minZ;
             const reach = ((handle.orientation == "+") ? 1 : -1) * WorldSpaceOutlineRect.getEdgeOffset(size);
@@ -180,6 +192,23 @@ function getResizedShape(shape: number, axis: "x" | "z", orientation: "-" | "+")
         !VoxelBlockShapeUtil.isBoundInMidCell(shape, axis, orientation));
 }
 
+// Which way along its axis the pointer asks a bound to go, having carried it past halfway to the place
+// next along and the dead band: 1, -1, or 0 while it asks the bound to stay. asked: where across its cell
+// the bound is asked to be, from 0 to 1 and beyond.
+function getAskedDirection(shape: number, axis: "x" | "z", orientation: "-" | "+", asked: number): number
+{
+    const offset = asked - getBoundPlaces(shape, axis, orientation).place;
+    return (Math.abs(offset) <= HALFWAY_TO_NEXT_PLACE + RESIZE_DEAD_BAND) ? 0 : Math.sign(offset);
+}
+
+// Where across its cell a bound lies, and the other of its two places (see getResizedShape).
+function getBoundPlaces(shape: number, axis: "x" | "z", orientation: "-" | "+"): {place: number, otherPlace: number}
+{
+    const cellSide = (orientation == "+") ? 1 : 0;
+    return VoxelBlockShapeUtil.isBoundInMidCell(shape, axis, orientation)
+        ? {place: 0.5, otherPlace: cellSide} : {place: cellSide, otherPlace: 0.5};
+}
+
 function isOnDraggedBlock(selection: VoxelQuadSelection | null): boolean
 {
     return selection != null && selection.voxel.row == draggedBlock.row && selection.voxel.col == draggedBlock.col &&
@@ -189,7 +218,9 @@ function isOnDraggedBlock(selection: VoxelQuadSelection | null): boolean
 // ─── Drags ──────────────────────────────────────────────────────────────
 
 // The bound follows the pointer across the face, offset by where on the handle the press took hold, and
-// goes over to its other place once it is carried past halfway there.
+// goes over to its other place once it is carried past halfway there. Carried as far toward a place it
+// can't take (out of its cell, in to where no block would be left, or to a shape the rules refuse), the
+// drag is blocked.
 function beginResize(selection: VoxelQuadSelection, pressEv: PointerEvent,
     handle: {id: string, axis: "x" | "z", orientation: "-" | "+"}): SelectionEditDrag
 {
@@ -206,7 +237,7 @@ function beginResize(selection: VoxelQuadSelection, pressEv: PointerEvent,
         : ((orientation == "+") ? bounds.maxZ : bounds.minZ));
     const grabOffset = SelectionEditGizmoUtil.getPointerOnPlane(pressEv, plane, hitTemp)
         ? ((axis == "x") ? hitTemp.x : hitTemp.z) - boundAtPress : 0;
-    const halfway = (orientation == "+") ? 0.75 : 0.25;
+    let reached = true;
     draggedBlock = {row: selection.voxel.row, col: selection.voxel.col,
         collisionLayer: VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex)};
 
@@ -216,20 +247,22 @@ function beginResize(selection: VoxelQuadSelection, pressEv: PointerEvent,
         {
             const room = App.getCurrentRoom();
             if (!room || !ensurePreview(room, quadIndex) || !SelectionEditGizmoUtil.getPointerOnPlane(ev, plane, hitTemp))
-                return;
+                return reached;
 
-            // Where across its cell the bound is asked to be, from 0 to 1.
+            // Where across its cell the bound is asked to be.
             const asked = ((axis == "x") ? hitTemp.x : hitTemp.z) - grabOffset - cellStart;
             const shape = getBlockShape(selection);
-            const inMidCell = VoxelBlockShapeUtil.isBoundInMidCell(shape, axis, orientation);
-            const towardCellSide = (orientation == "+") ? asked > halfway + RESIZE_DEAD_BAND : asked < halfway - RESIZE_DEAD_BAND;
-            const towardMidCell = (orientation == "+") ? asked < halfway - RESIZE_DEAD_BAND : asked > halfway + RESIZE_DEAD_BAND;
-            if (inMidCell ? !towardCellSide : !towardMidCell)
-                return;
-
-            const resized = getResizedShape(shape, axis, orientation);
-            if (resized != VOXEL_BLOCK_SHAPE_EMPTY)
-                ClientVoxelManager.previewVoxelBlockShape(room, resized);
+            const {place, otherPlace} = getBoundPlaces(shape, axis, orientation);
+            let direction = getAskedDirection(shape, axis, orientation, asked);
+            if (direction != 0 && direction == Math.sign(otherPlace - place))
+            {
+                const resized = getResizedShape(shape, axis, orientation);
+                if (resized != VOXEL_BLOCK_SHAPE_EMPTY && ClientVoxelManager.previewVoxelBlockShape(room, resized))
+                    direction = getAskedDirection(resized, axis, orientation, asked);
+            }
+            // Blocked while the bound is still asked to go on from where that left it.
+            reached = (direction == 0);
+            return reached;
         },
         onFinish: finishDrag,
         onReleased: settleSelection,
@@ -295,8 +328,24 @@ function settleSelection(): void
 function refresh(): void
 {
     target = findTarget();
-    if (target == null)
+    allowedBoundIds.clear();
+    const room = App.getCurrentRoom();
+    if (target == null || room == undefined)
+    {
         SelectionEditGizmoUtil.abandonDrag("voxelQuad");
+        return;
+    }
+
+    const shape = getBlockShape(target);
+    for (const handle of boundHandles)
+    {
+        const resized = getResizedShape(shape, handle.axis, handle.orientation);
+        if (resized != VOXEL_BLOCK_SHAPE_EMPTY &&
+            VoxelUpdateUtil.canSetVoxelBlockShape(App.getUser(), room, target.quadIndex, resized))
+        {
+            allowedBoundIds.add(handle.id);
+        }
+    }
 }
 
 SelectionEditGizmoUtil.addProvider("voxelQuad", VoxelQuadEditGizmos);
@@ -317,6 +366,9 @@ roomChangedObservable.addListener("voxelQuadEditGizmos", () => {
 for (const flag of STAND_DOWN_FLAGS)
     clientFeatureFlagsObservable.addElementListener("voxelQuadEditGizmos", flag, refresh);
 voxelQuadSelectionRestrictionObservable.addListener("voxelQuadEditGizmos", refresh);
+
+// What hangs on the block decides the shapes it may take.
+objectEditObservable.addListener("voxelQuadEditGizmos", refresh);
 
 // A preview ended from outside (another edit of the room's blocks came in) leaves a drag nothing to go on.
 voxelBlockPreviewObservable.addListener("voxelQuadEditGizmos", (previewing: boolean) => {

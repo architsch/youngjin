@@ -120,6 +120,15 @@ const ObjectAttachmentUtil =
         }
         return objectIds;
     },
+    // The blocks an object rests on: the cell layer behind each half cell of its footprint, until visit returns
+    // false. A layer past the layer range is the room's own floor or ceiling over that cell.
+    forEachSupportingBlock: (objectTypeIndex: number, transform: ObjectTransform,
+        visit: (row: number, col: number, collisionLayer: number) => boolean): void =>
+    {
+        const tr = getQuantizedTransform(objectTypeIndex, transform);
+        forEachSubBlockBeside(tr, getFootprintBounds(objectTypeIndex, tr), -1,
+            (subRow, subCol, layer) => visit(subRow >> 1, subCol >> 1, layer));
+    },
     // How much of a face the attached objects lying on it cover, from 0 (none) to 1 (all of it): a block's face,
     // or the room's own floor or ceiling over a cell.
     getVoxelQuadCoverage: (room: Room, quadIndex: number): number =>
@@ -219,39 +228,53 @@ const ObjectAttachmentUtil =
         }
         return partlyCovered;
     },
-    // Where a resize puts the object when one corner is dragged to cornerPos: the nearest size its type
-    // allows, with the opposite corner of anchor (the object as the drag began) held still. Undefined if that
-    // size doesn't fit there. cornerSignX/Y: the dragged corner, +1 toward the face's right / up (see
-    // Geometry3DUtil.getAxisFacingBasis), -1 the other way.
-    getResizeResult: (room: Room, obj: AddObjectSignal, anchor: ObjectTransform,
-        cornerSignX: number, cornerSignY: number, cornerPos: Vec3): ObjectTransform | undefined =>
+    // A transform on the placement grid, where every placement here lies (see getQuantizedTransform).
+    quantize: (objectTypeIndex: number, transform: ObjectTransform): ObjectTransform =>
     {
-        const objectTypeIndex = obj.objectTypeIndex;
+        return getQuantizedTransform(objectTypeIndex, transform);
+    },
+    // The scale a resize asks for when one corner is dragged to cornerPos, with the opposite corner of anchor
+    // (the object as the drag began) held still: as measured, so off the type's steps and maybe past its
+    // limits. cornerSignX/Y: the dragged corner, +1 toward the face's right / up (see
+    // Geometry3DUtil.getAxisFacingBasis), -1 the other way.
+    getResizeScale: (objectTypeIndex: number, anchor: ObjectTransform,
+        cornerSignX: number, cornerSignY: number, cornerPos: Vec3): Vec3 =>
+    {
         const baseHitboxSize = ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex)
             .components.spawnedByAny?.collider?.baseHitboxSize;
         if (!baseHitboxSize)
             throw new Error(`ColliderConfig not found (objectTypeIndex = ${objectTypeIndex})`);
 
-        const start = getQuantizedTransform(objectTypeIndex, anchor);
-        const startSize = ObjectScaleUtil.getObjectSize(objectTypeIndex, start.scale);
-        const {right, up} = Geometry3DUtil.getAxisFacingBasis(start.dir);
-        const toFixed = Vector3DUtil.add(Vector3DUtil.scale(right, -cornerSignX * 0.5 * startSize.x),
-            Vector3DUtil.scale(up, -cornerSignY * 0.5 * startSize.y));
-        const fixedCorner = Vector3DUtil.add(start.pos, toFixed);
-
-        const toDragged = Vector3DUtil.subtract(cornerPos, fixedCorner);
-        const scale = ObjectScaleUtil.sanitize(objectTypeIndex, {
+        const {start, right, up, heldCorner} = getHeldCorner(objectTypeIndex, anchor, cornerSignX, cornerSignY);
+        const toDragged = Vector3DUtil.subtract(cornerPos, heldCorner);
+        return {
             x: cornerSignX * Vector3DUtil.dot(toDragged, right) / baseHitboxSize.sizeX,
             y: cornerSignY * Vector3DUtil.dot(toDragged, up) / baseHitboxSize.sizeY,
             z: start.scale.z,
-        });
+        };
+    },
+    // The object at the nearest size its type allows to a scale, with the same corner of anchor held still. On
+    // the placement grid; whether it fits there is canPlaceObject's to say.
+    getResizedFromCorner: (objectTypeIndex: number, anchor: ObjectTransform,
+        cornerSignX: number, cornerSignY: number, scale: Vec3): ObjectTransform =>
+    {
+        const {start, right, up, heldCorner} = getHeldCorner(objectTypeIndex, anchor, cornerSignX, cornerSignY);
         const size = ObjectScaleUtil.getObjectSize(objectTypeIndex, scale);
-        const ideal = Vector3DUtil.add(fixedCorner, Vector3DUtil.add(
+        const ideal = Vector3DUtil.add(heldCorner, Vector3DUtil.add(
             Vector3DUtil.scale(right, cornerSignX * 0.5 * size.x),
             Vector3DUtil.scale(up, cornerSignY * 0.5 * size.y)));
 
         // Every type's sizes come in half-voxel steps, so half of one is on the grid and the corner holds exactly.
-        const candidate = getQuantizedTransform(objectTypeIndex, new ObjectTransform(ideal, {...start.dir}, scale));
+        return getQuantizedTransform(objectTypeIndex, new ObjectTransform(ideal, {...start.dir}, scale));
+    },
+    // Where a resize puts the object when one corner is dragged to cornerPos (see getResizeScale and
+    // getResizedFromCorner). Undefined if that size doesn't fit there.
+    getResizeResult: (room: Room, obj: AddObjectSignal, anchor: ObjectTransform,
+        cornerSignX: number, cornerSignY: number, cornerPos: Vec3): ObjectTransform | undefined =>
+    {
+        const objectTypeIndex = obj.objectTypeIndex;
+        const candidate = ObjectAttachmentUtil.getResizedFromCorner(objectTypeIndex, anchor, cornerSignX, cornerSignY,
+            ObjectAttachmentUtil.getResizeScale(objectTypeIndex, anchor, cornerSignX, cornerSignY, cornerPos));
         return ObjectAttachmentUtil.canPlaceObject(room, obj.objectId, objectTypeIndex, candidate)
             ? candidate : undefined;
     },
@@ -298,6 +321,51 @@ const ObjectAttachmentUtil =
         }
         return candidates;
     },
+    // The object turned a quarter over where it stands (its width and height swapped), each way to try it, in
+    // order: in place (see getResizedInPlace); then along the face's up, where turning it about its centre
+    // puts it and a grid step to either side of that; then in place again, a grid step to either side across.
+    // On the placement grid; whether each fits is canPlaceObject's to say.
+    getQuarterTurnCandidates: (objectTypeIndex: number, transform: ObjectTransform): ObjectTransform[] =>
+    {
+        const start = getQuantizedTransform(objectTypeIndex, transform);
+        const scale = {x: start.scale.y, y: start.scale.x, z: start.scale.z};
+        const {right, up} = Geometry3DUtil.getAxisFacingBasis(start.dir);
+        const inPlace = ObjectAttachmentUtil.getResizedInPlace(objectTypeIndex, start, scale);
+
+        const spots: Vec3[] = [inPlace.pos];
+        for (const step of [0, -GRID_STEP, GRID_STEP])
+            spots.push(Vector3DUtil.add(start.pos, Vector3DUtil.scale(up, step)));
+        for (const step of [-GRID_STEP, GRID_STEP])
+            spots.push(Vector3DUtil.add(inPlace.pos, Vector3DUtil.scale(right, step)));
+
+        const candidates: ObjectTransform[] = [];
+        const seen = new Set<string>();
+        for (const spot of spots)
+        {
+            const candidate = getQuantizedTransform(objectTypeIndex, new ObjectTransform(spot, {...start.dir}, {...scale}));
+            const key = `${candidate.pos.x},${candidate.pos.y},${candidate.pos.z}`;
+            if (!seen.has(key))
+            {
+                seen.add(key);
+                candidates.push(candidate);
+            }
+        }
+        return candidates;
+    },
+}
+
+// The corner of anchor that a resize by the corner across from it holds still (see
+// ObjectAttachmentUtil.getResizeScale), with anchor on the placement grid and its face's axes.
+function getHeldCorner(objectTypeIndex: number, anchor: ObjectTransform, cornerSignX: number, cornerSignY: number):
+    {start: ObjectTransform, right: Vec3, up: Vec3, heldCorner: Vec3}
+{
+    const start = getQuantizedTransform(objectTypeIndex, anchor);
+    const startSize = ObjectScaleUtil.getObjectSize(objectTypeIndex, start.scale);
+    const {right, up} = Geometry3DUtil.getAxisFacingBasis(start.dir);
+    const heldCorner = Vector3DUtil.add(start.pos, Vector3DUtil.add(
+        Vector3DUtil.scale(right, -cornerSignX * 0.5 * startSize.x),
+        Vector3DUtil.scale(up, -cornerSignY * 0.5 * startSize.y)));
+    return {start, right, up, heldCorner};
 }
 
 // Onto the placement grid: the face on its plane, the centre on the grid along X and Z, and the bottom edge

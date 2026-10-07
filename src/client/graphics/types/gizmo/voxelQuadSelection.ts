@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import Voxel from "../../../../shared/voxel/types/voxel";
-import { clientFeatureFlagsObservable, gameModeObservable, nearbyObjectSelectorObservable, roomChangedObservable, updateObservable, voxelQuadSelectionObservable, voxelQuadSelectionRestrictionObservable } from "../../../system/clientObservables";
+import { clientFeatureFlagsObservable, gameModeObservable, nearbyObjectSelectorObservable, roomChangedObservable, selectionEditBlockedObservable, updateObservable, voxelQuadSelectionObservable, voxelQuadSelectionRestrictionObservable } from "../../../system/clientObservables";
 import GraphicsManager from "../../graphicsManager";
 import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
@@ -15,7 +15,8 @@ import App from "../../../app";
 import Vec3 from "../../../../shared/math/types/vec3";
 import NumUtil from "../../../../shared/math/util/numUtil";
 import ObjectAttachmentUtil from "../../../../shared/object/util/objectAttachmentUtil";
-import { AUTO_SELECTION_MAX_DISTANCE, AUTO_SELECTION_MIN_COVERAGE_FREE_RATIO } from "../../../system/clientConstants";
+import { AUTO_SELECTION_MAX_DISTANCE, AUTO_SELECTION_MIN_COVERAGE_FREE_RATIO, SELECTION_BLOCKED_COLOR,
+    SELECTION_COLOR } from "../../../system/clientConstants";
 
 const tempPos = new THREE.Vector3();
 const tempPos2 = new THREE.Vector3();
@@ -261,7 +262,7 @@ function requestBlockCellWireBox()
         return;
     blockCellWireBoxRequested = true;
 
-    WorldSpaceWireBox.create("#00ff00").then(wireBox => {
+    WorldSpaceWireBox.create(SELECTION_COLOR).then(wireBox => {
         wireBox.addToParent(GraphicsManager.getScene());
         blockCellWireBox = wireBox;
 
@@ -279,7 +280,7 @@ voxelQuadSelectionObservable.addListener("voxelQuadSelection", async (selection:
         // Initialize the outline if it hasn't been initialized yet.
         if (selectionOutline == null)
         {
-            selectionOutline = await WorldSpaceOutlineRect.create("#00ff00");
+            selectionOutline = await WorldSpaceOutlineRect.create(SELECTION_COLOR);
             selectionOutline.addToParent(GraphicsManager.getScene());
         }
 
@@ -293,6 +294,12 @@ voxelQuadSelectionObservable.addListener("voxelQuadSelection", async (selection:
         selectionOutline?.setVisible(false);
         blockCellWireBox?.setVisible(false);
     }
+});
+
+selectionEditBlockedObservable.addListener("voxelQuadSelection", (blocked: boolean) => {
+    const color = blocked ? SELECTION_BLOCKED_COLOR : SELECTION_COLOR;
+    selectionOutline?.setColor(color);
+    blockCellWireBox?.setColor(color);
 });
 
 // Refreshed every frame, since the selected face changes with its block's shape (see VoxelQuadEditGizmos).

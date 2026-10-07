@@ -4,7 +4,7 @@ import * as THREE from "three";
 // overlaid mesh, and it is occluded and lit like the surface itself.
 
 // Half-width in world units (adjacent quads each paint their edge, so shared lines are double).
-const INSTANCE_OUTLINE_WIDTH = 0.025;
+const INSTANCE_OUTLINE_WIDTH = 0.0125;
 
 const VERTEX_PARS_GLSL = `
     attribute float outlineStrength;

@@ -58,7 +58,6 @@ export default function CanvasEditOptions(props: EditOptionsProps)
             mapName="PictureImageMap"
             subfolder={CANVAS_IMAGE_SUBFOLDER}
             currentPath={imagePath}
-            resumed={props.resumed}
             canChoose={path => ObjectEditUtil.canSetObjectMetadata(props.selection, ObjectMetadataKeyEnumMap.ImagePath, path)}
             onChoose={path => ObjectEditUtil.trySetObjectMetadata(props.selection, ObjectMetadataKeyEnumMap.ImagePath, path)}
             onClose={closePanel}

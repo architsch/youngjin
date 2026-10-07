@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import ObjectSelection from "./objectSelection";
-import { gameModeObservable, objectSelectionObservable,
+import { gameModeObservable, objectEditObservable, objectSelectionObservable,
     roomChangedObservable } from "../../../system/clientObservables";
 import GameModeUtil from "../../../system/util/gameModeUtil";
 import WorldSpaceOutlineRect from "./generic/worldSpaceOutlineRect";
@@ -32,7 +32,8 @@ import Vec3 from "../../../../shared/math/types/vec3";
 // Moving and resizing the selected attached object by its selection outline (see SelectionEditGizmoUtil):
 // dragging inside it puts the object on whichever voxel face the pointer is over (see
 // ObjectAttachmentUtil.findPlacement), and dragging a corner handle resizes it (types whose
-// ObjectScalingConfig has them). Edits preview locally and reach the server once, on release.
+// ObjectScalingConfig has them). Edits preview locally and reach the server once, on release. A drag is
+// blocked while the object can't be where, or as large as, the pointer asks.
 
 // Which way each handle's corner lies from the middle, along the face's right and up (see
 // Geometry3DUtil.getAxisFacingBasis).
@@ -41,17 +42,22 @@ const CORNERS: {x: number, y: number}[] = [{x: -1, y: -1}, {x: 1, y: -1}, {x: 1,
 // How far from the object's face a pointer hit still counts as on that face.
 const SAME_FACE_TOLERANCE = 0.01;
 
-type EditTarget = {selection: ObjectSelection, canMove: boolean, canResize: boolean};
+// How far apart two scales still count as the same.
+const SCALE_TOLERANCE = 1e-6;
 
-// The selection, when it is an attached object this user may drag (refreshed on every re-announcement).
+// The outline's corners, where the handles sit; placed whenever they are asked for.
+const outlineCorners = CORNERS.map(corner => ({id: `${corner.x},${corner.y}`, corner, position: new THREE.Vector3()}));
+const noHandles: typeof outlineCorners = [];
+
+// handles: the corners that resize the object, each some way that fits where it stands.
+type EditTarget = {selection: ObjectSelection, canMove: boolean, handles: typeof outlineCorners};
+
+// The selection, when it is an attached object this user may drag (refreshed on every re-announcement, and
+// when an object comes or goes).
 let target: EditTarget | null = null;
 
 // The object the drag under way began on; left as it was once that drag is over.
 let draggedObjectId: string | null = null;
-
-// The outline's corners, where the handles sit; placed whenever they are asked for.
-const outlineCorners = CORNERS.map(corner => ({id: `${corner.x},${corner.y}`, corner, position: new THREE.Vector3()}));
-const noHandles: {id: string, position: THREE.Vector3}[] = [];
 
 const rayTemp = new THREE.Ray();
 const planeTemp = new THREE.Plane();
@@ -63,20 +69,21 @@ const ObjectAttachmentEditGizmos: SelectionEditGizmoProvider =
 {
     getHandles: () =>
     {
-        if (target == null || !target.canResize)
+        if (target == null)
             return noHandles;
-        return placeOutlineCorners(target.selection);
+        placeOutlineCorners(target.selection);
+        return target.handles;
     },
 
     pickHandle: (handleIndex: number, ev: PointerEvent, handleScreen: {x: number, y: number}) =>
     {
         const selection = target!.selection;
-        const corner = CORNERS[handleIndex];
+        const handle = target!.handles[handleIndex];
         // The cursor's arrow runs along the screen diagonal the handle sits on.
         const middle = PointerCoordUtil.worldToClient(selection.gameObject.position, middleScreenTemp);
         const rising = middle != null && ((handleScreen.x > middle.x) == (handleScreen.y < middle.y));
         return {cursor: rising ? "nesw-resize" : "nwse-resize",
-            begin: () => beginResize(selection, ev, corner, outlineCorners[handleIndex].id)};
+            begin: () => beginResize(selection, ev, handle.corner, handle.id)};
     },
 
     // The inside of the outline, measured on the plane of the object's face.
@@ -124,23 +131,70 @@ function findTarget(): EditTarget | null
     // Asked of where it stands, so this comes down to whether this user may move it at all. One whose
     // metadata pins its scale (see ObjectScalingConfig.getFixedScale) isn't resized by hand.
     const canMove = canApply(room, obj.objectId, obj.transform);
-    return {selection, canMove,
-        canResize: canMove && config.scaling != undefined && config.scaling.cornerHandles !== false
-            && ObjectScaleUtil.getFixedScale(obj.objectTypeIndex, obj.metadata) == undefined};
+    const canResize = canMove && config.scaling != undefined && config.scaling.cornerHandles !== false
+        && ObjectScaleUtil.getFixedScale(obj.objectTypeIndex, obj.metadata) == undefined;
+    // (The handle held stays, so that it never goes from under a drag.)
+    const heldId = SelectionEditGizmoUtil.getHeldHandleId("object");
+    return {selection, canMove, handles: !canResize ? noHandles
+        : outlineCorners.filter(handle => handle.id == heldId || canResizeByCorner(room, obj, handle.corner))};
+}
+
+// Whether dragging a corner anywhere would resize the object: asked of every other size its type allows,
+// the nearest first, as a drag that asked for it would be (see beginResize).
+function canResizeByCorner(room: Room, obj: AddObjectSignal, corner: {x: number, y: number}): boolean
+{
+    const scaling = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).scaling;
+    if (!scaling)
+        return false;
+
+    const current = ObjectScaleUtil.sanitize(obj.objectTypeIndex, obj.transform.scale);
+    const scales: Vec3[] = [];
+    for (const x of getScalesAlong(scaling.minScale.x, scaling.maxScale.x, scaling.scaleStep.x, current.x))
+    {
+        for (const y of getScalesAlong(scaling.minScale.y, scaling.maxScale.y, scaling.scaleStep.y, current.y))
+        {
+            if (Math.abs(x - current.x) > SCALE_TOLERANCE || Math.abs(y - current.y) > SCALE_TOLERANCE)
+                scales.push({x, y, z: current.z});
+        }
+    }
+    const change = (scale: Vec3) => Math.abs(scale.x - current.x) + Math.abs(scale.y - current.y);
+    scales.sort((a, b) => change(a) - change(b));
+
+    return scales.some(scale => canApply(room, obj.objectId, ObjectAttachmentUtil.getResizedFromCorner(
+        obj.objectTypeIndex, obj.transform, corner.x, corner.y, scale)));
+}
+
+// The scales a type allows along one axis (see ObjectScalingConfig): only the one the object has, along an
+// axis that doesn't resize.
+function getScalesAlong(min: number, max: number, step: number, current: number): number[]
+{
+    if (step <= 0)
+        return [current];
+    const scales: number[] = [];
+    for (let index = 0; min + step * index <= max + SCALE_TOLERANCE; ++index)
+        scales.push(min + step * index);
+    return scales;
 }
 
 // ─── Drags ──────────────────────────────────────────────────────────────
 
 // The object goes to the face under the pointer, keeping under it the spot it was taken hold of while it
 // stays on the same face. Where the object can't go, it slides back toward where it stood along that face,
-// or tries the spots around the pointer on another one.
+// or tries the spots around the pointer on another one. Blocked while that leaves it short of the spot
+// asked for on its own face, or finds it no place on another.
 function beginMove(selection: ObjectSelection, pressEv: PointerEvent): SelectionEditDrag
 {
     const objectId = selection.gameObject.params.objectId;
+    const objectTypeIndex = selection.gameObject.params.objectTypeIndex;
     const start = copyTransform(selection.gameObject.params.transform);
+    const startScale = ObjectScaleUtil.sanitize(objectTypeIndex, start.scale);
     const startQuarterTurns = getTurnable(objectId) ? QuarterTurnsUtil.getQuarterTurns(selection.gameObject.params) : undefined;
+    // (See ObjectAttachmentConfig.turnsToFit. A square one fits turned wherever it fits as it is.)
+    const turnsToFit = startQuarterTurns != undefined && startScale.x != startScale.y &&
+        ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex).attachment?.turnsToFit === true;
     const grabOffset = getGrabOffset(start, pressEv);
     let lastRequest: string | null = null;
+    let followed = true;
     draggedObjectId = objectId;
 
     return {
@@ -149,16 +203,20 @@ function beginMove(selection: ObjectSelection, pressEv: PointerEvent): Selection
             const room = App.getCurrentRoom();
             const obj = room?.objectById[objectId];
             if (!room || !obj)
-                return;
+                return followed;
 
             const request = getMoveRequest(obj, ev, grabOffset);
             if (request == undefined)
-                return;
+            {
+                lastRequest = null;
+                followed = false;
+                return followed;
+            }
             // Placement is searched for, so a pointer still over the same spot isn't asked about again.
             const requestKey = `${request.dir.x},${request.dir.y},${request.dir.z}:` +
                 `${request.center.x.toFixed(2)},${request.center.y.toFixed(2)},${request.center.z.toFixed(2)}`;
             if (requestKey == lastRequest)
-                return;
+                return followed;
             lastRequest = requestKey;
 
             // From where the drag started, so the path taken doesn't matter. The whole object turns with its
@@ -166,17 +224,45 @@ function beginMove(selection: ObjectSelection, pressEv: PointerEvent): Selection
             const quarterTurns = (startQuarterTurns == undefined) ? undefined : QuarterTurnsUtil.getMovedQuarterTurns(
                 start, startQuarterTurns, {pos: request.center, dir: request.dir}, PointerCoordUtil.projectPoint);
             const turnedAcross = quarterTurns != undefined && Math.abs(quarterTurns - startQuarterTurns!) % 2 == 1;
-            const scale = turnedAcross ? {x: start.scale.y, y: start.scale.x, z: start.scale.z} : start.scale;
+            const scale = turnedAcross ? swapWidthAndHeight(startScale) : startScale;
+            const findPlace = (center: Vec3, placedScale: Vec3, placedQuarterTurns: number | undefined, from?: Vec3) =>
+                ObjectAttachmentUtil.findPlacement(room, objectTypeIndex, center, request.dir, placedScale,
+                    (transform) => canApply(room, objectId, transform, placedQuarterTurns), from);
 
-            const placed = ObjectAttachmentUtil.findPlacement(room, obj.objectTypeIndex, request.center, request.dir,
-                scale, (transform) => canApply(room, objectId, transform, quarterTurns),
-                request.onSameFace ? obj.transform.pos : undefined);
+            let placed = findPlace(request.center, scale, quarterTurns, request.onSameFace ? obj.transform.pos : undefined);
+            let placedQuarterTurns = quarterTurns;
+            followed = placed != undefined && (!request.onSameFace || transformsMatch(placed,
+                ObjectAttachmentUtil.quantize(objectTypeIndex, new ObjectTransform(request.center, request.dir, scale))));
+
+            // A type that turns to fit takes a quarter-turn where no spot under the pointer takes it as it is,
+            // so never at the edge of a face wide enough for it. The turn is the other of its pair (0 and 1,
+            // 2 and 3), so that the next such turn undoes it.
+            if (!followed && turnsToFit)
+            {
+                const asItIs = request.onSameFace ? findPlace(request.point, scale, quarterTurns) : placed;
+                const turned = (asItIs != undefined) ? undefined
+                    : findPlace(request.point, swapWidthAndHeight(scale), quarterTurns! ^ 1);
+                if (turned != undefined)
+                {
+                    placed = turned;
+                    placedQuarterTurns = quarterTurns! ^ 1;
+                    followed = true;
+                }
+                else if (placed == undefined && asItIs != undefined)
+                {
+                    // (Its own face had nowhere to slide back to, as when it stands there turned.)
+                    placed = asItIs;
+                    followed = true;
+                }
+            }
+
             if (placed != undefined && !transformsMatch(placed, obj.transform))
             {
                 apply(objectId, placed);
-                if (quarterTurns != undefined)
-                    applyQuarterTurns(objectId, quarterTurns);
+                if (placedQuarterTurns != undefined)
+                    applyQuarterTurns(objectId, placedQuarterTurns);
             }
+            return followed;
         },
         onFinish: (keep: boolean) => finishDrag(objectId, start, keep, startQuarterTurns),
         onReleased: () => reannounce(objectId),
@@ -184,7 +270,8 @@ function beginMove(selection: ObjectSelection, pressEv: PointerEvent): Selection
 }
 
 // The dragged corner follows the pointer, offset by where on the handle it took hold, and the opposite
-// corner stays where it was (see ObjectAttachmentUtil.getResizeResult).
+// corner stays where it was (see ObjectAttachmentUtil.getResizeResult). Blocked while that leaves the
+// object another size than is asked for: one that doesn't fit, or past its type's limits.
 function beginResize(selection: ObjectSelection, pressEv: PointerEvent,
     corner: {x: number, y: number}, handleId: string): SelectionEditDrag
 {
@@ -196,6 +283,7 @@ function beginResize(selection: ObjectSelection, pressEv: PointerEvent,
         grabOffset.sub(getObjectCorner(selection.gameObject.params.objectTypeIndex, start, corner, cornerTemp));
     else
         grabOffset.set(0, 0, 0);
+    let reached = true;
     draggedObjectId = objectId;
 
     return {
@@ -205,22 +293,34 @@ function beginResize(selection: ObjectSelection, pressEv: PointerEvent,
             const room = App.getCurrentRoom();
             const obj = room?.objectById[objectId];
             if (!room || !obj)
-                return;
+                return reached;
             if (!SelectionEditGizmoUtil.getPointerOnPlane(ev, plane, hitTemp))
-                return;
+                return reached;
 
             hitTemp.sub(grabOffset);
-            const resized = ObjectAttachmentUtil.getResizeResult(room, obj, start, corner.x, corner.y,
-                {x: hitTemp.x, y: hitTemp.y, z: hitTemp.z});
+            const cornerPos = {x: hitTemp.x, y: hitTemp.y, z: hitTemp.z};
+            const resized = ObjectAttachmentUtil.getResizeResult(room, obj, start, corner.x, corner.y, cornerPos);
             if (resized != undefined && !transformsMatch(resized, obj.transform) &&
                 canApply(room, objectId, resized))
             {
                 apply(objectId, resized);
             }
+            reached = hasScale(obj, ObjectAttachmentUtil.getResizeScale(
+                obj.objectTypeIndex, start, corner.x, corner.y, cornerPos));
+            return reached;
         },
         onFinish: (keep: boolean) => finishDrag(objectId, start, keep),
         onReleased: () => reannounce(objectId),
     };
+}
+
+// Whether the object is as large as a scale asks, to the nearest step of its type's scale.
+function hasScale(obj: AddObjectSignal, asked: Vec3): boolean
+{
+    const step = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).scaling?.scaleStep;
+    const scale = ObjectScaleUtil.sanitize(obj.objectTypeIndex, obj.transform.scale);
+    return Math.abs(asked.x - scale.x) <= 0.5 * (step?.x ?? 0) + SCALE_TOLERANCE &&
+        Math.abs(asked.y - scale.y) <= 0.5 * (step?.y ?? 0) + SCALE_TOLERANCE;
 }
 
 // Where on the object the press took hold of it, along its face's right and up.
@@ -234,11 +334,11 @@ function getGrabOffset(transform: ObjectTransform, pressEv: PointerEvent): {x: n
     return {x: Vector3DUtil.dot(offset, right), y: Vector3DUtil.dot(offset, up)};
 }
 
-// Where the pointer asks the object to be centred, and facing which way. The face under it if the type
-// may be attached there; otherwise the object's own face, where the pointer meets its plane. Undefined if
-// the pointer is on neither.
+// Where the pointer asks the object to be centred, the point of the face it is on, and facing which way.
+// The face under it if the type may be attached there; otherwise the object's own face, where the pointer
+// meets its plane. Undefined if the pointer is on neither.
 function getMoveRequest(obj: AddObjectSignal, ev: PointerEvent, grabOffset: {x: number, y: number}):
-    {center: Vec3, dir: Vec3, onSameFace: boolean} | undefined
+    {center: Vec3, point: Vec3, dir: Vec3, onSameFace: boolean} | undefined
 {
     const current = Geometry3DUtil.getAxisFacingBasis(obj.transform.dir);
     CameraUtil.getPointerRay(ev, rayTemp);
@@ -262,12 +362,12 @@ function getMoveRequest(obj: AddObjectSignal, ev: PointerEvent, grabOffset: {x: 
     const onSameFace = Vector3DUtil.equal(normal, current.normal) &&
         Math.abs(Vector3DUtil.dot(Vector3DUtil.subtract(point, obj.transform.pos), normal)) < SAME_FACE_TOLERANCE;
     if (!onSameFace)
-        return {center: point, dir: normal, onSameFace};
+        return {center: point, point, dir: normal, onSameFace};
 
     // On the object's own face, the spot it was taken hold of stays under the pointer.
     const center = Vector3DUtil.subtract(point, Vector3DUtil.add(
         Vector3DUtil.scale(current.right, grabOffset.x), Vector3DUtil.scale(current.up, grabOffset.y)));
-    return {center, dir: normal, onSameFace};
+    return {center, point, dir: normal, onSameFace};
 }
 
 // Asked by the same rule the server applies (permissions, restricted zones, placement), so an edit that
@@ -397,6 +497,12 @@ function copyTransform(transform: ObjectTransform): ObjectTransform
     return new ObjectTransform({...transform.pos}, {...transform.dir}, {...transform.scale});
 }
 
+// The scale of a footprint turned a quarter.
+function swapWidthAndHeight(scale: Vec3): Vec3
+{
+    return {x: scale.y, y: scale.x, z: scale.z};
+}
+
 function transformsMatch(a: ObjectTransform, b: ObjectTransform): boolean
 {
     return nearlyEqual(a.pos, b.pos) && nearlyEqual(a.dir, b.dir) && nearlyEqual(a.scale, b.scale);
@@ -425,6 +531,9 @@ objectSelectionObservable.addListener("objectAttachmentEditGizmos", (selection: 
 });
 
 gameModeObservable.addListener("objectAttachmentEditGizmos", refresh);
+
+// What else is attached near the object decides the sizes it may take.
+objectEditObservable.addListener("objectAttachmentEditGizmos", refresh);
 
 roomChangedObservable.addListener("objectAttachmentEditGizmos", () => {
     target = null;

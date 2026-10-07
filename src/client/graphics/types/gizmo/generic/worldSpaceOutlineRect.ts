@@ -25,6 +25,7 @@ export default class WorldSpaceOutlineRect
     private coreMaterial: LineMaterial;
     private haloMaterial: LineMaterial;
     private baseColor: THREE.Color = new THREE.Color();
+    private brightness: number = 1;
     private outset: number;
 
     private constructor(geometry: LineSegmentsGeometry, color: string, padded: boolean)
@@ -140,8 +141,16 @@ export default class WorldSpaceOutlineRect
     // A 0..1 multiplier applied to the base color, used to animate the outline's brightness.
     setBrightness(brightness: number): void
     {
+        this.brightness = brightness;
         this.coreMaterial.color.copy(this.baseColor).multiplyScalar(brightness);
         this.haloMaterial.color.copy(this.baseColor).multiplyScalar(brightness);
+    }
+
+    // Another base color, at the brightness it has.
+    setColor(color: string): void
+    {
+        this.baseColor.set(color);
+        this.setBrightness(this.brightness);
     }
 
     dispose(): void

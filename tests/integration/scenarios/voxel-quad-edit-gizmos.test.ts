@@ -2,12 +2,13 @@
  * Scenario tests: reshaping a block by the selection outline of one of its faces (see
  * VoxelQuadEditGizmos), driven as the player drives it: presses, drags and releases on the canvas, seen
  * through a real camera and passed through the canvas's own arbitration (see GizmoDragUtil).
- * Covers: which bounds of a block get a handle on which face; a handle carrying its bound between the
- * cell's side and mid-cell, with the dead band between; the walkthrough of the note the feature came
- * from; each gesture previewed locally and sent as one edit, or put back when cancelled or when another
- * edit comes in; the face itself taking no drag, so that one turns the view; the gizmo standing down
- * under scripted locks and in a restricted zone; the wireframe the selection draws around the whole cell
- * of the selected block (see VoxelQuadSelection).
+ * Covers: which bounds of a block get a handle on which face (those with another place they may go,
+ * given what hangs on the block); a handle carrying its bound between the cell's side and mid-cell, with
+ * the dead band between; a drag showing red while it asks the bound to a place it can't take; the
+ * walkthrough of the note the feature came from; each gesture previewed locally and sent as one edit, or
+ * put back when cancelled or when another edit comes in; the face itself taking no drag, so that one turns
+ * the view; the gizmo standing down under scripted locks and in a restricted zone; the wireframe the
+ * selection draws around the whole cell of the selected block (see VoxelQuadSelection).
  * Browser-bound client modules are stubbed; the grid, the rules and the gizmo run for real.
  */
 import * as THREE from "three";
@@ -41,6 +42,8 @@ vi.mock("../../../src/client/app", () => ({
 vi.mock("../../../src/client/graphics/types/gizmo/generic/worldSpaceOutlineRect", () => ({
     default: class WorldSpaceOutlineRectStub
     {
+        // The color the selection's outline was last given.
+        static lastColor: string | null = null;
         static async create() { return new WorldSpaceOutlineRectStub(); }
         // As the real one: its line runs this far outside the area it outlines.
         static getEdgeOffset(size: number) { return 0.5 * size + 0.08; }
@@ -48,6 +51,7 @@ vi.mock("../../../src/client/graphics/types/gizmo/generic/worldSpaceOutlineRect"
         setTransform() {}
         setTransformRaw() {}
         setVisible() {}
+        setColor(color: string) { WorldSpaceOutlineRectStub.lastColor = color; }
         isVisible() { return true; }
         dispose() {}
     },
@@ -63,13 +67,15 @@ vi.mock("../../../src/client/networking/client/socketsClient", () => ({
 import App from "../../../src/client/app";
 import GraphicsManager from "../../../src/client/graphics/graphicsManager";
 import "../../../src/client/graphics/types/gizmo/voxelQuadEditGizmos";
+import WorldSpaceOutlineRect from "../../../src/client/graphics/types/gizmo/generic/worldSpaceOutlineRect";
 import GizmoDragUtil from "../../../src/client/graphics/util/gizmoDragUtil";
 import SelectionEditGizmoUtil from "../../../src/client/graphics/util/selectionEditGizmoUtil";
 import SocketsClient from "../../../src/client/networking/client/socketsClient";
 import ClientVoxelManager from "../../../src/client/voxel/clientVoxelManager";
-import { clientFeatureFlagsObservable, gameModeObservable, objectSelectionObservable, updateObservable,
-    voxelBlockPreviewObservable, voxelQuadSelectionObservable,
+import { clientFeatureFlagsObservable, gameModeObservable, objectEditObservable, objectSelectionObservable,
+    selectionEditBlockedObservable, updateObservable, voxelBlockPreviewObservable, voxelQuadSelectionObservable,
     voxelQuadSelectionRestrictionObservable } from "../../../src/client/system/clientObservables";
+import { SELECTION_BLOCKED_COLOR, SELECTION_COLOR } from "../../../src/client/system/clientConstants";
 import { FeatureFlag } from "../../../src/shared/system/types/featureFlag";
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, VOXEL_BLOCK_SHAPE_EMPTY,
     VOXEL_BLOCK_SHAPE_WHOLE } from "../../../src/shared/system/sharedConstants";
@@ -81,6 +87,7 @@ import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfi
 import ObjectUpdateUtil from "../../../src/shared/object/util/objectUpdateUtil";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
+import RemoveObjectSignal from "../../../src/shared/object/types/removeObjectSignal";
 import Room from "../../../src/shared/room/types/room";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import { createEditingUser } from "../helpers/mockUser";
@@ -172,6 +179,21 @@ function onEastFace(acrossCell: number, faceX: number = COL + 1): ScreenPoint
 
 const BLOCK_QUAD = quadIndexOf(ROW, COL, "y", "-", LAYER); // the first of the block's quads, which signals name it by
 
+// Whether the drag under way is asking for what the block can't do, which shows red.
+const blocked = () => selectionEditBlockedObservable.peek();
+
+// Hangs a canvas one layer tall on the block's south face, reaching across its cell from one place to
+// another (0 at the cell's west side, 1 at its east), as generation would: nothing is announced.
+function hangCanvasOnSouthFace(objectId: string, fromAcrossCell: number, toAcrossCell: number): AddObjectSignal
+{
+    const canvas = new AddObjectSignal(room.id, actingUser.id, actingUser.userName,
+        ObjectTypeConfigMap.getIndexByType("Canvas"), objectId, new ObjectTransform(
+            {x: COL + 0.5 * (fromAcrossCell + toAcrossCell), y: MID_Y, z: ROW + 1}, {x: 0, y: 0, z: 1},
+            {x: toAcrossCell - fromAcrossCell, y: 0.5, z: 1}));
+    expect(ObjectUpdateUtil.addObject(actingUser, room, canvas)).toBe(true);
+    return canvas;
+}
+
 beforeEach(() => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -252,6 +274,41 @@ describe("a selected face's resize handles", () => {
     it("are none on the room's own floor, which is no block's face", () => {
         forceSelect(room, VoxelQueryUtil.getFloorVoxelQuadIndex(ROW, COL + 3));
         expect(SelectionEditGizmoUtil.getGrabPoints()).toBeNull();
+    });
+
+    it("are only on bounds whose other place strands nothing hung on the block", () => {
+        // A canvas on the west half of the south face: the east bound may come in, the west one may not.
+        hangCanvasOnSouthFace("canvas-on-west-half", 0, 0.5);
+        selectFace("z", "+");
+        expect(handleIds()).toEqual(["maxX"]);
+        // The south bound would take the face from behind the canvas; the north one would leave it be.
+        selectFace("y", "+");
+        expect(handleIds()).toEqual(["maxX", "minZ"]);
+    });
+
+    it("are none on a face whose every bound holds up what hangs there, where no press is taken", () => {
+        hangCanvasOnSouthFace("canvas-on-block", 0, 1);
+        selectFace("z", "+");
+        expect(handleIds()).toEqual([]);
+        expect(SelectionEditGizmoUtil.getGrabPoints()!.canResize).toBe(false);
+
+        const eastHandle = screenPointOf({x: COL + 1.08, y: MID_Y, z: ROW + 1});
+        expect(cursorAt(eastHandle)).toBe("");
+        expect(press(eastHandle)).toBe(false);
+        expect(shapeAt(ROW, COL)).toBe(VOXEL_BLOCK_SHAPE_WHOLE);
+    });
+
+    it("come and go with what is hung on the block, while its face stays selected", () => {
+        selectFace("z", "+");
+        expect(handleIds()).toEqual(["maxX", "minX"]);
+
+        const canvas = hangCanvasOnSouthFace("canvas-on-block", 0, 1);
+        objectEditObservable.set({kind: "add", object: canvas});
+        expect(handleIds()).toEqual([]);
+
+        expect(ObjectUpdateUtil.removeObject(actingUser, room, new RemoveObjectSignal(room.id, canvas.objectId))).toBe(true);
+        objectEditObservable.set({kind: "remove", object: canvas});
+        expect(handleIds()).toEqual(["maxX", "minX"]);
     });
 });
 
@@ -375,17 +432,93 @@ describe("dragging a resize handle", () => {
         expect(after.quadIndex).not.toBe(quadIndexOf(ROW, COL, "x", "+", LAYER));
     });
 
-    it("leaves a block as it is where the change would strand what hangs on it", () => {
-        // A canvas over the whole of the south face.
-        const canvas = new AddObjectSignal(room.id, actingUser.id, actingUser.userName,
-            ObjectTypeConfigMap.getIndexByType("Canvas"), "canvas-on-block",
-            new ObjectTransform({x: COL + 0.5, y: MID_Y, z: ROW + 1}, {x: 0, y: 0, z: 1}, {x: 1, y: 0.5, z: 1}));
-        expect(ObjectUpdateUtil.addObject(actingUser, room, canvas)).toBe(true);
-
+    it("leaves a block as it is, and shows red, where something came to hang on it after its handle was offered", () => {
         selectFace("z", "+");
-        expect(drag(handle("maxX"), onSouthFace(0.9), onSouthFace(0.5))).toBe(true);
+        const grip = handle("maxX");
+        // A canvas over the whole of the south face, of which the gizmo hasn't heard.
+        hangCanvasOnSouthFace("canvas-on-block", 0, 1);
+
+        expect(press(grip)).toBe(true);
+        dragThrough(onSouthFace(0.9), onSouthFace(0.5));
         expect(shapeAt(ROW, COL)).toBe(VOXEL_BLOCK_SHAPE_WHOLE);
+        expect(blocked()).toBe(true);
+        // Back where the bound stands, nothing more is asked of it.
+        dragThrough(onSouthFace(1.08));
+        expect(blocked()).toBe(false);
+
+        dragThrough(onSouthFace(0.5));
+        release();
+        expect(blocked()).toBe(false);
         expect(sentSignals()).toEqual([]);
+    });
+
+    it("shows red while the bound is carried on toward a place it can't take: out of its cell, or in past mid-cell", () => {
+        selectFace("z", "+");
+        expect(press(handle("maxX"))).toBe(true); // at 1.08 across the cell, so the pointer leads the bound by 0.08
+
+        // Out past the cell's east side: not until it is carried as far as would take it over the other way.
+        dragThrough(onSouthFace(1.2 + 0.08), onSouthFace(1.28 + 0.08));
+        expect(blocked()).toBe(false);
+        dragThrough(onSouthFace(1.34 + 0.08));
+        expect(shapeAt(ROW, COL)).toBe(VOXEL_BLOCK_SHAPE_WHOLE);
+        expect(blocked()).toBe(true);
+        dragThrough(onSouthFace(1 + 0.08));
+        expect(blocked()).toBe(false);
+
+        // In to mid-cell, which it takes, and on toward the west side, where no block would be left.
+        dragThrough(onSouthFace(0.5 + 0.08));
+        expect(shapeAt(ROW, COL)).toBe(WEST_HALF);
+        expect(blocked()).toBe(false);
+        dragThrough(onSouthFace(0.24 + 0.08));
+        expect(blocked()).toBe(false);
+        dragThrough(onSouthFace(0.16 + 0.08));
+        expect(shapeAt(ROW, COL)).toBe(WEST_HALF);
+        expect(blocked()).toBe(true);
+
+        // Straight there from the cell's side: the bound goes as far as it can, and the rest is refused.
+        dragThrough(onSouthFace(1 + 0.08));
+        expect(shapeAt(ROW, COL)).toBe(VOXEL_BLOCK_SHAPE_WHOLE);
+        expect(blocked()).toBe(false);
+        dragThrough(onSouthFace(0.1 + 0.08));
+        expect(shapeAt(ROW, COL)).toBe(WEST_HALF);
+        expect(blocked()).toBe(true);
+
+        release();
+        expect(blocked()).toBe(false);
+        expect(sentSignals()).toEqual([["reshape", BLOCK_QUAD, WEST_HALF]]);
+    });
+
+    it("turns the outline, the cell's wireframe and the handles red meanwhile, and back", async () => {
+        const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+        const frame = () => updateObservable.set(1 / 60);
+        const outlineColor = () => (WorldSpaceOutlineRect as unknown as {lastColor: string | null}).lastColor;
+        const colorsOf = (kind: "isMesh" | "isLineSegments") => [...new Set(GraphicsManager.getScene().children
+            .filter(child => (child as unknown as {[key: string]: boolean})[kind] && child.visible)
+            .map(child => ((child as THREE.Mesh).material as THREE.MeshBasicMaterial).color.getHexString()))];
+        const green = new THREE.Color(SELECTION_COLOR).getHexString();
+        const red = new THREE.Color(SELECTION_BLOCKED_COLOR).getHexString();
+
+        // The wireframe and the handles are each made the first time they are wanted.
+        selectFace("z", "+");
+        await settle();
+        frame();
+        await settle();
+        frame();
+        expect(colorsOf("isLineSegments")).toEqual([green]);
+        expect(colorsOf("isMesh")).toEqual(["ffff00"]);
+
+        expect(press(handle("maxX"))).toBe(true);
+        dragThrough(onSouthFace(1.2 + 0.08), onSouthFace(1.4 + 0.08));
+        frame();
+        expect(outlineColor()).toBe(SELECTION_BLOCKED_COLOR);
+        expect(colorsOf("isLineSegments")).toEqual([red]);
+        expect(colorsOf("isMesh")).toEqual([red]);
+
+        release();
+        frame();
+        expect(outlineColor()).toBe(SELECTION_COLOR);
+        expect(colorsOf("isLineSegments")).toEqual([green]);
+        expect(colorsOf("isMesh")).toEqual(["ffff00"]);
     });
 });
 

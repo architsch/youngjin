@@ -54,6 +54,11 @@ export default class WorldSpaceHandle
         this.highlighted = highlighted;
     }
 
+    setColor(color: string): void
+    {
+        this.material.color.set(color);
+    }
+
     // Faces the camera and keeps its size on screen; call each frame while shown.
     update(): void
     {

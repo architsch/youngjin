@@ -7,7 +7,7 @@ import SelectionEditDrag from "./selectionEditDrag";
 export default interface SelectionEditGizmoProvider
 {
     // The handles, each named for what it resizes and placed in the world, in an order that holds for as
-    // long as the selection does.
+    // long as the selection does: only those a drag could resize the selection by, some way or other.
     getHandles: () => {id: string, position: THREE.Vector3}[];
     // The cursor over a handle, and the drag a press on it begins. handleScreen is where the handle shows,
     // in the viewport coordinates pointer events carry.

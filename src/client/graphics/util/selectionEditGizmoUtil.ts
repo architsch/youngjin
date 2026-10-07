@@ -10,7 +10,9 @@ import CameraUtil from "./cameraUtil";
 import PointerCoordUtil from "./pointerCoordUtil";
 import WorldSpaceSelectionUtil from "./worldSpaceSelectionUtil";
 import GameModeUtil from "../../system/util/gameModeUtil";
-import { gameModeObservable, roomChangedObservable, updateObservable } from "../../system/clientObservables";
+import { gameModeObservable, roomChangedObservable, selectionEditBlockedObservable,
+    updateObservable } from "../../system/clientObservables";
+import { SELECTION_BLOCKED_COLOR } from "../../system/clientConstants";
 import Geometry3DUtil from "../../../shared/math/util/geometry3DUtil";
 import Vec3 from "../../../shared/math/types/vec3";
 import ErrorUtil from "../../../shared/system/util/errorUtil";
@@ -19,7 +21,8 @@ import ErrorUtil from "../../../shared/system/util/errorUtil";
 // it. Which of the two a kind of selection offers, and what a drag does, belongs to that kind (see
 // SelectionEditGizmoProvider). What the kinds share is here: the handles themselves, which of them a press
 // takes hold of, and a drag's upkeep. The view holds still while a drag lasts (see
-// WorldSpaceSelectionUtil.holdOrbitTarget), and no drag outlives edit mode or the room.
+// WorldSpaceSelectionUtil.holdOrbitTarget), and no drag outlives edit mode or the room. While a drag asks
+// for what the selection can't do, it is announced as blocked (see selectionEditBlockedObservable).
 
 const HANDLE_COLOR = "#ffff00";
 const HANDLE_DIAMETER_PX = 18; // on screen, at any distance
@@ -56,6 +59,10 @@ const SelectionEditGizmoUtil =
     },
 
     isDragging: (kind: SelectionKind): boolean => activeDrag?.kind == kind,
+
+    // The handle the drag of this kind's selection holds, if one is under way and holds one.
+    getHeldHandleId: (kind: SelectionKind): string | undefined =>
+        (activeDrag?.kind == kind) ? activeDrag.drag.handleId : undefined,
 
     // Ends the drag of this kind's selection, if one is under way, putting back whatever it changed.
     abandonDrag: (kind: SelectionKind): void =>
@@ -173,6 +180,7 @@ function runDrag(kind: SelectionKind, drag: SelectionEditDrag): GizmoDragHandler
     const finish = (keep: boolean): void =>
     {
         activeDrag = null;
+        setBlocked(false);
         if (!started)
             return;
         try
@@ -198,7 +206,10 @@ function runDrag(kind: SelectionKind, drag: SelectionEditDrag): GizmoDragHandler
                 started = true;
                 WorldSpaceSelectionUtil.holdOrbitTarget();
             }
-            drag.onMove(ev);
+            const blocked = !drag.onMove(ev);
+            // (A move can end its own drag, e.g. by finding the selection gone.)
+            if (activeDrag?.drag === drag)
+                setBlocked(blocked);
         },
         onEnd: () => finish(true),
         onCancel: () => finish(false),
@@ -209,6 +220,12 @@ function abandonAnyDrag(): void
 {
     if (activeDrag != null)
         GizmoDragUtil.cancel();
+}
+
+function setBlocked(blocked: boolean): void
+{
+    if (selectionEditBlockedObservable.peek() != blocked)
+        selectionEditBlockedObservable.set(blocked);
 }
 
 // ─── Handles ────────────────────────────────────────────────────────────
@@ -243,6 +260,7 @@ gameModeObservable.addListener("selectionEditGizmoUtil", () => {
 roomChangedObservable.addListener("selectionEditGizmoUtil", abandonAnyDrag);
 
 updateObservable.addListener("selectionEditGizmoUtil", () => {
+    const color = selectionEditBlockedObservable.peek() ? SELECTION_BLOCKED_COLOR : HANDLE_COLOR;
     let numShown = 0;
     for (const {kind, provider} of providers)
     {
@@ -255,6 +273,7 @@ updateObservable.addListener("selectionEditGizmoUtil", () => {
             handle.setVisible(true);
             handle.setPosition(shownHandles[index].position);
             handle.setHighlighted(activeDrag?.kind == kind && activeDrag.drag.handleId === shownHandles[index].id);
+            handle.setColor(color);
             handle.update();
         }
     }

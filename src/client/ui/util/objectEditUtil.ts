@@ -135,20 +135,21 @@ const ObjectEditUtil =
         // Re-announced so the tools catch up with the look it now has.
         objectSelectionObservable.notify();
     },
-    // A clockwise quarter-turn of the whole object, as one edit: its footprint swaps where it stands, and what it
-    // shows turns with it (see QuarterTurnsUtil). Checked as the server will check it, so it is offered only
-    // where the turned object fits.
+    // A clockwise quarter-turn of the whole object, as one edit: its footprint swaps where it stands, or a grid
+    // step from there if only so does it fit, and what it shows turns with it (see QuarterTurnsUtil). Checked as
+    // the server will check it, so it is offered only where the turned object fits.
     canQuarterTurn: (selection: ObjectSelection): boolean =>
     {
-        return ObjectEditUtil.canSetObjectMetadata(selection, ObjectMetadataKeyEnumMap.QuarterTurns,
-            getNextQuarterTurns(selection), getQuarterTurned(selection));
+        return findQuarterTurned(selection) != null;
     },
     tryQuarterTurn: (selection: ObjectSelection): void =>
     {
-        if (!ObjectEditUtil.canQuarterTurn(selection))
-            return;
-        ObjectEditUtil.trySetObjectMetadata(selection, ObjectMetadataKeyEnumMap.QuarterTurns,
-            getNextQuarterTurns(selection), getQuarterTurned(selection));
+        const turned = findQuarterTurned(selection);
+        if (turned != null)
+        {
+            ObjectEditUtil.trySetObjectMetadata(selection, ObjectMetadataKeyEnumMap.QuarterTurns,
+                getNextQuarterTurns(selection), turned.transform);
+        }
     },
 }
 
@@ -157,15 +158,24 @@ function getNextQuarterTurns(selection: ObjectSelection): string
     return QuarterTurnsUtil.encode(QuarterTurnsUtil.getQuarterTurns(selection.gameObject.params) + 1);
 }
 
-// The object with its width and height swapped where it stands, or undefined if it is square.
-function getQuarterTurned(selection: ObjectSelection): ObjectTransform | undefined
+// The transform to send with the object's next turn: none for a square object, or else the first way its
+// footprint fits with its width and height swapped (see ObjectAttachmentUtil.getQuarterTurnCandidates). Null when
+// the turn can't be made.
+function findQuarterTurned(selection: ObjectSelection): {transform: ObjectTransform | undefined} | null
 {
     const params = selection.gameObject.params;
     const scale = ObjectScaleUtil.sanitize(params.objectTypeIndex, params.transform.scale);
-    if (scale.x == scale.y)
-        return undefined;
-    return ObjectAttachmentUtil.getResizedInPlace(params.objectTypeIndex, params.transform,
-        {x: scale.y, y: scale.x, z: scale.z});
+    const candidates = (scale.x == scale.y) ? [undefined]
+        : ObjectAttachmentUtil.getQuarterTurnCandidates(params.objectTypeIndex, params.transform);
+    for (const transform of candidates)
+    {
+        if (ObjectEditUtil.canSetObjectMetadata(selection, ObjectMetadataKeyEnumMap.QuarterTurns,
+            getNextQuarterTurns(selection), transform))
+        {
+            return {transform};
+        }
+    }
+    return null;
 }
 
 async function tryRemoveObject(selection: ObjectSelection)

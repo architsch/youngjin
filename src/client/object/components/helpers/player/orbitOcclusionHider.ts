@@ -18,6 +18,7 @@ import VoxelBlockShapeUtil from "../../../../../shared/voxel/util/voxelBlockShap
 import ClientVoxelQueryUtil from "../../../../voxel/util/clientVoxelQueryUtil";
 import VoxelQuadInstanceUtil from "../../../../voxel/util/voxelQuadInstanceUtil";
 import PhysicsColliderStateUtil from "../../../../../shared/physics/util/physicsColliderStateUtil";
+import ObjectAttachmentUtil from "../../../../../shared/object/util/objectAttachmentUtil";
 import { DIRECTION_VECTORS } from "../../../../system/clientConstants";
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y, NEAR_EPSILON,
     NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS,
@@ -30,7 +31,8 @@ import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_R
 //   Samples sit on the target's exposed surface (see faceIsExposed): interior samples would condemn
 //   whole walls the target is embedded in.
 // - Voxels are culled by sweeping the target box toward the camera through the grid, then tested
-//   against samples. Other meshes are raycast along the samples, and a hit hides the whole object.
+//   against samples. Other meshes are raycast along the samples, and a hit hides the whole object,
+//   an attached one only along with a block it rests on (see restsOnHiddenBlock).
 // - The target itself is protected (see setProtectedRegion).
 // - Sweeps are throttled: frequent while the camera moves, rare at rest.
 
@@ -195,10 +197,47 @@ export default class OrbitOcclusionHider
             const candidate = this.candidateByKey[candidateKey];
             if (candidate.numSamplesBlocked < minBlockedSamples)
                 continue; // Barely in the way of anything: not worth emptying its place in the room.
+            if (candidate.gameObject.config.attachment != undefined &&
+                !this.restsOnHiddenBlock(candidate.gameObject))
+            {
+                continue; // Part of a face that is left standing.
+            }
 
             this.hideOccluder(candidate.mesh, candidate.instanceId);
             this.hideRemainingPartsOf(candidate.gameObject);
         }
+    }
+
+    // Whether this sweep hid any block the object rests on. An attached object goes only along with one, or
+    // samples a hair from its face (the floor at the foot of its wall) would take it off a wall left standing.
+    private restsOnHiddenBlock(gameObject: GameObject): boolean
+    {
+        let found = false;
+        ObjectAttachmentUtil.forEachSupportingBlock(gameObject.params.objectTypeIndex, gameObject.params.transform,
+            (row, col, collisionLayer) => {
+                found = this.blockIsHidden(row, col, collisionLayer);
+                return !found;
+            });
+        return found;
+    }
+
+    // A layer past the layer range asks about the room's own floor or ceiling over the cell.
+    private blockIsHidden(row: number, col: number, collisionLayer: number): boolean
+    {
+        if (collisionLayer < COLLISION_LAYER_MIN)
+            return this.sweepTagByHiddenQuadIndex[VoxelQueryUtil.getFloorVoxelQuadIndex(row, col)] != undefined;
+        if (collisionLayer > COLLISION_LAYER_MAX)
+            return this.sweepTagByHiddenQuadIndex[VoxelQueryUtil.getCeilingVoxelQuadIndex(row, col)] != undefined;
+
+        const firstQuadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, collisionLayer);
+        if (firstQuadIndex < 0)
+            return false;
+        for (let i = 0; i < NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
+        {
+            if (this.sweepTagByHiddenQuadIndex[firstQuadIndex + i] != undefined)
+                return true;
+        }
+        return false;
     }
 
     private collectCandidatesInFrontOf(sample: THREE.Vector3, sampleIndex: number): void
@@ -416,7 +455,7 @@ function collectQuadIndexIfDrawn(quadIndex: number): void
 // since the sweep keeps the target's full width all the way to the camera and over-condemns.
 function boxIsInTheWay(box: AABB3): boolean
 {
-    if (Geometry3DUtil.castAABBAgainstAABB(targetBox, cameraPos, box).hitNormal == undefined)
+    if (!targetSweepReaches(box))
         return false;
 
     let numSamplesBlocked = 0;
@@ -431,6 +470,13 @@ function boxIsInTheWay(box: AABB3): boolean
             return false; // Too few samples left over for this one to make up the difference.
     }
     return false;
+}
+
+// Whether the target, swept toward the camera, runs into a box. Never one it lies against from the start,
+// as a flat target (the room's floor or ceiling) does a block standing on it.
+function targetSweepReaches(box: AABB3): boolean
+{
+    return Geometry3DUtil.castAABBAgainstAABB(targetBox, cameraPos, box).hitNormal != undefined;
 }
 
 // Traced from the sample outward, so the target's own surface and flush neighbours count as touched,
@@ -507,8 +553,8 @@ function placeSampleOnTarget(sample: THREE.Vector3, voxels: Voxel[] | undefined)
 }
 
 // Whether a sample's face could ever be visible. Checked just outside the face. Buried means covered
-// by geometry that stays (protected blocks or a picture's host wall); a character's back against an
-// unprotected wall still counts, since clearing that wall is the point.
+// by geometry that stays (protected blocks, a picture's host wall, a block the sweep never reaches); a
+// character's back against an unprotected wall still counts, since clearing that wall is the point.
 function faceIsExposed(sample: THREE.Vector3, faceNormal: Vec3, voxels: Voxel[] | undefined): boolean
 {
     const x = sample.x + faceNormal.x * exposureProbeDist;
@@ -520,8 +566,9 @@ function faceIsExposed(sample: THREE.Vector3, faceNormal: Vec3, voxels: Voxel[] 
     const row = VoxelQueryUtil.getVoxelRowFromWorldZ(z);
     const col = VoxelQueryUtil.getVoxelColFromWorldX(x);
     const collisionLayer = VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(y);
-    return !Geometry3DUtil.AABBsOverlap(protectedRegion, VoxelQueryUtil.getVoxelBlockBox(row, col, collisionLayer,
-        VoxelQueryUtil.getVoxelBlockShapeAt(voxels, row, col, collisionLayer)));
+    const blockBox = VoxelQueryUtil.getVoxelBlockBox(row, col, collisionLayer,
+        VoxelQueryUtil.getVoxelBlockShapeAt(voxels, row, col, collisionLayer));
+    return !Geometry3DUtil.AABBsOverlap(protectedRegion, blockBox) && targetSweepReaches(blockBox);
 }
 
 // Half-width of the target along a camera axis (world-axis half-sizes would over-aim at edge-on

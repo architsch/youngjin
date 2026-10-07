@@ -9,6 +9,7 @@ An attached object (a canvas, a prop, a [door](door_design.md), a lamp) rests on
 - Each facing lays the object out on one fixed frame (`Geometry3DUtil`): walls keep the object upright, and floors and ceilings give it a fixed "up" along the ground. A transform carries no roll, so a non-square object is shaped by resizing, not by turning.
 - The collider, the selection outline and its handles, and the rendered rotation all read this frame.
 - A canvas's or prop's content turns in quarter-turns instead (`QuarterTurns` metadata, `QuarterTurnsUtil`): its rotate tool swaps the footprint's width and height where it stands, as a lamp's size change does, and the picture turns with it. The turn lives in the content because composed parts never take their parent's roll (`InstancedPartUtil`).
+- Where the turned footprint doesn't fit in place, the tool tries it a grid step away along one of the face's axes (`ObjectAttachmentUtil`): about the object's centre along the face's up, so a wall's object may keep its top edge instead of its bottom, or to either side across. It is offered only where one of these fits.
 - A move to another face keeps the turn the content shows on screen: its top points the way it looked, measured from where the drag started, and an odd change of turn swaps the footprint too, so the object keeps its shape as seen. A new canvas or prop on a floor or ceiling starts upright for the viewer the same way.
 - **Trap**: a stored facing decodes slightly off its axis. Rendering builds the rotation from the frame rather than by `lookAt`, which would leave a floor or ceiling object's roll to that error.
 
@@ -37,14 +38,17 @@ The selected object is moved by dragging the inside of its selection outline (`O
 - On its own face, the spot taken hold of stays under the pointer. On another face, the object is centred on the pointer.
 - Where it doesn't fit (`ObjectAttachmentUtil`), it slides back toward where it stood on the same face, or takes the nearest spot within half its footprint on another. Failing both, it stays put.
 - Among the spots it would take, one whose whole face is in the open wins over a partly covered one, so a spot snapped half into the foot of a wall gives way to one beside it. A partly covered spot is still valid, and still taken when nothing clear is near.
+- A type that sets `ObjectAttachmentConfig.turnsToFit` (a prop, which can't be resized to fit) also turns a quarter where no spot under the pointer takes it as it lies and one takes it turned. So it never turns at the edge of a face wide enough for it. The turn is the other of a pair, so the next such move undoes it.
+- While the object can't follow the pointer (held back on its own face, or with no place on another), the drag is blocked: the outline and its handles show red (`selectionEditBlockedObservable`).
 - Adding an object from a selected face uses the same search. A door instead stands on the storey floor.
 - A new object's size is its type's to choose, given which sizes that search finds a place for (`ObjectScalingConfig.getDefaultScale`). A canvas is a whole block wherever one fits, shifted up or down a wall if need be, and one layer tall where not (the side of a lone block). A prop's size is its image's and a lamp's is picked, both as they are added; the chooser dims those the search finds no place for.
 - A drag previews locally, and the server hears one transform, on release.
 
 ## Resizing
 A type with an `ObjectScalingConfig` is resized by the outline's corner handles, one step of its scale at a time, unless its config turns the handles off.
+- A corner has a handle only while some other size fits from it.
 - The corner opposite the dragged one holds exactly still, since sizes come in half-voxel steps and half of one is on the grid.
-- A size that doesn't fit is refused, and the object keeps the last size that did.
+- A size that doesn't fit is refused, and the object keeps the last size that did. The drag is blocked meanwhile, as it is past the type's limits.
 - A lamp has no handles. It comes in a few sizes, picked from its edit options and applied **where it stands** (`ObjectAttachmentUtil.getResizedInPlace`): the centre stays put across the face, except vertically, where the bottom edge does, so picking the earlier size puts it back exactly. The list offers only the sizes that fit there, asked by the same rule the server applies to the resulting transform.
 - Metadata can pin the scale (`ObjectScalingConfig.getFixedScale`): a prop is exactly its image's size, turned. It has no handles, and a change that moves the pin (a new image, a turn of a non-square one, a move that turns it) sends its transform inside the metadata signal (`SetObjectMetadataSignal.transform`), so the two are checked and applied as one edit. A new image's size is tried each way over where the prop stands (`ObjectAttachmentUtil.getResizeCandidates`): holding its bottom edge, then its top, then its centre, and likewise its left edge, right edge and centre. The first that fits is sent, and the image panel dims images that fit no way. A canvas is never pinned: its painting is fitted to whatever size it is.
 
