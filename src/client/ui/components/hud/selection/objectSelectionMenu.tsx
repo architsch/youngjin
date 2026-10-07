@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { objectInstalledObservable, objectSelectionObservable } from "../../../../system/clientObservables";
+import { SUB_PANELS_BENEATH_SELECTION_TOOLS } from "../../../../system/clientConstants";
 import ObjectSelection from "../../../../graphics/types/gizmo/objectSelection";
 import ObjectTypeClientConfigMap from "../../../../object/maps/objectTypeClientConfigMap";
 import { EditPanel } from "../../../types/editPanel";
@@ -10,24 +11,29 @@ export default function ObjectSelectionMenu({ inEditMode }: Props)
     // Read the selection on mount (it may have changed while hidden behind room settings, see
     // UIRoot), in the initial state so tools appear without a one-frame delay.
     const [state, setState] = useState<{selection: ObjectSelection | null, openPanel: EditPanel | null,
-        installing: boolean}>(() => ({
-            selection: objectSelectionObservable.peek(), openPanel: null, installing: false,
-        }));
+        installing: boolean}>(() => {
+            const selection = objectSelectionObservable.peek();
+            return {selection, openPanel: getOpenPanel(selection, null), installing: false};
+        });
 
     useEffect(() => {
         objectSelectionObservable.addListener("ui.objectSelection", selection => setState(prev => {
-            // Moving to an object whose tools offer the same sub-panel keeps it open, unless it was raised for the
-            // object just added; any other change closes it.
             const sameObject = selection?.gameObject === prev.selection?.gameObject;
-            const keepsPanel = prev.installing ? sameObject : offersPanel(selection, prev.openPanel);
-            return {selection, openPanel: keepsPanel ? prev.openPanel : null,
-                installing: prev.installing && sameObject};
+            // A panel raised in the tools' place for the object just added doesn't go on to another object.
+            const shown = (SUB_PANELS_BENEATH_SELECTION_TOOLS || !prev.installing || sameObject)
+                ? prev.openPanel : null;
+            return {selection, openPanel: getOpenPanel(selection, shown), installing: prev.installing && sameObject};
         }));
         objectInstalledObservable.addListener("ui.objectSelection", objectId => setState(prev => {
             const params = prev.selection?.gameObject.params;
-            const installPanel = (params?.objectId == objectId)
-                ? ObjectTypeClientConfigMap.getConfigByIndex(params.objectTypeIndex).selection?.installPanel
-                : undefined;
+            if (params?.objectId != objectId)
+                return prev;
+            // Beneath the tools, the panel already showing carries on from the chooser. In their place, the type's
+            // install panel is raised, if it has one.
+            if (SUB_PANELS_BENEATH_SELECTION_TOOLS)
+                return {...prev, installing: true};
+            const installPanel = ObjectTypeClientConfigMap.getConfigByIndex(params.objectTypeIndex)
+                .selection?.installPanel;
             return installPanel ? {...prev, openPanel: installPanel, installing: true} : prev;
         }));
         return () => {
@@ -50,20 +56,26 @@ export default function ObjectSelectionMenu({ inEditMode }: Props)
         {/* Keyed by object, so each object's tools start fresh; only the open sub-panel carries over. */}
         <EditOptions key={selection.gameObject.params.objectId} selection={selection}
             openPanel={state.openPanel}
-            // The tools' own choice of panel ends what was raised for the object just added.
-            setOpenPanel={openPanel => setState(prev => ({...prev, openPanel, installing: false}))}
-            installing={state.installing}
+            // The tools' own choice of another panel ends what was raised, or carried on, for the object just added.
+            setOpenPanel={openPanel => setState(prev => (openPanel == prev.openPanel) ? prev
+                : {...prev, openPanel, installing: false})}
+            installing={!SUB_PANELS_BENEATH_SELECTION_TOOLS && state.installing}
+            resumed={SUB_PANELS_BENEATH_SELECTION_TOOLS && state.installing}
         />
     </div>;
 }
 
-function offersPanel(selection: ObjectSelection | null, panel: EditPanel | null): boolean
+// The sub-panel an object's tools show: the one already open if its type offers that too. Failing that, its type's
+// first where panels show beneath the tools, and none where they take the tools' place.
+function getOpenPanel(selection: ObjectSelection | null, shown: EditPanel | null): EditPanel | null
 {
-    if (!selection || !panel)
-        return false;
+    if (!selection)
+        return null;
     const editPanels = ObjectTypeClientConfigMap.getConfigByIndex(
-        selection.gameObject.params.objectTypeIndex).selection?.editPanels;
-    return editPanels != undefined && editPanels.includes(panel);
+        selection.gameObject.params.objectTypeIndex).selection?.editPanels ?? [];
+    if (shown != null && editPanels.includes(shown))
+        return shown;
+    return SUB_PANELS_BENEATH_SELECTION_TOOLS ? editPanels[0] ?? null : null;
 }
 
 interface Props

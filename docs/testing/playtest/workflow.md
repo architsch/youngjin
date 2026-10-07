@@ -76,6 +76,7 @@ Both are installed only on non-public deployments. **Arrange with one, act with 
 - Silent failures (out of reach, occluded, covered by the HUD) are reported explicitly. Expected quirk: culled surfaces refuse selection, so candidates are tried in turn.
 - `clickSurfaceUntilEnabled` selects surfaces until a named control becomes enabled, widening the view and moving between rounds. Its report separates "nowhere valid" from "the tool is broken".
 - HUD controls are `div`s with `aria-disabled`, so use `uiClick` and `expectDisabled` rather than raw DOM clicks.
+- A sub-panel has a close button (`<panel id>Close`) only with `SUB_PANELS_BENEATH_SELECTION_TOOLS` off, and the server under test may run either way: click it with `"optional": true`, which passes over a control that isn't there.
 - Answer a confirm popup with `confirm`, not a `click` on Yes: Yes takes no click for the popup's first moment and shows no sign of it.
 
 ## Acquisition-analytics check

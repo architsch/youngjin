@@ -18,6 +18,12 @@ export const EDIT_MODE_OPENING_TILT = THREE.MathUtils.degToRad(15);
 // for the next to be added from (see VoxelQuadPlacementOptions).
 export const DISABLE_AUTO_SELECTION_ON_OBJECT_INSTALLATION = true;
 
+// Where the selection tools show a sub-panel (an object's, see EditOptionsProps; a face's chooser, see
+// VoxelQuadPlacementOptions). True shows it beneath the tool row, whose buttons toggle between panels that have no
+// close button: an object's tools always show one, and a new object's carry on from the chooser it was picked in.
+// False raises it in the tool row's place until it is closed, and a new canvas opens on its frame list.
+export const SUB_PANELS_BENEATH_SELECTION_TOOLS = true;
+
 // What an automatic selection asks of a voxel quad (see VoxelQuadSelection): to lie no further than this from where
 // it looks, with at least this share of its face clear of attached objects. With no such quad, it takes an object
 // within the same distance instead.

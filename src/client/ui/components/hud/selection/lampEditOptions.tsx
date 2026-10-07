@@ -13,6 +13,7 @@ import ObjectAttachmentUtil from "../../../../../shared/object/util/objectAttach
 import { MAX_LAMP_INTENSITY, MAX_LAMP_RANGE, MIN_LAMP_INTENSITY,
     MIN_LAMP_RANGE } from "../../../../../shared/graphics/light/util/lampLightUtil";
 import { LIGHT_COLOR_PALETTE_NAME } from "../../../../../shared/system/sharedConstants";
+import { SUB_PANELS_BENEATH_SELECTION_TOOLS } from "../../../../system/clientConstants";
 import ObjectEditUtil from "../../../util/objectEditUtil";
 import ResizeIcon from "../../../svg/icons/resizeIcon";
 import CompositionThumbnailPanel from "../../panel/compositionThumbnailPanel";
@@ -23,8 +24,8 @@ const INTENSITY_LABELS = getLabels(MIN_LAMP_INTENSITY, MAX_LAMP_INTENSITY);
 const RANGE_LABELS = getLabels(MIN_LAMP_RANGE, MAX_LAMP_RANGE);
 
 // Lamp tools: remove, resize (to one of its sizes, where it stands), or change its light (one stored setting
-// that also colors the glow; intensity and range are separate dials, see LampLightUtil). The size list
-// takes this row's place until closed.
+// that also colors the glow; intensity and range are separate dials, see LampLightUtil). The size list shows
+// beneath this row, or in its place until closed (see SUB_PANELS_BENEATH_SELECTION_TOOLS).
 export default function LampEditOptions(props: EditOptionsProps)
 {
     const obj = props.selection.gameObject.params;
@@ -43,28 +44,23 @@ export default function LampEditOptions(props: EditOptionsProps)
             LampObjectTypeConfig.util.encodeLightProperties(next.colorIndex, next.intensity, next.range));
     };
 
-    // Recomputed each render; zone changes and resizes re-announce the selection (see ClientVoxelManager).
+    // Recomputed each render; zone changes and resizes re-announce the selection (see ClientVoxelManager). Where the
+    // lamp can't be edited, a list beneath this row stays up with nothing in it to pick, and one in its place isn't
+    // raised.
     const canEdit = canEditLamp(props.selection);
-    const choosingSize = props.openPanel == "compositionThumbnail";
-    const toolsShown = !(canEdit && choosingSize);
+    const canRaisePanel = SUB_PANELS_BENEATH_SELECTION_TOOLS || canEdit;
+    const choosingSize = canRaisePanel && props.openPanel == "compositionThumbnail";
+    const toolsShown = SUB_PANELS_BENEATH_SELECTION_TOOLS || !choosingSize;
 
     // Full width, so the rows can scroll horizontally instead of growing.
     return <div className="flex flex-col gap-1 w-full">
-        {choosingSize && canEdit && <CompositionThumbnailPanel
-            id="lampSizeOptions"
-            objectType={LampObjectTypeConfig.objectType}
-            currentCompositionIndex={LampObjectTypeConfig.util.getCompositionIndex(obj)}
-            canChoose={(compositionIndex) => canResize(props.selection, compositionIndex)}
-            onChoose={(compositionIndex) => tryResize(props.selection, compositionIndex)}
-            onClose={() => props.setOpenPanel(null)}
-        />}
         {toolsShown && <SelectionToolRow>
             <IconButton icon={<TrashIcon/>} size="md" color="red" shortcutKey="Delete"
                 disabled={!ObjectEditUtil.canRemoveObject(props.selection)}
                 onClick={() => ObjectEditUtil.openRemoveConfirmPopup(props.selection, "Want to remove this?")}
             />
             <IconButton id="changeLampSizeButton" icon={<ResizeIcon/>} size="md"
-                disabled={!canEdit}
+                disabled={!canRaisePanel} highlight={choosingSize}
                 onClick={() => props.setOpenPanel("compositionThumbnail")}
             />
             <div className="flex flex-row items-center gap-1 shrink-0">
@@ -97,6 +93,15 @@ export default function LampEditOptions(props: EditOptionsProps)
                 />
             </div>
         </SelectionToolRow>}
+        {choosingSize && <CompositionThumbnailPanel
+            id="lampSizeOptions"
+            objectType={LampObjectTypeConfig.objectType}
+            currentCompositionIndex={LampObjectTypeConfig.util.getCompositionIndex(obj)}
+            resumed={props.resumed}
+            canChoose={(compositionIndex) => canResize(props.selection, compositionIndex)}
+            onChoose={(compositionIndex) => tryResize(props.selection, compositionIndex)}
+            onClose={SUB_PANELS_BENEATH_SELECTION_TOOLS ? undefined : () => props.setOpenPanel(null)}
+        />}
     </div>;
 }
 

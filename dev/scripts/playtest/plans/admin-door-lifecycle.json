@@ -50,12 +50,6 @@
       "settleMs": 2500
     },
     {
-      "type": "expectSelection",
-      "selection": {
-        "voxelQuad": true
-      }
-    },
-    {
       "type": "clickObject",
       "target": {
         "objectType": "Door",
@@ -86,6 +80,7 @@
     {
       "type": "uiClick",
       "elementId": "customizeLabelTextOptionsClose",
+      "optional": true,
       "settleMs": 400
     },
     {

@@ -6,8 +6,8 @@ import ThumbnailPanel from "./thumbnailPanel";
 
 // Picks one of an object type's pre-encoded appearances from their thumbnails (see ThumbnailPanel,
 // CompositionThumbnailBuilder).
-export default function CompositionThumbnailPanel({ id, objectType, currentCompositionIndex, canChoose, onChoose,
-    onClose }: Props)
+export default function CompositionThumbnailPanel({ id, objectType, currentCompositionIndex, resumed, canChoose,
+    onChoose, onClose }: Props)
 {
     const compositionIndices = PreEncodedCompositionIndexMap[objectType] ?? [];
     const cellSize = CompositionThumbnailUtil.getCellSize();
@@ -17,6 +17,7 @@ export default function CompositionThumbnailPanel({ id, objectType, currentCompo
         id={id}
         choices={compositionIndices}
         current={currentCompositionIndex}
+        resumed={resumed}
         canChoose={canChoose}
         onChoose={onChoose}
         renderThumbnail={(_, position) => {
@@ -35,7 +36,7 @@ export default function CompositionThumbnailPanel({ id, objectType, currentCompo
                     autoScrollToHighlight={false}
                     additionalClassNames="w-full rounded-md"
                 />
-                {/* Straddles the panel's top edge, clear of the highlight outline and of the close button above it,
+                {/* Straddles the panel's top edge, clear of the highlight outline and of a close button above it,
                     within ScrollPanel's overhang. */}
                 <span className="absolute -top-3 right-0 size-5 flex items-center justify-center rounded-full bg-gray-900 text-[12px] leading-none text-gray-300 pointer-events-none select-none">
                     {position + 1}
@@ -56,8 +57,11 @@ interface Props
     objectType: string;
     // Absent when nothing is chosen yet (e.g. for an object about to be added).
     currentCompositionIndex?: number;
+    // Carries on from the last panel of its id (see ThumbnailPanel).
+    resumed?: boolean;
     // Absent means every one may be picked.
     canChoose?: (compositionIndex: number) => boolean;
     onChoose: (compositionIndex: number) => void;
-    onClose: () => void;
+    // Absent means it has no close button (see ScrollPanel).
+    onClose?: () => void;
 }

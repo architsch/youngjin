@@ -1,6 +1,6 @@
 /**
  * Scenario tests: voxelQuad auto-reselection. When a selection is interrupted (the user's own edit,
- * another client's edit, or the selected object going away), or an added object is complete, a nearby visible
+ * another client's edit, or the selected object going away), or is to move on from an object, a nearby visible
  * quad is selected instead: the nearest that is near and clear enough of objects, else an object near there.
  * Browser-bound client modules are stubbed; generation, update rules and the search run for real.
  */
@@ -734,14 +734,13 @@ describe("what an automatic selection settles on", () => {
     });
 });
 
-// ─── Going on from an object just added ─────────────────────────────────────
-// Once a new object's look is complete, the selection leaves it for a face near it (see
-// VoxelQuadPlacementOptions).
+// ─── Going on from a selected object ────────────────────────────────────────
+// A search for a face near a selected object takes the selection over from it, unless a step holds the selection
+// of faces still.
 
-describe("reselection once an added object is complete", () => {
+describe("reselection from a selected object", () => {
     it("takes the selection over from the object", async () => {
         const canvas = hangCanvasOnPillar();
-        // Selected, as a canvas is while its frame is picked (see ObjectSelectionMenu).
         expect(ObjectSelection.trySelect(gameObjectOf(canvas))).toBe(true);
         await settle();
         expect(ObjectSelection.isSelected()).toBe(true);

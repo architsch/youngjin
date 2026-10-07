@@ -15,10 +15,13 @@ export default interface ObjectTypeClientConfig
     selection?: { // If this field is present, the object must be selectable (as long as the necessary conditions are met).
         canBeSelectedByUserInEditMode: (gameObject: GameObject, user: User, room: Room) => boolean;
         editOptions?: ComponentType<EditOptionsProps>;
-        editPanels?: EditPanel[]; // The sub-panels editOptions can raise.
-        // One of editPanels, raised as soon as the object is added from a selected face: what is left to pick of its
-        // look after what was picked before adding it (see VoxelQuadPlacementOptions). A type with none is complete
-        // as added, and isn't selected (unless DISABLE_AUTO_SELECTION_ON_OBJECT_INSTALLATION).
+        // The sub-panels editOptions can raise, one at a time. Shown beneath its tools, they open on the first (see
+        // SUB_PANELS_BENEATH_SELECTION_TOOLS).
+        editPanels?: EditPanel[];
+        // Read only where a sub-panel takes the tools' place. One of editPanels, raised as soon as the object is added
+        // from a selected face: what is left to pick of its look after what was picked before adding it (see
+        // VoxelQuadPlacementOptions). A type with none is complete as added, and isn't selected (unless
+        // DISABLE_AUTO_SELECTION_ON_OBJECT_INSTALLATION).
         installPanel?: EditPanel;
     };
 }

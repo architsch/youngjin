@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useReducer, useState } from "react";
+import { ReactNode, useEffect, useReducer, useRef, useState } from "react";
 import VoxelQuadSelection from "../../../../graphics/types/gizmo/voxelQuadSelection";
 import IconButton from "../../input/iconButton";
 import TrashIcon from "../../../svg/icons/trashIcon";
@@ -41,11 +41,13 @@ import SetVoxelBlockShapeSignal from "../../../../../shared/voxel/types/update/s
 import ObjectIdUtil from "../../../../../shared/object/util/objectIdUtil";
 import { clientFeatureFlagsObservable, notificationMessageObservable, objectInstalledObservable,
     voxelQuadSelectionObservable } from "../../../../system/clientObservables";
-import { DISABLE_AUTO_SELECTION_ON_OBJECT_INSTALLATION } from "../../../../system/clientConstants";
+import { DISABLE_AUTO_SELECTION_ON_OBJECT_INSTALLATION,
+    SUB_PANELS_BENEATH_SELECTION_TOOLS } from "../../../../system/clientConstants";
 import Room from "../../../../../shared/room/types/room";
 import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
 import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
 import PopupUtil from "../../../util/popupUtil";
+import ClosablePanelUtil from "../../../util/closablePanelUtil";
 import NumUtil from "../../../../../shared/math/util/numUtil";
 import RoomValidationUtil from "../../../../../shared/room/util/roomValidationUtil";
 import { DoorTypeEnumMap } from "../../../../../shared/object/types/doorType";
@@ -76,13 +78,17 @@ const placementFeatureFlags = [
     FeatureFlag.DisableManualObjectAddition,
 ];
 
-// Face tools: remove or add a block, or add an object. An object's look is picked first, from a chooser that takes
-// the place of this row and of the face's other tools (its children) until it is closed, and the pick adds it.
+// Face tools: remove or add a block, or add an object. An object's look is picked first, from a chooser its add button
+// raises in the place of the face's other tools (its children), and the pick adds it. The chooser shows beneath this
+// row, its add button a toggle, or in the place of this row too until it is closed (see
+// SUB_PANELS_BENEATH_SELECTION_TOOLS).
 export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSelection, children?: ReactNode})
 {
     const [, forceRefresh] = useReducer((x: number) => x + 1, 0);
     // The type whose chooser is open.
     const [choosingTypeIndex, setChoosingTypeIndex] = useState<number | null>(null);
+    // Whether a pick from a chooser beneath this row is still going up.
+    const addingRef = useRef(false);
 
     // Re-render this menu only when the feature flags it depends on change (e.g. tutorial steps).
     useEffect(() => {
@@ -111,56 +117,49 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
     const canAddLabel = isSuperuser &&
         getPlaceableAttachedObjectTransform(props.selection, labelTypeIndex) !== null;
 
-    // A chooser shows only while its type can be added to the selected face, and the tools stand down for it. A pick
-    // closes it at once, so a second click can't add another while the first goes up.
+    // A chooser shows only while its type can be added to the selected face.
     const canAdd = new Map([[canvasTypeIndex, canAddCanvas], [propTypeIndex, canAddProp], [lampTypeIndex, canAddLamp],
         [labelTypeIndex, canAddLabel], [doorTypeIndex, canAddDoor]]);
     const choosing = (choosingTypeIndex != null && canAdd.get(choosingTypeIndex)) ? choosingTypeIndex : null;
     const close = () => setChoosingTypeIndex(null);
+    const onClose = SUB_PANELS_BENEATH_SELECTION_TOOLS ? undefined : close;
     const addButton = (id: string, icon: ReactNode, objectTypeIndex: number) => <IconButton id={id} icon={icon}
-        size="md" disabled={!canAdd.get(objectTypeIndex)} onClick={() => setChoosingTypeIndex(objectTypeIndex)}/>;
+        size="md" disabled={!canAdd.get(objectTypeIndex)} highlight={choosing == objectTypeIndex}
+        onClick={() => setChoosingTypeIndex(objectTypeIndex == choosing ? null : objectTypeIndex)}/>;
+
+    // The back gesture puts away a chooser beneath this row, as its add button does (see ClosablePanelUtil). One in
+    // the row's place sees to that itself (see ScrollPanel).
+    useEffect(() => {
+        if (!SUB_PANELS_BENEATH_SELECTION_TOOLS || choosing == null)
+            return;
+        const token = ClosablePanelUtil.register(() => setChoosingTypeIndex(null));
+        return () => ClosablePanelUtil.unregister(token);
+    }, [choosing]);
+
+    // A pick closes a chooser in this row's place at once, so a second click can't add another while the first goes
+    // up. One beneath the row stays up as it is meanwhile, taking no other pick; once the object is up it is put away,
+    // where this menu outlives it (see addObject).
+    const add = async (tryAdd: () => Promise<void>) => {
+        if (!SUB_PANELS_BENEATH_SELECTION_TOOLS)
+        {
+            close();
+            tryAdd();
+            return;
+        }
+        if (addingRef.current)
+            return;
+        addingRef.current = true;
+        try {
+            await tryAdd();
+        } finally {
+            addingRef.current = false;
+            close();
+        }
+    };
 
     // Full width, so the rows can scroll horizontally instead of growing.
     return <div className="flex flex-col gap-1 w-full">
-        {choosing == canvasTypeIndex && <ImageMapThumbnailPanel
-            id="canvasImageOptions"
-            searchInputId="canvasImageSearchInput"
-            searchPlaceholder="Search by title or author"
-            mapName="PictureImageMap"
-            subfolder={CANVAS_IMAGE_SUBFOLDER}
-            onChoose={path => { close(); tryAddCanvasFromQuad(props.selection, path); }}
-            onClose={close}
-        />}
-        {choosing == propTypeIndex && <ImageMapThumbnailPanel
-            id="propImageOptions"
-            searchInputId="propImageSearchInput"
-            searchPlaceholder="Search"
-            mapName="PictureImageMap"
-            subfolder={PROP_IMAGE_SUBFOLDER}
-            canChoose={propImageFits}
-            onChoose={path => { close(); tryAddPropFromQuad(props.selection, path); }}
-            onClose={close}
-        />}
-        {choosing == lampTypeIndex && <CompositionThumbnailPanel
-            id="lampSizeOptions"
-            objectType={LampObjectTypeConfig.objectType}
-            canChoose={lampSizeFits}
-            onChoose={compositionIndex => { close(); tryAddLampFromQuad(props.selection, compositionIndex); }}
-            onClose={close}
-        />}
-        {choosing == labelTypeIndex && <CompositionThumbnailPanel
-            id="customizeLabelOptions"
-            objectType={LabelObjectTypeConfig.objectType}
-            onChoose={compositionIndex => { close(); tryAddLabelFromQuad(props.selection, compositionIndex); }}
-            onClose={close}
-        />}
-        {choosing == doorTypeIndex && <CompositionThumbnailPanel
-            id="customizeDoorOptions"
-            objectType={DoorObjectTypeConfig.objectType}
-            onChoose={compositionIndex => { close(); tryAddDoorFromQuad(props.selection, compositionIndex); }}
-            onClose={close}
-        />}
-        {choosing == null && <SelectionToolRow>
+        {(SUB_PANELS_BENEATH_SELECTION_TOOLS || choosing == null) && <SelectionToolRow>
             <IconButton id="removeVoxelBlockButton" icon={<TrashIcon/>} size="md" color="red"
                 disabled={!canRemoveVoxelBlock(props.selection)}
                 onClick={() => tryRemoveVoxelBlock(props.selection)}/>
@@ -173,6 +172,44 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
             {isSuperuser && addButton("addLabelButton", <AddLabelIcon/>, labelTypeIndex)}
             {isSuperuser && addButton("addDoorButton", <AddDoorIcon/>, doorTypeIndex)}
         </SelectionToolRow>}
+        {choosing == canvasTypeIndex && <ImageMapThumbnailPanel
+            id="canvasImageOptions"
+            searchInputId="canvasImageSearchInput"
+            searchPlaceholder="Search by title or author"
+            mapName="PictureImageMap"
+            subfolder={CANVAS_IMAGE_SUBFOLDER}
+            onChoose={path => add(() => tryAddCanvasFromQuad(props.selection, path))}
+            onClose={onClose}
+        />}
+        {choosing == propTypeIndex && <ImageMapThumbnailPanel
+            id="propImageOptions"
+            searchInputId="propImageSearchInput"
+            searchPlaceholder="Search"
+            mapName="PictureImageMap"
+            subfolder={PROP_IMAGE_SUBFOLDER}
+            canChoose={propImageFits}
+            onChoose={path => add(() => tryAddPropFromQuad(props.selection, path))}
+            onClose={onClose}
+        />}
+        {choosing == lampTypeIndex && <CompositionThumbnailPanel
+            id="lampSizeOptions"
+            objectType={LampObjectTypeConfig.objectType}
+            canChoose={lampSizeFits}
+            onChoose={compositionIndex => add(() => tryAddLampFromQuad(props.selection, compositionIndex))}
+            onClose={onClose}
+        />}
+        {choosing == labelTypeIndex && <CompositionThumbnailPanel
+            id="customizeLabelOptions"
+            objectType={LabelObjectTypeConfig.objectType}
+            onChoose={compositionIndex => add(() => tryAddLabelFromQuad(props.selection, compositionIndex))}
+            onClose={onClose}
+        />}
+        {choosing == doorTypeIndex && <CompositionThumbnailPanel
+            id="customizeDoorOptions"
+            objectType={DoorObjectTypeConfig.objectType}
+            onChoose={compositionIndex => add(() => tryAddDoorFromQuad(props.selection, compositionIndex))}
+            onClose={onClose}
+        />}
         {choosing == null && props.children}
     </div>;
 }
@@ -355,9 +392,11 @@ async function addObject(objectTypeIndex: number, tr: ObjectTransform, metadata:
             if (room.roomType != RoomTypeEnumMap.SinglePlayer)
                 SocketsClient.emitAddObjectSignal(signal);
             VoxelQuadSelection.unselect();
-            // Complete as added, it leaves the selection on a face near it, to add the next from. With more to pick,
-            // or with no face to take the selection, it is selected instead.
-            const installPanel = ObjectTypeClientConfigMap.getConfigByIndex(objectTypeIndex).selection?.installPanel;
+            // Complete as added, it leaves the selection on a face near it, to add the next from. With more to pick
+            // (only where its panel takes the tools' place), or with no face to take the selection, it is selected
+            // instead.
+            const installPanel = SUB_PANELS_BENEATH_SELECTION_TOOLS ? undefined
+                : ObjectTypeClientConfigMap.getConfigByIndex(objectTypeIndex).selection?.installPanel;
             if (!installPanel && !DISABLE_AUTO_SELECTION_ON_OBJECT_INSTALLATION
                 && VoxelQuadSelection.trySelectBestQuadNearby(gameObject.params.transform.pos))
             {

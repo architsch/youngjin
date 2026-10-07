@@ -247,12 +247,19 @@ async function runPlan(plan)
                 case "uiClick":
                 {
                     // Clicked only if enabled: these are divs, so a DOM-only click on a disabled one
-                    // "succeeds" and does nothing (see Interact.ui.isEnabled).
+                    // "succeeds" and does nothing (see Interact.ui.isEnabled). `optional` passes over a
+                    // control that isn't there, for one the app has under only one of its settings (a
+                    // sub-panel's close button; see SUB_PANELS_BENEATH_SELECTION_TOOLS in clientConstants.ts).
+                    record.elementId = action.elementId;
+                    if (action.optional && !(await Interact.ui.exists(page, action.elementId)))
+                    {
+                        record.skipped = true;
+                        break;
+                    }
                     await Interact.ui.click(page, action.elementId, {
                         timeout: action.timeout,
                         settleMs: action.settleMs,
                     });
-                    record.elementId = action.elementId;
                     break;
                 }
 

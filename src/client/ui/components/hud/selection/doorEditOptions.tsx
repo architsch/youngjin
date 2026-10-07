@@ -9,6 +9,7 @@ import DoorGameObject from "../../../../object/types/gameObject/doorGameObject";
 import DoorObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import { DoorTypeEnumMap } from "../../../../../shared/object/types/doorType";
 import { ObjectMetadataKeyEnumMap } from "../../../../../shared/object/types/objectMetadataKey";
+import { SUB_PANELS_BENEATH_SELECTION_TOOLS } from "../../../../system/clientConstants";
 import PopupUtil from "../../../util/popupUtil";
 import ObjectEditUtil from "../../../util/objectEditUtil";
 import CompositionThumbnailPanel from "../../panel/compositionThumbnailPanel";
@@ -16,28 +17,18 @@ import CustomizeLabelTextPanel from "../../panel/customizeLabelTextPanel";
 import SelectionToolRow from "./selectionToolRow";
 import EditOptionsProps from "../../../types/editOptionsProps";
 
-// Superuser tools for a selected door: remove, name, destination, finish, default entrance. The name bar and
-// the finish list take this row's place until closed (they belong to the door), one at a time; the rest open as
-// popups.
+// Superuser tools for a selected door: remove, name, destination, finish, default entrance. The name bar and the
+// finish list (they belong to the door) show one at a time: beneath this row, their buttons its toggles, or in its
+// place until closed (see SUB_PANELS_BENEATH_SELECTION_TOOLS). The rest open as popups.
 export default function DoorEditOptions(props: EditOptionsProps)
 {
     const customizingText = props.openPanel == "labelText";
     const customizing = props.openPanel == "compositionThumbnail";
-    const toolsShown = !customizingText && !customizing;
+    const toolsShown = SUB_PANELS_BENEATH_SELECTION_TOOLS || (!customizingText && !customizing);
+    const closePanel = SUB_PANELS_BENEATH_SELECTION_TOOLS ? undefined : () => props.setOpenPanel(null);
 
     // Full width, so the rows can scroll horizontally instead of growing.
     return <div className="flex flex-col gap-1 w-full">
-        {customizingText && <CustomizeLabelTextPanel
-            selection={props.selection}
-            onClose={() => props.setOpenPanel(null)}
-        />}
-        {customizing && <CompositionThumbnailPanel
-            id="customizeDoorOptions"
-            objectType={DoorObjectTypeConfig.objectType}
-            currentCompositionIndex={ObjectEditUtil.getCompositionIndex(props.selection)}
-            onChoose={(compositionIndex) => ObjectEditUtil.trySetCompositionIndex(props.selection, compositionIndex)}
-            onClose={() => props.setOpenPanel(null)}
-        />}
         {toolsShown && <SelectionToolRow>
             <IconButton id="removeDoorButton" icon={<TrashIcon/>} size="md" color="red" shortcutKey="Delete"
                 disabled={!ObjectEditUtil.canRemoveObject(props.selection)}
@@ -45,6 +36,7 @@ export default function DoorEditOptions(props: EditOptionsProps)
                     "Want to remove this door?")}
             />
             <IconButton id="changeDoorLabelButton" icon={<TextCursorIcon/>} size="md"
+                highlight={customizingText}
                 onClick={() => props.setOpenPanel("labelText")}
             />
             <IconButton id="changeDoorDestinationButton" icon={<DestinationIcon/>} size="md"
@@ -60,6 +52,7 @@ export default function DoorEditOptions(props: EditOptionsProps)
                 }})}
             />
             <IconButton id="customizeDoorButton" icon={<PaintBrushIcon/>} size="md"
+                highlight={customizing}
                 onClick={() => props.setOpenPanel("compositionThumbnail")}
             />
             <IconButton id="doorSettingsButton" icon={<GearIcon/>} size="md"
@@ -78,5 +71,13 @@ export default function DoorEditOptions(props: EditOptionsProps)
                 onClick={() => (props.selection.gameObject as DoorGameObject).enter()}
             />
         </SelectionToolRow>}
+        {customizingText && <CustomizeLabelTextPanel selection={props.selection} onClose={closePanel}/>}
+        {customizing && <CompositionThumbnailPanel
+            id="customizeDoorOptions"
+            objectType={DoorObjectTypeConfig.objectType}
+            currentCompositionIndex={ObjectEditUtil.getCompositionIndex(props.selection)}
+            onChoose={(compositionIndex) => ObjectEditUtil.trySetCompositionIndex(props.selection, compositionIndex)}
+            onClose={closePanel}
+        />}
     </div>;
 }

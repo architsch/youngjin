@@ -66,8 +66,8 @@ export const graphicsContextRestoredObservable = new Observable<number>(0);
 export const objectSelectionObservable = new Observable<ObjectSelection | null>(null);
 
 // Fires with the id of an object this user has just added from a selected face and selected (see
-// VoxelQuadPlacementOptions), whose tools then open on what is left to pick of its look (see
-// ObjectTypeClientConfig). Never peek() it: it holds the last one.
+// VoxelQuadPlacementOptions), whose tools then open on what is left to pick of its look, or carry on from the chooser
+// it was picked in (see EditOptionsProps). Never peek() it: it holds the last one.
 export const objectInstalledObservable = new Observable<string>("");
 
 // What an automatic selection falls back on when no voxel quad near will do (see VoxelQuadSelection): selects an

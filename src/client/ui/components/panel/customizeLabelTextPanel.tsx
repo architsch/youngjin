@@ -77,5 +77,6 @@ export default function CustomizeLabelTextPanel({ selection, onClose }: Props)
 interface Props
 {
     selection: ObjectSelection;
-    onClose: () => void;
+    // Absent means it has no close button (see ScrollPanel).
+    onClose?: () => void;
 }
