@@ -35,6 +35,10 @@ export const SELECTION_BLOCKED_COLOR = "#ff0000";
 export const AUTO_SELECTION_MAX_DISTANCE = 1.5;
 export const AUTO_SELECTION_MIN_COVERAGE_FREE_RATIO = 0.5;
 
+// How far from the selected object a movement key looks for another to select (see SelectionStepUtil). Measured
+// between the two objects' boxes, not their middles, so that large ones hung side by side count as near.
+export const SELECTION_STEP_OBJECT_REACH = 3;
+
 // UI
 
 // How long a notification message stays on screen (in milliseconds).
@@ -48,21 +52,9 @@ export const CONFIRM_ARMING_DELAY_MS = 500;
 // image is shown as if All were picked.
 export const IMAGE_CATEGORY_TABS_ENABLED = true;
 
-// Whether an admin can rearrange the image chooser's thumbnails by hand, holding one and dragging it along the row
-// (see ImageMapThumbnailPanel). False leaves every row as its map lists it, for an admin as for everyone else.
-export const IMAGE_THUMBNAIL_REORDER_ENABLED = true;
-
-// Whether an admin can set the categories an image is filed under, in a bar that comes up over the image chooser
-// once one of its thumbnails is picked up (see ImageCategoryBar). False leaves every image under those built in.
-export const IMAGE_CATEGORY_EDIT_ENABLED = true;
-
-// Whether an admin can add, rename and delete the image chooser's categories, with the buttons beside its category
-// tabs (see ImageMapThumbnailPanel). False leaves the categories as those built in.
-export const IMAGE_CATEGORY_TAB_EDIT_ENABLED = true;
-
-// How long a thumbnail is held still before it is picked up (in milliseconds; see useThumbnailReorder). A quicker
-// drag scrolls the row instead, and a quicker release is a click.
-export const THUMBNAIL_REORDER_HOLD_MS = 300;
+// How long a finger holds a tile still before it is lifted, to be rearranged (in milliseconds; see useGridReorder).
+// A quicker drag scrolls its grid instead, and a quicker release is a click.
+export const REORDER_HOLD_MS = 300;
 
 // three.js
 

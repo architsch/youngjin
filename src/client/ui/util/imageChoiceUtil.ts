@@ -8,7 +8,7 @@ import { dummyImagesDebugEnabledObservable } from "../../../shared/system/shared
 
 // The images offered to choose from (see ImageMapThumbnailPanel): in the order their map lists them in, narrowed by
 // a category tab and a search. An admin may rearrange them, file each under other categories, and change what
-// categories there are.
+// categories there are (see AdminAssetSettingsEditor).
 const ImageChoiceUtil =
 {
     // Every image in one of the map's subfolders that may be chosen: a staging one only withStaging, as off the live
@@ -25,17 +25,14 @@ const ImageChoiceUtil =
         return ImageChoiceUtil.getOffered(imageMap, subfolderName, withStaging).sort(compareOrder);
     },
     // All, then each category holding any of the images, and Misc if any names none of them; no tabs for a subfolder
-    // listing no categories. keptTab stays though it holds none (see getRow), as does every category withEmpty,
-    // for an admin to file images under or do away with.
-    getCategoryTabs: (imageMap: ImageMap, subfolderName: string, items: ImageMetadata[], keptTab?: string,
-        withEmpty: boolean = false): string[] =>
+    // listing no categories.
+    getCategoryTabs: (imageMap: ImageMap, subfolderName: string, items: ImageMetadata[]): string[] =>
     {
         const categories = imageMap.getSubfolderCategories(subfolderName);
         if (categories.length == 0)
             return [];
         const tabs = [...categories.map(category => category.name), ImageMap.MISC_TAB];
-        return [ImageMap.ALL_TAB, ...tabs.filter(tab => tab == keptTab || (withEmpty && tab != ImageMap.MISC_TAB)
-            || items.some(item => isInTab(categories, item, tab)))];
+        return [ImageMap.ALL_TAB, ...tabs.filter(tab => items.some(item => isInTab(categories, item, tab)))];
     },
     // What a tab shows of them, in the order they came in: a category's own, or every one under All.
     getItemsInTab: (imageMap: ImageMap, subfolderName: string, items: ImageMetadata[], tab: string): ImageMetadata[] =>
@@ -61,40 +58,40 @@ const ImageChoiceUtil =
     {
         return PictureSearchUtil.filter(allItems, searchInput, getSearchedWords);
     },
-    // Rearranges the one order so that an image comes at a place of a row narrowed from it (a tab's, a search's):
-    // right before the image the row then shows after it, or right after the row's last. Every other image of its
-    // subfolder, in the row or not, keeps its place among the rest.
-    moveItem: (imageMap: ImageMap, rowPaths: string[], path: string, position: number): void =>
+    // Every image of a subfolder, offered or not, in order: what an admin arranges.
+    getOrdered: (imageMap: ImageMap, subfolderName: string): ImageMetadata[] =>
     {
-        const row = rowPaths.filter(other => other != path);
-        row.splice(position, 0, path);
-        const next = row[position + 1], previous = row[position - 1];
-        if (next == undefined && previous == undefined)
+        return imageMap.getImageMetadataListInSubfolder(subfolderName).sort(compareOrder);
+    },
+    // Puts an image at a place in its subfolder's order (see getOrdered). Every other image keeps its place among
+    // the rest.
+    moveItem: (imageMap: ImageMap, path: string, position: number): void =>
+    {
+        const ordered = ImageChoiceUtil.getOrdered(imageMap, ImageMap.getSubfolderName(path));
+        const from = ordered.findIndex(image => image.path == path);
+        if (from < 0)
             return;
-
-        const moved = imageMap.getImageMetadataByPath(path);
-        const ordered = imageMap.getImageMetadataListInSubfolder(ImageMap.getSubfolderName(path)).sort(compareOrder);
         // The subfolder's own places in the map's order, handed out again.
         const places = ordered.map(image => image.order);
-        const rest = ordered.filter(image => image != moved);
-        const place = (next != undefined) ? rest.findIndex(image => image.path == next)
-            : rest.findIndex(image => image.path == previous) + 1;
-        rest.splice(place, 0, moved);
-        rest.forEach((image, index) => image.order = places[index]);
-    },
-    // The row a chooser shows of the images: those it is narrowed to, and with them those kept in it though they
-    // are narrowed out (an admin having filed them under other categories since), in the order they come in.
-    getRow: (items: ImageMetadata[], narrowed: ImageMetadata[], keptPaths: string[]): ImageMetadata[] =>
-    {
-        if (keptPaths.length == 0)
-            return narrowed;
-        const shown = new Set([...narrowed.map(item => item.path), ...keptPaths]);
-        return items.filter(item => shown.has(item.path));
+        ordered.splice(position, 0, ...ordered.splice(from, 1));
+        ordered.forEach((image, index) => image.order = places[index]);
     },
     // The categories an image is filed under, in order: the first is the tab a chooser opens on for it.
     getCategories: (imageMap: ImageMap, path: string): string[] =>
     {
         return ImageMap.getCategories(imageMap.getImageMetadataByPath(path).keywords);
+    },
+    // How many of a subfolder's images are filed under each of its categories, offered or not. One holding none is
+    // left out.
+    getNumFiled: (imageMap: ImageMap, subfolderName: string): Map<string, number> =>
+    {
+        const numFiled = new Map<string, number>();
+        for (const image of imageMap.getImageMetadataListInSubfolder(subfolderName))
+        {
+            for (const name of ImageMap.getCategories(image.keywords))
+                numFiled.set(name, (numFiled.get(name) ?? 0) + 1);
+        }
+        return numFiled;
     },
     // Files it under these instead, for every chooser of the map.
     setCategories: (imageMap: ImageMap, path: string, categories: string[]): void =>
@@ -125,6 +122,17 @@ const ImageChoiceUtil =
         if (category.name != name)
             refile(imageMap, subfolderName, name, category.name);
         return undefined;
+    },
+    // Puts one of a subfolder's categories at a place in their order, which is their tabs', for every chooser of
+    // the map. No image's own categories change.
+    moveCategory: (imageMap: ImageMap, subfolderName: string, name: string, position: number): void =>
+    {
+        const categories = [...imageMap.getSubfolderCategories(subfolderName)];
+        const from = categories.findIndex(category => category.name == name);
+        if (from < 0)
+            return;
+        categories.splice(position, 0, ...categories.splice(from, 1));
+        imageMap.setSubfolderCategories(subfolderName, categories);
     },
     // Does away with one of a subfolder's categories, taking every image filed under it out of it.
     removeCategory: (imageMap: ImageMap, subfolderName: string, name: string): void =>

@@ -1,6 +1,7 @@
 import AABB3 from "../../../shared/math/types/aabb3";
 import PhysicsColliderStateUtil from "../../../shared/physics/util/physicsColliderStateUtil";
 import SelectionKind from "../types/gizmo/selectionKind";
+import Voxel from "../../../shared/voxel/types/voxel";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import { cameraModeObservable, gameModeObservable, objectSelectionObservable,
     orbitCameraTargetOverrideObservable,
@@ -78,6 +79,23 @@ export default class WorldSpaceSelectionUtil
         syncCameraModeWithSelection(true);
     }
 
+    // What the orbit frames for a voxel quad: its block, or for the room's own floor or ceiling the flat
+    // tile, which carries no thickness of its own.
+    static getVoxelQuadOrbitTarget(voxel: Voxel, quadIndex: number): AABB3
+    {
+        const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+        if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
+        {
+            const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex);
+            return {
+                center: {x: voxel.col + 0.5, y: (orientation == "+") ? 0 : MAX_ROOM_Y, z: voxel.row + 0.5},
+                halfSize: {x: 0.5, y: 0, z: 0.5},
+            };
+        }
+        return VoxelQueryUtil.getVoxelBlockBox(voxel.row, voxel.col, collisionLayer,
+            VoxelQueryUtil.getVoxelBlockShape(voxel, collisionLayer));
+    }
+
     // Selects the first voxel quad or object along a line of sight (nearest first) that can be selected.
     // Refusing objects (e.g. another player) are looked past; a refusing quad ends the search, since a
     // room surface hides what lies behind it.
@@ -149,20 +167,8 @@ function getSelectionOrbitFraming(): {target: AABB3, minDistance?: number} | nul
     const voxelQuadSelection = voxelQuadSelectionObservable.peek();
     if (voxelQuadSelection)
     {
-        const voxel = voxelQuadSelection.voxel;
-        const quadIndex = voxelQuadSelection.quadIndex;
-        const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
-        if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
-        {
-            // The room's own floor or ceiling: a flat tile, carrying no thickness of its own.
-            const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex);
-            return {target: {
-                center: {x: voxel.col + 0.5, y: (orientation == "+") ? 0 : MAX_ROOM_Y, z: voxel.row + 0.5},
-                halfSize: {x: 0.5, y: 0, z: 0.5},
-            }, minDistance: SELECTION_ORBIT_MIN_DISTANCE};
-        }
-        return {target: VoxelQueryUtil.getVoxelBlockBox(voxel.row, voxel.col, collisionLayer,
-            VoxelQueryUtil.getVoxelBlockShape(voxel, collisionLayer)), minDistance: SELECTION_ORBIT_MIN_DISTANCE};
+        return {target: WorldSpaceSelectionUtil.getVoxelQuadOrbitTarget(voxelQuadSelection.voxel,
+            voxelQuadSelection.quadIndex), minDistance: SELECTION_ORBIT_MIN_DISTANCE};
     }
 
     const objectSelection = objectSelectionObservable.peek();

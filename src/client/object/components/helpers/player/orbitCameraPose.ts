@@ -62,9 +62,16 @@ export default class OrbitCameraPose
 
     // Frames a target, keeping the camera's current viewing direction (a fixed side could put the
     // camera behind a wall). Inside the target's footprint (e.g. orbiting one's own body), the default
-    // direction is used. minDistance: caller-imposed floor (see CameraMode).
-    reframe(target: AABB3, minDistance: number, camera: THREE.Camera, playerObj: THREE.Object3D): void
+    // direction is used. minDistance: caller-imposed floor (see CameraMode). holdAngles: keeps the orbit's
+    // own angles instead, so the camera slides alongside (see orbitCameraAngleHoldRequestObservable).
+    reframe(target: AABB3, minDistance: number, camera: THREE.Camera, playerObj: THREE.Object3D,
+        holdAngles: boolean = false): void
     {
+        this.framingDistance = Math.max(minOrbitDistance, minDistance, orbitDistancePerTargetReach *
+            getTargetReach(target));
+        if (holdAngles)
+            return;
+
         camera.getWorldPosition(worldPosTemp);
         orbitOffsetTemp.subVectors(worldPosTemp, setPivot(target, pivotTemp));
 
@@ -82,8 +89,6 @@ export default class OrbitCameraPose
         this.spherical.setFromVector3(orbitOffsetTemp);
         this.spherical.phi = NumUtil.clampInRange(this.spherical.phi, minPolarAngle, maxPolarAngle);
         this.publishAngles();
-        this.framingDistance = Math.max(minOrbitDistance, minDistance, orbitDistancePerTargetReach *
-            getTargetReach(target));
 
         // The default direction has no distance to start from.
         this.distanceAtReframe = cameraHasItsOwnView ? this.spherical.radius : 0;

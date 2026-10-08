@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import PlayerController from "../../playerController";
 import GraphicsManager from "../../../../graphics/graphicsManager";
-import { cameraModeObservable, orbitCameraDistanceRangeRequestObservable,
+import { cameraModeObservable, orbitCameraAngleHoldRequestObservable, orbitCameraDistanceRangeRequestObservable,
     orbitCameraViewRequestObservable } from "../../../../system/clientObservables";
 import AABB3 from "../../../../../shared/math/types/aabb3";
 import FirstPersonCameraPose from "./firstPersonCameraPose";
@@ -91,6 +91,9 @@ export default class PlayerCamera
         const distanceRangeRequest = orbitCameraDistanceRangeRequestObservable.peek();
         if (distanceRangeRequest != null)
             orbitCameraDistanceRangeRequestObservable.set(null);
+        const angleHoldRequest = orbitCameraAngleHoldRequestObservable.peek();
+        if (angleHoldRequest)
+            orbitCameraAngleHoldRequestObservable.set(false);
 
         if (mode.type !== "firstPerson")
             this.firstPersonPose.releaseLook();
@@ -102,9 +105,10 @@ export default class PlayerCamera
             // Re-frame on entering the mode or changing target.
             if (this.orbitTarget !== mode.target)
             {
+                // (An orbit just beginning has no angles of its own to hold yet.)
                 const orbitBegins = (this.orbitTarget == undefined);
                 this.orbitPose.reframe(mode.target, mode.minDistance ?? 0,
-                    this.camera!, controller.gameObject.obj);
+                    this.camera!, controller.gameObject.obj, angleHoldRequest && !orbitBegins);
 
                 // Starts from the current distance; zoom survives re-targeting but not re-entering
                 // the mode (see OrbitCameraPose).

@@ -26,12 +26,14 @@ import { clientFeatureFlagsObservable, gameModeObservable, numActiveInputElement
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import ImageGridChooserForm from "./components/form/imageGridChooserForm";
 import ConsoleLogForm from "./components/form/consoleLogForm";
+import AdminAssetSettingsEditor from "./components/form/adminAssetSettingsEditor";
 import ConfirmForm from "./components/form/confirmForm";
 import ExitPromptForm from "./components/form/exitPromptForm";
 import { FeatureFlag } from "../../shared/system/types/featureFlag";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 import useCloseGesture from "./util/closeGesture";
 import useShortcutKeyListener from "./util/shortcutKeyListener";
+import useSelectionStepKeyListener from "./util/selectionStepKeyListener";
 import PopupUtil from "./util/popupUtil";
 import ClosablePanelUtil from "./util/closablePanelUtil";
 import ExitConfirmationUtil from "./util/exitConfirmationUtil";
@@ -131,6 +133,9 @@ export default function UIRoot({ env, user }: UIRootProps)
     // Shortcut keys click their controls only where a click could reach them, which the popup on top decides.
     useShortcutKeyListener(popupStack[popupStack.length - 1]?.popupType);
 
+    // In edit mode the movement keys move the selection, though never under a popup.
+    useSelectionStepKeyListener(popupStack.length > 0);
+
     const isRoomLoaded = roomRuntimeMemory != undefined;
     const isMultiplayerRoomLoaded = isRoomLoaded &&
         roomRuntimeMemory.room.roomType != RoomTypeEnumMap.SinglePlayer;
@@ -204,6 +209,9 @@ export default function UIRoot({ env, user }: UIRootProps)
                 </Popup>;
                 case "consoleLog": return <Popup key={i} title="Console Log" showCloseButton={true}>
                     <ConsoleLogForm/>
+                </Popup>;
+                case "adminAssetSettings": return <Popup key={i}>
+                    <AdminAssetSettingsEditor/>
                 </Popup>;
             }
         })}

@@ -1,6 +1,6 @@
 # Game Mode
 
-Reference: @src/client/system/util/gameModeUtil.ts , @src/client/graphics/util/worldSpaceSelectionUtil.ts , @src/client/graphics/util/selectionEditGizmoUtil.ts , @src/client/graphics/types/gizmo/voxelQuadEditGizmos.ts , @src/client/object/types/objectTypeClientConfig/objectTypeClientConfig.ts , @src/client/ui/util/closablePanelUtil.ts , @src/client/ui/util/shortcutKeyUtil.ts
+Reference: @src/client/system/util/gameModeUtil.ts , @src/client/graphics/util/worldSpaceSelectionUtil.ts , @src/client/graphics/util/selectionStepUtil.ts , @src/client/graphics/util/selectionEditGizmoUtil.ts , @src/client/graphics/types/gizmo/voxelQuadEditGizmos.ts , @src/client/object/types/objectTypeClientConfig/objectTypeClientConfig.ts , @src/client/ui/util/closablePanelUtil.ts , @src/client/ui/util/shortcutKeyUtil.ts
 
 A `GameMode` decides the camera behavior, whether the player can walk, and which tools are shown. `GameModeUtil` publishes the current mode, and everything mode-dependent observes it.
 
@@ -26,6 +26,13 @@ The mode is stored separately from camera state, because the camera briefly has 
   - with none, an attached object near there that the user may select (`nearbyObjectSelectorObservable`);
   - failing that, whatever quad is left, the clear enough first.
 - Clicking the current selection or an unselectable spot keeps the current selection.
+- The movement keys (the arrows, and W, A, S and D by their places) step the selection the way they point on screen (`SelectionStepUtil`), a press at a time:
+  - a face goes to the face the room's surface runs on into that way (`VoxelQueryUtil`): the face of whatever stands in its way, else the one carrying straight on, else the next one round the edge of its own block. So a step climbs from a floor onto a wall and turns corners;
+  - never onto a face turned away from the camera, since no step swings the camera round to look. One such face is passed over for the face the surface runs on into beyond it (a riser, going down steps seen from above), though a face reached directly comes first; where the one beyond is turned away too, the key does nothing. A face is judged from where the camera will stand once it has slid alongside;
+  - an object goes to the nearest object lying that way that the user may select, within `SELECTION_STEP_OBJECT_REACH` and not turned away from the camera. Reach and direction are both read off the gap between the two, so size doesn't count against a large one;
+  - a step with nowhere to go changes nothing, and a face is never traded for an object;
+  - the keys are a focused input's first, and nobody's under a popup;
+  - a step of a face, or to an object facing the same way, slides the camera alongside (see [camera_control.md](../graphics/camera_control.md)), so a run of presses keeps its direction. An object facing another way is looked at from where the camera stands.
 - A click takes the nearest thing **drawn** under it. Where a picture's image is see-through (around the object in a prop's), it goes on to what shows there: the face behind a prop, a canvas's board (see [texture.md](../geometry/texture.md)). The selected object's outline still takes every press inside it, so a prop is dragged by its see-through parts too.
 - Each object type declares its selection behavior in `ObjectTypeClientConfig`: who may select it, the tool panel it opens, and whether it can be dragged along walls by its outline. Every selection also requires edit mode and reach. A refused click passes through silently.
 - A face's tools add an object only once its look is picked, from a chooser its add button raises (a canvas's painting, a prop's image, a lamp's size, a label's frame, a door's finish): a pick adds the object, and putting the chooser away adds nothing.

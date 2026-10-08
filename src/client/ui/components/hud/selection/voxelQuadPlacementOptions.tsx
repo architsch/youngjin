@@ -160,7 +160,7 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
     // Full width, so the rows can scroll horizontally instead of growing.
     return <div className="flex flex-col gap-1 w-full">
         {(SUB_PANELS_BENEATH_SELECTION_TOOLS || choosing == null) && <SelectionToolRow>
-            <IconButton id="removeVoxelBlockButton" icon={<TrashIcon/>} size="md" color="red"
+            <IconButton id="removeVoxelBlockButton" icon={<TrashIcon/>} size="md" color="red" shortcutKey="Delete"
                 disabled={!canRemoveVoxelBlock(props.selection)}
                 onClick={() => tryRemoveVoxelBlock(props.selection)}/>
             <IconButton id="addVoxelBlockButton" icon={<AddBlockIcon/>} size="md"

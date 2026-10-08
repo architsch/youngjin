@@ -72,6 +72,7 @@ import VoxelGameObject from "../../../src/client/object/types/gameObject/voxelGa
 import ObjectSelection from "../../../src/client/graphics/types/gizmo/objectSelection";
 import VoxelQuadSelection from "../../../src/client/graphics/types/gizmo/voxelQuadSelection";
 import WorldSpaceSelectionUtil from "../../../src/client/graphics/util/worldSpaceSelectionUtil";
+import SelectionStepUtil from "../../../src/client/graphics/util/selectionStepUtil";
 import ObjectHit from "../../../src/client/graphics/types/objectHit";
 import GameModeUtil from "../../../src/client/system/util/gameModeUtil";
 import CameraUtil from "../../../src/client/graphics/util/cameraUtil";
@@ -84,7 +85,8 @@ import SinglePlayerActionMap from "../../../src/client/singlePlayer/maps/singleP
 import PlayerGameObject from "../../../src/client/object/types/gameObject/playerGameObject";
 import { cameraModeObservable, clientFeatureFlagsObservable, editModeOpeningOverrideObservable,
     gameModeObservable, myPlayerHiddenObservable, notificationMessageObservable, objectSelectionObservable,
-    orbitCameraDistanceRangeRequestObservable, orbitCameraTargetOverrideObservable,
+    orbitCameraAngleHoldRequestObservable, orbitCameraDistanceRangeRequestObservable,
+    orbitCameraTargetOverrideObservable, orbitCameraViewRequestObservable, orbitCameraZoomObservable,
     voxelQuadSelectionObservable } from "../../../src/client/system/clientObservables";
 import { EDIT_MODE_OPENING_REACH, EDIT_MODE_OPENING_TILT } from "../../../src/client/system/clientConstants";
 import { FeatureFlag } from "../../../src/shared/system/types/featureFlag";
@@ -97,7 +99,8 @@ import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import Room from "../../../src/shared/room/types/room";
 import User from "../../../src/shared/user/types/user";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
-import { createRoom, floorQuadIndexOf, isQuadVisible, quadIndexOf, voxelAt } from "../helpers/selectionHarness";
+import { buildPillar, createRoom, floorQuadIndexOf, isQuadVisible, quadIndexOf,
+    voxelAt } from "../helpers/selectionHarness";
 import { createMockUser } from "../helpers/mockUser";
 import VoxelQuadInstanceUtil from "../../../src/client/voxel/util/voxelQuadInstanceUtil";
 import AdminPrefsUtil from "../../../src/shared/object/util/adminPrefsUtil";
@@ -238,6 +241,8 @@ beforeEach(() => {
     cameraModeObservable.set({type: "firstPerson"});
     orbitCameraTargetOverrideObservable.set(null);
     orbitCameraDistanceRangeRequestObservable.set(null);
+    orbitCameraAngleHoldRequestObservable.set(false);
+    orbitCameraViewRequestObservable.set(null);
     editModeOpeningOverrideObservable.set(null);
     notificationMessageObservable.set(null);
 
@@ -776,6 +781,229 @@ describe("the camera as edit mode opens", () => {
         const {before, after} = openEditModeFacingWall(10.5, WALL_FACE_Z + 4, 10, DISTANCE_RANGE);
 
         expect(after.distanceTo(before)).toBeLessThan(1e-6);
+    });
+});
+
+describe("the orbit following the selection to another face", () => {
+    // The boundary wall along row 0, whose inner faces look toward +z.
+    const WALL_ROW = 0;
+    const START_COL = 10;
+
+    /**
+     * Opens edit mode on the wall's face in front of a user standing back from it, with the real camera
+     * settled on it, and hands over that face's layer and a way to let the camera settle again. What is to
+     * happen between the mode opening and the orbit's first frame is done on the way.
+     */
+    function withOrbitOnWall(run: (layer: number, settleCamera: () => void) => void,
+        beforeFirstOrbitFrame: () => void = () => {}): void
+    {
+        const player = new THREE.Object3D();
+        player.position.set(START_COL + 0.5, 0.5 * PLAYER_HEIGHT, WALL_ROW + 1 + 5);
+        const controller = { gameObject: { obj: player, position: player.position } } as unknown as PlayerController;
+        const pointerInput = { dragDelta: new THREE.Vector2(), viewScale: 1 } as unknown as PlayerPointerInput;
+        const playerCamera = new PlayerCamera();
+        playerCamera.onSpawn(controller, pointerInput);
+        // A whole second eases the camera all the way to its pose.
+        const settleCamera = () => playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT);
+        try
+        {
+            settleCamera();
+            const eye = GraphicsManager.getCamera().getWorldPosition(new THREE.Vector3());
+            const layer = COLLISION_LAYER_MIN + Math.floor(eye.y / COLLISION_LAYER_HEIGHT);
+            const quadIndex = quadIndexOf(WALL_ROW, START_COL, "z", "+", layer);
+            GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOnVoxelQuad(WALL_ROW, START_COL, quadIndex)));
+            expect(voxelQuadSelectionObservable.peek()?.quadIndex).toBe(quadIndex);
+            beforeFirstOrbitFrame();
+            settleCamera();
+
+            run(layer, settleCamera);
+        }
+        finally
+        {
+            playerCamera.onDespawn(controller);
+            player.remove(GraphicsManager.getCamera());
+        }
+    }
+
+    function cameraPose(): {position: THREE.Vector3, facing: THREE.Vector3}
+    {
+        const camera = GraphicsManager.getCamera();
+        return {position: camera.getWorldPosition(new THREE.Vector3()), facing: camera.getWorldDirection(new THREE.Vector3())};
+    }
+
+    it("slides alongside a face stepped to by a movement key, holding its angles", () => {
+        withOrbitOnWall((layer, settleCamera) => {
+            const before = cameraPose();
+
+            // Looking toward -z, the view's right runs toward +x: three cells along, a step at a time.
+            for (let step = 1; step <= 3; ++step)
+            {
+                expect(SelectionStepUtil.tryStep("right")).toBe(true);
+                expect(voxelQuadSelectionObservable.peek()?.quadIndex)
+                    .toBe(quadIndexOf(WALL_ROW, START_COL + step, "z", "+", layer));
+                settleCamera();
+            }
+
+            const after = cameraPose();
+            expect(after.position.distanceTo(before.position.clone().add(new THREE.Vector3(3, 0, 0)))).toBeLessThan(1e-6);
+            expect(after.facing.distanceTo(before.facing)).toBeLessThan(1e-6);
+            expect(orbitCameraAngleHoldRequestObservable.peek()).toBe(false);
+        });
+    });
+
+    it("turns to look at a face picked out by a click from where it stands", () => {
+        withOrbitOnWall((layer, settleCamera) => {
+            const before = cameraPose();
+
+            expect(selectQuad(WALL_ROW, START_COL + 3, quadIndexOf(WALL_ROW, START_COL + 3, "z", "+", layer))).toBe(true);
+            settleCamera();
+
+            // Still on the line from that face to where it stood, so facing it at a slant.
+            const after = cameraPose();
+            expect(after.facing.angleTo(before.facing)).toBeGreaterThan(THREE.MathUtils.degToRad(20));
+            expect(after.position.x - before.position.x).toBeLessThan(1);
+        });
+    });
+
+    it("begins from where the camera stands though a step was taken before its first frame, when it has no angles yet to hold", () => {
+        let before = cameraPose();
+        withOrbitOnWall((layer) => {
+            expect(voxelQuadSelectionObservable.peek()?.quadIndex)
+                .toBe(quadIndexOf(WALL_ROW, START_COL + 1, "z", "+", layer));
+            expect(cameraPose().position.distanceTo(before.position)).toBeLessThan(1e-6);
+            expect(orbitCameraAngleHoldRequestObservable.peek()).toBe(false);
+        }, () => {
+            before = cameraPose();
+            expect(SelectionStepUtil.tryStep("right")).toBe(true);
+        });
+    });
+
+    it("holds its angles for the one change of target they were asked for", () => {
+        withOrbitOnWall((layer, settleCamera) => {
+            expect(SelectionStepUtil.tryStep("right")).toBe(true);
+            settleCamera();
+            const before = cameraPose();
+
+            expect(selectQuad(WALL_ROW, START_COL + 4, quadIndexOf(WALL_ROW, START_COL + 4, "z", "+", layer))).toBe(true);
+            settleCamera();
+
+            expect(cameraPose().facing.angleTo(before.facing)).toBeGreaterThan(THREE.MathUtils.degToRad(20));
+        });
+    });
+
+    it("slides alongside a face stepped to round a corner too, never turning to look at it", () => {
+        withOrbitOnWall((_layer, settleCamera) => {
+            // On the floor at the wall's foot, seen from above and in front: the wall rising there shows as well.
+            expect(selectQuad(WALL_ROW + 1, START_COL, floorQuadIndexOf(WALL_ROW + 1, START_COL))).toBe(true);
+            orbitCameraViewRequestObservable.set({azimuth: 0, polar: THREE.MathUtils.degToRad(70),
+                zoomAmount: orbitCameraZoomObservable.peek()});
+            settleCamera();
+            const before = cameraPose();
+
+            expect(SelectionStepUtil.tryStep("up")).toBe(true);
+            expect(voxelQuadSelectionObservable.peek()?.quadIndex)
+                .toBe(quadIndexOf(WALL_ROW, START_COL, "z", "+", COLLISION_LAYER_MIN));
+            settleCamera();
+
+            // Looking the same way, from as far off the wall's foot as it stood off the tile: a cell further
+            // on, and up by as much as the orbit looks at a block above a tile lying flat.
+            const after = cameraPose();
+            expect(after.facing.distanceTo(before.facing)).toBeLessThan(1e-6);
+            expect(after.position.x - before.position.x).toBeCloseTo(0, 6);
+            expect(after.position.z - before.position.z).toBeCloseTo(-1, 6);
+            expect(after.position.y - before.position.y).toBeGreaterThan(0.25);
+            expect(after.position.y - before.position.y).toBeLessThan(0.5 * COLLISION_LAYER_HEIGHT + 0.25);
+            expect(orbitCameraAngleHoldRequestObservable.peek()).toBe(false);
+        });
+    });
+
+    it("stays as it is when a step is refused for a face turned away from it", () => {
+        withOrbitOnWall((_layer, settleCamera) => {
+            // A block standing alone between the user and the wall, seen squarely: its sides show edge-on at
+            // best, and past each lies its back, turned away.
+            buildPillar(room, 3, START_COL, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
+            const front = quadIndexOf(3, START_COL, "z", "+", COLLISION_LAYER_MIN);
+            expect(selectQuad(3, START_COL, front)).toBe(true);
+            settleCamera();
+            const before = cameraPose();
+
+            for (const direction of ["left", "right"] as const)
+            {
+                expect(SelectionStepUtil.tryStep(direction)).toBe(false);
+                expect(voxelQuadSelectionObservable.peek()?.quadIndex).toBe(front);
+                expect(orbitCameraAngleHoldRequestObservable.peek()).toBe(false);
+            }
+            settleCamera();
+
+            const after = cameraPose();
+            expect(after.position.distanceTo(before.position)).toBeLessThan(1e-6);
+            expect(after.facing.distanceTo(before.facing)).toBeLessThan(1e-6);
+        });
+    });
+
+    it("steps round a corner exactly where the orbit, once slid alongside, sees the face from its front, and past it where not", () => {
+        withOrbitOnWall((layer, settleCamera) => {
+            // A block standing against the wall a cell along: its side, turned toward -x, is in the way of a
+            // step along the wall, and shows only from far enough round to that side. Past the side lies the
+            // block's front, turned the way the wall is.
+            const wallFace = quadIndexOf(WALL_ROW, START_COL, "z", "+", layer);
+            const blockSide = quadIndexOf(WALL_ROW + 1, START_COL + 1, "x", "-", layer);
+            const blockFront = quadIndexOf(WALL_ROW + 1, START_COL + 1, "z", "+", layer);
+            const blockSideX = START_COL + 1;
+            buildPillar(room, WALL_ROW + 1, START_COL + 1, COLLISION_LAYER_MIN, layer);
+
+            const sideTaken: boolean[] = [];
+            for (const roundDeg of [-14, -11, -8, -6.5, -4, -2, 0, 3])
+            {
+                expect(selectQuad(WALL_ROW, START_COL, wallFace)).toBe(true);
+                orbitCameraViewRequestObservable.set({azimuth: THREE.MathUtils.degToRad(roundDeg),
+                    polar: THREE.MathUtils.degToRad(80), zoomAmount: orbitCameraZoomObservable.peek()});
+                settleCamera();
+
+                expect(SelectionStepUtil.tryStep("right")).toBe(true);
+                const taken = voxelQuadSelectionObservable.peek()?.quadIndex == blockSide;
+                sideTaken.push(taken);
+                if (!taken)
+                {
+                    // Passed over for the front. Taken all the same, with the angles held as a step has them,
+                    // it shows from behind.
+                    expect(voxelQuadSelectionObservable.peek()?.quadIndex, `at ${roundDeg}`).toBe(blockFront);
+                    expect(selectQuad(WALL_ROW + 1, START_COL + 1, blockSide)).toBe(true);
+                    orbitCameraAngleHoldRequestObservable.set(true);
+                }
+                settleCamera();
+
+                // Before the side's plane, which lies toward -x of it, or not.
+                const beforeItsPlane = cameraPose().position.x < blockSideX;
+                expect(beforeItsPlane, `${roundDeg} degrees round`).toBe(taken);
+            }
+            // Both sides of the line were tried, and the line falls where the face's depth in its block puts it.
+            expect(sideTaken).toEqual([true, true, true, true, false, false, false, false]);
+        });
+    });
+
+    it("slides alongside a face reached past one turned away, as to any other", () => {
+        withOrbitOnWall((_layer, settleCamera) => {
+            // A low block standing alone between the user and the wall, seen from before and above: past its
+            // far side, which is turned away, lies the floor behind it.
+            buildPillar(room, 3, START_COL, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
+            expect(selectQuad(3, START_COL, quadIndexOf(3, START_COL, "y", "+", COLLISION_LAYER_MIN))).toBe(true);
+            orbitCameraViewRequestObservable.set({azimuth: 0, polar: THREE.MathUtils.degToRad(60),
+                zoomAmount: orbitCameraZoomObservable.peek()});
+            settleCamera();
+            const before = cameraPose();
+
+            expect(SelectionStepUtil.tryStep("up")).toBe(true);
+            expect(voxelQuadSelectionObservable.peek()?.quadIndex).toBe(floorQuadIndexOf(2, START_COL));
+            settleCamera();
+
+            // Looking the same way, a cell further on and lower by as much as the tile lies under the block.
+            const after = cameraPose();
+            expect(after.facing.distanceTo(before.facing)).toBeLessThan(1e-6);
+            expect(after.position.z - before.position.z).toBeCloseTo(-1, 6);
+            expect(after.position.y).toBeLessThan(before.position.y - 0.2);
+            expect(after.position.y).toBeGreaterThan(0);
+        });
     });
 });
 

@@ -261,7 +261,8 @@ async function zoom(page, deltaY, options = {})
     await sleep(150);
 }
 
-// Holds movement keys ("KeyW", "ArrowLeft", …); several at once walk diagonally.
+// Holds movement keys ("KeyW", "ArrowLeft", …); several at once walk diagonally. In edit mode nobody walks:
+// each key's press steps the selection once instead, the way the key points on screen.
 async function walk(page, keys, durationMs = 500)
 {
     const held = Array.isArray(keys) ? keys : [keys];

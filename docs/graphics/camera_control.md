@@ -13,7 +13,7 @@ Only the user's own player has a `PlayerController`. It reads input, steers the 
   - `PointerZoomInput`: pinch or mouse wheel, reported as a **scale factor** rather than a distance.
   - Click: a press that did not move, raycast through `CameraUtil` to find the clicked object. In play mode, where it hit a voxel quad or object is also handed to the camera for the next frame.
   - A second finger cancels the drag, and any finger lifting ends it.
-- `FirstPersonKeyInput`: smoothed movement keys, ignored while a UI input has focus.
+- `FirstPersonKeyInput`: smoothed movement keys, ignored while a UI input has focus. In edit mode a press of one steps the selection instead (see [game_mode.md](../gameplay/game_mode.md#selection)).
 - **Steering**: in first person, horizontal input yaws the player and vertical input sets forward velocity. In orbit, the player stands still and a drag orbits the camera.
 
 ## Camera modes
@@ -37,6 +37,7 @@ The camera is parented to the player object. Each frame, the active pose helper 
   - The framing distance scales with the target's size, and a selection can require a minimum distance (a block or wall object is framed with its surroundings). Zoom is a multiple of the framing distance, published logarithmically through `orbitCameraZoomObservable` for the zoom slider, whose middle is the framing distance. The range covers edit mode's opening reach (see [game_mode.md](../gameplay/game_mode.md)), so an orbit can start from there without moving the camera.
   - Zooming in stops a small clearance short of the target's side facing the camera (its extent along the view, not its bounding sphere), so the camera comes right up to tall or wide targets without clipping them.
   - An orbit starts at the camera's **current** distance and direction, unless the camera is inside the target's footprint (e.g. orbiting the user's own body), in which case it uses an over-the-shoulder default. Zoom persists across targets and resets when edit mode ends.
+  - A new target is looked at from where the camera stands. One stepped to by a movement key keeps the orbit's angles instead (`orbitCameraAngleHoldRequestObservable`), so the camera slides alongside rather than seeing a wall ever more aslant: any face, and an object facing the same way as the one left. No step turns the camera, so a face it would then see from behind is never stepped onto (see [game_mode.md](../gameplay/game_mode.md#selection)).
   - Angles are published in world terms (`orbitCameraAnglesObservable`). A requested view is applied right after the target is framed.
   - The orbit is computed in world space and converted into the player's frame, which avoids re-parenting mid-glide.
 - The head light stands at a point on the view axis, at most a fixed distance in front of the eased camera: the camera itself up close, otherwise a stand-in for a player standing near the subject. The fog is measured from there too, and so is the room light the head light yields to. Nothing about them grows with the camera's distance, and the far plane is fixed wide enough for the whole room from any orbit (`GraphicsManager`).

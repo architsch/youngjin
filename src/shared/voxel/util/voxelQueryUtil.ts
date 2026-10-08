@@ -264,6 +264,17 @@ const VoxelQueryUtil =
         return newCollisionLayer;
     },
 
+    // The layer of the block a quad is a face of. The room's floor and ceiling are the faces of the solid
+    // beyond the layer range, so theirs lies just past it.
+    getVoxelBlockCollisionLayerFromQuadIndex(quadIndex: number): number
+    {
+        const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+        if (collisionLayer >= COLLISION_LAYER_MIN && collisionLayer <= COLLISION_LAYER_MAX)
+            return collisionLayer;
+        return (VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex) == "+")
+            ? COLLISION_LAYER_MIN - 1 : COLLISION_LAYER_MAX + 1;
+    },
+
     getVoxelRowFromQuadIndex(quadIndex: number): number
     {
         const voxelIndex = Math.floor(quadIndex / NUM_VOXEL_QUADS_PER_VOXEL);
@@ -289,11 +300,7 @@ const VoxelQueryUtil =
         const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
         const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex);
         const step = (orientation == "+") ? 1 : -1;
-
-        // The room's floor and ceiling are the faces of the solid beyond the layer range.
-        let collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
-        if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
-            collisionLayer = (step > 0) ? COLLISION_LAYER_MIN - 1 : COLLISION_LAYER_MAX + 1;
+        const collisionLayer = VoxelQueryUtil.getVoxelBlockCollisionLayerFromQuadIndex(quadIndex);
 
         const shape = VoxelQueryUtil.getVoxelBlockShapeAt(voxels, row, col, collisionLayer);
         if (shape == VOXEL_BLOCK_SHAPE_EMPTY)
@@ -302,6 +309,89 @@ const VoxelQueryUtil =
             row + ((facingAxis == "z") ? step : 0),
             col + ((facingAxis == "x") ? step : 0),
             collisionLayer + ((facingAxis == "y") ? step : 0)), facingAxis, orientation);
+    },
+
+    // The quads the room's surface runs on into from a quad's face, along one of the face's own two axes:
+    // the face of whatever stands in the way, else the face carrying straight on, else the next face
+    // round the edge of its own block. Each half cell across the face is asked from as far along as it
+    // lies bare (a shrunk block may stand before part of a face), so several quads may come back, those
+    // in the way first. None for a quad that isn't drawn, or where the surface runs out of the room.
+    getVoxelQuadsNextAlong(voxels: Voxel[], quadIndex: number, axisDir: Vec3): number[]
+    {
+        const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
+        const alongAxis: "x" | "y" | "z" = (axisDir.x != 0) ? "x" : (axisDir.y != 0) ? "y" : "z";
+        if (alongAxis == facingAxis || !VoxelQueryUtil.isVoxelQuadVisible(voxels, quadIndex))
+            return [];
+        const acrossAxis = (facingAxis != "x" && alongAxis != "x") ? "x"
+            : (facingAxis != "y" && alongAxis != "y") ? "y" : "z";
+        const facingSign = (VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex) == "+") ? 1 : -1;
+        const alongSign = Math.sign(axisDir[alongAxis]);
+
+        const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
+        const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
+        const collisionLayer = VoxelQueryUtil.getVoxelBlockCollisionLayerFromQuadIndex(quadIndex);
+        const box = VoxelQueryUtil.getVoxelBlockBox(row, col, collisionLayer,
+            VoxelQueryUtil.getVoxelBlockShapeAt(voxels, row, col, collisionLayer));
+        const alongSize = getSubBlockSize(alongAxis), acrossSize = getSubBlockSize(acrossAxis);
+
+        // The middle of the sub-block lying so many sub-blocks on from a point of the face, before the
+        // face (side 1) or behind it (-1). Shared, so it holds the last one asked for.
+        const facePoint: Vec3 = {x: 0, y: 0, z: 0};
+        const probe: Vec3 = {x: 0, y: 0, z: 0};
+        const subBlockAt = (stepsOn: number, side: number): Vec3 =>
+        {
+            probe.x = facePoint.x;
+            probe.y = facePoint.y;
+            probe.z = facePoint.z;
+            probe[alongAxis] += stepsOn * alongSign * alongSize;
+            probe[facingAxis] += side * facingSign * 0.5 * getSubBlockSize(facingAxis);
+            return probe;
+        };
+        const isSolid = (point: Vec3) => VoxelQueryUtil.isPointInVoxelBlock(voxels, point);
+
+        const inTheWay: number[] = [], straightOn: number[] = [], roundTheEdge: number[] = [];
+        facePoint[facingAxis] = box.center[facingAxis] + facingSign * box.halfSize[facingAxis];
+        for (let across = 0.5 * acrossSize - box.halfSize[acrossAxis]; across < box.halfSize[acrossAxis];
+            across += acrossSize)
+        {
+            facePoint[acrossAxis] = box.center[acrossAxis] + across;
+
+            // From the sub-block's face furthest along, back to the first that lies bare.
+            for (let back = 0.5 * alongSize; back < 2 * box.halfSize[alongAxis]; back += alongSize)
+            {
+                facePoint[alongAxis] = box.center[alongAxis] + alongSign * (box.halfSize[alongAxis] - back);
+                if (isSolid(subBlockAt(0, 1)))
+                    continue;
+
+                if (isSolid(subBlockAt(1, 1)))
+                    inTheWay.push(getVoxelQuadIndexOfBlockAt(probe, alongAxis, -alongSign));
+                else if (isSolid(subBlockAt(1, -1)))
+                    straightOn.push(getVoxelQuadIndexOfBlockAt(probe, facingAxis, facingSign));
+                else
+                    roundTheEdge.push(getVoxelQuadIndexOfBlockAt(subBlockAt(0, -1), alongAxis, alongSign));
+                break;
+            }
+        }
+        return [...new Set([...inTheWay, ...straightOn, ...roundTheEdge])].filter(next => next >= 0);
+    },
+
+    // The way a walk along axisDir carries on once it has come off a quad's face onto the next one's (see
+    // getVoxelQuadsNextAlong): unchanged over a face turned the same way; the way the face left is
+    // turned, over one that stood in its way; against that, over one round the edge of its own block.
+    getVoxelQuadWalkDirectionOnto(quadIndex: number, axisDir: Vec3, nextQuadIndex: number): Vec3
+    {
+        const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
+        const nextFacingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(nextQuadIndex);
+        if (nextFacingAxis == facingAxis)
+            return {x: axisDir.x, y: axisDir.y, z: axisDir.z};
+
+        const facingSign = (VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex) == "+") ? 1 : -1;
+        const nextFacingSign = (VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(nextQuadIndex) == "+") ? 1 : -1;
+        const roundTheEdge = (nextFacingSign == Math.sign(axisDir[nextFacingAxis]));
+
+        const direction: Vec3 = {x: 0, y: 0, z: 0};
+        direction[facingAxis] = roundTheEdge ? -facingSign : facingSign;
+        return direction;
     },
 
     // What adding a block on a face comes to. On a face at its cell's side, and on the room's own floor
@@ -402,5 +492,26 @@ const VoxelQueryUtil =
         return { offsetX, offsetY, offsetZ, dirX, dirY, dirZ, scaleX, scaleY, scaleZ };
     },
 };
+
+// How long a sub-block is along an axis: half a cell across, a layer high.
+function getSubBlockSize(axis: "x" | "y" | "z"): number
+{
+    return (axis == "y") ? COLLISION_LAYER_HEIGHT : 0.5;
+}
+
+// The quad that the block a point lies in turns one way: the room's floor or ceiling for a point under or
+// over the layers. -1 where there is no such quad: any other side of that solid, and outside the grid.
+function getVoxelQuadIndexOfBlockAt(point: Vec3, facingAxis: "x" | "y" | "z", facingSign: number): number
+{
+    const row = VoxelQueryUtil.getVoxelRowFromWorldZ(point.z);
+    const col = VoxelQueryUtil.getVoxelColFromWorldX(point.x);
+    const collisionLayer = VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(point.y);
+    const orientation = (facingSign > 0) ? "+" : "-";
+    if (collisionLayer >= COLLISION_LAYER_MIN && collisionLayer <= COLLISION_LAYER_MAX)
+        return VoxelQueryUtil.getVoxelQuadIndex(row, col, facingAxis, orientation, collisionLayer);
+
+    const facesTheRoom = facingAxis == "y" && (facingSign > 0) == (collisionLayer < COLLISION_LAYER_MIN);
+    return facesTheRoom ? VoxelQueryUtil.getVoxelQuadIndex(row, col, "y", orientation, COLLISION_LAYER_NULL) : -1;
+}
 
 export default VoxelQueryUtil;

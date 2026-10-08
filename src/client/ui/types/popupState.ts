@@ -14,5 +14,6 @@ type PopupState =
     | { popupType: "doorDestination"; params: DoorDestinationProps }
     | { popupType: "doorSettings"; params: DoorSettingsProps }
     | { popupType: "consoleLog" }
+    | { popupType: "adminAssetSettings" }
 
 export default PopupState;

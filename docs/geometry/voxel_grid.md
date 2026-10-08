@@ -30,7 +30,7 @@ Reference: @src/shared/voxel/types/voxel.ts , @src/shared/voxel/types/voxelGrid.
 - An edit redraws only the quads it announces on `voxelQuadChangeObservable`: the ones it repaints, the ones it covers or uncovers, and the ones its block's new shape draws elsewhere. A shape changed any other way leaves the mesh stale.
 
 ## Queries
-- `VoxelQueryUtil` (shared): grid conventions such as cell positions, quad indices, a face's place and size, and which quads are drawn. A block is asked about in one of three ways: whether one is there, whether it is whole, or whether a point lies inside it.
+- `VoxelQueryUtil` (shared): grid conventions such as cell positions, quad indices, a face's place and size, which quads are drawn, and which faces a face runs on into along the room's surface (read a sub-block at a time, so a shrunk block standing before part of a face counts). A block is asked about in one of three ways: whether one is there, whether it is whole, or whether a point lies inside it.
 - `ClientVoxelQueryUtil` (client): questions about the room as it is currently drawn, which can differ from the stored room while the orbit camera hides blocks. It answers:
   - whether the room blocks the line between two points, found by walking the cell layers along the segment and testing a shrunk block against its own box (a block an end of the segment lies in is excluded);
   - how far the room ahead drops below the viewpoint, as a view-weighted average that drives the first-person camera pitch (see [camera_control.md](../graphics/camera_control.md)).

@@ -117,8 +117,8 @@ adds, renames and deletes them in the game, so read `categoryTabsBySubfolder` in
 | `accessory` | Small things worn, carried or held: bags, shoes, gloves, remotes, swimming gear |
 
 **They are not set here.** Which categories an image is filed under, and where it comes in the chooser's row, are
-an admin's to set in the game: holding its thumbnail in the chooser picks it up, to be dragged into place and
-filed under categories in the bar that comes up (see `docs/graphics/image_map.md`). Both are kept, with the
+an admin's to set in the game: in the editor the debug panel's `aas` command opens, its thumbnail is dragged into
+place and, once selected, filed under categories (see `docs/graphics/image_map.md`). Both are kept, with the
 categories themselves, in that settings file, which the game writes whole and the build reads; an image it leaves
 out, as every newly enabled one is, comes first in the chooser, under Misc, until the admin places and files it.
 Leave that file alone when adding samples, and write no category into the keywords.

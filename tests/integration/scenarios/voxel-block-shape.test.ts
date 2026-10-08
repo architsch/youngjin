@@ -6,7 +6,8 @@
  * room of mixed shapes draws, and where and how large, checked against an oracle that knows nothing but
  * sub-blocks; what adding a block on each kind of face comes to (a block beside it as wide as the face, or
  * the block itself grown); a bound moved between its cell's side and mid-cell; the colliders physics makes
- * of such a room.
+ * of such a room; which faces a face runs on into along the room's surface, round corners included, and the
+ * way a walk carries on over each, checked against the same oracle walking a sub-block at a time.
  */
 import { describe, it, expect } from "vitest";
 
@@ -154,6 +155,112 @@ function gameFaceOfQuad(grid: VoxelGrid, quadIndex: number): OracleFace
         min: {x: middle.x - half.x, y: middle.y - half.y, z: middle.z - half.z},
         max: {x: middle.x + half.x, y: middle.y + half.y, z: middle.z + half.z},
     };
+}
+
+// ─── The oracle's own walk along the room's surface, a sub-block at a time ───
+
+interface OracleSubBlock
+{
+    subX: number;
+    layer: number;
+    subZ: number;
+}
+
+function coordinateOf(subBlock: OracleSubBlock, axis: FacingAxis): number
+{
+    return (axis == "x") ? subBlock.subX : (axis == "y") ? subBlock.layer : subBlock.subZ;
+}
+
+function shifted(subBlock: OracleSubBlock, axis: FacingAxis, by: number): OracleSubBlock
+{
+    return {
+        subX: subBlock.subX + ((axis == "x") ? by : 0),
+        layer: subBlock.layer + ((axis == "y") ? by : 0),
+        subZ: subBlock.subZ + ((axis == "z") ? by : 0),
+    };
+}
+
+// The quad the block of a sub-block turns one way, or -1 if it has none: the rock beyond the layers has
+// only the room's floor and ceiling, and what lies outside the grid has nothing.
+function oracleQuadOf(subBlock: OracleSubBlock, axis: FacingAxis, sign: number): number
+{
+    const row = subBlock.subZ >> 1, col = subBlock.subX >> 1;
+    if (row < 0 || row >= NUM_VOXEL_ROWS || col < 0 || col >= NUM_VOXEL_COLS)
+        return -1;
+    if (subBlock.layer < COLLISION_LAYER_MIN)
+        return (axis == "y" && sign > 0) ? VoxelQueryUtil.getFloorVoxelQuadIndex(row, col) : -1;
+    if (subBlock.layer > COLLISION_LAYER_MAX)
+        return (axis == "y" && sign < 0) ? VoxelQueryUtil.getCeilingVoxelQuadIndex(row, col) : -1;
+    return VoxelQueryUtil.getVoxelQuadIndex(row, col, axis, (sign > 0) ? "+" : "-", subBlock.layer);
+}
+
+// How the surface turns to reach a face from the one before it: onto what rose in the way, straight on,
+// or round the edge of the block being left.
+type OracleTurn = "inTheWay" | "straightOn" | "roundTheEdge";
+
+// The quads a quad's face runs on into along one of its own axes.
+function oracleQuadsNextAlong(grid: VoxelGrid, quadIndex: number, alongAxis: FacingAxis, alongSign: number): number[]
+{
+    return oracleTurnsNextAlong(grid, quadIndex, alongAxis, alongSign).map(next => next.quadIndex);
+}
+
+// The same, each with how the surface turns to reach it. Each line of the face's sub-blocks along that axis
+// is left from its last one with nothing before it: onto what rises before the sub-block beyond, else onto
+// that sub-block's own face, else round onto the side of the one being left.
+function oracleTurnsNextAlong(grid: VoxelGrid, quadIndex: number, alongAxis: FacingAxis,
+    alongSign: number): {quadIndex: number, turn: OracleTurn}[]
+{
+    if (oracleFaceOfQuad(grid, quadIndex) == undefined)
+        return [];
+    const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
+    const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
+    const axis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
+    const sign = (VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex) == "+") ? 1 : -1;
+    let layer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+    if (layer == COLLISION_LAYER_NULL)
+        layer = (sign > 0) ? COLLISION_LAYER_MIN - 1 : COLLISION_LAYER_MAX + 1;
+    const isSolid = (subBlock: OracleSubBlock) => subBlockIsSolid(grid, subBlock.subX, subBlock.layer, subBlock.subZ);
+
+    // The sub-blocks the face is made of: its block's outermost slice the way it is turned.
+    let slice: OracleSubBlock[] = solidSubBlocks(grid, row, col, layer).map(([subX, subZ]) => ({subX, layer, subZ}));
+    if (axis != "y")
+    {
+        const outermost = Math.max(...slice.map(subBlock => sign * coordinateOf(subBlock, axis)));
+        slice = slice.filter(subBlock => sign * coordinateOf(subBlock, axis) == outermost);
+    }
+    const acrossAxis = (["x", "y", "z"] as const).find(other => other != axis && other != alongAxis)!;
+    const lines = [...new Set(slice.map(subBlock => coordinateOf(subBlock, acrossAxis)))].sort((a, b) => a - b);
+
+    const found: {quadIndex: number, turn: OracleTurn}[] = [];
+    for (const line of lines)
+    {
+        const furthestFirst = slice.filter(subBlock => coordinateOf(subBlock, acrossAxis) == line)
+            .sort((a, b) => alongSign * (coordinateOf(b, alongAxis) - coordinateOf(a, alongAxis)));
+        const left = furthestFirst.find(subBlock => !isSolid(shifted(subBlock, axis, sign)));
+        if (left == undefined)
+            continue;
+
+        const beyond = shifted(left, alongAxis, alongSign);
+        const rising = shifted(beyond, axis, sign);
+        if (isSolid(rising))
+            found.push({quadIndex: oracleQuadOf(rising, alongAxis, -alongSign), turn: "inTheWay"});
+        else if (isSolid(beyond))
+            found.push({quadIndex: oracleQuadOf(beyond, axis, sign), turn: "straightOn"});
+        else
+            found.push({quadIndex: oracleQuadOf(left, alongAxis, alongSign), turn: "roundTheEdge"});
+    }
+    // Those in the way first, then those straight on; each quad once.
+    const order: OracleTurn[] = ["inTheWay", "straightOn", "roundTheEdge"];
+    return order.flatMap(turn => found.filter(next => next.turn == turn))
+        .filter((next, i, all) => next.quadIndex >= 0 && all.findIndex(other => other.quadIndex == next.quadIndex) == i);
+}
+
+// Whether two faces meet along a line and nowhere else: an edge of one of them, at the least.
+function facesMeetAlongALine(a: OracleFace, b: OracleFace): boolean
+{
+    const shared = (["x", "y", "z"] as const).map(axis =>
+        Math.min(a.max[axis], b.max[axis]) - Math.max(a.min[axis], b.min[axis]));
+    return shared.every(extent => extent >= 0) && shared.filter(extent => extent > 0).length == 1;
 }
 
 describe("a block's shape", () => {
@@ -406,6 +513,207 @@ describe("the faces a room of mixed shapes draws", () => {
                 }
             }
         }
+    });
+});
+
+describe("the faces a face runs on into along the room's surface", () => {
+    const OWN_AXES: {[axis in FacingAxis]: FacingAxis[]} = {x: ["y", "z"], y: ["x", "z"], z: ["x", "y"]};
+    const along = (axis: FacingAxis, sign: number) => ({x: 0, y: 0, z: 0, [axis]: sign});
+
+    function facingOf(quadIndex: number): {axis: FacingAxis, sign: number}
+    {
+        return {axis: VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex),
+            sign: (VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex) == "+") ? 1 : -1};
+    }
+
+    it("are the ones a walk over bare sub-blocks comes to, in a room of mixed shapes", () => {
+        for (const seed of [11, 2024])
+        {
+            const grid = randomShapeGrid(seed);
+            const wrong: string[] = [];
+            const numByTurn = {inTheWay: 0, straightOn: 0, roundTheEdge: 0};
+            let numWithSeveral = 0, numWithNone = 0;
+
+            // Every third quad, which between them are every kind of face of every cell layer.
+            for (let quadIndex = 0; quadIndex < NUM_VOXEL_QUADS_PER_ROOM; quadIndex += 3)
+            {
+                const facing = facingOf(quadIndex);
+                const drawn = VoxelQueryUtil.isVoxelQuadVisible(grid.voxels, quadIndex);
+                for (const alongAxis of OWN_AXES[facing.axis])
+                {
+                    for (const alongSign of [-1, 1])
+                    {
+                        const found = VoxelQueryUtil.getVoxelQuadsNextAlong(grid.voxels, quadIndex, along(alongAxis, alongSign));
+                        const expected = oracleQuadsNextAlong(grid, quadIndex, alongAxis, alongSign);
+                        if (found.join() != expected.join())
+                            wrong.push(`${quadIndex} along ${alongSign}${alongAxis}: ${found} for ${expected}`);
+                        if (!drawn)
+                            continue;
+
+                        if (found.length == 0)
+                            ++numWithNone;
+                        if (found.length > 1)
+                            ++numWithSeveral;
+                        for (const next of found)
+                        {
+                            const nextFacing = facingOf(next);
+                            if (nextFacing.axis == facing.axis)
+                                ++numByTurn.straightOn;
+                            else if (nextFacing.sign == alongSign)
+                                ++numByTurn.roundTheEdge;
+                            else
+                                ++numByTurn.inTheWay;
+                        }
+                    }
+                }
+            }
+            expect(wrong.slice(0, 5), `seed ${seed}`).toEqual([]);
+
+            // Every kind of step was asked for many times over, and so were faces leading several ways at once.
+            for (const count of [...Object.values(numByTurn), numWithSeveral, numWithNone])
+                expect(count).toBeGreaterThan(500);
+        }
+    });
+
+    it("are each drawn, another face than the one left, and joined to it along a line", () => {
+        const grid = randomShapeGrid(5150);
+        const unsound: string[] = [];
+        let numChecked = 0;
+        for (let quadIndex = 0; quadIndex < NUM_VOXEL_QUADS_PER_ROOM; quadIndex += 3)
+        {
+            const face = oracleFaceOfQuad(grid, quadIndex);
+            if (face == undefined)
+                continue;
+            for (const alongAxis of OWN_AXES[facingOf(quadIndex).axis])
+            {
+                for (const alongSign of [-1, 1])
+                {
+                    for (const next of VoxelQueryUtil.getVoxelQuadsNextAlong(grid.voxels, quadIndex, along(alongAxis, alongSign)))
+                    {
+                        const nextFace = oracleFaceOfQuad(grid, next);
+                        ++numChecked;
+                        if (next == quadIndex || nextFace == undefined || !facesMeetAlongALine(face, nextFace))
+                            unsound.push(`${quadIndex} along ${alongSign}${alongAxis}: ${next}`);
+                    }
+                }
+            }
+        }
+        expect(unsound.slice(0, 5)).toEqual([]);
+        expect(numChecked).toBeGreaterThan(10000);
+    });
+
+    it("are one face a step in a room of whole blocks, from which a step leads back", () => {
+        // Each cell layer a whole block or none, as likely as each other.
+        const grid = VoxelGrid.createBaseGrid();
+        const rand = new RandomNumberGenerator(31);
+        for (let i = 0; i < grid.quadsMem.blockShapes.length; ++i)
+            grid.quadsMem.blockShapes[i] = (rand.randomInt(0, 2) == 0) ? VOXEL_BLOCK_SHAPE_EMPTY : VOXEL_BLOCK_SHAPE_WHOLE;
+
+        const astray: string[] = [];
+        let numBack = 0;
+        for (let quadIndex = 0; quadIndex < NUM_VOXEL_QUADS_PER_ROOM; quadIndex += 3)
+        {
+            const facing = facingOf(quadIndex);
+            for (const alongAxis of OWN_AXES[facing.axis])
+            {
+                for (const alongSign of [-1, 1])
+                {
+                    const found = VoxelQueryUtil.getVoxelQuadsNextAlong(grid.voxels, quadIndex, along(alongAxis, alongSign));
+                    if (found.length == 0)
+                        continue;
+
+                    // Straight back along a flat stretch; out of a corner the way the face left was turned,
+                    // and back over an edge against it.
+                    const nextFacing = facingOf(found[0]);
+                    const back = (nextFacing.axis == facing.axis) ? along(alongAxis, -alongSign)
+                        : along(facing.axis, (nextFacing.sign == alongSign) ? facing.sign : -facing.sign);
+                    const returned = VoxelQueryUtil.getVoxelQuadsNextAlong(grid.voxels, found[0], back);
+                    if (found.length != 1 || returned.length != 1 || returned[0] != quadIndex)
+                        astray.push(`${quadIndex} along ${alongSign}${alongAxis}: ${found}, then ${returned}`);
+                    ++numBack;
+                }
+            }
+        }
+        expect(astray.slice(0, 5)).toEqual([]);
+        expect(numBack).toBeGreaterThan(10000);
+    });
+
+    it("carry a walk on the way the surface turns onto each: as it went, out from a face it met, back under an edge it rounded", () => {
+        const grid = randomShapeGrid(808);
+        const wrong: string[] = [];
+        const numByTurn: {[turn: string]: number} = {inTheWay: 0, straightOn: 0, roundTheEdge: 0};
+        for (let quadIndex = 0; quadIndex < NUM_VOXEL_QUADS_PER_ROOM; quadIndex += 3)
+        {
+            const facing = facingOf(quadIndex);
+            for (const alongAxis of OWN_AXES[facing.axis])
+            {
+                for (const alongSign of [-1, 1])
+                {
+                    for (const next of oracleTurnsNextAlong(grid, quadIndex, alongAxis, alongSign))
+                    {
+                        // Over a face met in the way, the way the face left is turned; over one round the
+                        // edge, against it.
+                        const expected = (next.turn == "straightOn") ? along(alongAxis, alongSign)
+                            : along(facing.axis, (next.turn == "inTheWay") ? facing.sign : -facing.sign);
+                        const found = VoxelQueryUtil.getVoxelQuadWalkDirectionOnto(quadIndex,
+                            along(alongAxis, alongSign), next.quadIndex);
+                        ++numByTurn[next.turn];
+                        if (found.x != expected.x || found.y != expected.y || found.z != expected.z)
+                            wrong.push(`${quadIndex} along ${alongSign}${alongAxis} onto ${next.quadIndex}, ${next.turn}`);
+                    }
+                }
+            }
+        }
+        expect(wrong.slice(0, 5)).toEqual([]);
+        for (const count of Object.values(numByTurn))
+            expect(count).toBeGreaterThan(500);
+    });
+
+    it("never lead a walk carried on over one of them back onto the face it left, nor off the face's own plane", () => {
+        const grid = randomShapeGrid(4242);
+        const astray: string[] = [];
+        let numCarriedOn = 0;
+        for (let quadIndex = 0; quadIndex < NUM_VOXEL_QUADS_PER_ROOM; quadIndex += 3)
+        {
+            const facing = facingOf(quadIndex);
+            for (const alongAxis of OWN_AXES[facing.axis])
+            {
+                for (const alongSign of [-1, 1])
+                {
+                    const step = along(alongAxis, alongSign);
+                    for (const next of VoxelQueryUtil.getVoxelQuadsNextAlong(grid.voxels, quadIndex, step))
+                    {
+                        const onward = VoxelQueryUtil.getVoxelQuadWalkDirectionOnto(quadIndex, step, next);
+                        const beyond = VoxelQueryUtil.getVoxelQuadsNextAlong(grid.voxels, next, onward);
+                        ++numCarriedOn;
+                        if (onward[facingOf(next).axis] != 0 || Math.abs(onward.x) + Math.abs(onward.y) + Math.abs(onward.z) != 1
+                            || beyond.includes(quadIndex))
+                        {
+                            astray.push(`${quadIndex} along ${alongSign}${alongAxis} onto ${next}`);
+                        }
+                    }
+                }
+            }
+        }
+        expect(astray.slice(0, 5)).toEqual([]);
+        expect(numCarriedOn).toBeGreaterThan(10000);
+    });
+
+    it("are none for a face that isn't drawn, or along the way the face itself is turned", () => {
+        const ROW = 10, COL = 12, LAYER = 5;
+        const grid = VoxelGrid.createBaseGrid();
+        grid.quadsMem.blockShapes.fill(VOXEL_BLOCK_SHAPE_EMPTY);
+        setShape(grid, ROW, COL, LAYER, VOXEL_BLOCK_SHAPE_WHOLE);
+        setShape(grid, ROW, COL + 1, LAYER, VOXEL_BLOCK_SHAPE_WHOLE);
+        const covered = VoxelQueryUtil.getVoxelQuadIndex(ROW, COL, "x", "+", LAYER);
+        const top = VoxelQueryUtil.getVoxelQuadIndex(ROW, COL, "y", "+", LAYER);
+        const absent = VoxelQueryUtil.getVoxelQuadIndex(ROW, COL, "y", "+", LAYER + 3);
+
+        expect(VoxelQueryUtil.getVoxelQuadsNextAlong(grid.voxels, covered, along("z", 1))).toEqual([]);
+        expect(VoxelQueryUtil.getVoxelQuadsNextAlong(grid.voxels, absent, along("x", 1))).toEqual([]);
+        expect(VoxelQueryUtil.getVoxelQuadsNextAlong(grid.voxels, top, along("y", 1))).toEqual([]);
+        expect(VoxelQueryUtil.getVoxelQuadsNextAlong(grid.voxels, top, along("x", 1)))
+            .toEqual([VoxelQueryUtil.getVoxelQuadIndex(ROW, COL + 1, "y", "+", LAYER)]);
     });
 });
 

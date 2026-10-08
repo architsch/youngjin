@@ -1,7 +1,8 @@
 /**
  * Scenario tests: shortcut keys (see ShortcutKeyUtil, KeyPressUtil) — which keydown presses one, on
- * layouts that type no Latin letters too; the control a press goes to; and Backspace standing in for
- * Escape everywhere but in a text field. Focus is read through stand-ins for the DOM's own classes.
+ * layouts that type no Latin letters too; the control a press goes to; the way a movement key points;
+ * and Backspace standing in for Escape everywhere but in a text field. Focus is read through stand-ins
+ * for the DOM's own classes.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import ShortcutKeyUtil from "../../../src/client/ui/util/shortcutKeyUtil";
@@ -117,6 +118,34 @@ describe("the control a shortcut key's press goes to", () => {
 
         ShortcutKeyUtil.unregister(remove);
         ShortcutKeyUtil.unregister(mode);
+    });
+});
+
+describe("the way a movement key points", () => {
+    it("is an arrow's own way, and W, A, S and D's as they lie around the hand", () => {
+        expect(KeyPressUtil.getDirection(keyDown("ArrowUp"))).toBe("up");
+        expect(KeyPressUtil.getDirection(keyDown("ArrowDown"))).toBe("down");
+        expect(KeyPressUtil.getDirection(keyDown("ArrowLeft"))).toBe("left");
+        expect(KeyPressUtil.getDirection(keyDown("ArrowRight"))).toBe("right");
+
+        expect(KeyPressUtil.getDirection(keyDown("w", "KeyW"))).toBe("up");
+        expect(KeyPressUtil.getDirection(keyDown("s", "KeyS"))).toBe("down");
+        expect(KeyPressUtil.getDirection(keyDown("a", "KeyA"))).toBe("left");
+        expect(KeyPressUtil.getDirection(keyDown("D", "KeyD", {shiftKey: true}))).toBe("right");
+    });
+
+    it("goes by the key's place, whatever letter the layout types there", () => {
+        // AZERTY has Z and Q where QWERTY has W and A, and W where QWERTY has Z.
+        expect(KeyPressUtil.getDirection(keyDown("z", "KeyW"))).toBe("up");
+        expect(KeyPressUtil.getDirection(keyDown("q", "KeyA"))).toBe("left");
+        expect(KeyPressUtil.getDirection(keyDown("w", "KeyZ"))).toBeUndefined();
+        expect(KeyPressUtil.getDirection(keyDown("ㅈ", "KeyW"))).toBe("up");
+    });
+
+    it("is none for any other key, or for a keydown that names no key", () => {
+        for (const [key, code] of [["m", "KeyM"], ["Enter", "Enter"], [" ", "Space"], ["Delete", "Delete"]])
+            expect(KeyPressUtil.getDirection(keyDown(key, code))).toBeUndefined();
+        expect(KeyPressUtil.getDirection({} as KeyboardEvent)).toBeUndefined();
     });
 });
 

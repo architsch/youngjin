@@ -156,12 +156,16 @@ export const orbitCameraViewRequestObservable =
 export const orbitCameraDistanceRangeRequestObservable =
     new Observable<{min: number, max: number} | null>(null);
 
+// Whether the orbit camera is to keep its angles when its target next changes, sliding alongside the new one
+// rather than turning to look at it from where it stands (see SelectionStepUtil). False once applied.
+export const orbitCameraAngleHoldRequestObservable = new Observable<boolean>(false);
+
 // This observable notifies its listeners whenever ChatTextInput's input text changes.
 export const chatTextInputObservable = new Observable<string>("");
 
-// Fires with an image map's name when its admin settings are set whole (see DebugStats' "iaas"), for a chooser open
-// at the time to show them.
-export const imageMapSettingsAppliedObservable = new Observable<string>("");
+// Fires with an image map's name each time an admin changes its order or its categories (see
+// AdminAssetSettingsEditor), for a chooser open at the time to show them.
+export const imageMapSettingsChangedObservable = new Observable<string>("");
 
 // User State Observables
 

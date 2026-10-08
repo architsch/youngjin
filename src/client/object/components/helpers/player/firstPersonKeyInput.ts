@@ -1,4 +1,5 @@
 import { numActiveInputElementsObservable } from "../../../../system/clientObservables";
+import KeyPressUtil from "../../../../ui/util/keyPressUtil";
 import PlayerController from "../../playerController";
 
 export default class FirstPersonKeyInput
@@ -64,21 +65,21 @@ export default class FirstPersonKeyInput
         {
             return; // User is using an input element (UI) which may require keyboard inputs, so don't process an alphabet key as a control key.
         }
-        switch (ev.code)
+        switch (KeyPressUtil.getDirection(ev))
         {
-            case "ArrowUp": case "KeyW":
+            case "up":
                 ev.preventDefault();
                 this.upKeyPressed = keyDown;
                 break;
-            case "ArrowDown": case "KeyS":
+            case "down":
                 ev.preventDefault();
                 this.downKeyPressed = keyDown;
                 break;
-            case "ArrowLeft": case "KeyA":
+            case "left":
                 ev.preventDefault();
                 this.leftKeyPressed = keyDown;
                 break;
-            case "ArrowRight": case "KeyD":
+            case "right":
                 ev.preventDefault();
                 this.rightKeyPressed = keyDown;
                 break;
