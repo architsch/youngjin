@@ -5,7 +5,7 @@
  * being dropped for the one before it, and a skippable event passed over; the scripted lock on both; edits
  * typed in quick succession counting as one; the lists emptied as edit mode ends and on arriving in a
  * room; each kind of edit taken back and made again as the user's own (checked, applied, and sent as the
- * signals that undo it): blocks put up, taken down, reshaped and painted, objects hung, taken down, moved,
+ * signals that undo it): blocks put up, taken down and painted, objects hung, taken down, moved,
  * turned and given other values, a block taken down with what hung on it; a single-player room sending
  * nothing; where each step leaves the selection; and selections by a click or a movement key undone and
  * redone, in their order among the edits.
@@ -61,7 +61,6 @@ vi.mock("../../../src/client/networking/client/socketsClient", () => ({
     default: {
         emitAddVoxelBlockSignal: vi.fn(),
         emitRemoveVoxelBlockSignal: vi.fn(),
-        emitSetVoxelBlockShapeSignal: vi.fn(),
         emitSetVoxelQuadTextureSignal: vi.fn(),
         emitAddObjectSignal: vi.fn(),
         emitRemoveObjectSignal: vi.fn(),
@@ -73,10 +72,8 @@ vi.mock("../../../src/client/networking/client/socketsClient", () => ({
 import * as THREE from "three";
 import App from "../../../src/client/app";
 import ClientVoxelManager from "../../../src/client/voxel/clientVoxelManager";
-import "../../../src/client/graphics/types/gizmo/voxelQuadEditGizmos";
 import "../../../src/client/graphics/types/gizmo/objectAttachmentEditGizmos";
 import GizmoDragUtil from "../../../src/client/graphics/util/gizmoDragUtil";
-import SelectionEditGizmoUtil from "../../../src/client/graphics/util/selectionEditGizmoUtil";
 import ObjectSelection from "../../../src/client/graphics/types/gizmo/objectSelection";
 import VoxelQuadSelection from "../../../src/client/graphics/types/gizmo/voxelQuadSelection";
 import SelectionStepUtil from "../../../src/client/graphics/util/selectionStepUtil";
@@ -96,9 +93,9 @@ import { clientFeatureFlagsObservable, gameModeObservable, objectSelectionObserv
     orbitCameraAngleHoldRequestObservable, popupStateObservable, roomChangedObservable,
     voxelQuadSelectionObservable } from "../../../src/client/system/clientObservables";
 import { FeatureFlag } from "../../../src/shared/system/types/featureFlag";
-import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL,
-    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, LABEL_COLOR_PALETTE_NAME, UNIT_VEC3, VOXEL_BLOCK_SHAPE_EMPTY,
-    VOXEL_BLOCK_SHAPE_WHOLE } from "../../../src/shared/system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_POS,
+    LABEL_COLOR_PALETTE_NAME, UNIT_VEC3,
+    VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 import EncodableData from "../../../src/shared/networking/types/encodableData";
 import EncodableByteString from "../../../src/shared/networking/types/encodableByteString";
 import ColorUtil from "../../../src/shared/math/util/colorUtil";
@@ -108,7 +105,6 @@ import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
 import RestrictedZone from "../../../src/shared/voxel/types/restrictedZone";
 import AddVoxelBlockSignal from "../../../src/shared/voxel/types/update/addVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/removeVoxelBlockSignal";
-import SetVoxelBlockShapeSignal from "../../../src/shared/voxel/types/update/setVoxelBlockShapeSignal";
 import SetVoxelQuadTextureSignal from "../../../src/shared/voxel/types/update/setVoxelQuadTextureSignal";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 import ObjectAttachmentUtil from "../../../src/shared/object/util/objectAttachmentUtil";
@@ -126,7 +122,7 @@ import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import { createEditingUser } from "../helpers/mockUser";
 import { createRoom, forceSelect, quadIndexOf, voxelAt } from "../helpers/selectionHarness";
-import { drag, placeCamera, screenPointOf, ScreenPoint } from "../helpers/gizmoHarness";
+import { drag, placeCamera, screenPointOf } from "../helpers/gizmoHarness";
 import { FakeInput, focus, stubFocus } from "../helpers/focusStub";
 
 // The acting user: an admin, who is a hub's superuser (labels are theirs to put up).
@@ -135,23 +131,31 @@ const actingUser = createEditingUser();
 const ROOM_ID = "undo-room";
 const TEXTURES = [1, 2, 3, 4, 5, 6];
 const OTHER_TEXTURES = [11, 12, 13, 14, 15, 16];
-const WEST_HALF = 0b0101, NORTH_HALF = 0b0011;
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 const labelTypeIndex = ObjectTypeConfigMap.getIndexByType("Label");
 const voxelTypeIndex = ObjectTypeConfigMap.getIndexByType("Voxel");
 
-// A block standing by itself on the room's floor, well away from the walls.
-const ROW = 16, COL = 10, LAYER = COLLISION_LAYER_MIN;
+// A block standing by itself on the room's floor, well away from the walls: its voxel, and where its middle
+// and its south face lie in the world.
+const ROW = 32, COL = 20, LAYER = COLLISION_LAYER_MIN;
+const BLOCK_X = VoxelQueryUtil.getWorldXAtVoxelColCenter(COL);
+const BLOCK_Z = VoxelQueryUtil.getWorldZAtVoxelRowCenter(ROW);
+const BLOCK_SOUTH_Z = (ROW + 1) * VOXEL_CELL_SIZE;
 const MID_Y = (LAYER + 0.5) * COLLISION_LAYER_HEIGHT;
 const BLOCK_QUAD = quadIndexOf(ROW, COL, "y", "-", LAYER); // the first of the block's quads, which signals name it by
 const SOUTH_FACE = quadIndexOf(ROW, COL, "z", "+", LAYER);
 const TOP_FACE = quadIndexOf(ROW, COL, "y", "+", LAYER);
 
-// A free-standing wall running east-west, five cells long and two units high, whose south face (at
-// z = WALL_Z) objects hang on.
-const WALL_ROW = 10, WALL_COL_MIN = 8, WALL_COL_MAX = 12, WALL_LAYERS = 4;
-const WALL_Z = WALL_ROW + 1;
+// A free-standing wall running east-west from x = 8 to x = 13, a voxel thick and two units high, whose south
+// face (at z = WALL_Z) objects hang on.
+const WALL_Z = 11;
+const WALL_ROW = VoxelQueryUtil.getVoxelRowFromWorldZ(WALL_Z) - 1;
+const WALL_COL_MIN = VoxelQueryUtil.getVoxelColFromWorldX(8);
+const WALL_COL_MAX = VoxelQueryUtil.getVoxelColFromWorldX(13) - 1;
+const WALL_LAYERS = 4;
+// One of its voxels behind what hangs at the middle of it (x = 10.5), whose faces the scenarios pick out.
+const WALL_COL = VoxelQueryUtil.getVoxelColFromWorldX(10.5);
 const SOUTH = {x: 0, y: 0, z: 1};
 
 let room: Room;
@@ -159,9 +163,9 @@ let numObjects = 0;
 
 // ─── The room ───────────────────────────────────────────────────────────────
 
-function shapeAt(row: number, col: number, layer: number = LAYER): number
+function hasBlockAt(row: number, col: number, layer: number = LAYER): boolean
 {
-    return VoxelQueryUtil.getVoxelBlockShapeAt(room.voxelGrid.voxels, row, col, layer);
+    return VoxelQueryUtil.isVoxelBlockPresentAt(room.voxelGrid.voxels, row, col, layer);
 }
 
 function textureAt(quadIndex: number): number
@@ -176,10 +180,9 @@ function texturesAt(row: number, col: number, layer: number = LAYER): number[]
 }
 
 // Puts a block up as generation would: nothing is checked, sent or entered in the history.
-function putBlock(row: number, col: number, layer: number = LAYER, shape: number = VOXEL_BLOCK_SHAPE_WHOLE): void
+function putBlock(row: number, col: number, layer: number = LAYER): void
 {
-    VoxelUpdateUtil.addVoxelBlock(undefined, room.voxelGrid.voxels, quadIndexOf(row, col, "y", "+", layer), TEXTURES,
-        undefined, shape);
+    VoxelUpdateUtil.addVoxelBlock(undefined, room.voxelGrid.voxels, quadIndexOf(row, col, "y", "+", layer), TEXTURES);
 }
 
 const rounded = (v: Vec3) => [v.x, v.y, v.z].map(n => Math.round(n * 1000) / 1000);
@@ -205,9 +208,8 @@ function sentSignals(): unknown[][]
         (emit as Mock).mockClear();
     };
     collect(SocketsClient.emitAddVoxelBlockSignal,
-        signal => ["addBlock", signal.quadIndex, [...signal.quadTextureIndicesWithinLayer], signal.shape]);
+        signal => ["addBlock", signal.quadIndex, [...signal.quadTextureIndicesWithinLayer]]);
     collect(SocketsClient.emitRemoveVoxelBlockSignal, signal => ["removeBlock", signal.quadIndex]);
-    collect(SocketsClient.emitSetVoxelBlockShapeSignal, signal => ["reshape", signal.quadIndex, signal.shape]);
     collect(SocketsClient.emitSetVoxelQuadTextureSignal, signal => ["texture", signal.quadIndex, signal.textureIndex]);
     collect(SocketsClient.emitAddObjectSignal, signal => ["addObject", signal.objectId, signal.sourceUserID]);
     collect(SocketsClient.emitRemoveObjectSignal, signal => ["removeObject", signal.objectId]);
@@ -246,33 +248,21 @@ function userPaints(quadIndex: number, textureIndex: number): void
     RoomEditUtil.record(ClientEventType.ManuallyChangedVoxelQuadTexture, room, {redo: [signal], undo: [undoSignal]});
 }
 
-// What the "add block" button does on the selected face: a block against it, or its own block grown out to its
-// cell's side, with the selection moved onto the block made or grown.
+// What the "add block" button does on the selected face: a block in the cell layer the face looks into, with the
+// selection moved onto it.
 function userAddsBlock(textures: number[] = TEXTURES): void
 {
     const selection = voxelQuadSelectionObservable.peek()!;
-    const target = VoxelQueryUtil.getVoxelBlockAddTarget(room.voxelGrid.voxels, selection.quadIndex)!;
-    let made: {type: ClientEventType, redo: EncodableData, undo: EncodableData};
-    if (target.grows)
-    {
-        const signal = new SetVoxelBlockShapeSignal(room.id, target.quadIndex, target.shape);
-        made = {type: ClientEventType.ManuallyChangedVoxelBlockShape, redo: signal,
-            undo: RoomEditUtil.getUndoSignal(room, signal)};
-        expect(ClientVoxelManager.setVoxelBlockShape(room, target.quadIndex, target.shape)).toBe(true);
-        send(() => SocketsClient.emitSetVoxelBlockShapeSignal(signal));
-    }
-    else
-    {
-        const signal = new AddVoxelBlockSignal(room.id, target.quadIndex, textures, target.shape);
-        made = {type: ClientEventType.ManuallyAddedVoxelBlock, redo: signal, undo: RoomEditUtil.getUndoSignal(room, signal)};
-        expect(ClientVoxelManager.addVoxelBlock(room, target.quadIndex, textures, true, target.shape)).toBe(true);
-        send(() => SocketsClient.emitAddVoxelBlockSignal(signal));
-    }
+    const targetQuadIndex = VoxelQueryUtil.getVoxelBlockAddTargetQuadIndex(selection.quadIndex);
+    const signal = new AddVoxelBlockSignal(room.id, targetQuadIndex, textures);
+    const undoSignal = RoomEditUtil.getUndoSignal(room, signal);
+    expect(ClientVoxelManager.addVoxelBlock(room, targetQuadIndex, textures)).toBe(true);
+    send(() => SocketsClient.emitAddVoxelBlockSignal(signal));
     VoxelQuadSelection.unselect();
-    VoxelQuadSelection.trySelectBestQuad(VoxelQueryUtil.getVoxel(room.voxelGrid.voxels,
-        VoxelQueryUtil.getVoxelRowFromQuadIndex(target.quadIndex), VoxelQueryUtil.getVoxelColFromQuadIndex(target.quadIndex))!,
-        target.quadIndex);
-    RoomEditUtil.record(made.type, room, {redo: [made.redo], undo: [made.undo], selectionBefore: selection});
+    VoxelQuadSelection.trySelectBestQuad(voxelAt(room, VoxelQueryUtil.getVoxelRowFromQuadIndex(targetQuadIndex),
+        VoxelQueryUtil.getVoxelColFromQuadIndex(targetQuadIndex)), targetQuadIndex);
+    RoomEditUtil.record(ClientEventType.ManuallyAddedVoxelBlock, room,
+        {redo: [signal], undo: [undoSignal], selectionBefore: selection});
 }
 
 // What the "remove block" button does on the selected face: what hangs on its block first, then the block,
@@ -339,8 +329,6 @@ function send(emit: () => void): void
 // A click on a face, through the real click path (see GameObject.onClick).
 function userClicksFace(quadIndex: number): void
 {
-    const voxel = voxelAt(room, VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex),
-        VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex));
     // A click names a mesh instance, so the quad must hold one (see VoxelQuadInstanceUtil).
     const instanceId = 0;
     VoxelQuadInstanceUtil.bind(quadIndex, instanceId);
@@ -350,7 +338,7 @@ function userClicksFace(quadIndex: number): void
         const clicked = Object.assign(Object.create(VoxelGameObject.prototype), {
             params: {objectTypeIndex: voxelTypeIndex, metadata: {}},
             config: ObjectTypeConfigMap.getConfigByIndex(voxelTypeIndex),
-            getVoxel: () => voxel,
+            voxels: room.voxelGrid.voxels,
         }) as VoxelGameObject;
         clicked.onClick(instanceId, new THREE.Vector3());
     }
@@ -411,13 +399,15 @@ async function select(objectId: string): Promise<ObjectSelection>
     return objectSelectionObservable.peek()!;
 }
 
-// A canvas a block across and a layer tall, on the south face of the block standing by itself.
-const ON_BLOCK = {pos: {x: COL + 0.5, y: MID_Y, z: ROW + 1}, scale: {x: 1, y: 0.5, z: 1}};
-// A canvas a block square on the wall's south face, centred a unit up.
+// A canvas as large as a block's side (its scale is its size in world units), on the south face of the block
+// standing by itself.
+const ON_BLOCK = {pos: {x: BLOCK_X, y: MID_Y, z: BLOCK_SOUTH_Z},
+    scale: {x: VOXEL_CELL_SIZE, y: COLLISION_LAYER_HEIGHT, z: 1}};
+// A canvas a unit square on the wall's south face, centred a unit up.
 const onWallAt = (x: number) => ({x, y: 1, z: WALL_Z});
 
 // A label on the boundary wall, clear of the room's door (see label.test.ts).
-const LABEL_POS = {x: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL - 4.5, y: 2.25, z: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW};
+const LABEL_POS = {x: INITIAL_MULTI_PLAYER_ENTRANCE_POS.x - 5, y: 2.25, z: INITIAL_MULTI_PLAYER_ENTRANCE_POS.z};
 const LABEL_DIR = {x: 0, y: 0, z: -1};
 const labelled = (text: string): ObjectMetadata => ({[ObjectMetadataKeyEnumMap.Label]: new EncodableByteString(text)});
 
@@ -426,7 +416,7 @@ const labelled = (text: string): ObjectMetadata => ({[ObjectMetadataKeyEnumMap.L
 // From the south of the lone block and above it, so that its top and south faces show.
 function lookAtTheBlock(): void
 {
-    placeCamera({x: COL + 0.5, y: 3.2, z: ROW + 5}, {x: COL + 0.5, y: MID_Y, z: ROW + 0.5});
+    placeCamera({x: BLOCK_X, y: 3.2, z: BLOCK_Z + 4.5}, {x: BLOCK_X, y: MID_Y, z: BLOCK_Z});
 }
 
 // From the south of the wall and level with its middle.
@@ -435,16 +425,6 @@ function lookAtTheWall(): void
     placeCamera({x: 10.5, y: 1.2, z: WALL_Z + 6}, {x: 10.5, y: 1, z: WALL_Z});
 }
 
-function handle(id: string): ScreenPoint
-{
-    const found = SelectionEditGizmoUtil.getGrabPoints()?.handles.find(candidate => candidate.id == id);
-    if (found == undefined)
-        throw new Error(`No handle "${id}" is shown`);
-    return {x: found.x, y: found.y};
-}
-
-// Where the pointer has to be for the lone block's east or west bound to be asked to a place across its cell.
-const onSouthFace = (acrossCell: number) => screenPointOf({x: COL + acrossCell, y: MID_Y, z: ROW + 1});
 const onWall = (x: number, y: number) => screenPointOf({x, y, z: WALL_Z});
 
 beforeEach(() => {
@@ -477,7 +457,6 @@ beforeEach(() => {
 
 afterEach(async () => {
     GizmoDragUtil.cancel();
-    ClientVoxelManager.cancelVoxelBlockPreview();
     await settle();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
@@ -814,21 +793,20 @@ describe("a block's edits, undone and redone", () => {
         forceSelect(room, SOUTH_FACE);
         userAddsBlock(OTHER_TEXTURES);
         const built = quadIndexOf(ROW + 1, COL, "z", "+", LAYER);
-        expect(shapeAt(ROW + 1, COL)).toBe(VOXEL_BLOCK_SHAPE_WHOLE);
+        expect(hasBlockAt(ROW + 1, COL)).toBe(true);
         sentSignals();
 
         expect(await ClientEventHistoryUtil.undo()).toBe("done");
-        expect(shapeAt(ROW + 1, COL)).toBe(VOXEL_BLOCK_SHAPE_EMPTY);
+        expect(hasBlockAt(ROW + 1, COL)).toBe(false);
         expect(sentSignals()).toEqual([["removeBlock", built]]);
 
         expect(await ClientEventHistoryUtil.redo()).toBe("done");
-        expect(shapeAt(ROW + 1, COL)).toBe(VOXEL_BLOCK_SHAPE_WHOLE);
+        expect(hasBlockAt(ROW + 1, COL)).toBe(true);
         expect(texturesAt(ROW + 1, COL)).toEqual(OTHER_TEXTURES);
-        expect(sentSignals()).toEqual([["addBlock", built, OTHER_TEXTURES, VOXEL_BLOCK_SHAPE_WHOLE]]);
+        expect(sentSignals()).toEqual([["addBlock", built, OTHER_TEXTURES]]);
     });
 
-    it("puts a block taken down back with its shape and its faces' textures", async () => {
-        room.voxelGrid.quadsMem.blockShapes[VoxelQueryUtil.getVoxelBlockIndex(ROW, COL, LAYER)] = NORTH_HALF;
+    it("puts a block taken down back with its faces' textures", async () => {
         forceSelect(room, TOP_FACE);
         const selection = voxelQuadSelectionObservable.peek()!;
         const signal = new RemoveVoxelBlockSignal(room.id, TOP_FACE);
@@ -836,15 +814,15 @@ describe("a block's edits, undone and redone", () => {
         expect(ClientVoxelManager.removeVoxelBlock(room, TOP_FACE)).toBe(true);
         RoomEditUtil.record(ClientEventType.ManuallyRemovedVoxelBlock, room,
             {redo: [signal], undo: [undoSignal], selectionBefore: selection});
-        expect(shapeAt(ROW, COL)).toBe(VOXEL_BLOCK_SHAPE_EMPTY);
+        expect(hasBlockAt(ROW, COL)).toBe(false);
 
         expect(await ClientEventHistoryUtil.undo()).toBe("done");
-        expect(shapeAt(ROW, COL)).toBe(NORTH_HALF);
+        expect(hasBlockAt(ROW, COL)).toBe(true);
         expect(texturesAt(ROW, COL)).toEqual(TEXTURES);
-        expect(sentSignals()).toEqual([["addBlock", BLOCK_QUAD, TEXTURES, NORTH_HALF]]);
+        expect(sentSignals()).toEqual([["addBlock", BLOCK_QUAD, TEXTURES]]);
 
         expect(await ClientEventHistoryUtil.redo()).toBe("done");
-        expect(shapeAt(ROW, COL)).toBe(VOXEL_BLOCK_SHAPE_EMPTY);
+        expect(hasBlockAt(ROW, COL)).toBe(false);
         expect(sentSignals()).toEqual([["removeBlock", TOP_FACE]]);
     });
 
@@ -859,45 +837,6 @@ describe("a block's edits, undone and redone", () => {
         expect(await ClientEventHistoryUtil.redo()).toBe("done");
         expect(textureAt(SOUTH_FACE)).toBe(40);
         expect(sentSignals()).toEqual([["texture", SOUTH_FACE, 40]]);
-    });
-
-    it("gives a block reshaped by a handle its shape back, and the new one again", async () => {
-        forceSelect(room, SOUTH_FACE);
-        expect(drag(handle("maxX"), onSouthFace(0.9), onSouthFace(0.5))).toBe(true);
-        expect(shapeAt(ROW, COL)).toBe(WEST_HALF);
-        expect(sentSignals()).toEqual([["reshape", BLOCK_QUAD, WEST_HALF]]);
-
-        expect(await ClientEventHistoryUtil.undo()).toBe("done");
-        expect(shapeAt(ROW, COL)).toBe(VOXEL_BLOCK_SHAPE_WHOLE);
-        expect(sentSignals()).toEqual([["reshape", BLOCK_QUAD, VOXEL_BLOCK_SHAPE_WHOLE]]);
-
-        expect(await ClientEventHistoryUtil.redo()).toBe("done");
-        expect(shapeAt(ROW, COL)).toBe(WEST_HALF);
-        expect(sentSignals()).toEqual([["reshape", BLOCK_QUAD, WEST_HALF]]);
-    });
-
-    it("has nothing to undo after a handle's drag that came to no edit", async () => {
-        forceSelect(room, SOUTH_FACE);
-        // Carried in and back out again.
-        expect(drag(handle("maxX"), onSouthFace(0.9), onSouthFace(0.5), onSouthFace(1))).toBe(true);
-        expect(shapeAt(ROW, COL)).toBe(VOXEL_BLOCK_SHAPE_WHOLE);
-        expect(await ClientEventHistoryUtil.undo()).toBe("none");
-    });
-
-    it("shrinks a block grown out to its cell's side back, and grows it again", async () => {
-        room.voxelGrid.quadsMem.blockShapes[VoxelQueryUtil.getVoxelBlockIndex(ROW, COL, LAYER)] = NORTH_HALF;
-        forceSelect(room, SOUTH_FACE);
-        userAddsBlock();
-        expect(shapeAt(ROW, COL)).toBe(VOXEL_BLOCK_SHAPE_WHOLE);
-        sentSignals();
-
-        expect(await ClientEventHistoryUtil.undo()).toBe("done");
-        expect(shapeAt(ROW, COL)).toBe(NORTH_HALF);
-        expect(sentSignals()).toEqual([["reshape", SOUTH_FACE, NORTH_HALF]]);
-
-        expect(await ClientEventHistoryUtil.redo()).toBe("done");
-        expect(shapeAt(ROW, COL)).toBe(VOXEL_BLOCK_SHAPE_WHOLE);
-        expect(sentSignals()).toEqual([["reshape", SOUTH_FACE, VOXEL_BLOCK_SHAPE_WHOLE]]);
     });
 
     it("goes back through several, the latest first", async () => {
@@ -926,11 +865,11 @@ describe("an edit the room no longer allows", () => {
         // Somebody hangs a canvas on the new block, which then can't go by itself.
         expect(ObjectUpdateUtil.addObject(actingUser, room, new AddObjectSignal(room.id, actingUser.id,
             actingUser.userName, canvasTypeIndex, "somebody's-canvas", new ObjectTransform(
-                {x: COL + 0.5, y: MID_Y, z: ROW + 2}, SOUTH, {x: 1, y: 0.5, z: 1})))).toBe(true);
+                {...ON_BLOCK.pos, z: BLOCK_SOUTH_Z + VOXEL_CELL_SIZE}, SOUTH, {...ON_BLOCK.scale})))).toBe(true);
         sentSignals();
 
         expect(await ClientEventHistoryUtil.undo()).toBe("refused");
-        expect(shapeAt(ROW + 1, COL)).toBe(VOXEL_BLOCK_SHAPE_WHOLE);
+        expect(hasBlockAt(ROW + 1, COL)).toBe(true);
         expect(sentSignals()).toEqual([]);
 
         expect(await ClientEventHistoryUtil.undo()).toBe("done");
@@ -984,7 +923,7 @@ describe("in a single-player room", () => {
 
         expect(await ClientEventHistoryUtil.undo()).toBe("done");
         expect(await ClientEventHistoryUtil.undo()).toBe("done");
-        expect(shapeAt(ROW + 1, COL)).toBe(VOXEL_BLOCK_SHAPE_EMPTY);
+        expect(hasBlockAt(ROW + 1, COL)).toBe(false);
         expect(textureAt(SOUTH_FACE)).toBe(TEXTURES[5]);
 
         expect(await ClientEventHistoryUtil.redo()).toBe("done");
@@ -1046,18 +985,17 @@ describe("an object's edits, undone and redone", () => {
         const objectId = await standObject(canvasTypeIndex, ON_BLOCK.pos, SOUTH, ON_BLOCK.scale);
         forceSelect(room, SOUTH_FACE);
         await userRemovesBlock();
-        expect(shapeAt(ROW, COL)).toBe(VOXEL_BLOCK_SHAPE_EMPTY);
+        expect(hasBlockAt(ROW, COL)).toBe(false);
         expect(room.objectById[objectId]).toBeUndefined();
         expect(sentSignals()).toEqual([["removeObject", objectId], ["removeBlock", SOUTH_FACE]]);
 
         expect(await ClientEventHistoryUtil.undo()).toBe("done");
-        expect(shapeAt(ROW, COL)).toBe(VOXEL_BLOCK_SHAPE_WHOLE);
+        expect(hasBlockAt(ROW, COL)).toBe(true);
         expect(transformOf(objectId)).toEqual({pos: rounded(ON_BLOCK.pos), scale: rounded(ON_BLOCK.scale)});
-        expect(sentSignals()).toEqual([["addBlock", BLOCK_QUAD, TEXTURES, VOXEL_BLOCK_SHAPE_WHOLE],
-            ["addObject", objectId, actingUser.id]]);
+        expect(sentSignals()).toEqual([["addBlock", BLOCK_QUAD, TEXTURES], ["addObject", objectId, actingUser.id]]);
 
         expect(await ClientEventHistoryUtil.redo()).toBe("done");
-        expect(shapeAt(ROW, COL)).toBe(VOXEL_BLOCK_SHAPE_EMPTY);
+        expect(hasBlockAt(ROW, COL)).toBe(false);
         expect(room.objectById[objectId]).toBeUndefined();
         expect(sentSignals()).toEqual([["removeObject", objectId], ["removeBlock", SOUTH_FACE]]);
     });
@@ -1244,7 +1182,7 @@ describe("the selection after an undo or a redo", () => {
 
     it("leaves an object undone for the face it was hung from, and takes it up again as it is redone", async () => {
         lookAtTheWall();
-        const hungFrom = quadIndexOf(WALL_ROW, 10, "z", "+", LAYER + 1);
+        const hungFrom = quadIndexOf(WALL_ROW, WALL_COL, "z", "+", LAYER + 1);
         forceSelect(room, hungFrom);
         await settle();
         const objectId = await userHangs(canvasTypeIndex, onWallAt(10.5), SOUTH, {...UNIT_VEC3});
@@ -1321,8 +1259,8 @@ describe("the selection after an undo or a redo", () => {
 // ─── Selections made by hand ────────────────────────────────────────────────
 
 describe("a selection the user makes by hand", () => {
-    const WALL_FACE = quadIndexOf(WALL_ROW, 10, "z", "+", LAYER + 1);
-    const NEXT_WALL_FACE = quadIndexOf(WALL_ROW, 11, "z", "+", LAYER + 1);
+    const WALL_FACE = quadIndexOf(WALL_ROW, WALL_COL, "z", "+", LAYER + 1);
+    const NEXT_WALL_FACE = quadIndexOf(WALL_ROW, WALL_COL + 1, "z", "+", LAYER + 1);
     const BUILT_FACE = quadIndexOf(ROW + 1, COL, "z", "+", LAYER);
 
     const numSelectionsEntered = () =>
@@ -1404,15 +1342,16 @@ describe("a selection the user makes by hand", () => {
         userClicksFace(SOUTH_FACE);
         userAddsBlock();
         userClicksFace(WALL_FACE);
-        const state = () => [selectedQuadIndex(), textureAt(TOP_FACE), shapeAt(ROW + 1, COL)];
-        expect(state()).toEqual([WALL_FACE, 40, VOXEL_BLOCK_SHAPE_WHOLE]);
+        // The face selected, the top face's texture, and whether the block built stands.
+        const state = () => [selectedQuadIndex(), textureAt(TOP_FACE), hasBlockAt(ROW + 1, COL)];
+        expect(state()).toEqual([WALL_FACE, 40, true]);
 
         const undone = [
-            [BUILT_FACE, 40, VOXEL_BLOCK_SHAPE_WHOLE],
-            [SOUTH_FACE, 40, VOXEL_BLOCK_SHAPE_EMPTY],
-            [TOP_FACE, 40, VOXEL_BLOCK_SHAPE_EMPTY],
-            [TOP_FACE, TEXTURES[1], VOXEL_BLOCK_SHAPE_EMPTY],
-            [SOUTH_FACE, TEXTURES[1], VOXEL_BLOCK_SHAPE_EMPTY],
+            [BUILT_FACE, 40, true],
+            [SOUTH_FACE, 40, false],
+            [TOP_FACE, 40, false],
+            [TOP_FACE, TEXTURES[1], false],
+            [SOUTH_FACE, TEXTURES[1], false],
         ];
         for (const expected of undone)
         {
@@ -1421,7 +1360,7 @@ describe("a selection the user makes by hand", () => {
         }
         expect(await ClientEventHistoryUtil.undo()).toBe("none");
 
-        for (const expected of [...undone.slice(0, -1).reverse(), [WALL_FACE, 40, VOXEL_BLOCK_SHAPE_WHOLE]])
+        for (const expected of [...undone.slice(0, -1).reverse(), [WALL_FACE, 40, true]])
         {
             expect(await ClientEventHistoryUtil.redo()).toBe("done");
             expect(state()).toEqual(expected);
@@ -1556,7 +1495,7 @@ describe("a selection the user makes by hand", () => {
 
         it("enters nothing for a key that moves nothing", async () => {
             // Up from the wall's top layer, where the surface runs on only over its top, turned away from the camera.
-            forceSelect(room, quadIndexOf(WALL_ROW, 10, "z", "+", LAYER + WALL_LAYERS - 1));
+            forceSelect(room, quadIndexOf(WALL_ROW, WALL_COL, "z", "+", LAYER + WALL_LAYERS - 1));
             expect(SelectionStepUtil.tryStep("up")).toBe(false);
             expect(numSelectionsEntered()).toBe(0);
         });

@@ -10,7 +10,7 @@ import { cameraModeObservable, gameModeObservable, manualSelectionObservable, ob
     orbitCameraAnglesObservable, orbitCameraTargetOverrideObservable,
     voxelQuadSelectionObservable } from "../../system/clientObservables";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y,
-    NEAR_EPSILON } from "../../../shared/system/sharedConstants";
+    NEAR_EPSILON, VOXEL_CELL_SIZE } from "../../../shared/system/sharedConstants";
 import ObjectSelection from "../types/gizmo/objectSelection";
 import VoxelQuadSelection from "../types/gizmo/voxelQuadSelection";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
@@ -164,12 +164,12 @@ export default class WorldSpaceSelectionUtil
         {
             const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex);
             return {
-                center: {x: voxel.col + 0.5, y: (orientation == "+") ? 0 : MAX_ROOM_Y, z: voxel.row + 0.5},
-                halfSize: {x: 0.5, y: 0, z: 0.5},
+                center: {x: VoxelQueryUtil.getWorldXAtVoxelColCenter(voxel.col), y: (orientation == "+") ? 0 : MAX_ROOM_Y,
+                    z: VoxelQueryUtil.getWorldZAtVoxelRowCenter(voxel.row)},
+                halfSize: {x: 0.5 * VOXEL_CELL_SIZE, y: 0, z: 0.5 * VOXEL_CELL_SIZE},
             };
         }
-        return VoxelQueryUtil.getVoxelBlockBox(voxel.row, voxel.col, collisionLayer,
-            VoxelQueryUtil.getVoxelBlockShape(voxel, collisionLayer));
+        return VoxelQueryUtil.getVoxelBlockBox(voxel.row, voxel.col, collisionLayer);
     }
 
     // Makes a selection that is the user's own act (a click, a movement key's step), and announces it if it moved

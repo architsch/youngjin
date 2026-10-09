@@ -16,13 +16,12 @@ import { Action } from "../helpers/actions";
 const TOP_FACE_OFFSET = VoxelQueryUtil.getVoxelQuadIndex(10, 10, "y", "+", 0) -
     VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(10, 10, 0);
 
-// Every voxel operation there is, made by one user: a block is built, painted, shrunk, moved and taken down.
+// Every voxel operation there is, made by one user: a block is built, painted, moved and taken down.
 function allVoxelOperations(userIndex: number): Action[]
 {
     return [
         { type: "addVoxel", userIndex, row: 10, col: 10, layer: 0 },
         { type: "setVoxelTexture", userIndex, row: 10, col: 10, layer: 0, quadOffset: TOP_FACE_OFFSET, textureIndex: 3 },
-        { type: "reshapeVoxel", userIndex, row: 10, col: 10, layer: 0, shape: 0b0101 },
         { type: "addVoxel", userIndex, row: 11, col: 11, layer: 0 },
         { type: "moveVoxel", userIndex, row: 11, col: 11, layer: 0, dRow: 1, dCol: 0, dLayer: 0 },
         { type: "removeVoxel", userIndex, row: 10, col: 10, layer: 0 },

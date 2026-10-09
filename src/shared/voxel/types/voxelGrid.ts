@@ -1,13 +1,16 @@
 import Voxel from "./voxel";
 import BufferState from "../../networking/types/bufferState";
 import EncodableData from "../../networking/types/encodableData"
-import { MAX_RESTRICTED_ZONES, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, VOXEL_BLOCK_SHAPE_WHOLE } from "../../system/sharedConstants";
+import { MAX_RESTRICTED_ZONES, NUM_COLLISION_LAYERS, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
 import VoxelQuadsRuntimeMemory from "./voxelQuadsRuntimeMemory";
 import EncodableRawByteNumber from "../../networking/types/encodableRawByteNumber";
 import RestrictedZone from "./restrictedZone";
 import VoxelGridVersionMigration from "../versionMigration/voxelGridVersionMigration";
 
-const latestVersion = 6;
+const latestVersion = 7;
+
+// A voxel's mask when every one of its layers holds a block (see Voxel.blockLayerMask).
+const FULL_BLOCK_LAYER_MASK = (1 << NUM_COLLISION_LAYERS) - 1;
 
 export default class VoxelGrid extends EncodableData
 {
@@ -38,11 +41,10 @@ export default class VoxelGrid extends EncodableData
         const voxels = new Array<Voxel>(NUM_VOXEL_ROWS * NUM_VOXEL_COLS);
         const quadsMem = new VoxelQuadsRuntimeMemory();
         // Start fully solid; generation carves the room out.
-        quadsMem.blockShapes.fill(VOXEL_BLOCK_SHAPE_WHOLE);
         for (let row = 0; row < NUM_VOXEL_ROWS; ++row)
         {
             for (let col = 0; col < NUM_VOXEL_COLS; ++col)
-                voxels[row * NUM_VOXEL_COLS + col] = new Voxel(quadsMem, row, col);
+                voxels[row * NUM_VOXEL_COLS + col] = new Voxel(quadsMem, row, col, FULL_BLOCK_LAYER_MASK);
         }
         // No zones: a zone is a per-room owner decision generation can't make (see
         // @docs/geometry/room_generation.md).
@@ -64,7 +66,7 @@ export default class VoxelGrid extends EncodableData
         const versionFound = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
         const voxelGrid = new VoxelGrid([], new VoxelQuadsRuntimeMemory());
         if (versionFound < latestVersion)
-            VoxelGridVersionMigration.decode(bufferState, voxelGrid, versionFound, latestVersion);
+            VoxelGridVersionMigration.decode(bufferState, voxelGrid, versionFound);
         else
             decodeBody(bufferState, voxelGrid);
         voxelGrid.sourceFormatVersion = versionFound;

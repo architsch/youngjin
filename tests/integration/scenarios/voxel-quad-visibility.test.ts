@@ -3,10 +3,9 @@
  * VoxelQueryUtil.isVoxelQuadVisible), so nothing kept beside them can fall out of step with them.
  * Covers: the rule (a block's faces, the room's floor and ceiling, no outer shell, no caps, never more
  * quads than the voxel mesh has instances for); what an edit announces for redrawing (exactly the quads it
- * covers, uncovers, repaints or gives another rectangle), and the voxel mesh holding an instance for just
- * the drawn quads after it; a repaint never uncovering a face, and a covered face keeping its paint; a
- * quad's spare bit staying clear in memory, and spelling its block's shape in what is encoded. The rule
- * for blocks of other shapes than whole is checked sub-block by sub-block in voxel-block-shape.test.ts.
+ * covers, uncovers or repaints), and the voxel mesh holding an instance for just the drawn quads after it;
+ * a repaint never uncovering a face, and a covered face keeping its paint; a quad's spare bit staying
+ * clear, in memory and in what is encoded.
  */
 import { describe, it, expect, vi } from "vitest";
 
@@ -47,23 +46,17 @@ import Voxel from "../../../src/shared/voxel/types/voxel";
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
-import VoxelBlockShapeUtil from "../../../src/shared/voxel/util/voxelBlockShapeUtil";
 import { voxelQuadChangeObservable } from "../../../src/shared/system/sharedObservables";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ENCODED_VOXEL_GRID_BYTES, MAX_VISIBLE_VOXEL_QUADS_PER_ROOM,
-    NUM_COLLISION_LAYERS, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_QUADS_PER_ROOM,
-    NUM_VOXEL_QUADS_PER_VOXEL,
-    NUM_VOXEL_ROWS, NUM_VOXEL_TEXTURES, SANDBOX_SINGLE_PLAYER_MODE, TUTORIAL_SINGLE_PLAYER_MODE,
-    VOXEL_BLOCK_SHAPE_WHOLE } from "../../../src/shared/system/sharedConstants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, ENCODED_RESTRICTED_ZONE_BYTES, MAX_ENCODED_VOXEL_GRID_BYTES,
+    MAX_VISIBLE_VOXEL_QUADS_PER_ROOM, NUM_COLLISION_LAYERS, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER,
+    NUM_VOXEL_QUADS_PER_ROOM, NUM_VOXEL_ROWS, NUM_VOXEL_TEXTURES, SANDBOX_SINGLE_PLAYER_MODE,
+    TUTORIAL_SINGLE_PLAYER_MODE, VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 
 type FacingAxis = "x" | "y" | "z";
 type Orientation = "-" | "+";
 
 // The bit of a quad's byte that its texture index leaves over (see Voxel).
 const SPARE_QUAD_BIT = 0b10000000;
-
-// The shapes a block can have (see VoxelBlockShapeUtil): whole, the four halves, the four quarters.
-const LOW_X_HALF = 0b0101, HIGH_X_HALF = 0b1010, LOW_Z_HALF = 0b0011, HIGH_Z_HALF = 0b1100;
-const BLOCK_SHAPES = [VOXEL_BLOCK_SHAPE_WHOLE, LOW_X_HALF, HIGH_X_HALF, LOW_Z_HALF, HIGH_Z_HALF, 1, 2, 4, 8];
 
 // A cell well inside the grid, and a layer well inside its height.
 const ROW = 10, COL = 10, LAYER = 5;
@@ -105,12 +98,6 @@ function removeBlock(grid: VoxelGrid, row: number, col: number, layer: number): 
 {
     VoxelUpdateUtil.removeVoxelBlock(undefined, grid.voxels,
         VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, layer));
-}
-
-function reshapeBlock(grid: VoxelGrid, row: number, col: number, layer: number, shape: number): void
-{
-    VoxelUpdateUtil.setVoxelBlockShape(undefined, grid.voxels,
-        VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, layer), shape);
 }
 
 function openColumn(grid: VoxelGrid, row: number, col: number): void
@@ -156,7 +143,7 @@ function generatedRooms(): {name: string, grid: VoxelGrid}[]
     ];
 }
 
-const EDIT_KINDS = ["add", "remove", "move", "repaint", "reshape"] as const;
+const EDIT_KINDS = ["add", "remove", "move", "repaint"] as const;
 type EditKind = typeof EDIT_KINDS[number];
 
 // One edit of the given kind as the game makes it, at a random place where it makes sense, or undefined if
@@ -175,14 +162,7 @@ function drawRandomEdit(grid: VoxelGrid, rand: RandomNumberGenerator, kind: Edit
         {
             const textures = (rand.randomInt(0, 2) == 0) ? undefined
                 : Array.from({length: NUM_VOXEL_QUADS_PER_COLLISION_LAYER}, () => rand.randomInt(0, NUM_VOXEL_TEXTURES));
-            const shape = BLOCK_SHAPES[rand.randomInt(0, BLOCK_SHAPES.length)];
-            return () => VoxelUpdateUtil.addVoxelBlock(undefined, voxels, blockQuadIndex, textures, undefined, shape);
-        }
-        if (kind == "reshape" && solid)
-        {
-            const shape = BLOCK_SHAPES[rand.randomInt(0, BLOCK_SHAPES.length)];
-            if (shape != VoxelQueryUtil.getVoxelBlockShapeAt(voxels, row, col, layer))
-                return () => VoxelUpdateUtil.setVoxelBlockShape(undefined, voxels, blockQuadIndex, shape);
+            return () => VoxelUpdateUtil.addVoxelBlock(undefined, voxels, blockQuadIndex, textures);
         }
         if (kind == "remove" && solid)
             return () => VoxelUpdateUtil.removeVoxelBlock(undefined, voxels, blockQuadIndex);
@@ -209,29 +189,30 @@ function drawRandomEdit(grid: VoxelGrid, rand: RandomNumberGenerator, kind: Edit
     return undefined;
 }
 
-// An encoded grid's quad bytes, read by the layout itself rather than by the decoder (see Voxel): those of
-// the room's own floor and ceiling, and each stored block's six with the cell layer they are stored for.
-function encodedQuads(grid: VoxelGrid): {tiles: number[], blocks: {row: number, col: number, layer: number, quads: number[]}[]}
+// A grid as it is encoded, and where its quad bytes lie in that, found by the layout itself rather than by
+// the decoder (see Voxel): those of the room's own floor and ceiling, and each stored block's six.
+function encodeWithQuadByteIndices(grid: VoxelGrid): {bytes: Uint8Array, quadByteIndices: number[]}
 {
     const out = new BufferState(new Uint8Array(MAX_ENCODED_VOXEL_GRID_BYTES));
     grid.encode(out);
 
-    const encoded: ReturnType<typeof encodedQuads> = {tiles: [], blocks: []};
+    const quadByteIndices: number[] = [];
     let byteIndex = 1; // past the version
     for (let voxelIndex = 0; voxelIndex < NUM_VOXEL_ROWS * NUM_VOXEL_COLS; ++voxelIndex)
     {
-        encoded.tiles.push(out.view[byteIndex++], out.view[byteIndex++]); // ceiling, floor
+        quadByteIndices.push(byteIndex++, byteIndex++); // ceiling, floor
         const mask = out.view[byteIndex++] | (out.view[byteIndex++] << 8);
         for (let layer = COLLISION_LAYER_MIN; layer <= COLLISION_LAYER_MAX; ++layer)
         {
             if ((mask & (1 << layer)) == 0)
                 continue;
-            encoded.blocks.push({row: Math.floor(voxelIndex / NUM_VOXEL_COLS), col: voxelIndex % NUM_VOXEL_COLS, layer,
-                quads: Array.from(out.view.subarray(byteIndex, byteIndex + NUM_VOXEL_QUADS_PER_COLLISION_LAYER))});
-            byteIndex += NUM_VOXEL_QUADS_PER_COLLISION_LAYER;
+            for (let i = 0; i < NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
+                quadByteIndices.push(byteIndex++);
         }
     }
-    return encoded;
+    // (All that follows the voxels is the room's restricted zones, behind a byte counting them.)
+    expect(byteIndex + 1 + ENCODED_RESTRICTED_ZONE_BYTES * grid.restrictedZones.length).toBe(out.byteIndex);
+    return {bytes: out.view.slice(0, out.byteIndex), quadByteIndices};
 }
 
 describe("the quads a room draws", () => {
@@ -393,7 +374,6 @@ describe("what an edit announces for redrawing", () => {
     {
         visible: boolean[];
         quads: Uint8Array;
-        blockShapes: Uint8Array;
     }
 
     function snapshot(grid: VoxelGrid): Snapshot
@@ -401,47 +381,18 @@ describe("what an edit announces for redrawing", () => {
         const visible = new Array<boolean>(NUM_VOXEL_QUADS_PER_ROOM);
         for (let quadIndex = 0; quadIndex < NUM_VOXEL_QUADS_PER_ROOM; ++quadIndex)
             visible[quadIndex] = isVisible(grid, quadIndex);
-        return {visible, quads: grid.quadsMem.quads.slice(), blockShapes: grid.quadsMem.blockShapes.slice()};
+        return {visible, quads: grid.quadsMem.quads.slice()};
     }
 
-    // Where a block of the given shape has the face a quad stands for: the plane it lies in and its reach
-    // across it, in the cell's own terms. The room's floor and ceiling quads are of no block.
-    function faceRectangle(quadIndex: number, shape: number): string
-    {
-        const bounds = VoxelBlockShapeUtil.getBounds(shape);
-        const face = (quadIndex % NUM_VOXEL_QUADS_PER_VOXEL) % NUM_VOXEL_QUADS_PER_COLLISION_LAYER;
-        switch (face)
-        {
-            case 0: case 1: return `${bounds.minX},${bounds.maxX},${bounds.minZ},${bounds.maxZ}`;
-            case 2: return `${bounds.minX},${bounds.minZ},${bounds.maxZ}`;
-            case 3: return `${bounds.maxX},${bounds.minZ},${bounds.maxZ}`;
-            case 4: return `${bounds.minZ},${bounds.minX},${bounds.maxX}`;
-            default: return `${bounds.maxZ},${bounds.minX},${bounds.maxX}`;
-        }
-    }
-
-    // The quads drawn differently: covered, uncovered, repainted (drawn or not, since a covered face keeps
-    // its paint), or drawn as another rectangle because their block has another shape.
+    // The quads drawn differently: covered, uncovered, or repainted (drawn or not, since a covered face
+    // keeps its paint).
     function changedBetween(before: Snapshot, after: Snapshot): number[]
     {
         const changed: number[] = [];
         for (let quadIndex = 0; quadIndex < NUM_VOXEL_QUADS_PER_ROOM; ++quadIndex)
         {
             if (after.visible[quadIndex] != before.visible[quadIndex] || after.quads[quadIndex] != before.quads[quadIndex])
-            {
                 changed.push(quadIndex);
-                continue;
-            }
-            const layer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
-            if (!after.visible[quadIndex] || layer > COLLISION_LAYER_MAX)
-                continue;
-            const blockIndex = VoxelQueryUtil.getVoxelBlockIndex(VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex),
-                VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex), layer);
-            if (before.blockShapes[blockIndex] != after.blockShapes[blockIndex] &&
-                faceRectangle(quadIndex, before.blockShapes[blockIndex]) != faceRectangle(quadIndex, after.blockShapes[blockIndex]))
-            {
-                changed.push(quadIndex);
-            }
         }
         return changed;
     }
@@ -462,35 +413,12 @@ describe("what an edit announces for redrawing", () => {
     it("is nothing when the edit changes nothing", () => {
         const grid = VoxelGrid.createBaseGrid();
         expect(announcedBy(() => addBlock(grid, ROW, COL, LAYER))).toEqual([]); // solid already
-        expect(announcedBy(() => reshapeBlock(grid, ROW, COL, LAYER, VOXEL_BLOCK_SHAPE_WHOLE))).toEqual([]); // whole already
         removeBlock(grid, ROW, COL, LAYER);
         expect(announcedBy(() => removeBlock(grid, ROW, COL, LAYER))).toEqual([]); // open already
     });
 
-    it("is the faces a block shrunk in solid rock uncovers, on itself and on the blocks around it", () => {
-        // Its low-x half stays, so room opens up beside it on the high-x side.
-        const grid = VoxelGrid.createBaseGrid();
-        const announced = announcedBy(() => reshapeBlock(grid, ROW, COL, LAYER, LOW_X_HALF));
-        expect(announced.sort((a, b) => a - b)).toEqual([
-            // Its own face into the gap, which no longer lies against the block beyond...
-            quad(ROW, COL, "x", "+", LAYER),
-            // ...and that block's face, with the four around the gap that the half no longer covers whole.
-            quad(ROW, COL + 1, "x", "-", LAYER),
-            quad(ROW - 1, COL, "z", "+", LAYER),
-            quad(ROW + 1, COL, "z", "-", LAYER),
-            quad(ROW, COL, "y", "+", LAYER - 1),
-            quad(ROW, COL, "y", "-", LAYER + 1),
-        ].sort((a, b) => a - b));
-        // (Its other five stay covered: each lies wholly against a whole block.)
-        expect(visibleQuads(grid).sort((a, b) => a - b)).toEqual([...announced].sort((a, b) => a - b));
-
-        // Grown back, the same six are covered again.
-        expect(announcedBy(() => reshapeBlock(grid, ROW, COL, LAYER, VOXEL_BLOCK_SHAPE_WHOLE)).sort((a, b) => a - b))
-            .toEqual([...announced].sort((a, b) => a - b));
-        expect(visibleQuads(grid)).toEqual([]);
-    });
-
-    it("is the faces of a block standing in the open that its new shape draws elsewhere", () => {
+    it("is a block's own faces where they look into the open, and the face it covers on a block beside it", () => {
+        // Open space all round the cell, but for one block beside it.
         const grid = VoxelGrid.createBaseGrid();
         for (let row = ROW - 1; row <= ROW + 1; ++row)
         {
@@ -500,28 +428,38 @@ describe("what an edit announces for redrawing", () => {
                     removeBlock(grid, row, col, layer);
             }
         }
-        addBlock(grid, ROW, COL, LAYER);
+        addBlock(grid, ROW, COL - 1, LAYER);
 
-        // Shrunk to its low-x half: the face on that side stays exactly where and as it was.
-        expect(announcedBy(() => reshapeBlock(grid, ROW, COL, LAYER, LOW_X_HALF)).sort((a, b) => a - b)).toEqual([
+        const announced = announcedBy(() => addBlock(grid, ROW, COL, LAYER));
+        expect(announced.sort((a, b) => a - b)).toEqual([
             quad(ROW, COL, "y", "-", LAYER), quad(ROW, COL, "y", "+", LAYER),
             quad(ROW, COL, "x", "+", LAYER),
             quad(ROW, COL, "z", "-", LAYER), quad(ROW, COL, "z", "+", LAYER),
+            // Its face against the other block is never drawn: that block's, which it covers, stands in for it.
+            quad(ROW, COL - 1, "x", "+", LAYER),
         ].sort((a, b) => a - b));
 
-        // Slid to the other half: now both faces across x move, and the rest with them.
-        expect(announcedBy(() => reshapeBlock(grid, ROW, COL, LAYER, HIGH_X_HALF)).length).toBe(6);
-
-        // Halved again along z: the face at the high-z end stays put only if that end is the half kept.
-        expect(announcedBy(() => reshapeBlock(grid, ROW, COL, LAYER, HIGH_X_HALF & HIGH_Z_HALF)).sort((a, b) => a - b))
-            .toEqual([
-                quad(ROW, COL, "y", "-", LAYER), quad(ROW, COL, "y", "+", LAYER),
-                quad(ROW, COL, "x", "-", LAYER), quad(ROW, COL, "x", "+", LAYER),
-                quad(ROW, COL, "z", "-", LAYER),
-            ].sort((a, b) => a - b));
+        // Taken away again, the same six: its own are lost, and the other block's is bared.
+        expect(announcedBy(() => removeBlock(grid, ROW, COL, LAYER)).sort((a, b) => a - b)).toEqual(announced);
     });
 
-    it("is exactly the quads covered, uncovered, repainted or given another rectangle, over a run of random edits", () => {
+    it("is the faces given another texture, drawn or not, when a block is put up where one stands", () => {
+        // As a relayed edit or the server's correction of one may be (see VoxelUpdateUtil.addVoxelBlock).
+        const grid = VoxelGrid.createBaseGrid();
+        removeBlock(grid, ROW, COL + 1, LAYER); // (bares the face the block turns to +x, and no other)
+        const top = quad(ROW, COL, "y", "+", LAYER), bared = quad(ROW, COL, "x", "+", LAYER);
+        const textures = [0, 5, 0, 6, 0, 0]; // [-y, +y, -x, +x, -z, +z], over faces all holding the first
+
+        expect(announcedBy(() => addBlock(grid, ROW, COL, LAYER, textures)).sort((a, b) => a - b))
+            .toEqual([top, bared].sort((a, b) => a - b));
+        expect([grid.quadsMem.quads[top], grid.quadsMem.quads[bared]]).toEqual([5, 6]);
+        expect([isVisible(grid, top), isVisible(grid, bared)]).toEqual([false, true]);
+
+        // Put up once more as it is, there is nothing to draw again.
+        expect(announcedBy(() => addBlock(grid, ROW, COL, LAYER, textures))).toEqual([]);
+    });
+
+    it("is exactly the quads covered, uncovered or repainted, over a run of random edits", () => {
         // Blocks solid or open at random, so that every kind of edit finds places to be made.
         const rand = new RandomNumberGenerator(20261006);
         const grid = VoxelGrid.createBaseGrid();
@@ -564,64 +502,187 @@ describe("what an edit announces for redrawing", () => {
 });
 
 describe("the voxel mesh", () => {
+    // Voxel game objects bound to a grid as ClientObjectUtil binds them, one to each patch of the floor plan,
+    // over a pool that only counts and remembers where each instance was last put in the world.
+    function makeVoxelMesh(grid: VoxelGrid)
+    {
+        let numInstancesMade = 0;
+        const freeInstanceIds: number[] = [];
+        const worldPosByInstanceId = new Map<number, {x: number, y: number, z: number}>();
+        const gameObjectById: {[objectId: string]: VoxelGameObject} = {};
+
+        const numVoxelsPerSide = VoxelGameObject.numVoxelsPerSide;
+        for (let rowStart = 0; rowStart < NUM_VOXEL_ROWS; rowStart += numVoxelsPerSide)
+        {
+            for (let colStart = 0; colStart < NUM_VOXEL_COLS; colStart += numVoxelsPerSide)
+            {
+                // Each stands at the middle of its patch.
+                const pos = {x: (colStart + 0.5 * numVoxelsPerSide) * VOXEL_CELL_SIZE, y: 0,
+                    z: (rowStart + 0.5 * numVoxelsPerSide) * VOXEL_CELL_SIZE};
+                const objectId = `voxels-${rowStart}-${colStart}`;
+                const gameObject = Object.assign(Object.create(VoxelGameObject.prototype), {
+                    params: {objectId, transform: {pos}},
+                    instancedMeshGraphics: {
+                        rentInstanceFromPool: () => freeInstanceIds.pop() ?? numInstancesMade++,
+                        returnInstanceToPool: (_instancedMeshId: string, instanceId: number) => { freeInstanceIds.push(instanceId); },
+                        // A part is placed from its object's own position (see InstancedPartUtil.bakePartMatrix).
+                        updateInstanceTransform: (_instancedMeshId: string, instanceId: number,
+                            offsetX: number, offsetY: number, offsetZ: number) => {
+                            worldPosByInstanceId.set(instanceId, {x: pos.x + offsetX, y: pos.y + offsetY, z: pos.z + offsetZ});
+                        },
+                        updateInstanceTextureRect: () => {},
+                    },
+                }) as VoxelGameObject;
+                gameObject.setVoxels(grid.voxels, rowStart, colStart);
+                gameObjectById[objectId] = gameObject;
+            }
+        }
+
+        // As ClientVoxelManager hands a change to the object of the voxel it belongs to, in the room's grid.
+        let boundGrid = grid;
+        voxelQuadChangeObservable.addListener("test-mesh", change => {
+            const voxel = VoxelQueryUtil.getVoxel(boundGrid.voxels, VoxelQueryUtil.getVoxelRowFromQuadIndex(change.quadIndex),
+                VoxelQueryUtil.getVoxelColFromQuadIndex(change.quadIndex))!;
+            void gameObjectById[voxel.gameObjectId].applyVoxelQuadChange(change);
+        });
+        const gameObjects = Object.values(gameObjectById);
+        return {
+            gameObjects,
+            // As ClientObjectManager binds them to the grid of the room arrived in.
+            rebind: (nextGrid: VoxelGrid) => {
+                boundGrid = nextGrid;
+                for (const gameObject of gameObjects)
+                    gameObject.rebindVoxels(nextGrid.voxels);
+            },
+            numInstancesHeld: () => numInstancesMade - freeInstanceIds.length,
+            worldPosOf: (quadIndex: number) => worldPosByInstanceId.get(VoxelQuadInstanceUtil.getInstanceId(quadIndex)),
+            dispose: () => {
+                voxelQuadChangeObservable.removeListener("test-mesh");
+                for (let quadIndex = 0; quadIndex < NUM_VOXEL_QUADS_PER_ROOM; ++quadIndex)
+                {
+                    const instanceId = VoxelQuadInstanceUtil.getInstanceId(quadIndex);
+                    if (instanceId >= 0)
+                        VoxelQuadInstanceUtil.unbind(quadIndex, instanceId);
+                }
+            },
+        };
+    }
+
+    function expectInstancesOnDrawnQuadsOnly(grid: VoxelGrid, when: string): void
+    {
+        const mismatched: number[] = [];
+        for (let quadIndex = 0; quadIndex < NUM_VOXEL_QUADS_PER_ROOM; ++quadIndex)
+        {
+            if ((VoxelQuadInstanceUtil.getInstanceId(quadIndex) >= 0) != isVisible(grid, quadIndex))
+                mismatched.push(quadIndex);
+        }
+        expect(mismatched, when).toEqual([]);
+    }
+
     // It lends an instance to each drawn quad and takes it back once the quad is covered (see
     // VoxelQuadInstanceUtil), hearing of either only through what an edit announces.
     it("holds an instance for exactly the quads the room draws, through a run of edits", () => {
         const grid = RoomGenerationUtil.generateRoom("Hub", RoomTypeEnumMap.Hub, "", "", 104729).voxelGrid;
-        const voxels = grid.voxels;
-
-        // Voxel game objects bound to the grid as ClientObjectUtil binds them, over a pool that only counts.
-        let numInstancesMade = 0;
-        const freeInstanceIds: number[] = [];
-        const instancedMeshGraphics = {
-            rentInstanceFromPool: () => freeInstanceIds.pop() ?? numInstancesMade++,
-            returnInstanceToPool: (_instancedMeshId: string, instanceId: number) => { freeInstanceIds.push(instanceId); },
-            updateInstanceTransform: () => {},
-            updateInstanceTextureRect: () => {},
-        };
-        const gameObjects = voxels.map(voxel => Object.assign(Object.create(VoxelGameObject.prototype),
-            {voxel, voxels, instancedMeshGraphics}) as VoxelGameObject);
-
-        const expectInstancesOnDrawnQuadsOnly = (when: string) => {
-            const mismatched: number[] = [];
-            for (let quadIndex = 0; quadIndex < NUM_VOXEL_QUADS_PER_ROOM; ++quadIndex)
-            {
-                if ((VoxelQuadInstanceUtil.getInstanceId(quadIndex) >= 0) != isVisible(grid, quadIndex))
-                    mismatched.push(quadIndex);
-            }
-            expect(mismatched, when).toEqual([]);
-        };
-
-        // As ClientVoxelManager hands a change to the voxel it belongs to.
-        voxelQuadChangeObservable.addListener("test-mesh", change => {
-            const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(change.quadIndex);
-            const col = VoxelQueryUtil.getVoxelColFromQuadIndex(change.quadIndex);
-            void gameObjects[row * NUM_VOXEL_COLS + col].applyVoxelQuadChange(change);
-        });
+        const mesh = makeVoxelMesh(grid);
         try
         {
-            for (const gameObject of gameObjects)
+            for (const gameObject of mesh.gameObjects)
                 gameObject.refreshAllQuads();
-            expectInstancesOnDrawnQuadsOnly("as the room spawns");
+            expectInstancesOnDrawnQuadsOnly(grid, "as the room spawns");
 
             const rand = new RandomNumberGenerator(31);
             for (let i = 0; i < 2000; ++i)
             {
                 drawRandomEdit(grid, rand, EDIT_KINDS[i % EDIT_KINDS.length])?.();
                 if (i % 250 == 249)
-                    expectInstancesOnDrawnQuadsOnly(`after ${i + 1} edits`);
+                    expectInstancesOnDrawnQuadsOnly(grid, `after ${i + 1} edits`);
             }
-            expect(numInstancesMade - freeInstanceIds.length).toBe(visibleQuads(grid).length);
+            expect(mesh.numInstancesHeld()).toBe(visibleQuads(grid).length);
         }
         finally
         {
-            voxelQuadChangeObservable.removeListener("test-mesh");
-            for (let quadIndex = 0; quadIndex < NUM_VOXEL_QUADS_PER_ROOM; ++quadIndex)
+            mesh.dispose();
+        }
+    });
+
+    it("is drawn by far fewer objects than the room has voxels, each voxel by the one whose patch it lies in", () => {
+        const grid = RoomGenerationUtil.generateRoom("Regular", RoomTypeEnumMap.Regular, "", "", 7).voxelGrid;
+        const mesh = makeVoxelMesh(grid);
+        try
+        {
+            const numVoxelsPerSide = VoxelGameObject.numVoxelsPerSide;
+            expect(numVoxelsPerSide).toBeGreaterThan(1);
+            expect(mesh.gameObjects.length).toBe(grid.voxels.length / (numVoxelsPerSide * numVoxelsPerSide));
+
+            for (const voxel of grid.voxels)
             {
-                const instanceId = VoxelQuadInstanceUtil.getInstanceId(quadIndex);
-                if (instanceId >= 0)
-                    VoxelQuadInstanceUtil.unbind(quadIndex, instanceId);
+                const rowStart = voxel.row - voxel.row % numVoxelsPerSide, colStart = voxel.col - voxel.col % numVoxelsPerSide;
+                expect(voxel.gameObjectId, `voxel (${voxel.row}, ${voxel.col})`).toBe(`voxels-${rowStart}-${colStart}`);
             }
+        }
+        finally
+        {
+            mesh.dispose();
+        }
+    });
+
+    it("puts each quad where it lies in the room, whichever object draws it", () => {
+        const grid = RoomGenerationUtil.generateRoom("Regular", RoomTypeEnumMap.Regular, "", "", 7).voxelGrid;
+        const mesh = makeVoxelMesh(grid);
+        try
+        {
+            for (const gameObject of mesh.gameObjects)
+                gameObject.refreshAllQuads();
+
+            const drawn = visibleQuads(grid);
+            expect(drawn.length).toBeGreaterThan(500);
+            const misplaced: number[] = [];
+            for (const quadIndex of drawn)
+            {
+                // Where the quad lies: by its own voxel's middle (see VoxelQuadTransformDimensions).
+                const dims = VoxelQueryUtil.getVoxelQuadTransformDimensions(grid.voxels, quadIndex);
+                const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
+                const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
+                const expected = {x: VoxelQueryUtil.getWorldXAtVoxelColCenter(col) + dims.offsetX, y: dims.offsetY,
+                    z: VoxelQueryUtil.getWorldZAtVoxelRowCenter(row) + dims.offsetZ};
+                const pos = mesh.worldPosOf(quadIndex)!;
+                if (Math.hypot(pos.x - expected.x, pos.y - expected.y, pos.z - expected.z) > 1e-9)
+                    misplaced.push(quadIndex);
+            }
+            expect(misplaced).toEqual([]);
+        }
+        finally
+        {
+            mesh.dispose();
+        }
+    });
+
+    it("shows another room's voxels once its objects are bound to that room's grid", () => {
+        const first = RoomGenerationUtil.generateRoom("Regular", RoomTypeEnumMap.Regular, "", "", 7).voxelGrid;
+        const second = RoomGenerationUtil.generateRoom("Hub", RoomTypeEnumMap.Hub, "", "", 104729).voxelGrid;
+        expect(visibleQuads(second)).not.toEqual(visibleQuads(first));
+
+        const mesh = makeVoxelMesh(first);
+        try
+        {
+            for (const gameObject of mesh.gameObjects)
+                gameObject.refreshAllQuads();
+            mesh.rebind(second);
+
+            expectInstancesOnDrawnQuadsOnly(second, "after the room change");
+            expect(mesh.numInstancesHeld()).toBe(visibleQuads(second).length);
+            expect(second.voxels.every(voxel => voxel.gameObjectId ==
+                first.voxels[voxel.row * NUM_VOXEL_COLS + voxel.col].gameObjectId)).toBe(true);
+
+            // And hears of that room's edits from then on.
+            const rand = new RandomNumberGenerator(5);
+            for (let i = 0; i < 200; ++i)
+                drawRandomEdit(second, rand, EDIT_KINDS[i % EDIT_KINDS.length])?.();
+            expectInstancesOnDrawnQuadsOnly(second, "after edits of the room arrived in");
+        }
+        finally
+        {
+            mesh.dispose();
         }
     });
 });
@@ -669,63 +730,43 @@ describe("a quad's texture", () => {
 });
 
 describe("a quad's spare bit", () => {
-    // In memory a quad is its texture index and nothing else: a block's shape is kept beside the quads (see
-    // VoxelQuadsRuntimeMemory), so no texture writer can disturb it. Encoded, the four side quads of a
-    // block each say whether one of its sub-blocks is cut away, which costs a whole block's bytes nothing.
-    function expectSpareBitsSpellShapes(grid: VoxelGrid, what: string): void
+    // A quad is its texture index and nothing else, in memory and encoded (see Voxel): the bit its byte
+    // has to spare is never set, and one found set in what is read is dropped.
+    function expectSpareBitsClear(grid: VoxelGrid, what: string): void
     {
         expect(grid.quadsMem.quads.every(quadByte => (quadByte & SPARE_QUAD_BIT) == 0), `${what}, in memory`).toBe(true);
 
-        const encoded = encodedQuads(grid);
-        expect(encoded.tiles.every(quadByte => (quadByte & SPARE_QUAD_BIT) == 0), `${what}, the room's floor and ceiling`)
+        const {bytes, quadByteIndices} = encodeWithQuadByteIndices(grid);
+        expect(quadByteIndices.every(byteIndex => (bytes[byteIndex] & SPARE_QUAD_BIT) == 0), `${what}, encoded`)
             .toBe(true);
-        const misspelt: string[] = [];
-        for (const {row, col, layer, quads} of encoded.blocks)
-        {
-            // Bottom, top, then one side quad for each sub-block (bit = x half + 2 * z half).
-            const shape = VoxelQueryUtil.getVoxelBlockShapeAt(grid.voxels, row, col, layer);
-            let spelt = 0;
-            for (let subBlock = 0; subBlock < 4; ++subBlock)
-            {
-                if ((quads[2 + subBlock] & SPARE_QUAD_BIT) == 0)
-                    spelt |= (1 << subBlock);
-            }
-            if (spelt != shape || (quads[0] & SPARE_QUAD_BIT) != 0 || (quads[1] & SPARE_QUAD_BIT) != 0)
-                misspelt.push(`${row},${col},${layer}: holds ${shape}, encoded as ${spelt}`);
-        }
-        expect(misspelt, `${what}, encoded`).toEqual([]);
     }
 
-    it("is clear throughout every generated room, whose blocks are all whole", () => {
+    it("is clear throughout every generated room", () => {
         for (const {name, grid} of generatedRooms())
-        {
-            expectSpareBitsSpellShapes(grid, name);
-            const encoded = encodedQuads(grid);
-            expect(encoded.blocks.every(block => block.quads.every(quadByte => (quadByte & SPARE_QUAD_BIT) == 0)), name)
-                .toBe(true);
-        }
+            expectSpareBitsClear(grid, name);
     });
 
-    it("spells each block's shape through edits, and the room comes back from its encoding as it was", () => {
+    it("stays clear through edits and in what is read, and the room comes back from its encoding as it was", () => {
         const grid = RoomGenerationUtil.generateRoom("Regular", RoomTypeEnumMap.Regular, "", "", 999983).voxelGrid;
         const rand = new RandomNumberGenerator(7);
         for (let i = 0; i < 2000; ++i)
             drawRandomEdit(grid, rand, EDIT_KINDS[i % EDIT_KINDS.length])?.();
-        expectSpareBitsSpellShapes(grid, "edited room");
-        // (The run leaves blocks of every shape standing.)
-        const shapesHeld = new Set(grid.quadsMem.blockShapes);
-        for (const shape of BLOCK_SHAPES)
-            expect(shapesHeld.has(shape), `no block of shape ${shape} came of the edits`).toBe(true);
+        expectSpareBitsClear(grid, "edited room");
 
-        const out = new BufferState(new Uint8Array(MAX_ENCODED_VOXEL_GRID_BYTES));
-        grid.encode(out);
-        const reloaded = VoxelGrid.decode(new BufferState(out.view.slice(0, out.byteIndex))) as VoxelGrid;
-        expect(Array.from(reloaded.quadsMem.blockShapes)).toEqual(Array.from(grid.quadsMem.blockShapes));
-        expect(reloaded.voxels.map((voxel: Voxel) => VoxelQueryUtil.getVoxelBlockLayerMask(voxel)))
-            .toEqual(grid.voxels.map(voxel => VoxelQueryUtil.getVoxelBlockLayerMask(voxel)));
+        const {bytes, quadByteIndices} = encodeWithQuadByteIndices(grid);
+        const reloaded = VoxelGrid.decode(new BufferState(bytes)) as VoxelGrid;
+        expect(reloaded.voxels.map((voxel: Voxel) => voxel.blockLayerMask))
+            .toEqual(grid.voxels.map(voxel => voxel.blockLayerMask));
         expect(visibleQuads(reloaded)).toEqual(visibleQuads(grid));
         for (const quadIndex of visibleQuads(grid))
             expect(reloaded.quadsMem.quads[quadIndex]).toBe(grid.quadsMem.quads[quadIndex]);
-        expectSpareBitsSpellShapes(reloaded, "reloaded room");
+        expectSpareBitsClear(reloaded, "reloaded room");
+
+        // Set on every quad byte of what is read, it reaches none of the room's quads.
+        for (const byteIndex of quadByteIndices)
+            bytes[byteIndex] |= SPARE_QUAD_BIT;
+        const fromMarked = VoxelGrid.decode(new BufferState(bytes)) as VoxelGrid;
+        expect(fromMarked.quadsMem.quads.every((quadByte, quadIndex) => quadByte == reloaded.quadsMem.quads[quadIndex]))
+            .toBe(true);
     });
 });

@@ -15,6 +15,7 @@ import RoomPalette from "../../../src/shared/room/generation/types/roomPalette";
 import RoomVolume from "../../../src/shared/room/generation/types/roomVolume";
 import RoomVolumeUtil from "../../../src/shared/room/generation/util/roomVolumeUtil";
 import NumUtil from "../../../src/shared/math/util/numUtil";
+import { GENERATED_WALL_THICKNESS } from "../../../src/shared/system/sharedConstants";
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 
@@ -63,7 +64,7 @@ const PROFILES: TestProfile[] = [
     {
         name: "voxel-mixed",
         weights: { connect: 2, disconnect: 1, joinRoom: 2, moveObject: 1, addVoxel: 3, removeVoxel: 2, moveVoxel: 2,
-            reshapeVoxel: 3, setVoxelTexture: 2 },
+            setVoxelTexture: 2 },
         maxUsers: 6, maxActions: 40, numRuns: 20,
     },
     {
@@ -301,8 +302,8 @@ describe("property-based: gameplay state persistence", () => {
 
 // ─── Block edits against a model ────────────────────────────────────────────
 // The rules of block edits restated without the shared code that enforces them, so a fault there has no
-// second place to hide in. The model knows only cells, shapes and textures: no zone is drawn and nothing
-// hangs on these blocks.
+// second place to hide in. The model knows only cells and textures: no zone is drawn and nothing hangs on
+// these blocks.
 
 describe("property-based: block edits against a model", () => {
     const ROOM_ID = "block-model";
@@ -310,68 +311,33 @@ describe("property-based: block edits against a model", () => {
     // carry a block one cell out of it, so the cells around it are watched too.
     const EDITED = {rows: [10, 11], cols: [10, 11], layers: [0, 1]};
     const WATCHED = {rows: [9, 10, 11, 12], cols: [9, 10, 11, 12], layers: [0, 1, 2]};
-    const BLOCK_SIGNALS = ["addVoxelBlockSignal", "removeVoxelBlockSignal", "moveVoxelBlockSignal",
-        "setVoxelBlockShapeSignal"];
+    const BLOCK_SIGNALS = ["addVoxelBlockSignal", "removeVoxelBlockSignal", "moveVoxelBlockSignal"];
 
     interface Cell { row: number; col: number; layer: number }
-    interface ModelBlock { shape: number; textures: number[] }
+    interface ModelBlock { textures: number[] }
 
     const keyOf = (cell: Cell) => `${cell.row},${cell.col},${cell.layer}`;
     const quadIndexOf = (cell: Cell) => VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(cell.row, cell.col, cell.layer);
-
-    // The halves of its cell a shape reaches into, along each axis (bit = x half + 2 * z half).
-    function halvesOf(shape: number): {x: Set<number>, z: Set<number>, count: number}
-    {
-        const halves = {x: new Set<number>(), z: new Set<number>(), count: 0};
-        for (let bit = 0; bit < 4; ++bit)
-        {
-            if ((shape & (1 << bit)) == 0)
-                continue;
-            halves.x.add(bit & 1);
-            halves.z.add(bit >> 1);
-            ++halves.count;
-        }
-        return halves;
-    }
-    // A block is a rectangle of sub-blocks: every one in the halves it reaches into is there.
-    function isBlockShape(shape: number): boolean
-    {
-        if (!Number.isInteger(shape) || shape < 1 || shape > 15)
-            return false;
-        const halves = halvesOf(shape);
-        return halves.count == halves.x.size * halves.z.size;
-    }
 
     // Applies an edit to the model by the rules, and returns whether they allow it and which cell layers
     // the server owes the truth about if they don't.
     function applyToModel(model: Map<string, ModelBlock>, edit: Action): {accepted: boolean, touched: Cell[]}
     {
-        if (edit.type != "addVoxel" && edit.type != "removeVoxel" && edit.type != "moveVoxel" &&
-            edit.type != "reshapeVoxel")
-        {
+        if (edit.type != "addVoxel" && edit.type != "removeVoxel" && edit.type != "moveVoxel")
             throw new Error(`Not a block edit (${edit.type})`);
-        }
         const cell = {row: edit.row, col: edit.col, layer: edit.layer};
         const block = model.get(keyOf(cell));
         switch (edit.type)
         {
             case "addVoxel":
-            {
-                const shape = edit.shape ?? 0b1111;
-                if (block || !isBlockShape(shape))
+                if (block)
                     return {accepted: false, touched: [cell]};
-                model.set(keyOf(cell), {shape, textures: [...edit.textures!]});
+                model.set(keyOf(cell), {textures: [...edit.textures!]});
                 return {accepted: true, touched: [cell]};
-            }
             case "removeVoxel":
                 if (!block)
                     return {accepted: false, touched: [cell]};
                 model.delete(keyOf(cell));
-                return {accepted: true, touched: [cell]};
-            case "reshapeVoxel":
-                if (!block || !isBlockShape(edit.shape))
-                    return {accepted: false, touched: [cell]};
-                block.shape = edit.shape;
                 return {accepted: true, touched: [cell]};
             case "moveVoxel":
             {
@@ -380,7 +346,7 @@ describe("property-based: block edits against a model", () => {
                 const touched = (target.layer < 0) ? [cell] : [cell, target];
                 if (!block || target.layer < 0 || model.has(keyOf(target)))
                     return {accepted: false, touched};
-                // It goes as it is: its shape and its textures.
+                // It goes as it is, with its textures.
                 model.delete(keyOf(cell));
                 model.set(keyOf(target), block);
                 return {accepted: true, touched};
@@ -390,19 +356,13 @@ describe("property-based: block edits against a model", () => {
 
     const anyCell = fc.record({row: fc.constantFrom(...EDITED.rows), col: fc.constantFrom(...EDITED.cols),
         layer: fc.constantFrom(...EDITED.layers)});
-    // Mostly shapes a block can have, so that edits are taken often enough to build on one another.
-    const anyShape = fc.oneof(
-        {weight: 5, arbitrary: fc.constantFrom(0b1111, 0b0101, 0b1010, 0b0011, 0b1100, 1, 2, 4, 8)},
-        {weight: 1, arbitrary: fc.integer({min: 0, max: 255})});
     const anyTexture = fc.integer({min: 0, max: 127});
     const anyOffset = fc.constantFrom(-1, 0, 1);
     const anyEdit: fc.Arbitrary<Action> = fc.oneof(
-        {weight: 3, arbitrary: fc.tuple(anyCell, anyShape,
+        {weight: 3, arbitrary: fc.tuple(anyCell,
             fc.tuple(anyTexture, anyTexture, anyTexture, anyTexture, anyTexture, anyTexture)).map<Action>(
-            ([cell, shape, textures]) => ({type: "addVoxel", userIndex: 0, ...cell, shape, textures}))},
-        {weight: 1, arbitrary: anyCell.map<Action>(cell => ({type: "removeVoxel", userIndex: 0, ...cell}))},
-        {weight: 3, arbitrary: fc.tuple(anyCell, anyShape).map<Action>(
-            ([cell, shape]) => ({type: "reshapeVoxel", userIndex: 0, ...cell, shape}))},
+            ([cell, textures]) => ({type: "addVoxel", userIndex: 0, ...cell, textures}))},
+        {weight: 2, arbitrary: anyCell.map<Action>(cell => ({type: "removeVoxel", userIndex: 0, ...cell}))},
         {weight: 3, arbitrary: fc.tuple(anyCell, anyOffset, anyOffset, anyOffset).map<Action>(
             ([cell, dRow, dCol, dLayer]) => ({type: "moveVoxel", userIndex: 0, ...cell, dRow, dCol, dLayer}))});
 
@@ -416,7 +376,7 @@ describe("property-based: block edits against a model", () => {
         // How often the rules took and refused each kind of edit, over every run.
         const outcomes: {[editType: string]: {taken: number, refused: number}} = {};
         await fc.assert(
-            // (Long runs of edits: only blocks already standing can be moved, reshaped or taken away.)
+            // (Long runs of edits: only blocks already standing can be moved or taken away.)
             fc.asyncProperty(fc.array(anyEdit, {minLength: 30, maxLength: 80, size: "max"}), async (edits) => {
                 harness.reset();
                 harness.seedRoom(ROOM_ID, RoomTypeEnumMap.Hub);
@@ -444,8 +404,8 @@ describe("property-based: block edits against a model", () => {
                     for (const row of WATCHED.rows) for (const col of WATCHED.cols) for (const layer of WATCHED.layers)
                     {
                         const block = model.get(keyOf({row, col, layer}));
-                        expect(VoxelQueryUtil.getVoxelBlockShapeAt(grid.voxels, row, col, layer),
-                            `shape at ${row},${col},${layer} after ${context}`).toBe(block?.shape ?? 0);
+                        expect(VoxelQueryUtil.isVoxelBlockPresentAt(grid.voxels, row, col, layer),
+                            `block at ${row},${col},${layer} after ${context}`).toBe(block != undefined);
                         if (block)
                         {
                             const first = quadIndexOf({row, col, layer});
@@ -463,8 +423,7 @@ describe("property-based: block edits against a model", () => {
                         expect(sent(sender), `echo of ${context}`).toEqual(nothing);
                         const relayed = sent(observer);
                         const relayedType = {addVoxel: "addVoxelBlockSignal", removeVoxel: "removeVoxelBlockSignal",
-                            moveVoxel: "moveVoxelBlockSignal", reshapeVoxel: "setVoxelBlockShapeSignal"}[
-                            edit.type as "addVoxel" | "removeVoxel" | "moveVoxel" | "reshapeVoxel"];
+                            moveVoxel: "moveVoxelBlockSignal"}[edit.type as "addVoxel" | "removeVoxel" | "moveVoxel"];
                         for (const signalType of BLOCK_SIGNALS)
                         {
                             expect(relayed[signalType].length, `${signalType} relayed for ${context}`)
@@ -480,17 +439,16 @@ describe("property-based: block edits against a model", () => {
                         const held = touched.filter(cell => model.has(keyOf(cell)));
                         const empty = touched.filter(cell => !model.has(keyOf(cell)));
                         expect(answered["addVoxelBlockSignal"].map(signal =>
-                            [signal.quadIndex, signal.shape, signal.quadTextureIndicesWithinLayer]),
+                            [signal.quadIndex, signal.quadTextureIndicesWithinLayer]),
                             `blocks answered for ${context}`).toEqual(held.map(cell =>
-                            [quadIndexOf(cell), model.get(keyOf(cell))!.shape, model.get(keyOf(cell))!.textures]));
+                            [quadIndexOf(cell), model.get(keyOf(cell))!.textures]));
                         expect(answered["removeVoxelBlockSignal"].map(signal => signal.quadIndex),
                             `empty cells answered for ${context}`).toEqual(empty.map(quadIndexOf));
-                        expect(answered["moveVoxelBlockSignal"].length + answered["setVoxelBlockShapeSignal"].length)
-                            .toBe(0);
+                        expect(answered["moveVoxelBlockSignal"].length).toBe(0);
                     }
                 }
 
-                // (Among them: the room, shrunk blocks and all, reads back from its own encoding.)
+                // (Among them: the room reads back from its own encoding.)
                 checkStructuralInvariants(users);
 
                 for (const user of users)
@@ -503,7 +461,7 @@ describe("property-based: block edits against a model", () => {
         );
 
         // The property says nothing unless edits of every kind went both ways.
-        for (const editType of ["addVoxel", "removeVoxel", "moveVoxel", "reshapeVoxel"])
+        for (const editType of ["addVoxel", "removeVoxel", "moveVoxel"])
         {
             expect(outcomes[editType]?.taken ?? 0, `${editType} edits taken`).toBeGreaterThan(10);
             expect(outcomes[editType]?.refused ?? 0, `${editType} edits refused`).toBeGreaterThan(10);
@@ -527,15 +485,16 @@ const anyVolume = fc.record({
     rowMin, rowMin + rowSpan - 1, colMin, colMin + colSpan - 1, layers[0], layers[1]));
 
 describe("room volume geometry", () => {
-    it("expands a volume by the same amount on all six sides", () => {
+    it("expands a volume by so many walls on all six sides: their thickness sideways, a layer up and down", () => {
         fc.assert(fc.property(anyVolume, fc.integer({min: -2, max: 4}), (volume, amount) => {
             const before = {...volume};
             const grown = RoomVolumeUtil.getExpandedVolume(volume, amount);
 
-            expect(grown.rowMin).toBe(volume.rowMin - amount);
-            expect(grown.rowMax).toBe(volume.rowMax + amount);
-            expect(grown.colMin).toBe(volume.colMin - amount);
-            expect(grown.colMax).toBe(volume.colMax + amount);
+            const sideways = amount * GENERATED_WALL_THICKNESS;
+            expect(grown.rowMin).toBe(volume.rowMin - sideways);
+            expect(grown.rowMax).toBe(volume.rowMax + sideways);
+            expect(grown.colMin).toBe(volume.colMin - sideways);
+            expect(grown.colMax).toBe(volume.colMax + sideways);
             expect(grown.collisionLayerMin).toBe(volume.collisionLayerMin - amount);
             expect(grown.collisionLayerMax).toBe(volume.collisionLayerMax + amount);
 
@@ -545,26 +504,40 @@ describe("room volume geometry", () => {
         }));
     });
 
-    it("tells volumes that touch apart from volumes with a wall between them", () => {
-        // The two separation checks growth uses: expanding one finds touching pairs, expanding both finds
-        // pairs one wall block apart.
-        fc.assert(fc.property(anyVolume, fc.integer({min: 0, max: 3}), (volume, gap) => {
+    it("tells volumes less than a wall apart from volumes with one wall between them", () => {
+        // The two separation checks growth uses: expanding one finds pairs too close for a wall, expanding
+        // both finds pairs with less than two walls' thickness between them. Volumes laid out in whole
+        // walls' thicknesses are that many apart, so for them the first finds the ones that touch and the
+        // second the ones exactly one wall apart.
+        fc.assert(fc.property(anyVolume, fc.integer({min: 0, max: 3 * GENERATED_WALL_THICKNESS}), (volume, gap) => {
             // Offset along one axis with identical rows and layers, so only the gap varies.
             const other = new RoomVolume(
                 volume.rowMin, volume.rowMax,
                 volume.colMax + 1 + gap, volume.colMax + 1 + gap,
                 volume.collisionLayerMin, volume.collisionLayerMax);
 
-            const touching = RoomVolumeUtil.volumesIntersect(
+            const tooCloseForAWall = RoomVolumeUtil.volumesIntersect(
                 RoomVolumeUtil.getExpandedVolume(volume, 1), other);
-            const withinOneBlock = RoomVolumeUtil.volumesIntersect(
+            const withinTwoWalls = RoomVolumeUtil.volumesIntersect(
                 RoomVolumeUtil.getExpandedVolume(volume, 1),
                 RoomVolumeUtil.getExpandedVolume(other, 1));
 
-            expect(touching).toBe(gap == 0);
-            expect(withinOneBlock).toBe(gap <= 1);
+            expect(tooCloseForAWall).toBe(gap < GENERATED_WALL_THICKNESS);
+            expect(withinTwoWalls).toBe(gap < 2 * GENERATED_WALL_THICKNESS);
             // Never overlapping, whatever the gap: the second volume starts past the first.
             expect(RoomVolumeUtil.volumesIntersect(volume, other)).toBe(false);
+        }));
+    });
+
+    it("counts a storey's slab, one layer deep, as the wall between volumes standing one over the other", () => {
+        fc.assert(fc.property(anyVolume, fc.integer({min: 0, max: 3}), (volume, gap) => {
+            const above = new RoomVolume(volume.rowMin, volume.rowMax, volume.colMin, volume.colMax,
+                volume.collisionLayerMax + 1 + gap, volume.collisionLayerMax + 1 + gap);
+
+            expect(RoomVolumeUtil.volumesIntersect(RoomVolumeUtil.getExpandedVolume(volume, 1), above))
+                .toBe(gap == 0);
+            expect(RoomVolumeUtil.volumesIntersect(RoomVolumeUtil.getExpandedVolume(volume, 1),
+                RoomVolumeUtil.getExpandedVolume(above, 1))).toBe(gap <= 1);
         }));
     });
 
@@ -595,6 +568,47 @@ describe("room volume geometry", () => {
         }));
     });
 
+    it("keeps a passage in step with volumes laid out in whole walls' thicknesses", () => {
+        // Generated areas are, and a passage set a voxel off them would cut their texture tiles in two.
+        const steps = (min: number, max: number) => fc.integer({min, max}).map(n => n * GENERATED_WALL_THICKNESS);
+        fc.assert(fc.property(steps(1, 10), steps(1, 6), steps(1, 10), steps(1, 4), steps(1, 4),
+            (rowMin, numRows, colMin, gap, maxWidth) => {
+            const volume = new RoomVolume(rowMin, rowMin + numRows - 1, colMin, colMin + GENERATED_WALL_THICKNESS - 1, 0, 6);
+            const other = new RoomVolume(rowMin, rowMin + numRows - 1,
+                volume.colMax + 1 + gap, volume.colMax + gap + GENERATED_WALL_THICKNESS, 0, 6);
+
+            const passage = RoomVolumeUtil.makePassageBetweenVolumes(volume, other, maxWidth, 16)!;
+            expect(passage.rowMin % GENERATED_WALL_THICKNESS).toBe(0);
+            expect((passage.rowMax + 1) % GENERATED_WALL_THICKNESS).toBe(0);
+            expect(passage.rowMax - passage.rowMin + 1).toBe(Math.min(maxWidth, numRows));
+
+            // As near the middle of the stretch the two share as whole steps allow: no further from one of its
+            // ends than from the other by more than a step.
+            const before = passage.rowMin - volume.rowMin, after = volume.rowMax - passage.rowMax;
+            expect(Math.abs(after - before)).toBeLessThanOrEqual(GENERATED_WALL_THICKNESS);
+        }));
+    });
+
+    it("calls a volume solid only while every block of it is there", () => {
+        fc.assert(fc.property(anyVolume, fc.integer({min: 0, max: 100_000}), (volume, pick) => {
+            const grid = VoxelGrid.createBaseGrid();
+            expect(RoomVolumeUtil.volumeIsSolid(grid.voxels, volume)).toBe(true);
+
+            // Any one of its blocks taken out.
+            const numRows = volume.rowMax - volume.rowMin + 1;
+            const numCols = volume.colMax - volume.colMin + 1;
+            const numLayers = volume.collisionLayerMax - volume.collisionLayerMin + 1;
+            const index = pick % (numRows * numCols * numLayers);
+            RoomVolumeUtil.carveOutVolume(grid.voxels, new RoomVolume(
+                volume.rowMin + index % numRows, volume.rowMin + index % numRows,
+                volume.colMin + Math.floor(index / numRows) % numCols, volume.colMin + Math.floor(index / numRows) % numCols,
+                volume.collisionLayerMin + Math.floor(index / (numRows * numCols)),
+                volume.collisionLayerMin + Math.floor(index / (numRows * numCols)),
+                new RoomPalette(0, 0, 0, 0)));
+            expect(RoomVolumeUtil.volumeIsSolid(grid.voxels, volume)).toBe(false);
+        }), {numRuns: 25});
+    });
+
     it("refuses a passage between volumes that already meet", () => {
         fc.assert(fc.property(anyVolume, (volume) => {
             expect(RoomVolumeUtil.makePassageBetweenVolumes(volume, volume, 3, 16)).toBeNull();
@@ -615,7 +629,7 @@ describe("room volume geometry", () => {
                 for (const volume of order)
                     RoomVolumeUtil.carveOutVolume(grid.voxels, volume);
                 return {
-                    masks: grid.voxels.map(v => VoxelQueryUtil.getVoxelBlockLayerMask(v)).join(","),
+                    masks: grid.voxels.map(v => v.blockLayerMask).join(","),
                     quads: Array.from(grid.quadsMem.quads).join(","),
                 };
             };

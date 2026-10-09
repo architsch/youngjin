@@ -19,7 +19,7 @@ import AddVoxelBlockSignal from "../../../src/shared/voxel/types/update/addVoxel
 import RemoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/removeVoxelBlockSignal";
 import MoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/moveVoxelBlockSignal";
 import SetVoxelQuadTextureSignal from "../../../src/shared/voxel/types/update/setVoxelQuadTextureSignal";
-import SetVoxelBlockShapeSignal from "../../../src/shared/voxel/types/update/setVoxelBlockShapeSignal";
+import { GENERATED_WALL_THICKNESS, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../../src/shared/system/sharedConstants";
 
 // ─── Action Types ───────────────────────────────────────────────────────────
 
@@ -44,13 +44,11 @@ export type Action =
     | { type: "setObjectMetadata"; userIndex: number; metadataKey: number; metadataValue: string;
         targetUserIndex?: number }
     // Voxel operations
-    // shape: a block shape (see VoxelBlockShapeUtil). An add's is whole unless given.
     | { type: "addVoxel"; userIndex: number; row: number; col: number; layer: number;
-        textures?: [number, number, number, number, number, number]; shape?: number }
+        textures?: [number, number, number, number, number, number] }
     | { type: "removeVoxel"; userIndex: number; row: number; col: number; layer: number }
     | { type: "moveVoxel"; userIndex: number; row: number; col: number; layer: number;
         dRow: number; dCol: number; dLayer: number }
-    | { type: "reshapeVoxel"; userIndex: number; row: number; col: number; layer: number; shape: number }
     | { type: "setVoxelTexture"; userIndex: number; row: number; col: number;
         layer: number; quadOffset: number; textureIndex: number }
     // Permissions
@@ -208,7 +206,7 @@ export async function executeAction(action: Action, connectedUsers: ConnectedUse
             if (!roomID) return;
             const quadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(action.row, action.col, action.layer);
             const textures = action.textures ?? [0, 0, 0, 0, 0, 0];
-            const signal = new AddVoxelBlockSignal(roomID, quadIndex, textures, action.shape);
+            const signal = new AddVoxelBlockSignal(roomID, quadIndex, textures);
             ServerVoxelManager.onAddVoxelBlockSignalReceived(ctx.socketUserContext, signal);
             break;
         }
@@ -234,18 +232,6 @@ export async function executeAction(action: Action, connectedUsers: ConnectedUse
             const quadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(action.row, action.col, action.layer);
             const signal = new MoveVoxelBlockSignal(roomID, quadIndex, action.dRow, action.dCol, action.dLayer);
             ServerVoxelManager.onMoveVoxelBlockSignalReceived(ctx.socketUserContext, signal);
-            break;
-        }
-        case "reshapeVoxel":
-        {
-            if (connectedUsers.length === 0) return;
-            const idx = action.userIndex % connectedUsers.length;
-            const ctx = connectedUsers[idx];
-            const roomID = ServerRoomManager.currentRoomIDByUserID[ctx.user.id];
-            if (!roomID) return;
-            const quadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(action.row, action.col, action.layer);
-            const signal = new SetVoxelBlockShapeSignal(roomID, quadIndex, action.shape);
-            ServerVoxelManager.onSetVoxelBlockShapeSignalReceived(ctx.socketUserContext, signal);
             break;
         }
         case "setVoxelTexture":
@@ -312,7 +298,6 @@ export interface ActionWeights
     addVoxel?: number;
     removeVoxel?: number;
     moveVoxel?: number;
-    reshapeVoxel?: number;
     setVoxelTexture?: number;
     reconnectA?: number;
     reconnectB?: number;
@@ -320,8 +305,10 @@ export interface ActionWeights
 
 export const DEFAULT_MAX_USERS = 10;
 
-// Every value a shape can arrive as: the ten a block can have or lack, and the six that are refused.
-const anyShapeArbitrary = fc.integer({min: 0, max: 15});
+// The voxels inside the room's boundary wall.
+const INTERIOR_MIN = GENERATED_WALL_THICKNESS;
+const INTERIOR_ROW_MAX = NUM_VOXEL_ROWS - GENERATED_WALL_THICKNESS - 1;
+const INTERIOR_COL_MAX = NUM_VOXEL_COLS - GENERATED_WALL_THICKNESS - 1;
 export const DEFAULT_ROOM_IDS = ["room-A", "room-B", "room-C"];
 
 export function buildActionArbitrary(
@@ -339,7 +326,6 @@ export function buildActionArbitrary(
         addVoxel: weights.addVoxel ?? 1,
         removeVoxel: weights.removeVoxel ?? 0,
         moveVoxel: weights.moveVoxel ?? 0,
-        reshapeVoxel: weights.reshapeVoxel ?? 0,
         setVoxelTexture: weights.setVoxelTexture ?? 0,
         reconnectA: weights.reconnectA ?? 0,
         reconnectB: weights.reconnectB ?? 0,
@@ -385,18 +371,17 @@ export function buildActionArbitrary(
         arbs.push({weight: w.addVoxel, arbitrary: fc.record({
             type: fc.constant("addVoxel" as const),
             userIndex: fc.nat({max: maxUsers - 1}),
-            row: fc.integer({min: 2, max: 29}),
-            col: fc.integer({min: 2, max: 29}),
+            row: fc.integer({min: INTERIOR_MIN, max: INTERIOR_ROW_MAX}),
+            col: fc.integer({min: INTERIOR_MIN, max: INTERIOR_COL_MAX}),
             layer: fc.integer({min: 0, max: 7}),
-            shape: anyShapeArbitrary,
         })});
 
     if (w.removeVoxel > 0)
         arbs.push({weight: w.removeVoxel, arbitrary: fc.record({
             type: fc.constant("removeVoxel" as const),
             userIndex: fc.nat({max: maxUsers - 1}),
-            row: fc.integer({min: 2, max: 29}),
-            col: fc.integer({min: 2, max: 29}),
+            row: fc.integer({min: INTERIOR_MIN, max: INTERIOR_ROW_MAX}),
+            col: fc.integer({min: INTERIOR_MIN, max: INTERIOR_COL_MAX}),
             layer: fc.integer({min: 0, max: 7}),
         })});
 
@@ -409,30 +394,20 @@ export function buildActionArbitrary(
         arbs.push({weight: w.moveVoxel, arbitrary: fc.record({
             type: fc.constant("moveVoxel" as const),
             userIndex: fc.nat({max: maxUsers - 1}),
-            row: fc.integer({min: 2, max: 28}),
-            col: fc.integer({min: 2, max: 28}),
+            row: fc.integer({min: INTERIOR_MIN, max: INTERIOR_ROW_MAX - 1}),
+            col: fc.integer({min: INTERIOR_MIN, max: INTERIOR_COL_MAX - 1}),
             layer: fc.integer({min: 0, max: 6}),
             dRow: fc.constantFrom(-1, 0, 1),
             dCol: fc.constantFrom(-1, 0, 1),
             dLayer: fc.constantFrom(-1, 0, 1),
         })});
 
-    if (w.reshapeVoxel > 0)
-        arbs.push({weight: w.reshapeVoxel, arbitrary: fc.record({
-            type: fc.constant("reshapeVoxel" as const),
-            userIndex: fc.nat({max: maxUsers - 1}),
-            row: fc.integer({min: 2, max: 29}),
-            col: fc.integer({min: 2, max: 29}),
-            layer: fc.integer({min: 0, max: 7}),
-            shape: anyShapeArbitrary,
-        })});
-
     if (w.setVoxelTexture > 0)
         arbs.push({weight: w.setVoxelTexture, arbitrary: fc.record({
             type: fc.constant("setVoxelTexture" as const),
             userIndex: fc.nat({max: maxUsers - 1}),
-            row: fc.integer({min: 2, max: 29}),
-            col: fc.integer({min: 2, max: 29}),
+            row: fc.integer({min: INTERIOR_MIN, max: INTERIOR_ROW_MAX}),
+            col: fc.integer({min: INTERIOR_MIN, max: INTERIOR_COL_MAX}),
             layer: fc.integer({min: 0, max: 7}),
             quadOffset: fc.integer({min: 0, max: 5}),
             textureIndex: fc.integer({min: 0, max: 127}),

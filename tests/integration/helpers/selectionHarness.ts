@@ -115,39 +115,29 @@ export function buildPillar(room: Room, row: number, col: number,
 // Reproduces voxelQuadPlacementOptions.tsx's module-private handler sequences; keep in step.
 
 /**
- * What the "add block" button does: place a block against the selected face, or grow the selected block
- * out to its cell's side, then reselect (see VoxelQueryUtil.getVoxelBlockAddTarget).
+ * What the "add block" button does: place a block against the selected face, then reselect (see
+ * VoxelQueryUtil.getVoxelBlockAddTargetQuadIndex).
  */
 export function userAddsBlockAt(room: Room, selection: VoxelQuadSelection): boolean
 {
-    const target = VoxelQueryUtil.getVoxelBlockAddTarget(room.voxelGrid.voxels, selection.quadIndex);
-    if (!target)
+    const targetQuadIndex = VoxelQueryUtil.getVoxelBlockAddTargetQuadIndex(selection.quadIndex);
+    if (targetQuadIndex < 0)
         return false;
 
-    if (target.grows)
-    {
-        if (!VoxelUpdateUtil.setVoxelBlockShape(actingUser, room.voxelGrid.voxels, target.quadIndex, target.shape, room))
-            return false;
-    }
-    else
-    {
-        const textures = new Array<number>(NUM_VOXEL_QUADS_PER_COLLISION_LAYER);
-        const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(selection.voxel.row, selection.voxel.col,
-            VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(selection.quadIndex));
-        for (let i = startIndex; i < startIndex + NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
-            textures[i - startIndex] = room.voxelQuads[i] & 0b01111111;
+    const textures = new Array<number>(NUM_VOXEL_QUADS_PER_COLLISION_LAYER);
+    const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(selection.voxel.row, selection.voxel.col,
+        VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(selection.quadIndex));
+    for (let i = startIndex; i < startIndex + NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
+        textures[i - startIndex] = room.voxelQuads[i] & 0b01111111;
 
-        if (!VoxelUpdateUtil.addVoxelBlock(actingUser, room.voxelGrid.voxels, target.quadIndex, textures, room,
-            target.shape))
-        {
-            return false;
-        }
-    }
+    if (!VoxelUpdateUtil.addVoxelBlock(actingUser, room.voxelGrid.voxels, targetQuadIndex, textures, room))
+        return false;
+
     VoxelQuadSelection.unselect();
     const targetVoxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels,
-        VoxelQueryUtil.getVoxelRowFromQuadIndex(target.quadIndex), VoxelQueryUtil.getVoxelColFromQuadIndex(target.quadIndex));
+        VoxelQueryUtil.getVoxelRowFromQuadIndex(targetQuadIndex), VoxelQueryUtil.getVoxelColFromQuadIndex(targetQuadIndex));
     if (targetVoxel)
-        VoxelQuadSelection.trySelectBestQuad(targetVoxel, target.quadIndex);
+        VoxelQuadSelection.trySelectBestQuad(targetVoxel, targetQuadIndex);
     return true;
 }
 

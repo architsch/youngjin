@@ -8,11 +8,11 @@ import ObjectScaleUtil from "../../object/util/objectScaleUtil";
 import type ObjectTransform from "../../object/types/objectTransform";
 import { ColliderConfig } from "../types/colliderConfig";
 import PhysicsDebugUtil from "./physicsDebugUtil";
+import PhysicsVoxelUtil from "./physicsVoxelUtil";
 import PhysicsRoom from "../types/physicsRoom";
-import Voxel from "../../voxel/types/voxel";
 import VoxelQueryUtil from "../../voxel/util/voxelQueryUtil";
-import { ATTACHMENT_HITBOX_INSET, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
-    VOXEL_BLOCK_SHAPE_EMPTY } from "../../system/sharedConstants";
+import { ATTACHMENT_HITBOX_INSET, COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS,
+    NUM_VOXEL_ROWS, VOXEL_CELL_SIZE } from "../../system/sharedConstants";
 
 // Sequentially recycle each of the sets in the array (because there may be a function which uses multiple sets simultaneously).
 let colliderStatesTempNextIndex = 0;
@@ -21,7 +21,7 @@ for (let i = 0; i < 64; ++i)
     colliderStatesTemp.push(new Set<ColliderState>());
 
 const voxelBlockColliderConfig: ColliderConfig = {
-    baseHitboxSize: {sizeX: 1, sizeY: 0.5, sizeZ: 1},
+    baseHitboxSize: {sizeX: VOXEL_CELL_SIZE, sizeY: COLLISION_LAYER_HEIGHT, sizeZ: VOXEL_CELL_SIZE},
     applyHardCollisionToOthers: true,
     outgoingSoftCollisionForceMultiplier: 1,
     incomingSoftCollisionForceMultiplier: 0,
@@ -30,12 +30,10 @@ const voxelBlockColliderConfig: ColliderConfig = {
 
 const PhysicsColliderStateUtil =
 {
-    // A block's collider: its box as its shape leaves it (see VoxelQueryUtil.getVoxelBlockBox).
-    getVoxelBlockColliderState: (voxels: Voxel[], row: number, col: number, collisionLayer: number): ColliderState =>
+    getVoxelBlockColliderState: (row: number, col: number, collisionLayer: number): ColliderState =>
     {
         const state: ColliderState = {
-            hitbox: VoxelQueryUtil.getVoxelBlockBox(row, col, collisionLayer,
-                VoxelQueryUtil.getVoxelBlockShapeAt(voxels, row, col, collisionLayer)),
+            hitbox: VoxelQueryUtil.getVoxelBlockBox(row, col, collisionLayer),
             colliderConfig: voxelBlockColliderConfig
         };
         PhysicsDebugUtil.tryShowColliderBox("voxelBlock", state, "#ffff00");
@@ -72,10 +70,10 @@ const PhysicsColliderStateUtil =
         const maxX = hitbox.center.x + hitbox.halfSize.x;
         const minZ = hitbox.center.z - hitbox.halfSize.z;
         const maxZ = hitbox.center.z + hitbox.halfSize.z;
-        const minCol = Math.max(0, Math.floor(minX));
-        const maxCol = Math.min(NUM_VOXEL_COLS-1, Math.floor(maxX));
-        const minRow = Math.max(0, Math.floor(minZ));
-        const maxRow = Math.min(NUM_VOXEL_ROWS-1, Math.floor(maxZ));
+        const minCol = Math.max(0, VoxelQueryUtil.getVoxelColFromWorldX(minX));
+        const maxCol = Math.min(NUM_VOXEL_COLS-1, VoxelQueryUtil.getVoxelColFromWorldX(maxX));
+        const minRow = Math.max(0, VoxelQueryUtil.getVoxelRowFromWorldZ(minZ));
+        const maxRow = Math.min(NUM_VOXEL_ROWS-1, VoxelQueryUtil.getVoxelRowFromWorldZ(maxZ));
         const minLayer = Math.max(COLLISION_LAYER_MIN,
             VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(hitbox.center.y - hitbox.halfSize.y));
         const maxLayer = Math.min(COLLISION_LAYER_MAX,
@@ -93,37 +91,36 @@ const PhysicsColliderStateUtil =
                 set.add(globalCollider);
         }
 
-        // Voxel Colliders
+        // Voxel-block hitboxes, from the room's grid as it stands.
+        const voxels = physicsRoom.room.voxelGrid.voxels;
         for (let row = minRow; row <= maxRow; ++row)
         {
             for (let col = minCol; col <= maxCol; ++col)
             {
-                const physicsVoxel = physicsRoom.voxels[row * NUM_VOXEL_COLS + col];
-                // A voxel's blocks are contiguous (see VoxelQueryUtil.getVoxelBlockIndex).
-                const blockShapes = physicsVoxel.voxel.quadsMem.blockShapes;
-                const firstBlockIndex = VoxelQueryUtil.getVoxelBlockIndex(row, col, COLLISION_LAYER_MIN);
-
-                // Voxel-block hitboxes
+                const blockLayerMask = voxels[row * NUM_VOXEL_COLS + col].blockLayerMask;
                 for (let layer = minLayer; layer <= maxLayer; ++layer)
                 {
-                    const shape = blockShapes[firstBlockIndex + layer - COLLISION_LAYER_MIN];
-                    if (shape != VOXEL_BLOCK_SHAPE_EMPTY)
+                    if ((blockLayerMask & (1 << layer)) != 0)
                     {
-                        const voxelBlockHitbox = VoxelQueryUtil.getVoxelBlockBox(row, col, layer, shape);
+                        const voxelBlockHitbox = VoxelQueryUtil.getVoxelBlockBox(row, col, layer);
                         if (Geometry3DUtil.AABBsOverlap(hitbox, voxelBlockHitbox))
                             set.add({hitbox: voxelBlockHitbox, colliderConfig: voxelBlockColliderConfig});
                     }
                 }
-                // Object hitboxes
-                for (const object of physicsVoxel.intersectingObjects)
+            }
+        }
+
+        // Object hitboxes (an object reaching into several physics voxels is met in each).
+        for (const physicsVoxel of PhysicsVoxelUtil.getVoxelsInBox(physicsRoom, hitbox))
+        {
+            for (const object of physicsVoxel.intersectingObjects)
+            {
+                const objectHitbox = object.colliderState.hitbox;
+                if (objectHitbox != hitbox &&
+                    !set.has(object.colliderState) &&
+                    Geometry3DUtil.AABBsOverlap(hitbox, objectHitbox))
                 {
-                    const objectHitbox = object.colliderState.hitbox;
-                    if (objectHitbox != hitbox &&
-                        !set.has(object.colliderState) &&
-                        Geometry3DUtil.AABBsOverlap(hitbox, objectHitbox))
-                    {
-                        set.add(object.colliderState);
-                    }
+                    set.add(object.colliderState);
                 }
             }
         }

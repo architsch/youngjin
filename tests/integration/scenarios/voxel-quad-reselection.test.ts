@@ -53,8 +53,9 @@ import { clientFeatureFlagsObservable, gameModeObservable, objectSelectionObserv
     voxelQuadSelectionRestrictionObservable } from "../../../src/client/system/clientObservables";
 import WorldSpaceSelectionUtil from "../../../src/client/graphics/util/worldSpaceSelectionUtil";
 import { FeatureFlag } from "../../../src/shared/system/types/featureFlag";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
-    NUM_VOXEL_QUADS_PER_COLLISION_LAYER, VOXEL_BLOCK_SHAPE_WHOLE } from "../../../src/shared/system/sharedConstants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_X, MAX_ROOM_Z, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
+    NUM_VOXEL_QUADS_PER_COLLISION_LAYER, GENERATED_WALL_THICKNESS,
+    VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import AddVoxelBlockSignal from "../../../src/shared/voxel/types/update/addVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/removeVoxelBlockSignal";
@@ -83,6 +84,16 @@ const ROOM_ID = "reselection-room";
 const WALL_TEXTURES = [1, 1, 1, 1, 1, 1];
 const WALL_FACES: ["x" | "z", "-" | "+"][] = [["x", "-"], ["x", "+"], ["z", "-"], ["z", "+"]];
 
+// How many voxels thick the room's own wall is: the innermost of them show their faces to the room, and the
+// open floor begins a voxel further in.
+const WALL_THICKNESS = GENERATED_WALL_THICKNESS;
+
+const VOXELS_PER_WORLD_UNIT = 1 / VOXEL_CELL_SIZE;
+
+// How many voxels to either side an automatic selection looks: a world unit (see
+// VoxelQuadSelection.trySelectBestQuad).
+const SEARCH_REACH = Math.round(1 / VOXEL_CELL_SIZE);
+
 let room: Room;
 
 function useRoom(newRoom: Room)
@@ -97,6 +108,36 @@ function placeCameraAt(x: number, y: number, z: number)
 {
     GraphicsManager.getCamera().position.set(x, y, z);
     GraphicsManager.getCamera().updateMatrixWorld(true);
+}
+
+/** The middle of a face, drawn or not. */
+function middleOf(quadIndex: number): Vec3
+{
+    const dims = VoxelQueryUtil.getVoxelQuadTransformDimensions(room.voxelGrid.voxels, quadIndex, true);
+    return {
+        x: VoxelQueryUtil.getWorldXAtVoxelColCenter(VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex)) + dims.offsetX,
+        y: dims.offsetY,
+        z: VoxelQueryUtil.getWorldZAtVoxelRowCenter(VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex)) + dims.offsetZ,
+    };
+}
+
+/** The same face of the block right behind a face's own, or -1 where that lies outside the grid. */
+function faceBehind(quadIndex: number): number
+{
+    const axis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
+    const orientation = VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadIndex);
+    const back = (orientation == "+") ? -1 : 1;
+    return quadIndexOf(VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex) + ((axis == "z") ? back : 0),
+        VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex) + ((axis == "x") ? back : 0), axis, orientation,
+        VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex));
+}
+
+/** The cell layer a quad belongs to, as its block index. */
+function blockIndexOf(quadIndex: number): number
+{
+    return VoxelQueryUtil.getVoxelBlockIndex(VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex),
+        VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex),
+        VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex));
 }
 
 /** Asserts that the interruption left the user with a quad they can actually see. */
@@ -122,7 +163,7 @@ beforeEach(() => {
     // A hub, so anyone may build; an acting user is still required.
     (App.getUser as Mock).mockReturnValue(actingUser);
     useRoom(createRoom(ROOM_ID));
-    placeCameraAt(NUM_VOXEL_COLS * 0.5, 2, NUM_VOXEL_ROWS * 0.5);
+    placeCameraAt(0.5 * MAX_ROOM_X, 2, 0.5 * MAX_ROOM_Z);
 });
 
 // ─── Interruption by the user's own edit ────────────────────────────────────
@@ -174,65 +215,17 @@ describe("reselection after the user's own voxel edit", () => {
         expect(after.visible).toBe(true);
     });
 
-    it("keeps the selection on a thin wall as it is carried on from its end", () => {
-        // A wall half a cell thick, running along x.
-        const LOW_Z_HALF = 0b0011;
-        VoxelUpdateUtil.addVoxelBlock(actingUser, room.voxelGrid.voxels, quadIndexOf(10, 5, "y", "+", COLLISION_LAYER_MIN),
-            WALL_TEXTURES, room, LOW_Z_HALF);
+    it("keeps the selection on a low wall as it is carried on from its end", () => {
+        // A wall a block thick and a block high, running along x.
+        buildPillar(room, 10, 5, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
         const end = quadIndexOf(10, 5, "x", "+", COLLISION_LAYER_MIN);
 
         expect(userAddsBlockAt(room, forceSelect(room, end))).toBe(true);
 
-        // The next stretch of wall is as thin, and its own end takes the selection over.
-        expect(VoxelQueryUtil.getVoxelBlockShapeAt(room.voxelGrid.voxels, 10, 6, COLLISION_LAYER_MIN)).toBe(LOW_Z_HALF);
+        // The next stretch of wall stands beyond it, and its own end takes the selection over.
+        expect(VoxelQueryUtil.isVoxelBlockPresentAt(room.voxelGrid.voxels, 10, 6, COLLISION_LAYER_MIN)).toBe(true);
         const after = currentSelection(room)!;
         expect([after.row, after.col, after.axis, after.orientation, after.visible]).toEqual([10, 6, "x", "+", true]);
-    });
-
-    it("keeps the selection on the same face of a shrunk block as it grows out from it", () => {
-        const LOW_Z_HALF = 0b0011;
-        VoxelUpdateUtil.addVoxelBlock(actingUser, room.voxelGrid.voxels, quadIndexOf(10, 5, "y", "+", COLLISION_LAYER_MIN),
-            WALL_TEXTURES, room, LOW_Z_HALF);
-        // Its broad face in the middle of the cell: no cell layer lies beyond it to take another block.
-        const inner = quadIndexOf(10, 5, "z", "+", COLLISION_LAYER_MIN);
-        expect(isQuadVisible(room, inner)).toBe(true);
-
-        expect(userAddsBlockAt(room, forceSelect(room, inner))).toBe(true);
-
-        expect(VoxelQueryUtil.getVoxelBlockShapeAt(room.voxelGrid.voxels, 10, 5, COLLISION_LAYER_MIN))
-            .toBe(VOXEL_BLOCK_SHAPE_WHOLE);
-        expect(VoxelQueryUtil.isVoxelBlockPresentAt(room.voxelGrid.voxels, 11, 5, COLLISION_LAYER_MIN)).toBe(false);
-        const after = currentSelection(room)!;
-        expect(after.quadIndex).toBe(inner);
-        expect(after.visible).toBe(true);
-    });
-
-    it("moves the selection on when a shrunk block grows up against its neighbour", () => {
-        const LOW_Z_HALF = 0b0011;
-        VoxelUpdateUtil.addVoxelBlock(actingUser, room.voxelGrid.voxels, quadIndexOf(10, 5, "y", "+", COLLISION_LAYER_MIN),
-            WALL_TEXTURES, room, LOW_Z_HALF);
-        buildPillar(room, 11, 5, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
-        const inner = quadIndexOf(10, 5, "z", "+", COLLISION_LAYER_MIN);
-
-        expect(userAddsBlockAt(room, forceSelect(room, inner))).toBe(true);
-
-        // Grown whole, the face lies against the next block and no longer shows.
-        expect(isQuadVisible(room, inner)).toBe(false);
-        expectSomethingVisibleIsSelected();
-    });
-
-    it("adds nothing against a face whose cell beyond holds a block already, however little of it that block fills", () => {
-        const HIGH_X_HALF = 0b1010;
-        buildPillar(room, 10, 5, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
-        VoxelUpdateUtil.addVoxelBlock(actingUser, room.voxelGrid.voxels, quadIndexOf(10, 6, "y", "+", COLLISION_LAYER_MIN),
-            WALL_TEXTURES, room, HIGH_X_HALF);
-        // The whole block's face looks across half a cell of open floor at the half block.
-        const facing = quadIndexOf(10, 5, "x", "+", COLLISION_LAYER_MIN);
-        expect(isQuadVisible(room, facing)).toBe(true);
-
-        expect(userAddsBlockAt(room, forceSelect(room, facing))).toBe(false);
-        expect(currentSelection(room)!.quadIndex).toBe(facing);
-        expect(VoxelQueryUtil.getVoxelBlockShapeAt(room.voxelGrid.voxels, 10, 6, COLLISION_LAYER_MIN)).toBe(HIGH_X_HALF);
     });
 
     it("keeps a selection after removing the block whose wall face was selected", () => {
@@ -278,46 +271,72 @@ describe("reselection after the user's own voxel edit", () => {
     });
 
     it("keeps a selection after removing a block in the room's corner", () => {
-        buildPillar(room, 1, 1);
-        const quadIndex = quadIndexOf(1, 1, "x", "+", 0);
-
-        expect(userRemovesBlockAt(room, forceSelect(room, quadIndex))).toBe(true);
-        expectSomethingVisibleIsSelected();
-    });
-
-    // After a removal the search starts beyond the removed block; for a boundary block seen from inside
-    // that's outside the grid, so coords are clamped back to the removed block's voxel.
-    it("keeps a selection after removing a boundary wall block seen from inside", () => {
-        const quadIndex = quadIndexOf(10, 0, "x", "+", 3);
+        buildPillar(room, WALL_THICKNESS, WALL_THICKNESS);
+        const quadIndex = quadIndexOf(WALL_THICKNESS, WALL_THICKNESS, "x", "+", 0);
         expect(isQuadVisible(room, quadIndex)).toBe(true);
 
         expect(userRemovesBlockAt(room, forceSelect(room, quadIndex))).toBe(true);
         expectSomethingVisibleIsSelected();
+    });
 
-        // The wall it was cut out of is what the user is left looking at, not somewhere else.
-        const after = currentSelection(room)!;
-        expect([after.row, after.col]).toEqual([10, 0]);
-        expect(`${after.orientation}${after.axis}`).toBe("+x");
+    // After a removal the search starts beyond the removed block; for a block at the grid's edge seen from
+    // inside that's outside the grid, so coords are clamped back to the removed block's voxel.
+    it("keeps a selection after removing a boundary wall block seen from inside", () => {
+        // Through the wall from its inner face, a block at a time.
+        const gap: number[] = [];
+        for (let quadIndex = quadIndexOf(10, WALL_THICKNESS - 1, "x", "+", 3); quadIndex >= 0;
+            quadIndex = faceBehind(quadIndex))
+        {
+            expect(isQuadVisible(room, quadIndex)).toBe(true);
+            expect(userRemovesBlockAt(room, forceSelect(room, quadIndex))).toBe(true);
+            gap.push(blockIndexOf(quadIndex));
+            expectSomethingVisibleIsSelected();
+
+            // The wall it was cut out of is what the user is left looking at, not somewhere else: the same
+            // face of the block bared behind, or with none left, a face that lines the gap.
+            const after = currentSelection(room)!;
+            if (faceBehind(quadIndex) >= 0)
+                expect(after.quadIndex).toBe(faceBehind(quadIndex));
+            else
+                expect(gap).toContain(blockIndexOf(VoxelQueryUtil.getVoxelBlockAddTargetQuadIndex(after.quadIndex)));
+        }
+        expect(gap.length).toBe(WALL_THICKNESS);
     });
 
     it("keeps a selection after removing a wall block from each of the four walls", () => {
+        // Each wall's innermost block, and the face it shows the room.
         const walls: [number, number, "x" | "z", "-" | "+"][] = [
-            [10, 0, "x", "+"],                     // west wall, seen from the east
-            [10, NUM_VOXEL_COLS - 1, "x", "-"],    // east wall, seen from the west
-            [0, 10, "z", "+"],                     // north wall, seen from the south
-            [NUM_VOXEL_ROWS - 1, 10, "z", "-"],    // south wall, seen from the north
+            [10, WALL_THICKNESS - 1, "x", "+"],                 // west wall, seen from the east
+            [10, NUM_VOXEL_COLS - WALL_THICKNESS, "x", "-"],    // east wall, seen from the west
+            [WALL_THICKNESS - 1, 10, "z", "+"],                 // north wall, seen from the south
+            [NUM_VOXEL_ROWS - WALL_THICKNESS, 10, "z", "-"],    // south wall, seen from the north
         ];
         for (const [row, col, axis, orientation] of walls)
         {
             useRoom(createRoom(ROOM_ID));
             voxelQuadSelectionObservable.set(null);
-            const quadIndex = quadIndexOf(row, col, axis, orientation, 3);
-            expect(userRemovesBlockAt(room, forceSelect(room, quadIndex))).toBe(true);
 
-            const after = currentSelection(room);
-            expect(after, `${orientation}${axis} wall at (${row},${col})`).not.toBeNull();
-            expect(after!.visible, `${orientation}${axis} wall at (${row},${col})`).toBe(true);
-            expect([after!.row, after!.col]).toEqual([row, col]);
+            // Through to the grid's edge, as above.
+            const gap: number[] = [];
+            for (let quadIndex = quadIndexOf(row, col, axis, orientation, 3); quadIndex >= 0;
+                quadIndex = faceBehind(quadIndex))
+            {
+                const label = `${orientation}${axis} wall at (${row},${col}), ${gap.length} deep`;
+                expect(userRemovesBlockAt(room, forceSelect(room, quadIndex)), label).toBe(true);
+                gap.push(blockIndexOf(quadIndex));
+
+                const after = currentSelection(room);
+                expect(after, label).not.toBeNull();
+                expect(after!.visible, label).toBe(true);
+                if (faceBehind(quadIndex) >= 0)
+                    expect(after!.quadIndex, label).toBe(faceBehind(quadIndex));
+                else
+                {
+                    expect(gap, label).toContain(
+                        blockIndexOf(VoxelQueryUtil.getVoxelBlockAddTargetQuadIndex(after!.quadIndex)));
+                }
+            }
+            expect(gap.length).toBe(WALL_THICKNESS);
         }
     });
 });
@@ -325,28 +344,28 @@ describe("reselection after the user's own voxel edit", () => {
 // ─── The whole wall surface, swept ──────────────────────────────────────────
 
 describe("reselection after removing any wall block in the room", () => {
-    // Walks every visible, removable room-facing quad of all four boundary walls (where the neighbour
-    // lies outside the grid), since sampling isn't enough.
+    // Walks every visible, removable room-facing quad of all four boundary walls and digs on from it to the
+    // grid's edge (where the neighbour lies outside the grid), since sampling isn't enough.
     it("never leaves the user with nothing selected, on any of the four walls", () => {
         const lost: string[] = [];
         const hidden: string[] = [];
         let checked = 0;
 
+        // Every voxel of the walls, of which the innermost show their faces to begin with.
         const wallCoords: [number, number][] = [];
-        for (let col = 0; col < NUM_VOXEL_COLS; ++col)
+        for (let row = 0; row < NUM_VOXEL_ROWS; ++row)
         {
-            wallCoords.push([0, col]);
-            wallCoords.push([NUM_VOXEL_ROWS - 1, col]);
-        }
-        for (let row = 1; row < NUM_VOXEL_ROWS - 1; ++row)
-        {
-            wallCoords.push([row, 0]);
-            wallCoords.push([row, NUM_VOXEL_COLS - 1]);
+            for (let col = 0; col < NUM_VOXEL_COLS; ++col)
+            {
+                if (Math.min(row, col, NUM_VOXEL_ROWS - 1 - row, NUM_VOXEL_COLS - 1 - col) < WALL_THICKNESS)
+                    wallCoords.push([row, col]);
+            }
         }
 
-        // Each case is undone by re-adding the block (exact, since faces are recomputed from the collision
-        // mask), keeping the sweep fast.
+        // Each case is undone by re-adding its blocks (exact, since faces are recomputed from the blocks
+        // there are), keeping the sweep fast.
         const pristineQuads = Uint8Array.from(room.voxelQuads);
+        const pristineBlocks = room.voxelGrid.voxels.map(voxel => voxel.blockLayerMask);
 
         for (const [row, col] of wallCoords)
         {
@@ -354,36 +373,44 @@ describe("reselection after removing any wall block in the room", () => {
             {
                 for (const [axis, orientation] of WALL_FACES)
                 {
-                    const quadIndex = quadIndexOf(row, col, axis, orientation, layer);
-                    if (!isQuadVisible(room, quadIndex))
-                        continue;
-                    if (!VoxelUpdateUtil.canRemoveVoxelBlock(actingUser, room, quadIndex))
+                    const faceIndex = quadIndexOf(row, col, axis, orientation, layer);
+                    if (!isQuadVisible(room, faceIndex))
                         continue;
 
-                    const layerStart = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, layer);
-                    const textures = Array.from({length: NUM_VOXEL_QUADS_PER_COLLISION_LAYER},
-                        (_, i) => room.voxelQuads[layerStart + i] & 0b01111111);
+                    // Through the wall from this face, a block at a time.
+                    const removed: {layerStart: number, textures: number[]}[] = [];
+                    for (let quadIndex = faceIndex; quadIndex >= 0; quadIndex = faceBehind(quadIndex))
+                    {
+                        if (!VoxelUpdateUtil.canRemoveVoxelBlock(actingUser, room, quadIndex))
+                            break;
 
-                    voxelQuadSelectionObservable.set(null);
-                    ++checked;
-                    userRemovesBlockAt(room, forceSelect(room, quadIndex));
+                        const layerStart = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(
+                            VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex),
+                            VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex), layer);
+                        removed.push({layerStart, textures: Array.from({length: NUM_VOXEL_QUADS_PER_COLLISION_LAYER},
+                            (_, i) => room.voxelQuads[layerStart + i] & 0b01111111)});
 
-                    const after = currentSelection(room);
-                    const label = `(${row},${col}) layer ${layer} ${orientation}${axis}`;
-                    if (after == null)
-                        lost.push(label);
-                    else if (!after.visible)
-                        hidden.push(label);
+                        voxelQuadSelectionObservable.set(null);
+                        ++checked;
+                        userRemovesBlockAt(room, forceSelect(room, quadIndex));
 
-                    VoxelUpdateUtil.addVoxelBlock(undefined, room.voxelGrid.voxels,
-                        quadIndexOf(row, col, "y", "+", layer), textures);
+                        const after = currentSelection(room);
+                        const label = `(${row},${col}) layer ${layer} ${orientation}${axis}, ${removed.length} deep`;
+                        if (after == null)
+                            lost.push(label);
+                        else if (!after.visible)
+                            hidden.push(label);
+                    }
+                    for (const {layerStart, textures} of removed)
+                        VoxelUpdateUtil.addVoxelBlock(undefined, room.voxelGrid.voxels, layerStart, textures);
                 }
             }
         }
-        expect(checked).toBeGreaterThan(900);
+        expect(checked).toBeGreaterThan(3600);
         expect(lost).toEqual([]);
         expect(hidden).toEqual([]);
         expect(Array.from(room.voxelQuads)).toEqual(Array.from(pristineQuads));
+        expect(room.voxelGrid.voxels.map(voxel => voxel.blockLayerMask)).toEqual(pristineBlocks);
     });
 });
 
@@ -416,14 +443,20 @@ describe("reselection after another client's voxel edit", () => {
     });
 
     it("keeps a selection when a remote client removes a boundary wall block", async () => {
-        // Over the wire the ideal quad is the destroyed one, so the search has a voxel to start from.
-        const quadIndex = quadIndexOf(10, 0, "x", "+", 3);
-        forceSelect(room, quadIndex);
+        // Through the wall to the grid's edge, a block at a time. Over the wire the ideal quad is the destroyed
+        // one, so the search has a voxel to start from.
+        for (let quadIndex = quadIndexOf(10, WALL_THICKNESS - 1, "x", "+", 3); quadIndex >= 0;
+            quadIndex = faceBehind(quadIndex))
+        {
+            expect(isQuadVisible(room, quadIndex)).toBe(true);
+            forceSelect(room, quadIndex);
 
-        await ClientVoxelManager.onRemoveVoxelBlockSignalReceived(
-            new RemoveVoxelBlockSignal(ROOM_ID, quadIndex));
+            await ClientVoxelManager.onRemoveVoxelBlockSignalReceived(
+                new RemoveVoxelBlockSignal(ROOM_ID, quadIndex));
 
-        expectSomethingVisibleIsSelected();
+            expect(isQuadVisible(room, quadIndex)).toBe(false);
+            expectSomethingVisibleIsSelected();
+        }
     });
 
     it("keeps a selection when a remote client moves the selected block away", async () => {
@@ -439,27 +472,18 @@ describe("reselection after another client's voxel edit", () => {
     });
 
     it("takes the server's answer to a refused edit: the block as the server holds it, or none", async () => {
-        // The user shrank a block the server would not let them touch: their own copy is half a block,
-        // repainted, and the answer is the block whole in its own textures (see ServerVoxelManager).
-        const HALF = 0b0101;
+        // The user put up a block where the server already held one: their own copy has the textures they
+        // gave it, and the answer is the block in the server's (see ServerVoxelManager).
         buildPillar(room, 10, 5, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
         const first = quadIndexOf(10, 5, "y", "-", COLLISION_LAYER_MIN);
-        VoxelUpdateUtil.setVoxelBlockShape(undefined, room.voxelGrid.voxels, first, HALF);
         forceSelect(room, quadIndexOf(10, 5, "y", "+", COLLISION_LAYER_MIN));
 
         await ClientVoxelManager.onAddVoxelBlockSignalReceived(
-            new AddVoxelBlockSignal(ROOM_ID, first, [7, 6, 5, 4, 3, 2], VOXEL_BLOCK_SHAPE_WHOLE));
-        expect(VoxelQueryUtil.getVoxelBlockShapeAt(room.voxelGrid.voxels, 10, 5, COLLISION_LAYER_MIN))
-            .toBe(VOXEL_BLOCK_SHAPE_WHOLE);
+            new AddVoxelBlockSignal(ROOM_ID, first, [7, 6, 5, 4, 3, 2]));
+        expect(VoxelQueryUtil.isVoxelBlockPresentAt(room.voxelGrid.voxels, 10, 5, COLLISION_LAYER_MIN)).toBe(true);
         expect(Array.from(room.voxelQuads.subarray(first, first + 6))).toEqual([7, 6, 5, 4, 3, 2]);
         // The same face is still there to be selected.
         expect(currentSelection(room)!.quadIndex).toBe(quadIndexOf(10, 5, "y", "+", COLLISION_LAYER_MIN));
-
-        // And the other way about: a block of another shape than the user's copy has.
-        await ClientVoxelManager.onAddVoxelBlockSignalReceived(
-            new AddVoxelBlockSignal(ROOM_ID, first, [7, 6, 5, 4, 3, 2], HALF));
-        expect(VoxelQueryUtil.getVoxelBlockShapeAt(room.voxelGrid.voxels, 10, 5, COLLISION_LAYER_MIN)).toBe(HALF);
-        expectSomethingVisibleIsSelected();
 
         // A block the user put up where the server holds none is taken away again, and taking away one
         // that is not there (the answer to a move whose block was gone) changes nothing.
@@ -529,9 +553,10 @@ describe("reselection after another client's voxel edit", () => {
         buildPillar(room, 10, 10, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
         forceSelect(room, quadIndexOf(10, 10, "y", "+", COLLISION_LAYER_MIN));
 
-        for (let row = 9; row <= 11; ++row)
+        // As far around as a search from it looks.
+        for (let row = 10 - SEARCH_REACH; row <= 10 + SEARCH_REACH; ++row)
         {
-            for (let col = 9; col <= 11; ++col)
+            for (let col = 10 - SEARCH_REACH; col <= 10 + SEARCH_REACH; ++col)
             {
                 for (let layer = COLLISION_LAYER_MIN; layer <= COLLISION_LAYER_MAX; ++layer)
                 {
@@ -551,8 +576,8 @@ describe("reselection after another client's voxel edit", () => {
 describe("reselection after the selected object goes away", () => {
     it("selects a nearby quad when a canvas on a free-standing wall is removed", () => {
         buildPillar(room, 10, 5);
-        // A canvas hangs off the +x face of that wall, half a unit out from it.
-        expect(VoxelQuadSelection.trySelectBestQuadNearby({x: 6, y: 1.25, z: 10.5})).toBe(true);
+        // A canvas hung on the +x face of that wall, about the middle of its layer 2.
+        expect(VoxelQuadSelection.trySelectBestQuadNearby(middleOf(quadIndexOf(10, 5, "x", "+", 2)))).toBe(true);
         expectSomethingVisibleIsSelected();
     });
 
@@ -568,19 +593,21 @@ describe("reselection after the selected object goes away", () => {
     });
 
     it("selects a nearby quad when a canvas is walled in by voxels on every side", () => {
-        for (let row = 9; row <= 11; ++row)
-            for (let col = 9; col <= 11; ++col)
+        // As far around as a search from it looks.
+        for (let row = 10 - SEARCH_REACH; row <= 10 + SEARCH_REACH; ++row)
+            for (let col = 10 - SEARCH_REACH; col <= 10 + SEARCH_REACH; ++col)
                 buildPillar(room, row, col);
 
-        expect(VoxelQuadSelection.trySelectBestQuadNearby({x: 10.5, y: 1.25, z: 10.5})).toBe(true);
+        expect(VoxelQuadSelection.trySelectBestQuadNearby({x: VoxelQueryUtil.getWorldXAtVoxelColCenter(10), y: 1.25,
+            z: VoxelQueryUtil.getWorldZAtVoxelRowCenter(10)})).toBe(true);
         expectSomethingVisibleIsSelected();
     });
 
     it("gives up rather than misfiring when an object sits off the far edge of the grid", () => {
         // A position on the grid's outer boundary finds no voxel, so the search fails; unreachable today
         // (wall attachments can't be placed outside the room).
-        expect(VoxelQuadSelection.trySelectBestQuadNearby({x: NUM_VOXEL_COLS, y: 1.25, z: 10.5})).toBe(false);
-        expect(VoxelQuadSelection.trySelectBestQuadNearby({x: 10.5, y: 1.25, z: NUM_VOXEL_ROWS})).toBe(false);
+        expect(VoxelQuadSelection.trySelectBestQuadNearby({x: MAX_ROOM_X, y: 1.25, z: 10.5})).toBe(false);
+        expect(VoxelQuadSelection.trySelectBestQuadNearby({x: 10.5, y: 1.25, z: MAX_ROOM_Z})).toBe(false);
     });
 });
 
@@ -590,30 +617,56 @@ describe("reselection after the selected object goes away", () => {
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 
-/** A canvas (a cell across and two layers tall unless given a size), added the way a user's own is. */
-function addCanvas(pos: Vec3, dir: Vec3, scale: Vec3 = {x: 1, y: 1, z: 1}): AddObjectSignal
+/** A canvas so many world units across and tall, added the way a user's own is. */
+function addCanvas(pos: Vec3, dir: Vec3, width: number, height: number): AddObjectSignal
 {
     const canvas = new AddObjectSignal(room.id, actingUser.id, actingUser.userName, canvasTypeIndex, "canvas",
-        new ObjectTransform(pos, dir, scale), {});
+        new ObjectTransform(pos, dir, {x: width, y: height, z: 1}), {});
     expect(ObjectUpdateUtil.addObject(actingUser, room, canvas)).toBe(true);
     return canvas;
 }
 
-/** On the +x face of a pillar at (10, 5), its middle at the given height, with the camera looking straight at it. */
+/** The point at a height on the +x face of the pillar at (10, 5), midway across it. */
+function onPillarFace(y: number): Vec3
+{
+    return {...middleOf(quadIndexOf(10, 5, "x", "+", COLLISION_LAYER_MIN)), y};
+}
+
+/** Puts the camera before that face, looking straight at it. */
+function placeCameraBeforePillar()
+{
+    const face = onPillarFace(1.5);
+    placeCameraAt(face.x + 6, face.y, face.z);
+}
+
+/**
+ * On the +x face of a pillar at (10, 5), as wide as the pillar and two layers tall, its middle at the given
+ * height, with the camera looking straight at it.
+ */
 function hangCanvasOnPillar(y: number = 1.5): AddObjectSignal
 {
     buildPillar(room, 10, 5);
-    placeCameraAt(12, 1.5, 10.5);
-    return addCanvas({x: 6, y, z: 10.5}, {x: 1, y: 0, z: 0});
+    placeCameraBeforePillar();
+    return addCanvas(onPillarFace(y), {x: 1, y: 0, z: 0}, VOXEL_CELL_SIZE, 1);
 }
 
-/** Over the whole of a wall three cells long, from layer 2 to layer 5: every face of it within reach. */
-function coverWallWithCanvas(): AddObjectSignal
+/**
+ * Over one side of a wall standing free, a world unit thick and three long, from layer 2 to layer 5: the whole
+ * of it, or all but so many blocks at its higher-z end. Every face of the wall near the canvas lies under it; the
+ * wall's ends and its far side are clear, and lie just past what a search from the canvas counts as near (see
+ * AUTO_SELECTION_MAX_DISTANCE).
+ */
+function coverWallWithCanvas(numRowsLeftClear: number = 0): AddObjectSignal
 {
-    for (const row of [9, 10, 11])
-        buildPillar(room, row, 5);
-    placeCameraAt(12, 1.5, 10.5);
-    return addCanvas({x: 6, y: 2, z: 10.5}, {x: 1, y: 0, z: 0}, {x: 3, y: 2, z: 1});
+    const numRows = 3 * VOXELS_PER_WORLD_UNIT, firstRow = 10 - numRows / 2;
+    for (let row = firstRow; row < firstRow + numRows; ++row)
+    {
+        for (let col = 5 - VOXELS_PER_WORLD_UNIT + 1; col <= 5; ++col)
+            buildPillar(room, row, col);
+    }
+    placeCameraBeforePillar();
+    const width = (numRows - numRowsLeftClear) * VOXEL_CELL_SIZE;
+    return addCanvas({...onPillarFace(2), z: firstRow * VOXEL_CELL_SIZE + 0.5 * width}, {x: 1, y: 0, z: 0}, width, 2);
 }
 
 function coverageOf(selection: SelectionSnapshot): number
@@ -692,10 +745,10 @@ describe("what an automatic selection settles on", () => {
     });
 
     it("holds a quad asked for by name to the same test as the rest", () => {
-        // A lone block with a canvas lying on its top.
+        // A lone block with a canvas lying on its top, all over it.
         buildPillar(room, 10, 5, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
         const top = quadIndexOf(10, 5, "y", "+", COLLISION_LAYER_MIN);
-        addCanvas({x: 5.5, y: 0.5, z: 10.5}, {x: 0, y: 1, z: 0});
+        addCanvas(middleOf(top), {x: 0, y: 1, z: 0}, VOXEL_CELL_SIZE, VOXEL_CELL_SIZE);
 
         expect(VoxelQuadSelection.trySelectBestQuad(voxelAt(room, 10, 5), top)).toBe(true);
 
@@ -717,6 +770,23 @@ describe("what an automatic selection settles on", () => {
 
         expect(objectSelectionObservable.peek()?.gameObject).toBe(gameObject);
         expect(VoxelQuadSelection.isSelected()).toBe(false);
+    });
+
+    it("takes a clear face a world unit along the wall before an object nearer by", async () => {
+        // The canvas stops a unit short of the wall's end, and the search looks from under it, a unit and a
+        // quarter before the middle of the first face left clear.
+        const canvas = coverWallWithCanvas(VOXELS_PER_WORLD_UNIT);
+        clientHolds(gameObjectOf(canvas));
+        const canvasEndZ = canvas.transform.pos.z + 0.5 * canvas.transform.scale.x;
+        const firstClearRow = VoxelQueryUtil.getVoxelRowFromWorldZ(canvasEndZ);
+
+        expect(VoxelQuadSelection.trySelectBestQuadNearby({...canvas.transform.pos, z: canvasEndZ - 0.75})).toBe(true);
+        await settle();
+
+        expect(ObjectSelection.isSelected()).toBe(false);
+        const after = currentSelection(room)!;
+        expect([after.row, after.col, `${after.orientation}${after.axis}`]).toEqual([firstClearRow, 5, "+x"]);
+        expect(coverageOf(after)).toBe(0);
     });
 
     it("takes a quad further off, a clear one first, when the user may select no object near there", async () => {

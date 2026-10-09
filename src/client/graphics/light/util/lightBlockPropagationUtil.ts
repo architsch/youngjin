@@ -1,25 +1,27 @@
 import Vec3 from "../../../../shared/math/types/vec3";
+import Voxel from "../../../../shared/voxel/types/voxel";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
-import { NUM_COLLISION_LAYERS, NUM_VOXEL_SUB_BLOCKS, NUM_VOXEL_SUB_COLS, NUM_VOXEL_SUB_ROWS, VOXEL_SUB_BLOCK_SIZE }
+import { NUM_COLLISION_LAYERS, NUM_VOXEL_BLOCKS, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, VOXEL_CELL_SIZE }
     from "../../../../shared/system/sharedConstants";
 import { LIGHT_SOURCE_MIN_DISTANCE } from "../../../system/clientConstants";
 import LightSource from "../types/lightSource";
 
-// Spreads light through open sub-blocks into plain buffers (no three.js, so it is testable without a GPU). A
+// Spreads light through open blocks into plain buffers (no three.js, so it is testable without a GPU). A
 // flood fill finds what a light reaches and how far round its light goes to get there; brightness comes from
 // straight-line distance, so lamps are balls, not diamonds. The fill is bounded by the light's range.
 
-// Sub-block index strides: layer fastest, then sub-column, then sub-row (see VoxelQueryUtil).
+// Block index strides: layer fastest, then column, then row (see VoxelQueryUtil.getVoxelBlockIndex).
 const COL_STRIDE = NUM_COLLISION_LAYERS;
-const ROW_STRIDE = NUM_VOXEL_SUB_COLS * NUM_COLLISION_LAYERS;
+const ROW_STRIDE = NUM_VOXEL_COLS * NUM_COLLISION_LAYERS;
 
-// Distances are counted in half sub-blocks. Every sub-block's centre lies on that grid, and so does a lamp
-// (see ObjectAttachmentUtil), so a squared distance is a whole number and brightness a table lookup.
-const HALF_SUB_BLOCK = 0.5 * VOXEL_SUB_BLOCK_SIZE;
-const MAX_SQUARED_DISTANCE = 4 * (NUM_VOXEL_SUB_COLS * NUM_VOXEL_SUB_COLS +
-    NUM_VOXEL_SUB_ROWS * NUM_VOXEL_SUB_ROWS + NUM_COLLISION_LAYERS * NUM_COLLISION_LAYERS);
+// Distances are counted in half blocks, a block being a cube (see VOXEL_CELL_SIZE). Every block's centre
+// lies on that grid, and so does a lamp (see ObjectAttachmentUtil), so a squared distance is a whole number
+// and brightness a table lookup.
+const HALF_BLOCK = 0.5 * VOXEL_CELL_SIZE;
+const MAX_SQUARED_DISTANCE = 4 * (NUM_VOXEL_COLS * NUM_VOXEL_COLS +
+    NUM_VOXEL_ROWS * NUM_VOXEL_ROWS + NUM_COLLISION_LAYERS * NUM_COLLISION_LAYERS);
 
-// A point touches one sub-block along each axis, or two where it lies between them.
+// A point touches one block along each axis, or two where it lies between them.
 const MAX_SEEDS = 8;
 
 const UNREACHED = -1;
@@ -27,17 +29,17 @@ const UNREACHED = -1;
 // Reused across lights and recomputations to avoid GC churn during lamp drags.
 export class LightPropagationScratch
 {
-    // Steps along the open route from the light; UNREACHED for a sub-block this light has not reached.
-    stepsFromLight = new Int32Array(NUM_VOXEL_SUB_BLOCKS).fill(UNREACHED);
+    // Steps along the open route from the light; UNREACHED for a block this light has not reached.
+    stepsFromLight = new Int32Array(NUM_VOXEL_BLOCKS).fill(UNREACHED);
 
-    // The fill's queue. Every step is as long as any other, so a sub-block enters it once, and what it
+    // The fill's queue. Every step is as long as any other, so a block enters it once, and what it
     // holds when the fill ends is everything the light reached.
-    pendingSubBlockIndices = new Int32Array(NUM_VOXEL_SUB_BLOCKS);
+    pendingBlockIndices = new Int32Array(NUM_VOXEL_BLOCKS);
 
-    // The sub-blocks the fill starts from (see startFill).
-    seedSubCols = new Int32Array(MAX_SEEDS);
+    // The blocks the fill starts from (see startFill).
+    seedCols = new Int32Array(MAX_SEEDS);
     seedLayers = new Int32Array(MAX_SEEDS);
-    seedSubRows = new Int32Array(MAX_SEEDS);
+    seedRows = new Int32Array(MAX_SEEDS);
 
     // Brightness and direction weight by squared distance, as far as the range named goes. Lamps often
     // share their range and decay, so the tables are kept from one light to the next.
@@ -50,9 +52,28 @@ export class LightPropagationScratch
 
 const LightBlockPropagationUtil =
 {
+    // Which blocks light can be in: the cell layers holding none. Worked out once per recomputation, since
+    // every pass asks it of every block.
+    markOpen(voxels: Voxel[] | undefined, outIsOpen: Uint8Array)
+    {
+        if (voxels == undefined)
+        {
+            outIsOpen.fill(0);
+            return;
+        }
+        // A voxel's blocks are contiguous, and voxels come in the order of their blocks.
+        for (let voxelIndex = 0; voxelIndex < voxels.length; ++voxelIndex)
+        {
+            const blockLayerMask = voxels[voxelIndex].blockLayerMask;
+            const firstBlockIndex = voxelIndex * NUM_COLLISION_LAYERS;
+            for (let layer = 0; layer < NUM_COLLISION_LAYERS; ++layer)
+                outIsOpen[firstBlockIndex + layer] = ((blockLayerMask >> layer) & 1) ^ 1;
+        }
+    },
+
     // Adds one light into outLight (linear RGB) and outFlux (direction weighted by arrived luminance, so
-    // the brighter lamp wins where lamps meet), 3 entries per sub-block. Weighting by luminance also keeps
-    // |flux| <= luminance, which LightBlockMap relies on. isOpen: see LightSubBlockUtil.markOpen.
+    // the brighter lamp wins where lamps meet), 3 entries per block. Weighting by luminance also keeps
+    // |flux| <= luminance, which LightBlockMap relies on. isOpen: see markOpen.
     accumulate(isOpen: Uint8Array, light: LightSource,
         outLight: Float32Array, outFlux: Float32Array,
         scratch: LightPropagationScratch): void
@@ -62,36 +83,36 @@ const LightBlockPropagationUtil =
         if (numSeeds === 0)
             return;
 
-        const lightX = toHalfSubBlocks(light.worldPos.x);
-        const lightY = toHalfSubBlocks(light.worldPos.y);
-        const lightZ = toHalfSubBlocks(light.worldPos.z);
+        const lightX = toHalfBlocks(light.worldPos.x);
+        const lightY = toHalfBlocks(light.worldPos.y);
+        const lightZ = toHalfBlocks(light.worldPos.z);
 
         prepareTables(light.range, light.decay, scratch);
         const numTableEntries = scratch.numTableEntries;
         const brightnessBySquaredDistance = scratch.brightnessBySquaredDistance;
         const directionBySquaredDistance = scratch.directionBySquaredDistance;
         const stepsFromLight = scratch.stepsFromLight;
-        const pendingSubBlockIndices = scratch.pendingSubBlockIndices;
+        const pendingBlockIndices = scratch.pendingBlockIndices;
 
-        const rangeInHalfSubBlocks = light.range / HALF_SUB_BLOCK;
-        const rangeSquared = rangeInHalfSubBlocks * rangeInHalfSubBlocks;
+        const rangeInHalfBlocks = light.range / HALF_BLOCK;
+        const rangeSquared = rangeInHalfBlocks * rangeInHalfBlocks;
         const luminance = getLightLuminance(light.colorR, light.colorG, light.colorB);
 
         let queueHead = 0;
         let queueTail = numSeeds;
         while (queueHead < queueTail)
         {
-            const subBlockIndex = pendingSubBlockIndices[queueHead++];
-            const steps = stepsFromLight[subBlockIndex];
-            const layer = subBlockIndex % NUM_COLLISION_LAYERS;
-            const columnIndex = (subBlockIndex - layer) / NUM_COLLISION_LAYERS;
-            const subCol = columnIndex % NUM_VOXEL_SUB_COLS;
-            const subRow = (columnIndex - subCol) / NUM_VOXEL_SUB_COLS;
+            const blockIndex = pendingBlockIndices[queueHead++];
+            const steps = stepsFromLight[blockIndex];
+            const layer = blockIndex % NUM_COLLISION_LAYERS;
+            const columnIndex = (blockIndex - layer) / NUM_COLLISION_LAYERS;
+            const col = columnIndex % NUM_VOXEL_COLS;
+            const row = (columnIndex - col) / NUM_VOXEL_COLS;
 
-            // From the light to this sub-block's centre.
-            const offsetX = 2 * subCol + 1 - lightX;
+            // From the light to this block's centre.
+            const offsetX = 2 * col + 1 - lightX;
             const offsetY = 2 * layer + 1 - lightY;
-            const offsetZ = 2 * subRow + 1 - lightZ;
+            const offsetZ = 2 * row + 1 - lightZ;
             const squaredDistance = offsetX * offsetX + offsetY * offsetY + offsetZ * offsetZ;
 
             // Past the tables is past the range, where only what the fill started from can lie.
@@ -101,14 +122,14 @@ const LightBlockPropagationUtil =
                 // is relative to the shortest grid (Manhattan) route, since even an empty room's grid
                 // route exceeds the straight line.
                 let brightness = brightnessBySquaredDistance[squaredDistance];
-                const shortestOpenRoute = getShortestOpenRoute(subCol, layer, subRow, numSeeds, scratch);
+                const shortestOpenRoute = getShortestOpenRoute(col, layer, row, numSeeds, scratch);
                 if (shortestOpenRoute < steps)
                 {
                     const detour = shortestOpenRoute / steps;
                     brightness *= detour * detour;
                 }
 
-                const lightIndex = subBlockIndex * 3;
+                const lightIndex = blockIndex * 3;
                 outLight[lightIndex    ] += light.colorR * brightness;
                 outLight[lightIndex + 1] += light.colorG * brightness;
                 outLight[lightIndex + 2] += light.colorB * brightness;
@@ -126,64 +147,64 @@ const LightBlockPropagationUtil =
             // short where the falloff is still strong, producing a hard diamond edge. A neighbour's squared
             // distance follows from this one's, its offset along one axis being 2 more or less.
             const nextSteps = steps + 1;
-            if (subCol > 0 && squaredDistance + 4 - 4 * offsetX < rangeSquared)
-                queueTail = reach(subBlockIndex - COL_STRIDE, nextSteps, isOpen, scratch, queueTail);
-            if (subCol < NUM_VOXEL_SUB_COLS - 1 && squaredDistance + 4 + 4 * offsetX < rangeSquared)
-                queueTail = reach(subBlockIndex + COL_STRIDE, nextSteps, isOpen, scratch, queueTail);
-            if (subRow > 0 && squaredDistance + 4 - 4 * offsetZ < rangeSquared)
-                queueTail = reach(subBlockIndex - ROW_STRIDE, nextSteps, isOpen, scratch, queueTail);
-            if (subRow < NUM_VOXEL_SUB_ROWS - 1 && squaredDistance + 4 + 4 * offsetZ < rangeSquared)
-                queueTail = reach(subBlockIndex + ROW_STRIDE, nextSteps, isOpen, scratch, queueTail);
+            if (col > 0 && squaredDistance + 4 - 4 * offsetX < rangeSquared)
+                queueTail = reach(blockIndex - COL_STRIDE, nextSteps, isOpen, scratch, queueTail);
+            if (col < NUM_VOXEL_COLS - 1 && squaredDistance + 4 + 4 * offsetX < rangeSquared)
+                queueTail = reach(blockIndex + COL_STRIDE, nextSteps, isOpen, scratch, queueTail);
+            if (row > 0 && squaredDistance + 4 - 4 * offsetZ < rangeSquared)
+                queueTail = reach(blockIndex - ROW_STRIDE, nextSteps, isOpen, scratch, queueTail);
+            if (row < NUM_VOXEL_ROWS - 1 && squaredDistance + 4 + 4 * offsetZ < rangeSquared)
+                queueTail = reach(blockIndex + ROW_STRIDE, nextSteps, isOpen, scratch, queueTail);
             if (layer > 0 && squaredDistance + 4 - 4 * offsetY < rangeSquared)
-                queueTail = reach(subBlockIndex - 1, nextSteps, isOpen, scratch, queueTail);
+                queueTail = reach(blockIndex - 1, nextSteps, isOpen, scratch, queueTail);
             if (layer < NUM_COLLISION_LAYERS - 1 && squaredDistance + 4 + 4 * offsetY < rangeSquared)
-                queueTail = reach(subBlockIndex + 1, nextSteps, isOpen, scratch, queueTail);
+                queueTail = reach(blockIndex + 1, nextSteps, isOpen, scratch, queueTail);
         }
 
         // Reset only what was reached, so cleanup costs the light's reach, not the room size.
         for (let i = 0; i < queueTail; ++i)
-            stepsFromLight[pendingSubBlockIndices[i]] = UNREACHED;
+            stepsFromLight[pendingBlockIndices[i]] = UNREACHED;
     },
 }
 
-// Onto the grid a lamp stands on (see HALF_SUB_BLOCK), which also takes out the error a stored position
+// Onto the grid a lamp stands on (see HALF_BLOCK), which also takes out the error a stored position
 // decodes with.
-function toHalfSubBlocks(worldCoordinate: number): number
+function toHalfBlocks(worldCoordinate: number): number
 {
-    return Math.round(worldCoordinate / HALF_SUB_BLOCK);
+    return Math.round(worldCoordinate / HALF_BLOCK);
 }
 
-// Puts the open sub-blocks a light's outlet touches into the fill, and returns how many: the one it is
-// the centre of, or those it lies between (the middle of a lamp a cell wide lies between two). So a lamp
-// partly built over still lights from what is left open in front of it.
+// Puts the open blocks a light's outlet touches into the fill, and returns how many: the one it is
+// the centre of, or those it lies between (the middle of a lamp two blocks wide lies between two). So a
+// lamp partly built over still lights from what is left open in front of it.
 function startFill(isOpen: Uint8Array, outletPos: Vec3, scratch: LightPropagationScratch): number
 {
-    const outletX = toHalfSubBlocks(outletPos.x);
-    const outletY = toHalfSubBlocks(outletPos.y);
-    const outletZ = toHalfSubBlocks(outletPos.z);
+    const outletX = toHalfBlocks(outletPos.x);
+    const outletY = toHalfBlocks(outletPos.y);
+    const outletZ = toHalfBlocks(outletPos.z);
 
-    // A centre is an odd count of half sub-blocks along its axis; an even one lies between two sub-blocks.
+    // A centre is an odd count of half blocks along its axis; an even one lies between two blocks.
     // Clamped to the room, which leaves a light outside it nothing to start from.
-    const lastSubRow = Math.min(NUM_VOXEL_SUB_ROWS - 1, Math.floor(0.5 * outletZ));
-    const lastSubCol = Math.min(NUM_VOXEL_SUB_COLS - 1, Math.floor(0.5 * outletX));
+    const lastRow = Math.min(NUM_VOXEL_ROWS - 1, Math.floor(0.5 * outletZ));
+    const lastCol = Math.min(NUM_VOXEL_COLS - 1, Math.floor(0.5 * outletX));
     const lastLayer = Math.min(NUM_COLLISION_LAYERS - 1, Math.floor(0.5 * outletY));
 
     let numSeeds = 0;
-    for (let subRow = Math.max(0, Math.floor(0.5 * (outletZ - 1))); subRow <= lastSubRow; ++subRow)
+    for (let row = Math.max(0, Math.floor(0.5 * (outletZ - 1))); row <= lastRow; ++row)
     {
-        for (let subCol = Math.max(0, Math.floor(0.5 * (outletX - 1))); subCol <= lastSubCol; ++subCol)
+        for (let col = Math.max(0, Math.floor(0.5 * (outletX - 1))); col <= lastCol; ++col)
         {
             for (let layer = Math.max(0, Math.floor(0.5 * (outletY - 1))); layer <= lastLayer; ++layer)
             {
-                const subBlockIndex = VoxelQueryUtil.getVoxelSubBlockIndex(subRow, subCol, layer);
-                if (isOpen[subBlockIndex] === 0)
+                const blockIndex = VoxelQueryUtil.getVoxelBlockIndex(row, col, layer);
+                if (isOpen[blockIndex] === 0)
                     continue;
 
-                scratch.seedSubCols[numSeeds] = subCol;
+                scratch.seedCols[numSeeds] = col;
                 scratch.seedLayers[numSeeds] = layer;
-                scratch.seedSubRows[numSeeds] = subRow;
-                scratch.stepsFromLight[subBlockIndex] = 0;
-                scratch.pendingSubBlockIndices[numSeeds] = subBlockIndex;
+                scratch.seedRows[numSeeds] = row;
+                scratch.stepsFromLight[blockIndex] = 0;
+                scratch.pendingBlockIndices[numSeeds] = blockIndex;
                 ++numSeeds;
             }
         }
@@ -191,26 +212,26 @@ function startFill(isOpen: Uint8Array, outletPos: Vec3, scratch: LightPropagatio
     return numSeeds;
 }
 
-// Takes a sub-block into the fill if light can be in it and has not got there yet. Returns the queue's end.
-function reach(subBlockIndex: number, steps: number, isOpen: Uint8Array,
+// Takes a block into the fill if light can be in it and has not got there yet. Returns the queue's end.
+function reach(blockIndex: number, steps: number, isOpen: Uint8Array,
     scratch: LightPropagationScratch, queueTail: number): number
 {
-    if (isOpen[subBlockIndex] === 0 || scratch.stepsFromLight[subBlockIndex] !== UNREACHED)
+    if (isOpen[blockIndex] === 0 || scratch.stepsFromLight[blockIndex] !== UNREACHED)
         return queueTail;
-    scratch.stepsFromLight[subBlockIndex] = steps;
-    scratch.pendingSubBlockIndices[queueTail] = subBlockIndex;
+    scratch.stepsFromLight[blockIndex] = steps;
+    scratch.pendingBlockIndices[queueTail] = blockIndex;
     return queueTail + 1;
 }
 
-// Steps to a sub-block from the nearest of those the fill started from, with nothing in the way.
-function getShortestOpenRoute(subCol: number, layer: number, subRow: number, numSeeds: number,
+// Steps to a block from the nearest of those the fill started from, with nothing in the way.
+function getShortestOpenRoute(col: number, layer: number, row: number, numSeeds: number,
     scratch: LightPropagationScratch): number
 {
     let shortest = Number.POSITIVE_INFINITY;
     for (let seed = 0; seed < numSeeds; ++seed)
     {
-        const route = Math.abs(subCol - scratch.seedSubCols[seed]) +
-            Math.abs(layer - scratch.seedLayers[seed]) + Math.abs(subRow - scratch.seedSubRows[seed]);
+        const route = Math.abs(col - scratch.seedCols[seed]) +
+            Math.abs(layer - scratch.seedLayers[seed]) + Math.abs(row - scratch.seedRows[seed]);
         if (route < shortest)
             shortest = route;
     }
@@ -226,15 +247,15 @@ function prepareTables(range: number, decay: number, scratch: LightPropagationSc
     scratch.tableDecay = decay;
 
     // As far as the range, which is as far as the fill spreads.
-    const rangeInHalfSubBlocks = range / HALF_SUB_BLOCK;
+    const rangeInHalfBlocks = range / HALF_BLOCK;
     scratch.numTableEntries = 1 + Math.min(MAX_SQUARED_DISTANCE,
-        Math.ceil(rangeInHalfSubBlocks * rangeInHalfSubBlocks));
+        Math.ceil(rangeInHalfBlocks * rangeInHalfBlocks));
     for (let squaredDistance = 0; squaredDistance < scratch.numTableEntries; ++squaredDistance)
     {
         // Clamped: point-light falloff is infinite at zero distance.
-        const distance = Math.max(LIGHT_SOURCE_MIN_DISTANCE, HALF_SUB_BLOCK * Math.sqrt(squaredDistance));
+        const distance = Math.max(LIGHT_SOURCE_MIN_DISTANCE, HALF_BLOCK * Math.sqrt(squaredDistance));
         scratch.brightnessBySquaredDistance[squaredDistance] = getDistanceAttenuation(distance, range, decay);
-        scratch.directionBySquaredDistance[squaredDistance] = HALF_SUB_BLOCK / distance;
+        scratch.directionBySquaredDistance[squaredDistance] = HALF_BLOCK / distance;
     }
 }
 

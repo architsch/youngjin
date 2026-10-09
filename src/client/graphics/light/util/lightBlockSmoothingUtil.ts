@@ -1,8 +1,8 @@
-import { NUM_COLLISION_LAYERS, NUM_VOXEL_SUB_BLOCKS, NUM_VOXEL_SUB_COLS, NUM_VOXEL_SUB_ROWS }
+import { NUM_COLLISION_LAYERS, NUM_VOXEL_BLOCKS, NUM_VOXEL_COLS, NUM_VOXEL_ROWS }
     from "../../../../shared/system/sharedConstants";
 
-// Smooths the light field across neighbouring sub-blocks. Linear texture filtering has slope
-// discontinuities at sub-block boundaries that read as facets. Separable per-axis sweeps, which visit
+// Smooths the light field across neighbouring blocks. Linear texture filtering has slope
+// discontinuities at block boundaries that read as facets. Separable per-axis sweeps, which visit
 // only the columns of layers that light is in or beside (most of a room is usually dark).
 
 // Narrow tent kernel; wider would visibly shift light away from its lamp.
@@ -16,16 +16,16 @@ const NORMALIZE_BY_NUM_NEIGHBORS = [
     1 / (CENTER_WEIGHT + 2 * NEIGHBOR_WEIGHT),
 ];
 
-// Strides follow the sub-block index layout: layer fastest, then sub-column, then sub-row. So a column
-// (one sub-column of one sub-row) is a contiguous run of layers.
+// Strides follow the block index layout (see VoxelQueryUtil.getVoxelBlockIndex): layer fastest, then
+// column, then row. So a column (one voxel's blocks) is a contiguous run of layers.
 const LAYER_STRIDE = 1;
 const COL_STRIDE = NUM_COLLISION_LAYERS;
-const ROW_STRIDE = NUM_VOXEL_SUB_COLS * NUM_COLLISION_LAYERS;
-const NUM_COLUMNS = NUM_VOXEL_SUB_COLS * NUM_VOXEL_SUB_ROWS;
+const ROW_STRIDE = NUM_VOXEL_COLS * NUM_COLLISION_LAYERS;
+const NUM_COLUMNS = NUM_VOXEL_COLS * NUM_VOXEL_ROWS;
 
 // Reused across runs (this runs on every lamp drag).
-const lightScratch = new Float32Array(NUM_VOXEL_SUB_BLOCKS * 3);
-const fluxScratch = new Float32Array(NUM_VOXEL_SUB_BLOCKS * 3);
+const lightScratch = new Float32Array(NUM_VOXEL_BLOCKS * 3);
+const fluxScratch = new Float32Array(NUM_VOXEL_BLOCKS * 3);
 
 // The columns each sweep visits: those holding light, then those beside them along x as well (a sweep
 // carries light one column over), then those beside these along z.
@@ -35,15 +35,15 @@ const columnsForRowSweep = new Uint8Array(NUM_COLUMNS);
 
 const LightBlockSmoothingUtil =
 {
-    // In place; 3 entries per sub-block. The direction field is smoothed in step with the light: it would
+    // In place; 3 entries per block. The direction field is smoothed in step with the light: it would
     // otherwise band, and its length must stay within the light's (see LightBlockPropagationUtil), which
-    // also means it is dark wherever the light is. isOpen: see LightSubBlockUtil.markOpen.
+    // also means it is dark wherever the light is. isOpen: see LightBlockPropagationUtil.markOpen.
     smooth(light: Float32Array, flux: Float32Array, isOpen: Uint8Array)
     {
         if (!markLitColumns(light, columnsForLayerSweep))
             return;
-        spreadColumns(columnsForLayerSweep, columnsForColSweep, 1, NUM_VOXEL_SUB_COLS);
-        spreadColumns(columnsForColSweep, columnsForRowSweep, NUM_VOXEL_SUB_COLS, NUM_VOXEL_SUB_ROWS);
+        spreadColumns(columnsForLayerSweep, columnsForColSweep, 1, NUM_VOXEL_COLS);
+        spreadColumns(columnsForColSweep, columnsForRowSweep, NUM_VOXEL_COLS, NUM_VOXEL_ROWS);
 
         // A sweep writes only the columns it visits, so its target must already be dark everywhere else.
         // The fields are; the scratch still holds the last run's light.
@@ -53,9 +53,9 @@ const LightBlockSmoothingUtil =
         sweep(light, lightScratch, flux, fluxScratch, isOpen, columnsForLayerSweep,
             LAYER_STRIDE, NUM_COLLISION_LAYERS);
         sweep(lightScratch, light, fluxScratch, flux, isOpen, columnsForColSweep,
-            COL_STRIDE, NUM_VOXEL_SUB_COLS);
+            COL_STRIDE, NUM_VOXEL_COLS);
         sweep(light, lightScratch, flux, fluxScratch, isOpen, columnsForRowSweep,
-            ROW_STRIDE, NUM_VOXEL_SUB_ROWS);
+            ROW_STRIDE, NUM_VOXEL_ROWS);
         light.set(lightScratch);
         flux.set(fluxScratch);
     },
@@ -98,7 +98,7 @@ function spreadColumns(columns: Uint8Array, outColumns: Uint8Array, columnStride
     }
 }
 
-// One axis of the kernel, over both fields at once (they share every test of openness). Solid sub-blocks
+// One axis of the kernel, over both fields at once (they share every test of openness). Solid blocks
 // are excluded and weights renormalized, so light never crosses walls while smoothing.
 function sweep(sourceLight: Float32Array, targetLight: Float32Array,
     sourceFlux: Float32Array, targetFlux: Float32Array, isOpen: Uint8Array, columns: Uint8Array,
@@ -110,14 +110,14 @@ function sweep(sourceLight: Float32Array, targetLight: Float32Array,
         if (columns[column] === 0)
             continue;
 
-        const firstSubBlockIndex = column * NUM_COLLISION_LAYERS;
+        const firstBlockIndex = column * NUM_COLLISION_LAYERS;
         // Along x or z a column lies at one position; along y each of its layers is one.
-        const columnPosition = Math.floor(firstSubBlockIndex / stride) % axisLength;
+        const columnPosition = Math.floor(firstBlockIndex / stride) % axisLength;
         for (let layer = 0; layer < NUM_COLLISION_LAYERS; ++layer)
         {
-            const subBlockIndex = firstSubBlockIndex + layer;
-            const at = subBlockIndex * 3;
-            if (isOpen[subBlockIndex] === 0)
+            const blockIndex = firstBlockIndex + layer;
+            const at = blockIndex * 3;
+            if (isOpen[blockIndex] === 0)
             {
                 targetLight[at] = 0;
                 targetLight[at + 1] = 0;
@@ -138,7 +138,7 @@ function sweep(sourceLight: Float32Array, targetLight: Float32Array,
             // Prevents wrapping across the grid edge.
             const positionAlongAxis = (stride === LAYER_STRIDE) ? layer : columnPosition;
             let numNeighbors = 0;
-            if (positionAlongAxis > 0 && isOpen[subBlockIndex - stride] !== 0)
+            if (positionAlongAxis > 0 && isOpen[blockIndex - stride] !== 0)
             {
                 const lower = at - entryStride;
                 lightR += sourceLight[lower] * NEIGHBOR_WEIGHT;
@@ -149,7 +149,7 @@ function sweep(sourceLight: Float32Array, targetLight: Float32Array,
                 fluxZ += sourceFlux[lower + 2] * NEIGHBOR_WEIGHT;
                 ++numNeighbors;
             }
-            if (positionAlongAxis < axisLength - 1 && isOpen[subBlockIndex + stride] !== 0)
+            if (positionAlongAxis < axisLength - 1 && isOpen[blockIndex + stride] !== 0)
             {
                 const upper = at + entryStride;
                 lightR += sourceLight[upper] * NEIGHBOR_WEIGHT;

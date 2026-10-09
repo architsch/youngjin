@@ -29,9 +29,8 @@ import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import ColorUtil from "../../../src/shared/math/util/colorUtil";
 import LampLightUtil, { MAX_LAMP_INTENSITY, MAX_LAMP_RANGE, MIN_LAMP_INTENSITY, MIN_LAMP_RANGE }
     from "../../../src/shared/graphics/light/util/lampLightUtil";
-import { COLLISION_LAYER_MIN, GRAVITY_SPEED, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL,
-    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, INSTANCED_EMISSIVE_MATERIAL_ID,
-    LIGHT_COLOR_PALETTE_NAME, UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
+import { GRAVITY_SPEED, INITIAL_MULTI_PLAYER_ENTRANCE_POS, INSTANCED_EMISSIVE_MATERIAL_ID,
+    LIGHT_COLOR_PALETTE_NAME, NUM_VOXEL_ROWS, UNIT_VEC3, VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 import { PLAYER_HEIGHT } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import PhysicsManager from "../../../src/shared/physics/physicsManager";
 import PhysicsColliderStateUtil from "../../../src/shared/physics/util/physicsColliderStateUtil";
@@ -63,9 +62,9 @@ function makeLampSignal(room: Room, sourceUser: User, objectId: string = "new-la
     return new AddObjectSignal(room.id, sourceUser.id, sourceUser.userName, lampTypeIndex, objectId,
         new ObjectTransform(
             {
-                x: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL + colOffset + 0.5,
+                x: INITIAL_MULTI_PLAYER_ENTRANCE_POS.x + colOffset,
                 y: 2.25,
-                z: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
+                z: INITIAL_MULTI_PLAYER_ENTRANCE_POS.z,
             },
             {x: 0, y: 0, z: -1}, {...UNIT_VEC3}));
 }
@@ -195,8 +194,7 @@ describe("lamp permissions", () => {
                 expect(room.objectGroup.getCategoryCount(DoorObjectTypeConfig.category)).toBe(1);
 
                 const door = DoorObjectTypeConfig.util.makeEntranceDoor(room.id,
-                    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL + 4,
-                    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, COLLISION_LAYER_MIN);
+                    {...INITIAL_MULTI_PLAYER_ENTRANCE_POS, x: INITIAL_MULTI_PLAYER_ENTRANCE_POS.x + 4});
                 door.objectId = "another-door";
                 door.sourceUserID = ADMIN.id;
                 expect(ObjectUpdateUtil.canAddObject(ADMIN, room, door)).toBe(true);
@@ -237,10 +235,11 @@ describe("lamp permissions", () => {
             users: [userAtCenter("hub")],
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
-                const lampCol = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL - 5;
+                // Over the lamp's stretch of the wall, and the floor before it.
+                const lampCol = Math.floor((INITIAL_MULTI_PLAYER_ENTRANCE_POS.x - 5) / VOXEL_CELL_SIZE);
+                const firstWallRow = Math.floor(INITIAL_MULTI_PLAYER_ENTRANCE_POS.z / VOXEL_CELL_SIZE);
                 room.voxelGrid.restrictedZones = [new RestrictedZone(
-                    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 3, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
-                    lampCol - 2, lampCol + 2)];
+                    firstWallRow - 6, NUM_VOXEL_ROWS - 1, lampCol - 5, lampCol + 4)];
 
                 expect(ObjectUpdateUtil.canAddObject(MEMBER, room,
                     makeLampSignal(room, MEMBER))).toBe(false);

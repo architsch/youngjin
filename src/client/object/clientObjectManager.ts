@@ -20,7 +20,6 @@ import Vec3 from "../../shared/math/types/vec3";
 import { ObjectMetadataKey } from "../../shared/object/types/objectMetadataKey";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 import Room from "../../shared/room/types/room";
-import VoxelQueryUtil from "../../shared/voxel/util/voxelQueryUtil";
 import ClientObjectUtil from "./util/clientObjectUtil";
 import RoomLoadProgressUtil from "../system/util/roomLoadProgressUtil";
 import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
@@ -102,7 +101,7 @@ const ClientObjectManager =
 
         // Declares the spawn count up front so the loading bar measures real progress.
         RoomLoadProgressUtil.expectUnits(
-            (voxelsSpawned ? 0 : room.voxelGrid.voxels.length) +
+            (voxelsSpawned ? 0 : ClientObjectUtil.getNumVoxelObjects()) +
             Object.keys(room.objectById).length + 1);
 
         // Voxels persist across rooms: created on the first load, then rebound to each new grid.
@@ -344,24 +343,14 @@ const ClientObjectManager =
     },
 }
 
-// Rebinds persisted voxel objects to the new room's voxels at the same (row, col) and re-stamps each
-// voxel's gameObjectId (which quad edits rely on).
+// Rebinds persisted voxel objects to the new room's voxels, each to its own patch of them, which re-stamps
+// each voxel's gameObjectId (which quad edits rely on).
 const resyncVoxelsToCurrentGrid = (room: Room): void =>
 {
     for (const obj of Object.values(gameObjects))
     {
-        if (obj.params.objectTypeIndex !== voxelTypeIndex)
-            continue;
-        const voxelObj = obj as VoxelGameObject;
-        const cell = voxelObj.getVoxel();
-        const newVoxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, cell.row, cell.col);
-        if (!newVoxel)
-        {
-            console.error(`resyncVoxelsToCurrentGrid :: voxel not found in new room (row = ${cell.row}, col = ${cell.col})`);
-            continue;
-        }
-        voxelObj.setVoxel(newVoxel, room.voxelGrid.voxels);
-        voxelObj.refreshAllQuads();
+        if (obj.params.objectTypeIndex === voxelTypeIndex)
+            (obj as VoxelGameObject).rebindVoxels(room.voxelGrid.voxels);
     }
 }
 

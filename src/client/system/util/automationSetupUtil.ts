@@ -26,13 +26,11 @@ import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import DoorObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import CanvasObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
 import { PROP_IMAGE_SUBFOLDER } from "../../../shared/object/types/objectTypeConfig/propObjectTypeConfig";
-import { PLAYER_HEIGHT } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN,
     FOG_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME, MAX_RESTRICTED_ZONES, MAX_ROOM_Y,
     NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS,
-    SANDBOX_SINGLE_PLAYER_MODE, VOXEL_BLOCK_SHAPE_EMPTY,
-    VOXEL_BLOCK_SHAPE_WHOLE, VOXEL_SUB_BLOCK_SIZE } from "../../../shared/system/sharedConstants";
-import VoxelBlockShapeUtil from "../../../shared/voxel/util/voxelBlockShapeUtil";
+    SANDBOX_SINGLE_PLAYER_MODE } from "../../../shared/system/sharedConstants";
 import ObjectScaleUtil from "../../../shared/object/util/objectScaleUtil";
 import RoomLightingUtil from "../../graphics/light/util/roomLightingUtil";
 import RoomPrefs from "../../../shared/room/types/roomPrefs";
@@ -62,6 +60,9 @@ const PLAYER_LAYER_COUNT = Math.ceil(PLAYER_HEIGHT / COLLISION_LAYER_HEIGHT);
 // Default cap on reported spots (nearest first).
 const DEFAULT_SPOT_LIMIT = 40;
 
+// Keeps a footprint edge lying on a cell boundary out of the cell beyond it.
+const FOOTPRINT_EDGE_EPSILON = 0.01;
+
 const directionTemp = new THREE.Vector3();
 
 function requireRoom()
@@ -87,15 +88,11 @@ function standingHeight(collisionLayer: number): number
     return 0.5 * PLAYER_HEIGHT + (collisionLayer - COLLISION_LAYER_MIN) * COLLISION_LAYER_HEIGHT;
 }
 
-// Headroom from this layer up, plus support (room floor or a whole block, so the footing is the cell's own).
-function canStandAt(voxel: Voxel, collisionLayer: number): boolean
+// Whether a cell is clear a player's height up from this layer.
+function hasHeadroom(voxel: Voxel, collisionLayer: number): boolean
 {
     if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer + PLAYER_LAYER_COUNT - 1 > COLLISION_LAYER_MAX)
         return false;
-    if (collisionLayer > COLLISION_LAYER_MIN &&
-        !VoxelQueryUtil.isVoxelBlockWhole(voxel, collisionLayer - 1))
-        return false;
-
     for (let layer = collisionLayer; layer < collisionLayer + PLAYER_LAYER_COUNT; ++layer)
     {
         if (VoxelQueryUtil.isVoxelBlockPresent(voxel, layer))
@@ -104,16 +101,50 @@ function canStandAt(voxel: Voxel, collisionLayer: number): boolean
     return true;
 }
 
+// Headroom from this layer up, plus support (room floor or a block, so the footing is the cell's own).
+function cellIsStandable(voxel: Voxel, collisionLayer: number): boolean
+{
+    return hasHeadroom(voxel, collisionLayer) &&
+        (collisionLayer == COLLISION_LAYER_MIN || VoxelQueryUtil.isVoxelBlockPresent(voxel, collisionLayer - 1));
+}
+
 // Standable layers in a cell, lowest first (a cell can offer both storeys).
-function standingLayersAt(voxel: Voxel): number[]
+function standingLayersIn(voxel: Voxel): number[]
 {
     const layers: number[] = [];
     for (let layer = COLLISION_LAYER_MIN; layer <= COLLISION_LAYER_MAX; ++layer)
     {
-        if (canStandAt(voxel, layer))
+        if (cellIsStandable(voxel, layer))
             layers.push(layer);
     }
     return layers;
+}
+
+// The layers a player can stand on with his middle at a point, lowest first: the standable ones of the
+// cell there, with headroom in every cell he is wide enough to reach into (he is wider than one).
+function standingLayersAt(voxels: Voxel[], x: number, z: number): number[]
+{
+    const voxel = VoxelQueryUtil.getVoxel(voxels,
+        VoxelQueryUtil.getVoxelRowFromWorldZ(z), VoxelQueryUtil.getVoxelColFromWorldX(x));
+    if (voxel == undefined)
+        return [];
+
+    const reach = PLAYER_RADIUS_XZ - FOOTPRINT_EDGE_EPSILON;
+    const minRow = VoxelQueryUtil.getVoxelRowFromWorldZ(z - reach), maxRow = VoxelQueryUtil.getVoxelRowFromWorldZ(z + reach);
+    const minCol = VoxelQueryUtil.getVoxelColFromWorldX(x - reach), maxCol = VoxelQueryUtil.getVoxelColFromWorldX(x + reach);
+    return standingLayersIn(voxel).filter(layer =>
+    {
+        for (let row = minRow; row <= maxRow; ++row)
+        {
+            for (let col = minCol; col <= maxCol; ++col)
+            {
+                const reached = VoxelQueryUtil.getVoxel(voxels, row, col);
+                if (reached == undefined || !hasHeadroom(reached, layer))
+                    return false;
+            }
+        }
+        return true;
+    });
 }
 
 // Player facing (the negated transform direction, since players face -Z; see FORWARD_DIR). Read from
@@ -244,9 +275,9 @@ function faceTransformOf(voxels: Voxel[], voxel: Voxel, face: string, collisionL
 
     const dimensions = VoxelQueryUtil.getVoxelQuadTransformDimensions(voxels, quadIndex, true);
     return {
-        x: voxel.col + 0.5 + dimensions.offsetX,
+        x: VoxelQueryUtil.getWorldXAtVoxelColCenter(voxel.col) + dimensions.offsetX,
         y: dimensions.offsetY,
-        z: voxel.row + 0.5 + dimensions.offsetZ,
+        z: VoxelQueryUtil.getWorldZAtVoxelRowCenter(voxel.row) + dimensions.offsetZ,
         dir: {x: dimensions.dirX, y: dimensions.dirY, z: dimensions.dirZ} as Vec3,
     };
 }
@@ -263,7 +294,7 @@ function doorFloorY(voxels: Voxel[], row: number, col: number, face: string): nu
         return undefined;
 
     // Lowest surface with a full doorway of headroom.
-    for (const layer of standingLayersAt(inFront))
+    for (const layer of standingLayersIn(inFront))
     {
         const floorY = (layer - COLLISION_LAYER_MIN) * COLLISION_LAYER_HEIGHT;
         if (floorY + DOOR_FOOTPRINT_HEIGHT <= MAX_ROOM_Y)
@@ -272,40 +303,35 @@ function doorFloorY(voxels: Voxel[], row: number, col: number, face: string): nu
     return undefined;
 }
 
-// Blocks covering any part of an attachment's face, one sub-block out from it (a shrunk block's inner face
-// looks into its own cell). Stricter than the game's rule (partly clear is fine for building, bad for a
-// photo). Returns the blockers so the caller can move.
+// Blocks covering any part of an attachment's face, one block out from it. Stricter than the game's rule
+// (partly clear is fine for building, bad for a photo). Returns the blockers so the caller can move.
 function blockersInFrontOf(voxels: Voxel[], colliderState: {hitbox: {center: Vec3, halfSize: Vec3}},
     dir: Vec3): {row: number, col: number, layer: number}[]
 {
     const {center, halfSize} = colliderState.hitbox;
     const {normal} = Geometry3DUtil.getAxisFacingBasis(dir);
-    // Along the facing, the sub-block just in front; across it, every sub-block the face spans.
-    const range = (size: number, axis: "x" | "y" | "z") => (normal[axis] != 0)
-        ? {first: Math.floor((center[axis] + 0.01 * normal[axis]) / size),
-            last: Math.floor((center[axis] + 0.01 * normal[axis]) / size)}
-        : {first: Math.floor((center[axis] - halfSize[axis] + 0.01) / size),
-            last: Math.floor((center[axis] + halfSize[axis] - 0.01) / size)};
-    const subCols = range(VOXEL_SUB_BLOCK_SIZE, "x");
-    const layers = range(COLLISION_LAYER_HEIGHT, "y");
-    const subRows = range(VOXEL_SUB_BLOCK_SIZE, "z");
+    // Along the facing, the block just in front; across it, every block the face spans.
+    const range = (toIndex: (v: number) => number, axis: "x" | "y" | "z") => (normal[axis] != 0)
+        ? {first: toIndex(center[axis] + FOOTPRINT_EDGE_EPSILON * normal[axis]),
+            last: toIndex(center[axis] + FOOTPRINT_EDGE_EPSILON * normal[axis])}
+        : {first: toIndex(center[axis] - halfSize[axis] + FOOTPRINT_EDGE_EPSILON),
+            last: toIndex(center[axis] + halfSize[axis] - FOOTPRINT_EDGE_EPSILON)};
+    const cols = range(VoxelQueryUtil.getVoxelColFromWorldX, "x");
+    const layers = range(VoxelQueryUtil.getVoxelCollisionLayerFromWorldY, "y");
+    const rows = range(VoxelQueryUtil.getVoxelRowFromWorldZ, "z");
 
     const blockers: {row: number, col: number, layer: number}[] = [];
-    for (let subRow = subRows.first; subRow <= subRows.last; ++subRow)
+    for (let row = rows.first; row <= rows.last; ++row)
     {
-        for (let subCol = subCols.first; subCol <= subCols.last; ++subCol)
+        for (let col = cols.first; col <= cols.last; ++col)
         {
-            const row = Math.floor(0.5 * subRow), col = Math.floor(0.5 * subCol);
             const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);
             if (voxel == undefined)
                 continue;
             for (let layer = Math.max(COLLISION_LAYER_MIN, layers.first);
                 layer <= Math.min(COLLISION_LAYER_MAX, layers.last); ++layer)
             {
-                // The middle of the sub-block, across its cell.
-                const fillsSubBlock = VoxelBlockShapeUtil.containsPoint(VoxelQueryUtil.getVoxelBlockShape(voxel, layer),
-                    0.5 * (subCol - 2 * col + 0.5), 0.5 * (subRow - 2 * row + 0.5));
-                if (fillsSubBlock && !blockers.some(b => b.row == row && b.col == col && b.layer == layer))
+                if (VoxelQueryUtil.isVoxelBlockPresent(voxel, layer))
                     blockers.push({row, col, layer});
             }
         }
@@ -365,15 +391,12 @@ const AutomationSetupUtil =
                 {
                     for (let col = 0; col < NUM_VOXEL_COLS; ++col)
                     {
-                        const voxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, col);
-                        if (voxel == undefined)
-                            continue;
-                        for (const layer of standingLayersAt(voxel))
+                        const x = VoxelQueryUtil.getWorldXAtVoxelColCenter(col);
+                        const z = VoxelQueryUtil.getWorldZAtVoxelRowCenter(row);
+                        for (const layer of standingLayersAt(room.voxelGrid.voxels, x, z))
                         {
                             if (options?.collisionLayer != undefined && layer != options.collisionLayer)
                                 continue;
-                            const x = col + 0.5;
-                            const z = row + 0.5;
                             spots.push({
                                 x, z, row, col,
                                 collisionLayer: layer,
@@ -399,10 +422,11 @@ const AutomationSetupUtil =
                 if (voxel == undefined)
                     throw new Error(`(${x}, ${z}) is outside the room.`);
 
-                const layers = standingLayersAt(voxel);
+                const layers = standingLayersAt(room.voxelGrid.voxels, x, z);
                 if (layers.length == 0)
                     throw new Error(`Nothing can stand at (${x}, ${z}) — cell [row ${row}, col ${col}] ` +
-                        `is solid or has no headroom. Ask standingSpots({near: {x, z}}) for the nearest place that is not.`);
+                        `is solid or has no headroom, or a block stands within a player's width of the spot. ` +
+                        `Ask standingSpots({near: {x, z}}) for the nearest place that is clear.`);
 
                 let collisionLayer = options?.collisionLayer;
                 if (collisionLayer == undefined)
@@ -524,24 +548,16 @@ const AutomationSetupUtil =
                     return cameraModeObservable.peek().type;
                 },
 
-                // Adds a box of blocks in one texture (corner cell + size), each of one shape (see
-                // VoxelBlockShapeUtil), whole unless given. No permission validation.
+                // Adds a box of blocks in one texture (corner cell + size). No permission validation.
                 addBlocks: (region: {row: number, col: number, collisionLayer: number,
-                    rows?: number, cols?: number, layers?: number, textureIndex?: number, shape?: number}) =>
+                    rows?: number, cols?: number, layers?: number, textureIndex?: number}) =>
                 {
                     const room = requireSandboxRoom("Standing blocks up");
-                    const shape = region.shape ?? VOXEL_BLOCK_SHAPE_WHOLE;
-                    if (shape == VOXEL_BLOCK_SHAPE_EMPTY || !VoxelBlockShapeUtil.isValid(shape))
-                    {
-                        throw new Error(`${region.shape} is not a shape a block can have: one bit per quarter of ` +
-                            `the cell (1 = low x and z, 2 = high x, 4 = high z, 8 = both high), set where the ` +
-                            `block fills it, for the whole cell (15), a half (3, 12, 5, 10) or a quarter.`);
-                    }
                     const box = regionOf(region);
                     ClientVoxelManager.addVoxelBlocksByChunk(room, box.rowStart, box.colStart,
                         box.numRows, box.numCols, box.layerStart, box.layerEnd,
-                        uniformFaces(region.textureIndex ?? 0), false, shape);
-                    return {...box, shape};
+                        uniformFaces(region.textureIndex ?? 0), false);
+                    return box;
                 },
 
                 // Takes the same kind of box away again.

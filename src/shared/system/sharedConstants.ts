@@ -246,23 +246,31 @@ export const PROCEDURAL_VOXEL_TEXTURE_MARGIN = 8; // in pixels
 
 // Voxel Grid
 
-export const NUM_VOXEL_ROWS = 32;
-export const NUM_VOXEL_COLS = 32;
+export const NUM_VOXEL_ROWS = 64;
+export const NUM_VOXEL_COLS = 64;
+
+// How wide a voxel is along x and along z, in world units (see VoxelQueryUtil for telling one from the other).
+// As wide as a layer is high, so a block is a cube.
+export const VOXEL_CELL_SIZE = 0.5;
+
+// How far the room reaches along x and z, in world units (MAX_ROOM_Y is its height).
+export const MAX_ROOM_X = NUM_VOXEL_COLS * VOXEL_CELL_SIZE;
+export const MAX_ROOM_Z = NUM_VOXEL_ROWS * VOXEL_CELL_SIZE;
+
+// How thick room generation leaves a wall, in voxels: a world unit, as deep as a door needs behind it and as
+// wide as a texture tile. Generated rooms are laid out in steps of it (see RoomVolumeUtil).
+export const GENERATED_WALL_THICKNESS = 2;
+
+// The size of a physics voxel (see PhysicsVoxel): wide enough that most colliders lie in one or two, and a
+// storey high, so the objects of each storey are kept apart.
+export const PHYSICS_VOXEL_SIZE_XZ = 2;
+export const PHYSICS_VOXEL_SIZE_Y = 4;
+export const NUM_PHYSICS_VOXELS_X = Math.ceil(MAX_ROOM_X / PHYSICS_VOXEL_SIZE_XZ);
+export const NUM_PHYSICS_VOXELS_Y = Math.ceil(MAX_ROOM_Y / PHYSICS_VOXEL_SIZE_Y);
+export const NUM_PHYSICS_VOXELS_Z = Math.ceil(MAX_ROOM_Z / PHYSICS_VOXEL_SIZE_XZ);
 
 // Voxel blocks per room (one layer of one voxel); the buffer size for whole-volume computations.
 export const NUM_VOXEL_BLOCKS = NUM_VOXEL_ROWS * NUM_VOXEL_COLS * NUM_COLLISION_LAYERS;
-
-// A block's shape: which of its cell layer's four half-cell sub-blocks it fills, one bit each
-// (bit = x half + 2 * z half). Only rectangles are shapes (see VoxelBlockShapeUtil).
-export const VOXEL_BLOCK_SHAPE_EMPTY = 0b0000;
-export const VOXEL_BLOCK_SHAPE_WHOLE = 0b1111;
-
-// Sub-blocks along the room's two sides and in all of it: the grid for what has to be worked out as finely
-// as block shapes go (see LightBlockMap). A sub-block is a cube, half a cell across and one layer tall.
-export const NUM_VOXEL_SUB_ROWS = 2 * NUM_VOXEL_ROWS;
-export const NUM_VOXEL_SUB_COLS = 2 * NUM_VOXEL_COLS;
-export const NUM_VOXEL_SUB_BLOCKS = NUM_VOXEL_SUB_ROWS * NUM_VOXEL_SUB_COLS * NUM_COLLISION_LAYERS;
-export const VOXEL_SUB_BLOCK_SIZE = 0.5;
 
 export const NUM_VOXEL_QUADS_PER_COLLISION_LAYER = 6; // corresponding to 6 sides of a 3D box: [-y, +y, -x, +x, -z, +z]
 export const NUM_VOXEL_QUADS_PER_VOXEL =
@@ -270,7 +278,7 @@ export const NUM_VOXEL_QUADS_PER_VOXEL =
 
 // Quads per room; bounds quadIndex. The signal field carrying quadIndex must hold this range (an overflow
 // would silently clamp onto the wrong quad); tests assert it.
-export const NUM_VOXEL_QUADS_PER_ROOM = NUM_VOXEL_QUADS_PER_VOXEL * NUM_VOXEL_ROWS * NUM_VOXEL_COLS; // 100352
+export const NUM_VOXEL_QUADS_PER_ROOM = NUM_VOXEL_QUADS_PER_VOXEL * NUM_VOXEL_ROWS * NUM_VOXEL_COLS; // 401408
 
 // Max zones per room, sized for readability on the plan (see @docs/gameplay/restricted_zone.md).
 export const MAX_RESTRICTED_ZONES = 16;
@@ -286,11 +294,12 @@ export const MAX_ENCODED_VOXEL_GRID_BYTES = 1 /* format version */ +
     1 /* how many restricted zones follow */ +
     MAX_RESTRICTED_ZONES * ENCODED_RESTRICTED_ZONE_BYTES;
 
-// Upper bound on simultaneously visible quads (the voxel mesh's size; see VoxelQuadInstanceUtil). Shrunk
-// blocks can show nearly every quad there is: quarters standing in opposite corners of their cells from
-// one layer to the next hide nothing of each other. So the mesh is sized for every quad. Only buffers pay
-// for that, since an instance that was never lent is not drawn.
-export const MAX_VISIBLE_VOXEL_QUADS_PER_ROOM = NUM_VOXEL_QUADS_PER_ROOM;
+// Upper bound on simultaneously visible quads (the voxel mesh's size; see VoxelQuadInstanceUtil): one per
+// solid/open boundary, so no room layout can exceed it.
+export const MAX_VISIBLE_VOXEL_QUADS_PER_ROOM =
+    (NUM_COLLISION_LAYERS + 1) * NUM_VOXEL_ROWS * NUM_VOXEL_COLS +
+    (NUM_VOXEL_COLS - 1) * NUM_VOXEL_ROWS * NUM_COLLISION_LAYERS +
+    (NUM_VOXEL_ROWS - 1) * NUM_VOXEL_COLS * NUM_COLLISION_LAYERS; // 198656
 
 // Room Population
 
@@ -304,13 +313,11 @@ export const ROOM_ALMOST_FULL_MARGIN = 4;
 
 // Gameplay
 
-// Initial entrance door cell for generated multiplayer rooms (admins may move it later, so don't read
-// this as the current entrance). Single-player rooms set their own.
-export const INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL = 16;
-export const INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW = 31;
-
-// Legacy doorway height, used by conversions of older rooms.
-export const INITIAL_MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS = 5;
+// Where a generated multiplayer room's entrance door stands, in world units: the middle of its foot, on the
+// room's side of the boundary wall (admins may move it later, so don't read this as the current entrance).
+// Single-player rooms set their own.
+export const INITIAL_MULTI_PLAYER_ENTRANCE_POS: Vec3 =
+    {x: 16.5, y: 0, z: MAX_ROOM_Z - GENERATED_WALL_THICKNESS * VOXEL_CELL_SIZE};
 
 // UI
 

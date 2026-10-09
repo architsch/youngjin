@@ -24,12 +24,13 @@ import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import EncodableByteString from "../../../src/shared/networking/types/encodableByteString";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
-import { MAX_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
+import { MAX_ENCODED_VOXEL_GRID_BYTES, MAX_ROOM_X, MAX_ROOM_Y, MAX_ROOM_Z,
     COLLISION_LAYER_HEIGHT, LIGHT_COLOR_PALETTE_NAME, UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
 
 const FIXTURE_DIR = path.join(__dirname, "../fixtures/legacyVoxelGrids");
 const ROOM_ID = "object-migration-room";
-const SCRATCH_BUFFER_BYTES = 256 * 1024;
+// Room for the largest grid there is, and the few objects a test stores after it.
+const SCRATCH_BUFFER_BYTES = MAX_ENCODED_VOXEL_GRID_BYTES + 64 * 1024;
 
 // Room height before the second storey (the fixtures' original range).
 const LEGACY_MAX_ROOM_Y = 4;
@@ -107,8 +108,8 @@ describe("object transform ranges and migration", () => {
         // The ranges are the format: outgrowing one needs a new ObjectGroup version and converter.
         const bounds = ObjectTransform.encodableBounds;
         expect(MAX_ROOM_Y).toBeLessThanOrEqual(bounds.maxY);
-        expect(NUM_VOXEL_COLS).toBeLessThanOrEqual(bounds.maxX);
-        expect(NUM_VOXEL_ROWS).toBeLessThanOrEqual(bounds.maxZ);
+        expect(MAX_ROOM_X).toBeLessThanOrEqual(bounds.maxX);
+        expect(MAX_ROOM_Z).toBeLessThanOrEqual(bounds.maxZ);
     });
 
     it("the ranges no longer track the room's own dimensions", () => {

@@ -151,6 +151,9 @@ async function swing(page, {azimuthDeg = 0, polarDeg, zoom} = {}, options = {})
     }, options);
 }
 
+// A cell of the room's grid is half a world unit wide (the game's VOXEL_CELL_SIZE), as a layer is high.
+const CELL_SIZE = 0.5;
+
 // ─── The sandbox: building the set instead of finding one ───────────────
 // An empty single-player room with a free camera, where a local run builds what it needs instead of
 // going and finding it (see playtest/sandboxRunner.js). Only the set is staged: everything standing in
@@ -183,9 +186,8 @@ async function cameraMode(page, type, options = {})
 
 /**
  * Stands a box of blocks: a corner cell (`row`, `col`, `collisionLayer`) and a size (`rows`, `cols`,
- * `layers`, each defaulting to one), finished in `textureIndex` of the room's pack. Each fills its whole
- * cell unless given a `shape`: one bit per quarter of the cell it fills (1 = low x and z, 2 = high x,
- * 4 = high z, 8 = both high), so 5 and 10 are the halves across x, 3 and 12 those across z.
+ * `layers`, each defaulting to one), finished in `textureIndex` of the room's pack. A cell is half a world
+ * unit wide and a layer as high, so a block is a cube of that size: two rows or columns to the world unit.
  */
 const addBlocks = (page, region) => callSandbox(page, "addBlocks", region);
 
@@ -245,9 +247,12 @@ const canvasFrameStyles = (page) => callSandbox(page, "canvasFrameStyles");
  * `face` is `-x`, `+x`, `-z` or `+z` for a wall, where `collisionLayer` is the height on it, or `+y` / `-y`
  * for the top / underside of the block on `collisionLayer`; below the lowest layer is the room's floor, above
  * the highest its ceiling. Doors and labels go on walls only. A door ignores the layer and stands on the floor
- * unless given a `y`. Each goes up at the size the game adds it at (a lamp one layer tall; a canvas a whole block,
- * or one layer where only that fits on the spot; a prop its image's size; see `resizeObject` for others). Metadata uses the game's key names (`pictures` lists the images, with
- * the type that shows each); returns the object's id.
+ * unless given a `y`. Each goes up at the size the game adds it at (a lamp a world unit wide and one layer
+ * tall, or one block square where only that fits; a canvas a world unit square, then one layer tall, then one
+ * block square, whichever first fits on the spot; a prop its image's size; see `resizeObject` for others). It is
+ * centred on the cell's face, so one a world unit wide reaches half a cell past the cell on either side and
+ * needs wall behind all of that (a door, two cells deep). Metadata uses the game's key names (`pictures` lists
+ * the images, with the type that shows each); returns the object's id.
  */
 const addObject = (page, spec) => callSandbox(page, "addObject", spec);
 
@@ -269,7 +274,7 @@ const removeObject = (page, objectId) => callSandbox(page, "removeObject", objec
  * Replaces the room's restricted zones (full-height cell rectangles) and returns them; with no argument it
  * only reports:
  *
- *   restrictedZones([{rowMin: 14, rowMax: 21, colMin: 15, colMax: 22}])
+ *   restrictedZones([{rowMin: 28, rowMax: 43, colMin: 30, colMax: 45}])
  *
  * **Outlines are drawn in edit mode only.** Lay the zones, then `ctx.clickId("gameModeToggleSwitch")`;
  * the sandbox camera ignores the selection, so the composed frame survives.
@@ -280,13 +285,14 @@ const restrictedZones = (page, zones) => callSandbox(page, "restrictedZones", zo
 const clearSandbox = (page) => callSandbox(page, "clear");
 
 /**
- * Stands a room: four walls around a floor rectangle. `open` names sides to omit (`["-z"]` for a room the
- * camera looks into), `layers` is wall height in collision layers, and `floorTextureIndex` lays a floor of
- * another material. Returns the inside rectangle.
+ * Stands a room: four walls around a floor rectangle, given in cells. `open` names sides to omit (`["-z"]`
+ * for a room the camera looks into), `layers` is wall height in collision layers, `thickness` is how many
+ * cells thick the walls are (two by default: a door needs a wall that deep behind it), and
+ * `floorTextureIndex` lays a floor of another material. Returns the inside rectangle.
  */
 async function stage(page, spec)
 {
-    const {row, col, rows = 8, cols = 8, layers = 6,
+    const {row, col, rows = 16, cols = 16, layers = 6, thickness = 2,
         wallTextureIndex = 0, floorTextureIndex, open = []} = spec;
 
     if (floorTextureIndex !== undefined)
@@ -298,10 +304,10 @@ async function stage(page, spec)
     // A laid floor is a block layer on the room's own, so the walls start above it.
     const base = floorTextureIndex === undefined ? 0 : 1;
     const walls = {
-        "-z": {row, col, rows: 1, cols},
-        "+z": {row: row + rows - 1, col, rows: 1, cols},
-        "-x": {row, col, rows, cols: 1},
-        "+x": {row, col: col + cols - 1, rows, cols: 1},
+        "-z": {row, col, rows: thickness, cols},
+        "+z": {row: row + rows - thickness, col, rows: thickness, cols},
+        "-x": {row, col, rows, cols: thickness},
+        "+x": {row, col: col + cols - thickness, rows, cols: thickness},
     };
     for (const [side, box] of Object.entries(walls))
     {
@@ -313,18 +319,18 @@ async function stage(page, spec)
     return {
         row, col, rows, cols,
         floorY: base * 0.5,
-        centre: {x: col + cols / 2, z: row + rows / 2},
-        inside: {row: row + 1, col: col + 1, rows: rows - 2, cols: cols - 2},
+        centre: {x: CELL_SIZE * (col + cols / 2), z: CELL_SIZE * (row + rows / 2)},
+        inside: {row: row + thickness, col: col + thickness, rows: rows - 2 * thickness, cols: cols - 2 * thickness},
 
-        // Each wall's cells and inward face. Hanging on the cell in front of a wall silently hangs on
-        // nothing, so spread one of these into `addObject` and choose only the position along the wall:
+        // Each wall's innermost cells and inward face. Hanging on the cell in front of a wall silently hangs
+        // on nothing, so spread one of these into `addObject` and choose only the position along the wall:
         //
         //   addObject({type: "Door", ...stage.walls["+z"], col: 15, metadata: {Label: "Cellar"}})
         walls: {
-            "-z": {row, face: "+z"},
-            "+z": {row: row + rows - 1, face: "-z"},
-            "-x": {col, face: "+x"},
-            "+x": {col: col + cols - 1, face: "-x"},
+            "-z": {row: row + thickness - 1, face: "+z"},
+            "+z": {row: row + rows - thickness, face: "-z"},
+            "-x": {col: col + thickness - 1, face: "+x"},
+            "+x": {col: col + cols - thickness, face: "-x"},
         },
     };
 }

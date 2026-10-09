@@ -2,10 +2,11 @@ import AABB3 from "../../math/types/aabb3";
 import BufferState from "../../networking/types/bufferState";
 import EncodableData from "../../networking/types/encodableData";
 import EncodableRawByteNumber from "../../networking/types/encodableRawByteNumber";
-import { MAX_ROOM_Y } from "../../system/sharedConstants";
+import { MAX_ROOM_Y, VOXEL_CELL_SIZE } from "../../system/sharedConstants";
 
-// A rectangle only the superuser may edit (see @docs/gameplay/restricted_zone.md). Rows and columns only,
-// since it always spans the full room height (a partial zone would leave the wall above unprotected).
+// A rectangle of voxels only the superuser may edit (see @docs/gameplay/restricted_zone.md). Rows and
+// columns only, since it always spans the full room height (a partial zone would leave the wall above
+// unprotected).
 export default class RestrictedZone extends EncodableData
 {
     rowMin: number;
@@ -27,17 +28,17 @@ export default class RestrictedZone extends EncodableData
     {
         return {
             center: {
-                x: 0.5 * (this.colMax + this.colMin + 1),
+                x: 0.5 * (this.colMax + this.colMin + 1) * VOXEL_CELL_SIZE,
                 y: 0.5 * MAX_ROOM_Y,
-                z: 0.5 * (this.rowMax + this.rowMin + 1),
+                z: 0.5 * (this.rowMax + this.rowMin + 1) * VOXEL_CELL_SIZE,
             },
             halfSize: {
                 // Inset horizontally, so the zone's outermost faces stay paintable, and the objects on
                 // them editable (an attached collider is thinner than the inset; see PhysicsColliderStateUtil).
-                x: 0.5 * (this.colMax - this.colMin + 1) - EDGE_MARGIN,
+                x: 0.5 * (this.colMax - this.colMin + 1) * VOXEL_CELL_SIZE - EDGE_MARGIN,
                 // Extended vertically to include the room's floor and ceiling tiles.
                 y: 0.5 * MAX_ROOM_Y + EDGE_MARGIN,
-                z: 0.5 * (this.rowMax - this.rowMin + 1) - EDGE_MARGIN,
+                z: 0.5 * (this.rowMax - this.rowMin + 1) * VOXEL_CELL_SIZE - EDGE_MARGIN,
             },
         };
     }

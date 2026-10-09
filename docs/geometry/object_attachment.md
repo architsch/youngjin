@@ -14,8 +14,8 @@ An attached object (a canvas, a prop, a [door](door_design.md), a lamp) rests on
 - **Trap**: a stored facing decodes slightly off its axis. Rendering builds the rotation from the frame rather than by `lookAt`, which would leave a floor or ceiling object's roll to that error.
 
 ## Quantization
-- Facings snap to the nearest axis. Positions across the face snap to a grid of a quarter voxel, so an object half a voxel across can sit flush with a block's edge:
-  - the face lies on its plane: a cell's side or, on the inner face of a shrunk block, the middle of a cell. A type that needs whole blocks takes a cell's side only;
+- Facings snap to the nearest axis. Positions across the face snap to a grid of half a block, so an object can be centred on a block or on the line between two:
+  - the face lies on its plane, a voxel's side;
   - horizontal centres snap to the grid;
   - vertically, the **bottom edge** snaps, not the centre, so an object stands on the grid whatever its height.
 - The collider is centred on the position, so a door's origin sits half its height above the floor.
@@ -28,13 +28,13 @@ An attached object (a canvas, a prop, a [door](door_design.md), a lamp) rests on
 Checked at the object's own size, not its type's (see [object_update.md](../networking/object_update.md)). A placement is valid when:
 - its type allows the facing;
 - the whole footprint lies inside the room. Its face may lie on the room's floor or ceiling, but nothing may reach past them;
-- everything **behind** the footprint is solid (the object is supported). This is asked of each half-cell part behind it, so a shrunk block holds only what lies on it. Past the layer range lie the room's own floor and ceiling, which count as solid;
-- a type that sets `wholeBlocksOnly` is supported by whole blocks alone: a door, since arrivals stand in the wall cell behind one;
-- at least one part **in front** of it is open (the object is not buried);
+- every block **behind** the footprint is there (the object is supported). Past the layer range lie the room's own floor and ceiling, which count as solid;
+- a type that sets `ObjectAttachmentConfig.supportDepth` needs them that deep: a door, since arrivals stand inside the wall behind one;
+- at least one cell layer **in front** of it is open (the object is not buried);
 - it does not overlap another attached object.
 
 ## Moving
-The selected object is moved by dragging the inside of its selection outline (`ObjectAttachmentEditGizmos`, on what `SelectionEditGizmoUtil` shares with a block's outline; see [game_mode.md](../gameplay/game_mode.md#editing-a-block-by-its-outline)). It goes to whichever drawn face is under the pointer (`ClientVoxelQueryUtil`: a grid walk that ignores objects and passes through blocks the orbit camera has hidden). A face its type may not face counts as its own face's plane instead.
+The selected object is moved by dragging the inside of its selection outline (`ObjectAttachmentEditGizmos`, on `SelectionEditGizmoUtil`; see [game_mode.md](../gameplay/game_mode.md#editing-a-selection-by-its-outline)). It goes to whichever drawn face is under the pointer (`ClientVoxelQueryUtil`: a grid walk that ignores objects and passes through blocks the orbit camera has hidden). A face its type may not face counts as its own face's plane instead.
 - On its own face, the spot taken hold of stays under the pointer. On another face, the object is centred on the pointer.
 - Where it doesn't fit (`ObjectAttachmentUtil`), it slides back toward where it stood on the same face, or takes the nearest spot within half its footprint on another. Failing both, it stays put.
 - Among the spots it would take, one whose whole face is in the open wins over a partly covered one, so a spot snapped half into the foot of a wall gives way to one beside it. A partly covered spot is still valid, and still taken when nothing clear is near.
@@ -42,17 +42,16 @@ The selected object is moved by dragging the inside of its selection outline (`O
 - While the object can't follow the pointer (held back on its own face, or with no place on another), the drag is blocked: the outline and its handles show red (`selectionEditBlockedObservable`).
 - With the pointer at the edge of the view, the orbit goes toward the place pointed at, though the object be held back, and turns to see an object that has turned onto another face (see [camera_control.md](../graphics/camera_control.md#camera-modes)).
 - Adding an object from a selected face uses the same search. A door instead stands on the storey floor.
-- A new object's size is its type's to choose, given which sizes that search finds a place for (`ObjectScalingConfig.getDefaultScale`). A canvas is a whole block wherever one fits, shifted up or down a wall if need be, and one layer tall where not (the side of a lone block). A prop's size is its image's and a lamp's is picked, both as they are added; the chooser dims those the search finds no place for.
+- A new object's size is its type's to choose, given which sizes that search finds a place for (`ObjectScalingConfig.getDefaultScale`). A canvas and a lamp take the largest of their starting sizes that fits, shifted along the wall if need be, down to one the side of a lone block holds. A prop's size is its image's and a lamp's can be picked, both as they are added; the chooser dims those the search finds no place for.
 - A drag previews locally, and the server hears one transform, on release.
 
 ## Resizing
 A type with an `ObjectScalingConfig` is resized by the outline's corner handles, one step of its scale at a time, unless its config turns the handles off.
-- A corner has a handle only while some other size fits from it, and none while the object is too far from the camera to be held by one (see [game_mode.md](../gameplay/game_mode.md#editing-a-block-by-its-outline)).
-- The corner opposite the dragged one holds exactly still, since sizes come in half-voxel steps and half of one is on the grid.
+- A corner has a handle only while some other size fits from it, and none while the object is too far from the camera to be held by one (see [game_mode.md](../gameplay/game_mode.md#editing-a-selection-by-its-outline)).
+- The corner opposite the dragged one holds exactly still, since sizes come in steps of a block's width and half of one is on the grid.
 - A size that doesn't fit is refused, and the object keeps the last size that did. The drag is blocked meanwhile, as it is past the type's limits.
 - A lamp has no handles. It comes in a few sizes, picked from its edit options and applied **where it stands** (`ObjectAttachmentUtil.getResizedInPlace`): the centre stays put across the face, except vertically, where the bottom edge does, so picking the earlier size puts it back exactly. The list offers only the sizes that fit there, asked by the same rule the server applies to the resulting transform.
 - Metadata can pin the scale (`ObjectScalingConfig.getFixedScale`): a prop is exactly its image's size, turned. It has no handles, and a change that moves the pin (a new image, a turn of a non-square one, a move that turns it) sends its transform inside the metadata signal (`SetObjectMetadataSignal.transform`), so the two are checked and applied as one edit. A new image's size is tried each way over where the prop stands (`ObjectAttachmentUtil.getResizeCandidates`): holding its bottom edge, then its top, then its centre, and likewise its left edge, right edge and centre. The first that fits is sent, and the image panel dims images that fit no way. A canvas is never pinned: its painting is fitted to whatever size it is.
 
 ## Changing the supporting block
-- A block that holds up attached objects cannot be removed on its own. The user can instead remove the block together with its attachments after confirming, but only when the user may remove every one of those attachments. A door, for example, keeps its wall for anyone but the room's superuser.
-- It can be given another shape only while every object on it still passes the placement rule. So a wall under a picture can be made thin on the picture's side, and a door's wall cannot be shrunk at all.
+- A block that holds up attached objects cannot be removed on its own, which goes for every block of the depth a type needs behind it. The user can instead remove the block together with its attachments after confirming, but only when the user may remove every one of those attachments. A door, for example, keeps its wall for anyone but the room's superuser.

@@ -6,7 +6,7 @@ Single-player rooms differ from these flows (see [single_player_mode.md](single_
 
 ## Where state lives
 - **`DBUser`**: last room, player metadata (shared across rooms), single-player mode, seen FTUE elements, account info and login bookkeeping.
-- **`DBRoom`**: owner and texture pack. Room contents are a separate blob.
+- **`DBRoom`**: owner and texture pack. Room contents are a separate blob, stored gzipped (`DBFileStorageUtil`); one stored before blobs were gzipped is read as it is.
 - There is no per-session snapshot. Players always spawn behind a door, and permissions are derived from user + room by `RoomValidationUtil`, so there is nothing to establish or restore per session.
 
 ## Choosing the room on connect
@@ -36,7 +36,7 @@ Entries expire after a short TTL.
 - **Stale sockets**: a periodic check cleans up sockets whose disconnect never fired, after a grace period. The same loop evicts expired buffer entries.
 - **Heartbeat**: aggressive ping and timeout settings detect dead connections quickly.
 - **Room auto-save**: dirty rooms are saved in rate-limited batches. When the last user leaves a Regular room, it is saved and then unloaded, after re-checking that it is still empty. Hubs stay loaded.
-- **Signal batching**: signals queue per connection and flush on a fixed interval, in the order queued whatever their types. Some types have a minimum send interval (e.g. room changes and commands). The server rejects signals that arrive too early, and the client retries a few times.
+- **Signal batching**: signals queue per connection and flush on a fixed interval, in the order queued whatever their types. A long batch (a whole room, a crowd's movements) is sent deflated under an event of its own, and the client inflates it before reading it as any other. Some types have a minimum send interval (e.g. room changes and commands). The server rejects signals that arrive too early, and the client retries a few times.
 
 ## User commands
 The client sends a command string, and the server dispatches it to a handler (e.g. finish-tutorial, add-FTUE-element). Handlers that modify the user **update the in-memory user as well as `DBUser`**, because the in-memory object serves the rest of the session.

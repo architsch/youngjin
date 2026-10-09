@@ -6,8 +6,7 @@ import StringUtil from "../../../math/util/stringUtil";
 import EncodableByteString from "../../../networking/types/encodableByteString";
 import Room from "../../../room/types/room";
 import RoomValidationUtil from "../../../room/util/roomValidationUtil";
-import { ATTACHMENT_HITBOX_INSET, BACKWARD_DIR, COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN,
-    HUB_ROOM_ID_KEYWORD, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, UNIT_VEC3,
+import { ATTACHMENT_HITBOX_INSET, BACKWARD_DIR, HUB_ROOM_ID_KEYWORD, MAX_ROOM_X, MAX_ROOM_Z, UNIT_VEC3,
     WALL_DIRECTIONS } from "../../../system/sharedConstants";
 import User from "../../../user/types/user";
 import AddObjectSignal from "../addObjectSignal";
@@ -25,9 +24,8 @@ import { ObjectMetadataKeyEnumMap } from "../objectMetadataKey";
 // Fixed id for a room's entrance door, so conversions add exactly one and its derived appearance is stable.
 export const ENTRANCE_DOOR_OBJECT_ID = "entrance_door";
 
-// Spawn and walk-out distances along the door's facing. The door sits on the wall/room boundary, so
-// half a voxel either way is a cell centre: spawn behind the door in the wall cell, walk out to the
-// floor cell (see SpawnHotspotUtil, PlayerController).
+// Spawn and walk-out distances along the door's facing: spawn behind the door in the middle of the wall
+// it needs (see its supportDepth), walk out as far in front of it (see SpawnHotspotUtil, PlayerController).
 export const SPAWN_DIST_BEHIND_DOOR = 0.5;
 export const ENTRANCE_DIST_IN_FRONT_OF_DOOR = 0.5;
 
@@ -53,8 +51,8 @@ const DoorObjectTypeConfig =
     category: ObjectCategoryEnumMap.Door,
     attachment: {
         allowedDirections: WALL_DIRECTIONS,
-        // Arrivals stand in the wall cell behind the door (see SPAWN_DIST_BEHIND_DOOR).
-        wholeBlocksOnly: true,
+        // Arrivals stand inside the wall behind the door, which has to hide them (see SPAWN_DIST_BEHIND_DOOR).
+        supportDepth: 2 * SPAWN_DIST_BEHIND_DOOR,
     },
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => {
         if (!RoomValidationUtil.isRoomSuperuser(user, room))
@@ -95,7 +93,7 @@ const DoorObjectTypeConfig =
         spawnedByAny: {
             collider: {
                 // Claims its stretch of wall so nothing hangs over it. The footprint is a round number
-                // of half-voxels; the tested box is slightly inset (see PhysicsColliderStateUtil).
+                // of blocks' widths; the tested box is slightly inset (see PhysicsColliderStateUtil).
                 baseHitboxSize: {
                     sizeX: DOOR_FOOTPRINT_WIDTH,
                     sizeY: DOOR_FOOTPRINT_HEIGHT,
@@ -159,18 +157,19 @@ const DoorObjectTypeConfig =
     },
     // Door semantics: entrance creation and metadata reading (its label is read through LabelTextUtil).
     util: {
-        // A multiplayer room's entrance door on the boundary wall, facing in. Points at the hub keyword
-        // (an unwired door is locked; the balancer picks the hub at travel time). Used by both
-        // generation and older-room conversion so both produce the same door.
-        makeEntranceDoor: (roomID: string, entranceVoxelCol: number, entranceVoxelRow: number,
-            entranceVoxelCollisionLayer: number): AddObjectSignal =>
+        // A multiplayer room's entrance door on the boundary wall, facing in: entrancePos is the middle of its
+        // foot, on the wall's room-facing surface. Points at the hub keyword (an unwired door is locked; the
+        // balancer picks the hub at travel time). Used by both generation and older-room conversion so both
+        // produce the same door.
+        makeEntranceDoor: (roomID: string, entrancePos: Vec3): AddObjectSignal =>
         {
             const objectTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
             return new AddObjectSignal(roomID, "", "",
                 objectTypeIndex, ENTRANCE_DOOR_OBJECT_ID,
                 new ObjectTransform(
-                    getBoundaryWallDoorPos(entranceVoxelCol, entranceVoxelRow, entranceVoxelCollisionLayer),
-                    getBoundaryWallInwardDir(entranceVoxelCol, entranceVoxelRow),
+                    // Origin half a doorway above the floor (collider-centred).
+                    {x: entrancePos.x, y: entrancePos.y + 0.5 * DOOR_FOOTPRINT_HEIGHT, z: entrancePos.z},
+                    getBoundaryWallInwardDir(entrancePos),
                     {...UNIT_VEC3}),
                 {
                     [ObjectMetadataKeyEnumMap.DoorType]:
@@ -199,30 +198,15 @@ const DoorObjectTypeConfig =
     },
 } satisfies ObjectTypeConfig;
 
-// On the room-facing surface of a boundary wall cell, centred on the cell, origin half a doorway above
-// the storey floor (collider-centred).
-function getBoundaryWallDoorPos(col: number, row: number, collisionLayer: number): Vec3
+// Facing into the room, out of the boundary wall a spot is nearest.
+function getBoundaryWallInwardDir(pos: Vec3): Vec3
 {
-    const floorY = (collisionLayer - COLLISION_LAYER_MIN) * COLLISION_LAYER_HEIGHT;
-    const y = floorY + 0.5 * DOOR_FOOTPRINT_HEIGHT;
-
-    if (row >= NUM_VOXEL_ROWS - 1)
-        return {x: col + 0.5, y, z: row};
-    if (row <= 0)
-        return {x: col + 0.5, y, z: row + 1};
-    if (col >= NUM_VOXEL_COLS - 1)
-        return {x: col, y, z: row + 0.5};
-    return {x: col + 1, y, z: row + 0.5};
-}
-
-// Facing out of the boundary wall, into the room.
-function getBoundaryWallInwardDir(col: number, row: number): Vec3
-{
-    if (row >= NUM_VOXEL_ROWS - 1)
+    const distToWall = Math.min(pos.x, MAX_ROOM_X - pos.x, pos.z, MAX_ROOM_Z - pos.z);
+    if (distToWall == MAX_ROOM_Z - pos.z)
         return {x: 0, y: 0, z: -1};
-    if (row <= 0)
+    if (distToWall == pos.z)
         return {x: 0, y: 0, z: 1};
-    if (col >= NUM_VOXEL_COLS - 1)
+    if (distToWall == MAX_ROOM_X - pos.x)
         return {x: -1, y: 0, z: 0};
     return {x: 1, y: 0, z: 0};
 }

@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { ATMOSPHERE_FOG_TINT_PARS_GLSL, ATMOSPHERE_GROUND_PARS_GLSL, ATMOSPHERE_PARS_GLSL,
     ATMOSPHERE_SMOKE_PARS_GLSL } from "./atmosphereGLSL";
 import ValueNoiseTextureUtil from "../util/valueNoiseTextureUtil";
-import { NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../../shared/system/sharedConstants";
+import { MAX_ROOM_X, MAX_ROOM_Z } from "../../../shared/system/sharedConstants";
 
 // Paints every uncovered pixel: sky color, clouds and land, then the room's fog over them (see
 // atmosphereGLSL). A full-screen clip-space quad (drawn last; see AtmosphereMaterialUtil), installed
@@ -29,7 +29,7 @@ const FRAGMENT_PARS_GLSL = `
     ${ATMOSPHERE_FOG_TINT_PARS_GLSL}
 
     // Room footprint on XZ, starting at the origin (see VoxelQueryUtil).
-    const vec2 SKY_ROOM_SIZE = vec2(${NUM_VOXEL_COLS.toFixed(1)}, ${NUM_VOXEL_ROWS.toFixed(1)});
+    const vec2 SKY_ROOM_SIZE = vec2(${MAX_ROOM_X.toFixed(1)}, ${MAX_ROOM_Z.toFixed(1)});
 
     // View depth at which a ray (scaled to one unit of view depth) exits the room through the nearest
     // boundary wall. Clamped to [0, far plane].

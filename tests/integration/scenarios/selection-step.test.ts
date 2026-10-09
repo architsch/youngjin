@@ -61,8 +61,8 @@ import { cameraModeObservable, clientFeatureFlagsObservable, gameModeObservable,
     voxelQuadSelectionRestrictionObservable } from "../../../src/client/system/clientObservables";
 import { SELECTION_STEP_OBJECT_REACH } from "../../../src/client/system/clientConstants";
 import { FeatureFlag } from "../../../src/shared/system/types/featureFlag";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN,
-    STOREY_FLOOR_COLLISION_LAYER } from "../../../src/shared/system/sharedConstants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, GENERATED_WALL_THICKNESS, STOREY_FLOOR_COLLISION_LAYER,
+    VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
@@ -80,7 +80,6 @@ import { buildPillar, ceilingQuadIndexOf, createRoom, currentSelection, floorQua
 const actingUser = createEditingUser();
 
 const ROOM_ID = "selection-step-room";
-const WALL_TEXTURES = [1, 1, 1, 1, 1, 1];
 const DIRECTIONS: ScreenDirection[] = ["up", "down", "left", "right"];
 const OPPOSITE: {[direction in ScreenDirection]: ScreenDirection} =
     {up: "down", down: "up", left: "right", right: "left"};
@@ -99,6 +98,12 @@ function viewFrom(eye: Vec3, target: Vec3)
     camera.up.set(0, 1, 0);
     camera.lookAt(target.x, target.y, target.z);
     camera.updateMatrixWorld(true);
+}
+
+/** Stands the camera so far off a point along each axis, looking at it. */
+function viewFromOffset(target: Vec3, offset: Vec3)
+{
+    viewFrom({x: target.x + offset.x, y: target.y + offset.y, z: target.z + offset.z}, target);
 }
 
 /** Orbits the camera about a point: the azimuth turns it round, and the polar angle is measured from straight up. */
@@ -127,9 +132,9 @@ function middleOf(quadIndex: number): Vec3
 {
     const dims = VoxelQueryUtil.getVoxelQuadTransformDimensions(room.voxelGrid.voxels, quadIndex, true);
     return {
-        x: VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex) + 0.5 + dims.offsetX,
+        x: VoxelQueryUtil.getWorldXAtVoxelColCenter(VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex)) + dims.offsetX,
         y: dims.offsetY,
-        z: VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex) + 0.5 + dims.offsetZ,
+        z: VoxelQueryUtil.getWorldZAtVoxelRowCenter(VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex)) + dims.offsetZ,
     };
 }
 
@@ -183,27 +188,20 @@ beforeEach(() => {
 
 // ─── Faces ──────────────────────────────────────────────────────────────────
 
-// The room's own wall along its low-x side, whose inner faces look toward +x.
-const WALL_COL = 0;
+// The room's own walls along its low-x and low-z sides are several voxels thick: their inner faces, which
+// look toward +x and +z, are those of their innermost voxels, and the open floor begins a voxel further in.
+const WALL_COL = GENERATED_WALL_THICKNESS - 1;
+const WALL_ROW = GENERATED_WALL_THICKNESS - 1;
+const FIRST_OPEN_COL = WALL_COL + 1;
+const FIRST_OPEN_ROW = WALL_ROW + 1;
 const wallFace = (row: number, layer: number) => quadIndexOf(row, WALL_COL, "x", "+", layer);
-
-// Half a block, filling the lower-z half of its cell.
-const LOW_Z_HALF = 0b0011;
-
-function addShrunkBlock(row: number, col: number, layer: number, shape: number)
-{
-    expect(VoxelUpdateUtil.addVoxelBlock(actingUser, room.voxelGrid.voxels, quadIndexOf(row, col, "y", "+", layer),
-        WALL_TEXTURES, room, shape)).toBe(true);
-}
 
 /** The middle of the block a face belongs to, which is what the orbit turns about with the face selected. */
 function blockMiddleOf(quadIndex: number): Vec3
 {
-    const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
-    const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
-    const layer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
-    return VoxelQueryUtil.getVoxelBlockBox(row, col, layer,
-        VoxelQueryUtil.getVoxelBlockShapeAt(room.voxelGrid.voxels, row, col, layer)).center;
+    return VoxelQueryUtil.getVoxelBlockBox(VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex),
+        VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex),
+        VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex)).center;
 }
 
 /** Asserts that no direction steps the selection off a face. */
@@ -216,7 +214,7 @@ function expectNoStepAnyWay(quadIndex: number)
 describe("a selected face stepped straight on along its surface", () => {
     it("goes along a wall sideways and up and down it, as a camera facing the wall sees them", () => {
         const start = wallFace(10, 2);
-        viewFrom({x: 7, y: 1.25, z: 10.5}, middleOf(start));
+        viewFromOffset(middleOf(start), {x: 6, y: 0, z: 0});
 
         // Looking toward -x, the view's right runs toward -z, which is the row before.
         expect(stepFrom(start, "right")).toBe(wallFace(9, 2));
@@ -227,7 +225,7 @@ describe("a selected face stepped straight on along its surface", () => {
 
     it("says whether the selection moved, and carries on from where the last step left it", () => {
         const start = wallFace(10, 2);
-        viewFrom({x: 7, y: 1.25, z: 10.5}, middleOf(start));
+        viewFromOffset(middleOf(start), {x: 6, y: 0, z: 0});
         forceSelect(room, start);
 
         expect(SelectionStepUtil.tryStep("right")).toBe(true);
@@ -242,7 +240,7 @@ describe("a selected face stepped straight on along its surface", () => {
         const start = wallFace(10, 2);
         // High over the room and well along the wall: on screen the wall runs upward nearly as much as its
         // own height does, yet up and down are the wall's own.
-        viewFrom({x: 3, y: 7, z: 14}, middleOf(start));
+        viewFromOffset(middleOf(start), {x: 2, y: 5.75, z: 3.5});
 
         expect(stepFrom(start, "up")).toBe(wallFace(10, 3));
         expect(stepFrom(start, "down")).toBe(wallFace(10, 1));
@@ -258,14 +256,14 @@ describe("a selected face stepped straight on along its surface", () => {
         const start = floorQuadIndexOf(15, 15);
 
         // From the high-z side, looking toward -z.
-        viewFrom({x: 15.5, y: 4, z: 21.5}, middleOf(start));
+        viewFromOffset(middleOf(start), {x: 0, y: 4, z: 6});
         expect(stepFrom(start, "up")).toBe(floorQuadIndexOf(14, 15));
         expect(stepFrom(start, "down")).toBe(floorQuadIndexOf(16, 15));
         expect(stepFrom(start, "right")).toBe(floorQuadIndexOf(15, 16));
         expect(stepFrom(start, "left")).toBe(floorQuadIndexOf(15, 14));
 
         // From the low-x side, looking toward +x: the same keys now lead a quarter-turn round.
-        viewFrom({x: 9.5, y: 4, z: 15.5}, middleOf(start));
+        viewFromOffset(middleOf(start), {x: -6, y: 4, z: 0});
         expect(stepFrom(start, "up")).toBe(floorQuadIndexOf(15, 16));
         expect(stepFrom(start, "down")).toBe(floorQuadIndexOf(15, 14));
         expect(stepFrom(start, "right")).toBe(floorQuadIndexOf(16, 15));
@@ -327,7 +325,7 @@ describe("a selected face stepped straight on along its surface", () => {
             ceilingQuadIndexOf(15, 16)];
 
         // From under the ceiling on its high-z side: overhead, what lies further off shows lower.
-        viewFrom({x: 15.5, y: 5, z: 19.5}, middleOf(start));
+        viewFromOffset(middleOf(start), {x: 0, y: -3, z: 4});
         expect(stepFrom(start, "up")).toBe(ceilingQuadIndexOf(16, 15));
         expect(stepFrom(start, "down")).toBe(ceilingQuadIndexOf(14, 15));
 
@@ -343,19 +341,20 @@ describe("a selected face stepped straight on along its surface", () => {
         buildPillar(room, 10, 5, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
         buildPillar(room, 10, 6, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
         const top = (col: number) => quadIndexOf(10, col, "y", "+", COLLISION_LAYER_MIN);
-        viewFrom({x: 6, y: 4, z: 16.5}, middleOf(top(5)));
+        // From the high-z side and above, over the edge the two blocks share.
+        viewFromOffset(middleOf(top(5)), {x: 0.5 * VOXEL_CELL_SIZE, y: 3.5, z: 6});
 
         expect(stepFrom(top(5), "right")).toBe(top(6));
         expect(stepFrom(top(6), "left")).toBe(top(5));
     });
 
-    it("goes along a wall half a cell thick, whose faces lie in mid-cell", () => {
+    it("goes along a low wall standing free, from the side of one block to the next", () => {
         for (const col of [5, 6])
-            addShrunkBlock(10, col, COLLISION_LAYER_MIN, LOW_Z_HALF);
+            buildPillar(room, 10, col, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
         const face = (col: number) => quadIndexOf(10, col, "z", "+", COLLISION_LAYER_MIN);
-        expect(middleOf(face(5)).z).toBe(10.5);
 
-        viewFrom({x: 6, y: 1, z: 16}, middleOf(face(5)));
+        // From the high-z side and a little above, over the edge the two blocks share.
+        viewFromOffset(middleOf(face(5)), {x: 0.5 * VOXEL_CELL_SIZE, y: 0.75, z: 5.5});
         expect(stepFrom(face(5), "right")).toBe(face(6));
         expect(stepFrom(face(6), "left")).toBe(face(5));
     });
@@ -363,42 +362,42 @@ describe("a selected face stepped straight on along its surface", () => {
 
 describe("a selected face stepped round a corner onto a face turned toward the camera", () => {
     it("climbs from the floor onto the wall standing in its way, and comes back down onto the floor", () => {
-        const tile = floorQuadIndexOf(10, 1);
+        const tile = floorQuadIndexOf(10, FIRST_OPEN_COL);
         const wallFoot = wallFace(10, COLLISION_LAYER_MIN);
         // From inside the room, looking down toward the wall: away from the camera is toward it.
-        viewFrom({x: 6, y: 4, z: 10.5}, middleOf(tile));
+        viewFromOffset(middleOf(tile), {x: 4.5, y: 4, z: 0});
 
         expect(stepFrom(tile, "up")).toBe(wallFoot);
         expect(stepFrom(wallFoot, "up")).toBe(wallFace(10, COLLISION_LAYER_MIN + 1));
         expect(stepFrom(wallFoot, "down")).toBe(tile);
-        expect(stepFrom(tile, "down")).toBe(floorQuadIndexOf(10, 2));
+        expect(stepFrom(tile, "down")).toBe(floorQuadIndexOf(10, FIRST_OPEN_COL + 1));
     });
 
     it("goes up a wall onto the ceiling over it, seen from beneath, and off the ceiling back down the wall", () => {
         const wallTop = wallFace(10, COLLISION_LAYER_MAX);
-        const tile = ceilingQuadIndexOf(10, 1);
+        const tile = ceilingQuadIndexOf(10, FIRST_OPEN_COL);
         // From inside the room and beneath, looking up at where the two meet.
-        viewFrom({x: 6, y: 6, z: 10.5}, middleOf(wallTop));
+        viewFromOffset(middleOf(wallTop), {x: 5, y: -1.75, z: 0});
 
         expect(stepFrom(wallTop, "up")).toBe(tile);
         // Overhead, what shows higher lies nearer the camera: further out from the wall.
-        expect(stepFrom(tile, "up")).toBe(ceilingQuadIndexOf(10, 2));
+        expect(stepFrom(tile, "up")).toBe(ceilingQuadIndexOf(10, FIRST_OPEN_COL + 1));
         expect(stepFrom(tile, "down")).toBe(wallTop);
     });
 
     it("goes round the room's inner corner from one wall onto the next, and back, seen from where both show", () => {
-        const alongX = wallFace(1, 2);
-        const alongZ = quadIndexOf(0, 1, "z", "+", 2);
+        const alongX = wallFace(FIRST_OPEN_ROW, 2);
+        const alongZ = quadIndexOf(WALL_ROW, FIRST_OPEN_COL, "z", "+", 2);
         expect(isQuadVisible(room, alongZ)).toBe(true);
 
         // Out in the room, off both walls: the view's right runs into the corner along the first.
-        viewFrom({x: 6, y: 1.25, z: 5}, middleOf(alongX));
+        viewFromOffset(middleOf(alongX), {x: 5, y: 0, z: 3.5});
         expect(stepFrom(alongX, "right")).toBe(alongZ);
 
         // And its left back into it along the second.
-        viewFrom({x: 5, y: 1.25, z: 6}, middleOf(alongZ));
+        viewFromOffset(middleOf(alongZ), {x: 3.5, y: 0, z: 5});
         expect(stepFrom(alongZ, "left")).toBe(alongX);
-        expect(stepFrom(alongZ, "right")).toBe(quadIndexOf(0, 2, "z", "+", 2));
+        expect(stepFrom(alongZ, "right")).toBe(quadIndexOf(WALL_ROW, FIRST_OPEN_COL + 1, "z", "+", 2));
     });
 
     it("goes round the end of a wall standing free onto its end, seen from where the end shows", () => {
@@ -408,7 +407,7 @@ describe("a selected face stepped round a corner onto a face turned toward the c
         const end = quadIndexOf(9, 5, "z", "-", 2);
 
         // Before the wall and off past its end.
-        viewFrom({x: 12, y: 1.25, z: 5}, middleOf(front));
+        viewFromOffset(middleOf(front), {x: 6, y: 0, z: -4.5});
         expect(stepFrom(front, "right")).toBe(end);
         expect(stepFrom(end, "left")).toBe(front);
     });
@@ -419,12 +418,12 @@ describe("a selected face stepped round a corner onto a face turned toward the c
         const top = quadIndexOf(10, 5, "y", "+", 1);
 
         // From the high-x side and above: away from the camera is toward -x.
-        viewFrom({x: 11, y: 4, z: 10.5}, middleOf(top));
+        viewFromOffset(middleOf(top), {x: 5.5, y: 3, z: 0});
         expect(stepFrom(near, "up")).toBe(top);
         expect(stepFrom(top, "down")).toBe(near);
 
         // From off toward +z as well, the flank on that side shows too.
-        viewFrom({x: 11, y: 4, z: 14}, middleOf(top));
+        viewFromOffset(middleOf(top), {x: 5.5, y: 3, z: 3.5});
         expect(stepFrom(top, "left")).toBe(quadIndexOf(10, 5, "z", "+", 1));
     });
 
@@ -433,7 +432,7 @@ describe("a selected face stepped round a corner onto a face turned toward the c
         buildPillar(room, 10, 7, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN + 1);
         const top = quadIndexOf(10, 6, "y", "+", COLLISION_LAYER_MIN);
         // From the low-x side, which the higher block's side is turned toward: away from the camera is toward it.
-        viewFrom({x: 2, y: 4, z: 14}, middleOf(top));
+        viewFromOffset(middleOf(top), {x: -4.5, y: 3.5, z: 3.5});
 
         expect(stepFrom(top, "up")).toBe(quadIndexOf(10, 7, "x", "-", COLLISION_LAYER_MIN + 1));
     });
@@ -446,8 +445,8 @@ describe("a selected face stepped round a corner onto a face turned toward the c
         const riser = (step: number) => quadIndexOf(10, 5 + step, "x", "-", COLLISION_LAYER_MIN + step);
         const flight = [tread(0), riser(1), tread(1), riser(2), tread(2)];
 
-        // From the foot of the flight and above it, looking up it.
-        viewFrom({x: 0, y: 5, z: 10.5}, {x: 6.5, y: 1, z: 10.5});
+        // From the foot of the flight and above it, looking up it at its middle tread.
+        viewFromOffset(middleOf(tread(1)), {x: -6.5, y: 4, z: 0});
         forceSelect(room, flight[0]);
         for (let i = 1; i < flight.length; ++i)
         {
@@ -470,62 +469,28 @@ describe("a selected face stepped round a corner onto a face turned toward the c
         expect(isQuadVisible(room, face(9))).toBe(false);
 
         // Before the wall and off toward +z, which that block's side is turned toward.
-        viewFrom({x: 11, y: 1.25, z: 14}, middleOf(face(10)));
+        viewFromOffset(middleOf(face(10)), {x: 5, y: 0, z: 3.5});
         expect(stepFrom(face(10), "right")).toBe(quadIndexOf(9, 6, "z", "+", 2));
     });
 
-    it("reaches a wall half a cell thick from the floor before it, across the tile it stands on", () => {
-        addShrunkBlock(15, 14, COLLISION_LAYER_MIN, LOW_Z_HALF);
-        const under = floorQuadIndexOf(15, 14);
-        const thick = quadIndexOf(15, 14, "z", "+", COLLISION_LAYER_MIN);
-        expect(isQuadVisible(room, under)).toBe(true);
-        expect(middleOf(thick).z).toBe(15.5);
+    it("turns onto the side of a block standing proud of a wall, and round it onto the block's front", () => {
+        // A wall along x, and a block against the far end of its face that looks toward +z: the faces looking
+        // that way lie on the wall and, a block further out, on that block.
+        for (const col of [6, 7])
+            buildPillar(room, 10, col, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
+        buildPillar(room, 11, 7, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
+        const wall = quadIndexOf(10, 6, "z", "+", COLLISION_LAYER_MIN);
+        const proudSide = quadIndexOf(11, 7, "x", "-", COLLISION_LAYER_MIN);
+        const proudFront = quadIndexOf(11, 7, "z", "+", COLLISION_LAYER_MIN);
+        expect(middleOf(proudFront).z - middleOf(wall).z).toBe(VOXEL_CELL_SIZE);
 
-        // From the high-z side, looking down toward -z. The tile under the wall shows on this side of it,
-        // so that is next; from there the wall is in the way, though the tile runs on under it.
-        viewFrom({x: 14.5, y: 4, z: 21.5}, middleOf(floorQuadIndexOf(16, 14)));
-        expect(stepFrom(floorQuadIndexOf(16, 14), "up")).toBe(under);
-        expect(stepFrom(under, "up")).toBe(thick);
-        expect(stepFrom(thick, "down")).toBe(under);
-        expect(stepFrom(under, "down")).toBe(floorQuadIndexOf(16, 14));
-
-        // Sideways the tile's bare half carries straight on, beside the wall.
-        expect(stepFrom(under, "right")).toBe(floorQuadIndexOf(15, 15));
-    });
-
-    it("turns onto the side of a block standing proud of a thinner wall, and round it onto the block's front", () => {
-        // A wall half a cell thick along x, then a whole block: the faces looking toward +z lie across the
-        // middle of the first cell, and on the side of the second.
-        addShrunkBlock(10, 6, COLLISION_LAYER_MIN, LOW_Z_HALF);
-        buildPillar(room, 10, 7, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
-        const thin = quadIndexOf(10, 6, "z", "+", COLLISION_LAYER_MIN);
-        const proudSide = quadIndexOf(10, 7, "x", "-", COLLISION_LAYER_MIN);
-        const proudFront = quadIndexOf(10, 7, "z", "+", COLLISION_LAYER_MIN);
-        expect(middleOf(thin).z).toBe(10.5);
-        expect(middleOf(proudFront).z).toBe(11);
-
-        // Before the wall and off toward -x, which the proud block's side is turned toward. Half of that side
-        // lies behind the thinner wall: its bare half leads on round to the front, and back against the wall.
-        viewFrom({x: 2, y: 1, z: 15}, middleOf(thin));
-        expect(stepFrom(thin, "right")).toBe(proudSide);
+        // Before the wall and off toward -x, which the proud block's side is turned toward: that side leads on
+        // round to the block's front, and back against the wall.
+        viewFromOffset(middleOf(wall), {x: -4.5, y: 0.75, z: 4.5});
+        expect(stepFrom(wall, "right")).toBe(proudSide);
         expect(stepFrom(proudSide, "right")).toBe(proudFront);
         expect(stepFrom(proudFront, "left")).toBe(proudSide);
-        expect(stepFrom(proudSide, "left")).toBe(thin);
-    });
-
-    it("goes onto what stands in the way of only part of a face before what the rest carries on to", () => {
-        // Half a block beside a floor tile, across half that tile's width.
-        addShrunkBlock(15, 14, COLLISION_LAYER_MIN, LOW_Z_HALF);
-        const start = floorQuadIndexOf(15, 15);
-        const blockSide = quadIndexOf(15, 14, "x", "+", COLLISION_LAYER_MIN);
-
-        // From the high-x side, which the block's side is turned toward: away from the camera is toward it.
-        viewFrom({x: 20, y: 4, z: 19}, middleOf(start));
-        expect(stepFrom(start, "up")).toBe(blockSide);
-
-        // The tile beside it is the next of the two, taken where the first may not be.
-        voxelQuadSelectionRestrictionObservable.set(floorQuadIndexOf(15, 14));
-        expect(stepFrom(start, "up")).toBe(floorQuadIndexOf(15, 14));
+        expect(stepFrom(proudSide, "left")).toBe(wall);
     });
 });
 
@@ -534,7 +499,7 @@ describe("a selected face never stepped onto a face turned away from the camera"
         for (const row of [9, 10, 11])
             buildPillar(room, row, 5, COLLISION_LAYER_MIN, 3);
         const face = (row: number, layer: number) => quadIndexOf(row, 5, "x", "+", layer);
-        viewFrom({x: 12, y: 1.25, z: 10.5}, middleOf(face(10, 2)));
+        viewFromOffset(middleOf(face(10, 2)), {x: 6, y: 0, z: 0});
 
         expectNoStep(face(9, 2), "right");
         expectNoStep(face(11, 2), "left");
@@ -545,7 +510,8 @@ describe("a selected face never stepped onto a face turned away from the camera"
         for (const row of [9, 10, 11])
             buildPillar(room, row, 5, COLLISION_LAYER_MIN, 3);
         const end = quadIndexOf(9, 5, "z", "-", 2);
-        viewFrom({x: 12, y: 1.25, z: 5}, middleOf(quadIndexOf(9, 5, "x", "+", 2)));
+        // Before the wall and off past its end.
+        viewFromOffset(middleOf(quadIndexOf(9, 5, "x", "+", 2)), {x: 6, y: 0, z: -4.5});
 
         expectNoStep(end, "right");
     });
@@ -554,68 +520,68 @@ describe("a selected face never stepped onto a face turned away from the camera"
         buildPillar(room, 10, 5, COLLISION_LAYER_MIN, 1);
         const top = quadIndexOf(10, 5, "y", "+", 1);
         // From the high-x side and above.
-        viewFrom({x: 11, y: 4, z: 10.5}, middleOf(top));
+        viewFromOffset(middleOf(top), {x: 5.5, y: 3, z: 0});
 
         expectNoStep(top, "up");
         expectNoStep(top, "left");
         expectNoStep(top, "right");
 
         // From off toward +z the flank on that side shows, and the other is turned away for good.
-        viewFrom({x: 11, y: 4, z: 14}, middleOf(top));
+        viewFromOffset(middleOf(top), {x: 5.5, y: 3, z: 3.5});
         expectNoStep(top, "right");
     });
 
     it("stays on a wall under a ceiling seen from above it", () => {
         const wallTop = wallFace(10, COLLISION_LAYER_MAX);
-        viewFrom({x: 6, y: 9.5, z: 10.5}, middleOf(wallTop));
+        // From out in the room, and from over its ceiling.
+        viewFromOffset(middleOf(wallTop), {x: 5, y: 1.75, z: 0});
 
         expectNoStep(wallTop, "up");
         expect(stepFrom(wallTop, "down")).toBe(wallFace(10, COLLISION_LAYER_MAX - 1));
     });
 
     it("stays at the room's inner corner seen squarely, where the next wall would show edge-on", () => {
-        const alongX = wallFace(1, 2);
-        viewFrom({x: 7, y: 1.25, z: 1.5}, middleOf(alongX));
+        const alongX = wallFace(FIRST_OPEN_ROW, 2);
+        viewFromOffset(middleOf(alongX), {x: 6, y: 0, z: 0});
 
         expectNoStep(alongX, "right");
-        expect(stepFrom(alongX, "left")).toBe(wallFace(2, 2));
+        expect(stepFrom(alongX, "left")).toBe(wallFace(FIRST_OPEN_ROW + 1, 2));
     });
 
     it("stays on the floor behind a wall two layers tall, whose face on that side is turned away all the way up", () => {
-        addShrunkBlock(15, 14, COLLISION_LAYER_MIN, LOW_Z_HALF);
-        addShrunkBlock(15, 14, COLLISION_LAYER_MIN + 1, LOW_Z_HALF);
-        // From the high-z side: the wall's flush face looks toward -z.
-        viewFrom({x: 14.5, y: 4, z: 21.5}, middleOf(floorQuadIndexOf(16, 14)));
+        buildPillar(room, 15, 14, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN + 1);
+        // From the high-z side: the wall's far face looks toward -z.
+        viewFromOffset(middleOf(floorQuadIndexOf(16, 14)), {x: 0, y: 4, z: 5});
 
         expectNoStep(floorQuadIndexOf(14, 14), "down");
     });
 
     it("stays on a face that is itself seen from behind, whichever way is pressed, and along one seen edge-on", () => {
-        // A wall standing free, three cells long.
+        // A wall standing free, three blocks long.
         for (const row of [9, 10, 11])
             buildPillar(room, row, 5, COLLISION_LAYER_MIN, 3);
         const face = quadIndexOf(10, 5, "x", "+", 2);
 
         // From the side its faces are turned away from.
-        viewFrom({x: -1, y: 1.25, z: 10.5}, middleOf(face));
+        viewFromOffset(middleOf(face), {x: -7, y: 0, z: 0});
         expectNoStepAnyWay(face);
 
         // In the wall's own plane, off its high-z end: up, down and away along it there is nothing turned
         // toward the camera within a face's reach.
-        viewFrom({x: 6, y: 1.25, z: 20}, middleOf(face));
+        viewFromOffset(middleOf(face), {x: 0, y: 0, z: 9.5});
         expectNoStep(face, "up");
         expectNoStep(face, "down");
         expectNoStep(face, "left");
 
         // From before it, as ever.
-        viewFrom({x: 12, y: 1.25, z: 10.5}, middleOf(face));
+        viewFromOffset(middleOf(face), {x: 6, y: 0, z: 0});
         expect(stepFrom(face, "right")).toBe(quadIndexOf(9, 5, "x", "+", 2));
     });
 
     it("goes only so far along a wall as the one face a step leaves selectable, never past a face it may not take", () => {
         const start = wallFace(10, 2);
-        viewFrom({x: 7, y: 1.25, z: 10.5}, middleOf(start));
-        // Two cells along: the face between is turned toward the camera, so it is not one to pass over.
+        viewFromOffset(middleOf(start), {x: 6, y: 0, z: 0});
+        // Two faces along: the face between is turned toward the camera, so it is not one to pass over.
         voxelQuadSelectionRestrictionObservable.set(wallFace(8, 2));
 
         expectNoStep(start, "right");
@@ -631,8 +597,9 @@ describe("a selected face stepped past a face turned away from the camera", () =
         const foot = floorQuadIndexOf(10, 4);
         const way = [tread(2), tread(1), tread(0), foot];
 
-        // From over the head of the flight, looking down it: the risers are turned away, toward its foot.
-        viewFrom({x: 12.5, y: 6, z: 10.5}, {x: 6.5, y: 1, z: 10.5});
+        // From over the head of the flight, looking down it at its middle tread: the risers are turned away,
+        // toward its foot.
+        viewFromOffset(middleOf(tread(1)), {x: 6, y: 5, z: 0});
         forceSelect(room, way[0]);
         for (let i = 1; i < way.length; ++i)
         {
@@ -651,7 +618,7 @@ describe("a selected face stepped past a face turned away from the camera", () =
         const top = quadIndexOf(10, 5, "y", "+", COLLISION_LAYER_MIN);
         const behind = floorQuadIndexOf(10, 4);
         // From the high-x side and above: away from the camera is toward -x.
-        viewFrom({x: 11, y: 4, z: 10.5}, middleOf(top));
+        viewFromOffset(middleOf(top), {x: 5.5, y: 3.5, z: 0});
 
         expect(stepFrom(top, "up")).toBe(behind);
         expect(stepFrom(behind, "down")).toBe(top);
@@ -661,28 +628,31 @@ describe("a selected face stepped past a face turned away from the camera", () =
         buildPillar(room, 15, 14, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
         const start = floorQuadIndexOf(15, 15);
         const top = quadIndexOf(15, 14, "y", "+", COLLISION_LAYER_MIN);
-        viewFrom({x: 15.5, y: 4, z: 21.5}, middleOf(start));
+        viewFromOffset(middleOf(start), {x: 0, y: 4, z: 6});
 
         expect(stepFrom(start, "left")).toBe(top);
         expect(stepFrom(top, "right")).toBe(start);
     });
 
-    it("passes the jog between a thinner wall and a block standing proud of it, seen squarely", () => {
-        addShrunkBlock(10, 6, COLLISION_LAYER_MIN, LOW_Z_HALF);
-        buildPillar(room, 10, 7, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
-        const thin = quadIndexOf(10, 6, "z", "+", COLLISION_LAYER_MIN);
-        const proudFront = quadIndexOf(10, 7, "z", "+", COLLISION_LAYER_MIN);
+    it("passes the jog between a wall and a block standing proud of it, seen squarely", () => {
+        // A wall along x, and a block against the far end of its face that looks toward +z.
+        for (const col of [6, 7])
+            buildPillar(room, 10, col, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
+        buildPillar(room, 11, 7, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
+        const wall = quadIndexOf(10, 6, "z", "+", COLLISION_LAYER_MIN);
+        const proudSide = quadIndexOf(11, 7, "x", "-", COLLISION_LAYER_MIN);
+        const proudFront = quadIndexOf(11, 7, "z", "+", COLLISION_LAYER_MIN);
 
-        // Squarely before the two: the strip of side between them shows edge-on.
-        viewFrom({x: 7, y: 1, z: 16}, {x: 7, y: 0.25, z: 10.5});
-        expect(stepFrom(thin, "right")).toBe(proudFront);
-        expect(stepFrom(proudFront, "left")).toBe(thin);
+        // Squarely before the two, in the plane of the side between them, which shows edge-on.
+        viewFromOffset(middleOf(proudSide), {x: 0, y: 0.75, z: 5.5});
+        expect(stepFrom(wall, "right")).toBe(proudFront);
+        expect(stepFrom(proudFront, "left")).toBe(wall);
     });
 
     it("goes from the floor behind a low wall onto its top, past its face on that side", () => {
-        addShrunkBlock(15, 14, COLLISION_LAYER_MIN, LOW_Z_HALF);
-        // From the high-z side: the wall's flush face looks toward -z.
-        viewFrom({x: 14.5, y: 4, z: 21.5}, middleOf(floorQuadIndexOf(16, 14)));
+        buildPillar(room, 15, 14, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
+        // From the high-z side: the wall's far face looks toward -z.
+        viewFromOffset(middleOf(floorQuadIndexOf(16, 14)), {x: 0, y: 4, z: 5});
 
         expect(stepFrom(floorQuadIndexOf(14, 14), "down")).toBe(quadIndexOf(15, 14, "y", "+", COLLISION_LAYER_MIN));
     });
@@ -692,7 +662,7 @@ describe("a selected face stepped past a face turned away from the camera", () =
             buildPillar(room, row, 5, COLLISION_LAYER_MIN, 3);
         const face = quadIndexOf(10, 5, "x", "+", 2);
         // In the wall's own plane, off its high-z end, which is turned squarely toward the camera.
-        viewFrom({x: 6, y: 1.25, z: 20}, middleOf(face));
+        viewFromOffset(middleOf(face), {x: 0, y: 0, z: 9.5});
 
         expect(stepFrom(face, "right")).toBe(quadIndexOf(11, 5, "z", "+", 2));
     });
@@ -701,29 +671,15 @@ describe("a selected face stepped past a face turned away from the camera", () =
         // A block two layers tall: beyond the top of its far side lies the rest of that side, turned away too.
         buildPillar(room, 10, 5, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN + 1);
         const top = quadIndexOf(10, 5, "y", "+", COLLISION_LAYER_MIN + 1);
-        viewFrom({x: 11, y: 4, z: 10.5}, middleOf(top));
+        viewFromOffset(middleOf(top), {x: 5.5, y: 3, z: 0});
 
         expectNoStep(top, "up");
-    });
-
-    it("goes to a face the surface runs on into directly before one that lies past a face turned away", () => {
-        // Half a block beside a floor tile, across half that tile's width, with its side seen edge-on: past
-        // that side lies the block's top, but the tile beside the block is right there.
-        addShrunkBlock(15, 14, COLLISION_LAYER_MIN, LOW_Z_HALF);
-        const start = floorQuadIndexOf(15, 15);
-        viewFrom({x: 15.5, y: 4, z: 21.5}, middleOf(start));
-
-        expect(stepFrom(start, "left")).toBe(floorQuadIndexOf(15, 14));
-
-        // The top is taken where the tile may not be.
-        voxelQuadSelectionRestrictionObservable.set(quadIndexOf(15, 14, "y", "+", COLLISION_LAYER_MIN));
-        expect(stepFrom(start, "left")).toBe(quadIndexOf(15, 14, "y", "+", COLLISION_LAYER_MIN));
     });
 
     it("asks the orbit to keep its angles, as any step of a face does", () => {
         buildPillar(room, 10, 5, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
         const top = quadIndexOf(10, 5, "y", "+", COLLISION_LAYER_MIN);
-        viewFrom({x: 11, y: 4, z: 10.5}, middleOf(top));
+        viewFromOffset(middleOf(top), {x: 5.5, y: 3.5, z: 0});
 
         expect(stepFrom(top, "up")).toBe(floorQuadIndexOf(10, 4));
         expect(orbitCameraAngleHoldRequestObservable.peek()).toBe(true);
@@ -744,9 +700,18 @@ describe("the camera a face is judged from", () => {
         }, middle);
     }
 
+    /**
+     * How far round the orbit has to stand, from so far off, to see a block's side from its front: the side
+     * lies half a block out from the block's middle, which the orbit turns about.
+     */
+    function roundToSeeSideDeg(distance: number): number
+    {
+        return Math.asin(0.5 * VOXEL_CELL_SIZE / distance) / DEG;
+    }
+
     it("is the orbit where it would stand once it had slid alongside, not where it stands yet", () => {
-        const alongX = wallFace(1, 2);
-        const alongZ = quadIndexOf(0, 1, "z", "+", 2);
+        const alongX = wallFace(FIRST_OPEN_ROW, 2);
+        const alongZ = quadIndexOf(WALL_ROW, FIRST_OPEN_COL, "z", "+", 2);
 
         // Squarely before the first wall, the camera stands before the plane of the second: but slid on to the
         // second's block, it would stand in that plane, with the face edge-on.
@@ -754,20 +719,23 @@ describe("the camera a face is judged from", () => {
         expect(GraphicsManager.getCamera().position.z).toBeGreaterThan(middleOf(alongZ).z);
         expectNoStep(alongX, "right");
 
-        // A few degrees round is still short of the face's own depth from its block's middle.
-        orbitWallBlock(alongX, 3, 6);
+        // A little less far round than it takes is still short of the face's own depth from its block's middle.
+        orbitWallBlock(alongX, 0.75 * roundToSeeSideDeg(6), 6);
         expectNoStep(alongX, "right");
-        orbitWallBlock(alongX, 7, 6);
+        orbitWallBlock(alongX, 1.25 * roundToSeeSideDeg(6), 6);
         expect(stepFrom(alongX, "right")).toBe(alongZ);
     });
 
     it("has to stand further round from close by, where that depth counts for more", () => {
-        const alongX = wallFace(1, 2);
-        const alongZ = quadIndexOf(0, 1, "z", "+", 2);
+        const alongX = wallFace(FIRST_OPEN_ROW, 2);
+        const alongZ = quadIndexOf(WALL_ROW, FIRST_OPEN_COL, "z", "+", 2);
 
-        orbitWallBlock(alongX, 10, 2);
+        // What was far enough round from three times as far off falls short from here.
+        orbitWallBlock(alongX, 1.25 * roundToSeeSideDeg(6), 2);
         expectNoStep(alongX, "right");
-        orbitWallBlock(alongX, 20, 2);
+        orbitWallBlock(alongX, 0.75 * roundToSeeSideDeg(2), 2);
+        expectNoStep(alongX, "right");
+        orbitWallBlock(alongX, 1.25 * roundToSeeSideDeg(2), 2);
         expect(stepFrom(alongX, "right")).toBe(alongZ);
     });
 
@@ -775,7 +743,7 @@ describe("the camera a face is judged from", () => {
         // Barely above level with the foot of a wall: the floor at its foot is a tile lying in its own plane.
         const wallFoot = wallFace(10, COLLISION_LAYER_MIN);
         orbitWallBlock(wallFoot, 0, 6, 2);
-        expect(stepFrom(wallFoot, "down")).toBe(floorQuadIndexOf(10, 1));
+        expect(stepFrom(wallFoot, "down")).toBe(floorQuadIndexOf(10, FIRST_OPEN_COL));
         // Dead level it would show edge-on, which is not from its front.
         orbitWallBlock(wallFoot, 0, 6, 0);
         expectNoStep(wallFoot, "down");
@@ -789,34 +757,9 @@ describe("the camera a face is judged from", () => {
         expect(stepFrom(near, "up")).toBe(quadIndexOf(10, 5, "y", "+", 1));
     });
 
-    it("counts a shrunk block's face by how deep it lies in its own block, less than a whole one's", () => {
-        // A wall half a cell thick on the tile it stands on, whose face lies a quarter of a cell from its middle.
-        // (Two layers tall, so that past its face at the foot there is only more of the same.)
-        addShrunkBlock(15, 14, COLLISION_LAYER_MIN, LOW_Z_HALF);
-        addShrunkBlock(15, 14, COLLISION_LAYER_MIN + 1, LOW_Z_HALF);
-        const under = floorQuadIndexOf(15, 14);
-        const thick = quadIndexOf(15, 14, "z", "+", COLLISION_LAYER_MIN);
-        const tile = middleOf(under);
-
-        // From the high-x side and above, so far round toward the side the face is turned to: the view's
-        // right runs toward the wall.
-        const viewRound = (roundDeg: number) => viewFrom({
-            x: tile.x + 6 * Math.cos(30 * DEG) * Math.cos(roundDeg * DEG),
-            y: tile.y + 6 * Math.sin(30 * DEG),
-            z: tile.z + 6 * Math.cos(30 * DEG) * Math.sin(roundDeg * DEG),
-        }, tile);
-
-        viewRound(2);
-        expectNoStep(under, "right");
-        // Far enough round for a face that deep, though not for one half a cell deep.
-        viewRound(4);
-        expect(6 * Math.cos(30 * DEG) * Math.sin(4 * DEG)).toBeLessThan(0.5);
-        expect(stepFrom(under, "right")).toBe(thick);
-    });
-
     it("is the camera where it stands, under a camera that no selection moves", () => {
-        const alongX = wallFace(1, 2);
-        const alongZ = quadIndexOf(0, 1, "z", "+", 2);
+        const alongX = wallFace(FIRST_OPEN_ROW, 2);
+        const alongZ = quadIndexOf(WALL_ROW, FIRST_OPEN_COL, "z", "+", 2);
         // A free camera is left as it is by a selection (see WorldSpaceSelectionUtil).
         cameraModeObservable.set({type: "free"});
 
@@ -826,13 +769,14 @@ describe("the camera a face is judged from", () => {
         expect(cameraModeObservable.peek().type).toBe("free");
 
         // And behind that plane, off past the corner.
-        viewFrom({x: 6, y: 1.25, z: 0.5}, middleOf(alongX));
+        viewFromOffset(middleOf(alongX), {x: 5, y: 0, z: -1});
+        expect(GraphicsManager.getCamera().position.z).toBeLessThan(middleOf(alongZ).z);
         expectNoStep(alongX, "right");
     });
 
     it("is the camera where it stands, under an orbit a step holds on a point of its own", () => {
-        const alongX = wallFace(1, 2);
-        const alongZ = quadIndexOf(0, 1, "z", "+", 2);
+        const alongX = wallFace(FIRST_OPEN_ROW, 2);
+        const alongZ = quadIndexOf(WALL_ROW, FIRST_OPEN_COL, "z", "+", 2);
         orbitCameraTargetOverrideObservable.set(blockMiddleOf(alongX));
 
         orbitWallBlock(alongX, 0, 6);
@@ -843,32 +787,43 @@ describe("the camera a face is judged from", () => {
 
 describe("a selected face with nowhere to step to", () => {
     it("stays where it is where the room's surface runs out of the grid", () => {
-        // A gap in the room's own wall, floor to ceiling.
-        for (let layer = COLLISION_LAYER_MIN; layer <= COLLISION_LAYER_MAX; ++layer)
+        // A gap through the room's own wall, floor to ceiling.
+        for (let col = 0; col <= WALL_COL; ++col)
         {
-            expect(VoxelUpdateUtil.removeVoxelBlock(undefined, room.voxelGrid.voxels,
-                quadIndexOf(10, WALL_COL, "y", "+", layer))).toBe(true);
+            for (let layer = COLLISION_LAYER_MIN; layer <= COLLISION_LAYER_MAX; ++layer)
+            {
+                expect(VoxelUpdateUtil.removeVoxelBlock(undefined, room.voxelGrid.voxels,
+                    quadIndexOf(10, col, "y", "+", layer))).toBe(true);
+            }
         }
-        const inGap = floorQuadIndexOf(10, WALL_COL);
-        viewFrom({x: 6, y: 4, z: 10.5}, middleOf(floorQuadIndexOf(10, 1)));
+        const atEdge = floorQuadIndexOf(10, 0);
+        viewFromOffset(middleOf(floorQuadIndexOf(10, FIRST_OPEN_COL)), {x: 4.5, y: 4, z: 0});
 
-        expect(stepFrom(floorQuadIndexOf(10, 1), "up")).toBe(inGap);
-        expectNoStep(inGap, "up");
-        expect(stepFrom(inGap, "down")).toBe(floorQuadIndexOf(10, 1));
+        // Off the room's floor and through the gap, a tile a press, as far as the grid goes.
+        forceSelect(room, floorQuadIndexOf(10, FIRST_OPEN_COL));
+        for (let col = WALL_COL; col >= 0; --col)
+        {
+            expect(SelectionStepUtil.tryStep("up"), `into the gap at ${col}`).toBe(true);
+            expect(selectedQuadIndex(), `into the gap at ${col}`).toBe(floorQuadIndexOf(10, col));
+        }
+        expectNoStep(atEdge, "up");
+        expect(stepFrom(atEdge, "down")).toBe(floorQuadIndexOf(10, 1));
     });
 
     it("stays where it is when it isn't drawn itself", () => {
-        // A face inside the room's own wall, selected outright.
-        const buried = quadIndexOf(0, 10, "x", "+", 2);
+        // A face inside the room's own wall, selected outright: seen from out in the room, where the wall's
+        // inner face round the edge of its block shows.
+        const buried = quadIndexOf(WALL_ROW, 10, "x", "+", 2);
         expect(isQuadVisible(room, buried)).toBe(false);
-        viewFrom({x: 16, y: 1.25, z: 0.5}, middleOf(buried));
+        expect(isQuadVisible(room, quadIndexOf(WALL_ROW, 10, "z", "+", 2))).toBe(true);
+        viewFromOffset(middleOf(buried), {x: 5, y: 0, z: 3.5});
 
         expectNoStepAnyWay(buried);
     });
 
     it("stays where it is while a step holds the selection of faces still", () => {
         const start = wallFace(10, 2);
-        viewFrom({x: 7, y: 1.25, z: 10.5}, middleOf(start));
+        viewFromOffset(middleOf(start), {x: 6, y: 0, z: 0});
 
         for (const flag of [FeatureFlag.DisableVoxelQuadSelectionChange, FeatureFlag.DisableAllSelectionChange])
         {
@@ -880,7 +835,7 @@ describe("a selected face with nowhere to step to", () => {
 
     it("goes only to the one face a step leaves selectable", () => {
         const start = wallFace(10, 2);
-        viewFrom({x: 7, y: 1.25, z: 10.5}, middleOf(start));
+        viewFromOffset(middleOf(start), {x: 6, y: 0, z: 0});
         voxelQuadSelectionRestrictionObservable.set(wallFace(10, 3));
 
         expectNoStep(start, "right");
@@ -891,10 +846,10 @@ describe("a selected face with nowhere to step to", () => {
 
 describe("what a step of a face asks of the orbit", () => {
     it("is to keep its angles, along a surface and round a corner alike", () => {
-        const tile = floorQuadIndexOf(10, 1);
-        viewFrom({x: 6, y: 4, z: 10.5}, middleOf(tile));
+        const tile = floorQuadIndexOf(10, FIRST_OPEN_COL);
+        viewFromOffset(middleOf(tile), {x: 4.5, y: 4, z: 0});
 
-        expect(stepFrom(tile, "down")).toBe(floorQuadIndexOf(10, 2));
+        expect(stepFrom(tile, "down")).toBe(floorQuadIndexOf(10, FIRST_OPEN_COL + 1));
         expect(orbitCameraAngleHoldRequestObservable.peek()).toBe(true);
 
         orbitCameraAngleHoldRequestObservable.set(false);
@@ -906,7 +861,7 @@ describe("what a step of a face asks of the orbit", () => {
         // A block's top at its far edge, whose far side is turned away.
         buildPillar(room, 10, 5, COLLISION_LAYER_MIN, 1);
         const top = quadIndexOf(10, 5, "y", "+", 1);
-        viewFrom({x: 11, y: 4, z: 10.5}, middleOf(top));
+        viewFromOffset(middleOf(top), {x: 5.5, y: 3, z: 0});
 
         expectNoStep(top, "up");
         expect(orbitCameraAngleHoldRequestObservable.peek()).toBe(false);
@@ -944,7 +899,7 @@ describe("a selected object stepped to the nearest object lying that way", () =>
         return gameObject;
     }
 
-    /** A canvas (a cell across and two layers tall unless given a size), added the way a user's own is. */
+    /** A canvas (a world unit across and as tall unless given a size), added the way a user's own is. */
     function addCanvas(objectId: string, pos: Vec3, dir: Vec3, scale: Vec3 = {x: 1, y: 1, z: 1},
         selectable: boolean = true): GameObject
     {
@@ -1058,7 +1013,7 @@ describe("a selected object stepped to the nearest object lying that way", () =>
 
     it("counts an object as lying the way it lies most", async () => {
         const start = hangOnWall("start", 10.5, 1.5);
-        // Two cells off along the wall and a layer above its top: up and to the right, but more to the right.
+        // Two units off along the wall and a layer above its top: up and to the right, but more to the right.
         hangOnWall("diagonal", 7.5, 3);
         faceWallAt(10.5);
         await select(start);
@@ -1083,14 +1038,19 @@ describe("a selected object stepped to the nearest object lying that way", () =>
     });
 
     it("never takes an object on the far face of a wall, which is turned away from the camera", async () => {
-        // A wall standing free, with a canvas on each face of it, back to back.
-        for (const row of [8, 9, 10, 11])
-            buildPillar(room, row, 5, COLLISION_LAYER_MIN, 5);
+        // A wall standing free, a unit thick from x = 5 to 6 and four long from z = 8 to 12, with a canvas on
+        // each face of it, back to back.
+        const rowAt = VoxelQueryUtil.getVoxelRowFromWorldZ, colAt = VoxelQueryUtil.getVoxelColFromWorldX;
+        for (let row = rowAt(8); row < rowAt(12); ++row)
+        {
+            for (let col = colAt(5); col < colAt(6); ++col)
+                buildPillar(room, row, col, COLLISION_LAYER_MIN, 5);
+        }
         const front = addCanvas("front", {x: 6, y: 1.5, z: 10.5}, {x: 1, y: 0, z: 0});
         const back = addCanvas("back", {x: 5, y: 1.5, z: 10.25}, {x: -1, y: 0, z: 0});
         const frontPos = front.params.transform.pos, backPos = back.params.transform.pos;
 
-        // From the front and off to one side, the one behind the wall lies to the right, a block away.
+        // From the front and off to one side, the one behind the wall lies to the right, a unit away.
         viewFrom({x: 13, y: 1.5, z: 8.5}, frontPos);
         expect(shownToward("right", frontPos, backPos)).toBeGreaterThan(0);
         await select(front);
@@ -1233,7 +1193,7 @@ describe("a selected object stepped to the nearest object lying that way", () =>
     });
 
     it("never leaves an object for a face, or a face for an object", async () => {
-        // A canvas alone on the wall, and a face right beside it.
+        // A canvas alone on the wall, and the faces right beside it.
         const alone = hangOnWall("alone", 10.5);
         faceWallAt(10.5);
         await select(alone);
@@ -1241,11 +1201,13 @@ describe("a selected object stepped to the nearest object lying that way", () =>
             expectNoStep(direction);
         expect(VoxelQuadSelection.isSelected()).toBe(false);
 
-        const face = quadIndexOf(12, 0, "x", "+", 2);
-        expect(VoxelQuadSelection.trySelect(voxelAt(room, 12, 0), face)).toBe(true);
+        // The first row clear of the canvas, whose edge lies at z = 11, and the one after it.
+        const besideRow = VoxelQueryUtil.getVoxelRowFromWorldZ(11);
+        const face = wallFace(besideRow + 1, 2);
+        expect(VoxelQuadSelection.trySelect(voxelAt(room, besideRow + 1, WALL_COL), face)).toBe(true);
         await settle();
         expect(SelectionStepUtil.tryStep("right")).toBe(true);
-        expect(selectedQuadIndex()).toBe(quadIndexOf(11, 0, "x", "+", 2));
+        expect(selectedQuadIndex()).toBe(wallFace(besideRow, 2));
         expect(ObjectSelection.isSelected()).toBe(false);
     });
 });
@@ -1270,7 +1232,7 @@ describe("a step of a face, as a selection the user made by hand", () => {
         try
         {
             const start = wallFace(10, 2);
-            viewFrom({x: 7, y: 1.25, z: 10.5}, middleOf(start));
+            viewFromOffset(middleOf(start), {x: 6, y: 0, z: 0});
             forceSelect(room, start);
             expect(announced).toEqual([]);
 
@@ -1281,7 +1243,7 @@ describe("a step of a face, as a selection the user made by hand", () => {
 
             // Up from the wall's top layer there is only the ceiling, seen from above it: turned away.
             const wallTop = wallFace(10, COLLISION_LAYER_MAX);
-            viewFrom({x: 6, y: 9.5, z: 10.5}, middleOf(wallTop));
+            viewFromOffset(middleOf(wallTop), {x: 5, y: 1.75, z: 0});
             expectNoStep(wallTop, "up");
             expect(announced.length).toBe(2);
         }

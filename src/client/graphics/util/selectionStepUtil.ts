@@ -57,10 +57,9 @@ const SelectionStepUtil =
     },
 }
 
-// The first face that would be turned toward the camera and that the user may select, of those the room's
-// surface runs on into that way (see VoxelQueryUtil.getVoxelQuadsNextAlong). Failing those, of the ones it runs
-// on into past each of them turned away: one such face is passed over (a riser, going down steps seen from
-// above), and no more.
+// The face the room's surface runs on into that way (see VoxelQueryUtil.getVoxelQuadNextAlong), if it would be
+// turned toward the camera and the user may select it. Turned away, it is passed over for the one the surface
+// runs on into past it (a riser, going down steps seen from above), and no more than that one.
 function tryStepToNextFace(selection: VoxelQuadSelection, direction: ScreenDirection): boolean
 {
     const room = App.getCurrentRoom();
@@ -70,21 +69,19 @@ function tryStepToNextFace(selection: VoxelQuadSelection, direction: ScreenDirec
 
     const step = getStepAcrossFace(
         VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(selection.quadIndex), direction);
-    const next = VoxelQueryUtil.getVoxelQuadsNextAlong(voxels, selection.quadIndex, step);
-    const pastTurnedAway = next.filter(quadIndex => !wouldFaceCamera(voxels, quadIndex)).flatMap(quadIndex =>
-        VoxelQueryUtil.getVoxelQuadsNextAlong(voxels, quadIndex,
-            VoxelQueryUtil.getVoxelQuadWalkDirectionOnto(selection.quadIndex, step, quadIndex)));
-
-    for (const quadIndex of [...next, ...pastTurnedAway])
+    let next = VoxelQueryUtil.getVoxelQuadNextAlong(voxels, selection.quadIndex, step);
+    if (next >= 0 && !wouldFaceCamera(voxels, next))
     {
-        const voxel = getVoxelOfQuad(voxels, quadIndex);
-        if (!voxel || !wouldFaceCamera(voxels, quadIndex) || !VoxelQuadSelection.trySelect(voxel, quadIndex))
-            continue;
-
-        orbitCameraAngleHoldRequestObservable.set(true);
-        return true;
+        next = VoxelQueryUtil.getVoxelQuadNextAlong(voxels, next,
+            VoxelQueryUtil.getVoxelQuadWalkDirectionOnto(selection.quadIndex, step, next));
     }
-    return false;
+
+    const voxel = (next >= 0) ? getVoxelOfQuad(voxels, next) : undefined;
+    if (!voxel || !wouldFaceCamera(voxels, next) || !VoxelQuadSelection.trySelect(voxel, next))
+        return false;
+
+    orbitCameraAngleHoldRequestObservable.set(true);
+    return true;
 }
 
 function getVoxelOfQuad(voxels: Voxel[], quadIndex: number): Voxel | undefined

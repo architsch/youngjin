@@ -6,17 +6,14 @@ Voxel edits are **optimistic**: the client validates and applies an edit through
 
 | Signal | Edit | Answer on failure |
 |---|---|---|
-| `AddVoxelBlockSignal` | a block of a given shape and textures | the truth of the cell layer |
+| `AddVoxelBlockSignal` | a block with its textures | the truth of the cell layer |
 | `RemoveVoxelBlockSignal` | the block gone | the truth of the cell layer |
-| `SetVoxelBlockShapeSignal` | the block given another shape where it stands | the truth of the cell layer |
-| `MoveVoxelBlockSignal` | the block in another cell layer, in the shape it has | the truth of both cell layers |
+| `MoveVoxelBlockSignal` | the block in another cell layer, with its textures | the truth of both cell layers |
 | `SetVoxelQuadTextureSignal` | one face repainted | the same signal carrying the old texture |
 | `SetRestrictedZonesSignal` | the zone list | the room's current zone list |
 
-- **The truth of a cell layer** is an `AddVoxelBlockSignal` carrying the block there, or a `RemoveVoxelBlockSignal` if it holds none. So on the receiving side an add replaces whatever block is there, and a removal of nothing is no event.
+- **The truth of a cell layer** is an `AddVoxelBlockSignal` carrying the block there, or a `RemoveVoxelBlockSignal` if it holds none. So on the receiving side an add repaints whatever block is there, and a removal of nothing is no event.
 - A batch relays its signals in the order they were made, whatever their types: an edit undone and redone is a removal and then an add of the same block (see [game_mode.md](../gameplay/game_mode.md#undo-and-redo)), which the other way round would leave the others without it.
-- A drag is previewed locally (`ClientVoxelManager`) and sent as the single edit it comes to. Any other voxel edit arriving meanwhile ends the preview first.
-- A block's shape must be one a block can have (`VoxelBlockShapeUtil`), and a reshape is refused while it would leave an attached object without its footing (see [object_attachment.md](../geometry/object_attachment.md)).
 
 - Restricted zones are always sent as the full list (see [restricted_zone.md](../gameplay/restricted_zone.md)). They are stored with the voxels, so joining clients receive them with the room.
 - Edits mark the room dirty for the periodic save.

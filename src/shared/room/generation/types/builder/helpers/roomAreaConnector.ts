@@ -1,4 +1,4 @@
-import { NUM_COLLISION_LAYERS_PER_STOREY } from "../../../../../system/sharedConstants";
+import { GENERATED_WALL_THICKNESS, NUM_COLLISION_LAYERS_PER_STOREY } from "../../../../../system/sharedConstants";
 import RoomVolumeUtil from "../../../util/roomVolumeUtil";
 import RoomVolume from "../../roomVolume";
 import { RoomVolumeType, RoomVolumeTypeEnumMap } from "../../roomVolumeType";
@@ -6,8 +6,10 @@ import { RoomVolumeType, RoomVolumeTypeEnumMap } from "../../roomVolumeType";
 // Cuts passages until every area is reachable (checked on the plan, before carving).
 
 // Passages span the full storey height, so they're level with both floors.
-const MAX_PASSAGE_WIDTH = 3;
+const MAX_PASSAGE_WIDTH = 6; // in voxels
 const MAX_PASSAGE_HEIGHT = NUM_COLLISION_LAYERS_PER_STOREY;
+
+const CORRIDOR_WIDTH = GENERATED_WALL_THICKNESS;
 
 export default class RoomAreaConnector
 {
@@ -36,7 +38,7 @@ export default class RoomAreaConnector
                 parents[findRoot(parents, climbed[0])] = findRoot(parents, climbed[i]);
         }
 
-        // First: pairs one wall block apart.
+        // First: pairs one wall apart.
         this.joinPairs(parents, (a, b) => RoomVolumeUtil.volumesIntersect(
             RoomVolumeUtil.getExpandedVolume(a, 1), RoomVolumeUtil.getExpandedVolume(b, 1)));
 
@@ -103,20 +105,28 @@ export default class RoomAreaConnector
                 const layerMin = a.collisionLayerMin;
                 const layerMax = Math.min(a.collisionLayerMax, b.collisionLayerMax);
 
-                const rowA = Math.floor(0.5 * (a.rowMin + a.rowMax));
-                const colA = Math.floor(0.5 * (a.colMin + a.colMax));
-                const rowB = Math.floor(0.5 * (b.rowMin + b.rowMax));
-                const colB = Math.floor(0.5 * (b.colMin + b.colMax));
+                const rowA = getMiddleCorridorStart(a.rowMin, a.rowMax);
+                const colA = getMiddleCorridorStart(a.colMin, a.colMax);
+                const rowB = getMiddleCorridorStart(b.rowMin, b.rowMax);
+                const colB = getMiddleCorridorStart(b.colMin, b.colMax);
 
                 this.volumesByType[RoomVolumeTypeEnumMap.Passage].push(
-                    new RoomVolume(Math.min(rowA, rowB), Math.max(rowA, rowB), colA, colA,
-                        layerMin, layerMax, a.palette),
-                    new RoomVolume(rowB, rowB, Math.min(colA, colB), Math.max(colA, colB),
+                    new RoomVolume(Math.min(rowA, rowB), Math.max(rowA, rowB) + CORRIDOR_WIDTH - 1,
+                        colA, colA + CORRIDOR_WIDTH - 1, layerMin, layerMax, a.palette),
+                    new RoomVolume(rowB, rowB + CORRIDOR_WIDTH - 1,
+                        Math.min(colA, colB), Math.max(colA, colB) + CORRIDOR_WIDTH - 1,
                         layerMin, layerMax, b.palette));
                 parents[findRoot(parents, i)] = findRoot(parents, j);
             }
         }
     }
+}
+
+// The first row or column of a corridor through the middle of a span of them, a whole number of corridor
+// widths in from the span's start.
+function getMiddleCorridorStart(min: number, max: number): number
+{
+    return min + CORRIDOR_WIDTH * Math.floor((max - min) / (2 * CORRIDOR_WIDTH));
 }
 
 // Only areas on the same floor can be joined (an opening to a different floor leads to a drop).

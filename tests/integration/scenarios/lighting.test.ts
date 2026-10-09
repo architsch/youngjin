@@ -1,8 +1,8 @@
 /**
  * Scenario tests: light propagation through the voxel grid (three.js-free; see LightBlockMap).
- * Covers occlusion (by whole blocks and, a sub-block at a time, by shrunk ones), falloff (matching three.js
- * point lights), range, arrival direction, order-independent accumulation, monotonicity, and nearness for
- * the head lamp (never through walls).
+ * Covers occlusion (a block at a time), falloff (matching three.js point lights), range, arrival direction,
+ * order-independent accumulation, monotonicity, and nearness for the head lamp, which reads the room a
+ * region at a time (never through walls).
  */
 import { describe, it, expect } from "vitest";
 import * as THREE from "three";
@@ -14,15 +14,14 @@ import LightSource from "../../../src/client/graphics/light/types/lightSource";
 import LightBlockSmoothingUtil from "../../../src/client/graphics/light/util/lightBlockSmoothingUtil";
 import LightBlockDilationUtil, { NEARBY_LIGHT_SPREAD }
     from "../../../src/client/graphics/light/util/lightBlockDilationUtil";
-import LightSubBlockUtil from "../../../src/client/graphics/light/util/lightSubBlockUtil";
+import LightRegionUtil from "../../../src/client/graphics/light/util/lightRegionUtil";
 import LightBlockMap from "../../../src/client/graphics/light/maps/lightBlockMap";
 import Voxel from "../../../src/shared/voxel/types/voxel";
 import VoxelQuadsRuntimeMemory from "../../../src/shared/voxel/types/voxelQuadsRuntimeMemory";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
-import { NUM_COLLISION_LAYERS, NUM_VOXEL_BLOCKS, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, NUM_VOXEL_SUB_BLOCKS,
-    NUM_VOXEL_SUB_COLS, NUM_VOXEL_SUB_ROWS, VOXEL_BLOCK_SHAPE_EMPTY, VOXEL_BLOCK_SHAPE_WHOLE,
-    VOXEL_SUB_BLOCK_SIZE } from "../../../src/shared/system/sharedConstants";
-import { LIGHT_BLOCK_MAP_AMBIENT_SHARE, LIGHT_SOURCE_MIN_DISTANCE }
+import { MAX_ROOM_X, MAX_ROOM_Z, NUM_COLLISION_LAYERS, NUM_VOXEL_BLOCKS, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
+    VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
+import { LIGHT_BLOCK_MAP_AMBIENT_SHARE, LIGHT_REGION_SIZE_XZ, LIGHT_SOURCE_MIN_DISTANCE }
     from "../../../src/client/system/clientConstants";
 
 
@@ -31,7 +30,7 @@ import { LIGHT_BLOCK_MAP_AMBIENT_SHARE, LIGHT_SOURCE_MIN_DISTANCE }
 /** The mask of a voxel holding a block in every layer. */
 const FULL_COLLISION_LAYER_MASK = (1 << NUM_COLLISION_LAYERS) - 1;
 
-/** A grid whose every voxel holds a whole block in each layer the given mask names. */
+/** A grid whose every voxel holds a block in each layer the given mask names. */
 function makeVoxels(maskAt: (row: number, col: number) => number): Voxel[]
 {
     const quadsMem = new VoxelQuadsRuntimeMemory();
@@ -39,15 +38,7 @@ function makeVoxels(maskAt: (row: number, col: number) => number): Voxel[]
     for (let row = 0; row < NUM_VOXEL_ROWS; ++row)
     {
         for (let col = 0; col < NUM_VOXEL_COLS; ++col)
-        {
-            const mask = maskAt(row, col);
-            for (let layer = 0; layer < NUM_COLLISION_LAYERS; ++layer)
-            {
-                if ((mask & (1 << layer)) != 0)
-                    quadsMem.blockShapes[VoxelQueryUtil.getVoxelBlockIndex(row, col, layer)] = VOXEL_BLOCK_SHAPE_WHOLE;
-            }
-            voxels.push(new Voxel(quadsMem, row, col));
-        }
+            voxels.push(new Voxel(quadsMem, row, col, maskAt(row, col)));
     }
     return voxels;
 }
@@ -58,27 +49,34 @@ const openRoom = () => makeVoxels(() => 0);
 /** Every voxel solid. */
 const solidRoom = () => makeVoxels(() => FULL_COLLISION_LAYER_MASK);
 
-/** Gives every block of a box of cells one shape (see VoxelBlockShapeUtil), from the floor to the ceiling. */
-function setShapes(voxels: Voxel[], shape: number, box: {row: number, col: number, rows?: number, cols?: number}): Voxel[]
+/** A stretch of the floor plan in world units, lying on voxel boundaries; x and z are its low corner. */
+type Footprint = {x: number, z: number, sizeX: number, sizeZ: number};
+
+function setColumns(voxels: Voxel[], footprint: Footprint, mask: number): Voxel[]
 {
-    for (let row = box.row; row < box.row + (box.rows ?? 1); ++row)
+    const rowEnd = VoxelQueryUtil.getVoxelRowFromWorldZ(footprint.z + footprint.sizeZ);
+    const colEnd = VoxelQueryUtil.getVoxelColFromWorldX(footprint.x + footprint.sizeX);
+    for (let row = VoxelQueryUtil.getVoxelRowFromWorldZ(footprint.z); row < rowEnd; ++row)
     {
-        for (let col = box.col; col < box.col + (box.cols ?? 1); ++col)
-        {
-            for (let layer = 0; layer < NUM_COLLISION_LAYERS; ++layer)
-                voxels[0].quadsMem.blockShapes[VoxelQueryUtil.getVoxelBlockIndex(row, col, layer)] = shape;
-        }
+        for (let col = VoxelQueryUtil.getVoxelColFromWorldX(footprint.x); col < colEnd; ++col)
+            VoxelQueryUtil.getVoxel(voxels, row, col)!.blockLayerMask = mask;
     }
     return voxels;
 }
 
-// Sub-blocks by bit: (x half, z half) = (0, 0), (1, 0), (0, 1), (1, 1).
-const LOW_X_HALF = 0b0101, HIGH_X_HALF = 0b1010, LOW_Z_HALF = 0b0011, HIGH_Z_HALF = 0b1100;
-const LOW_X_LOW_Z_QUARTER = 0b0001;
+/** Stands blocks over a footprint, from the floor to the ceiling. */
+const fill = (voxels: Voxel[], footprint: Footprint) => setColumns(voxels, footprint, FULL_COLLISION_LAYER_MASK);
+
+/** Takes every block over a footprint out. */
+const carve = (voxels: Voxel[], footprint: Footprint) => setColumns(voxels, footprint, 0);
+
+/** Stands a wall across the whole room along x, from z on and as thick as told, in a grid (an open room by default). */
+const wallAcross = (z: number, thickness: number, voxels: Voxel[] = openRoom()) =>
+    fill(voxels, {x: 0, z, sizeX: MAX_ROOM_X, sizeZ: thickness});
 
 type Point = {x: number, y: number, z: number};
 
-/** Where the lights below stand unless told otherwise: the middle of a sub-block, in the middle of the room. */
+/** Where the lights below stand unless told otherwise: the middle of a block, in the middle of the room. */
 const LAMP: Point = {x: 16.25, y: 1.75, z: 16.25};
 
 /** A light standing in the open: its light comes out where it is measured from, unless told otherwise. */
@@ -95,33 +93,41 @@ function makeLight(overrides: Partial<LightSource> = {}): LightSource
     };
 }
 
-/** The sub-block holding a world point. */
-function subBlockIndexAt(point: Point): number
+/** The block holding a world point. */
+function blockIndexAt(point: Point): number
 {
-    return VoxelQueryUtil.getVoxelSubBlockIndex(Math.floor(point.z / VOXEL_SUB_BLOCK_SIZE),
-        Math.floor(point.x / VOXEL_SUB_BLOCK_SIZE), Math.floor(point.y / VOXEL_SUB_BLOCK_SIZE));
+    return VoxelQueryUtil.getVoxelBlockIndex(VoxelQueryUtil.getVoxelRowFromWorldZ(point.z),
+        VoxelQueryUtil.getVoxelColFromWorldX(point.x), VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(point.y));
 }
 
-/** The world-space centre of a sub-block, which is where its light is measured. */
-function subBlockCenter(subBlockIndex: number): Point
+/** The world-space centre of a block, which is where its light is measured. */
+function blockCenter(blockIndex: number): Point
 {
-    const layer = subBlockIndex % NUM_COLLISION_LAYERS;
-    const subCol = Math.floor(subBlockIndex / NUM_COLLISION_LAYERS) % NUM_VOXEL_SUB_COLS;
-    const subRow = Math.floor(subBlockIndex / (NUM_COLLISION_LAYERS * NUM_VOXEL_SUB_COLS));
     return {
-        x: (subCol + 0.5) * VOXEL_SUB_BLOCK_SIZE,
-        y: (layer + 0.5) * VOXEL_SUB_BLOCK_SIZE,
-        z: (subRow + 0.5) * VOXEL_SUB_BLOCK_SIZE,
+        x: VoxelQueryUtil.getWorldXAtVoxelColCenter(VoxelQueryUtil.getVoxelBlockCol(blockIndex)),
+        y: VoxelQueryUtil.getWorldYAtVoxelCollisionLayerCenter(VoxelQueryUtil.getVoxelBlockCollisionLayer(blockIndex)),
+        z: VoxelQueryUtil.getWorldZAtVoxelRowCenter(VoxelQueryUtil.getVoxelBlockRow(blockIndex)),
     };
 }
 
-/** The world-space centre of a voxel block, which is where the head lamp's reading of a block stands. */
-function blockCenter(row: number, col: number, collisionLayer: number): Point
+/** The region holding a world point (see LightRegionUtil, whose regions are indexed as blocks are). */
+function regionIndexAt(point: Point): number
 {
+    return (Math.floor(point.z / LIGHT_REGION_SIZE_XZ) * LightRegionUtil.numCols +
+        Math.floor(point.x / LIGHT_REGION_SIZE_XZ)) * NUM_COLLISION_LAYERS +
+        VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(point.y);
+}
+
+/** The world-space centre of a region, which is where the head lamp's reading of it stands. */
+function regionCenter(regionIndex: number): Point
+{
+    const layer = regionIndex % NUM_COLLISION_LAYERS;
+    const regionCol = Math.floor(regionIndex / NUM_COLLISION_LAYERS) % LightRegionUtil.numCols;
+    const regionRow = Math.floor(regionIndex / (NUM_COLLISION_LAYERS * LightRegionUtil.numCols));
     return {
-        x: col + 0.5,
-        y: VoxelQueryUtil.getWorldYAtVoxelCollisionLayerCenter(collisionLayer),
-        z: row + 0.5,
+        x: (regionCol + 0.5) * LIGHT_REGION_SIZE_XZ,
+        y: VoxelQueryUtil.getWorldYAtVoxelCollisionLayerCenter(layer),
+        z: (regionRow + 0.5) * LIGHT_REGION_SIZE_XZ,
     };
 }
 
@@ -135,17 +141,17 @@ interface PropagationResult
     light: Float32Array;
     flux: Float32Array;
     isOpen: Uint8Array;
-    /** Red channel of the sub-block holding a point, which every fixture here uses as "how much light is in it". */
+    /** Red channel of the block holding a point, which every fixture here uses as "how much light is in it". */
     at: (point: Point) => number;
     fluxAt: (point: Point) => Point;
 }
 
 function propagate(voxels: Voxel[], lights: LightSource[]): PropagationResult
 {
-    const light = new Float32Array(NUM_VOXEL_SUB_BLOCKS * 3);
-    const flux = new Float32Array(NUM_VOXEL_SUB_BLOCKS * 3);
-    const isOpen = new Uint8Array(NUM_VOXEL_SUB_BLOCKS);
-    LightSubBlockUtil.markOpen(voxels, isOpen);
+    const light = new Float32Array(NUM_VOXEL_BLOCKS * 3);
+    const flux = new Float32Array(NUM_VOXEL_BLOCKS * 3);
+    const isOpen = new Uint8Array(NUM_VOXEL_BLOCKS);
+    LightBlockPropagationUtil.markOpen(voxels, isOpen);
     const scratch = new LightPropagationScratch();
     for (const lightSource of lights)
         LightBlockPropagationUtil.accumulate(isOpen, lightSource, light, flux, scratch);
@@ -154,11 +160,11 @@ function propagate(voxels: Voxel[], lights: LightSource[]): PropagationResult
         light,
         flux,
         isOpen,
-        at: (point) => light[subBlockIndexAt(point) * 3],
+        at: (point) => light[blockIndexAt(point) * 3],
         fluxAt: (point) => ({
-            x: flux[subBlockIndexAt(point) * 3],
-            y: flux[subBlockIndexAt(point) * 3 + 1],
-            z: flux[subBlockIndexAt(point) * 3 + 2],
+            x: flux[blockIndexAt(point) * 3],
+            y: flux[blockIndexAt(point) * 3 + 1],
+            z: flux[blockIndexAt(point) * 3 + 2],
         }),
     };
 }
@@ -189,27 +195,27 @@ function everyEntry(values: ArrayLike<number>, predicate: (value: number) => boo
     return true;
 }
 
-/** How many sub-blocks hold light, among those the predicate picks. */
+/** How many blocks hold light, among those the predicate picks. */
 function countLit(result: PropagationResult, pick: (center: Point) => boolean): number
 {
     let numLit = 0;
-    for (let subBlockIndex = 0; subBlockIndex < NUM_VOXEL_SUB_BLOCKS; ++subBlockIndex)
+    for (let blockIndex = 0; blockIndex < NUM_VOXEL_BLOCKS; ++blockIndex)
     {
-        if (result.light[subBlockIndex * 3] !== 0 && pick(subBlockCenter(subBlockIndex)))
+        if (result.light[blockIndex * 3] !== 0 && pick(blockCenter(blockIndex)))
             ++numLit;
     }
     return numLit;
 }
 
-// A lamp stands on a grid half a sub-block fine (see ObjectAttachmentUtil), in the middle of a sub-block or between
+// A lamp stands on a grid half a block fine (see ObjectAttachmentUtil), in the middle of a block or between
 // two of them along any axis; these draw lamps from all of it, clear of the room's edge.
-const HALF_SUB_BLOCK = 0.5 * VOXEL_SUB_BLOCK_SIZE;
-const STEPS_PER_UNIT = 1 / HALF_SUB_BLOCK;
+const HALF_BLOCK = 0.5 * VOXEL_CELL_SIZE;
+const STEPS_PER_UNIT = 1 / HALF_BLOCK;
 const lampPoints = fc.record({
-    x: fc.integer({min: STEPS_PER_UNIT, max: STEPS_PER_UNIT * (NUM_VOXEL_COLS - 1)}),
+    x: fc.integer({min: STEPS_PER_UNIT, max: STEPS_PER_UNIT * (MAX_ROOM_X - 1)}),
     y: fc.integer({min: 1, max: 2 * NUM_COLLISION_LAYERS - 1}),
-    z: fc.integer({min: STEPS_PER_UNIT, max: STEPS_PER_UNIT * (NUM_VOXEL_ROWS - 1)}),
-}).map(steps => ({x: steps.x * HALF_SUB_BLOCK, y: steps.y * HALF_SUB_BLOCK, z: steps.z * HALF_SUB_BLOCK}));
+    z: fc.integer({min: STEPS_PER_UNIT, max: STEPS_PER_UNIT * (MAX_ROOM_Z - 1)}),
+}).map(steps => ({x: steps.x * HALF_BLOCK, y: steps.y * HALF_BLOCK, z: steps.z * HALF_BLOCK}));
 
 //------------------------------------------------------------------------------
 
@@ -219,9 +225,8 @@ describe("Light propagation", () =>
     {
         it("keeps a sealed room's light inside it", () =>
         {
-            // One hollow voxel column, walled in on every side.
-            const voxels = makeVoxels((row, col) =>
-                (row === 16 && col === 16) ? 0 : FULL_COLLISION_LAYER_MASK);
+            // One hollow shaft a world unit wide, walled in on every side.
+            const voxels = carve(solidRoom(), {x: 16, z: 16, sizeX: 1, sizeZ: 1});
             const result = propagate(voxels, [makeLight({range: 30})]);
 
             expect(result.at(LAMP)).toBeGreaterThan(0);
@@ -230,13 +235,13 @@ describe("Light propagation", () =>
 
         it("leaves the far side of a wall dark, and lights it once the wall comes down", () =>
         {
-            // A wall running the width of the room, one voxel thick, with the lamp on one side of it.
-            const wallRow = 20;
-            const walled = makeVoxels((row) => row === wallRow ? FULL_COLLISION_LAYER_MASK : 0);
+            // A wall running the width of the room, a world unit thick, with the lamp on one side of it.
+            const wallZ = 20;
+            const walled = wallAcross(wallZ, 1);
             const unwalled = openRoom();
             const light = makeLight({range: 20});
 
-            const behindWall = {x: LAMP.x, y: LAMP.y, z: wallRow + 1.25};
+            const behindWall = {x: LAMP.x, y: LAMP.y, z: wallZ + 1.25};
 
             expect(propagate(walled, [light]).at(behindWall)).toBe(0);
             expect(propagate(unwalled, [light]).at(behindWall)).toBeGreaterThan(0);
@@ -245,13 +250,12 @@ describe("Light propagation", () =>
         it("bends light around a corner, and charges it for the detour", () =>
         {
             // Light around a wall travels further, so it arrives dimmer.
-            const wallRow = 20;
+            const wallZ = 20;
             // The wall stops short of the room's edge, leaving a gap light can come round through.
-            const walled = makeVoxels((row, col) =>
-                (row === wallRow && col < 25) ? FULL_COLLISION_LAYER_MASK : 0);
+            const walled = fill(openRoom(), {x: 0, z: wallZ, sizeX: 25, sizeZ: 1});
             const light = makeLight({range: 40});
 
-            const target = {x: LAMP.x, y: LAMP.y, z: wallRow + 1.25};
+            const target = {x: LAMP.x, y: LAMP.y, z: wallZ + 1.25};
             const bent = propagate(walled, [light]);
             const direct = propagate(openRoom(), [light]);
 
@@ -263,6 +267,10 @@ describe("Light propagation", () =>
         {
             const result = propagate(solidRoom(), [makeLight({range: 30})]);
             expect(result.light.some(value => value !== 0)).toBe(false);
+
+            // Nor from inside a post one block thick, with open air all round it.
+            const post = fill(openRoom(), {x: 16, z: 16, sizeX: 0.5, sizeZ: 0.5});
+            expect(propagate(post, [makeLight({range: 30})]).light.some(value => value !== 0)).toBe(false);
         });
 
         it("lights nothing from outside the room", () =>
@@ -271,7 +279,7 @@ describe("Light propagation", () =>
                 {x: -5, y: 1.75, z: 16.5},
                 {x: 16.5, y: -1, z: 16.5},
                 {x: 16.5, y: 999, z: 16.5},
-                {x: 16.5, y: 1.75, z: NUM_VOXEL_ROWS + 5},
+                {x: 16.5, y: 1.75, z: MAX_ROOM_Z + 5},
             ];
             for (const worldPos of outside)
             {
@@ -289,10 +297,10 @@ describe("Light propagation", () =>
             const light = makeLight({range: 8, decay: 1, colorR: 2});
             const result = propagate(openRoom(), [light]);
 
-            // A lamp is treated as half a block across (point falloff is infinite at zero distance).
+            // A lamp is treated as having a size (point falloff is infinite at zero distance).
             expect(result.at(LAMP)).toBeCloseTo(2 * getDistanceAttenuation(LIGHT_SOURCE_MIN_DISTANCE, 8, 1), 5);
 
-            // A sub-block is as far along any axis as it is tall.
+            // A block is as far along any axis as it is tall.
             expect(result.at({...LAMP, x: LAMP.x + 1})).toBeCloseTo(2 * getDistanceAttenuation(1, 8, 1), 5);
             expect(result.at({...LAMP, x: LAMP.x + 1.5})).toBeCloseTo(2 * getDistanceAttenuation(1.5, 8, 1), 5);
             expect(result.at({...LAMP, y: LAMP.y + 1.5})).toBeCloseTo(2 * getDistanceAttenuation(1.5, 8, 1), 5);
@@ -302,9 +310,9 @@ describe("Light propagation", () =>
                 .toBeCloseTo(2 * getDistanceAttenuation(Math.hypot(3, 3), 8, 1), 5);
         });
 
-        it("measures from where the lamp stands, not from the middle of a sub-block", () =>
+        it("measures from where the lamp stands, not from the middle of a block", () =>
         {
-            // Between two sub-blocks along x, as the middle of a lamp a cell wide is on its wall.
+            // Between two blocks along x, as the middle of a lamp two blocks wide is on its wall.
             const lamp = {x: 16.5, y: 1.75, z: 16.25};
             const result = propagate(openRoom(), [makeLight({worldPos: lamp, range: 8, decay: 1})]);
 
@@ -333,7 +341,7 @@ describe("Light propagation", () =>
         {
             const result = propagate(openRoom(), [makeLight({range: 20})]);
             let previous = Number.POSITIVE_INFINITY;
-            for (let x = LAMP.x; x < NUM_VOXEL_COLS - 1; x += VOXEL_SUB_BLOCK_SIZE)
+            for (let x = LAMP.x; x < MAX_ROOM_X - 1; x += VOXEL_CELL_SIZE)
             {
                 const brightness = result.at({...LAMP, x});
                 expect(brightness).toBeLessThanOrEqual(previous);
@@ -357,15 +365,15 @@ describe("Light propagation", () =>
             const range = 7;
             const result = propagate(openRoom(), [makeLight({range})]);
 
-            // Sub-blocks exactly at the range are float-ambiguous, so a hair either side is skipped.
+            // Blocks exactly at the range are float-ambiguous, so a hair either side is skipped.
             const boundaryTolerance = 1e-6;
             let numMisplaced = 0;
-            for (let subBlockIndex = 0; subBlockIndex < NUM_VOXEL_SUB_BLOCKS; ++subBlockIndex)
+            for (let blockIndex = 0; blockIndex < NUM_VOXEL_BLOCKS; ++blockIndex)
             {
-                const straightLineDistance = distanceBetween(subBlockCenter(subBlockIndex), LAMP);
+                const straightLineDistance = distanceBetween(blockCenter(blockIndex), LAMP);
                 if (Math.abs(straightLineDistance - range) <= boundaryTolerance)
                     continue;
-                if ((result.light[subBlockIndex * 3] > 0) !== (straightLineDistance < range))
+                if ((result.light[blockIndex * 3] > 0) !== (straightLineDistance < range))
                     ++numMisplaced;
             }
             expect(numMisplaced).toBe(0);
@@ -376,9 +384,9 @@ describe("Light propagation", () =>
             const near = propagate(openRoom(), [makeLight({range: 6})]);
             const far = propagate(openRoom(), [makeLight({range: 12})]);
             let numLost = 0;
-            for (let subBlockIndex = 0; subBlockIndex < NUM_VOXEL_SUB_BLOCKS; ++subBlockIndex)
+            for (let blockIndex = 0; blockIndex < NUM_VOXEL_BLOCKS; ++blockIndex)
             {
-                if (near.light[subBlockIndex * 3] > 0 && !(far.light[subBlockIndex * 3] > 0))
+                if (near.light[blockIndex * 3] > 0 && !(far.light[blockIndex * 3] > 0))
                     ++numLost;
             }
             expect(numLost).toBe(0);
@@ -391,7 +399,7 @@ describe("Light propagation", () =>
         {
             const result = propagate(openRoom(), [makeLight({range: 20})]);
 
-            // Sub-blocks on opposite sides of the lamp record opposite directions.
+            // Blocks on opposite sides of the lamp record opposite directions.
             const rightward = result.fluxAt({...LAMP, x: LAMP.x + 4});
             const leftward = result.fluxAt({...LAMP, x: LAMP.x - 4});
             expect(rightward.x).toBeGreaterThan(0);
@@ -403,7 +411,7 @@ describe("Light propagation", () =>
             expect(forward.z).toBeGreaterThan(0);
         });
 
-        it("records no direction for the sub-block the lamp itself stands in the middle of", () =>
+        it("records no direction for the block the lamp itself stands in the middle of", () =>
         {
             const result = propagate(openRoom(), [makeLight()]);
             const flux = result.fluxAt(LAMP);
@@ -414,17 +422,17 @@ describe("Light propagation", () =>
 
         it("lets the direction fade out inside the lamp's own size, rather than cut out", () =>
         {
-            // Half a sub-block from a lamp standing between two: half way out to where a lamp's size ends.
+            // Half a block from a lamp standing between two, which is inside the lamp's size.
             const lamp = {x: 16.5, y: 1.75, z: 16.25};
             const result = propagate(openRoom(), [makeLight({worldPos: lamp})]);
-            const beside = {...lamp, x: lamp.x + HALF_SUB_BLOCK};
+            const beside = {...lamp, x: lamp.x + HALF_BLOCK};
 
             const flux = result.fluxAt(beside);
-            expect(flux.x).toBeCloseTo(result.at(beside) * HALF_SUB_BLOCK / LIGHT_SOURCE_MIN_DISTANCE, 5);
+            expect(flux.x).toBeCloseTo(result.at(beside) * HALF_BLOCK / LIGHT_SOURCE_MIN_DISTANCE, 5);
             expect(flux.y).toBe(0);
             expect(flux.z).toBe(0);
             // And the other way on the other side of it.
-            expect(result.fluxAt({...lamp, x: lamp.x - HALF_SUB_BLOCK}).x).toBeCloseTo(-flux.x, 6);
+            expect(result.fluxAt({...lamp, x: lamp.x - HALF_BLOCK}).x).toBeCloseTo(-flux.x, 6);
         });
 
         it("points straight back at the lamp", () =>
@@ -434,16 +442,16 @@ describe("Light propagation", () =>
             const result = propagate(openRoom(), [lamp]);
 
             let worstAlignment = 1;
-            for (let subBlockIndex = 0; subBlockIndex < NUM_VOXEL_SUB_BLOCKS; ++subBlockIndex)
+            for (let blockIndex = 0; blockIndex < NUM_VOXEL_BLOCKS; ++blockIndex)
             {
-                const x = result.flux[subBlockIndex * 3];
-                const y = result.flux[subBlockIndex * 3 + 1];
-                const z = result.flux[subBlockIndex * 3 + 2];
+                const x = result.flux[blockIndex * 3];
+                const y = result.flux[blockIndex * 3 + 1];
+                const z = result.flux[blockIndex * 3 + 2];
                 const length = Math.hypot(x, y, z);
                 if (length === 0)
                     continue;
 
-                const center = subBlockCenter(subBlockIndex);
+                const center = blockCenter(blockIndex);
                 const awayFromLamp = {
                     x: center.x - lamp.worldPos.x,
                     y: center.y - lamp.worldPos.y,
@@ -457,16 +465,15 @@ describe("Light propagation", () =>
             expect(worstAlignment).toBeGreaterThan(0.99);
         });
 
-        it("charges a sub-block for the detour rather than redirecting the light", () =>
+        it("charges a block for the detour rather than redirecting the light", () =>
         {
             // Straight-line direction points detoured light through the wall; accepted, since detoured
             // light is already dim.
-            const wallRow = 20;
-            const walled = makeVoxels((row, col) =>
-                (row === wallRow && col < 25) ? FULL_COLLISION_LAYER_MASK : 0);
+            const wallZ = 20;
+            const walled = fill(openRoom(), {x: 0, z: wallZ, sizeX: 25, sizeZ: 1});
             const lamp = makeLight({range: 40});
 
-            const target = {x: LAMP.x, y: LAMP.y, z: wallRow + 1.25};
+            const target = {x: LAMP.x, y: LAMP.y, z: wallZ + 1.25};
             const roundTheCorner = propagate(walled, [lamp]).at(target);
             const headOn = propagate(openRoom(), [lamp]).at(target);
 
@@ -477,27 +484,27 @@ describe("Light propagation", () =>
 
         it("charges nothing for a route as short as an empty room's, wherever the lamp stands", () =>
         {
-            // A lamp between sub-blocks starts from more than one; each must count as where the route began,
+            // A lamp between blocks starts from more than one; each must count as where the route began,
             // or light crossing to the other's side would be charged for a detour it never made. Nor is it
-            // one for light to come out half a sub-block from where it is measured, as a wall lamp's does.
+            // one for light to come out half a block from where it is measured, as a wall lamp's does.
             const offsets = [{x: 0, y: 0, z: 0}, {x: 1, y: 0, z: 0}, {x: -1, y: 0, z: 0}, {x: 0, y: 0, z: 1},
                 {x: 0, y: 0, z: -1}, {x: 0, y: 1, z: 0}, {x: 0, y: -1, z: 0}];
             fc.assert(fc.property(lampPoints, fc.constantFrom(...offsets), (worldPos, offset) =>
             {
                 const range = 6;
-                const outletPos = {x: worldPos.x + offset.x * HALF_SUB_BLOCK,
-                    y: worldPos.y + offset.y * HALF_SUB_BLOCK, z: worldPos.z + offset.z * HALF_SUB_BLOCK};
+                const outletPos = {x: worldPos.x + offset.x * HALF_BLOCK,
+                    y: worldPos.y + offset.y * HALF_BLOCK, z: worldPos.z + offset.z * HALF_BLOCK};
                 const result = propagate(openRoom(), [makeLight({worldPos, outletPos, range, decay: 1})]);
 
                 let worstError = 0;
-                for (let subBlockIndex = 0; subBlockIndex < NUM_VOXEL_SUB_BLOCKS; ++subBlockIndex)
+                for (let blockIndex = 0; blockIndex < NUM_VOXEL_BLOCKS; ++blockIndex)
                 {
-                    const distance = distanceBetween(subBlockCenter(subBlockIndex), worldPos);
+                    const distance = distanceBetween(blockCenter(blockIndex), worldPos);
                     if (distance >= range - 1e-6)
                         continue;
                     const expected = getDistanceAttenuation(
                         Math.max(LIGHT_SOURCE_MIN_DISTANCE, distance), range, 1);
-                    worstError = Math.max(worstError, Math.abs(result.light[subBlockIndex * 3] - expected));
+                    worstError = Math.max(worstError, Math.abs(result.light[blockIndex * 3] - expected));
                 }
                 expect(worstError).toBeLessThan(1e-5);
             }), {numRuns: 25});
@@ -524,16 +531,16 @@ describe("Light propagation", () =>
             const red = makeLight({colorR: 1, colorG: 0, colorB: 0, range: 20});
             const result = propagate(openRoom(), [red]);
             let numTinted = 0;
-            for (let subBlockIndex = 0; subBlockIndex < NUM_VOXEL_SUB_BLOCKS; ++subBlockIndex)
+            for (let blockIndex = 0; blockIndex < NUM_VOXEL_BLOCKS; ++blockIndex)
             {
-                if (result.light[subBlockIndex * 3 + 1] !== 0 || result.light[subBlockIndex * 3 + 2] !== 0)
+                if (result.light[blockIndex * 3 + 1] !== 0 || result.light[blockIndex * 3 + 2] !== 0)
                     ++numTinted;
             }
             expect(numTinted).toBe(0);
             expect(result.at(LAMP)).toBeGreaterThan(0);
         });
 
-        it("leaves every sub-block dark when there are no lights at all", () =>
+        it("leaves every block dark when there are no lights at all", () =>
         {
             const result = propagate(openRoom(), []);
             expect(result.light.some(value => value !== 0)).toBe(false);
@@ -602,13 +609,12 @@ describe("Light propagation", () =>
         it("never carries light across a solid block", () =>
         {
             // Smoothing must not blur light through walls.
-            const wallRow = 20;
-            const voxels = makeVoxels((row) => row === wallRow ? FULL_COLLISION_LAYER_MASK : 0);
-            const result = smoothed(propagate(voxels, [makeLight({range: 30})]));
+            const wallZ = 20;
+            const result = smoothed(propagate(wallAcross(wallZ, 1), [makeLight({range: 30})]));
 
             // The near face of the wall is as bright as ever; nothing at all reaches past it.
-            expect(result.at({...LAMP, z: wallRow - 0.25})).toBeGreaterThan(0);
-            expect(countLit(result, center => center.z > wallRow)).toBe(0);
+            expect(result.at({...LAMP, z: wallZ - 0.25})).toBeGreaterThan(0);
+            expect(countLit(result, center => center.z > wallZ)).toBe(0);
         });
 
         it("leaves a solid block dark even when it was never lit to begin with", () =>
@@ -626,34 +632,34 @@ describe("Light propagation", () =>
             expect(everyEntry(result.light, value => Math.abs(value - 1) < 1e-5)).toBe(true);
         });
 
-        it("gives what a sweep of every sub-block would, though it visits only those near light", () =>
+        it("gives what a sweep of every block would, though it visits only those near light", () =>
         {
-            // The plain kernel, a sub-block at a time along each axis in turn: half of itself and a quarter of
+            // The plain kernel, a block at a time along each axis in turn: half of itself and a quarter of
             // each open neighbour, renormalized over those that took part.
-            const strides = [1, NUM_COLLISION_LAYERS, NUM_COLLISION_LAYERS * NUM_VOXEL_SUB_COLS];
-            const lengths = [NUM_COLLISION_LAYERS, NUM_VOXEL_SUB_COLS, NUM_VOXEL_SUB_ROWS];
-            const sweepEverySubBlock = (field: Float32Array, isOpen: Uint8Array): Float32Array =>
+            const strides = [1, NUM_COLLISION_LAYERS, NUM_COLLISION_LAYERS * NUM_VOXEL_COLS];
+            const lengths = [NUM_COLLISION_LAYERS, NUM_VOXEL_COLS, NUM_VOXEL_ROWS];
+            const sweepEveryBlock = (field: Float32Array, isOpen: Uint8Array): Float32Array =>
             {
                 let source = field;
                 for (let axis = 0; axis < 3; ++axis)
                 {
                     const target = new Float32Array(source.length);
-                    for (let subBlockIndex = 0; subBlockIndex < NUM_VOXEL_SUB_BLOCKS; ++subBlockIndex)
+                    for (let blockIndex = 0; blockIndex < NUM_VOXEL_BLOCKS; ++blockIndex)
                     {
-                        if (isOpen[subBlockIndex] === 0)
+                        if (isOpen[blockIndex] === 0)
                             continue;
-                        const position = Math.floor(subBlockIndex / strides[axis]) % lengths[axis];
+                        const position = Math.floor(blockIndex / strides[axis]) % lengths[axis];
                         const neighbors: number[] = [];
-                        if (position > 0 && isOpen[subBlockIndex - strides[axis]] === 1)
-                            neighbors.push(subBlockIndex - strides[axis]);
-                        if (position < lengths[axis] - 1 && isOpen[subBlockIndex + strides[axis]] === 1)
-                            neighbors.push(subBlockIndex + strides[axis]);
+                        if (position > 0 && isOpen[blockIndex - strides[axis]] === 1)
+                            neighbors.push(blockIndex - strides[axis]);
+                        if (position < lengths[axis] - 1 && isOpen[blockIndex + strides[axis]] === 1)
+                            neighbors.push(blockIndex + strides[axis]);
                         for (let channel = 0; channel < 3; ++channel)
                         {
-                            let sum = 0.5 * source[subBlockIndex * 3 + channel];
+                            let sum = 0.5 * source[blockIndex * 3 + channel];
                             for (const neighbor of neighbors)
                                 sum += 0.25 * source[neighbor * 3 + channel];
-                            target[subBlockIndex * 3 + channel] = sum / (0.5 + 0.25 * neighbors.length);
+                            target[blockIndex * 3 + channel] = sum / (0.5 + 0.25 * neighbors.length);
                         }
                     }
                     source = target;
@@ -661,12 +667,13 @@ describe("Light propagation", () =>
                 return source;
             };
 
-            // Thin and whole walls, posts and a lone block for the light to meet, some of them at the room's edge.
-            const voxels = makeVoxels((row, col) => (row === 9 && col > 3) ? FULL_COLLISION_LAYER_MASK : 0);
-            setShapes(voxels, HIGH_Z_HALF, {row: 22, col: 0, cols: 20});
-            setShapes(voxels, LOW_X_HALF, {row: 12, col: 25, rows: 8});
-            setShapes(voxels, LOW_X_LOW_Z_QUARTER, {row: 14, col: 10, rows: 2, cols: 2});
-            setShapes(voxels, VOXEL_BLOCK_SHAPE_WHOLE, {row: 0, col: 0});
+            // Thick and thin walls, posts and a lone column for the light to meet, some of them at the room's edge.
+            const voxels = fill(openRoom(), {x: 4, z: 9, sizeX: MAX_ROOM_X - 4, sizeZ: 1});
+            fill(voxels, {x: 0, z: 22.5, sizeX: 20, sizeZ: 0.5});
+            fill(voxels, {x: 25, z: 12, sizeX: 0.5, sizeZ: 8});
+            for (const post of [{x: 10, z: 14}, {x: 11, z: 14}, {x: 10, z: 15}, {x: 11, z: 15}])
+                fill(voxels, {...post, sizeX: 0.5, sizeZ: 0.5});
+            fill(voxels, {x: 0, z: 0, sizeX: 1, sizeZ: 1});
 
             fc.assert(fc.property(fc.array(fc.record({
                 worldPos: lampPoints,
@@ -676,8 +683,8 @@ describe("Light propagation", () =>
             }), {minLength: 1, maxLength: 3}), (specs) =>
             {
                 const result = propagate(voxels, specs.map(spec => makeLight(spec)));
-                const expectedLight = sweepEverySubBlock(result.light, result.isOpen);
-                const expectedFlux = sweepEverySubBlock(result.flux, result.isOpen);
+                const expectedLight = sweepEveryBlock(result.light, result.isOpen);
+                const expectedFlux = sweepEveryBlock(result.flux, result.isOpen);
                 smoothed(result);
 
                 expect(maxAbsoluteDifference(result.light, expectedLight)).toBeLessThan(1e-5);
@@ -705,53 +712,51 @@ describe("Light propagation", () =>
     {
         // The head lamp dims for the brightest nearby light, discounted by distance (see
         // LightBlockDilationUtil), so a lamp's pool viewed from outside isn't washed out. It reads the room a
-        // block at a time (see LightSubBlockUtil.averageOverBlocks).
+        // region at a time (see LightRegionUtil).
 
-        const blockLight = new Float32Array(NUM_VOXEL_BLOCKS * 3);
-        const openBlocks = new Uint8Array(NUM_VOXEL_BLOCKS);
-        const nearbyLight = new Float32Array(NUM_VOXEL_BLOCKS * 3);
+        const NUM_REGIONS = LightRegionUtil.numRegions;
+        const regionLight = new Float32Array(NUM_REGIONS * 3);
+        const openRegions = new Uint8Array(NUM_REGIONS);
+        const nearbyLight = new Float32Array(NUM_REGIONS * 3);
 
-        /** The room's light a block at a time, as the map holds it for the head lamp: smoothed, then averaged. */
+        /** The room's light a region at a time, as the map holds it for the head lamp: smoothed, then averaged. */
         function averagedLight(voxels: Voxel[], lights: LightSource[]): PropagationResult
         {
             const result = smoothed(propagate(voxels, lights));
-            LightSubBlockUtil.averageOverBlocks(result.light, result.isOpen, blockLight, openBlocks);
+            LightRegionUtil.averageOverRegions(result.light, result.isOpen, regionLight, openRegions);
             return result;
         }
 
-        const blockLightAt = (buffer: Float32Array, row: number, col: number, collisionLayer: number) =>
-            buffer[VoxelQueryUtil.getVoxelBlockIndex(row, col, collisionLayer) * 3];
-
-        it("reads a block as the mean of its open sub-blocks, and one no more than half open as a wall", () =>
+        it("reads a region as the mean of its open blocks, and one no more than half open as a wall", () =>
         {
+            // A post in a region's corner, a thin wall through half of another, and a third filled.
             const voxels = openRoom();
-            setShapes(voxels, LOW_X_LOW_Z_QUARTER, {row: 5, col: 5});
-            setShapes(voxels, HIGH_X_HALF, {row: 5, col: 7});
-            setShapes(voxels, VOXEL_BLOCK_SHAPE_WHOLE, {row: 5, col: 9});
+            fill(voxels, {x: 5, z: 5, sizeX: 0.5, sizeZ: 0.5});
+            fill(voxels, {x: 7.5, z: 5, sizeX: 0.5, sizeZ: 1});
+            fill(voxels, {x: 9, z: 5, sizeX: 1, sizeZ: 1});
 
             const result = propagate(voxels, []);
-            // A different light in each sub-block, and light in the filled ones too, which must not count.
-            for (let subBlockIndex = 0; subBlockIndex < NUM_VOXEL_SUB_BLOCKS; ++subBlockIndex)
-                result.light[subBlockIndex * 3] = 1 + subBlockCenter(subBlockIndex).x + 10 * subBlockCenter(subBlockIndex).z;
-            LightSubBlockUtil.averageOverBlocks(result.light, result.isOpen, blockLight, openBlocks);
+            // A different light in each block, and light in the filled ones too, which must not count.
+            for (let blockIndex = 0; blockIndex < NUM_VOXEL_BLOCKS; ++blockIndex)
+                result.light[blockIndex * 3] = 1 + blockCenter(blockIndex).x + 10 * blockCenter(blockIndex).z;
+            LightRegionUtil.averageOverRegions(result.light, result.isOpen, regionLight, openRegions);
 
             const lightAt = (x: number, z: number) => 1 + x + 10 * z;
-            const layer = 3;
-            const isOpenAt = (row: number, col: number) => openBlocks[VoxelQueryUtil.getVoxelBlockIndex(row, col, layer)];
+            const regionAt = (x: number, z: number) => regionIndexAt({x, y: LAMP.y, z});
 
-            // An empty cell: all four.
-            expect(isOpenAt(5, 3)).toBe(1);
-            expect(blockLightAt(blockLight, 5, 3, layer)).toBeCloseTo(
+            // An empty region: all four.
+            expect(openRegions[regionAt(3.5, 5.5)]).toBe(1);
+            expect(regionLight[regionAt(3.5, 5.5) * 3]).toBeCloseTo(
                 (lightAt(3.25, 5.25) + lightAt(3.75, 5.25) + lightAt(3.25, 5.75) + lightAt(3.75, 5.75)) / 4, 3);
             // Beside a post: the three it leaves.
-            expect(isOpenAt(5, 5)).toBe(1);
-            expect(blockLightAt(blockLight, 5, 5, layer)).toBeCloseTo(
+            expect(openRegions[regionAt(5.5, 5.5)]).toBe(1);
+            expect(regionLight[regionAt(5.5, 5.5) * 3]).toBeCloseTo(
                 (lightAt(5.75, 5.25) + lightAt(5.25, 5.75) + lightAt(5.75, 5.75)) / 3, 3);
-            // A thin wall's cell and a whole block's: closed, and dark.
-            for (const col of [7, 9])
+            // The thin wall's region and the filled one: closed, and dark.
+            for (const x of [7.5, 9.5])
             {
-                expect(isOpenAt(5, col), `col ${col}`).toBe(0);
-                expect(blockLightAt(blockLight, 5, col, layer), `col ${col}`).toBe(0);
+                expect(openRegions[regionAt(x, 5.5)], `x ${x}`).toBe(0);
+                expect(regionLight[regionAt(x, 5.5) * 3], `x ${x}`).toBe(0);
             }
         });
 
@@ -759,42 +764,39 @@ describe("Light propagation", () =>
         {
             // The per-axis sweep must equal a brute-force search (a bell curve over straight-line
             // distance), ruling out lossy sweeps and diamond-shaped reach.
-            const isOpen = new Uint8Array(NUM_VOXEL_BLOCKS).fill(1);
-            const centers = Array.from({length: NUM_VOXEL_BLOCKS}, (_, blockIndex) => blockCenter(
-                VoxelQueryUtil.getVoxelBlockRow(blockIndex),
-                VoxelQueryUtil.getVoxelBlockCol(blockIndex),
-                VoxelQueryUtil.getVoxelBlockCollisionLayer(blockIndex)));
+            const isOpen = new Uint8Array(NUM_REGIONS).fill(1);
+            const centers = Array.from({length: NUM_REGIONS}, (_, regionIndex) => regionCenter(regionIndex));
             const discountPerSquaredDistance = 1 / (2 * NEARBY_LIGHT_SPREAD * NEARBY_LIGHT_SPREAD);
             const channel = fc.integer({min: 0, max: 400}).map(hundredths => hundredths / 100);
 
             fc.assert(fc.property(fc.array(fc.record({
-                blockIndex: fc.integer({min: 0, max: NUM_VOXEL_BLOCKS - 1}),
+                regionIndex: fc.integer({min: 0, max: NUM_REGIONS - 1}),
                 colorR: channel, colorG: channel, colorB: channel,
-            }), {minLength: 1, maxLength: 6}), (litBlocks) =>
+            }), {minLength: 1, maxLength: 6}), (litRegions) =>
             {
-                const field = new Float32Array(NUM_VOXEL_BLOCKS * 3);
-                for (const lit of litBlocks)
+                const field = new Float32Array(NUM_REGIONS * 3);
+                for (const lit of litRegions)
                 {
-                    field[lit.blockIndex * 3] = lit.colorR;
-                    field[lit.blockIndex * 3 + 1] = lit.colorG;
-                    field[lit.blockIndex * 3 + 2] = lit.colorB;
+                    field[lit.regionIndex * 3] = lit.colorR;
+                    field[lit.regionIndex * 3 + 1] = lit.colorG;
+                    field[lit.regionIndex * 3 + 2] = lit.colorB;
                 }
                 LightBlockDilationUtil.dilate(field, nearbyLight, isOpen);
 
-                const sources = [...new Set(litBlocks.map(lit => lit.blockIndex))];
-                const luminanceOf = (buffer: Float32Array, blockIndex: number) => getLightLuminance(
-                    buffer[blockIndex * 3], buffer[blockIndex * 3 + 1], buffer[blockIndex * 3 + 2]);
+                const sources = [...new Set(litRegions.map(lit => lit.regionIndex))];
+                const luminanceOf = (buffer: Float32Array, regionIndex: number) => getLightLuminance(
+                    buffer[regionIndex * 3], buffer[regionIndex * 3 + 1], buffer[regionIndex * 3 + 2]);
 
                 // Scanned into single worst cases and asserted once, as elsewhere in this file.
                 let worstError = 0;
-                for (let blockIndex = 0; blockIndex < NUM_VOXEL_BLOCKS; ++blockIndex)
+                for (let regionIndex = 0; regionIndex < NUM_REGIONS; ++regionIndex)
                 {
                     let best = -1, bestLight = 0, runnerUpLight = 0;
                     for (const source of sources)
                     {
-                        const dx = centers[blockIndex].x - centers[source].x;
-                        const dy = centers[blockIndex].y - centers[source].y;
-                        const dz = centers[blockIndex].z - centers[source].z;
+                        const dx = centers[regionIndex].x - centers[source].x;
+                        const dy = centers[regionIndex].y - centers[source].y;
+                        const dz = centers[regionIndex].z - centers[source].z;
                         const arrived = luminanceOf(field, source) *
                             Math.exp(-discountPerSquaredDistance * (dx*dx + dy*dy + dz*dz));
                         if (arrived > bestLight)
@@ -809,10 +811,10 @@ describe("Light propagation", () =>
 
                     // Relative error, except near zero where only the absolute difference is meaningful.
                     worstError = Math.max(worstError,
-                        Math.abs(luminanceOf(nearbyLight, blockIndex) - bestLight) /
+                        Math.abs(luminanceOf(nearbyLight, regionIndex) - bestLight) /
                         Math.max(bestLight, 1e-12));
 
-                    // The color is the winning block's; only checked where the winner is unambiguous.
+                    // The color is the winning region's; only checked where the winner is unambiguous.
                     if (bestLight < 1e-12 || bestLight - runnerUpLight < bestLight * 1e-6)
                         continue;
                     const discount = bestLight / luminanceOf(field, best);
@@ -820,7 +822,7 @@ describe("Light propagation", () =>
                     {
                         const expected = field[best * 3 + offset] * discount;
                         worstError = Math.max(worstError,
-                            Math.abs(nearbyLight[blockIndex * 3 + offset] - expected) /
+                            Math.abs(nearbyLight[regionIndex * 3 + offset] - expected) /
                             Math.max(expected, 1e-6));
                     }
                 }
@@ -838,13 +840,13 @@ describe("Light propagation", () =>
             }), {minLength: 1, maxLength: 3}), (specs) =>
             {
                 averagedLight(openRoom(), specs.map(spec => makeLight(spec)));
-                LightBlockDilationUtil.dilate(blockLight, nearbyLight, openBlocks);
+                LightBlockDilationUtil.dilate(regionLight, nearbyLight, openRegions);
 
                 let worstShortfall = 0;
-                for (let blockIndex = 0; blockIndex < NUM_VOXEL_BLOCKS; ++blockIndex)
+                for (let regionIndex = 0; regionIndex < NUM_REGIONS; ++regionIndex)
                 {
-                    const at = blockIndex * 3;
-                    const standing = getLightLuminance(blockLight[at], blockLight[at + 1], blockLight[at + 2]);
+                    const at = regionIndex * 3;
+                    const standing = getLightLuminance(regionLight[at], regionLight[at + 1], regionLight[at + 2]);
                     const near = getLightLuminance(nearbyLight[at], nearbyLight[at + 1],
                         nearbyLight[at + 2]);
                     worstShortfall = Math.max(worstShortfall,
@@ -854,29 +856,29 @@ describe("Light propagation", () =>
             }), {numRuns: 15});
         });
 
-        it("never carries light through a wall, be it a whole block thick or half a cell", () =>
+        it("never carries light through a wall, be it a region thick or half of one", () =>
         {
             // A lamp behind a wall isn't near, so a walled-off player keeps their head lamp.
-            const wallRow = 20;
-            for (const shape of [VOXEL_BLOCK_SHAPE_WHOLE, LOW_Z_HALF, HIGH_Z_HALF])
+            const wallZ = 20;
+            for (const wall of [{z: wallZ, thickness: 1}, {z: wallZ, thickness: 0.5}, {z: wallZ + 0.5, thickness: 0.5}])
             {
-                averagedLight(setShapes(openRoom(), shape, {row: wallRow, col: 0, cols: NUM_VOXEL_COLS}),
-                    [makeLight({range: 30})]);
-                LightBlockDilationUtil.dilate(blockLight, nearbyLight, openBlocks);
+                const name = `a wall ${wall.thickness} thick from z ${wall.z}`;
+                averagedLight(wallAcross(wall.z, wall.thickness), [makeLight({range: 30})]);
+                LightBlockDilationUtil.dilate(regionLight, nearbyLight, openRegions);
 
-                expect(blockLightAt(nearbyLight, wallRow - 1, 16, 3), `shape ${shape}`).toBeGreaterThan(0);
+                expect(nearbyLight[regionIndexAt({...LAMP, z: wallZ - 0.5}) * 3], name).toBeGreaterThan(0);
                 let brightestPastTheWall = 0;
-                for (let blockIndex = 0; blockIndex < NUM_VOXEL_BLOCKS; ++blockIndex)
+                for (let regionIndex = 0; regionIndex < NUM_REGIONS; ++regionIndex)
                 {
-                    if (VoxelQueryUtil.getVoxelBlockRow(blockIndex) < wallRow)
+                    if (regionCenter(regionIndex).z < wallZ)
                         continue;
                     for (let offset = 0; offset < 3; ++offset)
                     {
                         brightestPastTheWall = Math.max(brightestPastTheWall,
-                            nearbyLight[blockIndex * 3 + offset]);
+                            nearbyLight[regionIndex * 3 + offset]);
                     }
                 }
-                expect(brightestPastTheWall, `shape ${shape}`).toBe(0);
+                expect(brightestPastTheWall, name).toBe(0);
             }
         });
     });
@@ -884,12 +886,12 @@ describe("Light propagation", () =>
     describe("never darkening what it reaches", () =>
     {
         // Installing a light never removes light. The amount is monotone by construction; the direction
-        // (one vector per sub-block) isn't, hence the recorded directional share.
+        // (one vector per block) isn't, hence the recorded directional share.
 
-        /** Fraction of a sub-block's light that is directional (see LightBlockMap). */
-        function directionalShareAt(result: PropagationResult, subBlockIndex: number): number
+        /** Fraction of a block's light that is directional (see LightBlockMap). */
+        function directionalShareAt(result: PropagationResult, blockIndex: number): number
         {
-            const at = subBlockIndex * 3;
+            const at = blockIndex * 3;
             const luminance = getLightLuminance(result.light[at], result.light[at + 1],
                 result.light[at + 2]);
             if (luminance <= 0)
@@ -899,9 +901,9 @@ describe("Light propagation", () =>
         }
 
         /** What a surface with this normal receives (LIGHT_BLOCK_MAP_FRAGMENT_GLSL's arithmetic, on the CPU). */
-        function shadeAt(result: PropagationResult, subBlockIndex: number, normal: Point): number
+        function shadeAt(result: PropagationResult, blockIndex: number, normal: Point): number
         {
-            const at = subBlockIndex * 3;
+            const at = blockIndex * 3;
             const lit = getLightLuminance(result.light[at], result.light[at + 1],
                 result.light[at + 2]);
             const fluxX = result.flux[at], fluxY = result.flux[at + 1], fluxZ = result.flux[at + 2];
@@ -910,7 +912,7 @@ describe("Light propagation", () =>
             const facing = (fluxLength > 0)
                 ? Math.max(0, -(normal.x * fluxX + normal.y * fluxY + normal.z * fluxZ) / fluxLength)
                 : 0;
-            const reach = 1 - directionalShareAt(result, subBlockIndex) * (1 - facing);
+            const reach = 1 - directionalShareAt(result, blockIndex) * (1 - facing);
             return lit * (LIGHT_BLOCK_MAP_AMBIENT_SHARE +
                 (1 - LIGHT_BLOCK_MAP_AMBIENT_SHARE) * reach);
         }
@@ -952,7 +954,7 @@ describe("Light propagation", () =>
             // Light from the bright lamp travels toward increasing x to arrive here.
             expect(result.fluxAt(LAMP).x).toBeGreaterThan(0);
             // Nearly all the light here is directional, toward the bright lamp.
-            expect(directionalShareAt(result, subBlockIndexAt(LAMP))).toBeGreaterThan(0.9);
+            expect(directionalShareAt(result, blockIndexAt(LAMP))).toBeGreaterThan(0.9);
         });
 
         it("lights a surface between two facing lamps more than one lamp does, not less", () =>
@@ -960,7 +962,7 @@ describe("Light propagation", () =>
             // Light from both sides nearly cancels; a dim lamp must not flip the leftover direction and leave
             // a surface darker under two lamps than under one.
             const towardFirstLamp = {x: -1, y: 0, z: 0};
-            const target = subBlockIndexAt(LAMP);
+            const target = blockIndexAt(LAMP);
             const first = makeLight({worldPos: {x: 12.25, y: 1.75, z: 16.25}, range: 20});
             const second = makeLight({worldPos: {x: 20.25, y: 1.75, z: 16.25}, range: 20,
                 colorR: 1.1, colorG: 1.1, colorB: 1.1});
@@ -986,17 +988,17 @@ describe("Light propagation", () =>
                 const worstShare = (of: PropagationResult) =>
                 {
                     let worst = 0;
-                    for (let subBlockIndex = 0; subBlockIndex < NUM_VOXEL_SUB_BLOCKS; ++subBlockIndex)
-                        worst = Math.max(worst, directionalShareAt(of, subBlockIndex));
+                    for (let blockIndex = 0; blockIndex < NUM_VOXEL_BLOCKS; ++blockIndex)
+                        worst = Math.max(worst, directionalShareAt(of, blockIndex));
                     return worst;
                 };
                 // Measured before the shader's clamp, so out-of-step fields show.
                 const unclamped = (of: PropagationResult) =>
                 {
                     let worst = 0;
-                    for (let subBlockIndex = 0; subBlockIndex < NUM_VOXEL_SUB_BLOCKS; ++subBlockIndex)
+                    for (let blockIndex = 0; blockIndex < NUM_VOXEL_BLOCKS; ++blockIndex)
                     {
-                        const at = subBlockIndex * 3;
+                        const at = blockIndex * 3;
                         const luminance = getLightLuminance(of.light[at], of.light[at + 1],
                             of.light[at + 2]);
                         if (luminance <= 0)
@@ -1015,7 +1017,7 @@ describe("Light propagation", () =>
 
         it("never leaves a surface darker for another lamp having been installed", () =>
         {
-            // Every sub-block and every normal, with the field smoothed as before upload.
+            // Every block and every normal, with the field smoothed as before upload.
             const normals = [
                 {x: 1, y: 0, z: 0}, {x: -1, y: 0, z: 0},
                 {x: 0, y: 1, z: 0}, {x: 0, y: -1, z: 0},
@@ -1029,19 +1031,19 @@ describe("Light propagation", () =>
                     const after = smoothed(propagate(voxels,
                         [...installed, added].map(spec => makeLight(spec))));
 
-                    // Worst case scanned and asserted once (per-sub-block assertions cost minutes); relative,
+                    // Worst case scanned and asserted once (per-block assertions cost minutes); relative,
                     // since values span orders of magnitude.
                     let worstLoss = 0;
-                    for (let subBlockIndex = 0; subBlockIndex < NUM_VOXEL_SUB_BLOCKS; ++subBlockIndex)
+                    for (let blockIndex = 0; blockIndex < NUM_VOXEL_BLOCKS; ++blockIndex)
                     {
                         // Unlit before, so with nothing to lose.
-                        if (before.light[subBlockIndex * 3] === 0 && before.light[subBlockIndex * 3 + 1] === 0 &&
-                            before.light[subBlockIndex * 3 + 2] === 0)
+                        if (before.light[blockIndex * 3] === 0 && before.light[blockIndex * 3 + 1] === 0 &&
+                            before.light[blockIndex * 3 + 2] === 0)
                             continue;
                         for (const normal of normals)
                         {
-                            const wasLit = shadeAt(before, subBlockIndex, normal);
-                            const nowLit = shadeAt(after, subBlockIndex, normal);
+                            const wasLit = shadeAt(before, blockIndex, normal);
+                            const nowLit = shadeAt(after, blockIndex, normal);
                             worstLoss = Math.max(worstLoss,
                                 (wasLit - nowLit) / Math.max(wasLit, 1e-6));
                         }
@@ -1077,6 +1079,9 @@ describe("Light propagation", () =>
             const far = luminanceAt(map, {x: 16.5, y: 1.75, z: 28.5});
             expect(near).toBeGreaterThan(far);
             expect(far).toBeGreaterThanOrEqual(0);
+            // And as much to the side of the lamp as before it.
+            expect(luminanceAt(map, {x: 17.5, y: 1.75, z: 16.5})).toBeCloseTo(near, 5);
+            expect(luminanceAt(map, {x: 28.5, y: 1.75, z: 16.5})).toBeCloseTo(far, 5);
         });
 
         it("goes on reporting a lamp past its own light, and lets go of it gradually", () =>
@@ -1160,7 +1165,7 @@ describe("Light propagation", () =>
             expect(luminanceAt(map, far)).toBe(luminanceAt(mapWithLampAt(far), far));
 
             // Its outlet alone, into a block: it goes out.
-            const voxels = setShapes(openRoom(), VOXEL_BLOCK_SHAPE_WHOLE, {row: 20, col: 20});
+            const voxels = fill(openRoom(), {x: 20, z: 20, sizeX: 1, sizeZ: 1});
             const walled = new LightBlockMap();
             walled.resetForRoom(voxels);
             walled.addLightSource("lamp", makeLight({worldPos: far, range: 20}));
@@ -1187,11 +1192,11 @@ describe("Light propagation", () =>
         it("does not read a wall as darkness", () =>
         {
             // Solid blocks hold no light but aren't dark surroundings; reading them as dark would restore
-            // the head lamp right where the player looks. A thin wall's cell is no different.
-            const wallCol = 8;
-            for (const shape of [VOXEL_BLOCK_SHAPE_WHOLE, HIGH_X_HALF, LOW_X_HALF])
+            // the head lamp right where the player looks. A region a thin wall stands in is no different.
+            const wallX = 8;
+            for (const wall of [{x: wallX, thickness: 1}, {x: wallX + 0.5, thickness: 0.5}, {x: wallX, thickness: 0.5}])
             {
-                const voxels = setShapes(openRoom(), shape, {row: 0, col: wallCol, rows: NUM_VOXEL_ROWS});
+                const voxels = fill(openRoom(), {x: wall.x, z: 0, sizeX: wall.thickness, sizeZ: MAX_ROOM_Z});
                 const map = new LightBlockMap();
                 map.resetForRoom(voxels);
                 map.addLightSource("lamp", makeLight({
@@ -1201,39 +1206,42 @@ describe("Light propagation", () =>
                 // Walking the last stretch up to the wall must not drop the reading away.
                 let previous = luminanceAt(map, {x: 12.5, y: 1.75, z: 16.5});
                 expect(previous).toBeGreaterThan(0);
-                for (let x = 12.4; x > wallCol + 1.05; x -= 0.1)
+                for (let x = 12.4; x > wallX + 1.05; x -= 0.1)
                 {
                     const here = luminanceAt(map, {x, y: 1.75, z: 16.5});
                     // It falls off with distance from the lamp, but never collapses toward nothing.
-                    expect(here, `shape ${shape}, x ${x}`).toBeGreaterThan(previous * 0.75);
+                    expect(here, `a wall ${wall.thickness} thick from x ${wall.x}, x ${x}`)
+                        .toBeGreaterThan(previous * 0.75);
                     previous = here;
                 }
             }
         });
 
-        it("still reads the light standing where no block around is open", () =>
+        it("still reads the light standing where no region around is open", () =>
         {
-            // A passage a cell wide between two thin walls, each in the far half of its own cells: all of its
-            // air lies in blocks the head lamp's reading takes for walls.
-            const voxels = openRoom();
-            setShapes(voxels, LOW_Z_HALF, {row: 15, col: 0, cols: NUM_VOXEL_COLS});
-            setShapes(voxels, HIGH_Z_HALF, {row: 16, col: 0, cols: NUM_VOXEL_COLS});
+            // A passage a world unit wide between two thin walls, each in the far half of the regions it stands
+            // in: all of its air lies in regions the head lamp's reading takes for walls.
+            const voxels = wallAcross(15, 0.5);
+            wallAcross(16.5, 0.5, voxels);
+            const lamp = makeLight({worldPos: {x: 16.25, y: 1.75, z: 16}, range: 10, colorR: 3, colorG: 3, colorB: 3});
             const map = new LightBlockMap();
             map.resetForRoom(voxels);
-            map.addLightSource("lamp", makeLight({worldPos: {x: 16.25, y: 1.75, z: 16}, range: 10,
-                colorR: 3, colorG: 3, colorB: 3}));
+            map.addLightSource("lamp", lamp);
             map.update();
 
             expect(luminanceAt(map, {x: 12.5, y: 1.75, z: 16})).toBeGreaterThan(0);
             expect(luminanceAt(map, {x: 12.5, y: 1.75, z: 15.75})).toBeGreaterThan(0);
+            // In the middle of a block it is that block's own light, which is white: as bright as its red.
+            const inBlock = {x: 12.25, y: 1.75, z: 16.25};
+            expect(luminanceAt(map, inBlock)).toBeCloseTo(smoothed(propagate(voxels, [lamp])).at(inBlock), 5);
             // And nothing of it outside, past either wall.
             expect(luminanceAt(map, {x: 12.5, y: 1.75, z: 14.5})).toBe(0);
             expect(luminanceAt(map, {x: 12.5, y: 1.75, z: 17.5})).toBe(0);
         });
 
-        it("changes smoothly rather than block by block", () =>
+        it("changes smoothly rather than region by region", () =>
         {
-            // Stepping between blocks must not step the head lamp's brightness.
+            // Stepping between regions must not step the head lamp's brightness.
             const map = mapWithLampAt({x: 16.5, y: 1.75, z: 16.5});
             const along = (z: number) => luminanceAt(map, {x: 16.5, y: 1.75, z});
             const stride = 0.05;
@@ -1246,7 +1254,7 @@ describe("Light propagation", () =>
                 previous = here;
             }
 
-            // A twentieth-block move changes it by no more than its share of the steepest fall from one block's
+            // A twentieth-region move changes it by no more than its share of the steepest fall from one region's
             // middle to the next: a straight line between them, not a step at the border.
             let steepestFall = 0;
             for (let z = 18.5; z < 24.5; ++z)
@@ -1262,7 +1270,7 @@ describe("Light propagation", () =>
                 {x: -40, y: 1.75, z: 16.5},
                 {x: 16.5, y: -10, z: 16.5},
                 {x: 16.5, y: 900, z: 16.5},
-                {x: 16.5, y: 1.75, z: NUM_VOXEL_ROWS + 40},
+                {x: 16.5, y: 1.75, z: MAX_ROOM_Z + 40},
             ])
             {
                 const brightness = luminanceAt(map, worldPos);
@@ -1272,84 +1280,107 @@ describe("Light propagation", () =>
         });
     });
 
-    describe("shrunk blocks", () =>
+    describe("thin walls and posts", () =>
     {
-        // Light is kept a sub-block at a time, so it fills what a shrunk block leaves of its cell and stops at
-        // the rest (see LightSubBlockUtil).
-        const wallRow = 20;
+        // Light is kept a block at a time, so it stops at a wall or a post one block thick, which is half a
+        // world unit, and fills the air right up against it.
+        const wallZ = 20;
         const y = LAMP.y;
-        const thinWall = (shape: number) => setShapes(openRoom(), shape, {row: wallRow, col: 0, cols: NUM_VOXEL_COLS});
 
-        it("are open to light exactly where they leave their cell empty", () =>
+        /** Columns a block thick along x, one to every world unit of the room's width, from wallZ as deep as told. */
+        function columnsAcross(depth: number): Voxel[]
         {
-            const isOpen = new Uint8Array(NUM_VOXEL_SUB_BLOCKS);
-            const openAt = (shape: number, x: number, z: number) =>
+            const voxels = openRoom();
+            for (let x = 0; x < MAX_ROOM_X; ++x)
+                fill(voxels, {x, z: wallZ, sizeX: 0.5, sizeZ: depth});
+            return voxels;
+        }
+
+        it("are closed to light exactly where they stand", () =>
+        {
+            // Four voxels that meet at a corner, with posts in every choice of them.
+            const isOpen = new Uint8Array(NUM_VOXEL_BLOCKS);
+            const posts = [{x: 16, z: wallZ}, {x: 16.5, z: wallZ}, {x: 16, z: wallZ + 0.5}, {x: 16.5, z: wallZ + 0.5}];
+            for (let standing = 0; standing < (1 << posts.length); ++standing)
             {
-                LightSubBlockUtil.markOpen(setShapes(openRoom(), shape, {row: wallRow, col: 16}), isOpen);
-                return isOpen[subBlockIndexAt({x: 16 + x, y, z: wallRow + z})];
-            };
-            const quarters = [{x: 0.25, z: 0.25, bit: 0b0001}, {x: 0.75, z: 0.25, bit: 0b0010},
-                {x: 0.25, z: 0.75, bit: 0b0100}, {x: 0.75, z: 0.75, bit: 0b1000}];
-            for (const shape of [VOXEL_BLOCK_SHAPE_EMPTY, VOXEL_BLOCK_SHAPE_WHOLE, LOW_X_HALF, HIGH_X_HALF,
-                LOW_Z_HALF, HIGH_Z_HALF, 0b0001, 0b0010, 0b0100, 0b1000])
-            {
-                for (const quarter of quarters)
+                const voxels = openRoom();
+                posts.forEach((post, i) =>
                 {
-                    expect(openAt(shape, quarter.x, quarter.z), `shape ${shape.toString(2)} at ${quarter.x}, ${quarter.z}`)
-                        .toBe((shape & quarter.bit) ? 0 : 1);
-                }
+                    if ((standing & (1 << i)) !== 0)
+                        fill(voxels, {...post, sizeX: 0.5, sizeZ: 0.5});
+                });
+                LightBlockPropagationUtil.markOpen(voxels, isOpen);
+                posts.forEach((post, i) =>
+                {
+                    expect(isOpen[blockIndexAt({x: post.x + 0.25, y, z: post.z + 0.25})],
+                        `posts ${standing.toString(2)} at ${post.x}, ${post.z}`).toBe((standing & (1 << i)) ? 0 : 1);
+                });
             }
 
+            // Layer by layer too: one block to a voxel, at a height that changes from each voxel to the next.
+            const layerAt = (row: number, col: number) => (row + 3 * col) % NUM_COLLISION_LAYERS;
+            LightBlockPropagationUtil.markOpen(makeVoxels((row, col) => 1 << layerAt(row, col)), isOpen);
+            let numMisread = 0;
+            for (let blockIndex = 0; blockIndex < NUM_VOXEL_BLOCKS; ++blockIndex)
+            {
+                const stands = VoxelQueryUtil.getVoxelBlockCollisionLayer(blockIndex) === layerAt(
+                    VoxelQueryUtil.getVoxelBlockRow(blockIndex), VoxelQueryUtil.getVoxelBlockCol(blockIndex));
+                if (isOpen[blockIndex] !== (stands ? 0 : 1))
+                    ++numMisread;
+            }
+            expect(numMisread).toBe(0);
+
             // A room that is not there has nowhere for light to be.
-            LightSubBlockUtil.markOpen(undefined, isOpen);
+            LightBlockPropagationUtil.markOpen(undefined, isOpen);
             expect(isOpen.some(value => value !== 0)).toBe(false);
         });
 
         it("stop light where they stand and nowhere else", () =>
         {
             const light = makeLight({range: 20});
-            const behindWall = {...LAMP, z: wallRow + 1.25};
+            const behindWall = {...LAMP, z: wallZ + 1.25};
 
-            // A wall half a cell thick shadows as a whole one does, whichever half of its cells it fills.
-            for (const half of [LOW_Z_HALF, HIGH_Z_HALF])
-                expect(propagate(thinWall(half), [light]).at(behindWall), `${half.toString(2)}`).toBe(0);
-            // A row of posts does not, and neither does a wall standing along the light's way rather than across it.
-            expect(propagate(thinWall(LOW_X_LOW_Z_QUARTER), [light]).at(behindWall)).toBeGreaterThan(0);
-            expect(propagate(thinWall(LOW_X_HALF), [light]).at(behindWall)).toBeGreaterThan(0);
+            // A wall one block thick shadows as a thicker one does, in whichever half of a world unit it stands.
+            for (const z of [wallZ, wallZ + 0.5])
+                expect(propagate(wallAcross(z, 0.5), [light]).at(behindWall), `a wall from z ${z}`).toBe(0);
+            // A row of posts does not, and neither do walls standing along the light's way rather than across it.
+            expect(propagate(columnsAcross(0.5), [light]).at(behindWall)).toBeGreaterThan(0);
+            expect(propagate(columnsAcross(1), [light]).at(behindWall)).toBeGreaterThan(0);
         });
 
-        it("leave light in the half of a thin wall's cell that the wall does not fill", () =>
+        it("leave the air against a thin wall's face as lit as the air before it", () =>
         {
-            // The wall fills the far half of its cells, so their near half is open air, in front of its face.
-            const result = smoothed(propagate(thinWall(HIGH_Z_HALF), [makeLight({range: 20})]));
-            const inFrontOfFace = {...LAMP, z: wallRow + 0.25};
+            // The wall stands half a world unit further off, so a block of open air lies in front of its face.
+            const result = smoothed(propagate(wallAcross(wallZ + 0.5, 0.5), [makeLight({range: 20})]));
+            const inFrontOfFace = {...LAMP, z: wallZ + 0.25};
             expect(result.at(inFrontOfFace)).toBeGreaterThan(0);
-            // As much as the air just before it holds, or nearly: it is no darker for lying in the wall's cell.
-            expect(result.at(inFrontOfFace)).toBeGreaterThan(0.8 * result.at({...LAMP, z: wallRow - 0.25}));
+            // As much as the air just before it holds, or nearly: it is no darker for lying against the wall.
+            expect(result.at(inFrontOfFace)).toBeGreaterThan(0.8 * result.at({...LAMP, z: wallZ - 0.25}));
             // And none inside the wall or past it.
-            expect(countLit(result, center => center.z > wallRow + 0.5)).toBe(0);
+            expect(countLit(result, center => center.z > wallZ + 0.5)).toBe(0);
         });
 
-        it("let light through a window that two half blocks narrow from either side", () =>
+        it("let light through a window that a block narrows from either side", () =>
         {
-            // A whole wall with one opening, two cells wide; each cell of it half filled, from its outer side.
-            const voxels = makeVoxels((row) => row === wallRow ? FULL_COLLISION_LAYER_MASK : 0);
-            setShapes(voxels, LOW_X_HALF, {row: wallRow, col: 15});
-            setShapes(voxels, HIGH_X_HALF, {row: wallRow, col: 16});
+            // A thick wall with one gap, two world units wide, and a block stood in each end of it.
+            const gap = {x: 15, z: wallZ, sizeX: 2, sizeZ: 1};
+            const voxels = carve(wallAcross(wallZ, 1), gap);
+            fill(voxels, {x: 15, z: wallZ, sizeX: 0.5, sizeZ: 1});
+            fill(voxels, {x: 16.5, z: wallZ, sizeX: 0.5, sizeZ: 1});
             const result = smoothed(propagate(voxels, [makeLight({worldPos: {x: 16, y, z: 16.25}, range: 20})]));
 
-            // The opening is the two half cells left between them, lit through to the room beyond.
+            // The opening is the two blocks' width left between them, lit through to the room beyond.
             for (const x of [15.75, 16.25])
             {
-                expect(result.at({x, y, z: wallRow + 0.25}), `opening at x ${x}, near`).toBeGreaterThan(0);
-                expect(result.at({x, y, z: wallRow + 0.75}), `opening at x ${x}, far`).toBeGreaterThan(0);
+                expect(result.at({x, y, z: wallZ + 0.25}), `opening at x ${x}, near`).toBeGreaterThan(0);
+                expect(result.at({x, y, z: wallZ + 0.75}), `opening at x ${x}, far`).toBeGreaterThan(0);
             }
-            expect(result.at({x: 16.25, y, z: wallRow + 1.25})).toBeGreaterThan(0);
+            expect(result.at({x: 16.25, y, z: wallZ + 1.25})).toBeGreaterThan(0);
 
             // With the opening filled in, nothing passes.
-            setShapes(voxels, VOXEL_BLOCK_SHAPE_WHOLE, {row: wallRow, col: 15, cols: 2});
+            fill(voxels, gap);
             expect(countLit(propagate(voxels, [makeLight({worldPos: {x: 16, y, z: 16.25}, range: 20})]),
-                center => center.z > wallRow)).toBe(0);
+                center => center.z > wallZ)).toBe(0);
         });
 
         /** A lamp as the game hands one over (see the LightSource component): on a face, shining the way it looks. */
@@ -1360,56 +1391,55 @@ describe("Light propagation", () =>
             return makeLight({worldPos: out(0.5, 0.25), outletPos: out(0.25, 0.25), ...overrides});
         }
 
-        it("leave a lamp on a thin wall's inner face to light its own side alone", () =>
+        it("leave a lamp on a thin wall to light its own side alone", () =>
         {
-            // The wall fills the higher-z half of its cells; the lamp hangs on the face across their middle.
-            const voxels = thinWall(HIGH_Z_HALF);
-            const result = propagate(voxels, [lampOn({x: 16.5, y, z: wallRow + 0.5}, {x: 0, y: 0, z: -1}, {range: 20})]);
-            expect(result.at({...LAMP, z: wallRow + 0.25})).toBeGreaterThan(0);
-            expect(result.at({...LAMP, z: wallRow - 0.75})).toBeGreaterThan(0);
-            expect(countLit(result, center => center.z > wallRow + 0.5)).toBe(0);
+            // The wall stands in the further half of a world unit; the lamp hangs on its nearer face.
+            const voxels = wallAcross(wallZ + 0.5, 0.5);
+            const result = propagate(voxels, [lampOn({x: 16.5, y, z: wallZ + 0.5}, {x: 0, y: 0, z: -1}, {range: 20})]);
+            expect(result.at({...LAMP, z: wallZ + 0.25})).toBeGreaterThan(0);
+            expect(result.at({...LAMP, z: wallZ - 0.75})).toBeGreaterThan(0);
+            expect(countLit(result, center => center.z > wallZ + 0.5)).toBe(0);
 
             // On the wall's other face, it lights the other side alone.
-            const behind = propagate(voxels, [lampOn({x: 16.5, y, z: wallRow + 1}, {x: 0, y: 0, z: 1}, {range: 20})]);
-            expect(behind.at({...LAMP, z: wallRow + 1.25})).toBeGreaterThan(0);
-            expect(countLit(behind, center => center.z < wallRow + 1)).toBe(0);
+            const behind = propagate(voxels, [lampOn({x: 16.5, y, z: wallZ + 1}, {x: 0, y: 0, z: 1}, {range: 20})]);
+            expect(behind.at({...LAMP, z: wallZ + 1.25})).toBeGreaterThan(0);
+            expect(countLit(behind, center => center.z < wallZ + 1)).toBe(0);
         });
 
         it("put out a lamp they are built over, though its light is measured from beyond them", () =>
         {
-            // A lamp on a whole wall, looking toward -z, and half a cell of block flush against its face.
-            const wall = () => makeVoxels((row) => row === wallRow ? FULL_COLLISION_LAYER_MASK : 0);
-            const lamp = lampOn({x: 16.5, y, z: wallRow}, {x: 0, y: 0, z: -1}, {range: 20});
-            expect(propagate(wall(), [lamp]).at({...LAMP, z: wallRow - 0.25})).toBeGreaterThan(0);
+            // A lamp on a thick wall, looking toward -z, and blocks stood flush against its face.
+            const wall = () => wallAcross(wallZ, 1);
+            const lamp = lampOn({x: 16.5, y, z: wallZ}, {x: 0, y: 0, z: -1}, {range: 20});
+            expect(propagate(wall(), [lamp]).at({...LAMP, z: wallZ - 0.25})).toBeGreaterThan(0);
 
-            const covered = propagate(setShapes(wall(), HIGH_Z_HALF, {row: wallRow - 1, col: 16}), [lamp]);
+            const covered = propagate(fill(wall(), {x: 16, z: wallZ - 0.5, sizeX: 1, sizeZ: 0.5}), [lamp]);
             expect(everyEntry(covered.light, value => value === 0)).toBe(true);
 
             // Covered across half its width only, it still shines from the other half.
-            const halfCovered = propagate(setShapes(wall(), 0b1000, {row: wallRow - 1, col: 16}), [lamp]);
-            expect(halfCovered.at({x: 16.75, y, z: wallRow - 0.25})).toBe(0);
-            expect(halfCovered.at({x: 16.25, y, z: wallRow - 0.25})).toBeGreaterThan(0);
-            expect(halfCovered.at({x: 16.75, y, z: wallRow - 0.75})).toBeGreaterThan(0);
+            const halfCovered = propagate(fill(wall(), {x: 16.5, z: wallZ - 0.5, sizeX: 0.5, sizeZ: 0.5}), [lamp]);
+            expect(halfCovered.at({x: 16.75, y, z: wallZ - 0.25})).toBe(0);
+            expect(halfCovered.at({x: 16.25, y, z: wallZ - 0.25})).toBeGreaterThan(0);
+            expect(halfCovered.at({x: 16.75, y, z: wallZ - 0.75})).toBeGreaterThan(0);
         });
 
         it("leave a lamp to light the gap between its wall and a thin one facing it", () =>
         {
-            // Half a cell of air in front of the lamp, then a wall half a cell thick: the light is measured
-            // from that wall's face, and stays on the lamp's side of it.
-            const voxels = makeVoxels((row) => row === wallRow ? FULL_COLLISION_LAYER_MASK : 0);
-            setShapes(voxels, LOW_Z_HALF, {row: wallRow - 1, col: 0, cols: NUM_VOXEL_COLS});
-            const result = propagate(voxels, [lampOn({x: 16.5, y, z: wallRow}, {x: 0, y: 0, z: -1}, {range: 20})]);
+            // A block of air in front of the lamp, then a wall one block thick: the light is measured from that
+            // wall's face, and stays on the lamp's side of it.
+            const voxels = wallAcross(wallZ - 1, 0.5, wallAcross(wallZ, 1));
+            const result = propagate(voxels, [lampOn({x: 16.5, y, z: wallZ}, {x: 0, y: 0, z: -1}, {range: 20})]);
 
-            expect(result.at({...LAMP, z: wallRow - 0.25})).toBeGreaterThan(0);
-            expect(result.at({x: 12.25, y, z: wallRow - 0.25})).toBeGreaterThan(0);
-            expect(countLit(result, center => center.z < wallRow - 0.5)).toBe(0);
+            expect(result.at({...LAMP, z: wallZ - 0.25})).toBeGreaterThan(0);
+            expect(result.at({x: 12.25, y, z: wallZ - 0.25})).toBeGreaterThan(0);
+            expect(countLit(result, center => center.z < wallZ - 0.5)).toBe(0);
         });
 
         it("leave a lamp they half cover to light from the half left open", () =>
         {
-            // The middle of a lamp a cell wide lies between two sub-blocks; a post stands in one of them.
+            // The middle of a lamp two blocks wide lies between them; a post stands in one of the two.
             const lamp = {x: 16.5, y, z: 16.25};
-            const voxels = setShapes(openRoom(), LOW_X_LOW_Z_QUARTER, {row: 16, col: 16});
+            const voxels = fill(openRoom(), {x: 16, z: 16, sizeX: 0.5, sizeZ: 0.5});
             const result = propagate(voxels, [makeLight({worldPos: lamp, range: 8, decay: 1})]);
 
             expect(result.at({...lamp, x: 16.25})).toBe(0);
@@ -1426,8 +1456,6 @@ describe("Light propagation", () =>
     {
         it("never throws, and never produces a negative or non-finite amount of light", () =>
         {
-            const shapes = [VOXEL_BLOCK_SHAPE_EMPTY, VOXEL_BLOCK_SHAPE_WHOLE, LOW_X_HALF, HIGH_X_HALF, LOW_Z_HALF,
-                HIGH_Z_HALF, 0b0001, 0b0010, 0b0100, 0b1000];
             fc.assert(fc.property(
                 fc.record({
                     x: fc.float({min: -50, max: 80, noNaN: true}),
@@ -1437,13 +1465,17 @@ describe("Light propagation", () =>
                 fc.float({min: Math.fround(0.01), max: 60, noNaN: true}),
                 fc.float({min: 0, max: 4, noNaN: true}),
                 fc.integer({min: 0, max: FULL_COLLISION_LAYER_MASK}),
-                fc.integer({min: 0, max: shapes.length - 1}),
-                (worldPos, range, decay, mask, shapeIndex) =>
+                fc.integer({min: 0, max: 0b1111}),
+                (worldPos, range, decay, mask, tile) =>
                 {
-                    // Stripes, so the fill meets solid, open and boundary blocks for any mask, with a band of
-                    // one shape across them.
-                    const voxels = makeVoxels((row, col) => ((row + col) % 2 === 0) ? mask : 0);
-                    setShapes(voxels, shapes[shapeIndex], {row: 14, col: 0, rows: 5, cols: NUM_VOXEL_COLS});
+                    // Stripes two voxels wide, so the fill meets solid, open and boundary blocks for any mask.
+                    // Across them, a band laid with one tile of two voxels by two, each of its four solid or open.
+                    const voxels = makeVoxels((row, col) =>
+                    {
+                        if (row >= 28 && row < 38)
+                            return ((tile >> (2 * (row % 2) + col % 2)) & 1) !== 0 ? FULL_COLLISION_LAYER_MASK : 0;
+                        return (((row >> 1) + (col >> 1)) % 2 === 0) ? mask : 0;
+                    });
                     const result = smoothed(propagate(voxels,
                         [makeLight({worldPos, range, decay})]));
 
@@ -1452,9 +1484,9 @@ describe("Light propagation", () =>
                     expect(everyEntry(result.flux, value => Number.isFinite(value))).toBe(true);
                     // And no light in what a block fills.
                     let numLitSolid = 0;
-                    for (let subBlockIndex = 0; subBlockIndex < NUM_VOXEL_SUB_BLOCKS; ++subBlockIndex)
+                    for (let blockIndex = 0; blockIndex < NUM_VOXEL_BLOCKS; ++blockIndex)
                     {
-                        if (result.isOpen[subBlockIndex] === 0 && result.light[subBlockIndex * 3] !== 0)
+                        if (result.isOpen[blockIndex] === 0 && result.light[blockIndex * 3] !== 0)
                             ++numLitSolid;
                     }
                     expect(numLitSolid).toBe(0);

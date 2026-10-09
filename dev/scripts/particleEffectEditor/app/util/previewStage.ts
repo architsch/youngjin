@@ -2,6 +2,8 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import Vec3 from "../../../../../src/shared/math/types/vec3";
 import WaveformUtil from "../../../../../src/shared/math/util/waveformUtil";
+import { COLLISION_LAYER_HEIGHT, VOXEL_CELL_SIZE } from "../../../../../src/shared/system/sharedConstants";
+import VoxelQueryUtil from "../../../../../src/shared/voxel/util/voxelQueryUtil";
 import ParticleSystem from "../../../../../src/client/graphics/particle/particleSystem";
 import ParticleEffectConfig from "../../../../../src/client/graphics/particle/types/particleEffectConfig";
 import ParticleEmitterHandle from "../../../../../src/client/graphics/particle/types/particleEmitterHandle";
@@ -17,11 +19,11 @@ import PreviewSettings from "../types/previewSettings";
 import PreviewStatus from "../types/previewStatus";
 
 // The room cell effects play in, clear of the room's edges; its floor is y = 0 (see AppStandIn).
-const CELL_ROW = 16;
-const CELL_COL = 16;
-const ORIGIN_X = CELL_COL + 0.5;
-const ORIGIN_Z = CELL_ROW + 0.5;
-const WALL_Z = CELL_ROW;
+const CELL_ROW = 32;
+const CELL_COL = 32;
+const ORIGIN_X = VoxelQueryUtil.getWorldXAtVoxelColCenter(CELL_COL);
+const ORIGIN_Z = VoxelQueryUtil.getWorldZAtVoxelRowCenter(CELL_ROW);
+const WALL_Z = CELL_ROW * VOXEL_CELL_SIZE;
 const UP: Vec3 = {x: 0, y: 1, z: 0};
 const FLOOR_COLORS = {light: 0xa0a8b8, dark: 0x4a3a2c};
 const BACKGROUND_COLOR = 0x1c2026;
@@ -88,11 +90,12 @@ export default class PreviewStage
         this.floorMaterial = new THREE.MeshLambertMaterial({map: createGridTexture()});
         const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), this.floorMaterial);
         floor.rotation.x = -0.5 * Math.PI;
-        floor.position.set(CELL_COL, 0, CELL_ROW);
-        this.block = new THREE.Mesh(new THREE.BoxGeometry(1, 0.5, 1), new THREE.MeshLambertMaterial({color: 0x9aa3b8}));
-        this.block.position.set(ORIGIN_X, 0.25, ORIGIN_Z);
+        floor.position.set(WALL_Z, 0, WALL_Z);
+        this.block = new THREE.Mesh(new THREE.BoxGeometry(VOXEL_CELL_SIZE, COLLISION_LAYER_HEIGHT, VOXEL_CELL_SIZE),
+            new THREE.MeshLambertMaterial({color: 0x9aa3b8}));
+        this.block.position.set(ORIGIN_X, 0.5 * COLLISION_LAYER_HEIGHT, ORIGIN_Z);
         this.wall = new THREE.Mesh(new THREE.PlaneGeometry(40, 8), new THREE.MeshLambertMaterial({color: 0x8a8174}));
-        this.wall.position.set(CELL_COL, 4, WALL_Z);
+        this.wall.position.set(WALL_Z, 4, WALL_Z);
         this.scene.add(floor, this.block, this.wall);
 
         this.controls = new OrbitControls(this.camera, canvas);

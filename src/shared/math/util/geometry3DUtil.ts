@@ -12,6 +12,8 @@ const WORLD_UP: Vec3 = {x: 0, y: 1, z: 0};
 const coneBreakpointsTemp: number[] = [];
 let gapA = 0, gapB = 0, gapC = 0;
 const ascending = (a: number, b: number): number => a - b;
+// How far clear of a cone a box must be to be told so without the full test, which rounding could not undo.
+const CONE_CLEARANCE_MARGIN = 0.0001;
 
 const Geometry3DUtil =
 {
@@ -190,8 +192,18 @@ const Geometry3DUtil =
             return false;
         }
 
-        // The ball's own radius per distance, and how far it travels: past the base, to touch the cone at its rim.
         const slopeSqr = radiusPerDistance * radiusPerDistance;
+
+        // Every ball lies inside the cone carried on past its base, so a box whose bounding sphere stays clear
+        // of that cone's side is reached by none. Most boxes asked about are, and are told so here.
+        const centerX = 0.5 * (minX + maxX), centerY = 0.5 * (minY + maxY), centerZ = 0.5 * (minZ + maxZ);
+        const along = centerX * axisX + centerY * axisY + centerZ * axisZ;
+        const across = Math.sqrt(Math.max(0, centerX * centerX + centerY * centerY + centerZ * centerZ - along * along));
+        const boxRadius = Math.hypot(box.halfSize.x, box.halfSize.y, box.halfSize.z);
+        if (across - radiusPerDistance * along > (boxRadius + CONE_CLEARANCE_MARGIN) * Math.sqrt(1 + slopeSqr))
+            return false;
+
+        // The ball's own radius per distance, and how far it travels: past the base, to touch the cone at its rim.
         const ballSlopeSqr = slopeSqr / (1 + slopeSqr);
         const sweepLength = length * (1 + slopeSqr);
 

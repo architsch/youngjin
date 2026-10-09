@@ -5,12 +5,15 @@ export type ZoneHandle = "nw" | "n" | "ne" | "w" | "e" | "sw" | "s" | "se";
 
 export const ZONE_HANDLES: ZoneHandle[] = ["nw", "n", "ne", "w", "e", "sw", "s", "se"];
 
-// Fingertip-sized handles; this drives the plan's cell size.
+// Fingertip-sized handles.
 export const HANDLE_SIZE_PX = 14;
 
-// Plan cell size, and the inset that edge handles hang into.
-export const CELL_SIZE_PX = 20;
+// How large the plan draws a voxel, and the inset that edge handles hang into.
+export const CELL_SIZE_PX = 10;
 export const PLAN_INSET_PX = HANDLE_SIZE_PX / 2 + 1;
+
+// The shortest side with room for a handle at its middle, between those at its corners.
+const MIN_SIDE_WITH_MIDDLE_HANDLE_PX = 2 * CELL_SIZE_PX;
 
 // Marks zone elements, so zone drags can be told apart from plan scrolls (see RestrictedZoneGrid).
 export const ZONE_RECT_MARKER_ATTRIBUTE = "data-restricted-zone-rect";
@@ -24,20 +27,24 @@ export default function RestrictedZoneUIRect({zone, selected, onGrab}: Props)
     const width = (zone.colMax - zone.colMin + 1) * CELL_SIZE_PX;
     const height = (zone.rowMax - zone.rowMin + 1) * CELL_SIZE_PX;
 
+    const handles = ZONE_HANDLES.filter(handle =>
+        (width >= MIN_SIDE_WITH_MIDDLE_HANDLE_PX || (handle != "n" && handle != "s")) &&
+        (height >= MIN_SIDE_WITH_MIDDLE_HANDLE_PX || (handle != "w" && handle != "e")));
+
     return <div
         {...{[ZONE_RECT_MARKER_ATTRIBUTE]: true}}
         className={`absolute touch-none select-none cursor-move ${selected ? SELECTED_CLASS : UNSELECTED_CLASS}`}
         style={{left, top, width, height}}
         onPointerDown={(ev) => onGrab(ev, "body")}
     >
-        {selected && ZONE_HANDLES.map(handle => <div
+        {selected && handles.map(handle => <div
             key={handle}
             {...{[ZONE_RECT_MARKER_ATTRIBUTE]: true}}
             className={`absolute touch-none bg-red-200 border border-red-900 rounded-xs ${HANDLE_CURSORS[handle]}`}
             style={{
                 width: HANDLE_SIZE_PX,
                 height: HANDLE_SIZE_PX,
-                // Centred on the edge, so handles on one-cell zones stay distinguishable.
+                // Centred on the edge, so handles on the smallest zones stay distinguishable.
                 left: `calc(${HANDLE_ANCHORS[handle].x} - ${HANDLE_SIZE_PX / 2}px)`,
                 top: `calc(${HANDLE_ANCHORS[handle].y} - ${HANDLE_SIZE_PX / 2}px)`,
             }}

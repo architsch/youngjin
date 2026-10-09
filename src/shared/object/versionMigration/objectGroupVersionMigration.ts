@@ -23,8 +23,7 @@ import DoorCompositionParams from "../../graphics/mesh/composition/types/composi
 import { InstancedMeshCompositionParams } from "../../graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
 import ColorUtil from "../../math/util/colorUtil";
 import LightPaletteVersionMigration from "../../math/versionMigration/lightPaletteVersionMigration";
-import { COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL,
-    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, UNIT_VEC3 } from "../../system/sharedConstants";
+import { UNIT_VEC3 } from "../../system/sharedConstants";
 import BufferState from "../../networking/types/bufferState";
 
 // Grid version where rooms became two storeys. Objects share a blob with the grid, and the object
@@ -39,6 +38,9 @@ const FIRST_SCALED_TRANSFORM_VERSION = 4;
 // Grid version where the entrance doorway was filled and the entrance door became a stored object.
 // Older grids mean the room never stored its door.
 const FIRST_STORED_ENTRANCE_DOOR_VOXEL_GRID_VERSION = 3;
+
+// Where the doorway of those older rooms opened into the room, in world units: the foot of the door they get.
+const LEGACY_ENTRANCE_POS: Vec3 = {x: 16.5, y: 0, z: 31};
 
 // For objects decoded without a grid, which are current by construction. A literal, since importing
 // VoxelGrid would be an import cycle.
@@ -128,9 +130,7 @@ const converters: ((objectGroup: ObjectGroup, roomID: string, sourceVoxelGridVer
         if (sourceVoxelGridVersion >= FIRST_STORED_ENTRANCE_DOOR_VOXEL_GRID_VERSION)
             return;
 
-        const entranceDoor = DoorObjectTypeConfig.util.makeEntranceDoor(roomID,
-            INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, COLLISION_LAYER_MIN);
-        objectGroup.addObject(entranceDoor);
+        objectGroup.addObject(DoorObjectTypeConfig.util.makeEntranceDoor(roomID, LEGACY_ENTRANCE_POS));
     },
     (objectGroup: ObjectGroup) => { // version 2 -> 3
         // Bitmap canvas frames became composed wood frames: an atlas cell becomes its look-alike.
@@ -161,7 +161,7 @@ const converters: ((objectGroup: ObjectGroup, roomID: string, sourceVoxelGridVer
         // size, and decodeTransform gives them that as it reads them.
     },
     (objectGroup: ObjectGroup) => { // version 4 -> 5
-        // A lamp's base footprint went from one voxel by one layer to a unit square it is scaled from, so
+        // A lamp's base footprint went from a world unit by one layer to a unit square it is scaled from, so
         // lamps are halved in height to keep the size they were drawn at.
         const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
         for (const object of Object.values(objectGroup.objectById))

@@ -1,8 +1,6 @@
-import { NUM_VOXEL_COLS, NUM_VOXEL_ROWS, VOXEL_BLOCK_SHAPE_EMPTY, VOXEL_BLOCK_SHAPE_WHOLE }
-    from "../../../../../src/shared/system/sharedConstants";
+import { NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../../../../src/shared/system/sharedConstants";
 import Voxel from "../../../../../src/shared/voxel/types/voxel";
 import VoxelQuadsRuntimeMemory from "../../../../../src/shared/voxel/types/voxelQuadsRuntimeMemory";
-import VoxelQueryUtil from "../../../../../src/shared/voxel/util/voxelQueryUtil";
 
 // App as the particle system sees it (see server.js): an empty room, so landing particles find its floor, and
 // any block the preview stands in it.
@@ -23,8 +21,11 @@ const AppStandIn =
     },
     setBlock: (row: number, col: number, collisionLayer: number, occupied: boolean): void =>
     {
-        quadsMem.blockShapes[VoxelQueryUtil.getVoxelBlockIndex(row, col, collisionLayer)] =
-            occupied ? VOXEL_BLOCK_SHAPE_WHOLE : VOXEL_BLOCK_SHAPE_EMPTY;
+        const voxel = voxels[row * NUM_VOXEL_COLS + col];
+        if (occupied)
+            voxel.blockLayerMask |= (1 << collisionLayer);
+        else
+            voxel.blockLayerMask &= ~(1 << collisionLayer);
     },
 }
 

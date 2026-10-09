@@ -12,8 +12,7 @@ import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import SpawnHotspotUtil from "../../../src/server/room/util/spawnHotspotUtil";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 import { PLAYER_HEIGHT } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
-import { INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
-    UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
+import { INITIAL_MULTI_PLAYER_ENTRANCE_POS, UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import CanvasObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
 import ObjectUpdateUtil from "../../../src/shared/object/util/objectUpdateUtil";
@@ -29,10 +28,10 @@ function spawnPos(roomID: string): {x: number, z: number}
 
 const PLAYER_OBJECT_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Player");
 
-const SPAWN_X = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5;
+const SPAWN_X = INITIAL_MULTI_PLAYER_ENTRANCE_POS.x;
 
 // A standable point just inside the entrance, written out since actions are declared before the room exists.
-const SPAWN_Z = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 0.5;
+const SPAWN_Z = INITIAL_MULTI_PLAYER_ENTRANCE_POS.z - 0.5;
 
 describe("object scenarios", () => {
     beforeEach(() => {

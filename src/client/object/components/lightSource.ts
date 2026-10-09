@@ -5,7 +5,7 @@ import LampLightUtil from "../../../shared/graphics/light/util/lampLightUtil";
 import Geometry3DUtil from "../../../shared/math/util/geometry3DUtil";
 import LampObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/lampObjectTypeConfig";
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
-import { COLLISION_LAYER_HEIGHT, LIGHT_COLOR_PALETTE_NAME, VOXEL_SUB_BLOCK_SIZE }
+import { COLLISION_LAYER_HEIGHT, LIGHT_COLOR_PALETTE_NAME, VOXEL_CELL_SIZE }
     from "../../../shared/system/sharedConstants";
 import GraphicsManager from "../../graphics/graphicsManager";
 import GameObjectComponent from "./gameObjectComponent";
@@ -67,18 +67,17 @@ export default class LightSource extends GameObjectComponent
 
 }
 
-// Where the light is measured from: the middle of the cell layer that a face on its cell's side looks into,
-// so half a cell out from a wall but half a layer from a floor or a ceiling. Lamp ranges are tuned to it.
+// Where the light is measured from: half a world unit out from a wall, but half a layer from a floor or a
+// ceiling. Lamp ranges are tuned to it.
 function getLightWorldPos(pos: Vec3, dir: Vec3): Vec3
 {
     return getPosInFront(pos, dir, 0.5, 0.5 * COLLISION_LAYER_HEIGHT);
 }
 
-// Where the light comes out: the middle of the sub-blocks right in front of the face, whichever face it
-// is (a shrunk block's across the middle of its cell included).
+// Where the light comes out: the middle of the blocks right in front of the face.
 function getLightOutletPos(pos: Vec3, dir: Vec3): Vec3
 {
-    return getPosInFront(pos, dir, 0.5 * VOXEL_SUB_BLOCK_SIZE, 0.5 * VOXEL_SUB_BLOCK_SIZE);
+    return getPosInFront(pos, dir, 0.5 * VOXEL_CELL_SIZE, 0.5 * COLLISION_LAYER_HEIGHT);
 }
 
 function getPosInFront(pos: Vec3, dir: Vec3, reachAlongXZ: number, reachAlongY: number): Vec3

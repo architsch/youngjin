@@ -1,9 +1,9 @@
 /**
  * Scenario tests: multiplayer room generation (seed-independent properties). Every generated room is
  * fully walkable from the arrival point, keeps its door wall and the floor before it clear, has an intact
- * full-height boundary, nothing floating, only its door as an object, a pack its palettes target, and
- * reproduces from its seed. Regular rooms are procedural in one pack; Hubs are currently two empty
- * storeys (see the skipped block at the end).
+ * full-height boundary, nothing floating, nothing finer than a wall's thickness, only its door as an object, a pack
+ * its palettes target, and reproduces from its seed. Regular rooms are procedural in one pack; Hubs are
+ * currently two empty storeys (see the skipped block at the end).
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import RoomGenerationUtil from "../../../src/shared/room/generation/util/roomGenerationUtil";
@@ -15,6 +15,7 @@ import PhysicsManager from "../../../src/shared/physics/physicsManager";
 import PhysicsColliderStateUtil from "../../../src/shared/physics/util/physicsColliderStateUtil";
 import Vec3 from "../../../src/shared/math/types/vec3";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
+import Voxel from "../../../src/shared/voxel/types/voxel";
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import EncodingUtil from "../../../src/shared/networking/util/encodingUtil";
@@ -23,38 +24,79 @@ import { PLAYER_HEIGHT } from "../../../src/shared/object/types/objectTypeConfig
 import { DoorTypeEnumMap } from "../../../src/shared/object/types/doorType";
 import {
     COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, GRAVITY_SPEED,
-    HUB_ROOM_ID_KEYWORD,
-    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
+    GENERATED_WALL_THICKNESS, HUB_ROOM_ID_KEYWORD, INITIAL_MULTI_PLAYER_ENTRANCE_POS,
     NUM_COLLISION_LAYERS_PER_STOREY, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, NUM_VOXEL_TEXTURES,
     SANDBOX_SINGLE_PLAYER_MODE, STOREY_FLOOR_COLLISION_LAYER, TUTORIAL_SINGLE_PLAYER_MODE, UNIT_VEC3,
-    VOXEL_BLOCK_SHAPE_EMPTY, VOXEL_BLOCK_SHAPE_WHOLE,
+    VOXEL_CELL_SIZE,
 } from "../../../src/shared/system/sharedConstants";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 
 // Several unrelated seeds, so a property doesn't hold by one layout's luck.
 const SEEDS = [1, 2, 3, 91, 4242, 104729, 999983, 1234567];
 
+// ─── Reading a room back ───
+// Generation lays a room out in steps of a wall's thickness (see GENERATED_WALL_THICKNESS), so a generated
+// room reads as a coarser grid of squares that wide, each solid or open through all of its voxels. The rows,
+// columns and cells below count those squares.
+
+const NUM_CELL_ROWS = NUM_VOXEL_ROWS / GENERATED_WALL_THICKNESS;
+const NUM_CELL_COLS = NUM_VOXEL_COLS / GENERATED_WALL_THICKNESS;
+const CELL_SIZE = GENERATED_WALL_THICKNESS * VOXEL_CELL_SIZE;
+
+/** The voxels of a cell. */
+function getCellVoxels(voxelGrid: VoxelGrid, row: number, col: number): Voxel[]
+{
+    const rowEnd = (row + 1) * GENERATED_WALL_THICKNESS;
+    const colEnd = (col + 1) * GENERATED_WALL_THICKNESS;
+    const voxels: Voxel[] = [];
+    for (let voxelRow = row * GENERATED_WALL_THICKNESS; voxelRow < rowEnd; ++voxelRow)
+    {
+        for (let voxelCol = col * GENERATED_WALL_THICKNESS; voxelCol < colEnd; ++voxelCol)
+        {
+            const voxel = VoxelQueryUtil.getVoxel(voxelGrid.voxels, voxelRow, voxelCol);
+            if (voxel)
+                voxels.push(voxel);
+        }
+    }
+    return voxels;
+}
+
+/**
+ * One voxel standing for a cell; undefined outside the room. A generated cell's voxels all hold the same
+ * blocks (see "lays everything out in whole steps of a wall's thickness"): a cell where they differ fails
+ * whichever test reads it.
+ */
+function getCellVoxel(voxelGrid: VoxelGrid, row: number, col: number): Voxel | undefined
+{
+    const voxels = getCellVoxels(voxelGrid, row, col);
+    if (voxels.some(voxel => voxel.blockLayerMask != voxels[0].blockLayerMask))
+        throw new Error(`Cell (${row},${col}) is built in part`);
+    return voxels[0];
+}
+
 // The collision layers a standing player occupies. A cell is walkable when all of them are free.
 const PLAYER_LAYER_MASK = 0b00011111;
 
 function isWalkable(voxelGrid: VoxelGrid, row: number, col: number): boolean
 {
-    const voxel = VoxelQueryUtil.getVoxel(voxelGrid.voxels, row, col);
-    return !!voxel && (VoxelQueryUtil.getVoxelBlockLayerMask(voxel) & PLAYER_LAYER_MASK) == 0;
+    const voxel = getCellVoxel(voxelGrid, row, col);
+    return !!voxel && (voxel.blockLayerMask & PLAYER_LAYER_MASK) == 0;
 }
 
 const DOOR_OBJECT_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Door");
 
-// The entrance cell is boundary wall (the door hangs there), so walking starts from the cell in front
-// (see SpawnHotspotUtil and PlayerController).
-const ARRIVAL_ROW = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 1;
-const ARRIVAL_COL = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL;
+// The cell the entrance door hangs on is boundary wall, so walking starts from the cell in front of it (see
+// SpawnHotspotUtil and PlayerController).
+const ENTRANCE_WALL_ROW = Math.floor(INITIAL_MULTI_PLAYER_ENTRANCE_POS.z / CELL_SIZE);
+const ENTRANCE_COL = Math.floor(INITIAL_MULTI_PLAYER_ENTRANCE_POS.x / CELL_SIZE);
+const ARRIVAL_ROW = ENTRANCE_WALL_ROW - 1;
+const ARRIVAL_COL = ENTRANCE_COL;
 
 /** Every cell reachable on foot from where a player arrives. */
 function floodFillFromEntrance(voxelGrid: VoxelGrid): Set<number>
 {
     const reached = new Set<number>();
-    const pending = [ARRIVAL_ROW * NUM_VOXEL_COLS + ARRIVAL_COL];
+    const pending = [ARRIVAL_ROW * NUM_CELL_COLS + ARRIVAL_COL];
     while (pending.length > 0)
     {
         const index = pending.pop()!;
@@ -62,14 +104,14 @@ function floodFillFromEntrance(voxelGrid: VoxelGrid): Set<number>
             continue;
         reached.add(index);
 
-        const row = Math.floor(index / NUM_VOXEL_COLS);
-        const col = index % NUM_VOXEL_COLS;
+        const row = Math.floor(index / NUM_CELL_COLS);
+        const col = index % NUM_CELL_COLS;
         for (const [rowStep, colStep] of [[1, 0], [-1, 0], [0, 1], [0, -1]])
         {
             const nextRow = row + rowStep;
             const nextCol = col + colStep;
             if (isWalkable(voxelGrid, nextRow, nextCol))
-                pending.push(nextRow * NUM_VOXEL_COLS + nextCol);
+                pending.push(nextRow * NUM_CELL_COLS + nextCol);
         }
     }
     return reached;
@@ -91,9 +133,9 @@ function texturesUsedIn(voxelGrid: VoxelGrid): Set<number>
 function countWalkableCells(voxelGrid: VoxelGrid): number
 {
     let count = 0;
-    for (let row = 0; row < NUM_VOXEL_ROWS; ++row)
+    for (let row = 0; row < NUM_CELL_ROWS; ++row)
     {
-        for (let col = 0; col < NUM_VOXEL_COLS; ++col)
+        for (let col = 0; col < NUM_CELL_COLS; ++col)
         {
             if (isWalkable(voxelGrid, row, col))
                 ++count;
@@ -111,7 +153,7 @@ const PLAYER_HEIGHT_IN_LAYERS = Math.ceil(PLAYER_HEIGHT / COLLISION_LAYER_HEIGHT
 
 function layerIsSolid(voxelGrid: VoxelGrid, row: number, col: number, layer: number): boolean
 {
-    const voxel = VoxelQueryUtil.getVoxel(voxelGrid.voxels, row, col);
+    const voxel = getCellVoxel(voxelGrid, row, col);
     if (!voxel)
         return true; // outside the room, which is as solid as anything gets
     return VoxelQueryUtil.isVoxelBlockPresent(voxel, layer);
@@ -120,7 +162,7 @@ function layerIsSolid(voxelGrid: VoxelGrid, row: number, col: number, layer: num
 /** Whether a player standing on top of the given layer of this cell fits, and has ground under him. */
 function canStandOn(voxelGrid: VoxelGrid, row: number, col: number, supportLayer: number): boolean
 {
-    if (row < 0 || row >= NUM_VOXEL_ROWS || col < 0 || col >= NUM_VOXEL_COLS)
+    if (row < 0 || row >= NUM_CELL_ROWS || col < 0 || col >= NUM_CELL_COLS)
         return false;
     if (supportLayer >= COLLISION_LAYER_MIN && !layerIsSolid(voxelGrid, row, col, supportLayer))
         return false; // nothing under his feet
@@ -253,7 +295,8 @@ function walkRouteWithPhysics(room: Room, route: {row: number, col: number}[]): 
         PhysicsManager.unload(room.id);
     PhysicsManager.load(new RoomRuntimeMemory(room, {}));
 
-    let pos: Vec3 = {x: route[0].col + 0.5, y: 0.5 * PLAYER_HEIGHT, z: route[0].row + 0.5};
+    let pos: Vec3 = {x: (route[0].col + 0.5) * CELL_SIZE, y: 0.5 * PLAYER_HEIGHT,
+        z: (route[0].row + 0.5) * CELL_SIZE};
     PhysicsManager.addObject(room.id, objectId, playerTypeIndex,
         PhysicsColliderStateUtil.getObjectColliderState(playerTypeIndex,
             new ObjectTransform(pos, dir, {...UNIT_VEC3}))!);
@@ -262,8 +305,8 @@ function walkRouteWithPhysics(room: Room, route: {row: number, col: number}[]): 
     const walkSpeed = 3;
     for (let i = 1; i < route.length; ++i)
     {
-        const targetX = route[i].col + 0.5;
-        const targetZ = route[i].row + 0.5;
+        const targetX = (route[i].col + 0.5) * CELL_SIZE;
+        const targetZ = (route[i].row + 0.5) * CELL_SIZE;
 
         // Enough frames to climb a step.
         for (let frame = 0; frame < 40; ++frame)
@@ -294,8 +337,8 @@ function walkRouteWithPhysics(room: Room, route: {row: number, col: number}[]): 
 }
 
 // ─── What holds the room up ───
-// A block is supported by the floor, a supported block below, or a supported neighbour at the same
-// height (which carries storey slabs). Anything left unsupported is floating.
+// A cell's solid layer is supported by the floor, a supported one below, or a supported neighbour at the
+// same height (which carries storey slabs). Anything left unsupported is floating.
 
 function getBlockKey(row: number, col: number, layer: number): string
 {
@@ -310,7 +353,7 @@ function findFloatingBlocks(voxelGrid: VoxelGrid): string[]
     const hold = (row: number, col: number, layer: number) => {
         if (layer < COLLISION_LAYER_MIN || layer > COLLISION_LAYER_MAX)
             return;
-        if (row < 0 || row >= NUM_VOXEL_ROWS || col < 0 || col >= NUM_VOXEL_COLS)
+        if (row < 0 || row >= NUM_CELL_ROWS || col < 0 || col >= NUM_CELL_COLS)
             return;
         const key = getBlockKey(row, col, layer);
         if (held.has(key) || !layerIsSolid(voxelGrid, row, col, layer))
@@ -320,9 +363,9 @@ function findFloatingBlocks(voxelGrid: VoxelGrid): string[]
     };
 
     // Everything resting on the room's own floor holds itself up.
-    for (let row = 0; row < NUM_VOXEL_ROWS; ++row)
+    for (let row = 0; row < NUM_CELL_ROWS; ++row)
     {
-        for (let col = 0; col < NUM_VOXEL_COLS; ++col)
+        for (let col = 0; col < NUM_CELL_COLS; ++col)
             hold(row, col, COLLISION_LAYER_MIN);
     }
     while (pending.length > 0)
@@ -334,9 +377,9 @@ function findFloatingBlocks(voxelGrid: VoxelGrid): string[]
     }
 
     const floating: string[] = [];
-    for (let row = 0; row < NUM_VOXEL_ROWS; ++row)
+    for (let row = 0; row < NUM_CELL_ROWS; ++row)
     {
-        for (let col = 0; col < NUM_VOXEL_COLS; ++col)
+        for (let col = 0; col < NUM_CELL_COLS; ++col)
         {
             for (let layer = COLLISION_LAYER_MIN; layer <= COLLISION_LAYER_MAX; ++layer)
             {
@@ -352,9 +395,9 @@ function findFloatingBlocks(voxelGrid: VoxelGrid): string[]
 function countCellsOpenThroughBothStoreys(voxelGrid: VoxelGrid): number
 {
     let count = 0;
-    for (let row = 0; row < NUM_VOXEL_ROWS; ++row)
+    for (let row = 0; row < NUM_CELL_ROWS; ++row)
     {
-        for (let col = 0; col < NUM_VOXEL_COLS; ++col)
+        for (let col = 0; col < NUM_CELL_COLS; ++col)
         {
             let open = true;
             for (let layer = COLLISION_LAYER_MIN; layer < COLLISION_LAYER_MAX && open; ++layer)
@@ -387,13 +430,13 @@ function generateFromSeed(seed: number, roomType: number = RoomTypeEnumMap.Hub):
     return room;
 }
 
-/** Solid interior blocks between two layers (each solid layer of a cell counts once). */
-function countInteriorBlocks(voxelGrid: VoxelGrid, layerMin: number, layerMax: number): number
+/** Solid layers of the cells inside the boundary wall, between two layers (each solid layer of a cell counts once). */
+function countSolidInteriorLayers(voxelGrid: VoxelGrid, layerMin: number, layerMax: number): number
 {
     let count = 0;
-    for (let row = 1; row < NUM_VOXEL_ROWS - 1; ++row)
+    for (let row = 1; row < NUM_CELL_ROWS - 1; ++row)
     {
-        for (let col = 1; col < NUM_VOXEL_COLS - 1; ++col)
+        for (let col = 1; col < NUM_CELL_COLS - 1; ++col)
         {
             for (let layer = layerMin; layer <= layerMax; ++layer)
             {
@@ -405,7 +448,8 @@ function countInteriorBlocks(voxelGrid: VoxelGrid, layerMin: number, layerMax: n
     return count;
 }
 
-const NUM_INTERIOR_CELLS = (NUM_VOXEL_ROWS - 2) * (NUM_VOXEL_COLS - 2);
+// The boundary wall is one cell thick.
+const NUM_INTERIOR_CELLS = (NUM_CELL_ROWS - 2) * (NUM_CELL_COLS - 2);
 
 describe("every generated multiplayer room", () => {
     beforeEach(() => {
@@ -437,13 +481,13 @@ describe("every generated multiplayer room", () => {
                 const {voxelGrid} = generateFromSeed(seed, roomType);
 
                 // The entrance cell is wall: the door hangs on it (see ObjectAttachmentUtil).
-                expect(isWalkable(voxelGrid, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL),
+                expect(isWalkable(voxelGrid, ENTRANCE_WALL_ROW, ENTRANCE_COL),
                     `${name} seed ${seed} :: the wall the door hangs on was carved away`).toBe(false);
 
                 // The approach a player walks in along, which nothing generated may stand in.
-                for (let row = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW - 2; row < INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW; ++row)
+                for (let row = ENTRANCE_WALL_ROW - 2; row < ENTRANCE_WALL_ROW; ++row)
                 {
-                    for (let col = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL - 1; col <= INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL + 1; ++col)
+                    for (let col = ENTRANCE_COL - 1; col <= ENTRANCE_COL + 1; ++col)
                     {
                         expect(isWalkable(voxelGrid, row, col),
                             `${name} seed ${seed} :: (${row},${col}) is blocked`).toBe(true);
@@ -460,13 +504,13 @@ describe("every generated multiplayer room", () => {
             {
                 const {voxelGrid} = generateFromSeed(seed, roomType);
 
-                for (let row = 0; row < NUM_VOXEL_ROWS; ++row)
+                for (let row = 0; row < NUM_CELL_ROWS; ++row)
                 {
-                    for (let col = 0; col < NUM_VOXEL_COLS; ++col)
+                    for (let col = 0; col < NUM_CELL_COLS; ++col)
                     {
                         // Including the entrance: the door hangs on the wall rather than a hole.
                         const onBoundary = row == 0 || col == 0 ||
-                            row == NUM_VOXEL_ROWS - 1 || col == NUM_VOXEL_COLS - 1;
+                            row == NUM_CELL_ROWS - 1 || col == NUM_CELL_COLS - 1;
                         if (!onBoundary)
                             continue;
                         expect(isWalkable(voxelGrid, row, col),
@@ -477,10 +521,11 @@ describe("every generated multiplayer room", () => {
         }
     });
 
-    it("builds in whole blocks only", () => {
-        // A block's shape is a judgement about one particular piece of building, which nothing a generator
-        // knows stands in for (see room_generation.md): generated rooms leave shrinking blocks to whoever
-        // furnishes them. The single-player rooms, built from their mode's own layout, are no different.
+    it("lays everything out in whole steps of a wall's thickness", () => {
+        // Each layer of a cell is solid throughout or open throughout: building any finer is a judgement about
+        // one particular piece of building, which nothing a generator knows stands in for (see
+        // room_generation.md), so it is left to whoever furnishes the room. The single-player rooms, built from
+        // their mode's own layout, are no different.
         const generated: {name: string, voxelGrid: VoxelGrid}[] = [];
         for (const {name, roomType} of MULTIPLAYER_ROOM_TYPES)
         {
@@ -496,9 +541,17 @@ describe("every generated multiplayer room", () => {
         for (const {name, voxelGrid} of generated)
         {
             // (The sandbox is a bare floor, with no block in it at all.)
-            const shrunk = [...new Set(voxelGrid.quadsMem.blockShapes)]
-                .filter(shape => shape != VOXEL_BLOCK_SHAPE_EMPTY && shape != VOXEL_BLOCK_SHAPE_WHOLE);
-            expect(shrunk, name).toEqual([]);
+            const builtInPart: string[] = [];
+            for (let row = 0; row < NUM_CELL_ROWS; ++row)
+            {
+                for (let col = 0; col < NUM_CELL_COLS; ++col)
+                {
+                    const masks = getCellVoxels(voxelGrid, row, col).map(voxel => voxel.blockLayerMask);
+                    if (new Set(masks).size != 1)
+                        builtInPart.push(`(${row},${col}): ${masks.map(mask => mask.toString(2)).join(" ")}`);
+                }
+            }
+            expect(builtInPart, name).toEqual([]);
         }
     });
 
@@ -523,12 +576,12 @@ describe("every generated multiplayer room", () => {
             for (const seed of SEEDS)
             {
                 const {voxelGrid} = generateFromSeed(seed, roomType);
-                for (let row = 0; row < NUM_VOXEL_ROWS; ++row)
+                for (let row = 0; row < NUM_CELL_ROWS; ++row)
                 {
-                    for (let col = 0; col < NUM_VOXEL_COLS; ++col)
+                    for (let col = 0; col < NUM_CELL_COLS; ++col)
                     {
                         const onBoundary = row == 0 || col == 0 ||
-                            row == NUM_VOXEL_ROWS - 1 || col == NUM_VOXEL_COLS - 1;
+                            row == NUM_CELL_ROWS - 1 || col == NUM_CELL_COLS - 1;
                         if (!onBoundary)
                             continue;
                         for (let layer = STOREY_FLOOR_COLLISION_LAYER; layer <= COLLISION_LAYER_MAX; ++layer)
@@ -561,9 +614,9 @@ describe("every generated multiplayer room", () => {
                 expect(DoorObjectTypeConfig.util.getDestinationRoomId(door), `${name} seed ${seed}`)
                     .toBe(HUB_ROOM_ID_KEYWORD);
                 expect(door.transform.pos.x, `${name} seed ${seed}`)
-                    .toBeCloseTo(INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL + 0.5, 3);
+                    .toBeCloseTo(INITIAL_MULTI_PLAYER_ENTRANCE_POS.x, 3);
                 expect(door.transform.pos.z, `${name} seed ${seed}`)
-                    .toBeCloseTo(INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, 3);
+                    .toBeCloseTo(INITIAL_MULTI_PLAYER_ENTRANCE_POS.z, 3);
                 expect(door.transform.dir.z, `${name} seed ${seed}`).toBeCloseTo(-1, 3);
             }
         }
@@ -656,7 +709,7 @@ describe("a regular room's procedural layout", () => {
         for (const seed of SEEDS)
         {
             const {voxelGrid} = generateFromSeed(seed, RoomTypeEnumMap.Regular);
-            const above = countInteriorBlocks(voxelGrid,
+            const above = countSolidInteriorLayers(voxelGrid,
                 STOREY_FLOOR_COLLISION_LAYER, COLLISION_LAYER_MAX);
             const layersAbove = COLLISION_LAYER_MAX - STOREY_FLOOR_COLLISION_LAYER + 1;
             expect(above, `seed ${seed}`).toBe(NUM_INTERIOR_CELLS * layersAbove);
@@ -693,10 +746,10 @@ describe("a hub room", () => {
         {
             const {voxelGrid} = generateFromSeed(seed);
 
-            expect(countInteriorBlocks(voxelGrid, COLLISION_LAYER_MIN,
+            expect(countSolidInteriorLayers(voxelGrid, COLLISION_LAYER_MIN,
                 COLLISION_LAYER_MIN + NUM_COLLISION_LAYERS_PER_STOREY - 1),
                 `seed ${seed} :: something is standing on the ground floor`).toBe(0);
-            expect(countInteriorBlocks(voxelGrid, STOREY_FLOOR_COLLISION_LAYER + 1,
+            expect(countSolidInteriorLayers(voxelGrid, STOREY_FLOOR_COLLISION_LAYER + 1,
                 STOREY_FLOOR_COLLISION_LAYER + NUM_COLLISION_LAYERS_PER_STOREY),
                 `seed ${seed} :: something is standing on the upper storey`).toBe(0);
         }
@@ -708,10 +761,10 @@ describe("a hub room", () => {
         {
             const {voxelGrid} = generateFromSeed(seed);
 
-            expect(countInteriorBlocks(voxelGrid,
+            expect(countSolidInteriorLayers(voxelGrid,
                 STOREY_FLOOR_COLLISION_LAYER, STOREY_FLOOR_COLLISION_LAYER),
                 `seed ${seed} :: the storey floor has holes in it`).toBe(NUM_INTERIOR_CELLS);
-            expect(countInteriorBlocks(voxelGrid, COLLISION_LAYER_MAX, COLLISION_LAYER_MAX),
+            expect(countSolidInteriorLayers(voxelGrid, COLLISION_LAYER_MAX, COLLISION_LAYER_MAX),
                 `seed ${seed} :: the upper storey is not capped`).toBe(NUM_INTERIOR_CELLS);
             expect(countCellsOpenThroughBothStoreys(voxelGrid),
                 `seed ${seed} :: a cell is open from the floor to the ceiling`).toBe(0);

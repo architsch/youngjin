@@ -16,7 +16,6 @@ import DirUtil from "../../../../../shared/math/util/dirUtil";
 import Geometry3DUtil from "../../../../../shared/math/util/geometry3DUtil";
 import Voxel from "../../../../../shared/voxel/types/voxel";
 import VoxelQueryUtil from "../../../../../shared/voxel/util/voxelQueryUtil";
-import VoxelBlockShapeUtil from "../../../../../shared/voxel/util/voxelBlockShapeUtil";
 import ClientVoxelQueryUtil from "../../../../voxel/util/clientVoxelQueryUtil";
 import VoxelQuadInstanceUtil from "../../../../voxel/util/voxelQuadInstanceUtil";
 import PhysicsColliderStateUtil from "../../../../../shared/physics/util/physicsColliderStateUtil";
@@ -24,7 +23,7 @@ import ObjectAttachmentUtil from "../../../../../shared/object/util/objectAttach
 import { DIRECTION_VECTORS, ORBIT_SIGHT_CONE_RADIUS_PER_DISTANCE } from "../../../../system/clientConstants";
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, DIR_VEC_BY_CODE, MAX_ROOM_Y,
     NEAR_EPSILON, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS,
-    VOXEL_BLOCK_SHAPE_EMPTY } from "../../../../../shared/system/sharedConstants";
+    VOXEL_CELL_SIZE } from "../../../../../shared/system/sharedConstants";
 
 // Hides whatever stands in the orbit camera's view of its target (see @docs/graphics/camera_control.md).
 // - Only objects with an OrbitOccluder (room fabric) and voxel blocks are hidden; characters and
@@ -81,17 +80,19 @@ const targetBox: AABB3 = {center: {x: 0, y: 0, z: 0}, halfSize: {x: 0, y: 0, z: 
 // Distance a sample ray is carried past its aim: the target's bounding-sphere diameter.
 let targetSpan = 0;
 
-// A voxel target's block plus all 26 neighbours (see setProtectedRegion).
+// A voxel target's block with the blocks around it: two to each side, one above and one below (see
+// setProtectedRegion).
 const protectedNeighborhood: AABB3 = {
     center: {x: 0, y: 0, z: 0},
-    halfSize: {x: 1.5, y: 1.5 * COLLISION_LAYER_HEIGHT, z: 1.5},
+    halfSize: {x: 2.5 * VOXEL_CELL_SIZE, y: 1.5 * COLLISION_LAYER_HEIGHT, z: 2.5 * VOXEL_CELL_SIZE},
 };
 
 // The region nothing may be hidden from (see setProtectedRegion).
 let protectedRegion: AABB3 = targetBox;
 
 // The room's floor and ceiling are flat tiles, carrying no thickness of their own.
-const tileBoxTemp: AABB3 = {center: {x: 0, y: 0, z: 0}, halfSize: {x: 0.5, y: 0, z: 0.5}};
+const tileBoxTemp: AABB3 = {center: {x: 0, y: 0, z: 0},
+    halfSize: {x: 0.5 * VOXEL_CELL_SIZE, y: 0, z: 0.5 * VOXEL_CELL_SIZE}};
 
 // The cone of sight (see setSightCone): its tip, and how far its base reaches from the camera along x and z.
 const sightConeTip = new THREE.Vector3();
@@ -393,8 +394,8 @@ function setTargetBox(target: AABB3): void
     targetSpan = 2 * Math.hypot(targetBox.halfSize.x, targetBox.halfSize.y, targetBox.halfSize.z);
 }
 
-// The protected region. A voxel target (a face) protects its whole 3x3x3 neighbourhood, since its
-// wall and anything hung on it are what the user is inspecting. Any other target (character, prop,
+// The protected region. A voxel target (a face) protects its neighbourhood, since its wall and
+// anything hung on it are what the user is inspecting. Any other target (character, prop,
 // step point) protects only its own volume: protecting its surroundings would protect every
 // occluder once the camera gets close. Embedding is handled by sample exposure instead.
 function setProtectedRegion(target: AABB3, voxels: Voxel[] | undefined): void
@@ -408,9 +409,9 @@ function setProtectedRegion(target: AABB3, voxels: Voxel[] | undefined): void
         return;
     }
 
-    protectedNeighborhood.center.x = col + 0.5;
+    protectedNeighborhood.center.x = VoxelQueryUtil.getWorldXAtVoxelColCenter(col);
     protectedNeighborhood.center.y = VoxelQueryUtil.getWorldYAtVoxelCollisionLayerCenter(collisionLayer);
-    protectedNeighborhood.center.z = row + 0.5;
+    protectedNeighborhood.center.z = VoxelQueryUtil.getWorldZAtVoxelRowCenter(row);
     protectedRegion = protectedNeighborhood;
 }
 
@@ -425,8 +426,7 @@ function pointIsInBlock(voxels: Voxel[] | undefined, x: number, y: number, z: nu
     const row = VoxelQueryUtil.getVoxelRowFromWorldZ(z);
     const col = VoxelQueryUtil.getVoxelColFromWorldX(x);
     const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);
-    return voxel != undefined && VoxelBlockShapeUtil.containsPoint(
-        VoxelQueryUtil.getVoxelBlockShape(voxel, collisionLayer), x - col, z - row);
+    return voxel != undefined && VoxelQueryUtil.isVoxelBlockPresent(voxel, collisionLayer);
 }
 
 // Per-type OrbitOccluder declaration; object-less geometry is never hidden.
@@ -435,7 +435,7 @@ function objectIsOccluder(gameObject: GameObject | undefined): gameObject is Gam
     return gameObject != undefined && gameObject.components.orbitOccluder != undefined;
 }
 
-// Voxel columns are asked per column (one owning object per column).
+// Voxel columns are asked per column, of the object that draws it (see VoxelGameObject).
 function voxelIsOccluder(voxel: Voxel): boolean
 {
     return objectIsOccluder(ClientObjectManager.getObjectById(voxel.gameObjectId));
@@ -462,10 +462,14 @@ function collectQuadIndicesInTheWay(voxels: Voxel[]): void
     // Only the columns the swept target passes over, or the cone of sight reaches, can hold anything in the way.
     const reachX = Math.max(targetBox.halfSize.x, sightConeReachX);
     const reachZ = Math.max(targetBox.halfSize.z, sightConeReachZ);
-    const minCol = Math.floor(Math.min(targetBox.center.x - targetBox.halfSize.x, cameraPos.x - reachX));
-    const maxCol = Math.floor(Math.max(targetBox.center.x + targetBox.halfSize.x, cameraPos.x + reachX));
-    const minRow = Math.floor(Math.min(targetBox.center.z - targetBox.halfSize.z, cameraPos.z - reachZ));
-    const maxRow = Math.floor(Math.max(targetBox.center.z + targetBox.halfSize.z, cameraPos.z + reachZ));
+    const minCol = VoxelQueryUtil.getVoxelColFromWorldX(
+        Math.min(targetBox.center.x - targetBox.halfSize.x, cameraPos.x - reachX));
+    const maxCol = VoxelQueryUtil.getVoxelColFromWorldX(
+        Math.max(targetBox.center.x + targetBox.halfSize.x, cameraPos.x + reachX));
+    const minRow = VoxelQueryUtil.getVoxelRowFromWorldZ(
+        Math.min(targetBox.center.z - targetBox.halfSize.z, cameraPos.z - reachZ));
+    const maxRow = VoxelQueryUtil.getVoxelRowFromWorldZ(
+        Math.max(targetBox.center.z + targetBox.halfSize.z, cameraPos.z + reachZ));
 
     for (let row = Math.max(0, minRow); row <= Math.min(NUM_VOXEL_ROWS - 1, maxRow); ++row)
     {
@@ -480,16 +484,20 @@ function collectQuadIndicesInTheWay(voxels: Voxel[]): void
 
 function collectQuadIndicesInTheWayOfVoxel(voxel: Voxel, row: number, col: number): void
 {
-    const coneSparesBlocks = (row == sightConeSparedRow && col == sightConeSparedCol);
+    const coneSparesBlocks = sightConeSparedRow >= 0 &&
+        Math.abs(row - sightConeSparedRow) <= 1 && Math.abs(col - sightConeSparedCol) <= 1;
 
     // A blocking block hides all its faces, for a clean opening.
     for (let collisionLayer = COLLISION_LAYER_MIN; collisionLayer <= COLLISION_LAYER_MAX; ++collisionLayer)
     {
-        const shape = VoxelQueryUtil.getVoxelBlockShape(voxel, collisionLayer);
-        if (shape == VOXEL_BLOCK_SHAPE_EMPTY)
+        if (!VoxelQueryUtil.isVoxelBlockPresent(voxel, collisionLayer))
+            continue;
+        // Most blocks are buried among others and draw nothing, so they are asked nothing further.
+        const firstQuadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, collisionLayer);
+        if (!blockIsDrawn(firstQuadIndex))
             continue;
 
-        const blockBox = VoxelQueryUtil.getVoxelBlockBox(row, col, collisionLayer, shape);
+        const blockBox = VoxelQueryUtil.getVoxelBlockBox(row, col, collisionLayer);
         // Part of what the orbit is looking at, rather than something in its way.
         if (Geometry3DUtil.AABBsOverlap(protectedRegion, blockBox))
             continue;
@@ -497,29 +505,52 @@ function collectQuadIndicesInTheWayOfVoxel(voxel: Voxel, row: number, col: numbe
         if (!inSightCone && !boxIsInTheWay(blockBox))
             continue;
 
-        const firstQuadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, collisionLayer);
         for (let i = 0; i < NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
             collectQuadIndexIfDrawn(firstQuadIndex + i);
     }
 
     // The room's floor and ceiling, which the orbit reaches under and over respectively.
-    tileBoxTemp.center.x = col + 0.5;
-    tileBoxTemp.center.z = row + 0.5;
+    tileBoxTemp.center.x = VoxelQueryUtil.getWorldXAtVoxelColCenter(col);
+    tileBoxTemp.center.z = VoxelQueryUtil.getWorldZAtVoxelRowCenter(row);
 
+    const floorQuadIndex = VoxelQueryUtil.getFloorVoxelQuadIndex(row, col);
     tileBoxTemp.center.y = 0;
-    if ((sightConeTakesFloor && wholeSightConeReaches(tileBoxTemp)) || boxIsInTheWay(tileBoxTemp))
-        collectQuadIndexIfDrawn(VoxelQueryUtil.getFloorVoxelQuadIndex(row, col));
+    if (quadIsDrawn(floorQuadIndex) &&
+        ((sightConeTakesFloor && wholeSightConeReaches(tileBoxTemp)) || boxIsInTheWay(tileBoxTemp)))
+    {
+        quadIndicesTemp.push(floorQuadIndex);
+    }
 
+    const ceilingQuadIndex = VoxelQueryUtil.getCeilingVoxelQuadIndex(row, col);
     tileBoxTemp.center.y = MAX_ROOM_Y;
-    if ((sightConeTakesCeiling && wholeSightConeReaches(tileBoxTemp)) || boxIsInTheWay(tileBoxTemp))
-        collectQuadIndexIfDrawn(VoxelQueryUtil.getCeilingVoxelQuadIndex(row, col));
+    if (quadIsDrawn(ceilingQuadIndex) &&
+        ((sightConeTakesCeiling && wholeSightConeReaches(tileBoxTemp)) || boxIsInTheWay(tileBoxTemp)))
+    {
+        quadIndicesTemp.push(ceilingQuadIndex);
+    }
 }
 
-// Only drawn faces have anything to hide.
+// Only drawn faces have anything to hide (see VoxelQuadInstanceUtil).
+function quadIsDrawn(quadIndex: number): boolean
+{
+    return VoxelQuadInstanceUtil.getInstanceId(quadIndex) >= 0;
+}
+
 function collectQuadIndexIfDrawn(quadIndex: number): void
 {
-    if (VoxelQuadInstanceUtil.getInstanceId(quadIndex) >= 0)
+    if (quadIsDrawn(quadIndex))
         quadIndicesTemp.push(quadIndex);
+}
+
+// Whether any face of the block whose quads start at the given one is drawn.
+function blockIsDrawn(firstQuadIndex: number): boolean
+{
+    for (let i = 0; i < NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
+    {
+        if (quadIsDrawn(firstQuadIndex + i))
+            return true;
+    }
+    return false;
 }
 
 // A box sweep toward the camera cheaply rejects most blocks; survivors are tested against samples,
@@ -567,8 +598,8 @@ function traceToCameraHits(sample: THREE.Vector3, box: AABB3): boolean
 //   toward the camera with the pivot inside it.
 // - It takes the room's own floor or ceiling only from beyond it, where that lies between the camera and the room
 //   (from inside, a tile has nothing behind it to uncover), and never one the target itself lies in.
-// - Where the target is such a tile, the blocks of its own cell are left to the samples: the tip lies at their
-//   foot, so the cone would take them from any view along them.
+// - Where the target is such a tile, the blocks over it and against its sides are left to the samples: the tip
+//   lies at their foot, so the cone would take them from any view along them.
 function setSightCone(target: AABB3): void
 {
     OrbitCameraPose.getPivot(target, sightConeTip);
@@ -725,8 +756,7 @@ function faceIsExposed(sample: THREE.Vector3, faceNormal: Vec3, voxels: Voxel[] 
     const row = VoxelQueryUtil.getVoxelRowFromWorldZ(z);
     const col = VoxelQueryUtil.getVoxelColFromWorldX(x);
     const collisionLayer = VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(y);
-    const blockBox = VoxelQueryUtil.getVoxelBlockBox(row, col, collisionLayer,
-        VoxelQueryUtil.getVoxelBlockShapeAt(voxels, row, col, collisionLayer));
+    const blockBox = VoxelQueryUtil.getVoxelBlockBox(row, col, collisionLayer);
     return !Geometry3DUtil.AABBsOverlap(protectedRegion, blockBox) && targetSweepReaches(blockBox);
 }
 

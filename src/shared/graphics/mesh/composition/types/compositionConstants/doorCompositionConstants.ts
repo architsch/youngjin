@@ -7,7 +7,7 @@ import { COLLISION_LAYER_HEIGHT, NUM_COLLISION_LAYERS_PER_STOREY } from "../../.
 export const DOOR_GEOMETRY_ID = "Square";
 
 // Footprint (the collider, read via DoorObjectTypeConfig) vs. the drawn panel, centred and flush at
-// the bottom; the difference is margin. Kept to half-voxels so stored positions stay exact (overlap
+// the bottom; the difference is margin. Kept to blocks' widths so stored positions stay exact (overlap
 // slack is applied to the collision box instead; see PhysicsColliderStateUtil). The footprint is one
 // storey tall.
 export const DOOR_FOOTPRINT_WIDTH = 1.5;

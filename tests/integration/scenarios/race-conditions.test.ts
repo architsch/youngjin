@@ -195,7 +195,7 @@ describe("race condition scenarios", () => {
             });
         });
 
-        it("one user takes a block away while another moves or reshapes it: both end up told the truth", async () => {
+        it("one user takes a block away while another moves it and takes it away too: both end up told the truth", async () => {
             const quadIndexAt = (row: number, col: number) => VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, 0);
             await runScenario({
                 name: "concurrent remove and move of the same block",
@@ -207,10 +207,10 @@ describe("race condition scenarios", () => {
                 actions: [
                     { type: "addVoxel", userIndex: 0, row: 15, col: 15, layer: 0 },
                     // User 0's removal arrives first; user 1 had the block on screen and moved it, then
-                    // shrank what they took to be the block where they had put it.
+                    // took away what they took to be the block where they had put it.
                     { type: "removeVoxel", userIndex: 0, row: 15, col: 15, layer: 0 },
                     { type: "moveVoxel", userIndex: 1, row: 15, col: 15, layer: 0, dRow: 0, dCol: 1, dLayer: 0 },
-                    { type: "reshapeVoxel", userIndex: 1, row: 15, col: 16, layer: 0, shape: 0b0101 },
+                    { type: "removeVoxel", userIndex: 1, row: 15, col: 16, layer: 0 },
                 ],
                 assertions: ({ users }) => {
                     const voxels = ServerRoomManager.roomRuntimeMemories["mv-race"].room.voxelGrid.voxels;
@@ -224,12 +224,12 @@ describe("race condition scenarios", () => {
                     expect(removals).toEqual([
                         quadIndexAt(15, 15), // user 0's removal, relayed
                         quadIndexAt(15, 15), quadIndexAt(15, 16), // the refused move
-                        quadIndexAt(15, 16), // the refused reshape
+                        quadIndexAt(15, 16), // the refused removal
                     ]);
                     expect(getPendingSignals(users[1], "addVoxelBlockSignal").length).toBe(1);
 
                     // User 0 hears nothing of what was refused.
-                    for (const signalType of ["moveVoxelBlockSignal", "setVoxelBlockShapeSignal", "addVoxelBlockSignal"])
+                    for (const signalType of ["moveVoxelBlockSignal", "addVoxelBlockSignal"])
                         expect(getPendingSignals(users[0], signalType).length, signalType).toBe(0);
                 },
             });

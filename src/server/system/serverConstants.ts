@@ -48,6 +48,10 @@ export const TUTORIAL_FINISHED_COOKIE_NAME_BASE = "thingspool_tutorial_finished"
 // Dev-only cookie carrying the DevRunner runtime's boot id (see DevRuntimeUtil).
 export const DEV_BOOT_ID_COOKIE_NAME = "thingspool_dev_boot_id";
 
+// A signal batch at least this long is sent deflated (see SocketUserContext); a shorter one gains too
+// little by it.
+export const SIGNAL_BATCH_DEFLATE_MIN_BYTES = 1024;
+
 // SSG (Static Site Generator)
 
 export const STATIC_PAGE_ROOT_DIR = "public";

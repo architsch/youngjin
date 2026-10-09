@@ -126,19 +126,21 @@ Four things to get right:
 
 ### The VoxelGrid decoder chain cannot be seeded from a current room — read the rest, do not manufacture it
 
-`downgrade-content` rewrites byte 0 of a room's content blob and nothing else. That is a legitimate
+`downgrade-content` rewrites byte 0 of a room's content blob and nothing else (the blob is stored
+gzipped, so the script unpacks it first and stores the rewritten one plain, as old rooms are; the
+server reads either). That is a legitimate
 way to manufacture an old room only between versions whose bodies mean the same thing byte for byte.
-The current version's means something no earlier one's does: it lays a room out as the two before it
-did, but spells each block's shape in the bit of a quad that they put to other uses or to none, so a
-room holding a shrunk block is no older version's room. A blob whose header was flipped across such
-a boundary describes itself one way and is written another. The server does not read that as an old
-room; it reads it as a corrupt one, or as a room whose blocks have all silently grown whole, and
-anything it then logs is a fact about that blob rather than about the migration path.
+The current version's means something no earlier one's does: it holds four voxels for each cell an
+older version stored, so its body is several times as long and laid out to another count. A blob
+whose header was flipped across such a boundary describes itself one way and is written another. The
+server does not read that as an old room; it reads it as a corrupt one, and anything it then logs is
+a fact about that blob rather than about the migration path.
 
 The tool refuses that case rather than writing it: a downgrade across decoders exits with an error
-naming both, and only a downgrade within one is carried out. The one it still allows is of a room
-stored one version back, to the version before that. It is read and converted as an old room, but it
-is a thin test of that conversion: the bit the conversion drops was never set in it.
+naming both, and only a downgrade within one is carried out. The ones it still allows are between old
+versions that shared a layout (5 to 4, 3 to 2, 1 to 0), so they need a room that is still stored at an
+old version to begin with, and are a thin test of the conversion between the two: a version-5 room
+stamped as 4 never had the bit set that the conversion drops.
 
 What tests it in earnest costs nothing, because staging supplies it for free. **A room that has not been
 saved since the format changed is still stored at the old version**, which makes it a genuine

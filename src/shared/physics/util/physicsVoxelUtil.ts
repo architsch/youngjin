@@ -1,5 +1,6 @@
 import AABB3 from "../../math/types/aabb3";
-import { NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
+import { NUM_PHYSICS_VOXELS_X, NUM_PHYSICS_VOXELS_Y, NUM_PHYSICS_VOXELS_Z, PHYSICS_VOXEL_SIZE_XZ,
+    PHYSICS_VOXEL_SIZE_Y } from "../../system/sharedConstants";
 import PhysicsRoom from "../types/physicsRoom";
 import PhysicsVoxel from "../types/physicsVoxel";
 
@@ -7,27 +8,39 @@ const voxelsTemp = new Array<PhysicsVoxel>();
 
 const PhysicsVoxelUtil =
 {
-    // Returns all voxels that the given AABB3's XZ footprint overlaps with.
+    // A room's physics voxels, none holding anything yet.
+    createVoxels: (): PhysicsVoxel[] =>
+    {
+        return Array.from({length: NUM_PHYSICS_VOXELS_X * NUM_PHYSICS_VOXELS_Y * NUM_PHYSICS_VOXELS_Z},
+            () => new PhysicsVoxel());
+    },
+
+    // The physics voxels a box reaches into. What lies beyond the room counts as in the nearest ones, so
+    // no box is ever in none. The array is shared: it holds the latest call's answer.
     getVoxelsInBox: (physicsRoom: PhysicsRoom, box: AABB3): PhysicsVoxel[] =>
     {
         voxelsTemp.length = 0;
-        const row1 = Math.max(0, Math.floor(box.center.z - box.halfSize.z));
-        const col1 = Math.max(0, Math.floor(box.center.x - box.halfSize.x));
-        const row2 = Math.min(NUM_VOXEL_ROWS-1, Math.floor(box.center.z + box.halfSize.z));
-        const col2 = Math.min(NUM_VOXEL_COLS-1, Math.floor(box.center.x + box.halfSize.x));
-        for (let row = row1; row <= row2; ++row)
+        const x1 = toIndex(box.center.x - box.halfSize.x, PHYSICS_VOXEL_SIZE_XZ, NUM_PHYSICS_VOXELS_X);
+        const x2 = toIndex(box.center.x + box.halfSize.x, PHYSICS_VOXEL_SIZE_XZ, NUM_PHYSICS_VOXELS_X);
+        const y1 = toIndex(box.center.y - box.halfSize.y, PHYSICS_VOXEL_SIZE_Y, NUM_PHYSICS_VOXELS_Y);
+        const y2 = toIndex(box.center.y + box.halfSize.y, PHYSICS_VOXEL_SIZE_Y, NUM_PHYSICS_VOXELS_Y);
+        const z1 = toIndex(box.center.z - box.halfSize.z, PHYSICS_VOXEL_SIZE_XZ, NUM_PHYSICS_VOXELS_Z);
+        const z2 = toIndex(box.center.z + box.halfSize.z, PHYSICS_VOXEL_SIZE_XZ, NUM_PHYSICS_VOXELS_Z);
+        for (let z = z1; z <= z2; ++z)
         {
-            for (let col = col1; col <= col2; ++col)
+            for (let x = x1; x <= x2; ++x)
             {
-                const voxel = physicsRoom.voxels[row * NUM_VOXEL_COLS + col];
-                if (voxel != undefined)
-                    voxelsTemp.push(voxel);
-                else
-                    console.error(`PhysicsVoxel is undefined (row = ${row}, col = ${col})`);
+                for (let y = y1; y <= y2; ++y)
+                    voxelsTemp.push(physicsRoom.voxels[(z * NUM_PHYSICS_VOXELS_X + x) * NUM_PHYSICS_VOXELS_Y + y]);
             }
         }
         return voxelsTemp;
     },
+}
+
+function toIndex(coord: number, size: number, count: number): number
+{
+    return Math.max(0, Math.min(count - 1, Math.floor(coord / size)));
 }
 
 export default PhysicsVoxelUtil;

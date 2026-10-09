@@ -40,7 +40,6 @@ import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, DIR_V
 import QuarterTurnsUtil from "../../../../../shared/object/util/quarterTurnsUtil";
 import PointerCoordUtil from "../../../../graphics/util/pointerCoordUtil";
 import AddVoxelBlockSignal from "../../../../../shared/voxel/types/update/addVoxelBlockSignal";
-import SetVoxelBlockShapeSignal from "../../../../../shared/voxel/types/update/setVoxelBlockShapeSignal";
 import ObjectIdUtil from "../../../../../shared/object/util/objectIdUtil";
 import { clientFeatureFlagsObservable, notificationMessageObservable, objectInstalledObservable,
     voxelQuadSelectionObservable } from "../../../../system/clientObservables";
@@ -264,7 +263,8 @@ function getClickedFace(selection: VoxelQuadSelection): {center: Vec3, dir: Vec3
     const voxel = selection.voxel;
     const { offsetX, offsetY, offsetZ, dirX, dirY, dirZ } = selection.getTransformDimensions();
     return {
-        center: {x: voxel.col + 0.5 + offsetX, y: offsetY, z: voxel.row + 0.5 + offsetZ},
+        center: {x: VoxelQueryUtil.getWorldXAtVoxelColCenter(voxel.col) + offsetX, y: offsetY,
+            z: VoxelQueryUtil.getWorldZAtVoxelRowCenter(voxel.row) + offsetZ},
         dir: {x: dirX, y: dirY, z: dirZ},
     };
 }
@@ -425,13 +425,9 @@ function canAddVoxelBlock(selection: VoxelQuadSelection): boolean
     if (!room)
         return false;
 
-    // (See VoxelQueryUtil.getVoxelBlockAddTarget for what the button does on which face.)
-    const target = VoxelQueryUtil.getVoxelBlockAddTarget(room.voxelGrid.voxels, selection.quadIndex);
-    if (!target)
-        return false;
-    return target.grows
-        ? VoxelUpdateUtil.canSetVoxelBlockShape(App.getUser(), room, target.quadIndex, target.shape)
-        : VoxelUpdateUtil.canAddVoxelBlock(App.getUser(), room, target.quadIndex, target.shape);
+    // The block goes into the cell layer the face looks into.
+    const targetQuadIndex = VoxelQueryUtil.getVoxelBlockAddTargetQuadIndex(selection.quadIndex);
+    return targetQuadIndex >= 0 && VoxelUpdateUtil.canAddVoxelBlock(App.getUser(), room, targetQuadIndex);
 }
 
 function tryAddVoxelBlock(selection: VoxelQuadSelection)
@@ -440,47 +436,31 @@ function tryAddVoxelBlock(selection: VoxelQuadSelection)
         return;
 
     const room = App.getCurrentRoom()!;
-    const target = VoxelQueryUtil.getVoxelBlockAddTarget(room.voxelGrid.voxels, selection.quadIndex)!;
-    const isMultiPlayer = room.roomType != RoomTypeEnumMap.SinglePlayer;
-    // The edit as the history keeps it (see RoomEditUtil).
-    let made: {type: ClientEventType, redo: EncodableData, undo: EncodableData};
+    const targetQuadIndex = VoxelQueryUtil.getVoxelBlockAddTargetQuadIndex(selection.quadIndex);
 
-    if (target.grows)
-    {
-        const signal = new SetVoxelBlockShapeSignal(room.id, target.quadIndex, target.shape);
-        made = {type: ClientEventType.ManuallyChangedVoxelBlockShape, redo: signal,
-            undo: RoomEditUtil.getUndoSignal(room, signal)};
-        if (!ClientVoxelManager.setVoxelBlockShape(room, target.quadIndex, target.shape))
-            return;
-        if (isMultiPlayer)
-            SocketsClient.emitSetVoxelBlockShapeSignal(signal);
-    }
-    else
-    {
-        // A new block takes the textures of the one it is built from.
-        const quadTextureIndicesWithinLayer = new Array<number>(NUM_VOXEL_QUADS_PER_COLLISION_LAYER);
-        const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(selection.voxel.row, selection.voxel.col,
-            VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(selection.quadIndex));
-        for (let i = startIndex; i < startIndex + NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
-            quadTextureIndicesWithinLayer[i - startIndex] = App.getVoxelQuads()[i] & 0b01111111;
+    // A new block takes the textures of the one it is built from.
+    const quadTextureIndicesWithinLayer = new Array<number>(NUM_VOXEL_QUADS_PER_COLLISION_LAYER);
+    const startIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(selection.voxel.row, selection.voxel.col,
+        VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(selection.quadIndex));
+    for (let i = startIndex; i < startIndex + NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
+        quadTextureIndicesWithinLayer[i - startIndex] = App.getVoxelQuads()[i] & 0b01111111;
 
-        const signal = new AddVoxelBlockSignal(room.id, target.quadIndex, quadTextureIndicesWithinLayer, target.shape);
-        made = {type: ClientEventType.ManuallyAddedVoxelBlock, redo: signal,
-            undo: RoomEditUtil.getUndoSignal(room, signal)};
-        if (!ClientVoxelManager.addVoxelBlock(room, target.quadIndex, quadTextureIndicesWithinLayer, true, target.shape))
-            return;
-        if (isMultiPlayer)
-            SocketsClient.emitAddVoxelBlockSignal(signal);
-    }
+    const signal = new AddVoxelBlockSignal(room.id, targetQuadIndex, quadTextureIndicesWithinLayer);
+    const undoSignal = RoomEditUtil.getUndoSignal(room, signal);
+    if (!ClientVoxelManager.addVoxelBlock(room, targetQuadIndex, quadTextureIndicesWithinLayer))
+        return;
+    if (room.roomType != RoomTypeEnumMap.SinglePlayer)
+        SocketsClient.emitAddVoxelBlockSignal(signal);
 
-    // The same face of the block the edit made or grew, or the nearest one that shows if it is covered.
+    // The same face of the new block, or the nearest one that shows if it is covered.
     VoxelQuadSelection.unselect();
     const targetVoxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels,
-        VoxelQueryUtil.getVoxelRowFromQuadIndex(target.quadIndex), VoxelQueryUtil.getVoxelColFromQuadIndex(target.quadIndex));
+        VoxelQueryUtil.getVoxelRowFromQuadIndex(targetQuadIndex), VoxelQueryUtil.getVoxelColFromQuadIndex(targetQuadIndex));
     if (targetVoxel)
-        VoxelQuadSelection.trySelectBestQuad(targetVoxel, target.quadIndex);
+        VoxelQuadSelection.trySelectBestQuad(targetVoxel, targetQuadIndex);
 
-    RoomEditUtil.record(made.type, room, {redo: [made.redo], undo: [made.undo], selectionBefore: selection});
+    RoomEditUtil.record(ClientEventType.ManuallyAddedVoxelBlock, room,
+        {redo: [signal], undo: [undoSignal], selectionBefore: selection});
 }
 
 // Attachments don't disable removal; the user is warned and they are removed with the block.

@@ -93,8 +93,8 @@ import { EDIT_MODE_OPENING_REACH, EDIT_MODE_OPENING_TILT } from "../../../src/cl
 import { FeatureFlag } from "../../../src/shared/system/types/featureFlag";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
-import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN,
-    UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, GENERATED_WALL_THICKNESS, UNIT_VEC3,
+    VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import Room from "../../../src/shared/room/types/room";
@@ -112,6 +112,11 @@ const ROOM_ID = "game-mode-room";
 
 // The stand-in player is never moved by physics, so there is nothing for the camera to trail.
 const NO_IMPOSED_DISPLACEMENT = {x: 0, y: 0, z: 0};
+
+// The boundary wall on the room's north side: the innermost of its rows of voxels, and the plane their inner
+// faces lie in, looking toward +z.
+const WALL_ROW = GENERATED_WALL_THICKNESS - 1;
+const WALL_FACE_Z = (WALL_ROW + 1) * VOXEL_CELL_SIZE;
 
 let room: Room;
 
@@ -181,10 +186,9 @@ function lookingAt(...hits: ObjectHit[]): LineOfSightCast
 // Quads given an instance by hitOnVoxelQuad, released after each test.
 const boundInstances: {quadIndex: number, instanceId: number}[] = [];
 
-/** A voxel quad as a line of sight meets it: the room's voxel, hit on the instance drawing that quad. */
-function hitOnVoxelQuad(row: number, col: number, quadIndex: number): ObjectHit
+/** A voxel quad as a line of sight meets it: the room's voxels, hit on the instance drawing that quad. */
+function hitOnVoxelQuad(quadIndex: number): ObjectHit
 {
-    const voxel = voxelAt(room, row, col);
     const instanceId = boundInstances.length;
     VoxelQuadInstanceUtil.bind(quadIndex, instanceId);
     boundInstances.push({quadIndex, instanceId});
@@ -192,7 +196,7 @@ function hitOnVoxelQuad(row: number, col: number, quadIndex: number): ObjectHit
     // A real VoxelGameObject, so the quad is selected exactly as a real one selects it.
     const gameObject = Object.assign(Object.create(VoxelGameObject.prototype), {
         params: { objectTypeIndex: ObjectTypeConfigMap.getIndexByType("Voxel") },
-        getVoxel: () => voxel,
+        voxels: room.voxelGrid.voxels,
     }) as VoxelGameObject;
     return {gameObject, instanceId};
 }
@@ -206,7 +210,6 @@ function selectQuad(row: number, col: number, quadIndex: number): boolean
 /** Clicks a voxel quad through the full click path (mode and permission checks included). */
 function clickVoxel(row: number, col: number, quadIndex: number): void
 {
-    const voxel = voxelAt(room, row, col);
     // A click names a mesh instance, so the quad must hold one (see VoxelQuadInstanceUtil).
     const instanceId = 0;
     VoxelQuadInstanceUtil.bind(quadIndex, instanceId);
@@ -217,9 +220,10 @@ function clickVoxel(row: number, col: number, quadIndex: number): void
         const clicked = Object.assign(Object.create(VoxelGameObject.prototype), {
             params: { objectTypeIndex: voxelTypeIndex, metadata: {} },
             config: ObjectTypeConfigMap.getConfigByIndex(voxelTypeIndex),
-            getVoxel: () => voxel,
+            voxels: room.voxelGrid.voxels,
         }) as VoxelGameObject;
-        clicked.onClick(instanceId, new THREE.Vector3(col + 0.5, 0, row + 0.5));
+        clicked.onClick(instanceId, new THREE.Vector3(VoxelQueryUtil.getWorldXAtVoxelColCenter(col), 0,
+            VoxelQueryUtil.getWorldZAtVoxelRowCenter(row)));
     }
     finally
     {
@@ -279,10 +283,10 @@ describe("play mode", () => {
 });
 
 describe("a click in play mode", () => {
-    // Straight ahead of the user, who faces the boundary wall along row 0 (the plane z = 1): a floor tile,
-    // and a spot high up on that wall (below the storey above).
+    // Straight ahead of the user, who faces the room's north boundary wall: a spot on the floor, and one high
+    // up on that wall (below the storey above).
     const FLOOR_POINT = new THREE.Vector3(10.5, 0, 5.5);
-    const HIGH_WALL_POINT = new THREE.Vector3(10.5, 3, 1);
+    const HIGH_WALL_POINT = new THREE.Vector3(10.5, 3, WALL_FACE_Z);
 
     // A frame short enough that the camera only makes part of its turn.
     const SHORT_FRAME = 0.05;
@@ -495,14 +499,15 @@ describe("entering edit mode", () => {
     it("selects the voxel quad the camera faces and orbits it", () => {
         const quadIndex = floorQuadIndexOf(10, 10);
 
-        GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOnVoxelQuad(10, 10, quadIndex)));
+        GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOnVoxelQuad(quadIndex)));
 
         expect(GameModeUtil.isInEditMode()).toBe(true);
         expect(voxelQuadSelectionObservable.peek()?.quadIndex).toBe(quadIndex);
         expect(ObjectSelection.isSelected()).toBe(false);
 
         const mode = cameraModeObservable.peek();
-        expect(mode.type == "orbit" && [mode.target.center.x, mode.target.center.z]).toEqual([10.5, 10.5]);
+        expect(mode.type == "orbit" && [mode.target.center.x, mode.target.center.z]).toEqual(
+            [VoxelQueryUtil.getWorldXAtVoxelColCenter(10), VoxelQueryUtil.getWorldZAtVoxelRowCenter(10)]);
     });
 
     it("selects the object the camera faces", () => {
@@ -518,7 +523,7 @@ describe("entering edit mode", () => {
         const quadIndex = floorQuadIndexOf(10, 10);
 
         GameModeUtil.enterEditMode(makeCharacter(),
-            lookingAt(hitOn(makeOtherPlayer()), hitOnVoxelQuad(10, 10, quadIndex)));
+            lookingAt(hitOn(makeOtherPlayer()), hitOnVoxelQuad(quadIndex)));
 
         expect(voxelQuadSelectionObservable.peek()?.quadIndex).toBe(quadIndex);
     });
@@ -529,7 +534,7 @@ describe("entering edit mode", () => {
         const character = makeCharacter();
 
         GameModeUtil.enterEditMode(character,
-            lookingAt(hitOnVoxelQuad(10, 10, floorQuadIndexOf(10, 10)), hitOn(makePicture())));
+            lookingAt(hitOnVoxelQuad(floorQuadIndexOf(10, 10)), hitOn(makePicture())));
 
         expect(objectSelectionObservable.peek()?.gameObject).toBe(character);
     });
@@ -553,7 +558,7 @@ describe("entering edit mode", () => {
 
         GameModeUtil.enterEditMode(makeCharacter(), (maxDistance, pitchDownAngle) => {
             casts.push([maxDistance, pitchDownAngle]);
-            return (pitchDownAngle == 0) ? [hitOn(makeOtherPlayer())] : [hitOnVoxelQuad(10, 10, quadIndex)];
+            return (pitchDownAngle == 0) ? [hitOn(makeOtherPlayer())] : [hitOnVoxelQuad(quadIndex)];
         });
 
         expect(casts).toEqual([[EDIT_MODE_OPENING_REACH, 0], [EDIT_MODE_OPENING_REACH, EDIT_MODE_OPENING_TILT]]);
@@ -678,9 +683,10 @@ describe("entering edit mode", () => {
 });
 
 describe("the camera as edit mode opens", () => {
-    // The boundary wall along row 0, whose inner face is the plane z = 1.
-    const WALL_ROW = 0;
-    const WALL_FACE_Z = WALL_ROW + 1;
+    // The voxel of the boundary wall (see WALL_ROW) the user faces, and where along the wall he stands to
+    // face it squarely.
+    const WALL_COL = 20;
+    const USER_X = VoxelQueryUtil.getWorldXAtVoxelColCenter(WALL_COL);
 
     // How near to and far from the framed block a step might ask the camera to be.
     const DISTANCE_RANGE = {min: 2.5, max: 6};
@@ -710,7 +716,7 @@ describe("the camera as edit mode opens", () => {
             const quadIndex = quadIndexOf(WALL_ROW, wallCol, "z", "+", eyeLayer);
             expect(isQuadVisible(room, quadIndex), "the wall face in view is not drawn").toBe(true);
 
-            GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOnVoxelQuad(WALL_ROW, wallCol, quadIndex)));
+            GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOnVoxelQuad(quadIndex)));
             expect(voxelQuadSelectionObservable.peek()?.quadIndex).toBe(quadIndex);
 
             playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT);
@@ -720,9 +726,10 @@ describe("the camera as edit mode opens", () => {
                 playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT);
             }
 
-            const blockCenter = new THREE.Vector3(wallCol + 0.5,
-                VoxelQueryUtil.getWorldYAtVoxelCollisionLayerCenter(eyeLayer), WALL_ROW + 0.5);
-            const blockSize = new THREE.Vector3(1, COLLISION_LAYER_HEIGHT, 1); // a whole block's
+            const blockCenter = new THREE.Vector3(VoxelQueryUtil.getWorldXAtVoxelColCenter(wallCol),
+                VoxelQueryUtil.getWorldYAtVoxelCollisionLayerCenter(eyeLayer),
+                VoxelQueryUtil.getWorldZAtVoxelRowCenter(WALL_ROW));
+            const blockSize = new THREE.Vector3(VOXEL_CELL_SIZE, COLLISION_LAYER_HEIGHT, VOXEL_CELL_SIZE);
             return {before, after: GraphicsManager.getCamera().getWorldPosition(new THREE.Vector3()),
                 block: new THREE.Box3().setFromCenterAndSize(blockCenter, blockSize)};
         }
@@ -745,21 +752,21 @@ describe("the camera as edit mode opens", () => {
     }
 
     it("keeps the camera where it was when the wall faced is as far off as edit mode looks", () => {
-        const {before, after} = openEditModeFacingWall(10.5, WALL_FACE_Z + EDIT_MODE_OPENING_REACH, 10);
+        const {before, after} = openEditModeFacingWall(USER_X, WALL_FACE_Z + EDIT_MODE_OPENING_REACH, WALL_COL);
 
-        expect(before.distanceTo(new THREE.Vector3(10.5, before.y, WALL_FACE_Z)))
+        expect(before.distanceTo(new THREE.Vector3(USER_X, before.y, WALL_FACE_Z)))
             .toBeGreaterThanOrEqual(EDIT_MODE_OPENING_REACH);
         expect(after.distanceTo(before)).toBeLessThan(1e-6);
     });
 
     it("keeps the camera where it was when the user stands close to the wall", () => {
-        const {before, after} = openEditModeFacingWall(10.5, WALL_FACE_Z + 1, 10);
+        const {before, after} = openEditModeFacingWall(USER_X, WALL_FACE_Z + 1, WALL_COL);
 
         expect(after.distanceTo(before)).toBeLessThan(1e-6);
     });
 
     it("backs the camera off a wall the user stands against, as far as a step asks", () => {
-        const {before, after, block} = openEditModeFacingWall(10.5, WALL_FACE_Z + PLAYER_RADIUS_XZ, 10,
+        const {before, after, block} = openEditModeFacingWall(USER_X, WALL_FACE_Z + PLAYER_RADIUS_XZ, WALL_COL,
             DISTANCE_RANGE);
 
         expect(distancesToBox(before, block).nearest).toBeLessThan(DISTANCE_RANGE.min);
@@ -769,8 +776,8 @@ describe("the camera as edit mode opens", () => {
     });
 
     it("brings the camera in on a wall as far off as edit mode looks, as far as a step asks", () => {
-        const {before, after, block} = openEditModeFacingWall(10.5, WALL_FACE_Z + EDIT_MODE_OPENING_REACH, 10,
-            DISTANCE_RANGE);
+        const {before, after, block} = openEditModeFacingWall(USER_X, WALL_FACE_Z + EDIT_MODE_OPENING_REACH,
+            WALL_COL, DISTANCE_RANGE);
 
         expect(distancesToBox(before, block).farthest).toBeGreaterThan(DISTANCE_RANGE.max);
         const {nearest, farthest} = distancesToBox(after, block);
@@ -779,16 +786,21 @@ describe("the camera as edit mode opens", () => {
     });
 
     it("leaves a camera already within the range a step asks for where it was", () => {
-        const {before, after} = openEditModeFacingWall(10.5, WALL_FACE_Z + 4, 10, DISTANCE_RANGE);
+        const {before, after} = openEditModeFacingWall(USER_X, WALL_FACE_Z + 4, WALL_COL, DISTANCE_RANGE);
 
         expect(after.distanceTo(before)).toBeLessThan(1e-6);
     });
 });
 
 describe("the orbit following the selection to another face", () => {
-    // The boundary wall along row 0, whose inner faces look toward +z.
-    const WALL_ROW = 0;
-    const START_COL = 10;
+    // The voxel of the boundary wall (see WALL_ROW) whose face the mode opens on.
+    const START_COL = 20;
+
+    // How many voxels along the wall a face well off to one side lies: three world units.
+    const WELL_ALONG = 3 / VOXEL_CELL_SIZE;
+
+    // A row out on the open floor, between the user and the wall, for a block standing alone.
+    const LONE_BLOCK_ROW = WALL_ROW + 1 + 2 / VOXEL_CELL_SIZE;
 
     /**
      * Opens edit mode on the wall's face in front of a user standing back from it, with the real camera
@@ -799,7 +811,8 @@ describe("the orbit following the selection to another face", () => {
         beforeFirstOrbitFrame: () => void = () => {}): void
     {
         const player = new THREE.Object3D();
-        player.position.set(START_COL + 0.5, 0.5 * PLAYER_HEIGHT, WALL_ROW + 1 + 5);
+        player.position.set(VoxelQueryUtil.getWorldXAtVoxelColCenter(START_COL), 0.5 * PLAYER_HEIGHT,
+            WALL_FACE_Z + 5);
         const controller = { gameObject: { obj: player, position: player.position } } as unknown as PlayerController;
         const pointerInput = { dragDelta: new THREE.Vector2(), viewScale: 1 } as unknown as PlayerPointerInput;
         const playerCamera = new PlayerCamera();
@@ -812,7 +825,7 @@ describe("the orbit following the selection to another face", () => {
             const eye = GraphicsManager.getCamera().getWorldPosition(new THREE.Vector3());
             const layer = COLLISION_LAYER_MIN + Math.floor(eye.y / COLLISION_LAYER_HEIGHT);
             const quadIndex = quadIndexOf(WALL_ROW, START_COL, "z", "+", layer);
-            GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOnVoxelQuad(WALL_ROW, START_COL, quadIndex)));
+            GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOnVoxelQuad(quadIndex)));
             expect(voxelQuadSelectionObservable.peek()?.quadIndex).toBe(quadIndex);
             beforeFirstOrbitFrame();
             settleCamera();
@@ -836,7 +849,7 @@ describe("the orbit following the selection to another face", () => {
         withOrbitOnWall((layer, settleCamera) => {
             const before = cameraPose();
 
-            // Looking toward -z, the view's right runs toward +x: three cells along, a step at a time.
+            // Looking toward -z, the view's right runs toward +x: three voxels along, a step at a time.
             for (let step = 1; step <= 3; ++step)
             {
                 expect(SelectionStepUtil.tryStep("right")).toBe(true);
@@ -846,7 +859,8 @@ describe("the orbit following the selection to another face", () => {
             }
 
             const after = cameraPose();
-            expect(after.position.distanceTo(before.position.clone().add(new THREE.Vector3(3, 0, 0)))).toBeLessThan(1e-6);
+            const slid = new THREE.Vector3(3 * VOXEL_CELL_SIZE, 0, 0);
+            expect(after.position.distanceTo(before.position.clone().add(slid))).toBeLessThan(1e-6);
             expect(after.facing.distanceTo(before.facing)).toBeLessThan(1e-6);
             expect(orbitCameraAngleHoldRequestObservable.peek()).toBe(false);
         });
@@ -856,7 +870,8 @@ describe("the orbit following the selection to another face", () => {
         withOrbitOnWall((layer, settleCamera) => {
             const before = cameraPose();
 
-            expect(selectQuad(WALL_ROW, START_COL + 3, quadIndexOf(WALL_ROW, START_COL + 3, "z", "+", layer))).toBe(true);
+            const col = START_COL + WELL_ALONG;
+            expect(selectQuad(WALL_ROW, col, quadIndexOf(WALL_ROW, col, "z", "+", layer))).toBe(true);
             settleCamera();
 
             // Still on the line from that face to where it stood, so facing it at a slant.
@@ -885,7 +900,8 @@ describe("the orbit following the selection to another face", () => {
             settleCamera();
             const before = cameraPose();
 
-            expect(selectQuad(WALL_ROW, START_COL + 4, quadIndexOf(WALL_ROW, START_COL + 4, "z", "+", layer))).toBe(true);
+            const col = START_COL + 1 + WELL_ALONG;
+            expect(selectQuad(WALL_ROW, col, quadIndexOf(WALL_ROW, col, "z", "+", layer))).toBe(true);
             settleCamera();
 
             expect(cameraPose().facing.angleTo(before.facing)).toBeGreaterThan(THREE.MathUtils.degToRad(20));
@@ -906,12 +922,12 @@ describe("the orbit following the selection to another face", () => {
                 .toBe(quadIndexOf(WALL_ROW, START_COL, "z", "+", COLLISION_LAYER_MIN));
             settleCamera();
 
-            // Looking the same way, from as far off the wall's foot as it stood off the tile: a cell further
+            // Looking the same way, from as far off the wall's foot as it stood off the tile: a voxel further
             // on, and up by as much as the orbit looks at a block above a tile lying flat.
             const after = cameraPose();
             expect(after.facing.distanceTo(before.facing)).toBeLessThan(1e-6);
             expect(after.position.x - before.position.x).toBeCloseTo(0, 6);
-            expect(after.position.z - before.position.z).toBeCloseTo(-1, 6);
+            expect(after.position.z - before.position.z).toBeCloseTo(-VOXEL_CELL_SIZE, 6);
             expect(after.position.y - before.position.y).toBeGreaterThan(0.25);
             expect(after.position.y - before.position.y).toBeLessThan(0.5 * COLLISION_LAYER_HEIGHT + 0.25);
             expect(orbitCameraAngleHoldRequestObservable.peek()).toBe(false);
@@ -922,9 +938,9 @@ describe("the orbit following the selection to another face", () => {
         withOrbitOnWall((_layer, settleCamera) => {
             // A block standing alone between the user and the wall, seen squarely: its sides show edge-on at
             // best, and past each lies its back, turned away.
-            buildPillar(room, 3, START_COL, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
-            const front = quadIndexOf(3, START_COL, "z", "+", COLLISION_LAYER_MIN);
-            expect(selectQuad(3, START_COL, front)).toBe(true);
+            buildPillar(room, LONE_BLOCK_ROW, START_COL, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
+            const front = quadIndexOf(LONE_BLOCK_ROW, START_COL, "z", "+", COLLISION_LAYER_MIN);
+            expect(selectQuad(LONE_BLOCK_ROW, START_COL, front)).toBe(true);
             settleCamera();
             const before = cameraPose();
 
@@ -944,13 +960,13 @@ describe("the orbit following the selection to another face", () => {
 
     it("steps round a corner exactly where the orbit, once slid alongside, sees the face from its front, and past it where not", () => {
         withOrbitOnWall((layer, settleCamera) => {
-            // A block standing against the wall a cell along: its side, turned toward -x, is in the way of a
+            // A block standing against the wall a voxel along: its side, turned toward -x, is in the way of a
             // step along the wall, and shows only from far enough round to that side. Past the side lies the
             // block's front, turned the way the wall is.
             const wallFace = quadIndexOf(WALL_ROW, START_COL, "z", "+", layer);
             const blockSide = quadIndexOf(WALL_ROW + 1, START_COL + 1, "x", "-", layer);
             const blockFront = quadIndexOf(WALL_ROW + 1, START_COL + 1, "z", "+", layer);
-            const blockSideX = START_COL + 1;
+            const blockSideX = (START_COL + 1) * VOXEL_CELL_SIZE;
             buildPillar(room, WALL_ROW + 1, START_COL + 1, COLLISION_LAYER_MIN, layer);
 
             const sideTaken: boolean[] = [];
@@ -979,7 +995,7 @@ describe("the orbit following the selection to another face", () => {
                 expect(beforeItsPlane, `${roundDeg} degrees round`).toBe(taken);
             }
             // Both sides of the line were tried, and the line falls where the face's depth in its block puts it.
-            expect(sideTaken).toEqual([true, true, true, true, false, false, false, false]);
+            expect(sideTaken).toEqual([true, true, true, true, true, false, false, false]);
         });
     });
 
@@ -987,21 +1003,23 @@ describe("the orbit following the selection to another face", () => {
         withOrbitOnWall((_layer, settleCamera) => {
             // A low block standing alone between the user and the wall, seen from before and above: past its
             // far side, which is turned away, lies the floor behind it.
-            buildPillar(room, 3, START_COL, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
-            expect(selectQuad(3, START_COL, quadIndexOf(3, START_COL, "y", "+", COLLISION_LAYER_MIN))).toBe(true);
+            buildPillar(room, LONE_BLOCK_ROW, START_COL, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
+            const top = quadIndexOf(LONE_BLOCK_ROW, START_COL, "y", "+", COLLISION_LAYER_MIN);
+            expect(selectQuad(LONE_BLOCK_ROW, START_COL, top)).toBe(true);
             orbitCameraViewRequestObservable.set({azimuth: 0, polar: THREE.MathUtils.degToRad(60),
                 zoomAmount: orbitCameraZoomObservable.peek()});
             settleCamera();
             const before = cameraPose();
 
             expect(SelectionStepUtil.tryStep("up")).toBe(true);
-            expect(voxelQuadSelectionObservable.peek()?.quadIndex).toBe(floorQuadIndexOf(2, START_COL));
+            expect(voxelQuadSelectionObservable.peek()?.quadIndex)
+                .toBe(floorQuadIndexOf(LONE_BLOCK_ROW - 1, START_COL));
             settleCamera();
 
-            // Looking the same way, a cell further on and lower by as much as the tile lies under the block.
+            // Looking the same way, a voxel further on and lower by as much as the tile lies under the block.
             const after = cameraPose();
             expect(after.facing.distanceTo(before.facing)).toBeLessThan(1e-6);
-            expect(after.position.z - before.position.z).toBeCloseTo(-1, 6);
+            expect(after.position.z - before.position.z).toBeCloseTo(-VOXEL_CELL_SIZE, 6);
             expect(after.position.y).toBeLessThan(before.position.y - 0.2);
             expect(after.position.y).toBeGreaterThan(0);
         });
@@ -1184,8 +1202,8 @@ describe("the line of sight edit mode looks along", () => {
 });
 
 describe("a scripted step choosing what edit mode opens on", () => {
-    // A face of the boundary wall along row 0, as a step might pick it.
-    const WALL_FACE_QUAD_INDEX = quadIndexOf(0, 10, "z", "+", COLLISION_LAYER_MIN + 2);
+    // A face of the boundary wall (see WALL_ROW), as a step might pick it.
+    const WALL_FACE_QUAD_INDEX = quadIndexOf(WALL_ROW, 10, "z", "+", COLLISION_LAYER_MIN + 2);
 
     function pickOpening(quadIndex: () => number): void
     {
@@ -1285,7 +1303,7 @@ describe("a selection the user makes by hand", () => {
 
     it("is announced by a click on an object", () => {
         const quadIndex = floorQuadIndexOf(10, 10);
-        GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOnVoxelQuad(10, 10, quadIndex)));
+        GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOnVoxelQuad(quadIndex)));
         const picture = makePicture();
 
         // The click path every kind of object shares, reached through a subclass that doesn't override it:
@@ -1309,7 +1327,7 @@ describe("a selection the user makes by hand", () => {
     });
 
     it("is not announced as edit mode opens, whatever it opens on", () => {
-        GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOnVoxelQuad(10, 10, floorQuadIndexOf(10, 10))));
+        GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOnVoxelQuad(floorQuadIndexOf(10, 10))));
         expect(VoxelQuadSelection.isSelected()).toBe(true);
         GameModeUtil.exitEditMode();
 
@@ -1670,8 +1688,10 @@ describe("a scripted step pointing the camera", () => {
 
         // Back onto the quad the user picked while the step was holding the view.
         const freedMode = cameraModeObservable.peek();
-        expect(freedMode.type == "orbit" && freedMode.target.center.x).toBe(10.5);
-        expect(freedMode.type == "orbit" && freedMode.target.center.z).toBe(10.5);
+        expect(freedMode.type == "orbit" && freedMode.target.center.x)
+            .toBe(VoxelQueryUtil.getWorldXAtVoxelColCenter(10));
+        expect(freedMode.type == "orbit" && freedMode.target.center.z)
+            .toBe(VoxelQueryUtil.getWorldZAtVoxelRowCenter(10));
     });
 
     it("leaves the camera where it is in play mode", () => {

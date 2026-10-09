@@ -1,4 +1,5 @@
 import socketIO from "socket.io";
+import zlib from "zlib";
 import User from "../../../shared/user/types/user";
 import EncodableData from "../../../shared/networking/types/encodableData";
 import SignalTypeConfigMap from "../../../shared/networking/maps/signalTypeConfigMap";
@@ -6,6 +7,7 @@ import EncodableArray from "../../../shared/networking/types/encodableArray";
 import EncodableRawByteNumber from "../../../shared/networking/types/encodableRawByteNumber";
 import EncodingUtil from "../../../shared/networking/util/encodingUtil";
 import ErrorUtil from "../../../shared/system/util/errorUtil";
+import { SIGNAL_BATCH_DEFLATE_MIN_BYTES } from "../../system/serverConstants";
 
 export default class SocketUserContext
 {
@@ -113,7 +115,12 @@ export default class SocketUserContext
         if (bufferState.byteIndex > 0)
         {
             //console.log(`signalBatch sent :: ${bufferState.byteIndex}`);
-            this.socket.emit("signalBatch", subBuffer);
+            // A long batch (a whole room, or a crowd's movements) goes out deflated. The fastest level,
+            // since everyone in a room may be sent it in one flush.
+            if (subBuffer.byteLength >= SIGNAL_BATCH_DEFLATE_MIN_BYTES)
+                this.socket.emit("deflatedSignalBatch", zlib.deflateRawSync(subBuffer, {level: zlib.constants.Z_BEST_SPEED}));
+            else
+                this.socket.emit("signalBatch", subBuffer);
         }
     }
 }

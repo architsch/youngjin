@@ -283,8 +283,8 @@ const AutomationBridgeUtil =
                     // The user's character is reported as an ordinary object of its type.
                     object: objectSelection == null ? null
                         : describeObject(objectSelection.gameObject),
-                    // facing: the way the face looks ("+x", "-y", …). shape: its block's (see blockShape), or
-                    // null for the room's own floor or ceiling, which is no block's face.
+                    // facing: the way the face looks ("+x", "-y", …). collisionLayer: its block's, or null for
+                    // the room's own floor or ceiling, which is no block's face.
                     voxelQuad: quadSelection == null ? null : {
                         col: quadSelection.voxel.col,
                         row: quadSelection.voxel.row,
@@ -292,15 +292,12 @@ const AutomationBridgeUtil =
                         collisionLayer: getBlockLayer(quadSelection.quadIndex),
                         facing: VoxelQueryUtil.getVoxelQuadOrientationFromQuadIndex(quadSelection.quadIndex) +
                             VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadSelection.quadIndex),
-                        shape: getBlockLayer(quadSelection.quadIndex) == null ? null : VoxelQueryUtil.getVoxelBlockShape(
-                            quadSelection.voxel, getBlockLayer(quadSelection.quadIndex)!),
                     },
                 };
             },
 
-            // The shape of the block in a cell layer (see VoxelBlockShapeUtil): one bit per quarter of the
-            // cell that the block fills, so 0 for no block and 15 for a whole one.
-            blockShape: (row: number, col: number, collisionLayer: number) =>
+            // Whether a cell layer holds a block; null for one outside the room.
+            hasBlock: (row: number, col: number, collisionLayer: number) =>
             {
                 const room = App.getCurrentRoom();
                 if (room == undefined || VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, col) == undefined ||
@@ -308,7 +305,7 @@ const AutomationBridgeUtil =
                 {
                     return null;
                 }
-                return VoxelQueryUtil.getVoxelBlockShapeAt(room.voxelGrid.voxels, row, col, collisionLayer);
+                return VoxelQueryUtil.isVoxelBlockPresentAt(room.voxelGrid.voxels, row, col, collisionLayer);
             },
 
             // Where the selection can be dragged from: an object's middle moves it, and a handle resizes the

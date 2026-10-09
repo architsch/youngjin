@@ -1,4 +1,4 @@
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, NUM_COLLISION_LAYERS, NUM_COLLISION_LAYERS_PER_STOREY, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, STOREY_FLOOR_COLLISION_LAYER } from "../../../system/sharedConstants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, GENERATED_WALL_THICKNESS, NUM_COLLISION_LAYERS, NUM_COLLISION_LAYERS_PER_STOREY, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, STOREY_FLOOR_COLLISION_LAYER } from "../../../system/sharedConstants";
 import RoomPalette from "../types/roomPalette";
 import RoomVolume from "../types/roomVolume";
 
@@ -9,29 +9,10 @@ export const RoomVolumeConstructorMap: {[roomVolumeShape: string]:
     // Inside the boundary wall.
     "Interior": (): RoomVolume =>
     {
-        return new RoomVolume(1, NUM_VOXEL_ROWS - 2, 1, NUM_VOXEL_COLS - 2,
+        return new RoomVolume(
+            GENERATED_WALL_THICKNESS, NUM_VOXEL_ROWS - 1 - GENERATED_WALL_THICKNESS,
+            GENERATED_WALL_THICKNESS, NUM_VOXEL_COLS - 1 - GENERATED_WALL_THICKNESS,
             COLLISION_LAYER_MIN, COLLISION_LAYER_MAX);
-    },
-    // The legacy entrance doorway. No longer carved; still named by older-room conversions.
-    "InitialMultiplayerEntrance": (): RoomVolume =>
-    {
-        const row = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW;
-        const col = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL;
-
-        return new RoomVolume(row, row, col, col,
-            COLLISION_LAYER_MIN,
-            COLLISION_LAYER_MIN + INITIAL_MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS - 1);
-    },
-    // A keep-clear zone around the entrance, spanning the entrance storey's full height (the doorway,
-    // its wall and the arrival floor); the storey above stays buildable.
-    "InitialMultiplayerEntranceZone": (halfWidth: number, halfDepth: number): RoomVolume =>
-    {
-        const row = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW;
-        const col = INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL;
-
-        return new RoomVolume(row - halfDepth, row + halfDepth, col - halfWidth, col + halfWidth,
-            COLLISION_LAYER_MIN,
-            COLLISION_LAYER_MIN + NUM_COLLISION_LAYERS_PER_STOREY - 1);
     },
     "SingleBlock": (row: number, col: number, collisionLayer: number): RoomVolume =>
     {

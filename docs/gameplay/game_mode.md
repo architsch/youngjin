@@ -1,6 +1,6 @@
 # Game Mode
 
-Reference: @src/client/system/util/gameModeUtil.ts , @src/client/graphics/util/worldSpaceSelectionUtil.ts , @src/client/graphics/util/selectionStepUtil.ts , @src/client/graphics/util/selectionEditGizmoUtil.ts , @src/client/graphics/types/gizmo/voxelQuadEditGizmos.ts , @src/client/object/types/objectTypeClientConfig/objectTypeClientConfig.ts , @src/client/ui/util/closablePanelUtil.ts , @src/client/ui/util/shortcutKeyUtil.ts , @src/client/system/util/clientEventHistoryUtil.ts , @src/client/system/util/roomEditUtil.ts
+Reference: @src/client/system/util/gameModeUtil.ts , @src/client/graphics/util/worldSpaceSelectionUtil.ts , @src/client/graphics/util/selectionStepUtil.ts , @src/client/graphics/util/selectionEditGizmoUtil.ts , @src/client/object/types/objectTypeClientConfig/objectTypeClientConfig.ts , @src/client/ui/util/closablePanelUtil.ts , @src/client/ui/util/shortcutKeyUtil.ts , @src/client/system/util/clientEventHistoryUtil.ts , @src/client/system/util/roomEditUtil.ts
 
 A `GameMode` decides the camera behavior, whether the player can walk, and which tools are shown. `GameModeUtil` publishes the current mode, and everything mode-dependent observes it.
 
@@ -49,21 +49,16 @@ The mode is stored separately from camera state, because the camera briefly has 
 - A chooser with nothing picked yet opens on the tab and at the place where the last one for the same thing was left, edits included (see `ThumbnailPanel`); the first time, on All and at the start.
 - The outline and camera framing come from the object's collider at the object's own size. Anyone who may select an object may also move it, dragging inside the outline, and resize it by the outline's corners if its type scales that way; a lamp instead picks one of its sizes from its tools (see [object_attachment.md](../geometry/object_attachment.md)). Each placement is validated as it previews, and the result is sent once, on release.
 
-## Editing a block by its outline
+## Editing a selection by its outline
 - A press the selection's outline takes is a gizmo's, not the camera's (`GizmoDragUtil`). `SelectionEditGizmoUtil` owns what every kind of selection shares: the handles, which of them a press takes, and the view while a drag lasts (held still, or following the pointer that carries a selection to its edge; see [camera_control.md](../graphics/camera_control.md)). Each kind supplies its own handles and drags (`SelectionEditGizmoProvider`).
-- A kind offers only the handles a drag could resize its selection by, and says of each move whether the selection could do what the pointer asks. While it can't, the drag is blocked (`selectionEditBlockedObservable`): the outline, the handles and the cell's wireframe show red.
+- A kind offers only the handles a drag could resize its selection by, and says of each move whether the selection could do what the pointer asks. While it can't, the drag is blocked (`selectionEditBlockedObservable`): the outline and the handles show red.
 - A selection further from the camera than `SELECTION_HANDLE_MAX_DISTANCE` has no handles, since they keep their size on screen and would crowd it. The one a drag holds stays, and an object still moves by its inside.
-- A selected block face has a handle on each edge that is a bound of its block across XZ: the side edges of a wall face, all four of a top or bottom face. A handle carries its bound between the cell's side and mid-cell, and shows only where the bound has another place it may go: one that leaves a block, and strands nothing hung on it.
-- A block's drag is blocked while its bound is carried on toward a place it can't take: out of its cell, or in past mid-cell.
-- The face itself takes no press, so a drag that starts on it turns the view. A block is reshaped where it stands, never dragged elsewhere.
-- The whole cell layer of the selected face's block is drawn as a thin wireframe (`VoxelQuadSelection`), whole block or shrunk, so it is plain which cell a shrunk block belongs to.
-- A reshape that hides the selected face sends the selection to another face of the same block.
-- The handles are not offered on the room's own floor and ceiling, where the user may not edit the block, or while a step holds the selection or sets `FeatureFlag.DisableManualVoxelBlockResize`.
+- Only attached objects supply any (see [object_attachment.md](../geometry/object_attachment.md)). A block face's outline takes no press, so a drag that starts on it turns the view.
 
 ## Undo and redo
 - In edit mode Ctrl+Z undoes the latest thing the user did there, and Ctrl+Y or Ctrl+Shift+Z redoes the one last undone (`KeyPressUtil`; Command stands in for Ctrl). A press is one step, and a held chord doesn't repeat. The keys reach the room where the HUD's keys do, and not during a drag of the selection; in a text field they are the field's own.
 - What can be undone is of two kinds, taken in the order they were made:
-  - an edit by the selection's tools or outline: a block added, removed with what hung on it, reshaped or retextured; an object added, removed, moved, resized, turned or given another value. Room settings, restricted zones and the user's own character are not;
+  - an edit by the selection's tools or outline: a block added, removed with what hung on it, or retextured; an object added, removed, moved, resized, turned or given another value. Room settings, restricted zones and the user's own character are not;
   - a selection the user made by hand: a click on a face or an object, or a movement key's step. Not one the user didn't make: what edit mode opens on, or where a tool or somebody else's edit moves the selection.
 - Each is entered in `ClientEventHistoryUtil` as a `ClientEvent` that carries how to undo and redo it. The history lasts one stay in edit mode: it starts over as the mode ends, and so on every room arrival.
 - A new edit or selection ends what could be redone. A text typed into a field is one edit, not one for each letter.

@@ -2,14 +2,12 @@ import Room from "../../shared/room/types/room";
 import AddVoxelBlockSignal from "../../shared/voxel/types/update/addVoxelBlockSignal";
 import MoveVoxelBlockSignal from "../../shared/voxel/types/update/moveVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../shared/voxel/types/update/removeVoxelBlockSignal";
-import SetVoxelBlockShapeSignal from "../../shared/voxel/types/update/setVoxelBlockShapeSignal";
 import SetVoxelQuadTextureSignal from "../../shared/voxel/types/update/setVoxelQuadTextureSignal";
 import SetRestrictedZonesSignal from "../../shared/voxel/types/update/setRestrictedZonesSignal";
 import VoxelUpdateUtil from "../../shared/voxel/util/voxelUpdateUtil";
 import RestrictedZoneUtil from "../../shared/voxel/util/restrictedZoneUtil";
 import VoxelQueryUtil from "../../shared/voxel/util/voxelQueryUtil";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_QUADS_PER_COLLISION_LAYER,
-    VOXEL_BLOCK_SHAPE_EMPTY } from "../../shared/system/sharedConstants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../shared/system/sharedConstants";
 import SocketUserContext from "../sockets/types/socketUserContext";
 import ServerRoomManager from "../room/serverRoomManager";
 
@@ -31,7 +29,7 @@ const ServerVoxelManager =
         const room = roomRuntimeMemory.room;
 
         if (!VoxelUpdateUtil.addVoxelBlock(user, room.voxelGrid.voxels, signal.quadIndex,
-            signal.quadTextureIndicesWithinLayer, room, signal.shape))
+            signal.quadTextureIndicesWithinLayer, room))
         {
             console.error(`ServerVoxelManager::onAddVoxelBlockSignalReceived :: Failed (quadIndex=${signal.quadIndex})`);
             sendBlockTruth(socketUserContext, room, signal.quadIndex);
@@ -95,28 +93,6 @@ const ServerVoxelManager =
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         socketRoomContext.multicastSignal("moveVoxelBlockSignal", signal, user.id);
     },
-    onSetVoxelBlockShapeSignalReceived: (socketUserContext: SocketUserContext, signal: SetVoxelBlockShapeSignal) =>
-    {
-        const user = socketUserContext.user;
-        const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
-        const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
-        if (!roomRuntimeMemory) // Single-player users have no server-side room; their edits are client-side only and must never mutate the shared room.
-        {
-            console.error(`ServerVoxelManager::onSetVoxelBlockShapeSignalReceived :: No room registered for user (userID = ${user.id})`);
-            return;
-        }
-        const room = roomRuntimeMemory.room;
-
-        if (!VoxelUpdateUtil.setVoxelBlockShape(user, room.voxelGrid.voxels, signal.quadIndex, signal.shape, room))
-        {
-            console.error(`ServerVoxelManager::onSetVoxelBlockShapeSignalReceived :: Failed (quadIndex=${signal.quadIndex})`);
-            sendBlockTruth(socketUserContext, room, signal.quadIndex);
-            return;
-        }
-
-        const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
-        socketRoomContext.multicastSignal("setVoxelBlockShapeSignal", signal, user.id);
-    },
     onSetVoxelQuadTextureSignalReceived: (socketUserContext: SocketUserContext, signal: SetVoxelQuadTextureSignal) =>
     {
         const user = socketUserContext.user;
@@ -170,9 +146,9 @@ const ServerVoxelManager =
     },
 }
 
-// Tells a user what the cell layer of a quad really holds: its block, by an add (which replaces whatever
-// their client has there, shape and textures), or that it holds none, by a remove. Nothing for a quad
-// that is no block's.
+// Tells a user what the cell layer of a quad really holds: its block, by an add (which gives whatever
+// their client has there its textures), or that it holds none, by a remove. Nothing for a quad that is
+// no block's.
 function sendBlockTruth(socketUserContext: SocketUserContext, room: Room, quadIndex: number): void
 {
     if (!VoxelQueryUtil.isValidVoxelQuadIndex(quadIndex))
@@ -184,8 +160,7 @@ function sendBlockTruth(socketUserContext: SocketUserContext, room: Room, quadIn
         return;
 
     const firstQuadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, collisionLayer);
-    const shape = VoxelQueryUtil.getVoxelBlockShapeAt(room.voxelGrid.voxels, row, col, collisionLayer);
-    if (shape == VOXEL_BLOCK_SHAPE_EMPTY)
+    if (!VoxelQueryUtil.isVoxelBlockPresentAt(room.voxelGrid.voxels, row, col, collisionLayer))
     {
         socketUserContext.addPendingSignalToUser("removeVoxelBlockSignal",
             new RemoveVoxelBlockSignal(room.id, firstQuadIndex));
@@ -196,7 +171,7 @@ function sendBlockTruth(socketUserContext: SocketUserContext, room: Room, quadIn
     for (let i = 0; i < NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
         textures[i] = room.voxelGrid.quadsMem.quads[firstQuadIndex + i] & 0b01111111;
     socketUserContext.addPendingSignalToUser("addVoxelBlockSignal",
-        new AddVoxelBlockSignal(room.id, firstQuadIndex, textures, shape));
+        new AddVoxelBlockSignal(room.id, firstQuadIndex, textures));
 }
 
 export default ServerVoxelManager;

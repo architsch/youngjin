@@ -33,7 +33,7 @@ const LabelObjectTypeConfig =
     persistent: true,
     autoUnload: true,
     category: ObjectCategoryEnumMap.Label,
-    // Resized in half-voxel steps along the wall, as a canvas is; a step is also one cell of the label
+    // Resized in steps of a block's width along the wall, as a canvas is; a step is also one cell of the label
     // atlas (see LABEL_ATLAS_CELL_WORLD_SIZE). Depth is the wall gap and never changes.
     scaling: {
         scaleStep: {x: 0.5, y: 0.5, z: 0},

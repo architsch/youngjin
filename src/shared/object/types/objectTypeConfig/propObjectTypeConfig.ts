@@ -34,8 +34,8 @@ const PropObjectTypeConfig =
     persistent: true,
     autoUnload: true,
     category: ObjectCategoryEnumMap.Picture,
-    // Its image's own size, which pins it (a prop without one may be resized, in half-voxel steps). Depth is the
-    // gap from the face and never changes.
+    // Its image's own size, which pins it (a prop without one may be resized, in steps of a block's width).
+    // Depth is the gap from the face and never changes.
     scaling: {
         scaleStep: {x: 0.5, y: 0.5, z: 0},
         minScale: {x: 0.5, y: 0.5, z: 1},

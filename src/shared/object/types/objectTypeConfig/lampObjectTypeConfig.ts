@@ -32,6 +32,9 @@ const SIZES: Vec3[] = [
     {x: 1, y: 1, z: 1},
 ];
 
+// The sizes a new lamp tries, in order (see scaling).
+const START_SCALES: Vec3[] = [SIZES[1], SIZES[0]];
+
 // Character positions in the stored string; never reorder.
 const COLOR_CHAR_INDEX = 0;
 const INTENSITY_CHAR_INDEX = 1;
@@ -58,12 +61,13 @@ const LampObjectTypeConfig =
     category: ObjectCategoryEnumMap.Lamp,
     // One of SIZES, picked as it is added and later from its edit options rather than by dragging a corner;
     // with no roll to turn it by, this is how it is shaped to suit whichever face it is on. Depth is the gap
-    // from the face and never changes. By default one layer tall, so the side of a lone block holds it.
+    // from the face and never changes. By default one layer tall, or the smallest where only that fits, as on
+    // the side of a lone block.
     scaling: {
         scaleStep: {x: 0.5, y: 0.5, z: 0},
         minScale: {x: 0.5, y: 0.5, z: 1},
         maxScale: {x: 1, y: 1, z: 1},
-        getDefaultScale: () => ({x: 1, y: 0.5, z: 1}),
+        getDefaultScale: (fits: (scale: Vec3) => boolean): Vec3 => START_SCALES.find(fits) ?? START_SCALES[0],
         cornerHandles: false,
     },
     attachment: {

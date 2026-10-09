@@ -1,6 +1,5 @@
 import * as THREE from "three";
-import { COLLISION_LAYER_HEIGHT, NUM_COLLISION_LAYERS, NUM_VOXEL_COLS, NUM_VOXEL_ROWS }
-    from "../../../../../shared/system/sharedConstants";
+import { MAX_ROOM_X, MAX_ROOM_Y, MAX_ROOM_Z } from "../../../../../shared/system/sharedConstants";
 
 // Position and target are stored separately so each can be set without swinging the view.
 const cameraPos = new THREE.Vector3();
@@ -13,9 +12,9 @@ const lookRotationMatrix = new THREE.Matrix4();
 // Default view: room centre at head height, looking at the floor centre (not the grid origin, which
 // is outside the room).
 const DEFAULT_POS = {
-    x: 0.5 * NUM_VOXEL_COLS,
-    y: 0.5 * NUM_COLLISION_LAYERS * COLLISION_LAYER_HEIGHT,
-    z: 0.5 * NUM_VOXEL_ROWS,
+    x: 0.5 * MAX_ROOM_X,
+    y: 0.5 * MAX_ROOM_Y,
+    z: 0.5 * MAX_ROOM_Z,
 };
 const DEFAULT_TARGET = {x: DEFAULT_POS.x, y: 0, z: DEFAULT_POS.z};
 

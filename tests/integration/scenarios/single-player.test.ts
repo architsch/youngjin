@@ -76,9 +76,9 @@ import FirstPersonCameraPose from "../../../src/client/object/components/helpers
 import { voxelQuadSelectionObservable } from "../../../src/client/system/clientObservables";
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
 import { PLAYER_HEIGHT } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, HUB_ROOM_ID_KEYWORD,
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, HUB_ROOM_ID_KEYWORD, MAX_ROOM_X, MAX_ROOM_Z,
     NUM_VOXEL_COLS, NUM_VOXEL_ROWS, STOREY_FLOOR_COLLISION_LAYER,
-    TUTORIAL_SINGLE_PLAYER_MODE, UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
+    TUTORIAL_SINGLE_PLAYER_MODE, UNIT_VEC3, VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
@@ -148,8 +148,9 @@ describe("single-player scenarios", () => {
                 const userID = users[0].user.id;
                 const m = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE].getRoomBuilderParams();
                 // A real dividing-wall quad, so a misbehaving handler would have something to touch.
+                const wall = m.volumes.wall1;
                 const wallQuad = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(
-                    m.volumes.wall1.rowMin, m.volumes.wall1.colMin, COLLISION_LAYER_MIN);
+                    wall.rowMin, wall.colMin, COLLISION_LAYER_MIN);
                 const transform = new ObjectTransform({ x: 1, y: 0, z: 1 }, { x: 0, y: 0, z: 1 },
                     {...UNIT_VEC3});
 
@@ -212,7 +213,7 @@ describe("single-player room generation", () => {
         const { voxelGrid, objectGroup } = RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
         const m = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE].getRoomBuilderParams();
 
-        // Both walls stand initially (each is removed by a later step).
+        // Both walls stand initially (each is removed by a later step), over every voxel they cover.
         for (const volume of [m.volumes.wall1, m.volumes.wall2])
         {
             for (let row = volume.rowMin; row <= volume.rowMax; ++row)
@@ -228,7 +229,8 @@ describe("single-player room generation", () => {
 
         // The fallback floor patch (see the edit mode opening tests) is bare, so a block built on it fits.
         const floorVoxel = VoxelQueryUtil.getVoxel(voxelGrid.voxels,
-            Math.floor(m.hotspots.floor.z), Math.floor(m.hotspots.floor.x));
+            VoxelQueryUtil.getVoxelRowFromWorldZ(m.hotspots.floor.z),
+            VoxelQueryUtil.getVoxelColFromWorldX(m.hotspots.floor.x));
         expect(floorVoxel).toBeDefined();
         expect(VoxelQueryUtil.isVoxelBlockPresent(floorVoxel!, COLLISION_LAYER_MIN)).toBe(false);
 
@@ -321,6 +323,9 @@ describe("single-player room generation", () => {
 describe("tutorial edit mode opening", () => {
     // Edit mode opens on the wall face ahead of the user, picked as the user switches (see
     // "edit_mode_opening_voxel_quad"), and the building steps build against that face.
+    // The layout's volumes count voxels, so a row or col of one is turned into a place in the world (the
+    // voxel's low side) by worldAt.
+    const worldAt = (rowOrCol: number) => rowOrCol * VOXEL_CELL_SIZE;
     const config = SinglePlayerModeClientConfigMap[TUTORIAL_SINGLE_PLAYER_MODE];
     const m = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE].getRoomBuilderParams();
     const room = { voxelGrid: RoomGenerationUtil.generateRoom(
@@ -349,7 +354,7 @@ describe("tutorial edit mode opening", () => {
         return (opening as Extract<SinglePlayerAction, {type: "edit_mode_opening_voxel_quad"}>).quadIndex();
     }
 
-    /** A face's cell, layer and facing (e.g. "+z"). */
+    /** A face's voxel, layer and facing (e.g. "+z"). */
     function describeQuad(quadIndex: number): {row: number, col: number, collisionLayer: number, facing: string}
     {
         return {
@@ -361,14 +366,28 @@ describe("tutorial edit mode opening", () => {
         };
     }
 
+    /** The middle of the voxel a point lies in, from where a look along the grid runs down no voxel boundary. */
+    function voxelMiddleAt(point: {x: number, z: number}): {x: number, z: number}
+    {
+        return {
+            x: VoxelQueryUtil.getWorldXAtVoxelColCenter(VoxelQueryUtil.getVoxelColFromWorldX(point.x)),
+            z: VoxelQueryUtil.getWorldZAtVoxelRowCenter(VoxelQueryUtil.getVoxelRowFromWorldZ(point.z)),
+        };
+    }
+
+    // The dividing wall, whose first col holds its faces toward the arrival room.
+    const dividingWall = m.volumes.wall1;
+
     it("opens on the drawn face of the wall straight ahead, a little below the eye", () => {
         // In the arrival room, looking down its length toward the wall at its far end.
-        const col = m.entranceVoxelCol;
-        const quadIndex = openingQuadIndex({x: col + 0.5, z: m.entranceVoxelRow - 2.5}, {x: col + 0.5, z: 0});
+        const eye = voxelMiddleAt({x: m.entrancePos.x, z: m.entrancePos.z - 3});
+        const quadIndex = openingQuadIndex(eye, {x: eye.x, z: 0});
         const quad = describeQuad(quadIndex);
 
-        expect({row: quad.row, col: quad.col, facing: quad.facing})
-            .toEqual({row: m.volumes.room1.rowMin - 1, col, facing: "+z"});
+        // The wall's last voxel row before the room, in the col the eye looks along.
+        expect({row: quad.row, col: quad.col, facing: quad.facing}).toEqual({
+            row: m.volumes.room1.rowMin - 1,
+            col: VoxelQueryUtil.getVoxelColFromWorldX(eye.x), facing: "+z"});
         expect(VoxelQueryUtil.isVoxelQuadVisible(room.voxelGrid.voxels, quadIndex), "the face is not drawn").toBe(true);
 
         // About a block's height below the eye.
@@ -378,36 +397,37 @@ describe("tutorial edit mode opening", () => {
     });
 
     it("opens on the dividing wall when the user turns to face it", () => {
-        const wall = m.volumes.wall1;
-        const row = wall.rowMin + 2;
-        const quad = describeQuad(openingQuadIndex({x: wall.colMin - 2.5, z: row + 0.5}, {x: NUM_VOXEL_COLS, z: row + 0.5}));
+        const eye = voxelMiddleAt({x: worldAt(dividingWall.colMin) - 2.5, z: worldAt(dividingWall.rowMin) + 2.5});
+        const quad = describeQuad(openingQuadIndex(eye, {x: MAX_ROOM_X, z: eye.z}));
 
-        expect({row: quad.row, col: quad.col, facing: quad.facing}).toEqual({row, col: wall.colMin, facing: "-x"});
+        expect({row: quad.row, col: quad.col, facing: quad.facing}).toEqual({
+            row: VoxelQueryUtil.getVoxelRowFromWorldZ(eye.z), col: dividingWall.colMin, facing: "-x"});
     });
 
     it("follows a slanting look to where it meets the wall", () => {
-        // One cell across for every cell along, from off a cell's middle so the look grazes no corner.
-        const wall = m.volumes.wall1;
-        const eye = {x: m.volumes.room1.colMin + 0.5, z: m.volumes.room1.rowMax - 0.8};
+        // One block across for every block along, from where the look crosses rows and cols by turns and so
+        // grazes no corner.
+        const eye = {x: worldAt(m.volumes.room1.colMin) + 0.5, z: worldAt(m.volumes.room1.rowMax + 1) - 1.8};
         const quad = describeQuad(openingQuadIndex(eye, {x: eye.x + 10, z: eye.z - 10}));
 
-        expect({row: quad.row, col: quad.col, facing: quad.facing})
-            .toEqual({row: Math.floor(eye.z - (wall.colMin - eye.x)), col: wall.colMin, facing: "-x"});
+        expect({row: quad.row, col: quad.col, facing: quad.facing}).toEqual({
+            row: VoxelQueryUtil.getVoxelRowFromWorldZ(eye.z - (worldAt(dividingWall.colMin) - eye.x)),
+            col: dividingWall.colMin, facing: "-x"});
     });
 
     it("falls back to the room's own floor patch when no block stands ahead", () => {
         // Beyond the grid, looking away from the room.
-        const x = m.entranceVoxelCol + 0.5;
-        const quadIndex = openingQuadIndex({x, z: NUM_VOXEL_ROWS + 2}, {x, z: NUM_VOXEL_ROWS + 10});
+        const x = m.entrancePos.x;
+        const quadIndex = openingQuadIndex({x, z: MAX_ROOM_Z + 2}, {x, z: MAX_ROOM_Z + 10});
 
         expect(quadIndex).toBe(VoxelQueryUtil.getFloorVoxelQuadIndex(
-            Math.floor(m.hotspots.floor.z), Math.floor(m.hotspots.floor.x)));
+            VoxelQueryUtil.getVoxelRowFromWorldZ(m.hotspots.floor.z),
+            VoxelQueryUtil.getVoxelColFromWorldX(m.hotspots.floor.x)));
     });
 
-    // A face on the dividing wall, standing in for the one edit mode opened on.
-    const wall = m.volumes.wall1;
-    const openedOnRow = wall.rowMin + 2;
-    const openedOnQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(openedOnRow, wall.colMin, "x", "-",
+    // A face on the dividing wall, midway along it, standing in for the one edit mode opened on.
+    const openedOnRow = Math.floor(0.5 * (dividingWall.rowMin + dividingWall.rowMax + 1));
+    const openedOnQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(openedOnRow, dividingWall.colMin, "x", "-",
         COLLISION_LAYER_MIN + 2);
 
     /** Steps set aside the faces the steps after them work from (see "set_variable"). */
@@ -448,7 +468,7 @@ describe("tutorial edit mode opening", () => {
         const targetQuadIndex =
             (highlight as Extract<SinglePlayerAction, {type: "gizmo_voxel_quad_outline_rect"}>).quadIndex();
         expect(describeQuad(targetQuadIndex)).toEqual(
-            {row: openedOnRow - 1, col: wall.colMin, collisionLayer: COLLISION_LAYER_MIN + 2, facing: "-x"});
+            {row: openedOnRow - 1, col: dividingWall.colMin, collisionLayer: COLLISION_LAYER_MIN + 2, facing: "-x"});
         expect(VoxelQueryUtil.isVoxelQuadVisible(room.voxelGrid.voxels, targetQuadIndex), "the marked face is not drawn")
             .toBe(true);
 
@@ -472,7 +492,7 @@ describe("tutorial edit mode opening", () => {
         // The block goes into the cell that face looks into, and its own face that way is selected.
         const builtQuadIndex = selectedAtEndOf("add_block");
         expect(describeQuad(builtQuadIndex)).toEqual(
-            {row: openedOnRow - 1, col: wall.colMin - 1, collisionLayer: COLLISION_LAYER_MIN + 2, facing: "-x"});
+            {row: openedOnRow - 1, col: dividingWall.colMin - 1, collisionLayer: COLLISION_LAYER_MIN + 2, facing: "-x"});
 
         // Which is a face the built block really draws, covering the wall's.
         const builtRoom = RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
@@ -614,6 +634,65 @@ describe("tutorial step graph", () => {
         expect(acts(selectStep.actionsOnEnd, "clear_voxel_quad_selection_restriction")).toBe(true);
         // However the tutorial ends, the rest of the room is selectable again.
         expect(acts(config.onModeEnd(), "clear_voxel_quad_selection_restriction")).toBe(true);
+    });
+
+    it("takes each of its two walls down whole when their steps come, up to the slab that caps the room", () => {
+        const steps = config.loadSteps();
+        const m = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE].getRoomBuilderParams();
+        const { voxelGrid } = RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
+        const standsAt = (x: number, layer: number, z: number) => VoxelQueryUtil.isPointInVoxelBlock(voxelGrid.voxels,
+            {x, y: VoxelQueryUtil.getWorldYAtVoxelCollisionLayerCenter(layer), z});
+        // Each wall's box in the room, sampled a quarter unit apart, so every voxel under it is asked.
+        const worldAt = (rowOrCol: number) => rowOrCol * VOXEL_CELL_SIZE;
+        const forEachPointOf = (wall: typeof m.volumes.wall1, visit: (x: number, layer: number, z: number) => void) => {
+            for (let x = worldAt(wall.colMin) + 0.125; x < worldAt(wall.colMax + 1); x += 0.25)
+            {
+                for (let z = worldAt(wall.rowMin) + 0.125; z < worldAt(wall.rowMax + 1); z += 0.25)
+                {
+                    for (let layer = wall.collisionLayerMin; layer <= wall.collisionLayerMax; ++layer)
+                        visit(x, layer, z);
+                }
+            }
+        };
+        const walls = [m.volumes.wall1, m.volumes.wall2];
+        for (const wall of walls)
+            forEachPointOf(wall, (x, layer, z) => expect(standsAt(x, layer, z), `(${x}, ${layer}, ${z}) at first`).toBe(true));
+
+        const removals = Object.values(steps).flatMap(step => [...step.actionsOnStart, ...step.actionsOnEnd])
+            .filter((action): action is Extract<SinglePlayerAction, {type: "remove_voxel_blocks"}> =>
+                action.type === "remove_voxel_blocks");
+        expect(removals).toHaveLength(walls.length);
+        let numBlocksRemoved = 0;
+        for (const removal of removals)
+        {
+            for (let row = removal.rowStart(); row < removal.rowStart() + removal.numRows(); ++row)
+            {
+                for (let col = removal.colStart(); col < removal.colStart() + removal.numCols(); ++col)
+                {
+                    for (let layer = removal.collisionLayerMin(); layer <= removal.collisionLayerMax(); ++layer)
+                    {
+                        if (VoxelUpdateUtil.removeVoxelBlock(undefined, voxelGrid.voxels,
+                            VoxelQueryUtil.getVoxelQuadIndex(row, col, "y", "+", layer)))
+                        {
+                            ++numBlocksRemoved;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Nothing of either wall is left, and nothing but the walls was taken: as many blocks as they held.
+        let numBlocksOfWalls = 0;
+        for (const wall of walls)
+        {
+            forEachPointOf(wall, (x, layer, z) => expect(standsAt(x, layer, z), `(${x}, ${layer}, ${z}) afterwards`).toBe(false));
+            numBlocksOfWalls += (wall.rowMax - wall.rowMin + 1) * (wall.colMax - wall.colMin + 1) *
+                (wall.collisionLayerMax - wall.collisionLayerMin + 1);
+            // The slab over the wall still caps the room.
+            expect(standsAt(worldAt(wall.colMin) + 0.125, wall.collisionLayerMax + 1, worldAt(wall.rowMin) + 0.125))
+                .toBe(true);
+        }
+        expect(numBlocksRemoved).toBe(numBlocksOfWalls);
     });
 
     it("blocks undo and redo from the start, and gives them back only as the tutorial ends", () => {

@@ -7,20 +7,19 @@ import ParticleSystem from "../particleSystem";
 // never calls the particle system. Only a block's removal plays one; object edits are left unbound.
 const ParticleTriggerUtil =
 {
-    onVoxelBlockEdit: (edit: {kind: "add" | "remove" | "move" | "reshape" | "retexture", quadIndex: number,
-        shape: number}): void =>
+    onVoxelBlockEdit: (edit: {kind: "add" | "remove" | "move" | "retexture", quadIndex: number}): void =>
     {
         if (edit.kind === "remove")
-            ParticleSystem.play("blockRemoved", getBlockCenter(edit.quadIndex, edit.shape));
+            ParticleSystem.play("blockRemoved", getBlockCenter(edit.quadIndex));
     },
 }
 
-// The middle of the block of the given shape that a quad belongs to.
-function getBlockCenter(quadIndex: number, shape: number): Vec3
+// The middle of the block that a quad belongs to.
+function getBlockCenter(quadIndex: number): Vec3
 {
     return VoxelQueryUtil.getVoxelBlockBox(VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex),
         VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex),
-        VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex), shape).center;
+        VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex)).center;
 }
 
 // Observable dispatch has no try/catch, so an effect that fails must not stop the listeners after it.

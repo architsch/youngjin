@@ -1,5 +1,5 @@
 import NumUtil from "../../../math/util/numUtil";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOXEL_COLS,
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, GENERATED_WALL_THICKNESS, NUM_VOXEL_COLS,
     NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS } from "../../../system/sharedConstants";
 import Voxel from "../../../voxel/types/voxel";
 import VoxelQuadUpdateUtil from "../../../voxel/util/voxelQuadUpdateUtil";
@@ -8,7 +8,7 @@ import VoxelUpdateUtil from "../../../voxel/util/voxelUpdateUtil";
 import RoomVolume from "../types/roomVolume";
 import RoomVolumeRangeIntersections from "../types/roomVolumeRangeIntersections";
 
-// A Voxel is a stack of blocks (row, col, collisionLayer); a RoomVolume is a box of whole blocks.
+// A Voxel is a stack of blocks (row, col, collisionLayer); a RoomVolume is a box of blocks.
 const RoomVolumeUtil =
 {
     volumeContainsBlock(volume: RoomVolume,
@@ -43,16 +43,19 @@ const RoomVolumeUtil =
             rangeIntersections.collisionLayerRangeIntersection[1]
         );
     },
-    // The volume expanded by `amount` on all six sides (negative shrinks). With volumesIntersect:
+    // The volume expanded by `amount` walls on all six sides (negative shrinks): GENERATED_WALL_THICKNESS
+    // voxels sideways, and one layer up and down, which is how thick a storey's slab is. For volumes laid
+    // out in whole walls' thicknesses, with volumesIntersect:
     // - intersects(expand(a, 1), b): a and b would touch (growth rejects this).
-    // - intersects(expand(a, 1), expand(b, 1)) while not touching: exactly one wall block between them
-    //   (where passages go).
+    // - intersects(expand(a, 1), expand(b, 1)) while not touching: exactly one wall between them (where
+    //   passages go).
     // Height expands too, so stacked volumes behave like side-by-side ones.
     getExpandedVolume(volume: RoomVolume, amount: number): RoomVolume
     {
+        const sideways = amount * GENERATED_WALL_THICKNESS;
         return new RoomVolume(
-            volume.rowMin - amount, volume.rowMax + amount,
-            volume.colMin - amount, volume.colMax + amount,
+            volume.rowMin - sideways, volume.rowMax + sideways,
+            volume.colMin - sideways, volume.colMax + sideways,
             volume.collisionLayerMin - amount, volume.collisionLayerMax + amount,
             volume.palette);
     },
@@ -63,7 +66,7 @@ const RoomVolumeUtil =
             inner.collisionLayerMin >= outer.collisionLayerMin &&
             inner.collisionLayerMax <= outer.collisionLayerMax;
     },
-    // Inside `bounds` and not touching any of `others`. `ignore` excludes the volume being grown.
+    // Inside `bounds` and a wall or more from each of `others`. `ignore` excludes the volume being grown.
     volumeFitsAmong(volume: RoomVolume, bounds: RoomVolume, others: RoomVolume[],
         ignore?: RoomVolume): boolean
     {
@@ -91,8 +94,8 @@ const RoomVolumeUtil =
         // Passage's direction should be parallel to the y-axis (i.e. axis which spans collisionLayers)
         if (ri != null && ci != null && li == null)
         {
-            const [minPassageRow, numPassageRows] = fitCentered(ri, maxPassageWidth);
-            const [minPassageCol, numPassageCols] = fitCentered(ci, maxPassageWidth);
+            const [minPassageRow, numPassageRows] = fitCentered(ri, maxPassageWidth, GENERATED_WALL_THICKNESS);
+            const [minPassageCol, numPassageCols] = fitCentered(ci, maxPassageWidth, GENERATED_WALL_THICKNESS);
             const passageCollisionLayerRange = NumUtil.getGapBetweenIntegerRanges(
                 [volume1.collisionLayerMin, volume1.collisionLayerMax],
                 [volume2.collisionLayerMin, volume2.collisionLayerMax]
@@ -107,8 +110,8 @@ const RoomVolumeUtil =
         // Passage's direction should be parallel to the x-axis (i.e. axis which spans cols)
         else if (ri != null && ci == null && li != null)
         {
-            const [minPassageRow, numPassageRows] = fitCentered(ri, maxPassageWidth);
-            const [minPassageCollisionLayer, numPassageCollisionLayers] = fitCentered(li, maxPassageHeight);
+            const [minPassageRow, numPassageRows] = fitCentered(ri, maxPassageWidth, GENERATED_WALL_THICKNESS);
+            const [minPassageCollisionLayer, numPassageCollisionLayers] = fitCentered(li, maxPassageHeight, 1);
             const passageColRange = NumUtil.getGapBetweenIntegerRanges(
                 [volume1.colMin, volume1.colMax],
                 [volume2.colMin, volume2.colMax]
@@ -123,8 +126,8 @@ const RoomVolumeUtil =
         // Passage's direction should be parallel to the z-axis (i.e. axis which spans rows)
         else if (ri == null && ci != null && li != null)
         {
-            const [minPassageCol, numPassageCols] = fitCentered(ci, maxPassageWidth);
-            const [minPassageCollisionLayer, numPassageCollisionLayers] = fitCentered(li, maxPassageHeight);
+            const [minPassageCol, numPassageCols] = fitCentered(ci, maxPassageWidth, GENERATED_WALL_THICKNESS);
+            const [minPassageCollisionLayer, numPassageCollisionLayers] = fitCentered(li, maxPassageHeight, 1);
             const passageRowRange = NumUtil.getGapBetweenIntegerRanges(
                 [volume1.rowMin, volume1.rowMax],
                 [volume2.rowMin, volume2.rowMax]
@@ -138,6 +141,23 @@ const RoomVolumeUtil =
         }
         else
             return null;
+    },
+
+    // Whether every block of a volume is there.
+    volumeIsSolid(voxels: Voxel[], volume: RoomVolume): boolean
+    {
+        for (let row = volume.rowMin; row <= volume.rowMax; ++row)
+        {
+            for (let col = volume.colMin; col <= volume.colMax; ++col)
+            {
+                for (let layer = volume.collisionLayerMin; layer <= volume.collisionLayerMax; ++layer)
+                {
+                    if (!VoxelQueryUtil.isVoxelBlockPresentAt(voxels, row, col, layer))
+                        return false;
+                }
+            }
+        }
+        return true;
     },
 
     // Carves a volume from the (initially solid) grid in two passes: remove blocks, then finish the
@@ -246,11 +266,13 @@ function volumeCanBeApplied(methodName: string, volume: RoomVolume): boolean
     return true;
 }
 
-// The largest centred run of at most maxLength within the inclusive range, as [start, length].
-function fitCentered(range: [number, number], maxLength: number): [number, number]
+// The largest centred run of at most maxLength within the inclusive range, as [start, length], set in from
+// the range's start by a whole number of steps.
+function fitCentered(range: [number, number], maxLength: number, step: number): [number, number]
 {
-    const length = Math.max(1, Math.min(maxLength, range[1] - range[0] + 1));
-    return [Math.floor(0.5 * (range[0] + range[1] - length + 1)), length];
+    const rangeLength = range[1] - range[0] + 1;
+    const length = Math.max(1, Math.min(maxLength, rangeLength));
+    return [range[0] + step * Math.floor((rangeLength - length) / (2 * step)), length];
 }
 
 // Finishes one enclosing face. It is drawn only if the enclosing block is solid, and outside the layer

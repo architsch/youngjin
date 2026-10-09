@@ -35,10 +35,9 @@ export const roomChangedObservable = new Observable<RoomRuntimeMemory>();
 // remote and rolled-back edits, never for a room loading or unloading. Never peek() one: it holds the last
 // event.
 
-// A voxel block added, removed, moved, given another shape or retextured. shape: the one the edit left the
-// block with, or the one a removal took away.
-export const voxelBlockEditObservable = new Observable<{kind: "add" | "remove" | "move" | "reshape" | "retexture",
-    quadIndex: number, shape: number}>();
+// A voxel block added, removed, moved or retextured.
+export const voxelBlockEditObservable = new Observable<{kind: "add" | "remove" | "move" | "retexture",
+    quadIndex: number}>();
 
 // An object added or removed, including players joining and leaving.
 export const objectEditObservable = new Observable<{kind: "add" | "remove", object: AddObjectSignal}>();
@@ -54,10 +53,6 @@ export const voxelQuadSelectionObservable = new Observable<VoxelQuadSelection | 
 // The one quad a scripted step lets the user select, or null for no such restriction. Narrower than the
 // selection lock, which refuses every quad (see VoxelQuadSelection.trySelect).
 export const voxelQuadSelectionRestrictionObservable = new Observable<number | null>(null);
-
-// Whether a drag is previewing another shape for a block (see ClientVoxelManager): the room shows it, and
-// the server has yet to hear of it.
-export const voxelBlockPreviewObservable = new Observable<boolean>(false);
 
 // Fires after a lost WebGL context is restored. Anything drawn only into render targets must redraw.
 export const graphicsContextRestoredObservable = new Observable<number>(0);

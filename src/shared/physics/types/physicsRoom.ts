@@ -1,22 +1,23 @@
 import Room from "../../room/types/room";
-import { MAX_ROOM_Y, MID_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
+import { MAX_ROOM_X, MAX_ROOM_Y, MAX_ROOM_Z, MID_ROOM_Y } from "../../system/sharedConstants";
 import PhysicsObject from "./physicsObject";
 import PhysicsVoxel from "./physicsVoxel";
+import PhysicsVoxelUtil from "../util/physicsVoxelUtil";
 import { ColliderState } from "./colliderState";
 import { ColliderConfig } from "./colliderConfig";
 import Vec3 from "../../math/types/vec3";
 
 export default class PhysicsRoom
 {
-    room: Room;
-    voxels: PhysicsVoxel[];
+    room: Room; // Its voxel blocks are read from it as they stand (see PhysicsColliderStateUtil).
+    voxels: PhysicsVoxel[]; // By PhysicsVoxelUtil.getVoxelsInBox.
     objectById: { [objectId: string]: PhysicsObject };
     globalColliders: ColliderState[];
 
     constructor(room: Room)
     {
         this.room = room;
-        this.voxels = room.voxelGrid.voxels.map(voxel => new PhysicsVoxel(voxel));
+        this.voxels = PhysicsVoxelUtil.createVoxels();
         this.objectById = {};
         // The boundary is solid all the way round (doors hang on it).
         this.globalColliders = [floor, ceiling, wall_lowerX, wall_upperX, wall_lowerZ, wall_upperZ];
@@ -44,15 +45,15 @@ function makeCubeCollider(centerX: number, centerY: number, centerZ: number): Co
 }
 
 const floor = makeCubeCollider(
-    NUM_VOXEL_COLS*0.5, -cubeColliderSizeHalf, NUM_VOXEL_ROWS*0.5);
+    MAX_ROOM_X*0.5, -cubeColliderSizeHalf, MAX_ROOM_Z*0.5);
 const ceiling = makeCubeCollider(
-    NUM_VOXEL_COLS*0.5, MAX_ROOM_Y + cubeColliderSizeHalf, NUM_VOXEL_ROWS*0.5);
+    MAX_ROOM_X*0.5, MAX_ROOM_Y + cubeColliderSizeHalf, MAX_ROOM_Z*0.5);
 const wall_lowerX = makeCubeCollider(
-    -cubeColliderSizeHalf, MID_ROOM_Y, NUM_VOXEL_ROWS*0.5);
+    -cubeColliderSizeHalf, MID_ROOM_Y, MAX_ROOM_Z*0.5);
 const wall_upperX = makeCubeCollider(
-    NUM_VOXEL_COLS + cubeColliderSizeHalf, MID_ROOM_Y, NUM_VOXEL_ROWS*0.5);
+    MAX_ROOM_X + cubeColliderSizeHalf, MID_ROOM_Y, MAX_ROOM_Z*0.5);
 const wall_lowerZ = makeCubeCollider(
-    NUM_VOXEL_COLS*0.5, MID_ROOM_Y, -cubeColliderSizeHalf);
+    MAX_ROOM_X*0.5, MID_ROOM_Y, -cubeColliderSizeHalf);
 const wall_upperZ = makeCubeCollider(
-    NUM_VOXEL_COLS*0.5, MID_ROOM_Y, NUM_VOXEL_ROWS + cubeColliderSizeHalf);
+    MAX_ROOM_X*0.5, MID_ROOM_Y, MAX_ROOM_Z + cubeColliderSizeHalf);
 

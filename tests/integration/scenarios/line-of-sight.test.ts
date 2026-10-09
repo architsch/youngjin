@@ -42,34 +42,44 @@ import Room from "../../../src/shared/room/types/room";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
-import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, MAX_ROOM_Y, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
-    STOREY_FLOOR_COLLISION_LAYER } from "../../../src/shared/system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, GENERATED_WALL_THICKNESS, MAX_ROOM_X, MAX_ROOM_Y,
+    MAX_ROOM_Z, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
+    STOREY_FLOOR_COLLISION_LAYER, VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 import { createTestRoom } from "../helpers/roomContent";
 
 const ROOM_ID = "line-of-sight-room";
 
-// A cell of each boundary wall, taken well away from the corners so the wall opposite plays no part.
-const MIDDLE_ROW = Math.floor(0.5 * NUM_VOXEL_ROWS);
-const MIDDLE_COL = Math.floor(0.5 * NUM_VOXEL_COLS);
+// How far in from the room's edge a boundary wall's room-facing side lies.
+const WALL_DEPTH = GENERATED_WALL_THICKNESS * VOXEL_CELL_SIZE;
 
-// Boundary walls by door facing, with the cell each door hangs in (see DoorObjectTypeConfig).
+// A place along each boundary wall, taken well away from the corners so the wall opposite plays no part.
+const ALONG_X_WALLS = 0.5 * MAX_ROOM_Z + 0.5;
+const ALONG_Z_WALLS = 0.5 * MAX_ROOM_X + 0.5;
+
+// Boundary walls by door facing, with where the foot of each one's door stands (see DoorObjectTypeConfig).
 const WALLS = [
-    {facing: "+x", col: 0, row: MIDDLE_ROW},
-    {facing: "-x", col: NUM_VOXEL_COLS - 1, row: MIDDLE_ROW},
-    {facing: "+z", col: MIDDLE_COL, row: 0},
-    {facing: "-z", col: MIDDLE_COL, row: NUM_VOXEL_ROWS - 1},
+    {facing: "+x", foot: {x: WALL_DEPTH, y: 0, z: ALONG_X_WALLS}},
+    {facing: "-x", foot: {x: MAX_ROOM_X - WALL_DEPTH, y: 0, z: ALONG_X_WALLS}},
+    {facing: "+z", foot: {x: ALONG_Z_WALLS, y: 0, z: WALL_DEPTH}},
+    {facing: "-z", foot: {x: ALONG_Z_WALLS, y: 0, z: MAX_ROOM_Z - WALL_DEPTH}},
 ];
 
-// Viewpoint distance from the door, far enough to cross several cells.
+// A voxel in the middle of the open floor, and where its middle lies in the world.
+const MIDDLE_ROW = Math.floor(0.5 * NUM_VOXEL_ROWS);
+const MIDDLE_COL = Math.floor(0.5 * NUM_VOXEL_COLS);
+const MIDDLE_X = VoxelQueryUtil.getWorldXAtVoxelColCenter(MIDDLE_COL);
+const MIDDLE_Z = VoxelQueryUtil.getWorldZAtVoxelRowCenter(MIDDLE_ROW);
+
+// Viewpoint distance from the door, far enough to cross several blocks.
 const VIEWING_DIST = 6;
 
 let room: Room;
 
-/** The door itself, as room generation hangs one on the given cell of the boundary wall. */
-function makeDoor(col: number, row: number,
-    collisionLayer: number = COLLISION_LAYER_MIN): AddObjectSignal
+/** The door itself, as room generation hangs one on the boundary wall: its foot at the given place and layer. */
+function makeDoor(foot: {x: number, z: number}, collisionLayer: number = COLLISION_LAYER_MIN): AddObjectSignal
 {
-    return DoorObjectTypeConfig.util.makeEntranceDoor(ROOM_ID, col, row, collisionLayer);
+    return DoorObjectTypeConfig.util.makeEntranceDoor(ROOM_ID,
+        {x: foot.x, y: (collisionLayer - COLLISION_LAYER_MIN) * COLLISION_LAYER_HEIGHT, z: foot.z});
 }
 
 /** Round-trips a transform through storage, yielding the coordinate a client really receives. */
@@ -108,7 +118,7 @@ describe("Stored coordinates on a block boundary", () => {
     it("brings a wall attachment back a hair below where it was placed", () => {
         for (const wall of WALLS)
         {
-            const placed = makeDoor(wall.col, wall.row).transform;
+            const placed = makeDoor(wall.foot).transform;
             const stored = asStored(placed);
             expect(stored.pos.x, `${wall.facing} door's x`).toBeLessThanOrEqual(placed.pos.x);
             expect(stored.pos.z, `${wall.facing} door's z`).toBeLessThanOrEqual(placed.pos.z);
@@ -117,22 +127,20 @@ describe("Stored coordinates on a block boundary", () => {
         }
     });
 
-    it("leaves a door standing in the wall's own cell on half of the room's walls", () => {
+    it("leaves a door standing inside its wall's own blocks on half of the room's walls", () => {
         // The premise: half of stored doors fall inside their wall, half in the room.
-        const cellsOfStoredDoors = WALLS.map(wall => {
-            const stored = asStored(makeDoor(wall.col, wall.row).transform);
+        const blocksOfStoredDoors = WALLS.map(wall => {
+            const stored = asStored(makeDoor(wall.foot).transform);
             return {
                 facing: wall.facing,
-                inWallCell:
-                    VoxelQueryUtil.getVoxelColFromWorldX(stored.pos.x) === wall.col &&
-                    VoxelQueryUtil.getVoxelRowFromWorldZ(stored.pos.z) === wall.row,
+                inWallBlock: VoxelQueryUtil.isPointInVoxelBlock(room.voxelGrid.voxels, stored.pos),
             };
         });
-        expect(cellsOfStoredDoors).toEqual([
-            {facing: "+x", inWallCell: true},
-            {facing: "-x", inWallCell: false},
-            {facing: "+z", inWallCell: true},
-            {facing: "-z", inWallCell: false},
+        expect(blocksOfStoredDoors).toEqual([
+            {facing: "+x", inWallBlock: true},
+            {facing: "-x", inWallBlock: false},
+            {facing: "+z", inWallBlock: true},
+            {facing: "-z", inWallBlock: false},
         ]);
     });
 });
@@ -141,7 +149,7 @@ describe("Seeing a door from inside the room", () => {
     it("finds every wall's door in sight, whichever way it faces", () => {
         for (const wall of WALLS)
         {
-            const door = makeDoor(wall.col, wall.row);
+            const door = makeDoor(wall.foot);
             const viewpoint = viewpointFacing(door);
             expect(isBlocked(viewpoint, vec(asStored(door.transform).pos)),
                 `${wall.facing} door as stored`).toBe(false);
@@ -154,7 +162,7 @@ describe("Seeing a door from inside the room", () => {
         // An angled approach, so the line crosses a corner cell of the same wall.
         for (const wall of WALLS)
         {
-            const door = makeDoor(wall.col, wall.row);
+            const door = makeDoor(wall.foot);
             const doorPos = asStored(door.transform).pos;
             const {dir} = door.transform;
             const viewpoint = new THREE.Vector3(
@@ -168,20 +176,19 @@ describe("Seeing a door from inside the room", () => {
 
 describe("Seeing past the room's own geometry", () => {
     it("reports the storey's own floor slab as standing in the way", () => {
-        const belowSlab = new THREE.Vector3(MIDDLE_COL + 0.5, 1.75, MIDDLE_ROW + 0.5);
-        const aboveSlab = new THREE.Vector3(MIDDLE_COL + 0.5,
-            (STOREY_FLOOR_COLLISION_LAYER + 2.5) * 0.5, MIDDLE_ROW + 0.5);
+        const belowSlab = new THREE.Vector3(MIDDLE_X, 1.75, MIDDLE_Z);
+        const aboveSlab = new THREE.Vector3(MIDDLE_X, (STOREY_FLOOR_COLLISION_LAYER + 2.5) * 0.5, MIDDLE_Z);
         expect(isBlocked(belowSlab, aboveSlab)).toBe(true);
     });
 
     it("reports the boundary wall as standing in the way of what lies beyond it", () => {
-        const inside = new THREE.Vector3(MIDDLE_COL + 0.5, 1.75, 4.5);
-        const outside = new THREE.Vector3(MIDDLE_COL + 0.5, 1.75, -4.5);
+        const inside = new THREE.Vector3(MIDDLE_X, 1.75, 4.5);
+        const outside = new THREE.Vector3(MIDDLE_X, 1.75, -4.5);
         expect(isBlocked(inside, outside)).toBe(true);
     });
 
     it("reports the room's own floor and ceiling as closing it off from inside", () => {
-        const x = MIDDLE_COL + 0.5, z = MIDDLE_ROW + 0.5;
+        const x = MIDDLE_X, z = MIDDLE_Z;
         expect(isBlocked(new THREE.Vector3(x, 0.25, z), new THREE.Vector3(x, -2, z)),
             "down through the floor").toBe(true);
         expect(isBlocked(new THREE.Vector3(x, MAX_ROOM_Y - 0.25, z), new THREE.Vector3(x, MAX_ROOM_Y + 2, z)),
@@ -191,8 +198,8 @@ describe("Seeing past the room's own geometry", () => {
     it("sees in through the floor and ceiling from outside, which they are not drawn on", () => {
         // As with the walls, and for the same reason: an orbit camera lifted over the room or dropped
         // below it keeps sight of what it is pointed at. Each tile lies at the boundary, so only the
-        // step that leaves the room crosses it — not every cell of the empty space beyond.
-        const x = MIDDLE_COL + 0.5, z = MIDDLE_ROW + 0.5;
+        // step that leaves the room crosses it — not every block of the empty space beyond.
+        const x = MIDDLE_X, z = MIDDLE_Z;
         expect(isBlocked(new THREE.Vector3(x, -2, z), new THREE.Vector3(x, 0.25, z)),
             "up from below the floor").toBe(false);
         expect(isBlocked(new THREE.Vector3(x, MAX_ROOM_Y + 2, z), new THREE.Vector3(x, MAX_ROOM_Y - 0.25, z)),
@@ -203,41 +210,57 @@ describe("Seeing past the room's own geometry", () => {
         // The other way along the same line. A wall is drawn on the side that faces the room and bare
         // on the side that faces away, so from out there the eye passes through it — and so must this,
         // or an orbit camera swung out of the room loses sight of what it is pointed at.
-        const outside = new THREE.Vector3(MIDDLE_COL + 0.5, 1.75, -4.5);
-        const inside = new THREE.Vector3(MIDDLE_COL + 0.5, 1.75, 4.5);
+        const outside = new THREE.Vector3(MIDDLE_X, 1.75, -4.5);
+        const inside = new THREE.Vector3(MIDDLE_X, 1.75, 4.5);
         expect(isBlocked(outside, inside)).toBe(false);
     });
 
     it("does not blind a viewpoint pushed into a wall", () => {
-        // The block the line starts in is no more in the way than the one it ends in.
-        const insideWall = new THREE.Vector3(0.5, 1.75, MIDDLE_ROW + 0.5);
-        const inRoom = new THREE.Vector3(1 + VIEWING_DIST, 1.75, MIDDLE_ROW + 0.5);
-        expect(isBlocked(insideWall, inRoom)).toBe(false);
+        // The block the line starts in is no more in the way than the one it ends in, and the rest of the
+        // wall's thickness shows it nothing on the way out.
+        const inRoom = new THREE.Vector3(1 + VIEWING_DIST, 1.75, MIDDLE_Z);
+        for (let col = 0; col < GENERATED_WALL_THICKNESS; ++col)
+        {
+            const insideWall = new THREE.Vector3(VoxelQueryUtil.getWorldXAtVoxelColCenter(col), 1.75, MIDDLE_Z);
+            expect(isBlocked(insideWall, inRoom), `from the wall's voxel col ${col}`).toBe(false);
+        }
     });
 
     it("sees straight across an open floor", () => {
-        const from = new THREE.Vector3(2.5, 1.75, MIDDLE_ROW + 0.5);
-        const to = new THREE.Vector3(NUM_VOXEL_COLS - 2.5, 1.75, MIDDLE_ROW + 0.5);
+        const from = new THREE.Vector3(2.5, 1.75, MIDDLE_Z);
+        const to = new THREE.Vector3(MAX_ROOM_X - 2.5, 1.75, MIDDLE_Z);
         expect(isBlocked(from, to)).toBe(false);
     });
 });
 
-describe("Shrunk blocks along a line", () => {
-    // A cell in the open floor, whose lowest layers hold the lower-x half of a block: a thin wall standing
-    // against the cell's lower-x side and leaving its other half open.
-    const ROW = 12, COL = 12, WALL_LAYERS = 4;
-    const LOW_X_HALF = 0b0101, LOW_X_LOW_Z_QUARTER = 0b0001;
-    const EYE_HEIGHT = 0.75; // inside the wall's second layer
+describe("Blocks standing in the open along a line", () => {
+    // Blocks stood on the open floor from this voxel on, towards higher rows and cols: a thin wall (one
+    // block thick along x, two long along z), a post (one block) or a pillar (two blocks each way).
+    const ROW = 24, COL = 24, NUM_LAYERS = 4;
+    const EYE_HEIGHT = 0.75; // inside the blocks' second layer
 
-    function standShape(shape: number): void
+    function standBlocks(numRows: number, numCols: number): void
     {
-        for (let layer = COLLISION_LAYER_MIN; layer < COLLISION_LAYER_MIN + WALL_LAYERS; ++layer)
-            room.voxelGrid.quadsMem.blockShapes[VoxelQueryUtil.getVoxelBlockIndex(ROW, COL, layer)] = shape;
+        for (let row = ROW; row < ROW + numRows; ++row)
+        {
+            for (let col = COL; col < COL + numCols; ++col)
+            {
+                for (let layer = COLLISION_LAYER_MIN; layer < COLLISION_LAYER_MIN + NUM_LAYERS; ++layer)
+                {
+                    VoxelUpdateUtil.addVoxelBlock(undefined, room.voxelGrid.voxels,
+                        VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, layer));
+                }
+            }
+        }
     }
+    const standThinWall = () => standBlocks(2, 1);
+    const standPost = () => standBlocks(1, 1);
+    const standPillar = () => standBlocks(2, 2);
 
+    /** A point given in world units from the corner the blocks start at, where a block is 0.5 wide. */
     function at(x: number, z: number, y: number = EYE_HEIGHT): THREE.Vector3
     {
-        return new THREE.Vector3(COL + x, y, ROW + z);
+        return new THREE.Vector3(COL * VOXEL_CELL_SIZE + x, y, ROW * VOXEL_CELL_SIZE + z);
     }
 
     function firstFace(from: THREE.Vector3, to: THREE.Vector3)
@@ -247,68 +270,85 @@ describe("Shrunk blocks along a line", () => {
     }
 
     it("is stopped by a thin wall standing in the way", () => {
-        standShape(LOW_X_HALF);
+        standThinWall();
         expect(isBlocked(at(-2, 0.5), at(2.5, 0.5))).toBe(true);
         expect(isBlocked(at(2.5, 0.5), at(-2, 0.5))).toBe(true);
     });
 
-    it("passes through the half of the cell the wall leaves open", () => {
-        standShape(LOW_X_HALF);
+    it("passes a thin wall by through the blocks beside it", () => {
+        standThinWall();
         expect(isBlocked(at(0.75, -3), at(0.75, 4))).toBe(false);
-        // The same line through the half the wall fills is stopped.
+        // The same line a block over, through the wall, is stopped.
         expect(isBlocked(at(0.25, -3), at(0.25, 4))).toBe(true);
     });
 
-    it("is stopped by a thin wall in the viewer's own cell, but not when looking away from it", () => {
-        standShape(LOW_X_HALF);
-        const inOpenHalf = at(0.75, 0.5);
-        expect(isBlocked(inOpenHalf, at(-2, 0.5))).toBe(true);
-        expect(isBlocked(inOpenHalf, at(3, 0.5))).toBe(false);
+    it("is stopped by a thin wall right beside the viewer, but not when looking away from it", () => {
+        standThinWall();
+        const besideWall = at(0.75, 0.5);
+        expect(isBlocked(besideWall, at(-2, 0.5))).toBe(true);
+        expect(isBlocked(besideWall, at(3, 0.5))).toBe(false);
     });
 
-    it("is stopped by a thin wall in the target's own cell, when the target is on its far side", () => {
-        standShape(LOW_X_HALF);
-        const inOpenHalf = at(0.75, 0.5);
-        expect(isBlocked(at(-2, 0.5), inOpenHalf)).toBe(true);
-        expect(isBlocked(at(3, 0.5), inOpenHalf)).toBe(false);
+    it("is stopped by a thin wall right in front of the target, when the target is on its far side", () => {
+        standThinWall();
+        const besideWall = at(0.75, 0.5);
+        expect(isBlocked(at(-2, 0.5), besideWall)).toBe(true);
+        expect(isBlocked(at(3, 0.5), besideWall)).toBe(false);
     });
 
-    it("does not hide what hangs on the wall's inner face behind the wall itself", () => {
-        standShape(LOW_X_HALF);
-        // On the face in the middle of the cell, and a hair inside it, as a stored coordinate can come back.
+    it("does not hide what hangs on the wall's face behind the wall itself", () => {
+        standThinWall();
+        // On the face, and a hair inside it, as a stored coordinate can come back.
         for (const x of [0.5, 0.4995])
             expect(isBlocked(at(3, 0.5), at(x, 0.5)), `at ${x}`).toBe(false);
     });
 
-    it("is stopped by a post between two points of the post's own cell", () => {
-        standShape(LOW_X_LOW_Z_QUARTER);
+    it("is stopped by a post between two points in the blocks either side of its corner", () => {
+        standPost();
         expect(isBlocked(at(0.75, 0.1), at(0.1, 0.75))).toBe(true); // across the post's corner
         expect(isBlocked(at(0.75, 0.1), at(0.75, 0.9))).toBe(false); // past it
     });
 
-    it("meets the wall's inner face in the middle of the cell, and its outer face on the cell's side", () => {
-        standShape(LOW_X_HALF);
-
-        const inner = firstFace(at(3, 0.5), at(-2, 0.5))!;
-        expect(inner.point.x).toBeCloseTo(COL + 0.5, 6);
-        expect(inner.normal).toEqual({x: 1, y: 0, z: 0});
-
-        const outer = firstFace(at(-2, 0.5), at(3, 0.5))!;
-        expect(outer.point.x).toBeCloseTo(COL, 6);
-        expect(outer.normal).toEqual({x: -1, y: 0, z: 0});
-
-        // Its end, which is half a cell wide: met over the half the wall fills, missed beside it.
-        const end = firstFace(at(0.25, 4), at(0.25, -3))!;
-        expect(end.point.z).toBeCloseTo(ROW + 1, 6);
-        expect(end.normal).toEqual({x: 0, y: 0, z: 1});
-        const beside = firstFace(at(0.75, 4), at(0.75, -3))!;
-        expect(beside.point.z).toBeLessThan(ROW - 1); // on past the wall's cell
+    it("is stopped by a post whose corner it passes through a little way before its end", () => {
+        standPost();
+        // In through the post's lower-x face and out through its higher-z one, to end in the open beside it: only
+        // a block entered right at the line's end is let off as the end's own.
+        expect(isBlocked(at(-2, 0.1), at(0.3, 0.53))).toBe(true);
+        // The same way in from further along z, which misses the post.
+        expect(isBlocked(at(-2, 0.7), at(0.3, 0.53))).toBe(false);
     });
 
-    it("meets the wall's top over the half it fills, and the room's floor beside it", () => {
-        standShape(LOW_X_HALF);
+    it("does not hide a point inside a block behind the block's own face, only behind another's", () => {
+        standThinWall();
+        // The middle of the wall's first block, from before its end: no other block is entered on the way.
+        expect(isBlocked(at(0.25, -2), at(0.25, 0.25))).toBe(false);
+        // The middle of its second block, the same way: through the first.
+        expect(isBlocked(at(0.25, -2), at(0.25, 0.75))).toBe(true);
+    });
+
+    it("meets the wall's faces where they stand, each from the side it is turned to", () => {
+        standThinWall();
+
+        const higherX = firstFace(at(3, 0.5), at(-2, 0.5))!;
+        expect(higherX.point.x).toBeCloseTo(at(0.5, 0).x, 6);
+        expect(higherX.normal).toEqual({x: 1, y: 0, z: 0});
+
+        const lowerX = firstFace(at(-2, 0.5), at(3, 0.5))!;
+        expect(lowerX.point.x).toBeCloseTo(at(0, 0).x, 6);
+        expect(lowerX.normal).toEqual({x: -1, y: 0, z: 0});
+
+        // Its end, which is one block wide: met in line with the wall, missed a block over.
+        const end = firstFace(at(0.25, 4), at(0.25, -3))!;
+        expect(end.point.z).toBeCloseTo(at(0, 1).z, 6);
+        expect(end.normal).toEqual({x: 0, y: 0, z: 1});
+        const beside = firstFace(at(0.75, 4), at(0.75, -3))!;
+        expect(beside.point.z).toBeLessThan(at(0, -1).z); // on past the wall
+    });
+
+    it("meets the wall's top over the wall, and the room's floor beside it", () => {
+        standThinWall();
         const top = firstFace(at(0.25, 0.5, 3), at(0.25, 0.5, -1))!;
-        expect(top.point.y).toBeCloseTo(WALL_LAYERS * COLLISION_LAYER_HEIGHT, 6);
+        expect(top.point.y).toBeCloseTo(NUM_LAYERS * COLLISION_LAYER_HEIGHT, 6);
         expect(top.normal).toEqual({x: 0, y: 1, z: 0});
 
         const floor = firstFace(at(0.75, 0.5, 3), at(0.75, 0.5, -1))!;
@@ -316,11 +356,11 @@ describe("Shrunk blocks along a line", () => {
         expect(floor.normal).toEqual({x: 0, y: 1, z: 0});
     });
 
-    it("judges a whole block as before, by the side of its cell the line crosses", () => {
-        standShape(0b1111);
+    it("meets a pillar two blocks thick on its outer side, the faces between its blocks playing no part", () => {
+        standPillar();
         expect(isBlocked(at(-2, 0.5), at(2.5, 0.5))).toBe(true);
         const face = firstFace(at(3, 0.5), at(-2, 0.5))!;
-        expect(face.point.x).toBeCloseTo(COL + 1, 6);
+        expect(face.point.x).toBeCloseTo(at(1, 0).x, 6);
         expect(face.normal).toEqual({x: 1, y: 0, z: 0});
     });
 });
@@ -341,7 +381,7 @@ describe("The drop the first-person camera pitches by", () => {
         // Arrivals spawn inside the wall behind their door and walk out (see SpawnHotspotUtil). From in
         // there, sight lines down to the storey below leave through buried faces, which draw nothing —
         // so the sealed storey would read as a drop and tip the camera down for the length of the walk.
-        const door = makeDoor(0, MIDDLE_ROW, UPPER_STOREY_LAYER);
+        const door = makeDoor(WALLS[0].foot, UPPER_STOREY_LAYER);
         const {pos, dir} = door.transform;
         const forward = new THREE.Vector3(dir.x, 0, dir.z);
 
@@ -358,8 +398,44 @@ describe("The drop the first-person camera pitches by", () => {
         VoxelUpdateUtil.addVoxelBlock(undefined, room.voxelGrid.voxels,
             VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(MIDDLE_ROW, MIDDLE_COL, COLLISION_LAYER_MIN));
 
-        const onTop = dropAheadOf(MIDDLE_COL + 0.5, MIDDLE_ROW + 0.5, COLLISION_LAYER_HEIGHT,
-            new THREE.Vector3(1, 0, 0));
+        const onTop = dropAheadOf(MIDDLE_X, MIDDLE_Z, COLLISION_LAYER_HEIGHT, new THREE.Vector3(1, 0, 0));
         expect(onTop).toBeGreaterThan(0);
+    });
+
+    it("reads a gap in the floor ahead alike from one step to the next, whichever voxels the gap falls on", () => {
+        // A floor a block higher all round, further than the measure looks, with a gap one voxel wide across
+        // the way ahead. The voxels the measure reads are fixed in the room, so a step doesn't bring the gap
+        // in and out of the reading.
+        const REACH = 14; // in voxels
+        const blockAt = (row: number, col: number) =>
+            VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, COLLISION_LAYER_MIN);
+        for (let row = MIDDLE_ROW - REACH; row <= MIDDLE_ROW + REACH; ++row)
+        {
+            for (let col = MIDDLE_COL - REACH; col <= MIDDLE_COL + REACH; ++col)
+                VoxelUpdateUtil.addVoxelBlock(undefined, room.voxelGrid.voxels, blockAt(row, col));
+        }
+        const GAP_ROWS = [MIDDLE_ROW, MIDDLE_ROW + 1];
+        const footZ = (MIDDLE_ROW + 1) * VOXEL_CELL_SIZE; // where the gap's two rows meet
+        const forward = new THREE.Vector3(1, 0, 0);
+
+        let numGapsRead = 0;
+        for (const gapCol of [MIDDLE_COL + 4, MIDDLE_COL + 5])
+        {
+            for (const row of GAP_ROWS)
+                VoxelUpdateUtil.removeVoxelBlock(undefined, room.voxelGrid.voxels, blockAt(row, gapCol));
+
+            // From one voxel and from two before the gap, near enough to see down into it.
+            const gapX = VoxelQueryUtil.getWorldXAtVoxelColCenter(gapCol);
+            const readings = [1, 2].map(numVoxels =>
+                dropAheadOf(gapX - numVoxels * VOXEL_CELL_SIZE, footZ, COLLISION_LAYER_HEIGHT, forward) > 0);
+            expect(readings[1], `a gap at col ${gapCol}`).toBe(readings[0]);
+            if (readings[0])
+                ++numGapsRead;
+
+            for (const row of GAP_ROWS)
+                VoxelUpdateUtil.addVoxelBlock(undefined, room.voxelGrid.voxels, blockAt(row, gapCol));
+        }
+        // (A gap is there to be read at all.)
+        expect(numGapsRead).toBeGreaterThan(0);
     });
 });

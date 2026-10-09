@@ -1,9 +1,8 @@
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_QUADS_PER_ROOM, VOXEL_BLOCK_SHAPE_EMPTY, VOXEL_BLOCK_SHAPE_WHOLE } from "../../system/sharedConstants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, COLLISION_LAYER_NULL, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_QUADS_PER_ROOM } from "../../system/sharedConstants";
 import Room from "../../room/types/room";
 import User from "../../user/types/user";
 import VoxelQuadUpdateUtil from "./voxelQuadUpdateUtil";
 import VoxelQueryUtil from "./voxelQueryUtil";
-import VoxelBlockShapeUtil from "./voxelBlockShapeUtil";
 import Voxel from "../types/voxel";
 import ObjectAttachmentUtil from "../../object/util/objectAttachmentUtil";
 import RoomValidationUtil from "../../room/util/roomValidationUtil";
@@ -26,12 +25,9 @@ function quadIndexIsInRange(methodName: string, quadIndex: number): boolean
 // - Without a room: generation or format conversion, with nothing to validate.
 const VoxelUpdateUtil =
 {
-    // shape: the shape the new block takes, a whole one unless said.
-    canAddVoxelBlock(user: User, room: Room, quadIndex: number, shape: number = VOXEL_BLOCK_SHAPE_WHOLE): boolean
+    canAddVoxelBlock(user: User, room: Room, quadIndex: number): boolean
     {
         if (!quadIndexIsInRange("canAddVoxelBlock", quadIndex))
-            return false;
-        if (!shapeIsOfABlock(shape))
             return false;
 
         const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
@@ -51,27 +47,21 @@ const VoxelUpdateUtil =
 
         return true;
     },
-    // Unvalidated, it also replaces a block already there, shape and textures (a relayed edit, or the
-    // server's correction of one of the user's own; see ServerVoxelManager).
+    // Unvalidated, it also gives a block already there its textures (a relayed edit, or the server's
+    // correction of one of the user's own; see ServerVoxelManager).
     addVoxelBlock(user: User | undefined, voxels: Voxel[], quadIndex: number,
         quadTextureIndicesWithinLayer?: number[],
-        room?: Room, // Won't validate if the room is not defined (e.g. when generating a brand new room, or force-modifying a room's voxelGrid).
-        shape: number = VOXEL_BLOCK_SHAPE_WHOLE): boolean
+        room?: Room): boolean // Won't validate if the room is not defined (e.g. when generating a brand new room, or force-modifying a room's voxelGrid).
     {
         if (!quadIndexIsInRange("addVoxelBlock", quadIndex))
             return false;
         if (room != undefined) // A room to check against means the edit is somebody's — see the header.
         {
-            if (user == undefined || !VoxelUpdateUtil.canAddVoxelBlock(user, room, quadIndex, shape))
+            if (user == undefined || !VoxelUpdateUtil.canAddVoxelBlock(user, room, quadIndex))
             {
                 console.error(`VoxelUpdateUtil::addVoxelBlock :: Failed (quadIndex=${quadIndex})`);
                 return false;
             }
-        }
-        else if (!shapeIsOfABlock(shape))
-        {
-            console.error(`VoxelUpdateUtil::addVoxelBlock :: Not a block's shape (shape=${shape})`);
-            return false;
         }
         const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
         const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
@@ -83,7 +73,7 @@ const VoxelUpdateUtil =
             console.error(`VoxelUpdateUtil::addVoxelBlock :: No cell layer to hold a block (quadIndex=${quadIndex})`);
             return false;
         }
-        applyVoxelBlockShape(voxels, voxel, collisionLayer, shape, quadTextureIndicesWithinLayer);
+        setVoxelBlock(voxels, voxel, collisionLayer, true, quadTextureIndicesWithinLayer);
 
         if (room)
             room.dirty = true;
@@ -143,76 +133,7 @@ const VoxelUpdateUtil =
             console.error(`VoxelUpdateUtil::removeVoxelBlock :: No cell layer to hold a block (quadIndex=${quadIndex})`);
             return false;
         }
-        applyVoxelBlockShape(voxels, voxel, collisionLayer, VOXEL_BLOCK_SHAPE_EMPTY);
-
-        if (room)
-            room.dirty = true;
-        return true;
-    },
-
-    // Whether a block may be given another shape where it stands (see VoxelBlockShapeUtil): resized, or
-    // slid to another part of its cell. Refused while something attached to it would be left without its
-    // footing or buried.
-    canSetVoxelBlockShape(user: User, room: Room, quadIndex: number, shape: number): boolean
-    {
-        if (!quadIndexIsInRange("canSetVoxelBlockShape", quadIndex))
-            return false;
-        if (!shapeIsOfABlock(shape))
-            return false;
-
-        const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
-        const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
-        const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
-
-        if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
-            return false;
-        if (RestrictedZoneUtil.blocksVoxelBlockEdit(user, room, row, col))
-            return false;
-
-        const voxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, col);
-        if (!voxel)
-            return false;
-        if (!VoxelQueryUtil.isVoxelBlockPresent(voxel, collisionLayer))
-            return false;
-
-        const asReshaped = {row, col, collisionLayer, shape};
-        for (const objectId of ObjectAttachmentUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex))
-        {
-            const object = room.objectById[objectId];
-            if (object && !ObjectAttachmentUtil.canPlaceObject(room, objectId, object.objectTypeIndex,
-                object.transform, asReshaped))
-            {
-                return false;
-            }
-        }
-        return true;
-    },
-    setVoxelBlockShape(user: User | undefined, voxels: Voxel[], quadIndex: number, shape: number,
-        room?: Room): boolean // Won't validate if the room is not defined (e.g. a relayed edit).
-    {
-        if (!quadIndexIsInRange("setVoxelBlockShape", quadIndex))
-            return false;
-        if (room != undefined) // A room to check against means the edit is somebody's — see the header.
-        {
-            if (user == undefined || !VoxelUpdateUtil.canSetVoxelBlockShape(user, room, quadIndex, shape))
-            {
-                console.error(`VoxelUpdateUtil::setVoxelBlockShape :: Failed (quadIndex=${quadIndex}, shape=${shape})`);
-                return false;
-            }
-        }
-        const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
-        const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
-        const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
-
-        const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);
-        // (A shape is given only to a block that is there; taking one away or putting one up is another edit.)
-        if (!voxel || !layerHoldsBlocks(collisionLayer) || !shapeIsOfABlock(shape) ||
-            !VoxelQueryUtil.isVoxelBlockPresent(voxel, collisionLayer))
-        {
-            console.error(`VoxelUpdateUtil::setVoxelBlockShape :: No block to shape so (quadIndex=${quadIndex}, shape=${shape})`);
-            return false;
-        }
-        applyVoxelBlockShape(voxels, voxel, collisionLayer, shape);
+        setVoxelBlock(voxels, voxel, collisionLayer, false);
 
         if (room)
             room.dirty = true;
@@ -220,7 +141,6 @@ const VoxelUpdateUtil =
     },
 
     // No zone check here: the add and remove each check, so blocks can't cross zone boundaries.
-    // The block keeps its shape where it goes.
     canMoveVoxelBlock(user: User, room: Room, quadIndex: number,
         rowOffset: number, colOffset: number, collisionLayerOffset: number): boolean
     {
@@ -234,7 +154,6 @@ const VoxelUpdateUtil =
         const voxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, col);
         if (!voxel)
             return false;
-        const shape = VoxelQueryUtil.getVoxelBlockShape(voxel, collisionLayer);
 
         const row2 = row + rowOffset;
         const col2 = col + colOffset;
@@ -249,7 +168,7 @@ const VoxelUpdateUtil =
         const targetQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(
             row2, col2, "y", "-", newCollisionLayer);
 
-        return VoxelUpdateUtil.canAddVoxelBlock(user, room, targetQuadIndex, shape)
+        return VoxelUpdateUtil.canAddVoxelBlock(user, room, targetQuadIndex)
             && VoxelUpdateUtil.canRemoveVoxelBlock(user, room, quadIndex);
     },
     moveVoxelBlock(user: User | undefined, voxels: Voxel[], quadIndex: number,
@@ -300,13 +219,8 @@ const VoxelUpdateUtil =
             return false;
         }
 
-        // (Unvalidated, a block that isn't there is still put down where it was sent, as a whole one.)
-        let shape = VoxelQueryUtil.getVoxelBlockShape(removeVoxel, collisionLayer);
-        if (shape == VOXEL_BLOCK_SHAPE_EMPTY)
-            shape = VOXEL_BLOCK_SHAPE_WHOLE;
-
-        applyVoxelBlockShape(voxels, addVoxel, addCollisionLayer, shape, quadTextureIndicesWithinLayer);
-        applyVoxelBlockShape(voxels, removeVoxel, collisionLayer, VOXEL_BLOCK_SHAPE_EMPTY);
+        setVoxelBlock(voxels, addVoxel, addCollisionLayer, true, quadTextureIndicesWithinLayer);
+        setVoxelBlock(voxels, removeVoxel, collisionLayer, false);
 
         if (room)
             room.dirty = true;
@@ -363,65 +277,48 @@ const BLOCK_FACES: {facingAxis: "x" | "y" | "z", orientation: "-" | "+"}[] = [
     {facingAxis: "z", orientation: "-"}, {facingAxis: "z", orientation: "+"},
 ];
 
-// Whether a shape is one a block can have: a valid one, and not the empty one, which is no block.
-function shapeIsOfABlock(shape: number): boolean
-{
-    return shape != VOXEL_BLOCK_SHAPE_EMPTY && VoxelBlockShapeUtil.isValid(shape);
-}
-
 // The room's own floor and ceiling quads sit outside the layers, where no block can be (see
-// COLLISION_LAYER_NULL); a block written there would land in the next voxel's shapes.
+// COLLISION_LAYER_NULL).
 function layerHoldsBlocks(collisionLayer: number): boolean
 {
     return collisionLayer >= COLLISION_LAYER_MIN && collisionLayer <= COLLISION_LAYER_MAX;
 }
 
-// Gives a block its shape (the empty one takes the block away) and its faces their textures, if given,
-// then announces every quad that is drawn differently for it. On each side that can be the block's own
-// face (repainted, covered, uncovered, or a different rectangle) and the face looking back at it (covered
-// or uncovered); which are drawn follows VoxelQueryUtil.isVoxelQuadVisible.
-function applyVoxelBlockShape(voxels: Voxel[], voxel: Voxel, collisionLayer: number, shape: number,
+// Puts a block into a cell layer or takes it out, gives its faces their textures, if given, then
+// announces every quad that is drawn differently for it. On each side that is the block's own face
+// (repainted, or bared or lost against open space) or the face looking back at it (covered or
+// uncovered); which are drawn follows VoxelQueryUtil.isVoxelQuadVisible.
+function setVoxelBlock(voxels: Voxel[], voxel: Voxel, collisionLayer: number, present: boolean,
     quadTextureIndicesWithinLayer?: number[])
 {
-    const blockIndex = VoxelQueryUtil.getVoxelBlockIndex(voxel.row, voxel.col, collisionLayer);
-    const oldShape = voxel.quadsMem.blockShapes[blockIndex];
-    if (shape == oldShape && quadTextureIndicesWithinLayer == undefined)
+    const wasPresent = VoxelQueryUtil.isVoxelBlockPresent(voxel, collisionLayer);
+    if (present == wasPresent && quadTextureIndicesWithinLayer == undefined)
         return;
-    voxel.quadsMem.blockShapes[blockIndex] = shape;
+    if (present)
+        voxel.blockLayerMask |= (1 << collisionLayer);
+    else
+        voxel.blockLayerMask &= ~(1 << collisionLayer);
 
     const firstQuadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(voxel.row, voxel.col, collisionLayer);
     for (let i = 0; i < BLOCK_FACES.length; ++i)
     {
         const {facingAxis, orientation} = BLOCK_FACES[i];
-        const facedOrientation = (orientation == "+") ? "-" : "+";
         const step = (orientation == "+") ? 1 : -1;
         const facedRow = voxel.row + ((facingAxis == "z") ? step : 0);
         const facedCol = voxel.col + ((facingAxis == "x") ? step : 0);
         const facedCollisionLayer = collisionLayer + ((facingAxis == "y") ? step : 0);
-        const facedShape = VoxelQueryUtil.getVoxelBlockShapeAt(voxels, facedRow, facedCol, facedCollisionLayer);
-
-        // Each face's reach on this side of the cell (see VoxelBlockShapeUtil.showsFace, whose rule this
-        // applies to masks worked out once, since generation makes these edits by the thousand).
-        const oldSide = VoxelBlockShapeUtil.getSideMask(oldShape, facingAxis, orientation);
-        const newSide = VoxelBlockShapeUtil.getSideMask(shape, facingAxis, orientation);
-        const facedSide = VoxelBlockShapeUtil.getSideMask(facedShape, facingAxis, facedOrientation);
 
         // (A face given another texture is announced for that.)
         const textureIndex = quadTextureIndicesWithinLayer?.[i] ?? -1;
-        if (textureIndex < 0 || !VoxelQuadUpdateUtil.setVoxelQuadTexture(voxel, firstQuadIndex + i, textureIndex))
-        {
-            const wasDrawn = oldShape != VOXEL_BLOCK_SHAPE_EMPTY && VoxelBlockShapeUtil.isSideBare(oldSide, facedSide);
-            const isDrawn = shape != VOXEL_BLOCK_SHAPE_EMPTY && VoxelBlockShapeUtil.isSideBare(newSide, facedSide);
-            if (wasDrawn != isDrawn ||
-                (isDrawn && !VoxelBlockShapeUtil.facesMatch(oldShape, shape, facingAxis, orientation)))
-            {
-                VoxelQuadUpdateUtil.announceVoxelQuadChange(voxel, firstQuadIndex + i);
-            }
-        }
+        const repainted = textureIndex >= 0 &&
+            VoxelQuadUpdateUtil.setVoxelQuadTexture(voxel, firstQuadIndex + i, textureIndex);
+        if (present == wasPresent)
+            continue;
 
-        if (facedShape == VOXEL_BLOCK_SHAPE_EMPTY ||
-            VoxelBlockShapeUtil.isSideBare(facedSide, oldSide) == VoxelBlockShapeUtil.isSideBare(facedSide, newSide))
+        if (!VoxelQueryUtil.isVoxelBlockPresentAt(voxels, facedRow, facedCol, facedCollisionLayer))
         {
+            if (!repainted)
+                VoxelQuadUpdateUtil.announceVoxelQuadChange(voxel, firstQuadIndex + i);
             continue;
         }
         // Past the end layers the face looking back is the room's own floor or ceiling (see
@@ -430,7 +327,7 @@ function applyVoxelBlockShape(voxels: Voxel[], voxel: Voxel, collisionLayer: num
         if (facedVoxel)
         {
             VoxelQuadUpdateUtil.announceVoxelQuadChange(facedVoxel, VoxelQueryUtil.getVoxelQuadIndex(
-                facedRow, facedCol, facingAxis, facedOrientation,
+                facedRow, facedCol, facingAxis, (orientation == "+") ? "-" : "+",
                 (facedCollisionLayer < COLLISION_LAYER_MIN || facedCollisionLayer > COLLISION_LAYER_MAX)
                     ? COLLISION_LAYER_NULL : facedCollisionLayer));
         }

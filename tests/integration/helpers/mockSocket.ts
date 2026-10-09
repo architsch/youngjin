@@ -1,4 +1,5 @@
 import { EventEmitter } from "events";
+import { inflateSync } from "fflate";
 import User from "../../../src/shared/user/types/user";
 
 /** Minimal Socket.IO socket mock for server-side tests (no network I/O). */
@@ -39,6 +40,20 @@ export class MockSocket extends EventEmitter
     getEmitted(event: string): any[]
     {
         return this.emitted.filter(e => e.event === event).map(e => e.data);
+    }
+
+    /** The signal batches emitted, in order, each as the client reads it: a deflated one inflated. */
+    getEmittedSignalBatches(): Uint8Array[]
+    {
+        const batches: Uint8Array[] = [];
+        for (const { event, data } of this.emitted)
+        {
+            if (event === "signalBatch")
+                batches.push(new Uint8Array(data));
+            else if (event === "deflatedSignalBatch")
+                batches.push(inflateSync(new Uint8Array(data)));
+        }
+        return batches;
     }
 
     /** Clears recorded emissions. */

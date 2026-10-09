@@ -10,7 +10,7 @@ import RoomStaircasePlanner from "./helpers/roomStaircasePlanner";
 import RoomBuilder from "./roomBuilder";
 
 // Generic procedural toolkit (see @docs/geometry/room_generation.md). The room starts solid; areas are
-// scattered and grown one wall block apart, passages connect them, and stairwells reach upper storeys.
+// scattered and grown one wall apart, passages connect them, and stairwells reach upper storeys.
 // The plan is applied to the grid only once settled (carving is order-independent), then block work is
 // added based on the carved room. Specific room types are subclasses (HubRoomBuilder,
 // RegularRoomBuilder, ...); this class owns the plan and pass order, and the work lives in ./helpers.
@@ -114,9 +114,9 @@ export default abstract class ProceduralRoomBuilder extends RoomBuilder
         return this;
     }
 
-    protected placeProps(chancePerCell: number, maxStackHeight: number): this
+    protected placeProps(chancePerSpot: number, maxStackHeight: number): this
     {
-        this.props.place(this.room.voxelGrid.voxels, chancePerCell, maxStackHeight);
+        this.props.place(this.room.voxelGrid.voxels, chancePerSpot, maxStackHeight);
         return this;
     }
 }

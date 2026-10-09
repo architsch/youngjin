@@ -2,8 +2,7 @@ import * as THREE from "three";
 import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import { graphicsContextRestoredObservable } from "../system/clientObservables";
 import { endClientProcess, ongoingClientProcessExists, tryStartClientProcess } from "../system/types/clientProcess";
-import { FOG_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME, MAX_ROOM_Y, MINUTE_IN_MS,
-    NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
+import { FOG_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME, MAX_ROOM_X, MAX_ROOM_Y, MAX_ROOM_Z, MINUTE_IN_MS,
     SCENERY_COLOR_PALETTE_NAME } from "../../shared/system/sharedConstants";
 import LightBlockMap from "./light/maps/lightBlockMap";
 import { getLightLuminance } from "./light/util/lightBlockPropagationUtil";
@@ -79,7 +78,7 @@ const pointLightRoomHalfBrightness = 0.15;
 
 // Fixed, so clarity never depends on where the camera is: the room's diagonal plus the farthest an
 // orbit camera is pulled back from a pivot in its corner (see OrbitCameraPose).
-const cameraFar = Math.hypot(NUM_VOXEL_COLS, NUM_VOXEL_ROWS, MAX_ROOM_Y) + 50;
+const cameraFar = Math.hypot(MAX_ROOM_X, MAX_ROOM_Z, MAX_ROOM_Y) + 50;
 
 let currViewReferenceOffset = 0;
 const currRoomLightNearCamera = new THREE.Color(0, 0, 0);

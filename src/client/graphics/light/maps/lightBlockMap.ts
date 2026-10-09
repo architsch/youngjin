@@ -2,41 +2,40 @@ import * as THREE from "three";
 import Voxel from "../../../../shared/voxel/types/voxel";
 import Vec3 from "../../../../shared/math/types/vec3";
 import { COLLISION_LAYER_HEIGHT, NUM_COLLISION_LAYERS, NUM_VOXEL_BLOCKS, NUM_VOXEL_COLS,
-    NUM_VOXEL_ROWS, NUM_VOXEL_SUB_BLOCKS, NUM_VOXEL_SUB_COLS, NUM_VOXEL_SUB_ROWS, VOXEL_SUB_BLOCK_SIZE }
-    from "../../../../shared/system/sharedConstants";
+    NUM_VOXEL_ROWS, VOXEL_CELL_SIZE } from "../../../../shared/system/sharedConstants";
 import NumUtil from "../../../../shared/math/util/numUtil";
 import Vector3DUtil from "../../../../shared/math/util/vector3DUtil";
-import { LIGHT_BLOCK_MAP_MAX_BRIGHTNESS } from "../../../system/clientConstants";
+import { LIGHT_BLOCK_MAP_MAX_BRIGHTNESS, LIGHT_REGION_SIZE_XZ } from "../../../system/clientConstants";
 import LightBlockPropagationUtil, { getLightLuminance, LightPropagationScratch }
     from "../util/lightBlockPropagationUtil";
 import LightBlockMapMaterialUtil from "../util/lightBlockMapMaterialUtil";
 import LightBlockSmoothingUtil from "../util/lightBlockSmoothingUtil";
 import LightBlockDilationUtil from "../util/lightBlockDilationUtil";
-import LightSubBlockUtil from "../util/lightSubBlockUtil";
+import LightRegionUtil from "../util/lightRegionUtil";
 import LightSource from "../types/lightSource";
 
 // All lights except the head light, stored as data and delivered to shaders as 3D textures over the
-// room's sub-blocks, so that light follows the shapes of shrunk blocks. Real THREE lights would recompile
-// every shader when added and shine through walls (see @docs/graphics/lighting.md).
+// room's blocks. Real THREE lights would recompile every shader when added and shine through walls (see
+// @docs/graphics/lighting.md).
 export default class LightBlockMap
 {
     // Unbounded float accumulation (lamps can overlap); exposed into bytes in uploadTextures.
-    private subBlockLightBuffer = new Float32Array(NUM_VOXEL_SUB_BLOCKS * 3);
-    private subBlockFluxBuffer = new Float32Array(NUM_VOXEL_SUB_BLOCKS * 3);
-    private openSubBlocks = new Uint8Array(NUM_VOXEL_SUB_BLOCKS);
+    private blockLightBuffer = new Float32Array(NUM_VOXEL_BLOCKS * 3);
+    private blockFluxBuffer = new Float32Array(NUM_VOXEL_BLOCKS * 3);
+    private openBlocks = new Uint8Array(NUM_VOXEL_BLOCKS);
 
     private scratch = new LightPropagationScratch();
 
-    // The same light a block at a time, and the brightest light near each block (see
-    // LightBlockDilationUtil); read by getNearbyLightAt only, which needs it no finer.
-    private blockLightBuffer = new Float32Array(NUM_VOXEL_BLOCKS * 3);
-    private openBlocks = new Uint8Array(NUM_VOXEL_BLOCKS);
-    private nearbyLightBuffer = new Float32Array(NUM_VOXEL_BLOCKS * 3);
+    // The same light a region at a time (see LightRegionUtil), and the brightest light near each region
+    // (see LightBlockDilationUtil); read by getNearbyLightAt only, which needs it no finer.
+    private regionLightBuffer = new Float32Array(LightRegionUtil.numRegions * 3);
+    private openRegions = new Uint8Array(LightRegionUtil.numRegions);
+    private nearbyLightBuffer = new Float32Array(LightRegionUtil.numRegions * 3);
 
     // RGBA because three.js has no sized format for RGB byte 3D textures. Alpha holds openness (color)
     // and the directional share of the light (flux).
-    private colorBuffer = new Uint8Array(NUM_VOXEL_SUB_BLOCKS * 4);
-    private fluxBuffer = new Uint8Array(NUM_VOXEL_SUB_BLOCKS * 4);
+    private colorBuffer = new Uint8Array(NUM_VOXEL_BLOCKS * 4);
+    private fluxBuffer = new Uint8Array(NUM_VOXEL_BLOCKS * 4);
     private colorTexture: THREE.Data3DTexture;
     private fluxTexture: THREE.Data3DTexture;
 
@@ -59,11 +58,11 @@ export default class LightBlockMap
     {
         // Zero bytes would decode to a direction; start at "no direction" with no directional share.
         this.fluxBuffer.fill(FLUX_ZERO_BYTE);
-        for (let subBlockIndex = 0; subBlockIndex < NUM_VOXEL_SUB_BLOCKS; ++subBlockIndex)
-            this.fluxBuffer[subBlockIndex * 4 + 3] = 0;
+        for (let blockIndex = 0; blockIndex < NUM_VOXEL_BLOCKS; ++blockIndex)
+            this.fluxBuffer[blockIndex * 4 + 3] = 0;
 
-        this.colorTexture = createSubBlockTexture(this.colorBuffer);
-        this.fluxTexture = createSubBlockTexture(this.fluxBuffer);
+        this.colorTexture = createBlockTexture(this.colorBuffer);
+        this.fluxTexture = createBlockTexture(this.fluxBuffer);
 
         LightBlockMapMaterialUtil.setTextures(this.colorTexture, this.fluxTexture);
     }
@@ -121,19 +120,20 @@ export default class LightBlockMap
     }
 
     // Lamp light near a point (linear space), used by the head light to yield to the room. Trilinearly
-    // interpolated so the head light doesn't step as the player crosses blocks.
+    // interpolated so the head light doesn't step as the player crosses regions.
     getNearbyLightAt(worldPos: Vec3, outLight: THREE.Color): THREE.Color
     {
-        if (readOpenCells(this.nearbyLightBuffer, this.openBlocks, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
-            worldPos.x, worldPos.y / COLLISION_LAYER_HEIGHT, worldPos.z, outLight))
+        if (readOpenCells(this.nearbyLightBuffer, this.openRegions, LightRegionUtil.numCols, LightRegionUtil.numRows,
+            worldPos.x / LIGHT_REGION_SIZE_XZ, worldPos.y / COLLISION_LAYER_HEIGHT,
+            worldPos.z / LIGHT_REGION_SIZE_XZ, outLight))
         {
             return outLight;
         }
-        // No open block around, as in the air between two thin walls: the light standing at the point
-        // itself then, which the sub-blocks know.
-        readOpenCells(this.subBlockLightBuffer, this.openSubBlocks, NUM_VOXEL_SUB_COLS, NUM_VOXEL_SUB_ROWS,
-            worldPos.x / VOXEL_SUB_BLOCK_SIZE, worldPos.y / VOXEL_SUB_BLOCK_SIZE,
-            worldPos.z / VOXEL_SUB_BLOCK_SIZE, outLight);
+        // No open region around, as in the air between two thin walls: the light standing at the point
+        // itself then, which the blocks know.
+        readOpenCells(this.blockLightBuffer, this.openBlocks, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
+            worldPos.x / VOXEL_CELL_SIZE, worldPos.y / COLLISION_LAYER_HEIGHT,
+            worldPos.z / VOXEL_CELL_SIZE, outLight);
         return outLight;
     }
 
@@ -149,29 +149,29 @@ export default class LightBlockMap
             return;
         this.wasLit = isLit;
 
-        this.subBlockLightBuffer.fill(0);
-        this.subBlockFluxBuffer.fill(0);
+        this.blockLightBuffer.fill(0);
+        this.blockFluxBuffer.fill(0);
 
         // Always refreshed, so getNearbyLightAt never answers from a room that was left.
-        LightSubBlockUtil.markOpen(this.voxels, this.openSubBlocks);
+        LightBlockPropagationUtil.markOpen(this.voxels, this.openBlocks);
 
         if (this.voxels != undefined)
         {
             for (const objectId in this.lightSourceByObjectId)
             {
-                LightBlockPropagationUtil.accumulate(this.openSubBlocks,
+                LightBlockPropagationUtil.accumulate(this.openBlocks,
                     this.lightSourceByObjectId[objectId],
-                    this.subBlockLightBuffer, this.subBlockFluxBuffer, this.scratch);
+                    this.blockLightBuffer, this.blockFluxBuffer, this.scratch);
             }
 
-            LightBlockSmoothingUtil.smooth(this.subBlockLightBuffer, this.subBlockFluxBuffer,
-                this.openSubBlocks);
+            LightBlockSmoothingUtil.smooth(this.blockLightBuffer, this.blockFluxBuffer,
+                this.openBlocks);
         }
 
-        LightSubBlockUtil.averageOverBlocks(this.subBlockLightBuffer, this.openSubBlocks,
-            this.blockLightBuffer, this.openBlocks);
-        LightBlockDilationUtil.dilate(this.blockLightBuffer, this.nearbyLightBuffer,
-            this.openBlocks);
+        LightRegionUtil.averageOverRegions(this.blockLightBuffer, this.openBlocks,
+            this.regionLightBuffer, this.openRegions);
+        LightBlockDilationUtil.dilate(this.regionLightBuffer, this.nearbyLightBuffer,
+            this.openRegions);
 
         this.uploadTextures();
     }
@@ -179,18 +179,18 @@ export default class LightBlockMap
     // Exposes the accumulated light through the byte range the textures hold.
     private uploadTextures()
     {
-        for (let subBlockIndex = 0; subBlockIndex < NUM_VOXEL_SUB_BLOCKS; ++subBlockIndex)
+        for (let blockIndex = 0; blockIndex < NUM_VOXEL_BLOCKS; ++blockIndex)
         {
-            const sourceIndex = subBlockIndex * 3;
-            const targetIndex = subBlockIndex * 4;
+            const sourceIndex = blockIndex * 3;
+            const targetIndex = blockIndex * 4;
 
             // Openness, so the shader can renormalize filtered reads that include solid (lightless)
-            // sub-blocks; otherwise objects between sub-block centres get darkened.
-            this.colorBuffer[targetIndex + 3] = (this.openSubBlocks[subBlockIndex] !== 0) ? 255 : 0;
+            // blocks; otherwise objects between block centres get darkened.
+            this.colorBuffer[targetIndex + 3] = (this.openBlocks[blockIndex] !== 0) ? 255 : 0;
 
-            const lightR = this.subBlockLightBuffer[sourceIndex];
-            const lightG = this.subBlockLightBuffer[sourceIndex + 1];
-            const lightB = this.subBlockLightBuffer[sourceIndex + 2];
+            const lightR = this.blockLightBuffer[sourceIndex];
+            const lightG = this.blockLightBuffer[sourceIndex + 1];
+            const lightB = this.blockLightBuffer[sourceIndex + 2];
             // Most of a room is usually dark, and dark needs no arithmetic.
             if (lightR === 0 && lightG === 0 && lightB === 0)
             {
@@ -211,9 +211,9 @@ export default class LightBlockMap
             this.colorBuffer[targetIndex + 2] = toExposedByte(lightB);
 
             // Direction only (magnitude lives in the color texture); zero vector for no light.
-            const fluxX = this.subBlockFluxBuffer[sourceIndex];
-            const fluxY = this.subBlockFluxBuffer[sourceIndex + 1];
-            const fluxZ = this.subBlockFluxBuffer[sourceIndex + 2];
+            const fluxX = this.blockFluxBuffer[sourceIndex];
+            const fluxY = this.blockFluxBuffer[sourceIndex + 1];
+            const fluxZ = this.blockFluxBuffer[sourceIndex + 2];
             const fluxLength = Math.sqrt(fluxX*fluxX + fluxY*fluxY + fluxZ*fluxZ);
             if (fluxLength > 0)
             {
@@ -231,7 +231,7 @@ export default class LightBlockMap
 
             // Share of the light that has a net direction (opposing lamps cancel). Only this share is
             // subject to the facing test, so adding a lamp never darkens a surface. <= 1 because both
-            // fields accumulate in step; 0 for solid sub-blocks so it renormalizes like color.
+            // fields accumulate in step; 0 for solid blocks so it renormalizes like color.
             this.fluxBuffer[targetIndex + 3] =
                 Math.min(1, fluxLength / getLightLuminance(lightR, lightG, lightB)) * 255;
         }
@@ -251,7 +251,7 @@ function toExposedByte(light: number): number
 // Reads a field of 3 entries per cell at a point given in cells (centres sit at half-integers), from the
 // open cells around it: closed ones are excluded (not counted as dark), so standing at a wall doesn't
 // bring the head light back. Clamped because the camera may be outside the room. False, and black, where
-// no cell around is open. The grid is a block's or a sub-block's: both are indexed layer fastest, then
+// no cell around is open. The grid is the regions' or the blocks': both are indexed layer fastest, then
 // column, then row.
 function readOpenCells(field: Float32Array, isOpen: Uint8Array, numCols: number, numRows: number,
     x: number, y: number, z: number, outLight: THREE.Color): boolean
@@ -292,12 +292,11 @@ function readOpenCells(field: Float32Array, isOpen: Uint8Array, numCols: number,
     return sumWeight > 0;
 }
 
-function createSubBlockTexture(buffer: Uint8Array): THREE.Data3DTexture
+function createBlockTexture(buffer: Uint8Array): THREE.Data3DTexture
 {
-    // Axes follow the sub-block index layout (layer, sub-column, sub-row), since the first dimension
-    // varies fastest; shaders swizzle world positions accordingly (see lightBlockMapGLSL).
-    const texture = new THREE.Data3DTexture(buffer, NUM_COLLISION_LAYERS, NUM_VOXEL_SUB_COLS,
-        NUM_VOXEL_SUB_ROWS);
+    // Axes follow the block index layout (layer, column, row), since the first dimension varies fastest;
+    // shaders swizzle world positions accordingly (see lightBlockMapGLSL).
+    const texture = new THREE.Data3DTexture(buffer, NUM_COLLISION_LAYERS, NUM_VOXEL_COLS, NUM_VOXEL_ROWS);
     texture.format = THREE.RGBAFormat;
     texture.type = THREE.UnsignedByteType;
     // Data3DTexture defaults to NearestFilter.

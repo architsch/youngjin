@@ -2,14 +2,13 @@
  * Scenario tests: what the orbit camera hides to see its target (see OrbitOcclusionHider), mostly with one of
  * the room's own floor tiles as the target and a prop on a wall by it.
  * Covers: a prop never taken off blocks that are left standing (the floor at the wall's foot seen from all
- * round the room, and a shrunk block in the selected tile's own cell, which stays whole with what hangs on
- * it); a prop going along with its wall once the wall is in the way, and never without a block it rests on;
- * the cone of sight (a wall opened the wider the nearer the camera it stands and the faster the cone widens,
- * and only as far as the samples open it once the cone has no width; a prop in the cone going with its wall
- * though no sample's ray meets it; a selected face's own wall left standing however aslant it is seen, and
- * what stands out from it taken; the room's floor left under a camera above it and opened under one beneath,
- * never the floor a selected tile lies in); and the test of a box against a cone (its side, tip and base, a
- * cone of no width, never missing a box that holds a point of the cone or taking one clear of it).
+ * round the room); a prop going along with its wall once the wall is in the way, and never without a block it
+ * rests on; the cone of sight (a wall opened the wider the nearer the camera it stands and the faster the cone
+ * widens, and only as far as the samples open it once the cone has no width; a prop in the cone going with its
+ * wall though no sample's ray meets it; a selected face's own wall left standing however aslant it is seen,
+ * and what stands out from it taken; the room's floor left under a camera above it and opened under one
+ * beneath, never the floor a selected tile lies in); and the test of a box against a cone (its side, tip and
+ * base, a cone of no width, never missing a box that holds a point of the cone or taking one clear of it).
  * Browser-bound client modules are stubbed, and a prop is a plain mesh where its picture is drawn; the room,
  * the placement rules, the hider and its ray casts run for real. How fast the cone widens is set here rather
  * than read from the game's constant, which is for tuning.
@@ -80,8 +79,9 @@ import PropObjectTypeConfig from "../../../src/shared/object/types/objectTypeCon
 import ObjectScaleUtil from "../../../src/shared/object/util/objectScaleUtil";
 import ObjectUpdateUtil from "../../../src/shared/object/util/objectUpdateUtil";
 import Room from "../../../src/shared/room/types/room";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_COLLISION_LAYERS_PER_STOREY, NUM_VOXEL_QUADS_PER_ROOM,
-    VOXEL_BLOCK_SHAPE_WHOLE } from "../../../src/shared/system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y,
+    NUM_COLLISION_LAYERS_PER_STOREY, NUM_VOXEL_QUADS_PER_ROOM, STOREY_FLOOR_COLLISION_LAYER,
+    VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
 import { createEditingUser } from "../helpers/mockUser";
@@ -95,20 +95,23 @@ const ROOM_ID = "orbit-occlusion-room";
 const PROP_ID = "a-prop";
 const propTypeIndex = ObjectTypeConfigMap.getIndexByType("Prop");
 
-// The cell whose floor tile is selected, out on the open floor of the lower storey.
-const ROW = 12, COL = 12;
+// The voxel whose floor tile is selected, out on the open floor of the lower storey.
+const ROW = 24, COL = 24;
 // The orbit's target for that tile, as WorldSpaceSelectionUtil frames the room's own floor, and the
 // distance it keeps from a selection.
-const TILE: AABB3 = {center: {x: COL + 0.5, y: 0, z: ROW + 0.5}, halfSize: {x: 0.5, y: 0, z: 0.5}};
+const TILE: AABB3 = {
+    center: {x: VoxelQueryUtil.getWorldXAtVoxelColCenter(COL), y: 0, z: VoxelQueryUtil.getWorldZAtVoxelRowCenter(ROW)},
+    halfSize: {x: 0.5 * VOXEL_CELL_SIZE, y: 0, z: 0.5 * VOXEL_CELL_SIZE},
+};
 const ORBIT_DISTANCE = 5;
+
+// Where a voxel row or col begins in the world (along z or x), which is where its lower side's face lies.
+const lowerSideOf = (rowOrCol: number) => rowOrCol * VOXEL_CELL_SIZE;
 
 // How fast the cone of sight widens in these scenarios: its radius per unit of distance from the orbit's pivot.
 const SIGHT_CONE_RADIUS_PER_DISTANCE = 0.3;
 // How far up its target's height the orbit's pivot lies from the middle (see OrbitCameraPose).
 const PIVOT_HEIGHT_PER_HALF_HEIGHT = 0.2;
-
-// The halves of its cell a shrunk block can fill along x.
-const LOW_X_HALF = 0b0101, HIGH_X_HALF = 0b1010;
 
 const WEST = {x: -1, y: 0, z: 0}, EAST = {x: 1, y: 0, z: 0};
 
@@ -124,12 +127,12 @@ const camera = new THREE.PerspectiveCamera();
 let quadIndexByInstanceId: number[] = [];
 const hiddenInstanceIds = new Set<number>();
 
-function standBlocks(row: number, col: number, numLayers: number, shape: number = VOXEL_BLOCK_SHAPE_WHOLE): void
+function standBlocks(row: number, col: number, numLayers: number): void
 {
     for (let layer = COLLISION_LAYER_MIN; layer < COLLISION_LAYER_MIN + numLayers; ++layer)
     {
         expect(VoxelUpdateUtil.addVoxelBlock(undefined, room.voxelGrid.voxels,
-            quadIndexOf(row, col, "y", "+", layer), [1, 1, 1, 1, 1, 1], undefined, shape)).toBe(true);
+            quadIndexOf(row, col, "y", "+", layer), [1, 1, 1, 1, 1, 1])).toBe(true);
     }
 }
 
@@ -234,8 +237,15 @@ function hiddenFloorTiles(): string[]
         .map(quadIndex => `${VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex)}/${VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex)}`);
 }
 
-// A wall across the room along its z, as tall as a storey is high.
-function standWall(col: number, firstRow: number = ROW - 8, lastRow: number = ROW + 8): void
+// The same of the room's own ceiling.
+function hiddenCeilingTiles(): string[]
+{
+    return hiddenQuadsWhere((row, col, _layer, quadIndex) => quadIndex == VoxelQueryUtil.getCeilingVoxelQuadIndex(row, col))
+        .map(quadIndex => `${VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex)}/${VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex)}`);
+}
+
+// A wall across the room along its z, one block thick and as tall as a storey is high.
+function standWall(col: number, firstRow: number = ROW - 16, lastRow: number = ROW + 16): void
 {
     for (let row = firstRow; row <= lastRow; ++row)
         standBlocks(row, col, NUM_COLLISION_LAYERS_PER_STOREY);
@@ -272,11 +282,13 @@ afterEach(() => {
 
 describe("a prop on a wall that is left standing", () => {
     it("stays, however the floor at the wall's foot is looked at", () => {
-        // A wall along the tile's east side, and a prop standing on the floor against it, on the wall's lowest
-        // two layers: the tile's edge lies a hair from the picture, behind where it is drawn.
-        standBlocks(ROW, COL + 1, 4);
+        // A wall along the tile's east side, and a prop standing on the floor against it in line with the tile,
+        // on the wall's lowest two layers: the tile's edge lies a hair from the picture, behind where it is drawn.
+        const WALL_COL = COL + 1, WALL_ROWS = [ROW - 1, ROW, ROW + 1];
+        for (const row of WALL_ROWS)
+            standBlocks(row, WALL_COL, 4);
         drawRoom();
-        attachProp(FIXTURE_PICTURES.square, {x: COL + 1, y: 0.5, z: ROW + 0.5}, WEST);
+        attachProp(FIXTURE_PICTURES.square, {x: lowerSideOf(WALL_COL), y: 0.5, z: TILE.center.z}, WEST);
 
         const viewsThatHideIt: string[] = [];
         for (let elevation = 10; elevation <= 80; elevation += 5)
@@ -285,71 +297,58 @@ describe("a prop on a wall that is left standing", () => {
             {
                 lookAtTileFrom(azimuth, elevation);
                 // The cone of sight takes the wall's top from steeply above, never the blocks behind the prop.
-                const hiddenLayers = hiddenLayersOf(ROW, COL + 1);
-                expect(hiddenLayers, `from ${azimuth}/${elevation}`).not.toContain(0);
-                expect(hiddenLayers, `from ${azimuth}/${elevation}`).not.toContain(1);
+                for (const row of WALL_ROWS)
+                {
+                    const hiddenLayers = hiddenLayersOf(row, WALL_COL);
+                    expect(hiddenLayers, `row ${row} from ${azimuth}/${elevation}`).not.toContain(0);
+                    expect(hiddenLayers, `row ${row} from ${azimuth}/${elevation}`).not.toContain(1);
+                }
                 if (propIsHidden())
                     viewsThatHideIt.push(`${azimuth}/${elevation}`);
             }
         }
         expect(viewsThatHideIt).toEqual([]);
     });
-
-    // A thin wall over one half of the selected tile's own cell, with the prop on its inner face in mid-cell,
-    // seen from the side the other half is open to. The tile lies under the wall too, where it shows nothing.
-    const thinWalls = [
-        {half: "lower-x", shape: LOW_X_HALF, facing: EAST, firstAzimuth: -80},
-        {half: "upper-x", shape: HIGH_X_HALF, facing: WEST, firstAzimuth: 100},
-    ];
-    for (const wall of thinWalls)
-    {
-        it(`stays on a shrunk block over the ${wall.half} half of the selected tile's own cell, which stays whole too`, () => {
-            standBlocks(ROW, COL, 4, wall.shape);
-            drawRoom();
-            attachProp(FIXTURE_PICTURES.tall, {x: COL + 0.5, y: 0.5, z: ROW + 0.5}, wall.facing);
-
-            for (const elevation of [15, 30, 45, 60, 75])
-            {
-                for (let azimuth = wall.firstAzimuth; azimuth <= wall.firstAzimuth + 160; azimuth += 10)
-                {
-                    lookAtTileFrom(azimuth, elevation);
-                    expect(hiddenLayersOf(ROW, COL), `from ${azimuth}/${elevation}`).toEqual([]);
-                    expect(propIsHidden(), `from ${azimuth}/${elevation}`).toBe(false);
-                }
-            }
-        });
-    }
 });
 
 describe("a prop on a wall that is in the way", () => {
-    // A wall between the tile and a camera east of it, with the prop on the wall's far face, towards the
-    // camera, on the wall's second and third layers.
-    const PROP_LAYERS = [1, 2];
+    // A wall a world unit thick between the tile and a camera east of it, with the prop on the wall's far face,
+    // towards the camera and in line with the tile, on the wall's second and third layers. It rests on the
+    // wall's far blocks, over the three rows its width takes it across.
+    const NEAR_COL = COL + 1, FAR_COL = COL + 2;
+    const PROP_ROWS = [ROW - 1, ROW, ROW + 1], PROP_LAYERS = [1, 2];
 
     beforeEach(() => {
-        for (let row = ROW - 2; row <= ROW + 2; ++row)
-            standBlocks(row, COL + 1, 6);
+        for (let row = ROW - 4; row <= ROW + 4; ++row)
+        {
+            standBlocks(row, NEAR_COL, 6);
+            standBlocks(row, FAR_COL, 6);
+        }
         drawRoom();
-        attachProp(FIXTURE_PICTURES.square, {x: COL + 2, y: 1, z: ROW + 0.5}, EAST);
+        attachProp(FIXTURE_PICTURES.square, {x: lowerSideOf(FAR_COL + 1), y: 1, z: TILE.center.z}, EAST);
     });
 
     it("goes along with the blocks it rests on", () => {
         lookAtTileFrom(0, 30);
-        expect(hiddenLayersOf(ROW, COL + 1)).toEqual(expect.arrayContaining([0, 1, 2]));
+        expect(hiddenLayersOf(ROW, FAR_COL)).toEqual(expect.arrayContaining([0, 1, 2]));
         expect(propIsHidden()).toBe(true);
     });
 
     it("goes along with them by the samples alone", () => {
         sightCone.radiusPerDistance = 0;
         lookAtTileFrom(0, 30);
-        expect(hiddenLayersOf(ROW, COL + 1)).toEqual([0, 1, 2]);
+        expect(hiddenLayersOf(ROW, FAR_COL)).toEqual([0, 1]);
         expect(propIsHidden()).toBe(true);
     });
 
     it("comes back with them once the camera is round on the tile's own side", () => {
         lookAtTileFrom(0, 30);
         lookAtTileFrom(180, 30);
-        expect(hiddenLayersOf(ROW, COL + 1)).toEqual([]);
+        for (const row of PROP_ROWS)
+        {
+            expect(hiddenLayersOf(row, NEAR_COL), `row ${row}`).toEqual([]);
+            expect(hiddenLayersOf(row, FAR_COL), `row ${row}`).toEqual([]);
+        }
         expect(propIsHidden()).toBe(false);
     });
 
@@ -363,8 +362,11 @@ describe("a prop on a wall that is in the way", () => {
                 if (!propIsHidden())
                     continue;
                 ++numViewsThatHideIt;
-                const hiddenLayers = hiddenLayersOf(ROW, COL + 1);
-                expect(PROP_LAYERS.some(layer => hiddenLayers.includes(layer)), `from ${azimuth}/${elevation}`).toBe(true);
+                const restsOnHiddenBlock = PROP_ROWS.some(row => {
+                    const hiddenLayers = hiddenLayersOf(row, FAR_COL);
+                    return PROP_LAYERS.some(layer => hiddenLayers.includes(layer));
+                });
+                expect(restsOnHiddenBlock, `from ${azimuth}/${elevation}`).toBe(true);
             }
         }
         expect(numViewsThatHideIt).toBeGreaterThan(0);
@@ -372,10 +374,10 @@ describe("a prop on a wall that is in the way", () => {
 });
 
 describe("the cone of sight", () => {
-    // Two walls across the view of the tile from low in the east: one two cells from the tile, one just before
-    // the camera. The line of sight passes the first in its lowest layer and the second in the next.
-    const NEAR_TARGET_COL = COL + 2, NEAR_TARGET_LAYER = 0;
-    const NEAR_CAMERA_COL = COL + 5, NEAR_CAMERA_LAYER = 1;
+    // Two walls across the view of the tile from low in the east: one a few blocks from the tile, one just
+    // before the camera. The line of sight passes the first in its lowest layer and the second in the next.
+    const NEAR_TARGET_COL = COL + 4, NEAR_TARGET_LAYER = 0;
+    const NEAR_CAMERA_COL = COL + 10, NEAR_CAMERA_LAYER = 1;
     const lookFromTheEast = () => lookAtTileFrom(0, 10, 6);
 
     function standBothWalls(): void
@@ -388,10 +390,11 @@ describe("the cone of sight", () => {
     it("opens a wall up the wider, the nearer the camera it stands", () => {
         standBothWalls();
         lookFromTheEast();
-        // The cone is some three quarters of a block in radius by the first wall's far side, and over a block
-        // and a half by the second's.
+        // The cone is some one and a third blocks in radius by the first wall's far side, and over three by
+        // the second's; the rows to either side of the tile's own begin half a block from its axis.
         expect(hiddenRowsOf(NEAR_TARGET_COL, NEAR_TARGET_LAYER)).toEqual([ROW - 1, ROW, ROW + 1]);
-        expect(hiddenRowsOf(NEAR_CAMERA_COL, NEAR_CAMERA_LAYER)).toEqual([ROW - 2, ROW - 1, ROW, ROW + 1, ROW + 2]);
+        expect(hiddenRowsOf(NEAR_CAMERA_COL, NEAR_CAMERA_LAYER)).toEqual(
+            [ROW - 3, ROW - 2, ROW - 1, ROW, ROW + 1, ROW + 2, ROW + 3]);
     });
 
     it("opens them only as far as the samples do once it has no width", () => {
@@ -411,42 +414,46 @@ describe("the cone of sight", () => {
             lookFromTheEast();
             openings.push(hiddenRowsOf(NEAR_CAMERA_COL, NEAR_CAMERA_LAYER).length);
         }
-        expect(openings).toEqual([1, 3, 5, 7]);
+        expect(openings).toEqual([1, 5, 7, 13]);
     });
 
     it("has its tip where the orbit turns about", () => {
         standBothWalls();
-        // With that point a cell along the first wall, the opening by the tip lies that way too.
+        // With that point two blocks along the first wall, the opening by the tip lies that way too.
         vi.spyOn(OrbitCameraPose, "getPivot").mockImplementation((target, out) =>
-            out.set(target.center.x, target.center.y, target.center.z + 1));
+            out.set(target.center.x, target.center.y, target.center.z + 2 * VOXEL_CELL_SIZE));
         lookFromTheEast();
-        expect(hiddenRowsOf(NEAR_TARGET_COL, NEAR_TARGET_LAYER)).toEqual([ROW, ROW + 1]);
+        expect(hiddenRowsOf(NEAR_TARGET_COL, NEAR_TARGET_LAYER)).toEqual([ROW, ROW + 1, ROW + 2, ROW + 3]);
     });
 
     it("takes a prop along with its wall, though no sample's ray meets it", () => {
-        // On the wall before the camera, facing it, a cell aside from the line of sight.
+        // On the wall before the camera, facing it, over the two rows next to the one the line of sight passes.
+        const PROP_ROWS = [ROW + 1, ROW + 2];
         standWall(NEAR_CAMERA_COL);
         drawRoom();
-        attachProp(FIXTURE_PICTURES.square, {x: NEAR_CAMERA_COL + 1, y: 1, z: ROW + 1.5}, EAST);
+        attachProp(FIXTURE_PICTURES.square,
+            {x: lowerSideOf(NEAR_CAMERA_COL + 1), y: 1, z: lowerSideOf(ROW + 2)}, EAST);
 
         lookFromTheEast();
-        expect(hiddenLayersOf(ROW + 1, NEAR_CAMERA_COL)).toEqual(expect.arrayContaining([1, 2]));
+        for (const row of PROP_ROWS)
+            expect(hiddenLayersOf(row, NEAR_CAMERA_COL), `row ${row}`).toEqual(expect.arrayContaining([1, 2]));
         expect(propIsHidden()).toBe(true);
 
         sightCone.radiusPerDistance = 0;
         lookFromTheEast();
-        expect(hiddenLayersOf(ROW + 1, NEAR_CAMERA_COL)).toEqual([]);
+        for (const row of PROP_ROWS)
+            expect(hiddenLayersOf(row, NEAR_CAMERA_COL), `row ${row}`).toEqual([]);
         expect(propIsHidden()).toBe(false);
     });
 
     it("leaves a selected face's own wall standing however aslant it is seen, and takes what stands out from it", () => {
         // A wall along the room's z holding the selected block, seen from the west. The orbit's pivot lies inside
         // the wall, so seen aslant the cone's own axis runs through the wall's blocks.
-        const WALL_COL = COL + 1, BLOCK_LAYER = 2, PARTITION_ROW = ROW + 3;
-        const block = VoxelQueryUtil.getVoxelBlockBox(ROW, WALL_COL, BLOCK_LAYER, VOXEL_BLOCK_SHAPE_WHOLE);
+        const WALL_COL = COL + 1, BLOCK_LAYER = 2, PARTITION_ROW = ROW + 6;
+        const block = VoxelQueryUtil.getVoxelBlockBox(ROW, WALL_COL, BLOCK_LAYER);
         const hiddenBlocksOfTheWall = () => hiddenQuadsWhere((_row, col, layer) =>
             col == WALL_COL && layer < NUM_COLLISION_LAYERS_PER_STOREY);
-        standWall(WALL_COL, ROW - 10, ROW + 16);
+        standWall(WALL_COL, ROW - 20, ROW + 32);
         drawRoom();
 
         for (const elevation of [5, 10, 20])
@@ -459,18 +466,41 @@ describe("the cone of sight", () => {
         }
 
         // A partition out from the wall into the room, between the block and a camera that sees it aslant.
-        for (let col = WALL_COL - 4; col < WALL_COL; ++col)
+        for (let col = WALL_COL - 8; col < WALL_COL; ++col)
             standBlocks(PARTITION_ROW, col, NUM_COLLISION_LAYERS_PER_STOREY);
         drawRoom();
         lookAt(block, 100, 10, 6);
         expect(sorted(hiddenQuadsWhere((row, _col, layer) => row == PARTITION_ROW && layer == BLOCK_LAYER)
-            .map(quadIndex => VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex)))).toEqual([WALL_COL - 2, WALL_COL - 1]);
+            .map(quadIndex => VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex))))
+            .toEqual([WALL_COL - 3, WALL_COL - 2, WALL_COL - 1]);
         expect(hiddenBlocksOfTheWall()).toEqual([]);
     });
 
+    it("leaves standing what stands within a world unit of a selected block, and takes what stands further off in its way", () => {
+        // The selected block in a wall along the room's z, seen from the west, and a row of posts out from the wall
+        // toward the camera, in line with the block and a block clear of its face.
+        const WALL_COL = COL + 1, BLOCK_LAYER = 2;
+        const block = VoxelQueryUtil.getVoxelBlockBox(ROW, WALL_COL, BLOCK_LAYER);
+        const POST_COLS = [WALL_COL - 2, WALL_COL - 3, WALL_COL - 4, WALL_COL - 5];
+        standWall(WALL_COL);
+        for (const col of POST_COLS)
+            standBlocks(ROW, col, NUM_COLLISION_LAYERS_PER_STOREY);
+        drawRoom();
+
+        lookAt(block, 180, 10, 6);
+        const hiddenPostCols = sorted(hiddenQuadsWhere((row, col, layer) =>
+            row == ROW && col < WALL_COL && layer == BLOCK_LAYER).map(quadIndex => VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex)));
+        // Two blocks out from the selected one is within a world unit of it; three is not.
+        expect(hiddenPostCols).toEqual([WALL_COL - 5, WALL_COL - 4, WALL_COL - 3]);
+        // Nor does a layer above or below the block's own go from so near it.
+        expect(hiddenLayersOf(ROW, WALL_COL - 2).filter(layer => Math.abs(layer - BLOCK_LAYER) <= 1)).toEqual([]);
+        expect(hiddenLayersOf(ROW, WALL_COL)).toEqual([]);
+    });
+
     describe("and the room's own floor", () => {
-        // Something standing on the floor, the size of a character.
-        const figure: AABB3 = {center: {x: COL + 0.5, y: 0.9, z: ROW + 0.5}, halfSize: {x: 0.3, y: 0.9, z: 0.3}};
+        // Something standing on the floor over the tile, the size of a character.
+        const figure: AABB3 = {center: {x: TILE.center.x, y: 0.9, z: TILE.center.z},
+            halfSize: {x: 0.3, y: 0.9, z: 0.3}};
 
         beforeEach(() => drawRoom());
 
@@ -485,9 +515,9 @@ describe("the cone of sight", () => {
 
         it("is opened under a camera beneath it, to either side of what the samples open", () => {
             lookAt(figure, 0, -10, 8);
-            expect(hiddenFloorTiles()).toContain(`${ROW + 2}/${COL + 7}`);
-            expect(hiddenFloorTiles()).toContain(`${ROW - 2}/${COL + 7}`);
-            expect(hiddenFloorTiles()).not.toContain(`${ROW}/${COL + 1}`); // by the cone's tip
+            expect(hiddenFloorTiles()).toContain(`${ROW + 4}/${COL + 14}`);
+            expect(hiddenFloorTiles()).toContain(`${ROW - 4}/${COL + 14}`);
+            expect(hiddenFloorTiles()).not.toContain(`${ROW}/${COL + 2}`); // by the cone's tip
 
             sightCone.radiusPerDistance = 0;
             lookAt(figure, 0, -10, 8);
@@ -502,6 +532,44 @@ describe("the cone of sight", () => {
                 lookAtTileFrom(0, elevation, 6);
                 expect(hiddenFloorTiles(), `from ${elevation}`).toEqual([]);
             }
+        });
+    });
+
+    describe("and the room's own ceiling", () => {
+        // Something standing on the upper storey's floor over the tile, the size of a character.
+        const UPPER_FLOOR_Y = (STOREY_FLOOR_COLLISION_LAYER + 1) * COLLISION_LAYER_HEIGHT;
+        const figure: AABB3 = {center: {x: TILE.center.x, y: UPPER_FLOOR_Y + 0.9, z: TILE.center.z},
+            halfSize: {x: 0.3, y: 0.9, z: 0.3}};
+        // From high enough for the camera to stand over the room, and the voxel col under where the middle of its
+        // view passes through the ceiling on the way down to the figure.
+        const ELEVATION = 30, DISTANCE = 8;
+        const pivotY = figure.center.y + PIVOT_HEIGHT_PER_HALF_HEIGHT * figure.halfSize.y;
+        const colAtCeiling = VoxelQueryUtil.getVoxelColFromWorldX(figure.center.x +
+            (MAX_ROOM_Y - pivotY) / Math.tan(THREE.MathUtils.degToRad(ELEVATION)));
+
+        beforeEach(() => drawRoom());
+
+        it("is left over a camera beneath it", () => {
+            for (const elevation of [0, 10])
+            {
+                lookAt(figure, 0, elevation, DISTANCE);
+                expect(camera.position.y).toBeLessThan(MAX_ROOM_Y);
+                expect(hiddenCeilingTiles(), `from ${elevation}`).toEqual([]);
+            }
+        });
+
+        it("is opened over a camera above it, to either side of what the samples open", () => {
+            lookAt(figure, 0, ELEVATION, DISTANCE);
+            expect(camera.position.y).toBeGreaterThan(MAX_ROOM_Y);
+            expect(hiddenCeilingTiles()).toContain(`${ROW + 2}/${colAtCeiling}`);
+            expect(hiddenCeilingTiles()).toContain(`${ROW - 2}/${colAtCeiling}`);
+
+            sightCone.radiusPerDistance = 0;
+            lookAt(figure, 0, ELEVATION, DISTANCE);
+            const tiles = hiddenCeilingTiles();
+            expect(tiles.length).toBeGreaterThan(0);
+            expect(tiles).not.toContain(`${ROW + 2}/${colAtCeiling}`);
+            expect(tiles).not.toContain(`${ROW - 2}/${colAtCeiling}`);
         });
     });
 });

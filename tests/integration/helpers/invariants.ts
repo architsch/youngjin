@@ -9,7 +9,6 @@ import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import SignalTypeConfigMap from "../../../src/shared/networking/maps/signalTypeConfigMap";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
-import VoxelBlockShapeUtil from "../../../src/shared/voxel/util/voxelBlockShapeUtil";
 import BufferState from "../../../src/shared/networking/types/bufferState";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN,
     NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../../src/shared/system/sharedConstants";
@@ -249,26 +248,17 @@ export function checkRoomOwnershipConsistency(): void
 }
 
 /**
- * Invariant 12: every loaded room's voxel grid is one a room can be saved as and read back from. Each
- * block's shape is one a block can have (or none), the quads hold texture indices alone (a block's shape
- * is kept apart from them until the room is encoded), and the grid's own encoding reads back as itself.
+ * Invariant 12: every loaded room's voxel grid is one a room can be saved as and read back from. Its
+ * quads hold texture indices alone, and the grid's own encoding reads back as itself.
  */
 export function checkVoxelGridConsistency(): void
 {
     for (const [roomID, roomMem] of Object.entries(ServerRoomManager.roomRuntimeMemories))
     {
         const grid = roomMem.room.voxelGrid;
-        const {quads, blockShapes} = grid.quadsMem;
+        const quads = grid.quadsMem.quads;
 
-        // Counted rather than asserted one by one: a grid has hundreds of thousands of each.
-        let numInvalidShapes = 0;
-        for (let i = 0; i < blockShapes.length; ++i)
-        {
-            if (!VoxelBlockShapeUtil.isValid(blockShapes[i]))
-                ++numInvalidShapes;
-        }
-        expect(numInvalidShapes, `Room ${roomID} holds block shapes no block can have`).toBe(0);
-
+        // Counted rather than asserted one by one: a grid has hundreds of thousands of them.
         let numQuadsWithSpareBit = 0;
         for (let i = 0; i < quads.length; ++i)
         {
@@ -280,8 +270,8 @@ export function checkVoxelGridConsistency(): void
         const encoded = new BufferState(encodedGridBytes);
         grid.encode(encoded);
         const decoded = VoxelGrid.decode(new BufferState(encodedGridBytes.slice(0, encoded.byteIndex))) as VoxelGrid;
-        expect(buffersMatch(decoded.quadsMem.blockShapes, blockShapes),
-            `Room ${roomID}'s block shapes changed when stored and read back`).toBe(true);
+        expect(decoded.voxels.every((voxel, i) => voxel.blockLayerMask == grid.voxels[i].blockLayerMask),
+            `Room ${roomID}'s blocks changed when stored and read back`).toBe(true);
         expect(buffersMatch(decoded.quadsMem.quads, storedQuadsOf(grid)),
             `Room ${roomID}'s quads changed when stored and read back`).toBe(true);
     }

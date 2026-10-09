@@ -8,11 +8,15 @@
  *   changes (reopening the doorway yields v2 byte for byte).
  * - v4 -> v5 (whether a quad is drawn is no longer stored): the bit that said so is cleared, and the room's
  *   blocks show the faces it drew, bar an outer shell that an older build left drawn.
- * - v5 -> v6 (blocks have shapes): nothing is rewritten. The spare bit now spells a block's shape, and
- *   clear, as every older room has it, spells a whole block.
+ * - v5 -> v6 (blocks have shapes): nothing is rewritten. The spare bit spells a block's shape, and clear,
+ *   as every older room has it, spells a whole block.
+ * - v6 -> v7 (voxels half as wide, every block a cube): each cell becomes four voxels, and each half-cell
+ *   sub-block a block filled becomes a block of its own with that block's textures.
  *
- * Fixtures record quads as their own versions stored them, with that bit, so a room read today is compared
- * against them with the bit put back from what its blocks show (see legacyQuad).
+ * Fixtures up to version 5 describe their rooms cell by cell, each a world unit wide, so a room read today
+ * is compared against them as read back at that resolution (see readAtLegacyResolution). They record quads
+ * as their own versions stored them, with the bit that said a quad was drawn, which is put back from what
+ * the room's blocks show.
  */
 import { describe, it, expect } from "vitest";
 import fs from "fs";
@@ -23,13 +27,11 @@ import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import Voxel from "../../../src/shared/voxel/types/voxel";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
-import { RoomVolumeConstructorMap } from "../../../src/shared/room/generation/maps/roomVolumeConstructorMap";
 import RestrictedZone from "../../../src/shared/voxel/types/restrictedZone";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS,
-    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
-    MAX_ENCODED_VOXEL_GRID_BYTES, MAX_RESTRICTED_ZONES, NUM_VOXEL_COLS,
-    NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_QUADS_PER_ROOM,
-    NUM_VOXEL_ROWS, VOXEL_BLOCK_SHAPE_EMPTY, VOXEL_BLOCK_SHAPE_WHOLE } from "../../../src/shared/system/sharedConstants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN,
+    MAX_ENCODED_VOXEL_GRID_BYTES, MAX_RESTRICTED_ZONES, NUM_COLLISION_LAYERS, NUM_VOXEL_COLS,
+    NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_QUADS_PER_ROOM, NUM_VOXEL_QUADS_PER_VOXEL,
+    NUM_VOXEL_ROWS } from "../../../src/shared/system/sharedConstants";
 
 const FIXTURE_DIR = path.join(__dirname, "../fixtures/legacyVoxelGrids");
 const FIXTURE_NAMES = ["bare", "procedural_1", "procedural_7", "procedural_12345",
@@ -38,6 +40,23 @@ const FIXTURE_NAMES = ["bare", "procedural_1", "procedural_7", "procedural_12345
 // Legacy room height, and where migration lays the slab (not today's storey floor height).
 const LEGACY_NUM_COLLISION_LAYERS = 8;
 const LEGACY_COLLISION_LAYER_MAX = LEGACY_NUM_COLLISION_LAYERS - 1;
+
+// The grid every version up to 6 held: cells one world unit wide, each of which is four voxels now.
+const LEGACY_NUM_ROWS = 32;
+const LEGACY_NUM_COLS = 32;
+
+// The entrance doorway of the oldest rooms, as they stored it: a cell of the boundary wall, open so many layers
+// up. Today it is the voxels that cell became, two rows of two.
+const LEGACY_ENTRANCE_ROW = 31;
+const LEGACY_ENTRANCE_COL = 16;
+const LEGACY_ENTRANCE_HEIGHT_IN_LAYERS = 5;
+const DOORWAY_VOXELS = [0, 1].flatMap(rowOffset => [0, 1].map(colOffset => (
+    {row: 2 * LEGACY_ENTRANCE_ROW + rowOffset, col: 2 * LEGACY_ENTRANCE_COL + colOffset})));
+const LEGACY_NUM_QUADS = LEGACY_NUM_ROWS * LEGACY_NUM_COLS * NUM_VOXEL_QUADS_PER_VOXEL;
+
+// A block's quads within its layer: [-y, +y, -x, +x, -z, +z].
+const PLUS_X_QUAD_OFFSET = 3;
+const PLUS_Z_QUAD_OFFSET = 5;
 
 interface LegacyRoomDescription
 {
@@ -61,21 +80,29 @@ function decode(bytes: Uint8Array): VoxelGrid
     return VoxelGrid.decode(new BufferState(bytes)) as VoxelGrid;
 }
 
+function encode(grid: VoxelGrid): Uint8Array
+{
+    const out = new BufferState(new Uint8Array(MAX_ENCODED_VOXEL_GRID_BYTES));
+    grid.encode(out);
+    return out.view.slice(0, out.byteIndex);
+}
+
 // The migrated room with its doorway reopened (v2's state), so preservation checks run against the
 // recorded fixtures; a fill touching anything else wouldn't undo cleanly.
 function decodeWithDoorwayReopened(bytes: Uint8Array): VoxelGrid
 {
     const grid = decode(bytes);
-    const doorway = RoomVolumeConstructorMap["InitialMultiplayerEntrance"]();
-    for (let layer = doorway.collisionLayerMin; layer <= doorway.collisionLayerMax; ++layer)
+    for (const {row, col} of DOORWAY_VOXELS)
     {
-        const first = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(
-            doorway.rowMin, doorway.colMin, layer);
-        VoxelUpdateUtil.removeVoxelBlock(undefined, grid.voxels, first);
+        for (let layer = COLLISION_LAYER_MIN; layer < COLLISION_LAYER_MIN + LEGACY_ENTRANCE_HEIGHT_IN_LAYERS; ++layer)
+        {
+            const first = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, layer);
+            VoxelUpdateUtil.removeVoxelBlock(undefined, grid.voxels, first);
 
-        // Removal hides faces but keeps their paint; a v2 doorway is unpainted, so clear it too.
-        for (let i = 0; i < NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
-            grid.quadsMem.quads[first + i] = 0;
+            // Removal hides faces but keeps their paint; a v2 doorway is unpainted, so clear it too.
+            for (let i = 0; i < NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
+                grid.quadsMem.quads[first + i] = 0;
+        }
     }
     return grid;
 }
@@ -94,26 +121,89 @@ function quadIsVisible(quad: number): boolean
     return (quad & LEGACY_QUAD_VISIBLE_BIT) != 0;
 }
 
-// A quad of a room read today, as the formats up to version 4 stored it: its texture index under the bit
-// that said it was drawn, which the room's blocks now decide.
-function legacyQuad(grid: VoxelGrid, quadIndex: number): number
+function getVoxel(grid: VoxelGrid, row: number, col: number): Voxel
 {
-    return grid.quadsMem.quads[quadIndex] |
-        (VoxelQueryUtil.isVoxelQuadVisible(grid.voxels, quadIndex) ? LEGACY_QUAD_VISIBLE_BIT : 0);
+    return grid.voxels[row * NUM_VOXEL_COLS + col];
+}
+
+// The four voxels a legacy cell became, in the order of a shape's bits (x half + 2 * z half).
+function voxelsOfLegacyCell(grid: VoxelGrid, legacyRow: number, legacyCol: number): Voxel[]
+{
+    return [0, 1, 2, 3].map(subBlock => getVoxel(grid, 2 * legacyRow + (subBlock >> 1), 2 * legacyCol + (subBlock & 1)));
+}
+
+// A room read back cell by cell as the versions up to 5 held it, where every block filled its cell layer.
+// masks: each cell's layers holding a block. quads: each legacy quad's texture index, in legacy index order.
+// visible: whether that quad is drawn, as the room's blocks decide it.
+interface LegacyView
+{
+    masks: number[];
+    quads: Uint8Array;
+    visible: boolean[];
+}
+
+// A cell's face is read off the voxel of the four that lies on the side it is turned to, where the face is
+// the room's surface if it is drawn at all (the four agree on everything else; see the tests that say so).
+function readAtLegacyResolution(grid: VoxelGrid): LegacyView
+{
+    const view: LegacyView = {masks: [], quads: new Uint8Array(LEGACY_NUM_QUADS), visible: new Array(LEGACY_NUM_QUADS)};
+    for (let legacyRow = 0; legacyRow < LEGACY_NUM_ROWS; ++legacyRow)
+    {
+        for (let legacyCol = 0; legacyCol < LEGACY_NUM_COLS; ++legacyCol)
+        {
+            const voxels = voxelsOfLegacyCell(grid, legacyRow, legacyCol);
+            view.masks.push(voxels[0].blockLayerMask);
+
+            const firstLegacyQuadIndex = (legacyRow * LEGACY_NUM_COLS + legacyCol) * NUM_VOXEL_QUADS_PER_VOXEL;
+            for (let offset = 0; offset < NUM_VOXEL_QUADS_PER_VOXEL; ++offset)
+            {
+                const faceOffset = offset % NUM_VOXEL_QUADS_PER_COLLISION_LAYER;
+                const voxel = voxels[(faceOffset == PLUS_X_QUAD_OFFSET) ? 1 : (faceOffset == PLUS_Z_QUAD_OFFSET) ? 2 : 0];
+                const quadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(voxel.row, voxel.col) + offset;
+                view.quads[firstLegacyQuadIndex + offset] = grid.quadsMem.quads[quadIndex];
+                view.visible[firstLegacyQuadIndex + offset] = VoxelQueryUtil.isVoxelQuadVisible(grid.voxels, quadIndex);
+            }
+        }
+    }
+    return view;
+}
+
+// A legacy quad as the formats up to version 4 stored it: its texture index under the bit that said it was
+// drawn.
+function legacyQuad(view: LegacyView, legacyQuadIndex: number): number
+{
+    return view.quads[legacyQuadIndex] | (view.visible[legacyQuadIndex] ? LEGACY_QUAD_VISIBLE_BIT : 0);
+}
+
+function legacyQuadIndexOf(legacyRow: number, legacyCol: number, layer: number, faceOffset: number): number
+{
+    return (legacyRow * LEGACY_NUM_COLS + legacyCol) * NUM_VOXEL_QUADS_PER_VOXEL +
+        NUM_VOXEL_QUADS_PER_COLLISION_LAYER * layer + faceOffset;
+}
+
+// A cell's last two quads are the room's own ceiling and floor tiles over it.
+function legacyCeilingQuadIndexOf(cellIndex: number): number
+{
+    return (cellIndex + 1) * NUM_VOXEL_QUADS_PER_VOXEL - 2;
+}
+
+function legacyFloorQuadIndexOf(cellIndex: number): number
+{
+    return (cellIndex + 1) * NUM_VOXEL_QUADS_PER_VOXEL - 1;
 }
 
 // The fixtures' hash over the legacy layers, which must survive migration byte for byte.
-function hashLegacyLayerQuads(grid: VoxelGrid): number
+function hashLegacyLayerQuads(view: LegacyView): number
 {
     let hash = 0x811c9dc5; // FNV-1a
-    for (const voxel of grid.voxels)
+    for (let cellIndex = 0; cellIndex < LEGACY_NUM_ROWS * LEGACY_NUM_COLS; ++cellIndex)
     {
         for (let layer = COLLISION_LAYER_MIN; layer <= LEGACY_COLLISION_LAYER_MAX; ++layer)
         {
-            const first = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(voxel.row, voxel.col, layer);
+            const first = cellIndex * NUM_VOXEL_QUADS_PER_VOXEL + NUM_VOXEL_QUADS_PER_COLLISION_LAYER * layer;
             for (let i = 0; i < NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
             {
-                hash ^= legacyQuad(grid, first + i);
+                hash ^= legacyQuad(view, first + i);
                 hash = Math.imul(hash, 0x01000193) >>> 0;
             }
         }
@@ -121,9 +211,42 @@ function hashLegacyLayerQuads(grid: VoxelGrid): number
     return hash;
 }
 
-function getVoxel(grid: VoxelGrid, row: number, col: number): Voxel
+// What makes reading a room back cell by cell fair: the four voxels of every cell hold the same blocks,
+// finished the same, under the same floor and ceiling tiles.
+function expectEveryCellQuadrupled(grid: VoxelGrid): void
 {
-    return grid.voxels[row * NUM_VOXEL_COLS + col];
+    const quads = grid.quadsMem.quads;
+    let numCellsAtOdds = 0;
+    for (let legacyRow = 0; legacyRow < LEGACY_NUM_ROWS; ++legacyRow)
+    {
+        for (let legacyCol = 0; legacyCol < LEGACY_NUM_COLS; ++legacyCol)
+        {
+            const [first, ...others] = voxelsOfLegacyCell(grid, legacyRow, legacyCol);
+            const firstQuadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(first.row, first.col);
+            const alike = others.every(other =>
+            {
+                const otherQuadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(other.row, other.col);
+                if (other.blockLayerMask != first.blockLayerMask)
+                    return false;
+                for (let offset = 0; offset < NUM_VOXEL_QUADS_PER_VOXEL; ++offset)
+                {
+                    if (quads[otherQuadIndex + offset] != quads[firstQuadIndex + offset])
+                        return false;
+                }
+                return true;
+            });
+            if (!alike)
+                ++numCellsAtOdds;
+        }
+    }
+    expect(numCellsAtOdds).toBe(0);
+}
+
+function expectSameGrid(actual: VoxelGrid, expected: VoxelGrid): void
+{
+    expect(actual.quadsMem.quads.every((quad, i) => quad == expected.quadsMem.quads[i])).toBe(true);
+    expect(actual.voxels.map(voxel => voxel.blockLayerMask)).toEqual(expected.voxels.map(voxel => voxel.blockLayerMask));
+    expect(actual.restrictedZones).toEqual(expected.restrictedZones);
 }
 
 describe.each(FIXTURE_NAMES)("migrating a version-1 room (%s)", (name) => {
@@ -133,106 +256,90 @@ describe.each(FIXTURE_NAMES)("migrating a version-1 room (%s)", (name) => {
         expect(bytes[0]).toBe(1);
 
         // Re-encoding stamps the current version, so migration is a one-time cost per room.
-        const grid = decode(bytes);
-        const out = new BufferState(new Uint8Array(1024 * 1024));
-        grid.encode(out);
-        expect(out.view[0]).toBe(VoxelGrid.latestFormatVersion);
+        expect(encode(decode(bytes))[0]).toBe(VoxelGrid.latestFormatVersion);
+    });
+
+    it("makes four voxels of every cell, alike in their blocks and finishes", () => {
+        expect(decode(bytes).voxels.length).toBe(NUM_VOXEL_ROWS * NUM_VOXEL_COLS);
+        expectEveryCellQuadrupled(decode(bytes));
     });
 
     it("keeps every layer the room already had, face for face", () => {
-        expect(hashLegacyLayerQuads(decodeWithDoorwayReopened(bytes))).toBe(expected.layerQuadsHash);
+        expect(hashLegacyLayerQuads(readAtLegacyResolution(decodeWithDoorwayReopened(bytes)))).toBe(expected.layerQuadsHash);
     });
 
-    it("keeps every voxel standing where it stood, and adds the storey floor over it", () => {
-        const grid = decodeWithDoorwayReopened(bytes);
-        expect(grid.voxels.length).toBe(NUM_VOXEL_ROWS * NUM_VOXEL_COLS);
-
-        for (let i = 0; i < grid.voxels.length; ++i)
-        {
-            // The room's old contents, plus a slab at the height its ceiling used to hang at.
-            expect(VoxelQueryUtil.getVoxelBlockLayerMask(grid.voxels[i])).toBe(
-                expected.masks[i] | (1 << LEGACY_NUM_COLLISION_LAYERS));
-        }
+    it("keeps every block standing where it stood, and adds the storey floor over it", () => {
+        // The room's old contents, plus a slab at the height its ceiling used to hang at.
+        expect(readAtLegacyResolution(decodeWithDoorwayReopened(bytes)).masks)
+            .toEqual(expected.masks.map(mask => mask | (1 << LEGACY_NUM_COLLISION_LAYERS)));
     });
 
     it("fills the doorway in, and finishes it like the wall it is now part of", () => {
-        const grid = decode(bytes);
-        const doorway = getVoxel(grid, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL);
-        const wallBeside = getVoxel(grid, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
-            INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL - 1);
+        const view = readAtLegacyResolution(decode(bytes));
+        const doorwayCell = LEGACY_ENTRANCE_ROW * LEGACY_NUM_COLS + LEGACY_ENTRANCE_COL;
+        const insideFace = VoxelQueryUtil.getVoxelQuadIndexOffsetInsideLayer("z", "-");
 
         for (let layer = COLLISION_LAYER_MIN;
-            layer < COLLISION_LAYER_MIN + INITIAL_MULTI_PLAYER_ENTRANCE_HEIGHT_IN_LAYERS; ++layer)
+            layer < COLLISION_LAYER_MIN + LEGACY_ENTRANCE_HEIGHT_IN_LAYERS; ++layer)
         {
             // Solid, so that a door has something to hang on...
-            expect(VoxelQueryUtil.isVoxelBlockPresent(doorway, layer)).toBe(true);
+            expect(view.masks[doorwayCell] & (1 << layer)).not.toBe(0);
 
             // ...and finished like its neighbour, so it reads as wall.
-            const doorwayFirst = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(
-                doorway.row, doorway.col, layer);
-            const wallFirst = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(
-                wallBeside.row, wallBeside.col, layer);
-            const insideFace = VoxelQueryUtil.getVoxelQuadIndex(
-                doorway.row, doorway.col, "z", "-", layer) - doorwayFirst;
-            expect(quadTextureIndex(grid.quadsMem.quads[doorwayFirst + insideFace]))
-                .toBe(quadTextureIndex(grid.quadsMem.quads[wallFirst + insideFace]));
+            expect(view.quads[legacyQuadIndexOf(LEGACY_ENTRANCE_ROW, LEGACY_ENTRANCE_COL, layer, insideFace)])
+                .toBe(view.quads[legacyQuadIndexOf(LEGACY_ENTRANCE_ROW, LEGACY_ENTRANCE_COL - 1, layer, insideFace)]);
         }
     });
 
     it("leaves the storey above the slab empty", () => {
         const grid = decode(bytes);
+        let numBlocks = 0, numPaintedQuads = 0;
         for (const voxel of grid.voxels)
         {
             for (let layer = LEGACY_NUM_COLLISION_LAYERS + 1; layer <= COLLISION_LAYER_MAX; ++layer)
             {
-                expect(VoxelQueryUtil.isVoxelBlockPresent(voxel, layer)).toBe(false);
+                if (VoxelQueryUtil.isVoxelBlockPresent(voxel, layer))
+                    ++numBlocks;
 
                 const first = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(voxel.row, voxel.col, layer);
                 for (let i = 0; i < NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
-                    expect(grid.quadsMem.quads[first + i]).toBe(0);
+                {
+                    if (grid.quadsMem.quads[first + i] != 0)
+                        ++numPaintedQuads;
+                }
             }
         }
+        expect(numBlocks).toBe(0);
+        expect(numPaintedQuads).toBe(0);
     });
 
     it("leaves the room's floor exactly as it was", () => {
-        const grid = decodeWithDoorwayReopened(bytes);
-        for (let i = 0; i < grid.voxels.length; ++i)
-        {
-            const voxel = grid.voxels[i];
-            const quad = legacyQuad(grid, VoxelQueryUtil.getFloorVoxelQuadIndex(voxel.row, voxel.col));
-            expect(quad).toBe(expected.floorQuads[i]);
-        }
+        const view = readAtLegacyResolution(decodeWithDoorwayReopened(bytes));
+        expect(expected.floorQuads.map((_, cellIndex) => legacyQuad(view, legacyFloorQuadIndexOf(cellIndex))))
+            .toEqual(expected.floorQuads);
     });
 
     it("shows the old ceiling from below, as the underside of the new storey floor", () => {
-        const grid = decodeWithDoorwayReopened(bytes);
-        for (let i = 0; i < grid.voxels.length; ++i)
+        const view = readAtLegacyResolution(decodeWithDoorwayReopened(bytes));
+        const underside = VoxelQueryUtil.getVoxelQuadIndexOffsetInsideLayer("y", "-");
+        for (let cellIndex = 0; cellIndex < expected.ceilingQuads.length; ++cellIndex)
         {
-            const voxel = grid.voxels[i];
-            const slabQuadIndex = VoxelQueryUtil.getVoxelQuadIndex(
-                voxel.row, voxel.col, "y", "-", LEGACY_NUM_COLLISION_LAYERS);
-            const slabQuad = grid.quadsMem.quads[slabQuadIndex];
+            const slabQuadIndex = cellIndex * NUM_VOXEL_QUADS_PER_VOXEL +
+                NUM_VOXEL_QUADS_PER_COLLISION_LAYER * LEGACY_NUM_COLLISION_LAYERS + underside;
 
-            // It carries what the ceiling tile it replaces carried...
-            expect(quadTextureIndex(slabQuad)).toBe(quadTextureIndex(expected.ceilingQuads[i]));
-
-            // ...visible exactly where the ceiling tile was (every cell not walled to the top).
-            expect(VoxelQueryUtil.isVoxelQuadVisible(grid.voxels, slabQuadIndex))
-                .toBe(quadIsVisible(expected.ceilingQuads[i]));
+            // It carries what the ceiling tile it replaces carried, visible exactly where the ceiling tile
+            // was (every cell not walled to the top).
+            expect(legacyQuad(view, slabQuadIndex), `cell ${cellIndex}`).toBe(expected.ceilingQuads[cellIndex]);
         }
     });
 
     it("hangs the room's own ceiling over the empty storey instead", () => {
-        const grid = decode(bytes);
-        for (let i = 0; i < grid.voxels.length; ++i)
+        const view = readAtLegacyResolution(decode(bytes));
+        for (let cellIndex = 0; cellIndex < expected.ceilingQuads.length; ++cellIndex)
         {
-            const voxel = grid.voxels[i];
-            const quadIndex = VoxelQueryUtil.getCeilingVoxelQuadIndex(voxel.row, voxel.col);
-
             // Nothing stands above it, so every cell is visible.
-            expect(VoxelQueryUtil.isVoxelQuadVisible(grid.voxels, quadIndex)).toBe(true);
-            expect(quadTextureIndex(grid.quadsMem.quads[quadIndex]))
-                .toBe(quadTextureIndex(expected.ceilingQuads[i]));
+            expect(legacyQuad(view, legacyCeilingQuadIndexOf(cellIndex)), `cell ${cellIndex}`)
+                .toBe(quadTextureIndex(expected.ceilingQuads[cellIndex]) | LEGACY_QUAD_VISIBLE_BIT);
         }
     });
 
@@ -242,49 +349,76 @@ describe.each(FIXTURE_NAMES)("migrating a version-1 room (%s)", (name) => {
 
     it("comes out of a second decode identical to the first", () => {
         // Migration depends only on the blob, so repeated loads agree.
-        const first = decode(bytes);
-        const second = decode(bytes);
-        expect(Array.from(second.quadsMem.quads)).toEqual(Array.from(first.quadsMem.quads));
-        expect(second.voxels.map(v => VoxelQueryUtil.getVoxelBlockLayerMask(v)))
-            .toEqual(first.voxels.map(v => VoxelQueryUtil.getVoxelBlockLayerMask(v)));
+        expectSameGrid(decode(bytes), decode(bytes));
     });
 
     it("survives a round trip through the current format unchanged", () => {
         // Re-reading a migrated room must give the same room, or it decays on each save.
         const migrated = decode(bytes);
-        const out = new BufferState(new Uint8Array(1024 * 1024));
-        migrated.encode(out);
-        const reloaded = decode(out.view.slice(0, out.byteIndex));
-
-        expect(Array.from(reloaded.quadsMem.quads)).toEqual(Array.from(migrated.quadsMem.quads));
-        expect(reloaded.voxels.map(v => VoxelQueryUtil.getVoxelBlockLayerMask(v)))
-            .toEqual(migrated.voxels.map(v => VoxelQueryUtil.getVoxelBlockLayerMask(v)));
+        expectSameGrid(decode(encode(migrated)), migrated);
     });
 });
 
 describe("migrating a version-0 room", () => {
-    // v0 shares v1's layout, so reading one exercises the whole conversion chain.
-    const {bytes} = loadFixture("bare");
-    const version0Bytes = bytes.slice();
+    // v0 shares v1's layout, so reading one exercises the whole conversion chain. A version-0 room had no
+    // walls in its corners, so the fixture's are taken out of it first.
+    const CORNERS = [[0, 0], [0, LEGACY_NUM_COLS - 1], [LEGACY_NUM_ROWS - 1, 0], [LEGACY_NUM_ROWS - 1, LEGACY_NUM_COLS - 1]];
+    const version0Bytes = withCellsEmptied(loadFixture("bare").bytes, CORNERS);
     version0Bytes[0] = 0;
+
+    // A half-height blob (see the fixtures' README) with the blocks of some of its cells left out: each cell
+    // is its ceiling and floor quads, a one-byte mask of its layers, then six quads for each layer named.
+    function withCellsEmptied(bytes: Uint8Array, cells: number[][]): Uint8Array
+    {
+        const out: number[] = [bytes[0]];
+        let byteIndex = 1;
+        for (let cellIndex = 0; cellIndex < LEGACY_NUM_ROWS * LEGACY_NUM_COLS; ++cellIndex)
+        {
+            const mask = bytes[byteIndex + 2];
+            const numLayerBytes = NUM_VOXEL_QUADS_PER_COLLISION_LAYER * (mask.toString(2).split("1").length - 1);
+            const emptied = cells.some(([row, col]) => row * LEGACY_NUM_COLS + col == cellIndex);
+            out.push(bytes[byteIndex], bytes[byteIndex + 1], emptied ? 0 : mask);
+            if (!emptied)
+                out.push(...bytes.subarray(byteIndex + 3, byteIndex + 3 + numLayerBytes));
+            byteIndex += 3 + numLayerBytes;
+        }
+        expect(byteIndex).toBe(bytes.length);
+        return new Uint8Array(out);
+    }
 
     it("is carried through every version up to the current one", () => {
         const grid = decode(version0Bytes);
+        expect(grid.sourceFormatVersion).toBe(0);
+        expectEveryCellQuadrupled(grid);
+        const view = readAtLegacyResolution(grid);
 
-        for (const voxel of grid.voxels)
-        {
-            expect(VoxelQueryUtil.isVoxelBlockPresent(voxel, LEGACY_NUM_COLLISION_LAYERS))
-                .toBe(true);
-        }
+        for (const mask of view.masks)
+            expect(mask & (1 << LEGACY_NUM_COLLISION_LAYERS)).not.toBe(0);
+    });
 
-        // The corner walls version 1 introduced are there, standing through the room's lower storey.
-        for (const [row, col] of [[0, 0], [0, NUM_VOXEL_COLS - 1],
-            [NUM_VOXEL_ROWS - 1, 0], [NUM_VOXEL_ROWS - 1, NUM_VOXEL_COLS - 1]])
+    it("is given the corner walls version 1 introduced, standing through its lower storey", () => {
+        const view = readAtLegacyResolution(decode(version0Bytes));
+        const lowerStorey = (1 << LEGACY_NUM_COLLISION_LAYERS) - 1;
+        for (const [row, col] of CORNERS)
         {
-            const voxel = getVoxel(grid, row, col);
+            expect(view.masks[row * LEGACY_NUM_COLS + col] & lowerStorey, `corner ${row},${col}`).toBe(lowerStorey);
+            // Finished in the first texture, as they were put up.
             for (let layer = COLLISION_LAYER_MIN; layer <= LEGACY_COLLISION_LAYER_MAX; ++layer)
-                expect(VoxelQueryUtil.isVoxelBlockPresent(voxel, layer)).toBe(true);
+            {
+                for (let i = 0; i < NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
+                    expect(view.quads[legacyQuadIndexOf(row, col, layer, i)]).toBe(0);
+            }
         }
+    });
+
+    it("has no corner walls of its own to begin with, read as the version after it", () => {
+        // (The control: stamped as version 1, the same bytes keep their corners open.)
+        const version1Bytes = version0Bytes.slice();
+        version1Bytes[0] = 1;
+        const view = readAtLegacyResolution(decode(version1Bytes));
+        const lowerStorey = (1 << LEGACY_NUM_COLLISION_LAYERS) - 1;
+        for (const [row, col] of CORNERS)
+            expect(view.masks[row * LEGACY_NUM_COLS + col] & lowerStorey, `corner ${row},${col}`).toBe(0);
     });
 });
 
@@ -298,8 +432,8 @@ describe("the migrated room as a room", () => {
         // An open doorway would reject the room's own door (see ObjectAttachmentUtil), so this is checked
         // after migration.
         const grid = decode(loadFixture("procedural_1").bytes);
-        const entrance = getVoxel(grid, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL);
-        expect(VoxelQueryUtil.isVoxelBlockPresent(entrance, COLLISION_LAYER_MIN)).toBe(true);
+        for (const {row, col} of DOORWAY_VOXELS)
+            expect(VoxelQueryUtil.isVoxelBlockPresent(getVoxel(grid, row, col), COLLISION_LAYER_MIN)).toBe(true);
     });
 });
 
@@ -328,15 +462,33 @@ function loadVersion3Fixture(name: string): {bytes: Uint8Array, expected: Versio
 
 // The same fold the version-3 and version-4 fixtures were written with, over the whole of the room's quad
 // memory as those versions held it.
-function hashAllQuads(grid: VoxelGrid): number
+function hashAllQuads(view: LegacyView): number
 {
     let hash = 0x811c9dc5; // FNV-1a
-    for (let i = 0; i < grid.quadsMem.quads.length; ++i)
+    for (let i = 0; i < LEGACY_NUM_QUADS; ++i)
     {
-        hash ^= legacyQuad(grid, i);
+        hash ^= legacyQuad(view, i);
         hash = Math.imul(hash, 0x01000193) >>> 0;
     }
     return hash;
+}
+
+function countVisibleQuads(view: LegacyView): number
+{
+    return view.visible.filter(visible => visible).length;
+}
+
+function zonesOf(grid: VoxelGrid): number[][]
+{
+    return grid.restrictedZones.map(zone => [zone.rowMin, zone.rowMax, zone.colMin, zone.colMax]);
+}
+
+// Zones as an older room wrote them, over cells a world unit wide, as they should come back: over the voxels
+// those cells became.
+function overVoxels(legacyZones: number[][]): number[][]
+{
+    return legacyZones.map(([rowMin, rowMax, colMin, colMax]) =>
+        [2 * rowMin, 2 * rowMax + 1, 2 * colMin, 2 * colMax + 1]);
 }
 
 describe.each(V3_FIXTURE_NAMES)("migrating a version-3 room (%s)", (name) => {
@@ -348,11 +500,14 @@ describe.each(V3_FIXTURE_NAMES)("migrating a version-3 room (%s)", (name) => {
         expect(decode(bytes).sourceFormatVersion).toBe(3);
     });
 
-    it("comes back with every voxel exactly as it was written", () => {
+    it("comes back with every cell exactly as it was written, as four voxels alike", () => {
         const grid = decode(bytes);
-        expect(grid.voxels.map(v => VoxelQueryUtil.getVoxelBlockLayerMask(v))).toEqual(expected.masks);
-        expect(hashAllQuads(grid)).toBe(expected.quadsHash);
-        expect(countVisibleQuads(grid)).toBe(expected.numVisibleQuads);
+        expectEveryCellQuadrupled(grid);
+
+        const view = readAtLegacyResolution(grid);
+        expect(view.masks).toEqual(expected.masks);
+        expect(hashAllQuads(view)).toBe(expected.quadsHash);
+        expect(countVisibleQuads(view)).toBe(expected.numVisibleQuads);
         expect(grid.quadsMem.quads.every(quad => quad < LEGACY_QUAD_VISIBLE_BIT)).toBe(true);
     });
 
@@ -363,17 +518,11 @@ describe.each(V3_FIXTURE_NAMES)("migrating a version-3 room (%s)", (name) => {
 
     it("survives a round trip through the current format unchanged", () => {
         const migrated = decode(bytes);
-        migrated.restrictedZones = [new RestrictedZone(2, 9, 3, 11), new RestrictedZone(20, 20, 0, 31)];
+        migrated.restrictedZones = [new RestrictedZone(2, 9, 3, 11), new RestrictedZone(20, 20, 0, NUM_VOXEL_COLS - 1)];
 
-        const out = new BufferState(new Uint8Array(MAX_ENCODED_VOXEL_GRID_BYTES));
-        migrated.encode(out);
-        expect(out.view[0]).toBe(VoxelGrid.latestFormatVersion);
-
-        const reloaded = decode(out.view.slice(0, out.byteIndex));
-        expect(Array.from(reloaded.quadsMem.quads)).toEqual(Array.from(migrated.quadsMem.quads));
-        expect(reloaded.voxels.map(v => VoxelQueryUtil.getVoxelBlockLayerMask(v)))
-            .toEqual(migrated.voxels.map(v => VoxelQueryUtil.getVoxelBlockLayerMask(v)));
-        expect(reloaded.restrictedZones).toEqual(migrated.restrictedZones);
+        const stored = encode(migrated);
+        expect(stored[0]).toBe(VoxelGrid.latestFormatVersion);
+        expectSameGrid(decode(stored), migrated);
     });
 });
 
@@ -403,17 +552,6 @@ function loadVersion4Fixture(name: string): {bytes: Uint8Array, expected: Versio
     };
 }
 
-function countVisibleQuads(grid: VoxelGrid): number
-{
-    let count = 0;
-    for (let quadIndex = 0; quadIndex < NUM_VOXEL_QUADS_PER_ROOM; ++quadIndex)
-    {
-        if (VoxelQueryUtil.isVoxelQuadVisible(grid.voxels, quadIndex))
-            ++count;
-    }
-    return count;
-}
-
 describe.each(V4_FIXTURE_NAMES)("migrating a version-4 room (%s)", (name) => {
     const {bytes, expected} = loadVersion4Fixture(name);
 
@@ -423,32 +561,41 @@ describe.each(V4_FIXTURE_NAMES)("migrating a version-4 room (%s)", (name) => {
         expect(decode(bytes).sourceFormatVersion).toBe(4);
     });
 
-    it("comes back with every voxel and every zone exactly as it was written", () => {
+    it("comes back with every cell exactly as it was written, and every zone over the same ground", () => {
         const grid = decode(bytes);
-        expect(grid.voxels.map(v => VoxelQueryUtil.getVoxelBlockLayerMask(v))).toEqual(expected.masks);
-        expect(grid.restrictedZones.map(zone => [zone.rowMin, zone.rowMax, zone.colMin, zone.colMax]))
-            .toEqual(expected.restrictedZones);
+        expectEveryCellQuadrupled(grid);
+        expect(readAtLegacyResolution(grid).masks).toEqual(expected.masks);
+        expect(zonesOf(grid)).toEqual(overVoxels(expected.restrictedZones));
     });
 
     it("shows the faces it was stored as drawing, each in its texture, without an outer shell", () => {
-        const grid = decode(bytes);
-        expect(hashAllQuads(grid)).toBe(expected.quadsHashWithoutOuterShell);
-        expect(countVisibleQuads(grid)).toBe(expected.numVisibleQuads - expected.numVisibleOuterShellQuads);
+        const view = readAtLegacyResolution(decode(bytes));
+        expect(hashAllQuads(view)).toBe(expected.quadsHashWithoutOuterShell);
+        expect(countVisibleQuads(view)).toBe(expected.numVisibleQuads - expected.numVisibleOuterShellQuads);
     });
 
     it("leaves the bit that said so unused, and keeps it so through a save", () => {
         const migrated = decode(bytes);
         expect(migrated.quadsMem.quads.every(quad => quad < LEGACY_QUAD_VISIBLE_BIT)).toBe(true);
 
-        const out = new BufferState(new Uint8Array(MAX_ENCODED_VOXEL_GRID_BYTES));
-        migrated.encode(out);
-        expect(out.view[0]).toBe(VoxelGrid.latestFormatVersion);
+        const stored = encode(migrated);
+        expect(stored[0]).toBe(VoxelGrid.latestFormatVersion);
+        expectSameGrid(decode(stored), migrated);
+    });
+});
 
-        const reloaded = decode(out.view.slice(0, out.byteIndex));
-        expect(Array.from(reloaded.quadsMem.quads)).toEqual(Array.from(migrated.quadsMem.quads));
-        expect(reloaded.voxels.map(v => VoxelQueryUtil.getVoxelBlockLayerMask(v)))
-            .toEqual(migrated.voxels.map(v => VoxelQueryUtil.getVoxelBlockLayerMask(v)));
-        expect(reloaded.restrictedZones).toEqual(migrated.restrictedZones);
+describe("an older room claiming more zones than a room may carry", () => {
+    it("is refused, whichever version wrote it", () => {
+        for (const {bytes, expected} of [loadVersion4Fixture("mixed"), loadVersion5Fixture("mixed"), loadVersion6Fixture("regular")])
+        {
+            // The zones are the last thing in the blob, after the byte that counts them.
+            const countByteIndex = bytes.length - 1 - 4 * expected.restrictedZones.length;
+            expect(bytes[countByteIndex]).toBe(expected.restrictedZones.length);
+
+            const tampered = bytes.slice();
+            tampered[countByteIndex] = MAX_RESTRICTED_ZONES + 1;
+            expect(() => decode(tampered), `version ${bytes[0]}`).toThrow(/zone count is out of range/);
+        }
     });
 });
 
@@ -465,6 +612,7 @@ describe("a room saved while the outer shell was still drawn", () => {
 
     it("comes back with no face drawn on the outside of the grid", () => {
         const grid = decode(bytes);
+        let numOutwardQuadsDrawn = 0;
         for (let layer = COLLISION_LAYER_MIN; layer <= COLLISION_LAYER_MAX; ++layer)
         {
             const outwardQuadIndices: number[] = [];
@@ -478,15 +626,17 @@ describe("a room saved while the outer shell was still drawn", () => {
                 outwardQuadIndices.push(VoxelQueryUtil.getVoxelQuadIndex(0, col, "z", "-", layer));
                 outwardQuadIndices.push(VoxelQueryUtil.getVoxelQuadIndex(NUM_VOXEL_ROWS - 1, col, "z", "+", layer));
             }
-            for (const quadIndex of outwardQuadIndices)
-                expect(VoxelQueryUtil.isVoxelQuadVisible(grid.voxels, quadIndex)).toBe(false);
+            numOutwardQuadsDrawn += outwardQuadIndices.filter(quadIndex =>
+                VoxelQueryUtil.isVoxelQuadVisible(grid.voxels, quadIndex)).length;
         }
+        expect(numOutwardQuadsDrawn).toBe(0);
     });
 });
 
 // ─── Version 5: the last format holding whole blocks only ───
-// Its layout is the one still written, and its blocks are all whole, which is written the same way now. So
-// one of these rooms must come back as it was, and be written again exactly as it was after its version.
+// Its layout is version 6's, and its blocks are all whole, which version 6 wrote the same way. So one of
+// these rooms must come back with every block it held as four cubes, and nothing shrunk or missing for a
+// reader having mistaken the bit it left unused.
 
 const V5_FIXTURE_DIR = path.join(__dirname, "../fixtures/voxelGridsV5");
 const V5_FIXTURE_NAMES = ["hub", "regular", "mixed"];
@@ -508,20 +658,20 @@ function loadVersion5Fixture(name: string): {bytes: Uint8Array, expected: Versio
     };
 }
 
-// The fold the version-5 fixtures were written with: over the room's quad memory as it is, which by then
-// held texture indices alone.
-function hashQuadMemory(grid: VoxelGrid): number
+// The fold the fixtures from version 5 on were written with: over a room's quad memory as it is, which by
+// then held texture indices alone.
+function hashQuadMemory(quads: Uint8Array): number
 {
     let hash = 0x811c9dc5; // FNV-1a
-    for (let i = 0; i < grid.quadsMem.quads.length; ++i)
+    for (let i = 0; i < quads.length; ++i)
     {
-        hash ^= grid.quadsMem.quads[i];
+        hash ^= quads[i];
         hash = Math.imul(hash, 0x01000193) >>> 0;
     }
     return hash;
 }
 
-describe.each(V5_FIXTURE_NAMES)("reading a version-5 room (%s)", (name) => {
+describe.each(V5_FIXTURE_NAMES)("migrating a version-5 room (%s)", (name) => {
     const {bytes, expected} = loadVersion5Fixture(name);
 
     it("is the room its fixture says it is", () => {
@@ -530,67 +680,182 @@ describe.each(V5_FIXTURE_NAMES)("reading a version-5 room (%s)", (name) => {
         expect(decode(bytes).sourceFormatVersion).toBe(5);
     });
 
-    it("comes back with every voxel, quad and zone exactly as it was written", () => {
+    it("comes back with every cell and quad exactly as it was written, as four voxels alike, and every zone over the same ground", () => {
         const grid = decode(bytes);
-        expect(grid.voxels.map(v => VoxelQueryUtil.getVoxelBlockLayerMask(v))).toEqual(expected.masks);
-        expect(hashQuadMemory(grid)).toBe(expected.quadsHash);
-        expect(countVisibleQuads(grid)).toBe(expected.numVisibleQuads);
-        expect(grid.restrictedZones.map(zone => [zone.rowMin, zone.rowMax, zone.colMin, zone.colMax]))
-            .toEqual(expected.restrictedZones);
+        expectEveryCellQuadrupled(grid);
+
+        const view = readAtLegacyResolution(grid);
+        expect(view.masks).toEqual(expected.masks);
+        expect(hashQuadMemory(view.quads)).toBe(expected.quadsHash);
+        expect(countVisibleQuads(view)).toBe(expected.numVisibleQuads);
+        expect(zonesOf(grid)).toEqual(overVoxels(expected.restrictedZones));
     });
 
-    it("holds whole blocks and nothing else", () => {
-        const grid = decode(bytes);
-        expect(Array.from(grid.quadsMem.blockShapes).every(shape =>
-            shape == VOXEL_BLOCK_SHAPE_EMPTY || shape == VOXEL_BLOCK_SHAPE_WHOLE)).toBe(true);
-    });
-
-    it("is written again exactly as it was, after its version", () => {
-        const out = new BufferState(new Uint8Array(MAX_ENCODED_VOXEL_GRID_BYTES));
-        decode(bytes).encode(out);
-        expect(out.view[0]).toBe(VoxelGrid.latestFormatVersion);
-        expect(Array.from(out.view.slice(1, out.byteIndex))).toEqual(Array.from(bytes.slice(1)));
+    it("survives a round trip through the current format unchanged", () => {
+        const migrated = decode(bytes);
+        const stored = encode(migrated);
+        expect(stored[0]).toBe(VoxelGrid.latestFormatVersion);
+        expectSameGrid(decode(stored), migrated);
     });
 });
 
-// ─── Version 6: blocks have shapes ──────────────────────────────────────────
-// The layout is version 5's still. What is new is in the bit each quad's byte had to spare: on a block's
-// four side quads it says that one of the block's sub-blocks is cut away (see Voxel).
+// ─── Version 6 -> 7: every block a cube ─────────────────────────────────────
+// A version-6 block filled all of its cell layer, a half of it or a quarter. Each of the half-cell
+// sub-blocks it filled is a voxel's block now, so the room keeps its form, and a block's shape is gone.
 
-describe("a room holding shrunk blocks", () => {
-    const SHAPES = [VOXEL_BLOCK_SHAPE_WHOLE, 0b0101, 0b1010, 0b0011, 0b1100, 0b0001, 0b0010, 0b0100, 0b1000];
-    const ROW = 10;
-    const LAYER = 5;
+const V6_FIXTURE_DIR = path.join(__dirname, "../fixtures/voxelGridsV6");
+const V6_FIXTURE_NAMES = ["shapes", "regular", "hub"];
 
-    // One block of every shape in a row of an otherwise open stretch, each with textures of its own.
-    function buildRoom(shapes: number[] = SHAPES): VoxelGrid
-    {
-        const grid = VoxelGrid.createBaseGrid();
-        for (let col = 1; col <= 2 * shapes.length; ++col)
+interface Version6RoomDescription
+{
+    // One hex digit per block, in block index order over the legacy cells (see the fixtures' README).
+    shapes: string;
+    numBlocksByShape: {[shape: string]: number};
+    quadsHash: number;
+    restrictedZones: number[][];
+    byteLength: number;
+}
+
+function loadVersion6Fixture(name: string): {bytes: Uint8Array, expected: Version6RoomDescription}
+{
+    return {
+        bytes: new Uint8Array(fs.readFileSync(path.join(V6_FIXTURE_DIR, `${name}.bin`))),
+        expected: JSON.parse(fs.readFileSync(path.join(V6_FIXTURE_DIR, `${name}.json`), "utf8")),
+    };
+}
+
+function shapeOf(expected: Version6RoomDescription, legacyRow: number, legacyCol: number, layer: number): number
+{
+    return parseInt(expected.shapes[(legacyRow * LEGACY_NUM_COLS + legacyCol) * NUM_COLLISION_LAYERS + layer], 16);
+}
+
+describe.each(V6_FIXTURE_NAMES)("migrating a version-6 room (%s)", (name) => {
+    const {bytes, expected} = loadVersion6Fixture(name);
+
+    it("is the room its fixture says it is", () => {
+        expect(bytes[0]).toBe(6);
+        expect(bytes.length).toBe(expected.byteLength);
+        expect(expected.shapes.length).toBe(LEGACY_NUM_ROWS * LEGACY_NUM_COLS * NUM_COLLISION_LAYERS);
+        expect(decode(bytes).sourceFormatVersion).toBe(6);
+    });
+
+    it("stands a cube wherever a block filled a sub-block, and nowhere else", () => {
+        const grid = decode(bytes);
+        expect(grid.voxels.length).toBe(NUM_VOXEL_ROWS * NUM_VOXEL_COLS);
+
+        let numCubes = 0, numCubesAtOdds = 0;
+        for (let legacyRow = 0; legacyRow < LEGACY_NUM_ROWS; ++legacyRow)
         {
-            for (let layer = COLLISION_LAYER_MIN; layer <= COLLISION_LAYER_MAX; ++layer)
-                VoxelUpdateUtil.removeVoxelBlock(undefined, grid.voxels, VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(ROW, col, layer));
+            for (let legacyCol = 0; legacyCol < LEGACY_NUM_COLS; ++legacyCol)
+            {
+                const voxels = voxelsOfLegacyCell(grid, legacyRow, legacyCol);
+                for (let layer = COLLISION_LAYER_MIN; layer <= COLLISION_LAYER_MAX; ++layer)
+                {
+                    const shape = shapeOf(expected, legacyRow, legacyCol, layer);
+                    for (let subBlock = 0; subBlock < 4; ++subBlock)
+                    {
+                        const filled = (shape & (1 << subBlock)) != 0;
+                        if (filled)
+                            ++numCubes;
+                        if (VoxelQueryUtil.isVoxelBlockPresent(voxels[subBlock], layer) != filled)
+                            ++numCubesAtOdds;
+                    }
+                }
+            }
         }
-        shapes.forEach((shape, i) => {
-            const textures = Array.from({length: NUM_VOXEL_QUADS_PER_COLLISION_LAYER}, (_, face) => 10 * (i + 1) + face);
-            expect(VoxelUpdateUtil.addVoxelBlock(undefined, grid.voxels,
-                VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(ROW, 2 * i + 1, LAYER), textures, undefined, shape)).toBe(true);
-        });
-        return grid;
-    }
+        expect(numCubesAtOdds).toBe(0);
 
-    function encode(grid: VoxelGrid): Uint8Array
-    {
-        const out = new BufferState(new Uint8Array(MAX_ENCODED_VOXEL_GRID_BYTES));
-        grid.encode(out);
-        return out.view.slice(0, out.byteIndex);
-    }
+        // Four cubes for a whole block, two for a half, one for a quarter.
+        const numSubBlocksOf = (shape: number) => [0, 1, 2, 3].filter(subBlock => shape & (1 << subBlock)).length;
+        expect(numCubes).toBe(Object.entries(expected.numBlocksByShape)
+            .reduce((sum, [shape, numBlocks]) => sum + numSubBlocksOf(Number(shape)) * numBlocks, 0));
+    });
+
+    it("finishes every cube as the block it was part of, and leaves empty space unpainted", () => {
+        const grid = decode(bytes);
+        const quads = grid.quadsMem.quads;
+
+        // The room's quad memory as version 6 held it, put back together from the cubes: a block's six
+        // quads from any cube of it, since all of them must carry the same.
+        const legacyQuads = new Uint8Array(LEGACY_NUM_QUADS);
+        let numCubesAtOdds = 0;
+        for (let legacyRow = 0; legacyRow < LEGACY_NUM_ROWS; ++legacyRow)
+        {
+            for (let legacyCol = 0; legacyCol < LEGACY_NUM_COLS; ++legacyCol)
+            {
+                const voxels = voxelsOfLegacyCell(grid, legacyRow, legacyCol);
+                for (let layer = COLLISION_LAYER_MIN; layer <= COLLISION_LAYER_MAX; ++layer)
+                {
+                    const shape = shapeOf(expected, legacyRow, legacyCol, layer);
+                    const firstCube = voxels.find((_, subBlock) => (shape & (1 << subBlock)) != 0);
+                    for (let i = 0; i < NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
+                    {
+                        const quadOf = (voxel: Voxel) =>
+                            quads[VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(voxel.row, voxel.col, layer) + i];
+                        const blockQuad = (firstCube != undefined) ? quadOf(firstCube) : 0;
+                        legacyQuads[legacyQuadIndexOf(legacyRow, legacyCol, layer, i)] = blockQuad;
+
+                        voxels.forEach((voxel, subBlock) => {
+                            if (quadOf(voxel) != ((shape & (1 << subBlock)) ? blockQuad : 0))
+                                ++numCubesAtOdds;
+                        });
+                    }
+                }
+
+                // The room's own ceiling and floor tiles over the cell, which all four voxels take.
+                const cellIndex = legacyRow * LEGACY_NUM_COLS + legacyCol;
+                for (const [legacyQuadIndex, quadIndexOf] of [
+                    [legacyCeilingQuadIndexOf(cellIndex), VoxelQueryUtil.getCeilingVoxelQuadIndex],
+                    [legacyFloorQuadIndexOf(cellIndex), VoxelQueryUtil.getFloorVoxelQuadIndex]] as const)
+                {
+                    legacyQuads[legacyQuadIndex] = quads[quadIndexOf(voxels[0].row, voxels[0].col)];
+                    if (voxels.some(voxel => quads[quadIndexOf(voxel.row, voxel.col)] != legacyQuads[legacyQuadIndex]))
+                        ++numCubesAtOdds;
+                }
+            }
+        }
+        expect(numCubesAtOdds).toBe(0);
+        expect(hashQuadMemory(legacyQuads)).toBe(expected.quadsHash);
+    });
+
+    it("keeps its zones over the same ground", () => {
+        expect(zonesOf(decode(bytes))).toEqual(overVoxels(expected.restrictedZones));
+    });
+
+    it("leaves the bits that spelt its blocks' shapes unused, and keeps them so through a save", () => {
+        const migrated = decode(bytes);
+        expect(migrated.quadsMem.quads.every(quad => (quad & 0b10000000) == 0)).toBe(true);
+
+        const stored = encode(migrated);
+        expect(stored[0]).toBe(VoxelGrid.latestFormatVersion);
+        expectSameGrid(decode(stored), migrated);
+    });
+
+    it("comes out of a second decode identical to the first", () => {
+        expectSameGrid(decode(bytes), decode(bytes));
+    });
+});
+
+describe("a version-6 room of whole blocks", () => {
+    it("comes back as the same room read from version 5 would", () => {
+        // The hub fixture holds no shrunk block, so each of its cells is four voxels alike.
+        const {bytes, expected} = loadVersion6Fixture("hub");
+        expect(Object.keys(expected.numBlocksByShape).sort()).toEqual(["0", "15"]);
+        expectEveryCellQuadrupled(decode(bytes));
+    });
+});
+
+describe("a version-6 room whose stored bits spell no shape a block could have", () => {
+    // Version 6's own reader refused such a room. Any sub-blocks make up a room of cubes, so they are
+    // taken as they stand.
+    const {bytes, expected} = loadVersion6Fixture("shapes");
 
     // Where a stored block's six quad bytes start, found by walking the layout itself.
-    function storedBlockByteIndex(bytes: Uint8Array, row: number, col: number, layer: number): number
+    function storedBlockByteIndex(legacyRow: number, legacyCol: number, layer: number): number
     {
+        const countBits = (mask: number) => mask.toString(2).split("1").length - 1;
         let byteIndex = 1; // past the version
-        for (let voxelIndex = 0; voxelIndex < row * NUM_VOXEL_COLS + col; ++voxelIndex)
+        for (let cellIndex = 0; cellIndex < legacyRow * LEGACY_NUM_COLS + legacyCol; ++cellIndex)
         {
             const mask = bytes[byteIndex + 2] | (bytes[byteIndex + 3] << 8);
             byteIndex += 4 + NUM_VOXEL_QUADS_PER_COLLISION_LAYER * countBits(mask);
@@ -600,90 +865,61 @@ describe("a room holding shrunk blocks", () => {
         return byteIndex + 4 + NUM_VOXEL_QUADS_PER_COLLISION_LAYER * countBits(mask & ((1 << layer) - 1));
     }
 
-    function countBits(mask: number): number
+    // A whole block standing free in the hall (see the fixtures' README).
+    const ROW = 6, COL = 5, LAYER = 5;
+
+    function cubesAfterCuttingAway(...subBlocks: number[]): boolean[]
     {
-        let count = 0;
-        for (; mask != 0; mask >>>= 1)
-            count += mask & 1;
-        return count;
+        const tampered = bytes.slice();
+        const first = storedBlockByteIndex(ROW, COL, LAYER);
+        for (const subBlock of subBlocks)
+            tampered[first + 2 + subBlock] |= 0b10000000;
+        return voxelsOfLegacyCell(decode(tampered), ROW, COL).map(voxel => VoxelQueryUtil.isVoxelBlockPresent(voxel, LAYER));
     }
 
-    it("comes back from its encoding with every block's shape and every quad as it was", () => {
-        const grid = buildRoom();
-        const reloaded = decode(encode(grid));
-
-        expect(reloaded.sourceFormatVersion).toBe(VoxelGrid.latestFormatVersion);
-        SHAPES.forEach((shape, i) => {
-            expect(VoxelQueryUtil.getVoxelBlockShapeAt(reloaded.voxels, ROW, 2 * i + 1, LAYER), `block ${i}`).toBe(shape);
-            const first = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(ROW, 2 * i + 1, LAYER);
-            expect(Array.from(reloaded.quadsMem.quads.subarray(first, first + NUM_VOXEL_QUADS_PER_COLLISION_LAYER)), `block ${i}`)
-                .toEqual(Array.from({length: NUM_VOXEL_QUADS_PER_COLLISION_LAYER}, (_, face) => 10 * (i + 1) + face));
-        });
-        expect(Array.from(reloaded.quadsMem.blockShapes)).toEqual(Array.from(grid.quadsMem.blockShapes));
-        expect(countVisibleQuads(reloaded)).toBe(countVisibleQuads(grid));
-        // Written again, it is the same bytes: reading and writing agree on what the spare bits mean.
-        expect(Array.from(encode(reloaded))).toEqual(Array.from(encode(grid)));
+    it("stands on a whole block to begin with", () => {
+        expect(shapeOf(expected, ROW, COL, LAYER)).toBe(0b1111);
+        expect(cubesAfterCuttingAway()).toEqual([true, true, true, true]);
     });
 
-    it("takes exactly the bytes the same room of whole blocks takes, and differs from it in the spare bits alone", () => {
-        const shrunk = encode(buildRoom());
-        const whole = encode(buildRoom(SHAPES.map(() => VOXEL_BLOCK_SHAPE_WHOLE)));
-        expect(shrunk.length).toBe(whole.length);
-
-        const differing: number[] = [];
-        for (let i = 0; i < whole.length; ++i)
-        {
-            if (shrunk[i] != whole[i])
-                differing.push(shrunk[i] ^ whole[i]);
-        }
-        // One bit for each sub-block cut away: two from each of the four halves, three from each quarter.
-        expect(differing.length).toBe(4 * 2 + 4 * 3);
-        expect(differing.every(difference => difference == 0b10000000)).toBe(true);
+    it("reads each side quad's spare bit as its own sub-block cut away, whatever that leaves", () => {
+        // Two left that only touch at a corner, three left in an L, and none left at all.
+        expect(cubesAfterCuttingAway(0, 3)).toEqual([false, true, true, false]);
+        expect(cubesAfterCuttingAway(1, 2)).toEqual([true, false, false, true]);
+        expect(cubesAfterCuttingAway(2)).toEqual([true, true, false, true]);
+        expect(cubesAfterCuttingAway(0, 1, 2, 3)).toEqual([false, false, false, false]);
     });
 
-    it("spells a sub-block cut away on the side quad that stands for it, and nothing on the top and bottom", () => {
-        const bytes = encode(buildRoom());
-        SHAPES.forEach((shape, i) => {
-            const first = storedBlockByteIndex(bytes, ROW, 2 * i + 1, LAYER);
-            const spareBits = Array.from(bytes.subarray(first, first + NUM_VOXEL_QUADS_PER_COLLISION_LAYER),
-                quadByte => quadByte >> 7);
-            // Bottom, top, then the sub-blocks in the order of a shape's bits (x half + 2 * z half).
-            expect(spareBits, `block ${i}`).toEqual([0, 0,
-                (shape & 0b0001) ? 0 : 1, (shape & 0b0010) ? 0 : 1, (shape & 0b0100) ? 0 : 1, (shape & 0b1000) ? 0 : 1]);
-        });
-    });
-
-    it("is refused when a stored block's bits spell no shape a block can have", () => {
-        const bytes = encode(buildRoom());
-        const first = storedBlockByteIndex(bytes, ROW, 1, LAYER); // the whole block
-        const withSubBlocksCutAway = (...subBlocks: number[]) => {
-            const tampered = bytes.slice();
-            for (const subBlock of subBlocks)
-                tampered[first + 2 + subBlock] |= 0b10000000;
-            return tampered;
-        };
-
-        // Two sub-blocks left that only touch at a corner, three left in an L, and none left at all (a
-        // layer with no block is simply not stored, so a stored one with nothing in it is a fault too).
-        expect(() => decode(withSubBlocksCutAway(0, 3))).toThrow(/shape is invalid/);
-        expect(() => decode(withSubBlocksCutAway(1, 2))).toThrow(/shape is invalid/);
-        expect(() => decode(withSubBlocksCutAway(2))).toThrow(/shape is invalid/);
-        expect(() => decode(withSubBlocksCutAway(0, 1, 2, 3))).toThrow(/shape is invalid/);
-        // (Cutting a rectangle's worth away is just another block.)
-        expect(VoxelQueryUtil.getVoxelBlockShapeAt(decode(withSubBlocksCutAway(0, 2)).voxels, ROW, 1, LAYER)).toBe(0b1010);
-
-        // The bottom and top quads' spare bits are not part of the shape, and are dropped on reading.
+    it("drops the spare bits of the bottom and top quads, which were never part of a shape", () => {
         const strayBits = bytes.slice();
+        const first = storedBlockByteIndex(ROW, COL, LAYER);
         strayBits[first] |= 0b10000000;
         strayBits[first + 1] |= 0b10000000;
-        const read = decode(strayBits);
-        expect(VoxelQueryUtil.getVoxelBlockShapeAt(read.voxels, ROW, 1, LAYER)).toBe(VOXEL_BLOCK_SHAPE_WHOLE);
-        expect(Array.from(encode(read))).toEqual(Array.from(bytes));
+        expectSameGrid(decode(strayBits), decode(bytes));
+    });
+});
+
+describe("the current format", () => {
+    it("stores a room in a version of its own, read back as it was written", () => {
+        const grid = decode(loadVersion6Fixture("regular").bytes);
+        const stored = encode(grid);
+        const reloaded = decode(stored);
+        expect(reloaded.sourceFormatVersion).toBe(VoxelGrid.latestFormatVersion);
+        expectSameGrid(reloaded, grid);
+        // Written again, it is the same bytes.
+        expect(Array.from(encode(reloaded))).toEqual(Array.from(stored));
     });
 
-    it("keeps its quads' own memory to texture indices, whatever its blocks' shapes", () => {
-        const reloaded = decode(encode(buildRoom()));
-        expect(reloaded.quadsMem.quads.every(quadByte => (quadByte & 0b10000000) == 0)).toBe(true);
+    it("drops the spare bit of any quad it reads", () => {
+        const stored = encode(decode(loadVersion6Fixture("shapes").bytes));
+        const tampered = stored.slice();
+        // Every quad byte of the first voxel: its two tiles, then (past its mask) its blocks' quads.
+        const mask = tampered[3] | (tampered[4] << 8);
+        const numBlocks = mask.toString(2).split("1").length - 1;
+        expect(numBlocks).toBeGreaterThan(0);
+        for (const byteIndex of [1, 2, ...Array.from({length: NUM_VOXEL_QUADS_PER_COLLISION_LAYER * numBlocks}, (_, i) => 5 + i)])
+            tampered[byteIndex] |= 0b10000000;
+        expectSameGrid(decode(tampered), decode(stored));
     });
 });
 

@@ -4,8 +4,8 @@
  * room is edited and saved.
  * Covers: round trips through the five edit signals; the index range fitting their field; the entrance
  * wall (largest indices); refusal of out-of-range indices by VoxelUpdateUtil, including on the
- * unvalidated path used by generation and the client; the block shape an add and a reshape carry, and
- * the indices the block edit signals are sent on.
+ * unvalidated path used by generation and the client; the bytes an add is sent as, and the indices the
+ * block edit signals are sent on.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runScenario } from "../helpers/scenarioRunner";
@@ -21,11 +21,9 @@ import AddVoxelBlockSignal from "../../../src/shared/voxel/types/update/addVoxel
 import RemoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/removeVoxelBlockSignal";
 import MoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/moveVoxelBlockSignal";
 import SetVoxelQuadTextureSignal from "../../../src/shared/voxel/types/update/setVoxelQuadTextureSignal";
-import SetVoxelBlockShapeSignal from "../../../src/shared/voxel/types/update/setVoxelBlockShapeSignal";
 import SignalTypeConfigMap from "../../../src/shared/networking/maps/signalTypeConfigMap";
-import { COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
-    NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_ROOM, NUM_VOXEL_ROWS, VOXEL_BLOCK_SHAPE_EMPTY,
-    VOXEL_BLOCK_SHAPE_WHOLE } from "../../../src/shared/system/sharedConstants";
+import { COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_POS, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_ROOM,
+    NUM_VOXEL_ROWS } from "../../../src/shared/system/sharedConstants";
 
 // The acting user (editing utilities require one).
 const actingUser = createEditingUser();
@@ -50,7 +48,7 @@ function roundTrip<T>(build: (quadIndex: number) => { encode: (b: BufferState) =
 function getInterestingQuadIndices(): number[]
 {
     const entranceFirst = VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(
-        INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL);
+        NUM_VOXEL_ROWS - 1, VoxelQueryUtil.getVoxelColFromWorldX(INITIAL_MULTI_PLAYER_ENTRANCE_POS.x));
     const lastVoxelFirst = VoxelQueryUtil.getFirstVoxelQuadIndexInVoxel(
         NUM_VOXEL_ROWS - 1, NUM_VOXEL_COLS - 1);
 
@@ -105,46 +103,13 @@ describe("voxel quadIndex encoding and validation", () => {
             expect(textured.quadIndex).toBe(quadIndex);
             expect(textured.textureIndex).toBe(42);
 
-            const reshaped = roundTrip(
-                (i) => new SetVoxelBlockShapeSignal(ROOM_ID, i, 0b0101),
-                (b) => SetVoxelBlockShapeSignal.decode(b) as SetVoxelBlockShapeSignal, quadIndex);
-            expect(reshaped.quadIndex).toBe(quadIndex);
-            expect(reshaped.shape).toBe(0b0101);
-
             expect(added.roomID).toBe(ROOM_ID);
         }
     });
 
-    it("every signal that names a block's shape carries it whole", () => {
+    it("an add is sent as its room, its index and six texture indices, each in seven bits", () => {
         const quadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(10, 10, COLLISION_LAYER_MIN);
         const TEXTURES = [127, 0, 64, 1, 126, 5];
-
-        // An add packs the shape into the spare bits of its six quad bytes, so any of the sixteen values a
-        // shape's four bits can hold comes through, with the textures untouched: refusing one that no
-        // block can have is for whoever applies the signal (see VoxelUpdateUtil).
-        for (let shape = 0; shape <= 0b1111; ++shape)
-        {
-            const added = roundTrip((i) => new AddVoxelBlockSignal(ROOM_ID, i, TEXTURES, shape),
-                (b) => AddVoxelBlockSignal.decode(b) as AddVoxelBlockSignal, quadIndex);
-            expect(added.shape, `added as ${shape}`).toBe(shape);
-            expect(added.quadTextureIndicesWithinLayer, `added as ${shape}`).toEqual(TEXTURES);
-        }
-        // A reshape gives it a byte of its own.
-        for (const shape of [VOXEL_BLOCK_SHAPE_EMPTY, 1, 0b0101, 0b1100, VOXEL_BLOCK_SHAPE_WHOLE, 0b0110, 255])
-        {
-            const reshaped = roundTrip((i) => new SetVoxelBlockShapeSignal(ROOM_ID, i, shape),
-                (b) => SetVoxelBlockShapeSignal.decode(b) as SetVoxelBlockShapeSignal, quadIndex);
-            expect(reshaped.shape, `reshaped as ${shape}`).toBe(shape);
-        }
-
-        // Unsaid, an add is of a whole block.
-        expect(new AddVoxelBlockSignal(ROOM_ID, quadIndex, TEXTURES).shape).toBe(VOXEL_BLOCK_SHAPE_WHOLE);
-    });
-
-    it("an add reads as it always did while its block is whole", () => {
-        // The bytes an add was sent as before blocks had shapes: the room, the index, six texture indices.
-        const quadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(10, 10, COLLISION_LAYER_MIN);
-        const TEXTURES = [1, 2, 3, 4, 5, 6];
         const view = new Uint8Array(SCRATCH_BUFFER_BYTES);
         const writeState = new BufferState(view);
         new EncodableByteString(ROOM_ID).encode(writeState);
@@ -154,10 +119,9 @@ describe("voxel quadIndex encoding and validation", () => {
             view[writeState.byteIndex++] = textureIndex;
 
         const decoded = AddVoxelBlockSignal.decode(new BufferState(view)) as AddVoxelBlockSignal;
-        expect([decoded.roomID, decoded.quadIndex, decoded.quadTextureIndicesWithinLayer, decoded.shape])
-            .toEqual([ROOM_ID, quadIndex, TEXTURES, VOXEL_BLOCK_SHAPE_WHOLE]);
+        expect([decoded.roomID, decoded.quadIndex, decoded.quadTextureIndicesWithinLayer])
+            .toEqual([ROOM_ID, quadIndex, TEXTURES]);
 
-        // And a whole block is sent as exactly those bytes still.
         const rewritten = new Uint8Array(SCRATCH_BUFFER_BYTES);
         const rewriteState = new BufferState(rewritten);
         new AddVoxelBlockSignal(ROOM_ID, quadIndex, TEXTURES).encode(rewriteState);
@@ -165,17 +129,22 @@ describe("voxel quadIndex encoding and validation", () => {
         expect(Array.from(rewritten.subarray(0, rewriteState.byteIndex)))
             .toEqual(Array.from(view.subarray(0, writeState.byteIndex)));
 
-        // The spare bits of the bottom and top quads say nothing: only the four side quads spell the shape.
-        view[firstTextureByteIndex] |= 0b10000000;
-        view[firstTextureByteIndex + 1] |= 0b10000000;
+        // The spare bit of a quad's byte means nothing (a bundle from when it spelt a block's shape may
+        // still set it), and is dropped on reading and on writing.
+        for (let i = 0; i < TEXTURES.length; ++i)
+            view[firstTextureByteIndex + i] |= 0b10000000;
         const withStrayBits = AddVoxelBlockSignal.decode(new BufferState(view)) as AddVoxelBlockSignal;
-        expect([withStrayBits.quadTextureIndicesWithinLayer, withStrayBits.shape])
-            .toEqual([TEXTURES, VOXEL_BLOCK_SHAPE_WHOLE]);
+        expect(withStrayBits.quadTextureIndicesWithinLayer).toEqual(TEXTURES);
+
+        const strayState = new BufferState(new Uint8Array(SCRATCH_BUFFER_BYTES));
+        new AddVoxelBlockSignal(ROOM_ID, quadIndex, TEXTURES.map(textureIndex => textureIndex | 0b10000000)).encode(strayState);
+        expect(Array.from(strayState.view.subarray(0, strayState.byteIndex)))
+            .toEqual(Array.from(rewritten.subarray(0, rewriteState.byteIndex)));
     });
 
     it("sends the block edits older clients know on the indices they know them by, as long as they were", () => {
-        // A bundle from before blocks had shapes decodes these by their old layouts, so neither may grow
-        // without leaving its index: an add kept its bytes (see above), and a move names no shape.
+        // An older bundle decodes these by the layouts it knows, so neither may grow without leaving its
+        // index: an add kept its bytes (see above), and a move is its index and three offsets.
         expect(SignalTypeConfigMap.getIndexByType("addVoxelBlockSignal")).toBe(6);
         expect(SignalTypeConfigMap.getIndexByType("moveVoxelBlockSignal")).toBe(8);
         const quadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(10, 10, COLLISION_LAYER_MIN);
@@ -186,9 +155,9 @@ describe("voxel quadIndex encoding and validation", () => {
         new MoveVoxelBlockSignal(ROOM_ID, quadIndex, 1, -1, 0).encode(moveState);
         expect(moveState.byteIndex).toBe(headState.byteIndex + 3); // one byte for each offset
 
-        // A reshape is new, on an index of its own; the one retired earlier still names no signal.
-        expect(SignalTypeConfigMap.getIndexByType("setVoxelBlockShapeSignal")).toBe(16);
+        // The indices retired name no signal: the last of them was the one a block was reshaped by.
         expect(SignalTypeConfigMap.getConfigByIndex(11)).toBeUndefined();
+        expect(SignalTypeConfigMap.getConfigByIndex(16)).toBeUndefined();
     });
 
     it("refuses an edit from a client still sending the narrower index field", async () => {
@@ -216,13 +185,13 @@ describe("voxel quadIndex encoding and validation", () => {
             assertions: () => {
                 const { room } = ServerRoomManager.roomRuntimeMemories[ROOM_ID];
                 const { voxels } = room.voxelGrid;
-                const masksBefore = voxels.map(voxel => VoxelQueryUtil.getVoxelBlockLayerMask(voxel));
+                const masksBefore = voxels.map(voxel => voxel.blockLayerMask);
                 room.dirty = false;
 
                 expect(VoxelUpdateUtil.removeVoxelBlock(
                     actingUser, voxels, decoded.quadIndex, room)).toBe(false);
 
-                expect(voxels.map(voxel => VoxelQueryUtil.getVoxelBlockLayerMask(voxel))).toEqual(masksBefore);
+                expect(voxels.map(voxel => voxel.blockLayerMask)).toEqual(masksBefore);
                 expect(room.dirty).toBe(false);
             },
         });
@@ -251,7 +220,7 @@ describe("voxel quadIndex encoding and validation", () => {
                 // Fractional indices matter too (they come from calculations, and quadIndex getters take remainders).
                 const outOfRange = [NUM_VOXEL_QUADS_PER_ROOM, NUM_VOXEL_QUADS_PER_ROOM + 7, -1, 1.5, NaN];
 
-                const masksBefore = voxels.map(voxel => VoxelQueryUtil.getVoxelBlockLayerMask(voxel));
+                const masksBefore = voxels.map(voxel => voxel.blockLayerMask);
                 room.dirty = false;
 
                 for (const quadIndex of outOfRange)
@@ -268,7 +237,7 @@ describe("voxel quadIndex encoding and validation", () => {
                 }
 
                 // A refused edit leaves no trace: no voxel moved, and the room isn't dirty.
-                expect(voxels.map(voxel => VoxelQueryUtil.getVoxelBlockLayerMask(voxel))).toEqual(masksBefore);
+                expect(voxels.map(voxel => voxel.blockLayerMask)).toEqual(masksBefore);
                 expect(room.dirty).toBe(false);
             },
         });
@@ -286,7 +255,7 @@ describe("voxel quadIndex encoding and validation", () => {
 
                 // Without a room the can* predicate is skipped (as in generation and client apply), so the
                 // mutators must check the range themselves.
-                const masksBefore = voxels.map(voxel => VoxelQueryUtil.getVoxelBlockLayerMask(voxel));
+                const masksBefore = voxels.map(voxel => voxel.blockLayerMask);
 
                 for (const quadIndex of [NUM_VOXEL_QUADS_PER_ROOM + 7, -1, 1.5, NaN])
                 {
@@ -296,7 +265,7 @@ describe("voxel quadIndex encoding and validation", () => {
                     expect(VoxelUpdateUtil.moveVoxelBlock(undefined, voxels, quadIndex, 0, 0, 1)).toBe(false);
                 }
 
-                expect(voxels.map(voxel => VoxelQueryUtil.getVoxelBlockLayerMask(voxel))).toEqual(masksBefore);
+                expect(voxels.map(voxel => voxel.blockLayerMask)).toEqual(masksBefore);
             },
         });
     });
@@ -317,12 +286,12 @@ describe("voxel quadIndex encoding and validation", () => {
                 const source = VoxelQueryUtil.getVoxel(voxels, 5, 5)!;
                 expect(VoxelQueryUtil.isVoxelBlockPresent(source, COLLISION_LAYER_MIN)).toBe(true);
 
-                const masksBefore = voxels.map(voxel => VoxelQueryUtil.getVoxelBlockLayerMask(voxel));
+                const masksBefore = voxels.map(voxel => voxel.blockLayerMask);
                 expect(VoxelUpdateUtil.moveVoxelBlock(undefined, voxels, quadIndex, 0, -6, 0)).toBe(false);
 
                 // The block stays, and the boundary cell it would have wrapped onto is unchanged.
                 expect(VoxelQueryUtil.isVoxelBlockPresent(source, COLLISION_LAYER_MIN)).toBe(true);
-                expect(voxels.map(voxel => VoxelQueryUtil.getVoxelBlockLayerMask(voxel))).toEqual(masksBefore);
+                expect(voxels.map(voxel => voxel.blockLayerMask)).toEqual(masksBefore);
             },
         });
     });

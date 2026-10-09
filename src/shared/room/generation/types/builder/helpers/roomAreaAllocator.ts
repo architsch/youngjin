@@ -1,13 +1,14 @@
 import RandomNumberGenerator from "../../../../../math/types/randomNumberGenerator";
+import { GENERATED_WALL_THICKNESS } from "../../../../../system/sharedConstants";
 import { RoomVolumeConstructorMap } from "../../../maps/roomVolumeConstructorMap";
 import RoomVolumeUtil from "../../../util/roomVolumeUtil";
 import RoomVolume from "../../roomVolume";
 import { RoomVolumeType, RoomVolumeTypeEnumMap } from "../../roomVolumeType";
 import RoomPaletteSelector from "./roomPaletteSelector";
 
-// Places room areas: scatter small footprints, then grow each a block at a time while it doesn't touch
-// another, so neighbours end up exactly one wall block apart (where passages get cut). Candidates that
-// don't fit are dropped.
+// Places room areas: scatter small footprints, then grow each a wall's thickness at a time while it stays
+// a wall from every other, so neighbours end up exactly one wall apart (where passages get cut).
+// Candidates that don't fit are dropped. Sizes and places are whole walls' thicknesses, in voxels.
 
 export default class RoomAreaAllocator
 {
@@ -35,7 +36,7 @@ export default class RoomAreaAllocator
         return true;
     }
 
-    // Inside the boundary and not touching placed areas. `ignore` excludes the area being grown.
+    // Inside the boundary and a wall from placed areas. `ignore` excludes the area being grown.
     areaFits(volume: RoomVolume, ignore?: RoomVolume): boolean
     {
         return RoomVolumeUtil.volumeFitsAmong(volume, RoomVolumeConstructorMap["Interior"](),
@@ -47,8 +48,8 @@ export default class RoomAreaAllocator
     {
         for (let attempt = 0; attempt < attempts; ++attempt)
         {
-            this.tryFootprintSomewhere(this.rand.randomInt(minSpan, maxSpan + 1),
-                this.rand.randomInt(minSpan, maxSpan + 1), storeyShapes);
+            this.tryFootprintSomewhere(this.randomInWallSteps(minSpan, maxSpan),
+                this.randomInWallSteps(minSpan, maxSpan), storeyShapes);
         }
     }
 
@@ -93,24 +94,31 @@ export default class RoomAreaAllocator
     private tryFootprintSomewhere(numRows: number, numCols: number, storeyShapes: string[]): boolean
     {
         const interior = RoomVolumeConstructorMap["Interior"]();
-        const rowMin = this.rand.randomInt(interior.rowMin, interior.rowMax - numRows + 2);
-        const colMin = this.rand.randomInt(interior.colMin, interior.colMax - numCols + 2);
+        const rowMin = this.randomInWallSteps(interior.rowMin, interior.rowMax - numRows + 1);
+        const colMin = this.randomInWallSteps(interior.colMin, interior.colMax - numCols + 1);
 
         return this.add(RoomVolumeConstructorMap[this.rand.pick(storeyShapes)](
             rowMin, rowMin + numRows - 1, colMin, colMin + numCols - 1, this.palettes.next()));
     }
+
+    // A random multiple of a wall's thickness from min to max, which must be multiples of it too.
+    private randomInWallSteps(min: number, max: number): number
+    {
+        return GENERATED_WALL_THICKNESS * this.rand.randomInt(
+            min / GENERATED_WALL_THICKNESS, max / GENERATED_WALL_THICKNESS + 1);
+    }
 }
 
-// The same volume with one of its four sides pushed out by a block.
+// The same volume with one of its four sides pushed out by a wall's thickness.
 function expandOneSide(volume: RoomVolume, side: number): RoomVolume
 {
     const grown = RoomVolumeUtil.getExpandedVolume(volume, 0);
     switch (side)
     {
-        case 0: --grown.rowMin; break;
-        case 1: ++grown.rowMax; break;
-        case 2: --grown.colMin; break;
-        default: ++grown.colMax; break;
+        case 0: grown.rowMin -= GENERATED_WALL_THICKNESS; break;
+        case 1: grown.rowMax += GENERATED_WALL_THICKNESS; break;
+        case 2: grown.colMin -= GENERATED_WALL_THICKNESS; break;
+        default: grown.colMax += GENERATED_WALL_THICKNESS; break;
     }
     return grown;
 }

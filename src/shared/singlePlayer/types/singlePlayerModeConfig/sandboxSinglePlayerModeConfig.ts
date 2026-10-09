@@ -1,7 +1,7 @@
 import RandomNumberGenerator from "../../../math/types/randomNumberGenerator";
 import SandboxRoomBuilder from "../../../room/generation/types/builder/sandboxRoomBuilder";
 import Room from "../../../room/types/room";
-import { COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../../system/sharedConstants";
+import { MAX_ROOM_X, MAX_ROOM_Z } from "../../../system/sharedConstants";
 import SinglePlayerModeConfig from "./singlePlayerModeConfig";
 
 const SandboxSinglePlayerModeConfig: SinglePlayerModeConfig =
@@ -9,9 +9,7 @@ const SandboxSinglePlayerModeConfig: SinglePlayerModeConfig =
     getRoomBuilderParams: () =>
     {
         return {
-            entranceVoxelCol: Math.floor(0.5 * NUM_VOXEL_COLS),
-            entranceVoxelRow: Math.floor(0.5 * NUM_VOXEL_ROWS),
-            entranceVoxelCollisionLayer: COLLISION_LAYER_MIN,
+            entrancePos: {x: 0.5 * MAX_ROOM_X + 0.5, y: 0, z: 0.5 * MAX_ROOM_Z + 0.5},
             paletteSelection: {texturePackPaths: ["default"], palettes: []},
             hotspots: {},
             volumes: {},

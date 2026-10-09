@@ -1,9 +1,9 @@
 /**
  * Scenario tests: doors (the room superuser's world-building) — who may add, remove, move and edit them,
- * how their metadata is validated, and where arriving players spawn.
+ * how their metadata is validated, how deep a wall one needs behind it, and where arriving players spawn.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { runScenario } from "../helpers/scenarioRunner";
+import { runScenario, VoxelPlacement } from "../helpers/scenarioRunner";
 import { EMPTY_HUB, EMPTY_REGULAR, userAtCenter } from "../helpers/scenarioPresets";
 import { getLooks } from "../helpers/composition";
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
@@ -30,15 +30,19 @@ import ObjectGroup from "../../../src/shared/object/types/objectGroup";
 import User from "../../../src/shared/user/types/user";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import ColorUtil from "../../../src/shared/math/util/colorUtil";
+import Vec3 from "../../../src/shared/math/types/vec3";
 import ObjectAttachmentUtil from "../../../src/shared/object/util/objectAttachmentUtil";
-import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN,
-    LABEL_COLOR_PALETTE_NAME, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL,
-    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, NUM_VOXEL_COLS,
-    NUM_VOXEL_ROWS, OBJECT_LABEL_MAX_LENGTH, SANDBOX_SINGLE_PLAYER_MODE,
-    TUTORIAL_SINGLE_PLAYER_MODE, UNIT_VEC3, VOXEL_BLOCK_SHAPE_WHOLE } from "../../../src/shared/system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, GENERATED_WALL_THICKNESS,
+    LABEL_COLOR_PALETTE_NAME, INITIAL_MULTI_PLAYER_ENTRANCE_POS, MAX_ROOM_X, MAX_ROOM_Z, OBJECT_LABEL_MAX_LENGTH,
+    SANDBOX_SINGLE_PLAYER_MODE, STOREY_FLOOR_COLLISION_LAYER, TUTORIAL_SINGLE_PLAYER_MODE, UNIT_VEC3,
+    VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
+import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
 
 const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
+const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
+const DOOR_FOOTPRINT_WIDTH =
+    DoorObjectTypeConfig.components.spawnedByAny.collider.baseHitboxSize.sizeX;
 const DOOR_FOOTPRINT_HEIGHT =
     DoorObjectTypeConfig.components.spawnedByAny.collider.baseHitboxSize.sizeY;
 
@@ -59,9 +63,9 @@ function makeDoorSignal(room: Room, sourceUser: User, objectId: string = "new-do
     return new AddObjectSignal(room.id, sourceUser.id, sourceUser.userName, doorTypeIndex, objectId,
         new ObjectTransform(
             {
-                x: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL - 5 + 0.5,
+                x: INITIAL_MULTI_PLAYER_ENTRANCE_POS.x - 5,
                 y: 0.5 * DOOR_FOOTPRINT_HEIGHT,
-                z: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
+                z: INITIAL_MULTI_PLAYER_ENTRANCE_POS.z,
             },
             {x: 0, y: 0, z: -1}, {...UNIT_VEC3}));
 }
@@ -297,6 +301,64 @@ describe("what a door makes of the values it is handed", () => {
 });
 
 /**
+ * The door a multiplayer room comes with (see DoorObjectTypeConfig.util.makeEntranceDoor), which generation
+ * and the conversion of older rooms both hang by naming where its foot goes.
+ */
+describe("a room's own entrance door", () => {
+    beforeEach(() => {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        vi.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    // How far in from the room's edge a boundary wall's room-facing side lies.
+    const WALL_DEPTH = GENERATED_WALL_THICKNESS * VOXEL_CELL_SIZE;
+    const UPPER_FLOOR_Y = (STOREY_FLOOR_COLLISION_LAYER + 1) * COLLISION_LAYER_HEIGHT;
+
+    // A foot on each boundary wall, well away from the corners, and one on the upper storey.
+    const FEET = [
+        {wall: "far z", foot: {x: 10.5, y: 0, z: MAX_ROOM_Z - WALL_DEPTH}, facing: {x: 0, y: 0, z: -1}},
+        {wall: "near z", foot: {x: 10.5, y: 0, z: WALL_DEPTH}, facing: {x: 0, y: 0, z: 1}},
+        {wall: "far x", foot: {x: MAX_ROOM_X - WALL_DEPTH, y: 0, z: 10.5}, facing: {x: -1, y: 0, z: 0}},
+        {wall: "near x", foot: {x: WALL_DEPTH, y: 0, z: 10.5}, facing: {x: 1, y: 0, z: 0}},
+        {wall: "near z, upstairs", foot: {x: 10.5, y: UPPER_FLOOR_Y, z: WALL_DEPTH}, facing: {x: 0, y: 0, z: 1}},
+    ];
+
+    it("stands with its foot where it is told, facing into the room from whichever wall that is", () => {
+        for (const {wall, foot, facing} of FEET)
+        {
+            const door = DoorObjectTypeConfig.util.makeEntranceDoor("a-room", foot);
+            expect(door.objectId, wall).toBe(ENTRANCE_DOOR_OBJECT_ID);
+            expect(door.transform.pos, wall).toEqual({x: foot.x, y: foot.y + 0.5 * DOOR_FOOTPRINT_HEIGHT, z: foot.z});
+            expect(door.transform.dir, wall).toEqual(facing);
+        }
+    });
+
+    it("has the wall it needs behind it on every one of a room's boundary walls", async () => {
+        await runScenario({
+            name: "entrance doors round the boundary",
+            rooms: [EMPTY_HUB],
+            users: [userAtCenter("hub")],
+            assertions: () => {
+                const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
+                room.objectGroup.removeObject(ENTRANCE_DOOR_OBJECT_ID);
+                for (const {wall, foot} of FEET)
+                {
+                    const door = DoorObjectTypeConfig.util.makeEntranceDoor(room.id, foot);
+                    expect(ObjectAttachmentUtil.canPlaceObject(room, door.objectId, door.objectTypeIndex,
+                        door.transform), wall).toBe(true);
+
+                    // Turned to face the other way it would look into its own wall, and has none behind it.
+                    const turned = new ObjectTransform(door.transform.pos,
+                        {x: -door.transform.dir.x, y: 0, z: -door.transform.dir.z}, door.transform.scale);
+                    expect(ObjectAttachmentUtil.canPlaceObject(room, door.objectId, door.objectTypeIndex, turned),
+                        `${wall}, turned round`).toBe(false);
+                }
+            },
+        });
+    });
+});
+
+/**
  * Moving a door vertically: a door is an odd number of layers tall, so its center is off-grid; the
  * bottom edge is snapped instead (snapping the center would float it a quarter layer).
  */
@@ -349,29 +411,113 @@ describe("the wall a door needs", () => {
         vi.spyOn(console, "log").mockImplementation(() => {});
     });
 
-    it("is whole blocks all the way behind it, since arrivals stand in the wall's own cell", async () => {
+    // Two walls standing free in the room from its floor to the storey's slab, each with its face at its z,
+    // looking toward -z: one a single block deep, the other a block deeper than a door needs. Both reach a
+    // world unit or more past a door hung about x = DOOR_X, on either side of it.
+    const DOOR_X = 8.5;
+    const THIN_WALL_Z = 20;
+    const THICK_WALL_Z = 10;
+    const THICK_WALL_DEPTH_IN_BLOCKS = 3;
+    const WALL_HALF_WIDTH = Math.ceil(0.5 * DOOR_FOOTPRINT_WIDTH) + 1;
+    const SLAB_BOTTOM_Y = STOREY_FLOOR_COLLISION_LAYER * COLLISION_LAYER_HEIGHT;
+    const FACING: Vec3 = {x: 0, y: 0, z: -1};
+
+    // The blocks a box of the room reaches into, wholly or in part, given in world units.
+    function blocksIn(min: Vec3, max: Vec3): VoxelPlacement[]
+    {
+        // Measured just inside the box, so that a side lying on a block boundary takes in nothing beyond it.
+        const inset = 0.001;
+        const {getVoxelRowFromWorldZ: rowAt, getVoxelColFromWorldX: colAt,
+            getVoxelCollisionLayerFromWorldY: layerAt} = VoxelQueryUtil;
+        const blocks: VoxelPlacement[] = [];
+        for (let row = rowAt(min.z + inset); row <= rowAt(max.z - inset); ++row)
+        {
+            for (let col = colAt(min.x + inset); col <= colAt(max.x - inset); ++col)
+            {
+                for (let layer = layerAt(min.y + inset); layer <= layerAt(max.y - inset); ++layer)
+                    blocks.push({row, col, layer});
+            }
+        }
+        return blocks;
+    }
+
+    const wallAt = (z: number, depthInBlocks: number, height: number = SLAB_BOTTOM_Y) => blocksIn(
+        {x: DOOR_X - WALL_HALF_WIDTH, y: 0, z},
+        {x: DOOR_X + WALL_HALF_WIDTH, y: height, z: z + depthInBlocks * VOXEL_CELL_SIZE});
+    const WALLED_HUB = {...EMPTY_HUB,
+        voxels: [...wallAt(THIN_WALL_Z, 1), ...wallAt(THICK_WALL_Z, THICK_WALL_DEPTH_IN_BLOCKS)]};
+    // The thick wall and the slab over it: the blocks a door on that wall needs, and others beside it, above
+    // it and beyond the depth it needs.
+    const AROUND_THICK_WALL = wallAt(THICK_WALL_Z, THICK_WALL_DEPTH_IN_BLOCKS,
+        SLAB_BOTTOM_Y + COLLISION_LAYER_HEIGHT);
+
+    // Where a door stands on a wall with its middle at x, and the thick wall's blocks behind it there: those
+    // right behind its face (depth 0), or so many further in.
+    const doorPosOn = (wallZ: number, x: number = DOOR_X): Vec3 => ({x, y: 0.5 * DOOR_FOOTPRINT_HEIGHT, z: wallZ});
+    const behindDoor = (x: number, depth: number) => blocksIn(
+        {x: x - 0.5 * DOOR_FOOTPRINT_WIDTH, y: 0, z: THICK_WALL_Z + depth * VOXEL_CELL_SIZE},
+        {x: x + 0.5 * DOOR_FOOTPRINT_WIDTH, y: DOOR_FOOTPRINT_HEIGHT, z: THICK_WALL_Z + (depth + 1) * VOXEL_CELL_SIZE});
+    const quadOf = (block: VoxelPlacement) =>
+        VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(block.row, block.col, block.layer);
+
+    it("is solid two blocks deep behind all of it, since arrivals stand inside the wall", async () => {
         await runScenario({
-            name: "door on a shrunk wall",
-            rooms: [EMPTY_HUB],
+            name: "door on a thick wall and a thin one",
+            rooms: [WALLED_HUB],
             users: [userAtCenter("hub")],
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
-                const door = makeDoorSignal(room, ADMIN);
-                const fits = () => ObjectAttachmentUtil.canPlaceObject(room, door.objectId, doorTypeIndex, door.transform);
-                expect(fits()).toBe(true);
+                const voxels = room.voxelGrid.voxels;
+                const fits = (objectTypeIndex: number, pos: Vec3) => ObjectAttachmentUtil.canPlaceObject(room,
+                    "candidate", objectTypeIndex, new ObjectTransform(pos, FACING, {...UNIT_VEC3}));
 
-                // One block of the wall behind it, cut down to each half in turn: the half the door hangs
-                // on would hold a picture, but not a door.
-                const wallCol = Math.floor(door.transform.pos.x);
-                const blockIndex = VoxelQueryUtil.getVoxelBlockIndex(INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW, wallCol,
-                    COLLISION_LAYER_MIN + 1);
-                for (const half of [0b0011, 0b1100, 0b0101, 0b1010])
+                // Hung about the line between two voxels, as a room's own way in is, a door lies over half
+                // of the voxel at either end of it; hung about a voxel's middle, over whole ones alone.
+                for (const doorX of [DOOR_X, DOOR_X + 0.5 * VOXEL_CELL_SIZE])
                 {
-                    room.voxelGrid.quadsMem.blockShapes[blockIndex] = half;
-                    expect(fits(), `with a block behind it cut to ${half}`).toBe(false);
+                    const doorFits = () => fits(doorTypeIndex, doorPosOn(THICK_WALL_Z, doorX));
+                    const needed = new Set([...behindDoor(doorX, 0), ...behindDoor(doorX, 1)].map(quadOf));
+                    expect(doorFits(), `door at x ${doorX}`).toBe(true);
+
+                    // Each block behind any of it, right behind its face or one further in, has to be there;
+                    // no other has.
+                    for (const block of AROUND_THICK_WALL)
+                    {
+                        VoxelUpdateUtil.removeVoxelBlock(undefined, voxels, quadOf(block));
+                        expect(doorFits(), `door at x ${doorX}, without ${JSON.stringify(block)}`)
+                            .toBe(!needed.has(quadOf(block)));
+                        VoxelUpdateUtil.addVoxelBlock(undefined, voxels, quadOf(block));
+                    }
                 }
-                room.voxelGrid.quadsMem.blockShapes[blockIndex] = VOXEL_BLOCK_SHAPE_WHOLE;
-                expect(fits()).toBe(true);
+
+                // A wall one block deep would hold a picture, but not a door.
+                expect(fits(canvasTypeIndex, {x: DOOR_X, y: 1, z: THIN_WALL_Z})).toBe(true);
+                expect(fits(doorTypeIndex, doorPosOn(THIN_WALL_Z))).toBe(false);
+            },
+        });
+    });
+
+    it("keeps every block the door rests on, at either depth, and lets any other go", async () => {
+        await runScenario({
+            name: "blocks under a door",
+            rooms: [WALLED_HUB],
+            users: [userAtCenter("hub")],
+            assertions: () => {
+                const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
+                const door = new AddObjectSignal(room.id, ADMIN.id, ADMIN.userName, doorTypeIndex, "wall-door",
+                    new ObjectTransform(doorPosOn(THICK_WALL_Z), FACING, {...UNIT_VEC3}));
+                expect(ObjectUpdateUtil.addObject(ADMIN, room, door)).toBe(true);
+
+                const restedOn = new Set([...behindDoor(DOOR_X, 0), ...behindDoor(DOOR_X, 1)].map(quadOf));
+                for (const block of AROUND_THICK_WALL)
+                {
+                    const quadIndex = quadOf(block);
+                    const where = JSON.stringify(block);
+                    expect(ObjectAttachmentUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex), where)
+                        .toEqual(restedOn.has(quadIndex) ? [door.objectId] : []);
+                    expect(VoxelUpdateUtil.canRemoveVoxelBlock(ADMIN, room, quadIndex), where)
+                        .toBe(!restedOn.has(quadIndex));
+                }
             },
         });
     });
@@ -386,10 +532,10 @@ describe("choosing where a player arrives", () => {
         vi.spyOn(console, "log").mockImplementation(() => {});
     });
 
-    function addDoor(room: Room, objectId: string, col: number, label: string, doorType: number)
+    // Another door on the entrance's wall, at the given x.
+    function addDoor(room: Room, objectId: string, x: number, label: string, doorType: number)
     {
-        const door = DoorObjectTypeConfig.util.makeEntranceDoor(room.id, col, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
-            COLLISION_LAYER_MIN);
+        const door = DoorObjectTypeConfig.util.makeEntranceDoor(room.id, {...INITIAL_MULTI_PLAYER_ENTRANCE_POS, x});
         door.objectId = objectId;
         door.metadata[ObjectMetadataKeyEnumMap.Label] = new EncodableByteString(label);
         door.metadata[ObjectMetadataKeyEnumMap.DoorType] = new EncodableByteString(`${doorType}`);
@@ -404,7 +550,7 @@ describe("choosing where a player arrives", () => {
             users: [userAtCenter("hub")],
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
-                const named = addDoor(room, "side-door", 6, "Side Door",
+                const named = addDoor(room, "side-door", 6.5, "Side Door",
                     DoorTypeEnumMap.CustomEntrance);
 
                 const {pos, dir} = SpawnHotspotUtil.pickSpawnTransform(room, "Side Door");
@@ -425,7 +571,7 @@ describe("choosing where a player arrives", () => {
             users: [userAtCenter("hub")],
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
-                const named = addDoor(room, "side-door", 6, "Side\nDoor", DoorTypeEnumMap.CustomEntrance);
+                const named = addDoor(room, "side-door", 6.5, "Side\nDoor", DoorTypeEnumMap.CustomEntrance);
 
                 for (const destination of ["Side Door", " Side  Door "])
                 {
@@ -462,7 +608,7 @@ describe("choosing where a player arrives", () => {
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
                 room.objectGroup.removeObject(ENTRANCE_DOOR_OBJECT_ID);
-                const custom = addDoor(room, "side-door", 6, "", DoorTypeEnumMap.CustomEntrance);
+                const custom = addDoor(room, "side-door", 6.5, "", DoorTypeEnumMap.CustomEntrance);
 
                 const {pos} = SpawnHotspotUtil.pickSpawnTransform(room, "");
                 expect(pos.x).toBeCloseTo(custom.transform.pos.x, 3);
@@ -484,8 +630,8 @@ describe("choosing where a player arrives", () => {
                 }
 
                 const {pos} = SpawnHotspotUtil.pickSpawnTransform(room, "");
-                expect(pos.x).toBeCloseTo(0.5 * NUM_VOXEL_COLS, 3);
-                expect(pos.z).toBeCloseTo(0.5 * NUM_VOXEL_ROWS, 3);
+                expect(pos.x).toBeCloseTo(0.5 * MAX_ROOM_X, 3);
+                expect(pos.z).toBeCloseTo(0.5 * MAX_ROOM_Z, 3);
             },
         });
     });
@@ -498,7 +644,7 @@ describe("choosing where a player arrives", () => {
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
                 const entrance = getEntranceDoor(room);
-                addDoor(room, "side-door", 6, "", DoorTypeEnumMap.CustomEntrance);
+                addDoor(room, "side-door", 6.5, "", DoorTypeEnumMap.CustomEntrance);
 
                 // Picked at random among equals, so repeated to show the custom door is never chosen.
                 for (let attempt = 0; attempt < 20; ++attempt)

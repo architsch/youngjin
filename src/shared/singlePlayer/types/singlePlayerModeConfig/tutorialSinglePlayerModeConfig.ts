@@ -7,6 +7,7 @@ import Room from "../../../room/types/room";
 import DoorObjectTypeConfig from "../../../object/types/objectTypeConfig/doorObjectTypeConfig";
 import { PLAYER_HEIGHT } from "../../../object/types/objectTypeConfig/playerObjectTypeConfig";
 import { COLLISION_LAYER_MIN, STOREY_FLOOR_COLLISION_LAYER } from "../../../system/sharedConstants";
+import VoxelQueryUtil from "../../../voxel/util/voxelQueryUtil";
 
 const DOOR_FOOTPRINT_HEIGHT =
     DoorObjectTypeConfig.components.spawnedByAny.collider.baseHitboxSize.sizeY;
@@ -31,34 +32,32 @@ const TutorialSinglePlayerModeConfig: SinglePlayerModeConfig =
 
         // See the "Tutorial room" section of @docs/geometry/room_generation.md.
 
-        // Manually set parameters:
-        const entranceVoxelCol = 5;
-        const entranceVoxelRow = 30;
-        const entranceVoxelCollisionLayer = COLLISION_LAYER_MIN;
+        // Manually set parameters, in world units (each a whole number of voxels):
+        const entrancePos = {x: 5.5, y: 0, z: 30.5};
         const X1 = 5, X2 = 3, X3 = 5, Z1 = 7, Z2 = 5, Z3 = 5;
-
-        if (X1 % 2 == 0 || X2 % 2 == 0 || X3 % 2 == 0 || Z1 % 2 == 0 || Z2 % 2 == 0 || Z3 % 2 == 0)
-            throw new Error("X1,X2,X3,Z1,Z2,Z3 must all be positive odd integers.");
 
         // Algebraically derived parameters:
         const X = X1 + X2 + X3;
         const Z = Z1 + Z2 + Z3;
-        const x0 = entranceVoxelCol - 0.5 * (X1 - 1);
-        const z0 = entranceVoxelRow - Z + 1;
+        const x0 = entrancePos.x - 0.5 * X1;
+        const z0 = entrancePos.z + 0.5 - Z;
 
         const hotspots = {
             // Fallback floor patch in front of the entrance (the tutorial normally picks the wall the user faces).
-            floor: {x: entranceVoxelCol + 0.5, y: 0, z: entranceVoxelRow - 3 + 0.5},
-            npc: {x: x0 + X - 1 + 0.5, y: 0.5 * PLAYER_HEIGHT, z: z0 + Z1 + 0.5*(Z2 - 1) + 0.5},
+            floor: {x: entrancePos.x, y: 0, z: entrancePos.z - 3},
+            npc: {x: x0 + X - 0.5, y: 0.5 * PLAYER_HEIGHT, z: z0 + Z1 + 0.5 * Z2},
             // Door origin half a footprint up (collider-centred; see DoorObjectTypeConfig).
-            door: {x: x0 + X - 1 - 0.5*(X3 - 1) + 0.5, y: 0.5 * DOOR_FOOTPRINT_HEIGHT, z: z0},
+            door: {x: x0 + X - 0.5 * X3, y: 0.5 * DOOR_FOOTPRINT_HEIGHT, z: z0},
         };
 
-        // All spaces are on the first storey (a single-storey room with nothing above it).
-        const volume = (rowStart: number, colStart: number,
-            numRows: number, numCols: number,
+        // All spaces are on the first storey (a single-storey room with nothing above it). A space is laid
+        // out in world units, and its volume counts the voxels it covers.
+        const volume = (zStart: number, xStart: number,
+            sizeZ: number, sizeX: number,
             palette?: RoomPalette): RoomVolume =>
-            new RoomVolume(rowStart, rowStart + numRows - 1, colStart, colStart + numCols - 1,
+            new RoomVolume(
+                VoxelQueryUtil.getVoxelRowFromWorldZ(zStart), VoxelQueryUtil.getVoxelRowFromWorldZ(zStart + sizeZ) - 1,
+                VoxelQueryUtil.getVoxelColFromWorldX(xStart), VoxelQueryUtil.getVoxelColFromWorldX(xStart + sizeX) - 1,
                 COLLISION_LAYER_MIN, STOREY_FLOOR_COLLISION_LAYER - 1, palette);
 
         const volumes = {
@@ -73,9 +72,7 @@ const TutorialSinglePlayerModeConfig: SinglePlayerModeConfig =
         };
 
         cachedParams = {
-            entranceVoxelCol,
-            entranceVoxelRow,
-            entranceVoxelCollisionLayer,
+            entrancePos,
             // Palettes are set per volume, so only the pack is selected.
             paletteSelection: {texturePackPaths: ["default"], palettes: []},
             hotspots,

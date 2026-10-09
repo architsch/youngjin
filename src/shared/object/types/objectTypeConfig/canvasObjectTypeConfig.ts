@@ -20,8 +20,9 @@ export const CANVAS_IMAGE_SUBFOLDER = "1";
 
 const COMPOSITION_CODEC_VERSION = 0;
 
-// The sizes a new canvas tries, in order: a whole block, then one layer tall (all the side of a lone block holds).
-const START_SCALES: Vec3[] = [{x: 1, y: 1, z: 1}, {x: 1, y: 0.5, z: 1}];
+// The sizes a new canvas tries, in order: a world unit square, then one layer tall, then as small as the
+// side of a lone block, which holds nothing larger.
+const START_SCALES: Vec3[] = [{x: 1, y: 1, z: 1}, {x: 1, y: 0.5, z: 1}, {x: 0.5, y: 0.5, z: 1}];
 
 // Metadata keys a user may write to a canvas; anything else is refused.
 const editableMetadataKeys = [
@@ -38,7 +39,7 @@ const CanvasObjectTypeConfig =
     persistent: true,
     autoUnload: true,
     category: ObjectCategoryEnumMap.Picture,
-    // Resized in half-voxel steps across its face. Depth is the gap from the face and never changes.
+    // Resized in steps of a block's width across its face. Depth is the gap from the face and never changes.
     scaling: {
         scaleStep: {x: 0.5, y: 0.5, z: 0},
         minScale: {x: 0.5, y: 0.5, z: 1},

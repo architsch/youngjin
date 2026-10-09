@@ -39,7 +39,7 @@ import FramedPanelCompositionConstants from "../../../src/shared/graphics/mesh/c
 import { getLooks } from "../helpers/composition";
 import { useFixturePictures } from "../helpers/pictureFixture";
 import ImageMapUtil from "../../../src/shared/graphics/image/util/imageMapUtil";
-import { DOCUMENT_ID_MAX_LENGTH, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
+import { DOCUMENT_ID_MAX_LENGTH, INITIAL_MULTI_PLAYER_ENTRANCE_POS,
     INSTANCED_WOOD_MATERIAL_ID, LABEL_COLOR_PALETTE_NAME, OBJECT_LABEL_MAX_LENGTH, OBJECT_MESSAGE_MAX_LENGTH,
     UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
 
@@ -67,9 +67,9 @@ function makeLabelSignal(room: Room, sourceUser: User, objectId: string = "new-l
     return new AddObjectSignal(room.id, sourceUser.id, sourceUser.userName, labelTypeIndex, objectId,
         new ObjectTransform(
             {
-                x: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL + colOffset + 0.5,
+                x: INITIAL_MULTI_PLAYER_ENTRANCE_POS.x + colOffset,
                 y: 2.25,
-                z: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
+                z: INITIAL_MULTI_PLAYER_ENTRANCE_POS.z,
             },
             {x: 0, y: 0, z: -1}, {...UNIT_VEC3}),
         {[ObjectMetadataKeyEnumMap.Label]: new EncodableByteString("Library")});

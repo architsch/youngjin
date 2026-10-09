@@ -84,8 +84,8 @@ import { bottomUIHeightObservable, cameraModeObservable, gameModeObservable, obj
     voxelQuadSelectionObservable } from "../../../src/client/system/clientObservables";
 import { SELECTION_BLOCKED_COLOR, SELECTION_COLOR,
     SELECTION_HANDLE_MAX_DISTANCE } from "../../../src/client/system/clientConstants";
-import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN,
-    VOXEL_BLOCK_SHAPE_WHOLE } from "../../../src/shared/system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
+import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 import ObjectUpdateUtil from "../../../src/shared/object/util/objectUpdateUtil";
@@ -113,21 +113,19 @@ const OBJECT_ID = "an-object";
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 const propTypeIndex = ObjectTypeConfigMap.getIndexByType("Prop");
 
-// A free-standing wall running east-west, five cells long and two units high, whose south face (at
+// A free-standing wall running east-west, five units long, one thick and two high, whose south face (at
 // z = WALL_Z) the canvas hangs on.
-const WALL_ROW = 10, WALL_COL_MIN = 8, WALL_COL_MAX = 12, WALL_LAYERS = 4;
-const WALL_Z = WALL_ROW + 1;
-const WALL_TOP_Y = WALL_LAYERS * COLLISION_LAYER_HEIGHT;
+const WALL_X_MIN = 8, WALL_X_MAX = 13, WALL_THICKNESS = 1;
+const WALL_Z = 11;
+const WALL_TOP_Y = 2;
 const SOUTH = {x: 0, y: 0, z: 1};
 const UP = {x: 0, y: 1, z: 0};
 
-// Blocks stood on the room's floor south of the wall, each by itself: their tops are faces a block across
-// at most, lying in one plane. An object lying on one is as wide as its scale's x along the room's x, and
-// as tall as its scale's y along z.
-const BLOCK_ROW = 14;
+// Blocks stood on the room's floor south of the wall, one layer high, in groups clear of one another: their
+// tops are faces a unit across at most, lying in one plane, with their north edges along z = BLOCKS_Z. An
+// object lying on one is as wide as its scale's x along the room's x, and as tall as its scale's y along z.
+const BLOCKS_Z = 14;
 const BLOCK_TOP_Y = COLLISION_LAYER_HEIGHT;
-// The parts of its cell a shrunk block fills, with north towards -z and west towards -x.
-const WEST_HALF = 0b0101, NORTH_HALF = 0b0011, NORTH_WEST_QUARTER = 0b0001;
 
 // How far outside the outlined area the outline's line runs (see WorldSpaceOutlineRect).
 const OUTLINE_OUTSET = 0.08;
@@ -170,11 +168,29 @@ function attachProp(imagePath: string, pos: Vec3, dir: Vec3): void
         {[ObjectMetadataKeyEnumMap.ImagePath]: new EncodableByteString(imagePath)});
 }
 
-// Stands a block on the room's floor by itself, south of the wall: whole, or the part of its cell a shape fills.
-function standBlock(col: number, shape: number = VOXEL_BLOCK_SHAPE_WHOLE): void
+// Fills a box of the room with blocks: given in world units, with its sides on block boundaries.
+function fillWithBlocks(min: Vec3, max: Vec3): void
 {
-    VoxelUpdateUtil.addVoxelBlock(undefined, room.voxelGrid.voxels,
-        quadIndexOf(BLOCK_ROW, col, "y", "+", COLLISION_LAYER_MIN), [1, 1, 1, 1, 1, 1], undefined, shape);
+    const {getVoxelRowFromWorldZ: rowAt, getVoxelColFromWorldX: colAt,
+        getVoxelCollisionLayerFromWorldY: layerAt} = VoxelQueryUtil;
+    for (let row = rowAt(min.z); row < rowAt(max.z); ++row)
+    {
+        for (let col = colAt(min.x); col < colAt(max.x); ++col)
+        {
+            for (let layer = layerAt(min.y); layer < layerAt(max.y); ++layer)
+            {
+                VoxelUpdateUtil.addVoxelBlock(undefined, room.voxelGrid.voxels,
+                    quadIndexOf(row, col, "y", "+", layer), [1, 1, 1, 1, 1, 1]);
+            }
+        }
+    }
+}
+
+// Stands blocks on the room's floor by themselves, south of the wall and one layer high: from x eastward and
+// from BLOCKS_Z southward, as far as given.
+function standBlocks(x: number, width: number = 1, depth: number = 1): void
+{
+    fillWithBlocks({x, y: 0, z: BLOCKS_Z}, {x: x + width, y: BLOCK_TOP_Y, z: BLOCKS_Z + depth});
 }
 
 function objectTransform(): {pos: number[], dir: number[], scale: number[]}
@@ -198,7 +214,7 @@ const onTops = (x: number, z: number) => screenPointOf({x, y: BLOCK_TOP_Y, z});
 // From the south and above, so that the blocks' tops show before the wall.
 function lookDownOnTheBlocks(): void
 {
-    placeCamera({x: 11.5, y: 3.5, z: 19}, {x: 11.5, y: BLOCK_TOP_Y, z: BLOCK_ROW + 0.5});
+    placeCamera({x: 11.5, y: 3.5, z: 19}, {x: 11.5, y: BLOCK_TOP_Y, z: BLOCKS_Z + 0.5});
 }
 
 // Whether the drag under way is asking for what the object can't do, which shows red.
@@ -244,14 +260,7 @@ beforeEach(() => {
     room = createRoom(ROOM_ID);
     (App.getCurrentRoom as Mock).mockReturnValue(room);
     (App.getVoxelQuads as Mock).mockReturnValue(room.voxelQuads);
-    for (let col = WALL_COL_MIN; col <= WALL_COL_MAX; ++col)
-    {
-        for (let layer = COLLISION_LAYER_MIN; layer < COLLISION_LAYER_MIN + WALL_LAYERS; ++layer)
-        {
-            VoxelUpdateUtil.addVoxelBlock(undefined, room.voxelGrid.voxels,
-                quadIndexOf(WALL_ROW, col, "y", "+", layer), [1, 1, 1, 1, 1, 1]);
-        }
-    }
+    fillWithBlocks({x: WALL_X_MIN, y: 0, z: WALL_Z - WALL_THICKNESS}, {x: WALL_X_MAX, y: WALL_TOP_Y, z: WALL_Z});
     // South of the wall and level with its middle, under the slab between the room's two storeys.
     placeCamera({x: 10.5, y: 1.2, z: WALL_Z + 6}, {x: 10.5, y: 1, z: WALL_Z});
     sentSignals();
@@ -278,7 +287,7 @@ describe("dragging the selected object by the inside of its outline", () => {
         expect(press(onWall(10.7, 1.2))).toBe(true);
         dragThrough(onWall(11, 1.2), onWall(11.7, 1.2));
 
-        // A whole cell to the east: shown at once, and not yet sent.
+        // A whole unit to the east: shown at once, and not yet sent.
         expect(objectTransform()).toEqual({pos: [11.5, 1, WALL_Z], dir: [0, 0, 1], scale: [1, 1, 1]});
         expect(sentSignals()).toEqual([]);
 
@@ -290,8 +299,8 @@ describe("dragging the selected object by the inside of its outline", () => {
         hangCanvas(10.5, 1);
         // The pointer stays on the wall, but too near its end for the object to be centred under it.
         expect(drag(onWall(10.5, 1), onWall(11, 1), onWall(12.5, 1), onWall(12.9, 1))).toBe(true);
-        expect(objectTransform().pos).toEqual([WALL_COL_MAX + 0.5, 1, WALL_Z]);
-        expect(sentSignals()).toEqual([["transform", OBJECT_ID, [WALL_COL_MAX + 0.5, 1, WALL_Z], [1, 1, 1]]]);
+        expect(objectTransform().pos).toEqual([WALL_X_MAX - 0.5, 1, WALL_Z]);
+        expect(sentSignals()).toEqual([["transform", OBJECT_ID, [WALL_X_MAX - 0.5, 1, WALL_Z], [1, 1, 1]]]);
     });
 
     it("lays the object on another face the pointer goes to", () => {
@@ -433,7 +442,7 @@ describe("dragging a corner of the selected object's outline", () => {
     it("has none on a corner that can't: as small as it gets, in the corner of its wall", () => {
         // At the foot of the wall's west end, where the corner down and to the west could only take it off the
         // wall or under the floor.
-        const x = WALL_COL_MIN + 0.25, y = 0.25;
+        const x = WALL_X_MIN + 0.25, y = 0.25;
         hangCanvas(x, y, 0.5, 0.5);
         expect(handleIds()).toEqual(["-1,1", "1,-1", "1,1"]);
         expect(cursorAt(beyondCorner(x, y, 0.5, 1, 1))).toBe("nesw-resize");
@@ -442,9 +451,9 @@ describe("dragging a corner of the selected object's outline", () => {
     });
 
     it("has none at all on an object that fills the only face near it, and still moves by its inside", () => {
-        // The south side of a quarter block: half a block across, one layer up.
-        standBlock(10, NORTH_WEST_QUARTER);
-        const middle = {x: 10.25, y: 0.5 * COLLISION_LAYER_HEIGHT, z: BLOCK_ROW + 0.5};
+        // The south side of a lone block: one block across, one layer up.
+        standBlocks(10, VOXEL_CELL_SIZE, VOXEL_CELL_SIZE);
+        const middle = {x: 10 + 0.5 * VOXEL_CELL_SIZE, y: 0.5 * COLLISION_LAYER_HEIGHT, z: BLOCKS_Z + VOXEL_CELL_SIZE};
         attach(canvasTypeIndex, middle, SOUTH, {x: 0.5, y: 0.5, z: 1});
 
         expect(handleIds()).toEqual([]);
@@ -453,7 +462,7 @@ describe("dragging a corner of the selected object's outline", () => {
     });
 
     it("loses and regains handles as its neighbours come and go", () => {
-        const x = WALL_COL_MIN + 0.25, y = 0.25;
+        const x = WALL_X_MIN + 0.25, y = 0.25;
         hangCanvas(x, y, 0.5, 0.5);
         expect(handleIds()).toEqual(["-1,1", "1,-1", "1,1"]);
 
@@ -623,23 +632,23 @@ describe("the view following the pointer that drags an object to its edge", () =
         expect(slid.y).toBeCloseTo(1, 9);
         expect(slid.z).toBeCloseTo(WALL_Z, 9);
         // Only the view's pivot moves: the object is where the drag has it.
-        expect(objectTransform().pos).toEqual([WALL_COL_MAX + 0.5, 1, WALL_Z]);
+        expect(objectTransform().pos).toEqual([WALL_X_MAX - 0.5, 1, WALL_Z]);
     });
 
     it("goes toward the place pointed at though the object can't go there itself", () => {
         // Another canvas has the wall's east end, so ours is held back short of it.
         expect(ObjectUpdateUtil.addObject(actingUser, room, new AddObjectSignal(room.id, actingUser.id,
             actingUser.userName, canvasTypeIndex, "neighbour",
-            new ObjectTransform({x: WALL_COL_MAX + 0.5, y: 1, z: WALL_Z}, {...SOUTH}, {x: 1, y: 1, z: 1})))).toBe(true);
+            new ObjectTransform({x: WALL_X_MAX - 0.5, y: 1, z: WALL_Z}, {...SOUTH}, {x: 1, y: 1, z: 1})))).toBe(true);
         dragCanvasToWall(12.6);
-        expect(objectTransform().pos).toEqual([WALL_COL_MAX - 0.5, 1, WALL_Z]);
+        expect(objectTransform().pos).toEqual([WALL_X_MAX - 1.5, 1, WALL_Z]);
         expect(blocked()).toBe(true);
 
         // All the way to where the pointer is, past where the object stays.
         for (let i = 0; i < 10; ++i)
             frame(1);
         expect(pivot().x).toBeCloseTo(12.6, 6);
-        expect(objectTransform().pos).toEqual([WALL_COL_MAX - 0.5, 1, WALL_Z]);
+        expect(objectTransform().pos).toEqual([WALL_X_MAX - 1.5, 1, WALL_Z]);
         expect(blocked()).toBe(true);
     });
 
@@ -882,12 +891,12 @@ describe("a move the object can't follow", () => {
         hangCanvas(10.5, 1);
         expect(press(onWall(10.5, 1))).toBe(true);
         dragThrough(onWall(11, 1), onWall(12.4, 1));
-        expect(objectTransform().pos).toEqual([WALL_COL_MAX + 0.5, 1, WALL_Z]);
+        expect(objectTransform().pos).toEqual([WALL_X_MAX - 0.5, 1, WALL_Z]);
         expect(blocked()).toBe(false);
 
         // On along the wall, too near its end for the object to be centred under the pointer.
         dragThrough(onWall(12.9, 1));
-        expect(objectTransform().pos).toEqual([WALL_COL_MAX + 0.5, 1, WALL_Z]);
+        expect(objectTransform().pos).toEqual([WALL_X_MAX - 0.5, 1, WALL_Z]);
         expect(blocked()).toBe(true);
         dragThrough(onWall(12.5, 1));
         expect(blocked()).toBe(false);
@@ -898,10 +907,10 @@ describe("a move the object can't follow", () => {
     });
 
     it("shows red over another face that has no place for it, and leaves it where it was", () => {
-        // From the south-east, so that the wall's east end shows as well: a face one block across.
+        // From the south-east, so that the wall's east end shows as well: a face one unit across.
         placeCamera({x: 17, y: 1.2, z: WALL_Z + 5}, {x: 12.5, y: 1, z: WALL_Z});
         hangCanvas(10.5, 1, 2, 2);
-        const wallEnd = screenPointOf({x: WALL_COL_MAX + 1, y: 1, z: WALL_ROW + 0.5});
+        const wallEnd = screenPointOf({x: WALL_X_MAX, y: 1, z: WALL_Z - 0.5 * WALL_THICKNESS});
 
         expect(press(onWall(10.5, 1))).toBe(true);
         dragThrough(onWall(11, 1), wallEnd);
@@ -951,26 +960,26 @@ describe("a move the object can't follow", () => {
 
 describe("a prop dragged to a spot that takes it only turned", () => {
     useFixturePictures();
-    // An everyday object a block wide and half a block tall, and one the other way about.
+    // An everyday object a unit wide and half a unit tall, and one the other way about.
     const wide = FIXTURE_PICTURES.wide, tall = FIXTURE_PICTURES.tall;
 
-    // Three tops in one plane, each clear of the next: a whole block's, one half as wide (a block's west half),
-    // and one half as deep (a block's north half).
-    const ON_WHOLE = {x: 9.5, y: BLOCK_TOP_Y, z: BLOCK_ROW + 0.75};
-    const NARROW = {x: 11.25, y: BLOCK_TOP_Y, z: BLOCK_ROW + 0.5};
-    const SHALLOW = {x: 13.5, y: BLOCK_TOP_Y, z: BLOCK_ROW + 0.25};
+    // Three tops in one plane, each clear of the next: one a unit square, one half as wide (the west half of
+    // such a square), and one half as deep (the north half of one).
+    const ON_WHOLE = {x: 9.5, y: BLOCK_TOP_Y, z: BLOCKS_Z + 0.75};
+    const NARROW = {x: 11.25, y: BLOCK_TOP_Y, z: BLOCKS_Z + 0.5};
+    const SHALLOW = {x: 13.5, y: BLOCK_TOP_Y, z: BLOCKS_Z + 0.25};
 
     beforeEach(() => {
-        standBlock(9);
-        standBlock(11, WEST_HALF);
-        standBlock(13, NORTH_HALF);
+        standBlocks(9);
+        standBlocks(11, 0.5, 1);
+        standBlocks(13, 1, 0.5);
         lookDownOnTheBlocks();
     });
 
     it("turns a quarter onto a top too narrow for it as it lies, as one edit", () => {
         attachProp(wide, ON_WHOLE, UP);
         expect(press(screenPointOf(ON_WHOLE))).toBe(true);
-        dragThrough(onTops(9.6, BLOCK_ROW + 0.7), screenPointOf(NARROW));
+        dragThrough(onTops(9.6, BLOCKS_Z + 0.7), screenPointOf(NARROW));
 
         expect(objectTransform()).toEqual({pos: [NARROW.x, NARROW.y, NARROW.z], dir: [0, 1, 0], scale: [0.5, 1, 1]});
         expect(quarterTurns()).toBe(1);
@@ -985,8 +994,8 @@ describe("a prop dragged to a spot that takes it only turned", () => {
     it("lies as it did on a top wide enough for it, however near the edge the pointer goes", () => {
         attachProp(wide, ON_WHOLE, UP);
         expect(press(screenPointOf(ON_WHOLE))).toBe(true);
-        // To the whole block's east edge, where it would overhang if it followed.
-        dragThrough(onTops(9.6, BLOCK_ROW + 0.7), onTops(9.95, BLOCK_ROW + 0.75));
+        // To the square top's east edge, where it would overhang if it followed.
+        dragThrough(onTops(9.6, BLOCKS_Z + 0.7), onTops(9.95, BLOCKS_Z + 0.75));
         expect(objectTransform()).toEqual({pos: [ON_WHOLE.x, ON_WHOLE.y, ON_WHOLE.z], dir: [0, 1, 0], scale: [1, 0.5, 1]});
         expect(quarterTurns()).toBe(0);
         expect(blocked()).toBe(true);
@@ -1004,7 +1013,7 @@ describe("a prop dragged to a spot that takes it only turned", () => {
     it("lies as it started again once the pointer is back where that fits", () => {
         attachProp(wide, ON_WHOLE, UP);
         expect(press(screenPointOf(ON_WHOLE))).toBe(true);
-        dragThrough(onTops(9.6, BLOCK_ROW + 0.7), screenPointOf(NARROW));
+        dragThrough(onTops(9.6, BLOCKS_Z + 0.7), screenPointOf(NARROW));
         expect(quarterTurns()).toBe(1);
 
         dragThrough(screenPointOf(ON_WHOLE));
@@ -1015,20 +1024,20 @@ describe("a prop dragged to a spot that takes it only turned", () => {
     });
 
     it("turns the other way about: a tall one onto a top too shallow for it", () => {
-        const start = {x: 9.25, y: BLOCK_TOP_Y, z: BLOCK_ROW + 0.5};
+        const start = {x: 9.25, y: BLOCK_TOP_Y, z: BLOCKS_Z + 0.5};
         attachProp(tall, start, UP);
-        expect(drag(screenPointOf(start), onTops(9.3, BLOCK_ROW + 0.5), screenPointOf(SHALLOW))).toBe(true);
+        expect(drag(screenPointOf(start), onTops(9.3, BLOCKS_Z + 0.5), screenPointOf(SHALLOW))).toBe(true);
         expect(objectTransform()).toEqual({pos: [SHALLOW.x, SHALLOW.y, SHALLOW.z], dir: [0, 1, 0], scale: [1, 0.5, 1]});
         expect(quarterTurns()).toBe(1);
     });
 
     it("is turned back by the next such move, not on round", () => {
         attachProp(wide, ON_WHOLE, UP);
-        expect(drag(screenPointOf(ON_WHOLE), onTops(9.6, BLOCK_ROW + 0.7), screenPointOf(NARROW))).toBe(true);
+        expect(drag(screenPointOf(ON_WHOLE), onTops(9.6, BLOCKS_Z + 0.7), screenPointOf(NARROW))).toBe(true);
         expect(quarterTurns()).toBe(1);
 
         // Turned, it is too deep for the shallow top.
-        expect(drag(screenPointOf(NARROW), onTops(11.3, BLOCK_ROW + 0.5), screenPointOf(SHALLOW))).toBe(true);
+        expect(drag(screenPointOf(NARROW), onTops(11.3, BLOCKS_Z + 0.5), screenPointOf(SHALLOW))).toBe(true);
         expect(objectTransform()).toEqual({pos: [SHALLOW.x, SHALLOW.y, SHALLOW.z], dir: [0, 1, 0], scale: [1, 0.5, 1]});
         expect(quarterTurns()).toBe(0);
     });
@@ -1043,7 +1052,7 @@ describe("a prop dragged to a spot that takes it only turned", () => {
     it("leaves a canvas as it lies: only a prop turns to fit", () => {
         attach(canvasTypeIndex, ON_WHOLE, UP, {x: 1, y: 0.5, z: 1});
         expect(press(screenPointOf(ON_WHOLE))).toBe(true);
-        dragThrough(onTops(9.6, BLOCK_ROW + 0.7), screenPointOf(NARROW));
+        dragThrough(onTops(9.6, BLOCKS_Z + 0.7), screenPointOf(NARROW));
         expect(objectTransform()).toEqual({pos: [ON_WHOLE.x, ON_WHOLE.y, ON_WHOLE.z], dir: [0, 1, 0], scale: [1, 0.5, 1]});
         expect(quarterTurns()).toBe(0);
         expect(blocked()).toBe(true);
@@ -1066,18 +1075,18 @@ describe("the rotate tool of the selected object", () => {
             [10.5, 1, WALL_Z], [0.5, 1, 1]]]);
     });
 
-    it("shifts it a grid step first where it only fits so: lying along one half of a block's top", () => {
-        standBlock(10);
-        attach(canvasTypeIndex, {x: 10.5, y: BLOCK_TOP_Y, z: BLOCK_ROW + 0.75}, UP, {x: 1, y: 0.5, z: 1});
+    it("shifts it a grid step first where it only fits so: lying along one half of a square top", () => {
+        standBlocks(10);
+        attach(canvasTypeIndex, {x: 10.5, y: BLOCK_TOP_Y, z: BLOCKS_Z + 0.75}, UP, {x: 1, y: 0.5, z: 1});
         expect(ObjectEditUtil.canQuarterTurn(selection())).toBe(true);
         ObjectEditUtil.tryQuarterTurn(selection());
         // Along the whole of the top, across its middle.
-        expect(objectTransform()).toEqual({pos: [10.5, BLOCK_TOP_Y, BLOCK_ROW + 0.5], dir: [0, 1, 0], scale: [0.5, 1, 1]});
+        expect(objectTransform()).toEqual({pos: [10.5, BLOCK_TOP_Y, BLOCKS_Z + 0.5], dir: [0, 1, 0], scale: [0.5, 1, 1]});
         expect(quarterTurns()).toBe(1);
 
         // And on round, where it now stands.
         ObjectEditUtil.tryQuarterTurn(selection());
-        expect(objectTransform()).toEqual({pos: [10.5, BLOCK_TOP_Y, BLOCK_ROW + 0.5], dir: [0, 1, 0], scale: [1, 0.5, 1]});
+        expect(objectTransform()).toEqual({pos: [10.5, BLOCK_TOP_Y, BLOCKS_Z + 0.5], dir: [0, 1, 0], scale: [1, 0.5, 1]});
         expect(quarterTurns()).toBe(2);
     });
 
@@ -1088,24 +1097,24 @@ describe("the rotate tool of the selected object", () => {
     });
 
     it("shifts it along a wall from the end it stands at, on the bottom edge it had", () => {
-        hangCanvas(WALL_COL_MIN + 0.25, 0.5, 0.5, 1);
+        hangCanvas(WALL_X_MIN + 0.25, 0.5, 0.5, 1);
         ObjectEditUtil.tryQuarterTurn(selection());
-        expect(objectTransform()).toEqual({pos: [WALL_COL_MIN + 0.5, 0.25, WALL_Z], dir: [0, 0, 1], scale: [1, 0.5, 1]});
+        expect(objectTransform()).toEqual({pos: [WALL_X_MIN + 0.5, 0.25, WALL_Z], dir: [0, 0, 1], scale: [1, 0.5, 1]});
     });
 
     it("turns a prop the same way, the size its image pins it to turning with it", () => {
-        standBlock(10);
-        attachProp(FIXTURE_PICTURES.wide, {x: 10.5, y: BLOCK_TOP_Y, z: BLOCK_ROW + 0.25}, UP);
+        standBlocks(10);
+        attachProp(FIXTURE_PICTURES.wide, {x: 10.5, y: BLOCK_TOP_Y, z: BLOCKS_Z + 0.25}, UP);
         expect(ObjectEditUtil.canQuarterTurn(selection())).toBe(true);
         ObjectEditUtil.tryQuarterTurn(selection());
-        expect(objectTransform()).toEqual({pos: [10.5, BLOCK_TOP_Y, BLOCK_ROW + 0.5], dir: [0, 1, 0], scale: [0.5, 1, 1]});
+        expect(objectTransform()).toEqual({pos: [10.5, BLOCK_TOP_Y, BLOCKS_Z + 0.5], dir: [0, 1, 0], scale: [0.5, 1, 1]});
         expect(quarterTurns()).toBe(1);
     });
 
     it("is not offered where the object fits turned nowhere within a grid step", () => {
-        // On the south side of a lone block, which is one layer tall.
-        standBlock(10);
-        const middle = {x: 10.5, y: 0.5 * COLLISION_LAYER_HEIGHT, z: BLOCK_ROW + 1};
+        // On the south side of blocks standing by themselves, a unit wide and one layer tall.
+        standBlocks(10);
+        const middle = {x: 10.5, y: 0.5 * COLLISION_LAYER_HEIGHT, z: BLOCKS_Z + 1};
         attach(canvasTypeIndex, middle, SOUTH, {x: 1, y: 0.5, z: 1});
         expect(ObjectEditUtil.canQuarterTurn(selection())).toBe(false);
 

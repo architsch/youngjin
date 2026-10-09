@@ -40,8 +40,9 @@ export const SELECTION_HANDLE_MAX_DISTANCE = 12;
 
 // What an automatic selection asks of a voxel quad (see VoxelQuadSelection): to lie no further than this from where
 // it looks, with at least this share of its face clear of attached objects. With no such quad, it takes an object
-// within the same distance instead.
-export const AUTO_SELECTION_MAX_DISTANCE = 1.5;
+// within the same distance instead. The distance stops just short of the far side of a wall a world unit thick,
+// as measured from the middle of the voxel before it.
+export const AUTO_SELECTION_MAX_DISTANCE = 1.25;
 export const AUTO_SELECTION_MIN_COVERAGE_FREE_RATIO = 0.5;
 
 // How far from the selected object a movement key looks for another to select (see SelectionStepUtil). Measured
@@ -65,6 +66,12 @@ export const IMAGE_CATEGORY_TABS_ENABLED = true;
 // A quicker drag scrolls its grid instead, and a quicker release is a click.
 export const REORDER_HOLD_MS = 300;
 
+// Voxels
+
+// How wide a patch of the floor plan one VoxelGameObject owns the voxels of, in world units. Each is a
+// node of the scene, walked every frame, so the room has a few hundred of them, not one per voxel.
+export const VOXEL_GAME_OBJECT_SIZE_XZ = 2;
+
 // three.js
 
 export const DIRECTION_VECTORS: {[key: string]: THREE.Vector3} = {
@@ -78,9 +85,13 @@ export const DIRECTION_VECTORS: {[key: string]: THREE.Vector3} = {
 
 // Lighting
 
-// Minimum light distance: treats lights as having size (three quarters of a block), since point falloff
+// Minimum light distance: treats lights as having size (a block and a half), since point falloff
 // near the light would spike and clip.
 export const LIGHT_SOURCE_MIN_DISTANCE = 0.75;
+
+// The head light reads lamp light a region at a time (see LightBlockMap): a square of blocks this wide in
+// world units, one layer high. It needs the light no finer, and what it reads is worked out for every one.
+export const LIGHT_REGION_SIZE_XZ = 1;
 
 // Brightness mapped to the top of the light texture's range (the room's exposure). Set high so bright
 // lamps have headroom; the sqrt encoding (see LightBlockMap) takes that precision from the bright end.

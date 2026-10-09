@@ -5,7 +5,7 @@ import Room from "../../../shared/room/types/room";
 import RoomGenerationUtil from "../../../shared/room/generation/util/roomGenerationUtil";
 import SinglePlayerModeConfigMap from "../../../shared/singlePlayer/maps/singlePlayerModeConfigMap";
 import { PLAYER_HEIGHT } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
-import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, UNIT_VEC3 } from "../../../shared/system/sharedConstants";
+import { NUM_VOXEL_COLS, NUM_VOXEL_ROWS, UNIT_VEC3, VOXEL_CELL_SIZE } from "../../../shared/system/sharedConstants";
 import ClientObjectManager from "../clientObjectManager";
 import ObjectFactory from "../factories/objectFactory";
 import GameObject from "../types/gameObject/gameObject";
@@ -31,21 +31,33 @@ const ClientObjectUtil =
 
     // Spawn Actions
 
+    // How many objects spawnVoxelsFromGrid spawns.
+    getNumVoxelObjects: (): number =>
+    {
+        return Math.ceil(NUM_VOXEL_ROWS / VoxelGameObject.numVoxelsPerSide) *
+            Math.ceil(NUM_VOXEL_COLS / VoxelGameObject.numVoxelsPerSide);
+    },
+    // One object for each patch of the floor plan (see VoxelGameObject), standing at its middle.
     spawnVoxelsFromGrid: async (room: Room): Promise<void> =>
     {
-        for (const voxel of room.voxelGrid.voxels)
+        const numVoxelsPerSide = VoxelGameObject.numVoxelsPerSide;
+        for (let rowStart = 0; rowStart < NUM_VOXEL_ROWS; rowStart += numVoxelsPerSide)
         {
-            const gameObject = ObjectFactory.createClientSideObject(
-                room.id,
-                voxelTypeIndex,
-                new ObjectTransform(
-                    {x: voxel.col + 0.5, y: 0, z: voxel.row + 0.5},
-                    {x: 0, y: 0, z: 1},
-                    {...UNIT_VEC3}
-                )
-            );
-            (gameObject as VoxelGameObject).setVoxel(voxel, room.voxelGrid.voxels);
-            await ClientObjectManager.addObject(gameObject, false, false);
+            for (let colStart = 0; colStart < NUM_VOXEL_COLS; colStart += numVoxelsPerSide)
+            {
+                const gameObject = ObjectFactory.createClientSideObject(
+                    room.id,
+                    voxelTypeIndex,
+                    new ObjectTransform(
+                        {x: (colStart + 0.5 * numVoxelsPerSide) * VOXEL_CELL_SIZE, y: 0,
+                            z: (rowStart + 0.5 * numVoxelsPerSide) * VOXEL_CELL_SIZE},
+                        {x: 0, y: 0, z: 1},
+                        {...UNIT_VEC3}
+                    )
+                );
+                (gameObject as VoxelGameObject).setVoxels(room.voxelGrid.voxels, rowStart, colStart);
+                await ClientObjectManager.addObject(gameObject, false, false);
+            }
         }
     },
     spawnSingleModePlayer: async (room: Room): Promise<GameObject> =>
@@ -67,12 +79,8 @@ const ClientObjectUtil =
     getSingleModePlayerPosition: (room: Room): Vec3 =>
     {
         const config = SinglePlayerModeConfigMap[room.roomName];
-        const p = config.getRoomBuilderParams();
-        return {
-            x: p.entranceVoxelCol + 0.5,
-            y: 0.5 * PLAYER_HEIGHT + (p.entranceVoxelCollisionLayer - COLLISION_LAYER_MIN) * COLLISION_LAYER_HEIGHT,
-            z: p.entranceVoxelRow + 0.5
-        };
+        const {entrancePos} = config.getRoomBuilderParams();
+        return {x: entrancePos.x, y: entrancePos.y + 0.5 * PLAYER_HEIGHT, z: entrancePos.z};
     },
 
     // Conditions

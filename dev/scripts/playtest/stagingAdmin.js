@@ -26,6 +26,7 @@
 //
 // Every command prints JSON on stdout, naming the target it addressed.
 
+const zlib = require("zlib");
 const DBGuard = require("./lib/dbGuard");
 const { generateRoomContent } = require("./generateRoomContent");
 const { MILESTONES } = require("../analytics/funnelReport");
@@ -515,17 +516,27 @@ async function cleanupAcquisition(db)
 // room only between versions sharing a decoder (identical body layout); across decoders it yields
 // corruption, so that downgrade is refused. Cross-decoder migration is covered by
 // tests/integration/scenarios/voxel-grid-migration.test.ts instead.
+//
+// The server stores a blob gzipped and reads one stored either way (see DBFileStorageUtil), so a blob is
+// unpacked before its bytes are read here, and one rewritten here is stored plain, as old rooms are.
 const CONTENT_FILE = "content.bin";
+
+function unpackContent(stored)
+{
+    return (stored[0] === 0x1f && stored[1] === 0x8b) ? zlib.gunzipSync(stored) : stored;
+}
 
 // Voxel-grid format version -> decoder. Versions sharing a decoder share a body layout. Versions 4 and 5
 // share one though they differ in the spare bit of each quad (drawn in 4, unused in 5): a version-5 body
 // stamped as 4 reads back the same room. Version 6 is laid out like them, but spells block shapes with
-// that bit, so a room holding a shrunk block is no version-5 room and the downgrade is refused.
+// that bit, so a room holding a shrunk block is no version-5 room and the downgrade is refused. Version 7
+// holds four voxels for each of their cells, so nothing older reads its body.
 const VOXEL_GRID_DECODER_BY_VERSION = {
     0: "decodeHalfHeightFormat", 1: "decodeHalfHeightFormat",
-    2: "decodeVoxelsOnlyFormat", 3: "decodeVoxelsOnlyFormat",
-    4: "decodeVoxelsAndZonesFormat", 5: "decodeVoxelsAndZonesFormat",
-    6: "VoxelGrid's decodeBody",
+    2: "decodeCellsOnlyFormat", 3: "decodeCellsOnlyFormat",
+    4: "decodeCellsAndZonesFormat", 5: "decodeCellsAndZonesFormat",
+    6: "decodeShapedBlocksFormat",
+    7: "VoxelGrid's decodeBody",
 };
 
 function contentPath(roomID) { return `${collection("rooms")}/${roomID}/${CONTENT_FILE}`; }
@@ -542,10 +553,12 @@ async function inspectContent(bucket)
     {
         if (!file.name.endsWith(CONTENT_FILE)) continue;
         const roomID = file.name.split("/")[1];
-        const [buffer] = await file.download();
+        const [stored] = await file.download();
+        const buffer = unpackContent(stored);
         rooms.push({
             roomID,
             bytes: buffer.length,
+            storedBytes: stored.length,
             voxelGridVersion: buffer[0],
             hasBackup: backedUp.has(roomID),
         });
@@ -563,7 +576,8 @@ async function downgradeContent(bucket, roomID, toVersion)
     if (!exists)
         throw new Error(`No content blob at ${contentPath(roomID)}`);
 
-    const [buffer] = await file.download();
+    const [stored] = await file.download();
+    const buffer = unpackContent(stored);
     const originalVersion = buffer[0];
     if (toVersion >= originalVersion)
         throw new Error(`--to ${toVersion} is not below the current version (${originalVersion}); nothing to downgrade.`);
@@ -590,7 +604,7 @@ async function downgradeContent(bucket, roomID, toVersion)
     const backup = bucket.file(backupPath(roomID));
     const [backupExists] = await backup.exists();
     if (!backupExists)
-        await backup.save(buffer, { metadata: { contentType: "application/octet-stream" }, resumable: false });
+        await backup.save(stored, { metadata: { contentType: "application/octet-stream" }, resumable: false });
 
     const downgraded = Buffer.from(buffer);
     downgraded[0] = toVersion;
@@ -616,10 +630,11 @@ async function restoreContent(bucket, roomID)
     for (const backup of targets)
     {
         const id = backup.name.split("/")[1];
-        const [buffer] = await backup.download();
-        await bucket.file(contentPath(id)).save(buffer,
+        const [stored] = await backup.download();
+        await bucket.file(contentPath(id)).save(stored,
             { metadata: { contentType: "application/octet-stream" }, resumable: false });
         await backup.delete();
+        const buffer = unpackContent(stored);
         restored.push({ roomID: id, bytes: buffer.length, voxelGridVersion: buffer[0] });
     }
     return { restored };

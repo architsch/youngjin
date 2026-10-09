@@ -115,7 +115,6 @@ plates were painted out; small incidental labels on goods remain.
 | `2/91.webp` | Japanese Whisky Shelf | Rod Long | [dSvBSp4jgX8](https://unsplash.com/photos/bottles-of-liquor-displayed-on-illuminated-shelves-dSvBSp4jgX8) | Unsplash License |
 | `2/96.webp` | Vintage Black CRT TV | Lucrezia Carnelos | [esPwOIfkz5U](https://unsplash.com/photos/vintage-black-crt-tv-turned-on-near-lighted-table-lamp-esPwOIfkz5U) | Unsplash License |
 | `2/97.webp` | Parts Drawers | Jesse Orrico | [h6xNSDlgciU](https://unsplash.com/photos/gray-metal-drawers-h6xNSDlgciU) | Unsplash License |
-| `2/98.webp` | Sink Taps | Jennifer Grismer | [ybyCGhe2HHI](https://unsplash.com/photos/an-old-sink-in-a-room-with-a-green-wall-ybyCGhe2HHI) | Unsplash License |
 | `2/99.webp` | No Smoking Plaque | Benjamin Lehman | [1wxXo58XOjk](https://unsplash.com/photos/a-bathroom-with-a-no-smoking-sign-on-the-wall-1wxXo58XOjk) | Unsplash License |
 | `2/100.webp` | Bowl of Apples in Water | Giorgio Trovato | [9LnqAaMnUL8](https://unsplash.com/photos/a-bowl-of-apples-sitting-on-top-of-a-sink-9LnqAaMnUL8) | Unsplash License |
 | `2/101.webp` | Library Card Catalog | Jan Antonin Kolar | [lRoX0shwjUQ](https://unsplash.com/photos/brown-wooden-drawer-lRoX0shwjUQ) | Unsplash License |
@@ -189,6 +188,7 @@ The substantive ones, for attribution:
 | [three](https://github.com/mrdoob/three.js) | MIT | 3D rendering |
 | [react](https://github.com/facebook/react) / react-dom | MIT | UI |
 | [socket.io](https://github.com/socketio/socket.io) / socket.io-client | MIT | real-time networking |
+| [fflate](https://github.com/101arrowz/fflate) | MIT | inflating compressed network data in the client |
 | [express](https://github.com/expressjs/express) | MIT | HTTP server |
 | [tailwindcss](https://github.com/tailwindlabs/tailwindcss) | MIT | styling |
 | [firebase-admin](https://github.com/firebase/firebase-admin-node) | Apache-2.0 | database and storage |
@@ -211,7 +211,7 @@ npx license-checker --summary
 ```
 
 Development dependencies included: the packages the client is built from (three,
-react, socket.io-client, tailwindcss) are among them, since only the build needs
+react, socket.io-client, fflate, tailwindcss) are among them, since only the build needs
 them installed, yet they ship inside the client bundle.
 
 The picture preparation script (`npm run imagePrep`) fetches three things on

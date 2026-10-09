@@ -20,7 +20,6 @@ import ServerAnalyticsManager from "../analytics/serverAnalyticsManager";
 import { FunnelMilestoneEnumMap } from "../analytics/types/funnelMilestone";
 import MoveVoxelBlockSignal from "../../shared/voxel/types/update/moveVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../shared/voxel/types/update/removeVoxelBlockSignal";
-import SetVoxelBlockShapeSignal from "../../shared/voxel/types/update/setVoxelBlockShapeSignal";
 import SetVoxelQuadTextureSignal from "../../shared/voxel/types/update/setVoxelQuadTextureSignal";
 import SetRestrictedZonesSignal from "../../shared/voxel/types/update/setRestrictedZonesSignal";
 import AddObjectSignal from "../../shared/object/types/addObjectSignal";
@@ -138,12 +137,6 @@ const SocketsServer =
                     const bufferState = new BufferState(new Uint8Array(buffer));
                     const signal = RemoveVoxelBlockSignal.decode(bufferState) as RemoveVoxelBlockSignal;
                     ServerVoxelManager.onRemoveVoxelBlockSignalReceived(socketUserContext, signal);
-                    recordEdit();
-                });
-                socketUserContext.onReceivedSignalFromUser("setVoxelBlockShapeSignal", (buffer: ArrayBuffer) => {
-                    const bufferState = new BufferState(new Uint8Array(buffer));
-                    const signal = SetVoxelBlockShapeSignal.decode(bufferState) as SetVoxelBlockShapeSignal;
-                    ServerVoxelManager.onSetVoxelBlockShapeSignalReceived(socketUserContext, signal);
                     recordEdit();
                 });
                 socketUserContext.onReceivedSignalFromUser("setVoxelQuadTextureSignal", (buffer: ArrayBuffer) => {

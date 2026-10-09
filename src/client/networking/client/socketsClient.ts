@@ -1,4 +1,5 @@
 import { io, Socket } from "socket.io-client";
+import { inflateSync } from "fflate";
 import SetObjectTransformSignal from "../../../shared/object/types/setObjectTransformSignal";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import RemoveObjectSignal from "../../../shared/object/types/removeObjectSignal";
@@ -16,7 +17,6 @@ import { connectionStateObservable } from "../../system/clientObservables";
 import { tryStartClientProcess, endClientProcess, ongoingClientProcessExists } from "../../system/types/clientProcess";
 import BufferState from "../../../shared/networking/types/bufferState";
 import SetVoxelQuadTextureSignal from "../../../shared/voxel/types/update/setVoxelQuadTextureSignal";
-import SetVoxelBlockShapeSignal from "../../../shared/voxel/types/update/setVoxelBlockShapeSignal";
 import SetRestrictedZonesSignal from "../../../shared/voxel/types/update/setRestrictedZonesSignal";
 import RemoveVoxelBlockSignal from "../../../shared/voxel/types/update/removeVoxelBlockSignal";
 import AddVoxelBlockSignal from "../../../shared/voxel/types/update/addVoxelBlockSignal";
@@ -57,8 +57,6 @@ const incomingSignalHandlers: {[signalType: string]: (data: EncodableData) => vo
         ClientVoxelManager.onMoveVoxelBlockSignalReceived(data as MoveVoxelBlockSignal),
     "removeVoxelBlockSignal": (data: EncodableData) =>
         ClientVoxelManager.onRemoveVoxelBlockSignalReceived(data as RemoveVoxelBlockSignal),
-    "setVoxelBlockShapeSignal": (data: EncodableData) =>
-        ClientVoxelManager.onSetVoxelBlockShapeSignalReceived(data as SetVoxelBlockShapeSignal),
     "setVoxelQuadTextureSignal": (data: EncodableData) =>
         ClientVoxelManager.onSetVoxelQuadTextureSignalReceived(data as SetVoxelQuadTextureSignal),
     "setRestrictedZonesSignal": (data: EncodableData) =>
@@ -141,33 +139,12 @@ const SocketsClient =
                 (window as any).location.href = err.message;
         });
 
-        socket.on("signalBatch", (buffer: ArrayBuffer) => {
-            try {
-                //console.log(`signalBatch received - length = ${buffer.byteLength}`);
-                const bufferState = new BufferState(new Uint8Array(buffer));
-                while (bufferState.byteIndex < bufferState.view.byteLength)
-                {
-                    const signalTypeIndex = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
-                    const signalConfig = SignalTypeConfigMap.getConfigByIndex(signalTypeIndex);
-                    if (!signalConfig)
-                    {
-                        console.error(`Unknown signal type index: ${signalTypeIndex}`);
-                        return;
-                    }
-                    const incomingSignalHandler = incomingSignalHandlers[signalConfig.signalType];
-                    if (!incomingSignalHandler)
-                    {
-                        console.error(`Incoming Signal handler not found (signal type = ${signalConfig.signalType})`);
-                        return;
-                    }
-                    const arr = (EncodableArray.decodeWithParams(bufferState, signalConfig.decode, 65535) as EncodableArray).arr;
-                    for (const data of arr)
-                        incomingSignalHandler(data);
-                }
-            } catch (err) {
-                console.error(`Exception while receiving a signalBatch from the server :: Error: ${ErrorUtil.getErrorMessage(err)}`);
-            }
-        });
+        socket.on("signalBatch", (buffer: ArrayBuffer) => receiveSignalBatch(() => new Uint8Array(buffer)));
+
+        // A long batch arrives deflated (see SocketUserContext). Inflated at once, so batches are still
+        // handled in the order they arrive.
+        socket.on("deflatedSignalBatch", (buffer: ArrayBuffer) =>
+            receiveSignalBatch(() => inflateSync(new Uint8Array(buffer))));
     },
 
     emitSetObjectTransformSignal: (params: SetObjectTransformSignal) => emitWhenReady("setObjectTransformSignal", params),
@@ -186,10 +163,6 @@ const SocketsClient =
     emitRemoveVoxelBlockSignal: (params: RemoveVoxelBlockSignal) =>
     {
         emitWhenReady("removeVoxelBlockSignal", params);
-    },
-    emitSetVoxelBlockShapeSignal: (params: SetVoxelBlockShapeSignal) =>
-    {
-        emitWhenReady("setVoxelBlockShapeSignal", params);
     },
     emitSetVoxelQuadTextureSignal: (params: SetVoxelQuadTextureSignal) =>
     {
@@ -211,6 +184,36 @@ const SocketsClient =
     {
         emitWhenReady("setObjectMetadataSignal", params);
     },
+}
+
+// Hands each signal of a batch to its handler, in the order sent.
+function receiveSignalBatch(readBatch: () => Uint8Array)
+{
+    try {
+        const bufferState = new BufferState(readBatch());
+        //console.log(`signalBatch received - length = ${bufferState.view.byteLength}`);
+        while (bufferState.byteIndex < bufferState.view.byteLength)
+        {
+            const signalTypeIndex = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
+            const signalConfig = SignalTypeConfigMap.getConfigByIndex(signalTypeIndex);
+            if (!signalConfig)
+            {
+                console.error(`Unknown signal type index: ${signalTypeIndex}`);
+                return;
+            }
+            const incomingSignalHandler = incomingSignalHandlers[signalConfig.signalType];
+            if (!incomingSignalHandler)
+            {
+                console.error(`Incoming Signal handler not found (signal type = ${signalConfig.signalType})`);
+                return;
+            }
+            const arr = (EncodableArray.decodeWithParams(bufferState, signalConfig.decode, 65535) as EncodableArray).arr;
+            for (const data of arr)
+                incomingSignalHandler(data);
+        }
+    } catch (err) {
+        console.error(`Exception while receiving a signalBatch from the server :: Error: ${ErrorUtil.getErrorMessage(err)}`);
+    }
 }
 
 // The "Reconnecting..." wait: for a lost connection, or for a room the server is reloading.

@@ -31,18 +31,18 @@ import SetRestrictedZonesSignal from "../../../src/shared/voxel/types/update/set
 import AddVoxelBlockSignal from "../../../src/shared/voxel/types/update/addVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/removeVoxelBlockSignal";
 import SetVoxelQuadTextureSignal from "../../../src/shared/voxel/types/update/setVoxelQuadTextureSignal";
-import SetVoxelBlockShapeSignal from "../../../src/shared/voxel/types/update/setVoxelBlockShapeSignal";
 import MoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/moveVoxelBlockSignal";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
-import { COLLISION_LAYER_MIN, MAX_RESTRICTED_ZONES, NUM_VOXEL_COLS, NUM_VOXEL_ROWS,
-    SANDBOX_SINGLE_PLAYER_MODE, UNIT_VEC3, VOXEL_BLOCK_SHAPE_WHOLE } from "../../../src/shared/system/sharedConstants";
+import { COLLISION_LAYER_MIN, MAX_RESTRICTED_ZONES, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, SANDBOX_SINGLE_PLAYER_MODE,
+    UNIT_VEC3, VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 
-// Clear of the boundary walls and the door's wall.
-const ZONE = new RestrictedZone(8, 15, 8, 15);
+// Clear of the boundary walls and the door's wall. It counts voxels, and every side of it lies half a world
+// unit off a whole one.
+const ZONE = new RestrictedZone(17, 30, 17, 30);
 
-// A cell inside that zone, and one outside it, at a height the room is hollow at.
-const INSIDE = {row: 10, col: 10};
-const OUTSIDE = {row: 20, col: 20};
+// A voxel inside that zone, and one outside it, at a height the room is hollow at.
+const INSIDE = {row: 20, col: 20};
+const OUTSIDE = {row: 40, col: 40};
 const LAYER = COLLISION_LAYER_MIN + 2;
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
@@ -89,12 +89,18 @@ function blockIsThere(room: Room, row: number, col: number, layer: number = LAYE
     return VoxelQueryUtil.isVoxelBlockPresent(voxel, layer);
 }
 
-// Only the collider's position matters, not whether a canvas could really hang there.
+// The middle of a voxel in the world, at a height.
+function voxelMiddle(row: number, col: number, y: number): {x: number, y: number, z: number}
+{
+    return {x: VoxelQueryUtil.getWorldXAtVoxelColCenter(col), y, z: VoxelQueryUtil.getWorldZAtVoxelRowCenter(row)};
+}
+
+// Over a voxel's middle. Only the collider's position matters, not whether a canvas could really hang there.
 function makeCanvasSignal(room: Room, user: User, row: number, col: number,
     objectId: string = "a-canvas"): AddObjectSignal
 {
     return new AddObjectSignal(room.id, user.id, user.userName, canvasTypeIndex, objectId,
-        new ObjectTransform({x: col + 0.5, y: 2, z: row + 0.5}, {x: 0, y: 0, z: -1}, {...UNIT_VEC3}));
+        new ObjectTransform(voxelMiddle(row, col, 2), {x: 0, y: 0, z: -1}, {...UNIT_VEC3}));
 }
 
 describe("restricted zones", () => {
@@ -148,6 +154,47 @@ describe("restricted zones", () => {
         });
     });
 
+    it("covers the voxels it is drawn over and none past them, down to a single one", async () => {
+        await runScenario({
+            name: "a zone's voxels",
+            rooms: [EMPTY_HUB],
+            users: [userAtCenter("hub")],
+            assertions: () => {
+                const room = getRoom("hub");
+                drawZone(room, ZONE);
+                const blocked = (row: number, col: number) =>
+                    RestrictedZoneUtil.blocksVoxelBlockEdit(MEMBER, room, row, col);
+
+                // Its first and last voxels along rows and cols, and the ones just past them.
+                const first = {row: ZONE.rowMin, col: ZONE.colMin};
+                const last = {row: ZONE.rowMax, col: ZONE.colMax};
+                expect(blocked(first.row, first.col)).toBe(true);
+                expect(blocked(last.row, last.col)).toBe(true);
+                expect(blocked(first.row - 1, first.col)).toBe(false);
+                expect(blocked(first.row, first.col - 1)).toBe(false);
+                expect(blocked(last.row + 1, last.col)).toBe(false);
+                expect(blocked(last.row, last.col + 1)).toBe(false);
+
+                // One voxel is the least a zone covers, and it covers that one alone.
+                const lone = new RestrictedZone(OUTSIDE.row, OUTSIDE.row, OUTSIDE.col, OUTSIDE.col);
+                drawZone(room, lone);
+                expect(blocked(OUTSIDE.row, OUTSIDE.col)).toBe(true);
+                for (const [rowOffset, colOffset] of [[-1, 0], [1, 0], [0, -1], [0, 1]])
+                    expect(blocked(OUTSIDE.row + rowOffset, OUTSIDE.col + colOffset)).toBe(false);
+
+                // In the world it is that voxel's column, less the margin its sides keep clear.
+                const {center, halfSize} = lone.getVolume();
+                expect(center.x).toBeCloseTo(VoxelQueryUtil.getWorldXAtVoxelColCenter(OUTSIDE.col), 6);
+                expect(center.z).toBeCloseTo(VoxelQueryUtil.getWorldZAtVoxelRowCenter(OUTSIDE.row), 6);
+                for (const halfWidth of [halfSize.x, halfSize.z])
+                {
+                    expect(halfWidth).toBeLessThan(0.5 * VOXEL_CELL_SIZE);
+                    expect(halfWidth).toBeGreaterThan(0.45 * VOXEL_CELL_SIZE);
+                }
+            },
+        });
+    });
+
     it("lets an admin build inside a hub's zone", async () => {
         await runScenario({
             name: "admin builds inside a zone",
@@ -193,10 +240,9 @@ describe("restricted zones", () => {
         });
     });
 
-    it("refuses an ordinary user's reshape or move inside a zone, and answers with the block as it is", async () => {
-        const LOW_X_HALF = 0b0101;
+    it("refuses an ordinary user's move within, out of or into a zone, and answers with the blocks as they are", async () => {
         await runScenario({
-            name: "block reshaped and moved inside a zone",
+            name: "block moved inside a zone",
             rooms: [EMPTY_HUB],
             users: [userAtCenter("hub")],
             assertions: ({users}) => {
@@ -210,51 +256,45 @@ describe("restricted zones", () => {
                 }
                 drawZone(room, ZONE);
                 room.dirty = false;
-                const shapeOf = (quadIndex: number) => VoxelQueryUtil.getVoxelBlockShapeAt(room.voxelGrid.voxels,
-                    VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex), VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex),
-                    LAYER);
+                // The first voxel row past the zone's far edge.
+                const pastZoneRow = ZONE.rowMax + 1;
 
-                // Shrinking a block inside the zone, moving it within the zone, and moving it out.
-                ServerVoxelManager.onSetVoxelBlockShapeSignalReceived(users[0].socketUserContext,
-                    new SetVoxelBlockShapeSignal(room.id, inside, LOW_X_HALF));
+                // Moving a block within the zone, and moving it out.
                 ServerVoxelManager.onMoveVoxelBlockSignalReceived(users[0].socketUserContext,
                     new MoveVoxelBlockSignal(room.id, inside, 1, 0, 0));
                 ServerVoxelManager.onMoveVoxelBlockSignalReceived(users[0].socketUserContext,
-                    new MoveVoxelBlockSignal(room.id, inside, ZONE.rowMax + 1 - INSIDE.row, 0, 0));
+                    new MoveVoxelBlockSignal(room.id, inside, pastZoneRow - INSIDE.row, 0, 0));
                 // Moving a block in from outside puts a block inside the zone just as adding one would.
                 ServerVoxelManager.onMoveVoxelBlockSignalReceived(users[0].socketUserContext,
                     new MoveVoxelBlockSignal(room.id, outside, INSIDE.row + 1 - OUTSIDE.row,
                         INSIDE.col - OUTSIDE.col, 0));
 
-                expect(shapeOf(inside)).toBe(VOXEL_BLOCK_SHAPE_WHOLE);
-                expect(shapeOf(outside)).toBe(VOXEL_BLOCK_SHAPE_WHOLE);
+                expect(blockIsThere(room, INSIDE.row, INSIDE.col)).toBe(true);
+                expect(blockIsThere(room, OUTSIDE.row, OUTSIDE.col)).toBe(true);
                 expect(blockIsThere(room, INSIDE.row + 1, INSIDE.col)).toBe(false);
-                expect(blockIsThere(room, ZONE.rowMax + 1, INSIDE.col)).toBe(false);
+                expect(blockIsThere(room, pastZoneRow, INSIDE.col)).toBe(false);
                 expect(room.dirty).toBe(false);
 
-                // Each refusal is answered with what its cells hold: the block whole where it was, and
-                // nothing where it was sent.
-                expect(getPendingSignals(users[0], "addVoxelBlockSignal")
-                    .map(signal => [signal.quadIndex, signal.shape])).toEqual([
-                    [inside, VOXEL_BLOCK_SHAPE_WHOLE], [inside, VOXEL_BLOCK_SHAPE_WHOLE],
-                    [inside, VOXEL_BLOCK_SHAPE_WHOLE], [outside, VOXEL_BLOCK_SHAPE_WHOLE]]);
+                // Each refusal is answered with what its cells hold: the block where it was, and nothing
+                // where it was sent.
+                expect(getPendingSignals(users[0], "addVoxelBlockSignal").map(signal => signal.quadIndex))
+                    .toEqual([inside, inside, outside]);
                 expect(getPendingSignals(users[0], "removeVoxelBlockSignal").map(signal => signal.quadIndex))
-                    .toEqual([blockQuadIndex(INSIDE.row + 1, INSIDE.col), blockQuadIndex(ZONE.rowMax + 1, INSIDE.col),
+                    .toEqual([blockQuadIndex(INSIDE.row + 1, INSIDE.col), blockQuadIndex(pastZoneRow, INSIDE.col),
                         blockQuadIndex(INSIDE.row + 1, INSIDE.col)]);
 
-                // Outside the zone the same user shapes and moves blocks as they like.
-                ServerVoxelManager.onSetVoxelBlockShapeSignalReceived(users[0].socketUserContext,
-                    new SetVoxelBlockShapeSignal(room.id, outside, LOW_X_HALF));
-                expect(shapeOf(outside)).toBe(LOW_X_HALF);
+                // Outside the zone the same user moves blocks as they like.
                 ServerVoxelManager.onMoveVoxelBlockSignalReceived(users[0].socketUserContext,
                     new MoveVoxelBlockSignal(room.id, outside, 1, 0, 0));
-                expect(shapeOf(blockQuadIndex(OUTSIDE.row + 1, OUTSIDE.col))).toBe(LOW_X_HALF);
+                expect(blockIsThere(room, OUTSIDE.row, OUTSIDE.col)).toBe(false);
+                expect(blockIsThere(room, OUTSIDE.row + 1, OUTSIDE.col)).toBe(true);
 
                 // And an admin does inside it.
                 becomeAdmin(users[0]);
-                ServerVoxelManager.onSetVoxelBlockShapeSignalReceived(users[0].socketUserContext,
-                    new SetVoxelBlockShapeSignal(room.id, inside, LOW_X_HALF));
-                expect(shapeOf(inside)).toBe(LOW_X_HALF);
+                ServerVoxelManager.onMoveVoxelBlockSignalReceived(users[0].socketUserContext,
+                    new MoveVoxelBlockSignal(room.id, inside, 1, 0, 0));
+                expect(blockIsThere(room, INSIDE.row, INSIDE.col)).toBe(false);
+                expect(blockIsThere(room, INSIDE.row + 1, INSIDE.col)).toBe(true);
             },
         });
     });
@@ -270,7 +310,7 @@ describe("restricted zones", () => {
                 const room = getRoom("hub");
 
                 // A block on the zone's west edge: its outward face stays editable, its inward face is in the zone.
-                const edge = {row: 10, col: ZONE.colMin};
+                const edge = {row: INSIDE.row, col: ZONE.colMin};
                 ServerVoxelManager.onAddVoxelBlockSignalReceived(users[0].socketUserContext,
                     new AddVoxelBlockSignal(room.id, blockQuadIndex(edge.row, edge.col),
                         [0, 0, 0, 0, 0, 0]));
@@ -367,7 +407,7 @@ describe("restricted zones", () => {
                 // Dragging out of a zone is refused too, or removal could be done in two steps.
                 expect(ObjectUpdateUtil.canSetObjectTransform(MEMBER, room,
                     new SetObjectTransformSignal(room.id, canvas.objectId,
-                        new ObjectTransform({x: OUTSIDE.col + 0.5, y: 2, z: OUTSIDE.row + 0.5},
+                        new ObjectTransform(voxelMiddle(OUTSIDE.row, OUTSIDE.col, 2),
                             {x: 0, y: 0, z: -1}, {...UNIT_VEC3}), false))).toBe(false);
             },
         });
@@ -406,12 +446,17 @@ describe("restricted zones", () => {
     });
 
     it("leaves a canvas on a zone's outer wall editable, and protects one on its inner side", async () => {
-        // A wall along the zone's west edge, tall enough for a canvas on either side of it.
-        const wallCol = ZONE.colMin;
+        // A wall along the zone's west edge, two voxels thick and six long, tall enough for a canvas on either
+        // side of it: where its outer and inner faces lie in the world, and the middle of its length.
+        const NUM_WALL_COLS = 2, FIRST_WALL_ROW = 18, NUM_WALL_ROWS = 6;
+        const outerX = ZONE.colMin * VOXEL_CELL_SIZE;
+        const innerX = (ZONE.colMin + NUM_WALL_COLS) * VOXEL_CELL_SIZE;
+        const middleZ = (FIRST_WALL_ROW + 0.5 * NUM_WALL_ROWS) * VOXEL_CELL_SIZE;
         const wall: {row: number, col: number, layer: number}[] = [];
-        for (let row = 9; row <= 11; ++row)
-            for (let layer = COLLISION_LAYER_MIN; layer < COLLISION_LAYER_MIN + 6; ++layer)
-                wall.push({row, col: wallCol, layer});
+        for (let row = FIRST_WALL_ROW; row < FIRST_WALL_ROW + NUM_WALL_ROWS; ++row)
+            for (let col = ZONE.colMin; col < ZONE.colMin + NUM_WALL_COLS; ++col)
+                for (let layer = COLLISION_LAYER_MIN; layer < COLLISION_LAYER_MIN + 6; ++layer)
+                    wall.push({row, col, layer});
 
         await runScenario({
             name: "canvases on a zone's edge wall",
@@ -424,14 +469,14 @@ describe("restricted zones", () => {
                 // The wall belongs to the zone, but what hangs on its outer face stands outside it.
                 const hang = (user: User, objectId: string, x: number, dirX: number) =>
                     new AddObjectSignal(room.id, user.id, user.userName, canvasTypeIndex, objectId,
-                        new ObjectTransform({x, y: 1.5, z: 10}, {x: dirX, y: 0, z: 0}, {...UNIT_VEC3}));
-                const outer = hang(MEMBER, "outer-canvas", wallCol, -1);
+                        new ObjectTransform({x, y: 1.5, z: middleZ}, {x: dirX, y: 0, z: 0}, {...UNIT_VEC3}));
+                const outer = hang(MEMBER, "outer-canvas", outerX, -1);
 
                 expect(ObjectUpdateUtil.canAddObject(MEMBER, room, outer)).toBe(true);
                 expect(ObjectUpdateUtil.canAddObject(MEMBER, room,
-                    hang(MEMBER, "inner-canvas", wallCol + 1, 1))).toBe(false);
+                    hang(MEMBER, "inner-canvas", innerX, 1))).toBe(false);
                 expect(ObjectUpdateUtil.canAddObject(ADMIN, room,
-                    hang(ADMIN, "inner-canvas", wallCol + 1, 1))).toBe(true);
+                    hang(ADMIN, "inner-canvas", innerX, 1))).toBe(true);
 
                 room.objectGroup.addObject(outer);
                 expect(ObjectUpdateUtil.canSetObjectMetadata(MEMBER, room,
@@ -454,7 +499,7 @@ describe("restricted zones", () => {
 
                 // Zones restrict building, not standing; players are never checked.
                 expect(RestrictedZoneUtil.blocksObjectEdit(MEMBER, room, playerTypeIndex,
-                    new ObjectTransform({x: INSIDE.col + 0.5, y: 1, z: INSIDE.row + 0.5},
+                    new ObjectTransform(voxelMiddle(INSIDE.row, INSIDE.col, 1),
                         {x: 0, y: 0, z: -1}, {...UNIT_VEC3}))).toBe(false);
             },
         });
@@ -498,7 +543,8 @@ describe("restricted zones", () => {
                 drawZone(room, ZONE);
 
                 ServerVoxelManager.onSetRestrictedZonesSignalReceived(users[0].socketUserContext,
-                    new SetRestrictedZonesSignal(room.id, [new RestrictedZone(0, 31, 0, 31)]));
+                    new SetRestrictedZonesSignal(room.id,
+                        [new RestrictedZone(0, NUM_VOXEL_ROWS - 1, 0, NUM_VOXEL_COLS - 1)]));
 
                 expect(room.voxelGrid.restrictedZones).toEqual([ZONE]);
 
@@ -528,6 +574,8 @@ describe("restricted zones", () => {
                     tooMany.push(new RestrictedZone(i, i, 0, 0));
                 expect(canSet(tooMany)).toBe(false);
 
+                // The grid's voxels are the range, all of them.
+                expect(canSet([new RestrictedZone(0, NUM_VOXEL_ROWS - 1, 0, NUM_VOXEL_COLS - 1)])).toBe(true);
                 expect(canSet([new RestrictedZone(-1, 4, 0, 4)])).toBe(false);
                 expect(canSet([new RestrictedZone(0, NUM_VOXEL_ROWS, 0, 4)])).toBe(false);
                 expect(canSet([new RestrictedZone(0, 4, 0, NUM_VOXEL_COLS)])).toBe(false);

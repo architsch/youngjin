@@ -5,13 +5,10 @@ import Voxel from "../../../shared/voxel/types/voxel";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import MeshDataUtil from "../../../shared/graphics/mesh/util/meshDataUtil";
 import VoxelQuadInstanceUtil from "./voxelQuadInstanceUtil";
-import AABB3 from "../../../shared/math/types/aabb3";
 import Vec3 from "../../../shared/math/types/vec3";
-import Geometry3DUtil from "../../../shared/math/util/geometry3DUtil";
-import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y, NEAR_EPSILON,
-    NUM_COLLISION_LAYERS, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS,
-    VOXEL_BLOCK_SHAPE_EMPTY, VOXEL_BLOCK_SHAPE_WHOLE, VOXEL_QUAD_GEOMETRY_ID, VOXEL_TEXTURE_PACK_MATERIAL_ID }
-    from "../../../shared/system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_X, MAX_ROOM_Y, MAX_ROOM_Z,
+    NEAR_EPSILON, NUM_COLLISION_LAYERS, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, VOXEL_CELL_SIZE, VOXEL_QUAD_GEOMETRY_ID,
+    VOXEL_TEXTURE_PACK_MATERIAL_ID } from "../../../shared/system/sharedConstants";
 
 // Queries about the room as drawn (vs. VoxelQueryUtil's stored grid): blocks hidden by the orbit camera
 // are still solid but not visible (see OrbitOcclusionHider). Always about the single current room.
@@ -20,26 +17,30 @@ import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_R
 const voxelInstancedMeshId = MeshDataUtil.getInstancedMeshId(
     VOXEL_QUAD_GEOMETRY_ID, VOXEL_TEXTURE_PACK_MATERIAL_ID);
 
-// Upper bound on walk steps: enough to cross the whole room and the margin either side of it (see
-// ROOM_BOX_MARGIN), guarding against degenerate segments.
-const maxGridWalkSteps = NUM_VOXEL_ROWS + NUM_VOXEL_COLS + NUM_COLLISION_LAYERS + 12;
+// How far past the room the ray walk's box reaches (see getFirstDrawnFaceAlongRay): two blocks, since the
+// walk never judges the block it ends in, and the one just past the floor is the one the floor tile tops.
+const ROOM_BOX_MARGIN_IN_BLOCKS = 2;
+const ROOM_BOX_MARGIN = ROOM_BOX_MARGIN_IN_BLOCKS * VOXEL_CELL_SIZE;
 
-// How far past the room the ray walk's box reaches (see getFirstDrawnFaceAlongRay): a whole block, since
-// the walk never judges the block it ends in, and one just past the floor is the one the floor tile tops.
-const ROOM_BOX_MARGIN = 1;
+// Upper bound on walk steps: enough to cross the whole room and the margin on either side of it along
+// each axis, guarding against degenerate segments.
+const maxGridWalkSteps = NUM_VOXEL_ROWS + NUM_VOXEL_COLS + NUM_COLLISION_LAYERS + 6 * ROOM_BOX_MARGIN_IN_BLOCKS;
+
+// How far short of a segment's end its walk stops (see walkBlocks), in world units. An end lying where blocks
+// meet, as the middle of an attached object often does, rounds into any of them, and none of them hides it.
+const SEGMENT_END_CLEARANCE = 0.01;
 
 // Reach for the open-space measure (see getOpenSpaceDropAhead).
 const openSpaceReach = 5; // in world units
 
-// How near a block's box a point counts as lying on it (see getShrunkBlockEntry).
-const ON_FACE_TOLERANCE = 0.01;
+// The measure reads one voxel in so many along each side: a world unit apart, which is as fine as an
+// average over that reach needs, and it is taken every frame.
+const openSpaceSampleStride = Math.round(1 / VOXEL_CELL_SIZE);
 
 const blockCenterTemp = new THREE.Vector3();
 const roomBoxTemp = new THREE.Box3();
 const segmentStartTemp = new THREE.Vector3();
 const segmentEndTemp = new THREE.Vector3();
-// A segment's start as a box of no size, to cast it against a block's box (see Geometry3DUtil).
-const segmentStartBoxTemp: AABB3 = {center: {x: 0, y: 0, z: 0}, halfSize: {x: 0, y: 0, z: 0}};
 
 const ClientVoxelQueryUtil =
 {
@@ -59,7 +60,7 @@ const ClientVoxelQueryUtil =
         if (room == undefined)
             return false;
         const voxels = room.voxelGrid.voxels;
-        return walkBlocks(voxels, from, to, (row, col, collisionLayer, entryAxis, entryOrientation) =>
+        return walkBlocks(from, to, (row, col, collisionLayer, entryAxis, entryOrientation) =>
             voxelBlockFaceIsDrawn(voxels, row, col, collisionLayer, entryAxis, entryOrientation));
     },
 
@@ -76,8 +77,8 @@ const ClientVoxelQueryUtil =
         // The box reaches past the room so that a walk from outside enters every block through a face, and
         // one leaving through the floor or ceiling crosses it before it ends.
         roomBoxTemp.min.set(-ROOM_BOX_MARGIN, -ROOM_BOX_MARGIN, -ROOM_BOX_MARGIN);
-        roomBoxTemp.max.set(NUM_VOXEL_COLS + ROOM_BOX_MARGIN, MAX_ROOM_Y + ROOM_BOX_MARGIN,
-            NUM_VOXEL_ROWS + ROOM_BOX_MARGIN);
+        roomBoxTemp.max.set(MAX_ROOM_X + ROOM_BOX_MARGIN, MAX_ROOM_Y + ROOM_BOX_MARGIN,
+            MAX_ROOM_Z + ROOM_BOX_MARGIN);
         const span = getRaySpanInBox(ray, roomBoxTemp);
         if (span == undefined)
             return undefined;
@@ -85,7 +86,7 @@ const ClientVoxelQueryUtil =
         ray.at(span.exit, segmentEndTemp);
 
         let hit: {point: Vec3, normal: Vec3} | undefined = undefined;
-        walkBlocks(voxels, segmentStartTemp, segmentEndTemp, (row, col, collisionLayer, entryAxis,
+        walkBlocks(segmentStartTemp, segmentEndTemp, (row, col, collisionLayer, entryAxis,
             entryOrientation, along) =>
         {
             if (!voxelBlockFaceIsDrawn(voxels, row, col, collisionLayer, entryAxis, entryOrientation))
@@ -123,16 +124,19 @@ const ClientVoxelQueryUtil =
         const forwardX = forwardDir.x / forwardLength;
         const forwardZ = forwardDir.z / forwardLength;
 
-        const minCol = VoxelQueryUtil.getVoxelColFromWorldX(viewPosition.x - openSpaceReach);
+        // The voxels read are fixed in the room, whichever way the square around the viewer falls on them, so
+        // the measure doesn't waver as the viewer moves.
+        const firstSampleAtOrBefore = (index: number) => Math.floor(index / openSpaceSampleStride) * openSpaceSampleStride;
+        const minCol = firstSampleAtOrBefore(VoxelQueryUtil.getVoxelColFromWorldX(viewPosition.x - openSpaceReach));
         const maxCol = VoxelQueryUtil.getVoxelColFromWorldX(viewPosition.x + openSpaceReach);
-        const minRow = VoxelQueryUtil.getVoxelRowFromWorldZ(viewPosition.z - openSpaceReach);
+        const minRow = firstSampleAtOrBefore(VoxelQueryUtil.getVoxelRowFromWorldZ(viewPosition.z - openSpaceReach));
         const maxRow = VoxelQueryUtil.getVoxelRowFromWorldZ(viewPosition.z + openSpaceReach);
 
         let weightedDropSum = 0;
         let weightSum = 0;
-        for (let row = minRow; row <= maxRow; ++row)
+        for (let row = minRow; row <= maxRow; row += openSpaceSampleStride)
         {
-            for (let col = minCol; col <= maxCol; ++col)
+            for (let col = minCol; col <= maxCol; col += openSpaceSampleStride)
             {
                 // Also what keeps the square of voxels above from reaching outside the room.
                 const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);
@@ -159,8 +163,8 @@ const ClientVoxelQueryUtil =
 function getVoxelProximityWeight(viewPosition: THREE.Vector3, forwardX: number, forwardZ: number,
     row: number, col: number): number
 {
-    const offsetX = col + 0.5 - viewPosition.x;
-    const offsetZ = row + 0.5 - viewPosition.z;
+    const offsetX = VoxelQueryUtil.getWorldXAtVoxelColCenter(col) - viewPosition.x;
+    const offsetZ = VoxelQueryUtil.getWorldZAtVoxelRowCenter(row) - viewPosition.z;
     const dist = Math.hypot(offsetX, offsetZ);
     if (dist >= openSpaceReach)
         return 0;
@@ -189,7 +193,8 @@ function getVisibleDropBelow(voxel: Voxel, row: number, col: number, viewPositio
             continue;
 
         // Block centre is precise enough, given the neighbourhood average.
-        blockCenterTemp.set(col + 0.5, blockCenterY, row + 0.5);
+        blockCenterTemp.set(VoxelQueryUtil.getWorldXAtVoxelColCenter(col), blockCenterY,
+            VoxelQueryUtil.getWorldZAtVoxelRowCenter(row));
         if (ClientVoxelQueryUtil.lineSegmentIsBlockedByDrawnVoxelBlock(viewPosition, blockCenterTemp))
             continue;
 
@@ -198,17 +203,15 @@ function getVisibleDropBelow(voxel: Voxel, row: number, col: number, viewPositio
     return 0;
 }
 
-// Walks the cell layers a segment passes through, handing visit each block it comes upon with the face it
-// is entered through (the face looking back the way the segment came) and how far along the segment that
-// is, from 0 to 1. A cell layer is taken for a whole block, entered where the segment crosses into it; a
-// shrunk block is entered where the segment meets its own box, if it does (see getShrunkBlockEntry). The
-// cell layers the segment starts and ends in are handed over only for a shrunk block standing clear of
-// that end. Stops when visit returns true, which the walk then returns.
-function walkBlocks(voxels: Voxel[], from: THREE.Vector3, to: THREE.Vector3,
+// Walks the blocks a segment passes through after from's own, handing visit each one with the face it is
+// entered through (the face looking back the way the segment came) and how far along the segment that is,
+// from 0 to 1. Stops before to's block and any entered right at the segment's end (see SEGMENT_END_CLEARANCE),
+// or when visit returns true, which the walk then returns.
+function walkBlocks(from: THREE.Vector3, to: THREE.Vector3,
     visit: (row: number, col: number, collisionLayer: number, entryAxis: "x" | "y" | "z",
         entryOrientation: "-" | "+", along: number) => boolean): boolean
 {
-    // A step of the walk is one collision layer of one voxel: a unit square in XZ, one layer tall.
+    // A block of the walk is one collision layer of one voxel.
     let col = VoxelQueryUtil.getVoxelColFromWorldX(from.x);
     let row = VoxelQueryUtil.getVoxelRowFromWorldZ(from.z);
     let collisionLayer = VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(from.y);
@@ -220,31 +223,27 @@ function walkBlocks(voxels: Voxel[], from: THREE.Vector3, to: THREE.Vector3,
     const dx = to.x - from.x, dy = to.y - from.y, dz = to.z - from.z;
     const absDx = Math.abs(dx), absDy = Math.abs(dy), absDz = Math.abs(dz);
     const colStep = Math.sign(dx), rowStep = Math.sign(dz), layerStep = Math.sign(dy);
+    // How far along the segment the last block to be judged may be entered.
+    const lastEntry = 1 - SEGMENT_END_CLEARANCE / Math.hypot(dx, dy, dz);
 
     // Per-axis cost of one block (as a segment fraction) and distance to the next boundary.
-    const colStride = (absDx > 0) ? (1 / absDx) : Infinity;
-    const rowStride = (absDz > 0) ? (1 / absDz) : Infinity;
+    const colStride = (absDx > 0) ? (VOXEL_CELL_SIZE / absDx) : Infinity;
+    const rowStride = (absDz > 0) ? (VOXEL_CELL_SIZE / absDz) : Infinity;
     const layerStride = (absDy > 0) ? (COLLISION_LAYER_HEIGHT / absDy) : Infinity;
 
     let colBoundary = (absDx > 0)
-        ? (((colStep > 0) ? (col + 1 - from.x) : (from.x - col)) / absDx) : Infinity;
+        ? (((colStep > 0) ? ((col + 1) * VOXEL_CELL_SIZE - from.x) : (from.x - col * VOXEL_CELL_SIZE)) / absDx)
+        : Infinity;
     let rowBoundary = (absDz > 0)
-        ? (((rowStep > 0) ? (row + 1 - from.z) : (from.z - row)) / absDz) : Infinity;
+        ? (((rowStep > 0) ? ((row + 1) * VOXEL_CELL_SIZE - from.z) : (from.z - row * VOXEL_CELL_SIZE)) / absDz)
+        : Infinity;
     let layerBoundary = (absDy > 0)
         ? (((layerStep > 0)
             ? ((collisionLayer + 1) * COLLISION_LAYER_HEIGHT - from.y)
             : (from.y - collisionLayer * COLLISION_LAYER_HEIGHT)) / absDy)
         : Infinity;
 
-    const visitShrunkBlock = (): boolean =>
-    {
-        const entry = getShrunkBlockEntry(voxels, row, col, collisionLayer, from, to);
-        return entry != undefined && visit(row, col, collisionLayer, entry.axis, entry.orientation, entry.along);
-    };
-
-    if (visitShrunkBlock())
-        return true;
-    // The segment ends in the cell layer it starts in, so there is none in between to speak of.
+    // The segment ends in the block it starts in, so there is no block in between to speak of.
     if (col === endCol && row === endRow && collisionLayer === endCollisionLayer)
         return false;
 
@@ -279,63 +278,17 @@ function walkBlocks(voxels: Voxel[], from: THREE.Vector3, to: THREE.Vector3,
             entryStep = layerStep;
         }
 
-        if (boundaryCrossed >= 1)
-            return false; // Stepped past the end itself, which the block test below may have missed.
+        if (boundaryCrossed >= lastEntry)
+            return false; // Entered at the segment's end, or past it.
 
-        // Check arrival before judging a whole block, since attached objects often sit exactly on a
-        // boundary and may round into the block behind them.
+        // Arrival is checked before the block is judged: the block the segment ends in doesn't hide its end.
         if (col === endCol && row === endRow && collisionLayer === endCollisionLayer)
-            return visitShrunkBlock();
+            return false;
 
-        if (blockIsShrunk(voxels, row, col, collisionLayer))
-        {
-            if (visitShrunkBlock())
-                return true;
-        }
-        else if (visit(row, col, collisionLayer, entryAxis, (entryStep > 0) ? "-" : "+", boundaryCrossed))
+        if (visit(row, col, collisionLayer, entryAxis, (entryStep > 0) ? "-" : "+", boundaryCrossed))
             return true;
     }
     return false;
-}
-
-// Whether a cell layer of the room holds a block that fills only part of it.
-function blockIsShrunk(voxels: Voxel[], row: number, col: number, collisionLayer: number): boolean
-{
-    // (Outside the room and beyond its layers lies rock, which comes back whole.)
-    const shape = VoxelQueryUtil.getVoxelBlockShapeAt(voxels, row, col, collisionLayer);
-    return shape != VOXEL_BLOCK_SHAPE_EMPTY && shape != VOXEL_BLOCK_SHAPE_WHOLE;
-}
-
-// Where a segment enters the box of the shrunk block in a cell layer: the face of the box it comes in by,
-// and how far along the segment that is. Undefined if the cell layer holds no shrunk block, if the segment
-// misses the box, or if either end of the segment lies in the box or on it: an end inside is not shut in by
-// its own block (see lineSegmentIsBlockedByDrawnVoxelBlock), and one on a face, as an attached object's is,
-// may have been stored a hair inside.
-function getShrunkBlockEntry(voxels: Voxel[], row: number, col: number, collisionLayer: number,
-    from: THREE.Vector3, to: THREE.Vector3): {axis: "x" | "y" | "z", orientation: "-" | "+", along: number} | undefined
-{
-    if (!blockIsShrunk(voxels, row, col, collisionLayer))
-        return undefined;
-    const box = VoxelQueryUtil.getVoxelBlockBox(row, col, collisionLayer,
-        VoxelQueryUtil.getVoxelBlockShapeAt(voxels, row, col, collisionLayer));
-    if (pointIsInOrOnBox(from, box) || pointIsInOrOnBox(to, box))
-        return undefined;
-
-    segmentStartBoxTemp.center.x = from.x;
-    segmentStartBoxTemp.center.y = from.y;
-    segmentStartBoxTemp.center.z = from.z;
-    const {hitRayScale, hitNormal} = Geometry3DUtil.castAABBAgainstAABB(segmentStartBoxTemp, to, box);
-    if (hitNormal == undefined)
-        return undefined;
-    const axis = (hitNormal.x != 0) ? "x" : (hitNormal.y != 0) ? "y" : "z";
-    return {axis, orientation: (hitNormal[axis] > 0) ? "+" : "-", along: hitRayScale};
-}
-
-function pointIsInOrOnBox(point: THREE.Vector3, box: AABB3): boolean
-{
-    return Math.abs(point.x - box.center.x) <= box.halfSize.x + ON_FACE_TOLERANCE &&
-        Math.abs(point.y - box.center.y) <= box.halfSize.y + ON_FACE_TOLERANCE &&
-        Math.abs(point.z - box.center.z) <= box.halfSize.z + ON_FACE_TOLERANCE;
 }
 
 // Where along the ray (in ray lengths) it enters and leaves the box, from its origin at the earliest.
@@ -386,6 +339,10 @@ function voxelBlockFaceIsDrawn(voxels: Voxel[], row: number, col: number, collis
             return !quadIsTakenOutOfSight(VoxelQueryUtil.getCeilingVoxelQuadIndex(row, col));
         return false;
     }
+
+    // Most of what a line passes through is open air, which is told before a quad is worked out.
+    if (!VoxelQueryUtil.isVoxelBlockPresent(voxel, collisionLayer))
+        return false;
 
     const quadIndex = VoxelQueryUtil.getVoxelQuadIndex(row, col, facingAxis, orientation, collisionLayer);
     if (!VoxelQueryUtil.isVoxelQuadVisible(voxels, quadIndex))

@@ -25,7 +25,6 @@ import ObjectUpdateUtil from "../../../shared/object/util/objectUpdateUtil";
 import LabelTextUtil from "../../../shared/object/util/labelTextUtil";
 import AddVoxelBlockSignal from "../../../shared/voxel/types/update/addVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../../shared/voxel/types/update/removeVoxelBlockSignal";
-import SetVoxelBlockShapeSignal from "../../../shared/voxel/types/update/setVoxelBlockShapeSignal";
 import SetVoxelQuadTextureSignal from "../../../shared/voxel/types/update/setVoxelQuadTextureSignal";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import VoxelUpdateUtil from "../../../shared/voxel/util/voxelUpdateUtil";
@@ -65,8 +64,6 @@ const RoomEditUtil =
             return new RemoveVoxelBlockSignal(room.id, signal.quadIndex);
         if (signal instanceof RemoveVoxelBlockSignal)
             return getVoxelBlockAddSignal(room, signal.quadIndex);
-        if (signal instanceof SetVoxelBlockShapeSignal)
-            return new SetVoxelBlockShapeSignal(room.id, signal.quadIndex, getVoxelBlockShape(room, signal.quadIndex));
         if (signal instanceof SetVoxelQuadTextureSignal)
         {
             return new SetVoxelQuadTextureSignal(room.id, signal.quadIndex,
@@ -124,8 +121,8 @@ async function make(room: Room, signal: EncodableData): Promise<boolean>
 
     if (signal instanceof AddVoxelBlockSignal)
     {
-        if (!VoxelUpdateUtil.canAddVoxelBlock(user, room, signal.quadIndex, signal.shape) ||
-            !ClientVoxelManager.addVoxelBlock(room, signal.quadIndex, signal.quadTextureIndicesWithinLayer, true, signal.shape))
+        if (!VoxelUpdateUtil.canAddVoxelBlock(user, room, signal.quadIndex) ||
+            !ClientVoxelManager.addVoxelBlock(room, signal.quadIndex, signal.quadTextureIndicesWithinLayer))
         {
             return false;
         }
@@ -142,17 +139,6 @@ async function make(room: Room, signal: EncodableData): Promise<boolean>
         }
         if (isMultiPlayer)
             SocketsClient.emitRemoveVoxelBlockSignal(signal);
-        return true;
-    }
-    if (signal instanceof SetVoxelBlockShapeSignal)
-    {
-        if (!VoxelUpdateUtil.canSetVoxelBlockShape(user, room, signal.quadIndex, signal.shape) ||
-            !ClientVoxelManager.setVoxelBlockShape(room, signal.quadIndex, signal.shape))
-        {
-            return false;
-        }
-        if (isMultiPlayer)
-            SocketsClient.emitSetVoxelBlockShapeSignal(signal);
         return true;
     }
     if (signal instanceof SetVoxelQuadTextureSignal)
@@ -305,14 +291,7 @@ function copyTransform(transform: ObjectTransform): ObjectTransform
     return new ObjectTransform({...transform.pos}, {...transform.dir}, {...transform.scale});
 }
 
-// The shape of the block a quad belongs to.
-function getVoxelBlockShape(room: Room, quadIndex: number): number
-{
-    return VoxelQueryUtil.getVoxelBlockShapeAt(room.voxelGrid.voxels, VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex),
-        VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex), VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex));
-}
-
-// The signal that puts a quad's block back as it stands: its shape, and its faces' textures.
+// The signal that puts a quad's block back as it stands, with its faces' textures.
 function getVoxelBlockAddSignal(room: Room, quadIndex: number): AddVoxelBlockSignal
 {
     const firstQuadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex),
@@ -321,7 +300,7 @@ function getVoxelBlockAddSignal(room: Room, quadIndex: number): AddVoxelBlockSig
     const textures = new Array<number>(NUM_VOXEL_QUADS_PER_COLLISION_LAYER);
     for (let i = 0; i < NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
         textures[i] = room.voxelGrid.quadsMem.quads[firstQuadIndex + i] & 0b01111111;
-    return new AddVoxelBlockSignal(room.id, firstQuadIndex, textures, getVoxelBlockShape(room, quadIndex));
+    return new AddVoxelBlockSignal(room.id, firstQuadIndex, textures);
 }
 
 // The value to write under a key for it to read as it now does. One never written reads as its type's default,

@@ -17,6 +17,7 @@ import ServerVoxelManager from "../../../src/server/voxel/serverVoxelManager";
 import SpawnHotspotUtil from "../../../src/server/room/util/spawnHotspotUtil";
 import DBRoomUtil from "../../../src/server/db/util/dbRoomUtil";
 import PhysicsManager from "../../../src/shared/physics/physicsManager";
+import PhysicsColliderStateUtil from "../../../src/shared/physics/util/physicsColliderStateUtil";
 import Room from "../../../src/shared/room/types/room";
 import RoomFile from "../../../src/shared/room/types/roomFile";
 import RoomChangedSignal from "../../../src/shared/room/types/roomChangedSignal";
@@ -41,7 +42,7 @@ import RestrictedZone from "../../../src/shared/voxel/types/restrictedZone";
 import AddVoxelBlockSignal from "../../../src/shared/voxel/types/update/addVoxelBlockSignal";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
-import { COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
+import { COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_POS,
     NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS,
     UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
 
@@ -63,7 +64,7 @@ const SOURCE_ZONE = new RestrictedZone(2, 6, 2, 6);
 const SOURCE_BLOCK = {row: 10, col: 10};
 const SOURCE_LABEL_ID = "a-label";
 // On the west wall, where the fixture's door is on the south one.
-const SOURCE_DOOR_CELL = {row: 16, col: 0};
+const SOURCE_DOOR_POS = {x: 1, y: 0, z: 16.5};
 
 // A room to save: a door on another wall, a block on the floor, a label, a zone, settings of its own, and
 // somebody standing in it.
@@ -77,11 +78,10 @@ function makeSourceRoom(): Room
         new Array<number>(NUM_VOXEL_QUADS_PER_COLLISION_LAYER).fill(5));
 
     room.objectGroup = new ObjectGroup([
-        DoorObjectTypeConfig.util.makeEntranceDoor(room.id, SOURCE_DOOR_CELL.col, SOURCE_DOOR_CELL.row,
-            COLLISION_LAYER_MIN),
+        DoorObjectTypeConfig.util.makeEntranceDoor(room.id, SOURCE_DOOR_POS),
         new AddObjectSignal(room.id, "a-builder", "Builder", labelTypeIndex, SOURCE_LABEL_ID,
             new ObjectTransform(
-                {x: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL - 4.5, y: 2.25, z: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW},
+                {x: INITIAL_MULTI_PLAYER_ENTRANCE_POS.x - 5, y: 2.25, z: INITIAL_MULTI_PLAYER_ENTRANCE_POS.z},
                 {x: 0, y: 0, z: -1}, {...UNIT_VEC3}),
             {[ObjectMetadataKeyEnumMap.Label]: new EncodableByteString("Library")}),
         new AddObjectSignal(room.id, "a-visitor", "Visitor", playerTypeIndex, "@99",
@@ -221,6 +221,10 @@ describe("room file: the stored format", () => {
         const door = roomFile.objectGroup.objectById[ENTRANCE_DOOR_OBJECT_ID];
         expect(door.objectTypeIndex).toBe(doorTypeIndex);
         expect(door.roomID).toBe("target");
+        // Where the doorway such a room was entered by opened into it: the middle of the room's far-z wall, half
+        // a world unit along, looking in.
+        expect(door.transform.pos).toMatchObject({x: 16.5, z: 31});
+        expect(door.transform.dir).toEqual({x: 0, y: 0, z: -1});
 
         // Written again, it is in today's formats.
         const rewritten = fromBytes(toBytes(roomFile));
@@ -322,10 +326,10 @@ describe("room file: loading one over a live room", () => {
     {
         user.socket.clearEmitted();
         user.socketUserContext.processAllPendingSignalsToUser();
-        const batches = user.socket.getEmitted("signalBatch");
+        const batches = user.socket.getEmittedSignalBatches();
         expect(batches).toHaveLength(1);
 
-        const bufferState = new BufferState(new Uint8Array(batches[0]));
+        const bufferState = new BufferState(batches[0]);
         expect((EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n)
             .toBe(SignalTypeConfigMap.getIndexByType("roomChangedSignal"));
         const signals = (EncodableArray.decodeWithParams(bufferState, RoomChangedSignal.decode, 65535) as EncodableArray).arr;
@@ -397,13 +401,18 @@ describe("room file: loading one over a live room", () => {
         const admin = await connectTo(HUB, {userType: UserTypeEnumMap.Admin});
         const room = getRoom();
         const physicsRoomBefore = PhysicsManager.physicsRooms[HUB];
+        // Inside the block the file stands where the room had none.
+        const insideSourceBlock = {
+            center: VoxelQueryUtil.getVoxelBlockBox(SOURCE_BLOCK.row, SOURCE_BLOCK.col, COLLISION_LAYER_MIN).center,
+            halfSize: {x: 0.2, y: 0.1, z: 0.2}};
+        expect(PhysicsColliderStateUtil.boxOverlapsHardCollider(physicsRoomBefore, insideSourceBlock)).toBe(false);
 
         await ServerRoomManager.loadRoomFile(HUB, readSourceFile());
 
         const physicsRoom = PhysicsManager.physicsRooms[HUB];
         expect(physicsRoom).not.toBe(physicsRoomBefore);
-        expect(physicsRoom.voxels.every((physicsVoxel, i) => physicsVoxel.voxel === room.voxelGrid.voxels[i]))
-            .toBe(true);
+        expect(physicsRoom.room).toBe(room);
+        expect(PhysicsColliderStateUtil.boxOverlapsHardCollider(physicsRoom, insideSourceBlock)).toBe(true);
 
         // Nothing of the old room is left in it, and the player collides where it now stands.
         expect(Object.keys(physicsRoom.objectById).every(objectId => room.objectById[objectId] != undefined))

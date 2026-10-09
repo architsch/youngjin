@@ -125,7 +125,8 @@ function getSelectedFace(): {center: Vec3, dir: Vec3, size: number} | undefined
     const voxel = selection.voxel;
     const d = selection.getTransformDimensions();
     return {
-        center: {x: voxel.col + 0.5 + d.offsetX, y: d.offsetY, z: voxel.row + 0.5 + d.offsetZ},
+        center: {x: VoxelQueryUtil.getWorldXAtVoxelColCenter(voxel.col) + d.offsetX, y: d.offsetY,
+            z: VoxelQueryUtil.getWorldZAtVoxelRowCenter(voxel.row) + d.offsetZ},
         dir: {x: d.dirX, y: d.dirY, z: d.dirZ},
         size: Math.min(d.scaleX, d.scaleY),
     };

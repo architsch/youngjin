@@ -1,5 +1,6 @@
 import RandomNumberGenerator from "../../../../../math/types/randomNumberGenerator";
-import { COLLISION_LAYER_MIN, STOREY_FLOOR_COLLISION_LAYER } from "../../../../../system/sharedConstants";
+import { COLLISION_LAYER_MIN, GENERATED_WALL_THICKNESS,
+    STOREY_FLOOR_COLLISION_LAYER } from "../../../../../system/sharedConstants";
 import { RoomVolumeConstructorMap } from "../../../maps/roomVolumeConstructorMap";
 import RoomVolumeUtil from "../../../util/roomVolumeUtil";
 import RoomVolume from "../../roomVolume";
@@ -9,12 +10,14 @@ import RoomAreaAllocator from "./roomAreaAllocator";
 // Adds second storeys (the same footprint over the dividing slab) only where a climbable flight of
 // steps fits; otherwise areas keep their ceiling.
 
-// A flight rises one layer per cell (a climbable stride); the run needs one extra cell for the landing.
+// A flight rises one layer per step, each a wall's thickness deep (a climbable stride); the run needs one
+// more step's depth for the landing. Depths and widths are in voxels.
 const RISE_IN_LAYERS = STOREY_FLOOR_COLLISION_LAYER + 1;
-const RUN_IN_CELLS = RISE_IN_LAYERS + 1;
-const WIDTH_IN_CELLS = 3; // wide enough to walk up rather than balance along
+const STEP_DEPTH = GENERATED_WALL_THICKNESS;
+const RUN = (RISE_IN_LAYERS + 1) * STEP_DEPTH;
+const WIDTH = 3 * GENERATED_WALL_THICKNESS; // wide enough to walk up rather than balance along
 
-// Block work must stay this far from a flight's approach and exit.
+// Block work must stay this many walls' thicknesses from a flight's approach and exit.
 const CLEARANCE = 1;
 
 // One flight of steps as a plan: the shaft it climbs through, and the steps standing in it.
@@ -26,9 +29,9 @@ interface Staircase
 
 export default class RoomStaircasePlanner
 {
-    // Smallest area that fits a flight plus the one-cell clearance ring (see planStaircase).
-    static readonly MIN_AREA_RUN = RUN_IN_CELLS + 2;
-    static readonly MIN_AREA_WIDTH = WIDTH_IN_CELLS + 2;
+    // Smallest area that fits a flight plus the ring of floor round it (see planStaircase).
+    static readonly MIN_AREA_RUN = RUN + 2 * GENERATED_WALL_THICKNESS;
+    static readonly MIN_AREA_WIDTH = WIDTH + 2 * GENERATED_WALL_THICKNESS;
 
     private rand: RandomNumberGenerator;
     private volumesByType: {[roomVolumeType: RoomVolumeType]: RoomVolume[]};
@@ -74,7 +77,7 @@ export default class RoomStaircasePlanner
             for (const step of staircase.steps)
                 steps.push(step);
 
-            // The run, and a block of floor either side of it, are kept clear of block work.
+            // The run, and a wall's thickness of floor either side of it, are kept clear of block work.
             this.volumesByType[RoomVolumeTypeEnumMap.Reserved].push(
                 RoomVolumeUtil.getExpandedVolume(staircase.stairwell, CLEARANCE));
         }
@@ -96,7 +99,7 @@ export default class RoomStaircasePlanner
 }
 
 // One flight from an area's floor to the storey above. The stairwell is carved (removing the slab over
-// the run), then the steps are refilled one layer higher per cell. The cell past the top stays uncarved
+// the run), then the steps are refilled one layer higher each. A step's depth past the top stays uncarved
 // as the landing. Returns undefined if it doesn't fit this orientation.
 function planStaircase(lower: RoomVolume, upper: RoomVolume,
     alongRows: boolean): Staircase | undefined
@@ -106,25 +109,27 @@ function planStaircase(lower: RoomVolume, upper: RoomVolume,
     const region = RoomVolumeUtil.getExpandedVolume(lower, -1);
     const runSpan = alongRows ? region.rowMax - region.rowMin + 1 : region.colMax - region.colMin + 1;
     const widthSpan = alongRows ? region.colMax - region.colMin + 1 : region.rowMax - region.rowMin + 1;
-    if (runSpan < RUN_IN_CELLS || widthSpan < WIDTH_IN_CELLS)
+    if (runSpan < RUN || widthSpan < WIDTH)
         return undefined;
 
     const runStart = alongRows ? region.rowMin : region.colMin;
     const widthStart = alongRows ? region.colMin : region.rowMin;
-    const widthEnd = widthStart + WIDTH_IN_CELLS - 1;
-    const runEnd = runStart + RISE_IN_LAYERS - 1; // the landing sits one cell beyond this
+    const widthEnd = widthStart + WIDTH - 1;
+    const runEnd = runStart + RISE_IN_LAYERS * STEP_DEPTH - 1; // the landing lies beyond this
 
     const steps: RoomVolume[] = [];
     for (let i = 0; i < RISE_IN_LAYERS; ++i)
     {
-        // The first run cell is bare floor, so the flight is walked onto.
+        // The first step's depth is bare floor, so the flight is walked onto.
         const topLayer = COLLISION_LAYER_MIN + i - 1;
         if (topLayer < COLLISION_LAYER_MIN)
             continue;
+        const stepStart = runStart + i * STEP_DEPTH;
+        const stepEnd = stepStart + STEP_DEPTH - 1;
         steps.push(alongRows
-            ? new RoomVolume(runStart + i, runStart + i, widthStart, widthEnd,
+            ? new RoomVolume(stepStart, stepEnd, widthStart, widthEnd,
                 COLLISION_LAYER_MIN, topLayer, lower.palette)
-            : new RoomVolume(widthStart, widthEnd, runStart + i, runStart + i,
+            : new RoomVolume(widthStart, widthEnd, stepStart, stepEnd,
                 COLLISION_LAYER_MIN, topLayer, lower.palette));
     }
 

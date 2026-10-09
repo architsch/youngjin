@@ -84,7 +84,7 @@ export default function RestrictedZonesPanel({ anchorElementId, onClose }: Props
 }
 
 // New zone size in voxels: grabbable on a phone, obviously resizable.
-const NEW_ZONE_SIZE = 6;
+const NEW_ZONE_SIZE = 12;
 
 // New zones start at the room centre; the plan scrolls to them.
 function makeNewZone(): RestrictedZone

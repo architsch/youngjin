@@ -1,15 +1,15 @@
 /**
  * Attached objects: the frame each of the six facings lays an object out on, where a type may be attached
- * and what holds it there (walls, floors, ceilings, the storey slab), where a drag or a click puts it
- * (findPlacement, on its quarter-voxel grid) and at what size a new one goes up, where a corner-handle resize
- * puts it — its size, the corner held still, and when it refuses — a resize where it stands (a lamp's sizes,
- * a canvas's turn), the ways a quarter-turn is tried where the object stands (in place, then a grid step
- * from there), the turn its content keeps when it moves to another face (QuarterTurnsUtil), and a prop
- * pinned to the size of its image (a change of image or turn carrying the transform it needs, a new image's size
- * taken whichever way there is room).
+ * and what holds it there (walls, floors, ceilings, the storey slab, a lone block), how deep the wall behind
+ * a door has to be, where a drag or a click puts it (findPlacement, on its half-block grid) and at what size
+ * a new one goes up, where a corner-handle resize puts it — its size, the corner held still, and when it
+ * refuses — a resize where it stands (a lamp's sizes, a canvas's turn), the ways a quarter-turn is tried
+ * where the object stands (in place, then a grid step from there), the turn its content keeps when it moves
+ * to another face (QuarterTurnsUtil), and a prop pinned to the size of its image (a change of image or turn
+ * carrying the transform it needs, a new image's size taken whichever way there is room).
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { runScenario } from "../helpers/scenarioRunner";
+import { runScenario, VoxelPlacement } from "../helpers/scenarioRunner";
 import { EMPTY_HUB, userAtCenter } from "../helpers/scenarioPresets";
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
@@ -32,11 +32,13 @@ import Geometry3DUtil from "../../../src/shared/math/util/geometry3DUtil";
 import QuarterTurnsUtil from "../../../src/shared/object/util/quarterTurnsUtil";
 import Vector3DUtil from "../../../src/shared/math/util/vector3DUtil";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
+import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
 import Room from "../../../src/shared/room/types/room";
 import User from "../../../src/shared/user/types/user";
 import Vec3 from "../../../src/shared/math/types/vec3";
 import { ALL_FACE_DIRECTIONS, ATTACHMENT_HITBOX_INSET, COLLISION_LAYER_HEIGHT, MAX_ROOM_Y,
-    STOREY_FLOOR_COLLISION_LAYER, UNIT_VEC3, WALL_DIRECTIONS } from "../../../src/shared/system/sharedConstants";
+    STOREY_FLOOR_COLLISION_LAYER, UNIT_VEC3, VOXEL_CELL_SIZE,
+    WALL_DIRECTIONS } from "../../../src/shared/system/sharedConstants";
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 const propTypeIndex = ObjectTypeConfigMap.getIndexByType("Prop");
@@ -44,35 +46,68 @@ const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
 const scaling = CanvasObjectTypeConfig.scaling;
 
-// A wall facing -z, wide and tall enough for the largest canvas grown from any corner of one hung in
-// its middle. It is exactly that tall: the canvas can grow by the difference in size both up and down.
+// The step of the grid an object is placed on across its face: half a block (see ObjectAttachmentUtil).
+const GRID_STEP = 0.5 * VOXEL_CELL_SIZE;
+
+// A wall facing -z (its face at z = WALL_Z), wide and tall enough for the largest canvas grown from any
+// corner of one hung in its middle. It is exactly that tall: the canvas can grow by the difference in size
+// both up and down. Two blocks deep, which is what a door needs behind it.
 const CANVAS_HEIGHT = ObjectScaleUtil.getObjectSize(canvasTypeIndex, UNIT_VEC3).y;
 const WALL_HEIGHT = 2 * ObjectScaleUtil.getMaxObjectSize(canvasTypeIndex).y - CANVAS_HEIGHT;
-const WALL_ROW = 8;
-const WALL_COL_MIN = 6;
-const WALL_COLS = 12;
+const WALL_Z = 8;
+const WALL_X_MIN = 6;
+const WALL_X_MAX = 18;
+const WALL_DEPTH = 2 * VOXEL_CELL_SIZE;
 const WALL_LAYERS = Math.ceil(WALL_HEIGHT / COLLISION_LAYER_HEIGHT);
 const FACING: Vec3 = {x: 0, y: 0, z: -1};
-const MIDDLE: Vec3 = {x: 12, y: 0.5 * WALL_HEIGHT, z: WALL_ROW};
+const MIDDLE: Vec3 = {x: 12, y: 0.5 * WALL_HEIGHT, z: WALL_Z};
 
 // The storey slab the fixture room has everywhere (see buildBareMultiplayerRoomContent): its top is the
 // upper storey's floor, its underside the lower storey's ceiling.
 const SLAB_TOP_Y = (STOREY_FLOOR_COLLISION_LAYER + 1) * COLLISION_LAYER_HEIGHT;
 const SLAB_BOTTOM_Y = STOREY_FLOOR_COLLISION_LAYER * COLLISION_LAYER_HEIGHT;
 
-// A single block floating in the lower storey: a floor and a ceiling one cell across.
-const BLOCK = {row: 20, col: 20, layer: 4};
-const BLOCK_TOP_Y = (BLOCK.layer + 1) * COLLISION_LAYER_HEIGHT;
-const BLOCK_BOTTOM_Y = BLOCK.layer * COLLISION_LAYER_HEIGHT;
-const BLOCK_CENTRE: Vec3 = {x: BLOCK.col + 0.5, y: BLOCK_BOTTOM_Y + 0.5 * COLLISION_LAYER_HEIGHT, z: BLOCK.row + 0.5};
+// A platform floating in the lower storey, a world unit square and one layer thick: a floor and a ceiling
+// as wide as a unit object, and sides as wide but one layer tall.
+const PLATFORM_MIN: Vec3 = {x: 20, y: 2, z: 20};
+const PLATFORM_MAX: Vec3 = {x: 21, y: 2 + COLLISION_LAYER_HEIGHT, z: 21};
+const PLATFORM_CENTRE: Vec3 = Vector3DUtil.scale(Vector3DUtil.add(PLATFORM_MIN, PLATFORM_MAX), 0.5);
+
+// A lone block floating beside it, whose faces are the smallest there are: one block across.
+const BLOCK = {row: 40, col: 48, layer: 4};
+const BLOCK_BOX = VoxelQueryUtil.getVoxelBlockBox(BLOCK.row, BLOCK.col, BLOCK.layer);
+const BLOCK_CENTRE: Vec3 = BLOCK_BOX.center;
+const BLOCK_MIN: Vec3 = Vector3DUtil.subtract(BLOCK_BOX.center, BLOCK_BOX.halfSize);
+const BLOCK_MAX: Vec3 = Vector3DUtil.add(BLOCK_BOX.center, BLOCK_BOX.halfSize);
+// The scale of an object as large as a face of it.
+const BLOCK_SIZED: Vec3 = {x: VOXEL_CELL_SIZE, y: COLLISION_LAYER_HEIGHT, z: 1};
 
 const CORNERS = [{x: -1, y: -1}, {x: 1, y: -1}, {x: 1, y: 1}, {x: -1, y: 1}];
 
-const WALL = [...Array(WALL_COLS).keys()].flatMap(col => [...Array(WALL_LAYERS).keys()].map(
-    layer => ({row: WALL_ROW, col: WALL_COL_MIN + col, layer})));
+const WALL = blocksIn({x: WALL_X_MIN, y: 0, z: WALL_Z},
+    {x: WALL_X_MAX, y: WALL_LAYERS * COLLISION_LAYER_HEIGHT, z: WALL_Z + WALL_DEPTH});
+const PLATFORM = blocksIn(PLATFORM_MIN, PLATFORM_MAX);
 
 const UP: Vec3 = {x: 0, y: 1, z: 0};
 const DOWN: Vec3 = {x: 0, y: -1, z: 0};
+
+// The blocks a box of the room reaches into, given in world units. (A side lying on a block boundary doesn't
+// reach into the block beyond it.)
+function blocksIn(min: Vec3, max: Vec3): VoxelPlacement[]
+{
+    const {getVoxelRowFromWorldZ: rowAt, getVoxelColFromWorldX: colAt,
+        getVoxelCollisionLayerFromWorldY: layerAt} = VoxelQueryUtil;
+    const blocks: VoxelPlacement[] = [];
+    for (let row = rowAt(min.z); row < Math.ceil(max.z / VOXEL_CELL_SIZE); ++row)
+    {
+        for (let col = colAt(min.x); col < Math.ceil(max.x / VOXEL_CELL_SIZE); ++col)
+        {
+            for (let layer = layerAt(min.y); layer < Math.ceil(max.y / COLLISION_LAYER_HEIGHT); ++layer)
+                blocks.push({row, col, layer});
+        }
+    }
+    return blocks;
+}
 
 function attachment(user: User, room: Room, objectTypeIndex: number, objectId: string,
     pos: Vec3, dir: Vec3 = FACING, scale: Vec3 = UNIT_VEC3): AddObjectSignal
@@ -107,8 +142,8 @@ function draggedTo(fixed: Vec3, dir: Vec3, corner: {x: number, y: number}, width
 async function inTheRoom(assertions: (user: User, room: Room) => void)
 {
     await runScenario({
-        name: "a wall and a floating block to attach things to",
-        rooms: [{...EMPTY_HUB, voxels: [...WALL, BLOCK]}],
+        name: "a wall, a floating platform and a lone block to attach things to",
+        rooms: [{...EMPTY_HUB, voxels: [...WALL, ...PLATFORM, BLOCK]}],
         users: [userAtCenter("hub")],
         assertions: ({users}) => assertions(users[0].user, ServerRoomManager.roomRuntimeMemories["hub"].room),
     });
@@ -163,21 +198,21 @@ describe("where an attached object may go", () => {
         vi.spyOn(console, "log").mockImplementation(() => {});
     });
 
-    it("takes a lamp on any face that holds it: the room's floor and ceiling, a wall, the slab and a block", async () => {
+    it("takes a lamp on any face that holds it: the room's floor and ceiling, a wall, the slab and a platform", async () => {
         await inTheRoom((user, room) => {
-            const onBlock = {x: BLOCK.col + 0.5, z: BLOCK.row + 0.5};
+            const onPlatform = {x: PLATFORM_CENTRE.x, z: PLATFORM_CENTRE.z};
             expect(fits(room, lampTypeIndex, {x: 3.5, y: 0, z: 3.5}, UP)).toBe(true);
             expect(fits(room, lampTypeIndex, {x: 3.5, y: MAX_ROOM_Y, z: 3.5}, DOWN)).toBe(true);
             expect(fits(room, lampTypeIndex, MIDDLE, FACING)).toBe(true);
             expect(fits(room, lampTypeIndex, {x: 3.5, y: SLAB_TOP_Y, z: 3.5}, UP)).toBe(true);
             expect(fits(room, lampTypeIndex, {x: 3.5, y: SLAB_BOTTOM_Y, z: 3.5}, DOWN)).toBe(true);
-            expect(fits(room, lampTypeIndex, {...onBlock, y: BLOCK_TOP_Y}, UP)).toBe(true);
-            expect(fits(room, lampTypeIndex, {...onBlock, y: BLOCK_BOTTOM_Y}, DOWN)).toBe(true);
+            expect(fits(room, lampTypeIndex, {...onPlatform, y: PLATFORM_MAX.y}, UP)).toBe(true);
+            expect(fits(room, lampTypeIndex, {...onPlatform, y: PLATFORM_MIN.y}, DOWN)).toBe(true);
 
-            // Facing into the block, or off it into the air past its edge, holds nothing.
-            expect(fits(room, lampTypeIndex, {...onBlock, y: BLOCK_TOP_Y}, DOWN)).toBe(false);
-            expect(fits(room, lampTypeIndex, {...onBlock, y: BLOCK_BOTTOM_Y}, UP)).toBe(false);
-            expect(fits(room, lampTypeIndex, {x: BLOCK.col + 1, y: BLOCK_TOP_Y, z: BLOCK.row + 0.5}, UP)).toBe(false);
+            // Facing into the platform, or off it into the air past its edge, holds nothing.
+            expect(fits(room, lampTypeIndex, {...onPlatform, y: PLATFORM_MAX.y}, DOWN)).toBe(false);
+            expect(fits(room, lampTypeIndex, {...onPlatform, y: PLATFORM_MIN.y}, UP)).toBe(false);
+            expect(fits(room, lampTypeIndex, {...onPlatform, x: PLATFORM_MAX.x, y: PLATFORM_MAX.y}, UP)).toBe(false);
             // Nor does a floor looking down out of the room, or a ceiling looking up out of it.
             expect(fits(room, lampTypeIndex, {x: 3.5, y: 0, z: 3.5}, DOWN)).toBe(false);
             expect(fits(room, lampTypeIndex, {x: 3.5, y: MAX_ROOM_Y, z: 3.5}, UP)).toBe(false);
@@ -186,12 +221,12 @@ describe("where an attached object may go", () => {
 
     it("takes a canvas on any face that holds it, as the face of an everyday object", async () => {
         await inTheRoom((user, room) => {
-            const onBlock = {x: BLOCK.col + 0.5, z: BLOCK.row + 0.5};
+            const onPlatform = {x: PLATFORM_CENTRE.x, z: PLATFORM_CENTRE.z};
             expect(fits(room, canvasTypeIndex, {x: 3.5, y: 0, z: 3.5}, UP)).toBe(true);
             expect(fits(room, canvasTypeIndex, {x: 3.5, y: MAX_ROOM_Y, z: 3.5}, DOWN)).toBe(true);
             expect(fits(room, canvasTypeIndex, MIDDLE, FACING)).toBe(true);
-            expect(fits(room, canvasTypeIndex, {...onBlock, y: BLOCK_TOP_Y}, UP)).toBe(true);
-            expect(fits(room, canvasTypeIndex, {...onBlock, y: BLOCK_BOTTOM_Y}, DOWN)).toBe(true);
+            expect(fits(room, canvasTypeIndex, {...onPlatform, y: PLATFORM_MAX.y}, UP)).toBe(true);
+            expect(fits(room, canvasTypeIndex, {...onPlatform, y: PLATFORM_MIN.y}, DOWN)).toBe(true);
 
             // The same rule the server applies to what a client sends.
             const onTheFloor = attachment(user, room, canvasTypeIndex, "on-the-floor", {x: 3.5, y: 0, z: 3.5}, UP);
@@ -214,129 +249,171 @@ describe("where an attached object may go", () => {
         // scans stop at the room's edge.
         await inTheRoom((user, room) => {
             const height = ObjectScaleUtil.getObjectSize(canvasTypeIndex, UNIT_VEC3).y;
-            const canvasAt = (bottomY: number) => ({x: MIDDLE.x, y: bottomY + 0.5 * height, z: WALL_ROW});
+            const canvasAt = (bottomY: number) => ({x: MIDDLE.x, y: bottomY + 0.5 * height, z: WALL_Z});
             expect(fits(room, canvasTypeIndex, canvasAt(0), FACING)).toBe(true);
             expect(fits(room, canvasTypeIndex, canvasAt(-COLLISION_LAYER_HEIGHT), FACING)).toBe(false);
         });
     });
 });
 
-describe("what a shrunk block holds", () => {
+describe("what a lone block holds", () => {
     beforeEach(() => {
         vi.spyOn(console, "error").mockImplementation(() => {});
         vi.spyOn(console, "log").mockImplementation(() => {});
     });
 
-    // Sub-blocks by bit: (x half, z half) = (0, 0), (1, 0), (0, 1), (1, 1).
-    const LOW_X_HALF = 0b0101, HIGH_X_HALF = 0b1010, LOW_Z_HALF = 0b0011, HIGH_Z_HALF = 0b1100;
-    const HALF_CANVAS = {x: 0.5, y: 0.5, z: 1}; // half a cell across, one layer tall
-    const BLOCK_MIDDLE_Y = BLOCK_BOTTOM_Y + 0.5 * COLLISION_LAYER_HEIGHT;
     const PLUS_X: Vec3 = {x: 1, y: 0, z: 0}, MINUS_X: Vec3 = {x: -1, y: 0, z: 0}, PLUS_Z: Vec3 = {x: 0, y: 0, z: 1};
 
-    function setShape(room: Room, block: {row: number, col: number, layer: number}, shape: number): void
-    {
-        room.voxelGrid.quadsMem.blockShapes[
-            VoxelQueryUtil.getVoxelBlockIndex(block.row, block.col, block.layer)] = shape;
-    }
-
-    it("is what lies on a face of it, the face across the middle of its cell among them", async () => {
+    it("is what lies on a face of it", async () => {
         await inTheRoom((user, room) => {
-            setShape(room, BLOCK, LOW_X_HALF); // filling x from the cell's side to its middle
-            const innerFaceX = BLOCK.col + 0.5;
-            const onInnerFace = {x: innerFaceX, y: BLOCK_MIDDLE_Y, z: BLOCK.row + 0.25};
+            const onSide = {x: BLOCK_MAX.x, y: BLOCK_CENTRE.y, z: BLOCK_CENTRE.z};
 
-            // Hung on the inner face, looking out over the half that was cut away.
-            expect(fits(room, canvasTypeIndex, onInnerFace, PLUS_X, HALF_CANVAS)).toBe(true);
-            expect(ObjectUpdateUtil.canAddObject(user, room, attachment(user, room, canvasTypeIndex, "inner",
-                onInnerFace, PLUS_X, HALF_CANVAS))).toBe(true);
+            expect(fits(room, canvasTypeIndex, onSide, PLUS_X, BLOCK_SIZED)).toBe(true);
+            expect(ObjectUpdateUtil.canAddObject(user, room, attachment(user, room, canvasTypeIndex, "side",
+                onSide, PLUS_X, BLOCK_SIZED))).toBe(true);
             // Not on the same plane looking the other way, with open air behind it...
-            expect(fits(room, canvasTypeIndex, onInnerFace, MINUS_X, HALF_CANVAS)).toBe(false);
-            // ...nor on the cell's side, where the block's face was before it shrank.
-            expect(fits(room, canvasTypeIndex, {...onInnerFace, x: BLOCK.col + 1}, PLUS_X, HALF_CANVAS)).toBe(false);
-            // Its other side face is where it always was.
-            expect(fits(room, canvasTypeIndex, {...onInnerFace, x: BLOCK.col}, MINUS_X, HALF_CANVAS)).toBe(true);
+            expect(fits(room, canvasTypeIndex, onSide, MINUS_X, BLOCK_SIZED)).toBe(false);
+            // ...nor a block further out, where none stands.
+            expect(fits(room, canvasTypeIndex, {...onSide, x: BLOCK_MAX.x + VOXEL_CELL_SIZE}, PLUS_X, BLOCK_SIZED))
+                .toBe(false);
+            // Its other side holds one the same.
+            expect(fits(room, canvasTypeIndex, {...onSide, x: BLOCK_MIN.x}, MINUS_X, BLOCK_SIZED)).toBe(true);
         });
     });
 
-    it("is nothing that reaches past the part of the cell it fills", async () => {
+    it("is nothing that reaches past it", async () => {
         await inTheRoom((user, room) => {
-            setShape(room, BLOCK, LOW_X_HALF);
-            const onEnd = (x: number) => ({x: BLOCK.col + x, y: BLOCK_MIDDLE_Y, z: BLOCK.row + 1});
-            const onTop = (x: number) => ({x: BLOCK.col + x, y: BLOCK_TOP_Y, z: BLOCK.row + 0.25});
+            // Centred so many blocks along x from the block's own side.
+            const onEnd = (blocks: number) =>
+                ({x: BLOCK_MIN.x + blocks * VOXEL_CELL_SIZE, y: BLOCK_CENTRE.y, z: BLOCK_MAX.z});
+            const onTop = (blocks: number) =>
+                ({x: BLOCK_MIN.x + blocks * VOXEL_CELL_SIZE, y: BLOCK_MAX.y, z: BLOCK_CENTRE.z});
 
-            // Its end, now half a cell wide: over the half it fills, not beside it, nor astride the two.
-            expect(fits(room, canvasTypeIndex, onEnd(0.25), PLUS_Z, HALF_CANVAS)).toBe(true);
-            expect(fits(room, canvasTypeIndex, onEnd(0.75), PLUS_Z, HALF_CANVAS)).toBe(false);
-            expect(fits(room, canvasTypeIndex, onEnd(0.5), PLUS_Z, HALF_CANVAS)).toBe(false);
-            expect(fits(room, canvasTypeIndex, onEnd(0.5), PLUS_Z, {x: 1, y: 0.5, z: 1})).toBe(false);
+            // Its end: over the block, not beside it, nor astride its edge, however wide.
+            expect(fits(room, canvasTypeIndex, onEnd(0.5), PLUS_Z, BLOCK_SIZED)).toBe(true);
+            expect(fits(room, canvasTypeIndex, onEnd(1.5), PLUS_Z, BLOCK_SIZED)).toBe(false);
+            expect(fits(room, canvasTypeIndex, onEnd(1), PLUS_Z, BLOCK_SIZED)).toBe(false);
+            expect(fits(room, canvasTypeIndex, onEnd(1), PLUS_Z, {x: 1, y: 0.5, z: 1})).toBe(false);
 
             // Its top, likewise.
-            expect(fits(room, canvasTypeIndex, onTop(0.25), UP, HALF_CANVAS)).toBe(true);
-            expect(fits(room, canvasTypeIndex, onTop(0.75), UP, HALF_CANVAS)).toBe(false);
-            expect(fits(room, canvasTypeIndex, onTop(0.5), UP, HALF_CANVAS)).toBe(false);
+            expect(fits(room, canvasTypeIndex, onTop(0.5), UP, BLOCK_SIZED)).toBe(true);
+            expect(fits(room, canvasTypeIndex, onTop(1.5), UP, BLOCK_SIZED)).toBe(false);
+            expect(fits(room, canvasTypeIndex, onTop(1), UP, BLOCK_SIZED)).toBe(false);
         });
     });
 
     it("is found again by the block, and counted against the face it lies on", async () => {
         await inTheRoom((user, room) => {
-            setShape(room, BLOCK, LOW_X_HALF);
             const blockQuad = (axis: "x" | "z", orientation: "-" | "+") =>
                 VoxelQueryUtil.getVoxelQuadIndex(BLOCK.row, BLOCK.col, axis, orientation, BLOCK.layer);
 
-            expect(ObjectUpdateUtil.addObject(user, room, attachment(user, room, canvasTypeIndex, "inner",
-                {x: BLOCK.col + 0.5, y: BLOCK_MIDDLE_Y, z: BLOCK.row + 0.25}, PLUS_X, HALF_CANVAS))).toBe(true);
+            expect(ObjectUpdateUtil.addObject(user, room, attachment(user, room, canvasTypeIndex, "side",
+                {x: BLOCK_MAX.x, y: BLOCK_CENTRE.y, z: BLOCK_CENTRE.z}, PLUS_X, BLOCK_SIZED))).toBe(true);
             expect(ObjectUpdateUtil.addObject(user, room, attachment(user, room, canvasTypeIndex, "end",
-                {x: BLOCK.col + 0.25, y: BLOCK_MIDDLE_Y, z: BLOCK.row + 1}, PLUS_Z, HALF_CANVAS))).toBe(true);
+                {x: BLOCK_CENTRE.x, y: BLOCK_CENTRE.y, z: BLOCK_MAX.z}, PLUS_Z, BLOCK_SIZED))).toBe(true);
 
             expect(ObjectAttachmentUtil.getObjectIdsAttachedToVoxelBlock(room, blockQuad("x", "+")).sort())
-                .toEqual(["end", "inner"]);
-            // The inner face is a cell long, the end half a cell: one canvas covers half of the first, all of the second.
-            expect(ObjectAttachmentUtil.getVoxelQuadCoverage(room, blockQuad("x", "+"))).toBe(0.5);
+                .toEqual(["end", "side"]);
+            // Each is as large as the face it lies on.
+            expect(ObjectAttachmentUtil.getVoxelQuadCoverage(room, blockQuad("x", "+"))).toBe(1);
             expect(ObjectAttachmentUtil.getVoxelQuadCoverage(room, blockQuad("z", "+"))).toBe(1);
             expect(ObjectAttachmentUtil.getVoxelQuadCoverage(room, blockQuad("x", "-"))).toBe(0);
         });
     });
+});
 
-    it("can be asked of a block as if it had another shape, without giving it one", async () => {
+describe("the wall behind a door", () => {
+    beforeEach(() => {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        vi.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    const doorSize = ObjectScaleUtil.getObjectSize(doorTypeIndex, UNIT_VEC3);
+    // Its side on the middle of a block, so that it reaches halfway into a block at either side (as a room's
+    // entrance door does) and covers the ones between.
+    const DOOR_X_MIN = 9 + 0.5 * VOXEL_CELL_SIZE;
+    const doorAt = (z: number) => ({x: DOOR_X_MIN + 0.5 * doorSize.x, y: 0.5 * doorSize.y, z});
+    // The wall's blocks behind a stretch of its face, from (xMin, yMin) and as wide and tall as given: those
+    // right behind it (depth 0), or the next behind them (depth 1).
+    const behind = (xMin: number, yMin: number, width: number, height: number, depth: number) => blocksIn(
+        {x: xMin, y: yMin, z: WALL_Z + depth * VOXEL_CELL_SIZE},
+        {x: xMin + width, y: yMin + height, z: WALL_Z + (depth + 1) * VOXEL_CELL_SIZE});
+    const behindDoor = (depth: number) => behind(DOOR_X_MIN, 0, doorSize.x, doorSize.y, depth);
+    const quadOf = (block: VoxelPlacement) =>
+        VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(block.row, block.col, block.layer);
+
+    it("has to be solid two blocks deep behind all of it, where one block's depth holds a canvas", async () => {
         await inTheRoom((user, room) => {
-            const onSide = new ObjectTransform({x: BLOCK.col + 1, y: BLOCK_MIDDLE_Y, z: BLOCK.row + 0.25},
-                PLUS_X, HALF_CANVAS);
-            const as = (shape: number) => ({row: BLOCK.row, col: BLOCK.col, collisionLayer: BLOCK.layer, shape});
+            const voxels = room.voxelGrid.voxels;
+            const remove = (block: VoxelPlacement) =>
+                VoxelUpdateUtil.removeVoxelBlock(undefined, voxels, quadOf(block));
+            const restore = (block: VoxelPlacement) =>
+                VoxelUpdateUtil.addVoxelBlock(undefined, voxels, quadOf(block));
+            const canvasAt = (z: number) => ({x: DOOR_X_MIN + 0.5, y: 1, z});
+            expect(fits(room, doorTypeIndex, doorAt(WALL_Z), FACING)).toBe(true);
 
-            expect(ObjectAttachmentUtil.canPlaceObject(room, "canvas", canvasTypeIndex, onSide)).toBe(true);
-            // Shrunk away from that side it would be left in the air; shrunk toward it, it would not.
-            expect(ObjectAttachmentUtil.canPlaceObject(room, "canvas", canvasTypeIndex, onSide, as(LOW_X_HALF))).toBe(false);
-            expect(ObjectAttachmentUtil.canPlaceObject(room, "canvas", canvasTypeIndex, onSide, as(HIGH_X_HALF))).toBe(true);
-            expect(ObjectAttachmentUtil.canPlaceObject(room, "canvas", canvasTypeIndex, onSide, as(0))).toBe(false);
-            expect(VoxelQueryUtil.isVoxelBlockWholeAt(room.voxelGrid.voxels, BLOCK.row, BLOCK.col, BLOCK.layer)).toBe(true);
+            // Any one block gone from the further depth leaves it no place.
+            for (const block of behindDoor(1))
+            {
+                remove(block);
+                expect(fits(room, doorTypeIndex, doorAt(WALL_Z), FACING), JSON.stringify(block)).toBe(false);
+                restore(block);
+            }
+            expect(fits(room, doorTypeIndex, doorAt(WALL_Z), FACING)).toBe(true);
+
+            // The wall thinned from behind still lies against the door's plane, and holds a canvas there; not a door.
+            behindDoor(1).forEach(remove);
+            expect(fits(room, canvasTypeIndex, canvasAt(WALL_Z), FACING)).toBe(true);
+            expect(fits(room, doorTypeIndex, doorAt(WALL_Z), FACING)).toBe(false);
+
+            // Thinned from in front instead, its face lies a block further back: a canvas hangs there, a door nowhere.
+            behindDoor(1).forEach(restore);
+            behindDoor(0).forEach(remove);
+            expect(fits(room, canvasTypeIndex, canvasAt(WALL_Z + VOXEL_CELL_SIZE), FACING)).toBe(true);
+            expect(fits(room, doorTypeIndex, doorAt(WALL_Z + VOXEL_CELL_SIZE), FACING)).toBe(false);
+            expect(fits(room, doorTypeIndex, doorAt(WALL_Z), FACING)).toBe(false);
         });
     });
 
-    it("is never a door, which needs whole blocks behind it on the side of their cells", async () => {
+    it("holds the door at both depths, so that no block of either comes out from under it", async () => {
         await inTheRoom((user, room) => {
-            const doorSize = ObjectScaleUtil.getObjectSize(doorTypeIndex, UNIT_VEC3);
-            const DOOR_COL = 9;
-            const doorAt = (z: number) => ({x: DOOR_COL + 0.5 * doorSize.x, y: 0.5 * doorSize.y, z});
-            const numDoorCols = Math.ceil(doorSize.x);
-            const shrinkWallBehindDoor = (shape: number) => {
-                for (let col = DOOR_COL; col < DOOR_COL + numDoorCols; ++col)
-                {
-                    for (let layer = 0; layer < WALL_LAYERS; ++layer)
-                        setShape(room, {row: WALL_ROW, col, layer}, shape);
-                }
-            };
-            expect(fits(room, doorTypeIndex, doorAt(WALL_ROW), FACING)).toBe(true);
+            const restingOn = (block: VoxelPlacement) =>
+                ObjectAttachmentUtil.getObjectIdsAttachedToVoxelBlock(room, quadOf(block));
+            const removable = (block: VoxelPlacement) => VoxelUpdateUtil.canRemoveVoxelBlock(user, room, quadOf(block));
 
-            // The wall thinned from behind still lies against the door's plane, and holds a canvas there; not a door.
-            shrinkWallBehindDoor(LOW_Z_HALF);
-            expect(fits(room, canvasTypeIndex, {x: DOOR_COL + 0.5, y: 1, z: WALL_ROW}, FACING)).toBe(true);
-            expect(fits(room, doorTypeIndex, doorAt(WALL_ROW), FACING)).toBe(false);
+            // (Put up unasked: a door is the room's superuser's to lay.)
+            const door = attachment(user, room, doorTypeIndex, "door", doorAt(WALL_Z));
+            expect(ObjectUpdateUtil.addObject(user, room, door, false)).toBe(true);
+            // A canvas beside it, on the blocks next to those the door reaches into, which rests on the ones
+            // right behind it alone.
+            const canvasXMin = DOOR_X_MIN + doorSize.x + 0.5 * VOXEL_CELL_SIZE;
+            expect(ObjectUpdateUtil.addObject(user, room, attachment(user, room, canvasTypeIndex, "canvas",
+                {x: canvasXMin + 0.5, y: 1, z: WALL_Z}))).toBe(true);
+            const behindCanvas = (depth: number) => behind(canvasXMin, 0.5, 1, 1, depth);
 
-            // Thinned from in front, its face is across the middle of its cells: a canvas hangs there, a door nowhere.
-            shrinkWallBehindDoor(HIGH_Z_HALF);
-            expect(fits(room, canvasTypeIndex, {x: DOOR_COL + 0.5, y: 1, z: WALL_ROW + 0.5}, FACING)).toBe(true);
-            expect(fits(room, doorTypeIndex, doorAt(WALL_ROW + 0.5), FACING)).toBe(false);
-            expect(fits(room, doorTypeIndex, doorAt(WALL_ROW), FACING)).toBe(false);
+            for (const block of [...behindDoor(0), ...behindDoor(1)])
+            {
+                expect(restingOn(block), JSON.stringify(block)).toEqual(["door"]);
+                expect(removable(block), JSON.stringify(block)).toBe(false);
+            }
+            for (const block of behindCanvas(0))
+            {
+                expect(restingOn(block), JSON.stringify(block)).toEqual(["canvas"]);
+                expect(removable(block), JSON.stringify(block)).toBe(false);
+            }
+            for (const block of behindCanvas(1))
+            {
+                expect(restingOn(block), JSON.stringify(block)).toEqual([]);
+                expect(removable(block), JSON.stringify(block)).toBe(true);
+            }
+
+            // The blocks the door's face lies on are still the nearer ones alone.
+            const liesOn: VoxelPlacement[] = [];
+            ObjectAttachmentUtil.forEachSupportingBlock(doorTypeIndex, door.transform, (row, col, layer) => {
+                liesOn.push({row, col, layer});
+                return true;
+            });
+            expect(liesOn.map(quadOf).sort()).toEqual(behindDoor(0).map(quadOf).sort());
         });
     });
 });
@@ -347,52 +424,63 @@ describe("how much of a face attached objects cover", () => {
         vi.spyOn(console, "log").mockImplementation(() => {});
     });
 
-    // The wall's own face over one cell and layer.
-    const wallFace = (col: number, layer: number) => VoxelQueryUtil.getVoxelQuadIndex(WALL_ROW, col, "z", "-", layer);
+    // The wall's own face at a point of it: one block across and one layer tall.
+    const wallFaceAt = (x: number, y: number) => VoxelQueryUtil.getVoxelQuadIndex(
+        VoxelQueryUtil.getVoxelRowFromWorldZ(WALL_Z), VoxelQueryUtil.getVoxelColFromWorldX(x), "z", "-",
+        VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(y));
+    // The room's floor tile under a point.
+    const floorTileAt = (x: number, z: number) => VoxelQueryUtil.getFloorVoxelQuadIndex(
+        VoxelQueryUtil.getVoxelRowFromWorldZ(z), VoxelQueryUtil.getVoxelColFromWorldX(x));
     const coverage = (room: Room, quadIndex: number) => ObjectAttachmentUtil.getVoxelQuadCoverage(room, quadIndex);
 
     it("is the share of the face under what lies on it, and nothing for what only meets its edge", async () => {
         await inTheRoom((user, room) => {
-            expect(coverage(room, wallFace(9, 2))).toBe(0);
+            expect(coverage(room, wallFaceAt(9.25, 1.25))).toBe(0);
 
-            // A canvas a cell across and two layers tall.
+            // A canvas a unit square: the four faces under it, and none of those around them.
             expect(ObjectUpdateUtil.addObject(user, room, attachment(user, room, canvasTypeIndex, "whole",
-                {x: 9.5, y: 1.5, z: WALL_ROW}))).toBe(true);
-            expect(coverage(room, wallFace(9, 2))).toBe(1);
-            expect(coverage(room, wallFace(9, 3))).toBe(1);
-            for (const [col, layer] of [[8, 2], [10, 3], [9, 1], [9, 4]])
-                expect(coverage(room, wallFace(col, layer)), `col ${col}, layer ${layer}`).toBe(0);
+                {x: 9.5, y: 1.5, z: WALL_Z}))).toBe(true);
+            for (const [x, y] of [[9.25, 1.25], [9.75, 1.25], [9.25, 1.75], [9.75, 1.75]])
+                expect(coverage(room, wallFaceAt(x, y)), `at (${x}, ${y})`).toBe(1);
+            for (const [x, y] of [[8.75, 1.25], [10.25, 1.75], [9.25, 0.75], [9.75, 2.25]])
+                expect(coverage(room, wallFaceAt(x, y)), `at (${x}, ${y})`).toBe(0);
 
-            // One half a cell across and a layer tall, in a face's corner.
-            expect(ObjectUpdateUtil.addObject(user, room, attachment(user, room, canvasTypeIndex, "half",
-                {x: 12.25, y: 1.25, z: WALL_ROW}, FACING, {x: 0.5, y: 0.5, z: 1}))).toBe(true);
-            expect(coverage(room, wallFace(12, 2))).toBe(0.5);
+            // One as large as a face, astride two of them.
+            expect(ObjectUpdateUtil.addObject(user, room, attachment(user, room, canvasTypeIndex, "astride",
+                {x: 12.5, y: 1.25, z: WALL_Z}, FACING, BLOCK_SIZED))).toBe(true);
+            expect(coverage(room, wallFaceAt(12.25, 1.25))).toBe(0.5);
+            expect(coverage(room, wallFaceAt(12.75, 1.25))).toBe(0.5);
         });
     });
 
     it("counts only what lies on that very face", async () => {
         await inTheRoom((user, room) => {
-            const floorTile = (row: number, col: number) => VoxelQueryUtil.getFloorVoxelQuadIndex(row, col);
-            const blockFace = (axis: "x" | "y", orientation: "-" | "+") =>
-                VoxelQueryUtil.getVoxelQuadIndex(BLOCK.row, BLOCK.col, axis, orientation, BLOCK.layer);
-
-            // At the wall's foot, and on the floor tile in front of it.
+            // At the wall's foot, and on the floor tiles in front of it.
             expect(ObjectUpdateUtil.addObject(user, room, attachment(user, room, canvasTypeIndex, "on-the-wall",
-                {x: 16.5, y: 0.5, z: WALL_ROW}))).toBe(true);
-            expect(coverage(room, wallFace(16, 0))).toBe(1);
-            expect(coverage(room, floorTile(WALL_ROW - 1, 16))).toBe(0);
+                {x: 16.5, y: 0.5, z: WALL_Z}))).toBe(true);
+            expect(coverage(room, wallFaceAt(16.25, 0.25))).toBe(1);
+            expect(coverage(room, floorTileAt(16.25, WALL_Z - 0.25))).toBe(0);
             expect(ObjectUpdateUtil.addObject(user, room, attachment(user, room, canvasTypeIndex, "on-the-floor",
-                {x: 15.5, y: 0, z: WALL_ROW - 0.5}, UP))).toBe(true);
-            expect(coverage(room, floorTile(WALL_ROW - 1, 15))).toBe(1);
-            expect(coverage(room, wallFace(15, 0))).toBe(0);
+                {x: 15.5, y: 0, z: WALL_Z - 0.5}, UP))).toBe(true);
+            expect(coverage(room, floorTileAt(15.25, WALL_Z - 0.25))).toBe(1);
+            expect(coverage(room, wallFaceAt(15.25, 0.25))).toBe(0);
 
-            // On the floating block's top: not its side, its underside, or the floor below it.
-            expect(ObjectUpdateUtil.addObject(user, room, attachment(user, room, canvasTypeIndex, "on-the-block",
-                {x: BLOCK.col + 0.5, y: BLOCK_TOP_Y, z: BLOCK.row + 0.5}, UP))).toBe(true);
-            expect(coverage(room, blockFace("y", "+"))).toBe(1);
-            expect(coverage(room, blockFace("y", "-"))).toBe(0);
-            expect(coverage(room, blockFace("x", "+"))).toBe(0);
-            expect(coverage(room, floorTile(BLOCK.row, BLOCK.col))).toBe(0);
+            // On the floating platform's top: not its sides, its underside, or the floor below it.
+            expect(ObjectUpdateUtil.addObject(user, room, attachment(user, room, canvasTypeIndex, "on-the-platform",
+                {x: PLATFORM_CENTRE.x, y: PLATFORM_MAX.y, z: PLATFORM_CENTRE.z}, UP))).toBe(true);
+            for (const {row, col, layer} of PLATFORM)
+            {
+                const blockFace = (axis: "x" | "y" | "z", orientation: "-" | "+") =>
+                    VoxelQueryUtil.getVoxelQuadIndex(row, col, axis, orientation, layer);
+                expect(coverage(room, blockFace("y", "+"))).toBe(1);
+                expect(coverage(room, blockFace("y", "-"))).toBe(0);
+                for (const axis of ["x", "z"] as const)
+                {
+                    expect(coverage(room, blockFace(axis, "-"))).toBe(0);
+                    expect(coverage(room, blockFace(axis, "+"))).toBe(0);
+                }
+                expect(coverage(room, VoxelQueryUtil.getFloorVoxelQuadIndex(row, col))).toBe(0);
+            }
         });
     });
 
@@ -400,11 +488,11 @@ describe("how much of a face attached objects cover", () => {
         await inTheRoom((user, room) => {
             // As a canvas at (14.5, 1.5) on the wall comes back off the wire (see ObjectTransform).
             expect(ObjectUpdateUtil.addObject(user, room, attachment(user, room, canvasTypeIndex, "decoded",
-                {x: 14.4996, y: 1.4996, z: WALL_ROW - 0.0004}, {x: -0.0000153, y: -0.0000153, z: -0.99998}))).toBe(true);
-            expect(coverage(room, wallFace(14, 2))).toBe(1);
-            expect(coverage(room, wallFace(14, 3))).toBe(1);
-            expect(coverage(room, wallFace(13, 2))).toBe(0);
-            expect(coverage(room, wallFace(14, 1))).toBe(0);
+                {x: 14.4996, y: 1.4996, z: WALL_Z - 0.0004}, {x: -0.0000153, y: -0.0000153, z: -0.99998}))).toBe(true);
+            for (const [x, y] of [[14.25, 1.25], [14.75, 1.25], [14.25, 1.75], [14.75, 1.75]])
+                expect(coverage(room, wallFaceAt(x, y)), `at (${x}, ${y})`).toBe(1);
+            for (const [x, y] of [[13.75, 1.25], [14.25, 0.75]])
+                expect(coverage(room, wallFaceAt(x, y)), `at (${x}, ${y})`).toBe(0);
         });
     });
 });
@@ -420,27 +508,26 @@ describe("where a drag or a click puts an attached object", () => {
             const accepts = (tr: ObjectTransform) => ObjectAttachmentUtil.canPlaceObject(room, "lamp", lampTypeIndex, tr);
             const placed = ObjectAttachmentUtil.findPlacement(room, lampTypeIndex, {x: 3.7, y: 0.1, z: 3.9}, UP,
                 UNIT_VEC3, accepts)!;
-            // Across the face in quarter-voxel steps, and on the face's own plane.
+            // Across the face in steps of half a block, and on the face's own plane.
             expect(placed.pos).toEqual({x: 3.75, y: 0, z: 4});
             expect(placed.dir).toEqual(UP);
         });
     });
 
-    it("sets an object half a voxel across flush with a block's edge, on a wall and on a floor", async () => {
+    it("sets an object one block across flush with a block's edges, on a wall and on a floor", async () => {
         await inTheRoom((user, room) => {
-            const half = {x: 0.5, y: 0.5, z: 1};
             const accepts = (tr: ObjectTransform) => ObjectAttachmentUtil.canPlaceObject(room, "canvas", canvasTypeIndex, tr);
-            // Against the wall's left end, and in a cell's corner on the floor.
-            const wallEnd = WALL_COL_MIN;
+            // Over the block at the wall's left end, and over one tile of the floor.
+            const wallEnd = WALL_X_MIN;
             const onWall = ObjectAttachmentUtil.findPlacement(room, canvasTypeIndex,
-                {x: wallEnd + 0.27, y: 1.24, z: WALL_ROW}, FACING, half, accepts)!;
-            expect(onWall.pos).toEqual({x: wallEnd + 0.25, y: 1.25, z: WALL_ROW});
+                {x: wallEnd + 0.27, y: 1.24, z: WALL_Z}, FACING, BLOCK_SIZED, accepts)!;
+            expect(onWall.pos).toEqual({x: wallEnd + 0.25, y: 1.25, z: WALL_Z});
             const onFloor = ObjectAttachmentUtil.findPlacement(room, canvasTypeIndex, {x: 3.2, y: 0, z: 5.3}, UP,
-                half, accepts)!;
+                BLOCK_SIZED, accepts)!;
             expect(onFloor.pos).toEqual({x: 3.25, y: 0, z: 5.25});
             for (const placed of [onWall, onFloor])
                 expect(ObjectUpdateUtil.canAddObject(user, room, attachment(user, room, canvasTypeIndex, "flush",
-                    placed.pos, placed.dir, half))).toBe(true);
+                    placed.pos, placed.dir, BLOCK_SIZED))).toBe(true);
         });
     });
 
@@ -448,12 +535,12 @@ describe("where a drag or a click puts an attached object", () => {
         await inTheRoom((user, room) => {
             const accepts = (tr: ObjectTransform) => ObjectAttachmentUtil.canPlaceObject(room, "lamp", lampTypeIndex, tr);
             // Asked for just short of the wall, the grid would centre it on the wall's own face.
-            const askedFor = {x: MIDDLE.x + 0.5, y: 0, z: WALL_ROW - 0.1};
-            const snapped = new ObjectTransform({...askedFor, z: WALL_ROW}, UP, {...UNIT_VEC3});
+            const askedFor = {x: MIDDLE.x + 0.5, y: 0, z: WALL_Z - 0.1};
+            const snapped = new ObjectTransform({...askedFor, z: WALL_Z}, UP, {...UNIT_VEC3});
             expect(ObjectAttachmentUtil.canPlaceObject(room, "lamp", lampTypeIndex, snapped)).toBe(true);
 
             const placed = ObjectAttachmentUtil.findPlacement(room, lampTypeIndex, askedFor, UP, UNIT_VEC3, accepts)!;
-            expect(placed.pos.z + 0.5).toBeLessThanOrEqual(WALL_ROW + 1e-6);
+            expect(placed.pos.z + 0.5).toBeLessThanOrEqual(WALL_Z + 1e-6);
         });
     });
 
@@ -461,9 +548,9 @@ describe("where a drag or a click puts an attached object", () => {
         await inTheRoom((user, room) => {
             const accepts = (tr: ObjectTransform) => ObjectAttachmentUtil.canPlaceObject(room, "canvas", canvasTypeIndex, tr);
             // Dragged right past the wall's end: it stops at the last spot the wall still holds.
-            const wallEnd = WALL_COL_MIN + WALL_COLS;
+            const wallEnd = WALL_X_MAX;
             const placed = ObjectAttachmentUtil.findPlacement(room, canvasTypeIndex,
-                {x: wallEnd + 3, y: MIDDLE.y, z: WALL_ROW}, FACING, UNIT_VEC3, accepts, MIDDLE)!;
+                {x: wallEnd + 3, y: MIDDLE.y, z: WALL_Z}, FACING, UNIT_VEC3, accepts, MIDDLE)!;
             expect(placed).toBeDefined();
             expect(placed.pos.x).toBeCloseTo(wallEnd - 0.5, 6);
         });
@@ -474,42 +561,56 @@ describe("where a drag or a click puts an attached object", () => {
             const accepts = (tr: ObjectTransform) => ObjectAttachmentUtil.canPlaceObject(room, "lamp", lampTypeIndex, tr);
             // Asked for right at the wall's top edge, a unit lamp fits just below it.
             const top = WALL_LAYERS * COLLISION_LAYER_HEIGHT;
-            const placed = ObjectAttachmentUtil.findPlacement(room, lampTypeIndex, {x: MIDDLE.x, y: top, z: WALL_ROW},
+            const placed = ObjectAttachmentUtil.findPlacement(room, lampTypeIndex, {x: MIDDLE.x, y: top, z: WALL_Z},
                 FACING, UNIT_VEC3, accepts)!;
             expect(placed.pos.y + 0.5).toBeLessThanOrEqual(top + 1e-6);
 
-            // A single block's underside holds a lamp one cell across, and its side, one layer tall, no
-            // lamp a whole cell tall.
-            const underBlock = {x: BLOCK.col + 0.5, y: BLOCK_BOTTOM_Y, z: BLOCK.row + 0.5};
-            expect(ObjectAttachmentUtil.findPlacement(room, lampTypeIndex, underBlock, DOWN, UNIT_VEC3, accepts))
+            // The platform's underside holds a lamp a unit across, and its side, one layer tall, no lamp a
+            // unit tall.
+            const underPlatform = {x: PLATFORM_CENTRE.x, y: PLATFORM_MIN.y, z: PLATFORM_CENTRE.z};
+            expect(ObjectAttachmentUtil.findPlacement(room, lampTypeIndex, underPlatform, DOWN, UNIT_VEC3, accepts))
                 .toBeDefined();
-            const blockSide = {x: BLOCK.col, y: BLOCK_BOTTOM_Y + 0.5 * COLLISION_LAYER_HEIGHT, z: BLOCK.row + 0.5};
-            expect(ObjectAttachmentUtil.findPlacement(room, lampTypeIndex, blockSide, {x: -1, y: 0, z: 0},
+            const platformSide = {x: PLATFORM_MIN.x, y: PLATFORM_CENTRE.y, z: PLATFORM_CENTRE.z};
+            expect(ObjectAttachmentUtil.findPlacement(room, lampTypeIndex, platformSide, {x: -1, y: 0, z: 0},
                 UNIT_VEC3, accepts)).toBeUndefined();
         });
     });
 
-    it("adds a new lamp at a size the side of a lone block holds, where a unit one finds no room", async () => {
+    it("adds a new lamp at a size the side of a lone block holds, where a larger one finds no room", async () => {
         await inTheRoom((user, room) => {
-            const scale = ObjectScaleUtil.getDefaultScale(lampTypeIndex, () => true);
-            expect(scale).toEqual({x: 1, y: 0.5, z: 1});
-            expect(ObjectScaleUtil.sanitize(lampTypeIndex, scale)).toEqual(scale);
+            const wide = ObjectScaleUtil.getDefaultScale(lampTypeIndex, () => true);
+            expect(wide).toEqual({x: 1, y: 0.5, z: 1});
+            expect(ObjectScaleUtil.sanitize(lampTypeIndex, wide)).toEqual(wide);
 
             const accepts = (tr: ObjectTransform) => ObjectAttachmentUtil.canPlaceObject(room, "lamp", lampTypeIndex, tr);
+            const place = (spot: Vec3, dir: Vec3, scale: Vec3) =>
+                ObjectAttachmentUtil.findPlacement(room, lampTypeIndex, spot, dir, scale, accepts);
+            // The size a new one takes at a spot: the first it tries that finds a placement.
+            const sizeAt = (spot: Vec3, dir: Vec3) =>
+                ObjectScaleUtil.getDefaultScale(lampTypeIndex, scale => place(spot, dir, scale) != undefined);
             for (const dir of WALL_DIRECTIONS)
             {
-                // One cell wide and one layer tall, with nothing above or below it.
-                const side = Vector3DUtil.add(BLOCK_CENTRE, Vector3DUtil.scale(dir, 0.5));
-                const placed = ObjectAttachmentUtil.findPlacement(room, lampTypeIndex, side, dir, scale, accepts);
-                expect(placed, `facing ${JSON.stringify(dir)}`).toBeDefined();
-                expect(placed!.pos.y).toBeCloseTo(BLOCK_CENTRE.y, 6);
-                expect(ObjectAttachmentUtil.findPlacement(room, lampTypeIndex, side, dir, UNIT_VEC3, accepts))
-                    .toBeUndefined();
+                const label = `facing ${JSON.stringify(dir)}`;
+                // The platform's side: a unit wide and one layer tall, with nothing above or below it.
+                const platformSide = Vector3DUtil.add(PLATFORM_CENTRE, Vector3DUtil.scale(dir, 0.5));
+                const onPlatform = place(platformSide, dir, sizeAt(platformSide, dir));
+                expect(onPlatform, label).toBeDefined();
+                expect(onPlatform!.scale, label).toEqual(wide);
+                expect(onPlatform!.pos.y, label).toBeCloseTo(PLATFORM_CENTRE.y, 6);
+                expect(place(platformSide, dir, UNIT_VEC3), label).toBeUndefined();
+
+                // The lone block's: no wider than it is tall.
+                const blockSide = Vector3DUtil.add(BLOCK_CENTRE, Vector3DUtil.scale(dir, 0.5 * VOXEL_CELL_SIZE));
+                expect(place(blockSide, dir, wide), label).toBeUndefined();
+                const onBlock = place(blockSide, dir, sizeAt(blockSide, dir));
+                expect(onBlock, label).toBeDefined();
+                expect(onBlock!.scale, label).toEqual(BLOCK_SIZED);
+                expect(onBlock!.pos, label).toEqual(blockSide);
             }
         });
     });
 
-    it("adds a new canvas a whole block where one fits near the spot, up or down the wall, and one layer tall where not", async () => {
+    it("adds a new canvas a unit square where one fits near the spot, up or down the wall, then one layer tall, then one block across", async () => {
         await inTheRoom((user, room) => {
             // As adding one from a clicked face does: the first size the canvas takes that finds a placement.
             const accepts = (tr: ObjectTransform) => ObjectAttachmentUtil.canPlaceObject(room, "canvas", canvasTypeIndex, tr);
@@ -519,21 +620,28 @@ describe("where a drag or a click puts an attached object", () => {
                 return place(ObjectScaleUtil.getDefaultScale(canvasTypeIndex, scale => place(scale) != undefined))!;
             };
 
-            // The wall's lowest and highest layers: a whole block centred on either would run off the wall.
+            // The wall's lowest and highest layers: a unit square centred on either would run off the wall.
             const top = WALL_LAYERS * COLLISION_LAYER_HEIGHT;
-            const low = addedAt({x: MIDDLE.x, y: 0.5 * COLLISION_LAYER_HEIGHT, z: WALL_ROW}, FACING);
+            const low = addedAt({x: MIDDLE.x, y: 0.5 * COLLISION_LAYER_HEIGHT, z: WALL_Z}, FACING);
             expect(low.scale).toEqual(UNIT_VEC3);
             expect(low.pos.y).toBeCloseTo(0.5, 6);
-            const high = addedAt({x: MIDDLE.x, y: top - 0.5 * COLLISION_LAYER_HEIGHT, z: WALL_ROW}, FACING);
+            const high = addedAt({x: MIDDLE.x, y: top - 0.5 * COLLISION_LAYER_HEIGHT, z: WALL_Z}, FACING);
             expect(high.scale).toEqual(UNIT_VEC3);
             expect(high.pos.y).toBeCloseTo(top - 0.5, 6);
 
-            // The side of a lone block holds one layer.
             for (const dir of WALL_DIRECTIONS)
             {
-                const onSide = addedAt(Vector3DUtil.add(BLOCK_CENTRE, Vector3DUtil.scale(dir, 0.5)), dir);
-                expect(onSide.scale, `facing ${JSON.stringify(dir)}`).toEqual({x: 1, y: 0.5, z: 1});
-                expect(onSide.pos.y).toBeCloseTo(BLOCK_CENTRE.y, 6);
+                const label = `facing ${JSON.stringify(dir)}`;
+                // The platform's side, a unit wide, holds one layer.
+                const onPlatform = addedAt(Vector3DUtil.add(PLATFORM_CENTRE, Vector3DUtil.scale(dir, 0.5)), dir);
+                expect(onPlatform.scale, label).toEqual({x: 1, y: 0.5, z: 1});
+                expect(onPlatform.pos.y, label).toBeCloseTo(PLATFORM_CENTRE.y, 6);
+
+                // The side of the lone block holds nothing larger than itself.
+                const blockSide = Vector3DUtil.add(BLOCK_CENTRE, Vector3DUtil.scale(dir, 0.5 * VOXEL_CELL_SIZE));
+                const onBlock = addedAt(blockSide, dir);
+                expect(onBlock.scale, label).toEqual(BLOCK_SIZED);
+                expect(onBlock.pos, label).toEqual(blockSide);
             }
 
             expect(addedAt({x: 3.5, y: 0, z: 3.5}, UP).scale).toEqual(UNIT_VEC3);
@@ -584,9 +692,9 @@ describe("resizing an attached object by a corner", () => {
                 draggedTo(fixed, FACING, {x: 1, y: 1}, 1.5, 2))!;
             const size = ObjectScaleUtil.getObjectSize(canvasTypeIndex, resized.scale);
 
-            expect(4 * resized.pos.x % 1).toBeCloseTo(0, 6);
-            expect(resized.pos.z).toBe(WALL_ROW);
-            expect(4 * (resized.pos.y - 0.5 * size.y) % 1).toBeCloseTo(0, 6);
+            expect(resized.pos.x / GRID_STEP % 1).toBeCloseTo(0, 6);
+            expect(resized.pos.z).toBe(WALL_Z);
+            expect((resized.pos.y - 0.5 * size.y) / GRID_STEP % 1).toBeCloseTo(0, 6);
             expect(ObjectAttachmentUtil.canPlaceObject(room, "canvas", canvasTypeIndex, resized)).toBe(true);
         });
     });
@@ -642,7 +750,7 @@ describe("resizing an attached object by a corner", () => {
             expect(widest?.scale.x).toBe(2.5);
             expect(Vector3DUtil.distSqr(fixedCornerOf(widest, canvasTypeIndex, {x: 1, y: -1}), fixed)).toBeCloseTo(0, 6);
 
-            // A neighbour half a voxel nearer leaves 2.5 no room.
+            // A neighbour one block nearer leaves 2.5 no room.
             expect(ObjectUpdateUtil.removeObject(user, room, new RemoveObjectSignal(room.id, "touching"))).toBe(true);
             const blocking = attachment(user, room, canvasTypeIndex, "blocking",
                 {...Vector3DUtil.add(fixed, Vector3DUtil.scale(right, 2.5)), y: MIDDLE.y});
@@ -654,9 +762,9 @@ describe("resizing an attached object by a corner", () => {
 
     it("refuses a size that runs off the wall", async () => {
         await inTheRoom((user, room) => {
-            // Half a voxel below the wall's top: growing upward runs out of wall behind it.
+            // One layer below the wall's top: growing upward runs out of wall behind it.
             const high = attachment(user, room, canvasTypeIndex, "high",
-                {x: MIDDLE.x, y: WALL_HEIGHT - 0.5 - 0.5 * CANVAS_HEIGHT, z: WALL_ROW});
+                {x: MIDDLE.x, y: WALL_HEIGHT - 0.5 - 0.5 * CANVAS_HEIGHT, z: WALL_Z});
             const fixed = fixedCornerOf(high.transform, canvasTypeIndex, {x: 1, y: 1});
 
             expect(ObjectAttachmentUtil.getResizeResult(room, high, high.transform, 1, 1,
@@ -684,10 +792,10 @@ describe("resizing an attached object by a corner", () => {
 
     it("keeps a type that declares no scaling at its size", async () => {
         await inTheRoom((user, room) => {
-            // A door, already on the placement grid: foot on a layer boundary, centred on a half-voxel.
+            // A door, already on the placement grid: foot on a layer boundary, centred on a block's edge.
             const doorHeight = ObjectScaleUtil.getObjectSize(doorTypeIndex, UNIT_VEC3).y;
             const door = attachment(user, room, doorTypeIndex, "door",
-                {x: MIDDLE.x + 0.5, y: 1.5 + 0.5 * doorHeight, z: WALL_ROW});
+                {x: MIDDLE.x + 0.5, y: 1.5 + 0.5 * doorHeight, z: WALL_Z});
             const fixed = fixedCornerOf(door.transform, doorTypeIndex, {x: 1, y: 1});
 
             const resized = ObjectAttachmentUtil.getResizeResult(room, door, door.transform, 1, 1,
@@ -710,7 +818,7 @@ describe("resizing an attached object where it stands", () => {
     it("keeps its centre across a floor, and its bottom edge on a wall, so going back puts it back exactly", async () => {
         await inTheRoom((user, room) => {
             const onFloor = new ObjectTransform({x: 3.5, y: 0, z: 3.5}, UP, {x: 1, y: 0.5, z: 1});
-            const onWall = new ObjectTransform({x: MIDDLE.x, y: 1.25, z: WALL_ROW}, FACING, {x: 1, y: 0.5, z: 1});
+            const onWall = new ObjectTransform({x: MIDDLE.x, y: 1.25, z: WALL_Z}, FACING, {x: 1, y: 0.5, z: 1});
             for (const start of [onFloor, onWall])
             {
                 const startSize = ObjectScaleUtil.getObjectSize(lampTypeIndex, start.scale);
@@ -740,7 +848,7 @@ describe("resizing an attached object where it stands", () => {
     it("turns a canvas where it stands, on a floor and on a wall, and turning it back puts it back exactly", async () => {
         await inTheRoom((user, room) => {
             const onFloor = new ObjectTransform({x: 4, y: 0, z: 3.5}, UP, {x: 2, y: 1, z: 1});
-            const onWall = new ObjectTransform({x: MIDDLE.x, y: 1.5, z: WALL_ROW}, FACING, {x: 2, y: 1, z: 1});
+            const onWall = new ObjectTransform({x: MIDDLE.x, y: 1.5, z: WALL_Z}, FACING, {x: 2, y: 1, z: 1});
             for (const start of [onFloor, onWall])
             {
                 const label = `facing ${JSON.stringify(start.dir)}`;
@@ -766,8 +874,8 @@ describe("resizing an attached object where it stands", () => {
 
     it("is refused, by the rule the server applies, at a size that doesn't fit where it stands", async () => {
         await inTheRoom((user, room) => {
-            // On the side of the lone block, which is one layer tall: the short sizes fit, the tall ones don't.
-            const side = {x: BLOCK.col, y: BLOCK_BOTTOM_Y + 0.5 * COLLISION_LAYER_HEIGHT, z: BLOCK.row + 0.5};
+            // On the side of the platform, which is one layer tall: the short sizes fit, the tall ones don't.
+            const side = {x: PLATFORM_MIN.x, y: PLATFORM_CENTRE.y, z: PLATFORM_CENTRE.z};
             const lamp = attachment(user, room, lampTypeIndex, "lamp", side, {x: -1, y: 0, z: 0},
                 {x: 1, y: 0.5, z: 1});
             expect(ObjectUpdateUtil.addObject(user, room, lamp)).toBe(true);
@@ -804,7 +912,7 @@ describe("turning an attached object a quarter where it stands", () => {
     it("is tried in place first, so an object with room around it turns as it does by resizing where it stands", async () => {
         await inTheRoom((user, room) => {
             const onFloor = new ObjectTransform({x: 4, y: 0, z: 3.5}, UP, {x: 2, y: 1, z: 1});
-            const onWall = new ObjectTransform({x: MIDDLE.x, y: 1.5, z: WALL_ROW}, FACING, {x: 2, y: 1, z: 1});
+            const onWall = new ObjectTransform({x: MIDDLE.x, y: 1.5, z: WALL_Z}, FACING, {x: 2, y: 1, z: 1});
             for (const start of [onFloor, onWall])
             {
                 const inPlace = ObjectAttachmentUtil.getResizedInPlace(canvasTypeIndex, start, {x: 1, y: 2, z: 1});
@@ -820,39 +928,41 @@ describe("turning an attached object a quarter where it stands", () => {
         expect(places(onFloor)).toEqual([[3.5, 0, 3.75], [3.5, 0, 4], [3.5, 0, 3.5], [3.25, 0, 3.75], [3.75, 0, 3.75]]);
 
         // On a wall facing -z, where in place keeps the bottom edge: right runs along -x.
-        const onWall = candidates(new ObjectTransform({x: 12, y: 1.25, z: WALL_ROW}, FACING, wide));
-        expect(places(onWall)).toEqual([[12, 1.5, WALL_ROW], [12, 1.25, WALL_ROW], [12, 1, WALL_ROW],
-            [12.25, 1.5, WALL_ROW], [11.75, 1.5, WALL_ROW]]);
+        const onWall = candidates(new ObjectTransform({x: 12, y: 1.25, z: WALL_Z}, FACING, wide));
+        expect(places(onWall)).toEqual([[12, 1.5, WALL_Z], [12, 1.25, WALL_Z], [12, 1, WALL_Z],
+            [12.25, 1.5, WALL_Z], [11.75, 1.5, WALL_Z]]);
         for (const way of [...onFloor, ...onWall])
             expect(way.scale).toEqual(tall);
     });
 
     it("takes the first way that fits where the object can't turn in place", async () => {
         await inTheRoom((user, room) => {
-            // Along one half of the lone block's top: along the whole of it, across its middle.
-            const onBlock = new ObjectTransform({x: BLOCK.col + 0.5, y: BLOCK_TOP_Y, z: BLOCK.row + 0.75}, UP, wide);
-            expect(fitsAt(room, onBlock)).toBe(true);
-            expect(fitsAt(room, candidates(onBlock)[0])).toBe(false);
-            expect(turned(room, onBlock)).toEqual(
-                new ObjectTransform({x: BLOCK.col + 0.5, y: BLOCK_TOP_Y, z: BLOCK.row + 0.5}, UP, tall));
+            // Along one half of the platform's top: along the whole of it, across its middle.
+            const onPlatform = new ObjectTransform(
+                {x: PLATFORM_CENTRE.x, y: PLATFORM_MAX.y, z: PLATFORM_MIN.z + 0.75}, UP, wide);
+            expect(fitsAt(room, onPlatform)).toBe(true);
+            expect(fitsAt(room, candidates(onPlatform)[0])).toBe(false);
+            expect(turned(room, onPlatform)).toEqual(
+                new ObjectTransform({x: PLATFORM_CENTRE.x, y: PLATFORM_MAX.y, z: PLATFORM_CENTRE.z}, UP, tall));
 
             // At the top of the wall: its top edge kept, instead of its bottom.
-            const atTop = new ObjectTransform({x: 12, y: WALL_TOP - 0.25, z: WALL_ROW}, FACING, wide);
+            const atTop = new ObjectTransform({x: 12, y: WALL_TOP - 0.25, z: WALL_Z}, FACING, wide);
             expect(fitsAt(room, candidates(atTop)[0])).toBe(false);
-            expect(turned(room, atTop)).toEqual(new ObjectTransform({x: 12, y: WALL_TOP - 0.5, z: WALL_ROW}, FACING, tall));
+            expect(turned(room, atTop)).toEqual(new ObjectTransform({x: 12, y: WALL_TOP - 0.5, z: WALL_Z}, FACING, tall));
 
             // At an end of the wall: a grid step along it, on the bottom edge it had.
-            const atEnd = new ObjectTransform({x: WALL_COL_MIN + 0.25, y: 1.5, z: WALL_ROW}, FACING, tall);
+            const atEnd = new ObjectTransform({x: WALL_X_MIN + 0.25, y: 1.5, z: WALL_Z}, FACING, tall);
             expect(fitsAt(room, candidates(atEnd)[0])).toBe(false);
             expect(turned(room, atEnd)).toEqual(
-                new ObjectTransform({x: WALL_COL_MIN + 0.5, y: 1.25, z: WALL_ROW}, FACING, wide));
+                new ObjectTransform({x: WALL_X_MIN + 0.5, y: 1.25, z: WALL_Z}, FACING, wide));
         });
     });
 
     it("finds no way where the object fits turned nowhere within a grid step", async () => {
         await inTheRoom((user, room) => {
-            // On the side of the lone block, which is one layer tall.
-            const onSide = new ObjectTransform({x: BLOCK.col + 0.5, y: BLOCK_CENTRE.y, z: BLOCK.row}, FACING, wide);
+            // On the side of the platform, which is one layer tall.
+            const onSide = new ObjectTransform(
+                {x: PLATFORM_CENTRE.x, y: PLATFORM_CENTRE.y, z: PLATFORM_MIN.z}, FACING, wide);
             expect(fitsAt(room, onSide)).toBe(true);
             expect(turned(room, onSide)).toBeUndefined();
         });
@@ -977,13 +1087,13 @@ describe("a prop", () => {
             expect(canAdd(showing(user, room, propTypeIndex, "c", wide.path, scaleOf(wide, 1)))).toBe(false);
             expect(canAdd(showing(user, room, propTypeIndex, "d", wide.path, UNIT_VEC3))).toBe(false);
 
-            // Down to half a block across.
+            // Down to one block across.
             expect(canAdd(showing(user, room, canvasTypeIndex, "e", painting.path, {x: 0.5, y: 0.5, z: 1}))).toBe(true);
             expect(canAdd(showing(user, room, canvasTypeIndex, "f", painting.path, {x: 3.5, y: 2, z: 1}))).toBe(true);
         });
     });
 
-    it("is added showing any image that fits near the spot, up or down the wall, so a lone block's side takes only one a layer tall", async () => {
+    it("is added showing any image that fits near the spot, up or down the wall, so the platform's side takes only one a layer tall", async () => {
         await inTheRoom((user, room) => {
             // As adding one from a clicked face does: each image at its own size, with it as the prop's.
             const addedAt = (image: {path: string}, spot: Vec3, dir: Vec3) => {
@@ -996,13 +1106,13 @@ describe("a prop", () => {
             };
 
             // The wall's lowest layer: every size, shifted up as far as it needs.
-            const lowest = {x: MIDDLE.x, y: 0.5 * COLLISION_LAYER_HEIGHT, z: WALL_ROW};
+            const lowest = {x: MIDDLE.x, y: 0.5 * COLLISION_LAYER_HEIGHT, z: WALL_Z};
             for (const image of [square, wide, tall])
                 expect(addedAt(image, lowest, FACING), image.path).toBeDefined();
 
             for (const dir of WALL_DIRECTIONS)
             {
-                const side = Vector3DUtil.add(BLOCK_CENTRE, Vector3DUtil.scale(dir, 0.5));
+                const side = Vector3DUtil.add(PLATFORM_CENTRE, Vector3DUtil.scale(dir, 0.5));
                 expect(addedAt(wide, side, dir)).toBeDefined();
                 expect(addedAt(square, side, dir)).toBeUndefined();
                 expect(addedAt(tall, side, dir)).toBeUndefined();
@@ -1065,7 +1175,7 @@ describe("a prop", () => {
     it("takes a new image's size whichever way there is room where it stands, holding one of its edges", async () => {
         await inTheRoom((user, room) => {
             const wallTop = WALL_LAYERS * COLLISION_LAYER_HEIGHT;
-            const wallLeft = WALL_COL_MIN, wallRight = WALL_COL_MIN + WALL_COLS;
+            const wallLeft = WALL_X_MIN, wallRight = WALL_X_MAX;
 
             const hung = (objectId: string, image: {path: string}, pos: Vec3) => {
                 const prop = attachment(user, room, propTypeIndex, objectId, pos, FACING, scaleOf(image));
@@ -1088,16 +1198,16 @@ describe("a prop", () => {
                 ObjectAttachmentUtil.getResizedInPlace(propTypeIndex, prop.transform, scaleOf(image)));
 
             // Up from its bottom edge where there is room, and down from its top edge at the top of the wall.
-            const low = changed(hung("low", wide, {x: 12, y: 0.25, z: WALL_ROW}), square);
+            const low = changed(hung("low", wide, {x: 12, y: 0.25, z: WALL_Z}), square);
             expect(extent(low)).toEqual({left: 11.5, right: 12.5, bottom: 0, top: 1});
-            const atTop = hung("atTop", wide, {x: 12, y: wallTop - 0.25, z: WALL_ROW});
+            const atTop = hung("atTop", wide, {x: 12, y: wallTop - 0.25, z: WALL_Z});
             expect(inPlaceFits(atTop, square)).toBe(false);
             expect(extent(changed(atTop, square))).toEqual({left: 11.5, right: 12.5, bottom: wallTop - 1, top: wallTop});
 
             // Across from whichever end of the wall it stands at.
             for (const [objectId, x] of [["atLeft", wallLeft + 0.25], ["atRight", wallRight - 0.25]] as const)
             {
-                const prop = hung(objectId, tall, {x, y: 3, z: WALL_ROW});
+                const prop = hung(objectId, tall, {x, y: 3, z: WALL_Z});
                 expect(inPlaceFits(prop, square), objectId).toBe(false);
                 const grown = extent(changed(prop, square));
                 expect(grown, objectId).toEqual({left: (x < 12) ? wallLeft : wallRight - 1,
@@ -1105,7 +1215,7 @@ describe("a prop", () => {
             }
 
             // Shrinking holds its bottom edge, as growing back does, so the two round-trip.
-            const shrunk = changed(hung("shrinking", square, {x: 9.5, y: 3, z: WALL_ROW}), wide);
+            const shrunk = changed(hung("shrinking", square, {x: 9.5, y: 3, z: WALL_Z}), wide);
             expect(extent(shrunk)).toEqual({left: 9, right: 10, bottom: 2.5, top: 3});
         });
     });

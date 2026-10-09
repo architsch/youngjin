@@ -96,16 +96,19 @@ export default function RestrictedZoneGrid({zones, selectedIndex, onSelect, onCo
         if (!drag)
             return;
 
-        const rowDelta = Math.round((ev.clientY - drag.startY) / CELL_SIZE_PX);
-        const colDelta = Math.round((ev.clientX - drag.startX) / CELL_SIZE_PX);
-        // A drag starts only when it would move by a whole voxel (half-voxel slack), avoiding a jump
-        // that a pixel threshold would cause.
-        if (rowDelta == 0 && colDelta == 0)
+        const dx = ev.clientX - drag.startX;
+        const dy = ev.clientY - drag.startY;
+        // A drag starts only once the pointer is a whole voxel from where it went down, so a tap that
+        // wobbles moves nothing, and what is dragged sets off in step with the pointer.
+        if (!drag.moved && Math.abs(dx) < CELL_SIZE_PX && Math.abs(dy) < CELL_SIZE_PX)
             return;
         drag.moved = true;
 
         if (drag.zone)
-            setDraft({index: drag.index, zone: applyDrag(drag.zone, drag.handle, rowDelta, colDelta)});
+        {
+            setDraft({index: drag.index, zone: applyDrag(drag.zone, drag.handle,
+                Math.round(dy / CELL_SIZE_PX), Math.round(dx / CELL_SIZE_PX))});
+        }
     }, []);
 
     const endDrag = useCallback((cancelled: boolean) => {

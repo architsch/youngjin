@@ -1,6 +1,6 @@
 import RandomNumberGenerator from "../../../../../math/types/randomNumberGenerator";
+import { GENERATED_WALL_THICKNESS } from "../../../../../system/sharedConstants";
 import Voxel from "../../../../../voxel/types/voxel";
-import VoxelQueryUtil from "../../../../../voxel/util/voxelQueryUtil";
 import RoomVolumeUtil from "../../../util/roomVolumeUtil";
 import RoomPalette from "../../roomPalette";
 import RoomVolume from "../../roomVolume";
@@ -21,7 +21,8 @@ export default class RoomPropPlacer
         this.volumesByType = volumesByType;
     }
 
-    place(voxels: Voxel[], chancePerCell: number, maxStackHeight: number): void
+    // A stack stands on a spot a wall's thickness square; chancePerSpot is each spot's chance of holding one.
+    place(voxels: Voxel[], chancePerSpot: number, maxStackHeight: number): void
     {
         for (const area of this.volumesByType[RoomVolumeTypeEnumMap.Area])
         {
@@ -37,24 +38,27 @@ export default class RoomPropPlacer
             // The prop texture on all sides.
             const propPalette = new RoomPalette(palette.prop, palette.prop, palette.prop, palette.prop);
 
-            for (let row = inner.rowMin; row <= inner.rowMax; ++row)
+            for (let row = inner.rowMin; row <= inner.rowMax; row += GENERATED_WALL_THICKNESS)
             {
-                for (let col = inner.colMin; col <= inner.colMax; ++col)
+                for (let col = inner.colMin; col <= inner.colMax; col += GENERATED_WALL_THICKNESS)
                 {
-                    if (this.rand.randomFloat(0, 1) >= chancePerCell)
+                    if (this.rand.randomFloat(0, 1) >= chancePerSpot)
                         continue;
 
+                    const rowMax = row + GENERATED_WALL_THICKNESS - 1;
+                    const colMax = col + GENERATED_WALL_THICKNESS - 1;
+
                     // Requires the area's own floor under the stack (nothing floats).
-                    const voxel = VoxelQueryUtil.getVoxel(voxels, row, col);
-                    if (!voxel || !VoxelQueryUtil.isVoxelBlockWhole(
-                        voxel, area.collisionLayerMin - 1))
+                    const floorLayer = area.collisionLayerMin - 1;
+                    if (!RoomVolumeUtil.volumeIsSolid(voxels,
+                        new RoomVolume(row, rowMax, col, colMax, floorLayer, floorLayer)))
                     {
                         continue;
                     }
 
                     // Leave headroom so a stack isn't a pillar.
                     const height = this.rand.randomInt(1, maxStackHeight + 1);
-                    const stack = new RoomVolume(row, row, col, col, area.collisionLayerMin,
+                    const stack = new RoomVolume(row, rowMax, col, colMax, area.collisionLayerMin,
                         Math.min(area.collisionLayerMin + height - 1, area.collisionLayerMax - 1),
                         propPalette);
                     if (stack.collisionLayerMin > stack.collisionLayerMax)

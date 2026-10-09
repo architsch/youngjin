@@ -7,7 +7,7 @@ import DoorObjectTypeConfig, { SPAWN_DIST_BEHIND_DOOR } from "../../../shared/ob
 import { PLAYER_HEIGHT } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import LabelTextUtil from "../../../shared/object/util/labelTextUtil";
 import Room from "../../../shared/room/types/room";
-import { NUM_VOXEL_COLS, NUM_VOXEL_ROWS, UNIT_VEC3 } from "../../../shared/system/sharedConstants";
+import { MAX_ROOM_X, MAX_ROOM_Z, UNIT_VEC3 } from "../../../shared/system/sharedConstants";
 
 const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 
@@ -71,7 +71,7 @@ function getTransformBehindDoor(door: AddObjectSignal): ObjectTransform
 function getRoomCenterTransform(): ObjectTransform
 {
     return new ObjectTransform(
-        {x: 0.5 * NUM_VOXEL_COLS, y: 0.5 * PLAYER_HEIGHT, z: 0.5 * NUM_VOXEL_ROWS},
+        {x: 0.5 * MAX_ROOM_X, y: 0.5 * PLAYER_HEIGHT, z: 0.5 * MAX_ROOM_Z},
         {x: 0, y: 0, z: 1}, {...UNIT_VEC3});
 }
 

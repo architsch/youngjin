@@ -70,9 +70,8 @@ import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfi
 import AddVoxelBlockSignal from "../../../src/shared/voxel/types/update/addVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/removeVoxelBlockSignal";
 import SetVoxelQuadTextureSignal from "../../../src/shared/voxel/types/update/setVoxelQuadTextureSignal";
-import SetVoxelBlockShapeSignal from "../../../src/shared/voxel/types/update/setVoxelBlockShapeSignal";
 import Room from "../../../src/shared/room/types/room";
-import { VOXEL_BLOCK_SHAPE_WHOLE } from "../../../src/shared/system/sharedConstants";
+import { VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 import { createEditingUser } from "../helpers/mockUser";
 import { buildPillar, createRoom, quadIndexOf } from "../helpers/selectionHarness";
 
@@ -416,9 +415,8 @@ describe("effect definitions", () => {
 describe("voxel block events", () => {
     const ROOM_ID = "particle-room";
     const TEXTURES = [1, 1, 1, 1, 1, 1];
-    const LOW_X_HALF = 0b0101;
     let room: Room;
-    let blockEdits: {kind: string, quadIndex: number, shape: number}[];
+    let blockEdits: {kind: string, quadIndex: number}[];
     let shapeChanges: string[];
 
     beforeEach(() => {
@@ -443,19 +441,15 @@ describe("voxel block events", () => {
         await ClientVoxelManager.onAddVoxelBlockSignalReceived(new AddVoxelBlockSignal(ROOM_ID, added, TEXTURES));
         await ClientVoxelManager.onSetVoxelQuadTextureSignalReceived(
             new SetVoxelQuadTextureSignal(ROOM_ID, added, 2));
-        await ClientVoxelManager.onSetVoxelBlockShapeSignalReceived(
-            new SetVoxelBlockShapeSignal(ROOM_ID, added, LOW_X_HALF));
         await ClientVoxelManager.onRemoveVoxelBlockSignalReceived(new RemoveVoxelBlockSignal(ROOM_ID, added));
 
-        // Each carries the shape the edit left the block with; the removal, the one it took away.
         expect(blockEdits).toEqual([
-            {kind: "add", quadIndex: added, shape: VOXEL_BLOCK_SHAPE_WHOLE},
-            {kind: "retexture", quadIndex: added, shape: VOXEL_BLOCK_SHAPE_WHOLE},
-            {kind: "reshape", quadIndex: added, shape: LOW_X_HALF},
-            {kind: "remove", quadIndex: added, shape: LOW_X_HALF},
+            {kind: "add", quadIndex: added},
+            {kind: "retexture", quadIndex: added},
+            {kind: "remove", quadIndex: added},
         ]);
         // Retexturing leaves the room's shape alone.
-        expect(shapeChanges).toEqual([ROOM_ID, ROOM_ID, ROOM_ID]);
+        expect(shapeChanges).toEqual([ROOM_ID, ROOM_ID]);
     });
 
     it("plays a removal's burst in the middle of the block that was there", () => {
@@ -463,15 +457,14 @@ describe("voxel block events", () => {
         try
         {
             const quadIndex = quadIndexOf(10, 6, "x", "+", 2);
-            ParticleTriggerUtil.onVoxelBlockEdit({kind: "remove", quadIndex, shape: VOXEL_BLOCK_SHAPE_WHOLE});
-            expect(play).toHaveBeenLastCalledWith("blockRemoved", {x: 6.5, y: 1.25, z: 10.5});
-            ParticleTriggerUtil.onVoxelBlockEdit({kind: "remove", quadIndex, shape: LOW_X_HALF});
-            expect(play).toHaveBeenLastCalledWith("blockRemoved", {x: 6.25, y: 1.25, z: 10.5});
+            ParticleTriggerUtil.onVoxelBlockEdit({kind: "remove", quadIndex});
+            expect(play).toHaveBeenLastCalledWith("blockRemoved",
+                {x: 6.5 * VOXEL_CELL_SIZE, y: 1.25, z: 10.5 * VOXEL_CELL_SIZE});
 
             // Only a removal plays anything.
             play.mockClear();
-            for (const kind of ["add", "move", "reshape", "retexture"] as const)
-                ParticleTriggerUtil.onVoxelBlockEdit({kind, quadIndex, shape: VOXEL_BLOCK_SHAPE_WHOLE});
+            for (const kind of ["add", "move", "retexture"] as const)
+                ParticleTriggerUtil.onVoxelBlockEdit({kind, quadIndex});
             expect(play).not.toHaveBeenCalled();
         }
         finally

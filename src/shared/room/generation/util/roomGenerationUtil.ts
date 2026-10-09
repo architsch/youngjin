@@ -12,8 +12,7 @@ import RoomPaletteSelectionParams from "../types/params/roomPaletteSelectionPara
 import RoomPalette from "../types/roomPalette";
 import RoomPaletteMap from "../maps/roomPaletteMap";
 import RoomPrefsUtil from "../../util/roomPrefsUtil";
-import { COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL,
-    INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW } from "../../../system/sharedConstants";
+import { INITIAL_MULTI_PLAYER_ENTRANCE_POS } from "../../../system/sharedConstants";
 
 const RoomGenerationUtil =
 {
@@ -77,9 +76,7 @@ function makeMultiplayerRoomBuilderParams(paletteSelection: RoomPaletteSelection
     seed?: number): RoomBuilderParams
 {
     return {
-        entranceVoxelCol: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL,
-        entranceVoxelRow: INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_ROW,
-        entranceVoxelCollisionLayer: COLLISION_LAYER_MIN,
+        entrancePos: {...INITIAL_MULTI_PLAYER_ENTRANCE_POS},
         paletteSelection,
         hotspots: {},
         volumes: {},

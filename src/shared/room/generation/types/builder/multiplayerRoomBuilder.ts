@@ -1,17 +1,20 @@
 import DoorObjectTypeConfig from "../../../../object/types/objectTypeConfig/doorObjectTypeConfig";
-import { INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL, NUM_VOXEL_ROWS } from "../../../../system/sharedConstants";
+import VoxelQueryUtil from "../../../../voxel/util/voxelQueryUtil";
 import { RoomVolumeConstructorMap } from "../../maps/roomVolumeConstructorMap";
+import RoomPalette from "../roomPalette";
+import RoomVolume from "../roomVolume";
 import { RoomVolumeTypeEnumMap } from "../roomVolumeType";
 import ProceduralRoomBuilder from "./proceduralRoomBuilder";
 import RoomBuilder from "./roomBuilder";
 
-// Half-width of the open arrival area in front of the entrance.
-const ARRIVAL_AREA_HALF_WIDTH = 3;
-const ARRIVAL_AREA_DEPTH = 4;
+// The open arrival area in front of the entrance door, in voxels: how far it reaches to either side of the
+// door's middle, and out from the door's wall.
+const ARRIVAL_AREA_HALF_WIDTH = 7;
+const ARRIVAL_AREA_DEPTH = 8;
 
-// Half-width of the keep-clear floor around the entrance (see @docs/geometry/room_entrance.md).
-const ENTRANCE_KEEP_CLEAR_HALF_WIDTH = 2;
-const ENTRANCE_KEEP_CLEAR_HALF_DEPTH = 3;
+// The floor kept clear in front of the door, likewise (see @docs/geometry/room_entrance.md).
+const ENTRANCE_KEEP_CLEAR_HALF_WIDTH = 5;
+const ENTRANCE_KEEP_CLEAR_DEPTH = 6;
 
 // Shared by multiplayer rooms: one fixed entrance and an arrival area behind it.
 export default abstract class MultiplayerRoomBuilder extends ProceduralRoomBuilder
@@ -22,17 +25,12 @@ export default abstract class MultiplayerRoomBuilder extends ProceduralRoomBuild
 
         const arrivalPalette = this.nextPalette();
 
-        // The arrival area, placed first so it always exists; it reaches the boundary wall at the
-        // entrance cell, where the door hangs (the wall stays solid, since attachments need it).
-        this.addArea(RoomVolumeConstructorMap["FirstStorey"](
-            NUM_VOXEL_ROWS - 1 - ARRIVAL_AREA_DEPTH, NUM_VOXEL_ROWS - 2,
-            INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL - ARRIVAL_AREA_HALF_WIDTH,
-            INITIAL_MULTI_PLAYER_ENTRANCE_VOXEL_COL + ARRIVAL_AREA_HALF_WIDTH,
-            arrivalPalette));
+        // The arrival area, placed first so it always exists; it reaches the boundary wall where the door
+        // hangs (the wall stays solid, since attachments need it).
+        this.addArea(this.makeVolumeBeforeEntrance(ARRIVAL_AREA_HALF_WIDTH, ARRIVAL_AREA_DEPTH, arrivalPalette));
 
         this.addVolume(RoomVolumeTypeEnumMap.Reserved,
-            RoomVolumeConstructorMap["InitialMultiplayerEntranceZone"](
-                ENTRANCE_KEEP_CLEAR_HALF_WIDTH, ENTRANCE_KEEP_CLEAR_HALF_DEPTH));
+            this.makeVolumeBeforeEntrance(ENTRANCE_KEEP_CLEAR_HALF_WIDTH, ENTRANCE_KEEP_CLEAR_DEPTH));
         return this;
     }
 
@@ -41,9 +39,18 @@ export default abstract class MultiplayerRoomBuilder extends ProceduralRoomBuild
     protected addEntranceDoor(): RoomBuilder
     {
         const {params, room} = this;
-        const door = DoorObjectTypeConfig.util.makeEntranceDoor(room.id, params.entranceVoxelCol,
-            params.entranceVoxelRow, params.entranceVoxelCollisionLayer);
-        room.objectGroup.addObject(door);
+        room.objectGroup.addObject(DoorObjectTypeConfig.util.makeEntranceDoor(room.id, params.entrancePos));
         return this;
+    }
+
+    // A stretch of the first storey in front of the entrance door, which hangs on the wall along the
+    // room's last rows.
+    private makeVolumeBeforeEntrance(halfWidth: number, depth: number, palette?: RoomPalette): RoomVolume
+    {
+        const {entrancePos} = this.params;
+        const firstColPastMiddle = VoxelQueryUtil.getVoxelColFromWorldX(entrancePos.x);
+        const firstWallRow = VoxelQueryUtil.getVoxelRowFromWorldZ(entrancePos.z);
+        return RoomVolumeConstructorMap["FirstStorey"](firstWallRow - depth, firstWallRow - 1,
+            firstColPastMiddle - halfWidth, firstColPastMiddle + halfWidth - 1, palette);
     }
 }

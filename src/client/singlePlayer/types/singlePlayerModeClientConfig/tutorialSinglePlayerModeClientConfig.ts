@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
 import TutorialSinglePlayerModeConfig from "../../../../shared/singlePlayer/types/singlePlayerModeConfig/tutorialSinglePlayerModeConfig";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NEAR_EPSILON, NUM_VOXEL_COLS,
-    NUM_VOXEL_ROWS } from "../../../../shared/system/sharedConstants";
+    NUM_VOXEL_ROWS, VOXEL_CELL_SIZE } from "../../../../shared/system/sharedConstants";
 import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import App from "../../../app";
@@ -84,8 +84,6 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                     {type: "feature_flag", flag: FeatureFlag.DisableObjectSelectionChange, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockAddition, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockRemoval, enable: true},
-                    // The whole way through: no step here has a block resized.
-                    {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockResize, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelQuadTextureChange, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualObjectAddition, enable: true},
                     // The whole way through: an edit undone would leave the steps after it nothing to act on.
@@ -94,7 +92,7 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                 ],
                 transitionRules: [{
                     requirements: [{type: "player_is_nearby", negate: true,
-                        targetX: () => p.entranceVoxelCol+0.5, targetZ: () => p.entranceVoxelRow+0.5,
+                        targetX: () => p.entrancePos.x, targetZ: () => p.entrancePos.z,
                         detectionDist: () => 0.5}],
                     nextStep: "start_edit",
                     nextStepDelay: 500,
@@ -118,7 +116,8 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                     // on whatever is in view. Falls back to the layout's floor patch.
                     {type: "edit_mode_opening_voxel_quad", quadIndex: () => pickWallQuadAhead(
                         VoxelQueryUtil.getFloorVoxelQuadIndex(
-                            Math.floor(p.hotspots.floor.z), Math.floor(p.hotspots.floor.x)))},
+                            VoxelQueryUtil.getVoxelRowFromWorldZ(p.hotspots.floor.z),
+                            VoxelQueryUtil.getVoxelColFromWorldX(p.hotspots.floor.x)))},
                 ],
                 transitionRules: [{
                     requirements: [{type: "edit_mode_active", negate: false}],
@@ -483,12 +482,12 @@ function pickWallQuadAhead(fallbackQuadIndex: number): number
     let row = VoxelQueryUtil.getVoxelRowFromWorldZ(cameraPosTemp.z);
 
     // Walk length between successive column (row) boundaries, and to the next one.
-    const colStride = 1 / Math.abs(dirX);
-    const rowStride = 1 / Math.abs(dirZ);
+    const colStride = VOXEL_CELL_SIZE / Math.abs(dirX);
+    const rowStride = VOXEL_CELL_SIZE / Math.abs(dirZ);
     let colBoundary = (dirX != 0)
-        ? Math.abs(col + ((dirX > 0) ? 1 : 0) - cameraPosTemp.x) * colStride : Infinity;
+        ? Math.abs((col + ((dirX > 0) ? 1 : 0)) * VOXEL_CELL_SIZE - cameraPosTemp.x) / Math.abs(dirX) : Infinity;
     let rowBoundary = (dirZ != 0)
-        ? Math.abs(row + ((dirZ > 0) ? 1 : 0) - cameraPosTemp.z) * rowStride : Infinity;
+        ? Math.abs((row + ((dirZ > 0) ? 1 : 0)) * VOXEL_CELL_SIZE - cameraPosTemp.z) / Math.abs(dirZ) : Infinity;
 
     for (let step = 0; step < NUM_VOXEL_ROWS + NUM_VOXEL_COLS; ++step)
     {
@@ -573,12 +572,12 @@ function getQuadArrowTarget(quadIndex: number): THREE.Vector3
     const voxels = App.getCurrentRoom()?.voxelGrid.voxels;
     const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
     const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
+    const x = VoxelQueryUtil.getWorldXAtVoxelColCenter(col), z = VoxelQueryUtil.getWorldZAtVoxelRowCenter(row);
     if (!voxels || !VoxelQueryUtil.getVoxel(voxels, row, col))
-        return quadArrowTargetTemp.set(col + 0.5, QUAD_ARROW_LIFT, row + 0.5);
+        return quadArrowTargetTemp.set(x, QUAD_ARROW_LIFT, z);
 
     const d = VoxelQueryUtil.getVoxelQuadTransformDimensions(voxels, quadIndex);
-    return quadArrowTargetTemp.set(col + 0.5 + d.offsetX, d.offsetY + QUAD_ARROW_LIFT,
-        row + 0.5 + d.offsetZ);
+    return quadArrowTargetTemp.set(x + d.offsetX, d.offsetY + QUAD_ARROW_LIFT, z + d.offsetZ);
 }
 
 // A view looking at a face head-on (see OrbitCameraPose for the angles). A face lying flat has no

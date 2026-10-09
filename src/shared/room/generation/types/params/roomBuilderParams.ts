@@ -6,9 +6,9 @@ import RoomPaletteSelectionParams from "./roomPaletteSelectionParams";
 // Inputs to a RoomBuilder; where template-built rooms declare their room-level parameters. All fields
 // are required (empty collections when unused), so a missing name is a config error, not a case.
 type RoomBuilderParams = {
-    entranceVoxelCol: number,
-    entranceVoxelRow: number,
-    entranceVoxelCollisionLayer: number, // = where the player's bottom (feet) will be placed on the y-axis. If collisionLayer is 0, the player's bottom will be located at (y = 0).
+    // Where the room is entered, in world units and at floor level: where a single-player room's player
+    // starts, or where a multiplayer room's entrance door stands (see DoorObjectTypeConfig).
+    entrancePos: Vec3,
 
     // Packs and palettes the room may use; fewer candidates mean a plainer room.
     paletteSelection: RoomPaletteSelectionParams,
