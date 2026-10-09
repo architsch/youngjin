@@ -88,6 +88,8 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelBlockResize, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualVoxelQuadTextureChange, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableManualObjectAddition, enable: true},
+                    // The whole way through: an edit undone would leave the steps after it nothing to act on.
+                    {type: "feature_flag", flag: FeatureFlag.DisableUndoRedo, enable: true},
                     {type: "feature_flag", flag: FeatureFlag.DisableGameModeTransition, enable: true},
                 ],
                 transitionRules: [{

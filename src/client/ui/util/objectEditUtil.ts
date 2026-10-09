@@ -14,6 +14,9 @@ import InstancedMeshComposer from "../../object/components/instancedMeshComposer
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 import { FeatureFlag } from "../../../shared/system/types/featureFlag";
 import { clientFeatureFlagsObservable, objectSelectionObservable } from "../../system/clientObservables";
+import RoomEditUtil from "../../system/util/roomEditUtil";
+import { ClientEventType } from "../../system/types/clientEventType";
+import KeyPressUtil from "./keyPressUtil";
 import RestrictedZoneUtil from "../../../shared/voxel/util/restrictedZoneUtil";
 import QuarterTurnsUtil from "../../../shared/object/util/quarterTurnsUtil";
 import ObjectAttachmentUtil from "../../../shared/object/util/objectAttachmentUtil";
@@ -21,7 +24,8 @@ import ObjectScaleUtil from "../../../shared/object/util/objectScaleUtil";
 import PopupUtil from "./popupUtil";
 
 // The edits every selected object's tools share. Each is checked as the server will check it (see
-// ObjectUpdateUtil), applied locally, then sent (a single-player room has no server to send it to).
+// ObjectUpdateUtil), applied locally, then sent (a single-player room has no server to send it to), and
+// entered in the history for an undo to take back (see RoomEditUtil).
 const ObjectEditUtil =
 {
     // The room must be editable and the object outside others' restricted zones (see
@@ -81,16 +85,24 @@ const ObjectEditUtil =
 
         const room = App.getCurrentRoom()!;
         const objectId = selection.gameObject.params.objectId;
+        const undoSignal = RoomEditUtil.getUndoSignal(room,
+            new SetObjectMetadataSignal(room.id, objectId, metadataKey, metadataValue, transform)) as SetObjectMetadataSignal;
         if (!ClientObjectManager.setObjectMetadata(objectId, metadataKey, metadataValue, true, transform))
             return;
 
+        const applied = room.objectById[objectId];
+        const signal = new SetObjectMetadataSignal(room.id, objectId, metadataKey, metadataValue, transform
+            ? new ObjectTransform({...applied.transform.pos}, {...applied.transform.dir}, {...applied.transform.scale})
+            : undefined);
         if (room.roomType != RoomTypeEnumMap.SinglePlayer)
-        {
-            const applied = room.objectById[objectId].transform;
-            SocketsClient.emitSetObjectMetadataSignal(new SetObjectMetadataSignal(room.id, objectId, metadataKey,
-                metadataValue, transform ? new ObjectTransform({...applied.pos}, {...applied.dir}, {...applied.scale})
-                    : undefined));
-        }
+            SocketsClient.emitSetObjectMetadataSignal(signal);
+
+        // A value set to what it already was is no edit to undo.
+        if (transform == undefined && applied.metadata[metadataKey]?.str === undoSignal.metadataValue)
+            return;
+        RoomEditUtil.record(ClientEventType.ManuallyChangedObjectMetadata, room, {redo: [signal], undo: [undoSignal],
+            // A text is one edit as it is typed, not one for each letter.
+            mergeKey: KeyPressUtil.isTyping() ? `${objectId}.${metadataKey}` : undefined});
     },
     // Transforms set by a tool are placements, which ignore physics (as a drag's do).
     canSetObjectTransform: (selection: ObjectSelection, transform: ObjectTransform): boolean =>
@@ -110,12 +122,14 @@ const ObjectEditUtil =
 
         const room = App.getCurrentRoom()!;
         const objectId = selection.gameObject.params.objectId;
+        const undoSignal = RoomEditUtil.getUndoSignal(room,
+            new SetObjectTransformSignal(room.id, objectId, transform, true));
         const applied = ClientObjectManager.setObjectTransform(objectId, transform, true, false);
+        const signal = new SetObjectTransformSignal(room.id, objectId,
+            new ObjectTransform({...applied.pos}, {...applied.dir}, {...applied.scale}), true);
         if (room.roomType != RoomTypeEnumMap.SinglePlayer)
-        {
-            SocketsClient.emitSetObjectTransformSignal(new SetObjectTransformSignal(room.id, objectId,
-                new ObjectTransform({...applied.pos}, {...applied.dir}, {...applied.scale}), true));
-        }
+            SocketsClient.emitSetObjectTransformSignal(signal);
+        RoomEditUtil.record(ClientEventType.ManuallyChangedObjectTransform, room, {redo: [signal], undo: [undoSignal]});
         // Re-announced so the outline and the tools catch up with where and how big it now is.
         objectSelectionObservable.notify();
     },
@@ -186,6 +200,8 @@ async function tryRemoveObject(selection: ObjectSelection)
 
     const room = App.getCurrentRoom()!;
     const objectId = selection.gameObject.params.objectId;
+    const signal = new RemoveObjectSignal(room.id, objectId);
+    const undoSignal = RoomEditUtil.getUndoSignal(room, signal);
 
     // Removed locally, then reported to the server if that succeeded. The selection moves on once the room no
     // longer holds the object (removeObject sees to that before it first waits), so the face it leaves counts as
@@ -193,9 +209,12 @@ async function tryRemoveObject(selection: ObjectSelection)
     ObjectSelection.unselect();
     const removal = ClientObjectManager.removeObject(objectId);
     VoxelQuadSelection.trySelectBestQuadNearby(selection.gameObject.params.transform.pos);
-    const success = await removal;
-    if (success && room.roomType != RoomTypeEnumMap.SinglePlayer)
-        SocketsClient.emitRemoveObjectSignal(new RemoveObjectSignal(room.id, objectId));
+    if (!await removal)
+        return;
+    if (room.roomType != RoomTypeEnumMap.SinglePlayer)
+        SocketsClient.emitRemoveObjectSignal(signal);
+    RoomEditUtil.record(ClientEventType.ManuallyRemovedObject, room,
+        {redo: [signal], undo: [undoSignal], selectionBefore: selection});
 }
 
 export default ObjectEditUtil;

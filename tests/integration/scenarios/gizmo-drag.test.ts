@@ -17,6 +17,13 @@ const canvas = {
     getBoundingClientRect: () => ({left: 0, top: 0, width: 800, height: 600}),
 };
 
+// Likewise the window, where the fingers of a pinch are counted from touch events.
+const windowListeners: {[type: string]: (ev: any) => void} = {};
+vi.stubGlobal("window", {
+    addEventListener: (type: string, listener: (ev: any) => void) => { windowListeners[type] = listener; },
+    removeEventListener: (type: string) => { delete windowListeners[type]; },
+});
+
 vi.mock("../../../src/client/graphics/graphicsManager", () => ({
     default: {
         getGameCanvas: () => canvas,
@@ -51,6 +58,13 @@ function fire(type: string, x: number, y: number, init: Record<string, unknown> 
 {
     canvasListeners[type]({pointerId: 1, pointerType: "mouse", buttons: 0, clientX: x, clientY: y,
         preventDefault: () => {}, ...init});
+}
+
+// A touch event, which follows the pointer event of the same finger: every finger now down, each on the canvas.
+function touch(type: string, ...fingers: [number, number][]): void
+{
+    windowListeners[type]({cancelable: true, preventDefault: () => {},
+        touches: fingers.map(([clientX, clientY]) => ({target: canvas, clientX, clientY}))});
 }
 
 // One frame of input: what the camera would read as the drag.
@@ -104,10 +118,28 @@ describe("a press on a gizmo", () => {
 
     it("is taken away by a second finger, which pinches instead", () => {
         fire("pointerdown", 50, 300, {pointerType: "touch", buttons: 1});
+        touch("touchstart", [50, 300]);
         fire("pointerdown", 400, 300, {pointerType: "touch", pointerId: 2, buttons: 1});
+        touch("touchstart", [50, 300], [400, 300]);
 
         expect(handler.onCancel).toHaveBeenCalledOnce();
         expect(GizmoDragUtil.isActive()).toBe(false);
+
+        // Nor does the second finger's own press turn the view.
+        frameDragDelta();
+        fire("pointermove", 460, 300, {pointerType: "touch", pointerId: 2, buttons: 1});
+        expect(frameDragDelta()).toEqual({x: 0, y: 0});
+    });
+
+    it("is not begun by a second finger that lands on the gizmo", () => {
+        fire("pointerdown", 400, 300, {pointerType: "touch", buttons: 1});
+        touch("touchstart", [400, 300]);
+        fire("pointerdown", 50, 300, {pointerType: "touch", pointerId: 2, buttons: 1});
+        touch("touchstart", [400, 300], [50, 300]);
+
+        expect(GizmoDragUtil.isActive()).toBe(false);
+        fire("pointermove", 90, 300, {pointerType: "touch", pointerId: 2, buttons: 1});
+        expect(handler.onMove).not.toHaveBeenCalled();
     });
 
     it("is abandoned when the canvas loses focus mid-drag", () => {

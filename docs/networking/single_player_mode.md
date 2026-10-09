@@ -32,7 +32,7 @@ On connect, `SocketsServer` picks, in order: the single-player room (if the flag
 ## Presentation and constraints
 - **Tutorial UI** (observable-backed and non-blocking for pointers): headline banner, arrow and outline that track a DOM element, and a gesture diagram. **World gizmos** (always on top): navigation arrow, point-of-interest arrow, quad outline. A single "clear" action removes all of them.
 - The two gizmos that mark a **face** hide themselves whenever that face is out of sight — something drawn in between, or the camera behind it. They draw on top of everything, so otherwise they would hang in the middle of the wall in the way.
-- **`FeatureFlag`**: an observable set of switches that restrict the UI and interactions (e.g. hide chat, disable voxel edits, lock selection, lock game mode). A flag restricts the **action itself**, not just the button for it (e.g. the mode lock also blocks the toggle's shortcut key).
+- **`FeatureFlag`**: an observable set of switches that restrict the UI and interactions (e.g. hide chat, disable voxel edits, lock selection, lock game mode, block undo and redo). A flag restricts the **action itself**, not just the button for it (e.g. the mode lock also blocks the toggle's shortcut key).
 - **Selection restriction**: separate from the selection lock, which refuses every quad. A step that asks the user to pick a face out lifts the lock and leaves only that one face selectable, so a stray click can't strand the steps that act on it.
 
 ## Finishing

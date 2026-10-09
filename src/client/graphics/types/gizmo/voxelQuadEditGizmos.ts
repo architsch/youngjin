@@ -9,6 +9,8 @@ import App from "../../../app";
 import SocketsClient from "../../../networking/client/socketsClient";
 import ClientVoxelManager from "../../../voxel/clientVoxelManager";
 import GameModeUtil from "../../../system/util/gameModeUtil";
+import RoomEditUtil from "../../../system/util/roomEditUtil";
+import { ClientEventType } from "../../../system/types/clientEventType";
 import { clientFeatureFlagsObservable, gameModeObservable, objectEditObservable, roomChangedObservable,
     voxelBlockPreviewObservable, voxelQuadSelectionObservable,
     voxelQuadSelectionRestrictionObservable } from "../../../system/clientObservables";
@@ -127,7 +129,7 @@ const VoxelQuadEditGizmos: SelectionEditGizmoProvider =
         if (target == null || room == undefined)
             return null;
         const {center, dir, reachRight, reachUp} = getFace(room, target);
-        const {right, up} = Geometry3DUtil.getAxisFacingBasis(dir);
+        const {normal, right, up} = Geometry3DUtil.getAxisFacingBasis(dir);
         for (const {corner, position} of outlineCorners)
         {
             const alongRight = corner.x * reachRight;
@@ -135,7 +137,7 @@ const VoxelQuadEditGizmos: SelectionEditGizmoProvider =
             position.set(center.x + right.x * alongRight + up.x * alongUp, center.y + right.y * alongRight + up.y * alongUp,
                 center.z + right.z * alongRight + up.z * alongUp);
         }
-        return {middle: middleTemp.set(center.x, center.y, center.z), corners: outlineCorners};
+        return {middle: middleTemp.set(center.x, center.y, center.z), facing: normal, corners: outlineCorners};
     },
 }
 
@@ -287,8 +289,13 @@ function finishDrag(keep: boolean): void
     }
 
     const edit = ClientVoxelManager.commitVoxelBlockPreview(room);
-    if (edit != null && room.roomType != RoomTypeEnumMap.SinglePlayer)
-        SocketsClient.emitSetVoxelBlockShapeSignal(new SetVoxelBlockShapeSignal(room.id, edit.quadIndex, edit.shape));
+    if (edit == null)
+        return;
+    const signal = new SetVoxelBlockShapeSignal(room.id, edit.quadIndex, edit.shape);
+    if (room.roomType != RoomTypeEnumMap.SinglePlayer)
+        SocketsClient.emitSetVoxelBlockShapeSignal(signal);
+    RoomEditUtil.record(ClientEventType.ManuallyChangedVoxelBlockShape, room,
+        {redo: [signal], undo: [new SetVoxelBlockShapeSignal(room.id, edit.quadIndex, edit.originShape)]});
 }
 
 // ─── The selection ──────────────────────────────────────────────────────

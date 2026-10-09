@@ -30,6 +30,9 @@ import ImageMapUtil from "../../../../../shared/graphics/image/util/imageMapUtil
 import ImageMetadata from "../../../../../shared/graphics/image/types/imageMetadata";
 import ImageChoiceUtil from "../../../util/imageChoiceUtil";
 import ClientVoxelManager from "../../../../voxel/clientVoxelManager";
+import RoomEditUtil from "../../../../system/util/roomEditUtil";
+import { ClientEventType } from "../../../../system/types/clientEventType";
+import EncodableData from "../../../../../shared/networking/types/encodableData";
 import VoxelUpdateUtil from "../../../../../shared/voxel/util/voxelUpdateUtil";
 import RemoveVoxelBlockSignal from "../../../../../shared/voxel/types/update/removeVoxelBlockSignal";
 import DoorObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
@@ -85,8 +88,8 @@ const placementFeatureFlags = [
 export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSelection, children?: ReactNode})
 {
     const [, forceRefresh] = useReducer((x: number) => x + 1, 0);
-    // The type whose chooser is open.
-    const [choosingTypeIndex, setChoosingTypeIndex] = useState<number | null>(null);
+    // The type whose chooser is open, and the selection it was raised on: the next face selected has none open.
+    const [chooser, setChooser] = useState<{typeIndex: number, selection: VoxelQuadSelection} | null>(null);
     // Whether a pick from a chooser beneath this row is still going up.
     const addingRef = useRef(false);
 
@@ -120,19 +123,22 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
     // A chooser shows only while its type can be added to the selected face.
     const canAdd = new Map([[canvasTypeIndex, canAddCanvas], [propTypeIndex, canAddProp], [lampTypeIndex, canAddLamp],
         [labelTypeIndex, canAddLabel], [doorTypeIndex, canAddDoor]]);
-    const choosing = (choosingTypeIndex != null && canAdd.get(choosingTypeIndex)) ? choosingTypeIndex : null;
-    const close = () => setChoosingTypeIndex(null);
+    const choosing = (chooser != null && chooser.selection == props.selection && canAdd.get(chooser.typeIndex))
+        ? chooser.typeIndex : null;
+    const close = () => setChooser(null);
     const onClose = SUB_PANELS_BENEATH_SELECTION_TOOLS ? undefined : close;
     const addButton = (id: string, icon: ReactNode, objectTypeIndex: number) => <IconButton id={id} icon={icon}
         size="md" disabled={!canAdd.get(objectTypeIndex)} highlight={choosing == objectTypeIndex}
-        onClick={() => setChoosingTypeIndex(objectTypeIndex == choosing ? null : objectTypeIndex)}/>;
+        onClick={() => setChooser(objectTypeIndex == choosing ? null
+            : {typeIndex: objectTypeIndex, selection: props.selection})}/>;
 
-    // The back gesture puts away a chooser beneath this row, as its add button does (see ClosablePanelUtil). One in
-    // the row's place sees to that itself (see ScrollPanel).
+    // The back gesture puts away a chooser beneath this row, as its add button does (see ClosablePanelUtil): not as a
+    // panel over the tools, which this row stays on screen as. One in the row's place sees to that itself (see
+    // ScrollPanel).
     useEffect(() => {
         if (!SUB_PANELS_BENEATH_SELECTION_TOOLS || choosing == null)
             return;
-        const token = ClosablePanelUtil.register(() => setChoosingTypeIndex(null));
+        const token = ClosablePanelUtil.register(() => setChooser(null), false);
         return () => ClosablePanelUtil.unregister(token);
     }, [choosing]);
 
@@ -383,6 +389,7 @@ async function addObject(objectTypeIndex: number, tr: ObjectTransform, metadata:
         const user = App.getUser();
         const objectId = ObjectIdUtil.generateRandomObjectId();
         const signal = new AddObjectSignal(room.id, user.id, user.userName, objectTypeIndex, objectId, tr, metadata);
+        const selectionBefore = voxelQuadSelectionObservable.peek();
 
         // Add the game object locally, and report it to the server if successful.
         const gameObject = ObjectFactory.createServerSideObject(signal);
@@ -397,13 +404,12 @@ async function addObject(objectTypeIndex: number, tr: ObjectTransform, metadata:
             // instead.
             const installPanel = SUB_PANELS_BENEATH_SELECTION_TOOLS ? undefined
                 : ObjectTypeClientConfigMap.getConfigByIndex(objectTypeIndex).selection?.installPanel;
-            if (!installPanel && !DISABLE_AUTO_SELECTION_ON_OBJECT_INSTALLATION
-                && VoxelQuadSelection.trySelectBestQuadNearby(gameObject.params.transform.pos))
-            {
-                return;
-            }
-            if (ObjectSelection.trySelect(gameObject))
+            const leftOnFace = !installPanel && !DISABLE_AUTO_SELECTION_ON_OBJECT_INSTALLATION
+                && VoxelQuadSelection.trySelectBestQuadNearby(gameObject.params.transform.pos);
+            if (!leftOnFace && ObjectSelection.trySelect(gameObject))
                 objectInstalledObservable.set(objectId);
+            RoomEditUtil.record(ClientEventType.ManuallyAddedObject, room,
+                {redo: [signal], undo: [RoomEditUtil.getUndoSignal(room, signal)], selectionBefore});
         }
     } catch (err) {
         console.error(`Exception while trying to add an object from a voxelQuad :: Error: ${ErrorUtil.getErrorMessage(err)}`);
@@ -436,13 +442,18 @@ function tryAddVoxelBlock(selection: VoxelQuadSelection)
     const room = App.getCurrentRoom()!;
     const target = VoxelQueryUtil.getVoxelBlockAddTarget(room.voxelGrid.voxels, selection.quadIndex)!;
     const isMultiPlayer = room.roomType != RoomTypeEnumMap.SinglePlayer;
+    // The edit as the history keeps it (see RoomEditUtil).
+    let made: {type: ClientEventType, redo: EncodableData, undo: EncodableData};
 
     if (target.grows)
     {
+        const signal = new SetVoxelBlockShapeSignal(room.id, target.quadIndex, target.shape);
+        made = {type: ClientEventType.ManuallyChangedVoxelBlockShape, redo: signal,
+            undo: RoomEditUtil.getUndoSignal(room, signal)};
         if (!ClientVoxelManager.setVoxelBlockShape(room, target.quadIndex, target.shape))
             return;
         if (isMultiPlayer)
-            SocketsClient.emitSetVoxelBlockShapeSignal(new SetVoxelBlockShapeSignal(room.id, target.quadIndex, target.shape));
+            SocketsClient.emitSetVoxelBlockShapeSignal(signal);
     }
     else
     {
@@ -453,13 +464,13 @@ function tryAddVoxelBlock(selection: VoxelQuadSelection)
         for (let i = startIndex; i < startIndex + NUM_VOXEL_QUADS_PER_COLLISION_LAYER; ++i)
             quadTextureIndicesWithinLayer[i - startIndex] = App.getVoxelQuads()[i] & 0b01111111;
 
+        const signal = new AddVoxelBlockSignal(room.id, target.quadIndex, quadTextureIndicesWithinLayer, target.shape);
+        made = {type: ClientEventType.ManuallyAddedVoxelBlock, redo: signal,
+            undo: RoomEditUtil.getUndoSignal(room, signal)};
         if (!ClientVoxelManager.addVoxelBlock(room, target.quadIndex, quadTextureIndicesWithinLayer, true, target.shape))
             return;
         if (isMultiPlayer)
-        {
-            SocketsClient.emitAddVoxelBlockSignal(new AddVoxelBlockSignal(room.id, target.quadIndex,
-                quadTextureIndicesWithinLayer, target.shape));
-        }
+            SocketsClient.emitAddVoxelBlockSignal(signal);
     }
 
     // The same face of the block the edit made or grew, or the nearest one that shows if it is covered.
@@ -468,6 +479,8 @@ function tryAddVoxelBlock(selection: VoxelQuadSelection)
         VoxelQueryUtil.getVoxelRowFromQuadIndex(target.quadIndex), VoxelQueryUtil.getVoxelColFromQuadIndex(target.quadIndex));
     if (targetVoxel)
         VoxelQuadSelection.trySelectBestQuad(targetVoxel, target.quadIndex);
+
+    RoomEditUtil.record(made.type, room, {redo: [made.redo], undo: [made.undo], selectionBefore: selection});
 }
 
 // Attachments don't disable removal; the user is warned and they are removed with the block.
@@ -549,16 +562,34 @@ async function removeVoxelBlockWithItsAttachments(selection: VoxelQuadSelection)
     if (reportUndetachableAttachment(room, quadIndex))
         return;
 
+    const isMultiPlayer = room.roomType != RoomTypeEnumMap.SinglePlayer;
+    // The removals made, and what puts each back: the block first, for what hung on it to have its footing again.
+    const removals: EncodableData[] = [];
+    const restorals: EncodableData[] = [];
+
     // Attachments first; the server processes signals in order and reaches the same result.
     for (const objectId of ObjectAttachmentUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex))
     {
-        const removed = await ClientObjectManager.removeObject(objectId);
-        if (removed && room.roomType != RoomTypeEnumMap.SinglePlayer)
-            SocketsClient.emitRemoveObjectSignal(new RemoveObjectSignal(room.id, objectId));
+        // (One may have left the room while another was being removed.)
+        if (room.objectById[objectId] == undefined)
+            continue;
+        const signal = new RemoveObjectSignal(room.id, objectId);
+        const undoSignal = RoomEditUtil.getUndoSignal(room, signal);
+        if (!await ClientObjectManager.removeObject(objectId))
+            continue;
+        if (isMultiPlayer)
+            SocketsClient.emitRemoveObjectSignal(signal);
+        removals.push(signal);
+        restorals.unshift(undoSignal);
     }
 
-    if (ClientVoxelManager.removeVoxelBlock(room, quadIndex))
+    const signal = new RemoveVoxelBlockSignal(room.id, quadIndex);
+    const undoSignal = RoomEditUtil.getUndoSignal(room, signal);
+    const blockRemoved = ClientVoxelManager.removeVoxelBlock(room, quadIndex);
+    if (blockRemoved)
     {
+        removals.push(signal);
+        restorals.unshift(undoSignal);
         VoxelQuadSelection.unselect();
 
         const facingAxis = VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex);
@@ -582,7 +613,13 @@ async function removeVoxelBlockWithItsAttachments(selection: VoxelQuadSelection)
         if (idealVoxel)
             VoxelQuadSelection.trySelectBestQuad(idealVoxel, idealQuadIndex);
 
-        if (room.roomType != RoomTypeEnumMap.SinglePlayer)
-            SocketsClient.emitRemoveVoxelBlockSignal(new RemoveVoxelBlockSignal(room.id, quadIndex));
+        if (isMultiPlayer)
+            SocketsClient.emitRemoveVoxelBlockSignal(signal);
+    }
+
+    if (removals.length > 0)
+    {
+        RoomEditUtil.record(blockRemoved ? ClientEventType.ManuallyRemovedVoxelBlock : ClientEventType.ManuallyRemovedObject,
+            room, {redo: removals, undo: restorals, selectionBefore: selection});
     }
 }

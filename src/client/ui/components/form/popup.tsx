@@ -1,8 +1,9 @@
-import { ReactNode, useRef } from "react";
+import { ReactNode, useEffect, useRef } from "react";
 import Text from "../basic/text";
 import IconButton from "../input/iconButton";
 import CloseIcon from "../../svg/icons/closeIcon";
 import { MOUSE_DRAG_THRESHOLD_PX, TOUCH_DRAG_THRESHOLD_PX } from "../../../system/clientConstants";
+import { numOpenPopupsObservable } from "../../../system/clientObservables";
 import PopupUtil from "../../util/popupUtil";
 
 export default function Popup({ children, showCloseButton = false, title = "" }: Props)
@@ -11,6 +12,13 @@ export default function Popup({ children, showCloseButton = false, title = "" }:
     const downOnBackdropRef = useRef(false);
     const downPosRef = useRef({ x: 0, y: 0 });
     const downIsMouseRef = useRef(false);
+
+    useEffect(() => {
+        numOpenPopupsObservable.change(n => n + 1);
+        return () => {
+            numOpenPopupsObservable.change(n => n - 1);
+        };
+    }, []);
 
     return <div
         className={className}

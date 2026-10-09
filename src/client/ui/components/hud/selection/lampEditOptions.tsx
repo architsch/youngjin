@@ -1,4 +1,3 @@
-import { useState } from "react";
 import ObjectSelection from "../../../../graphics/types/gizmo/objectSelection";
 import IconButton from "../../input/iconButton";
 import TrashIcon from "../../../svg/icons/trashIcon";
@@ -28,18 +27,19 @@ const RANGE_LABELS = getLabels(MIN_LAMP_RANGE, MAX_LAMP_RANGE);
 // beneath this row, or in its place until closed (see SUB_PANELS_BENEATH_SELECTION_TOOLS).
 export default function LampEditOptions(props: EditOptionsProps)
 {
+    // Read off the lamp each render, as every edit of it re-announces the selection (see ClientObjectManager): its
+    // own, one undone, or somebody else's.
     const obj = props.selection.gameObject.params;
-    const [light, setLight] = useState(() => ({
+    const light = {
         colorIndex: LampObjectTypeConfig.util.getColorIndex(obj),
         intensity: LampObjectTypeConfig.util.getIntensity(obj),
         range: LampObjectTypeConfig.util.getRange(obj),
-    }));
+    };
 
     // Written immediately (not deferred): lamp edits are discrete, with few values.
     const apply = (edit: (next: typeof light) => void) => {
         const next = {...light};
         edit(next);
-        setLight(next);
         ObjectEditUtil.trySetObjectMetadata(props.selection, ObjectMetadataKeyEnumMap.LightProperties,
             LampObjectTypeConfig.util.encodeLightProperties(next.colorIndex, next.intensity, next.range));
     };

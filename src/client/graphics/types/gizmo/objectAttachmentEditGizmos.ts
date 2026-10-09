@@ -3,6 +3,8 @@ import ObjectSelection from "./objectSelection";
 import { gameModeObservable, objectEditObservable, objectSelectionObservable,
     roomChangedObservable } from "../../../system/clientObservables";
 import GameModeUtil from "../../../system/util/gameModeUtil";
+import RoomEditUtil from "../../../system/util/roomEditUtil";
+import { ClientEventType } from "../../../system/types/clientEventType";
 import WorldSpaceOutlineRect from "./generic/worldSpaceOutlineRect";
 import SelectionEditDrag from "./drag/selectionEditDrag";
 import SelectionEditGizmoProvider from "./drag/selectionEditGizmoProvider";
@@ -106,7 +108,10 @@ const ObjectAttachmentEditGizmos: SelectionEditGizmoProvider =
     {
         if (target == null || !target.canMove)
             return null;
-        return {middle: target.selection.gameObject.position, corners: placeOutlineCorners(target.selection)};
+        const gameObject = target.selection.gameObject;
+        return {middle: gameObject.position,
+            facing: Geometry3DUtil.getAxisFacingBasis(gameObject.params.transform.dir).normal,
+            corners: placeOutlineCorners(target.selection)};
     },
 }
 
@@ -428,22 +433,29 @@ function finishDrag(objectId: string, start: ObjectTransform, keep: boolean, sta
         ClientObjectManager.setObjectTransform(objectId, start, true, false);
         if (startQuarterTurns != undefined)
             applyQuarterTurns(objectId, startQuarterTurns);
+        return;
     }
-    else if (room.roomType != RoomTypeEnumMap.SinglePlayer)
+
+    const isMultiPlayer = room.roomType != RoomTypeEnumMap.SinglePlayer;
+    // A move that turned the object is one edit, the turn carrying the transform (see
+    // SetObjectMetadataSignal.transform).
+    if (startQuarterTurns != undefined && QuarterTurnsUtil.getQuarterTurns(obj) != startQuarterTurns)
     {
-        // A move that turned the object is one edit, the turn carrying the transform (see
-        // SetObjectMetadataSignal.transform).
-        if (startQuarterTurns != undefined && QuarterTurnsUtil.getQuarterTurns(obj) != startQuarterTurns)
-        {
-            SocketsClient.emitSetObjectMetadataSignal(new SetObjectMetadataSignal(room.id, objectId,
-                ObjectMetadataKeyEnumMap.QuarterTurns, QuarterTurnsUtil.encode(QuarterTurnsUtil.getQuarterTurns(obj)),
-                copyTransform(obj.transform)));
-        }
-        else if (!transformsMatch(obj.transform, start))
-        {
-            SocketsClient.emitSetObjectTransformSignal(new SetObjectTransformSignal(
-                room.id, objectId, copyTransform(obj.transform), true));
-        }
+        const signal = new SetObjectMetadataSignal(room.id, objectId, ObjectMetadataKeyEnumMap.QuarterTurns,
+            QuarterTurnsUtil.encode(QuarterTurnsUtil.getQuarterTurns(obj)), copyTransform(obj.transform));
+        if (isMultiPlayer)
+            SocketsClient.emitSetObjectMetadataSignal(signal);
+        RoomEditUtil.record(ClientEventType.ManuallyChangedObjectTransform, room, {redo: [signal],
+            undo: [new SetObjectMetadataSignal(room.id, objectId, ObjectMetadataKeyEnumMap.QuarterTurns,
+                QuarterTurnsUtil.encode(startQuarterTurns), start)]});
+    }
+    else if (!transformsMatch(obj.transform, start))
+    {
+        const signal = new SetObjectTransformSignal(room.id, objectId, copyTransform(obj.transform), true);
+        if (isMultiPlayer)
+            SocketsClient.emitSetObjectTransformSignal(signal);
+        RoomEditUtil.record(ClientEventType.ManuallyChangedObjectTransform, room,
+            {redo: [signal], undo: [new SetObjectTransformSignal(room.id, objectId, start, true)]});
     }
 }
 

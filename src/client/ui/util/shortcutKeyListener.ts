@@ -43,7 +43,7 @@ function reachesControl(key: ShortcutKey, topPopupType: PopupState["popupType"] 
     // The others are the HUD's: not under a popup, and not while a text field takes the key. Delete is the selection
     // tools', so not with a panel open over them either.
     return topPopupType == undefined && !KeyPressUtil.isTyping()
-        && (key != "Delete" || !ClosablePanelUtil.hasOpenPanel());
+        && (key != "Delete" || !ClosablePanelUtil.hasPanelOverTools());
 }
 
 // The popups whose forms have a button that Enter clicks.

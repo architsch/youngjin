@@ -5,6 +5,8 @@ import SocketsClient from "../../../../networking/client/socketsClient";
 import SetVoxelQuadTextureSignal from "../../../../../shared/voxel/types/update/setVoxelQuadTextureSignal";
 import App from "../../../../app";
 import ClientVoxelManager from "../../../../voxel/clientVoxelManager";
+import RoomEditUtil from "../../../../system/util/roomEditUtil";
+import { ClientEventType } from "../../../../system/types/clientEventType";
 import VoxelGameObject from "../../../../object/types/gameObject/voxelGameObject";
 import useMouseDragScroll from "../../../util/mouseDragScroll";
 import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
@@ -73,12 +75,16 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
                     return;
                 }
 
+                const signal = new SetVoxelQuadTextureSignal(room.id, quadIndex, textureIndex);
+                const undoSignal = RoomEditUtil.getUndoSignal(room, signal);
                 if (ClientVoxelManager.setVoxelQuadTexture(room, quadIndex, textureIndex))
                 {
                     voxelQuadSelectionObservable.notify();
 
                     if (room.roomType != RoomTypeEnumMap.SinglePlayer)
-                        SocketsClient.emitSetVoxelQuadTextureSignal(new SetVoxelQuadTextureSignal(room.id, quadIndex, textureIndex));
+                        SocketsClient.emitSetVoxelQuadTextureSignal(signal);
+                    RoomEditUtil.record(ClientEventType.ManuallyChangedVoxelQuadTexture, room,
+                        {redo: [signal], undo: [undoSignal]});
                 }
             };
             return <AtlasCellSprite

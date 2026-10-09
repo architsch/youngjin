@@ -1,6 +1,7 @@
 /**
  * Scenario tests: signal emission — multicast excludes the sender, unicast rollbacks reach only the
- * sender, desyncs reach everyone, nothing leaks across rooms, and batching/pending queues.
+ * sender, desyncs reach everyone, nothing leaks across rooms, a batch keeps the order its signals were
+ * queued in across their types, and batching/pending queues.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runScenario } from "../helpers/scenarioRunner";
@@ -17,6 +18,10 @@ import SetObjectTransformSignal from "../../../src/shared/object/types/setObject
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import AddVoxelBlockSignal from "../../../src/shared/voxel/types/update/addVoxelBlockSignal";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
+import SignalTypeConfigMap from "../../../src/shared/networking/maps/signalTypeConfigMap";
+import BufferState from "../../../src/shared/networking/types/bufferState";
+import EncodableArray from "../../../src/shared/networking/types/encodableArray";
+import EncodableRawByteNumber from "../../../src/shared/networking/types/encodableRawByteNumber";
 
 describe("signal emission scenarios", () => {
     beforeEach(() => {
@@ -110,6 +115,49 @@ describe("signal emission scenarios", () => {
                 expect(getPendingSignals(users[0], "addVoxelBlockSignal").length).toBe(0);
                 for (const signalType of ["removeVoxelBlockSignal", "addVoxelBlockSignal", "setVoxelBlockShapeSignal"])
                     expect(getPendingSignals(users[1], signalType).length, signalType).toBe(0);
+            },
+        });
+    });
+
+    it("relays the edits of one batch in the order they were made, whatever their kinds", async () => {
+        await runScenario({
+            name: "batch order across signal types",
+            rooms: [hubRoom("order-hub")],
+            users: usersInRoom(2, "order-hub"),
+            actions: [
+                // A block put up, taken down and put up again, as an edit undone and redone sends it: told the
+                // other way round, the last two would leave the others without the block.
+                { type: "addVoxel", userIndex: 0, row: 10, col: 10, layer: 0 },
+                { type: "removeVoxel", userIndex: 0, row: 10, col: 10, layer: 0 },
+                { type: "addVoxel", userIndex: 0, row: 10, col: 10, layer: 0 },
+                { type: "reshapeVoxel", userIndex: 0, row: 10, col: 10, layer: 0, shape: 0b0101 },
+                { type: "removeVoxel", userIndex: 0, row: 10, col: 10, layer: 0 },
+            ],
+            assertions: ({ users }) => {
+                // The other user's next batch, read as their client reads it.
+                users[1].socket.clearEmitted();
+                users[1].socketUserContext.processAllPendingSignalsToUser();
+                const batches = users[1].socket.getEmitted("signalBatch");
+                expect(batches).toHaveLength(1);
+
+                const voxelEdits: string[] = [];
+                const bufferState = new BufferState(new Uint8Array(batches[0]));
+                while (bufferState.byteIndex < bufferState.view.byteLength)
+                {
+                    const config = SignalTypeConfigMap.getConfigByIndex(
+                        (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n);
+                    const signals = (EncodableArray.decodeWithParams(bufferState, config.decode, 65535) as EncodableArray).arr;
+                    for (const _signal of signals)
+                    {
+                        if (config.signalType.includes("Voxel"))
+                            voxelEdits.push(config.signalType);
+                    }
+                }
+                expect(voxelEdits).toEqual(["addVoxelBlockSignal", "removeVoxelBlockSignal", "addVoxelBlockSignal",
+                    "setVoxelBlockShapeSignal", "removeVoxelBlockSignal"]);
+
+                // Sent, so nothing of it is left for the batch after.
+                expect(getPendingSignals(users[1], "addVoxelBlockSignal")).toEqual([]);
             },
         });
     });

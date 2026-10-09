@@ -55,8 +55,9 @@ import VoxelQuadSelection from "../../../src/client/graphics/types/gizmo/voxelQu
 import ClientObjectManager from "../../../src/client/object/clientObjectManager";
 import SelectionStepUtil from "../../../src/client/graphics/util/selectionStepUtil";
 import ScreenDirection from "../../../src/client/graphics/types/screenDirection";
-import { cameraModeObservable, clientFeatureFlagsObservable, gameModeObservable, objectSelectionObservable,
-    orbitCameraAngleHoldRequestObservable, orbitCameraTargetOverrideObservable, voxelQuadSelectionObservable,
+import { cameraModeObservable, clientFeatureFlagsObservable, gameModeObservable, manualSelectionObservable,
+    objectSelectionObservable, orbitCameraAngleHoldRequestObservable, orbitCameraTargetOverrideObservable,
+    voxelQuadSelectionObservable,
     voxelQuadSelectionRestrictionObservable } from "../../../src/client/system/clientObservables";
 import { SELECTION_STEP_OBJECT_REACH } from "../../../src/client/system/clientConstants";
 import { FeatureFlag } from "../../../src/shared/system/types/featureFlag";
@@ -1167,6 +1168,28 @@ describe("a selected object stepped to the nearest object lying that way", () =>
         expect(selectedObjectId()).toBe("onWall");
     });
 
+    it("is announced as a selection the user made by hand, with the object it left and the one it took", async () => {
+        const middle = hangOnWall("middle", 10.5);
+        hangOnWall("right", 8.5);
+        faceWallAt(10.5);
+        await select(middle);
+        const announced: (string | undefined)[][] = [];
+        manualSelectionObservable.addListener("selection-step.test", ({before, after}) => {
+            announced.push([(before as ObjectSelection | null)?.gameObject.params.objectId,
+                (after as ObjectSelection).gameObject.params.objectId]);
+        });
+        try
+        {
+            expect(SelectionStepUtil.tryStep("right")).toBe(true);
+            expectNoStep("up");
+            expect(announced).toEqual([["middle", "right"]]);
+        }
+        finally
+        {
+            manualSelectionObservable.removeListener("selection-step.test");
+        }
+    });
+
     it("asks the orbit to keep its angles only for a step to an object facing the same way", async () => {
         const onWall = hangOnWall("onWall", 6.5);
         hangOnWall("beside", 8.5);
@@ -1235,5 +1258,36 @@ describe("a step with nothing selected", () => {
 
         expect(VoxelQuadSelection.isSelected()).toBe(false);
         expect(ObjectSelection.isSelected()).toBe(false);
+    });
+});
+
+describe("a step of a face, as a selection the user made by hand", () => {
+    it("is announced with the face it left and the face it took, and not at all where it went nowhere", () => {
+        const announced: (number | undefined)[][] = [];
+        manualSelectionObservable.addListener("selection-step.test", ({before, after}) => {
+            announced.push([(before as VoxelQuadSelection | null)?.quadIndex, (after as VoxelQuadSelection).quadIndex]);
+        });
+        try
+        {
+            const start = wallFace(10, 2);
+            viewFrom({x: 7, y: 1.25, z: 10.5}, middleOf(start));
+            forceSelect(room, start);
+            expect(announced).toEqual([]);
+
+            // Looking toward -x, the view's right runs toward -z, which is the row before.
+            expect(SelectionStepUtil.tryStep("right")).toBe(true);
+            expect(SelectionStepUtil.tryStep("up")).toBe(true);
+            expect(announced).toEqual([[start, wallFace(9, 2)], [wallFace(9, 2), wallFace(9, 3)]]);
+
+            // Up from the wall's top layer there is only the ceiling, seen from above it: turned away.
+            const wallTop = wallFace(10, COLLISION_LAYER_MAX);
+            viewFrom({x: 6, y: 9.5, z: 10.5}, middleOf(wallTop));
+            expectNoStep(wallTop, "up");
+            expect(announced.length).toBe(2);
+        }
+        finally
+        {
+            manualSelectionObservable.removeListener("selection-step.test");
+        }
     });
 });

@@ -40,13 +40,14 @@ The selected object is moved by dragging the inside of its selection outline (`O
 - Among the spots it would take, one whose whole face is in the open wins over a partly covered one, so a spot snapped half into the foot of a wall gives way to one beside it. A partly covered spot is still valid, and still taken when nothing clear is near.
 - A type that sets `ObjectAttachmentConfig.turnsToFit` (a prop, which can't be resized to fit) also turns a quarter where no spot under the pointer takes it as it lies and one takes it turned. So it never turns at the edge of a face wide enough for it. The turn is the other of a pair, so the next such move undoes it.
 - While the object can't follow the pointer (held back on its own face, or with no place on another), the drag is blocked: the outline and its handles show red (`selectionEditBlockedObservable`).
+- With the pointer at the edge of the view, the orbit goes toward the place pointed at, though the object be held back, and turns to see an object that has turned onto another face (see [camera_control.md](../graphics/camera_control.md#camera-modes)).
 - Adding an object from a selected face uses the same search. A door instead stands on the storey floor.
 - A new object's size is its type's to choose, given which sizes that search finds a place for (`ObjectScalingConfig.getDefaultScale`). A canvas is a whole block wherever one fits, shifted up or down a wall if need be, and one layer tall where not (the side of a lone block). A prop's size is its image's and a lamp's is picked, both as they are added; the chooser dims those the search finds no place for.
 - A drag previews locally, and the server hears one transform, on release.
 
 ## Resizing
 A type with an `ObjectScalingConfig` is resized by the outline's corner handles, one step of its scale at a time, unless its config turns the handles off.
-- A corner has a handle only while some other size fits from it.
+- A corner has a handle only while some other size fits from it, and none while the object is too far from the camera to be held by one (see [game_mode.md](../gameplay/game_mode.md#editing-a-block-by-its-outline)).
 - The corner opposite the dragged one holds exactly still, since sizes come in half-voxel steps and half of one is on the grid.
 - A size that doesn't fit is refused, and the object keeps the last size that did. The drag is blocked meanwhile, as it is past the type's limits.
 - A lamp has no handles. It comes in a few sizes, picked from its edit options and applied **where it stands** (`ObjectAttachmentUtil.getResizedInPlace`): the centre stays put across the face, except vertically, where the bottom edge does, so picking the earlier size puts it back exactly. The list offers only the sizes that fit there, asked by the same rule the server applies to the resulting transform.

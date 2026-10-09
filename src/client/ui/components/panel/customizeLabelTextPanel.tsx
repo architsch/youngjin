@@ -18,14 +18,21 @@ const FONT_SIZE_LABELS = LabelTextUtil.fontSizes.map(String);
 // Each change is saved as it is made.
 export default function CustomizeLabelTextPanel({ selection, onClose }: Props)
 {
-    // Held here rather than read back, since the stored text is trimmed (see ObjectMetadataEntryMap) and a
-    // space or line break typed at the end has to stay in the field.
-    const [text, setText] = useState(() => LabelTextUtil.getText(selection.gameObject.params));
-    const [colorIndex, setColorIndex] = useState(() => LabelTextUtil.getColorIndex(selection.gameObject.params));
-    const [font, setFont] = useState(() => LabelTextUtil.getFont(selection.gameObject.params));
+    // Read off the object each render, as every edit of it re-announces the selection (see ClientObjectManager): its
+    // own, one undone, or somebody else's.
+    const params = selection.gameObject.params;
+    const storedText = LabelTextUtil.getText(params);
+    const colorIndex = LabelTextUtil.getColorIndex(params);
+    const font = LabelTextUtil.getFont(params);
+
+    // The field's own text is held beside the stored one it was last in step with, rather than read back: the stored
+    // text is trimmed (see ObjectMetadataEntryMap), and a space or line break typed at the end has to stay in the
+    // field. Once the stored text changes from under the field, the field follows it.
+    const [field, setField] = useState({text: storedText, storedText});
+    if (field.storedText != storedText)
+        setField({text: storedText, storedText});
 
     const applyFont = (autoSize: boolean, fontSize: number) => {
-        setFont({autoSize, fontSize});
         ObjectEditUtil.trySetObjectMetadata(selection, ObjectMetadataKeyEnumMap.LabelFont,
             LabelTextUtil.encodeFont(autoSize, fontSize));
     };
@@ -35,12 +42,12 @@ export default function CustomizeLabelTextPanel({ selection, onClose }: Props)
             id="labelTextInput"
             size="sm"
             placeholder="Label text"
-            currValue={text}
+            currValue={field.text}
             filterTextInput={(rawText: string) =>
                 StringUtil.truncateByCodePoints(rawText, OBJECT_LABEL_MAX_LENGTH)}
             setTextInput={(newText: string) => {
-                setText(newText);
                 ObjectEditUtil.trySetObjectMetadata(selection, ObjectMetadataKeyEnumMap.Label, newText);
+                setField({text: newText, storedText: LabelTextUtil.getText(selection.gameObject.params)});
             }}
             maxVisibleLines={4}
             additionalClassNames="w-56 shrink-0 self-center"
@@ -51,10 +58,8 @@ export default function CustomizeLabelTextPanel({ selection, onClose }: Props)
             <PaletteColorInput
                 paletteName={LABEL_COLOR_PALETTE_NAME}
                 currValue={colorIndex}
-                setColorIndex={(index: number) => {
-                    setColorIndex(index);
-                    ObjectEditUtil.trySetObjectMetadata(selection, ObjectMetadataKeyEnumMap.LabelColor, `${index}`);
-                }}
+                setColorIndex={(index: number) =>
+                    ObjectEditUtil.trySetObjectMetadata(selection, ObjectMetadataKeyEnumMap.LabelColor, `${index}`)}
             />
         </div>
         <div className="w-px self-stretch shrink-0 bg-gray-500"/>

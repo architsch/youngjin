@@ -1,16 +1,21 @@
+import * as THREE from "three";
+import GraphicsManager from "../graphicsManager";
 import AABB3 from "../../../shared/math/types/aabb3";
+import NumUtil from "../../../shared/math/util/numUtil";
 import PhysicsColliderStateUtil from "../../../shared/physics/util/physicsColliderStateUtil";
 import SelectionKind from "../types/gizmo/selectionKind";
 import Voxel from "../../../shared/voxel/types/voxel";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
-import { cameraModeObservable, gameModeObservable, objectSelectionObservable,
-    orbitCameraTargetOverrideObservable,
+import { cameraModeObservable, gameModeObservable, manualSelectionObservable, objectSelectionObservable,
+    orbitCameraAnglesObservable, orbitCameraTargetOverrideObservable,
     voxelQuadSelectionObservable } from "../../system/clientObservables";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y } from "../../../shared/system/sharedConstants";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ROOM_Y,
+    NEAR_EPSILON } from "../../../shared/system/sharedConstants";
 import ObjectSelection from "../types/gizmo/objectSelection";
 import VoxelQuadSelection from "../types/gizmo/voxelQuadSelection";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import ObjectHit from "../types/objectHit";
+import Vec3 from "../../../shared/math/types/vec3";
 
 const voxelTypeIndex = ObjectTypeConfigMap.getIndexByType("Voxel");
 
@@ -24,6 +29,18 @@ const pointTargetHalfSize = {x: 0, y: 0, z: 0};
 const SELECTION_ORBIT_MIN_DISTANCE = 5;
 
 let orbitTargetHeld = false;
+
+// The copy the orbit is held on meanwhile, if it was orbiting when the hold began.
+let heldOrbitTarget: AABB3 | null = null;
+
+// How little is left of a turn of the held view for it to count as made (in radians).
+const TURN_TOLERANCE = 1e-6;
+
+const cameraPosTemp = new THREE.Vector3();
+const viewRightTemp = new THREE.Vector3();
+const orbitDirTemp = new THREE.Vector3();
+const facingTemp = new THREE.Vector3();
+const turnAxisTemp = new THREE.Vector3();
 
 // The current selection (one voxel quad or one object) and the camera's response to it. The camera
 // is pointed from here, not per selection, because replacing a selection is two changes and only the
@@ -64,10 +81,68 @@ export default class WorldSpaceSelectionUtil
         if (mode.type !== "orbit")
             return;
         const {center, halfSize} = mode.target;
-        cameraModeObservable.set({type: "orbit", minDistance: mode.minDistance, target: {
+        heldOrbitTarget = {
             center: {x: center.x, y: center.y, z: center.z},
             halfSize: {x: halfSize.x, y: halfSize.y, z: halfSize.z},
-        }});
+        };
+        cameraModeObservable.set({type: "orbit", minDistance: mode.minDistance, target: heldOrbitTarget});
+    }
+
+    // Slides the held view toward a point, never past it and no further than a share of the camera's distance from
+    // what it holds (so the pace looks the same at any zoom). sideways and upDown (0 to 1) are how much of the way
+    // across the view and up or down the room it goes; toward or away from the camera it always goes. Only the
+    // copy moves, so the camera goes alongside. Never off a point a scripted step holds the orbit on.
+    static slideHeldOrbitTarget(toward: Vec3, maxShareOfViewDistance: number, sideways: number, upDown: number): void
+    {
+        if (heldOrbitTarget == null || orbitCameraTargetOverrideObservable.peek() != null)
+            return;
+        const center = heldOrbitTarget.center;
+        const camera = GraphicsManager.getCamera();
+        camera.getWorldPosition(cameraPosTemp);
+        // (Level, whatever roll the camera's easing has left it.)
+        viewRightTemp.setFromMatrixColumn(camera.matrixWorld, 0).setY(0).normalize();
+
+        const across = (toward.x - center.x) * viewRightTemp.x + (toward.z - center.z) * viewRightTemp.z;
+        const wayX = (toward.x - center.x) - (1 - sideways) * across * viewRightTemp.x;
+        const wayY = upDown * (toward.y - center.y);
+        const wayZ = (toward.z - center.z) - (1 - sideways) * across * viewRightTemp.z;
+        const gap = Math.hypot(wayX, wayY, wayZ);
+        if (gap == 0)
+            return;
+        const viewDistance = Math.hypot(cameraPosTemp.x - center.x, cameraPosTemp.y - center.y, cameraPosTemp.z - center.z);
+        const share = Math.min(1, maxShareOfViewDistance * viewDistance / gap);
+        center.x += wayX * share;
+        center.y += wayY * share;
+        center.z += wayZ * share;
+    }
+
+    // Turns the held view, by no more than maxTurn, toward where it sees a facing from within an angle of
+    // head-on: the shortest way round, to no nearer head-on than that. (The orbit follows its published angles;
+    // see OrbitCameraPose.) Not while a scripted step holds the orbit on a point.
+    static turnHeldOrbitToward(facing: Vec3, withinAngle: number, maxTurn: number): void
+    {
+        if (heldOrbitTarget == null || orbitCameraTargetOverrideObservable.peek() != null)
+            return;
+        const angles = orbitCameraAnglesObservable.peek();
+        orbitDirTemp.setFromSphericalCoords(1, angles.polar, angles.azimuth);
+        facingTemp.set(facing.x, facing.y, facing.z).normalize();
+        const excess = orbitDirTemp.angleTo(facingTemp) - withinAngle;
+        if (excess <= TURN_TOLERANCE)
+            return;
+
+        const azimuthBefore = Math.atan2(orbitDirTemp.x, orbitDirTemp.z);
+        turnAxisTemp.crossVectors(orbitDirTemp, facingTemp);
+        // (Seen from straight behind, one way round is as short as the other.)
+        if (turnAxisTemp.lengthSq() < NEAR_EPSILON)
+            turnAxisTemp.set(0, 1, 0);
+        orbitDirTemp.applyAxisAngle(turnAxisTemp.normalize(), Math.min(maxTurn, excess));
+
+        // The azimuth is kept running on from what it was, as a drag leaves it, never wrapped.
+        const azimuthTurn = Math.atan2(orbitDirTemp.x, orbitDirTemp.z) - azimuthBefore;
+        orbitCameraAnglesObservable.set({
+            azimuth: angles.azimuth + azimuthTurn - 2 * Math.PI * Math.round(azimuthTurn / (2 * Math.PI)),
+            polar: Math.acos(NumUtil.clampInRange(orbitDirTemp.y, -1, 1)),
+        });
     }
 
     // Points the orbit back at the selection where it now stands.
@@ -76,6 +151,7 @@ export default class WorldSpaceSelectionUtil
         if (!orbitTargetHeld)
             return;
         orbitTargetHeld = false;
+        heldOrbitTarget = null;
         syncCameraModeWithSelection(true);
     }
 
@@ -94,6 +170,24 @@ export default class WorldSpaceSelectionUtil
         }
         return VoxelQueryUtil.getVoxelBlockBox(voxel.row, voxel.col, collisionLayer,
             VoxelQueryUtil.getVoxelBlockShape(voxel, collisionLayer));
+    }
+
+    // Makes a selection that is the user's own act (a click, a movement key's step), and announces it if it moved
+    // the selection (see manualSelectionObservable). Whether it selected.
+    static trySelectManually(select: () => boolean): boolean
+    {
+        const quadBefore = voxelQuadSelectionObservable.peek();
+        const objectBefore = objectSelectionObservable.peek();
+        if (!select())
+            return false;
+
+        // What it took is of the kind that changed: the other kind may not have let go yet (see ObjectSelection).
+        const quad = voxelQuadSelectionObservable.peek();
+        const object = objectSelectionObservable.peek();
+        const after = (quad != null && quad !== quadBefore) ? quad : (object !== objectBefore) ? object : null;
+        if (after != null)
+            manualSelectionObservable.set({before: quadBefore ?? objectBefore, after});
+        return true;
     }
 
     // Selects the first voxel quad or object along a line of sight (nearest first) that can be selected.

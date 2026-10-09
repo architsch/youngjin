@@ -11,6 +11,7 @@ import Vec3 from "../../../../shared/math/types/vec3";
 import Geometry3DUtil from "../../../../shared/math/util/geometry3DUtil";
 import ObjectTypeClientConfigMap from "../../maps/objectTypeClientConfigMap";
 import ObjectSelection from "../../../graphics/types/gizmo/objectSelection";
+import WorldSpaceSelectionUtil from "../../../graphics/util/worldSpaceSelectionUtil";
 import GameModeUtil from "../../../system/util/gameModeUtil";
 import ObjectScaleUtil from "../../../../shared/object/util/objectScaleUtil";
 import Vector3DUtil from "../../../../shared/math/util/vector3DUtil";
@@ -66,11 +67,11 @@ export default abstract class GameObject
         }
     }
 
-    // Selects the object in edit mode; in play mode, does what its type does when clicked (see
-    // PlayModeClickCallbackMap). Whether either happened.
+    // Selects the object in edit mode, as the user's own act (see WorldSpaceSelectionUtil.trySelectManually); in
+    // play mode, does what its type does when clicked (see PlayModeClickCallbackMap). Whether either happened.
     onClick(instanceId: number, hitPoint: THREE.Vector3): boolean
     {
-        if (this.trySelect(instanceId))
+        if (WorldSpaceSelectionUtil.trySelectManually(() => this.trySelect(instanceId)))
             return true;
         if (GameModeUtil.getGameMode() != "play")
             return false;

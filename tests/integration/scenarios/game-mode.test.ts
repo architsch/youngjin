@@ -84,8 +84,9 @@ import ClientObjectManager from "../../../src/client/object/clientObjectManager"
 import SinglePlayerActionMap from "../../../src/client/singlePlayer/maps/singlePlayerActionMap";
 import PlayerGameObject from "../../../src/client/object/types/gameObject/playerGameObject";
 import { cameraModeObservable, clientFeatureFlagsObservable, editModeOpeningOverrideObservable,
-    gameModeObservable, myPlayerHiddenObservable, notificationMessageObservable, objectSelectionObservable,
-    orbitCameraAngleHoldRequestObservable, orbitCameraDistanceRangeRequestObservable,
+    gameModeObservable, manualSelectionObservable, myPlayerHiddenObservable, notificationMessageObservable,
+    objectSelectionObservable,
+    orbitCameraAngleHoldRequestObservable, orbitCameraAnglesObservable, orbitCameraDistanceRangeRequestObservable,
     orbitCameraTargetOverrideObservable, orbitCameraViewRequestObservable, orbitCameraZoomObservable,
     voxelQuadSelectionObservable } from "../../../src/client/system/clientObservables";
 import { EDIT_MODE_OPENING_REACH, EDIT_MODE_OPENING_TILT } from "../../../src/client/system/clientConstants";
@@ -1258,6 +1259,80 @@ describe("leaving edit mode", () => {
     });
 });
 
+describe("a selection the user makes by hand", () => {
+    let announced: {before: VoxelQuadSelection | ObjectSelection | null, after: VoxelQuadSelection | ObjectSelection}[];
+
+    beforeEach(() => {
+        announced = [];
+        manualSelectionObservable.addListener("game-mode.test", selection => { announced.push(selection); });
+    });
+
+    afterEach(() => {
+        manualSelectionObservable.removeListener("game-mode.test");
+    });
+
+    it("is announced by a click on a face, with what it left and what it took", () => {
+        const character = makeCharacter();
+        GameModeUtil.enterEditMode(character);
+        const quadIndex = floorQuadIndexOf(10, 10);
+
+        clickVoxel(10, 10, quadIndex);
+
+        expect(announced.length).toBe(1);
+        expect((announced[0].before as ObjectSelection).gameObject).toBe(character);
+        expect((announced[0].after as VoxelQuadSelection).quadIndex).toBe(quadIndex);
+    });
+
+    it("is announced by a click on an object", () => {
+        const quadIndex = floorQuadIndexOf(10, 10);
+        GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOnVoxelQuad(10, 10, quadIndex)));
+        const picture = makePicture();
+
+        // The click path every kind of object shares, reached through a subclass that doesn't override it:
+        // GameObject imported for its value would be entered first, and its subclasses made before it.
+        VoxelGameObject.prototype.onClick.call(picture, -1, new THREE.Vector3());
+
+        expect(announced.length).toBe(1);
+        expect((announced[0].before as VoxelQuadSelection).quadIndex).toBe(quadIndex);
+        expect((announced[0].after as ObjectSelection).gameObject).toBe(picture);
+    });
+
+    it("is not announced by a click that leaves the selection where it is", () => {
+        GameModeUtil.enterEditMode(makeCharacter());
+        const quadIndex = floorQuadIndexOf(10, 10);
+
+        clickVoxel(10, 10, quadIndex);
+        clickVoxel(10, 10, quadIndex);
+
+        expect(announced.length).toBe(1);
+        expect(voxelQuadSelectionObservable.peek()?.quadIndex).toBe(quadIndex);
+    });
+
+    it("is not announced as edit mode opens, whatever it opens on", () => {
+        GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOnVoxelQuad(10, 10, floorQuadIndexOf(10, 10))));
+        expect(VoxelQuadSelection.isSelected()).toBe(true);
+        GameModeUtil.exitEditMode();
+
+        GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOn(makePicture())));
+        expect(ObjectSelection.isSelected()).toBe(true);
+        GameModeUtil.exitEditMode();
+
+        GameModeUtil.enterEditMode(makeCharacter());
+        expect(ObjectSelection.isSelected()).toBe(true);
+
+        expect(announced).toEqual([]);
+    });
+
+    it("is not announced when code asks for it, nor by a click in play mode", () => {
+        clickVoxel(10, 10, floorQuadIndexOf(10, 10));
+        GameModeUtil.enterEditMode(makeCharacter());
+        expect(selectQuad(10, 10, floorQuadIndexOf(10, 10))).toBe(true);
+        expect(ObjectSelection.trySelect(makePicture())).toBe(true);
+
+        expect(announced).toEqual([]);
+    });
+});
+
 describe("a gizmo drag holding the view", () => {
     // A failed case must not leave the orbit held for the next one.
     afterEach(() => WorldSpaceSelectionUtil.releaseOrbitTarget());
@@ -1302,6 +1377,229 @@ describe("a gizmo drag holding the view", () => {
         WorldSpaceSelectionUtil.releaseOrbitTarget();
 
         expect(cameraModeObservable.peek().type).toBe("firstPerson");
+    });
+
+    // Stands the camera a way off the picture, squarely before it, and tells the orbit it looks from there.
+    const lookAtPictureFrom = (picture: GameObject, distance: number): void => {
+        const camera = GraphicsManager.getCamera();
+        camera.removeFromParent();
+        camera.position.set(picture.position.x, picture.position.y, picture.position.z + distance);
+        camera.updateMatrixWorld(true);
+        orbitCameraAnglesObservable.set({azimuth: 0, polar: 0.5 * Math.PI});
+    };
+    // The way from the orbit's pivot to its camera, as its published angles have it.
+    const orbitDirection = (): THREE.Vector3 => {
+        const {azimuth, polar} = orbitCameraAnglesObservable.peek();
+        return new THREE.Vector3().setFromSphericalCoords(1, polar, azimuth);
+    };
+    const degreesFrom = (facing: THREE.Vector3): number => THREE.MathUtils.radToDeg(orbitDirection().angleTo(facing));
+    const heldPivot = (): {x: number, y: number, z: number} => {
+        const mode = cameraModeObservable.peek();
+        if (mode.type != "orbit")
+            throw new Error(`The camera is not orbiting (mode = ${mode.type})`);
+        return mode.target.center;
+    };
+
+    it("slides the held pivot toward a point by a share of the camera's distance, the selection staying where it is", () => {
+        const picture = makePicture();
+        GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOn(picture)));
+        const start = {x: picture.position.x, y: picture.position.y, z: picture.position.z};
+        lookAtPictureFrom(picture, 8);
+
+        WorldSpaceSelectionUtil.holdOrbitTarget();
+        const held = cameraModeObservable.peek();
+        // A quarter of the eight units the camera stands off: two units, along the way to the point.
+        WorldSpaceSelectionUtil.slideHeldOrbitTarget({x: start.x + 6, y: start.y, z: start.z + 8}, 0.25, 1, 1);
+
+        // The same mode and the same target, moved: the orbit keeps its angles and goes alongside.
+        expect(cameraModeObservable.peek()).toBe(held);
+        expect(heldPivot().x).toBeCloseTo(start.x + 1.2, 10);
+        expect(heldPivot().y).toBeCloseTo(start.y, 10);
+        expect(heldPivot().z).toBeCloseTo(start.z + 1.6, 10);
+        expect(picture.position).toMatchObject(start);
+
+        // Let go, the orbit is back on the selection where that stands.
+        WorldSpaceSelectionUtil.releaseOrbitTarget();
+        const released = cameraModeObservable.peek();
+        expect(released.type == "orbit" && released.target.center).toBe(picture.position);
+    });
+
+    it("slides it at a pace that goes by how far off the camera stands, and never past the point", () => {
+        const picture = makePicture();
+        GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOn(picture)));
+        const startX = picture.position.x;
+        const point = {x: startX + 3, y: picture.position.y, z: picture.position.z};
+
+        lookAtPictureFrom(picture, 4);
+        WorldSpaceSelectionUtil.holdOrbitTarget();
+        WorldSpaceSelectionUtil.slideHeldOrbitTarget(point, 0.25, 1, 1);
+        expect(heldPivot().x).toBeCloseTo(startX + 1, 10);
+        WorldSpaceSelectionUtil.releaseOrbitTarget();
+
+        // Twice as far off, twice the step.
+        lookAtPictureFrom(picture, 8);
+        WorldSpaceSelectionUtil.holdOrbitTarget();
+        WorldSpaceSelectionUtil.slideHeldOrbitTarget(point, 0.25, 1, 1);
+        expect(heldPivot().x).toBeCloseTo(startX + 2, 10);
+
+        // A step longer than what is left of the way stops at the point, and one more goes nowhere.
+        WorldSpaceSelectionUtil.slideHeldOrbitTarget(point, 0.25, 1, 1);
+        expect(heldPivot()).toEqual(point);
+        WorldSpaceSelectionUtil.slideHeldOrbitTarget(point, 0.25, 1, 1);
+        expect(heldPivot()).toEqual(point);
+    });
+
+    it("goes only as much of the way across the view, and up or down the room, as it is told to", () => {
+        const picture = makePicture();
+        GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOn(picture)));
+        const start = {x: picture.position.x, y: picture.position.y, z: picture.position.z};
+        // A place to the east of the picture, above it, and nearer the camera that looks at it from the south.
+        const place = {x: start.x + 3, y: start.y + 4, z: start.z + 2};
+        // How far a slide with all the pace it needs takes the pivot, to the east, up, and toward the camera.
+        const slideFromStart = (sideways: number, upDown: number): number[] => {
+            lookAtPictureFrom(picture, 8);
+            WorldSpaceSelectionUtil.holdOrbitTarget();
+            WorldSpaceSelectionUtil.slideHeldOrbitTarget(place, 10, sideways, upDown);
+            const {x, y, z} = heldPivot();
+            WorldSpaceSelectionUtil.releaseOrbitTarget();
+            return [x - start.x, y - start.y, z - start.z].map(n => Math.round(n * 1e9) / 1e9);
+        };
+
+        // Toward or away from the camera it always goes; across and up only as told.
+        expect(slideFromStart(1, 1)).toEqual([3, 4, 2]);
+        expect(slideFromStart(0, 0)).toEqual([0, 0, 2]);
+        expect(slideFromStart(1, 0)).toEqual([3, 0, 2]);
+        expect(slideFromStart(0, 1)).toEqual([0, 4, 2]);
+        expect(slideFromStart(0.5, 0.25)).toEqual([1.5, 1, 2]);
+
+        // Across is across the view, wherever it looks from: from the east, the room's north and south.
+        const camera = GraphicsManager.getCamera();
+        camera.position.set(start.x + 8, start.y, start.z);
+        camera.lookAt(start.x, start.y, start.z);
+        camera.updateMatrixWorld(true);
+        WorldSpaceSelectionUtil.holdOrbitTarget();
+        WorldSpaceSelectionUtil.slideHeldOrbitTarget(place, 10, 0, 0);
+        expect(heldPivot().x - start.x).toBeCloseTo(3, 9);
+        expect(heldPivot().y - start.y).toBeCloseTo(0, 9);
+        expect(heldPivot().z - start.z).toBeCloseTo(0, 9);
+        camera.rotation.set(0, 0, 0);
+    });
+
+    it("slides nothing that isn't held", () => {
+        const picture = makePicture();
+        GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOn(picture)));
+        const start = {x: picture.position.x, y: picture.position.y, z: picture.position.z};
+        const elsewhere = {x: start.x + 4, y: start.y, z: start.z};
+        lookAtPictureFrom(picture, 8);
+
+        // The orbit's own target is the selection's live position, which is never written.
+        WorldSpaceSelectionUtil.slideHeldOrbitTarget(elsewhere, 0.5, 1, 1);
+        expect(picture.position).toMatchObject(start);
+
+        WorldSpaceSelectionUtil.holdOrbitTarget();
+        WorldSpaceSelectionUtil.releaseOrbitTarget();
+        WorldSpaceSelectionUtil.slideHeldOrbitTarget(elsewhere, 0.5, 1, 1);
+        expect(picture.position).toMatchObject(start);
+    });
+
+    it("never slides or turns the view off a place a scripted step holds it on", () => {
+        const stepsChosenPlace = {x: 20.5, y: 0, z: 30.5};
+        const picture = makePicture();
+        GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOn(picture)));
+        lookAtPictureFrom(picture, 8);
+        orbitCameraTargetOverrideObservable.set(stepsChosenPlace);
+
+        WorldSpaceSelectionUtil.holdOrbitTarget();
+        WorldSpaceSelectionUtil.slideHeldOrbitTarget({x: 0, y: 0, z: 0}, 0.5, 1, 1);
+        WorldSpaceSelectionUtil.turnHeldOrbitToward({x: 1, y: 0, z: 0}, 0.25 * Math.PI, 0.5);
+
+        expect(heldPivot()).toEqual(stepsChosenPlace);
+        expect(stepsChosenPlace).toEqual({x: 20.5, y: 0, z: 30.5});
+        expect(orbitCameraAnglesObservable.peek()).toEqual({azimuth: 0, polar: 0.5 * Math.PI});
+    });
+
+    it("slides and turns nothing under a camera that wasn't orbiting when the drag began", () => {
+        const picture = makePicture();
+        GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOn(picture)));
+        lookAtPictureFrom(picture, 8);
+        cameraModeObservable.set({type: "free"});
+
+        WorldSpaceSelectionUtil.holdOrbitTarget();
+        WorldSpaceSelectionUtil.slideHeldOrbitTarget({x: 0, y: 0, z: 0}, 0.5, 1, 1);
+        WorldSpaceSelectionUtil.turnHeldOrbitToward({x: 1, y: 0, z: 0}, 0.25 * Math.PI, 0.5);
+
+        expect(cameraModeObservable.peek()).toEqual({type: "free"});
+        expect(orbitCameraAnglesObservable.peek()).toEqual({azimuth: 0, polar: 0.5 * Math.PI});
+    });
+
+    it("turns the held view toward seeing a facing, a step at a time, and no nearer head-on than asked", () => {
+        const picture = makePicture();
+        GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOn(picture)));
+        lookAtPictureFrom(picture, 8);
+        WorldSpaceSelectionUtil.holdOrbitTarget();
+
+        // Squarely before a wall that looks south, the view sees one that looks west edge-on.
+        const west = new THREE.Vector3(-1, 0, 0);
+        expect(degreesFrom(west)).toBeCloseTo(90, 6);
+
+        WorldSpaceSelectionUtil.turnHeldOrbitToward(west, THREE.MathUtils.degToRad(45), THREE.MathUtils.degToRad(10));
+        expect(degreesFrom(west)).toBeCloseTo(80, 6);
+        // Round the way that is shortest: level as it was, the camera gone toward the west.
+        expect(orbitCameraAnglesObservable.peek().polar).toBeCloseTo(0.5 * Math.PI, 9);
+        expect(orbitDirection().x).toBeLessThan(0);
+
+        for (let i = 0; i < 10; ++i)
+            WorldSpaceSelectionUtil.turnHeldOrbitToward(west, THREE.MathUtils.degToRad(45), THREE.MathUtils.degToRad(10));
+        expect(degreesFrom(west)).toBeCloseTo(45, 6);
+
+        // Seen well enough already, it is left as it is.
+        const settled = orbitCameraAnglesObservable.peek();
+        WorldSpaceSelectionUtil.turnHeldOrbitToward(west, THREE.MathUtils.degToRad(45), THREE.MathUtils.degToRad(10));
+        WorldSpaceSelectionUtil.turnHeldOrbitToward(new THREE.Vector3(0, 0, 1), THREE.MathUtils.degToRad(45), 1);
+        expect(orbitCameraAnglesObservable.peek()).toBe(settled);
+    });
+
+    it("turns it down to see a floor and up to see a ceiling, round the far side of one seen from behind", () => {
+        const picture = makePicture();
+        GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOn(picture)));
+        lookAtPictureFrom(picture, 8);
+        WorldSpaceSelectionUtil.holdOrbitTarget();
+        const turnFullyToward = (facing: THREE.Vector3): void => {
+            for (let i = 0; i < 40; ++i)
+                WorldSpaceSelectionUtil.turnHeldOrbitToward(facing, THREE.MathUtils.degToRad(45), THREE.MathUtils.degToRad(10));
+        };
+
+        // A floor: the camera rises over it, heading as it was.
+        turnFullyToward(new THREE.Vector3(0, 1, 0));
+        expect(THREE.MathUtils.radToDeg(orbitCameraAnglesObservable.peek().polar)).toBeCloseTo(45, 6);
+        expect(orbitCameraAnglesObservable.peek().azimuth).toBeCloseTo(0, 9);
+
+        // A ceiling: it drops beneath.
+        turnFullyToward(new THREE.Vector3(0, -1, 0));
+        expect(THREE.MathUtils.radToDeg(orbitCameraAnglesObservable.peek().polar)).toBeCloseTo(135, 6);
+        expect(orbitCameraAnglesObservable.peek().azimuth).toBeCloseTo(0, 9);
+
+        // A wall seen from straight behind: round either side of it, level, to its front.
+        orbitCameraAnglesObservable.set({azimuth: 0, polar: 0.5 * Math.PI});
+        const north = new THREE.Vector3(0, 0, -1);
+        turnFullyToward(north);
+        expect(degreesFrom(north)).toBeCloseTo(45, 6);
+        expect(orbitCameraAnglesObservable.peek().polar).toBeCloseTo(0.5 * Math.PI, 9);
+    });
+
+    it("keeps the orbit's azimuth running on through a turn, as a drag leaves it, never wrapped", () => {
+        const picture = makePicture();
+        GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOn(picture)));
+        lookAtPictureFrom(picture, 8);
+        WorldSpaceSelectionUtil.holdOrbitTarget();
+
+        // Three whole turns on from due south, and a little short of the wrap: turning on toward the east crosses it.
+        const turnsOn = 3 * 2 * Math.PI;
+        orbitCameraAnglesObservable.set({azimuth: turnsOn + THREE.MathUtils.degToRad(170), polar: 0.5 * Math.PI});
+        const northWest = new THREE.Vector3(-1, 0, -1).normalize();
+        WorldSpaceSelectionUtil.turnHeldOrbitToward(northWest, 0, THREE.MathUtils.degToRad(30));
+
+        expect(THREE.MathUtils.radToDeg(orbitCameraAnglesObservable.peek().azimuth - turnsOn)).toBeCloseTo(200, 6);
     });
 });
 

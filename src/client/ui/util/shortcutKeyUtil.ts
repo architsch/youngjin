@@ -43,15 +43,8 @@ const ShortcutKeyUtil =
             return undefined;
         if (ev.key == "Enter" || ev.key == "Delete")
             return ev.key;
-        return typesLetter(ev, "m") ? "M" : undefined;
+        return KeyPressUtil.typesLetter(ev, "m") ? "M" : undefined;
     },
-}
-
-// On a layout that types no Latin letters (e.g. Hangul), the key in the letter's usual place stands for it.
-function typesLetter(ev: KeyboardEvent, letter: string): boolean
-{
-    const typesLatin = ev.key.length == 1 && ev.key.charCodeAt(0) < 128;
-    return typesLatin ? ev.key.toLowerCase() == letter : ev.code == `Key${letter.toUpperCase()}`;
 }
 
 export default ShortcutKeyUtil;

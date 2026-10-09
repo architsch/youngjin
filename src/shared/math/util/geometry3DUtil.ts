@@ -7,6 +7,12 @@ import { DIR_VEC_BY_CODE, DIR_VEC_BY_NAME } from "../../system/sharedConstants";
 
 const WORLD_UP: Vec3 = {x: 0, y: 1, z: 0};
 
+// Scratch for coneReachesAABB: where along the axis the nearest part of the box changes, and the squared
+// distance to the box in between, as the coefficients of a quadratic (see addSlabGap).
+const coneBreakpointsTemp: number[] = [];
+let gapA = 0, gapB = 0, gapC = 0;
+const ascending = (a: number, b: number): number => a - b;
+
 const Geometry3DUtil =
 {
     areAABBsEqual: (a: AABB3, b: AABB3): boolean =>
@@ -157,6 +163,97 @@ const Geometry3DUtil =
 
         return { hitRayScale: tmin, hitNormal };
     },
+    // Whether a box reaches into a cone that widens from its apex to a flat base centred on baseCenter, its
+    // radius growing by radiusPerDistance with each unit of distance from the apex along its axis.
+    // A ball travelling the axis and growing with it sweeps the cone out, so the box is in the cone where it
+    // is no further from the ball's centre than the ball's radius. Between the points where the centre passes
+    // a face plane of the box, that is a quadratic in how far the centre has come.
+    coneReachesAABB: (apex: Vec3, baseCenter: Vec3, radiusPerDistance: number, box: AABB3): boolean =>
+    {
+        const length = Math.hypot(baseCenter.x - apex.x, baseCenter.y - apex.y, baseCenter.z - apex.z);
+        if (length == 0)
+            return false;
+        const axisX = (baseCenter.x - apex.x) / length;
+        const axisY = (baseCenter.y - apex.y) / length;
+        const axisZ = (baseCenter.z - apex.z) / length;
+
+        // The box's bounds, from the apex.
+        const minX = box.center.x - box.halfSize.x - apex.x, maxX = box.center.x + box.halfSize.x - apex.x;
+        const minY = box.center.y - box.halfSize.y - apex.y, maxY = box.center.y + box.halfSize.y - apex.y;
+        const minZ = box.center.z - box.halfSize.z - apex.z, maxZ = box.center.z + box.halfSize.z - apex.z;
+
+        // Wholly past the base. The sweep below rounds the cone's end off past it, so a box across the base's
+        // plane may count from a little outside the rim.
+        if (axisX * (axisX > 0 ? minX : maxX) + axisY * (axisY > 0 ? minY : maxY) +
+            axisZ * (axisZ > 0 ? minZ : maxZ) > length)
+        {
+            return false;
+        }
+
+        // The ball's own radius per distance, and how far it travels: past the base, to touch the cone at its rim.
+        const slopeSqr = radiusPerDistance * radiusPerDistance;
+        const ballSlopeSqr = slopeSqr / (1 + slopeSqr);
+        const sweepLength = length * (1 + slopeSqr);
+
+        coneBreakpointsTemp.length = 0;
+        addConeBreakpoint(minX, axisX, sweepLength);
+        addConeBreakpoint(maxX, axisX, sweepLength);
+        addConeBreakpoint(minY, axisY, sweepLength);
+        addConeBreakpoint(maxY, axisY, sweepLength);
+        addConeBreakpoint(minZ, axisZ, sweepLength);
+        addConeBreakpoint(maxZ, axisZ, sweepLength);
+        coneBreakpointsTemp.sort(ascending);
+        coneBreakpointsTemp.push(sweepLength);
+
+        let from = 0;
+        for (let i = 0; i < coneBreakpointsTemp.length; ++i)
+        {
+            const to = coneBreakpointsTemp[i];
+            const middle = 0.5 * (from + to);
+            gapA = gapB = gapC = 0;
+            addSlabGap(minX, maxX, axisX, middle);
+            addSlabGap(minY, maxY, axisY, middle);
+            addSlabGap(minZ, maxZ, axisZ, middle);
+
+            // The squared distance to the box, less the ball's squared radius: in the cone where not above zero.
+            const a = gapA - ballSlopeSqr;
+            if (a * from * from + gapB * from + gapC <= 0 || a * to * to + gapB * to + gapC <= 0)
+                return true;
+            if (a > 0)
+            {
+                const lowest = -gapB / (2 * a);
+                if (lowest > from && lowest < to && a * lowest * lowest + gapB * lowest + gapC <= 0)
+                    return true;
+            }
+            from = to;
+        }
+        return false;
+    },
+}
+
+// Where a point leaving the origin at a rate passes a plane, kept if it lies within the sweep.
+function addConeBreakpoint(planeOffset: number, rate: number, sweepLength: number): void
+{
+    if (rate == 0)
+        return;
+    const distance = planeOffset / rate;
+    if (distance > 0 && distance < sweepLength)
+        coneBreakpointsTemp.push(distance);
+}
+
+// Adds one axis's share of the squared distance between a point leaving the origin at a rate and the slab
+// [min, max], as the coefficients of a quadratic in how far the point has come. `at` tells which side of the
+// slab the point is on.
+function addSlabGap(min: number, max: number, rate: number, at: number): void
+{
+    const position = rate * at;
+    if (position >= min && position <= max)
+        return;
+    const offset = (position < min) ? min : -max;
+    const slope = (position < min) ? -rate : rate;
+    gapA += slope * slope;
+    gapB += 2 * offset * slope;
+    gapC += offset * offset;
 }
 
 // Adding 0 turns a rounded -0 into 0, which strict comparisons tell apart.

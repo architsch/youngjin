@@ -1,6 +1,6 @@
 # Game Mode
 
-Reference: @src/client/system/util/gameModeUtil.ts , @src/client/graphics/util/worldSpaceSelectionUtil.ts , @src/client/graphics/util/selectionStepUtil.ts , @src/client/graphics/util/selectionEditGizmoUtil.ts , @src/client/graphics/types/gizmo/voxelQuadEditGizmos.ts , @src/client/object/types/objectTypeClientConfig/objectTypeClientConfig.ts , @src/client/ui/util/closablePanelUtil.ts , @src/client/ui/util/shortcutKeyUtil.ts
+Reference: @src/client/system/util/gameModeUtil.ts , @src/client/graphics/util/worldSpaceSelectionUtil.ts , @src/client/graphics/util/selectionStepUtil.ts , @src/client/graphics/util/selectionEditGizmoUtil.ts , @src/client/graphics/types/gizmo/voxelQuadEditGizmos.ts , @src/client/object/types/objectTypeClientConfig/objectTypeClientConfig.ts , @src/client/ui/util/closablePanelUtil.ts , @src/client/ui/util/shortcutKeyUtil.ts , @src/client/system/util/clientEventHistoryUtil.ts , @src/client/system/util/roomEditUtil.ts
 
 A `GameMode` decides the camera behavior, whether the player can walk, and which tools are shown. `GameModeUtil` publishes the current mode, and everything mode-dependent observes it.
 
@@ -12,7 +12,7 @@ The mode is stored separately from camera state, because the camera briefly has 
 ## Switching
 - Edit mode can only be entered through the top-bar toggle. It opens on the nearest voxel quad or object in the middle of the view that can be selected, within a limited reach, looking past objects that refuse (e.g. other players) and through a picture where its image is see-through, but never through a room surface. If there is none, the same look is tried again tilted toward the ground. If that finds nothing either, it opens on the user's own character, even past a step's selection lock.
 - It is left only through the toggle, which clears the selection. The back gesture (Escape, Backspace outside a text field, device Back) closes popups and closable panels (`ClosablePanelUtil`), an open color palette before whatever it is open over, and never the mode.
-- Shortcut keys stand for clicks on the controls that declare them (`ShortcutKeyUtil`): M on the toggle, Delete on the selection tools' remove button, Enter on a popup's answer (a confirm popup's Yes, a welcome popup's OK). A press reaches its control only where a click could: Enter while its popup is on top; the others not under a popup or while a text field has the keyboard, and Delete not with a panel open over the tools.
+- Shortcut keys stand for clicks on the controls that declare them (`ShortcutKeyUtil`): M on the toggle, Delete on the selection tools' remove button, Enter on a popup's answer (a confirm popup's Yes, a welcome popup's OK). A press reaches its control only where a click could: Enter while its popup is on top; the others not under a popup or while a text field has the keyboard, and Delete not with a panel open over the tools (`ClosablePanelUtil`). A face's chooser beneath the tools is not over them, so Delete still removes the block.
 - A confirm popup takes no Yes, clicked or keyed, for a moment after it appears (`CONFIRM_ARMING_DELAY_MS`), and shows no sign of it.
 - Selecting or deselecting never changes the mode.
 - Edit mode is open to everyone. Permissions are checked per edit (see [restricted_zone.md](restricted_zone.md)).
@@ -35,7 +35,7 @@ The mode is stored separately from camera state, because the camera briefly has 
   - a step of a face, or to an object facing the same way, slides the camera alongside (see [camera_control.md](../graphics/camera_control.md)), so a run of presses keeps its direction. An object facing another way is looked at from where the camera stands.
 - A click takes the nearest thing **drawn** under it. Where a picture's image is see-through (around the object in a prop's), it goes on to what shows there: the face behind a prop, a canvas's board (see [texture.md](../geometry/texture.md)). The selected object's outline still takes every press inside it, so a prop is dragged by its see-through parts too.
 - Each object type declares its selection behavior in `ObjectTypeClientConfig`: who may select it, the tool panel it opens, and whether it can be dragged along walls by its outline. Every selection also requires edit mode and reach. A refused click passes through silently.
-- A face's tools add an object only once its look is picked, from a chooser its add button raises (a canvas's painting, a prop's image, a lamp's size, a label's frame, a door's finish): a pick adds the object, and putting the chooser away adds nothing.
+- A face's tools add an object only once its look is picked, from a chooser its add button raises (a canvas's painting, a prop's image, a lamp's size, a label's frame, a door's finish): a pick adds the object, and putting the chooser away adds nothing. Selecting another face puts it away.
 - The tools' sub-panels (an object's, see `EditOptionsProps`, and a face's choosers) follow one of two flows, which `SUB_PANELS_BENEATH_SELECTION_TOOLS` picks:
 
   | | Off: in the tools' place | On: beneath the tools |
@@ -50,11 +50,26 @@ The mode is stored separately from camera state, because the camera briefly has 
 - The outline and camera framing come from the object's collider at the object's own size. Anyone who may select an object may also move it, dragging inside the outline, and resize it by the outline's corners if its type scales that way; a lamp instead picks one of its sizes from its tools (see [object_attachment.md](../geometry/object_attachment.md)). Each placement is validated as it previews, and the result is sent once, on release.
 
 ## Editing a block by its outline
-- A press the selection's outline takes is a gizmo's, not the camera's (`GizmoDragUtil`). `SelectionEditGizmoUtil` owns what every kind of selection shares: the handles, which of them a press takes, and holding the view still while a drag lasts. Each kind supplies its own handles and drags (`SelectionEditGizmoProvider`).
+- A press the selection's outline takes is a gizmo's, not the camera's (`GizmoDragUtil`). `SelectionEditGizmoUtil` owns what every kind of selection shares: the handles, which of them a press takes, and the view while a drag lasts (held still, or following the pointer that carries a selection to its edge; see [camera_control.md](../graphics/camera_control.md)). Each kind supplies its own handles and drags (`SelectionEditGizmoProvider`).
 - A kind offers only the handles a drag could resize its selection by, and says of each move whether the selection could do what the pointer asks. While it can't, the drag is blocked (`selectionEditBlockedObservable`): the outline, the handles and the cell's wireframe show red.
+- A selection further from the camera than `SELECTION_HANDLE_MAX_DISTANCE` has no handles, since they keep their size on screen and would crowd it. The one a drag holds stays, and an object still moves by its inside.
 - A selected block face has a handle on each edge that is a bound of its block across XZ: the side edges of a wall face, all four of a top or bottom face. A handle carries its bound between the cell's side and mid-cell, and shows only where the bound has another place it may go: one that leaves a block, and strands nothing hung on it.
 - A block's drag is blocked while its bound is carried on toward a place it can't take: out of its cell, or in past mid-cell.
 - The face itself takes no press, so a drag that starts on it turns the view. A block is reshaped where it stands, never dragged elsewhere.
 - The whole cell layer of the selected face's block is drawn as a thin wireframe (`VoxelQuadSelection`), whole block or shrunk, so it is plain which cell a shrunk block belongs to.
 - A reshape that hides the selected face sends the selection to another face of the same block.
 - The handles are not offered on the room's own floor and ceiling, where the user may not edit the block, or while a step holds the selection or sets `FeatureFlag.DisableManualVoxelBlockResize`.
+
+## Undo and redo
+- In edit mode Ctrl+Z undoes the latest thing the user did there, and Ctrl+Y or Ctrl+Shift+Z redoes the one last undone (`KeyPressUtil`; Command stands in for Ctrl). A press is one step, and a held chord doesn't repeat. The keys reach the room where the HUD's keys do, and not during a drag of the selection; in a text field they are the field's own.
+- What can be undone is of two kinds, taken in the order they were made:
+  - an edit by the selection's tools or outline: a block added, removed with what hung on it, reshaped or retextured; an object added, removed, moved, resized, turned or given another value. Room settings, restricted zones and the user's own character are not;
+  - a selection the user made by hand: a click on a face or an object, or a movement key's step. Not one the user didn't make: what edit mode opens on, or where a tool or somebody else's edit moves the selection.
+- Each is entered in `ClientEventHistoryUtil` as a `ClientEvent` that carries how to undo and redo it. The history lasts one stay in edit mode: it starts over as the mode ends, and so on every room arrival.
+- A new edit or selection ends what could be redone. A text typed into a field is one edit, not one for each letter.
+- `RoomEditUtil` builds how to undo and redo an edit from signals: the ones the edit was sent by, and the ones that take it back. A step makes those signals' edits as the user's own: checked by the shared rules, applied, then sent. So the server and the other users see ordinary edits, and one step can be refused like any other.
+- An edit the room no longer allows (something hung on the block since, a restricted zone drawn over it) is dropped with a notification, and the next press reaches the step before it.
+- The selection goes back with an edit while it is still where the edit's other end left it, as a step back through the history finds it: onto the face a block or object was added from, or onto an object whose removal is undone. Where something else has moved it since, it stays, or moves on by the usual search if the step took it away or covered it.
+- A selection made by hand is announced by `WorldSpaceSelectionUtil` (`manualSelectionObservable`), with what it left and what it took. Undone, what it left is selected again; redone, what it took: as a click on it would, except that the camera slides alongside where the selection's own step had it slide (see [camera_control.md](../graphics/camera_control.md)).
+- A selection whose place is gone, hidden or selected already is passed over without a word, and the same press goes on to the step before it.
+- A single-player step can block undo and redo (`FeatureFlag.DisableUndoRedo`), which the tutorial does throughout.

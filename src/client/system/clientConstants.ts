@@ -14,6 +14,11 @@ export const TOUCH_DRAG_THRESHOLD_PX = 40;
 export const EDIT_MODE_OPENING_REACH = 8;
 export const EDIT_MODE_OPENING_TILT = THREE.MathUtils.degToRad(15);
 
+// How fast the orbit camera's cone of sight widens: the radius it gains per unit of distance from the orbit's pivot,
+// where its tip is, toward the camera, where it is widest. What reaches into the cone is hidden (see
+// OrbitOcclusionHider), so a larger value clears more of the room from around the line of sight.
+export const ORBIT_SIGHT_CONE_RADIUS_PER_DISTANCE = 0.3;
+
 // True keeps a newly added object selected once its look is complete. False hands the selection to a face near it,
 // for the next to be added from (see VoxelQuadPlacementOptions).
 export const DISABLE_AUTO_SELECTION_ON_OBJECT_INSTALLATION = true;
@@ -28,6 +33,10 @@ export const SUB_PANELS_BENEATH_SELECTION_TOOLS = true;
 // selectionEditBlockedObservable).
 export const SELECTION_COLOR = "#00ff00";
 export const SELECTION_BLOCKED_COLOR = "#ff0000";
+
+// How far from the camera a selection still has the handles that resize it (see SelectionEditGizmoUtil). They keep
+// their size on screen while the selection shrinks, so further off they crowd it and can't be told apart to hold.
+export const SELECTION_HANDLE_MAX_DISTANCE = 12;
 
 // What an automatic selection asks of a voxel quad (see VoxelQuadSelection): to lie no further than this from where
 // it looks, with at least this share of its face clear of attached objects. With no such quad, it takes an object

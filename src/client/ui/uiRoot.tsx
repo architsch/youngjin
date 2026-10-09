@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ThingsPoolEnv from "../system/types/thingsPoolEnv";
 import Chat from "./components/hud/chat/chat";
 import DebugStats from "./components/hud/debug/debugStats";
@@ -22,7 +22,7 @@ import User from "../../shared/user/types/user";
 import AuthPromptForm from "./components/form/authPromptForm";
 import DestinationChooserForm from "./components/form/destinationChooserForm";
 import MyRoomWelcomeForm from "./components/form/myRoomWelcomeForm";
-import { clientFeatureFlagsObservable, gameModeObservable, numActiveInputElementsObservable, popupStateObservable, roomChangedObservable } from "../system/clientObservables";
+import { bottomUIHeightObservable, clientFeatureFlagsObservable, gameModeObservable, numActiveInputElementsObservable, popupStateObservable, roomChangedObservable } from "../system/clientObservables";
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import ImageGridChooserForm from "./components/form/imageGridChooserForm";
 import ConsoleLogForm from "./components/form/consoleLogForm";
@@ -34,6 +34,8 @@ import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 import useCloseGesture from "./util/closeGesture";
 import useShortcutKeyListener from "./util/shortcutKeyListener";
 import useSelectionStepKeyListener from "./util/selectionStepKeyListener";
+import useUndoRedoKeyListener from "./util/undoRedoKeyListener";
+import useWheelScrollListener from "./util/wheelScrollListener";
 import PopupUtil from "./util/popupUtil";
 import ClosablePanelUtil from "./util/closablePanelUtil";
 import ExitConfirmationUtil from "./util/exitConfirmationUtil";
@@ -136,6 +138,29 @@ export default function UIRoot({ env, user }: UIRootProps)
     // In edit mode the movement keys move the selection, though never under a popup.
     useSelectionStepKeyListener(popupStack.length > 0);
 
+    // In edit mode Ctrl+Z and Ctrl+Y undo and redo the user's edits of the room and selections, under the same
+    // condition.
+    useUndoRedoKeyListener(popupStack.length > 0);
+
+    useWheelScrollListener();
+
+    // In edit mode a pinch on the UI zooms the camera (see PlayerPointerInput), and the browser isn't to zoom the page
+    // by one: not even on a popup, as no pinch could then undo it.
+    useEffect(() => {
+        document.getElementById("uiRoot")?.classList.toggle("yj-no-page-zoom", inEditMode);
+    }, [inEditMode]);
+
+    // How much of the room the bottom UI stands over is kept measured (see bottomUIHeightObservable).
+    const bottomUIRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        const bottomUI = bottomUIRef.current;
+        if (!bottomUI)
+            return;
+        const observer = new ResizeObserver(() => bottomUIHeightObservable.set(bottomUI.offsetHeight));
+        observer.observe(bottomUI);
+        return () => observer.disconnect();
+    }, []);
+
     const isRoomLoaded = roomRuntimeMemory != undefined;
     const isMultiplayerRoomLoaded = isRoomLoaded &&
         roomRuntimeMemory.room.roomType != RoomTypeEnumMap.SinglePlayer;
@@ -157,7 +182,7 @@ export default function UIRoot({ env, user }: UIRootProps)
         {isMultiplayerRoomLoaded && <DebugStats env={env}/>}
         <CameraZoomSlider/>
         {/* Selection tools are edit-mode only. */}
-        <div className="flex flex-col absolute bottom-0 w-full pointer-events-none">
+        <div ref={bottomUIRef} className="flex flex-col absolute bottom-0 w-full pointer-events-none">
             {!roomSettingsOpen && <ObjectSelectionMenu inEditMode={inEditMode}/>}
             {inEditMode && !roomSettingsOpen && <VoxelQuadSelectionMenu/>}
             <Chat hide={chatHidden}/>

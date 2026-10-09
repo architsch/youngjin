@@ -44,7 +44,7 @@ const worldQuatTemp = new THREE.Quaternion();
 const parentQuatTemp = new THREE.Quaternion();
 const lookMat4Temp = new THREE.Matrix4();
 
-// "orbit" pose: orbits a pivot within the target (see setPivot), driven by 1:1 drags, with zoom
+// "orbit" pose: orbits a pivot within the target (see getPivot), driven by 1:1 drags, with zoom
 // shared via orbitCameraZoomObservable and angles via orbitCameraAnglesObservable (settable by
 // scripted steps; see setView). Computed in world space and returned in the player's frame, because
 // the camera stays parented to the player (re-parenting mid-glide would break the easing).
@@ -60,6 +60,15 @@ export default class OrbitCameraPose
     // (see matchZoomToCurrentDistance).
     private distanceAtReframe: number = 0;
 
+    // The point within the target that the camera orbits around and looks at (see the share above).
+    static getPivot(target: AABB3, out: THREE.Vector3): THREE.Vector3
+    {
+        return out.set(
+            target.center.x,
+            target.center.y + orbitPivotHeightPerTargetHalfHeight * target.halfSize.y,
+            target.center.z);
+    }
+
     // Frames a target, keeping the camera's current viewing direction (a fixed side could put the
     // camera behind a wall). Inside the target's footprint (e.g. orbiting one's own body), the default
     // direction is used. minDistance: caller-imposed floor (see CameraMode). holdAngles: keeps the orbit's
@@ -73,7 +82,7 @@ export default class OrbitCameraPose
             return;
 
         camera.getWorldPosition(worldPosTemp);
-        orbitOffsetTemp.subVectors(worldPosTemp, setPivot(target, pivotTemp));
+        orbitOffsetTemp.subVectors(worldPosTemp, OrbitCameraPose.getPivot(target, pivotTemp));
 
         // Tests the footprint rather than a circle: wall-flat targets are wide and thin, and a circle
         // would swallow the floor the user stands on and send the camera through the wall.
@@ -162,7 +171,7 @@ export default class OrbitCameraPose
             this.framingDistance * getZoomDistanceFactor(newZoomAmount),
             getTargetExtentToward(target, this.spherical) + minTargetClearance);
 
-        setPivot(target, pivotTemp);
+        OrbitCameraPose.getPivot(target, pivotTemp);
         orbitOffsetTemp.setFromSpherical(this.spherical);
         worldPosTemp.addVectors(pivotTemp, orbitOffsetTemp);
         lookMat4Temp.lookAt(worldPosTemp, pivotTemp, DIRECTION_VECTORS["+y"]);
@@ -198,15 +207,6 @@ function getZoomDistanceFactor(zoomAmount: number): number
 function getZoomAmount(zoomDistanceFactor: number): number
 {
     return Math.log(maxZoomDistanceFactor / zoomDistanceFactor) / Math.log(zoomDistanceFactorSpan);
-}
-
-// The point within the target that the camera orbits around and looks at (see the share above).
-function setPivot(target: AABB3, out: THREE.Vector3): THREE.Vector3
-{
-    return out.set(
-        target.center.x,
-        target.center.y + orbitPivotHeightPerTargetHalfHeight * target.halfSize.y,
-        target.center.z);
 }
 
 // Target bounding-sphere radius, the unit for framing distances.

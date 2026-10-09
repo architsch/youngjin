@@ -253,4 +253,12 @@
       inset 0 2px 4px rgba(0, 0, 0, 0.38),
       inset 0 -1px 0 rgba(255, 255, 255, 0.12);
   }
+  /* Worn by the UI root throughout edit mode, where a pinch that lands on the UI zooms the camera (see
+     PlayerPointerInput), so that the browser does not zoom the page by the same pinch. A finger still
+     scrolls whatever scrolls. Named on every element, since a scrolling one starts the reckoning afresh
+     in some browsers. */
+  .yj-no-page-zoom,
+  .yj-no-page-zoom * {
+    touch-action: pan-x pan-y;
+  }
 }

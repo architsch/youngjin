@@ -75,7 +75,8 @@ import ClientVoxelManager from "../../../src/client/voxel/clientVoxelManager";
 import { clientFeatureFlagsObservable, gameModeObservable, objectEditObservable, objectSelectionObservable,
     selectionEditBlockedObservable, updateObservable, voxelBlockPreviewObservable, voxelQuadSelectionObservable,
     voxelQuadSelectionRestrictionObservable } from "../../../src/client/system/clientObservables";
-import { SELECTION_BLOCKED_COLOR, SELECTION_COLOR } from "../../../src/client/system/clientConstants";
+import { SELECTION_BLOCKED_COLOR, SELECTION_COLOR,
+    SELECTION_HANDLE_MAX_DISTANCE } from "../../../src/client/system/clientConstants";
 import { FeatureFlag } from "../../../src/shared/system/types/featureFlag";
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, VOXEL_BLOCK_SHAPE_EMPTY,
     VOXEL_BLOCK_SHAPE_WHOLE } from "../../../src/shared/system/sharedConstants";
@@ -309,6 +310,56 @@ describe("a selected face's resize handles", () => {
         expect(ObjectUpdateUtil.removeObject(actingUser, room, new RemoveObjectSignal(room.id, canvas.objectId))).toBe(true);
         objectEditObservable.set({kind: "remove", object: canvas});
         expect(handleIds()).toEqual(["maxX", "minX"]);
+    });
+});
+
+describe("the resize handles of a face far from the camera", () => {
+    // From the south and above the block's top face, at a distance from the middle of that face.
+    const topMiddle = {x: COL + 0.5, y: TOP_Y, z: ROW + 0.5};
+    const lookAtTopFrom = (distance: number) => placeCamera(
+        {x: topMiddle.x, y: topMiddle.y + 0.6 * distance, z: topMiddle.z + 0.8 * distance}, topMiddle);
+    // Where the top face's east handle sits.
+    const eastHandle = () => screenPointOf({x: COL + 1.08, y: TOP_Y, z: ROW + 0.5});
+
+    it("are offered as far off as they can be held, and no further", () => {
+        selectFace("y", "+");
+        lookAtTopFrom(SELECTION_HANDLE_MAX_DISTANCE - 0.01);
+        expect(handleIds()).toEqual(["maxX", "maxZ", "minX", "minZ"]);
+
+        lookAtTopFrom(SELECTION_HANDLE_MAX_DISTANCE + 0.01);
+        expect(handleIds()).toEqual([]);
+        // The outline itself is as it was.
+        const grabPoints = SelectionEditGizmoUtil.getGrabPoints()!;
+        expect(grabPoints.canResize).toBe(false);
+        expect(grabPoints.corners.length).toBe(4);
+
+        lookAtTopFrom(5);
+        expect(handleIds()).toEqual(["maxX", "maxZ", "minX", "minZ"]);
+    });
+
+    it("take no press past that, so a drag from the outline's edge turns the view", () => {
+        selectFace("y", "+");
+        lookAtTopFrom(5);
+        expect(cursorAt(eastHandle())).toBe("ew-resize");
+
+        lookAtTopFrom(SELECTION_HANDLE_MAX_DISTANCE + 2);
+        expect(cursorAt(eastHandle())).toBe("");
+        expect(press(eastHandle())).toBe(false);
+        expect(shapeAt(ROW, COL)).toBe(VOXEL_BLOCK_SHAPE_WHOLE);
+    });
+
+    it("keep the one a drag holds when the view draws back from it, until it is let go", () => {
+        selectFace("z", "+");
+        expect(press(handle("maxX"))).toBe(true);
+        dragThrough(onSouthFace(0.8), onSouthFace(0.58));
+        expect(shapeAt(ROW, COL)).toBe(WEST_HALF);
+
+        placeCamera({x: COL + 0.5, y: 3.2, z: ROW + 1 + SELECTION_HANDLE_MAX_DISTANCE + 2}, {x: COL + 0.5, y: MID_Y, z: ROW + 1});
+        expect(handleIds()).toEqual(["maxX"]);
+
+        release();
+        expect(handleIds()).toEqual([]);
+        expect(sentSignals()).toEqual([["reshape", BLOCK_QUAD, WEST_HALF]]);
     });
 });
 

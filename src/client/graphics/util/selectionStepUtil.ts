@@ -42,15 +42,18 @@ const FACE_AXES: {[facingAxis: string]: ["x" | "y" | "z", "x" | "y" | "z"]} = {
 
 const SelectionStepUtil =
 {
-    // Whether the selection moved.
+    // Whether the selection moved: by the user's own act, as a click moves it (see
+    // WorldSpaceSelectionUtil.trySelectManually).
     tryStep: (direction: ScreenDirection): boolean =>
     {
-        const voxelQuadSelection = voxelQuadSelectionObservable.peek();
-        if (voxelQuadSelection)
-            return tryStepToNextFace(voxelQuadSelection, direction);
+        return WorldSpaceSelectionUtil.trySelectManually(() => {
+            const voxelQuadSelection = voxelQuadSelectionObservable.peek();
+            if (voxelQuadSelection)
+                return tryStepToNextFace(voxelQuadSelection, direction);
 
-        const objectSelection = objectSelectionObservable.peek();
-        return objectSelection != null && tryStepToNearbyObject(objectSelection, direction);
+            const objectSelection = objectSelectionObservable.peek();
+            return objectSelection != null && tryStepToNearbyObject(objectSelection, direction);
+        });
     },
 }
 

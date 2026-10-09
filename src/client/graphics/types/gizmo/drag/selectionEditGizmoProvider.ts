@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import SelectionEditDrag from "./selectionEditDrag";
+import Vec3 from "../../../../../shared/math/types/vec3";
 
 // What one kind of selection offers to be edited by its outline (see SelectionEditGizmoUtil): handles to
 // resize it by, its body to move it by, or both. Asked on every press and every frame, so each answer is for
@@ -15,7 +16,10 @@ export default interface SelectionEditGizmoProvider
         {cursor: string, begin: () => SelectionEditDrag};
     // The same for a press on no handle; null unless it lands on the selection's body and that can be moved.
     pickBody: (ev: PointerEvent) => {cursor: string, begin: () => SelectionEditDrag} | null;
-    // The outline's middle and its corners in the world, with where each corner lies from the middle along
-    // the face's right and up; null while there is nothing to grab. For automation.
-    getOutline: () => {middle: THREE.Vector3, corners: {corner: {x: number, y: number}, position: THREE.Vector3}[]} | null;
+    // The outline's middle, the way it faces (along an axis) and its corners in the world, with where each
+    // corner lies from the middle along the face's right and up; null while there is nothing to grab. Where the
+    // selection stands, for what goes by that (its distance from the camera, the view following it) and for
+    // automation.
+    getOutline: () => {middle: THREE.Vector3, facing: Vec3,
+        corners: {corner: {x: number, y: number}, position: THREE.Vector3}[]} | null;
 }

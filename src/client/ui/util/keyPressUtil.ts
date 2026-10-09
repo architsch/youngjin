@@ -14,6 +14,25 @@ const KeyPressUtil =
     {
         return !ev.repeat && !ev.isComposing && !ev.ctrlKey && !ev.metaKey && !ev.altKey;
     },
+    // Whether a keydown is of a letter's key. On a layout that types no Latin letters (e.g. Hangul), the key in the
+    // letter's usual place stands for it.
+    typesLetter: (ev: KeyboardEvent, letter: string): boolean =>
+    {
+        const typesLatin = ev.key.length == 1 && ev.key.charCodeAt(0) < 128;
+        return typesLatin ? ev.key.toLowerCase() == letter : ev.code == `Key${letter.toUpperCase()}`;
+    },
+    // The step through what the user did in edit mode a keydown asks for (see ClientEventHistoryUtil): Ctrl+Z undoes,
+    // and Ctrl+Y or Ctrl+Shift+Z redoes, with Command standing in for Ctrl as on a Mac. One press at a time: a held
+    // chord doesn't repeat. Undefined for any other keydown.
+    getHistoryStep: (ev: KeyboardEvent): "undo" | "redo" | undefined =>
+    {
+        // (A keydown the browser fires as it autofills a field names no key.)
+        if (ev.key == undefined || ev.repeat || ev.isComposing || ev.altKey || !(ev.ctrlKey || ev.metaKey))
+            return undefined;
+        if (KeyPressUtil.typesLetter(ev, "z"))
+            return ev.shiftKey ? "redo" : "undo";
+        return (KeyPressUtil.typesLetter(ev, "y") && !ev.shiftKey) ? "redo" : undefined;
+    },
     // Whether a text field has the keyboard, and so every key that types or edits.
     isTyping: (): boolean =>
     {

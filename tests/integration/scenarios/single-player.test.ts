@@ -616,6 +616,21 @@ describe("tutorial step graph", () => {
         expect(acts(config.onModeEnd(), "clear_voxel_quad_selection_restriction")).toBe(true);
     });
 
+    it("blocks undo and redo from the start, and gives them back only as the tutorial ends", () => {
+        // An edit undone would leave the steps after it nothing to act on.
+        const steps = config.loadSteps();
+        const switches = (actions: SinglePlayerAction[], enable: boolean) => actions.some(action =>
+            action.type === "feature_flag" && action.flag === FeatureFlag.DisableUndoRedo && action.enable === enable);
+
+        expect(switches(steps["initial"].actionsOnStart, true)).toBe(true);
+        for (const [name, step] of Object.entries(steps))
+        {
+            expect(switches(step.actionsOnStart, false) || switches(step.actionsOnEnd, false),
+                `step "${name}" lets an edit be undone mid-tutorial`).toBe(false);
+        }
+        expect(switches(config.onModeEnd(), false)).toBe(true);
+    });
+
     it("hides the user's own character from the start, and shows it again however the tutorial ends", () => {
         // A hidden character can't catch clicks meant for the room around it.
         const steps = config.loadSteps();

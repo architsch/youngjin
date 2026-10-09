@@ -65,6 +65,11 @@ export const graphicsContextRestoredObservable = new Observable<number>(0);
 // Selected object (including the user's own character), or null.
 export const objectSelectionObservable = new Observable<ObjectSelection | null>(null);
 
+// Fires as the user selects something by hand (a click on it, a movement key's step), with what that left selected
+// and what it took, for the history to keep (see RoomEditUtil). Never peek() it: it holds the last one.
+export const manualSelectionObservable = new Observable<{before: VoxelQuadSelection | ObjectSelection | null,
+    after: VoxelQuadSelection | ObjectSelection}>();
+
 // Whether the drag of the selection's outline under way asks for what the selection can't do (see
 // SelectionEditGizmoUtil): its outline and handles show red meanwhile.
 export const selectionEditBlockedObservable = new Observable<boolean>(false);
@@ -127,6 +132,13 @@ export const voxelQuadHighlightObservable = new Observable<VoxelQuadSelection | 
 // This observable notifies its listeners whenever a popup needs to be opened/closed.
 export const popupStateObservable = new Observable<PopupState>({ popupType: "none" });
 
+// Number of popups on screen; 0 means none stands between the user and the room.
+export const numOpenPopupsObservable = new Observable<number>(0);
+
+// How much of the screen's bottom the 2D UI stands along (the selection tools, the chat), in CSS px, as UIRoot
+// measures it: the room shows clear of it only above.
+export const bottomUIHeightObservable = new Observable<number>(0);
+
 // Camera mode, including the orbit target. Drives PlayerCamera and own-body visibility.
 export const cameraModeObservable = new Observable<CameraMode>({type: "firstPerson"});
 
@@ -142,7 +154,8 @@ export const orbitCameraTargetOverrideObservable = new Observable<Vec3 | null>(n
 // depends on the target (see OrbitCameraPose). An orbit starting overwrites the initial value.
 export const orbitCameraZoomObservable = new Observable<number>(0.5);
 
-// Orbit view angles in world space (radians; polar measured from straight up), written by OrbitCameraPose.
+// Orbit view angles in world space (radians; polar measured from straight up), written by OrbitCameraPose, which
+// goes by whatever else writes them (see WorldSpaceSelectionUtil.turnHeldOrbitToward).
 export const orbitCameraAnglesObservable = new Observable<{azimuth: number, polar: number}>(
     {azimuth: 0, polar: 0.5 * Math.PI});
 

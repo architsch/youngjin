@@ -23,11 +23,8 @@ import VoxelGameObject from "../object/types/gameObject/voxelGameObject";
 import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 import InstancedMeshGraphics from "../object/components/instancedMeshGraphics";
 import ImageMapUtil from "../../shared/graphics/image/util/imageMapUtil";
-import ClientEventHistoryUtil from "../system/util/clientEventHistoryUtil";
 import ClientVoxelQueryUtil from "./util/clientVoxelQueryUtil";
 import GraphicsManager from "../graphics/graphicsManager";
-import ClientEvent from "../system/types/clientEvent";
-import { ClientEventType } from "../system/types/clientEventType";
 
 // The preview under way, if any: the block's first quad, the shape it had when the preview began, and the
 // one it is shown in now.
@@ -84,8 +81,6 @@ const ClientVoxelManager =
             onRoomShapeChanged(room);
             voxelBlockEditObservable.set({kind: "add", quadIndex, shape: getBlockShape(room, quadIndex)});
         }
-        if (success && validate)
-            ClientEventHistoryUtil.add(new ClientEvent(ClientEventType.ManuallyAddedVoxelBlock));
         return success;
     },
     addVoxelBlocksByChunk: (room: Room, rowStart: number, colStart: number,
@@ -122,8 +117,6 @@ const ClientVoxelManager =
             onRoomShapeChanged(room);
             voxelBlockEditObservable.set({kind: "remove", quadIndex, shape: removedShape});
         }
-        if (success && validate)
-            ClientEventHistoryUtil.add(new ClientEvent(ClientEventType.ManuallyRemovedVoxelBlock));
         return success;
     },
     removeVoxelBlocksByChunk: (room: Room, rowStart: number, colStart: number,
@@ -182,8 +175,6 @@ const ClientVoxelManager =
             quadIndex, textureIndex, validate ? room : undefined);
         if (success)
             voxelBlockEditObservable.set({kind: "retexture", quadIndex, shape: getBlockShape(room, quadIndex)});
-        if (success && validate)
-            ClientEventHistoryUtil.add(new ClientEvent(ClientEventType.ManuallyChangedVoxelQuadTexture));
         return success;
     },
     // Redraws zone outlines. Sending to the server is the caller's job (see voxelQuadTextureOptions).
@@ -238,8 +229,8 @@ const ClientVoxelManager =
         return accepted;
     },
     // Ends the preview, keeping what it shows. Returns the one edit that amounts to, for the caller to send
-    // (the block and the shape it now has), or null if it amounts to none.
-    commitVoxelBlockPreview: (room: Room): {quadIndex: number, shape: number} | null =>
+    // (the block, the shape it now has, and the one it had), or null if it amounts to none.
+    commitVoxelBlockPreview: (room: Room): {quadIndex: number, shape: number, originShape: number} | null =>
     {
         const preview = blockPreview;
         if (preview == null || preview.roomID != room.id)
@@ -251,7 +242,7 @@ const ClientVoxelManager =
             return null;
         room.dirty = true;
         voxelBlockEditObservable.set({kind: "reshape", quadIndex: preview.quadIndex, shape: preview.shownShape});
-        return {quadIndex: preview.quadIndex, shape: preview.shownShape};
+        return {quadIndex: preview.quadIndex, shape: preview.shownShape, originShape: preview.originShape};
     },
     // Ends the preview, putting the block back as it was.
     cancelVoxelBlockPreview: (): void =>
