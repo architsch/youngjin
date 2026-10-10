@@ -9,6 +9,8 @@ import Image from "../basic/image/image";
 import ImageChooser from "../input/imageChooser";
 import TooltipButton from "../input/tooltipButton";
 import ScrollPanel from "./scrollPanel";
+import ClientVoxelManager from "../../../voxel/clientVoxelManager";
+import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
 
 // Texture pack panel (see CustomizeRoomPanel). Choosing another pack opens the chooser; the server
 // decides whether the change is allowed.
@@ -24,6 +26,15 @@ export default function TexturePackPanel({ anchorElementId, onClose }: Props)
             return;
         try
         {
+            // A single-player room is no server's to re-skin: the room editor's is, as it stands.
+            const currentRoom = App.getCurrentRoom();
+            if (currentRoom && currentRoom.roomType == RoomTypeEnumMap.SinglePlayer)
+            {
+                currentRoom.texturePackPath = path;
+                await ClientVoxelManager.applyVoxelTexturePack(path);
+                setTexturePackPath(path);
+                return;
+            }
             const response = await RoomAPIClient.changeRoomTexture(path, roomID);
             if (response.status >= 200 && response.status < 300)
             {

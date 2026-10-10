@@ -135,33 +135,39 @@ const SinglePlayerActionMap: {
             console.error("SinglePlayerActionMap :: Current room doesn't exits.");
             return;
         }
-        ClientVoxelManager.removeVoxelBlocksByChunk(room,
-            action.rowStart(), action.colStart(), action.numRows(), action.numCols(),
-            action.collisionLayerMin(), action.collisionLayerMax(), false);
+        // (A volume the room lacks has been reported already; see SinglePlayerRoomQueryUtil.)
+        const volume = action.volume();
+        if (!volume)
+            return;
+        ClientVoxelManager.removeVoxelBlocksByChunk(room, volume.rowMin, volume.colMin,
+            volume.rowMax - volume.rowMin + 1, volume.colMax - volume.colMin + 1,
+            volume.collisionLayerMin, volume.collisionLayerMax, false);
     },
     "set_object_metadata": (action) =>
     {
-        const obj = ClientObjectManager.getObjectById(action.objectId);
+        const objectId = action.objectId();
+        const obj = ClientObjectManager.getObjectById(objectId);
         if (!obj)
         {
-            console.error(`SinglePlayerActionMap :: Object doesn't exits (objectId = ${action.objectId})`);
+            console.error(`SinglePlayerActionMap :: Object doesn't exits (objectId = ${objectId})`);
             return;
         }
-        ClientObjectManager.setObjectMetadata(action.objectId, action.metadataKey,
+        ClientObjectManager.setObjectMetadata(objectId, action.metadataKey,
             action.metadataValue(), false);
     },
     "object_bounce": (action) => // Triggers a brief easing motion (offset/rotation/scale) on the target object, e.g. to make an NPC nod when it replies.
     {
-        const obj = ClientObjectManager.getObjectById(action.objectId);
+        const objectId = action.objectId();
+        const obj = ClientObjectManager.getObjectById(objectId);
         if (!obj)
         {
-            console.error(`SinglePlayerActionMap :: Object doesn't exits (objectId = ${action.objectId})`);
+            console.error(`SinglePlayerActionMap :: Object doesn't exits (objectId = ${objectId})`);
             return;
         }
         const easingMotion = obj.components.easingMotion as EasingMotion | undefined;
         if (!easingMotion)
         {
-            console.error(`SinglePlayerActionMap :: Object has no easingMotion component (objectId = ${action.objectId})`);
+            console.error(`SinglePlayerActionMap :: Object has no easingMotion component (objectId = ${objectId})`);
             return;
         }
         easingMotion.bounce({

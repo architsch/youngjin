@@ -139,7 +139,7 @@ function findTarget(): EditTarget | null
     const canResize = canMove && config.scaling != undefined && config.scaling.cornerHandles !== false
         && ObjectScaleUtil.getFixedScale(obj.objectTypeIndex, obj.metadata) == undefined;
     // (The handle held stays, so that it never goes from under a drag.)
-    const heldId = SelectionEditGizmoUtil.getHeldHandleId("object");
+    const heldId = SelectionEditGizmoUtil.getHeldHandleId(ObjectAttachmentEditGizmos);
     return {selection, canMove, handles: !canResize ? noHandles
         : outlineCorners.filter(handle => handle.id == heldId || canResizeByCorner(room, obj, handle.corner))};
 }
@@ -537,8 +537,11 @@ SelectionEditGizmoUtil.addProvider("object", ObjectAttachmentEditGizmos);
 
 objectSelectionObservable.addListener("objectAttachmentEditGizmos", (selection: ObjectSelection | null) => {
     // A drag belongs to the object it began on.
-    if (SelectionEditGizmoUtil.isDragging("object") && selection?.gameObject.params.objectId !== draggedObjectId)
-        SelectionEditGizmoUtil.abandonDrag("object");
+    if (SelectionEditGizmoUtil.isDragging(ObjectAttachmentEditGizmos)
+        && selection?.gameObject.params.objectId !== draggedObjectId)
+    {
+        SelectionEditGizmoUtil.abandonDrag(ObjectAttachmentEditGizmos);
+    }
     refresh();
 });
 

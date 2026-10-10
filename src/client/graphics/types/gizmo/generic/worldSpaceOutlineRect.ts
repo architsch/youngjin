@@ -33,8 +33,8 @@ export default class WorldSpaceOutlineRect
         this.baseColor.set(color);
         this.outset = padded ? OUTSET : 0;
 
-        this.haloMaterial = WorldSpaceOutlineRect.makeMaterial(color, HALO_WIDTH, HALO_OPACITY, THREE.AdditiveBlending, true);
-        this.coreMaterial = WorldSpaceOutlineRect.makeMaterial(color, CORE_WIDTH, 1, THREE.NormalBlending, false);
+        this.haloMaterial = WorldSpaceOutlineRect.makeHaloMaterial(color);
+        this.coreMaterial = WorldSpaceOutlineRect.makeCoreMaterial(color);
 
         // Halo draws first (lower render order) so the crisp core sits on top of its glow.
         this.haloLine = new LineSegments2(geometry, this.haloMaterial);
@@ -59,6 +59,16 @@ export default class WorldSpaceOutlineRect
         const geometry = new LineSegmentsGeometry();
         geometry.setPositions((edges.attributes.position as THREE.BufferAttribute).array as Float32Array);
         return new WorldSpaceOutlineRect(geometry, color, padded);
+    }
+
+    // The two lines an outline is drawn in, which other outlines share the look of (see WorldSpaceOutlineBox).
+    static makeCoreMaterial(color: string): LineMaterial
+    {
+        return WorldSpaceOutlineRect.makeMaterial(color, CORE_WIDTH, 1, THREE.NormalBlending, false);
+    }
+    static makeHaloMaterial(color: string): LineMaterial
+    {
+        return WorldSpaceOutlineRect.makeMaterial(color, HALO_WIDTH, HALO_OPACITY, THREE.AdditiveBlending, true);
     }
 
     private static makeMaterial(color: string, linewidth: number, opacity: number, blending: THREE.Blending, fade: boolean): LineMaterial

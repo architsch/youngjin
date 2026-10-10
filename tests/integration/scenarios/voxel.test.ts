@@ -13,7 +13,7 @@ import ServerVoxelManager from "../../../src/server/voxel/serverVoxelManager";
 import AddVoxelBlockSignal from "../../../src/shared/voxel/types/update/addVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/removeVoxelBlockSignal";
 import MoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/moveVoxelBlockSignal";
-import RestrictedZone from "../../../src/shared/voxel/types/restrictedZone";
+import { addRestrictedZone } from "../helpers/restrictedZone";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
@@ -31,7 +31,6 @@ import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN,
     UNIT_VEC3, VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 import { PLAYER_HEIGHT } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import DoorObjectTypeConfig, { ENTRANCE_DOOR_OBJECT_ID } from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
-import { RoomVolumeConstructorMap } from "../../../src/shared/room/generation/maps/roomVolumeConstructorMap";
 import Room from "../../../src/shared/room/types/room";
 import RoomRuntimeMemory from "../../../src/shared/room/types/roomRuntimeMemory";
 import PhysicsManager from "../../../src/shared/physics/physicsManager";
@@ -556,7 +555,7 @@ describe("block edits, relayed or refused", () => {
 
     it("answers a refused add with what its cell holds", async () => {
         // A zone only the room's superuser builds in, and a voxel inside it.
-        const ZONE = new RestrictedZone(16, 17, 16, 17);
+        const ZONE = {rowMin: 16, rowMax: 17, colMin: 16, colMax: 17};
         const ZONED = {row: ZONE.rowMin, col: ZONE.colMin};
         await runScenario({
             name: "refused adds",
@@ -579,7 +578,7 @@ describe("block edits, relayed or refused", () => {
                 expect(texturesAt(ROW, COL)).toEqual(TEXTURES);
 
                 // The sender put a block up on their own screen, so where there is none they are told so.
-                room.voxelGrid.restrictedZones = [ZONE];
+                addRestrictedZone(room, ZONE);
                 expect(add(ZONED.row, ZONED.col, TEXTURES)).toEqual(
                     {add: [], remove: [quadIndexAt(ZONED.row, ZONED.col)]});
                 expect(blockAt(ZONED.row, ZONED.col)).toBe(false);

@@ -27,6 +27,7 @@ import RoomFile from "../../shared/room/types/roomFile";
 import UserRoomChangeResult from "./types/userRoomChangeResult";
 import RoomPickerUtil from "./util/roomPickerUtil";
 import HubRoomUtil from "./util/hubRoomUtil";
+import RoomValidationUtil from "../../shared/room/util/roomValidationUtil";
 
 const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
 const socketRoomContexts: {[roomID: string]: SocketRoomContext} = {};
@@ -150,8 +151,12 @@ const ServerRoomManager =
         if (roomID.length == 0)
             return {type: "rejected", reason: RoomChangeRejectionReasonEnumMap.RoomUnavailable};
 
-        if (SinglePlayerModeConfigMap[roomID] != undefined) // User is joining a single-player room.
+        const singlePlayerModeConfig = SinglePlayerModeConfigMap[roomID];
+        if (singlePlayerModeConfig != undefined) // User is joining a single-player room.
         {
+            if (singlePlayerModeConfig.adminOnly && !RoomValidationUtil.userIsAdmin(user))
+                return {type: "rejected", reason: RoomChangeRejectionReasonEnumMap.RoomUnavailable};
+
             await leavePreviousRoom(socketUserContext, prevRoomShouldExist, savePlayerMetadata);
             socketUserContext.isInSinglePlayerRoom = true;
             const mem = buildSinglePlayerRoomRuntimeMemory(roomID);
@@ -412,10 +417,10 @@ async function leavePreviousRoom(socketUserContext: SocketUserContext,
 }
 
 // A transient, content-less RoomRuntimeMemory for a single-player room: not stored, no physics world;
-// id and name are the mode. The client generates the content (see Room.encode).
+// id and name are the mode. The client fetches the content, and the settings with it (see
+// SinglePlayerModeConfig.roomPath).
 function buildSinglePlayerRoomRuntimeMemory(mode: string): RoomRuntimeMemory
 {
-    // Texture pack left empty; the client sets it while building the room.
     const room = new Room(mode /*id*/, mode /*roomName*/, RoomTypeEnumMap.SinglePlayer,
         "", "", "" /*texturePackPath*/, RoomPrefsUtil.getDefaultPrefsString(),
         new VoxelGrid([], new VoxelQuadsRuntimeMemory()),

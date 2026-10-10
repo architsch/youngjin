@@ -2,9 +2,7 @@ import Vec3 from "../../../shared/math/types/vec3";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
 import Room from "../../../shared/room/types/room";
-import RoomGenerationUtil from "../../../shared/room/generation/util/roomGenerationUtil";
-import SinglePlayerModeConfigMap from "../../../shared/singlePlayer/maps/singlePlayerModeConfigMap";
-import { PLAYER_HEIGHT } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import SinglePlayerRoomUtil from "../../../shared/singlePlayer/util/singlePlayerRoomUtil";
 import { NUM_VOXEL_COLS, NUM_VOXEL_ROWS, UNIT_VEC3, VOXEL_CELL_SIZE } from "../../../shared/system/sharedConstants";
 import ClientObjectManager from "../clientObjectManager";
 import ObjectFactory from "../factories/objectFactory";
@@ -17,18 +15,6 @@ const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 
 const ClientObjectUtil =
 {
-    // Room construction
-
-    // Single-player rooms arrive empty (see Room.encode), so the client generates their content from
-    // SinglePlayerModeConfig. Must run before anything reads room.voxelGrid / room.objectById.
-    buildSinglePlayerRoomContent: (room: Room): void =>
-    {
-        RoomGenerationUtil.generateRoomContent(room);
-        // buildRoom leaves roomID empty (only decodeWithParams stamps it), so backfill it.
-        for (const obj of Object.values(room.objectById))
-            obj.roomID = room.id;
-    },
-
     // Spawn Actions
 
     // How many objects spawnVoxelsFromGrid spawns.
@@ -78,9 +64,7 @@ const ClientObjectUtil =
 
     getSingleModePlayerPosition: (room: Room): Vec3 =>
     {
-        const config = SinglePlayerModeConfigMap[room.roomName];
-        const {entrancePos} = config.getRoomBuilderParams();
-        return {x: entrancePos.x, y: entrancePos.y + 0.5 * PLAYER_HEIGHT, z: entrancePos.z};
+        return SinglePlayerRoomUtil.getPlayerStartPos(room);
     },
 
     // Conditions

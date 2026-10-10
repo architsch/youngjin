@@ -12,7 +12,7 @@ import PhysicsVoxelUtil from "./physicsVoxelUtil";
 import PhysicsRoom from "../types/physicsRoom";
 import VoxelQueryUtil from "../../voxel/util/voxelQueryUtil";
 import { ATTACHMENT_HITBOX_INSET, COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS,
-    NUM_VOXEL_ROWS, VOXEL_CELL_SIZE } from "../../system/sharedConstants";
+    NUM_VOXEL_ROWS, VOXEL_CELL_SIZE, ZERO_VEC3 } from "../../system/sharedConstants";
 
 // Sequentially recycle each of the sets in the array (because there may be a function which uses multiple sets simultaneously).
 let colliderStatesTempNextIndex = 0;
@@ -50,11 +50,15 @@ const PhysicsColliderStateUtil =
         // This object's own footprint, not the type's: the scale is applied before anything else, so an
         // attached object's inset stays an absolute distance whatever size the object is.
         const hitboxSize = ObjectScaleUtil.getObjectSize(objectTypeIndex, transform.scale);
+        // An object that stands out from its face has its origin on the face and its box in front of it (see
+        // ObjectAttachmentConfig.standsOut).
+        const standOutDist = objectTypeConfig.attachment?.standsOut ? 0.5 * hitboxSize.z : 0;
+        const standOutDir = (standOutDist > 0) ? Geometry3DUtil.getAxisFacingBasis(transform.dir).normal : ZERO_VEC3;
         const hitbox: AABB3 = {
             center: {
-                x: transform.pos.x,
-                y: transform.pos.y,
-                z: transform.pos.z
+                x: transform.pos.x + standOutDist * standOutDir.x,
+                y: transform.pos.y + standOutDist * standOutDir.y,
+                z: transform.pos.z + standOutDist * standOutDir.z
             },
             halfSize: objectTypeConfig.attachment
                 ? getAttachedHalfSize(hitboxSize, transform.dir)

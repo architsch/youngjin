@@ -21,7 +21,6 @@ import { FunnelMilestoneEnumMap } from "../analytics/types/funnelMilestone";
 import MoveVoxelBlockSignal from "../../shared/voxel/types/update/moveVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../shared/voxel/types/update/removeVoxelBlockSignal";
 import SetVoxelQuadTextureSignal from "../../shared/voxel/types/update/setVoxelQuadTextureSignal";
-import SetRestrictedZonesSignal from "../../shared/voxel/types/update/setRestrictedZonesSignal";
 import AddObjectSignal from "../../shared/object/types/addObjectSignal";
 import RemoveObjectSignal from "../../shared/object/types/removeObjectSignal";
 import SetObjectMetadataSignal from "../../shared/object/types/setObjectMetadataSignal";
@@ -144,13 +143,6 @@ const SocketsServer =
                     const signal = SetVoxelQuadTextureSignal.decode(bufferState) as SetVoxelQuadTextureSignal;
                     ServerVoxelManager.onSetVoxelQuadTextureSignalReceived(socketUserContext, signal);
                     recordEdit();
-                });
-                socketUserContext.onReceivedSignalFromUser("setRestrictedZonesSignal", (buffer: ArrayBuffer) => {
-                    const bufferState = new BufferState(new Uint8Array(buffer));
-                    const signal = SetRestrictedZonesSignal.decode(bufferState) as SetRestrictedZonesSignal;
-                    ServerVoxelManager.onSetRestrictedZonesSignalReceived(socketUserContext, signal);
-
-                    // Zone edits aren't "building".
                 });
                 socketUserContext.onReceivedSignalFromUser("addObjectSignal", (buffer: ArrayBuffer) => {
                     const bufferState = new BufferState(new Uint8Array(buffer));

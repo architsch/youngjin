@@ -1,7 +1,7 @@
 import ColorUtil from "../../math/util/colorUtil";
 import NumUtil from "../../math/util/numUtil";
 import StringUtil from "../../math/util/stringUtil";
-import { LABEL_COLOR_PALETTE_NAME } from "../../system/sharedConstants";
+import { LABEL_COLOR_PALETTE_NAME, OBJECT_NAME_MAX_LENGTH } from "../../system/sharedConstants";
 import AddObjectSignal from "../types/addObjectSignal";
 import { ObjectMetadataKeyEnumMap } from "../types/objectMetadataKey";
 import ObjectTypeConfigMap from "../maps/objectTypeConfigMap";
@@ -34,6 +34,12 @@ const LabelTextUtil =
     toName: (text: string): string =>
     {
         return text.replace(/\s+/g, " ").trim();
+    },
+    // Whether a text is short enough to be what an object with no text to show is called (an NPC, a volume).
+    isShortName: (text: string): boolean =>
+    {
+        const trimmed = text.trim();
+        return StringUtil.truncateByCodePoints(trimmed, OBJECT_NAME_MAX_LENGTH) == trimmed;
     },
     // The ink's palette index, defaulting to the nearest match for the type's default color (so the
     // picker opens on the color actually shown).

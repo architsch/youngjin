@@ -127,9 +127,9 @@ deleted, and one written as an essay gets cut to CLAUDE.md's **Code Comment Guid
 CLAUDE.md's rule that **room generation defines what a room is** — in full at
 [`../../rules/room-generation.md`](../../rules/room-generation.md) — is the invariant most easily
 broken by a change that looks unrelated. If this change introduced a room-level parameter, verify that
-`RoomGenerationUtil` and the procedural `RoomBuilder`s decide it, that every `SinglePlayerModeConfig`
-declares it on its `RoomBuilderParams`, and that any curated data behind it covers every option a
-room can be generated with. A parameter no generator sets is one that every room in the game silently
+`RoomGenerationUtil` decides it, that `RoomFile` carries it and every room file shipped under
+`public/app/assets/rooms` holds the value meant for it, and that any curated data behind it covers
+every option a room can be generated with. A parameter no generator sets is one that every room in the game silently
 holds the default value of.
 
 Contents are the narrower half of that rule, and reading it as "generation must place everything" is

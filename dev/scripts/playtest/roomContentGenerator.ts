@@ -3,10 +3,10 @@
 // (texture indices only mean something within the generated texture pack). TypeScript because the
 // generator is; stagingAdmin.js bundles it on demand (see generateRoomContent.js).
 
-// Registers the image maps generation places canvases and paints voxels from (as both entrypoints do).
+// Registers the image maps (as both entrypoints do).
 import "../../../src/shared/graphics/image/imageMapDependencies";
 
-import RoomGenerationUtil from "../../../src/shared/room/generation/util/roomGenerationUtil";
+import RoomGenerationUtil from "../../../src/shared/room/util/roomGenerationUtil";
 import EncodingUtil from "../../../src/shared/networking/util/encodingUtil";
 import ObjectGroup from "../../../src/shared/object/types/objectGroup";
 import { RoomType } from "../../../src/shared/room/types/roomType";
@@ -26,11 +26,11 @@ export interface GeneratedRoomContent
     objectCount: number;
 }
 
-// A `seed` reproduces the same interior (stable script coordinates); omitted, a fresh room is drawn.
+// Every generated room is the same empty one, so script coordinates written against it hold on every run.
 export function generateRoomContent(roomName: string, roomType: RoomType,
-    ownerUserID: string, ownerUserName: string, seed?: number): GeneratedRoomContent
+    ownerUserID: string, ownerUserName: string): GeneratedRoomContent
 {
-    const room = RoomGenerationUtil.generateRoom(roomName, roomType, ownerUserID, ownerUserName, seed);
+    const room = RoomGenerationUtil.generateRoom(roomName, roomType, ownerUserID, ownerUserName);
 
     const bufferState = EncodingUtil.startEncoding();
     room.voxelGrid.encode(bufferState);

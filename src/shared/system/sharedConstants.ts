@@ -22,6 +22,11 @@ export const UNIT_VEC3: Vec3 = {x: 1, y: 1, z: 1};
 
 export const TUTORIAL_SINGLE_PLAYER_MODE = "tutorial";
 export const SANDBOX_SINGLE_PLAYER_MODE = "sandbox";
+// Where an admin makes the rooms the other modes are played in (see @docs/networking/single_player_mode.md).
+export const ROOM_EDITOR_SINGLE_PLAYER_MODE = "roomEditor";
+
+// The tag of the object a single-player room's player starts under (see ObjectTagUtil).
+export const SINGLE_PLAYER_START_TAG = "start";
 
 // Database
 
@@ -39,6 +44,20 @@ export const OBJECT_INSTANCED_MESH_COMPOSITION_METADATA_MAX_LENGTH = 512;
 
 // In code points. Text past what a label's patch holds is cut off at its bottom (see LabelText).
 export const OBJECT_LABEL_MAX_LENGTH = 512;
+
+// In code points: what an object with no text to show is called (an NPC's name, a volume's), kept in its Label.
+export const OBJECT_NAME_MAX_LENGTH = 32;
+
+// In characters, commas included (see ObjectTagUtil). Short, and plain letters, as any object may carry tags.
+export const OBJECT_TAGS_MAX_LENGTH = 64;
+
+// In code points: room for any user's name (see ObjectMetadataKeyEnumMap.ZoneUserName). A member's is the
+// local part of an email address, with a short suffix where that was taken (see UserAuthGoogleUtil).
+export const OBJECT_USER_NAME_MAX_LENGTH = 72;
+
+// In place of a user's name, what keeps a restricted zone from every user but the room's superuser (see
+// RestrictedZoneUtil).
+export const ZONE_USER_NAME_FOR_NOBODY = "*";
 
 // Stored label colors are positions in this palette.
 export const LABEL_COLOR_PALETTE_NAME = "LabelColor";
@@ -257,8 +276,8 @@ export const VOXEL_CELL_SIZE = 0.5;
 export const MAX_ROOM_X = NUM_VOXEL_COLS * VOXEL_CELL_SIZE;
 export const MAX_ROOM_Z = NUM_VOXEL_ROWS * VOXEL_CELL_SIZE;
 
-// How thick room generation leaves a wall, in voxels: a world unit, as deep as a door needs behind it and as
-// wide as a texture tile. Generated rooms are laid out in steps of it (see RoomVolumeUtil).
+// How thick room generation leaves a room's boundary wall, in voxels: a world unit, as deep as a door needs
+// behind it and as wide as a texture tile (see RoomGenerationUtil).
 export const GENERATED_WALL_THICKNESS = 2;
 
 // The size of a physics voxel (see PhysicsVoxel): wide enough that most colliders lie in one or two, and a
@@ -280,19 +299,11 @@ export const NUM_VOXEL_QUADS_PER_VOXEL =
 // would silently clamp onto the wrong quad); tests assert it.
 export const NUM_VOXEL_QUADS_PER_ROOM = NUM_VOXEL_QUADS_PER_VOXEL * NUM_VOXEL_ROWS * NUM_VOXEL_COLS; // 401408
 
-// Max zones per room, sized for readability on the plan (see @docs/gameplay/restricted_zone.md).
-export const MAX_RESTRICTED_ZONES = 16;
-
-// Bytes per zone: row min/max and col min/max, one byte each.
-export const ENCODED_RESTRICTED_ZONE_BYTES = 4;
-
 // Worst-case encoded grid size (a fully solid room), for sizing the encoding buffer (see EncodingUtil).
 export const MAX_ENCODED_VOXEL_GRID_BYTES = 1 /* format version */ +
     NUM_VOXEL_ROWS * NUM_VOXEL_COLS *
         (2 /* floor and ceiling quads */ + 2 /* collision layer mask */ +
-            NUM_VOXEL_QUADS_PER_COLLISION_LAYER * NUM_COLLISION_LAYERS) +
-    1 /* how many restricted zones follow */ +
-    MAX_RESTRICTED_ZONES * ENCODED_RESTRICTED_ZONE_BYTES;
+            NUM_VOXEL_QUADS_PER_COLLISION_LAYER * NUM_COLLISION_LAYERS);
 
 // Upper bound on simultaneously visible quads (the voxel mesh's size; see VoxelQuadInstanceUtil): one per
 // solid/open boundary, so no room layout can exceed it.
@@ -313,9 +324,8 @@ export const ROOM_ALMOST_FULL_MARGIN = 4;
 
 // Gameplay
 
-// Where a generated multiplayer room's entrance door stands, in world units: the middle of its foot, on the
-// room's side of the boundary wall (admins may move it later, so don't read this as the current entrance).
-// Single-player rooms set their own.
+// Where a generated room's entrance door stands, in world units: the middle of its foot, on the room's side of
+// the boundary wall (admins may move it later, so don't read this as the current entrance).
 export const INITIAL_MULTI_PLAYER_ENTRANCE_POS: Vec3 =
     {x: 16.5, y: 0, z: MAX_ROOM_Z - GENERATED_WALL_THICKNESS * VOXEL_CELL_SIZE};
 

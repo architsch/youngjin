@@ -3,6 +3,7 @@ import GraphicsManager from "../../graphicsManager";
 import RoomAPIClient from "../../../networking/client/roomAPIClient";
 import RoomPrefs from "../../../../shared/room/types/roomPrefs";
 import RoomPrefsUtil from "../../../../shared/room/util/roomPrefsUtil";
+import { RoomTypeEnumMap } from "../../../../shared/room/types/roomType";
 import createDeferredSave from "../../../ui/util/deferredSave";
 import { notificationMessageObservable } from "../../../system/clientObservables";
 
@@ -21,6 +22,12 @@ const RoomLightingUtil =
     applyLocalEdit: (prefs: RoomPrefs, roomID: string) =>
     {
         const encodedPrefs = RoomPrefsUtil.encode(prefs);
+        // A single-player room is no server's to save, or to echo the edit back (see RoomEditorUtil).
+        if (App.getCurrentRoom()?.roomType == RoomTypeEnumMap.SinglePlayer)
+        {
+            applyToScene(encodedPrefs);
+            return;
+        }
         outstandingPrefs = encodedPrefs;
         applyToScene(encodedPrefs);
         trySave(encodedPrefs, roomID);

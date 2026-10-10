@@ -15,6 +15,8 @@ import CompositionThumbnailBuilder from "./builder/compositionThumbnailBuilder";
 import { ArcadeData } from "./data/arcadeData";
 import { LibraryData } from "./data/libraryData";
 import { ImageMapSeeds } from "./data/imageMapSeeds";
+import RoomMapBuilder from "./builder/roomMapBuilder";
+import { RoomMapSeeds } from "./data/roomMapSeeds";
 // Capacities decode compositions, which needs the part builders registered.
 import "../../shared/graphics/mesh/composition/instancedMeshCompositionBuilderMapDependencies";
 
@@ -70,6 +72,11 @@ export default async function SSG(): Promise<void>
     await new VoxelTexturePackBuilder(process.env.MODE == "ssg").build();
     for (const seed of Object.values(ImageMapSeeds))
         await new ImageMapBuilder(seed).build();
+
+    // Generate Room Maps
+
+    for (const seed of Object.values(RoomMapSeeds))
+        await new RoomMapBuilder(seed).build();
 
     // Generate Pre-Encoded Compositions, the mesh capacities they need, and their thumbnails
 

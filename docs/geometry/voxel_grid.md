@@ -6,7 +6,7 @@ Reference: @src/shared/voxel/types/voxel.ts , @src/shared/voxel/types/voxelGrid.
 - A room is a fixed-size square grid of **voxels** on XZ: square columns standing side by side, each as tall as the room. A voxel is addressed by its row (along Z) and its column (along X).
 - The room's height is split into equal **collision layers**, each as high as a voxel is wide. One layer of one voxel, a **cell layer**, is therefore a cube.
 - A cell layer holds one **voxel block** or none, and a block fills it exactly. Anything larger is built of several blocks.
-- Rows and columns mean voxels everywhere: edits, restricted zones and room generation's volumes all count them, and nothing counts a coarser grid. Only what stands in the room (objects, the camera) is placed in world units. A voxel is narrower than a world unit, and code goes between the two through `VoxelQueryUtil` rather than assuming the ratio.
+- Rows and columns mean voxels everywhere: edits, volumes and room generation all count them, and nothing counts a coarser grid. Only what stands in the room (objects, the camera) is placed in world units. A voxel is narrower than a world unit, and code goes between the two through `VoxelQueryUtil` rather than assuming the ratio.
 - Cell layers also have a flat index in which the layer varies fastest, so each voxel's column is contiguous. Volume-based systems such as lighting flood fills work on it.
 - The room is tall enough for two storeys. A storey is not built into the grid. It is just a slab of blocks placed one layer below mid-height, so both storeys get equal headroom. Leaving the slab out opens a tall space. Tops of caps are not drawn, so a camera above the room sees inside it.
 
@@ -17,10 +17,11 @@ Reference: @src/shared/voxel/types/voxel.ts , @src/shared/voxel/types/voxelGrid.
 - A texture tile spans a world unit, not a quad. A quad shows the part of the tile it lies over, so neighbouring faces in one texture read as one surface.
 
 ## Stored format
-- Room contents (voxels and restricted zones) are one versioned binary blob, not database rows. A voxel encodes which of its layers hold a block, and then only those layers. The blob is long but repetitive, and is compressed wherever it is stored or sent (see [user_state_management.md](../networking/user_state_management.md)).
+- Room contents (the voxels, then the room's objects) are one versioned binary blob, not database rows. A voxel encodes which of its layers hold a block, and then only those layers. The blob is long but repetitive, and is compressed wherever it is stored or sent (see [user_state_management.md](../networking/user_state_management.md)).
 - Loading reads the blob with the reader for its own version, then converts it forward one version at a time. The room is re-saved in the current version the next time it is written.
 - Every past version keeps a **reader** (how the bytes are laid out) and a **converter** to the next version (how to keep the room's meaning). Both live in `VoxelGridVersionMigration`, so `VoxelGrid` itself describes only the current format.
-- The versions whose cells were a world unit wide, with blocks that could fill a half or a quarter of one, are read and converted in a grid of their own (`LegacyVoxelGrid`). Only the last step writes voxels: a block for each part of a cell that was filled, and each zone over the voxels its cells became, so the room keeps its form.
+- The versions whose cells were a world unit wide, with blocks that could fill a half or a quarter of one, are read and converted in a grid of their own (`LegacyVoxelGrid`). Only the last step writes voxels: a block for each part of a cell that was filled, so the room keeps its form.
+- A grid no longer holds restricted zones. The ones an older version held are handed to the objects read from the same blob, which take them over as volumes (`ObjectGroupVersionMigration`; see [restricted_zone.md](../gameplay/restricted_zone.md)).
 
 ## Rendering
 - The whole room is one instanced mesh, sized for the most quads any layout can show: one per boundary between a block and open space. Instances are lent to visible quads and returned when those quads are hidden (`VoxelQuadInstanceUtil`).

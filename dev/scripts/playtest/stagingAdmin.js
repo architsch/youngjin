@@ -218,7 +218,6 @@ async function seedPopulation(db, bucket, version, count, runID, options)
 
         if (options.withContent)
         {
-            // Each room from its own seed, so the population varies like organic rooms.
             const generated = generateContentFor(`Playtest-${runID}-${i}`, userRef.id, user.userName);
             applyGeneratedContent(room, generated);
             blobs.push({ roomID: roomRef.id, content: generated.content });
@@ -243,7 +242,7 @@ async function seedPopulation(db, bucket, version, count, runID, options)
         collection: `${collection("users")} + ${collection("rooms")}`,
         userVersion, roomVersion, count, runID,
         withContent: Boolean(options.withContent),
-        contentSource: options.withContent ? "procedural generation (RoomGenerationUtil)" : "none",
+        contentSource: options.withContent ? "room generation (RoomGenerationUtil)" : "none",
         persist: Boolean(options.persist),
         owners: created,
     };
@@ -530,13 +529,15 @@ function unpackContent(stored)
 // share one though they differ in the spare bit of each quad (drawn in 4, unused in 5): a version-5 body
 // stamped as 4 reads back the same room. Version 6 is laid out like them, but spells block shapes with
 // that bit, so a room holding a shrunk block is no version-5 room and the downgrade is refused. Version 7
-// holds four voxels for each of their cells, so nothing older reads its body.
+// holds four voxels for each of their cells, so nothing older reads its body, and writes the room's
+// restricted zones after them, which version 8 no longer does: its body ends where version 7's zones began.
 const VOXEL_GRID_DECODER_BY_VERSION = {
     0: "decodeHalfHeightFormat", 1: "decodeHalfHeightFormat",
     2: "decodeCellsOnlyFormat", 3: "decodeCellsOnlyFormat",
     4: "decodeCellsAndZonesFormat", 5: "decodeCellsAndZonesFormat",
     6: "decodeShapedBlocksFormat",
-    7: "VoxelGrid's decodeBody",
+    7: "decodeCubesAndZonesFormat",
+    8: "VoxelGrid's decodeBody",
 };
 
 function contentPath(roomID) { return `${collection("rooms")}/${roomID}/${CONTENT_FILE}`; }

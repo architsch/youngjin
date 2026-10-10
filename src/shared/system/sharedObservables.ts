@@ -14,7 +14,8 @@ export const logEventObservable = new Observable<LogEvent>();
 // This observable notifies its listeners whenever a room's voxelGrid needs to be modified.
 export const voxelQuadChangeObservable = new Observable<VoxelQuadChange>();
 
-// Fires with a room id when its restricted zones are replaced (listeners read the room's own list).
+// Fires with a room id when one of its volumes changes, which may change its restricted zones (listeners read
+// them off the room; see RestrictedZoneUtil).
 export const restrictedZonesChangedObservable = new Observable<string>("");
 
 // Fires with a room id when its prefs are replaced (listeners read the room's own string).

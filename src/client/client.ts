@@ -10,6 +10,7 @@ import VersionSyncUtil from "./system/util/versionSyncUtil";
 import { ongoingClientProcessExists } from "./system/types/clientProcess";
 
 import "../shared/graphics/image/imageMapDependencies.ts";
+import "../shared/room/roomMapDependencies.ts";
 import "../shared/graphics/mesh/composition/instancedMeshCompositionBuilderMapDependencies.ts";
 
 // Store the client-side env variables that were injected by the server via the game page route.

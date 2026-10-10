@@ -11,10 +11,9 @@ import AddVoxelBlockSignal from "../../shared/voxel/types/update/addVoxelBlockSi
 import RemoveVoxelBlockSignal from "../../shared/voxel/types/update/removeVoxelBlockSignal";
 import SetVoxelQuadTextureSignal from "../../shared/voxel/types/update/setVoxelQuadTextureSignal";
 import { COLLISION_LAYER_NULL } from "../../shared/system/sharedConstants";
-import SetRestrictedZonesSignal from "../../shared/voxel/types/update/setRestrictedZonesSignal";
-import RestrictedZone from "../../shared/voxel/types/restrictedZone";
-import RestrictedZoneUtil from "../../shared/voxel/util/restrictedZoneUtil";
-import { voxelQuadChangeObservable } from "../../shared/system/sharedObservables";
+import ObjectTypeConfigMap from "../../shared/object/maps/objectTypeConfigMap";
+import VolumeObjectTypeConfig from "../../shared/object/types/objectTypeConfig/volumeObjectTypeConfig";
+import { restrictedZonesChangedObservable, voxelQuadChangeObservable } from "../../shared/system/sharedObservables";
 import VoxelQuadChange from "../../shared/voxel/types/voxelQuadChange";
 import AsyncUtil from "../../shared/system/util/asyncUtil";
 import SignalTypeConfigMap from "../../shared/networking/maps/signalTypeConfigMap";
@@ -145,13 +144,6 @@ const ClientVoxelManager =
             voxelBlockEditObservable.set({kind: "retexture", quadIndex});
         return success;
     },
-    // Redraws zone outlines. Sending to the server is the caller's job (see voxelQuadTextureOptions).
-    setRestrictedZones: (room: Room, restrictedZones: RestrictedZone[],
-        validate: boolean = true): boolean =>
-    {
-        return RestrictedZoneUtil.setRestrictedZones(App.getUser(), room, restrictedZones, validate);
-    },
-
     // --- Signal reception handlers (for signals from other clients via server) ---
 
     onAddVoxelBlockSignalReceived: async (signal: AddVoxelBlockSignal) => {
@@ -190,16 +182,18 @@ const ClientVoxelManager =
             signal.quadIndex, signal.textureIndex, false);
         refreshSelections();
     },
-    onSetRestrictedZonesSignalReceived: async (signal: SetRestrictedZonesSignal) => {
-        const success = await waitUntilSignalProcessingReady("setRestrictedZonesSignal",
-            () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == signal.roomID);
-        if (!success)
-            return;
-        ClientVoxelManager.setRestrictedZones(App.getCurrentRoom()!, signal.restrictedZones, false);
+}
 
-        // Zone changes can affect what the selection allows.
-        refreshSelections();
-    },
+// A restricted zone's change can change what the selection allows. A selected volume is left as it is: it is
+// what is changing, by its own tools, which no zone holds against.
+function onRestrictedZonesChanged(roomID: string)
+{
+    if (App.getCurrentRoom()?.id != roomID)
+        return;
+    const selected = objectSelectionObservable.peek()?.gameObject.params;
+    if (selected && ObjectTypeConfigMap.getConfigByIndex(selected.objectTypeIndex) == VolumeObjectTypeConfig)
+        return;
+    refreshSelections();
 }
 
 // Re-announces both selection kinds after any external edit, since edits can change what a selection
@@ -300,5 +294,7 @@ function getVoxelGameObject(room: Room, row: number, col: number): VoxelGameObje
 
 const waitUntilSignalProcessingReady = (signalType: string, successCond: () => boolean): Promise<boolean> =>
     AsyncUtil.waitUntilSuccess(successCond, SignalTypeConfigMap.getConfigByType(signalType).maxClientSideReceptionPeriod)
+
+restrictedZonesChangedObservable.addListener("clientVoxelManager", onRestrictedZonesChanged);
 
 export default ClientVoxelManager;

@@ -26,7 +26,7 @@ export default class SpeechBubble extends GameObjectComponent
 
     async onSpawn(): Promise<void>
     {
-        this.gameObject.obj.add(this.speechBubbleHotspot);
+        this.gameObject.bodyObj.add(this.speechBubbleHotspot);
         this.speechBubbleHotspot.position.set(0, this.componentConfig.yOffset as number, 0);
 
         const metadata = this.gameObject.params.metadata[ObjectMetadataKeyEnumMap.SentMessage];
@@ -105,6 +105,12 @@ export default class SpeechBubble extends GameObjectComponent
         this.displayMessage(value, true);
     }
 
+    // Shows the message again as it stands, for a speaker whose name has changed (see GameObject.getSpeakerName).
+    refresh(): void
+    {
+        this.displayMessage(this.gameObject.params.metadata[ObjectMetadataKeyEnumMap.SentMessage]?.str ?? "", false);
+    }
+
     // While the orbit frames this speaker, skip the bubble's own occlusion test: it disagrees
     // momentarily with OrbitOcclusionHider during camera turns, causing blinks.
     private orbitCameraIsFramingSpeaker(): boolean
@@ -130,7 +136,7 @@ export default class SpeechBubble extends GameObjectComponent
 
         if (prepend)
         {
-            const userName = this.gameObject.params.sourceUserName;
+            const userName = this.gameObject.getSpeakerName();
             const userNameSpan = document.createElement("span");
             userNameSpan.style.color = "oklch(87.9% 0.169 91.605)";
             userNameSpan.textContent = userName + (message.length > 0 ? ":" : "");

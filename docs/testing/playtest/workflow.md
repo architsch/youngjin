@@ -41,7 +41,7 @@ node dev/scripts/playtest/stagingAdmin.js cleanup [--run <runID>] [--all]
 - `--version` means "no newer than this" and is clamped per collection.
 - **Row versions** (`DBVersionMigration`) and **content blob versions** (the leading byte of the blob once unpacked, `VoxelGridVersionMigration`/`ObjectGroupVersionMigration`) are separate. Blobs are stored gzipped; the scripts unpack them, and store the ones they rewrite or seed plain, which the server reads as well. `downgrade-content` refuses to cross a decoder boundary, because that would produce a corrupt blob rather than an old one. Cross-decoder migration is tested offline in `voxel-grid-migration.test.ts`.
 - `seed-population` creates Members paired with their rooms. It is the only way to get owned rooms on staging, because production mode disables the dev user switch. **Pass `--with-content`**: a room without a blob cannot be entered and leaves an error in every later baseline.
-- Seeded content comes from the real `RoomGenerationUtil` with per-room seeds, and the row gets the texture pack that generation chose.
+- Seeded content comes from the real `RoomGenerationUtil`, and the row gets the texture pack that generation chose.
 - `set-user-type` promotes a guest minted through the real page (the server re-reads the user type on every request). It refuses rows that have an email and marks the row for `cleanup`. Use a plan's `sessionFile` to keep the session across the change.
 
 ## runPlan.js

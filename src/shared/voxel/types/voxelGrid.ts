@@ -1,13 +1,13 @@
 import Voxel from "./voxel";
 import BufferState from "../../networking/types/bufferState";
 import EncodableData from "../../networking/types/encodableData"
-import { MAX_RESTRICTED_ZONES, NUM_COLLISION_LAYERS, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
+import { NUM_COLLISION_LAYERS, NUM_VOXEL_COLS, NUM_VOXEL_ROWS } from "../../system/sharedConstants";
 import VoxelQuadsRuntimeMemory from "./voxelQuadsRuntimeMemory";
 import EncodableRawByteNumber from "../../networking/types/encodableRawByteNumber";
-import RestrictedZone from "./restrictedZone";
+import LegacyRestrictedZone from "../versionMigration/legacyRestrictedZone";
 import VoxelGridVersionMigration from "../versionMigration/voxelGridVersionMigration";
 
-const latestVersion = 7;
+const latestVersion = 8;
 
 // A voxel's mask when every one of its layers holds a block (see Voxel.blockLayerMask).
 const FULL_BLOCK_LAYER_MASK = (1 << NUM_COLLISION_LAYERS) - 1;
@@ -17,20 +17,19 @@ export default class VoxelGrid extends EncodableData
     voxels: Voxel[];
     quadsMem: VoxelQuadsRuntimeMemory; // This field is NOT part of the encoded data.
 
-    // Restricted zones (see @docs/gameplay/restricted_zone.md), stored and sent with the voxels.
-    restrictedZones: RestrictedZone[];
-
     // Format version this grid was read from (current if generated); not encoded. Also dates the objects
     // stored in the same blob (see ObjectGroupVersionMigration).
     sourceFormatVersion: number = latestVersion;
 
-    constructor(voxels: Voxel[], quadsMem: VoxelQuadsRuntimeMemory,
-        restrictedZones: RestrictedZone[] = [])
+    // The restricted zones an older version kept here, in voxels; not encoded. The objects read from the same
+    // blob take them over as volumes (see ObjectGroupVersionMigration).
+    legacyRestrictedZones: LegacyRestrictedZone[] = [];
+
+    constructor(voxels: Voxel[], quadsMem: VoxelQuadsRuntimeMemory)
     {
         super();
         this.voxels = voxels;
         this.quadsMem = quadsMem;
-        this.restrictedZones = restrictedZones;
     }
 
     // The version a grid encoded right now is written at, which is what an unread grid reports.
@@ -46,8 +45,6 @@ export default class VoxelGrid extends EncodableData
             for (let col = 0; col < NUM_VOXEL_COLS; ++col)
                 voxels[row * NUM_VOXEL_COLS + col] = new Voxel(quadsMem, row, col, FULL_BLOCK_LAYER_MASK);
         }
-        // No zones: a zone is a per-room owner decision generation can't make (see
-        // @docs/geometry/room_generation.md).
         return new VoxelGrid(voxels, quadsMem);
     }
 
@@ -57,8 +54,6 @@ export default class VoxelGrid extends EncodableData
 
         for (const voxel of this.voxels)
             voxel.encode(bufferState);
-
-        encodeRestrictedZones(bufferState, this.restrictedZones);
     }
 
     static decode(bufferState: BufferState): EncodableData
@@ -74,7 +69,7 @@ export default class VoxelGrid extends EncodableData
     }
 }
 
-// Current format: voxels, then restricted zones.
+// Current format: the voxels, row by row.
 function decodeBody(bufferState: BufferState, voxelGrid: VoxelGrid): void
 {
     for (let row = 0; row < NUM_VOXEL_ROWS; ++row)
@@ -85,31 +80,4 @@ function decodeBody(bufferState: BufferState, voxelGrid: VoxelGrid): void
                 Voxel.decodeWithParams(bufferState, voxelGrid.quadsMem, row, col) as Voxel;
         }
     }
-    voxelGrid.restrictedZones = decodeRestrictedZones(bufferState);
-}
-
-function encodeRestrictedZones(bufferState: BufferState, restrictedZones: RestrictedZone[]): void
-{
-        // Capped (single-byte count); an over-long list here means an upstream validation bug.
-    const numZones = Math.min(restrictedZones.length, MAX_RESTRICTED_ZONES);
-    if (restrictedZones.length > MAX_RESTRICTED_ZONES)
-    {
-        console.error(`VoxelGrid :: Too many restricted zones to encode ` +
-            `(${restrictedZones.length}, max ${MAX_RESTRICTED_ZONES})`);
-    }
-    new EncodableRawByteNumber(numZones).encode(bufferState);
-    for (let i = 0; i < numZones; ++i)
-        restrictedZones[i].encode(bufferState);
-}
-
-function decodeRestrictedZones(bufferState: BufferState): RestrictedZone[]
-{
-    const numZones = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
-    if (numZones > MAX_RESTRICTED_ZONES)
-        throw new Error(`Decoded restricted zone count is out of range (numZones = ${numZones})`);
-
-    const restrictedZones = new Array<RestrictedZone>(numZones);
-    for (let i = 0; i < numZones; ++i)
-        restrictedZones[i] = RestrictedZone.decode(bufferState) as RestrictedZone;
-    return restrictedZones;
 }

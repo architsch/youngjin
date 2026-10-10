@@ -15,9 +15,7 @@ import DBRoom from "../../../db/types/row/dbRoom";
 import Room from "../../../../shared/room/types/room";
 import RoomFile from "../../../../shared/room/types/roomFile";
 import RoomValidationUtil from "../../../../shared/room/util/roomValidationUtil";
-import BufferState from "../../../../shared/networking/types/bufferState";
-import { MAX_ENCODED_OBJECTS_BYTES } from "../../../../shared/networking/util/encodingUtil";
-import { MAX_ENCODED_VOXEL_GRID_BYTES } from "../../../../shared/system/sharedConstants";
+import ServerRoomFileUtil, { MAX_ROOM_FILE_BYTES } from "../../../room/util/serverRoomFileUtil";
 
 const RoomRouter = express.Router();
 
@@ -25,8 +23,6 @@ const RoomRouter = express.Router();
 const ROOM_LIST_PAGE_SIZE = 10;
 // Search scan cap: Firestore has no substring queries, so search filters a paged scan in memory.
 const ROOM_SEARCH_MAX_SCAN = 500;
-// A room file is written through the encoding buffer (see EncodingUtil), so none is longer than it.
-const MAX_ROOM_FILE_BYTES = MAX_ENCODED_VOXEL_GRID_BYTES + MAX_ENCODED_OBJECTS_BYTES;
 
 // Regular rooms: a member's one owned room. Hubs: admin-only world-building.
 RoomRouter.post("/create_room", UserIdentificationUtil.identifyRegisteredUser, async (req: Request, res: Response): Promise<void> => {
@@ -173,7 +169,7 @@ RoomRouter.post("/load_room_file", UserIdentificationUtil.identifyAdmin,
     let roomFile: RoomFile;
     try
     {
-        roomFile = RoomFile.decodeWithParams(new BufferState(new Uint8Array(req.body)), roomID) as RoomFile;
+        roomFile = ServerRoomFileUtil.decode(req.body, roomID);
     }
     catch (err)
     {

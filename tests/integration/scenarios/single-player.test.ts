@@ -2,8 +2,9 @@
  * Scenario tests: single-player mode (see @docs/networking/single_player_mode.md).
  * Server: the room is never loaded or stored (a transient, content-less descriptor), the user isn't a
  * participant, the context is flagged, lastRoomID isn't persisted, and every room-mutating handler bails.
- * Shared: the wire format omits content, the generator builds the tutorial room, the tutorial's edit mode
- * opens on the wall ahead and builds against a face beside it, and the tutorial step graph is well-formed.
+ * Shared: the wire format omits content, the tutorial room's file holds what its steps act on, the tutorial's
+ * edit mode opens on the wall ahead and builds against a face beside it, and the tutorial step graph is
+ * well-formed.
  */
 import { describe, it, expect, beforeEach, vi, Mock } from "vitest";
 
@@ -50,7 +51,13 @@ import ServerRoomManager from "../../../src/server/room/serverRoomManager";
 import ServerObjectManager from "../../../src/server/object/serverObjectManager";
 import ServerVoxelManager from "../../../src/server/voxel/serverVoxelManager";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
-import RoomGenerationUtil from "../../../src/shared/room/generation/util/roomGenerationUtil";
+import RoomGenerationUtil from "../../../src/shared/room/util/roomGenerationUtil";
+import RoomVolume from "../../../src/shared/room/types/roomVolume";
+import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
+import VolumeObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/volumeObjectTypeConfig";
+import ObjectTagUtil from "../../../src/shared/object/util/objectTagUtil";
+import SinglePlayerRoomUtil from "../../../src/shared/singlePlayer/util/singlePlayerRoomUtil";
+import { createTestRoom } from "../helpers/roomContent";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import { voxelQuadChangeObservable } from "../../../src/shared/system/sharedObservables";
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
@@ -77,7 +84,7 @@ import { voxelQuadSelectionObservable } from "../../../src/client/system/clientO
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
 import { PLAYER_HEIGHT } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, HUB_ROOM_ID_KEYWORD, MAX_ROOM_X, MAX_ROOM_Z,
-    NUM_VOXEL_COLS, NUM_VOXEL_ROWS, STOREY_FLOOR_COLLISION_LAYER,
+    NUM_VOXEL_COLS, NUM_VOXEL_ROWS, ROOM_EDITOR_SINGLE_PLAYER_MODE, SANDBOX_SINGLE_PLAYER_MODE, SINGLE_PLAYER_START_TAG, STOREY_FLOOR_COLLISION_LAYER,
     TUTORIAL_SINGLE_PLAYER_MODE, UNIT_VEC3, VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
@@ -90,6 +97,46 @@ import RemoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/remov
 import MoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/moveVoxelBlockSignal";
 import SetVoxelQuadTextureSignal from "../../../src/shared/voxel/types/update/setVoxelQuadTextureSignal";
 import { FeatureFlag } from "../../../src/shared/system/types/featureFlag";
+import User from "../../../src/shared/user/types/user";
+import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
+import RoomValidationUtil from "../../../src/shared/room/util/roomValidationUtil";
+
+/** The tutorial room as its file holds it (see SinglePlayerModeConfig.roomPath). */
+function loadTutorialRoom(): Room
+{
+    return createTestRoom(TUTORIAL_SINGLE_PLAYER_MODE, TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
+}
+
+/**
+ * What the tutorial's steps act on in the room, found as they find it (see SinglePlayerRoomQueryUtil): the walls
+ * that come down by their volumes' names, and where the player starts. `arrival` is the space they start in: how
+ * far its floor runs along the row and the col of the voxel they stand on.
+ */
+function getTutorialLayout(room: Room): {start: {x: number, z: number}, arrival: {rowMin: number, rowMax: number,
+    colMin: number, colMax: number}, wall1: RoomVolume, wall2: RoomVolume}
+{
+    const volume = (name: string) => VolumeObjectTypeConfig.util.getRoomVolume(
+        VolumeObjectTypeConfig.util.findByName(room, name)!.transform);
+    const start = SinglePlayerRoomUtil.getPlayerStartPos(room);
+    const startRow = VoxelQueryUtil.getVoxelRowFromWorldZ(start.z);
+    const startCol = VoxelQueryUtil.getVoxelColFromWorldX(start.x);
+    const reach = (stepRow: number, stepCol: number) => {
+        let n = 0;
+        while (!VoxelQueryUtil.isVoxelBlockPresentAt(room.voxelGrid.voxels,
+            startRow + (n + 1) * stepRow, startCol + (n + 1) * stepCol, COLLISION_LAYER_MIN))
+        {
+            ++n;
+        }
+        return n;
+    };
+    return {
+        start: {x: start.x, z: start.z},
+        arrival: {rowMin: startRow - reach(-1, 0), rowMax: startRow + reach(1, 0),
+            colMin: startCol - reach(0, -1), colMax: startCol + reach(0, 1)},
+        wall1: volume("wall1"),
+        wall2: volume("wall2"),
+    };
+}
 
 describe("single-player scenarios", () => {
     beforeEach(() => {
@@ -112,6 +159,53 @@ describe("single-player scenarios", () => {
                 expect(users[0].socketUserContext.isInSinglePlayerRoom).toBe(true);
             },
         });
+    });
+
+    it("lets an admin into the room editor, and nobody else", async () => {
+        await runScenario({
+            name: "entering the room editor",
+            rooms: [EMPTY_HUB],
+            users: [userAtCenter("hub", { userType: UserTypeEnumMap.Admin }), userAtCenter("hub", { userType: UserTypeEnumMap.Member }),
+                userAtCenter("hub")],
+            assertions: async ({ harness, users }) => {
+                const [admin, member, guest] = users;
+                expect(SinglePlayerModeConfigMap[ROOM_EDITOR_SINGLE_PLAYER_MODE].adminOnly).toBe(true);
+
+                // Whoever is refused stays in the room they asked from.
+                for (const user of [member, guest])
+                {
+                    const result = await ServerRoomManager.changeUserRoom(user.socketUserContext,
+                        ROOM_EDITOR_SINGLE_PLAYER_MODE, true, true, false);
+                    expect(result.type).toBe("rejected");
+                    expect(user.socketUserContext.isInSinglePlayerRoom).toBe(false);
+                    expect(ServerRoomManager.currentRoomIDByUserID[user.user.id]).toBe("hub");
+                }
+
+                // The admin leaves the hub for a room the server keeps nothing of.
+                const result = await ServerRoomManager.changeUserRoom(admin.socketUserContext,
+                    ROOM_EDITOR_SINGLE_PLAYER_MODE, true, true, false);
+                expect(result).toEqual({type: "success", newRoomID: ROOM_EDITOR_SINGLE_PLAYER_MODE});
+                expect(admin.socketUserContext.isInSinglePlayerRoom).toBe(true);
+                expect(ServerRoomManager.currentRoomIDByUserID[admin.user.id]).toBeUndefined();
+                expect(harness.isRoomLoaded(ROOM_EDITOR_SINGLE_PLAYER_MODE)).toBe(false);
+            },
+        });
+    });
+
+    it("keeps the tutorial and the sandbox open to anybody", () => {
+        expect(SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE].adminOnly).toBe(false);
+        expect(SinglePlayerModeConfigMap[SANDBOX_SINGLE_PLAYER_MODE].adminOnly).toBe(false);
+    });
+
+    it("puts whoever is in the sandbox or the room editor above the room's rules, and nobody in the tutorial", () => {
+        const roomOf = (mode: string) => createTestRoom(mode, mode, RoomTypeEnumMap.SinglePlayer);
+        for (const userType of [UserTypeEnumMap.Admin, UserTypeEnumMap.Member, UserTypeEnumMap.Guest])
+        {
+            const user = new User("somebody", "Somebody", userType, "", "");
+            expect(RoomValidationUtil.isRoomSuperuser(user, roomOf(SANDBOX_SINGLE_PLAYER_MODE))).toBe(true);
+            expect(RoomValidationUtil.isRoomSuperuser(user, roomOf(ROOM_EDITOR_SINGLE_PLAYER_MODE))).toBe(true);
+            expect(RoomValidationUtil.isRoomSuperuser(user, roomOf(TUTORIAL_SINGLE_PLAYER_MODE))).toBe(false);
+        }
     });
 
     it("does not persist lastRoomID when joining a single-player room", async () => {
@@ -146,9 +240,8 @@ describe("single-player scenarios", () => {
             assertions: ({ users }) => {
                 const ctx = users[0].socketUserContext;
                 const userID = users[0].user.id;
-                const m = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE].getRoomBuilderParams();
                 // A real dividing-wall quad, so a misbehaving handler would have something to touch.
-                const wall = m.volumes.wall1;
+                const wall = getTutorialLayout(loadTutorialRoom()).wall1;
                 const wallQuad = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(
                     wall.rowMin, wall.colMin, COLLISION_LAYER_MIN);
                 const transform = new ObjectTransform({ x: 1, y: 0, z: 1 }, { x: 0, y: 0, z: 1 },
@@ -207,80 +300,96 @@ describe("single-player room wire format", () => {
     });
 });
 
-describe("single-player room generation", () => {
-    // The shared generator (also used by the client) must build what the tutorial's steps take apart.
-    it("generates the tutorial room with the walls its steps take down", () => {
-        const { voxelGrid, objectGroup } = RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
-        const m = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE].getRoomBuilderParams();
+describe("the tutorial room's file", () => {
+    // The room is made by hand and read from a file, so what the tutorial's steps act on has to be in it.
+    it("holds the walls its steps take down, each under a volume of its name, and what the steps find by tag", () => {
+        const room = loadTutorialRoom();
+        const layout = getTutorialLayout(room);
 
         // Both walls stand initially (each is removed by a later step), over every voxel they cover.
-        for (const volume of [m.volumes.wall1, m.volumes.wall2])
+        for (const volume of [layout.wall1, layout.wall2])
         {
             for (let row = volume.rowMin; row <= volume.rowMax; ++row)
             {
                 for (let col = volume.colMin; col <= volume.colMax; ++col)
                 {
-                    const voxel = VoxelQueryUtil.getVoxel(voxelGrid.voxels, row, col);
+                    const voxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, col);
                     expect(voxel).toBeDefined();
                     expect(VoxelQueryUtil.isVoxelBlockPresent(voxel!, COLLISION_LAYER_MIN)).toBe(true);
                 }
             }
         }
 
-        // The fallback floor patch (see the edit mode opening tests) is bare, so a block built on it fits.
-        const floorVoxel = VoxelQueryUtil.getVoxel(voxelGrid.voxels,
-            VoxelQueryUtil.getVoxelRowFromWorldZ(m.hotspots.floor.z),
-            VoxelQueryUtil.getVoxelColFromWorldX(m.hotspots.floor.x));
+        // The floor the player starts on (edit mode's fallback opening; see the tests below) is bare, so a block
+        // built on it fits.
+        const floorVoxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels,
+            VoxelQueryUtil.getVoxelRowFromWorldZ(layout.start.z),
+            VoxelQueryUtil.getVoxelColFromWorldX(layout.start.x));
         expect(floorVoxel).toBeDefined();
         expect(VoxelQueryUtil.isVoxelBlockPresent(floorVoxel!, COLLISION_LAYER_MIN)).toBe(false);
 
-        // The two the tutorial addresses by name.
-        expect(objectGroup.objectById["npc"]).toBeDefined();
-        expect(objectGroup.objectById["door"]).toBeDefined();
+        // The two the tutorial finds by tag, and the mark the player starts under.
+        expect(ObjectTagUtil.findObject(room, "npc")?.objectTypeIndex).toBe(ObjectTypeConfigMap.getIndexByType("Npc"));
+        expect(ObjectTagUtil.findObject(room, "exit")?.objectTypeIndex).toBe(ObjectTypeConfigMap.getIndexByType("Door"));
+        expect(ObjectTagUtil.findObject(room, SINGLE_PLAYER_START_TAG)).toBeDefined();
     });
 
-    it("dresses the tutorial's two fixtures itself, the same way every time", () => {
-        // The tutorial's two fixtures have explicit appearances, which must be deterministic.
-        const first = RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
-        const second = RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
+    it("puts the player down on the floor under the object tagged as the start", () => {
+        const room = loadTutorialRoom();
+        const marker = ObjectTagUtil.findObject(room, SINGLE_PLAYER_START_TAG)!.transform.pos;
+        const start = SinglePlayerRoomUtil.getPlayerStartPos(room);
 
-        for (const objectId of ["npc", "door"])
+        // Where the mark was put, which its stored position reads a little off; standing on the room's own
+        // floor, well under it.
+        expect(start).toEqual({x: 5.5, y: 0.5 * PLAYER_HEIGHT, z: 30.5});
+        expect(start.x).toBeCloseTo(marker.x, 2);
+        expect(start.z).toBeCloseTo(marker.z, 2);
+        expect(marker.y).toBeGreaterThan(PLAYER_HEIGHT);
+    });
+
+    it("starts the player in the middle of a room that marks no start", () => {
+        const room = createTestRoom(SANDBOX_SINGLE_PLAYER_MODE, SANDBOX_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
+        expect(ObjectTagUtil.findObject(room, SINGLE_PLAYER_START_TAG)).toBeUndefined();
+        expect(SinglePlayerRoomUtil.getPlayerStartPos(room)).toEqual(
+            {x: 0.5 * MAX_ROOM_X + 0.5, y: 0.5 * PLAYER_HEIGHT, z: 0.5 * MAX_ROOM_Z + 0.5});
+    });
+
+    it("comes with its two fixtures dressed, and the receptionist named", () => {
+        const room = loadTutorialRoom();
+        const npc = ObjectTagUtil.findObject(room, "npc")!;
+        const door = ObjectTagUtil.findObject(room, "exit")!;
+
+        for (const fixture of [npc, door])
         {
-            const appearance = first.objectGroup.objectById[objectId]
-                .metadata[ObjectMetadataKeyEnumMap.InstancedMeshComposition];
-            expect(appearance, `the tutorial's ${objectId} was left undressed`).toBeDefined();
+            const appearance = fixture.metadata[ObjectMetadataKeyEnumMap.InstancedMeshComposition];
+            expect(appearance, `the tutorial's ${fixture.objectId} was left undressed`).toBeDefined();
             expect(appearance!.str.length).toBeGreaterThan(0);
-            expect(appearance!.str).toBe(second.objectGroup.objectById[objectId]
-                .metadata[ObjectMetadataKeyEnumMap.InstancedMeshComposition]!.str);
         }
-
-        const door = first.objectGroup.objectById["door"];
+        expect(LabelTextUtil.getText(npc)).toBe("Receptionist");
         expect(LabelTextUtil.getText(door)).toBe("Door");
-        expect(LabelTextUtil.getColorIndex(door)).toBe(
-            LabelTextUtil.getColorIndex(second.objectGroup.objectById["door"]));
     });
 
     it("wires the tutorial's door to the hubs, as the room's own way in", () => {
         // The hubs keyword hands the player to the balancer (see DoorGameObject and RoomPickerUtil); naming
         // one hub could hit a full or deleted room, and naming nothing would lock the door.
-        const { objectGroup } = RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
-        const door = objectGroup.objectById["door"];
+        const door = ObjectTagUtil.findObject(loadTutorialRoom(), "exit")!;
 
         expect(DoorObjectTypeConfig.util.getDoorType(door)).toBe(DoorTypeEnumMap.DefaultEntrance);
         expect(DoorObjectTypeConfig.util.getDestinationRoomId(door)).toBe(HUB_ROOM_ID_KEYWORD);
         expect(DoorObjectTypeConfig.util.getDestinationDoorLabel(door)).toBe("");
     });
 
-    it("builds the tutorial room as a single storey the camera can look down into", () => {
+    it("is a single storey the camera can look down into", () => {
         // One storey, with its capping slab left whole.
-        const { voxelGrid } = RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
-        const m = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE].getRoomBuilderParams();
+        const room = loadTutorialRoom();
+        const layout = getTutorialLayout(room);
+        const voxelGrid = room.voxelGrid;
 
-        // Every space the tutorial opens is on the first storey and none on the storey above.
-        for (const volume of Object.values(m.volumes))
+        // The walls the tutorial opens are on the first storey and reach none of the storey above.
+        for (const volume of [layout.wall1, layout.wall2])
         {
             expect(volume.collisionLayerMax,
-                "a tutorial space reaches past the slab that caps the room").toBeLessThan(
+                "a tutorial wall reaches past the slab that caps the room").toBeLessThan(
                 STOREY_FLOOR_COLLISION_LAYER);
         }
 
@@ -302,22 +411,6 @@ describe("single-player room generation", () => {
             }
         }
     });
-
-    it("emits per-quad change events during generation (why the client listens only after voxels spawn)", () => {
-        // Generation emits voxelQuadChangeObservable events, so the client subscribes only once voxel game
-        // objects exist (ClientVoxelManager loads after ClientObjectManager). Guards that it does emit them.
-        let fireCount = 0;
-        voxelQuadChangeObservable.addListener("test-spy", () => { fireCount++; });
-        try
-        {
-            RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
-            expect(fireCount).toBeGreaterThan(0);
-        }
-        finally
-        {
-            voxelQuadChangeObservable.removeListener("test-spy");
-        }
-    });
 });
 
 describe("tutorial edit mode opening", () => {
@@ -327,9 +420,8 @@ describe("tutorial edit mode opening", () => {
     // voxel's low side) by worldAt.
     const worldAt = (rowOrCol: number) => rowOrCol * VOXEL_CELL_SIZE;
     const config = SinglePlayerModeClientConfigMap[TUTORIAL_SINGLE_PLAYER_MODE];
-    const m = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE].getRoomBuilderParams();
-    const room = { voxelGrid: RoomGenerationUtil.generateRoom(
-        TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer).voxelGrid } as Room;
+    const room = loadTutorialRoom();
+    const layout = getTutorialLayout(room);
 
     // The eye of a user standing on the floor.
     const EYE_Y = 0.5 * PLAYER_HEIGHT + FirstPersonCameraPose.restPosition.y;
@@ -376,17 +468,17 @@ describe("tutorial edit mode opening", () => {
     }
 
     // The dividing wall, whose first col holds its faces toward the arrival room.
-    const dividingWall = m.volumes.wall1;
+    const dividingWall = layout.wall1;
 
     it("opens on the drawn face of the wall straight ahead, a little below the eye", () => {
         // In the arrival room, looking down its length toward the wall at its far end.
-        const eye = voxelMiddleAt({x: m.entrancePos.x, z: m.entrancePos.z - 3});
+        const eye = voxelMiddleAt({x: layout.start.x, z: layout.start.z - 3});
         const quadIndex = openingQuadIndex(eye, {x: eye.x, z: 0});
         const quad = describeQuad(quadIndex);
 
         // The wall's last voxel row before the room, in the col the eye looks along.
         expect({row: quad.row, col: quad.col, facing: quad.facing}).toEqual({
-            row: m.volumes.room1.rowMin - 1,
+            row: layout.arrival.rowMin - 1,
             col: VoxelQueryUtil.getVoxelColFromWorldX(eye.x), facing: "+z"});
         expect(VoxelQueryUtil.isVoxelQuadVisible(room.voxelGrid.voxels, quadIndex), "the face is not drawn").toBe(true);
 
@@ -407,7 +499,7 @@ describe("tutorial edit mode opening", () => {
     it("follows a slanting look to where it meets the wall", () => {
         // One block across for every block along, from where the look crosses rows and cols by turns and so
         // grazes no corner.
-        const eye = {x: worldAt(m.volumes.room1.colMin) + 0.5, z: worldAt(m.volumes.room1.rowMax + 1) - 1.8};
+        const eye = {x: worldAt(layout.arrival.colMin) + 0.5, z: worldAt(layout.arrival.rowMax + 1) - 1.8};
         const quad = describeQuad(openingQuadIndex(eye, {x: eye.x + 10, z: eye.z - 10}));
 
         expect({row: quad.row, col: quad.col, facing: quad.facing}).toEqual({
@@ -415,14 +507,14 @@ describe("tutorial edit mode opening", () => {
             col: dividingWall.colMin, facing: "-x"});
     });
 
-    it("falls back to the room's own floor patch when no block stands ahead", () => {
+    it("falls back to the floor the user started on when no block stands ahead", () => {
         // Beyond the grid, looking away from the room.
-        const x = m.entrancePos.x;
+        const x = layout.start.x;
         const quadIndex = openingQuadIndex({x, z: MAX_ROOM_Z + 2}, {x, z: MAX_ROOM_Z + 10});
 
         expect(quadIndex).toBe(VoxelQueryUtil.getFloorVoxelQuadIndex(
-            VoxelQueryUtil.getVoxelRowFromWorldZ(m.hotspots.floor.z),
-            VoxelQueryUtil.getVoxelColFromWorldX(m.hotspots.floor.x)));
+            VoxelQueryUtil.getVoxelRowFromWorldZ(layout.start.z),
+            VoxelQueryUtil.getVoxelColFromWorldX(layout.start.x)));
     });
 
     // A face on the dividing wall, midway along it, standing in for the one edit mode opened on.
@@ -495,7 +587,7 @@ describe("tutorial edit mode opening", () => {
             {row: openedOnRow - 1, col: dividingWall.colMin - 1, collisionLayer: COLLISION_LAYER_MIN + 2, facing: "-x"});
 
         // Which is a face the built block really draws, covering the wall's.
-        const builtRoom = RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
+        const builtRoom = loadTutorialRoom();
         expect(VoxelUpdateUtil.addVoxelBlock(undefined, builtRoom.voxelGrid.voxels, builtQuadIndex)).toBe(true);
         expect(VoxelQueryUtil.isVoxelQuadVisible(builtRoom.voxelGrid.voxels, builtQuadIndex)).toBe(true);
         expect(VoxelQueryUtil.isVoxelQuadVisible(builtRoom.voxelGrid.voxels, targetQuadIndex)).toBe(false);
@@ -638,13 +730,16 @@ describe("tutorial step graph", () => {
 
     it("takes each of its two walls down whole when their steps come, up to the slab that caps the room", () => {
         const steps = config.loadSteps();
-        const m = SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE].getRoomBuilderParams();
-        const { voxelGrid } = RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE, RoomTypeEnumMap.SinglePlayer);
+        const room = loadTutorialRoom();
+        const layout = getTutorialLayout(room);
+        const voxelGrid = room.voxelGrid;
+        // The steps find each wall in the room they are run in.
+        (App.getCurrentRoom as Mock).mockReturnValue(room);
         const standsAt = (x: number, layer: number, z: number) => VoxelQueryUtil.isPointInVoxelBlock(voxelGrid.voxels,
             {x, y: VoxelQueryUtil.getWorldYAtVoxelCollisionLayerCenter(layer), z});
         // Each wall's box in the room, sampled a quarter unit apart, so every voxel under it is asked.
         const worldAt = (rowOrCol: number) => rowOrCol * VOXEL_CELL_SIZE;
-        const forEachPointOf = (wall: typeof m.volumes.wall1, visit: (x: number, layer: number, z: number) => void) => {
+        const forEachPointOf = (wall: RoomVolume, visit: (x: number, layer: number, z: number) => void) => {
             for (let x = worldAt(wall.colMin) + 0.125; x < worldAt(wall.colMax + 1); x += 0.25)
             {
                 for (let z = worldAt(wall.rowMin) + 0.125; z < worldAt(wall.rowMax + 1); z += 0.25)
@@ -654,7 +749,7 @@ describe("tutorial step graph", () => {
                 }
             }
         };
-        const walls = [m.volumes.wall1, m.volumes.wall2];
+        const walls = [layout.wall1, layout.wall2];
         for (const wall of walls)
             forEachPointOf(wall, (x, layer, z) => expect(standsAt(x, layer, z), `(${x}, ${layer}, ${z}) at first`).toBe(true));
 
@@ -665,11 +760,13 @@ describe("tutorial step graph", () => {
         let numBlocksRemoved = 0;
         for (const removal of removals)
         {
-            for (let row = removal.rowStart(); row < removal.rowStart() + removal.numRows(); ++row)
+            const volume = removal.volume();
+            expect(volume, "a step takes down a wall the room has no volume for").toBeDefined();
+            for (let row = volume!.rowMin; row <= volume!.rowMax; ++row)
             {
-                for (let col = removal.colStart(); col < removal.colStart() + removal.numCols(); ++col)
+                for (let col = volume!.colMin; col <= volume!.colMax; ++col)
                 {
-                    for (let layer = removal.collisionLayerMin(); layer <= removal.collisionLayerMax(); ++layer)
+                    for (let layer = volume!.collisionLayerMin; layer <= volume!.collisionLayerMax; ++layer)
                     {
                         if (VoxelUpdateUtil.removeVoxelBlock(undefined, voxelGrid.voxels,
                             VoxelQueryUtil.getVoxelQuadIndex(row, col, "y", "+", layer)))

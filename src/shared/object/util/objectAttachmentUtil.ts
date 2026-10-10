@@ -64,10 +64,12 @@ const ObjectAttachmentUtil =
         });
         if (!supported)
             return false;
+        // One that stands out from its face needs every block its body reaches open instead.
+        const standOutDepth = getStandOutDepthInBlocks(objectTypeIndex, tr);
         let exposed = false;
-        forEachBlockBeside(tr, bounds, 1, 1, (row, col, layer) => {
+        forEachBlockBeside(tr, bounds, 1, Math.max(1, standOutDepth), (row, col, layer) => {
             exposed = blockIsOpen(voxels, row, col, layer);
-            return !exposed;
+            return (standOutDepth > 0) ? exposed : !exposed;
         });
         if (!exposed)
             return false;
@@ -406,6 +408,17 @@ function getSupportDepthInBlocks(objectTypeIndex: number, tr: ObjectTransform): 
     const supportDepth = ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex).attachment?.supportDepth ?? 0;
     const {normal} = Geometry3DUtil.getAxisFacingBasis(tr.dir);
     return Math.max(1, Math.ceil(supportDepth / ((normal.y != 0) ? COLLISION_LAYER_HEIGHT : VOXEL_CELL_SIZE)));
+}
+
+// How many blocks deep in front of its face an object reaches, if its type stands out from it (see
+// ObjectAttachmentConfig.standsOut); none for one that lies flat.
+function getStandOutDepthInBlocks(objectTypeIndex: number, tr: ObjectTransform): number
+{
+    if (!ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex).attachment?.standsOut)
+        return 0;
+    const depth = ObjectScaleUtil.getObjectSize(objectTypeIndex, tr.scale).z;
+    const {normal} = Geometry3DUtil.getAxisFacingBasis(tr.dir);
+    return Math.ceil(depth / ((normal.y != 0) ? COLLISION_LAYER_HEIGHT : VOXEL_CELL_SIZE) - EDGE_EPSILON);
 }
 
 function getDeepestSupport(): number

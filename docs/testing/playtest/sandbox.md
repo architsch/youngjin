@@ -16,10 +16,10 @@ node dev/scripts/e2eDevServer.js devnossg                        # a dev server 
 node dev/scripts/playtest/sandboxRunner.js --serve [--admin]     # hold a session open and drive it
 node dev/scripts/playtest/sandboxRunner.js <script.js> [--admin] [--headed] [--out=dir]
 node dev/scripts/playtest/sandboxRunner.js --probe               # boot, dump the visible UI, one screenshot
-node dev/scripts/playtest/sandboxRunner.js --serve --fresh-room [--room-type=hub] [--devuser=4] [--seed=N]
+node dev/scripts/playtest/sandboxRunner.js --serve --fresh-room [--room-type=hub] [--devuser=4]
 ```
 - The runner never starts a dev server; it exits with instructions if none answers.
-- `--fresh-room` opens a generated room from a fixed seed, owned by a seeded dev user and removed afterwards — for what the sandbox cannot host: generation itself, travel between rooms, and anything stored.
+- `--fresh-room` opens a newly generated room, owned by a seeded dev user and removed afterwards — for what the sandbox cannot host: generation itself, travel between rooms, and anything stored.
 - Screenshots land in `test-results/sandbox/` (git-ignored). **Read them.** The runner cannot tell a good frame from a half-loaded one.
 
 ## Driving a session
@@ -36,8 +36,9 @@ The bare `:4321/...` shorthand does not work under zsh. Ops share their names wi
 | `addBlocks` / `removeBlocks` | a box of blocks, or a doorway cut through one already standing |
 | `addObject` / `removeObject` | a canvas, a prop, a door, a lamp or a label on a cell's face (walls, or a block's top or underside), at its type's default size (a prop at its image's), by the game's own metadata keys |
 | `resizeObject` | a standing object at another size, in multiples of its type's step; the placement rule still applies, and the size it ended up with is returned |
-| `restrictedZones` / `texturePack` / `roomLighting` | room-level state; each reports when called with nothing |
-| `palettes` / `pictures` / `doorStyles` / `canvasFrameStyles` | the values to build out of, as the game uses them (each picture with the type that shows it) |
+| `restrictedZones` | the room's zones, each a volume of whole cells kept for a user (from floor to ceiling and for nobody, unless given); reports them when called with nothing |
+| `texturePack` / `roomLighting` | room-level state; each reports when called with nothing |
+| `palettes` / `pictures` / `doorStyles` / `canvasFrameStyles` | the values to build out of: a pack's curated palettes (`RoomPaletteMap`), and the rest as the game uses them (each picture with the type that shows it) |
 | `camera` / `cameraPose` | where the free camera stands and what it aims at, in world coordinates |
 | `cameraMode` | `"firstPerson"` to walk the player (e.g. to test movement or the view on stairs), `"free"` to go back |
 | `clearSandbox` | back to bare floor, between one test and the next |

@@ -22,6 +22,11 @@ const configByCategory: {[category: string]: ObjectCategoryConfig} =
     // With the doors, as many labels as the label atlas always has room for, even all at their largest
     // (see LabelText).
     [ObjectCategoryEnumMap.Label]: {maxCountPerRoom: 16},
+    // Characters a room's script plays, counted apart from the players it admits. Sizes the mesh instance pools
+    // they share with them (see InstancedMeshCapacityBuilder).
+    [ObjectCategoryEnumMap.Npc]: {maxCountPerRoom: 16},
+    // As many as can still be told apart by their outlines (see VolumeGameObject).
+    [ObjectCategoryEnumMap.Volume]: {maxCountPerRoom: 32},
 }
 
 const ObjectCategoryConfigMap =

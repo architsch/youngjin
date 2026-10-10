@@ -12,7 +12,6 @@ import AddVoxelBlockSignal from "../../voxel/types/update/addVoxelBlockSignal";
 import MoveVoxelBlockSignal from "../../voxel/types/update/moveVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../voxel/types/update/removeVoxelBlockSignal";
 import SetVoxelQuadTextureSignal from "../../voxel/types/update/setVoxelQuadTextureSignal";
-import SetRestrictedZonesSignal from "../../voxel/types/update/setRestrictedZonesSignal";
 import BufferState from "../types/bufferState";
 import SignalTypeConfig from "../types/signalTypeConfig";
 
@@ -108,14 +107,6 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
         minClientToServerSendInterval: 0,
         maxClientSideReceptionPeriod: 2000,
         decode: (bufferState: BufferState) => SetVoxelQuadTextureSignal.decode(bufferState),
-    }],
-    [14, { // Bidirectional (client <-> server)
-        // A superuser sends the room's full zone list; the server validates and relays.
-        signalType: "setRestrictedZonesSignal",
-        // Rate-limited, since zone drags can emit rapidly (unlike deliberate voxel edits).
-        minClientToServerSendInterval: 250,
-        maxClientSideReceptionPeriod: 2000,
-        decode: (bufferState: BufferState) => SetRestrictedZonesSignal.decode(bufferState),
     }],
 
     // User Signals

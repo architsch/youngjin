@@ -1,5 +1,6 @@
 import RequestRoomChangeSignal from "../../shared/room/types/requestRoomChangeSignal";
 import UserCommandSignal from "../../shared/user/types/userCommandSignal";
+import { ROOM_EDITOR_SINGLE_PLAYER_MODE } from "../../shared/system/sharedConstants";
 import App from "../app";
 import SocketsClient from "../networking/client/socketsClient";
 import { singlePlayerObservable } from "../system/clientObservables";
@@ -77,7 +78,9 @@ const SinglePlayerManager =
         runActions(SinglePlayerModeClientConfigMap[mode].onModeEnd());
         for (const name of Object.keys(variables))
             delete variables[name];
-        SocketsClient.emitUserCommandSignal(new UserCommandSignal("finishSinglePlayerMode"));
+        // (The room editor is nothing the server holds its user to: they came by it and may again.)
+        if (mode != ROOM_EDITOR_SINGLE_PLAYER_MODE)
+            SocketsClient.emitUserCommandSignal(new UserCommandSignal("finishSinglePlayerMode"));
         App.getUser().singlePlayerMode = "";
         singlePlayerObservable.set({mode: "", step: ""});
     },

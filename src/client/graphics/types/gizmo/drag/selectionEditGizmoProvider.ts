@@ -22,4 +22,7 @@ export default interface SelectionEditGizmoProvider
     // automation.
     getOutline: () => {middle: THREE.Vector3, facing: Vec3,
         corners: {corner: {x: number, y: number}, position: THREE.Vector3}[]} | null;
+    // Whether the handles show however far off the camera is (see SELECTION_HANDLE_MAX_DISTANCE): for a selection
+    // that can be large enough to be looked at only from afar. Absent, they don't.
+    handlesShowAtAnyDistance?: boolean;
 }

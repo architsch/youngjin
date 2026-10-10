@@ -1,6 +1,6 @@
 # The Admin Privilege
 
-Reference: @src/shared/room/util/roomValidationUtil.ts , @src/shared/object/types/objectTypeConfig/doorObjectTypeConfig.ts , @src/shared/object/types/objectTypeConfig/labelObjectTypeConfig.ts , @src/shared/object/util/adminPrefsUtil.ts , @src/server/user/util/userIdentificationUtil.ts
+Reference: @src/shared/room/util/roomValidationUtil.ts , @src/shared/object/types/objectTypeConfig/doorObjectTypeConfig.ts , @src/shared/object/types/objectTypeConfig/labelObjectTypeConfig.ts , @src/shared/object/types/objectTypeConfig/npcObjectTypeConfig.ts , @src/shared/object/types/objectTypeConfig/volumeObjectTypeConfig.ts , @src/shared/object/util/adminPrefsUtil.ts , @src/server/user/util/userIdentificationUtil.ts
 
 Admin is a user type that is granted manually in the database. Admins decide by hand how hubs connect through doors, which forms the world's room graph.
 
@@ -9,6 +9,9 @@ Admin is a user type that is granted manually in the database. Admins decide by 
 - Creating a new hub. The server otherwise creates one only when every hub is full.
 - Ordering the hubs, by setting each one's join priority (see [room_population.md](../networking/room_population.md)).
 - Saving a room to a file and loading one over it, in any room the admin is the superuser of (see [my_room.md](../networking/my_room.md#room-files)).
+- Laying NPCs (see [player_customization.md](../geometry/player_customization.md#npcs)) and tagging objects, in any room: what a single-player room's steps act on (see [single_player_mode.md](../networking/single_player_mode.md#rooms)).
+- Laying and editing volumes in any room, which is otherwise the room's superuser's to do (see [restricted_zone.md](restricted_zone.md#volumes)).
+- Building single-player rooms in the room editor (see [single_player_mode.md](../networking/single_player_mode.md#room-editor)).
 - Ghost mode: the admin's own character, body and speech bubble alike, is drawn for nobody, the admin included. Only drawing is affected; the character still moves and collides as usual.
 - Setting how the image choosers offer pictures: rearranging a chooser's thumbnails, setting the categories each is filed under, and adding, renaming and deleting the categories themselves, by hand, saving it all as the admin's settings file, and taking a saved file back to go on from (see [image_map.md](../graphics/image_map.md#chooser-ui)).
 
@@ -19,7 +22,8 @@ An object's admin-only settings live in its `AdminPrefs` metadata, one base-94 c
 
 ## Enforcement
 - `RoomValidationUtil` answers both "is this user an admin" and "is this user the room's superuser". Door and label operations run the superuser check on the client and the server.
-- `AdminPrefs` is admin-only on any object, by its own rule in `ObjectMetadataEntryMap`; a player may change it only on their own character. A saved value is restored only if the user is still an admin, so a demotion also clears ghost mode.
+- `AdminPrefs` is admin-only on any object, by its own rule in `ObjectMetadataEntryMap`; a player may change it only on their own character. `Tags` is admin-only the same way, on an object of any type.
+- NPCs are admin-only, and volumes an admin's or the superuser's, by their types' own rules, checked on the client and the server. The server refuses the room editor to anyone but an admin. A saved value is restored only if the user is still an admin, so a demotion also clears ghost mode.
 - Admin HTTP routes re-read the user type from the database on every request (`UserIdentificationUtil`), so the client's claims are never trusted.
 - Rearranging and filing pictures, editing their categories, and taking a settings file back are checked on the client alone: they change nothing but that client's own choosers, and reach everyone only through a settings file built into the game.
 
@@ -27,4 +31,4 @@ An object's admin-only settings live in its `AdminPrefs` metadata, one base-94 c
 See [room_entrance.md](../geometry/room_entrance.md). A door's label is the name that the destination room looks up on arrival. A door with no destination, or one that points at its own room, is locked.
 
 ## UI
-There is no separate admin mode. In hubs, admins see the superuser's tools: adding a door or a label to a selected wall, selecting doors and labels in edit mode, and room settings. Only admins are offered a new hub in the door destination chooser. Ghost mode is switched with the `ghost on` and `ghost off` commands in the debug panel's command input, where `aas` (admin asset settings) opens the editor of the choosers' order and categories (see [image_map.md](../graphics/image_map.md#admins-settings-editor)). Locally, a dev admin is available through `?devuser=` or `?sandboxadmin=` (see [local_dev.md](../devOps/local_dev.md)).
+There is no separate admin mode. In hubs, admins see the superuser's tools: adding a door or a label to a selected wall, selecting doors and labels in edit mode, and room settings. In any room, an admin's tools for a selected face also add an NPC (on a floor) or a volume, and the admin sees the room's volumes (see [game_mode.md](game_mode.md#selection)). Only admins are offered a new hub in the door destination chooser. Ghost mode is switched with the `ghost on` and `ghost off` commands in the debug panel's command input, where `aas` (admin asset settings) opens the editor of the choosers' order and categories (see [image_map.md](../graphics/image_map.md#admins-settings-editor)), and the room editor's commands are typed as well. Locally, a dev admin is available through `?devuser=` or `?sandboxadmin=` (see [local_dev.md](../devOps/local_dev.md)).

@@ -271,10 +271,13 @@ const resizeObject = (page, spec) => callSandbox(page, "resizeObject", spec);
 const removeObject = (page, objectId) => callSandbox(page, "removeObject", objectId);
 
 /**
- * Replaces the room's restricted zones (full-height cell rectangles) and returns them; with no argument it
- * only reports:
+ * Replaces the room's restricted zones and returns them; with no argument it only reports. Each is a volume
+ * of whole cells kept for a user: from floor to ceiling unless its layers are given, and for nobody ("*")
+ * unless a user's name is:
  *
  *   restrictedZones([{rowMin: 28, rowMax: 43, colMin: 30, colMax: 45}])
+ *   restrictedZones([{rowMin: 28, rowMax: 43, colMin: 30, colMax: 45,
+ *       collisionLayerMin: 0, collisionLayerMax: 5, userName: "DevMember1"}])
  *
  * **Outlines are drawn in edit mode only.** Lay the zones, then `ctx.clickId("gameModeToggleSwitch")`;
  * the sandbox camera ignores the selection, so the composed frame survives.

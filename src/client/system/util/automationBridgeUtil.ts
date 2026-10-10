@@ -13,6 +13,8 @@ import ObjectScaleUtil from "../../../shared/object/util/objectScaleUtil";
 import Geometry3DUtil from "../../../shared/math/util/geometry3DUtil";
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
+import RestrictedZoneUtil from "../../../shared/voxel/util/restrictedZoneUtil";
+import VolumeObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/volumeObjectTypeConfig";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN } from "../../../shared/system/sharedConstants";
 import RoomPrefsUtil from "../../../shared/room/util/roomPrefsUtil";
 import ThingsPoolEnv from "../types/thingsPoolEnv";
@@ -208,10 +210,12 @@ const AutomationBridgeUtil =
                         texturePackPath: room.texturePackPath,
                         // Decoded (like zones below), since callers check the room, not the wire format.
                         lighting: RoomPrefsUtil.decode(room.prefs),
-                        restrictedZones: room.voxelGrid.restrictedZones.map(zone => ({
-                            rowMin: zone.rowMin, rowMax: zone.rowMax,
-                            colMin: zone.colMin, colMax: zone.colMax,
-                        })),
+                        restrictedZones: Object.values(room.objectById).filter(RestrictedZoneUtil.isZone)
+                            .map(zone => ({
+                                objectId: zone.objectId,
+                                ...VolumeObjectTypeConfig.util.getRoomVolume(zone.transform),
+                                userName: VolumeObjectTypeConfig.util.getZoneUserName(zone),
+                            })),
                     },
                     gameMode: gameModeObservable.peek(),
                     isAdmin: user != undefined && RoomValidationUtil.userIsAdmin(user),

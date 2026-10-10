@@ -3,9 +3,7 @@ import AddVoxelBlockSignal from "../../shared/voxel/types/update/addVoxelBlockSi
 import MoveVoxelBlockSignal from "../../shared/voxel/types/update/moveVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../shared/voxel/types/update/removeVoxelBlockSignal";
 import SetVoxelQuadTextureSignal from "../../shared/voxel/types/update/setVoxelQuadTextureSignal";
-import SetRestrictedZonesSignal from "../../shared/voxel/types/update/setRestrictedZonesSignal";
 import VoxelUpdateUtil from "../../shared/voxel/util/voxelUpdateUtil";
-import RestrictedZoneUtil from "../../shared/voxel/util/restrictedZoneUtil";
 import VoxelQueryUtil from "../../shared/voxel/util/voxelQueryUtil";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../shared/system/sharedConstants";
 import SocketUserContext from "../sockets/types/socketUserContext";
@@ -118,31 +116,6 @@ const ServerVoxelManager =
 
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         socketRoomContext.multicastSignal("setVoxelQuadTextureSignal", signal, user.id);
-    },
-    onSetRestrictedZonesSignalReceived: (socketUserContext: SocketUserContext, signal: SetRestrictedZonesSignal) =>
-    {
-        const user = socketUserContext.user;
-        const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
-        const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[roomID];
-        if (!roomRuntimeMemory) // Single-player users have no server-side room; their edits are client-side only and must never mutate the shared room.
-        {
-            console.error(`ServerVoxelManager::onSetRestrictedZonesSignalReceived :: No room registered for user (userID = ${user.id})`);
-            return;
-        }
-        const room = roomRuntimeMemory.room;
-
-        if (!RestrictedZoneUtil.setRestrictedZones(user, room, signal.restrictedZones))
-        {
-            console.error(`ServerVoxelManager::onSetRestrictedZonesSignalReceived :: Failed (roomID=${room.id})`);
-
-            // Send back the room's full list to correct the sender.
-            socketUserContext.addPendingSignalToUser("setRestrictedZonesSignal",
-                new SetRestrictedZonesSignal(room.id, room.voxelGrid.restrictedZones));
-            return;
-        }
-
-        const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
-        socketRoomContext.multicastSignal("setRestrictedZonesSignal", signal, user.id);
     },
 }
 

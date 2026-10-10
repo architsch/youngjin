@@ -20,7 +20,7 @@ type SinglePlayerCondition =
         minDifferenceDeg: SinglePlayerParam<number>}
     | {type: "always_true"}
     | {type: "chat_input_passes_condition", chatInputCondition: (str: string) => boolean}
-    | {type: "object_metadata_passes_condition", objectId: string,
+    | {type: "object_metadata_passes_condition", objectId: SinglePlayerParam<string>,
         metadataKey: ObjectMetadataKey, metadataValueCondition: (str: string) => boolean}
     | {type: "room_exited"}
 

@@ -4,11 +4,11 @@ The rule in one line, as [`../../CLAUDE.md`](../../CLAUDE.md) states it: **a new
 must be chosen by room generation in the same change that introduces it.** This page is why, and how
 far the obligation reaches.
 
-Every room in the game is born from `RoomGenerationUtil` — multiplayer rooms laid out procedurally by
-`HubRoomBuilder` and `RegularRoomBuilder` on top of `ProceduralRoomBuilder`, single-player rooms built
-from their `SinglePlayerModeConfig` — and nothing else ever produces one. That makes room generation
-the *definition* of a complete room: not only the voxels and objects inside it, but every room-level
-parameter those contents were chosen to suit.
+Every multiplayer room in the game is born from `RoomGenerationUtil`, which hands over the same empty
+room every time, and every single-player room is shipped as a room file (`RoomFile`) that its
+`SinglePlayerModeConfig` names — and nothing else ever produces one. That makes room generation, with
+the room file beside it, the *definition* of a complete room: not only the voxels and objects inside
+it, but every room-level parameter those contents were chosen to suit.
 
 ## Why this is not polish to defer
 
@@ -27,12 +27,11 @@ parameter those contents were chosen to suit.
 
 ## Contents are a narrower obligation than parameters
 
-Reading the rule as "generation must place everything" is the usual overcorrection. Procedural
-generation lays out a multiplayer room's voxel grid — its areas, the walls and passages between them,
-the ways up to the storey above, and the voxel block work standing in them — and places exactly one
-object: the door that is the room's way in. A Hub or Regular room is otherwise meant to be furnished
-by the people who use it, so what generation owes them is somewhere to build rather than a full
-house.
+Reading the rule as "generation must place everything" is the usual overcorrection. Generation lays
+out a multiplayer room's voxel grid — two open storeys inside the boundary wall, with the slab between
+them — and places exactly one object: the door that is the room's way in. A Hub or Regular room is
+otherwise meant to be built and furnished by the people who use it, so what generation owes them is
+somewhere to build rather than a full house.
 
 - A new kind of **placeable object** needs nothing from generation.
 - A new kind of **voxel content** does.
@@ -46,13 +45,15 @@ house.
   parameters, or in the room's own content blob where it belongs beside the contents. Which of the
   two it lives in decides nothing about this rule — a parameter kept with the voxels is a room-level
   parameter and is reached by every line of this page.
-- Make `RoomGenerationUtil` and the procedural `RoomBuilder`s decide it. **The obligation is to
-  decide, and the decision is sometimes the default.** A parameter that is a judgement about one
+- Make `RoomGenerationUtil` decide it. **The obligation is to decide, and the decision is sometimes
+  the default.** A parameter that is a judgement about one
   particular room — which nothing a generator knows could stand in for — is rightly generated empty.
   What is never allowed is leaving it undecided, and the two are told apart only in writing: say in
   the parameter's `/docs` page what generated rooms come with and why, so the next reader meets a
   considered answer rather than an oversight to correct.
-- Declare it on every `SinglePlayerModeConfig`, which carries its parameters as `RoomBuilderParams`.
+- Carry it in `RoomFile`, which is how every single-player room reaches the game, and decide it in
+  each room file shipped under `public/app/assets/rooms`: where the value a file is read with is not
+  the one wanted, re-save the file from the room editor.
 - Where the parameter has curated data behind it — as texture packs have palettes in `RoomPaletteMap`
   — extend that curation to cover **every** option a room can be generated with.
 

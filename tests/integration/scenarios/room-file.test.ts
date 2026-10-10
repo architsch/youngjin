@@ -5,6 +5,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import fs from "fs";
 import path from "path";
+import zlib from "zlib";
 import { harness, ConnectedUser } from "../helpers/serverHarness";
 import { checkNoUserInMultipleRooms, checkObjectTransformConsistency, checkPhysicsObjectConsistency,
     checkPhysicsRoomConsistency, checkPlayerObjectsExist, checkRoomIDReferences, checkRoomParticipantCounts,
@@ -13,6 +14,8 @@ import { createTestRoom } from "../helpers/roomContent";
 import { writeLegacyObjectGroup } from "../helpers/legacyObjectGroup";
 import { MockUserOverrides } from "../helpers/mockUser";
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
+import ServerRoomFileUtil, { MAX_ROOM_FILE_BYTES } from "../../../src/server/room/util/serverRoomFileUtil";
+import ClientRoomFileUtil from "../../../src/client/system/util/clientRoomFileUtil";
 import ServerVoxelManager from "../../../src/server/voxel/serverVoxelManager";
 import SpawnHotspotUtil from "../../../src/server/room/util/spawnHotspotUtil";
 import DBRoomUtil from "../../../src/server/db/util/dbRoomUtil";
@@ -38,7 +41,8 @@ import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
 import DoorObjectTypeConfig, { ENTRANCE_DOOR_OBJECT_ID } from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
-import RestrictedZone from "../../../src/shared/voxel/types/restrictedZone";
+import { makeZoneSignal } from "../helpers/restrictedZone";
+import VolumeObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/volumeObjectTypeConfig";
 import AddVoxelBlockSignal from "../../../src/shared/voxel/types/update/addVoxelBlockSignal";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
@@ -60,7 +64,9 @@ const SOURCE_TEXTURE_PACK_PATH = "garden";
 const SOURCE_INITIAL_JOIN_PRIORITY = 7;
 const SOURCE_PREFS = RoomPrefsUtil.encode({...RoomPrefsUtil.decode(""),
     fogNearStep: 10, fogFarStep: 40, initialJoinPriority: SOURCE_INITIAL_JOIN_PRIORITY});
-const SOURCE_ZONE = new RestrictedZone(2, 6, 2, 6);
+const SOURCE_ZONE_ID = "a-zone";
+const SOURCE_ZONE = {rowMin: 2, rowMax: 6, colMin: 2, colMax: 6, collisionLayerMin: 0, collisionLayerMax: 3};
+const SOURCE_ZONE_USER_NAME = "a-friend";
 const SOURCE_BLOCK = {row: 10, col: 10};
 const SOURCE_LABEL_ID = "a-label";
 // On the west wall, where the fixture's door is on the south one.
@@ -72,7 +78,6 @@ function makeSourceRoom(): Room
 {
     const room = createTestRoom("source", "", RoomTypeEnumMap.Hub, "", "", SOURCE_TEXTURE_PACK_PATH);
     room.prefs = SOURCE_PREFS;
-    room.voxelGrid.restrictedZones = [SOURCE_ZONE];
     VoxelUpdateUtil.addVoxelBlock(undefined, room.voxelGrid.voxels,
         VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(SOURCE_BLOCK.row, SOURCE_BLOCK.col, COLLISION_LAYER_MIN),
         new Array<number>(NUM_VOXEL_QUADS_PER_COLLISION_LAYER).fill(5));
@@ -84,10 +89,19 @@ function makeSourceRoom(): Room
                 {x: INITIAL_MULTI_PLAYER_ENTRANCE_POS.x - 5, y: 2.25, z: INITIAL_MULTI_PLAYER_ENTRANCE_POS.z},
                 {x: 0, y: 0, z: -1}, {...UNIT_VEC3}),
             {[ObjectMetadataKeyEnumMap.Label]: new EncodableByteString("Library")}),
+        makeZoneSignal(room, SOURCE_ZONE, SOURCE_ZONE_USER_NAME, SOURCE_ZONE_ID),
         new AddObjectSignal(room.id, "a-visitor", "Visitor", playerTypeIndex, "@99",
             new ObjectTransform({x: 5, y: 1.25, z: 5}, {x: 0, y: 0, z: 1}, {...UNIT_VEC3})),
     ]);
     return room;
+}
+
+// The source room's zone as a room holds it: the blocks its volume covers, and whom it is kept for.
+function expectSourceZoneIn(room: {objectById: Readonly<{[objectId: string]: AddObjectSignal}>}): void
+{
+    const zone = room.objectById[SOURCE_ZONE_ID];
+    expect({...VolumeObjectTypeConfig.util.getRoomVolume(zone.transform)}).toEqual(SOURCE_ZONE);
+    expect(VolumeObjectTypeConfig.util.getZoneUserName(zone)).toBe(SOURCE_ZONE_USER_NAME);
 }
 
 function toBytes(roomFile: RoomFile): Uint8Array
@@ -173,7 +187,7 @@ describe("room file: the stored format", () => {
 
         expect(roomFile.texturePackPath).toBe(SOURCE_TEXTURE_PACK_PATH);
         expect(roomFile.prefs).toBe(SOURCE_PREFS);
-        expect(roomFile.voxelGrid.restrictedZones).toEqual([SOURCE_ZONE]);
+        expectSourceZoneIn(roomFile.objectGroup);
         expect(isBlockSolid(roomFile.voxelGrid, SOURCE_BLOCK.row, SOURCE_BLOCK.col, COLLISION_LAYER_MIN)).toBe(true);
         expect(roomFile.objectGroup.objectById[SOURCE_LABEL_ID].metadata[ObjectMetadataKeyEnumMap.Label].str)
             .toBe("Library");
@@ -189,7 +203,7 @@ describe("room file: the stored format", () => {
         const roomFile = fromBytes(toBytes(RoomFile.fromRoom(room)));
 
         expect(Object.keys(roomFile.objectGroup.objectById).sort())
-            .toEqual([SOURCE_LABEL_ID, ENTRANCE_DOOR_OBJECT_ID].sort());
+            .toEqual([SOURCE_LABEL_ID, SOURCE_ZONE_ID, ENTRANCE_DOOR_OBJECT_ID].sort());
     });
 
     it("names no room: its objects are read into whichever room takes it", () => {
@@ -278,6 +292,57 @@ describe("room file: the stored format", () => {
     });
 });
 
+// A file holds the format's bytes gzipped, or plain as files saved before that did (see RoomFile).
+describe("room file: the file's bytes", () => {
+    beforeEach(() => {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        vi.spyOn(console, "warn").mockImplementation(() => {});
+        vi.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    it("is written gzipped by the client, to a small fraction of the format's bytes, and read back as it was", async () => {
+        const room = makeSourceRoom();
+        const plain = toBytes(RoomFile.fromRoom(room));
+        const fileBytes = new Uint8Array(await ClientRoomFileUtil.encode(room));
+
+        expect(RoomFile.isGzipped(fileBytes)).toBe(true);
+        expect(RoomFile.isGzipped(plain)).toBe(false);
+        expect(fileBytes.length).toBeLessThan(0.1 * plain.length);
+        expect(Array.from(zlib.gunzipSync(fileBytes))).toEqual(Array.from(plain));
+        expect(Array.from(toBytes(ClientRoomFileUtil.decode(fileBytes, "target")))).toEqual(Array.from(plain));
+    });
+
+    it("is read by either side whether it is gzipped or plain", () => {
+        const plain = toBytes(RoomFile.fromRoom(makeSourceRoom()));
+        const gzipped = new Uint8Array(zlib.gzipSync(plain));
+
+        for (const fileBytes of [plain, gzipped])
+        {
+            expect(Array.from(toBytes(ClientRoomFileUtil.decode(fileBytes, "target")))).toEqual(Array.from(plain));
+            expect(Array.from(toBytes(ServerRoomFileUtil.decode(Buffer.from(fileBytes), "target")))).toEqual(Array.from(plain));
+        }
+    });
+
+    it("is refused by either side when it is no room file, zipped or not", () => {
+        const notARoom = new TextEncoder().encode("Just some text that happens to be in a file.");
+        for (const fileBytes of [notARoom, new Uint8Array(zlib.gzipSync(notARoom)), new Uint8Array([0x1f, 0x8b, 1, 2, 3])])
+        {
+            expect(() => ClientRoomFileUtil.decode(fileBytes, "target")).toThrow();
+            expect(() => ServerRoomFileUtil.decode(Buffer.from(fileBytes), "target")).toThrow();
+        }
+    });
+
+    it("is refused by the server when it unzips to more than a room file can be", () => {
+        const bomb = zlib.gzipSync(Buffer.alloc(MAX_ROOM_FILE_BYTES + 1));
+        expect(bomb.length).toBeLessThan(MAX_ROOM_FILE_BYTES);
+        // Stopped while unzipping, not unzipped whole and then found to be no room.
+        let error: {code?: string} | undefined;
+        try { ServerRoomFileUtil.decode(bomb, "target"); }
+        catch (caught) { error = caught as {code?: string}; }
+        expect(error?.code).toBe("ERR_BUFFER_TOO_LARGE");
+    });
+});
+
 describe("room file: loading one over a live room", () => {
     const HUB = "hub";
     const HUB_INITIAL_JOIN_PRIORITY = 2;
@@ -346,12 +411,12 @@ describe("room file: loading one over a live room", () => {
         expect(await ServerRoomManager.loadRoomFile(HUB, roomFile)).toBe(true);
 
         expect(room.voxelGrid).toBe(roomFile.voxelGrid);
-        expect(room.voxelGrid.restrictedZones).toEqual([SOURCE_ZONE]);
+        expectSourceZoneIn(room);
         expect(isBlockSolid(room.voxelGrid, SOURCE_BLOCK.row, SOURCE_BLOCK.col, COLLISION_LAYER_MIN)).toBe(true);
 
         const persistentObjects = Object.values(room.objectById).filter(isPersistent);
         expect(persistentObjects.map(obj => obj.objectId).sort())
-            .toEqual([SOURCE_LABEL_ID, ENTRANCE_DOOR_OBJECT_ID].sort());
+            .toEqual([SOURCE_LABEL_ID, SOURCE_ZONE_ID, ENTRANCE_DOOR_OBJECT_ID].sort());
         for (const obj of persistentObjects)
         {
             expect(obj.roomID).toBe(HUB);
@@ -496,7 +561,7 @@ describe("room file: loading one over a live room", () => {
         expect(received.room.id).toBe(HUB);
         expect(received.room.texturePackPath).toBe(SOURCE_TEXTURE_PACK_PATH);
         expect(received.room.prefs).toBe(getRoom().prefs);
-        expect(received.room.voxelGrid.restrictedZones).toEqual([SOURCE_ZONE]);
+        expectSourceZoneIn(received.room);
         expect(isBlockSolid(received.room.voxelGrid, SOURCE_BLOCK.row, SOURCE_BLOCK.col, COLLISION_LAYER_MIN))
             .toBe(true);
         expect(isBlockSolid(received.room.voxelGrid, 20, 20, COLLISION_LAYER_MIN)).toBe(false);

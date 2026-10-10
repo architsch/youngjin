@@ -1,6 +1,8 @@
 import ClientObjectManager from "./object/clientObjectManager";
-import ClientObjectUtil from "./object/util/clientObjectUtil";
 import ClientVoxelManager from "./voxel/clientVoxelManager";
+import SocketsClient from "./networking/client/socketsClient";
+import RequestRoomChangeSignal from "../shared/room/types/requestRoomChangeSignal";
+import SinglePlayerRoomLoadUtil from "./singlePlayer/util/singlePlayerRoomLoadUtil";
 import RoomRuntimeMemory from "../shared/room/types/roomRuntimeMemory";
 import RoomChangedSignal from "../shared/room/types/roomChangedSignal";
 import RoomChangeRejectedSignal from "../shared/room/types/roomChangeRejectedSignal";
@@ -16,6 +18,7 @@ import { roomChangedObservable, updateObservable, singlePlayerObservable, notifi
 import { roomPrefsChangedObservable } from "../shared/system/sharedObservables";
 import "./graphics/types/gizmo/colliderDebugGizmo";
 import "./graphics/types/gizmo/objectAttachmentEditGizmos"; // Side-effect: lets the selected attached object be dragged and resized by its outline
+import "./graphics/types/gizmo/volumeEditGizmos"; // Side-effect: lets the selected volume be resized by its outline's corners
 import "./voxel/util/restrictedZoneOutlineUtil"; // Side-effect: keeps the outlines on the room's restricted zones up to date
 import { preloadGenericWorldSpaceGizmos } from "./graphics/types/gizmo/genericWorldSpaceGizmos"; // Side-effect: registers world-space gizmos that are used for general purposes; also exposes a pre-load hook
 import "./graphics/particle/util/particleTriggerUtil"; // Side-effect: plays the effects gameplay events call for
@@ -132,6 +135,16 @@ async function changeRoom(roomChangedSignal: RoomChangedSignal)
     // Whoever asked for the room has put up the loading screen already; an unasked one puts it up here.
     tryStartClientProcess("roomChange", 1, 0);
 
+    // A single-player room's content is fetched before the room the user is in is given up. Without it there
+    // is no room to enter, and the server has already let go of the last one, so it is asked for another.
+    const roomToJoin = roomChangedSignal.roomRuntimeMemory.room;
+    if (roomToJoin.roomType == RoomTypeEnumMap.SinglePlayer && !await SinglePlayerRoomLoadUtil.tryLoad(roomToJoin))
+    {
+        notificationMessageObservable.set("Failed to load the room.");
+        SocketsClient.emitRequestRoomChangeSignal(new RequestRoomChangeSignal("", true));
+        return;
+    }
+
     if (currentRoom != undefined)
     {
         RoomLoadProgressUtil.enterPhase("unloadingRoom");
@@ -177,10 +190,6 @@ async function changeRoom(roomChangedSignal: RoomChangedSignal)
 async function loadRoom(roomRuntimeMemory: RoomRuntimeMemory)
 {
     currentRoom = roomRuntimeMemory.room;
-
-    // Generate single-player content before anything reads it.
-    if (currentRoom.roomType == RoomTypeEnumMap.SinglePlayer)
-        ClientObjectUtil.buildSinglePlayerRoomContent(currentRoom);
 
     RoomLoadProgressUtil.enterPhase("loadingGraphics");
     await GraphicsManager.load(update);

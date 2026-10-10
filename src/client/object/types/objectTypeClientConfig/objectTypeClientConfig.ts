@@ -23,5 +23,8 @@ export default interface ObjectTypeClientConfig
         // selected until that pick only where a sub-panel takes the tools' place: otherwise, as with none, the object
         // is complete as added, and isn't selected (unless DISABLE_AUTO_SELECTION_ON_OBJECT_INSTALLATION).
         installPanel?: EditPanel;
+        // Whether the type outlines itself, and is selected only by a control it shows for that (see
+        // VolumeGameObject): the selection's outline is left off it, and no key step leads onto it. Absent, it isn't.
+        selectedByOwnControl?: boolean;
     };
 }

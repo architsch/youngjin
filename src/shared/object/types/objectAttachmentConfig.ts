@@ -11,4 +11,7 @@ export type ObjectAttachmentConfig = {
     // Whether a move turns the object a quarter where it fits under the pointer no other way (see
     // ObjectAttachmentEditGizmos): for a type that can't be resized to fit instead. Absent, it never does.
     turnsToFit?: boolean,
+    // Whether the object stands out from its face, its whole depth in front of it (a figure on a floor), and
+    // needs that much open room there. Absent, it lies flat on the face.
+    standsOut?: boolean,
 };

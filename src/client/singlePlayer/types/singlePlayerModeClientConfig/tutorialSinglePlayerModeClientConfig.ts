@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import { ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
-import TutorialSinglePlayerModeConfig from "../../../../shared/singlePlayer/types/singlePlayerModeConfig/tutorialSinglePlayerModeConfig";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NEAR_EPSILON, NUM_VOXEL_COLS,
     NUM_VOXEL_ROWS, VOXEL_CELL_SIZE } from "../../../../shared/system/sharedConstants";
 import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
@@ -12,11 +11,19 @@ import { orbitCameraAnglesObservable, orbitCameraZoomObservable,
     voxelQuadSelectionObservable } from "../../../system/clientObservables";
 import { ClientEventType } from "../../../system/types/clientEventType";
 import SinglePlayerManager from "../../singlePlayerManager";
+import SinglePlayerRoomQueryUtil from "../../util/singlePlayerRoomQueryUtil";
 import SinglePlayerAction from "../singlePlayerAction";
 import SinglePlayerStep from "../singlePlayerStep";
 import SinglePlayerModeClientConfig from "./singlePlayerModeClientConfig";
 
 let cachedSteps: {[stepName: string]: SinglePlayerStep} | undefined;
+
+// What the tutorial room's maker called the things the steps act on (see SinglePlayerRoomQueryUtil): the
+// receptionist and the door out by their tags, and the two walls that come down by their volumes' names.
+const NPC_TAG = "npc";
+const EXIT_DOOR_TAG = "exit";
+const FIRST_WALL_VOLUME_NAME = "wall1";
+const SECOND_WALL_VOLUME_NAME = "wall2";
 
 // Thin outline for the small mode-switch capsule.
 const MODE_SWITCH_OUTLINE_THICKNESS_PX = 2;
@@ -61,15 +68,13 @@ const cameraPosTemp = new THREE.Vector3();
 const cameraDirTemp = new THREE.Vector3();
 const quadArrowTargetTemp = new THREE.Vector3();
 
-// Tutorial steps and teardown. The room is in the shared TutorialSinglePlayerModeConfig.
+// Tutorial steps and teardown. The room is the file the shared TutorialSinglePlayerModeConfig names.
 const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
 {
     loadSteps: () =>
     {
         if (cachedSteps)
             return cachedSteps;
-
-        const p = TutorialSinglePlayerModeConfig.getRoomBuilderParams();
 
         const steps: {[stepName: string]: SinglePlayerStep} = {
             "initial": { // Drag to move
@@ -92,7 +97,8 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                 ],
                 transitionRules: [{
                     requirements: [{type: "player_is_nearby", negate: true,
-                        targetX: () => p.entrancePos.x, targetZ: () => p.entrancePos.z,
+                        targetX: () => SinglePlayerRoomQueryUtil.getPlayerStartPos().x,
+                        targetZ: () => SinglePlayerRoomQueryUtil.getPlayerStartPos().z,
                         detectionDist: () => 0.5}],
                     nextStep: "start_edit",
                     nextStepDelay: 500,
@@ -113,11 +119,11 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                         thicknessPx: () => MODE_SWITCH_OUTLINE_THICKNESS_PX},
                     {type: "feature_flag", flag: FeatureFlag.DisableGameModeTransition, enable: false},
                     // The next steps build against a wall, so the mode opens on the one ahead rather than
-                    // on whatever is in view. Falls back to the layout's floor patch.
+                    // on whatever is in view. Falls back to the floor the user started on.
                     {type: "edit_mode_opening_voxel_quad", quadIndex: () => pickWallQuadAhead(
                         VoxelQueryUtil.getFloorVoxelQuadIndex(
-                            VoxelQueryUtil.getVoxelRowFromWorldZ(p.hotspots.floor.z),
-                            VoxelQueryUtil.getVoxelColFromWorldX(p.hotspots.floor.x)))},
+                            VoxelQueryUtil.getVoxelRowFromWorldZ(SinglePlayerRoomQueryUtil.getPlayerStartPos().z),
+                            VoxelQueryUtil.getVoxelColFromWorldX(SinglePlayerRoomQueryUtil.getPlayerStartPos().x)))},
                 ],
                 transitionRules: [{
                     requirements: [{type: "edit_mode_active", negate: false}],
@@ -329,19 +335,16 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                 actionsOnStart: [
                     {type: "ui_headline", text: () => "Follow the arrow."},
                     {type: "gizmo_navigation_arrow",
-                        targetX: () => p.hotspots.npc.x, targetZ: () => p.hotspots.npc.z},
+                        targetX: () => SinglePlayerRoomQueryUtil.getTaggedObjectPos(NPC_TAG).x,
+                        targetZ: () => SinglePlayerRoomQueryUtil.getTaggedObjectPos(NPC_TAG).z},
+                    // The wall between the user and the receptionist comes down.
                     {type: "remove_voxel_blocks",
-                        rowStart: () => p.volumes.wall1.rowMin,
-                        colStart: () => p.volumes.wall1.colMin,
-                        numRows: () => p.volumes.wall1.rowMax - p.volumes.wall1.rowMin + 1,
-                        numCols: () => p.volumes.wall1.colMax - p.volumes.wall1.colMin + 1,
-                        // Stop at the capping slab (the ceiling must stay).
-                        collisionLayerMin: () => p.volumes.wall1.collisionLayerMin,
-                        collisionLayerMax: () => p.volumes.wall1.collisionLayerMax},
+                        volume: () => SinglePlayerRoomQueryUtil.getVolume(FIRST_WALL_VOLUME_NAME)},
                 ],
                 transitionRules: [{
                     requirements: [{type: "player_is_nearby", negate: false,
-                        targetX: () => p.hotspots.npc.x, targetZ: () => p.hotspots.npc.z,
+                        targetX: () => SinglePlayerRoomQueryUtil.getTaggedObjectPos(NPC_TAG).x,
+                        targetZ: () => SinglePlayerRoomQueryUtil.getTaggedObjectPos(NPC_TAG).z,
                         detectionDist: () => 5}],
                     nextStep: "type_chat_message",
                     nextStepDelay: 0,
@@ -379,7 +382,7 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                 ],
                 transitionRules: [{
                     requirements: [{type: "object_metadata_passes_condition",
-                        objectId: "my_player",
+                        objectId: () => "my_player",
                         metadataKey: ObjectMetadataKeyEnumMap.SentMessage,
                         metadataValueCondition: (str: string) => str.trim().length > 0}],
                     nextStep: "watch_npc_reply",
@@ -393,10 +396,13 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                 startDelay: 0,
                 actionsOnStart: [
                     {type: "ui_headline", text: () => "Look! The receptionist greeted you back."},
-                    {type: "set_object_metadata", objectId: "npc",
+                    {type: "set_object_metadata",
+                            objectId: () => SinglePlayerRoomQueryUtil.getTaggedObjectId(NPC_TAG),
                             metadataKey: ObjectMetadataKeyEnumMap.SentMessage,
                             metadataValue: () => "Hello!"},
-                    {type: "object_bounce", objectId: "npc", durationSeconds: () => 1.25,
+                    {type: "object_bounce",
+                            objectId: () => SinglePlayerRoomQueryUtil.getTaggedObjectId(NPC_TAG),
+                            durationSeconds: () => 1.25,
                             positionOffset: () => ({x: 0, y: 0.3, z: 0}), oscillations: () => 3}, // The NPC bobs up and down to "nod" as it greets back.
                 ],
                 transitionRules: [{
@@ -414,15 +420,11 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                     {type: "ui_headline", text: () => "Exit through the door."},
                     // Aimed past the door, pointing the way out.
                     {type: "gizmo_navigation_arrow",
-                        targetX: () => p.hotspots.door.x, targetZ: () => p.hotspots.door.z - 5},
+                        targetX: () => SinglePlayerRoomQueryUtil.getTaggedObjectPos(EXIT_DOOR_TAG).x,
+                        targetZ: () => SinglePlayerRoomQueryUtil.getTaggedObjectPos(EXIT_DOOR_TAG).z - 5},
+                    // The wall between the receptionist and the door comes down.
                     {type: "remove_voxel_blocks",
-                        rowStart: () => p.volumes.wall2.rowMin,
-                        colStart: () => p.volumes.wall2.colMin,
-                        numRows: () => p.volumes.wall2.rowMax - p.volumes.wall2.rowMin + 1,
-                        numCols: () => p.volumes.wall2.colMax - p.volumes.wall2.colMin + 1,
-                        // As above: the wall comes down only as far as the slab that caps the room.
-                        collisionLayerMin: () => p.volumes.wall2.collisionLayerMin,
-                        collisionLayerMax: () => p.volumes.wall2.collisionLayerMax},
+                        volume: () => SinglePlayerRoomQueryUtil.getVolume(SECOND_WALL_VOLUME_NAME)},
                 ],
                 transitionRules: [{
                     requirements: [{type: "room_exited"}],

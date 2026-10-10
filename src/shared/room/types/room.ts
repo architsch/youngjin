@@ -72,8 +72,8 @@ export default class Room extends EncodableData
         // Encoded before the branch: single-player rooms have prefs too.
         new EncodableByteString(this.prefs).encode(bufferState);
 
-        // Single-player rooms carry no content (the client regenerates it); roomType tells the decoder to
-        // skip it.
+        // Single-player rooms carry no content (the client fetches it; see SinglePlayerModeConfig.roomPath);
+        // roomType tells the decoder to skip it.
         if (this.roomType != RoomTypeEnumMap.SinglePlayer)
         {
             this.voxelGrid.encode(bufferState);
@@ -93,15 +93,14 @@ export default class Room extends EncodableData
         const texturePackPath = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const prefs = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
 
-        // Single-player: empty placeholders; the client generates the content.
+        // Single-player: empty placeholders; the client fetches the content.
         let voxelGrid: VoxelGrid;
         let objectGroup: ObjectGroup;
         if (roomType != RoomTypeEnumMap.SinglePlayer)
         {
             voxelGrid = VoxelGrid.decode(bufferState) as VoxelGrid;
-            // The grid version dates the objects (see ObjectGroupVersionMigration).
-            objectGroup = ObjectGroup.decodeWithParams(bufferState, id,
-                voxelGrid.sourceFormatVersion) as ObjectGroup;
+            // The grid dates the objects (see ObjectGroupVersionMigration).
+            objectGroup = ObjectGroup.decodeWithParams(bufferState, id, voxelGrid) as ObjectGroup;
         }
         else
         {

@@ -1,5 +1,5 @@
 import Room from "../../../shared/room/types/room";
-import RoomGenerationUtil from "../../../shared/room/generation/util/roomGenerationUtil";
+import RoomGenerationUtil from "../../../shared/room/util/roomGenerationUtil";
 import DBRoom from "../types/row/dbRoom";
 import { RoomType } from "../../../shared/room/types/roomType";
 import DBQuery from "../types/dbQuery";
@@ -159,9 +159,8 @@ async function getRoomFromDBRoom(dbRoom: DBRoom): Promise<Room | null>
 
     const bufferState = new BufferState(new Uint8Array(buffer));
     const voxelGrid = VoxelGrid.decode(bufferState) as VoxelGrid;
-    // The grid's version dates the objects stored with it (see ObjectGroupVersionMigration).
-    const objectGroup = ObjectGroup.decodeWithParams(bufferState, dbRoom.id ?? "",
-        voxelGrid.sourceFormatVersion) as ObjectGroup;
+    // The grid dates the objects stored with it (see ObjectGroupVersionMigration).
+    const objectGroup = ObjectGroup.decodeWithParams(bufferState, dbRoom.id ?? "", voxelGrid) as ObjectGroup;
     const room = new Room(dbRoom.id, dbRoom.roomName, dbRoom.roomType,
         dbRoom.ownerUserID, dbRoom.ownerUserName, dbRoom.texturePackPath, dbRoom.prefs,
         voxelGrid, objectGroup);

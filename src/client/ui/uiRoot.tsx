@@ -45,6 +45,7 @@ import { FTUEElementCodeEnumMap } from "./types/ftueElementCode";
 import HubRoomWelcomeForm from "./components/form/hubRoomWelcomeForm";
 import DoorSettingsForm from "./components/form/doorSettingsForm";
 import CustomizeRoomPanel from "./components/panel/customizeRoomPanel";
+import RoomEditorUtil from "../singlePlayer/util/roomEditorUtil";
 
 export default function UIRoot({ env, user }: UIRootProps)
 {
@@ -179,7 +180,8 @@ export default function UIRoot({ env, user }: UIRootProps)
             onToggleRoomSettings={() => setRoomSettingsOpen(prev => !prev)}
             onExitApp={exitApp}
         />}
-        {isMultiplayerRoomLoaded && <DebugStats env={env}/>}
+        {/* (Its commands are the room editor's way out, and its way to save.) */}
+        {(isMultiplayerRoomLoaded || RoomEditorUtil.isEditing(roomRuntimeMemory?.room)) && <DebugStats env={env}/>}
         <CameraZoomSlider/>
         {/* Selection tools are edit-mode only. */}
         <div ref={bottomUIRef} className="flex flex-col absolute bottom-0 w-full pointer-events-none">

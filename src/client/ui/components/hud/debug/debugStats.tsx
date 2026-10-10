@@ -18,6 +18,7 @@ import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
 import ParticleSystem from "../../../../graphics/particle/particleSystem";
 import ParticleDebugUtil from "../../../../graphics/particle/util/particleDebugUtil";
 import RoomValidationUtil from "../../../../../shared/room/util/roomValidationUtil";
+import RoomEditorUtil from "../../../../singlePlayer/util/roomEditorUtil";
 
 export default function DebugStats({env}: Props)
 {
@@ -119,6 +120,10 @@ export default function DebugStats({env}: Props)
                         case "ghost on": setGhostMode(true); break;
                         case "ghost off": setGhostMode(false); break;
                         case "aas": openAdminAssetSettingsEditor(); break;
+                        case "new room": leaveEditedRoomFor(RoomEditorUtil.openNewRoom); break;
+                        case "open room": leaveEditedRoomFor(RoomEditorUtil.openRoomFile); break;
+                        case "save room": void RoomEditorUtil.saveRoomFile(); break;
+                        case "leave room": leaveEditedRoomFor(RoomEditorUtil.leave); break;
                         default:
                             notificationMessageObservable.set(
                                 ParticleDebugUtil.tryRunCommand(command) ?? "Unknown debug command.");
@@ -203,6 +208,30 @@ function openAdminAssetSettingsEditor(): void
         return;
     }
     PopupUtil.openPopup({popupType: "adminAssetSettings"});
+}
+
+// The room editor's debug commands (see RoomEditorUtil): "new room" enters it on a new empty room, "open room" on
+// a room file, "save room" saves the room being edited as one, and "leave room" goes back to the multiplayer
+// rooms. Admin-only (also enforced server-side). A room being edited is given up only on the user's say-so, and
+// the action comes straight from that click, as opening a file has to (see LocalFileUtil).
+function leaveEditedRoomFor(action: () => void): void
+{
+    if (!RoomEditorUtil.isEditing())
+    {
+        action();
+        return;
+    }
+    PopupUtil.openPopup({
+        popupType: "confirm",
+        params: {
+            message: "The room being edited will be lost unless it has been saved. Do you really want to proceed?",
+            onConfirm: () => {
+                PopupUtil.closePopup();
+                action();
+            },
+            onCancel: PopupUtil.closePopup,
+        },
+    });
 }
 
 const className = "flex flex-col justify-start absolute left-0 top-0 max-w-full max-h-1/5";

@@ -1,7 +1,7 @@
 import App from "../../../app";
 import RoomFile from "../../../../shared/room/types/roomFile";
-import EncodingUtil from "../../../../shared/networking/util/encodingUtil";
 import RoomAPIClient from "../../../networking/client/roomAPIClient";
+import ClientRoomFileUtil from "../../../system/util/clientRoomFileUtil";
 import LocalFileUtil from "../../../system/util/localFileUtil";
 import { notificationMessageObservable } from "../../../system/clientObservables";
 import { tryStartClientProcess, endClientProcess } from "../../../system/types/clientProcess";
@@ -11,6 +11,7 @@ import IconButton from "../input/iconButton";
 import FloppyDiskIcon from "../../svg/icons/floppyDiskIcon";
 import OpenFolderIcon from "../../svg/icons/openFolderIcon";
 import ScrollPanel from "./scrollPanel";
+import RoomEditorUtil from "../../../singlePlayer/util/roomEditorUtil";
 
 // Room file panel (see CustomizeRoomPanel): one button saves the room to a file, the other loads a file
 // over the room (see RoomFile).
@@ -33,7 +34,7 @@ export default function RoomFilePanel({ anchorElementId, onClose }: Props)
 // One action per line, right-aligned so the buttons line up.
 const COLUMN_CLASS_NAMES = "flex flex-col items-end gap-1 shrink-0";
 
-const ROOM_FILE_EXTENSION = ".room";
+const ROOM_FILE_EXTENSION = RoomFile.FILE_EXTENSION;
 
 // Written from the room as this client holds it, with no trip to the server.
 async function saveRoomFile()
@@ -41,13 +42,16 @@ async function saveRoomFile()
     const room = App.getCurrentRoom();
     if (!room)
         return;
-
-    const bufferState = EncodingUtil.startEncoding();
-    RoomFile.fromRoom(room).encode(bufferState);
-    const bytes = EncodingUtil.endEncoding(bufferState);
+    // (The room editor names its file after the one it opened.)
+    if (RoomEditorUtil.isEditing(room))
+    {
+        await RoomEditorUtil.saveRoomFile();
+        return;
+    }
 
     try
     {
+        const bytes = await ClientRoomFileUtil.encode(room);
         if (await LocalFileUtil.save(bytes, `${room.id}${ROOM_FILE_EXTENSION}`, ROOM_FILE_EXTENSION, "Room file"))
             notificationMessageObservable.set("Room saved!");
     }
@@ -74,9 +78,15 @@ function confirmLoadingRoomFile()
 }
 
 // The server does the overwriting, and sends the room again to everyone in it (see
-// ServerRoomManager.loadRoomFile).
+// ServerRoomManager.loadRoomFile). The room editor's room is no server's, and is opened afresh on the file instead.
 async function loadRoomFile()
 {
+    if (RoomEditorUtil.isEditing())
+    {
+        await RoomEditorUtil.openRoomFile();
+        return;
+    }
+
     const roomID = App.getCurrentRoom()?.id;
     const file = await LocalFileUtil.pick(ROOM_FILE_EXTENSION);
     if (!file || roomID == undefined)

@@ -10,6 +10,7 @@ import RoomRuntimeMemory from "../../../../shared/room/types/roomRuntimeMemory";
 import WorldSpaceSelectionUtil from "../../util/worldSpaceSelectionUtil";
 import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
 import WorldSpaceOutlineRect from "./generic/worldSpaceOutlineRect";
+import ObjectTypeClientConfigMap from "../../../object/maps/objectTypeClientConfigMap";
 
 const outlinePos = new THREE.Vector3();
 const outlineQuat = new THREE.Quaternion();
@@ -121,7 +122,9 @@ objectSelectionObservable.addListener("objectSelection", async (selection: Objec
     }
 
     refreshSelectionOutline(selection);
-    selectionOutline.setVisible(true);
+    // (A type that outlines its own selection is left to; see ObjectTypeClientConfig.)
+    selectionOutline.setVisible(!ObjectTypeClientConfigMap.getConfigByIndex(
+        selection.gameObject.params.objectTypeIndex).selection?.selectedByOwnControl);
 
     WorldSpaceSelectionUtil.unselectOthers("object");
 });

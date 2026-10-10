@@ -70,6 +70,12 @@ import ObjectUpdateUtil from "../../../src/shared/object/util/objectUpdateUtil";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import { PLAYER_HEIGHT } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import VolumeObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/volumeObjectTypeConfig";
+// The client's configs of the types these tests select, which register themselves on load (see
+// ObjectTypeClientConfigMap): a selection reads off them whether its type is selected by its own control.
+import "../../../src/client/object/types/objectTypeClientConfig/canvasObjectTypeClientConfig";
+import "../../../src/client/object/types/objectTypeClientConfig/playerObjectTypeClientConfig";
+import "../../../src/client/object/types/objectTypeClientConfig/volumeObjectTypeClientConfig";
 import Vec3 from "../../../src/shared/math/types/vec3";
 import Room from "../../../src/shared/room/types/room";
 import { createEditingUser } from "../helpers/mockUser";
@@ -872,6 +878,7 @@ describe("what a step of a face asks of the orbit", () => {
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
+const volumeTypeIndex = ObjectTypeConfigMap.getIndexByType("Volume");
 
 // A selection's outline is made on first use, and it takes over from the other kind only once made.
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
@@ -1124,6 +1131,23 @@ describe("a selected object stepped to the nearest object lying that way", () =>
 
         expect(SelectionStepUtil.tryStep("right")).toBe(true);
         expect(selectedObjectId()).toBe("character");
+        expect(SelectionStepUtil.tryStep("left")).toBe(true);
+        expect(selectedObjectId()).toBe("onWall");
+    });
+
+    it("never takes a volume, which only its own button selects, though it lies nearest", async () => {
+        const onWall = hangOnWall("onWall", 10.5);
+        hangOnWall("beyond", 7.5);
+        // Round the selected canvas and on toward the next, so that nothing lies nearer that way.
+        const volume = new AddObjectSignal(room.id, actingUser.id, actingUser.userName, volumeTypeIndex, "volume",
+            VolumeObjectTypeConfig.util.makeTransform({x: 1, y: 1, z: 8}, {x: 2, y: 2, z: 11}), {});
+        room.objectGroup.addObject(volume);
+        hold(volume);
+        faceWallAt(10.5);
+        await select(onWall);
+
+        expect(SelectionStepUtil.tryStep("right")).toBe(true);
+        expect(selectedObjectId()).toBe("beyond");
         expect(SelectionStepUtil.tryStep("left")).toBe(true);
         expect(selectedObjectId()).toBe("onWall");
     });

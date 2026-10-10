@@ -41,7 +41,7 @@ import { useFixturePictures } from "../helpers/pictureFixture";
 import ImageMapUtil from "../../../src/shared/graphics/image/util/imageMapUtil";
 import { DOCUMENT_ID_MAX_LENGTH, INITIAL_MULTI_PLAYER_ENTRANCE_POS,
     INSTANCED_WOOD_MATERIAL_ID, LABEL_COLOR_PALETTE_NAME, OBJECT_LABEL_MAX_LENGTH, OBJECT_MESSAGE_MAX_LENGTH,
-    UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
+    OBJECT_NAME_MAX_LENGTH, OBJECT_TAGS_MAX_LENGTH, OBJECT_USER_NAME_MAX_LENGTH, UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
 
 const labelTypeIndex = ObjectTypeConfigMap.getIndexByType("Label");
 const MAX_LABELS_PER_ROOM = ObjectCategoryConfigMap.getMaxCountPerRoom(LabelObjectTypeConfig.category);
@@ -369,7 +369,12 @@ describe("a room full of the longest text", () => {
             [ObjectMetadataKeyEnumMap.DestinationDoorLabel]: longest(OBJECT_LABEL_MAX_LENGTH),
             [ObjectMetadataKeyEnumMap.DoorType]: "0",
             [ObjectMetadataKeyEnumMap.LightProperties]: "~~~",
+            [ObjectMetadataKeyEnumMap.ZoneUserName]: longest(OBJECT_USER_NAME_MAX_LENGTH),
         };
+        // As long as tags and a name may be (see ObjectTagUtil, LabelTextUtil.isShortName).
+        const longestTags = "t".repeat(OBJECT_TAGS_MAX_LENGTH);
+        expect(ObjectMetadataEntryMap.preprocess(ObjectMetadataKeyEnumMap.Tags, longestTags)).toBe(longestTags);
+        const longestName = longest(OBJECT_NAME_MAX_LENGTH);
         // Asked of an admin in a hub, who may write the most.
         const hub = {roomType: RoomTypeEnumMap.Hub} as Room;
         const canHoldValue = (config: ReturnType<typeof ObjectTypeConfigMap.getConfigByIndex>, key: number,
@@ -404,6 +409,13 @@ describe("a room full of the longest text", () => {
                     if (config.objectType == "Player" ? key == ObjectMetadataKeyEnumMap.SentMessage : canHold(config, key))
                         obj.metadata[key] = new EncodableByteString(longestMetadata[key]);
                 }
+                // Tags are an admin's to give to an object of any type, and a name to one with no text to show.
+                obj.metadata[ObjectMetadataKeyEnumMap.Tags] = new EncodableByteString(longestTags);
+                if (obj.metadata[ObjectMetadataKeyEnumMap.Label] == undefined
+                    && canHoldValue(config, ObjectMetadataKeyEnumMap.Label, longestName))
+                {
+                    obj.metadata[ObjectMetadataKeyEnumMap.Label] = new EncodableByteString(longestName);
+                }
                 const composer = config.components.spawnedByAny?.instancedMeshComposer;
                 if (composer)
                 {
@@ -422,6 +434,9 @@ describe("a room full of the longest text", () => {
             obj.metadata[ObjectMetadataKeyEnumMap.Label]?.str == longestMetadata[ObjectMetadataKeyEnumMap.Label]);
         expect(longestLabels.length, "a door or a label was left without the longest text").toBe(
             ObjectCategoryConfigMap.getMaxCountPerRoom("Door") + MAX_LABELS_PER_ROOM);
+        const named = objects.filter(obj => obj.metadata[ObjectMetadataKeyEnumMap.Label]?.str == longestName);
+        expect(named.length, "an NPC or a volume was left without the longest name").toBe(
+            ObjectCategoryConfigMap.getMaxCountPerRoom("Npc") + ObjectCategoryConfigMap.getMaxCountPerRoom("Volume"));
         expect(bufferState.byteIndex).toBeLessThanOrEqual(MAX_ENCODED_OBJECTS_BYTES);
     });
 });

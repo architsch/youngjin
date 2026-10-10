@@ -92,12 +92,10 @@ const SinglePlayerConditionMap: {
     },
     "object_metadata_passes_condition": (condition) =>
     {
-        const obj = ClientObjectManager.getObjectById(condition.objectId);
+        // (An object the room lacks has been reported already; see SinglePlayerRoomQueryUtil.)
+        const obj = ClientObjectManager.getObjectById(condition.objectId());
         if (!obj)
-        {
-            console.error(`SinglePlayerConditionMap :: Object doesn't exits (objectId = ${condition.objectId})`);
             return false;
-        }
         const metadataValueEncoded = obj.params.metadata[condition.metadataKey];
         return metadataValueEncoded != undefined &&
             condition.metadataValueCondition(metadataValueEncoded.str);

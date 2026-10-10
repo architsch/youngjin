@@ -12,6 +12,7 @@ import { MINUTE_IN_MS } from "../../../../../shared/system/sharedConstants";
 import PopupUtil from "../../../util/popupUtil";
 import FTUEUtil from "../../../util/ftueUtil";
 import { FTUEElementCodeEnumMap } from "../../../types/ftueElementCode";
+import RoomEditorUtil from "../../../../singlePlayer/util/roomEditorUtil";
 
 // Top bar (same in both modes): mode switch, room settings (for the superuser), exit. A non-interactive
 // fade sits behind the controls so drags still reach the canvas. It sits below the headline, which
@@ -19,9 +20,10 @@ import { FTUEElementCodeEnumMap } from "../../../types/ftueElementCode";
 
 export default function TopBarMenu({ user, room, roomSettingsOpen, onToggleRoomSettings, onExitApp }: Props)
 {
-    // Superuser only (see RoomValidationUtil); not in single-player rooms, which aren't stored.
+    // Superuser only (see RoomValidationUtil); not in single-player rooms, which aren't stored, but for the one
+    // being made in the room editor, whose settings go into its file.
     const showRoomSettings = RoomValidationUtil.isRoomSuperuser(user, room) &&
-        room.roomType != RoomTypeEnumMap.SinglePlayer;
+        (room.roomType != RoomTypeEnumMap.SinglePlayer || RoomEditorUtil.isEditing(room));
     const inOwnRoom = RoomValidationUtil.userOwnsRoom(user, room);
 
     // The coach mark is scheduled while the button is offered and cleared when it isn't, so it can't

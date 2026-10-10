@@ -42,7 +42,7 @@ vi.mock("../../../src/shared/system/util/logUtil", () => ({
 }));
 
 import DBFileStorageUtil from "../../../src/server/db/util/dbFileStorageUtil";
-import RoomGenerationUtil from "../../../src/shared/room/generation/util/roomGenerationUtil";
+import RoomGenerationUtil from "../../../src/shared/room/util/roomGenerationUtil";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import EncodingUtil from "../../../src/shared/networking/util/encodingUtil";
 import BufferState from "../../../src/shared/networking/types/bufferState";
@@ -54,7 +54,7 @@ const PATH = "rooms/a-room/content.bin";
 // A generated room's contents as the server writes them: its voxels, then its objects.
 function encodeRoomContent(): Buffer
 {
-    const room = RoomGenerationUtil.generateRoom("", RoomTypeEnumMap.Regular, "owner", "Owner", 7);
+    const room = RoomGenerationUtil.generateRoom("", RoomTypeEnumMap.Regular, "owner", "Owner");
     const bufferState = EncodingUtil.startEncoding();
     room.voxelGrid.encode(bufferState);
     new ObjectGroup(Object.values(room.objectById)).encode(bufferState);
@@ -88,7 +88,7 @@ describe("stored files", () => {
         // And still a room's contents: voxels, then objects, to the last byte.
         const bufferState = new BufferState(new Uint8Array(loaded!));
         const voxelGrid = VoxelGrid.decode(bufferState) as VoxelGrid;
-        ObjectGroup.decodeWithParams(bufferState, "a-room", voxelGrid.sourceFormatVersion);
+        ObjectGroup.decodeWithParams(bufferState, "a-room", voxelGrid);
         expect(bufferState.byteIndex).toBe(loaded!.length);
     });
 

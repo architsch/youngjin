@@ -26,4 +26,10 @@ export const ObjectMetadataKeyEnumMap: Record<string, number> =
     // Clockwise quarter-turns of a flat object's content about its facing, as seen from the front (see
     // QuarterTurnsUtil). Generic, so any flat type may read it.
     QuarterTurns: 12,
+    // Comma-separated keywords an admin gives an object of any type, for scripts to find it by (see ObjectTagUtil).
+    Tags: 13,
+    // For volumes: the name of the user a volume's stretch of the room is kept for, besides the room's
+    // superuser, which makes it a restricted zone (see RestrictedZoneUtil); or ZONE_USER_NAME_FOR_NOBODY,
+    // for the superuser alone. Absent or empty, it is no zone.
+    ZoneUserName: 14,
 }

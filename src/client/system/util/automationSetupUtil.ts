@@ -16,8 +16,9 @@ import ObjectMetadataEntryMap from "../../../shared/object/maps/objectMetadataEn
 import ObjectTransform from "../../../shared/object/types/objectTransform";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import PhysicsColliderStateUtil from "../../../shared/physics/util/physicsColliderStateUtil";
-import RestrictedZone from "../../../shared/voxel/types/restrictedZone";
-import RoomPaletteMap from "../../../shared/room/generation/maps/roomPaletteMap";
+import RestrictedZoneUtil from "../../../shared/voxel/util/restrictedZoneUtil";
+import VolumeObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/volumeObjectTypeConfig";
+import RoomPaletteMap from "../../../shared/room/maps/roomPaletteMap";
 import ObjectAttachmentUtil from "../../../shared/object/util/objectAttachmentUtil";
 import Geometry3DUtil from "../../../shared/math/util/geometry3DUtil";
 import Vec3 from "../../../shared/math/types/vec3";
@@ -28,9 +29,10 @@ import CanvasObjectTypeConfig from "../../../shared/object/types/objectTypeConfi
 import { PROP_IMAGE_SUBFOLDER } from "../../../shared/object/types/objectTypeConfig/propObjectTypeConfig";
 import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN,
-    FOG_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME, MAX_RESTRICTED_ZONES, MAX_ROOM_Y,
+    FOG_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME, MAX_ROOM_Y,
     NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS,
-    SANDBOX_SINGLE_PLAYER_MODE } from "../../../shared/system/sharedConstants";
+    SANDBOX_SINGLE_PLAYER_MODE, VOXEL_CELL_SIZE,
+    ZONE_USER_NAME_FOR_NOBODY } from "../../../shared/system/sharedConstants";
 import ObjectScaleUtil from "../../../shared/object/util/objectScaleUtil";
 import RoomLightingUtil from "../../graphics/light/util/roomLightingUtil";
 import RoomPrefs from "../../../shared/room/types/roomPrefs";
@@ -762,29 +764,55 @@ const AutomationSetupUtil =
                     return {objectId};
                 },
 
-                // Replaces the room's restricted zones (row/col rectangles; see
-                // @docs/gameplay/restricted_zone.md); with no argument, reports them. Outlines render
-                // only in edit mode. The game's permission rule is applied (it passes in single-player
-                // rooms) and catches invalid rectangles.
-                restrictedZones: (zones?: {rowMin: number, rowMax: number,
-                    colMin: number, colMax: number}[]) =>
+                // Replaces the room's restricted zones (see @docs/gameplay/restricted_zone.md), each a volume of
+                // whole blocks kept for a user: its rows, columns and layers, each inclusive (from floor to
+                // ceiling unless the layers are given), and the user's name (nobody's unless given). With no
+                // argument, reports them. Outlines render only in edit mode. Other volumes are left alone.
+                restrictedZones: async (zones?: {rowMin: number, rowMax: number, colMin: number, colMax: number,
+                    collisionLayerMin?: number, collisionLayerMax?: number, userName?: string}[]) =>
                 {
                     const room = requireSandboxRoom("Laying restricted zones");
                     if (zones != undefined)
                     {
-                        const laid = zones.map(zone => new RestrictedZone(
-                            zone.rowMin, zone.rowMax, zone.colMin, zone.colMax));
-                        if (!ClientVoxelManager.setRestrictedZones(room, laid))
+                        const boxes = zones.map(zone => ({...zone,
+                            collisionLayerMin: zone.collisionLayerMin ?? COLLISION_LAYER_MIN,
+                            collisionLayerMax: zone.collisionLayerMax ?? COLLISION_LAYER_MAX}));
+                        const isSpan = (min: number, max: number, limit: number) =>
+                            Number.isInteger(min) && Number.isInteger(max) && min >= 0 && min <= max && max <= limit;
+                        if (!boxes.every(box => isSpan(box.rowMin, box.rowMax, NUM_VOXEL_ROWS - 1)
+                            && isSpan(box.colMin, box.colMax, NUM_VOXEL_COLS - 1)
+                            && isSpan(box.collisionLayerMin, box.collisionLayerMax, COLLISION_LAYER_MAX)))
                         {
                             throw new Error(`The room will not take those zones. Each one is whole ` +
-                                `cells of the grid — rows 0 to ${NUM_VOXEL_ROWS - 1}, columns 0 to ` +
-                                `${NUM_VOXEL_COLS - 1} — with each minimum no greater than its ` +
-                                `maximum, and a room holds at most ${MAX_RESTRICTED_ZONES} of them.`);
+                                `blocks of the grid — rows 0 to ${NUM_VOXEL_ROWS - 1}, columns 0 to ` +
+                                `${NUM_VOXEL_COLS - 1}, layers 0 to ${COLLISION_LAYER_MAX} — with each ` +
+                                `minimum no greater than its maximum.`);
+                        }
+
+                        for (const object of Object.values(room.objectById).filter(RestrictedZoneUtil.isZone))
+                            await ClientObjectManager.removeObject(object.objectId, false);
+
+                        const user = App.getUser();
+                        const volumeTypeIndex = ObjectTypeConfigMap.getIndexByType(VolumeObjectTypeConfig.objectType);
+                        for (const box of boxes)
+                        {
+                            const signal = new AddObjectSignal(room.id, user.id, user.userName, volumeTypeIndex,
+                                ObjectIdUtil.generateRandomObjectId(),
+                                VolumeObjectTypeConfig.util.makeTransform(
+                                    {x: box.colMin * VOXEL_CELL_SIZE, y: box.collisionLayerMin * COLLISION_LAYER_HEIGHT,
+                                        z: box.rowMin * VOXEL_CELL_SIZE},
+                                    {x: (box.colMax + 1) * VOXEL_CELL_SIZE,
+                                        y: (box.collisionLayerMax + 1) * COLLISION_LAYER_HEIGHT,
+                                        z: (box.rowMax + 1) * VOXEL_CELL_SIZE}),
+                                metadataFrom({ZoneUserName: box.userName ?? ZONE_USER_NAME_FOR_NOBODY}));
+                            if (!await ClientObjectManager.addObject(ObjectFactory.createServerSideObject(signal), false))
+                                throw new Error(`The room would not take a zone there (it holds only so many volumes).`);
                         }
                     }
-                    return room.voxelGrid.restrictedZones.map(zone => ({
-                        rowMin: zone.rowMin, rowMax: zone.rowMax,
-                        colMin: zone.colMin, colMax: zone.colMax,
+                    return Object.values(room.objectById).filter(RestrictedZoneUtil.isZone).map(zone => ({
+                        objectId: zone.objectId,
+                        ...VolumeObjectTypeConfig.util.getRoomVolume(zone.transform),
+                        userName: VolumeObjectTypeConfig.util.getZoneUserName(zone),
                     }));
                 },
 
@@ -796,15 +824,13 @@ const AutomationSetupUtil =
                         NUM_VOXEL_ROWS, NUM_VOXEL_COLS,
                         COLLISION_LAYER_MIN, COLLISION_LAYER_MAX, false);
 
+                    // (Zones go with the rest: they are volumes.)
                     const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
                     for (const object of Object.values(room.objectById))
                     {
                         if (object.objectTypeIndex != playerTypeIndex)
                             await ClientObjectManager.removeObject(object.objectId, false);
                     }
-
-                    // Stale zones would outline the next set.
-                    ClientVoxelManager.setRestrictedZones(room, []);
 
                     FreeCameraPose.reset();
                     return AutomationSetupUtil.describeFreeCamera();

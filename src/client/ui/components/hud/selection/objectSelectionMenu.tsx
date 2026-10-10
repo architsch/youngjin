@@ -4,6 +4,8 @@ import { SUB_PANELS_BENEATH_SELECTION_TOOLS } from "../../../../system/clientCon
 import ObjectSelection from "../../../../graphics/types/gizmo/objectSelection";
 import ObjectTypeClientConfigMap from "../../../../object/maps/objectTypeClientConfigMap";
 import { EditPanel } from "../../../types/editPanel";
+import RoomEditorUtil from "../../../../singlePlayer/util/roomEditorUtil";
+import ObjectTagsRow from "./objectTagsRow";
 
 // Raises the tool panel declared by the selected object's type (see ObjectTypeClientConfig).
 export default function ObjectSelectionMenu({ inEditMode }: Props)
@@ -52,7 +54,11 @@ export default function ObjectSelectionMenu({ inEditMode }: Props)
     if (!EditOptions)
         return null;
 
+    // Tags are given where single-player rooms are made, to what such a room keeps.
+    const taggable = RoomEditorUtil.isEditing() && selection.gameObject.config.persistent;
+
     return <div className="flex flex-col gap-1 p-2 max-w-full h-fit overflow-hidden relative z-10">
+        {taggable && <ObjectTagsRow key={`tags.${selection.gameObject.params.objectId}`} selection={selection}/>}
         {/* Keyed by object, so each object's tools start fresh; only the open sub-panel carries over. */}
         <EditOptions key={selection.gameObject.params.objectId} selection={selection}
             openPanel={state.openPanel}

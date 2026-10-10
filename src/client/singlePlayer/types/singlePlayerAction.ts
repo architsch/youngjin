@@ -3,9 +3,11 @@ import Vec3 from "../../../shared/math/types/vec3";
 import { FeatureFlag } from "../../../shared/system/types/featureFlag";
 import SinglePlayerParam from "./singlePlayerParam";
 import CameraMode from "../../graphics/types/cameraMode";
+import RoomVolume from "../../../shared/room/types/roomVolume";
 
 // A tagged step command (see SinglePlayerActionMap). Inputs are SinglePlayerParams so they can be
-// computed during play; identifiers known up front (flags, object ids) stay plain values.
+// computed during play, as what they name in the room has to be (see SinglePlayerRoomQueryUtil); identifiers
+// known up front (flags) stay plain values.
 type SinglePlayerAction =
     | {type: "clear_all_ui_and_gizmo"}
     | {type: "ui_headline", text: SinglePlayerParam<string>}
@@ -37,13 +39,10 @@ type SinglePlayerAction =
     | {type: "orbit_camera_target_override", targetX: SinglePlayerParam<number>,
         targetY: SinglePlayerParam<number>, targetZ: SinglePlayerParam<number>}
     | {type: "clear_orbit_camera_target_override"}
-    | {type: "remove_voxel_blocks", rowStart: SinglePlayerParam<number>,
-        colStart: SinglePlayerParam<number>, numRows: SinglePlayerParam<number>,
-        numCols: SinglePlayerParam<number>, collisionLayerMin: SinglePlayerParam<number>,
-        collisionLayerMax: SinglePlayerParam<number>}
-    | {type: "set_object_metadata", objectId: string,
+    | {type: "remove_voxel_blocks", volume: SinglePlayerParam<RoomVolume | undefined>}
+    | {type: "set_object_metadata", objectId: SinglePlayerParam<string>,
         metadataKey: ObjectMetadataKey, metadataValue: SinglePlayerParam<string>}
-    | {type: "object_bounce", objectId: string, durationSeconds: SinglePlayerParam<number>,
+    | {type: "object_bounce", objectId: SinglePlayerParam<string>, durationSeconds: SinglePlayerParam<number>,
         positionOffset?: SinglePlayerParam<Vec3>, rotationOffset?: SinglePlayerParam<Vec3>,
         scaleMultiplier?: SinglePlayerParam<Vec3>, oscillations?: SinglePlayerParam<number>}
     | {type: "play_vfx", effect: string, position: SinglePlayerParam<Vec3>,

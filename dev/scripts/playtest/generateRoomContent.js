@@ -36,7 +36,6 @@ function load()
 }
 
 module.exports = {
-    // (roomName, roomType, ownerUserID, ownerUserName, seed?) -> { texturePackPath, content, ... }
-    // A seed reproduces the same interior; omitting it draws a fresh one.
+    // (roomName, roomType, ownerUserID, ownerUserName) -> { texturePackPath, content, ... }
     generateRoomContent: (...args) => load().generateRoomContent(...args),
 };

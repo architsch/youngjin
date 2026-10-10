@@ -11,12 +11,13 @@ import ObjectTransform from "./objectTransform";
 import ObjectTypeConfigMap from "../maps/objectTypeConfigMap";
 import ObjectGroupVersionMigration, { CURRENT_ERA_VOXEL_GRID_VERSION }
     from "../versionMigration/objectGroupVersionMigration";
+import type VoxelGrid from "../../voxel/types/voxelGrid";
 
 let temp_roomID = "";
 let temp_participantUserNameByID: { [userID: string]: string } = {};
-let temp_sourceVoxelGridVersion = 0;
+let temp_sourceVoxelGrid: VoxelGrid | undefined;
 
-const latestVersion = 6;
+const latestVersion = 7;
 
 export default class ObjectGroup extends EncodableData
 {
@@ -124,13 +125,14 @@ export default class ObjectGroup extends EncodableData
         }
     }
 
-    // sourceVoxelGridVersion: the version of the grid decoded from the same blob, used to date the
-    // objects (see ObjectGroupVersionMigration). Omit for standalone (current) groups.
+    // sourceVoxelGrid: the grid decoded from the same blob, whose version dates the objects and which
+    // hands over what older ones kept in it (see ObjectGroupVersionMigration). Omit for standalone
+    // (current) groups.
     static decodeWithParams(bufferState: BufferState, roomID: string,
-        sourceVoxelGridVersion: number = CURRENT_ERA_VOXEL_GRID_VERSION): EncodableData
+        sourceVoxelGrid?: VoxelGrid): EncodableData
     {
         temp_roomID = roomID;
-        temp_sourceVoxelGridVersion = sourceVoxelGridVersion;
+        temp_sourceVoxelGrid = sourceVoxelGrid;
         if (!temp_roomID || temp_roomID.length == 0)
             throw new Error("ObjectGroup::decodeWithParams :: temp_roomID is empty.");
         return ObjectGroup.decode(bufferState);
@@ -143,7 +145,8 @@ export default class ObjectGroup extends EncodableData
         if (versionFound < latestVersion)
         {
             ObjectGroupVersionMigration.convert(objectGroup, versionFound, latestVersion, temp_roomID,
-                temp_sourceVoxelGridVersion);
+                temp_sourceVoxelGrid?.sourceFormatVersion ?? CURRENT_ERA_VOXEL_GRID_VERSION,
+                temp_sourceVoxelGrid?.legacyRestrictedZones ?? []);
         }
         objectGroup.sourceFormatVersion = versionFound;
         return objectGroup;

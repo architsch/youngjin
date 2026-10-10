@@ -68,6 +68,8 @@ import ObjectAttachmentUtil from "../../../src/shared/object/util/objectAttachme
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import RemoveObjectSignal from "../../../src/shared/object/types/removeObjectSignal";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
+import { restrictedZonesChangedObservable } from "../../../src/shared/system/sharedObservables";
+import { addRestrictedZone } from "../helpers/restrictedZone";
 import Vec3 from "../../../src/shared/math/types/vec3";
 import Room from "../../../src/shared/room/types/room";
 import RoomRuntimeMemory from "../../../src/shared/room/types/roomRuntimeMemory";
@@ -928,5 +930,78 @@ describe("selection restricted to one quad", () => {
 
         expect(VoxelQuadSelection.trySelect(voxelAt(room, 10, 5), other)).toBe(true);
         expect(currentSelection(room)!.quadIndex).toBe(other);
+    });
+});
+
+// ─── A restricted zone changing ─────────────────────────────────────────────
+// What a selection's tools may do depends on the room's zones, so a zone's change re-announces the selection
+// for them to ask again (see ClientVoxelManager).
+
+describe("a restricted zone changing under a selection", () => {
+    function countAnnouncements(): {faces: Mock, objects: Mock, stop: () => void}
+    {
+        const faces = vi.fn();
+        const objects = vi.fn();
+        voxelQuadSelectionObservable.addListener("zone-change-test", faces);
+        objectSelectionObservable.addListener("zone-change-test", objects);
+        return {faces, objects, stop: () => {
+            voxelQuadSelectionObservable.removeListener("zone-change-test");
+            objectSelectionObservable.removeListener("zone-change-test");
+        }};
+    }
+
+    it("re-announces a selected face, and a selected object", async () => {
+        buildPillar(room, 10, 5);
+        forceSelect(room, quadIndexOf(10, 5, "x", "+", 2));
+        const heard = countAnnouncements();
+        try
+        {
+            const zone = addRestrictedZone(room, {rowMin: 8, rowMax: 12, colMin: 3, colMax: 7});
+            expect(heard.faces).toHaveBeenCalledTimes(1);
+            expect(currentSelection(room)!.quadIndex).toBe(quadIndexOf(10, 5, "x", "+", 2));
+
+            const canvas = hangCanvasOnPillar();
+            expect(ObjectSelection.trySelect(gameObjectOf(canvas))).toBe(true);
+            await settle();
+            heard.objects.mockClear();
+            ObjectUpdateUtil.removeObject(App.getUser(), room, new RemoveObjectSignal(room.id, zone.objectId), false);
+            expect(heard.objects).toHaveBeenCalledTimes(1);
+        }
+        finally
+        {
+            heard.stop();
+        }
+    });
+
+    it("leaves a selected volume as it is, which is what is changing", async () => {
+        const zone = addRestrictedZone(room, {rowMin: 8, rowMax: 12, colMin: 3, colMax: 7});
+        expect(ObjectSelection.trySelect(gameObjectOf(zone))).toBe(true);
+        await settle();
+        const heard = countAnnouncements();
+        try
+        {
+            addRestrictedZone(room, {rowMin: 20, rowMax: 22, colMin: 20, colMax: 22});
+            expect(heard.objects).not.toHaveBeenCalled();
+            expect(heard.faces).not.toHaveBeenCalled();
+        }
+        finally
+        {
+            heard.stop();
+        }
+    });
+
+    it("says nothing of another room's zones", () => {
+        buildPillar(room, 10, 5);
+        forceSelect(room, quadIndexOf(10, 5, "x", "+", 2));
+        const heard = countAnnouncements();
+        try
+        {
+            restrictedZonesChangedObservable.set("some-other-room");
+            expect(heard.faces).not.toHaveBeenCalled();
+        }
+        finally
+        {
+            heard.stop();
+        }
     });
 });

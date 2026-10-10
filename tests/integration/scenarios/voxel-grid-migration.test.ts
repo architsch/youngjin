@@ -12,6 +12,8 @@
  *   as every older room has it, spells a whole block.
  * - v6 -> v7 (voxels half as wide, every block a cube): each cell becomes four voxels, and each half-cell
  *   sub-block a block filled becomes a block of its own with that block's textures.
+ * - v7 -> v8 (restricted zones leave the grid): the zones an older grid held are handed on, over the voxels
+ *   they covered, and the objects read after it take them over as volumes (see ObjectGroupVersionMigration).
  *
  * Fixtures up to version 5 describe their rooms cell by cell, each a world unit wide, so a room read today
  * is compared against them as read back at that resolution (see readAtLegacyResolution). They record quads
@@ -27,11 +29,17 @@ import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import Voxel from "../../../src/shared/voxel/types/voxel";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
-import RestrictedZone from "../../../src/shared/voxel/types/restrictedZone";
+import ObjectGroup from "../../../src/shared/object/types/objectGroup";
+import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
+import VolumeObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/volumeObjectTypeConfig";
+import RestrictedZoneUtil from "../../../src/shared/voxel/util/restrictedZoneUtil";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN,
-    MAX_ENCODED_VOXEL_GRID_BYTES, MAX_RESTRICTED_ZONES, NUM_COLLISION_LAYERS, NUM_VOXEL_COLS,
+    MAX_ENCODED_VOXEL_GRID_BYTES, NUM_COLLISION_LAYERS, NUM_VOXEL_COLS,
     NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_QUADS_PER_ROOM, NUM_VOXEL_QUADS_PER_VOXEL,
-    NUM_VOXEL_ROWS } from "../../../src/shared/system/sharedConstants";
+    NUM_VOXEL_ROWS, ZONE_USER_NAME_FOR_NOBODY } from "../../../src/shared/system/sharedConstants";
+
+// How many restricted zones a grid could hold, while it held them.
+const LEGACY_MAX_RESTRICTED_ZONES = 16;
 
 const FIXTURE_DIR = path.join(__dirname, "../fixtures/legacyVoxelGrids");
 const FIXTURE_NAMES = ["bare", "procedural_1", "procedural_7", "procedural_12345",
@@ -246,7 +254,6 @@ function expectSameGrid(actual: VoxelGrid, expected: VoxelGrid): void
 {
     expect(actual.quadsMem.quads.every((quad, i) => quad == expected.quadsMem.quads[i])).toBe(true);
     expect(actual.voxels.map(voxel => voxel.blockLayerMask)).toEqual(expected.voxels.map(voxel => voxel.blockLayerMask));
-    expect(actual.restrictedZones).toEqual(expected.restrictedZones);
 }
 
 describe.each(FIXTURE_NAMES)("migrating a version-1 room (%s)", (name) => {
@@ -478,9 +485,10 @@ function countVisibleQuads(view: LegacyView): number
     return view.visible.filter(visible => visible).length;
 }
 
+// The zones an older grid held, as it hands them on (see VoxelGrid.legacyRestrictedZones).
 function zonesOf(grid: VoxelGrid): number[][]
 {
-    return grid.restrictedZones.map(zone => [zone.rowMin, zone.rowMax, zone.colMin, zone.colMax]);
+    return grid.legacyRestrictedZones.map(zone => [zone.rowMin, zone.rowMax, zone.colMin, zone.colMax]);
 }
 
 // Zones as an older room wrote them, over cells a world unit wide, as they should come back: over the voxels
@@ -513,12 +521,11 @@ describe.each(V3_FIXTURE_NAMES)("migrating a version-3 room (%s)", (name) => {
 
     it("comes back holding no restricted zones", () => {
         // Pre-zone rooms have no zones, so they stay fully editable.
-        expect(decode(bytes).restrictedZones).toEqual([]);
+        expect(zonesOf(decode(bytes))).toEqual([]);
     });
 
     it("survives a round trip through the current format unchanged", () => {
         const migrated = decode(bytes);
-        migrated.restrictedZones = [new RestrictedZone(2, 9, 3, 11), new RestrictedZone(20, 20, 0, NUM_VOXEL_COLS - 1)];
 
         const stored = encode(migrated);
         expect(stored[0]).toBe(VoxelGrid.latestFormatVersion);
@@ -593,7 +600,7 @@ describe("an older room claiming more zones than a room may carry", () => {
             expect(bytes[countByteIndex]).toBe(expected.restrictedZones.length);
 
             const tampered = bytes.slice();
-            tampered[countByteIndex] = MAX_RESTRICTED_ZONES + 1;
+            tampered[countByteIndex] = LEGACY_MAX_RESTRICTED_ZONES + 1;
             expect(() => decode(tampered), `version ${bytes[0]}`).toThrow(/zone count is out of range/);
         }
     });
@@ -923,12 +930,121 @@ describe("the current format", () => {
     });
 });
 
+// ─── Version 7 -> 8: restricted zones leave the grid ───
+// Version 7 wrote today's voxels and then the room's zones, which counted voxels. The grid holds none now:
+// it hands them on, and the objects read after it take them over as volumes.
+
+// A room's voxels as version 7 wrote them, with zones after them: [rowMin, rowMax, colMin, colMax] each.
+function encodeAsVersion7(grid: VoxelGrid, zones: number[][]): Uint8Array
+{
+    const voxels = encode(grid);
+    return new Uint8Array([7, ...voxels.slice(1), zones.length, ...zones.flat()]);
+}
+
+// What was stored after a grid, with nothing in it: objects at the version before zones became volumes.
+function encodeEmptyVersion6Objects(): Uint8Array
+{
+    const out = new BufferState(new Uint8Array(64));
+    new ObjectGroup([]).encode(out);
+    const bytes = out.view.slice(0, out.byteIndex);
+    expect(bytes[0]).toBe(ObjectGroup.latestFormatVersion);
+    bytes[0] = 6;
+    return bytes;
+}
+
+// The volumes a room's objects hold, each as the blocks it covers and whom it is kept for.
+function zoneVolumesOf(objectGroup: ObjectGroup): {blocks: number[], userName: string}[]
+{
+    const volumeTypeIndex = ObjectTypeConfigMap.getIndexByType("Volume");
+    return Object.values(objectGroup.objectById).filter(obj => obj.objectTypeIndex == volumeTypeIndex).map(obj => {
+        const blocks = VolumeObjectTypeConfig.util.getRoomVolume(obj.transform);
+        return {blocks: [blocks.rowMin, blocks.rowMax, blocks.colMin, blocks.colMax,
+            blocks.collisionLayerMin, blocks.collisionLayerMax],
+            userName: VolumeObjectTypeConfig.util.getZoneUserName(obj)};
+    });
+}
+
+describe("a version-7 room", () => {
+    const source = decode(loadVersion6Fixture("regular").bytes);
+    const ZONES = [[4, 19, 6, 23], [40, 40, 0, NUM_VOXEL_COLS - 1], [63, 63, 63, 63]];
+    const bytes = encodeAsVersion7(source, ZONES);
+
+    it("is recognised as an older version than the one being written now", () => {
+        expect(VoxelGrid.latestFormatVersion).toBeGreaterThan(7);
+        expect(decode(bytes).sourceFormatVersion).toBe(7);
+    });
+
+    it("comes back with every voxel as it was written, and hands on its zones as they stood", () => {
+        const grid = decode(bytes);
+        expectSameGrid(grid, source);
+        expect(zonesOf(grid)).toEqual(ZONES);
+    });
+
+    it("is written again with nothing after its voxels", () => {
+        const stored = encode(decode(bytes));
+        expect(stored[0]).toBe(VoxelGrid.latestFormatVersion);
+        expect(stored.length).toBe(bytes.length - 1 - 4 * ZONES.length);
+        expect(zonesOf(decode(stored))).toEqual([]);
+        expectSameGrid(decode(stored), source);
+    });
+
+    it("is refused when it claims more zones than a room could carry", () => {
+        const tampered = encodeAsVersion7(source, []);
+        tampered[tampered.length - 1] = LEGACY_MAX_RESTRICTED_ZONES + 1;
+        expect(() => decode(tampered)).toThrow(/zone count is out of range/);
+    });
+});
+
+describe("the zones an older room's grid held", () => {
+    // The grid, then the objects, as a room's contents are stored and read (see DBRoomUtil).
+    function readObjectsAfter(gridBytes: Uint8Array): ObjectGroup
+    {
+        const readState = new BufferState(new Uint8Array([...gridBytes, ...encodeEmptyVersion6Objects()]));
+        const voxelGrid = VoxelGrid.decode(readState) as VoxelGrid;
+        const objectGroup = ObjectGroup.decodeWithParams(readState, "a-room", voxelGrid) as ObjectGroup;
+        expect(readState.byteIndex).toBe(readState.view.length);
+        return objectGroup;
+    }
+
+    it("become volumes over the same ground, from the room's floor to its ceiling, kept for nobody", () => {
+        const fullHeight = [COLLISION_LAYER_MIN, COLLISION_LAYER_MAX];
+        for (const {bytes, zones} of [
+            {bytes: loadVersion4Fixture("mixed").bytes, zones: overVoxels(loadVersion4Fixture("mixed").expected.restrictedZones)},
+            {bytes: loadVersion6Fixture("regular").bytes, zones: overVoxels(loadVersion6Fixture("regular").expected.restrictedZones)},
+            {bytes: encodeAsVersion7(decode(loadVersion6Fixture("regular").bytes), [[4, 19, 6, 23], [63, 63, 63, 63]]),
+                zones: [[4, 19, 6, 23], [63, 63, 63, 63]]}])
+        {
+            expect(zones.length, `version ${bytes[0]}`).toBeGreaterThan(0);
+            const objectGroup = readObjectsAfter(bytes);
+            expect(zoneVolumesOf(objectGroup), `version ${bytes[0]}`)
+                .toEqual(zones.map(zone => ({blocks: [...zone, ...fullHeight], userName: ZONE_USER_NAME_FOR_NOBODY})));
+            // Each is a restricted zone as a room reads one, under an id of its own.
+            expect(Object.values(objectGroup.objectById).every(RestrictedZoneUtil.isZone)).toBe(true);
+            expect(new Set(Object.keys(objectGroup.objectById)).size).toBe(zones.length);
+        }
+    });
+
+    it("are taken over once: written again, the room's objects hold them and its grid none", () => {
+        const objectGroup = readObjectsAfter(loadVersion4Fixture("mixed").bytes);
+        const out = new BufferState(new Uint8Array(4096));
+        objectGroup.encode(out);
+
+        const reloaded = ObjectGroup.decodeWithParams(new BufferState(out.view.slice(0, out.byteIndex)), "a-room",
+            decode(encode(decode(loadVersion4Fixture("mixed").bytes)))) as ObjectGroup;
+        expect(reloaded.sourceFormatVersion).toBe(ObjectGroup.latestFormatVersion);
+        expect(zoneVolumesOf(reloaded)).toEqual(zoneVolumesOf(objectGroup));
+    });
+
+    it("leave a room that held none without a volume", () => {
+        expect(zoneVolumesOf(readObjectsAfter(loadVersion3Fixture(V3_FIXTURE_NAMES[0]).bytes))).toEqual([]);
+        expect(zoneVolumesOf(readObjectsAfter(encodeAsVersion7(decode(loadVersion6Fixture("hub").bytes), [])))).toEqual([]);
+    });
+});
+
 describe("the encoded room's size bound", () => {
-    it("holds for the largest room there is, with every zone it may carry", () => {
+    it("holds for the largest room there is", () => {
         // The encode buffer is sized from this bound, so exceeding it would write past the buffer.
         const grid = VoxelGrid.createBaseGrid(); // solid floor to ceiling: the costliest room to write
-        for (let i = 0; i < MAX_RESTRICTED_ZONES; ++i)
-            grid.restrictedZones.push(new RestrictedZone(i, i, 0, NUM_VOXEL_COLS - 1));
 
         const out = new BufferState(new Uint8Array(MAX_ENCODED_VOXEL_GRID_BYTES));
         grid.encode(out);

@@ -82,8 +82,7 @@ function decodeRoomBlob(bytes: Uint8Array): {voxelGrid: VoxelGrid, objectGroup: 
 {
     const readState = new BufferState(bytes);
     const voxelGrid = VoxelGrid.decode(readState) as VoxelGrid;
-    const objectGroup = ObjectGroup.decodeWithParams(readState, ROOM_ID,
-        voxelGrid.sourceFormatVersion) as ObjectGroup;
+    const objectGroup = ObjectGroup.decodeWithParams(readState, ROOM_ID, voxelGrid) as ObjectGroup;
     return {voxelGrid, objectGroup};
 }
 

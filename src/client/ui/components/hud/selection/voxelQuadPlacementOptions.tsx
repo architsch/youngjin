@@ -8,6 +8,9 @@ import AddPropIcon from "../../../svg/icons/addPropIcon";
 import AddDoorIcon from "../../../svg/icons/addDoorIcon";
 import AddLampIcon from "../../../svg/icons/addLampIcon";
 import AddLabelIcon from "../../../svg/icons/addLabelIcon";
+import AddNpcIcon from "../../../svg/icons/addNpcIcon";
+import AddVolumeIcon from "../../../svg/icons/addVolumeIcon";
+import VolumeObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/volumeObjectTypeConfig";
 import App from "../../../../app";
 import SocketsClient from "../../../../networking/client/socketsClient";
 import ObjectTypeConfigMap from "../../../../../shared/object/maps/objectTypeConfigMap";
@@ -36,7 +39,7 @@ import EncodableData from "../../../../../shared/networking/types/encodableData"
 import VoxelUpdateUtil from "../../../../../shared/voxel/util/voxelUpdateUtil";
 import RemoveVoxelBlockSignal from "../../../../../shared/voxel/types/update/removeVoxelBlockSignal";
 import DoorObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
-import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, DIR_VEC_BY_NAME, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS, STOREY_FLOOR_COLLISION_LAYER, UNIT_VEC3 } from "../../../../../shared/system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, DIR_VEC_BY_NAME, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS, STOREY_FLOOR_COLLISION_LAYER, UNIT_VEC3, VOXEL_CELL_SIZE } from "../../../../../shared/system/sharedConstants";
 import QuarterTurnsUtil from "../../../../../shared/object/util/quarterTurnsUtil";
 import PointerCoordUtil from "../../../../graphics/util/pointerCoordUtil";
 import AddVoxelBlockSignal from "../../../../../shared/voxel/types/update/addVoxelBlockSignal";
@@ -69,9 +72,14 @@ const propTypeIndex = ObjectTypeConfigMap.getIndexByType("Prop");
 const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
 const labelTypeIndex = ObjectTypeConfigMap.getIndexByType("Label");
+const npcTypeIndex = ObjectTypeConfigMap.getIndexByType("Npc");
+const volumeTypeIndex = ObjectTypeConfigMap.getIndexByType("Volume");
 
 // What a new label says, so it shows (and can be clicked) before anything is written on it.
 const NEW_LABEL_TEXT = "Label";
+
+// What a new NPC is called until it is named.
+const NEW_NPC_NAME = "NPC";
 
 // Feature flags whose toggling changes whether this menu's buttons are enabled.
 const placementFeatureFlags = [
@@ -118,6 +126,14 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
         getPlaceableAttachedObjectTransform(props.selection, doorTypeIndex) !== null;
     const canAddLabel = isSuperuser &&
         getPlaceableAttachedObjectTransform(props.selection, labelTypeIndex) !== null;
+
+    // NPCs (an admin's) and volumes (an admin's or the superuser's, who draws the room's zones with them) are
+    // added as they are, with nothing to pick first.
+    const isAdmin = RoomValidationUtil.userIsAdmin(App.getUser());
+    const canAddNpc = isAdmin &&
+        getPlaceableAttachedObjectTransform(props.selection, npcTypeIndex) !== null;
+    const managesVolumes = isAdmin || isSuperuser;
+    const canAddVolume = managesVolumes && getPlaceableVolumeTransform(props.selection) !== null;
 
     // A chooser shows only while its type can be added to the selected face.
     const canAdd = new Map([[canvasTypeIndex, canAddCanvas], [propTypeIndex, canAddProp], [lampTypeIndex, canAddLamp],
@@ -176,6 +192,10 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
             {addButton("addLampButton", <AddLampIcon/>, lampTypeIndex)}
             {isSuperuser && addButton("addLabelButton", <AddLabelIcon/>, labelTypeIndex)}
             {isSuperuser && addButton("addDoorButton", <AddDoorIcon/>, doorTypeIndex)}
+            {isAdmin && <IconButton id="addNpcButton" icon={<AddNpcIcon/>} size="md"
+                disabled={!canAddNpc} onClick={() => tryAddNpcFromQuad(props.selection)}/>}
+            {managesVolumes && <IconButton id="addVolumeButton" icon={<AddVolumeIcon/>} size="md"
+                disabled={!canAddVolume} onClick={() => tryAddVolumeFromQuad(props.selection)}/>}
         </SelectionToolRow>}
         {choosing == canvasTypeIndex && <ImageMapThumbnailPanel
             id="canvasImageOptions"
@@ -340,6 +360,48 @@ async function tryAddDoorFromQuad(selection: VoxelQuadSelection, compositionInde
     });
 }
 
+// Standing on the clicked floor, turned to face the user, and left selected to be named and dressed.
+async function tryAddNpcFromQuad(selection: VoxelQuadSelection)
+{
+    const metadata = {
+        [ObjectMetadataKeyEnumMap.Label]: new EncodableByteString(NEW_NPC_NAME),
+        // (Its content's top is the way it faces, which runs away from the user when upright on screen.)
+        [ObjectMetadataKeyEnumMap.QuarterTurns]: new EncodableByteString(
+            QuarterTurnsUtil.encode(getUprightQuarterTurns(selection) + 2)),
+    };
+    const tr = getPlaceableAttachedObjectTransform(selection, npcTypeIndex, undefined, metadata);
+    if (tr != null)
+        await addObject(npcTypeIndex, tr, metadata, true);
+}
+
+// The one cell the clicked face looks into, and left selected to be resized and named.
+async function tryAddVolumeFromQuad(selection: VoxelQuadSelection)
+{
+    const tr = getPlaceableVolumeTransform(selection);
+    if (tr != null)
+        await addObject(volumeTypeIndex, tr, {}, true);
+}
+
+function getPlaceableVolumeTransform(selection: VoxelQuadSelection): ObjectTransform | null
+{
+    if (clientFeatureFlagsObservable.has(FeatureFlag.DisableManualObjectAddition))
+        return null;
+
+    const room = App.getCurrentRoom();
+    if (!room)
+        return null;
+    const user = App.getUser();
+
+    const {center, dir} = getClickedFace(selection);
+    const reach = 0.5 * VOXEL_CELL_SIZE;
+    const middle = {x: center.x + reach * dir.x, y: center.y + reach * dir.y, z: center.z + reach * dir.z};
+    const tr = VolumeObjectTypeConfig.util.makeTransform(
+        {x: middle.x - reach, y: middle.y - reach, z: middle.z - reach},
+        {x: middle.x + reach, y: middle.y + reach, z: middle.z + reach});
+    return ObjectUpdateUtil.canAddObject(user, room, new AddObjectSignal(room.id, user.id, user.userName,
+        volumeTypeIndex, ObjectIdUtil.generateRandomObjectId(), tr)) ? tr : null;
+}
+
 // Whether a prop showing an image fits near the click, at the size the image pins it to: asked once per size, as
 // images share a handful of them.
 function getPropImageFits(selection: VoxelQuadSelection): (imagePath: string) => boolean
@@ -382,7 +444,9 @@ function getImages(subfolder: string): ImageMetadata[]
     return ImageChoiceUtil.getOffered(ImageMapUtil.getImageMap("PictureImageMap"), subfolder, !App.isPublicSite());
 }
 
-async function addObject(objectTypeIndex: number, tr: ObjectTransform, metadata: ObjectMetadata)
+// selectIt: leaves the new object selected whatever its type's panels, for one that is finished by hand.
+async function addObject(objectTypeIndex: number, tr: ObjectTransform, metadata: ObjectMetadata,
+    selectIt: boolean = false)
 {
     try {
         const room = App.getCurrentRoom()!;
@@ -404,7 +468,7 @@ async function addObject(objectTypeIndex: number, tr: ObjectTransform, metadata:
             // instead.
             const installPanel = SUB_PANELS_BENEATH_SELECTION_TOOLS ? undefined
                 : ObjectTypeClientConfigMap.getConfigByIndex(objectTypeIndex).selection?.installPanel;
-            const leftOnFace = !installPanel && !DISABLE_AUTO_SELECTION_ON_OBJECT_INSTALLATION
+            const leftOnFace = !selectIt && !installPanel && !DISABLE_AUTO_SELECTION_ON_OBJECT_INSTALLATION
                 && VoxelQuadSelection.trySelectBestQuadNearby(gameObject.params.transform.pos);
             if (!leftOnFace && ObjectSelection.trySelect(gameObject))
                 objectInstalledObservable.set(objectId);

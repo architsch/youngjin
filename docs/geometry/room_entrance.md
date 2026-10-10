@@ -26,4 +26,4 @@ The player starts inside the wall behind the door, facing the room, and `PlayerC
 - **Collider**: a thin pass-through collider, since the wall behind it already blocks movement.
 - **Enter prompt**: shown only when the player is close, looking toward the door, in front of its face and has line of sight. The cheap checks run first. The line-of-sight check is needed because users may have built in front of the door.
 - **Click**: travels to the destination, or shows a "locked" notice. A door that points at the hubs hands the player to the balancer, which is also how the tutorial ends. For the room's superuser, a click selects the door in edit mode instead.
-- **Protection**: no cells are reserved around a door. The blocks of the wall it needs cannot be removed while the door hangs on them, and only the room's superuser may remove the door. Generation keeps its own block work off the floor in front of the entrance.
+- **Protection**: no cells are reserved around a door. The blocks of the wall it needs cannot be removed while the door hangs on them, and only the room's superuser may remove the door.

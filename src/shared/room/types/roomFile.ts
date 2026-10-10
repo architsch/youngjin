@@ -15,10 +15,23 @@ const latestVersion = 0;
 // What every room file starts with, so a file of another kind is refused before it is read as a room.
 const SIGNATURE = "ThingsPoolRoom";
 
-// A room saved to a file, to be loaded over a room later (see ServerRoomManager.loadRoomFile): its
-// contents as they are stored (see DBRoomUtil), then its settings. It names no room, so any can take it.
+// How a gzip stream starts, which a room file's bytes are told from a plain one's by.
+const GZIP_MAGIC_BYTES = [0x1f, 0x8b];
+
+// A room saved to a file, to be loaded over a room later (see ServerRoomManager.loadRoomFile) or played in
+// (see RoomMap): its contents as they are stored (see DBRoomUtil), then its settings. It names no room, so any
+// can take it. The file itself holds these bytes gzipped, or plain: each side unzips with what it has (see
+// ClientRoomFileUtil, ServerRoomFileUtil).
 export default class RoomFile extends EncodableData
 {
+    // What a room file's name ends in.
+    static readonly FILE_EXTENSION = ".room";
+
+    static isGzipped(fileBytes: Uint8Array): boolean
+    {
+        return GZIP_MAGIC_BYTES.every((byte, i) => fileBytes[i] == byte);
+    }
+
     voxelGrid: VoxelGrid;
     objectGroup: ObjectGroup;
     texturePackPath: string;
@@ -78,8 +91,7 @@ export default class RoomFile extends EncodableData
         const voxelGrid = VoxelGrid.decode(bufferState) as VoxelGrid;
         if (voxelGrid.sourceFormatVersion > VoxelGrid.latestFormatVersion)
             throw new Error(`RoomFile :: Voxels written in a newer format (version = ${voxelGrid.sourceFormatVersion})`);
-        const objectGroup = ObjectGroup.decodeWithParams(bufferState, temp_roomID,
-            voxelGrid.sourceFormatVersion) as ObjectGroup;
+        const objectGroup = ObjectGroup.decodeWithParams(bufferState, temp_roomID, voxelGrid) as ObjectGroup;
         if (objectGroup.sourceFormatVersion > ObjectGroup.latestFormatVersion)
             throw new Error(`RoomFile :: Objects written in a newer format (version = ${objectGroup.sourceFormatVersion})`);
 

@@ -13,8 +13,8 @@
  *
  * Runs open in the sandbox by default: an empty single-player room with a free camera, where sets are
  * built on request (see AutomationSetupUtil's sandbox group). `--fresh-room` (or `freshRoom: true`) opens a
- * generated room from a fixed seed instead, for what the sandbox cannot host — room generation itself, and
- * flows that need a stored, multiplayer room. `--admin` opens either as an admin.
+ * newly generated room instead, for what the sandbox cannot host — room generation itself, and flows that
+ * need a stored, multiplayer room. `--admin` opens either as an admin.
  *
  * Expects a dev server already up (`npm run devnossg`) and never starts one, so it can't take down a
  * server in use.
@@ -68,8 +68,7 @@ async function main()
     const servePort = serveArg == undefined ? 0
         : (serveArg.includes("=") ? Number(serveArg.split("=")[1]) : DEFAULT_SERVE_PORT);
     const outArg = args.find(a => a.startsWith("--out="));
-    const seedArg = args.find(a => a.startsWith("--seed="));
-    // Runs choose the room type on the command line: only hubs have two storeys and admin-managed doors.
+    // Runs choose the room type on the command line: only hubs have admin-managed doors.
     const roomTypeArg = args.find(a => a.startsWith("--room-type="));
     // Likewise the seat, for a generated room: the sandbox has seats of its own (see openGame).
     const devUserArg = args.find(a => a.startsWith("--devuser="));
@@ -129,18 +128,17 @@ async function main()
 
     await assertServerIsUp();
 
-    // A seeded room makes a script's coordinates reproducible across machines and runs; removed at the end.
+    // A room seeded for the run makes a script's coordinates reproducible across machines and runs; removed at
+    // the end.
     let seededRoom = null;
     if (freshRoom)
     {
         seededRoom = await seedFreshRoom({
-            seed: seedArg ? Number(seedArg.slice("--seed=".length)) : undefined,
             devUser: runScript.devUser,
-            // Two-storey work needs a hub (Regular rooms are one storey; see freshRoom.js).
             roomType: runScript.roomType,
         });
         console.log(`[sandbox] Seeded ${seededRoom.roomType == 0 ? "hub" : "regular"} room ` +
-            `${seededRoom.roomID} from seed ${seededRoom.seed} ` +
+            `${seededRoom.roomID} ` +
             `(${seededRoom.voxelCount} voxels, ${seededRoom.objectCount} objects).`);
     }
 

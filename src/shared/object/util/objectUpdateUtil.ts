@@ -70,6 +70,7 @@ const ObjectUpdateUtil =
         {
             room.objectGroup.addObject(obj);
             markRoomAsDirtyIfPersistent(room, obj);
+            RestrictedZoneUtil.noteObjectChange(room, obj);
         }
 
         // Skip if already registered (room loads bulk-register physics objects before spawning).
@@ -115,6 +116,7 @@ const ObjectUpdateUtil =
             const obj = room.objectById[signal.objectId];
             room.objectGroup.removeObject(signal.objectId);
             markRoomAsDirtyIfPersistent(room, obj);
+            RestrictedZoneUtil.noteObjectChange(room, obj);
         }
 
         // Remove the object's corresponding PhysicsObject.
@@ -172,6 +174,7 @@ const ObjectUpdateUtil =
             obj.transform.scale.x = result.transform.scale.x;
             obj.transform.scale.y = result.transform.scale.y;
             obj.transform.scale.z = result.transform.scale.z;
+            RestrictedZoneUtil.noteObjectChange(room, obj);
             return result;
         }
         else
@@ -185,6 +188,7 @@ const ObjectUpdateUtil =
             obj.transform.scale.x = target.scale.x;
             obj.transform.scale.y = target.scale.y;
             obj.transform.scale.z = target.scale.z;
+            RestrictedZoneUtil.noteObjectChange(room, obj);
             return {transform: target, desyncDetected: false};
         }
     },
@@ -205,10 +209,14 @@ const ObjectUpdateUtil =
         if (!ObjectMetadataEntryMap.canUserSet(signal.metadataKey, user))
             return false;
 
-        // Check if the object passes the config's criteria.
+        // Check if the object passes the config's criteria, unless the key is no type's own (see
+        // ObjectMetadataEntry.appliesToAnyType).
         const config = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex);
-        if (!config.canUserSetObjectMetadata(user, room, obj, signal))
+        if (!ObjectMetadataEntryMap.appliesToAnyType(signal.metadataKey)
+            && !config.canUserSetObjectMetadata(user, room, obj, signal))
+        {
             return false;
+        }
 
         // Metadata edits are also zone-restricted (a picture's content is part of that stretch of room).
         if (RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex, obj.transform))
@@ -245,6 +253,7 @@ const ObjectUpdateUtil =
             ObjectUpdateUtil.setObjectTransform(user, room, transformSignal, false);
 
         markRoomAsDirtyIfPersistent(room, obj);
+        RestrictedZoneUtil.noteObjectChange(room, obj);
         return true;
     },
 }

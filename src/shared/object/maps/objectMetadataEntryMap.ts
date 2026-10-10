@@ -1,5 +1,6 @@
 import { OBJECT_MESSAGE_MAX_LENGTH, OBJECT_INSTANCED_MESH_COMPOSITION_METADATA_MAX_LENGTH,
-    OBJECT_LABEL_MAX_LENGTH, DOCUMENT_ID_MAX_LENGTH, LABEL_COLOR_PALETTE_NAME } from "../../system/sharedConstants";
+    OBJECT_LABEL_MAX_LENGTH, OBJECT_USER_NAME_MAX_LENGTH, DOCUMENT_ID_MAX_LENGTH,
+    LABEL_COLOR_PALETTE_NAME } from "../../system/sharedConstants";
 import StringUtil from "../../math/util/stringUtil";
 import ColorUtil from "../../math/util/colorUtil";
 import NumUtil from "../../math/util/numUtil";
@@ -10,6 +11,7 @@ import LampObjectTypeConfig from "../types/objectTypeConfig/lampObjectTypeConfig
 import LabelTextUtil from "../util/labelTextUtil";
 import AdminPrefsUtil from "../util/adminPrefsUtil";
 import QuarterTurnsUtil from "../util/quarterTurnsUtil";
+import ObjectTagUtil from "../util/objectTagUtil";
 import User from "../../user/types/user";
 import RoomValidationUtil from "../../room/util/roomValidationUtil";
 
@@ -71,6 +73,16 @@ const entries: {[key: number]: ObjectMetadataEntry} = {
     [ObjectMetadataKeyEnumMap.QuarterTurns]: {
         preprocessingMethod: (rawValue: string) => QuarterTurnsUtil.canonicalize(rawValue),
     },
+    // An admin's to give, to an object of any type (see ObjectTagUtil).
+    [ObjectMetadataKeyEnumMap.Tags]: {
+        preprocessingMethod: (rawValue: string) => ObjectTagUtil.canonicalize(rawValue),
+        canUserSet: (user: User) => RoomValidationUtil.userIsAdmin(user),
+        appliesToAnyType: true,
+    },
+    // Trimmed, since it is matched against a user's name as it stands.
+    [ObjectMetadataKeyEnumMap.ZoneUserName]: {
+        preprocessingMethod: (rawValue: string) => StringUtil.truncateByCodePoints(rawValue.trim(), OBJECT_USER_NAME_MAX_LENGTH),
+    },
 };
 
 const ObjectMetadataEntryMap =
@@ -92,6 +104,10 @@ const ObjectMetadataEntryMap =
         if (entry && entry.canUserSet)
             return entry.canUserSet(user);
         return true;
+    },
+    appliesToAnyType: (metadataKey: number): boolean =>
+    {
+        return entries[metadataKey]?.appliesToAnyType === true;
     },
 }
 

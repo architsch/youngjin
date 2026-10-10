@@ -158,6 +158,19 @@ export default abstract class GameObject
         return this.params.sourceUserID == App.getUser().id;
     }
 
+    // Whose words a speech bubble says the object's are (see SpeechBubble).
+    getSpeakerName(): string
+    {
+        return this.params.sourceUserName;
+    }
+
+    // What visualObj hangs from, for what is placed about the object's body rather than drawn as it (e.g. a speech
+    // bubble): obj itself, unless a subclass poses the body apart from its transform (see NpcGameObject).
+    get bodyObj(): THREE.Object3D
+    {
+        return this.visualObj.parent ?? this.obj;
+    }
+
     // Aliases
     get position(): THREE.Vector3 { return this.obj.position; }
     get direction(): THREE.Vector3

@@ -102,7 +102,7 @@ import ColorUtil from "../../../src/shared/math/util/colorUtil";
 import Vec3 from "../../../src/shared/math/types/vec3";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
-import RestrictedZone from "../../../src/shared/voxel/types/restrictedZone";
+import { addRestrictedZone } from "../helpers/restrictedZone";
 import AddVoxelBlockSignal from "../../../src/shared/voxel/types/update/addVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/removeVoxelBlockSignal";
 import SetVoxelQuadTextureSignal from "../../../src/shared/voxel/types/update/setVoxelQuadTextureSignal";
@@ -880,7 +880,7 @@ describe("an edit the room no longer allows", () => {
         // An ordinary user, whom a hub's zones bind (see RestrictedZoneUtil).
         (App.getUser as Mock).mockReturnValue(createEditingUser(UserTypeEnumMap.Member));
         userPaints(TOP_FACE, 40);
-        room.voxelGrid.restrictedZones = [new RestrictedZone(ROW, ROW, COL, COL)];
+        addRestrictedZone(room, {rowMin: ROW, rowMax: ROW, colMin: COL, colMax: COL});
         sentSignals();
 
         expect(await ClientEventHistoryUtil.undo()).toBe("refused");

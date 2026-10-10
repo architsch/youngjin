@@ -188,7 +188,7 @@ The substantive ones, for attribution:
 | [three](https://github.com/mrdoob/three.js) | MIT | 3D rendering |
 | [react](https://github.com/facebook/react) / react-dom | MIT | UI |
 | [socket.io](https://github.com/socketio/socket.io) / socket.io-client | MIT | real-time networking |
-| [fflate](https://github.com/101arrowz/fflate) | MIT | inflating compressed network data in the client |
+| [fflate](https://github.com/101arrowz/fflate) | MIT | inflating compressed network data and room files in the client |
 | [express](https://github.com/expressjs/express) | MIT | HTTP server |
 | [tailwindcss](https://github.com/tailwindlabs/tailwindcss) | MIT | styling |
 | [firebase-admin](https://github.com/firebase/firebase-admin-node) | Apache-2.0 | database and storage |

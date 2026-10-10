@@ -38,7 +38,8 @@ vi.mock("../../../src/client/object/clientObjectManager", () => ({
 
 import VoxelGameObject from "../../../src/client/object/types/gameObject/voxelGameObject";
 import VoxelQuadInstanceUtil from "../../../src/client/voxel/util/voxelQuadInstanceUtil";
-import RoomGenerationUtil from "../../../src/shared/room/generation/util/roomGenerationUtil";
+import RoomGenerationUtil from "../../../src/shared/room/util/roomGenerationUtil";
+import { createTestRoom } from "../helpers/roomContent";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import BufferState from "../../../src/shared/networking/types/bufferState";
 import RandomNumberGenerator from "../../../src/shared/math/types/randomNumberGenerator";
@@ -47,7 +48,7 @@ import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
 import { voxelQuadChangeObservable } from "../../../src/shared/system/sharedObservables";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, ENCODED_RESTRICTED_ZONE_BYTES, MAX_ENCODED_VOXEL_GRID_BYTES,
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_ENCODED_VOXEL_GRID_BYTES,
     MAX_VISIBLE_VOXEL_QUADS_PER_ROOM, NUM_COLLISION_LAYERS, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER,
     NUM_VOXEL_QUADS_PER_ROOM, NUM_VOXEL_ROWS, NUM_VOXEL_TEXTURES, SANDBOX_SINGLE_PLAYER_MODE,
     TUTORIAL_SINGLE_PLAYER_MODE, VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
@@ -131,15 +132,24 @@ function countSolidOpenBoundaries(grid: VoxelGrid): number
     return count;
 }
 
+// A room as the server makes one: empty.
+function generatedGrid(): VoxelGrid
+{
+    return RoomGenerationUtil.generateRoom("Room", RoomTypeEnumMap.Regular).voxelGrid;
+}
+
+// A single-player room's, read from its file: the tutorial's is spaces cut out of rock, the sandbox's all open.
+function singlePlayerGrid(singlePlayerMode: string): VoxelGrid
+{
+    return createTestRoom(singlePlayerMode, singlePlayerMode, RoomTypeEnumMap.SinglePlayer).voxelGrid;
+}
+
 function generatedRooms(): {name: string, grid: VoxelGrid}[]
 {
     return [
-        {name: "hub", grid: RoomGenerationUtil.generateRoom("Hub", RoomTypeEnumMap.Hub, "", "", 4242).voxelGrid},
-        {name: "regular", grid: RoomGenerationUtil.generateRoom("Regular", RoomTypeEnumMap.Regular, "", "", 91).voxelGrid},
-        {name: "tutorial", grid: RoomGenerationUtil.generateRoom(TUTORIAL_SINGLE_PLAYER_MODE,
-            RoomTypeEnumMap.SinglePlayer).voxelGrid},
-        {name: "sandbox", grid: RoomGenerationUtil.generateRoom(SANDBOX_SINGLE_PLAYER_MODE,
-            RoomTypeEnumMap.SinglePlayer).voxelGrid},
+        {name: "generated", grid: generatedGrid()},
+        {name: "tutorial", grid: singlePlayerGrid(TUTORIAL_SINGLE_PLAYER_MODE)},
+        {name: "sandbox", grid: singlePlayerGrid(SANDBOX_SINGLE_PLAYER_MODE)},
     ];
 }
 
@@ -210,8 +220,8 @@ function encodeWithQuadByteIndices(grid: VoxelGrid): {bytes: Uint8Array, quadByt
                 quadByteIndices.push(byteIndex++);
         }
     }
-    // (All that follows the voxels is the room's restricted zones, behind a byte counting them.)
-    expect(byteIndex + 1 + ENCODED_RESTRICTED_ZONE_BYTES * grid.restrictedZones.length).toBe(out.byteIndex);
+    // (Nothing follows the voxels.)
+    expect(byteIndex).toBe(out.byteIndex);
     return {bytes: out.view.slice(0, out.byteIndex), quadByteIndices};
 }
 
@@ -346,7 +356,7 @@ describe("the quads a room draws", () => {
     });
 
     it("are none for a quad index outside the room", () => {
-        const grid = RoomGenerationUtil.generateRoom("Hub", RoomTypeEnumMap.Hub, "", "", 3).voxelGrid;
+        const grid = generatedGrid();
         for (const quadIndex of [-1, NUM_VOXEL_QUADS_PER_ROOM, NUM_VOXEL_QUADS_PER_ROOM + 12345])
             expect(isVisible(grid, quadIndex), `${quadIndex}`).toBe(false);
     });
@@ -582,7 +592,7 @@ describe("the voxel mesh", () => {
     // It lends an instance to each drawn quad and takes it back once the quad is covered (see
     // VoxelQuadInstanceUtil), hearing of either only through what an edit announces.
     it("holds an instance for exactly the quads the room draws, through a run of edits", () => {
-        const grid = RoomGenerationUtil.generateRoom("Hub", RoomTypeEnumMap.Hub, "", "", 104729).voxelGrid;
+        const grid = generatedGrid();
         const mesh = makeVoxelMesh(grid);
         try
         {
@@ -606,7 +616,7 @@ describe("the voxel mesh", () => {
     });
 
     it("is drawn by far fewer objects than the room has voxels, each voxel by the one whose patch it lies in", () => {
-        const grid = RoomGenerationUtil.generateRoom("Regular", RoomTypeEnumMap.Regular, "", "", 7).voxelGrid;
+        const grid = singlePlayerGrid(TUTORIAL_SINGLE_PLAYER_MODE);
         const mesh = makeVoxelMesh(grid);
         try
         {
@@ -627,7 +637,7 @@ describe("the voxel mesh", () => {
     });
 
     it("puts each quad where it lies in the room, whichever object draws it", () => {
-        const grid = RoomGenerationUtil.generateRoom("Regular", RoomTypeEnumMap.Regular, "", "", 7).voxelGrid;
+        const grid = singlePlayerGrid(TUTORIAL_SINGLE_PLAYER_MODE);
         const mesh = makeVoxelMesh(grid);
         try
         {
@@ -658,8 +668,8 @@ describe("the voxel mesh", () => {
     });
 
     it("shows another room's voxels once its objects are bound to that room's grid", () => {
-        const first = RoomGenerationUtil.generateRoom("Regular", RoomTypeEnumMap.Regular, "", "", 7).voxelGrid;
-        const second = RoomGenerationUtil.generateRoom("Hub", RoomTypeEnumMap.Hub, "", "", 104729).voxelGrid;
+        const first = singlePlayerGrid(TUTORIAL_SINGLE_PLAYER_MODE);
+        const second = generatedGrid();
         expect(visibleQuads(second)).not.toEqual(visibleQuads(first));
 
         const mesh = makeVoxelMesh(first);
@@ -747,7 +757,7 @@ describe("a quad's spare bit", () => {
     });
 
     it("stays clear through edits and in what is read, and the room comes back from its encoding as it was", () => {
-        const grid = RoomGenerationUtil.generateRoom("Regular", RoomTypeEnumMap.Regular, "", "", 999983).voxelGrid;
+        const grid = singlePlayerGrid(TUTORIAL_SINGLE_PLAYER_MODE);
         const rand = new RandomNumberGenerator(7);
         for (let i = 0; i < 2000; ++i)
             drawRandomEdit(grid, rand, EDIT_KINDS[i % EDIT_KINDS.length])?.();

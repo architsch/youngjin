@@ -1,8 +1,11 @@
 import EncodableByteString from "../../networking/types/encodableByteString";
+import AddObjectSignal from "../types/addObjectSignal";
 // Type-only: ObjectGroup imports this module, so a value import would be an import cycle.
 import type ObjectGroup from "../types/objectGroup";
 import ObjectTransform from "../types/objectTransform";
 import DoorObjectTypeConfig from "../types/objectTypeConfig/doorObjectTypeConfig";
+import VolumeObjectTypeConfig from "../types/objectTypeConfig/volumeObjectTypeConfig";
+import type LegacyRestrictedZone from "../../voxel/versionMigration/legacyRestrictedZone";
 import ObjectTypeConfigMap from "../maps/objectTypeConfigMap";
 import ObjectScaleUtil from "../util/objectScaleUtil";
 import ObjectAttachmentUtil from "../util/objectAttachmentUtil";
@@ -23,7 +26,7 @@ import DoorCompositionParams from "../../graphics/mesh/composition/types/composi
 import { InstancedMeshCompositionParams } from "../../graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
 import ColorUtil from "../../math/util/colorUtil";
 import LightPaletteVersionMigration from "../../math/versionMigration/lightPaletteVersionMigration";
-import { UNIT_VEC3 } from "../../system/sharedConstants";
+import { MAX_ROOM_Y, UNIT_VEC3, VOXEL_CELL_SIZE, ZONE_USER_NAME_FOR_NOBODY } from "../../system/sharedConstants";
 import BufferState from "../../networking/types/bufferState";
 
 // Grid version where rooms became two storeys. Objects share a blob with the grid, and the object
@@ -85,6 +88,9 @@ const LEGACY_FINISH_PROFILE_WEIGHT = 16;
 // Bitmap canvas frames were cells of a square atlas, this many cells a side.
 const LEGACY_CANVAS_FRAME_ATLAS_CELLS_PER_SIDE = 4;
 
+// The id of the volume a restricted zone of the grid becomes, before the zone's place in the grid's list.
+const LEGACY_ZONE_VOLUME_OBJECT_ID_PREFIX = "restricted_zone_";
+
 // Each bitmap frame's look-alike in wood inputs, by atlas cell (row by row): frame and inner colors from
 // the "Timber" palette, band width and profile. The old borders came in four widths, each kept at the
 // nearest band width on offer, which caps the carved frames'. Colors are matched against how the wood
@@ -110,7 +116,8 @@ const LEGACY_CANVAS_FRAMES = [
 
 // Every version so far shares one body layout, so older groups are read as current ones and only their
 // meaning is converted. Index N converts version N to N+1, in place.
-const converters: ((objectGroup: ObjectGroup, roomID: string, sourceVoxelGridVersion: number) => void)[] = [
+const converters: ((objectGroup: ObjectGroup, roomID: string, sourceVoxelGridVersion: number,
+    legacyRestrictedZones: LegacyRestrictedZone[]) => void)[] = [
     (objectGroup: ObjectGroup, roomID: string, sourceVoxelGridVersion: number) => { // version 0 -> 1
         // Only objects from pre-two-storey grids had heights doubled; newer ones must be left alone.
         if (sourceVoxelGridVersion >= FIRST_TWO_STOREY_VOXEL_GRID_VERSION)
@@ -243,6 +250,21 @@ const converters: ((objectGroup: ObjectGroup, roomID: string, sourceVoxelGridVer
                     config.components.spawnedByAny?.instancedMeshComposer?.codecVersion ?? 0));
         }
     },
+    (objectGroup: ObjectGroup, roomID: string, sourceVoxelGridVersion: number,
+        legacyRestrictedZones: LegacyRestrictedZone[]) => { // version 6 -> 7
+        // Restricted zones left the grid for volumes (see RestrictedZoneUtil): each the grid still held
+        // becomes one, from the room's floor to its ceiling as zones ran, and kept for nobody, which
+        // leaves it the superuser's alone as it was.
+        const volumeTypeIndex = ObjectTypeConfigMap.getIndexByType("Volume");
+        legacyRestrictedZones.forEach((zone, index) => {
+            objectGroup.addObject(new AddObjectSignal(roomID, "", "", volumeTypeIndex,
+                `${LEGACY_ZONE_VOLUME_OBJECT_ID_PREFIX}${index}`,
+                VolumeObjectTypeConfig.util.makeTransform(
+                    {x: zone.colMin * VOXEL_CELL_SIZE, y: 0, z: zone.rowMin * VOXEL_CELL_SIZE},
+                    {x: (zone.colMax + 1) * VOXEL_CELL_SIZE, y: MAX_ROOM_Y, z: (zone.rowMax + 1) * VOXEL_CELL_SIZE}),
+                {[ObjectMetadataKeyEnumMap.ZoneUserName]: new EncodableByteString(ZONE_USER_NAME_FOR_NOBODY)}));
+        });
+    },
 ];
 
 const ObjectGroupVersionMigration =
@@ -258,12 +280,13 @@ const ObjectGroupVersionMigration =
         return new ObjectTransform(pos, dir, {...UNIT_VEC3});
     },
     // Converts a group read at an older version forward, one version at a time. The grid decoded from
-    // the same blob dates the objects (see FIRST_TWO_STOREY_VOXEL_GRID_VERSION).
+    // the same blob dates the objects (see FIRST_TWO_STOREY_VOXEL_GRID_VERSION), and hands over the
+    // restricted zones it used to hold (see VoxelGrid.legacyRestrictedZones).
     convert: (objectGroup: ObjectGroup, version: number, latestVersion: number, roomID: string,
-        sourceVoxelGridVersion: number): void =>
+        sourceVoxelGridVersion: number, legacyRestrictedZones: LegacyRestrictedZone[]): void =>
     {
         for (let fromVersion = version; fromVersion < latestVersion; ++fromVersion)
-            converters[fromVersion](objectGroup, roomID, sourceVoxelGridVersion);
+            converters[fromVersion](objectGroup, roomID, sourceVoxelGridVersion, legacyRestrictedZones);
     },
 }
 

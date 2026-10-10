@@ -1,19 +1,24 @@
 /**
- * Deterministic room fixtures: generated rooms are random, so scenarios get a bare shell (open storeys,
- * boundary wall, entrance door). Generation itself is tested in room-generation.test.ts.
+ * Room fixtures: multiplayer scenarios get a bare shell (open storeys, boundary wall, entrance door) finished in
+ * textures that tell its floor, walls and ceiling apart. Generation itself is tested in room-generation.test.ts.
+ * Single-player rooms are read from their room files, as the game reads them.
  */
+import fs from "fs";
+import path from "path";
+import zlib from "zlib";
+import BufferState from "../../../src/shared/networking/types/bufferState";
+import RoomFile from "../../../src/shared/room/types/roomFile";
+import SinglePlayerModeConfigMap from "../../../src/shared/singlePlayer/maps/singlePlayerModeConfigMap";
 import ObjectGroup from "../../../src/shared/object/types/objectGroup";
 import RoomPrefsUtil from "../../../src/shared/room/util/roomPrefsUtil";
 import DoorObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
-import { RoomVolumeConstructorMap } from "../../../src/shared/room/generation/maps/roomVolumeConstructorMap";
-import RoomPalette from "../../../src/shared/room/generation/types/roomPalette";
-import RoomVolume from "../../../src/shared/room/generation/types/roomVolume";
-import RoomGenerationUtil from "../../../src/shared/room/generation/util/roomGenerationUtil";
-import RoomVolumeUtil from "../../../src/shared/room/generation/util/roomVolumeUtil";
+import RoomPalette from "../../../src/shared/room/types/roomPalette";
+import RoomVolume from "../../../src/shared/room/types/roomVolume";
+import RoomGenerationUtil from "../../../src/shared/room/util/roomGenerationUtil";
+import RoomVolumeUtil from "../../../src/shared/room/util/roomVolumeUtil";
 import Room from "../../../src/shared/room/types/room";
 import { RoomType, RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
-import { COLLISION_LAYER_MAX, INITIAL_MULTI_PLAYER_ENTRANCE_POS,
-    STOREY_FLOOR_COLLISION_LAYER } from "../../../src/shared/system/sharedConstants";
+import { COLLISION_LAYER_MAX, INITIAL_MULTI_PLAYER_ENTRANCE_POS } from "../../../src/shared/system/sharedConstants";
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import VoxelQuadsRuntimeMemory from "../../../src/shared/voxel/types/voxelQuadsRuntimeMemory";
 
@@ -28,14 +33,12 @@ function carveBareGrid(): VoxelGrid
     // Start solid and carve the open space.
     const grid = VoxelGrid.createBaseGrid();
 
-    // Two open storeys with the slab between; the upper one reaches the room ceiling (unlike generated
-    // rooms), so ceiling-tile scenarios work.
-    const {rowMin, rowMax, colMin, colMax} = RoomVolumeConstructorMap["Interior"]();
-    RoomVolumeUtil.carveOutVolume(grid.voxels, RoomVolumeConstructorMap["FirstStorey"](
-        rowMin, rowMax, colMin, colMax, PALETTE));
-    RoomVolumeUtil.carveOutVolume(grid.voxels, new RoomVolume(
-        rowMin, rowMax, colMin, colMax,
-        STOREY_FLOOR_COLLISION_LAYER + 1, COLLISION_LAYER_MAX, PALETTE));
+    // A generated room's two storeys with the slab between; the upper one reaches the room ceiling (unlike a
+    // generated room's), so ceiling-tile scenarios work.
+    const [lower, upper] = RoomGenerationUtil.getStoreys();
+    RoomVolumeUtil.carveOutVolume(grid.voxels, lower, PALETTE);
+    RoomVolumeUtil.carveOutVolume(grid.voxels, new RoomVolume(upper.rowMin, upper.rowMax, upper.colMin, upper.colMax,
+        upper.collisionLayerMin, COLLISION_LAYER_MAX), PALETTE);
     return grid;
 }
 
@@ -59,7 +62,26 @@ export function buildBareMultiplayerRoomContent(room: Room): void
         DoorObjectTypeConfig.util.makeEntranceDoor(room.id, INITIAL_MULTI_PLAYER_ENTRANCE_POS));
 }
 
-/** A fixture room of the given type. Single-player rooms keep their real template. */
+/** The bytes of a single-player room's file, unzipped (see RoomFile). */
+export function readSinglePlayerRoomFileBytes(roomPath: string): Uint8Array
+{
+    const fileBytes = fs.readFileSync(path.join(process.cwd(), "public/app/assets/rooms",
+        `${roomPath}${RoomFile.FILE_EXTENSION}`));
+    return new Uint8Array(RoomFile.isGzipped(fileBytes) ? zlib.gunzipSync(fileBytes) : fileBytes);
+}
+
+/** Fills a single-player room in from its mode's room file, as the client does on entering it. */
+export function loadSinglePlayerRoomContent(room: Room): void
+{
+    const roomFile = RoomFile.decodeWithParams(new BufferState(
+        readSinglePlayerRoomFileBytes(SinglePlayerModeConfigMap[room.roomName].roomPath)), room.id) as RoomFile;
+    room.voxelGrid = roomFile.voxelGrid;
+    room.objectGroup = roomFile.objectGroup;
+    room.texturePackPath = roomFile.texturePackPath;
+    room.prefs = roomFile.prefs;
+}
+
+/** A fixture room of the given type. Single-player rooms keep their real content. */
 export function createTestRoom(roomID: string, roomName: string, roomType: RoomType,
     ownerUserID: string = "", ownerUserName: string = "", texturePackPath: string = "default"): Room
 {
@@ -68,7 +90,7 @@ export function createTestRoom(roomID: string, roomName: string, roomType: RoomT
         new VoxelGrid([], new VoxelQuadsRuntimeMemory()), new ObjectGroup([]));
 
     if (roomType === RoomTypeEnumMap.SinglePlayer)
-        RoomGenerationUtil.generateRoomContent(room);
+        loadSinglePlayerRoomContent(room);
     else
         buildBareMultiplayerRoomContent(room);
 

@@ -1,5 +1,5 @@
-// Seeds a local run's room from a fixed seed (see RoomGenerationUtil), owned by the run's dev user so
-// it's editable, and removes it afterwards. Existing rooms differ per machine and keep earlier runs'
+// Seeds a local run's room as the server generates one (see RoomGenerationUtil), owned by the run's dev user
+// so it's editable, and removes it afterwards. Existing rooms differ per machine and keep earlier runs'
 // edits, so coordinates written against them don't reproduce.
 
 const { generateRoomContent } = require("../generateRoomContent");
@@ -16,8 +16,7 @@ const EMULATOR_DEFAULTS = {
 // Stamped on the seeded room and checked before removal, so a wrong id can't delete a real room.
 const MARKER = "__localFreshRoom";
 
-// Mirrors RoomTypeEnumMap. Regular rooms are one storey (see RegularRoomBuilder), so anything upstairs
-// needs "hub".
+// Mirrors RoomTypeEnumMap. Both are generated alike; they differ in who may do what in them.
 const ROOM_TYPES = { hub: 0, regular: 1 };
 const DEFAULT_ROOM_TYPE = ROOM_TYPES.regular;
 
@@ -89,13 +88,12 @@ async function findDevUser(db, devUser)
  */
 async function seedFreshRoom(options = {})
 {
-    const seed = options.seed === undefined ? 0 : options.seed;
     const roomType = resolveRoomType(options.roomType);
     const {db, bucket, target} = connect();
     const owner = await findDevUser(db, options.devUser === undefined ? 1 : options.devUser);
 
     const generated = generateRoomContent(
-        options.roomName || "Fresh Room", roomType, owner.id, owner.userName, seed);
+        options.roomName || "Fresh Room", roomType, owner.id, owner.userName);
 
     const roomRef = db.collection(roomsCollection()).doc();
     await roomRef.set({
@@ -113,7 +111,6 @@ async function seedFreshRoom(options = {})
 
     return {
         roomID: roomRef.id,
-        seed,
         roomType,
         target: target.name,
         ownerUserID: owner.id,

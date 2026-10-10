@@ -17,7 +17,6 @@ import { connectionStateObservable } from "../../system/clientObservables";
 import { tryStartClientProcess, endClientProcess, ongoingClientProcessExists } from "../../system/types/clientProcess";
 import BufferState from "../../../shared/networking/types/bufferState";
 import SetVoxelQuadTextureSignal from "../../../shared/voxel/types/update/setVoxelQuadTextureSignal";
-import SetRestrictedZonesSignal from "../../../shared/voxel/types/update/setRestrictedZonesSignal";
 import RemoveVoxelBlockSignal from "../../../shared/voxel/types/update/removeVoxelBlockSignal";
 import AddVoxelBlockSignal from "../../../shared/voxel/types/update/addVoxelBlockSignal";
 import MoveVoxelBlockSignal from "../../../shared/voxel/types/update/moveVoxelBlockSignal";
@@ -59,8 +58,6 @@ const incomingSignalHandlers: {[signalType: string]: (data: EncodableData) => vo
         ClientVoxelManager.onRemoveVoxelBlockSignalReceived(data as RemoveVoxelBlockSignal),
     "setVoxelQuadTextureSignal": (data: EncodableData) =>
         ClientVoxelManager.onSetVoxelQuadTextureSignalReceived(data as SetVoxelQuadTextureSignal),
-    "setRestrictedZonesSignal": (data: EncodableData) =>
-        ClientVoxelManager.onSetRestrictedZonesSignalReceived(data as SetRestrictedZonesSignal),
     "roomTexturePackChangedSignal": (data: EncodableData) =>
         App.onRoomTexturePackChangedSignalReceived(data as RoomTexturePackChangedSignal),
     "roomPrefsChangedSignal": (data: EncodableData) =>
@@ -167,10 +164,6 @@ const SocketsClient =
     emitSetVoxelQuadTextureSignal: (params: SetVoxelQuadTextureSignal) =>
     {
         emitWhenReady("setVoxelQuadTextureSignal", params);
-    },
-    emitSetRestrictedZonesSignal: (params: SetRestrictedZonesSignal) =>
-    {
-        emitWhenReady("setRestrictedZonesSignal", params);
     },
     emitAddObjectSignal: (params: AddObjectSignal) =>
     {

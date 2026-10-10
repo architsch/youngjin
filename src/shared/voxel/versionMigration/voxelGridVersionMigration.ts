@@ -1,12 +1,19 @@
 import BufferState from "../../networking/types/bufferState";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, MAX_RESTRICTED_ZONES, NUM_VOXEL_COLS,
-    NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../system/sharedConstants";
-import RestrictedZone from "../types/restrictedZone";
+import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER,
+    NUM_VOXEL_ROWS } from "../../system/sharedConstants";
 import Voxel from "../types/voxel";
 // Type-only: VoxelGrid imports this module, so a value import would be an import cycle.
 import type VoxelGrid from "../types/voxelGrid";
 import VoxelQueryUtil from "../util/voxelQueryUtil";
+import LegacyRestrictedZone from "./legacyRestrictedZone";
 import LegacyVoxelGrid from "./legacyVoxelGrid";
+
+// The version that laid its voxels out as today's, with the room's restricted zones after them: read as it
+// stands (see decodeCubesAndZonesFormat), not through the legacy grid older ones are converted in.
+const FIRST_CUBE_VERSION = 7;
+
+// How many restricted zones a grid could hold, while it held them.
+const LEGACY_MAX_RESTRICTED_ZONES = 16;
 
 // Layer count of the half-height format. Its layers map onto the current lowest ones; the upper half
 // arrives empty.
@@ -97,6 +104,11 @@ const VoxelGridVersionMigration =
     // converted forward one version at a time (see @docs/geometry/voxel_grid.md).
     decode: (bufferState: BufferState, voxelGrid: VoxelGrid, version: number): void =>
     {
+        if (version >= FIRST_CUBE_VERSION)
+        {
+            decodeCubesAndZonesFormat(bufferState, voxelGrid);
+            return;
+        }
         const legacyGrid = new LegacyVoxelGrid();
         decoders[version](bufferState, legacyGrid);
         for (let fromVersion = version; fromVersion < converters.length; ++fromVersion)
@@ -109,6 +121,7 @@ const VoxelGridVersionMigration =
 // Each sub-block a block filled becomes a block of its own with that block's textures, and the four
 // voxels a cell becomes each take its floor and ceiling quads. A quad keeps its texture index alone: the
 // spare bit older versions put to their uses is dropped here. A zone covers the voxels its cells became.
+// Version 7 -> 8: zones left the grid, which hands them on (see VoxelGrid.legacyRestrictedZones).
 function convertToCubes(legacyGrid: LegacyVoxelGrid, voxelGrid: VoxelGrid): void
 {
     const quads = voxelGrid.quadsMem.quads;
@@ -142,8 +155,22 @@ function convertToCubes(legacyGrid: LegacyVoxelGrid, voxelGrid: VoxelGrid): void
             }
         }
     }
-    voxelGrid.restrictedZones = legacyGrid.restrictedZones.map(zone => new RestrictedZone(
+    voxelGrid.legacyRestrictedZones = legacyGrid.restrictedZones.map(zone => new LegacyRestrictedZone(
         2 * zone.rowMin, 2 * zone.rowMax + 1, 2 * zone.colMin, 2 * zone.colMax + 1));
+}
+
+// Version 7: today's voxels, then the restricted zones, which counted voxels.
+function decodeCubesAndZonesFormat(bufferState: BufferState, voxelGrid: VoxelGrid): void
+{
+    for (let row = 0; row < NUM_VOXEL_ROWS; ++row)
+    {
+        for (let col = 0; col < NUM_VOXEL_COLS; ++col)
+        {
+            voxelGrid.voxels[row * NUM_VOXEL_COLS + col] =
+                Voxel.decodeWithParams(bufferState, voxelGrid.quadsMem, row, col) as Voxel;
+        }
+    }
+    voxelGrid.legacyRestrictedZones = decodeRestrictedZones(bufferState);
 }
 
 function forEachEntranceDoorwayLayer(visit: (collisionLayer: number) => void): void
@@ -195,14 +222,14 @@ function decodeCellsOnlyFormat(bufferState: BufferState, grid: LegacyVoxelGrid):
 function decodeCellsAndZonesFormat(bufferState: BufferState, grid: LegacyVoxelGrid): void
 {
     decodeCells(bufferState, grid, 2, false);
-    decodeRestrictedZones(bufferState, grid);
+    grid.restrictedZones = decodeRestrictedZones(bufferState);
 }
 
 // The same layout, with each block's shape in the spare bits of its side quads.
 function decodeShapedBlocksFormat(bufferState: BufferState, grid: LegacyVoxelGrid): void
 {
     decodeCells(bufferState, grid, 2, true);
-    decodeRestrictedZones(bufferState, grid);
+    grid.restrictedZones = decodeRestrictedZones(bufferState);
 }
 
 // A cell as every version up to 6 wrote it: its ceiling and floor quads, a mask of the layers holding a
@@ -251,13 +278,17 @@ function getStoredShape(quads: Uint8Array, firstQuadIndex: number): number
     return shape;
 }
 
-function decodeRestrictedZones(bufferState: BufferState, grid: LegacyVoxelGrid): void
+// How many zones follow, then each (see LegacyRestrictedZone).
+function decodeRestrictedZones(bufferState: BufferState): LegacyRestrictedZone[]
 {
     const numZones = bufferState.view[bufferState.byteIndex++];
-    if (numZones > MAX_RESTRICTED_ZONES)
+    if (numZones > LEGACY_MAX_RESTRICTED_ZONES)
         throw new Error(`Decoded restricted zone count is out of range (numZones = ${numZones})`);
+
+    const restrictedZones: LegacyRestrictedZone[] = [];
     for (let i = 0; i < numZones; ++i)
-        grid.restrictedZones.push(RestrictedZone.decode(bufferState) as RestrictedZone);
+        restrictedZones.push(LegacyRestrictedZone.decode(bufferState));
+    return restrictedZones;
 }
 
 export default VoxelGridVersionMigration;

@@ -55,8 +55,8 @@ export interface ScenarioConfig
     /** If true, skip invariant checking (for tests that intentionally break invariants). */
     skipInvariants?: boolean;
 
-    /** Specific assertions on final state. */
-    assertions?: (ctx: ScenarioContext) => void;
+    /** Specific assertions on final state, awaited before cleanup. */
+    assertions?: (ctx: ScenarioContext) => void | Promise<void>;
 
     /** If true, don't auto-disconnect users at the end. */
     skipCleanup?: boolean;
@@ -158,7 +158,7 @@ export async function runScenario(config: ScenarioConfig): Promise<ScenarioConte
     // 8. Run custom assertions
     const ctx: ScenarioContext = { users, harness };
     if (config.assertions)
-        config.assertions(ctx);
+        await config.assertions(ctx);
 
     // 9. Cleanup
     if (!config.skipCleanup)

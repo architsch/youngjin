@@ -23,7 +23,7 @@ import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import EncodableByteString from "../../../src/shared/networking/types/encodableByteString";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
 import Room from "../../../src/shared/room/types/room";
-import RestrictedZone from "../../../src/shared/voxel/types/restrictedZone";
+import { addRestrictedZone } from "../helpers/restrictedZone";
 import User from "../../../src/shared/user/types/user";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import ColorUtil from "../../../src/shared/math/util/colorUtil";
@@ -238,8 +238,8 @@ describe("lamp permissions", () => {
                 // Over the lamp's stretch of the wall, and the floor before it.
                 const lampCol = Math.floor((INITIAL_MULTI_PLAYER_ENTRANCE_POS.x - 5) / VOXEL_CELL_SIZE);
                 const firstWallRow = Math.floor(INITIAL_MULTI_PLAYER_ENTRANCE_POS.z / VOXEL_CELL_SIZE);
-                room.voxelGrid.restrictedZones = [new RestrictedZone(
-                    firstWallRow - 6, NUM_VOXEL_ROWS - 1, lampCol - 5, lampCol + 4)];
+                addRestrictedZone(room, {rowMin: firstWallRow - 6, rowMax: NUM_VOXEL_ROWS - 1,
+                    colMin: lampCol - 5, colMax: lampCol + 4});
 
                 expect(ObjectUpdateUtil.canAddObject(MEMBER, room,
                     makeLampSignal(room, MEMBER))).toBe(false);

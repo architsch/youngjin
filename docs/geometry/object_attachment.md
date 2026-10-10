@@ -2,7 +2,7 @@
 
 Reference: @src/shared/object/util/objectAttachmentUtil.ts , @src/shared/object/types/objectAttachmentConfig.ts , @src/shared/physics/util/physicsColliderStateUtil.ts , @src/client/graphics/types/gizmo/objectAttachmentEditGizmos.ts
 
-An attached object (a canvas, a prop, a [door](door_design.md), a lamp) rests on a voxel face: a wall, a floor or a ceiling. Its type's `ObjectAttachmentConfig` lists the facings it may take (walls only for doors and labels, any face for canvases, props and lamps), and the placement rule enforces it on the server as well.
+An attached object (a canvas, a prop, a [door](door_design.md), a lamp, an NPC) rests on a voxel face: a wall, a floor or a ceiling. Its type's `ObjectAttachmentConfig` lists the facings it may take (walls only for doors and labels, floors only for NPCs, any face for canvases, props and lamps), and the placement rule enforces it on the server as well.
 
 ## Frame
 - The facing is the normal of the face the object rests on: up for a floor, down for a ceiling.
@@ -18,7 +18,7 @@ An attached object (a canvas, a prop, a [door](door_design.md), a lamp) rests on
   - the face lies on its plane, a voxel's side;
   - horizontal centres snap to the grid;
   - vertically, the **bottom edge** snaps, not the centre, so an object stands on the grid whatever its height.
-- The collider is centred on the position, so a door's origin sits half its height above the floor.
+- The collider is centred on the position, so a door's origin sits half its height above the floor. A type that **stands out** from its face (`ObjectAttachmentConfig.standsOut`: an NPC) has its origin on the face instead, and its collider in front of it.
 - The collision test box is shrunk slightly along the face's own axes (in `PhysicsColliderStateUtil`), so that neighbours sharing an edge never register as overlapping.
 - **Trap**: a stored position decodes slightly below the value that was written, so an origin can land on either side of its face. Always find the block an object rests on from its facing, never from the cell its origin falls in.
 
@@ -30,7 +30,7 @@ Checked at the object's own size, not its type's (see [object_update.md](../netw
 - the whole footprint lies inside the room. Its face may lie on the room's floor or ceiling, but nothing may reach past them;
 - every block **behind** the footprint is there (the object is supported). Past the layer range lie the room's own floor and ceiling, which count as solid;
 - a type that sets `ObjectAttachmentConfig.supportDepth` needs them that deep: a door, since arrivals stand inside the wall behind one;
-- at least one cell layer **in front** of it is open (the object is not buried);
+- at least one cell layer **in front** of it is open (the object is not buried). A type that stands out needs every block its body reaches open instead;
 - it does not overlap another attached object.
 
 ## Moving

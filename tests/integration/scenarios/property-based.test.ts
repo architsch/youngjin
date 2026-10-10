@@ -11,11 +11,10 @@ import { checkStructuralInvariants, checkObjectTransformConsistency, checkCleanS
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
 import ServerUserManager from "../../../src/server/user/serverUserManager";
-import RoomPalette from "../../../src/shared/room/generation/types/roomPalette";
-import RoomVolume from "../../../src/shared/room/generation/types/roomVolume";
-import RoomVolumeUtil from "../../../src/shared/room/generation/util/roomVolumeUtil";
+import RoomPalette from "../../../src/shared/room/types/roomPalette";
+import RoomVolume from "../../../src/shared/room/types/roomVolume";
+import RoomVolumeUtil from "../../../src/shared/room/util/roomVolumeUtil";
 import NumUtil from "../../../src/shared/math/util/numUtil";
-import { GENERATED_WALL_THICKNESS } from "../../../src/shared/system/sharedConstants";
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 
@@ -469,8 +468,8 @@ describe("property-based: block edits against a model", () => {
     });
 });
 
-// ─── Room volume geometry ───────────────────────────────────────────────────
-// The pure arithmetic room generation is built on, so a fault here affects every room.
+// ─── Room volume carving ────────────────────────────────────────────────────
+// What every generated room, and every room fixture, is cut out of rock by.
 
 const layerRange = fc.tuple(fc.integer({min: 0, max: 15}), fc.integer({min: 0, max: 15}))
     .map(([a, b]) => [Math.min(a, b), Math.max(a, b)] as [number, number]);
@@ -484,135 +483,29 @@ const anyVolume = fc.record({
 }).map(({rowMin, rowSpan, colMin, colSpan, layers}) => new RoomVolume(
     rowMin, rowMin + rowSpan - 1, colMin, colMin + colSpan - 1, layers[0], layers[1]));
 
-describe("room volume geometry", () => {
-    it("expands a volume by so many walls on all six sides: their thickness sideways, a layer up and down", () => {
-        fc.assert(fc.property(anyVolume, fc.integer({min: -2, max: 4}), (volume, amount) => {
-            const before = {...volume};
-            const grown = RoomVolumeUtil.getExpandedVolume(volume, amount);
-
-            const sideways = amount * GENERATED_WALL_THICKNESS;
-            expect(grown.rowMin).toBe(volume.rowMin - sideways);
-            expect(grown.rowMax).toBe(volume.rowMax + sideways);
-            expect(grown.colMin).toBe(volume.colMin - sideways);
-            expect(grown.colMax).toBe(volume.colMax + sideways);
-            expect(grown.collisionLayerMin).toBe(volume.collisionLayerMin - amount);
-            expect(grown.collisionLayerMax).toBe(volume.collisionLayerMax + amount);
-
-            // A copy: growth queries this repeatedly and must not move the area.
-            expect(grown).not.toBe(volume);
-            expect({...volume}).toEqual(before);
-        }));
-    });
-
-    it("tells volumes less than a wall apart from volumes with one wall between them", () => {
-        // The two separation checks growth uses: expanding one finds pairs too close for a wall, expanding
-        // both finds pairs with less than two walls' thickness between them. Volumes laid out in whole
-        // walls' thicknesses are that many apart, so for them the first finds the ones that touch and the
-        // second the ones exactly one wall apart.
-        fc.assert(fc.property(anyVolume, fc.integer({min: 0, max: 3 * GENERATED_WALL_THICKNESS}), (volume, gap) => {
-            // Offset along one axis with identical rows and layers, so only the gap varies.
-            const other = new RoomVolume(
-                volume.rowMin, volume.rowMax,
-                volume.colMax + 1 + gap, volume.colMax + 1 + gap,
-                volume.collisionLayerMin, volume.collisionLayerMax);
-
-            const tooCloseForAWall = RoomVolumeUtil.volumesIntersect(
-                RoomVolumeUtil.getExpandedVolume(volume, 1), other);
-            const withinTwoWalls = RoomVolumeUtil.volumesIntersect(
-                RoomVolumeUtil.getExpandedVolume(volume, 1),
-                RoomVolumeUtil.getExpandedVolume(other, 1));
-
-            expect(tooCloseForAWall).toBe(gap < GENERATED_WALL_THICKNESS);
-            expect(withinTwoWalls).toBe(gap < 2 * GENERATED_WALL_THICKNESS);
-            // Never overlapping, whatever the gap: the second volume starts past the first.
-            expect(RoomVolumeUtil.volumesIntersect(volume, other)).toBe(false);
-        }));
-    });
-
-    it("counts a storey's slab, one layer deep, as the wall between volumes standing one over the other", () => {
-        fc.assert(fc.property(anyVolume, fc.integer({min: 0, max: 3}), (volume, gap) => {
-            const above = new RoomVolume(volume.rowMin, volume.rowMax, volume.colMin, volume.colMax,
-                volume.collisionLayerMax + 1 + gap, volume.collisionLayerMax + 1 + gap);
-
-            expect(RoomVolumeUtil.volumesIntersect(RoomVolumeUtil.getExpandedVolume(volume, 1), above))
-                .toBe(gap == 0);
-            expect(RoomVolumeUtil.volumesIntersect(RoomVolumeUtil.getExpandedVolume(volume, 1),
-                RoomVolumeUtil.getExpandedVolume(above, 1))).toBe(gap <= 1);
-        }));
-    });
-
-    it("cuts a passage that reaches both volumes and stands between them", () => {
-        fc.assert(fc.property(anyVolume, fc.integer({min: 1, max: 4}),
-            fc.integer({min: 1, max: 4}), (volume, gap, maxWidth) => {
-            const other = new RoomVolume(
-                volume.rowMin, volume.rowMax,
-                volume.colMax + 1 + gap, volume.colMax + gap + (volume.colMax - volume.colMin + 1),
-                volume.collisionLayerMin, volume.collisionLayerMax);
-
-            const passage = RoomVolumeUtil.makePassageBetweenVolumes(volume, other, maxWidth, 16);
-            expect(passage).not.toBeNull();
-
-            // Fills exactly the gap, meeting both volumes.
-            expect(passage!.colMin).toBe(volume.colMax + 1);
-            expect(passage!.colMax).toBe(other.colMin - 1);
-
-            // Non-empty (a one-cell overlap once inverted it) and within the allowed width.
-            const numRows = passage!.rowMax - passage!.rowMin + 1;
-            expect(numRows).toBeGreaterThan(0);
-            expect(numRows).toBeLessThanOrEqual(maxWidth);
-            expect(numRows).toBeLessThanOrEqual(volume.rowMax - volume.rowMin + 1);
-
-            // And it stays within the stretch the two volumes share, so it opens into both.
-            expect(passage!.rowMin).toBeGreaterThanOrEqual(volume.rowMin);
-            expect(passage!.rowMax).toBeLessThanOrEqual(volume.rowMax);
-        }));
-    });
-
-    it("keeps a passage in step with volumes laid out in whole walls' thicknesses", () => {
-        // Generated areas are, and a passage set a voxel off them would cut their texture tiles in two.
-        const steps = (min: number, max: number) => fc.integer({min, max}).map(n => n * GENERATED_WALL_THICKNESS);
-        fc.assert(fc.property(steps(1, 10), steps(1, 6), steps(1, 10), steps(1, 4), steps(1, 4),
-            (rowMin, numRows, colMin, gap, maxWidth) => {
-            const volume = new RoomVolume(rowMin, rowMin + numRows - 1, colMin, colMin + GENERATED_WALL_THICKNESS - 1, 0, 6);
-            const other = new RoomVolume(rowMin, rowMin + numRows - 1,
-                volume.colMax + 1 + gap, volume.colMax + gap + GENERATED_WALL_THICKNESS, 0, 6);
-
-            const passage = RoomVolumeUtil.makePassageBetweenVolumes(volume, other, maxWidth, 16)!;
-            expect(passage.rowMin % GENERATED_WALL_THICKNESS).toBe(0);
-            expect((passage.rowMax + 1) % GENERATED_WALL_THICKNESS).toBe(0);
-            expect(passage.rowMax - passage.rowMin + 1).toBe(Math.min(maxWidth, numRows));
-
-            // As near the middle of the stretch the two share as whole steps allow: no further from one of its
-            // ends than from the other by more than a step.
-            const before = passage.rowMin - volume.rowMin, after = volume.rowMax - passage.rowMax;
-            expect(Math.abs(after - before)).toBeLessThanOrEqual(GENERATED_WALL_THICKNESS);
-        }));
-    });
-
-    it("calls a volume solid only while every block of it is there", () => {
-        fc.assert(fc.property(anyVolume, fc.integer({min: 0, max: 100_000}), (volume, pick) => {
-            const grid = VoxelGrid.createBaseGrid();
-            expect(RoomVolumeUtil.volumeIsSolid(grid.voxels, volume)).toBe(true);
-
-            // Any one of its blocks taken out.
-            const numRows = volume.rowMax - volume.rowMin + 1;
-            const numCols = volume.colMax - volume.colMin + 1;
-            const numLayers = volume.collisionLayerMax - volume.collisionLayerMin + 1;
-            const index = pick % (numRows * numCols * numLayers);
-            RoomVolumeUtil.carveOutVolume(grid.voxels, new RoomVolume(
-                volume.rowMin + index % numRows, volume.rowMin + index % numRows,
-                volume.colMin + Math.floor(index / numRows) % numCols, volume.colMin + Math.floor(index / numRows) % numCols,
-                volume.collisionLayerMin + Math.floor(index / (numRows * numCols)),
-                volume.collisionLayerMin + Math.floor(index / (numRows * numCols)),
-                new RoomPalette(0, 0, 0, 0)));
-            expect(RoomVolumeUtil.volumeIsSolid(grid.voxels, volume)).toBe(false);
-        }), {numRuns: 25});
-    });
-
-    it("refuses a passage between volumes that already meet", () => {
+describe("room volume carving", () => {
+    it("takes out a volume's own blocks and no other", () => {
         fc.assert(fc.property(anyVolume, (volume) => {
-            expect(RoomVolumeUtil.makePassageBetweenVolumes(volume, volume, 3, 16)).toBeNull();
-        }));
+            const grid = VoxelGrid.createBaseGrid();
+            RoomVolumeUtil.carveOutVolume(grid.voxels, volume, new RoomPalette(0, 0, 0, 0));
+
+            // Across the volume and a block beyond it on every side.
+            for (let row = volume.rowMin - 1; row <= volume.rowMax + 1; ++row)
+            {
+                for (let col = volume.colMin - 1; col <= volume.colMax + 1; ++col)
+                {
+                    for (let layer = Math.max(0, volume.collisionLayerMin - 1);
+                        layer <= Math.min(15, volume.collisionLayerMax + 1); ++layer)
+                    {
+                        const inside = row >= volume.rowMin && row <= volume.rowMax
+                            && col >= volume.colMin && col <= volume.colMax
+                            && layer >= volume.collisionLayerMin && layer <= volume.collisionLayerMax;
+                        expect(VoxelQueryUtil.isVoxelBlockPresentAt(grid.voxels, row, col, layer),
+                            `(${row}, ${col}, ${layer})`).toBe(!inside);
+                    }
+                }
+            }
+        }), {numRuns: 25});
     });
 
     it("carves the same room whatever order the volumes are carved in", () => {
@@ -621,24 +514,21 @@ describe("room volume geometry", () => {
         const volumeSet = fc.array(anyVolume, {minLength: 2, maxLength: 5});
 
         fc.assert(fc.property(volumeSet, fc.integer({min: 0, max: 1000}), (volumes, shuffleSeed) => {
-            const painted = volumes.map(v => new RoomVolume(v.rowMin, v.rowMax, v.colMin, v.colMax,
-                v.collisionLayerMin, v.collisionLayerMax, palette));
-
             const carve = (order: RoomVolume[]) => {
                 const grid = VoxelGrid.createBaseGrid();
                 for (const volume of order)
-                    RoomVolumeUtil.carveOutVolume(grid.voxels, volume);
+                    RoomVolumeUtil.carveOutVolume(grid.voxels, volume, palette);
                 return {
                     masks: grid.voxels.map(v => v.blockLayerMask).join(","),
                     quads: Array.from(grid.quadsMem.quads).join(","),
                 };
             };
 
-            const reversed = painted.slice().reverse();
-            const rotated = painted.slice(shuffleSeed % painted.length)
-                .concat(painted.slice(0, shuffleSeed % painted.length));
+            const reversed = volumes.slice().reverse();
+            const rotated = volumes.slice(shuffleSeed % volumes.length)
+                .concat(volumes.slice(0, shuffleSeed % volumes.length));
 
-            const first = carve(painted);
+            const first = carve(volumes);
             expect(carve(reversed)).toEqual(first);
             expect(carve(rotated)).toEqual(first);
         }), {numRuns: 20});

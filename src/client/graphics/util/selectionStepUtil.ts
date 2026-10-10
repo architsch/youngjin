@@ -6,6 +6,7 @@ import ObjectSelection from "../types/gizmo/objectSelection";
 import VoxelQuadSelection from "../types/gizmo/voxelQuadSelection";
 import WorldSpaceSelectionUtil from "./worldSpaceSelectionUtil";
 import ClientObjectManager from "../../object/clientObjectManager";
+import ObjectTypeClientConfigMap from "../../object/maps/objectTypeClientConfigMap";
 import { cameraModeObservable, objectSelectionObservable, orbitCameraAngleHoldRequestObservable,
     orbitCameraTargetOverrideObservable, voxelQuadSelectionObservable } from "../../system/clientObservables";
 import { SELECTION_STEP_OBJECT_REACH } from "../../system/clientConstants";
@@ -131,7 +132,7 @@ function wouldFaceCamera(voxels: Voxel[], quadIndex: number): boolean
 }
 
 // The nearest object lying that way from the selected one that the user may select, no further off than
-// SELECTION_STEP_OBJECT_REACH.
+// SELECTION_STEP_OBJECT_REACH. Never one selected only by its own control (see ObjectTypeClientConfig).
 function tryStepToNearbyObject(selection: ObjectSelection, direction: ScreenDirection): boolean
 {
     const room = App.getCurrentRoom();
@@ -145,7 +146,7 @@ function tryStepToNearbyObject(selection: ObjectSelection, direction: ScreenDire
     const candidates: {objectId: string, distance: number, centerDistance: number}[] = [];
     for (const object of Object.values(room.objectById))
     {
-        if (object.objectId == selected.objectId || !isTurnedToCamera(object))
+        if (object.objectId == selected.objectId || !isTurnedToCamera(object) || isSelectedByOwnControl(object))
             continue;
 
         const box = getObjectBox(object);
@@ -199,6 +200,11 @@ function isTurnedToCamera(object: AddObjectSignal): boolean
     const facing = getFacing(object);
     return facing == undefined
         || Vector3DUtil.dot(facing, Vector3DUtil.subtract(cameraPosTemp, object.transform.pos)) > 0;
+}
+
+function isSelectedByOwnControl(object: AddObjectSignal): boolean
+{
+    return ObjectTypeClientConfigMap.getConfigByIndex(object.objectTypeIndex).selection?.selectedByOwnControl == true;
 }
 
 // The way an attached object faces, as an axis. Undefined for one standing free.

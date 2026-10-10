@@ -57,7 +57,7 @@ let handlesFailed = false;
 
 // lastMove: the pointer as the drag was last handed it; null until the press has become a drag. startFacing: the
 // way the selection faced as it became one. turned: whether it has faced another way since.
-let activeDrag: {kind: SelectionKind, drag: SelectionEditDrag, lastMove: PointerEvent | null,
+let activeDrag: {provider: SelectionEditGizmoProvider, drag: SelectionEditDrag, lastMove: PointerEvent | null,
     startFacing: Vec3 | null, turned: boolean} | null = null;
 
 // Where the camera stood when the drag was last handed the pointer.
@@ -76,23 +76,26 @@ const screenTemp = new THREE.Vector2();
 
 const SelectionEditGizmoUtil =
 {
+    // A kind may have several, each for selections of its own sort (e.g. attached objects, volumes), of which no
+    // more than one has anything to offer at a time.
     addProvider: (kind: SelectionKind, provider: SelectionEditGizmoProvider): void =>
     {
-        if (providers.some(entry => entry.kind == kind))
+        if (providers.some(entry => entry.provider == provider))
             throw new Error(`Selection edit gizmo provider already exists (kind = ${kind})`);
         providers.push({kind, provider});
     },
 
-    isDragging: (kind: SelectionKind): boolean => activeDrag?.kind == kind,
+    // Whether the drag under way is one this provider began.
+    isDragging: (provider: SelectionEditGizmoProvider): boolean => activeDrag?.provider == provider,
 
-    // The handle the drag of this kind's selection holds, if one is under way and holds one.
-    getHeldHandleId: (kind: SelectionKind): string | undefined =>
-        (activeDrag?.kind == kind) ? activeDrag.drag.handleId : undefined,
+    // The handle this provider's drag holds, if one is under way and holds one.
+    getHeldHandleId: (provider: SelectionEditGizmoProvider): string | undefined =>
+        (activeDrag?.provider == provider) ? activeDrag.drag.handleId : undefined,
 
-    // Ends the drag of this kind's selection, if one is under way, putting back whatever it changed.
-    abandonDrag: (kind: SelectionKind): void =>
+    // Ends this provider's drag, if one is under way, putting back whatever it changed.
+    abandonDrag: (provider: SelectionEditGizmoProvider): void =>
     {
-        if (activeDrag?.kind == kind)
+        if (activeDrag?.provider == provider)
             GizmoDragUtil.cancel();
     },
 
@@ -151,7 +154,7 @@ const SelectionEditGizmoUtil =
                 if (screen != null)
                     corners.push({corner: {...corner}, x: screen.x, y: screen.y});
             }
-            const shownHandles = getOfferedHandles(kind, provider);
+            const shownHandles = getOfferedHandles(provider);
             const handlePoints: {id: string, x: number, y: number}[] = [];
             for (const {id, position} of shownHandles)
             {
@@ -167,13 +170,12 @@ const SelectionEditGizmoUtil =
 
 // ─── What a press can take hold of ──────────────────────────────────────
 
-// The handles a kind's selection has now: its provider's, in their order. Further from the camera than
+// The handles a provider's selection has now, in their order. Further from the camera than
 // SELECTION_HANDLE_MAX_DISTANCE it has none, but for the one a drag holds, which never goes from under it.
-function getOfferedHandles(kind: SelectionKind, provider: SelectionEditGizmoProvider):
-    {id: string, position: THREE.Vector3}[]
+function getOfferedHandles(provider: SelectionEditGizmoProvider): {id: string, position: THREE.Vector3}[]
 {
     const all = provider.getHandles();
-    const outline = (all.length > 0) ? provider.getOutline() : null;
+    const outline = (all.length > 0 && !provider.handlesShowAtAnyDistance) ? provider.getOutline() : null;
     if (outline == null ||
         outline.middle.distanceTo(GraphicsManager.getCamera().getWorldPosition(cameraPosTemp)) <= SELECTION_HANDLE_MAX_DISTANCE)
     {
@@ -181,7 +183,8 @@ function getOfferedHandles(kind: SelectionKind, provider: SelectionEditGizmoProv
     }
 
     heldHandleTemp.length = 0;
-    const held = (activeDrag?.kind == kind) ? all.find(handle => handle.id === activeDrag!.drag.handleId) : undefined;
+    const held = (activeDrag?.provider == provider)
+        ? all.find(handle => handle.id === activeDrag!.drag.handleId) : undefined;
     if (held != undefined)
         heldHandleTemp.push(held);
     return heldHandleTemp;
@@ -190,11 +193,11 @@ function getOfferedHandles(kind: SelectionKind, provider: SelectionEditGizmoProv
 function pick(ev: PointerEvent): {cursor: string, begin: () => GizmoDragHandler} | null
 {
     const reachPx = (ev.pointerType === "mouse") ? MOUSE_HANDLE_REACH_PX : TOUCH_HANDLE_REACH_PX;
-    for (const {kind, provider} of providers)
+    for (const {provider} of providers)
     {
         // Handles first: they sit on the outline, overlapping its inside. (No drag holds one as a press
         // lands, so they are all of the provider's or none.)
-        const shownHandles = getOfferedHandles(kind, provider);
+        const shownHandles = getOfferedHandles(provider);
         let nearest: {index: number, distSq: number, x: number, y: number} | null = null;
         for (let index = 0; index < shownHandles.length; ++index)
         {
@@ -209,18 +212,18 @@ function pick(ev: PointerEvent): {cursor: string, begin: () => GizmoDragHandler}
         const picked = (nearest != null) ? provider.pickHandle(nearest.index, ev, {x: nearest.x, y: nearest.y})
             : provider.pickBody(ev);
         if (picked != null)
-            return {cursor: picked.cursor, begin: () => runDrag(kind, picked.begin())};
+            return {cursor: picked.cursor, begin: () => runDrag(provider, picked.begin())};
     }
     return null;
 }
 
 // ─── Drags ──────────────────────────────────────────────────────────────
 
-// A kind's drag, as GizmoDragUtil feeds it the pointer. Only a drag that got past the tap tolerance ever
+// A provider's drag, as GizmoDragUtil feeds it the pointer. Only a drag that got past the tap tolerance ever
 // changed anything, so only such a one is finished.
-function runDrag(kind: SelectionKind, drag: SelectionEditDrag): GizmoDragHandler
+function runDrag(provider: SelectionEditGizmoProvider, drag: SelectionEditDrag): GizmoDragHandler
 {
-    const state: NonNullable<typeof activeDrag> = {kind, drag, lastMove: null, startFacing: null, turned: false};
+    const state: NonNullable<typeof activeDrag> = {provider, drag, lastMove: null, startFacing: null, turned: false};
     activeDrag = state;
 
     const finish = (keep: boolean): void =>
@@ -250,7 +253,7 @@ function runDrag(kind: SelectionKind, drag: SelectionEditDrag): GizmoDragHandler
             if (state.lastMove == null)
             {
                 WorldSpaceSelectionUtil.holdOrbitTarget();
-                state.startFacing = getOutline(kind)?.facing ?? null;
+                state.startFacing = provider.getOutline()?.facing ?? null;
             }
             handPointerToDrag(state, ev);
         },
@@ -298,7 +301,7 @@ function followDraggedSelection(deltaTime: number): void
     if (activeDrag !== state)
         return;
 
-    const facing = getOutline(state.kind)?.facing;
+    const facing = state.provider.getOutline()?.facing;
     if (facing != undefined && state.startFacing != null && !Vector3DUtil.equal(facing, state.startFacing))
         state.turned = true;
 
@@ -333,11 +336,6 @@ function getReachIntoViewMargin(ev: PointerEvent): {sideways: number, upDown: nu
     reachTemp.upDown = (margin <= 0) ? 0
         : NumUtil.clampInRange(Math.max(margin - y, y - (height - margin)) / margin, 0, 1);
     return reachTemp;
-}
-
-function getOutline(kind: SelectionKind): ReturnType<SelectionEditGizmoProvider["getOutline"]>
-{
-    return providers.find(entry => entry.kind == kind)?.provider.getOutline() ?? null;
 }
 
 // ─── Handles ────────────────────────────────────────────────────────────
@@ -376,9 +374,9 @@ updateObservable.addListener("selectionEditGizmoUtil", (deltaTime: number) => {
 
     const color = selectionEditBlockedObservable.peek() ? SELECTION_BLOCKED_COLOR : HANDLE_COLOR;
     let numShown = 0;
-    for (const {kind, provider} of providers)
+    for (const {provider} of providers)
     {
-        const shownHandles = getOfferedHandles(kind, provider);
+        const shownHandles = getOfferedHandles(provider);
         for (let index = 0; index < shownHandles.length; ++index, ++numShown)
         {
             const handle = handles[numShown];
@@ -386,7 +384,7 @@ updateObservable.addListener("selectionEditGizmoUtil", (deltaTime: number) => {
                 continue; // still being made
             handle.setVisible(true);
             handle.setPosition(shownHandles[index].position);
-            handle.setHighlighted(activeDrag?.kind == kind && activeDrag.drag.handleId === shownHandles[index].id);
+            handle.setHighlighted(activeDrag?.provider == provider && activeDrag.drag.handleId === shownHandles[index].id);
             handle.setColor(color);
             handle.update();
         }

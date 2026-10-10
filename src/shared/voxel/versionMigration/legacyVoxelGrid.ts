@@ -1,5 +1,5 @@
 import { NUM_COLLISION_LAYERS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_QUADS_PER_VOXEL } from "../../system/sharedConstants";
-import RestrictedZone from "../types/restrictedZone";
+import LegacyRestrictedZone from "./legacyRestrictedZone";
 
 // The grid as format versions up to 6 held it (see VoxelGridVersionMigration): cells one world unit wide,
 // each layer of one holding a block that fills all of it, half of it or a quarter.
@@ -18,7 +18,7 @@ export default class LegacyVoxelGrid
     // (bit = x half + 2 * z half), or none where there is no block.
     blockShapes = new Uint8Array(LegacyVoxelGrid.numRows * LegacyVoxelGrid.numCols * NUM_COLLISION_LAYERS);
 
-    restrictedZones: RestrictedZone[] = [];
+    restrictedZones: LegacyRestrictedZone[] = [];
 
     getFirstQuadIndexInLayer(row: number, col: number, collisionLayer: number): number
     {

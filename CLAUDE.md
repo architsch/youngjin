@@ -15,7 +15,7 @@
   - `/graphics` - 3D graphics for game objects, voxels, and world-space gizmos
   - `/networking` - Client-side networking (SocketsClient for Socket.IO, RestAPI and the API clients over it)
   - `/object` - Game object management (ClientObjectManager, component system including Rigidbody, PlayerController, PeriodicTransformEmitter/Receiver)
-  - `/singlePlayer` - Client-side single-player gameplay logic (SinglePlayerManager, the scripted steps of each mode in SinglePlayerModeClientConfigMap, and the action/condition maps those steps are carried out through)
+  - `/singlePlayer` - Client-side single-player gameplay logic (SinglePlayerManager, the scripted steps of each mode in SinglePlayerModeClientConfigMap, the action/condition maps those steps are carried out through, loading a mode's room from its file, and the room editor)
   - `/system` - Client-side observables and state management
   - `/ui` - React UI components and styles
   - `/voxel` - Voxel management (ClientVoxelManager), plus the client-only queries about the room as drawn (ClientVoxelQueryUtil) and the pool of mesh instances the visible quads are lent (VoxelQuadInstanceUtil)
@@ -38,8 +38,8 @@
   - `/networking` - Data encoding/decoding utilities and Socket.IO signal type configs
   - `/object` - Game object types, configs, and shared update logic (ObjectUpdateUtil)
   - `/physics` - Physics engine (PhysicsManager — collision detection, hitboxes, step-up, gravity)
-  - `/room` - Room types and generators
-  - `/singlePlayer` - Single-player room configs and types (SinglePlayerModeConfig — the room's layout and how it is built, which the server generates too)
+  - `/room` - Room types, room generation (RoomGenerationUtil — every Hub or Regular room starts out empty), room files, and the room map that catalogs the room files the game ships with
+  - `/singlePlayer` - Single-player mode configs and types (SinglePlayerModeConfig — which room file a mode is played in, and who may enter it)
   - `/system` - Shared observables, constants, logging, and error handling
   - `/user` - User types
   - `/voxel` - Voxel/block system (3D world building)
@@ -103,7 +103,7 @@ Each rule below is binding as written. The linked page in `.claude/rules/` carri
 edge cases, and the concrete checklist — read it before acting in that area.
 
 ### Room Generation Defines What a Room Is
-Every room is born from `RoomGenerationUtil` and nothing else ever produces one, so generation is the *definition* of a complete room. **Whenever a new room-level parameter is introduced, room generation must be extended to choose it as part of the same change** — `Room`, `RoomGenerationUtil`, the procedural `RoomBuilder`s, every `SinglePlayerModeConfig`, and any curated data behind the parameter. A parameter no generator sets is one that every room silently holds the default value of. Contents are a narrower obligation: a new *placeable object* owes generation nothing, a new kind of *voxel* content does. Full rule: [`.claude/rules/room-generation.md`](.claude/rules/room-generation.md).
+Every multiplayer room is born from `RoomGenerationUtil`, every single-player room is shipped as a room file (`RoomFile`), and nothing else ever produces one, so generation is the *definition* of a complete room. **Whenever a new room-level parameter is introduced, room generation must be extended to choose it as part of the same change** — `Room`, `RoomGenerationUtil`, `RoomFile` and every room file shipped under `public/app/assets/rooms`, and any curated data behind the parameter. A parameter no generator sets is one that every room silently holds the default value of. Contents are a narrower obligation: a new *placeable object* owes generation nothing, a new kind of *voxel* content does. Full rule: [`.claude/rules/room-generation.md`](.claude/rules/room-generation.md).
 
 ### The License Files Must Describe What Actually Ships
 The code is Apache-2.0; the writing and artwork under `public/` are all rights reserved; some bundled assets are third-party. That boundary exists only in `LICENSE-CONTENT.md` and `THIRD-PARTY-NOTICES.md`, nothing enforces it, and no test fails when it drifts. **Whenever the set of things that ship changes — a dependency, an external asset, a new `public/` directory, a new top-level code directory — the license files change in the same commit.** A copyleft or source-available dependency license is a decision for the user: report it and stop. Never add an asset whose terms are unknown. **`LICENSE` is verbatim Apache-2.0 and is never edited.** Full rule: [`.claude/rules/license-files.md`](.claude/rules/license-files.md).

@@ -36,7 +36,7 @@ const VoxelUpdateUtil =
 
         if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
             return false;
-        if (RestrictedZoneUtil.blocksVoxelBlockEdit(user, room, row, col))
+        if (RestrictedZoneUtil.blocksVoxelBlockEdit(user, room, row, col, collisionLayer))
             return false;
 
         const voxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, col);
@@ -99,7 +99,7 @@ const VoxelUpdateUtil =
 
         if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
             return false;
-        if (RestrictedZoneUtil.blocksVoxelBlockEdit(user, room, row, col))
+        if (RestrictedZoneUtil.blocksVoxelBlockEdit(user, room, row, col, collisionLayer))
             return false;
 
         const voxel = VoxelQueryUtil.getVoxel(room.voxelGrid.voxels, row, col);
