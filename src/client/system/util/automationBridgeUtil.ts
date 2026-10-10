@@ -18,7 +18,7 @@ import VolumeObjectTypeConfig from "../../../shared/object/types/objectTypeConfi
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN } from "../../../shared/system/sharedConstants";
 import RoomPrefsUtil from "../../../shared/room/util/roomPrefsUtil";
 import ThingsPoolEnv from "../types/thingsPoolEnv";
-import { gameModeObservable, objectSelectionObservable,
+import { gameModeObservable, objectSelectionObservable, volumesShownObservable,
     voxelQuadSelectionObservable } from "../clientObservables";
 
 // Read-only automation surface (window.__thingspool_automation) for playtests and screenshot capture:
@@ -210,14 +210,14 @@ const AutomationBridgeUtil =
                         texturePackPath: room.texturePackPath,
                         // Decoded (like zones below), since callers check the room, not the wire format.
                         lighting: RoomPrefsUtil.decode(room.prefs),
-                        restrictedZones: Object.values(room.objectById).filter(RestrictedZoneUtil.isZone)
-                            .map(zone => ({
-                                objectId: zone.objectId,
-                                ...VolumeObjectTypeConfig.util.getRoomVolume(zone.transform),
-                                userName: VolumeObjectTypeConfig.util.getZoneUserName(zone),
-                            })),
+                        restrictedZones: RestrictedZoneUtil.getZones(room).map(zone => ({
+                            objectId: zone.objectId,
+                            ...VolumeObjectTypeConfig.util.getRoomVolume(zone.transform),
+                            userName: VolumeObjectTypeConfig.util.getZoneUserName(zone),
+                        })),
                     },
                     gameMode: gameModeObservable.peek(),
+                    volumesShown: volumesShownObservable.peek(),
                     isAdmin: user != undefined && RoomValidationUtil.userIsAdmin(user),
                     isRoomSuperuser: user != undefined && room != undefined &&
                         RoomValidationUtil.isRoomSuperuser(user, room),

@@ -87,6 +87,10 @@ const RoomEditUtil =
         }
         throw new Error("RoomEditUtil.getUndoSignal :: Not a signal of an edit that can be undone.");
     },
+
+    // Makes one edit as the user's own and enters nothing in the history, for an edit no undo is to take back (see
+    // RestrictedZonePlanUtil). Resolves to whether it took.
+    make: (room: Room, signal: EncodableData): Promise<boolean> => make(room, signal),
 }
 
 // ─── Undoing and redoing ────────────────────────────────────────────────

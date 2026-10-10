@@ -91,11 +91,16 @@ const RestrictedZoneUtil =
         return isVolume(obj) && VolumeObjectTypeConfig.util.getZoneUserName(obj).length > 0;
     },
 
-    // The blocks each of the room's zones covers, whomever it is kept for, for drawing them (see
-    // RestrictedZoneOutlineUtil).
+    // The room's zones, whomever each is kept for.
+    getZones(room: Room): AddObjectSignal[]
+    {
+        return Object.values(room.objectById).filter(RestrictedZoneUtil.isZone);
+    },
+
+    // The blocks each of the room's zones covers, for drawing them (see RestrictedZoneOutlineUtil).
     getBlocksOfZones(room: Room): RoomVolume[]
     {
-        return Object.values(room.objectById).filter(RestrictedZoneUtil.isZone).map(getBlocks);
+        return RestrictedZoneUtil.getZones(room).map(getBlocks);
     },
 
     blocksHold(blocks: RoomVolume, row: number, col: number, collisionLayer: number): boolean
@@ -118,7 +123,7 @@ function getZonesBlocking(user: User, room: Room): AddObjectSignal[]
         return [];
     if (RoomValidationUtil.isRoomSuperuser(user, room))
         return [];
-    return Object.values(room.objectById).filter(obj => RestrictedZoneUtil.isZone(obj) && !isKeptFor(obj, user));
+    return RestrictedZoneUtil.getZones(room).filter(zone => !isKeptFor(zone, user));
 }
 
 // Whether a zone lets this user in: the one it names, which is nobody where it names none (see

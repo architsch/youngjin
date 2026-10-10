@@ -45,7 +45,7 @@ import PointerCoordUtil from "../../../../graphics/util/pointerCoordUtil";
 import AddVoxelBlockSignal from "../../../../../shared/voxel/types/update/addVoxelBlockSignal";
 import ObjectIdUtil from "../../../../../shared/object/util/objectIdUtil";
 import { clientFeatureFlagsObservable, notificationMessageObservable, objectInstalledObservable,
-    voxelQuadSelectionObservable } from "../../../../system/clientObservables";
+    volumesShownObservable, voxelQuadSelectionObservable } from "../../../../system/clientObservables";
 import { DISABLE_AUTO_SELECTION_ON_OBJECT_INSTALLATION,
     SUB_PANELS_BENEATH_SELECTION_TOOLS } from "../../../../system/clientConstants";
 import Room from "../../../../../shared/room/types/room";
@@ -100,13 +100,16 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
     // Whether a pick from a chooser beneath this row is still going up.
     const addingRef = useRef(false);
 
-    // Re-render this menu only when the feature flags it depends on change (e.g. tutorial steps).
+    // Re-render this menu only when the feature flags it depends on change (e.g. tutorial steps), or volumes are
+    // shown or hidden.
     useEffect(() => {
         for (const flag of placementFeatureFlags)
             clientFeatureFlagsObservable.addElementListener("voxelQuadPlacementOptions", flag, forceRefresh);
+        volumesShownObservable.addListener("voxelQuadPlacementOptions", forceRefresh);
         return () => {
             for (const flag of placementFeatureFlags)
                 clientFeatureFlagsObservable.removeElementListener("voxelQuadPlacementOptions", flag);
+            volumesShownObservable.removeListener("voxelQuadPlacementOptions");
         };
     }, []);
 
@@ -127,12 +130,12 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
     const canAddLabel = isSuperuser &&
         getPlaceableAttachedObjectTransform(props.selection, labelTypeIndex) !== null;
 
-    // NPCs (an admin's) and volumes (an admin's or the superuser's, who draws the room's zones with them) are
-    // added as they are, with nothing to pick first.
+    // NPCs (an admin's) and volumes (an admin's or the superuser's, while volumes show; see volumesShownObservable)
+    // are added as they are, with nothing to pick first.
     const isAdmin = RoomValidationUtil.userIsAdmin(App.getUser());
     const canAddNpc = isAdmin &&
         getPlaceableAttachedObjectTransform(props.selection, npcTypeIndex) !== null;
-    const managesVolumes = isAdmin || isSuperuser;
+    const managesVolumes = (isAdmin || isSuperuser) && volumesShownObservable.peek();
     const canAddVolume = managesVolumes && getPlaceableVolumeTransform(props.selection) !== null;
 
     // A chooser shows only while its type can be added to the selected face.

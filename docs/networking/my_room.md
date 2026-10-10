@@ -9,7 +9,7 @@ Reference: @src/server/networking/router/api/roomRouter.ts , @src/server/room/se
 
 ## Room settings
 - **Texture pack and lighting** share one HTTP route, and every request names its target room. Allowed callers are the room's owner, or an admin targeting a hub. Everyone else is refused.
-- **Restricted zones** are not a setting: they are volumes among the room's objects (see [restricted_zone.md](../gameplay/restricted_zone.md)).
+- **Restricted zones** are drawn in room settings too, but are stored as volumes among the room's objects, so they go by object signals instead (see [restricted_zone.md](../gameplay/restricted_zone.md#drawing-zones)).
 
 ## Room files
 An admin who is the room's superuser can save the room to a file on their own machine, and load one over it.

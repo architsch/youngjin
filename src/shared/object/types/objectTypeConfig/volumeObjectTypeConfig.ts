@@ -129,6 +129,15 @@ const VolumeObjectTypeConfig =
                 {x: 0, y: 0, z: 1},
                 {x: (x.max - x.min) / BASE_SIZE, y: (y.max - y.min) / BASE_SIZE, z: (z.max - z.min) / BASE_SIZE});
         },
+        // The transform of the box that covers the given blocks, which getRoomVolume reads back from it.
+        makeTransformOfRoomVolume: (blocks: RoomVolume): ObjectTransform =>
+        {
+            return makeTransform(
+                {x: blocks.colMin * VOXEL_CELL_SIZE, y: blocks.collisionLayerMin * COLLISION_LAYER_HEIGHT,
+                    z: blocks.rowMin * VOXEL_CELL_SIZE},
+                {x: (blocks.colMax + 1) * VOXEL_CELL_SIZE, y: (blocks.collisionLayerMax + 1) * COLLISION_LAYER_HEIGHT,
+                    z: (blocks.rowMax + 1) * VOXEL_CELL_SIZE});
+        },
     },
 } satisfies ObjectTypeConfig;
 
@@ -146,6 +155,11 @@ function isVolume(obj: AddObjectSignal): boolean
 function getName(obj: AddObjectSignal): string
 {
     return VolumeObjectTypeConfig.util.getName(obj);
+}
+
+function makeTransform(cornerA: Vec3, cornerB: Vec3): ObjectTransform
+{
+    return VolumeObjectTypeConfig.util.makeTransform(cornerA, cornerB);
 }
 
 // Snapped onto the block grid, since a stored position decodes a little off it (see ObjectTransform).

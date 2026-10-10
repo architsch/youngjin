@@ -36,8 +36,9 @@ On connect, `SocketsServer` picks, in order: the single-player room (if the flag
 ### Room editor
 - A single-player mode of its own, open to admins only, with no steps: the admin edits the room with every edit-mode tool, as the superuser of a room nobody else is in.
 - It opens on an empty room or on a room file, and saves the room as a file. Nothing of it reaches the server, and leaving it finishes no mode.
-- It is driven from the debug panel's command input: `edit room`, `open room`, `save room` and `leave room`.
+- It is driven from the debug panel's command input: `new room`, `open room`, `save room` and `leave room`.
 - Room settings are applied locally there and saved with the file. Tags are edited only there.
+- Volumes are hidden there as anywhere, until `volumes on` (see [restricted_zone.md](../gameplay/restricted_zone.md#display)).
 - A saved file ships once it is put in the room map's directory, under the path a mode names.
 - **Trap**: room files are static assets, which reach every running build at once (see [deployment.md](../devOps/vps/deployment.md)). An edit that the live build's steps cannot play belongs under a new roomPath.
 

@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import ObjectSelection from "./objectSelection";
+import VoxelQuadSelection from "./voxelQuadSelection";
 import SelectionEditDrag from "./drag/selectionEditDrag";
 import SelectionEditGizmoProvider from "./drag/selectionEditGizmoProvider";
 import GraphicsManager from "../../graphicsManager";
@@ -7,7 +8,8 @@ import SelectionEditGizmoUtil from "../../util/selectionEditGizmoUtil";
 import App from "../../../app";
 import SocketsClient from "../../../networking/client/socketsClient";
 import ClientObjectManager from "../../../object/clientObjectManager";
-import { gameModeObservable, objectSelectionObservable, roomChangedObservable } from "../../../system/clientObservables";
+import { gameModeObservable, objectSelectionObservable, roomChangedObservable,
+    volumesShownObservable } from "../../../system/clientObservables";
 import { ClientEventType } from "../../../system/types/clientEventType";
 import GameModeUtil from "../../../system/util/gameModeUtil";
 import RoomEditUtil from "../../../system/util/roomEditUtil";
@@ -261,6 +263,18 @@ gameModeObservable.addListener("volumeEditGizmos", refresh);
 
 roomChangedObservable.addListener("volumeEditGizmos", () => {
     target = null;
+});
+
+// Hidden, a volume is nothing to hold selected: the selection moves on from it, as from one removed.
+volumesShownObservable.addListener("volumeEditGizmos", (shown: boolean) => {
+    const selected = objectSelectionObservable.peek()?.gameObject;
+    if (shown || selected == undefined
+        || ObjectTypeConfigMap.getConfigByIndex(selected.params.objectTypeIndex) != VolumeObjectTypeConfig)
+    {
+        return;
+    }
+    ObjectSelection.unselect(true);
+    VoxelQuadSelection.trySelectBestQuadNearby(selected.position);
 });
 
 export default VolumeEditGizmos;

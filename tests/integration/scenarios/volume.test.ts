@@ -26,6 +26,7 @@ import PhysicsManager from "../../../src/shared/physics/physicsManager";
 import PhysicsColliderStateUtil from "../../../src/shared/physics/util/physicsColliderStateUtil";
 import Room from "../../../src/shared/room/types/room";
 import RoomFile from "../../../src/shared/room/types/roomFile";
+import RoomVolume from "../../../src/shared/room/types/roomVolume";
 import { INITIAL_MULTI_PLAYER_ENTRANCE_POS, MAX_ROOM_X, MAX_ROOM_Y, MAX_ROOM_Z, NUM_COLLISION_LAYERS, NUM_VOXEL_COLS,
     NUM_VOXEL_ROWS, OBJECT_NAME_MAX_LENGTH, OBJECT_USER_NAME_MAX_LENGTH, UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
 import User from "../../../src/shared/user/types/user";
@@ -33,7 +34,8 @@ import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 
 const volumeTypeIndex = ObjectTypeConfigMap.getIndexByType("Volume");
 const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
-const {makeTransform, getBox, getRoomVolume, findByName, getName, getZoneUserName} = VolumeObjectTypeConfig.util;
+const {makeTransform, makeTransformOfRoomVolume, getBox, getRoomVolume, findByName, getName,
+    getZoneUserName} = VolumeObjectTypeConfig.util;
 
 const ADMIN = new User("an-admin", "Admin", UserTypeEnumMap.Admin, "admin@test.com", "");
 const MEMBER = new User("a-member", "Member", UserTypeEnumMap.Member, "member@test.com", "");
@@ -111,6 +113,19 @@ describe("a volume's box", () => {
             expect({...getRoomVolume(roundTrip(transform))}).toEqual(expected);
             // The scale it is stored at is one its type allows as it stands.
             expect(ObjectScaleUtil.sanitize(volumeTypeIndex, transform.scale)).toEqual(transform.scale);
+        }));
+    });
+
+    it("is laid over the blocks it is asked to cover: rows along z, columns along x, layers up", () => {
+        expect(getBox(makeTransformOfRoomVolume(new RoomVolume(42, 51, 16, 17, 0, 6))))
+            .toEqual({min: {x: 8, y: 0, z: 21}, max: {x: 9, y: 3.5, z: 26}});
+
+        fc.assert(fc.property(gridBox, (box) => {
+            const blocks = new RoomVolume(box.row, box.row + box.numRows - 1, box.col, box.col + box.numCols - 1,
+                box.layer, box.layer + box.numLayers - 1);
+            const transform = makeTransformOfRoomVolume(blocks);
+            expect({...getRoomVolume(transform)}).toEqual({...blocks});
+            expect({...getRoomVolume(roundTrip(transform))}).toEqual({...blocks});
         }));
     });
 

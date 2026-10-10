@@ -37,6 +37,7 @@ The bare `:4321/...` shorthand does not work under zsh. Ops share their names wi
 | `addObject` / `removeObject` | a canvas, a prop, a door, a lamp or a label on a cell's face (walls, or a block's top or underside), at its type's default size (a prop at its image's), by the game's own metadata keys |
 | `resizeObject` | a standing object at another size, in multiples of its type's step; the placement rule still applies, and the size it ended up with is returned |
 | `restrictedZones` | the room's zones, each a volume of whole cells kept for a user (from floor to ceiling and for nobody, unless given); reports them when called with nothing |
+| `volumes` | whether the room's volumes show in edit mode, with the tool that adds one (`true` or `false`); reports which when called with nothing |
 | `texturePack` / `roomLighting` | room-level state; each reports when called with nothing |
 | `palettes` / `pictures` / `doorStyles` / `canvasFrameStyles` | the values to build out of: a pack's curated palettes (`RoomPaletteMap`), and the rest as the game uses them (each picture with the type that shows it) |
 | `camera` / `cameraPose` | where the free camera stands and what it aims at, in world coordinates |
@@ -52,6 +53,7 @@ The bare `:4321/...` shorthand does not work under zsh. Ops share their names wi
 - A canvas or prop fetches its picture over the network, so a frame taken straight after one goes up catches a blank placeholder.
 - A click goes through a prop wherever its image is see-through, its middle included, and selects the face behind. `interact.clickObject` aims where it doesn't, and `bridge("clickPoint", objectId)` gives that pixel to a script that clicks by hand.
 - Restricted-zone outlines are drawn in edit mode only; the zones themselves stand either way.
+- Volumes are hidden until asked for: by `volumes(true)` here, and by the `volumes on` command in a room that has the debug panel (a fresh hub or Regular room). The plan that draws zones is in room settings, which the sandbox has none of.
 - Selection does not move the free camera, so a composed view survives entering edit mode. For the game's own orbit instead, hand the camera back before entering it (`cameraMode("firstPerson")`, then `place` and `ensureEditMode`).
 - `place` takes its `faceX` and `faceZ` as a heading, not as a point to face.
 - In edit mode `press` with a movement key (`"ArrowRight"`, `"KeyW"`) steps the selection the way the key points in that view, round a corner where the surface turns one, and `bridge("selection")` says where it went. A face turned away from the camera is passed over for the one beyond it, and the press goes nowhere when that is turned away too: under the free camera, judged from where that stands.

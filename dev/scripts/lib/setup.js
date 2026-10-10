@@ -284,6 +284,13 @@ const removeObject = (page, objectId) => callSandbox(page, "removeObject", objec
  */
 const restrictedZones = (page, zones) => callSandbox(page, "restrictedZones", zones);
 
+/**
+ * Shows (`true`) or hides (`false`) the room's volumes in edit mode, with the tool that adds one to a selected
+ * face, and returns which; with no argument it only reports. They are hidden until asked for: here by this, and
+ * in a room with the debug panel by its `volumes on` and `volumes off` commands.
+ */
+const volumes = (page, shown) => callSandbox(page, "volumes", shown);
+
 /** Empties the set back to bare floor and puts the camera back, between one shot and the next. */
 const clearSandbox = (page) => callSandbox(page, "clear");
 
@@ -363,6 +370,6 @@ module.exports = {
     look, view, swing, lookAt, clearLookAt,
     sandboxActive, camera, cameraPose, cameraMode, addBlocks, removeBlocks, clearSandbox, roomLighting,
     texturePack, palettes, pictures, doorStyles, canvasFrameStyles, addObject, resizeObject, removeObject,
-    restrictedZones, stage,
+    restrictedZones, volumes, stage,
     sleep,
 };

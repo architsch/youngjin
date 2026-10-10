@@ -16,10 +16,11 @@ const UNSELECTED_BRIGHTNESS = 0.45;
 const centerTemp = {x: 0, y: 0, z: 0};
 const sizeTemp = {x: 0, y: 0, z: 0};
 
-// A named box of the room (see VolumeObjectTypeConfig), shown only in edit mode and only to who may select it: as
-// the outline of its box, under its name. It has no surface to click, which would stand in the way of everything
-// inside it, so a button over its top selects it. Selected, its outline is the selection's own, and its corners
-// take the handles that resize it (see VolumeEditGizmos).
+// A named box of the room (see VolumeObjectTypeConfig), shown only in edit mode and only to who may select it,
+// which is nobody until volumes are asked for (see volumesShownObservable): as the outline of its box, under its
+// name. It has no surface to click, which would stand in the way of everything inside it, so a button over its
+// top selects it. Selected, its outline is the selection's own, and its corners take the handles that resize it
+// (see VolumeEditGizmos).
 export default class VolumeGameObject extends GameObject
 {
     private outline: WorldSpaceOutlineBox | null = null;

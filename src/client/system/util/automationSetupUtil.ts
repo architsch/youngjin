@@ -31,8 +31,7 @@ import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../shared/object/types/ob
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN,
     FOG_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME, MAX_ROOM_Y,
     NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS,
-    SANDBOX_SINGLE_PLAYER_MODE, VOXEL_CELL_SIZE,
-    ZONE_USER_NAME_FOR_NOBODY } from "../../../shared/system/sharedConstants";
+    SANDBOX_SINGLE_PLAYER_MODE, ZONE_USER_NAME_FOR_NOBODY } from "../../../shared/system/sharedConstants";
 import ObjectScaleUtil from "../../../shared/object/util/objectScaleUtil";
 import RoomLightingUtil from "../../graphics/light/util/roomLightingUtil";
 import RoomPrefs from "../../../shared/room/types/roomPrefs";
@@ -42,7 +41,7 @@ import { ObjectMetadata } from "../../../shared/object/types/objectMetadata";
 import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 import { cameraModeObservable, orbitCameraAnglesObservable, orbitCameraTargetOverrideObservable,
-    orbitCameraViewRequestObservable, orbitCameraZoomObservable } from "../clientObservables";
+    orbitCameraViewRequestObservable, orbitCameraZoomObservable, volumesShownObservable } from "../clientObservables";
 
 // Automation surface (window.__thingspool_setup) that arranges the scene (player position, facing,
 // orbit view) for playtests and screenshots, so runs don't pay for slow, imprecise locomotion. It never
@@ -789,8 +788,8 @@ const AutomationSetupUtil =
                                 `minimum no greater than its maximum.`);
                         }
 
-                        for (const object of Object.values(room.objectById).filter(RestrictedZoneUtil.isZone))
-                            await ClientObjectManager.removeObject(object.objectId, false);
+                        for (const zone of RestrictedZoneUtil.getZones(room))
+                            await ClientObjectManager.removeObject(zone.objectId, false);
 
                         const user = App.getUser();
                         const volumeTypeIndex = ObjectTypeConfigMap.getIndexByType(VolumeObjectTypeConfig.objectType);
@@ -798,22 +797,28 @@ const AutomationSetupUtil =
                         {
                             const signal = new AddObjectSignal(room.id, user.id, user.userName, volumeTypeIndex,
                                 ObjectIdUtil.generateRandomObjectId(),
-                                VolumeObjectTypeConfig.util.makeTransform(
-                                    {x: box.colMin * VOXEL_CELL_SIZE, y: box.collisionLayerMin * COLLISION_LAYER_HEIGHT,
-                                        z: box.rowMin * VOXEL_CELL_SIZE},
-                                    {x: (box.colMax + 1) * VOXEL_CELL_SIZE,
-                                        y: (box.collisionLayerMax + 1) * COLLISION_LAYER_HEIGHT,
-                                        z: (box.rowMax + 1) * VOXEL_CELL_SIZE}),
+                                VolumeObjectTypeConfig.util.makeTransformOfRoomVolume(box),
                                 metadataFrom({ZoneUserName: box.userName ?? ZONE_USER_NAME_FOR_NOBODY}));
                             if (!await ClientObjectManager.addObject(ObjectFactory.createServerSideObject(signal), false))
                                 throw new Error(`The room would not take a zone there (it holds only so many volumes).`);
                         }
                     }
-                    return Object.values(room.objectById).filter(RestrictedZoneUtil.isZone).map(zone => ({
+                    return RestrictedZoneUtil.getZones(room).map(zone => ({
                         objectId: zone.objectId,
                         ...VolumeObjectTypeConfig.util.getRoomVolume(zone.transform),
                         userName: VolumeObjectTypeConfig.util.getZoneUserName(zone),
                     }));
+                },
+
+                // Shows or hides the room's volumes with the tools that add and edit one, as the "volumes on" and
+                // "volumes off" debug commands do in a room that has the debug panel (see DebugStats). With no
+                // argument, reports which.
+                volumes: (shown?: boolean) =>
+                {
+                    requireSandboxRoom("Showing volumes");
+                    if (shown != undefined)
+                        volumesShownObservable.set(shown);
+                    return volumesShownObservable.peek();
                 },
 
                 // Resets the set to the generated floor. The player stays (the camera hangs off it).

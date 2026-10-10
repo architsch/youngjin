@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import App from "../../../../app";
 import ClientObjectManager from "../../../../object/clientObjectManager";
-import { notificationMessageObservable, voxelQuadSelectionObservable } from "../../../../system/clientObservables";
+import { notificationMessageObservable, volumesShownObservable,
+    voxelQuadSelectionObservable } from "../../../../system/clientObservables";
 import { colliderDebugEnabledObservable, dummyImagesDebugEnabledObservable, roomListDebugEnabledObservable } from "../../../../../shared/system/sharedObservables";
 import VoxelQueryUtil from "../../../../../shared/voxel/util/voxelQueryUtil";
 import Button from "../../input/button";
@@ -119,6 +120,8 @@ export default function DebugStats({env}: Props)
                         case "restore context": setWebGLContextLost(false); break;
                         case "ghost on": setGhostMode(true); break;
                         case "ghost off": setGhostMode(false); break;
+                        case "volumes on": setVolumesShown(true); break;
+                        case "volumes off": setVolumesShown(false); break;
                         case "aas": openAdminAssetSettingsEditor(); break;
                         case "new room": leaveEditedRoomFor(RoomEditorUtil.openNewRoom); break;
                         case "open room": leaveEditedRoomFor(RoomEditorUtil.openRoomFile); break;
@@ -196,6 +199,14 @@ function setGhostMode(ghostMode: boolean): void
     SocketsClient.emitSetObjectMetadataSignal(
         new SetObjectMetadataSignal(room.id, myPlayer.params.objectId, key, value));
     notificationMessageObservable.set(ghostMode ? "Ghost mode is on." : "Ghost mode is off.");
+}
+
+// "volumes on" / "volumes off" debug commands: whether the room's volumes show in edit mode, along with the tools
+// that add and edit one, to whoever may edit them (see VolumeGameObject). Off until asked for, in every room.
+function setVolumesShown(shown: boolean): void
+{
+    volumesShownObservable.set(shown);
+    notificationMessageObservable.set(shown ? "Volumes are on." : "Volumes are off.");
 }
 
 // "aas" debug command (admin asset settings). Admin-only: opens the window those settings are set, saved and
