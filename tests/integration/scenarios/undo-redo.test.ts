@@ -235,8 +235,7 @@ function selectedObjectId(): string | undefined
 }
 
 // ─── Edits as the user's tools make them ────────────────────────────────────
-// The face tools' handlers (see VoxelQuadPlacementOptions, VoxelQuadTextureOptions) are private to their
-// components, so their sequences are mirrored here; keep in step.
+// The face tools' handler sequences (see VoxelEditUtil, ObjectPlacementUtil) are mirrored here; keep in step.
 
 // What the texture strip does on a click.
 function userPaints(quadIndex: number, textureIndex: number): void

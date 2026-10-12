@@ -191,3 +191,39 @@ Paint ThingsPool's vast three-dimensional canvas with lamps and fuzzy atmospheri
 <20260919-colors-4>
 
 #WebApp #WebGame #BrowserGame #ArtSimulation #VisualArts #FineArts #Architecture #Painting #DigitalArts #InteractivePainting #LiminalSpace #Dreamcore #Aesthetics
+
+
+
+
+
+
+:d:ThingsPool now has two new features - props and tiny blocks.
+:k:ThingsPool, Dev Log, Browser Game, Web Game, Multiplayer Game, Sandbox Game, Virtual World, Room Building, World Building, Metaverse
+:l:2026-10-12
+
+[Props and Tiny Blocks] October 12, 2026
+
+Quite a number of new features have been added to ThingsPool lately!
+
+<20261012-props-3>
+
+For those of you who haven't heard of it, ThingsPool is a browser-based chat app where anyone can come in, chat with other people, and build all sorts of custom spaces by laying down blocks.
+
+Recently, we introduced two major features to the app:
+
+<20261011-props-1>
+
+1. Props are here. Now you can add drawers, shelves, home appliances, signs, toilets, decorations, and a plethora of other real-life objects to your virtual space!
+
+<20261011-props-8>
+
+2. All blocks are now halved in both X and Z directions, which means that they are now tiny cubes instead of the wide boxes which we used to have. Now with these much finer building blocks, you can construct narrow walls, fences, seat backs, bath tubs, and other granular shapes.
+
+<20261011-props-4>
+
+<20261012-props-1>
+
+#Architecture #Voxels #VoxelEngine #WebGraphics #3DGraphics #DigitalAesthetics #VisualArts #FineArts #Multimedia #InteractiveArts #3DPainting
+
+
+

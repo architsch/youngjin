@@ -13,7 +13,7 @@ Single-player rooms are not generated. Each is authored by hand and shipped as a
 
 ## What a generated room comes with
 - **Two open storeys** inside the boundary wall, with the slab between them left solid (see [voxel_grid.md](voxel_grid.md)). The top layer is never carved.
-- A boundary wall several voxels thick (`GENERATED_WALL_THICKNESS`): as deep as a door needs behind it, and as wide as a texture tile.
+- A boundary wall several voxels thick (`GENERATED_WALL_THICKNESS`): deep enough to hide whoever arrives behind a door on it, and as wide as a texture tile.
 - **One texture of the default pack** on every surface, since how a room looks is its builders' to choose.
 - Exactly one object, the **entrance door**: on a boundary wall, pointing at the hubs, and hung after carving (see [room_entrance.md](room_entrance.md)). A room without one could not be left.
 - Default atmosphere, no lamps and no restricted zones, each being a judgement about one room (see [lighting.md](../graphics/lighting.md#what-generated-rooms-come-with), [restricted_zone.md](../gameplay/restricted_zone.md)).

@@ -628,8 +628,7 @@ function textureOptionElementId(textureIndex: number): string
     return `voxelQuadTextureOption.${textureIndex}`;
 }
 
-// The same face on the block that adding one against the given face builds (see
-// VoxelQuadPlacementOptions).
+// The same face on the block that adding one against the given face builds (see VoxelEditUtil).
 function getSameQuadOnBlockBuiltAgainst(quadIndex: number): number
 {
     if (!VoxelQueryUtil.isValidVoxelQuadIndex(quadIndex))

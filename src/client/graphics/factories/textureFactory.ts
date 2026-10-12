@@ -25,6 +25,17 @@ const TextureFactory =
         loadedTextures[texturePath] = newTexture;
         return newTexture;
     },
+    // The texture loaded under an id or a path, if there is one. It stays its loader's, to unload at any time.
+    getLoadedTexture: (textureId: string): THREE.Texture | undefined =>
+    {
+        return loadedTextures[textureId];
+    },
+    // An image's texture for a scene other than the game's (see RoomPreviewUtil), set up as a static one is. Not
+    // cached, whatever else shows the image; the caller owns and disposes it.
+    createDetachedImageTexture: async (texturePath: string): Promise<THREE.Texture> =>
+    {
+        return await textureLoader.loadAsync(texturePath);
+    },
     // An image to be drawn onto a dynamic texture (see TextureUtil). Set up differently from a static
     // texture, so never load the same path as both.
     loadSourceImageTexture: async (imagePath: string): Promise<THREE.Texture> =>

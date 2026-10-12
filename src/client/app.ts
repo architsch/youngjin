@@ -3,6 +3,7 @@ import ClientVoxelManager from "./voxel/clientVoxelManager";
 import SocketsClient from "./networking/client/socketsClient";
 import RequestRoomChangeSignal from "../shared/room/types/requestRoomChangeSignal";
 import SinglePlayerRoomLoadUtil from "./singlePlayer/util/singlePlayerRoomLoadUtil";
+import RoomEditorUtil from "./singlePlayer/util/roomEditorUtil";
 import RoomRuntimeMemory from "../shared/room/types/roomRuntimeMemory";
 import RoomChangedSignal from "../shared/room/types/roomChangedSignal";
 import RoomChangeRejectedSignal from "../shared/room/types/roomChangeRejectedSignal";
@@ -132,12 +133,15 @@ function getRoomChangeRejectionMessage(reason: RoomChangeRejectionReason): strin
 // Unloads the previous room (if any) and loads the new one.
 async function changeRoom(roomChangedSignal: RoomChangedSignal)
 {
+    const roomToJoin = roomChangedSignal.roomRuntimeMemory.room;
+    if (RoomEditorUtil.turnAwayUnasked(roomToJoin))
+        return;
+
     // Whoever asked for the room has put up the loading screen already; an unasked one puts it up here.
     tryStartClientProcess("roomChange", 1, 0);
 
     // A single-player room's content is fetched before the room the user is in is given up. Without it there
     // is no room to enter, and the server has already let go of the last one, so it is asked for another.
-    const roomToJoin = roomChangedSignal.roomRuntimeMemory.room;
     if (roomToJoin.roomType == RoomTypeEnumMap.SinglePlayer && !await SinglePlayerRoomLoadUtil.tryLoad(roomToJoin))
     {
         notificationMessageObservable.set("Failed to load the room.");

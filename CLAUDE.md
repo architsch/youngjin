@@ -12,7 +12,7 @@
 ## Project Structure
 ### `/src` - Main Source Code
 - **`/client`** - Client-side code (browser)
-  - `/graphics` - 3D graphics for game objects, voxels, and world-space gizmos
+  - `/graphics` - 3D graphics for game objects, voxels, and world-space gizmos, plus the picture of a room file's room shown before the file is loaded (RoomPreviewUtil)
   - `/networking` - Client-side networking (SocketsClient for Socket.IO, RestAPI and the API clients over it)
   - `/object` - Game object management (ClientObjectManager, component system including Rigidbody, PlayerController, PeriodicTransformEmitter/Receiver)
   - `/singlePlayer` - Client-side single-player gameplay logic (SinglePlayerManager, the scripted steps of each mode in SinglePlayerModeClientConfigMap, the action/condition maps those steps are carried out through, loading a mode's room from its file, and the room editor)

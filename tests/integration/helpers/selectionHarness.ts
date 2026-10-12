@@ -112,7 +112,7 @@ export function buildPillar(room: Room, row: number, col: number,
 }
 
 // ─── Mirrors of the placement menu's handlers ─────────────────────────────
-// Reproduces voxelQuadPlacementOptions.tsx's module-private handler sequences; keep in step.
+// Reproduces the block handlers' sequences (see VoxelEditUtil); keep in step.
 
 /**
  * What the "add block" button does: place a block against the selected face, then reselect (see

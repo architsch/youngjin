@@ -28,8 +28,7 @@ An attached object (a canvas, a prop, a [door](door_design.md), a lamp, an NPC) 
 Checked at the object's own size, not its type's (see [object_update.md](../networking/object_update.md)). A placement is valid when:
 - its type allows the facing;
 - the whole footprint lies inside the room. Its face may lie on the room's floor or ceiling, but nothing may reach past them;
-- every block **behind** the footprint is there (the object is supported). Past the layer range lie the room's own floor and ceiling, which count as solid;
-- a type that sets `ObjectAttachmentConfig.supportDepth` needs them that deep: a door, since arrivals stand inside the wall behind one;
+- every block right **behind** the footprint is there (the object is supported), one block deep for every type. Past the layer range lie the room's own floor and ceiling, which count as solid;
 - at least one cell layer **in front** of it is open (the object is not buried). A type that stands out needs every block its body reaches open instead;
 - it does not overlap another attached object.
 
@@ -54,4 +53,4 @@ A type with an `ObjectScalingConfig` is resized by the outline's corner handles,
 - Metadata can pin the scale (`ObjectScalingConfig.getFixedScale`): a prop is exactly its image's size, turned. It has no handles, and a change that moves the pin (a new image, a turn of a non-square one, a move that turns it) sends its transform inside the metadata signal (`SetObjectMetadataSignal.transform`), so the two are checked and applied as one edit. A new image's size is tried each way over where the prop stands (`ObjectAttachmentUtil.getResizeCandidates`): holding its bottom edge, then its top, then its centre, and likewise its left edge, right edge and centre. The first that fits is sent, and the image panel dims images that fit no way. A canvas is never pinned: its painting is fitted to whatever size it is.
 
 ## Changing the supporting block
-- A block that holds up attached objects cannot be removed on its own, which goes for every block of the depth a type needs behind it. The user can instead remove the block together with its attachments after confirming, but only when the user may remove every one of those attachments. A door, for example, keeps its wall for anyone but the room's superuser.
+- A block that holds up attached objects cannot be removed on its own. The user can instead remove the block together with its attachments after confirming, but only when the user may remove every one of those attachments. A door, for example, keeps its wall for anyone but the room's superuser.

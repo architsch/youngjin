@@ -22,7 +22,7 @@ The mode is stored separately from camera state, because the camera briefly has 
 ## Selection
 - A selection is a single voxel quad or object. Nothing is selected in play mode, and something is always selected in edit mode.
 - When the selected thing is removed or hidden, or a block is added or removed, the selection moves on by one search (`VoxelQuadSelection`), starting from where the edit points:
-  - the nearest voxel quad that is near enough and clear enough of attached objects (`AUTO_SELECTION_MAX_DISTANCE`, `AUTO_SELECTION_MIN_COVERAGE_FREE_RATIO`);
+  - the nearest voxel quad that is near enough and clear enough of attached objects (`AUTO_SELECTION_MAX_DISTANCE`, `AUTO_SELECTION_MIN_COVERAGE_FREE_RATIO`). Of quads about as near, one facing across the camera's view comes before one facing along it, either way; the quad the edit points at still comes first;
   - with none, an attached object near there that the user may select (`nearbyObjectSelectorObservable`);
   - failing that, whatever quad is left, the clear enough first.
 - Clicking the current selection or an unselectable spot keeps the current selection.

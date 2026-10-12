@@ -1,16 +1,11 @@
-import { clientFeatureFlagsObservable, voxelQuadSelectionObservable } from "../../../../system/clientObservables";
+import { clientFeatureFlagsObservable } from "../../../../system/clientObservables";
 import VoxelQuadSelection from "../../../../graphics/types/gizmo/voxelQuadSelection";
 import AtlasCellSprite from "../../basic/image/atlasCellSprite";
-import SocketsClient from "../../../../networking/client/socketsClient";
-import SetVoxelQuadTextureSignal from "../../../../../shared/voxel/types/update/setVoxelQuadTextureSignal";
 import App from "../../../../app";
-import ClientVoxelManager from "../../../../voxel/clientVoxelManager";
-import RoomEditUtil from "../../../../system/util/roomEditUtil";
-import { ClientEventType } from "../../../../system/types/clientEventType";
+import VoxelEditUtil from "../../../../voxel/util/voxelEditUtil";
+import VoxelQuadTextureUtil from "../../../../voxel/util/voxelQuadTextureUtil";
 import VoxelGameObject from "../../../../object/types/gameObject/voxelGameObject";
 import useMouseDragScroll from "../../../util/mouseDragScroll";
-import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
-import VoxelUpdateUtil from "../../../../../shared/voxel/util/voxelUpdateUtil";
 import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
 import { NUM_PACK_VOXEL_TEXTURES } from "../../../../../shared/system/sharedConstants";
 import { useEffect, useReducer } from "react";
@@ -36,10 +31,7 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
 
     // Disabled (not hidden) inside restricted zones (see @docs/gameplay/restricted_zone.md), so the
     // current texture stays visible.
-    const currentRoom = App.getCurrentRoom();
-    const disabled = currentRoom == undefined ||
-        clientFeatureFlagsObservable.has(FeatureFlag.DisableManualVoxelQuadTextureChange) ||
-        !VoxelUpdateUtil.canSetVoxelQuadTexture(App.getUser(), currentRoom, quadIndex);
+    const disabled = !VoxelEditUtil.canSetVoxelQuadTexture(props.selection);
 
     const materialParams = VoxelGameObject.materialParams;
     if (!materialParams)
@@ -64,29 +56,6 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
         {textureIndices.map((textureIndex) => {
             const col = textureIndex % numCols;
             const row = Math.floor(textureIndex / numCols);
-            const onClick = async () => {
-                if (clientFeatureFlagsObservable.has(FeatureFlag.DisableManualVoxelQuadTextureChange))
-                    return;
-
-                const room = App.getCurrentRoom();
-                if (!room)
-                {
-                    console.error("Current room not found.");
-                    return;
-                }
-
-                const signal = new SetVoxelQuadTextureSignal(room.id, quadIndex, textureIndex);
-                const undoSignal = RoomEditUtil.getUndoSignal(room, signal);
-                if (ClientVoxelManager.setVoxelQuadTexture(room, quadIndex, textureIndex))
-                {
-                    voxelQuadSelectionObservable.notify();
-
-                    if (room.roomType != RoomTypeEnumMap.SinglePlayer)
-                        SocketsClient.emitSetVoxelQuadTextureSignal(signal);
-                    RoomEditUtil.record(ClientEventType.ManuallyChangedVoxelQuadTexture, room,
-                        {redo: [signal], undo: [undoSignal]});
-                }
-            };
             return <AtlasCellSprite
                 key={`voxelQuadTexture.select.${textureIndex}`}
                 // Addressable one cell at a time, so a scripted step can point at a single texture.
@@ -98,12 +67,13 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
                 atlasCellHeight={materialParams.textureGridCellHeight}
                 atlasCellCol={col}
                 atlasCellRow={row}
-                atlasCellMargin={VoxelGameObject.getTextureMargin(textureIndex)}
+                atlasCellMargin={VoxelQuadTextureUtil.getTextureMargin(textureIndex)}
                 flipRow={true}
                 highlight={col == selectedTextureCol && row == selectedTextureRow}
                 autoScrollToHighlight={true}
                 additionalClassNames={additionalClassNames}
-                onClick={disabled ? undefined : onClick}
+                onClick={disabled ? undefined
+                    : () => VoxelEditUtil.trySetVoxelQuadTexture(props.selection, textureIndex)}
             />})
         }
     </div>;

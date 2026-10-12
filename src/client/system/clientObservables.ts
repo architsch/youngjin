@@ -70,11 +70,11 @@ export const manualSelectionObservable = new Observable<{before: VoxelQuadSelect
 export const selectionEditBlockedObservable = new Observable<boolean>(false);
 
 // Whether the room's volumes show to whoever may edit them, along with the tools that add and edit one (see
-// VolumeGameObject): not until the "volumes on" debug command (see DebugStats).
+// VolumeGameObject): not until the "volumes on" debug command (see DebugCommandUtil).
 export const volumesShownObservable = new Observable<boolean>(false);
 
 // Fires with the id of an object this user has just added from a selected face and selected (see
-// VoxelQuadPlacementOptions), whose tools then open on what is left to pick of its look, or carry on from the chooser
+// ObjectPlacementUtil), whose tools then open on what is left to pick of its look, or carry on from the chooser
 // it was picked in (see EditOptionsProps). Never peek() it: it holds the last one.
 export const objectInstalledObservable = new Observable<string>("");
 

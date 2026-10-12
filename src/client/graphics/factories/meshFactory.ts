@@ -118,6 +118,36 @@ const MeshFactory =
         loadedMeshes[meshId] = newMesh;
         return newMesh;
     },
+    // The two below make a mesh for a scene other than the game's (see RoomPreviewUtil). It is never registered, so
+    // nothing reuses or raycasts it, and its geometry is its own: its caller places it and disposes of that.
+
+    // An instanced mesh set up as a registered one is (see loadInstancedMesh), every instance its caller's to fill in.
+    createDetachedInstancedMesh: async (geometryId: string, materialParams: MaterialParams,
+        numInstances: number): Promise<THREE.InstancedMesh> =>
+    {
+        return await buildInstancedMesh(geometryId, materialParams, numInstances);
+    },
+    // A mesh of quads, given by their four corners each: counter-clockwise from the bottom left, as seen from in
+    // front. uvs: none for one drawn without a texture.
+    createDetachedQuadMesh: (positions: Float32Array, normals: Float32Array, uvs: Float32Array | undefined,
+        material: THREE.Material): THREE.Mesh =>
+    {
+        const numQuads = positions.length / 12;
+        const indices = new Uint32Array(numQuads * 6);
+        for (let quad = 0; quad < numQuads; ++quad)
+        {
+            const corner = 4 * quad;
+            indices.set([corner, corner + 1, corner + 2, corner + 2, corner + 3, corner], 6 * quad);
+        }
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
+        if (uvs)
+            geometry.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
+        geometry.setIndex(new THREE.BufferAttribute(indices, 1));
+        return new THREE.Mesh(geometry, material);
+    },
     // Undefined when the pool is exhausted; the caller leaves the part undrawn and retries later.
     rentInstanceId: (meshId: string): number | undefined =>
     {
@@ -202,6 +232,29 @@ const MeshFactory =
 async function createInstancedMesh(meshId: string, geometryId: string, materialParams: MaterialParams,
     maxNumInstances: number, createInstanceIdPool: boolean): Promise<THREE.InstancedMesh>
 {
+    const newMesh = await buildInstancedMesh(geometryId, materialParams, maxNumInstances);
+    newMesh.name = meshId;
+    GraphicsManager.addObjectToSceneIfNotAlreadyAdded(newMesh);
+    loadedMeshes[meshId] = newMesh;
+
+    if (createInstanceIdPool)
+    {
+        if (instanceIdPools[meshId] != undefined)
+            throw new Error(`InstanceId pool already exists (meshId = ${meshId})`);
+        instanceIdPools[meshId] = new Pool<number>(maxNumInstances,
+            (index: number) => maxNumInstances - index - 1);
+        // The pool rents low ids first, so count only needs to track the high-water mark, keeping
+        // uploads, draws and raycasts proportional to actual usage.
+        newMesh.count = 0;
+    }
+    return newMesh;
+}
+
+// An instanced mesh of its own copy of the geometry, with the per-instance attributes the instanced materials
+// read.
+async function buildInstancedMesh(geometryId: string, materialParams: MaterialParams,
+    maxNumInstances: number): Promise<THREE.InstancedMesh>
+{
     const geometryClone = (await GeometryFactory.load(geometryId)).clone();
     const material = await MaterialFactory.load(materialParams);
 
@@ -236,25 +289,11 @@ async function createInstancedMesh(meshId: string, geometryId: string, materialP
         newMesh.instanceColor = new THREE.InstancedBufferAttribute(
             new Float32Array(maxNumInstances * 3), 3);
     }
-    newMesh.name = meshId;
     newMesh.frustumCulled = false;
     // Partial uploads per changed instance (see InstancedMeshBinding).
     newMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     uvStartBufferAttrib.setUsage(THREE.DynamicDrawUsage);
     uvSampleSizeBufferAttrib.setUsage(THREE.DynamicDrawUsage);
-    GraphicsManager.addObjectToSceneIfNotAlreadyAdded(newMesh);
-    loadedMeshes[meshId] = newMesh;
-
-    if (createInstanceIdPool)
-    {
-        if (instanceIdPools[meshId] != undefined)
-            throw new Error(`InstanceId pool already exists (meshId = ${meshId})`);
-        instanceIdPools[meshId] = new Pool<number>(maxNumInstances,
-            (index: number) => maxNumInstances - index - 1);
-        // The pool rents low ids first, so count only needs to track the high-water mark, keeping
-        // uploads, draws and raycasts proportional to actual usage.
-        newMesh.count = 0;
-    }
     return newMesh;
 }
 

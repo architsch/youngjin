@@ -51,7 +51,7 @@ const GRID_STEP = 0.5 * VOXEL_CELL_SIZE;
 
 // A wall facing -z (its face at z = WALL_Z), wide and tall enough for the largest canvas grown from any
 // corner of one hung in its middle. It is exactly that tall: the canvas can grow by the difference in size
-// both up and down. Two blocks deep, which is what a door needs behind it.
+// both up and down. Two blocks deep, so that either depth can be taken from it.
 const CANVAS_HEIGHT = ObjectScaleUtil.getObjectSize(canvasTypeIndex, UNIT_VEC3).y;
 const WALL_HEIGHT = 2 * ObjectScaleUtil.getMaxObjectSize(canvasTypeIndex).y - CANVAS_HEIGHT;
 const WALL_Z = 8;
@@ -342,7 +342,7 @@ describe("the wall behind a door", () => {
     const quadOf = (block: VoxelPlacement) =>
         VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(block.row, block.col, block.layer);
 
-    it("has to be solid two blocks deep behind all of it, where one block's depth holds a canvas", async () => {
+    it("has to be solid right behind all of it, one block deep, as a canvas's is", async () => {
         await inTheRoom((user, room) => {
             const voxels = room.voxelGrid.voxels;
             const remove = (block: VoxelPlacement) =>
@@ -352,30 +352,33 @@ describe("the wall behind a door", () => {
             const canvasAt = (z: number) => ({x: DOOR_X_MIN + 0.5, y: 1, z});
             expect(fits(room, doorTypeIndex, doorAt(WALL_Z), FACING)).toBe(true);
 
-            // Any one block gone from the further depth leaves it no place.
-            for (const block of behindDoor(1))
+            // Any one block gone from right behind it leaves it no place; one gone from further in changes nothing.
+            for (const [depth, stillFits] of [[0, false], [1, true]] as const)
             {
-                remove(block);
-                expect(fits(room, doorTypeIndex, doorAt(WALL_Z), FACING), JSON.stringify(block)).toBe(false);
-                restore(block);
+                for (const block of behindDoor(depth))
+                {
+                    remove(block);
+                    expect(fits(room, doorTypeIndex, doorAt(WALL_Z), FACING), JSON.stringify(block)).toBe(stillFits);
+                    restore(block);
+                }
             }
             expect(fits(room, doorTypeIndex, doorAt(WALL_Z), FACING)).toBe(true);
 
-            // The wall thinned from behind still lies against the door's plane, and holds a canvas there; not a door.
+            // The wall thinned from behind still lies against the door's plane, and holds it there as it does a canvas.
             behindDoor(1).forEach(remove);
             expect(fits(room, canvasTypeIndex, canvasAt(WALL_Z), FACING)).toBe(true);
-            expect(fits(room, doorTypeIndex, doorAt(WALL_Z), FACING)).toBe(false);
+            expect(fits(room, doorTypeIndex, doorAt(WALL_Z), FACING)).toBe(true);
 
-            // Thinned from in front instead, its face lies a block further back: a canvas hangs there, a door nowhere.
+            // Thinned from in front instead, its face lies a block further back, and each hangs there.
             behindDoor(1).forEach(restore);
             behindDoor(0).forEach(remove);
             expect(fits(room, canvasTypeIndex, canvasAt(WALL_Z + VOXEL_CELL_SIZE), FACING)).toBe(true);
-            expect(fits(room, doorTypeIndex, doorAt(WALL_Z + VOXEL_CELL_SIZE), FACING)).toBe(false);
+            expect(fits(room, doorTypeIndex, doorAt(WALL_Z + VOXEL_CELL_SIZE), FACING)).toBe(true);
             expect(fits(room, doorTypeIndex, doorAt(WALL_Z), FACING)).toBe(false);
         });
     });
 
-    it("holds the door at both depths, so that no block of either comes out from under it", async () => {
+    it("holds the door on the blocks right behind it alone, as it does a canvas", async () => {
         await inTheRoom((user, room) => {
             const restingOn = (block: VoxelPlacement) =>
                 ObjectAttachmentUtil.getObjectIdsAttachedToVoxelBlock(room, quadOf(block));
@@ -384,30 +387,27 @@ describe("the wall behind a door", () => {
             // (Put up unasked: a door is the room's superuser's to lay.)
             const door = attachment(user, room, doorTypeIndex, "door", doorAt(WALL_Z));
             expect(ObjectUpdateUtil.addObject(user, room, door, false)).toBe(true);
-            // A canvas beside it, on the blocks next to those the door reaches into, which rests on the ones
-            // right behind it alone.
+            // A canvas beside it, on the blocks next to those the door reaches into.
             const canvasXMin = DOOR_X_MIN + doorSize.x + 0.5 * VOXEL_CELL_SIZE;
             expect(ObjectUpdateUtil.addObject(user, room, attachment(user, room, canvasTypeIndex, "canvas",
                 {x: canvasXMin + 0.5, y: 1, z: WALL_Z}))).toBe(true);
             const behindCanvas = (depth: number) => behind(canvasXMin, 0.5, 1, 1, depth);
 
-            for (const block of [...behindDoor(0), ...behindDoor(1)])
+            for (const [name, behindIt] of [["door", behindDoor], ["canvas", behindCanvas]] as const)
             {
-                expect(restingOn(block), JSON.stringify(block)).toEqual(["door"]);
-                expect(removable(block), JSON.stringify(block)).toBe(false);
-            }
-            for (const block of behindCanvas(0))
-            {
-                expect(restingOn(block), JSON.stringify(block)).toEqual(["canvas"]);
-                expect(removable(block), JSON.stringify(block)).toBe(false);
-            }
-            for (const block of behindCanvas(1))
-            {
-                expect(restingOn(block), JSON.stringify(block)).toEqual([]);
-                expect(removable(block), JSON.stringify(block)).toBe(true);
+                for (const block of behindIt(0))
+                {
+                    expect(restingOn(block), JSON.stringify(block)).toEqual([name]);
+                    expect(removable(block), JSON.stringify(block)).toBe(false);
+                }
+                for (const block of behindIt(1))
+                {
+                    expect(restingOn(block), JSON.stringify(block)).toEqual([]);
+                    expect(removable(block), JSON.stringify(block)).toBe(true);
+                }
             }
 
-            // The blocks the door's face lies on are still the nearer ones alone.
+            // Which are the blocks the door's face lies on.
             const liesOn: VoxelPlacement[] = [];
             ObjectAttachmentUtil.forEachSupportingBlock(doorTypeIndex, door.transform, (row, col, layer) => {
                 liesOn.push({row, col, layer});

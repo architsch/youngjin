@@ -9,12 +9,13 @@ import App from "../../../app";
 import InstancedTexturePackMaterialParams from "../../../../shared/graphics/material/types/instancedTexturePackMaterialParams";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import VoxelQuadTransformDimensions from "../../../../shared/voxel/types/voxelQuadTransformDimensions";
-import Geometry3DUtil from "../../../../shared/math/util/geometry3DUtil";
 import ClientVoxelQueryUtil from "../../../voxel/util/clientVoxelQueryUtil";
 import VoxelQuadInstanceUtil from "../../../voxel/util/voxelQuadInstanceUtil";
+import VoxelQuadTextureUtil from "../../../voxel/util/voxelQuadTextureUtil";
+import TexelRect from "../../../graphics/types/texture/texelRect";
 import { NUM_VOXEL_QUADS_PER_VOXEL, MAX_VISIBLE_VOXEL_QUADS_PER_ROOM, VOXEL_TEXTURE_PACK_MATERIAL_ID, VOXEL_QUAD_GEOMETRY_ID,
-    NUM_PACK_VOXEL_TEXTURES, NUM_VOXEL_TEXTURE_COLS, NUM_VOXEL_TEXTURE_ROWS, PROCEDURAL_VOXEL_TEXTURE_MARGIN,
-    VOXEL_TEXTURE_CELL_SIZE, NUM_VOXEL_COLS, MAX_ROOM_X } from "../../../../shared/system/sharedConstants";
+    NUM_VOXEL_TEXTURE_COLS, NUM_VOXEL_TEXTURE_ROWS, VOXEL_TEXTURE_CELL_SIZE, NUM_VOXEL_COLS,
+    MAX_ROOM_X } from "../../../../shared/system/sharedConstants";
 import { VOXEL_GAME_OBJECT_SIZE_XZ } from "../../../system/clientConstants";
 import AddObjectSignal from "../../../../shared/object/types/addObjectSignal";
 import { gameModeObservable, notificationMessageObservable, texturePackURLObservable } from "../../../system/clientObservables";
@@ -26,6 +27,7 @@ import GameModeUtil from "../../../system/util/gameModeUtil";
 
 let debugEnabled: boolean = false;
 const vector3Temp = new THREE.Vector3();
+const texelsTemp: TexelRect = {x: 0, y: 0, width: 0, height: 0};
 
 // Draws the quads of the voxels in one square patch of the floor plan (see VOXEL_GAME_OBJECT_SIZE_XZ).
 export default class VoxelGameObject extends GameObject
@@ -40,13 +42,6 @@ export default class VoxelGameObject extends GameObject
     private voxels: Voxel[] | undefined;
     private rowStart: number = 0;
     private colStart: number = 0;
-
-    // How much of a texture's cell, all round, is no part of what tiles: none of a pack's own (see
-    // PROCEDURAL_VOXEL_TEXTURE_MARGIN). Whatever shows the texture leaves it out.
-    static getTextureMargin(textureIndex: number): number
-    {
-        return (textureIndex < NUM_PACK_VOXEL_TEXTURES) ? 0 : PROCEDURAL_VOXEL_TEXTURE_MARGIN;
-    }
 
     constructor(params: AddObjectSignal)
     {
@@ -237,29 +232,8 @@ export default class VoxelGameObject extends GameObject
     private updateTextureUV(quadIndex: number, instanceId: number, quad: number,
         dims: VoxelQuadTransformDimensions, worldX: number, worldZ: number)
     {
-        const { scaleX, scaleY } = dims;
-
-        // The quad shows the part of the tile it lies over, a tile being a world unit across, so faces side
-        // by side make up one tile between them: across, from where it starts along its own right. Up a
-        // wall, a layer shows half a tile, the halves alternating so two layers show the whole; a floor or
-        // ceiling goes by where it starts along its own up.
-        const {right, up} = Geometry3DUtil.getAxisFacingBasis({x: dims.dirX, y: dims.dirY, z: dims.dirZ});
-        const fractionOfTile = (along: number) => along - Math.floor(along);
-        const sampleOffsetX = fractionOfTile(worldX * right.x + worldZ * right.z - 0.5 * scaleX); // [0,1)
-        const sampleOffsetY = (VoxelQueryUtil.getVoxelQuadFacingAxisFromQuadIndex(quadIndex) == "y")
-            ? fractionOfTile(worldX * up.x + worldZ * up.z - 0.5 * scaleY)
-            : ((VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex) % 2 == 0) ? scaleY : 0); // [0,1)
-
-        // What tiles of the texture's cell: all of a pack's own, and what is inside a procedural one's margin
-        // (see PROCEDURAL_VOXEL_TEXTURE_MARGIN). The quad shows its share of that, in whole texels.
-        const textureIndex = quad & 0b01111111;
-        const margin = VoxelGameObject.getTextureMargin(textureIndex);
-        const tileSize = VOXEL_TEXTURE_CELL_SIZE - 2 * margin;
-        const cellX = (textureIndex % NUM_VOXEL_TEXTURE_COLS) * VOXEL_TEXTURE_CELL_SIZE;
-        const cellY = Math.floor(textureIndex / NUM_VOXEL_TEXTURE_COLS) * VOXEL_TEXTURE_CELL_SIZE;
-
+        const texels = VoxelQuadTextureUtil.getTexelRect(quadIndex, quad & 0b01111111, dims, worldX, worldZ, texelsTemp);
         this.instancedMeshGraphics.updateInstanceTextureRect(ClientVoxelQueryUtil.getVoxelInstancedMeshId(), instanceId,
-            cellX + margin + sampleOffsetX * tileSize, cellY + margin + sampleOffsetY * tileSize,
-            scaleX * tileSize, scaleY * tileSize);
+            texels.x, texels.y, texels.width, texels.height);
     }
 }

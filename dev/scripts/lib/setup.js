@@ -251,7 +251,7 @@ const canvasFrameStyles = (page) => callSandbox(page, "canvasFrameStyles");
  * tall, or one block square where only that fits; a canvas a world unit square, then one layer tall, then one
  * block square, whichever first fits on the spot; a prop its image's size; see `resizeObject` for others). It is
  * centred on the cell's face, so one a world unit wide reaches half a cell past the cell on either side and
- * needs wall behind all of that (a door, two cells deep). Metadata uses the game's key names (`pictures` lists
+ * needs wall behind all of that. Metadata uses the game's key names (`pictures` lists
  * the images, with the type that shows each); returns the object's id.
  */
 const addObject = (page, spec) => callSandbox(page, "addObject", spec);
@@ -297,7 +297,7 @@ const clearSandbox = (page) => callSandbox(page, "clear");
 /**
  * Stands a room: four walls around a floor rectangle, given in cells. `open` names sides to omit (`["-z"]`
  * for a room the camera looks into), `layers` is wall height in collision layers, `thickness` is how many
- * cells thick the walls are (two by default: a door needs a wall that deep behind it), and
+ * cells thick the walls are (two by default, as a generated room's boundary wall is), and
  * `floorTextureIndex` lays a floor of another material. Returns the inside rectangle.
  */
 async function stage(page, spec)

@@ -267,10 +267,11 @@ describe("voxel scenarios", () => {
         });
     });
 
-    it("refuses to take down a wall a door is hanging on", async () => {
+    it("refuses to take down the wall a door is hanging on", async () => {
         // The entrance has no positional protection: a block can't be removed while something hangs on it,
         // and non-admins can't remove the door (see DoorObjectTypeConfig).
         const behindDoor = getWallBehindEntranceDoor();
+        const [innerWallRow, outerWallRow] = behindDoor.rows;
         // The same wall just clear of the door on either side, which holds nothing up → editable, as a control.
         const plainCols = [behindDoor.cols[0] - 1, behindDoor.cols[behindDoor.cols.length - 1] + 1];
         // (Each column through the wall's whole thickness.)
@@ -283,30 +284,30 @@ describe("voxel scenarios", () => {
             actions: [...removalOf(behindDoor.cols), ...removalOf(plainCols)],
             assertions: () => {
                 const voxels = ServerRoomManager.roomRuntimeMemories["hub"].room.voxelGrid.voxels;
+                const stands = (row: number, col: number) =>
+                    VoxelQueryUtil.isVoxelBlockPresent(VoxelQueryUtil.getVoxel(voxels, row, col)!, 0);
                 expect(behindDoor.cols.length).toBeGreaterThan(0);
+                for (const col of behindDoor.cols)
+                {
+                    expect(stands(innerWallRow, col),
+                        `the wall the room's door hangs on was taken out at (${innerWallRow}, ${col})`).toBe(true);
+                    // The blocks behind those hold nothing up either.
+                    expect(stands(outerWallRow, col), `(${outerWallRow}, ${col})`).toBe(false);
+                }
                 for (const row of behindDoor.rows)
                 {
-                    for (const col of behindDoor.cols)
-                    {
-                        const wallBehindDoor = VoxelQueryUtil.getVoxel(voxels, row, col)!;
-                        expect(VoxelQueryUtil.isVoxelBlockPresent(wallBehindDoor, 0),
-                            `the wall the room's door hangs on was taken out at (${row}, ${col})`).toBe(true);
-                    }
                     for (const col of plainCols)
-                    {
-                        const plainWall = VoxelQueryUtil.getVoxel(voxels, row, col)!;
-                        expect(VoxelQueryUtil.isVoxelBlockPresent(plainWall, 0), `(${row}, ${col})`).toBe(false);
-                    }
+                        expect(stands(row, col), `(${row}, ${col})`).toBe(false);
                 }
             },
         });
     });
 
-    it("keeps the wall behind a door two blocks deep, where a canvas needs only the blocks it hangs on", async () => {
-        // Arrivals stand inside the wall behind a door (see DoorObjectTypeConfig), so it rests on that wall
-        // through the boundary's whole thickness, and across all of its own footprint.
+    it("keeps the blocks right behind a door, as it does a canvas's, and none further in", async () => {
+        // A door rests on the blocks its face lies on, across all of its own footprint, as anything attached
+        // does (see ObjectAttachmentUtil).
         await runScenario({
-            name: "the depth of wall behind a door",
+            name: "the wall behind a door",
             rooms: [EMPTY_HUB],
             users: [userAtCenter("hub")],
             assertions: () => {
@@ -324,8 +325,8 @@ describe("voxel scenarios", () => {
                     room, door.objectId, door.objectTypeIndex, door.transform);
                 expect(doorStands()).toBe(true);
 
-                // All along the wall, at either depth: a block behind the door holds it, cannot go, and is one
-                // the door would not stand without; no other block holds anything.
+                // All along the wall, at either depth: a block right behind the door holds it, cannot go, and is
+                // one the door would not stand without; no other block holds anything.
                 for (const row of [innerWallRow, outerWallRow])
                 {
                     for (let col = 0; col < NUM_VOXEL_COLS; ++col)
@@ -333,7 +334,8 @@ describe("voxel scenarios", () => {
                         for (let layer = COLLISION_LAYER_MIN; layer <= COLLISION_LAYER_MAX; ++layer)
                         {
                             const quadIndex = quadIndexAt(row, col, layer);
-                            const isBehindDoor = behindDoor.cols.includes(col) && behindDoor.layers.includes(layer);
+                            const isBehindDoor = row == innerWallRow
+                                && behindDoor.cols.includes(col) && behindDoor.layers.includes(layer);
                             const where = `(${row}, ${col}, ${layer})`;
                             expect(ObjectAttachmentUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex), where)
                                 .toEqual(isBehindDoor ? [door.objectId] : []);
@@ -350,17 +352,21 @@ describe("voxel scenarios", () => {
                 }
                 expect(doorStands()).toBe(true);
 
-                // A canvas beside the door stays up with the wall's outer blocks gone from behind it.
+                // The door, and a canvas beside it, stay up with the wall's outer blocks gone from behind them.
                 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
                 const canvasTransform = new ObjectTransform(
                     { x: ENTRANCE_DOOR_X - 3, y: 1, z: ENTRANCE_WALL_Z }, { x: 0, y: 0, z: -1 }, {...UNIT_VEC3});
                 const behindCanvas = getWallBehind(canvasTypeIndex, canvasTransform);
                 expect(behindCanvas.cols.length * behindCanvas.layers.length).toBeGreaterThan(0);
-                for (const col of behindCanvas.cols)
+                for (const behind of [behindDoor, behindCanvas])
                 {
-                    for (const layer of behindCanvas.layers)
-                        VoxelUpdateUtil.removeVoxelBlock(undefined, voxels, quadIndexAt(outerWallRow, col, layer));
+                    for (const col of behind.cols)
+                    {
+                        for (const layer of behind.layers)
+                            VoxelUpdateUtil.removeVoxelBlock(undefined, voxels, quadIndexAt(outerWallRow, col, layer));
+                    }
                 }
+                expect(doorStands()).toBe(true);
                 expect(ObjectAttachmentUtil.canPlaceObject(room, "attachment", canvasTypeIndex, canvasTransform))
                     .toBe(true);
             },
@@ -718,8 +724,8 @@ describe("block edits, relayed or refused", () => {
         });
     });
 
-    it("keeps both depths of the wall behind a door, and answers with the blocks as they are", async () => {
-        // A door rests on its wall two blocks deep (see DoorObjectTypeConfig): all the boundary wall has.
+    it("keeps the block a door hangs on and lets the one behind it go, answering with the block as it is", async () => {
+        // A door rests on the blocks right behind it (see ObjectAttachmentUtil): the boundary wall's inner ones.
         const behindDoor = getWallBehindEntranceDoor();
         const [innerWallRow, outerWallRow] = behindDoor.rows;
         // The outermost column any part of the door lies before, and the one next to it, which holds nothing
@@ -728,10 +734,9 @@ describe("block edits, relayed or refused", () => {
         const plainCol = colBehindDoor - 1;
         await runScenario({
             name: "the wall a door hangs on, at each depth",
-            // (Seeding a block that stands already gives it its textures, which tell the two depths apart.)
+            // (Seeding a block that stands already gives it its textures, which the answer has to carry.)
             rooms: [{ ...EMPTY_HUB, voxels: [
                 { row: innerWallRow, col: colBehindDoor, layer: 0, textures: TEXTURES },
-                { row: outerWallRow, col: colBehindDoor, layer: 0, textures: OTHER_TEXTURES },
             ] }],
             users: usersInRoom(2, "hub"),
             actions: [
@@ -741,19 +746,19 @@ describe("block edits, relayed or refused", () => {
                 { type: "removeVoxel", userIndex: 0, row: outerWallRow, col: plainCol, layer: 0 },
             ],
             assertions: ({ users }) => {
-                expect([blockAt(innerWallRow, colBehindDoor), blockAt(outerWallRow, colBehindDoor)],
-                    "the wall the room's door hangs on was taken out").toEqual([true, true]);
-                expect([blockAt(innerWallRow, plainCol), blockAt(outerWallRow, plainCol)]).toEqual([false, false]);
+                expect(blockAt(innerWallRow, colBehindDoor),
+                    "the wall the room's door hangs on was taken out").toBe(true);
+                expect([blockAt(outerWallRow, colBehindDoor), blockAt(innerWallRow, plainCol),
+                    blockAt(outerWallRow, plainCol)]).toEqual([false, false, false]);
 
                 const answered = blockSignalsSentTo(users[0]);
-                expect(answered.add.map(signal => [signal.quadIndex, signal.quadTextureIndicesWithinLayer])).toEqual([
-                    [quadIndexAt(innerWallRow, colBehindDoor), TEXTURES],
-                    [quadIndexAt(outerWallRow, colBehindDoor), OTHER_TEXTURES]]);
+                expect(answered.add.map(signal => [signal.quadIndex, signal.quadTextureIndicesWithinLayer]))
+                    .toEqual([[quadIndexAt(innerWallRow, colBehindDoor), TEXTURES]]);
                 expect([answered.remove, answered.move]).toEqual([[], []]);
 
                 const told = blockSignalsSentTo(users[1]);
-                expect(told.remove.map(signal => signal.quadIndex))
-                    .toEqual([quadIndexAt(innerWallRow, plainCol), quadIndexAt(outerWallRow, plainCol)]);
+                expect(told.remove.map(signal => signal.quadIndex)).toEqual([quadIndexAt(outerWallRow, colBehindDoor),
+                    quadIndexAt(innerWallRow, plainCol), quadIndexAt(outerWallRow, plainCol)]);
                 expect([told.add, told.move]).toEqual([[], []]);
             },
         });

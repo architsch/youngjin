@@ -18,12 +18,12 @@ const DEFAULT_PULSE_DUTY = 0.3;
 const testEmitters: ParticleEmitterHandle[] = [];
 const testSprites: SpriteHandle[] = [];
 
-// Debug commands (see DebugStats) that show any effect or sprite on the selected block face, so emitters,
+// Debug commands (see DebugCommandUtil) that show any effect or sprite on the selected block face, so emitters,
 // sprites and the solid batch can be seen before an object type uses them:
 // - "vfx <effect>": plays it once, or starts it if it streams;
 // - "sprite <name> [constant|sine|pulse low high frequency [duty]]": a sprite whose rate follows the waveform;
 // - "vfx clear": stops and removes what these commands started.
-// Names match whatever their case, since DebugStats lower-cases what is typed.
+// Names match whatever their case, since DebugCommandUtil lower-cases what is typed.
 const ParticleDebugUtil =
 {
     // A message for the user, or undefined when the command isn't one of these.

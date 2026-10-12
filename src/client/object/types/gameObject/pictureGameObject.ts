@@ -18,12 +18,11 @@ import QuarterTurnsUtil from "../../../../shared/object/util/quarterTurnsUtil";
 import TextureAtlas from "../../../graphics/types/texture/textureAtlas";
 import TextureAtlasHolder from "../../../graphics/types/texture/textureAtlasHolder";
 import TextureAtlasRegion from "../../../graphics/types/texture/textureAtlasRegion";
-import TextureAtlasLayout from "../../../graphics/types/texture/textureAtlasLayout";
 import TexelRect from "../../../graphics/types/texture/texelRect";
 import TextureAtlasLayoutUtil from "../../../graphics/util/textureAtlasLayoutUtil";
+import PictureLayoutUtil from "../../../graphics/util/pictureLayoutUtil";
 
 const NUM_ATLAS_CELLS_PER_SIDE = PICTURE_ATLAS_SIZE / PICTURE_ATLAS_CELL_SIZE;
-const PIXELS_PER_WORLD_UNIT = PICTURE_ATLAS_CELL_SIZE / PICTURE_ATLAS_CELL_WORLD_SIZE;
 
 
 // What an object without an image shows, keyed apart from any image path.
@@ -171,7 +170,9 @@ export default abstract class PictureGameObject extends GameObject implements Te
 
         const pictureSize = this.getPictureSize();
         const quarterTurns = QuarterTurnsUtil.getQuarterTurns(this.params);
-        const {quadSize, texelRect} = getPictureLayout(this.getImage(), this.region, pictureSize, quarterTurns);
+        const image = this.getImage();
+        const {quadSize, texelRect} = PictureLayoutUtil.getLayout(image, getImageTexels(image, this.region),
+            pictureSize, quarterTurns);
         this.instancedMeshGraphics.updateInstanceTransform(
             PictureGameObject.instancedMeshId, this.instanceId,
             0, 0, FRAMED_PANEL_BOARD_RELIEF + FRAMED_PANEL_CONTENT_LIFT, BACKWARD_DIR.x, BACKWARD_DIR.y, BACKWARD_DIR.z,
@@ -209,21 +210,6 @@ export default abstract class PictureGameObject extends GameObject implements Te
         const imageMap = ImageMapUtil.getImageMap("PictureImageMap");
         return (path.length > 0 && imageMap.hasImagePath(path)) ? imageMap.getImageMetadataByPath(path) : undefined;
     }
-}
-
-// Where the picture of an image (or the placeholder, which fills it) goes, from the region it is drawn in.
-function getPictureLayout(image: ImageMetadata | undefined, region: TextureAtlasRegion, pictureSize: Vec3,
-    quarterTurns: number): TextureAtlasLayout
-{
-    const texels = getImageTexels(image, region);
-    if (image == undefined)
-        return TextureAtlasLayoutUtil.getLayout(pictureSize, texels, "fill", 0);
-    if (image.preserveScale && image.width && image.height)
-    {
-        return TextureAtlasLayoutUtil.getLayout(pictureSize, texels, "preserve", quarterTurns,
-            {x: image.width / PIXELS_PER_WORLD_UNIT, y: image.height / PIXELS_PER_WORLD_UNIT});
-    }
-    return TextureAtlasLayoutUtil.getLayout(pictureSize, texels, "fit", quarterTurns);
 }
 
 // The part of the region an image is drawn over, or all of it for the placeholder.

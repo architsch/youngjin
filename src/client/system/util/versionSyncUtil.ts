@@ -1,4 +1,5 @@
 import { HEALTH_ROUTE_PATH } from "../../../shared/system/sharedConstants";
+import RoomEditorUtil from "../../singlePlayer/util/roomEditorUtil";
 
 // Reloads the page when the server's build commit differs from the page's. Checked on returning to
 // the foreground and on socket reconnect; clients awake during a deploy are disconnected and reload
@@ -13,6 +14,9 @@ const VersionSyncUtil =
 
         const serverGitCommit = await fetchServerGitCommit();
         if (serverGitCommit == undefined || serverGitCommit === pageGitCommit)
+            return;
+        // (A reload would cost the room editor its room, which is kept nowhere until it is saved.)
+        if (RoomEditorUtil.isEditing())
             return;
 
         reloading = true;

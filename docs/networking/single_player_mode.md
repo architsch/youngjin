@@ -11,7 +11,7 @@ A single-player room is explored alone and runs entirely on the client. Its main
 **The client decides whether to run single-player logic from the joined room's `RoomType`**, never from the user flag, so single-player logic can never run in a multiplayer room or the reverse.
 
 ## Routing
-On connect, `SocketsServer` picks, in order: the single-player room (if the flag is set), the URL's room, the last room, a hub. While the tutorial is unfinished, a URL room is deferred: the client remembers it and uses it when the tutorial is skipped. The reserved **hub keyword** is a pseudo room id that `RoomPickerUtil` resolves to a balanced hub (see [room_population.md](room_population.md)).
+On connect, `SocketsServer` picks, in order: the room editor (for an admin whose client says it is still in it), the single-player room (if the flag is set), the URL's room, the last room, a hub. While the tutorial is unfinished, a URL room is deferred: the client remembers it and uses it when the tutorial is skipped. The reserved **hub keyword** is a pseudo room id that `RoomPickerUtil` resolves to a balanced hub (see [room_population.md](room_population.md)).
 
 ## Server contract
 - The server sends only the room's identity, and the client fills the room in from its file (see [Rooms](#rooms)).
@@ -35,8 +35,10 @@ On connect, `SocketsServer` picks, in order: the single-player room (if the flag
 
 ### Room editor
 - A single-player mode of its own, open to admins only, with no steps: the admin edits the room with every edit-mode tool, as the superuser of a room nobody else is in.
-- It opens on an empty room or on a room file, and saves the room as a file. Nothing of it reaches the server, and leaving it finishes no mode.
-- It is driven from the debug panel's command input: `new room`, `open room`, `save room` and `leave room`.
+- Its room is a **template**, not a stored room: nothing of it reaches the server, so it lasts only as the file it is saved as. Leaving it finishes no mode.
+- The debug panel's `new room template` command enters it, on an empty room. From there the room file buttons of room settings save the room and open a file in its place (see [my_room.md](my_room.md#room-files)). Reloading the page leaves it.
+- It is given up only on its user's say-so: a new template, a file opened in its place and a door out of it each ask first, and the browser asks before the page is left.
+- It goes on without the server. A lost connection puts up no wait, and reloads and redirects nothing. As the connection comes back the client says it is still in the editor, and the server leaves it there. A room the client did not ask for is turned away, and the server told where the user is. Asking for another room is refused while there is no connection.
 - Room settings are applied locally there and saved with the file. Tags are edited only there.
 - Volumes are hidden there as anywhere, until `volumes on` (see [restricted_zone.md](../gameplay/restricted_zone.md#display)).
 - A saved file ships once it is put in the room map's directory, under the path a mode names.

@@ -13,7 +13,7 @@ import EncodableRawByteNumber from "../../../shared/networking/types/encodableRa
 import SignalTypeConfigMap from "../../../shared/networking/maps/signalTypeConfigMap";
 import EncodableData from "../../../shared/networking/types/encodableData";
 import RequestRoomChangeSignal from "../../../shared/room/types/requestRoomChangeSignal";
-import { connectionStateObservable } from "../../system/clientObservables";
+import { connectionStateObservable, notificationMessageObservable } from "../../system/clientObservables";
 import { tryStartClientProcess, endClientProcess, ongoingClientProcessExists } from "../../system/types/clientProcess";
 import BufferState from "../../../shared/networking/types/bufferState";
 import SetVoxelQuadTextureSignal from "../../../shared/voxel/types/update/setVoxelQuadTextureSignal";
@@ -29,6 +29,7 @@ import ClientVoxelManager from "../../voxel/clientVoxelManager";
 import ErrorUtil from "../../../shared/system/util/errorUtil";
 import { HEALTH_ROUTE_PATH } from "../../../shared/system/sharedConstants";
 import VersionSyncUtil from "../../system/util/versionSyncUtil";
+import RoomEditorUtil from "../../singlePlayer/util/roomEditorUtil";
 
 let socket: Socket;
 let pollingForServer = false;
@@ -81,7 +82,9 @@ const SocketsClient =
             reconnectionAttempts: 20,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
-            auth: { targetRoomID: env.targetRoomID },
+            // Said anew with every connection: one that comes back to a client in the room editor is to leave it
+            // there (see RoomPickerUtil).
+            auth: (cb) => cb({ targetRoomID: env.targetRoomID, roomEditorOpen: RoomEditorUtil.isEditing() }),
         });
 
         // Expose for E2E test teardown (explicit disconnect prevents stale players)
@@ -92,7 +95,7 @@ const SocketsClient =
         socket.on("connect", () => {
             console.log(`Successfully connected to socket server (transport: ${socket.io.engine.transport.name})`);
             endReconnectWait();
-            if (hasConnectedBefore)
+            if (hasConnectedBefore && !worksWithoutServer())
             {
                 // Start a roomChange process so the server's auto-join (roomChangedSignal) can complete.
                 tryStartClientProcess("roomChange", 1, 0);
@@ -104,7 +107,8 @@ const SocketsClient =
         });
 
         socket.on("forceRedirect", (url: string) => {
-            window.location.href = url;
+            if (!worksWithoutServer())
+                window.location.href = url;
         });
 
         // The server is overwriting the room with its users still in it (see
@@ -113,6 +117,8 @@ const SocketsClient =
 
         socket.on("disconnect", (reason) => {
             console.warn(`Socket disconnected (reason: ${reason})`);
+            if (worksWithoutServer())
+                return;
             beginReconnectWait();
 
             if (reason === "io server disconnect")
@@ -123,6 +129,8 @@ const SocketsClient =
         });
 
         socket.io.on("reconnect_failed", () => {
+            if (worksWithoutServer())
+                return;
             // Reconnection exhausted. Wait for the server before reloading (the proxy would serve an error).
             console.warn("All reconnection attempts exhausted. Waiting for the server to come back...");
             pollServerAndReload();
@@ -132,7 +140,7 @@ const SocketsClient =
             console.error("SocketIO connection error");
             console.error(`Error message: ${err.message}`);
             console.error(`Error data:`, err);
-            if (err.message.startsWith("http"))
+            if (err.message.startsWith("http") && !worksWithoutServer())
                 (window as any).location.href = err.message;
         });
 
@@ -148,6 +156,21 @@ const SocketsClient =
     emitUserCommandSignal: (params: UserCommandSignal) => emitWhenReady("userCommandSignal", params),
     emitRequestRoomChangeSignal: (params: RequestRoomChangeSignal) => {
         emitWhenReady("requestRoomChangeSignal", params);
+    },
+    // Asks the server for another room on the user's behalf, with the loading screen up until one arrives (see
+    // App), and says whether it asked. Not without a connection, over which the request would only go out once
+    // one came back; nor while another room is on its way.
+    requestRoomChange: (params: RequestRoomChangeSignal): boolean =>
+    {
+        if (!socket.connected)
+        {
+            notificationMessageObservable.set("The server can't be reached right now.");
+            return false;
+        }
+        if (!tryStartClientProcess("roomChange", 1, 1))
+            return false;
+        emitWhenReady("requestRoomChangeSignal", params);
+        return true;
     },
     emitMoveVoxelBlockSignal: (params: MoveVoxelBlockSignal) =>
     {
@@ -207,6 +230,14 @@ function receiveSignalBatch(readBatch: () => Uint8Array)
     } catch (err) {
         console.error(`Exception while receiving a signalBatch from the server :: Error: ${ErrorUtil.getErrorMessage(err)}`);
     }
+}
+
+// Whether the client is where the server isn't needed: in the room editor, whose room is the client's alone and
+// kept nowhere until it is saved (see RoomEditorUtil). Nothing the connection does is then to hold its user up,
+// move them to another room, or take the page from them.
+function worksWithoutServer(): boolean
+{
+    return RoomEditorUtil.isEditing();
 }
 
 // The "Reconnecting..." wait: for a lost connection, or for a room the server is reloading.

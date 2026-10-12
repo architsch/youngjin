@@ -99,6 +99,7 @@ plates were painted out; small incidental labels on goods remain.
 | `2/56.webp` | Dartboard | Simon Ray | [1Bdsg4xqdYs](https://unsplash.com/photos/a-dart-hitting-in-the-center-of-a-dartboard-on-a-wooden-wall-1Bdsg4xqdYs) | Unsplash License |
 | `2/57.webp` | Popcorn Sign | Rita Vicari | [kGGnJBw78Vo](https://unsplash.com/photos/popcorn-signage-kGGnJBw78Vo) | Unsplash License |
 | `2/58.webp` | Popcorn Machine Window | Vitya Lapatey | [Q-dusXpAH0I](https://unsplash.com/photos/popcorn-on-white-and-red-box-Q-dusXpAH0I) | Unsplash License |
+| `2/62.webp` | Toy Capsule Dispenser | Jovita Braun | [wJehzgG9uyM](https://unsplash.com/photos/a-red-brick-wall-with-a-row-of-vending-machines-wJehzgG9uyM) | Unsplash License |
 | `2/63.webp` | Candy Dispenser | Erik Mclean | [CMmyYQmgFes](https://unsplash.com/photos/assorted-candies-in-black-plastic-container-CMmyYQmgFes) | Unsplash License |
 | `2/69.webp` | Fridge Shelf of Orange Soda | Onur Burak Akin | [B3cqR6OZOWU](https://unsplash.com/photos/a-refrigerator-filled-with-lots-of-green-and-yellow-bottles-B3cqR6OZOWU) | Unsplash License |
 | `2/72.webp` | Gin Shelf | Rod Long | [dSvBSp4jgX8](https://unsplash.com/photos/bottles-of-liquor-displayed-on-illuminated-shelves-dSvBSp4jgX8) | Unsplash License |

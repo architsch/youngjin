@@ -1,6 +1,6 @@
 /**
  * Scenario tests: doors (the room superuser's world-building) — who may add, remove, move and edit them,
- * how their metadata is validated, how deep a wall one needs behind it, and where arriving players spawn.
+ * how their metadata is validated, the wall one needs behind it, and where arriving players spawn.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runScenario, VoxelPlacement } from "../helpers/scenarioRunner";
@@ -11,8 +11,11 @@ import SpawnHotspotUtil from "../../../src/server/room/util/spawnHotspotUtil";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 import ObjectMetadataEntryMap from "../../../src/shared/object/maps/objectMetadataEntryMap";
 import ObjectUpdateUtil from "../../../src/shared/object/util/objectUpdateUtil";
-import DoorObjectTypeConfig, { ENTRANCE_DOOR_OBJECT_ID,
+import DoorObjectTypeConfig, { ENTRANCE_DIST_IN_FRONT_OF_DOOR, ENTRANCE_DOOR_OBJECT_ID,
     SPAWN_DIST_BEHIND_DOOR } from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
+import { PLAYER_RADIUS_XZ } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import PhysicsManager from "../../../src/shared/physics/physicsManager";
+import PhysicsColliderStateUtil from "../../../src/shared/physics/util/physicsColliderStateUtil";
 import LabelTextUtil from "../../../src/shared/object/util/labelTextUtil";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import RemoveObjectSignal from "../../../src/shared/object/types/removeObjectSignal";
@@ -32,7 +35,7 @@ import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import ColorUtil from "../../../src/shared/math/util/colorUtil";
 import Vec3 from "../../../src/shared/math/types/vec3";
 import ObjectAttachmentUtil from "../../../src/shared/object/util/objectAttachmentUtil";
-import { COLLISION_LAYER_HEIGHT, GENERATED_WALL_THICKNESS,
+import { COLLISION_LAYER_HEIGHT, GENERATED_WALL_THICKNESS, GRAVITY_SPEED,
     LABEL_COLOR_PALETTE_NAME, INITIAL_MULTI_PLAYER_ENTRANCE_POS, MAX_ROOM_X, MAX_ROOM_Z, OBJECT_LABEL_MAX_LENGTH,
     SANDBOX_SINGLE_PLAYER_MODE, STOREY_FLOOR_COLLISION_LAYER, TUTORIAL_SINGLE_PLAYER_MODE, UNIT_VEC3,
     VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
@@ -412,8 +415,8 @@ describe("the wall a door needs", () => {
     });
 
     // Two walls standing free in the room from its floor to the storey's slab, each with its face at its z,
-    // looking toward -z: one a single block deep, the other a block deeper than a door needs. Both reach a
-    // world unit or more past a door hung about x = DOOR_X, on either side of it.
+    // looking toward -z: one a single block deep, the other three. Both reach a world unit or more past a door
+    // hung about x = DOOR_X, on either side of it.
     const DOOR_X = 8.5;
     const THIN_WALL_Z = 20;
     const THICK_WALL_Z = 10;
@@ -446,21 +449,20 @@ describe("the wall a door needs", () => {
         {x: DOOR_X + WALL_HALF_WIDTH, y: height, z: z + depthInBlocks * VOXEL_CELL_SIZE});
     const WALLED_HUB = {...EMPTY_HUB,
         voxels: [...wallAt(THIN_WALL_Z, 1), ...wallAt(THICK_WALL_Z, THICK_WALL_DEPTH_IN_BLOCKS)]};
-    // The thick wall and the slab over it: the blocks a door on that wall needs, and others beside it, above
-    // it and beyond the depth it needs.
+    // The thick wall and the slab over it: the blocks a door on that wall needs, and others beside them, above
+    // them and behind them.
     const AROUND_THICK_WALL = wallAt(THICK_WALL_Z, THICK_WALL_DEPTH_IN_BLOCKS,
         SLAB_BOTTOM_Y + COLLISION_LAYER_HEIGHT);
 
-    // Where a door stands on a wall with its middle at x, and the thick wall's blocks behind it there: those
-    // right behind its face (depth 0), or so many further in.
+    // Where a door stands on a wall with its middle at x, and the thick wall's blocks right behind it there.
     const doorPosOn = (wallZ: number, x: number = DOOR_X): Vec3 => ({x, y: 0.5 * DOOR_FOOTPRINT_HEIGHT, z: wallZ});
-    const behindDoor = (x: number, depth: number) => blocksIn(
-        {x: x - 0.5 * DOOR_FOOTPRINT_WIDTH, y: 0, z: THICK_WALL_Z + depth * VOXEL_CELL_SIZE},
-        {x: x + 0.5 * DOOR_FOOTPRINT_WIDTH, y: DOOR_FOOTPRINT_HEIGHT, z: THICK_WALL_Z + (depth + 1) * VOXEL_CELL_SIZE});
+    const behindDoor = (x: number) => blocksIn(
+        {x: x - 0.5 * DOOR_FOOTPRINT_WIDTH, y: 0, z: THICK_WALL_Z},
+        {x: x + 0.5 * DOOR_FOOTPRINT_WIDTH, y: DOOR_FOOTPRINT_HEIGHT, z: THICK_WALL_Z + VOXEL_CELL_SIZE});
     const quadOf = (block: VoxelPlacement) =>
         VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(block.row, block.col, block.layer);
 
-    it("is solid two blocks deep behind all of it, since arrivals stand inside the wall", async () => {
+    it("is solid right behind all of it, and no deeper than a picture's", async () => {
         await runScenario({
             name: "door on a thick wall and a thin one",
             rooms: [WALLED_HUB],
@@ -476,11 +478,11 @@ describe("the wall a door needs", () => {
                 for (const doorX of [DOOR_X, DOOR_X + 0.5 * VOXEL_CELL_SIZE])
                 {
                     const doorFits = () => fits(doorTypeIndex, doorPosOn(THICK_WALL_Z, doorX));
-                    const needed = new Set([...behindDoor(doorX, 0), ...behindDoor(doorX, 1)].map(quadOf));
+                    const needed = new Set(behindDoor(doorX).map(quadOf));
                     expect(doorFits(), `door at x ${doorX}`).toBe(true);
 
-                    // Each block behind any of it, right behind its face or one further in, has to be there;
-                    // no other has.
+                    // Each block right behind any of it has to be there; no other has, the ones further in
+                    // included.
                     for (const block of AROUND_THICK_WALL)
                     {
                         VoxelUpdateUtil.removeVoxelBlock(undefined, voxels, quadOf(block));
@@ -490,14 +492,14 @@ describe("the wall a door needs", () => {
                     }
                 }
 
-                // A wall one block deep would hold a picture, but not a door.
+                // A wall one block deep holds a door as it holds a picture.
                 expect(fits(canvasTypeIndex, {x: DOOR_X, y: 1, z: THIN_WALL_Z})).toBe(true);
-                expect(fits(doorTypeIndex, doorPosOn(THIN_WALL_Z))).toBe(false);
+                expect(fits(doorTypeIndex, doorPosOn(THIN_WALL_Z))).toBe(true);
             },
         });
     });
 
-    it("keeps every block the door rests on, at either depth, and lets any other go", async () => {
+    it("keeps every block the door rests on, and lets any other go", async () => {
         await runScenario({
             name: "blocks under a door",
             rooms: [WALLED_HUB],
@@ -508,7 +510,7 @@ describe("the wall a door needs", () => {
                     new ObjectTransform(doorPosOn(THICK_WALL_Z), FACING, {...UNIT_VEC3}));
                 expect(ObjectUpdateUtil.addObject(ADMIN, room, door)).toBe(true);
 
-                const restedOn = new Set([...behindDoor(DOOR_X, 0), ...behindDoor(DOOR_X, 1)].map(quadOf));
+                const restedOn = new Set(behindDoor(DOOR_X).map(quadOf));
                 for (const block of AROUND_THICK_WALL)
                 {
                     const quadIndex = quadOf(block);
@@ -517,6 +519,47 @@ describe("the wall a door needs", () => {
                         .toEqual(restedOn.has(quadIndex) ? [door.objectId] : []);
                     expect(VoxelUpdateUtil.canRemoveVoxelBlock(ADMIN, room, quadIndex), where)
                         .toBe(!restedOn.has(quadIndex));
+                }
+            },
+        });
+    });
+
+    it("lets whoever arrives behind it walk out in front of it, however thin", async () => {
+        await runScenario({
+            name: "arriving through a door on a thin wall and a thick one",
+            rooms: [WALLED_HUB],
+            users: [userAtCenter("hub")],
+            assertions: () => {
+                const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
+                const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
+                const stride = SPAWN_DIST_BEHIND_DOOR + ENTRANCE_DIST_IN_FRONT_OF_DOOR;
+                const deltaTime = 1 / 60;
+
+                for (const wallZ of [THIN_WALL_Z, THICK_WALL_Z])
+                {
+                    const label = `Door at ${wallZ}`;
+                    expect(ObjectUpdateUtil.addObject(ADMIN, room, new AddObjectSignal(room.id, ADMIN.id,
+                        ADMIN.userName, doorTypeIndex, label, new ObjectTransform(doorPosOn(wallZ), FACING, {...UNIT_VEC3}),
+                        {[ObjectMetadataKeyEnumMap.Label]: new EncodableByteString(label)}))).toBe(true);
+
+                    // Put down behind the door, then walked forward for a second through the real physics, as
+                    // PlayerController walks him: he looks the opposite way to his transform's direction.
+                    const spawn = SpawnHotspotUtil.pickSpawnTransform(room, label);
+                    let pos = {...spawn.pos};
+                    PhysicsManager.addObject(room.id, "arrival", playerTypeIndex, PhysicsColliderStateUtil
+                        .getObjectColliderState(playerTypeIndex, new ObjectTransform(pos, spawn.dir, {...UNIT_VEC3}))!);
+                    for (let frame = 0; frame < 60 && Math.abs(pos.z - spawn.pos.z) < stride; ++frame)
+                    {
+                        const velocity = PhysicsManager.getAdjustedVelocity(room.id, "arrival",
+                            {x: -3 * spawn.dir.x, y: -GRAVITY_SPEED, z: -3 * spawn.dir.z});
+                        pos = PhysicsManager.setObjectTransform(room.id, "arrival", new ObjectTransform(
+                            {x: pos.x + velocity.x * deltaTime, y: pos.y + velocity.y * deltaTime,
+                                z: pos.z + velocity.z * deltaTime}, spawn.dir, {...UNIT_VEC3}), false).transform.pos;
+                    }
+                    PhysicsManager.removeObject(room.id, "arrival");
+
+                    // Clear of the wall, on the side the door faces.
+                    expect((pos.z - wallZ) * FACING.z, label).toBeGreaterThan(PLAYER_RADIUS_XZ);
                 }
             },
         });

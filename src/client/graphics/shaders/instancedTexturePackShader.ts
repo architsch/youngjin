@@ -82,20 +82,25 @@ export function getUVScales(textureWidth: number, textureHeight: number,
     ];
 }
 
+// Where in what a quad shows (in UV) a point of the quad falls, once that is turned clockwise by quarterTurns:
+// the vertex stage's turn, which this must follow (see TURN_VERTEX_GLSL).
+export function getTurnedUV(quarterTurns: number, quadUV: THREE.Vector2, out: THREE.Vector2): THREE.Vector2
+{
+    if (quarterTurns > 2.5)
+        return out.set(quadUV.y, 1 - quadUV.x);
+    if (quarterTurns > 1.5)
+        return out.set(1 - quadUV.x, 1 - quadUV.y);
+    if (quarterTurns > 0.5)
+        return out.set(1 - quadUV.y, quadUV.x);
+    return out.copy(quadUV);
+}
+
 // Where in the texture (in UV) an instance samples at a point of its quad: the vertex stage's mapping, which
-// this must follow (see TURN_VERTEX_GLSL and vertexGLSL).
+// this must follow (see vertexGLSL).
 export function getSampledUV(geometry: THREE.BufferGeometry, instanceId: number, quadUV: THREE.Vector2,
     uvScales: readonly [number, number], out: THREE.Vector2): THREE.Vector2
 {
-    const quarterTurns = geometry.getAttribute("uvQuarterTurns")?.getX(instanceId) ?? 0;
-    if (quarterTurns > 2.5)
-        out.set(quadUV.y, 1 - quadUV.x);
-    else if (quarterTurns > 1.5)
-        out.set(1 - quadUV.x, 1 - quadUV.y);
-    else if (quarterTurns > 0.5)
-        out.set(1 - quadUV.y, quadUV.x);
-    else
-        out.copy(quadUV);
+    getTurnedUV(geometry.getAttribute("uvQuarterTurns")?.getX(instanceId) ?? 0, quadUV, out);
 
     const uvStart = geometry.getAttribute("uvStart");
     const uvSampleSize = geometry.getAttribute("uvSampleSize");

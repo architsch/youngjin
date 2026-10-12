@@ -1,7 +1,8 @@
 import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";
 import ObjectCategoryConfigMap from "../../../shared/object/maps/objectCategoryConfigMap";
 import { ObjectCategoryEnumMap } from "../../../shared/object/types/objectCategory";
-import { HUB_ROOM_ID_KEYWORD, ROOM_ALMOST_FULL_MARGIN, ROOM_OVER_POPULATION_THRESHOLD, ROOM_UNDER_POPULATION_THRESHOLD } from "../../../shared/system/sharedConstants";
+import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
+import { HUB_ROOM_ID_KEYWORD, ROOM_ALMOST_FULL_MARGIN, ROOM_EDITOR_SINGLE_PLAYER_MODE, ROOM_OVER_POPULATION_THRESHOLD, ROOM_UNDER_POPULATION_THRESHOLD } from "../../../shared/system/sharedConstants";
 import SocketUserContext from "../../sockets/types/socketUserContext";
 import ServerRoomManager from "../serverRoomManager";
 import HubRoomCandidate from "../types/hubRoomCandidate";
@@ -16,7 +17,9 @@ const RoomPickerUtil =
         const targetRoomID = socket.handshake.auth.targetRoomID as string | undefined;
 
         let roomID: string;
-        if (pickContext == "appStart" && user.singlePlayerMode && user.singlePlayerMode.length > 0) // If the user is supposed to enter a single-player mode (e.g. tutorial),
+        if (pickContext == "appStart" && socket.handshake.auth.roomEditorOpen === true && RoomValidationUtil.userIsAdmin(user)) // If the connection came back to a client that is still in the room editor (see SocketsClient),
+            roomID = ROOM_EDITOR_SINGLE_PLAYER_MODE; // User should be left there, as the room being edited is kept nowhere else.
+        else if (pickContext == "appStart" && user.singlePlayerMode && user.singlePlayerMode.length > 0) // If the user is supposed to enter a single-player mode (e.g. tutorial),
             roomID = user.singlePlayerMode; // User should join the corresponding single-player room. (If targetRoomID exists, the user should join it AFTER finishing the single-player mode first.)
         else if (targetRoomID && targetRoomID.length > 0) // If roomID was explicitly specified in the URL as a parameter,
         {

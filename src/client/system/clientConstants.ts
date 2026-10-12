@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import Vec3 from "../../shared/math/types/vec3";
 
 // Pointer interaction
 
@@ -20,7 +21,7 @@ export const EDIT_MODE_OPENING_TILT = THREE.MathUtils.degToRad(15);
 export const ORBIT_SIGHT_CONE_RADIUS_PER_DISTANCE = 0.3;
 
 // True keeps a newly added object selected once its look is complete. False hands the selection to a face near it,
-// for the next to be added from (see VoxelQuadPlacementOptions).
+// for the next to be added from (see ObjectPlacementUtil).
 export const DISABLE_AUTO_SELECTION_ON_OBJECT_INSTALLATION = true;
 
 // Where the selection tools show a sub-panel (an object's, see EditOptionsProps; a face's chooser, see
@@ -55,7 +56,7 @@ export const SELECTION_STEP_OBJECT_REACH = 3;
 export const NOTIFICATION_DURATION_MS = 3000;
 
 // How long a confirm popup's Yes takes no click or key press once the popup comes up (in milliseconds; see
-// ConfirmForm).
+// ConfirmButtons).
 export const CONFIRM_ARMING_DELAY_MS = 500;
 
 // Whether the image chooser offers its category tabs (see ImageMapThumbnailPanel). False hides them, and every
@@ -82,6 +83,12 @@ export const DIRECTION_VECTORS: {[key: string]: THREE.Vector3} = {
     "+z": new THREE.Vector3(0, 0, 1),
     "-z": new THREE.Vector3(0, 0, -1),
 };
+
+// Room preview
+
+// Where a room file's preview looks at its room from (see RoomPreviewUtil): toward the camera, which is over one of
+// the room's corners. Only what is turned this way is drawn.
+export const ROOM_PREVIEW_VIEW_DIR: Vec3 = {x: 1, y: 1, z: -1};
 
 // Lighting
 

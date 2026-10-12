@@ -7,7 +7,7 @@ export class MockSocket extends EventEmitter
 {
     id: string;
     connected: boolean;
-    handshake: { auth: { user: User; targetRoomID?: string } };
+    handshake: { auth: { user: User; targetRoomID?: string; roomEditorOpen?: boolean } };
 
     /** Signals emitted *to* this socket (what a real client would receive). */
     emitted: Array<{ event: string; data: any }>;

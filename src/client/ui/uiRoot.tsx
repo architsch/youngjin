@@ -28,6 +28,7 @@ import ImageGridChooserForm from "./components/form/imageGridChooserForm";
 import ConsoleLogForm from "./components/form/consoleLogForm";
 import AdminAssetSettingsEditor from "./components/form/adminAssetSettingsEditor";
 import ConfirmForm from "./components/form/confirmForm";
+import RoomFilePreviewForm from "./components/form/roomFilePreviewForm";
 import ExitPromptForm from "./components/form/exitPromptForm";
 import { FeatureFlag } from "../../shared/system/types/featureFlag";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
@@ -36,6 +37,7 @@ import useShortcutKeyListener from "./util/shortcutKeyListener";
 import useSelectionStepKeyListener from "./util/selectionStepKeyListener";
 import useUndoRedoKeyListener from "./util/undoRedoKeyListener";
 import useWheelScrollListener from "./util/wheelScrollListener";
+import usePageLeaveWarning from "./util/pageLeaveWarning";
 import PopupUtil from "./util/popupUtil";
 import ClosablePanelUtil from "./util/closablePanelUtil";
 import ExitConfirmationUtil from "./util/exitConfirmationUtil";
@@ -165,6 +167,11 @@ export default function UIRoot({ env, user }: UIRootProps)
     const isRoomLoaded = roomRuntimeMemory != undefined;
     const isMultiplayerRoomLoaded = isRoomLoaded &&
         roomRuntimeMemory.room.roomType != RoomTypeEnumMap.SinglePlayer;
+    const isRoomEditorOpen = RoomEditorUtil.isEditing(roomRuntimeMemory?.room);
+
+    // The room editor's room is kept nowhere until it is saved as a file, so the browser is to ask before the
+    // page is left with one open.
+    usePageLeaveWarning(isRoomEditorOpen);
 
     // Room settings take the bottom edge, so chat and selection tools stand down meanwhile (the tools
     // re-read the selection when they return; see ObjectSelectionMenu, VoxelQuadSelectionMenu).
@@ -180,8 +187,8 @@ export default function UIRoot({ env, user }: UIRootProps)
             onToggleRoomSettings={() => setRoomSettingsOpen(prev => !prev)}
             onExitApp={exitApp}
         />}
-        {/* (Its commands are the room editor's way out, and its way to save.) */}
-        {(isMultiplayerRoomLoaded || RoomEditorUtil.isEditing(roomRuntimeMemory?.room)) && <DebugStats env={env}/>}
+        {/* (The room editor needs its commands too: one starts a new room there, another shows its volumes.) */}
+        {(isMultiplayerRoomLoaded || isRoomEditorOpen) && <DebugStats env={env}/>}
         <CameraZoomSlider/>
         {/* Selection tools are edit-mode only. */}
         <div ref={bottomUIRef} className="flex flex-col absolute bottom-0 w-full pointer-events-none">
@@ -239,6 +246,14 @@ export default function UIRoot({ env, user }: UIRootProps)
                 </Popup>;
                 case "adminAssetSettings": return <Popup key={i}>
                     <AdminAssetSettingsEditor/>
+                </Popup>;
+                case "roomFilePreview": return <Popup key={i}>
+                    <RoomFilePreviewForm
+                        image={state.params.image}
+                        width={state.params.width}
+                        onConfirm={state.params.onConfirm}
+                        onCancel={state.params.onCancel}
+                    />
                 </Popup>;
             }
         })}

@@ -2,7 +2,7 @@
 
 Reference: @src/shared/object/types/objectTypeConfig/doorObjectTypeConfig.ts , @src/server/room/util/spawnHotspotUtil.ts
 
-A room's only entrances are its **doors**. A door is an attached object on a wall (see [object_attachment.md](object_attachment.md)) that is stored with the room and used by clicking it. No hole is cut behind a door: a door needs solid wall behind it, deep enough to hide an arrival, so room boundaries stay solid all the way round.
+A room's only entrances are its **doors**. A door is an attached object on a wall (see [object_attachment.md](object_attachment.md)) that is stored with the room and used by clicking it. No hole is cut behind a door: it hangs on solid wall as any attached object does, so room boundaries stay solid all the way round.
 
 Every multiplayer room is generated with exactly one door on a boundary wall. Doors are then added, linked and removed by the room's superuser: an admin in a Hub, the owner in a Regular room (see [restricted_zone.md](../gameplay/restricted_zone.md)).
 
@@ -20,10 +20,10 @@ Players have no saved position. Every room entry places the player behind a door
 3. any door;
 4. the room center.
 
-The player starts inside the wall behind the door, facing the room, and `PlayerController` walks them forward until they are clear of it. The walk is limited by both distance and time.
+The player starts a fixed distance behind the door's face, facing the room, and `PlayerController` walks them forward until they are clear of it. A wall as thick as a generated room's boundary hides them until then; behind a thinner one they start in the open. The walk is limited by both distance and time.
 
 ## Door behavior
 - **Collider**: a thin pass-through collider, since the wall behind it already blocks movement.
 - **Enter prompt**: shown only when the player is close, looking toward the door, in front of its face and has line of sight. The cheap checks run first. The line-of-sight check is needed because users may have built in front of the door.
 - **Click**: travels to the destination, or shows a "locked" notice. A door that points at the hubs hands the player to the balancer, which is also how the tutorial ends. For the room's superuser, a click selects the door in edit mode instead.
-- **Protection**: no cells are reserved around a door. The blocks of the wall it needs cannot be removed while the door hangs on them, and only the room's superuser may remove the door.
+- **Protection**: no cells are reserved around a door. The blocks right behind it cannot be removed while the door hangs on them, and only the room's superuser may remove the door.

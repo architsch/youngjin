@@ -637,7 +637,7 @@ const ui =
     },
 
     // Answers a confirm popup with Yes. Yes takes no click for the popup's first moment and looks no different
-    // meanwhile (see ConfirmForm), so that moment is waited out; the popup closing is what says the click was taken.
+    // meanwhile (see ConfirmButtons), so that moment is waited out; the popup closing is what says the click was taken.
     async confirm(page, options = {})
     {
         const yes = page.locator("#uiRoot").getByText("Yes", {exact: true}).last();

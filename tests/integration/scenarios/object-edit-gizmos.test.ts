@@ -84,10 +84,12 @@ import { bottomUIHeightObservable, cameraModeObservable, gameModeObservable, obj
     voxelQuadSelectionObservable } from "../../../src/client/system/clientObservables";
 import { SELECTION_BLOCKED_COLOR, SELECTION_COLOR,
     SELECTION_HANDLE_MAX_DISTANCE } from "../../../src/client/system/clientConstants";
-import { COLLISION_LAYER_HEIGHT, VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, GENERATED_WALL_THICKNESS, MAX_ROOM_Z, UNIT_VEC3,
+    VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
+import ObjectScaleUtil from "../../../src/shared/object/util/objectScaleUtil";
 import ObjectUpdateUtil from "../../../src/shared/object/util/objectUpdateUtil";
 import QuarterTurnsUtil from "../../../src/shared/object/util/quarterTurnsUtil";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
@@ -955,6 +957,35 @@ describe("a move the object can't follow", () => {
         frame();
         expect(outlineColor()).toBe(SELECTION_COLOR);
         expect(handleColors()).toEqual(["ffff00"]);
+    });
+});
+
+describe("a door dragged from its wall onto another", () => {
+    const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
+    const doorSize = ObjectScaleUtil.getObjectSize(doorTypeIndex, UNIT_VEC3);
+    const DOOR_Y = 0.5 * doorSize.y;
+    // The face the room's boundary wall turns to it on the north side, which the door hangs on, and the west
+    // face of a wall built in the room: a block thick and as tall as the door, running south from the boundary.
+    const BOUNDARY_Z = MAX_ROOM_Z - GENERATED_WALL_THICKNESS * VOXEL_CELL_SIZE;
+    const BUILT_WALL_X = 5;
+
+    it("goes onto a wall built one block thick, as one edit", () => {
+        fillWithBlocks({x: BUILT_WALL_X, y: 0, z: BOUNDARY_Z - 7},
+            {x: BUILT_WALL_X + VOXEL_CELL_SIZE, y: doorSize.y, z: BOUNDARY_Z});
+        attach(doorTypeIndex, {x: 3, y: DOOR_Y, z: BOUNDARY_Z}, {x: 0, y: 0, z: -1}, UNIT_VEC3);
+        // From the south-west, so that both walls show.
+        placeCamera({x: 1.5, y: DOOR_Y, z: BOUNDARY_Z - 7.5}, {x: 4.5, y: DOOR_Y, z: BOUNDARY_Z - 2});
+        const onBoundary = (x: number) => screenPointOf({x, y: DOOR_Y, z: BOUNDARY_Z});
+        const onBuiltWall = (z: number) => screenPointOf({x: BUILT_WALL_X, y: DOOR_Y, z});
+
+        expect(press(onBoundary(3))).toBe(true);
+        dragThrough(onBoundary(3.5), onBuiltWall(BOUNDARY_Z - 3), onBuiltWall(BOUNDARY_Z - 4));
+        expect(objectTransform()).toEqual(
+            {pos: [BUILT_WALL_X, DOOR_Y, BOUNDARY_Z - 4], dir: [-1, 0, 0], scale: [1, 1, 1]});
+        expect(blocked()).toBe(false);
+
+        release();
+        expect(sentSignals()).toEqual([["transform", OBJECT_ID, [BUILT_WALL_X, DOOR_Y, BOUNDARY_Z - 4], [1, 1, 1]]]);
     });
 });
 

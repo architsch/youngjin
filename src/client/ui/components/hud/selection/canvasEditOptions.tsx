@@ -70,7 +70,7 @@ export default function CanvasEditOptions(props: EditOptionsProps)
             onChoose={(compositionIndex) => {
                 ObjectEditUtil.trySetCompositionIndex(props.selection, compositionIndex);
                 // The pick that completes a canvas just added: the selection leaves it for a face near it (see
-                // VoxelQuadPlacementOptions).
+                // ObjectPlacementUtil).
                 if (props.installing)
                 {
                     props.setOpenPanel(null);

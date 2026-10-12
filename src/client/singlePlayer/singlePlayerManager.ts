@@ -6,7 +6,6 @@ import SocketsClient from "../networking/client/socketsClient";
 import { singlePlayerObservable } from "../system/clientObservables";
 import ClientEvent from "../system/types/clientEvent";
 import { ClientEventType } from "../system/types/clientEventType";
-import { tryStartClientProcess } from "../system/types/clientProcess";
 import ClientEventHistoryUtil from "../system/util/clientEventHistoryUtil";
 import SinglePlayerActionMap from "./maps/singlePlayerActionMap";
 import SinglePlayerConditionMap from "./maps/singlePlayerConditionMap";
@@ -96,11 +95,8 @@ const SinglePlayerManager =
         // (end step, then finish). Otherwise a step's end actions could re-enable a flag after
         // onModeEnd's teardown.
         singlePlayerObservable.set({mode, step: ""});
-        if (tryStartClientProcess("roomChange", 1, 1))
-        {
-            // An empty roomID lets the server pick the destination.
-            SocketsClient.emitRequestRoomChangeSignal(new RequestRoomChangeSignal("", true));
-        }
+        // An empty roomID lets the server pick the destination.
+        SocketsClient.requestRoomChange(new RequestRoomChangeSignal("", true));
     },
     // Stores a value for later steps of this mode (see the "set_variable" action).
     setVariable: (name: string, value: any) =>

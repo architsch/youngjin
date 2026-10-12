@@ -4,8 +4,8 @@ import SpeechBubble from "../../components/speechBubble";
 import AddObjectSignal from "../../../../shared/object/types/addObjectSignal";
 import PlayerProximityDetector from "../../components/playerProximityDetector";
 import { notificationMessageObservable } from "../../../system/clientObservables";
-import { tryStartClientProcess } from "../../../system/types/clientProcess";
 import SocketsClient from "../../../networking/client/socketsClient";
+import RoomEditorUtil from "../../../singlePlayer/util/roomEditorUtil";
 import RequestRoomChangeSignal from "../../../../shared/room/types/requestRoomChangeSignal";
 import DoorObjectTypeConfig from "../../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import App from "../../../app";
@@ -53,11 +53,11 @@ export default class DoorGameObject extends GameObject
             return;
         }
         // No fallback: a refused destination should be reported. (The server itself reroutes the hub
-        // keyword.)
-        if (!tryStartClientProcess("roomChange", 1, 1))
-            return;
-        SocketsClient.emitRequestRoomChangeSignal(new RequestRoomChangeSignal(destinationRoomID,
-            false, DoorObjectTypeConfig.util.getDestinationDoorLabel(this.params)));
+        // keyword.) Out of the room editor, the user is asked first: the room being edited goes with it.
+        RoomEditorUtil.askBeforeLeaving(() => {
+            SocketsClient.requestRoomChange(new RequestRoomChangeSignal(destinationRoomID,
+                false, DoorObjectTypeConfig.util.getDestinationDoorLabel(this.params)));
+        });
     }
 
     onPlayerProximityStart(): void

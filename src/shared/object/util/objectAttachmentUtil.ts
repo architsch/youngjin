@@ -22,10 +22,6 @@ const FACE_PLANE_STEP = VOXEL_CELL_SIZE;
 // Keeps a footprint edge lying on a block boundary out of the block beyond it.
 const EDGE_EPSILON = 0.01;
 
-// The deepest support any type needs (see ObjectAttachmentConfig.supportDepth): how far behind its face
-// a block an object rests on can lie.
-let deepestSupport: number | undefined;
-
 const ObjectAttachmentUtil =
 {
     // Whether the type may face this way, read by the facing's nearest axis.
@@ -54,11 +50,11 @@ const ObjectAttachmentUtil =
             return false;
         }
 
-        // Every block behind it is solid, as deep as its type needs (it is supported), and at least one in
-        // front is open (it is not buried).
+        // Every block right behind it is solid (it is supported), and at least one in front is open (it is
+        // not buried).
         const voxels = room.voxelGrid.voxels;
         let supported = true;
-        forEachBlockBeside(tr, bounds, -1, getSupportDepthInBlocks(objectTypeIndex, tr), (row, col, layer) => {
+        forEachBlockBeside(tr, bounds, -1, 1, (row, col, layer) => {
             supported = blockIsSolid(voxels, row, col, layer);
             return supported;
         });
@@ -89,20 +85,18 @@ const ObjectAttachmentUtil =
         }
         return true;
     },
-    // Attached objects resting on this block, to the depth their types need (they must be refused or
-    // removed along with it).
+    // Attached objects resting on this block (they must be refused or removed along with it).
     getObjectIdsAttachedToVoxelBlock: (room: Room, quadIndex: number): string[] =>
     {
         const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
         const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
         const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
 
-        // Whatever rests on the block lies within the deepest support of it, on any side.
-        const reach = getDeepestSupport();
+        // Whatever rests on the block lies against a face of it, which one that stands out only touches.
         const nearbyVolume = PhysicsColliderStateUtil.getVoxelBlockColliderState(row, col, collisionLayer);
-        nearbyVolume.hitbox.halfSize.x += reach;
-        nearbyVolume.hitbox.halfSize.y += reach;
-        nearbyVolume.hitbox.halfSize.z += reach;
+        nearbyVolume.hitbox.halfSize.x += EDGE_EPSILON;
+        nearbyVolume.hitbox.halfSize.y += EDGE_EPSILON;
+        nearbyVolume.hitbox.halfSize.z += EDGE_EPSILON;
 
         const objectIds: string[] = [];
         const nearbyObjects = PhysicsObjectUtil.getObjectsCollidingWith3DVolume(room.id, nearbyVolume);
@@ -116,10 +110,9 @@ const ObjectAttachmentUtil =
                 console.error(`Colliding object not found (objectId = ${nearbyObject.objectId})`);
                 continue;
             }
-            const tr = getQuantizedTransform(object.objectTypeIndex, object.transform);
             let restsOnIt = false;
-            forEachBlockBeside(tr, getFootprintBounds(object.objectTypeIndex, tr), -1,
-                getSupportDepthInBlocks(object.objectTypeIndex, tr), (supportRow, supportCol, supportLayer) => {
+            ObjectAttachmentUtil.forEachSupportingBlock(object.objectTypeIndex, object.transform,
+                (supportRow, supportCol, supportLayer) => {
                     restsOnIt = supportRow == row && supportCol == col && supportLayer == collisionLayer;
                     return !restsOnIt;
                 });
@@ -401,15 +394,6 @@ function getQuantizedTransform(objectTypeIndex: number, transform: ObjectTransfo
         normal, scale);
 }
 
-// How many blocks deep behind its face an object of this type needs solid: one, or as many as its type's
-// support depth comes to along the facing.
-function getSupportDepthInBlocks(objectTypeIndex: number, tr: ObjectTransform): number
-{
-    const supportDepth = ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex).attachment?.supportDepth ?? 0;
-    const {normal} = Geometry3DUtil.getAxisFacingBasis(tr.dir);
-    return Math.max(1, Math.ceil(supportDepth / ((normal.y != 0) ? COLLISION_LAYER_HEIGHT : VOXEL_CELL_SIZE)));
-}
-
 // How many blocks deep in front of its face an object reaches, if its type stands out from it (see
 // ObjectAttachmentConfig.standsOut); none for one that lies flat.
 function getStandOutDepthInBlocks(objectTypeIndex: number, tr: ObjectTransform): number
@@ -419,13 +403,6 @@ function getStandOutDepthInBlocks(objectTypeIndex: number, tr: ObjectTransform):
     const depth = ObjectScaleUtil.getObjectSize(objectTypeIndex, tr.scale).z;
     const {normal} = Geometry3DUtil.getAxisFacingBasis(tr.dir);
     return Math.ceil(depth / ((normal.y != 0) ? COLLISION_LAYER_HEIGHT : VOXEL_CELL_SIZE) - EDGE_EPSILON);
-}
-
-function getDeepestSupport(): number
-{
-    deepestSupport ??= Math.max(0, ...ObjectTypeConfigMap.getAllConfigs()
-        .map(config => config.attachment?.supportDepth ?? 0));
-    return deepestSupport;
 }
 
 // The footprint's extent in the world: its face, flat on its plane.

@@ -276,8 +276,8 @@ export const VOXEL_CELL_SIZE = 0.5;
 export const MAX_ROOM_X = NUM_VOXEL_COLS * VOXEL_CELL_SIZE;
 export const MAX_ROOM_Z = NUM_VOXEL_ROWS * VOXEL_CELL_SIZE;
 
-// How thick room generation leaves a room's boundary wall, in voxels: a world unit, as deep as a door needs
-// behind it and as wide as a texture tile (see RoomGenerationUtil).
+// How thick room generation leaves a room's boundary wall, in voxels: a world unit, deep enough to hide whoever
+// arrives behind a door on it (see SPAWN_DIST_BEHIND_DOOR) and as wide as a texture tile (see RoomGenerationUtil).
 export const GENERATED_WALL_THICKNESS = 2;
 
 // The size of a physics voxel (see PhysicsVoxel): wide enough that most colliders lie in one or two, and a

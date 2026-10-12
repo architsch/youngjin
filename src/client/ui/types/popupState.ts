@@ -2,6 +2,7 @@ import ConfirmProps from "./confirmProps";
 import DoorDestinationProps from "./doorDestinationProps";
 import DoorSettingsProps from "./doorSettingsProps";
 import ImageChooserProps from "./imageChooserProps";
+import RoomFilePreviewProps from "./roomFilePreviewProps";
 
 type PopupState =
     | { popupType: "none" }
@@ -15,5 +16,6 @@ type PopupState =
     | { popupType: "doorSettings"; params: DoorSettingsProps }
     | { popupType: "consoleLog" }
     | { popupType: "adminAssetSettings" }
+    | { popupType: "roomFilePreview"; params: RoomFilePreviewProps }
 
 export default PopupState;

@@ -105,11 +105,25 @@ function useRoom(newRoom: Room)
     (App.getVoxelQuads as Mock).mockReturnValue(room.voxelQuads);
 }
 
-/** Puts the camera somewhere inside the room, since the search uses it as a tiebreak. */
+/**
+ * Puts the camera somewhere inside the room, looking toward the room's -z as a camera is made, since the search
+ * uses both: where it stands as a tiebreak, and which way it looks to tell the quads facing across its view.
+ */
 function placeCameraAt(x: number, y: number, z: number)
 {
-    GraphicsManager.getCamera().position.set(x, y, z);
-    GraphicsManager.getCamera().updateMatrixWorld(true);
+    const camera = GraphicsManager.getCamera();
+    camera.position.set(x, y, z);
+    camera.quaternion.identity();
+    camera.updateMatrixWorld(true);
+}
+
+/** Puts the camera at a place, looking at a point. */
+function lookFrom(from: Vec3, at: Vec3)
+{
+    const camera = GraphicsManager.getCamera();
+    camera.position.set(from.x, from.y, from.z);
+    camera.lookAt(at.x, at.y, at.z);
+    camera.updateMatrixWorld(true);
 }
 
 /** The middle of a face, drawn or not. */
@@ -638,7 +652,7 @@ function onPillarFace(y: number): Vec3
 function placeCameraBeforePillar()
 {
     const face = onPillarFace(1.5);
-    placeCameraAt(face.x + 6, face.y, face.z);
+    lookFrom({...face, x: face.x + 6}, face);
 }
 
 /**
@@ -743,6 +757,8 @@ describe("what an automatic selection settles on", () => {
 
         expect(VoxelQuadSelection.trySelectBestQuadNearby(canvas.transform.pos)).toBe(true);
 
+        // Seen squarely as it is, though the pillar's flanks face across the view: they lie further off than that
+        // makes up for.
         expectPillarFaceSelected(3);
     });
 
@@ -803,6 +819,103 @@ describe("what an automatic selection settles on", () => {
         const after = currentSelection(room)!;
         expect(coverageOf(after)).toBe(0);
         expect(after.visible).toBe(true);
+    });
+});
+
+// ─── How a quad faces the view ──────────────────────────────────────────────
+// Of quads about as near, a search takes one facing across the camera's look-direction before one facing along it,
+// whichever way along. The quad it starts from still comes before every other.
+
+describe("what an automatic selection settles on, by how a quad faces the view", () => {
+    it("takes a side facing across the view before one as near facing along it, whichever way along", () => {
+        // A lone block with a canvas all over its top, which leaves a search from the top its four sides, all as near.
+        buildPillar(room, 10, 5, COLLISION_LAYER_MIN, COLLISION_LAYER_MIN);
+        const top = quadIndexOf(10, 5, "y", "+", COLLISION_LAYER_MIN);
+        addCanvas(middleOf(top), {x: 0, y: 1, z: 0}, VOXEL_CELL_SIZE, VOXEL_CELL_SIZE);
+        const block = {...middleOf(top), y: VoxelQueryUtil.getWorldYAtVoxelCollisionLayerCenter(COLLISION_LAYER_MIN)};
+        const sideTaken = () => {
+            voxelQuadSelectionObservable.set(null);
+            expect(VoxelQuadSelection.trySelectBestQuad(voxelAt(room, 10, 5), top)).toBe(true);
+            const after = currentSelection(room)!;
+            expect([after.row, after.col, after.layer, after.visible]).toEqual([10, 5, COLLISION_LAYER_MIN, true]);
+            return after.axis;
+        };
+
+        // From its +x side, which is the side nearest the camera each time: looking at the block, that side looks
+        // back along the view; looking away from it, the same way as the view.
+        const eastOfIt = {...block, x: block.x + 6};
+        lookFrom(eastOfIt, block);
+        expect(sideTaken()).toBe("z");
+        lookFrom(eastOfIt, {...block, x: block.x + 12});
+        expect(sideTaken()).toBe("z");
+
+        // From its +z side, the other pair.
+        lookFrom({...block, z: block.z + 6}, block);
+        expect(sideTaken()).toBe("x");
+    });
+
+    it("takes the floor at the foot of a wall seen level, half a block further off, and the wall seen from above", () => {
+        buildPillar(room, 10, 5);
+        // Where the middle of something small at the foot of the pillar's +x face would be: its lowest face and the
+        // one above are as near, and the floor tile before them half a block further.
+        const foot = middleOf(quadIndexOf(10, 5, "x", "+", COLLISION_LAYER_MIN));
+
+        lookFrom({...foot, x: foot.x + 6}, foot);
+        expect(VoxelQuadSelection.trySelectBestQuadNearby(foot)).toBe(true);
+        expect(currentSelection(room)!.quadIndex).toBe(floorQuadIndexOf(10, 6));
+
+        // From above, it is the floor that looks back along the view.
+        voxelQuadSelectionObservable.set(null);
+        lookFrom({x: foot.x + 3, y: foot.y + 5, z: foot.z}, foot);
+        expect(VoxelQuadSelection.trySelectBestQuadNearby(foot)).toBe(true);
+        const after = currentSelection(room)!;
+        expect([after.row, after.col, `${after.orientation}${after.axis}`, after.visible]).toEqual([10, 5, "+x", true]);
+    });
+
+    it("lines a gap dug through a thin wall with a face across the view, not the one nearest the camera", () => {
+        // A wall a block thick along z, seen from its +x side and almost along its length.
+        for (let row = 8; row <= 12; ++row)
+            buildPillar(room, row, 5);
+        const face = quadIndexOf(10, 5, "x", "+", 2);
+        const at = middleOf(face);
+        lookFrom({x: at.x + 1.5, y: at.y, z: at.z + 5}, at);
+
+        expect(userRemovesBlockAt(room, forceSelect(room, face))).toBe(true);
+
+        // The gap's top or bottom, rather than its side toward the camera, which looks along the view.
+        const after = currentSelection(room)!;
+        expect(blockIndexOf(VoxelQueryUtil.getVoxelBlockAddTargetQuadIndex(after.quadIndex))).toBe(blockIndexOf(face));
+        expect([after.axis, after.visible]).toEqual(["y", true]);
+    });
+
+    it("keeps to the quad an edit names, from wherever the camera looks at it", () => {
+        buildPillar(room, 10, 5);
+        const face = quadIndexOf(10, 5, "x", "+", 2);
+        const faceOfNewBlock = quadIndexOf(10, 6, "x", "+", 2);
+        const at = middleOf(face);
+        const strayed: string[] = [];
+
+        // All round the face and from above and below it, squarely before it and from straight behind included.
+        const offset = new THREE.Vector3();
+        for (let yaw = 0; yaw < 360; yaw += 30)
+        {
+            for (let pitch = -60; pitch <= 60; pitch += 30)
+            {
+                offset.setFromSphericalCoords(5, THREE.MathUtils.degToRad(90 - pitch), THREE.MathUtils.degToRad(yaw));
+                lookFrom({x: at.x + offset.x, y: at.y + offset.y, z: at.z + offset.z}, at);
+
+                // A block added against the face: the same face of the new block.
+                userAddsBlockAt(room, forceSelect(room, face));
+                if (currentSelection(room)?.quadIndex != faceOfNewBlock)
+                    strayed.push(`added, yaw ${yaw} pitch ${pitch}`);
+
+                // That block taken away again: the face bared behind it.
+                userRemovesBlockAt(room, forceSelect(room, faceOfNewBlock));
+                if (currentSelection(room)?.quadIndex != face)
+                    strayed.push(`removed, yaw ${yaw} pitch ${pitch}`);
+            }
+        }
+        expect(strayed).toEqual([]);
     });
 });
 

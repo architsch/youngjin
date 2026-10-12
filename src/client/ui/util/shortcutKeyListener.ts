@@ -47,4 +47,4 @@ function reachesControl(key: ShortcutKey, topPopupType: PopupState["popupType"] 
 }
 
 // The popups whose forms have a button that Enter clicks.
-const ENTER_POPUP_TYPES: PopupState["popupType"][] = ["confirm", "myRoomWelcome", "hubRoomWelcome"];
+const ENTER_POPUP_TYPES: PopupState["popupType"][] = ["confirm", "roomFilePreview", "myRoomWelcome", "hubRoomWelcome"];

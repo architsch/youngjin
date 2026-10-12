@@ -7,15 +7,13 @@ import ClientObjectManager from "../../../clientObjectManager";
 import GameObject from "../../../types/gameObject/gameObject";
 import InstancedMeshCompositionPart from "../../../../../shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
 import { InstancedMeshCompositionCodecMap } from "../../../../../shared/graphics/mesh/composition/maps/instancedMeshCompositionCodecMap";
-import StringUtil from "../../../../../shared/math/util/stringUtil";
 import CompositionMetadataUtil from "../../../../../shared/graphics/mesh/composition/util/compositionMetadataUtil";
 import { InstancedMeshCompositionCodecType, InstancedMeshCompositionCodecTypeEnumMap } from "../../../../../shared/graphics/mesh/composition/types/instancedMeshCompositionCodecType";
 import { InstancedMeshCompositionParams } from "../../../../../shared/graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
 import Vec3 from "../../../../../shared/math/types/vec3";
+import ObjectCompositionUtil from "../../../../../shared/object/util/objectCompositionUtil";
 import ObjectScaleUtil from "../../../../../shared/object/util/objectScaleUtil";
 import { UNIT_VEC3 } from "../../../../../shared/system/sharedConstants";
-import ObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/objectTypeConfig";
-import ObjectTypeConfigMap from "../../../../../shared/object/maps/objectTypeConfigMap";
 
 export default class InstancedMeshComposition
 {
@@ -68,46 +66,7 @@ export default class InstancedMeshComposition
         this.parts.length = 0;
         ++this.revision;
         this.objectSize = getObjectSize(gameObject);
-        const metadata = gameObject.params.metadata[ObjectMetadataKeyEnumMap.InstancedMeshComposition];
-        if (!metadata || !this.canDecode(metadata.str, gameObject))
-        {
-            const {params, parts} = getComposerConfig(gameObject).generateDefaultParts(gameObject.params);
-            Object.assign(this.params, params);
-            for (let i = 0; i < parts.length; ++i)
-                this.parts.push(parts[i]);
-        }
-        else
-        {
-            InstancedMeshCompositionCodecMap[this.codecType].decode(
-                metadata.str, this.objectSize, this.params, this.parts);
-        }
-        this.deriveParts(gameObject);
-    }
-
-    private canDecode(str: string, gameObject: GameObject): boolean
-    {
-        const codecType = StringUtil.convertVisibleASCIIToRawNumber(str, 0, 0);
-        if (codecType != this.codecType || !InstancedMeshCompositionCodecMap[codecType])
-        {
-            console.error(`InstancedMeshComposition::canDecode :: CodecType mismatch (expected: ${this.codecType}, decoded: ${codecType})`);
-            return false;
-        }
-        // Added objects' metadata is not checked by the server, and another type's entry builds parts and
-        // params this object can't place.
-        const objectType = ObjectTypeConfigMap.getConfigByIndex(gameObject.params.objectTypeIndex).objectType;
-        if (codecType == InstancedMeshCompositionCodecTypeEnumMap.Indexed
-            && !CompositionMetadataUtil.isIndexedLookOf(objectType, this.codecVersion, str))
-        {
-            console.error(`InstancedMeshComposition::canDecode :: Not one of the type's own looks (objectType: ${objectType}, str: ${str})`);
-            return false;
-        }
-        const codecVersion = StringUtil.convertVisibleASCIIToRawNumber(str, 1, 0);
-        if (codecVersion != this.codecVersion)
-        {
-            // Codecs are expected to migrate outdated versions inside decode.
-            console.warn(`InstancedMeshComposition::canDecode :: CodecVersion mismatch (expected: ${this.codecVersion}, decoded: ${codecVersion}). An automatic version migration logic should run.`);
-        }
-        return true;
+        ObjectCompositionUtil.decode(gameObject.params, this.params, this.parts);
     }
 
     // One visible-ASCII char per quantized parameter, without the codec prefix.
@@ -125,13 +84,7 @@ export default class InstancedMeshComposition
         this.objectSize = getObjectSize(gameObject);
         InstancedMeshCompositionCodecMap[this.codecType].decode(
             `${this.getCodecPrefix()}${encodedParams}`, this.objectSize, this.params, this.parts);
-        this.deriveParts(gameObject);
-    }
-
-    // What the parts take from the object rather than the composition (see ObjectTypeConfig).
-    private deriveParts(gameObject: GameObject)
-    {
-        getComposerConfig(gameObject).deriveParts?.(gameObject.params, this.parts);
+        ObjectCompositionUtil.deriveParts(gameObject.params, this.parts);
     }
 
     // The prefix consists of two characters, denoting the codec's type and version, respectively.
@@ -145,11 +98,4 @@ export default class InstancedMeshComposition
 function getObjectSize(gameObject: GameObject): Vec3
 {
     return ObjectScaleUtil.getObjectSize(gameObject.params.objectTypeIndex, gameObject.params.transform.scale);
-}
-
-function getComposerConfig(gameObject: GameObject): NonNullable<NonNullable<
-    ObjectTypeConfig["components"]["spawnedByAny"]>["instancedMeshComposer"]>
-{
-    return gameObject.components.instancedMeshComposer.componentConfig as NonNullable<NonNullable<
-        ObjectTypeConfig["components"]["spawnedByAny"]>["instancedMeshComposer"]>;
 }

@@ -32,7 +32,7 @@ The bare `:4321/...` shorthand does not work under zsh. Ops share their names wi
 
 | Build op | Stands up |
 |---|---|
-| `stage` | four walls around a floor rectangle, two cells thick so that a door can hang on them; returns each wall's innermost cells and its inward face |
+| `stage` | four walls around a floor rectangle, two cells thick as a generated room's boundary wall is; returns each wall's innermost cells and its inward face |
 | `addBlocks` / `removeBlocks` | a box of blocks, or a doorway cut through one already standing |
 | `addObject` / `removeObject` | a canvas, a prop, a door, a lamp or a label on a cell's face (walls, or a block's top or underside), at its type's default size (a prop at its image's), by the game's own metadata keys |
 | `resizeObject` | a standing object at another size, in multiples of its type's step; the placement rule still applies, and the size it ended up with is returned |
@@ -47,7 +47,7 @@ The bare `:4321/...` shorthand does not work under zsh. Ops share their names wi
 ## Traps
 - **Arrange with `setup`, act with `interact`.** Build calls skip the permission check, so a door hung by `addObject` proves nothing about the superuser's door tools — reach those through `ensureEditMode`, a real surface click and `uiClick` on the control.
 - Rows, columns and layers count cells half a world unit wide and high, so a block is a cube that size and a wall a world unit thick is two cells. `restrictedZones` counts the same cells.
-- An object is centred on the face of the cell named, and one a world unit wide reaches half a cell past it on either side: it needs wall behind all of that, and a door needs it two cells deep.
+- An object is centred on the face of the cell named, and one a world unit wide reaches half a cell past it on either side: it needs wall behind all of that.
 - Hang objects on the cells `stage` reports, not on one worked out by hand: naming the cell *in front* of a wall hangs the object in mid-air, and it reads as deliberate until the camera moves.
 - The room is lit by a light the camera carries, reaching as far as it is aimed, and past the built set there is only black.
 - A canvas or prop fetches its picture over the network, so a frame taken straight after one goes up catches a blank placeholder.

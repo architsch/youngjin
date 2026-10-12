@@ -5,12 +5,14 @@ import { LIGHT_BLOCK_MAP_FRAGMENT_GLSL, LIGHT_BLOCK_MAP_FRAGMENT_PARS_GLSL,
 // Adds light block map sampling to lit materials. Owns the uniforms (rather than LightBlockMap) so
 // MaterialConstructorMap can use it without an import cycle through GraphicsManager.
 
+// 1x1x1 stand-ins (black / directionless, alpha 0 = "nothing here").
+const placeholderColorTexture = createPlaceholderTexture(0);
+const placeholderFluxTexture = createPlaceholderTexture(128);
+
 // Holder objects are never replaced: three.js re-reads "value" each frame, so swapping the value
 // reaches already-compiled materials.
-const lightBlockMapColorUniform: {value: THREE.Data3DTexture} =
-    {value: createPlaceholderTexture(0)};
-const lightBlockMapFluxUniform: {value: THREE.Data3DTexture} =
-    {value: createPlaceholderTexture(128)};
+const lightBlockMapColorUniform: {value: THREE.Data3DTexture} = {value: placeholderColorTexture};
+const lightBlockMapFluxUniform: {value: THREE.Data3DTexture} = {value: placeholderFluxTexture};
 
 const LightBlockMapMaterialUtil =
 {
@@ -19,6 +21,22 @@ const LightBlockMapMaterialUtil =
     {
         lightBlockMapColorUniform.value = colorTexture;
         lightBlockMapFluxUniform.value = fluxTexture;
+    },
+
+    // Draws something that isn't in the room, which its lamps don't light (see RoomPreviewUtil).
+    drawWithoutLamps<T>(draw: () => T): T
+    {
+        const colorTexture = lightBlockMapColorUniform.value;
+        const fluxTexture = lightBlockMapFluxUniform.value;
+        LightBlockMapMaterialUtil.setTextures(placeholderColorTexture, placeholderFluxTexture);
+        try
+        {
+            return draw();
+        }
+        finally
+        {
+            LightBlockMapMaterialUtil.setTextures(colorTexture, fluxTexture);
+        }
     },
 
     // For splices that sample by world position alone (the fog and the sky); the lit path below
@@ -63,7 +81,6 @@ const LightBlockMapMaterialUtil =
     },
 }
 
-// A 1x1x1 stand-in (black / directionless, alpha 0 = "nothing here").
 function createPlaceholderTexture(fillValue: number): THREE.Data3DTexture
 {
     const texture = new THREE.Data3DTexture(

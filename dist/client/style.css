@@ -564,6 +564,9 @@
   .h-\[min\(40vh\,12rem\)\] {
     height: min(40vh, 12rem);
   }
+  .h-auto {
+    height: auto;
+  }
   .h-fit {
     height: fit-content;
   }

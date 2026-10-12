@@ -24,8 +24,9 @@ import { ObjectMetadataKeyEnumMap } from "../objectMetadataKey";
 // Fixed id for a room's entrance door, so conversions add exactly one and its derived appearance is stable.
 export const ENTRANCE_DOOR_OBJECT_ID = "entrance_door";
 
-// Spawn and walk-out distances along the door's facing: spawn behind the door in the middle of the wall
-// it needs (see its supportDepth), walk out as far in front of it (see SpawnHotspotUtil, PlayerController).
+// Spawn and walk-out distances along the door's facing: spawn behind the door's face, out of sight where the
+// wall is twice as deep (as a generated room's boundary is), and walk out as far in front of it (see
+// SpawnHotspotUtil, PlayerController).
 export const SPAWN_DIST_BEHIND_DOOR = 0.5;
 export const ENTRANCE_DIST_IN_FRONT_OF_DOOR = 0.5;
 
@@ -51,8 +52,6 @@ const DoorObjectTypeConfig =
     category: ObjectCategoryEnumMap.Door,
     attachment: {
         allowedDirections: WALL_DIRECTIONS,
-        // Arrivals stand inside the wall behind the door, which has to hide them (see SPAWN_DIST_BEHIND_DOOR).
-        supportDepth: 2 * SPAWN_DIST_BEHIND_DOOR,
     },
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => {
         if (!RoomValidationUtil.isRoomSuperuser(user, room))
@@ -71,7 +70,7 @@ const DoorObjectTypeConfig =
         if (!RoomValidationUtil.isRoomSuperuser(user, room))
             return false;
 
-        // A door is slid along the wall by a gizmo, which is a placement rather than a motion.
+        // A door is dragged from wall to wall by a gizmo, which is a placement rather than a motion.
         if (!signal.ignorePhysics)
             return false;
 

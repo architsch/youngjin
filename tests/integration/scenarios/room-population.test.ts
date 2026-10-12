@@ -14,9 +14,11 @@ import { RoomChangeRejectionReasonEnumMap } from "../../../src/shared/room/types
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import ObjectCategoryConfigMap from "../../../src/shared/object/maps/objectCategoryConfigMap";
 import { ObjectCategoryEnumMap } from "../../../src/shared/object/types/objectCategory";
+import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import {
     HUB_ROOM_ID_KEYWORD,
     ROOM_ALMOST_FULL_MARGIN,
+    ROOM_EDITOR_SINGLE_PLAYER_MODE,
     ROOM_OVER_POPULATION_THRESHOLD,
     ROOM_UNDER_POPULATION_THRESHOLD,
 } from "../../../src/shared/system/sharedConstants";
@@ -470,6 +472,53 @@ describe("room population scenarios", () => {
         expect(result).toEqual({type: "success", newRoomID: "tutorial"});
         expect(ServerRoomManager.currentRoomIDByUserID[ctx.user.id]).toBeUndefined();
         expect(harness.isRoomLoaded("tutorial")).toBe(false);
+    });
+
+    it("leaves an admin whose client is still in the room editor there, in no room of the server's", async () => {
+        harness.seedRoom("from-url", RoomTypeEnumMap.Regular);
+        harness.seedRoom("previous", RoomTypeEnumMap.Regular);
+        await setUpHubs({"hub-a": 0});
+
+        // The connection came back to a client that never left the editor, which says so (see SocketsClient).
+        const ctx = harness.connectUser({userType: UserTypeEnumMap.Admin, singlePlayerMode: "tutorial",
+            lastRoomID: "previous"});
+        ctx.socket.handshake.auth.targetRoomID = "from-url";
+        ctx.socket.handshake.auth.roomEditorOpen = true;
+        const result = await harness.appStartJoin(ctx);
+
+        expect(result).toEqual({type: "success", newRoomID: ROOM_EDITOR_SINGLE_PLAYER_MODE});
+        expect(ctx.socketUserContext.isInSinglePlayerRoom).toBe(true);
+        expect(ServerRoomManager.currentRoomIDByUserID[ctx.user.id]).toBeUndefined();
+        for (const roomID of ["from-url", "previous", "hub-a"])
+            expect(harness.isRoomLoaded(roomID), roomID).toBe(false);
+    });
+
+    it("routes anyone else who says they are in the room editor, and an admin who doesn't, as it would have", async () => {
+        harness.seedRoom("previous", RoomTypeEnumMap.Regular);
+        await setUpHubs({"hub-a": 0});
+
+        const routedAsUsual = async (userType: number, roomEditorOpen: boolean | undefined) => {
+            const ctx = harness.connectUser({userType, lastRoomID: "previous"});
+            ctx.socket.handshake.auth.roomEditorOpen = roomEditorOpen;
+
+            expect(await harness.appStartJoin(ctx)).toEqual({type: "success", newRoomID: "previous"});
+            expect(ctx.socketUserContext.isInSinglePlayerRoom).toBe(false);
+        };
+        await routedAsUsual(UserTypeEnumMap.Member, true);
+        await routedAsUsual(UserTypeEnumMap.Guest, true);
+        await routedAsUsual(UserTypeEnumMap.Admin, false);
+        await routedAsUsual(UserTypeEnumMap.Admin, undefined);
+    });
+
+    it("takes a client's word for the room editor only as its connection is made", async () => {
+        // Asked later for any room at all, the server is being asked to take the user out of the editor.
+        harness.seedRoom("previous", RoomTypeEnumMap.Regular);
+        const ctx = harness.connectUser({userType: UserTypeEnumMap.Admin, lastRoomID: "previous"});
+        ctx.socket.handshake.auth.roomEditorOpen = true;
+
+        expect(await RoomPickerUtil.pickBestRoomID(ctx.socketUserContext, "appStart"))
+            .toBe(ROOM_EDITOR_SINGLE_PLAYER_MODE);
+        expect(await RoomPickerUtil.pickBestRoomID(ctx.socketUserContext, "requestFromUser")).toBe("previous");
     });
 
     it("tells a connecting user when no room at all can take them", async () => {

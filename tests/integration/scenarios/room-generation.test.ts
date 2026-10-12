@@ -121,7 +121,7 @@ describe("every generated room", () => {
             expect(DoorObjectTypeConfig.util.getDoorType(door)).toBe(DoorTypeEnumMap.DefaultEntrance);
             expect(DoorObjectTypeConfig.util.getDestinationRoomId(door)).toBe(HUB_ROOM_ID_KEYWORD);
 
-            // The wall behind it stands as deep as a door needs, and the floor in front of it is clear.
+            // The wall behind it holds it, and the floor in front of it is clear.
             PhysicsManager.load(new RoomRuntimeMemory(room, {}));
             try
             {

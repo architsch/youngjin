@@ -7,9 +7,8 @@ import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
 import { ROOM_EDITOR_SINGLE_PLAYER_MODE } from "../../../shared/system/sharedConstants";
 import { notificationMessageObservable } from "../../system/clientObservables";
-import { tryStartClientProcess } from "../../system/types/clientProcess";
-import ClientRoomFileUtil from "../../system/util/clientRoomFileUtil";
-import LocalFileUtil from "../../system/util/localFileUtil";
+import { ongoingClientProcessExists } from "../../system/types/clientProcess";
+import PopupUtil from "../../ui/util/popupUtil";
 
 const NEW_ROOM_FILE_NAME = `room${RoomFile.FILE_EXTENSION}`;
 
@@ -20,7 +19,9 @@ let fileToOpen: {bytes: Uint8Array, name: string} | null = null;
 let editedFileName = NEW_ROOM_FILE_NAME;
 
 // The room editor: a single-player room an admin edits as they would a room of their own, opened empty or from
-// a room file and saved as one (see @docs/networking/single_player_mode.md). Nothing of it reaches the server.
+// a room file and saved as one (see @docs/networking/single_player_mode.md). Nothing of it reaches the server, so
+// until it is saved it is kept nowhere else: it is given up only on its user's say-so, and goes on whatever
+// becomes of the connection (see SocketsClient).
 const RoomEditorUtil =
 {
     isEditing: (room: Room | undefined = App.getCurrentRoom()): boolean =>
@@ -31,58 +32,48 @@ const RoomEditorUtil =
     // Enters the editor on a new empty room, leaving whichever room the user is in.
     openNewRoom: (): void =>
     {
-        enter(null);
+        RoomEditorUtil.askBeforeLeaving(() => enter(null));
     },
-    // Enters it on a room file of the user's choosing. Has to come straight from a click (see LocalFileUtil).
-    openRoomFile: async (): Promise<void> =>
+    // Enters it on a room file, which its caller has read as a room already, and asked over (see LocalRoomFileUtil).
+    openRoomFile: (bytes: Uint8Array, name: string): void =>
     {
-        const file = await LocalFileUtil.pick(RoomFile.FILE_EXTENSION);
-        if (!file)
-            return;
-
-        // Read before leaving the room the user is in, so a file that isn't a room leaves them there.
-        const bytes = new Uint8Array(await file.arrayBuffer());
-        try
+        enter({bytes, name});
+    },
+    // Leaves the room the user is in, by the given way: at once, unless that room is the one being edited.
+    askBeforeLeaving: (leave: () => void): void =>
+    {
+        if (!RoomEditorUtil.isEditing())
         {
-            ClientRoomFileUtil.decode(bytes, ROOM_EDITOR_SINGLE_PLAYER_MODE);
-        }
-        catch (err)
-        {
-            console.error("Failed to read the file as a room.", err);
-            notificationMessageObservable.set("This file can't be read as a room.");
+            leave();
             return;
         }
-        enter({bytes, name: file.name});
+        PopupUtil.openPopup({
+            popupType: "confirm",
+            params: {
+                message: "The room being edited will be lost unless it has been saved. Do you really want to proceed?",
+                onConfirm: () => {
+                    PopupUtil.closePopup();
+                    leave();
+                },
+                onCancel: PopupUtil.closePopup,
+            },
+        });
     },
-    // Saves the room being edited as a room file. Has to come straight from a click, likewise.
-    saveRoomFile: async (): Promise<void> =>
+    // Turns away a room the server sent unasked, and says whether it did. The room being edited is given up only
+    // for one its user asked for, who then has the loading screen up (see App). The room a client is put in as
+    // its connection comes back is none of that, and the server is told where the user still is.
+    turnAwayUnasked: (roomSent: Room): boolean =>
     {
-        const room = App.getCurrentRoom();
-        if (!room || !RoomEditorUtil.isEditing(room))
-        {
-            notificationMessageObservable.set("There is no room being edited.");
-            return;
-        }
-
-        try
-        {
-            if (await LocalFileUtil.save(await ClientRoomFileUtil.encode(room), editedFileName,
-                RoomFile.FILE_EXTENSION, "Room file"))
-            {
-                notificationMessageObservable.set("Room saved!");
-            }
-        }
-        catch (err)
-        {
-            console.error("Failed to save the room to a file.", err);
-            notificationMessageObservable.set("Failed to save the room.");
-        }
+        if (!RoomEditorUtil.isEditing() || ongoingClientProcessExists("roomChange"))
+            return false;
+        if (!RoomEditorUtil.isEditing(roomSent))
+            SocketsClient.emitRequestRoomChangeSignal(new RequestRoomChangeSignal(ROOM_EDITOR_SINGLE_PLAYER_MODE, false));
+        return true;
     },
-    // Leaves the editor for whichever room the server puts the user in, and the room being edited behind.
-    leave: (): void =>
+    // The name the room being edited is saved under (see LocalRoomFileUtil).
+    getEditedFileName: (): string =>
     {
-        if (RoomEditorUtil.isEditing() && tryStartClientProcess("roomChange", 1, 1))
-            SocketsClient.emitRequestRoomChangeSignal(new RequestRoomChangeSignal("", true));
+        return editedFileName;
     },
     // The bytes the editor's room is to be read from, once: none if it wasn't asked to open a file, which leaves
     // it its mode's own room (see SinglePlayerModeConfig.roomPath).
@@ -105,10 +96,8 @@ function enter(file: {bytes: Uint8Array, name: string} | null): void
         notificationMessageObservable.set("Only an admin can edit single-player rooms.");
         return;
     }
-    if (!tryStartClientProcess("roomChange", 1, 1))
-        return;
-    fileToOpen = file;
-    SocketsClient.emitRequestRoomChangeSignal(new RequestRoomChangeSignal(ROOM_EDITOR_SINGLE_PLAYER_MODE, false));
+    if (SocketsClient.requestRoomChange(new RequestRoomChangeSignal(ROOM_EDITOR_SINGLE_PLAYER_MODE, false)))
+        fileToOpen = file;
 }
 
 export default RoomEditorUtil;

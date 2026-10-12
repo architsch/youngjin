@@ -20,6 +20,10 @@ import { AUTO_SELECTION_MAX_DISTANCE, AUTO_SELECTION_MIN_COVERAGE_FREE_RATIO,
 // VoxelQuadSelection.trySelectBestQuad): a world unit, and a layer above and below.
 const SEARCH_REACH_IN_VOXELS = Math.round(1 / VOXEL_CELL_SIZE);
 
+// How much further off a quad facing straight along the camera's look-direction counts than one facing across it
+// (see VoxelQuadSelection.trySelectBestQuad). Less than the ideal quad's lead over its neighbors, so it still wins.
+const VIEW_ALIGNMENT_PENALTY = 0.5 * VOXEL_CELL_SIZE;
+
 const tempPos = new THREE.Vector3();
 const tempPos2 = new THREE.Vector3();
 const tempPos3 = new THREE.Vector3();
@@ -70,8 +74,8 @@ export default class VoxelQuadSelection
     }
 
     // Selects the nearest of the visible quads around the ideal one, itself included, that is near and clear enough
-    // (see AUTO_SELECTION_MAX_DISTANCE). With none such, an object near there instead; failing that, the nearest
-    // quad left, the clear enough first.
+    // (see AUTO_SELECTION_MAX_DISTANCE); of quads about as near, one facing across the camera's view first. With none
+    // such, an object near there instead; failing that, the nearest quad left, the clear enough first.
     static trySelectBestQuad(idealVoxel: Voxel, idealQuadIndex: number): boolean
     {
         const room = App.getCurrentRoom();
@@ -98,6 +102,8 @@ export default class VoxelQuadSelection
         const camera = GraphicsManager.getCamera();
         const cameraPos = tempPos;
         camera.getWorldPosition(cameraPos);
+        const cameraLookDir = tempDir;
+        camera.getWorldDirection(cameraLookDir);
         const idealQuadPos = setToQuadPos(tempPos2, idealVoxel, idealDims);
 
         candidates.sort((a, b) => {
@@ -108,12 +114,15 @@ export default class VoxelQuadSelection
             const bDistFromIdealQuad = idealQuadPos.distanceTo(bPos);
             const aDistFromCamera = cameraPos.distanceTo(aPos);
             const bDistFromCamera = cameraPos.distanceTo(bPos);
-            const aDistScore = aDistFromIdealQuad + 0.1 * aDistFromCamera;
-            const bDistScore = bDistFromIdealQuad + 0.1 * bDistFromCamera;
+            const aViewAlignment = getViewAlignment(a.dims, cameraLookDir);
+            const bViewAlignment = getViewAlignment(b.dims, cameraLookDir);
+            const aScore = aDistFromIdealQuad + 0.1 * aDistFromCamera + VIEW_ALIGNMENT_PENALTY * aViewAlignment;
+            const bScore = bDistFromIdealQuad + 0.1 * bDistFromCamera + VIEW_ALIGNMENT_PENALTY * bViewAlignment;
 
             // Prioritize voxelQuads that are closer to the ideal voxelQuad.
-            // In case of a tie (or near-tie), prefer the one which is closer to the camera.
-            return aDistScore - bDistScore;
+            // In case of a tie (or near-tie), prefer the one whose facing direction is orthogonal to the camera's
+            // look-direction over one facing along it (parallel or anti-parallel), then the one closer to the camera.
+            return aScore - bScore;
         });
 
         const isNearEnough = (candidate: VoxelQuadSelectionCandidate) => idealQuadPos.distanceTo(
@@ -214,6 +223,13 @@ function setToQuadPos(out: THREE.Vector3, voxel: Voxel, dims: VoxelQuadTransform
 {
     return out.set(VoxelQueryUtil.getWorldXAtVoxelColCenter(voxel.col) + dims.offsetX, dims.offsetY,
         VoxelQueryUtil.getWorldZAtVoxelRowCenter(voxel.row) + dims.offsetZ);
+}
+
+// How far a quad faces along the camera's look-direction, either way: 0 for one facing across it (orthogonal), 1 for
+// one facing straight along or against it.
+function getViewAlignment(dims: VoxelQuadTransformDimensions, cameraLookDir: THREE.Vector3): number
+{
+    return Math.abs(dims.dirX * cameraLookDir.x + dims.dirY * cameraLookDir.y + dims.dirZ * cameraLookDir.z);
 }
 
 voxelQuadSelectionObservable.addListener("voxelQuadSelection", async (selection: VoxelQuadSelection | null) => {

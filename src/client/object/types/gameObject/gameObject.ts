@@ -8,7 +8,7 @@ import ObjectComponentFactory from "../../factories/objectComponentFactory";
 import ObjectTypeConfig, { SpawnType } from "../../../../shared/object/types/objectTypeConfig/objectTypeConfig";
 import { ObjectMetadataKey } from "../../../../shared/object/types/objectMetadataKey";
 import Vec3 from "../../../../shared/math/types/vec3";
-import Geometry3DUtil from "../../../../shared/math/util/geometry3DUtil";
+import ObjectPoseUtil from "../../util/objectPoseUtil";
 import ObjectTypeClientConfigMap from "../../maps/objectTypeClientConfigMap";
 import ObjectSelection from "../../../graphics/types/gizmo/objectSelection";
 import WorldSpaceSelectionUtil from "../../../graphics/util/worldSpaceSelectionUtil";
@@ -17,12 +17,7 @@ import ObjectScaleUtil from "../../../../shared/object/util/objectScaleUtil";
 import Vector3DUtil from "../../../../shared/math/util/vector3DUtil";
 import PlayModeClickCallbackMap from "../../maps/playModeClickCallbackMap";
 
-const vec3Temp = new THREE.Vector3();
 const cameraPosTemp = new THREE.Vector3();
-const rightTemp = new THREE.Vector3();
-const upTemp = new THREE.Vector3();
-const normalTemp = new THREE.Vector3();
-const basisTemp = new THREE.Matrix4();
 const positionTemp = new THREE.Vector3();
 const quaternionTemp = new THREE.Quaternion();
 
@@ -226,18 +221,6 @@ export default abstract class GameObject
     // Not setObjectTransform, which subclasses extend with state the constructor hasn't set up yet.
     private applyTransform(pos: Vec3, dir: Vec3)
     {
-        this.obj.position.set(pos.x, pos.y, pos.z);
-        if (this.config.attachment)
-        {
-            // From the face's own axes. lookAt would leave a floor or ceiling facing's roll to the error
-            // its stored facing decodes with (see Geometry3DUtil.getAxisFacingBasis).
-            const {normal, right, up} = Geometry3DUtil.getAxisFacingBasis(dir);
-            basisTemp.makeBasis(rightTemp.set(right.x, right.y, right.z), upTemp.set(up.x, up.y, up.z),
-                normalTemp.set(normal.x, normal.y, normal.z));
-            this.obj.quaternion.setFromRotationMatrix(basisTemp);
-            return;
-        }
-        vec3Temp.set(pos.x + dir.x, pos.y + dir.y, pos.z + dir.z);
-        this.obj.lookAt(vec3Temp);
+        ObjectPoseUtil.pose(this.obj, this.config.attachment != undefined, pos, dir);
     }
 }
