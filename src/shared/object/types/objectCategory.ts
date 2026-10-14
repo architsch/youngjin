@@ -12,4 +12,5 @@ export const ObjectCategoryEnumMap: Record<string, ObjectCategory> =
     Label: "Label",
     Npc: "Npc",
     Volume: "Volume",
+    Fan: "Fan",
 }

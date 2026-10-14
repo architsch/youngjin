@@ -20,6 +20,8 @@ export default class ParticleEmitterHandle
     rateScale = 1;
     speedScale = 1;
     sizeScale = 1;
+    // How fast the lives of the particles it spawns run (see ParticleEmitterDescriptor.particleTimeScale).
+    particleTimeScale = 1;
     level: Waveform = WaveformUtil.constant(1);
     // How far along forward its particles may travel before they end.
     stopDistance = Infinity;
@@ -55,6 +57,12 @@ export default class ParticleEmitterHandle
         this.rateScale = rateScale;
         this.speedScale = speedScale;
         this.sizeScale = sizeScale;
+    }
+
+    // Particles already in flight keep the pace they were born with.
+    setParticleTimeScale(timeScale: number): void
+    {
+        this.particleTimeScale = timeScale;
     }
 
     // Scales emission rate and speed over time.

@@ -8,6 +8,7 @@ import LabelObjectTypeConfig from "../types/objectTypeConfig/labelObjectTypeConf
 import PropObjectTypeConfig from "../types/objectTypeConfig/propObjectTypeConfig";
 import NpcObjectTypeConfig from "../types/objectTypeConfig/npcObjectTypeConfig";
 import VolumeObjectTypeConfig from "../types/objectTypeConfig/volumeObjectTypeConfig";
+import FanObjectTypeConfig from "../types/objectTypeConfig/fanObjectTypeConfig";
 
 // All GameObject types and the components each spawns with. Type indices are stored with objects, so
 // they are append-only. The list is read lazily on first lookup, because configs import this map (an
@@ -24,6 +25,7 @@ function getObjectTypeConfigPairs(): [number, ObjectTypeConfig][]
         [6, PropObjectTypeConfig],
         [7, NpcObjectTypeConfig],
         [8, VolumeObjectTypeConfig],
+        [9, FanObjectTypeConfig],
     ];
 }
 

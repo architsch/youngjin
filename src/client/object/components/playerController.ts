@@ -157,6 +157,7 @@ export default class PlayerController extends GameObjectComponent
         if (ongoingClientProcessExists())
             return;
 
-        this.playerCamera.update(deltaTime, this, this.rigidbody!.getImposedDisplacement());
+        this.playerCamera.update(deltaTime, this, this.rigidbody!.getImposedDisplacement(),
+            this.rigidbody!.isUnderForce());
     }
 }

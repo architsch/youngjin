@@ -21,8 +21,9 @@ const quaternionTemp = new THREE.Quaternion();
 // looks from beside its subject, rather than from wherever the camera was pulled back to.
 const maxViewReferenceDistance = 8;
 
-// Stiffness of the spring the first-person camera trails the physics' moves on (see updateTrail).
-// The physics' speed caps keep the trail within about a block.
+// Stiffness of the spring the first-person camera trails the physics' moves on (see updateTrail). Never capped:
+// a wind lifting or throwing the player fast leaves it further behind, since any limit would jolt the camera into
+// step with the player, and again to a stop when the player hits something.
 const trailRate = 12;
 
 // Parents the camera to the player and eases it toward the active mode's pose (FirstPersonCameraPose,
@@ -41,6 +42,12 @@ export default class PlayerCamera
 
     // What the orbit is framing right now, or undefined while the orbit mode is not active.
     private orbitTarget: AABB3 | undefined;
+
+    // Where the orbit's eased pose stood in the world after the last frame, kept while one is under way: the
+    // next frame eases on from there, whatever has moved the player meanwhile (see update).
+    private orbitWorldPosition = new THREE.Vector3();
+    private orbitWorldQuaternion = new THREE.Quaternion();
+    private orbitWorldPoseKept: boolean = false;
 
     // Eased with the camera (not taken from the target pose) so the light doesn't slide ahead of a zoom.
     private viewReferenceOffset: number = 0;
@@ -75,8 +82,9 @@ export default class PlayerCamera
         GraphicsManager.setPointLightSurroundings(this.roomLightNearCamera);
     }
 
-    // Runs after physics has moved the player this frame (see PlayerController.lateUpdate).
-    update(deltaTime: number, controller: PlayerController, imposedDisplacement: Vec3): void
+    // Runs after physics has moved the player this frame (see PlayerController.lateUpdate). imposedDisplacement
+    // and underForce: what Rigidbody reports of that move.
+    update(deltaTime: number, controller: PlayerController, imposedDisplacement: Vec3, underForce: boolean): void
     {
         const mode = cameraModeObservable.peek();
 
@@ -97,11 +105,19 @@ export default class PlayerCamera
 
         if (mode.type !== "firstPerson")
             this.firstPersonPose.releaseLook();
+        if (mode.type !== "orbit")
+            this.orbitWorldPoseKept = false;
 
         let interpRate: number;
 
         if (mode.type === "orbit")
         {
+            // The camera hangs off the player, but an orbit under way is eased in the world: whatever has
+            // moved the player since last frame (a fan bouncing them as they edit) is taken out of it first,
+            // so that only what it orbits moves it.
+            if (this.orbitWorldPoseKept)
+                this.restoreOrbitWorldPose(controller.gameObject.obj);
+
             // Re-frame on entering the mode or changing target.
             if (this.orbitTarget !== mode.target)
             {
@@ -133,7 +149,7 @@ export default class PlayerCamera
                 this.orbitTarget = undefined;
             }
             interpRate = this.firstPersonPose.updatePose(deltaTime, controller, this.camera!,
-                this.pointerInput!.clickedPoint, imposedDisplacement,
+                this.pointerInput!.clickedPoint, imposedDisplacement, underForce,
                 this.positionInterpTarget, this.quaternionInterpTarget);
         }
         else if (mode.type == "free")
@@ -149,6 +165,8 @@ export default class PlayerCamera
         const t = Math.min(1, interpRate * deltaTime);
         this.camera!.position.lerp(this.positionInterpTarget, t);
         this.camera!.quaternion.slerp(this.quaternionInterpTarget, t);
+        if (mode.type === "orbit")
+            this.keepOrbitWorldPose(controller.gameObject.obj);
 
         this.updateTrail(deltaTime, imposedDisplacement, mode.type === "firstPerson");
         controller.gameObject.obj.getWorldQuaternion(quaternionTemp).invert();
@@ -175,6 +193,24 @@ export default class PlayerCamera
         // The camera the sweep must see past is the eased one, so this follows the easing above.
         if (mode.type === "orbit")
             this.occlusionHider.update(deltaTime, this.camera!, mode.target);
+    }
+
+    // Notes where the orbit's eased pose stands in the world (without the trail, which is laid on after it).
+    private keepOrbitWorldPose(playerObj: THREE.Object3D): void
+    {
+        playerObj.updateWorldMatrix(true, false);
+        playerObj.localToWorld(this.orbitWorldPosition.copy(this.camera!.position));
+        playerObj.getWorldQuaternion(this.orbitWorldQuaternion).multiply(this.camera!.quaternion);
+        this.orbitWorldPoseKept = true;
+    }
+
+    // Puts the camera back there, in the player's frame as it is now.
+    private restoreOrbitWorldPose(playerObj: THREE.Object3D): void
+    {
+        playerObj.updateWorldMatrix(true, false);
+        this.camera!.position.copy(playerObj.worldToLocal(vectorTemp.copy(this.orbitWorldPosition)));
+        this.camera!.quaternion.copy(playerObj.getWorldQuaternion(quaternionTemp).invert())
+            .multiply(this.orbitWorldQuaternion);
     }
 
     // Physics moves the player in jolts (a step climbed, a drop, a push) that steering never makes.

@@ -34,7 +34,7 @@ The bare `:4321/...` shorthand does not work under zsh. Ops share their names wi
 |---|---|
 | `stage` | four walls around a floor rectangle, two cells thick as a generated room's boundary wall is; returns each wall's innermost cells and its inward face |
 | `addBlocks` / `removeBlocks` | a box of blocks, or a doorway cut through one already standing |
-| `addObject` / `removeObject` | a canvas, a prop, a door, a lamp or a label on a cell's face (walls, or a block's top or underside), at its type's default size (a prop at its image's), by the game's own metadata keys |
+| `addObject` / `removeObject` | a canvas, a prop, a door, a lamp, a fan or a label on a cell's face (walls, or a block's top or underside), at its type's default size (a prop at its image's), by the game's own metadata keys |
 | `resizeObject` | a standing object at another size, in multiples of its type's step; the placement rule still applies, and the size it ended up with is returned |
 | `restrictedZones` | the room's zones, each a volume of whole cells kept for a user (from floor to ceiling and for nobody, unless given); reports them when called with nothing |
 | `volumes` | whether the room's volumes show in edit mode, with the tool that adds one (`true` or `false`); reports which when called with nothing |

@@ -14,6 +14,7 @@ export default class Rigidbody extends GameObjectComponent
     private collider: Collider | undefined;
     private desiredVelocity: Vec3 = { x: 0, y: 0, z: 0 };
     private imposedDisplacement: Vec3 = { x: 0, y: 0, z: 0 };
+    private underForce: boolean = false;
 
     async onSpawn(): Promise<void>
     {
@@ -25,15 +26,22 @@ export default class Rigidbody extends GameObjectComponent
     update(deltaTime: number): void
     {
         this.imposedDisplacement = { x: 0, y: 0, z: 0 };
+        this.underForce = false;
         try {
             const steering: Vec3 = { ...this.desiredVelocity };
+            const roomID = App.getCurrentRoom()?.id!;
+            const objectId = this.gameObject.params.objectId;
 
             // Apply gravity to velocity
             this.desiredVelocity.y -= GRAVITY_SPEED;
 
             // Apply soft collisions (and step-up logic) to the velocity
-            this.desiredVelocity = PhysicsManager.getAdjustedVelocity(App.getCurrentRoom()?.id!,
-                this.gameObject.params.objectId, this.desiredVelocity);
+            this.desiredVelocity = PhysicsManager.getAdjustedVelocity(roomID, objectId, this.desiredVelocity);
+
+            // Apply the forces of whatever blows on the object, and the velocity it carries from them
+            const unforcedVelocity = this.desiredVelocity;
+            this.desiredVelocity = PhysicsManager.applyForces(roomID, objectId, unforcedVelocity, deltaTime);
+            this.underForce = !Vector3DUtil.equal(this.desiredVelocity, unforcedVelocity);
 
             const currentPos: Vec3 = {
                 x: this.gameObject.position.x,
@@ -50,7 +58,7 @@ export default class Rigidbody extends GameObjectComponent
                 y: this.gameObject.direction.y,
                 z: this.gameObject.direction.z,
             };
-            ClientObjectManager.setObjectTransform(this.gameObject.params.objectId,
+            ClientObjectManager.setObjectTransform(objectId,
                 new ObjectTransform(targetPos, targetDir, this.gameObject.params.transform.scale), false);
 
             // Held back from where it was steered (by a wall, a slide or a crowd), the move counts as
@@ -79,6 +87,13 @@ export default class Rigidbody extends GameObjectComponent
     getImposedDisplacement(): Vec3
     {
         return this.imposedDisplacement;
+    }
+
+    // Whether a force of the room's had a part in the last move: one acting on the object, or one whose
+    // velocity the object still carried (see PhysicsForceUtil).
+    isUnderForce(): boolean
+    {
+        return this.underForce;
     }
 
     getDesiredVelocity(): Vec3

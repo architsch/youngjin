@@ -6,6 +6,7 @@ import { DIR_VEC_BY_CODE } from "../../../shared/system/sharedConstants";
 import VALUE_NOISE_GLSL from "./valueNoiseGLSL";
 import WAVEFORM_GLSL from "./waveformGLSL";
 import { LIGHT_BLOCK_MAP_SAMPLE_PARS_GLSL } from "./lightBlockMapGLSL";
+import { ATMOSPHERE_FOG_TINT_HALF_LIGHT } from "./atmosphereGLSL";
 
 // Particles and animated sprites, spliced into a stock material (MeshBasicMaterial for the blended batch,
 // MeshPhongMaterial for the solid one). The vertex stage computes everything about an instance from its
@@ -52,6 +53,7 @@ const PARTICLE_VERTEX_PARS_GLSL = `
     attribute vec4 particleData2;
     attribute vec4 particleData3;
     uniform float particleTime;
+    uniform float particleLampTint;
     uniform highp sampler2D particleParams;
     varying vec4 vParticleColor;
     varying float vParticleAdditive;
@@ -64,8 +66,7 @@ const PARTICLE_VERTEX_PARS_GLSL = `
     // A particle this near the camera fades out, so a large quad never fills the screen.
     const float PARTICLE_NEAR_FADE_START = 0.3;
     const float PARTICLE_NEAR_FADE_END = 0.9;
-    // A lit particle away from every lamp still shows faintly, like the room's ambient light.
-    const float PARTICLE_LIT_FLOOR = 0.35;
+    const float PARTICLE_LAMP_TINT_HALF_LIGHT = ${ATMOSPHERE_FOG_TINT_HALF_LIGHT.toFixed(4)};
     // How far above the floor a landed particle's middle is held, in its own sizes.
     const float PARTICLE_LANDING_LIFT = 0.3;
 
@@ -133,16 +134,21 @@ const PARTICLE_VERTEX_PARS_GLSL = `
             if (age >= 0.0 && age < lifetime)
             {
                 float life = age / lifetime;
+                // Its motion and spin run at its own pace, along the same path whatever that is (its lifetime
+                // was stretched to match).
+                float pace = particleData3.z;
+                float pacedAge = age * pace;
                 vec4 motion = particleParam(row, ${T.motion});
                 float drag = motion.y;
                 // Closed-form motion under linear drag: how far the launch has carried it, and how far
                 // gravity has pulled it.
-                float carry = (drag > 0.0) ? (1.0 - exp(-drag * age)) / drag : age;
-                float fall = (drag > 0.0) ? (age - carry) / drag : 0.5 * age * age;
+                float carry = (drag > 0.0) ? (1.0 - exp(-drag * pacedAge)) / drag : pacedAge;
+                float fall = (drag > 0.0) ? (pacedAge - carry) / drag : 0.5 * pacedAge * pacedAge;
                 center = particleData0.xyz + particleData1.xyz * carry;
                 center.y -= motion.x * fall;
-                vec3 velocity = particleData1.xyz * exp(-drag * age);
+                vec3 velocity = particleData1.xyz * exp(-drag * pacedAge);
                 velocity.y -= motion.x * carry;
+                velocity *= pace;
                 if (motion.z > 0.0)
                 {
                     center += valueNoiseWarp(center * 0.8 +
@@ -155,9 +161,9 @@ const PARTICLE_VERTEX_PARS_GLSL = `
                 vec4 curveColor = particleColorCurve(row, life);
                 color = vec4(curveColor.rgb * particleUnpackTint(particleData2.w), curveColor.a);
                 float spin = mix(look.z, look.w, particleHash(particleData2.y, 1.0));
-                angle = particleHash(particleData2.y, 2.0) * PARTICLE_TAU + spin * age;
+                angle = particleHash(particleData2.y, 2.0) * PARTICLE_TAU + spin * pacedAge;
                 frame = (animation.y > 0.0)
-                    ? floor(age * animation.y + particleHash(particleData2.y, 3.0) * frames)
+                    ? floor(pacedAge * animation.y + particleHash(particleData2.y, 3.0) * frames)
                     : floor(life * frames);
 
                 if (animation.w > 0.5) // stretched along its motion, as the camera sees it
@@ -210,13 +216,15 @@ const PARTICLE_VERTEX_PARS_GLSL = `
         #ifdef PARTICLE_BLENDED
             color.a *= smoothstep(PARTICLE_NEAR_FADE_START, PARTICLE_NEAR_FADE_END,
                 distance(center, cameraPosition));
-            if (look.y > 0.5)
+            // A lit particle takes on the color of the lamp light it floats in, as the fog does (see
+            // atmosphereFogColor): the lamps' hue, by an amount that saturates. Skipped while the room has no lamp.
+            if (look.y > 0.5 && particleLampTint > 0.0)
             {
-                // Inside a block the map reads black rather than unlit, so keep the color there.
                 float openness;
                 vec3 lamp = lightBlockMapLightAt(center, openness);
-                if (openness >= LIGHT_BLOCK_MAP_MIN_OPENNESS)
-                    color.rgb *= PARTICLE_LIT_FLOOR + lamp;
+                float peak = max(lamp.r, max(lamp.g, lamp.b));
+                float amount = peak / (peak + PARTICLE_LAMP_TINT_HALF_LIGHT);
+                color.rgb *= mix(vec3(1.0), lamp / max(peak, 0.0001), amount * particleLampTint);
             }
         #endif
         vParticleColor = color;

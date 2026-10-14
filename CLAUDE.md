@@ -37,7 +37,7 @@
   - `/math` - Math utilities (vectors, geometry, etc.)
   - `/networking` - Data encoding/decoding utilities and Socket.IO signal type configs
   - `/object` - Game object types, configs, and shared update logic (ObjectUpdateUtil)
-  - `/physics` - Physics engine (PhysicsManager — collision detection, hitboxes, step-up, gravity)
+  - `/physics` - Physics engine (PhysicsManager — collision detection, hitboxes, step-up, gravity, and the pushes objects give from afar in PhysicsForceUtil)
   - `/room` - Room types, room generation (RoomGenerationUtil — every Hub or Regular room starts out empty), room files, and the room map that catalogs the room files the game ships with
   - `/singlePlayer` - Single-player mode configs and types (SinglePlayerModeConfig — which room file a mode is played in, and who may enter it)
   - `/system` - Shared observables, constants, logging, and error handling

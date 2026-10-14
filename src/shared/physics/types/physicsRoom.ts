@@ -12,6 +12,8 @@ export default class PhysicsRoom
     room: Room; // Its voxel blocks are read from it as they stand (see PhysicsColliderStateUtil).
     voxels: PhysicsVoxel[]; // By PhysicsVoxelUtil.getVoxelsInBox.
     objectById: { [objectId: string]: PhysicsObject };
+    // The objects whose type pushes others (see PhysicsForceUtil), each read from the room as it stands.
+    forceEmitterIds: Set<string>;
     globalColliders: ColliderState[];
 
     constructor(room: Room)
@@ -19,6 +21,7 @@ export default class PhysicsRoom
         this.room = room;
         this.voxels = PhysicsVoxelUtil.createVoxels();
         this.objectById = {};
+        this.forceEmitterIds = new Set<string>();
         // The boundary is solid all the way round (doors hang on it).
         this.globalColliders = [floor, ceiling, wall_lowerX, wall_upperX, wall_lowerZ, wall_upperZ];
     }

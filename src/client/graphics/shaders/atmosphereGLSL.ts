@@ -191,8 +191,8 @@ export const ATMOSPHERE_SMOKE_PARS_GLSL = `
 
 // Brightest-channel lamp light at which the tint reaches half its maximum, in the units LightBlockMap
 // accumulates. Well above the level the head light yields at, so a distant wash barely colors the air
-// and a lamp's own pool is what shows.
-const ATMOSPHERE_FOG_TINT_HALF_LIGHT = 0.6;
+// and a lamp's own pool is what shows. Lit particles are tinted by the same measure (see particleShader).
+export const ATMOSPHERE_FOG_TINT_HALF_LIGHT = 0.6;
 
 // The most a lamp's own color can add to the fog color, where its pool is brightest. Chosen against
 // the fog palette's own range so neither color takes the other over: the fog color stays the floor of

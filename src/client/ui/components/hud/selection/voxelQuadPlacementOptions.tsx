@@ -7,6 +7,7 @@ import AddCanvasIcon from "../../../svg/icons/addCanvasIcon";
 import AddPropIcon from "../../../svg/icons/addPropIcon";
 import AddDoorIcon from "../../../svg/icons/addDoorIcon";
 import AddLampIcon from "../../../svg/icons/addLampIcon";
+import AddFanIcon from "../../../svg/icons/addFanIcon";
 import AddLabelIcon from "../../../svg/icons/addLabelIcon";
 import AddNpcIcon from "../../../svg/icons/addNpcIcon";
 import AddVolumeIcon from "../../../svg/icons/addVolumeIcon";
@@ -38,6 +39,7 @@ const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
 const labelTypeIndex = ObjectTypeConfigMap.getIndexByType("Label");
 const npcTypeIndex = ObjectTypeConfigMap.getIndexByType("Npc");
+const fanTypeIndex = ObjectTypeConfigMap.getIndexByType("Fan");
 
 // Feature flags whose toggling changes whether this menu's buttons are enabled.
 const placementFeatureFlags = [
@@ -78,6 +80,8 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
     const lampSizeFits = (compositionIndex: number) => ObjectPlacementUtil.canAddObject(props.selection,
         lampTypeIndex, LampObjectTypeConfig.util.getScale(compositionIndex));
     const canAddLamp = (PreEncodedCompositionIndexMap.Lamp ?? []).some(lampSizeFits);
+    // A fan has one look and one size, so it is added as it is.
+    const canAddFan = ObjectPlacementUtil.canAddObject(props.selection, fanTypeIndex);
 
     // Doors and labels: the room's superuser only (see RoomValidationUtil).
     const room = App.getCurrentRoom();
@@ -151,6 +155,8 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
             {addButton("addCanvasButton", <AddCanvasIcon/>, canvasTypeIndex)}
             {addButton("addPropButton", <AddPropIcon/>, propTypeIndex)}
             {addButton("addLampButton", <AddLampIcon/>, lampTypeIndex)}
+            <IconButton id="addFanButton" icon={<AddFanIcon/>} size="md"
+                disabled={!canAddFan} onClick={() => ObjectPlacementUtil.tryAddFan(props.selection)}/>
             {isSuperuser && addButton("addLabelButton", <AddLabelIcon/>, labelTypeIndex)}
             {isSuperuser && addButton("addDoorButton", <AddDoorIcon/>, doorTypeIndex)}
             {isAdmin && <IconButton id="addNpcButton" icon={<AddNpcIcon/>} size="md"

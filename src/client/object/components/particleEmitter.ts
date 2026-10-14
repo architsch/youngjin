@@ -8,6 +8,7 @@ import { ObjectMetadata } from "../../../shared/object/types/objectMetadata";
 import ParticleEmitterDescriptor from "../../../shared/graphics/particle/types/particleEmitterDescriptor";
 import ParticleSystem from "../../graphics/particle/particleSystem";
 import ParticleEmitterHandle from "../../graphics/particle/types/particleEmitterHandle";
+import ParticleSpawnUtil from "../../graphics/particle/util/particleSpawnUtil";
 import { roomShapeChangedObservable } from "../../system/clientObservables";
 import App from "../../app";
 import GameObjectComponent from "./gameObjectComponent";
@@ -17,7 +18,8 @@ const MAX_STOP_DISTANCE = 32;
 
 // A stream of particles out of its object's face (see ParticleSystem.createEmitter), resolved like
 // AnimatedSprite's: its type's baseline, changed by what getOverride makes of the object's metadata. Sized
-// to the object's footprint. One that walls stop is re-measured whenever the room's blocks change.
+// to the object's footprint. One that walls stop is re-measured whenever the room's blocks change, and one
+// given a reach ends there if no wall stops it sooner.
 export default class ParticleEmitter extends GameObjectComponent
 {
     private handle: ParticleEmitterHandle | undefined;
@@ -65,8 +67,13 @@ export default class ParticleEmitter extends GameObjectComponent
 
         const params = this.gameObject.params;
         const size = ObjectScaleUtil.getObjectSize(params.objectTypeIndex, params.transform.scale);
+        const sizeScale = Math.max(size.x, size.y);
+        // Thickened by as much as its reach speeds it up, so a longer stream is no thinner along its way.
+        const reachBoost = this.getReachBoost(descriptor, sizeScale);
         this.handle.setPose(this.getOrigin(descriptor), this.getNormal());
-        this.handle.setScales(descriptor.rateScale ?? 1, descriptor.speedScale ?? 1, Math.max(size.x, size.y));
+        this.handle.setScales((descriptor.rateScale ?? 1) * reachBoost, (descriptor.speedScale ?? 1) * reachBoost,
+            sizeScale);
+        this.handle.setParticleTimeScale(descriptor.particleTimeScale ?? 1);
         // Only a real change, so the level's phase carries on (see ParticleSystem's clock rebase).
         const level = descriptor.level ?? WaveformUtil.constant(1);
         if (this.level == undefined || !WaveformUtil.equals(level, this.level))
@@ -81,11 +88,25 @@ export default class ParticleEmitter extends GameObjectComponent
     private refreshStopDistance(descriptor: ParticleEmitterDescriptor): void
     {
         const voxels = App.getCurrentRoom()?.voxelGrid.voxels;
-        const stopDistance = (descriptor.stopAtBlocks && voxels != undefined)
+        const blockDistance = (descriptor.stopAtBlocks && voxels != undefined)
             ? VoxelQueryUtil.getDistanceToOccupiedBlock(voxels, this.getOrigin(descriptor), this.getNormal(),
                 MAX_STOP_DISTANCE)
             : Infinity;
-        this.handle?.setStopDistance(stopDistance);
+        this.handle?.setStopDistance(Math.min(blockDistance, this.getReach(descriptor)));
+    }
+
+    // How far from where it emits its particles may carry (see ParticleEmitterDescriptor.reach).
+    private getReach(descriptor: ParticleEmitterDescriptor): number
+    {
+        return (descriptor.reach == undefined) ? Infinity : Math.max(0, descriptor.reach - (descriptor.faceOffset ?? 0));
+    }
+
+    // How many times faster its particles must go for the slowest of them to carry to its reach; never slower.
+    private getReachBoost(descriptor: ParticleEmitterDescriptor, sizeScale: number): number
+    {
+        const carry = ParticleSpawnUtil.getShortestCarry(this.handle!.config) * sizeScale * (descriptor.speedScale ?? 1);
+        const reach = this.getReach(descriptor);
+        return (reach < Infinity && carry > 0) ? Math.max(1, reach / carry) : 1;
     }
 
     private resolveDescriptor(): ParticleEmitterDescriptor

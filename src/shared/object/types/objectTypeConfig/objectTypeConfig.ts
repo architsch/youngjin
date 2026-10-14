@@ -8,6 +8,7 @@ import User from "../../../user/types/user";
 import { ObjectCategory } from "../objectCategory";
 import { ObjectScalingConfig } from "../objectScalingConfig";
 import { ObjectAttachmentConfig } from "../objectAttachmentConfig";
+import { ObjectForceConfig } from "../objectForceConfig";
 import AddObjectSignal from "../addObjectSignal";
 import SetObjectMetadataSignal from "../setObjectMetadataSignal";
 import SetObjectTransformSignal from "../setObjectTransformSignal";
@@ -27,6 +28,8 @@ export default interface ObjectTypeConfig
     scaling?: ObjectScalingConfig;
     // Which voxel faces the type is attached to. Absent means it stands free in the room.
     attachment?: ObjectAttachmentConfig;
+    // The push the type gives whatever physics moves in front of its face. Absent means none.
+    force?: ObjectForceConfig;
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => boolean,
     canUserRemoveObject: (user: User, room: Room, obj: AddObjectSignal) => boolean,
     canUserSetObjectTransform: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => boolean,

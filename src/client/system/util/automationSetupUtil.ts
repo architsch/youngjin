@@ -652,7 +652,7 @@ const AutomationSetupUtil =
                         CanvasObjectTypeConfig.components.spawnedByAny.instancedMeshComposer.codecVersion);
                 },
 
-                // Attaches a canvas, prop, door, lamp or label to a cell face (cell-addressed, like the walls). Spawned
+                // Attaches a canvas, prop, door, lamp, fan or label to a cell face (cell-addressed, like the walls). Spawned
                 // through the normal factory with normal metadata; only the permission check is skipped.
                 addObject: async (spec: {type: string, row: number, col: number,
                     collisionLayer?: number, face?: string, y?: number,

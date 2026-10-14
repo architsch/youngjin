@@ -27,6 +27,8 @@ const configByCategory: {[category: string]: ObjectCategoryConfig} =
     [ObjectCategoryEnumMap.Npc]: {maxCountPerRoom: 16},
     // As many as can still be told apart by their outlines (see VolumeGameObject).
     [ObjectCategoryEnumMap.Volume]: {maxCountPerRoom: 32},
+    // No more than the particle ring holds the winds of, all in view at their longest (see ParticleSystem).
+    [ObjectCategoryEnumMap.Fan]: {maxCountPerRoom: 16},
 }
 
 const ObjectCategoryConfigMap =

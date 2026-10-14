@@ -707,6 +707,20 @@
                 "mouldingIsConvex": true,
                 "framed": true
             }
+        },
+        {
+            "comment": "[Index 66] 'Fan': the housing its blades turn in, a plate half sunk in the face it is on (see FanObjectTypeConfig).",
+            "objectType": "Fan",
+            "codecType": "Default",
+            "codecVersion": 1,
+            "parts": [{
+                "geometryId": "Box",
+                "materialId": "InstancedTin",
+                "dir": {"x": 0, "y": 0, "z": 1},
+                "offset": {"x": 0, "y": 0, "z": 0},
+                "scale": {"x": 1, "y": 1, "z": 0.125},
+                "color": {"x": 151, "y": 151, "z": 151}
+            }]
         }
     ]
 }

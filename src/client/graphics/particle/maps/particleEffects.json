@@ -22,22 +22,23 @@
             ]
         },
         "wind": {
-            "note": "A stream of air out of a face: a rapid jet of puffs that swell and thin out as they go, like steam from a kettle.",
+            "note": "A stream of air out of a face: a rapid jet of faint puffs that swell and thin out as they go, like steam from a kettle. Drawn as a fan of the default strength blows it; a stronger fan's puffs go faster and closer together, a weaker one's slower and further apart. Lit, so it takes on the color of the lamps it blows past.",
             "layers": [
                 {
                     "sprite": "puff",
                     "additiveness": 0.15,
-                    "rate": 110,
+                    "lit": true,
+                    "rate": 48,
                     "spawnHalfSize": {"x": 0.1, "y": 0.1, "z": 0.02},
                     "spread": 0.18,
                     "speed": [4.6, 5.8],
                     "lifetime": [0.95, 1.2],
-                    "size": [0.42, 0.56],
+                    "size": [0.5, 0.66],
                     "spin": [-1.2, 1.2],
                     "drag": 0.6,
                     "turbulence": 0.95,
-                    "sizeCurve": [0.7, 1.1, 1.5, 1.85, 2.15, 2.45, 2.7, 2.9],
-                    "alphaCurve": [0.55, 0.6, 0.5, 0.38, 0.27, 0.17, 0.08, 0],
+                    "sizeCurve": [0.85, 1.2, 1.55, 1.9, 2.2, 2.5, 2.75, 2.95],
+                    "alphaCurve": [0.09, 0.16, 0.15, 0.125, 0.095, 0.06, 0.03, 0],
                     "colorCurve": ["#f7f9fb", "#dfe5eb"]
                 }
             ]

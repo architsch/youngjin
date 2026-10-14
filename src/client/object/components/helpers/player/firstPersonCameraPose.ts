@@ -29,8 +29,14 @@ const lookPitchLimit = 1.3;
 // counts: a push or a step climbed doesn't, and turning in place keeps the look.
 const lookMaxSpeed = 4;
 
-// Easing rate of the camera toward this pose, per second (see PlayerCamera).
+// Easing rate of the camera toward this pose, per second (see PlayerCamera): where the user moves on their
+// own, and where a force of the room's has a part in it (a fan lifting them), when the gaze follows more gently.
 const easingRate = 8;
+const easingRateUnderForce = 0.5 * easingRate;
+
+// Easing rate of the pitch the gaze turns through under a force (per second, like easingRate). The camera eases
+// after that pitch in turn, so the gaze sets off from rest rather than at full speed.
+const pitchUnderForceRate = easingRate;
 
 // Easing rate of the pitch the gaze turns through toward a clicked spot, and back once the look ends (per
 // second, like easingRate). The camera eases after that pitch in turn, so each turn sets off gently
@@ -90,10 +96,15 @@ export default class FirstPersonCameraPose
     // lookEasingRate); undefined otherwise.
     private lookTurnPitch: number | undefined;
 
+    // The pitch the gaze turns through while a force has a part in the player's move, and after it until the pose's
+    // own pitch is caught up with (see pitchUnderForceRate); undefined otherwise.
+    private pitchUnderForce: number | undefined;
+
     // Returns the desired camera interpolation rate. clickedPoint: where a play-mode click hit this frame.
-    // imposedDisplacement: physics' part of the player's move this frame (see Rigidbody).
+    // imposedDisplacement: physics' part of the player's move this frame, and underForce: whether a force of
+    // the room's had a part in it (see Rigidbody).
     updatePose(deltaTime: number, controller: PlayerController, camera: THREE.PerspectiveCamera,
-        clickedPoint: THREE.Vector3 | undefined, imposedDisplacement: Vec3,
+        clickedPoint: THREE.Vector3 | undefined, imposedDisplacement: Vec3, underForce: boolean,
         outPos: THREE.Vector3, outQuat: THREE.Quaternion): number
     {
         outPos.copy(FirstPersonCameraPose.restPosition);
@@ -112,7 +123,9 @@ export default class FirstPersonCameraPose
             this.lookSpot = undefined;
 
         let pitchAngle: number;
-        if (this.isFalling(player.position, standingLevelY))
+        // Held up by a force (a fan's wind), the player isn't falling: the room ahead, below wherever they are, sets
+        // the pitch, which follows their height with no jump.
+        if (!underForce && this.isFalling(player.position, standingLevelY))
         {
             // The drop ahead shrinks as the ground nears, which would lift the gaze on the way down.
             pitchAngle = -pitchLimit;
@@ -147,16 +160,32 @@ export default class FirstPersonCameraPose
             else
                 pitchAngle = this.lookTurnPitch;
         }
+
+        // From where the camera is when the force begins, and on after it ends until the camera has caught up (its
+        // pace picks up when handed back), so neither jolts the gaze.
+        if (underForce || this.pitchUnderForce != undefined)
+        {
+            const cameraPitch = cameraEuler.setFromQuaternion(camera.quaternion, "YXZ").x;
+            if (this.pitchUnderForce == undefined)
+                this.pitchUnderForce = cameraPitch;
+            this.pitchUnderForce += (pitchAngle - this.pitchUnderForce) * Math.min(1, pitchUnderForceRate * deltaTime);
+            if (!underForce && Math.abs(pitchAngle - cameraPitch) < lookSettledAngle)
+                this.pitchUnderForce = undefined;
+            else
+                pitchAngle = this.pitchUnderForce;
+        }
         outQuat.setFromAxisAngle(DIRECTION_VECTORS["+x"], pitchAngle);
 
-        return easingRate;
+        return (this.pitchUnderForce != undefined) ? easingRateUnderForce : easingRate;
     }
 
     // Lets go of a click's look, as when another camera mode takes the camera away from the eye.
     releaseLook(): void
     {
         this.lookSpot = undefined;
-        this.lookTurnPitch = undefined; // Coming back from the other mode glides as any mode change does.
+        // Coming back from the other mode glides as any mode change does.
+        this.lookTurnPitch = undefined;
+        this.pitchUnderForce = undefined;
     }
 
     // Fixes the look on a clicked spot. The turn toward it sets off from wherever the camera is, or carries

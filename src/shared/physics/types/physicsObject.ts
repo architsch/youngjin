@@ -1,3 +1,4 @@
+import Vec3 from "../../math/types/vec3";
 import PhysicsVoxel from "./physicsVoxel";
 import { ColliderState } from "./colliderState";
 import PhysicsRoom from "./physicsRoom";
@@ -10,6 +11,8 @@ export default class PhysicsObject
     objectTypeIndex: number;
     colliderState: ColliderState;
     intersectingVoxels: PhysicsVoxel[]; // The purpose of this is to let the object remember from which voxels it must unregister itself when leaving them.
+    // The velocity the room's forces have given it and it still carries (see PhysicsForceUtil).
+    carriedVelocity: Vec3;
 
     constructor(physicsRoom: PhysicsRoom, objectId: string, objectTypeIndex: number, colliderState: ColliderState)
     {
@@ -19,7 +22,8 @@ export default class PhysicsObject
         this.colliderState = colliderState;
         this.intersectingVoxels = new Array<PhysicsVoxel>(4);
         this.intersectingVoxels.length = 0;
-        
+        this.carriedVelocity = {x: 0, y: 0, z: 0};
+
         this.addToIntersectingVoxels();
     }
 

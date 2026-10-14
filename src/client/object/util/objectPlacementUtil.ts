@@ -33,6 +33,7 @@ import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 import { FeatureFlag } from "../../../shared/system/types/featureFlag";
 import { DoorTypeEnumMap } from "../../../shared/object/types/doorType";
 import LampObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/lampObjectTypeConfig";
+import FanObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/fanObjectTypeConfig";
 import LabelObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/labelObjectTypeConfig";
 import CanvasObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
 import PropObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/propObjectTypeConfig";
@@ -46,6 +47,7 @@ const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
 const labelTypeIndex = ObjectTypeConfigMap.getIndexByType("Label");
 const npcTypeIndex = ObjectTypeConfigMap.getIndexByType("Npc");
 const volumeTypeIndex = ObjectTypeConfigMap.getIndexByType("Volume");
+const fanTypeIndex = ObjectTypeConfigMap.getIndexByType("Fan");
 
 // What a new label says, so it shows (and can be clicked) before anything is written on it.
 const NEW_LABEL_TEXT = "Label";
@@ -111,6 +113,14 @@ const ObjectPlacementUtil =
             [ObjectMetadataKeyEnumMap.LightProperties]:
                 new EncodableByteString(LampObjectTypeConfig.util.getDefaultLightProperties()),
         }, LampObjectTypeConfig.util.getScale(compositionIndex));
+    },
+    // With the default wind (see FanObjectTypeConfig).
+    tryAddFan: async (selection: VoxelQuadSelection): Promise<void> =>
+    {
+        await tryAddObject(selection, fanTypeIndex, {
+            [ObjectMetadataKeyEnumMap.ForceProperties]:
+                new EncodableByteString(FanObjectTypeConfig.util.getDefaultForceProperties()),
+        });
     },
     tryAddLabel: async (selection: VoxelQuadSelection, compositionIndex: number): Promise<void> =>
     {

@@ -32,4 +32,7 @@ export const ObjectMetadataKeyEnumMap: Record<string, number> =
     // superuser, which makes it a restricted zone (see RestrictedZoneUtil); or ZONE_USER_NAME_FOR_NOBODY,
     // for the superuser alone. Absent or empty, it is no zone.
     ZoneUserName: 14,
+    // How hard a fan's wind pushes and how far it reaches, as two quantized characters (see FanObjectTypeConfig),
+    // always read and written together.
+    ForceProperties: 15,
 }

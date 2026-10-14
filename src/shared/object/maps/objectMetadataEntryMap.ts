@@ -8,6 +8,7 @@ import ObjectMetadataEntry from "../types/objectMetadataEntry";
 import { ObjectMetadataKeyEnumMap } from "../types/objectMetadataKey";
 import { DoorTypeEnumMap } from "../types/doorType";
 import LampObjectTypeConfig from "../types/objectTypeConfig/lampObjectTypeConfig";
+import FanObjectTypeConfig from "../types/objectTypeConfig/fanObjectTypeConfig";
 import LabelTextUtil from "../util/labelTextUtil";
 import AdminPrefsUtil from "../util/adminPrefsUtil";
 import QuarterTurnsUtil from "../util/quarterTurnsUtil";
@@ -82,6 +83,10 @@ const entries: {[key: number]: ObjectMetadataEntry} = {
     // Trimmed, since it is matched against a user's name as it stands.
     [ObjectMetadataKeyEnumMap.ZoneUserName]: {
         preprocessingMethod: (rawValue: string) => StringUtil.truncateByCodePoints(rawValue.trim(), OBJECT_USER_NAME_MAX_LENGTH),
+    },
+    // Round-tripped as LightProperties is, through FanObjectTypeConfig's util.
+    [ObjectMetadataKeyEnumMap.ForceProperties]: {
+        preprocessingMethod: (rawValue: string) => FanObjectTypeConfig.util.canonicalize(rawValue),
     },
 };
 

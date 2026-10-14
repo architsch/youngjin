@@ -1,9 +1,10 @@
 /**
  * Particles and animated sprites, without a GPU: the ring allocator (wrapping, at most two upload ranges, its
  * high-water mark), sprite slots and phase continuity, clock rebasing, waveforms (level and closed-form
- * integral), parameter-row baking, the effect definitions in their JSON map (each one sound, and the checker
- * catching what a compiler would), the gameplay events that trigger effects (fired by edits only), and the
- * components' baseline + override resolution. What the shader draws is checked headlessly instead (see
+ * integral), parameter-row baking, the effect definitions in their JSON map (each one sound, the checker
+ * catching what a compiler would, and every one an object type names being there), how far an effect's stream
+ * carries, the gameplay events that trigger effects (fired by edits only), and the components' baseline +
+ * override resolution, an emitter's reach and its particles' pace among it. What the shader draws is checked headlessly instead (see
  * docs/testing/integration/scenarios.md).
  */
 import { describe, it, expect, beforeEach, afterEach, vi, Mock } from "vitest";
@@ -50,9 +51,15 @@ import SpriteHandle from "../../../src/client/graphics/particle/types/spriteHand
 import ParticleParamTextureUtil from "../../../src/client/graphics/particle/util/particleParamTextureUtil";
 import ParticleEffectConfigUtil from "../../../src/client/graphics/particle/util/particleEffectConfigUtil";
 import ParticleEffectConfigMap from "../../../src/client/graphics/particle/maps/particleEffectConfigMap";
+import SpriteConfigMap from "../../../src/client/graphics/particle/maps/spriteConfigMap";
+import ObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/objectTypeConfig";
 import ParticleLayerConfig from "../../../src/client/graphics/particle/types/particleLayerConfig";
 import ParticleSystem from "../../../src/client/graphics/particle/particleSystem";
 import ParticleTriggerUtil from "../../../src/client/graphics/particle/util/particleTriggerUtil";
+import ParticleSpawnUtil from "../../../src/client/graphics/particle/util/particleSpawnUtil";
+import ParticleEmitterHandle from "../../../src/client/graphics/particle/types/particleEmitterHandle";
+import ParticleEmitterDescriptor from "../../../src/shared/graphics/particle/types/particleEmitterDescriptor";
+import ParticleEmitter from "../../../src/client/object/components/particleEmitter";
 import { PARTICLE_CURVE_SAMPLES, PARTICLE_KIND_CODE, PARTICLE_ORIENTATION_CODE, PARTICLE_PARAM_ROW_TEXELS,
     PARTICLE_PARAM_TEXEL } from "../../../src/client/graphics/shaders/particleShader";
 import { unpackWaveformShape } from "../../../src/client/graphics/shaders/waveformGLSL";
@@ -82,7 +89,7 @@ const FLOATS_PER_INSTANCE = 16;
 function makeSpawn(overrides: Partial<ParticleSpawn> = {}): ParticleSpawn
 {
     return {origin: {x: 1, y: 2, z: 3}, spawnTime: 0, velocity: {x: 0, y: 1, z: 0}, lifetime: 1,
-        paramRow: 0, seed: 0.5, size: 0.2, packedTint: 0xffffff, levelAtBirth: 1, landingY: -1e6, ...overrides};
+        paramRow: 0, seed: 0.5, size: 0.2, timeScale: 1, packedTint: 0xffffff, levelAtBirth: 1, landingY: -1e6, ...overrides};
 }
 
 // The batch's own instance data, which is what the shader reads.
@@ -254,6 +261,16 @@ describe("ParticleBatch", () => {
         expect(batch.getNumLiveParticles(now - delta)).toBe(1);
     });
 
+    it("writes a particle's time scale where the shader reads it, after its landing height", () => {
+        const batch = new ParticleBatch("blended", 1, 2);
+        batch.writeParticle(makeSpawn({landingY: 0.5, timeScale: 0.7}), 0);
+        // The first ring instance comes after the one sprite slot.
+        const data = instanceData(batch).subarray(FLOATS_PER_INSTANCE, 2 * FLOATS_PER_INSTANCE);
+        expect(data[13]).toBe(0.5);
+        expect(data[14]).toBeCloseTo(0.7, 6);
+        expect(data[15]).toBe(0);
+    });
+
     it("forgets every particle when cleared, so none reappears under a new clock", () => {
         const batch = new ParticleBatch("blended", 0, 4);
         batch.writeParticle(makeSpawn({spawnTime: 5, lifetime: 10}), 5);
@@ -391,6 +408,54 @@ describe("effect definitions", () => {
     it("include every effect the gameplay events play, whatever the editor renamed", () => {
         for (const effect of ["blockRemoved"])
             expect(ParticleEffectConfigMap.getConfig(effect), effect).toBeDefined();
+    });
+
+    it("include every effect and sprite an object type shows, which it names from shared code", () => {
+        const typesShowingOne: string[] = [];
+        for (const config of ObjectTypeConfigMap.getAllConfigs())
+        {
+            const components: ObjectTypeConfig["components"]["spawnedByAny"] = config.components.spawnedByAny;
+            const effect = components?.particleEmitter?.baseline.effect;
+            const sprite = components?.animatedSprite?.baseline.sprite;
+            if (effect != undefined)
+                expect(ParticleEffectConfigMap.getConfig(effect), `${config.objectType}: ${effect}`).toBeDefined();
+            if (sprite != undefined)
+                expect(SpriteConfigMap.getConfig(sprite), `${config.objectType}: ${sprite}`).toBeDefined();
+            if (effect != undefined || sprite != undefined)
+                typesShowingOne.push(config.objectType);
+        }
+        expect(typesShowingOne).toContain("Fan");
+    });
+
+    it("carry at least as far along their axis as their slowest, shortest-lived, widest-thrown particle does", () => {
+        // How far one particle gets, by adding up its slowing speed rather than by the closed form.
+        const travelled = (speed: number, lifetime: number, drag: number, steps: number = 4000): number => {
+            const dt = lifetime / steps;
+            let distance = 0;
+            for (let i = 0; i < steps; ++i)
+                distance += speed * Math.exp(-drag * (i + 0.5) * dt) * dt;
+            return distance;
+        };
+        const layerArbitrary = fc.record({
+            minSpeed: fc.integer({min: 1, max: 80}), extraSpeed: fc.integer({min: 0, max: 40}),
+            minLifetime: fc.integer({min: 2, max: 30}), extraLifetime: fc.integer({min: 0, max: 20}),
+            drag: fc.integer({min: 0, max: 40}), spread: fc.integer({min: 0, max: 12}),
+        }).map(({minSpeed, extraSpeed, minLifetime, extraLifetime, drag, spread}): ParticleLayerConfig => ({
+            ...SOUND_LAYER, burst: 0, rate: 20, speed: [minSpeed / 10, (minSpeed + extraSpeed) / 10],
+            lifetime: [minLifetime / 10, (minLifetime + extraLifetime) / 10], drag: drag / 10, spread: spread / 10,
+        }));
+
+        fc.assert(fc.property(fc.array(layerArbitrary, {minLength: 1, maxLength: 3}), (layers) => {
+            const shortest = Math.min(...layers.map(layer =>
+                travelled(layer.speed[0] * Math.cos(layer.spread!), layer.lifetime[0], layer.drag!)));
+            expect(ParticleSpawnUtil.getShortestCarry({layers})).toBeCloseTo(shortest, 3);
+        }));
+
+        // A layer that only bursts is not part of the stream, and an effect with none has no end to speak of.
+        const burstOnly: ParticleLayerConfig = {...SOUND_LAYER, speed: [0.1, 0.1]};
+        const stream: ParticleLayerConfig = {...SOUND_LAYER, burst: 0, rate: 5, speed: [2, 3], lifetime: [1, 2]};
+        expect(ParticleSpawnUtil.getShortestCarry({layers: [burstOnly, stream]})).toBeCloseTo(2, 9);
+        expect(ParticleSpawnUtil.getShortestCarry({layers: [burstOnly]})).toBe(Infinity);
     });
 
     it("are checked for what a compiler would catch, and for what it wouldn't", () => {
@@ -559,5 +624,130 @@ describe("AnimatedSprite", () => {
         component.onSetMetadata();
         expect(handles.map(h => h.sprite)).toEqual(["fanBlades", "glow"]);
         expect(handles[0].release).toHaveBeenCalledOnce();
+    });
+});
+
+describe("ParticleEmitter", () => {
+    const fanTypeIndex = ObjectTypeConfigMap.getIndexByType("Fan");
+    const windCarry = ParticleSpawnUtil.getShortestCarry(ParticleEffectConfigMap.getConfig("wind")!);
+    // On a face looking along +x, with nothing in front of it.
+    const POS = {x: 5, y: 1.75, z: 5.25};
+    const FACE_OFFSET = 0.1;
+    let room: Room;
+
+    beforeEach(() => {
+        room = createRoom("emitter-room");
+        (App.getCurrentRoom as Mock).mockReturnValue(room);
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    // A component on a fan-sized object, with the handle the particle system would have given it.
+    async function spawn(baseline: ParticleEmitterDescriptor)
+    {
+        const handle = {effect: baseline.effect, config: ParticleEffectConfigMap.getConfig(baseline.effect)!,
+            setPose: vi.fn(), setScales: vi.fn(), setParticleTimeScale: vi.fn(), setLevel: vi.fn(), setStopDistance: vi.fn(),
+            stop: vi.fn()};
+        vi.spyOn(ParticleSystem, "createEmitter").mockReturnValue(handle as unknown as ParticleEmitterHandle);
+        const params = new AddObjectSignal(room.id, "user", "User", fanTypeIndex, "emitter-object",
+            new ObjectTransform({...POS}, {x: 1, y: 0, z: 0}, {x: 1, y: 1, z: 1}), {});
+        const component = new ParticleEmitter({params} as unknown as GameObject, {baseline});
+        await component.onSpawn();
+        return {handle, component};
+    }
+
+    it("ends its stream at its reach from the face, speeding its particles up only as far as the slowest needs", async () => {
+        for (const reach of [1, 3, 5, 7, 9])
+        {
+            const {handle, component} = await spawn({effect: "wind", faceOffset: FACE_OFFSET, reach});
+            const fromEmitter = reach - FACE_OFFSET;
+            expect(handle.setStopDistance).toHaveBeenLastCalledWith(fromEmitter);
+            const [rateScale, speedScale] = handle.setScales.mock.lastCall!;
+            expect(speedScale).toBeCloseTo(Math.max(1, fromEmitter / windCarry), 9);
+            // Sped up or not, its slowest particle now carries that far, to be ended there.
+            expect(windCarry * speedScale).toBeGreaterThanOrEqual(fromEmitter - 1e-9);
+            // And as many more of them come out as they are faster, so the stream is no thinner for it.
+            expect(rateScale).toBeCloseTo(speedScale, 9);
+            await component.onDespawn();
+        }
+        // The wind's own speeds carry it past the shortest of those reaches and short of the longest.
+        expect(windCarry).toBeGreaterThan(1);
+        expect(windCarry).toBeLessThan(9);
+    });
+
+    it("ends at the first block in its way where that is nearer, re-measured as the room's shape changes", async () => {
+        const {handle, component} = await spawn({effect: "wind", faceOffset: FACE_OFFSET, reach: 5, stopAtBlocks: true});
+        expect(handle.setStopDistance).toHaveBeenLastCalledWith(5 - FACE_OFFSET);
+
+        // A pillar whose near side is two units from the face.
+        const row = Math.floor(POS.z / VOXEL_CELL_SIZE), col = Math.floor((POS.x + 2) / VOXEL_CELL_SIZE);
+        buildPillar(room, row, col);
+        roomShapeChangedObservable.set(room.id);
+        expect(handle.setStopDistance.mock.lastCall![0]).toBeCloseTo(2 - FACE_OFFSET, 9);
+        await component.onDespawn();
+
+        // A block beyond its reach changes nothing.
+        const short = await spawn({effect: "wind", faceOffset: FACE_OFFSET, reach: 1, stopAtBlocks: true});
+        expect(short.handle.setStopDistance).toHaveBeenLastCalledWith(1 - FACE_OFFSET);
+        await short.component.onDespawn();
+    });
+
+    it("leaves its speeds alone without a reach, and where they carry past one already", async () => {
+        const {handle, component} = await spawn({effect: "wind", rateScale: 0.5, speedScale: 2.5});
+        expect(handle.setScales.mock.lastCall!.slice(0, 2)).toEqual([0.5, 2.5]);
+        expect(handle.setStopDistance).toHaveBeenLastCalledWith(Infinity);
+        await component.onDespawn();
+
+        const fast = await spawn({effect: "wind", rateScale: 0.5, speedScale: 4, reach: 3});
+        expect(fast.handle.setScales.mock.lastCall!.slice(0, 2)).toEqual([0.5, 4]);
+        expect(fast.handle.setStopDistance).toHaveBeenLastCalledWith(3);
+
+        // Its own rate and speed scales still count where its reach asks for more of both.
+        const far = await spawn({effect: "wind", rateScale: 0.5, speedScale: 1.5, reach: 9});
+        const [rateScale, speedScale] = far.handle.setScales.mock.lastCall!;
+        expect(speedScale).toBeCloseTo(9 / windCarry, 9);
+        expect(rateScale).toBeCloseTo(0.5 * speedScale / 1.5, 9);
+        await far.component.onDespawn();
+
+        // One that stands still has no speed to raise, and nothing about it is.
+        const still = await spawn({effect: "wind", speedScale: 0, reach: 9});
+        expect(still.handle.setScales.mock.lastCall!.slice(0, 2)).toEqual([1, 0]);
+        await still.component.onDespawn();
+        await fast.component.onDespawn();
+    });
+
+    it("paces its particles by its own time scale, along the same paths over as much longer lives, and nothing else", async () => {
+        const plain = await spawn({effect: "wind", faceOffset: FACE_OFFSET, reach: 9});
+        expect(plain.handle.setParticleTimeScale).toHaveBeenLastCalledWith(1);
+        const slow = await spawn({effect: "wind", faceOffset: FACE_OFFSET, reach: 9, particleTimeScale: 0.5});
+        expect(slow.handle.setParticleTimeScale).toHaveBeenLastCalledWith(0.5);
+        expect(slow.handle.setScales.mock.lastCall).toEqual(plain.handle.setScales.mock.lastCall);
+        expect(slow.handle.setStopDistance.mock.lastCall).toEqual(plain.handle.setStopDistance.mock.lastCall);
+        await plain.component.onDespawn();
+        await slow.component.onDespawn();
+
+        // A particle it spawns starts out just the same, to live as many times longer as it is paced slower: whether
+        // its life is its own, or how long it takes to reach where its stream ends.
+        for (const stopDistance of [Infinity, 4])
+        {
+            const emitter = new ParticleEmitterHandle("wind", ParticleEffectConfigMap.getConfig("wind")!);
+            emitter.setScales(1.5, 2, 1.25);
+            emitter.setStopDistance(stopDistance);
+            const spawned = (timeScale: number): ParticleSpawn => {
+                emitter.setParticleTimeScale(timeScale);
+                const out = ParticleSpawnUtil.createSpawn();
+                const random = vi.spyOn(Math, "random").mockReturnValue(0.3);
+                ParticleSpawnUtil.fill(out, emitter, emitter.config.layers[0], 0, 0, 1, 0);
+                random.mockRestore();
+                return out;
+            };
+            const usual = spawned(1), slower = spawned(0.5);
+            expect(usual.timeScale).toBe(1);
+            expect(slower.timeScale).toBe(0.5);
+            expect(slower.lifetime, `stopping at ${stopDistance}`).toBeCloseTo(2 * usual.lifetime, 9);
+            expect({...slower, lifetime: usual.lifetime, timeScale: 1}).toEqual(usual);
+        }
     });
 });

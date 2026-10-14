@@ -11,6 +11,7 @@ export default interface ParticleSpawn
     paramRow: number; // its layer's row in the parameter texture
     seed: number; // in [0, 1), for the per-particle variation the shader derives
     size: number; // world units
+    timeScale: number; // how fast its life runs (see ParticleEmitterHandle.particleTimeScale)
     packedTint: number; // see ParticleColorUtil
     levelAtBirth: number; // the emitter's level when it was born
     landingY: number; // the floor it is held at, or far below the room

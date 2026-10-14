@@ -203,6 +203,8 @@ Paint ThingsPool's vast three-dimensional canvas with lamps and fuzzy atmospheri
 
 [Props and Tiny Blocks] October 12, 2026
 
+@@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net#what-is-thingspool">What is ThingsPool?</a></h3>
+
 Quite a number of new features have been added to ThingsPool lately!
 
 <20261012-props-3>
@@ -224,6 +226,3 @@ Recently, we introduced two major features to the app:
 <20261012-props-1>
 
 #Architecture #Voxels #VoxelEngine #WebGraphics #3DGraphics #DigitalAesthetics #VisualArts #FineArts #Multimedia #InteractiveArts #3DPainting
-
-
-

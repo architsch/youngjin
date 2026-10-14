@@ -1,0 +1,142 @@
+:d:How do we keep programming despite the presence of AI coding agents?
+:k:Computer Science, Software Engineering, CSE, Vibe Coding, Agentic Coding, AI-Generated Code, Claude Code, Programming Practice
+:l:2026-10-14
+
+[Post-AI Computer Science - Volume 1] October 14, 2026
+
+@@<hr>
+@@<h3><b>Problem</b></h3>
+
+As more and more aspects of software engineering are being automated away, a fear that such a tendency will make us forget its implementational details is bound to ensue. Some people say that such details are archaic remnants rather than pieces of wisdom which are relevant to core principles of engineering, yet a corner of our intellectual heart tells us that the ability to deal with old-fashioned techniques, however irrelevant they may appear to be in today's world, does still serve its unique role in the understanding of fundamentals. After all, we know that being able to do arithmetic by hand does contribute to one's comprehension of the soul of mathematics, although it is often looked down upon as a mere cookbook of obsolete skills, whose only job is to scratch the surface of the conceptual essence rather than penetrate it from a philosophical angle.
+
+The major difficulty, though, arises from the fact that we are now significantly less motivated to exercise the old-school techniques of computer science. Programming just for the sake of not forgetting how to program, due to our inner voice which tells us that programming is not just a means to an end but also a fountain of myriad academic inspirations, is a direct source of frustration. And even when we try to keep our mental muscles in shape by "programming just for fun", we inevitably encounter the absence of joy which originates from the lack of its practical ends. One cannot simply enjoy developing a computer program by traditional means, when it is so painfully obvious that such a manual approach is objectively "useless" compared to the level of intellectual automation we are witnessing today, as well as what we fear to witness tomorrow.
+
+Some may claim that what we are experiencing is just yet another shift in the scope of human reason, and that we ought to sacrifice some degree of our personal attachment to low-level mechanics (as we saw from the advent of general-purpose machines, high-level languages, and APIs) in order to be able to work on a higher level of abstraction and think in a broader context. Still, however, we cannot ignore the feeling that something is missing here because we know that, when it comes to understanding something deeply, the ability to stay vividly aware of the legacies of its full history is indispensable.
+
+So, what shall we do to keep up with the latest technologies and embrace their merit, while making sure not to lose our grasp on the strengths of our past selves? Force-feeding the past knowledge down our throats is one way, yet we all know that it requires either a great deal of self-discipline (which is becoming increasingly hard to maintain, as the past knowledge is becoming more and more irrelevant to our current challenges), or an educational institution which pushes us forward despite the absence of our own willpower. The former is fragile, and the latter is not quite affordable unless you are a student and will stay as a student for the rest of your life.
+
+The engine of human inspiration has lost its fuel, and contemporary intellectual shortcuts have replaced our substance of passion with a decoy of meaning. And it is now time to recognize this unforeseen existential dread, and search for new horizons of imagination through which we will be able to live in this brave new world without locking ourselves up in an old ivory tower.
+
+@@<hr>
+@@<h3><b>Objective</b></h3>
+
+There is an ongoing fear that every type of human endeavor, whether it be a trade, an academic pursuit, or even a practice of moral decency such as empathy, will eventually be taken over by our AI overlords and their ever-growing capacity. And those of you who have been attentive to the latest breakthroughs in technology will share the feeling that such a fear is hardly unfounded. What was once considered an absurd work of science fiction yesterday is part of today's mundane reality, and we seem to have no other choice but to merely contemplate the impending doom.
+
+It is an inner conviction of mine, however, that there must be a way out of this airtight chamber.
+
+It is true that the old habit of programming is technically "outdated", and it is true that some of today's most powerful AI agents are so advanced, that they are capable of even maintaining a large codebase with a decent sense of architectural integrity in mind. So it is understandable that a natural response to this phenomenon would be, "Just learn how to use AI! There is no way you will write code better than they do."
+
+But of course, many of us are vividly aware that "learning how to use AI" is way too superficial a subject to preoccupy one's mind with. Some professionals may respond to this sentiment by saying, "Oh, for sure! Knowing how to use AI is not sufficient, just like memorizing the syntax of a particular programming language has nothing to do with the essence of computer science. What you really need to learn are the core concepts of computer science which are abstract in nature, rather than means of implementation."
+
+This is a fair call, yet we ought to also remind ourselves that one cannot study abstract concepts without first observing concrete examples and repeatedly dealing with them in real life.
+
+Philosophy is the ultimate destiny of human freedom, and its fullest realization begins with the process of abstraction (for otherwise the so-called "philosophy" is prone to quickly degrade into an endless word play of sophists, backed up by a mere assortment of personal word associations). Yet, since the human mind does not possess the ability to perceive abstract ideas directly, we need a language through which we can indirectly refer to such ideas. In computer science, a programming language does represent such a means of reference (i.e. an interface to the process of abstraction), although the public is often quick to dismiss it as "just a tool". We do not need to memorize its grammar, but we do need to be familiar with its "language pattern" in order to thoroughly grasp the underlying metaphysics.
+
+@@<hr>
+@@<h3><b>Solution</b></h3>
+
+Here is my idea. In order to overcome the apparent dilemma between the convenience offered by vibe coding and the benefit of mental exercise offered by programming on our own, we must establish a clear distinction between part of the codebase which will be actively maintained by AI, and part of the codebase which will be strictly human-reserved.
+
+Let me explain what I mean by this. If you have been working on a codebase with the help of a powerful AI agent, you may have realized that the smarter the agent gets, the more of a bottleneck your direct engagement in that codebase turns out to be. AI-generated code used to be quite clumsy and prone to numerous errors, both from technical and aesthetic points of view, which rendered frequent human intervention necessary. Just as much as your AI assistant helped you with quick code generation and troubleshooting, you were forced to guide its partially broken line of reasoning by reviewing and adjusting its output with almost as much rigor as when you were writing at least the core logic by hand. Due to this balancing factor, you could still claim your irreplaceable role as a software engineer and proudly say, "AI can write a bunch of code, but humans are still needed to maintain its quality!"
+
+I myself used to hold this sentiment, up until the middle of this year (July 2026). It was the release of Claude Opus 5 which seriously made me change my mind. Today's model (Claude Opus version 5 and onward) does not simply stop once it analyzes the user's prompt and then modifies the codebase in a way which fits what the user asked for. It also proceeds to guess (in a shockingly accurate manner) the hidden design intentions behind what was explicitly mentioned by the user, and even goes so far as to discover a list of alternative solutions as well as hidden pitfalls through which the program might fail to function in a way the user might have intended. And it does not stop here. It even takes measures to simplify the codebase by abstracting out redundant pieces of code into generic modules (Up until July 2026, I had to frequently instruct Claude to carry out this kind of refactoring; now I don't even have to), performs end-to-end tests (which it devised on its own) to verify that all the scenarios work as expected, and even learns from every test failure by memorizing what went wrong and what was the mistake from which such a failure originated. Can you believe it? It is adjusting its own decision-making habit (at least within the scope of the project) by directly observing the outcome of its own actions, just like a scientist would keep revising a hypothesis by conducting experiments in a laboratory and drawing conclusions from them. And it frequently reflects upon the structural complexity of the code it wrote, and manages to keep the level of tech debt fairly low by cleaning it up on its own. The depth of engineering insight which Claude has gained over the past few months is more than stunning.
+
+At this point, therefore, the idea of co-authoring the same area of the codebase with an AI agent (for the sake of keeping human engineers in charge) seems to be losing its strength. What's the use of even looking at a piece of AI-authored code, if its quality is so undeniably high that any human endeavor to analyze and modify it in the hope of boosting its quality a bit further is not really worth the effort anymore? A pretty straightforward analogy can be found in craftsmanship. You may manually craft a wooden table that is endowed with delicate details which are unique to a human carpenter, to show off that your mastery in the field of carpentry is not fully replicable by a wood-carving machine. However, you will not be able to deny the cost-effectiveness of wooden tables which are mass-produced in a factory.
+
+It is necessary, therefore, to wake up from the illusion that a human engineer can somehow work WITH an AI agent when it comes to writing and maintaining code. The moment you delegate a portion of your work to a competent agent, you are turning yourself into a manager who will eventually be expected to stop micromanaging and simply admit that trusting the work of an expert without knowing its details is inevitable.
+
+Fortunately, however, this is not the end of the story. The fact that you have to become a manager in some aspects of engineering does not mean that you are required to be stuck in a management role without any chance to participate in software craftsmanship.
+
+@@<hr>
+@@<h3><b>Solution Part 1: Human-Reserved Code</b></h3>
+
+<000>
+
+What we need is a clear separation of the human-reserved part from the rest of the codebase. And when it comes to the question of "Which part?", I would say that it depends on which subject you are primarily dealing with as an engineer. This is not a new concept; even way before the mainstream debut of AI-driven coding tools, people were developing software products using ready-made libraries for the implementation of UI frameworks, real-time graphics, physics engines, financial transactions, audio, in-app advertisements, and countless other pieces of logic which could be decoupled from the application's core mechanism in a fairly organized way. Delegating portions of one's development work to third parties has been a common industrial practice for decades, and it has been common for generalist developers to ridicule anyone who would build rudimentary modules from scratch by saying, "Don't reinvent the wheel!"
+
+It is not so absurd an idea, therefore, for an engineer to work on a fraction of a large-scale software project rather than trying to be actively engaged in every single piece of it. As long as there is a clear boundary between part of the work which is one's own and part of the work which can be attributed to external entities, you will be able to claim your own world of intellectual endeavors in which you will preserve a room for sanity, reason, and growth.
+
+You can turn this concept into reality by making a dedicated place within your codebase (e.g. a separate source file directory) in which you will be writing code entirely on your own, without any chance of interference by an AI agent (Enforcing this rule as part of the instruction for your AI agent will be a good starting point). Any piece of code you write within this reserved area, then, will be something which you will be able to confidently claim as your own, as well as something you will be able to manipulate with ease because no intermediary step during your course of formulating it would be skipped due to the help of AI.
+
+Merely allocating a portion of the codebase and treating it as some kind of "human reservation", however, is not sufficient because it does not provide us with a clear reason why this thing is supposed to be treated as an exception and not be included as part of the automated workflow. Because of this, it is important for you to assign an indispensable yet independent role to your manually written code.
+
+@@<hr>
+@@<h3><b>Solution Part 2: Separation of the Pure Part</b></h3>
+
+The key is to recognize the "pure side" of your project, which is functionally distinct yet still capable of working with the rest of the codebase. A quick example of this can be found in the game called "The Sims".
+
+For those of you who do not know, The Sims is a life simulation game where you can create virtual people called "sims" and make them live inside virtual houses (It is like playing with a dollhouse, but the dolls are smart enough to make their own decisions and move on their own).
+
+One can easily determine the "pure side" of The Sims; it is the collection of the game's core mechanics, such as the behavioral characteristics of each individual sim (e.g. how a motive triggers a sequence of actions, or how a personality trait determines the rate at which a motive gets aroused), house construction rules, item placement logic, distribution of random good/bad luck, and so on.
+
+So, for instance, you may come up with your own human-reserved code which illustrates the way a sim updates its internal state, such as:
+
+#$
+// File Location: [src/humanReserved/.../sim.ts]
+
+export default class Sim
+{
+    private environment: Environment;
+    private location: Location;
+    private needs: Need[];
+    private tasks: Queue<SimTask>;
+    
+    tick(dt: number): void
+    {
+        this.inspectEnvironment(this.environment, this.location);
+        this.updateNeeds(dt);
+        this.tryStartNextTask(dt);
+    }
+    // ...
+}
+#$
+
+Meanwhile, you can let your AI agent import your module into the code it has generated for the purpose of graphical rendering and other non-core parts of the game, like the one shown below:
+
+#$
+// File Location: [src/aiReserved/.../simGameObject.ts]
+
+import Sim from "(...)/humanReserved/(...)/sim.ts";
+
+export default class SimGameObject extends GameObject
+{
+    // The "sim" object is the purely logical side of the game character,
+    // written entirely by a human engineer.
+    private sim: Sim;
+
+    // "components" are the GameObject's composable building blocks for specific
+    // implementation details, such as "Mesh", "Animator", "AudioPlayer", etc.
+    private components: Map<string, GameObjectComponent>;
+
+    assignSim(sim: Sim): void
+    {
+        this.sim = sim;
+    }
+    update(dt: number): void
+    {
+        for (const component of this.components.values())
+            component.update(this.sim, dt);
+    }
+    // ...
+}
+#$
+
+In this example, the "Sim" class shown above can be considered pure because it does not depend on a particular tech stack; you may as well port it into any game engine (such as Unity or Unreal) and make it run inside the game without any major difficulty, given that it is properly integrated. The UI, graphics pipeline, asset/config management tools, and other platform-specific elements can be managed separately from the very mechanics of "Sim", which means it is possible to let the AI handle them without exposing you to the risk of losing control over the core logic.
+
+@@<hr>
+@@<h3><b>Beyond Human Exceptionalism</b></h3>
+
+There is one remaining question which might be bugging you still. And that is, "Is there any objective reason why I shouldn't just delegate the full process of engineering, including the formulation of the program's core logic, to my AI agent?"
+
+What I really hate to admit is that there seems to be no decisive evidence to dismiss such a doubt. If your AI agent is capable of building websites, management tools, editors, interactive physics simulations, and countless other types of applications, on what basis shall we insist that the very "soul" of the software will never be replicated by LLMs? Why, because they "cannot possibly be conscious"? Or, because they "cannot truly understand human creativity"? Or perhaps, because they "only know how to imitate human intelligence without actually being intelligent"?
+
+It is indeed comforting to come up with words that are vague in meaning (such as "consciousness", "creativity", or "intelligence"), and use them to make up an argument which cannot be disproven because there are multiple ways of interpreting it. But if you are a rational thinker, such a rash sort of conclusion will not leave you satisfied.
+
+Instead of relying on the very ambiguity of our natural language (i.e. English) to justify wishful thinking, therefore, we must acknowledge the chance of facing even the most inhuman moments of disillusionment within our lifetime. We cannot entirely rule out the possibility that machines may eventually be able to reproduce even the subtlest corner of human glory.
+
+Yet, there is one thing which will stay valid no matter what happens. It is the particularity of your very presence as a software engineer, right among your neighbors in a local community, where your own work has its special meaning for those who are using your software regardless of how insignificant it is measured to be from a holistic viewpoint. In the heart of your audience who have been acquainted more intimately with your own product than anything else in the world, familiarity triumphs over the objectivity of value.
+
+@@<hr>
+@@<h3><b>Prospect</b></h3>
+
+What I just said above may sound like a mere emotional appeal. However, my goal is to gradually prove that there is more depth to the subject of human agency in engineering. So bear with me, and I will show you more concrete examples in the upcoming volumes.

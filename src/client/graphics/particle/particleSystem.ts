@@ -49,6 +49,7 @@ const frustum = new THREE.Frustum();
 const projectionTemp = new THREE.Matrix4();
 const cameraPositionTemp = new THREE.Vector3();
 const sphereTemp = new THREE.Sphere();
+const streamMiddleTemp = new THREE.Vector3();
 const spawnTemp = ParticleSpawnUtil.createSpawn();
 
 // Particles and persistent animated sprites (see docs/graphics/particles.md). The shader computes everything
@@ -203,7 +204,7 @@ function tickEmitter(emitter: ParticleEmitterHandle, deltaTime: number, density:
         return;
     }
 
-    const inView = isInView(emitter.position, VIEW_MARGIN * emitter.sizeScale);
+    const inView = isStreamInView(emitter);
     const cameIntoView = inView && !emitter.wasInView;
     emitter.wasInView = inView;
     if (!inView)
@@ -225,7 +226,7 @@ function tickEmitter(emitter: ParticleEmitterHandle, deltaTime: number, density:
         // Back in view, or new: fill the stream as if it had been running all along.
         if (cameIntoView && !emitter.oneShot)
         {
-            const span = layer.lifetime[1];
+            const span = layer.lifetime[1] / emitter.particleTimeScale;
             const count = Math.floor(rate * getLevel(emitter, clock) * span);
             for (let k = 0; k < count; ++k)
             {
@@ -291,6 +292,15 @@ function isInView(position: Vec3, margin: number): boolean
     sphereTemp.radius = margin;
     return sphereTemp.center.distanceTo(cameraPositionTemp) <= MAX_SPAWN_DISTANCE + margin &&
         frustum.intersectsSphere(sphereTemp);
+}
+
+// Asked about the middle of a stream that has an end (see ParticleEmitterHandle.stopDistance), so one whose
+// emitter is out of sight still shows where it passes through the view.
+function isStreamInView(emitter: ParticleEmitterHandle): boolean
+{
+    const halfLength = (emitter.stopDistance < Infinity) ? 0.5 * emitter.stopDistance : 0;
+    streamMiddleTemp.copy(emitter.position).addScaledVector(emitter.forward, halfLength);
+    return isInView(streamMiddleTemp, VIEW_MARGIN * emitter.sizeScale + halfLength);
 }
 
 // Keeps the clock where float32 still resolves it finely. Emitter levels advance by the same interval, so

@@ -5,6 +5,7 @@ import RoomRuntimeMemory from "../room/types/roomRuntimeMemory";
 import PhysicsRoom from "./types/physicsRoom";
 import PhysicsColliderStateUtil from "./util/physicsColliderStateUtil";
 import PhysicsCollisionUtil from "./util/physicsCollisionUtil";
+import PhysicsForceUtil from "./util/physicsForceUtil";
 import { ColliderState } from "./types/colliderState";
 import ObjectTransform from "../object/types/objectTransform";
 
@@ -59,6 +60,8 @@ const PhysicsManager =
         }
         const newObject = new PhysicsObject(physicsRoom, objectId, objectTypeIndex, colliderState);
         physicsRoom.objectById[objectId] = newObject;
+        if (PhysicsForceUtil.emitsForce(objectTypeIndex))
+            physicsRoom.forceEmitterIds.add(objectId);
         return newObject;
     },
     removeObject: (roomID: string, objectId: string) =>
@@ -71,6 +74,7 @@ const PhysicsManager =
         if (object == undefined)
             throw new Error(`PhysicsObject is not registered (roomID = ${roomID}, objectId = ${objectId})`);
         delete physicsRoom.objectById[objectId];
+        physicsRoom.forceEmitterIds.delete(objectId);
         object.onDestroy();
     },
     setObjectTransform: (roomID: string, objectId: string,
@@ -109,6 +113,14 @@ const PhysicsManager =
         const physicsRoom = physicsRooms[roomID];
         const object = physicsRoom.objectById[objectId];
         return PhysicsCollisionUtil.applySoftCollision(physicsRoom, object, desiredVelocity);
+    },
+    // Returns the velocity with what the room's force emitters have given the object added, after a step of
+    // deltaTime under them (see PhysicsForceUtil). Once per step, with gravity already in the velocity and after
+    // the adjustment, whose limit on a push doesn't hold this one back.
+    applyForces: (roomID: string, objectId: string, velocity: Vec3, deltaTime: number): Vec3 =>
+    {
+        const physicsRoom = physicsRooms[roomID];
+        return PhysicsForceUtil.applyForces(physicsRoom, physicsRoom.objectById[objectId], velocity, deltaTime);
     },
 }
 

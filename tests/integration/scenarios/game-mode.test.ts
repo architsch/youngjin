@@ -67,6 +67,7 @@ import GraphicsManager from "../../../src/client/graphics/graphicsManager";
 import GameObject from "../../../src/client/object/types/gameObject/gameObject";
 import PlayerController from "../../../src/client/object/components/playerController";
 import PlayerCamera from "../../../src/client/object/components/helpers/player/playerCamera";
+import FirstPersonCameraPose from "../../../src/client/object/components/helpers/player/firstPersonCameraPose";
 import PlayerPointerInput from "../../../src/client/object/components/helpers/player/playerPointerInput";
 import VoxelGameObject from "../../../src/client/object/types/gameObject/voxelGameObject";
 import ObjectSelection from "../../../src/client/graphics/types/gizmo/objectSelection";
@@ -93,11 +94,12 @@ import { EDIT_MODE_OPENING_REACH, EDIT_MODE_OPENING_TILT } from "../../../src/cl
 import { FeatureFlag } from "../../../src/shared/system/types/featureFlag";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
-import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, GENERATED_WALL_THICKNESS, UNIT_VEC3,
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, GENERATED_WALL_THICKNESS, GRAVITY_SPEED, UNIT_VEC3,
     VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import Room from "../../../src/shared/room/types/room";
+import AABB3 from "../../../src/shared/math/types/aabb3";
 import User from "../../../src/shared/user/types/user";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import { buildPillar, createRoom, floorQuadIndexOf, isQuadVisible, quadIndexOf,
@@ -112,6 +114,8 @@ const ROOM_ID = "game-mode-room";
 
 // The stand-in player is never moved by physics, so there is nothing for the camera to trail.
 const NO_IMPOSED_DISPLACEMENT = {x: 0, y: 0, z: 0};
+// Nor by any force of the room's (see Rigidbody.isUnderForce).
+const NO_FORCE = false;
 
 // The boundary wall on the room's north side: the innermost of its rows of voxels, and the plane their inner
 // faces lie in, looking toward +z.
@@ -308,7 +312,7 @@ describe("a click in play mode", () => {
     function frame(clickedPoint?: THREE.Vector3): void
     {
         pointerInput.clickedPoint = clickedPoint;
-        playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT);
+        playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
     }
 
     /** How far up the view a point shows, in NDC: 0 is the middle. */
@@ -328,7 +332,7 @@ describe("a click in play mode", () => {
     function shortFrame(clickedPoint?: THREE.Vector3): void
     {
         pointerInput.clickedPoint = clickedPoint;
-        playerCamera.update(SHORT_FRAME, controller, NO_IMPOSED_DISPLACEMENT);
+        playerCamera.update(SHORT_FRAME, controller, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
     }
 
     /** The user walking straight ahead (toward -z, the way he faces) at a speed, per second, for a while. */
@@ -425,7 +429,7 @@ describe("a click in play mode", () => {
         const push = {x: 0, y: 0, z: -BRISK_WALK * SHORT_FRAME};
         player.position.z += push.z;
         pointerInput.clickedPoint = undefined;
-        playerCamera.update(SHORT_FRAME, controller, push);
+        playerCamera.update(SHORT_FRAME, controller, push, NO_FORCE);
         frame();
 
         // Still trailing the push by a hair (see PlayerCamera).
@@ -492,6 +496,331 @@ describe("a click in play mode", () => {
         frame();
 
         expect(usualShareTurned()).toBeCloseTo(usualShare, 6);
+    });
+
+    it("follows the user's height without a jump while a force of the room's holds them up, where a fall of their own snaps it down", () => {
+        // Raised a little at a time from the floor to well past where a fall begins, the camera settling each time.
+        const pitchesWhileRaised = (underForce: boolean): number[] => {
+            const standing = player.position.y;
+            const pitches: number[] = [];
+            for (let lift = 0; lift <= 1.5 * FALL_HEIGHT + 1e-9; lift += 0.05)
+            {
+                player.position.y = standing + lift;
+                for (let settle = 0; settle < 2; ++settle)
+                    playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT, underForce);
+                pitches.push(pitch());
+            }
+            player.position.y = standing;
+            for (let settle = 0; settle < 3; ++settle)
+                frame();
+            return pitches;
+        };
+        const largestStep = (pitches: number[]) => Math.max(...pitches.slice(1).map((p, i) => Math.abs(p - pitches[i])));
+
+        const fallen = pitchesWhileRaised(NO_FORCE);
+        expect(largestStep(fallen)).toBeGreaterThan(0.3);
+
+        // Held up, the gaze turns down by small steps as the user rises, and still looks down from up there.
+        const held = pitchesWhileRaised(true);
+        expect(largestStep(held)).toBeLessThan(0.1);
+        expect(held[held.length - 1]).toBeLessThan(held[0] - 0.2);
+    });
+
+    it("turns from rest while a force of the room's has a part in the user's move, and so on after it until caught up", () => {
+        const usualShare = usualShareTurned();
+        expect(usualShare).toBeGreaterThan(0);
+        const camera = GraphicsManager.getCamera();
+        const turnInShortFrame = (underForce: boolean): number => {
+            const before = camera.quaternion.clone();
+            pointerInput.clickedPoint = undefined;
+            playerCamera.update(SHORT_FRAME, controller, NO_IMPOSED_DISPLACEMENT, underForce);
+            return before.angleTo(camera.quaternion);
+        };
+
+        // Off the floor as far as in a fall, but lifted there by a fan's wind: well short of even half the usual
+        // pace at first, then picking up, and never ahead of where half the usual pace would have taken it.
+        const start = camera.quaternion.clone();
+        player.position.y += FALL_HEIGHT;
+        const firstTurns = [turnInShortFrame(true), turnInShortFrame(true), turnInShortFrame(true)];
+        for (let settle = 0; settle < 3; ++settle)
+            playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT, true);
+        const whole = start.angleTo(camera.quaternion);
+        expect(whole).toBeGreaterThan(0.1);
+        expect(firstTurns[0] / whole).toBeLessThan(0.5 * usualShare);
+        expect(firstTurns[1]).toBeGreaterThan(firstTurns[0]);
+        const atHalfPace = 1 - (1 - 0.5 * usualShare) ** firstTurns.length;
+        expect((firstTurns[0] + firstTurns[1] + firstTurns[2]) / whole).toBeLessThan(atHalfPace);
+
+        // The force over with the user still up there, the gaze turns on down the fall, from rest as well.
+        const held = camera.quaternion.clone();
+        const firstTurnAfter = turnInShortFrame(NO_FORCE);
+        frame();
+        frame();
+        expect(firstTurnAfter / held.angleTo(camera.quaternion)).toBeLessThan(0.5 * usualShare);
+    });
+
+    it("never jumps in pace as the turn a force began hands back to the usual one", () => {
+        const FRAME = 1 / 60;
+        const camera = GraphicsManager.getCamera();
+        player.position.y += FALL_HEIGHT;
+        for (let settle = 0; settle < 3; ++settle)
+            playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT, true);
+
+        // The force over: how far the camera turns in each frame on, until it has long since caught up.
+        const turns: number[] = [];
+        for (let frames = 0; frames < 120; ++frames)
+        {
+            const before = camera.quaternion.clone();
+            playerCamera.update(FRAME, controller, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
+            turns.push(before.angleTo(camera.quaternion));
+        }
+        const fastest = Math.max(...turns);
+        expect(fastest).toBeGreaterThan(0);
+        for (let i = 1; i < turns.length; ++i)
+            expect(turns[i] - turns[i - 1], `frame ${i}`).toBeLessThan(0.4 * fastest);
+        expect(turns[turns.length - 1]).toBeLessThan(0.01 * fastest);
+    });
+});
+
+describe("the eye camera trailing a move the user didn't steer", () => {
+    const FRAME = 1 / 60;
+
+    // As fast as anything fell or was shoved before a wind could throw the user, and as fast as a wind does (see
+    // PhysicsForceUtil).
+    const FALL_SPEED = GRAVITY_SPEED;
+    const THROW_SPEED = 5 * GRAVITY_SPEED;
+
+    // About as far behind as a fall leaves the camera.
+    const FALL_TRAIL = 1;
+
+    let player: THREE.Object3D;
+    let controller: PlayerController;
+    let playerCamera: PlayerCamera;
+
+    /** How far the camera is from its place at the eye. */
+    function trail(): number
+    {
+        return GraphicsManager.getCamera().position.distanceTo(FirstPersonCameraPose.restPosition);
+    }
+
+    /** Physics moving the user toward -z at a speed for a while: how far behind the camera is after each frame. */
+    function trailsWhileMoved(speed: number, seconds: number): number[]
+    {
+        const trails: number[] = [];
+        for (let frames = Math.round(seconds / FRAME); frames > 0; frames--)
+        {
+            const imposed = {x: 0, y: 0, z: -speed * FRAME};
+            player.position.z += imposed.z;
+            playerCamera.update(FRAME, controller, imposed, NO_FORCE);
+            trails.push(trail());
+        }
+        return trails;
+    }
+
+    beforeEach(() => {
+        player = new THREE.Object3D();
+        player.position.set(10.5, 0.5 * PLAYER_HEIGHT, 28.5);
+        controller = { gameObject: { obj: player, position: player.position } } as unknown as PlayerController;
+        const pointerInput = {dragDelta: new THREE.Vector2(), viewScale: 1, clickedPoint: undefined};
+        playerCamera = new PlayerCamera();
+        playerCamera.onSpawn(controller, pointerInput as unknown as PlayerPointerInput);
+        playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
+    });
+
+    afterEach(() => {
+        playerCamera.onDespawn(controller);
+        player.remove(GraphicsManager.getCamera());
+    });
+
+    it("is left as far behind by a fall as its spring lets it be", () => {
+        expect(trail()).toBeCloseTo(0, 9);
+
+        const trails = trailsWhileMoved(FALL_SPEED, 2);
+
+        for (let i = 1; i < trails.length; i++)
+            expect(trails[i]).toBeGreaterThanOrEqual(trails[i - 1]);
+        expect(trails[trails.length - 1]).toBeGreaterThan(0.9 * FALL_TRAIL);
+        expect(trails[trails.length - 1]).toBeLessThan(FALL_TRAIL);
+    });
+
+    it("is never held in: a move however fast leaves it as many times further behind as it is faster", () => {
+        const fallen = trailsWhileMoved(FALL_SPEED, 0.5);
+        trailsWhileMoved(0, 2);
+        const thrown = trailsWhileMoved(THROW_SPEED, 0.5);
+        for (let i = 0; i < fallen.length; i++)
+            expect(thrown[i], `frame ${i}`).toBeCloseTo(fallen[i] * THROW_SPEED / FALL_SPEED, 4);
+    });
+
+    it("goes along with a wind's throw and to a stop after it with no jump in its pace, even when the throw stops dead", () => {
+        const camera = GraphicsManager.getCamera();
+        const along: number[] = [];
+        for (const [speed, seconds] of [[THROW_SPEED, 0.5], [0, 1]])
+        {
+            for (let frames = Math.round(seconds / FRAME); frames > 0; frames--)
+            {
+                player.position.z -= speed * FRAME;
+                playerCamera.update(FRAME, controller, {x: 0, y: 0, z: -speed * FRAME}, NO_FORCE);
+                along.push(-camera.getWorldPosition(new THREE.Vector3()).z);
+            }
+        }
+        const paces = along.slice(1).map((position, i) => (position - along[i]) / FRAME);
+        expect(Math.max(...paces)).toBeGreaterThan(0.9 * THROW_SPEED);
+        for (let i = 1; i < paces.length; i++)
+            expect(Math.abs(paces[i] - paces[i - 1]), `frame ${i}`).toBeLessThan(0.15 * THROW_SPEED);
+
+        // Caught up once it is over, from never ahead of the user.
+        for (let i = 1; i < paces.length; i++)
+            expect(paces[i]).toBeGreaterThanOrEqual(-1e-9);
+        expect(trail()).toBeLessThan(0.001);
+    });
+});
+
+describe("the orbit while physics moves the user", () => {
+    const FRAME = 1 / 60;
+
+    // A bounce like the one over a fan: so far up and down from where the user stood, so often.
+    const BOUNCE_HEIGHT = 1.25;
+    const BOUNCE_PERIOD = 1.2;
+
+    // Something in the room for the orbit to frame, well away from the user.
+    const BLOCK: AABB3 = {center: {x: 10.5, y: 0.25, z: 6.5}, halfSize: {x: 0.25, y: 0.25, z: 0.25}};
+
+    let player: THREE.Object3D;
+    let controller: PlayerController;
+    let playerCamera: PlayerCamera;
+
+    function cameraPosition(): THREE.Vector3
+    {
+        return GraphicsManager.getCamera().getWorldPosition(new THREE.Vector3());
+    }
+
+    function cameraFacing(): THREE.Quaternion
+    {
+        return GraphicsManager.getCamera().getWorldQuaternion(new THREE.Quaternion());
+    }
+
+    /** Frames long enough for the camera to ease all the way to its pose. */
+    function settle(): void
+    {
+        for (let i = 0; i < 3; i++)
+            playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
+    }
+
+    /** The user bounced by a force for whole bounces, a frame at a time: where the camera is after each. */
+    function cameraThroughBounces(bounces: number): THREE.Vector3[]
+    {
+        const startY = player.position.y;
+        const positions: THREE.Vector3[] = [];
+        const frames = Math.round(bounces * BOUNCE_PERIOD / FRAME);
+        for (let frame = 1; frame <= frames; frame++)
+        {
+            const y = startY + BOUNCE_HEIGHT * Math.sin(2 * Math.PI * frame / (BOUNCE_PERIOD / FRAME));
+            const imposed = {x: 0, y: y - player.position.y, z: 0};
+            player.position.y = y;
+            playerCamera.update(FRAME, controller, imposed, true);
+            positions.push(cameraPosition());
+        }
+        return positions;
+    }
+
+    /** The user at the eye, in the air over a fan, with the camera settled there. */
+    function spawn(): void
+    {
+        cameraModeObservable.set({type: "firstPerson"});
+        player = new THREE.Object3D();
+        player.position.set(10.5, 0.5 * PLAYER_HEIGHT + BOUNCE_HEIGHT, 12.5);
+        controller = { gameObject: { obj: player, position: player.position } } as unknown as PlayerController;
+        const pointerInput = {dragDelta: new THREE.Vector2(), viewScale: 1, clickedPoint: undefined};
+        playerCamera = new PlayerCamera();
+        playerCamera.onSpawn(controller, pointerInput as unknown as PlayerPointerInput);
+        settle();
+    }
+
+    function despawn(): void
+    {
+        playerCamera.onDespawn(controller);
+        player.remove(GraphicsManager.getCamera());
+    }
+
+    beforeEach(spawn);
+    afterEach(despawn);
+
+    it("leaves the view still, as long as what it frames stays where it is", () => {
+        cameraModeObservable.set({type: "orbit", target: BLOCK, minDistance: 5});
+        settle();
+        const position = cameraPosition(), facing = cameraFacing();
+
+        const positions = cameraThroughBounces(3);
+
+        for (const moved of positions)
+            expect(moved.distanceTo(position)).toBeLessThan(1e-9);
+        expect(cameraFacing().angleTo(facing)).toBeLessThan(1e-9);
+
+        // Turned about as well, as when the user is set down facing another way: still nothing.
+        player.rotateY(1);
+        playerCamera.update(FRAME, controller, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
+        expect(cameraPosition().distanceTo(position)).toBeLessThan(1e-9);
+        expect(cameraFacing().angleTo(facing)).toBeLessThan(1e-9);
+    });
+
+    it("eases to what it frames next the same way, whatever the user does meanwhile", () => {
+        // Another block to frame, two units along, taken up as the bounce begins.
+        const other: AABB3 = {center: {...BLOCK.center, x: BLOCK.center.x + 2}, halfSize: {...BLOCK.halfSize}};
+        const frames = Math.round(3 * BOUNCE_PERIOD / FRAME);
+        const turnToOther = (bounced: boolean): THREE.Vector3[] => {
+            cameraModeObservable.set({type: "orbit", target: BLOCK, minDistance: 5});
+            settle();
+            cameraModeObservable.set({type: "orbit", target: other, minDistance: 5});
+            if (bounced)
+                return cameraThroughBounces(3);
+            return Array.from({length: frames}, () => {
+                playerCamera.update(FRAME, controller, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
+                return cameraPosition();
+            });
+        };
+
+        const standing = turnToOther(false);
+        despawn();
+        spawn();
+        const bounced = turnToOther(true);
+
+        expect(standing[frames - 1].distanceTo(standing[0])).toBeGreaterThan(0.1);
+        for (let frame = 0; frame < frames; frame++)
+            expect(bounced[frame].distanceTo(standing[frame])).toBeLessThan(1e-9);
+    });
+
+    it("goes with the user's own character when that is what it frames, and comes to rest about it as before", () => {
+        // As a selected character is framed: about its live position (see WorldSpaceSelectionUtil).
+        cameraModeObservable.set({type: "orbit",
+            target: {center: player.position, halfSize: {x: PLAYER_RADIUS_XZ, y: 0.5 * PLAYER_HEIGHT, z: PLAYER_RADIUS_XZ}}});
+        settle();
+        const about = cameraPosition().sub(player.position);
+
+        const heights = cameraThroughBounces(3).map(position => position.y);
+
+        // Up and down with the character, by a good share of its bounce.
+        expect(Math.max(...heights) - Math.min(...heights)).toBeGreaterThan(BOUNCE_HEIGHT);
+        settle();
+        expect(cameraPosition().sub(player.position).distanceTo(about)).toBeLessThan(1e-6);
+    });
+
+    it("takes nothing of an orbit that is over into the next one: that starts from the eye", () => {
+        cameraModeObservable.set({type: "orbit", target: BLOCK, minDistance: 5});
+        settle();
+        const orbiting = cameraPosition();
+
+        // Back to the eye, a walk across the room, and into an orbit again.
+        cameraModeObservable.set({type: "firstPerson"});
+        settle();
+        player.position.x += 8;
+        settle();
+        const eye = cameraPosition();
+        expect(eye.distanceTo(orbiting)).toBeGreaterThan(5);
+        cameraModeObservable.set({type: "orbit", target: BLOCK, minDistance: 5});
+        playerCamera.update(FRAME, controller, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
+
+        // One frame on, it has only set off from the eye.
+        expect(cameraPosition().distanceTo(eye)).toBeLessThan(0.2 * eye.distanceTo(orbiting));
     });
 });
 
@@ -709,7 +1038,7 @@ describe("the camera as edit mode opens", () => {
         try
         {
             // A whole second eases the camera all the way to its pose.
-            playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT);
+            playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
             const before = GraphicsManager.getCamera().getWorldPosition(new THREE.Vector3());
 
             const eyeLayer = COLLISION_LAYER_MIN + Math.floor(before.y / COLLISION_LAYER_HEIGHT);
@@ -719,11 +1048,11 @@ describe("the camera as edit mode opens", () => {
             GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOnVoxelQuad(quadIndex)));
             expect(voxelQuadSelectionObservable.peek()?.quadIndex).toBe(quadIndex);
 
-            playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT);
+            playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
             if (distanceRange != undefined)
             {
                 orbitCameraDistanceRangeRequestObservable.set(distanceRange);
-                playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT);
+                playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
             }
 
             const blockCenter = new THREE.Vector3(VoxelQueryUtil.getWorldXAtVoxelColCenter(wallCol),
@@ -818,7 +1147,7 @@ describe("the orbit following the selection to another face", () => {
         const playerCamera = new PlayerCamera();
         playerCamera.onSpawn(controller, pointerInput);
         // A whole second eases the camera all the way to its pose.
-        const settleCamera = () => playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT);
+        const settleCamera = () => playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
         try
         {
             settleCamera();

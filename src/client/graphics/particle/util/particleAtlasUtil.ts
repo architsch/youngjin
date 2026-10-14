@@ -231,11 +231,24 @@ function drawFlame(ctx: CanvasRenderingContext2D, width: number, height: number,
     ctx.fill();
 }
 
-// Four swept blades around a hub, as a cut-out surface: opaque inside, a one-texel soft edge outside.
+// Four swept blades around a hub, in the round vent they turn in, as a cut-out surface: opaque inside, a one-texel
+// soft edge outside. The vent is the same all the way round, so it looks still while the sprite turns.
 function drawFanBlades(ctx: CanvasRenderingContext2D, width: number, height: number)
 {
     const cx = 0.5 * width, cy = 0.5 * height;
-    const r = 0.5 * Math.min(width, height);
+    const ventRadius = 0.5 * Math.min(width, height);
+    // The rim, the wall of the duct inside it, then the dark of the opening.
+    const rings: [number, number][] = [[1, 176], [0.92, 58], [0.84, 20]];
+    for (const [radius, shade] of rings)
+    {
+        ctx.fillStyle = `rgb(${shade},${shade},${shade})`;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius * ventRadius, 0, 2 * Math.PI);
+        ctx.fill();
+    }
+
+    // The blades stop short of the duct's wall.
+    const r = 0.8 * ventRadius;
     ctx.fillStyle = "rgb(214,214,214)";
     for (let i = 0; i < 4; ++i)
     {

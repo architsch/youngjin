@@ -159,6 +159,10 @@ export default class LibraryPostPageBuilder
                     prev_lastmod = lastmod;
                 lastmod = line.substring(3);
             }
+            else if (line.startsWith(":stop:")) // "Stop" sign (i.e. "Stop reading lines beyond this point.")
+            {
+                break;
+            }
             else // plain text
             {
                 line = line.replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("{%", "<").replaceAll("%}", ">");

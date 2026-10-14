@@ -13,11 +13,11 @@ import ParticleRingAllocator from "./particleRingAllocator";
 import ParticleSpawn from "./particleSpawn";
 
 // Floats per instance, read by the shader as four vec4 attributes (see particleShader):
-//          particle                                    sprite
-// data0    origin, spawn time                          position, t0 (its last rate change)
-// data1    velocity, lifetime                          orientation code, phase at t0, width, height
-// data2    param row, seed, size, packed tint          param row, packed tint, packed shape, 0
-// data3    level at birth, landing height, 0, 0        rate waveform: low, high, frequency, phase
+//          particle                                       sprite
+// data0    origin, spawn time                             position, t0 (its last rate change)
+// data1    velocity, lifetime                             orientation code, phase at t0, width, height
+// data2    param row, seed, size, packed tint             param row, packed tint, packed shape, 0
+// data3    level at birth, landing height, time scale, 0  rate waveform: low, high, frequency, phase
 const FLOATS_PER_INSTANCE = 16;
 
 // After labels (transparent at 0) and before gizmos, so air in front of a label is drawn over it.
@@ -169,7 +169,7 @@ export default class ParticleBatch
         d[o + 11] = spawn.packedTint;
         d[o + 12] = spawn.levelAtBirth;
         d[o + 13] = spawn.landingY;
-        d[o + 14] = 0;
+        d[o + 14] = spawn.timeScale;
         d[o + 15] = 0;
         return true;
     }

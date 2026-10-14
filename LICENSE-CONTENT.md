@@ -38,7 +38,7 @@ Concretely, it covers:
   At the time of writing these are `bridge-to-math/`, `blockchains/`,
   `concepts-of-plan/`, `essays/`, `game-analysis/`, `game-design/`,
   `gamedev-journey/`, `infsoc/`, `metaphysics/`, `morsels/`, `read-rec/`,
-  `reality/`, `sandwich/` and `software-development/`. **The list is
+  `reality/`, `sandwich/`, `software-development/`, and `shards-of-sanity/`. **The list is
   illustrative, not exhaustive** — a section added later is covered by the same
   rule.
 - **Illustrations, cartoons and photographs** — including `public/illustrations/`

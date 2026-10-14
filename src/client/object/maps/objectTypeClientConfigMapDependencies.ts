@@ -7,3 +7,4 @@ import "../types/objectTypeClientConfig/labelObjectTypeClientConfig.ts";
 import "../types/objectTypeClientConfig/propObjectTypeClientConfig.ts";
 import "../types/objectTypeClientConfig/npcObjectTypeClientConfig.ts";
 import "../types/objectTypeClientConfig/volumeObjectTypeClientConfig.ts";
+import "../types/objectTypeClientConfig/fanObjectTypeClientConfig.ts";

@@ -13,6 +13,7 @@ import ColorUtil from "../../shared/math/util/colorUtil";
 import NumUtil from "../../shared/math/util/numUtil";
 import ShaderPrecompileUtil from "./util/shaderPrecompileUtil";
 import AtmosphereMaterialUtil from "./util/atmosphereMaterialUtil";
+import ParticleMaterialUtil from "./particle/util/particleMaterialUtil";
 
 const minAspectRatio = 0.6;
 const maxAspectRatio = 2;
@@ -190,6 +191,7 @@ const GraphicsManager =
         // Once per frame, so dragging a lamp costs one propagation per frame.
         lightBlockMap.update();
         AtmosphereMaterialUtil.setRoomHasLamps(lightBlockMap.hasLightSources());
+        ParticleMaterialUtil.setRoomHasLamps(lightBlockMap.hasLightSources());
         AtmosphereMaterialUtil.update(camera);
         gameRenderer.render(scene, camera);
         overlayRenderer.render(scene, camera);

@@ -3,6 +3,7 @@ import App from "../../../app";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN } from "../../../../shared/system/sharedConstants";
 import Vec3 from "../../../../shared/math/types/vec3";
+import ParticleEffectConfig from "../types/particleEffectConfig";
 import ParticleEmitterHandle from "../types/particleEmitterHandle";
 import ParticleLayerConfig from "../types/particleLayerConfig";
 import ParticleSpawn from "../types/particleSpawn";
@@ -68,7 +69,9 @@ const ParticleSpawnUtil =
         }
 
         out.spawnTime = spawnTime;
-        out.lifetime = lifetime;
+        // At its own pace, as far along the same path (see the shader's paced age).
+        out.lifetime = lifetime / emitter.particleTimeScale;
+        out.timeScale = emitter.particleTimeScale;
         out.paramRow = paramRow;
         out.seed = Math.random();
         out.size = randomInRange(layer.size) * scale;
@@ -79,8 +82,29 @@ const ParticleSpawnUtil =
     createSpawn: (): ParticleSpawn =>
     {
         return {origin: {x: 0, y: 0, z: 0}, spawnTime: 0, velocity: {x: 0, y: 0, z: 0}, lifetime: 0,
-            paramRow: 0, seed: 0, size: 0, packedTint: 0, levelAtBirth: 1, landingY: NO_LANDING_Y};
+            paramRow: 0, seed: 0, size: 0, timeScale: 1, packedTint: 0, levelAtBirth: 1, landingY: NO_LANDING_Y};
     },
+    // The least an effect's streaming particles carry along their emitter's axis within their lives, at unit
+    // scales: the slowest and shortest-lived of them, launched at the edge of its spread. Infinity for an effect
+    // that streams nothing.
+    getShortestCarry: (config: ParticleEffectConfig): number =>
+    {
+        let shortestCarry = Infinity;
+        for (const layer of config.layers)
+        {
+            if ((layer.rate ?? 0) <= 0)
+                continue;
+            const axialSpeed = layer.speed[0] * Math.cos(Math.min(layer.spread ?? 0, Math.PI));
+            shortestCarry = Math.min(shortestCarry, getDistanceTravelled(axialSpeed, layer.lifetime[0], layer.drag ?? 0));
+        }
+        return shortestCarry;
+    },
+}
+
+// How far a particle launched at this speed along an axis, slowed by linear drag, travels along it in a time.
+function getDistanceTravelled(axialSpeed: number, time: number, drag: number): number
+{
+    return (drag > 0) ? axialSpeed * (1 - Math.exp(-drag * time)) / drag : axialSpeed * time;
 }
 
 // How long a particle launched at this speed along an axis, slowed by linear drag, takes to travel a

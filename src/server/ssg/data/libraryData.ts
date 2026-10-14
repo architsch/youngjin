@@ -19,6 +19,7 @@ export const LibraryData: {
             { dirName: "read-rec", title: "Recommended Readings (2024)"},
             { dirName: "morsels", title: "Morsels of Thought (2024)"},
             { dirName: "concepts-of-plan", title: "Concepts of a Plan (2025)"},
+            { dirName: "shards-of-sanity", title: "Shards of Sanity (2026)"},
         ],
         "Fiction": [
             { dirName: "novels", title: "단편소설 (2012 - 2013)"},

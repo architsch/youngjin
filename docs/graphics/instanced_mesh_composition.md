@@ -2,7 +2,7 @@
 
 Reference: @src/client/graphics/types/mesh/instancedMeshBinding.ts , @src/client/object/components/instancedMeshGraphics.ts , @src/client/object/components/instancedMeshComposer.ts , @src/client/object/components/helpers/mesh/instancedMeshComposition.ts , @src/shared/graphics/mesh/composition/types/compositionCodec/instancedMeshCompositionCodec.ts , @src/shared/graphics/mesh/composition/types/compositionBuilder/instancedMeshCompositionBuilder.ts , @src/server/ssg/builder/preEncodedCompositionBuilder.ts , @src/shared/graphics/mesh/composition/util/preEncodingSourceUtil.ts , @src/server/ssg/builder/instancedMeshCapacityBuilder.ts , @src/server/ssg/builder/compositionThumbnailBuilder.ts
 
-A `GameObject` can render itself as a set of simple parts borrowed from shared instanced meshes. The parts are described by its `InstancedMeshComposition` metadata string. Players, doors, lamps and the framed panels (canvases, labels) use this system.
+A `GameObject` can render itself as a set of simple parts borrowed from shared instanced meshes. The parts are described by its `InstancedMeshComposition` metadata string. Players, doors, lamps, fans' housings and the framed panels (canvases, labels) use this system.
 
 ![InstancedMeshComposition System Overview](figures/mesh_composition_1.jpg)
 
@@ -30,7 +30,7 @@ A `GameObject` can render itself as a set of simple parts borrowed from shared i
 
 ## Indexed compositions
 Metadata is stored and sent once per object, so a spelled-out composition is expensive. `IndexedCompositionCodec` is a **router**: the object stores only an index into `PreEncodedCompositionStringMap`, and the entry at that index (which carries its own codec prefix) is decoded by its own codec.
-- Lamps use it with one entry per size, and store no composition at all: a lamp's default parts are the entry for its current size, so its look can't disagree with its footprint. A resize re-decodes the live parameters, so the lamp points them at the new size's entry first (`LampGameObject`).
+- Lamps use it with one entry per size, and store no composition at all: a lamp's default parts are the entry for its current size, so its look can't disagree with its footprint. A resize re-decodes the live parameters, so the lamp points them at the new size's entry first (`LampGameObject`). A fan stores none either: its one entry is its housing.
 - Doors, canvases and labels use it with one entry per look on offer, which users pick between. A framed panel's first look is the frameless one; a canvas added by hand wears it until its frame is picked, and an object storing none is given one of the others (any, for a door), seeded by its room and id so everyone sees the same.
 - A type accepts only its own entries, on the server and when decoding (`CompositionMetadataUtil.isIndexedLookOf`): another type's entry builds parts and parameters the object can't place.
 - The table is generated at build time by `PreEncodedCompositionBuilder` (during SSG) from authored asset data (`pre_encoding_source.json`), so a new look is a data edit rather than new code. An entry gives parts for `DefaultCompositionCodec` or parameters for any other codec, and every value it gives must survive that codec's round trip or the build fails.
