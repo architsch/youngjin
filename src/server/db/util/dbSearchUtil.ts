@@ -39,6 +39,16 @@ const DBSearchUtil =
         },
     },
     users: {
+        // Users who own a room, in no order but the one the inequality needs, so no index of its own.
+        withOwnedRoom: async (limit: number): Promise<DBQueryResponse<DBUser>> => {
+            LogUtil.log("DBSearchUtil.users.withOwnedRoom", {limit}, "low", "info");
+            return await new DBQuery<DBUser>()
+                .select()
+                .from(COLLECTION_USERS)
+                .where("ownedRoomID", "!=", "")
+                .limit(limit)
+                .run();
+        },
         withUserName: async (userName: string): Promise<DBQueryResponse<DBUser>> => {
             LogUtil.log("DBSearchUtil.users.withUserName", {userName}, "low", "info");
             return await new DBQuery<DBUser>()

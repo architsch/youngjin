@@ -17,7 +17,7 @@ let temp_roomID = "";
 let temp_participantUserNameByID: { [userID: string]: string } = {};
 let temp_sourceVoxelGrid: VoxelGrid | undefined;
 
-const latestVersion = 7;
+const latestVersion = 8;
 
 export default class ObjectGroup extends EncodableData
 {
@@ -98,8 +98,9 @@ export default class ObjectGroup extends EncodableData
             objectSourceUserIndices[i] = userIndex;
         }
 
-        // Number of unique source users (so the decoder knows how many id/name strings follow).
-        new EncodableRawByteNumber(sourceUserIDs.length).encode(bufferState);
+        // Number of unique source users (so the decoder knows how many id/name strings follow), in two bytes
+        // like each object's index into them.
+        new EncodableRaw2ByteNumber(sourceUserIDs.length).encode(bufferState);
 
         // Encode the sourceUserIDs and sourceUserNames.
         for (let i = 0; i < sourceUserIDs.length; ++i)
@@ -158,8 +159,8 @@ function getCategory(object: AddObjectSignal): ObjectCategory
     return ObjectTypeConfigMap.getConfigByIndex(object.objectTypeIndex).category;
 }
 
-// The body's own layout is the current one; only the transform has ever changed shape, and
-// ObjectGroupVersionMigration reads the older one (see decodeTransform).
+// The body's own layout is the current one; only the transform and the owner count have ever changed shape,
+// and ObjectGroupVersionMigration reads the older ones (see decodeTransform, decodeSourceUserCount).
 function decodeBody(bufferState: BufferState, formatVersion: number): ObjectGroup
 {
     const objects: AddObjectSignal[] = [];
@@ -167,7 +168,7 @@ function decodeBody(bufferState: BufferState, formatVersion: number): ObjectGrou
     const sourceUserNames: string[] = [];
 
     // Decode the number of unique source users.
-    const numSourceUsers = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
+    const numSourceUsers = ObjectGroupVersionMigration.decodeSourceUserCount(bufferState, formatVersion);
     // Decode the sourceUserIDs and sourceUserNames.
     for (let i = 0; i < numSourceUsers; ++i)
     {

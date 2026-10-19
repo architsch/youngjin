@@ -1,8 +1,10 @@
 import * as THREE from "three";
 import GameObjectComponent from "./gameObjectComponent";
 import { ongoingClientProcessExists } from "../../system/types/clientProcess";
-import { ENTRANCE_DIST_IN_FRONT_OF_DOOR,
-    SPAWN_DIST_BEHIND_DOOR } from "../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
+import { ENTERING_MAX_DURATION, ENTERING_SPEED,
+    ENTERING_STRIDE_LENGTH } from "../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
+import { PLAYER_MAX_TURN_INPUT, PLAYER_MAX_WALK_INPUT, PLAYER_TURN_RATE_PER_INPUT,
+    PLAYER_WALK_SPEED_PER_INPUT } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import { NEAR_EPSILON } from "../../../shared/system/sharedConstants";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 import App from "../../app";
@@ -15,12 +17,6 @@ import { DIRECTION_VECTORS } from "../../system/clientConstants";
 import { cameraModeObservable } from "../../system/clientObservables";
 
 const forwardTemp = new THREE.Vector3();
-
-// The walk out of the doorway on arrival. Normally ends by distance; the time limit covers arriving
-// facing something solid. The stride spans from behind the door to just clear of it.
-const ENTERING_STRIDE_LENGTH = SPAWN_DIST_BEHIND_DOOR + ENTRANCE_DIST_IN_FRONT_OF_DOOR;
-const ENTERING_SPEED = 3;
-const ENTERING_MAX_DURATION = 1.5; // in seconds
 
 export default class PlayerController extends GameObjectComponent
 {
@@ -124,12 +120,13 @@ export default class PlayerController extends GameObjectComponent
             else // cameraMode === "firstPerson"
             {
                 // Speed Limit
-                this.dx = Math.max(-1, Math.min(1, this.dx));
-                this.dy = Math.max(-0.6, Math.min(0.6, this.dy));
+                this.dx = Math.max(-PLAYER_MAX_TURN_INPUT, Math.min(PLAYER_MAX_TURN_INPUT, this.dx));
+                this.dy = Math.max(-PLAYER_MAX_WALK_INPUT, Math.min(PLAYER_MAX_WALK_INPUT, this.dy));
 
                 if (Math.abs(this.dx) > NEAR_EPSILON)
                 {
-                    this.gameObject.obj.rotateOnWorldAxis(DIRECTION_VECTORS["+y"], -3 * deltaTime * this.dx);
+                    this.gameObject.obj.rotateOnWorldAxis(DIRECTION_VECTORS["+y"],
+                        -PLAYER_TURN_RATE_PER_INPUT * deltaTime * this.dx);
                     this.gameObject.notifyTransformChanged();
                 }
 
@@ -139,7 +136,7 @@ export default class PlayerController extends GameObjectComponent
                     this.gameObject.obj.getWorldDirection(forwardTemp);
                     forwardTemp.negate(); // Player-camera's "forward" direction is the opposite of the player-gameObject's forward direction.
 
-                    const speed = 9 * this.dy;
+                    const speed = PLAYER_WALK_SPEED_PER_INPUT * this.dy;
                     vx = forwardTemp.x * speed;
                     vz = forwardTemp.z * speed;
                 }

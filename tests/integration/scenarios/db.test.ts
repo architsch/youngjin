@@ -1,7 +1,7 @@
 /**
  * Integration tests: the DB query layer against the Firestore emulator, since mocks can't reproduce the
- * target defects (transaction rules, writes per commit, malformed writes). Skips without an emulator;
- * see `test:integration:db`.
+ * target defects (transaction rules, writes per commit, malformed writes), and the counters written beside it
+ * with atomic increments. Skips without an emulator; see `test:integration:db`.
  */
 import { describe, it, expect, beforeAll, beforeEach, afterAll, afterEach, vi } from "vitest";
 import { FieldValue } from "firebase-admin/firestore";
@@ -23,11 +23,17 @@ import RoomPrefsUtil from "../../../src/shared/room/util/roomPrefsUtil";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import { ColorPaletteMap } from "../../../src/shared/math/maps/colorPaletteMap";
 import StringUtil from "../../../src/shared/math/util/stringUtil";
-import { LIGHT_COLOR_PALETTE_NAME, TUTORIAL_SINGLE_PLAYER_MODE } from "../../../src/shared/system/sharedConstants";
-import { COLLECTION_ROOMS, COLLECTION_USERS, DB_MAX_WRITES_PER_COMMIT } from "../../../src/server/system/serverConstants";
+import { ATMOSPHERE_COLOR_PALETTE_NAME, DAY_IN_MS, LIGHT_COLOR_PALETTE_NAME,
+    TUTORIAL_SINGLE_PLAYER_MODE } from "../../../src/shared/system/sharedConstants";
+import { COLLECTION_HELPER_SPENDING, COLLECTION_ROOMS, COLLECTION_USERS,
+    DB_MAX_WRITES_PER_COMMIT } from "../../../src/server/system/serverConstants";
+import DBHelperSpendingUtil from "../../../src/server/db/util/dbHelperSpendingUtil";
 
 const USER_VERSION = DBUserVersionMigration.length;
 const ROOM_VERSION = DBRoomVersionMigration.length;
+
+// The prefs string generation wrote while a room's air was painted from the "Fog" and "Scenery" palettes.
+const LEGACY_DEFAULT_PREFS = "!!_!~~@+XC!X\"$KBY;-[_Z_!&";
 
 const emulatorAvailable = await EmulatorDB.isAvailable();
 if (!emulatorAvailable)
@@ -557,6 +563,28 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
             expect(result?.success).toBe(true);
             expect(Object.keys(await EmulatorDB.readStoredAll(COLLECTION_ROOMS))).toHaveLength(0);
         }, 60_000);
+
+        it("finds stale guests and stale agents by the same tiers, each of its own type only", async () => {
+            const now = Date.now();
+            // Past the first tier's cutoff, short of the last's.
+            const longAgo = now - 2 * DAY_IN_MS;
+            await EmulatorDB.seed(COLLECTION_USERS, {
+                staleGuest: currentUser({ userType: UserTypeEnumMap.Guest, lastLoginAt: longAgo, loginCount: 1 }),
+                staleAgent: currentUser({ userType: UserTypeEnumMap.Agent, lastLoginAt: longAgo, loginCount: 1 }),
+                recentAgent: currentUser({ userType: UserTypeEnumMap.Agent, lastLoginAt: now, loginCount: 1 }),
+                returningAgent: currentUser({ userType: UserTypeEnumMap.Agent, lastLoginAt: longAgo, loginCount: 5 }),
+                staleMember: currentUser({ userType: UserTypeEnumMap.Member, lastLoginAt: longAgo, loginCount: 1 }),
+            });
+
+            const staleAgents = await DBUserUtil.findStaleUsersByTier(UserTypeEnumMap.Agent, 0);
+            expect(staleAgents?.map(row => row.id)).toEqual(["staleAgent"]);
+            expect(await DBUserUtil.findStaleUsersByTier(UserTypeEnumMap.Agent, 2)).toEqual([]);
+
+            expect(await DBUserUtil.deleteStaleGuestsByTier(0)).toBe(1);
+            await DBUserUtil.deleteUsers(["staleAgent"]);
+            expect(Object.keys(await EmulatorDB.readStoredAll(COLLECTION_USERS)).sort())
+                .toEqual(["recentAgent", "returningAgent", "staleMember"]);
+        });
     });
 
     // ─── Batch ───────────────────────────────────────────────────────────────
@@ -778,10 +806,11 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
 
         it("carries a room's light colors over to the nearest ones the trimmed palette still offers", async () => {
             // v6 -> v7: the first two chars are "Light" palette positions (ambient, then head light); the rest
-            // is kept as it was. A soft green and a strong blue were dropped; a pure blue was kept.
+            // is kept as it was (its fog is black, which v7 -> v8 keeps black). A soft green and a strong blue were
+            // dropped; a pure blue was kept.
             const char = StringUtil.convertRawNumberToVisibleASCII;
             await EmulatorDB.seed(COLLECTION_ROOMS, {
-                tinted: currentRoom({ version: 6, prefs: char(47) + char(75) + "rest" }),
+                tinted: currentRoom({ version: 6, prefs: char(47) + char(75) + "r!st" }),
                 kept: currentRoom({ version: 6, prefs: char(87) }),
                 unconfigured: currentRoom({ version: 6, prefs: "" }),
             });
@@ -796,9 +825,32 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
 
             expect(result.data.every(row => row.version === ROOM_VERSION)).toBe(true);
             expect(lightColors(prefsByID.tinted)).toEqual(["#c2ffc2", "#6b6bff"]);
-            expect(prefsByID.tinted.substring(2)).toBe("rest");
+            expect(prefsByID.tinted.substring(2)).toBe("r!st");
             expect(lightColors(prefsByID.kept)).toEqual(["#0000ff", "#ffffff"]);
             expect(prefsByID.kept).toHaveLength(1);
+            expect(prefsByID.unconfigured).toBe("");
+        });
+
+        it("carries a room's air over to the colors that look nearest it in the palette it is painted from now", async () => {
+            // v7 -> v8: the fog, sky, cloud and ground colors were positions in the "Fog" and "Scenery" palettes
+            // (see room-prefs.test.ts). The air generation wrote turns into the air it writes now, and the rest of
+            // a string is kept as it was. Here a fog with a near-black red cast, and a deep red cloud.
+            const char = StringUtil.convertRawNumberToVisibleASCII;
+            await EmulatorDB.seed(COLLECTION_ROOMS, {
+                generated: currentRoom({ version: 7, prefs: LEGACY_DEFAULT_PREFS }),
+                tinted: currentRoom({ version: 7, prefs: "!!_" + char(10) + "~~@" + char(23) }),
+                unconfigured: currentRoom({ version: 7, prefs: "" }),
+            });
+
+            const result = await selectRooms().where("roomType", "==", RoomTypeEnumMap.Regular).run();
+            const prefsByID = Object.fromEntries(result.data.map(row => [row.id, row.prefs]));
+            const tinted = RoomPrefsUtil.decode(prefsByID.tinted);
+
+            expect(result.data.every(row => row.version === ROOM_VERSION)).toBe(true);
+            expect(prefsByID.generated).toBe(RoomPrefsUtil.getDefaultPrefsString());
+            expect([tinted.fogColorIndex, tinted.cloudColorIndex]
+                .map(index => ColorPaletteMap[ATMOSPHERE_COLOR_PALETTE_NAME][index])).toEqual(["#000000", "#95002d"]);
+            expect(prefsByID.tinted.substring(4, 7)).toBe("~~@");
             expect(prefsByID.unconfigured).toBe("");
         });
 
@@ -1060,6 +1112,23 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
                 logs.restore();
                 (db as any).runTransaction = originalRunTransaction;
             }
+        });
+    });
+
+    // ─── The Helper's spending (written directly, as acquisition counters are) ──
+
+    describe("the Helper's spending", () =>
+    {
+        it("adds up by day, two additions at once included, and reads an untouched day as nothing", async () => {
+            const date = "2099-12-31";
+            await (await EmulatorDB.getDB()).collection(COLLECTION_HELPER_SPENDING).doc(date).delete();
+            expect(await DBHelperSpendingUtil.getSpent(date)).toBe(0);
+
+            expect(await Promise.all([DBHelperSpendingUtil.addSpent(date, 1500),
+                DBHelperSpendingUtil.addSpent(date, 250)])).toEqual([true, true]);
+
+            expect(await DBHelperSpendingUtil.getSpent(date)).toBe(1750);
+            expect(await DBHelperSpendingUtil.getSpent("2099-12-30")).toBe(0);
         });
     });
 });

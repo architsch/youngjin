@@ -12,7 +12,7 @@ export default interface RoomPrefs
     headLightPowerStep: number;
     headLightRangeStep: number;
 
-    // Fog color ("Fog" palette) and near/far distance steps. Also layered over the sky (see the sky shader).
+    // Fog color ("Atmosphere" palette) and near/far distance steps. Also layered over the sky (see the sky shader).
     fogColorIndex: number;
     fogNearStep: number;
     fogFarStep: number;
@@ -25,11 +25,11 @@ export default interface RoomPrefs
     fogSmokeDriftStep: number;
     fogSmokeRiseStep: number;
 
-    // Sky color ("Fog" palette), separate from the fog color. Missing values fall back to the fog color
+    // Sky color ("Atmosphere" palette), separate from the fog color. Missing values fall back to the fog color
     // (see RoomPrefsUtil).
     skyColorIndex: number;
 
-    // Clouds: color ("Scenery" palette), opacity (0 = clear), scale, edge softness, and angular speed
+    // Clouds: color ("Atmosphere" palette), opacity (0 = clear), scale, edge softness, and angular speed
     // (independent of scale).
     cloudColorIndex: number;
     cloudOpacityStep: number;
@@ -37,7 +37,7 @@ export default interface RoomPrefs
     cloudSoftnessStep: number;
     cloudSpeedStep: number;
 
-    // Ground below the horizon (sky only): low and peak colors ("Scenery" palette), scale, solidity (how
+    // Ground below the horizon (sky only): low and peak colors ("Atmosphere" palette), scale, solidity (how
     // slowly it fades into the air; never opaque at the horizon), and slope softness.
     groundColorIndex: number;
     groundPeakColorIndex: number;

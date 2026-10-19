@@ -175,7 +175,7 @@ describe("room file: the stored format", () => {
         const room = makeSourceRoom();
 
         expect(Array.from(toBytes(RoomFile.fromRoom(room)))).toEqual(Array.from(concat(
-            encodeString(SIGNATURE).slice(0, -1), [0],
+            encodeString(SIGNATURE).slice(0, -1), [1],
             encodeStoredContent(room),
             encodeString(SOURCE_TEXTURE_PACK_PATH),
             encodeString(SOURCE_PREFS))));
@@ -244,6 +244,21 @@ describe("room file: the stored format", () => {
         const rewritten = fromBytes(toBytes(roomFile));
         expect(rewritten.voxelGrid.sourceFormatVersion).toBe(VoxelGrid.latestFormatVersion);
         expect(rewritten.objectGroup.sourceFormatVersion).toBe(ObjectGroup.latestFormatVersion);
+    });
+
+    it("carries the settings of a file from before the air's palette changed over to it", () => {
+        // Version 0 painted the fog and sky from the "Fog" palette and the clouds and ground from "Scenery" (see
+        // room-prefs.test.ts): the air generation wrote then reads as the air it writes now.
+        const room = makeSourceRoom();
+        const roomFile = fromBytes(concat(
+            encodeString(SIGNATURE).slice(0, -1), [0],
+            encodeStoredContent(room),
+            encodeString(SOURCE_TEXTURE_PACK_PATH),
+            encodeString("!!_!~~@+XC!X\"$KBY;-[_Z_!&")));
+        expect(roomFile.prefs).toBe(RoomPrefsUtil.getDefaultPrefsString());
+
+        // Written again, it is in today's format, and its settings are read as they stand.
+        expect(fromBytes(toBytes(roomFile)).prefs).toBe(RoomPrefsUtil.getDefaultPrefsString());
     });
 
     describe("refuses", () => {

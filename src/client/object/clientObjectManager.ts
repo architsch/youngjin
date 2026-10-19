@@ -245,7 +245,8 @@ const ClientObjectManager =
             else
                 object.setObjectTransform(result.transform.pos, result.transform.dir);
         }
-        else
+        // An object of a room still loading spawns later, from the room's data, which already has the move.
+        else if (room.objectById[objectId] == undefined)
             console.error(`ClientObjectManager.setObjectTransform :: GameObject not found (objectId = ${objectId})`);
         return result.transform;
     },
@@ -321,6 +322,10 @@ const ClientObjectManager =
             if (!success)
                 return;
         }
+        // A physics update can overtake the add of a player who has just arrived, which waits on the room. The next
+        // update moves them.
+        else if (App.getCurrentRoom()?.objectById[signal.objectId] == undefined)
+            return;
         ClientObjectManager.setObjectTransform(signal.objectId, signal.transform,
             signal.ignorePhysics, false);
 

@@ -108,6 +108,7 @@ plates were painted out; small incidental labels on goods remain.
 | `2/78.webp` | Vinyl Record | Markus Spiske | [ui79XsmHTos](https://unsplash.com/photos/vinyl-record-on-white-surface-ui79XsmHTos) | Unsplash License |
 | `2/79.webp` | Leather-Bound Proceedings | Erol Ahmed | [N23rmTcf0NA](https://unsplash.com/photos/assorted-title-book-lot-N23rmTcf0NA) | Unsplash License |
 | `2/81.webp` | Peg Doll Cubbies | Atelierbyvineeth | [2JEPY_XDHdE](https://unsplash.com/photos/many-small-colorful-wooden-dolls-displayed-in-shelves-2JEPY_XDHdE) | Unsplash License |
+| `2/84.webp` | Plush Capsule Cubbies | Eric Prouzet | [p5XNx-63Emc](https://unsplash.com/photos/a-display-case-filled-with-lots-of-different-items-p5XNx-63Emc) | Unsplash License |
 | `2/85.webp` | Arch Vase Cubby | Kshiraj Vij | [xIJRwAaxwZo](https://unsplash.com/photos/various-decorative-objects-displayed-in-illuminated-cubbies-xIJRwAaxwZo) | Unsplash License |
 | `2/86.webp` | Vase Pair Cubby | Kshiraj Vij | [xIJRwAaxwZo](https://unsplash.com/photos/various-decorative-objects-displayed-in-illuminated-cubbies-xIJRwAaxwZo) | Unsplash License |
 | `2/87.webp` | Sculpture Cubby | Kshiraj Vij | [xIJRwAaxwZo](https://unsplash.com/photos/various-decorative-objects-displayed-in-illuminated-cubbies-xIJRwAaxwZo) | Unsplash License |
@@ -122,6 +123,7 @@ plates were painted out; small incidental labels on goods remain.
 | `2/102.webp` | Cutlery Drawer | Orgalux | [Ho4ymAUhBFs](https://unsplash.com/photos/a-cabinet-with-utensils-and-spoons-in-it-Ho4ymAUhBFs) | Unsplash License |
 | `2/103.webp` | Rusty Drawers | Ries Bosch | [pO0pdJn6QPk](https://unsplash.com/photos/an-old-desk-with-a-sink-and-a-stool-pO0pdJn6QPk) | Unsplash License |
 | `2/104.webp` | Mini Drawer Cabinet | Merylove Art | [7WXsn8Rof-8](https://unsplash.com/photos/two-maroon-sewing-threads-on-cube-shelf-7WXsn8Rof-8) | Unsplash License |
+| `2/105.webp` | Filing Cabinet Drawers | Elena Kloppenburg | [IqfceUqv590](https://unsplash.com/photos/brown-wooden-4-layer-drawer-IqfceUqv590) | Unsplash License |
 | `2/108.webp` | Post Office Box Doors | Joel Dunn | [f3Ug9b50KwI](https://unsplash.com/photos/black-and-white-abstract-painting-f3Ug9b50KwI) | Unsplash License |
 | `2/109.webp` | Parts Organizer Drawers | Raymond Rasmusson | [7EhAf2dBthg](https://unsplash.com/photos/plastic-organizer-with-labels-7EhAf2dBthg) | Unsplash License |
 | `2/111.webp` | Cards, Dice and Chips | James Nilsson | [Ih32pz1tMis](https://unsplash.com/photos/playing-cards-and-dice-on-a-black-background-Ih32pz1tMis) | Unsplash License |
@@ -164,6 +166,7 @@ plates were painted out; small incidental labels on goods remain.
 | `2/170.webp` | Figs on a Saucer | Sonia | [Y8fR4Qapmrs](https://unsplash.com/photos/two-figs-on-a-plate-on-a-blue-table-Y8fR4Qapmrs) | Unsplash License |
 | `2/172.webp` | Mesh Cabinet Door | Mayur Roxan | [l25poGqsBgA](https://unsplash.com/photos/a-kitchen-with-a-stove-top-oven-next-to-a-counter-l25poGqsBgA) | Unsplash License |
 | `2/178.webp` | Shelf of Divided Plates | David Nabil | [ocQcix1Rgcg](https://unsplash.com/photos/woman-in-blue-denim-jacket-standing-in-front-of-brown-wooden-shelf-ocQcix1Rgcg) | Unsplash License |
+| `2/179.webp` | Kitchen Knives on a Cutting Board | Andrey Matveev | [OtlyMBQC3ow](https://unsplash.com/photos/a-couple-of-knives-sitting-on-top-of-a-cutting-board-OtlyMBQC3ow) | Unsplash License |
 | `2/180.webp` | Baskets of Berries | Will | [fqkrXYMosT4](https://unsplash.com/photos/assorted-berries-fqkrXYMosT4) | Unsplash License |
 | `2/190.webp` | Organ Keys | Mark Foster | [_TWQ7o8v4zU](https://unsplash.com/photos/brown-wooden-upright-piano-with-black-and-white-piano-keys-_TWQ7o8v4zU) | Unsplash License |
 | `2/191.webp` | Closed Laptop | Neil Soni | [09tYbU3JaNs](https://unsplash.com/photos/silver-ipad-on-brown-wooden-table-09tYbU3JaNs) | Unsplash License |
@@ -191,6 +194,8 @@ The substantive ones, for attribution:
 | [socket.io](https://github.com/socketio/socket.io) / socket.io-client | MIT | real-time networking |
 | [fflate](https://github.com/101arrowz/fflate) | MIT | inflating compressed network data and room files in the client |
 | [express](https://github.com/expressjs/express) | MIT | HTTP server |
+| [@modelcontextprotocol/server](https://github.com/modelcontextprotocol/typescript-sdk) / node / client | Apache-2.0 | the AI agents' MCP endpoint (client: its tests, dev) |
+| [zod](https://github.com/colinhacks/zod) | MIT | the MCP endpoint's tool inputs |
 | [tailwindcss](https://github.com/tailwindlabs/tailwindcss) | MIT | styling |
 | [firebase-admin](https://github.com/firebase/firebase-admin-node) | Apache-2.0 | database and storage |
 | [@google-cloud/secret-manager](https://github.com/googleapis/google-cloud-node) | Apache-2.0 | secret loading |

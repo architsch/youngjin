@@ -2,8 +2,8 @@ import * as THREE from "three";
 import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import { graphicsContextRestoredObservable } from "../system/clientObservables";
 import { endClientProcess, ongoingClientProcessExists, tryStartClientProcess } from "../system/types/clientProcess";
-import { FOG_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME, MAX_ROOM_X, MAX_ROOM_Y, MAX_ROOM_Z, MINUTE_IN_MS,
-    SCENERY_COLOR_PALETTE_NAME } from "../../shared/system/sharedConstants";
+import { ATMOSPHERE_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME, MAX_ROOM_X, MAX_ROOM_Y, MAX_ROOM_Z,
+    MINUTE_IN_MS } from "../../shared/system/sharedConstants";
 import LightBlockMap from "./light/maps/lightBlockMap";
 import { getLightLuminance } from "./light/util/lightBlockPropagationUtil";
 import RoomPrefs from "../../shared/room/types/roomPrefs";
@@ -166,18 +166,18 @@ const GraphicsManager =
         pointLightDecay = HeadLightUtil.getDecay(prefs.headLightRangeStep);
         refreshPointLight();
 
-        sceneFog.color.set(getPaletteColor(FOG_COLOR_PALETTE_NAME, prefs.fogColorIndex));
-        skyColorTemp.set(getPaletteColor(FOG_COLOR_PALETTE_NAME, prefs.skyColorIndex));
+        sceneFog.color.set(getPaletteColor(ATMOSPHERE_COLOR_PALETTE_NAME, prefs.fogColorIndex));
+        skyColorTemp.set(getPaletteColor(ATMOSPHERE_COLOR_PALETTE_NAME, prefs.skyColorIndex));
         AtmosphereMaterialUtil.setSkyColor(skyColorTemp);
         AtmosphereMaterialUtil.setSmoke(RoomPrefsUtil.getFogSmokeAmplitude(prefs),
             RoomPrefsUtil.getFogSmokeScale(prefs), RoomPrefsUtil.getFogSmokeSpeed(prefs),
             RoomPrefsUtil.getFogSmokeDrift(prefs));
-        cloudColorTemp.set(getPaletteColor(SCENERY_COLOR_PALETTE_NAME, prefs.cloudColorIndex));
+        cloudColorTemp.set(getPaletteColor(ATMOSPHERE_COLOR_PALETTE_NAME, prefs.cloudColorIndex));
         AtmosphereMaterialUtil.setClouds(cloudColorTemp,
             RoomPrefsUtil.getCloudOpacity(prefs), RoomPrefsUtil.getCloudScale(prefs),
             RoomPrefsUtil.getCloudSoftness(prefs), RoomPrefsUtil.getCloudSpeed(prefs));
-        groundColorTemp.set(getPaletteColor(SCENERY_COLOR_PALETTE_NAME, prefs.groundColorIndex));
-        peakColorTemp.set(getPaletteColor(SCENERY_COLOR_PALETTE_NAME, prefs.groundPeakColorIndex));
+        groundColorTemp.set(getPaletteColor(ATMOSPHERE_COLOR_PALETTE_NAME, prefs.groundColorIndex));
+        peakColorTemp.set(getPaletteColor(ATMOSPHERE_COLOR_PALETTE_NAME, prefs.groundPeakColorIndex));
         AtmosphereMaterialUtil.setGround(groundColorTemp, peakColorTemp,
             RoomPrefsUtil.getGroundScale(prefs), RoomPrefsUtil.getGroundSolidity(prefs),
             RoomPrefsUtil.getGroundSoftness(prefs));

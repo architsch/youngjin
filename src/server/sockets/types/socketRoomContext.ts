@@ -1,16 +1,16 @@
 import EncodableData from "../../../shared/networking/types/encodableData";
-import SocketUserContext from "./socketUserContext";
+import UserContext from "./userContext";
 
 export default class SocketRoomContext
 {
-    private socketUserContexts: {[userID: string]: SocketUserContext};
+    private socketUserContexts: {[userID: string]: UserContext};
 
     constructor()
     {
         this.socketUserContexts = {};
     }
 
-    getUserContexts(): {[userID: string]: SocketUserContext}
+    getUserContexts(): {[userID: string]: UserContext}
     {
         return this.socketUserContexts;
     }
@@ -35,7 +35,7 @@ export default class SocketRoomContext
         socketUserContext.addPendingSignalToUser(signalType, signalData);
     }
 
-    addSocketUserContext(userID: string, socketUserContext: SocketUserContext)
+    addSocketUserContext(userID: string, socketUserContext: UserContext)
     {
         if (this.socketUserContexts[userID] != undefined)
         {

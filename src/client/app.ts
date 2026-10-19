@@ -174,11 +174,9 @@ async function changeRoom(roomChangedSignal: RoomChangedSignal)
 
     endClientProcess("roomChange");
 
-    // Remove superfluous trailing parts of the URL
-    window.history.replaceState(null, "", "/");
-
     // The joined room decides whether single-player runs (its roomName is the mode id).
     const joinedRoom = roomChangedSignal.roomRuntimeMemory.room;
+    keepAddressInStep(joinedRoom);
     if (joinedRoom.roomType == RoomTypeEnumMap.SinglePlayer)
     {
         singlePlayerObservable.set({mode: joinedRoom.roomName, step: "initial"});
@@ -189,6 +187,16 @@ async function changeRoom(roomChangedSignal: RoomChangedSignal)
         // No-op otherwise.
         SinglePlayerManager.finishSinglePlayerMode();
     }
+}
+
+// The address keeps the room it named (the page's target) while the user is on the way there, through the tutorial
+// say, or in it. Once they enter any other room it is dropped, from reconnections as from the address bar, so that
+// neither brings them back. Whatever follows the path (a ref tag, say) goes at once.
+function keepAddressInStep(joinedRoom: Room): void
+{
+    if (joinedRoom.roomType != RoomTypeEnumMap.SinglePlayer && joinedRoom.id != env.targetRoomID)
+        env.targetRoomID = "";
+    window.history.replaceState(null, "", env.targetRoomID.length > 0 ? `/${env.targetRoomID}` : "/");
 }
 
 async function loadRoom(roomRuntimeMemory: RoomRuntimeMemory)

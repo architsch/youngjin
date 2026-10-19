@@ -1,10 +1,9 @@
 {
     "compilerOptions": {
         "strict": true,
-        "outDir": "../dist/tests",
+        "noEmit": true,
         "allowJs": true,
         "noImplicitAny": true,
-        "sourceMap": true,
         "module": "es6",
         "target": "es2020",
         "jsx": "react",

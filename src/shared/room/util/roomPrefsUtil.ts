@@ -3,8 +3,7 @@ import StringUtil from "../../math/util/stringUtil";
 import NumUtil from "../../math/util/numUtil";
 import ColorUtil from "../../math/util/colorUtil";
 import Vec3 from "../../math/types/vec3";
-import { FOG_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME,
-    SCENERY_COLOR_PALETTE_NAME } from "../../system/sharedConstants";
+import { ATMOSPHERE_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME } from "../../system/sharedConstants";
 
 // Max value of one stored character; every step is in [0, this] (see StringUtil).
 export const MAX_ROOM_PREFS_STEP = 93;
@@ -62,23 +61,23 @@ const DEFAULT_HEAD_LIGHT_COLOR_INDEX = 0; // white, likewise
 const DEFAULT_HEAD_LIGHT_POWER_STEP = 62;
 // Likewise two thirds up.
 const DEFAULT_HEAD_LIGHT_RANGE_STEP = 62;
-const DEFAULT_FOG_COLOR_INDEX = 0; // black, the first entry in the "Fog" palette
+const DEFAULT_FOG_COLOR_INDEX = 0; // black, the first entry in the "Atmosphere" palette
 const DEFAULT_FOG_NEAR_STEP = MAX_ROOM_PREFS_STEP;
 const DEFAULT_FOG_FAR_STEP = MAX_ROOM_PREFS_STEP;
 
 // (No sky default: a missing sky color falls back to the fog color; see decode.)
 
 // No weather is expressed with zero opacity; the color defaults to white so raising opacity gives clouds.
-const DEFAULT_CLOUD_COLOR_INDEX = 10; // white, the last of the "Scenery" neutrals
+const DEFAULT_CLOUD_COLOR_INDEX = 3; // white
 const DEFAULT_CLOUD_OPACITY_STEP = 0;
 // Fine enough for several clouds per view (coarser just looks like a gradient).
 const DEFAULT_CLOUD_SCALE_STEP = 55;
 const DEFAULT_CLOUD_SOFTNESS_STEP = 55;
 const DEFAULT_CLOUD_SPEED_STEP = 34;
-// Ground is on by default (two near-black neutrals): a sky without ground reads as a void. Dark ground
-// suits any air color.
-const DEFAULT_GROUND_COLOR_INDEX = 1; // "#1a1a1a", the first neutral above black
-const DEFAULT_GROUND_PEAK_COLOR_INDEX = 3; // "#4d4d4d"
+// Ground is on by default (black, with the darkest grey for its peaks): a sky without ground reads as a void. Dark
+// ground suits any air color.
+const DEFAULT_GROUND_COLOR_INDEX = 0; // black
+const DEFAULT_GROUND_PEAK_COLOR_INDEX = 1; // "#2a2a2a"
 const DEFAULT_GROUND_SCALE_STEP = 42;
 // Solid enough to read as land, short of the top of the range.
 const DEFAULT_GROUND_SOLIDITY_STEP = 62;
@@ -138,7 +137,7 @@ const RoomPrefsUtil =
     {
         // Read first, since the sky falls back to it.
         const fogColorIndex = readPaletteIndex(prefs, FOG_COLOR_CHAR_INDEX,
-            FOG_COLOR_PALETTE_NAME, DEFAULT_FOG_COLOR_INDEX);
+            ATMOSPHERE_COLOR_PALETTE_NAME, DEFAULT_FOG_COLOR_INDEX);
         return {
             ambientColorIndex: readPaletteIndex(prefs, AMBIENT_COLOR_CHAR_INDEX,
                 LIGHT_COLOR_PALETTE_NAME, DEFAULT_AMBIENT_COLOR_INDEX),
@@ -153,10 +152,10 @@ const RoomPrefsUtil =
             fogColorIndex,
             fogNearStep: readStep(prefs, FOG_NEAR_CHAR_INDEX, DEFAULT_FOG_NEAR_STEP),
             fogFarStep: readStep(prefs, FOG_FAR_CHAR_INDEX, DEFAULT_FOG_FAR_STEP),
-            skyColorIndex: readPaletteIndex(prefs, SKY_COLOR_CHAR_INDEX, FOG_COLOR_PALETTE_NAME,
+            skyColorIndex: readPaletteIndex(prefs, SKY_COLOR_CHAR_INDEX, ATMOSPHERE_COLOR_PALETTE_NAME,
                 fogColorIndex),
             cloudColorIndex: readPaletteIndex(prefs, CLOUD_COLOR_CHAR_INDEX,
-                SCENERY_COLOR_PALETTE_NAME, DEFAULT_CLOUD_COLOR_INDEX),
+                ATMOSPHERE_COLOR_PALETTE_NAME, DEFAULT_CLOUD_COLOR_INDEX),
             cloudOpacityStep: readStep(prefs, CLOUD_OPACITY_CHAR_INDEX,
                 DEFAULT_CLOUD_OPACITY_STEP),
             cloudScaleStep: readStep(prefs, CLOUD_SCALE_CHAR_INDEX, DEFAULT_CLOUD_SCALE_STEP),
@@ -164,9 +163,9 @@ const RoomPrefsUtil =
                 DEFAULT_CLOUD_SOFTNESS_STEP),
             cloudSpeedStep: readStep(prefs, CLOUD_SPEED_CHAR_INDEX, DEFAULT_CLOUD_SPEED_STEP),
             groundColorIndex: readPaletteIndex(prefs, GROUND_COLOR_CHAR_INDEX,
-                SCENERY_COLOR_PALETTE_NAME, DEFAULT_GROUND_COLOR_INDEX),
+                ATMOSPHERE_COLOR_PALETTE_NAME, DEFAULT_GROUND_COLOR_INDEX),
             groundPeakColorIndex: readPaletteIndex(prefs, GROUND_PEAK_COLOR_CHAR_INDEX,
-                SCENERY_COLOR_PALETTE_NAME, DEFAULT_GROUND_PEAK_COLOR_INDEX),
+                ATMOSPHERE_COLOR_PALETTE_NAME, DEFAULT_GROUND_PEAK_COLOR_INDEX),
             groundScaleStep: readStep(prefs, GROUND_SCALE_CHAR_INDEX, DEFAULT_GROUND_SCALE_STEP),
             groundSolidityStep: readStep(prefs, GROUND_SOLIDITY_CHAR_INDEX,
                 DEFAULT_GROUND_SOLIDITY_STEP),
@@ -196,21 +195,21 @@ const RoomPrefsUtil =
             LIGHT_COLOR_PALETTE_NAME);
         chars[HEAD_LIGHT_POWER_CHAR_INDEX] = writeStep(prefs.headLightPowerStep);
         chars[HEAD_LIGHT_RANGE_CHAR_INDEX] = writeStep(prefs.headLightRangeStep);
-        chars[FOG_COLOR_CHAR_INDEX] = writePaletteIndex(prefs.fogColorIndex, FOG_COLOR_PALETTE_NAME);
+        chars[FOG_COLOR_CHAR_INDEX] = writePaletteIndex(prefs.fogColorIndex, ATMOSPHERE_COLOR_PALETTE_NAME);
         chars[FOG_NEAR_CHAR_INDEX] = writeStep(prefs.fogNearStep);
         chars[FOG_FAR_CHAR_INDEX] = writeStep(prefs.fogFarStep);
-        chars[SKY_COLOR_CHAR_INDEX] = writePaletteIndex(prefs.skyColorIndex, FOG_COLOR_PALETTE_NAME);
+        chars[SKY_COLOR_CHAR_INDEX] = writePaletteIndex(prefs.skyColorIndex, ATMOSPHERE_COLOR_PALETTE_NAME);
         chars[AMBIENT_INTENSITY_CHAR_INDEX] = writeStep(prefs.ambientIntensityStep);
         chars[CLOUD_COLOR_CHAR_INDEX] = writePaletteIndex(prefs.cloudColorIndex,
-            SCENERY_COLOR_PALETTE_NAME);
+            ATMOSPHERE_COLOR_PALETTE_NAME);
         chars[CLOUD_SCALE_CHAR_INDEX] = writeStep(prefs.cloudScaleStep);
         chars[CLOUD_SPEED_CHAR_INDEX] = writeStep(prefs.cloudSpeedStep);
         chars[CLOUD_OPACITY_CHAR_INDEX] = writeStep(prefs.cloudOpacityStep);
         chars[CLOUD_SOFTNESS_CHAR_INDEX] = writeStep(prefs.cloudSoftnessStep);
         chars[GROUND_COLOR_CHAR_INDEX] = writePaletteIndex(prefs.groundColorIndex,
-            SCENERY_COLOR_PALETTE_NAME);
+            ATMOSPHERE_COLOR_PALETTE_NAME);
         chars[GROUND_PEAK_COLOR_CHAR_INDEX] = writePaletteIndex(prefs.groundPeakColorIndex,
-            SCENERY_COLOR_PALETTE_NAME);
+            ATMOSPHERE_COLOR_PALETTE_NAME);
         chars[GROUND_SCALE_CHAR_INDEX] = writeStep(prefs.groundScaleStep);
         chars[GROUND_SOLIDITY_CHAR_INDEX] = writeStep(prefs.groundSolidityStep);
         chars[GROUND_SOFTNESS_CHAR_INDEX] = writeStep(prefs.groundSoftnessStep);

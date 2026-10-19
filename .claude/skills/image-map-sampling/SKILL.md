@@ -149,6 +149,11 @@ landing under Office. A painting has none.
    named in a survey or a plan by its file name. So is a source the user preprocessed in the editor's Sources tab
    (cut out, squared up or made round, e.g. `<id>_cut_out.png`): it carries its photo's address, author and
    license, but the address and the id name the photo itself.
+
+   Until an entry is sampled from it, a photo can be deleted: stopping the editor (`npm run imageMapEditor`)
+   deletes the unsampled ones that were in the library when it started, so a batch's photos are lost if the user
+   starts the editor before step 4 and stops it again. If `--survey` or `--save-samples` no longer finds one, add
+   it again and redo its author check.
 2. **Survey.**
    `npm run imageMapEditor -- --survey` draws every source no entry is sampled from yet at 1600 px with a grid
    in fractions of the photo, to `temp/image_map_editor/survey/<id>.jpg`. Read each one. For precise edges on a

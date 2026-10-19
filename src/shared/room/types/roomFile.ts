@@ -5,12 +5,13 @@ import EncodableRawByteNumber from "../../networking/types/encodableRawByteNumbe
 import ObjectTypeConfigMap from "../../object/maps/objectTypeConfigMap";
 import ObjectGroup from "../../object/types/objectGroup";
 import VoxelGrid from "../../voxel/types/voxelGrid";
+import RoomFileVersionMigration from "../versionMigration/roomFileVersionMigration";
 import Room from "./room";
 
 let temp_roomID = "";
 
-// Also dates the settings, which carry no version of their own (see DBRoomVersionMigration).
-const latestVersion = 0;
+// Also dates the settings, which carry no version of their own (see RoomFileVersionMigration).
+const latestVersion = 1;
 
 // What every room file starts with, so a file of another kind is refused before it is read as a room.
 const SIGNATURE = "ThingsPoolRoom";
@@ -96,7 +97,8 @@ export default class RoomFile extends EncodableData
             throw new Error(`RoomFile :: Objects written in a newer format (version = ${objectGroup.sourceFormatVersion})`);
 
         const texturePackPath = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
-        const prefs = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
+        const prefs = RoomFileVersionMigration.convertPrefs(
+            (EncodableByteString.decode(bufferState) as EncodableByteString).str, versionFound);
 
         if (bufferState.byteIndex != bufferState.view.length)
             throw new Error(`RoomFile :: Length doesn't match the content (read = ${bufferState.byteIndex}, length = ${bufferState.view.length})`);

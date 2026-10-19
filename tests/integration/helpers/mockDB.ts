@@ -112,7 +112,7 @@ export const mockDBRoomUtil = {
     {
         return true;
     }),
-    deleteRoomContent: vi.fn(async (_room: Room): Promise<boolean> =>
+    deleteRoomContent: vi.fn(async (_roomID: string): Promise<boolean> =>
     {
         return true;
     }),

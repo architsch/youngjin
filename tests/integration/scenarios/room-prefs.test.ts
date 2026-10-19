@@ -1,8 +1,9 @@
 /**
  * Scenario tests: room prefs — atmosphere (room light, head lamp, air) and a hub's join priority.
  * Covers round-trips; an empty string decoding to the pre-prefs look (so existing rooms need no
- * migration); total decoding; fog distances always leaving a span; and light colors carried over from the
- * six-saturation "Light" palette.
+ * migration); total decoding; fog distances always leaving a span; light colors carried over from the
+ * six-saturation "Light" palette; and the fog, sky, cloud and ground colors carried over from the "Fog" and
+ * "Scenery" palettes to the "Atmosphere" one.
  */
 import { describe, it, expect } from "vitest";
 import fc from "fast-check";
@@ -19,8 +20,11 @@ import ColorUtil from "../../../src/shared/math/util/colorUtil";
 import StringUtil from "../../../src/shared/math/util/stringUtil";
 import { ColorPaletteMap } from "../../../src/shared/math/maps/colorPaletteMap";
 import LightPaletteVersionMigration from "../../../src/shared/math/versionMigration/lightPaletteVersionMigration";
-import { FOG_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME,
-    SCENERY_COLOR_PALETTE_NAME } from "../../../src/shared/system/sharedConstants";
+import AtmospherePaletteVersionMigration
+    from "../../../src/shared/math/versionMigration/atmospherePaletteVersionMigration";
+import RoomPrefsVersionMigration from "../../../src/shared/room/versionMigration/roomPrefsVersionMigration";
+import { ATMOSPHERE_COLOR_PALETTE_NAME, COMPOSITION_PALETTE_NAME_BY_MATERIAL_ID, INSTANCED_TIN_MATERIAL_ID,
+    LIGHT_COLOR_PALETTE_NAME } from "../../../src/shared/system/sharedConstants";
 
 // The eye camera's far plane (the renderer's, written out); the default fog must lie beyond it.
 const CAMERA_FAR_PLANE = 45;
@@ -45,21 +49,21 @@ function arbitraryPrefs(): fc.Arbitrary<RoomPrefs>
         headLightPowerStep: steps,
         headLightRangeStep: steps,
         fogColorIndex: fc.integer({min: 0,
-            max: ColorUtil.getPaletteSize(FOG_COLOR_PALETTE_NAME) - 1}),
+            max: ColorUtil.getPaletteSize(ATMOSPHERE_COLOR_PALETTE_NAME) - 1}),
         fogNearStep: steps,
         fogFarStep: steps,
         skyColorIndex: fc.integer({min: 0,
-            max: ColorUtil.getPaletteSize(FOG_COLOR_PALETTE_NAME) - 1}),
+            max: ColorUtil.getPaletteSize(ATMOSPHERE_COLOR_PALETTE_NAME) - 1}),
         cloudColorIndex: fc.integer({min: 0,
-            max: ColorUtil.getPaletteSize(SCENERY_COLOR_PALETTE_NAME) - 1}),
+            max: ColorUtil.getPaletteSize(ATMOSPHERE_COLOR_PALETTE_NAME) - 1}),
         cloudOpacityStep: steps,
         cloudScaleStep: steps,
         cloudSoftnessStep: steps,
         cloudSpeedStep: steps,
         groundColorIndex: fc.integer({min: 0,
-            max: ColorUtil.getPaletteSize(SCENERY_COLOR_PALETTE_NAME) - 1}),
+            max: ColorUtil.getPaletteSize(ATMOSPHERE_COLOR_PALETTE_NAME) - 1}),
         groundPeakColorIndex: fc.integer({min: 0,
-            max: ColorUtil.getPaletteSize(SCENERY_COLOR_PALETTE_NAME) - 1}),
+            max: ColorUtil.getPaletteSize(ATMOSPHERE_COLOR_PALETTE_NAME) - 1}),
         groundScaleStep: steps,
         groundSolidityStep: steps,
         groundSoftnessStep: steps,
@@ -100,9 +104,9 @@ describe("room prefs encoding", () => {
             expect(prefs.headLightColorIndex).toBeLessThan(
                 ColorUtil.getPaletteSize(LIGHT_COLOR_PALETTE_NAME));
             expect(prefs.fogColorIndex).toBeLessThan(
-                ColorUtil.getPaletteSize(FOG_COLOR_PALETTE_NAME));
+                ColorUtil.getPaletteSize(ATMOSPHERE_COLOR_PALETTE_NAME));
             expect(prefs.skyColorIndex).toBeLessThan(
-                ColorUtil.getPaletteSize(FOG_COLOR_PALETTE_NAME));
+                ColorUtil.getPaletteSize(ATMOSPHERE_COLOR_PALETTE_NAME));
         }));
     });
 
@@ -159,29 +163,29 @@ describe("a room that has said nothing", () => {
 
     it("has no fog the camera can reach", () => {
         expect(RoomPrefsUtil.getFogNearDistance(defaults)).toBeGreaterThanOrEqual(CAMERA_FAR_PLANE);
-        expect(ColorPaletteMap[FOG_COLOR_PALETTE_NAME][defaults.fogColorIndex]).toBe("#000000");
+        expect(ColorPaletteMap[ATMOSPHERE_COLOR_PALETTE_NAME][defaults.fogColorIndex]).toBe("#000000");
     });
 
     it("paints its sky in its own air's color", () => {
         // The sky has no default: without one it takes the fog color (a black void when unconfigured).
         expect(defaults.skyColorIndex).toBe(defaults.fogColorIndex);
-        expect(ColorPaletteMap[FOG_COLOR_PALETTE_NAME][defaults.skyColorIndex]).toBe("#000000");
+        expect(ColorPaletteMap[ATMOSPHERE_COLOR_PALETTE_NAME][defaults.skyColorIndex]).toBe("#000000");
     });
 
     it("shows no clouds, because there is no weather at all", () => {
         // Clouds are off via zero strength, not via color; the color behind it is a real cloud color.
         expect(RoomPrefsUtil.getCloudOpacity(defaults)).toBe(0);
-        expect(ColorPaletteMap[SCENERY_COLOR_PALETTE_NAME][defaults.cloudColorIndex])
+        expect(ColorPaletteMap[ATMOSPHERE_COLOR_PALETTE_NAME][defaults.cloudColorIndex])
             .toBe("#ffffff");
     });
 
     it("stands the room over quiet neutral land", () => {
         // Unlike the rest, the ground default isn't "as before": a groundless sky reads as a void, and dark
         // neutrals sit correctly under any air.
-        expect(ColorPaletteMap[SCENERY_COLOR_PALETTE_NAME][defaults.groundColorIndex])
-            .toBe("#1a1a1a");
-        expect(ColorPaletteMap[SCENERY_COLOR_PALETTE_NAME][defaults.groundPeakColorIndex])
-            .toBe("#4d4d4d");
+        expect(ColorPaletteMap[ATMOSPHERE_COLOR_PALETTE_NAME][defaults.groundColorIndex])
+            .toBe("#000000");
+        expect(ColorPaletteMap[ATMOSPHERE_COLOR_PALETTE_NAME][defaults.groundPeakColorIndex])
+            .toBe("#2a2a2a");
         // A few solid hills before the horizon, meeting on a hillside; pinned (no prior look to match).
         expect(RoomPrefsUtil.getGroundScale(defaults)).toBeCloseTo(1.2, 1);
         expect(RoomPrefsUtil.getGroundSolidity(defaults)).toBeGreaterThan(1);
@@ -414,7 +418,7 @@ describe("the palettes a room's lighting is drawn from", () => {
     it("starts each with the entry that changes nothing", () => {
         // Index 0 is the unconfigured default: white light and a black void.
         expect(ColorPaletteMap[LIGHT_COLOR_PALETTE_NAME][0]).toBe("#ffffff");
-        expect(ColorPaletteMap[FOG_COLOR_PALETTE_NAME][0]).toBe("#000000");
+        expect(ColorPaletteMap[ATMOSPHERE_COLOR_PALETTE_NAME][0]).toBe("#000000");
     });
 
     it("offers no light that is merely a dimmed one", () => {
@@ -469,13 +473,127 @@ describe("the palettes a room's lighting is drawn from", () => {
     it("keeps both inside what one stored character can address", () => {
         expect(ColorUtil.getPaletteSize(LIGHT_COLOR_PALETTE_NAME))
             .toBeLessThanOrEqual(MAX_ROOM_PREFS_STEP + 1);
-        expect(ColorUtil.getPaletteSize(FOG_COLOR_PALETTE_NAME))
+        expect(ColorUtil.getPaletteSize(ATMOSPHERE_COLOR_PALETTE_NAME))
             .toBeLessThanOrEqual(MAX_ROOM_PREFS_STEP + 1);
     });
 
     it("holds the fog inside the range its steps address", () => {
         const furthest = RoomPrefsUtil.decode("");
         expect(RoomPrefsUtil.getFogNearDistance(furthest)).toBe(MAX_FOG_DISTANCE);
+    });
+});
+
+// Where each color of the legacy "Fog" and "Scenery" palettes goes, as a position in the "Atmosphere" palette.
+// Pinned, since a room is converted only when it is next loaded, which may be long after the palettes changed.
+const FOG_TO_ATMOSPHERE = [0, 0, 1, 1, 1, 1, 6, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 30, 30,
+    1, 0, 1, 1, 1, 7, 8, 24, 24, 24, 30, 30, 1, 36, 36, 42, 12, 12, 8, 11, 24, 24, 26, 30, 39, 36, 42, 45, 12, 13,
+    6, 11, 26, 26, 26, 31, 39, 39, 45, 45, 45, 2, 5, 5, 5, 28, 29, 31, 40, 40, 41, 41, 41];
+const SCENERY_TO_ATMOSPHERE = [0, 1, 1, 1, 6, 2, 2, 2, 3, 3, 3, 7, 8, 24, 24, 24, 24, 30, 1, 36, 36, 42, 12, 12, 9,
+    11, 25, 25, 26, 31, 39, 42, 42, 45, 45, 14, 10, 20, 23, 27, 28, 32, 38, 37, 43, 46, 62, 15, 57, 4, 28, 28, 28,
+    32, 34, 40, 44, 47, 17, 16, 49, 51, 52, 52, 53, 53, 54, 55, 41, 56, 16];
+
+// The prefs string generation wrote while the air was painted from those palettes.
+const LEGACY_DEFAULT_PREFS = "!!_!~~@+XC!X\"$KBY;-[_Z_!&";
+
+// Where the prefs string holds the colors the conversion carries over (see RoomPrefsUtil).
+const FOG_CHAR = 3, CLOUD_CHAR = 7, GROUND_CHAR = 12, GROUND_PEAK_CHAR = 13, SKY_CHAR = 23;
+
+describe("a room's air carried over to the palette it is painted from now", () => {
+    const atmosphere = ColorPaletteMap[ATMOSPHERE_COLOR_PALETTE_NAME];
+    const convertPair = AtmospherePaletteVersionMigration.convertSceneryColorPair;
+    // A stored legacy position, read as the legacy decode read it: past the palette is its last color.
+    const fogIndexIn = (prefs: string, charIndex: number) =>
+        Math.min(StringUtil.convertVisibleASCIIToRawNumber(prefs, charIndex), FOG_TO_ATMOSPHERE.length - 1);
+    const sceneryIndexIn = (prefs: string, charIndex: number) =>
+        Math.min(StringUtil.convertVisibleASCIIToRawNumber(prefs, charIndex), SCENERY_TO_ATMOSPHERE.length - 1);
+
+    it("offers tin's colors and then the light colors unlike any of tin's, each once", () => {
+        const tin = ColorPaletteMap[COMPOSITION_PALETTE_NAME_BY_MATERIAL_ID[INSTANCED_TIN_MATERIAL_ID]];
+        const light = ColorPaletteMap[LIGHT_COLOR_PALETTE_NAME];
+        // Each looks the same at a glance as one of tin's (as #0000ff does tin's #0905ff).
+        const tinAlike = ["#b56bff", "#ffff00", "#74c9ff", "#00ffff", "#0080ff", "#0000ff", "#8000ff", "#ff00ff"];
+        expect(atmosphere).toEqual([...tin, ...light.filter(hex => !tin.includes(hex) && !tinAlike.includes(hex))]);
+        expect(new Set(atmosphere).size).toBe(atmosphere.length);
+    });
+
+    it("carries each legacy color to the one that looks nearest it", () => {
+        for (let i = 0; i < FOG_TO_ATMOSPHERE.length; ++i)
+            expect(AtmospherePaletteVersionMigration.convertFogColorIndex(i), `fog ${i}`).toBe(FOG_TO_ATMOSPHERE[i]);
+        for (let i = 0; i < SCENERY_TO_ATMOSPHERE.length; ++i)
+        {
+            expect(AtmospherePaletteVersionMigration.convertSceneryColorIndex(i), `scenery ${i}`)
+                .toBe(SCENERY_TO_ATMOSPHERE[i]);
+        }
+        // A position past either palette read as its last color, and still does.
+        expect(AtmospherePaletteVersionMigration.convertFogColorIndex(93)).toBe(FOG_TO_ATMOSPHERE[81]);
+        expect(AtmospherePaletteVersionMigration.convertSceneryColorIndex(93)).toBe(SCENERY_TO_ATMOSPHERE[70]);
+    });
+
+    it("keeps a color still on offer, a near-black cast black, and a grey grey", () => {
+        const fog = (i: number) => atmosphere[FOG_TO_ATMOSPHERE[i]];
+        const scenery = (i: number) => atmosphere[SCENERY_TO_ATMOSPHERE[i]];
+        expect([fog(0), scenery(0), scenery(10)]).toEqual(["#000000", "#000000", "#ffffff"]);
+        // The fog's near-black casts, its ordinary case, stay as dark as they were rather than lifting to a grey.
+        for (let i = 10; i < 22; ++i)
+            expect(fog(i), `fog ${i}`).toBe("#000000");
+        // A grey goes to a grey where one is near (plain RGB distance turns some of these teal or khaki).
+        expect([scenery(3), scenery(5), scenery(8), fog(5), fog(9)])
+            .toEqual(["#2a2a2a", "#979797", "#ffffff", "#2a2a2a", "#979797"]);
+    });
+
+    it("keeps the ground's low and its peaks apart wherever they were apart", () => {
+        // The ground generation stood every room over has both its greys nearest the one dark grey, which would
+        // flatten every hill.
+        expect(SCENERY_TO_ATMOSPHERE[1]).toBe(SCENERY_TO_ATMOSPHERE[3]);
+        expect(convertPair(1, 3).map(i => atmosphere[i])).toEqual(["#000000", "#2a2a2a"]);
+        for (let a = 0; a < SCENERY_TO_ATMOSPHERE.length; ++a)
+        {
+            for (let b = 0; b < SCENERY_TO_ATMOSPHERE.length; ++b)
+            {
+                const [low, peak] = convertPair(a, b);
+                expect(low == peak, `${a}, ${b}`).toBe(a == b);
+                // Two that land apart anyway land where each would alone.
+                if (SCENERY_TO_ATMOSPHERE[a] != SCENERY_TO_ATMOSPHERE[b])
+                    expect([low, peak]).toEqual([SCENERY_TO_ATMOSPHERE[a], SCENERY_TO_ATMOSPHERE[b]]);
+            }
+        }
+    });
+
+    it("carries a stored room's air over and leaves the rest of its settings as they were", () => {
+        const colorChars = [FOG_CHAR, CLOUD_CHAR, GROUND_CHAR, GROUND_PEAK_CHAR, SKY_CHAR];
+        fc.assert(fc.property(prefsStrings, (prefs) => {
+            const converted = RoomPrefsVersionMigration.convertToAtmospherePalette(prefs);
+            expect(converted).toHaveLength(prefs.length);
+            for (let i = 0; i < prefs.length; ++i)
+            {
+                if (!colorChars.includes(i))
+                    expect(converted[i]).toBe(prefs[i]);
+            }
+
+            const decoded = RoomPrefsUtil.decode(converted);
+            if (prefs.length > FOG_CHAR)
+                expect(decoded.fogColorIndex).toBe(FOG_TO_ATMOSPHERE[fogIndexIn(prefs, FOG_CHAR)]);
+            // A sky never chosen still follows the fog.
+            expect(decoded.skyColorIndex).toBe((prefs.length > SKY_CHAR)
+                ? FOG_TO_ATMOSPHERE[fogIndexIn(prefs, SKY_CHAR)] : decoded.fogColorIndex);
+            if (prefs.length > CLOUD_CHAR)
+                expect(decoded.cloudColorIndex).toBe(SCENERY_TO_ATMOSPHERE[sceneryIndexIn(prefs, CLOUD_CHAR)]);
+            if (prefs.length > GROUND_PEAK_CHAR)
+            {
+                expect([decoded.groundColorIndex, decoded.groundPeakColorIndex]).toEqual(convertPair(
+                    sceneryIndexIn(prefs, GROUND_CHAR), sceneryIndexIn(prefs, GROUND_PEAK_CHAR)));
+            }
+        }));
+    });
+
+    it("turns the air generation wrote into the air it writes now", () => {
+        expect(RoomPrefsVersionMigration.convertToAtmospherePalette(LEGACY_DEFAULT_PREFS))
+            .toBe(RoomPrefsUtil.getDefaultPrefsString());
+        // A string too short to hold a color reads its default, which is where the legacy default goes.
+        expect(RoomPrefsVersionMigration.convertToAtmospherePalette("")).toBe("");
+        const short = LEGACY_DEFAULT_PREFS.substring(0, FOG_CHAR);
+        expect(RoomPrefsVersionMigration.convertToAtmospherePalette(short)).toBe(short);
+        expect(RoomPrefsUtil.decode(short)).toEqual(RoomPrefsUtil.decode(RoomPrefsUtil.getDefaultPrefsString()));
     });
 });
 
@@ -487,7 +605,7 @@ describe("a sky with a color of its own", () => {
         // Such strings end before the sky field, and their sky was the fog color; reading them otherwise
         // would repaint every such room's sky.
         const fogColors = fc.integer({min: 0,
-            max: ColorUtil.getPaletteSize(FOG_COLOR_PALETTE_NAME) - 1});
+            max: ColorUtil.getPaletteSize(ATMOSPHERE_COLOR_PALETTE_NAME) - 1});
         fc.assert(fc.property(fogColors, (fogColorIndex) => {
             const stored = RoomPrefsUtil.encode({...defaultPrefs, fogColorIndex, skyColorIndex: 0})
                 .substring(0, PRE_SKY_PREFS_LENGTH);

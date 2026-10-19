@@ -1,11 +1,14 @@
 /**
  * Scenario tests: fans (furniture anyone may install, as lamps are) — permissions and the per-category cap, the
- * one size on every kind of face, the stored wind setting (its strength and its range), the blades turning by
- * the strength and the wind effect as long as the range, and the push itself through the real physics engine: a
- * force along the facing, as hard as its strength makes it, thinning out to the end of its range and where a body
- * runs out of room, on a body at least half in the stream, stopped by a block, read from the room as it stands;
- * the velocity a body is given and keeps until gravity and drag have taken it away; and a fan blowing upward
- * making up for gravity without switching it off, so that a player over one bounces and goes on bouncing.
+ * one size on every kind of face, the stored setting (one, two or three blades, each with its strength and its
+ * range), the stored color (any of tin's colors, which a player's are; a mid grey by default) painting the housing
+ * and tinting the wind, as many blades as it has turning at one steady rate and one wind effect as long as the
+ * range, and the
+ * push itself through the real physics engine: a force along the facing, as hard as its strength makes it,
+ * thinning out to the end of its range and where a body runs out of room, on a body at least half in the stream,
+ * stopped by a block, read from the room as it stands; the velocity a body is given and keeps until gravity and
+ * drag have taken it away; and a fan blowing upward making up for gravity without switching it off, so that a
+ * player over one bounces and goes on bouncing.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import fc from "fast-check";
@@ -17,8 +20,11 @@ import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfi
 import ObjectMetadataEntryMap from "../../../src/shared/object/maps/objectMetadataEntryMap";
 import ObjectUpdateUtil from "../../../src/shared/object/util/objectUpdateUtil";
 import ObjectScaleUtil from "../../../src/shared/object/util/objectScaleUtil";
-import FanObjectTypeConfig, { FAN_RANGES, FAN_STRENGTHS }
-    from "../../../src/shared/object/types/objectTypeConfig/fanObjectTypeConfig";
+import FanObjectTypeConfig, { FAN_COLOR_PALETTE_NAME,
+    FAN_SETTINGS } from "../../../src/shared/object/types/objectTypeConfig/fanObjectTypeConfig";
+import ObjectCompositionUtil from "../../../src/shared/object/util/objectCompositionUtil";
+import InstancedMeshCompositionPart from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
+import ColorUtil from "../../../src/shared/math/util/colorUtil";
 import ObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/objectTypeConfig";
 import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
@@ -33,14 +39,17 @@ import Room from "../../../src/shared/room/types/room";
 import User from "../../../src/shared/user/types/user";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import Vec3 from "../../../src/shared/math/types/vec3";
+import StringUtil from "../../../src/shared/math/util/stringUtil";
 import WaveformUtil from "../../../src/shared/math/util/waveformUtil";
 import PhysicsManager from "../../../src/shared/physics/physicsManager";
 import PhysicsColliderStateUtil from "../../../src/shared/physics/util/physicsColliderStateUtil";
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import PreEncodedCompositionIndexMap from "../../../src/shared/graphics/mesh/composition/maps/preEncodedCompositionIndexMap";
-import { COLLISION_LAYER_HEIGHT, GRAVITY_SPEED, INITIAL_MULTI_PLAYER_ENTRANCE_POS, INSTANCED_TIN_MATERIAL_ID,
-    MAX_ROOM_Y, STOREY_FLOOR_COLLISION_LAYER, UNIT_VEC3, VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, COMPOSITION_PALETTE_NAME_BY_MATERIAL_ID, GRAVITY_SPEED,
+    INITIAL_MULTI_PLAYER_ENTRANCE_POS, INSTANCED_TIN_MATERIAL_ID,
+    MAX_ROOM_Y, RELIEF_STEP, STOREY_FLOOR_COLLISION_LAYER, UNIT_VEC3,
+    VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 // The fan's housing is decoded from its pre-encoded entry, which needs the part builders registered.
 import "../../../src/shared/graphics/mesh/composition/instancedMeshCompositionBuilderMapDependencies";
 
@@ -49,10 +58,15 @@ const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
 const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
 const MAX_FANS_PER_ROOM = ObjectCategoryConfigMap.getMaxCountPerRoom(FanObjectTypeConfig.category);
 const FORCE = FanObjectTypeConfig.force;
-const SETTING = FanObjectTypeConfig.util;
+const UTIL = FanObjectTypeConfig.util;
 const FORCE_KEY = ObjectMetadataKeyEnumMap.ForceProperties;
-const WEAKEST = FAN_STRENGTHS[0], STRONGEST = FAN_STRENGTHS[FAN_STRENGTHS.length - 1];
-const SHORTEST = FAN_RANGES[0], LONGEST = FAN_RANGES[FAN_RANGES.length - 1];
+const COLOR_KEY = ObjectMetadataKeyEnumMap.FanColor;
+const WEAKEST = FAN_SETTINGS[0], STRONGEST = FAN_SETTINGS[FAN_SETTINGS.length - 1];
+// What a fan that stores nothing reads as.
+const DEFAULT = UTIL.getSetting({});
+const NUM_FAN_COLORS = ColorUtil.getPaletteSize(FAN_COLOR_PALETTE_NAME);
+
+type FanSetting = (typeof FAN_SETTINGS)[number];
 
 function makeUser(id: string, userType: number): User
 {
@@ -80,15 +94,25 @@ const SLAB_TOP_Y = SLAB_UNDERSIDE_Y + COLLISION_LAYER_HEIGHT;
 
 // A frame, and a step short enough that the speed a force adds over it, divided by it, is the force itself.
 const FRAME = 1 / 60;
-const AN_INSTANT = 0.000001;
+const AN_INSTANT = 0.00000001;
 // As fast as a player walks.
 const WALKING_SPEED = 5.4;
 // An upward speed for a body to be carrying where gravity's pull on what it carries is to show.
 const RISING = 10;
 
-function windOf(strength: number, range: number): ObjectMetadata
+function windOf(setting: FanSetting): ObjectMetadata
 {
-    return {[FORCE_KEY]: new EncodableByteString(FanObjectTypeConfig.util.encodeForceProperties(strength, range))};
+    return {[FORCE_KEY]: new EncodableByteString(UTIL.encodeForceProperties(setting))};
+}
+
+function colorOf(colorIndex: number): ObjectMetadata
+{
+    return {[COLOR_KEY]: new EncodableByteString(UTIL.encodeColor(colorIndex))};
+}
+
+function bladesOf(setting: FanSetting): string
+{
+    return `${setting.blades} blades`;
 }
 
 function makeFanSignal(room: Room, sourceUser: User, objectId: string = "new-fan", pos: Vec3 = WALL_SPOT,
@@ -161,10 +185,7 @@ function pushOutOfWall(room: Room, pos: Vec3): number
 // move through the real collisions. Returns where its middle ends up.
 function step(room: Room, objectId: string, pos: Vec3, steering: Vec3 = still(), deltaTime: number = FRAME): Vec3
 {
-    let velocity: Vec3 = {...steering};
-    velocity.y -= GRAVITY_SPEED;
-    velocity = PhysicsManager.getAdjustedVelocity(room.id, objectId, velocity);
-    velocity = PhysicsManager.applyForces(room.id, objectId, velocity, deltaTime);
+    const velocity = PhysicsManager.getStepVelocity(room.id, objectId, steering, deltaTime).velocity;
     return PhysicsManager.setObjectTransform(room.id, objectId, standingAt({x: pos.x + velocity.x * deltaTime,
         y: pos.y + velocity.y * deltaTime, z: pos.z + velocity.z * deltaTime}), false).transform.pos;
 }
@@ -278,7 +299,7 @@ describe("fan permissions", () => {
         });
     });
 
-    it("lets anybody change its wind, and nothing else about it", async () => {
+    it("lets anybody change its wind and its color, and nothing else about it", async () => {
         await runScenario({
             name: "editing a fan",
             rooms: [EMPTY_HUB],
@@ -289,18 +310,23 @@ describe("fan permissions", () => {
                 const canSet = (key: number, value: string) => ObjectUpdateUtil.canSetObjectMetadata(GUEST, room,
                     new SetObjectMetadataSignal(room.id, "fan", key, value));
 
-                expect(canSet(FORCE_KEY, FanObjectTypeConfig.util.encodeForceProperties(STRONGEST, SHORTEST))).toBe(true);
+                expect(canSet(FORCE_KEY, UTIL.encodeForceProperties(STRONGEST))).toBe(true);
+                expect(canSet(COLOR_KEY, UTIL.encodeColor(NUM_FAN_COLORS - 1))).toBe(true);
                 for (const key of [ObjectMetadataKeyEnumMap.InstancedMeshComposition, ObjectMetadataKeyEnumMap.ImagePath,
                     ObjectMetadataKeyEnumMap.LightProperties, ObjectMetadataKeyEnumMap.Label])
                 {
                     expect(canSet(key, "!!"), `key ${key}`).toBe(false);
                 }
 
-                // Stored as the setting it reads as, whatever was sent.
-                expect(ObjectUpdateUtil.setObjectMetadata(GUEST, room,
-                    new SetObjectMetadataSignal(room.id, "fan", FORCE_KEY, "~~~~"))).toBe(true);
-                expect(room.objectById["fan"].metadata[FORCE_KEY].str)
-                    .toBe(FanObjectTypeConfig.util.encodeForceProperties(STRONGEST, LONGEST));
+                // Each stored as what it reads as, whatever was sent, and neither touching the other.
+                for (const key of [FORCE_KEY, COLOR_KEY])
+                {
+                    expect(ObjectUpdateUtil.setObjectMetadata(GUEST, room,
+                        new SetObjectMetadataSignal(room.id, "fan", key, "~~~~")), `key ${key}`).toBe(true);
+                }
+                const stored = room.objectById["fan"].metadata;
+                expect(stored[FORCE_KEY].str).toBe(UTIL.encodeForceProperties(STRONGEST));
+                expect(stored[COLOR_KEY].str).toBe(UTIL.encodeColor(NUM_FAN_COLORS - 1));
                 expect(ObjectUpdateUtil.canRemoveObject(GUEST, room, new RemoveObjectSignal(room.id, "fan"))).toBe(true);
             },
         });
@@ -308,132 +334,249 @@ describe("fan permissions", () => {
 });
 
 describe("a fan's setting", () => {
-    it("offers a strength and a range of 1, 3, 5, 7 or 9 each", () => {
-        expect(FAN_STRENGTHS).toEqual([1, 3, 5, 7, 9]);
-        expect(FAN_RANGES).toEqual([1, 3, 5, 7, 9]);
+    it("offers one, two or three blades, the more of them the stronger and the farther its wind", () => {
+        expect(FAN_SETTINGS).toEqual([
+            {blades: 1, strength: 3, range: 3},
+            {blades: 2, strength: 5, range: 5},
+            {blades: 3, strength: 7, range: 7},
+        ]);
+        // An ordinary one is the middle one.
+        expect(DEFAULT).toBe(FAN_SETTINGS[1]);
     });
 
     it("comes back exactly as it was set", () => {
-        for (const strength of FAN_STRENGTHS)
-        {
-            for (const range of FAN_RANGES)
-            {
-                const metadata = windOf(strength, range);
-                expect(SETTING.getStrength(metadata)).toBe(strength);
-                expect(SETTING.getRange(metadata)).toBe(range);
-            }
-        }
+        for (const setting of FAN_SETTINGS)
+            expect(UTIL.getSetting(windOf(setting))).toBe(setting);
     });
 
-    it("pushes by the square of its strength, and as far as its range is set", () => {
-        const strongestPush = FORCE.getAcceleration(windOf(STRONGEST, SHORTEST), CEILING_FACING);
+    it("pushes by the square of its strength, and as far as its range", () => {
+        const strongestPush = FORCE.getAcceleration(windOf(STRONGEST), CEILING_FACING);
         expect(strongestPush).toBeGreaterThan(0);
-        for (const strength of FAN_STRENGTHS)
+        for (const setting of FAN_SETTINGS)
         {
-            for (const range of FAN_RANGES)
-            {
-                const metadata = windOf(strength, range);
-                expect(FORCE.getAcceleration(metadata, CEILING_FACING)).toBeCloseTo(strongestPush * (strength / STRONGEST) ** 2, 9);
-                expect(FORCE.getRange(metadata)).toBe(range);
-            }
+            const metadata = windOf(setting);
+            expect(FORCE.getAcceleration(metadata, CEILING_FACING), bladesOf(setting))
+                .toBeCloseTo(strongestPush * (setting.strength / STRONGEST.strength) ** 2, 9);
+            expect(FORCE.getRange(metadata)).toBe(setting.range);
         }
     });
 
-    it("pushes harder across the room than up or down, and up at least as hard as down, by the same many times at any strength", () => {
+    it("pushes harder across the room than up or down, and up at least as hard as down, by the same many times at any setting", () => {
         const shareOfDown = (metadata: ObjectMetadata, facing: Vec3) =>
             FORCE.getAcceleration(metadata, facing) / FORCE.getAcceleration(metadata, CEILING_FACING);
-        const upShare = shareOfDown(windOf(STRONGEST, SHORTEST), FLOOR_FACING);
-        const sidewaysShare = shareOfDown(windOf(STRONGEST, SHORTEST), WALL_FACING);
+        const upShare = shareOfDown(windOf(STRONGEST), FLOOR_FACING);
+        const sidewaysShare = shareOfDown(windOf(STRONGEST), WALL_FACING);
         expect(upShare).toBeGreaterThanOrEqual(1);
         expect(sidewaysShare).toBeGreaterThan(upShare);
         const acrossTheRoom: Vec3[] = [{x: 1, y: 0, z: 0}, {x: -1, y: 0, z: 0}, {x: 0, y: 0, z: 1}, WALL_FACING];
-        for (const strength of FAN_STRENGTHS)
+        for (const setting of FAN_SETTINGS)
         {
-            expect(shareOfDown(windOf(strength, LONGEST), FLOOR_FACING), `strength ${strength}`).toBeCloseTo(upShare, 9);
+            expect(shareOfDown(windOf(setting), FLOOR_FACING), bladesOf(setting)).toBeCloseTo(upShare, 9);
             for (const facing of acrossTheRoom)
-                expect(shareOfDown(windOf(strength, LONGEST), facing), `strength ${strength}`).toBeCloseTo(sidewaysShare, 9);
+                expect(shareOfDown(windOf(setting), facing), bladesOf(setting)).toBeCloseTo(sidewaysShare, 9);
         }
     });
 
-    it("reads as one of its values whatever is stored, and is stored as it reads", () => {
+    it("reads as one of its settings whatever is stored, and is stored as it reads", () => {
         fc.assert(fc.property(fc.string({maxLength: 6}), (raw) => {
             const canonical = ObjectMetadataEntryMap.preprocess(FORCE_KEY, raw);
-            const metadata = {[FORCE_KEY]: new EncodableByteString(canonical)};
-            expect(FAN_STRENGTHS).toContain(SETTING.getStrength(metadata));
-            expect(FAN_RANGES).toContain(SETTING.getRange(metadata));
-            expect(canonical).toBe(SETTING.encodeForceProperties(
-                SETTING.getStrength(metadata), SETTING.getRange(metadata)));
+            const setting = UTIL.getSetting({[FORCE_KEY]: new EncodableByteString(canonical)});
+            expect(FAN_SETTINGS).toContain(setting);
+            expect(canonical).toBe(UTIL.encodeForceProperties(setting));
             expect(ObjectMetadataEntryMap.preprocess(FORCE_KEY, canonical)).toBe(canonical);
         }));
 
         // A fan that stores nothing is an ordinary one.
-        const byDefault = {[FORCE_KEY]: new EncodableByteString(SETTING.getDefaultForceProperties())};
-        expect(SETTING.getStrength({})).toBe(SETTING.getStrength(byDefault));
-        expect(SETTING.getRange({})).toBe(SETTING.getRange(byDefault));
+        expect(UTIL.getSetting({[FORCE_KEY]: new EncodableByteString(UTIL.getDefaultForceProperties())}))
+            .toBe(DEFAULT);
 
-        // Anything else is the nearest value there is: the lower of two as near, and the lowest for no number.
-        const encode = FanObjectTypeConfig.util.encodeForceProperties;
-        expect(encode(8, 2)).toBe(encode(7, 1));
-        expect(encode(6.1, 3.9)).toBe(encode(7, 3));
-        expect(encode(100, -4)).toBe(encode(STRONGEST, SHORTEST));
-        expect(encode(NaN, NaN)).toBe(encode(WEAKEST, SHORTEST));
+        // Any other strength stored is the setting whose strength is nearest it (the weaker of two as near), and
+        // nothing after it counts.
+        const storing = (...numbers: number[]) => UTIL.getSetting({[FORCE_KEY]: new EncodableByteString(
+            numbers.map(StringUtil.convertRawNumberToVisibleASCII).join(""))});
+        expect(storing(0)).toBe(WEAKEST);
+        expect(storing(1)).toBe(WEAKEST);
+        expect(storing(4)).toBe(WEAKEST);
+        expect(storing(6)).toBe(FAN_SETTINGS[1]);
+        expect(storing(8)).toBe(STRONGEST);
+        expect(storing(93)).toBe(STRONGEST);
+        expect(storing(1, 9)).toBe(WEAKEST);
+        expect(storing(9, 1)).toBe(STRONGEST);
     });
 
-    it("looks one way only: its housing, which is never stored", () => {
+    it("takes one shape only: its housing, which is never stored", () => {
         expect(PreEncodedCompositionIndexMap.Fan).toHaveLength(1);
         const {parts} = fanComponents().instancedMeshComposer!.generateDefaultParts(fanWith({}));
         expect(parts).toHaveLength(1);
         expect(parts[0]).toMatchObject({geometryId: "Box", materialId: INSTANCED_TIN_MATERIAL_ID});
         expect(parts[0].scale).toMatchObject({x: 1, y: 1});
     });
+
+    it("is drawn a relief step short of its footprint's edges, so its sides never share a block face's plane", () => {
+        fc.assert(fc.property(fc.integer({min: 0, max: NUM_FAN_COLORS - 1}), fc.constantFrom(...FAN_SETTINGS),
+            (colorIndex, setting) => {
+                const fan = fanWith({...colorOf(colorIndex), ...windOf(setting)});
+                const footprint = ObjectScaleUtil.getObjectSize(fanTypeIndex, fan.transform.scale);
+                const stored = fanComponents().instancedMeshComposer!.generateDefaultParts(fan).parts[0];
+                const parts: InstancedMeshCompositionPart[] = [];
+                ObjectCompositionUtil.decode(fan, {}, parts);
+                expect(parts[0].scale.x).toBeCloseTo(footprint.x - 2 * RELIEF_STEP, 9);
+                expect(parts[0].scale.y).toBeCloseTo(footprint.y - 2 * RELIEF_STEP, 9);
+                // Still half sunk in its face, as stored.
+                expect(parts[0].scale.z).toBe(stored.scale.z);
+                expect(parts[0].offset).toEqual(stored.offset);
+
+                // Deriving again changes nothing.
+                const derived = {...parts[0].scale};
+                ObjectCompositionUtil.deriveParts(fan, parts);
+                expect(parts[0].scale).toEqual(derived);
+            }));
+    });
+});
+
+describe("a fan's color", () => {
+    const colorIndices = fc.integer({min: 0, max: NUM_FAN_COLORS - 1});
+
+    // The housing as whatever draws the fan composes it: the game and the room preview alike.
+    function housingOf(metadata: ObjectMetadata): InstancedMeshCompositionPart
+    {
+        const parts: InstancedMeshCompositionPart[] = [];
+        ObjectCompositionUtil.decode(fanWith(metadata), {}, parts);
+        expect(parts).toHaveLength(1);
+        return parts[0];
+    }
+
+    // What the fan's ParticleEmitter is told about its wind.
+    function windShownBy(metadata: ObjectMetadata)
+    {
+        return fanComponents().particleEmitter!.getOverride!(metadata)!;
+    }
+
+    it("is any of tin's colors, which a player's parts come in, and comes back exactly as it was set", () => {
+        expect(FAN_COLOR_PALETTE_NAME).toBe(COMPOSITION_PALETTE_NAME_BY_MATERIAL_ID[INSTANCED_TIN_MATERIAL_ID]);
+        expect(FAN_COLOR_PALETTE_NAME).toBe("Player");
+        fc.assert(fc.property(colorIndices, (colorIndex) => {
+            expect(UTIL.getColorIndex(colorOf(colorIndex))).toBe(colorIndex);
+        }));
+    });
+
+    it("is a mid grey where none is stored, as a new fan stores it", () => {
+        expect(ColorUtil.rgbToHex(housingOf({}).color!)).toBe("#979797");
+        expect(UTIL.getColorIndex({[COLOR_KEY]: new EncodableByteString(UTIL.getDefaultColor())}))
+            .toBe(UTIL.getColorIndex({}));
+    });
+
+    it("reads as one of those colors whatever is stored, and is stored as it reads", () => {
+        fc.assert(fc.property(fc.string({maxLength: 6}), (raw) => {
+            const canonical = ObjectMetadataEntryMap.preprocess(COLOR_KEY, raw);
+            const colorIndex = UTIL.getColorIndex({[COLOR_KEY]: new EncodableByteString(canonical)});
+            expect(colorIndex).toBeGreaterThanOrEqual(0);
+            expect(colorIndex).toBeLessThan(NUM_FAN_COLORS);
+            expect(canonical).toBe(UTIL.encodeColor(colorIndex));
+            expect(ObjectMetadataEntryMap.preprocess(COLOR_KEY, canonical)).toBe(canonical);
+        }));
+
+        // A position past the palette is its last color, and nothing after the first character counts.
+        const storing = (...numbers: number[]) => UTIL.getColorIndex({[COLOR_KEY]: new EncodableByteString(
+            numbers.map(StringUtil.convertRawNumberToVisibleASCII).join(""))});
+        expect(storing(93)).toBe(NUM_FAN_COLORS - 1);
+        expect(storing(5, 9)).toBe(5);
+    });
+
+    it("paints the housing in it at any setting, the setting reading as it was", () => {
+        fc.assert(fc.property(colorIndices, fc.constantFrom(...FAN_SETTINGS), (colorIndex, setting) => {
+            const metadata = {...colorOf(colorIndex), ...windOf(setting)};
+            const housing = housingOf(metadata);
+            expect(housing.materialId).toBe(INSTANCED_TIN_MATERIAL_ID);
+            expect(housing.color).toEqual(ColorUtil.paletteIndexToRGB(FAN_COLOR_PALETTE_NAME, colorIndex));
+            expect(UTIL.getSetting(metadata)).toBe(setting);
+        }));
+    });
+
+    it("tints the wind in it too at any setting, and changes nothing else about the wind", () => {
+        fc.assert(fc.property(colorIndices, fc.constantFrom(...FAN_SETTINGS), (colorIndex, setting) => {
+            const {tint, ...rest} = windShownBy({...colorOf(colorIndex), ...windOf(setting)});
+            const {tint: _, ...uncolored} = windShownBy(windOf(setting));
+            expect(tint).toBe(ColorUtil.rgbToHex(ColorUtil.paletteIndexToRGB(FAN_COLOR_PALETTE_NAME, colorIndex)));
+            expect(rest).toEqual(uncolored);
+        }));
+    });
 });
 
 describe("what a fan shows of its wind", () => {
-    it("turns its blades steadily, in proportion to its strength", () => {
-        const turnsPerSecondAt = (strength: number, time: number) => WaveformUtil.getLevel(
-            fanComponents().animatedSprite!.getOverride!(windOf(strength, SHORTEST))!.rate!, time);
-        const turnsPerStrength = turnsPerSecondAt(WEAKEST, 0) / WEAKEST;
-        expect(turnsPerStrength).toBeGreaterThan(0);
-        for (const strength of FAN_STRENGTHS)
+    // The blades as the fan's AnimatedSprite shows them at a setting.
+    function bladesShownAt(setting: FanSetting)
+    {
+        const sprite = fanComponents().animatedSprite!;
+        return {...sprite.baseline, ...sprite.getOverride!(windOf(setting))};
+    }
+
+    it("turns as many blades as it is set to have, all at one steady rate whatever the setting", () => {
+        const turnsPerSecond = WaveformUtil.getLevel(bladesShownAt(DEFAULT).rate!, 0);
+        expect(turnsPerSecond).toBeGreaterThan(0);
+        for (const setting of FAN_SETTINGS)
         {
+            const shown = bladesShownAt(setting);
+            expect(shown.sprite).toBe("fanBlades");
+            expect(shown.centers, bladesOf(setting)).toHaveLength(setting.blades);
             for (const time of [0, 0.37, 12, 4000])
-                expect(turnsPerSecondAt(strength, time)).toBeCloseTo(strength * turnsPerStrength, 9);
+                expect(WaveformUtil.getLevel(shown.rate!, time), bladesOf(setting)).toBeCloseTo(turnsPerSecond, 9);
         }
-        // Its range is nothing to them.
-        expect(fanComponents().animatedSprite!.getOverride!(windOf(STRONGEST, LONGEST)))
-            .toEqual(fanComponents().animatedSprite!.getOverride!(windOf(STRONGEST, SHORTEST)));
     });
 
-    it("lets out a wind as long as its push reaches, ended by a block as the push is", () => {
-        for (const strength of FAN_STRENGTHS)
+    it("sets its blades round the middle of its plate, each wholly on it and clear of the others, one size at any setting", () => {
+        // A lone one in the middle.
+        const lone = bladesShownAt(WEAKEST);
+        expect(lone.centers).toEqual([{x: 0, y: 0}]);
+        for (const setting of FAN_SETTINGS)
         {
-            for (const range of FAN_RANGES)
+            const {centers, widthScale, heightScale} = bladesShownAt(setting);
+            // Round, as their vents are, and as large however many there are.
+            expect(widthScale, bladesOf(setting)).toBe(heightScale);
+            expect(widthScale, bladesOf(setting)).toBe(lone.widthScale);
+            const radius = 0.5 * widthScale!;
+            for (const [i, center] of centers!.entries())
             {
-                const metadata = windOf(strength, range);
-                const override = fanComponents().particleEmitter!.getOverride!(metadata)!;
-                expect(override.reach).toBe(FORCE.getRange(metadata));
-                // Steady: nothing about it rises and falls.
-                expect(override.level).toBeUndefined();
+                expect(Math.abs(center.x) + radius, bladesOf(setting)).toBeLessThan(0.5);
+                expect(Math.abs(center.y) + radius, bladesOf(setting)).toBeLessThan(0.5);
+                for (const other of centers!.slice(i + 1))
+                    expect(Math.hypot(center.x - other.x, center.y - other.y), bladesOf(setting)).toBeGreaterThan(2 * radius);
             }
+            // As far out on one side as on the other, across and up.
+            const xs = centers!.map(center => center.x), ys = centers!.map(center => center.y);
+            expect(Math.min(...xs) + Math.max(...xs), bladesOf(setting)).toBeCloseTo(0, 9);
+            expect(Math.min(...ys) + Math.max(...ys), bladesOf(setting)).toBeCloseTo(0, 9);
+        }
+    });
+
+    it("lets out one wind, as long as its push reaches, ended by a block as the push is", () => {
+        for (const setting of FAN_SETTINGS)
+        {
+            const metadata = windOf(setting);
+            const override = fanComponents().particleEmitter!.getOverride!(metadata)!;
+            expect(override.reach, bladesOf(setting)).toBe(FORCE.getRange(metadata));
+            // Steady: nothing about it rises and falls.
+            expect(override.level).toBeUndefined();
         }
         expect(fanComponents().particleEmitter!.baseline.stopAtBlocks).toBe(true);
         expect(fanComponents().particleEmitter!.baseline.level).toBeUndefined();
     });
 
-    it("lets out the same puffs at any strength, going faster and closer together the stronger it is, never far from the default", () => {
-        const puffsOf = (strength: number, range: number = SHORTEST) => {
-            const override = fanComponents().particleEmitter!.getOverride!(windOf(strength, range))!;
-            // How far they go is the range's alone (see ParticleEmitter's reach), and how they look the effect's.
-            expect(Object.keys(override).sort()).toEqual(["particleTimeScale", "rateScale", "reach"]);
+    it("lets out the same puffs at any setting, going faster and closer together the stronger it is, never far from the default", () => {
+        const puffsOf = (setting: FanSetting) => {
+            const override = fanComponents().particleEmitter!.getOverride!(windOf(setting))!;
+            // How far they go is the range's alone (see ParticleEmitter's reach), how they look the effect's in the
+            // wind's color, and where they start the middle of the fan's face, however many blades it has.
+            expect(Object.keys(override).sort()).toEqual(["particleTimeScale", "rateScale", "reach", "tint"]);
             // How close behind each other they come: as many more a second as they go faster gives none closer.
             return {pace: override.particleTimeScale!, closeness: override.rateScale! / override.particleTimeScale!};
         };
-        expect(puffsOf(SETTING.getStrength({}))).toEqual({pace: 1, closeness: 1});
-        for (let i = 1; i < FAN_STRENGTHS.length; ++i)
+        expect(puffsOf(DEFAULT)).toEqual({pace: 1, closeness: 1});
+        for (let i = 1; i < FAN_SETTINGS.length; ++i)
         {
-            const weaker = puffsOf(FAN_STRENGTHS[i - 1]), stronger = puffsOf(FAN_STRENGTHS[i]);
-            expect(stronger.pace, `strength ${FAN_STRENGTHS[i]}`).toBeGreaterThan(weaker.pace);
-            expect(stronger.closeness, `strength ${FAN_STRENGTHS[i]}`).toBeGreaterThan(weaker.closeness);
+            const weaker = puffsOf(FAN_SETTINGS[i - 1]), stronger = puffsOf(FAN_SETTINGS[i]);
+            expect(stronger.pace, bladesOf(FAN_SETTINGS[i])).toBeGreaterThan(weaker.pace);
+            expect(stronger.closeness, bladesOf(FAN_SETTINGS[i])).toBeGreaterThan(weaker.closeness);
         }
 
         // Neither end extreme: the weakest's puffs still drifting along, and a stream at either end neither bare
@@ -443,35 +586,30 @@ describe("what a fan shows of its wind", () => {
         expect(strongest.pace).toBeLessThanOrEqual(2);
         expect(weakest.closeness).toBeGreaterThan(0.6);
         expect(strongest.closeness).toBeLessThan(1.4);
-        // Its range is nothing to them.
-        for (const range of FAN_RANGES)
-            expect(puffsOf(STRONGEST, range)).toEqual(strongest);
     });
 });
 
 describe("a fan's push", () => {
-    const STRENGTH = 5, RANGE = 5;
-    const PUSH = FORCE.getAcceleration(windOf(STRENGTH, RANGE), WALL_FACING);
+    const PUSH = FORCE.getAcceleration(windOf(DEFAULT), WALL_FACING);
     // A hair: less than anything measured here, more than what rounding leaves.
     const HAIR = 0.001;
 
-    function addWallFan(room: Room, objectId: string = "wall-fan", strength: number = STRENGTH,
-        range: number = RANGE): void
+    function addWallFan(room: Room, objectId: string = "wall-fan", setting: FanSetting = DEFAULT): void
     {
         expect(ObjectUpdateUtil.addObject(MEMBER, room, makeFanSignal(room, MEMBER, objectId, WALL_SPOT, WALL_FACING,
-            windOf(strength, range)))).toBe(true);
+            windOf(setting)))).toBe(true);
     }
 
-    function setWind(room: Room, objectId: string, strength: number, range: number): void
+    function setWind(room: Room, objectId: string, setting: FanSetting): void
     {
         expect(ObjectUpdateUtil.setObjectMetadata(GUEST, room, new SetObjectMetadataSignal(room.id, objectId, FORCE_KEY,
-            SETTING.encodeForceProperties(strength, range)))).toBe(true);
+            UTIL.encodeForceProperties(setting)))).toBe(true);
     }
 
     // How hard the wall fan itself pushes, that far down its stream, at a setting.
-    function pushAt(strength: number, range: number, distance: number): number
+    function pushAt(setting: FanSetting, distance: number): number
     {
-        return FORCE.getAcceleration(windOf(strength, range), WALL_FACING) * (1 - distance / range);
+        return FORCE.getAcceleration(windOf(setting), WALL_FACING) * (1 - distance / setting.range);
     }
 
     it("speeds a body up along its facing, as hard at its face as its strength makes it", async () => {
@@ -492,14 +630,14 @@ describe("a fan's push", () => {
                 expect(push.y).toBeCloseTo(0, 6);
                 expect(push.z).toBeCloseTo(-PUSH, 3);
 
-                for (const strength of FAN_STRENGTHS)
+                for (const setting of FAN_SETTINGS)
                 {
-                    setWind(room, "wall-fan", strength, RANGE);
-                    expect(pushOutOfWall(room, atTheFace) / pushAt(strength, RANGE, 0)).toBeCloseTo(1, 5);
+                    setWind(room, "wall-fan", setting);
+                    expect(pushOutOfWall(room, atTheFace) / pushAt(setting, 0), bladesOf(setting)).toBeCloseTo(1, 5);
                 }
 
                 // What it gives a body comes on top of however the body is moving, not in its place.
-                setWind(room, "wall-fan", STRENGTH, RANGE);
+                setWind(room, "wall-fan", DEFAULT);
                 putBody(room, "body", atTheFace);
                 const pushed = PhysicsManager.applyForces(room.id, "body", {x: 1, y: -2, z: 4}, FRAME);
                 expect(pushed).toMatchObject({x: 1, y: -2});
@@ -524,6 +662,7 @@ describe("a fan's push", () => {
                 addWallFan(room);
                 expect(pushOutOfWall(room, inFrontOfWallFan(0))).toBeCloseTo(PUSH, 3);
 
+                const RANGE = DEFAULT.range;
                 for (const [acceleration, range] of [[-PUSH, RANGE], [0, RANGE], [PUSH, 0], [PUSH, -RANGE]])
                 {
                     const getAcceleration = vi.spyOn(FORCE, "getAcceleration").mockReturnValue(acceleration);
@@ -543,7 +682,7 @@ describe("a fan's push", () => {
         });
     });
 
-    it("thins out evenly to nothing at the end of its range, wherever that is set, and reaches nothing behind it", async () => {
+    it("thins out evenly to nothing at the end of its range, at every setting, and reaches nothing behind it", async () => {
         await runScenario({
             name: "the reach of a wall fan",
             rooms: [EMPTY_HUB],
@@ -553,17 +692,19 @@ describe("a fan's push", () => {
                 addWallFan(room);
                 const pushAfter = (distance: number) => pushOutOfWall(room, inFrontOfWallFan(distance));
 
-                for (const range of FAN_RANGES)
+                for (const setting of FAN_SETTINGS)
                 {
-                    setWind(room, "wall-fan", STRENGTH, range);
-                    expect(pushAfter(0), `range ${range}`).toBeCloseTo(PUSH, 3);
+                    setWind(room, "wall-fan", setting);
+                    const {range} = setting, push = pushAt(setting, 0);
+                    expect(pushAfter(0), bladesOf(setting)).toBeCloseTo(push, 3);
                     for (const share of [0.25, 0.5, 0.75, 0.96])
-                        expect(pushAfter(share * range)).toBeCloseTo((1 - share) * PUSH, 3);
+                        expect(pushAfter(share * range), bladesOf(setting)).toBeCloseTo((1 - share) * push, 3);
                     expect(pushAfter(range - 0.01)).toBeGreaterThan(0);
                     expect(pushAfter(range)).toBeCloseTo(0, 6);
                     expect(pushAfter(range + 0.01)).toBe(0);
                     expect(pushAfter(range + 3)).toBe(0);
                 }
+                setWind(room, "wall-fan", DEFAULT);
 
                 // A second fan on a wall one block thick, standing free: whoever is on the wall's other side is
                 // behind its face.
@@ -579,7 +720,7 @@ describe("a fan's push", () => {
                 const thinWallSpot: Vec3 = {x: cols[1] * VOXEL_CELL_SIZE, y: layers[1] * VOXEL_CELL_SIZE,
                     z: row * VOXEL_CELL_SIZE};
                 expect(ObjectUpdateUtil.addObject(MEMBER, room, makeFanSignal(room, MEMBER, "thin-wall-fan",
-                    thinWallSpot, WALL_FACING, windOf(STRENGTH, RANGE)))).toBe(true);
+                    thinWallSpot, WALL_FACING, windOf(DEFAULT)))).toBe(true);
                 const besideThinWall = (z: number): Vec3 => ({x: thinWallSpot.x, y: STANDING_Y, z});
                 const front = thinWallSpot.z - PLAYER_RADIUS_XZ, back = thinWallSpot.z + VOXEL_CELL_SIZE + PLAYER_RADIUS_XZ;
                 expect(pushOutOfWall(room, besideThinWall(front))).toBeCloseTo(PUSH, 3);
@@ -614,7 +755,7 @@ describe("a fan's push", () => {
                 // a player could take of it is half its own height.
                 const highSpot: Vec3 = {x: WALL_SPOT.x - 2, y: PLAYER_HEIGHT + 0.5, z: WALL_SPOT.z};
                 expect(ObjectUpdateUtil.addObject(MEMBER, room, makeFanSignal(room, MEMBER, "high-fan", highSpot,
-                    WALL_FACING, windOf(STRENGTH, RANGE)))).toBe(true);
+                    WALL_FACING, windOf(DEFAULT)))).toBe(true);
                 const pushUnderHighFan = (feetOffTheFloor: number) =>
                     pushBeside(highSpot.x - WALL_SPOT.x, STANDING_Y + feetOffTheFloor);
                 expect(pushUnderHighFan(0)).toBe(0);
@@ -632,7 +773,7 @@ describe("a fan's push", () => {
             users: [userAtCenter("hub")],
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
-                addWallFan(room, "wall-fan", STRENGTH, LONGEST);
+                addWallFan(room, "wall-fan", STRONGEST);
                 const pushAfter = (distance: number) => pushOutOfWall(room, inFrontOfWallFan(distance));
                 // A block two units out, on the line through the fan's middle, above where a player walks; a body
                 // fits under it, before it and behind it.
@@ -654,7 +795,7 @@ describe("a fan's push", () => {
                 // With the block gone again, so is its shelter.
                 expect(VoxelUpdateUtil.removeVoxelBlock(undefined, room.voxelGrid.voxels,
                     VoxelQueryUtil.getVoxelQuadIndex(row, col, "x", "+", layer))).toBe(true);
-                expect(pushAfter(behind)).toBeCloseTo(pushAt(STRENGTH, LONGEST, behind), 3);
+                expect(pushAfter(behind)).toBeCloseTo(pushAt(STRONGEST, behind), 3);
             },
         });
     });
@@ -666,7 +807,7 @@ describe("a fan's push", () => {
             users: [userAtCenter("hub")],
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
-                addWallFan(room, "wall-fan", STRENGTH, LONGEST);
+                addWallFan(room, "wall-fan", STRONGEST);
                 // A wall six units out, as wide and as high as would stop a player.
                 const wallDistance = 6;
                 const row = VoxelQueryUtil.getVoxelRowFromWorldZ(WALL_SPOT.z - wallDistance - 0.5 * VOXEL_CELL_SIZE);
@@ -683,7 +824,7 @@ describe("a fan's push", () => {
                 const pushWithRoom = (roomAhead: number) => pushOutOfWall(room,
                     inFrontOfWallFan(wallDistance - roomAhead - 2 * PLAYER_RADIUS_XZ));
                 const unhindered = (roomAhead: number) =>
-                    pushAt(STRENGTH, LONGEST, wallDistance - roomAhead - 2 * PLAYER_RADIUS_XZ);
+                    pushAt(STRONGEST, wallDistance - roomAhead - 2 * PLAYER_RADIUS_XZ);
 
                 expect(pushWithRoom(3)).toBeCloseTo(unhindered(3), 3);
                 expect(pushWithRoom(1.5)).toBeCloseTo(unhindered(1.5), 3);
@@ -708,7 +849,7 @@ describe("a fan's push", () => {
             users: [userAtCenter("hub")],
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
-                addWallFan(room, "wall-fan", STRONGEST, LONGEST);
+                addWallFan(room, "wall-fan", STRONGEST);
                 const atTheFace = inFrontOfWallFan(0), aside = inFrontOfWallFan(0, 3);
                 const speedAfter = (deltaTime: number) => 0 - PhysicsManager.applyForces(room.id, "body", still(), deltaTime).z;
 
@@ -716,7 +857,7 @@ describe("a fan's push", () => {
                 putBody(room, "body", atTheFace);
                 const building = Array.from({length: 120}, () => speedAfter(FRAME));
                 expect(building[0]).toBeGreaterThan(0);
-                expect(building[0]).toBeLessThan(FORCE.getAcceleration(windOf(STRONGEST, LONGEST), WALL_FACING) * FRAME + HAIR);
+                expect(building[0]).toBeLessThan(FORCE.getAcceleration(windOf(STRONGEST), WALL_FACING) * FRAME + HAIR);
                 for (let i = 1; i < building.length; ++i)
                 {
                     expect(building[i]).toBeGreaterThan(building[i - 1]);
@@ -778,8 +919,8 @@ describe("a fan's push", () => {
                 addWallFan(room);
                 // Left at the fan's face, moved through the real physics as a Rigidbody moves its object: how far
                 // out the near side of the body is after each frame, for eight seconds.
-                const thrown = (strength: number): number[] => {
-                    setWind(room, "wall-fan", strength, RANGE);
+                const thrown = (setting: FanSetting): number[] => {
+                    setWind(room, "wall-fan", setting);
                     let pos = inFrontOfWallFan(0);
                     putBody(room, "thrown", pos);
                     const distances: number[] = [];
@@ -791,23 +932,23 @@ describe("a fan's push", () => {
                     return distances;
                 };
 
-                const distances = thrown(STRENGTH);
+                const distances = thrown(DEFAULT);
                 for (let i = 1; i < distances.length; ++i)
                     expect(distances[i]).toBeGreaterThanOrEqual(distances[i - 1] - 1e-9);
                 // Out of the stream by its own speed, and at rest there.
                 const rest = distances[distances.length - 1];
-                expect(rest).toBeGreaterThan(RANGE);
+                expect(rest).toBeGreaterThan(DEFAULT.range);
                 expect(rest - distances[distances.length - 60]).toBeLessThan(HAIR);
                 expect(carriedBy(room, "thrown")).toEqual({x: 0, y: 0, z: 0});
                 // Smoothly: from nothing, up to more than twice a walk, and down again.
                 const speeds = distances.map((distance, i) => (distance - (distances[i - 1] ?? 0)) / FRAME);
-                expect(speeds[0]).toBeLessThan(0.5 * WALKING_SPEED);
+                expect(speeds[0]).toBeLessThan(PUSH * FRAME);
                 expect(Math.max(...speeds)).toBeGreaterThan(2 * WALKING_SPEED);
 
                 const strongest = thrown(STRONGEST), weakest = thrown(WEAKEST);
                 expect(strongest[strongest.length - 1]).toBeGreaterThan(rest + 1);
                 expect(weakest[weakest.length - 1]).toBeLessThan(rest);
-                expect(weakest[weakest.length - 1]).toBeGreaterThan(0.5 * RANGE);
+                expect(weakest[weakest.length - 1]).toBeGreaterThan(WEAKEST.range);
             },
         });
     });
@@ -820,22 +961,23 @@ describe("a fan's push", () => {
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
                 addWallFan(room);
-                const here = inFrontOfWallFan(0), farOut = inFrontOfWallFan(RANGE + 1), aside = inFrontOfWallFan(0, -3);
+                const farOutDistance = DEFAULT.range + 1;
+                const here = inFrontOfWallFan(0), farOut = inFrontOfWallFan(farOutDistance), aside = inFrontOfWallFan(0, -3);
                 const pushOn = (pos: Vec3) => pushOutOfWall(room, pos);
                 expect(pushOn(here)).toBeCloseTo(PUSH, 3);
                 expect(pushOn(farOut)).toBe(0);
                 expect(pushOn(aside)).toBe(0);
 
                 // The strongest and the longest wind in its place: harder here, and now felt out there.
-                setWind(room, "wall-fan", STRONGEST, LONGEST);
-                expect(pushOn(here) / pushAt(STRONGEST, LONGEST, 0)).toBeCloseTo(1, 5);
-                expect(pushOn(farOut) / pushAt(STRONGEST, LONGEST, RANGE + 1)).toBeCloseTo(1, 5);
+                setWind(room, "wall-fan", STRONGEST);
+                expect(pushOn(here) / pushAt(STRONGEST, 0)).toBeCloseTo(1, 5);
+                expect(pushOn(farOut) / pushAt(STRONGEST, farOutDistance)).toBeCloseTo(1, 5);
 
                 // Moved three units along its wall, it takes its stream with it.
                 ObjectUpdateUtil.setObjectTransform(GUEST, room, new SetObjectTransformSignal(room.id, "wall-fan",
                     new ObjectTransform({...WALL_SPOT, x: WALL_SPOT.x - 3}, {...WALL_FACING}, {...UNIT_VEC3}), true));
                 expect(pushOn(here)).toBe(0);
-                expect(pushOn(aside) / pushAt(STRONGEST, LONGEST, 0)).toBeCloseTo(1, 5);
+                expect(pushOn(aside) / pushAt(STRONGEST, 0)).toBeCloseTo(1, 5);
 
                 expect(ObjectUpdateUtil.removeObject(GUEST, room, new RemoveObjectSignal(room.id, "wall-fan"))).toBe(true);
                 expect(pushOn(aside)).toBe(0);
@@ -855,7 +997,7 @@ describe("a fan's push", () => {
                 // A second one on the floor under the first one's stream.
                 const floorSpot: Vec3 = {x: WALL_SPOT.x, y: 0, z: WALL_SPOT.z - 1.5};
                 expect(ObjectUpdateUtil.addObject(MEMBER, room, makeFanSignal(room, MEMBER, "floor-fan", floorSpot,
-                    FLOOR_FACING, windOf(STRONGEST, RANGE)))).toBe(true);
+                    FLOOR_FACING, windOf(STRONGEST)))).toBe(true);
 
                 PhysicsManager.unload(room.id);
                 PhysicsManager.load(ServerRoomManager.roomRuntimeMemories["hub"]);
@@ -866,7 +1008,7 @@ describe("a fan's push", () => {
                 const standing: Vec3 = {x: floorSpot.x, y: STANDING_Y, z: floorSpot.z};
                 const fromWall = WALL_SPOT.z - (standing.z + PLAYER_RADIUS_XZ);
                 const pushed = accelerationOn(room, standing, RISING);
-                expect(pushed.z).toBeCloseTo(-pushAt(STRENGTH, RANGE, fromWall), 3);
+                expect(pushed.z).toBeCloseTo(-pushAt(DEFAULT, fromWall), 3);
                 expect(pushed.y).toBeGreaterThan(0);
                 expect(ObjectUpdateUtil.removeObject(GUEST, room, new RemoveObjectSignal(room.id, "floor-fan"))).toBe(true);
                 expect(accelerationOn(room, standing, RISING).z).toBeCloseTo(pushed.z, 6);
@@ -876,21 +1018,20 @@ describe("a fan's push", () => {
 });
 
 describe("a fan blowing upward", () => {
-    const STRENGTH = 5, RANGE = 5;
-    const PUSH = FORCE.getAcceleration(windOf(STRENGTH, RANGE), FLOOR_FACING);
+    const PUSH = FORCE.getAcceleration(windOf(DEFAULT), FLOOR_FACING), RANGE = DEFAULT.range;
     // The most room a player has over the room's own floor: up against the slab, or against the room's ceiling.
     const HEADROOM_UNDER_SLAB = SLAB_UNDERSIDE_Y - PLAYER_HEIGHT, HEADROOM_UNDER_CEILING = MAX_ROOM_Y - PLAYER_HEIGHT;
 
-    function addFloorFan(room: Room, strength: number = STRENGTH, range: number = RANGE): void
+    function addFloorFan(room: Room, setting: FanSetting = DEFAULT): void
     {
         expect(ObjectUpdateUtil.addObject(MEMBER, room, makeFanSignal(room, MEMBER, "floor-fan", FLOOR_SPOT,
-            FLOOR_FACING, windOf(strength, range)))).toBe(true);
+            FLOOR_FACING, windOf(setting)))).toBe(true);
     }
 
-    function setWind(room: Room, strength: number, range: number): void
+    function setWind(room: Room, setting: FanSetting): void
     {
         expect(ObjectUpdateUtil.setObjectMetadata(GUEST, room, new SetObjectMetadataSignal(room.id, "floor-fan",
-            FORCE_KEY, SETTING.encodeForceProperties(strength, range)))).toBe(true);
+            FORCE_KEY, UTIL.encodeForceProperties(setting)))).toBe(true);
     }
 
     // Takes the slab between the storeys away over a stretch of the room, so that what is below can go up through.
@@ -970,10 +1111,13 @@ describe("a fan blowing upward", () => {
                 openSlabOverFloorFan(room);
                 const farAway: Vec3 = {x: FLOOR_SPOT.x + 6, y: STANDING_Y + 0.5, z: FLOOR_SPOT.z};
 
-                // What a body carries upward, gravity takes away at one steady rate, wherever the body is.
+                // What a body carries upward, gravity takes away at one steady rate, wherever the body is: past
+                // the end of a stream (one short enough to end below the ceiling) as well as away from it.
                 const pull = gravityPullIn(room);
                 expect(pull).toBeGreaterThan(GRAVITY_SPEED);
-                expect(liftOn(room, overFloorFan(RANGE + 0.2))).toBeCloseTo(-pull, 3);
+                setWind(room, WEAKEST);
+                expect(liftOn(room, overFloorFan(WEAKEST.range + 0.2))).toBeCloseTo(-pull, 3);
+                setWind(room, DEFAULT);
                 expect(liftOn(room, {...farAway, y: farAway.y - 0.25})).toBeCloseTo(-pull, 3);
                 // One that carries nothing has nothing more to lose: it falls as fast as ever, and no faster.
                 expect(accelerationOn(room, farAway)).toEqual({x: 0, y: 0, z: 0});
@@ -1000,7 +1144,7 @@ describe("a fan blowing upward", () => {
         });
     });
 
-    it("makes up for gravity by the same measure as it pushes: any strength lifts at its face, none at its range's end", async () => {
+    it("makes up for gravity by the same measure as it pushes: any setting lifts at its face, none at its range's end", async () => {
         await runScenario({
             name: "the lift of a floor fan",
             rooms: [EMPTY_HUB],
@@ -1011,35 +1155,42 @@ describe("a fan blowing upward", () => {
                 openSlabOverFloorFan(room);
                 const pull = gravityPullIn(room);
 
-                for (const strength of FAN_STRENGTHS)
+                for (const setting of FAN_SETTINGS)
                 {
-                    setWind(room, strength, RANGE);
-                    const push = FORCE.getAcceleration(windOf(strength, RANGE), FLOOR_FACING);
+                    setWind(room, setting);
+                    const push = FORCE.getAcceleration(windOf(setting), FLOOR_FACING), {range} = setting;
                     // At its face, what is left once gravity has had its pull is the fan's own push.
-                    expect(liftOn(room, overFloorFan(0.1)), `strength ${strength}`)
-                        .toBeCloseTo((push + pull) * (1 - 0.1 / RANGE) - pull, 3);
+                    expect(liftOn(room, overFloorFan(0.1)), bladesOf(setting))
+                        .toBeCloseTo((push + pull) * (1 - 0.1 / range) - pull, 3);
                     expect(liftOn(room, overFloorFan(0.001))).toBeGreaterThan(0.99 * push);
-                    // Thinning out with the push, so that somewhere short of the range's end gravity wins.
-                    expect(liftOn(room, overFloorFan(0.5 * RANGE))).toBeCloseTo(0.5 * (push + pull) - pull, 3);
-                    expect(liftOn(room, overFloorFan(RANGE - 0.01))).toBeLessThan(0);
+                    // Thinning out with the push: a third of the way up its range, by a third.
+                    expect(liftOn(room, overFloorFan(range / 3)), bladesOf(setting))
+                        .toBeCloseTo((2 / 3) * (push + pull) - pull, 3);
                     // As much speed in a step as its length, however long the step.
-                    putBody(room, "body", overFloorFan(0.5 * RANGE));
+                    putBody(room, "body", overFloorFan(range / 3));
                     PhysicsManager.physicsRooms[room.id].objectById["body"].carriedVelocity = {x: 0, y: RISING, z: 0};
                     expect((PhysicsManager.applyForces(room.id, "body", still(), 0.05).y - RISING) / 0.05)
-                        .toBeCloseTo(0.5 * (push + pull) - pull, 6);
+                        .toBeCloseTo((2 / 3) * (push + pull) - pull, 6);
                 }
-                // The strongest outdoes gravity's pull several times over.
-                expect(FORCE.getAcceleration(windOf(STRONGEST, RANGE), FLOOR_FACING)).toBeGreaterThan(3 * pull);
+                // So that short of the range's end gravity wins, wherever the room is high enough to show it.
+                for (const setting of FAN_SETTINGS.filter(setting => setting.range < HEADROOM_UNDER_CEILING - 1))
+                {
+                    setWind(room, setting);
+                    expect(liftOn(room, overFloorFan(setting.range - 0.01)), bladesOf(setting)).toBeLessThan(0);
+                }
+                // The strongest outdoes gravity's pull more than twice over.
+                expect(FORCE.getAcceleration(windOf(STRONGEST), FLOOR_FACING)).toBeGreaterThan(2 * pull);
 
                 // A fan blowing sideways or down makes up for nothing: gravity pulls as ever in its stream.
+                setWind(room, DEFAULT);
                 expect(ObjectUpdateUtil.addObject(MEMBER, room, makeFanSignal(room, MEMBER, "wall-fan", WALL_SPOT,
-                    WALL_FACING, windOf(STRENGTH, RANGE)))).toBe(true);
+                    WALL_FACING, windOf(DEFAULT)))).toBe(true);
                 const inWallStream = accelerationOn(room, inFrontOfWallFan(1, 0, STANDING_Y + 0.25), RISING);
                 expect(inWallStream.z).toBeLessThan(0);
                 expect(inWallStream.y).toBeCloseTo(-pull, 3);
                 const ceilingSpot: Vec3 = {x: FLOOR_SPOT.x + 6, y: MAX_ROOM_Y, z: FLOOR_SPOT.z};
                 expect(ObjectUpdateUtil.addObject(MEMBER, room, makeFanSignal(room, MEMBER, "ceiling-fan", ceilingSpot,
-                    CEILING_FACING, windOf(STRENGTH, RANGE)))).toBe(true);
+                    CEILING_FACING, windOf(DEFAULT)))).toBe(true);
                 const underCeilingFan: Vec3 = {x: ceilingSpot.x, y: SLAB_TOP_Y + STANDING_Y + 0.25, z: ceilingSpot.z};
                 expect(liftOn(room, underCeilingFan)).toBeLessThan(-pull);
                 // What it gives a body is a speed downward, which drag wears away once the body is out of it.
@@ -1068,15 +1219,15 @@ describe("a fan blowing upward", () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
                 addFloorFan(room);
 
-                for (const strength of FAN_STRENGTHS)
+                for (const setting of FAN_SETTINGS)
                 {
-                    setWind(room, strength, RANGE);
+                    setWind(room, setting);
                     const standing = overFloorFan(0);
                     putBody(room, "stander", standing);
                     // Off the floor in its very first frame, however weak the fan: from rest, not with a jolt.
                     const lifted = step(room, "stander", standing);
-                    expect(lifted.y, `strength ${strength}`).toBeGreaterThan(standing.y);
-                    expect(lifted.y - standing.y).toBeLessThan(FORCE.getAcceleration(windOf(strength, RANGE), FLOOR_FACING) * FRAME * FRAME + 1e-9);
+                    expect(lifted.y, bladesOf(setting)).toBeGreaterThan(standing.y);
+                    expect(lifted.y - standing.y).toBeLessThan(FORCE.getAcceleration(windOf(setting), FLOOR_FACING) * FRAME * FRAME + 1e-9);
                     expect(carriedBy(room, "stander").y).toBeGreaterThan(GRAVITY_SPEED);
                 }
 
@@ -1094,10 +1245,11 @@ describe("a fan blowing upward", () => {
 
                 // With a fan on the ceiling blowing down on it as well (through the opened slab), added after the
                 // one below: still weightless on the floor fan, and off it at once.
-                setWind(room, STRENGTH, RANGE);
+                setWind(room, DEFAULT);
                 openSlabOverFloorFan(room);
+                expect(STRONGEST.range).toBeGreaterThan(MAX_ROOM_Y - PLAYER_HEIGHT); // reaching down to it
                 expect(ObjectUpdateUtil.addObject(MEMBER, room, makeFanSignal(room, MEMBER, "ceiling-fan", CEILING_SPOT,
-                    CEILING_FACING, windOf(WEAKEST, LONGEST)))).toBe(true);
+                    CEILING_FACING, windOf(STRONGEST)))).toBe(true);
                 const between = overFloorFan(0);
                 putBody(room, "stander", between);
                 expect(step(room, "stander", between).y).toBeGreaterThan(between.y);
@@ -1174,9 +1326,9 @@ describe("a fan blowing upward", () => {
                 expect(late.turns).toBeGreaterThanOrEqual(5);
                 expect(late.low).toBeCloseTo(earlier.low, 1);
                 expect(late.high).toBeCloseTo(earlier.high, 1);
-                // In the air all the while, within the reach of its wind.
+                // In the air all the while, and never pinned to the ceiling.
                 expect(late.low).toBeGreaterThan(0.5);
-                expect(late.high).toBeLessThan(RANGE + 0.5);
+                expect(late.high).toBeLessThan(HEADROOM_UNDER_CEILING);
                 // Never falling faster than anything falls.
                 for (let i = 1; i < heights.length; ++i)
                     expect(heights[i - 1] - heights[i]).toBeLessThanOrEqual(GRAVITY_SPEED * FRAME + 1e-9);
@@ -1186,28 +1338,27 @@ describe("a fan blowing upward", () => {
                 expect(Math.abs(coarse.low - late.low)).toBeLessThan(0.15);
                 expect(Math.abs(coarse.high - late.high)).toBeLessThan(0.15);
 
-                // A weak one over a short reach: up off the floor and back down onto it, again and again.
-                setWind(room, 3, 3);
+                // The weakest, over its short reach: up off the floor and back down onto it, again and again.
+                setWind(room, WEAKEST);
                 const gentle = bounceIn(heightsOver(room, 40), 30, 40);
                 expect(gentle.low).toBeLessThan(0.05);
                 expect(gentle.high).toBeGreaterThan(1);
                 expect(gentle.turns).toBeGreaterThanOrEqual(3);
 
-                // Every strength and every range: never coming to rest (the weakest, see below).
-                for (const [strength, range] of [[3, 5], [7, 5], [STRONGEST, 5], [STRENGTH, SHORTEST], [STRENGTH, 3],
-                    [STRENGTH, 7], [STRONGEST, LONGEST], [3, SHORTEST], [3, LONGEST]])
+                // Every setting: never coming to rest.
+                for (const setting of FAN_SETTINGS)
                 {
-                    setWind(room, strength, range);
+                    setWind(room, setting);
                     const bounce = bounceIn(heightsOver(room, 30), 20, 30);
-                    expect(bounce.high - bounce.low, `${strength} over ${range}`).toBeGreaterThan(0.25);
-                    expect(bounce.turns, `${strength} over ${range}`).toBeGreaterThanOrEqual(3);
+                    expect(bounce.high - bounce.low, bladesOf(setting)).toBeGreaterThan(0.25);
+                    expect(bounce.turns, bladesOf(setting)).toBeGreaterThanOrEqual(3);
                     expect(bounce.high).toBeLessThanOrEqual(HEADROOM_UNDER_CEILING + 1e-6);
                 }
             },
         });
     });
 
-    it("lifts a body only a little where it is weakest, however far it reaches: the stronger, the higher", async () => {
+    it("lifts a body least where it has one blade, back onto the floor each time, and higher with each blade more", async () => {
         await runScenario({
             name: "the weakest floor fan",
             rooms: [EMPTY_HUB],
@@ -1217,27 +1368,28 @@ describe("a fan blowing upward", () => {
                 addFloorFan(room);
                 openSlabOverFloorFan(room);
 
-                // A little way up and back down onto the floor, again and again: never so much as half a player's
-                // height up at its default reach, nor a player's height at any.
-                for (const range of FAN_RANGES)
-                {
-                    setWind(room, WEAKEST, range);
-                    const gentle = bounceIn(heightsOver(room, 40), 20, 40);
-                    expect(gentle.low, `over ${range}`).toBeLessThan(0.05);
-                    expect(gentle.high, `over ${range}`).toBeGreaterThan(0.05);
-                    expect(gentle.high, `over ${range}`).toBeLessThan((range == RANGE ? 0.5 : 1) * PLAYER_HEIGHT);
-                    expect(gentle.turns, `over ${range}`).toBeGreaterThanOrEqual(5);
-                }
+                // Some way up and back down onto the floor, again and again: never so much as a player's height.
+                setWind(room, WEAKEST);
+                const gentle = bounceIn(heightsOver(room, 40), 20, 40);
+                expect(gentle.low).toBeLessThan(0.05);
+                expect(gentle.high).toBeGreaterThan(0.05);
+                expect(gentle.high).toBeLessThan(PLAYER_HEIGHT);
+                expect(gentle.turns).toBeGreaterThanOrEqual(5);
 
-                // How high a body first goes rises with each step of strength, and the weakest takes it up by less
-                // than its share of the strongest's strength makes of the strongest's lift.
-                const firstRises = FAN_STRENGTHS.map(strength => {
-                    setWind(room, strength, SHORTEST);
-                    return Math.max(...heightsOver(room, 4));
+                // With each blade more, a body is higher a quarter of a second after it is set down, and goes at
+                // least as high at first: higher, where the ceiling does not stop it.
+                const quarterSecond = Math.round(0.25 / FRAME) - 1;
+                const rises = FAN_SETTINGS.map(setting => {
+                    setWind(room, setting);
+                    return heightsOver(room, 4);
                 });
-                for (let i = 1; i < firstRises.length; ++i)
-                    expect(firstRises[i], `strength ${FAN_STRENGTHS[i]}`).toBeGreaterThan(firstRises[i - 1]);
-                expect(firstRises[0]).toBeLessThan(firstRises[firstRises.length - 1] * WEAKEST / STRONGEST);
+                expect(Math.max(...rises[0])).toBeLessThan(HEADROOM_UNDER_CEILING - 1);
+                for (let i = 1; i < rises.length; ++i)
+                {
+                    expect(rises[i][quarterSecond], bladesOf(FAN_SETTINGS[i])).toBeGreaterThan(rises[i - 1][quarterSecond]);
+                    expect(Math.max(...rises[i]), bladesOf(FAN_SETTINGS[i])).toBeGreaterThan(Math.max(...rises[i - 1]) - 1e-9);
+                    expect(Math.max(...rises[i])).toBeLessThanOrEqual(HEADROOM_UNDER_CEILING + 1e-6);
+                }
             },
         });
     });
@@ -1251,14 +1403,13 @@ describe("a fan blowing upward", () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
                 addFloorFan(room);
 
-                for (const [strength, range] of [[STRENGTH, RANGE], [3, RANGE], [STRONGEST, RANGE], [STRONGEST, LONGEST],
-                    [STRENGTH, SHORTEST]])
+                for (const setting of FAN_SETTINGS)
                 {
-                    setWind(room, strength, range);
+                    setWind(room, setting);
                     const bounce = bounceIn(heightsOver(room, 30), 20, 30);
-                    expect(bounce.high, `${strength} over ${range}`).toBeLessThanOrEqual(HEADROOM_UNDER_SLAB + 1e-6);
-                    expect(bounce.high - bounce.low, `${strength} over ${range}`).toBeGreaterThan(0.15);
-                    expect(bounce.turns, `${strength} over ${range}`).toBeGreaterThanOrEqual(5);
+                    expect(bounce.high, bladesOf(setting)).toBeLessThanOrEqual(HEADROOM_UNDER_SLAB + 1e-6);
+                    expect(bounce.high - bounce.low, bladesOf(setting)).toBeGreaterThan(0.15);
+                    expect(bounce.turns, bladesOf(setting)).toBeGreaterThanOrEqual(5);
                 }
             },
         });

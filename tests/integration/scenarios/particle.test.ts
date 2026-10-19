@@ -68,8 +68,10 @@ import AnimatedSprite from "../../../src/client/object/components/animatedSprite
 import GameObject from "../../../src/client/object/types/gameObject/gameObject";
 import ClientVoxelManager from "../../../src/client/voxel/clientVoxelManager";
 import { roomShapeChangedObservable, voxelBlockEditObservable } from "../../../src/client/system/clientObservables";
+import Vec2 from "../../../src/shared/math/types/vec2";
 import Waveform from "../../../src/shared/math/types/waveform";
 import WaveformUtil from "../../../src/shared/math/util/waveformUtil";
+import ObjectScaleUtil from "../../../src/shared/object/util/objectScaleUtil";
 import AnimatedSpriteDescriptor from "../../../src/shared/graphics/particle/types/animatedSpriteDescriptor";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
@@ -625,6 +627,66 @@ describe("AnimatedSprite", () => {
         expect(handles.map(h => h.sprite)).toEqual(["fanBlades", "glow"]);
         expect(handles[0].release).toHaveBeenCalledOnce();
     });
+
+    it("shows a copy at each of the centers it is given, and lets go of those no longer wanted", async () => {
+        const handles: ReturnType<typeof fakeHandle>[] = [];
+        vi.spyOn(ParticleSystem, "createSprite").mockImplementation((sprite: string) => {
+            handles.push(fakeHandle(sprite));
+            return handles[handles.length - 1] as unknown as SpriteHandle;
+        });
+        const centersBy: {[key: string]: Vec2[] | undefined} = {
+            three: [{x: 0, y: 0.25}, {x: -0.25, y: -0.2}, {x: 0.3, y: -0.2}],
+            one: [{x: 0.1, y: 0}],
+        };
+        const object = makeObject({7: "three"});
+        const size = ObjectScaleUtil.getObjectSize(canvasTypeIndex, object.params.transform.scale);
+        const component = new AnimatedSprite(object, {
+            baseline: {sprite: "fanBlades", faceOffset: 0.1, widthScale: 0.4, heightScale: 0.3},
+            getOverride: (metadata: {[key: number]: string}) => ({centers: centersBy[metadata[7]]}),
+        });
+        const poseOf = (handle: ReturnType<typeof fakeHandle>) => {
+            const [position, facing, quarterTurns, width, height] = handle.setPose.mock.lastCall!;
+            return {position, facing, quarterTurns, width, height};
+        };
+
+        // Each as far across (+x, on a face looking along +z) and up from the face's middle as its share of the
+        // footprint, all of one size and facing.
+        await component.onSpawn();
+        expect(handles).toHaveLength(3);
+        handles.forEach((handle, i) => {
+            const pose = poseOf(handle);
+            expect(pose.position.x).toBeCloseTo(5 + centersBy.three![i].x * size.x, 6);
+            expect(pose.position.y).toBeCloseTo(1 + centersBy.three![i].y * size.y, 6);
+            expect(pose.position.z).toBeCloseTo(3.1, 6);
+            expect(pose.facing).toEqual({x: 0, y: 0, z: 1});
+            expect(pose.width).toBeCloseTo(0.4 * size.x, 6);
+            expect(pose.height).toBeCloseTo(0.3 * size.y, 6);
+        });
+
+        // Fewer: the first kept and moved, the rest let go.
+        object.params.metadata[7] = "one";
+        component.onSetMetadata();
+        expect(handles).toHaveLength(3);
+        expect(handles[0].release).not.toHaveBeenCalled();
+        expect(handles[1].release).toHaveBeenCalledOnce();
+        expect(handles[2].release).toHaveBeenCalledOnce();
+        expect(poseOf(handles[0]).position.x).toBeCloseTo(5 + 0.1 * size.x, 6);
+
+        // None given: the one, in the middle.
+        object.params.metadata[7] = "none";
+        component.onSetMetadata();
+        expect(handles).toHaveLength(3);
+        expect(poseOf(handles[0]).position.x).toBeCloseTo(5, 6);
+        expect(poseOf(handles[0]).position.y).toBeCloseTo(1, 6);
+
+        // More again: as many more rented, and every one let go in the end.
+        object.params.metadata[7] = "three";
+        component.onSetMetadata();
+        expect(handles).toHaveLength(5);
+        await component.onDespawn();
+        for (const handle of handles)
+            expect(handle.release).toHaveBeenCalledOnce();
+    });
 });
 
 describe("ParticleEmitter", () => {
@@ -649,7 +711,7 @@ describe("ParticleEmitter", () => {
     {
         const handle = {effect: baseline.effect, config: ParticleEffectConfigMap.getConfig(baseline.effect)!,
             setPose: vi.fn(), setScales: vi.fn(), setParticleTimeScale: vi.fn(), setLevel: vi.fn(), setStopDistance: vi.fn(),
-            stop: vi.fn()};
+            setTint: vi.fn(), stop: vi.fn()};
         vi.spyOn(ParticleSystem, "createEmitter").mockReturnValue(handle as unknown as ParticleEmitterHandle);
         const params = new AddObjectSignal(room.id, "user", "User", fanTypeIndex, "emitter-object",
             new ObjectTransform({...POS}, {x: 1, y: 0, z: 0}, {x: 1, y: 1, z: 1}), {});
@@ -716,6 +778,16 @@ describe("ParticleEmitter", () => {
         expect(still.handle.setScales.mock.lastCall!.slice(0, 2)).toEqual([1, 0]);
         await still.component.onDespawn();
         await fast.component.onDespawn();
+    });
+
+    it("tints the particles it lets out as it is told, and leaves them white where it is told nothing", async () => {
+        const plain = await spawn({effect: "wind"});
+        expect(plain.handle.setTint).toHaveBeenLastCalledWith("#ffffff");
+        const tinted = await spawn({effect: "wind", tint: "#ce0048"});
+        expect(tinted.handle.setTint).toHaveBeenLastCalledWith("#ce0048");
+        expect(tinted.handle.setScales.mock.lastCall).toEqual(plain.handle.setScales.mock.lastCall);
+        await plain.component.onDespawn();
+        await tinted.component.onDespawn();
     });
 
     it("paces its particles by its own time scale, along the same paths over as much longer lives, and nothing else", async () => {

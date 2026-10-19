@@ -30,6 +30,7 @@ import Voxel from "../../../src/shared/voxel/types/voxel";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
 import ObjectGroup from "../../../src/shared/object/types/objectGroup";
+import { writeLegacyObjectGroup } from "../helpers/legacyObjectGroup";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 import VolumeObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/volumeObjectTypeConfig";
 import RestrictedZoneUtil from "../../../src/shared/voxel/util/restrictedZoneUtil";
@@ -945,11 +946,8 @@ function encodeAsVersion7(grid: VoxelGrid, zones: number[][]): Uint8Array
 function encodeEmptyVersion6Objects(): Uint8Array
 {
     const out = new BufferState(new Uint8Array(64));
-    new ObjectGroup([]).encode(out);
-    const bytes = out.view.slice(0, out.byteIndex);
-    expect(bytes[0]).toBe(ObjectGroup.latestFormatVersion);
-    bytes[0] = 6;
-    return bytes;
+    writeLegacyObjectGroup(out, [], 6);
+    return out.view.slice(0, out.byteIndex);
 }
 
 // The volumes a room's objects hold, each as the blocks it covers and whom it is kept for.

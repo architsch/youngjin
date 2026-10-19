@@ -45,7 +45,7 @@ ls dev/scripts/*.js dev/scripts/*/*.js docs/devOps/*.md docs/devOps/*/*.md docs/
 ```
 
 Every one gets checked, not only the ones the diff touched — drift accumulates from changes made
-long before this batch. `docs/plans/` is never touched, whatever a sweep here turns up
+long before this batch. `docs/plans/` is not touched without the user's approval, whatever a sweep here turns up
 ([`../../rules/plan-documents.md`](../../rules/plan-documents.md)), and the other `/docs` pages —
 the subject maps — belong to `docs-and-tests-sync`, not here.
 

@@ -14,11 +14,14 @@ import SetObjectTransformSignal from "../types/setObjectTransformSignal";
 import SetObjectMetadataSignal from "../types/setObjectMetadataSignal";
 import RestrictedZoneUtil from "../../voxel/util/restrictedZoneUtil";
 import ObjectTransform from "../types/objectTransform";
+import { ObjectMetadata } from "../types/objectMetadata";
 import ObjectScaleUtil from "./objectScaleUtil";
 
 const ObjectUpdateUtil =
 {
-    canAddObject(user: User, room: Room, obj: AddObjectSignal): boolean
+    // asServer: an add the server makes of its own accord, which no user's permission speaks for (see
+    // ServerObjectManager.addObjectAsServer). Every other check still applies.
+    canAddObject(user: User, room: Room, obj: AddObjectSignal, asServer: boolean = false): boolean
     {
         // Check if the object's ID is absent.
         if (!obj.objectId || obj.objectId.length == 0)
@@ -34,11 +37,19 @@ const ObjectUpdateUtil =
 
         // Check if the object passes the config's criteria.
         const config = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex);
-        if (!config.canUserAddObject(user, room, obj))
+        if (!asServer && !config.canUserAddObject(user, room, obj))
             return false;
 
+        // Check if it comes with any value the user couldn't give it once it is there.
+        if (!asServer && !Object.entries(obj.metadata).every(([metadataKey, value]) =>
+            userMaySetMetadata(user, room, obj, new SetObjectMetadataSignal(room.id, obj.objectId,
+                Number(metadataKey), value.str))))
+        {
+            return false;
+        }
+
         // Check if its metadata pins its scale to another (see ObjectScalingConfig.getFixedScale).
-        if (!ObjectScaleUtil.allowsScale(obj.objectTypeIndex, obj.metadata, obj.transform.scale))
+        if (!ObjectScaleUtil.allowsScale(obj.objectTypeIndex, getStoredMetadata(obj.metadata), obj.transform.scale))
             return false;
 
         // Check if the room already holds as many of the object's category as it may. The cap belongs to
@@ -65,9 +76,10 @@ const ObjectUpdateUtil =
             console.error(`ObjectUpdateUtil::addObject :: Failed (x=${obj.transform.pos.x}, y=${obj.transform.pos.y}, z=${obj.transform.pos.z})`);
             return false;
         }
-        // Add the object.
+        // Add the object, with its values as setting each would store it (so also as the room is told of it).
         if (addToRoomData)
         {
+            obj.metadata = getStoredMetadata(obj.metadata);
             room.objectGroup.addObject(obj);
             markRoomAsDirtyIfPersistent(room, obj);
             RestrictedZoneUtil.noteObjectChange(room, obj);
@@ -80,7 +92,8 @@ const ObjectUpdateUtil =
         return true;
     },
 
-    canRemoveObject(user: User, room: Room, signal: RemoveObjectSignal): boolean
+    // asServer: as for canAddObject.
+    canRemoveObject(user: User, room: Room, signal: RemoveObjectSignal, asServer: boolean = false): boolean
     {
         // Check if the room doesn't match.
         if (signal.roomID != room.id)
@@ -93,7 +106,7 @@ const ObjectUpdateUtil =
         
         // Check if the object passes the config's criteria.
         const config = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex);
-        if (!config.canUserRemoveObject(user, room, obj))
+        if (!asServer && !config.canUserRemoveObject(user, room, obj))
             return false;
 
         // Check if the object stands in a stretch of the room that is not this user's to clear.
@@ -205,18 +218,8 @@ const ObjectUpdateUtil =
         if (obj == undefined)
             return false;
 
-        // Check if the key's own rule allows the user, whatever the object (e.g. admin-only keys).
-        if (!ObjectMetadataEntryMap.canUserSet(signal.metadataKey, user))
+        if (!userMaySetMetadata(user, room, obj, signal))
             return false;
-
-        // Check if the object passes the config's criteria, unless the key is no type's own (see
-        // ObjectMetadataEntry.appliesToAnyType).
-        const config = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex);
-        if (!ObjectMetadataEntryMap.appliesToAnyType(signal.metadataKey)
-            && !config.canUserSetObjectMetadata(user, room, obj, signal))
-        {
-            return false;
-        }
 
         // Metadata edits are also zone-restricted (a picture's content is part of that stretch of room).
         if (RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex, obj.transform))
@@ -277,6 +280,25 @@ function canMoveTo(user: User, room: Room, obj: AddObjectSignal, signal: SetObje
     if (config.attachment)
         return ObjectAttachmentUtil.canPlaceObject(room, obj.objectId, obj.objectTypeIndex, target);
     return true;
+}
+
+// Whether the user may give the object the signal's value: the key's own rule (e.g. admin-only keys), and the type's,
+// unless the key is no type's own (see ObjectMetadataEntry.appliesToAnyType).
+function userMaySetMetadata(user: User, room: Room, obj: AddObjectSignal, signal: SetObjectMetadataSignal): boolean
+{
+    if (!ObjectMetadataEntryMap.canUserSet(signal.metadataKey, user))
+        return false;
+    return ObjectMetadataEntryMap.appliesToAnyType(signal.metadataKey)
+        || ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).canUserSetObjectMetadata(user, room, obj, signal);
+}
+
+// The values as setting each would store it (see ObjectMetadataEntryMap.preprocess).
+function getStoredMetadata(metadata: ObjectMetadata): ObjectMetadata
+{
+    const stored: ObjectMetadata = {};
+    for (const [metadataKey, value] of Object.entries(metadata))
+        stored[Number(metadataKey)] = new EncodableByteString(ObjectMetadataEntryMap.preprocess(Number(metadataKey), value.str));
+    return stored;
 }
 
 // A metadata signal's transform, as the placement it is (see SetObjectMetadataSignal.transform).

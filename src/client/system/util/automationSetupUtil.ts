@@ -28,8 +28,8 @@ import DoorObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/
 import CanvasObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
 import { PROP_IMAGE_SUBFOLDER } from "../../../shared/object/types/objectTypeConfig/propObjectTypeConfig";
 import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
-import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN,
-    FOG_COLOR_PALETTE_NAME, LIGHT_COLOR_PALETTE_NAME, MAX_ROOM_Y,
+import { ATMOSPHERE_COLOR_PALETTE_NAME, COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN,
+    LIGHT_COLOR_PALETTE_NAME, MAX_ROOM_Y,
     NUM_VOXEL_COLS, NUM_VOXEL_QUADS_PER_COLLISION_LAYER, NUM_VOXEL_ROWS,
     SANDBOX_SINGLE_PLAYER_MODE, ZONE_USER_NAME_FOR_NOBODY } from "../../../shared/system/sharedConstants";
 import ObjectScaleUtil from "../../../shared/object/util/objectScaleUtil";
@@ -608,7 +608,7 @@ const AutomationSetupUtil =
                         ...RoomPrefsUtil.decode(room.prefs),
                         maxStep: MAX_ROOM_PREFS_STEP,
                         lightColors: ColorPaletteMap[LIGHT_COLOR_PALETTE_NAME],
-                        fogColors: ColorPaletteMap[FOG_COLOR_PALETTE_NAME],
+                        atmosphereColors: ColorPaletteMap[ATMOSPHERE_COLOR_PALETTE_NAME],
                     };
                 },
 

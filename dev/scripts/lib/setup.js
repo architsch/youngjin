@@ -242,7 +242,7 @@ const canvasFrameStyles = (page) => callSandbox(page, "canvasFrameStyles");
  *   addObject({type: "Prop", row, col, face: "-z", collisionLayer: 1, metadata: {ImagePath: "2/4"}})
  *   addObject({type: "Door", row, col, face: "+x", metadata: {Label: "Library"}})
  *   addObject({type: "Lamp", row, col, face: "+y", collisionLayer: -1})   // on the room's floor
- *   addObject({type: "Fan", row, col, face: "+x", collisionLayer: 3, metadata: {ForceProperties: "*&"}})   // strength 9, range 5
+ *   addObject({type: "Fan", row, col, face: "+x", collisionLayer: 3, metadata: {ForceProperties: "("}})   // three blades
  *   addObject({type: "Label", row, col, face: "-z", collisionLayer: 2, metadata: {Label: "Reading Room"}})
  *
  * `face` is `-x`, `+x`, `-z` or `+z` for a wall, where `collisionLayer` is the height on it, or `+y` / `-y`
@@ -253,8 +253,8 @@ const canvasFrameStyles = (page) => callSandbox(page, "canvasFrameStyles");
  * block square, whichever first fits on the spot; a prop its image's size; a fan always a world unit square; see
  * `resizeObject` for others). It is centred on the cell's face, so one a world unit wide reaches half a cell past
  * the cell on either side and needs wall behind all of that. Metadata uses the game's key names (`pictures` lists
- * the images, with the type that shows each; a fan's `ForceProperties` is two characters, its strength then its
- * range, each the value itself counted up from `!`, so `"` is 1, `&` is 5 and `*` is 9); returns the object's id.
+ * the images, with the type that shows each; a fan's `ForceProperties` is one character, its strength counted up
+ * from `!`: `$` is 3 for one blade, `&` 5 for two and `(` 7 for three); returns the object's id.
  */
 const addObject = (page, spec) => callSandbox(page, "addObject", spec);
 

@@ -14,14 +14,19 @@ The source code and the machinery that builds and runs it:
 |---|---|
 | `src/` | client, server and shared TypeScript |
 | `views/` | EJS templates |
-| `dev/` | build configuration and helper scripts, but not the images in `dev/assets/`, which are copies of the game's pictures on the same terms as them (below) |
+| `dev/` | build configuration and helper scripts, but not the images in `dev/assets/`, which are copies of the game's pictures on the same terms as them (below), nor `dev/clawhub/` (below the table) |
 | `tests/` | E2E and integration tests |
 | `docs/` | technical documentation |
 | `.github/` | workflows |
-| root config | `package.json`, `webpack` and `tsconfig` files, `firebase.json`, and the like |
+| root config | `package.json`, `webpack` and `tsconfig` files, `firebase.json`, `server.json`, and the like |
+| `public/skill.md` | the manual for AI agents, the one written work under `public/` that Apache-2.0 covers, since it is meant to be copied and installed wherever agents keep their skills |
 
 Compiled and generated output derived from those files is covered on the same
 terms.
+
+`dev/clawhub/` holds the copy of the agents' manual published on ClawHub, which
+licenses every skill under MIT-0 and allows no other license. That copy, and it
+alone, is under MIT-0.
 
 ## What Apache-2.0 does not cover
 
@@ -83,7 +88,7 @@ You may read, fork, modify, self-host and build upon **the code**, commercially
 or otherwise, under the terms of Apache-2.0.
 
 You may not republish **the writing, the artwork or the illustrations** without
-permission. If you fork this repository to build something of your own, replace
-them with your own.
+permission, the agents' manual (`public/skill.md`) aside. If you fork this
+repository to build something of your own, replace them with your own.
 
 For permission beyond these terms, ask: <https://thingspool.net>

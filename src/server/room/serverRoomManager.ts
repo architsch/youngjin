@@ -4,7 +4,7 @@ import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import RoomChangedSignal from "../../shared/room/types/roomChangedSignal";
 import RoomChangeRejectedSignal from "../../shared/room/types/roomChangeRejectedSignal";
 import { RoomChangeRejectionReason, RoomChangeRejectionReasonEnumMap } from "../../shared/room/types/roomChangeRejectionReason";
-import SocketUserContext from "../sockets/types/socketUserContext";
+import UserContext from "../sockets/types/userContext";
 import SocketRoomContext from "../sockets/types/socketRoomContext";
 import ServerUserManager from "../user/serverUserManager";
 import DBRoomUtil from "../db/util/dbRoomUtil";
@@ -73,7 +73,7 @@ const ServerRoomManager =
 
         PhysicsManager.unload(roomID);
     },
-    getRoom: (socketUserContext: SocketUserContext): Room | undefined =>
+    getRoom: (socketUserContext: UserContext): Room | undefined =>
     {
         const user = socketUserContext.user;
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
@@ -121,7 +121,7 @@ const ServerRoomManager =
         }
     },
     // Batch-saves every connected user's player metadata (graceful shutdown).
-    saveAllUsersPlayerMetadata: async (socketUserContextsByUserID: {[userID: string]: SocketUserContext}) =>
+    saveAllUsersPlayerMetadata: async (socketUserContextsByUserID: {[userID: string]: UserContext}) =>
     {
         const updates: Array<{userID: string; playerMetadata: {[key: string]: string}}> = [];
 
@@ -134,7 +134,7 @@ const ServerRoomManager =
         await DBUserUtil.saveMultipleUsersPlayerMetadata(updates);
     },
     // destinationDoorLabel: the arrival door, when travelling through a door that names one.
-    changeUserRoom: async (socketUserContext: SocketUserContext, roomID: string | undefined, prevRoomShouldExist: boolean,
+    changeUserRoom: async (socketUserContext: UserContext, roomID: string | undefined, prevRoomShouldExist: boolean,
         savePlayerMetadata: boolean, allowFallback: boolean,
         destinationDoorLabel: string = ""): Promise<UserRoomChangeResult> =>
     {
@@ -236,7 +236,7 @@ const ServerRoomManager =
     },
     // An empty room ID or the hub keyword is resolved by the picker (hub load changes over time, so doors
     // name the keyword rather than a hub). Picker-chosen hubs allow fallback.
-    onRequestRoomChangeSignalReceived: async (socketUserContext: SocketUserContext, params: RequestRoomChangeSignal): Promise<void> =>
+    onRequestRoomChangeSignalReceived: async (socketUserContext: UserContext, params: RequestRoomChangeSignal): Promise<void> =>
     {
         let roomID = params.roomID;
         let allowFallback = params.allowFallback;
@@ -252,7 +252,7 @@ const ServerRoomManager =
         ServerRoomManager.notifyRoomChangeRejection(socketUserContext, result);
     },
     // Releases the client's loading block with a reason. No-op on success (RoomChangedSignal covers that).
-    notifyRoomChangeRejection: (socketUserContext: SocketUserContext, result: UserRoomChangeResult): void =>
+    notifyRoomChangeRejection: (socketUserContext: UserContext, result: UserRoomChangeResult): void =>
     {
         if (result.type == "success")
             return;
@@ -332,7 +332,7 @@ const ServerRoomManager =
 
         roomIDsTakingRoomFile.add(roomID);
         for (const socketUserContext of Object.values(socketRoomContexts[roomID].getUserContexts()))
-            socketUserContext.socket.emit("roomReloadStarted");
+            socketUserContext.notifyRoomReloadStarted();
 
         try
         {
@@ -396,7 +396,7 @@ function applyRoomFile(room: Room, roomFile: RoomFile, prefs: string): void
 }
 
 // Routes a user whose destination was unusable to a hub with space; the reason is reported if none can.
-async function fallBackToHub(socketUserContext: SocketUserContext, prevRoomShouldExist: boolean,
+async function fallBackToHub(socketUserContext: UserContext, prevRoomShouldExist: boolean,
     savePlayerMetadata: boolean, rejectionReason: RoomChangeRejectionReason): Promise<UserRoomChangeResult>
 {
     const fallbackRoomID = await RoomPickerUtil.pickBestHubRoomID();
@@ -408,7 +408,7 @@ async function fallBackToHub(socketUserContext: SocketUserContext, prevRoomShoul
 }
 
 // Removes the user from their current room (never from single-player rooms, which they were never added to).
-async function leavePreviousRoom(socketUserContext: SocketUserContext,
+async function leavePreviousRoom(socketUserContext: UserContext,
     prevRoomShouldExist: boolean, savePlayerMetadata: boolean): Promise<void>
 {
     if (socketUserContext.isInSinglePlayerRoom)

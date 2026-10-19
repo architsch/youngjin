@@ -74,6 +74,7 @@ export default class ParticleEmitter extends GameObjectComponent
         this.handle.setScales((descriptor.rateScale ?? 1) * reachBoost, (descriptor.speedScale ?? 1) * reachBoost,
             sizeScale);
         this.handle.setParticleTimeScale(descriptor.particleTimeScale ?? 1);
+        this.handle.setTint(descriptor.tint ?? "#ffffff");
         // Only a real change, so the level's phase carries on (see ParticleSystem's clock rebase).
         const level = descriptor.level ?? WaveformUtil.constant(1);
         if (this.level == undefined || !WaveformUtil.equals(level, this.level))

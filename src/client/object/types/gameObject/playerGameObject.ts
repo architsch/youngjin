@@ -41,6 +41,13 @@ export default class PlayerGameObject extends GameObject
         this.refreshOtherPlayerVisibility();
     }
 
+    // An AI agent the server runs itself is marked as one (see ObjectMetadataKeyEnumMap.AgentMark).
+    getSpeakerName(): string
+    {
+        const name = super.getSpeakerName();
+        return this.params.metadata[ObjectMetadataKeyEnumMap.AgentMark]?.str == "2" ? `${name} (AI)` : name;
+    }
+
     // Recomputed per frame, since the camera eases toward its pose (see refreshOwnVisibility).
     update(_deltaTime: number)
     {

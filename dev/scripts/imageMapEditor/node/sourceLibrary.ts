@@ -25,10 +25,13 @@ export default class SourceLibrary
 {
     private readonly paths: EditorPaths;
     private readonly decoded = new Map<string, Promise<RgbaImage>>();
+    // Listed when it was made, or added through it since: the sources deleteUnused may delete.
+    private readonly known: Set<string>;
 
     constructor(paths: EditorPaths)
     {
         this.paths = paths;
+        this.known = new Set(this.list().map(source => source.sha1));
     }
 
     list(): SourceEntry[]
@@ -67,6 +70,7 @@ export default class SourceLibrary
             preparedFrom: existing?.preparedFrom ?? known.preparedFrom,
         };
         this.writeIndex([...sources.filter(source => source.sha1 != sha1), entry]);
+        this.known.add(sha1);
         return entry;
     }
 
@@ -157,6 +161,27 @@ export default class SourceLibrary
         if (source != undefined)
             this.deleteSurveys(source);
         this.writeIndex(this.list().filter(other => other.sha1 != sha1));
+    }
+
+    // Each source it knows of that no entry is sampled from (sampledSha1s naming those that are), either itself or
+    // through a source made from it, deleted as by delete. One another process added meanwhile (a batch command) is
+    // left alone. Returns those deleted.
+    deleteUnused(sampledSha1s: string[]): SourceEntry[]
+    {
+        const sources = this.list();
+        const bySha1 = new Map(sources.map(source => [source.sha1, source]));
+        const inUse = new Set<string>();
+        for (const sampled of sampledSha1s)
+        {
+            // Along with what it was preprocessed from, which it is made again from (see SourcePreprocessor).
+            for (let sha1: string | undefined = sampled; sha1 != undefined && !inUse.has(sha1);
+                sha1 = bySha1.get(sha1)?.preparedFrom?.sha1)
+                inUse.add(sha1);
+        }
+        const unused = sources.filter(source => this.known.has(source.sha1) && !inUse.has(source.sha1));
+        for (const source of unused)
+            this.delete(source.sha1, []);
+        return unused;
     }
 
     // Upright (as its EXIF says), at no more than the working size; the last few are kept decoded.

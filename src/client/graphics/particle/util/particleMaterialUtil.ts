@@ -9,9 +9,10 @@ const particleTimeUniform = {value: 0};
 const particleParamsUniform: {value: THREE.Texture | null} = {value: null};
 let atlasTexture: THREE.Texture | undefined;
 
-// How far a lit particle's color goes toward its lamps' hue in the thick of their light (see particleShader), and
-// zero while the room has no lamp, which skips the sample.
-const PARTICLE_LAMP_TINT = 0.8;
+// How much of its lamps' hue a lit particle takes on over its own color in the thick of their light (see
+// particleShader), and zero while the room has no lamp, which skips the sample. Strong enough for a near-white
+// particle to show the hue once it is scaled back under white.
+const PARTICLE_LAMP_TINT = 0.7;
 const particleLampTintUniform = {value: 0};
 
 const ParticleMaterialUtil =

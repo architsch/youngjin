@@ -3,21 +3,21 @@ import ObjectCategoryConfigMap from "../../../shared/object/maps/objectCategoryC
 import { ObjectCategoryEnumMap } from "../../../shared/object/types/objectCategory";
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
 import { HUB_ROOM_ID_KEYWORD, ROOM_ALMOST_FULL_MARGIN, ROOM_EDITOR_SINGLE_PLAYER_MODE, ROOM_OVER_POPULATION_THRESHOLD, ROOM_UNDER_POPULATION_THRESHOLD } from "../../../shared/system/sharedConstants";
-import SocketUserContext from "../../sockets/types/socketUserContext";
+import UserContext from "../../sockets/types/userContext";
 import ServerRoomManager from "../serverRoomManager";
 import HubRoomCandidate from "../types/hubRoomCandidate";
 import HubRoomUtil from "./hubRoomUtil";
 
 const RoomPickerUtil =
 {
-    pickBestRoomID: async (socketUserContext: SocketUserContext, pickContext: "appStart" | "requestFromUser"): Promise<string> =>
+    pickBestRoomID: async (socketUserContext: UserContext, pickContext: "appStart" | "requestFromUser"): Promise<string> =>
     {
         const user = socketUserContext.user;
-        const socket = socketUserContext.socket;
-        const targetRoomID = socket.handshake.auth.targetRoomID as string | undefined;
+        const joinHints = socketUserContext.getJoinHints();
+        const targetRoomID = joinHints.targetRoomID;
 
         let roomID: string;
-        if (pickContext == "appStart" && socket.handshake.auth.roomEditorOpen === true && RoomValidationUtil.userIsAdmin(user)) // If the connection came back to a client that is still in the room editor (see SocketsClient),
+        if (pickContext == "appStart" && joinHints.roomEditorOpen === true && RoomValidationUtil.userIsAdmin(user)) // If the connection came back to a client that is still in the room editor (see SocketsClient),
             roomID = ROOM_EDITOR_SINGLE_PLAYER_MODE; // User should be left there, as the room being edited is kept nowhere else.
         else if (pickContext == "appStart" && user.singlePlayerMode && user.singlePlayerMode.length > 0) // If the user is supposed to enter a single-player mode (e.g. tutorial),
             roomID = user.singlePlayerMode; // User should join the corresponding single-player room. (If targetRoomID exists, the user should join it AFTER finishing the single-player mode first.)
@@ -73,6 +73,13 @@ const RoomPickerUtil =
 
         // All medium: pick the least populated.
         return pickLeastPopulatedRoomID(hubRooms);
+    },
+    // The hub quiet hubs fill from, where a newcomer most often lands: the earliest in the admins' order, however
+    // full. "" with no hub.
+    getFirstHubRoomID: (): string =>
+    {
+        return pickEarliestByPriorityRoomID(Object.entries(HubRoomUtil.initialJoinPriorityByHubRoomID)
+            .map(([roomID, initialJoinPriority]) => ({roomID, initialJoinPriority, population: 0})));
     },
     getRoomPopulation: (roomRuntimeMemory: RoomRuntimeMemory): number =>
     {

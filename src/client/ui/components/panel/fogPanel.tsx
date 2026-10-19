@@ -1,5 +1,5 @@
 import { MAX_ROOM_PREFS_STEP } from "../../../../shared/room/util/roomPrefsUtil";
-import { FOG_COLOR_PALETTE_NAME } from "../../../../shared/system/sharedConstants";
+import { ATMOSPHERE_COLOR_PALETTE_NAME } from "../../../../shared/system/sharedConstants";
 import useEditableRoomPrefs from "../../util/editableRoomPrefs";
 import TooltipButton from "../input/tooltipButton";
 import FormPaletteColorInput from "../input/formPaletteColorInput";
@@ -28,7 +28,7 @@ export default function FogPanel({ anchorElementId, onClose }: Props)
         <div className={COLUMN_CLASS_NAMES}>
             <FormPaletteColorInput
                 label="Color"
-                paletteName={FOG_COLOR_PALETTE_NAME}
+                paletteName={ATMOSPHERE_COLOR_PALETTE_NAME}
                 currValue={prefs.fogColorIndex}
                 setColorIndex={(index) => apply(next => next.fogColorIndex = index)}
             />

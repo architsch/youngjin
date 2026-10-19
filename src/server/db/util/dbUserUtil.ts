@@ -16,7 +16,8 @@ const DBUserUtil =
 {
     createUser: async (userName: string, userType: UserType,
         email: string, singlePlayerMode: string = TUTORIAL_SINGLE_PLAYER_MODE,
-        acquisitionSource: string = ACQUISITION_SOURCE_DIRECT): Promise<DBQueryResponse<{id: string}>> =>
+        acquisitionSource: string = ACQUISITION_SOURCE_DIRECT,
+        agentKeyHash: string = ""): Promise<DBQueryResponse<{id: string}>> =>
     {
         LogUtil.log("DBUserUtil.createUser", {userName, userType, email, singlePlayerMode, acquisitionSource}, "low", "info");
         const createdAt = Date.now();
@@ -36,6 +37,8 @@ const DBUserUtil =
             // Stamped at creation, so a concurrent milestone can't append to an empty funnel and lose Arrived.
             funnel: FunnelMilestoneEnumMap.Arrived,
             playerMetadata: {},
+            agentKeyHash,
+            agentInterests: "",
         };
         const result = await new DBQuery<{id: string}>()
             .insertInto(COLLECTION_USERS)
@@ -167,27 +170,35 @@ const DBUserUtil =
     },
     deleteStaleGuestsByTier: async (phase: number): Promise<number> =>
     {
+        const stale = await DBUserUtil.findStaleUsersByTier(UserTypeEnumMap.Guest, phase);
+        if (stale == undefined || stale.length == 0)
+            return 0;
+        await DBUserUtil.deleteUsers(stale.map(dbUser => dbUser.id as string));
+        return stale.length;
+    },
+    // Users of the type inactive for longer than their engagement tier allows (see GUEST_MAX_AGE_BY_TIER_PHASE);
+    // undefined if the query failed.
+    findStaleUsersByTier: async (userType: UserType, phase: number): Promise<DBUser[] | undefined> =>
+    {
         const cutoffTime = Date.now() - GUEST_MAX_AGE_BY_TIER_PHASE[phase];
 
         const selectResult = await new DBQuery<DBUser>()
             .select()
             .from(COLLECTION_USERS)
-            .where("userType", "==", UserTypeEnumMap.Guest)
+            .where("userType", "==", userType)
             .where("lastLoginAt", "<", cutoffTime)
             .run();
 
         if (!selectResult.success)
         {
             // Log failures (e.g. a missing userType + lastLoginAt composite index) instead of looking healthy.
-            LogUtil.log("DBUserUtil.deleteStaleGuestsByTier - stale-guest query failed",
-                { phase }, "high", "error");
-            return 0;
+            LogUtil.log("DBUserUtil.findStaleUsersByTier - stale-user query failed",
+                { userType, phase }, "high", "error");
+            return undefined;
         }
-        if (selectResult.data.length === 0)
-            return 0;
 
         // Filter in-memory by tier engagement criteria (loginCount only).
-        const tierFilter = (doc: DBUser): boolean => {
+        return selectResult.data.filter(doc => {
             const loginCount = doc.loginCount ?? 0;
 
             let tierPhase = 0; // 0 = disposable, 1 = casual, 2 = dedicated
@@ -196,22 +207,17 @@ const DBUserUtil =
             else if (loginCount > 1)
                 tierPhase = 1;
 
-            return phase == tierPhase;
-        };
-
-        const toDelete = selectResult.data.filter(tierFilter);
-        if (toDelete.length === 0)
-            return 0;
-        const deleteQueries = toDelete
-            .filter(doc => doc.id)
-            .map(doc => new DBQuery<DBRow>()
-                .delete()
-                .from(COLLECTION_USERS)
-                .where("id", "==", doc.id as string)
-            );
-        await DBQuery.runAll(deleteQueries);
-
-        return toDelete.length;
+            return phase == tierPhase && doc.id != undefined;
+        });
+    },
+    deleteUsers: async (userIDs: string[]): Promise<void> =>
+    {
+        if (userIDs.length == 0)
+            return;
+        await DBQuery.runAll(userIDs.map(userID => new DBQuery<DBRow>()
+            .delete()
+            .from(COLLECTION_USERS)
+            .where("id", "==", userID)));
     },
     deleteUser: async (userID: string): Promise<DBQueryResponse<DBRow>> =>
     {
@@ -222,6 +228,15 @@ const DBUserUtil =
             .where("id", "==", userID)
             .run();
         return result;
+    },
+    setAgentInterests: async (userID: string, agentInterests: string): Promise<DBQueryResponse<DBRow>> =>
+    {
+        LogUtil.log("DBUserUtil.setAgentInterests", {userID, agentInterests}, "low", "info");
+        return await new DBQuery<DBRow>()
+            .update(COLLECTION_USERS)
+            .set({ agentInterests })
+            .where("id", "==", userID)
+            .run();
     },
     setOwnedRoomID: async (userID: string, roomID: string): Promise<DBQueryResponse<DBRow>> =>
     {

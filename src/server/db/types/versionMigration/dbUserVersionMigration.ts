@@ -30,6 +30,12 @@ const DBUserVersionMigration: DBVersionMigration = [
         row.funnel = row.funnel ?? "";
         return row;
     },
+    // v5 -> v6: add "agentKeyHash" and "agentInterests" (AI agents). Nobody before had either.
+    async (row: any) => {
+        row.agentKeyHash = row.agentKeyHash ?? "";
+        row.agentInterests = row.agentInterests ?? "";
+        return row;
+    },
 ];
 
 export default DBUserVersionMigration;

@@ -1,5 +1,4 @@
 import Room from "../../../room/types/room";
-import { IS_SERVER } from "../../../system/sharedConstants";
 import User from "../../../user/types/user";
 import AddObjectSignal from "../addObjectSignal";
 import { ObjectCategoryEnumMap } from "../objectCategory";
@@ -16,6 +15,13 @@ import StringUtil from "../../../math/util/stringUtil";
 export const PLAYER_HEIGHT = 2.5;
 export const PLAYER_RADIUS_XZ = 0.375; // radius of the player on the XZ plane.
 
+// How fast a player walks and turns per unit of steering, and how much steering there can be, whoever steers (see
+// PlayerController, AgentBodyUtil).
+export const PLAYER_WALK_SPEED_PER_INPUT = 9;
+export const PLAYER_MAX_WALK_INPUT = 0.6;
+export const PLAYER_TURN_RATE_PER_INPUT = 3; // radians per second
+export const PLAYER_MAX_TURN_INPUT = 1;
+
 // This object represents each user's player character. Users directly control their player characters in first-person view, using input devices (such as mouse and keyboard).
 const PlayerObjectTypeConfig =
 {
@@ -23,11 +29,13 @@ const PlayerObjectTypeConfig =
     persistent: false,
     autoUnload: true,
     category: ObjectCategoryEnumMap.Player,
+    // No user may add or remove a player character: the server spawns one as its user joins and removes it as
+    // they leave (see ServerObjectManager.addObjectAsServer).
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => {
-        return IS_SERVER; // Only the server can add a player character.
+        return false;
     },
     canUserRemoveObject: (user: User, room: Room, obj: AddObjectSignal) => {
-        return IS_SERVER; // Only the server can remove a player character.
+        return false;
     },
     canUserSetObjectTransform: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => {
         // User can only move his/her own player character

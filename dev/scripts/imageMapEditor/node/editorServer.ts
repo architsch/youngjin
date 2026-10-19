@@ -86,6 +86,10 @@ export default async function serveEditor(store: EntryStore, port: number): Prom
     await buildContext.watch();
     watchState(store, () => broadcast("state", {hash: store.readState().hash}));
 
+    // Saves under way, which name their sources only once they finish; stopping waits for them (see shutDown).
+    const saves = new Set<Promise<string>>();
+    let stopping = false;
+
     const handleRequest = async (req: http.IncomingMessage, res: http.ServerResponse) => {
         // Rejects pages on other origins reaching this server through a rebound DNS name.
         if (req.headers.host !== `${HOST}:${port}` && req.headers.host !== `localhost:${port}`)
@@ -125,7 +129,11 @@ export default async function serveEditor(store: EntryStore, port: number): Prom
             if (!(req.headers["content-type"] ?? "").startsWith("application/json"))
                 return sendText(res, 415, "Expected application/json");
             const request = JSON.parse((await readBody(req)).toString("utf8")) as SaveEntryRequest;
-            const entryPath = await store.saveEntry(request);
+            if (stopping)
+                return sendText(res, 503, "The editor is stopping");
+            const saving = store.saveEntry(request);
+            saves.add(saving);
+            const entryPath = await saving.finally(() => saves.delete(saving));
             mapRebuilder.request();
             return sendJSON(res, 200, {path: entryPath, state: store.readState()});
         }
@@ -230,14 +238,35 @@ export default async function serveEditor(store: EntryStore, port: number): Prom
     });
     server.listen(port, HOST, () => {
         console.log(`Image map editor: http://${HOST}:${port}`);
-        console.log(`Editing ${store.readState().manifestPath}. Stop with Ctrl+C.`);
+        console.log(`Editing ${store.readState().manifestPath}. Stop with Ctrl+C, which deletes the sources no entry `
+            + `is sampled from.`);
     });
 
-    const shutDown = () => {
-        Promise.allSettled([buildContext.dispose(), preprocessor.release()]).finally(() => process.exit(0));
+    const shutDown = async () => {
+        if (stopping)
+            return;
+        stopping = true;
+        await Promise.allSettled(saves);
+        try
+        {
+            const deleted = store.deleteUnusedSources();
+            if (deleted.length > 0)
+            {
+                console.log(`Deleted the sources no entry is sampled from: `
+                    + deleted.map(source => source.fileName).join(", "));
+            }
+        }
+        catch (err)
+        {
+            console.error(`Kept the sources no entry is sampled from: ${err instanceof Error ? err.message : err}`);
+        }
+        await Promise.allSettled([buildContext.dispose(), preprocessor.release()]);
+        process.exit(0);
     };
     process.on("SIGINT", shutDown);
     process.on("SIGTERM", shutDown);
+    // The terminal it runs in was closed.
+    process.on("SIGHUP", shutDown);
 }
 
 // The directories are watched, not the files, since an editor that saves by replacing a file ends a watch on it.

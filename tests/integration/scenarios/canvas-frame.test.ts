@@ -29,7 +29,7 @@ import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfi
 import CanvasObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
 import SetObjectMetadataSignal from "../../../src/shared/object/types/setObjectMetadataSignal";
 import ObjectScaleUtil from "../../../src/shared/object/util/objectScaleUtil";
-import { LAST_UNSCALED_OBJECT_GROUP_VERSION, writeLegacyObjectGroup } from "../helpers/legacyObjectGroup";
+import { writeLegacyObjectGroup } from "../helpers/legacyObjectGroup";
 import { getLooks } from "../helpers/composition";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
@@ -531,17 +531,14 @@ describe("a canvas's quarter-turns", () => {
     });
 });
 
-// Objects encoded now, with the format's version byte stamped back to the given version.
+// Objects written as the given version wrote them, then read back.
 function decodeAsVersion(objects: AddObjectSignal[], version: number): ObjectGroup
 {
     const view = new Uint8Array(64 * 1024);
     const writeState = new BufferState(view);
-    // Versions from before the scale are written in their own layout, not stamped onto a current one.
-    if (version > LAST_UNSCALED_OBJECT_GROUP_VERSION)
-    {
+    // Older versions are written in their own layout, not stamped onto a current one.
+    if (version == ObjectGroup.latestFormatVersion)
         new ObjectGroup(objects).encodeWithParams(writeState, {});
-        view[0] = version;
-    }
     else
         writeLegacyObjectGroup(writeState, objects, version);
     return ObjectGroup.decodeWithParams(new BufferState(view.subarray(0, writeState.byteIndex)), ROOM_ID) as ObjectGroup;

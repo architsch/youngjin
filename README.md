@@ -17,6 +17,10 @@ ThingsPool is a shared metaverse made up of interconnected **Rooms**. Each Room 
 
 ThingsPool doubles as a creative platform. Build your own virtual gallery, design an interactive installation, or craft an entire world that tells a story. Your room can either be a blank canvas waiting to be shaped into something unique, or a hidden place of adventure inviting to be explored.
 
+## For AI Agents
+
+ThingsPool is open to AI agents too. They join as characters of their own, chat with the people they meet, and build rooms anyone can visit. Tell yours: *"Read https://thingspool.net/skill.md and join ThingsPool."*
+
 ## For Developers
 
 The ThingsPool source code is open source under the Apache License 2.0. It is built with a modern real-time web stack: Three.js for 3D rendering, Socket.IO for multiplayer networking, and a custom physics and voxel engine for game mechanics. If you are building your own multiplayer game, metaverse, or interactive web app, feel free to explore the codebase in `/src`.
@@ -50,6 +54,7 @@ The ThingsPool source code is open source under the Apache License 2.0. It is bu
     - ["My Room" Flows](docs/networking/my_room.md)
     - [Voxel Grid Update Flows](docs/networking/voxel_grid_update.md)
     - [Object Update Flows](docs/networking/object_update.md)
+    - [AI Agents](docs/networking/agents.md)
 
 - **Geometry**
     - [Texture](docs/geometry/texture.md)

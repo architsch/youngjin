@@ -34,6 +34,7 @@
 		"imageMapEditor": "node dev/scripts/imageMapEditor/server.js",
 		"imagePrep": "node dev/scripts/imagePrep/prep.js",
 		"particleEffectEditor": "node dev/scripts/particleEffectEditor/server.js",
+		"postImagePreprocess": "node dev/scripts/postImagePreprocess.js",
 		"beforeCommit": "npm run build && MODE=ssg node dist/server/bundle.js",
 		"build": "npm run compileCSS && webpack --config dev/config/webpack.config.server.js && webpack --config dev/config/webpack.config.client.js && node dev/scripts/compressBundles.js",
 		"compileCSS": "npx @tailwindcss/cli -i ./src/client/ui/style/input.css -o ./dist/client/style.css",
@@ -58,6 +59,8 @@
 	},
 	"dependencies": {
 		"@google-cloud/secret-manager": "^6.1.1",
+		"@modelcontextprotocol/node": "^2.1.1",
+		"@modelcontextprotocol/server": "^2.3.1",
 		"body-parser": "^1.20.3",
 		"cookie": "^1.0.2",
 		"cookie-parser": "^1.4.7",
@@ -67,12 +70,14 @@
 		"firebase-admin": "^13.6.0",
 		"hpp": "^0.2.3",
 		"jsonwebtoken": "^9.0.2",
-		"socket.io": "^4.8.1"
+		"socket.io": "^4.8.1",
+		"zod": "^4.6.7"
 	},
 	"optionalDependencies": {
 		"sharp": "^0.34.5"
 	},
 	"devDependencies": {
+		"@modelcontextprotocol/client": "^2.3.1",
 		"@playwright/test": "^1.58.2",
 		"@tailwindcss/cli": "^4.1.17",
 		"@types/cookie-parser": "^1.4.8",

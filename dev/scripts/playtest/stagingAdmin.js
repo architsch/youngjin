@@ -47,7 +47,7 @@ function backupRoot() { return `${PREFIX}playtest_backup`; }
 // here detects drift — `inspect` and `verify-migration` both measure against these numbers, so a stale
 // one reports migrated rows as outdated and hides real staleness. Bump alongside
 // src/server/db/types/versionMigration/.
-const CURRENT_VERSION = { users: 5, rooms: 7 };
+const CURRENT_VERSION = { users: 5, rooms: 8 };
 
 const ROOM_TYPE_REGULAR = 1;
 

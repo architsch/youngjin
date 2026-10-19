@@ -2,7 +2,7 @@ import ProceduralTextureSpec from "../types/proceduralTextureSpec";
 
 // The cells SSG adds to every voxel texture pack's atlas (see VoxelTexturePackBuilder), in texture index order from
 // the first past a pack's own. Append-only: a stored quad names its texture by index, and each is drawn from a seed
-// that is its place here.
+// that is its place here. Each is named in VoxelTextureNameMap too.
 export const ProceduralVoxelTextures: ProceduralTextureSpec[] = [
     // Shiny metal: light, medium and dark gray
     {surface: "metal", colorHex: "#c2c6cb"},

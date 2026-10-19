@@ -15,6 +15,9 @@ import DevUserSeedUtil from "./user/util/devUserSeedUtil";
 import DevRuntimeUtil from "./system/util/devRuntimeUtil";
 import HubRoomUtil from "./room/util/hubRoomUtil";
 import ServerLifecycleUtil from "./system/util/serverLifecycleUtil";
+import EventLoopDelayUtil from "./system/util/eventLoopDelayUtil";
+import AgentCleanupUtil from "./agent/util/agentCleanupUtil";
+import HelperAgentUtil from "./agent/util/helperAgentUtil";
 
 require("../shared/graphics/image/imageMapDependencies.ts");
 
@@ -113,7 +116,13 @@ ${LatencySimUtil.getConfigSummary()}
     // socket connection
     SocketsServer.init(server);
 
-    // Clean up stale guest accounts regularly (rotating through tiers to spread DB load)
+    EventLoopDelayUtil.start();
+
+    // The agent the server runs itself, so that newcomers never arrive to an empty world (see HelperAgentUtil).
+    HelperAgentUtil.start()
+        .catch(err => LogUtil.log("Helper couldn't start", { err }, "high", "error"));
+
+    // Clean up stale guest and agent accounts regularly (rotating through tiers to spread DB load)
     let cleanupPhase = 0;
     setInterval(() => {
         const phase = cleanupPhase;
@@ -121,6 +130,9 @@ ${LatencySimUtil.getConfigSummary()}
         DBUserUtil.deleteStaleGuestsByTier(phase)
             .then(count => { if (count > 0) LogUtil.logRaw(`Cleaned up ${count} stale ${GUEST_TIER_NAME_BY_TIER_PHASE[phase]} guest accounts`, "low", "info"); })
             .catch(err => LogUtil.log("Guest cleanup failed", { err, phase }, "high", "error"));
+        AgentCleanupUtil.deleteStaleAgentsByTier(phase)
+            .then(count => { if (count > 0) LogUtil.logRaw(`Cleaned up ${count} stale ${GUEST_TIER_NAME_BY_TIER_PHASE[phase]} agent accounts`, "low", "info"); })
+            .catch(err => LogUtil.log("Agent cleanup failed", { err, phase }, "high", "error"));
     }, HOUR_IN_MS);
 
     // graceful shutdown
@@ -134,6 +146,8 @@ ${LatencySimUtil.getConfigSummary()}
         }
 
         console.log(`[${signal}] Graceful shutdown initiated...`);
+        // Saves what it spent since it last did, so the next run pays from the day's budget where this one left off.
+        await HelperAgentUtil.stop();
         console.log("Saving all multiplayer rooms and user gameplay states before shutdown...");
 
         await ServerRoomManager.saveMultiplayerRooms(true);

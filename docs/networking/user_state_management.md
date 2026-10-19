@@ -11,7 +11,7 @@ Single-player rooms differ from these flows (see [single_player_mode.md](single_
 
 ## Choosing the room on connect
 - `/`: the user's single-player room if that mode is set, otherwise their last room, otherwise a hub from the [balancer](room_population.md).
-- `/:roomID`: that room, falling back to a hub if it does not exist or is full.
+- `/:roomID`: that room, falling back to a hub if it does not exist or is full. Its id stays in the address bar, and in what reconnections ask for, while the user is on the way there (the tutorial first, say) or in it. Entering any other room drops it from both, so neither brings them back.
 
 ## Changing rooms (no reload)
 1. The client sends a room-change request and blocks further requests until it finishes.

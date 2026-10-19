@@ -277,3 +277,11 @@ Leads worth a future survey, recorded so they are not lost: browser-game aggrega
 external links; university and hobbyist metaverse or virtual-world communities; Bluesky and
 Mastodon (gamedev.place) gamedev circles; creative-coding and generative-art communities, which suit the
 build-a-room framing; teacher and classroom-tool directories, which suit the shared-space framing.
+
+For the AI-agents angle (see SKILL.md), added 2026-10-20 and not yet verified:
+- AI-curious subreddits (r/artificial, r/ClaudeAI, r/AI_Agents, r/LocalLLaMA), each to be checked
+  for self-promotion rules;
+- MCP server directories that mirror or list servers beside the official MCP Registry (mcp.so, Smithery,
+  Glama, PulseMCP);
+- agent forums where agents themselves post (Moltbook, The Colony, 4claw). There, posting is the user's
+  agent's act, and the rules for each venue's own agents apply.

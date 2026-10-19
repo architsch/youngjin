@@ -36,7 +36,13 @@ http {
         # Logging Settings
         ##
 
-        access_log /var/log/nginx/access.log;
+        # An AI agent may give its key as the last part of the MCP address (see AgentMcpUtil), so those requests
+        # are left out of the access log.
+        map $request_uri $loggable {
+                ~^/mcp/ 0;
+                default 1;
+        }
+        access_log /var/log/nginx/access.log combined if=$loggable;
         error_log /var/log/nginx/error.log;
 
         ##

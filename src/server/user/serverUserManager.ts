@@ -3,7 +3,7 @@ import AddObjectSignal from "../../shared/object/types/addObjectSignal";
 import EncodableByteString from "../../shared/networking/types/encodableByteString";
 import ObjectTransform from "../../shared/object/types/objectTransform";
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
-import SocketUserContext from "../sockets/types/socketUserContext";
+import UserContext from "../sockets/types/userContext";
 import ServerRoomManager from "../room/serverRoomManager";
 import ServerObjectManager from "../object/serverObjectManager";
 import DBRoomUtil from "../db/util/dbRoomUtil";
@@ -11,8 +11,11 @@ import DBUserUtil from "../db/util/dbUserUtil";
 import RemoveObjectSignal from "../../shared/object/types/removeObjectSignal";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 import ObjectMetadataEntryMap from "../../shared/object/maps/objectMetadataEntryMap";
+import { ObjectMetadataKeyEnumMap } from "../../shared/object/types/objectMetadataKey";
+import { UserTypeEnumMap } from "../../shared/user/types/userType";
+import { HELPER_AGENT_NAME } from "../system/serverConstants";
 
-const socketUserContexts: {[userID: string]: SocketUserContext} = {};
+const socketUserContexts: {[userID: string]: UserContext} = {};
 const playerObjectByUserID: {[userID: string]: AddObjectSignal} = {};
 
 // Player metadata captured at disconnect, read on reconnect before DBUser (the DB write may not have
@@ -23,7 +26,7 @@ const ServerUserManager =
 {
     socketUserContexts,
     recentDisconnectMetadata,
-    addUser: (socketUserContext: SocketUserContext) =>
+    addUser: (socketUserContext: UserContext) =>
     {
         socketUserContexts[socketUserContext.user.id] = socketUserContext;
     },
@@ -31,7 +34,7 @@ const ServerUserManager =
     {
         delete socketUserContexts[userID];
     },
-    getSocketUserContext: (userID: string): SocketUserContext | undefined =>
+    getSocketUserContext: (userID: string): UserContext | undefined =>
     {
         return socketUserContexts[userID];
     },
@@ -40,7 +43,7 @@ const ServerUserManager =
         return socketUserContexts[userID] != undefined;
     },
     // Registers the user in the room and spawns their player. Returns the room joined, or undefined.
-    addUserToRoom: async (socketUserContext: SocketUserContext, roomRuntimeMemory: RoomRuntimeMemory,
+    addUserToRoom: async (socketUserContext: UserContext, roomRuntimeMemory: RoomRuntimeMemory,
         userID: string, playerObjectTransform: ObjectTransform,
         playerMetadata: {[key: string]: string}): Promise<RoomRuntimeMemory | undefined> =>
     {
@@ -86,6 +89,12 @@ const ServerUserManager =
                 continue;
             restoredMetadata[metadataKey] = new EncodableByteString(playerMetadata[key]);
         }
+        // The Helper is the agent the server runs itself, the one people are shown as an AI.
+        if (user.userType == UserTypeEnumMap.Agent)
+        {
+            restoredMetadata[ObjectMetadataKeyEnumMap.AgentMark] = new EncodableByteString(
+                (user.userName == HELPER_AGENT_NAME) ? "2" : "1");
+        }
         const playerAddObjectSignal = new AddObjectSignal(
             roomID,
             user.id,
@@ -95,11 +104,12 @@ const ServerUserManager =
             playerObjectTransform,
             restoredMetadata
         );
-        if (ServerObjectManager.onAddObjectSignalReceived(socketUserContext, playerAddObjectSignal))
+        // The joining user is sent their player with the room, so only the others are told now.
+        if (ServerObjectManager.addObjectAsServer(roomRuntimeMemory.room, user, playerAddObjectSignal, user.id))
             playerObjectByUserID[userID] = playerAddObjectSignal;
         return roomRuntimeMemory;
     },
-    removeUserFromRoom: async (socketUserContext: SocketUserContext, prevRoomShouldExist: boolean,
+    removeUserFromRoom: async (socketUserContext: UserContext, prevRoomShouldExist: boolean,
         savePlayerMetadata: boolean) =>
     {
         const user = socketUserContext.user;
@@ -125,7 +135,10 @@ const ServerUserManager =
 
         const objectIds = getIdsOfNonPersistentObjectsSpawnedByUser(roomID, user.id);
         for (const objectId of objectIds)
-            ServerObjectManager.onRemoveObjectSignalReceived(socketUserContext, new RemoveObjectSignal(roomRuntimeMemory.room.id, objectId));
+        {
+            ServerObjectManager.removeObjectAsServer(roomRuntimeMemory.room, user,
+                new RemoveObjectSignal(roomRuntimeMemory.room.id, objectId), user.id);
+        }
 
         if (roomRuntimeMemory.participantUserNameByID[user.id] == undefined)
         {

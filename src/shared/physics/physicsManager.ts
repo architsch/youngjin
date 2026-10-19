@@ -8,6 +8,8 @@ import PhysicsCollisionUtil from "./util/physicsCollisionUtil";
 import PhysicsForceUtil from "./util/physicsForceUtil";
 import { ColliderState } from "./types/colliderState";
 import ObjectTransform from "../object/types/objectTransform";
+import Vector3DUtil from "../math/util/vector3DUtil";
+import { GRAVITY_SPEED } from "../system/sharedConstants";
 
 const physicsRooms: {[roomID: string]: PhysicsRoom} = {};
 
@@ -121,6 +123,17 @@ const PhysicsManager =
     {
         const physicsRoom = physicsRooms[roomID];
         return PhysicsForceUtil.applyForces(physicsRoom, physicsRoom.objectById[objectId], velocity, deltaTime);
+    },
+    // The velocity a walking body moves at for one step, whoever walks it (a browser's player, a server-walked
+    // agent): its steering, falling at gravity's speed, then the two above. Moving the body by it, through the hard
+    // collisions, is the caller's (see Rigidbody). underForce: whether a force had a part in it.
+    getStepVelocity: (roomID: string, objectId: string, steering: Vec3,
+        deltaTime: number): {velocity: Vec3, underForce: boolean} =>
+    {
+        const adjusted = PhysicsManager.getAdjustedVelocity(roomID, objectId,
+            {x: steering.x, y: steering.y - GRAVITY_SPEED, z: steering.z});
+        const velocity = PhysicsManager.applyForces(roomID, objectId, adjusted, deltaTime);
+        return {velocity, underForce: !Vector3DUtil.equal(velocity, adjusted)};
     },
 }
 

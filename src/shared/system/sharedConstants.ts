@@ -64,9 +64,8 @@ export const LABEL_COLOR_PALETTE_NAME = "LabelColor";
 
 // Stored room light colors are positions in this palette.
 export const LIGHT_COLOR_PALETTE_NAME = "Light";
-export const FOG_COLOR_PALETTE_NAME = "Fog";
-// Palette for clouds and ground (masses against the air, unlike the fog palette).
-export const SCENERY_COLOR_PALETTE_NAME = "Scenery";
+// And its fog, sky, cloud and ground colors in this one.
+export const ATMOSPHERE_COLOR_PALETTE_NAME = "Atmosphere";
 
 // Firestore's document id limit (bounds a door's destination id).
 export const DOCUMENT_ID_MAX_LENGTH = 1500;

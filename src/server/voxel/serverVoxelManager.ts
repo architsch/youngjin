@@ -6,7 +6,7 @@ import SetVoxelQuadTextureSignal from "../../shared/voxel/types/update/setVoxelQ
 import VoxelUpdateUtil from "../../shared/voxel/util/voxelUpdateUtil";
 import VoxelQueryUtil from "../../shared/voxel/util/voxelQueryUtil";
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_QUADS_PER_COLLISION_LAYER } from "../../shared/system/sharedConstants";
-import SocketUserContext from "../sockets/types/socketUserContext";
+import UserContext from "../sockets/types/userContext";
 import ServerRoomManager from "../room/serverRoomManager";
 
 // A user's edit is applied to their own client first, so one the server refuses is answered with what the
@@ -14,7 +14,7 @@ import ServerRoomManager from "../room/serverRoomManager";
 // had made of them.
 const ServerVoxelManager =
 {
-    onAddVoxelBlockSignalReceived: (socketUserContext: SocketUserContext, signal: AddVoxelBlockSignal) =>
+    onAddVoxelBlockSignalReceived: (socketUserContext: UserContext, signal: AddVoxelBlockSignal) =>
     {
         const user = socketUserContext.user;
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
@@ -37,7 +37,7 @@ const ServerVoxelManager =
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         socketRoomContext.multicastSignal("addVoxelBlockSignal", signal, user.id);
     },
-    onRemoveVoxelBlockSignalReceived: (socketUserContext: SocketUserContext, signal: RemoveVoxelBlockSignal) =>
+    onRemoveVoxelBlockSignalReceived: (socketUserContext: UserContext, signal: RemoveVoxelBlockSignal) =>
     {
         const user = socketUserContext.user;
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
@@ -59,7 +59,7 @@ const ServerVoxelManager =
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         socketRoomContext.multicastSignal("removeVoxelBlockSignal", signal, user.id);
     },
-    onMoveVoxelBlockSignalReceived: (socketUserContext: SocketUserContext, signal: MoveVoxelBlockSignal) =>
+    onMoveVoxelBlockSignalReceived: (socketUserContext: UserContext, signal: MoveVoxelBlockSignal) =>
     {
         const user = socketUserContext.user;
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
@@ -91,7 +91,7 @@ const ServerVoxelManager =
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         socketRoomContext.multicastSignal("moveVoxelBlockSignal", signal, user.id);
     },
-    onSetVoxelQuadTextureSignalReceived: (socketUserContext: SocketUserContext, signal: SetVoxelQuadTextureSignal) =>
+    onSetVoxelQuadTextureSignalReceived: (socketUserContext: UserContext, signal: SetVoxelQuadTextureSignal) =>
     {
         const user = socketUserContext.user;
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
@@ -122,7 +122,7 @@ const ServerVoxelManager =
 // Tells a user what the cell layer of a quad really holds: its block, by an add (which gives whatever
 // their client has there its textures), or that it holds none, by a remove. Nothing for a quad that is
 // no block's.
-function sendBlockTruth(socketUserContext: SocketUserContext, room: Room, quadIndex: number): void
+function sendBlockTruth(socketUserContext: UserContext, room: Room, quadIndex: number): void
 {
     if (!VoxelQueryUtil.isValidVoxelQuadIndex(quadIndex))
         return;

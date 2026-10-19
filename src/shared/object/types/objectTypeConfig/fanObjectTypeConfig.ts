@@ -3,11 +3,15 @@ import { InstancedMeshCompositionParams } from "../../../graphics/mesh/compositi
 import InstancedMeshCompositionPart from "../../../graphics/mesh/composition/types/instancedMeshCompositionPart";
 import CompositionMetadataUtil from "../../../graphics/mesh/composition/util/compositionMetadataUtil";
 import PreEncodedCompositionIndexMap from "../../../graphics/mesh/composition/maps/preEncodedCompositionIndexMap";
+import ColorUtil from "../../../math/util/colorUtil";
+import NumUtil from "../../../math/util/numUtil";
 import StringUtil from "../../../math/util/stringUtil";
 import WaveformUtil from "../../../math/util/waveformUtil";
+import Vec2 from "../../../math/types/vec2";
 import Vec3 from "../../../math/types/vec3";
 import Room from "../../../room/types/room";
-import { ALL_FACE_DIRECTIONS, ATTACHMENT_HITBOX_INSET, RELIEF_STEP } from "../../../system/sharedConstants";
+import { ALL_FACE_DIRECTIONS, ATTACHMENT_HITBOX_INSET, COMPOSITION_PALETTE_NAME_BY_MATERIAL_ID,
+    INSTANCED_TIN_MATERIAL_ID, RELIEF_STEP } from "../../../system/sharedConstants";
 import User from "../../../user/types/user";
 import AddObjectSignal from "../addObjectSignal";
 import { ObjectCategoryEnumMap } from "../objectCategory";
@@ -20,30 +24,36 @@ import ObjectTypeConfig from "./objectTypeConfig";
 
 const COMPOSITION_CODEC_VERSION = 0;
 
-// The values a fan's two settings step through (see FanEditOptions), each stored as it is: how strong its wind is,
-// and how far that reaches, in world units.
-export const FAN_STRENGTHS = [1, 3, 5, 7, 9];
-export const FAN_RANGES = [1, 3, 5, 7, 9];
-const MAX_STRENGTH = FAN_STRENGTHS[FAN_STRENGTHS.length - 1];
+// The settings a fan steps through (see FanEditOptions): how many blades turn on its plate, each a rotor in a vent
+// of its own, and with them how strong its wind is and how far that reaches, in world units. Stored as the
+// strength alone (see readSetting).
+export const FAN_SETTINGS = [
+    {blades: 1, strength: 3, range: 3},
+    {blades: 2, strength: 5, range: 5},
+    {blades: 3, strength: 7, range: 7},
+];
+const DEFAULT_SETTING = FAN_SETTINGS[1];
 
-// Character positions in the stored string; never reorder.
+// Character position in the stored string; never move it.
 const STRENGTH_CHAR_INDEX = 0;
-const RANGE_CHAR_INDEX = 1;
 
-const DEFAULT_STRENGTH = 5;
-const DEFAULT_RANGE = 5;
+// The palette a fan's color is picked from: tin's, which a player's parts are painted from too (see ColorPaletteMap).
+// A fan comes in a mid grey.
+export const FAN_COLOR_PALETTE_NAME = COMPOSITION_PALETTE_NAME_BY_MATERIAL_ID[INSTANCED_TIN_MATERIAL_ID];
+const DEFAULT_COLOR_INDEX = 2;
 
-// How hard the strongest wind pushes at its face: the speed it adds in a second, in world units per second, several
-// times gravity's own pull (see PhysicsForceUtil). A weaker one pushes by the square of its share of that strength,
-// so that how high an upward fan lifts a body grows about as its strength does, and the weakest barely stirs it.
-const STRONGEST_ACCELERATION = 144;
+// How hard a wind of strength 9 pushes at its face: the speed it adds in a second, in world units per second, several
+// times gravity's own pull (see PhysicsForceUtil). Any other pushes by the square of its share of that strength, so
+// that how high an upward fan lifts a body grows about as its strength does.
+const FULL_STRENGTH = 9;
+const FULL_STRENGTH_ACCELERATION = 144;
 // How many times as hard a wind across the room pushes as one blowing down at the same strength, which would otherwise
 // throw a body hardly faster than it walks; and a wind blowing upward.
 const SIDEWAYS_PUSH_SCALE = 3;
 const UPWARD_PUSH_SCALE = 1;
-// The blades' turns per second for each unit of strength. Kept low, since a fast spin strobes.
-const BLADE_TURNS_PER_STRENGTH = 0.3;
-// How much the wind effect, drawn as the default strength blows it, changes for each unit of strength away from
+// The blades' turns per second, the same at every setting. Kept low, since a fast spin strobes.
+const BLADE_TURNS_PER_SECOND = 1.5;
+// How much the wind effect, drawn as the default setting blows it, changes for each unit of strength away from
 // it: how fast its puffs go (taking as much longer to reach the end of the push), and how close behind each other
 // they come. Their size and look are its own at any strength.
 const WIND_PACE_PER_STRENGTH = 0.125;
@@ -51,18 +61,22 @@ const WIND_DENSITY_PER_STRENGTH = 0.075;
 
 // How far the housing stands out of its face (see pre_encoding_source.json). The blades turn just in front of it.
 const HOUSING_DEPTH = 0.0625;
-// The share of the footprint the vent takes, the housing showing around it.
-const VENT_SCALE = 0.86;
+// The share of the footprint each blade's vent takes, at any setting, and how far apart two vents' rims are: two side
+// by side span the plate but for a rim of housing.
+const VENT_SCALE = 0.45;
+const VENT_GAP = 0.02;
 
-// Only the wind is editable; the look is the type's one.
+// Only the setting and the color are editable; the housing itself is the type's one.
 const editableMetadataKeys = [
     ObjectMetadataKeyEnumMap.ForceProperties,
+    ObjectMetadataKeyEnumMap.FanColor,
 ];
 
-// Fans, on walls, floors or ceilings: a housing with blades turning in its vent, and a steady wind out of it that
-// pushes whatever physics moves, and bounces it where it blows upward (see PhysicsForceUtil). The blades turn as
-// fast as the wind is strong, the wind effect's puffs go faster and closer together the stronger it is, and it is
-// as long as the push reaches. Anyone may edit them, subject to restricted zones (see ObjectUpdateUtil).
+// Fans, on walls, floors or ceilings: a housing with one to three blades turning in it, and one steady wind out of
+// its middle that pushes whatever physics moves, and bounces it where it blows upward (see PhysicsForceUtil). The
+// more blades, the stronger the wind and the farther it reaches; its puffs go faster and closer together the
+// stronger it is, and it is as long as the push reaches. One color paints the housing and tints the wind.
+// Anyone may edit them, subject to restricted zones (see ObjectUpdateUtil).
 const FanObjectTypeConfig =
 {
     objectType: "Fan",
@@ -75,8 +89,8 @@ const FanObjectTypeConfig =
     force: {
         getAcceleration: (metadata: ObjectMetadata, direction: Vec3): number =>
             ((direction.y > 0) ? UPWARD_PUSH_SCALE : (direction.y == 0) ? SIDEWAYS_PUSH_SCALE : 1)
-                * STRONGEST_ACCELERATION * (readStrength(getForceProperties(metadata)) / MAX_STRENGTH) ** 2,
-        getRange: (metadata: ObjectMetadata): number => readRange(getForceProperties(metadata)),
+                * FULL_STRENGTH_ACCELERATION * (getSetting(metadata).strength / FULL_STRENGTH) ** 2,
+        getRange: (metadata: ObjectMetadata): number => getSetting(metadata).range,
     },
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => {
         // Block spoofing attempts
@@ -128,75 +142,129 @@ const FanObjectTypeConfig =
                         params, parts);
                     return {params, parts};
                 },
+                // The housing takes the fan's stored color (a change recomposes the parts, see FanGameObject), and
+                // stops a relief step short of the footprint's edges, where its half-sunk sides would share planes
+                // with block faces and z-fight.
+                deriveParts: (obj: AddObjectSignal, parts: InstancedMeshCompositionPart[]) => {
+                    const color = ColorUtil.paletteIndexToRGB(FAN_COLOR_PALETTE_NAME, getColorIndex(obj.metadata));
+                    const footprint = ObjectScaleUtil.getObjectSize(obj.objectTypeIndex, obj.transform.scale);
+                    for (const part of parts)
+                    {
+                        if (part.materialId != INSTANCED_TIN_MATERIAL_ID)
+                            continue;
+                        part.color = {...color};
+                        part.scale = {...part.scale, x: Math.min(part.scale.x, footprint.x - 2 * RELIEF_STEP),
+                            y: Math.min(part.scale.y, footprint.y - 2 * RELIEF_STEP)};
+                    }
+                },
                 // Straight on, as it is mounted.
                 thumbnailView: {yawDeg: 0, pitchDeg: 0},
             },
             orbitOccluder: {}, // Part of the face it is mounted on, as far as the orbit camera is concerned.
             animatedSprite: {
                 baseline: {sprite: "fanBlades", widthScale: VENT_SCALE, heightScale: VENT_SCALE,
-                    faceOffset: HOUSING_DEPTH + RELIEF_STEP},
-                getOverride: (metadata: ObjectMetadata) => ({rate: WaveformUtil.constant(
-                    BLADE_TURNS_PER_STRENGTH * readStrength(getForceProperties(metadata)))}),
+                    faceOffset: HOUSING_DEPTH + RELIEF_STEP, rate: WaveformUtil.constant(BLADE_TURNS_PER_SECOND)},
+                getOverride: (metadata: ObjectMetadata) => ({centers: getBladeCenters(getSetting(metadata).blades)}),
             },
             particleEmitter: {
                 baseline: {effect: "wind", faceOffset: HOUSING_DEPTH + 2 * RELIEF_STEP, stopAtBlocks: true},
                 getOverride: (metadata: ObjectMetadata) => {
-                    const fromDefault = readStrength(getForceProperties(metadata)) - DEFAULT_STRENGTH;
+                    const {strength, range} = getSetting(metadata);
+                    const fromDefault = strength - DEFAULT_SETTING.strength;
                     const pace = 1 + WIND_PACE_PER_STRENGTH * fromDefault;
                     // As many more a second as they go faster, so their spacing is down to the density alone.
-                    return {reach: readRange(getForceProperties(metadata)), particleTimeScale: pace,
-                        rateScale: pace * (1 + WIND_DENSITY_PER_STRENGTH * fromDefault)};
+                    return {reach: range, particleTimeScale: pace,
+                        rateScale: pace * (1 + WIND_DENSITY_PER_STRENGTH * fromDefault),
+                        tint: ColorUtil.rgbToHex(ColorUtil.paletteIndexToRGB(FAN_COLOR_PALETTE_NAME,
+                            getColorIndex(metadata)))};
                 },
             },
         },
     },
     util: {
-        // Decode + encode round trip is the whole validation (see ObjectMetadataEntryMap). Decoding is total: a
-        // missing character defaults, and any other reads as the nearest of its setting's values.
-        canonicalize: (rawForceProperties: string): string =>
+        // Decode + encode round trip is the whole validation of each key (see ObjectMetadataEntryMap).
+        canonicalizeForceProperties: (rawForceProperties: string): string =>
         {
-            return encodeForceProperties(readStrength(rawForceProperties), readRange(rawForceProperties));
+            return encodeForceProperties(readSetting(rawForceProperties));
+        },
+        canonicalizeColor: (rawColor: string): string =>
+        {
+            return encodeColor(readColorIndex(rawColor));
         },
         encodeForceProperties,
+        // As its key stores it.
+        encodeColor,
         getDefaultForceProperties: (): string =>
         {
-            return encodeForceProperties(DEFAULT_STRENGTH, DEFAULT_RANGE);
+            return encodeForceProperties(DEFAULT_SETTING);
         },
-        // The two settings as a fan stores them, each one of its values.
-        getStrength: (metadata: ObjectMetadata): number => readStrength(getForceProperties(metadata)),
-        getRange: (metadata: ObjectMetadata): number => readRange(getForceProperties(metadata)),
+        getDefaultColor: (): string =>
+        {
+            return encodeColor(DEFAULT_COLOR_INDEX);
+        },
+        // One of FAN_SETTINGS.
+        getSetting,
+        // A position in FAN_COLOR_PALETTE_NAME.
+        getColorIndex,
     },
 } satisfies ObjectTypeConfig;
 
-function encodeForceProperties(strength: number, range: number): string
+function encodeForceProperties(setting: {strength: number}): string
 {
-    const chars: string[] = [];
-    chars[STRENGTH_CHAR_INDEX] = StringUtil.convertRawNumberToVisibleASCII(getNearest(FAN_STRENGTHS, strength));
-    chars[RANGE_CHAR_INDEX] = StringUtil.convertRawNumberToVisibleASCII(getNearest(FAN_RANGES, range));
-    return chars.join("");
+    return StringUtil.convertRawNumberToVisibleASCII(setting.strength);
 }
 
-function getForceProperties(metadata: ObjectMetadata): string
+function encodeColor(colorIndex: number): string
 {
-    return metadata[ObjectMetadataKeyEnumMap.ForceProperties]?.str ?? "";
+    return StringUtil.convertRawNumberToVisibleASCII(clampToPalette(colorIndex));
 }
 
-function readStrength(forceProperties: string): number
+function getSetting(metadata: ObjectMetadata)
 {
-    return getNearest(FAN_STRENGTHS,
-        StringUtil.convertVisibleASCIIToRawNumber(forceProperties, STRENGTH_CHAR_INDEX, DEFAULT_STRENGTH));
+    return readSetting(metadata[ObjectMetadataKeyEnumMap.ForceProperties]?.str ?? "");
 }
 
-function readRange(forceProperties: string): number
+// Total: the setting whose strength is nearest the stored one (the weaker of two as near), and the default where
+// none is stored. Anything after the strength is ignored.
+function readSetting(forceProperties: string)
 {
-    return getNearest(FAN_RANGES,
-        StringUtil.convertVisibleASCIIToRawNumber(forceProperties, RANGE_CHAR_INDEX, DEFAULT_RANGE));
+    const strength = StringUtil.convertVisibleASCIIToRawNumber(forceProperties, STRENGTH_CHAR_INDEX,
+        DEFAULT_SETTING.strength);
+    return FAN_SETTINGS.reduce((nearest, setting) =>
+        (Math.abs(setting.strength - strength) < Math.abs(nearest.strength - strength)) ? setting : nearest);
 }
 
-// The one of a setting's values nearest a number: the lower of two as near, and the lowest for what is no number.
-function getNearest(values: number[], n: number): number
+function getColorIndex(metadata: ObjectMetadata): number
 {
-    return values.reduce((nearest, value) => (Math.abs(value - n) < Math.abs(nearest - n)) ? value : nearest);
+    return readColorIndex(metadata[ObjectMetadataKeyEnumMap.FanColor]?.str ?? "");
+}
+
+// Total: the default where none is stored, and the palette's last color for a position past it. Anything after the
+// first character is ignored.
+function readColorIndex(storedColor: string): number
+{
+    return clampToPalette(StringUtil.convertVisibleASCIIToRawNumber(storedColor, 0, DEFAULT_COLOR_INDEX));
+}
+
+// NaN becomes the first color (clamping alone keeps NaN).
+function clampToPalette(colorIndex: number): number
+{
+    if (!Number.isFinite(colorIndex))
+        return 0;
+    return Math.round(NumUtil.clampInRange(colorIndex, 0, ColorUtil.getPaletteSize(FAN_COLOR_PALETTE_NAME) - 1));
+}
+
+// Where a fan's blades turn on its plate, as shares of its footprint (see AnimatedSpriteDescriptor): a lone one in
+// the middle; two side by side; three in a triangle, its point up, centred top to bottom.
+function getBladeCenters(blades: number): Vec2[]
+{
+    if (blades <= 1)
+        return [{x: 0, y: 0}];
+    const across = 0.5 * (VENT_SCALE + VENT_GAP);
+    if (blades == 2)
+        return [{x: -across, y: 0}, {x: across, y: 0}];
+    const rise = 0.5 * Math.sqrt(3) * across;
+    return [{x: 0, y: rise}, {x: -across, y: -rise}, {x: across, y: -rise}];
 }
 
 export default FanObjectTypeConfig;

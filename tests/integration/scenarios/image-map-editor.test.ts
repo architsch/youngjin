@@ -8,7 +8,9 @@
  * with the rest and each other, or filling outside with a color; an inverted one taking out or filling what lies
  * inside it instead), reshaping one by hand (handles on its own turned axes and at its middle,
  * the side across held, a knob to turn it) and picking one of several by a click, color adjustments, the source library (photos kept once, dated by their first
- * adding, an index by name, none dropped while in use, nothing left of a deleted one, Unsplash links), a source
+ * adding, an index by name, none dropped while in use, nothing left of a deleted one, those no entry is sampled from
+ * deleted on asking but not one a sampled source was made from, one another process added meanwhile, a photo of a
+ * library only read, or any while an entry has no recipe, Unsplash links), a source
  * preprocessed into another beside it (cut out by a stand-in for the model, squared by corners placed on the source,
  * previewed, kept once, refused where it can't be made or its model would first be fetched), the paths new
  * entries take (never one used before), an entry with no recipe taken in as its own image, disabled entries (their
@@ -610,6 +612,78 @@ describe("the source library", () => {
         finally
         {
             vi.useRealTimers();
+            fs.rmSync(dir, {recursive: true, force: true});
+        }
+    });
+
+    it("deletes on asking each source it knows of that no entry is sampled from, itself or through one made from it, but none another process added since, nor a photo of a library it only reads", async () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), "source-library-"));
+        try
+        {
+            const library = libraryIn(dir);
+            const prep: SourcePrep = {tidy: true};
+            const photo = await library.add(await png(10, 30, 20), "photo.png");
+            const cutOut = await library.add(await png(20, 30, 20), "photo_tidied.png", {preparedFrom: {sha1: photo.sha1, prep}});
+            const sampled = await library.add(await png(30, 30, 20), "sampled.png");
+            const unusedCutOut = await library.add(await png(40, 30, 20), "sampled_tidied.png",
+                {preparedFrom: {sha1: sampled.sha1, prep}});
+            const unused = await library.add(await png(50, 30, 20), "unused.png");
+            await library.getThumbnail(unused.sha1);
+            // As a batch command would, from a process of its own.
+            await libraryIn(dir).add(await png(60, 30, 20), "elsewhere.png");
+
+            expect(library.deleteUnused([cutOut.sha1, sampled.sha1]).map(source => source.fileName).sort())
+                .toEqual(["sampled_tidied.png", "unused.png"]);
+            expect(library.list().map(source => source.fileName).sort())
+                .toEqual(["elsewhere.png", "photo.png", "photo_tidied.png", "sampled.png"]);
+            expect([unused, unusedCutOut].map(source => library.findFile(source.sha1))).toEqual([undefined, undefined]);
+            expect(fs.readdirSync(path.join(dir, "work", "source_thumbnails"))).toEqual([]);
+            // A library made later knows of it.
+            expect(libraryIn(dir).deleteUnused([cutOut.sha1, sampled.sha1]).map(source => source.fileName))
+                .toEqual(["elsewhere.png"]);
+
+            // A workspace's own index loses them, but the photos it reads from the repository's library stay.
+            const workspace = path.join(dir, "workspace");
+            fs.mkdirSync(path.join(workspace, "sources"), {recursive: true});
+            fs.copyFileSync(library.getIndexPath(), path.join(workspace, "sources", "index.json"));
+            const workspaceLibrary = new SourceLibrary({...pathsIn(workspace), fallbackSourcesDir: path.join(dir, "sources")});
+            expect(workspaceLibrary.deleteUnused([])).toHaveLength(3);
+            expect(workspaceLibrary.list()).toEqual([]);
+            expect([photo, cutOut, sampled].every(source => library.findFile(source.sha1) != undefined)).toBe(true);
+        }
+        finally
+        {
+            fs.rmSync(dir, {recursive: true, force: true});
+        }
+    });
+
+    it("deletes the sources no entry is sampled from as the manifest and recipes say, and none while an entry has no recipe, as while they are mid-write", async () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), "entry-store-"));
+        try
+        {
+            const store = new EntryStore(pathsIn(dir));
+            fs.mkdirSync(store.paths.imagesDir, {recursive: true});
+            fs.writeFileSync(path.join(store.paths.imagesDir, "manifest.json"),
+                JSON.stringify({subfolders: [{name: "2", title: "Objects"}], images: []}));
+            fs.writeFileSync(store.paths.noticesPath,
+                "# Notices\n<!-- pictures:begin (written by the image map editor) -->\n<!-- pictures:end -->\n");
+            const sampled = await store.library.add(await png(10, 30, 20), "sampled.png");
+            const unused = await store.library.add(await png(20, 30, 20), "unused.png");
+            await store.saveEntry({path: undefined, subfolder: "2", fields: {title: "Red", author: "thingspool"},
+                recipe: recipe({sourceSha1: sampled.sha1}), baseHash: store.readState().hash});
+
+            // Read as no recipes at all, which would leave every source unused.
+            const recipesText = fs.readFileSync(store.paths.recipesPath, "utf8");
+            fs.writeFileSync(store.paths.recipesPath, "");
+            expect(() => store.deleteUnusedSources()).toThrow(/2\/1 has no recipe/);
+            expect(store.library.list()).toHaveLength(2);
+
+            fs.writeFileSync(store.paths.recipesPath, recipesText);
+            expect(store.deleteUnusedSources().map(source => source.sha1)).toEqual([unused.sha1]);
+            expect(store.library.list().map(source => source.sha1)).toEqual([sampled.sha1]);
+        }
+        finally
+        {
             fs.rmSync(dir, {recursive: true, force: true});
         }
     });

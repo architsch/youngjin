@@ -6,7 +6,7 @@ import ErrorUtil from "../../../shared/system/util/errorUtil";
 import PhysicsManager from "../../../shared/physics/physicsManager";
 import App from "../../app";
 import Vector3DUtil from "../../../shared/math/util/vector3DUtil";
-import { GRAVITY_SPEED, NEAR_EPSILON } from "../../../shared/system/sharedConstants";
+import { NEAR_EPSILON } from "../../../shared/system/sharedConstants";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
 
 export default class Rigidbody extends GameObjectComponent
@@ -32,16 +32,9 @@ export default class Rigidbody extends GameObjectComponent
             const roomID = App.getCurrentRoom()?.id!;
             const objectId = this.gameObject.params.objectId;
 
-            // Apply gravity to velocity
-            this.desiredVelocity.y -= GRAVITY_SPEED;
-
-            // Apply soft collisions (and step-up logic) to the velocity
-            this.desiredVelocity = PhysicsManager.getAdjustedVelocity(roomID, objectId, this.desiredVelocity);
-
-            // Apply the forces of whatever blows on the object, and the velocity it carries from them
-            const unforcedVelocity = this.desiredVelocity;
-            this.desiredVelocity = PhysicsManager.applyForces(roomID, objectId, unforcedVelocity, deltaTime);
-            this.underForce = !Vector3DUtil.equal(this.desiredVelocity, unforcedVelocity);
+            const step = PhysicsManager.getStepVelocity(roomID, objectId, steering, deltaTime);
+            this.desiredVelocity = step.velocity;
+            this.underForce = step.underForce;
 
             const currentPos: Vec3 = {
                 x: this.gameObject.position.x,

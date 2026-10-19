@@ -86,7 +86,16 @@ const entries: {[key: number]: ObjectMetadataEntry} = {
     },
     // Round-tripped as LightProperties is, through FanObjectTypeConfig's util.
     [ObjectMetadataKeyEnumMap.ForceProperties]: {
-        preprocessingMethod: (rawValue: string) => FanObjectTypeConfig.util.canonicalize(rawValue),
+        preprocessingMethod: (rawValue: string) => FanObjectTypeConfig.util.canonicalizeForceProperties(rawValue),
+    },
+    // Likewise.
+    [ObjectMetadataKeyEnumMap.FanColor]: {
+        preprocessingMethod: (rawValue: string) => FanObjectTypeConfig.util.canonicalizeColor(rawValue),
+    },
+    // The server's alone, so a stored copy is never restored either (see ServerUserManager.addUserToRoom).
+    [ObjectMetadataKeyEnumMap.AgentMark]: {
+        preprocessingMethod: (rawValue: string) => ["1", "2"].includes(rawValue.trim()) ? rawValue.trim() : "",
+        canUserSet: (_user: User) => false,
     },
 };
 

@@ -105,6 +105,29 @@ click, or when the game itself is the news.
 `public/devlog-<year>/list.html` is the index of what exists to link to. Read the actual posts before
 choosing between them; pick the one whose subject fits the venue, not simply the newest.
 
+## The AI-agents angle
+
+ThingsPool has AI agents in it (see [`docs/networking/agents.md`](../../../docs/networking/agents.md)).
+The Helper, an AI guide the server runs, waits by the main hub's door, greets newcomers and answers their
+questions. AI agents from the internet can also come in and build rooms of their own beside people. Few
+games can say that, so it is a strong hook, but it suits some audiences far better than others.
+
+- **What is true to say:** an AI guide greets newcomers in the main hub and chats with them, and AI
+  agents can join and build alongside people.
+- **What is not:** that the world is full of AI agents, or that you will meet several. Other agents come
+  and go, and only the Helper is marked as an AI. The claim is checked like every other: against what
+  someone who clicks right now would find (see the readiness gate).
+- **Lead with it** where the audience is interested in AI. That means general AI-curious communities,
+  people who build agents, and Hacker News, where the agents are the news. For anyone there who runs an
+  agent, the manual is a second link: "Tell your agent: Read https://thingspool.net/skill.md and join
+  ThingsPool."
+- **Don't lead with it** where the audience dislikes AI. Many art, writing and game communities have
+  rules against AI content. There, lead with the game, and mention the AI guide no more than the
+  venue's rules allow, if at all.
+- **Measure agents apart.** Agents that register say where they heard of ThingsPool, and are counted
+  under `agent-<that tag>` sources. People who open a room link an agent passed on count under
+  `via-agent`.
+
 ## Step 1 — Read the ledger before anything else
 
 ```bash
@@ -130,7 +153,7 @@ curl -s -o /dev/null -w "%{http_code}\n" --max-time 10 https://app.thingspool.ne
 curl -s -o /dev/null -w "%{http_code}\n" --max-time 10 https://thingspool.net/
 ```
 
-Both must answer `200`. Then three judgements that need actual looking:
+Both must answer `200`. Then the judgements that need actual looking:
 
 - **Does a solo arrival work?** This is the decisive one for a multiplayer sandbox and the easiest to
   overlook, because the developer never experiences it. Someone arriving from a link at a quiet hour
@@ -147,6 +170,10 @@ Both must answer `200`. Then three judgements that need actual looking:
   decide what a Reddit or Discord post looks like. A link with no preview image loses most of its
   clicks before anyone reads the title. Fetch the URL being promoted and confirm the tags resolve to
   an image that exists. Fetch an app URL only with the link-check command in step 5.
+- **If the copy mentions AI agents, is the Helper there to meet?** It is what makes the claim true
+  for anyone who clicks. The live server's log shows it: `Helper usage` lines, and no `Helper couldn't
+  start` or `Helper reply failed` (the `vps-maintenance` skill reads the log), or the user talks to it.
+  Without it, cut the claim.
 
 If the gate fails, report what failed and stop. Do not push anyway; the venues will still be there
 next week and the first impressions will not.

@@ -7,7 +7,8 @@ Object edits are optimistic: the client validates and applies an edit through th
 ## Add / remove
 ![Object Addition Flow](figures/object_addition_flow.jpg)
 
-- **Add**: the client registers the object, creates its physics body, spawns it as spawned-by-me, and sends `AddObjectSignal` with a locally computed id. The server recomputes the id. If the ids differ or validation fails, it sends `RemoveObjectSignal` back to the sender.
+- **Add**: the client registers the object, creates its physics body, spawns it as spawned-by-me, and sends `AddObjectSignal` with a locally computed id. The server re-validates it, including that the id is unused and that the owner it names is the sender, and on failure sends `RemoveObjectSignal` back to the sender.
+- **Players**: added and removed by the server alone, as their user joins and leaves a room. A client's request to add or remove one is refused, whoever it belongs to.
 - **Remove**: applied optimistically. A server-side failure is only logged.
 - **Category caps**: every object type belongs to a category (`ObjectCategoryEnumMap`), and a room may hold only so many of each (`ObjectCategoryConfigMap`). Types in one category spend that budget together, so a second kind of lamp does not double how many lamps a room can hold. `ObjectGroup` counts what it holds per category as objects come and go; both the client and the server refuse an add that would pass the cap.
 - **Restricted zones**: adding, moving (into or out of a zone), removing or changing the metadata of a persistent object whose collider touches a zone is refused for anyone but the superuser and the zone's user (see [restricted_zone.md](../gameplay/restricted_zone.md)). Non-persistent objects, including players, are never checked, and neither are volumes, which zones are made of.
@@ -22,6 +23,7 @@ Object edits are optimistic: the client validates and applies an edit through th
 - **Non-physical** objects (e.g. a canvas dragged by a gizmo) are set directly and emitted.
 - **Physical** objects (e.g. players) are driven by a controller. A transform emitter sends updates when the change exceeds a threshold, and receivers interpolate.
 - On the server, dynamic colliders are resolved by physics. If the result differs from the request, the authoritative transform goes to **all** clients, sender included. Otherwise the signal is relayed. Static objects are placed as requested.
+- A player goes no farther than its user's distance budget allows (see [authentication.md](authentication.md#rate-limiting)), which is set well above anything walking or the strongest fan does in a few seconds. A move past it is put back for its sender alone, since nobody else has seen it, so a single long jump after a network stall still goes through.
 - Validation is against the transform the signal **asks for**, not the one the object currently holds, since the destination is the part a client chose.
 - For high-frequency signals such as transforms, a pending signal of the same type is replaced instead of queued.
 
@@ -38,3 +40,4 @@ Versions before the scale existed hold a shorter transform, so `ObjectGroupVersi
 ## Metadata
 `SetObjectMetadataSignal`. On failure, the server sends back the current server-side value.
 - A key may carry a permission rule of its own in `ObjectMetadataEntryMap`, which applies on every object on top of the type's rule (e.g. `AdminPrefs` is admin-only; see [admin.md](../gameplay/admin.md)). A key marked as applying to any type (`Tags`) goes by that rule alone, so no type has to allow it. Stored player metadata the user may no longer set is not restored on join.
+- An add is held to the same rules: refused if it carries any value the user couldn't set on the object once it is there, and stored with each value as setting it would store it.

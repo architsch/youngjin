@@ -43,8 +43,9 @@ the same mechanism in passing, and that second one is the one that gets missed �
 concept across `/docs` rather than trusting the index alone.
 
 **That grep will hit `/docs/plans`, and those hits are not findings.** Plan documents are dated
-historical records of what was known and intended on one day, and they are **never edited after it** —
-not to follow a rename, not to fix a stale path, not to note what was eventually built. A plan that
+historical records of what was known and intended on one day, and they are **edited only with the
+user's approval** — never on this pass's own initiative to follow a rename, fix a stale path, or note
+what was eventually built. A plan that
 disagrees with today's code is doing its job. Skip every match under `/docs/plans`, and do not add
 plans to the README index either. The full rule is
 [`../../rules/plan-documents.md`](../../rules/plan-documents.md); this pass is the one most likely to
@@ -117,7 +118,8 @@ mean for a sync pass:
   configuration, still tersely.
 - **A small feature gets a short code comment, not a page** (and not a paragraph in an existing page
   unless it changes a concept that page describes).
-- **`/docs/plans` is governed by none of this.** Dated records are never rewritten to match the code.
+- **`/docs/plans` is governed by none of this.** Dated records are not rewritten to match the code
+  without the user's approval.
 
 Code comments the batch touched are in scope too: a comment the change made wrong gets fixed or
 deleted, and one written as an essay gets cut to CLAUDE.md's **Code Comment Guidelines**.
@@ -140,6 +142,16 @@ room nobody can leave.
 
 This is a *report* if it is unfixable within the scope of a doc/test pass — say plainly that the
 feature is incomplete rather than documenting it as though it works everywhere.
+
+### And one more: agents keep up
+
+CLAUDE.md's rule that **agents keep up with every feature**, in full at
+[`../../rules/agents-keep-up.md`](../../rules/agents-keep-up.md), is broken by every change that
+remembers only the browser. For each behaviour change a player could notice, check the agents' side:
+the tools reach it, what agents see describes it, and the endpoint's instructions, the manual (with its
+ClawHub copy), the Helper's guide and `docs/networking/agents.md` say it. As with room generation, a
+missing tool is a *report* if it is beyond a doc/test pass; a stale sentence in what agents read is
+fixed here.
 
 ## Step 3 — Map behaviour to tests
 

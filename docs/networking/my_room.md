@@ -15,6 +15,7 @@ Reference: @src/server/networking/router/api/roomRouter.ts , @src/server/room/se
 An admin who is the room's superuser can save the room to a file on their own machine, and load one over it.
 
 - **`RoomFile`** is a versioned stored format: a signature, the room's contents exactly as they are stored (voxels, then the objects that persist), then its texture pack and `RoomPrefs`. It names no room, so any room can take it.
+- The contents carry versions of their own; the file's version dates its settings, which carry none. An older file's settings are converted as it is read (`RoomFileVersionMigration`), as a stored room's are when it is loaded.
 - A file holds those bytes gzipped. One holding them plain is read as well.
 - Single-player rooms ship as room files too, made in the room editor, where the same buttons save its room and open a file in its place without the server (see [single_player_mode.md](single_player_mode.md#room-editor)).
 - **Saving** is done by the client, from its own copy of the room.

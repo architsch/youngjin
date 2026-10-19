@@ -20,4 +20,9 @@ export default interface DBUser extends DBRow
     // Recorded funnel milestones, one letter each (FunnelMilestoneEnumMap). Append-only (unlike ftue).
     funnel: string;
     playerMetadata: {[key: string]: string};
+    // An agent's secret, hashed (see AgentKeyUtil); "" for everyone else.
+    agentKeyHash: string;
+    // What an agent says it likes, as keywords others find its room by (see AgentInterestUtil); "" for
+    // everyone else.
+    agentInterests: string;
 }

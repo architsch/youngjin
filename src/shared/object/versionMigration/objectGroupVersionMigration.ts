@@ -1,4 +1,6 @@
 import EncodableByteString from "../../networking/types/encodableByteString";
+import EncodableRaw2ByteNumber from "../../networking/types/encodableRaw2ByteNumber";
+import EncodableRawByteNumber from "../../networking/types/encodableRawByteNumber";
 import AddObjectSignal from "../types/addObjectSignal";
 // Type-only: ObjectGroup imports this module, so a value import would be an import cycle.
 import type ObjectGroup from "../types/objectGroup";
@@ -37,6 +39,10 @@ const FIRST_TWO_STOREY_VOXEL_GRID_VERSION = 2;
 // Object format version where a transform gained its scale. Earlier ones stop after the facing, so
 // their bytes have to be read as the shorter record they are.
 const FIRST_SCALED_TRANSFORM_VERSION = 4;
+
+// Object format version where the number of distinct owners took two bytes, as each object's index into
+// them always had. Earlier ones count them in one, which a room built by more than 255 users overflowed.
+const FIRST_TWO_BYTE_SOURCE_USER_COUNT_VERSION = 8;
 
 // Grid version where the entrance doorway was filled and the entrance door became a stored object.
 // Older grids mean the room never stored its door.
@@ -114,7 +120,7 @@ const LEGACY_CANVAS_FRAMES = [
     legacyCanvasFrame("#5e3a26", "#7a3b62", 0.16, false), // carved dark wood
 ];
 
-// Every version so far shares one body layout, so older groups are read as current ones and only their
+// Older groups are read in their own layout (see decodeTransform, decodeSourceUserCount), then only their
 // meaning is converted. Index N converts version N to N+1, in place.
 const converters: ((objectGroup: ObjectGroup, roomID: string, sourceVoxelGridVersion: number,
     legacyRestrictedZones: LegacyRestrictedZone[]) => void)[] = [
@@ -265,6 +271,9 @@ const converters: ((objectGroup: ObjectGroup, roomID: string, sourceVoxelGridVer
                 {[ObjectMetadataKeyEnumMap.ZoneUserName]: new EncodableByteString(ZONE_USER_NAME_FOR_NOBODY)}));
         });
     },
+    () => { // version 7 -> 8
+        // The owner count took two bytes; decodeSourceUserCount reads either width, and nothing it means changed.
+    },
 ];
 
 const ObjectGroupVersionMigration =
@@ -278,6 +287,13 @@ const ObjectGroupVersionMigration =
 
         const {pos, dir} = ObjectTransform.decodePosAndDir(bufferState);
         return new ObjectTransform(pos, dir, {...UNIT_VEC3});
+    },
+    // Reads the number of distinct owners out of a body of the given version.
+    decodeSourceUserCount: (bufferState: BufferState, formatVersion: number): number =>
+    {
+        if (formatVersion >= FIRST_TWO_BYTE_SOURCE_USER_COUNT_VERSION)
+            return (EncodableRaw2ByteNumber.decode(bufferState) as EncodableRaw2ByteNumber).n;
+        return (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
     },
     // Converts a group read at an older version forward, one version at a time. The grid decoded from
     // the same blob dates the objects (see FIRST_TWO_STOREY_VOXEL_GRID_VERSION), and hands over the

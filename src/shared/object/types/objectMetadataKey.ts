@@ -32,7 +32,13 @@ export const ObjectMetadataKeyEnumMap: Record<string, number> =
     // superuser, which makes it a restricted zone (see RestrictedZoneUtil); or ZONE_USER_NAME_FOR_NOBODY,
     // for the superuser alone. Absent or empty, it is no zone.
     ZoneUserName: 14,
-    // How hard a fan's wind pushes and how far it reaches, as two quantized characters (see FanObjectTypeConfig),
-    // always read and written together.
+    // A fan's setting, which sets its blades, how hard its wind pushes and how far it reaches: one quantized
+    // character (see FanObjectTypeConfig).
     ForceProperties: 15,
+    // A fan's color as one character, a position in its palette, which paints its housing and tints its wind (see
+    // FanObjectTypeConfig).
+    FanColor: 16,
+    // On an AI agent's player, set by the server at spawn (see ServerUserManager.addUserToRoom): "1", or "2" for an
+    // agent the server runs itself, which people are shown as an AI. No signal may set it.
+    AgentMark: 17,
 }

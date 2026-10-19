@@ -13,12 +13,16 @@ const SECRET_NAMES = [
     "GOOGLE_OAUTH_CLIENT_ID",
     "GOOGLE_OAUTH_CLIENT_SECRET",
 ];
+// Loaded when present: the server runs without them, less one feature (the Helper's replies, here).
+const OPTIONAL_SECRET_NAMES = [
+    "ANTHROPIC_API_KEY",
+];
 
 async function loadSecrets()
 {
     const client = new SecretManagerServiceClient();
 
-    for (const secretName of SECRET_NAMES)
+    for (const secretName of [...SECRET_NAMES, ...OPTIONAL_SECRET_NAMES])
     {
         if (process.env[secretName])
         {
@@ -26,9 +30,20 @@ async function loadSecrets()
             continue;
         }
 
-        const [version] = await client.accessSecretVersion({
-            name: `projects/${GCP_PROJECT_ID}/secrets/${secretName}/versions/latest`,
-        });
+        let version;
+        try
+        {
+            [version] = await client.accessSecretVersion({
+                name: `projects/${GCP_PROJECT_ID}/secrets/${secretName}/versions/latest`,
+            });
+        }
+        catch (err)
+        {
+            if (!OPTIONAL_SECRET_NAMES.includes(secretName))
+                throw err;
+            console.log(`[bootstrap] Optional secret "${secretName}" not loaded (${err.message}).`);
+            continue;
+        }
 
         const payload = version.payload?.data;
         if (payload)
@@ -37,6 +52,10 @@ async function loadSecrets()
                 ? payload
                 : Buffer.from(payload).toString("utf8");
             console.log(`[bootstrap] Secret "${secretName}" loaded from Secret Manager.`);
+        }
+        else if (OPTIONAL_SECRET_NAMES.includes(secretName))
+        {
+            console.log(`[bootstrap] Optional secret "${secretName}" has no payload in Secret Manager.`);
         }
         else
         {

@@ -59,10 +59,10 @@ const DBRoomUtil =
         const buffer = Buffer.from(EncodingUtil.endEncoding(bufferState));
         return await DBFileStorageUtil.saveBinaryFile(getRoomContentFilePath(room.id), buffer);
     },
-    deleteRoomContent: async (room: Room): Promise<boolean> =>
+    deleteRoomContent: async (roomID: string): Promise<boolean> =>
     {
-        LogUtil.log("DBRoomUtil.deleteRoomContent", {roomID: room.id}, "low", "info");
-        return await DBFileStorageUtil.deleteFile(getRoomContentFilePath(room.id));
+        LogUtil.log("DBRoomUtil.deleteRoomContent", {roomID}, "low", "info");
+        return await DBFileStorageUtil.deleteFile(getRoomContentFilePath(roomID));
     },
     createRoom: async (roomName: string, roomType: RoomType,
         ownerUserID: string, ownerUserName: string): Promise<DBQueryResponse<{id: string}>> =>
@@ -90,7 +90,7 @@ const DBRoomUtil =
 
         if (!roomInsertResult.success)
         {
-            await DBRoomUtil.deleteRoomContent(room);
+            await DBRoomUtil.deleteRoomContent(room.id);
             return {success: false, data: []};
         }
         room.id = roomInsertResult.data[0].id;

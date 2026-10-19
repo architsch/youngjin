@@ -2,11 +2,18 @@ import RemoveObjectSignal from "../../shared/object/types/removeObjectSignal";
 import SetObjectMetadataSignal from "../../shared/object/types/setObjectMetadataSignal";
 import AddObjectSignal from "../../shared/object/types/addObjectSignal";
 import ObjectUpdateUtil from "../../shared/object/util/objectUpdateUtil";
-import SocketUserContext from "../sockets/types/socketUserContext";
+import UserContext from "../sockets/types/userContext";
 import ServerRoomManager from "../room/serverRoomManager";
 import SetObjectTransformSignal from "../../shared/object/types/setObjectTransformSignal";
 import ObjectTransform from "../../shared/object/types/objectTransform";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
+import Room from "../../shared/room/types/room";
+import User from "../../shared/user/types/user";
+import ObjectTypeConfigMap from "../../shared/object/maps/objectTypeConfigMap";
+import Vector3DUtil from "../../shared/math/util/vector3DUtil";
+import UserBudgetUtil from "../user/util/userBudgetUtil";
+
+const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
 
 let nonPersistentObjectIdCounter = 0;
 
@@ -16,7 +23,7 @@ const ServerObjectManager =
     {
         return `@${++nonPersistentObjectIdCounter}`;
     },
-    onAddObjectSignalReceived: (socketUserContext: SocketUserContext, obj: AddObjectSignal): boolean =>
+    onAddObjectSignalReceived: (socketUserContext: UserContext, obj: AddObjectSignal): boolean =>
     {
         const user = socketUserContext.user;
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
@@ -40,7 +47,7 @@ const ServerObjectManager =
         socketRoomContext.multicastSignal("addObjectSignal", obj, user.id);
         return true;
     },
-    onRemoveObjectSignalReceived: (socketUserContext: SocketUserContext, signal: RemoveObjectSignal): boolean =>
+    onRemoveObjectSignalReceived: (socketUserContext: UserContext, signal: RemoveObjectSignal): boolean =>
     {
         const user = socketUserContext.user;
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
@@ -62,7 +69,31 @@ const ServerObjectManager =
         socketRoomContext.multicastSignal("removeObjectSignal", signal, user.id);
         return true;
     },
-    onSetObjectTransformSignalReceived: (socketUserContext: SocketUserContext, signal: SetObjectTransformSignal) =>
+    // The server's own adds and removes (a joining user's player, say), made for owner and announced to the
+    // room except to userIDToExclude. Only these may add or remove what no user may (see
+    // ObjectTypeConfig.canUserAddObject).
+    addObjectAsServer: (room: Room, owner: User, obj: AddObjectSignal, userIDToExclude?: string): boolean =>
+    {
+        if (!ObjectUpdateUtil.canAddObject(owner, room, obj, true) || !ObjectUpdateUtil.addObject(owner, room, obj, false))
+        {
+            console.error(`ServerObjectManager::addObjectAsServer :: Failed (objectId=${obj.objectId})`);
+            return false;
+        }
+        ServerRoomManager.socketRoomContexts[room.id].multicastSignal("addObjectSignal", obj, userIDToExclude);
+        return true;
+    },
+    removeObjectAsServer: (room: Room, owner: User, signal: RemoveObjectSignal, userIDToExclude?: string): boolean =>
+    {
+        if (!ObjectUpdateUtil.canRemoveObject(owner, room, signal, true) ||
+            !ObjectUpdateUtil.removeObject(owner, room, signal, false))
+        {
+            console.error(`ServerObjectManager::removeObjectAsServer :: Failed (objectId=${signal.objectId})`);
+            return false;
+        }
+        ServerRoomManager.socketRoomContexts[room.id].multicastSignal("removeObjectSignal", signal, userIDToExclude);
+        return true;
+    },
+    onSetObjectTransformSignalReceived: (socketUserContext: UserContext, signal: SetObjectTransformSignal) =>
     {
         const user = socketUserContext.user;
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
@@ -73,6 +104,19 @@ const ServerObjectManager =
             return;
         }
         const room = roomRuntimeMemory.room;
+
+        // A user's player goes no farther than its distance budget lets it (see USER_BUDGETS): a move past it is taken
+        // back from the sender alone, whom nobody else has seen make it.
+        const obj = room.objectById[signal.objectId];
+        if (obj != undefined && !signal.ignorePhysics && obj.objectTypeIndex == playerTypeIndex
+            && obj.sourceUserID == user.id && !UserBudgetUtil.trySpend(user.id, "distance",
+                Vector3DUtil.length(Vector3DUtil.subtract(signal.transform.pos, obj.transform.pos))))
+        {
+            socketUserContext.addPendingSignalToUser("setObjectTransformSignal", new SetObjectTransformSignal(room.id,
+                obj.objectId, new ObjectTransform({...obj.transform.pos}, {...obj.transform.dir}, {...obj.transform.scale}),
+                true));
+            return;
+        }
 
         const result = ObjectUpdateUtil.setObjectTransform(user, room, signal);
 
@@ -88,7 +132,7 @@ const ServerObjectManager =
             socketRoomContext.multicastSignal("setObjectTransformSignal", signal, user.id);
         }
     },
-    onSetObjectMetadataSignalReceived: (socketUserContext: SocketUserContext, signal: SetObjectMetadataSignal) =>
+    onSetObjectMetadataSignalReceived: (socketUserContext: UserContext, signal: SetObjectMetadataSignal) =>
     {
         const user = socketUserContext.user;
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];

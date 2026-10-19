@@ -6,8 +6,10 @@ import StringUtil from "../../../math/util/stringUtil";
 import EncodableByteString from "../../../networking/types/encodableByteString";
 import Room from "../../../room/types/room";
 import RoomValidationUtil from "../../../room/util/roomValidationUtil";
-import { ATTACHMENT_HITBOX_INSET, BACKWARD_DIR, HUB_ROOM_ID_KEYWORD, MAX_ROOM_X, MAX_ROOM_Z, UNIT_VEC3,
+import { ATTACHMENT_HITBOX_INSET, BACKWARD_DIR, COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN,
+    HUB_ROOM_ID_KEYWORD, MAX_ROOM_X, MAX_ROOM_Z, STOREY_FLOOR_COLLISION_LAYER, UNIT_VEC3,
     WALL_DIRECTIONS } from "../../../system/sharedConstants";
+import VoxelQueryUtil from "../../../voxel/util/voxelQueryUtil";
 import User from "../../../user/types/user";
 import AddObjectSignal from "../addObjectSignal";
 import { ObjectCategoryEnumMap } from "../objectCategory";
@@ -29,6 +31,13 @@ export const ENTRANCE_DOOR_OBJECT_ID = "entrance_door";
 // SpawnHotspotUtil, PlayerController).
 export const SPAWN_DIST_BEHIND_DOOR = 0.5;
 export const ENTRANCE_DIST_IN_FRONT_OF_DOOR = 0.5;
+
+// The walk out of the doorway on arrival, whoever walks it (see PlayerController, AgentBodyUtil). Normally ends by
+// distance; the time limit covers arriving facing something solid. The stride spans from behind the door to just
+// clear of it.
+export const ENTERING_STRIDE_LENGTH = SPAWN_DIST_BEHIND_DOOR + ENTRANCE_DIST_IN_FRONT_OF_DOOR;
+export const ENTERING_SPEED = 3;
+export const ENTERING_MAX_DURATION = 1.5; // in seconds
 
 const COMPOSITION_CODEC_VERSION = 0;
 
@@ -184,6 +193,24 @@ const DoorObjectTypeConfig =
         getDestinationDoorLabel: (obj: AddObjectSignal): string =>
         {
             return obj.metadata[ObjectMetadataKeyEnumMap.DestinationDoorLabel]?.str ?? "";
+        },
+        // The floor the door stands on: its origin is at the middle of the stretch of wall it claims.
+        getFloorY: (obj: AddObjectSignal): number =>
+        {
+            return obj.transform.pos.y - 0.5 * DOOR_FOOTPRINT_HEIGHT;
+        },
+        // How high the origin of a door hung on a wall face is: the door stands on the floor of the storey the face
+        // is in (see RoomGenerationUtil). Undefined for the room's own floor or ceiling.
+        getOriginYOnWall: (quadIndex: number): number | undefined =>
+        {
+            const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+            if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
+                return undefined;
+
+            const storeyFloorLayer = (collisionLayer >= STOREY_FLOOR_COLLISION_LAYER)
+                ? STOREY_FLOOR_COLLISION_LAYER + 1 : COLLISION_LAYER_MIN;
+            const floorY = (storeyFloorLayer - COLLISION_LAYER_MIN) * COLLISION_LAYER_HEIGHT;
+            return floorY + 0.5 * DOOR_FOOTPRINT_HEIGHT;
         },
         // Unspecified means a custom (non-default) entrance.
         getDoorType: (obj: AddObjectSignal): DoorType =>

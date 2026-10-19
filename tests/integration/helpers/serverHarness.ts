@@ -32,6 +32,8 @@ const _latencyConfig = vi.hoisted(() => ({
 
 // Serial number for rooms created by the mocked DBRoomUtil.createRoom (e.g. auto-opened hubs).
 const _autoRoomCounter = vi.hoisted(() => ({ value: 0 }));
+// Likewise for users created by the mocked DBUserUtil.createUser (e.g. registered agents).
+const _autoUserCounter = vi.hoisted(() => ({ value: 0 }));
 
 function _randomDelay(): Promise<void>
 {
@@ -79,6 +81,9 @@ vi.mock("../../../src/server/db/util/dbRoomUtil", () => ({
             const roomID = `room-auto-${++_autoRoomCounter.value}`;
             const room = seedRoomInStore(roomID, roomType);
             room.roomName = roomName;
+            // As a room loaded from its row carries them.
+            room.ownerUserID = ownerUserID;
+            room.ownerUserName = ownerUserName;
             _roomStore[roomID] = { room, ownerUserID, ownerUserName, roomType,
                 texturePackPath: room.texturePackPath, prefs: room.prefs };
             return { success: true, data: [{ id: roomID }] };
@@ -127,7 +132,14 @@ vi.mock("../../../src/server/db/util/dbSearchUtil", () => ({
         },
         users: {
             all: vi.fn(async () => ({ success: true, data: [] })),
-            withUserName: vi.fn(async () => ({ success: true, data: [] })),
+            withOwnedRoom: vi.fn(async (limit: number) => ({
+                success: true,
+                data: Object.values(_userStore).filter(user => (user.ownedRoomID ?? "").length > 0).slice(0, limit),
+            })),
+            withUserName: vi.fn(async (userName: string) => ({
+                success: true,
+                data: Object.values(_userStore).filter(user => user.userName === userName),
+            })),
             withEmail: vi.fn(async () => ({ success: true, data: [] })),
             withUserNameOrEmail: vi.fn(async () => ({ success: true, data: [] })),
         },
@@ -172,7 +184,20 @@ vi.mock("../../../src/server/db/util/dbUserUtil", () => ({
                     u.playerMetadata = update.playerMetadata;
             }
         }),
-        createUser: vi.fn(async () => ({ success: true, data: [{ id: "user-auto" }] })),
+        // Stores the row, so what is created can be found again (e.g. an agent by its key).
+        createUser: vi.fn(async (userName: string, userType: number, email: string,
+            singlePlayerMode: string = "tutorial", acquisitionSource: string = "direct", agentKeyHash: string = "") => {
+            const id = `user-auto-${++_autoUserCounter.value}`;
+            _userStore[id] = { id, userName, userType, email, singlePlayerMode, lastRoomID: "", ownedRoomID: "",
+                ftue: "", playerMetadata: {}, acquisitionSource, funnel: "", agentKeyHash, agentInterests: "",
+                lastLoginAt: Date.now(), loginCount: 0 };
+            return { success: true, data: [{ id }] };
+        }),
+        setAgentInterests: vi.fn(async (userID: string, agentInterests: string) => {
+            const u = _userStore[userID];
+            if (u) u.agentInterests = agentInterests;
+            return { success: true, data: [] };
+        }),
         setSinglePlayerMode: vi.fn(async () => ({ success: true, data: [] })),
         setFTUE: vi.fn(async (userID: string, ftue: string) => {
             if (_latencyConfig.enabled) await _randomDelay();
@@ -181,6 +206,10 @@ vi.mock("../../../src/server/db/util/dbUserUtil", () => ({
             return { success: true, data: [] };
         }),
         deleteStaleGuestsByTier: vi.fn(async () => 0),
+        findStaleUsersByTier: vi.fn(async () => []),
+        deleteUsers: vi.fn(async (userIDs: string[]) => {
+            for (const userID of userIDs) delete _userStore[userID];
+        }),
         deleteUser: vi.fn(async () => ({ success: true, data: [] })),
         fromDBType: vi.fn((u: any) => {
             // Mirrors fromDBType's "" default for a missing FTUE record (in place).
@@ -233,6 +262,7 @@ import ServerUserManager from "../../../src/server/user/serverUserManager";
 import ServerObjectManager from "../../../src/server/object/serverObjectManager";
 import RoomPickerUtil from "../../../src/server/room/util/roomPickerUtil";
 import HubRoomUtil from "../../../src/server/room/util/hubRoomUtil";
+import UserBudgetUtil from "../../../src/server/user/util/userBudgetUtil";
 import UserRoomChangeResult from "../../../src/server/room/types/userRoomChangeResult";
 import SocketUserContext from "../../../src/server/sockets/types/socketUserContext";
 import DBUserVersionMigration from "../../../src/server/db/types/versionMigration/dbUserVersionMigration";
@@ -318,6 +348,8 @@ export const harness = {
 
         for (const hubID in HubRoomUtil.initialJoinPriorityByHubRoomID)
             delete HubRoomUtil.initialJoinPriorityByHubRoomID[hubID];
+        // Users' ids come round again from test to test.
+        UserBudgetUtil.budgetsByUserID.clear();
 
         resetStores();
         resetUserCounter();
@@ -326,6 +358,7 @@ export const harness = {
         for (const k in _userStore) delete _userStore[k];
         _savedMetadataRecords.length = 0;
         _autoRoomCounter.value = 0;
+        _autoUserCounter.value = 0;
 
         for (const k in _pendingMetadata) delete _pendingMetadata[k];
 
@@ -574,7 +607,7 @@ export const harness = {
         for (const [_userID, ctx] of Object.entries(ServerUserManager.socketUserContexts))
         {
             await ServerRoomManager.changeUserRoom(ctx, undefined, false, false, false);
-            ctx.socket.disconnect(true);
+            ctx.disconnect();
         }
 
         for (const uid in ServerUserManager.socketUserContexts)

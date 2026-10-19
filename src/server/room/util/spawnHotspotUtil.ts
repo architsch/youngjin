@@ -11,10 +11,6 @@ import { MAX_ROOM_X, MAX_ROOM_Z, UNIT_VEC3 } from "../../../shared/system/shared
 
 const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 
-// How much wall a door claims, which is what its origin sits at the middle of.
-const DOOR_FOOTPRINT_HEIGHT =
-    DoorObjectTypeConfig.components.spawnedByAny.collider.baseHitboxSize.sizeY;
-
 // Where an arriving player is placed (RoomPickerUtil decides the room). Tries in order: the named door,
 // a default-entrance door, any door, the room centre.
 const SpawnHotspotUtil =
@@ -58,7 +54,7 @@ function pickOne(doors: AddObjectSignal[]): AddObjectSignal
 function getTransformBehindDoor(door: AddObjectSignal): ObjectTransform
 {
     const {pos, dir} = door.transform;
-    const floorY = pos.y - 0.5 * DOOR_FOOTPRINT_HEIGHT;
+    const floorY = DoorObjectTypeConfig.util.getFloorY(door);
     const spawnPos: Vec3 = {
         x: pos.x - dir.x * SPAWN_DIST_BEHIND_DOOR,
         y: floorY + 0.5 * PLAYER_HEIGHT,

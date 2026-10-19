@@ -1,5 +1,5 @@
 import { MAX_ROOM_PREFS_STEP } from "../../../../shared/room/util/roomPrefsUtil";
-import { SCENERY_COLOR_PALETTE_NAME } from "../../../../shared/system/sharedConstants";
+import { ATMOSPHERE_COLOR_PALETTE_NAME } from "../../../../shared/system/sharedConstants";
 import useEditableRoomPrefs from "../../util/editableRoomPrefs";
 import TooltipButton from "../input/tooltipButton";
 import FormPaletteColorInput from "../input/formPaletteColorInput";
@@ -18,13 +18,13 @@ export default function GroundPanel({ anchorElementId, onClose }: Props)
         <div className={COLUMN_CLASS_NAMES}>
             <FormPaletteColorInput
                 label="Color"
-                paletteName={SCENERY_COLOR_PALETTE_NAME}
+                paletteName={ATMOSPHERE_COLOR_PALETTE_NAME}
                 currValue={prefs.groundColorIndex}
                 setColorIndex={(index) => apply(next => next.groundColorIndex = index)}
             />
             <FormPaletteColorInput
                 label="Peaks"
-                paletteName={SCENERY_COLOR_PALETTE_NAME}
+                paletteName={ATMOSPHERE_COLOR_PALETTE_NAME}
                 currValue={prefs.groundPeakColorIndex}
                 setColorIndex={(index) => apply(next => next.groundPeakColorIndex = index)}
             />

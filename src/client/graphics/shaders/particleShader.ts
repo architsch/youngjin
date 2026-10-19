@@ -67,6 +67,8 @@ const PARTICLE_VERTEX_PARS_GLSL = `
     const float PARTICLE_NEAR_FADE_START = 0.3;
     const float PARTICLE_NEAR_FADE_END = 0.9;
     const float PARTICLE_LAMP_TINT_HALF_LIGHT = ${ATMOSPHERE_FOG_TINT_HALF_LIGHT.toFixed(4)};
+    // Near enough sRGB's curve for a tint: lamp light added in linear space would bury a dark color.
+    const float PARTICLE_DISPLAY_GAMMA = 2.2;
     // How far above the floor a landed particle's middle is held, in its own sizes.
     const float PARTICLE_LANDING_LIFT = 0.3;
 
@@ -216,15 +218,19 @@ const PARTICLE_VERTEX_PARS_GLSL = `
         #ifdef PARTICLE_BLENDED
             color.a *= smoothstep(PARTICLE_NEAR_FADE_START, PARTICLE_NEAR_FADE_END,
                 distance(center, cameraPosition));
-            // A lit particle takes on the color of the lamp light it floats in, as the fog does (see
-            // atmosphereFogColor): the lamps' hue, by an amount that saturates. Skipped while the room has no lamp.
+            // A lit particle takes the lamp light it floats in as the fog does (see atmosphereFogColor): in display
+            // space, the lamps' hue rides on top of its own color, by an amount that saturates, so neither takes the
+            // other over. Scaled back under white by its brightest channel, so a pale particle turns toward the
+            // lamps' hue rather than clipping white. Skipped while the room has no lamp.
             if (look.y > 0.5 && particleLampTint > 0.0)
             {
                 float openness;
                 vec3 lamp = lightBlockMapLightAt(center, openness);
                 float peak = max(lamp.r, max(lamp.g, lamp.b));
                 float amount = peak / (peak + PARTICLE_LAMP_TINT_HALF_LIGHT);
-                color.rgb *= mix(vec3(1.0), lamp / max(peak, 0.0001), amount * particleLampTint);
+                vec3 shown = pow(color.rgb, vec3(1.0 / PARTICLE_DISPLAY_GAMMA))
+                    + lamp / max(peak, 0.0001) * (amount * particleLampTint);
+                color.rgb = pow(shown / max(1.0, max(shown.r, max(shown.g, shown.b))), vec3(PARTICLE_DISPLAY_GAMMA));
             }
         #endif
         vParticleColor = color;

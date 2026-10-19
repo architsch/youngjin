@@ -709,7 +709,7 @@
             }
         },
         {
-            "comment": "[Index 66] 'Fan': the housing its blades turn in, a plate half sunk in the face it is on (see FanObjectTypeConfig).",
+            "comment": "[Index 66] 'Fan': the housing its blades turn in, a plate half sunk in the face it is on (see FanObjectTypeConfig). The '-1' color is set by the fan from its housing color.",
             "objectType": "Fan",
             "codecType": "Default",
             "codecVersion": 1,
@@ -719,7 +719,7 @@
                 "dir": {"x": 0, "y": 0, "z": 1},
                 "offset": {"x": 0, "y": 0, "z": 0},
                 "scale": {"x": 1, "y": 1, "z": 0.125},
-                "color": {"x": 151, "y": 151, "z": 151}
+                "color": {"x": -1, "y": -1, "z": -1}
             }]
         }
     ]

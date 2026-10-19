@@ -7,7 +7,8 @@ import EJSUtil from "../../ssg/util/ejsUtil";
 import { USER_API_ROUTE_PATH, ROOM_API_ROUTE_PATH, HEALTH_ROUTE_PATH } from "../../../shared/system/sharedConstants";
 import RateLimitUtil from "../util/rateLimitUtil";
 import ServerLifecycleUtil from "../../system/util/serverLifecycleUtil";
-import { GIT_COMMIT, IS_PUBLIC_SITE } from "../../system/serverConstants";
+import { AGENT_MCP_ROUTE_PATH, GIT_COMMIT, IS_PUBLIC_SITE } from "../../system/serverConstants";
+import AgentMcpUtil from "../../agent/util/agentMcpUtil";
 
 export default function Router(app: Express): void
 {
@@ -38,7 +39,7 @@ export default function Router(app: Express): void
             res.status(200).setHeader("content-type", "text/javascript")
                 .sendFile(FileUtil.getAbsoluteFilePath(req.url));
         });
-        app.get(/(.*\.css)|(.*\.jpg)|(.*\.png)|(.*\.webp)|(.*\.svg)|(.*\.ico)|(.*\.atom)|(.*\.xml)|(.*\.txt)|(.*\.json)|(.*\.pdf)|(.*\.room)$/, async (req: Request, res: Response): Promise<void> => {
+        app.get(/(.*\.css)|(.*\.jpg)|(.*\.png)|(.*\.webp)|(.*\.svg)|(.*\.ico)|(.*\.atom)|(.*\.xml)|(.*\.txt)|(.*\.json)|(.*\.pdf)|(.*\.room)|(.*\.md)$/, async (req: Request, res: Response): Promise<void> => {
             res.sendFile(FileUtil.getAbsoluteFilePath(req.url));
         });
     }
@@ -78,5 +79,9 @@ export default function Router(app: Express): void
 
     app.use(`/${USER_API_ROUTE_PATH}`, RateLimitUtil.apiRateLimiter, UserRouter);
     app.use(`/${ROOM_API_ROUTE_PATH}`, RateLimitUtil.apiRateLimiter, RoomRouter);
+    // AI agents (see @docs/networking/agents.md), the key in the address for hosts that can't send a header. Before
+    // PageRouter, which would refuse it as a room address.
+    app.all([`/${AGENT_MCP_ROUTE_PATH}`, `/${AGENT_MCP_ROUTE_PATH}/:key`], RateLimitUtil.agentRateLimiter,
+        AgentMcpUtil.authenticate, AgentMcpUtil.handle);
     app.use("/", RateLimitUtil.pageRateLimiter, PageRouter);
 }

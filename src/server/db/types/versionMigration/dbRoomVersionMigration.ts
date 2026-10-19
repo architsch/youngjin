@@ -1,6 +1,7 @@
 import { DBVersionMigration } from "./dbVersionMigration";
 import DBUserUtil from "../../util/dbUserUtil";
 import LightPaletteVersionMigration from "../../../../shared/math/versionMigration/lightPaletteVersionMigration";
+import RoomPrefsVersionMigration from "../../../../shared/room/versionMigration/roomPrefsVersionMigration";
 
 // The prefs string's "Light" palette positions: the ambient color, then the head light's (see RoomPrefsUtil).
 const LEGACY_PREFS_LIGHT_COLOR_CHAR_INDICES = [0, 1];
@@ -49,6 +50,12 @@ const DBRoomVersionMigration: DBVersionMigration = [
         for (const charIndex of LEGACY_PREFS_LIGHT_COLOR_CHAR_INDICES)
             prefs = LightPaletteVersionMigration.convertColorChar(prefs, charIndex);
         row.prefs = prefs;
+        return row;
+    },
+    // v7 -> v8: the fog, sky, cloud and ground colors move to the "Atmosphere" palette, each to the color that looks
+    // nearest it (as room files do in their version 1).
+    async (row: any) => {
+        row.prefs = RoomPrefsVersionMigration.convertToAtmospherePalette(row.prefs ?? "");
         return row;
     },
 ];

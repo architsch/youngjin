@@ -4,7 +4,8 @@
  * the server on, which sends rooms as the server encodes them. In the editor: a room nobody asked for is turned
  * away and the server told where the user is; nothing the connection does there waits, reloads or redirects; a
  * room is asked for only over a connection; and the editor is left, for a new room or through a door, only on
- * a Yes. In a multiplayer room every one of those stays as it was.
+ * a Yes. In a multiplayer room every one of those stays as it was. The room the page's address names stays in the
+ * address and in reconnections until another room is entered.
  */
 import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from "vitest";
 import fs from "fs";
@@ -391,7 +392,8 @@ describe("the room editor keeping its room", () => {
         fake.state.connected = false;
         fire("disconnect", "transport close");
 
-        expect(getHandshake()).toEqual({targetRoomID: "from-url", roomEditorOpen: true});
+        // The page's own room was dropped once the user came into another (see "the room the page's address names").
+        expect(getHandshake()).toEqual({targetRoomID: "", roomEditorOpen: true});
         fake.state.connected = true;
         fire("connect");
         expect(ongoingClientProcessExists()).toBe(false);
@@ -501,7 +503,7 @@ describe("a multiplayer room, where the connection matters as it did", () => {
         expect(connectionStates).toEqual(["reconnecting"]);
         expect(ongoingClientProcessExists("reconnect")).toBe(true);
 
-        expect(getHandshake()).toEqual({targetRoomID: "from-url", roomEditorOpen: false});
+        expect(getHandshake()).toEqual({targetRoomID: "", roomEditorOpen: false});
         fake.state.connected = true;
         fire("connect");
         expect(connectionStates).toEqual(["reconnecting", "connected"]);
@@ -512,6 +514,32 @@ describe("a multiplayer room, where the connection matters as it did", () => {
         expect(App.getCurrentRoom() === room, "the room was kept").toBe(false);
         expect(isIn("hub")).toBe(true);
         expect(ongoingClientProcessExists()).toBe(false);
+    });
+
+    it("keeps the room the page's address names, in the address and in reconnections, until another is entered",
+        async () => {
+        // The page opened at that room's address. (The page in these tests came up in a hub instead, which had
+        // dropped it already.)
+        App.getEnv().targetRoomID = "from-url";
+        const addresses = vi.spyOn(window.history, "replaceState");
+        const lastAddress = () => addresses.mock.calls.at(-1)?.[2];
+        const enter = async (room: Room) => {
+            tryStartClientProcess("roomChange", 1, 0);
+            await arrive(room);
+        };
+
+        await enter(createTestRoom("from-url", "Named", RoomTypeEnumMap.Regular));
+        expect(lastAddress()).toBe("/from-url");
+        expect(getHandshake()).toEqual({targetRoomID: "from-url", roomEditorOpen: false});
+
+        await enter(hubRoom());
+        expect(lastAddress()).toBe("/");
+        expect(getHandshake()).toEqual({targetRoomID: "", roomEditorOpen: false});
+
+        // For good: coming back by a door doesn't bring it back.
+        await enter(createTestRoom("from-url", "Named", RoomTypeEnumMap.Regular));
+        expect(lastAddress()).toBe("/");
+        await enter(hubRoom());
     });
 
     it("gives way to a room the server sends unasked", async () => {

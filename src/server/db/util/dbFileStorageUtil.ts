@@ -58,7 +58,8 @@ const DBFileStorageUtil =
         try {
             const bucket = (await FirebaseUtil.getStorage()).bucket();
             const file = bucket.file(filePath);
-            const responses = await file.delete();
+            // A file already gone counts as deleted (e.g. a room's contents, never saved).
+            const responses = await file.delete({ignoreNotFound: true});
             for (const response of responses)
             {
                 const statusCode = response.statusCode;

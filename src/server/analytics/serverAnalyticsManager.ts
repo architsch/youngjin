@@ -3,7 +3,7 @@ import FirebaseUtil from "../networking/util/firebaseUtil";
 import DBCacheUtil from "../db/util/dbCacheUtil";
 import LogUtil from "../../shared/system/util/logUtil";
 import AcquisitionSourceUtil from "./util/acquisitionSourceUtil";
-import SocketUserContext from "../sockets/types/socketUserContext";
+import UserContext from "../sockets/types/userContext";
 import { FunnelMilestone, FunnelMilestoneEnumMap } from "./types/funnelMilestone";
 import { COLLECTION_ACQUISITION, COLLECTION_USERS } from "../system/serverConstants";
 
@@ -52,7 +52,7 @@ const ServerAnalyticsManager =
     // Call on every occurrence. `session` (from the live connection) answers repeats from memory, so
     // only the first reaches the DB; HTTP callers omit it.
     recordMilestone: async (userID: string, milestone: FunnelMilestone,
-        session?: SocketUserContext): Promise<void> =>
+        session?: UserContext): Promise<void> =>
     {
         if (!userID)
             return;
@@ -111,7 +111,7 @@ const ServerAnalyticsManager =
 }
 
 // Releases an uncompleted claim so the next call retries.
-function releaseClaim(session: SocketUserContext | undefined, milestone: FunnelMilestone): void
+function releaseClaim(session: UserContext | undefined, milestone: FunnelMilestone): void
 {
     if (session)
         session.funnel = session.funnel.replace(milestone, "");

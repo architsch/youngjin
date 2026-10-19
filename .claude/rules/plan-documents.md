@@ -1,8 +1,8 @@
 # Plan Documents Are Historical Records
 
-The rule in one line, as [`../../CLAUDE.md`](../../CLAUDE.md) states it: **files under `/docs/plans`
-are never edited after the day they were written.** This page is why, and what to do at the moments
-the rule actually gets broken.
+The rule in one line, as [`../../CLAUDE.md`](../../CLAUDE.md) states it: **a file under `/docs/plans`
+is edited only with the user's approval, whatever its date.** This page is why, and what to do at the
+moments the rule actually gets broken.
 
 ## What these files are
 
@@ -40,22 +40,23 @@ author's thinking on a specific day — cannot be reconstructed from the code th
 
 - **When a mechanical edit matches a file under `/docs/plans`, skip it and leave the file untouched.**
   Do not apply it "for consistency". Inconsistency with today's code is the correct state for a
-  historical document.
-- **When a plan is genuinely misleading someone, write a new dated plan that supersedes it.** Never
-  revise the old one, and do not add a pointer to the new plan from the old one either — a superseded
-  plan is still an accurate record of its own day.
+  historical document. If the edit seems worth making there anyway, ask first (see below).
+- **When a plan is genuinely misleading someone, offer the user a choice:** a new dated plan that
+  supersedes it, or an edit of the old one. A superseded plan is still an accurate record of its own
+  day, so until the user approves an edit, the old one gets no revision and no pointer to the new one.
 - **Do not add plans to the documentation index in `README.md`.** The rule that every `/docs` page
   must be linked there does not reach `/docs/plans`; the index lists the conceptual pages that
   describe the present.
 - **Do not cite a plan as evidence of how the system currently works.** It is evidence of what was
   intended on one date. The `/docs` pages and the source are the present tense.
 
-## The only legitimate edits
+## When an edit is legitimate
 
-Both require the user to ask:
+Only with the user's approval, on any date:
 
-1. Writing a **new** dated plan.
-2. Editing a plan **on the day it was written**, while it is still being drafted.
+1. Writing a **new** dated plan, when the user asks for one.
+2. Editing an **existing** plan, when the user asks for that edit or says yes to it once proposed.
 
-Anything else — including a correction the user would probably agree with — is a change to the
-historical record, and it is theirs to authorise, not yours to infer.
+To propose an edit, name the plan and say what would change. The approval covers that edit alone, not
+plans in general. Anything else — including a correction the user would probably agree with — is a
+change to the historical record, and it is theirs to authorise, not yours to infer.

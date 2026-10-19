@@ -6,25 +6,22 @@ import SignalTypeConfigMap from "../../../shared/networking/maps/signalTypeConfi
 import EncodableArray from "../../../shared/networking/types/encodableArray";
 import EncodableRawByteNumber from "../../../shared/networking/types/encodableRawByteNumber";
 import EncodingUtil from "../../../shared/networking/util/encodingUtil";
-import ErrorUtil from "../../../shared/system/util/errorUtil";
 import { SIGNAL_BATCH_DEFLATE_MIN_BYTES } from "../../system/serverConstants";
+import UserContext from "./userContext";
+import UserJoinHints from "./userJoinHints";
 
-export default class SocketUserContext
+export default class SocketUserContext implements UserContext
 {
     socket: socketIO.Socket;
     user: User;
     isInSinglePlayerRoom: boolean = false;
-
-    // Recorded funnel milestones from the authenticated row, so analytics can skip DB reads on the
-    // edit path. Not on User, which is serialized to the browser. Kept in sync by
-    // ServerAnalyticsManager.
     funnel: string;
+    signalThrottleTimestamps: {[signalType: string]: number} = {};
 
     // What the next batch will carry, in the order queued, as runs of one type each. The order is kept across
     // types: a client that undoes an edit and redoes it sends a removal and then an add of the same thing, and
     // the others must hear of them that way round.
     private pendingSignalRunsToUser: {typeIndex: number, signals: EncodableData[]}[] = [];
-    private throttleTimestamps: {[signalType: string]: number} = {};
 
     constructor(socket: socketIO.Socket)
     {
@@ -33,25 +30,30 @@ export default class SocketUserContext
         this.funnel = (socket.handshake.auth.funnel as string) ?? "";
     }
 
-    onReceivedSignalFromUser(signalType: string, handler: (buffer: ArrayBuffer) => void): void
+    notifyRoomReloadStarted(): void
     {
-        const minClientToServerSendInterval = SignalTypeConfigMap.getConfigByType(signalType).minClientToServerSendInterval;
+        this.socket.emit("roomReloadStarted");
+    }
 
-        this.socket.on(signalType, (buffer: ArrayBuffer) => {
-            if (minClientToServerSendInterval > 0)
-            {
-                const now = Date.now();
-                const lastTime = this.throttleTimestamps[signalType];
-                if (lastTime && now - lastTime < minClientToServerSendInterval)
-                    return;
-                this.throttleTimestamps[signalType] = now;
-            }
-            try {
-                handler(buffer);
-            } catch (err) {
-                console.error(`Exception while handling '${signalType}' from user (ID: ${this.user.id}, Name: ${this.user.userName}) :: Error: ${ErrorUtil.getErrorMessage(err)}`);
-            }
-        });
+    isConnected(): boolean
+    {
+        return this.socket.connected;
+    }
+
+    disconnect(redirectURL?: string): void
+    {
+        if (redirectURL != undefined)
+            this.socket.emit("forceRedirect", redirectURL);
+        this.socket.disconnect(true);
+    }
+
+    getJoinHints(): UserJoinHints
+    {
+        const auth = this.socket.handshake.auth;
+        return {
+            targetRoomID: auth.targetRoomID as string | undefined,
+            roomEditorOpen: auth.roomEditorOpen === true,
+        };
     }
 
     addPendingSignalToUser(signalType: string, signalData: EncodableData)
@@ -92,8 +94,6 @@ export default class SocketUserContext
         return false;
     }
 
-    // Drops what is queued, for when the signal queued next replaces all of it (see
-    // ServerRoomManager.loadRoomFile).
     clearAllPendingSignalsToUser()
     {
         this.pendingSignalRunsToUser.length = 0;

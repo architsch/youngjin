@@ -21,6 +21,7 @@
   - `/voxel` - Voxel management (ClientVoxelManager), plus the client-only queries about the room as drawn (ClientVoxelQueryUtil) and the pool of mesh instances the visible quads are lent (VoxelQuadInstanceUtil)
   
 - **`/server`** - Server-side code (Node.js/Express)
+  - `/agent` - AI agents as players (the MCP endpoint they play over, their accounts, keys and presence, their bodies the server walks, their tools for seeing, building, placing things and setting up their rooms, the directory of rooms they find, and the Helper, the agent the server runs itself to greet newcomers)
   - `/analytics` - Acquisition analytics (ServerAnalyticsManager — which traffic source a visitor came from, and how far through the funnel they got)
   - `/db` - Database utilities and types (Firestore, Firebase Storage, caching)
   - `/networking` - Express.js routers and general networking utilities (e.g. address (URL) formatting, cookies, firebase-admin, and rate-limiter initialization)
@@ -64,9 +65,9 @@
 - **`/gameplay`** - Game modes (play mode, edit mode), the admin privilege
 - **`/geometry`** - Voxel grid, physics, room generation, room entrances and doors, attached objects (on walls, floors and ceilings), textures, player customization
 - **`/graphics`** - Camera control, instanced mesh composition, image map, label text
-- **`/networking`** - HTTP/Socket/Authentication Flows, single-player mode
+- **`/networking`** - HTTP/Socket/Authentication Flows, single-player mode, AI agents
 - **`/testing`** - E2E and integration test workflows, framework, and scenario coverage
-- **`/plans`** - Dated design/planning notes, filed by year. **Historical records, not descriptions of the present — never edited after the day they were written.** See "Plan Documents Are Historical Records" below.
+- **`/plans`** - Dated design/planning notes, filed by year. **Historical records, not descriptions of the present — edited only with the user's approval.** See "Plan Documents Are Historical Records" below.
 
 ### `/tests` - All Tests
 - **`/e2e`** - E2E test fixtures, specs, configs, and helpers (Playwright)
@@ -109,10 +110,13 @@ Every multiplayer room is born from `RoomGenerationUtil`, every single-player ro
 The code is Apache-2.0; the writing and artwork under `public/` are all rights reserved; some bundled assets are third-party. That boundary exists only in `LICENSE-CONTENT.md` and `THIRD-PARTY-NOTICES.md`, nothing enforces it, and no test fails when it drifts. **Whenever the set of things that ship changes — a dependency, an external asset, a new `public/` directory, a new top-level code directory — the license files change in the same commit.** A copyleft or source-available dependency license is a decision for the user: report it and stop. Never add an asset whose terms are unknown. **`LICENSE` is verbatim Apache-2.0 and is never edited.** Full rule: [`.claude/rules/license-files.md`](.claude/rules/license-files.md).
 
 ### Plan Documents Are Historical Records
-Files under `/docs/plans` are dated records of what was known, intended and uncertain on the day they were written. **A plan document is never edited after that day** — not to rename a symbol that has since been renamed in `src/`, not to fix a stale path or number, not to correct it, not to append an outcome or a status note, and not to apply the documentation guidelines to it. Plans are also not added to the README index. When a sweeping edit (a rename, a find-and-replace, a docs-sync pass) matches a file under `/docs/plans`, **skip it and leave the file untouched**; inconsistency with today's code is the correct state for a historical record. If a plan is misleading, write a *new* dated plan rather than revising the old one. The only edits that are ever in scope are ones the user asks for: writing a new plan, or editing one on the day it was written. Full rule: [`.claude/rules/plan-documents.md`](.claude/rules/plan-documents.md).
+Files under `/docs/plans` are dated records of what was known, intended and uncertain on the day they were written. **A plan document is edited only with the user's approval, whatever its date** — never on Claude's own initiative: not to rename a symbol that has since been renamed in `src/`, not to fix a stale path or number, not to correct it, not to append an outcome or a status note, and not to apply the documentation guidelines to it. Plans are also not added to the README index. When a sweeping edit (a rename, a find-and-replace, a docs-sync pass) matches a file under `/docs/plans`, **skip it and leave the file untouched**; inconsistency with today's code is the correct state for a historical record. If a plan is misleading, offer the user a *new* dated plan or an edit of the old one. Approval means the user asked for that edit, or said yes to it once proposed. Full rule: [`.claude/rules/plan-documents.md`](.claude/rules/plan-documents.md).
 
 ### Source Changes Go Through the File-Editing Tools
 The user reviews changes to `src/` by approving each file edit. **Every file created or modified under `src/` must be written with the file-editing tools (Edit, Write), never by a shell command** — no `python3`/`node -e` scripts, `sed -i`, `perl -pi`, redirects (`>`, `tee`) or heredocs, however many files a change touches. A shell command can match an allow rule and write without asking, which bypasses that review. The one exception is regenerating files marked auto-generated by running the project's own build scripts. Full rule: [`.claude/rules/source-edits.md`](.claude/rules/source-edits.md).
+
+### Agents Keep Up With Every Feature
+AI agents play the game through the MCP endpoint (see `docs/networking/agents.md`): they can do only what its tools reach, see only what those tools put into words, and know only what they are told. **Whenever a feature is added or changed, the agents' side changes in the same change** — the tools reach it (or a comment says why not), what agents see describes it, and what they read says it: the endpoint's instructions, the manual (`public/skill.md`, with its ClawHub copy), the Helper's guide, `docs/networking/agents.md`, and the agent tests. Nothing fails when this drifts; agents just quietly can't, or are told wrong. Full rule: [`.claude/rules/agents-keep-up.md`](.claude/rules/agents-keep-up.md).
 
 ## Documentation Guidelines (`/docs`, excluding `/docs/plans`)
 A `/docs` page is a **short map of one subsystem** for a developer about to work on it: what it is for, its core concepts and invariants, the main flow, and where the code lives. It is not a description of everything the subsystem does. Keep each page as short as its subject allows — most fit on a screen or two. (`/docs/plans` is outside all of this; see "Plan Documents Are Historical Records" above.)

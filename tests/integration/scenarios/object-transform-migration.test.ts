@@ -63,14 +63,8 @@ function buildRoomBlob(voxelGridBytes: Uint8Array, objects: AddObjectSignal[],
     view.set(voxelGridBytes, 0);
 
     const writeState = new BufferState(view, voxelGridBytes.length);
-    if (stampObjectVersion == undefined)
+    if (stampObjectVersion == undefined || stampObjectVersion == ObjectGroup.latestFormatVersion)
         new ObjectGroup(objects).encodeWithParams(writeState, {});
-    else if (stampObjectVersion > LAST_UNSCALED_OBJECT_GROUP_VERSION)
-    {
-        // Laid out as the current version is; only the leading version byte differs.
-        new ObjectGroup(objects).encodeWithParams(writeState, {});
-        view[voxelGridBytes.length] = stampObjectVersion;
-    }
     else
         writeLegacyObjectGroup(writeState, objects, stampObjectVersion);
 

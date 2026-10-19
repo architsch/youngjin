@@ -7,31 +7,17 @@ import * as cookie from "cookie";
 import UserTokenUtil from "../user/util/userTokenUtil";
 import CookieUtil from "../networking/util/cookieUtil";
 import DBUserUtil from "../db/util/dbUserUtil";
-import SetObjectTransformSignal from "../../shared/object/types/setObjectTransformSignal";
-import RequestRoomChangeSignal from "../../shared/room/types/requestRoomChangeSignal";
 import ServerRoomManager from "../room/serverRoomManager";
 import ServerUserManager from "../user/serverUserManager";
-import ServerObjectManager from "../object/serverObjectManager";
-import ServerVoxelManager from "../voxel/serverVoxelManager";
 import SocketUserContext from "./types/socketUserContext";
-import BufferState from "../../shared/networking/types/bufferState";
-import AddVoxelBlockSignal from "../../shared/voxel/types/update/addVoxelBlockSignal";
-import ServerAnalyticsManager from "../analytics/serverAnalyticsManager";
-import { FunnelMilestoneEnumMap } from "../analytics/types/funnelMilestone";
-import MoveVoxelBlockSignal from "../../shared/voxel/types/update/moveVoxelBlockSignal";
-import RemoveVoxelBlockSignal from "../../shared/voxel/types/update/removeVoxelBlockSignal";
-import SetVoxelQuadTextureSignal from "../../shared/voxel/types/update/setVoxelQuadTextureSignal";
-import AddObjectSignal from "../../shared/object/types/addObjectSignal";
-import RemoveObjectSignal from "../../shared/object/types/removeObjectSignal";
-import SetObjectMetadataSignal from "../../shared/object/types/setObjectMetadataSignal";
-import { ObjectMetadataKeyEnumMap } from "../../shared/object/types/objectMetadataKey";
 import { SIGNAL_BATCH_SEND_INTERVAL } from "../../shared/system/sharedConstants";
-import UserCommandSignal from "../../shared/user/types/userCommandSignal";
-import UserCommandUtil from "../user/util/userCommandUtil";
 import LatencySimUtil from "../system/util/latencySimUtil";
 import ErrorUtil from "../../shared/system/util/errorUtil";
-import RoomPickerUtil from "../room/util/roomPickerUtil";
 import BotDetectionUtil from "../networking/util/botDetectionUtil";
+import UserSessionUtil from "../user/util/userSessionUtil";
+import UserSignalDispatchUtil from "../user/util/userSignalDispatchUtil";
+import EditRateLogUtil from "../user/util/editRateLogUtil";
+import AgentBodyUtil from "../agent/util/agentBodyUtil";
 
 let io: socketIO.Server;
 let signalProcessingInterval: ReturnType<typeof setInterval>;
@@ -88,121 +74,35 @@ const SocketsServer =
                 const user = socketUserContext.user;
                 console.log(`(SocketsServer) Client connected :: ${JSON.stringify(user)}`);
 
-                // Metadata is bridged by ServerUserManager.recentDisconnectMetadata whether the old
-                // disconnect fired before (Case B) or after (Case A) this connection; Case A only needs
-                // to evict the old socket here.
-                if (ServerUserManager.hasUser(user.id))
-                {
-                    // Case A: new socket before the old disconnect (refresh, or another tab).
-                    console.warn(`(SocketsServer) Replacing existing socket for userID = ${user.id} (likely page refresh)`);
-                    const oldContext = ServerUserManager.getSocketUserContext(user.id)!;
-
-                    ServerUserManager.removeUser(user.id);
-                    await ServerRoomManager.changeUserRoom(oldContext, undefined, false, true, false);
-                    oldContext.socket.emit("forceRedirect", AddressUtil.getErrorPageURL("auth-duplication"));
-                    oldContext.socket.disconnect(true);
-                }
+                await UserSessionUtil.admit(socketUserContext);
                 delete staleSocketFirstDetectedAt[user.id];
-                ServerUserManager.addUser(socketUserContext);
 
-                socketUserContext.onReceivedSignalFromUser("setObjectTransformSignal", (buffer: ArrayBuffer) => {
-                    const bufferState = new BufferState(new Uint8Array(buffer));
-                    const signal = SetObjectTransformSignal.decode(bufferState) as SetObjectTransformSignal;
-                    ServerObjectManager.onSetObjectTransformSignalReceived(socketUserContext, signal);
-                });
-                socketUserContext.onReceivedSignalFromUser("userCommandSignal", async (buffer: ArrayBuffer) => {
-                    const bufferState = new BufferState(new Uint8Array(buffer));
-                    const signal = UserCommandSignal.decode(bufferState) as UserCommandSignal;
-                    await UserCommandUtil.onUserCommandSignalReceived(user, signal);
-                });
-                // Edit signals record the Built milestone. Only the first reaches the DB (session cache);
-                // not awaited, and it never rejects.
-                const recordEdit = () => ServerAnalyticsManager.recordMilestone(
-                    user.id, FunnelMilestoneEnumMap.Built, socketUserContext);
-
-                socketUserContext.onReceivedSignalFromUser("addVoxelBlockSignal", (buffer: ArrayBuffer) => {
-                    const bufferState = new BufferState(new Uint8Array(buffer));
-                    const signal = AddVoxelBlockSignal.decode(bufferState) as AddVoxelBlockSignal;
-                    ServerVoxelManager.onAddVoxelBlockSignalReceived(socketUserContext, signal);
-                    recordEdit();
-                });
-                socketUserContext.onReceivedSignalFromUser("moveVoxelBlockSignal", (buffer: ArrayBuffer) => {
-                    const bufferState = new BufferState(new Uint8Array(buffer));
-                    const signal = MoveVoxelBlockSignal.decode(bufferState) as MoveVoxelBlockSignal;
-                    ServerVoxelManager.onMoveVoxelBlockSignalReceived(socketUserContext, signal);
-                    recordEdit();
-                });
-                socketUserContext.onReceivedSignalFromUser("removeVoxelBlockSignal", (buffer: ArrayBuffer) => {
-                    const bufferState = new BufferState(new Uint8Array(buffer));
-                    const signal = RemoveVoxelBlockSignal.decode(bufferState) as RemoveVoxelBlockSignal;
-                    ServerVoxelManager.onRemoveVoxelBlockSignalReceived(socketUserContext, signal);
-                    recordEdit();
-                });
-                socketUserContext.onReceivedSignalFromUser("setVoxelQuadTextureSignal", (buffer: ArrayBuffer) => {
-                    const bufferState = new BufferState(new Uint8Array(buffer));
-                    const signal = SetVoxelQuadTextureSignal.decode(bufferState) as SetVoxelQuadTextureSignal;
-                    ServerVoxelManager.onSetVoxelQuadTextureSignalReceived(socketUserContext, signal);
-                    recordEdit();
-                });
-                socketUserContext.onReceivedSignalFromUser("addObjectSignal", (buffer: ArrayBuffer) => {
-                    const bufferState = new BufferState(new Uint8Array(buffer));
-                    const signal = AddObjectSignal.decode(bufferState) as AddObjectSignal;
-                    ServerObjectManager.onAddObjectSignalReceived(socketUserContext, signal);
-                    recordEdit();
-                });
-                socketUserContext.onReceivedSignalFromUser("removeObjectSignal", (buffer: ArrayBuffer) => {
-                    const bufferState = new BufferState(new Uint8Array(buffer));
-                    const signal = RemoveObjectSignal.decode(bufferState) as RemoveObjectSignal;
-                    ServerObjectManager.onRemoveObjectSignalReceived(socketUserContext, signal);
-                    recordEdit();
-                });
-                socketUserContext.onReceivedSignalFromUser("setObjectMetadataSignal", (buffer: ArrayBuffer) => {
-                    const bufferState = new BufferState(new Uint8Array(buffer));
-                    const signal = SetObjectMetadataSignal.decode(bufferState) as SetObjectMetadataSignal;
-                    ServerObjectManager.onSetObjectMetadataSignalReceived(socketUserContext, signal);
-
-                    // Chat arrives on this signal too (SentMessage metadata), so it's counted as
-                    // Chatted rather than Built.
-                    if (signal.metadataKey == ObjectMetadataKeyEnumMap.SentMessage)
-                        ServerAnalyticsManager.recordMilestone(
-                            user.id, FunnelMilestoneEnumMap.Chatted, socketUserContext);
-                    else
-                        recordEdit();
-                });
-                socketUserContext.onReceivedSignalFromUser("requestRoomChangeSignal", async (buffer: ArrayBuffer) => {
-                    const bufferState = new BufferState(new Uint8Array(buffer));
-                    const signal = RequestRoomChangeSignal.decode(bufferState) as RequestRoomChangeSignal;
-                    await ServerRoomManager.onRequestRoomChangeSignalReceived(socketUserContext, signal);
-                });
+                for (const signalType of UserSignalDispatchUtil.signalTypes)
+                {
+                    socket.on(signalType, (buffer: ArrayBuffer) => {
+                        void UserSignalDispatchUtil.dispatch(socketUserContext, signalType, buffer);
+                    });
+                }
 
                 socket.on("disconnect", async () => {
                     console.log(`(SocketsServer) Client disconnected :: ${JSON.stringify(user)}`);
-
-                    if (ServerUserManager.getSocketUserContext(user.id) != socketUserContext)
-                    {
-                        // Already replaced by a newer connection or cleaned up; metadata was captured then.
-                        console.warn(`(SocketsServer) Skipping stale disconnect handler (userID = ${user.id})`);
-                        return;
-                    }
-
-                    // removeUserFromRoom snapshots playerMetadata synchronously before the DB write, so
-                    // a quick reconnect still sees it.
-                    ServerUserManager.removeUser(user.id);
-                    await ServerRoomManager.changeUserRoom(socketUserContext, undefined, false, true, false);
+                    await UserSessionUtil.release(socketUserContext);
                 });
 
-                // Try to join the best room. If it is full, fall back to a room that is NOT full.
-                const roomID = await RoomPickerUtil.pickBestRoomID(socketUserContext, "appStart");
-                const roomChangeResult = await ServerRoomManager.changeUserRoom(socketUserContext, roomID, false, false, true);
-                ServerRoomManager.notifyRoomChangeRejection(socketUserContext, roomChangeResult);
+                await UserSessionUtil.joinFirstRoom(socketUserContext);
             } catch (err) {
                 console.error(`Exception while establishing a socket connection with a client :: Error: ${ErrorUtil.getErrorMessage(err)}`);
                 socket.disconnect(true);
             }
         });
 
-        // Signals are batched and flushed on an interval.
+        // Signals are batched and flushed on an interval. Agents' bodies move first, so their moves go out with it.
+        let lastFlushAt = Date.now();
         signalProcessingInterval = setInterval(() => {
+            const now = Date.now();
+            AgentBodyUtil.stepAll((now - lastFlushAt) / 1000);
+            lastFlushAt = now;
+
             for (const userID in ServerUserManager.socketUserContexts)
             {
                 ServerUserManager.socketUserContexts[userID].processAllPendingSignalsToUser();
@@ -210,11 +110,11 @@ const SocketsServer =
         }, SIGNAL_BATCH_SEND_INTERVAL);
 
         setInterval(async () => {
-            // Clean up sockets whose disconnect never fired (e.g. browser crash).
+            // Clean up connections that ended without saying so (e.g. a browser crash, or an agent gone quiet).
             const currTime = Date.now();
             for (const [userID, ctx] of Object.entries(ServerUserManager.socketUserContexts))
             {
-                if (!ctx.socket.connected)
+                if (!ctx.isConnected())
                 {
                     if (staleSocketFirstDetectedAt[userID] == undefined)
                     {
@@ -222,10 +122,9 @@ const SocketsServer =
                     }
                     else if (currTime - staleSocketFirstDetectedAt[userID] > 5000)
                     {
-                        console.warn(`(SocketsServer) Stale socket detected, cleaning up :: userID = ${userID}`);
+                        console.warn(`(SocketsServer) Stale connection detected, cleaning up :: userID = ${userID}`);
                         delete staleSocketFirstDetectedAt[userID];
-                        ServerUserManager.removeUser(userID);
-                        await ServerRoomManager.changeUserRoom(ctx, undefined, false, true, false);
+                        await UserSessionUtil.release(ctx);
                     }
                 }
                 else
@@ -245,7 +144,8 @@ const SocketsServer =
         for (const [userID, socketUserContext] of Object.entries(ServerUserManager.socketUserContexts))
         {
             await ServerRoomManager.changeUserRoom(socketUserContext, undefined, false, false, false);
-            socketUserContext.socket.disconnect(true);
+            EditRateLogUtil.flush(socketUserContext.user);
+            socketUserContext.disconnect();
         }
     },
 }

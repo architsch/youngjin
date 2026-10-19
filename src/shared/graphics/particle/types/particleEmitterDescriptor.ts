@@ -9,6 +9,9 @@ export default interface ParticleEmitterDescriptor
     speedScale?: number;
     // How fast its particles' lives run: a slower pace takes them along the same paths, over as much longer lives.
     particleTimeScale?: number;
+    // "#rrggbb" its particles are tinted with, over the effect's own colors; each keeps the one it was born with.
+    // White if absent.
+    tint?: string;
     // Scales both over time. A steady 1 if absent.
     level?: Waveform;
     // How far in front of the object's face it emits from, in world units.

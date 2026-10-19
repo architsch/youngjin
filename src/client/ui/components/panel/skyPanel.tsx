@@ -1,5 +1,5 @@
 import { MAX_ROOM_PREFS_STEP } from "../../../../shared/room/util/roomPrefsUtil";
-import { FOG_COLOR_PALETTE_NAME, SCENERY_COLOR_PALETTE_NAME } from "../../../../shared/system/sharedConstants";
+import { ATMOSPHERE_COLOR_PALETTE_NAME } from "../../../../shared/system/sharedConstants";
 import useEditableRoomPrefs from "../../util/editableRoomPrefs";
 import TooltipButton from "../input/tooltipButton";
 import FormPaletteColorInput from "../input/formPaletteColorInput";
@@ -16,16 +16,15 @@ export default function SkyPanel({ anchorElementId, onClose }: Props)
             text="The sky past your room, and the cloud drifting across it — the air outside it, where Smoke is the air inside. The sky and the clouds each have a color of their own, so the further apart you pick the two the stronger the clouds read. Strength is how much weather there is at all, and starts at none. Softness is how sharp the edge of a cloud is, from cut to no edge at all. Your room's fog is laid over the sky as well, as far as the room stands in front of it."/>
         */}
         <div className={COLUMN_CLASS_NAMES}>
-            {/* Sky uses the fog palette; clouds use the scenery palette (see RoomPrefs). */}
             <FormPaletteColorInput
                 label="Sky Color"
-                paletteName={FOG_COLOR_PALETTE_NAME}
+                paletteName={ATMOSPHERE_COLOR_PALETTE_NAME}
                 currValue={prefs.skyColorIndex}
                 setColorIndex={(index) => apply(next => next.skyColorIndex = index)}
             />
             <FormPaletteColorInput
                 label="Cloud Color"
-                paletteName={SCENERY_COLOR_PALETTE_NAME}
+                paletteName={ATMOSPHERE_COLOR_PALETTE_NAME}
                 currValue={prefs.cloudColorIndex}
                 setColorIndex={(index) => apply(next => next.cloudColorIndex = index)}
             />

@@ -4467,28 +4467,30 @@
             "sourceFileName": "p5XNx-63Emc.jpg",
             "corners": [
                 [
-                    0.16181095048152644,
-                    0.38294270833333366
+                    0.3828881314737428,
+                    0.1980614015224972
                 ],
                 [
-                    0.8152836704489393,
-                    0.38294270833333366
+                    0.8103162504197023,
+                    0.1980614015224972
                 ],
                 [
-                    0.8152836704489393,
-                    0.9431489372895623
+                    0.8103162504197023,
+                    0.7647622986386285
                 ],
                 [
-                    0.16181095048152644,
-                    0.9431489372895623
+                    0.3828881314737428,
+                    0.7647622986386285
                 ]
             ],
             "retouches": [],
             "output": {
                 "preserveScale": true,
-                "numCols": 2,
-                "numRows": 2
-            }
+                "numCols": 1,
+                "numRows": 2,
+                "stretch": true
+            },
+            "rotation": 0.4
         },
         "2/85": {
             "sourceSha1": "4d4bdca08715b4ba776c00aee46f529d064df9b3",
@@ -5384,27 +5386,28 @@
             "sourceFileName": "IqfceUqv590.jpg",
             "corners": [
                 [
-                    0.018,
-                    0.197
+                    0.49302678818006074,
+                    0.20114557028619542
                 ],
                 [
-                    0.538,
-                    0.197
+                    1,
+                    0.20114557028619542
                 ],
                 [
-                    0.538,
-                    0.543687866927593
+                    1,
+                    0.5562855113636364
                 ],
                 [
-                    0.018,
-                    0.543687866927593
+                    0.49302678818006074,
+                    0.5562855113636364
                 ]
             ],
             "retouches": [],
             "output": {
                 "preserveScale": true,
                 "numCols": 2,
-                "numRows": 2
+                "numRows": 2,
+                "stretch": true
             }
         },
         "2/106": {
@@ -21278,31 +21281,35 @@
             }
         },
         "2/219": {
-            "sourceSha1": "99f944197760f7238ff7b4e2394def1e8b18fca7",
-            "sourceFileName": "elec_hood_bottom.png",
+            "sourceSha1": "74ec0ea1c91eb6656e9842542d9d3a224d3cdedf",
+            "sourceFileName": "silver_plate_rounded.png",
             "corners": [
                 [
                     0,
-                    0.12161620334370139
+                    0
                 ],
                 [
                     1,
-                    0.12161620334370139
+                    0
                 ],
                 [
                     1,
-                    0.8618050155520995
+                    1
                 ],
                 [
                     0,
-                    0.8618050155520995
+                    1
                 ]
             ],
             "retouches": [],
             "output": {
                 "preserveScale": true,
                 "numCols": 2,
-                "numRows": 2
+                "numRows": 2,
+                "margin": [
+                    0.1,
+                    0
+                ]
             },
             "background": {
                 "fromBorder": true,
@@ -21310,8 +21317,7 @@
                 "tolerance": 0,
                 "step": 4,
                 "keepLargest": true
-            },
-            "rotation": 180
+            }
         },
         "2/220": {
             "sourceSha1": "371a26752a2fa2d5896cd23d30938381e6b1365e",

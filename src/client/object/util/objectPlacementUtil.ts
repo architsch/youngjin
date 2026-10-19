@@ -20,8 +20,7 @@ import ErrorUtil from "../../../shared/system/util/errorUtil";
 import RoomEditUtil from "../../system/util/roomEditUtil";
 import { ClientEventType } from "../../system/types/clientEventType";
 import DoorObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
-import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, DIR_VEC_BY_NAME,
-    STOREY_FLOOR_COLLISION_LAYER, UNIT_VEC3, VOXEL_CELL_SIZE } from "../../../shared/system/sharedConstants";
+import { DIR_VEC_BY_NAME, UNIT_VEC3, VOXEL_CELL_SIZE } from "../../../shared/system/sharedConstants";
 import QuarterTurnsUtil from "../../../shared/object/util/quarterTurnsUtil";
 import PointerCoordUtil from "../../graphics/util/pointerCoordUtil";
 import ObjectIdUtil from "../../../shared/object/util/objectIdUtil";
@@ -114,12 +113,14 @@ const ObjectPlacementUtil =
                 new EncodableByteString(LampObjectTypeConfig.util.getDefaultLightProperties()),
         }, LampObjectTypeConfig.util.getScale(compositionIndex));
     },
-    // With the default wind (see FanObjectTypeConfig).
+    // With the default wind and color (see FanObjectTypeConfig).
     tryAddFan: async (selection: VoxelQuadSelection): Promise<void> =>
     {
         await tryAddObject(selection, fanTypeIndex, {
             [ObjectMetadataKeyEnumMap.ForceProperties]:
                 new EncodableByteString(FanObjectTypeConfig.util.getDefaultForceProperties()),
+            [ObjectMetadataKeyEnumMap.FanColor]:
+                new EncodableByteString(FanObjectTypeConfig.util.getDefaultColor()),
         });
     },
     tryAddLabel: async (selection: VoxelQuadSelection, compositionIndex: number): Promise<void> =>
@@ -189,7 +190,7 @@ function getPlaceableAttachedObjectTransform(selection: VoxelQuadSelection, obje
     // wherever there is room near the click.
     if (objectTypeIndex == doorTypeIndex)
     {
-        const doorY = getDoorHeight(selection.quadIndex);
+        const doorY = DoorObjectTypeConfig.util.getOriginYOnWall(selection.quadIndex);
         if (doorY == undefined)
             return null;
         const tr = new ObjectTransform({...center, y: doorY}, dir, {...UNIT_VEC3});
@@ -211,18 +212,6 @@ function getClickedFace(selection: VoxelQuadSelection): {center: Vec3, dir: Vec3
             z: VoxelQueryUtil.getWorldZAtVoxelRowCenter(voxel.row) + offsetZ},
         dir: {x: dirX, y: dirY, z: dirZ},
     };
-}
-
-function getDoorHeight(quadIndex: number): number | undefined
-{
-    const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
-    if (collisionLayer < COLLISION_LAYER_MIN || collisionLayer > COLLISION_LAYER_MAX)
-        return undefined;
-
-    const storeyFloorLayer = (collisionLayer >= STOREY_FLOOR_COLLISION_LAYER)
-        ? STOREY_FLOOR_COLLISION_LAYER + 1 : COLLISION_LAYER_MIN;
-    const floorY = (storeyFloorLayer - COLLISION_LAYER_MIN) * COLLISION_LAYER_HEIGHT;
-    return floorY + 0.5 * DoorObjectTypeConfig.components.spawnedByAny.collider.baseHitboxSize.sizeY;
 }
 
 async function tryAddObject(selection: VoxelQuadSelection, objectTypeIndex: number,

@@ -13,6 +13,7 @@ import EntryPathUtil from "../core/entryPathUtil";
 import IMAGE_LICENSES from "../core/imageLicenses";
 import ImageRecipe from "../core/imageRecipe";
 import RgbaImage from "../core/rgbaImage";
+import SourceEntry from "../core/sourceEntry";
 import SampleRenderUtil from "../core/sampleRenderUtil";
 import ImageProcessingUtil from "../core/imageProcessingUtil";
 import SourceLibrary from "./sourceLibrary";
@@ -170,6 +171,17 @@ export default class EntryStore
         if (adopted.length > 0)
             this.writeRecipes(state.recipeFile);
         return adopted;
+    }
+
+    // The sources no entry is sampled from, deleted (see SourceLibrary.deleteUnused). Refused while an entry has no
+    // recipe, as when the files are mid-write or edited by hand, since they can't say then which sources are in use.
+    deleteUnusedSources(): SourceEntry[]
+    {
+        const state = this.readState();
+        const unrecorded = state.entries.find(entry => state.recipeFile.recipes[entry.path] == undefined);
+        if (unrecorded != undefined)
+            throw new Error(`${unrecorded.path} has no recipe, so which sources are in use isn't known`);
+        return this.library.deleteUnused(Object.values(state.recipeFile.recipes).map(recipe => recipe.sourceSha1));
     }
 
     // The manifest, recipes and notices written again as the editor writes them, e.g. after a hand edit.

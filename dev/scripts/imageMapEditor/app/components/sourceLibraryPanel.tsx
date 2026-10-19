@@ -96,7 +96,8 @@ export default function SourceLibraryPanel(props: Props)
                 <option value="name">Name (A–Z)</option>
                 <option value="usage">Most used first</option>
             </select>
-            <label className="checkbox" title="Only the sources no entry is sampled from">
+            <label className="checkbox"
+                title="Only the sources no entry is sampled from, which stopping the editor deletes">
                 <input type="checkbox" checked={props.unusedOnly}
                     onChange={ev => props.onUnusedOnlyChange(ev.target.checked)}/>
                 Unused only
