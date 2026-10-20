@@ -8,8 +8,15 @@ import SocketsClient from "../../networking/client/socketsClient";
 import App from "../../app";
 import CameraUtil from "../../graphics/util/cameraUtil";
 import Geometry3DUtil from "../../../shared/math/util/geometry3DUtil";
-import { cameraModeObservable } from "../../system/clientObservables";
+import { cameraModeObservable, updateObservable } from "../../system/clientObservables";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
+
+// Room left between a bubble and the top of the view (see keepInView).
+const VIEW_TOP_MARGIN_PX = 8;
+
+const anchorTemp = new THREE.Vector3();
+const viewSizeTemp = new THREE.Vector2();
+let instanceCount = 0;
 
 export default class SpeechBubble extends GameObjectComponent
 {
@@ -24,6 +31,11 @@ export default class SpeechBubble extends GameObjectComponent
     // Set when the speaker's body isn't drawn (see PlayerGameObject), so the bubble doesn't float alone.
     private hidden: boolean = false;
 
+    // How far the bubble is lowered to keep its top in view.
+    private lowered: number = 0;
+    private readonly viewListenerKey = `speechBubble${++instanceCount}`;
+    private keepingInView: boolean = false;
+
     async onSpawn(): Promise<void>
     {
         this.gameObject.bodyObj.add(this.speechBubbleHotspot);
@@ -32,10 +44,19 @@ export default class SpeechBubble extends GameObjectComponent
         const metadata = this.gameObject.params.metadata[ObjectMetadataKeyEnumMap.SentMessage];
         const initialMessage = metadata ? metadata.str : "";
         this.displayMessage(initialMessage, false); // No bounce for the message already present at spawn.
+
+        // After the overlay has placed the bubble for the frame (see GraphicsManager.update).
+        updateObservable.addListener(this.viewListenerKey, () => this.keepInView());
+        this.keepingInView = true;
     }
 
     async onDespawn(): Promise<void>
     {
+        if (this.keepingInView)
+        {
+            updateObservable.removeListener(this.viewListenerKey);
+            this.keepingInView = false;
+        }
         this.hideSpeechBubble();
     }
 
@@ -111,6 +132,26 @@ export default class SpeechBubble extends GameObjectComponent
         this.displayMessage(this.gameObject.params.metadata[ObjectMetadataKeyEnumMap.SentMessage]?.str ?? "", false);
     }
 
+    // A long message from a speaker close by would rise past the top of the view: it is lowered over the speaker instead,
+    // so that it reads from its first line, and bounces from its top.
+    private keepInView(): void
+    {
+        if (!this.textElement || !this.bubbleElement || this.textElement.hidden)
+            return;
+        const height = this.textElement.offsetHeight;
+        if (height == 0) // Not drawn, as behind the camera.
+            return;
+        this.speechBubbleHotspot.getWorldPosition(anchorTemp).project(GraphicsManager.getCamera());
+        GraphicsManager.getGameRenderer().getSize(viewSizeTemp);
+        const top = (1 - anchorTemp.y) / 2 * viewSizeTemp.y - height;
+        const lowered = Math.max(0, Math.round(VIEW_TOP_MARGIN_PX - top));
+        if (lowered == this.lowered)
+            return;
+        this.lowered = lowered;
+        this.bubbleElement.style.top = `${lowered}px`;
+        this.bubbleElement.style.transformOrigin = (lowered > 0) ? "top" : "";
+    }
+
     // While the orbit frames this speaker, skip the bubble's own occlusion test: it disagrees
     // momentarily with OrbitOcclusionHider during camera turns, causing blinks.
     private orbitCameraIsFramingSpeaker(): boolean
@@ -173,7 +214,9 @@ export default class SpeechBubble extends GameObjectComponent
             this.textElement.style = "position:absolute; font-size:0.75rem; pointer-events:none;"; // font-size (inherited by the child) is then driven per-frame in update().
 
             this.bubbleElement = document.createElement("div");
-            this.bubbleElement.style = `max-width:${this.componentConfig.widthInChars ?? 18}ch; margin:auto auto; padding:0.2rem 0.4rem; color:white; background-color:rgba(0, 0, 0, 0.75); border-radius:0.4rem; text-align:center; white-space:normal;`;
+            // Relative, so that it can be lowered (see keepInView) without moving the root the renderer places.
+            this.bubbleElement.style = `position:relative; max-width:${this.componentConfig.widthInChars ?? 18}ch; margin:auto auto; padding:0.2rem 0.4rem; color:white; background-color:rgba(0, 0, 0, 0.75); border-radius:0.4rem; text-align:center; white-space:normal;`;
+            this.lowered = 0;
             this.textElement.appendChild(this.bubbleElement);
 
             this.textCSS2DObject = new CSS2DObject(this.textElement);
