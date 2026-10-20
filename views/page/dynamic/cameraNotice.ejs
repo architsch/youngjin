@@ -1,5 +1,7 @@
 <%- include(`${ejsPartialRootPath}/common/header_min.ejs`, {
     includeFullscreenPanel: false,
+    // The game's own stylesheet, as the game page has, rather than the site's, which would dress the text as an article.
+    useTailwindCSS: true,
     title: "Camera - ThingsPool",
     ogDisabled: true,
     analyticsDisabled: true,
