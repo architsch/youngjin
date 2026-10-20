@@ -8,6 +8,8 @@ import { EMPTY_REGULAR, userAt, userAtCenter, namedUser, disconnectWithSave } fr
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import ServerUserManager from "../../../src/server/user/serverUserManager";
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
+import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
+import { OBJECT_MESSAGE_MAX_LENGTH } from "../../../src/shared/system/sharedConstants";
 
 describe("connection scenarios", () => {
     beforeEach(() => {
@@ -160,6 +162,23 @@ describe("connection scenarios", () => {
                 const metadata = harness.getPlayerMetadata(users[0].user.id);
                 expect(metadata).toBeDefined();
                 expect(metadata!["0"]).toBe("hello");
+            },
+        });
+    });
+
+    it("a player's message is as long as the chat input takes, and no longer", async () => {
+        const atLimit = "a".repeat(OBJECT_MESSAGE_MAX_LENGTH);
+        await runScenario({
+            name: "a player's message held to its length",
+            rooms: [EMPTY_REGULAR],
+            users: [userAtCenter("regular")],
+            actions: [
+                { type: "sendMessage", userIndex: 0, message: atLimit },
+                { type: "sendMessage", userIndex: 0, message: `${atLimit}b` },
+            ],
+            assertions: ({ users, harness }) => {
+                expect(harness.getPlayerObject(users[0].user.id)!.metadata[ObjectMetadataKeyEnumMap.SentMessage].str)
+                    .toBe(atLimit);
             },
         });
     });

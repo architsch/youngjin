@@ -135,6 +135,7 @@ describe("object ownership", () => {
                     ["lamp-with-text", {[ObjectMetadataKeyEnumMap.Label]: "no lamp shows text"}],
                     ["lamp-tagged", {[ObjectMetadataKeyEnumMap.Tags]: "marked"}],
                     ["lamp-marked", {[ObjectMetadataKeyEnumMap.AgentMark]: "1"}],
+                    ["lamp-faced", {[ObjectMetadataKeyEnumMap.Facing]: "90"}],
                 ];
                 for (const [objectId, metadata] of refused)
                 {
@@ -144,12 +145,14 @@ describe("object ownership", () => {
                     expect(getPendingSignals(other, "addObjectSignal").map(s => s.objectId)).not.toContain(objectId);
                 }
 
-                // A lamp's own value is anyone's to give it; an admin's key is an admin's; the agent mark is nobody's.
+                // A lamp's own value is anyone's to give it; an admin's key is an admin's; the agent mark and a helper's
+                // facing are nobody's.
                 expect(add("lamp-lit", -4, {[ObjectMetadataKeyEnumMap.LightProperties]:
                     LampObjectTypeConfig.util.getDefaultLightProperties()})).toBe(true);
                 sender.user.userType = UserTypeEnumMap.Admin;
                 expect(add("lamp-tagged-by-admin", -7, {[ObjectMetadataKeyEnumMap.Tags]: "marked"})).toBe(true);
                 expect(add("lamp-marked-by-admin", -10, {[ObjectMetadataKeyEnumMap.AgentMark]: "1"})).toBe(false);
+                expect(add("lamp-faced-by-admin", -10, {[ObjectMetadataKeyEnumMap.Facing]: "90"})).toBe(false);
             },
         });
     });

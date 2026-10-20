@@ -34,7 +34,7 @@ import AgentBodyUtil from "../../../src/server/agent/util/agentBodyUtil";
 import AgentCleanupUtil from "../../../src/server/agent/util/agentCleanupUtil";
 import HelperAgentUtil from "../../../src/server/agent/util/helperAgentUtil";
 import SetObjectTransformSignal from "../../../src/shared/object/types/setObjectTransformSignal";
-import QuarterTurnsUtil from "../../../src/shared/object/util/quarterTurnsUtil";
+import NpcFacingUtil from "../../../src/shared/object/util/npcFacingUtil";
 import DBUserUtil from "../../../src/server/db/util/dbUserUtil";
 import DBRoomUtil from "../../../src/server/db/util/dbRoomUtil";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
@@ -574,7 +574,7 @@ describe("AI agents", () => {
                 new ObjectTransform({...room.objectById[npc].transform.pos, x: room.objectById[npc].transform.pos.x + 0.4},
                     {x: 0, y: 1, z: 0}, {x: 1, y: 1, z: 1}), true));
             roomContext.multicastSignal("setObjectMetadataSignal", new SetObjectMetadataSignal(HUB_ID, npc,
-                ObjectMetadataKeyEnumMap.QuarterTurns, QuarterTurnsUtil.encode(1)));
+                ObjectMetadataKeyEnumMap.Facing, NpcFacingUtil.encode(45)));
             roomContext.multicastSignal("setObjectMetadataSignal", new SetObjectMetadataSignal(HUB_ID, npc,
                 ObjectMetadataKeyEnumMap.SentMessage, "Hi Listener, welcome!"));
 

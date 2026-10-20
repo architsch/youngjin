@@ -80,7 +80,7 @@ const RoomPreviewObjectUtil =
             {
                 partParent = new THREE.Object3D();
                 node.add(partParent);
-                ObjectPoseUtil.poseNpcBody(partParent, node, obj);
+                ObjectPoseUtil.poseNpcBody(partParent, node, obj, ObjectPoseUtil.getNpcFacing(obj));
             }
             node.updateMatrixWorld(true);
 

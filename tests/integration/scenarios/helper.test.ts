@@ -50,6 +50,7 @@ import DoorObjectTypeConfig from "../../../src/shared/object/types/objectTypeCon
 import { DoorTypeEnumMap } from "../../../src/shared/object/types/doorType";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
 import QuarterTurnsUtil from "../../../src/shared/object/util/quarterTurnsUtil";
+import NpcFacingUtil from "../../../src/shared/object/util/npcFacingUtil";
 import HoldObjectSignal from "../../../src/shared/object/types/holdObjectSignal";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
@@ -65,16 +66,18 @@ const LATER_HUB_ID = "hubBBBBBBBBBBBBBBBBB";
 const NPC_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Npc");
 const UP: Vec3 = {x: 0, y: 1, z: 0};
 
-// Claude, stood in for: what it was asked, the answers it gives in turn, and the tokens it says each took.
+// Claude, stood in for: what it was asked, the answers it gives in turn, the tokens it says each took, and what it waits
+// for before it answers, if anything.
 const REPLY_USAGE = {input_tokens: 1200, output_tokens: 30, cache_read_input_tokens: 0, cache_creation_input_tokens: 0};
 const claude = {requests: [] as {body: any, headers: any}[], answers: [] as string[], failing: false,
-    usage: REPLY_USAGE};
+    usage: REPLY_USAGE, thinking: undefined as Promise<void> | undefined};
 
 async function fakeFetch(url: string | URL, init?: RequestInit): Promise<Response>
 {
     if (!String(url).startsWith("https://api.anthropic.com/"))
         throw new Error(`Unexpected fetch of ${url}`);
     claude.requests.push({body: JSON.parse(init?.body as string), headers: init?.headers});
+    await claude.thinking;
     if (claude.failing)
         return new Response("overloaded", {status: 529});
     return new Response(JSON.stringify({content: [{type: "text", text: claude.answers.shift() ?? "Happy to help!"}],
@@ -160,6 +163,38 @@ function saidBy(objectId: string): string[]
         && signal.metadataValue != "").map(({signal}) => signal.metadataValue);
 }
 
+// The ways a helper was shown facing, in turn, as the room was shown it (see NpcFacingUtil).
+function facingsOf(objectId: string): number[]
+{
+    return shown.filter(({signalType, signal, userID}) => userID == undefined && signalType == "setObjectMetadataSignal"
+        && signal.objectId == objectId && signal.metadataKey == ObjectMetadataKeyEnumMap.Facing)
+        .map(({signal}) => NpcFacingUtil.decode(signal.metadataValue)!);
+}
+
+// Or the way it was put to face, if it hasn't been shown turning.
+function lastFacingOf(objectId: string, quarterTurns: number = 0): number
+{
+    const facings = facingsOf(objectId);
+    return facings[facings.length - 1] ?? facingPut(quarterTurns);
+}
+
+function degreesToward(from: Vec3, to: Vec3): number
+{
+    return NpcFacingUtil.getDegrees({x: to.x - from.x, y: 0, z: to.z - from.z});
+}
+
+// How far, in degrees, a facing at one point is from the way toward another.
+function offFrom(facing: number, from: Vec3, to: Vec3): number
+{
+    return Math.abs(NpcFacingUtil.getTurn(facing, degreesToward(from, to)));
+}
+
+// The way an NPC put with these turns faces (see QuarterTurnsUtil).
+function facingPut(quarterTurns: number): number
+{
+    return NpcFacingUtil.getDegrees(QuarterTurnsUtil.getContentUp(UP, quarterTurns));
+}
+
 // A person's line, sent as their browser sends it.
 async function talk(person: ConnectedUser, text: string): Promise<void>
 {
@@ -202,6 +237,15 @@ async function moveTo(person: ConnectedUser, floor: Vec3, roomID: string = FIRST
         EncodingUtil.endEncoding(bufferState));
 }
 
+// Moves a person this far into the first hub from its entrance, and then this far to one side: out of the doorway
+// first, whose sides would stop the move across.
+async function walkIn(person: ConnectedUser, distance: number, side: number = 0): Promise<void>
+{
+    await moveTo(person, inFrontOfEntrance(FIRST_HUB_ID, distance));
+    if (side != 0)
+        await moveTo(person, inFrontOfEntrance(FIRST_HUB_ID, distance, side));
+}
+
 async function registerAndAttend(name: string, ip: string): Promise<AgentUserContext>
 {
     const registered = await AgentAccountUtil.register(name, undefined, ip, "test-agent");
@@ -222,7 +266,7 @@ describe("helpers", () => {
         vi.useFakeTimers({toFake: ["Date", "setInterval", "clearInterval"]});
         vi.stubGlobal("fetch", fakeFetch);
         process.env.ANTHROPIC_API_KEY = "test-key";
-        Object.assign(claude, {requests: [], answers: [], failing: false, usage: REPLY_USAGE});
+        Object.assign(claude, {requests: [], answers: [], failing: false, usage: REPLY_USAGE, thinking: undefined});
         _spending.byDate.clear();
         _spending.failing = false;
         harness.reset();
@@ -276,21 +320,21 @@ describe("helpers", () => {
 
         const alice = await joinPerson("Alice");
         await live(6);
-        expect(saidBy(mira)).toEqual(["Hi Alice, welcome to ThingsPool! I'm Mira, an AI guide.",
-            "Ask me anything, or just look around!"]);
+        expect(saidBy(mira)).toEqual(["Hi Alice, welcome to ThingsPool! I'm Mira, an AI guide. Ask me anything, or just "
+            + "look around!"]);
 
         // Out and in again, and a refresh, in the same login.
         await harness.disconnectUser(alice);
         await live(2);
         await joinPerson("Alice");
         await live(6);
-        expect(saidBy(mira)).toHaveLength(2);
+        expect(saidBy(mira)).toHaveLength(1);
 
         // Back on another day: a new login, and one who has come back before.
         await harness.disconnectUser(harness.connectUser({id: "id-Alice", userName: "Alice"}));
         await joinPerson("Alice", "an", FIRST_HUB_ID, 1);
         await live(6);
-        expect(saidBy(mira)[2]).toBe("Hi Alice, welcome back! I'm Mira, an AI guide.");
+        expect(saidBy(mira)[1]).toBe("Hi Alice, welcome back! I'm Mira, an AI guide. Ask me anything, or just look around!");
         expect(claude.requests).toEqual([]);
     });
 
@@ -304,7 +348,7 @@ describe("helpers", () => {
 
         await moveTo(guest, inFrontOfEntrance(FIRST_HUB_ID, 5));
         await live(3);
-        expect(saidBy(mira)[0]).toBe("Hi, welcome to ThingsPool! I'm Mira, an AI guide.");
+        expect(saidBy(mira)[0]).toBe("Hi, welcome to ThingsPool! I'm Mira, an AI guide. Ask me anything, or just look around!");
     });
 
     it("greets and hears by nearness only those on its own floor, and anyone in the room who names it", async () => {
@@ -324,25 +368,93 @@ describe("helpers", () => {
         expect(claude.requests).toHaveLength(1);
     });
 
-    it("turns to face whoever it greets, keeping to the four ways an NPC faces", async () => {
+    it("turns to face whoever it greets, whichever way that is, and keeps them in view as they move", async () => {
         // Stood off to the side of the doorway, so that the arrival is off to one side of it.
         const mira = standNpc(FIRST_HUB_ID, "Mira", inFrontOfEntrance(FIRST_HUB_ID, 1, 4));
         await live(1);
         const alice = await joinPerson("Alice");
         await live(4);
+        const at = helperIn(FIRST_HUB_ID, mira).at;
+        expect(offFrom(lastFacingOf(mira), at, playerOf(alice.user.id).transform.pos)).toBeLessThan(3);
 
-        const turns = shown.filter(({signalType, signal}) => signalType == "setObjectMetadataSignal"
-            && signal.objectId == mira && signal.metadataKey == ObjectMetadataKeyEnumMap.QuarterTurns);
-        expect(turns.length).toBeGreaterThan(0);
-        const facing = QuarterTurnsUtil.getContentUp(UP, QuarterTurnsUtil.decode(turns[turns.length - 1].signal.metadataValue));
-        const helper = helperIn(FIRST_HUB_ID, mira);
-        const them = playerOf(alice.user.id).transform.pos;
-        const toward = {x: them.x - helper.at.x, z: them.z - helper.at.z};
-        expect((facing.x * toward.x + facing.z * toward.z) / Math.hypot(toward.x, toward.z)).toBeGreaterThan(0.7);
+        // Off at a slant, which none of the four ways an NPC is put to face would point at.
+        await walkIn(alice, 4, 1);
+        await live(1);
+        expect(offFrom(lastFacingOf(mira), at, playerOf(alice.user.id).transform.pos)).toBeLessThan(3);
+        expect(lastFacingOf(mira) % 90).not.toBe(0);
+
+        // Done speaking (its greeting read), it keeps her in view while she stays near.
+        await live(5);
+        expect(saidBy(mira)).toHaveLength(1);
+        await walkIn(alice, 5, -1);
+        await live(1);
+        expect(offFrom(lastFacingOf(mira), at, playerOf(alice.user.id).transform.pos)).toBeLessThan(3);
+        expect(facingsOf(mira).length).toBeLessThan(10);
+    });
+
+    it("greeting several at once, looks at each in turn while it speaks", async () => {
+        const mira = standNpc(FIRST_HUB_ID, "Mira", inFrontOfEntrance(FIRST_HUB_ID, 4));
+        await live(1);
+        const alice = await joinPerson("Alice");
+        const bob = await joinPerson("Bob");
+        const carol = await joinPerson("Carol");
+        await walkIn(alice, 6, 3);
+        await walkIn(bob, 6, -3);
+        await walkIn(carol, 7);
+        shown.length = 0;
+        await live(6);
+
+        expect(saidBy(mira)).toHaveLength(1);
+        expect(saidBy(mira)[0]).toMatch(/^Hi everyone,/);
+        const at = helperIn(FIRST_HUB_ID, mira).at;
+        const toward = (person: ConnectedUser) => degreesToward(at, playerOf(person.user.id).transform.pos);
+        expect(Math.abs(NpcFacingUtil.getTurn(toward(alice), toward(carol)))).toBeGreaterThan(30);
+        expect(Math.abs(NpcFacingUtil.getTurn(toward(bob), toward(carol)))).toBeGreaterThan(30);
+        const looks = facingsOf(mira).map(facing => [alice, bob, carol].findIndex(person =>
+            offFrom(facing, at, playerOf(person.user.id).transform.pos) < 3));
+        expect(looks.filter((person, i) => person >= 0 && person != looks[i - 1])).toEqual([0, 1, 2]);
+    });
+
+    it("looks at whoever it answers, one at a time, and at whoever talks to it while it's free", async () => {
+        const mira = standNpc(FIRST_HUB_ID, "Mira", inFrontOfEntrance(FIRST_HUB_ID, 4));
+        await live(1);
+        const alice = await joinPerson("Alice", "an");
+        const bob = await joinPerson("Bob", "an");
+        // Near enough that it answers each where it stands; Bob the nearer, whom it keeps in view once it has greeted
+        // them.
+        await walkIn(alice, 6, 2);
+        await walkIn(bob, 5.5, -2);
+        await live(10);
+        claude.answers = ["Hello Alice!", "Hello Bob!"];
+        const facingAt = (person: ConnectedUser) => offFrom(lastFacingOf(mira), helperIn(FIRST_HUB_ID, mira).at,
+            playerOf(person.user.id).transform.pos);
+        expect(offFrom(degreesToward(helperIn(FIRST_HUB_ID, mira).at, playerOf(alice.user.id).transform.pos),
+            helperIn(FIRST_HUB_ID, mira).at, playerOf(bob.user.id).transform.pos)).toBeGreaterThan(60);
+
+        // Free, it turns to Alice as she talks, before it answers.
+        expect(facingAt(bob)).toBeLessThan(3);
+        await talk(alice, "hi Mira!");
+        await live(1);
+        expect(facingAt(alice)).toBeLessThan(3);
+        expect(claude.requests).toHaveLength(0);
+
+        // Bob talks to it while it answers her: it keeps to her until it is done, then turns to him to answer.
+        await live(2);
+        expect(saidBy(mira)).toContain("Hello Alice!");
+        await talk(bob, "hello?");
+        await live(1);
+        expect(facingAt(alice)).toBeLessThan(3);
+        // Thinking of what to say to him while she reads what it said to her (his answer shown only as this ends).
+        await live(2);
+        expect(claude.requests).toHaveLength(2);
+        expect(facingAt(alice)).toBeLessThan(3);
+        await live(3);
+        expect(saidBy(mira)).toContain("Hello Bob!");
+        expect(facingAt(bob)).toBeLessThan(3);
     });
 
     it("answers a person near it through Claude: the rules and guide cached, then its name and place, and that "
-        + "person's own lines, in bubbles", async () => {
+        + "person's own lines, in one bubble", async () => {
         const mira = standNpc(FIRST_HUB_ID, "Mira");
         await live(1);
         const alice = await joinPerson("Alice");
@@ -363,9 +475,8 @@ describe("helpers", () => {
         expect(body.system[0].cache_control).toEqual({type: "ephemeral"});
         expect(body.system[1].text).toBe("Your name is Mira. You stand in the main hub, the public room newcomers arrive in.");
         expect(body.messages).toEqual([{role: "user", content: "Alice (new here): how do I build?"}]);
-        expect(saidBy(mira).slice(2)).toEqual(["Switch to Edit mode with the toggle at the top.",
-            "Then click a block, and add one next to it!"]);
-        expect(saidBy(mira).every(bubble => bubble.length <= OBJECT_MESSAGE_MAX_LENGTH)).toBe(true);
+        expect(saidBy(mira).slice(1)).toEqual(["Switch to Edit mode with the toggle at the top. Then click a block, and "
+            + "add one next to it!"]);
 
         await talk(alice, "thanks!");
         await live(6);
@@ -400,7 +511,8 @@ describe("helpers", () => {
         await live(1);
         const agent = await registerAndAttend("Chatty-Agent", "10.9.9.7");
         await live(10);
-        expect(saidBy(mira)[0]).toBe("Hi Chatty-Agent, welcome to ThingsPool! I'm Mira, an AI guide.");
+        expect(saidBy(mira)[0]).toBe("Hi Chatty-Agent, welcome to ThingsPool! I'm Mira, an AI guide. Ask me anything, or "
+            + "just look around!");
 
         await AgentToolUtil.say(agent, "hello, what can I build?");
         await live(6);
@@ -427,18 +539,30 @@ describe("helpers", () => {
         expect(claude.requests).toHaveLength(2);
     });
 
-    it("keeps an address whole in its bubble, splitting a reply only where a sentence ends", async () => {
+    it("says each reply whole in one bubble, longer than a person's, and gives it time to be read before the next",
+        async () => {
         const mira = standNpc(FIRST_HUB_ID, "Mira");
         await live(1);
         const alice = await joinPerson("Alice");
-        await live(8);
+        const bob = await joinPerson("Bob");
+        await live(12);
+        expect(saidBy(mira)).toHaveLength(1);
 
-        claude.answers.push("Agents can make rooms of their own. Their manual is at https://thingspool.net/skill.md.");
+        const toAlice = "Agents can make rooms of their own, and anyone can visit them. Their manual is at "
+            + "https://thingspool.net/skill.md, if you run one.";
+        expect(toAlice.length).toBeGreaterThan(OBJECT_MESSAGE_MAX_LENGTH);
+        claude.answers.push(toAlice, "Hi Bob!");
         await talk(alice, "can AIs play?");
-        await live(10);
+        await live(3);
+        expect(saidBy(mira).slice(1)).toEqual([toAlice]);
 
-        expect(saidBy(mira).slice(2)).toEqual(["Agents can make rooms of their own.",
-            "Their manual is at https://thingspool.net/skill.md."]);
+        // Bob's answer is ready in moments, but waits until hers has had time to be read, at an easy pace.
+        await talk(bob, "hello!");
+        await live(9);
+        expect(claude.requests).toHaveLength(2);
+        expect(saidBy(mira).slice(1)).toEqual([toAlice]);
+        await live(4);
+        expect(saidBy(mira).slice(1)).toEqual([toAlice, "Hi Bob!"]);
     });
 
     it("greets those who come near while it is still talking together, so that a crowd isn't greeted one by one",
@@ -455,7 +579,8 @@ describe("helpers", () => {
         await live(20);
 
         const greetings = saidBy(mira).filter(text => text.includes("welcome to ThingsPool"));
-        expect(greetings[0]).toBe("Hi Alice, welcome to ThingsPool! I'm Mira, an AI guide.");
+        expect(greetings[0]).toBe("Hi Alice, welcome to ThingsPool! I'm Mira, an AI guide. Ask me anything, or just look "
+            + "around!");
         expect(greetings.length).toBeLessThanOrEqual(3);
         expect(greetings.slice(1).every(text => text.startsWith("Hi everyone,"))).toBe(true);
     });
@@ -484,8 +609,8 @@ describe("helpers", () => {
         expect(asked).toEqual(crowd.slice(0, asked.length).map(person => `${person.user.userName} (new here): hi there!`));
     });
 
-    it("keeps to an agent's hourly limit, lower than a person's, telling it once, and renews it the next hour",
-        async () => {
+    it("keeps to an agent's hourly limit, lower than a person's, telling it so (not at every line), and renews it the "
+        + "next hour", async () => {
         const mira = standNpc(FIRST_HUB_ID, "Mira");
         await live(1);
         const agent = await registerAndAttend("Endless-Agent", "10.9.9.6");
@@ -581,21 +706,32 @@ describe("helpers", () => {
         expect(_spending.byDate.get(today())).toBe(2 * oneReply);
     });
 
-    it("without a model only greets, and tells whoever talks to it so, once", async () => {
+    it("without a model only greets, and tells whoever talks to it so, again only once a couple of minutes have passed",
+        async () => {
         delete process.env.ANTHROPIC_API_KEY;
         const mira = standNpc(FIRST_HUB_ID, "Mira");
         await live(1);
         const alice = await joinPerson("Alice", "an");
         await live(6);
         const greeted = saidBy(mira).length;
+        const sorry = "Sorry, I can only say hello for now. Have fun exploring!";
 
         await talk(alice, "hi!");
         await live(4);
         await talk(alice, "hello?");
         await live(4);
+        expect(saidBy(mira).slice(greeted)).toEqual([sorry]);
 
+        // Still talking to it a while later, she is told again rather than met with silence.
+        await live(100);
+        await talk(alice, "how are you?");
+        await live(4);
+        expect(saidBy(mira).slice(greeted)).toEqual([sorry]);
+        await live(20);
+        await talk(alice, "what's your favorite food?");
+        await live(4);
+        expect(saidBy(mira).slice(greeted)).toEqual([sorry, sorry]);
         expect(claude.requests).toEqual([]);
-        expect(saidBy(mira).slice(greeted)).toEqual(["Sorry, I can only say hello for now. Have fun exploring!"]);
     });
 
     it("says nothing when a reply fails, and logs the failure", async () => {
@@ -633,9 +769,123 @@ describe("helpers", () => {
         expect(shown.some(({signalType, signal}) => signalType == "setObjectTransformSignal" && signal.objectId == mira))
             .toBe(true);
         expect(ServerRoomManager.roomRuntimeMemories[FIRST_HUB_ID].room.objectById[mira].transform.pos).toEqual(home);
+        expect(offFrom(lastFacingOf(mira), met, them)).toBeLessThan(3);
 
         await live(45);
         expect(across(helperIn(FIRST_HUB_ID, mira).at, home)).toBeLessThan(0.05);
+    });
+
+    it("turns back the way it was put once it has been quiet a while at home", async () => {
+        const mira = standNpc(FIRST_HUB_ID, "Mira", inFrontOfEntrance(FIRST_HUB_ID, 4));
+        const alice = await joinPerson("Alice");
+        await walkIn(alice, 6, 2);
+        // So that the wander it goes on, as quiet as it is then, heads off a known way (toward the room's back wall).
+        vi.spyOn(Math, "random").mockReturnValue(0.25);
+        await live(6);
+        const toAlice = degreesToward(helperIn(FIRST_HUB_ID, mira).at, playerOf(alice.user.id).transform.pos);
+        expect(Math.abs(NpcFacingUtil.getTurn(lastFacingOf(mira), toAlice))).toBeLessThan(3);
+        expect(Math.abs(NpcFacingUtil.getTurn(toAlice, facingPut(0)))).toBeGreaterThan(20);
+
+        // She stays near, saying nothing.
+        const looked = facingsOf(mira).length;
+        await live(30);
+        expect(facingsOf(mira).slice(looked)[0]).toBe(facingPut(0));
+    });
+
+    it("turns to whom it is thinking of an answer to as soon as its words to someone else have been read", async () => {
+        const mira = standNpc(FIRST_HUB_ID, "Mira", inFrontOfEntrance(FIRST_HUB_ID, 4));
+        await live(1);
+        const alice = await joinPerson("Alice", "an");
+        const bob = await joinPerson("Bob", "an");
+        await walkIn(alice, 6, 2);
+        await walkIn(bob, 6, -2);
+        await live(10);
+        const toAlice = "Hello Alice! The hub is where everyone arrives, so have a look around.";
+        expect(toAlice.length).toBeLessThanOrEqual(OBJECT_MESSAGE_MAX_LENGTH);
+        claude.answers = [toAlice, "Hello Bob!"];
+        const facingAt = (person: ConnectedUser) => offFrom(lastFacingOf(mira), helperIn(FIRST_HUB_ID, mira).at,
+            playerOf(person.user.id).transform.pos);
+        await talk(alice, "hi Mira!");
+        await live(3);
+        expect(saidBy(mira)).toContain(toAlice);
+
+        // Bob's answer is slow in coming: it thinks of it while she reads hers, looking at her until she has had time to.
+        let answered = () => {};
+        claude.thinking = new Promise(resolve => { answered = resolve; });
+        await talk(bob, "hello?");
+        await live(3);
+        expect(claude.requests).toHaveLength(2);
+        expect(facingAt(alice)).toBeLessThan(3);
+        await live(4);
+        expect(saidBy(mira)).not.toContain("Hello Bob!");
+        expect(facingAt(bob)).toBeLessThan(3);
+
+        answered();
+        await live(2);
+        expect(saidBy(mira)).toContain("Hello Bob!");
+        expect(facingAt(bob)).toBeLessThan(3);
+    });
+
+    it("keeps looking at whom its words are for while they are read, and turns to the next with the next words",
+        async () => {
+        const mira = standNpc(FIRST_HUB_ID, "Mira", inFrontOfEntrance(FIRST_HUB_ID, 4));
+        await live(1);
+        const alice = await joinPerson("Alice", "an");
+        await walkIn(alice, 6, 2);
+        await live(10);
+        const answer = "Hello Alice! The hub is where everyone arrives, so have a look around.";
+        expect(answer.length).toBeLessThanOrEqual(OBJECT_MESSAGE_MAX_LENGTH);
+        claude.answers = [answer];
+        const facingAt = (person: ConnectedUser) => offFrom(lastFacingOf(mira), helperIn(FIRST_HUB_ID, mira).at,
+            playerOf(person.user.id).transform.pos);
+        await talk(alice, "hi!");
+        await live(3);
+        expect(saidBy(mira)[saidBy(mira).length - 1]).toBe(answer);
+
+        // Bob comes near as she reads it: his greeting waits for her to have read it, and so does the turn to him.
+        const bob = await joinPerson("Bob", "an");
+        await walkIn(bob, 6, -2);
+        await live(2);
+        expect(saidBy(mira)[saidBy(mira).length - 1]).toBe(answer);
+        expect(facingAt(alice)).toBeLessThan(3);
+        await live(6);
+        expect(saidBy(mira).slice(-2)).toEqual([answer, expect.stringMatching(/^Hi Bob,/)]);
+        expect(facingAt(bob)).toBeLessThan(3);
+    });
+
+    it("faces the way it walks, step by step, never one of four ways only", async () => {
+        const home = inFrontOfEntrance(FIRST_HUB_ID, 4);
+        const mira = standNpc(FIRST_HUB_ID, "Mira", home);
+        await live(1);
+        const alice = await joinPerson("Alice", "an");
+        await walkIn(alice, 11, 3);
+        await live(6);
+        shown.length = 0;
+        await talk(alice, "over here!");
+        await live(8);
+
+        // Each step against the way it was last shown facing as it took it.
+        let facing: number | undefined = undefined;
+        let from: Vec3 | undefined = undefined;
+        const steps: {off: number, length: number}[] = [];
+        for (const {signalType, signal, userID} of shown)
+        {
+            if (signal.objectId != mira || userID != undefined)
+                continue;
+            if (signalType == "setObjectMetadataSignal" && signal.metadataKey == ObjectMetadataKeyEnumMap.Facing)
+                facing = NpcFacingUtil.decode(signal.metadataValue);
+            else if (signalType == "setObjectTransformSignal")
+            {
+                const to = signal.transform.pos;
+                if (from != undefined && facing != undefined && across(from, to) > 0.2)
+                    steps.push({off: offFrom(facing, from, to), length: across(from, to)});
+                from = to;
+            }
+        }
+        expect(steps.length).toBeGreaterThan(3);
+        // A step may round a bend in the path, which it faces past as it reaches it.
+        expect(steps.filter(step => step.off > 45)).toEqual([]);
+        expect(facingsOf(mira).some(degrees => degrees % 90 != 0)).toBe(true);
     });
 
     it("stands still a while at the home an admin moves it to, then wanders near it now and then", async () => {
@@ -710,7 +960,7 @@ describe("helpers", () => {
                 EncodingUtil.endEncoding(bufferState));
         };
         const moves = () => shown.filter(({signalType, signal}) => signal.objectId == mira
-            && (signalType == "setObjectTransformSignal" || signal.metadataKey == ObjectMetadataKeyEnumMap.QuarterTurns));
+            && (signalType == "setObjectTransformSignal" || signal.metadataKey == ObjectMetadataKeyEnumMap.Facing));
         const alice = await joinPerson("Alice", "an");
         await moveTo(alice, inFrontOfEntrance(FIRST_HUB_ID, 11));
         await live(8);
@@ -728,7 +978,11 @@ describe("helpers", () => {
         const dropped = inFrontOfEntrance(FIRST_HUB_ID, 6, -2);
         ServerRoomManager.roomRuntimeMemories[FIRST_HUB_ID].room.objectById[mira].transform =
             new ObjectTransform({...dropped}, {...UP}, {x: 1, y: 1, z: 1});
-        await live(25);
+        // Shown facing the way it was put, as the admin is shown it there; and then nothing of its own.
+        await live(1);
+        expect(lastFacingOf(mira)).toBe(facingPut(0));
+        shown.length = 0;
+        await live(24);
         await talk(alice, "and now?");
         await live(8);
         expect(moves()).toEqual([]);
@@ -767,7 +1021,8 @@ describe("helpers", () => {
         const mira = standNpc(FIRST_HUB_ID, "Mira", home);
         await live(1);
         const alice = await joinPerson("Alice", "an");
-        await moveTo(alice, inFrontOfEntrance(FIRST_HUB_ID, 11));
+        // Off to one side, so that it faces her the way it wasn't put to face.
+        await walkIn(alice, 11, 3);
         await live(6);
         await talk(alice, "over here!");
         await live(10);
@@ -779,5 +1034,52 @@ describe("helpers", () => {
             && signalType == "setObjectTransformSignal");
         expect(toBob).toHaveLength(1);
         expect(toBob[0].signal.transform.pos).toEqual(helperIn(FIRST_HUB_ID, mira).at);
+        // And which way it faces, since that isn't the way it was put either.
+        const facingToBob = shown.filter(({signal, userID}) => userID == bob.user.id && signal.objectId == mira
+            && signal.metadataKey == ObjectMetadataKeyEnumMap.Facing);
+        expect(facingToBob).toHaveLength(1);
+        expect(NpcFacingUtil.decode(facingToBob[0].signal.metadataValue)).toBe(lastFacingOf(mira));
+        expect(lastFacingOf(mira)).not.toBe(facingPut(0));
+    });
+
+    it("turns, once an admin turns it, the way it was put, over the way it was facing", async () => {
+        const mira = standNpc(FIRST_HUB_ID, "Mira", inFrontOfEntrance(FIRST_HUB_ID, 1, 4));
+        await live(1);
+        const alice = await joinPerson("Alice");
+        await live(4);
+        // Gone before it has looked away from where she was.
+        await harness.joinRoom(alice, LATER_HUB_ID);
+        await live(1);
+        const quarterTurns = [1, 2, 3].find(turns =>
+            Math.abs(NpcFacingUtil.getTurn(lastFacingOf(mira), facingPut(turns))) > 45)!;
+
+        const room = ServerRoomManager.roomRuntimeMemories[FIRST_HUB_ID].room;
+        room.objectById[mira].metadata[ObjectMetadataKeyEnumMap.QuarterTurns] =
+            new EncodableByteString(QuarterTurnsUtil.encode(quarterTurns));
+        await live(1);
+        expect(lastFacingOf(mira)).toBe(facingPut(quarterTurns));
+    });
+
+    it("lets nobody set the way it faces, an admin included", async () => {
+        const mira = standNpc(FIRST_HUB_ID, "Mira");
+        await live(1);
+        const admin = harness.connectUser({id: "id-Admin", userName: "Admin", userType: UserTypeEnumMap.Admin});
+        await harness.joinRoom(admin, FIRST_HUB_ID);
+        await live(1);
+        const metadata = ServerRoomManager.roomRuntimeMemories[FIRST_HUB_ID].room.objectById[mira].metadata;
+        const set = async (key: number, value: string) => {
+            const bufferState = EncodingUtil.startEncoding();
+            new SetObjectMetadataSignal(FIRST_HUB_ID, mira, key, value).encode(bufferState);
+            await UserSignalDispatchUtil.dispatch(admin.socketUserContext, "setObjectMetadataSignal",
+                EncodingUtil.endEncoding(bufferState));
+        };
+        shown.length = 0;
+
+        await set(ObjectMetadataKeyEnumMap.Facing, "90");
+        expect(metadata[ObjectMetadataKeyEnumMap.Facing]).toBeUndefined();
+        expect(facingsOf(mira)).toEqual([]);
+        // As an admin's name for it is set, the same way.
+        await set(ObjectMetadataKeyEnumMap.Label, "Mia");
+        expect(metadata[ObjectMetadataKeyEnumMap.Label].str).toBe("Mia");
     });
 });

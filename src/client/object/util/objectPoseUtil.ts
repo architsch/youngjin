@@ -36,13 +36,17 @@ const ObjectPoseUtil =
         vec3Temp.set(pos.x + dir.x, pos.y + dir.y, pos.z + dir.z);
         node.lookAt(vec3Temp);
     },
-    // Stands an NPC's body up in the node its object is posed as (see NpcGameObject). The body looks along its
-    // own -z (see FORWARD_DIR), which is turned onto the way its content's top points across the floor (see
-    // QuarterTurnsUtil.getContentUp); its middle is half its height up from there.
-    poseNpcBody: (body: THREE.Object3D, node: THREE.Object3D, obj: AddObjectSignal): void =>
+    // The way an NPC was put to face across the floor: the way its content's top points (see
+    // QuarterTurnsUtil.getContentUp).
+    getNpcFacing: (obj: AddObjectSignal): Vec3 =>
+    {
+        return QuarterTurnsUtil.getContentUp(obj.transform.dir, QuarterTurnsUtil.getQuarterTurns(obj));
+    },
+    // Stands an NPC's body up in the node its object is posed as (see NpcGameObject), facing a way across the floor.
+    // The body looks along its own -z (see FORWARD_DIR); its middle is half its height up from the floor.
+    poseNpcBody: (body: THREE.Object3D, node: THREE.Object3D, obj: AddObjectSignal, facing: Vec3): void =>
     {
         const transform = obj.transform;
-        const facing = QuarterTurnsUtil.getContentUp(transform.dir, QuarterTurnsUtil.getQuarterTurns(obj));
         backTemp.set(-facing.x, -facing.y, -facing.z);
         rightTemp.crossVectors(WORLD_UP, backTemp);
         uprightTemp.setFromRotationMatrix(basisTemp.makeBasis(rightTemp, WORLD_UP, backTemp));

@@ -23,8 +23,8 @@ import QuarterTurnsUtil from "../../../src/shared/object/util/quarterTurnsUtil";
 import PhysicsColliderStateUtil from "../../../src/shared/physics/util/physicsColliderStateUtil";
 import Room from "../../../src/shared/room/types/room";
 import RoomFile from "../../../src/shared/room/types/roomFile";
-import { COLLISION_LAYER_HEIGHT, DIR_VEC_BY_NAME, OBJECT_NAME_MAX_LENGTH, STOREY_FLOOR_COLLISION_LAYER,
-    UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, DIR_VEC_BY_NAME, NPC_MESSAGE_MAX_LENGTH, OBJECT_MESSAGE_MAX_LENGTH,
+    OBJECT_NAME_MAX_LENGTH, STOREY_FLOOR_COLLISION_LAYER, UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
 import User from "../../../src/shared/user/types/user";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
@@ -231,6 +231,30 @@ describe("NPCs", () => {
                 longNamed.metadata[ObjectMetadataKeyEnumMap.Label] =
                     new EncodableByteString("g".repeat(OBJECT_NAME_MAX_LENGTH + 1));
                 expect(ObjectUpdateUtil.canAddObject(ADMIN, room, longNamed)).toBe(false);
+            },
+        });
+    });
+
+    it("say more than a player may, as the server or a room's script has them, kept whole by whoever is shown it",
+        async () => {
+        await runScenario({
+            name: "an NPC's long line",
+            rooms: [EMPTY_HUB],
+            users: [userAtCenter("hub")],
+            assertions: () => {
+                const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
+                const npc = makeNpcSignal(room, ADMIN);
+                expect(ObjectUpdateUtil.addObject(ADMIN, room, npc)).toBe(true);
+                // As a browser applies what the server shows it (see ClientObjectManager.setObjectMetadata).
+                const show = (text: string) => {
+                    ObjectUpdateUtil.setObjectMetadata(ADMIN, room, new SetObjectMetadataSignal(room.id, npc.objectId,
+                        ObjectMetadataKeyEnumMap.SentMessage, text), false);
+                    return room.objectById[npc.objectId].metadata[ObjectMetadataKeyEnumMap.SentMessage].str;
+                };
+                const longest = "a".repeat(NPC_MESSAGE_MAX_LENGTH);
+                expect(NPC_MESSAGE_MAX_LENGTH).toBeGreaterThan(OBJECT_MESSAGE_MAX_LENGTH);
+                expect(show(longest)).toBe(longest);
+                expect(show(`${longest}b`)).toBe(longest);
             },
         });
     });

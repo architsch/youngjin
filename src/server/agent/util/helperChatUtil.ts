@@ -1,4 +1,4 @@
-import { HOUR_IN_MS, MINUTE_IN_MS } from "../../../shared/system/sharedConstants";
+import { HOUR_IN_MS, MINUTE_IN_MS, NPC_MESSAGE_MAX_LENGTH } from "../../../shared/system/sharedConstants";
 import LogUtil from "../../../shared/system/util/logUtil";
 import ErrorUtil from "../../../shared/system/util/errorUtil";
 import { HELPER_DAILY_BUDGET_DOLLARS, HELPER_MAX_REPLIES_PER_AGENT_PER_HOUR, HELPER_MAX_REPLIES_PER_PERSON_PER_HOUR,
@@ -19,9 +19,9 @@ import HelperIdentity from "../types/helperIdentity";
 // Another base (a proxy, or a stand-in on a local stack) may be named as the Anthropic SDKs allow.
 const API_BASE_URL = process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com";
 const API_VERSION = "2023-06-01";
-// A bubble or two (see HelperAgentUtil).
+// One bubble (see HelperAgentUtil).
 const MAX_OUTPUT_TOKENS = 160;
-const MAX_REPLY_CHARS = 200;
+const MAX_REPLY_CHARS = NPC_MESSAGE_MAX_LENGTH;
 // What is remembered of a talk with one person, and for how long after they last spoke.
 const MAX_REMEMBERED_TURNS = 8;
 const CONVERSATION_TTL_MS = 20 * MINUTE_IN_MS;

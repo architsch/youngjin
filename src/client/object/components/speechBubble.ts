@@ -173,7 +173,7 @@ export default class SpeechBubble extends GameObjectComponent
             this.textElement.style = "position:absolute; font-size:0.75rem; pointer-events:none;"; // font-size (inherited by the child) is then driven per-frame in update().
 
             this.bubbleElement = document.createElement("div");
-            this.bubbleElement.style = "max-width:18ch; margin:auto auto; padding:0.2rem 0.4rem; color:white; background-color:rgba(0, 0, 0, 0.75); border-radius:0.4rem; text-align:center; white-space:normal;";
+            this.bubbleElement.style = `max-width:${this.componentConfig.widthInChars ?? 18}ch; margin:auto auto; padding:0.2rem 0.4rem; color:white; background-color:rgba(0, 0, 0, 0.75); border-radius:0.4rem; text-align:center; white-space:normal;`;
             this.textElement.appendChild(this.bubbleElement);
 
             this.textCSS2DObject = new CSS2DObject(this.textElement);

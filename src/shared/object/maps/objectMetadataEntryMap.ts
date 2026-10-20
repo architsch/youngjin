@@ -1,4 +1,4 @@
-import { OBJECT_MESSAGE_MAX_LENGTH, OBJECT_INSTANCED_MESH_COMPOSITION_METADATA_MAX_LENGTH,
+import { NPC_MESSAGE_MAX_LENGTH, OBJECT_INSTANCED_MESH_COMPOSITION_METADATA_MAX_LENGTH,
     OBJECT_LABEL_MAX_LENGTH, OBJECT_USER_NAME_MAX_LENGTH, DOCUMENT_ID_MAX_LENGTH,
     LABEL_COLOR_PALETTE_NAME } from "../../system/sharedConstants";
 import StringUtil from "../../math/util/stringUtil";
@@ -12,6 +12,7 @@ import FanObjectTypeConfig from "../types/objectTypeConfig/fanObjectTypeConfig";
 import LabelTextUtil from "../util/labelTextUtil";
 import AdminPrefsUtil from "../util/adminPrefsUtil";
 import QuarterTurnsUtil from "../util/quarterTurnsUtil";
+import NpcFacingUtil from "../util/npcFacingUtil";
 import ObjectTagUtil from "../util/objectTagUtil";
 import User from "../../user/types/user";
 import RoomValidationUtil from "../../room/util/roomValidationUtil";
@@ -19,8 +20,9 @@ import RoomValidationUtil from "../../room/util/roomValidationUtil";
 const doorTypeValues = Object.values(DoorTypeEnumMap);
 
 const entries: {[key: number]: ObjectMetadataEntry} = {
+    // As long as anything may say: an NPC. A player says less (see PlayerObjectTypeConfig).
     [ObjectMetadataKeyEnumMap.SentMessage]: {
-        preprocessingMethod: (rawValue: string) => StringUtil.truncateByCodePoints(rawValue.trim(), OBJECT_MESSAGE_MAX_LENGTH),
+        preprocessingMethod: (rawValue: string) => StringUtil.truncateByCodePoints(rawValue.trim(), NPC_MESSAGE_MAX_LENGTH),
     },
     [ObjectMetadataKeyEnumMap.ImagePath]: {
         preprocessingMethod: (rawValue: string) => rawValue,
@@ -95,6 +97,11 @@ const entries: {[key: number]: ObjectMetadataEntry} = {
     // The server's alone, so a stored copy is never restored either (see ServerUserManager.addUserToRoom).
     [ObjectMetadataKeyEnumMap.AgentMark]: {
         preprocessingMethod: (rawValue: string) => (rawValue.trim() == "1") ? "1" : "",
+        canUserSet: (_user: User) => false,
+    },
+    // Likewise the server's alone (see HelperAgentUtil).
+    [ObjectMetadataKeyEnumMap.Facing]: {
+        preprocessingMethod: (rawValue: string) => NpcFacingUtil.canonicalize(rawValue),
         canUserSet: (_user: User) => false,
     },
 };

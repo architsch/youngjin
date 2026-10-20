@@ -6,13 +6,14 @@ import SetObjectMetadataSignal from "../../../shared/object/types/setObjectMetad
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 import QuarterTurnsUtil from "../../../shared/object/util/quarterTurnsUtil";
+import NpcFacingUtil from "../../../shared/object/util/npcFacingUtil";
 import LabelTextUtil from "../../../shared/object/util/labelTextUtil";
 import Room from "../../../shared/room/types/room";
 import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 import VoxelPathUtil from "../../../shared/voxel/util/voxelPathUtil";
 import EncodableData from "../../../shared/networking/types/encodableData";
-import { DAY_IN_MS, HOUR_IN_MS, MINUTE_IN_MS, OBJECT_MESSAGE_MAX_LENGTH } from "../../../shared/system/sharedConstants";
+import { DAY_IN_MS, HOUR_IN_MS, MINUTE_IN_MS } from "../../../shared/system/sharedConstants";
 import LogUtil from "../../../shared/system/util/logUtil";
 import ErrorUtil from "../../../shared/system/util/errorUtil";
 import ServerRoomManager from "../../room/serverRoomManager";
@@ -33,8 +34,8 @@ import HelperChatUtil from "./helperChatUtil";
 // Helpers: the NPCs an admin stands in multiplayer rooms (see NpcObjectTypeConfig), which the server plays as AI guides,
 // so that a newcomer never arrives to an empty world. Each keeps near where it was put, its home; greets each visitor as
 // they come near, once a login; and answers whoever talks to it nearby, or names it, people and agents alike, through
-// Claude (see HelperChatUtil). What it does is shown to the room and never kept: the room keeps it at home, so an admin
-// moving it moves its home. People are shown it is an AI (see NpcGameObject).
+// Claude (see HelperChatUtil), facing whom it talks with. What it does is shown to the room and never kept: the room keeps
+// it at home, so an admin moving it moves its home. People are shown it is an AI (see NpcGameObject).
 
 const TICK_MS = 1000;
 const NPC_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Npc");
@@ -47,9 +48,14 @@ const SAME_FLOOR_HEIGHT = 1;
 // long, by when whoever said them has likely moved on.
 const ANSWER_PAUSE_MS = 1500;
 const UNANSWERED_LINES_TTL_MS = MINUTE_IN_MS;
-// How long a bubble stays before the next, so it can be read; the last is taken down once it has been quiet this long.
-const MIN_BUBBLE_MS = 2500;
-const BUBBLE_MS_PER_CHAR = 55;
+// Someone it can't answer is told why, and told again at most this often while they keep talking to it, so that it
+// neither seems to ignore them nor says the same thing to every line.
+const REFUSAL_RETOLD_AFTER_MS = 2 * MINUTE_IN_MS;
+// How long a bubble stays before the next, so it can be read: a moment to notice it, then its words at an easy pace, as
+// many read English as a second language. The last is taken down once it has been quiet this long.
+const MIN_BUBBLE_MS = 3000;
+const BUBBLE_NOTICE_MS = 1000;
+const BUBBLE_MS_PER_CHAR = 80;
 const BUBBLE_CLEARED_AFTER_MS = 20_000;
 // A stroll, in world units a second.
 const WALK_SPEED = 2;
@@ -65,6 +71,10 @@ const STAY_AFTER_TALK_MS = 30_000;
 // Still this long after an admin has moved it, or has let go of it.
 const FROZEN_AFTER_MOVE_MS = 10_000;
 const FROZEN_AFTER_RELEASE_MS = 3000;
+// Speaking to several at once, it looks at each in turn, this long each.
+const GLANCE_MS = 2000;
+// A turn smaller than this isn't shown.
+const MIN_TURN_DEGREES = 2;
 // Two positions this close are the same place.
 const SAME_PLACE = 0.05;
 const USAGE_LOG_INTERVAL_MS = HOUR_IN_MS;
@@ -119,7 +129,7 @@ const HelperAgentUtil =
                 followHome(helper, memory.room, now);
                 tellNewcomers(helper, memory);
                 noticeVisitors(helper, memory, now);
-                greet(helper);
+                greet(helper, now);
                 answerSpeakers(helper, now);
                 speakNextBubble(helper, now);
                 wander(helper, memory.room, now);
@@ -130,6 +140,7 @@ const HelperAgentUtil =
                 state.usageLoggedAt = now;
                 LogUtil.log("Helper usage", HelperChatUtil.getUsageToday(), "low", "info");
                 forgetOldLogins(now);
+                forgetOldRefusals(now);
             }
         }
         catch (err)
@@ -145,13 +156,16 @@ const HelperAgentUtil =
             state.ticking = false;
         }
     },
-    // Walking helpers take their steps, from SocketsServer's flush, so each step goes out with it.
+    // Helpers take their steps, or else turn to whom they talk with, from SocketsServer's flush, so each goes out with it.
     stepAll: (seconds: number): void =>
     {
+        const now = Date.now();
         for (const helper of helpers.values())
         {
             if (helper.path.length > 0)
                 step(helper, seconds);
+            else if (helper.heldBy.size == 0)
+                look(helper, now);
         }
     },
     // A line someone said, as SocketsServer dispatched it (see UserSignalDispatchUtil): for a helper they named, else
@@ -180,6 +194,10 @@ const HelperAgentUtil =
         pending.lines.push(text);
         pending.lastAt = now;
         helper.linesByUserID.set(userID, pending);
+        // It turns to whoever talks to it, unless it is still speaking to someone else.
+        helper.lastTalkAt = now;
+        if (!isSpeaking(helper, now))
+            talkWith(helper, [userID], now);
     },
     // An admin's edit-mode selection taking hold of a helper, or letting go of it (see HoldObjectSignal). Held, it stands
     // still for everyone, as it does under the admin's own pointer.
@@ -199,7 +217,6 @@ const HelperAgentUtil =
         {
             helper.heldBy.add(ctx.user.id);
             helper.path = [];
-            helper.facePointAfterWalk = undefined;
         }
         else if (helper.heldBy.delete(ctx.user.id))
             letGo(helper, Date.now());
@@ -248,10 +265,10 @@ function newHelper(roomID: string, obj: AddObjectSignal, now: number): HelperSta
 {
     const quarterTurns = QuarterTurnsUtil.getQuarterTurns(obj);
     return {roomID, objectId: obj.objectId, name: "", home: {...obj.transform.pos}, homeQuarterTurns: quarterTurns,
-        at: {...obj.transform.pos}, quarterTurns, saying: "", path: [], facePointAfterWalk: undefined, heldBy: new Set(),
-        frozenUntil: 0,
+        at: {...obj.transform.pos}, facing: getFacingPut(quarterTurns), saying: "", path: [], talkingWith: [],
+        talkingSince: 0, heldBy: new Set(), frozenUntil: 0,
         nextWanderAt: now + randomBetween(WANDER_INTERVAL_MS), returnHomeAt: 0, lastTalkAt: -Infinity,
-        greetedLogins: new Map(), greetings: [], linesByUserID: new Map(), answering: false, bubbles: [],
+        greetedLogins: new Map(), greetings: [], linesByUserID: new Map(), answering: undefined, bubbles: [],
         nextBubbleAt: 0, toldUserIDs: new Set()};
 }
 
@@ -273,7 +290,7 @@ function letGo(helper: HelperState, now: number): void
 }
 
 // An admin moving it (or turning it) moves its home, the room's own copy, which it then stands still at for a while.
-// The admin's edit has already shown it there to everyone.
+// The admin's edit has already shown it there to everyone; facing the way it was put is shown over the way it faced.
 function followHome(helper: HelperState, room: Room, now: number): void
 {
     const obj = room.objectById[helper.objectId];
@@ -283,10 +300,10 @@ function followHome(helper: HelperState, room: Room, now: number): void
     helper.home = {...obj.transform.pos};
     helper.homeQuarterTurns = quarterTurns;
     helper.at = {...helper.home};
-    helper.quarterTurns = quarterTurns;
     helper.path = [];
-    helper.facePointAfterWalk = undefined;
     helper.frozenUntil = now + FROZEN_AFTER_MOVE_MS;
+    helper.facing = getFacingPut(quarterTurns);
+    send(helper, "setObjectMetadataSignal", facingSignal(helper));
 }
 
 function tellNewcomers(helper: HelperState, memory: RoomRuntimeMemory): void
@@ -312,8 +329,8 @@ function catchUpOn(helper: HelperState): {signalType: string, signal: EncodableD
     const signals: {signalType: string, signal: EncodableData}[] = [];
     if (distance(helper.at, helper.home) >= SAME_PLACE)
         signals.push({signalType: "setObjectTransformSignal", signal: transformSignal(helper)});
-    if (helper.quarterTurns != helper.homeQuarterTurns)
-        signals.push({signalType: "setObjectMetadataSignal", signal: turnSignal(helper)});
+    if (helper.facing != getFacingPut(helper.homeQuarterTurns))
+        signals.push({signalType: "setObjectMetadataSignal", signal: facingSignal(helper)});
     if (helper.saying.length > 0)
         signals.push({signalType: "setObjectMetadataSignal", signal: speechSignal(helper, helper.saying)});
     return signals;
@@ -339,9 +356,9 @@ function noticeVisitors(helper: HelperState, memory: RoomRuntimeMemory, now: num
 
 // Those who came near together are greeted together, as are those who came while it was still talking, so that a crowd
 // isn't greeted one by one long after it came.
-function greet(helper: HelperState): void
+function greet(helper: HelperState, now: number): void
 {
-    if (helper.greetings.length == 0 || helper.bubbles.length > 0)
+    if (helper.greetings.length == 0 || helper.bubbles.length > 0 || now < helper.nextBubbleAt)
         return;
     const due = helper.greetings;
     helper.greetings = [];
@@ -349,12 +366,12 @@ function greet(helper: HelperState): void
     const whom = due.length > 1 ? " everyone" : name;
     const welcome = due.every(greeting => greeting.returning) ? "welcome back" : "welcome to ThingsPool";
     const me = helper.name.length > 0 ? `I'm ${helper.name}, an AI guide.` : "I'm an AI guide.";
-    faceToward(helper, ServerUserManager.getPlayerObject(due[0].userID)?.transform.pos);
-    say(helper, [`Hi${whom}, ${welcome}! ${me}`, "Ask me anything, or just look around!"]);
+    say(helper, `Hi${whom}, ${welcome}! ${me} Ask me anything, or just look around!`,
+        due.map(greeting => greeting.userID));
 }
 
 // Speakers who have paused are answered in turn, each once the helper has said all it was saying, as a person answers a
-// crowd.
+// crowd: it stops to answer (and turns to them, see look).
 function answerSpeakers(helper: HelperState, now: number): void
 {
     for (const [userID, pending] of helper.linesByUserID)
@@ -362,16 +379,17 @@ function answerSpeakers(helper: HelperState, now: number): void
         if (now - pending.lastAt >= UNANSWERED_LINES_TTL_MS)
             helper.linesByUserID.delete(userID);
     }
-    if (helper.answering || helper.bubbles.length > 0)
+    if (helper.answering != undefined || helper.bubbles.length > 0)
         return;
     for (const [userID, pending] of helper.linesByUserID)
     {
         if (now - pending.lastAt < ANSWER_PAUSE_MS)
             continue;
         helper.linesByUserID.delete(userID);
-        helper.answering = true;
+        helper.path = [];
+        helper.answering = userID;
         helper.lastTalkAt = now;
-        void answer(helper, userID, pending).finally(() => { helper.answering = false; });
+        void answer(helper, userID, pending).finally(() => { helper.answering = undefined; });
         return;
     }
 }
@@ -381,14 +399,13 @@ async function answer(helper: HelperState, userID: string, pending: HelperPendin
     const refusal = await HelperChatUtil.getRefusal(userID, pending.isAgent);
     if (refusal != undefined)
     {
-        // Told once a day why no reply comes, or once an hour for their own limit.
         const toldKey = `${userID} ${refusal}`;
         const toldAt = state.refusalToldAt.get(toldKey) ?? -Infinity;
-        if (Date.now() - toldAt >= (refusal == "hourlyLimit" ? HOUR_IN_MS : DAY_IN_MS))
+        if (Date.now() - toldAt >= REFUSAL_RETOLD_AFTER_MS)
         {
             state.refusalToldAt.set(toldKey, Date.now());
             meet(helper, userID);
-            say(helper, [REFUSAL_LINES[refusal]]);
+            say(helper, REFUSAL_LINES[refusal], [userID]);
         }
         return;
     }
@@ -398,7 +415,7 @@ async function answer(helper: HelperState, userID: string, pending: HelperPendin
     if (reply == undefined || !helpers.has(`${helper.roomID}/${helper.objectId}`))
         return;
     meet(helper, userID);
-    say(helper, toBubbles(reply));
+    say(helper, reply, [userID]);
 }
 
 function identityOf(helper: HelperState): HelperIdentity
@@ -409,13 +426,15 @@ function identityOf(helper: HelperState): HelperIdentity
     return {key: `${helper.roomID}/${helper.objectId}`, name: helper.name, place};
 }
 
-// Queued, so that one reply's bubbles follow each other at a pace they can be read in.
-function say(helper: HelperState, lines: string[]): void
+// Each thing it says is one bubble, a whole greeting or reply (see NPC_MESSAGE_MAX_LENGTH), queued behind whatever it is
+// still saying.
+function say(helper: HelperState, text: string, to: string[]): void
 {
-    helper.bubbles.push(...lines.flatMap(toBubbles));
+    helper.bubbles.push({text, to});
     helper.lastTalkAt = Date.now();
 }
 
+// It looks at whom each bubble is for as it shows.
 function speakNextBubble(helper: HelperState, now: number): void
 {
     if (helper.bubbles.length == 0)
@@ -429,42 +448,14 @@ function speakNextBubble(helper: HelperState, now: number): void
     }
     if (now < helper.nextBubbleAt)
         return;
-    const text = helper.bubbles.shift() as string;
+    const {text, to} = helper.bubbles.shift()!;
     helper.saying = text;
     send(helper, "setObjectMetadataSignal", speechSignal(helper, text));
-    helper.nextBubbleAt = now + Math.max(MIN_BUBBLE_MS, BUBBLE_MS_PER_CHAR * text.length);
+    helper.nextBubbleAt = now + Math.max(MIN_BUBBLE_MS, BUBBLE_NOTICE_MS + BUBBLE_MS_PER_CHAR * text.length);
+    talkWith(helper, to, now);
 }
 
-// Bubble-sized pieces: whole sentences where they fit, else words.
-function toBubbles(text: string): string[]
-{
-    const bubbles: string[] = [];
-    let current = "";
-    const add = (piece: string) => {
-        const joined = current.length > 0 ? `${current} ${piece}` : piece;
-        if (joined.length <= OBJECT_MESSAGE_MAX_LENGTH)
-        {
-            current = joined;
-            return;
-        }
-        if (current.length > 0)
-            bubbles.push(current);
-        current = piece;
-    };
-    // Split only where a sentence's end meets a space, so that an address (thingspool.net/skill.md) stays whole.
-    for (const sentence of text.split(/(?<=[.!?])\s+/).map(sentence => sentence.trim()))
-    {
-        if (sentence.length <= OBJECT_MESSAGE_MAX_LENGTH)
-            add(sentence);
-        else
-            sentence.split(/\s+/).forEach(word => add(word.slice(0, OBJECT_MESSAGE_MAX_LENGTH)));
-    }
-    if (current.length > 0)
-        bubbles.push(current);
-    return bubbles.filter(bubble => bubble.length > 0);
-}
-
-// Turns to whoever it answers, and walks up to one a little way off, as far as it goes from home.
+// Walks up to whoever it answers from a little way off, as far as it goes from home.
 function meet(helper: HelperState, userID: string): void
 {
     const them = ServerUserManager.getPlayerObject(userID)?.transform.pos;
@@ -475,51 +466,40 @@ function meet(helper: HelperState, userID: string): void
     const feet = VoxelPathUtil.feetOf(them);
     const away = distanceAcross(feet, helper.at);
     if (away <= APPROACH_FROM || Date.now() < helper.frozenUntil || helper.heldBy.size > 0)
-    {
-        if (helper.path.length > 0)
-            helper.facePointAfterWalk = feet;
-        else
-            faceToward(helper, feet);
         return;
-    }
     // On its own floor, whichever one they stand on.
-    const meeting = clampToLeash(helper, {x: feet.x + (helper.at.x - feet.x) * MEETING_DISTANCE / away, y: helper.home.y,
-        z: feet.z + (helper.at.z - feet.z) * MEETING_DISTANCE / away});
-    if (!walkTo(helper, room, meeting, feet))
-        faceToward(helper, feet);
+    walkTo(helper, room, clampToLeash(helper, {x: feet.x + (helper.at.x - feet.x) * MEETING_DISTANCE / away,
+        y: helper.home.y, z: feet.z + (helper.at.z - feet.z) * MEETING_DISTANCE / away}));
 }
 
-// Idle, it wanders off now and then, and heads home a while after; back home, it turns the way it was put.
+// Idle, it wanders off now and then, and heads home a while after.
 function wander(helper: HelperState, room: Room, now: number): void
 {
-    if (helper.path.length > 0 || helper.answering || helper.bubbles.length > 0 || helper.linesByUserID.size > 0
-        || now < helper.frozenUntil || helper.heldBy.size > 0)
+    if (helper.path.length > 0 || helper.answering != undefined || helper.bubbles.length > 0
+        || helper.linesByUserID.size > 0 || now < helper.frozenUntil || helper.heldBy.size > 0)
     {
         return;
     }
-    const home = distance(helper.at, helper.home) < SAME_PLACE;
-    if (!home)
+    if (distance(helper.at, helper.home) >= SAME_PLACE)
     {
         if (now >= helper.returnHomeAt)
-            walkTo(helper, room, helper.home, undefined);
+            walkTo(helper, room, helper.home);
         return;
     }
-    if (helper.quarterTurns != helper.homeQuarterTurns && now - helper.lastTalkAt >= STAY_AFTER_TALK_MS)
-        turn(helper, helper.homeQuarterTurns);
     if (now < helper.nextWanderAt || now - helper.lastTalkAt < STAY_AFTER_TALK_MS)
         return;
     helper.nextWanderAt = now + randomBetween(WANDER_INTERVAL_MS);
     const angle = Math.random() * 2 * Math.PI;
     const reach = WANDER_RADIUS * (0.4 + 0.6 * Math.random());
     if (walkTo(helper, room, {x: helper.home.x + reach * Math.cos(angle), y: helper.home.y,
-        z: helper.home.z + reach * Math.sin(angle)}, undefined))
+        z: helper.home.z + reach * Math.sin(angle)}))
     {
         helper.returnHomeAt = now + randomBetween(WANDER_STAY_MS);
     }
 }
 
 // A path over the room's floor to near the goal (to the goal itself when that is home), or false if there is none.
-function walkTo(helper: HelperState, room: Room, goal: Vec3, facePoint: Vec3 | undefined): boolean
+function walkTo(helper: HelperState, room: Room, goal: Vec3): boolean
 {
     const voxels = room.voxelGrid.voxels;
     const start = VoxelPathUtil.findStandingVertexNear(voxels, helper.at, 1);
@@ -530,13 +510,12 @@ function walkTo(helper: HelperState, room: Room, goal: Vec3, facePoint: Vec3 | u
     helper.path = path.slice(1).map(vertex => VoxelPathUtil.toWorld(vertex));
     if (distance(goal, helper.home) < SAME_PLACE)
         helper.path.push({...helper.home});
-    helper.facePointAfterWalk = facePoint;
     return helper.path.length > 0;
 }
 
+// Along its way, facing where it goes next.
 function step(helper: HelperState, seconds: number): void
 {
-    const from = {...helper.at};
     let left = WALK_SPEED * seconds;
     while (left > 0 && helper.path.length > 0)
     {
@@ -555,44 +534,73 @@ function step(helper: HelperState, seconds: number): void
             left = 0;
         }
     }
-    faceToward(helper, {x: 2 * helper.at.x - from.x, y: helper.at.y, z: 2 * helper.at.z - from.z});
-    send(helper, "setObjectTransformSignal", transformSignal(helper));
     if (helper.path.length > 0)
-        return;
-    if (helper.facePointAfterWalk != undefined)
-        faceToward(helper, helper.facePointAfterWalk);
-    else if (distance(helper.at, helper.home) < SAME_PLACE)
-        turn(helper, helper.homeQuarterTurns);
-    helper.facePointAfterWalk = undefined;
+        faceToward(helper, helper.path[0]);
+    send(helper, "setObjectTransformSignal", transformSignal(helper));
 }
 
-// It faces one of four ways, as an NPC does (see QuarterTurnsUtil): the one nearest the point.
-function faceToward(helper: HelperState, point: Vec3 | undefined): void
+// Standing, it looks at whom it talks with, and once that is over, at home, the way it was put. Thinking of an answer,
+// it turns to whom it is for as soon as it has nothing else left to say.
+function look(helper: HelperState, now: number): void
 {
-    if (point == undefined || distanceAcross(point, helper.at) < SAME_PLACE)
-        return;
-    const toward = {x: point.x - helper.at.x, z: point.z - helper.at.z};
-    let best = helper.quarterTurns;
-    let bestDot = -Infinity;
-    for (let quarterTurns = 0; quarterTurns < 4; ++quarterTurns)
-    {
-        const facing = QuarterTurnsUtil.getContentUp(UP, quarterTurns);
-        const dot = facing.x * toward.x + facing.z * toward.z;
-        if (dot > bestDot)
-        {
-            best = quarterTurns;
-            bestDot = dot;
-        }
-    }
-    turn(helper, best);
+    if (helper.answering != undefined && helper.bubbles.length == 0 && now >= helper.nextBubbleAt)
+        talkWith(helper, [helper.answering], now);
+    const them = getGazeTarget(helper, now);
+    if (them != undefined)
+        faceToward(helper, them);
+    else if (distance(helper.at, helper.home) < SAME_PLACE && now - helper.lastTalkAt >= STAY_AFTER_TALK_MS)
+        face(helper, getFacingPut(helper.homeQuarterTurns));
 }
 
-function turn(helper: HelperState, quarterTurns: number): void
+// Where whom it talks with stand: those it speaks to, or is about to answer, wherever they are in its room, each in turn
+// for a moment when they are several; once it is done speaking, the nearest of them still in earshot on its floor,
+// until it has been quiet a while.
+function getGazeTarget(helper: HelperState, now: number): Vec3 | undefined
 {
-    if (quarterTurns == helper.quarterTurns || helper.heldBy.size > 0)
+    const present = helper.talkingWith.filter(userID => ServerRoomManager.currentRoomIDByUserID[userID] == helper.roomID)
+        .map(userID => ServerUserManager.getPlayerObject(userID)?.transform.pos)
+        .filter((pos): pos is Vec3 => pos != undefined);
+    if (present.length == 0)
+        return undefined;
+    if (isSpeaking(helper, now))
+        return present[Math.floor((now - helper.talkingSince) / GLANCE_MS) % present.length];
+    if (now - helper.lastTalkAt >= STAY_AFTER_TALK_MS)
+        return undefined;
+    return present.filter(pos => distanceAcross(pos, helper.at) <= HEARING_DISTANCE && onFloorOf(helper, pos))
+        .sort((a, b) => distanceAcross(a, helper.at) - distanceAcross(b, helper.at))[0];
+}
+
+function talkWith(helper: HelperState, userIDs: string[], now: number): void
+{
+    helper.talkingWith = userIDs;
+    helper.talkingSince = now;
+}
+
+// Saying something, about to, or thinking of what to say.
+function isSpeaking(helper: HelperState, now: number): boolean
+{
+    return helper.answering != undefined || helper.bubbles.length > 0 || now < helper.nextBubbleAt;
+}
+
+function faceToward(helper: HelperState, point: Vec3): void
+{
+    if (distanceAcross(point, helper.at) >= SAME_PLACE)
+        face(helper, NpcFacingUtil.getDegrees({x: point.x - helper.at.x, y: 0, z: point.z - helper.at.z}));
+}
+
+// Browsers turn it there over a moment (see NpcGameObject).
+function face(helper: HelperState, degrees: number): void
+{
+    if (Math.abs(NpcFacingUtil.getTurn(helper.facing, degrees)) < MIN_TURN_DEGREES)
         return;
-    helper.quarterTurns = quarterTurns;
-    send(helper, "setObjectMetadataSignal", turnSignal(helper));
+    helper.facing = degrees;
+    send(helper, "setObjectMetadataSignal", facingSignal(helper));
+}
+
+// The way an admin put it to face (see QuarterTurnsUtil).
+function getFacingPut(quarterTurns: number): number
+{
+    return NpcFacingUtil.getDegrees(QuarterTurnsUtil.getContentUp(UP, quarterTurns));
 }
 
 function transformSignal(helper: HelperState): SetObjectTransformSignal
@@ -602,10 +610,10 @@ function transformSignal(helper: HelperState): SetObjectTransformSignal
         {...scale}), true);
 }
 
-function turnSignal(helper: HelperState): SetObjectMetadataSignal
+function facingSignal(helper: HelperState): SetObjectMetadataSignal
 {
-    return new SetObjectMetadataSignal(helper.roomID, helper.objectId, ObjectMetadataKeyEnumMap.QuarterTurns,
-        QuarterTurnsUtil.encode(helper.quarterTurns));
+    return new SetObjectMetadataSignal(helper.roomID, helper.objectId, ObjectMetadataKeyEnumMap.Facing,
+        NpcFacingUtil.encode(helper.facing));
 }
 
 function speechSignal(helper: HelperState, text: string): SetObjectMetadataSignal
@@ -645,6 +653,16 @@ function forgetOldLogins(now: number): void
             if (now - greeted.at > 2 * DAY_IN_MS)
                 helper.greetedLogins.delete(userID);
         }
+    }
+}
+
+// Whom it would tell why it can't answer again anyway.
+function forgetOldRefusals(now: number): void
+{
+    for (const [toldKey, toldAt] of state.refusalToldAt)
+    {
+        if (now - toldAt >= REFUSAL_RETOLD_AFTER_MS)
+            state.refusalToldAt.delete(toldKey);
     }
 }
 

@@ -40,6 +40,8 @@ export const HEALTH_ROUTE_PATH = "health";
 export const SIGNAL_BATCH_SEND_INTERVAL = 200; // in milliseconds (0.2s)
 export const ROOM_AUTO_SAVE_INTERVAL = 10 * MINUTE_IN_MS; // in milliseconds (10m)
 export const OBJECT_MESSAGE_MAX_LENGTH = 72;
+// What an NPC says, which only the server or a room's script writes: a helper's whole reply, in one bubble.
+export const NPC_MESSAGE_MAX_LENGTH = 200;
 export const OBJECT_INSTANCED_MESH_COMPOSITION_METADATA_MAX_LENGTH = 512;
 
 // In code points. Text past what a label's patch holds is cut off at its bottom (see LabelText).

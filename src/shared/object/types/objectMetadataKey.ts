@@ -40,4 +40,7 @@ export const ObjectMetadataKeyEnumMap: Record<string, number> =
     FanColor: 16,
     // "1" on an AI agent's player, set by the server at spawn (see ServerUserManager.addUserToRoom). No signal may set it.
     AgentMark: 17,
+    // Which way a helper faces as the server plays it, shown to its room and never kept (see NpcFacingUtil). No signal
+    // may set it.
+    Facing: 18,
 }

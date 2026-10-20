@@ -18,7 +18,7 @@ import { AUTO_SELECTION_MAX_DISTANCE } from "../system/clientConstants";
 import ObjectSelection from "../graphics/types/gizmo/objectSelection";
 import ObjectUpdateUtil from "../../shared/object/util/objectUpdateUtil";
 import Vec3 from "../../shared/math/types/vec3";
-import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../shared/object/types/objectMetadataKey";
+import { ObjectMetadataKey } from "../../shared/object/types/objectMetadataKey";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 import Room from "../../shared/room/types/room";
 import ClientObjectUtil from "./util/clientObjectUtil";
@@ -349,8 +349,6 @@ const ClientObjectManager =
         const success = await waitUntilSignalProcessingReady("setObjectMetadataSignal",
             () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == signal.roomID);
         if (!success)
-            return;
-        if (signal.metadataKey == ObjectMetadataKeyEnumMap.QuarterTurns && NpcGameObject.isHeld(signal.objectId))
             return;
         ClientObjectManager.setObjectMetadata(signal.objectId, signal.metadataKey,
             signal.metadataValue, false, signal.transform);

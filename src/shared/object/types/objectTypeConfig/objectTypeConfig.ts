@@ -57,6 +57,8 @@ export default interface ObjectTypeConfig
                 yOffset: number,
                 checkLineOfSight: boolean,
                 prependUserNameToMessage: boolean,
+                // How wide its lines run, in characters, for a type whose messages run long. Narrow if unset.
+                widthInChars?: number,
             },
             // In-world label from the object's "Label" metadata, and a default ink (a "LabelColor" metadata
             // value wins). localTransform is the patch the text is drawn on, relative to the object's

@@ -7,6 +7,7 @@ import SelectionEditGizmoUtil from "../../graphics/util/selectionEditGizmoUtil";
 import WorldSpaceSelectionUtil from "../../graphics/util/worldSpaceSelectionUtil";
 import ClientObjectManager from "../../object/clientObjectManager";
 import GameObject from "../../object/types/gameObject/gameObject";
+import NpcGameObject from "../../object/types/gameObject/npcGameObject";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 import ObjectScaleUtil from "../../../shared/object/util/objectScaleUtil";
@@ -88,6 +89,8 @@ function describeObject(gameObject: GameObject): Record<string, unknown>
         // Out-of-reach clicks silently do nothing.
         withinSelectRange: true,
         metadata: readMetadata(gameObject),
+        // The way an NPC's body faces as drawn, turning or not (see NpcFacingUtil).
+        ...(gameObject instanceof NpcGameObject ? {facing: gameObject.getDrawnFacing()} : {}),
     };
 }
 

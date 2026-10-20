@@ -93,6 +93,8 @@ const NpcObjectTypeConfig =
                 yOffset: 0.5 * PLAYER_HEIGHT,
                 checkLineOfSight: true,
                 prependUserNameToMessage: true,
+                // A helper's whole reply (see NPC_MESSAGE_MAX_LENGTH), in a few lines rather than a column.
+                widthInChars: 28,
             },
             playerProximityDetector: { // Keeps its body from clipping through the camera's view, as a player's does.
                 maxDist: 0.45,
