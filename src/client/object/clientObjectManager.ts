@@ -12,12 +12,13 @@ import SetObjectMetadataSignal from "../../shared/object/types/setObjectMetadata
 import SetObjectTransformSignal from "../../shared/object/types/setObjectTransformSignal";
 import PeriodicTransformReceiver from "./components/periodicTransformReceiver";
 import VoxelGameObject from "./types/gameObject/voxelGameObject";
+import NpcGameObject from "./types/gameObject/npcGameObject";
 import { nearbyObjectSelectorObservable, objectEditObservable, objectSelectionObservable } from "../system/clientObservables";
 import { AUTO_SELECTION_MAX_DISTANCE } from "../system/clientConstants";
 import ObjectSelection from "../graphics/types/gizmo/objectSelection";
 import ObjectUpdateUtil from "../../shared/object/util/objectUpdateUtil";
 import Vec3 from "../../shared/math/types/vec3";
-import { ObjectMetadataKey } from "../../shared/object/types/objectMetadataKey";
+import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../shared/object/types/objectMetadataKey";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 import Room from "../../shared/room/types/room";
 import ClientObjectUtil from "./util/clientObjectUtil";
@@ -46,6 +47,10 @@ const ClientObjectManager =
             return playerByUserID[user.id];
         console.error(`Failed to fetch the user data (env = ${JSON.stringify(App.getEnv())})`);
         return undefined;
+    },
+    getPlayerOfUser: (userID: string): GameObject | undefined =>
+    {
+        return playerByUserID[userID];
     },
     // Selects the attached object nearest a position that this user may select, no further off than
     // AUTO_SELECTION_MAX_DISTANCE, and returns whether it did (see nearbyObjectSelectorObservable).
@@ -326,6 +331,8 @@ const ClientObjectManager =
         // update moves them.
         else if (App.getCurrentRoom()?.objectById[signal.objectId] == undefined)
             return;
+        if (NpcGameObject.isHeld(signal.objectId))
+            return;
         ClientObjectManager.setObjectTransform(signal.objectId, signal.transform,
             signal.ignorePhysics, false);
 
@@ -342,6 +349,8 @@ const ClientObjectManager =
         const success = await waitUntilSignalProcessingReady("setObjectMetadataSignal",
             () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == signal.roomID);
         if (!success)
+            return;
+        if (signal.metadataKey == ObjectMetadataKeyEnumMap.QuarterTurns && NpcGameObject.isHeld(signal.objectId))
             return;
         ClientObjectManager.setObjectMetadata(signal.objectId, signal.metadataKey,
             signal.metadataValue, false, signal.transform);

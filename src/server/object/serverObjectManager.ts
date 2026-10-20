@@ -44,7 +44,7 @@ const ServerObjectManager =
         }
 
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
-        socketRoomContext.multicastSignal("addObjectSignal", obj, user.id);
+        socketRoomContext.multicastSignalFromUser("addObjectSignal", obj, socketUserContext);
         return true;
     },
     onRemoveObjectSignalReceived: (socketUserContext: UserContext, signal: RemoveObjectSignal): boolean =>
@@ -66,7 +66,7 @@ const ServerObjectManager =
         }
 
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
-        socketRoomContext.multicastSignal("removeObjectSignal", signal, user.id);
+        socketRoomContext.multicastSignalFromUser("removeObjectSignal", signal, socketUserContext);
         return true;
     },
     // The server's own adds and removes (a joining user's player, say), made for owner and announced to the
@@ -129,7 +129,7 @@ const ServerObjectManager =
         }
         else
         {
-            socketRoomContext.multicastSignal("setObjectTransformSignal", signal, user.id);
+            socketRoomContext.multicastSignalFromUser("setObjectTransformSignal", signal, socketUserContext);
         }
     },
     onSetObjectMetadataSignalReceived: (socketUserContext: UserContext, signal: SetObjectMetadataSignal) =>
@@ -163,7 +163,7 @@ const ServerObjectManager =
         // Broadcast to other clients
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         if (socketRoomContext)
-            socketRoomContext.multicastSignal("setObjectMetadataSignal", signal, user.id);
+            socketRoomContext.multicastSignalFromUser("setObjectMetadataSignal", signal, socketUserContext);
     },
 }
 

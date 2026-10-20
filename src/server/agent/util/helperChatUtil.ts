@@ -6,11 +6,15 @@ import { HELPER_DAILY_BUDGET_DOLLARS, HELPER_MAX_REPLIES_PER_AGENT_PER_HOUR, HEL
 import DBHelperSpendingUtil from "../../db/util/dbHelperSpendingUtil";
 import { HELPER_GUIDE } from "../data/helperGuide";
 import { HelperChatRefusal } from "../types/helperChatRefusal";
+import HelperChatTurn from "../types/helperChatTurn";
+import HelperChatUsage from "../types/helperChatUsage";
+import HelperConversation from "../types/helperConversation";
+import HelperIdentity from "../types/helperIdentity";
 
-// What the Helper says when someone talks to it, from Claude (see HelperAgentUtil). Each reply is paid for, so they
-// are paid from a daily budget in dollars, worked out from the tokens each one took, and limited per person an hour;
-// kept short; and asked for only with what the reply needs: the rules and the guide (cached), and the person's own
-// recent lines.
+// What a helper says when someone talks to it, from Claude (see HelperAgentUtil). Each reply is paid for, so they are
+// paid from a daily budget in dollars, worked out from the tokens each one took, and limited per person an hour, across
+// every helper; kept short; and asked for only with what the reply needs: the rules and the guide (cached, the same for
+// every helper), who the helper is, and the person's own recent lines with it.
 
 // Another base (a proxy, or a stand-in on a local stack) may be named as the Anthropic SDKs allow.
 const API_BASE_URL = process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com";
@@ -30,12 +34,14 @@ const SAVE_INTERVAL_MS = 30_000;
 const LOAD_RETRY_MS = MINUTE_IN_MS;
 const BUDGET_MICRO_DOLLARS = HELPER_DAILY_BUDGET_DOLLARS * 1_000_000;
 
-const SYSTEM_PROMPT = `You are Helper, ThingsPool's AI guide. You stand near the door of the main hub, the public room
-newcomers arrive in, and chat with whoever comes by, people and AI agents, in speech bubbles.
+const RULES = `You are one of ThingsPool's AI guides: a character standing in one of its rooms, who chats with whoever
+comes by, people and AI agents, in speech bubbles. Your name and where you stand come after the guide below.
 
 How you talk:
 - Very short: one or two short sentences, at most ${MAX_REPLY_CHARS - 60} characters in all. Plain text only: no
   markdown, lists or emoji.
+- Visitors were already welcomed in your own words as they came near, and told who you are: don't welcome them
+  again or introduce yourself, just answer what they said.
 - Warm, with simple words, since many people read English as a second language. Answer in the language the person
   writes in.
 - You are an AI, and say so whenever it matters. Never claim to be a person.
@@ -52,12 +58,10 @@ screen, and their manual is https://thingspool.net/skill.md.
 ${HELPER_GUIDE}
 </guide>`;
 
-type Turn = {role: "user" | "assistant", content: string};
-type Conversation = {turns: Turn[], lastAt: number, replyTimes: number[]};
-type Usage = {input_tokens?: number, output_tokens?: number, cache_creation_input_tokens?: number,
-    cache_read_input_tokens?: number};
-
-const conversationsByUserID = new Map<string, Conversation>();
+// Each helper's talk with each person, by the helper's key and the person's id.
+const conversations = new Map<string, HelperConversation>();
+// When each person was answered, by any helper, within the hour.
+const replyTimesByUserID = new Map<string, number[]>();
 // The day (UTC) being paid for: what was spent, from what was saved once the day's spending was read (loaded), plus
 // what was spent since, of which what isn't saved yet.
 const day = {date: "", loaded: false, loadTriedAt: -Infinity, spentMicroDollars: 0, unsavedMicroDollars: 0, savedAt: 0,
@@ -77,27 +81,27 @@ const HelperChatUtil =
         await keepDay(now);
         if (!day.loaded || day.spentMicroDollars >= BUDGET_MICRO_DOLLARS)
             return "dayLimit";
-        const conversation = conversationsByUserID.get(userID);
         const hourlyLimit = isAgent ? HELPER_MAX_REPLIES_PER_AGENT_PER_HOUR : HELPER_MAX_REPLIES_PER_PERSON_PER_HOUR;
-        if (conversation != undefined && conversation.replyTimes.filter(at => now - at < HOUR_IN_MS).length >= hourlyLimit)
+        if ((replyTimesByUserID.get(userID) ?? []).filter(at => now - at < HOUR_IN_MS).length >= hourlyLimit)
             return "hourlyLimit";
         return undefined;
     },
-    // The Helper's answer to a line said to it ("Name: ..."), or undefined if none could be had (see getRefusal,
-    // which callers ask first).
-    reply: async (userID: string, line: string): Promise<string | undefined> =>
+    // A helper's answer to a line said to it ("Name: ..."), or undefined if none could be had (see getRefusal, which
+    // callers ask first).
+    reply: async (helper: HelperIdentity, userID: string, line: string): Promise<string | undefined> =>
     {
         const now = Date.now();
-        let conversation = conversationsByUserID.get(userID);
+        const key = `${helper.key}\n${userID}`;
+        let conversation = conversations.get(key);
         if (conversation == undefined || now - conversation.lastAt > CONVERSATION_TTL_MS)
-            conversationsByUserID.set(userID, conversation = {turns: [], lastAt: now, replyTimes: []});
+            conversations.set(key, conversation = {turns: [], lastAt: now});
         conversation.lastAt = now;
-        conversation.replyTimes = conversation.replyTimes.filter(at => now - at < HOUR_IN_MS);
-        conversation.replyTimes.push(now);
+        replyTimesByUserID.set(userID, [...(replyTimesByUserID.get(userID) ?? []).filter(at => now - at < HOUR_IN_MS),
+            now]);
         conversation.turns.push({role: "user", content: line});
         ++day.replies;
 
-        const text = await ask(conversation.turns);
+        const text = await ask(helper, conversation.turns);
         if (text == undefined)
         {
             conversation.turns.pop();
@@ -136,7 +140,8 @@ const HelperChatUtil =
     // Forgets every talk and the day (for tests).
     reset: (): void =>
     {
-        conversationsByUserID.clear();
+        conversations.clear();
+        replyTimesByUserID.clear();
         Object.assign(day, {date: "", loaded: false, loadTriedAt: -Infinity, spentMicroDollars: 0,
             unsavedMicroDollars: 0, savedAt: 0, replies: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0,
             cacheWriteTokens: 0});
@@ -146,8 +151,10 @@ const HelperChatUtil =
     },
 }
 
-async function ask(turns: Turn[]): Promise<string | undefined>
+async function ask(helper: HelperIdentity, turns: HelperChatTurn[]): Promise<string | undefined>
 {
+    const identity = (helper.name.length > 0 ? `Your name is ${helper.name}.` : "You have no name: you are an AI guide.")
+        + ` You stand in ${helper.place}.`;
     try
     {
         const response = await fetch(`${API_BASE_URL}/v1/messages`, {
@@ -158,14 +165,16 @@ async function ask(turns: Turn[]): Promise<string | undefined>
             body: JSON.stringify({
                 model: HELPER_MODEL,
                 max_tokens: MAX_OUTPUT_TOKENS,
-                system: [{type: "text", text: SYSTEM_PROMPT, cache_control: {type: "ephemeral"}}],
+                // The model thinks by default, out of the same max_tokens, which could leave a reply cut off unsaid.
+                thinking: {type: "disabled"},
+                system: [{type: "text", text: RULES, cache_control: {type: "ephemeral"}}, {type: "text", text: identity}],
                 // Starting with the person, as the API asks, even once the oldest lines are forgotten.
                 messages: turns.slice(turns.findIndex(turn => turn.role == "user")),
             }),
         });
         if (!response.ok)
             throw new Error(`${response.status} ${(await response.text()).slice(0, 300)}`);
-        const data = await response.json() as {content: {type: string, text?: string}[], usage?: Usage};
+        const data = await response.json() as {content: {type: string, text?: string}[], usage?: HelperChatUsage};
         pay(data.usage ?? {});
         const text = data.content.filter(block => block.type == "text").map(block => block.text ?? "").join(" ")
             .replace(/\s+/g, " ").trim();
@@ -183,7 +192,7 @@ async function ask(turns: Turn[]): Promise<string | undefined>
 }
 
 // What a reply cost, from the tokens the API says it took: a token at a dollar a million is a millionth of a dollar.
-function pay(usage: Usage): void
+function pay(usage: HelperChatUsage): void
 {
     const input = usage.input_tokens ?? 0;
     const output = usage.output_tokens ?? 0;

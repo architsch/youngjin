@@ -465,6 +465,24 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
             expect((await EmulatorDB.readStored(COLLECTION_USERS, "u1"))?.loginCount).toBe(5);
         });
 
+        it("counts a visit after a day away as a new login, which the visit reads the same before its update is "
+            + "written as after, and a refresh soon after as the same one", async () => {
+            await EmulatorDB.seed(COLLECTION_USERS, { u1: currentUser({ loginCount: 3,
+                lastLoginAt: Date.now() - 2 * 24 * 60 * 60 * 1000 }) });
+            const before = (await DBUserUtil.lookUpUserById("u1")).data[0];
+            expect(DBUserUtil.getLoginCount(before)).toBe(4);
+
+            await DBUserUtil.updateLastLogin("u1", before.lastLoginAt);
+            const after = await EmulatorDB.readStored(COLLECTION_USERS, "u1") as DBUser;
+            expect(after.loginCount).toBe(4);
+            expect(DBUserUtil.getLoginCount(after)).toBe(4);
+
+            await DBUserUtil.updateLastLogin("u1", after.lastLoginAt);
+            const refreshed = await EmulatorDB.readStored(COLLECTION_USERS, "u1") as DBUser;
+            expect(refreshed.loginCount).toBe(4);
+            expect(DBUserUtil.getLoginCount(refreshed)).toBe(4);
+        });
+
         it("migrates an outdated row and applies the update in the same write", async () => {
             await EmulatorDB.seed(COLLECTION_USERS, {
                 u1: { version: 0, userName: "old", userType: UserTypeEnumMap.Guest, email: "",
@@ -748,6 +766,21 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
             finally { logs.restore(); }
 
             expect((await EmulatorDB.readStored(COLLECTION_ROOMS, "r1"))?.roomName).toBe("untouched");
+        });
+
+        it("counts no read the cache answers, since it costs Firestore nothing", async () => {
+            await EmulatorDB.seed(COLLECTION_ROOMS, { r1: currentRoom({ roomName: "cached" }) });
+            const logs = EmulatorDB.captureLogs();
+            try {
+                expect((await selectRooms().where("id", "==", "r1").run()).success).toBe(true);
+                for (let i = 0; i < 400; ++i)
+                    expect((await selectRooms().where("id", "==", "r1").run()).data[0].roomName).toBe("cached");
+
+                const write = await new DBQuery<DBRow>().update(COLLECTION_ROOMS)
+                    .set({ roomName: "changed" }).where("id", "==", "r1").run();
+                expect(write.success).toBe(true);
+            }
+            finally { logs.restore(); }
         });
 
         it("accepts writes again once the window is reset", async () => {
@@ -1117,7 +1150,7 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
 
     // ─── The Helper's spending (written directly, as acquisition counters are) ──
 
-    describe("the Helper's spending", () =>
+    describe("helpers' spending", () =>
     {
         it("adds up by day, two additions at once included, and reads an untouched day as nothing", async () => {
             const date = "2099-12-31";

@@ -48,7 +48,7 @@ export default class PlayerController extends GameObjectComponent
         if (!this.rigidbody)
             throw new Error("PlayerController requires Rigidbody component");
 
-        this.playerCamera.onSpawn(this, this.pointerInput);
+        this.playerCamera.onSpawn(this.gameObject, this.pointerInput);
         this.pointerInput.onSpawn(this);
         this.keyInput.onSpawn(this);
     }
@@ -78,7 +78,7 @@ export default class PlayerController extends GameObjectComponent
 
     async onDespawn(): Promise<void>
     {
-        this.playerCamera.onDespawn(this);
+        this.playerCamera.onDespawn();
         this.pointerInput.onDespawn(this);
         this.keyInput.onDespawn(this);
     }
@@ -90,7 +90,7 @@ export default class PlayerController extends GameObjectComponent
 
         this.pointerInput.update(deltaTime, this);
         this.keyInput.update(deltaTime, this);
-        this.proxUpdater.update(deltaTime, this);
+        this.proxUpdater.update(deltaTime, this.gameObject);
 
         if (!this.fullyEntered)
         {
@@ -154,7 +154,7 @@ export default class PlayerController extends GameObjectComponent
         if (ongoingClientProcessExists())
             return;
 
-        this.playerCamera.update(deltaTime, this, this.rigidbody!.getImposedDisplacement(),
+        this.playerCamera.update(deltaTime, this.gameObject, this.rigidbody!.getImposedDisplacement(),
             this.rigidbody!.isUnderForce());
     }
 }

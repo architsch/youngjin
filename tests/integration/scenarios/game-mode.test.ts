@@ -30,6 +30,7 @@ vi.mock("../../../src/client/app", () => ({
         getVoxelQuads: vi.fn(),
         getUser: vi.fn(),
         getEnv: vi.fn(),
+        getWatchedUserID: () => "",
     },
 }));
 
@@ -65,7 +66,6 @@ import * as THREE from "three";
 import App from "../../../src/client/app";
 import GraphicsManager from "../../../src/client/graphics/graphicsManager";
 import GameObject from "../../../src/client/object/types/gameObject/gameObject";
-import PlayerController from "../../../src/client/object/components/playerController";
 import PlayerCamera from "../../../src/client/object/components/helpers/player/playerCamera";
 import FirstPersonCameraPose from "../../../src/client/object/components/helpers/player/firstPersonCameraPose";
 import PlayerPointerInput from "../../../src/client/object/components/helpers/player/playerPointerInput";
@@ -304,7 +304,7 @@ describe("a click in play mode", () => {
     const FALL_HEIGHT = 0.8;
 
     let player: THREE.Object3D;
-    let controller: PlayerController;
+    let playerObject: GameObject;
     let pointerInput: {dragDelta: THREE.Vector2, viewScale: number, clickedPoint: THREE.Vector3 | undefined};
     let playerCamera: PlayerCamera;
 
@@ -312,7 +312,7 @@ describe("a click in play mode", () => {
     function frame(clickedPoint?: THREE.Vector3): void
     {
         pointerInput.clickedPoint = clickedPoint;
-        playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
+        playerCamera.update(1, playerObject, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
     }
 
     /** How far up the view a point shows, in NDC: 0 is the middle. */
@@ -332,7 +332,7 @@ describe("a click in play mode", () => {
     function shortFrame(clickedPoint?: THREE.Vector3): void
     {
         pointerInput.clickedPoint = clickedPoint;
-        playerCamera.update(SHORT_FRAME, controller, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
+        playerCamera.update(SHORT_FRAME, playerObject, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
     }
 
     /** The user walking straight ahead (toward -z, the way he faces) at a speed, per second, for a while. */
@@ -378,15 +378,15 @@ describe("a click in play mode", () => {
     beforeEach(() => {
         player = new THREE.Object3D();
         player.position.set(10.5, 0.5 * PLAYER_HEIGHT, 10.5);
-        controller = { gameObject: { obj: player, position: player.position } } as unknown as PlayerController;
+        playerObject = { obj: player, position: player.position } as unknown as GameObject;
         pointerInput = {dragDelta: new THREE.Vector2(), viewScale: 1, clickedPoint: undefined};
         playerCamera = new PlayerCamera();
-        playerCamera.onSpawn(controller, pointerInput as unknown as PlayerPointerInput);
+        playerCamera.onSpawn(playerObject, pointerInput as unknown as PlayerPointerInput);
         frame();
     });
 
     afterEach(() => {
-        playerCamera.onDespawn(controller);
+        playerCamera.onDespawn();
         player.remove(GraphicsManager.getCamera());
     });
 
@@ -429,7 +429,7 @@ describe("a click in play mode", () => {
         const push = {x: 0, y: 0, z: -BRISK_WALK * SHORT_FRAME};
         player.position.z += push.z;
         pointerInput.clickedPoint = undefined;
-        playerCamera.update(SHORT_FRAME, controller, push, NO_FORCE);
+        playerCamera.update(SHORT_FRAME, playerObject, push, NO_FORCE);
         frame();
 
         // Still trailing the push by a hair (see PlayerCamera).
@@ -507,7 +507,7 @@ describe("a click in play mode", () => {
             {
                 player.position.y = standing + lift;
                 for (let settle = 0; settle < 2; ++settle)
-                    playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT, underForce);
+                    playerCamera.update(1, playerObject, NO_IMPOSED_DISPLACEMENT, underForce);
                 pitches.push(pitch());
             }
             player.position.y = standing;
@@ -533,7 +533,7 @@ describe("a click in play mode", () => {
         const turnInShortFrame = (underForce: boolean): number => {
             const before = camera.quaternion.clone();
             pointerInput.clickedPoint = undefined;
-            playerCamera.update(SHORT_FRAME, controller, NO_IMPOSED_DISPLACEMENT, underForce);
+            playerCamera.update(SHORT_FRAME, playerObject, NO_IMPOSED_DISPLACEMENT, underForce);
             return before.angleTo(camera.quaternion);
         };
 
@@ -543,7 +543,7 @@ describe("a click in play mode", () => {
         player.position.y += FALL_HEIGHT;
         const firstTurns = [turnInShortFrame(true), turnInShortFrame(true), turnInShortFrame(true)];
         for (let settle = 0; settle < 3; ++settle)
-            playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT, true);
+            playerCamera.update(1, playerObject, NO_IMPOSED_DISPLACEMENT, true);
         const whole = start.angleTo(camera.quaternion);
         expect(whole).toBeGreaterThan(0.1);
         expect(firstTurns[0] / whole).toBeLessThan(0.5 * usualShare);
@@ -564,14 +564,14 @@ describe("a click in play mode", () => {
         const camera = GraphicsManager.getCamera();
         player.position.y += FALL_HEIGHT;
         for (let settle = 0; settle < 3; ++settle)
-            playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT, true);
+            playerCamera.update(1, playerObject, NO_IMPOSED_DISPLACEMENT, true);
 
         // The force over: how far the camera turns in each frame on, until it has long since caught up.
         const turns: number[] = [];
         for (let frames = 0; frames < 120; ++frames)
         {
             const before = camera.quaternion.clone();
-            playerCamera.update(FRAME, controller, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
+            playerCamera.update(FRAME, playerObject, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
             turns.push(before.angleTo(camera.quaternion));
         }
         const fastest = Math.max(...turns);
@@ -594,7 +594,7 @@ describe("the eye camera trailing a move the user didn't steer", () => {
     const FALL_TRAIL = 1;
 
     let player: THREE.Object3D;
-    let controller: PlayerController;
+    let playerObject: GameObject;
     let playerCamera: PlayerCamera;
 
     /** How far the camera is from its place at the eye. */
@@ -611,7 +611,7 @@ describe("the eye camera trailing a move the user didn't steer", () => {
         {
             const imposed = {x: 0, y: 0, z: -speed * FRAME};
             player.position.z += imposed.z;
-            playerCamera.update(FRAME, controller, imposed, NO_FORCE);
+            playerCamera.update(FRAME, playerObject, imposed, NO_FORCE);
             trails.push(trail());
         }
         return trails;
@@ -620,15 +620,15 @@ describe("the eye camera trailing a move the user didn't steer", () => {
     beforeEach(() => {
         player = new THREE.Object3D();
         player.position.set(10.5, 0.5 * PLAYER_HEIGHT, 28.5);
-        controller = { gameObject: { obj: player, position: player.position } } as unknown as PlayerController;
+        playerObject = { obj: player, position: player.position } as unknown as GameObject;
         const pointerInput = {dragDelta: new THREE.Vector2(), viewScale: 1, clickedPoint: undefined};
         playerCamera = new PlayerCamera();
-        playerCamera.onSpawn(controller, pointerInput as unknown as PlayerPointerInput);
-        playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
+        playerCamera.onSpawn(playerObject, pointerInput as unknown as PlayerPointerInput);
+        playerCamera.update(1, playerObject, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
     });
 
     afterEach(() => {
-        playerCamera.onDespawn(controller);
+        playerCamera.onDespawn();
         player.remove(GraphicsManager.getCamera());
     });
 
@@ -659,7 +659,7 @@ describe("the eye camera trailing a move the user didn't steer", () => {
             for (let frames = Math.round(seconds / FRAME); frames > 0; frames--)
             {
                 player.position.z -= speed * FRAME;
-                playerCamera.update(FRAME, controller, {x: 0, y: 0, z: -speed * FRAME}, NO_FORCE);
+                playerCamera.update(FRAME, playerObject, {x: 0, y: 0, z: -speed * FRAME}, NO_FORCE);
                 along.push(-camera.getWorldPosition(new THREE.Vector3()).z);
             }
         }
@@ -686,7 +686,7 @@ describe("the orbit while physics moves the user", () => {
     const BLOCK: AABB3 = {center: {x: 10.5, y: 0.25, z: 6.5}, halfSize: {x: 0.25, y: 0.25, z: 0.25}};
 
     let player: THREE.Object3D;
-    let controller: PlayerController;
+    let playerObject: GameObject;
     let playerCamera: PlayerCamera;
 
     function cameraPosition(): THREE.Vector3
@@ -703,7 +703,7 @@ describe("the orbit while physics moves the user", () => {
     function settle(): void
     {
         for (let i = 0; i < 3; i++)
-            playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
+            playerCamera.update(1, playerObject, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
     }
 
     /** The user bounced by a force for whole bounces, a frame at a time: where the camera is after each. */
@@ -717,7 +717,7 @@ describe("the orbit while physics moves the user", () => {
             const y = startY + BOUNCE_HEIGHT * Math.sin(2 * Math.PI * frame / (BOUNCE_PERIOD / FRAME));
             const imposed = {x: 0, y: y - player.position.y, z: 0};
             player.position.y = y;
-            playerCamera.update(FRAME, controller, imposed, true);
+            playerCamera.update(FRAME, playerObject, imposed, true);
             positions.push(cameraPosition());
         }
         return positions;
@@ -729,16 +729,16 @@ describe("the orbit while physics moves the user", () => {
         cameraModeObservable.set({type: "firstPerson"});
         player = new THREE.Object3D();
         player.position.set(10.5, 0.5 * PLAYER_HEIGHT + BOUNCE_HEIGHT, 12.5);
-        controller = { gameObject: { obj: player, position: player.position } } as unknown as PlayerController;
+        playerObject = { obj: player, position: player.position } as unknown as GameObject;
         const pointerInput = {dragDelta: new THREE.Vector2(), viewScale: 1, clickedPoint: undefined};
         playerCamera = new PlayerCamera();
-        playerCamera.onSpawn(controller, pointerInput as unknown as PlayerPointerInput);
+        playerCamera.onSpawn(playerObject, pointerInput as unknown as PlayerPointerInput);
         settle();
     }
 
     function despawn(): void
     {
-        playerCamera.onDespawn(controller);
+        playerCamera.onDespawn();
         player.remove(GraphicsManager.getCamera());
     }
 
@@ -758,7 +758,7 @@ describe("the orbit while physics moves the user", () => {
 
         // Turned about as well, as when the user is set down facing another way: still nothing.
         player.rotateY(1);
-        playerCamera.update(FRAME, controller, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
+        playerCamera.update(FRAME, playerObject, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
         expect(cameraPosition().distanceTo(position)).toBeLessThan(1e-9);
         expect(cameraFacing().angleTo(facing)).toBeLessThan(1e-9);
     });
@@ -774,7 +774,7 @@ describe("the orbit while physics moves the user", () => {
             if (bounced)
                 return cameraThroughBounces(3);
             return Array.from({length: frames}, () => {
-                playerCamera.update(FRAME, controller, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
+                playerCamera.update(FRAME, playerObject, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
                 return cameraPosition();
             });
         };
@@ -817,7 +817,7 @@ describe("the orbit while physics moves the user", () => {
         const eye = cameraPosition();
         expect(eye.distanceTo(orbiting)).toBeGreaterThan(5);
         cameraModeObservable.set({type: "orbit", target: BLOCK, minDistance: 5});
-        playerCamera.update(FRAME, controller, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
+        playerCamera.update(FRAME, playerObject, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
 
         // One frame on, it has only set off from the eye.
         expect(cameraPosition().distanceTo(eye)).toBeLessThan(0.2 * eye.distanceTo(orbiting));
@@ -1031,14 +1031,14 @@ describe("the camera as edit mode opens", () => {
     {
         const player = new THREE.Object3D();
         player.position.set(x, 0.5 * PLAYER_HEIGHT, z);
-        const controller = { gameObject: { obj: player, position: player.position } } as unknown as PlayerController;
+        const playerObject = { obj: player, position: player.position } as unknown as GameObject;
         const pointerInput = { dragDelta: new THREE.Vector2(), viewScale: 1 } as unknown as PlayerPointerInput;
         const playerCamera = new PlayerCamera();
-        playerCamera.onSpawn(controller, pointerInput);
+        playerCamera.onSpawn(playerObject, pointerInput);
         try
         {
             // A whole second eases the camera all the way to its pose.
-            playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
+            playerCamera.update(1, playerObject, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
             const before = GraphicsManager.getCamera().getWorldPosition(new THREE.Vector3());
 
             const eyeLayer = COLLISION_LAYER_MIN + Math.floor(before.y / COLLISION_LAYER_HEIGHT);
@@ -1048,11 +1048,11 @@ describe("the camera as edit mode opens", () => {
             GameModeUtil.enterEditMode(makeCharacter(), lookingAt(hitOnVoxelQuad(quadIndex)));
             expect(voxelQuadSelectionObservable.peek()?.quadIndex).toBe(quadIndex);
 
-            playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
+            playerCamera.update(1, playerObject, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
             if (distanceRange != undefined)
             {
                 orbitCameraDistanceRangeRequestObservable.set(distanceRange);
-                playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
+                playerCamera.update(1, playerObject, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
             }
 
             const blockCenter = new THREE.Vector3(VoxelQueryUtil.getWorldXAtVoxelColCenter(wallCol),
@@ -1064,7 +1064,7 @@ describe("the camera as edit mode opens", () => {
         }
         finally
         {
-            playerCamera.onDespawn(controller);
+            playerCamera.onDespawn();
             player.remove(GraphicsManager.getCamera());
         }
     }
@@ -1142,12 +1142,12 @@ describe("the orbit following the selection to another face", () => {
         const player = new THREE.Object3D();
         player.position.set(VoxelQueryUtil.getWorldXAtVoxelColCenter(START_COL), 0.5 * PLAYER_HEIGHT,
             WALL_FACE_Z + 5);
-        const controller = { gameObject: { obj: player, position: player.position } } as unknown as PlayerController;
+        const playerObject = { obj: player, position: player.position } as unknown as GameObject;
         const pointerInput = { dragDelta: new THREE.Vector2(), viewScale: 1 } as unknown as PlayerPointerInput;
         const playerCamera = new PlayerCamera();
-        playerCamera.onSpawn(controller, pointerInput);
+        playerCamera.onSpawn(playerObject, pointerInput);
         // A whole second eases the camera all the way to its pose.
-        const settleCamera = () => playerCamera.update(1, controller, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
+        const settleCamera = () => playerCamera.update(1, playerObject, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
         try
         {
             settleCamera();
@@ -1163,7 +1163,7 @@ describe("the orbit following the selection to another face", () => {
         }
         finally
         {
-            playerCamera.onDespawn(controller);
+            playerCamera.onDespawn();
             player.remove(GraphicsManager.getCamera());
         }
     }

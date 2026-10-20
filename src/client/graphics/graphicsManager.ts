@@ -45,6 +45,8 @@ const pixelRatioMinChange = 0.02;
 let smoothedFrameTime = frameTimeLowWater;
 let lastFrameTime = 0;
 let timeSincePixelRatioChange = 0;
+// Set on a page whose frames are pictures (see holdFullResolution).
+let fullResolutionHeld = false;
 
 let gameCanvasRoot: HTMLElement;
 let overlayCanvasRoot: HTMLElement;
@@ -122,6 +124,16 @@ const GraphicsManager =
     getScene: (): THREE.Scene =>
     {
         return scene;
+    },
+    // Draws at full resolution however slowly frames come, for a page whose frames are pictures (an agent's camera;
+    // see WatchedPlayerCameraUtil): a sharp screenshot matters there, and a high frame rate doesn't.
+    holdFullResolution: (): void =>
+    {
+        if (fullResolutionHeld)
+            return;
+        fullResolutionHeld = true;
+        currPixelRatio = maxPixelRatio;
+        gameRenderer?.setPixelRatio(currPixelRatio);
     },
     // Whether adaptive resolution has nothing left to give (see updatePixelRatio), so other costs should
     // yield instead (e.g. particle density).
@@ -289,6 +301,8 @@ const GraphicsManager =
 // at the floor points at the CPU.
 function updatePixelRatio()
 {
+    if (fullResolutionHeld)
+        return;
     const now = performance.now() * 0.001;
     const frameTime = (lastFrameTime > 0) ? now - lastFrameTime : frameTimeLowWater;
     lastFrameTime = now;

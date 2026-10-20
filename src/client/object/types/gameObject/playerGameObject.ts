@@ -9,6 +9,7 @@ import AddObjectSignal from "../../../../shared/object/types/addObjectSignal";
 import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
 import AdminPrefsUtil from "../../../../shared/object/util/adminPrefsUtil";
+import App from "../../../app";
 
 const playerHalfHeightWithMargin = 0.5 * PLAYER_HEIGHT + 1;
 const playerRadiusWithMargin = PLAYER_RADIUS_XZ + 1;
@@ -41,17 +42,10 @@ export default class PlayerGameObject extends GameObject
         this.refreshOtherPlayerVisibility();
     }
 
-    // An AI agent the server runs itself is marked as one (see ObjectMetadataKeyEnumMap.AgentMark).
-    getSpeakerName(): string
-    {
-        const name = super.getSpeakerName();
-        return this.params.metadata[ObjectMetadataKeyEnumMap.AgentMark]?.str == "2" ? `${name} (AI)` : name;
-    }
-
     // Recomputed per frame, since the camera eases toward its pose (see refreshOwnVisibility).
     update(_deltaTime: number)
     {
-        if (this.isMine())
+        if (this.isSeenThrough())
             this.refreshOwnVisibility();
     }
 
@@ -76,17 +70,17 @@ export default class PlayerGameObject extends GameObject
         this.refreshOtherPlayerVisibility();
     }
 
-    // A ghost's body and bubble are hidden from everyone (see AdminPrefs). The user's own character uses
+    // A ghost's body and bubble are hidden from everyone (see AdminPrefs). The character the camera is at uses
     // refreshOwnVisibility instead.
     private refreshOtherPlayerVisibility()
     {
-        if (this.isMine())
+        if (this.isSeenThrough())
             return;
         this.instancedMeshComposer.setHidden(this.ghostMode || this.tooCloseToCamera);
         this.speechBubble.setHidden(this.ghostMode);
     }
 
-    // The user's own body (and bubble) is shown when it isn't a ghost, no scripted step hides it, the mode
+    // The body (and bubble) the camera is at is shown when it isn't a ghost, no scripted step hides it, the mode
     // isn't first-person and the camera isn't inside the body. The body is never hidden as an occluder
     // (see OrbitOccluder), and orbiting one's own character shows it unless a step hides it.
     private refreshOwnVisibility()
@@ -97,6 +91,13 @@ export default class PlayerGameObject extends GameObject
             this.cameraIsInsideOwnBody();
         this.instancedMeshComposer.setHidden(hidden);
         this.speechBubble.setHidden(hidden);
+    }
+
+    // Whose eyes the camera is at: the user's own player's, or the agent's a camera page watches (see
+    // WatchedPlayerCameraUtil).
+    private isSeenThrough(): boolean
+    {
+        return this.isMine() || this.params.sourceUserID == App.getWatchedUserID();
     }
 
     private cameraIsInsideOwnBody(): boolean

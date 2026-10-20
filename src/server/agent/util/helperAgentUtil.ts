@@ -1,55 +1,72 @@
 import Vec3 from "../../../shared/math/types/vec3";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
+import ObjectTransform from "../../../shared/object/types/objectTransform";
+import SetObjectTransformSignal from "../../../shared/object/types/setObjectTransformSignal";
+import SetObjectMetadataSignal from "../../../shared/object/types/setObjectMetadataSignal";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
-import DoorObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
-import { DoorTypeEnumMap } from "../../../shared/object/types/doorType";
-import { UserTypeEnumMap } from "../../../shared/user/types/userType";
+import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
+import QuarterTurnsUtil from "../../../shared/object/util/quarterTurnsUtil";
+import LabelTextUtil from "../../../shared/object/util/labelTextUtil";
+import Room from "../../../shared/room/types/room";
+import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";
+import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 import VoxelPathUtil from "../../../shared/voxel/util/voxelPathUtil";
-import { HOUR_IN_MS, MINUTE_IN_MS, OBJECT_MESSAGE_MAX_LENGTH } from "../../../shared/system/sharedConstants";
+import EncodableData from "../../../shared/networking/types/encodableData";
+import { DAY_IN_MS, HOUR_IN_MS, MINUTE_IN_MS, OBJECT_MESSAGE_MAX_LENGTH } from "../../../shared/system/sharedConstants";
 import LogUtil from "../../../shared/system/util/logUtil";
 import ErrorUtil from "../../../shared/system/util/errorUtil";
-import DBUser from "../../db/types/row/dbUser";
-import DBUserUtil from "../../db/util/dbUserUtil";
-import DBSearchUtil from "../../db/util/dbSearchUtil";
 import ServerRoomManager from "../../room/serverRoomManager";
 import RoomPickerUtil from "../../room/util/roomPickerUtil";
 import ServerUserManager from "../../user/serverUserManager";
+import HoldObjectSignal from "../../../shared/object/types/holdObjectSignal";
+import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
+import UserContext from "../../sockets/types/userContext";
 import { FunnelMilestoneEnumMap } from "../../analytics/types/funnelMilestone";
-import { AGENT_ACQUISITION_SOURCE_PREFIX, HELPER_AGENT_NAME } from "../../system/serverConstants";
+import { HELPER_AGENT_NAME } from "../../system/serverConstants";
 import AgentUserContext from "../types/agentUserContext";
-import AgentEvent from "../types/agentEvent";
 import { HelperChatRefusal } from "../types/helperChatRefusal";
-import AgentPresenceUtil from "./agentPresenceUtil";
-import AgentToolUtil from "./agentToolUtil";
-import AgentBodyUtil from "./agentBodyUtil";
-import AgentRoomUtil from "./agentRoomUtil";
+import HelperPendingLines from "../types/helperPendingLines";
+import HelperState from "../types/helperState";
+import HelperIdentity from "../types/helperIdentity";
 import HelperChatUtil from "./helperChatUtil";
 
-// The Helper: the agent the server runs itself, so that a newcomer never arrives to an empty world. It stays near the
-// door of the hub newcomers land in first (see RoomPickerUtil.getFirstHubRoomID), moving with that hub when the order
-// changes; greets those on their first visit; and answers whoever talks to it nearby, or names it, people and agents
-// alike, through Claude (see HelperChatUtil). It plays by the same tools and rules as any agent, and people are shown
-// it is an AI (see ObjectMetadataKeyEnumMap.AgentMark).
+// Helpers: the NPCs an admin stands in multiplayer rooms (see NpcObjectTypeConfig), which the server plays as AI guides,
+// so that a newcomer never arrives to an empty world. Each keeps near where it was put, its home; greets each visitor as
+// they come near, once a login; and answers whoever talks to it nearby, or names it, people and agents alike, through
+// Claude (see HelperChatUtil). What it does is shown to the room and never kept: the room keeps it at home, so an admin
+// moving it moves its home. People are shown it is an AI (see NpcGameObject).
 
 const TICK_MS = 1000;
-const HUB_CHECK_INTERVAL_MS = 10_000;
-const POST_CHECK_INTERVAL_MS = 15_000;
-// Its post: this far into the room from the door, and this far to one side, out of the way of arrivals.
-const POST_DISTANCE = 3;
-const POST_SIDE_OFFSET = 1.5;
-// Walked back to once this far from it, or to face the door again once nobody has talked to it for this long.
-const POST_TOLERANCE = 1.5;
-const REFACE_DOOR_AFTER_MS = 30_000;
-// Someone this near is heard; someone farther off only when they name the Helper.
+const NPC_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Npc");
+const UP: Vec3 = {x: 0, y: 1, z: 0};
+// Someone this near on its own floor (feet within this height of its own) is heard, and greeted; anyone else in the
+// room is heard only when they name it.
 const HEARING_DISTANCE = 8;
-// A person's lines are answered together once they have paused this long.
+const SAME_FLOOR_HEIGHT = 1;
+// A person's lines are answered together once they have paused this long, and let go if still unanswered after this
+// long, by when whoever said them has likely moved on.
 const ANSWER_PAUSE_MS = 1500;
-// An arrival is greeted once it has stepped out of the doorway.
-const GREETING_DELAY_MS = 2500;
-// How long a bubble stays before the next of the same reply, so it can be read.
+const UNANSWERED_LINES_TTL_MS = MINUTE_IN_MS;
+// How long a bubble stays before the next, so it can be read; the last is taken down once it has been quiet this long.
 const MIN_BUBBLE_MS = 2500;
 const BUBBLE_MS_PER_CHAR = 55;
-// How often what the Helper spends is logged.
+const BUBBLE_CLEARED_AFTER_MS = 20_000;
+// A stroll, in world units a second.
+const WALK_SPEED = 2;
+// How far from home it goes: idly, and to meet someone talking to it from a little way off.
+const WANDER_RADIUS = 2.5;
+const LEASH_RADIUS = 5;
+const APPROACH_FROM = 3;
+const MEETING_DISTANCE = 1.5;
+// Idle at home this long between wanders, and away this long before it heads back (or, after a talk, this long after it).
+const WANDER_INTERVAL_MS = [20_000, 40_000];
+const WANDER_STAY_MS = [8_000, 15_000];
+const STAY_AFTER_TALK_MS = 30_000;
+// Still this long after an admin has moved it, or has let go of it.
+const FROZEN_AFTER_MOVE_MS = 10_000;
+const FROZEN_AFTER_RELEASE_MS = 3000;
+// Two positions this close are the same place.
+const SAME_PLACE = 0.05;
 const USAGE_LOG_INTERVAL_MS = HOUR_IN_MS;
 const FAILURE_LOG_INTERVAL_MS = MINUTE_IN_MS;
 const GUEST_NAME_PATTERN = /^guest-/i;
@@ -60,89 +77,59 @@ const REFUSAL_LINES: {[refusal in HelperChatRefusal]: string} = {
     hourlyLimit: "Let's take a little break. Try exploring, and talk to me again later!",
 };
 
-type PendingLines = {name: string, isAgent: boolean, firstVisit: boolean, lines: string[], lastAt: number};
-
+// By room and object id.
+const helpers = new Map<string, HelperState>();
 const state = {
-    account: undefined as DBUser | undefined,
-    ctx: undefined as AgentUserContext | undefined,
     timer: undefined as NodeJS.Timeout | undefined,
     ticking: false,
-    hubCheckedAt: -Infinity,
-    postCheckedAt: -Infinity,
     usageLoggedAt: Date.now(),
     failureLoggedAt: -Infinity,
-    walking: false,
-    facingDoor: false,
-    lastTalkAt: -Infinity,
-    greetings: [] as {name: string, dueAt: number}[],
-    linesByUserID: new Map<string, PendingLines>(),
-    answering: new Set<string>(),
-    bubbles: [] as string[],
-    nextBubbleAt: 0,
-    // When each person was last told why no reply came, by the reason.
+    // When each person was last told why no reply came, by the reason; any helper's telling counts.
     refusalToldAt: new Map<string, number>(),
 };
 
 const HelperAgentUtil =
 {
-    // Puts the Helper in its hub and keeps it there. Nothing is fatal: a Helper that can't start is logged and missed.
-    start: async (): Promise<void> =>
+    start: (): void =>
     {
-        state.account = await findOrCreateAccount();
-        if (state.account == undefined)
-        {
-            LogUtil.log("Helper couldn't start", {reason: "no account"}, "high", "error");
-            return;
-        }
-        await HelperAgentUtil.tick();
         state.timer = setInterval(() => void HelperAgentUtil.tick(), TICK_MS);
     },
     stop: async (): Promise<void> =>
     {
         clearInterval(state.timer);
         await HelperChatUtil.saveSpending(true);
-        if (state.ctx != undefined && !state.ctx.isClosed())
-            await AgentPresenceUtil.leave(state.ctx);
-        Object.assign(state, {account: undefined, ctx: undefined, timer: undefined, ticking: false,
-            hubCheckedAt: -Infinity, postCheckedAt: -Infinity, usageLoggedAt: Date.now(), walking: false,
-            facingDoor: false, lastTalkAt: -Infinity, greetings: [], bubbles: [], nextBubbleAt: 0});
-        state.linesByUserID.clear();
-        state.answering.clear();
+        helpers.clear();
         state.refusalToldAt.clear();
+        Object.assign(state, {timer: undefined, ticking: false, usageLoggedAt: Date.now(), failureLoggedAt: -Infinity});
     },
-    getContext: (): AgentUserContext | undefined => state.ctx,
-    // One beat of the Helper's life, every second.
+    // One beat of every helper's life, each second.
     tick: async (): Promise<void> =>
     {
-        if (state.ticking || state.account == undefined)
+        if (state.ticking)
             return;
         state.ticking = true;
         try
         {
             const now = Date.now();
-            const ctx = await stayPresent();
-            if (ctx == undefined)
-                return;
-            if (now - state.hubCheckedAt >= HUB_CHECK_INTERVAL_MS)
+            findHelpers(now);
+            for (const helper of helpers.values())
             {
-                state.hubCheckedAt = now;
-                await keepToFirstHub(ctx);
-            }
-            for (const event of ctx.inbox.take())
-                hear(ctx, event, now);
-            greetArrivals(now);
-            answerSpeakers(ctx, now);
-            await speakNextBubble(ctx, now);
-            if (now - state.postCheckedAt >= POST_CHECK_INTERVAL_MS)
-            {
-                state.postCheckedAt = now;
-                keepToPost(ctx, now);
+                const memory = ServerRoomManager.roomRuntimeMemories[helper.roomID];
+                releaseLeavers(helper, memory, now);
+                followHome(helper, memory.room, now);
+                tellNewcomers(helper, memory);
+                noticeVisitors(helper, memory, now);
+                greet(helper);
+                answerSpeakers(helper, now);
+                speakNextBubble(helper, now);
+                wander(helper, memory.room, now);
             }
             await HelperChatUtil.saveSpending();
             if (now - state.usageLoggedAt >= USAGE_LOG_INTERVAL_MS)
             {
                 state.usageLoggedAt = now;
                 LogUtil.log("Helper usage", HelperChatUtil.getUsageToday(), "low", "info");
+                forgetOldLogins(now);
             }
         }
         catch (err)
@@ -158,99 +145,238 @@ const HelperAgentUtil =
             state.ticking = false;
         }
     },
-}
-
-// Its own account: an agent under the reserved name, made the first time, with no key, so nothing else can play it.
-async function findOrCreateAccount(): Promise<DBUser | undefined>
-{
-    const found = await DBSearchUtil.users.withUserName(HELPER_AGENT_NAME);
-    if (!found.success)
-        return undefined;
-    const existing = found.data.find(row => row.userType == UserTypeEnumMap.Agent);
-    if (existing != undefined)
-        return existing;
-    const created = await DBUserUtil.createUser(HELPER_AGENT_NAME, UserTypeEnumMap.Agent, "", "",
-        `${AGENT_ACQUISITION_SOURCE_PREFIX}-helper`);
-    if (!created.success || created.data.length == 0)
-        return undefined;
-    return (await DBUserUtil.findUserById(created.data[0].id)) ?? undefined;
-}
-
-// Present, as an agent's requests keep it, coming back if it was taken out (say, when its room was reloaded).
-async function stayPresent(): Promise<AgentUserContext | undefined>
-{
-    if (state.ctx == undefined || state.ctx.isClosed() || !ServerUserManager.hasUser(state.ctx.user.id))
+    // Walking helpers take their steps, from SocketsServer's flush, so each step goes out with it.
+    stepAll: (seconds: number): void =>
     {
-        state.ctx = await AgentPresenceUtil.attend(state.account as DBUser);
-        state.hubCheckedAt = -Infinity;
-        state.facingDoor = false;
-    }
-    state.ctx?.noteRequest();
-    return state.ctx;
-}
-
-async function keepToFirstHub(ctx: AgentUserContext): Promise<void>
-{
-    const firstHubRoomID = RoomPickerUtil.getFirstHubRoomID();
-    if (firstHubRoomID.length > 0 && ServerRoomManager.currentRoomIDByUserID[ctx.user.id] != firstHubRoomID)
+        for (const helper of helpers.values())
+        {
+            if (helper.path.length > 0)
+                step(helper, seconds);
+        }
+    },
+    // A line someone said, as SocketsServer dispatched it (see UserSignalDispatchUtil): for a helper they named, else
+    // the nearest one in earshot.
+    hear: (userID: string, signal: SetObjectMetadataSignal): void =>
     {
-        await AgentToolUtil.travel(ctx, firstHubRoomID);
-        state.facingDoor = false;
-        state.postCheckedAt = -Infinity;
-    }
-}
-
-// Newcomers, agents among them, are greeted with fixed words; whoever talks to it is answered, each within an hourly
-// limit of their own (see HelperChatUtil.getRefusal).
-function hear(ctx: AgentUserContext, event: AgentEvent, now: number): void
-{
-    if (event.who == undefined)
-        return;
-    if (event.kind == "arrival")
-    {
-        if (isOnFirstVisit(ctx, event.who))
-            state.greetings.push({name: event.who, dueAt: now + GREETING_DELAY_MS});
-    }
-    else if (event.kind == "speech" && (event.text ?? "").length > 0)
-    {
-        const userID = findUserID(ctx, event.who);
-        if (userID == undefined || !(isNear(ctx, userID) || /\bhelper\b/i.test(event.text as string)))
+        const player = ServerUserManager.getPlayerObject(userID);
+        const roomID = ServerRoomManager.currentRoomIDByUserID[userID];
+        const text = signal.metadataValue.trim();
+        if (player == undefined || player.objectId != signal.objectId || roomID == undefined || text.length == 0)
             return;
-        const pending = state.linesByUserID.get(userID) ?? {name: event.who, isAgent: event.whoIsAgent == true,
-            firstVisit: isOnFirstVisit(ctx, event.who), lines: [], lastAt: now};
-        pending.lines.push(event.text as string);
+        const inRoom = [...helpers.values()].filter(helper => helper.roomID == roomID);
+        const named = inRoom.find(helper => helper.name.length > 0 && namedIn(text, helper.name));
+        const nearest = inRoom.map(helper => ({helper, distance: distanceAcross(player.transform.pos, helper.at)}))
+            .filter(({helper, distance}) => (distance <= HEARING_DISTANCE && onFloorOf(helper, player.transform.pos))
+                || namedIn(text, HELPER_AGENT_NAME))
+            .sort((a, b) => a.distance - b.distance)[0]?.helper;
+        const helper = named ?? nearest;
+        const ctx = ServerUserManager.getSocketUserContext(userID);
+        if (helper == undefined || ctx == undefined)
+            return;
+        const now = Date.now();
+        const pending: HelperPendingLines = helper.linesByUserID.get(userID) ?? {name: player.sourceUserName,
+            isAgent: ctx instanceof AgentUserContext, firstVisit: !ctx.funnel.includes(FunnelMilestoneEnumMap.Returned),
+            lines: [], lastAt: now};
+        pending.lines.push(text);
         pending.lastAt = now;
-        state.linesByUserID.set(userID, pending);
+        helper.linesByUserID.set(userID, pending);
+    },
+    // An admin's edit-mode selection taking hold of a helper, or letting go of it (see HoldObjectSignal). Held, it stands
+    // still for everyone, as it does under the admin's own pointer.
+    hold: (ctx: UserContext, signal: HoldObjectSignal): void =>
+    {
+        const key = `${signal.roomID}/${signal.objectId}`;
+        // One just stood there, and selected as it was, may not have been found yet.
+        if (!helpers.has(key))
+            findHelpers(Date.now());
+        const helper = helpers.get(key);
+        if (helper == undefined || !RoomValidationUtil.userIsAdmin(ctx.user)
+            || ServerRoomManager.currentRoomIDByUserID[ctx.user.id] != signal.roomID)
+        {
+            return;
+        }
+        if (signal.held)
+        {
+            helper.heldBy.add(ctx.user.id);
+            helper.path = [];
+            helper.facePointAfterWalk = undefined;
+        }
+        else if (helper.heldBy.delete(ctx.user.id))
+            letGo(helper, Date.now());
+    },
+    // The helpers in a room as they are shown, for what agents see (see AgentToolUtil.look).
+    // What one sent a room is to be told of its helpers besides (see catchUpOn). The helpers tell a newcomer to the room
+    // themselves; whatever else shows it (an agent's camera) asks.
+    getCatchUpSignals: (roomID: string): {signalType: string, signal: EncodableData}[] =>
+    {
+        return [...helpers.values()].filter(helper => helper.roomID == roomID).flatMap(catchUpOn);
+    },
+    getHelpers: (roomID: string): {objectId: string, name: string, at: Vec3, saying: string}[] =>
+    {
+        return [...helpers.values()].filter(helper => helper.roomID == roomID)
+            .map(helper => ({objectId: helper.objectId, name: helper.name, at: {...helper.at}, saying: helper.saying}));
+    },
+}
+
+// Every NPC in a loaded multiplayer room is a helper, from the beat after it is put there until it is taken away.
+function findHelpers(now: number): void
+{
+    const found = new Set<string>();
+    for (const [roomID, memory] of Object.entries(ServerRoomManager.roomRuntimeMemories))
+    {
+        if (memory.room.roomType == RoomTypeEnumMap.SinglePlayer)
+            continue;
+        for (const obj of Object.values(memory.room.objectById))
+        {
+            if (obj.objectTypeIndex != NPC_TYPE_INDEX)
+                continue;
+            const key = `${roomID}/${obj.objectId}`;
+            found.add(key);
+            const helper = helpers.get(key) ?? newHelper(roomID, obj, now);
+            helper.name = LabelTextUtil.toName(LabelTextUtil.getText(obj));
+            helpers.set(key, helper);
+        }
+    }
+    for (const key of helpers.keys())
+    {
+        if (!found.has(key))
+            helpers.delete(key);
     }
 }
 
-// Those who arrived together are greeted together.
-function greetArrivals(now: number): void
+function newHelper(roomID: string, obj: AddObjectSignal, now: number): HelperState
 {
-    const due = state.greetings.filter(greeting => greeting.dueAt <= now);
-    if (due.length == 0)
+    const quarterTurns = QuarterTurnsUtil.getQuarterTurns(obj);
+    return {roomID, objectId: obj.objectId, name: "", home: {...obj.transform.pos}, homeQuarterTurns: quarterTurns,
+        at: {...obj.transform.pos}, quarterTurns, saying: "", path: [], facePointAfterWalk: undefined, heldBy: new Set(),
+        frozenUntil: 0,
+        nextWanderAt: now + randomBetween(WANDER_INTERVAL_MS), returnHomeAt: 0, lastTalkAt: -Infinity,
+        greetedLogins: new Map(), greetings: [], linesByUserID: new Map(), answering: false, bubbles: [],
+        nextBubbleAt: 0, toldUserIDs: new Set()};
+}
+
+// An admin holding it who has left its room lets go of it.
+function releaseLeavers(helper: HelperState, memory: RoomRuntimeMemory, now: number): void
+{
+    for (const userID of helper.heldBy)
+    {
+        if (memory.participantUserNameByID[userID] == undefined && helper.heldBy.delete(userID))
+            letGo(helper, now);
+    }
+}
+
+// Once nobody holds it, it stands still a moment more before it goes on.
+function letGo(helper: HelperState, now: number): void
+{
+    if (helper.heldBy.size == 0)
+        helper.frozenUntil = Math.max(helper.frozenUntil, now + FROZEN_AFTER_RELEASE_MS);
+}
+
+// An admin moving it (or turning it) moves its home, the room's own copy, which it then stands still at for a while.
+// The admin's edit has already shown it there to everyone.
+function followHome(helper: HelperState, room: Room, now: number): void
+{
+    const obj = room.objectById[helper.objectId];
+    const quarterTurns = QuarterTurnsUtil.getQuarterTurns(obj);
+    if (distance(obj.transform.pos, helper.home) < SAME_PLACE && quarterTurns == helper.homeQuarterTurns)
         return;
-    state.greetings = state.greetings.filter(greeting => greeting.dueAt > now);
+    helper.home = {...obj.transform.pos};
+    helper.homeQuarterTurns = quarterTurns;
+    helper.at = {...helper.home};
+    helper.quarterTurns = quarterTurns;
+    helper.path = [];
+    helper.facePointAfterWalk = undefined;
+    helper.frozenUntil = now + FROZEN_AFTER_MOVE_MS;
+}
+
+function tellNewcomers(helper: HelperState, memory: RoomRuntimeMemory): void
+{
+    for (const userID of helper.toldUserIDs)
+    {
+        if (memory.participantUserNameByID[userID] == undefined)
+            helper.toldUserIDs.delete(userID);
+    }
+    for (const userID of Object.keys(memory.participantUserNameByID))
+    {
+        if (helper.toldUserIDs.has(userID))
+            continue;
+        helper.toldUserIDs.add(userID);
+        for (const {signalType, signal} of catchUpOn(helper))
+            send(helper, signalType, signal, userID);
+    }
+}
+
+// The room one is sent keeps the helper at home, so they are told where it is, which way it faces and what it is saying.
+function catchUpOn(helper: HelperState): {signalType: string, signal: EncodableData}[]
+{
+    const signals: {signalType: string, signal: EncodableData}[] = [];
+    if (distance(helper.at, helper.home) >= SAME_PLACE)
+        signals.push({signalType: "setObjectTransformSignal", signal: transformSignal(helper)});
+    if (helper.quarterTurns != helper.homeQuarterTurns)
+        signals.push({signalType: "setObjectMetadataSignal", signal: turnSignal(helper)});
+    if (helper.saying.length > 0)
+        signals.push({signalType: "setObjectMetadataSignal", signal: speechSignal(helper, helper.saying)});
+    return signals;
+}
+
+// Each visitor who comes near is greeted once in each of their logins (see UserContext.loginCount), not each time they
+// come into the room.
+function noticeVisitors(helper: HelperState, memory: RoomRuntimeMemory, now: number): void
+{
+    for (const [userID, name] of Object.entries(memory.participantUserNameByID))
+    {
+        const ctx = ServerUserManager.getSocketUserContext(userID);
+        const player = ServerUserManager.getPlayerObject(userID);
+        if (ctx == undefined || player == undefined || helper.greetedLogins.get(userID)?.loginCount === ctx.loginCount
+            || distanceAcross(player.transform.pos, helper.at) > HEARING_DISTANCE || !onFloorOf(helper, player.transform.pos))
+        {
+            continue;
+        }
+        helper.greetedLogins.set(userID, {loginCount: ctx.loginCount, at: now});
+        helper.greetings.push({userID, name, returning: ctx.funnel.includes(FunnelMilestoneEnumMap.Returned)});
+    }
+}
+
+// Those who came near together are greeted together, as are those who came while it was still talking, so that a crowd
+// isn't greeted one by one long after it came.
+function greet(helper: HelperState): void
+{
+    if (helper.greetings.length == 0 || helper.bubbles.length > 0)
+        return;
+    const due = helper.greetings;
+    helper.greetings = [];
     const name = (due.length == 1 && !GUEST_NAME_PATTERN.test(due[0].name)) ? ` ${due[0].name}` : "";
     const whom = due.length > 1 ? " everyone" : name;
-    say([`Hi${whom}, welcome to ThingsPool! I'm Helper, an AI guide.`, "Ask me anything, or just look around!"]);
+    const welcome = due.every(greeting => greeting.returning) ? "welcome back" : "welcome to ThingsPool";
+    const me = helper.name.length > 0 ? `I'm ${helper.name}, an AI guide.` : "I'm an AI guide.";
+    faceToward(helper, ServerUserManager.getPlayerObject(due[0].userID)?.transform.pos);
+    say(helper, [`Hi${whom}, ${welcome}! ${me}`, "Ask me anything, or just look around!"]);
 }
 
-// Each speaker who has paused is answered, one model call at a time per person.
-function answerSpeakers(ctx: AgentUserContext, now: number): void
+// Speakers who have paused are answered in turn, each once the helper has said all it was saying, as a person answers a
+// crowd.
+function answerSpeakers(helper: HelperState, now: number): void
 {
-    for (const [userID, pending] of state.linesByUserID)
+    for (const [userID, pending] of helper.linesByUserID)
     {
-        if (now - pending.lastAt < ANSWER_PAUSE_MS || state.answering.has(userID))
+        if (now - pending.lastAt >= UNANSWERED_LINES_TTL_MS)
+            helper.linesByUserID.delete(userID);
+    }
+    if (helper.answering || helper.bubbles.length > 0)
+        return;
+    for (const [userID, pending] of helper.linesByUserID)
+    {
+        if (now - pending.lastAt < ANSWER_PAUSE_MS)
             continue;
-        state.linesByUserID.delete(userID);
-        state.answering.add(userID);
-        state.lastTalkAt = now;
-        void answer(ctx, userID, pending).finally(() => state.answering.delete(userID));
+        helper.linesByUserID.delete(userID);
+        helper.answering = true;
+        helper.lastTalkAt = now;
+        void answer(helper, userID, pending).finally(() => { helper.answering = false; });
+        return;
     }
 }
 
-async function answer(ctx: AgentUserContext, userID: string, pending: PendingLines): Promise<void>
+async function answer(helper: HelperState, userID: string, pending: HelperPendingLines): Promise<void>
 {
     const refusal = await HelperChatUtil.getRefusal(userID, pending.isAgent);
     if (refusal != undefined)
@@ -258,40 +384,55 @@ async function answer(ctx: AgentUserContext, userID: string, pending: PendingLin
         // Told once a day why no reply comes, or once an hour for their own limit.
         const toldKey = `${userID} ${refusal}`;
         const toldAt = state.refusalToldAt.get(toldKey) ?? -Infinity;
-        if (Date.now() - toldAt >= (refusal == "hourlyLimit" ? HOUR_IN_MS : 24 * HOUR_IN_MS))
+        if (Date.now() - toldAt >= (refusal == "hourlyLimit" ? HOUR_IN_MS : DAY_IN_MS))
         {
             state.refusalToldAt.set(toldKey, Date.now());
-            turnTo(ctx, userID);
-            say([REFUSAL_LINES[refusal]]);
+            meet(helper, userID);
+            say(helper, [REFUSAL_LINES[refusal]]);
         }
         return;
     }
     const tags = [pending.isAgent ? "an AI agent" : "", pending.firstVisit ? "new here" : ""].filter(tag => tag != "");
     const line = `${pending.name}${tags.length > 0 ? ` (${tags.join(", ")})` : ""}: ${pending.lines.join(" ")}`;
-    const reply = await HelperChatUtil.reply(userID, line);
-    if (reply == undefined)
+    const reply = await HelperChatUtil.reply(identityOf(helper), userID, line);
+    if (reply == undefined || !helpers.has(`${helper.roomID}/${helper.objectId}`))
         return;
-    turnTo(ctx, userID);
-    say(toBubbles(reply));
+    meet(helper, userID);
+    say(helper, toBubbles(reply));
+}
+
+function identityOf(helper: HelperState): HelperIdentity
+{
+    const room = ServerRoomManager.roomRuntimeMemories[helper.roomID]?.room;
+    const place = (helper.roomID == RoomPickerUtil.getFirstHubRoomID()) ? "the main hub, the public room newcomers arrive in"
+        : (room?.roomType == RoomTypeEnumMap.Hub) ? "one of the public hubs" : "a room one of the players made";
+    return {key: `${helper.roomID}/${helper.objectId}`, name: helper.name, place};
 }
 
 // Queued, so that one reply's bubbles follow each other at a pace they can be read in.
-function say(lines: string[]): void
+function say(helper: HelperState, lines: string[]): void
 {
-    state.bubbles.push(...lines.flatMap(toBubbles));
+    helper.bubbles.push(...lines.flatMap(toBubbles));
+    helper.lastTalkAt = Date.now();
 }
 
-async function speakNextBubble(ctx: AgentUserContext, now: number): Promise<void>
+function speakNextBubble(helper: HelperState, now: number): void
 {
-    if (state.bubbles.length == 0 || now < state.nextBubbleAt)
+    if (helper.bubbles.length == 0)
+    {
+        if (helper.saying.length > 0 && now >= helper.nextBubbleAt + BUBBLE_CLEARED_AFTER_MS)
+        {
+            helper.saying = "";
+            send(helper, "setObjectMetadataSignal", speechSignal(helper, ""));
+        }
         return;
-    const text = state.bubbles[0];
-    const said = await AgentToolUtil.say(ctx, text);
-    // Refused only for talking too fast, so it is tried again on a later beat.
-    if ("error" in said)
+    }
+    if (now < helper.nextBubbleAt)
         return;
-    state.bubbles.shift();
-    state.nextBubbleAt = now + Math.max(MIN_BUBBLE_MS, BUBBLE_MS_PER_CHAR * text.length);
+    const text = helper.bubbles.shift() as string;
+    helper.saying = text;
+    send(helper, "setObjectMetadataSignal", speechSignal(helper, text));
+    helper.nextBubbleAt = now + Math.max(MIN_BUBBLE_MS, BUBBLE_MS_PER_CHAR * text.length);
 }
 
 // Bubble-sized pieces: whole sentences where they fit, else words.
@@ -310,7 +451,8 @@ function toBubbles(text: string): string[]
             bubbles.push(current);
         current = piece;
     };
-    for (const sentence of (text.match(/[^.!?]+[.!?]*/g) ?? []).map(sentence => sentence.trim()))
+    // Split only where a sentence's end meets a space, so that an address (thingspool.net/skill.md) stays whole.
+    for (const sentence of text.split(/(?<=[.!?])\s+/).map(sentence => sentence.trim()))
     {
         if (sentence.length <= OBJECT_MESSAGE_MAX_LENGTH)
             add(sentence);
@@ -322,79 +464,215 @@ function toBubbles(text: string): string[]
     return bubbles.filter(bubble => bubble.length > 0);
 }
 
-// Its post in front of the hub's entrance (see SpawnHotspotUtil, which puts arrivals behind it), facing the door.
-function keepToPost(ctx: AgentUserContext, now: number): void
+// Turns to whoever it answers, and walks up to one a little way off, as far as it goes from home.
+function meet(helper: HelperState, userID: string): void
 {
-    const room = AgentRoomUtil.getCurrentRoom(ctx);
-    const me = AgentRoomUtil.getMyPlayer(ctx);
-    const door = room == undefined ? undefined : findEntrance(Object.values(room.objectById));
-    if (room == undefined || me == undefined || door == undefined || state.walking || state.answering.size > 0)
+    const them = ServerUserManager.getPlayerObject(userID)?.transform.pos;
+    const room = ServerRoomManager.roomRuntimeMemories[helper.roomID]?.room;
+    if (them == undefined || room == undefined)
         return;
-    const {pos, dir} = door.transform;
-    const floorY = DoorObjectTypeConfig.util.getFloorY(door);
-    const post: Vec3 = {
-        x: pos.x + dir.x * POST_DISTANCE - dir.z * POST_SIDE_OFFSET,
-        y: floorY,
-        z: pos.z + dir.z * POST_DISTANCE + dir.x * POST_SIDE_OFFSET,
-    };
-    const feet = VoxelPathUtil.feetOf(me.transform.pos);
-    const offPost = Math.hypot(feet.x - post.x, feet.z - post.z) > POST_TOLERANCE;
-    if (!offPost && (state.facingDoor || now - state.lastTalkAt < REFACE_DOOR_AFTER_MS))
+    helper.returnHomeAt = Date.now() + STAY_AFTER_TALK_MS;
+    const feet = VoxelPathUtil.feetOf(them);
+    const away = distanceAcross(feet, helper.at);
+    if (away <= APPROACH_FROM || Date.now() < helper.frozenUntil || helper.heldBy.size > 0)
+    {
+        if (helper.path.length > 0)
+            helper.facePointAfterWalk = feet;
+        else
+            faceToward(helper, feet);
         return;
-    const goal = VoxelPathUtil.findStandingVertexNear(room.voxelGrid.voxels, post);
-    if (goal == undefined)
-        return;
-    state.walking = true;
-    void AgentBodyUtil.walk(ctx, goal, {faceToward: pos})
-        .then(outcome => { state.facingDoor = (outcome == "arrived"); })
-        .finally(() => { state.walking = false; });
+    }
+    // On its own floor, whichever one they stand on.
+    const meeting = clampToLeash(helper, {x: feet.x + (helper.at.x - feet.x) * MEETING_DISTANCE / away, y: helper.home.y,
+        z: feet.z + (helper.at.z - feet.z) * MEETING_DISTANCE / away});
+    if (!walkTo(helper, room, meeting, feet))
+        faceToward(helper, feet);
 }
 
-function turnTo(ctx: AgentUserContext, userID: string): void
+// Idle, it wanders off now and then, and heads home a while after; back home, it turns the way it was put.
+function wander(helper: HelperState, room: Room, now: number): void
 {
-    const room = AgentRoomUtil.getCurrentRoom(ctx);
-    const me = AgentRoomUtil.getMyPlayer(ctx);
-    const them = ServerUserManager.getPlayerObject(userID);
-    if (room == undefined || me == undefined || them == undefined || state.walking)
+    if (helper.path.length > 0 || helper.answering || helper.bubbles.length > 0 || helper.linesByUserID.size > 0
+        || now < helper.frozenUntil || helper.heldBy.size > 0)
+    {
         return;
-    const here = VoxelPathUtil.findStandingVertexNear(room.voxelGrid.voxels, VoxelPathUtil.feetOf(me.transform.pos));
-    if (here == undefined)
+    }
+    const home = distance(helper.at, helper.home) < SAME_PLACE;
+    if (!home)
+    {
+        if (now >= helper.returnHomeAt)
+            walkTo(helper, room, helper.home, undefined);
         return;
-    state.walking = true;
-    state.facingDoor = false;
-    void AgentBodyUtil.walk(ctx, here, {faceToward: them.transform.pos}).finally(() => { state.walking = false; });
+    }
+    if (helper.quarterTurns != helper.homeQuarterTurns && now - helper.lastTalkAt >= STAY_AFTER_TALK_MS)
+        turn(helper, helper.homeQuarterTurns);
+    if (now < helper.nextWanderAt || now - helper.lastTalkAt < STAY_AFTER_TALK_MS)
+        return;
+    helper.nextWanderAt = now + randomBetween(WANDER_INTERVAL_MS);
+    const angle = Math.random() * 2 * Math.PI;
+    const reach = WANDER_RADIUS * (0.4 + 0.6 * Math.random());
+    if (walkTo(helper, room, {x: helper.home.x + reach * Math.cos(angle), y: helper.home.y,
+        z: helper.home.z + reach * Math.sin(angle)}, undefined))
+    {
+        helper.returnHomeAt = now + randomBetween(WANDER_STAY_MS);
+    }
 }
 
-// The default entrance, else any door.
-function findEntrance(objects: AddObjectSignal[]): AddObjectSignal | undefined
+// A path over the room's floor to near the goal (to the goal itself when that is home), or false if there is none.
+function walkTo(helper: HelperState, room: Room, goal: Vec3, facePoint: Vec3 | undefined): boolean
 {
-    const doors = objects.filter(obj => obj.objectTypeIndex == ObjectTypeConfigMap.getIndexByType("Door"));
-    return doors.find(door => DoorObjectTypeConfig.util.getDoorType(door) == DoorTypeEnumMap.DefaultEntrance)
-        ?? doors[0];
+    const voxels = room.voxelGrid.voxels;
+    const start = VoxelPathUtil.findStandingVertexNear(voxels, helper.at, 1);
+    const end = VoxelPathUtil.findStandingVertexNear(voxels, goal, 1);
+    const path = (start == undefined || end == undefined) ? undefined : VoxelPathUtil.findPath(voxels, start, end);
+    if (path == undefined)
+        return false;
+    helper.path = path.slice(1).map(vertex => VoxelPathUtil.toWorld(vertex));
+    if (distance(goal, helper.home) < SAME_PLACE)
+        helper.path.push({...helper.home});
+    helper.facePointAfterWalk = facePoint;
+    return helper.path.length > 0;
 }
 
-function findUserID(ctx: AgentUserContext, name: string): string | undefined
+function step(helper: HelperState, seconds: number): void
 {
-    const roomID = ServerRoomManager.currentRoomIDByUserID[ctx.user.id];
-    const participants = roomID == undefined ? {} : ServerRoomManager.roomRuntimeMemories[roomID]?.participantUserNameByID ?? {};
-    return Object.keys(participants).find(userID => participants[userID] == name);
+    const from = {...helper.at};
+    let left = WALK_SPEED * seconds;
+    while (left > 0 && helper.path.length > 0)
+    {
+        const next = helper.path[0];
+        const gap = distance(helper.at, next);
+        if (gap <= left)
+        {
+            helper.at = {...next};
+            helper.path.shift();
+            left -= gap;
+        }
+        else
+        {
+            helper.at = {x: helper.at.x + (next.x - helper.at.x) * left / gap, y: helper.at.y + (next.y - helper.at.y) *
+                left / gap, z: helper.at.z + (next.z - helper.at.z) * left / gap};
+            left = 0;
+        }
+    }
+    faceToward(helper, {x: 2 * helper.at.x - from.x, y: helper.at.y, z: 2 * helper.at.z - from.z});
+    send(helper, "setObjectTransformSignal", transformSignal(helper));
+    if (helper.path.length > 0)
+        return;
+    if (helper.facePointAfterWalk != undefined)
+        faceToward(helper, helper.facePointAfterWalk);
+    else if (distance(helper.at, helper.home) < SAME_PLACE)
+        turn(helper, helper.homeQuarterTurns);
+    helper.facePointAfterWalk = undefined;
 }
 
-// Not yet back on a later day (see FunnelMilestoneEnumMap.Returned).
-function isOnFirstVisit(ctx: AgentUserContext, name: string): boolean
+// It faces one of four ways, as an NPC does (see QuarterTurnsUtil): the one nearest the point.
+function faceToward(helper: HelperState, point: Vec3 | undefined): void
 {
-    const userID = findUserID(ctx, name);
-    const userContext = userID == undefined ? undefined : ServerUserManager.getSocketUserContext(userID);
-    return userContext != undefined && !userContext.funnel.includes(FunnelMilestoneEnumMap.Returned);
+    if (point == undefined || distanceAcross(point, helper.at) < SAME_PLACE)
+        return;
+    const toward = {x: point.x - helper.at.x, z: point.z - helper.at.z};
+    let best = helper.quarterTurns;
+    let bestDot = -Infinity;
+    for (let quarterTurns = 0; quarterTurns < 4; ++quarterTurns)
+    {
+        const facing = QuarterTurnsUtil.getContentUp(UP, quarterTurns);
+        const dot = facing.x * toward.x + facing.z * toward.z;
+        if (dot > bestDot)
+        {
+            best = quarterTurns;
+            bestDot = dot;
+        }
+    }
+    turn(helper, best);
 }
 
-function isNear(ctx: AgentUserContext, userID: string): boolean
+function turn(helper: HelperState, quarterTurns: number): void
 {
-    const me = AgentRoomUtil.getMyPlayer(ctx);
-    const them = ServerUserManager.getPlayerObject(userID);
-    return me != undefined && them != undefined
-        && Math.hypot(me.transform.pos.x - them.transform.pos.x, me.transform.pos.z - them.transform.pos.z)
-            <= HEARING_DISTANCE;
+    if (quarterTurns == helper.quarterTurns || helper.heldBy.size > 0)
+        return;
+    helper.quarterTurns = quarterTurns;
+    send(helper, "setObjectMetadataSignal", turnSignal(helper));
+}
+
+function transformSignal(helper: HelperState): SetObjectTransformSignal
+{
+    const scale = ServerRoomManager.roomRuntimeMemories[helper.roomID].room.objectById[helper.objectId].transform.scale;
+    return new SetObjectTransformSignal(helper.roomID, helper.objectId, new ObjectTransform({...helper.at}, {...UP},
+        {...scale}), true);
+}
+
+function turnSignal(helper: HelperState): SetObjectMetadataSignal
+{
+    return new SetObjectMetadataSignal(helper.roomID, helper.objectId, ObjectMetadataKeyEnumMap.QuarterTurns,
+        QuarterTurnsUtil.encode(helper.quarterTurns));
+}
+
+function speechSignal(helper: HelperState, text: string): SetObjectMetadataSignal
+{
+    return new SetObjectMetadataSignal(helper.roomID, helper.objectId, ObjectMetadataKeyEnumMap.SentMessage, text);
+}
+
+// Shown to the room (or to one user in it), without changing what the room keeps.
+function send(helper: HelperState, signalType: string, signal: EncodableData, userID?: string): void
+{
+    const roomContext = ServerRoomManager.socketRoomContexts[helper.roomID];
+    if (roomContext == undefined)
+        return;
+    if (userID == undefined)
+        roomContext.multicastSignal(signalType, signal);
+    else
+        roomContext.unicastSignal(signalType, signal, userID);
+}
+
+// Within its leash of home.
+function clampToLeash(helper: HelperState, point: Vec3): Vec3
+{
+    const away = distanceAcross(point, helper.home);
+    if (away <= LEASH_RADIUS)
+        return point;
+    return {x: helper.home.x + (point.x - helper.home.x) * LEASH_RADIUS / away, y: point.y,
+        z: helper.home.z + (point.z - helper.home.z) * LEASH_RADIUS / away};
+}
+
+// Whose logins are long over, since a login lasts at most until a day without a visit.
+function forgetOldLogins(now: number): void
+{
+    for (const helper of helpers.values())
+    {
+        for (const [userID, greeted] of helper.greetedLogins)
+        {
+            if (now - greeted.at > 2 * DAY_IN_MS)
+                helper.greetedLogins.delete(userID);
+        }
+    }
+}
+
+// Whether a player (by its position, at its middle) stands on the helper's own floor.
+function onFloorOf(helper: HelperState, playerPos: Vec3): boolean
+{
+    return Math.abs(VoxelPathUtil.feetOf(playerPos).y - helper.at.y) <= SAME_FLOOR_HEIGHT;
+}
+
+function namedIn(text: string, name: string): boolean
+{
+    return new RegExp(`(^|[^\\p{L}\\p{N}])${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|[^\\p{L}\\p{N}])`, "iu")
+        .test(text);
+}
+
+function distance(a: Vec3, b: Vec3): number
+{
+    return Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+}
+
+function distanceAcross(a: Vec3, b: Vec3): number
+{
+    return Math.hypot(a.x - b.x, a.z - b.z);
+}
+
+function randomBetween([min, max]: number[]): number
+{
+    return min + Math.random() * (max - min);
 }
 
 export default HelperAgentUtil;

@@ -94,7 +94,7 @@ const entries: {[key: number]: ObjectMetadataEntry} = {
     },
     // The server's alone, so a stored copy is never restored either (see ServerUserManager.addUserToRoom).
     [ObjectMetadataKeyEnumMap.AgentMark]: {
-        preprocessingMethod: (rawValue: string) => ["1", "2"].includes(rawValue.trim()) ? rawValue.trim() : "",
+        preprocessingMethod: (rawValue: string) => (rawValue.trim() == "1") ? "1" : "",
         canUserSet: (_user: User) => false,
     },
 };

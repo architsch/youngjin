@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import App from "../../../../app";
-import PlayerController from "../../playerController";
+import GameObject from "../../../types/gameObject/gameObject";
 import NumUtil from "../../../../../shared/math/util/numUtil";
 import AABB3 from "../../../../../shared/math/types/aabb3";
 import Vec3 from "../../../../../shared/math/types/vec3";
@@ -103,13 +103,12 @@ export default class FirstPersonCameraPose
     // Returns the desired camera interpolation rate. clickedPoint: where a play-mode click hit this frame.
     // imposedDisplacement: physics' part of the player's move this frame, and underForce: whether a force of
     // the room's had a part in it (see Rigidbody).
-    updatePose(deltaTime: number, controller: PlayerController, camera: THREE.PerspectiveCamera,
+    updatePose(deltaTime: number, player: GameObject, camera: THREE.PerspectiveCamera,
         clickedPoint: THREE.Vector3 | undefined, imposedDisplacement: Vec3, underForce: boolean,
         outPos: THREE.Vector3, outQuat: THREE.Quaternion): number
     {
         outPos.copy(FirstPersonCameraPose.restPosition);
 
-        const player = controller.gameObject;
         const standingLevelY = player.position.y - 0.5 * PLAYER_HEIGHT;
 
         if (clickedPoint != undefined)
@@ -135,10 +134,10 @@ export default class FirstPersonCameraPose
             this.lookSpot = undefined;
         }
         else if (this.lookSpot != undefined)
-            pitchAngle = this.getPitchToward(this.lookSpot, controller);
+            pitchAngle = this.getPitchToward(this.lookSpot, player);
         else
         {
-            pitchAngle = this.getPitchForRoomAhead(controller, camera, standingLevelY);
+            pitchAngle = this.getPitchForRoomAhead(player, camera, standingLevelY);
 
             // Only rising is held back: once the room asks to look as far down, the rise is over.
             if (this.pitchAfterFall != undefined)
@@ -202,9 +201,9 @@ export default class FirstPersonCameraPose
 
     // The pitch of the line of sight from the eye to a spot, whichever way the player faces. Facing the
     // spot, that brings it level with the middle of the view.
-    private getPitchToward(spot: THREE.Vector3, controller: PlayerController): number
+    private getPitchToward(spot: THREE.Vector3, player: GameObject): number
     {
-        const playerObj = controller.gameObject.obj;
+        const playerObj = player.obj;
         playerObj.updateWorldMatrix(true, false);
         const eye = playerObj.localToWorld(eyePos.copy(FirstPersonCameraPose.restPosition));
 
@@ -212,11 +211,11 @@ export default class FirstPersonCameraPose
         return NumUtil.clampInRange(pitch, -lookPitchLimit, lookPitchLimit);
     }
 
-    private getPitchForRoomAhead(controller: PlayerController, camera: THREE.PerspectiveCamera,
+    private getPitchForRoomAhead(player: GameObject, camera: THREE.PerspectiveCamera,
         standingLevelY: number): number
     {
         camera.getWorldPosition(cameraPos);
-        controller.gameObject.obj.getWorldDirection(playerForwardDir);
+        player.obj.getWorldDirection(playerForwardDir);
         playerForwardDir.negate(); // Player-camera's "forward" direction is the opposite of the player-gameObject's forward direction.
 
         const drop = ClientVoxelQueryUtil.getOpenSpaceDropAhead(cameraPos, playerForwardDir, standingLevelY);

@@ -118,9 +118,8 @@ ${LatencySimUtil.getConfigSummary()}
 
     EventLoopDelayUtil.start();
 
-    // The agent the server runs itself, so that newcomers never arrive to an empty world (see HelperAgentUtil).
-    HelperAgentUtil.start()
-        .catch(err => LogUtil.log("Helper couldn't start", { err }, "high", "error"));
+    // The NPCs admins stand in multiplayer rooms, played as AI guides (see HelperAgentUtil).
+    HelperAgentUtil.start();
 
     // Clean up stale guest and agent accounts regularly (rotating through tiers to spread DB load)
     let cleanupPhase = 0;

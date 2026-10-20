@@ -15,6 +15,9 @@
     ogImageWidth: 1200,
     ogImageHeight: 630,
     ogImageAlt: "A fully immersive 3D sandbox metaverse of ThingsPool, which includes interactive 3D chat rooms, digital art exhibition areas, customizable avatars, and real-time multiplayer gameplay experience.",
+    // An agent's camera is one agent's private page, its address a secret (see AgentCameraUtil).
+    ogDisabled: !!locals.cameraToken,
+    analyticsDisabled: !!locals.cameraToken,
 }) %>
 
 <%_ if (isStaticPage) { _%>
@@ -62,6 +65,8 @@
             assets_url: `${URL_STATIC}/app/assets`,
             gitCommit: gitCommit,
             targetRoomID: targetRoomID,
+            cameraToken: locals.cameraToken ?? "",
+            watchedUserID: locals.watchedUserID ?? "",
         }).replace(/</g, "\\u003c") %>;
     </script>
     <%_ /* The dependency chunks carry no side effects of their own — each one only registers its

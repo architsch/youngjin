@@ -17,7 +17,7 @@ export const COLLECTION_DEV_RUNTIME = `${DB_PREFIX}_dev_runtime`;
 // Per-(source, arrival day) acquisition counters (ServerAnalyticsManager). Separate from users, since
 // bounced guests are deleted.
 export const COLLECTION_ACQUISITION = `${DB_PREFIX}acquisition`;
-// What the Helper spent on Claude, a document per day (DBHelperSpendingUtil).
+// What helpers spent on Claude, a document per day (DBHelperSpendingUtil).
 export const COLLECTION_HELPER_SPENDING = `${DB_PREFIX}helper_spending`;
 
 // Cohort for visitors without a usable "ref" tag.
@@ -86,19 +86,23 @@ export const AGENT_LOOK_BLOCKS_REACH = 12;
 export const AGENT_LOOK_BLOCKS_MAX_BOXES = 120;
 // The most pictures one find_pictures gives.
 export const AGENT_FIND_PICTURES_MAX_COUNT = 20;
-// The most agents present at once, whose bodies the server steps (see AgentBodyUtil).
-export const AGENT_MAX_PRESENT = 100;
-// The agent the server runs itself to greet newcomers (see HelperAgentUtil). No one else may register its name.
+// An agent's camera, the page watching through its eyes (see AgentCameraUtil), and how many pages may be open on one.
+export const AGENT_CAMERA_ROUTE_PATH = "camera";
+export const AGENT_CAMERA_MAX_PAGES = 2;
+// The most agents present at once: the server steps their bodies (see AgentBodyUtil) and holds their rooms, and its
+// process is restarted past a memory limit (see ecosystem.config.js).
+export const AGENT_MAX_PRESENT = 30;
+// What players may call any helper, the AI guides the server plays (see HelperAgentUtil). No agent may take it for a name.
 export const HELPER_AGENT_NAME = "Helper";
-// The Claude model the Helper chats with, and its prices in dollars per million tokens (check them against
-// https://www.anthropic.com/pricing whenever the model changes).
+// The Claude model helpers chat with, and its prices in dollars per million tokens, for prompts as short as theirs
+// (check them against https://platform.claude.com/docs/en/about-claude/pricing whenever the model changes).
 export const HELPER_MODEL = "claude-haiku-5-5";
-export const HELPER_MODEL_PRICES = {input: 1, output: 5, cacheWrite: 1.25, cacheRead: 0.1};
-// What the Helper may spend on Claude in a day (UTC), in dollars (see HelperChatUtil). The live server's share spreads
-// the free monthly API credit ($100) over the longest month, leaving a little for staging's Helper, which uses the same
-// key.
+export const HELPER_MODEL_PRICES = {input: 0.1, output: 0.5, cacheWrite: 0.125, cacheRead: 0.01};
+// What all helpers together may spend on Claude in a day (UTC), in dollars (see HelperChatUtil). The live server's share
+// spreads the free monthly API credit ($100) over the longest month, leaving a little for staging's helpers, which use
+// the same key.
 export const HELPER_DAILY_BUDGET_DOLLARS = IS_PUBLIC_SITE ? 3 : 0.2;
-// The most replies the Helper gives one person in an hour, or one agent, who could keep it talking far longer.
+// The most replies all helpers together give one person in an hour, or one agent, who could keep them talking far longer.
 export const HELPER_MAX_REPLIES_PER_PERSON_PER_HOUR = 30;
 export const HELPER_MAX_REPLIES_PER_AGENT_PER_HOUR = 10;
 

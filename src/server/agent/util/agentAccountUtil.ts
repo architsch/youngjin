@@ -28,7 +28,7 @@ const AgentAccountUtil =
                 + `'-', '_' or '.', starts with a letter or a digit, and doesn't start with "Guest-".`};
         }
 
-        // The Helper's, in any case, so that no one can pass for the agent the server runs.
+        // What helpers are called, in any case, so that no agent can pass for one.
         if (userName.toLowerCase() == HELPER_AGENT_NAME.toLowerCase())
             return {error: `The name "${userName}" is taken. Choose another.`};
         const nameHolders = await DBSearchUtil.users.withUserName(userName);

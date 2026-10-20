@@ -1,4 +1,6 @@
 import Vec3 from "../../../shared/math/types/vec3";
+import Vector3DUtil from "../../../shared/math/util/vector3DUtil";
+import Room from "../../../shared/room/types/room";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import SetObjectMetadataSignal from "../../../shared/object/types/setObjectMetadataSignal";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
@@ -16,6 +18,7 @@ import OwnedRoomUtil from "../../room/util/ownedRoomUtil";
 import { AGENT_LOOK_MAX_PEOPLE } from "../../system/serverConstants";
 import AgentUserContext from "../types/agentUserContext";
 import AgentWalkOutcome from "../types/agentWalkOutcome";
+import { AgentHeading } from "../types/agentHeading";
 import AgentPresenceUtil from "./agentPresenceUtil";
 import AgentDirectoryUtil from "./agentDirectoryUtil";
 import AgentInterestUtil from "./agentInterestUtil";
@@ -27,6 +30,8 @@ import AgentObjectUtil from "./agentObjectUtil";
 import DBUserUtil from "../../db/util/dbUserUtil";
 import UserBudgetUtil from "../../user/util/userBudgetUtil";
 import AgentBudgetUtil from "./agentBudgetUtil";
+import HelperAgentUtil from "./helperAgentUtil";
+import AgentCameraUtil from "./agentCameraUtil";
 
 // What an agent's tools do, apart from how they are served (see AgentMcpUtil), building aside (see AgentBlockUtil,
 // AgentObjectUtil). Everything that changes the world goes through the signals a browser would send, so an agent
@@ -60,7 +65,7 @@ const AgentToolUtil =
             return {room: null, note: "You aren't in a room. Use travel to go to a hub or your own room."};
         const myFeet = VoxelPathUtil.feetOf(me.transform.pos);
 
-        const people = Object.values(room.objectById)
+        const players = Object.values(room.objectById)
             .filter(obj => isPlayer(obj) && obj.objectId != me.objectId)
             .map(obj => ({
                 name: obj.sourceUserName,
@@ -68,7 +73,17 @@ const AgentToolUtil =
                 at: AgentGridUtil.toGridPosition(VoxelPathUtil.feetOf(obj.transform.pos)),
                 distance: Math.round(10 * distanceInVoxels(me.transform.pos, obj.transform.pos)) / 10,
                 saying: getSpeech(obj),
-            }))
+            }));
+        // The room's AI guides, which the server plays (see HelperAgentUtil).
+        const guides = HelperAgentUtil.getHelpers(room.id).map(helper => ({
+            name: helper.name,
+            isAgent: true,
+            isGuide: true,
+            at: AgentGridUtil.toGridPosition(helper.at),
+            distance: Math.round(10 * distanceInVoxels(myFeet, helper.at)) / 10,
+            saying: helper.saying.length > 0 ? helper.saying : undefined,
+        }));
+        const people = [...players, ...guides]
             .sort((a, b) => a.distance - b.distance)
             .slice(0, AGENT_LOOK_MAX_PEOPLE);
 
@@ -91,7 +106,8 @@ const AgentToolUtil =
         const {objects, more} = AgentObjectUtil.describeObjects(room, me.transform.pos);
         return {
             room: describeRoom(ctx),
-            you: {name: ctx.user.userName, at: AgentGridUtil.toGridPosition(myFeet), saying: getSpeech(me)},
+            you: {name: ctx.user.userName, at: AgentGridUtil.toGridPosition(myFeet), facing: getFacing(me),
+                saying: getSpeech(me)},
             people,
             doors,
             objects,
@@ -113,13 +129,11 @@ const AgentToolUtil =
         let options = {};
         if (target.person != undefined && target.person.trim().length > 0)
         {
-            const name = target.person.trim().toLowerCase();
-            const person = Object.values(room.objectById).find(obj => isPlayer(obj) && obj.objectId != me.objectId
-                && obj.sourceUserName.toLowerCase() == name);
+            const person = findPerson(room, me, target.person);
             if (person == undefined)
                 return {error: `Nobody named "${target.person}" is in this room.`};
-            feet = VoxelPathUtil.feetOf(person.transform.pos);
-            options = {arriveWithin: MEETING_DISTANCE, target: person.transform.pos};
+            feet = person.feet;
+            options = {arriveWithin: MEETING_DISTANCE, target: person.pos};
         }
         else if (target.row != undefined && target.column != undefined)
         {
@@ -136,6 +150,51 @@ const AgentToolUtil =
 
         const outcome = await AgentBodyUtil.walk(ctx, goal, options);
         return {outcome, note: WALK_OUTCOME_NOTES[outcome], you: describeMe(ctx)};
+    },
+    // Turns where the agent stands: toward a person in the room, a voxel (its layer, if not given, the one the agent
+    // stands in), or a heading.
+    face: async (ctx: AgentUserContext, target: {row?: number, column?: number, layer?: number, person?: string,
+        direction?: AgentHeading}): Promise<object> =>
+    {
+        const room = AgentRoomUtil.getCurrentRoom(ctx);
+        const me = AgentRoomUtil.getMyPlayer(ctx);
+        if (room == undefined || me == undefined)
+            return {error: "You aren't in a room."};
+        const myFeet = VoxelPathUtil.feetOf(me.transform.pos);
+
+        let point: Vec3;
+        if (target.person != undefined && target.person.trim().length > 0)
+        {
+            const person = findPerson(room, me, target.person);
+            if (person == undefined)
+                return {error: `Nobody named "${target.person}" is in this room.`};
+            point = person.feet;
+        }
+        else if (target.row != undefined && target.column != undefined)
+        {
+            const layer = target.layer ?? AgentGridUtil.toGridPosition(myFeet).layer;
+            point = {x: VoxelQueryUtil.getWorldXAtVoxelColCenter(target.column), y: layer * COLLISION_LAYER_HEIGHT,
+                z: VoxelQueryUtil.getWorldZAtVoxelRowCenter(target.row)};
+        }
+        else if (target.direction != undefined)
+            point = Vector3DUtil.add(myFeet, AgentGridUtil.getHeadingDir(target.direction));
+        else
+            return {error: "Give a row and a column (and a layer), a person's name, or a direction."};
+
+        const outcome = await AgentBodyUtil.face(ctx, point);
+        return {outcome, note: (outcome == "arrived") ? "You face that way." : WALK_OUTCOME_NOTES[outcome],
+            you: describeMe(ctx)};
+    },
+    // A link for a browser tool, live on what the agent sees (see AgentCameraUtil).
+    camera: (ctx: AgentUserContext): object =>
+    {
+        return {
+            link: AgentCameraUtil.getLink(ctx),
+            note: "Open it in your browser tool and wait until \"Loading...\" is gone. It stays live, showing what you "
+                + "see as a person's screen would and following you as you walk, turn (face) and travel: keep it open, "
+                + "and screenshot it whenever you want to look around or keep a picture. The link is yours alone and "
+                + "works while you are here: share pictures, not the link.",
+        };
     },
     // Walks to the door and goes through it, as a person clicking it would.
     useDoor: async (ctx: AgentUserContext, doorId: string): Promise<object> =>
@@ -278,6 +337,19 @@ function describeRoom(ctx: AgentUserContext): object | null
     };
 }
 
+// Someone in the room by name, the agent aside: a player, or else one of its guides. pos: where it stands as the room
+// holds it (a player's middle).
+function findPerson(room: Room, me: AddObjectSignal, name: string): {feet: Vec3, pos: Vec3} | undefined
+{
+    const wanted = name.trim().toLowerCase();
+    const person = Object.values(room.objectById).find(obj => isPlayer(obj) && obj.objectId != me.objectId
+        && obj.sourceUserName.toLowerCase() == wanted);
+    if (person != undefined)
+        return {feet: VoxelPathUtil.feetOf(person.transform.pos), pos: person.transform.pos};
+    const guide = HelperAgentUtil.getHelpers(room.id).find(helper => helper.name.toLowerCase() == wanted);
+    return (guide != undefined) ? {feet: guide.at, pos: guide.at} : undefined;
+}
+
 function isPlayer(obj: AddObjectSignal): boolean
 {
     return obj.objectTypeIndex == ObjectTypeConfigMap.getIndexByType("Player");
@@ -288,11 +360,18 @@ function isDoor(obj: AddObjectSignal): boolean
     return obj.objectTypeIndex == ObjectTypeConfigMap.getIndexByType("Door");
 }
 
-// Where the agent stands now, as the room last heard it.
+// Where the agent stands now, as the room last heard it, and which way it faces.
 function describeMe(ctx: AgentUserContext): object | null
 {
     const me = AgentRoomUtil.getMyPlayer(ctx);
-    return me == undefined ? null : {at: AgentGridUtil.toGridPosition(VoxelPathUtil.feetOf(me.transform.pos))};
+    return me == undefined ? null
+        : {at: AgentGridUtil.toGridPosition(VoxelPathUtil.feetOf(me.transform.pos)), facing: getFacing(me)};
+}
+
+// A player's transform direction points behind it (see SpawnHotspotUtil), so it faces the other way.
+function getFacing(player: AddObjectSignal): AgentHeading
+{
+    return AgentGridUtil.getHeading(Vector3DUtil.scale(player.transform.dir, -1));
 }
 
 function getSpeech(obj: AddObjectSignal): string | undefined

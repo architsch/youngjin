@@ -21,6 +21,7 @@ import "./graphics/types/gizmo/colliderDebugGizmo";
 import "./graphics/types/gizmo/objectAttachmentEditGizmos"; // Side-effect: lets the selected attached object be dragged and resized by its outline
 import "./graphics/types/gizmo/volumeEditGizmos"; // Side-effect: lets the selected volume be resized by its outline's corners
 import "./voxel/util/restrictedZoneOutlineUtil"; // Side-effect: keeps the outlines on the room's restricted zones up to date
+import "./object/util/helperHoldUtil"; // Side-effect: holds a helper still for everyone while an admin has it selected
 import { preloadGenericWorldSpaceGizmos } from "./graphics/types/gizmo/genericWorldSpaceGizmos"; // Side-effect: registers world-space gizmos that are used for general purposes; also exposes a pre-load hook
 import "./graphics/particle/util/particleTriggerUtil"; // Side-effect: plays the effects gameplay events call for
 import ParticleSystem from "./graphics/particle/particleSystem";
@@ -31,6 +32,7 @@ import AsyncUtil from "../shared/system/util/asyncUtil";
 import SignalTypeConfigMap from "../shared/networking/maps/signalTypeConfigMap";
 import SinglePlayerManager from "./singlePlayer/singlePlayerManager";
 import RoomLoadProgressUtil from "./system/util/roomLoadProgressUtil";
+import WatchedPlayerCameraUtil from "./object/util/watchedPlayerCameraUtil";
 
 const minFramesPerSecond = 20;
 const maxFramesPerSecond = 60;
@@ -71,6 +73,12 @@ const App =
     {
         return user;
     },
+    // The user whose eyes this page sees through, if it is an agent's camera (see AgentCameraUtil); "" otherwise. Such a
+    // page has no user of its own: no player is its.
+    getWatchedUserID: (): string =>
+    {
+        return env?.watchedUserID ?? "";
+    },
     getFPS(): number
     {
         return tickTimeQueue.length;
@@ -110,9 +118,12 @@ const App =
         lastRoomChange = roomChange.catch(() => {}); // A failed change must not hold up the next.
         return roomChange;
     },
-    // Releases the loading indicator and explains why the user stays put.
+    // Releases the loading indicator and explains why the user stays put. A camera asks for no room, so a refusal is
+    // only the agent's, who stays where the camera is.
     onRoomChangeRejectedSignalReceived: (roomChangeRejectedSignal: RoomChangeRejectedSignal) =>
     {
+        if (App.getWatchedUserID().length > 0)
+            return;
         if (ongoingClientProcessExists("roomChange"))
             endClientProcess("roomChange");
         notificationMessageObservable.set(getRoomChangeRejectionMessage(roomChangeRejectedSignal.reason));
@@ -191,9 +202,12 @@ async function changeRoom(roomChangedSignal: RoomChangedSignal)
 
 // The address keeps the room it named (the page's target) while the user is on the way there, through the tutorial
 // say, or in it. Once they enter any other room it is dropped, from reconnections as from the address bar, so that
-// neither brings them back. Whatever follows the path (a ref tag, say) goes at once.
+// neither brings them back. Whatever follows the path (a ref tag, say) goes at once. A camera page keeps the address it is
+// reloaded by.
 function keepAddressInStep(joinedRoom: Room): void
 {
+    if (App.getWatchedUserID().length > 0)
+        return;
     if (joinedRoom.roomType != RoomTypeEnumMap.SinglePlayer && joinedRoom.id != env.targetRoomID)
         env.targetRoomID = "";
     window.history.replaceState(null, "", env.targetRoomID.length > 0 ? `/${env.targetRoomID}` : "/");
@@ -245,6 +259,8 @@ function update()
         deltaTimePending -= deltaTime;
 
         ClientObjectManager.update(deltaTime);
+        // After the watched player has moved this frame.
+        WatchedPlayerCameraUtil.update(deltaTime);
         ParticleSystem.update(deltaTime);
         GraphicsManager.update();
         SinglePlayerManager.update(deltaTime);

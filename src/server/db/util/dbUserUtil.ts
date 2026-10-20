@@ -151,10 +151,9 @@ const DBUserUtil =
     },
     updateLastLogin: async (userID: string, prevLastLoginAt: number): Promise<void> =>
     {
-        // No cache invalidation here: it would evict users mid-login, and lastLoginAt/loginCount are
-        // only read by deleteStaleGuestsByTier. loginCount counts distinct logins (gap >=
-        // LOGIN_COUNT_MIN_GAP_MS), not requests.
-        const isDistinctLogin = Date.now() - (prevLastLoginAt ?? 0) >= LOGIN_COUNT_MIN_GAP_MS;
+        // No cache invalidation here: it would evict users mid-login, which is why getLoginCount reads either copy
+        // alike. loginCount counts distinct logins (gap >= LOGIN_COUNT_MIN_GAP_MS), not requests.
+        const isDistinctLogin = startsLogin(prevLastLoginAt);
         await new DBQuery<DBRow>()
             .update(COLLECTION_USERS)
             .noInvalidate()
@@ -167,6 +166,12 @@ const DBUserUtil =
         // Distinct login (a day's gap) counts as a return, never a refresh.
         if (isDistinctLogin)
             await ServerAnalyticsManager.recordReturnVisit(userID);
+    },
+    // The login a visit now belongs to, by its row as read before updateLastLogin or after it: the visit that starts a
+    // login is counted in, whether or not its update has been written yet.
+    getLoginCount: (dbUser: DBUser): number =>
+    {
+        return (dbUser.loginCount ?? 0) + (startsLogin(dbUser.lastLoginAt) ? 1 : 0);
     },
     deleteStaleGuestsByTier: async (phase: number): Promise<number> =>
     {
@@ -265,6 +270,12 @@ const DBUserUtil =
             dbUser.ftue ?? ""
         );
     },
+}
+
+// Whether a visit after the last login at that time begins a new one.
+function startsLogin(prevLastLoginAt: number | undefined): boolean
+{
+    return Date.now() - (prevLastLoginAt ?? 0) >= LOGIN_COUNT_MIN_GAP_MS;
 }
 
 export default DBUserUtil;

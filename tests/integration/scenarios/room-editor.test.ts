@@ -126,7 +126,7 @@ const ADMIN = new User("an-admin", "Admin", UserTypeEnumMap.Admin, "admin@test.c
 const PAGE_BUILD = "page-build";
 const ENV = {mode: "dev", serverType: "Staging", userString: ADMIN.toString(), socket_server_url: "http://socket.test",
     rest_api_server_url: "http://api.test", static_server_url: "http://static.test", assets_url: "http://assets.test",
-    gitCommit: PAGE_BUILD, targetRoomID: "from-url"};
+    gitCommit: PAGE_BUILD, targetRoomID: "from-url", cameraToken: "", watchedUserID: ""};
 const ASSETS_ROOT_PATH = path.join(process.cwd(), "public/app/assets");
 
 const EDITOR = ROOM_EDITOR_SINGLE_PLAYER_MODE;

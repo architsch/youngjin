@@ -21,6 +21,7 @@ import RemoveVoxelBlockSignal from "../../../shared/voxel/types/update/removeVox
 import AddVoxelBlockSignal from "../../../shared/voxel/types/update/addVoxelBlockSignal";
 import MoveVoxelBlockSignal from "../../../shared/voxel/types/update/moveVoxelBlockSignal";
 import UserCommandSignal from "../../../shared/user/types/userCommandSignal";
+import HoldObjectSignal from "../../../shared/object/types/holdObjectSignal";
 import RoomTexturePackChangedSignal from "../../../shared/room/types/roomTexturePackChangedSignal";
 import RoomPrefsChangedSignal from "../../../shared/room/types/roomPrefsChangedSignal";
 import App from "../../app";
@@ -83,8 +84,9 @@ const SocketsClient =
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
             // Said anew with every connection: one that comes back to a client in the room editor is to leave it
-            // there (see RoomPickerUtil).
-            auth: (cb) => cb({ targetRoomID: env.targetRoomID, roomEditorOpen: RoomEditorUtil.isEditing() }),
+            // there (see RoomPickerUtil). A camera page has its link's token instead of a session.
+            auth: (cb) => cb((env.cameraToken.length > 0) ? { cameraToken: env.cameraToken }
+                : { targetRoomID: env.targetRoomID, roomEditorOpen: RoomEditorUtil.isEditing() }),
         });
 
         // Expose for E2E test teardown (explicit disconnect prevents stale players)
@@ -154,6 +156,7 @@ const SocketsClient =
 
     emitSetObjectTransformSignal: (params: SetObjectTransformSignal) => emitWhenReady("setObjectTransformSignal", params),
     emitUserCommandSignal: (params: UserCommandSignal) => emitWhenReady("userCommandSignal", params),
+    emitHoldObjectSignal: (params: HoldObjectSignal) => emitWhenReady("holdObjectSignal", params),
     emitRequestRoomChangeSignal: (params: RequestRoomChangeSignal) => {
         emitWhenReady("requestRoomChangeSignal", params);
     },

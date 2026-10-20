@@ -14,6 +14,7 @@
 //   node dev/scripts/playtest/stagingAdmin.js seed-users --version 0 --count 3
 //   node dev/scripts/playtest/stagingAdmin.js seed-rooms --version 1 --count 2 [--owner <userID>] [--with-content]
 //   node dev/scripts/playtest/stagingAdmin.js seed-population --version 4 --count 25 [--with-content] [--persist]
+//   node dev/scripts/playtest/stagingAdmin.js seed-agents --count 50 --run <runID>
 //   node dev/scripts/playtest/stagingAdmin.js set-user-type --user <userID> --type admin|member|guest [--run <runID>]
 //   node dev/scripts/playtest/stagingAdmin.js restore-user-type --user <userID>
 //   node dev/scripts/playtest/stagingAdmin.js verify-migration
@@ -27,6 +28,7 @@
 // Every command prints JSON on stdout, naming the target it addressed.
 
 const zlib = require("zlib");
+const crypto = require("crypto");
 const DBGuard = require("./lib/dbGuard");
 const { generateRoomContent } = require("./generateRoomContent");
 const { MILESTONES } = require("../analytics/funnelReport");
@@ -47,7 +49,7 @@ function backupRoot() { return `${PREFIX}playtest_backup`; }
 // here detects drift — `inspect` and `verify-migration` both measure against these numbers, so a stale
 // one reports migrated rows as outdated and hides real staleness. Bump alongside
 // src/server/db/types/versionMigration/.
-const CURRENT_VERSION = { users: 5, rooms: 8 };
+const CURRENT_VERSION = { users: 6, rooms: 8 };
 
 const ROOM_TYPE_REGULAR = 1;
 
@@ -90,6 +92,10 @@ function buildUser(version, runID, index)
 
     // v2 -> v3 adds ftue.
     if (version >= 3) row.ftue = "";
+
+    // v4 -> v5 adds acquisitionSource and funnel; v5 -> v6 agentKeyHash and agentInterests.
+    if (version >= 5) { row.acquisitionSource = ""; row.funnel = ""; }
+    if (version >= 6) { row.agentKeyHash = ""; row.agentInterests = ""; }
 
     return addLegacyStoredID(row, version, CURRENT_VERSION.users, runID);
 }
@@ -288,6 +294,51 @@ async function seedRooms(db, bucket, version, count, runID, ownerUserID, options
     };
 }
 
+// ─── Agents ─────────────────────────────────────────────────────────────
+// Agents register through the MCP endpoint, capped per IP as guests are, so a crowd of them (a load test) is
+// seeded: the row registration writes, with a key printed only here (as AgentKeyUtil makes and checks one).
+const USER_TYPE_AGENT = 3;
+const FUNNEL_ARRIVED = "a";
+const AGENT_NAME_MAX_LENGTH = 24;
+
+// The source registration gives an agent whose ref is the run's playtest ref (agent prefix, capped at 32).
+function agentSource(runID)
+{
+    return `agent-${playtestRef(runID)}`.slice(0, 32);
+}
+
+async function seedAgents(db, count, runID)
+{
+    const agents = [];
+    // A batch holds at most 500 writes.
+    for (let start = 0; start < count; start += 400)
+    {
+        const batch = db.batch();
+        for (let i = start; i < Math.min(count, start + 400); i++)
+        {
+            const userName = `Load-${runID}-${i}`;
+            if (userName.length > AGENT_NAME_MAX_LENGTH)
+                throw new Error(`"${userName}" is longer than an agent's name may be; use a shorter --run.`);
+
+            const ref = db.collection(collection("users")).doc();
+            const secret = crypto.randomBytes(32).toString("base64url");
+            const row = buildUser(CURRENT_VERSION.users, runID, i);
+            Object.assign(row, {
+                userName,
+                userType: USER_TYPE_AGENT,
+                singlePlayerMode: "",
+                acquisitionSource: agentSource(runID),
+                funnel: FUNNEL_ARRIVED,
+                agentKeyHash: crypto.createHash("sha256").update(secret).digest("hex"),
+            });
+            batch.set(ref, row);
+            agents.push({ userID: ref.id, userName, key: `${ref.id}.${secret}` });
+        }
+        await batch.commit();
+    }
+    return { collection: collection("users"), count, runID, source: agentSource(runID), agents };
+}
+
 // ─── Who a session is allowed to be ─────────────────────────────────────
 // Staging sessions can only be guests (production mode), which puts admin- and member-only checks out of
 // reach. As in production (admins are promoted by hand in the DB), a run mints a guest through the real
@@ -409,17 +460,29 @@ async function list(db)
     return results;
 }
 
+// A batch holds at most 500 writes.
+async function deleteDocs(db, docs)
+{
+    for (let i = 0; i < docs.length; i += 400)
+    {
+        const batch = db.batch();
+        docs.slice(i, i + 400).forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+    }
+}
+
 // `--persist` documents are kept unless `--all`: current-version seeds are reusable fixtures, while
 // outdated seeds migrate on first read and so are never persistent.
 async function cleanup(db, bucket, runID, includePersistent)
 {
     const results = {};
     const roomIDs = [];
+    const userIDs = [];
 
     for (const name of ["users", "rooms"])
     {
         const snap = await db.collection(collection(name)).where(MARKER, "!=", null).get();
-        // Filtered from the marker query's results, so unmarked documents can never be deleted.
+        // Filtered from the marker query's results, so unmarked documents are never deleted here.
         const targets = snap.docs.filter(doc => {
             const data = doc.data();
             if (runID && data[MARKER] !== runID) return false;
@@ -427,10 +490,9 @@ async function cleanup(db, bucket, runID, includePersistent)
             return true;
         });
 
-        const batch = db.batch();
-        targets.forEach(doc => batch.delete(doc.ref));
-        if (targets.length > 0) await batch.commit();
+        await deleteDocs(db, targets);
 
+        if (name === "users") targets.forEach(doc => userIDs.push(doc.id));
         if (name === "rooms") targets.forEach(doc => roomIDs.push(doc.id));
 
         const kept = snap.docs.filter(doc => !targets.includes(doc));
@@ -440,6 +502,29 @@ async function cleanup(db, bucket, runID, includePersistent)
             docIDs: targets.map(d => d.id),
         };
     }
+
+    // Agents a run registered through the endpoint carry no marker, since the server wrote them, so they're
+    // selected by the playtest ref in their source, as cohort documents are.
+    const agentSnap = await db.collection(collection("users")).where("userType", "==", USER_TYPE_AGENT).get();
+    const registered = agentSnap.docs.filter(doc => {
+        const source = String(doc.data().acquisitionSource || "");
+        return runID ? source === agentSource(runID) : source.startsWith(agentSource(""));
+    });
+    await deleteDocs(db, registered);
+    registered.forEach(doc => userIDs.push(doc.id));
+    results.registeredAgents = { deleted: registered.length, docIDs: registered.map(d => d.id) };
+
+    // Rooms the server made for a user deleted here (an agent's home) would otherwise outlive their owner.
+    const owned = [];
+    for (let i = 0; i < userIDs.length; i += 30)
+    {
+        const snap = await db.collection(collection("rooms"))
+            .where("ownerUserID", "in", userIDs.slice(i, i + 30)).get();
+        owned.push(...snap.docs);
+    }
+    await deleteDocs(db, owned);
+    owned.forEach(doc => roomIDs.push(doc.id));
+    results.ownedRooms = { deleted: owned.length, docIDs: owned.map(d => d.id) };
 
     // A deleted room's content blob would otherwise be orphaned in the bucket forever.
     let blobsDeleted = 0;
@@ -496,15 +581,16 @@ async function verifyFunnel(db, runID)
     };
 }
 
-// Deletes only cohort documents with the reserved prefix; organic traffic can't be named.
+// Deletes only cohort documents with the reserved prefix (an agent's too); organic traffic can't be named.
 async function cleanupAcquisition(db)
 {
     const snap = await db.collection(collection("acquisition")).get();
-    const targets = snap.docs.filter(doc => String(doc.data().source || "").startsWith(PLAYTEST_REF_PREFIX));
+    const targets = snap.docs.filter(doc => {
+        const source = String(doc.data().source || "");
+        return source.startsWith(PLAYTEST_REF_PREFIX) || source.startsWith(agentSource(""));
+    });
 
-    const batch = db.batch();
-    targets.forEach(doc => batch.delete(doc.ref));
-    if (targets.length > 0) await batch.commit();
+    await deleteDocs(db, targets);
 
     return { deleted: targets.length, docIDs: targets.map(d => d.id) };
 }
@@ -676,6 +762,7 @@ async function main()
                 persist: process.argv.includes("--persist"),
             });
             break;
+        case "seed-agents":        output = await seedAgents(db, count, runID); break;
         case "set-user-type":
             output = await setUserType(db, flag("user", ""), flag("type", ""), runID);
             break;
@@ -697,7 +784,7 @@ async function main()
             break;
         default:
             console.error(`Unknown command: ${command || "(none)"}\n` +
-                `Commands: inspect | seed-users | seed-rooms | seed-population | set-user-type |\n` +
+                `Commands: inspect | seed-users | seed-rooms | seed-population | seed-agents | set-user-type |\n` +
                 `          restore-user-type | verify-migration | verify-funnel | inspect-content |\n` +
                 `          downgrade-content | restore-content | list | cleanup\n` +
                 `Targets:  --target staging (default) | --target local`);

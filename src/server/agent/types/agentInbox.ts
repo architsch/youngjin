@@ -9,6 +9,8 @@ import { RoomChangeRejectionReasonEnumMap } from "../../../shared/room/types/roo
 import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import VolumeObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/volumeObjectTypeConfig";
+import NpcObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/npcObjectTypeConfig";
+import LabelTextUtil from "../../../shared/object/util/labelTextUtil";
 import AddVoxelBlockSignal from "../../../shared/voxel/types/update/addVoxelBlockSignal";
 import MoveVoxelBlockSignal from "../../../shared/voxel/types/update/moveVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../../shared/voxel/types/update/removeVoxelBlockSignal";
@@ -37,6 +39,8 @@ export default class AgentInbox
     private playerByObjectId: {[objectId: string]: {name: string, isAgent: boolean}} = {};
     // What every other object in the room is, likewise.
     private objectTypeById: {[objectId: string]: string} = {};
+    // The helpers' names (see HelperAgentUtil): every NPC in a room an agent can be in is one.
+    private helperNameById: {[objectId: string]: string} = {};
 
     constructor(userID: string)
     {
@@ -54,6 +58,7 @@ export default class AgentInbox
                 const room = (signalData as RoomChangedSignal).roomRuntimeMemory.room;
                 this.playerByObjectId = {};
                 this.objectTypeById = {};
+                this.helperNameById = {};
                 for (const obj of Object.values(room.objectById))
                     this.noteObject(obj);
                 this.push({kind: "roomEntered", roomID: room.id});
@@ -94,6 +99,7 @@ export default class AgentInbox
                 else if (type)
                 {
                     delete this.objectTypeById[objectId];
+                    delete this.helperNameById[objectId];
                     this.push({kind: "objectRemoved", id: objectId, type});
                 }
                 break;
@@ -102,16 +108,31 @@ export default class AgentInbox
             {
                 const signal = signalData as SetObjectMetadataSignal;
                 const player = this.playerByObjectId[signal.objectId];
+                const helperName = this.helperNameById[signal.objectId];
                 const text = signal.metadataValue.trim();
-                if (player && signal.metadataKey == ObjectMetadataKeyEnumMap.SentMessage && text.length > 0)
+                const isSpeech = signal.metadataKey == ObjectMetadataKeyEnumMap.SentMessage;
+                if (player && isSpeech && text.length > 0)
                     this.push({kind: "speech", who: player.name, whoIsAgent: player.isAgent, text});
+                else if (helperName != undefined)
+                {
+                    // A helper's speech, or a new name; which way it faces is its own doing, not anyone's edit.
+                    if (isSpeech && text.length > 0)
+                        this.push({kind: "speech", who: helperName, whoIsAgent: true, text});
+                    else if (signal.metadataKey == ObjectMetadataKeyEnumMap.Label)
+                        this.helperNameById[signal.objectId] = LabelTextUtil.toName(signal.metadataValue);
+                }
                 else
                     this.noteObjectChange(signal.objectId);
                 break;
             }
             case "setObjectTransformSignal":
-                this.noteObjectChange((signalData as SetObjectTransformSignal).objectId);
+            {
+                // A helper walks of its own accord.
+                const objectId = (signalData as SetObjectTransformSignal).objectId;
+                if (this.helperNameById[objectId] == undefined)
+                    this.noteObjectChange(objectId);
                 break;
+            }
             case "addVoxelBlockSignal":
                 this.noteBlocks("placed", [(signalData as AddVoxelBlockSignal).quadIndex]);
                 break;
@@ -159,7 +180,11 @@ export default class AgentInbox
             }
         }
         else
+        {
             this.objectTypeById[obj.objectId] = (config == VolumeObjectTypeConfig) ? "zone" : config.objectType.toLowerCase();
+            if (config == NpcObjectTypeConfig)
+                this.helperNameById[obj.objectId] = LabelTextUtil.toName(LabelTextUtil.getText(obj));
+        }
     }
 
     // Whether a player of the room by that name is an agent, as far as can be told.

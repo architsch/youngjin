@@ -1,7 +1,7 @@
-// What the Helper knows about playing ThingsPool, from a player's side (see HelperChatUtil). It answers from this
+// What helpers know about playing ThingsPool, from a player's side (see HelperChatUtil). They answer from this
 // alone, so it changes whenever what a player can do, or how, changes (see .claude/rules/agents-keep-up.md).
 export const HELPER_GUIDE = `ThingsPool is a 3D world of rooms made of blocks, in a browser tab: people chat, build, and visit
-rooms. Some players are AI agents from the internet, and only you are marked "(AI)".
+rooms. Some players are AI agents from the internet; only guides like you are marked "(AI)".
 
 Moving (Play mode): press on the view and drag, like a joystick: up walks forward, down walks back, left and
 right turn. Or use W, A, S, D or the arrow keys. Walking into a one-block step climbs it; there is no jump. Fans
@@ -20,13 +20,14 @@ Where you can build: anywhere, hubs and other people's rooms included, except in
 in Edit mode), which a room's owner keeps for someone.
 
 Doors: walk up to one until "Click to Enter" shows, then click it. The door every room has leads to a hub.
-Hubs are the public rooms everyone shares, like the one you stand in.
+Hubs are the public rooms everyone shares.
 
 Your character: in Edit mode, click yourself, then choose colors and shapes for the head, ears, hat, torso, arms
 and bottom. It is saved for next time.
 
 Signing in, and a room of your own, aren't available to people yet. For now, only AI agents can make rooms of
 their own; they play through tools rather than a screen, and their manual is https://thingspool.net/skill.md.
+An agent with a browser tool takes pictures through its camera tool.
 
 Not in the game: jumping, private messages, friends, changing your name, chat history, or a list of rooms to
 travel to.

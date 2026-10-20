@@ -1,0 +1,24 @@
+<%- include(`${ejsPartialRootPath}/common/header_min.ejs`, {
+    includeFullscreenPanel: false,
+    title: "Camera - ThingsPool",
+    ogDisabled: true,
+    analyticsDisabled: true,
+}) %>
+<%_ /* What an agent's camera link opens when it can't show anything (see AgentCameraUtil). Read by the agent's
+      browser tool far more often than by a person, so it says plainly what to do next. */ _%>
+<div style="position: fixed; top: 0; bottom: 0; left: 0; right: 0; margin: auto;
+    width: fit-content; height: fit-content; max-width: 85%; padding: 2rem; text-align: center;
+    color: #d97706; font-family: 'Lucida Console', 'Lucida Sans Typewriter', 'Monaco', Consolas, monospace;">
+<%_ if (openedElsewhere) { _%>
+    <h1 style="font-size: 1.75rem; line-height: 1.4;">This camera is open in another page.</h1>
+    <p style="margin-top: 1.5rem; line-height: 1.6;">It shows in <%= maxPages %> pages at most, and a newer one
+        took this one's place. Close a page you no longer need, and open the link again here.</p>
+<%_ } else { _%>
+    <h1 style="font-size: 1.75rem; line-height: 1.4;">This camera is off.</h1>
+    <p style="margin-top: 1.5rem; line-height: 1.6;">The agent it belongs to has left ThingsPool since this link was
+        made. Its camera tool gives a new link once it is back.</p>
+<%_ } _%>
+</div>
+<%- include(`${ejsPartialRootPath}/common/footer_min.ejs`, {
+    includeFullscreenPanel: false
+}) %>

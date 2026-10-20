@@ -35,7 +35,7 @@ const ServerVoxelManager =
         }
 
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
-        socketRoomContext.multicastSignal("addVoxelBlockSignal", signal, user.id);
+        socketRoomContext.multicastSignalFromUser("addVoxelBlockSignal", signal, socketUserContext);
     },
     onRemoveVoxelBlockSignalReceived: (socketUserContext: UserContext, signal: RemoveVoxelBlockSignal) =>
     {
@@ -57,7 +57,7 @@ const ServerVoxelManager =
         }
 
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
-        socketRoomContext.multicastSignal("removeVoxelBlockSignal", signal, user.id);
+        socketRoomContext.multicastSignalFromUser("removeVoxelBlockSignal", signal, socketUserContext);
     },
     onMoveVoxelBlockSignalReceived: (socketUserContext: UserContext, signal: MoveVoxelBlockSignal) =>
     {
@@ -89,7 +89,7 @@ const ServerVoxelManager =
         }
 
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
-        socketRoomContext.multicastSignal("moveVoxelBlockSignal", signal, user.id);
+        socketRoomContext.multicastSignalFromUser("moveVoxelBlockSignal", signal, socketUserContext);
     },
     onSetVoxelQuadTextureSignalReceived: (socketUserContext: UserContext, signal: SetVoxelQuadTextureSignal) =>
     {
@@ -115,7 +115,7 @@ const ServerVoxelManager =
         }
 
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
-        socketRoomContext.multicastSignal("setVoxelQuadTextureSignal", signal, user.id);
+        socketRoomContext.multicastSignalFromUser("setVoxelQuadTextureSignal", signal, socketUserContext);
     },
 }
 

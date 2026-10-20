@@ -12,11 +12,16 @@ export default interface UserContext
     // Recorded funnel milestones from the authenticated row, so analytics can skip DB reads on the edit path.
     // Not on User, which is serialized to the browser. Kept in sync by ServerAnalyticsManager.
     funnel: string;
+    // The login this visit belongs to (see DBUserUtil.getLoginCount), by which a helper greets each visitor once a login.
+    loginCount: number;
 
     // When each throttled signal type was last let through (see UserSignalDispatchUtil).
     signalThrottleTimestamps: {[signalType: string]: number};
 
     addPendingSignalToUser(signalType: string, signalData: EncodableData): void;
+    // A change the user made, which their own client has applied already (see SocketRoomContext.multicastSignalFromUser):
+    // nothing to send them, but whatever else shows the room through their eyes needs it (see AgentCameraUtil).
+    addOwnSignalToUser(signalType: string, signalData: EncodableData): void;
     // Drops what is queued, for when the signal queued next replaces all of it (see
     // ServerRoomManager.loadRoomFile).
     clearAllPendingSignalsToUser(): void;

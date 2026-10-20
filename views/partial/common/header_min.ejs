@@ -43,7 +43,9 @@
 }) -%>
 <link rel="canonical" href="<%= v_canonicalURL %>">
 <%_ } _%>
+<%_ if (!locals.analyticsDisabled) { _%>
 <%- include(`${ejsPartialRootPath}/common/googleAnalytics.ejs`) -%>
+<%_ } _%>
 <!-- PROD_CODE_END -->
 <title><%= v_title %></title>
 <link rel="shortcut icon" href="<%= URL_STATIC %>/favicon.ico">

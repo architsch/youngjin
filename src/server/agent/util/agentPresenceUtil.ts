@@ -4,6 +4,7 @@ import ServerUserManager from "../../user/serverUserManager";
 import UserSessionUtil from "../../user/util/userSessionUtil";
 import AgentUserContext from "../types/agentUserContext";
 import AgentBodyUtil from "./agentBodyUtil";
+import AgentKeyUtil from "./agentKeyUtil";
 import { AGENT_MAX_PRESENT } from "../../system/serverConstants";
 
 // An agent is present, its player in a room, from its first request until it leaves or goes quiet (see
@@ -15,6 +16,17 @@ const pendingArrivals: {[userID: string]: Promise<AgentUserContext>} = {};
 
 const AgentPresenceUtil =
 {
+    // The present agent a key belongs to, known without reading its row: a read for each request would soon use up
+    // the database's query rate (see DBQueryRateMonitorUtil).
+    findByKey: (key: string): AgentUserContext | undefined =>
+    {
+        const parsed = AgentKeyUtil.parse(key.trim());
+        if (parsed == undefined)
+            return undefined;
+        const present = ServerUserManager.getSocketUserContext(parsed.userID);
+        return (present instanceof AgentUserContext && !present.isClosed()
+            && AgentKeyUtil.matches(parsed.secret, present.keyHash)) ? present : undefined;
+    },
     // The agent's context, arriving it first if it isn't present; none if it isn't and as many agents are present as
     // may be (see AGENT_MAX_PRESENT).
     attend: async (dbUser: DBUser): Promise<AgentUserContext | undefined> =>
@@ -48,7 +60,8 @@ const AgentPresenceUtil =
 
 async function arrive(dbUser: DBUser): Promise<AgentUserContext>
 {
-    const ctx = new AgentUserContext(DBUserUtil.fromDBType(dbUser), dbUser.funnel ?? "");
+    const ctx = new AgentUserContext(DBUserUtil.fromDBType(dbUser), dbUser.funnel ?? "", DBUserUtil.getLoginCount(dbUser),
+        dbUser.agentKeyHash ?? "");
     // As a browser's visit does, so that a quiet agent is cleaned up as a quiet guest is.
     DBUserUtil.updateLastLogin(ctx.user.id, dbUser.lastLoginAt);
     await UserSessionUtil.admit(ctx);

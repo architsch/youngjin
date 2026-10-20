@@ -18,6 +18,9 @@ import UserSessionUtil from "../user/util/userSessionUtil";
 import UserSignalDispatchUtil from "../user/util/userSignalDispatchUtil";
 import EditRateLogUtil from "../user/util/editRateLogUtil";
 import AgentBodyUtil from "../agent/util/agentBodyUtil";
+import HelperAgentUtil from "../agent/util/helperAgentUtil";
+import AgentCameraUtil from "../agent/util/agentCameraUtil";
+import AgentUserContext from "../agent/types/agentUserContext";
 
 let io: socketIO.Server;
 let signalProcessingInterval: ReturnType<typeof setInterval>;
@@ -69,6 +72,15 @@ const SocketsServer =
         }
 
         io.on("connection", async (socket: socketIO.Socket) => {
+            // A camera page is nobody: it watches an agent, and has no player or session of its own. (Set only by the
+            // middleware: whatever else a handshake says is never an agent.)
+            const watched = socket.handshake.auth.cameraOf;
+            if (watched instanceof AgentUserContext)
+            {
+                AgentCameraUtil.admit(socket, watched);
+                return;
+            }
+
             try {
                 const socketUserContext = new SocketUserContext(socket);
                 const user = socketUserContext.user;
@@ -96,11 +108,13 @@ const SocketsServer =
             }
         });
 
-        // Signals are batched and flushed on an interval. Agents' bodies move first, so their moves go out with it.
+        // Signals are batched and flushed on an interval. Agents' bodies and walking helpers move first, so their moves go
+        // out with it.
         let lastFlushAt = Date.now();
         signalProcessingInterval = setInterval(() => {
             const now = Date.now();
             AgentBodyUtil.stepAll((now - lastFlushAt) / 1000);
+            HelperAgentUtil.stepAll((now - lastFlushAt) / 1000);
             lastFlushAt = now;
 
             for (const userID in ServerUserManager.socketUserContexts)
@@ -124,6 +138,8 @@ const SocketsServer =
                     {
                         console.warn(`(SocketsServer) Stale connection detected, cleaning up :: userID = ${userID}`);
                         delete staleSocketFirstDetectedAt[userID];
+                        // Ended for good first, which closes whatever else hangs on it (an agent's cameras).
+                        ctx.disconnect();
                         await UserSessionUtil.release(ctx);
                     }
                 }
@@ -156,6 +172,22 @@ function makeAuthMiddleware(passCondition: (user: User) => Boolean): SocketMiddl
     {
         try
         {
+            // An agent's camera page carries its link's token instead of a session (see AgentCameraUtil).
+            const cameraToken = socket.handshake.auth?.cameraToken;
+            if (cameraToken != undefined)
+            {
+                const watched = AgentCameraUtil.findByToken(cameraToken);
+                if (watched == undefined)
+                {
+                    // The page reloads into saying why.
+                    next(new Error(AgentCameraUtil.getPageURL(encodeURIComponent(String(cameraToken).slice(0, 64)))));
+                    return;
+                }
+                socket.handshake.auth = {cameraOf: watched};
+                next();
+                return;
+            }
+
             const cookieStr = socket.request.headers.cookie;
             console.log(`Authenticating socket (ID: ${socket.id})`);
             if (!cookieStr)
@@ -191,9 +223,10 @@ function makeAuthMiddleware(passCondition: (user: User) => Boolean): SocketMiddl
                 return;
             }
 
-            // Set after the spread so client handshake values are overwritten. funnel is server-only
+            // Set after the spread so client handshake values are overwritten. funnel and loginCount are server-only
             // state, deliberately not part of User.
-            socket.handshake.auth = { ...socket.handshake.auth, user, funnel: dbUser.funnel ?? "" };
+            socket.handshake.auth = { ...socket.handshake.auth, user, funnel: dbUser.funnel ?? "",
+                loginCount: DBUserUtil.getLoginCount(dbUser) };
             next();
         }
         catch (err)

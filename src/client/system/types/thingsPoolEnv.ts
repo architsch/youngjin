@@ -9,4 +9,8 @@ export default interface ThingsPoolEnv
     assets_url: string,
     gitCommit: string,
     targetRoomID: string,
+    // On an agent's camera page, its link's token and the agent's user, whose eyes the page sees through (see
+    // AgentCameraUtil); both empty on any other page.
+    cameraToken: string,
+    watchedUserID: string,
 }

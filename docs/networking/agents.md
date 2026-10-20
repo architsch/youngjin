@@ -1,12 +1,14 @@
 # AI Agents
 
-Reference: @src/server/agent/util/agentMcpUtil.ts , @src/server/agent/util/agentToolUtil.ts , @src/server/agent/util/agentBlockUtil.ts , @src/server/agent/util/agentObjectUtil.ts , @src/server/agent/util/agentRoomSettingsUtil.ts , @src/server/agent/util/helperAgentUtil.ts , @src/server/agent/util/helperChatUtil.ts , @src/server/agent/util/agentGridUtil.ts , @src/shared/voxel/maps/voxelTextureNameMap.ts , @src/server/agent/util/agentPresenceUtil.ts , @src/server/agent/util/agentBodyUtil.ts , @src/shared/voxel/util/voxelPathUtil.ts , @src/server/agent/util/agentAccountUtil.ts , @src/server/agent/util/agentDirectoryUtil.ts , @src/server/agent/util/agentCleanupUtil.ts , @src/server/agent/types/agentUserContext.ts , @src/server/agent/types/agentInbox.ts , @src/server/user/util/userSessionUtil.ts , @src/server/user/util/userSignalDispatchUtil.ts
+Reference: @src/server/agent/util/agentMcpUtil.ts , @src/server/agent/util/agentToolUtil.ts , @src/server/agent/util/agentBlockUtil.ts , @src/server/agent/util/agentObjectUtil.ts , @src/server/agent/util/agentRoomSettingsUtil.ts , @src/server/agent/util/helperAgentUtil.ts , @src/server/agent/util/helperChatUtil.ts , @src/server/agent/util/agentGridUtil.ts , @src/shared/voxel/maps/voxelTextureNameMap.ts , @src/server/agent/util/agentPresenceUtil.ts , @src/server/agent/util/agentBodyUtil.ts , @src/shared/voxel/util/voxelPathUtil.ts , @src/server/agent/util/agentAccountUtil.ts , @src/server/agent/util/agentDirectoryUtil.ts , @src/server/agent/util/agentCleanupUtil.ts , @src/server/agent/util/agentCameraUtil.ts , @src/client/object/util/watchedPlayerCameraUtil.ts , @src/server/agent/types/agentUserContext.ts , @src/server/agent/types/agentInbox.ts , @src/server/user/util/userSessionUtil.ts , @src/server/user/util/userSignalDispatchUtil.ts
 
 AI agents play as players: in the same rooms as people, under the same rules, with edits kept as anyone's are. They reach the game through an MCP endpoint instead of a browser.
 
 ## Identity
 - An agent is a user of type `Agent`. It registers itself by a tool, under a name of its own choosing: names are unique, since zones are kept for a user by name, and can't pass for a guest's.
 - Registration returns a key once: the user's id and a secret, of which the row keeps only a hash. Every request carries the key, as a bearer token or as the endpoint address's last part (for hosts that take only an address), and nothing else identifies an agent. Neither the server nor Nginx logs that address.
+- A present agent's key is checked against the hash its presence holds, so its requests read no row: a read each would soon use up the database's query rate (`DBQueryRateMonitorUtil`), past which writes are refused for everyone.
+- A request carries one message: batches are refused, since one would carry any number of calls past the per-address limits.
 - Registrations share guest creation's per-IP account caps (see [authentication.md](authentication.md)).
 - An agent enters the world directly, with no tutorial, and is deleted when inactive by the guests' tiers, its room with it (`AgentCleanupUtil`). One who is present, or whose room someone is in, waits for a later round.
 - Agents' acquisition sources carry an agent prefix, so they never mix with the human funnel.
@@ -15,7 +17,7 @@ AI agents play as players: in the same rooms as people, under the same rules, wi
 - The protocol keeps no session, so the server keeps the agent's presence. Its first request puts its player in a room (its last, else a hub), as a browser's connection does. The player leaves on the leave tool, or once the agent has gone quiet, when the stale-connection sweep releases it.
 - An agent is a `UserContext` without a socket (`AgentUserContext`): rooms and managers hold browsers and agents alike, and both arrive and leave through `UserSessionUtil`.
 - Requests arriving together share one arrival.
-- Only so many agents are present at once (`AGENT_MAX_PRESENT`), since the server steps their bodies; one more is turned away until another leaves.
+- Only so many agents are present at once (`AGENT_MAX_PRESENT`), since the server steps their bodies and holds their rooms, within the process's memory limit; one more is turned away until another leaves.
 - Each agent's calls are paid for from budgets of its own, the tools that only look apart from the rest, on top of the endpoint's limit per IP, which leaves room for a few agents run from one address.
 
 ## Acting and hearing
@@ -44,9 +46,11 @@ AI agents play as players: in the same rooms as people, under the same rules, wi
 | Tool | Does |
 |---|---|
 | register | an account under a name of the agent's own |
-| look | the room, where the agent stands, the nearest people with their speech, the doors with where they lead, the nearest things placed, and the zones |
+| look | the room, where the agent stands and which way it faces, the nearest people (helpers among them, marked as guides) with their speech, the doors with where they lead, the nearest things placed, and the zones |
 | look_blocks | a region's blocks, as boxes with their textures |
-| walk_to | to a voxel, or up to a person |
+| walk_to | to a voxel, or up to a person or a helper |
+| face | turns where it stands, toward a voxel, a person or a compass direction |
+| camera | a private link to its camera, for a browser tool's screenshots |
 | use_door | walks through a door, wherever it leads |
 | whats_new | the events since the last call |
 | textures | the room's textures, by name |
@@ -62,27 +66,38 @@ AI agents play as players: in the same rooms as people, under the same rules, wi
 | find_rooms | rooms people and other agents own: by the owner's name, by agents' shared interests, or at random |
 | leave | ends the visit |
 
-- What agents read (the endpoint's instructions, the manual and its ClawHub copy) and what the Helper is told keep up with every feature (see `.claude/rules/agents-keep-up.md`).
+- What agents read (the endpoint's instructions, the manual and its ClawHub copy) and what the helpers are told keep up with every feature (see `.claude/rules/agents-keep-up.md`).
+
+## The camera
+- A page showing a browser, live, what an agent's player sees: the game page in play mode, in first person at the player's eyes, with nothing over the view but the site's address in a corner, and the waits. An agent with a browser tool keeps it open to watch its surroundings, and screenshots it for pictures: a look costs the server nothing beyond what a player's browser is sent, and no picture is rendered on the server.
+- Its link holds a random token, made when first asked for and good while the agent is present; a few pages may be open on it, a newer one sending the oldest away. Once the agent leaves, its pages reload into saying the camera is off.
+- The page is nobody: no session, cookie or player of its own, nobody added to the room, and nothing it sends is heard. Its socket carries the token instead (`AgentCameraUtil`).
+- On opening it is sent the agent's room, and where its helpers stand and what they say, as a newcomer is told; from then on what the agent is sent (`AgentUserContext`), and the agent's own changes besides, which a browser applies itself and so is never sent back: `SocketRoomContext` hands each user's change back to its sender, for whatever watches through their eyes.
+- The client moves the watched player as any other's, and `WatchedPlayerCameraUtil` drives the first-person `PlayerCamera` from it. Its frames are pictures, so the view is at the eyes at once rather than easing after them, and drawn at full resolution however slow the browser (`GraphicsManager`).
 
 ## Reaching agents
 - **The manual**, `public/skill.md`, served at the static site's `/skill.md`: the page an invitation names ("Read … and join ThingsPool"), and a skill file agents can keep. It covers connecting (an MCP client, an address, or curl), registering, manners, and what to tell the operator. The world and the tools are left to the endpoint's instructions. It is Apache-2.0, unlike the rest of `public/`. Its ClawHub copy, `dev/clawhub/thingspool/SKILL.md`, is MIT-0, the only license ClawHub publishes under, and otherwise the same (see `LICENSE-CONTENT.md`). The integration tests hold the two together and send the manual's curl commands as written.
 - **Listings**: `server.json` describes the endpoint for the official MCP Registry under the domain's namespace, published by hand with `mcp-publisher`.
 - **Room links** given to agents carry the `via-agent` ref tag, so the people who open one, an agent's operator above all, are counted apart (see [analytics.md](../devOps/analytics.md)).
 
-## The Helper
-- The agent the server runs itself, so that a newcomer never arrives to an empty world (`HelperAgentUtil`). An ordinary agent account under a reserved name, with no key: it plays through the same tools and rules as any agent, from inside the server.
-- It stays near the default entrance of the hub newcomers land in first (`RoomPickerUtil.getFirstHubRoomID`), facing it, and follows when the admins' order puts another hub first.
-- It greets each arrival on a first visit (no Returned milestone), agents included, with fixed words, and answers whoever talks to it nearby, or names it, people and agents alike, through Claude (`HelperChatUtil`).
-- Claude is asked only for a reply: the rules, the guide (`helperGuide.ts`, cached) and that one's own recent lines.
-- Replies are paid from a daily budget in dollars (`HELPER_DAILY_BUDGET_DOLLARS`). Each is charged at the tokens the API says it took, priced by `HELPER_MODEL_PRICES`, which must follow the model.
+## Helpers
+- AI guides the server plays, so that a newcomer never arrives to an empty world (`HelperAgentUtil`): every NPC an admin stands in a multiplayer room (see `NpcObjectTypeConfig`). An admin places, names, dresses and drags one as any NPC; there may be several, in any rooms.
+- A helper is no agent and no player: it holds no presence or account, and counts toward no cap. What it does is shown to the room and never kept. Its steps, turns and speech are sent as signals, while the room keeps it at home, where the admin put it. So an admin's move is a new home, which it stands still at for a while; those who arrive are told where it is now.
+- It keeps near home, on its own floor: it wanders a little, walks up to someone it answers from a little way off (on a leash), and walks back, round blocks by A* paths (`VoxelPathUtil`). Browsers glide it between steps.
+- An admin's edit-mode selection holds it still for everyone, a drag's drop included, until the selection leaves it: the browser tells the server as the selection takes it and leaves it (`HoldObjectSignal`), and the admin leaving the room lets go too.
+- It greets each visitor as they come near on its floor, once in each of their logins (`UserContext.loginCount`, the visit's `DBUser.loginCount`), agents included, with fixed words. It answers whoever talks to it nearby on its floor, or names it (or says "helper") from anywhere in the room, people and agents alike, through Claude (`HelperChatUtil`); speech reaches it from `UserSignalDispatchUtil`.
+- Claude is asked only for a reply: the rules and the guide (`helperGuide.ts`), cached and the same for every helper, then its name and place, and that one's own recent lines with it, with thinking off, which would spend the reply's tokens.
+- In a crowd it talks as a person would: those who come near while it is talking are greeted together after, and those who talk to it at once are answered in turn, each once it has finished speaking; lines left waiting too long are let go.
+- Replies are paid from a daily budget in dollars (`HELPER_DAILY_BUDGET_DOLLARS`), shared by every helper. Each is charged at the tokens the API says it took, priced by `HELPER_MODEL_PRICES`, which must follow the model.
   - The day's spending is kept in Firestore (`DBHelperSpendingUtil`) as it goes, so a restart doesn't hand out the day anew. While it can't be read, nothing is paid for.
   - Staging and local servers have a small budget of their own, since they share the key.
-- Each one talking to it also has an hourly limit, lower for an agent, which could otherwise keep it talking. Each limit reached is said once. Its spending is logged hourly. Without `ANTHROPIC_API_KEY` it only greets.
-- Its replies are cut into bubbles a speech bubble holds, paced to be read.
+- Each one talking to helpers also has an hourly limit, across all of them, lower for an agent, which could otherwise keep them talking. Each limit reached is said once. Spending is logged hourly. Without `ANTHROPIC_API_KEY` a helper only greets.
+- Its replies are cut into bubbles a speech bubble holds, paced to be read, and the last is taken down after a quiet while.
+- People see a helper's name with "(AI)" after it (`NpcGameObject`), because the server plays it on a model whose provider, and laws on AI that talks to people, require saying so; an NPC in a single-player room is its script's, and unmarked. Agents see helpers among the people, marked as guides, hear their speech, and can walk up to them; their steps and turns aren't reported as edits.
 
 ## The agent mark
-- An agent's player carries the `AgentMark` metadata key, set by the server at spawn: one value for any agent, which agents see, and another for the Helper, which people see too, as an AI after its name. No signal may set it, and a stored copy is never restored.
-- Only the Helper is shown to people as an AI, because the server runs it on a model whose provider, and laws on AI that talks to people, require saying so. Other agents' operators carry that duty, and the manual and instructions tell agents to say they are AIs.
+- An agent's player carries the `AgentMark` metadata key, set by the server at spawn, which agents see and people don't. No signal may set it, and a stored copy is never restored.
+- Agents aren't shown to people as AIs: their operators carry that duty, and the manual and instructions tell agents to say they are AIs.
 
 ## Room directory
 - Lists the rooms people and agents own, for agents to find rooms to visit, each saying whether its owner is an agent. Hubs aren't listed, since travel reaches them by "hub".

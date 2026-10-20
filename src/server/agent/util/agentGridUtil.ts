@@ -9,6 +9,7 @@ import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS,
 import AgentBox from "../types/agentBox";
 import AgentFace from "../types/agentFace";
 import { AgentSide } from "../types/agentSide";
+import { AgentHeading } from "../types/agentHeading";
 
 // A body resting on a layer's bottom may sit a hair under it.
 const FEET_MARGIN = 1e-3;
@@ -21,6 +22,9 @@ const SIDE_DIRS: {[side in AgentSide]: Vec3} = {
     down: {x: 0, y: -1, z: 0},
     up: {x: 0, y: 1, z: 0},
 };
+
+// Clockwise from north, which is toward row 0, as east is away from column 0.
+const HEADINGS: AgentHeading[] = ["north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest"];
 
 // How agents are told where things are, and how what they give is read (see @docs/networking/agents.md): a cell's
 // row, column and layer, as the voxel grid counts them, and a block's sides by the compass.
@@ -40,6 +44,17 @@ const AgentGridUtil =
     {
         const {normal} = Geometry3DUtil.getAxisFacingBasis(dir);
         return AgentGridUtil.sides.find(side => Vector3DUtil.equal(SIDE_DIRS[side], normal)) ?? "up";
+    },
+    // The heading nearest a way to face, and the way a heading faces.
+    getHeading: (forward: Vec3): AgentHeading =>
+    {
+        const turns = Math.round(Math.atan2(forward.x, -forward.z) / (Math.PI / 4));
+        return HEADINGS[(turns + HEADINGS.length) % HEADINGS.length];
+    },
+    getHeadingDir: (heading: AgentHeading): Vec3 =>
+    {
+        const angle = HEADINGS.indexOf(heading) * (Math.PI / 4);
+        return {x: Math.sin(angle), y: 0, z: -Math.cos(angle)};
     },
     // The cell some feet stand in.
     toGridPosition: (feet: Vec3): {row: number, column: number, layer: number} =>

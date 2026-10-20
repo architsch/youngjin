@@ -14,7 +14,7 @@ it falls behind.
 
 Nothing fails when the agents' side drifts. A feature the tools don't reach is one no agent can use. A
 change the instructions don't mention is one agents keep getting wrong, acting on the old description,
-and the Helper (the agent the server runs) goes on telling newcomers how things used to work.
+and the helpers (the AI guides the server plays) go on telling newcomers how things used to work.
 
 ## What a change touches
 
@@ -28,8 +28,8 @@ and the Helper (the agent the server runs) goes on telling newcomers how things 
 4. **The manual**, `public/skill.md`, when the change touches connecting, manners, limits or what a first
    visit does. Its ClawHub copy, `dev/clawhub/thingspool/SKILL.md`, changes with it (a test compares the
    two), and a changed manual gets a new version.
-5. **The Helper's guide**, `src/server/agent/data/helperGuide.ts`, when the change alters what a newcomer
-   can do or how they do it. The Helper answers people's questions from it alone.
+5. **The helpers' guide**, `src/server/agent/data/helperGuide.ts`, when the change alters what a newcomer
+   can do or how they do it. Helpers answer people's questions from it alone.
 6. **`docs/networking/agents.md`**, and **tests** in `tests/integration/scenarios/agent.test.ts`.
 
 ## Where the line falls

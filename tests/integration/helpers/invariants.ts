@@ -138,11 +138,11 @@ export function checkObjectTransformConsistency(connectedUsers: ConnectedUser[])
 /** Pending signals of a type from a user's SocketUserContext buffer (flushed on the batch interval). */
 export function getPendingSignals(ctx: ConnectedUser, signalType: string): any[]
 {
-    // Access the private pendingSignalRunsToUser via the socket context
+    // Read off the socket context's private queue (see SocketSignalQueue)
     const suc = ctx.socketUserContext as any;
     const typeIndex = getSignalTypeIndex(signalType);
     if (typeIndex == undefined) return [];
-    const runs: {typeIndex: number, signals: any[]}[] = suc.pendingSignalRunsToUser ?? [];
+    const runs: {typeIndex: number, signals: any[]}[] = suc.pendingSignalsToUser?.runs ?? [];
     return runs.filter(run => run.typeIndex == typeIndex).flatMap(run => run.signals);
 }
 

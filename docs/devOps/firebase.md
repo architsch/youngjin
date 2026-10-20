@@ -36,7 +36,7 @@ CI never authenticates to Firebase. The service account is `firebase-adminsdk-fb
 ## Runtime secrets
 Secrets live in Secret Manager, not GitHub: `JWT_SECRET_KEY`, `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`. They are loaded into `process.env` by `dev/scripts/bootstrap.js` (VPS) and `devRunner.js` (local). To add a secret, create it and add its name to both scripts.
 
-`ANTHROPIC_API_KEY` is optional and loaded by `bootstrap.js` alone: without it the Helper only greets (see [agents.md](../networking/agents.md)), and a local server leaves it out unless it is set in the environment, so that local chat spends nothing. What the Helper spends is kept per day in `helper_spending` (`staging_helper_spending` on staging).
+`ANTHROPIC_API_KEY` is optional and loaded by `bootstrap.js` alone: without it helpers only greet (see [agents.md](../networking/agents.md#helpers)), and a local server leaves it out unless it is set in the environment, so that local chat spends nothing. What helpers spend is kept per day in `helper_spending` (`staging_helper_spending` on staging).
 
 ## What is deployed manually
 **No workflow deploys Firebase assets.** This keeps the runtime account at least privilege and keeps code deploys decoupled from Firebase.

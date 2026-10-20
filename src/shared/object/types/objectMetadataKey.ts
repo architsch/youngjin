@@ -38,7 +38,6 @@ export const ObjectMetadataKeyEnumMap: Record<string, number> =
     // A fan's color as one character, a position in its palette, which paints its housing and tints its wind (see
     // FanObjectTypeConfig).
     FanColor: 16,
-    // On an AI agent's player, set by the server at spawn (see ServerUserManager.addUserToRoom): "1", or "2" for an
-    // agent the server runs itself, which people are shown as an AI. No signal may set it.
+    // "1" on an AI agent's player, set by the server at spawn (see ServerUserManager.addUserToRoom). No signal may set it.
     AgentMark: 17,
 }

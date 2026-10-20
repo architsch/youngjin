@@ -24,6 +24,13 @@ export default class SocketRoomContext
         }
     }
 
+    // A change one user made in the room, which their own client has applied already.
+    multicastSignalFromUser(signalType: string, signalData: EncodableData, sender: UserContext)
+    {
+        this.multicastSignal(signalType, signalData, sender.user.id);
+        sender.addOwnSignalToUser(signalType, signalData);
+    }
+
     unicastSignal(signalType: string, signalData: EncodableData, targetUserID: string)
     {
         const socketUserContext = this.socketUserContexts[targetUserID];

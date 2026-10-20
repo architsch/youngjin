@@ -73,6 +73,7 @@ const NEW_ZONE_NAME = "zone";
 const PICTURE_DESCRIPTION_WORDS = 3;
 
 const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
+const npcTypeIndex = ObjectTypeConfigMap.getIndexByType("Npc");
 
 // What an agent places and arranges: canvases, props, lamps, fans, and (in a room of its own) labels, doors and
 // restricted zones. Each change is sent as the signal a browser sends for a person's, so it passes the same checks
@@ -81,11 +82,11 @@ const AgentObjectUtil =
 {
     addableTypes: ADDABLE_OBJECT_TYPES.map(objectType => objectType.toLowerCase()),
 
-    // The room's placed objects nearest a point, its doors and zones apart (look lists those).
+    // The room's placed objects nearest a point, its doors, zones and helpers apart (look lists those).
     describeObjects: (room: Room, from: Vec3): {objects: object[], more?: number} =>
     {
         const listed = Object.values(room.objectById)
-            .filter(obj => isAttached(obj) && obj.objectTypeIndex != doorTypeIndex)
+            .filter(obj => isAttached(obj) && obj.objectTypeIndex != doorTypeIndex && obj.objectTypeIndex != npcTypeIndex)
             .map(obj => ({obj, distance: Vector3DUtil.distSqr(from, obj.transform.pos)}))
             .sort((a, b) => a.distance - b.distance);
         const shown = listed.slice(0, AGENT_LOOK_MAX_OBJECTS);

@@ -13,7 +13,6 @@ import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 import ObjectMetadataEntryMap from "../../shared/object/maps/objectMetadataEntryMap";
 import { ObjectMetadataKeyEnumMap } from "../../shared/object/types/objectMetadataKey";
 import { UserTypeEnumMap } from "../../shared/user/types/userType";
-import { HELPER_AGENT_NAME } from "../system/serverConstants";
 
 const socketUserContexts: {[userID: string]: UserContext} = {};
 const playerObjectByUserID: {[userID: string]: AddObjectSignal} = {};
@@ -89,12 +88,8 @@ const ServerUserManager =
                 continue;
             restoredMetadata[metadataKey] = new EncodableByteString(playerMetadata[key]);
         }
-        // The Helper is the agent the server runs itself, the one people are shown as an AI.
         if (user.userType == UserTypeEnumMap.Agent)
-        {
-            restoredMetadata[ObjectMetadataKeyEnumMap.AgentMark] = new EncodableByteString(
-                (user.userName == HELPER_AGENT_NAME) ? "2" : "1");
-        }
+            restoredMetadata[ObjectMetadataKeyEnumMap.AgentMark] = new EncodableByteString("1");
         const playerAddObjectSignal = new AddObjectSignal(
             roomID,
             user.id,

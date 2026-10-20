@@ -31,7 +31,8 @@ const WALK_SPEED = PLAYER_WALK_SPEED_PER_INPUT * PLAYER_MAX_WALK_INPUT;
 const TURN_RATE = PLAYER_TURN_RATE_PER_INPUT * PLAYER_MAX_TURN_INPUT;
 // Walks forward only while facing roughly the right way, so a sharp turn is made on the spot.
 const FACING_TOLERANCE = Math.PI / 4;
-const FACED_TOLERANCE = 0.1;
+// A turn to face something ends square on, for what its camera sees (the last step lands on the angle exactly).
+const FACED_TOLERANCE = 0.001;
 const WAYPOINT_REACHED_DISTANCE = 0.15;
 const WALK_TIMEOUT_MS = 30_000;
 const STUCK_AFTER_MS = 1500;
@@ -85,6 +86,27 @@ const AgentBodyUtil =
             const now = Date.now();
             motion.walk = {waypoints, next: 0, goal, ...options, deadline: now + WALK_TIMEOUT_MS, repaths: 0,
                 nearest: Infinity, nearestAt: now, finish: resolve};
+            motion.settled = false;
+        });
+    },
+    // Turns the agent where it stands toward a point, replacing any walk under way: a walk to where it is. Resolves with
+    // how the turn ended.
+    face: (ctx: AgentUserContext, point: Vec3): Promise<AgentWalkOutcome> =>
+    {
+        AgentBodyUtil.stop(ctx);
+        const body = getBody(ctx);
+        if (body == undefined)
+            return Promise.resolve("interrupted");
+        const feet = VoxelPathUtil.feetOf(body.player.transform.pos);
+        const here = VoxelPathUtil.findStandingVertexNear(body.room.voxelGrid.voxels, feet);
+        if (here == undefined)
+            return Promise.resolve("noPath");
+
+        const motion = getMotion(ctx, body.player);
+        return new Promise(resolve => {
+            const now = Date.now();
+            motion.walk = {waypoints: [], next: 0, goal: here, faceToward: point, deadline: now + WALK_TIMEOUT_MS,
+                repaths: 0, nearest: Infinity, nearestAt: now, finish: resolve};
             motion.settled = false;
         });
     },

@@ -217,6 +217,8 @@ vi.mock("../../../src/server/db/util/dbUserUtil", () => ({
             return u;
         }),
         updateLastLogin: vi.fn(async () => {}),
+        // The stored count, since updateLastLogin counts nothing here (the rule itself is the DB suite's).
+        getLoginCount: vi.fn((u: any) => u.loginCount ?? 0),
         upgradeGuestToMember: vi.fn(async () => ({ success: true, data: [] })),
         setOwnedRoomID: vi.fn(async (userID: string, roomID: string) => {
             const u = _userStore[userID];

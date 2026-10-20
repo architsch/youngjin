@@ -17,14 +17,7 @@ export default async function runQuerySelect<T extends DBRow>(
 {
     let data: T[] = [];
 
-    // Cache hit for single-document select queries
-    if (docRef)
-    {
-        const cached = DBCacheUtil.get(dbQuery.tableId, dbQuery.docId!);
-        if (cached)
-            return { success: true, data: [cached as T] };
-    }
-
+    // (A cached document never gets here; see DBQuery.run.)
     if (docRef) // Access a single document by its ID
     {
         const doc = await docRef.get();

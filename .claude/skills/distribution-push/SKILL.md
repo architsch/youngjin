@@ -112,10 +112,10 @@ The Helper, an AI guide the server runs, waits by the main hub's door, greets ne
 questions. AI agents from the internet can also come in and build rooms of their own beside people. Few
 games can say that, so it is a strong hook, but it suits some audiences far better than others.
 
-- **What is true to say:** an AI guide greets newcomers in the main hub and chats with them, and AI
-  agents can join and build alongside people.
+- **What is true to say:** an AI guide greets newcomers in the main hub and chats with them (once an
+  admin has stood one there), and AI agents can join and build alongside people.
 - **What is not:** that the world is full of AI agents, or that you will meet several. Other agents come
-  and go, and only the Helper is marked as an AI. The claim is checked like every other: against what
+  and go, and only helpers (the guides) are marked as AIs. The claim is checked like every other: against what
   someone who clicks right now would find (see the readiness gate).
 - **Lead with it** where the audience is interested in AI. That means general AI-curious communities,
   people who build agents, and Hacker News, where the agents are the news. For anyone there who runs an
@@ -170,10 +170,10 @@ Both must answer `200`. Then the judgements that need actual looking:
   decide what a Reddit or Discord post looks like. A link with no preview image loses most of its
   clicks before anyone reads the title. Fetch the URL being promoted and confirm the tags resolve to
   an image that exists. Fetch an app URL only with the link-check command in step 5.
-- **If the copy mentions AI agents, is the Helper there to meet?** It is what makes the claim true
-  for anyone who clicks. The live server's log shows it: `Helper usage` lines, and no `Helper couldn't
-  start` or `Helper reply failed` (the `vps-maintenance` skill reads the log), or the user talks to it.
-  Without it, cut the claim.
+- **If the copy mentions AI agents, is a helper there to meet?** It is what makes the claim true for
+  anyone who clicks: an NPC an admin stood in the main hub, which the server plays as its guide. The
+  live server's log shows it answering: `Helper usage` lines, and no `Helper reply failed` (the
+  `vps-maintenance` skill reads the log), or the user talks to it. Without one, cut the claim.
 
 If the gate fails, report what failed and stop. Do not push anyway; the venues will still be there
 next week and the first impressions will not.

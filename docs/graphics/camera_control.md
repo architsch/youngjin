@@ -1,10 +1,10 @@
 # Camera Control
 
-Reference: @src/client/object/components/playerController.ts , @src/client/object/components/helpers/player/playerCamera.ts , @src/client/object/components/helpers/player/firstPersonCameraPose.ts , @src/client/object/components/helpers/player/orbitCameraPose.ts , @src/client/object/components/helpers/player/orbitOcclusionHider.ts , @src/client/object/components/helpers/player/playerPointerInput.ts , @src/client/graphics/util/gizmoDragUtil.ts , @src/client/graphics/util/worldSpaceSelectionUtil.ts , @src/client/ui/util/scrollAreaUtil.ts
+Reference: @src/client/object/components/playerController.ts , @src/client/object/util/watchedPlayerCameraUtil.ts , @src/client/object/components/helpers/player/playerCamera.ts , @src/client/object/components/helpers/player/firstPersonCameraPose.ts , @src/client/object/components/helpers/player/orbitCameraPose.ts , @src/client/object/components/helpers/player/orbitOcclusionHider.ts , @src/client/object/components/helpers/player/playerPointerInput.ts , @src/client/graphics/util/gizmoDragUtil.ts , @src/client/graphics/util/worldSpaceSelectionUtil.ts , @src/client/ui/util/scrollAreaUtil.ts
 
 ![Player Control Scheme](figures/player_control.jpg)
 
-Only the user's own player has a `PlayerController`. It reads input, steers the player's `Rigidbody`, and drives `PlayerCamera`. The camera updates in the components' late pass, after this frame's input and physics.
+Only the user's own player has a `PlayerController`. It reads input, steers the player's `Rigidbody`, and drives `PlayerCamera`. The camera updates in the components' late pass, after this frame's input and physics. An agent's camera page (see [agents.md](../networking/agents.md#the-camera)) has no player of its own: `WatchedPlayerCameraUtil` drives `PlayerCamera` in first person from the watched agent's player, which moves as anyone else's does, without easing and at full resolution, since its frames are pictures.
 
 ## Input
 - `PlayerPointerInput` arbitrates pointer gestures. Presses are the canvas's; the wheel and a pinch's fingers are heard page-wide:

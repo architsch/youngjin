@@ -14,6 +14,7 @@ import runQueryDelete from "../runners/runQueryDelete";
 import runQueryBatch from "../runners/runQueryBatch";
 import LogUtil from "../../../shared/system/util/logUtil";
 import DBQueryRateMonitorUtil from "../util/dbQueryRateMonitorUtil";
+import DBCacheUtil from "../util/dbCacheUtil";
 import LatencySimUtil from "../../system/util/latencySimUtil";
 
 export default class DBQuery<T extends DBRow>
@@ -143,6 +144,14 @@ export default class DBQuery<T extends DBRow>
 
     async run(): Promise<DBQueryResponse<T>>
     {
+        // A cached document costs Firestore nothing, so it isn't counted against the query rate.
+        if (this.type == "select" && this.docId)
+        {
+            const cached = DBCacheUtil.get(this.tableId, this.docId);
+            if (cached)
+                return { success: true, data: [cached as T] };
+        }
+
         LogUtil.log("DB Query Started", this.getStateAsObject(), "low");
 
         if (!DBQueryRateMonitorUtil.allowQuery(this.type))

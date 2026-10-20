@@ -3,8 +3,8 @@ import FirebaseUtil from "../../networking/util/firebaseUtil";
 import LogUtil from "../../../shared/system/util/logUtil";
 import { COLLECTION_HELPER_SPENDING } from "../../system/serverConstants";
 
-// What the Helper has spent on Claude, a document per day (UTC) in millionths of a dollar, kept so that a restart
-// doesn't hand it the day's budget anew (see HelperChatUtil). Written directly with atomic increments, as the
+// What helpers have spent on Claude, a document per day (UTC) in millionths of a dollar, kept so that a restart
+// doesn't hand them the day's budget anew (see HelperChatUtil). Written directly with atomic increments, as the
 // acquisition counters are (see ServerAnalyticsManager).
 const DBHelperSpendingUtil =
 {

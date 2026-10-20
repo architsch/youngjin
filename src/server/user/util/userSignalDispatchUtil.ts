@@ -12,6 +12,7 @@ import RemoveVoxelBlockSignal from "../../../shared/voxel/types/update/removeVox
 import SetVoxelQuadTextureSignal from "../../../shared/voxel/types/update/setVoxelQuadTextureSignal";
 import UserCommandSignal from "../../../shared/user/types/userCommandSignal";
 import RequestRoomChangeSignal from "../../../shared/room/types/requestRoomChangeSignal";
+import HoldObjectSignal from "../../../shared/object/types/holdObjectSignal";
 import ErrorUtil from "../../../shared/system/util/errorUtil";
 import ServerObjectManager from "../../object/serverObjectManager";
 import ServerVoxelManager from "../../voxel/serverVoxelManager";
@@ -21,6 +22,7 @@ import { FunnelMilestoneEnumMap } from "../../analytics/types/funnelMilestone";
 import UserCommandUtil from "./userCommandUtil";
 import EditRateLogUtil from "./editRateLogUtil";
 import UserBudgetUtil from "./userBudgetUtil";
+import HelperAgentUtil from "../../agent/util/helperAgentUtil";
 
 // Every signal a user may send, as it arrives over the wire, whoever sends it (a browser's socket or an AI agent),
 // so both pass the same throttle, budgets, checks and milestones. A handler resolves to false for a signal it drops.
@@ -62,11 +64,16 @@ const handlers: {[signalType: string]: (ctx: UserContext, bufferState: BufferSta
             return false;
         ServerObjectManager.onSetObjectMetadataSignalReceived(ctx, signal);
         ServerAnalyticsManager.recordMilestone(ctx.user.id, FunnelMilestoneEnumMap.Chatted, ctx);
+        HelperAgentUtil.hear(ctx.user.id, signal);
         return true;
     },
     requestRoomChangeSignal: async (ctx, bufferState) => {
         await ServerRoomManager.onRequestRoomChangeSignalReceived(ctx,
             RequestRoomChangeSignal.decode(bufferState) as RequestRoomChangeSignal);
+        return true;
+    },
+    holdObjectSignal: async (ctx, bufferState) => {
+        HelperAgentUtil.hold(ctx, HoldObjectSignal.decode(bufferState) as HoldObjectSignal);
         return true;
     },
 };

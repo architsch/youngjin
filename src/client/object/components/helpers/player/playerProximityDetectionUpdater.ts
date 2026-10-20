@@ -1,6 +1,6 @@
-import PlayerController from "../../playerController";
 import App from "../../../../app";
 import ClientObjectManager from "../../../clientObjectManager";
+import GameObject from "../../../types/gameObject/gameObject";
 import PlayerProximityDetector from "../../playerProximityDetector";
 import PhysicsObjectUtil from "../../../../../shared/physics/util/physicsObjectUtil";
 
@@ -10,15 +10,15 @@ export default class PlayerProximityDetectionUpdater
 {
     // May miss a proximity exit if the player teleports more than
     // [maxProximityDetectionDist - maxDist] in one frame.
-    update(deltaTime: number, controller: PlayerController): void
+    update(deltaTime: number, player: GameObject): void
     {
         const currentRoom = App.getCurrentRoom();
 
         if (currentRoom)
         {
             const physicsObjects = PhysicsObjectUtil.getObjectsIn2DDist(currentRoom.id,
-                controller.gameObject.position.x, controller.gameObject.position.z, maxProximityDetectionDist);
-            
+                player.position.x, player.position.z, maxProximityDetectionDist);
+
             for (const objectId in physicsObjects)
             {
                 const obj = ClientObjectManager.getObjectById(objectId);
@@ -28,7 +28,7 @@ export default class PlayerProximityDetectionUpdater
                     {
                         const detector = obj.components.playerProximityDetector;
                         if (detector != undefined)
-                            (detector as PlayerProximityDetector).updateProximity(controller.gameObject);
+                            (detector as PlayerProximityDetector).updateProximity(player);
                     }
                 }
                 else

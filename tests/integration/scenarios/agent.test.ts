@@ -21,6 +21,8 @@ const _analytics = vi.hoisted(() => ({
 vi.mock("../../../src/server/analytics/serverAnalyticsManager", () => ({ default: _analytics }));
 
 import { harness, ConnectedUser } from "../helpers/serverHarness";
+import { MockSocket } from "../helpers/mockSocket";
+import AgentCameraUtil from "../../../src/server/agent/util/agentCameraUtil";
 import AgentAccountUtil from "../../../src/server/agent/util/agentAccountUtil";
 import AgentPresenceUtil from "../../../src/server/agent/util/agentPresenceUtil";
 import AgentToolUtil from "../../../src/server/agent/util/agentToolUtil";
@@ -30,6 +32,9 @@ import AgentMcpUtil from "../../../src/server/agent/util/agentMcpUtil";
 import AgentDirectoryUtil from "../../../src/server/agent/util/agentDirectoryUtil";
 import AgentBodyUtil from "../../../src/server/agent/util/agentBodyUtil";
 import AgentCleanupUtil from "../../../src/server/agent/util/agentCleanupUtil";
+import HelperAgentUtil from "../../../src/server/agent/util/helperAgentUtil";
+import SetObjectTransformSignal from "../../../src/shared/object/types/setObjectTransformSignal";
+import QuarterTurnsUtil from "../../../src/shared/object/util/quarterTurnsUtil";
 import DBUserUtil from "../../../src/server/db/util/dbUserUtil";
 import DBRoomUtil from "../../../src/server/db/util/dbRoomUtil";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
@@ -49,8 +54,8 @@ import ServerRoomManager from "../../../src/server/room/serverRoomManager";
 import ServerUserManager from "../../../src/server/user/serverUserManager";
 import DBUser from "../../../src/server/db/types/row/dbUser";
 import { FunnelMilestoneEnumMap } from "../../../src/server/analytics/types/funnelMilestone";
-import { AGENT_INBOX_MAX_EVENTS, AGENT_LOOK_MAX_PEOPLE, AGENT_MAX_PRESENT, AGENT_PRESENCE_IDLE_TIMEOUT_MS,
-    USER_BUDGETS } from "../../../src/server/system/serverConstants";
+import { AGENT_CAMERA_MAX_PAGES, AGENT_INBOX_MAX_EVENTS, AGENT_LOOK_MAX_PEOPLE, AGENT_MAX_PRESENT,
+    AGENT_PRESENCE_IDLE_TIMEOUT_MS, USER_BUDGETS } from "../../../src/server/system/serverConstants";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
@@ -134,8 +139,21 @@ function receivedSignals(user: ConnectedUser): {signalType: string, signal: any}
 {
     user.socket.clearEmitted();
     user.socketUserContext.processAllPendingSignalsToUser();
+    return decodeSignalBatches(user.socket);
+}
+
+// What a page open on an agent's camera has been sent since last asked, decoded: it goes with the agent's flush.
+function cameraReceived(agent: AgentUserContext, page: MockSocket): {signalType: string, signal: any}[]
+{
+    page.clearEmitted();
+    agent.processAllPendingSignalsToUser();
+    return decodeSignalBatches(page);
+}
+
+function decodeSignalBatches(socket: MockSocket): {signalType: string, signal: any}[]
+{
     const received: {signalType: string, signal: any}[] = [];
-    for (const batch of user.socket.getEmittedSignalBatches())
+    for (const batch of socket.getEmittedSignalBatches())
     {
         const bufferState = new BufferState(batch);
         while (bufferState.byteIndex < bufferState.view.byteLength)
@@ -348,7 +366,7 @@ describe("AI agents", () => {
             }
         });
 
-        it("refuses the Helper's name in any case, so that no one can pass for the agent the server runs", async () => {
+        it("refuses the name helpers are called by, in any case, so that no agent can pass for one", async () => {
             for (const name of ["Helper", "helper", "HELPER"])
             {
                 const result = await AgentAccountUtil.register(name, undefined, nextAddress(), "test-agent");
@@ -510,6 +528,87 @@ describe("AI agents", () => {
             const events = inbox.take();
             expect(events).toHaveLength(AGENT_INBOX_MAX_EVENTS);
             expect(events.every(event => event.kind == "roomReloading")).toBe(true);
+        });
+    });
+
+    describe("helpers", () => {
+        // An NPC an admin stood a little in from the hub's entrance, which the server then plays as a helper. Stood
+        // before the agent arrives, so that the room it is sent has it.
+        async function standHelper(name: string): Promise<string>
+        {
+            if (ServerRoomManager.roomRuntimeMemories[HUB_ID] == undefined)
+                await harness.loadRoom(HUB_ID);
+            const room = ServerRoomManager.roomRuntimeMemories[HUB_ID].room;
+            const {pos, dir} = room.objectById[ENTRANCE_DOOR_OBJECT_ID].transform;
+            const objectId = "helperNpc";
+            room.objectById[objectId] = new AddObjectSignal(HUB_ID, "admin", "Admin",
+                ObjectTypeConfigMap.getIndexByType("Npc"), objectId, new ObjectTransform(
+                    {x: pos.x + 3 * dir.x, y: DoorObjectTypeConfig.util.getFloorY(room.objectById[ENTRANCE_DOOR_OBJECT_ID]),
+                        z: pos.z + 3 * dir.z}, {x: 0, y: 1, z: 0}, {x: 1, y: 1, z: 1}),
+                {[ObjectMetadataKeyEnumMap.Label]: new EncodableByteString(name)});
+            await HelperAgentUtil.tick();
+            return objectId;
+        }
+
+        afterEach(async () => {
+            await HelperAgentUtil.stop();
+        });
+
+        it("are seen among the people, marked as guides, and not among the things placed", async () => {
+            const npc = await standHelper("Mira");
+            const agent = await arriveAgent("Looker");
+
+            const seen = AgentToolUtil.look(agent) as any;
+            expect(seen.people.find((person: any) => person.name == "Mira")).toMatchObject({isAgent: true, isGuide: true});
+            expect(seen.objects.some((obj: any) => obj.id == npc)).toBe(false);
+        });
+
+        it("are heard as anyone is, while their own steps and turns aren't told as edits", async () => {
+            const npc = await standHelper("Mira");
+            const agent = await arriveAgent("Listener");
+            eventsOf(agent);
+
+            const roomContext = ServerRoomManager.socketRoomContexts[HUB_ID];
+            const room = ServerRoomManager.roomRuntimeMemories[HUB_ID].room;
+            roomContext.multicastSignal("setObjectTransformSignal", new SetObjectTransformSignal(HUB_ID, npc,
+                new ObjectTransform({...room.objectById[npc].transform.pos, x: room.objectById[npc].transform.pos.x + 0.4},
+                    {x: 0, y: 1, z: 0}, {x: 1, y: 1, z: 1}), true));
+            roomContext.multicastSignal("setObjectMetadataSignal", new SetObjectMetadataSignal(HUB_ID, npc,
+                ObjectMetadataKeyEnumMap.QuarterTurns, QuarterTurnsUtil.encode(1)));
+            roomContext.multicastSignal("setObjectMetadataSignal", new SetObjectMetadataSignal(HUB_ID, npc,
+                ObjectMetadataKeyEnumMap.SentMessage, "Hi Listener, welcome!"));
+
+            expect(eventsOf(agent).map(({kind, who, whoIsAgent, text}) => ({kind, who, whoIsAgent, text})))
+                .toEqual([{kind: "speech", who: "Mira", whoIsAgent: true, text: "Hi Listener, welcome!"}]);
+        });
+
+        it("are shown to an agent's camera saying what they say, which the room it is sent doesn't keep", async () => {
+            const npc = await standHelper("Mira");
+            const agent = await arriveAgent("Snapper");
+            flush(10);
+            await HelperAgentUtil.tick();
+            await HelperAgentUtil.tick();
+            const saying = HelperAgentUtil.getHelpers(HUB_ID)[0].saying;
+            expect(saying).toMatch(/Snapper/);
+
+            const page = new MockSocket(new User("camera-page", "", UserTypeEnumMap.Guest, "", ""));
+            AgentCameraUtil.admit(page as any, agent);
+
+            const shown = cameraReceived(agent, page);
+            expect(shown[0].signalType).toBe("roomChangedSignal");
+            expect(shown.some(({signalType, signal}) => signalType == "setObjectMetadataSignal" && signal.objectId == npc
+                && signal.metadataKey == ObjectMetadataKeyEnumMap.SentMessage && signal.metadataValue == saying)).toBe(true);
+        });
+
+        it("can be walked up to by name", async () => {
+            await standHelper("Mira");
+            const agent = await arriveAgent("Walker");
+
+            const walked = await flushUntil(AgentToolUtil.walkTo(agent, {person: "mira"})) as any;
+            expect(walked.outcome).toBe("arrived");
+            const helper = HelperAgentUtil.getHelpers(HUB_ID)[0];
+            const feet = positionOf(agent);
+            expect(Math.hypot(feet.x - helper.at.x, feet.z - helper.at.z)).toBeLessThan(2);
         });
     });
 
@@ -859,6 +958,219 @@ describe("AI agents", () => {
             expect((await AgentToolUtil.useDoor(agent, ENTRANCE_DOOR_OBJECT_ID) as any).error).toMatch(/locked/);
             expect((await AgentToolUtil.useDoor(agent, "no-such-door") as any).error).toMatch(/no door/);
             expect((AgentToolUtil.look(agent) as any).doors[0].leadsTo).toBe("locked");
+        });
+
+        it("face turns the agent where it stands, toward a person, a place or a direction, as look then says", async () => {
+            const human = await joinHuman("Alice");
+            const agent = await arriveAgent("Bot-1");
+            flush(10);
+            // Alice four cells east of the agent, out of its way, once it has walked out of the doorway they shared.
+            const out = positionOf(agent);
+            harness.updateObjectTransform(human, new ObjectTransform({x: out.x + 2, y: out.y, z: out.z},
+                {x: 0, y: 0, z: 1}, {x: 1, y: 1, z: 1}));
+            flush(10);
+            const here = positionOf(agent);
+            const at = (AgentToolUtil.look(agent) as any).you.at;
+            receivedSignals(human);
+
+            const towardAlice = await flushUntil(AgentToolUtil.face(agent, {person: "alice"})) as any;
+
+            expect(towardAlice.outcome).toBe("arrived");
+            expect(towardAlice.you.facing).toBe("east");
+            expect((AgentToolUtil.look(agent) as any).you.facing).toBe("east");
+            const after = positionOf(agent);
+            expect(Math.hypot(after.x - here.x, after.z - here.z)).toBeLessThan(0.01);
+            // People see it turn.
+            expect(receivedSignals(human).some(({signalType, signal}) => signalType == "setObjectTransformSignal"
+                && signal.objectId == playerIdOf(agent))).toBe(true);
+
+            expect((await flushUntil(AgentToolUtil.face(agent, {direction: "southwest"})) as any).you.facing)
+                .toBe("southwest");
+            // Square on, as a camera needs: a player's transform direction points behind it.
+            const {dir} = roomOf(agent).objectById[playerIdOf(agent)].transform;
+            const wanted = AgentGridUtil.getHeadingDir("southwest");
+            expect(Math.abs(Math.atan2(-dir.x, -dir.z) - Math.atan2(wanted.x, wanted.z))).toBeLessThan(0.002);
+            expect((await flushUntil(AgentToolUtil.face(agent, {row: at.row - 6, column: at.column})) as any).you.facing)
+                .toBe("north");
+        });
+
+        it("face says what it needs, and who isn't there", async () => {
+            const agent = await arriveAgent("Bot-1");
+            flush(10);
+
+            expect((await AgentToolUtil.face(agent, {}) as any).error).toMatch(/row and a column/);
+            expect((await AgentToolUtil.face(agent, {person: "Nobody"}) as any).error).toMatch(/Nobody named/);
+        });
+    });
+
+    describe("the camera", () => {
+        // A browser opening the agent's camera link, once SocketsServer has found its token good.
+        function openCamera(agent: AgentUserContext): MockSocket
+        {
+            const page = new MockSocket(new User("camera-page", "", UserTypeEnumMap.Guest, "", ""));
+            AgentCameraUtil.admit(page as any, agent);
+            return page;
+        }
+
+        function cameraLinkOf(agent: AgentUserContext): string
+        {
+            return (AgentToolUtil.camera(agent) as {link: string}).link;
+        }
+
+        function tokenOf(link: string): string
+        {
+            return link.slice(link.lastIndexOf("/") + 1);
+        }
+
+        it("gives the agent a private link, the same while it is here, that opens no one else's", async () => {
+            const agent = await arriveAgent("Snapper");
+            const other = await arriveAgent("Other-1");
+            const link = cameraLinkOf(agent);
+
+            expect(link).toMatch(/^http:\/\/localhost:3000\/camera\/[A-Za-z0-9_-]{32}$/);
+            expect(cameraLinkOf(agent)).toBe(link);
+            expect(AgentCameraUtil.findByToken(tokenOf(link)) === agent).toBe(true);
+            expect(AgentCameraUtil.findByToken(tokenOf(cameraLinkOf(other))) === other).toBe(true);
+            expect(AgentCameraUtil.findByToken("A".repeat(32))).toBeUndefined();
+            expect(AgentCameraUtil.findByToken(`${tokenOf(link)}x`)).toBeUndefined();
+            expect(AgentCameraUtil.findByToken(undefined)).toBeUndefined();
+        });
+
+        it("shows a page the agent's room at once, then what the agent is sent, adding nobody to the room", async () => {
+            const human = await joinHuman("Alice");
+            const agent = await arriveAgent("Snapper");
+            const room = roomOf(agent);
+            const people = Object.keys(ServerRoomManager.roomRuntimeMemories[HUB_ID].participantUserNameByID).length;
+            const objects = Object.keys(room.objectById).length;
+            cameraLinkOf(agent);
+
+            const page = openCamera(agent);
+
+            const first = cameraReceived(agent, page);
+            expect(first.map(({signalType}) => signalType)).toEqual(["roomChangedSignal"]);
+            const shown = first[0].signal.roomRuntimeMemory.room;
+            expect(shown.id).toBe(HUB_ID);
+            expect(Object.values(shown.objectById).some((obj: any) => obj.objectId == playerIdOf(agent))).toBe(true);
+            expect(Object.keys(ServerRoomManager.roomRuntimeMemories[HUB_ID].participantUserNameByID).length)
+                .toBe(people);
+            expect(Object.keys(room.objectById).length).toBe(objects);
+
+            const alicePlayerId = ServerUserManager.getPlayerObject(human.user.id)!.objectId;
+            await dispatchAs(human, "setObjectMetadataSignal", new SetObjectMetadataSignal(HUB_ID, alicePlayerId,
+                ObjectMetadataKeyEnumMap.SentMessage, "Say cheese"));
+
+            expect(cameraReceived(agent, page).some(({signalType, signal}) => signalType == "setObjectMetadataSignal"
+                && signal.objectId == alicePlayerId && signal.metadataValue == "Say cheese")).toBe(true);
+        });
+
+        it("shows a page what the agent does itself too, which the agent isn't sent back", async () => {
+            const agent = await arriveAgent("Snapper");
+            flush(10);
+            const page = openCamera(agent);
+            cameraReceived(agent, page);
+            eventsOf(agent);
+
+            await AgentBlockUtil.placeBlocks(agent, {rows: [30], columns: [30], layers: [0]}, "oak");
+            await AgentToolUtil.say(agent, "Cheese!");
+            expect((await flushUntil(AgentToolUtil.walkTo(agent, {row: 26, column: 26, layer: 0})) as any).outcome)
+                .toBe("arrived");
+
+            const seen = cameraReceived(agent, page);
+            expect(seen.some(({signalType}) => signalType == "addVoxelBlockSignal")).toBe(true);
+            expect(seen.some(({signalType, signal}) => signalType == "setObjectMetadataSignal"
+                && signal.objectId == playerIdOf(agent) && signal.metadataValue == "Cheese!")).toBe(true);
+            expect(seen.some(({signalType, signal}) => signalType == "setObjectTransformSignal"
+                && signal.objectId == playerIdOf(agent))).toBe(true);
+            expect(eventsOf(agent)).toEqual([]);
+        });
+
+        it("follows the agent on its trips", async () => {
+            harness.seedHub(OTHER_HUB_ID);
+            const agent = await arriveAgent("Snapper");
+            const page = openCamera(agent);
+            cameraReceived(agent, page);
+
+            await AgentToolUtil.travel(agent, OTHER_HUB_ID);
+
+            expect(cameraReceived(agent, page).filter(({signalType}) => signalType == "roomChangedSignal")
+                .map(({signal}) => signal.roomRuntimeMemory.room.id)).toEqual([OTHER_HUB_ID]);
+        });
+
+        it("goes off when the agent leaves, its link with it, and the agent comes back with a new one", async () => {
+            const {dbUser} = await registerAgent("Snapper");
+            const agent = await attendAgent(dbUser);
+            const link = cameraLinkOf(agent);
+            const page = openCamera(agent);
+
+            await AgentToolUtil.leave(agent);
+
+            expect(page.connected).toBe(false);
+            expect(agent.cameras.length).toBe(0);
+            expect(AgentCameraUtil.findByToken(tokenOf(link))).toBeUndefined();
+            const back = await attendAgent(dbUser);
+            expect(cameraLinkOf(back)).not.toBe(link);
+        });
+
+        it(`shows in ${AGENT_CAMERA_MAX_PAGES} pages at most, the oldest sent away to say why`, async () => {
+            const agent = await arriveAgent("Snapper");
+            const link = cameraLinkOf(agent);
+
+            const pages = [openCamera(agent), openCamera(agent), openCamera(agent)];
+
+            expect(pages.map(page => page.connected)).toEqual([false, true, true]);
+            expect(pages[0].getEmitted("forceRedirect")).toEqual([`${link}?elsewhere`]);
+            expect(agent.cameras.length).toBe(AGENT_CAMERA_MAX_PAGES);
+        });
+
+        describe("its page", () => {
+            let server: http.Server;
+            let base: string;
+
+            beforeAll(async () => {
+                const app = express();
+                app.set("view engine", "ejs");
+                // As PageRouter serves it.
+                app.get("/camera/:token", AgentCameraUtil.servePage);
+                server = await new Promise<http.Server>(resolve => {
+                    const listening = app.listen(0, "127.0.0.1", () => resolve(listening));
+                });
+                base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+            });
+
+            afterAll(async () => {
+                server.closeAllConnections();
+                await new Promise<void>(resolve => server.close(() => resolve()));
+            });
+
+            it("is the game, watching through the agent's eyes, for nobody: no session, no guest", async () => {
+                const agent = await arriveAgent("Snapper");
+                const token = tokenOf(cameraLinkOf(agent));
+                vi.mocked(DBUserUtil.createUser).mockClear();
+
+                const response = await fetch(`${base}/camera/${token}`);
+                const html = await response.text();
+
+                expect(response.status).toBe(200);
+                expect(response.headers.get("cache-control")).toBe("no-store");
+                expect(response.headers.get("set-cookie")).toBeNull();
+                const env = JSON.parse(/window\.thingspool_env = (\{.*?\});/s.exec(html)![1]);
+                expect(env).toMatchObject({cameraToken: token, watchedUserID: agent.user.id, targetRoomID: ""});
+                expect(User.fromString(env.userString).id).toBe("#camera");
+                expect(html).toContain(`<meta name="robots" content="noindex">`);
+                expect(DBUserUtil.createUser).not.toHaveBeenCalled();
+            });
+
+            it("says why it shows nothing: the agent has gone, or a newer page took its place", async () => {
+                const agent = await arriveAgent("Snapper");
+                const token = tokenOf(cameraLinkOf(agent));
+
+                expect(await (await fetch(`${base}/camera/${token}?elsewhere`)).text()).toContain("open in another page");
+                await AgentToolUtil.leave(agent);
+                const off = await (await fetch(`${base}/camera/${token}`)).text();
+                expect(off).toContain("This camera is off.");
+                expect(off).not.toContain("thingspool_env");
+                expect(await (await fetch(`${base}/camera/not-a-token`)).text()).toContain("This camera is off.");
+            });
         });
     });
 
@@ -1304,7 +1616,7 @@ describe("AI agents", () => {
             for (let i = 1; i < AGENT_MAX_PRESENT; ++i)
             {
                 ServerUserManager.socketUserContexts[`stand-in-${i}`] = new AgentUserContext(
-                    new User(`stand-in-${i}`, `Stand-in-${i}`, UserTypeEnumMap.Agent, "", ""), "");
+                    new User(`stand-in-${i}`, `Stand-in-${i}`, UserTypeEnumMap.Agent, "", ""), "", 0, "");
             }
 
             const {dbUser: latecomer} = await registerAgent("Latecomer");
@@ -1416,11 +1728,14 @@ describe("AI agents", () => {
             try
             {
                 const tools = (await client.listTools()).tools.map(tool => tool.name).sort();
-                expect(tools).toEqual(["add_object", "add_zone", "change_room_settings", "edit_object", "find_pictures",
-                    "find_rooms", "leave", "look", "look_blocks", "move_object", "paint_faces", "place_blocks", "register",
-                    "remove_blocks", "remove_object", "room_settings", "say", "set_interests", "textures", "travel",
-                    "use_door", "walk_to", "whats_new"]);
+                expect(tools).toEqual(["add_object", "add_zone", "camera", "change_room_settings", "edit_object", "face",
+                    "find_pictures", "find_rooms", "leave", "look", "look_blocks", "move_object", "paint_faces",
+                    "place_blocks", "register", "remove_blocks", "remove_object", "room_settings", "say", "set_interests",
+                    "textures", "travel", "use_door", "walk_to", "whats_new"]);
                 expect(client.getInstructions()).toContain("Authorization: Bearer <key>");
+                // How an agent with a browser tool watches and takes pictures.
+                expect(client.getInstructions())
+                    .toMatch(/camera: a private link[\s\S]*Keep it open while you play: a screenshot of it/);
             }
             finally
             {
@@ -1605,6 +1920,46 @@ describe("AI agents", () => {
                 await anonymous.close();
                 await stranger.close();
                 await strangerByAddress.close();
+            }
+        });
+
+        it("refuses a batch, which would carry any number of calls past the per-address limits", async () => {
+            const response = await fetch(url, {method: "POST", headers: {"Content-Type": "application/json",
+                "Accept": "application/json, text/event-stream"},
+                body: JSON.stringify([1, 2].map(id => ({jsonrpc: "2.0", id, method: "tools/list", params: {}})))});
+            expect(response.status).toBe(400);
+            const refusal = await response.json() as {error: {message: string}};
+            expect(refusal.error.message).toMatch(/one JSON-RPC message per request/);
+        });
+
+        it("knows a present agent by its key without reading its row, and brings it back by its row once gone",
+            async () => {
+            const {key} = await registerAgent("Known-Agent");
+            const agent = await connect(key);
+            const forger = await connect(`${key.split(".")[0]}.not-its-secret`);
+            const reads = vi.spyOn(DBUserUtil, "findUserById");
+            try
+            {
+                expect(read(await agent.callTool({name: "look", arguments: {}})).you.name).toBe("Known-Agent");
+                reads.mockClear();
+                for (let i = 0; i < 5; ++i)
+                    await agent.callTool({name: "whats_new", arguments: {}});
+                expect(reads).not.toHaveBeenCalled();
+
+                const forged = await forger.callTool({name: "look", arguments: {}}) as any;
+                expect(forged.isError).toBe(true);
+                expect(forged.content[0].text).toContain("No valid key");
+
+                await agent.callTool({name: "leave", arguments: {}});
+                reads.mockClear();
+                expect(read(await agent.callTool({name: "look", arguments: {}})).you.name).toBe("Known-Agent");
+                expect(reads).toHaveBeenCalled();
+            }
+            finally
+            {
+                reads.mockRestore();
+                await agent.close();
+                await forger.close();
             }
         });
     });

@@ -4,6 +4,7 @@ import RoomTexturePackChangedSignal from "../../room/types/roomTexturePackChange
 import RoomPrefsChangedSignal from "../../room/types/roomPrefsChangedSignal";
 import AddObjectSignal from "../../object/types/addObjectSignal";
 import SetObjectTransformSignal from "../../object/types/setObjectTransformSignal";
+import HoldObjectSignal from "../../object/types/holdObjectSignal";
 import UserCommandSignal from "../../user/types/userCommandSignal";
 import RequestRoomChangeSignal from "../../room/types/requestRoomChangeSignal";
 import RoomChangedSignal from "../../room/types/roomChangedSignal";
@@ -133,6 +134,14 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
         minClientToServerSendInterval: 0, // not used because the client never sends this signal to the server.
         maxClientSideReceptionPeriod: 2000,
         decode: (bufferState: BufferState) => RoomPrefsChangedSignal.decode(bufferState),
+    }],
+    // (Indices 14 and 16 are retired too.)
+    [17, { // Unidirectional (client -> server)
+        // An admin's edit-mode selection taking hold of a helper or letting go of it, which stands it still meanwhile.
+        signalType: "holdObjectSignal",
+        minClientToServerSendInterval: 0, // never throttled: a dropped letting-go would leave the helper held.
+        maxClientSideReceptionPeriod: 0, // not used because the client never receives this signal from the server.
+        decode: (bufferState: BufferState) => HoldObjectSignal.decode(bufferState),
     }],
 ];
 

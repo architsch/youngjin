@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import PlayerController from "../../playerController";
+import GameObject from "../../../types/gameObject/gameObject";
 import GraphicsManager from "../../../../graphics/graphicsManager";
 import { cameraModeObservable, orbitCameraAngleHoldRequestObservable, orbitCameraDistanceRangeRequestObservable,
     orbitCameraViewRequestObservable } from "../../../../system/clientObservables";
@@ -27,7 +27,8 @@ const maxViewReferenceDistance = 8;
 const trailRate = 12;
 
 // Parents the camera to the player and eases it toward the active mode's pose (FirstPersonCameraPose,
-// OrbitCameraPose, FreeCameraPose), so mode changes glide.
+// OrbitCameraPose, FreeCameraPose), so mode changes glide. Without a pointer input, which only the user's own player
+// has, there is only first person (see WatchedPlayerCameraUtil).
 
 export default class PlayerCamera
 {
@@ -61,17 +62,17 @@ export default class PlayerCamera
     private trailVelocity = new THREE.Vector3();
     private appliedTrailOffset = new THREE.Vector3();
 
-    onSpawn(controller: PlayerController, pointerInput: PlayerPointerInput): void
+    onSpawn(player: GameObject, pointerInput?: PlayerPointerInput): void
     {
         this.pointerInput = pointerInput;
         this.camera = GraphicsManager.getCamera();
-        controller.gameObject.obj.add(this.camera);
+        player.obj.add(this.camera);
         this.camera.position.copy(FirstPersonCameraPose.restPosition);
         this.positionInterpTarget.copy(this.camera.position);
         this.quaternionInterpTarget.copy(this.camera.quaternion);
     }
 
-    onDespawn(controller: PlayerController): void
+    onDespawn(): void
     {
         this.occlusionHider.revealAll();
 
@@ -84,7 +85,7 @@ export default class PlayerCamera
 
     // Runs after physics has moved the player this frame (see PlayerController.lateUpdate). imposedDisplacement
     // and underForce: what Rigidbody reports of that move.
-    update(deltaTime: number, controller: PlayerController, imposedDisplacement: Vec3, underForce: boolean): void
+    update(deltaTime: number, player: GameObject, imposedDisplacement: Vec3, underForce: boolean): void
     {
         const mode = cameraModeObservable.peek();
 
@@ -116,7 +117,7 @@ export default class PlayerCamera
             // moved the player since last frame (a fan bouncing them as they edit) is taken out of it first,
             // so that only what it orbits moves it.
             if (this.orbitWorldPoseKept)
-                this.restoreOrbitWorldPose(controller.gameObject.obj);
+                this.restoreOrbitWorldPose(player.obj);
 
             // Re-frame on entering the mode or changing target.
             if (this.orbitTarget !== mode.target)
@@ -124,7 +125,7 @@ export default class PlayerCamera
                 // (An orbit just beginning has no angles of its own to hold yet.)
                 const orbitBegins = (this.orbitTarget == undefined);
                 this.orbitPose.reframe(mode.target, mode.minDistance ?? 0,
-                    this.camera!, controller.gameObject.obj, angleHoldRequest && !orbitBegins);
+                    this.camera!, player.obj, angleHoldRequest && !orbitBegins);
 
                 // Starts from the current distance; zoom survives re-targeting but not re-entering
                 // the mode (see OrbitCameraPose).
@@ -137,7 +138,7 @@ export default class PlayerCamera
                 this.orbitPose.applyDistanceRange(distanceRangeRequest, mode.target);
             this.orbitTarget = mode.target;
             interpRate = this.orbitPose.updatePose(this.pointerInput!.dragDelta, this.pointerInput!.viewScale,
-                mode.target, controller.gameObject.obj,
+                mode.target, player.obj,
                 this.positionInterpTarget, this.quaternionInterpTarget);
         }
         else if (mode.type == "firstPerson")
@@ -148,14 +149,14 @@ export default class PlayerCamera
                 this.occlusionHider.revealAll();
                 this.orbitTarget = undefined;
             }
-            interpRate = this.firstPersonPose.updatePose(deltaTime, controller, this.camera!,
-                this.pointerInput!.clickedPoint, imposedDisplacement, underForce,
+            interpRate = this.firstPersonPose.updatePose(deltaTime, player, this.camera!,
+                this.pointerInput?.clickedPoint, imposedDisplacement, underForce,
                 this.positionInterpTarget, this.quaternionInterpTarget);
         }
         else if (mode.type == "free")
         {
             // The camera hangs off the player, so the world-space pose is converted into its frame.
-            interpRate = this.freePose.updatePose(controller.gameObject.obj,
+            interpRate = this.freePose.updatePose(player.obj,
                 this.positionInterpTarget, this.quaternionInterpTarget);
         }
         else
@@ -166,10 +167,10 @@ export default class PlayerCamera
         this.camera!.position.lerp(this.positionInterpTarget, t);
         this.camera!.quaternion.slerp(this.quaternionInterpTarget, t);
         if (mode.type === "orbit")
-            this.keepOrbitWorldPose(controller.gameObject.obj);
+            this.keepOrbitWorldPose(player.obj);
 
         this.updateTrail(deltaTime, imposedDisplacement, mode.type === "firstPerson");
-        controller.gameObject.obj.getWorldQuaternion(quaternionTemp).invert();
+        player.obj.getWorldQuaternion(quaternionTemp).invert();
         this.appliedTrailOffset.copy(this.trailOffset).applyQuaternion(quaternionTemp);
         this.camera!.position.add(this.appliedTrailOffset);
 

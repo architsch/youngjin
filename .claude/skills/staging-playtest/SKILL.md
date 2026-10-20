@@ -93,6 +93,10 @@ node dev/scripts/playtest/stagingAdmin.js seed-rooms  --version 0 --count 4 --ru
 # so a number at or above both collections' current version seeds a current population.
 node dev/scripts/playtest/stagingAdmin.js seed-population --version 99 --count 14 --run <runID> --with-content --persist
 
+# AI agents with keys (printed once, in the output), for a crowd the per-address registration caps
+# would never let one machine register.
+node dev/scripts/playtest/stagingAdmin.js seed-agents --count 50 --run <runID>
+
 # What binary version each room's content blob is actually stored at.
 node dev/scripts/playtest/stagingAdmin.js inspect-content
 
@@ -314,6 +318,30 @@ So: 2–3 agents, not a swarm. Reuse sessions instead of creating guests. `runPl
 own API calls and reports `rateLimitHits` separately — a non-zero count is self-inflicted, not a
 server fault, and must be reported that way.
 
+### AI agents, and a crowd of them
+
+An agent's checks go through Nginx, as any agent's requests do: the MCP endpoint at
+`https://staging.thingspool.net/mcp`, with a key from `register` or `seed-agents`. Nginx allows an
+address about five requests a second, and the endpoint 300 a minute, so one machine is a few
+agents at most. A crowd is driven through an SSH tunnel to the app's own port instead
+(`ssh -N -L 13001:127.0.0.1:3001 root@<VPS>`), each seeded agent sending an `X-Forwarded-For` of
+its own, which the app believes only from loopback, its one trusted proxy. Ramp it, and stop
+before the limits that take the server down rather than slow it:
+
+- PM2 restarts the process past `max_memory_restart` (`ecosystem.config.js`). `pm2 jlist` gives
+  its memory, and the heap's under `axm_monitor`.
+- `DB query rate WARNING` and `CRITICAL — write query rejected` in the error log mean the
+  database's query rate is spent: writes are being refused for everyone, people included.
+- A crowd that reaches the hubs' population threshold makes the server open a new hub, which
+  stays.
+
+A crowd landing in a hub also meets any helper an admin stood there, whose replies are paid for; the staging budget is
+small, so a load test keeps its agents quiet near it.
+
+An agent's camera (the link `camera` gives) is opened as a browser tool would: a fresh Playwright context with no
+cookies, waiting until "Loading..." is gone, then a screenshot. It is a page for nobody, so it never counts against the
+guest caps; each open page is a socket the server feeds for as long as its agent is present.
+
 ## Step 5 — Correlate
 
 ```
@@ -395,7 +423,9 @@ Beyond the target boundary:
   than to whether: the server writes them, so they carry no marker, and `cleanup` selects them by
   the reserved `playtest-` prefix on their traffic source instead. That is the whole reason the
   prefix is mandatory — a run tagged without it leaves counts behind that cannot be told from real
-  visitors and so are never removed.
+  visitors and so are never removed. Two more are selected the same way: agents a run registered
+  through the endpoint with its playtest ref (their source is `agent-playtest-…`), and the rooms
+  the server made for a user that `cleanup` deletes (an agent's home), by their owner.
 - `downgrade-content` copies the original blob aside before touching it, and never overwrites an
   existing backup; `restore-content` puts it back and is also run by `cleanup`.
 - Every command reports the target it addressed, so which namespace was touched is never

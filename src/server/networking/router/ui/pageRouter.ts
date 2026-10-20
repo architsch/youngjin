@@ -3,7 +3,8 @@ import express from "express";
 import { Request, Response } from "express";
 import { ArcadeData } from "../../../ssg/data/arcadeData";
 import UserIdentificationUtil from "../../../user/util/userIdentificationUtil";
-import { GIT_COMMIT } from "../../../system/serverConstants";
+import { AGENT_CAMERA_ROUTE_PATH, GIT_COMMIT } from "../../../system/serverConstants";
+import AgentCameraUtil from "../../../agent/util/agentCameraUtil";
 
 const PageRouter = express.Router();
 
@@ -30,6 +31,9 @@ else
         EJSUtil.render(req, res, "page/development/console", {});
     });
 }
+
+// An agent's camera, which no session goes with (see AgentCameraUtil).
+PageRouter.get(`/${AGENT_CAMERA_ROUTE_PATH}/:token`, AgentCameraUtil.servePage);
 
 PageRouter.get("/", UserIdentificationUtil.identifyAnyUserUnlessBot, (req: Request, res: Response): void => {
     EJSUtil.render(req, res, "page/dynamic/mypage", { gitCommit: GIT_COMMIT, targetRoomID: "" });
