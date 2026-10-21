@@ -7,7 +7,9 @@ import UserJoinHints from "./userJoinHints";
 export default interface UserContext
 {
     user: User;
-    isInSinglePlayerRoom: boolean;
+    // The single-player mode whose room the user is in (see SinglePlayerModeConfigMap), "" for none.
+    singlePlayerMode: string;
+    readonly isInSinglePlayerRoom: boolean;
 
     // Recorded funnel milestones from the authenticated row, so analytics can skip DB reads on the edit path.
     // Not on User, which is serialized to the browser. Kept in sync by ServerAnalyticsManager.

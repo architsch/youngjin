@@ -5,6 +5,8 @@
  * it, through Claude (stood in for here), within limits every helper shares.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import fs from "fs";
+import path from "path";
 
 // Analytics write to Firestore directly.
 const _analytics = vi.hoisted(() => ({
@@ -34,6 +36,10 @@ import AgentPresenceUtil from "../../../src/server/agent/util/agentPresenceUtil"
 import AgentToolUtil from "../../../src/server/agent/util/agentToolUtil";
 import AgentUserContext from "../../../src/server/agent/types/agentUserContext";
 import HelperIdentity from "../../../src/server/agent/types/helperIdentity";
+import HelperRouter from "../../../src/server/networking/router/api/helperRouter";
+import { HELPER_PERSONALITIES } from "../../../src/server/agent/data/helperPersonalities";
+import { HELPER_GUIDE } from "../../../src/server/agent/data/helperGuide";
+import { HELPER_KNOWLEDGE } from "../../../src/server/agent/data/helperKnowledge";
 import SocketRoomContext from "../../../src/server/sockets/types/socketRoomContext";
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
 import ServerUserManager from "../../../src/server/user/serverUserManager";
@@ -54,7 +60,12 @@ import NpcFacingUtil from "../../../src/shared/object/util/npcFacingUtil";
 import HoldObjectSignal from "../../../src/shared/object/types/holdObjectSignal";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
-import { NUM_VOXEL_COLS, OBJECT_MESSAGE_MAX_LENGTH } from "../../../src/shared/system/sharedConstants";
+import NpcPersonalityMap from "../../../src/shared/object/maps/npcPersonalityMap";
+import HelperBehaviorUtil from "../../../src/shared/object/util/helperBehaviorUtil";
+import MessageLinkUtil from "../../../src/shared/object/util/messageLinkUtil";
+import { NPC_MESSAGE_MAX_LENGTH, NUM_VOXEL_COLS, OBJECT_MESSAGE_MAX_LENGTH, OBJECT_NAME_MAX_LENGTH,
+    ROOM_EDITOR_SINGLE_PLAYER_MODE, SANDBOX_SINGLE_PLAYER_MODE,
+    TUTORIAL_SINGLE_PLAYER_MODE } from "../../../src/shared/system/sharedConstants";
 import { HELPER_DAILY_BUDGET_DOLLARS, HELPER_MAX_REPLIES_PER_AGENT_PER_HOUR,
     HELPER_MAX_REPLIES_PER_PERSON_PER_HOUR, HELPER_MODEL, HELPER_MODEL_PRICES } from "../../../src/server/system/serverConstants";
 import Vec3 from "../../../src/shared/math/types/vec3";
@@ -65,6 +76,8 @@ const FIRST_HUB_ID = "hubAAAAAAAAAAAAAAAAA";
 const LATER_HUB_ID = "hubBBBBBBBBBBBBBBBBB";
 const NPC_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Npc");
 const UP: Vec3 = {x: 0, y: 1, z: 0};
+// A helper's walk ends on the grid vertex nearest where it was headed, at most half a cell's diagonal off.
+const PATH_END_SLACK = 0.36;
 
 // Claude, stood in for: what it was asked, the answers it gives in turn, the tokens it says each took, and what it waits
 // for before it answers, if anything.
@@ -84,7 +97,8 @@ async function fakeFetch(url: string | URL, init?: RequestInit): Promise<Respons
         usage: claude.usage}), {status: 200, headers: {"content-type": "application/json"}});
 }
 
-const SOME_HELPER: HelperIdentity = {key: "room/npc", name: "Mira", place: "one of the public hubs"};
+const SOME_HELPER: HelperIdentity = {key: "room/npc", name: "Mira", place: "one of the public hubs",
+    personality: "guide"};
 
 // Replies to different people until the budget refuses one, after a reply that cost what the usage says.
 async function replyUntilRefused(): Promise<number>
@@ -141,9 +155,11 @@ function inFrontOfEntrance(roomID: string, distance: number, side: number = 0): 
         z: pos.z + dir.z * distance + dir.x * side};
 }
 
-// An NPC an admin stood on a room's floor (by default a little in from the entrance), as the room keeps it.
+// An NPC an admin stood on a room's floor (by default a little in from the entrance), as the room keeps it, with any
+// other values the admin gave it.
 let npcCounter = 0;
-function standNpc(roomID: string, name: string, at?: Vec3, quarterTurns: number = 0): string
+function standNpc(roomID: string, name: string, at?: Vec3, quarterTurns: number = 0,
+    values: {[metadataKey: number]: string} = {}): string
 {
     const objectId = `npc${++npcCounter}`;
     const position = at ?? inFrontOfEntrance(roomID, 3, 1.5);
@@ -151,8 +167,16 @@ function standNpc(roomID: string, name: string, at?: Vec3, quarterTurns: number 
         "Admin", NPC_TYPE_INDEX, objectId, new ObjectTransform({...position}, {...UP}, {x: 1, y: 1, z: 1}), {
             [ObjectMetadataKeyEnumMap.Label]: new EncodableByteString(name),
             [ObjectMetadataKeyEnumMap.QuarterTurns]: new EncodableByteString(QuarterTurnsUtil.encode(quarterTurns)),
+            ...Object.fromEntries(Object.entries(values).map(([key, value]) => [key, new EncodableByteString(value)])),
         });
     return objectId;
+}
+
+// Gives a helper's NPC a value as an admin's edit leaves it in the room.
+function setNpcValue(roomID: string, objectId: string, metadataKey: number, value: string): void
+{
+    ServerRoomManager.roomRuntimeMemories[roomID].room.objectById[objectId].metadata[metadataKey] =
+        new EncodableByteString(value);
 }
 
 // What a helper has said, bubble by bubble, as the room was shown it (not what a newcomer was told it is saying).
@@ -262,8 +286,9 @@ describe("helpers", () => {
         vi.spyOn(console, "error").mockImplementation(() => {});
         vi.spyOn(console, "warn").mockImplementation(() => {});
         vi.spyOn(console, "log").mockImplementation(() => {});
-        // The clock, and the helpers' own beat, which the tests give them.
+        // The clock, and the helpers' own beat, which the tests give them. Noon (UTC), so no test's day ends as it runs.
         vi.useFakeTimers({toFake: ["Date", "setInterval", "clearInterval"]});
+        vi.setSystemTime(new Date(`${new Date().toISOString().slice(0, 10)}T12:00:00Z`));
         vi.stubGlobal("fetch", fakeFetch);
         process.env.ANTHROPIC_API_KEY = "test-key";
         Object.assign(claude, {requests: [], answers: [], failing: false, usage: REPLY_USAGE, thinking: undefined});
@@ -320,7 +345,7 @@ describe("helpers", () => {
 
         const alice = await joinPerson("Alice");
         await live(6);
-        expect(saidBy(mira)).toEqual(["Hi Alice, welcome to ThingsPool! I'm Mira, an AI guide. Ask me anything, or just "
+        expect(saidBy(mira)).toEqual(["Hi Alice, welcome to ThingsPool! I'm Mira. Ask me anything, or just "
             + "look around!"]);
 
         // Out and in again, and a refresh, in the same login.
@@ -334,7 +359,7 @@ describe("helpers", () => {
         await harness.disconnectUser(harness.connectUser({id: "id-Alice", userName: "Alice"}));
         await joinPerson("Alice", "an", FIRST_HUB_ID, 1);
         await live(6);
-        expect(saidBy(mira)[1]).toBe("Hi Alice, welcome back! I'm Mira, an AI guide. Ask me anything, or just look around!");
+        expect(saidBy(mira)[1]).toBe("Hi Alice, welcome back! I'm Mira. Ask me anything, or just look around!");
         expect(claude.requests).toEqual([]);
     });
 
@@ -348,7 +373,7 @@ describe("helpers", () => {
 
         await moveTo(guest, inFrontOfEntrance(FIRST_HUB_ID, 5));
         await live(3);
-        expect(saidBy(mira)[0]).toBe("Hi, welcome to ThingsPool! I'm Mira, an AI guide. Ask me anything, or just look around!");
+        expect(saidBy(mira)[0]).toBe("Hi, welcome to ThingsPool! I'm Mira. Ask me anything, or just look around!");
     });
 
     it("greets and hears by nearness only those on its own floor, and anyone in the room who names it", async () => {
@@ -453,8 +478,8 @@ describe("helpers", () => {
         expect(facingAt(bob)).toBeLessThan(3);
     });
 
-    it("answers a person near it through Claude: the rules and guide cached, then its name and place, and that "
-        + "person's own lines, in one bubble", async () => {
+    it("answers a person near it through Claude: the rules, guide and knowledge cached, then its name, place and "
+        + "character, and that person's own lines, in one bubble", async () => {
         const mira = standNpc(FIRST_HUB_ID, "Mira");
         await live(1);
         const alice = await joinPerson("Alice");
@@ -471,9 +496,12 @@ describe("helpers", () => {
         // Thinking would spend the reply's tokens before a word of it.
         expect(body.thinking).toEqual({type: "disabled"});
         expect(headers["x-api-key"]).toBe("test-key");
-        expect(body.system[0].text).toContain("<guide>");
+        expect(body.system[0].text).toContain(HELPER_GUIDE);
+        expect(body.system[0].text).toContain(HELPER_KNOWLEDGE);
         expect(body.system[0].cache_control).toEqual({type: "ephemeral"});
-        expect(body.system[1].text).toBe("Your name is Mira. You stand in the main hub, the public room newcomers arrive in.");
+        // A guide, as one an admin has picked no character for is.
+        expect(body.system[1].text).toBe("Your name is Mira. You stand in the main hub, the public room newcomers arrive "
+            + `in.\n\nYour character: ${HELPER_PERSONALITIES.guide.character}`);
         expect(body.messages).toEqual([{role: "user", content: "Alice (new here): how do I build?"}]);
         expect(saidBy(mira).slice(1)).toEqual(["Switch to Edit mode with the toggle at the top. Then click a block, and "
             + "add one next to it!"]);
@@ -482,6 +510,28 @@ describe("helpers", () => {
         await live(6);
         expect(claude.requests[1].body.messages.map((turn: {role: string}) => turn.role))
             .toEqual(["user", "assistant", "user"]);
+    });
+
+    it("gives an address in a reply only as a link, and cuts a long reply short without cutting one", async () => {
+        const mira = standNpc(FIRST_HUB_ID, "Mira");
+        await live(1);
+        const alice = await joinPerson("Alice");
+        await live(8);
+
+        claude.answers.push("Read it at https://thingspool.net/essays/page-12.html, it's funny!");
+        await talk(alice, "anything to read?");
+        await live(6);
+        expect(saidBy(mira).at(-1)).toBe("Read it at <link href=\"https://thingspool.net/essays/page-12.html\">"
+            + "thingspool.net</link>, it's funny!");
+
+        const kept = `${"Cats are great. ".repeat(11)}See <link href="https://thingspool.net/">this essay</link> now.`;
+        claude.answers.push(`${kept} More words here.`);
+        await talk(alice, "more?");
+        await live(20);
+        const said = saidBy(mira).at(-1)!;
+        expect(MessageLinkUtil.getVisibleLength(`${kept} More words here.`)).toBeGreaterThan(NPC_MESSAGE_MAX_LENGTH);
+        expect(said).toBe(kept);
+        expect(claude.requests[1].body.messages.at(-1)).toEqual({role: "user", content: "Alice (new here): more?"});
     });
 
     it("has every helper ask with the same rules, a name and place of its own, and a talk of its own with each person",
@@ -502,8 +552,81 @@ describe("helpers", () => {
         expect(claude.requests).toHaveLength(2);
         const [toMira, toBo] = claude.requests.map(request => request.body);
         expect(toBo.system[0].text).toBe(toMira.system[0].text);
-        expect(toBo.system[1].text).toBe("Your name is Bo. You stand in one of the public hubs.");
+        expect(toBo.system[1].text).toBe("Your name is Bo. You stand in one of the public hubs.\n\nYour character: "
+            + HELPER_PERSONALITIES.guide.character);
         expect(toBo.messages).toEqual([{role: "user", content: "Alice (new here): hi Bo!"}]);
+    });
+
+    it("greets and answers in the character an admin picked for it, under the rules and guide every helper shares",
+        async () => {
+        const mira = standNpc(FIRST_HUB_ID, "Mira", undefined, 0, {[ObjectMetadataKeyEnumMap.Personality]: "jester"});
+        const bo = standNpc(LATER_HUB_ID, "Bo");
+        await live(1);
+        const alice = await joinPerson("Alice");
+        await live(8);
+        expect(saidBy(mira)).toEqual(["Hi Alice, welcome to ThingsPool! I'm Mira. Ask me anything. Some of "
+            + "my answers are even serious!"]);
+        await talk(alice, "what is this place?");
+        await live(6);
+        await harness.joinRoom(alice, LATER_HUB_ID);
+        await live(8);
+        expect(saidBy(bo)).toEqual(["Hi Alice, welcome to ThingsPool! I'm Bo. Ask me anything, or just look "
+            + "around!"]);
+        await talk(alice, "hi Bo!");
+        await live(6);
+
+        const [toMira, toBo] = claude.requests.map(request => request.body);
+        expect(toMira.system[0]).toEqual(toBo.system[0]);
+        expect(toMira.system[1].text).toContain(`Your character: ${HELPER_PERSONALITIES.jester.character}`);
+        expect(toBo.system[1].text).toContain(`Your character: ${HELPER_PERSONALITIES.guide.character}`);
+
+        // Another picked, it plays that one from then on.
+        setNpcValue(FIRST_HUB_ID, mira, ObjectMetadataKeyEnumMap.Personality, "sage");
+        await harness.joinRoom(alice, FIRST_HUB_ID);
+        await live(6);
+        await talk(alice, "Mira, are you still there?");
+        await live(6);
+        expect(claude.requests).toHaveLength(3);
+        expect(claude.requests[2].body.system[1].text).toContain(`Your character: ${HELPER_PERSONALITIES.sage.character}`);
+    });
+
+    it("has a character to play for every personality an admin is offered that is played, each greeting a crowd in one "
+        + "bubble", () => {
+        const played = NpcPersonalityMap.getEntries().map(entry => entry.id).filter(NpcPersonalityMap.isPlayed);
+        expect(played.sort()).toEqual(Object.keys(HELPER_PERSONALITIES).sort());
+        for (const personality of played)
+        {
+            const helper = {...HelperBehaviorUtil.create(new AddObjectSignal("room", "admin", "Admin", NPC_TYPE_INDEX, "npc",
+                new ObjectTransform({x: 0, y: 0, z: 0}, {...UP}, {x: 1, y: 1, z: 1}), {}), 0),
+                name: "n".repeat(OBJECT_NAME_MAX_LENGTH), personality};
+            const greeting = HelperBehaviorUtil.getGreeting(helper, ["Alice", "Bob"], false);
+            expect(greeting).toBe(`Hi everyone, welcome to ThingsPool! I'm ${helper.name}. `
+                + NpcPersonalityMap.getInvitation(personality));
+            expect(greeting.length).toBeLessThanOrEqual(NPC_MESSAGE_MAX_LENGTH);
+            // One with no name says what it is.
+            expect(HelperBehaviorUtil.getGreeting({...helper, name: ""}, ["Alice"], false))
+                .toContain(`I'm an AI ${NpcPersonalityMap.getRole(personality)}.`);
+        }
+    });
+
+    it("points helpers only at pages the site has, and gives a character as favorite reads only writings the knowledge "
+        + "every helper shares describes", () => {
+        const addresses = [...`${HELPER_GUIDE}\n${HELPER_KNOWLEDGE}`.matchAll(/https:\/\/thingspool\.net\/[^\s),"<>]*/g)]
+            .map(match => match[0].replace(/\.$/, ""));
+        expect(addresses.length).toBeGreaterThan(10);
+        for (const address of addresses)
+            expect(fs.existsSync(path.resolve(__dirname, "../../../public", new URL(address).pathname.slice(1))), address)
+                .toBe(true);
+
+        const knowledge = HELPER_KNOWLEDGE.replace(/\s+/g, " ");
+        for (const [personality, {character}] of Object.entries(HELPER_PERSONALITIES))
+        {
+            const reads = character.replace(/\s+/g, " ").match(/Favorite reads?[^:]*: (.*?) Voice:/)?.[1] ?? "";
+            const titles = [...reads.matchAll(/"([^"]+)"/g)].map(match => match[1]);
+            expect(titles.length, personality).toBeGreaterThan(0);
+            for (const title of titles)
+                expect(knowledge, `${personality}: ${title}`).toContain(`"${title}"`);
+        }
     });
 
     it("answers an agent near it as it would a person, saying it is one, and greets it by name", async () => {
@@ -511,7 +634,7 @@ describe("helpers", () => {
         await live(1);
         const agent = await registerAndAttend("Chatty-Agent", "10.9.9.7");
         await live(10);
-        expect(saidBy(mira)[0]).toBe("Hi Chatty-Agent, welcome to ThingsPool! I'm Mira, an AI guide. Ask me anything, or "
+        expect(saidBy(mira)[0]).toBe("Hi Chatty-Agent, welcome to ThingsPool! I'm Mira. Ask me anything, or "
             + "just look around!");
 
         await AgentToolUtil.say(agent, "hello, what can I build?");
@@ -539,8 +662,138 @@ describe("helpers", () => {
         expect(claude.requests).toHaveLength(2);
     });
 
-    it("says each reply whole in one bubble, longer than a person's, and gives it time to be read before the next",
+    it("plays no NPC whose personality isn't played: it neither greets, hears, walks nor turns", async () => {
+        const mira = standNpc(FIRST_HUB_ID, "Mira", inFrontOfEntrance(FIRST_HUB_ID, 4), 0,
+            {[ObjectMetadataKeyEnumMap.Personality]: "idle"});
+        await live(1);
+        const alice = await joinPerson("Alice", "an");
+        await walkIn(alice, 6, 2);
+        await live(6);
+        await talk(alice, "hi Mira!");
+        await talk(alice, "any helper around?");
+        await live(60);
+
+        expect(HelperAgentUtil.getHelpers(FIRST_HUB_ID)).toEqual([]);
+        expect(shown.filter(({signal}) => signal.objectId == mira)).toEqual([]);
+        expect(claude.requests).toEqual([]);
+    });
+
+    it("goes back home, the way it was put, and falls silent, once an admin makes it idle", async () => {
+        const home = inFrontOfEntrance(FIRST_HUB_ID, 4);
+        const mira = standNpc(FIRST_HUB_ID, "Mira", home);
+        await live(1);
+        const alice = await joinPerson("Alice", "an");
+        await walkIn(alice, 11, 3);
+        await live(6);
+        await talk(alice, "over here!");
+        await live(8);
+        expect(across(helperIn(FIRST_HUB_ID, mira).at, home)).toBeGreaterThan(1);
+        expect(saidBy(mira).at(-1)).toBe("Happy to help!");
+
+        shown.length = 0;
+        setNpcValue(FIRST_HUB_ID, mira, ObjectMetadataKeyEnumMap.Personality, "idle");
+        await live(1);
+        expect(HelperAgentUtil.getHelpers(FIRST_HUB_ID)).toEqual([]);
+        const toRoom = shown.filter(({signal, userID}) => userID == undefined && signal.objectId == mira);
+        expect(toRoom.filter(({signalType}) => signalType == "setObjectTransformSignal")
+            .map(({signal}) => signal.transform.pos)).toEqual([home]);
+        expect(toRoom.filter(({signal}) => signal.metadataKey == ObjectMetadataKeyEnumMap.SentMessage)
+            .map(({signal}) => signal.metadataValue)).toEqual([""]);
+
+        shown.length = 0;
+        await talk(alice, "hello?");
+        await live(30);
+        expect(shown.filter(({signal}) => signal.objectId == mira)).toEqual([]);
+        expect(claude.requests).toHaveLength(1);
+    });
+
+    it("answers a user in a single-player room for the helper their browser plays there, in its character", async () => {
+        const alice = await joinPerson("Alice");
+        const pip = {objectId: "npc", name: "Pip", personality: "jester"};
+        expect(await HelperAgentUtil.answerAlone(alice.user.id, pip, "hi")).toBe("");
+
+        await harness.joinRoom(alice, TUTORIAL_SINGLE_PLAYER_MODE);
+        claude.answers.push("Hi Ana! Want a joke with that answer?");
+        expect(await HelperAgentUtil.answerAlone(alice.user.id, pip, "hi there")).toBe("Hi Ana! Want a joke with that "
+            + "answer?");
+        const {body} = claude.requests[0];
+        expect(body.system[1].text).toBe("Your name is Pip. You stand in a single-player room, where the visitor is on "
+            + `their own with you.\n\nYour character: ${HELPER_PERSONALITIES.jester.character}`);
+        expect(body.messages).toEqual([{role: "user", content: "Alice (new here): hi there"}]);
+
+        // Nothing for an NPC that isn't played, however its personality is given, nor once the user has left the room.
+        expect(await HelperAgentUtil.answerAlone(alice.user.id, {...pip, personality: "idle"}, "hi")).toBe("");
+        await harness.joinRoom(alice, FIRST_HUB_ID);
+        expect(await HelperAgentUtil.answerAlone(alice.user.id, pip, "still here?")).toBe("");
+        expect(claude.requests).toHaveLength(1);
+    });
+
+    it("answers through its route only what a browser could ask: a few chat lines, for an NPC by its id and name",
         async () => {
+        const alice = await joinPerson("Alice");
+        await harness.joinRoom(alice, TUTORIAL_SINGLE_PLAYER_MODE);
+        // Past the identification, as the user is known.
+        const ask = async (body: object): Promise<{statusCode: number, body: unknown}> => {
+            const route = (HelperRouter as any).stack.find((layer: any) => layer.route?.path == "/reply").route;
+            const res: any = {statusCode: 200, status(code: number) { this.statusCode = code; return this; },
+                send(data: unknown) { this.body = data; return this; }, json(data: unknown) { this.body = data; return this; }};
+            await route.stack[route.stack.length - 1].handle({userString: alice.user.toString(), body}, res);
+            return res;
+        };
+        const pip = {objectId: "npc", name: "Pip", personality: "jester"};
+        claude.answers.push("Ha! Welcome aboard!");
+        expect(await ask({...pip, text: "  hi there  "})).toMatchObject({statusCode: 200,
+            body: {reply: "Ha! Welcome aboard!"}});
+        expect(claude.requests[0].body.messages).toEqual([{role: "user", content: "Alice (new here): hi there"}]);
+
+        for (const wrong of [{...pip, text: "x".repeat(4 * OBJECT_MESSAGE_MAX_LENGTH + 1)}, {...pip, text: "   "},
+            {...pip, text: 7}, {...pip, objectId: undefined, text: "hi"},
+            {...pip, name: "n".repeat(OBJECT_NAME_MAX_LENGTH + 1), text: "hi"}])
+        {
+            expect((await ask(wrong)).statusCode).toBe(400);
+        }
+        expect(claude.requests).toHaveLength(1);
+    });
+
+    it("answers nobody in a room being authored, and tells a single-player user why it can't answer, again only a "
+        + "while later, within the limits every helper shares", async () => {
+        const admin = harness.connectUser({id: "id-Admin", userName: "Admin", userType: UserTypeEnumMap.Admin});
+        await harness.joinRoom(admin, ROOM_EDITOR_SINGLE_PLAYER_MODE);
+        const pip = {objectId: "npc", name: "Pip", personality: "guide"};
+        expect(await HelperAgentUtil.answerAlone(admin.user.id, pip, "hi")).toBe("");
+        expect(claude.requests).toEqual([]);
+
+        const alice = await joinPerson("Alice");
+        await harness.joinRoom(alice, SANDBOX_SINGLE_PLAYER_MODE);
+        for (let i = 0; i < HELPER_MAX_REPLIES_PER_PERSON_PER_HOUR; ++i)
+            expect(await HelperAgentUtil.answerAlone(alice.user.id, pip, `question ${i}`)).toBe("Happy to help!");
+        expect(await HelperAgentUtil.answerAlone(alice.user.id, pip, "one more")).toMatch(/^Let's take a little break/);
+        expect(await HelperAgentUtil.answerAlone(alice.user.id, pip, "and another")).toBe("");
+        vi.setSystemTime(Date.now() + 2 * 60_000 + 1000);
+        expect(await HelperAgentUtil.answerAlone(alice.user.id, pip, "still there?")).toMatch(/^Let's take a little break/);
+        expect(claude.requests).toHaveLength(HELPER_MAX_REPLIES_PER_PERSON_PER_HOUR);
+    });
+
+    it("never hears another helper, however near, so that helpers never talk to one another", async () => {
+        const mira = standNpc(FIRST_HUB_ID, "Mira", inFrontOfEntrance(FIRST_HUB_ID, 3, 1.5));
+        const bo = standNpc(FIRST_HUB_ID, "Bo", inFrontOfEntrance(FIRST_HUB_ID, 3, -1.5));
+        await live(1);
+        const alice = await joinPerson("Alice");
+        await live(8);
+        expect(saidBy(mira)).toHaveLength(1);
+        expect(saidBy(bo)).toHaveLength(1);
+
+        // One answers her, naming the other, and calling it a helper besides.
+        claude.answers.push("Hello! Bo knows a lot too: ask Bo, the helper beside me.");
+        await talk(alice, "Mira, hello!");
+        await live(60);
+        expect(saidBy(mira)).toHaveLength(2);
+        expect(saidBy(bo)).toHaveLength(1);
+        expect(claude.requests).toHaveLength(1);
+    });
+
+    it("says each reply whole in one bubble, links and all, longer than a person's, and gives it time to be read before "
+        + "the next", async () => {
         const mira = standNpc(FIRST_HUB_ID, "Mira");
         await live(1);
         const alice = await joinPerson("Alice");
@@ -548,9 +801,10 @@ describe("helpers", () => {
         await live(12);
         expect(saidBy(mira)).toHaveLength(1);
 
-        const toAlice = "Agents can make rooms of their own, and anyone can visit them. Their manual is at "
-            + "https://thingspool.net/skill.md, if you run one.";
-        expect(toAlice.length).toBeGreaterThan(OBJECT_MESSAGE_MAX_LENGTH);
+        // Read at the pace of what it shows, its link's label and not its address.
+        const toAlice = "Agents can make rooms of their own, and anyone can visit them. If you run one, just give it "
+            + "<link href=\"https://thingspool.net/skill.md\">the manual</link> and it can join right away.";
+        expect(MessageLinkUtil.getVisibleLength(toAlice)).toBeGreaterThan(OBJECT_MESSAGE_MAX_LENGTH);
         claude.answers.push(toAlice, "Hi Bob!");
         await talk(alice, "can AIs play?");
         await live(3);
@@ -579,7 +833,7 @@ describe("helpers", () => {
         await live(20);
 
         const greetings = saidBy(mira).filter(text => text.includes("welcome to ThingsPool"));
-        expect(greetings[0]).toBe("Hi Alice, welcome to ThingsPool! I'm Mira, an AI guide. Ask me anything, or just look "
+        expect(greetings[0]).toBe("Hi Alice, welcome to ThingsPool! I'm Mira. Ask me anything, or just look "
             + "around!");
         expect(greetings.length).toBeLessThanOrEqual(3);
         expect(greetings.slice(1).every(text => text.startsWith("Hi everyone,"))).toBe(true);
@@ -640,7 +894,8 @@ describe("helpers", () => {
     });
 
     it("counts each person's replies across every helper against one hourly limit", async () => {
-        const other: HelperIdentity = {key: "elsewhere/npc", name: "Bo", place: "one of the public hubs"};
+        const other: HelperIdentity = {key: "elsewhere/npc", name: "Bo", place: "one of the public hubs",
+            personality: "guide"};
         for (let i = 0; i < HELPER_MAX_REPLIES_PER_AGENT_PER_HOUR; ++i)
         {
             expect(await HelperChatUtil.getRefusal("agent-1", true)).toBeUndefined();
@@ -750,7 +1005,7 @@ describe("helpers", () => {
         expect(logSpy.mock.calls.some(([title]) => title == "Helper reply failed")).toBe(true);
     });
 
-    it("walks up to someone it answers from a little way off, never past its leash, and home again a while after, "
+    it("walks toward someone it answers from farther off, never past its wander radius, and home again a while after, "
         + "while the room keeps it at home", async () => {
         const home = inFrontOfEntrance(FIRST_HUB_ID, 4);
         const mira = standNpc(FIRST_HUB_ID, "Mira", home);
@@ -763,8 +1018,9 @@ describe("helpers", () => {
         await live(8);
         const met = helperIn(FIRST_HUB_ID, mira).at;
         const them = playerOf(alice.user.id).transform.pos;
+        // As far as one an admin has set no radius for goes, give or take where a path's end falls.
         expect(across(met, home)).toBeGreaterThan(2);
-        expect(across(met, home)).toBeLessThanOrEqual(5.01);
+        expect(across(met, home)).toBeLessThanOrEqual(3 + PATH_END_SLACK);
         expect(across(met, them)).toBeLessThan(across(home, them));
         expect(shown.some(({signalType, signal}) => signalType == "setObjectTransformSignal" && signal.objectId == mira))
             .toBe(true);
@@ -773,6 +1029,85 @@ describe("helpers", () => {
 
         await live(45);
         expect(across(helperIn(FIRST_HUB_ID, mira).at, home)).toBeLessThan(0.05);
+    });
+
+    it("keeps a little way off from whom it answers: stays put for someone near, stops short of someone farther off",
+        async () => {
+        const home = inFrontOfEntrance(FIRST_HUB_ID, 4);
+        const mira = standNpc(FIRST_HUB_ID, "Mira", home, 0, {[ObjectMetadataKeyEnumMap.WanderRadius]: "8"});
+        await live(1);
+        // Bob is near it, though not so near that walking a little way short of him would take it nowhere, and off to one
+        // side of the way to where Alice will be.
+        const bob = await joinPerson("Bob", "an");
+        await walkIn(bob, 6, -4);
+        await live(6);
+        await talk(bob, "hello!");
+        await live(6);
+        expect(saidBy(mira)).toContain("Happy to help!");
+        expect(across(helperIn(FIRST_HUB_ID, mira).at, home)).toBeLessThan(0.05);
+
+        const alice = await joinPerson("Alice", "an");
+        await moveTo(alice, inFrontOfEntrance(FIRST_HUB_ID, 11.5));
+        await live(6);
+        await talk(alice, "over here!");
+        await live(8);
+        const met = helperIn(FIRST_HUB_ID, mira).at;
+        const her = playerOf(alice.user.id).transform.pos;
+        expect(across(met, home)).toBeGreaterThan(2);
+        expect(across(met, her)).toBeGreaterThan(3.5 - PATH_END_SLACK);
+        expect(across(met, her)).toBeLessThan(across(home, her));
+    });
+
+    it("never steps up closer than a few steps to anyone in its way", async () => {
+        const home = inFrontOfEntrance(FIRST_HUB_ID, 4);
+        const mira = standNpc(FIRST_HUB_ID, "Mira", home, 0, {[ObjectMetadataKeyEnumMap.WanderRadius]: "8"});
+        await live(1);
+        const alice = await joinPerson("Alice", "an");
+        await moveTo(alice, inFrontOfEntrance(FIRST_HUB_ID, 11.5));
+        const bob = await joinPerson("Bob", "an");
+        await moveTo(bob, inFrontOfEntrance(FIRST_HUB_ID, 8.5));
+        await live(6);
+
+        await talk(alice, "over here!");
+        const walked: Vec3[] = [];
+        for (let i = 0; i < 10; ++i)
+        {
+            await live(1);
+            walked.push(helperIn(FIRST_HUB_ID, mira).at);
+        }
+        const him = playerOf(bob.user.id).transform.pos;
+        expect(walked.some(at => across(at, home) > 1)).toBe(true);
+        expect(Math.min(...walked.map(at => across(at, him)))).toBeGreaterThanOrEqual(3);
+    });
+
+    it("goes no farther from home than an admin sets, and nowhere at all when that is none", async () => {
+        const home = inFrontOfEntrance(FIRST_HUB_ID, 6);
+        const mira = standNpc(FIRST_HUB_ID, "Mira", home, 0, {[ObjectMetadataKeyEnumMap.WanderRadius]: "1"});
+        await live(1);
+        const seen: Vec3[] = [];
+        for (let i = 0; i < 150; ++i)
+        {
+            await live(1);
+            seen.push(helperIn(FIRST_HUB_ID, mira).at);
+        }
+        expect(seen.some(at => across(at, home) > 0.3)).toBe(true);
+        expect(seen.every(at => across(at, home) <= 1 + PATH_END_SLACK)).toBe(true);
+
+        // None: once home, it stays there, though called over from far off.
+        setNpcValue(FIRST_HUB_ID, mira, ObjectMetadataKeyEnumMap.WanderRadius, "0");
+        await live(30);
+        const alice = await joinPerson("Alice", "an");
+        await moveTo(alice, inFrontOfEntrance(FIRST_HUB_ID, 13));
+        await live(6);
+        await talk(alice, "over here!");
+        const after: Vec3[] = [];
+        for (let i = 0; i < 90; ++i)
+        {
+            await live(1);
+            after.push(helperIn(FIRST_HUB_ID, mira).at);
+        }
+        expect(saidBy(mira)).toContain("Happy to help!");
+        expect(after.every(at => across(at, home) < 0.05)).toBe(true);
     });
 
     it("turns back the way it was put once it has been quiet a while at home", async () => {
@@ -908,18 +1243,18 @@ describe("helpers", () => {
             seen.push(helperIn(FIRST_HUB_ID, mira).at);
         }
         expect(seen.some(at => across(at, moved) > 0.5)).toBe(true);
-        expect(seen.every(at => across(at, moved) <= 2.6)).toBe(true);
+        expect(seen.every(at => across(at, moved) <= 3 + PATH_END_SLACK)).toBe(true);
     });
 
     it("walks round blocks in its way, never into one", async () => {
         const home = inFrontOfEntrance(FIRST_HUB_ID, 4);
-        const mira = standNpc(FIRST_HUB_ID, "Mira", home);
+        const mira = standNpc(FIRST_HUB_ID, "Mira", home, 0, {[ObjectMetadataKeyEnumMap.WanderRadius]: "8"});
         await live(1);
         const alice = await joinPerson("Alice", "an");
         await moveTo(alice, inFrontOfEntrance(FIRST_HUB_ID, 10));
         // Then a wall across the way to her, three units out to each side.
         const room = ServerRoomManager.roomRuntimeMemories[FIRST_HUB_ID].room;
-        const wall = inFrontOfEntrance(FIRST_HUB_ID, 7);
+        const wall = inFrontOfEntrance(FIRST_HUB_ID, 5.5);
         const {dir} = entranceOf(FIRST_HUB_ID).transform;
         const row = VoxelQueryUtil.getVoxelRowFromWorldZ(wall.z);
         const col = VoxelQueryUtil.getVoxelColFromWorldX(wall.x);
@@ -941,7 +1276,7 @@ describe("helpers", () => {
         }
         const met = walked[walked.length - 1];
         const along = (at: Vec3) => (at.x - home.x) * dir.x + (at.z - home.z) * dir.z;
-        expect(along(met)).toBeGreaterThan(3.5);
+        expect(along(met)).toBeGreaterThan(2);
         expect(walked.some(at => Math.abs((at.x - home.x) * dir.z - (at.z - home.z) * dir.x) > 2.5)).toBe(true);
         expect(walked.filter(blocked)).toEqual([]);
     });
@@ -1014,6 +1349,28 @@ describe("helpers", () => {
         await live(8);
         expect(shown.some(({signalType, signal}) => signalType == "setObjectTransformSignal" && signal.objectId == mira))
             .toBe(true);
+    });
+
+    it("stands at home, the way it was put, for everyone, as soon as an admin takes hold of it", async () => {
+        const home = inFrontOfEntrance(FIRST_HUB_ID, 4);
+        const mira = standNpc(FIRST_HUB_ID, "Mira", home);
+        await live(1);
+        const alice = await joinPerson("Alice", "an");
+        await walkIn(alice, 11, 3);
+        await live(6);
+        await talk(alice, "over here!");
+        await live(8);
+        expect(across(helperIn(FIRST_HUB_ID, mira).at, home)).toBeGreaterThan(1);
+        expect(lastFacingOf(mira)).not.toBe(facingPut(0));
+
+        const admin = harness.connectUser({id: "id-Admin", userName: "Admin", userType: UserTypeEnumMap.Admin});
+        await harness.joinRoom(admin, FIRST_HUB_ID);
+        shown.length = 0;
+        HelperAgentUtil.hold(admin.socketUserContext, new HoldObjectSignal(FIRST_HUB_ID, mira, true));
+        expect(helperIn(FIRST_HUB_ID, mira).at).toEqual(home);
+        expect(shown.filter(({signalType, signal, userID}) => userID == undefined && signal.objectId == mira
+            && signalType == "setObjectTransformSignal").map(({signal}) => signal.transform.pos)).toEqual([home]);
+        expect(facingsOf(mira)).toEqual([facingPut(0)]);
     });
 
     it("tells someone who comes into its room where it stands, when that isn't home", async () => {

@@ -8,13 +8,18 @@ right turn. Or use W, A, S, D or the arrow keys. Walking into a one-block step c
 blow people around, and upward ones bounce them up.
 
 Chat: in Play mode, type in the "Your Message" box at the bottom and press Send or Enter (72 characters at most).
-The words show in a bubble over your head to people near you, until you send another or clear it with the X.
+The words show in a bubble over your head to people near you, until you send another or clear it with the X. A web
+address typed there becomes a link: a button in the bubble that others click to open it, a page of ThingsPool's own
+website over the game and any other in a new tab, and a ThingsPool room by going there.
 
 Edit mode: the Play/Edit switch at the top right, or the M key. Drag to look around, and zoom with the mouse
 wheel, a pinch or the slider on the right. Click a block's face, or a thing, to select it. The tools that appear:
 the trash can removes the block, the cube adds one, the picture adds a painting, the cart an everyday object,
-the sun a lamp, the pinwheel a fan. The strip of textures under them repaints the selected face. Drag a thing to
-move it. Ctrl+Z undoes, Ctrl+Y redoes. Switch back to Play to walk again.
+the sun a lamp, the pinwheel a fan. The strip of textures under them repaints the selected face. A thing goes on
+the face it is added to, so a fan on a floor blows upward. Select a thing to change it: a lamp's color, brightness
+and reach; a fan's color and blades (more blades blow harder and farther); a painting's picture (found by title or
+artist) and frame; an everyday object's picture. Paintings and everyday objects turn, too. Drag a thing to move it.
+Ctrl+Z undoes, Ctrl+Y redoes. Switch back to Play to walk again.
 
 Where you can build: anywhere, hubs and other people's rooms included, except in restricted zones (red outlines
 in Edit mode), which a room's owner keeps for someone.

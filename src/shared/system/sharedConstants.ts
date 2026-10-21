@@ -36,12 +36,23 @@ export const UNDEFINED_DOCUMENT_ID_CHAR = "?";
 
 export const USER_API_ROUTE_PATH = "api/user";
 export const ROOM_API_ROUTE_PATH = "api/room";
+export const HELPER_API_ROUTE_PATH = "api/helper";
 export const HEALTH_ROUTE_PATH = "health";
 export const SIGNAL_BATCH_SEND_INTERVAL = 200; // in milliseconds (0.2s)
 export const ROOM_AUTO_SAVE_INTERVAL = 10 * MINUTE_IN_MS; // in milliseconds (10m)
+// ThingsPool's website, whose pages a link someone says opens over the game (see MessageLinkOpenUtil).
+export const SITE_URL = "https://thingspool.net";
+// What a message shows, in code points, a link counting as its label (see MessageLinkUtil).
 export const OBJECT_MESSAGE_MAX_LENGTH = 72;
 // What an NPC says, which only the server or a room's script writes: a helper's whole reply, in one bubble.
 export const NPC_MESSAGE_MAX_LENGTH = 200;
+// A message's links (see MessageLinkUtil): how many it holds, and how long an address and a label may be, in characters.
+export const MESSAGE_LINK_MAX_COUNT = 3;
+export const MESSAGE_LINK_ADDRESS_MAX_LENGTH = 300;
+export const MESSAGE_LINK_LABEL_MAX_LENGTH = 24;
+// What players may call any helper, the AI guides NPCs are played as (see HelperBehaviorUtil). No agent may take it for a
+// name.
+export const HELPER_AGENT_NAME = "Helper";
 export const OBJECT_INSTANCED_MESH_COMPOSITION_METADATA_MAX_LENGTH = 512;
 
 // In code points. Text past what a label's patch holds is cut off at its bottom (see LabelText).

@@ -2,7 +2,8 @@ import * as THREE from "three";
 import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import GeometryFactory from "../../../../graphics/factories/geometryFactory";
 import GraphicsManager from "../../../../graphics/graphicsManager";
-import { DIRECTION_VECTORS, MOUSE_DRAG_THRESHOLD_PX, TOUCH_DRAG_THRESHOLD_PX } from "../../../../../client/system/clientConstants";
+import OverlayClickTargetUtil from "../../../util/overlayClickTargetUtil";
+import { DIRECTION_VECTORS } from "../../../../../client/system/clientConstants";
 
 const tempQuat = new THREE.Quaternion();
 const vecTemp1 = new THREE.Vector3();
@@ -88,62 +89,15 @@ export default class WorldSpaceArrow
             "cursor:pointer; pointer-events:auto;" +
             "border-radius:50%; background:transparent;";
 
-        // A press that moves past the drag threshold is handed to the game canvas (camera drag);
-        // otherwise it stays here and fires "click".
-        let pressArmed = false;
-        let pressStartX = 0;
-        let pressStartY = 0;
-        let pressPointerId: number | null = null;
-        let pressIsMouse = false;
-
-        function cleanupPress(): void {
-            pressArmed = false;
-            pressPointerId = null;
-            document.removeEventListener("pointermove", onPressMove);
-            document.removeEventListener("pointerup", cleanupPress);
-            document.removeEventListener("pointercancel", cleanupPress);
-        }
-
-        function onPressMove(ev: PointerEvent): void {
-            if (!pressArmed || ev.pointerId !== pressPointerId) return;
-            const dx = ev.clientX - pressStartX;
-            const dy = ev.clientY - pressStartY;
-            const thresholdPx = pressIsMouse ? MOUSE_DRAG_THRESHOLD_PX : TOUCH_DRAG_THRESHOLD_PX;
-            if (dx * dx + dy * dy < thresholdPx * thresholdPx) return;
-
-            cleanupPress();
-
-            const canvas = GraphicsManager.getGameCanvas();
-            canvas.dispatchEvent(new PointerEvent("pointerdown", {
-                pointerId: ev.pointerId,
-                pointerType: ev.pointerType,
-                clientX: pressStartX,
-                clientY: pressStartY,
-                bubbles: false,
-            }));
-            canvas.dispatchEvent(new PointerEvent("pointermove", ev));
-        }
-
-        this.clickElement.addEventListener("pointerdown", (ev) => {
-            pressArmed = true;
-            pressStartX = ev.clientX;
-            pressStartY = ev.clientY;
-            pressPointerId = ev.pointerId;
-            pressIsMouse = (ev.pointerType === "mouse");
-            document.addEventListener("pointermove", onPressMove);
-            document.addEventListener("pointerup", cleanupPress);
-            document.addEventListener("pointercancel", cleanupPress);
+        OverlayClickTargetUtil.makeClickable(this.clickElement, () => {
+            if (this.onClickCallback)
+                this.onClickCallback();
         });
         this.clickElement.addEventListener("pointerenter", () => {
             mat.opacity = 1.0;
         });
         this.clickElement.addEventListener("pointerleave", () => {
             mat.opacity = 0.85;
-        });
-        this.clickElement.addEventListener("click", (ev) => {
-            ev.stopPropagation();
-            if (this.onClickCallback)
-                this.onClickCallback();
         });
 
         this.css2dObject = new CSS2DObject(this.clickElement);

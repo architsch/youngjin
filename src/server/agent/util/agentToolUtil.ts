@@ -7,12 +7,14 @@ import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap
 import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 import DoorObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import LabelTextUtil from "../../../shared/object/util/labelTextUtil";
+import MessageLinkUtil from "../../../shared/object/util/messageLinkUtil";
 import RequestRoomChangeSignal from "../../../shared/room/types/requestRoomChangeSignal";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import VoxelPathUtil from "../../../shared/voxel/util/voxelPathUtil";
-import { COLLISION_LAYER_HEIGHT, HUB_ROOM_ID_KEYWORD, VOXEL_CELL_SIZE } from "../../../shared/system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, HUB_ROOM_ID_KEYWORD, OBJECT_MESSAGE_MAX_LENGTH,
+    VOXEL_CELL_SIZE } from "../../../shared/system/sharedConstants";
 import ServerRoomManager from "../../room/serverRoomManager";
 import OwnedRoomUtil from "../../room/util/ownedRoomUtil";
 import { AGENT_LOOK_MAX_PEOPLE } from "../../system/serverConstants";
@@ -246,6 +248,12 @@ const AgentToolUtil =
         {
             return {error: `You are talking faster than anyone may: try again in about `
                 + `${AgentBudgetUtil.describeWait(ctx.user.id, "speech")}.`};
+        }
+        const shown = MessageLinkUtil.getVisibleLength(text.trim());
+        if (shown > OBJECT_MESSAGE_MAX_LENGTH)
+        {
+            return {error: `That shows ${shown} characters, and a bubble shows at most ${OBJECT_MESSAGE_MAX_LENGTH} `
+                + `(a link counting as its label): say it shorter.`};
         }
 
         await AgentSignalUtil.send(ctx, "setObjectMetadataSignal",

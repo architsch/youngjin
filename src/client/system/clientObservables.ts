@@ -187,3 +187,6 @@ export const texturePackURLObservable = new Observable<string>("");
 // Current single-player mode and step. Updated on env load, when the user's mode changes, and by
 // SinglePlayerManager on step changes.
 export const singlePlayerObservable = new Observable<{mode: string, step: string}>({mode: "", step: ""});
+
+// A line the user said in a single-player room, which no server hears, as it is sent (see SinglePlayerHelperUtil).
+export const singlePlayerChatLineObservable = new Observable<string>("");

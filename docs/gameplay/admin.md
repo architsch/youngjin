@@ -9,7 +9,7 @@ Admin is a user type that is granted manually in the database. Admins decide by 
 - Creating a new hub. The server otherwise creates one only when every hub is full.
 - Ordering the hubs, by setting each one's join priority (see [room_population.md](../networking/room_population.md)).
 - Saving a room to a file and loading one over it, in any room the admin is the superuser of (see [my_room.md](../networking/my_room.md#room-files)).
-- Laying NPCs (see [player_customization.md](../geometry/player_customization.md#npcs)) and tagging objects, in any room: what a single-player room's steps act on (see [single_player_mode.md](../networking/single_player_mode.md#rooms)). An NPC in a multiplayer room is a helper, an AI guide that keeps near where the admin puts it (see [agents.md](../networking/agents.md#helpers)).
+- Laying NPCs (see [player_customization.md](../geometry/player_customization.md#npcs)) and tagging objects, in any room: what a single-player room's steps act on (see [single_player_mode.md](../networking/single_player_mode.md#rooms)). An NPC is a helper, an AI guide that keeps within the distance the admin sets of where they put it, played as the personality they pick for it, unless that is Idle (see [agents.md](../networking/agents.md#helpers)).
 - Laying and editing volumes in any room, which is otherwise the room's superuser's to do (see [restricted_zone.md](restricted_zone.md#volumes)).
 - Building single-player rooms in the room editor (see [single_player_mode.md](../networking/single_player_mode.md#room-editor)).
 - Ghost mode: the admin's own character, body and speech bubble alike, is drawn for nobody, the admin included. Only drawing is affected; the character still moves and collides as usual.

@@ -5,7 +5,8 @@ import ChatSentMessage from "./chatSentMessage";
 import ClientObjectManager from "../../../../object/clientObjectManager";
 import SpeechBubble from "../../../../object/components/speechBubble";
 import { ObjectMetadataKeyEnumMap } from "../../../../../shared/object/types/objectMetadataKey";
-import { clientFeatureFlagsObservable, roomChangedObservable } from "../../../../system/clientObservables";
+import { clientFeatureFlagsObservable, roomChangedObservable,
+    singlePlayerChatLineObservable } from "../../../../system/clientObservables";
 import App from "../../../../app";
 import RoomRuntimeMemory from "../../../../../shared/room/types/roomRuntimeMemory";
 import AsyncUtil from "../../../../../shared/system/util/asyncUtil";
@@ -110,13 +111,17 @@ export default function Chat({hide}: Props)
 }
 
 // Sets the player's SentMessage ("" clears it). Multiplayer persists it via the server echo;
-// single-player sets it locally, which drives the bubble and step conditions.
+// single-player sets it locally, which drives the bubble and step conditions, and is told to the room's helpers.
 function setMyPlayerSentMessage(player: GameObject, message: string)
 {
     const room = App.getCurrentRoom();
     if (room && room.roomType == RoomTypeEnumMap.SinglePlayer)
+    {
         ClientObjectManager.setObjectMetadata(player.params.objectId,
             ObjectMetadataKeyEnumMap.SentMessage, message, false);
+        if (message.length > 0)
+            singlePlayerChatLineObservable.set(message);
+    }
     else
         (player.components.speechBubble as SpeechBubble).setMessage(message, true);
 }

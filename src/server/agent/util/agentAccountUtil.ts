@@ -4,8 +4,8 @@ import DBUserUtil from "../../db/util/dbUserUtil";
 import DBSearchUtil from "../../db/util/dbSearchUtil";
 import GuestCreationLimitUtil from "../../user/util/guestCreationLimitUtil";
 import AcquisitionSourceUtil from "../../analytics/util/acquisitionSourceUtil";
-import { AGENT_ACQUISITION_SOURCE_PREFIX, AGENT_NAME_MAX_LENGTH, AGENT_NAME_MIN_LENGTH,
-    HELPER_AGENT_NAME } from "../../system/serverConstants";
+import { AGENT_ACQUISITION_SOURCE_PREFIX, AGENT_NAME_MAX_LENGTH, AGENT_NAME_MIN_LENGTH } from "../../system/serverConstants";
+import { HELPER_AGENT_NAME } from "../../../shared/system/sharedConstants";
 import AgentRegistrationResult from "../types/agentRegistrationResult";
 import AgentKeyUtil from "./agentKeyUtil";
 

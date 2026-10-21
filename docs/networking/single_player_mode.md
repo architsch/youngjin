@@ -1,6 +1,6 @@
 # Single-Player Mode
 
-Reference: @src/shared/room/types/roomType.ts , @src/shared/system/types/featureFlag.ts , @src/server/room/util/roomPickerUtil.ts , @src/server/sockets/socketsServer.ts , @src/shared/singlePlayer/maps/singlePlayerModeConfigMap.ts , @src/shared/room/types/roomMap.ts , @src/server/ssg/builder/roomMapBuilder.ts , @src/shared/object/util/objectTagUtil.ts , @src/shared/object/types/objectTypeConfig/volumeObjectTypeConfig.ts , @src/client/singlePlayer/singlePlayerManager.ts , @src/client/singlePlayer/util/singlePlayerRoomLoadUtil.ts , @src/client/singlePlayer/util/singlePlayerRoomQueryUtil.ts , @src/client/singlePlayer/util/roomEditorUtil.ts , @src/client/singlePlayer/maps/singlePlayerModeClientConfigMap.ts , @src/client/singlePlayer/maps/singlePlayerActionMap.ts , @src/client/singlePlayer/maps/singlePlayerConditionMap.ts
+Reference: @src/shared/room/types/roomType.ts , @src/shared/system/types/featureFlag.ts , @src/server/room/util/roomPickerUtil.ts , @src/server/sockets/socketsServer.ts , @src/shared/singlePlayer/maps/singlePlayerModeConfigMap.ts , @src/shared/room/types/roomMap.ts , @src/server/ssg/builder/roomMapBuilder.ts , @src/shared/object/util/objectTagUtil.ts , @src/shared/object/types/objectTypeConfig/volumeObjectTypeConfig.ts , @src/client/singlePlayer/singlePlayerManager.ts , @src/client/singlePlayer/util/singlePlayerRoomLoadUtil.ts , @src/client/singlePlayer/util/singlePlayerRoomQueryUtil.ts , @src/client/singlePlayer/util/roomEditorUtil.ts , @src/client/singlePlayer/util/singlePlayerHelperUtil.ts , @src/client/singlePlayer/maps/singlePlayerModeClientConfigMap.ts , @src/client/singlePlayer/maps/singlePlayerActionMap.ts , @src/client/singlePlayer/maps/singlePlayerConditionMap.ts
 
 A single-player room is explored alone and runs entirely on the client. Its main use is the first-time **tutorial**, a scripted experience isolated from other players and from persistence.
 
@@ -31,7 +31,7 @@ On connect, `SocketsServer` picks, in order: the room editor (for an admin whose
   - a stretch of the room by the name of the **volume** that marks it (`VolumeObjectTypeConfig`): a named box of blocks that draws nothing and stops nobody;
   - a spot with no object of its own by a placeholder object carrying a tag. The player starts on the floor under the object tagged as the start, or in the middle of a room with none.
 - A thing the room lacks is reported once and read as nothing, so a step carries on as well as it can.
-- The tutorial is a single storey: a row of small rooms separated by walls that steps take down, each under a volume of its name. Its fixtures are the receptionist (an NPC; see [player_customization.md](../geometry/player_customization.md)) and the exit door.
+- The tutorial is a single storey: a row of small rooms separated by walls that steps take down, each under a volume of its name. Its fixtures are the receptionist (an Idle NPC; see [NPCs](#npcs)) and the exit door.
 
 ### Room editor
 - A single-player mode of its own, open to admins only, with no steps: the admin edits the room with every edit-mode tool, as the superuser of a room nobody else is in.
@@ -43,6 +43,11 @@ On connect, `SocketsServer` picks, in order: the room editor (for an admin whose
 - Volumes are hidden there as anywhere, until `volumes on` (see [restricted_zone.md](../gameplay/restricted_zone.md#display)).
 - A saved file ships once it is put in the room map's directory, under the path a mode names.
 - **Trap**: room files are static assets, which reach every running build at once (see [deployment.md](../devOps/vps/deployment.md)). An edit that the live build's steps cannot play belongs under a new roomPath.
+
+## NPCs
+- An NPC (see [player_customization.md](../geometry/player_customization.md#npcs)) is a helper here as in a multiplayer room (see [agents.md](agents.md#helpers)) when its mode plays NPCs (`SinglePlayerModeConfig`) and its personality isn't Idle. The browser plays it alone, by the behavior the server's helpers share, and asks the server only for its replies.
+- The room editor plays none, since a helper would walk off the spot its file saves.
+- An Idle NPC stands where it was put and says only what the steps give it, as the tutorial's receptionist does.
 
 ## Scripted steps
 - `SinglePlayerModeConfig` (shared) names the mode's room and who may enter it. `SinglePlayerModeClientConfig` (client) defines named `SinglePlayerStep`s and a teardown.

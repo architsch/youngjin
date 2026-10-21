@@ -2,9 +2,11 @@ import { Express, Request, Response } from "express";
 import PageRouter from "./ui/pageRouter";
 import UserRouter from "./api/userRouter";
 import RoomRouter from "./api/roomRouter";
+import HelperRouter from "./api/helperRouter";
 import FileUtil from "../../ssg/util/fileUtil";
 import EJSUtil from "../../ssg/util/ejsUtil";
-import { USER_API_ROUTE_PATH, ROOM_API_ROUTE_PATH, HEALTH_ROUTE_PATH } from "../../../shared/system/sharedConstants";
+import { USER_API_ROUTE_PATH, ROOM_API_ROUTE_PATH, HELPER_API_ROUTE_PATH,
+    HEALTH_ROUTE_PATH } from "../../../shared/system/sharedConstants";
 import RateLimitUtil from "../util/rateLimitUtil";
 import ServerLifecycleUtil from "../../system/util/serverLifecycleUtil";
 import { AGENT_MCP_ROUTE_PATH, GIT_COMMIT, IS_PUBLIC_SITE } from "../../system/serverConstants";
@@ -79,6 +81,7 @@ export default function Router(app: Express): void
 
     app.use(`/${USER_API_ROUTE_PATH}`, RateLimitUtil.apiRateLimiter, UserRouter);
     app.use(`/${ROOM_API_ROUTE_PATH}`, RateLimitUtil.apiRateLimiter, RoomRouter);
+    app.use(`/${HELPER_API_ROUTE_PATH}`, RateLimitUtil.apiRateLimiter, HelperRouter);
     // AI agents (see @docs/networking/agents.md), the key in the address for hosts that can't send a header. Before
     // PageRouter, which would refuse it as a room address.
     app.all([`/${AGENT_MCP_ROUTE_PATH}`, `/${AGENT_MCP_ROUTE_PATH}/:key`], RateLimitUtil.agentRateLimiter,

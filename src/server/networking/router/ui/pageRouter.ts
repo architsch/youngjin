@@ -5,6 +5,7 @@ import { ArcadeData } from "../../../ssg/data/arcadeData";
 import UserIdentificationUtil from "../../../user/util/userIdentificationUtil";
 import { AGENT_CAMERA_ROUTE_PATH, GIT_COMMIT } from "../../../system/serverConstants";
 import AgentCameraUtil from "../../../agent/util/agentCameraUtil";
+import RoomIdUtil from "../../../../shared/room/util/roomIdUtil";
 
 const PageRouter = express.Router();
 
@@ -44,15 +45,12 @@ PageRouter.get("/:roomID", rejectMalformedRoomID, UserIdentificationUtil.identif
         EJSUtil.render(req, res, "page/dynamic/mypage", { gitCommit: GIT_COMMIT, targetRoomID: req.params.roomID });
     });
 
-// Firestore document IDs: exactly 20 alphanumeric characters.
-const ROOM_ID_PATTERN = /^[A-Za-z0-9]{20}$/;
-
 // Rejects non-room-shaped paths (favicon, scanner probes) before identification, which would otherwise
 // create a guest and a Firestore write each. Also makes the ID safe to embed in the page URL.
 function rejectMalformedRoomID(req: Request, res: Response, next: () => void): void
 {
     const roomID = req.params.roomID;
-    if (typeof roomID != "string" || !ROOM_ID_PATTERN.test(roomID))
+    if (typeof roomID != "string" || !RoomIdUtil.isRoomID(roomID))
     {
         res.status(404).send("Page not found");
         return;

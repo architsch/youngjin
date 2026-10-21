@@ -1,4 +1,4 @@
-import { DAY_IN_MS, MINUTE_IN_MS } from "../../shared/system/sharedConstants";
+import { DAY_IN_MS, MINUTE_IN_MS, SITE_URL } from "../../shared/system/sharedConstants";
 import { UserBudgetKind } from "../user/types/userBudgetKind";
 
 // Build Info
@@ -40,7 +40,7 @@ export const GUEST_MAX_AGE_BY_TIER_PHASE = [
 
 // Networking
 
-export const URL_STATIC = "https://thingspool.net";
+export const URL_STATIC = SITE_URL;
 export const URL_DYNAMIC = process.env.DB_PREFIX == "staging_" ? "https://staging.thingspool.net" : "https://app.thingspool.net";
 
 // Only the public site serves share metadata and the analytics tag (staging would duplicate the site in
@@ -48,6 +48,7 @@ export const URL_DYNAMIC = process.env.DB_PREFIX == "staging_" ? "https://stagin
 export const IS_PUBLIC_SITE = process.env.MODE != "dev" && process.env.DB_PREFIX != "staging_";
 export const AUTH_TOKEN_NAME_BASE = "thingspool_token";
 export const TUTORIAL_FINISHED_COOKIE_NAME_BASE = "thingspool_tutorial_finished";
+export const OAUTH_STATE_COOKIE_NAME_BASE = "thingspool_oauth_state";
 // Dev-only cookie carrying the DevRunner runtime's boot id (see DevRuntimeUtil).
 export const DEV_BOOT_ID_COOKIE_NAME = "thingspool_dev_boot_id";
 
@@ -92,8 +93,6 @@ export const AGENT_CAMERA_MAX_PAGES = 2;
 // The most agents present at once: the server steps their bodies (see AgentBodyUtil) and holds their rooms, and its
 // process is restarted past a memory limit (see ecosystem.config.js).
 export const AGENT_MAX_PRESENT = 30;
-// What players may call any helper, the AI guides the server plays (see HelperAgentUtil). No agent may take it for a name.
-export const HELPER_AGENT_NAME = "Helper";
 // The Claude model helpers chat with, and its prices in dollars per million tokens, for prompts as short as theirs
 // (check them against https://platform.claude.com/docs/en/about-claude/pricing whenever the model changes).
 export const HELPER_MODEL = "claude-haiku-5-5";

@@ -57,7 +57,8 @@ export default interface ObjectTypeConfig
                 yOffset: number,
                 checkLineOfSight: boolean,
                 prependUserNameToMessage: boolean,
-                // How wide its lines run, in characters, for a type whose messages run long. Narrow if unset.
+                // How wide its lines run, in characters, for a type whose messages run long. Narrow if unset. A message
+                // too long for a few lines at this width is laid out wider (see SpeechBubble).
                 widthInChars?: number,
             },
             // In-world label from the object's "Label" metadata, and a default ink (a "LabelColor" metadata

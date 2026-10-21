@@ -9,7 +9,10 @@ import { ObjectMetadataKeyEnumMap } from "../types/objectMetadataKey";
 import { DoorTypeEnumMap } from "../types/doorType";
 import LampObjectTypeConfig from "../types/objectTypeConfig/lampObjectTypeConfig";
 import FanObjectTypeConfig from "../types/objectTypeConfig/fanObjectTypeConfig";
+import NpcObjectTypeConfig from "../types/objectTypeConfig/npcObjectTypeConfig";
+import NpcPersonalityMap from "./npcPersonalityMap";
 import LabelTextUtil from "../util/labelTextUtil";
+import MessageLinkUtil from "../util/messageLinkUtil";
 import AdminPrefsUtil from "../util/adminPrefsUtil";
 import QuarterTurnsUtil from "../util/quarterTurnsUtil";
 import NpcFacingUtil from "../util/npcFacingUtil";
@@ -20,9 +23,10 @@ import RoomValidationUtil from "../../room/util/roomValidationUtil";
 const doorTypeValues = Object.values(DoorTypeEnumMap);
 
 const entries: {[key: number]: ObjectMetadataEntry} = {
-    // As long as anything may say: an NPC. A player says less (see PlayerObjectTypeConfig).
+    // As long as anything may say: an NPC. A player says less (see PlayerObjectTypeConfig). Its web addresses as links
+    // (see MessageLinkUtil).
     [ObjectMetadataKeyEnumMap.SentMessage]: {
-        preprocessingMethod: (rawValue: string) => StringUtil.truncateByCodePoints(rawValue.trim(), NPC_MESSAGE_MAX_LENGTH),
+        preprocessingMethod: (rawValue: string) => MessageLinkUtil.canonicalize(rawValue, NPC_MESSAGE_MAX_LENGTH),
     },
     [ObjectMetadataKeyEnumMap.ImagePath]: {
         preprocessingMethod: (rawValue: string) => rawValue,
@@ -103,6 +107,13 @@ const entries: {[key: number]: ObjectMetadataEntry} = {
     [ObjectMetadataKeyEnumMap.Facing]: {
         preprocessingMethod: (rawValue: string) => NpcFacingUtil.canonicalize(rawValue),
         canUserSet: (_user: User) => false,
+    },
+    // Round-tripped through NpcObjectTypeConfig's util.
+    [ObjectMetadataKeyEnumMap.WanderRadius]: {
+        preprocessingMethod: (rawValue: string) => NpcObjectTypeConfig.util.canonicalizeWanderRadius(rawValue),
+    },
+    [ObjectMetadataKeyEnumMap.Personality]: {
+        preprocessingMethod: (rawValue: string) => NpcPersonalityMap.canonicalize(rawValue),
     },
 };
 

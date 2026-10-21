@@ -18,6 +18,8 @@ Reference: @src/server/sockets/socketsServer.ts , @src/client/networking/client/
 AI agents use neither cookie nor socket: each request to the MCP endpoint carries the agent's key (see [agents.md](agents.md)).
 
 ## Sign-in / sign-up (OAuth)
+The sign-in route puts a random `state` in the provider URL and in a short-lived cookie, and the callback goes on only when the two match: only the browser that started a sign-in can finish it.
+
 After the provider callback, the server takes one of three paths:
 - **New user with a guest session**: the guest is upgraded to a Member in place, keeping its id, token and state.
 - **New user without a session**: a new Member is created.

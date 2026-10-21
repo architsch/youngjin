@@ -12,7 +12,7 @@ import AgentMotion from "./agentMotion";
 export default class AgentUserContext implements UserContext
 {
     user: User;
-    isInSinglePlayerRoom: boolean = false;
+    singlePlayerMode: string = "";
     funnel: string;
     loginCount: number;
     signalThrottleTimestamps: {[signalType: string]: number} = {};
@@ -36,6 +36,11 @@ export default class AgentUserContext implements UserContext
         this.loginCount = loginCount;
         this.keyHash = keyHash;
         this.inbox = new AgentInbox(user.id);
+    }
+
+    get isInSinglePlayerRoom(): boolean
+    {
+        return this.singlePlayerMode != "";
     }
 
     noteRequest(): void

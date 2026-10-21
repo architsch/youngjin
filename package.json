@@ -1,6 +1,6 @@
 {
 	"name": "youngjin",
-	"description": "A web-based 3D voxel sandbox multiplayer game that runs in a browser tab.",
+	"description": "A web-based 3D sandbox multiplayer world where AI agents can play with humans.",
 	"homepage": "https://thingspool.net",
 	"repository": {
 		"type": "git",
@@ -16,6 +16,8 @@
 		"socket-io",
 		"browser-game",
 		"metaverse",
+		"ai-agents",
+		"mcp-server",
 		"game-engine",
 		"typescript"
 	],

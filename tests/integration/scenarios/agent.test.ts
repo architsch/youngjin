@@ -43,7 +43,7 @@ import DoorObjectTypeConfig, { ENTERING_STRIDE_LENGTH,
     ENTRANCE_DOOR_OBJECT_ID } from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import Vec3 from "../../../src/shared/math/types/vec3";
 import Voxel from "../../../src/shared/voxel/types/voxel";
-import { NUM_VOXEL_COLS } from "../../../src/shared/system/sharedConstants";
+import { NUM_VOXEL_COLS, OBJECT_MESSAGE_MAX_LENGTH } from "../../../src/shared/system/sharedConstants";
 import AgentUserContext from "../../../src/server/agent/types/agentUserContext";
 import AgentInbox from "../../../src/server/agent/types/agentInbox";
 import AgentEvent from "../../../src/server/agent/types/agentEvent";
@@ -532,9 +532,9 @@ describe("AI agents", () => {
     });
 
     describe("helpers", () => {
-        // An NPC an admin stood a little in from the hub's entrance, which the server then plays as a helper. Stood
-        // before the agent arrives, so that the room it is sent has it.
-        async function standHelper(name: string): Promise<string>
+        // An NPC an admin stood a little in from the hub's entrance, which the server then plays as a helper (unless
+        // its personality is Idle). Stood before the agent arrives, so that the room it is sent has it.
+        async function standHelper(name: string, personality: string = "guide"): Promise<string>
         {
             if (ServerRoomManager.roomRuntimeMemories[HUB_ID] == undefined)
                 await harness.loadRoom(HUB_ID);
@@ -545,7 +545,8 @@ describe("AI agents", () => {
                 ObjectTypeConfigMap.getIndexByType("Npc"), objectId, new ObjectTransform(
                     {x: pos.x + 3 * dir.x, y: DoorObjectTypeConfig.util.getFloorY(room.objectById[ENTRANCE_DOOR_OBJECT_ID]),
                         z: pos.z + 3 * dir.z}, {x: 0, y: 1, z: 0}, {x: 1, y: 1, z: 1}),
-                {[ObjectMetadataKeyEnumMap.Label]: new EncodableByteString(name)});
+                {[ObjectMetadataKeyEnumMap.Label]: new EncodableByteString(name),
+                    [ObjectMetadataKeyEnumMap.Personality]: new EncodableByteString(personality)});
             await HelperAgentUtil.tick();
             return objectId;
         }
@@ -561,6 +562,17 @@ describe("AI agents", () => {
             const seen = AgentToolUtil.look(agent) as any;
             expect(seen.people.find((person: any) => person.name == "Mira")).toMatchObject({isAgent: true, isGuide: true});
             expect(seen.objects.some((obj: any) => obj.id == npc)).toBe(false);
+        });
+
+        it("aren't played when Idle, and are then seen among the things placed, still and silent, and not among the "
+            + "people", async () => {
+            const npc = await standHelper("Statue", "idle");
+            const agent = await arriveAgent("Looker");
+
+            const seen = AgentToolUtil.look(agent) as any;
+            expect(seen.people.some((person: any) => person.name == "Statue")).toBe(false);
+            expect(seen.objects.find((obj: any) => obj.id == npc)).toMatchObject({type: "npc", text: "Statue",
+                note: expect.stringContaining("nobody plays")});
         });
 
         it("are heard as anyone is, while their own steps and turns aren't told as edits", async () => {
@@ -653,6 +665,21 @@ describe("AI agents", () => {
             expect(_analytics.recordMilestone).toHaveBeenCalledWith(agent.user.id, FunnelMilestoneEnumMap.Chatted, agent);
 
             expect(await AgentToolUtil.say(agent, "")).toEqual({saying: ""});
+        });
+
+        it("say gives a web address as a link, which counts as its label, and says when what it shows is too long",
+            async () => {
+            const agent = await arriveAgent("Bot-1");
+            const address = `https://thingspool.net/${"a".repeat(OBJECT_MESSAGE_MAX_LENGTH)}`;
+            expect(await AgentToolUtil.say(agent, `my favorite: ${address}`))
+                .toEqual({saying: `my favorite: <link href="${address}">thingspool.net</link>`});
+            expect(await AgentToolUtil.say(agent, `<link href="${address}">this page</link>, read it`))
+                .toEqual({saying: `<link href="${address}">this page</link>, read it`});
+
+            const tooLong = await AgentToolUtil.say(agent, "x".repeat(OBJECT_MESSAGE_MAX_LENGTH + 1)) as any;
+            expect(tooLong.error).toContain(`shows ${OBJECT_MESSAGE_MAX_LENGTH + 1} characters`);
+            expect((await AgentToolUtil.look(agent) as any).you.saying).toBe("<link href=\""
+                + `${address}">this page</link>, read it`);
         });
 
         it("travel home makes the agent's own room on the first trip, where it is the superuser", async () => {
@@ -1930,6 +1957,24 @@ describe("AI agents", () => {
             expect(response.status).toBe(400);
             const refusal = await response.json() as {error: {message: string}};
             expect(refusal.error.message).toMatch(/one JSON-RPC message per request/);
+        });
+
+        it("holds no stream open for word of changed tools, which never change while it runs", async () => {
+            // Were it honored, a client with no key could hold streams like this one open by the thousand.
+            const client = new Client({name: "test-agent", version: "1.0.0"},
+                {versionNegotiation: {mode: {pin: "2026-07-28"}}});
+            await client.connect(new StreamableHTTPClientTransport(url));
+            try
+            {
+                expect(client.getServerCapabilities()?.tools?.listChanged).toBe(false);
+                const subscription = await client.listen({toolsListChanged: true});
+                expect(subscription.honoredFilter).toEqual({});
+                expect(await subscription.closed).toBe("graceful");
+            }
+            finally
+            {
+                await client.close();
+            }
         });
 
         it("knows a present agent by its key without reading its row, and brings it back by its row once gone",

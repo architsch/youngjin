@@ -12,7 +12,7 @@ import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfi
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
-import NpcObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/npcObjectTypeConfig";
+import NpcObjectTypeConfig, { NPC_WANDER_RADII } from "../../../src/shared/object/types/objectTypeConfig/npcObjectTypeConfig";
 import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import RemoveObjectSignal from "../../../src/shared/object/types/removeObjectSignal";
 import SetObjectMetadataSignal from "../../../src/shared/object/types/setObjectMetadataSignal";
@@ -231,6 +231,52 @@ describe("NPCs", () => {
                 longNamed.metadata[ObjectMetadataKeyEnumMap.Label] =
                     new EncodableByteString("g".repeat(OBJECT_NAME_MAX_LENGTH + 1));
                 expect(ObjectUpdateUtil.canAddObject(ADMIN, room, longNamed)).toBe(false);
+            },
+        });
+    });
+
+    it("take how far they wander and the character they are played as from an admin, as the nearest they can be",
+        async () => {
+        await runScenario({
+            name: "setting an NPC's wander radius and personality",
+            rooms: [EMPTY_HUB],
+            users: [userAtCenter("hub")],
+            assertions: () => {
+                const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
+                const npc = makeNpcSignal(room, ADMIN);
+                expect(ObjectUpdateUtil.addObject(ADMIN, room, npc)).toBe(true);
+                const set = (user: User, key: number, value: string) => ObjectUpdateUtil.setObjectMetadata(
+                    user, room, new SetObjectMetadataSignal(room.id, npc.objectId, key, value));
+                const stored = (key: number) => room.objectById[npc.objectId].metadata[key]?.str ?? "";
+                const {WanderRadius, Personality} = ObjectMetadataKeyEnumMap;
+
+                // Until an admin says otherwise, a guide going a little way.
+                expect(NpcObjectTypeConfig.util.getWanderRadius(npc)).toBe(3);
+                expect(NpcObjectTypeConfig.util.getPersonality(npc)).toBe("guide");
+
+                for (const user of [MEMBER, GUEST])
+                {
+                    expect(set(user, WanderRadius, "5")).toBe(false);
+                    expect(set(user, Personality, "jester")).toBe(false);
+                }
+                expect(stored(WanderRadius)).toBe("");
+                expect(stored(Personality)).toBe("");
+
+                const farthest = String(NPC_WANDER_RADII[NPC_WANDER_RADII.length - 1]);
+                for (const [given, kept] of [["5", "5"], ["2.4", "2"], ["99", farthest], ["-3", "0"], ["Infinity", farthest],
+                    ["far", ""]])
+                {
+                    expect(set(ADMIN, WanderRadius, given)).toBe(true);
+                    expect(stored(WanderRadius), given).toBe(kept);
+                }
+                expect(NpcObjectTypeConfig.util.getWanderRadius(room.objectById[npc.objectId])).toBe(3);
+
+                for (const [given, kept] of [["jester", "jester"], [" sage ", "sage"], ["pirate", ""]])
+                {
+                    expect(set(ADMIN, Personality, given)).toBe(true);
+                    expect(stored(Personality), given).toBe(kept);
+                }
+                expect(NpcObjectTypeConfig.util.getPersonality(room.objectById[npc.objectId])).toBe("guide");
             },
         });
     });

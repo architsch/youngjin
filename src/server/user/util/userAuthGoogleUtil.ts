@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import UserTokenUtil from "./userTokenUtil";
 import DBUserUtil from "../../db/util/dbUserUtil";
 import { UserTypeEnumMap } from "../../../shared/user/types/userType";
-import url from "url";
 import crypto from "crypto";
 import RestAPI from "../../../client/networking/api/restAPI";
 import DBSearchUtil from "../../db/util/dbSearchUtil";
@@ -23,19 +22,32 @@ const UserAuthGoogleUtil =
             await DevOAuthUtil.fakeSignIn(req, res);
             return;
         }
-        res.redirect(generateOAuthURL());
+        // Only the browser holding this state may finish the sign-in, so nobody can sign a visitor in with
+        // a code of their own (login CSRF).
+        const state = crypto.randomUUID();
+        res.cookie(CookieUtil.getOAuthStateCookieName(), state, CookieUtil.getOAuthStateCookieOptions());
+        res.redirect(generateOAuthURL(state));
     },
     loginCallback: async (req: Request, res: Response): Promise<void> =>
     {
         try
         {
-            const query = url.parse(req.url, true).query;
-            if (!query || !query.code)
+            const query = req.query;
+            // A state is good for one callback, whatever its outcome (see login).
+            const expectedState = req.cookies[CookieUtil.getOAuthStateCookieName()];
+            res.clearCookie(CookieUtil.getOAuthStateCookieName(),
+                CookieUtil.toClearOptions(CookieUtil.getOAuthStateCookieOptions()));
+            if (!expectedState || query.state !== expectedState)
+            {
+                res.status(400).send(`Google OAuth state mismatch. Please sign in again.`);
+                return;
+            }
+            if (typeof query.code != "string" || !query.code)
             {
                 res.status(400).send(`Google OAuth code not found.`);
                 return;
             }
-            const accessTokenRes = await RestAPI.post(generateTokenURL(query.code as string));
+            const accessTokenRes = await RestAPI.post(generateTokenURL(query.code));
             if (accessTokenRes.status < 200 || accessTokenRes.status >= 300)
             {
                 res.status(500).send(`Failed to fetch the access token from Google API.`);
@@ -157,14 +169,15 @@ const redirectURL = `${AddressUtil.getEnvDynamicURL()}/${USER_API_ROUTE_PATH}/lo
 const userInfoURL = `https://www.googleapis.com/oauth2/v3/userinfo?alt=json`;
 
 // Forces the account chooser, so users can pick a different account.
-function generateOAuthURL(): string
+function generateOAuthURL(state: string): string
 {
-    return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&response_type=code&redirect_uri=${redirectURL}&scope=openid%20profile%20email&access_type=offline&state=${crypto.randomUUID()}&prompt=select_account%20consent`;
+    return `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&response_type=code&redirect_uri=${redirectURL}&scope=openid%20profile%20email&access_type=offline&state=${state}&prompt=select_account%20consent`;
 }
 
+// The code arrives decoded, so it is encoded again to stay one parameter.
 function generateTokenURL(code: string): string
 {
-    return `https://oauth2.googleapis.com/token?code=${code}&client_id=${clientId}&client_secret=${clientSecret}&redirect_uri=${redirectURL}&grant_type=authorization_code`;
+    return `https://oauth2.googleapis.com/token?code=${encodeURIComponent(code)}&client_id=${clientId}&client_secret=${clientSecret}&redirect_uri=${redirectURL}&grant_type=authorization_code`;
 }
 
 interface GoogleUserInfo

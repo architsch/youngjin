@@ -83,6 +83,8 @@ vi.mock("../../../src/server/networking/util/cookieUtil", () => ({
     default: {
         getAuthTokenName: () => "auth_token_dev",
         getAuthTokenCookieOptions: () => ({ httpOnly: true, sameSite: "lax" }),
+        getOAuthStateCookieName: () => "oauth_state_dev",
+        getOAuthStateCookieOptions: () => ({ httpOnly: true, sameSite: "lax" }),
         getTutorialFinishedCookieName: () => "tutorial_finished_dev",
         getTutorialFinishedCookieOptions: () => ({ httpOnly: true, sameSite: "lax" }),
         toClearOptions: ({ maxAge, expires, ...rest }: any) => rest,
@@ -116,10 +118,15 @@ import UserIdentificationUtil from "../../../src/server/user/util/userIdentifica
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
+const OAUTH_STATE = "test-oauth-state";
+
+// By default, the callback of a sign-in this browser started: the URL carries the state its cookie holds.
 function createMockReqRes(cookies: Record<string, string> = {}, queryUrl?: string) {
+    const url = queryUrl || `/login_google_callback?code=test-auth-code&state=${OAUTH_STATE}`;
     const req: any = {
-        url: queryUrl || "/login_google_callback?code=test-auth-code",
-        cookies,
+        url,
+        query: Object.fromEntries(new URL(url, "http://localhost").searchParams), // as Express parses it
+        cookies: { oauth_state_dev: OAUTH_STATE, ...cookies },
         ip: "127.0.0.1",
         headers: { "user-agent": "test" },
     };
@@ -127,11 +134,14 @@ function createMockReqRes(cookies: Record<string, string> = {}, queryUrl?: strin
         statusCode: 200,
         redirectUrl: undefined,
         body: undefined,
+        setCookies: {} as Record<string, string>,
+        clearedCookies: [] as string[],
         status(code: number) { this.statusCode = code; return this; },
         send(data: any) { this.body = data; return this; },
         json(data: any) { this.body = data; return this; },
         redirect(url: string) { this.redirectUrl = url; return this; },
-        cookie() { return this; },
+        cookie(name: string, value: string) { this.setCookies[name] = value; return this; },
+        clearCookie(name: string) { this.clearedCookies.push(name); return this; },
     };
     return { req, res };
 }
@@ -240,6 +250,8 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
         // A returning member isn't a sign-up: no room is opened, and the plain redirect resumes their last room.
         expect(_mockOwnedRoomUtil.setUpFirstOwnedRoom).not.toHaveBeenCalled();
         expect(res.redirectUrl).toBe("/");
+        // The sign-in's state is used up.
+        expect(res.clearedCookies).toContain("oauth_state_dev");
     });
 
     it("signed-in member via Google OAuth: a new email leaves the member's own account untouched", async () => {
@@ -299,11 +311,60 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
     });
 
     it("Google OAuth fails gracefully when no auth code provided", async () => {
-        const { req, res } = createMockReqRes({}, "/login_google_callback");
+        const { req, res } = createMockReqRes({}, `/login_google_callback?state=${OAUTH_STATE}`);
         await UserAuthGoogleUtil.loginCallback(req, res);
 
         expect(res.statusCode).toBe(400);
         expect(res.body).toContain("code not found");
+    });
+
+    it("Google OAuth refuses a code that is not a single string", async () => {
+        const { req, res } = createMockReqRes();
+        req.query.code = ["code-1", "code-2"]; // ?code=code-1&code=code-2, as Express parses it
+        await UserAuthGoogleUtil.loginCallback(req, res);
+
+        expect(res.statusCode).toBe(400);
+        expect(_mockRestAPI.post).not.toHaveBeenCalled();
+    });
+
+    it("Google OAuth passes the code on to Google as one parameter", async () => {
+        _mockRestAPI.post.mockResolvedValue({ status: 401, data: { error: "invalid_grant" } });
+        const { req, res } = createMockReqRes({},
+            `/login_google_callback?code=${encodeURIComponent("abc&client_id=other")}&state=${OAUTH_STATE}`);
+        await UserAuthGoogleUtil.loginCallback(req, res);
+
+        const tokenParams = new URL(_mockRestAPI.post.mock.calls[0][0]).searchParams;
+        expect(tokenParams.get("code")).toBe("abc&client_id=other");
+        expect(tokenParams.getAll("client_id")).toHaveLength(1);
+    });
+
+    it("Google sign-in keeps in a cookie the state it sends to Google", async () => {
+        const { req, res } = createMockReqRes({}, "/login_google");
+        await UserAuthGoogleUtil.login(req, res);
+
+        const state = res.setCookies["oauth_state_dev"];
+        expect(state).toBeTruthy();
+        expect(new URL(res.redirectUrl).searchParams.get("state")).toBe(state);
+    });
+
+    it("Google OAuth refuses a callback this browser did not start", async () => {
+        const startedElsewhere = createMockReqRes();
+        delete startedElsewhere.req.cookies.oauth_state_dev;
+        const cases = [
+            createMockReqRes({ oauth_state_dev: "another-sign-in" }),          // the state of another sign-in
+            createMockReqRes({}, "/login_google_callback?code=test-auth-code"), // no state in the URL
+            startedElsewhere,                                                   // no sign-in started in this browser
+        ];
+        for (const { req, res } of cases)
+        {
+            await UserAuthGoogleUtil.loginCallback(req, res);
+            expect(res.statusCode).toBe(400);
+            expect(res.body).toContain("state");
+        }
+        // The code is never exchanged, so no account is signed into or changed.
+        expect(_mockRestAPI.post).not.toHaveBeenCalled();
+        expect(_mockUserTokenUtil.addTokenForUserId).not.toHaveBeenCalled();
+        expect(_mockDBUserUtil.upgradeGuestToMember).not.toHaveBeenCalled();
     });
 
     it("Google OAuth fails gracefully when token exchange fails", async () => {

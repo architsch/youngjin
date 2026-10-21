@@ -158,7 +158,7 @@ const ServerRoomManager =
                 return {type: "rejected", reason: RoomChangeRejectionReasonEnumMap.RoomUnavailable};
 
             await leavePreviousRoom(socketUserContext, prevRoomShouldExist, savePlayerMetadata);
-            socketUserContext.isInSinglePlayerRoom = true;
+            socketUserContext.singlePlayerMode = roomID;
             const mem = buildSinglePlayerRoomRuntimeMemory(roomID);
             socketUserContext.addPendingSignalToUser("roomChangedSignal",
                 new RoomChangedSignal(mem));
@@ -215,7 +215,7 @@ const ServerRoomManager =
 
         // Multiplayer only (single-player players are client-side). The joined instance is whichever
         // is live at registration (see addUserToRoom).
-        socketUserContext.isInSinglePlayerRoom = false;
+        socketUserContext.singlePlayerMode = "";
         const joinedRoomRuntimeMemory = await ServerUserManager.addUserToRoom(socketUserContext, roomRuntimeMemory, user.id,
             SpawnHotspotUtil.pickSpawnTransform(roomRuntimeMemory.room, destinationDoorLabel),
             playerMetadata

@@ -64,6 +64,8 @@ import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import VoxelQuadsRuntimeMemory from "../../../src/shared/voxel/types/voxelQuadsRuntimeMemory";
 import ObjectGroup from "../../../src/shared/object/types/objectGroup";
 import DoorObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
+import NpcObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/npcObjectTypeConfig";
+import HelperBehaviorUtil from "../../../src/shared/object/util/helperBehaviorUtil";
 import LabelTextUtil from "../../../src/shared/object/util/labelTextUtil";
 import { DoorTypeEnumMap } from "../../../src/shared/object/types/doorType";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
@@ -367,6 +369,15 @@ describe("the tutorial room's file", () => {
         }
         expect(LabelTextUtil.getText(npc)).toBe("Receptionist");
         expect(LabelTextUtil.getText(door)).toBe("Door");
+    });
+
+    it("keeps its receptionist idle, as the tutorial's steps alone speak for it, in a mode that plays NPCs", () => {
+        const npc = ObjectTagUtil.findObject(loadTutorialRoom(), "npc")!;
+        expect(NpcObjectTypeConfig.util.getPersonality(npc)).toBe("idle");
+        expect(HelperBehaviorUtil.isPlayed(npc)).toBe(false);
+        expect(SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE].playsNpcs).toBe(true);
+        // Nor are an authored room's NPCs played, which are saved where they were put.
+        expect(SinglePlayerModeConfigMap[ROOM_EDITOR_SINGLE_PLAYER_MODE].playsNpcs).toBe(false);
     });
 
     it("wires the tutorial's door to the hubs, as the room's own way in", () => {

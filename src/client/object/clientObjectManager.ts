@@ -331,7 +331,7 @@ const ClientObjectManager =
         // update moves them.
         else if (App.getCurrentRoom()?.objectById[signal.objectId] == undefined)
             return;
-        if (NpcGameObject.isHeld(signal.objectId))
+        if (NpcGameObject.isDragged(signal.objectId))
             return;
         ClientObjectManager.setObjectTransform(signal.objectId, signal.transform,
             signal.ignorePhysics, false);

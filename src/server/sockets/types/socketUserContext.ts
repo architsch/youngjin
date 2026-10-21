@@ -9,7 +9,7 @@ export default class SocketUserContext implements UserContext
 {
     socket: socketIO.Socket;
     user: User;
-    isInSinglePlayerRoom: boolean = false;
+    singlePlayerMode: string = "";
     funnel: string;
     loginCount: number;
     signalThrottleTimestamps: {[signalType: string]: number} = {};
@@ -23,6 +23,11 @@ export default class SocketUserContext implements UserContext
         this.funnel = (socket.handshake.auth.funnel as string) ?? "";
         this.loginCount = (socket.handshake.auth.loginCount as number) ?? 0;
         this.pendingSignalsToUser = new SocketSignalQueue(socket);
+    }
+
+    get isInSinglePlayerRoom(): boolean
+    {
+        return this.singlePlayerMode != "";
     }
 
     notifyRoomReloadStarted(): void

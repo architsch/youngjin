@@ -5,6 +5,7 @@ const RoomEditorSinglePlayerModeConfig: SinglePlayerModeConfig =
 {
     roomPath: "empty",
     adminOnly: true,
+    playsNpcs: false,
 };
 
 export default RoomEditorSinglePlayerModeConfig;

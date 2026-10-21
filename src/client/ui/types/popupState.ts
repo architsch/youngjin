@@ -3,6 +3,7 @@ import DoorDestinationProps from "./doorDestinationProps";
 import DoorSettingsProps from "./doorSettingsProps";
 import ImageChooserProps from "./imageChooserProps";
 import RoomFilePreviewProps from "./roomFilePreviewProps";
+import WebPageProps from "./webPageProps";
 
 type PopupState =
     | { popupType: "none" }
@@ -17,5 +18,6 @@ type PopupState =
     | { popupType: "consoleLog" }
     | { popupType: "adminAssetSettings" }
     | { popupType: "roomFilePreview"; params: RoomFilePreviewProps }
+    | { popupType: "webPage"; params: WebPageProps }
 
 export default PopupState;

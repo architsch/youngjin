@@ -77,11 +77,15 @@ post, it becomes a **repeatable** channel — a new post is a new reason to retu
   Apache-2.0, while the essays and artwork under `public/` stay all rights reserved
   (`LICENSE-CONTENT.md`). "Open source" is accurate for the code and should be said that way, not
   as a claim about the whole repository. Expect somebody to ask why the repo is not wholly open.
-- **Effort:** Low to prepare, high to attend. **Verified:** 2026-09-24 (showhn.html: still asks for
+- **No generated text.** newsguidelines.html now says "Please don't put generated text in HN posts"
+  and "Don't post generated text or AI-edited text". So an HN kit carries the rules, the facts and the
+  angle as notes, and **never a title or comment to paste**: the user writes both in their own words.
+- **Effort:** Low to prepare, high to attend. **Verified:** 2026-10-20 (showhn.html: still asks for
   something people can try "ideally without barriers such as signups or emails"; excludes blog
-  posts, sign-up pages, landing pages and quick one-offs).
-- **Kit prepared:** 2026-08-22, `temp/distribution/hn-show/`. Not posted. It was written before
-  lights, sky and fog, labels and resizable objects shipped, so rebuild it before using it.
+  posts, sign-up pages, landing pages, quickly generated one-offs and minor updates;
+  newsguidelines.html: the generated-text rule above).
+- **Kit prepared:** 2026-08-22, `temp/distribution/hn-show/`. Not posted. Rebuilt 2026-10-20 for the
+  AI-agents launch, as notes rather than copy (see above).
 
 ### r/iogames
 - **Fit:** Good. Audience is specifically browser multiplayer.
@@ -198,6 +202,44 @@ post, it becomes a **repeatable** channel — a new post is a new reason to retu
   any.
 - **Effort:** Already happening. **Verified:** 2026-08-22.
 
+### MCP server directories (the AI-agents angle)
+Where people who run agents look for servers to connect them to. They list the MCP endpoint
+(`https://app.thingspool.net/mcp`), not a page, so no `?ref=` tag applies: an agent says where it heard
+of ThingsPool itself when it registers, if it does (see SKILL.md, "Measure agents apart").
+- **Official MCP Registry** (registry.modelcontextprotocol.io): published 2026-10-20 as
+  `net.thingspool/thingspool` 1.0.0 from `server.json`, with `mcp-publisher` signed in by the
+  thingspool.net DNS key. Several directories below copy from it, so it is the one to keep current.
+- **Glama** (glama.ai/mcp/connectors): imports registry entries by itself. ThingsPool appeared at
+  `glama.ai/mcp/connectors/net.thingspool/thingspool` within the hour, "Healthy", with all 25 tools and a
+  tool-quality score being calculated. The owner may "claim ownership" by verifying the domain or a
+  GitHub account, which adds control over the page; nothing else is needed. **Verified:** 2026-10-20.
+- **PulseMCP** (pulsemcp.com/submit): "We are not accepting new MCP server or client submissions right
+  now." It says to publish to the official registry first, and that "we will pick it up automatically
+  once we are back". No date given. **Verified:** 2026-10-20.
+- **mcp.so** (mcp.so/submit): **free, through a review queue.** The submit page's button reads as
+  paid, but a submission made from a signed-in account is "Queued for review" for free; $39 only
+  skips the queue ("Skip review — go live now", with a "Verified" badge and featured placement).
+  After submitting, the listing's own form asks for: name, author name, avatar, a short description,
+  category, tags, GitHub, website and docs URLs, listing type, the remote endpoint URL, the
+  authentication it uses ("API Key" or "None"), a client configuration snippet, up to 6 screenshots,
+  and an overview in Markdown. Its tools section reads "No tools detected" until someone presses
+  "Fetch tools" on the listing, which asks mcp.so's own server to call the endpoint (so the browser's
+  cross-site rules don't apply). That only works once the listing is published: on a submission still
+  queued for review, the button answers "Server not found" (2026-10-20), whatever the authentication
+  setting. A third-party collector tool posts to an undocumented mcp.so API; it goes around the
+  site's own form, so it is not a path to use. **Verified:** 2026-10-20 (by the user's own
+  submission).
+- **Smithery** (smithery.ai/new): takes a server by its public HTTPS address, or by
+  `smithery mcp publish "<url>" -n @<org>/<name>`, and scans its tools (public servers scan without
+  help). An auth-required server must support OAuth; ThingsPool's key is optional, so the scan works.
+  **Open question before using it:** whether Smithery relays its users' connections, which would put
+  them all behind Smithery's own addresses and so under one set of the per-address limits on
+  registering. Not verified. **Verified:** 2026-10-20 (the publish docs).
+- **ClawHub** (clawhub.ai): the manual's MIT-0 copy, published 2026-10-20 as `thingspool` 1.1.0 with
+  `npx clawhub@0.23.3` after the user's `login`. The scan's verdict was "clean", but ClawHub still held it
+  as "pending publication" (hidden) an hour later, 19:41 to 20:39 KST: its own review. Its page will be
+  `clawhub.ai/architsch/thingspool`.
+
 ### Directory and list placements
 - **Fit:** Low individually, but they accumulate, they are permanent, and they are pure link-out.
 - **Candidates:** GitHub topics on the repository itself, `awesome-*` list pull requests (awesome
@@ -279,9 +321,9 @@ Mastodon (gamedev.place) gamedev circles; creative-coding and generative-art com
 build-a-room framing; teacher and classroom-tool directories, which suit the shared-space framing.
 
 For the AI-agents angle (see SKILL.md), added 2026-10-20 and not yet verified:
-- AI-curious subreddits (r/artificial, r/ClaudeAI, r/AI_Agents, r/LocalLLaMA), each to be checked
-  for self-promotion rules;
-- MCP server directories that mirror or list servers beside the official MCP Registry (mcp.so, Smithery,
-  Glama, PulseMCP);
+- AI-curious subreddits (r/mcp, r/artificial, r/ClaudeAI, r/AI_Agents, r/LocalLLaMA), each to be
+  checked for self-promotion rules and for rules on AI-written posts;
 - agent forums where agents themselves post (Moltbook, The Colony, 4claw). There, posting is the user's
   agent's act, and the rules for each venue's own agents apply.
+
+The MCP server directories were researched on 2026-10-20 and now have their own entry in Lane 1.

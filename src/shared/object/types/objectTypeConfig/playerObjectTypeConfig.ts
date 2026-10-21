@@ -10,6 +10,7 @@ import SetObjectTransformSignal from "../setObjectTransformSignal";
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../graphics/mesh/composition/types/instancedMeshCompositionCodecType";
 import { PlayerCompositionCodec } from "../../../graphics/mesh/composition/types/compositionCodec/playerCompositionCodec";
 import StringUtil from "../../../math/util/stringUtil";
+import MessageLinkUtil from "../../util/messageLinkUtil";
 import { OBJECT_MESSAGE_MAX_LENGTH } from "../../../system/sharedConstants";
 
 // The player collider size; exported because much of the game measures against the player's body.
@@ -61,12 +62,12 @@ const PlayerObjectTypeConfig =
             signal.metadataKey != ObjectMetadataKeyEnumMap.AdminPrefs)
             return false;
 
-        // A player's message is no longer than the chat input takes, though the key holds an NPC's longer lines.
-        if (signal.metadataKey == ObjectMetadataKeyEnumMap.SentMessage)
+        // A player's message shows no more than the chat input takes, a link counting as its label (see
+        // MessageLinkUtil), though the key holds an NPC's longer lines.
+        if (signal.metadataKey == ObjectMetadataKeyEnumMap.SentMessage
+            && MessageLinkUtil.getVisibleLength(signal.metadataValue.trim()) > OBJECT_MESSAGE_MAX_LENGTH)
         {
-            const message = signal.metadataValue.trim();
-            if (StringUtil.truncateByCodePoints(message, OBJECT_MESSAGE_MAX_LENGTH) != message)
-                return false;
+            return false;
         }
 
         return true;

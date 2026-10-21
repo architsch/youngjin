@@ -43,4 +43,8 @@ export const ObjectMetadataKeyEnumMap: Record<string, number> =
     // Which way a helper faces as the server plays it, shown to its room and never kept (see NpcFacingUtil). No signal
     // may set it.
     Facing: 18,
+    // How far from home a helper goes, in world units, as an admin sets it (see NpcObjectTypeConfig).
+    WanderRadius: 19,
+    // The character a helper is played as, by its id, as an admin picks it (see NpcPersonalityMap).
+    Personality: 20,
 }

@@ -166,6 +166,24 @@ describe("connection scenarios", () => {
         });
     });
 
+    it("a player's message counts a link as its label: an address past the length is taken, as a link", async () => {
+        const address = `https://thingspool.net/${"a".repeat(OBJECT_MESSAGE_MAX_LENGTH)}`;
+        const words = "b".repeat(OBJECT_MESSAGE_MAX_LENGTH - "thingspool.net".length - 1);
+        await runScenario({
+            name: "a player's message with a link",
+            rooms: [EMPTY_REGULAR],
+            users: [userAtCenter("regular")],
+            actions: [
+                { type: "sendMessage", userIndex: 0, message: `${words} ${address}` },
+                { type: "sendMessage", userIndex: 0, message: `b${words} ${address}` },
+            ],
+            assertions: ({ users, harness }) => {
+                expect(harness.getPlayerObject(users[0].user.id)!.metadata[ObjectMetadataKeyEnumMap.SentMessage].str)
+                    .toBe(`${words} <link href="${address}">thingspool.net</link>`);
+            },
+        });
+    });
+
     it("a player's message is as long as the chat input takes, and no longer", async () => {
         const atLimit = "a".repeat(OBJECT_MESSAGE_MAX_LENGTH);
         await runScenario({

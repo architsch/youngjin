@@ -5,10 +5,10 @@
  * and tinting the wind, as many blades as it has turning at one steady rate and one wind effect as long as the
  * range, and the
  * push itself through the real physics engine: a force along the facing, as hard as its strength makes it,
- * thinning out to the end of its range and where a body runs out of room, on a body at least half in the stream,
- * stopped by a block, read from the room as it stands; the velocity a body is given and keeps until gravity and
- * drag have taken it away; and a fan blowing upward making up for gravity without switching it off, so that a
- * player over one bounces and goes on bouncing.
+ * thinning out to the end of its range and where a body runs out of room, on a body by as much of it as the stream
+ * reaches (in full from half), stopped by a block only where the block lies across the stream, read from the room
+ * as it stands; the velocity a body is given and keeps until gravity and drag have taken it away; and a fan blowing
+ * upward making up for gravity without switching it off, so that a player over one bounces and goes on bouncing.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import fc from "fast-check";
@@ -549,7 +549,7 @@ describe("what a fan shows of its wind", () => {
         }
     });
 
-    it("lets out one wind, as long as its push reaches, ended by a block as the push is", () => {
+    it("lets out one wind, as long as its push reaches, and ended by a block in its way", () => {
         for (const setting of FAN_SETTINGS)
         {
             const metadata = windOf(setting);
@@ -730,7 +730,7 @@ describe("a fan's push", () => {
         });
     });
 
-    it("takes hold of a body at least half in its stream, across it and up it, as hard as one wholly in it", async () => {
+    it("pushes a body by as much of it as its stream reaches, across it and up it: in full from half of the most it could", async () => {
         await runScenario({
             name: "the width of a wall fan's stream",
             rooms: [EMPTY_HUB],
@@ -741,61 +741,112 @@ describe("a fan's push", () => {
                 const pushBeside = (sideways: number, y: number = STANDING_Y) =>
                     pushOutOfWall(room, inFrontOfWallFan(0, sideways, y));
 
-                // The stream is the fan's own unit square; a player is narrower than it and taller.
+                // The stream is the fan's own unit square; a player is narrower than it and taller. The most of a
+                // player it could reach across is all of the player's width.
                 const halfStream = 0.5, halfBody = PLAYER_RADIUS_XZ;
                 expect(pushBeside(0)).toBeCloseTo(PUSH, 3);
-                expect(pushBeside(halfStream - halfBody)).toBeCloseTo(PUSH, 3); // still wholly inside it
-                expect(pushBeside(halfStream - HAIR)).toBeCloseTo(PUSH, 3); // a hair more than half in it
-                expect(pushBeside(-halfStream + HAIR)).toBeCloseTo(PUSH, 3);
-                expect(pushBeside(halfStream + HAIR)).toBe(0); // a hair less than half
-                expect(pushBeside(-halfStream - HAIR)).toBe(0);
-                expect(pushBeside(halfStream + halfBody + 1)).toBe(0); // beside it
+                for (const side of [1, -1])
+                {
+                    expect(pushBeside(side * (halfStream - halfBody))).toBeCloseTo(PUSH, 3); // wholly in it
+                    expect(pushBeside(side * halfStream)).toBeCloseTo(PUSH, 3); // half in it
+                    // Less in it, by as much less, to nothing at its edge.
+                    expect(pushBeside(side * (halfStream + HAIR))).toBeLessThan(PUSH);
+                    for (const out of [HAIR, 0.25 * halfBody, 0.5 * halfBody, 0.75 * halfBody, halfBody - HAIR])
+                        expect(pushBeside(side * (halfStream + out)), `${side * out}`).toBeCloseTo(PUSH * (1 - out / halfBody), 3);
+                    expect(pushBeside(side * (halfStream + halfBody - HAIR))).toBeGreaterThan(0);
+                    expect(pushBeside(side * (halfStream + halfBody + HAIR))).toBe(0); // beside it
+                    expect(pushBeside(side * (halfStream + halfBody + 1))).toBe(0);
+                }
 
-                // Up the wall: a second fan whose square begins where a standing player's head ends. Half of what
-                // a player could take of it is half its own height.
+                // Up the wall: a second fan whose square begins where a standing player's head ends. The most of it
+                // a player could take is all of its height.
                 const highSpot: Vec3 = {x: WALL_SPOT.x - 2, y: PLAYER_HEIGHT + 0.5, z: WALL_SPOT.z};
                 expect(ObjectUpdateUtil.addObject(MEMBER, room, makeFanSignal(room, MEMBER, "high-fan", highSpot,
                     WALL_FACING, windOf(DEFAULT)))).toBe(true);
-                const pushUnderHighFan = (feetOffTheFloor: number) =>
-                    pushBeside(highSpot.x - WALL_SPOT.x, STANDING_Y + feetOffTheFloor);
+                const pushUnderHighFan = (feetOffTheFloor: number, sideways: number = 0) =>
+                    pushBeside(highSpot.x - WALL_SPOT.x + sideways, STANDING_Y + feetOffTheFloor);
                 expect(pushUnderHighFan(0)).toBe(0);
-                expect(pushUnderHighFan(0.5 - HAIR)).toBe(0);
-                expect(pushUnderHighFan(0.5 + HAIR)).toBeCloseTo(PUSH, 3);
+                expect(pushUnderHighFan(HAIR)).toBeGreaterThan(0);
+                expect(pushUnderHighFan(0.25)).toBeCloseTo(0.5 * PUSH, 3);
+                expect(pushUnderHighFan(0.5)).toBeCloseTo(PUSH, 3);
                 expect(pushUnderHighFan(1)).toBeCloseTo(PUSH, 3);
+
+                // By how much of the body it reaches, not by each way apart: half in it across and half up it, a
+                // body is a quarter in it, and pushed by half.
+                expect(pushUnderHighFan(0.5, halfStream)).toBeCloseTo(0.5 * PUSH, 3);
+                expect(pushUnderHighFan(0.5, -halfStream)).toBeCloseTo(0.5 * PUSH, 3);
             },
         });
     });
 
-    it("ends at the first block in the middle of its stream", async () => {
+    it("is stopped by a block only where the block lies across it, so a body behind one is pushed by what gets past", async () => {
         await runScenario({
-            name: "a block in a wall fan's stream",
+            name: "blocks in a wall fan's stream",
             rooms: [EMPTY_HUB],
             users: [userAtCenter("hub")],
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
                 addWallFan(room, "wall-fan", STRONGEST);
-                const pushAfter = (distance: number) => pushOutOfWall(room, inFrontOfWallFan(distance));
-                // A block two units out, on the line through the fan's middle, above where a player walks; a body
-                // fits under it, before it and behind it.
-                const blockDistance = 2;
-                const before = blockDistance - 2 * PLAYER_RADIUS_XZ - 0.05, behind = blockDistance + VOXEL_CELL_SIZE + 0.05;
-                const raised = STANDING_Y + 0.25;
-                expect(pushOutOfWall(room, inFrontOfWallFan(behind, 0, raised))).toBeGreaterThan(0);
+                // Blocks four units out. A body before them, with room enough that nothing eases its push, or just
+                // behind them; how much of the push it takes, of what it would there with nothing in the way.
+                const blockDistance = 4;
+                const before = blockDistance - 2 * PLAYER_RADIUS_XZ - 1.5, behind = blockDistance + VOXEL_CELL_SIZE + 0.05;
+                const shareOf = (pos: Vec3, distance: number) => pushOutOfWall(room, pos) / pushAt(STRONGEST, distance);
+                const shareAt = (distance: number, sideways: number = 0) =>
+                    shareOf(inFrontOfWallFan(distance, sideways), distance);
+                const halfBody = PLAYER_RADIUS_XZ;
 
+                // The fan's square covers two cells across, its middle where they meet, and two layers up.
                 const row = VoxelQueryUtil.getVoxelRowFromWorldZ(WALL_SPOT.z - blockDistance - 0.5 * VOXEL_CELL_SIZE);
-                const col = VoxelQueryUtil.getVoxelColFromWorldX(WALL_SPOT.x);
-                const layer = VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(WALL_SPOT.y);
-                expect(VoxelUpdateUtil.addVoxelBlock(undefined, room.voxelGrid.voxels,
-                    VoxelQueryUtil.getVoxelQuadIndex(row, col, "x", "+", layer))).toBe(true);
+                const plusX = VoxelQueryUtil.getVoxelColFromWorldX(WALL_SPOT.x + 0.25), minusX = plusX - 1;
+                const lower = VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(WALL_SPOT.y - 0.25), upper = lower + 1;
+                expect(minusX).toBe(VoxelQueryUtil.getVoxelColFromWorldX(WALL_SPOT.x - 0.25));
+                const quadAt = (col: number, layer: number) => VoxelQueryUtil.getVoxelQuadIndex(row, col, "x", "+", layer);
+                const fill = (cells: [number, number][]) => {
+                    for (const [col, layer] of cells)
+                        expect(VoxelUpdateUtil.addVoxelBlock(undefined, room.voxelGrid.voxels, quadAt(col, layer))).toBe(true);
+                };
 
-                expect(pushAfter(before)).toBeGreaterThan(0);
-                expect(pushAfter(behind)).toBe(0);
-                expect(pushAfter(behind + 4)).toBe(0);
+                // Across the half of it toward +x: nothing for a body on that side; all for one in the middle (half
+                // its width still reached is half of the most) or on the other side; by as much less in between.
+                fill([[plusX, lower], [plusX, upper]]);
+                expect(pushOutOfWall(room, inFrontOfWallFan(behind, halfBody))).toBe(0);
+                expect(shareAt(behind, 0.5 * halfBody)).toBeCloseTo(0.5, 5);
+                expect(shareAt(behind, 0)).toBeCloseTo(1, 5);
+                expect(shareAt(behind, -halfBody)).toBeCloseTo(1, 5);
+                expect(shareAt(behind + 2, 0.5 * halfBody)).toBeCloseTo(0.5, 5);
+                // Before them, untouched by them.
+                expect(shareAt(before, halfBody)).toBeCloseTo(1, 5);
 
-                // With the block gone again, so is its shelter.
-                expect(VoxelUpdateUtil.removeVoxelBlock(undefined, room.voxelGrid.voxels,
-                    VoxelQueryUtil.getVoxelQuadIndex(row, col, "x", "+", layer))).toBe(true);
-                expect(pushAfter(behind)).toBeCloseTo(pushAt(STRONGEST, behind), 3);
+                // Across three quarters of it: a body in the middle is reached across half its width and up half
+                // the stream's height, a quarter of the most, and pushed by half.
+                fill([[minusX, upper]]);
+                expect(shareAt(behind)).toBeCloseTo(0.5, 5);
+
+                // Across all of it: nothing behind, wherever the body stands, and all of it before.
+                fill([[minusX, lower]]);
+                for (const sideways of [-halfBody, 0, halfBody])
+                    expect(pushOutOfWall(room, inFrontOfWallFan(behind, sideways))).toBe(0);
+                expect(shareAt(before)).toBeCloseTo(1, 5);
+
+                // With the blocks gone again, so is their shelter.
+                for (const [col, layer] of [[plusX, lower], [plusX, upper], [minusX, lower], [minusX, upper]])
+                    expect(VoxelUpdateUtil.removeVoxelBlock(undefined, room.voxelGrid.voxels, quadAt(col, layer))).toBe(true);
+                expect(shareAt(behind, halfBody)).toBeCloseTo(1, 5);
+
+                // A second fan, whose middle is in the middle of a cell: blocks across that cell leave only its
+                // stream's two edges, half a cell each, to get past, and a body behind them in the middle is reached
+                // as far as its own width covers them.
+                const offCellSpot: Vec3 = {...WALL_SPOT, x: WALL_SPOT.x - 2 - 0.5 * VOXEL_CELL_SIZE};
+                expect(ObjectUpdateUtil.addObject(MEMBER, room, makeFanSignal(room, MEMBER, "off-cell-fan", offCellSpot,
+                    WALL_FACING, windOf(STRONGEST)))).toBe(true);
+                const middleCol = VoxelQueryUtil.getVoxelColFromWorldX(offCellSpot.x);
+                expect((middleCol + 0.5) * VOXEL_CELL_SIZE).toBeCloseTo(offCellSpot.x, 9);
+                fill([[middleCol, lower], [middleCol, upper]]);
+                const reachedWidth = 2 * (halfBody - 0.5 * VOXEL_CELL_SIZE);
+                // Of half the body's width, the most it could be reached across being all of it.
+                expect(shareOf(inFrontOfWallFan(behind, offCellSpot.x - WALL_SPOT.x), behind))
+                    .toBeCloseTo(reachedWidth / halfBody, 5);
             },
         });
     });
@@ -1237,11 +1288,17 @@ describe("a fan blowing upward", () => {
                     .toEqual({x: 0, y: -GRAVITY_SPEED, z: 0});
                 expect(carriedBy(room, "stander")).toEqual({x: 0, y: 0, z: 0});
 
-                // Standing beside the fan, less than half over it, a body weighs what it always did.
-                const beside = overFloorFan(0, 0.5 + 0.001);
+                // Standing beside the fan, wholly off it, a body weighs what it always did.
+                const beside = overFloorFan(0, 0.5 + PLAYER_RADIUS_XZ + 0.001);
                 putBody(room, "stander", beside);
                 expect(step(room, "stander", beside).y).toBeCloseTo(beside.y, 6);
                 expect(carriedBy(room, "stander")).toEqual({x: 0, y: 0, z: 0});
+                // Barely over it, given too little of the push to lift off; half over it, off the floor at once.
+                const barelyOver = overFloorFan(0, 0.5 + PLAYER_RADIUS_XZ - 0.05), halfOver = overFloorFan(0, 0.5);
+                putBody(room, "stander", barelyOver);
+                expect(step(room, "stander", barelyOver).y).toBeCloseTo(barelyOver.y, 6);
+                putBody(room, "stander", halfOver);
+                expect(step(room, "stander", halfOver).y).toBeGreaterThan(halfOver.y);
 
                 // With a fan on the ceiling blowing down on it as well (through the opened slab), added after the
                 // one below: still weightless on the floor fan, and off it at once.

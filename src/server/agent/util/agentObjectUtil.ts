@@ -26,6 +26,7 @@ import RemoveObjectSignal from "../../../shared/object/types/removeObjectSignal"
 import SetObjectMetadataSignal from "../../../shared/object/types/setObjectMetadataSignal";
 import SetObjectTransformSignal from "../../../shared/object/types/setObjectTransformSignal";
 import LabelTextUtil from "../../../shared/object/util/labelTextUtil";
+import HelperBehaviorUtil from "../../../shared/object/util/helperBehaviorUtil";
 import ObjectAttachmentUtil from "../../../shared/object/util/objectAttachmentUtil";
 import ObjectIdUtil from "../../../shared/object/util/objectIdUtil";
 import ObjectScaleUtil from "../../../shared/object/util/objectScaleUtil";
@@ -56,8 +57,10 @@ import AgentSignalUtil from "./agentSignalUtil";
 
 const NOT_IN_A_ROOM = "You aren't in a room.";
 const NOTHING_BY_THAT_ID = "Nothing by that id is here (look lists what is).";
+const STILL_NPC_NOTE = "A character nobody plays, named by its text: it stands still and says nothing.";
 
-// What agents may add, by the names they give the types.
+// What agents may add, by the names they give the types. NPCs, with a helper's personality and wander radius, are an
+// admin's alone (see NpcObjectTypeConfig), and no agent is one.
 const ADDABLE_OBJECT_TYPES = ["Canvas", "Prop", "Lamp", "Fan", "Label", "Door"];
 // The types whose look is chosen, by its number among their pre-encoded looks (a lamp's follows its size).
 const LOOK_CHOOSING_OBJECT_TYPES = ["Canvas", "Label", "Door"];
@@ -82,11 +85,13 @@ const AgentObjectUtil =
 {
     addableTypes: ADDABLE_OBJECT_TYPES.map(objectType => objectType.toLowerCase()),
 
-    // The room's placed objects nearest a point, its doors, zones and helpers apart (look lists those).
+    // The room's placed objects nearest a point, its doors, zones and helpers apart (look lists those). An NPC nobody
+    // plays (an Idle one) is no helper, so it is one of them.
     describeObjects: (room: Room, from: Vec3): {objects: object[], more?: number} =>
     {
         const listed = Object.values(room.objectById)
-            .filter(obj => isAttached(obj) && obj.objectTypeIndex != doorTypeIndex && obj.objectTypeIndex != npcTypeIndex)
+            .filter(obj => isAttached(obj) && obj.objectTypeIndex != doorTypeIndex
+                && !(obj.objectTypeIndex == npcTypeIndex && HelperBehaviorUtil.isPlayed(obj)))
             .map(obj => ({obj, distance: Vector3DUtil.distSqr(from, obj.transform.pos)}))
             .sort((a, b) => a.distance - b.distance);
         const shown = listed.slice(0, AGENT_LOOK_MAX_OBJECTS);
@@ -377,6 +382,7 @@ function describeObject(obj: AddObjectSignal): object
         text: (text.length > 0) ? text : undefined,
         look: getLookNumber(obj),
         by: (obj.sourceUserName.length > 0) ? obj.sourceUserName : undefined,
+        note: (obj.objectTypeIndex == npcTypeIndex) ? STILL_NPC_NOTE : undefined,
     };
 }
 

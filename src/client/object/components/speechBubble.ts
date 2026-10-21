@@ -10,9 +10,33 @@ import CameraUtil from "../../graphics/util/cameraUtil";
 import Geometry3DUtil from "../../../shared/math/util/geometry3DUtil";
 import { cameraModeObservable, updateObservable } from "../../system/clientObservables";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
+import MessageSegment from "../../../shared/object/types/messageSegment";
+import MessageLinkUtil from "../../../shared/object/util/messageLinkUtil";
+import OverlayClickTargetUtil from "../../graphics/util/overlayClickTargetUtil";
+import MessageLinkOpenUtil from "../../ui/util/messageLinkOpenUtil";
 
-// Room left between a bubble and the top of the view (see keepInView).
-const VIEW_TOP_MARGIN_PX = 8;
+// Room left between a bubble and the edges of the view (see keepInView).
+const VIEW_MARGIN_PX = 8;
+const PADDING_X_REM = 0.4;
+// A bubble runs as wide as its speaker's type has it, unless its message could take more lines than this there: then it
+// is widened until it can't, at most this many times as wide, and never past the view's sides, so that it rises less
+// far over its speaker.
+const MAX_LINES_AT_TYPE_WIDTH = 3;
+const MAX_WIDENING = 2;
+const DEFAULT_WIDTH_IN_CHARS = 18;
+// What a link's button adds to its label, in characters: its margins, padding and icon.
+const LINK_BUTTON_EXTRA_CHARS = 4;
+// A control in the bubble, so raised (a lit top edge over a darkening face), and taking presses the bubble around it
+// lets through. A row, since a line may break before an icon even where text may not. Its unpainted border above and
+// below makes it easier to hit with a finger, and its margins give that height back, so the lines keep their place.
+const LINK_BUTTON_STYLE = "display:inline-flex; align-items:center; margin:-0.35em 0.15em; padding:0 0.35em;"
+    + " border:0.35em solid transparent; border-left-width:0; border-right-width:0; background-clip:padding-box;"
+    + " border-radius:0.35em / 0.7em; background-image:linear-gradient(#38bdf8, #0369a1); color:white; font-weight:bold;"
+    + " white-space:nowrap; box-shadow:inset 0 1px rgba(255, 255, 255, 0.35); cursor:pointer; pointer-events:auto;";
+const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+// Characters about twice as wide as a Latin letter in the bubble's monospace font: Hangul, kana, CJK ideographs, and
+// full-width forms.
+const WIDE_CHARACTER = /[ᄀ-ᅟ⺀-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]/;
 
 const anchorTemp = new THREE.Vector3();
 const viewSizeTemp = new THREE.Vector2();
@@ -31,8 +55,9 @@ export default class SpeechBubble extends GameObjectComponent
     // Set when the speaker's body isn't drawn (see PlayerGameObject), so the bubble doesn't float alone.
     private hidden: boolean = false;
 
-    // How far the bubble is lowered to keep its top in view.
+    // How far the bubble is lowered to keep its top in view, and moved sideways to keep its sides in view.
     private lowered: number = 0;
+    private shifted: number = 0;
     private readonly viewListenerKey = `speechBubble${++instanceCount}`;
     private keepingInView: boolean = false;
 
@@ -133,22 +158,29 @@ export default class SpeechBubble extends GameObjectComponent
     }
 
     // A long message from a speaker close by would rise past the top of the view: it is lowered over the speaker instead,
-    // so that it reads from its first line, and bounces from its top.
+    // so that it reads from its first line, and bounces from its top. One from a speaker near a side of the view, which
+    // would run past it, is moved in from that side (from the left, where it is wider than the view).
     private keepInView(): void
     {
         if (!this.textElement || !this.bubbleElement || this.textElement.hidden)
             return;
+        const width = this.textElement.offsetWidth;
         const height = this.textElement.offsetHeight;
         if (height == 0) // Not drawn, as behind the camera.
             return;
         this.speechBubbleHotspot.getWorldPosition(anchorTemp).project(GraphicsManager.getCamera());
         GraphicsManager.getGameRenderer().getSize(viewSizeTemp);
         const top = (1 - anchorTemp.y) / 2 * viewSizeTemp.y - height;
-        const lowered = Math.max(0, Math.round(VIEW_TOP_MARGIN_PX - top));
-        if (lowered == this.lowered)
+        const left = (1 + anchorTemp.x) / 2 * viewSizeTemp.x - 0.5 * width;
+        const lowered = Math.max(0, Math.round(VIEW_MARGIN_PX - top));
+        const shifted = Math.round((left < VIEW_MARGIN_PX) ? VIEW_MARGIN_PX - left
+            : Math.min(0, viewSizeTemp.x - VIEW_MARGIN_PX - (left + width)));
+        if (lowered == this.lowered && shifted == this.shifted)
             return;
         this.lowered = lowered;
+        this.shifted = shifted;
         this.bubbleElement.style.top = `${lowered}px`;
+        this.bubbleElement.style.left = `${shifted}px`;
         this.bubbleElement.style.transformOrigin = (lowered > 0) ? "top" : "";
     }
 
@@ -172,8 +204,10 @@ export default class SpeechBubble extends GameObjectComponent
             return;
         }
 
+        const segments = MessageLinkUtil.parse(message);
         this.showSpeechBubble();
         this.bubbleElement!.replaceChildren();
+        this.bubbleElement!.style.maxWidth = this.getMaxWidth(segments);
 
         if (prepend)
         {
@@ -187,11 +221,46 @@ export default class SpeechBubble extends GameObjectComponent
                 this.bubbleElement!.appendChild(document.createElement("br"));
         }
 
-        if (message.length > 0)
-            this.bubbleElement!.appendChild(document.createTextNode(message));
+        for (const segment of segments)
+        {
+            this.bubbleElement!.appendChild((segment.kind == "text") ? document.createTextNode(segment.text)
+                : createLinkButton(segment.href, segment.label));
+        }
 
         if (animate)
             this.playBounce();
+    }
+
+    // In characters, as many as the message needs to take no more than MAX_LINES_AT_TYPE_WIDTH lines however its words
+    // wrap: a line falls short of the width by less than the longest word. A line may break on either side of a wide
+    // character, as at a space, and of a link, which is a word as wide as its button.
+    private getMaxWidth(segments: MessageSegment[]): string
+    {
+        const typeWidth = this.componentConfig.widthInChars ?? DEFAULT_WIDTH_IN_CHARS;
+        let messageWidth = 0;
+        let wordWidth = 0;
+        let longestWordWidth = 0;
+        for (const segment of segments)
+        {
+            if (segment.kind == "link")
+            {
+                const linkWidth = Array.from(segment.label).length + LINK_BUTTON_EXTRA_CHARS;
+                messageWidth += linkWidth;
+                wordWidth = 0;
+                longestWordWidth = Math.max(longestWordWidth, linkWidth);
+                continue;
+            }
+            for (const char of segment.text)
+            {
+                const wide = WIDE_CHARACTER.test(char);
+                messageWidth += wide ? 2 : 1;
+                wordWidth = (wide || /\s/.test(char)) ? 0 : wordWidth + 1;
+                longestWordWidth = Math.max(longestWordWidth, wide ? 2 : wordWidth);
+            }
+        }
+        const width = Math.min(MAX_WIDENING * typeWidth,
+            Math.max(typeWidth, Math.ceil(messageWidth / MAX_LINES_AT_TYPE_WIDTH) + longestWordWidth));
+        return `min(${width}ch, calc(100vw - ${2 * VIEW_MARGIN_PX}px - ${2 * PADDING_X_REM}rem))`;
     }
 
     // Scales bubbleElement, since the renderer overwrites the CSS2D root's transform each frame.
@@ -214,9 +283,11 @@ export default class SpeechBubble extends GameObjectComponent
             this.textElement.style = "position:absolute; font-size:0.75rem; pointer-events:none;"; // font-size (inherited by the child) is then driven per-frame in update().
 
             this.bubbleElement = document.createElement("div");
-            // Relative, so that it can be lowered (see keepInView) without moving the root the renderer places.
-            this.bubbleElement.style = `position:relative; max-width:${this.componentConfig.widthInChars ?? 18}ch; margin:auto auto; padding:0.2rem 0.4rem; color:white; background-color:rgba(0, 0, 0, 0.75); border-radius:0.4rem; text-align:center; white-space:normal;`;
+            // Relative, so that it can be moved into view (see keepInView) without moving the root the renderer places.
+            // Its text's width, its padding aside, is the message's (see getMaxWidth).
+            this.bubbleElement.style = `position:relative; margin:auto auto; box-sizing:content-box; padding:0.2rem ${PADDING_X_REM}rem; color:white; background-color:rgba(0, 0, 0, 0.75); border-radius:0.4rem; text-align:center; white-space:normal;`;
             this.lowered = 0;
+            this.shifted = 0;
             this.textElement.appendChild(this.bubbleElement);
 
             this.textCSS2DObject = new CSS2DObject(this.textElement);
@@ -237,4 +308,30 @@ export default class SpeechBubble extends GameObjectComponent
             this.textCSS2DObject = undefined;
         }
     }
+}
+
+// A link in a message, as a button that opens it (see MessageLinkOpenUtil). Its address shows when the pointer rests on
+// it, since its label is whatever its sender wrote.
+function createLinkButton(href: string, label: string): HTMLElement
+{
+    const button = document.createElement("span");
+    button.className = "speechBubbleLink";
+    button.title = href;
+    button.style = LINK_BUTTON_STYLE;
+    button.append(label, createLinkIcon());
+    OverlayClickTargetUtil.makeClickable(button, () => MessageLinkOpenUtil.open(href));
+    return button;
+}
+
+// An arrow out of the bubble, up and to the right.
+function createLinkIcon(): SVGElement
+{
+    const icon = document.createElementNS(SVG_NAMESPACE, "svg");
+    icon.setAttribute("viewBox", "0 0 12 12");
+    icon.setAttribute("style", "width:0.8em; height:0.8em; margin-left:0.25em; flex-shrink:0;");
+    const arrow = document.createElementNS(SVG_NAMESPACE, "path");
+    arrow.setAttribute("d", "M4.5 2.5h5v5M9.5 2.5l-7 7");
+    arrow.setAttribute("style", "fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round;");
+    icon.append(arrow);
+    return icon;
 }

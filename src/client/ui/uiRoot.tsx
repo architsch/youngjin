@@ -29,6 +29,7 @@ import ConsoleLogForm from "./components/form/consoleLogForm";
 import AdminAssetSettingsEditor from "./components/form/adminAssetSettingsEditor";
 import ConfirmForm from "./components/form/confirmForm";
 import RoomFilePreviewForm from "./components/form/roomFilePreviewForm";
+import WebPageForm from "./components/form/webPageForm";
 import ExitPromptForm from "./components/form/exitPromptForm";
 import { FeatureFlag } from "../../shared/system/types/featureFlag";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
@@ -207,6 +208,7 @@ export default function UIRoot({ env, user }: UIRootProps)
                 case "confirm": return <Popup key={i}>
                     <ConfirmForm
                         message={state.params.message}
+                        detail={state.params.detail}
                         onConfirm={state.params.onConfirm}
                         onCancel={state.params.onCancel}
                     />
@@ -254,6 +256,9 @@ export default function UIRoot({ env, user }: UIRootProps)
                         onConfirm={state.params.onConfirm}
                         onCancel={state.params.onCancel}
                     />
+                </Popup>;
+                case "webPage": return <Popup key={i}>
+                    <WebPageForm url={state.params.url}/>
                 </Popup>;
             }
         })}

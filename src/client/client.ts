@@ -17,24 +17,53 @@ import "../shared/graphics/mesh/composition/instancedMeshCompositionBuilderMapDe
 const env = (window as any).thingspool_env;
 App.setEnv(env);
 
-// Automation surfaces for playtests and screen capture: one only reports, the other only arranges.
-// Installed before the first room, and not on the public site (see AutomationBridgeUtil).
-AutomationBridgeUtil.install(env);
-AutomationSetupUtil.install();
+// A page of the website shown over the game (see WebPageForm) may link to the game, which would start again, as the
+// same user, inside itself: one game to a tab.
+if (isFramedByThisGame())
+{
+    const indicator = document.getElementById("bootLoadingIndicator");
+    if (indicator)
+        indicator.textContent = "ThingsPool is already open in this tab.";
+}
+else
+    start();
 
-SocketsClient.init(env); // Starting establishing a socket connection.
-UIManager.load(env, App.getUser()); // Initialize the UI system.
+function start(): void
+{
+    // Automation surfaces for playtests and screen capture: one only reports, the other only arranges.
+    // Installed before the first room, and not on the public site (see AutomationBridgeUtil).
+    AutomationBridgeUtil.install(env);
+    AutomationSetupUtil.install();
 
-// A backgrounded page may have missed a deployment; check the build on return (also checked on
-// socket reconnect, see SocketsClient).
-document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible")
-        void VersionSyncUtil.reloadIfOutdated(env.gitCommit);
-});
+    SocketsClient.init(env); // Starting establishing a socket connection.
+    UIManager.load(env, App.getUser()); // Initialize the UI system.
 
-// A bfcache-restored page after an auth redirect or sign-out is stale (no socket, no context, maybe
-// a different account), so reload it.
-window.addEventListener("pageshow", (ev: PageTransitionEvent) => {
-    if (ev.persisted && ongoingClientProcessExists("pageTerminated"))
-        window.location.reload();
-});
+    // A backgrounded page may have missed a deployment; check the build on return (also checked on
+    // socket reconnect, see SocketsClient).
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible")
+            void VersionSyncUtil.reloadIfOutdated(env.gitCommit);
+    });
+
+    // A bfcache-restored page after an auth redirect or sign-out is stale (no socket, no context, maybe
+    // a different account), so reload it.
+    window.addEventListener("pageshow", (ev: PageTransitionEvent) => {
+        if (ev.persisted && ongoingClientProcessExists("pageTerminated"))
+            window.location.reload();
+    });
+}
+
+// Framed by a page of this game's own origin, which only it can see into.
+function isFramedByThisGame(): boolean
+{
+    if (window.self === window.top)
+        return false;
+    try
+    {
+        return window.top?.location.origin === window.location.origin;
+    }
+    catch
+    {
+        return false;
+    }
+}
