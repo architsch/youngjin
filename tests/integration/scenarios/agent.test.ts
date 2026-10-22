@@ -46,6 +46,7 @@ import Voxel from "../../../src/shared/voxel/types/voxel";
 import { NUM_VOXEL_COLS, OBJECT_MESSAGE_MAX_LENGTH } from "../../../src/shared/system/sharedConstants";
 import AgentUserContext from "../../../src/server/agent/types/agentUserContext";
 import AgentInbox from "../../../src/server/agent/types/agentInbox";
+import AdminPrefsUtil from "../../../src/shared/object/util/adminPrefsUtil";
 import AgentEvent from "../../../src/server/agent/types/agentEvent";
 import AgentRoomListing from "../../../src/server/agent/types/agentRoomListing";
 import UserSessionUtil from "../../../src/server/user/util/userSessionUtil";
@@ -517,6 +518,36 @@ describe("AI agents", () => {
             expect(eventsOf(agent)).toEqual([expect.objectContaining({kind: "speech", who: "Bot-2", whoIsAgent: true,
                 text: "beep"})]);
             expect(eventsOf(other)).toEqual([expect.objectContaining({kind: "speech", who: "Bot-1", text: "boop"})]);
+        });
+
+        it("nothing of an admin in ghost mode, whom nobody sees: not in look, nor found by name, nor heard", async () => {
+            const agent = await arriveAgent("Bot-1");
+            eventsOf(agent);
+
+            const ghost = harness.connectUser({id: "id-Ghost", userName: "Ghost", userType: UserTypeEnumMap.Admin,
+                playerMetadata: {[ObjectMetadataKeyEnumMap.AdminPrefs]: AdminPrefsUtil.encode({ghostMode: true})}});
+            await harness.joinRoom(ghost, HUB_ID);
+            harness.sendObjectMessage(ghost, "boo");
+            const seen = AgentToolUtil.look(agent) as any;
+            expect(seen.people.some((person: any) => person.name == "Ghost")).toBe(false);
+            expect(seen.room.people).toBe(1);
+            expect("error" in (await AgentToolUtil.walkTo(agent, {person: "Ghost"}) as any)).toBe(true);
+            await harness.disconnectUser(ghost);
+
+            expect(eventsOf(agent)).toEqual([]);
+        });
+
+        it("names nobody as having placed what a ghost placed", () => {
+            const inbox = new AgentInbox("me");
+            const at = new ObjectTransform({x: 10, y: 1, z: 10}, {x: 0, y: 0, z: 1}, {x: 1, y: 1, z: 1});
+            inbox.note("addObjectSignal", new AddObjectSignal("room", "id-Ghost", "Ghost",
+                ObjectTypeConfigMap.getIndexByType("Player"), "ghost-player", at,
+                {[ObjectMetadataKeyEnumMap.AdminPrefs]: new EncodableByteString(AdminPrefsUtil.encode({ghostMode: true}))}));
+            inbox.note("addObjectSignal", new AddObjectSignal("room", "id-Ghost", "Ghost",
+                ObjectTypeConfigMap.getIndexByType("Lamp"), "a-lamp", at, {}));
+
+            expect(inbox.take()).toEqual([expect.objectContaining({kind: "objectAdded", id: "a-lamp", who: undefined,
+                whoIsAgent: undefined})]);
         });
 
         it("keeps only the newest events once too many wait", () => {
@@ -1795,6 +1826,19 @@ describe("AI agents", () => {
             }
         });
 
+        it("says it is the version its MCP Registry entry lists", async () => {
+            const entry = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../../../server.json"), "utf8"));
+            const client = await connect();
+            try
+            {
+                expect(client.getServerVersion()?.version).toBe(entry.version);
+            }
+            finally
+            {
+                await client.close();
+            }
+        });
+
         it("builds as the tools do, boxes and faces given as the instructions describe them", async () => {
             const anonymous = await connect();
             const registered = read(await anonymous.callTool({name: "register", arguments: {name: "Mcp-Builder"}}));
@@ -1883,6 +1927,14 @@ describe("AI agents", () => {
             expect(manual).toMatch(/^license: Apache-2.0$/m);
             expect(clawhubCopy).toMatch(/^license: MIT-0$/m);
             expect(withoutLicense(clawhubCopy)).toBe(withoutLicense(manual));
+        });
+
+        it("names the same version at its end as in its frontmatter", () => {
+            const manual = fs.readFileSync(path.resolve(__dirname, "../../../public/skill.md"), "utf8");
+            const version = manual.match(/^ {2}version: "(.+)"$/m)?.[1];
+
+            expect(version).toBeDefined();
+            expect(manual).toContain(`\nVersion ${version}, `);
         });
 
         it("answers the calls the agents' manual shows curl making, as it says it does", async () => {

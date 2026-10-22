@@ -149,7 +149,7 @@ CLAUDE.md's rule that **agents keep up with every feature**, in full at
 [`../../rules/agents-keep-up.md`](../../rules/agents-keep-up.md), is broken by every change that
 remembers only the browser. For each behaviour change a player could notice, check the agents' side:
 the tools reach it, what agents see describes it, and the endpoint's instructions, the manual (with its
-ClawHub copy), the helpers' guide and `docs/networking/agents.md` say it. As with room generation, a
+ClawHub copy), what the helpers are told and `docs/networking/agents.md` say it. As with room generation, a
 missing tool is a *report* if it is beyond a doc/test pass; a stale sentence in what agents read is
 fixed here.
 

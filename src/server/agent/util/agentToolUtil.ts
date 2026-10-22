@@ -8,6 +8,7 @@ import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMet
 import DoorObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import LabelTextUtil from "../../../shared/object/util/labelTextUtil";
 import MessageLinkUtil from "../../../shared/object/util/messageLinkUtil";
+import AdminPrefsUtil from "../../../shared/object/util/adminPrefsUtil";
 import RequestRoomChangeSignal from "../../../shared/room/types/requestRoomChangeSignal";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
@@ -68,7 +69,7 @@ const AgentToolUtil =
         const myFeet = VoxelPathUtil.feetOf(me.transform.pos);
 
         const players = Object.values(room.objectById)
-            .filter(obj => isPlayer(obj) && obj.objectId != me.objectId)
+            .filter(obj => isSeenPlayer(obj) && obj.objectId != me.objectId)
             .map(obj => ({
                 name: obj.sourceUserName,
                 isAgent: (obj.metadata[ObjectMetadataKeyEnumMap.AgentMark]?.str ?? "").length > 0,
@@ -84,6 +85,7 @@ const AgentToolUtil =
             at: AgentGridUtil.toGridPosition(helper.at),
             distance: Math.round(10 * distanceInVoxels(myFeet, helper.at)) / 10,
             saying: helper.saying.length > 0 ? helper.saying : undefined,
+            thinking: helper.thinking ? true : undefined,
         }));
         const people = [...players, ...guides]
             .sort((a, b) => a.distance - b.distance)
@@ -334,13 +336,12 @@ function describeRoom(ctx: AgentUserContext): object | null
     if (room == undefined)
         return null;
 
-    const roomRuntimeMemory = ServerRoomManager.roomRuntimeMemories[room.id];
     return {
         id: room.id,
         type: Object.keys(RoomTypeEnumMap).find(name => RoomTypeEnumMap[name] == room.roomType) ?? "Unknown",
         owner: room.ownerUserName.length > 0 ? room.ownerUserName : null,
         isYours: RoomValidationUtil.userOwnsRoom(ctx.user, room),
-        people: roomRuntimeMemory ? Object.keys(roomRuntimeMemory.participantUserNameByID).length : 0,
+        people: Object.values(room.objectById).filter(isSeenPlayer).length,
         link: AgentRoomUtil.getLink(room.id),
     };
 }
@@ -350,7 +351,7 @@ function describeRoom(ctx: AgentUserContext): object | null
 function findPerson(room: Room, me: AddObjectSignal, name: string): {feet: Vec3, pos: Vec3} | undefined
 {
     const wanted = name.trim().toLowerCase();
-    const person = Object.values(room.objectById).find(obj => isPlayer(obj) && obj.objectId != me.objectId
+    const person = Object.values(room.objectById).find(obj => isSeenPlayer(obj) && obj.objectId != me.objectId
         && obj.sourceUserName.toLowerCase() == wanted);
     if (person != undefined)
         return {feet: VoxelPathUtil.feetOf(person.transform.pos), pos: person.transform.pos};
@@ -358,9 +359,10 @@ function findPerson(room: Room, me: AddObjectSignal, name: string): {feet: Vec3,
     return (guide != undefined) ? {feet: guide.at, pos: guide.at} : undefined;
 }
 
-function isPlayer(obj: AddObjectSignal): boolean
+// A player an agent sees: any but a ghost (see AdminPrefsUtil.isGhost).
+function isSeenPlayer(obj: AddObjectSignal): boolean
 {
-    return obj.objectTypeIndex == ObjectTypeConfigMap.getIndexByType("Player");
+    return obj.objectTypeIndex == ObjectTypeConfigMap.getIndexByType("Player") && !AdminPrefsUtil.isGhost(obj);
 }
 
 function isDoor(obj: AddObjectSignal): boolean

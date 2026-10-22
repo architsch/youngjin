@@ -17,12 +17,14 @@ Block everything else. The Actions runner connects **outbound**, so restricting 
 ### Outbound rules (traffic from the VPS to the outside)
 | Protocol | Port | Purpose |
 |---|---|---|
-| TCP | 443 | Firebase, npm, Certbot, GitHub runner |
+| TCP | 443 | Firebase and Secret Manager, the Anthropic API (helpers), npm, Certbot, GitHub runner |
 | TCP | 80 | package downloads, Certbot |
 | UDP / TCP | 53 | DNS |
 
 ## Nginx setup for the VPS
 From the project root, run `npm run nginx:update`. It copies the Nginx configs in `dev/config/` to the VPS, then tests and reloads Nginx (a reload, not a restart, so live connections survive). **No deployment workflow does this**, so a config change reaches the server only when someone runs it.
+- Requests to `/mcp/<key>` stay out of the access log (the `$loggable` map in `nginx_conf.txt`), since an agent's key may be the address's last part: any `access_log` added needs `if=$loggable`.
+- Nginx's per-IP `limit_req` covers `/mcp` too, so raising the app's own agent limit (`RateLimitUtil`) alone gains nothing.
 
 ## DNS/SSL setup for the VPS
 1. DNS A records: `app.thingspool.net` and `staging.thingspool.net` both point to `222.239.251.208`.

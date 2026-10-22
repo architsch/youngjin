@@ -72,6 +72,8 @@ washer's door, a range hood).
 
 The prop's image chooser searches keywords only, so they are how a player finds a sample. Every everyday object
 needs them (`--save-samples` refuses one without); a painting has none, since it is found by its title and author.
+AI agents search the same way (`find_pictures`) and are told only a picture's first three keywords as what it shows,
+so those three must name it.
 Write them from the sample as it came out, not from the photo or the title.
 
 - **One comma-separated string** of lowercase single words, 6–12 of them, most important first:

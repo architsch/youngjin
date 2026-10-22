@@ -22,6 +22,7 @@ import ObjectTransform from "../../../shared/object/types/objectTransform";
 import { ObjectMetadata } from "../../../shared/object/types/objectMetadata";
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 import ObjectUpdateUtil from "../../../shared/object/util/objectUpdateUtil";
+import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import LabelTextUtil from "../../../shared/object/util/labelTextUtil";
 import AddVoxelBlockSignal from "../../../shared/voxel/types/update/addVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../../shared/voxel/types/update/removeVoxelBlockSignal";
@@ -279,13 +280,17 @@ function keep(signal: EncodableData): EncodableData
 }
 
 // An object as it stands, as the signal this user adds it by: under their own name, as whoever adds one must (see
-// ObjectTypeConfig.canUserAddObject).
+// ObjectTypeConfig.canUserAddObject), and as its room keeps it, without what it was only shown with.
 function copyObject(obj: AddObjectSignal): AddObjectSignal
 {
     const user = App.getUser();
+    const shown = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).shownMetadataKeys ?? [];
     const metadata: ObjectMetadata = {};
     for (const [key, value] of Object.entries(obj.metadata))
-        metadata[Number(key)] = new EncodableByteString(value.str);
+    {
+        if (!shown.includes(Number(key)))
+            metadata[Number(key)] = new EncodableByteString(value.str);
+    }
     return new AddObjectSignal(obj.roomID, user.id, user.userName, obj.objectTypeIndex, obj.objectId,
         copyTransform(obj.transform), metadata);
 }

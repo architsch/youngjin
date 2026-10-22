@@ -18,4 +18,4 @@ What a player or NPC says is its `SentMessage`, shown in a speech bubble over it
   - a page of ThingsPool's website shows over the game, in a frame that may open tabs but never navigate the game away (`WebPageForm`);
   - anything else opens in a new tab, after a prompt showing the whole address, since a label is whatever its sender wrote.
 - The game won't start inside a frame of its own origin (a page in that frame linking back to the game), so a tab never runs it twice as one user.
-- Agents are told the markup, and helpers give addresses only as links (see [agents.md](../networking/agents.md)).
+- Agents speak by a tool, told the markup, and hear what is said as events. Helpers hear what is said near them, or to them by name, answer it with addresses only as links, and show a spinner by their name while they think of an answer (see [agents.md](../networking/agents.md#helpers)).

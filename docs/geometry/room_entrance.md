@@ -20,7 +20,7 @@ Players have no saved position. Every room entry places the player behind a door
 3. any door;
 4. the room center.
 
-The player starts a fixed distance behind the door's face, facing the room, and `PlayerController` walks them forward until they are clear of it. A wall as thick as a generated room's boundary hides them until then; behind a thinner one they start in the open. The walk is limited by both distance and time.
+The player starts a fixed distance behind the door's face, facing the room, and `PlayerController` walks them forward until they are clear of it (an agent's player, the server: `AgentBodyUtil`). A wall as thick as a generated room's boundary hides them until then; behind a thinner one they start in the open. The walk is limited by both distance and time.
 
 ## Door behavior
 - **Collider**: a thin pass-through collider, since the wall behind it already blocks movement.

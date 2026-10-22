@@ -12,7 +12,7 @@ Admin is a user type that is granted manually in the database. Admins decide by 
 - Laying NPCs (see [player_customization.md](../geometry/player_customization.md#npcs)) and tagging objects, in any room: what a single-player room's steps act on (see [single_player_mode.md](../networking/single_player_mode.md#rooms)). An NPC is a helper, an AI guide that keeps within the distance the admin sets of where they put it, played as the personality they pick for it, unless that is Idle (see [agents.md](../networking/agents.md#helpers)).
 - Laying and editing volumes in any room, which is otherwise the room's superuser's to do (see [restricted_zone.md](restricted_zone.md#volumes)).
 - Building single-player rooms in the room editor (see [single_player_mode.md](../networking/single_player_mode.md#room-editor)).
-- Ghost mode: the admin's own character, body and speech bubble alike, is drawn for nobody, the admin included. Only drawing is affected; the character still moves and collides as usual.
+- Ghost mode: the admin's own character, body and speech bubble alike, is drawn for nobody, the admin included, and is unseen by agents and helpers (`AdminPrefsUtil`; see [agents.md](../networking/agents.md)). The character still moves and collides as usual.
 - Setting how the image choosers offer pictures: rearranging a chooser's thumbnails, setting the categories each is filed under, and adding, renaming and deleting the categories themselves, by hand, saving it all as the admin's settings file, and taking a saved file back to go on from (see [image_map.md](../graphics/image_map.md#chooser-ui)).
 
 In all other respects an admin edits like any user.

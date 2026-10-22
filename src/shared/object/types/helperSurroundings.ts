@@ -8,10 +8,13 @@ type HelperSurroundings = {
     getPeople: () => Vec3[],
     // One of them by user id, while they are in its room.
     getPerson: (userID: string) => Vec3 | undefined,
+    // Whether anyone's lines wait for its answer.
+    hasLinesWaiting: () => boolean,
     isHeld: () => boolean,
     showAt: () => void,
     showFacing: () => void,
     showSaying: () => void,
+    showThinking: () => void,
 };
 
 export default HelperSurroundings;

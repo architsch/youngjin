@@ -1,6 +1,6 @@
 ---
 name: staging-playtest
-description: Run an AI-driven playtest and server-health investigation against the deployed staging server — survey the existing error backlog, seed database states that ordinary play cannot produce (outdated row versions, a large population of room owners), drive concurrent browser sessions against it, and correlate everything against the staging server's logs and process metrics. Use after deploying to staging, when asked to playtest staging, verify a deployment, hunt for server-side errors, or check whether a fix actually took effect on a real server.
+description: Run an AI-driven playtest and server-health investigation against the deployed staging server — survey the existing error backlog, seed database states that ordinary play cannot produce (outdated row versions, a large population of room owners), drive concurrent browser sessions and AI agents (a crowd of them included) against it, and correlate everything against the staging server's logs and process metrics. Use after deploying to staging, when asked to playtest staging, verify a deployment, hunt for server-side errors, or check whether a fix actually took effect on a real server.
 ---
 
 # Staging Playtest
@@ -20,7 +20,8 @@ that are genuinely hard to produce by hand:
   pagination and the denormalized owner name. Staging runs in production mode, so the dev OAuth
   bypass is off and a browser session can only ever become a guest — twenty owners means twenty
   Google accounts, or one seeding command. (Those two endpoints no longer have any UI in front of
-  them; see Step 4.)
+  them; see Step 4.) The same population also drives the agents' `find_rooms`, which reads room owners
+  through `AgentDirectoryUtil`.
 - **Concurrency** — several real clients in one room at once.
 - **A whole client run, watched** — page errors, failed asset requests and what actually rendered,
   across a room load and a mode change, which a human notices only if they happen to be looking.
@@ -168,6 +169,7 @@ fixture that no seeding could produce. So:
 | `seed-population` at the current version | **Yes** — use `--persist` | Reading it does not change it. A stable population makes pagination deterministic between runs. Check `inspect` reports it as `outdated: 0`; if not, the schema moved and the fixture is now single-use. |
 | `seed-users` / `seed-rooms` at an outdated version | **No** | Single-use by nature: the first read migrates the row and writes it back at the current version, after which it is no longer the fixture the test needed. Re-seed every run. |
 | Seeded guests (`userType` 2) | **No** | The server's own hourly stale-guest sweep deletes them regardless of intent. |
+| `seed-agents` | **No** | The same sweep deletes inactive agents by the guests' tiers, their home rooms with them. |
 | `downgrade-content` | **No** — and only within one decoder | Refused outright across a change of decoder (see above). Where it is allowed, the next room save re-encodes the blob at the current version, so it is single-use. Always `restore-content` afterwards. |
 | A room already stored below the current version | **No** | Single-use, and not seeded at all — it is left over from before the format changed. The first save after it is entered spends it. |
 
@@ -270,9 +272,10 @@ order in the README beside them.
 Two things still cannot be driven, and belong in the report as such:
 
 - **`listRooms` and `searchRooms` exercise the API and nothing else.** A door carries its own
-  destination rather than opening a room-list popup, and no player-facing room list survives — the
-  only list left is the admin's destination chooser. A green `listRooms` proves the endpoint, its
-  pagination and the denormalized owner name, and nothing a player can reach.
+  destination rather than opening a room-list popup, and no room list survives for people — the
+  lists left are the admin's destination chooser and the agents' `find_rooms`, reached over the MCP
+  endpoint. A green `listRooms` proves the endpoint, its pagination and the denormalized owner name,
+  and nothing a person can reach.
 - **`gotoRoom` navigates by URL**, which is not travelling by door. Going through a door *can* now
   be driven (`clickObject` on a door, or the admin's `enterDoorButton`), so use that when the
   journey is what is under test.
@@ -314,18 +317,25 @@ Staging runs in production mode. **20 requests per minute per IP** for both page
 every agent on this machine shares one IP. Guest creation is capped at **10 per IP per hour** and
 **3 per IP+User-Agent per hour**.
 
-So: 2–3 agents, not a swarm. Reuse sessions instead of creating guests. `runPlan.js` paces its
+So: 2–3 browser sessions, not a swarm. Reuse sessions instead of creating guests. An AI agent's
+`register` spends these same guest caps (logged `Guest creation blocked`), so more than a few come from
+`seed-agents`. `runPlan.js` paces its
 own API calls and reports `rateLimitHits` separately — a non-zero count is self-inflicted, not a
 server fault, and must be reported that way.
 
 ### AI agents, and a crowd of them
 
 An agent's checks go through Nginx, as any agent's requests do: the MCP endpoint at
-`https://staging.thingspool.net/mcp`, with a key from `register` or `seed-agents`. Nginx allows an
+`https://staging.thingspool.net/mcp`, with a key from `register` or `seed-agents`. No dev script
+speaks MCP: drive agents with the manual's curl commands, or a scratch script on
+`@modelcontextprotocol/client` (a dev dependency). Past `AGENT_MAX_PRESENT` a new agent is turned away
+by design; that is not a fault. Nginx allows an
 address about five requests a second, and the endpoint 300 a minute, so one machine is a few
 agents at most. A crowd is driven through an SSH tunnel to the app's own port instead
 (`ssh -N -L 13001:127.0.0.1:3001 root@<VPS>`), each seeded agent sending an `X-Forwarded-For` of
-its own, which the app believes only from loopback, its one trusted proxy. Ramp it, and stop
+its own, which the app takes from whatever proxies it (`trust proxy` is one hop): Nginx appends the
+real address, and the tunnel passes the agent's own. Only the provider's firewall keeps the app's port
+private. Ramp it, and stop
 before the limits that take the server down rather than slow it:
 
 - PM2 restarts the process past `max_memory_restart` (`ecosystem.config.js`). `pm2 jlist` gives
@@ -336,7 +346,9 @@ before the limits that take the server down rather than slow it:
   stays.
 
 A crowd landing in a hub also meets any helper an admin stood there, whose replies are paid for; the staging budget is
-small, so a load test keeps its agents quiet near it.
+small, so a load test keeps its agents quiet near it. Helpers show in the logs three ways: `Helper usage` (hourly, info, in
+a `diff`'s `activity`), `Helper reply failed` (an error, in `needsAttention`), and, at boot, `[bootstrap] Optional secret
+"ANTHROPIC_API_KEY" not loaded` when they can only greet.
 
 An agent's camera (the link `camera` gives) is opened as a browser tool would: a fresh Playwright context with no
 cookies, waiting until "Loading..." is gone, then a screenshot. It is a page for nobody, so it never counts against the

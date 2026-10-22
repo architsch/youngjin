@@ -9,6 +9,7 @@ Reference: @dev/scripts/playtest/sandboxRunner.js , @dev/scripts/lib/setup.js , 
 - `?sandboxuser=<name>` opens it as a guest, `?sandboxadmin=<name>` as an admin. Each name is its own reusable account, dev mode only.
 - Its player, guest or admin, is its superuser and gets the door and label tools a hub's admin has (`RoomValidationUtil`). Room settings stay hidden, since the room is not stored — those need `--fresh-room` or the staging playtest.
 - Build calls refuse to run in any other room, so they can never fake evidence a real room would have refused.
+- It plays NPCs as helpers, as the modes that play them do (see [single_player_mode.md](../../networking/single_player_mode.md#npcs)): one stood there greets, wanders, answers and shows a spinner by its name while it thinks, its replies asked of the local server, which gives them only with `ANTHROPIC_API_KEY` set, or from a stand-in at `ANTHROPIC_BASE_URL` (see [local_dev.md](../../devOps/local_dev.md)).
 
 ## Running
 ```
@@ -34,7 +35,7 @@ The bare `:4321/...` shorthand does not work under zsh. Ops share their names wi
 |---|---|
 | `stage` | four walls around a floor rectangle, two cells thick as a generated room's boundary wall is; returns each wall's innermost cells and its inward face |
 | `addBlocks` / `removeBlocks` | a box of blocks, or a doorway cut through one already standing |
-| `addObject` / `removeObject` | a canvas, a prop, a door, a lamp, a fan or a label on a cell's face (walls, or a block's top or underside), at its type's default size (a prop at its image's), by the game's own metadata keys |
+| `addObject` / `removeObject` | a canvas, a prop, a door, a lamp, a fan or a label on a cell's face (walls, or a block's top or underside), or an NPC on a floor (`face: "+y"`, and a `collisionLayer` below the lowest for the room's own floor), at its type's default size (a prop at its image's), by the game's own metadata keys |
 | `resizeObject` | a standing object at another size, in multiples of its type's step; the placement rule still applies, and the size it ended up with is returned |
 | `restrictedZones` | the room's zones, each a volume of whole cells kept for a user (from floor to ceiling and for nobody, unless given); reports them when called with nothing |
 | `volumes` | whether the room's volumes show in edit mode, with the tool that adds one (`true` or `false`); reports which when called with nothing |

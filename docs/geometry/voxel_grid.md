@@ -31,6 +31,7 @@ Reference: @src/shared/voxel/types/voxel.ts , @src/shared/voxel/types/voxelGrid.
 
 ## Queries
 - `VoxelQueryUtil` (shared): grid conventions such as voxel positions, quad indices, a face's place and size, whether a cell layer holds a block, which quads are drawn, and which face a face runs on into along the room's surface.
+- `VoxelPathUtil` (shared): walking paths, by A* between grid vertices, for agents' and helpers' bodies. It relies on a player's body being narrower than two cells, so that one standing on a vertex covers the four cells around it, and counts only blocks (see [agents.md](../networking/agents.md#the-body)).
 - `ClientVoxelQueryUtil` (client): questions about the room as it is currently drawn, which can differ from the stored room while the orbit camera hides blocks. It answers:
   - whether the room blocks the line between two points, found by walking the cell layers along the segment (a block an end of the segment lies in, or right against, is excluded);
   - how far the room ahead drops below the viewpoint, as a view-weighted average that drives the first-person camera pitch (see [camera_control.md](../graphics/camera_control.md)).

@@ -31,6 +31,11 @@ const AdminPrefsUtil =
     {
         return AdminPrefsUtil.decode(obj.metadata[ObjectMetadataKeyEnumMap.AdminPrefs]?.str ?? "");
     },
+    // A player in ghost mode is hidden from everyone: drawn for nobody, and unseen by agents and helpers.
+    isGhost: (obj: AddObjectSignal | undefined): boolean =>
+    {
+        return obj != undefined && AdminPrefsUtil.getObjectPrefs(obj).ghostMode;
+    },
 }
 
 export default AdminPrefsUtil;

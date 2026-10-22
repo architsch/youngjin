@@ -219,7 +219,12 @@ of ThingsPool itself when it registers, if it does (see SKILL.md, "Measure agent
 - **mcp.so** (mcp.so/submit): **free, through a review queue.** The submit page's button reads as
   paid, but a submission made from a signed-in account is "Queued for review" for free; $39 only
   skips the queue ("Skip review — go live now", with a "Verified" badge and featured placement).
-  After submitting, the listing's own form asks for: name, author name, avatar, a short description,
+  ThingsPool goes in as a **Remote Server** (`?type=remote-server`: endpoint URL and name), filed
+  under Remote Servers ("hosted MCP endpoints ... connect directly, no install required"). The plain
+  MCP Server type wants a repository and presents a program to install and run, and ThingsPool's
+  repository would only give a visitor an empty world of their own. **Category** is a separate field
+  with no games category, and "Other" holds over half of all servers; "AI & Agents" ("LLMs, AI
+  assistants, chatbot integrations, and agent servers") fits best. After submitting, the listing's own form asks for: name, author name, avatar, a short description,
   category, tags, GitHub, website and docs URLs, listing type, the remote endpoint URL, the
   authentication it uses ("API Key" or "None"), a client configuration snippet, up to 6 screenshots,
   and an overview in Markdown. Its tools section reads "No tools detected" until someone presses
@@ -228,7 +233,7 @@ of ThingsPool itself when it registers, if it does (see SKILL.md, "Measure agent
   queued for review, the button answers "Server not found" (2026-10-20), whatever the authentication
   setting. A third-party collector tool posts to an undocumented mcp.so API; it goes around the
   site's own form, so it is not a path to use. **Verified:** 2026-10-20 (by the user's own
-  submission).
+  submission); types and categories 2026-10-22.
 - **Smithery** (smithery.ai/new): takes a server by its public HTTPS address, or by
   `smithery mcp publish "<url>" -n @<org>/<name>`, and scans its tools (public servers scan without
   help). An auth-required server must support OAuth; ThingsPool's key is optional, so the scan works.

@@ -39,7 +39,7 @@ Each hub carries a **join priority**: its place in the order arriving visitors f
 - A change takes effect at once, whether or not the hub is loaded.
 
 ## Entering a room
-- A room change is flagged as **user-picked** (a door, or the user's own room), which is refused if the room cannot be entered, or **server-routed** (last room, URL, hub keyword), which falls back to a hub. "Cannot be entered" means almost full or failing to load.
+- A room change is flagged as **user-picked** (a door, the user's own room, or a room an agent travels to by id or link), which is refused if the room cannot be entered, or **server-routed** (last room, URL, hub keyword), which falls back to a hub. "Cannot be entered" means almost full or failing to load.
 - `ServerRoomManager` vets the destination **before** leaving the current room, so a refused user stays where they are. The user's own slot does not count against a room they re-enter.
 - A refusal sends `RoomChangeRejectedSignal` with a `RoomChangeRejectionReason`. This releases the client's loading screen and shows a notification.
 

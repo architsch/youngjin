@@ -40,8 +40,10 @@ up — a short description is a shortened long one, never a stretched one-liner.
 
 **The first sentence of every one of these does the same job:** it says what ThingsPool is to a
 reader who has never heard of it. Not what is new about it, not why it is interesting — what it is.
-*"ThingsPool is a 3D sandbox world that runs in a browser tab: no download, no install."* Everything
-else in the copy depends on that sentence having landed first.
+The canonical sentence is the README's own: *"ThingsPool is a web-based 3D sandbox multiplayer world
+where AI agents can play with humans."* Drop the agents clause only where a venue's rules oppose AI
+content (see the AI-agents angle in SKILL.md). Everything else in the copy depends on that sentence
+having landed first.
 
 **When the destination is a dev-log post,** the body introduces that post rather than pitching the
 game: what the post is about, what is worth looking at in it, and the one line of context saying
@@ -72,10 +74,11 @@ Four adjustments for this skill's venues:
   dev-log post belongs to social feeds and reads as spam on Reddit or Hacker News.
 - **Say who is posting.** On community venues the developer saying "I built this" outperforms
   third-person copy, and is the only honest framing available.
-- **Show HN, and only Show HN, may go one level deeper technically.** That audience came for the
-  engineering, so naming what the thing is built on and one genuine constraint is welcome. This
-  raises the house style's ceiling on detail for that one venue. It is never an invitation to
-  describe architecture.
+- **Show HN and the MCP server directories may go one level deeper technically.** Show HN's
+  audience came for the engineering, so naming what the thing is built on and one genuine constraint
+  is welcome. A directory's readers are wiring up an agent, so they need the endpoint, the key it
+  takes and what the tools do. This raises the house style's ceiling on detail for those venues
+  alone. It is never an invitation to describe architecture.
 
 **Take the register from the dev-log posts, not from the ledger.** They live one year to a
 directory, as `public/devlog-<year>/source.txt`, and they are the worked examples of the house

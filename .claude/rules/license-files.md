@@ -7,8 +7,9 @@ follows from it.
 ## Why drift here is not cosmetic
 
 This repository is **dual-natured on purpose**: the code is open source under Apache-2.0, while the
-written and illustrated works under `public/` are all rights reserved, and some bundled assets belong
-to third parties under their own terms. That boundary exists only in
+written and illustrated works under `public/` are all rights reserved (but for the agents' manual,
+`public/skill.md`, which is Apache-2.0, and its MIT-0 copy for ClawHub in `dev/clawhub/`), and some
+bundled assets belong to third parties under their own terms. That boundary exists only in
 [`../../LICENSE-CONTENT.md`](../../LICENSE-CONTENT.md) and
 [`../../THIRD-PARTY-NOTICES.md`](../../THIRD-PARTY-NOTICES.md). Nothing enforces it, no test fails
 when it drifts, and a reader — or a court — has no other place to look.

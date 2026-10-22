@@ -47,7 +47,10 @@ ls dev/scripts/*.js dev/scripts/*/*.js docs/devOps/*.md docs/devOps/*/*.md docs/
 Every one gets checked, not only the ones the diff touched — drift accumulates from changes made
 long before this batch. `docs/plans/` is not touched without the user's approval, whatever a sweep here turns up
 ([`../../rules/plan-documents.md`](../../rules/plan-documents.md)), and the other `/docs` pages —
-the subject maps — belong to `docs-and-tests-sync`, not here.
+the subject maps — belong to `docs-and-tests-sync`, not here. So do the agents' manual and its ClawHub
+copy (`public/skill.md`, `dev/clawhub/thingspool/SKILL.md`): skills in form, but written for AI agents
+playing the game, not for this project's work. They change under the agents-keep-up rule, both together
+or neither, since a test compares them.
 
 `.claude/writing-style.md` is the house style that `distribution-push` writes public copy against.
 Audit it like any other file here, and treat a style rule that has migrated into that skill as drift
@@ -55,7 +58,8 @@ to reverse — rules about *how* to write belong in the style page, rules about 
 piece must contain belong in the skill that owns it.
 
 `.claude/rules/` holds the project invariants that CLAUDE.md states in short and delegates the
-reasoning for — room generation, the license files, plan documents. They are instructions like any
+reasoning for — room generation, the license files, plan documents, source edits, agents keeping up
+with every feature. They are instructions like any
 other file here, and they make the same checkable claims (module and type names, paths, which files
 a rule reaches), so they drift the same way. Two extra checks for these: the summary of each rule
 in CLAUDE.md must still say the same thing as the page it links to — a rule that has been sharpened

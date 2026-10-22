@@ -11,6 +11,7 @@ import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap
 import VolumeObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/volumeObjectTypeConfig";
 import NpcObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/npcObjectTypeConfig";
 import LabelTextUtil from "../../../shared/object/util/labelTextUtil";
+import AdminPrefsUtil from "../../../shared/object/util/adminPrefsUtil";
 import AddVoxelBlockSignal from "../../../shared/voxel/types/update/addVoxelBlockSignal";
 import MoveVoxelBlockSignal from "../../../shared/voxel/types/update/moveVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../../shared/voxel/types/update/removeVoxelBlockSignal";
@@ -35,8 +36,9 @@ export default class AgentInbox
 
     private readonly userID: string;
     private events: AgentEvent[] = [];
-    // Players in the agent's room by object id, so that a departure is still named once its player is gone.
-    private playerByObjectId: {[objectId: string]: {name: string, isAgent: boolean}} = {};
+    // Players in the agent's room by object id, so that a departure is still named once its player is gone. A ghost
+    // (see AdminPrefsUtil.isGhost) comes, goes, speaks and places things unseen.
+    private playerByObjectId: {[objectId: string]: {userID: string, name: string, isAgent: boolean, ghost: boolean}} = {};
     // What every other object in the room is, likewise.
     private objectTypeById: {[objectId: string]: string} = {};
     // The helpers' names (see HelperAgentUtil): every NPC in a room an agent can be in is one.
@@ -78,11 +80,17 @@ export default class AgentInbox
                 const player = this.playerByObjectId[obj.objectId];
                 const type = this.objectTypeById[obj.objectId];
                 if (player)
-                    this.push({kind: "arrival", who: player.name, whoIsAgent: player.isAgent});
+                {
+                    if (!player.ghost)
+                        this.push({kind: "arrival", who: player.name, whoIsAgent: player.isAgent});
+                }
                 else if (type)
                 {
-                    this.push({kind: "objectAdded", id: obj.objectId, type, who: obj.sourceUserName || undefined,
-                        whoIsAgent: this.isAgentNamed(obj.sourceUserName)});
+                    const unseen = Object.values(this.playerByObjectId)
+                        .some(placer => placer.userID == obj.sourceUserID && placer.ghost);
+                    this.push({kind: "objectAdded", id: obj.objectId, type,
+                        who: (unseen || obj.sourceUserName.length == 0) ? undefined : obj.sourceUserName,
+                        whoIsAgent: unseen ? undefined : this.isAgentNamed(obj.sourceUserName)});
                 }
                 break;
             }
@@ -94,7 +102,8 @@ export default class AgentInbox
                 if (player)
                 {
                     delete this.playerByObjectId[objectId];
-                    this.push({kind: "departure", who: player.name, whoIsAgent: player.isAgent});
+                    if (!player.ghost)
+                        this.push({kind: "departure", who: player.name, whoIsAgent: player.isAgent});
                 }
                 else if (type)
                 {
@@ -111,8 +120,13 @@ export default class AgentInbox
                 const helperName = this.helperNameById[signal.objectId];
                 const text = signal.metadataValue.trim();
                 const isSpeech = signal.metadataKey == ObjectMetadataKeyEnumMap.SentMessage;
-                if (player && isSpeech && text.length > 0)
-                    this.push({kind: "speech", who: player.name, whoIsAgent: player.isAgent, text});
+                if (player && signal.metadataKey == ObjectMetadataKeyEnumMap.AdminPrefs)
+                    player.ghost = AdminPrefsUtil.decode(signal.metadataValue).ghostMode;
+                else if (player && isSpeech && text.length > 0)
+                {
+                    if (!player.ghost)
+                        this.push({kind: "speech", who: player.name, whoIsAgent: player.isAgent, text});
+                }
                 else if (helperName != undefined)
                 {
                     // A helper's speech, or a new name; which way it faces is its own doing, not anyone's edit.
@@ -175,8 +189,9 @@ export default class AgentInbox
         {
             if (obj.sourceUserID != this.userID)
             {
-                this.playerByObjectId[obj.objectId] = {name: obj.sourceUserName,
-                    isAgent: (obj.metadata[ObjectMetadataKeyEnumMap.AgentMark]?.str ?? "").length > 0};
+                this.playerByObjectId[obj.objectId] = {userID: obj.sourceUserID, name: obj.sourceUserName,
+                    isAgent: (obj.metadata[ObjectMetadataKeyEnumMap.AgentMark]?.str ?? "").length > 0,
+                    ghost: AdminPrefsUtil.isGhost(obj)};
             }
         }
         else

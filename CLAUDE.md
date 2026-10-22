@@ -4,6 +4,7 @@
 - **Runtime**: Node.js with TypeScript
 - **Frontend**: Three.js (3D graphics), React, Tailwind CSS, EJS
 - **Networking**: Express.js (HTTP requests, authentication), Socket.IO (real-time communication), Fetch API (HTTP requests from the client and to external APIs), Nginx (VPS's web server)
+- **AI**: MCP TypeScript SDK (the endpoint AI agents play over, Streamable HTTP), Claude through the Anthropic Messages API (the helpers' replies)
 - **Database**: Firebase (Firestore, Cloud Storage, Content Distribution)
 - **Build Tools**: Webpack (typescript compiler, bundler), Sharp (static site image generation)
 - **Dev Tools**: Husky (git hooks), PM2 (runtime process management), GitHub (source control, workflows, and static page hosting), VS Code (IDE), Claude Code (AI assistant)
@@ -15,13 +16,13 @@
   - `/graphics` - 3D graphics for game objects, voxels, and world-space gizmos, plus the picture of a room file's room shown before the file is loaded (RoomPreviewUtil)
   - `/networking` - Client-side networking (SocketsClient for Socket.IO, RestAPI and the API clients over it)
   - `/object` - Game object management (ClientObjectManager, component system including Rigidbody, PlayerController, PeriodicTransformEmitter/Receiver)
-  - `/singlePlayer` - Client-side single-player gameplay logic (SinglePlayerManager, the scripted steps of each mode in SinglePlayerModeClientConfigMap, the action/condition maps those steps are carried out through, loading a mode's room from its file, and the room editor)
+  - `/singlePlayer` - Client-side single-player gameplay logic (SinglePlayerManager, the scripted steps of each mode in SinglePlayerModeClientConfigMap, the action/condition maps those steps are carried out through, loading a mode's room from its file, the room editor, and the helpers the browser plays where a mode plays NPCs (SinglePlayerHelperUtil))
   - `/system` - Client-side observables and state management
   - `/ui` - React UI components and styles
   - `/voxel` - Voxel management (ClientVoxelManager), plus the client-only queries about the room as drawn (ClientVoxelQueryUtil) and the pool of mesh instances the visible quads are lent (VoxelQuadInstanceUtil)
   
 - **`/server`** - Server-side code (Node.js/Express)
-  - `/agent` - AI agents as players (the MCP endpoint they play over, their accounts, keys and presence, their bodies the server walks, their tools for seeing, building, placing things and setting up their rooms, the camera page that shows a browser what one sees, the directory of rooms they find, and the helpers, the NPCs in multiplayer rooms the server plays as AI guides)
+  - `/agent` - AI agents as players (the MCP endpoint they play over, their accounts, keys and presence, their bodies the server walks, their tools for seeing, building, placing things and setting up their rooms, the camera page that shows a browser what one sees, the directory of rooms they find, and the helpers, the NPCs the server plays as AI guides in multiplayer rooms and answers for in single-player ones, with what they are told under `data/`)
   - `/analytics` - Acquisition analytics (ServerAnalyticsManager — which traffic source a visitor came from, and how far through the funnel they got)
   - `/db` - Database utilities and types (Firestore, Firebase Storage, caching)
   - `/networking` - Express.js routers and general networking utilities (e.g. address (URL) formatting, cookies, firebase-admin, and rate-limiter initialization)
@@ -37,7 +38,7 @@
   - `/graphics` - Shared graphics data (image maps, material params, and the instanced mesh composition system with its codecs and builders)
   - `/math` - Math utilities (vectors, geometry, etc.)
   - `/networking` - Data encoding/decoding utilities and Socket.IO signal type configs
-  - `/object` - Game object types, configs, and shared update logic (ObjectUpdateUtil)
+  - `/object` - Game object types, configs, and shared update logic (ObjectUpdateUtil), and how a helper walks, turns, greets and paces its speech wherever it is played (HelperBehaviorUtil)
   - `/physics` - Physics engine (PhysicsManager — collision detection, hitboxes, step-up, gravity, and the pushes objects give from afar in PhysicsForceUtil)
   - `/room` - Room types, room generation (RoomGenerationUtil — every Hub or Regular room starts out empty), room files, and the room map that catalogs the room files the game ships with
   - `/singlePlayer` - Single-player mode configs and types (SinglePlayerModeConfig — which room file a mode is played in, and who may enter it)
@@ -57,7 +58,8 @@
 
 ### `/dev` - Development Configuration
 - **`/config`** - Webpack config files, tsconfig files, Nginx config files
-- **`/scripts`** - Helper scripts (e.g. dev-server with hot-reloading capability, secrets injector, the composition and image map editors, the picture preparation tool)
+- **`/scripts`** - Dev scripts (e.g. dev-server with hot-reloading capability, secrets injector, the composition and image map editors, the picture preparation tool, the helpers' reply sampler)
+- **`/clawhub`** - The agents' manual as published on ClawHub (MIT-0): `public/skill.md` but for its license, which a test checks
 - **`/assets`** - Full-resolution samples the image map editor keeps to remake pictures (what canvases and props show) at another size, the images of disabled entries, and the index of its source library, whose photos are gitignored (third-party photos; never shipped)
 
 ### `/docs` - Documents explaining technical details
@@ -89,11 +91,15 @@
 - `src/shared/object/maps/objectTypeConfigMap.ts` - Overview of all types of GameObjects involved in gameplay.
 - `src/client/system/clientObservables.ts` - Observables used only by the client app (for internal event handling)
 - `src/shared/system/sharedObservables.ts` - Observables used by both the client and server apps (for internal event handling)
-- `views/page/dynamic/mypage.ejs` - Page where the client app runs (This is where gameplay takes place). This client app authenticates the user via the server's user-API routes and makes a socket connection (game_sockets) with the server's Socket.IO instance.
+- `views/page/dynamic/mypage.ejs` - Page where the client app runs (This is where gameplay takes place). This client app authenticates the user via the server's user-API routes and makes a socket connection (game_sockets) with the server's Socket.IO instance. It is also an agent's camera (`/camera/<token>`, see AgentCameraUtil): no sign-in, the token on its socket, and only the view through the agent's eyes.
+- `src/server/agent/util/agentMcpUtil.ts` - The MCP endpoint AI agents play over: its tools, and `INSTRUCTIONS`, which every agent reads on connecting.
+- `public/skill.md` - The agents' manual, served at thingspool.net/skill.md (Apache-2.0); its ClawHub copy is `dev/clawhub/thingspool/SKILL.md`.
+- `server.json` - The endpoint's entry in the official MCP Registry (`net.thingspool/thingspool`), published by hand with `mcp-publisher`; its `version` is the one the endpoint reports.
 
 ## Architecture Notes
 - **Observable Pattern**: Used for state management. Each listener can subscribe to an observable and react to its state changes.
-- **Optional Sign-Up**: A new user automatically joins the game as a guest, which is a temporary user profile. In order to save one's progress, the user needs to create his/her own account by selecting one of the given auth providers (such as Google OAuth2). Detailed flows are illustrated in `docs/networking/authentication.md`.
+- **Optional Sign-Up**: A new person automatically joins the game as a guest, which is a temporary user profile. In order to save one's progress, the user needs to create his/her own account by selecting one of the given auth providers (such as Google OAuth2). An AI agent instead registers itself through the MCP endpoint (user type `Agent`) and is known by its key; inactive agents are deleted by the guests' tiers, their rooms with them. Detailed flows are illustrated in `docs/networking/authentication.md` and `docs/networking/agents.md`.
+- **Agents Are Players Without Sockets**: An AI agent is a `UserContext` with no socket (`AgentUserContext`), kept present by the server between its MCP requests. It arrives and leaves through `UserSessionUtil` and acts only by signals encoded as a browser's and handled by `UserSignalDispatchUtil`, so rooms, managers and signal handlers never assume a socket. Helpers are NPCs, not users. See *Agents Keep Up With Every Feature* below.
 - **Separation between Static and Dynamic Pages**: Static pages (HTML files in the "public" directory) are being served via GitHub Pages, under the URL: `https://thingspool.net`. Dynamic pages and the server/client apps are being hosted in the VPS, under the URL: `https://app.thingspool.net` (live server) or `https://staging.thingspool.net` (staging server). During local dev test, a local URL (`http://127.0.0.1:3000`) is used to serve both static and dynamic contents.
 - **Room Generation Defines What a Room Is**: See *Project Rules* below.
 - **Stored Formats Keep Their History Apart**: A versioned stored type (e.g. `VoxelGrid`, `ObjectGroup`) holds only its current format. Decoders for older layouts, converters and legacy constants live in a sibling `versionMigration/` directory (e.g. `VoxelGridVersionMigration`), as DB row migrations do in `src/server/db/types/versionMigration/`.
@@ -107,7 +113,7 @@ edge cases, and the concrete checklist — read it before acting in that area.
 Every multiplayer room is born from `RoomGenerationUtil`, every single-player room is shipped as a room file (`RoomFile`), and nothing else ever produces one, so generation is the *definition* of a complete room. **Whenever a new room-level parameter is introduced, room generation must be extended to choose it as part of the same change** — `Room`, `RoomGenerationUtil`, `RoomFile` and every room file shipped under `public/app/assets/rooms`, and any curated data behind the parameter. A parameter no generator sets is one that every room silently holds the default value of. Contents are a narrower obligation: a new *placeable object* owes generation nothing, a new kind of *voxel* content does. Full rule: [`.claude/rules/room-generation.md`](.claude/rules/room-generation.md).
 
 ### The License Files Must Describe What Actually Ships
-The code is Apache-2.0; the writing and artwork under `public/` are all rights reserved; some bundled assets are third-party. That boundary exists only in `LICENSE-CONTENT.md` and `THIRD-PARTY-NOTICES.md`, nothing enforces it, and no test fails when it drifts. **Whenever the set of things that ship changes — a dependency, an external asset, a new `public/` directory, a new top-level code directory — the license files change in the same commit.** A copyleft or source-available dependency license is a decision for the user: report it and stop. Never add an asset whose terms are unknown. **`LICENSE` is verbatim Apache-2.0 and is never edited.** Full rule: [`.claude/rules/license-files.md`](.claude/rules/license-files.md).
+The code is Apache-2.0; the writing and artwork under `public/` are all rights reserved, but for the agents' manual (`public/skill.md`, Apache-2.0, with an MIT-0 copy for ClawHub); some bundled assets are third-party. That boundary exists only in `LICENSE-CONTENT.md` and `THIRD-PARTY-NOTICES.md`, nothing enforces it, and no test fails when it drifts. **Whenever the set of things that ship changes — a dependency, an external asset, a new `public/` directory, a new top-level code directory — the license files change in the same commit.** A copyleft or source-available dependency license is a decision for the user: report it and stop. Never add an asset whose terms are unknown. **`LICENSE` is verbatim Apache-2.0 and is never edited.** Full rule: [`.claude/rules/license-files.md`](.claude/rules/license-files.md).
 
 ### Plan Documents Are Historical Records
 Files under `/docs/plans` are dated records of what was known, intended and uncertain on the day they were written. **A plan document is edited only with the user's approval, whatever its date** — never on Claude's own initiative: not to rename a symbol that has since been renamed in `src/`, not to fix a stale path or number, not to correct it, not to append an outcome or a status note, and not to apply the documentation guidelines to it. Plans are also not added to the README index. When a sweeping edit (a rename, a find-and-replace, a docs-sync pass) matches a file under `/docs/plans`, **skip it and leave the file untouched**; inconsistency with today's code is the correct state for a historical record. If a plan is misleading, offer the user a *new* dated plan or an edit of the old one. Approval means the user asked for that edit, or said yes to it once proposed. Full rule: [`.claude/rules/plan-documents.md`](.claude/rules/plan-documents.md).
@@ -116,7 +122,7 @@ Files under `/docs/plans` are dated records of what was known, intended and unce
 The user reviews changes to `src/` by approving each file edit. **Every file created or modified under `src/` must be written with the file-editing tools (Edit, Write), never by a shell command** — no `python3`/`node -e` scripts, `sed -i`, `perl -pi`, redirects (`>`, `tee`) or heredocs, however many files a change touches. A shell command can match an allow rule and write without asking, which bypasses that review. The one exception is regenerating files marked auto-generated by running the project's own build scripts. Full rule: [`.claude/rules/source-edits.md`](.claude/rules/source-edits.md).
 
 ### Agents Keep Up With Every Feature
-AI agents play the game through the MCP endpoint (see `docs/networking/agents.md`): they can do only what its tools reach, see only what those tools put into words, and know only what they are told. **Whenever a feature is added or changed, the agents' side changes in the same change** — the tools reach it (or a comment says why not), what agents see describes it, and what they read says it: the endpoint's instructions, the manual (`public/skill.md`, with its ClawHub copy), the helpers' guide, `docs/networking/agents.md`, and the agent tests. Nothing fails when this drifts; agents just quietly can't, or are told wrong. Full rule: [`.claude/rules/agents-keep-up.md`](.claude/rules/agents-keep-up.md).
+AI agents play the game through the MCP endpoint (see `docs/networking/agents.md`): they can do only what its tools reach, see only what those tools put into words, and know only what they are told. **Whenever a feature is added or changed, the agents' side changes in the same change** — the tools reach it (or a comment says why not), what agents see describes it, and what they read says it: the endpoint's instructions, the manual (`public/skill.md`, with its ClawHub copy), what the helpers are told, `docs/networking/agents.md`, and the agent tests. Nothing fails when this drifts; agents just quietly can't, or are told wrong. Full rule: [`.claude/rules/agents-keep-up.md`](.claude/rules/agents-keep-up.md).
 
 ## Documentation Guidelines (`/docs`, excluding `/docs/plans`)
 A `/docs` page is a **short map of one subsystem** for a developer about to work on it: what it is for, its core concepts and invariants, the main flow, and where the code lives. It is not a description of everything the subsystem does. Keep each page as short as its subject allows — most fit on a screen or two. (`/docs/plans` is outside all of this; see "Plan Documents Are Historical Records" above.)

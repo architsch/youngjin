@@ -8,14 +8,14 @@ Server-side, first-party measurement of **what visitors from each traffic source
 - Promoted links carry `?ref=<tag>` (e.g. `https://app.thingspool.net/?ref=reddit-webgames`).
 - The static site carries a visitor's first `ref` of the session onto its links into the app (`views/partial/common/footer.ejs`), so a tagged dev-log post is attributed as well.
 - **First-touch**: the tag is stored only when a new account is created for the visitor.
-- AI agents count apart from people: their own accounts under an `agent` source, and the people who open a room link an agent passed on under `via-agent` (see [agents.md](../networking/agents.md)).
+- AI agents count apart from people: an agent's account, made by its `register` call, which no bot check stands before, under `agent`, or `agent-<ref>` for the `ref` it passes; and the people who open a room link an agent passed on, under `via-agent` (see [agents.md](../networking/agents.md)).
 - Crawlers, scanners, link-preview fetchers, scripted clients and requests with no User-Agent get no account (`BotDetectionUtil`), so they never count as arrivals. Fetchers posing as a browser still do. **Any other client that loads an app page does**, so check a tagged link with a bot User-Agent, never a plain browser or HTTP client.
 - The tag is rebuilt, not trimmed: only `a-z0-9-_` survive, the result is lowercased and capped at 32 characters, and an empty result becomes `direct`. **A tag outside that alphabet cannot be measured.**
 
 ## Funnel
 Milestones are defined in `FunnelMilestoneEnumMap`. Each is one letter on the account, counted **once per account** and never reset (unlike the FTUE record): Arrived, TutorialDone, EnteredRoom, Built, Chatted, OwnedRoom, SignedUp, Returned (a later day, using the stale-guest definition of a distinct login), RetainedRepeat.
 
-- Callers record milestones on every occurrence. Already-recorded milestones are cached on `SocketUserContext` (not `User`, which is serialized to the browser), so only a session's first occurrence reaches the DB. The cache can only answer "already recorded". A "not yet" is confirmed against the row.
+- Callers record milestones on every occurrence. Already-recorded milestones are cached on the `UserContext`, a browser's or an agent's (not `User`, which is serialized to the browser), so only a session's first occurrence reaches the DB. The cache can only answer "already recorded". A "not yet" is confirmed against the row.
 - Chat and build arrive on the same metadata signal and are told apart by key.
 
 ## Storage

@@ -47,4 +47,7 @@ export const ObjectMetadataKeyEnumMap: Record<string, number> =
     WanderRadius: 19,
     // The character a helper is played as, by its id, as an admin picks it (see NpcPersonalityMap).
     Personality: 20,
+    // "1" while a helper thinks of an answer, until it says it: shown to its room and never kept (see
+    // HelperBehaviorUtil). No signal may set it.
+    Thinking: 21,
 }

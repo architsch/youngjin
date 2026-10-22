@@ -13,6 +13,7 @@ import AsyncUtil from "../../../../../shared/system/util/asyncUtil";
 import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
 import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
 import GameObject from "../../../../object/types/gameObject/gameObject";
+import HelperThinkingUtil from "../../../../object/util/helperThinkingUtil";
 
 export default function Chat({hide}: Props)
 {
@@ -110,8 +111,9 @@ export default function Chat({hide}: Props)
     }
 }
 
-// Sets the player's SentMessage ("" clears it). Multiplayer persists it via the server echo;
-// single-player sets it locally, which drives the bubble and step conditions, and is told to the room's helpers.
+// Sets the player's SentMessage ("" clears it). Multiplayer persists it via the server echo, and shows the helper that
+// will hear it thinking at once; single-player sets it locally, which drives the bubble and step conditions, and is told
+// to the room's helpers.
 function setMyPlayerSentMessage(player: GameObject, message: string)
 {
     const room = App.getCurrentRoom();
@@ -123,7 +125,10 @@ function setMyPlayerSentMessage(player: GameObject, message: string)
             singlePlayerChatLineObservable.set(message);
     }
     else
+    {
         (player.components.speechBubble as SpeechBubble).setMessage(message, true);
+        HelperThinkingUtil.expectAnswerTo(message);
+    }
 }
 
 interface ChatState

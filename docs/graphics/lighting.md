@@ -30,6 +30,7 @@ Rebuild requests (a lamp changed, block work edited) are batched and handled onc
 
 ## Atmosphere settings (`RoomPrefs`)
 - Every setting is a small integer step, encoded by `RoomPrefsUtil` into a short string on `Room`, so the atmosphere travels with the room. Colors are palette indices, and each step maps through a curve suited to its quantity.
+- Agents see and set them by the customize-room panel's names (`AgentRoomSettingsUtil`), so a new setting needs its name there too.
 - **Light**: ambient color and strength; head-lamp color, power and range. A lamp has intensity and range. Range covers both reach and falloff, since they cannot sensibly vary independently. Ambient and head-lamp strengths run past normal lighting into deliberate overexposure.
 - **Light palette**: every entry is full brightness (hue and tint only), because strength is a separate setting.
 - **Fog**: color plus start and end distances. **Smoke**: strength, scale, speed, drift and rise. **Sky**: color. **Clouds**: color, opacity, scale, softness, speed. **Ground**: low and peak colors, scale, solidity, softness.

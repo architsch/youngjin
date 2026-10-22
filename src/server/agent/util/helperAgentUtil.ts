@@ -8,6 +8,7 @@ import NpcPersonalityMap from "../../../shared/object/maps/npcPersonalityMap";
 import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 import HelperSurroundings from "../../../shared/object/types/helperSurroundings";
 import QuarterTurnsUtil from "../../../shared/object/util/quarterTurnsUtil";
+import AdminPrefsUtil from "../../../shared/object/util/adminPrefsUtil";
 import NpcFacingUtil from "../../../shared/object/util/npcFacingUtil";
 import LabelTextUtil from "../../../shared/object/util/labelTextUtil";
 import HelperBehaviorUtil, { ANSWER_PAUSE_MS,
@@ -139,13 +140,17 @@ const HelperAgentUtil =
     // A line someone said, as SocketsServer dispatched it (see UserSignalDispatchUtil), for whichever helper it is for
     // (see HelperBehaviorUtil.pickListener). Only a player's own lines come here: what a helper says goes to its room
     // directly (see send), so helpers never hear one another, and two near each other never talk on at the key's expense.
+    // A ghost isn't heard, since an answer would show everyone it is there.
     hear: (userID: string, signal: SetObjectMetadataSignal): void =>
     {
         const player = ServerUserManager.getPlayerObject(userID);
         const roomID = ServerRoomManager.currentRoomIDByUserID[userID];
         const text = signal.metadataValue.trim();
-        if (player == undefined || player.objectId != signal.objectId || roomID == undefined || text.length == 0)
+        if (player == undefined || player.objectId != signal.objectId || roomID == undefined || text.length == 0
+            || AdminPrefsUtil.isGhost(player))
+        {
             return;
+        }
         const helper = HelperBehaviorUtil.pickListener([...helpers.values()].filter(helper => helper.roomID == roomID),
             text, player.transform.pos);
         const ctx = ServerUserManager.getSocketUserContext(userID);
@@ -158,7 +163,7 @@ const HelperAgentUtil =
         pending.lines.push(text);
         pending.lastAt = now;
         helper.linesByUserID.set(userID, pending);
-        HelperBehaviorUtil.hear(helper, userID, now);
+        HelperBehaviorUtil.hear(helper, surroundingsOf(helper), userID, now);
     },
     // An admin's edit-mode selection taking hold of a helper, or letting go of it (see HoldObjectSignal). Held, it stands
     // still for everyone, as it does under the admin's own pointer: at home, the way it was put, as the room keeps the
@@ -214,29 +219,36 @@ const HelperAgentUtil =
     {
         return [...helpers.values()].filter(helper => helper.roomID == roomID).flatMap(catchUpOn);
     },
-    getHelpers: (roomID: string): {objectId: string, name: string, at: Vec3, saying: string}[] =>
+    getHelpers: (roomID: string): {objectId: string, name: string, at: Vec3, saying: string, thinking: boolean}[] =>
     {
         return [...helpers.values()].filter(helper => helper.roomID == roomID)
-            .map(helper => ({objectId: helper.objectId, name: helper.name, at: {...helper.at}, saying: helper.saying}));
+            .map(helper => ({objectId: helper.objectId, name: helper.name, at: {...helper.at}, saying: helper.saying,
+                thinking: helper.thinking}));
     },
 }
 
-// Its room as its behavior asks of it: shown to the room, whose players are the people about. One unloaded since the
-// last beat, which forgets its helpers, has no blocks or people left in it.
+// Its room as its behavior asks of it: shown to the room, whose players are the people about, ghosts aside. One
+// unloaded since the last beat, which forgets its helpers, has no blocks or people left in it.
 function surroundingsOf(helper: HelperState): HelperSurroundings
 {
     const memory = ServerRoomManager.roomRuntimeMemories[helper.roomID] as RoomRuntimeMemory | undefined;
+    const seenPlayerOf = (userID: string) => {
+        const player = ServerUserManager.getPlayerObject(userID);
+        return AdminPrefsUtil.isGhost(player) ? undefined : player;
+    };
     return {
         voxels: memory?.room.voxelGrid.voxels ?? [],
         getPeople: () => Object.keys(memory?.participantUserNameByID ?? {})
-            .map(userID => ServerUserManager.getPlayerObject(userID)?.transform.pos)
+            .map(userID => seenPlayerOf(userID)?.transform.pos)
             .filter((pos): pos is Vec3 => pos != undefined),
         getPerson: (userID: string) => (ServerRoomManager.currentRoomIDByUserID[userID] == helper.roomID)
-            ? ServerUserManager.getPlayerObject(userID)?.transform.pos : undefined,
+            ? seenPlayerOf(userID)?.transform.pos : undefined,
+        hasLinesWaiting: () => helper.linesByUserID.size > 0,
         isHeld: () => helper.heldBy.size > 0,
         showAt: () => send(helper, "setObjectTransformSignal", transformSignal(helper)),
         showFacing: () => send(helper, "setObjectMetadataSignal", facingSignal(helper)),
         showSaying: () => send(helper, "setObjectMetadataSignal", speechSignal(helper, helper.saying)),
+        showThinking: () => send(helper, "setObjectMetadataSignal", thinkingSignal(helper)),
     };
 }
 
@@ -330,7 +342,8 @@ function tellNewcomers(helper: HelperState, memory: RoomRuntimeMemory): void
     }
 }
 
-// The room one is sent keeps the helper at home, so they are told where it is, which way it faces and what it is saying.
+// The room one is sent keeps the helper at home, so they are told where it is, which way it faces, what it is saying and
+// whether it is thinking of an answer.
 function catchUpOn(helper: HelperState): {signalType: string, signal: EncodableData}[]
 {
     const signals: {signalType: string, signal: EncodableData}[] = [];
@@ -340,11 +353,13 @@ function catchUpOn(helper: HelperState): {signalType: string, signal: EncodableD
         signals.push({signalType: "setObjectMetadataSignal", signal: facingSignal(helper)});
     if (helper.saying.length > 0)
         signals.push({signalType: "setObjectMetadataSignal", signal: speechSignal(helper, helper.saying)});
+    if (helper.thinking)
+        signals.push({signalType: "setObjectMetadataSignal", signal: thinkingSignal(helper)});
     return signals;
 }
 
 // Each visitor who comes near is greeted once in each of their logins (see UserContext.loginCount), not each time they
-// come into the room.
+// come into the room; a ghost not at all while it is one.
 function noticeVisitors(helper: HelperState, memory: RoomRuntimeMemory, now: number): void
 {
     for (const [userID, name] of Object.entries(memory.participantUserNameByID))
@@ -352,7 +367,7 @@ function noticeVisitors(helper: HelperState, memory: RoomRuntimeMemory, now: num
         const ctx = ServerUserManager.getSocketUserContext(userID);
         const player = ServerUserManager.getPlayerObject(userID);
         if (ctx == undefined || player == undefined || helper.greetedLogins.get(userID)?.loginCount === ctx.loginCount
-            || !HelperBehaviorUtil.isInEarshot(helper, player.transform.pos))
+            || AdminPrefsUtil.isGhost(player) || !HelperBehaviorUtil.isInEarshot(helper, player.transform.pos))
         {
             continue;
         }
@@ -389,10 +404,14 @@ function answerSpeakers(helper: HelperState, now: number): void
         if (now - pending.lastAt < ANSWER_PAUSE_MS)
             continue;
         helper.linesByUserID.delete(userID);
-        helper.path = [];
-        helper.answering = userID;
-        helper.lastTalkAt = now;
-        void answer(helper, userID, pending).finally(() => { helper.answering = undefined; });
+        HelperBehaviorUtil.startAnswering(helper, surroundingsOf(helper), userID, now);
+        void answer(helper, userID, pending).finally(() => {
+            // Shown to the room only while it is still a helper there (see findHelpers).
+            if (helpers.get(`${helper.roomID}/${helper.objectId}`) === helper)
+                HelperBehaviorUtil.stopAnswering(helper, surroundingsOf(helper));
+            else
+                helper.answering = undefined;
+        });
         return;
     }
 }
@@ -405,7 +424,7 @@ async function answer(helper: HelperState, userID: string, pending: HelperPendin
         if (refusalLine.length > 0)
         {
             HelperBehaviorUtil.meet(helper, surroundingsOf(helper), userID, Date.now());
-            HelperBehaviorUtil.say(helper, refusalLine, [userID], Date.now());
+            HelperBehaviorUtil.sayAnswer(helper, refusalLine, [userID], Date.now());
         }
         return;
     }
@@ -415,7 +434,7 @@ async function answer(helper: HelperState, userID: string, pending: HelperPendin
     if (reply == undefined || !helpers.has(`${helper.roomID}/${helper.objectId}`))
         return;
     HelperBehaviorUtil.meet(helper, surroundingsOf(helper), userID, Date.now());
-    HelperBehaviorUtil.say(helper, reply, [userID], Date.now());
+    HelperBehaviorUtil.sayAnswer(helper, reply, [userID], Date.now());
 }
 
 // Why no reply can be paid for this one now, as they are told, or "" when they have been told lately; undefined if one
@@ -457,6 +476,12 @@ function facingSignal(helper: HelperState): SetObjectMetadataSignal
 function speechSignal(helper: HelperState, text: string): SetObjectMetadataSignal
 {
     return new SetObjectMetadataSignal(helper.roomID, helper.objectId, ObjectMetadataKeyEnumMap.SentMessage, text);
+}
+
+function thinkingSignal(helper: HelperState): SetObjectMetadataSignal
+{
+    return new SetObjectMetadataSignal(helper.roomID, helper.objectId, ObjectMetadataKeyEnumMap.Thinking,
+        helper.thinking ? "1" : "");
 }
 
 // Shown to the room (or to one user in it), without changing what the room keeps.

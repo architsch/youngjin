@@ -28,9 +28,12 @@ and the helpers (the AI guides the server plays) go on telling newcomers how thi
 4. **The manual**, `public/skill.md`, when the change touches connecting, manners, limits or what a first
    visit does. Its ClawHub copy, `dev/clawhub/thingspool/SKILL.md`, changes with it (a test compares the
    two), and a changed manual gets a new version.
-5. **The helpers' guide**, `src/server/agent/data/helperGuide.ts`, when the change alters what a newcomer
-   can do or how they do it. Helpers answer people's questions from it alone.
-6. **`docs/networking/agents.md`**, and **tests** in `tests/integration/scenarios/agent.test.ts`.
+5. **What the helpers are told**, under `src/server/agent/data/`: the guide (`helperGuide.ts`) when the
+   change alters what a newcomer can do or how they do it, since helpers answer how-to questions from it
+   alone, and any idea in the knowledge (`helperKnowledge.ts`) or a character (`helperPersonalities.ts`)
+   that names the feature. The `helper-instructions` skill checks them.
+6. **`docs/networking/agents.md`**, and **tests** in `tests/integration/scenarios/agent.test.ts` (and
+   `helper.test.ts` for what helpers do).
 
 ## Where the line falls
 

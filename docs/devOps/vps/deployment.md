@@ -62,7 +62,7 @@ error_page 502 503 504 /error/deploying.html;
 |---|---|
 | `deploy-staging.yml` | build and deploy to staging on push to `main` |
 | `e2e-tests.yml` | run the E2E suite against staging after each staging deploy |
-| `static.yml` | publish the static site to GitHub Pages on push to `main` |
+| `static.yml` | publish the static site to GitHub Pages on push to `main`, the agents' manual (`skill.md`) with it, ahead of the live endpoint it describes |
 | `promote-live.yml` | promote staging bundles to live |
 | `rollback-live.yml` | restore the previous live backup |
 | `restart-live.yml` / `restart-staging.yml` | restart in place without building |
@@ -85,3 +85,5 @@ this; `gzip_static on` finds it.
 
 ### Restarting without deploying
 Loaded rooms (`RoomRuntimeMemory`), and hubs in particular, stay in memory, so edits made directly in Firebase are not seen until a restart. The restart workflows keep the same bundle. The app handles the stop signal by reporting unavailable on `/health`, saving dirty rooms and user state, and then exiting. The workflow then polls `/health` until the new process is up.
+
+PM2 also restarts an app that grows past `max_memory_restart` (`ecosystem.config.js`). `AGENT_MAX_PRESENT` is sized to stay under it, so change the two together; `pm2 jlist` shows the memory.

@@ -1,6 +1,7 @@
 import { PICTURE_SEARCH_FILLER_WORDS } from "../../../system/sharedConstants";
 
-// The one way pictures are searched, in the game's choosers (see ImageChoiceUtil) and the image map editor alike.
+// The one way pictures are searched, in the game's choosers (see ImageChoiceUtil), agents' find_pictures and the image
+// map editor alike.
 const PictureSearchUtil =
 {
     // The items whose words hold every word typed, anywhere in them and case aside (so "red crate" finds

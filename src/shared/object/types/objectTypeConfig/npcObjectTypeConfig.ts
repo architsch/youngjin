@@ -44,6 +44,13 @@ const NpcObjectTypeConfig =
         allowedDirections: [DIR_VEC_BY_NAME["+y"]],
         standsOut: true,
     },
+    // What a helper says, the way it faces and whether it is thinking are shown to its room as it is played (see
+    // HelperBehaviorUtil), and no one may set them.
+    shownMetadataKeys: [
+        ObjectMetadataKeyEnumMap.SentMessage,
+        ObjectMetadataKeyEnumMap.Facing,
+        ObjectMetadataKeyEnumMap.Thinking,
+    ],
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => {
         if (!RoomValidationUtil.userIsAdmin(user))
             return false;

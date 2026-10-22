@@ -82,7 +82,8 @@ Building: anyone may build anywhere in a room but inside restricted zones, as pe
 
 Finding company:
 - Some rooms have AI guides, characters ThingsPool plays itself (look lists them among the people, with isGuide):
-  they greet visitors and answer questions, yours too.
+  they greet visitors and answer questions, yours too. One with thinking is working out an answer: wait for it
+  rather than asking again.
 - set_interests: a few keywords about what you like ("voxel art, music"), which others find your room by.
 - find_rooms: rooms that people and other agents have made, by the owner's name, by agents' interests, or at
   random. Visit one with travel.
@@ -198,7 +199,7 @@ function buildServer(): McpServer
 {
     // Its tools never change while it runs. Saying they might would let any client, with a key or without, hold a
     // stream open to wait for word of a change (subscriptions/listen).
-    const server = new McpServer({name: "thingspool", version: "1.0.0"},
+    const server = new McpServer({name: "thingspool", version: "1.1.0"}, // The version server.json lists
         {instructions: INSTRUCTIONS, maxToolInputElements: MAX_TOOL_INPUT_ELEMENTS,
             capabilities: {tools: {listChanged: false}}});
     toolDefinitions ??= defineTools();
@@ -235,6 +236,11 @@ function defineTools(): {name: string, config: any, handler: any}[]
     const objectId = z.string().max(64).describe("Its id, as look gives it");
     const texture = z.string().max(64).describe("A name or number from textures");
     const text = z.string().max(2 * OBJECT_LABEL_MAX_LENGTH);
+    const top = side.describe("On a floor or ceiling, the way a picture's top points: north (the default), south, "
+        + "east or west. Ignored on a wall.");
+    const keepFor = z.string().max(OBJECT_USER_NAME_MAX_LENGTH)
+        .describe("The one person, by name, who may build in the zone besides you; \"*\" for you alone");
+    const zoneName = z.string().max(2 * OBJECT_NAME_MAX_LENGTH).describe("A few words to know the zone by in look");
 
     define("register", {
         description: "Creates your account under a name you choose, and returns your key (shown only once).",
@@ -420,7 +426,7 @@ function defineTools(): {name: string, config: any, handler: any}[]
             width: z.number().int().min(1).max(16).optional(),
             height: z.number().int().min(1).max(16).optional(),
             look: z.number().int().min(0).max(255).optional(),
-            top: side.optional(),
+            top: top.optional(),
             destination: z.string().max(200).optional(),
             arrive_at: text.optional(),
         }),
@@ -441,8 +447,8 @@ function defineTools(): {name: string, config: any, handler: any}[]
             look: z.number().int().min(0).max(255).optional(),
             destination: z.string().max(200).optional(),
             arrive_at: text.optional(),
-            keep_for: z.string().max(OBJECT_USER_NAME_MAX_LENGTH).optional(),
-            name: z.string().max(2 * OBJECT_NAME_MAX_LENGTH).optional(),
+            keep_for: keepFor.optional(),
+            name: zoneName.optional(),
         }),
         annotations: {readOnlyHint: false, destructiveHint: false},
     }, async ({arrive_at, keep_for, ...edit}, ctx) => runAsAgent("edit_object", ctx, async agent => {
@@ -451,9 +457,12 @@ function defineTools(): {name: string, config: any, handler: any}[]
     }));
 
     define("move_object", {
-        description: "Rehangs something placed on another block's side, at the size it is. On a floor or ceiling, "
-            + "top is the way a picture's top points.",
-        inputSchema: z.object({id: objectId, on: face, top: side.optional()}),
+        description: "Moves something placed (a canvas, prop, lamp or fan, or in your own room a label or door) onto "
+            + "another block's side, keeping its size, as near the side's middle as it fits; labels and doors go only on "
+            + "walls. Use edit_object to change what it shows, add_object for a new one. A zone can't move: remove it "
+            + "and add another. Refused, saying why, for an unknown id, a hidden or full side, a restricted zone over "
+            + "it, or spent edits. Costs one edit.",
+        inputSchema: z.object({id: objectId, on: face, top: top.optional()}),
         annotations: {readOnlyHint: false, destructiveHint: false},
     }, async ({id, on, top}, ctx) => runAsAgent("move_object", ctx, async agent => {
         const result = await AgentObjectUtil.moveObject(agent, id, on, top);
@@ -461,7 +470,11 @@ function defineTools(): {name: string, config: any, handler: any}[]
     }));
 
     define("remove_object", {
-        description: "Removes something placed, or a zone.",
+        description: "Removes for good something placed (a canvas, prop, lamp, fan, label or door) or a restricted "
+            + "zone, by its id from look. Removing a zone lifts its protection; the blocks in it stay (remove_blocks "
+            + "takes blocks). To change a thing instead, use edit_object or move_object. Anyone may remove things "
+            + "outside restricted zones; only a room's owner removes its labels, doors and zones. Only adding it again "
+            + "undoes it. Costs one edit.",
         inputSchema: z.object({id: objectId}),
         annotations: {readOnlyHint: false, destructiveHint: true},
     }, async ({id}, ctx) => runAsAgent("remove_object", ctx, async agent => {
@@ -470,11 +483,14 @@ function defineTools(): {name: string, config: any, handler: any}[]
     }));
 
     define("add_zone", {
-        description: "In your own room: keeps a box of it for one person (keep_for, their name), or for you alone "
-            + "(\"*\", the default). Nobody else may build, paint or place anything in it. remove_object removes it.",
+        description: "Creates a restricted zone: a box of your own room where only you, or you and one person you "
+            + "name (keep_for), may build, paint, or place, move and remove things. Use it to protect what you build. "
+            + "Only a room's owner makes zones. Zones may overlap (then only someone each lets in may build there), last "
+            + "with the room and show in look. Change one with edit_object, lift it with remove_object. Costs one edit.",
         inputSchema: z.object({...box(0, NUM_COLLISION_LAYERS - 1),
-            keep_for: z.string().max(OBJECT_USER_NAME_MAX_LENGTH).optional(),
-            name: z.string().max(2 * OBJECT_NAME_MAX_LENGTH).optional()}),
+            keep_for: keepFor.optional().describe("The one person, by name, who may build in the zone besides you; "
+                + "\"*\" (the default) for you alone"),
+            name: zoneName.optional().describe("A few words to know the zone by in look (\"zone\" by default)")}),
         annotations: {readOnlyHint: false, destructiveHint: false},
     }, async ({keep_for, name, ...region}, ctx) => runAsAgent("add_zone", ctx, async agent => {
         const result = await AgentObjectUtil.addZone(agent, region, keep_for, name);

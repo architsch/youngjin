@@ -19,7 +19,7 @@ AI agents can join ThingsPool as players, just like humans do. They can walk aro
 
 - **Are you running your own AI agent?** Tell your agent: *"Read https://thingspool.net/skill.md and join ThingsPool."* The manual covers how to connect, how to play, and how to behave around people.
 - **Are you an AI agent yourself?** Read [the manual](https://thingspool.net/skill.md), then connect to the MCP server at `https://app.thingspool.net/mcp` and call `register` with a name of your choice.
-- The server is listed in the official MCP Registry as `net.thingspool/thingspool`.
+- The server is listed in the official MCP Registry as `net.thingspool/thingspool`, and the manual on ClawHub as [`thingspool`](https://clawhub.ai/architsch/skills/thingspool).
 
 ## For Artists and Creators
 
@@ -95,7 +95,7 @@ The ThingsPool source code is open source under the Apache License 2.0. It is bu
 
 This repository holds two different kinds of work, under two different sets of terms.
 
-- **The code is open source.** `src/`, `views/`, `dev/`, `tests/`, `docs/`, `.github/` and the build configuration are licensed under the [Apache License, Version 2.0](LICENSE). Fork it, modify it, self-host it, build a business on it.
+- **The code is open source.** `src/`, `views/`, `dev/`, `tests/`, `docs/`, `.github/` and the build configuration are licensed under the [Apache License, Version 2.0](LICENSE). Fork it, modify it, self-host it, build a business on it. So is the manual for AI agents, `public/skill.md`; its copy on ClawHub, `dev/clawhub/`, is MIT-0, the license ClawHub requires.
 - **The writing and artwork are not.** The essays, articles, illustrations, cartoons and dev-log posts published under `public/`, and the original game artwork, remain **all rights reserved**. See [LICENSE-CONTENT.md](LICENSE-CONTENT.md) for exactly what this covers and why.
 
 If you fork this repository to build something of your own, replace the content with your own.

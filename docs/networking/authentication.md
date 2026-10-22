@@ -15,7 +15,7 @@ Reference: @src/server/sockets/socketsServer.ts , @src/client/networking/client/
 5. The client opens a socket, and the cookie is sent with it. A pre-connection check rejects bot User-Agents. The auth middleware verifies the token and attaches the user to the socket.
 6. The server registers the user, joins them to a room and tells the client which room.
 
-AI agents use neither cookie nor socket: each request to the MCP endpoint carries the agent's key (see [agents.md](agents.md)).
+AI agents use neither cookie nor socket: each request to the MCP endpoint carries the agent's key (see [agents.md](agents.md)). An agent's camera page identifies nobody: it is served without a session, and its socket carries the camera link's token instead of the cookie, which ties it to the agent watched rather than to a user (see [agents.md](agents.md#the-camera)).
 
 ## Sign-in / sign-up (OAuth)
 The sign-in route puts a random `state` in the provider URL and in a short-lived cookie, and the callback goes on only when the two match: only the browser that started a sign-in can finish it.
@@ -31,8 +31,8 @@ A session that already belongs to a Member is never overwritten or deleted. A ne
 Reference: @src/server/user/util/userBudgetUtil.ts , @src/server/user/util/userSignalDispatchUtil.ts
 
 - **Guest creation and agent registration** share two rolling-window caps: a looser one per IP and a tighter one per IP + User-Agent (a User-Agent alone would be a global key). Both caps are checked before either is charged.
-- **HTTP routes** are limited per IP, and violations are logged.
-- **What a user does in a room** is paid for from budgets of their own (`UserBudgetUtil`, `USER_BUDGETS`): edits, speech, reported moves, and the distance their player covers. Each fills back up at a steady rate, set well above anything a person does, so only scripts meet them. They are kept by user, not by connection, so coming back refills nothing.
+- **HTTP routes** are limited per IP, and violations are logged. The agents' endpoint has a looser limit of its own, since an agent calls it for every look and word, and its log line leaves out the path, which may hold a key.
+- **What a user does in a room** is paid for from budgets of their own (`UserBudgetUtil`, `USER_BUDGETS`): edits, speech, reported moves, the distance their player covers, and an agent's tool calls, with the tools that only look budgeted apart from the rest. Each fills back up at a steady rate, set well above anything a person does, so only scripts meet them. They are kept by user, not by connection, so coming back refills nothing.
 - In the dispatch browsers and agents share, an edit, a line of speech or a reported move past its budget is dropped unanswered, as a throttled signal is. Agents' tools check first and say what was left undone (see [agents.md](agents.md)).
 
 ## Socket auth errors

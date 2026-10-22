@@ -62,6 +62,7 @@ import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import NpcPersonalityMap from "../../../src/shared/object/maps/npcPersonalityMap";
 import HelperBehaviorUtil from "../../../src/shared/object/util/helperBehaviorUtil";
+import AdminPrefsUtil from "../../../src/shared/object/util/adminPrefsUtil";
 import MessageLinkUtil from "../../../src/shared/object/util/messageLinkUtil";
 import { NPC_MESSAGE_MAX_LENGTH, NUM_VOXEL_COLS, OBJECT_MESSAGE_MAX_LENGTH, OBJECT_NAME_MAX_LENGTH,
     ROOM_EDITOR_SINGLE_PLAYER_MODE, SANDBOX_SINGLE_PLAYER_MODE,
@@ -195,6 +196,14 @@ function facingsOf(objectId: string): number[]
         .map(({signal}) => NpcFacingUtil.decode(signal.metadataValue)!);
 }
 
+// Whether a helper was shown thinking of an answer, in turn, as the room was shown it.
+function thinkingOf(objectId: string): string[]
+{
+    return shown.filter(({signalType, signal, userID}) => userID == undefined && signalType == "setObjectMetadataSignal"
+        && signal.objectId == objectId && signal.metadataKey == ObjectMetadataKeyEnumMap.Thinking)
+        .map(({signal}) => signal.metadataValue);
+}
+
 // Or the way it was put to face, if it hasn't been shown turning.
 function lastFacingOf(objectId: string, quarterTurns: number = 0): number
 {
@@ -222,9 +231,15 @@ function facingPut(quarterTurns: number): number
 // A person's line, sent as their browser sends it.
 async function talk(person: ConnectedUser, text: string): Promise<void>
 {
+    await setOwnValue(person, ObjectMetadataKeyEnumMap.SentMessage, text);
+}
+
+// A value of a person's own player, set as their browser sets it.
+async function setOwnValue(person: ConnectedUser, metadataKey: number, value: string): Promise<void>
+{
     const bufferState = EncodingUtil.startEncoding();
     new SetObjectMetadataSignal(ServerRoomManager.currentRoomIDByUserID[person.user.id], playerOf(person.user.id).objectId,
-        ObjectMetadataKeyEnumMap.SentMessage, text).encode(bufferState);
+        metadataKey, value).encode(bufferState);
     await UserSignalDispatchUtil.dispatch(person.socketUserContext, "setObjectMetadataSignal",
         EncodingUtil.endEncoding(bufferState));
 }
@@ -1080,6 +1095,29 @@ describe("helpers", () => {
         expect(Math.min(...walked.map(at => across(at, him)))).toBeGreaterThanOrEqual(3);
     });
 
+    it("walks on past an admin in ghost mode in its way, whom it doesn't see", async () => {
+        const home = inFrontOfEntrance(FIRST_HUB_ID, 4);
+        const mira = standNpc(FIRST_HUB_ID, "Mira", home, 0, {[ObjectMetadataKeyEnumMap.WanderRadius]: "8"});
+        await live(1);
+        const alice = await joinPerson("Alice", "an");
+        await moveTo(alice, inFrontOfEntrance(FIRST_HUB_ID, 11.5));
+        const ghost = harness.connectUser({id: "id-Ghost", userName: "Ghost", userType: UserTypeEnumMap.Admin,
+            playerMetadata: {[ObjectMetadataKeyEnumMap.AdminPrefs]: AdminPrefsUtil.encode({ghostMode: true})}});
+        await harness.joinRoom(ghost, FIRST_HUB_ID);
+        await moveTo(ghost, inFrontOfEntrance(FIRST_HUB_ID, 8.5));
+        await live(6);
+
+        await talk(alice, "over here!");
+        const walked: Vec3[] = [];
+        for (let i = 0; i < 10; ++i)
+        {
+            await live(1);
+            walked.push(helperIn(FIRST_HUB_ID, mira).at);
+        }
+        const unseen = playerOf(ghost.user.id).transform.pos;
+        expect(Math.min(...walked.map(at => across(at, unseen)))).toBeLessThan(3);
+    });
+
     it("goes no farther from home than an admin sets, and nowhere at all when that is none", async () => {
         const home = inFrontOfEntrance(FIRST_HUB_ID, 6);
         const mira = standNpc(FIRST_HUB_ID, "Mira", home, 0, {[ObjectMetadataKeyEnumMap.WanderRadius]: "1"});
@@ -1159,6 +1197,157 @@ describe("helpers", () => {
         await live(2);
         expect(saidBy(mira)).toContain("Hello Bob!");
         expect(facingAt(bob)).toBeLessThan(3);
+    });
+
+    it("is shown thinking of an answer the moment it hears a line, before the pause it waits for", async () => {
+        const mira = standNpc(FIRST_HUB_ID, "Mira");
+        await live(1);
+        const alice = await joinPerson("Alice", "an");
+        await live(12);
+        shown.length = 0;
+
+        await talk(alice, "hi Mira!");
+        expect(thinkingOf(mira)).toEqual(["1"]);
+        expect(claude.requests).toEqual([]);
+        await live(3);
+        expect(claude.requests).toHaveLength(1);
+    });
+
+    it("stops being shown thinking once lines left waiting too long are let go, with nothing else to answer",
+        async () => {
+        const mira = standNpc(FIRST_HUB_ID, "Mira");
+        await live(1);
+        const alice = await joinPerson("Alice", "an");
+        const bob = await joinPerson("Bob", "an");
+        await live(12);
+        let answered = () => {};
+        claude.thinking = new Promise(resolve => { answered = resolve; });
+        shown.length = 0;
+
+        await talk(alice, "hi Mira!");
+        await live(3);
+        await talk(bob, "and me?");
+        await live(65);
+        expect(thinkingOf(mira)).toEqual(["1"]);
+
+        // Alice's answer comes after Bob's line has been let go of, which leaves nothing to think of.
+        answered();
+        await live(3);
+        expect(thinkingOf(mira)).toEqual(["1", ""]);
+        expect(claude.requests).toHaveLength(1);
+    });
+
+    it("neither greets, hears nor turns to an admin in ghost mode, whom nobody sees, until they are seen again",
+        async () => {
+        const mira = standNpc(FIRST_HUB_ID, "Mira");
+        await live(1);
+        const ghost = harness.connectUser({id: "id-Ghost", userName: "Ghost", userType: UserTypeEnumMap.Admin,
+            playerMetadata: {[ObjectMetadataKeyEnumMap.AdminPrefs]: AdminPrefsUtil.encode({ghostMode: true})}});
+        await harness.joinRoom(ghost, FIRST_HUB_ID);
+        await live(6);
+        await talk(ghost, "hi Mira!");
+        await live(6);
+        expect(saidBy(mira)).toEqual([]);
+        expect(thinkingOf(mira)).toEqual([]);
+        expect(facingsOf(mira)).toEqual([]);
+        expect(claude.requests).toEqual([]);
+
+        await setOwnValue(ghost, ObjectMetadataKeyEnumMap.AdminPrefs, AdminPrefsUtil.encode({ghostMode: false}));
+        await live(3);
+        expect(saidBy(mira)).toEqual([expect.stringMatching(/^Hi Ghost, welcome to ThingsPool!/)]);
+    });
+
+    it("is shown thinking of an answer, its last words still up, from when it hears a line until the answer is up",
+        async () => {
+        const mira = standNpc(FIRST_HUB_ID, "Mira");
+        await live(1);
+        const alice = await joinPerson("Alice", "an");
+        const looker = await registerAndAttend("Looker", "10.0.0.9");
+        await live(2);
+        // Up for a good while yet (see HelperBehaviorUtil's pace).
+        expect(saidBy(mira)).toEqual(["Hi everyone, welcome to ThingsPool! I'm Mira. Ask me anything, or just look "
+            + "around!"]);
+        const guideSeen = () => (AgentToolUtil.look(looker) as any).people.find((person: any) => person.name == "Mira");
+        expect(guideSeen().thinking).toBeUndefined();
+
+        let answered = () => {};
+        claude.thinking = new Promise(resolve => { answered = resolve; });
+        shown.length = 0;
+        await talk(alice, "hi Mira, what is this place?");
+        await live(3);
+        expect(thinkingOf(mira)).toEqual(["1"]);
+        expect(guideSeen().thinking).toBe(true);
+        // Its greeting stays up meanwhile.
+        expect(shown.filter(({signal}) => signal.objectId == mira
+            && signal.metadataKey == ObjectMetadataKeyEnumMap.SentMessage)).toEqual([]);
+
+        // An answer that comes while the greeting is still being read waits for it, and is thought of until it is up.
+        answered();
+        await live(2);
+        expect(claude.requests).toHaveLength(1);
+        expect(saidBy(mira)).toEqual([]);
+        expect(thinkingOf(mira)).toEqual(["1"]);
+        expect(guideSeen().thinking).toBe(true);
+        await live(3);
+        const toRoom = shown.filter(({signal, userID}) => userID == undefined && signal.objectId == mira
+            && [ObjectMetadataKeyEnumMap.SentMessage, ObjectMetadataKeyEnumMap.Thinking].includes(signal.metadataKey))
+            .map(({signal}) => [signal.metadataKey, signal.metadataValue]);
+        expect(toRoom).toEqual([[ObjectMetadataKeyEnumMap.Thinking, "1"],
+            [ObjectMetadataKeyEnumMap.SentMessage, "Happy to help!"], [ObjectMetadataKeyEnumMap.Thinking, ""]]);
+        expect(guideSeen().thinking).toBeUndefined();
+    });
+
+    it("stops being shown thinking once it has nothing to say: a reply that fails, or a refusal it gave lately",
+        async () => {
+        const mira = standNpc(FIRST_HUB_ID, "Mira");
+        await live(1);
+        const alice = await joinPerson("Alice", "an");
+        await live(12);
+        shown.length = 0;
+
+        claude.failing = true;
+        await talk(alice, "hello?");
+        await live(4);
+        expect(thinkingOf(mira)).toEqual(["1", ""]);
+
+        delete process.env.ANTHROPIC_API_KEY;
+        await talk(alice, "anyone there?");
+        await live(12);
+        await talk(alice, "hello??");
+        await live(12);
+        expect(saidBy(mira)).toEqual([expect.stringMatching(/^Sorry, I can only say hello/)]);
+        expect(thinkingOf(mira)).toEqual(["1", "", "1", "", "1", ""]);
+    });
+
+    it("stops being shown thinking once an admin makes it idle as it thinks", async () => {
+        const mira = standNpc(FIRST_HUB_ID, "Mira");
+        await live(1);
+        const alice = await joinPerson("Alice", "an");
+        await live(6);
+        claude.thinking = new Promise(() => {});
+        await talk(alice, "hi Mira!");
+        await live(3);
+        expect(thinkingOf(mira)).toEqual(["1"]);
+
+        setNpcValue(FIRST_HUB_ID, mira, ObjectMetadataKeyEnumMap.Personality, "idle");
+        await live(1);
+        expect(thinkingOf(mira)).toEqual(["1", ""]);
+    });
+
+    it("tells someone who comes into its room while it thinks of an answer that it is", async () => {
+        const mira = standNpc(FIRST_HUB_ID, "Mira");
+        await live(1);
+        const alice = await joinPerson("Alice", "an");
+        await live(6);
+        claude.thinking = new Promise(() => {});
+        await talk(alice, "hi Mira!");
+        await live(3);
+
+        const bob = await joinPerson("Bob", "an");
+        await live(1);
+        expect(shown.filter(({signal, userID}) => userID == bob.user.id && signal.objectId == mira
+            && signal.metadataKey == ObjectMetadataKeyEnumMap.Thinking).map(({signal}) => signal.metadataValue))
+            .toEqual(["1"]);
     });
 
     it("keeps looking at whom its words are for while they are read, and turns to the next with the next words",
@@ -1417,7 +1606,7 @@ describe("helpers", () => {
         expect(lastFacingOf(mira)).toBe(facingPut(quarterTurns));
     });
 
-    it("lets nobody set the way it faces, an admin included", async () => {
+    it("lets nobody set the way it faces or whether it is thinking, an admin included", async () => {
         const mira = standNpc(FIRST_HUB_ID, "Mira");
         await live(1);
         const admin = harness.connectUser({id: "id-Admin", userName: "Admin", userType: UserTypeEnumMap.Admin});
@@ -1435,6 +1624,9 @@ describe("helpers", () => {
         await set(ObjectMetadataKeyEnumMap.Facing, "90");
         expect(metadata[ObjectMetadataKeyEnumMap.Facing]).toBeUndefined();
         expect(facingsOf(mira)).toEqual([]);
+        await set(ObjectMetadataKeyEnumMap.Thinking, "1");
+        expect(metadata[ObjectMetadataKeyEnumMap.Thinking]).toBeUndefined();
+        expect(thinkingOf(mira)).toEqual([]);
         // As an admin's name for it is set, the same way.
         await set(ObjectMetadataKeyEnumMap.Label, "Mia");
         expect(metadata[ObjectMetadataKeyEnumMap.Label].str).toBe("Mia");

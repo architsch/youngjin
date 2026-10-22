@@ -12,6 +12,7 @@ import HelperSurroundings from "../../../shared/object/types/helperSurroundings"
 import HelperBehaviorUtil, { ANSWER_PAUSE_MS } from "../../../shared/object/util/helperBehaviorUtil";
 import NpcFacingUtil from "../../../shared/object/util/npcFacingUtil";
 import QuarterTurnsUtil from "../../../shared/object/util/quarterTurnsUtil";
+import AdminPrefsUtil from "../../../shared/object/util/adminPrefsUtil";
 import Room from "../../../shared/room/types/room";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 import { SIGNAL_BATCH_SEND_INTERVAL } from "../../../shared/system/sharedConstants";
@@ -68,14 +69,15 @@ roomChangedObservable.addListener("singlePlayerHelperUtil", () => {
 // A line the user said, for whichever helper it is for (see HelperBehaviorUtil.pickListener).
 singlePlayerChatLineObservable.addListener("singlePlayerHelperUtil", (text: string) => {
     const user = App.getUser();
+    const room = App.getCurrentRoom();
     const me = getMyPosition();
     const helper = (me == undefined) ? undefined : HelperBehaviorUtil.pickListener([...helpers.values()], text, me);
-    if (helper == undefined || user == undefined || text.trim().length == 0)
+    if (helper == undefined || user == undefined || room == undefined || text.trim().length == 0)
         return;
     const now = Date.now();
     helper.lines.push(text.trim());
     helper.linesAt = now;
-    HelperBehaviorUtil.hear(helper, user.id, now);
+    HelperBehaviorUtil.hear(helper, surroundingsOf(helper, room), user.id, now);
 });
 
 // Each second: the helpers there are now, each greeting the user once they come near, and answering them once they
@@ -93,7 +95,7 @@ function beat(room: Room, now: number): void
             helper.greeted = true;
             HelperBehaviorUtil.say(helper, HelperBehaviorUtil.getGreeting(helper, [user.userName], false), [user.id], now);
         }
-        answer(helper, now);
+        answer(helper, room, now);
         HelperBehaviorUtil.beat(helper, surroundings, now, helper.lines.length > 0);
     }
 }
@@ -145,7 +147,7 @@ function followHold(helper: SinglePlayerHelper, room: Room, surroundings: Helper
 }
 
 // Once the user has paused, and it has said all it was saying, it asks the server what to answer, and stops to say it.
-function answer(helper: SinglePlayerHelper, now: number): void
+function answer(helper: SinglePlayerHelper, room: Room, now: number): void
 {
     const user = App.getUser();
     if (user == undefined || helper.lines.length == 0 || helper.answering != undefined || helper.bubbles.length > 0
@@ -155,17 +157,20 @@ function answer(helper: SinglePlayerHelper, now: number): void
     }
     const text = helper.lines.slice(-MAX_LINES_ASKED).join(" ");
     helper.lines = [];
-    helper.path = [];
-    helper.answering = user.id;
-    helper.lastTalkAt = now;
+    HelperBehaviorUtil.startAnswering(helper, surroundingsOf(helper, room), user.id, now);
     void HelperAPIClient.reply(helper.objectId, helper.name, helper.personality, text).then(reply => {
         const room = App.getCurrentRoom();
         if (reply.length == 0 || room == undefined || helpers.get(helper.objectId) !== helper)
             return;
         HelperBehaviorUtil.meet(helper, surroundingsOf(helper, room), user.id, Date.now());
-        HelperBehaviorUtil.say(helper, reply, [user.id], Date.now());
+        HelperBehaviorUtil.sayAnswer(helper, reply, [user.id], Date.now());
     }).finally(() => {
-        helper.answering = undefined;
+        // Shown only while it is still a helper in the room the user is in (see findHelpers).
+        const room = App.getCurrentRoom();
+        if (room != undefined && helpers.get(helper.objectId) === helper)
+            HelperBehaviorUtil.stopAnswering(helper, surroundingsOf(helper, room));
+        else
+            helper.answering = undefined;
     });
 }
 
@@ -179,6 +184,7 @@ function surroundingsOf(helper: SinglePlayerHelper, room: Room): HelperSurroundi
             return (me == undefined) ? [] : [me];
         },
         getPerson: (userID: string) => (userID == App.getUser()?.id) ? getMyPosition() : undefined,
+        hasLinesWaiting: () => helper.lines.length > 0,
         isHeld: () => NpcGameObject.isHeld(helper.objectId),
         showAt: () => {
             const scale = room.objectById[helper.objectId]?.transform.scale ?? {x: 1, y: 1, z: 1};
@@ -189,12 +195,16 @@ function surroundingsOf(helper: SinglePlayerHelper, room: Room): HelperSurroundi
             NpcFacingUtil.encode(helper.facing), false),
         showSaying: () => ClientObjectManager.setObjectMetadata(helper.objectId, ObjectMetadataKeyEnumMap.SentMessage,
             helper.saying, false),
+        showThinking: () => ClientObjectManager.setObjectMetadata(helper.objectId, ObjectMetadataKeyEnumMap.Thinking,
+            helper.thinking ? "1" : "", false),
     };
 }
 
-// The user's player, at its middle.
+// The user's player, at its middle; none for a ghost, which helpers neither greet nor hear (see AdminPrefsUtil.isGhost).
 function getMyPosition(): Vec3 | undefined
 {
-    const position = ClientObjectManager.getMyPlayer()?.position;
-    return (position == undefined) ? undefined : {x: position.x, y: position.y, z: position.z};
+    const player = ClientObjectManager.getMyPlayer();
+    if (player == undefined || AdminPrefsUtil.isGhost(player.params))
+        return undefined;
+    return {x: player.position.x, y: player.position.y, z: player.position.z};
 }

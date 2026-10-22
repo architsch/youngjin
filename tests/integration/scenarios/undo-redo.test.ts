@@ -134,6 +134,7 @@ const OTHER_TEXTURES = [11, 12, 13, 14, 15, 16];
 
 const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
 const labelTypeIndex = ObjectTypeConfigMap.getIndexByType("Label");
+const npcTypeIndex = ObjectTypeConfigMap.getIndexByType("Npc");
 const voxelTypeIndex = ObjectTypeConfigMap.getIndexByType("Voxel");
 
 // A block standing by itself on the room's floor, well away from the walls: its voxel, and where its middle
@@ -978,6 +979,25 @@ describe("an object's edits, undone and redone", () => {
         expect(await ClientEventHistoryUtil.redo()).toBe("done");
         expect(room.objectById[objectId]).toBeUndefined();
         expect(sentSignals()).toEqual([["removeObject", objectId]]);
+    });
+
+    it("stands a helper taken down again as its room keeps it, without what it was only shown saying, facing or "
+        + "thinking", async () => {
+        const shown = (value: string) => new EncodableByteString(value);
+        const objectId = await standObject(npcTypeIndex, {x: BLOCK_X + 3, y: 0, z: BLOCK_Z}, {x: 0, y: 1, z: 0},
+            {...UNIT_VEC3}, {...labelled("Mira"), [ObjectMetadataKeyEnumMap.SentMessage]: shown("Hi there!"),
+                [ObjectMetadataKeyEnumMap.Facing]: shown("90"), [ObjectMetadataKeyEnumMap.Thinking]: shown("1")});
+        ObjectEditUtil.openRemoveConfirmPopup(await select(objectId), "Want to remove this NPC?");
+        const popup = popupStateObservable.peek();
+        (popup as Extract<typeof popup, {popupType: "confirm"}>).params.onConfirm();
+        await settle();
+        expect(room.objectById[objectId]).toBeUndefined();
+        expect(sentSignals()).toEqual([["removeObject", objectId]]);
+
+        expect(await ClientEventHistoryUtil.undo()).toBe("done");
+        expect(Object.keys(room.objectById[objectId].metadata).map(Number)).toEqual([ObjectMetadataKeyEnumMap.Label]);
+        expect(metadataOf(objectId, ObjectMetadataKeyEnumMap.Label)).toBe("Mira");
+        expect(sentSignals()).toEqual([["addObject", objectId, actingUser.id]]);
     });
 
     it("puts back a block taken down with what hung on it: the block first, then the rest", async () => {

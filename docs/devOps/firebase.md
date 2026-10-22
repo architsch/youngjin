@@ -34,7 +34,7 @@ CI never authenticates to Firebase. The service account is `firebase-adminsdk-fb
 | `roles/firebaserules.admin` | rules are compiled on every Firestore deploy |
 
 ## Runtime secrets
-Secrets live in Secret Manager, not GitHub: `JWT_SECRET_KEY`, `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`. They are loaded into `process.env` by `dev/scripts/bootstrap.js` (VPS) and `devRunner.js` (local). To add a secret, create it and add its name to both scripts.
+Secrets live in Secret Manager, not GitHub: `JWT_SECRET_KEY`, `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`. They are loaded into `process.env` by `dev/scripts/bootstrap.js` (VPS) and `devRunner.js` (local). To add a required secret, create it and add its name to both scripts; an optional one goes in `bootstrap.js`'s `OPTIONAL_SECRET_NAMES` alone.
 
 `ANTHROPIC_API_KEY` is optional and loaded by `bootstrap.js` alone: without it helpers only greet (see [agents.md](../networking/agents.md#helpers)), and a local server leaves it out unless it is set in the environment, so that local chat spends nothing. What helpers spend is kept per day in `helper_spending` (`staging_helper_spending` on staging).
 
@@ -53,3 +53,4 @@ A missing index is surfaced by logging: queries that depend on an index log a di
 - **Query works locally but fails on the VPS with `FAILED_PRECONDITION`**: the index is missing for that environment's collection name. The emulator does not enforce indexes.
 - **Index stuck in "Building"**: creation is asynchronous. Wait until it shows "Enabled".
 - **`[bootstrap] Secret "..." has no payload`**: the secret or its enabled version is missing, or the accessor role is missing.
+- **Helpers only greet on the VPS**: the app log shows `[bootstrap] Optional secret "ANTHROPIC_API_KEY" not loaded` or `has no payload`.

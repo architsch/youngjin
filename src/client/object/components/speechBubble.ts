@@ -17,6 +17,9 @@ import MessageLinkOpenUtil from "../../ui/util/messageLinkOpenUtil";
 
 // Room left between a bubble and the edges of the view (see keepInView).
 const VIEW_MARGIN_PX = 8;
+// How long a helper is shown thinking on the browser's word alone, before the server's Thinking takes over (see
+// HelperThinkingUtil); one the server never confirms was a wrong guess.
+const EXPECTED_THINKING_MS = 3000;
 const PADDING_X_REM = 0.4;
 // A bubble runs as wide as its speaker's type has it, unless its message could take more lines than this there: then it
 // is widened until it can't, at most this many times as wide, and never past the view's sides, so that it rises less
@@ -54,6 +57,8 @@ export default class SpeechBubble extends GameObjectComponent
 
     // Set when the speaker's body isn't drawn (see PlayerGameObject), so the bubble doesn't float alone.
     private hidden: boolean = false;
+    // Until when a helper is shown thinking before the server says so (see expectThinking).
+    private thinkingExpectedUntil: number = 0;
 
     // How far the bubble is lowered to keep its top in view, and moved sideways to keep its sides in view.
     private lowered: number = 0;
@@ -87,6 +92,12 @@ export default class SpeechBubble extends GameObjectComponent
 
     update(deltaTime: number)
     {
+        if (this.thinkingExpectedUntil > 0 && performance.now() >= this.thinkingExpectedUntil)
+        {
+            this.thinkingExpectedUntil = 0;
+            this.refresh();
+        }
+
         // If the speech bubble is active (visible), update its position and size.
         if (this.textElement)
         {
@@ -146,12 +157,24 @@ export default class SpeechBubble extends GameObjectComponent
 
     onSetMetadata(key: ObjectMetadataKey, value: string): void
     {
-        if (key !== ObjectMetadataKeyEnumMap.SentMessage)
-            return;
-        this.displayMessage(value, true);
+        if (key === ObjectMetadataKeyEnumMap.SentMessage)
+            this.displayMessage(value, true);
+        else if (key === ObjectMetadataKeyEnumMap.Thinking)
+        {
+            this.thinkingExpectedUntil = 0;
+            this.refresh();
+        }
     }
 
-    // Shows the message again as it stands, for a speaker whose name has changed (see GameObject.getSpeakerName).
+    // A helper shown thinking at once, for the user's line it is about to hear, until the server's Thinking comes.
+    expectThinking(): void
+    {
+        this.thinkingExpectedUntil = performance.now() + EXPECTED_THINKING_MS;
+        this.refresh();
+    }
+
+    // Shows the message again as it stands, for a speaker whose name has changed (see GameObject.getSpeakerName), or who
+    // starts or stops thinking.
     refresh(): void
     {
         this.displayMessage(this.gameObject.params.metadata[ObjectMetadataKeyEnumMap.SentMessage]?.str ?? "", false);
@@ -215,6 +238,12 @@ export default class SpeechBubble extends GameObjectComponent
             const userNameSpan = document.createElement("span");
             userNameSpan.style.color = "oklch(87.9% 0.169 91.605)";
             userNameSpan.textContent = userName + (message.length > 0 ? ":" : "");
+            // A helper thinking of an answer (see HelperBehaviorUtil), with its last words still up.
+            if (this.gameObject.params.metadata[ObjectMetadataKeyEnumMap.Thinking]?.str == "1"
+                || performance.now() < this.thinkingExpectedUntil)
+            {
+                userNameSpan.appendChild(createThinkingSpinner());
+            }
             this.bubbleElement!.appendChild(userNameSpan);
 
             if (message.length > 0)
@@ -321,6 +350,27 @@ function createLinkButton(href: string, label: string): HTMLElement
     button.append(label, createLinkIcon());
     OverlayClickTargetUtil.makeClickable(button, () => MessageLinkOpenUtil.open(href));
     return button;
+}
+
+// A ring with a turning arc, in the name's color.
+function createThinkingSpinner(): SVGElement
+{
+    const spinner = document.createElementNS(SVG_NAMESPACE, "svg");
+    spinner.setAttribute("viewBox", "0 0 12 12");
+    spinner.setAttribute("style", "display:inline-block; width:0.8em; height:0.8em; margin-left:0.35em;"
+        + " vertical-align:-0.1em;");
+    const ring = document.createElementNS(SVG_NAMESPACE, "circle");
+    ring.setAttribute("cx", "6");
+    ring.setAttribute("cy", "6");
+    ring.setAttribute("r", "4.5");
+    ring.setAttribute("style", "fill:none; stroke:currentColor; stroke-width:1.8; opacity:0.3;");
+    const arc = document.createElementNS(SVG_NAMESPACE, "path");
+    arc.setAttribute("d", "M6 1.5a4.5 4.5 0 0 1 4.5 4.5");
+    arc.setAttribute("style", "fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round;");
+    spinner.append(ring, arc);
+    spinner.animate([{transform: "rotate(0turn)"}, {transform: "rotate(1turn)"}],
+        {duration: 900, iterations: Infinity});
+    return spinner;
 }
 
 // An arrow out of the bubble, up and to the right.

@@ -28,8 +28,11 @@ type HelperBehavior = {
     lastTalkAt: number,
     // Whom it is thinking of an answer to.
     answering: string | undefined,
-    // What it has still to say, bubble by bubble, and whom each is for.
-    bubbles: {text: string, to: string[]}[],
+    // Whether it is shown thinking of an answer (see Thinking): from when it hears a line until it says its answer,
+    // or has none to say.
+    thinking: boolean,
+    // What it has still to say, bubble by bubble, whom each is for, and whether it is an answer.
+    bubbles: {text: string, to: string[], answer: boolean}[],
     nextBubbleAt: number,
 };
 

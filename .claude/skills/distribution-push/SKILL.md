@@ -102,14 +102,19 @@ Link to a post rather than to the app when:
 Link to the app directly when the audience is players, when the venue's whole purpose is games to
 click, or when the game itself is the news.
 
+Venues for AI agents take two more: **the manual** (`https://thingspool.net/skill.md`), which an
+operator hands their agent, and **the MCP endpoint** (`https://app.thingspool.net/mcp`), which server
+directories list. Neither carries a `?ref=` tag; an agent names its own source when it registers (the
+`ref` on `register`), if it does.
+
 `public/devlog-<year>/list.html` is the index of what exists to link to. Read the actual posts before
 choosing between them; pick the one whose subject fits the venue, not simply the newest.
 
 ## The AI-agents angle
 
 ThingsPool has AI agents in it (see [`docs/networking/agents.md`](../../../docs/networking/agents.md)).
-The Helper, an AI guide the server runs, waits by the main hub's door, greets newcomers and answers their
-questions. AI agents from the internet can also come in and build rooms of their own beside people. Few
+Helpers, AI guides the server plays as NPCs an admin stands in multiplayer rooms, each in a character of
+its own, greet newcomers and answer their questions. AI agents from the internet can also come in and build rooms of their own beside people. Few
 games can say that, so it is a strong hook, but it suits some audiences far better than others.
 
 - **What is true to say:** an AI guide greets newcomers in the main hub and chats with them (once an
@@ -158,7 +163,8 @@ Both must answer `200`. Then the judgements that need actual looking:
 - **Does a solo arrival work?** This is the decisive one for a multiplayer sandbox and the easiest to
   overlook, because the developer never experiences it. Someone arriving from a link at a quiet hour
   meets an empty world. Read `docs/networking/ftue.md` and `docs/networking/single_player_mode.md`
-  and establish what that person is actually given to do. If the answer is "wait for somebody", say
+  and establish what that person is actually given to do; a helper standing in the main hub is what
+  meets them there when nobody else does. If the answer is "wait for somebody", say
   so and recommend holding the push — no venue fixes an empty-room first session. Then check it
   against what visitors actually did: the `direct` cohort in the step 7 report is the baseline, and
   its `tutorialDone` and `returned` rates say how the first minute and the first day are going
@@ -172,8 +178,9 @@ Both must answer `200`. Then the judgements that need actual looking:
   an image that exists. Fetch an app URL only with the link-check command in step 5.
 - **If the copy mentions AI agents, is a helper there to meet?** It is what makes the claim true for
   anyone who clicks: an NPC an admin stood in the main hub, which the server plays as its guide. The
-  live server's log shows it answering: `Helper usage` lines, and no `Helper reply failed` (the
-  `vps-maintenance` skill reads the log), or the user talks to it. Without one, cut the claim.
+  live server's log shows it answering: `Helper usage` lines in a `serverMonitor.js baseline` then
+  `diff --app live` window's `activity`, and no `Helper reply failed` in `history --app live`, or the
+  user talks to it. Without one, cut the claim.
 
 If the gate fails, report what failed and stop. Do not push anyway; the venues will still be there
 next week and the first impressions will not.
@@ -230,10 +237,11 @@ Three rules that do not bend:
 - **Style.** Every line of every kit follows [`../../writing-style.md`](../../writing-style.md) —
   common words, ordinary sentences, open-ended lists that suggest more than they name, and no
   account of how anything works. `reference/submission-kit.md` names the venue adjustments,
-  including the one venue allowed more technical depth and the venues where the house
+  including the venues allowed more technical depth and the venues where the house
   enthusiasm has to be dialed down. Earlier submissions in `ledger.md` show what was sent before;
   they are not a model for how to write.
-- **The tagged link.** Every venue gets its own, appended to whichever destination was chosen:
+- **The tagged link.** Every venue that links to the app or a post gets its own (the manual and the
+  MCP endpoint take none; see above), appended to whichever destination was chosen:
   `https://app.thingspool.net/?ref=<venue-slug>` or
   `https://thingspool.net/devlog-<year>/page-<N>.html?ref=<venue-slug>`.
 
@@ -358,7 +366,9 @@ that blurs them leaves the user believing the work is finished when it is sittin
 - **Never post the same link to the same venue twice** without a genuinely new reason, a real
   interval, and a ledger row explaining both.
 - **Two or three venues per run.** A wider push is not a faster one; it is a spam pattern.
-- **No `src/`, `docs/`, `tests/`, `CLAUDE.md` or `README.md` edits.** Findings only.
+- **No `src/`, `docs/`, `tests/`, `CLAUDE.md` or `README.md` edits.** Findings only. What agents read
+  (`server.json`, the manual and its ClawHub copy) changes only under the agents-keep-up rule: both
+  copies together, a new version, and `agent.test.ts` passing.
 - **Nothing goes out that the user has not seen.** Every outbound artifact — post text, store
   listing, description — is shown to the user in full before it is placed anywhere.
 - **Report a venue's rejection as a rejection.** A portal that declined, a post that was removed by a

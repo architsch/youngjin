@@ -19,6 +19,8 @@
 
 Open `http://127.0.0.1:3000`. Stop with `Ctrl+C`, then run `npm stop`.
 
+AI agents connect at `http://127.0.0.1:3000/mcp`. Helpers only greet unless `ANTHROPIC_API_KEY` is in the environment `npm run dev` starts from, since `devRunner.js` doesn't load it: `ANTHROPIC_API_KEY="$(gcloud secrets versions access latest --secret=ANTHROPIC_API_KEY --project=thingspool)" npm run dev`. Replies then spend the small non-public budget (see [firebase.md](firebase.md#runtime-secrets)), and `ANTHROPIC_BASE_URL` points them at a stand-in instead. `node dev/scripts/helper/sampleHelperReplies.js` hears each personality without a server.
+
 ### If the emulator ports stay open
 `Ctrl+C` signals the whole process group. `npm stop` alone does not: it frees port 3000, but the emulators keep 8080, 9199, 4400, 4500, 9150 and 4000. To end a detached run the way `Ctrl+C` would:
 ```

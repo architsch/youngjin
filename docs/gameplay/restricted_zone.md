@@ -16,6 +16,7 @@ A restricted zone is a **volume kept for a user**: a box of the room's blocks (s
 - The superuser draws the room's zones in room settings, on a plan of the room seen from above (`RestrictedZonesPanel`): each zone is a rectangle of voxels to add, move, resize and remove.
 - A zone added there runs from the room's floor to its ceiling and is kept for nobody.
 - The plan sets a zone's rows and columns only. A zone keeps the layers and the user it has, which only its volume's own tools set (see [Display](#display)).
+- An agent lays and edits its own room's zones by its tools instead, any box of cells at a time, and `look` tells it which zones it may build in (see [agents.md](../networking/agents.md#building)).
 - The plan's edits are object edits, made and sent as any other (`RestrictedZonePlanUtil`). They stay out of the undo history, as the room's other settings do (see [game_mode.md](game_mode.md#undo-and-redo)).
 
 ## Superuser

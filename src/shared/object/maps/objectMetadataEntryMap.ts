@@ -108,6 +108,11 @@ const entries: {[key: number]: ObjectMetadataEntry} = {
         preprocessingMethod: (rawValue: string) => NpcFacingUtil.canonicalize(rawValue),
         canUserSet: (_user: User) => false,
     },
+    // Likewise.
+    [ObjectMetadataKeyEnumMap.Thinking]: {
+        preprocessingMethod: (rawValue: string) => (rawValue.trim() == "1") ? "1" : "",
+        canUserSet: (_user: User) => false,
+    },
     // Round-tripped through NpcObjectTypeConfig's util.
     [ObjectMetadataKeyEnumMap.WanderRadius]: {
         preprocessingMethod: (rawValue: string) => NpcObjectTypeConfig.util.canonicalizeWanderRadius(rawValue),

@@ -1,6 +1,6 @@
 # Staging Playtest Workflow
 
-An AI-driven playtest against the deployed staging server, driven by the `staging-playtest` skill. It covers what E2E cannot: stored states that ordinary play never produces (outdated row versions, old content blobs, a large population of owned rooms) and what the server logs while real browser sessions play. For a quick local run in a room built on request, see [sandbox.md](sandbox.md).
+An AI-driven playtest against the deployed staging server, driven by the `staging-playtest` skill. It covers what E2E cannot: stored states that ordinary play never produces (outdated row versions, old content blobs, a large population of owned rooms) and what the server logs while real browser sessions play, and AI agents over the MCP endpoint, a crowd of them included. For a quick local run in a room built on request, see [sandbox.md](sandbox.md).
 
 | Script | Purpose |
 |---|---|
@@ -28,6 +28,7 @@ node dev/scripts/playtest/stagingAdmin.js inspect
 node dev/scripts/playtest/stagingAdmin.js seed-users      --version 0 --count 3 --run <runID>
 node dev/scripts/playtest/stagingAdmin.js seed-rooms      --version 0 --count 4 --run <runID> [--owner <userID>] [--with-content]
 node dev/scripts/playtest/stagingAdmin.js seed-population --version 99 --count 14 --run <runID> [--with-content] [--persist]
+node dev/scripts/playtest/stagingAdmin.js seed-agents     --count 50 --run <runID>
 node dev/scripts/playtest/stagingAdmin.js set-user-type     --user <userID> --type admin|member|guest [--run <runID>]
 node dev/scripts/playtest/stagingAdmin.js restore-user-type --user <userID>
 node dev/scripts/playtest/stagingAdmin.js verify-migration
@@ -35,9 +36,11 @@ node dev/scripts/playtest/stagingAdmin.js verify-funnel     [--run <runID>]
 node dev/scripts/playtest/stagingAdmin.js inspect-content
 node dev/scripts/playtest/stagingAdmin.js downgrade-content --room <roomID> [--to 0]
 node dev/scripts/playtest/stagingAdmin.js restore-content   [--room <roomID>]
+node dev/scripts/playtest/stagingAdmin.js list
 node dev/scripts/playtest/stagingAdmin.js cleanup [--run <runID>] [--all]
 ```
 - `--target staging` (default, gcloud ADC) or `--target local` (emulator). There is no live target.
+- `seed-agents` writes agent rows with keys, printed once, for a crowd the per-IP registration caps would never let one machine register.
 - `--version` means "no newer than this" and is clamped per collection.
 - **Row versions** (`DBVersionMigration`) and **content blob versions** (the leading byte of the blob once unpacked, `VoxelGridVersionMigration`/`ObjectGroupVersionMigration`) are separate. Blobs are stored gzipped; the scripts unpack them, and store the ones they rewrite or seed plain, which the server reads as well. `downgrade-content` refuses to cross a decoder boundary, because that would produce a corrupt blob rather than an old one. Cross-decoder migration is tested offline in `voxel-grid-migration.test.ts`.
 - `seed-population` creates Members paired with their rooms. It is the only way to get owned rooms on staging, because production mode disables the dev user switch. **Pass `--with-content`**: a room without a blob cannot be entered and leaves an error in every later baseline.
@@ -85,6 +88,7 @@ The only end-to-end test of [analytics](../../devOps/analytics.md). Tag the star
 - **The `playtest-` prefix is required**, because `cleanup` deletes cohort documents by that prefix.
 - Use only `a-z0-9-_` characters, or the tag is rewritten.
 - A ref counts only on the visit that creates the account, so reused sessions keep their original source.
+- An agent a run registers passes `ref: "playtest-<runID>"`, so its source is `agent-playtest-<runID>`, by which `cleanup` finds it, its home room and its cohort.
 - `verify-funnel` reports the milestones reached without passing or failing. Compare them with what the plan did. The milestone list comes from `funnelReport.js`.
 
 ## What persists between runs
@@ -93,17 +97,18 @@ The only end-to-end test of [analytics](../../devOps/analytics.md). Tag the star
 | `seed-population` at current version with `--persist` | yes | reading does not change it |
 | outdated `seed-users` / `seed-rooms` | no | the first read migrates them |
 | seeded guests | no | the stale-guest sweep deletes them |
+| `seed-agents` | no | the stale-agent sweep deletes them, as it does guests |
 | `downgrade-content` | no | the next save re-encodes it, so always restore |
 
 `cleanup` keeps `--persist` seeds, and `cleanup --all` removes them too.
 
 ## Rate limits
-Staging enforces production limits: a per-IP request rate, and per-IP and per-IP+UA guest caps. Run at most two or three agents, reuse sessions, and give each agent its own User-Agent. `runPlan.js` paces its API calls and reports rate-limit hits separately. Those hits are self-inflicted, not server faults.
+Staging enforces production limits: a per-IP request rate, and per-IP and per-IP+UA guest caps. Run at most two or three browser sessions, reuse them, and give each its own User-Agent. AI agents' calls have a per-IP limit of their own under Nginx's, and their registrations spend the guest caps, so a crowd of them is seeded (`seed-agents`) and driven through an SSH tunnel to the app's port (see the skill); past `AGENT_MAX_PRESENT` one more is turned away by design. A helper an admin stood in a hub answers what is said near it from staging's small daily budget. `runPlan.js` paces its API calls and reports rate-limit hits separately. Those hits are self-inflicted, not server faults.
 
 ## Safety
 - **No live write path exists, and none may be added.** Live and staging share a project and are separated only by a prefix.
 - `lib/dbGuard.js` accepts only `staging` and `local` (it refuses `live`, `prod` and `production` by name). It returns a facade that checks every collection and storage path against the target prefix. `local` requires `FIRESTORE_EMULATOR_HOST` (an unprefixed namespace without an emulator would be live), and `staging` refuses to run when that variable is set.
 - `.claude/settings.json` denies the assistant the gcloud and firebase CLI data commands.
 - `serverMonitor.js --app live` is read-only. `dbGuard.js` also offers a read-only live facade limited to the `acquisition` collection.
-- `cleanup` deletes only marker-stamped seeds, plus acquisition cohorts with the `playtest-` prefix. `downgrade-content` backs up the original blob and never overwrites an existing backup.
+- `cleanup` deletes only marker-stamped seeds, agents registered with a playtest ref (source `agent-playtest-…`), the rooms of the users it deletes (with their content blobs), and acquisition cohorts prefixed `playtest-` or `agent-playtest-`. `downgrade-content` backs up the original blob and never overwrites an existing backup.
 - Every command prints its target. Staging writes consume the shared Firebase quota.

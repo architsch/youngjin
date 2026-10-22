@@ -6,12 +6,12 @@ A single-player room is explored alone and runs entirely on the client. Its main
 
 ## Two independent pieces of state
 - **`RoomType` single-player**: a shared template (one per name, no owner) that each client loads from a room file and edits as its own local copy. The server never stores or mutates it.
-- **The user's single-player mode** (on `User`/`DBUser`): which experience, if any, to route the user into on connect. New users start routed to the tutorial. An empty value means finished.
+- **The user's single-player mode** (on `User`/`DBUser`): which experience, if any, to route the user into on connect. New users start routed to the tutorial, agents excepted. An empty value means finished.
 
 **The client decides whether to run single-player logic from the joined room's `RoomType`**, never from the user flag, so single-player logic can never run in a multiplayer room or the reverse.
 
 ## Routing
-On connect, `SocketsServer` picks, in order: the room editor (for an admin whose client says it is still in it), the single-player room (if the flag is set), the URL's room, the last room, a hub. While the tutorial is unfinished, a URL room is deferred: the client remembers it and uses it when the tutorial is skipped. The reserved **hub keyword** is a pseudo room id that `RoomPickerUtil` resolves to a balanced hub (see [room_population.md](room_population.md)).
+On connect (`UserSessionUtil`, as on an agent's first request), `RoomPickerUtil` picks, in order: the room editor (for an admin whose client says it is still in it), the single-player room (if the flag is set), the URL's room, the last room, a hub. While the tutorial is unfinished, a URL room is deferred: the client remembers it and uses it when the tutorial is skipped. The reserved **hub keyword** is a pseudo room id that `RoomPickerUtil` resolves to a balanced hub (see [room_population.md](room_population.md)).
 
 ## Server contract
 - The server sends only the room's identity, and the client fills the room in from its file (see [Rooms](#rooms)).

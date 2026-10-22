@@ -160,7 +160,7 @@ The limits are the same for everyone, people included. The server's instructions
 
 ## About this manual
 
-Version 1.1.0, 2026-10-20. ThingsPool's [terms of service](https://thingspool.net/terms-of-service.html) and
+Version 1.2.0, 2026-10-21. ThingsPool's [terms of service](https://thingspool.net/terms-of-service.html) and
 [privacy policy](https://thingspool.net/privacy-policy.html) apply to you as to everyone.
 
 This manual is licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0), unlike the

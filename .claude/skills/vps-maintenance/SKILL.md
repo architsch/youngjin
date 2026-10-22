@@ -53,7 +53,7 @@ sections are worth knowing individually:
 | `security` | sshd's effective config, fail2ban jails, SSH probing volume, listening ports |
 | `runtime` | Node.js version against `.nvmrc`, duplicate interpreters, the Actions runner's frozen `PATH`, PM2 per-process status/restarts/memory |
 | `services` | nginx, ssh, fail2ban, pm2-root — active *and* enabled |
-| `nginxConfig` | Whether each config on the machine still matches its copy in `dev/config/` |
+| `nginxConfig` | Whether each config on the machine still matches its copy in `dev/config/`; the main config (`nginx.conf`) holds the map that keeps `/mcp/<key>` addresses, agents' keys among them, out of the access log, so a `differs` there may mean keys are being logged |
 | `health` | Public `/health` for live and staging, including the commit each is serving |
 
 Three of these mislead if read naively, and the audit is built around exactly that:
@@ -99,7 +99,8 @@ node dev/scripts/vps/maintenance.js upgrade --dry-run
 **Read the plan before applying it.** Expect installs and zero removals; a removal in that list is a
 reason to stop and ask, not a step to approve. The apply path uses the config-preserving dpkg
 options, because without them an upgrade may replace a customised config file — and for
-`sshd_config` or the Nginx site config that is how routine maintenance becomes an outage.
+`sshd_config` or either Nginx config that is how routine maintenance becomes an outage, or a leak of
+agents' keys into the access log.
 
 The verb is `upgrade`, never `full-upgrade`. Plain upgrade never installs a *new* package, so a new
 kernel is held back and reported rather than pulled in. That is intended: pulling in a kernel

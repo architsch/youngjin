@@ -64,7 +64,7 @@ const HelperBehaviorUtil =
             facing: HelperBehaviorUtil.getFacingPut(quarterTurns), saying: "", path: [], talkingWith: [], talkingSince: 0,
             frozenUntil: 0,
             nextWanderAt: now + randomBetween(WANDER_INTERVAL_MS), returnHomeAt: 0, lastTalkAt: -Infinity,
-            answering: undefined, bubbles: [], nextBubbleAt: 0};
+            answering: undefined, thinking: false, bubbles: [], nextBubbleAt: 0};
         HelperBehaviorUtil.takeSettings(behavior, obj);
         return behavior;
     },
@@ -107,12 +107,14 @@ const HelperBehaviorUtil =
         return helpers.filter(helper => callsForHelper || HelperBehaviorUtil.isInEarshot(helper, speaker))
             .sort((a, b) => distanceAcross(speaker, a.at) - distanceAcross(speaker, b.at))[0];
     },
-    // It turns to whoever talks to it, unless it is still speaking to someone else.
-    hear: (behavior: HelperBehavior, userID: string, now: number): void =>
+    // A line for it, once whoever plays it has kept it to answer: it turns to whoever said it, unless it is still
+    // speaking to someone else, and is shown thinking of an answer at once.
+    hear: (behavior: HelperBehavior, surroundings: HelperSurroundings, userID: string, now: number): void =>
     {
         behavior.lastTalkAt = now;
         if (!HelperBehaviorUtil.isSpeaking(behavior, now))
             HelperBehaviorUtil.talkWith(behavior, [userID], now);
+        showThinking(behavior, surroundings);
     },
     // Whether a player (by its position, at its middle) is near enough on its own floor to be heard, and greeted.
     isInEarshot: (behavior: HelperBehavior, playerPos: Vec3): boolean =>
@@ -123,8 +125,28 @@ const HelperBehaviorUtil =
     // is still saying.
     say: (behavior: HelperBehavior, text: string, to: string[], now: number): void =>
     {
-        behavior.bubbles.push({text, to});
+        behavior.bubbles.push({text, to, answer: false});
         behavior.lastTalkAt = now;
+    },
+    // Likewise, an answer, which it is shown thinking of until its bubble is up.
+    sayAnswer: (behavior: HelperBehavior, text: string, to: string[], now: number): void =>
+    {
+        behavior.bubbles.push({text, to, answer: true});
+        behavior.lastTalkAt = now;
+    },
+    // It stops to think of an answer to someone, and is shown thinking of it, its last words still up.
+    startAnswering: (behavior: HelperBehavior, surroundings: HelperSurroundings, userID: string, now: number): void =>
+    {
+        behavior.path = [];
+        behavior.answering = userID;
+        behavior.lastTalkAt = now;
+        showThinking(behavior, surroundings);
+    },
+    // Done thinking: its answer, if it has one, waits its turn among its bubbles.
+    stopAnswering: (behavior: HelperBehavior, surroundings: HelperSurroundings): void =>
+    {
+        behavior.answering = undefined;
+        showThinking(behavior, surroundings);
     },
     // Walks toward whoever it answers from farther off, to a little way short of them, as far as it goes from home.
     meet: (behavior: HelperBehavior, surroundings: HelperSurroundings, userID: string, now: number): void =>
@@ -163,7 +185,7 @@ const HelperBehaviorUtil =
         }
         face(behavior, surroundings, HelperBehaviorUtil.getFacingPut(behavior.homeQuarterTurns));
     },
-    // Taken down, whatever it was saying.
+    // Taken down, whatever it was saying or thinking of.
     fallSilent: (behavior: HelperBehavior, surroundings: HelperSurroundings): void =>
     {
         behavior.bubbles = [];
@@ -171,6 +193,11 @@ const HelperBehaviorUtil =
         {
             behavior.saying = "";
             surroundings.showSaying();
+        }
+        if (behavior.thinking)
+        {
+            behavior.thinking = false;
+            surroundings.showThinking();
         }
     },
     // Once nobody holds it, it stands still a moment more before it goes on.
@@ -219,9 +246,21 @@ function speakNextBubble(behavior: HelperBehavior, surroundings: HelperSurroundi
     const {text, to} = behavior.bubbles.shift()!;
     behavior.saying = text;
     surroundings.showSaying();
+    showThinking(behavior, surroundings);
     behavior.nextBubbleAt = now + Math.max(MIN_BUBBLE_MS,
         BUBBLE_NOTICE_MS + BUBBLE_MS_PER_CHAR * MessageLinkUtil.getVisibleLength(text));
     HelperBehaviorUtil.talkWith(behavior, to, now);
+}
+
+// Shown thinking from when it hears a line until its answer is up, or it has none to say.
+function showThinking(behavior: HelperBehavior, surroundings: HelperSurroundings): void
+{
+    const thinking = surroundings.hasLinesWaiting() || behavior.answering != undefined
+        || behavior.bubbles.some(bubble => bubble.answer);
+    if (thinking == behavior.thinking)
+        return;
+    behavior.thinking = thinking;
+    surroundings.showThinking();
 }
 
 // Idle, it wanders off now and then, though not up to anyone, and heads home a while after.
