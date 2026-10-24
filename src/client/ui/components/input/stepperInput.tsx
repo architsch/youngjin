@@ -6,7 +6,7 @@ import TriangleRightIcon from "../../svg/icons/triangleRightIcon";
 // Wrap-around stepper over 0..numValues-1 with left/right arrows (like a character-creator selector).
 // Shows `preview` if given (it must keep one size), otherwise the value's label: by default its position.
 
-export default function StepperInput({ currValue, numValues, setValue, labels, preview, disabled = false,
+export default function StepperInput({ id, currValue, numValues, setValue, labels, preview, disabled = false,
     additionalClassNames = "" }: Props)
 {
     const step = (delta: number) => {
@@ -24,7 +24,7 @@ export default function StepperInput({ currValue, numValues, setValue, labels, p
     // shift the controls beside it). Digits are tabular, so the last position is as wide as any.
     const sizingLabels = [...(labels ?? [`${numValues}/${numValues}`]), NO_VALUE_LABEL];
 
-    return <div className={`flex flex-row items-center gap-1 shrink-0 ${additionalClassNames}`}>
+    return <div id={id} className={`flex flex-row items-center gap-1 shrink-0 ${additionalClassNames}`}>
         <IconButton icon={<TriangleLeftIcon/>} disabled={disabled} onClick={() => step(-1)}/>
         {/* Sunken: it holds the value, it isn't pressable. */}
         <div className={`grid place-items-center shrink-0 min-w-10 h-10 px-1 text-sm tabular-nums select-none rounded-md bg-gray-700 text-gray-200 yj-surface-concave ${disabled ? "opacity-50" : ""}`}>
@@ -42,6 +42,7 @@ const NO_VALUE_LABEL = "–";
 
 interface Props
 {
+    id?: string;
     currValue: number; // Index within the set of selectable values, or -1 for none
     numValues: number;
     setValue: (value: number) => void;

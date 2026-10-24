@@ -86,6 +86,7 @@ const AgentToolUtil =
             distance: Math.round(10 * distanceInVoxels(myFeet, helper.at)) / 10,
             saying: helper.saying.length > 0 ? helper.saying : undefined,
             thinking: helper.thinking ? true : undefined,
+            chattingWith: helper.chattingWith,
         }));
         const people = [...players, ...guides]
             .sort((a, b) => a.distance - b.distance)

@@ -6,7 +6,7 @@ export default interface SinglePlayerModeConfig
     roomPath: string;
     // Whether only an admin may enter.
     adminOnly: boolean;
-    // Whether its NPCs are played as helpers, each as its Personality has it (see SinglePlayerHelperUtil): not in a room
-    // being authored, whose NPCs are to be saved where they were put.
+    // Whether its NPCs are played as helpers, each as its BehaviorPrefs have it (see SinglePlayerHelperUtil): not in a
+    // room being authored, whose NPCs are to be saved where they were put.
     playsNpcs: boolean;
 }

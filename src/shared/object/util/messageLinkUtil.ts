@@ -35,6 +35,13 @@ const MessageLinkUtil =
             const label = normalizeLabel(match[2]);
             if (href == undefined)
                 addText(written, label.length > 0 ? label : match[1]);
+            // A label longer than a button shows (a title, as models often write one) is said before it in full, and
+            // the button named by its site, rather than cut short.
+            else if (Array.from(label).length > MESSAGE_LINK_LABEL_MAX_LENGTH)
+            {
+                addText(written, `${label} `);
+                written.push({kind: "link", href, label: MessageLinkUtil.getSiteName(href)});
+            }
             else
                 written.push({kind: "link", href, label: label.length > 0 ? label : MessageLinkUtil.getSiteName(href)});
             index = start + match[0].length;
@@ -96,7 +103,10 @@ const MessageLinkUtil =
         }
         return canonical;
     },
-    // As canonicalize, but where it must be cut, cut after the last sentence that fits, else the last word.
+    // As canonicalize, but where it must be cut, cut after the last sentence that fits, else the last word. A link said
+    // as a sentence of its own, as helpers end a reply ("... a story in 12 chapters. Read it."), is kept where the cut
+    // would leave every link out: after the last whole sentence that fits with it, unless what is cut from between them
+    // names something (in quotes, as a title), which its words would then be taken for.
     shorten: (message: string, maxVisibleLength: number): string =>
     {
         const segments = MessageLinkUtil.parse(message.trim());
@@ -114,7 +124,20 @@ const MessageLinkUtil =
                 : `${shortened}${CUT_MARK}`;
         };
         const sentenceEnd = Math.max(within.lastIndexOf(". "), within.lastIndexOf("! "), within.lastIndexOf("? "));
-        return (sentenceEnd > 0) ? cutAfter(sentenceEnd + 1, true) : cutAfter(Math.max(0, within.lastIndexOf(" ")), false);
+        const shortened = (sentenceEnd > 0) ? cutAfter(sentenceEnd + 1, true)
+            : cutAfter(Math.max(0, within.lastIndexOf(" ")), false);
+
+        const alone = findLinkAlone(segments);
+        if (alone == undefined || MessageLinkUtil.parse(shortened).some(segment => segment.kind == "link"))
+            return shortened;
+        const leading = segments.slice(0, alone.index);
+        const endingLength = Array.from(`${alone.link.label}${alone.after}`).length;
+        const kept = keepWholeSentences(leading, maxVisibleLength - endingLength - 1);
+        if (kept == undefined)
+            return shortened;
+        const left = MessageLinkUtil.getVisibleText(leading).slice(MessageLinkUtil.getVisibleText(kept).length);
+        return /["“”]/.test(left) ? shortened
+            : `${MessageLinkUtil.format(kept).trim()} ${MessageLinkUtil.format([alone.link])}${alone.after}`;
     },
     // Where text holds bare web addresses: each one's start and end, the end of the run of characters it is written in
     // (what punctuation follows it included), and the address its link holds.
@@ -160,12 +183,10 @@ function toWebAddress(address: string): string | undefined
     return (url.href.length <= MESSAGE_LINK_ADDRESS_MAX_LENGTH && !/[\s"<>]/.test(url.href)) ? url.href : undefined;
 }
 
-// A label as a button shows it: one line, and one too long cut to fit, which it says.
+// A label on one line, as a button shows it.
 function normalizeLabel(label: string): string
 {
-    const codePoints = Array.from(label.replace(/[<>]/g, "").replace(/\s+/g, " ").trim());
-    return (codePoints.length <= MESSAGE_LINK_LABEL_MAX_LENGTH) ? codePoints.join("")
-        : `${codePoints.slice(0, MESSAGE_LINK_LABEL_MAX_LENGTH - 1).join("").trimEnd()}…`;
+    return label.replace(/[<>]/g, "").replace(/\s+/g, " ").trim();
 }
 
 // Text, run on into the text before it.
@@ -192,6 +213,43 @@ function addBareAddresses(segments: MessageSegment[], text: string,
         index = end;
     }
     addText(segments, text.slice(index));
+}
+
+// The first link said as a sentence of its own: after a sentence's end (or nothing), and before nothing but the mark
+// that ends it and what follows that. Its place among the segments, and that mark.
+function findLinkAlone(segments: MessageSegment[]): {index: number, link: MessageSegment & {kind: "link"}, after: string}
+    | undefined
+{
+    for (let index = 0; index < segments.length; ++index)
+    {
+        const segment = segments[index];
+        if (segment.kind != "link")
+            continue;
+        const previous = segments[index - 1];
+        const next = segments[index + 1];
+        const startsSentence = previous == undefined || (previous.kind == "text" && /[.!?]\s+$/.test(previous.text));
+        const ending = (next == undefined) ? "" : (next.kind == "text") ? next.text.match(/^[.!?]?(?=\s|$)/)?.[0] : undefined;
+        if (startsSentence && ending != undefined)
+            return {index, link: segment, after: ending};
+    }
+    return undefined;
+}
+
+// The segments cut after the last whole sentence among them that shows within so many characters (all of them, if
+// they do), or undefined where none does.
+function keepWholeSentences(segments: MessageSegment[], maxVisibleLength: number): MessageSegment[] | undefined
+{
+    const shown = Array.from(MessageLinkUtil.getVisibleText(segments));
+    if (shown.length <= maxVisibleLength)
+        return (MessageLinkUtil.getVisibleText(segments).trim().length > 0) ? segments : undefined;
+    const within = shown.slice(0, Math.max(0, maxVisibleLength + 1)).join("");
+    const sentenceEnd = Math.max(within.lastIndexOf(". "), within.lastIndexOf("! "), within.lastIndexOf("? "));
+    if (sentenceEnd <= 0)
+        return undefined;
+    const length = Array.from(within.slice(0, sentenceEnd + 1)).length;
+    const kept = cut(segments, length);
+    // Not where a link the sentence's end falls in would be left out.
+    return (Array.from(MessageLinkUtil.getVisibleText(kept)).length == length) ? kept : undefined;
 }
 
 // The segments that show no more than so many characters: text cut to fit, a link only if its whole label fits.

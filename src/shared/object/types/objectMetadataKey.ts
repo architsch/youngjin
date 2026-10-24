@@ -43,11 +43,15 @@ export const ObjectMetadataKeyEnumMap: Record<string, number> =
     // Which way a helper faces as the server plays it, shown to its room and never kept (see NpcFacingUtil). No signal
     // may set it.
     Facing: 18,
-    // How far from home a helper goes, in world units, as an admin sets it (see NpcObjectTypeConfig).
-    WanderRadius: 19,
-    // The character a helper is played as, by its id, as an admin picks it (see NpcPersonalityMap).
-    Personality: 20,
+    // Retired (slots 19 and 20 reserved): a helper's wander radius and personality, now in its BehaviorPrefs. Read only
+    // by ObjectGroup's migration.
     // "1" while a helper thinks of an answer, until it says it: shown to its room and never kept (see
     // HelperBehaviorUtil). No signal may set it.
     Thinking: 21,
+    // How an object behaves, one base-94 character per setting (see BehaviorPrefsUtil). Generic, so any type may read
+    // it; an NPC's say how it is played as a helper, as an admin sets them.
+    BehaviorPrefs: 22,
+    // A mirror's surface: its color and how opaque it is over the reflection, one quantized character each (see
+    // MirrorObjectTypeConfig), always read and written together.
+    MirrorProperties: 23,
 }

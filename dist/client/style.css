@@ -45,6 +45,7 @@
     --color-pink-700: oklch(52.5% 0.223 3.958);
     --color-pink-800: oklch(45.9% 0.187 3.815);
     --color-pink-900: oklch(40.8% 0.153 2.432);
+    --color-slate-300: oklch(86.9% 0.022 252.894);
     --color-gray-100: oklch(96.7% 0.003 264.542);
     --color-gray-200: oklch(92.8% 0.006 264.531);
     --color-gray-300: oklch(87.2% 0.01 258.338);
@@ -666,6 +667,9 @@
   .w-36 {
     width: calc(var(--spacing) * 36);
   }
+  .w-40 {
+    width: calc(var(--spacing) * 40);
+  }
   .w-44 {
     width: calc(var(--spacing) * 44);
   }
@@ -1193,6 +1197,9 @@
   }
   .stroke-sky-300 {
     stroke: var(--color-sky-300);
+  }
+  .stroke-slate-300 {
+    stroke: var(--color-slate-300);
   }
   .stroke-violet-300 {
     stroke: var(--color-violet-300);

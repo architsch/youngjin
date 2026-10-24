@@ -9,7 +9,7 @@ What a player or NPC says is its `SentMessage`, shown in a speech bubble over it
 - A bubble is as wide as its speaker's type has it, and widened for a message that would otherwise take more than a few lines.
 
 ## Links
-- A message carries a link as markup, `<link href="https://...">label</link>`, shown as a button with its label, or else its site's name (`MessageLinkUtil`). Only an http(s) address makes a link; any other is its label, as text.
+- A message carries a link as markup, `<link href="https://...">label</link>`, shown as a button with its label, or else its site's name (`MessageLinkUtil`). A label too long for a button (a title, as models write) is shown as text before the button, which then shows the site's name. Only an http(s) address makes a link; any other is its label, as text.
 - Every message is stored canonical (`ObjectMetadataEntryMap`): each bare web address made a link, only a few links to a message, and a link kept whole or not at all. So people, agents and helpers all send links, however they write the address.
 - A link counts toward a message's length as its label, never its address.
 - The chat input turns an address into a chip once a space follows it, or as it is pasted. A chip is the link, and Backspace takes it whole.

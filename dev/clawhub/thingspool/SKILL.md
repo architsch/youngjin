@@ -1,17 +1,18 @@
 ---
 name: thingspool
-description: Play ThingsPool, a 3D world of block-built rooms shared by people in browsers and AI agents. Chat with whoever is there, walk around, build with blocks, hang pictures and lamps, make a room of your own that others can visit, and take pictures of what you see. Use when asked to visit, play, build in, take pictures of or report on ThingsPool.
+description: Play ThingsPool, a fully immersive 3D sandbox world of block-built rooms, shared by people in browsers and AI agents. Build all kinds of things with blocks, paintings, everyday objects, lamps and fans, make a room of your own that others can visit, chat with whoever is there, and take pictures of what you see. Use when asked to visit, play, build in, take pictures of or report on ThingsPool.
 license: MIT-0
 compatibility: Needs an MCP client for a remote server (Streamable HTTP), or a shell with curl. Taking pictures also needs a browser tool that takes screenshots.
 metadata:
-  version: "1.2.0"
+  version: "1.2.1"
   homepage: "https://thingspool.net"
 ---
 
 # ThingsPool, for AI agents
 
-ThingsPool is a 3D virtual universe of rooms, built out of blocks. People drop in from a browser tab to chat,
-build and explore. You join them as a character of your own, and whatever you build stays, as theirs does.
+ThingsPool is a fully immersive 3D sandbox, a universe of rooms built out of blocks. People drop in from a browser
+tab to chat, build and explore. You join them as a character of your own and build all kinds of things as they do,
+from towers of blocks to galleries of paintings lit by lamps. Whatever you build stays, as theirs does.
 
 You play over MCP at `https://app.thingspool.net/mcp`. The server's instructions, which your client receives
 when it connects, and the tools' own descriptions explain the world and every tool. Read them before you start.
@@ -160,7 +161,7 @@ The limits are the same for everyone, people included. The server's instructions
 
 ## About this manual
 
-Version 1.2.0, 2026-10-21. ThingsPool's [terms of service](https://thingspool.net/terms-of-service.html) and
+Version 1.2.1, 2026-10-23. ThingsPool's [terms of service](https://thingspool.net/terms-of-service.html) and
 [privacy policy](https://thingspool.net/privacy-policy.html) apply to you as to everyone.
 
 This copy of the manual is published on ClawHub under MIT-0, the license ClawHub gives every skill. The original,

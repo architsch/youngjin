@@ -9,11 +9,11 @@ import { ObjectMetadataKeyEnumMap } from "../types/objectMetadataKey";
 import { DoorTypeEnumMap } from "../types/doorType";
 import LampObjectTypeConfig from "../types/objectTypeConfig/lampObjectTypeConfig";
 import FanObjectTypeConfig from "../types/objectTypeConfig/fanObjectTypeConfig";
-import NpcObjectTypeConfig from "../types/objectTypeConfig/npcObjectTypeConfig";
-import NpcPersonalityMap from "./npcPersonalityMap";
+import MirrorObjectTypeConfig from "../types/objectTypeConfig/mirrorObjectTypeConfig";
 import LabelTextUtil from "../util/labelTextUtil";
 import MessageLinkUtil from "../util/messageLinkUtil";
 import AdminPrefsUtil from "../util/adminPrefsUtil";
+import BehaviorPrefsUtil from "../util/behaviorPrefsUtil";
 import QuarterTurnsUtil from "../util/quarterTurnsUtil";
 import NpcFacingUtil from "../util/npcFacingUtil";
 import ObjectTagUtil from "../util/objectTagUtil";
@@ -98,6 +98,10 @@ const entries: {[key: number]: ObjectMetadataEntry} = {
     [ObjectMetadataKeyEnumMap.FanColor]: {
         preprocessingMethod: (rawValue: string) => FanObjectTypeConfig.util.canonicalizeColor(rawValue),
     },
+    // Round-tripped as LightProperties is, through MirrorObjectTypeConfig's util.
+    [ObjectMetadataKeyEnumMap.MirrorProperties]: {
+        preprocessingMethod: (rawValue: string) => MirrorObjectTypeConfig.util.canonicalize(rawValue),
+    },
     // The server's alone, so a stored copy is never restored either (see ServerUserManager.addUserToRoom).
     [ObjectMetadataKeyEnumMap.AgentMark]: {
         preprocessingMethod: (rawValue: string) => (rawValue.trim() == "1") ? "1" : "",
@@ -113,12 +117,9 @@ const entries: {[key: number]: ObjectMetadataEntry} = {
         preprocessingMethod: (rawValue: string) => (rawValue.trim() == "1") ? "1" : "",
         canUserSet: (_user: User) => false,
     },
-    // Round-tripped through NpcObjectTypeConfig's util.
-    [ObjectMetadataKeyEnumMap.WanderRadius]: {
-        preprocessingMethod: (rawValue: string) => NpcObjectTypeConfig.util.canonicalizeWanderRadius(rawValue),
-    },
-    [ObjectMetadataKeyEnumMap.Personality]: {
-        preprocessingMethod: (rawValue: string) => NpcPersonalityMap.canonicalize(rawValue),
+    // Round-tripped as AdminPrefs is, through BehaviorPrefsUtil.
+    [ObjectMetadataKeyEnumMap.BehaviorPrefs]: {
+        preprocessingMethod: (rawValue: string) => BehaviorPrefsUtil.canonicalize(rawValue),
     },
 };
 

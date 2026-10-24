@@ -86,10 +86,16 @@ import RoomVolume from "../../../src/shared/room/types/roomVolume";
 import Room from "../../../src/shared/room/types/room";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
+import NpcPersonalityMap from "../../../src/shared/object/maps/npcPersonalityMap";
+import BehaviorPrefsUtil from "../../../src/shared/object/util/behaviorPrefsUtil";
 import VolumeObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/volumeObjectTypeConfig";
 import { HUB_ROOM_ID_KEYWORD, NUM_PACK_VOXEL_TEXTURES,
     NUM_VOXEL_TEXTURES } from "../../../src/shared/system/sharedConstants";
 import User from "../../../src/shared/user/types/user";
+import ObjectAttachmentUtil from "../../../src/shared/object/util/objectAttachmentUtil";
+import ObjectUpdateUtil from "../../../src/shared/object/util/objectUpdateUtil";
+import MirrorObjectTypeConfig, {
+    NUM_MIRROR_OPACITY_STEPS } from "../../../src/shared/object/types/objectTypeConfig/mirrorObjectTypeConfig";
 
 // Room ids as Firestore makes them (twenty letters and digits), which is all travel takes.
 const HUB_ID = "hubAAAAAAAAAAAAAAAAA";
@@ -563,21 +569,24 @@ describe("AI agents", () => {
     });
 
     describe("helpers", () => {
-        // An NPC an admin stood a little in from the hub's entrance, which the server then plays as a helper (unless
-        // its personality is Idle). Stood before the agent arrives, so that the room it is sent has it.
-        async function standHelper(name: string, personality: string = "guide"): Promise<string>
+        // An NPC an admin stood a little in from the hub's entrance (and this far to one side), which the server then
+        // plays as a helper (unless its personality is Idle). Stood before the agent arrives, so that the room it is sent
+        // has it.
+        async function standHelper(name: string, personality: string = "guide", side: number = 0): Promise<string>
         {
             if (ServerRoomManager.roomRuntimeMemories[HUB_ID] == undefined)
                 await harness.loadRoom(HUB_ID);
             const room = ServerRoomManager.roomRuntimeMemories[HUB_ID].room;
             const {pos, dir} = room.objectById[ENTRANCE_DOOR_OBJECT_ID].transform;
-            const objectId = "helperNpc";
+            const objectId = `helperNpc-${name}`;
             room.objectById[objectId] = new AddObjectSignal(HUB_ID, "admin", "Admin",
                 ObjectTypeConfigMap.getIndexByType("Npc"), objectId, new ObjectTransform(
-                    {x: pos.x + 3 * dir.x, y: DoorObjectTypeConfig.util.getFloorY(room.objectById[ENTRANCE_DOOR_OBJECT_ID]),
-                        z: pos.z + 3 * dir.z}, {x: 0, y: 1, z: 0}, {x: 1, y: 1, z: 1}),
+                    {x: pos.x + 3 * dir.x - side * dir.z,
+                        y: DoorObjectTypeConfig.util.getFloorY(room.objectById[ENTRANCE_DOOR_OBJECT_ID]),
+                        z: pos.z + 3 * dir.z + side * dir.x}, {x: 0, y: 1, z: 0}, {x: 1, y: 1, z: 1}),
                 {[ObjectMetadataKeyEnumMap.Label]: new EncodableByteString(name),
-                    [ObjectMetadataKeyEnumMap.Personality]: new EncodableByteString(personality)});
+                    [ObjectMetadataKeyEnumMap.BehaviorPrefs]: new EncodableByteString(BehaviorPrefsUtil.encode(
+                        {...BehaviorPrefsUtil.decode(""), personality: NpcPersonalityMap.read(personality)}))});
             await HelperAgentUtil.tick();
             return objectId;
         }
@@ -641,6 +650,26 @@ describe("AI agents", () => {
             expect(shown[0].signalType).toBe("roomChangedSignal");
             expect(shown.some(({signalType, signal}) => signalType == "setObjectMetadataSignal" && signal.objectId == npc
                 && signal.metadataKey == ObjectMetadataKeyEnumMap.SentMessage && signal.metadataValue == saying)).toBe(true);
+        });
+
+        it("are seen chatting with each other now and then, each with whom it chats with", async () => {
+            await standHelper("Mira", "jester", 1.5);
+            await standHelper("Bo", "sage", -1.5);
+            const agent = await arriveAgent("Watcher");
+            for (let second = 0; second < 200; ++second)
+            {
+                flush(5);
+                HelperAgentUtil.stepAll(1);
+                await HelperAgentUtil.tick();
+                if (HelperAgentUtil.getHelpers(HUB_ID).some(helper => helper.chattingWith != undefined))
+                    break;
+            }
+
+            const seen = AgentToolUtil.look(agent) as any;
+            expect(seen.people.find((person: any) => person.name == "Mira")).toMatchObject({isGuide: true,
+                chattingWith: "Bo"});
+            expect(seen.people.find((person: any) => person.name == "Bo")).toMatchObject({isGuide: true,
+                chattingWith: "Mira"});
         });
 
         it("can be walked up to by name", async () => {
@@ -1532,6 +1561,47 @@ describe("AI agents", () => {
             expect((await AgentObjectUtil.removeObject(visitor, canvas.id) as any).removed).toBe(canvas.id);
             expect((await AgentObjectUtil.removeObject(visitor, playerIdOf(owner)) as any).error)
                 .toMatch(/Nothing by that id/);
+        });
+
+        it("sees a mirror an admin hung, told what it shows, and may not add, change, move or remove one",
+            async () => {
+            const agent = await arriveAgent("Admirer");
+            const room = roomOf(agent);
+            // As an admin's browser hangs one (see MirrorObjectTypeConfig).
+            const admin = new User("an-admin", "Admin", UserTypeEnumMap.Admin, "admin@test.com", "");
+            const mirrorTypeIndex = ObjectTypeConfigMap.getIndexByType("Mirror");
+            const wall: AgentFace = {row: 1, column: 30, layer: 2, side: "south"};
+            const {center, dir} = AgentGridUtil.getFaceCenter(room.voxelGrid.voxels, AgentGridUtil.getFaceQuadIndex(wall));
+            const signalAt = (transform: ObjectTransform) => new AddObjectSignal(room.id, admin.id, admin.userName,
+                mirrorTypeIndex, "a-mirror", transform, {});
+            const transform = ObjectAttachmentUtil.findPlacement(room, mirrorTypeIndex, center, dir, {x: 1, y: 1, z: 1},
+                candidate => ObjectUpdateUtil.canAddObject(admin, room, signalAt(candidate)))!;
+            expect(ObjectUpdateUtil.addObject(admin, room, signalAt(transform))).toBe(true);
+
+            const seen = (AgentToolUtil.look(agent) as any).objects.find((obj: any) => obj.id == "a-mirror");
+            expect(seen).toMatchObject({type: "mirror", size: [2, 2], note: expect.stringContaining("reflected")});
+            // Its surface, as far as it shows: a tint, then all of it.
+            const noteWith = (opacityStep: number) => {
+                ObjectUpdateUtil.setObjectMetadata(admin, room, new SetObjectMetadataSignal(room.id, "a-mirror",
+                    ObjectMetadataKeyEnumMap.MirrorProperties, MirrorObjectTypeConfig.util.encodeMirrorProperties(0,
+                        opacityStep)));
+                return (AgentToolUtil.look(agent) as any).objects.find((obj: any) => obj.id == "a-mirror").note;
+            };
+            expect(seen.note).not.toMatch(/tint/);
+            expect(noteWith(7)).toMatch(/^A mirror tinted #000000, 35% opaque: it shows the room in front of it reflected/);
+            expect(noteWith(NUM_MIRROR_OPACITY_STEPS - 1))
+                .toMatch(/^A mirror covered over in #000000: it shows no reflection/);
+
+            expect((await AgentObjectUtil.editObject(agent, {id: "a-mirror", look: 3}) as any).error)
+                .toMatch(/Only an admin changes a mirror/);
+            const elsewhere: AgentFace = {row: 1, column: 20, layer: 2, side: "south"};
+            expect((await AgentObjectUtil.moveObject(agent, "a-mirror", elsewhere) as any).error)
+                .toMatch(/Only an admin moves a mirror/);
+            expect((await AgentObjectUtil.removeObject(agent, "a-mirror") as any).error)
+                .toMatch(/Only an admin removes a mirror/);
+            expect((await AgentObjectUtil.addObject(agent, {type: "mirror", on: {row: 1, column: 20, layer: 2,
+                side: "south"}} as any) as any).error).toMatch(/^Only canvas, prop, lamp, fan, label, door can be added/);
+            expect(room.objectById["a-mirror"].transform).toEqual(transform);
         });
 
         it("whats_new tells of what others built, one thing after another as one, but nothing of the agent's own",

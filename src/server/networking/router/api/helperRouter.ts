@@ -31,6 +31,22 @@ HelperRouter.post("/reply", UserIdentificationUtil.identifyAnyUser, async (req: 
     res.status(200).json({ reply });
 });
 
+// What two helpers in the user's single-player room say as they chat, as the browser that plays them asks (see
+// HelperAgentUtil.smallTalkAlone): each by its name and personality, and each line by its speaker's place among them.
+HelperRouter.post("/smalltalk", UserIdentificationUtil.identifyAnyUser, (req: Request, res: Response): void => {
+    const user = User.fromString((req as any).userString);
+    const { helpers } = req.body ?? {};
+    if (!Array.isArray(helpers) || helpers.length != 2 || !helpers.every(helper => isTextUpTo(helper?.name,
+        OBJECT_NAME_MAX_LENGTH) && isTextUpTo(helper?.personality, OBJECT_NAME_MAX_LENGTH)))
+    {
+        res.status(400).send("Invalid request.");
+        return;
+    }
+    const lines = HelperAgentUtil.smallTalkAlone(user.id,
+        helpers.map(helper => ({ name: helper.name, personality: helper.personality })));
+    res.status(200).json({ lines });
+});
+
 function isTextUpTo(value: unknown, maxLength: number): value is string
 {
     return typeof value == "string" && StringUtil.truncateByCodePoints(value, maxLength) == value;

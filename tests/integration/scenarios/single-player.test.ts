@@ -64,7 +64,7 @@ import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import VoxelQuadsRuntimeMemory from "../../../src/shared/voxel/types/voxelQuadsRuntimeMemory";
 import ObjectGroup from "../../../src/shared/object/types/objectGroup";
 import DoorObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
-import NpcObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/npcObjectTypeConfig";
+import BehaviorPrefsUtil from "../../../src/shared/object/util/behaviorPrefsUtil";
 import HelperBehaviorUtil from "../../../src/shared/object/util/helperBehaviorUtil";
 import LabelTextUtil from "../../../src/shared/object/util/labelTextUtil";
 import { DoorTypeEnumMap } from "../../../src/shared/object/types/doorType";
@@ -373,7 +373,7 @@ describe("the tutorial room's file", () => {
 
     it("keeps its receptionist idle, as the tutorial's steps alone speak for it, in a mode that plays NPCs", () => {
         const npc = ObjectTagUtil.findObject(loadTutorialRoom(), "npc")!;
-        expect(NpcObjectTypeConfig.util.getPersonality(npc)).toBe("idle");
+        expect(BehaviorPrefsUtil.getObjectPrefs(npc).personality).toBe("idle");
         expect(HelperBehaviorUtil.isPlayed(npc)).toBe(false);
         expect(SinglePlayerModeConfigMap[TUTORIAL_SINGLE_PLAYER_MODE].playsNpcs).toBe(true);
         // Nor are an authored room's NPCs played, which are saved where they were put.

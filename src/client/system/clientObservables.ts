@@ -57,6 +57,10 @@ export const voxelQuadSelectionRestrictionObservable = new Observable<number | n
 // Fires after a lost WebGL context is restored. Anything drawn only into render targets must redraw.
 export const graphicsContextRestoredObservable = new Observable<number>(0);
 
+// True while a mirror's reflection is drawn (see MirrorReflectionUtil), which shows what only the camera is kept from
+// seeing: the body it is inside, or someone too close to it (see InstancedMeshComposer.setHiddenFromCamera).
+export const reflectionDrawingObservable = new Observable<boolean>(false);
+
 // Selected object (including the user's own character), or null.
 export const objectSelectionObservable = new Observable<ObjectSelection | null>(null);
 

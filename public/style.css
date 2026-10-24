@@ -60,6 +60,24 @@ a:active {
 	left: 50%;
 	transform: translate(-50%, 0);
 }
+.imageButton {
+	-webkit-tap-highlight-color: transparent;
+}
+/* Transparent, so that the glow follows the picture's own outline rather than the image's box. */
+.imageButton img {
+	background-color: transparent;
+	transition: filter 0.15s ease-out, transform 0.08s ease-out;
+}
+@media (hover: hover) {
+	.imageButton:hover img {
+		filter: drop-shadow(0 0 0.2vmin #fff6b0) drop-shadow(0 0 0.8vmin #ffe45c) drop-shadow(0 0 2vmin #ffd23f);
+	}
+}
+/* iOS Safari applies :active only where a touch listener exists, hence the empty ontouchstart on these links. */
+.imageButton:active img {
+	filter: brightness(0.85) drop-shadow(0 0 0.2vmin #fff6b0) drop-shadow(0 0 0.8vmin #ffe45c) drop-shadow(0 0 2vmin #ffd23f);
+	transform: translateY(0.4vmin) scale(0.95);
+}
 
 @media (orientation: landscape) {
 	

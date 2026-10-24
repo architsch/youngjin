@@ -10,6 +10,7 @@ import AddLampIcon from "../../../svg/icons/addLampIcon";
 import AddFanIcon from "../../../svg/icons/addFanIcon";
 import AddLabelIcon from "../../../svg/icons/addLabelIcon";
 import AddNpcIcon from "../../../svg/icons/addNpcIcon";
+import AddMirrorIcon from "../../../svg/icons/addMirrorIcon";
 import AddVolumeIcon from "../../../svg/icons/addVolumeIcon";
 import App from "../../../../app";
 import ObjectTypeConfigMap from "../../../../../shared/object/maps/objectTypeConfigMap";
@@ -26,6 +27,7 @@ import ClosablePanelUtil from "../../../util/closablePanelUtil";
 import RoomValidationUtil from "../../../../../shared/room/util/roomValidationUtil";
 import LampObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/lampObjectTypeConfig";
 import LabelObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/labelObjectTypeConfig";
+import MirrorObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/mirrorObjectTypeConfig";
 import { CANVAS_IMAGE_SUBFOLDER } from "../../../../../shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
 import { PROP_IMAGE_SUBFOLDER } from "../../../../../shared/object/types/objectTypeConfig/propObjectTypeConfig";
 import SelectionToolRow from "./selectionToolRow";
@@ -40,6 +42,7 @@ const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
 const labelTypeIndex = ObjectTypeConfigMap.getIndexByType("Label");
 const npcTypeIndex = ObjectTypeConfigMap.getIndexByType("Npc");
 const fanTypeIndex = ObjectTypeConfigMap.getIndexByType("Fan");
+const mirrorTypeIndex = ObjectTypeConfigMap.getIndexByType("Mirror");
 
 // Feature flags whose toggling changes whether this menu's buttons are enabled.
 const placementFeatureFlags = [
@@ -99,10 +102,12 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
         ObjectPlacementUtil.canAddObject(props.selection, npcTypeIndex);
     const managesVolumes = (isAdmin || isSuperuser) && volumesShownObservable.peek();
     const canAddVolume = managesVolumes && ObjectPlacementUtil.canAddVolume(props.selection);
+    // A mirror is an admin's too, its frame picked first.
+    const canAddMirror = isAdmin && ObjectPlacementUtil.canAddObject(props.selection, mirrorTypeIndex);
 
     // A chooser shows only while its type can be added to the selected face.
     const canAdd = new Map([[canvasTypeIndex, canAddCanvas], [propTypeIndex, canAddProp], [lampTypeIndex, canAddLamp],
-        [labelTypeIndex, canAddLabel], [doorTypeIndex, canAddDoor]]);
+        [labelTypeIndex, canAddLabel], [doorTypeIndex, canAddDoor], [mirrorTypeIndex, canAddMirror]]);
     const choosing = (chooser != null && chooser.selection == props.selection && canAdd.get(chooser.typeIndex))
         ? chooser.typeIndex : null;
     const close = () => setChooser(null);
@@ -161,6 +166,7 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
             {isSuperuser && addButton("addDoorButton", <AddDoorIcon/>, doorTypeIndex)}
             {isAdmin && <IconButton id="addNpcButton" icon={<AddNpcIcon/>} size="md"
                 disabled={!canAddNpc} onClick={() => ObjectPlacementUtil.tryAddNpc(props.selection)}/>}
+            {isAdmin && addButton("addMirrorButton", <AddMirrorIcon/>, mirrorTypeIndex)}
             {managesVolumes && <IconButton id="addVolumeButton" icon={<AddVolumeIcon/>} size="md"
                 disabled={!canAddVolume} onClick={() => ObjectPlacementUtil.tryAddVolume(props.selection)}/>}
         </SelectionToolRow>}
@@ -200,6 +206,12 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
             id="customizeDoorOptions"
             objectType={DoorObjectTypeConfig.objectType}
             onChoose={compositionIndex => add(() => ObjectPlacementUtil.tryAddDoor(props.selection, compositionIndex))}
+            onClose={onClose}
+        />}
+        {choosing == mirrorTypeIndex && <CompositionThumbnailPanel
+            id="customizeMirrorOptions"
+            objectType={MirrorObjectTypeConfig.objectType}
+            onChoose={compositionIndex => add(() => ObjectPlacementUtil.tryAddMirror(props.selection, compositionIndex))}
             onClose={onClose}
         />}
         {choosing == null && props.children}

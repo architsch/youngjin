@@ -71,7 +71,7 @@ import "../../../src/client/graphics/types/gizmo/objectAttachmentEditGizmos";
 import WorldSpaceOutlineRect from "../../../src/client/graphics/types/gizmo/generic/worldSpaceOutlineRect";
 import GizmoDragUtil from "../../../src/client/graphics/util/gizmoDragUtil";
 import CameraUtil from "../../../src/client/graphics/util/cameraUtil";
-import SelectionEditGizmoUtil from "../../../src/client/graphics/util/selectionEditGizmoUtil";
+import SelectionEditGizmoUtil, { HANDLE_MIN_SPACING_PX } from "../../../src/client/graphics/util/selectionEditGizmoUtil";
 import ObjectSelection from "../../../src/client/graphics/types/gizmo/objectSelection";
 import GameObject from "../../../src/client/object/types/gameObject/gameObject";
 import ClientObjectManager from "../../../src/client/object/clientObjectManager";
@@ -496,8 +496,15 @@ describe("the corner handles of an object far from the camera", () => {
     const settle = () => new Promise(resolve => setTimeout(resolve, 0));
     const frame = () => updateObservable.set(1 / 60);
 
-    it("are offered as far off as they can be held, and no further", () => {
+    // How far off the camera must be for the outline's corners, so far apart, to show only so far apart on screen
+    // (squarely before them, as lookFrom places it).
+    const distanceShowing = (worldApart: number, screenApartPx: number) =>
+        worldApart * (0.5 * 600) / Math.tan(THREE.MathUtils.degToRad(30)) / screenApartPx;
+
+    it("are offered to a small object as far off as they can be held, and no further", () => {
         hangCanvas(10.5, 1);
+        // Its corners show too close together past there.
+        expect(distanceShowing(1 + 2 * OUTLINE_OUTSET, HANDLE_MIN_SPACING_PX)).toBeLessThan(SELECTION_HANDLE_MAX_DISTANCE);
         lookFrom(SELECTION_HANDLE_MAX_DISTANCE - 0.01);
         expect(handleIds()).toEqual(["-1,-1", "-1,1", "1,-1", "1,1"]);
 
@@ -507,6 +514,35 @@ describe("the corner handles of an object far from the camera", () => {
 
         lookFrom(6);
         expect(handleIds()).toEqual(["-1,-1", "-1,1", "1,-1", "1,1"]);
+    });
+
+    it("are offered nearer than that however close together they show", () => {
+        hangCanvas(10.5, 1, 0.5, 0.5);
+        lookFrom(SELECTION_HANDLE_MAX_DISTANCE - 0.01);
+        const handles = SelectionEditGizmoUtil.getGrabPoints()!.handles;
+        const closest = Math.min(...handles.flatMap((a, i) =>
+            handles.slice(i + 1).map(b => Math.hypot(a.x - b.x, a.y - b.y))));
+        expect(closest).toBeLessThan(HANDLE_MIN_SPACING_PX);
+        expect(handleIds()).toEqual(["-1,-1", "-1,1", "1,-1", "1,1"]);
+    });
+
+    it("are offered further off to an object large enough on screen, until its corners show too close together", () => {
+        hangCanvas(10.5, 1, 3, 1.5);
+        // Its shorter side decides.
+        const farthest = distanceShowing(1.5 + 2 * OUTLINE_OUTSET, HANDLE_MIN_SPACING_PX);
+        expect(farthest).toBeGreaterThan(SELECTION_HANDLE_MAX_DISTANCE + 2);
+
+        lookFrom(SELECTION_HANDLE_MAX_DISTANCE + 2);
+        expect(handleIds()).toEqual(["-1,-1", "-1,1", "1,-1", "1,1"]);
+        expect(SelectionEditGizmoUtil.getGrabPoints()!.canResize).toBe(true);
+        // A press on a corner takes hold of its handle, as it would nearer.
+        expect(cursorAt(onWall(10.5 + 1.5 + 0.05, 1 + 0.75 + 0.05))).toMatch(/resize/);
+
+        lookFrom(farthest - 0.05);
+        expect(handleIds()).toEqual(["-1,-1", "-1,1", "1,-1", "1,1"]);
+        lookFrom(farthest + 0.05);
+        expect(handleIds()).toEqual([]);
+        expect(cursorAt(onWall(10.5 + 1.5 + 0.05, 1 + 0.75 + 0.05))).toBe("move");
     });
 
     it("are drawn only while they are offered", async () => {
@@ -542,7 +578,8 @@ describe("the corner handles of an object far from the camera", () => {
         dragThrough(onWall(11.3, 1.8), onWall(11.6, 2.1));
         expect(objectTransform().scale).toEqual([1.5, 1.5, 1]);
 
-        lookFrom(SELECTION_HANDLE_MAX_DISTANCE + 2);
+        // Far enough off for its corners, grown apart, to show too close together.
+        lookFrom(distanceShowing(1.5 + 2 * OUTLINE_OUTSET, HANDLE_MIN_SPACING_PX) + 1);
         expect(handleIds()).toEqual(["1,1"]);
         await settle();
         frame();

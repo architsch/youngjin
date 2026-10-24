@@ -12,7 +12,7 @@ import { SELECTION_COLOR } from "../../../system/clientConstants";
 import Vec3 from "../../../../shared/math/types/vec3";
 import AddObjectSignal from "../../../../shared/object/types/addObjectSignal";
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
-import NpcObjectTypeConfig from "../../../../shared/object/types/objectTypeConfig/npcObjectTypeConfig";
+import BehaviorPrefsUtil from "../../../../shared/object/util/behaviorPrefsUtil";
 import HelperBehaviorUtil from "../../../../shared/object/util/helperBehaviorUtil";
 import LabelTextUtil from "../../../../shared/object/util/labelTextUtil";
 import NpcFacingUtil from "../../../../shared/object/util/npcFacingUtil";
@@ -30,6 +30,10 @@ const MAX_TURN_SPEED = 360;
 const TURNED_WITHIN = 0.1;
 // The circle of how far a helper goes lies this far over its floor.
 const WANDER_CIRCLE_LIFT = 0.02;
+
+// A radius an admin is dragging a helper's wander slider through, shown round it before it is set (see
+// previewWanderRadius).
+let wanderRadiusPreview: {objectId: string, radius: number} | undefined = undefined;
 
 // A character an admin stood on a floor (see NpcObjectTypeConfig). Its transform is an attached object's: on the
 // floor, facing up out of it. Its body is a player's, built upright about its own middle, so it is posed apart from
@@ -62,6 +66,12 @@ export default class NpcGameObject extends GameObject
     static isDragged(objectId: string): boolean
     {
         return NpcGameObject.isHeld(objectId) && GizmoDragUtil.isActive();
+    }
+
+    // The radius its circle shows while this user drags its wander slider, before the radius is set; none once it is.
+    static previewWanderRadius(objectId: string, radius: number | undefined): void
+    {
+        wanderRadiusPreview = (radius == undefined) ? undefined : {objectId, radius};
     }
 
     // Whether NPCs are played as helpers in the room the user is in: in any multiplayer room, by the server (see
@@ -139,14 +149,14 @@ export default class NpcGameObject extends GameObject
         return NpcGameObject.arePlayedHere() && HelperBehaviorUtil.isPlayed(this.params);
     }
 
-    // Hidden while the camera is inside it, as another player's body is (see PlayerGameObject).
+    // Hidden from the camera while it is inside it, as another player's body is (see PlayerGameObject).
     onPlayerProximityStart()
     {
-        this.instancedMeshComposer.setHidden(true);
+        this.instancedMeshComposer.setHiddenFromCamera(true);
     }
     onPlayerProximityEnd()
     {
-        this.instancedMeshComposer.setHidden(false);
+        this.instancedMeshComposer.setHiddenFromCamera(false);
     }
 
     onSetMetadata(key: ObjectMetadataKey, value: string)
@@ -197,11 +207,12 @@ export default class NpcGameObject extends GameObject
         ObjectPoseUtil.poseNpcBody(this.body, this.obj, this.params, NpcFacingUtil.getDir(this.drawnFacing));
     }
 
-    // An NPC this user holds whose personality is played is shown how far from home it goes as a helper, round where it
+    // An NPC this user holds whose personality is played is shown its wander radius (see BehaviorPrefs), round where it
     // stands: at home, as the room keeps it, or as it is being authored.
     private updateWanderCircle()
     {
-        const radius = NpcObjectTypeConfig.util.getWanderRadius(this.params);
+        const radius = (wanderRadiusPreview?.objectId == this.params.objectId) ? wanderRadiusPreview.radius
+            : BehaviorPrefsUtil.getObjectPrefs(this.params).wanderRadius;
         const shown = radius > 0 && HelperBehaviorUtil.isPlayed(this.params) && NpcGameObject.isHeld(this.params.objectId);
         if (shown && !this.wanderCircleMade)
         {

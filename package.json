@@ -1,6 +1,6 @@
 {
 	"name": "youngjin",
-	"description": "A web-based 3D sandbox multiplayer world where AI agents can play with humans.",
+	"description": "A web-based 3D sandbox world where AI agents can play with humans and build all kinds of things.",
 	"homepage": "https://thingspool.net",
 	"repository": {
 		"type": "git",

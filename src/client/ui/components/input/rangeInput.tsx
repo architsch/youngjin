@@ -3,9 +3,9 @@ import RangeValueInput from "./rangeValueInput";
 import { numActiveInputElementsObservable } from "../../../system/clientObservables";
 
 // Slider with an editable value field (see RangeValueInput); the field is omitted only for settings
-// judged by eye (e.g. CameraZoomSlider). Short ranges (<= MAX_TICK_MARKS values) get unlabeled ticks.
-export default function RangeInput({ currValue, setValue, min, max, step, showValueInput = true,
-    orientation = "horizontal", disabled = false, additionalClassNames = "" }: Props)
+// judged by eye (e.g. CameraZoomSlider). Short ranges (<= MAX_TICK_MARKS values, or ticks) get unlabeled ticks.
+export default function RangeInput({ id, currValue, setValue, commitValue, min, max, step, tickStep,
+    showValueInput = true, orientation = "horizontal", disabled = false, additionalClassNames = "" }: Props)
 {
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -14,6 +14,25 @@ export default function RangeInput({ currValue, setValue, min, max, step, showVa
 
     const onChange: FormEventHandler<HTMLInputElement> = useCallback((event: FormEvent<HTMLInputElement>) => {
         setValue(event.currentTarget.value);
+    }, [setValue]);
+
+    // The browser's own change event comes once a drag is let go of (or a key's step is taken), where React's onChange
+    // comes at every move. Read through a ref, as the listener is added once.
+    const commitRef = useRef(commitValue);
+    commitRef.current = commitValue;
+    useEffect(() => {
+        const input = inputRef.current;
+        if (!input)
+            return;
+        const onCommit = () => commitRef.current?.(input.value);
+        input.addEventListener("change", onCommit);
+        return () => {
+            input.removeEventListener("change", onCommit);
+        };
+    }, []);
+    const setTypedValue = useCallback((value: string) => {
+        setValue(value);
+        commitRef.current?.(value);
     }, [setValue]);
 
     const onFocus = useCallback(() => {
@@ -72,6 +91,7 @@ export default function RangeInput({ currValue, setValue, min, max, step, showVa
         <div className={`relative flex items-center min-w-0 ${additionalClassNames}`}>
             {/* Override the browser's default (blue) accent with the app's green. */}
             <input
+                id={id}
                 ref={inputRef}
                 type="range"
                 className={`${vertical ? "w-8 h-full [writing-mode:vertical-lr] [direction:rtl]" : "w-full h-8"} p-0 rounded-md cursor-pointer accent-green-600 yj-surface-concave disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -85,12 +105,12 @@ export default function RangeInput({ currValue, setValue, min, max, step, showVa
                 onBlur={onBlur}
             >
             </input>
-            {!vertical && renderTickMarks(minValue, maxValue, stepValue)}
+            {!vertical && renderTickMarks(minValue, maxValue, Number(tickStep ?? step))}
         </div>
         {showValueInput &&
             <RangeValueInput
                 currValue={currValue}
-                setValue={setValue}
+                setValue={setTypedValue}
                 min={minValue}
                 max={maxValue}
                 step={stepValue}
@@ -99,15 +119,15 @@ export default function RangeInput({ currValue, setValue, min, max, step, showVa
     </div>
 }
 
-// Ticks span the handle's travel (inset by half the handle width at each end).
-function renderTickMarks(min: number, max: number, step: number)
+// Ticks span the handle's travel (inset by half the handle width at each end), one every tickStep of the value.
+function renderTickMarks(min: number, max: number, tickStep: number)
 {
-    const numValues = getNumValues(min, max, step);
-    if (numValues < 2 || numValues > MAX_TICK_MARKS)
+    const numTicks = getNumValues(min, max, tickStep);
+    if (numTicks < 2 || numTicks > MAX_TICK_MARKS)
         return null;
 
     return <div className="absolute inset-x-0 bottom-0.5 flex flex-row justify-between px-1.75 pointer-events-none">
-        {Array.from({length: numValues}, (_, i) =>
+        {Array.from({length: numTicks}, (_, i) =>
             <div key={i} className="w-px h-1.5 rounded-full bg-white/40"/>)}
     </div>
 }
@@ -129,11 +149,17 @@ const MAX_TICK_MARKS = 12;
 
 interface Props
 {
+    id?: string;
     currValue: string;
     setValue: (value: string) => void;
+    // Given, what setValue is told as the handle moves is only a preview, and this is told the value settled on: once a
+    // drag is let go of, a key's step is taken, or a value is typed.
+    commitValue?: (value: string) => void;
     min: string;
     max: string;
     step: string;
+    // A tick every this much of the value, dividing the range evenly; by default every step.
+    tickStep?: string;
     // Defaults to true.
     showValueInput?: boolean;
     // Vertical sliders (e.g. CameraZoomSlider) have no tick marks.

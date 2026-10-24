@@ -36,6 +36,10 @@ const HANDLE_DIAMETER_PX = 18; // on screen, at any distance
 const MOUSE_HANDLE_REACH_PX = 14;
 const TOUCH_HANDLE_REACH_PX = 28;
 
+// How far apart on screen a selection's corners must show for it to keep its handles further from the camera than
+// SELECTION_HANDLE_MAX_DISTANCE, in CSS px: so that a finger's reach of one handle overlaps no other's.
+export const HANDLE_MIN_SPACING_PX = 2 * TOUCH_HANDLE_REACH_PX;
+
 // The pointer that moves a selection has the view follow it within a margin of the view's edge (see
 // followDraggedSelection): FOLLOW_SIDE_MARGIN_SHARE of the view's width from a side edge, FOLLOW_MARGIN_SHARE of
 // its shorter side from the top or bottom one. At the edge the view goes FOLLOW_SPEED of its own distance from
@@ -64,6 +68,7 @@ let activeDrag: {provider: SelectionEditGizmoProvider, drag: SelectionEditDrag, 
 const cameraAtLastMove = new THREE.Matrix4();
 
 const heldHandleTemp: {id: string, position: THREE.Vector3}[] = [];
+const cornerScreenTemps: THREE.Vector2[] = [];
 const reachTemp = {sideways: 0, upDown: 0};
 const rayTemp = new THREE.Ray();
 const planeTemp = new THREE.Plane();
@@ -171,13 +176,15 @@ const SelectionEditGizmoUtil =
 // ─── What a press can take hold of ──────────────────────────────────────
 
 // The handles a provider's selection has now, in their order. Further from the camera than
-// SELECTION_HANDLE_MAX_DISTANCE it has none, but for the one a drag holds, which never goes from under it.
+// SELECTION_HANDLE_MAX_DISTANCE it has none while its outline's corners, where they sit, show closer together than
+// HANDLE_MIN_SPACING_PX, but for the one a drag holds, which never goes from under it.
 function getOfferedHandles(provider: SelectionEditGizmoProvider): {id: string, position: THREE.Vector3}[]
 {
     const all = provider.getHandles();
     const outline = (all.length > 0 && !provider.handlesShowAtAnyDistance) ? provider.getOutline() : null;
     if (outline == null ||
-        outline.middle.distanceTo(GraphicsManager.getCamera().getWorldPosition(cameraPosTemp)) <= SELECTION_HANDLE_MAX_DISTANCE)
+        outline.middle.distanceTo(GraphicsManager.getCamera().getWorldPosition(cameraPosTemp)) <= SELECTION_HANDLE_MAX_DISTANCE ||
+        !showCrowded(outline.corners))
     {
         return all;
     }
@@ -188,6 +195,28 @@ function getOfferedHandles(provider: SelectionEditGizmoProvider): {id: string, p
     if (held != undefined)
         heldHandleTemp.push(held);
     return heldHandleTemp;
+}
+
+// Whether any two of these points show closer together on screen than HANDLE_MIN_SPACING_PX (any behind the camera
+// left out).
+function showCrowded(points: {position: THREE.Vector3}[]): boolean
+{
+    let numShown = 0;
+    for (const {position} of points)
+    {
+        const screen = PointerCoordUtil.worldToClient(position, screenTemp);
+        if (screen == null)
+            continue;
+        for (let i = 0; i < numShown; ++i)
+        {
+            if (cornerScreenTemps[i].distanceToSquared(screen) < HANDLE_MIN_SPACING_PX * HANDLE_MIN_SPACING_PX)
+                return true;
+        }
+        if (cornerScreenTemps.length <= numShown)
+            cornerScreenTemps.push(new THREE.Vector2());
+        cornerScreenTemps[numShown++].copy(screen);
+    }
+    return false;
 }
 
 function pick(ev: PointerEvent): {cursor: string, begin: () => GizmoDragHandler} | null

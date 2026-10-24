@@ -1,13 +1,15 @@
 import Vec3 from "../../math/types/vec3";
 import Voxel from "../types/voxel";
+import VoxelReach from "../types/voxelReach";
 import VoxelVertex from "../types/voxelVertex";
 import VoxelQueryUtil from "./voxelQueryUtil";
 import { COLLISION_LAYER_HEIGHT, NUM_VOXEL_COLS, NUM_VOXEL_ROWS, VOXEL_CELL_SIZE } from "../../system/sharedConstants";
 import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../object/types/objectTypeConfig/playerObjectTypeConfig";
 
-// Walking paths for a player's body over the voxel grid, by A*. A path runs between grid vertices: a body narrower
-// than two voxels, standing on one, covers exactly the four voxels around it, so it passes wherever a person could,
-// through a corridor two voxels wide. Only blocks count; objects on the way are left to the physics.
+// Walking paths for a player's body over the voxel grid, by A* to one place, or by Dijkstra to everywhere near at once
+// (see findReach). A path runs between grid vertices: a body narrower than two voxels, standing on one, covers exactly
+// the four voxels around it, so it passes wherever a person could, through a corridor two voxels wide. Only blocks
+// count; objects on the way are left to the physics.
 
 if (PLAYER_RADIUS_XZ >= VOXEL_CELL_SIZE)
     throw new Error("VoxelPathUtil assumes a player narrower than two voxels");
@@ -19,6 +21,8 @@ const MAX_DROP_LAYERS = 8;
 const MAX_EXPANSIONS = 40_000;
 const NUM_VERTEX_ROWS = NUM_VOXEL_ROWS + 1;
 const NUM_VERTEX_COLS = NUM_VOXEL_COLS + 1;
+// How far a world point may be off a vertex and still be on it.
+const ON_VERTEX = 1e-6;
 
 const DIRECTIONS: [number, number][] = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]];
 
@@ -35,6 +39,16 @@ const VoxelPathUtil =
     toWorld: (vertex: VoxelVertex): Vec3 =>
     {
         return {x: vertex.col * VOXEL_CELL_SIZE, y: vertex.layer * COLLISION_LAYER_HEIGHT, z: vertex.row * VOXEL_CELL_SIZE};
+    },
+    // The vertex a body's feet are exactly on there, if they are on one (see toWorld).
+    toVertex: (feet: Vec3): VoxelVertex | undefined =>
+    {
+        const col = feet.x / VOXEL_CELL_SIZE;
+        const row = feet.z / VOXEL_CELL_SIZE;
+        const layer = feet.y / COLLISION_LAYER_HEIGHT;
+        const onLine = (n: number) => Math.abs(n - Math.round(n)) < ON_VERTEX;
+        return (onLine(col) && onLine(row) && onLine(layer))
+            ? {row: Math.round(row), col: Math.round(col), layer: Math.round(layer)} : undefined;
     },
     // A standing player's feet, from its position, which is at its middle (see SpawnHotspotUtil).
     feetOf: (playerPos: Vec3): Vec3 =>
@@ -96,10 +110,8 @@ const VoxelPathUtil =
                 if (next == undefined)
                     continue;
 
-                const stepCost = ((dr != 0 && dc != 0) ? Math.SQRT2 : 1)
-                    + (next.layer > current.layer ? 0.5 : 0.25 * (current.layer - next.layer));
                 const nextKey = toKey(next);
-                const nextCost = currentCost + stepCost;
+                const nextCost = currentCost + getStepCost(current, next, dr, dc);
                 if (nextCost < (costSoFar.get(nextKey) ?? Infinity))
                 {
                     costSoFar.set(nextKey, nextCost);
@@ -110,6 +122,62 @@ const VoxelPathUtil =
         }
         return undefined;
     },
+    // Every vertex a body can walk to from the one it stands on, nearest first, by Dijkstra over the steps findPath
+    // takes: onto vertices `passes` lets it (start aside), out to a walk of about maxDistance world units. One search
+    // finds the way to each of them (see getPathWithin), so a walker picking where to go picks only where it can get to.
+    findReach: (voxels: Voxel[], start: VoxelVertex, maxDistance: number,
+        passes: (vertex: VoxelVertex) => boolean = () => true): VoxelReach =>
+    {
+        const maxCost = maxDistance / VOXEL_CELL_SIZE;
+        const startKey = toKey(start);
+        const costSoFar = new Map<number, number>([[startKey, 0]]);
+        const cameFrom = new Map<number, number>();
+        const vertices: VoxelVertex[] = [];
+        const open: {key: number, priority: number}[] = [{key: startKey, priority: 0}];
+
+        let expansions = 0;
+        while (open.length > 0 && expansions++ < MAX_EXPANSIONS)
+        {
+            const {key: currentKey, priority: currentCost} = heapPop(open);
+            // Reached more cheaply since it was queued.
+            if (currentCost > costSoFar.get(currentKey)!)
+                continue;
+
+            const current = fromKey(currentKey);
+            vertices.push(current);
+            for (const [dr, dc] of DIRECTIONS)
+            {
+                const next = findStep(voxels, current, dr, dc);
+                if (next == undefined || !passes(next))
+                    continue;
+
+                const nextKey = toKey(next);
+                const nextCost = currentCost + getStepCost(current, next, dr, dc);
+                if (nextCost <= maxCost && nextCost < (costSoFar.get(nextKey) ?? Infinity))
+                {
+                    costSoFar.set(nextKey, nextCost);
+                    cameFrom.set(nextKey, currentKey);
+                    heapPush(open, {key: nextKey, priority: nextCost});
+                }
+            }
+        }
+        return {start, vertices, cameFrom};
+    },
+    // The vertices from a reach's start to one it reached, both included, every step of the way; undefined for one it
+    // didn't reach.
+    getPathWithin: (reach: VoxelReach, vertex: VoxelVertex): VoxelVertex[] | undefined =>
+    {
+        const key = toKey(vertex);
+        if (key != toKey(reach.start) && !reach.cameFrom.has(key))
+            return undefined;
+        return rebuildPath(reach.cameFrom, key);
+    },
+}
+
+// A step's share of a path's cost: a diagonal its length, and a climb or a fall a little more than walking on.
+function getStepCost(from: VoxelVertex, to: VoxelVertex, dr: number, dc: number): number
+{
+    return ((dr != 0 && dc != 0) ? Math.SQRT2 : 1) + (to.layer > from.layer ? 0.5 : 0.25 * (from.layer - to.layer));
 }
 
 // Where a step from the vertex in a direction lands: on the same layer, else one up, else the highest of a few

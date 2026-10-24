@@ -69,6 +69,8 @@ export const ColorPaletteMap: {[colorPaletteName: ColorPaletteName]: string[]} =
     ],
     // Label ink (see LabelText): the full spectrum, so it can contrast with any plate color.
     "LabelColor": [...FULL_SPECTRUM_COLORS],
+    // A mirror's surface, laid over its reflection (see MirrorObjectTypeConfig).
+    "Mirror": [...FULL_SPECTRUM_COLORS],
     // Light colors (lamps, ambient, head light). Index 0 is white, which unconfigured rooms read back.
     // All entries are full brightness (hue and tint only), since strength is a separate setting and
     // light can only add. Few and far apart, roughly palest to most saturated.

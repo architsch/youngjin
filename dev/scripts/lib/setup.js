@@ -236,7 +236,7 @@ const doorStyles = (page) => callSandbox(page, "doorStyles");
 const canvasFrameStyles = (page) => callSandbox(page, "canvasFrameStyles");
 
 /**
- * Attaches a canvas, a prop, a door, a lamp, a fan or a label to a cell's face:
+ * Attaches a canvas, a prop, a door, a lamp, a fan, a label or a mirror to a cell's face:
  *
  *   addObject({type: "Canvas", row, col, face: "-z", collisionLayer: 2, metadata: {ImagePath: "1/14"}})
  *   addObject({type: "Prop", row, col, face: "-z", collisionLayer: 1, metadata: {ImagePath: "2/4"}})
@@ -244,6 +244,7 @@ const canvasFrameStyles = (page) => callSandbox(page, "canvasFrameStyles");
  *   addObject({type: "Lamp", row, col, face: "+y", collisionLayer: -1})   // on the room's floor
  *   addObject({type: "Fan", row, col, face: "+x", collisionLayer: 3, metadata: {ForceProperties: "("}})   // three blades
  *   addObject({type: "Label", row, col, face: "-z", collisionLayer: 2, metadata: {Label: "Reading Room"}})
+ *   addObject({type: "Mirror", row, col, face: "+x", collisionLayer: 4})   // in a frame of its own, seeded by its id
  *
  * `face` is `-x`, `+x`, `-z` or `+z` for a wall, where `collisionLayer` is the height on it, or `+y` / `-y`
  * for the top / underside of the block on `collisionLayer`; below the lowest layer is the room's floor, above

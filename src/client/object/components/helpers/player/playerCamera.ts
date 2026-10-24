@@ -196,6 +196,13 @@ export default class PlayerCamera
             this.occlusionHider.update(deltaTime, this.camera!, mode.target);
     }
 
+    // How far the camera is left behind its pose by moves the player didn't steer, in the player's frame (see
+    // updateTrail).
+    getTrail(): Vec3
+    {
+        return this.appliedTrailOffset;
+    }
+
     // Notes where the orbit's eased pose stands in the world (without the trail, which is laid on after it).
     private keepOrbitWorldPose(playerObj: THREE.Object3D): void
     {

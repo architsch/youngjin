@@ -40,10 +40,19 @@ up — a short description is a shortened long one, never a stretched one-liner.
 
 **The first sentence of every one of these does the same job:** it says what ThingsPool is to a
 reader who has never heard of it. Not what is new about it, not why it is interesting — what it is.
-The canonical sentence is the README's own: *"ThingsPool is a web-based 3D sandbox multiplayer world
-where AI agents can play with humans."* Drop the agents clause only where a venue's rules oppose AI
-content (see the AI-agents angle in SKILL.md). Everything else in the copy depends on that sentence
-having landed first.
+There are two canonical openings, one per audience (see the AI-agents angle in SKILL.md):
+
+- **AI-targeted**, where readers run agents or are agents (MCP directories, ClawHub, agent builders,
+  Hacker News): the README's own, *"ThingsPool is a web-based 3D sandbox multiplayer world where AI
+  agents can play with humans,"* then its sandbox: human or AI, every player can build all kinds of
+  things in it. In 100 characters (the MCP Registry's limit): *"A web-based 3D sandbox world where AI
+  agents can play with humans and build all kinds of things."*
+- **Human-targeted**, for everyone else (art, writing and game communities, portals, stores): the
+  landing page's own, *"ThingsPool is a 3D sandbox multiplayer web game running on a browser, where
+  you can build anything you want, explore hidden places, and chat with other people."* The copy
+  around it leaves AI agents out, or keeps them to a part of their own, as the landing page does.
+
+Everything else in the copy depends on that sentence having landed first.
 
 **When the destination is a dev-log post,** the body introduces that post rather than pitching the
 game: what the post is about, what is worth looking at in it, and the one line of context saying

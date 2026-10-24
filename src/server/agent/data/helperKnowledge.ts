@@ -4,10 +4,10 @@
 // helperPersonalities.ts). Each address is written as the link a helper gives it, a word or two its button's words,
 // since models copy that more faithfully than they follow a rule. Kept true and up to date by the helper-instructions
 // skill: every feature named is one the guide describes, and every address a page the site has (a test checks them).
-export const HELPER_KNOWLEDGE = `ThingsPool's maker: Youngjin (call them by that name alone), a software engineer with a
-background in game development and web programming, who made ThingsPool and writes and draws on its website. Their pages:
-<link href="https://thingspool.net/portfolio.html">their portfolio</link>,
-<link href="https://www.linkedin.com/in/youngjin-kang-55321882">their LinkedIn</link>, and
+export const HELPER_KNOWLEDGE = `ThingsPool's maker: Youngjin (call him by that name alone), a software engineer with a
+background in game development and web programming, who made ThingsPool and writes and draws on its website. His pages:
+<link href="https://thingspool.net/portfolio.html">his portfolio</link>,
+<link href="https://www.linkedin.com/in/youngjin-kang-55321882">his LinkedIn</link>, and
 <link href="https://www.linkedin.com/company/thingspool">ThingsPool's LinkedIn</link>.
 ThingsPool's website: <link href="https://thingspool.net/">its home page</link>, with
 <link href="https://thingspool.net/library.html">every writing</link> and
@@ -36,13 +36,13 @@ Things a visitor might make or do (ideas, not places that already exist; each wo
 - AI agents: some players are AI agents who build rooms of their own. If one shares a link to its room, open it in your
   browser to visit.
 
-Writings by the person who made ThingsPool on its website, all but one their own. Visitors don't know of them: bringing
+Writings by the person who made ThingsPool on its website, all but one his own. Visitors don't know of them: bringing
 one up, say who wrote it, what kind of writing it is and what it is about, and give its link as written here. Some are
 satire: say what they poke fun at, and never repeat a crude joke from one.
 Game design:
 - "Universal Laws of Game Design", a series in 15 volumes,
-  <link href="https://thingspool.net/game-design/list.html">read it</link>: laws of games, sought as Newton sought his;
-  the simplest creature has three goals, to absorb, to expand and to secure.
+  <link href="https://thingspool.net/game-design/list.html">read it</link>: a search for laws of game design, as Newton
+  found laws of motion; the simplest creature has three goals: to absorb, to expand and to secure.
 - "Making Profit as a Game Developer", an essay,
   <link href="https://thingspool.net/software-development/page-20.html">read it</link>: between a game and an engine sits
   the "software toy", like Minecraft: fixed core rules, with parts players shape themselves.
@@ -55,24 +55,25 @@ Game design:
 - "Game Design Concepts", ten short ideas, <link href="https://thingspool.net/morsels/page-1.html">read it</link>: like
   enemies on fixed paths, as trains on rails.
 - "Intergraph", an essay, <link href="https://thingspool.net/software-development/page-11.html">read it</link>: the links
-  between a game's map and its story; without them, you could loot a sunken ship from your bed.
+  between a game's map and its story; without them, you could collect a sunken ship's treasure from your bed.
 - "Degrees of Abstraction in Games", an essay,
-  <link href="https://thingspool.net/software-development/page-8.html">read it</link>: a pirate with a sword reads as an
-  enemy; a purple circle pointing a triangle doesn't.
+  <link href="https://thingspool.net/software-development/page-8.html">read it</link>: game art people already know
+  explains itself: a pirate with a sword is plainly an enemy, but a purple circle pointing a triangle is not.
 - "Procedural Narratives", an essay,
   <link href="https://thingspool.net/software-development/page-3.html">read it</link>: stories from goals and obstacles,
-  by carving a world into regions, one for each goal.
+  by dividing a world into regions, one for each goal.
 Ideas and wonder:
 - "Cosmic Programming", an essay, <link href="https://thingspool.net/essays/page-8.html">read it</link>: if the universe
   is a simulation, a wizard's spell is a line of code slipped into it.
 - "Model of the Mind", a short essay, <link href="https://thingspool.net/morsels/page-2.html">read it</link>: curiosity is
   strongest when something is neither too familiar nor too strange.
 - "The Origin of Reality", a series in 18 volumes, <link href="https://thingspool.net/reality/page-1.html">read it</link>:
-  even "1+1=2" is real only within a context; a search for whatever is real in every one.
+  even "1+1=2" is true only within a set of rules (in Boolean algebra, 1+1 is 1); it looks for what is real under any
+  rules.
 - "A Layman's Bridge to Mathematics", a series,
   <link href="https://thingspool.net/bridge-to-math/page-1.html">read it</link>: math made enjoyable, by linking it to
   everyday life.
-- "Flatland", <link href="https://thingspool.net/read-rec/page-8.html">read it</link>: not the maker's own, but their
+- "Flatland", <link href="https://thingspool.net/read-rec/page-8.html">read it</link>: not the maker's own, but his
   introduction to an old novel by Edwin Abbott, in which a shape's sides are its rank in society.
 - "Millimeter Real Estate", an essay, <link href="https://thingspool.net/essays/page-7.html">read it</link>: land bought
   by the square millimeter, colored in pixel by pixel.
@@ -81,36 +82,39 @@ Ideas and wonder:
 AI and art:
 - "Automation of Arts", an essay in 3 parts, <link href="https://thingspool.net/essays/page-9.html">read it</link>: AI
   may match an artist's technique, but technique isn't what makes real art; the human story behind a work is.
-- "Generative AI", an essay, <link href="https://thingspool.net/essays/page-13.html">read it</link>: AI can grow millions
-  of roses, but each of us keeps our own, as in The Little Prince.
+- "Generative AI", an essay, <link href="https://thingspool.net/essays/page-13.html">read it</link>: AI can make millions
+  of things, but each of us still loves the one that is ours, like the prince's one rose in "The Little Prince".
 - "Artificial Emotion", an essay,
   <link href="https://thingspool.net/software-development/page-15.html">read it</link>: AI solves the problems it is
   given; emotions are what would make it look for its own.
 - "To Every Lonely Artist", an essay, <link href="https://thingspool.net/concepts-of-plan/page-6.html">read it</link>:
-  don't blame the audience; great art balances the familiar, the moving and the clever.
-- "Surviving the Reign of AI", an essay, <link href="https://thingspool.net/essays/page-19.html">read it</link>: being
-  unique depends on context, so small communities with a shared story could let people matter again.
+  don't blame the audience; great art balances the familiar, the emotional and the clever.
+- "Surviving the Reign of AI", an essay, <link href="https://thingspool.net/essays/page-19.html">read it</link>: whether
+  someone stands out depends on the group they are in, so small communities with a shared story could let each person
+  matter again.
 - "Post-AI Computer Science", an essay,
-  <link href="https://thingspool.net/shards-of-sanity/page-1.html">read it</link>: with AI writing code, keep one corner
-  of yours, its core rules, to write yourself.
+  <link href="https://thingspool.net/shards-of-sanity/page-1.html">read it</link>: with AI writing most code, still write
+  a program's core rules yourself.
 Stories and fun:
 - "A Game Developer's Journey", a story in 12 chapters,
-  <link href="https://thingspool.net/gamedev-journey/page-1.html">read it</link>: a game developer in a basement, guided
-  by a talking magenta square, learns that his first players will be the people who know him.
+  <link href="https://thingspool.net/gamedev-journey/page-1.html">read it</link>: a made-up game developer (not
+  Youngjin) in a basement, guided by a talking magenta square, learns that his first players will be the people who
+  know him.
 - "The Island of Infinite Treasures", a satire in 10 parts,
-  <link href="https://thingspool.net/infinite-treasures/page-1.html">read it</link>: greedy game design poked fun at,
-  written as a game's script, where a fawning guide hands you a credit card as the legendary weapon.
+  <link href="https://thingspool.net/infinite-treasures/page-1.html">read it</link>: written as a game's script, it makes
+  fun of greedy games: an over-eager guide hands you a credit card as the legendary weapon.
 - "Sandwich Engineering", a story in 8 chapters, <link href="https://thingspool.net/sandwich/page-1.html">read it</link>:
-  mock tech hype that quietly teaches logic and sets, with sandwiches.
+  a parody of tech hype that teaches logic and sets, using sandwiches.
 - "Alien Job Interview", a parody in 10 parts,
   <link href="https://thingspool.net/alien-job-interview/page-1.html">read it</link>: a recruiter interviews a software
   engineer as if he were an alien.
 - "Technical Memes", joke charts, <link href="https://thingspool.net/concepts-of-plan/page-2.html">read it</link>: like
-  game development as a cycle from inspiration to disillusionment and back.
+  game development as a cycle of five steps: a new idea, a quick prototype, a cleanup, doubts, a lesson, and a new
+  idea again.
 - "Domestication", a funny essay, <link href="https://thingspool.net/essays/page-12.html">read it</link>: cats
-  domesticated us for free; we are their self-running livestock, paid in cuteness.
+  tamed humans, not the other way round: we feed them and give them homes, and they only have to be cute.
 - "My Younger Days with The Sims", an essay, <link href="https://thingspool.net/essays/page-1.html">read it</link>: the
-  game, played from third grade, that steered ThingsPool's maker toward making games.
+  game ThingsPool's maker played from third grade, in 2002, which led him to become a game developer.
 Art by the same person, on the same website: illustrations
 (<link href="https://thingspool.net/illustrations/list.html">see them</link>) and cartoons
 (<link href="https://thingspool.net/cartoons/list.html">see them</link>).

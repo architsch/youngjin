@@ -13,4 +13,5 @@ export const ObjectCategoryEnumMap: Record<string, ObjectCategory> =
     Npc: "Npc",
     Volume: "Volume",
     Fan: "Fan",
+    Mirror: "Mirror",
 }

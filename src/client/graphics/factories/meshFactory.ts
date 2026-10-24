@@ -5,6 +5,7 @@ import Pool from "../../../shared/system/types/pool";
 import MaterialParams from "../../../shared/graphics/material/types/materialParams";
 import InstancedTexturePackMaterialParams from "../../../shared/graphics/material/types/instancedTexturePackMaterialParams";
 import GraphicsManager from "../graphicsManager";
+import { MIRRORED_LAYER } from "../../system/clientConstants";
 
 const loadedMeshes: { [meshId: string]: THREE.Mesh } = {};
 const loadedLineSegments: { [id: string]: THREE.LineSegments } = {};
@@ -114,6 +115,7 @@ const MeshFactory =
         newMesh.name = meshId;
         newMesh.frustumCulled = false;
         newMesh.raycast = () => {};
+        newMesh.layers.enable(MIRRORED_LAYER);
         GraphicsManager.addObjectToSceneIfNotAlreadyAdded(newMesh);
         loadedMeshes[meshId] = newMesh;
         return newMesh;
@@ -234,6 +236,8 @@ async function createInstancedMesh(meshId: string, geometryId: string, materialP
 {
     const newMesh = await buildInstancedMesh(geometryId, materialParams, maxNumInstances);
     newMesh.name = meshId;
+    // The room's own meshes, which a mirror shows (see MirrorReflectionUtil).
+    newMesh.layers.enable(MIRRORED_LAYER);
     GraphicsManager.addObjectToSceneIfNotAlreadyAdded(newMesh);
     loadedMeshes[meshId] = newMesh;
 

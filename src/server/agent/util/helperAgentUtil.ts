@@ -34,14 +34,16 @@ import HelperPendingLines from "../types/helperPendingLines";
 import HelperState from "../types/helperState";
 import HelperIdentity from "../types/helperIdentity";
 import HelperChatUtil from "./helperChatUtil";
+import HelperSmallTalkUtil from "./helperSmallTalkUtil";
 
 // Helpers: the NPCs an admin stands in multiplayer rooms (see NpcObjectTypeConfig), which the server plays as AI guides,
-// so that a newcomer never arrives to an empty world, each as its personality has it (one with none played isn't a
-// helper). Each behaves as any helper does (see HelperBehaviorUtil); here, it greets each visitor as they come near,
-// once a login, and answers whoever talks to it nearby, or names it, people and agents alike, through Claude (see
-// HelperChatUtil). What it does is shown to the room and never kept: the room keeps it at home, so an admin moving it
-// moves its home. People are shown it is an AI (see NpcGameObject). A single-player room's helpers are played by the
-// browser, which asks here for their answers (see answerAlone).
+// so that a newcomer never arrives to an empty world, each as its BehaviorPrefs have it (one whose personality isn't
+// played isn't a helper). Each behaves as any helper does (see HelperBehaviorUtil); here, it greets each visitor as they
+// come near, once a login, answers whoever talks to it nearby, or names it, people and agents alike, through Claude (see
+// HelperChatUtil), and now and then chats with another helper near it in fixed words (see HelperSmallTalkUtil). What it
+// does is shown to the room and never kept: the room keeps it at home, so an admin moving it moves its home. People are
+// shown it is an AI (see NpcGameObject). A single-player room's helpers are played by the browser, which asks here for
+// their answers and their chats (see answerAlone, smallTalkAlone).
 
 const TICK_MS = 1000;
 const NPC_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Npc");
@@ -106,8 +108,10 @@ const HelperAgentUtil =
                 noticeVisitors(helper, memory, now);
                 greet(helper, now);
                 answerSpeakers(helper, now);
-                HelperBehaviorUtil.beat(helper, surroundingsOf(helper), now, helper.linesByUserID.size > 0);
             }
+            startSmallTalks(now);
+            for (const helper of helpers.values())
+                HelperBehaviorUtil.beat(helper, surroundingsOf(helper), now, helper.linesByUserID.size > 0);
             await HelperChatUtil.saveSpending();
             if (now - state.usageLoggedAt >= USAGE_LOG_INTERVAL_MS)
             {
@@ -139,8 +143,8 @@ const HelperAgentUtil =
     },
     // A line someone said, as SocketsServer dispatched it (see UserSignalDispatchUtil), for whichever helper it is for
     // (see HelperBehaviorUtil.pickListener). Only a player's own lines come here: what a helper says goes to its room
-    // directly (see send), so helpers never hear one another, and two near each other never talk on at the key's expense.
-    // A ghost isn't heard, since an answer would show everyone it is there.
+    // directly (see send), so helpers never hear one another, and two near each other chat only in fixed words (see
+    // startSmallTalks), never at the key's expense. A ghost isn't heard, since an answer would show everyone it is there.
     hear: (userID: string, signal: SetObjectMetadataSignal): void =>
     {
         const player = ServerUserManager.getPlayerObject(userID);
@@ -212,18 +216,34 @@ const HelperAgentUtil =
         const tag = ctx.funnel.includes(FunnelMilestoneEnumMap.Returned) ? "" : " (new here)";
         return await HelperChatUtil.reply(identity, userID, `${ctx.user.userName}${tag}: ${text}`) ?? "";
     },
-    // The helpers in a room as they are shown, for what agents see (see AgentToolUtil.look).
+    // What two of a single-player room's helpers, which the browser plays, say to each other as they chat (see
+    // SinglePlayerHelperUtil), as two in a multiplayer room would: each line by its speaker's place among them, and none
+    // when nothing of the ask is right (the user isn't in a mode that plays NPCs, or either character isn't played).
+    smallTalkAlone: (userID: string, npcs: {name: string, personality: string}[]): {by: number, text: string}[] =>
+    {
+        const ctx = ServerUserManager.getSocketUserContext(userID);
+        if (ctx == undefined || !SinglePlayerModeConfigMap[ctx.singlePlayerMode]?.playsNpcs)
+            return [];
+        return HelperSmallTalkUtil.compose(npcs.map(npc => ({
+            name: LabelTextUtil.isShortName(npc.name) ? LabelTextUtil.toName(npc.name) : "",
+            personality: NpcPersonalityMap.read(npc.personality)})));
+    },
     // What one sent a room is to be told of its helpers besides (see catchUpOn). The helpers tell a newcomer to the room
     // themselves; whatever else shows it (an agent's camera) asks.
     getCatchUpSignals: (roomID: string): {signalType: string, signal: EncodableData}[] =>
     {
         return [...helpers.values()].filter(helper => helper.roomID == roomID).flatMap(catchUpOn);
     },
-    getHelpers: (roomID: string): {objectId: string, name: string, at: Vec3, saying: string, thinking: boolean}[] =>
+    // The helpers in a room as they are shown, for what agents see (see AgentToolUtil.look), with the helper each is
+    // chatting with, if it is, by name.
+    getHelpers: (roomID: string): {objectId: string, name: string, at: Vec3, saying: string, thinking: boolean,
+        chattingWith: string | undefined}[] =>
     {
-        return [...helpers.values()].filter(helper => helper.roomID == roomID)
-            .map(helper => ({objectId: helper.objectId, name: helper.name, at: {...helper.at}, saying: helper.saying,
-                thinking: helper.thinking}));
+        return [...helpers.values()].filter(helper => helper.roomID == roomID).map(helper => {
+            const partner = HelperBehaviorUtil.getSmallTalkPartner(helper);
+            return {objectId: helper.objectId, name: helper.name, at: {...helper.at}, saying: helper.saying,
+                thinking: helper.thinking, chattingWith: (partner == undefined) ? undefined : (partner.name || "a guide")};
+        });
     },
 }
 
@@ -243,6 +263,8 @@ function surroundingsOf(helper: HelperState): HelperSurroundings
             .filter((pos): pos is Vec3 => pos != undefined),
         getPerson: (userID: string) => (ServerRoomManager.currentRoomIDByUserID[userID] == helper.roomID)
             ? seenPlayerOf(userID)?.transform.pos : undefined,
+        getOtherHelpers: () => [...helpers.values()].filter(other => other.roomID == helper.roomID && other !== helper)
+            .map(other => other.at),
         hasLinesWaiting: () => helper.linesByUserID.size > 0,
         isHeld: () => helper.heldBy.size > 0,
         showAt: () => send(helper, "setObjectTransformSignal", transformSignal(helper)),
@@ -268,7 +290,7 @@ function findHelpers(now: number): void
             const key = `${roomID}/${obj.objectId}`;
             found.add(key);
             const helper = helpers.get(key) ?? newHelper(roomID, obj, now);
-            HelperBehaviorUtil.takeSettings(helper, obj);
+            HelperBehaviorUtil.takeSettings(helper, obj, now);
             helpers.set(key, helper);
         }
     }
@@ -282,7 +304,30 @@ function findHelpers(now: number): void
             HelperBehaviorUtil.standAtHome(helper, surroundings);
             HelperBehaviorUtil.fallSilent(helper, surroundings);
         }
+        HelperBehaviorUtil.endSmallTalk(helper);
         helpers.delete(key);
+    }
+}
+
+// Helpers near each other chat now and then, in fixed words (see HelperSmallTalkUtil): only while someone is in their
+// room to see it, and never one held. One with someone to greet or answer has talked with them too lately to.
+function startSmallTalks(now: number): void
+{
+    const byRoomID = new Map<string, HelperState[]>();
+    for (const helper of helpers.values())
+        byRoomID.set(helper.roomID, [...(byRoomID.get(helper.roomID) ?? []), helper]);
+    for (const [roomID, inRoom] of byRoomID)
+    {
+        const free = inRoom.filter(helper => helper.heldBy.size == 0);
+        if (free.length < 2 || surroundingsOf(free[0]).getPeople().length == 0)
+            continue;
+        const pair = HelperBehaviorUtil.findSmallTalkPair(free,
+            ServerRoomManager.roomRuntimeMemories[roomID].room.voxelGrid.voxels, now);
+        if (pair != undefined)
+        {
+            HelperBehaviorUtil.startSmallTalk(pair, HelperSmallTalkUtil.compose(pair.map(helper =>
+                ({name: helper.name, personality: helper.prefs.personality}))), now);
+        }
     }
 }
 
@@ -456,7 +501,7 @@ function identityOf(helper: HelperState): HelperIdentity
     const room = ServerRoomManager.roomRuntimeMemories[helper.roomID]?.room;
     const place = (helper.roomID == RoomPickerUtil.getFirstHubRoomID()) ? "the main hub, the public room newcomers arrive in"
         : (room?.roomType == RoomTypeEnumMap.Hub) ? "one of the public hubs" : "a room one of the players made";
-    return {key: `${helper.roomID}/${helper.objectId}`, name: helper.name, place, personality: helper.personality};
+    return {key: `${helper.roomID}/${helper.objectId}`, name: helper.name, place, personality: helper.prefs.personality};
 }
 
 function transformSignal(helper: HelperState): SetObjectTransformSignal

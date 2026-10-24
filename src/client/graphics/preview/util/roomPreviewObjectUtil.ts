@@ -17,6 +17,8 @@ import { ObjectCategoryEnumMap } from "../../../../shared/object/types/objectCat
 import ObjectGroup from "../../../../shared/object/types/objectGroup";
 import { ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
 import NpcObjectTypeConfig from "../../../../shared/object/types/objectTypeConfig/npcObjectTypeConfig";
+import MirrorObjectTypeConfig, { MIRROR_COLOR_PALETTE_NAME } from "../../../../shared/object/types/objectTypeConfig/mirrorObjectTypeConfig";
+import ColorUtil from "../../../../shared/math/util/colorUtil";
 import ObjectCompositionUtil from "../../../../shared/object/util/objectCompositionUtil";
 import ObjectScaleUtil from "../../../../shared/object/util/objectScaleUtil";
 import QuarterTurnsUtil from "../../../../shared/object/util/quarterTurnsUtil";
@@ -37,6 +39,9 @@ const QUAD_CORNER_UVS = [[0, 0], [1, 0], [1, 1], [0, 1]];
 // What an object without an image shows, as the game's placeholder texels are read (see TextureUtil).
 const PLACEHOLDER_COLOR = new THREE.Color().setHex(0x282828, THREE.LinearSRGBColorSpace);
 
+// What a mirror's glass shows in the picture, which reflects nothing (see MirrorReflectionUtil).
+const GLASS_COLOR = new THREE.Color().setHex(0xaebcc6);
+
 const matrixTemp = new THREE.Matrix4();
 const vec3Temp = new THREE.Vector3();
 const uvTemp = new THREE.Vector2();
@@ -46,8 +51,8 @@ const turnedUVTemp = new THREE.Vector2();
 const RoomPreviewObjectUtil =
 {
     // Adds the objects to the levels they are on: their composed parts, in the materials the game draws them in,
-    // and their pictures, but no lettering, which would be too small to read. Only what is on a face turned toward
-    // the camera, as anything else would hang in the air with its back to it. loadImage gives an image's texture,
+    // their pictures and mirrors' glass, but no lettering, which would be too small to read. Only what is on a face
+    // turned toward the camera, as anything else would hang in the air with its back to it. loadImage gives an image's texture,
     // the same one each time, or nothing for one that can't be had. Returns the materials made here, which are the
     // caller's to dispose of.
     addObjects: async (objectGroup: ObjectGroup, levels: RoomPreviewLevel[],
@@ -60,6 +65,9 @@ const RoomPreviewObjectUtil =
         const pictureQuadsByImagePath: {[imagePath: string]: {texture: THREE.Texture | undefined, positions: number[],
             normals: number[], uvs: number[]}}[] = levels.map(() => ({}));
         const pictures: Promise<void>[] = [];
+        // Each level's mirrors' glass: the corners of its quads, and the color the room's one mirror gives it.
+        const glassQuads: {positions: number[], normals: number[]}[] = levels.map(() => ({positions: [], normals: []}));
+        let glassColor = GLASS_COLOR;
 
         for (const obj of Object.values(objectGroup.objectById))
         {
@@ -104,6 +112,11 @@ const RoomPreviewObjectUtil =
 
             if (config.category == ObjectCategoryEnumMap.Picture)
                 pictures.push(addPictureQuad(obj, node, objectSize, params, pictureQuadsByImagePath[levelIndex], loadImage));
+            else if (config.category == ObjectCategoryEnumMap.Mirror)
+            {
+                addGlassQuad(node, objectSize, params, glassQuads[levelIndex]);
+                glassColor = getGlassColor(obj);
+            }
         }
 
         for (let levelIndex = 0; levelIndex < levels.length; ++levelIndex)
@@ -123,7 +136,22 @@ const RoomPreviewObjectUtil =
                     new Float32Array(uvs), material));
             }
         });
-        return Object.values(materialByImagePath);
+        const materials = Object.values(materialByImagePath);
+
+        if (glassQuads.some(({positions}) => positions.length > 0))
+        {
+            const glassMaterial = createPictureMaterial(undefined, glassColor);
+            levels.forEach((level, levelIndex) => {
+                const {positions, normals} = glassQuads[levelIndex];
+                if (positions.length > 0)
+                {
+                    level.group.add(MeshFactory.createDetachedQuadMesh(new Float32Array(positions),
+                        new Float32Array(normals), undefined, glassMaterial));
+                }
+            });
+            materials.push(glassMaterial);
+        }
+        return materials;
     },
 }
 
@@ -207,11 +235,35 @@ async function addPictureQuad(obj: AddObjectSignal, node: THREE.Object3D, object
     }
 }
 
-// What a picture is drawn in: over its board as the game draws it (see PictureGameObject), an image's own
-// see-through texels left out.
-function createPictureMaterial(texture: THREE.Texture | undefined): THREE.Material
+// A mirror's glass, where the game lays it (see MirrorGameObject): inside its frame, or over its whole footprint where
+// it has none. Added to its level's glass quads.
+function addGlassQuad(node: THREE.Object3D, objectSize: Vec3, params: InstancedMeshCompositionParams,
+    quads: {positions: number[], normals: number[]}): void
 {
-    const material = new THREE.MeshPhongMaterial(texture ? {map: texture, alphaTest: 0.5} : {color: PLACEHOLDER_COLOR});
+    const glassSize = FramedPanelCompositionConstants.getInnerSize(params as FramedPanelCompositionParams, objectSize);
+    InstancedPartUtil.bakePartMatrix(node, 0, 0, FRAMED_PANEL_BOARD_RELIEF + FRAMED_PANEL_CONTENT_LIFT,
+        BACKWARD_DIR.x, BACKWARD_DIR.y, BACKWARD_DIR.z, glassSize.x, glassSize.y, glassSize.z, matrixTemp);
+    const normal = vec3Temp.setFromMatrixColumn(node.matrixWorld, 2);
+    for (const [u, v] of QUAD_CORNER_UVS)
+    {
+        quads.normals.push(normal.x, normal.y, normal.z);
+        quads.positions.push(...new THREE.Vector3(u - 0.5, v - 0.5, 0).applyMatrix4(matrixTemp).toArray());
+    }
+}
+
+// The glass as the picture shows it: plain, under as much of its surface's color as the mirror lays over it.
+function getGlassColor(obj: AddObjectSignal): THREE.Color
+{
+    const rgb = ColorUtil.paletteIndexToRGB(MIRROR_COLOR_PALETTE_NAME, MirrorObjectTypeConfig.util.getColorIndex(obj));
+    return GLASS_COLOR.clone().lerp(new THREE.Color().setRGB(rgb.x / 255, rgb.y / 255, rgb.z / 255, THREE.SRGBColorSpace),
+        MirrorObjectTypeConfig.util.getOpacity(obj));
+}
+
+// What a picture is drawn in: over its board as the game draws it (see PictureGameObject), an image's own
+// see-through texels left out; without one, the color given (the placeholder's unless told).
+function createPictureMaterial(texture: THREE.Texture | undefined, color: THREE.Color = PLACEHOLDER_COLOR): THREE.Material
+{
+    const material = new THREE.MeshPhongMaterial(texture ? {map: texture, alphaTest: 0.5} : {color});
     material.polygonOffset = true;
     material.polygonOffsetFactor = -2;
     material.polygonOffsetUnits = -2;

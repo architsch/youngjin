@@ -70,27 +70,28 @@ export default class PlayerGameObject extends GameObject
         this.refreshOtherPlayerVisibility();
     }
 
-    // A ghost's body and bubble are hidden from everyone (see AdminPrefs). The character the camera is at uses
-    // refreshOwnVisibility instead.
+    // A ghost's body and bubble are hidden from everyone (see AdminPrefs), and a body too close from the camera alone. The
+    // character the camera is at uses refreshOwnVisibility instead.
     private refreshOtherPlayerVisibility()
     {
         if (this.isSeenThrough())
             return;
-        this.instancedMeshComposer.setHidden(this.ghostMode || this.tooCloseToCamera);
+        this.instancedMeshComposer.setHidden(this.ghostMode);
+        this.instancedMeshComposer.setHiddenFromCamera(this.tooCloseToCamera);
         this.speechBubble.setHidden(this.ghostMode);
     }
 
     // The body (and bubble) the camera is at is shown when it isn't a ghost, no scripted step hides it, the mode
-    // isn't first-person and the camera isn't inside the body. The body is never hidden as an occluder
-    // (see OrbitOccluder), and orbiting one's own character shows it unless a step hides it.
+    // isn't first-person and the camera isn't inside the body; in those last two, the body is hidden from the camera
+    // alone, so a mirror still shows it. The body is never hidden as an occluder (see OrbitOccluder), and orbiting
+    // one's own character shows it unless a step hides it.
     private refreshOwnVisibility()
     {
-        const hidden = this.ghostMode ||
-            myPlayerHiddenObservable.peek() ||
-            cameraModeObservable.peek().type === "firstPerson" ||
-            this.cameraIsInsideOwnBody();
+        const hidden = this.ghostMode || myPlayerHiddenObservable.peek();
+        const seenFromInside = cameraModeObservable.peek().type === "firstPerson" || this.cameraIsInsideOwnBody();
         this.instancedMeshComposer.setHidden(hidden);
-        this.speechBubble.setHidden(hidden);
+        this.instancedMeshComposer.setHiddenFromCamera(seenFromInside);
+        this.speechBubble.setHidden(hidden || seenFromInside);
     }
 
     // Whose eyes the camera is at: the user's own player's, or the agent's a camera page watches (see

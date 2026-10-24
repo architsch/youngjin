@@ -2,7 +2,7 @@
 
 Reference: @src/shared/object/util/objectAttachmentUtil.ts , @src/shared/object/types/objectAttachmentConfig.ts , @src/shared/physics/util/physicsColliderStateUtil.ts , @src/client/graphics/types/gizmo/objectAttachmentEditGizmos.ts
 
-An attached object (a canvas, a prop, a [door](door_design.md), a lamp, a fan, an NPC) rests on a voxel face: a wall, a floor or a ceiling. Its type's `ObjectAttachmentConfig` lists the facings it may take (walls only for doors and labels, floors only for NPCs, any face for canvases, props, lamps and fans), and the placement rule enforces it on the server as well.
+An attached object (a canvas, a prop, a [door](door_design.md), a lamp, a fan, an NPC, a [mirror](../graphics/mirror.md)) rests on a voxel face: a wall, a floor or a ceiling. Its type's `ObjectAttachmentConfig` lists the facings it may take (walls only for doors and labels, floors only for NPCs, any face for canvases, props, lamps, fans and mirrors), and the placement rule enforces it on the server as well.
 
 ## Frame
 - The facing is the normal of the face the object rests on: up for a floor, down for a ceiling.

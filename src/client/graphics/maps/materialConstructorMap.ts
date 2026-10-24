@@ -10,6 +10,7 @@ import InstancedTinMaterialParams from "../../../shared/graphics/material/types/
 import InstancedWoodMaterialParams from "../../../shared/graphics/material/types/instancedWoodMaterialParams";
 import InstancedEmissiveMaterialParams from "../../../shared/graphics/material/types/instancedEmissiveMaterialParams";
 import InstancedParticleMaterialParams from "../../../shared/graphics/material/types/instancedParticleMaterialParams";
+import InstancedMirrorMaterialParams from "../../../shared/graphics/material/types/instancedMirrorMaterialParams";
 import LightBlockMapMaterialUtil from "../light/util/lightBlockMapMaterialUtil";
 import ParticleMaterialUtil from "../particle/util/particleMaterialUtil";
 import installParticleShader from "../shaders/particleShader";
@@ -21,6 +22,8 @@ import installInstancedTinShader, { applyInstancedTinMaterialProperties }
     from "../shaders/instancedTinShader";
 import installInstancedWoodShader, { applyInstancedWoodMaterialProperties }
     from "../shaders/instancedWoodShader";
+import installMirrorShader from "../shaders/mirrorShader";
+import MirrorMaterialUtil from "../util/mirrorMaterialUtil";
 
 // Material type -> THREE.Material. Shader code lives in @src/client/graphics/shaders (one module per
 // surface). "addSampling" = lit by room lamps (see LightBlockMap); "addFogNoise" = stands in the
@@ -52,6 +55,12 @@ export const MaterialConstructorMap: { [materialType: string]:
     {
         return AtmosphereMaterialUtil.addFogNoise(
             createInstancedEmissiveMaterial(params as InstancedEmissiveMaterialParams));
+    },
+    // Both, for its surface; what it shows of the room under that is lit and fogged already (see mirrorShader).
+    "InstancedMirror": async (params: MaterialParams) =>
+    {
+        return AtmosphereMaterialUtil.addFogNoise(LightBlockMapMaterialUtil.addSampling(
+            createInstancedMirrorMaterial(params as InstancedMirrorMaterialParams)));
     },
     // Solid sprites are surfaces, lit like any other; blended particles are air, which isn't.
     "InstancedParticle": async (params: MaterialParams) =>
@@ -152,6 +161,21 @@ function createInstancedEmissiveMaterial(p: InstancedEmissiveMaterialParams): TH
     newMaterial.polygonOffsetFactor = -2;
     newMaterial.polygonOffsetUnits = -2;
     newMaterial.onBeforeCompile = installInstanceColorShader;
+    return newMaterial;
+}
+
+// A mirror's glass, over its board as a picture is (see PictureGameObject).
+function createInstancedMirrorMaterial(p: InstancedMirrorMaterialParams): THREE.Material
+{
+    const newMaterial = new THREE.MeshPhongMaterial();
+    newMaterial.polygonOffset = true;
+    newMaterial.polygonOffsetFactor = -2;
+    newMaterial.polygonOffsetUnits = -2;
+    newMaterial.onBeforeCompile = (shader) =>
+    {
+        MirrorMaterialUtil.bindUniforms(shader);
+        installMirrorShader(shader);
+    };
     return newMaterial;
 }
 

@@ -13,7 +13,7 @@
 ## Project Structure
 ### `/src` - Main Source Code
 - **`/client`** - Client-side code (browser)
-  - `/graphics` - 3D graphics for game objects, voxels, and world-space gizmos, plus the picture of a room file's room shown before the file is loaded (RoomPreviewUtil)
+  - `/graphics` - 3D graphics for game objects, voxels, and world-space gizmos, plus the picture of a room file's room shown before the file is loaded (RoomPreviewUtil) and the room as a mirror reflects it (MirrorReflectionUtil)
   - `/networking` - Client-side networking (SocketsClient for Socket.IO, RestAPI and the API clients over it)
   - `/object` - Game object management (ClientObjectManager, component system including Rigidbody, PlayerController, PeriodicTransformEmitter/Receiver)
   - `/singlePlayer` - Client-side single-player gameplay logic (SinglePlayerManager, the scripted steps of each mode in SinglePlayerModeClientConfigMap, the action/condition maps those steps are carried out through, loading a mode's room from its file, the room editor, and the helpers the browser plays where a mode plays NPCs (SinglePlayerHelperUtil))
@@ -22,7 +22,7 @@
   - `/voxel` - Voxel management (ClientVoxelManager), plus the client-only queries about the room as drawn (ClientVoxelQueryUtil) and the pool of mesh instances the visible quads are lent (VoxelQuadInstanceUtil)
   
 - **`/server`** - Server-side code (Node.js/Express)
-  - `/agent` - AI agents as players (the MCP endpoint they play over, their accounts, keys and presence, their bodies the server walks, their tools for seeing, building, placing things and setting up their rooms, the camera page that shows a browser what one sees, the directory of rooms they find, and the helpers, the NPCs the server plays as AI guides in multiplayer rooms and answers for in single-player ones, with what they are told under `data/`)
+  - `/agent` - AI agents as players (the MCP endpoint they play over, their accounts, keys and presence, their bodies the server walks, their tools for seeing, building, placing things and setting up their rooms, the camera page that shows a browser what one sees, the directory of rooms they find, and the helpers, the NPCs the server plays as AI guides in multiplayer rooms and answers for in single-player ones, with what they are told, and the fixed words they chat in among themselves, under `data/`)
   - `/analytics` - Acquisition analytics (ServerAnalyticsManager — which traffic source a visitor came from, and how far through the funnel they got)
   - `/db` - Database utilities and types (Firestore, Firebase Storage, caching)
   - `/networking` - Express.js routers and general networking utilities (e.g. address (URL) formatting, cookies, firebase-admin, and rate-limiter initialization)
@@ -58,7 +58,7 @@
 
 ### `/dev` - Development Configuration
 - **`/config`** - Webpack config files, tsconfig files, Nginx config files
-- **`/scripts`** - Dev scripts (e.g. dev-server with hot-reloading capability, secrets injector, the composition and image map editors, the picture preparation tool, the helpers' reply sampler)
+- **`/scripts`** - Dev scripts (e.g. dev-server with hot-reloading capability, secrets injector, the composition and image map editors, the picture preparation tool, the helpers' reply and small-talk samplers)
 - **`/clawhub`** - The agents' manual as published on ClawHub (MIT-0): `public/skill.md` but for its license, which a test checks
 - **`/assets`** - Full-resolution samples the image map editor keeps to remake pictures (what canvases and props show) at another size, the images of disabled entries, and the index of its source library, whose photos are gitignored (third-party photos; never shipped)
 

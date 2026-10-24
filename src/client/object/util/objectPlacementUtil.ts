@@ -36,6 +36,7 @@ import FanObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/f
 import LabelObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/labelObjectTypeConfig";
 import CanvasObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
 import PropObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/propObjectTypeConfig";
+import MirrorObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/mirrorObjectTypeConfig";
 import { ObjectMetadata } from "../../../shared/object/types/objectMetadata";
 import CompositionMetadataUtil from "../../../shared/graphics/mesh/composition/util/compositionMetadataUtil";
 
@@ -47,6 +48,7 @@ const labelTypeIndex = ObjectTypeConfigMap.getIndexByType("Label");
 const npcTypeIndex = ObjectTypeConfigMap.getIndexByType("Npc");
 const volumeTypeIndex = ObjectTypeConfigMap.getIndexByType("Volume");
 const fanTypeIndex = ObjectTypeConfigMap.getIndexByType("Fan");
+const mirrorTypeIndex = ObjectTypeConfigMap.getIndexByType("Mirror");
 
 // What a new label says, so it shows (and can be clicked) before anything is written on it.
 const NEW_LABEL_TEXT = "Label";
@@ -130,6 +132,17 @@ const ObjectPlacementUtil =
         await tryAddObject(selection, labelTypeIndex, {
             [ObjectMetadataKeyEnumMap.Label]: new EncodableByteString(NEW_LABEL_TEXT),
             [ObjectMetadataKeyEnumMap.InstancedMeshComposition]: new EncodableByteString(look),
+        });
+    },
+    // In the frame picked, a plain mirror, at the size a new one takes where it goes (see MirrorObjectTypeConfig).
+    tryAddMirror: async (selection: VoxelQuadSelection, compositionIndex: number): Promise<void> =>
+    {
+        const look = CompositionMetadataUtil.encodeIndexed(compositionIndex,
+            MirrorObjectTypeConfig.components.spawnedByAny.instancedMeshComposer.codecVersion);
+        await tryAddObject(selection, mirrorTypeIndex, {
+            [ObjectMetadataKeyEnumMap.InstancedMeshComposition]: new EncodableByteString(look),
+            [ObjectMetadataKeyEnumMap.MirrorProperties]:
+                new EncodableByteString(MirrorObjectTypeConfig.util.getDefaultMirrorProperties()),
         });
     },
     // New doors lead nowhere and aren't default entrances until configured.

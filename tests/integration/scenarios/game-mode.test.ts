@@ -69,6 +69,7 @@ import GameObject from "../../../src/client/object/types/gameObject/gameObject";
 import PlayerCamera from "../../../src/client/object/components/helpers/player/playerCamera";
 import FirstPersonCameraPose from "../../../src/client/object/components/helpers/player/firstPersonCameraPose";
 import PlayerPointerInput from "../../../src/client/object/components/helpers/player/playerPointerInput";
+import PlayerController from "../../../src/client/object/components/playerController";
 import VoxelGameObject from "../../../src/client/object/types/gameObject/voxelGameObject";
 import ObjectSelection from "../../../src/client/graphics/types/gizmo/objectSelection";
 import VoxelQuadSelection from "../../../src/client/graphics/types/gizmo/voxelQuadSelection";
@@ -672,6 +673,35 @@ describe("the eye camera trailing a move the user didn't steer", () => {
         for (let i = 1; i < paces.length; i++)
             expect(paces[i]).toBeGreaterThanOrEqual(-1e-9);
         expect(trail()).toBeLessThan(0.001);
+    });
+
+    it("is how far a mirror shows the user's own body off its place, handed on once the camera has followed each move",
+        () => {
+        // Physics lifting the user aslant, as a fan's wind may, the user turned off the room's axes: the user's frame is
+        // not the room's.
+        const imposed = {x: 0.5 * THROW_SPEED * FRAME, y: THROW_SPEED * FRAME, z: 0};
+        player.rotation.y = 0.7;
+        player.updateMatrixWorld();
+        const handed: THREE.Vector3[] = [];
+        const controller = Object.assign(Object.create(PlayerController.prototype), {
+            gameObject: playerObject,
+            playerCamera,
+            rigidbody: {getImposedDisplacement: () => imposed, isUnderForce: () => true},
+            composer: {setReflectionOffset: (offset: {x: number, y: number, z: number}) =>
+                handed.push(new THREE.Vector3(offset.x, offset.y, offset.z))},
+        }) as PlayerController;
+
+        for (let frame = 0; frame < 20; frame++)
+        {
+            player.position.x += imposed.x;
+            player.position.y += imposed.y;
+            controller.lateUpdate(FRAME);
+            // The camera's own place off the eye, in the user's frame: where the view has the body.
+            const offEye = GraphicsManager.getCamera().position.clone().sub(FirstPersonCameraPose.restPosition);
+            expect(handed.length).toBe(frame + 1);
+            expect(handed[frame].distanceTo(offEye), `frame ${frame}`).toBeLessThan(1e-9);
+        }
+        expect(handed[handed.length - 1].y).toBeLessThan(-0.1);
     });
 });
 
@@ -2055,10 +2085,14 @@ describe("only one thing at a time is selected", () => {
     });
 });
 
-/** Somebody's character, with its body and speech bubble reduced to whether each is hidden. */
-function makeCharacterOf(sourceUserID: string): {character: PlayerGameObject, shown: {body: boolean, bubble: boolean}}
+/** Somebody's character, with its body and speech bubble reduced to whether each is shown to the camera, and its body
+ * to whether it is hidden from everyone or from the camera alone (which a mirror still shows it to). */
+function makeCharacterOf(sourceUserID: string): {character: PlayerGameObject, shown: {body: boolean, bubble: boolean},
+    hiddenFrom: {everyone: boolean, camera: boolean}}
 {
     const shown = {body: true, bubble: true};
+    const hiddenFrom = {everyone: false, camera: false};
+    const showBody = () => { shown.body = !hiddenFrom.everyone && !hiddenFrom.camera; };
     const character = Object.assign(Object.create(PlayerGameObject.prototype), {
         params: { objectTypeIndex: ObjectTypeConfigMap.getIndexByType("Player"),
             sourceUserID,
@@ -2066,11 +2100,16 @@ function makeCharacterOf(sourceUserID: string): {character: PlayerGameObject, sh
             metadata: {} },
         obj: new THREE.Object3D(),
         components: {},
-        instancedMeshComposer: { setHidden: (hidden: boolean) => { shown.body = !hidden; } },
+        // As the constructor reads it from metadata holding no admin prefs.
+        ghostMode: false,
+        instancedMeshComposer: {
+            setHidden: (hidden: boolean) => { hiddenFrom.everyone = hidden; showBody(); },
+            setHiddenFromCamera: (hidden: boolean) => { hiddenFrom.camera = hidden; showBody(); },
+        },
         speechBubble: { setHidden: (hidden: boolean) => { shown.bubble = !hidden; } },
     }) as PlayerGameObject;
     character.obj.position.set(10.5, 0.5 * PLAYER_HEIGHT, 10.5);
-    return {character, shown};
+    return {character, shown, hiddenFrom};
 }
 
 /** Sets the character's ghost mode as a metadata change from the server would. */
@@ -2082,7 +2121,7 @@ function setGhostMode(character: PlayerGameObject, ghostMode: boolean): void
 }
 
 describe("the user's own character", () => {
-    function makeOwnCharacter(): {character: PlayerGameObject, shown: {body: boolean, bubble: boolean}}
+    function makeOwnCharacter(): ReturnType<typeof makeCharacterOf>
     {
         return makeCharacterOf(App.getUser().id);
     }
@@ -2132,6 +2171,25 @@ describe("the user's own character", () => {
         character.update(0);
         expect(shown).toEqual({body: true, bubble: true});
     });
+
+    it("is hidden from the camera alone in first person, so that a mirror still shows it, but from everyone as a ghost", () => {
+        const {character, shown, hiddenFrom} = makeOwnCharacter();
+        cameraModeObservable.set({type: "firstPerson"});
+        character.update(0);
+        expect(shown).toEqual({body: false, bubble: false});
+        expect(hiddenFrom).toEqual({everyone: false, camera: true});
+
+        setGhostMode(character, true);
+        character.update(0);
+        expect(hiddenFrom).toEqual({everyone: true, camera: true});
+
+        // Orbiting it from well clear of it, it is hidden from nobody but as a ghost.
+        setGhostMode(character, false);
+        cameraModeObservable.set({type: "orbit", target: {center: {x: 10.5, y: 1.25, z: 10.5},
+            halfSize: {x: 0.5, y: 0.5, z: 0.5}}});
+        character.update(0);
+        expect(hiddenFrom).toEqual({everyone: false, camera: false});
+    });
 });
 
 describe("another player's character", () => {
@@ -2152,6 +2210,17 @@ describe("another player's character", () => {
         expect(shown).toEqual({body: false, bubble: false});
         character.onPlayerProximityEnd();
         expect(shown).toEqual({body: false, bubble: false});
+    });
+
+    it("is hidden from the camera alone while too close to it, so that a mirror still shows it", () => {
+        const {character, shown, hiddenFrom} = makeCharacterOf("someone-else");
+        character.onPlayerProximityStart();
+        expect(shown).toEqual({body: false, bubble: true});
+        expect(hiddenFrom).toEqual({everyone: false, camera: true});
+
+        character.onPlayerProximityEnd();
+        expect(shown).toEqual({body: true, bubble: true});
+        expect(hiddenFrom).toEqual({everyone: false, camera: false});
     });
 
     it("leaving ghost mode while too close to the camera shows only its speech bubble until it moves away", () => {

@@ -28,6 +28,9 @@ const API_VERSION = "2023-06-01";
 // One bubble (see HelperAgentUtil).
 const MAX_OUTPUT_TOKENS = 160;
 const MAX_REPLY_CHARS = NPC_MESSAGE_MAX_LENGTH;
+// Added to what a helper is told when its reply is asked for again, the first having lost its link to the cut.
+const SHORTER_NOTE = `Your reply must be one sentence of at most ${MAX_REPLY_CHARS - 60} characters: a longer one is cut `
+    + "short, and the link at its end lost.";
 // What is remembered of a talk with one person, and for how long after they last spoke.
 const MAX_REMEMBERED_TURNS = 8;
 const CONVERSATION_TTL_MS = 20 * MINUTE_IN_MS;
@@ -48,24 +51,34 @@ How you talk:
 - Very short: one or two short sentences, at most ${MAX_REPLY_CHARS - 60} characters, a link counting as its label.
   Plain text only: no markdown, lists or emoji.
 - A web address only ever as a link, written <link href="https://...">its words</link>, which people see as a button
-  that opens the page. Its words are a word or two (here, this essay, their LinkedIn), never a whole title, and never
-  write a bare address.
+  that opens the page. Its words are a word or two (read it, see it, his LinkedIn), never a title, and never write a
+  bare address.
 - Visitors were already welcomed in your own words as they came near, and told who you are: don't welcome them
   again or introduce yourself, just answer what they said.
 - Every reply in your character's own voice, through and through, a how-to answer too: say the guide's facts in
   your character's words, never the guide's. Turn free talk to your character's favorite subjects. Whatever your
   character, you are kind at heart, and what you say is true.
+- How to play or build: answer from the guide's basics, in a sentence or two, and give its details only to someone
+  who asks for more.
 - A line your character is given is only a taste of its voice: never say it. Make up your own words each time,
   and never open two replies the same way.
 - Simple words, since many people read English as a second language. Answer in the language the person writes in.
+- Plain and precise: name the real thing (the key or button in the game, or a book and who wrote it, a person, a
+  place, a year) rather than speak in general terms. No metaphors, loose comparisons ("like a storyteller's first
+  scene"), riddles, poetic lines, puns or wordplay; for a joke, use a funny fact or a plain exaggeration. A fact you
+  are not sure of, leave out, and never make up a quote or who said something.
+- Speak as yourself, in the first person, only what you say: no narration of what you do ("Pip grins: ...").
 - You are an AI, and say so whenever it matters. Never claim to be a person.
 - Help people enjoy ThingsPool with what the guide and the knowledge below say. If they don't say, you don't know: say
-  so, and suggest exploring. Never make up features, writings or addresses, even in character: a tale is told as a
-  tale.
+  so, and suggest exploring. Never make up features, writings, addresses or stories, even in character: asked for a
+  story, tell a true one in a sentence or two (a famous book, a legend called a legend, ThingsPool's own story) or
+  name a writing.
 - Bring up an idea to try, or one of the writings the knowledge lists, now and then, when it fits the talk: one at
   most in a reply. Asked for something to read or do, name one. Visitors know nothing of ThingsPool's website or the
-  writings on it, so introduce a writing in full: its title, who wrote it, what kind of writing it is and what it is
-  about, and every time a link to it (never just "the library").
+  writings on it (never say "the library" or "the arcade"), so a reply that names a writing is that one sentence and
+  nothing more: its title, what kind it is, who wrote it and, in a few words, what it is about, then its link (say:
+  Try "Domestication", a funny essay by Youngjin about cats taming humans:
+  <link href="https://thingspool.net/essays/page-12.html">read it</link>.).
 - Keep to ThingsPool and your character's subjects. You are no general assistant, so kindly turn down homework, code
   and the like.
 - Politely decline anything hateful, sexual, dangerous or cruel, and never argue.
@@ -178,33 +191,19 @@ const HelperChatUtil =
 
 async function ask(helper: HelperIdentity, turns: HelperChatTurn[]): Promise<string | undefined>
 {
-    const role = NpcPersonalityMap.getRole(helper.personality);
-    const character = HELPER_PERSONALITIES[helper.personality as Exclude<NpcPersonality, "idle">]?.character ?? "";
-    const identity = (helper.name.length > 0 ? `Your name is ${helper.name}.` : `You have no name: you are an AI ${role}.`)
-        + ` You stand in ${helper.place}.\n\nYour character: ${character}`;
     try
     {
-        const response = await fetch(`${API_BASE_URL}/v1/messages`, {
-            method: "POST",
-            signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-            headers: {"x-api-key": process.env.ANTHROPIC_API_KEY as string, "anthropic-version": API_VERSION,
-                "content-type": "application/json"},
-            body: JSON.stringify({
-                model: HELPER_MODEL,
-                max_tokens: MAX_OUTPUT_TOKENS,
-                // The model thinks by default, out of the same max_tokens, which could leave a reply cut off unsaid.
-                thinking: {type: "disabled"},
-                system: [{type: "text", text: RULES, cache_control: {type: "ephemeral"}}, {type: "text", text: identity}],
-                // Starting with the person, as the API asks, even once the oldest lines are forgotten.
-                messages: turns.slice(turns.findIndex(turn => turn.role == "user")),
-            }),
-        });
-        if (!response.ok)
-            throw new Error(`${response.status} ${(await response.text()).slice(0, 300)}`);
-        const data = await response.json() as {content: {type: string, text?: string}[], usage?: HelperChatUsage};
-        pay(data.usage ?? {});
-        const text = MessageLinkUtil.shorten(data.content.filter(block => block.type == "text")
-            .map(block => block.text ?? "").join(" ").replace(/\s+/g, " "), MAX_REPLY_CHARS);
+        const written = await request(helper, turns);
+        const text = MessageLinkUtil.shorten(written, MAX_REPLY_CHARS);
+        // A link the cut leaves out is often what the reply was for, so it is asked for once more, shorter; the first,
+        // cut, is said if that one loses its link too.
+        if (hasLink(written) && !hasLink(text))
+        {
+            const shorter = await request(helper, turns, SHORTER_NOTE)
+                .then(again => MessageLinkUtil.shorten(again, MAX_REPLY_CHARS), () => "");
+            if (hasLink(shorter))
+                return shorter;
+        }
         return text.length > 0 ? text : undefined;
     }
     catch (err)
@@ -216,6 +215,42 @@ async function ask(helper: HelperIdentity, turns: HelperChatTurn[]): Promise<str
         }
         return undefined;
     }
+}
+
+// What the model wrote, on one line, once paid for; with a note added to what the helper is told, if given.
+async function request(helper: HelperIdentity, turns: HelperChatTurn[], note?: string): Promise<string>
+{
+    const role = NpcPersonalityMap.getRole(helper.personality);
+    const character = HELPER_PERSONALITIES[helper.personality as Exclude<NpcPersonality, "idle">]?.character ?? "";
+    const identity = (helper.name.length > 0 ? `Your name is ${helper.name}.` : `You have no name: you are an AI ${role}.`)
+        + ` You stand in ${helper.place}.\n\nYour character: ${character}`;
+    const response = await fetch(`${API_BASE_URL}/v1/messages`, {
+        method: "POST",
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        headers: {"x-api-key": process.env.ANTHROPIC_API_KEY as string, "anthropic-version": API_VERSION,
+            "content-type": "application/json"},
+        body: JSON.stringify({
+            model: HELPER_MODEL,
+            max_tokens: MAX_OUTPUT_TOKENS,
+            // The model thinks by default, out of the same max_tokens, which could leave a reply cut off unsaid.
+            thinking: {type: "disabled"},
+            system: [{type: "text", text: RULES, cache_control: {type: "ephemeral"}}, {type: "text", text: identity},
+                ...(note != undefined ? [{type: "text", text: note}] : [])],
+            // Starting with the person, as the API asks, even once the oldest lines are forgotten.
+            messages: turns.slice(turns.findIndex(turn => turn.role == "user")),
+        }),
+    });
+    if (!response.ok)
+        throw new Error(`${response.status} ${(await response.text()).slice(0, 300)}`);
+    const data = await response.json() as {content: {type: string, text?: string}[], usage?: HelperChatUsage};
+    pay(data.usage ?? {});
+    return data.content.filter(block => block.type == "text").map(block => block.text ?? "").join(" ")
+        .replace(/\s+/g, " ");
+}
+
+function hasLink(message: string): boolean
+{
+    return MessageLinkUtil.parse(message).some(segment => segment.kind == "link");
 }
 
 // What a reply cost, from the tokens the API says it took: a token at a dollar a million is a millionth of a dollar.

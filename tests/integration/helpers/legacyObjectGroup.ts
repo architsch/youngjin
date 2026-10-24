@@ -17,6 +17,8 @@ import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 
 // The last version whose transforms carried no scale.
 export const LAST_UNSCALED_OBJECT_GROUP_VERSION = 3;
+// The first whose owner count took two bytes.
+const FIRST_TWO_BYTE_SOURCE_USER_COUNT_VERSION = 8;
 
 export function writeLegacyObjectGroup(writeState: BufferState, objects: AddObjectSignal[],
     version: number)
@@ -26,7 +28,10 @@ export function writeLegacyObjectGroup(writeState: BufferState, objects: AddObje
     const sourceUserIDs = [...new Set(objects.map(object => object.sourceUserID))];
 
     new EncodableRawByteNumber(version).encode(writeState);
-    new EncodableRawByteNumber(sourceUserIDs.length).encode(writeState);
+    if (version >= FIRST_TWO_BYTE_SOURCE_USER_COUNT_VERSION)
+        new EncodableRaw2ByteNumber(sourceUserIDs.length).encode(writeState);
+    else
+        new EncodableRawByteNumber(sourceUserIDs.length).encode(writeState);
     for (const sourceUserID of sourceUserIDs)
     {
         new EncodableByteString(sourceUserID).encode(writeState);

@@ -13,6 +13,7 @@ import PlayerProximityDetectionUpdater from "./helpers/player/playerProximityDet
 import PlayerPointerInput from "./helpers/player/playerPointerInput";
 import FirstPersonKeyInput from "./helpers/player/firstPersonKeyInput";
 import Rigidbody from "./rigidbody";
+import InstancedMeshComposer from "./instancedMeshComposer";
 import { DIRECTION_VECTORS } from "../../system/clientConstants";
 import { cameraModeObservable } from "../../system/clientObservables";
 
@@ -36,6 +37,7 @@ export default class PlayerController extends GameObjectComponent
     private keyInput: FirstPersonKeyInput = new FirstPersonKeyInput();
 
     private rigidbody: Rigidbody | undefined;
+    private composer: InstancedMeshComposer | undefined;
 
     async onSpawn(): Promise<void>
     {
@@ -47,6 +49,7 @@ export default class PlayerController extends GameObjectComponent
         this.rigidbody = this.gameObject.components.rigidbody as Rigidbody;
         if (!this.rigidbody)
             throw new Error("PlayerController requires Rigidbody component");
+        this.composer = this.gameObject.components.instancedMeshComposer as InstancedMeshComposer | undefined;
 
         this.playerCamera.onSpawn(this.gameObject, this.pointerInput);
         this.pointerInput.onSpawn(this);
@@ -156,5 +159,7 @@ export default class PlayerController extends GameObjectComponent
 
         this.playerCamera.update(deltaTime, this.gameObject, this.rigidbody!.getImposedDisplacement(),
             this.rigidbody!.isUnderForce());
+        // A mirror shows the body where the view has it, so that the two move as one while the camera trails a push.
+        this.composer?.setReflectionOffset(this.playerCamera.getTrail());
     }
 }

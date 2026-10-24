@@ -123,4 +123,48 @@ describe("walking paths", () => {
             }
         }
     });
+
+    it("reaches everywhere a body can walk to within a walk's length, round a wall too, each by a way of single steps",
+        () => {
+        const voxels = openGrid();
+        fill(voxels, [1, 29], [30, 30], ALL_LAYERS);
+        const start = vertex(20, 25);
+        const reach = VoxelPathUtil.findReach(voxels, start, 40);
+        expect(reach.vertices[0]).toEqual(start);
+        expect(reach.vertices.every(reached => VoxelPathUtil.isStandable(voxels, reached))).toBe(true);
+
+        // Behind the wall, by the gap past its end.
+        const way = VoxelPathUtil.getPathWithin(reach, vertex(20, 35))!;
+        expect(way[0]).toEqual(start);
+        expect(way[way.length - 1]).toEqual(vertex(20, 35));
+        expect(way.some(step => step.row > 30)).toBe(true);
+        for (let i = 1; i < way.length; ++i)
+        {
+            expect(VoxelPathUtil.isStandable(voxels, way[i])).toBe(true);
+            expect(Math.max(Math.abs(way[i].row - way[i - 1].row), Math.abs(way[i].col - way[i - 1].col))).toBe(1);
+        }
+
+        // A short walk reaches what is near, and not what is near only through the wall.
+        const near = VoxelPathUtil.findReach(voxels, start, 5);
+        expect(VoxelPathUtil.getPathWithin(near, vertex(20, 21))).toBeDefined();
+        expect(VoxelPathUtil.getPathWithin(near, vertex(20, 33))).toBeUndefined();
+        expect(near.vertices.length).toBeLessThan(reach.vertices.length);
+    });
+
+    it("reaches only through the vertices it is let onto, up a step and down a ledge as a path goes", () => {
+        const voxels = openGrid();
+        fill(voxels, [20, 30], [20, 30], [0, 0]);
+        const reach = VoxelPathUtil.findReach(voxels, vertex(25, 10), 30, step => step.col < 40);
+        expect(reach.vertices.some(reached => reached.layer == 1)).toBe(true);
+        expect(reach.vertices.every(reached => reached.col < 40)).toBe(true);
+        // Off the ledge's far side, back on the floor.
+        expect(VoxelPathUtil.getPathWithin(reach, vertex(25, 35))!.map(step => step.layer)).toContain(1);
+    });
+
+    it("tells the vertex a body's feet stand exactly on, and none off one", () => {
+        for (const on of [vertex(0, 0), vertex(31, 7, 3), vertex(64, 64, 15)])
+            expect(VoxelPathUtil.toVertex(VoxelPathUtil.toWorld(on))).toEqual(on);
+        expect(VoxelPathUtil.toVertex({x: 10.25, y: 0, z: 10})).toBeUndefined();
+        expect(VoxelPathUtil.toVertex({x: 10, y: 0.3, z: 10})).toBeUndefined();
+    });
 });

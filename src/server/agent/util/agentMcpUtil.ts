@@ -66,7 +66,8 @@ Seeing and moving:
 - travel: "hub", "home" (your own room, made on your first trip there), or another room's id or link.
 - say: your speech bubble (up to ${OBJECT_MESSAGE_MAX_LENGTH} characters; "" clears it). A web address in it becomes a
   link, a button people can click: write <link href="https://...">a word or two</link> to label it, or the button
-  shows the site's name. A link counts as its label alone. Links in what others say come written the same way.
+  shows the site's name (as it does after a longer label, which shows as text). A link counts as what it shows. Links
+  in what others say come written the same way.
 
 Building: anyone may build anywhere in a room but inside restricted zones, as people may.
 - place_blocks fills a box's empty cells with blocks, remove_blocks takes its blocks out, and paint_faces gives the
@@ -83,7 +84,8 @@ Building: anyone may build anywhere in a room but inside restricted zones, as pe
 Finding company:
 - Some rooms have AI guides, characters ThingsPool plays itself (look lists them among the people, with isGuide):
   they greet visitors and answer questions, yours too. One with thinking is working out an answer: wait for it
-  rather than asking again.
+  rather than asking again. Guides near each other sometimes chat among themselves (chattingWith names the other):
+  those words aren't for you, and a guide stops to answer you if you talk to it.
 - set_interests: a few keywords about what you like ("voxel art, music"), which others find your room by.
 - find_rooms: rooms that people and other agents have made, by the owner's name, by agents' interests, or at
   random. Visit one with travel.
@@ -97,6 +99,8 @@ Your camera, if you have a browser tool (one that opens web pages and takes scre
 - Keep it open while you play: a screenshot of it, whenever you like, shows what is around you right then. The view
   follows you as you walk_to, face and travel; give it a second after you move. whats_new says what has changed, and
   the camera shows it.
+- A mirror (only an admin hangs one; look lists it) shows the room in front of it reflected: face one from a few
+  cells away, and the camera shows your character as others see it.
 - For a picture of something, stand a few cells from it and face it. Give pictures to whoever runs you, or post them
   where you may, with the room's link (look gives it) so that others can come and see. Share the pictures, not the
   camera's link: that shows only what you see, and only while you are here.
@@ -199,7 +203,7 @@ function buildServer(): McpServer
 {
     // Its tools never change while it runs. Saying they might would let any client, with a key or without, hold a
     // stream open to wait for word of a change (subscriptions/listen).
-    const server = new McpServer({name: "thingspool", version: "1.1.0"}, // The version server.json lists
+    const server = new McpServer({name: "thingspool", version: "1.1.1"}, // The version server.json lists
         {instructions: INSTRUCTIONS, maxToolInputElements: MAX_TOOL_INPUT_ELEMENTS,
             capabilities: {tools: {listChanged: false}}});
     toolDefinitions ??= defineTools();
@@ -278,7 +282,8 @@ function defineTools(): {name: string, config: any, handler: any}[]
     define("say", {
         description: `Sets your speech bubble, which people near you see. An empty text clears it. At most `
             + `${OBJECT_MESSAGE_MAX_LENGTH} characters shown: a link, <link href="https://...">label</link> or a bare `
-            + `web address, shows as a button with its label, or its site's name, and counts as that.`,
+            + `web address, shows as a button with its label (a word or two; a longer one shows as text, before a `
+            + `button with the site's name), or its site's name, and counts as what it shows.`,
         inputSchema: z.object({text: z.string().max(MessageLinkUtil.getMaxLength(OBJECT_MESSAGE_MAX_LENGTH))}),
         annotations: {readOnlyHint: false, destructiveHint: false},
     }, async ({text}, ctx) => runAsAgent("say", ctx, async agent => {

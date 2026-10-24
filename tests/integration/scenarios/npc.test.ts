@@ -12,7 +12,13 @@ import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfi
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
-import NpcObjectTypeConfig, { NPC_WANDER_RADII } from "../../../src/shared/object/types/objectTypeConfig/npcObjectTypeConfig";
+import NpcObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/npcObjectTypeConfig";
+import BehaviorPrefs from "../../../src/shared/object/types/behaviorPrefs";
+import BehaviorPrefsUtil, { LONGEST_IDLE_TIME, MAX_WANDER_RADIUS,
+    SHORTEST_IDLE_TIME } from "../../../src/shared/object/util/behaviorPrefsUtil";
+import ObjectGroup from "../../../src/shared/object/types/objectGroup";
+import BufferState from "../../../src/shared/networking/types/bufferState";
+import { writeLegacyObjectGroup } from "../helpers/legacyObjectGroup";
 import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import RemoveObjectSignal from "../../../src/shared/object/types/removeObjectSignal";
 import SetObjectMetadataSignal from "../../../src/shared/object/types/setObjectMetadataSignal";
@@ -235,50 +241,93 @@ describe("NPCs", () => {
         });
     });
 
-    it("take how far they wander and the character they are played as from an admin, as the nearest they can be",
-        async () => {
+    it("take how they are played (character, how far they wander, whether they climb, whether home holds them, how long "
+        + "they idle) from an admin alone, as the nearest it can be", async () => {
         await runScenario({
-            name: "setting an NPC's wander radius and personality",
+            name: "setting how an NPC is played",
             rooms: [EMPTY_HUB],
             users: [userAtCenter("hub")],
             assertions: () => {
                 const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
                 const npc = makeNpcSignal(room, ADMIN);
                 expect(ObjectUpdateUtil.addObject(ADMIN, room, npc)).toBe(true);
-                const set = (user: User, key: number, value: string) => ObjectUpdateUtil.setObjectMetadata(
-                    user, room, new SetObjectMetadataSignal(room.id, npc.objectId, key, value));
-                const stored = (key: number) => room.objectById[npc.objectId].metadata[key]?.str ?? "";
-                const {WanderRadius, Personality} = ObjectMetadataKeyEnumMap;
+                const set = (user: User, value: string) => ObjectUpdateUtil.setObjectMetadata(user, room,
+                    new SetObjectMetadataSignal(room.id, npc.objectId, ObjectMetadataKeyEnumMap.BehaviorPrefs, value));
+                const stored = () => room.objectById[npc.objectId].metadata[ObjectMetadataKeyEnumMap.BehaviorPrefs]?.str;
+                const prefs = () => BehaviorPrefsUtil.getObjectPrefs(room.objectById[npc.objectId]);
+                const encode = (changed: Partial<BehaviorPrefs>) =>
+                    BehaviorPrefsUtil.encode({...BehaviorPrefsUtil.decode(""), ...changed});
 
-                // Until an admin says otherwise, a guide going a little way.
-                expect(NpcObjectTypeConfig.util.getWanderRadius(npc)).toBe(3);
-                expect(NpcObjectTypeConfig.util.getPersonality(npc)).toBe("guide");
+                // Until an admin says otherwise, a guide going a little way on its own floor now and then, and home
+                // after each wander.
+                expect(prefs()).toEqual({personality: "guide", wanderRadius: 3, canClimb: false, anchoredToHome: true,
+                    minIdleTime: 20, maxIdleTime: LONGEST_IDLE_TIME});
 
                 for (const user of [MEMBER, GUEST])
-                {
-                    expect(set(user, WanderRadius, "5")).toBe(false);
-                    expect(set(user, Personality, "jester")).toBe(false);
-                }
-                expect(stored(WanderRadius)).toBe("");
-                expect(stored(Personality)).toBe("");
+                    expect(set(user, encode({personality: "jester"}))).toBe(false);
+                expect(stored()).toBeUndefined();
 
-                const farthest = String(NPC_WANDER_RADII[NPC_WANDER_RADII.length - 1]);
-                for (const [given, kept] of [["5", "5"], ["2.4", "2"], ["99", farthest], ["-3", "0"], ["Infinity", farthest],
-                    ["far", ""]])
-                {
-                    expect(set(ADMIN, WanderRadius, given)).toBe(true);
-                    expect(stored(WanderRadius), given).toBe(kept);
-                }
-                expect(NpcObjectTypeConfig.util.getWanderRadius(room.objectById[npc.objectId])).toBe(3);
+                const wanted: BehaviorPrefs = {personality: "storyteller", wanderRadius: MAX_WANDER_RADIUS, canClimb: true,
+                    anchoredToHome: false, minIdleTime: SHORTEST_IDLE_TIME, maxIdleTime: 4};
+                expect(set(ADMIN, encode(wanted))).toBe(true);
+                expect(prefs()).toEqual(wanted);
+                expect(stored()).toHaveLength(6);
 
-                for (const [given, kept] of [["jester", "jester"], [" sage ", "sage"], ["pirate", ""]])
+                // Whatever else is given is kept as the nearest it can be: a radius past the farthest as the farthest,
+                // a character there is none of as a guide, idle times outside the range at its ends and the wrong way
+                // round the right way, and nothing as the defaults.
+                const unknownCharacter = String.fromCharCode(33 + 90) + encode({}).slice(1);
+                for (const [given, kept] of [[encode({wanderRadius: 99}), {wanderRadius: MAX_WANDER_RADIUS}],
+                    [encode({wanderRadius: 2.4}), {wanderRadius: 2}], [unknownCharacter, {}], ["", {}],
+                    [encode({minIdleTime: 0, maxIdleTime: 99}), {minIdleTime: SHORTEST_IDLE_TIME,
+                        maxIdleTime: LONGEST_IDLE_TIME}],
+                    [encode({minIdleTime: 12, maxIdleTime: 5}), {minIdleTime: 5, maxIdleTime: 12}],
+                    [encode({minIdleTime: 7.6}), {minIdleTime: 8}],
+                    ["~~~~~~~~", {wanderRadius: MAX_WANDER_RADIUS, canClimb: true, minIdleTime: LONGEST_IDLE_TIME}]] as
+                    [string, Partial<BehaviorPrefs>][])
                 {
-                    expect(set(ADMIN, Personality, given)).toBe(true);
-                    expect(stored(Personality), given).toBe(kept);
+                    expect(set(ADMIN, given)).toBe(true);
+                    expect(stored(), given).toBe(encode(kept));
                 }
-                expect(NpcObjectTypeConfig.util.getPersonality(room.objectById[npc.objectId])).toBe("guide");
+                // And read so, as a stored value that was never made the nearest is.
+                expect(BehaviorPrefsUtil.decode("!~").wanderRadius).toBe(MAX_WANDER_RADIUS);
             },
         });
+    });
+
+    it("keep the wander radius and character they were played with before BehaviorPrefs, as rooms stored them", () => {
+        // The keys a helper's settings were kept under: its wander radius as the number itself, and its character by id.
+        const [legacyWanderRadius, legacyPersonality] = [19, 20];
+        const stood = (objectTypeIndex: number, objectId: string, values: {[key: number]: string}) =>
+            new AddObjectSignal("room", "admin", "Admin", objectTypeIndex, objectId,
+                new ObjectTransform({x: 10, y: 0, z: 10}, {...DIR_VEC_BY_NAME["+y"]}, {...UNIT_VEC3}),
+                Object.fromEntries(Object.entries(values).map(([key, value]) => [key, new EncodableByteString(value)])));
+        const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
+        const view = new Uint8Array(16 * 1024);
+        const writeState = new BufferState(view);
+        writeLegacyObjectGroup(writeState, [
+            stood(npcTypeIndex, "set", {[legacyWanderRadius]: "8", [legacyPersonality]: "jester"}),
+            stood(npcTypeIndex, "idle", {[legacyPersonality]: "idle"}),
+            stood(npcTypeIndex, "plain", {}),
+            stood(npcTypeIndex, "odd", {[legacyWanderRadius]: "far", [legacyPersonality]: "pirate"}),
+            stood(lampTypeIndex, "lamp", {[legacyWanderRadius]: "5"}),
+        ], 8);
+
+        const group = ObjectGroup.decodeWithParams(new BufferState(view.subarray(0, writeState.byteIndex)), "room") as
+            ObjectGroup;
+        expect(group.sourceFormatVersion).toBe(8);
+        const prefsOf = (objectId: string) => BehaviorPrefsUtil.getObjectPrefs(group.objectById[objectId]);
+        const defaults = BehaviorPrefsUtil.decode("");
+        expect(prefsOf("set")).toEqual({...defaults, personality: "jester", wanderRadius: 8});
+        expect(prefsOf("idle")).toEqual({...defaults, personality: "idle"});
+        expect(prefsOf("odd")).toEqual(defaults);
+        expect(group.objectById["plain"].metadata[ObjectMetadataKeyEnumMap.BehaviorPrefs]).toBeUndefined();
+        expect(group.objectById["lamp"].metadata[ObjectMetadataKeyEnumMap.BehaviorPrefs]).toBeUndefined();
+        for (const obj of Object.values(group.objectById))
+        {
+            expect(obj.metadata[legacyWanderRadius], obj.objectId).toBeUndefined();
+            expect(obj.metadata[legacyPersonality], obj.objectId).toBeUndefined();
+        }
     });
 
     it("say more than a player may, as the server or a room's script has them, kept whole by whoever is shown it",

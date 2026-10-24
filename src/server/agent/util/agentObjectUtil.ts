@@ -19,6 +19,9 @@ import CanvasObjectTypeConfig, {
 import DoorObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import FanObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/fanObjectTypeConfig";
 import LampObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/lampObjectTypeConfig";
+import MirrorObjectTypeConfig, {
+    MIRROR_COLOR_PALETTE_NAME } from "../../../shared/object/types/objectTypeConfig/mirrorObjectTypeConfig";
+import ColorUtil from "../../../shared/math/util/colorUtil";
 import PropObjectTypeConfig, {
     PROP_IMAGE_SUBFOLDER } from "../../../shared/object/types/objectTypeConfig/propObjectTypeConfig";
 import VolumeObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/volumeObjectTypeConfig";
@@ -58,9 +61,10 @@ import AgentSignalUtil from "./agentSignalUtil";
 const NOT_IN_A_ROOM = "You aren't in a room.";
 const NOTHING_BY_THAT_ID = "Nothing by that id is here (look lists what is).";
 const STILL_NPC_NOTE = "A character nobody plays, named by its text: it stands still and says nothing.";
+const MIRROR_ADMIN_NOTE = "Only an admin changes one.";
 
-// What agents may add, by the names they give the types. NPCs, with a helper's personality and wander radius, are an
-// admin's alone (see NpcObjectTypeConfig), and no agent is one.
+// What agents may add, by the names they give the types. NPCs, with how a helper is played (its BehaviorPrefs), and
+// mirrors are an admin's alone (see NpcObjectTypeConfig, MirrorObjectTypeConfig), and no agent is one.
 const ADDABLE_OBJECT_TYPES = ["Canvas", "Prop", "Lamp", "Fan", "Label", "Door"];
 // The types whose look is chosen, by its number among their pre-encoded looks (a lamp's follows its size).
 const LOOK_CHOOSING_OBJECT_TYPES = ["Canvas", "Label", "Door"];
@@ -77,6 +81,7 @@ const PICTURE_DESCRIPTION_WORDS = 3;
 
 const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 const npcTypeIndex = ObjectTypeConfigMap.getIndexByType("Npc");
+const mirrorTypeIndex = ObjectTypeConfigMap.getIndexByType("Mirror");
 
 // What an agent places and arranges: canvases, props, lamps, fans, and (in a room of its own) labels, doors and
 // restricted zones. Each change is sent as the signal a browser sends for a person's, so it passes the same checks
@@ -182,6 +187,8 @@ const AgentObjectUtil =
         {
             return {error: describeUntouchable(room, ctx.user, obj, "changes")};
         }
+        if (objectType == "Mirror" && !RoomValidationUtil.userIsAdmin(ctx.user))
+            return {error: describeUntouchable(room, ctx.user, obj, "changes")};
 
         const changes: {key: number, value: string}[] = [];
         const refuse = (field: string) => ({error: `A ${typeName} has no ${field} to change.`});
@@ -382,8 +389,23 @@ function describeObject(obj: AddObjectSignal): object
         text: (text.length > 0) ? text : undefined,
         look: getLookNumber(obj),
         by: (obj.sourceUserName.length > 0) ? obj.sourceUserName : undefined,
-        note: (obj.objectTypeIndex == npcTypeIndex) ? STILL_NPC_NOTE : undefined,
+        note: (obj.objectTypeIndex == npcTypeIndex) ? STILL_NPC_NOTE
+            : (obj.objectTypeIndex == mirrorTypeIndex) ? describeMirror(obj) : undefined,
     };
+}
+
+// What a mirror shows, through its surface's color as far as that is opaque (see MirrorObjectTypeConfig).
+function describeMirror(obj: AddObjectSignal): string
+{
+    const percent = Math.round(100 * MirrorObjectTypeConfig.util.getOpacity(obj));
+    const color = ColorUtil.rgbToHex(ColorUtil.paletteIndexToRGB(MIRROR_COLOR_PALETTE_NAME,
+        MirrorObjectTypeConfig.util.getColorIndex(obj)));
+    if (percent <= 0)
+        return `A mirror: it shows the room in front of it reflected, people too. ${MIRROR_ADMIN_NOTE}`;
+    if (percent >= 100)
+        return `A mirror covered over in ${color}: it shows no reflection. ${MIRROR_ADMIN_NOTE}`;
+    return `A mirror tinted ${color}, ${percent}% opaque: it shows the room in front of it reflected through the `
+        + `tint, people too. ${MIRROR_ADMIN_NOTE}`;
 }
 
 function describeZone(room: Room, user: User, zone: AddObjectSignal): object
@@ -662,6 +684,8 @@ function describeUntouchable(room: Room, user: User, obj: AddObjectSignal, chang
     {
         return `Only the room's owner ${change} its doors, labels and zones.`;
     }
+    if (objectType == "Mirror" && !RoomValidationUtil.userIsAdmin(user))
+        return `Only an admin ${change} a mirror.`;
     if (RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex, obj.transform))
         return "A restricted zone covers it (look lists the zones).";
     return "That can't be done to it.";
@@ -685,7 +709,8 @@ function makeObjectId(room: Room): string
     return objectId;
 }
 
-// Hung on a face (a canvas, prop, lamp, fan, label, door or NPC), rather than a player, a zone or the room's blocks.
+// Hung on a face (a canvas, prop, lamp, fan, label, door, NPC or mirror), rather than a player, a zone or the room's
+// blocks.
 function isAttached(obj: AddObjectSignal): boolean
 {
     return ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).attachment != undefined;

@@ -257,6 +257,7 @@ const big_button_frame = elevatedFrame(extraDarkColor, mediumColor, dimColor, "0
 const text_input_frame = elevatedFrame(dimColor, lightColor, mediumColor, "0.25");
 const list_scroll_panel_frame = outlinedFrame(darkColor, lightColor, dimColor, "0.1");
 const list_item_frame = outlinedFrame(mediumColor, lightColor, lightColor, "0.1");
+const image_button_glow = "drop-shadow(0 0 0.2vmin #fff6b0) drop-shadow(0 0 0.8vmin #ffe45c) drop-shadow(0 0 2vmin #ffd23f)";
 
 // Orientation-Dependent Styles
 
@@ -654,6 +655,24 @@ a:active {
 .horizontallyCentered {
 	left: 50%;
 	transform: translate(-50%, 0);
+}
+.imageButton {
+	-webkit-tap-highlight-color: transparent;
+}
+/* Transparent, so that the glow follows the picture's own outline rather than the image's box. */
+.imageButton img {
+	background-color: transparent;
+	transition: filter 0.15s ease-out, transform 0.08s ease-out;
+}
+@media (hover: hover) {
+	.imageButton:hover img {
+		filter: ${image_button_glow};
+	}
+}
+/* iOS Safari applies :active only where a touch listener exists, hence the empty ontouchstart on these links. */
+.imageButton:active img {
+	filter: brightness(0.85) ${image_button_glow};
+	transform: translateY(0.4vmin) scale(0.95);
 }
 
 @media (orientation: landscape) {

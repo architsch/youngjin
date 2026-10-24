@@ -12,7 +12,8 @@ const ESSAY = "https://thingspool.net/essays/page-12.html";
 const link = (href: string, label: string) => `<link href="${href}">${label}</link>`;
 
 describe("message links", () => {
-    it("are found where written, labelled as written or by their site, and nothing else is one", () => {
+    it("are found where written, labelled as written or by their site (a label too long for a button said before it), "
+        + "and nothing else is one", () => {
         expect(MessageLinkUtil.parse("just words")).toEqual([{kind: "text", text: "just words"}]);
         expect(MessageLinkUtil.parse(`read it ${link(ESSAY, "here")}!`)).toEqual([
             {kind: "text", text: "read it "},
@@ -24,10 +25,19 @@ describe("message links", () => {
             .toEqual([{kind: "link", href: ESSAY, label: "a good read"}]);
         expect(MessageLinkUtil.parse(link("https://www.linkedin.com/in/someone", "")))
             .toEqual([{kind: "link", href: "https://www.linkedin.com/in/someone", label: "linkedin.com"}]);
-        expect(MessageLinkUtil.parse(link(ESSAY, "x".repeat(MESSAGE_LINK_LABEL_MAX_LENGTH + 5))))
-            .toEqual([{kind: "link", href: ESSAY, label: `${"x".repeat(MESSAGE_LINK_LABEL_MAX_LENGTH - 1)}…`}]);
+        const title = "A Game Developer's Journey";
+        expect(Array.from(title).length).toBeGreaterThan(MESSAGE_LINK_LABEL_MAX_LENGTH);
+        expect(MessageLinkUtil.parse(`Try ${link(ESSAY, ` "${title}" `)}, a story.`)).toEqual([
+            {kind: "text", text: `Try "${title}" `},
+            {kind: "link", href: ESSAY, label: "thingspool.net"},
+            {kind: "text", text: ", a story."},
+        ]);
         expect(MessageLinkUtil.parse(link(ESSAY, "x".repeat(MESSAGE_LINK_LABEL_MAX_LENGTH))))
             .toEqual([{kind: "link", href: ESSAY, label: "x".repeat(MESSAGE_LINK_LABEL_MAX_LENGTH)}]);
+        // Said before its button, as it is stored and stored again.
+        const stored = MessageLinkUtil.canonicalize(`Try ${link(ESSAY, title)}.`, NPC_MESSAGE_MAX_LENGTH);
+        expect(stored).toBe(`Try ${title} ${link(ESSAY, "thingspool.net")}.`);
+        expect(MessageLinkUtil.canonicalize(stored, NPC_MESSAGE_MAX_LENGTH)).toBe(stored);
 
         // Anything but a web page's address is its label alone, or its address as text.
         for (const href of ["javascript:alert(1)", "data:text/html,hi", "ftp://thingspool.net/", "https://", "thingspool",
@@ -92,6 +102,24 @@ describe("message links", () => {
         expect(MessageLinkUtil.shorten(reply, 20)).toBe(`Try ${link(ESSAY, "this essay")},...`);
         // A sentence ending within a label doesn't split the link.
         expect(MessageLinkUtil.shorten(`Look: ${link(ESSAY, "Hi. Bye. Now")} and more words`, 14)).toBe("Look:...");
+    });
+
+    it("keep a link said as a sentence of its own after the last whole sentence that fits with it, where a cut would "
+        + "leave it out", () => {
+        const intro = `Try "Model of the Mind", a short essay.`;
+        const more = "It says curiosity is strongest when a thing is a bit new.";
+        expect(MessageLinkUtil.shorten(`${intro} ${more} ${link(ESSAY, "Read it")}`, 60))
+            .toBe(`${intro} ${link(ESSAY, "Read it")}`);
+        expect(MessageLinkUtil.shorten(`${intro} ${more} ${link(ESSAY, "Read it")}. And a joke after it.`, 60))
+            .toBe(`${intro} ${link(ESSAY, "Read it")}.`);
+        // Kept as it was where it fits, and not moved where no whole sentence fits with it, nor where it is part of a
+        // sentence, nor past a title cut from between, whose words it would then seem to be about.
+        expect(MessageLinkUtil.shorten(`${intro} ${link(ESSAY, "Read it")} ${more}`, 60))
+            .toBe(`${intro} ${link(ESSAY, "Read it")}`);
+        expect(MessageLinkUtil.shorten(`${intro} ${more} ${link(ESSAY, "Read it")}`, 43)).toBe(intro);
+        expect(MessageLinkUtil.shorten(`${intro} ${more} Read it: ${link(ESSAY, "here")}.`, 60)).toBe(intro);
+        expect(MessageLinkUtil.shorten(`${intro} Or try "Flatland", a novel about shapes. ${link(ESSAY, "Read it")}`, 50))
+            .toBe(intro);
     });
 
     it("leave a message alone when stored again, and never show more than it may", () => {

@@ -11,6 +11,16 @@ const HelperAPIClient =
         const response = await RestAPI.post(getURL("reply"), { data: { objectId, name, personality, text } });
         return (response.status == 200 && typeof response.data?.reply == "string") ? response.data.reply : "";
     },
+    // What two helpers the browser plays in a single-player room say to each other as they chat (see
+    // SinglePlayerHelperUtil): each line by its speaker's place among them, and none, as when the server can't be
+    // reached, for no chat.
+    smallTalk: async (helpers: {name: string, personality: string}[]): Promise<{by: number, text: string}[]> =>
+    {
+        const response = await RestAPI.post(getURL("smalltalk"), { data: { helpers } });
+        const lines: unknown = response.status == 200 ? response.data?.lines : undefined;
+        return Array.isArray(lines) && lines.every(line => typeof line?.text == "string"
+            && Number.isInteger(line?.by) && line.by >= 0 && line.by < helpers.length) ? lines : [];
+    },
 }
 
 function getURL(type: string): string

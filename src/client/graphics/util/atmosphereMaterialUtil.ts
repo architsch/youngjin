@@ -8,6 +8,7 @@ import { ATMOSPHERE_CLOUD_DRIFT, ATMOSPHERE_FOG_FRAGMENT_GLSL, ATMOSPHERE_FOG_FR
     ATMOSPHERE_FOG_LAMP_TINT, ATMOSPHERE_FOG_VERTEX_GLSL, ATMOSPHERE_FOG_VERTEX_PARS_GLSL,
     ATMOSPHERE_SMOKE_CHURN } from "../shaders/atmosphereGLSL";
 import LightBlockMapMaterialUtil from "../light/util/lightBlockMapMaterialUtil";
+import { MIRRORED_LAYER } from "../../system/clientConstants";
 
 // Room air: the sky mesh, shared atmosphere uniforms, and cloud/smoke drift. Shader logic is in
 // atmosphereGLSL. Uniforms live here (not GraphicsManager) to avoid an import cycle.
@@ -85,6 +86,8 @@ const AtmosphereMaterialUtil =
         mesh.renderOrder = SKY_RENDER_ORDER;
         // Vertices bypass the projection, so frustum culling doesn't apply.
         mesh.frustumCulled = false;
+        // A mirror shows the sky beyond the room as well (see MirrorReflectionUtil).
+        mesh.layers.enable(MIRRORED_LAYER);
         return mesh;
     },
 
@@ -161,8 +164,7 @@ const AtmosphereMaterialUtil =
         atmosphereGroundUniform.value.set(scale, solidity, softness);
     },
 
-    // Per frame: advances drifts and uploads the inverse projection and far depth (view matrix and
-    // camera position come from three.js at draw time, so they're never a frame stale).
+    // Per frame: advances drifts, and draws the sky through the camera (see setView).
     // Drift is a running total, not clock × speed, so speed changes don't jump the field; it is
     // wrapped at VALUE_NOISE_FBM_PERIOD (seamless) to keep float precision.
     update: (camera: THREE.PerspectiveCamera) =>
@@ -178,6 +180,14 @@ const AtmosphereMaterialUtil =
         advanceDrift(atmosphereSmokeChurnUniform.value, smokeDirection,
             smokeDistance * (1 - ATMOSPHERE_SMOKE_CHURN));
 
+        AtmosphereMaterialUtil.setView(camera);
+    },
+
+    // The camera the sky is drawn through next, as a mirror's reflection draws it through another (see
+    // MirrorReflectionUtil): uploads its inverse projection and far depth (view matrix and camera position come
+    // from three.js at draw time, so they're never a frame stale).
+    setView: (camera: THREE.PerspectiveCamera) =>
+    {
         skyInverseProjectionUniform.value.copy(camera.projectionMatrixInverse);
         skyFarDepthUniform.value = camera.far;
     },

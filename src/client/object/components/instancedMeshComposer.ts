@@ -10,11 +10,18 @@ import MaterialParamsMap from "../../../shared/graphics/material/maps/materialPa
 import InstancedMeshIdMap from "../../../shared/graphics/mesh/maps/instancedMeshIdMap";
 import InstancedMeshCapacityMap from "../../../shared/graphics/mesh/composition/maps/instancedMeshCapacityMap";
 import Observable from "../../../shared/system/types/observable";
+import Vec3 from "../../../shared/math/types/vec3";
+import { reflectionDrawingObservable } from "../../system/clientObservables";
 
 function getPartMeshId(part: InstancedMeshCompositionPart): string
 {
     return InstancedMeshIdMap.getInstancedMeshId(part.geometryId, part.materialId);
 }
+
+// The composers hidden from the camera alone (see setHiddenFromCamera).
+const composersHiddenFromCamera: Set<InstancedMeshComposer> = new Set();
+
+const NO_OFFSET: Vec3 = {x: 0, y: 0, z: 0};
 
 export default class InstancedMeshComposer extends GameObjectComponent
 {
@@ -29,6 +36,8 @@ export default class InstancedMeshComposer extends GameObjectComponent
     private updateState: "awaitingSpawn" | "refreshPending" | "meshesLoading" | "upToDate" = "awaitingSpawn";
 
     private hidden: boolean = false;
+    private hiddenFromCamera: boolean = false;
+    private reflectionOffset: Vec3 = {x: 0, y: 0, z: 0};
 
     // Notified after every decode, for owners that place their own drawing by the composition (e.g. a
     // canvas's picture inside its frame). Per object, so a listener hears only its own composer.
@@ -53,6 +62,8 @@ export default class InstancedMeshComposer extends GameObjectComponent
 
     async onDespawn(): Promise<void>
     {
+        composersHiddenFromCamera.delete(this);
+
         // Return all instances.
         for (const instancedMeshId in this.instanceIdsByInstancedMeshId)
         {
@@ -107,6 +118,41 @@ export default class InstancedMeshComposer extends GameObjectComponent
         this.hidden = hidden;
         if (this.updateState != "awaitingSpawn")
             this.updateState = "refreshPending";
+    }
+
+    // Hidden for where the camera is (the body it is inside, someone too close to it), which a mirror's reflection
+    // still shows: drawn for it, and parked again for the camera (see reflectionDrawingObservable).
+    setHiddenFromCamera(hiddenFromCamera: boolean)
+    {
+        if (this.hiddenFromCamera === hiddenFromCamera)
+            return;
+        this.hiddenFromCamera = hiddenFromCamera;
+        if (hiddenFromCamera)
+            composersHiddenFromCamera.add(this);
+        else
+            composersHiddenFromCamera.delete(this);
+        if (this.updateState != "awaitingSpawn")
+            this.updateState = "refreshPending";
+    }
+
+    // How far from where it stands it is drawn for a reflection (see setHiddenFromCamera), in its own frame: for the
+    // body the camera is mounted in, as far as the camera trails its moves under a push (see PlayerCamera), so that a
+    // mirror shows it moving with the view.
+    setReflectionOffset(offset: Vec3)
+    {
+        this.reflectionOffset.x = offset.x;
+        this.reflectionOffset.y = offset.y;
+        this.reflectionOffset.z = offset.z;
+    }
+
+    // Draws its instances again as the parts stand, for a draw in between frames (see setHiddenFromCamera): where the
+    // object now is too, since a move after this frame's update leaves a refresh due (a walking player's). Never while
+    // its meshes are still loading.
+    redraw()
+    {
+        if (this.updateState == "upToDate" ||
+            (this.updateState == "refreshPending" && this.allPartMeshesAreLoaded()))
+            this.refreshInstancedMeshes();
     }
 
     // Visits all instances across meshes, for whole-object actions (e.g. occlusion hiding).
@@ -206,6 +252,9 @@ export default class InstancedMeshComposer extends GameObjectComponent
 
     private refreshInstancedMeshes()
     {
+        const drawingReflection = reflectionDrawingObservable.peek();
+        const parked = this.hidden || (this.hiddenFromCamera && !drawingReflection);
+        const offset = drawingReflection ? this.reflectionOffset : NO_OFFSET;
         for (const instancedMeshId in this.nextIndexByInstancedMeshIdTemp)
             this.nextIndexByInstancedMeshIdTemp[instancedMeshId] = 0;
 
@@ -248,7 +297,7 @@ export default class InstancedMeshComposer extends GameObjectComponent
 
             this.instancedMeshGraphics.updateInstanceTransform(
                 instancedMeshId, instanceId,
-                part.offset.x, this.hidden ? -9999 : part.offset.y, part.offset.z,
+                part.offset.x + offset.x, parked ? -9999 : part.offset.y + offset.y, part.offset.z + offset.z,
                 part.dir.x, part.dir.y, part.dir.z, part.scale.x, part.scale.y, part.scale.z);
             if (INSTANCE_COLORED_MATERIAL_IDS.includes(part.materialId))
             {
@@ -285,3 +334,8 @@ export default class InstancedMeshComposer extends GameObjectComponent
         this.updateState = "upToDate";
     }
 }
+
+reflectionDrawingObservable.addListener("instancedMeshComposer", () => {
+    for (const composer of composersHiddenFromCamera)
+        composer.redraw();
+});

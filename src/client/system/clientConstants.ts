@@ -35,8 +35,9 @@ export const SUB_PANELS_BENEATH_SELECTION_TOOLS = true;
 export const SELECTION_COLOR = "#00ff00";
 export const SELECTION_BLOCKED_COLOR = "#ff0000";
 
-// How far from the camera a selection still has the handles that resize it (see SelectionEditGizmoUtil). They keep
-// their size on screen while the selection shrinks, so further off they crowd it and can't be told apart to hold.
+// How far from the camera a selection has the handles that resize it however small it shows. They keep their size on
+// screen while the selection shrinks, so further off it keeps them only while they show far enough apart for a finger
+// to take hold of one (see SelectionEditGizmoUtil).
 export const SELECTION_HANDLE_MAX_DISTANCE = 12;
 
 // What an automatic selection asks of a voxel quad (see VoxelQuadSelection): to lie no further than this from where
@@ -89,6 +90,12 @@ export const DIRECTION_VECTORS: {[key: string]: THREE.Vector3} = {
 // Where a room file's preview looks at its room from (see RoomPreviewUtil): toward the camera, which is over one of
 // the room's corners. Only what is turned this way is drawn.
 export const ROOM_PREVIEW_VIEW_DIR: Vec3 = {x: 1, y: 1, z: -1};
+
+// Mirror
+
+// The three.js layer of what a mirror shows of the room: its blocks, objects, particles, sky and lights. What is
+// there for the camera alone (gizmos, outlines) is left off it (see MirrorReflectionUtil).
+export const MIRRORED_LAYER = 1;
 
 // Lighting
 

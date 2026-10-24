@@ -12,28 +12,20 @@ import SetObjectMetadataSignal from "../setObjectMetadataSignal";
 import SetObjectTransformSignal from "../setObjectTransformSignal";
 import LabelTextUtil from "../../util/labelTextUtil";
 import ObjectScaleUtil from "../../util/objectScaleUtil";
-import NpcPersonalityMap from "../../maps/npcPersonalityMap";
-import { NpcPersonality } from "../npcPersonality";
 import ObjectTypeConfig from "./objectTypeConfig";
 import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "./playerObjectTypeConfig";
-
-// The distances, in world units, a helper may be set to go from home (see HelperAgentUtil), which an admin steps
-// through. Stored as the number itself.
-export const NPC_WANDER_RADII = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-const DEFAULT_WANDER_RADIUS = 3;
 
 // Metadata keys an admin may write to an NPC; anything else is refused.
 const editableMetadataKeys = [
     ObjectMetadataKeyEnumMap.InstancedMeshComposition,
     ObjectMetadataKeyEnumMap.Label,
     ObjectMetadataKeyEnumMap.QuarterTurns,
-    ObjectMetadataKeyEnumMap.WanderRadius,
-    ObjectMetadataKeyEnumMap.Personality,
+    ObjectMetadataKeyEnumMap.BehaviorPrefs,
 ];
 
 // A character nobody plays, built as a player's is. Only an admin lays one, on a floor: its Label is its name,
 // and its QuarterTurns the way it faces (see NpcGameObject). What it says, a room's script sets; in a multiplayer room
-// it is a helper, which goes as far from home as its WanderRadius and is played as its Personality.
+// it is a helper, played as its BehaviorPrefs have it: its personality, and how far and how it wanders.
 const NpcObjectTypeConfig =
 {
     objectType: "Npc",
@@ -122,31 +114,6 @@ const NpcObjectTypeConfig =
             easingMotion: {},
         },
     },
-    util: {
-        getWanderRadius: (obj: AddObjectSignal): number =>
-        {
-            return readWanderRadius(obj.metadata[ObjectMetadataKeyEnumMap.WanderRadius]?.str ?? "");
-        },
-        // The nearest of NPC_WANDER_RADII, or none for what is no number (see ObjectMetadataEntryMap).
-        canonicalizeWanderRadius: (rawValue: string): string =>
-        {
-            return isNaN(parseFloat(rawValue)) ? "" : String(readWanderRadius(rawValue));
-        },
-        getPersonality: (obj: AddObjectSignal): NpcPersonality =>
-        {
-            return NpcPersonalityMap.read(obj.metadata[ObjectMetadataKeyEnumMap.Personality]?.str ?? "");
-        },
-    },
 } satisfies ObjectTypeConfig;
-
-function readWanderRadius(stored: string): number
-{
-    const parsed = parseFloat(stored);
-    if (isNaN(parsed))
-        return DEFAULT_WANDER_RADIUS;
-    const radius = Math.min(Math.max(parsed, NPC_WANDER_RADII[0]), NPC_WANDER_RADII[NPC_WANDER_RADII.length - 1]);
-    return NPC_WANDER_RADII.reduce((nearest, value) =>
-        (Math.abs(value - radius) < Math.abs(nearest - radius)) ? value : nearest);
-}
 
 export default NpcObjectTypeConfig;

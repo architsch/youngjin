@@ -12,6 +12,7 @@ import ParticleAtlasUtil from "./util/particleAtlasUtil";
 import ParticleParamTextureUtil from "./util/particleParamTextureUtil";
 import ParticleMaterialUtil from "./util/particleMaterialUtil";
 import ParticleSpawnUtil from "./util/particleSpawnUtil";
+import MirrorReflectionUtil from "../util/mirrorReflectionUtil";
 
 // Capacities per batch. Translucent sprites and every transient particle share the blended batch; the solid
 // batch holds cut-out sprites and has no ring yet. The overwrite count (see getStats) says when a ring is too
@@ -26,7 +27,8 @@ const SOLID_RING = 0;
 const CLOCK_REBASE_SECONDS = 3600;
 
 // Nothing spawns farther than this from the camera, or out of view by more than its margin (scaled by the
-// effect's size). An emitter back in view refills its stream at once (see tickEmitter).
+// effect's size), the view a mirror shows counting as in view. An emitter back in view refills its stream at
+// once (see tickEmitter).
 const MAX_SPAWN_DISTANCE = 40;
 const VIEW_MARGIN = 2;
 
@@ -46,6 +48,9 @@ const sprites: Set<SpriteHandle> = new Set();
 const ringlessWarnings: Set<string> = new Set();
 
 const frustum = new THREE.Frustum();
+// What a mirror showed, when it showed anything (see MirrorReflectionUtil).
+const reflectionFrustum = new THREE.Frustum();
+let reflectionShown = false;
 const projectionTemp = new THREE.Matrix4();
 const cameraPositionTemp = new THREE.Vector3();
 const sphereTemp = new THREE.Sphere();
@@ -284,6 +289,14 @@ function updateFrustum()
     projectionTemp.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     frustum.setFromProjectionMatrix(projectionTemp);
     cameraPositionTemp.setFromMatrixPosition(camera.matrixWorld);
+
+    const reflectionCamera = MirrorReflectionUtil.getLastCamera();
+    reflectionShown = reflectionCamera != undefined;
+    if (reflectionCamera != undefined)
+    {
+        projectionTemp.multiplyMatrices(reflectionCamera.projectionMatrix, reflectionCamera.matrixWorldInverse);
+        reflectionFrustum.setFromProjectionMatrix(projectionTemp);
+    }
 }
 
 function isInView(position: Vec3, margin: number): boolean
@@ -291,7 +304,7 @@ function isInView(position: Vec3, margin: number): boolean
     sphereTemp.center.set(position.x, position.y, position.z);
     sphereTemp.radius = margin;
     return sphereTemp.center.distanceTo(cameraPositionTemp) <= MAX_SPAWN_DISTANCE + margin &&
-        frustum.intersectsSphere(sphereTemp);
+        (frustum.intersectsSphere(sphereTemp) || (reflectionShown && reflectionFrustum.intersectsSphere(sphereTemp)));
 }
 
 // Asked about the middle of a stream that has an end (see ParticleEmitterHandle.stopDistance), so one whose

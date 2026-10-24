@@ -29,6 +29,9 @@ const configByCategory: {[category: string]: ObjectCategoryConfig} =
     [ObjectCategoryEnumMap.Volume]: {maxCountPerRoom: 32},
     // No more than the particle ring holds the winds of, all in view at their longest (see ParticleSystem).
     [ObjectCategoryEnumMap.Fan]: {maxCountPerRoom: 16},
+    // One reflection is drawn a frame, into the one render target (see MirrorReflectionUtil). Also sizes the glass's
+    // mesh and the frames' share of the shared mesh pools (see InstancedMeshCapacityBuilder).
+    [ObjectCategoryEnumMap.Mirror]: {maxCountPerRoom: 1},
 }
 
 const ObjectCategoryConfigMap =

@@ -12,6 +12,8 @@ import ObjectTypeConfigMap from "../maps/objectTypeConfigMap";
 import ObjectScaleUtil from "../util/objectScaleUtil";
 import ObjectAttachmentUtil from "../util/objectAttachmentUtil";
 import LabelTextUtil from "../util/labelTextUtil";
+import BehaviorPrefsUtil from "../util/behaviorPrefsUtil";
+import NpcPersonalityMap from "../maps/npcPersonalityMap";
 import Geometry3DUtil from "../../math/util/geometry3DUtil";
 import NumUtil from "../../math/util/numUtil";
 import StringUtil from "../../math/util/stringUtil";
@@ -96,6 +98,11 @@ const LEGACY_CANVAS_FRAME_ATLAS_CELLS_PER_SIDE = 4;
 
 // The id of the volume a restricted zone of the grid becomes, before the zone's place in the grid's list.
 const LEGACY_ZONE_VOLUME_OBJECT_ID_PREFIX = "restricted_zone_";
+
+// The metadata keys a helper's settings were kept under before its BehaviorPrefs: how far it wandered from home, as the
+// number itself, and its personality, by id.
+const LEGACY_WANDER_RADIUS_KEY = 19;
+const LEGACY_PERSONALITY_KEY = 20;
 
 // Each bitmap frame's look-alike in wood inputs, by atlas cell (row by row): frame and inner colors from
 // the "Timber" palette, band width and profile. The old borders came in four widths, each kept at the
@@ -273,6 +280,28 @@ const converters: ((objectGroup: ObjectGroup, roomID: string, sourceVoxelGridVer
     },
     () => { // version 7 -> 8
         // The owner count took two bytes; decodeSourceUserCount reads either width, and nothing it means changed.
+    },
+    (objectGroup: ObjectGroup) => { // version 8 -> 9
+        // A helper's wander radius and personality became two of its BehaviorPrefs, which an NPC that set neither keeps
+        // at the defaults it was played with; no other type ever read them.
+        const npcTypeIndex = ObjectTypeConfigMap.getIndexByType("Npc");
+        for (const object of Object.values(objectGroup.objectById))
+        {
+            const radius = object.metadata[LEGACY_WANDER_RADIUS_KEY]?.str;
+            const personality = object.metadata[LEGACY_PERSONALITY_KEY]?.str;
+            delete object.metadata[LEGACY_WANDER_RADIUS_KEY];
+            delete object.metadata[LEGACY_PERSONALITY_KEY];
+            if (object.objectTypeIndex !== npcTypeIndex || (radius == undefined && personality == undefined))
+                continue;
+
+            const prefs = BehaviorPrefsUtil.getObjectPrefs(object);
+            if (radius != undefined && !isNaN(parseFloat(radius)))
+                prefs.wanderRadius = parseFloat(radius);
+            if (personality != undefined)
+                prefs.personality = NpcPersonalityMap.read(personality);
+            object.metadata[ObjectMetadataKeyEnumMap.BehaviorPrefs] =
+                new EncodableByteString(BehaviorPrefsUtil.encode(prefs));
+        }
     },
 ];
 

@@ -14,6 +14,8 @@ import NumUtil from "../../shared/math/util/numUtil";
 import ShaderPrecompileUtil from "./util/shaderPrecompileUtil";
 import AtmosphereMaterialUtil from "./util/atmosphereMaterialUtil";
 import ParticleMaterialUtil from "./particle/util/particleMaterialUtil";
+import MirrorReflectionUtil from "./util/mirrorReflectionUtil";
+import { MIRRORED_LAYER } from "../system/clientConstants";
 
 const minAspectRatio = 0.6;
 const maxAspectRatio = 2;
@@ -205,16 +207,20 @@ const GraphicsManager =
         AtmosphereMaterialUtil.setRoomHasLamps(lightBlockMap.hasLightSources());
         ParticleMaterialUtil.setRoomHasLamps(lightBlockMap.hasLightSources());
         AtmosphereMaterialUtil.update(camera);
+        // Before the room: the glass shows what this draws.
+        MirrorReflectionUtil.render(gameRenderer, scene, camera, pointLight);
         gameRenderer.render(scene, camera);
         overlayRenderer.render(scene, camera);
     },
     // Compiles shaders during the loading screen instead of stalling the first frame that needs them.
     // Pass 1: the loaded scene. Pass 2: stand-ins for materials that may appear later (see
-    // ShaderPrecompileUtil), compiled against the real scene so the programs match.
+    // ShaderPrecompileUtil), compiled against the real scene so the programs match. Pass 3: both again as a
+    // mirror's reflection draws them, if the room has a mirror.
     precompileSceneShaders: async () =>
     {
         await gameRenderer.compileAsync(scene, camera);
         await gameRenderer.compileAsync(await ShaderPrecompileUtil.getWarmupScene(), camera, scene);
+        await MirrorReflectionUtil.precompile(gameRenderer, scene, camera);
     },
     load: async (updateCallback: XRFrameRequestCallback | null) =>
     {
@@ -228,8 +234,11 @@ const GraphicsManager =
 
             scene.add(AtmosphereMaterialUtil.createSkyMesh());
 
+            // Both lights light what a mirror shows as well (see MirrorReflectionUtil): the head light from nearer
+            // the glass, so that the viewer's side the glass shows isn't dark.
             ambLight = new THREE.AmbientLight(0xffffff,
                 RoomPrefsUtil.getAmbientIntensity(currRoomPrefs));
+            ambLight.layers.enable(MIRRORED_LAYER);
             scene.add(ambLight);
 
             camera = new THREE.PerspectiveCamera(60, 1, 0.1, cameraFar);
@@ -238,6 +247,7 @@ const GraphicsManager =
             pointLight = new THREE.PointLight(0xffffff, basePointLightIntensity,
                 basePointLightDistance, pointLightDecay);
             pointLight.position.set(0, 1, 0);
+            pointLight.layers.enable(MIRRORED_LAYER);
             camera.add(pointLight);
 
             gameRenderer = new THREE.WebGLRenderer({ antialias: true });

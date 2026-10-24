@@ -12,7 +12,12 @@
     backDestination_href: `${URL_STATIC}/library.html`,
 }) %>
 <h1><%= entry.title %></h1>
+<%_ /* A store's own badge (playLinkImagePathOverride) is shown as the store made it, without the Play button's glow. */ _%>
+<%_ if (entry.playLinkImagePathOverride == undefined) { _%>
+<a class="noTextDeco imageButton" target="_blank" href="<%= entry.playLinkURL %>" ontouchstart="">
+<%_ } else { _%>
 <a class="noTextDeco" target="_blank" href="<%= entry.playLinkURL %>">
+<%_ } _%>
 <img class="s_image" src="<%= URL_STATIC %>/<%= playLinkImagePath %>" alt="Play">
 </a>
 <div class="zero_row"></div>
