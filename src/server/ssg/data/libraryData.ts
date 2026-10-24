@@ -4,7 +4,7 @@ export const LibraryData: {
     entriesByCategory: { [category: string]: PostEntry[] }
 } = {
     entriesByCategory : {
-        "Development History": [
+        "Dev Log": [
             { dirName: "devlog-2026", title: "Dev Log - 2026"},
         ],
         "Nonfiction": [

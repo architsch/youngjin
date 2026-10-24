@@ -200,9 +200,6 @@ const l_spacing = (landscape: boolean): string => spacing(landscape, 3, 3);
 const xl_spacing = (landscape: boolean): string => spacing(landscape, 4, 4);
 const xxl_spacing = (landscape: boolean): string => spacing(landscape, 6, 6);
 
-// xxl vertical spacing with horizontal spacing capped for narrow (especially portrait) screens.
-const xxl_spacing_narrowHorizontal = (landscape: boolean): string => spacing(landscape, 6, landscape ? 4.5 : 2.5);
-
 const xs_spacing_paddingOnly = (landscape: boolean): string => spacing(landscape, 0.5, 1, true, false);
 const xs_spacing_marginOnly = (landscape: boolean): string => spacing(landscape, 0.5, 1, false, true);
 
@@ -253,7 +250,6 @@ const img_frame = roundedFrame(darkColor, lightColor);
 const snippet_frame = roundedFrame(extraDarkColor, lightGreenColor);
 const excerpt_frame = roundedFrame(extraDarkColor, lightGreenColor);
 const button_frame = elevatedFrame(extraDarkColor, mediumColor, dimColor, "0.5");
-const big_button_frame = elevatedFrame(extraDarkColor, mediumColor, dimColor, "0.75");
 const text_input_frame = elevatedFrame(dimColor, lightColor, mediumColor, "0.25");
 const list_scroll_panel_frame = outlinedFrame(darkColor, lightColor, dimColor, "0.1");
 const list_item_frame = outlinedFrame(mediumColor, lightColor, lightColor, "0.1");
@@ -448,13 +444,6 @@ hr {
 	${l_bold_font}
 	${img_frame}
 }
-.portal {
-	position: relative;
-	display: block;
-	margin: ${landscape ? "5%" : "12.5%"} 0;
-	padding: 0 0;
-	max-width: ${landscape ? "30%" : "70%"};
-}
 .postEntryButton {
 	${flexible_row_area(landscape)}
 	${s_spacing(landscape)}
@@ -463,21 +452,6 @@ hr {
 	text-decoration: none;
 }
 .postEntryButton:hover {
-	border-color: ${lightYellowColor};
-}
-/* The label is a single phrase, so it stays on one line rather than breaking mid-sentence. The
-   tightened sides above are what earn that: they leave a narrow screen enough room for the whole
-   phrase at full size, instead of spending it all on the button's own margin and padding. */
-.bigButton {
-	${flexible_row_area(landscape)}
-	${xxl_spacing_narrowHorizontal(landscape)}
-	${m_bold_font}
-	${big_button_frame}
-	text-decoration: none;
-	text-align: center;
-	white-space: nowrap;
-}
-.bigButton:hover {
 	border-color: ${lightYellowColor};
 }
 .pagePath {
@@ -651,10 +625,6 @@ a:active {
 }
 .noTextDeco {
 	text-decoration: none;
-}
-.horizontallyCentered {
-	left: 50%;
-	transform: translate(-50%, 0);
 }
 .imageButton {
 	-webkit-tap-highlight-color: transparent;

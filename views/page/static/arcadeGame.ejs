@@ -3,13 +3,13 @@
     desc: description,
     keywords: keywords,
     url: `${URL_STATIC}/${relativeURL}`,
-    pageName: "library",
+    pageName: "arcade",
     pagePathList: [
         {title: PAGE_NAME_MAP["index"], url: URL_STATIC},
-        {title: PAGE_NAME_MAP["library"], url: `${URL_STATIC}/library.html`},
+        {title: PAGE_NAME_MAP["arcade"], url: `${URL_STATIC}/arcade.html`},
         {title: entry.title, url: undefined},
     ],
-    backDestination_href: `${URL_STATIC}/library.html`,
+    backDestination_href: `${URL_STATIC}/arcade.html`,
 }) %>
 <h1><%= entry.title %></h1>
 <%_ /* A store's own badge (playLinkImagePathOverride) is shown as the store made it, without the Play button's glow. */ _%>

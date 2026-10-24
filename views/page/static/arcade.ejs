@@ -12,4 +12,6 @@
 <hr>
 <h1>Games</h1>
 <%- include(`${ejsPartialRootPath}/info/gameLinks.ejs`, { entries }) _%>
-<%- include(`${ejsPartialRootPath}/common/footer.ejs`) %>
+<%- include(`${ejsPartialRootPath}/common/footer.ejs`, {
+    hideThingsPoolLink: true,
+}) %>

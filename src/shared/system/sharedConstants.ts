@@ -345,7 +345,7 @@ export const INITIAL_MULTI_PLAYER_ENTRANCE_POS: Vec3 =
 
 export const PAGE_NAME_MAP = {
     "index": "Home", // static
-    "arcade": "Arcade", // static
+    "arcade": "Games", // static
     "library": "Blog", // static
     "portfolio": "Portfolio", // static
 };

@@ -15,4 +15,6 @@
 <a class="postEntryButton" href="<%= URL_STATIC %>/<%= entry.dirName %>/list.html"><%= entry.title %></a>
 <%_ } _%>
 <%_ } _%>
-<%- include(`${ejsPartialRootPath}/common/footer.ejs`) %>
+<%- include(`${ejsPartialRootPath}/common/footer.ejs`, {
+    hideThingsPoolLink: true,
+}) %>

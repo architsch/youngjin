@@ -12,7 +12,6 @@ import InstancedMeshCapacityBuilder from "./builder/instancedMeshCapacityBuilder
 import ImageMapBuilder from "./builder/imageMapBuilder";
 import VoxelTexturePackBuilder from "./builder/voxelTexturePackBuilder";
 import CompositionThumbnailBuilder from "./builder/compositionThumbnailBuilder";
-import { ArcadeData } from "./data/arcadeData";
 import { LibraryData } from "./data/libraryData";
 import { ImageMapSeeds } from "./data/imageMapSeeds";
 import RoomMapBuilder from "./builder/roomMapBuilder";
@@ -33,9 +32,8 @@ export default async function SSG(): Promise<void>
 
     let tb = new TextFileBuilder();
     // The landing page links to the newest dev-log year, from the Library's list.
-    const devlogEntries = LibraryData.entriesByCategory["Development History"];
+    const devlogEntries = LibraryData.entriesByCategory["Dev Log"];
     tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/static/index.ejs", {
-        gameEntries: ArcadeData.gameEntries,
         latestDevlogEntry: devlogEntries[devlogEntries.length - 1],
     }));
     await tb.build("index.html");

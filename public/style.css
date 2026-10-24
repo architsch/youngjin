@@ -56,10 +56,6 @@ a:active {
 .noTextDeco {
 	text-decoration: none;
 }
-.horizontallyCentered {
-	left: 50%;
-	transform: translate(-50%, 0);
-}
 .imageButton {
 	-webkit-tap-highlight-color: transparent;
 }
@@ -426,13 +422,6 @@ hr {
 	color: #c0c0c0;
 	border-radius: 2vmin;
 }
-.portal {
-	position: relative;
-	display: block;
-	margin: 5% 0;
-	padding: 0 0;
-	max-width: 30%;
-}
 .postEntryButton {
 	position: relative;
 	display: block;
@@ -453,33 +442,6 @@ hr {
 	text-decoration: none;
 }
 .postEntryButton:hover {
-	border-color: #d0c090;
-}
-/* The label is a single phrase, so it stays on one line rather than breaking mid-sentence. The
-   tightened sides above are what earn that: they leave a narrow screen enough room for the whole
-   phrase at full size, instead of spending it all on the button's own margin and padding. */
-.bigButton {
-	position: relative;
-	display: block;
-	max-width: none;
-	width: fit-content;
-	block-size: fit-content;
-	padding: 3.60% 4.50% 3.60% 4.50%;
-	margin: 3.60% 4.50% 3.60% 0;
-	font-size: min(2.18vmax, 19.20px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: italic;
-	font-weight: 800;
-	background-color: #101010;
-	color: #a0a0a0;
-	border-radius: 2vmin;
-	border-bottom: 0.75vmin #707070 solid;
-	border-right: 0.75vmin #707070 solid;
-	text-decoration: none;
-	text-align: center;
-	white-space: nowrap;
-}
-.bigButton:hover {
 	border-color: #d0c090;
 }
 .pagePath {
@@ -1070,13 +1032,6 @@ hr {
 	color: #c0c0c0;
 	border-radius: 2vmin;
 }
-.portal {
-	position: relative;
-	display: block;
-	margin: 12.5% 0;
-	padding: 0 0;
-	max-width: 70%;
-}
 .postEntryButton {
 	position: relative;
 	display: block;
@@ -1097,33 +1052,6 @@ hr {
 	text-decoration: none;
 }
 .postEntryButton:hover {
-	border-color: #d0c090;
-}
-/* The label is a single phrase, so it stays on one line rather than breaking mid-sentence. The
-   tightened sides above are what earn that: they leave a narrow screen enough room for the whole
-   phrase at full size, instead of spending it all on the button's own margin and padding. */
-.bigButton {
-	position: relative;
-	display: block;
-	max-width: none;
-	width: fit-content;
-	block-size: fit-content;
-	padding: 6.00% 6.25% 6.00% 6.25%;
-	margin: 6.00% 6.25% 6.00% 0;
-	font-size: min(2.18vmax, 19.20px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
-	font-style: italic;
-	font-weight: 800;
-	background-color: #101010;
-	color: #a0a0a0;
-	border-radius: 2vmin;
-	border-bottom: 0.75vmin #707070 solid;
-	border-right: 0.75vmin #707070 solid;
-	text-decoration: none;
-	text-align: center;
-	white-space: nowrap;
-}
-.bigButton:hover {
 	border-color: #d0c090;
 }
 .pagePath {

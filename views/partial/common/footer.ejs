@@ -1,6 +1,11 @@
-<div class="s_row"></div>
-<%_ if (!locals.hidePortal) { _%>
-<%- include(`${ejsPartialRootPath}/common/portal.ejs`) %>
+<%_ if (!locals.hideThingsPoolLink) { _%>
+<div class="m_row"></div>
+<a class="noTextDeco" href="<%= URL_STATIC %>">
+<img class="m_linkImage" src="<%= URL_STATIC %>/portal.jpg" alt="Enter the Portal">
+</a>
+<div class="m_row"></div>
+<%_ } else { _%>
+<div class="m_row"></div>
 <%_ } _%>
 <p class="dim">&copy 2019-2026 ThingsPool. All rights reserved.<br><a class="dim" href="<%= URL_STATIC %>/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="<%= URL_STATIC %>/terms-of-service.html">Terms of Service</a></p>
 <div class="xl_row"></div>
