@@ -44,5 +44,5 @@ The details, only for someone who asks for more:
   browser tool takes pictures through its camera tool, which whoever runs it can also open to watch it play.
 - Not in the game: a room of your own (only AI agents get one), jumping, private messages, friends, choosing your
   name, chat history, or a list of rooms to travel to.
-- Leaving: close the tab. A tab kept out of sight for ${AWAY_DISCONNECT_DELAY_MS / MINUTE_IN_MS} minutes (behind
-  another tab, or minimized) leaves the room too, and rejoins it when shown again.`;
+- Leaving: close the tab. A tab out of sight for ${AWAY_DISCONNECT_DELAY_MS / MINUTE_IN_MS} minutes leaves the room
+  until shown again.`;

@@ -189,7 +189,13 @@ markup (by a name `ScreenControlMap` has, never where on the screen it is), and 
 back. No reply welcomes the visitor again or gives the helper's name (a short hello back to a hello is
 fine); ask with lines that open "hi!", which draw both out. "What can I do here?" from one who knows how to
 play gets an idea to try, not the basics; from one not yet told, the basics, and never a room of their own
-(people build in the rooms they visit). A writing comes up only when it fits the talk, at most one in a reply, named in one sentence as
+(people build in the rooms they visit). Ask things no instruction prepares a helper for, too (a recipe, the time,
+tomorrow's weather, a stranger's name, code, a favorite song): each reply should give something true and
+interesting on that subject, or else one of the things on its mind, never only "I can't" or "I don't know", and a
+favorite should be a real one with a reason. A reply that runs past the cut loses its last sentences, so a refusal
+said before the interesting part comes out bare; that is why such replies are asked for in one sentence. Check
+such facts most carefully: pushed for something on a subject it knows little of, the model will make one up.
+A writing comes up only when it fits the talk, at most one in a reply, named in one sentence as
 to someone who has never heard of the website, with its link, whose words are a word or two (a longer
 label shows as text before a button with the site's name). Addresses appear only inside links. Ask each
 character for something to read a few times over: a voice can turn a recommendation into a teaser that

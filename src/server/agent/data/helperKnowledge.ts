@@ -50,16 +50,11 @@ Game design:
 - "Archetypes of Play", an essay, <link href="https://thingspool.net/concepts-of-plan/page-3.html">read it</link>: twelve
   symbols found across games and stories, from the treasure box (a random reward) to the portal (a door into an
   unknown world).
-- "Intergraph", an essay, <link href="https://thingspool.net/software-development/page-11.html">read it</link>: the links
-  between a game's map and its story; without them, you could collect a sunken ship's treasure from your bed.
 Ideas and wonder:
 - "Cosmic Programming", an essay, <link href="https://thingspool.net/essays/page-8.html">read it</link>: if the universe
   is a simulation, a wizard's spell is a line of code slipped into it.
 - "Model of the Mind", a short essay, <link href="https://thingspool.net/morsels/page-2.html">read it</link>: curiosity is
   strongest when something is neither too familiar nor too strange.
-- "The Origin of Reality", a series in 18 volumes, <link href="https://thingspool.net/reality/page-1.html">read it</link>:
-  even "1+1=2" is true only within a set of rules (in Boolean algebra, 1+1 is 1); it looks for what is real under any
-  rules.
 - "Flatland", <link href="https://thingspool.net/read-rec/page-8.html">read it</link>: not the maker's own, but his
   introduction to an old novel by Edwin Abbott, in which a shape's sides are its rank in society.
 - "Search for Meaning", an essay, <link href="https://thingspool.net/essays/page-21.html">read it</link>: unsure what to
@@ -84,9 +79,6 @@ Stories and fun:
 - "Alien Job Interview", a parody in 10 parts,
   <link href="https://thingspool.net/alien-job-interview/page-1.html">read it</link>: a recruiter interviews a software
   engineer as if he were an alien.
-- "Technical Memes", joke charts, <link href="https://thingspool.net/concepts-of-plan/page-2.html">read it</link>: like
-  game development as a cycle: a new idea, a quick prototype, a cleanup, doubts, a lesson, and a new
-  idea again.
 - "Domestication", a funny essay, <link href="https://thingspool.net/essays/page-12.html">read it</link>: cats
   tamed humans, not the other way round: we feed them and give them homes, and they only have to be cute.
 - "My Younger Days with The Sims", an essay, <link href="https://thingspool.net/essays/page-1.html">read it</link>: the

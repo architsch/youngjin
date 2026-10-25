@@ -689,6 +689,37 @@ describe("helpers", () => {
         expect(claude.requests).toHaveLength(4);
     });
 
+    it("asks once more for a fuller reply where the first only says what it can't do or doesn't know, and says the "
+        + "first if that one is no better", async () => {
+        const mira = standNpc(FIRST_HUB_ID, "Mira");
+        await live(1);
+        const alice = await joinPerson("Alice");
+        await live(8);
+
+        const fuller = "I can't know tomorrow's weather, but here is a fact: a falling raindrop is shaped more like a "
+            + "hamburger bun than a tear.";
+        claude.answers.push("I can't know tomorrow's weather, sorry.", fuller);
+        await talk(alice, "will it rain tomorrow?");
+        await live(8);
+        expect(saidBy(mira).at(-1)).toBe(fuller);
+        expect(claude.requests).toHaveLength(2);
+        expect(claude.requests[1].body.messages).toEqual(claude.requests[0].body.messages);
+        expect(claude.requests[1].body.system[2].text).toContain("must not stop at what you can't do");
+
+        claude.answers.push("I don't know her, sorry.", "I don't know Minji.");
+        await talk(alice, "do you know my friend Minji?");
+        await live(8);
+        expect(saidBy(mira).at(-1)).toBe("I don't know her, sorry.");
+        expect(claude.requests).toHaveLength(4);
+
+        // A short reply that refuses nothing is said as it is.
+        claude.answers.push("Hello again! Good to see you.");
+        await talk(alice, "hello!");
+        await live(8);
+        expect(saidBy(mira).at(-1)).toBe("Hello again! Good to see you.");
+        expect(claude.requests).toHaveLength(5);
+    });
+
     it("has every helper ask with the same rules, a name and place of its own, and a talk of its own with each person",
         async () => {
         standNpc(FIRST_HUB_ID, "Mira");

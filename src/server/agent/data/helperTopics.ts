@@ -212,6 +212,9 @@ export const HELPER_TOPICS: {[personality in Exclude<NpcPersonality, "idle">]: s
         "\"Model of the Mind\", a short essay by Youngjin (<link "
             + "href=\"https://thingspool.net/morsels/page-2.html\">read it</link>): something strange surprises you "
             + "more the closer it is: surprise is how different two things are, divided by how far apart they are.",
+        "\"Intergraph\", an essay by Youngjin (<link href=\"https://thingspool.net/software-development/page-11.html\">"
+            + "read it</link>): the links between a game's map and its story; without them, you could collect a sunken "
+            + "ship's treasure from your bed.",
     ],
     storyteller: [
         "In the folk tales of the Akan people of Ghana, Anansi the spider wins all the world's stories from the sky god "
@@ -357,6 +360,9 @@ export const HELPER_TOPICS: {[personality in Exclude<NpcPersonality, "idle">]: s
         "\"Millimeter Real Estate\", an essay by Youngjin (<link href=\"https://thingspool.net/essays/page-7.html\">read "
             + "it</link>): he imagines land sold by the square millimeter, as easily as swiping a credit card, so that "
             + "owners draw their land a tiny piece at a time.",
+        "\"Technical Memes\", Youngjin's joke charts (<link href=\"https://thingspool.net/concepts-of-plan/page-2.html\">"
+            + "read it</link>): game development as a cycle: a new idea, a quick prototype, a cleanup, doubts, a lesson, "
+            + "and a new idea again.",
     ],
     sage: [
         "The Chinese thinker Zhuangzi dreamed he was a butterfly. Awake, he wondered if he was now a butterfly dreaming "
