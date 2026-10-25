@@ -29,6 +29,9 @@ const UP: Vec3 = {x: 0, y: 1, z: 0};
 // Someone this near on its own floor (feet within this height of its own) is in earshot.
 export const HEARING_DISTANCE = 8;
 const SAME_FLOOR_HEIGHT = 1;
+// A helper this little farther off the way a speaker faces than the one most in front of them is as good as faced too,
+// and the nearest of those hears them (see pickListener): a helper just behind another in view isn't the one faced.
+const FACING_TIE_DEGREES = 10;
 // Someone's lines are answered together once they have paused this long.
 export const ANSWER_PAUSE_MS = 1500;
 // How long a bubble stays before the next, so it can be read: a moment to notice it, then its words at an easy pace, as
@@ -130,16 +133,19 @@ const HelperBehaviorUtil =
         if (!linesWaiting)
             wander(behavior, surroundings, now);
     },
-    // Of the helpers in a room, the one a line is for: one it names, else the nearest in earshot of whoever said it, or
-    // the nearest at all to one calling for a helper.
-    pickListener: <T extends HelperBehavior>(helpers: T[], text: string, speaker: Vec3): T | undefined =>
+    // Of the helpers in a room, the one a line is for: one it names, else, of those in earshot of whoever said it (all of
+    // them, to one calling for a helper), the one they face, which the way they face decides before nearness does.
+    pickListener: <T extends HelperBehavior>(helpers: T[], text: string, speaker: Vec3, facing: Vec3): T | undefined =>
     {
         const named = helpers.find(helper => helper.name.length > 0 && namedIn(text, helper.name));
         if (named != undefined)
             return named;
         const callsForHelper = namedIn(text, HELPER_AGENT_NAME);
-        return helpers.filter(helper => callsForHelper || HelperBehaviorUtil.isInEarshot(helper, speaker))
-            .sort((a, b) => distanceAcross(speaker, a.at) - distanceAcross(speaker, b.at))[0];
+        const hearing = helpers.filter(helper => callsForHelper || HelperBehaviorUtil.isInEarshot(helper, speaker))
+            .map(helper => ({helper, off: degreesOffFacing(speaker, facing, helper.at)}));
+        const leastOff = Math.min(...hearing.map(({off}) => off));
+        return hearing.filter(({off}) => off <= leastOff + FACING_TIE_DEGREES)
+            .sort((a, b) => distanceAcross(speaker, a.helper.at) - distanceAcross(speaker, b.helper.at))[0]?.helper;
     },
     // A line for it, once whoever plays it has kept it to answer: it turns to whoever said it, unless it is still
     // speaking to someone else, and is shown thinking of an answer at once. A chat with another helper ends for it.
@@ -713,6 +719,15 @@ function namedIn(text: string, name: string): boolean
 function distanceAcross(a: Vec3, b: Vec3): number
 {
     return Math.hypot(a.x - b.x, a.z - b.z);
+}
+
+// How many degrees the way across the floor to a point is off the way someone faces (none, for where they stand).
+function degreesOffFacing(from: Vec3, facing: Vec3, to: Vec3): number
+{
+    if (distanceAcross(from, to) == 0)
+        return 0;
+    return Math.abs(NpcFacingUtil.getTurn(NpcFacingUtil.getDegrees(facing),
+        NpcFacingUtil.getDegrees({x: to.x - from.x, y: 0, z: to.z - from.z})));
 }
 
 function randomBetween([min, max]: number[]): number

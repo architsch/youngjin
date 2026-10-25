@@ -23,9 +23,9 @@ The details, only for someone who asks for more:
 - Moving (Play mode): press on the screen and drag, like a joystick: up walks forward, down walks back, left and
   right turn. There is no jump. Fans blow people around, and upward ones bounce them up.
 - Chat: 72 characters at most. The words show in a bubble over your head to people near you, until you send another
-  or clear it with <control name="clear"/>. A web address typed there becomes a link: a button in the bubble that
-  others click to open it, a page of ThingsPool's own website over the game and any other in a new tab, and a
-  ThingsPool room by going there.
+  or clear it with <control name="clear"/>. Of several guides near you, the one you face answers. A web address typed
+  there becomes a link: a button in the bubble that others click to open it, a page of ThingsPool's own website over
+  the game and any other in a new tab, and a ThingsPool room by going there.
 - Edit mode: drag to look around, and zoom with a pinch, the mouse wheel or the slider. Click a block's face, or a
   thing, to select it. The strip of textures under the tools repaints the selected face. A thing goes on the face it
   is added to, so a fan on a floor blows upward. Select a thing to change it: a lamp's color, brightness and reach; a

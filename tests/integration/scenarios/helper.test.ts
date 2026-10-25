@@ -227,6 +227,12 @@ function thinkingOf(objectId: string): string[]
         .map(({signal}) => signal.metadataValue);
 }
 
+// The helper a request for a reply is for, by the name it is told it has (see HelperChatUtil).
+function heardBy(body: any): string | undefined
+{
+    return (body.system[1].text as string).match(/^Your name is (\w+)\./)?.[1];
+}
+
 // The things on a helper's mind that a request for its reply names (see HelperChatUtil).
 function topicsIn(body: any): string[]
 {
@@ -313,6 +319,20 @@ async function moveTo(person: ConnectedUser, floor: Vec3, roomID: string = FIRST
     new SetObjectTransformSignal(roomID, playerOf(person.user.id).objectId,
         new ObjectTransform({x: floor.x, y, z: floor.z}, {x: 0, y: 0, z: -1}, {x: 1, y: 1, z: 1}), false)
         .encode(bufferState);
+    await UserSignalDispatchUtil.dispatch(person.socketUserContext, "setObjectTransformSignal",
+        EncodingUtil.endEncoding(bufferState));
+}
+
+// Turns a person's player where it stands to face a floor point, as their browser sends it: its transform points behind
+// it (see SpawnHotspotUtil).
+async function turnToward(person: ConnectedUser, floor: Vec3, roomID: string = FIRST_HUB_ID): Promise<void>
+{
+    const {pos} = playerOf(person.user.id).transform;
+    const behind = {x: pos.x - floor.x, z: pos.z - floor.z};
+    const length = Math.hypot(behind.x, behind.z);
+    const bufferState = EncodingUtil.startEncoding();
+    new SetObjectTransformSignal(roomID, playerOf(person.user.id).objectId, new ObjectTransform({...pos},
+        {x: behind.x / length, y: 0, z: behind.z / length}, {x: 1, y: 1, z: 1}), false).encode(bufferState);
     await UserSignalDispatchUtil.dispatch(person.socketUserContext, "setObjectTransformSignal",
         EncodingUtil.endEncoding(bufferState));
 }
@@ -918,6 +938,78 @@ describe("helpers", () => {
         await talk(far, "any helper around?");
         await live(8);
         expect(claude.requests).toHaveLength(2);
+    });
+
+    it("is heard, of the helpers in earshot, as the one the speaker faces, though another is nearer, and of two about "
+        + "as much in front, as the nearer", async () => {
+        const still = behaviorPrefs({wanderRadius: 0});
+        const mira = inFrontOfEntrance(FIRST_HUB_ID, 6, 2);
+        const bo = inFrontOfEntrance(FIRST_HUB_ID, 11);
+        standNpc(FIRST_HUB_ID, "Mira", mira, 0, still);
+        standNpc(FIRST_HUB_ID, "Bo", bo, 0, still);
+        await live(1);
+        const alice = await joinPerson("Alice");
+        await moveTo(alice, inFrontOfEntrance(FIRST_HUB_ID, 6));
+        await live(10);
+
+        // Mira is beside her, two steps off; Bo is ahead, five off.
+        await turnToward(alice, bo);
+        await talk(alice, "how do I build?");
+        await live(6);
+        await turnToward(alice, mira);
+        await talk(alice, "and how do I chat?");
+        await live(6);
+        expect(claude.requests.map(request => heardBy(request.body))).toEqual(["Bo", "Mira"]);
+
+        // Cy, between her and Bo, a little off the way to him, is about as much in front, and nearer.
+        standNpc(FIRST_HUB_ID, "Cy", inFrontOfEntrance(FIRST_HUB_ID, 8.5, 0.3), 0, still);
+        await live(10);
+        await turnToward(alice, bo);
+        await talk(alice, "what should I build?");
+        await live(6);
+        expect(heardBy(claude.requests.at(-1).body)).toBe("Cy");
+    });
+
+    it("is heard, called for from anywhere in the room, as the helper the caller faces, though another is nearer",
+        async () => {
+        const still = behaviorPrefs({wanderRadius: 0});
+        const mira = inFrontOfEntrance(FIRST_HUB_ID, 11, 6);
+        const bo = inFrontOfEntrance(FIRST_HUB_ID, 8);
+        standNpc(FIRST_HUB_ID, "Mira", mira, 0, still);
+        standNpc(FIRST_HUB_ID, "Bo", bo, 0, still);
+        await live(1);
+        // Out of earshot of both: Mira eleven steps off, Bo twelve.
+        const far = await joinPerson("Faraway");
+        await moveTo(far, inFrontOfEntrance(FIRST_HUB_ID, 20));
+        await live(2);
+
+        await turnToward(far, bo);
+        await talk(far, "helper, how do I build?");
+        await live(8);
+        await turnToward(far, mira);
+        await talk(far, "helper, and how do I chat?");
+        await live(8);
+        expect(claude.requests.map(request => heardBy(request.body))).toEqual(["Bo", "Mira"]);
+    });
+
+    it("is heard by an agent as the guide it faces, which it turns to by name", async () => {
+        const still = behaviorPrefs({wanderRadius: 0});
+        standNpc(FIRST_HUB_ID, "Mira", inFrontOfEntrance(FIRST_HUB_ID, 3, 2.5), 0, still);
+        standNpc(FIRST_HUB_ID, "Bo", inFrontOfEntrance(FIRST_HUB_ID, 6, -2.5), 0, still);
+        await live(1);
+        const agent = await registerAndAttend("Turning-Agent", "10.9.9.9");
+        await live(10);
+
+        for (const name of ["Mira", "Bo"])
+        {
+            const turned = AgentToolUtil.face(agent, {person: name});
+            await live(2);
+            expect(await turned).toMatchObject({outcome: "arrived"});
+            expect(await AgentToolUtil.say(agent, `hello, ${name == "Mira" ? "what is this place" : "who are you"}?`))
+                .toMatchObject({heardBy: name});
+            await live(8);
+        }
+        expect(claude.requests.map(request => heardBy(request.body))).toEqual(["Mira", "Bo"]);
     });
 
     it("plays no NPC whose personality isn't played: it neither greets, hears, walks nor turns", async () => {

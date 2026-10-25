@@ -85,7 +85,7 @@ Stories and fun:
   <link href="https://thingspool.net/alien-job-interview/page-1.html">read it</link>: a recruiter interviews a software
   engineer as if he were an alien.
 - "Technical Memes", joke charts, <link href="https://thingspool.net/concepts-of-plan/page-2.html">read it</link>: like
-  game development as a cycle of five steps: a new idea, a quick prototype, a cleanup, doubts, a lesson, and a new
+  game development as a cycle: a new idea, a quick prototype, a cleanup, doubts, a lesson, and a new
   idea again.
 - "Domestication", a funny essay, <link href="https://thingspool.net/essays/page-12.html">read it</link>: cats
   tamed humans, not the other way round: we feed them and give them homes, and they only have to be cute.

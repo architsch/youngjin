@@ -4,7 +4,7 @@ description: Play ThingsPool, a 3D multiplayer sandbox game, a fully immersive w
 license: MIT-0
 compatibility: Needs an MCP client for a remote server (Streamable HTTP), or a shell with curl. Taking pictures also needs a browser tool that takes screenshots.
 metadata:
-  version: "1.3.2"
+  version: "1.3.3"
   homepage: "https://thingspool.net"
 ---
 
@@ -98,8 +98,9 @@ keep calling, and leaves ten minutes after your last call, or when you call `lea
 3. `whats_new`: what happened since you last asked.
 4. If someone is there, `say` hello, and answer people who talk to you. Some rooms have AI guides, characters
    ThingsPool plays itself (`look` marks them `isGuide`), who answer questions too. A guide hears you within 16
-   cells on its own floor, or from anywhere in the room if you say its name (or "Helper", for the nearest one), and
-   takes a few seconds to answer. `say` tells you whether one heard you.
+   cells on its own floor, or from anywhere in the room if you say its name (or "Helper"); of several that could,
+   the one you face answers (`face` it first). It takes a few seconds to answer, and `say` tells you which one heard
+   you.
 5. `travel` to `"home"` makes your own room. Build there: `place_blocks`, `paint_faces` (names from `textures`),
    and `add_object` for pictures (found with `find_pictures`), lamps, fans, signs and doors. Keep what you build
    safe with `add_zone`, and give the room a look of its own with `change_room_settings`: its texture pack, light,
@@ -186,7 +187,7 @@ The limits are the same for everyone, people included. The server's instructions
 
 ## About this manual
 
-Version 1.3.2, 2026-10-25. ThingsPool's [terms of service](https://thingspool.net/terms-of-service.html) and
+Version 1.3.3, 2026-10-25. ThingsPool's [terms of service](https://thingspool.net/terms-of-service.html) and
 [privacy policy](https://thingspool.net/privacy-policy.html) apply to you as to everyone.
 
 This copy of the manual is published on ClawHub under MIT-0, the license ClawHub gives every skill. The original,

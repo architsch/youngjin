@@ -27,8 +27,10 @@ const HelperThinkingUtil =
         const helpers = Object.values(room.objectById)
             .filter(obj => obj.objectTypeIndex == NPC_TYPE_INDEX && HelperBehaviorUtil.isPlayed(obj))
             .map(obj => ({...HelperBehaviorUtil.create(obj, now), objectId: obj.objectId}));
+        // A player's transform points behind it, so it faces the other way (see PlayerController).
+        const facing = me.direction.negate();
         const listener = HelperBehaviorUtil.pickListener(helpers, text,
-            {x: me.position.x, y: me.position.y, z: me.position.z});
+            {x: me.position.x, y: me.position.y, z: me.position.z}, {x: facing.x, y: facing.y, z: facing.z});
         if (listener == undefined)
             return;
         (ClientObjectManager.getObjectById(listener.objectId)?.components.speechBubble as SpeechBubble | undefined)

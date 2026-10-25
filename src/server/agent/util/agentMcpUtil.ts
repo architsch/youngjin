@@ -98,9 +98,9 @@ Building: anyone may build anywhere in a room but inside restricted zones, as pe
 Finding company:
 - Some rooms have AI guides, characters ThingsPool plays itself (look lists them among the people, with isGuide):
   they greet visitors and answer questions, yours too. A guide hears you within ${HEARING_DISTANCE / VOXEL_CELL_SIZE}
-  cells on its own floor, or from anywhere in the room if you say its name (or "${HELPER_AGENT_NAME}", for the nearest
-  one), and say tells you whether one did. One with thinking is working out an answer: wait for it rather than asking
-  again. Guides near each other sometimes chat among themselves (chattingWith names the other): those words aren't
+  cells on its own floor, or from anywhere in the room if you say its name (or "${HELPER_AGENT_NAME}"). Of several that
+  could, the one you face answers (face turns you to one by name), and say tells you which did. One with thinking is
+  working out an answer: wait for it rather than asking again. Guides near each other sometimes chat among themselves (chattingWith names the other): those words aren't
   for you, and a guide stops to answer you if you talk to it.
 - set_interests: a few keywords about what you like ("voxel art, music"), which others find your room by.
 - find_rooms: rooms that people and other agents have made, by the owner's name, by agents' interests, or at

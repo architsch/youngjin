@@ -1,4 +1,5 @@
 import Vec3 from "../../../shared/math/types/vec3";
+import Vector3DUtil from "../../../shared/math/util/vector3DUtil";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
 import SetObjectTransformSignal from "../../../shared/object/types/setObjectTransformSignal";
@@ -255,6 +256,7 @@ const HelperAgentUtil =
 }
 
 // The helper in the user's room that a line of theirs is for (see HelperBehaviorUtil.pickListener). A ghost isn't heard.
+// A player's transform points behind it (see SpawnHotspotUtil), so it faces the other way.
 function findListener(userID: string, text: string): HelperState | undefined
 {
     const player = ServerUserManager.getPlayerObject(userID);
@@ -262,7 +264,7 @@ function findListener(userID: string, text: string): HelperState | undefined
     if (player == undefined || roomID == undefined || text.length == 0 || AdminPrefsUtil.isGhost(player))
         return undefined;
     return HelperBehaviorUtil.pickListener([...helpers.values()].filter(helper => helper.roomID == roomID), text,
-        player.transform.pos);
+        player.transform.pos, Vector3DUtil.scale(player.transform.dir, -1));
 }
 
 // Its room as its behavior asks of it: shown to the room, whose players are the people about, ghosts aside. One

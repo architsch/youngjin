@@ -75,7 +75,8 @@ singlePlayerChatLineObservable.addListener("singlePlayerHelperUtil", (text: stri
     const user = App.getUser();
     const room = App.getCurrentRoom();
     const me = getMyPosition();
-    const helper = (me == undefined) ? undefined : HelperBehaviorUtil.pickListener([...helpers.values()], text, me);
+    const helper = (me == undefined) ? undefined
+        : HelperBehaviorUtil.pickListener([...helpers.values()], text, me, getMyFacing());
     if (helper == undefined || user == undefined || room == undefined || text.trim().length == 0)
         return;
     const now = Date.now();
@@ -241,4 +242,11 @@ function getMyPosition(): Vec3 | undefined
     if (player == undefined || AdminPrefsUtil.isGhost(player.params))
         return undefined;
     return {x: player.position.x, y: player.position.y, z: player.position.z};
+}
+
+// A player's transform points behind it, so it faces the other way (see PlayerController).
+function getMyFacing(): Vec3
+{
+    const facing = ClientObjectManager.getMyPlayer()?.direction.negate();
+    return {x: facing?.x ?? 0, y: facing?.y ?? 0, z: facing?.z ?? 0};
 }
