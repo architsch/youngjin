@@ -26,8 +26,11 @@ const AgentAwayLogUtil =
         const room = roomRuntimeMemory.room;
         if (room.roomType != RoomTypeEnumMap.Regular || room.ownerUserID.length == 0)
             return;
-        const owner = await DBUserUtil.findUserById(room.ownerUserID);
-        if (owner?.userType != UserTypeEnumMap.Agent)
+        // Known without a read when the owner is here, as on its own trip home.
+        const present = ServerUserManager.getSocketUserContext(room.ownerUserID);
+        const ownerType = (present != undefined) ? present.user.userType
+            : (await DBUserUtil.findUserById(room.ownerUserID))?.userType;
+        if (ownerType != UserTypeEnumMap.Agent)
             return;
 
         const watch = {ownerID: room.ownerUserID, roomRuntimeMemory, inbox: undefined as AgentInbox | undefined};

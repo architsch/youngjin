@@ -47,7 +47,9 @@ const DBFileStorageUtil =
             const gzipped = GZIP_MAGIC_BYTES.every((byte, i) => buffer[i] == byte);
             return gzipped ? await gunzip(buffer) : buffer;
         } catch (err) {
-            LogUtil.log("DBFileStorageUtil.loadBinaryFile failed", {errorMessage: ErrorUtil.getErrorMessage(err)}, "high", "error");
+            // A file that isn't there is the caller's to judge (a room may be asked for before it is known to exist).
+            if ((err as {code?: number}).code != 404)
+                LogUtil.log("DBFileStorageUtil.loadBinaryFile failed", {errorMessage: ErrorUtil.getErrorMessage(err)}, "high", "error");
             return null;
         }
     },

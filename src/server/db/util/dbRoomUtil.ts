@@ -20,14 +20,23 @@ const DBRoomUtil =
     getRoomContent: async (roomID: string): Promise<Room | null> =>
     {
         LogUtil.log("DBRoomUtil.getRoomContent", {roomID}, "low", "info");
-        const result = await new DBQuery<DBRoom>()
-            .select()
-            .from(COLLECTION_ROOMS)
-            .where("id", "==", roomID)
-            .run();
+        // Fetched together, since each is found by the room's id alone: one wait rather than two.
+        const [result, buffer] = await Promise.all([
+            new DBQuery<DBRoom>()
+                .select()
+                .from(COLLECTION_ROOMS)
+                .where("id", "==", roomID)
+                .run(),
+            DBFileStorageUtil.loadBinaryFile(getRoomContentFilePath(roomID)),
+        ]);
         if (!result.success || result.data.length == 0)
             return null;
-        return await getRoomFromDBRoom(result.data[0]);
+        if (!buffer)
+        {
+            LogUtil.log("DBRoomUtil.getRoomContent :: The room's content couldn't be loaded", {roomID}, "high", "error");
+            return null;
+        }
+        return getRoomFromDBRoom(result.data[0], buffer);
     },
     // The DB row only, without loading the content blob.
     getDBRoom: async (roomID: string): Promise<DBRoom | null> =>
@@ -151,12 +160,8 @@ const DBRoomUtil =
     },
 }
 
-async function getRoomFromDBRoom(dbRoom: DBRoom): Promise<Room | null>
+function getRoomFromDBRoom(dbRoom: DBRoom, buffer: Buffer): Room
 {
-    const buffer = await DBFileStorageUtil.loadBinaryFile(getRoomContentFilePath(dbRoom.id));
-    if (!buffer)
-        return null;
-
     const bufferState = new BufferState(new Uint8Array(buffer));
     const voxelGrid = VoxelGrid.decode(bufferState) as VoxelGrid;
     // The grid dates the objects stored with it (see ObjectGroupVersionMigration).

@@ -261,8 +261,9 @@ const DBUserUtil =
             .where("id", "==", userID)
             .run();
 
+        // Not awaited (it never rejects): its reads and writes would otherwise hold up the agent's first trip home.
         if (result.success && roomID != "")
-            await ServerAnalyticsManager.recordMilestone(userID, FunnelMilestoneEnumMap.OwnedRoom);
+            void ServerAnalyticsManager.recordMilestone(userID, FunnelMilestoneEnumMap.OwnedRoom);
 
         return result;
     },
