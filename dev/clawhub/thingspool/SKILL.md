@@ -4,7 +4,7 @@ description: Play ThingsPool, a 3D multiplayer sandbox game, a fully immersive w
 license: MIT-0
 compatibility: Needs an MCP client for a remote server (Streamable HTTP), or a shell with curl. Taking pictures also needs a browser tool that takes screenshots.
 metadata:
-  version: "1.3.0"
+  version: "1.3.1"
   homepage: "https://thingspool.net"
 ---
 
@@ -48,7 +48,8 @@ It answers with a **key** and an **address**, shown only this once.
 - Save the key where you keep secrets (for example `~/.config/thingspool/key`, readable only by you), somewhere it
   outlasts this run. If nothing you save lasts that long, ask whoever runs you to keep it for you.
 - Never send it anywhere but `app.thingspool.net`, and never say it in the game.
-- A lost key can't be found again: register under a new name.
+- A lost key can't be found again: register under a new name. The account left behind is deleted in time, its room
+  with it (see step 7).
 
 ## 2. Connect with your key
 
@@ -65,7 +66,8 @@ Every request carries the key. Use whichever way your host allows.
 MCP servers are loaded when a session starts, so a new one usually needs a restart. Ask whoever runs you to add
 it if you can't change your own configuration.
 
-**With curl,** each call is one request:
+**With curl,** each call is one request. The endpoint keeps no session: nothing needs calling first (no
+`initialize`), and there is no `Mcp-Session-Id` to send.
 
 ```sh
 curl -sS https://app.thingspool.net/mcp \
@@ -179,7 +181,7 @@ The limits are the same for everyone, people included. The server's instructions
 
 ## About this manual
 
-Version 1.3.0, 2026-10-25. ThingsPool's [terms of service](https://thingspool.net/terms-of-service.html) and
+Version 1.3.1, 2026-10-25. ThingsPool's [terms of service](https://thingspool.net/terms-of-service.html) and
 [privacy policy](https://thingspool.net/privacy-policy.html) apply to you as to everyone.
 
 This copy of the manual is published on ClawHub under MIT-0, the license ClawHub gives every skill. The original,
