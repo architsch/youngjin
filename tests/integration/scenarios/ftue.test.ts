@@ -1,10 +1,10 @@
 /**
  * Scenario tests: FTUE (see @docs/networking/ftue.md).
- * Covers: FTUEUtil's element chars, local record and coach mark timing; client/server agreement on
- * elements; the add-FTUE-element command (memory and storage, rejecting duplicates and invalid input);
- * restart, wire format and migration.
+ * Covers: FTUEUtil's element chars, local record and coach mark timing (the top bar's, from landing in the first
+ * multiplayer room); client/server agreement on elements; the add-FTUE-element command (memory and storage, rejecting
+ * duplicates and invalid input); restart, wire format and migration.
  */
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 // ─── Hoisted mock state (vi.mock factories are hoisted, so refs must be too) ─
 
@@ -116,14 +116,17 @@ vi.mock("../../../src/server/system/util/latencySimUtil", () => ({
 // ─── Import after mocks ───────────────────────────────────────────────────
 
 import FTUEUtil from "../../../src/client/ui/util/ftueUtil";
-import { FTUEElementCodeEnumMap } from "../../../src/client/ui/types/ftueElementCode";
+import { FTUEElementCodeEnumMap } from "../../../src/shared/user/types/ftueElementCode";
+import FTUEElementUtil from "../../../src/shared/user/util/ftueElementUtil";
 import { screenCoachMarksObservable } from "../../../src/client/system/clientObservables";
 import UserCommandUtil from "../../../src/server/user/util/userCommandUtil";
 import UserCommandSignal from "../../../src/shared/user/types/userCommandSignal";
 import UserRouter from "../../../src/server/networking/router/api/userRouter";
 import User from "../../../src/shared/user/types/user";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
-import { TUTORIAL_SINGLE_PLAYER_MODE } from "../../../src/shared/system/sharedConstants";
+import Room from "../../../src/shared/room/types/room";
+import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
+import { MINUTE_IN_MS, TUTORIAL_SINGLE_PLAYER_MODE } from "../../../src/shared/system/sharedConstants";
 import DBUserVersionMigration from "../../../src/server/db/types/versionMigration/dbUserVersionMigration";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -225,6 +228,9 @@ describe("FTUE element records (client)", () => {
             ChangeCanvasImage: "F", // retired element: the slot stays reserved, never reused
             ChangeCanvasFrame: "G", // retired element: the slot stays reserved, never reused
             EnterHub: "H",
+            Basics: "I",
+            EnterEditMode: "J",
+            OwnIdentity: "K",
         });
     });
 
@@ -341,6 +347,112 @@ describe("FTUE coach marks (client)", () => {
 
         expect(FTUEUtil.hasFTUEElement(FTUEElementCodeEnumMap.CustomizePlayer)).toBe(false);
         expect(_emittedUserCommands.length).toBe(0);
+    });
+});
+
+// ─── Client side: the top bar's marks, timed from landing ──────────────────
+
+describe("FTUE coach marks timed from landing (client)", () => {
+    // The clock is the page's, so each test loads FTUEUtil afresh, as a page does.
+    let PageFTUEUtil: typeof FTUEUtil;
+
+    beforeEach(async () => {
+        vi.useFakeTimers();
+        vi.resetModules();
+        PageFTUEUtil = (await import("../../../src/client/ui/util/ftueUtil")).default;
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    function enterRoom(roomType: number): void
+    {
+        PageFTUEUtil.onRoomEntered({ roomType } as Room);
+    }
+
+    function markTexts(): string[]
+    {
+        return screenCoachMarksObservable.peek().map(mark => mark.text);
+    }
+
+    it("points at the mode switch from one minute after landing to three, then at the person button until five", () => {
+        enterRoom(RoomTypeEnumMap.Hub);
+
+        vi.advanceTimersByTime(MINUTE_IN_MS - 1);
+        expect(markTexts()).toEqual([]);
+        vi.advanceTimersByTime(1);
+        expect(screenCoachMarksObservable.peek()).toEqual([{
+            ftueElementCode: FTUEElementCodeEnumMap.EnterEditMode,
+            targetElementId: "gameModeToggleSwitch",
+            text: "Try Editing",
+        }]);
+
+        vi.advanceTimersByTime(2 * MINUTE_IN_MS - 1);
+        expect(markTexts()).toEqual(["Try Editing"]);
+        vi.advanceTimersByTime(1);
+        expect(screenCoachMarksObservable.peek()).toEqual([{
+            ftueElementCode: FTUEElementCodeEnumMap.OwnIdentity,
+            targetElementId: "userIdentityButton",
+            text: "Customize Yourself",
+        }]);
+
+        vi.advanceTimersByTime(2 * MINUTE_IN_MS - 1);
+        expect(markTexts()).toEqual(["Customize Yourself"]);
+        vi.advanceTimersByTime(1);
+        expect(markTexts()).toEqual([]);
+
+        // Nothing more for the rest of the page, though neither control was used.
+        vi.advanceTimersByTime(60 * MINUTE_IN_MS);
+        expect(markTexts()).toEqual([]);
+    });
+
+    it("starts the clock in the first multiplayer room, not in the tutorial before it", () => {
+        // The tutorial guides the user itself, however long it takes.
+        enterRoom(RoomTypeEnumMap.SinglePlayer);
+        vi.advanceTimersByTime(10 * MINUTE_IN_MS);
+        expect(markTexts()).toEqual([]);
+
+        enterRoom(RoomTypeEnumMap.Hub);
+        vi.advanceTimersByTime(MINUTE_IN_MS);
+        expect(markTexts()).toEqual(["Try Editing"]);
+    });
+
+    it("keeps the first room's clock through later rooms", () => {
+        enterRoom(RoomTypeEnumMap.Hub);
+        vi.advanceTimersByTime(MINUTE_IN_MS / 2);
+        enterRoom(RoomTypeEnumMap.Regular);
+        vi.advanceTimersByTime(MINUTE_IN_MS / 2);
+        expect(markTexts()).toEqual(["Try Editing"]);
+
+        // Once the marks are over, another room brings none back.
+        vi.advanceTimersByTime(4 * MINUTE_IN_MS);
+        enterRoom(RoomTypeEnumMap.Hub);
+        vi.advanceTimersByTime(MINUTE_IN_MS);
+        expect(markTexts()).toEqual([]);
+        vi.advanceTimersByTime(2 * MINUTE_IN_MS);
+        expect(markTexts()).toEqual([]);
+    });
+
+    it("skips the mark of a control the user has used before", () => {
+        // A returning user who has been in edit mode, but never opened their identity.
+        _clientUser.current = makeUser(FTUEElementUtil.toChar(FTUEElementCodeEnumMap.EnterEditMode));
+        enterRoom(RoomTypeEnumMap.Hub);
+
+        vi.advanceTimersByTime(MINUTE_IN_MS);
+        expect(markTexts()).toEqual([]);
+        vi.advanceTimersByTime(2 * MINUTE_IN_MS);
+        expect(markTexts()).toEqual(["Customize Yourself"]);
+    });
+
+    it("takes a mark down as soon as its control is used, and leaves the next one to its time", () => {
+        enterRoom(RoomTypeEnumMap.Hub);
+        vi.advanceTimersByTime(MINUTE_IN_MS);
+        PageFTUEUtil.tryAddFTUEElement(FTUEElementCodeEnumMap.EnterEditMode);
+        expect(markTexts()).toEqual([]);
+
+        vi.advanceTimersByTime(2 * MINUTE_IN_MS);
+        expect(markTexts()).toEqual(["Customize Yourself"]);
     });
 });
 

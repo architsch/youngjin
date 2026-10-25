@@ -6,6 +6,7 @@ import EasingMotion from "../../object/components/easingMotion";
 import ParticleSystem from "../../graphics/particle/particleSystem";
 import { cameraModeObservable, clientFeatureFlagsObservable, downwardArrowTargetObservable, editModeOpeningOverrideObservable, headlineMessageObservable, myPlayerHiddenObservable, navigationArrowTargetObservable, orbitCameraDistanceRangeRequestObservable, orbitCameraTargetOverrideObservable, orbitCameraViewRequestObservable, screenArrowTargetObservable, screenDiagramObservable, screenOutlineCapsuleTargetObservable, screenOutlineRectTargetObservable, voxelQuadHighlightObservable, voxelQuadSelectionObservable, voxelQuadSelectionRestrictionObservable } from "../../system/clientObservables";
 import ClientVoxelManager from "../../voxel/clientVoxelManager";
+import FTUEUtil from "../../ui/util/ftueUtil";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import SinglePlayerManager from "../singlePlayerManager";
 import SinglePlayerAction from "../types/singlePlayerAction";
@@ -182,6 +183,10 @@ const SinglePlayerActionMap: {
     {
         ParticleSystem.play(action.effect, action.position(),
             {direction: action.direction?.(), scale: action.scale?.()});
+    },
+    "add_ftue_element": (action) => // Records that the user has been through something (see FTUEUtil), e.g. the lessons that teach it.
+    {
+        FTUEUtil.tryAddFTUEElement(action.ftueElementCode);
     },
 }
 

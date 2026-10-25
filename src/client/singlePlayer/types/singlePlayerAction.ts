@@ -4,6 +4,7 @@ import { FeatureFlag } from "../../../shared/system/types/featureFlag";
 import SinglePlayerParam from "./singlePlayerParam";
 import CameraMode from "../../graphics/types/cameraMode";
 import RoomVolume from "../../../shared/room/types/roomVolume";
+import { FTUEElementCode } from "../../../shared/user/types/ftueElementCode";
 
 // A tagged step command (see SinglePlayerActionMap). Inputs are SinglePlayerParams so they can be
 // computed during play, as what they name in the room has to be (see SinglePlayerRoomQueryUtil); identifiers
@@ -47,5 +48,6 @@ type SinglePlayerAction =
         scaleMultiplier?: SinglePlayerParam<Vec3>, oscillations?: SinglePlayerParam<number>}
     | {type: "play_vfx", effect: string, position: SinglePlayerParam<Vec3>,
         direction?: SinglePlayerParam<Vec3>, scale?: SinglePlayerParam<number>}
+    | {type: "add_ftue_element", ftueElementCode: FTUEElementCode}
 
 export default SinglePlayerAction;

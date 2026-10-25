@@ -8,7 +8,8 @@ import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
 import useShortcutKey from "../../../util/shortcutKey";
 
 // Play/edit switch (see GameModeUtil), which M ("mode") clicks too. Outlined to read over the scene. Greyed out,
-// not hidden, while a step locks the mode.
+// not hidden, while a step locks the mode. Pictured in messages by a hand-made copy (see ScreenControlPicture): a new
+// look goes there too.
 
 export default function GameModeToggleSwitch()
 {

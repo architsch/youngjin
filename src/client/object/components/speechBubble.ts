@@ -14,6 +14,7 @@ import MessageSegment from "../../../shared/object/types/messageSegment";
 import MessageLinkUtil from "../../../shared/object/util/messageLinkUtil";
 import OverlayClickTargetUtil from "../../graphics/util/overlayClickTargetUtil";
 import MessageLinkOpenUtil from "../../ui/util/messageLinkOpenUtil";
+import ScreenControlPictureUtil from "../../ui/util/screenControlPictureUtil";
 
 // Room left between a bubble and the edges of the view (see keepInView).
 const VIEW_MARGIN_PX = 8;
@@ -253,7 +254,8 @@ export default class SpeechBubble extends GameObjectComponent
         for (const segment of segments)
         {
             this.bubbleElement!.appendChild((segment.kind == "text") ? document.createTextNode(segment.text)
-                : createLinkButton(segment.href, segment.label));
+                : (segment.kind == "link") ? createLinkButton(segment.href, segment.label)
+                : ScreenControlPictureUtil.create(segment.control));
         }
 
         if (animate)
@@ -262,7 +264,7 @@ export default class SpeechBubble extends GameObjectComponent
 
     // In characters, as many as the message needs to take no more than MAX_LINES_AT_TYPE_WIDTH lines however its words
     // wrap: a line falls short of the width by less than the longest word. A line may break on either side of a wide
-    // character, as at a space, and of a link, which is a word as wide as its button.
+    // character, as at a space, and of a link or a picture, which is a word as wide as it is drawn.
     private getMaxWidth(segments: MessageSegment[]): string
     {
         const typeWidth = this.componentConfig.widthInChars ?? DEFAULT_WIDTH_IN_CHARS;
@@ -271,12 +273,13 @@ export default class SpeechBubble extends GameObjectComponent
         let longestWordWidth = 0;
         for (const segment of segments)
         {
-            if (segment.kind == "link")
+            if (segment.kind != "text")
             {
-                const linkWidth = Array.from(segment.label).length + LINK_BUTTON_EXTRA_CHARS;
-                messageWidth += linkWidth;
+                const drawnWidth = (segment.kind == "link") ? Array.from(segment.label).length + LINK_BUTTON_EXTRA_CHARS
+                    : ScreenControlPictureUtil.getWidthInChars(segment.control);
+                messageWidth += drawnWidth;
                 wordWidth = 0;
-                longestWordWidth = Math.max(longestWordWidth, linkWidth);
+                longestWordWidth = Math.max(longestWordWidth, drawnWidth);
                 continue;
             }
             for (const char of segment.text)

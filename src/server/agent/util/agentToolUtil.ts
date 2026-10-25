@@ -85,7 +85,7 @@ const AgentToolUtil =
             isGuide: true,
             at: AgentGridUtil.toGridPosition(helper.at),
             distance: Math.round(10 * distanceInVoxels(myFeet, helper.at)) / 10,
-            saying: helper.saying.length > 0 ? helper.saying : undefined,
+            saying: helper.saying.length > 0 ? MessageLinkUtil.withControlsInWords(helper.saying) : undefined,
             thinking: helper.thinking ? true : undefined,
             chattingWith: helper.chattingWith,
         }));
@@ -393,7 +393,7 @@ function getFacing(player: AddObjectSignal): AgentHeading
 function getSpeech(obj: AddObjectSignal): string | undefined
 {
     const text = obj.metadata[ObjectMetadataKeyEnumMap.SentMessage]?.str ?? "";
-    return text.length > 0 ? text : undefined;
+    return text.length > 0 ? MessageLinkUtil.withControlsInWords(text) : undefined;
 }
 
 // Whether a guide in the room heard a line, which an agent can't otherwise tell from a guide slow to answer.

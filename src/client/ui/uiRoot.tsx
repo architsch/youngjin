@@ -43,7 +43,7 @@ import ClosablePanelUtil from "./util/closablePanelUtil";
 import ExitConfirmationUtil from "./util/exitConfirmationUtil";
 import GameMode from "../system/types/gameMode";
 import FTUEUtil from "./util/ftueUtil";
-import { FTUEElementCodeEnumMap } from "./types/ftueElementCode";
+import { FTUEElementCodeEnumMap } from "../../shared/user/types/ftueElementCode";
 import HubRoomWelcomeForm from "./components/form/hubRoomWelcomeForm";
 import DoorSettingsForm from "./components/form/doorSettingsForm";
 import CustomizeRoomPanel from "./components/panel/customizeRoomPanel";
@@ -67,6 +67,7 @@ export default function UIRoot({ env, user }: UIRootProps)
             // The settings on screen were the settings of the room the user has just left.
             setRoomSettingsOpen(false);
 
+            FTUEUtil.onRoomEntered(roomRuntimeMemory.room);
             if (roomRuntimeMemory.room.ownerUserID == user.id && !FTUEUtil.hasFTUEElement(FTUEElementCodeEnumMap.EnterMyRoom))
             {
                 PopupUtil.openPopup({popupType: "myRoomWelcome"});

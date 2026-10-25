@@ -10,7 +10,7 @@ const EDITABLE = getPlainTextEditing() ? "plaintext-only" : "true";
 // A line to type in, in which a web address becomes a chip once written out (see ChatInputEditUtil), and the message
 // it holds carries as a link (see MessageLinkUtil). Its content is the browser's own while typing, so that IME (CJK)
 // composition goes undisturbed: it is read as typed, and drawn anew only when changed from outside (e.g. cleared once
-// sent).
+// sent). Pictured in messages by a hand-made copy (see ScreenControlPicture): a new look goes there too.
 export default function ChatTextInput({textInput, setTextInput}
     : {textInput: string, setTextInput: (newTextInput: string) => void})
 {

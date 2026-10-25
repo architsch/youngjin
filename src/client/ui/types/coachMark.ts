@@ -1,4 +1,4 @@
-import { FTUEElementCode } from "./ftueElementCode";
+import { FTUEElementCode } from "../../../shared/user/types/ftueElementCode";
 
 export default interface CoachMark
 {

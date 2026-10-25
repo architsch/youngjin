@@ -44,7 +44,7 @@ async function handleFinishSinglePlayerModeCommand(user: User, words: string[], 
 async function handleAddFTUEElement(user: User, words: string[], params: UserCommandSignal): Promise<void>
 {
     const element = words[1];
-    // One letter per element (mapping owned by FTUEUtil). Letters only: the user record is embedded
+    // One letter per element (see FTUEElementUtil). Letters only: the user record is embedded
     // verbatim in the page.
     if (!element || !/^[A-Za-z]$/.test(element))
     {

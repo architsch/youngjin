@@ -1,6 +1,6 @@
 export type FTUEElementCode = number;
 
-// Codes are positions in the stored character mapping (see FTUEUtil), so they're permanent; retired
+// Codes are positions in the stored character mapping (see FTUEElementUtil), so they're permanent; retired
 // codes leave a gap.
 export const FTUEElementCodeEnumMap: Record<string, number> =
 {
@@ -12,4 +12,9 @@ export const FTUEElementCodeEnumMap: Record<string, number> =
     ChangeCanvasImage: 5, // retired: Showing a coach mark for this feels annoying
     ChangeCanvasFrame: 6, // retired: Showing a coach mark for this feels annoying
     EnterHub: 7,
+    // Told how to walk and build, by the tutorial's lessons or a helper (see HelperBehaviorUtil.getBasics), so that no
+    // helper tells them again. No coach mark.
+    Basics: 8,
+    EnterEditMode: 9,
+    OwnIdentity: 10,
 }

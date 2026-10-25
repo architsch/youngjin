@@ -11,6 +11,7 @@ import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap
 import VolumeObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/volumeObjectTypeConfig";
 import NpcObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/npcObjectTypeConfig";
 import LabelTextUtil from "../../../shared/object/util/labelTextUtil";
+import MessageLinkUtil from "../../../shared/object/util/messageLinkUtil";
 import AdminPrefsUtil from "../../../shared/object/util/adminPrefsUtil";
 import AddVoxelBlockSignal from "../../../shared/voxel/types/update/addVoxelBlockSignal";
 import MoveVoxelBlockSignal from "../../../shared/voxel/types/update/moveVoxelBlockSignal";
@@ -125,13 +126,15 @@ export default class AgentInbox
                 else if (player && isSpeech && text.length > 0)
                 {
                     if (!player.ghost)
-                        this.push({kind: "speech", who: player.name, whoIsAgent: player.isAgent, text});
+                        this.push({kind: "speech", who: player.name, whoIsAgent: player.isAgent,
+                            text: MessageLinkUtil.withControlsInWords(text)});
                 }
                 else if (helperName != undefined)
                 {
                     // A helper's speech, or a new name; which way it faces is its own doing, not anyone's edit.
                     if (isSpeech && text.length > 0)
-                        this.push({kind: "speech", who: helperName, whoIsAgent: true, text});
+                        this.push({kind: "speech", who: helperName, whoIsAgent: true,
+                            text: MessageLinkUtil.withControlsInWords(text)});
                     else if (signal.metadataKey == ObjectMetadataKeyEnumMap.Label)
                         this.helperNameById[signal.objectId] = LabelTextUtil.toName(signal.metadataValue);
                 }

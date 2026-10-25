@@ -22,8 +22,8 @@ import QuarterTurnsUtil from "./quarterTurnsUtil";
 // by the browser in a single-player room, which is the browser's alone (see SinglePlayerHelperUtil). It goes only to
 // places within its wander radius of home (its way there may run past it), keeps a little way off from people, walks
 // round blocks, faces whom it talks with, says one thing at a time, each up long enough to be read, and now and then
-// chats with another helper near it. Whoever plays it decides whom it greets, what it answers, and what it says to
-// another helper.
+// chats with another helper near it. Whoever plays it decides whom it greets (and tells the basics), what it answers,
+// and what it says to another helper.
 
 const UP: Vec3 = {x: 0, y: 1, z: 0};
 // Someone this near on its own floor (feet within this height of its own) is in earshot.
@@ -277,6 +277,12 @@ const HelperBehaviorUtil =
         const {personality} = behavior.prefs;
         const me = behavior.name.length > 0 ? `I'm ${behavior.name}.` : `I'm an AI ${NpcPersonalityMap.getRole(personality)}.`;
         return `Hi${whom}, ${welcome}! ${me} ${NpcPersonalityMap.getInvitation(personality)}`;
+    },
+    // How to walk and build, which it says after its greeting to anyone greeted who has never been told: once for good,
+    // by whichever helper (or the tutorial) tells them first, as whoever plays it keeps (see FTUEElementCodeEnumMap.Basics).
+    getBasics: (behavior: HelperBehavior): string =>
+    {
+        return NpcPersonalityMap.getBasics(behavior.prefs.personality);
     },
     // Of a room's helpers free to chat (whoever plays them leaves out any held, or with someone to greet or answer), the
     // two nearest each other, if they are near enough on one floor and in sight of each other.

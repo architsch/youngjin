@@ -24,7 +24,8 @@ export default function ChatSendButton({textInput, sendMessage}
         }
     }, []);
 
-    // Standard button; on narrow screens the text field (min-w-0) shrinks instead of the button.
+    // Standard button; on narrow screens the text field (min-w-0) shrinks instead of the button. Pictured in messages by
+    // a hand-made copy (see ScreenControlPicture): a new look goes there too.
     return <Button
         id="chatSendButton"
         name="Send"

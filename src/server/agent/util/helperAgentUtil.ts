@@ -27,7 +27,10 @@ import ServerUserManager from "../../user/serverUserManager";
 import HoldObjectSignal from "../../../shared/object/types/holdObjectSignal";
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
 import UserContext from "../../sockets/types/userContext";
+import DBUserUtil from "../../db/util/dbUserUtil";
 import { FunnelMilestoneEnumMap } from "../../analytics/types/funnelMilestone";
+import { FTUEElementCodeEnumMap } from "../../../shared/user/types/ftueElementCode";
+import FTUEElementUtil from "../../../shared/user/util/ftueElementUtil";
 import AgentUserContext from "../types/agentUserContext";
 import { HelperChatRefusal } from "../types/helperChatRefusal";
 import HelperPendingLines from "../types/helperPendingLines";
@@ -39,11 +42,11 @@ import HelperSmallTalkUtil from "./helperSmallTalkUtil";
 // Helpers: the NPCs an admin stands in multiplayer rooms (see NpcObjectTypeConfig), which the server plays as AI guides,
 // so that a newcomer never arrives to an empty world, each as its BehaviorPrefs have it (one whose personality isn't
 // played isn't a helper). Each behaves as any helper does (see HelperBehaviorUtil); here, it greets each visitor as they
-// come near, once a login, answers whoever talks to it nearby, or names it, people and agents alike, through Claude (see
-// HelperChatUtil), and now and then chats with another helper near it in fixed words (see HelperSmallTalkUtil). What it
-// does is shown to the room and never kept: the room keeps it at home, so an admin moving it moves its home. People are
-// shown it is an AI (see NpcGameObject). A single-player room's helpers are played by the browser, which asks here for
-// their answers and their chats (see answerAlone, smallTalkAlone).
+// come near, once a login, telling anyone never told how to walk and build, answers whoever talks to it nearby, or names
+// it, people and agents alike, through Claude (see HelperChatUtil), and now and then chats with another helper near it in
+// fixed words (see HelperSmallTalkUtil). What it does is shown to the room and never kept: the room keeps it at home, so
+// an admin moving it moves its home. People are shown it is an AI (see NpcGameObject). A single-player room's helpers are
+// played by the browser, which asks here for their answers and their chats (see answerAlone, smallTalkAlone).
 
 const TICK_MS = 1000;
 const NPC_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Npc");
@@ -57,6 +60,10 @@ const USAGE_LOG_INTERVAL_MS = HOUR_IN_MS;
 const FAILURE_LOG_INTERVAL_MS = MINUTE_IN_MS;
 // Where a single-player room's helper stands, as it is told.
 const SINGLE_PLAYER_PLACE = "a single-player room, where the visitor is on their own with you";
+// What it is told of a person, before their words: whether they have been told how to walk and build (see needsBasics).
+// Never their name, which a model then puts in every reply.
+const TOLD_TAG = "knows how to play";
+const UNTOLD_TAG = "not yet told how to play";
 
 const REFUSAL_LINES: {[refusal in HelperChatRefusal]: string} = {
     noModel: "Sorry, I can only say hello for now. Have fun exploring!",
@@ -156,8 +163,7 @@ const HelperAgentUtil =
         if (helper == undefined || ctx == undefined)
             return;
         const now = Date.now();
-        const pending: HelperPendingLines = helper.linesByUserID.get(userID) ?? {name: player.sourceUserName,
-            isAgent: ctx instanceof AgentUserContext, firstVisit: !ctx.funnel.includes(FunnelMilestoneEnumMap.Returned),
+        const pending: HelperPendingLines = helper.linesByUserID.get(userID) ?? {isAgent: ctx instanceof AgentUserContext,
             lines: [], lastAt: now};
         pending.lines.push(text);
         pending.lastAt = now;
@@ -208,8 +214,8 @@ const HelperAgentUtil =
         const identity: HelperIdentity = {key: `${ctx.singlePlayerMode}/${npc.objectId}`,
             name: LabelTextUtil.isShortName(npc.name) ? LabelTextUtil.toName(npc.name) : "", place: SINGLE_PLAYER_PLACE,
             personality};
-        const tag = ctx.funnel.includes(FunnelMilestoneEnumMap.Returned) ? "" : " (new here)";
-        return await HelperChatUtil.reply(identity, userID, `${ctx.user.userName}${tag}: ${text}`) ?? "";
+        const tag = needsBasics(ctx) ? UNTOLD_TAG : TOLD_TAG;
+        return await HelperChatUtil.reply(identity, userID, `(${tag}) ${text}`) ?? "";
     },
     // What two of a single-player room's helpers, which the browser plays, say to each other as they chat (see
     // SinglePlayerHelperUtil), as two in a multiplayer room would: each line by its speaker's place among them, and none
@@ -434,7 +440,8 @@ function noticeVisitors(helper: HelperState, memory: RoomRuntimeMemory, now: num
 }
 
 // Those who came near together are greeted together, as are those who came while it was still talking, so that a crowd
-// isn't greeted one by one long after it came.
+// isn't greeted one by one long after it came. Whoever of them has never been told how to walk and build is told next,
+// by the first helper to greet them.
 function greet(helper: HelperState, now: number): void
 {
     if (helper.greetings.length == 0 || helper.bubbles.length > 0 || now < helper.nextBubbleAt)
@@ -443,6 +450,24 @@ function greet(helper: HelperState, now: number): void
     helper.greetings = [];
     HelperBehaviorUtil.say(helper, HelperBehaviorUtil.getGreeting(helper, due.map(greeting => greeting.name),
         due.every(greeting => greeting.returning)), due.map(greeting => greeting.userID), now);
+    const untold = due.map(greeting => ServerUserManager.getSocketUserContext(greeting.userID))
+        .filter((ctx): ctx is UserContext => ctx != undefined && needsBasics(ctx));
+    if (untold.length == 0)
+        return;
+    HelperBehaviorUtil.say(helper, HelperBehaviorUtil.getBasics(helper), untold.map(ctx => ctx.user.id), now);
+    for (const ctx of untold)
+    {
+        // In memory at once, so that no other helper tells them too, and kept in their row for good.
+        ctx.user.ftue += FTUEElementUtil.toChar(FTUEElementCodeEnumMap.Basics);
+        void DBUserUtil.setFTUE(ctx.user.id, ctx.user.ftue);
+    }
+}
+
+// Whether someone has never been told how to walk and build, by the tutorial or a helper (see
+// FTUEElementCodeEnumMap.Basics). An agent plays through tools, which its manual tells it of.
+function needsBasics(ctx: UserContext): boolean
+{
+    return !(ctx instanceof AgentUserContext) && !FTUEElementUtil.has(ctx.user.ftue, FTUEElementCodeEnumMap.Basics);
 }
 
 // Speakers who have paused are answered in turn, each once the helper has said all it was saying, as a person answers a
@@ -485,8 +510,10 @@ async function answer(helper: HelperState, userID: string, pending: HelperPendin
         }
         return;
     }
-    const tags = [pending.isAgent ? "an AI agent" : "", pending.firstVisit ? "new here" : ""].filter(tag => tag != "");
-    const line = `${pending.name}${tags.length > 0 ? ` (${tags.join(", ")})` : ""}: ${pending.lines.join(" ")}`;
+    // As things stand now: they may have been told how to play while their lines waited.
+    const ctx = ServerUserManager.getSocketUserContext(userID);
+    const tag = pending.isAgent ? "an AI agent" : (ctx != undefined && needsBasics(ctx)) ? UNTOLD_TAG : TOLD_TAG;
+    const line = `(${tag}) ${pending.lines.join(" ")}`;
     const reply = await HelperChatUtil.reply(identityOf(helper), userID, line);
     if (reply == undefined || !helpers.has(`${helper.roomID}/${helper.objectId}`))
         return;

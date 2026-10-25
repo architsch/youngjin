@@ -3,6 +3,7 @@ import { ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/object
 import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NEAR_EPSILON, NUM_VOXEL_COLS,
     NUM_VOXEL_ROWS, VOXEL_CELL_SIZE } from "../../../../shared/system/sharedConstants";
 import { FeatureFlag } from "../../../../shared/system/types/featureFlag";
+import { FTUEElementCodeEnumMap } from "../../../../shared/user/types/ftueElementCode";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
 import App from "../../../app";
 import GraphicsManager from "../../../graphics/graphicsManager";
@@ -418,6 +419,8 @@ const TutorialSinglePlayerModeClientConfig: SinglePlayerModeClientConfig =
                 startDelay: 0,
                 actionsOnStart: [
                     {type: "ui_headline", text: () => "Exit through the door."},
+                    // Every lesson before this one taught a basic, so no helper need tell them again.
+                    {type: "add_ftue_element", ftueElementCode: FTUEElementCodeEnumMap.Basics},
                     // Aimed past the door, pointing the way out.
                     {type: "gizmo_navigation_arrow",
                         targetX: () => SinglePlayerRoomQueryUtil.getTaggedObjectPos(EXIT_DOOR_TAG).x,

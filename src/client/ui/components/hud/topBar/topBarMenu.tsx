@@ -10,8 +10,9 @@ import RoomValidationUtil from "../../../../../shared/room/util/roomValidationUt
 import { MINUTE_IN_MS } from "../../../../../shared/system/sharedConstants";
 import FTUEUtil from "../../../util/ftueUtil";
 import OwnIdentityUtil from "../../../util/ownIdentityUtil";
-import { FTUEElementCodeEnumMap } from "../../../types/ftueElementCode";
+import { FTUEElementCodeEnumMap } from "../../../../../shared/user/types/ftueElementCode";
 import RoomEditorUtil from "../../../../singlePlayer/util/roomEditorUtil";
+import GameModeUtil from "../../../../system/util/gameModeUtil";
 import { gameModeObservable, objectSelectionObservable } from "../../../../system/clientObservables";
 
 // Top bar (same in both modes): mode switch, room settings (for the superuser), and the user's identity (see
@@ -30,7 +31,15 @@ export default function TopBarMenu({ user, room, roomSettingsOpen, onToggleRoomS
 
     const [identityShown, setIdentityShown] = useState<boolean>(OwnIdentityUtil.isShown());
     useEffect(() => {
-        const update = () => setIdentityShown(OwnIdentityUtil.isShown());
+        const update = () => {
+            const shown = OwnIdentityUtil.isShown();
+            setIdentityShown(shown);
+            // Edit mode and the identity are experienced however they were opened, not only by these controls.
+            if (GameModeUtil.isInEditMode())
+                FTUEUtil.tryAddFTUEElement(FTUEElementCodeEnumMap.EnterEditMode);
+            if (shown)
+                FTUEUtil.tryAddFTUEElement(FTUEElementCodeEnumMap.OwnIdentity);
+        };
         gameModeObservable.addListener("ui.topBarMenu", update);
         objectSelectionObservable.addListener("ui.topBarMenu", update);
         return () => {
@@ -66,6 +75,7 @@ export default function TopBarMenu({ user, room, roomSettingsOpen, onToggleRoomS
                 FTUEUtil.tryAddFTUEElement(FTUEElementCodeEnumMap.MyRoomSettings);
             }}
         />}
+        {/* Pictured in messages by a hand-made copy (see ScreenControlPicture): a new icon or color goes there too. */}
         {showIdentity && <IconButton id="userIdentityButton" icon={<PersonIcon/>} size="sm"
             highlight={identityShown}
             onClick={OwnIdentityUtil.toggle}

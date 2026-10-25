@@ -80,7 +80,8 @@ Seeing and moving:
 - say: your speech bubble (up to ${OBJECT_MESSAGE_MAX_LENGTH} characters; "" clears it). A web address in it becomes a
   link, a button people can click: write <link href="https://...">a word or two</link> to label it, or the button
   shows the site's name (as it does after a longer label, which shows as text). A link counts as what it shows. Links
-  in what others say come written the same way.
+  in what others say come written the same way, and a picture of a control on people's screens, which guides show
+  rather than name one, as its name in square brackets.
 
 Building: anyone may build anywhere in a room but inside restricted zones, as people may.
 - place_blocks fills a box's empty cells with blocks, remove_blocks takes its blocks out, and paint_faces gives the

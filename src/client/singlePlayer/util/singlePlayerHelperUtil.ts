@@ -2,6 +2,7 @@ import App from "../../app";
 import ClientObjectManager from "../../object/clientObjectManager";
 import NpcGameObject from "../../object/types/gameObject/npcGameObject";
 import HelperAPIClient from "../../networking/client/helperAPIClient";
+import FTUEUtil from "../../ui/util/ftueUtil";
 import { roomChangedObservable, singlePlayerChatLineObservable,
     updateObservable } from "../../system/clientObservables";
 import Vec3 from "../../../shared/math/types/vec3";
@@ -16,13 +17,14 @@ import AdminPrefsUtil from "../../../shared/object/util/adminPrefsUtil";
 import Room from "../../../shared/room/types/room";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 import { SIGNAL_BATCH_SEND_INTERVAL } from "../../../shared/system/sharedConstants";
+import { FTUEElementCodeEnumMap } from "../../../shared/user/types/ftueElementCode";
 import SinglePlayerHelper from "../types/singlePlayerHelper";
 
 // The NPCs of a single-player room played as helpers, by the browser, as the room is the browser's alone (see
-// HelperBehaviorUtil). Each greets the user once as they come near, answers what they say to it through the server
-// (see HelperAPIClient), walks, wanders and turns as a helper in a multiplayer room does, an admin holding it still
-// as there, and chats with another helper near it in words the server gives. Only in a mode that plays NPCs (see
-// NpcGameObject.arePlayedHere), and only NPCs whose personality is played.
+// HelperBehaviorUtil). Each greets the user once as they come near (telling them how to walk and build, if nothing has
+// yet), answers what they say to it through the server (see HelperAPIClient), walks, wanders and turns as a helper in a
+// multiplayer room does, an admin holding it still as there, and chats with another helper near it in words the server
+// gives. Only in a mode that plays NPCs (see NpcGameObject.arePlayedHere), and only NPCs whose personality is played.
 
 // As often as the server steps its helpers (see SocketsServer's flush), and gives each a beat.
 const STEP_SECONDS = SIGNAL_BATCH_SEND_INTERVAL / 1000;
@@ -95,6 +97,11 @@ function beat(room: Room, now: number): void
         {
             helper.greeted = true;
             HelperBehaviorUtil.say(helper, HelperBehaviorUtil.getGreeting(helper, [user.userName], false), [user.id], now);
+            if (!FTUEUtil.hasFTUEElement(FTUEElementCodeEnumMap.Basics))
+            {
+                HelperBehaviorUtil.say(helper, HelperBehaviorUtil.getBasics(helper), [user.id], now);
+                FTUEUtil.tryAddFTUEElement(FTUEElementCodeEnumMap.Basics);
+            }
         }
         answer(helper, room, now);
     }

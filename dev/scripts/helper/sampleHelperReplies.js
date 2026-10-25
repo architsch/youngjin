@@ -1,12 +1,13 @@
 // Asks the real model, as a helper would (see HelperChatUtil), for each played personality's answers to a few lines from
-// a newcomer, and prints them with their lengths and what they cost: to hear the helpers after changing what they are
-// told (see the helper-instructions skill). Spends a little of the helpers' API credit, outside their daily budget (this
-// spending is not saved), and needs their key:
+// a newcomer, and prints them with their lengths and what they cost, after the things on its mind in that talk: to hear
+// the helpers after changing what they are told (see the helper-instructions skill). Spends a little of the helpers' API
+// credit, outside their daily budget (this spending is not saved), and needs their key:
 //
 //   ANTHROPIC_API_KEY="$(gcloud secrets versions access latest --secret=ANTHROPIC_API_KEY --project=thingspool)" \
-//       node dev/scripts/helper/sampleHelperReplies.js [--personality=jester] [--line="how do I build?"]...
+//       node dev/scripts/helper/sampleHelperReplies.js [--personality=jester] [--line="how do I build?"]... [--untold]
 //
-// Each --line replaces the default lines; each personality hears them in turn, as one conversation.
+// Each --line replaces the default lines; each personality hears them in turn, as one conversation. --untold speaks as
+// someone never told how to walk and build (see FTUEElementCodeEnumMap.Basics), as helpers are told of them.
 
 const path = require("path");
 const Module = require("module");
@@ -16,9 +17,9 @@ const DEFAULT_LINES = [
     "hi! what is this place?",
     "how do I build something?",
     "tell me something fun",
+    "what do you like to talk about?",
     "is there anything good to read here?",
 ];
-const SPEAKER = "Ana (new here)";
 
 function load()
 {
@@ -58,6 +59,15 @@ async function main()
     const chosen = args.find(arg => arg.startsWith("--personality="))?.split("=")[1];
     const givenLines = args.filter(arg => arg.startsWith("--line=")).map(arg => arg.slice("--line=".length));
     const lines = givenLines.length > 0 ? givenLines : DEFAULT_LINES;
+    const speaker = args.includes("--untold") ? "(not yet told how to play)" : "(knows how to play)";
+
+    // What each reply was asked with, for the things on the helper's mind.
+    const realFetch = global.fetch;
+    let asked = undefined;
+    global.fetch = (url, init) => {
+        asked = JSON.parse(init.body);
+        return realFetch(url, init);
+    };
 
     const { HelperChatUtil, NpcPersonalityMap, MessageLinkUtil } = load();
     const personalities = NpcPersonalityMap.getEntries().map(entry => entry.id)
@@ -67,10 +77,12 @@ async function main()
         const helper = {key: `sample/${personality}`, name: "Pip", place: "the main hub, the public room newcomers arrive in",
             personality};
         console.log(`\n== ${personality}`);
-        for (const line of lines)
+        for (const [i, line] of lines.entries())
         {
-            const reply = await HelperChatUtil.reply(helper, `sample-${personality}`, `${SPEAKER}: ${line}`);
-            // As long as it shows, a link counting as its label.
+            const reply = await HelperChatUtil.reply(helper, `sample-${personality}`, `${speaker} ${line}`);
+            if (i == 0)
+                console.log(`  ${asked?.system[1].text.split("\n\nOn your mind today:\n")[1] ?? "(nothing on its mind)"}`);
+            // As long as it shows, a link counting as its label and a picture as its control's words.
             const shown = MessageLinkUtil.getVisibleLength(reply ?? "");
             console.log(`> ${line}\n  (${String(shown).padStart(3)}) ${reply ?? "(no reply)"}`);
         }

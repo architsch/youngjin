@@ -1,21 +1,21 @@
 import UserCommandSignal from "../../../shared/user/types/userCommandSignal";
+import { FTUEElementCode, FTUEElementCodeEnumMap } from "../../../shared/user/types/ftueElementCode";
+import FTUEElementUtil from "../../../shared/user/util/ftueElementUtil";
+import Room from "../../../shared/room/types/room";
+import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
+import { MINUTE_IN_MS } from "../../../shared/system/sharedConstants";
 import App from "../../app";
 import SocketsClient from "../../networking/client/socketsClient";
 import { screenCoachMarksObservable } from "../../system/clientObservables";
-import { FTUEElementCode } from "../types/ftueElementCode";
-
-// Experienced elements are stored as one string, one letter per element (positions are permanent).
-// Letters only, since the user record is embedded verbatim in the page (the server enforces this).
-const FTUE_ELEMENT_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 const FTUEUtil =
 {
     tryAddFTUEElement: (ftueElementCode: FTUEElementCode) =>
     {
         const ftue = App.getUser().ftue;
-        const element = convertFTUEElementCodeToChar(ftueElementCode);
-        if (ftue.includes(element)) // FTUE element already exists
+        if (FTUEElementUtil.has(ftue, ftueElementCode))
             return;
+        const element = FTUEElementUtil.toChar(ftueElementCode);
         SocketsClient.emitUserCommandSignal(new UserCommandSignal(`addFTUEElement ${element}`));
         App.getUser().ftue = `${ftue}${element}`;
         // Using the feature removes its coach mark immediately.
@@ -23,9 +23,7 @@ const FTUEUtil =
     },
     hasFTUEElement: (ftueElementCode: FTUEElementCode) =>
     {
-        const ftue = App.getUser().ftue;
-        const element = convertFTUEElementCodeToChar(ftueElementCode);
-        return ftue.includes(element);
+        return FTUEElementUtil.has(App.getUser().ftue, ftueElementCode);
     },
     // Shows a coach mark unless the element was experienced meanwhile (marks are scheduled in advance).
     tryShowCoachMark: (ftueElementCode: FTUEElementCode, targetElementId: string, text: string) =>
@@ -38,21 +36,35 @@ const FTUEUtil =
                 ? coachMarks
                 : [...coachMarks, {ftueElementCode, targetElementId, text}]);
     },
-    // Removes a mark. The owning UI calls this when its control is gone or disabled (marks don't
-    // expire on their own).
+    // Removes a mark, once its time is up or when the owning UI's control is gone or disabled.
     hideCoachMark: (ftueElementCode: FTUEElementCode) =>
     {
         screenCoachMarksObservable.change(coachMarks =>
             coachMarks.filter(mark => mark.ftueElementCode != ftueElementCode));
     },
+    // The top bar's switch and person button get their marks at set times after the user lands in the page's first
+    // multiplayer room (the tutorial guides the user itself), each for a while. Later rooms don't restart the clock.
+    onRoomEntered: (room: Room) =>
+    {
+        if (landed || room.roomType == RoomTypeEnumMap.SinglePlayer)
+            return;
+        landed = true;
+        showCoachMarkLater(FTUEElementCodeEnumMap.EnterEditMode, "gameModeToggleSwitch", "Try Editing",
+            MINUTE_IN_MS, 2 * MINUTE_IN_MS);
+        showCoachMarkLater(FTUEElementCodeEnumMap.OwnIdentity, "userIdentityButton", "Customize Yourself",
+            3 * MINUTE_IN_MS, 2 * MINUTE_IN_MS);
+    },
 }
 
-function convertFTUEElementCodeToChar(ftueElementCode: FTUEElementCode): string
+let landed = false;
+
+function showCoachMarkLater(ftueElementCode: FTUEElementCode, targetElementId: string, text: string,
+    delayMs: number, durationMs: number): void
 {
-    const element = FTUE_ELEMENT_CHARS[ftueElementCode];
-    if (element == undefined)
-        throw new Error(`FTUE element code is out of range (code = ${ftueElementCode})`);
-    return element;
+    setTimeout(() => {
+        FTUEUtil.tryShowCoachMark(ftueElementCode, targetElementId, text);
+        setTimeout(() => FTUEUtil.hideCoachMark(ftueElementCode), durationMs);
+    }, delayMs);
 }
 
 export default FTUEUtil;

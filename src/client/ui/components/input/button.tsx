@@ -1,6 +1,7 @@
 import { ShortcutKey } from "../../types/shortcutKey";
 import useShortcutKey from "../../util/shortcutKey";
 
+// Chat's Send button is pictured in messages by a hand-made copy (see ScreenControlPicture): a new look goes there too.
 export default function Button({name, size = "md", color = "gray", disabled = false, highlight = false, onClick, shortcutKey, additionalClassNames = "", id }: Props)
 {
     useShortcutKey(shortcutKey, onClick, !disabled);

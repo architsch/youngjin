@@ -148,7 +148,8 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
         }
     };
 
-    // Full width, so the rows can scroll horizontally instead of growing.
+    // Full width, so the rows can scroll horizontally instead of growing. The buttons ScreenControlMap names are pictured
+    // in messages by hand-made copies (see ScreenControlPicture): a new icon or color for one goes there too.
     return <div className="flex flex-col gap-1 w-full">
         {(SUB_PANELS_BENEATH_SELECTION_TOOLS || choosing == null) && <SelectionToolRow>
             <IconButton id="removeVoxelBlockButton" icon={<TrashIcon/>} size="md" color="red" shortcutKey="Delete"

@@ -1,28 +1,37 @@
 import MessageSegment from "../types/messageSegment";
+import { ScreenControl } from "../types/screenControl";
+import ScreenControlMap from "../maps/screenControlMap";
 import StringUtil from "../../math/util/stringUtil";
 import { MESSAGE_LINK_ADDRESS_MAX_LENGTH, MESSAGE_LINK_LABEL_MAX_LENGTH,
     MESSAGE_LINK_MAX_COUNT } from "../../system/sharedConstants";
 
 // How a link is written in a message, spaces and letter case aside, as models and agents write it.
 const LINK_TAG = /<link\s+href\s*=\s*"([^"]*)"\s*>([^<]*)<\/link\s*>/gi;
+// How a picture of a control is written, closed or not, as models write it.
+const CONTROL_TAG = /<control\s+name\s*=\s*"([^"]*)"\s*\/?\s*>(?:<\/control\s*>)?/gi;
 // A web address written as it is (the second group), from its scheme or "www." to the first space, quote or angle
 // bracket, where no word runs into it (the first group).
 const BARE_ADDRESS = /(^|[^\w@./-])((?:https?:\/\/|www\.)[^\s<>"]+)/gi;
 // What ends the sentence an address closes, rather than the address.
 const TRAILING_PUNCTUATION = /[.,!?;:'")\]}]+$/;
 const LINK_MARKUP_LENGTH = `<link href=""></link>`.length;
+// The most characters a picture of a control is written in for each it counts as (see getMaxLength).
+const CONTROL_MARKUP_PER_SHOWN_CHAR = Math.max(1, ...ScreenControlMap.getControls().map(control =>
+    formatControl(control).length / Array.from(toShownText({kind: "control", control})).length));
 const MAX_CANONICALIZING_PASSES = 8;
 const CUT_MARK = "...";
 
 // Links in what players and NPCs say (their SentMessage), written <link href="https://...">label</link> and shown as a
 // button with that label, or else the site's name (see SpeechBubble). Whoever writes a message, a person's chat input,
 // an agent or a helper, a bare web address in it becomes a link as it is stored (see canonicalize), and only what is
-// shown counts toward its length.
+// shown counts toward its length. A message also shows a picture of a control on the screen where it is written
+// <control name="..."/> (see ScreenControlMap), as helpers name one rather than say where it is.
 const MessageLinkUtil =
 {
-    // The message as text and links, in order. Only a well-formed link to a web page is one: another is its label alone
-    // (its address, if it has none), as are those past the most a message holds. Bare addresses are looked for once
-    // those are text, since one may run on into the text beside it.
+    // The message as text, links and pictures, in order. Only a well-formed link to a web page is one: another is its
+    // label alone (its address, if it has none), as are those past the most a message holds. A picture no control has
+    // the name of is that name. Pictures and bare addresses are looked for once links are found, since an address may
+    // run on into the text beside it.
     parse: (message: string): MessageSegment[] =>
     {
         const written: MessageSegment[] = [];
@@ -63,34 +72,43 @@ const MessageLinkUtil =
         {
             if (segment.kind == "link")
                 addLink(segment, segment.label);
-            else
-                addBareAddresses(segments, segment.text, addLink);
+            else if (segment.kind == "text")
+                addControls(segments, segment.text, addLink);
         }
         return segments;
     },
     format: (segments: MessageSegment[]): string =>
     {
         return segments.map(segment => (segment.kind == "text") ? segment.text
-            : `<link href="${segment.href}">${segment.label}</link>`).join("");
+            : (segment.kind == "link") ? `<link href="${segment.href}">${segment.label}</link>`
+            : formatControl(segment.control)).join("");
     },
-    // What a message shows: its text, and each link as its label.
+    // What a message shows, as text: its text, each link as its label, and each picture as its control's words.
     getVisibleText: (segments: MessageSegment[]): string =>
     {
-        return segments.map(segment => (segment.kind == "text") ? segment.text : segment.label).join("");
+        return segments.map(toShownText).join("");
     },
     // In code points.
     getVisibleLength: (message: string): number =>
     {
         return Array.from(MessageLinkUtil.getVisibleText(MessageLinkUtil.parse(message))).length;
     },
-    // The most characters a message showing so many may hold, its links' markup and addresses included.
+    // The most characters a message showing so many may hold, its markup and links' addresses included.
     getMaxLength: (maxVisibleLength: number): number =>
     {
-        return maxVisibleLength + MESSAGE_LINK_MAX_COUNT * (LINK_MARKUP_LENGTH + MESSAGE_LINK_ADDRESS_MAX_LENGTH);
+        return Math.ceil(maxVisibleLength * CONTROL_MARKUP_PER_SHOWN_CHAR)
+            + MESSAGE_LINK_MAX_COUNT * (LINK_MARKUP_LENGTH + MESSAGE_LINK_ADDRESS_MAX_LENGTH);
     },
-    // As a message is stored: trimmed, with its links as parse finds them, and cut to show no more than so many
-    // characters (a link kept whole or not at all). Doing it twice changes nothing: a cut can leave text that reads as
-    // an address, so it is done until it does, each time only shortening what is shown.
+    // The message as told to whoever has no screen to see its pictures (an agent): each as its control's words, and its
+    // links as written.
+    withControlsInWords: (message: string): string =>
+    {
+        return MessageLinkUtil.format(MessageLinkUtil.parse(message).map((segment): MessageSegment =>
+            (segment.kind == "control") ? {kind: "text", text: toShownText(segment)} : segment));
+    },
+    // As a message is stored: trimmed, with its links and pictures as parse finds them, and cut to show no more than so
+    // many characters (a link or a picture kept whole or not at all). Doing it twice changes nothing: a cut can leave
+    // text that reads as an address, so it is done until it does, each time only shortening what is shown.
     canonicalize: (message: string, maxVisibleLength: number): string =>
     {
         let canonical = message;
@@ -189,6 +207,18 @@ function normalizeLabel(label: string): string
     return label.replace(/[<>]/g, "").replace(/\s+/g, " ").trim();
 }
 
+function formatControl(control: ScreenControl): string
+{
+    return `<control name="${control}"/>`;
+}
+
+// What a segment shows, as text: a link its label, and a picture its control's words, in brackets.
+function toShownText(segment: MessageSegment): string
+{
+    return (segment.kind == "text") ? segment.text : (segment.kind == "link") ? segment.label
+        : `[${ScreenControlMap.getWords(segment.control)}]`;
+}
+
 // Text, run on into the text before it.
 function addText(segments: MessageSegment[], text: string): void
 {
@@ -199,6 +229,25 @@ function addText(segments: MessageSegment[], text: string): void
         last.text += text;
     else
         segments.push({kind: "text", text});
+}
+
+// Text with each picture written in it made one, and each bare web address in the rest a link.
+function addControls(segments: MessageSegment[], text: string,
+    addLink: (link: MessageSegment & {kind: "link"}, otherwise: string) => void): void
+{
+    let index = 0;
+    for (const match of text.matchAll(CONTROL_TAG))
+    {
+        const start = match.index ?? 0;
+        addBareAddresses(segments, text.slice(index, start), addLink);
+        const control = ScreenControlMap.read(match[1]);
+        if (control != undefined)
+            segments.push({kind: "control", control});
+        else
+            addText(segments, normalizeLabel(match[1]));
+        index = start + match[0].length;
+    }
+    addBareAddresses(segments, text.slice(index), addLink);
 }
 
 // Text with each bare web address in it a link labelled by its site, or else left as written.
@@ -252,7 +301,7 @@ function keepWholeSentences(segments: MessageSegment[], maxVisibleLength: number
     return (Array.from(MessageLinkUtil.getVisibleText(kept)).length == length) ? kept : undefined;
 }
 
-// The segments that show no more than so many characters: text cut to fit, a link only if its whole label fits.
+// The segments that show no more than so many characters: text cut to fit, a link or a picture only if it fits whole.
 function cut(segments: MessageSegment[], maxVisibleLength: number): MessageSegment[]
 {
     const kept: MessageSegment[] = [];
@@ -268,11 +317,11 @@ function cut(segments: MessageSegment[], maxVisibleLength: number): MessageSegme
             left -= Math.min(left, codePoints.length);
             continue;
         }
-        const labelLength = Array.from(segment.label).length;
-        if (labelLength > left)
+        const shownLength = Array.from(toShownText(segment)).length;
+        if (shownLength > left)
             break;
         kept.push(segment);
-        left -= labelLength;
+        left -= shownLength;
     }
     return kept;
 }

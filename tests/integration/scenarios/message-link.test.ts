@@ -1,15 +1,18 @@
 /**
  * Integration tests: links in what players and NPCs say (see MessageLinkUtil), written
- * <link href="https://...">label</link>: which are links, what a message shows, and how it is stored and cut.
+ * <link href="https://...">label</link>, and pictures of controls on the screen, written <control name="..."/>: which
+ * are links and pictures, what a message shows, and how it is stored and cut.
  */
 import { describe, it, expect } from "vitest";
 import fc from "fast-check";
 import MessageLinkUtil from "../../../src/shared/object/util/messageLinkUtil";
+import ScreenControlMap from "../../../src/shared/object/maps/screenControlMap";
 import { MESSAGE_LINK_ADDRESS_MAX_LENGTH, MESSAGE_LINK_LABEL_MAX_LENGTH, MESSAGE_LINK_MAX_COUNT,
     NPC_MESSAGE_MAX_LENGTH } from "../../../src/shared/system/sharedConstants";
 
 const ESSAY = "https://thingspool.net/essays/page-12.html";
 const link = (href: string, label: string) => `<link href="${href}">${label}</link>`;
+const picture = (name: string) => `<control name="${name}"/>`;
 
 describe("message links", () => {
     it("are found where written, labelled as written or by their site (a label too long for a button said before it), "
@@ -126,7 +129,8 @@ describe("message links", () => {
         const piece = fc.oneof(
             fc.string({maxLength: 12}),
             fc.constantFrom(ESSAY, "www.thingspool.net", "https://", " ", ".", "<", ">", "\"", "<link href=\"", "\">",
-                "</link>", link(ESSAY, "here"), link("javascript:x", "bad"), "한", "😀"));
+                "</link>", link(ESSAY, "here"), link("javascript:x", "bad"), "한", "😀", picture("trash"),
+                picture("modeSwitch"), picture("nothing"), "<control name=\"", "\"/>", "</control>"));
         fc.assert(fc.property(fc.array(piece, {maxLength: 12}), fc.integer({min: 0, max: 80}), (pieces, max) => {
             const once = MessageLinkUtil.canonicalize(pieces.join(""), max);
             expect(MessageLinkUtil.canonicalize(once, max)).toBe(once);
@@ -136,5 +140,63 @@ describe("message links", () => {
             expect(MessageLinkUtil.parse(once).filter(segment => segment.kind == "link").length)
                 .toBeLessThanOrEqual(MESSAGE_LINK_MAX_COUNT);
         }));
+    });
+});
+
+describe("pictures of controls in messages", () => {
+    it("are found where written, as models write them, and a name no control has is that name, as text", () => {
+        expect(MessageLinkUtil.parse(`switch to Edit with ${picture("modeSwitch")} to build`)).toEqual([
+            {kind: "text", text: "switch to Edit with "},
+            {kind: "control", control: "modeSwitch"},
+            {kind: "text", text: " to build"},
+        ]);
+        // Spacing and letter case aside, closed or not.
+        for (const written of ["<control name=\"trash\">", "<CONTROL  NAME = \"Trash\" />",
+            "<control name=\"trash\"></control>", "<control name=\" trash \"/>"])
+        {
+            expect(MessageLinkUtil.parse(written), written).toEqual([{kind: "control", control: "trash"}]);
+        }
+        expect(MessageLinkUtil.parse(`press ${picture("jump  button")}!`)).toEqual([{kind: "text", text: "press jump button!"}]);
+        expect(MessageLinkUtil.parse("<control name=\"trash")).toEqual([{kind: "text", text: "<control name=\"trash"}]);
+        // Beside links and bare addresses, each its own.
+        expect(MessageLinkUtil.parse(`${picture("send")}${ESSAY} ${link(ESSAY, "here")}`)).toEqual([
+            {kind: "control", control: "send"},
+            {kind: "link", href: ESSAY, label: "thingspool.net"},
+            {kind: "text", text: " "},
+            {kind: "link", href: ESSAY, label: "here"},
+        ]);
+        expect(ScreenControlMap.getControls().map(control => MessageLinkUtil.parse(picture(control))))
+            .toEqual(ScreenControlMap.getControls().map(control => [{kind: "control", control}]));
+    });
+
+    it("are stored as written here, count toward a message's length as their controls' words, and are kept whole or "
+        + "not at all", () => {
+        const stored = MessageLinkUtil.canonicalize("  press <CONTROL name=\"Send\">  ", NPC_MESSAGE_MAX_LENGTH);
+        expect(stored).toBe(`press ${picture("send")}`);
+        expect(MessageLinkUtil.canonicalize(stored, NPC_MESSAGE_MAX_LENGTH)).toBe(stored);
+        expect(MessageLinkUtil.getVisibleText(MessageLinkUtil.parse(stored))).toBe("press [Send button]");
+        expect(MessageLinkUtil.getVisibleLength(stored)).toBe("press [Send button]".length);
+
+        expect(MessageLinkUtil.canonicalize(`press ${picture("send")} now`, 10)).toBe("press");
+        expect(MessageLinkUtil.shorten(`Switch to Edit with ${picture("modeSwitch")}. Then click a face, and more.`, 45))
+            .toBe(`Switch to Edit with ${picture("modeSwitch")}.`);
+        expect(MessageLinkUtil.shorten(`Switch to Edit with ${picture("modeSwitch")} and build a house.`, 30))
+            .toBe("Switch to Edit with...");
+    });
+
+    it("are as long, written, as a message showing so many characters may be", () => {
+        const links = MESSAGE_LINK_MAX_COUNT * (link("", "").length + MESSAGE_LINK_ADDRESS_MAX_LENGTH);
+        for (const control of ScreenControlMap.getControls())
+        {
+            const pictures = picture(control).repeat(5);
+            expect(pictures.length, control)
+                .toBeLessThanOrEqual(MessageLinkUtil.getMaxLength(MessageLinkUtil.getVisibleLength(pictures)) - links);
+        }
+    });
+
+    it("are told to whoever has no screen to see them as their controls' words, links as written", () => {
+        expect(MessageLinkUtil.withControlsInWords(`Press ${picture("send")}, or read ${link(ESSAY, "this")}.`))
+            .toBe(`Press [Send button], or read ${link(ESSAY, "this")}.`);
+        expect(MessageLinkUtil.withControlsInWords("just words")).toBe("just words");
     });
 });

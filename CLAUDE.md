@@ -103,6 +103,7 @@
 - **Separation between Static and Dynamic Pages**: Static pages (HTML files in the "public" directory) are being served via GitHub Pages, under the URL: `https://thingspool.net`. Dynamic pages and the server/client apps are being hosted in the VPS, under the URL: `https://app.thingspool.net` (live server) or `https://staging.thingspool.net` (staging server). During local dev test, a local URL (`http://127.0.0.1:3000`) is used to serve both static and dynamic contents.
 - **Room Generation Defines What a Room Is**: See *Project Rules* below.
 - **Stored Formats Keep Their History Apart**: A versioned stored type (e.g. `VoxelGrid`, `ObjectGroup`) holds only its current format. Decoders for older layouts, converters and legacy constants live in a sibling `versionMigration/` directory (e.g. `VoxelGridVersionMigration`), as DB row migrations do in `src/server/db/types/versionMigration/`.
+- **Pictured Controls Are Copies**: A control a message pictures (`<control name="..."/>`, mostly in helpers' replies; see `docs/gameplay/chat.md`) is drawn by `ScreenControlPicture`, a hand-made copy that shares only the control's icon. **Whenever a pictured control's look changes** (its frame, face, color, icon or text), **its picture changes to match in the same change**; nothing else carries the redesign over.
 
 ## Project Rules
 

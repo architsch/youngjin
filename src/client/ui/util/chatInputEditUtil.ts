@@ -10,11 +10,12 @@ const CHIP_CLASS_NAMES = "inline-block align-middle h-6 leading-6 px-1.5 mx-0.5 
 const ChatInputEditUtil =
 {
     chipClassNames: CHIP_CLASS_NAMES,
-    // Shows a message in the editor, its links as chips.
+    // Shows a message in the editor, its links as chips and its pictures as written, to edit as text.
     show: (editor: HTMLElement, message: string): void =>
     {
-        editor.replaceChildren(...MessageLinkUtil.parse(message).map(segment => (segment.kind == "text")
-            ? document.createTextNode(segment.text) : createChip(segment.href, segment.label)));
+        editor.replaceChildren(...MessageLinkUtil.parse(message).map(segment => (segment.kind == "link")
+            ? createChip(segment.href, segment.label)
+            : document.createTextNode((segment.kind == "text") ? segment.text : MessageLinkUtil.format([segment]))));
     },
     // The message the editor holds: its text, and each chip as its link.
     read: (editor: HTMLElement): string =>

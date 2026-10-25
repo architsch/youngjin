@@ -1,6 +1,6 @@
 ---
 name: helper-instructions
-description: Bring up to date what the helpers (the NPCs an admin places, which the server plays as AI guides through Claude) are told — the guide to playing, the knowledge they share of ThingsPool's story, ideas to try and the library's writings, and each personality's character — and the fixed small talk they say to one another, from the dev log, the library, well-known facts and the game as it is now; check every claim and address; then hear the helpers answer through the real model, and read their small talk, before handing the change over. Use when asked to update, enrich or refresh what the helpers or NPCs know or say (to visitors or to each other), after new dev-log posts or library writings or new features, or when a helper is reported saying something wrong, stale or dull.
+description: Bring up to date what the helpers (the NPCs an admin places, which the server plays as AI guides through Claude) are told — the guide to playing, the knowledge they share of ThingsPool's story, ideas to try and the library's writings, each personality's character and the things on its mind — and the fixed small talk they say to one another, from the dev log, the library, well-known facts and the game as it is now; check every claim and address; then hear the helpers answer through the real model, and read their small talk, before handing the change over. Use when asked to update, enrich or refresh what the helpers or NPCs know or say (to visitors or to each other), after new dev-log posts or library writings or new features, or when a helper is reported saying something wrong, stale or dull.
 ---
 
 # Helper Instructions
@@ -19,13 +19,24 @@ One system prompt, in two parts (built in `src/server/agent/util/helperChatUtil.
 |---|---|---|
 | Shared, cached | `RULES` in `helperChatUtil.ts` | How every helper talks. Rarely changes; change it only for a fault every helper shows. |
 | | `src/server/agent/data/helperGuide.ts` | How to play, from a player's side: the basics a how-to answer gives, and the details for someone who asks for more. The helpers answer how-to questions from it alone. |
-| | `src/server/agent/data/helperKnowledge.ts` | ThingsPool's story so far, things worth trying, the library's writings, the art and the games. |
-| Each helper's own | `src/server/agent/data/helperPersonalities.ts` | Each character: who it is, its voice and a line in it, its favorite ideas and reads. |
+| | `src/server/agent/data/helperKnowledge.ts` | ThingsPool's story so far, things worth trying, the writings the characters name as favorites, the art and the games. |
+| Each helper's own | `src/server/agent/data/helperPersonalities.ts` | Each character: who it is, its field of subjects across the whole world, its voice and a line in it (an idea to try, never a fact it could reuse), its favorite ideas and reads. |
+| | `src/server/agent/data/helperTopics.ts` | Each personality's list of things on its mind: specific, true statements from the world and from the maker's writings (with links). Three, picked at random, go with each talk, so free talk ranges wide; only those are sent, so the lists cost nothing to grow. |
 
-`src/shared/object/maps/npcPersonalityMap.ts` holds what an admin is shown for each personality and
-what it greets people as. A new personality touches `NpcPersonality`, that map,
-`HELPER_PERSONALITIES` and `HELPER_SMALL_TALK` together; one that is not played (like Idle) has no
-role, no character and no small talk.
+Each line a helper hears starts with "(knows how to play)", "(not yet told how to play)" or "(an AI agent)",
+never the speaker's name, which the model would otherwise put in every reply. Whoever was never told how to
+walk and build hears it once, in fixed words, from the first helper to
+greet them (`NpcPersonalityMap`'s `basics`; the `Basics` FTUE element, which the tutorial's last lesson
+records too), and the rules give the basics only to them, and only when asked. Nothing a helper is
+told or says names a keyboard key: many play on phones (a test checks). Nor does it say where on the
+screen a control is: a control is written as its picture, `<control name="trash"/>`, which a bubble
+shows as a small copy of the control and agents hear as its words (names in `ScreenControlMap`; see
+`docs/gameplay/chat.md`; a test checks every name).
+
+`src/shared/object/maps/npcPersonalityMap.ts` holds what an admin is shown for each personality, what
+it greets people as and how it tells the basics. A new personality touches `NpcPersonality`, that map,
+`HELPER_PERSONALITIES`, `HELPER_TOPICS` and `HELPER_SMALL_TALK` together; one that is not played (like
+Idle) has no role, no character, no topics and no small talk.
 
 The guide is also bound by the agents-keep-up rule (`.claude/rules/agents-keep-up.md`): when it
 changes because the game did, the other things agents read may need the same change.
@@ -82,10 +93,14 @@ Any opener can meet any voice's answer, so the lines only work if each keeps to 
 - **True.** Every feature an idea, the knowledge or a line of small talk names works as the guide
   says. If the guide doesn't say how, add that to the guide from the UI code, or drop the idea. A
   helper told about a thing without the how makes the how up.
-- **Brief how-to.** A new feature's how goes into the guide's basics in a few words (the key or
-  button), and anything more into its details, which a helper gives only to someone who asks. Leave
-  out what a player sees anyway (every part the character editor lists, every setting of a fan): the
-  model passes on whatever sits beside the basics.
+- **Brief how-to.** A new feature's how goes into the guide's basics in a few words (the button or
+  switch it is done with, as its picture's markup, never a key or where on the screen it is), and
+  anything more into its details, which a helper gives only to someone who asks. Leave out what a
+  player sees anyway (every part the character editor lists, every setting of a fan): the model passes
+  on whatever sits beside the basics. A control with no picture yet gets one: a name and its words in
+  `ScreenControlMap`, its drawing in `ScreenControlPicture` (from the control's own icon and face), and
+  its width in `ScreenControlPictureUtil`. A tall one (a slider standing upright) doesn't fit a line of
+  text, so it is named in words instead.
 - **Real addresses only**, each a page under `public/` (a test checks), and each written as the link a helper gives,
   `<link href="https://...">read it</link>`, a word or two its button's words: the model copies that markup more
   faithfully than it follows a rule about links (see `docs/gameplay/chat.md`).
@@ -102,7 +117,9 @@ Any opener can meet any voice's answer, so the lines only work if each keeps to 
   politics or other divisive subjects are left out: helpers talk with everyone.
 - **Characters**: favorite reads by the knowledge's exact titles (a test checks); ideas using only the
   guide's tools; one example line, which the rules forbid saying, so it is only a taste of the voice,
-  and no two characters' lines open alike. Every voice is as plain and precise as the small talk (see
+  and no two characters' lines open alike. Make the line an idea to try, never a fact: the model
+  reuses a fact in its example line as its favorite, crowding out the topics, and a how-to example
+  makes it give steps unasked. Every voice is as plain and precise as the small talk (see
   below): a character shows in what it names and how it reacts, never in metaphors, riddles or puns.
   Ask a voice only for what the model can do truthfully: a voice told to name a thinker for each idea
   makes up quotes (even a sage told to quote only what is true puts Socrates on a building tip unless
@@ -130,6 +147,11 @@ Any opener can meet any voice's answer, so the lines only work if each keeps to 
   - Variety comes from more openers and more answers, not longer ones: every voice opens on several
     topics, and a topic many openers share gets more than one answer in each voice, or the same answer
     follows every one of them.
+- **Topics** (`helperTopics.ts`) follow the small talk's rules for truth and plain words: each a
+  statement about something named, in its personality's field, the world's facts well known and certain.
+  An idea from a writing is a whole entry, as in the knowledge (title, kind, the link, the idea), retold as
+  the writing has it. No entry appears twice across the lists (a test checks). A writing whose idea is a
+  topic need not be in the knowledge too, which keeps the shared part small.
 - **Simple words** throughout. Many visitors read English as a second language, and the helpers
   borrow the wording they are given.
 - **Mind the size.** The shared part is read from the cache on every reply, and paid in full again
@@ -147,7 +169,7 @@ npx vitest run tests/integration/scenarios/helper.test.ts
 ```
 
 Then hear them. The sampler asks the real model as each played personality would be asked, and
-prints every reply, its length, and the tokens the run took:
+prints the things on its mind in that talk, every reply, its length, and the tokens the run took:
 
 ```bash
 ANTHROPIC_API_KEY="$(gcloud secrets versions access latest --secret=ANTHROPIC_API_KEY --project=thingspool)" \
@@ -155,13 +177,19 @@ ANTHROPIC_API_KEY="$(gcloud secrets versions access latest --secret=ANTHROPIC_AP
 ```
 
 `--personality=<id>` hears one, and each `--line="..."` replaces the default lines; ask about
-whatever was added. A full run costs well under a cent, outside the helpers' daily budget. Fetch the
-key inline like this, and never print it.
+whatever was added. The speaker knows how to play, as most do; `--untold` speaks as one never told.
+A full run costs well under a cent, outside the helpers' daily budget. Fetch the key inline like this,
+and never print it.
 
-Read every reply. Each should be in its character's voice, true, short, about ThingsPool, plain and
-precise (no metaphor, loose comparison, riddle or pun, no made-up quote, story or number, no narration
-of what the helper does), a how-to answer only the guide's basics, and never an example line said
-back. A writing comes up only when it fits the talk, at most one in a reply, named in one sentence as
+Read every reply. Each should be in its character's voice, true, short, specific (a named thing, often
+one of the things on its mind in free talk), plain and precise (no metaphor, loose comparison, riddle
+or pun, no made-up quote, story or number, no narration of what the helper does), a how-to answer only
+the guide's basics, with nothing added, and only when asked, never a key, each control as its picture's
+markup (by a name `ScreenControlMap` has, never where on the screen it is), and never an example line said
+back. No reply welcomes the visitor again or gives the helper's name (a short hello back to a hello is
+fine); ask with lines that open "hi!", which draw both out. "What can I do here?" from one who knows how to
+play gets an idea to try, not the basics; from one not yet told, the basics, and never a room of their own
+(people build in the rooms they visit). A writing comes up only when it fits the talk, at most one in a reply, named in one sentence as
 to someone who has never heard of the website, with its link, whose words are a word or two (a longer
 label shows as text before a button with the site's name). Addresses appear only inside links. Ask each
 character for something to read a few times over: a voice can turn a recommendation into a teaser that
