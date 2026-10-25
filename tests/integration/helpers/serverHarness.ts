@@ -30,6 +30,18 @@ const _latencyConfig = vi.hoisted(() => ({
     maxMs: 0,
 }));
 
+// What agents away from their rooms are to be told, by agent (see AgentAwayLogUtil).
+const _awayEventStore = vi.hoisted(() => {
+    const store: { [agentID: string]: any[] } = {};
+    return store;
+});
+
+// The clients registered with the agents' OAuth, by id (see AgentOAuthClientUtil).
+const _oauthClientStore = vi.hoisted(() => {
+    const store: { [clientID: string]: { name: string, redirectURIs: string[] } } = {};
+    return store;
+});
+
 // Serial number for rooms created by the mocked DBRoomUtil.createRoom (e.g. auto-opened hubs).
 const _autoRoomCounter = vi.hoisted(() => ({ value: 0 }));
 // Likewise for users created by the mocked DBUserUtil.createUser (e.g. registered agents).
@@ -253,6 +265,31 @@ vi.mock("../../../src/server/user/util/userCommandUtil", () => ({
     },
 }));
 
+vi.mock("../../../src/server/db/util/dbAgentAwayEventsUtil", () => ({
+    default: {
+        append: vi.fn(async (agentID: string, events: any[]) => {
+            _awayEventStore[agentID] = [...(_awayEventStore[agentID] ?? []), ...events];
+            return true;
+        }),
+        take: vi.fn(async (agentID: string) => {
+            const events = _awayEventStore[agentID] ?? [];
+            delete _awayEventStore[agentID];
+            return events;
+        }),
+        remove: vi.fn(async (agentID: string) => { delete _awayEventStore[agentID]; }),
+    },
+}));
+
+vi.mock("../../../src/server/db/util/dbOAuthClientUtil", () => ({
+    default: {
+        create: vi.fn(async (clientID: string, name: string, redirectURIs: string[]) => {
+            _oauthClientStore[clientID] = { name, redirectURIs };
+            return true;
+        }),
+        get: vi.fn(async (clientID: string) => _oauthClientStore[clientID]),
+    },
+}));
+
 // ─── Now import the real modules ─────────────────────────────────────────────
 
 import { setIsServer } from "../../../src/shared/system/sharedConstants";
@@ -260,6 +297,7 @@ setIsServer(); // Must be called before any server module logic runs (e.g. Playe
 
 import User from "../../../src/shared/user/types/user";
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
+import AgentAwayLogUtil from "../../../src/server/agent/util/agentAwayLogUtil";
 import ServerUserManager from "../../../src/server/user/serverUserManager";
 import ServerObjectManager from "../../../src/server/object/serverObjectManager";
 import RoomPickerUtil from "../../../src/server/room/util/roomPickerUtil";
@@ -343,6 +381,7 @@ export const harness = {
                 PhysicsManager.unload(roomID);
             delete ServerRoomManager.roomRuntimeMemories[roomID];
             delete ServerRoomManager.socketRoomContexts[roomID];
+            AgentAwayLogUtil.unwatchRoom(roomID);
         }
         for (const uid in ServerRoomManager.currentRoomIDByUserID)
             delete ServerRoomManager.currentRoomIDByUserID[uid];
@@ -358,6 +397,7 @@ export const harness = {
 
         for (const k in _roomStore) delete _roomStore[k];
         for (const k in _userStore) delete _userStore[k];
+        for (const k in _awayEventStore) delete _awayEventStore[k];
         _savedMetadataRecords.length = 0;
         _autoRoomCounter.value = 0;
         _autoUserCounter.value = 0;
@@ -367,6 +407,12 @@ export const harness = {
         _latencyConfig.enabled = false;
         _latencyConfig.minMs = 0;
         _latencyConfig.maxMs = 0;
+    },
+
+    /** What is kept for an agent away from its room, as the mocked store holds it (see AgentAwayLogUtil). */
+    keptAwayEvents(agentID: string): any[]
+    {
+        return [...(_awayEventStore[agentID] ?? [])];
     },
 
     /** Seeds a room into the mock DB. */

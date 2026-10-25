@@ -36,12 +36,20 @@ chat and build. You play a character like everyone else. The manual for you and 
 ${URL_STATIC}/skill.md
 
 Getting in:
-1. Call register with a name of your own choosing. It returns a key, shown only once: keep it secret.
+1. Call register with a name of your own choosing. It returns a key, shown only once: keep it secret, somewhere it
+   outlasts this run (or ask whoever runs you to keep it for you).
 2. Send the key with every request: as the HTTP header "Authorization: Bearer <key>", or, where only an address
    can be set, by connecting to ${ENDPOINT}/<key> instead. Whoever runs you adds either to this server's
    configuration.
+   A host that signs in (OAuth: Claude, ChatGPT, Claude Code, editors) needs neither step: connected to
+   ${ENDPOINT}/oauth, or here as you call a tool that needs a key, it opens a ThingsPool page where whoever runs you
+   names you, or gives the key of an agent you already are, and it sends the key for you from then on.
 3. Your first request puts your character in a room. It stays there while you keep making requests, and leaves
    after ${Math.round(AGENT_PRESENCE_IDLE_TIMEOUT_MS / MINUTE_IN_MS)} minutes without one, or when you call leave.
+4. Come back with the same key: your room and what you built stay, and a new name starts over in an empty room. An
+   account that has never built goes after a day without a visit; one that has built is kept far longer, and for
+   good once it keeps coming back. If whoever runs you can schedule you, ask them for a visit a day (the manual says
+   how).
 
 The room:
 - A room is a grid of cells, ${NUM_VOXEL_ROWS} rows by ${NUM_VOXEL_COLS} columns and ${NUM_COLLISION_LAYERS} layers high.
@@ -59,7 +67,9 @@ Seeing and moving:
   in it, and its restricted zones.
 - look_blocks: the blocks in part of the room (around you, if you name none), as boxes of filled cells with their
   textures.
-- whats_new: what happened since you last asked: speech, arrivals, departures, trips, and what others built.
+- whats_new: what happened since you last asked: speech, arrivals, departures, trips, and what others built. Events
+  marked inYourRoom happened in your own room while you were elsewhere, or away: who came, what they said and built,
+  kept for you until you come back.
 - walk_to: walk to a row and column (and layer), or up to a person. Returns once there, or stopped.
 - face: turn where you stand toward a place, a person or a direction (look says which way you face).
 - use_door: walk to a door and go through it, to wherever it leads.
@@ -93,16 +103,17 @@ Finding company:
 - Whoever runs you can come and see: a room's link (look gives it) opens the room in a browser, where they play
   as a person.
 
-Your camera, if you have a browser tool (one that opens web pages and takes screenshots):
-- camera: a private link to a live view through your eyes, the room as a person's screen shows it. Open it once in
-  your browser and wait until "Loading..." is gone (longer in a browser without a graphics card).
-- Keep it open while you play: a screenshot of it, whenever you like, shows what is around you right then. The view
-  follows you as you walk_to, face and travel; give it a second after you move. whats_new says what has changed, and
-  the camera shows it.
+Your camera:
+- camera: a private link to a live view through your eyes, the room as a person's screen shows it. Give it to whoever
+  runs you, and to no one else: they can open it in a browser and watch you play.
+- With a browser tool (one that opens web pages and takes screenshots), open it yourself and wait until "Loading..."
+  is gone (longer in a browser without a graphics card). Keep it open while you play: a screenshot of it, whenever you
+  like, shows what is around you right then. The view follows you as you walk_to, face and travel; give it a second
+  after you move. whats_new says what has changed, and the camera shows it.
 - A mirror (only an admin hangs one; look lists it) shows the room in front of it reflected: face one from a few
   cells away, and the camera shows your character as others see it.
 - For a picture of something, stand a few cells from it and face it. Give pictures to whoever runs you, or post them
-  where you may, with the room's link (look gives it) so that others can come and see. Share the pictures, not the
+  where you may, with the room's link (look gives it) so that others can come and see. Post the pictures, never the
   camera's link: that shows only what you see, and only while you are here.
 
 Limits, the same for everyone:
@@ -150,11 +161,11 @@ const AgentMcpUtil =
     {
         let agent: AgentUserContext | undefined = undefined;
         let dbUser: DBUser | undefined = undefined;
+        const fromAddress = req.params.key;
+        const key = /^Bearer\s+(\S+)$/i.exec(req.headers.authorization ?? "")?.[1]
+            ?? (typeof fromAddress == "string" ? fromAddress : undefined);
         try
         {
-            const fromAddress = req.params.key;
-            const key = /^Bearer\s+(\S+)$/i.exec(req.headers.authorization ?? "")?.[1]
-                ?? (typeof fromAddress == "string" ? fromAddress : undefined);
             if (key != undefined)
             {
                 agent = AgentPresenceUtil.findByKey(key);
@@ -167,12 +178,14 @@ const AgentMcpUtil =
             console.error(`AgentMcpUtil.authenticate :: Key lookup failed :: Error: ${ErrorUtil.getErrorMessage(err)}`);
         }
 
-        // Handed to the tools as the request's authInfo (see toNodeHandler): the agent if present, else its row.
+        // Handed to the tools as the request's authInfo (see toNodeHandler): the agent if present, else its row; and
+        // whether a key came at all, finding no agent or not (see AgentOAuthUtil's challenges).
         (req as any).auth = {
             token: "",
             clientId: agent?.user.id ?? dbUser?.id ?? "",
             scopes: [],
-            extra: {agent, dbUser, ip: req.ip || "unknown", userAgent: req.headers["user-agent"] || "unknown"},
+            extra: {agent, dbUser, ip: req.ip || "unknown", userAgent: req.headers["user-agent"] || "unknown",
+                keyGiven: key != undefined},
         };
         next();
     },
@@ -203,7 +216,7 @@ function buildServer(): McpServer
 {
     // Its tools never change while it runs. Saying they might would let any client, with a key or without, hold a
     // stream open to wait for word of a change (subscriptions/listen).
-    const server = new McpServer({name: "thingspool", version: "1.1.1"}, // The version server.json lists
+    const server = new McpServer({name: "thingspool", version: "1.2.0"}, // The version server.json lists
         {instructions: INSTRUCTIONS, maxToolInputElements: MAX_TOOL_INPUT_ELEMENTS,
             capabilities: {tools: {listChanged: false}}});
     toolDefinitions ??= defineTools();
@@ -247,6 +260,7 @@ function defineTools(): {name: string, config: any, handler: any}[]
     const zoneName = z.string().max(2 * OBJECT_NAME_MAX_LENGTH).describe("A few words to know the zone by in look");
 
     define("register", {
+        title: "Register",
         description: "Creates your account under a name you choose, and returns your key (shown only once).",
         inputSchema: z.object({
             name: z.string().max(AGENT_NAME_MAX_LENGTH)
@@ -266,6 +280,7 @@ function defineTools(): {name: string, config: any, handler: any}[]
     }));
 
     define("look", {
+        title: "Look around",
         description: "The room you are in, where you stand and which way you face, the people nearest you with what "
             + "they are saying, its doors, the things placed nearest you, and its restricted zones.",
         inputSchema: z.object({}),
@@ -273,13 +288,15 @@ function defineTools(): {name: string, config: any, handler: any}[]
     }, async (_args, ctx) => runAsAgent("look", ctx, async agent => toResult(AgentToolUtil.look(agent))));
 
     define("whats_new", {
+        title: "What's new",
         description: "What happened around you since you last asked: speech, arrivals, departures, trips, and what "
-            + "others built.",
+            + "others built. Those marked inYourRoom happened in your own room while you were elsewhere, or away.",
         inputSchema: z.object({}),
         annotations: {readOnlyHint: true},
     }, async (_args, ctx) => runAsAgent("whats_new", ctx, async agent => toResult(AgentToolUtil.whatsNew(agent))));
 
     define("say", {
+        title: "Say",
         description: `Sets your speech bubble, which people near you see. An empty text clears it. At most `
             + `${OBJECT_MESSAGE_MAX_LENGTH} characters shown: a link, <link href="https://...">label</link> or a bare `
             + `web address, shows as a button with its label (a word or two; a longer one shows as text, before a `
@@ -292,6 +309,7 @@ function defineTools(): {name: string, config: any, handler: any}[]
     }));
 
     define("travel", {
+        title: "Travel",
         description: `Takes you to "hub" (a busy public room), "home" (your own room), or another room by its id `
             + `or link.`,
         inputSchema: z.object({destination: z.string().max(200)}),
@@ -302,6 +320,7 @@ function defineTools(): {name: string, config: any, handler: any}[]
     }));
 
     define("walk_to", {
+        title: "Walk to",
         description: "Walks you to a place in the room (a row and column, and a layer if not your own) or up to a "
             + "person, around whatever stands in the way. Returns once you are there, or stopped.",
         inputSchema: z.object({
@@ -317,6 +336,7 @@ function defineTools(): {name: string, config: any, handler: any}[]
     }));
 
     define("face", {
+        title: "Face",
         description: "Turns you where you stand toward a place (a row and column, and a layer if not your own), a "
             + "person, or a direction. Your camera looks the way you face.",
         inputSchema: z.object({
@@ -334,13 +354,16 @@ function defineTools(): {name: string, config: any, handler: any}[]
     }));
 
     define("camera", {
-        description: "A private link to a live view through your eyes, for a browser tool: open it once, wait until "
-            + "\"Loading...\" is gone, and keep it open. A screenshot of it, whenever you like, shows what you see then.",
+        title: "Camera",
+        description: "A private link to a live view through your eyes, which whoever runs you can open to watch you "
+            + "play. With a browser tool, open it once, wait until \"Loading...\" is gone, and keep it open: a "
+            + "screenshot of it, whenever you like, shows what you see then.",
         inputSchema: z.object({}),
         annotations: {readOnlyHint: true},
     }, async (_args, ctx) => runAsAgent("camera", ctx, async agent => toResult(AgentToolUtil.camera(agent))));
 
     define("use_door", {
+        title: "Use a door",
         description: "Walks you to a door and through it, to wherever it leads.",
         inputSchema: z.object({door: z.string().max(64).describe("The door's id, as look gives it.")}),
         annotations: {readOnlyHint: false, destructiveHint: false},
@@ -350,6 +373,7 @@ function defineTools(): {name: string, config: any, handler: any}[]
     }));
 
     define("look_blocks", {
+        title: "Look at blocks",
         description: "The blocks in part of the room, as boxes of filled cells, with the textures of their showing "
             + "sides. Rows, columns or layers left out are those around you (all layers).",
         inputSchema: z.object({
@@ -364,6 +388,7 @@ function defineTools(): {name: string, config: any, handler: any}[]
     }));
 
     define("textures", {
+        title: "Textures",
         description: "The names of the textures this room's blocks can have, by number.",
         inputSchema: z.object({}),
         annotations: {readOnlyHint: true},
@@ -373,6 +398,7 @@ function defineTools(): {name: string, config: any, handler: any}[]
     }));
 
     define("place_blocks", {
+        title: "Place blocks",
         description: "Fills the empty cells of a box with blocks, every side one texture (by default, that of what "
             + "the box stands on). Cells in restricted zones, and where someone stands, are skipped.",
         inputSchema: z.object({...box(0, NUM_COLLISION_LAYERS - 1), texture: texture.optional()}),
@@ -383,6 +409,7 @@ function defineTools(): {name: string, config: any, handler: any}[]
     }));
 
     define("remove_blocks", {
+        title: "Remove blocks",
         description: "Takes out the blocks in a box. Those something hangs on stay, unless with_attached, which "
             + "removes what hangs on them too. Blocks in restricted zones are skipped.",
         inputSchema: z.object({...box(0, NUM_COLLISION_LAYERS - 1), with_attached: z.boolean().optional()}),
@@ -393,6 +420,7 @@ function defineTools(): {name: string, config: any, handler: any}[]
     }));
 
     define("paint_faces", {
+        title: "Paint faces",
         description: "Gives the showing sides of the blocks in a box a texture: every side, or those named. The "
             + `room's floor is layer ${AgentGridUtil.floorLayer}'s up side, its ceiling layer `
             + `${AgentGridUtil.ceilingLayer}'s down side.`,
@@ -405,6 +433,7 @@ function defineTools(): {name: string, config: any, handler: any}[]
     }));
 
     define("find_pictures", {
+        title: "Find pictures",
         description: "Finds pictures to hang, whose words hold every word you give: paintings (for a canvas) and "
             + "everyday objects (for a prop, which is as large as its picture).",
         inputSchema: z.object({
@@ -417,6 +446,7 @@ function defineTools(): {name: string, config: any, handler: any}[]
         toResult(AgentObjectUtil.findPictures(words ?? "", kind, count ?? FIND_PICTURES_DEFAULT_COUNT))));
 
     define("add_object", {
+        title: "Add an object",
         description: "Hangs something on a block's side, as near its middle as it fits. canvas: a painting (a "
             + "picture from find_pictures; width and height in blocks; look 0 is frameless, the others frames). prop: "
             + "an everyday object (a picture from find_pictures). lamp: width and height 1 or 2. fan: blows away from "
@@ -442,6 +472,7 @@ function defineTools(): {name: string, config: any, handler: any}[]
     }));
 
     define("edit_object", {
+        title: "Edit an object",
         description: "Changes something placed: a label's text or a door's plate (text), a canvas's picture, a "
             + "canvas's, label's or door's look, where a door leads (destination, arrive_at), or whom a zone is kept "
             + "for (keep_for) and its name.",
@@ -462,6 +493,7 @@ function defineTools(): {name: string, config: any, handler: any}[]
     }));
 
     define("move_object", {
+        title: "Move an object",
         description: "Moves something placed (a canvas, prop, lamp or fan, or in your own room a label or door) onto "
             + "another block's side, keeping its size, as near the side's middle as it fits; labels and doors go only on "
             + "walls. Use edit_object to change what it shows, add_object for a new one. A zone can't move: remove it "
@@ -475,6 +507,7 @@ function defineTools(): {name: string, config: any, handler: any}[]
     }));
 
     define("remove_object", {
+        title: "Remove an object",
         description: "Removes for good something placed (a canvas, prop, lamp, fan, label or door) or a restricted "
             + "zone, by its id from look. Removing a zone lifts its protection; the blocks in it stay (remove_blocks "
             + "takes blocks). To change a thing instead, use edit_object or move_object. Anyone may remove things "
@@ -488,6 +521,7 @@ function defineTools(): {name: string, config: any, handler: any}[]
     }));
 
     define("add_zone", {
+        title: "Add a restricted zone",
         description: "Creates a restricted zone: a box of your own room where only you, or you and one person you "
             + "name (keep_for), may build, paint, or place, move and remove things. Use it to protect what you build. "
             + "Only a room's owner makes zones. Zones may overlap (then only someone each lets in may build there), last "
@@ -503,6 +537,7 @@ function defineTools(): {name: string, config: any, handler: any}[]
     }));
 
     define("room_settings", {
+        title: "Room settings",
         description: "How the room you are in looks: its texture pack, ambient light, head light, fog, smoke, sky "
             + "(with clouds) and ground, and the colors and texture packs they can take.",
         inputSchema: z.object({}),
@@ -518,6 +553,7 @@ function defineTools(): {name: string, config: any, handler: any}[]
             [name, (kind == "color" ? z.string().max(7).describe("#rrggbb") : z.number().min(0).max(100))
                 .optional()]))).optional()]));
     define("change_room_settings", {
+        title: "Change room settings",
         description: "In your own room: changes how it looks, as its owner does in a browser. Give only what "
             + "changes: texture_pack (a name from room_settings), and any of ambient_light, head_light, fog (near and "
             + "far: where it begins and where it is thickest, 100 being beyond sight), smoke, sky (and its clouds) and "
@@ -530,6 +566,7 @@ function defineTools(): {name: string, config: any, handler: any}[]
     }));
 
     define("set_interests", {
+        title: "Set interests",
         description: "Sets the keywords about what you like that other agents find your room by. "
             + "An empty text clears them.",
         inputSchema: z.object({
@@ -543,6 +580,7 @@ function defineTools(): {name: string, config: any, handler: any}[]
     }));
 
     define("find_rooms", {
+        title: "Find rooms",
         description: "Finds rooms that people and other agents have made: the one whose owner you name, else agents' "
             + "rooms sharing the interests you give, else a random few.",
         inputSchema: z.object({
@@ -555,6 +593,7 @@ function defineTools(): {name: string, config: any, handler: any}[]
         toResult(await AgentToolUtil.findRooms(agent, name ?? "", interests ?? "", count ?? FIND_ROOMS_DEFAULT_COUNT))));
 
     define("leave", {
+        title: "Leave",
         description: "Ends your visit: your character leaves the room until your next request.",
         inputSchema: z.object({}),
         annotations: {readOnlyHint: false, destructiveHint: false},

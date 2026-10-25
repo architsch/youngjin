@@ -9,6 +9,7 @@ import { getPendingSignals } from "../helpers/invariants";
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
 import RoomPickerUtil from "../../../src/server/room/util/roomPickerUtil";
 import DBRoomUtil from "../../../src/server/db/util/dbRoomUtil";
+import DBUserUtil from "../../../src/server/db/util/dbUserUtil";
 import RequestRoomChangeSignal from "../../../src/shared/room/types/requestRoomChangeSignal";
 import { RoomChangeRejectionReasonEnumMap } from "../../../src/shared/room/types/roomChangeRejectionReason";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
@@ -21,6 +22,8 @@ import {
     ROOM_EDITOR_SINGLE_PLAYER_MODE,
     ROOM_OVER_POPULATION_THRESHOLD,
     ROOM_UNDER_POPULATION_THRESHOLD,
+    SANDBOX_SINGLE_PLAYER_MODE,
+    TUTORIAL_SINGLE_PLAYER_MODE,
 } from "../../../src/shared/system/sharedConstants";
 
 const MAX_PLAYERS_PER_ROOM = ObjectCategoryConfigMap.getMaxCountPerRoom(ObjectCategoryEnumMap.Player);
@@ -460,18 +463,43 @@ describe("room population scenarios", () => {
         expect(result).toEqual({type: "success", newRoomID: "from-url"});
     });
 
-    it("sends a user who owes a single-player mode there first, whatever else they have", async () => {
+    it("sends a user who owes a single-player mode there first: the tutorial when no room is named, any other mode whatever else they have", async () => {
         harness.seedRoom("previous", RoomTypeEnumMap.Regular);
         await setUpHubs({"hub-a": 0});
+        vi.mocked(DBUserUtil.setSinglePlayerMode).mockClear();
 
-        const ctx = harness.connectUser({singlePlayerMode: "tutorial", lastRoomID: "previous"});
+        const inTutorial = harness.connectUser({singlePlayerMode: TUTORIAL_SINGLE_PLAYER_MODE, lastRoomID: "previous"});
+        const inSandbox = harness.connectUser({singlePlayerMode: SANDBOX_SINGLE_PLAYER_MODE, lastRoomID: "previous"});
+        inSandbox.socket.handshake.auth.targetRoomID = "from-url";
+
+        for (const [ctx, mode] of [[inTutorial, TUTORIAL_SINGLE_PLAYER_MODE], [inSandbox, SANDBOX_SINGLE_PLAYER_MODE]] as const)
+        {
+            // Single-player rooms register nobody and have no population rules.
+            expect(await harness.appStartJoin(ctx)).toEqual({type: "success", newRoomID: mode});
+            expect(ctx.user.singlePlayerMode).toBe(mode);
+            expect(ServerRoomManager.currentRoomIDByUserID[ctx.user.id]).toBeUndefined();
+        }
+        expect(harness.isRoomLoaded(TUTORIAL_SINGLE_PLAYER_MODE)).toBe(false);
+        expect(DBUserUtil.setSinglePlayerMode).not.toHaveBeenCalled();
+    });
+
+    it("skips a pending tutorial for good when the connection names a room, as a link someone was given does", async () => {
+        harness.seedRoom("from-url", RoomTypeEnumMap.Regular);
+        harness.seedRoom("previous", RoomTypeEnumMap.Regular);
+        await setUpHubs({"hub-a": 0});
+        vi.mocked(DBUserUtil.setSinglePlayerMode).mockClear();
+
+        const ctx = harness.connectUser({singlePlayerMode: TUTORIAL_SINGLE_PLAYER_MODE, lastRoomID: "previous"});
         ctx.socket.handshake.auth.targetRoomID = "from-url";
         const result = await harness.appStartJoin(ctx);
 
-        // Single-player rooms register nobody and have no population rules.
-        expect(result).toEqual({type: "success", newRoomID: "tutorial"});
-        expect(ServerRoomManager.currentRoomIDByUserID[ctx.user.id]).toBeUndefined();
-        expect(harness.isRoomLoaded("tutorial")).toBe(false);
+        expect(result).toEqual({type: "success", newRoomID: "from-url"});
+        expect(ctx.user.singlePlayerMode).toBe("");
+        expect(vi.mocked(DBUserUtil.setSinglePlayerMode).mock.calls).toEqual([[ctx.user.id, ""]]);
+
+        // Not owed on the next connection either, whatever it names.
+        ctx.socket.handshake.auth.targetRoomID = undefined;
+        expect(await RoomPickerUtil.pickBestRoomID(ctx.socketUserContext, "appStart")).not.toBe(TUTORIAL_SINGLE_PLAYER_MODE);
     });
 
     it("leaves an admin whose client is still in the room editor there, in no room of the server's", async () => {

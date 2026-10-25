@@ -153,6 +153,16 @@ const SocketsClient =
         socket.on("deflatedSignalBatch", (buffer: ArrayBuffer) =>
             receiveSignalBatch(() => inflateSync(new Uint8Array(buffer))));
     },
+    // Ends the connection, and with it any attempt to take it up again, until connect is called (see
+    // AwayDisconnectUtil). The server puts a user who connects again back in their room (see RoomPickerUtil).
+    disconnect: (): void =>
+    {
+        socket.disconnect();
+    },
+    connect: (): void =>
+    {
+        socket.connect();
+    },
 
     emitSetObjectTransformSignal: (params: SetObjectTransformSignal) => emitWhenReady("setObjectTransformSignal", params),
     emitUserCommandSignal: (params: UserCommandSignal) => emitWhenReady("userCommandSignal", params),

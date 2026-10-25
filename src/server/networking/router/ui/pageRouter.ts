@@ -6,6 +6,7 @@ import UserIdentificationUtil from "../../../user/util/userIdentificationUtil";
 import { AGENT_CAMERA_ROUTE_PATH, GIT_COMMIT } from "../../../system/serverConstants";
 import AgentCameraUtil from "../../../agent/util/agentCameraUtil";
 import RoomIdUtil from "../../../../shared/room/util/roomIdUtil";
+import SignInProviderMap from "../../../user/maps/signInProviderMap";
 
 const PageRouter = express.Router();
 
@@ -37,12 +38,14 @@ else
 PageRouter.get(`/${AGENT_CAMERA_ROUTE_PATH}/:token`, AgentCameraUtil.servePage);
 
 PageRouter.get("/", UserIdentificationUtil.identifyAnyUserUnlessBot, (req: Request, res: Response): void => {
-    EJSUtil.render(req, res, "page/dynamic/mypage", { gitCommit: GIT_COMMIT, targetRoomID: "" });
+    EJSUtil.render(req, res, "page/dynamic/mypage", { gitCommit: GIT_COMMIT, targetRoomID: "",
+        signInProviders: SignInProviderMap.getOfferedIDs() });
 });
 
 PageRouter.get("/:roomID", rejectMalformedRoomID, UserIdentificationUtil.identifyAnyUserUnlessBot,
     (req: Request, res: Response): void => {
-        EJSUtil.render(req, res, "page/dynamic/mypage", { gitCommit: GIT_COMMIT, targetRoomID: req.params.roomID });
+        EJSUtil.render(req, res, "page/dynamic/mypage", { gitCommit: GIT_COMMIT, targetRoomID: req.params.roomID,
+            signInProviders: SignInProviderMap.getOfferedIDs() });
     });
 
 // Rejects non-room-shaped paths (favicon, scanner probes) before identification, which would otherwise

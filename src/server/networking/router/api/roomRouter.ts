@@ -8,7 +8,6 @@ import DBUserUtil from "../../../db/util/dbUserUtil";
 import DBRoomUtil from "../../../db/util/dbRoomUtil";
 import DBSearchUtil from "../../../db/util/dbSearchUtil";
 import ServerRoomManager from "../../../room/serverRoomManager";
-import OwnedRoomUtil from "../../../room/util/ownedRoomUtil";
 import HubRoomUtil from "../../../room/util/hubRoomUtil";
 import RoomListEntry from "../../../../shared/room/types/roomListEntry";
 import DBRoom from "../../../db/types/row/dbRoom";
@@ -24,7 +23,8 @@ const ROOM_LIST_PAGE_SIZE = 10;
 // Search scan cap: Firestore has no substring queries, so search filters a paged scan in memory.
 const ROOM_SEARCH_MAX_SCAN = 500;
 
-// Regular rooms: a member's one owned room. Hubs: admin-only world-building.
+// Hubs, an admin's world-building. No person gets a room of their own: only AI agents do, on their first trip home (see
+// AgentToolUtil.travel).
 RoomRouter.post("/create_room", UserIdentificationUtil.identifyRegisteredUser, async (req: Request, res: Response): Promise<void> => {
     const user = User.fromString((req as any).userString);
 
@@ -58,27 +58,7 @@ RoomRouter.post("/create_room", UserIdentificationUtil.identifyRegisteredUser, a
         return;
     }
 
-    // Look up the full DB user to check ownedRoomID
-    const dbUser = await DBUserUtil.findUserById(user.id);
-    if (!dbUser)
-    {
-        res.status(404).send("User not found.");
-        return;
-    }
-    if (dbUser.ownedRoomID && dbUser.ownedRoomID.length > 0)
-    {
-        res.status(409).send("User already owns a room.");
-        return;
-    }
-
-    const newRoomID = await OwnedRoomUtil.createOwnedRoom(user.id, dbUser.userName);
-    if (newRoomID.length === 0)
-    {
-        res.status(500).send("Failed to create room.");
-        return;
-    }
-
-    res.status(200).json({ roomID: newRoomID });
+    res.status(403).send("Rooms of one's own are for AI agents only.");
 });
 
 // Permission via resolveConfigurableRoom.

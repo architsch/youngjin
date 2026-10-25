@@ -19,6 +19,10 @@ export const COLLECTION_DEV_RUNTIME = `${DB_PREFIX}_dev_runtime`;
 export const COLLECTION_ACQUISITION = `${DB_PREFIX}acquisition`;
 // What helpers spent on Claude, a document per day (DBHelperSpendingUtil).
 export const COLLECTION_HELPER_SPENDING = `${DB_PREFIX}helper_spending`;
+// What happened in each agent's room while it was away, a document per agent (see AgentAwayLogUtil).
+export const COLLECTION_AGENT_AWAY_EVENTS = `${DB_PREFIX}agent_away_events`;
+// The clients that registered themselves with the agents' OAuth (see AgentOAuthClientUtil).
+export const COLLECTION_OAUTH_CLIENTS = `${DB_PREFIX}oauth_clients`;
 
 // Cohort for visitors without a usable "ref" tag.
 export const ACQUISITION_SOURCE_DIRECT = "direct";
@@ -37,6 +41,14 @@ export const GUEST_MAX_AGE_BY_TIER_PHASE = [
     3 * DAY_IN_MS, // max age of a "casual" guest (3 days)
     20 * DAY_IN_MS, // max age of a "dedicated" guest (20 days)
 ];
+// An agent that has built is kept far longer than a guest of its tier, and for good from this many logins (see
+// AgentCleanupUtil).
+export const BUILDER_AGENT_MAX_AGE_BY_TIER_PHASE = [
+    14 * DAY_IN_MS, // max age of a "disposable" agent that has built (14 days)
+    30 * DAY_IN_MS, // max age of a "casual" one (30 days)
+    90 * DAY_IN_MS, // max age of a "dedicated" one (90 days)
+];
+export const BUILDER_AGENT_KEPT_FOR_GOOD_LOGIN_COUNT = 10;
 
 // Networking
 
@@ -49,6 +61,7 @@ export const IS_PUBLIC_SITE = process.env.MODE != "dev" && process.env.DB_PREFIX
 export const AUTH_TOKEN_NAME_BASE = "thingspool_token";
 export const TUTORIAL_FINISHED_COOKIE_NAME_BASE = "thingspool_tutorial_finished";
 export const OAUTH_STATE_COOKIE_NAME_BASE = "thingspool_oauth_state";
+export const OAUTH_RETURN_ROOM_COOKIE_NAME_BASE = "thingspool_oauth_return_room";
 // Dev-only cookie carrying the DevRunner runtime's boot id (see DevRuntimeUtil).
 export const DEV_BOOT_ID_COOKIE_NAME = "thingspool_dev_boot_id";
 
@@ -59,6 +72,14 @@ export const SIGNAL_BATCH_DEFLATE_MIN_BYTES = 1024;
 // AI Agents (see @docs/networking/agents.md)
 
 export const AGENT_MCP_ROUTE_PATH = "mcp";
+// The OAuth by which agents' hosts sign in (see AgentOAuthUtil): its endpoints' path, the endpoint that asks every
+// request to sign in (beside AGENT_MCP_ROUTE_PATH, which asks only those needing a key), and the one scope it grants.
+export const AGENT_OAUTH_ROUTE_PATH = "oauth";
+export const AGENT_MCP_SIGNED_IN_ROUTE_PATH = `${AGENT_MCP_ROUTE_PATH}/oauth`;
+export const AGENT_OAUTH_SCOPE = "agent";
+// How long a consent page stays good to answer, and a code to exchange for a token.
+export const AGENT_OAUTH_REQUEST_TTL_MS = 10 * MINUTE_IN_MS;
+export const AGENT_OAUTH_CODE_TTL_MS = MINUTE_IN_MS;
 // An agent's player leaves its room after this long without a request from it.
 export const AGENT_PRESENCE_IDLE_TIMEOUT_MS = 10 * MINUTE_IN_MS;
 export const AGENT_NAME_MIN_LENGTH = 3;
@@ -69,6 +90,9 @@ export const AGENT_ACQUISITION_SOURCE_PREFIX = "agent";
 export const AGENT_LINK_ACQUISITION_SOURCE = "via-agent";
 // Events kept for an agent until it asks for them; the oldest go first.
 export const AGENT_INBOX_MAX_EVENTS = 100;
+// How often what happens in agents' rooms without them is handed on (see AgentAwayLogUtil): a run of edits within it is
+// one event, and one write for an agent away.
+export const AGENT_AWAY_LOG_FLUSH_MS = MINUTE_IN_MS / 4;
 // How many of the nearest people a look reports.
 export const AGENT_LOOK_MAX_PEOPLE = 16;
 // An agent's interests: at most this many keywords, each at most this long.

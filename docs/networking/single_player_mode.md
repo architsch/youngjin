@@ -11,7 +11,7 @@ A single-player room is explored alone and runs entirely on the client. Its main
 **The client decides whether to run single-player logic from the joined room's `RoomType`**, never from the user flag, so single-player logic can never run in a multiplayer room or the reverse.
 
 ## Routing
-On connect (`UserSessionUtil`, as on an agent's first request), `RoomPickerUtil` picks, in order: the room editor (for an admin whose client says it is still in it), the single-player room (if the flag is set), the URL's room, the last room, a hub. While the tutorial is unfinished, a URL room is deferred: the client remembers it and uses it when the tutorial is skipped. The reserved **hub keyword** is a pseudo room id that `RoomPickerUtil` resolves to a balanced hub (see [room_population.md](room_population.md)).
+On connect (`UserSessionUtil`, as on an agent's first request), `RoomPickerUtil` picks, in order: the room editor (for an admin whose client says it is still in it), the single-player room (if the flag is set), the URL's room, the last room, a hub. A URL room skips an unfinished tutorial altogether, clearing its flag for good; another mode still comes first, and the URL room after it. The reserved **hub keyword** is a pseudo room id that `RoomPickerUtil` resolves to a balanced hub (see [room_population.md](room_population.md)).
 
 ## Server contract
 - The server sends only the room's identity, and the client fills the room in from its file (see [Rooms](#rooms)).
@@ -67,5 +67,5 @@ On connect (`UserSessionUtil`, as on an agent's first request), `RoomPickerUtil`
 
 ## Finishing
 - The tutorial's exit is an ordinary door pointed at the hubs.
-- Arriving in a non-single-player room triggers the finish command. The server verifies the user was in the tutorial and clears the flag in memory and in the DB. Skipping sends the user to the picker instead, which honors a deferred URL room.
+- Arriving in a non-single-player room triggers the finish command. The server verifies the user was in the tutorial and clears the flag in memory and in the DB. Skipping sends the user to the picker instead.
 - [FTUE](ftue.md) takes over afterwards.

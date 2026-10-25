@@ -3,6 +3,9 @@ import UserContext from "./userContext";
 
 export default class SocketRoomContext
 {
+    // Sees everything said to the whole room, for an owner who isn't in it (see AgentAwayLogUtil).
+    observer?: (signalType: string, signalData: EncodableData) => void;
+
     private socketUserContexts: {[userID: string]: UserContext};
 
     constructor()
@@ -22,6 +25,7 @@ export default class SocketRoomContext
             if (userID != userIDToExclude)
                 this.socketUserContexts[userID].addPendingSignalToUser(signalType, signalData);
         }
+        this.observer?.(signalType, signalData);
     }
 
     // A change one user made in the room, which their own client has applied already.

@@ -45,6 +45,9 @@ post, it becomes a **repeatable** channel — a new post is a new reason to retu
 | Lobsters | A dev-log post | Yes, sparingly |
 | Discord showcase channels | Either | Yes, per feature |
 | itch.io, portals, directories | The app / the build | No — a listing, not a post |
+| The Colony — Get Reviewed | The manual, with the app beside it | Yes, as a follow-up when something changes |
+| Moltbook, from the user's own agent | The manual, and a room the agent built | Yes, sparingly |
+| MCP and connector directories | The MCP endpoint | No — a listing, not a post |
 | The user's own social feeds | A dev-log post | Yes, per feature |
 
 ---
@@ -206,6 +209,13 @@ post, it becomes a **repeatable** channel — a new post is a new reason to retu
 Where people who run agents look for servers to connect them to. They list the MCP endpoint
 (`https://app.thingspool.net/mcp`), not a page, so no `?ref=` tag applies: an agent says where it heard
 of ThingsPool itself when it registers, if it does (see SKILL.md, "Measure agents apart").
+
+**What they deliver, measured 2026-10-24:** machines, not operators. In the five days after the listings
+went up, `/mcp` took 4,449 requests, nearly all from about 40 crawlers, liveness probes and scanners;
+the only agents that registered were automated test runs (see the ledger). ClawHub counted 208
+downloads and 0 installs, and GitHub saw no referral from any listing. Keep the listings current,
+since they cost little, but never count one as distribution.
+
 - **Official MCP Registry** (registry.modelcontextprotocol.io): published 2026-10-20 as
   `net.thingspool/thingspool` 1.0.0 from `server.json`, with `mcp-publisher` signed in by the
   thingspool.net DNS key. Several directories below copy from it, so it is the one to keep current.
@@ -215,7 +225,9 @@ of ThingsPool itself when it registers, if it does (see SKILL.md, "Measure agent
   GitHub account, which adds control over the page; nothing else is needed. **Verified:** 2026-10-20.
 - **PulseMCP** (pulsemcp.com/submit): "We are not accepting new MCP server or client submissions right
   now." It says to publish to the official registry first, and that "we will pick it up automatically
-  once we are back". No date given. **Verified:** 2026-10-20.
+  once we are back". No date given. **Verified:** 2026-10-20. Still paused 2026-10-24 ("New server
+  submissions and listing changes are still paused", updated 2026-09-03), and its newsletter, now The
+  Agentic Loop, last went out 2026-05-20.
 - **mcp.so** (mcp.so/submit): **free, through a review queue.** The submit page's button reads as
   paid, but a submission made from a signed-in account is "Queued for review" for free; $39 only
   skips the queue ("Skip review — go live now", with a "Verified" badge and featured placement).
@@ -237,13 +249,98 @@ of ThingsPool itself when it registers, if it does (see SKILL.md, "Measure agent
 - **Smithery** (smithery.ai/new): takes a server by its public HTTPS address, or by
   `smithery mcp publish "<url>" -n @<org>/<name>`, and scans its tools (public servers scan without
   help). An auth-required server must support OAuth; ThingsPool's key is optional, so the scan works.
-  **Open question before using it:** whether Smithery relays its users' connections, which would put
-  them all behind Smithery's own addresses and so under one set of the per-address limits on
-  registering. Not verified. **Verified:** 2026-10-20 (the publish docs).
+  **It relays:** its gateway proxies every connection, from Cloudflare Workers with the UA
+  `SmitheryBot/1.0` (smithery.ai/docs/build/publish.md). So all its users would share one set of the
+  per-address caps on registering (10 an hour; `guestCreationLimitUtil.ts`). Not before those limits
+  go by agent or client rather than by address. **Verified:** 2026-10-24.
 - **ClawHub** (clawhub.ai): the manual's MIT-0 copy, published 2026-10-20 as `thingspool` 1.1.0 with
   `npx clawhub@0.23.3` after the user's `login`. The scan's verdict was "clean", but ClawHub still held it
   as "pending publication" (hidden) an hour later, 19:41 to 20:39 KST: its own review. Its page will be
-  `clawhub.ai/architsch/thingspool`.
+  `clawhub.ai/architsch/thingspool`. **Search** (2026-10-24, `clawhub search`): found for "sandbox
+  world" and its name, not for "game", "3D sandbox", "virtual world", "multiplayer game" or "build with
+  blocks". OpenClaw's bundled clawhub skill tells agents to prefer searching for *plugins*, and a bundle
+  plugin can carry a streamable-http MCP config (docs.openclaw.ai/plugins/bundles). **Featured** is 16
+  slots picked by 30-day installs with a maintainer's approval, and "not taking requests" (a maintainer,
+  2026-06-15); **trending** ranks the last 24 UTC hours of installs.
+- **Claude's Connectors Directory** (claude.ai/directory/manage → Submit new → MCP connector; needs a
+  paid Claude plan): the one listing a chat can recommend by itself (Suggested Connectors, ranked by
+  usage); the MCP Registry does not put a server in Claude. Requires a `title` and `readOnlyHint` or
+  `destructiveHint` on every tool, OAuth for an authenticated service (none is allowed, and "required
+  when the server asks" lets sign-in come later), a docs URL, privacy policy, support contact, icon, a
+  reviewer test account and at least 3 example prompts. No games category; "Media & entertainment" is
+  the nearest. **Blocked for ThingsPool** (2026-10-24): no tool has a `title`; a connector's fixed URL
+  can't carry the key `register` returns, so every other tool fails until the user edits the URL by
+  hand; and Anthropic's shared addresses (160.79.104.0/21) would meet the per-address caps on
+  registering. A custom connector (one on Free) can be prefilled by link:
+  `https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=ThingsPool&connectorUrl=https%3A%2F%2Fapp.thingspool.net%2Fmcp`.
+  **Verified:** 2026-10-24 (claude.com/docs/directory/publish, …/connectors/building/submission and
+  review-criteria).
+- **OpenAI's plugin directory** (ChatGPT and Codex; platform.openai.com/plugins → Upload → With MCP):
+  identity verification, a domain token at `/.well-known/openai-apps-challenge`, 5 positive and 3
+  negative test cases, a privacy policy, explicit read-only, destructive and open-world hints on every
+  tool, no keys or tokens in tool responses, and content suitable for 13 to 17. A UI is optional.
+  ChatGPT "can't present custom API keys", so it needs OAuth or no auth. **Blocked** until OAuth exists
+  (`register` hands back a key). **Verified:** 2026-10-24 (developers.openai.com plugin docs).
+- **GitHub MCP Registry and VS Code's gallery** (github.com/mcp; the `@mcp` gallery reads the same
+  list): curated by hand, not mirrored from the official registry: "onboarding a new server is still a
+  manual curation process today" (GitHub staff, 2026-05-19). ThingsPool is not in it. A request goes in
+  github.com/github/github-mcp-server/discussions/1257. Cheap, low odds. **Verified:** 2026-10-24.
+- **MCP Market** (mcpmarket.com/submit): takes a GitHub repository URL; free in 4 to 6 weeks, or $29
+  for 24 hours. Remote listings unclear, traffic unknown. Optional. **Verified:** 2026-10-24.
+
+### Agent networks and operator communities (the AI-agents angle)
+Where agents post and their operators read along. Agents arrive because an operator, or a post an agent
+read, sent them; the products that got real operators were posted here, or written up by the press,
+not merely listed. Reddit's agent subreddits are under the Reddit warning at the top of this file.
+- **The Colony — Get Reviewed** (thecolony.cc/c/reviews, "Product Review Requests"): "Ask the Colony
+  agent community to review your website, application, service etc." Its API docs define the post as
+  "A HUMAN inviting AI agents to review their product, site or project", so the user posts it himself
+  (sign-in with GitHub, Google or X). 2,750 agents and 1,334 humans; the section has 82 posts.
+  - Terms (2026-09-09): don't "Disguise advertising, sponsorship or self-promotion as independent
+    content", and don't pass an agent off as a person. Authors put their tie in the title: "(affiliated)",
+    "(disclosed: our own game)".
+  - What drew replies: a bar for agents asked for one `GET` and blunt answers, and its owner replied to
+    each and shipped fixes, so reviewers came back to recheck (20 replies). A browser MMO for agents and
+    people ("join in one step, no key") drew 4, which reviewed its skill file without playing.
+  - **Fit: high**, the only venue built for inviting agents to try something. **Verified:** 2026-10-24.
+- **Moltbook** (moltbook.com): live (a new post every 30 to 40 s), Meta-owned since 2026-03-10. Only
+  agents post; the human claims one with an email and a public post on X naming @moltbook. A new agent
+  may post once every two hours for its first day. Rules: "Don't spam or self-promote excessively"; the
+  terms forbid "unauthorized advertising". Submolts: m/builds ("Show what you made", about 2,600),
+  m/openclaw-explorers (about 2,700), m/buildlogs, m/mcp, m/gaming. Link posts there have sent 1,000+
+  agents to a site within a week (Zenity Labs, 2026-02). Posting is the user's own agent's act.
+  **Fit: medium-high**; posts sink fast. **Verified:** 2026-10-24 (rules.md, skill.md v1.12.0).
+- **4claw** (4claw.org): agents only; its skill.md says "Avoid self-promotion of products", and no board
+  suits a game. **Fit: low.** **Verified:** 2026-10-24.
+- **awesome-agent-native-social** (github.com/ColonistOne/awesome-agent-native-social, kept by The
+  Colony's own agent): a list of social platforms where agents are first-class users, with a "Gaming &
+  Play" section (League of Agents, OpenClawCity, The Crab Games). Criteria: first-class agent accounts,
+  a documented agent-facing surface, live; "Browser-only platforms don't qualify". Entry format
+  `- [Name](URL) — One-line neutral description.`, alphabetical; "Self-submissions are accepted; the
+  affiliation is fine, the puffery isn't." A pull request. **Fit: high, cheap.** **Verified:** 2026-10-24.
+- **OpenClaw's community:** the forum's Build & Showcase category (community.openclaw.ai; 7 topics, a
+  few dozen views each; "Don't post spam"): medium. Discord (about 100k members): #showcase is for "cool
+  stuff you and your agent are actually doing together… Not for shilling your skill", self-promotion has
+  its own channel, crypto banned; **UNVERIFIED** (secondary source). GitHub Discussions are off on the
+  OpenClaw repositories.
+- **MCP community:** the official Discord is for contributors and says to avoid "Service or product
+  marketing" (none). The modelcontextprotocol GitHub Discussions' "Show and tell" is quiet (low).
+  mcpnewsletter.com, a weekly from the r/MCPservers team, takes submissions by form or email (medium).
+  **Verified:** 2026-10-24.
+- **Product Hunt:** an "AI Agents" category with an "OpenClaw" subcategory, and "Games". Comment
+  guidelines: "No LLMs or Chrome extensions please!" Image sizes are in its own entry above. **Fit:
+  medium**, one-shot. **Verified:** 2026-10-24.
+- **AI newsletters** (TLDR AI, The Rundown, Ben's Bites): no editorial submission route, only paid ads.
+  Paid AI-tool directories (There's An AI For That, Toolify, Futurepedia) list tools, not games. **Fit:
+  low.** **Verified:** 2026-10-24, the directories' prices UNVERIFIED.
+- **Reddit, UNVERIFIED** (secondary sources): r/openclaw (self-promotion "not allowed without mod
+  approval", a Showcase flair), r/AI_Agents (projects in the weekly project thread), r/ClaudeAI
+  (promotion with disclosure), r/LocalLLaMA (1 in 10), r/mcp (ask the mods first).
+- **Neighbors, not venues:** Agentic Kingdoms (agentickingdoms.com, a kingdom-war MMO where agents play
+  beside people, guest join with no key; beta 2026-10-23) and OpenClawCity (openclawcity.ai, a
+  persistent city with judged challenges, whose operators watch their own agent) court the same
+  operators. SpaceMolt's history is the precedent: "a handful" of agents after its Show HN (11 points),
+  394 sign-ups in one day once Ars Technica and PC Gamer wrote it up.
 
 ### Directory and list placements
 - **Fit:** Low individually, but they accumulate, they are permanent, and they are pure link-out.
@@ -331,4 +428,6 @@ For the AI-agents angle (see SKILL.md), added 2026-10-20 and not yet verified:
 - agent forums where agents themselves post (Moltbook, The Colony, 4claw). There, posting is the user's
   agent's act, and the rules for each venue's own agents apply.
 
-The MCP server directories were researched on 2026-10-20 and now have their own entry in Lane 1.
+The MCP server directories were researched on 2026-10-20 and now have their own entry in Lane 1. The
+agent forums, the operator communities and the connector directories were researched on 2026-10-24,
+and the subreddits' rules read only at second hand; all are in Lane 1 now.

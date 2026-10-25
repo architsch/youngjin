@@ -437,7 +437,11 @@ describe("how a helper wanders", () => {
         // Someone stands on its home a few seconds, then goes.
         let now = live(helper, around(voxels, [home]), 0, 3, seen);
         expect(helper.path).toEqual([]);
-        now = live(helper, around(voxels), now, 5, seen);
+        // Still there, though its home is free again, for the while it drew when it gave up.
+        const setsOffAt = helper.returnHomeAt;
+        expect(setsOffAt).toBeGreaterThan(now);
+        while (now < setsOffAt)
+            now = live(helper, around(voxels), now, 1, seen);
         expect(seen.every(at => HelperBehaviorUtil.isSamePlace(at, {x: 19, y: 0, z: 16}))).toBe(true);
         live(helper, around(voxels), now, 20, seen);
         expect(seen.some(at => HelperBehaviorUtil.isSamePlace(at, home))).toBe(true);
@@ -526,6 +530,7 @@ describe("helpers chatting", () => {
         const said: {who: string, text: string, at: number}[] = [];
         const lastSaid = {a: "", b: ""};
         const startedAt = {...a.at};
+        const seen: Vec3[] = [];
         // Seconds in a row both bubbles were up: the one before is taken down within a beat of the answer.
         let bothUp = 0;
         let mostBothUp = 0;
@@ -539,6 +544,7 @@ describe("helpers chatting", () => {
             }
             HelperBehaviorUtil.beat(a, aAround, now, false);
             HelperBehaviorUtil.beat(b, bAround, now, false);
+            seen.push({...a.at});
             for (const [who, helper] of [["a", a], ["b", b]] as [keyof typeof lastSaid, HelperBehavior][])
             {
                 if (helper.saying != lastSaid[who] && helper.saying.length > 0)
@@ -570,7 +576,8 @@ describe("helpers chatting", () => {
         expect(a.saying).toBe(LINES[2].text);
         expect(a.smallTalk).toBeUndefined();
         expect(b.smallTalk).toBeUndefined();
-        expect(across(a.at, startedAt)).toBeGreaterThan(0.5);
+        // Then on to where it was headed, though it may be home again by the end.
+        expect(seen.some(at => HelperBehaviorUtil.isSamePlace(at, goal))).toBe(true);
     });
 
     it("ends a chat for both the moment someone talks to either, turning to them", () => {

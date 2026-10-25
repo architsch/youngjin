@@ -181,6 +181,14 @@ export default class AgentInbox
         return events;
     }
 
+    // Events from elsewhere: what happened in the agent's own room without it (see AgentAwayLogUtil).
+    receive(events: AgentEvent[]): void
+    {
+        this.events.push(...events);
+        if (this.events.length > AGENT_INBOX_MAX_EVENTS)
+            this.events.splice(0, this.events.length - AGENT_INBOX_MAX_EVENTS);
+    }
+
     // Records another user's player, or what any other object is (a zone, for a volume).
     private noteObject(obj: AddObjectSignal): void
     {

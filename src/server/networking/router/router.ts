@@ -9,8 +9,8 @@ import { USER_API_ROUTE_PATH, ROOM_API_ROUTE_PATH, HELPER_API_ROUTE_PATH,
     HEALTH_ROUTE_PATH } from "../../../shared/system/sharedConstants";
 import RateLimitUtil from "../util/rateLimitUtil";
 import ServerLifecycleUtil from "../../system/util/serverLifecycleUtil";
-import { AGENT_MCP_ROUTE_PATH, GIT_COMMIT, IS_PUBLIC_SITE } from "../../system/serverConstants";
-import AgentMcpUtil from "../../agent/util/agentMcpUtil";
+import { AGENT_MCP_ROUTE_PATH, AGENT_OAUTH_ROUTE_PATH, GIT_COMMIT, IS_PUBLIC_SITE } from "../../system/serverConstants";
+import AgentRouter from "./agentRouter";
 
 export default function Router(app: Express): void
 {
@@ -82,9 +82,10 @@ export default function Router(app: Express): void
     app.use(`/${USER_API_ROUTE_PATH}`, RateLimitUtil.apiRateLimiter, UserRouter);
     app.use(`/${ROOM_API_ROUTE_PATH}`, RateLimitUtil.apiRateLimiter, RoomRouter);
     app.use(`/${HELPER_API_ROUTE_PATH}`, RateLimitUtil.apiRateLimiter, HelperRouter);
-    // AI agents (see @docs/networking/agents.md), the key in the address for hosts that can't send a header. Before
-    // PageRouter, which would refuse it as a room address.
-    app.all([`/${AGENT_MCP_ROUTE_PATH}`, `/${AGENT_MCP_ROUTE_PATH}/:key`], RateLimitUtil.agentRateLimiter,
-        AgentMcpUtil.authenticate, AgentMcpUtil.handle);
+    // AI agents and the OAuth their hosts sign in by (see AgentRouter). Before PageRouter, which would refuse their paths as
+    // room addresses.
+    app.use([`/${AGENT_MCP_ROUTE_PATH}`, `/${AGENT_OAUTH_ROUTE_PATH}`, "/.well-known"], RateLimitUtil.agentRateLimiter);
+    app.use(`/${AGENT_OAUTH_ROUTE_PATH}/register`, RateLimitUtil.clientRegistrationRateLimiter);
+    app.use(AgentRouter);
     app.use("/", RateLimitUtil.pageRateLimiter, PageRouter);
 }

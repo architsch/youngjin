@@ -59,7 +59,7 @@ const MAX_DETOUR = 3;
 const DETOUR_SLACK = 4;
 // Idle at home (or, roaming, wherever it is) between wanders as long as its prefs say (see BehaviorPrefs), and away this
 // long before it heads back (or, after a talk, this long after it).
-const WANDER_STAY_MS = [8_000, 15_000];
+const WANDER_STAY_MS = [1_000, 8_000];
 const STAY_AFTER_TALK_MS = 30_000;
 // Still this long after it was moved somewhere new, or let go of.
 export const FROZEN_AFTER_MOVE_MS = 10_000;

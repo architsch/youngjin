@@ -67,6 +67,7 @@
             targetRoomID: targetRoomID,
             cameraToken: locals.cameraToken ?? "",
             watchedUserID: locals.watchedUserID ?? "",
+            sign_in_providers: locals.signInProviders ?? [],
         }).replace(/</g, "\\u003c") %>;
     </script>
     <%_ /* The dependency chunks carry no side effects of their own — each one only registers its

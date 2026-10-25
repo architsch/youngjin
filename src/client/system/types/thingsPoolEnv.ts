@@ -13,4 +13,6 @@ export default interface ThingsPoolEnv
     // AgentCameraUtil); both empty on any other page.
     cameraToken: string,
     watchedUserID: string,
+    // The ids of the services a person may sign in through here (see SignInProviderNameMap).
+    sign_in_providers: string[],
 }

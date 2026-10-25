@@ -8,6 +8,8 @@ const REQUESTS_PER_MINUTE = process.env.MODE == "dev" ? 1000 : 20;
 // An agent makes a request for every look and word, as a browser sends a signal; each agent's own calls are capped too
 // (see USER_BUDGETS), so this leaves room for a few agents run from one address.
 const AGENT_REQUESTS_PER_MINUTE = process.env.MODE == "dev" ? 1000 : 300;
+// An app registers once per install, or once per connection for some; a stored document each.
+const CLIENT_REGISTRATIONS_PER_HOUR = process.env.MODE == "dev" ? 1000 : 30;
 
 const RateLimitUtil =
 {
@@ -33,6 +35,19 @@ const RateLimitUtil =
         message: "Too many requests. Please try again later.",
         handler: (req, res, next, options) => {
             LogUtil.log("API rate limit exceeded", { ip: req.ip, path: req.path }, "high", "warn");
+            res.status(options.statusCode).send(options.message);
+        },
+    }),
+
+    // For the clients that register themselves with the agents' OAuth (see AgentOAuthClientUtil), each a stored document.
+    clientRegistrationRateLimiter: rateLimit({
+        windowMs: 60 * MINUTE_IN_MS,
+        limit: CLIENT_REGISTRATIONS_PER_HOUR,
+        standardHeaders: true,
+        legacyHeaders: false,
+        message: "Too many client registrations. Please try again later.",
+        handler: (req, res, next, options) => {
+            LogUtil.log("Client registration rate limit exceeded", { ip: req.ip }, "high", "warn");
             res.status(options.statusCode).send(options.message);
         },
     }),

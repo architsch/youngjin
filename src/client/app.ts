@@ -198,11 +198,13 @@ async function changeRoom(roomChangedSignal: RoomChangedSignal)
         // Ends any single-player experience we just left (tears down UI/flags, tells the server).
         // No-op otherwise.
         SinglePlayerManager.finishSinglePlayerMode();
+        // None is owed either: the server skips a pending tutorial for a room the address names (see RoomPickerUtil).
+        App.getUser().singlePlayerMode = "";
     }
 }
 
-// The address keeps the room it named (the page's target) while the user is on the way there, through the tutorial
-// say, or in it. Once they enter any other room it is dropped, from reconnections as from the address bar, so that
+// The address keeps the room it named (the page's target) while the user is on the way there, through a single-player
+// room, or in it. Once they enter any other room it is dropped, from reconnections as from the address bar, so that
 // neither brings them back. Whatever follows the path (a ref tag, say) goes at once. A camera page keeps the address it is
 // reloaded by.
 function keepAddressInStep(joinedRoom: Room): void

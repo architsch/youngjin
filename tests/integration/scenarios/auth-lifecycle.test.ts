@@ -1,6 +1,7 @@
 /**
- * Integration tests: authentication lifecycle — Google OAuth (guest upgrade, existing account), stale
- * guest cleanup (deleteStaleGuestsByTier), and loginCount (only distinct page-level logins count).
+ * Integration tests: authentication lifecycle — signing in through Google, GitHub or Discord (guest upgrade, existing
+ * account, verified emails only, no room of one's own, back to the room it started from), stale guest cleanup
+ * (deleteStaleGuestsByTier), and loginCount (only distinct page-level logins count).
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
@@ -40,11 +41,6 @@ const _mockRestAPI = vi.hoisted(() => ({
     delete: vi.fn(),
 }));
 
-const _mockOwnedRoomUtil = vi.hoisted(() => ({
-    createOwnedRoom: vi.fn(),
-    setUpFirstOwnedRoom: vi.fn(),
-}));
-
 const _mockUserTokenUtil = vi.hoisted(() => ({
     getUserIdFromToken: vi.fn((token: string) => {
         return token.startsWith("valid-") ? token.replace("valid-", "") : undefined;
@@ -61,10 +57,6 @@ vi.mock("../../../src/server/db/util/dbUserUtil", () => ({
 
 vi.mock("../../../src/server/db/util/dbSearchUtil", () => ({
     default: _mockDBSearchUtil,
-}));
-
-vi.mock("../../../src/server/room/util/ownedRoomUtil", () => ({
-    default: _mockOwnedRoomUtil,
 }));
 
 vi.mock("../../../src/client/networking/api/restAPI", () => ({
@@ -84,6 +76,7 @@ vi.mock("../../../src/server/networking/util/cookieUtil", () => ({
         getAuthTokenName: () => "auth_token_dev",
         getAuthTokenCookieOptions: () => ({ httpOnly: true, sameSite: "lax" }),
         getOAuthStateCookieName: () => "oauth_state_dev",
+        getOAuthReturnRoomCookieName: () => "oauth_return_room_dev",
         getOAuthStateCookieOptions: () => ({ httpOnly: true, sameSite: "lax" }),
         getTutorialFinishedCookieName: () => "tutorial_finished_dev",
         getTutorialFinishedCookieOptions: () => ({ httpOnly: true, sameSite: "lax" }),
@@ -113,7 +106,12 @@ vi.mock("../../../src/server/user/util/guestCreationLimitUtil", () => ({
 
 // ─── Import after mocks ──────────────────────────────────────────────────
 
-import UserAuthGoogleUtil from "../../../src/server/user/util/userAuthGoogleUtil";
+import UserSignInUtil from "../../../src/server/user/util/userSignInUtil";
+import GoogleSignInProvider from "../../../src/server/user/types/signInProvider/googleSignInProvider";
+import GitHubSignInProvider from "../../../src/server/user/types/signInProvider/gitHubSignInProvider";
+import DiscordSignInProvider from "../../../src/server/user/types/signInProvider/discordSignInProvider";
+import SignInProviderMap from "../../../src/server/user/maps/signInProviderMap";
+import SignInProviderNameMap from "../../../src/shared/user/maps/signInProviderNameMap";
 import UserIdentificationUtil from "../../../src/server/user/util/userIdentificationUtil";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -148,14 +146,17 @@ function createMockReqRes(cookies: Record<string, string> = {}, queryUrl?: strin
 
 // ─── Tests: Google OAuth (Scenario 10) ────────────────────────────────────
 
+// A room's id, as a sign-in started in that room carries it (see UserAPIClient.signIn).
+const ROOM_ID = "AbCdEfGhIjKlMnOpQrSt";
+
 describe("Google OAuth lifecycle (Scenario 10)", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         vi.spyOn(console, "error").mockImplementation(() => {});
         vi.spyOn(console, "warn").mockImplementation(() => {});
         vi.spyOn(console, "log").mockImplementation(() => {});
-        // Default: no room opened for this sign-in ("" is what an existing owner gets); sign-up tests override.
-        _mockOwnedRoomUtil.setUpFirstOwnedRoom.mockResolvedValue("");
+        vi.stubEnv("GOOGLE_OAUTH_CLIENT_ID", "google-client");
+        vi.stubEnv("GOOGLE_OAUTH_CLIENT_SECRET", "google-secret");
         // Default: the browser's token belongs to a guest (the only kind a sign-in may absorb).
         _mockDBUserUtil.findUserById.mockImplementation(async (userID: string) =>
             ({ id: userID, userName: userID, userType: UserTypeEnumMap.Guest }));
@@ -177,20 +178,19 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
         _mockDBSearchUtil.users.withUserName.mockResolvedValue({ success: true, data: [] });
         // Upgrade succeeds
         _mockDBUserUtil.upgradeGuestToMember.mockResolvedValue({ success: true, data: [] });
-        // A first-time member gets a room of their own
-        _mockOwnedRoomUtil.setUpFirstOwnedRoom.mockResolvedValue("new-room-1");
 
-        const { req, res } = createMockReqRes({ auth_token_dev: "valid-guest-1" });
-        await UserAuthGoogleUtil.loginCallback(req, res);
+        // Signed in from a room: the sign-in started there keeps it.
+        const { req, res } = createMockReqRes({ auth_token_dev: "valid-guest-1", oauth_return_room_dev: ROOM_ID });
+        await UserSignInUtil.loginCallback(GoogleSignInProvider, req, res);
 
         // Should upgrade guest to member (not create a new user)
         expect(_mockDBUserUtil.upgradeGuestToMember).toHaveBeenCalledWith(
             "guest-1", "newuser", "newuser@gmail.com",
         );
-        // The upgraded guest — not some other account — is the one given a room
-        expect(_mockOwnedRoomUtil.setUpFirstOwnedRoom).toHaveBeenCalledWith("guest-1");
-        // Should redirect into the newly created room
-        expect(res.redirectUrl).toBe("/new-room-1");
+        // No room of one's own: the new member's player arrives back in the room it signed in from.
+        expect(_mockDBUserUtil.setOwnedRoomID).not.toHaveBeenCalled();
+        expect(res.redirectUrl).toBe(`/${ROOM_ID}`);
+        expect(res.clearedCookies).toContain("oauth_return_room_dev");
     });
 
     it("new user via Google OAuth: creates member when no guest exists", async () => {
@@ -206,18 +206,18 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
         _mockDBSearchUtil.users.withEmail.mockResolvedValue({ success: true, data: [] });
         _mockDBSearchUtil.users.withUserName.mockResolvedValue({ success: true, data: [] });
         _mockDBUserUtil.createUser.mockResolvedValue({ success: true, data: [{ id: "new-member-1" }] });
-        _mockOwnedRoomUtil.setUpFirstOwnedRoom.mockResolvedValue("new-room-2");
 
-        // No guest token in cookies
+        // No guest token in cookies, and a sign-in started from no room (or a single-player one)
         const { req, res } = createMockReqRes({});
-        await UserAuthGoogleUtil.loginCallback(req, res);
+        await UserSignInUtil.loginCallback(GoogleSignInProvider, req, res);
 
         // Should create a new member (no guest to upgrade)
         expect(_mockDBUserUtil.createUser).toHaveBeenCalledWith(
             "brandnew", UserTypeEnumMap.Member, "brandnew@gmail.com",
         );
-        expect(_mockOwnedRoomUtil.setUpFirstOwnedRoom).toHaveBeenCalledWith("new-member-1");
-        expect(res.redirectUrl).toBe("/new-room-2");
+        expect(_mockUserTokenUtil.addTokenForUserId).toHaveBeenCalledWith("new-member-1", req, res);
+        expect(_mockDBUserUtil.setOwnedRoomID).not.toHaveBeenCalled();
+        expect(res.redirectUrl).toBe("/");
     });
 
     it("existing user via Google OAuth: signs in and cleans up orphaned guest", async () => {
@@ -237,9 +237,9 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
         });
         _mockDBUserUtil.deleteUser.mockResolvedValue({ success: true, data: [] });
 
-        // Current session has a different guest
-        const { req, res } = createMockReqRes({ auth_token_dev: "valid-orphan-guest" });
-        await UserAuthGoogleUtil.loginCallback(req, res);
+        // Current session has a different guest, signing in from a room
+        const { req, res } = createMockReqRes({ auth_token_dev: "valid-orphan-guest", oauth_return_room_dev: ROOM_ID });
+        await UserSignInUtil.loginCallback(GoogleSignInProvider, req, res);
 
         // Should delete the orphaned guest
         expect(_mockDBUserUtil.deleteUser).toHaveBeenCalledWith("orphan-guest");
@@ -247,9 +247,8 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
         expect(_mockUserTokenUtil.addTokenForUserId).toHaveBeenCalledWith(
             "existing-member", req, res,
         );
-        // A returning member isn't a sign-up: no room is opened, and the plain redirect resumes their last room.
-        expect(_mockOwnedRoomUtil.setUpFirstOwnedRoom).not.toHaveBeenCalled();
-        expect(res.redirectUrl).toBe("/");
+        // The member's player arrives in the room the guest's was in, not in their last room.
+        expect(res.redirectUrl).toBe(`/${ROOM_ID}`);
         // The sign-in's state is used up.
         expect(res.clearedCookies).toContain("oauth_state_dev");
     });
@@ -272,7 +271,7 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
             { id: "member-1", userName: "member", userType: UserTypeEnumMap.Member });
 
         const { req, res } = createMockReqRes({ auth_token_dev: "valid-member-1" });
-        await UserAuthGoogleUtil.loginCallback(req, res);
+        await UserSignInUtil.loginCallback(GoogleSignInProvider, req, res);
 
         // The signed-in member is its own account; the browser's account isn't overwritten.
         expect(_mockDBUserUtil.upgradeGuestToMember).not.toHaveBeenCalled();
@@ -301,7 +300,7 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
             { id: "member-1", userName: "member", userType: UserTypeEnumMap.Member });
 
         const { req, res } = createMockReqRes({ auth_token_dev: "valid-member-1" });
-        await UserAuthGoogleUtil.loginCallback(req, res);
+        await UserSignInUtil.loginCallback(GoogleSignInProvider, req, res);
 
         // Only a guest is an orphan of the sign-in; the member left behind keeps their account.
         expect(_mockDBUserUtil.deleteUser).not.toHaveBeenCalled();
@@ -312,7 +311,7 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
 
     it("Google OAuth fails gracefully when no auth code provided", async () => {
         const { req, res } = createMockReqRes({}, `/login_google_callback?state=${OAUTH_STATE}`);
-        await UserAuthGoogleUtil.loginCallback(req, res);
+        await UserSignInUtil.loginCallback(GoogleSignInProvider, req, res);
 
         expect(res.statusCode).toBe(400);
         expect(res.body).toContain("code not found");
@@ -321,7 +320,7 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
     it("Google OAuth refuses a code that is not a single string", async () => {
         const { req, res } = createMockReqRes();
         req.query.code = ["code-1", "code-2"]; // ?code=code-1&code=code-2, as Express parses it
-        await UserAuthGoogleUtil.loginCallback(req, res);
+        await UserSignInUtil.loginCallback(GoogleSignInProvider, req, res);
 
         expect(res.statusCode).toBe(400);
         expect(_mockRestAPI.post).not.toHaveBeenCalled();
@@ -331,7 +330,7 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
         _mockRestAPI.post.mockResolvedValue({ status: 401, data: { error: "invalid_grant" } });
         const { req, res } = createMockReqRes({},
             `/login_google_callback?code=${encodeURIComponent("abc&client_id=other")}&state=${OAUTH_STATE}`);
-        await UserAuthGoogleUtil.loginCallback(req, res);
+        await UserSignInUtil.loginCallback(GoogleSignInProvider, req, res);
 
         const tokenParams = new URL(_mockRestAPI.post.mock.calls[0][0]).searchParams;
         expect(tokenParams.get("code")).toBe("abc&client_id=other");
@@ -340,7 +339,7 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
 
     it("Google sign-in keeps in a cookie the state it sends to Google", async () => {
         const { req, res } = createMockReqRes({}, "/login_google");
-        await UserAuthGoogleUtil.login(req, res);
+        await UserSignInUtil.login(GoogleSignInProvider, req, res);
 
         const state = res.setCookies["oauth_state_dev"];
         expect(state).toBeTruthy();
@@ -357,7 +356,7 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
         ];
         for (const { req, res } of cases)
         {
-            await UserAuthGoogleUtil.loginCallback(req, res);
+            await UserSignInUtil.loginCallback(GoogleSignInProvider, req, res);
             expect(res.statusCode).toBe(400);
             expect(res.body).toContain("state");
         }
@@ -374,10 +373,140 @@ describe("Google OAuth lifecycle (Scenario 10)", () => {
         });
 
         const { req, res } = createMockReqRes({});
-        await UserAuthGoogleUtil.loginCallback(req, res);
+        await UserSignInUtil.loginCallback(GoogleSignInProvider, req, res);
 
         expect(res.statusCode).toBe(500);
         expect(res.body).toContain("access token");
+    });
+});
+
+describe("signing in through GitHub and Discord, and where a sign-in returns to (Scenario 10)", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        vi.unstubAllEnvs();
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        vi.spyOn(console, "warn").mockImplementation(() => {});
+        vi.spyOn(console, "log").mockImplementation(() => {});
+        for (const provider of ["GOOGLE", "GITHUB", "DISCORD"])
+        {
+            vi.stubEnv(`${provider}_OAUTH_CLIENT_ID`, `${provider.toLowerCase()}-client`);
+            vi.stubEnv(`${provider}_OAUTH_CLIENT_SECRET`, `${provider.toLowerCase()}-secret`);
+        }
+        _mockDBUserUtil.findUserById.mockImplementation(async (userID: string) =>
+            ({ id: userID, userName: userID, userType: UserTypeEnumMap.Guest }));
+        _mockDBSearchUtil.users.withEmail.mockResolvedValue({ success: true, data: [] });
+        _mockDBSearchUtil.users.withUserName.mockResolvedValue({ success: true, data: [] });
+        _mockDBUserUtil.upgradeGuestToMember.mockResolvedValue({ success: true, data: [] });
+    });
+
+    // GitHub's answers: the code exchanged, then the user and their emails, by address.
+    const answerAsGitHub = (login: string, emails: object[]) => {
+        _mockRestAPI.post.mockResolvedValue({ status: 200, data: { access_token: "github-token" } });
+        _mockRestAPI.get.mockImplementation(async (url: string) => url.endsWith("/user/emails")
+            ? { status: 200, data: emails } : { status: 200, data: { login } });
+    };
+    const callback = async (provider: typeof GitHubSignInProvider, cookies: Record<string, string> = {}) => {
+        const { req, res } = createMockReqRes({ auth_token_dev: "valid-guest-9", ...cookies },
+            `/login_${provider.id}_callback?code=the-code&state=${OAUTH_STATE}`);
+        await UserSignInUtil.loginCallback(provider, req, res);
+        return res;
+    };
+
+    it("offers each provider the browser names, in its order, and only those set up", () => {
+        expect(SignInProviderMap.getAll().map(provider => provider.id)).toEqual(Object.keys(SignInProviderNameMap));
+        expect(SignInProviderMap.getOfferedIDs()).toEqual(["google", "github", "discord"]);
+
+        vi.stubEnv("DISCORD_OAUTH_CLIENT_SECRET", "");
+        expect(SignInProviderMap.getOfferedIDs()).toEqual(["google", "github"]);
+    });
+
+    it("signs a guest in through GitHub by its verified primary email, named by its login", async () => {
+        answerAsGitHub("octo-cat", [{ email: "old@example.com", primary: false, verified: true },
+            { email: "octo@example.com", primary: true, verified: true }]);
+
+        await callback(GitHubSignInProvider);
+
+        expect(_mockDBUserUtil.upgradeGuestToMember).toHaveBeenCalledWith("guest-9", "octo-cat", "octo@example.com");
+        // The code goes to GitHub as JSON, and the answer is asked for as JSON.
+        const [tokenURL, tokenRequest] = _mockRestAPI.post.mock.calls[0];
+        expect(tokenURL).toBe("https://github.com/login/oauth/access_token");
+        expect(tokenRequest.data).toMatchObject({ client_id: "github-client", code: "the-code" });
+        expect(tokenRequest.headers.Accept).toBe("application/json");
+    });
+
+    it("refuses a GitHub account whose primary email isn't verified, and a code GitHub refused", async () => {
+        answerAsGitHub("octo-cat", [{ email: "octo@example.com", primary: true, verified: false },
+            { email: "other@example.com", primary: false, verified: true }]);
+        expect((await callback(GitHubSignInProvider)).statusCode).toBe(403);
+
+        // GitHub answers a refused code with 200 and an error in place of the token.
+        _mockRestAPI.post.mockResolvedValue({ status: 200, data: { error: "bad_verification_code" } });
+        const refused = await callback(GitHubSignInProvider);
+        expect(refused.statusCode).toBe(500);
+        expect(refused.body).toContain("access token");
+
+        expect(_mockDBUserUtil.upgradeGuestToMember).not.toHaveBeenCalled();
+        expect(_mockUserTokenUtil.addTokenForUserId).not.toHaveBeenCalled();
+    });
+
+    it("signs in through Discord with a verified email, the code going to Discord as a form", async () => {
+        _mockRestAPI.post.mockResolvedValue({ status: 200, data: { access_token: "discord-token" } });
+        _mockRestAPI.get.mockResolvedValue({ status: 200,
+            data: { username: "gamer_1", email: "gamer@example.com", verified: true } });
+
+        await callback(DiscordSignInProvider);
+
+        expect(_mockDBUserUtil.upgradeGuestToMember).toHaveBeenCalledWith("guest-9", "gamer_1", "gamer@example.com");
+        expect(_mockRestAPI.post.mock.calls[0][1].form)
+            .toMatchObject({ grant_type: "authorization_code", code: "the-code", client_secret: "discord-secret" });
+    });
+
+    it("refuses a Discord account whose email isn't verified", async () => {
+        _mockRestAPI.post.mockResolvedValue({ status: 200, data: { access_token: "discord-token" } });
+        _mockRestAPI.get.mockResolvedValue({ status: 200,
+            data: { username: "gamer_1", email: "gamer@example.com", verified: false } });
+
+        expect((await callback(DiscordSignInProvider)).statusCode).toBe(403);
+        expect(_mockDBUserUtil.upgradeGuestToMember).not.toHaveBeenCalled();
+    });
+
+    it("names a new member by the provider's name, kept to what names hold and passing for no guest", async () => {
+        const named = async (login: string) => {
+            _mockDBUserUtil.upgradeGuestToMember.mockClear();
+            answerAsGitHub(login, [{ email: `${login.length}@example.com`, primary: true, verified: true }]);
+            await callback(GitHubSignInProvider);
+            return _mockDBUserUtil.upgradeGuestToMember.mock.calls[0][1];
+        };
+
+        expect(await named("a b+c!d")).toBe("abcd");
+        expect(await named("Guest-1234")).toBe("member-Guest-1234");
+        expect(await named("xy")).toBe("member-xy");
+        expect(await named("a".repeat(40))).toHaveLength(24);
+    });
+
+    it("keeps the room a sign-in starts from, and returns there; nothing but a room's id is kept", async () => {
+        const started = createMockReqRes({}, `/login_github?roomID=${ROOM_ID}`);
+        await UserSignInUtil.login(GitHubSignInProvider, started.req, started.res);
+        expect(started.res.setCookies["oauth_return_room_dev"]).toBe(ROOM_ID);
+        expect(new URL(started.res.redirectUrl).host).toBe("github.com");
+
+        const oddlyStarted = createMockReqRes({}, "/login_github?roomID=https://elsewhere.example");
+        await UserSignInUtil.login(GitHubSignInProvider, oddlyStarted.req, oddlyStarted.res);
+        expect(oddlyStarted.res.setCookies["oauth_return_room_dev"]).toBe("");
+
+        answerAsGitHub("octo-cat", [{ email: "octo@example.com", primary: true, verified: true }]);
+        expect((await callback(GitHubSignInProvider, { oauth_return_room_dev: ROOM_ID })).redirectUrl).toBe(`/${ROOM_ID}`);
+        expect((await callback(GitHubSignInProvider, { oauth_return_room_dev: "//elsewhere.example" })).redirectUrl)
+            .toBe("/");
+    });
+
+    it("starts no sign-in through a provider that isn't set up", async () => {
+        vi.stubEnv("DISCORD_OAUTH_CLIENT_ID", "");
+        const { req, res } = createMockReqRes({}, "/login_discord");
+        await UserSignInUtil.login(DiscordSignInProvider, req, res);
+
+        expect(res.statusCode).toBe(404);
+        expect(res.redirectUrl).toBeUndefined();
     });
 });
 

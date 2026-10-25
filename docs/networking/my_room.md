@@ -3,7 +3,7 @@
 Reference: @src/server/networking/router/api/roomRouter.ts , @src/server/room/serverRoomManager.ts , @src/server/db/types/row/dbRoom.ts , @src/shared/room/types/roomFile.ts , @src/client/ui/components/panel/customizeRoomPanel.tsx , @src/client/graphics/preview/util/roomPreviewUtil.ts , @src/client/ui/components/form/destinationChooserForm.tsx
 
 ## Ownership
-- Each Member gets exactly one Regular room at sign-up (see [authentication.md](authentication.md)), and each agent one on its first trip home, deleted along with the agent (see [agents.md](agents.md#identity)). The create request is refused if the user already owns one.
+- Only AI agents own Regular rooms: each gets one on its first trip home, deleted along with it when it goes (see [agents.md](agents.md#identity)). No person is ever given one, which `OwnedRoomUtil` refuses whoever asks; people build in hubs and in rooms others leave open. Rooms people were given before keep their owners.
 - Ownership is recorded on both the room and the user. Permission checks read the user's side through `RoomValidationUtil`.
 - Owning a room does not control who may build in it. Anyone may build in a Regular room outside its restricted zones. The owner is the room's superuser: they choose its texture pack and lighting, lay its restricted zones, and manage its doors and labels.
 

@@ -64,6 +64,15 @@ const ServerUserManager =
             roomRuntimeMemory = reloaded;
         }
 
+        // A connection that ended during the join was released before it had a room to leave, so nothing would
+        // ever take this player out again.
+        if (socketUserContexts[userID] != socketUserContext)
+        {
+            console.warn(`ServerUserManager.addUserToRoom :: The connection ended during the join (roomID = ${roomID}, userID = ${userID})`);
+            await unloadRoomIfEmpty(roomRuntimeMemory);
+            return undefined;
+        }
+
         if (roomRuntimeMemory.participantUserNameByID[userID] != undefined)
         {
             console.error(`ServerUserManager.addUserToRoom :: User is already registered (roomID = ${roomID}, userID = ${userID})`);
@@ -154,17 +163,7 @@ const ServerUserManager =
         if (savePlayerMetadata && metadataSnapshot)
             await DBUserUtil.savePlayerMetadata(user.id, metadataSnapshot);
 
-        // Regular rooms unload when empty.
-        if (roomRuntimeMemory.room.roomType == RoomTypeEnumMap.Regular &&
-            Object.keys(roomRuntimeMemory.participantUserNameByID).length == 0)
-        {
-            if (await DBRoomUtil.saveRoomContent(roomRuntimeMemory.room))
-            {
-                // Re-check emptiness: someone may have joined during the save.
-                if (Object.keys(roomRuntimeMemory.participantUserNameByID).length == 0)
-                    ServerRoomManager.unloadRoom(roomID);
-            }
-        }
+        await unloadRoomIfEmpty(roomRuntimeMemory);
     },
     // Current metadata from the live player object (for the shutdown batch save).
     getPlayerMetadata: (userID: string): {[key: string]: string} | undefined =>
@@ -200,6 +199,23 @@ const ServerUserManager =
         for (const key in recentDisconnectMetadata)
             delete recentDisconnectMetadata[key];
     },
+}
+
+// Regular rooms unload when empty.
+async function unloadRoomIfEmpty(roomRuntimeMemory: RoomRuntimeMemory): Promise<void>
+{
+    if (roomRuntimeMemory.room.roomType != RoomTypeEnumMap.Regular ||
+        Object.keys(roomRuntimeMemory.participantUserNameByID).length > 0)
+        return;
+
+    if (await DBRoomUtil.saveRoomContent(roomRuntimeMemory.room))
+    {
+        // Re-check after the save: someone may have joined during it, or another leaver unloaded this instance.
+        const roomID = roomRuntimeMemory.room.id;
+        if (Object.keys(roomRuntimeMemory.participantUserNameByID).length == 0 &&
+            ServerRoomManager.roomRuntimeMemories[roomID] == roomRuntimeMemory)
+            ServerRoomManager.unloadRoom(roomID);
+    }
 }
 
 function extractPlayerMetadata(userID: string): {[key: string]: string} | undefined

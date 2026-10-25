@@ -34,7 +34,7 @@ CI never authenticates to Firebase. The service account is `firebase-adminsdk-fb
 | `roles/firebaserules.admin` | rules are compiled on every Firestore deploy |
 
 ## Runtime secrets
-Secrets live in Secret Manager, not GitHub: `JWT_SECRET_KEY`, `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`. They are loaded into `process.env` by `dev/scripts/bootstrap.js` (VPS) and `devRunner.js` (local). To add a required secret, create it and add its name to both scripts; an optional one goes in `bootstrap.js`'s `OPTIONAL_SECRET_NAMES` alone.
+Secrets live in Secret Manager, not GitHub: `JWT_SECRET_KEY`, `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, and the optional `ANTHROPIC_API_KEY`, `GITHUB_OAUTH_CLIENT_ID`/`_SECRET` and `DISCORD_OAUTH_CLIENT_ID`/`_SECRET` (a sign-in provider without its pair isn't offered). Live and staging share them, so each OAuth client registers both servers' callbacks (`/<user API path>/login_<provider>_callback`): GitHub's must be a GitHub App, since an OAuth App takes one callback URL. They are loaded into `process.env` by `dev/scripts/bootstrap.js` (VPS) and `devRunner.js` (local). To add a required secret, create it and add its name to both scripts; an optional one goes in `bootstrap.js`'s `OPTIONAL_SECRET_NAMES` alone.
 
 `ANTHROPIC_API_KEY` is optional and loaded by `bootstrap.js` alone: without it helpers only greet (see [agents.md](../networking/agents.md#helpers)), and a local server leaves it out unless it is set in the environment, so that local chat spends nothing. What helpers spend is kept per day in `helper_spending` (`staging_helper_spending` on staging).
 

@@ -5,6 +5,7 @@ import UserSessionUtil from "../../user/util/userSessionUtil";
 import AgentUserContext from "../types/agentUserContext";
 import AgentBodyUtil from "./agentBodyUtil";
 import AgentKeyUtil from "./agentKeyUtil";
+import AgentAwayLogUtil from "./agentAwayLogUtil";
 import { AGENT_MAX_PRESENT } from "../../system/serverConstants";
 
 // An agent is present, its player in a room, from its first request until it leaves or goes quiet (see
@@ -64,8 +65,11 @@ async function arrive(dbUser: DBUser): Promise<AgentUserContext>
         dbUser.agentKeyHash ?? "");
     // As a browser's visit does, so that a quiet agent is cleaned up as a quiet guest is.
     DBUserUtil.updateLastLogin(ctx.user.id, dbUser.lastLoginAt);
+    // What happened in its room while it was away, read as it arrives and told after its arrival.
+    const kept = AgentAwayLogUtil.takeKept(ctx.user.id);
     await UserSessionUtil.admit(ctx);
     await UserSessionUtil.joinFirstRoom(ctx);
+    ctx.inbox.receive(await kept);
     return ctx;
 }
 

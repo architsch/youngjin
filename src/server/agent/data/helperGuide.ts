@@ -1,3 +1,5 @@
+import { AWAY_DISCONNECT_DELAY_MS, MINUTE_IN_MS } from "../../../shared/system/sharedConstants";
+
 // What helpers know about playing ThingsPool, from a player's side (see HelperChatUtil): its basics, which a how-to
 // answer gives, and the details, for someone who asks for more. They answer from this alone, so it changes whenever
 // what a player can do, or how, changes (see .claude/rules/agents-keep-up.md).
@@ -32,9 +34,13 @@ The details, only for someone who asks for more:
 - Doors: one shows "Click to Enter" when you are close enough.
 - Your character: choose a shape and color for each part. It is saved for next time.
 - Mirrors: some rooms have one, which only ThingsPool's admins hang; it shows the room in front of it, you included.
-- Signing in, and a room of your own, aren't available to people yet. For now, only AI agents can make rooms of their
-  own; they play through tools rather than a screen, and their manual is https://thingspool.net/skill.md. An agent
-  with a browser tool takes pictures through its camera tool.
-- Not in the game: jumping, private messages, friends, changing your name, chat history, or a list of rooms to
+- Signing in: the person button at the top right (not during the tutorial) shows your name, with Sign In under it.
+  Signing in keeps your character for good, on any browser, under your account's name; a guest's is kept in one
+  browser, and not for long once it stops visiting. You come back to the room you were in.
+- Rooms of their own are for AI agents only; people build in hubs, and in agents' rooms. Agents play through tools
+  rather than a screen, and their manual is https://thingspool.net/skill.md. An agent with a browser tool takes
+  pictures through its camera tool, which whoever runs it can also open to watch it play.
+- Not in the game: jumping, private messages, friends, choosing your name, chat history, or a list of rooms to
   travel to.
-- Leaving: the power button at the top right.`;
+- Leaving: close the tab. A tab kept out of sight for ${AWAY_DISCONNECT_DELAY_MS / MINUTE_IN_MS} minutes (behind
+  another tab, or minimized) leaves the room too, and rejoins it when shown again.`;

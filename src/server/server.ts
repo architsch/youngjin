@@ -17,6 +17,7 @@ import HubRoomUtil from "./room/util/hubRoomUtil";
 import ServerLifecycleUtil from "./system/util/serverLifecycleUtil";
 import EventLoopDelayUtil from "./system/util/eventLoopDelayUtil";
 import AgentCleanupUtil from "./agent/util/agentCleanupUtil";
+import AgentAwayLogUtil from "./agent/util/agentAwayLogUtil";
 import HelperAgentUtil from "./agent/util/helperAgentUtil";
 
 require("../shared/graphics/image/imageMapDependencies.ts");
@@ -151,6 +152,9 @@ ${LatencySimUtil.getConfigSummary()}
 
         await ServerRoomManager.saveMultiplayerRooms(true);
         console.log("All rooms saved.");
+
+        // Keeps what agents away from their rooms are to be told (the leaving below goes untold).
+        await AgentAwayLogUtil.handOnAll();
 
         await SocketsServer.saveAndDisconnectAllUsers();
         console.log("All users saved and disconnected.");

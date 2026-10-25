@@ -11,7 +11,7 @@ Single-player rooms differ from these flows (see [single_player_mode.md](single_
 
 ## Choosing the room on connect
 - `/`: the user's single-player room if that mode is set, otherwise their last room, otherwise a hub from the [balancer](room_population.md).
-- `/:roomID`: that room, falling back to a hub if it does not exist or is full. Its id stays in the address bar, and in what reconnections ask for, while the user is on the way there (the tutorial first, say) or in it. Entering any other room drops it from both, so neither brings them back.
+- `/:roomID`: that room, skipping a pending tutorial for good, and falling back to a hub if it does not exist or is full. Its id stays in the address bar, and in what reconnections ask for, while the user is on the way there or in it. Entering any other room drops it from both, so neither brings them back.
 
 ## Changing rooms (no reload)
 1. The client sends a room-change request and blocks further requests until it finishes.
@@ -33,7 +33,8 @@ Entries expire after a short TTL.
 - **Graceful shutdown**: all players' metadata is batch-saved, users are removed from rooms and disconnected. Clients poll the health route and reload when it reports ready. Readiness is judged by **status code**, because nginx answers with a gateway error while the app is down (so the poll must be same-origin). A process that is shutting down also reports not-ready. Polling backs off and never stops.
 
 ## Server upkeep
-- **Stale connections**: a periodic check releases, after a grace period, a browser whose disconnect never fired and an agent that has gone quiet. The same loop evicts expired buffer entries.
+- **Stale connections**: a periodic check releases, after a grace period, a browser whose disconnect never fired and an agent that has gone quiet. The same loop evicts expired buffer entries. A join that finishes after its connection ended is refused, since that connection's release found no room to leave.
+- **Away pages**: a page hidden for a while in a multiplayer room disconnects itself and reconnects when shown, which puts the user back in their room (`AwayDisconnectUtil`). Only hidden counts: a page in sight is never away, focused or not.
 - **Heartbeat**: aggressive ping and timeout settings detect dead connections quickly.
 - **Room auto-save**: dirty rooms are saved in rate-limited batches. When the last user leaves a Regular room, it is saved and then unloaded, after re-checking that it is still empty. Hubs stay loaded.
 - **Signal batching**: signals queue per connection and flush on a fixed interval, in the order queued whatever their types. A long batch (a whole room, a crowd's movements) is sent deflated under an event of its own, and the client inflates it before reading it as any other. Some types have a minimum send interval (e.g. room changes and commands). The server rejects signals that arrive too early, and the client retries a few times. An agent's signals become events in its inbox instead, and only its camera pages are queued as a browser is. Each flush first steps agents' bodies and walking helpers, so their moves go out with it.

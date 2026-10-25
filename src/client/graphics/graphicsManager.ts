@@ -50,6 +50,10 @@ let timeSincePixelRatioChange = 0;
 // Set on a page whose frames are pictures (see holdFullResolution).
 let fullResolutionHeld = false;
 
+// A mirror's reflection draws what its glass covers a second time (see MirrorReflectionUtil): on a touch device, whose
+// GPU is slow for its dense screen, at half the density each way.
+const reflectionDensity = window.matchMedia("(pointer: coarse)").matches ? 0.5 : 1;
+
 let gameCanvasRoot: HTMLElement;
 let overlayCanvasRoot: HTMLElement;
 let gameRenderer: THREE.WebGLRenderer;
@@ -208,7 +212,8 @@ const GraphicsManager =
         ParticleMaterialUtil.setRoomHasLamps(lightBlockMap.hasLightSources());
         AtmosphereMaterialUtil.update(camera);
         // Before the room: the glass shows what this draws.
-        MirrorReflectionUtil.render(gameRenderer, scene, camera, pointLight);
+        MirrorReflectionUtil.render(gameRenderer, scene, camera, pointLight,
+            fullResolutionHeld ? 1 : reflectionDensity);
         gameRenderer.render(scene, camera);
         overlayRenderer.render(scene, camera);
     },

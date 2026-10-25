@@ -40,6 +40,8 @@ export const HELPER_API_ROUTE_PATH = "api/helper";
 export const HEALTH_ROUTE_PATH = "health";
 export const SIGNAL_BATCH_SEND_INTERVAL = 200; // in milliseconds (0.2s)
 export const ROOM_AUTO_SAVE_INTERVAL = 10 * MINUTE_IN_MS; // in milliseconds (10m)
+// How long a page stays hidden in a multiplayer room before it lets go of its connection (see AwayDisconnectUtil).
+export const AWAY_DISCONNECT_DELAY_MS = 10 * MINUTE_IN_MS;
 // ThingsPool's website, whose pages a link someone says opens over the game (see MessageLinkOpenUtil).
 export const SITE_URL = "https://thingspool.net";
 // What a message shows, in code points, a link counting as its label (see MessageLinkUtil).
@@ -64,8 +66,8 @@ export const OBJECT_NAME_MAX_LENGTH = 32;
 // In characters, commas included (see ObjectTagUtil). Short, and plain letters, as any object may carry tags.
 export const OBJECT_TAGS_MAX_LENGTH = 64;
 
-// In code points: room for any user's name (see ObjectMetadataKeyEnumMap.ZoneUserName). A member's is the
-// local part of an email address, with a short suffix where that was taken (see UserAuthGoogleUtil).
+// In code points: room for any user's name (see ObjectMetadataKeyEnumMap.ZoneUserName). A member's is their
+// sign-in provider's handle for them, with a short suffix where that was taken (see UserSignInUtil).
 export const OBJECT_USER_NAME_MAX_LENGTH = 72;
 
 // In place of a user's name, what keeps a restricted zone from every user but the room's superuser (see

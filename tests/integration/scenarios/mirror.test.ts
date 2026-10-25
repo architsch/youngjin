@@ -3,8 +3,9 @@
  * remove one, the one a room may hold, the faces and sizes it takes, and its looks (its own copies of a canvas's, the
  * frameless first); the geometry of the reflection it shows (see MirrorProjectionUtil): through the camera reflected in
  * its glass, each point of the glass where the camera sees it but across the view, the view narrowed to the glass,
- * nothing behind the glass drawn, and each point of the room read back by the glass where it was drawn; the head light it
- * is drawn in, nearer the glass for it alone (see MirrorReflectionUtil); and what a reflection shows that the camera
+ * nothing behind the glass drawn, and each point of the room read back by the glass where it was drawn; the texels it is
+ * drawn in, as many to a pixel of the glass as asked; the head light it is drawn in, nearer the glass for it alone (see
+ * MirrorReflectionUtil); and what a reflection shows that the camera
  * doesn't (see InstancedMeshComposer.setHiddenFromCamera), the body the camera trails where the view has it.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
@@ -690,15 +691,91 @@ describe("the reflection a mirror shows", () => {
         try
         {
             // The first only sets its programs compiling.
-            MirrorReflectionUtil.render(renderer, scene, viewer, headLight);
+            MirrorReflectionUtil.render(renderer, scene, viewer, headLight, 1);
             await new Promise(resolve => setTimeout(resolve, 0));
             expect(litFrom).toEqual([]);
-            MirrorReflectionUtil.render(renderer, scene, viewer, headLight);
+            MirrorReflectionUtil.render(renderer, scene, viewer, headLight, 1);
 
             // Three in front of the glass, so moved the whole way toward it.
             expect(litFrom).toEqual([[5, 3, 6 - HEAD_LIGHT_SHIFT]]);
             expect(headLight.position.toArray()).toEqual([0, 1, 0]);
             expect(headLight.getWorldPosition(new THREE.Vector3()).toArray()).toEqual([5, 3, 6]);
+        }
+        finally
+        {
+            MirrorReflectionUtil.setGlass(undefined);
+        }
+    });
+
+    it("is drawn as many texels each way to a pixel of the glass as asked, as far as its target holds, and read back "
+        + "from just the part drawn", async () => {
+        const {matrix, corners} = makeGlass();
+        const glassMesh = new THREE.InstancedMesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial(), 1);
+        glassMesh.setMatrixAt(0, matrix);
+        const scene = new THREE.Scene();
+        const viewer = makeCamera({x: 5, y: 2, z: 6}, {x: 5, y: 2, z: 3});
+        scene.add(viewer);
+        const headLight = new THREE.PointLight();
+        viewer.add(headLight);
+
+        // A renderer as far as the reflection asks of one: the part of its target each drawing filled.
+        const bufferSize = new THREE.Vector2(1200, 800);
+        let target: THREE.WebGLRenderTarget | null = null;
+        const filled: {viewport: number[], targetSize: number}[] = [];
+        const renderer = {
+            shadowMap: {autoUpdate: true},
+            getRenderTarget: () => target,
+            setRenderTarget: (next: THREE.WebGLRenderTarget | null) => { target = next; },
+            compileAsync: async () => {},
+            getDrawingBufferSize: (out: THREE.Vector2) => out.copy(bufferSize),
+            render: () => { filled.push({viewport: target!.viewport.toArray(), targetSize: target!.width}); },
+        } as unknown as THREE.WebGLRenderer;
+        const shader = {uniforms: {} as {[name: string]: {value: any}}} as unknown as THREE.WebGLProgramParametersWithUniforms;
+        MirrorMaterialUtil.bindUniforms(shader);
+
+        // What the reflection fills, and what the glass reads of it, at a density.
+        const drawAt = (density: number) => {
+            MirrorReflectionUtil.render(renderer, scene, viewer, headLight, density);
+            const {viewport, targetSize} = filled[filled.length - 1];
+            const [x, y, width, height] = viewport;
+            expect([x, y]).toEqual([0, 0]);
+            // From the middle of its first texel to the middle of its last.
+            expect((shader.uniforms.mirrorUVBounds.value as THREE.Vector4).toArray().map(n => n * targetSize))
+                .toEqual([0.5, 0.5, width - 0.5, height - 0.5]);
+            return {width, height, targetSize};
+        };
+        const extent = new THREE.Box2();
+        MirrorProjectionUtil.getVisibleExtent(viewer, corners, extent);
+        const glassWidth = () => 0.5 * (extent.max.x - extent.min.x) * bufferSize.x;
+        const glassHeight = () => 0.5 * (extent.max.y - extent.min.y) * bufferSize.y;
+
+        MirrorReflectionUtil.setGlass(glassMesh, 0);
+        try
+        {
+            // The first only sets its programs compiling.
+            MirrorReflectionUtil.render(renderer, scene, viewer, headLight, 1);
+            await new Promise(resolve => setTimeout(resolve, 0));
+
+            for (const density of [1, 0.5, 0.25])
+            {
+                const {width, height} = drawAt(density);
+                expect([width, height], `${density}`).toEqual([Math.ceil(glassWidth() * density),
+                    Math.ceil(glassHeight() * density)]);
+            }
+
+            // Covering more pixels than its target holds, it is drawn as large as fits, at any density asking more.
+            bufferSize.set(6000, 4000);
+            const fitScale = drawAt(1).targetSize / Math.max(glassWidth(), glassHeight());
+            for (const density of [1, 0.5, 0.25])
+            {
+                const {width, height, targetSize} = drawAt(density);
+                const scale = Math.min(density, fitScale);
+                expect(Math.max(width, height), `${density}`).toBeLessThanOrEqual(targetSize);
+                expect(Math.abs(width - glassWidth() * scale), `${density}`).toBeLessThanOrEqual(1);
+                expect(Math.abs(height - glassHeight() * scale), `${density}`).toBeLessThanOrEqual(1);
+            }
+            expect(fitScale).toBeLessThan(0.5);
+            expect(fitScale).toBeGreaterThan(0.25);
         }
         finally
         {

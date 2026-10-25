@@ -66,7 +66,7 @@ vi.mock("../../../src/server/db/util/dbSearchUtil", () => ({
 }));
 
 vi.mock("../../../src/server/room/util/ownedRoomUtil", () => ({
-    default: { createOwnedRoom: vi.fn(), setUpFirstOwnedRoom: vi.fn() },
+    default: { createOwnedRoom: vi.fn() },
 }));
 
 vi.mock("../../../src/client/networking/api/restAPI", () => ({

@@ -226,22 +226,25 @@ describe("room API: create room (Scenario 1)", () => {
         vi.spyOn(console, "log").mockImplementation(() => {});
     });
 
-    it("registered user can create a room", async () => {
-        const user = new User("user-1", "TestUser", UserTypeEnumMap.Member, "test@test.com", "", "", "");
-
-        mockFindUserById.mockResolvedValue({
-            id: "user-1", userName: "TestUser", userType: UserTypeEnumMap.Member,
-            email: "test@test.com", singlePlayerMode: "", lastRoomID: "", ownedRoomID: "",
-        });
+    it("no person gets a room of their own, a member or an admin, whatever they hold already", async () => {
+        const people = [
+            new User("user-1", "TestUser", UserTypeEnumMap.Member, "test@test.com", "", "", ""),
+            new User("user-2", "Owner", UserTypeEnumMap.Member, "owner@test.com", "", "", "existing-room"),
+            new User("admin-1", "Admin", UserTypeEnumMap.Admin, "admin@test.com", "", "", ""),
+        ];
         mockCreateRoom.mockResolvedValue({ success: true, data: [{ id: "new-room-1" }] });
-        mockSetOwnedRoomID.mockResolvedValue({ success: true, data: [] });
 
-        const res = await callRoute("post", "/create_room", user);
-
-        expect(res.statusCode).toBe(200);
-        expect(res.jsonBody).toEqual({ roomID: "new-room-1" });
-        expect(mockCreateRoom).toHaveBeenCalledOnce();
-        expect(mockSetOwnedRoomID).toHaveBeenCalledWith("user-1", "new-room-1");
+        for (const user of people)
+        {
+            for (const roomType of [undefined, RoomTypeEnumMap.Regular])
+            {
+                const res = await callRoute("post", "/create_room", user, { roomType });
+                expect(res.statusCode, user.userName).toBe(403);
+                expect(res.body).toContain("AI agents");
+            }
+        }
+        expect(mockCreateRoom).not.toHaveBeenCalled();
+        expect(mockSetOwnedRoomID).not.toHaveBeenCalled();
     });
 
     it("guest user cannot create a room", async () => {
@@ -254,20 +257,6 @@ describe("room API: create room (Scenario 1)", () => {
         expect(mockCreateRoom).not.toHaveBeenCalled();
     });
 
-    it("user who already owns a room cannot create another", async () => {
-        const user = new User("user-1", "TestUser", UserTypeEnumMap.Member, "test@test.com", "", "", "existing-room");
-
-        mockFindUserById.mockResolvedValue({
-            id: "user-1", userName: "TestUser", userType: UserTypeEnumMap.Member,
-            email: "test@test.com", singlePlayerMode: "", lastRoomID: "", ownedRoomID: "existing-room",
-        });
-
-        const res = await callRoute("post", "/create_room", user);
-
-        expect(res.statusCode).toBe(409);
-        expect(res.body).toContain("already owns");
-        expect(mockCreateRoom).not.toHaveBeenCalled();
-    });
 });
 
 describe("room API: change room texture pack (Scenario 9)", () => {

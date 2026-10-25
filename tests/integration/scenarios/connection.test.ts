@@ -4,7 +4,8 @@
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { runScenario } from "../helpers/scenarioRunner";
-import { EMPTY_REGULAR, userAt, userAtCenter, namedUser, disconnectWithSave } from "../helpers/scenarioPresets";
+import { EMPTY_REGULAR, userAt, userAtCenter, namedUser, disconnectWithSave, parallel } from "../helpers/scenarioPresets";
+import { checkCleanState } from "../helpers/invariants";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import ServerUserManager from "../../../src/server/user/serverUserManager";
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
@@ -144,6 +145,21 @@ describe("connection scenarios", () => {
             assertions: () => {
                 expect(Object.keys(ServerUserManager.socketUserContexts)).toHaveLength(0);
             },
+            skipCleanup: true,
+        });
+    });
+
+    it("a connection that ends while its join is under way leaves no player in the room", async () => {
+        await runScenario({
+            name: "disconnect during the join",
+            rooms: [EMPTY_REGULAR],
+            users: [userAtCenter()],
+            actions: [
+                // The join is still loading the room when the connection ends, so the release finds no room to leave.
+                parallel([{ type: "joinRoom", userIndex: 0, roomID: "regular" }], [disconnectWithSave(0)]),
+            ],
+            // Nobody is left in a room, and the Regular room the join loaded is unloaded again.
+            assertions: () => checkCleanState(),
             skipCleanup: true,
         });
     });

@@ -34,6 +34,11 @@ async function send(method: "GET" | "POST" | "PUT" | "DELETE",
             body = JSON.stringify(requestConfig.data);
             headers["Content-Type"] = "application/json";
         }
+        else if (requestConfig?.form != undefined)
+        {
+            body = new URLSearchParams(requestConfig.form).toString();
+            headers["Content-Type"] = "application/x-www-form-urlencoded";
+        }
         else if (requestConfig?.file != undefined)
         {
             body = requestConfig.file;
@@ -69,7 +74,9 @@ async function readBody(response: Response): Promise<any>
 export interface RestAPIRequestConfig
 {
     data?: any;
-    // Sent as the body itself, byte for byte, when there is no data.
+    // Sent as a URL-encoded form when there is no data.
+    form?: Record<string, string>;
+    // Sent as the body itself, byte for byte, when there is neither data nor a form.
     file?: Blob;
     headers?: Record<string, string>;
 }

@@ -13,9 +13,14 @@ const SECRET_NAMES = [
     "GOOGLE_OAUTH_CLIENT_ID",
     "GOOGLE_OAUTH_CLIENT_SECRET",
 ];
-// Loaded when present: the server runs without them, less one feature (the Helper's replies, here).
+// Loaded when present: the server runs without them, less one feature each (the Helper's replies; signing in through
+// GitHub or Discord, which isn't offered until its OAuth client is set up).
 const OPTIONAL_SECRET_NAMES = [
     "ANTHROPIC_API_KEY",
+    "GITHUB_OAUTH_CLIENT_ID",
+    "GITHUB_OAUTH_CLIENT_SECRET",
+    "DISCORD_OAUTH_CLIENT_ID",
+    "DISCORD_OAUTH_CLIENT_SECRET",
 ];
 
 async function loadSecrets()

@@ -6,8 +6,8 @@ import MirrorMaterialUtil from "./mirrorMaterialUtil";
 import MirrorProjectionUtil from "./mirrorProjectionUtil";
 import ShaderPrecompileUtil from "./shaderPrecompileUtil";
 
-// The reflection is drawn into one square target this many texels a side, a texel to each pixel the glass covers on
-// screen, or fewer where it covers more than that.
+// The reflection is drawn into one square target this many texels a side: at most a texel to each pixel the glass
+// covers on screen (see render), and fewer where it covers more pixels than that.
 const TEXTURE_SIZE = 1024;
 
 // No reflection is drawn for a camera nearer the glass's plane than this, from which it is seen edge-on.
@@ -71,9 +71,10 @@ const MirrorReflectionUtil =
         }
     },
     // Draws what the glass shows this frame, if any of it is on screen: before the room is drawn for the screen, with
-    // the camera where it is for that, and the head light (a child of the camera's) nearer the glass for it alone.
+    // the camera where it is for that, and the head light (a child of the camera's) nearer the glass for it alone. The
+    // density is the texels drawn to each pixel the glass covers, each way.
     render: (renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera,
-        headLight: THREE.PointLight) =>
+        headLight: THREE.PointLight, density: number) =>
     {
         drawnLastFrame = false;
         if (glass == undefined || renderTarget == undefined || MirrorMaterialUtil.isSurfaceOpaque())
@@ -100,14 +101,14 @@ const MirrorReflectionUtil =
         if (!MirrorProjectionUtil.getVisibleExtent(camera, glassCorners, extent))
             return;
 
-        // The part of the target drawn: as many texels as the glass's extent covers pixels, scaled down to fit.
+        // The part of the target drawn: the glass's extent in pixels at the density, scaled down to fit.
         renderer.getDrawingBufferSize(drawingBufferSize);
         const widthPx = 0.5 * (extent.max.x - extent.min.x) * drawingBufferSize.x;
         const heightPx = 0.5 * (extent.max.y - extent.min.y) * drawingBufferSize.y;
         // Under a pixel, as a glass far off or parked out of the room is, there is nothing to show.
         if (widthPx < 1 || heightPx < 1)
             return;
-        const scale = Math.min(1, TEXTURE_SIZE / widthPx, TEXTURE_SIZE / heightPx);
+        const scale = Math.min(density, TEXTURE_SIZE / widthPx, TEXTURE_SIZE / heightPx);
         const width = Math.max(1, Math.min(TEXTURE_SIZE, Math.ceil(widthPx * scale)));
         const height = Math.max(1, Math.min(TEXTURE_SIZE, Math.ceil(heightPx * scale)));
 

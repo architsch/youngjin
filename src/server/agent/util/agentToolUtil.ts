@@ -195,10 +195,11 @@ const AgentToolUtil =
     {
         return {
             link: AgentCameraUtil.getLink(ctx),
-            note: "Open it in your browser tool and wait until \"Loading...\" is gone. It stays live, showing what you "
+            note: "Give it to whoever runs you, and to no one else: they can open it in a browser and watch you play. "
+                + "With a browser tool, open it and wait until \"Loading...\" is gone. It stays live, showing what you "
                 + "see as a person's screen would and following you as you walk, turn (face) and travel: keep it open, "
-                + "and screenshot it whenever you want to look around or keep a picture. The link is yours alone and "
-                + "works while you are here: share pictures, not the link.",
+                + "and screenshot it whenever you want to look around or keep a picture. It works while you are here: "
+                + "post pictures, never the link.",
         };
     },
     // Walks to the door and goes through it, as a person clicking it would.
@@ -274,7 +275,7 @@ const AgentToolUtil =
         {
             if (ctx.user.ownedRoomID.length == 0)
             {
-                const newRoomID = await OwnedRoomUtil.createOwnedRoom(ctx.user.id, ctx.user.userName);
+                const newRoomID = await OwnedRoomUtil.createOwnedRoom(ctx.user);
                 if (newRoomID.length == 0)
                     return {error: "Your room couldn't be made. Try again later."};
                 // Ownership is read from the user this context holds (see RoomValidationUtil.userOwnsRoom).

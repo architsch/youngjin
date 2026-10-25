@@ -28,6 +28,7 @@ import UserRoomChangeResult from "./types/userRoomChangeResult";
 import RoomPickerUtil from "./util/roomPickerUtil";
 import HubRoomUtil from "./util/hubRoomUtil";
 import RoomValidationUtil from "../../shared/room/util/roomValidationUtil";
+import AgentAwayLogUtil from "../agent/util/agentAwayLogUtil";
 
 const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
 const socketRoomContexts: {[roomID: string]: SocketRoomContext} = {};
@@ -70,6 +71,7 @@ const ServerRoomManager =
             throw new Error(`ServerRoomManager.unloadRoom :: There are still participants in the room (participantUserNameByID = [${JSON.stringify(roomRuntimeMemory.participantUserNameByID)}])`);
         delete ServerRoomManager.roomRuntimeMemories[roomID];
         delete ServerRoomManager.socketRoomContexts[roomID];
+        AgentAwayLogUtil.unwatchRoom(roomID);
 
         PhysicsManager.unload(roomID);
     },
@@ -437,6 +439,8 @@ async function _loadRoom(roomID: string): Promise<RoomRuntimeMemory | null>
     const roomRuntimeMemory = new RoomRuntimeMemory(room, {});
     ServerRoomManager.roomRuntimeMemories[roomID] = roomRuntimeMemory;
     ServerRoomManager.socketRoomContexts[roomID] = new SocketRoomContext();
+    // Before anyone joins, so that an agent away from its room is told of the first to come.
+    await AgentAwayLogUtil.watchRoom(roomRuntimeMemory, ServerRoomManager.socketRoomContexts[roomID]);
 
     PhysicsManager.load(roomRuntimeMemory);
     return roomRuntimeMemory;

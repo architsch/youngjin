@@ -1,30 +1,43 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import IconButton from "../../input/iconButton";
 import GearIcon from "../../../svg/icons/gearIcon";
-import PowerIcon from "../../../svg/icons/powerIcon";
+import PersonIcon from "../../../svg/icons/personIcon";
 import GameModeToggleSwitch from "../mode/gameModeToggleSwitch";
 import User from "../../../../../shared/user/types/user";
 import Room from "../../../../../shared/room/types/room";
-import { UserTypeEnumMap } from "../../../../../shared/user/types/userType";
 import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
 import RoomValidationUtil from "../../../../../shared/room/util/roomValidationUtil";
 import { MINUTE_IN_MS } from "../../../../../shared/system/sharedConstants";
-import PopupUtil from "../../../util/popupUtil";
 import FTUEUtil from "../../../util/ftueUtil";
+import OwnIdentityUtil from "../../../util/ownIdentityUtil";
 import { FTUEElementCodeEnumMap } from "../../../types/ftueElementCode";
 import RoomEditorUtil from "../../../../singlePlayer/util/roomEditorUtil";
+import { gameModeObservable, objectSelectionObservable } from "../../../../system/clientObservables";
 
-// Top bar (same in both modes): mode switch, room settings (for the superuser), exit. A non-interactive
-// fade sits behind the controls so drags still reach the canvas. It sits below the headline, which
-// can take the full width.
+// Top bar (same in both modes): mode switch, room settings (for the superuser), and the user's identity (see
+// OwnIdentityUtil). A non-interactive fade sits behind the controls so drags still reach the canvas. It sits below the
+// headline, which can take the full width.
 
-export default function TopBarMenu({ user, room, roomSettingsOpen, onToggleRoomSettings, onExitApp }: Props)
+export default function TopBarMenu({ user, room, roomSettingsOpen, onToggleRoomSettings }: Props)
 {
     // Superuser only (see RoomValidationUtil); not in single-player rooms, which aren't stored, but for the one
     // being made in the room editor, whose settings go into its file.
     const showRoomSettings = RoomValidationUtil.isRoomSuperuser(user, room) &&
         (room.roomType != RoomTypeEnumMap.SinglePlayer || RoomEditorUtil.isEditing(room));
     const inOwnRoom = RoomValidationUtil.userOwnsRoom(user, room);
+    // Signing in leaves the page, which a single-player room would have to be started over after.
+    const showIdentity = room.roomType != RoomTypeEnumMap.SinglePlayer;
+
+    const [identityShown, setIdentityShown] = useState<boolean>(OwnIdentityUtil.isShown());
+    useEffect(() => {
+        const update = () => setIdentityShown(OwnIdentityUtil.isShown());
+        gameModeObservable.addListener("ui.topBarMenu", update);
+        objectSelectionObservable.addListener("ui.topBarMenu", update);
+        return () => {
+            gameModeObservable.removeListener("ui.topBarMenu");
+            objectSelectionObservable.removeListener("ui.topBarMenu");
+        };
+    }, []);
 
     // The coach mark is scheduled while the button is offered and cleared when it isn't, so it can't
     // reappear instantly when the button returns.
@@ -53,24 +66,10 @@ export default function TopBarMenu({ user, room, roomSettingsOpen, onToggleRoomS
                 FTUEUtil.tryAddFTUEElement(FTUEElementCodeEnumMap.MyRoomSettings);
             }}
         />}
-        <IconButton id="exitAppButton" icon={<PowerIcon/>} size="sm" onClick={() => {
-            // Guests only get a leave confirmation; account holders can also switch accounts.
-            if (user.userType === UserTypeEnumMap.Guest)
-            {
-                PopupUtil.openPopup({popupType: "confirm", params: {
-                    message: "Exit this app?",
-                    onConfirm: () => {
-                        PopupUtil.closePopup();
-                        onExitApp();
-                    },
-                    onCancel: PopupUtil.closePopup,
-                }});
-            }
-            else
-            {
-                PopupUtil.openPopup({popupType: "exitPrompt"});
-            }
-        }}/>
+        {showIdentity && <IconButton id="userIdentityButton" icon={<PersonIcon/>} size="sm"
+            highlight={identityShown}
+            onClick={OwnIdentityUtil.toggle}
+        />}
     </div>;
 }
 
@@ -80,5 +79,4 @@ interface Props
     room: Room;
     roomSettingsOpen: boolean;
     onToggleRoomSettings: () => void;
-    onExitApp: () => void;
 }

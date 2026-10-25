@@ -77,6 +77,7 @@ import WorldSpaceSelectionUtil from "../../../src/client/graphics/util/worldSpac
 import SelectionStepUtil from "../../../src/client/graphics/util/selectionStepUtil";
 import ObjectHit from "../../../src/client/graphics/types/objectHit";
 import GameModeUtil from "../../../src/client/system/util/gameModeUtil";
+import OwnIdentityUtil from "../../../src/client/ui/util/ownIdentityUtil";
 import CameraUtil from "../../../src/client/graphics/util/cameraUtil";
 import MeshFactory from "../../../src/client/graphics/factories/meshFactory";
 import InstancedMeshBinding from "../../../src/client/graphics/types/mesh/instancedMeshBinding";
@@ -1038,6 +1039,51 @@ describe("entering edit mode", () => {
 
         expect(GameModeUtil.isInEditMode()).toBe(true);
         expect(cameraModeObservable.peek().type).toBe("orbit");
+    });
+});
+
+describe("the user's identity, which the top bar's person button opens and closes", () => {
+    it("shows in edit mode with the user's own character selected, however it came to be, and goes with the mode", () => {
+        const character = makeCharacter();
+        (ClientObjectManager.getMyPlayer as Mock).mockReturnValue(character);
+        expect(OwnIdentityUtil.isShown()).toBe(false);
+
+        GameModeUtil.enterEditMode(character, lookingAt(hitOnVoxelQuad(floorQuadIndexOf(10, 10))));
+        expect(OwnIdentityUtil.isShown()).toBe(false);
+        // As a click on the user's own character selects it.
+        ObjectSelection.trySelect(character, true);
+        expect(OwnIdentityUtil.isShown()).toBe(true);
+
+        GameModeUtil.exitEditMode();
+        expect(OwnIdentityUtil.isShown()).toBe(false);
+    });
+
+    it("is opened on the user's own character from either mode, and closed by leaving edit mode", () => {
+        const character = makeCharacter();
+        (ClientObjectManager.getMyPlayer as Mock).mockReturnValue(character);
+
+        OwnIdentityUtil.toggle();
+        expect(GameModeUtil.isInEditMode()).toBe(true);
+        expect(objectSelectionObservable.peek()?.gameObject).toBe(character);
+
+        OwnIdentityUtil.toggle();
+        expect(GameModeUtil.isInEditMode()).toBe(false);
+        expect(ObjectSelection.isSelected()).toBe(false);
+
+        // In edit mode on something else, the character is selected and the mode stays.
+        GameModeUtil.enterEditMode(character, lookingAt(hitOnVoxelQuad(floorQuadIndexOf(10, 10))));
+        OwnIdentityUtil.toggle();
+        expect(GameModeUtil.isInEditMode()).toBe(true);
+        expect(objectSelectionObservable.peek()?.gameObject).toBe(character);
+        expect(OwnIdentityUtil.isShown()).toBe(true);
+    });
+
+    it("isn't opened while a step holds the mode", () => {
+        (ClientObjectManager.getMyPlayer as Mock).mockReturnValue(makeCharacter());
+        clientFeatureFlagsObservable.tryAdd(FeatureFlag.DisableGameModeTransition);
+
+        OwnIdentityUtil.toggle();
+        expect(GameModeUtil.isInEditMode()).toBe(false);
     });
 });
 

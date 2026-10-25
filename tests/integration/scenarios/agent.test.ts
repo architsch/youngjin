@@ -10,7 +10,8 @@ import path from "path";
 import { AddressInfo } from "net";
 import express from "express";
 import bodyParser from "body-parser";
-import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
+import crypto from "crypto";
+import { Client, StreamableHTTPClientTransport, type OAuthClientProvider } from "@modelcontextprotocol/client";
 
 // Analytics write to Firestore directly; the milestones an agent earns are asserted on these.
 const _analytics = vi.hoisted(() => ({
@@ -21,6 +22,11 @@ const _analytics = vi.hoisted(() => ({
 vi.mock("../../../src/server/analytics/serverAnalyticsManager", () => ({ default: _analytics }));
 
 import { harness, ConnectedUser } from "../helpers/serverHarness";
+// After the harness, whose mocks the modules these import must be given.
+import AgentRouter from "../../../src/server/networking/router/agentRouter";
+import AddressUtil from "../../../src/server/networking/util/addressUtil";
+import PublicFetchUtil from "../../../src/server/networking/util/publicFetchUtil";
+import GuestCreationLimitUtil from "../../../src/server/user/util/guestCreationLimitUtil";
 import { MockSocket } from "../helpers/mockSocket";
 import AgentCameraUtil from "../../../src/server/agent/util/agentCameraUtil";
 import AgentAccountUtil from "../../../src/server/agent/util/agentAccountUtil";
@@ -28,7 +34,6 @@ import AgentPresenceUtil from "../../../src/server/agent/util/agentPresenceUtil"
 import AgentToolUtil from "../../../src/server/agent/util/agentToolUtil";
 import AgentRoomSettingsUtil from "../../../src/server/agent/util/agentRoomSettingsUtil";
 import RoomPrefsUtil, { MAX_ROOM_PREFS_STEP } from "../../../src/shared/room/util/roomPrefsUtil";
-import AgentMcpUtil from "../../../src/server/agent/util/agentMcpUtil";
 import AgentDirectoryUtil from "../../../src/server/agent/util/agentDirectoryUtil";
 import AgentBodyUtil from "../../../src/server/agent/util/agentBodyUtil";
 import AgentCleanupUtil from "../../../src/server/agent/util/agentCleanupUtil";
@@ -37,13 +42,16 @@ import SetObjectTransformSignal from "../../../src/shared/object/types/setObject
 import NpcFacingUtil from "../../../src/shared/object/util/npcFacingUtil";
 import DBUserUtil from "../../../src/server/db/util/dbUserUtil";
 import DBRoomUtil from "../../../src/server/db/util/dbRoomUtil";
+import OwnedRoomUtil from "../../../src/server/room/util/ownedRoomUtil";
+import AgentAwayLogUtil from "../../../src/server/agent/util/agentAwayLogUtil";
+import DBAgentAwayEventsUtil from "../../../src/server/db/util/dbAgentAwayEventsUtil";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import EncodableByteString from "../../../src/shared/networking/types/encodableByteString";
 import DoorObjectTypeConfig, { ENTERING_STRIDE_LENGTH,
     ENTRANCE_DOOR_OBJECT_ID } from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import Vec3 from "../../../src/shared/math/types/vec3";
 import Voxel from "../../../src/shared/voxel/types/voxel";
-import { NUM_VOXEL_COLS, OBJECT_MESSAGE_MAX_LENGTH } from "../../../src/shared/system/sharedConstants";
+import { DAY_IN_MS, NUM_VOXEL_COLS, OBJECT_MESSAGE_MAX_LENGTH } from "../../../src/shared/system/sharedConstants";
 import AgentUserContext from "../../../src/server/agent/types/agentUserContext";
 import AgentInbox from "../../../src/server/agent/types/agentInbox";
 import AdminPrefsUtil from "../../../src/shared/object/util/adminPrefsUtil";
@@ -56,7 +64,8 @@ import ServerUserManager from "../../../src/server/user/serverUserManager";
 import DBUser from "../../../src/server/db/types/row/dbUser";
 import { FunnelMilestoneEnumMap } from "../../../src/server/analytics/types/funnelMilestone";
 import { AGENT_CAMERA_MAX_PAGES, AGENT_INBOX_MAX_EVENTS, AGENT_LOOK_MAX_PEOPLE, AGENT_MAX_PRESENT,
-    AGENT_PRESENCE_IDLE_TIMEOUT_MS, USER_BUDGETS } from "../../../src/server/system/serverConstants";
+    AGENT_PRESENCE_IDLE_TIMEOUT_MS, BUILDER_AGENT_KEPT_FOR_GOOD_LOGIN_COUNT, BUILDER_AGENT_MAX_AGE_BY_TIER_PHASE,
+    USER_BUDGETS } from "../../../src/server/system/serverConstants";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
@@ -568,6 +577,87 @@ describe("AI agents", () => {
         });
     });
 
+    describe("what happens in an agent's room without it", () => {
+        // An agent owning REGULAR_ID, not in ThingsPool until a test brings it.
+        async function agentAwayFromItsRoom(name: string): Promise<DBUser>
+        {
+            const {dbUser} = await registerAgent(name);
+            const room = harness.seedRoom(REGULAR_ID, RoomTypeEnumMap.Regular);
+            room.ownerUserID = dbUser.id as string;
+            room.ownerUserName = name;
+            dbUser.ownedRoomID = REGULAR_ID;
+            return dbUser;
+        }
+        const shortly = () => new Promise(resolve => setTimeout(resolve, 0));
+        const inMyRoom = (events: AgentEvent[]) => events.filter(event => event.inYourRoom)
+            .map(({kind, who, text}) => ({kind, who, text}));
+
+        it("is kept while the agent is away, and told as it next arrives, marked as its room's", async () => {
+            const dbUser = await agentAwayFromItsRoom("Bot-1");
+
+            const human = await joinHuman("Alice", REGULAR_ID);
+            harness.sendObjectMessage(human, "nice tower");
+            await harness.disconnectUser(human);
+            await shortly();
+            expect(harness.keptAwayEvents(dbUser.id as string)).toHaveLength(3);
+
+            const agent = await attendAgent(dbUser);
+            expect(inMyRoom(eventsOf(agent))).toEqual([
+                {kind: "arrival", who: "Alice", text: undefined},
+                {kind: "speech", who: "Alice", text: "nice tower"},
+                {kind: "departure", who: "Alice", text: undefined},
+            ]);
+            // Told once.
+            expect(harness.keptAwayEvents(dbUser.id as string)).toEqual([]);
+        });
+
+        it("is told at once while the agent is elsewhere in ThingsPool", async () => {
+            const dbUser = await agentAwayFromItsRoom("Bot-1");
+            const agent = await attendAgent(dbUser);
+            expect(currentRoomID(agent)).toBe(HUB_ID);
+            eventsOf(agent);
+
+            const human = await joinHuman("Alice", REGULAR_ID);
+            harness.sendObjectMessage(human, "anyone home?");
+            await AgentAwayLogUtil.handOnAll();
+
+            expect(inMyRoom(eventsOf(agent))).toEqual([
+                {kind: "arrival", who: "Alice", text: undefined},
+                {kind: "speech", who: "Alice", text: "anyone home?"},
+            ]);
+            expect(harness.keptAwayEvents(dbUser.id as string)).toEqual([]);
+        });
+
+        it("keeps nothing while the agent is in its room, hearing all of it itself", async () => {
+            const agent = await agentWithOwnRoom("Bot-1", REGULAR_ID);
+            eventsOf(agent);
+
+            const human = await joinHuman("Alice", REGULAR_ID);
+            harness.sendObjectMessage(human, "hello");
+            await AgentAwayLogUtil.handOnAll();
+
+            const events = eventsOf(agent);
+            expect(events).toContainEqual(expect.objectContaining({kind: "speech", who: "Alice", text: "hello"}));
+            expect(inMyRoom(events)).toEqual([]);
+            expect(harness.keptAwayEvents(agent.user.id)).toEqual([]);
+        });
+
+        it("watches no room a person owns", async () => {
+            const room = harness.seedRoom(REGULAR_ID, RoomTypeEnumMap.Regular);
+            room.ownerUserID = "id-Owner";
+            room.ownerUserName = "Owner";
+            harness.connectUser({id: "id-Owner", userName: "Owner"});
+            vi.mocked(DBAgentAwayEventsUtil.append).mockClear();
+
+            const human = await joinHuman("Alice", REGULAR_ID);
+            harness.sendObjectMessage(human, "hello");
+            await harness.disconnectUser(human);
+            await AgentAwayLogUtil.handOnAll();
+
+            expect(DBAgentAwayEventsUtil.append).not.toHaveBeenCalled();
+        });
+    });
+
     describe("helpers", () => {
         // An NPC an admin stood a little in from the hub's entrance (and this far to one side), which the server then
         // plays as a helper (unless its personality is Idle). Stood before the agent arrives, so that the room it is sent
@@ -762,6 +852,16 @@ describe("AI agents", () => {
             await AgentToolUtil.travel(agent, "home");
             expect(agent.user.ownedRoomID).toBe(homeID);
             expect(currentRoomID(agent)).toBe(homeID);
+        });
+
+        it("make a room of one's own for an agent alone, never for a person", async () => {
+            vi.mocked(DBRoomUtil.createRoom).mockClear();
+            for (const userType of [UserTypeEnumMap.Guest, UserTypeEnumMap.Member, UserTypeEnumMap.Admin])
+            {
+                const person = new User(`person-${userType}`, `Person-${userType}`, userType, "", "");
+                expect(await OwnedRoomUtil.createOwnedRoom(person)).toBe("");
+            }
+            expect(DBRoomUtil.createRoom).not.toHaveBeenCalled();
         });
 
         it("travel takes a room's id or its link, to a hub or anyone's room", async () => {
@@ -1771,6 +1871,7 @@ describe("AI agents", () => {
             vi.mocked(DBUserUtil.findStaleUsersByTier).mockResolvedValueOnce([gone, busy, present]);
             vi.mocked(DBRoomUtil.deleteRoom).mockClear();
             vi.mocked(DBRoomUtil.deleteRoomContent).mockClear();
+            vi.mocked(DBAgentAwayEventsUtil.remove).mockClear();
 
             expect(await AgentCleanupUtil.deleteStaleAgentsByTier(0)).toBe(1);
 
@@ -1780,6 +1881,46 @@ describe("AI agents", () => {
             expect(await DBUserUtil.findUserById(gone.id as string)).toBeNull();
             expect(await DBUserUtil.findUserById(busy.id as string)).not.toBeNull();
             expect(await DBUserUtil.findUserById(present.id as string)).not.toBeNull();
+            // What it would have been told of its room goes with it.
+            expect(vi.mocked(DBAgentAwayEventsUtil.remove).mock.calls).toEqual([[gone.id]]);
+        });
+
+        it("that have built are kept far longer in each tier, and for good past enough logins", async () => {
+            const now = Date.now();
+            const staleAgent = async (name: string, built: boolean, loginCount: number, idleMs: number) => {
+                const {dbUser} = await registerAgent(name);
+                dbUser.funnel = built ? FunnelMilestoneEnumMap.Arrived + FunnelMilestoneEnumMap.Built
+                    : FunnelMilestoneEnumMap.Arrived;
+                dbUser.loginCount = loginCount;
+                dbUser.lastLoginAt = now - idleMs;
+                return dbUser;
+            };
+            // Each tier's query finds the agents stale by the guests' age for it (one of its logins apiece).
+            const loginCountByPhase = [1, 2, 4];
+            for (let phase = 0; phase < BUILDER_AGENT_MAX_AGE_BY_TIER_PHASE.length; ++phase)
+            {
+                const maxAge = BUILDER_AGENT_MAX_AGE_BY_TIER_PHASE[phase];
+                const loginCount = loginCountByPhase[phase];
+                const keptBuilder = await staleAgent(`Kept-${phase}`, true, loginCount, maxAge - DAY_IN_MS);
+                const goneBuilder = await staleAgent(`Gone-${phase}`, true, loginCount, maxAge + DAY_IN_MS);
+                const neverBuilt = await staleAgent(`Idle-${phase}`, false, loginCount, maxAge - DAY_IN_MS);
+                vi.mocked(DBUserUtil.findStaleUsersByTier).mockResolvedValueOnce([keptBuilder, goneBuilder, neverBuilt]);
+
+                expect(await AgentCleanupUtil.deleteStaleAgentsByTier(phase), `phase ${phase}`).toBe(2);
+                expect(await DBUserUtil.findUserById(keptBuilder.id as string)).not.toBeNull();
+                expect(await DBUserUtil.findUserById(goneBuilder.id as string)).toBeNull();
+                expect(await DBUserUtil.findUserById(neverBuilt.id as string)).toBeNull();
+            }
+            // Each tier's longer age is longer than the last: what a returning agent built waits longer for it.
+            for (let phase = 1; phase < BUILDER_AGENT_MAX_AGE_BY_TIER_PHASE.length; ++phase)
+                expect(BUILDER_AGENT_MAX_AGE_BY_TIER_PHASE[phase]).toBeGreaterThan(BUILDER_AGENT_MAX_AGE_BY_TIER_PHASE[phase - 1]);
+
+            const veteran = await staleAgent("Veteran", true, BUILDER_AGENT_KEPT_FOR_GOOD_LOGIN_COUNT, 1000 * DAY_IN_MS);
+            const almost = await staleAgent("Almost", true, BUILDER_AGENT_KEPT_FOR_GOOD_LOGIN_COUNT - 1, 1000 * DAY_IN_MS);
+            vi.mocked(DBUserUtil.findStaleUsersByTier).mockResolvedValueOnce([veteran, almost]);
+            expect(await AgentCleanupUtil.deleteStaleAgentsByTier(2)).toBe(1);
+            expect(await DBUserUtil.findUserById(veteran.id as string)).not.toBeNull();
+            expect(await DBUserUtil.findUserById(almost.id as string)).toBeNull();
         });
     });
 
@@ -1816,13 +1957,21 @@ describe("AI agents", () => {
 
         beforeAll(async () => {
             const app = express();
+            app.set("view engine", "ejs");
+            app.set("views", path.resolve(__dirname, "../../../views"));
             app.use(bodyParser.json());
-            // As Router mounts it.
-            app.all(["/mcp", "/mcp/:key"], AgentMcpUtil.authenticate, AgentMcpUtil.handle);
+            app.use(bodyParser.urlencoded({extended: true}));
+            // As Router mounts it, but for its rate limits.
+            app.use(AgentRouter);
             server = await new Promise<http.Server>(resolve => {
                 const listening = app.listen(0, "127.0.0.1", () => resolve(listening));
             });
             url = new URL(`http://127.0.0.1:${(server.address() as AddressInfo).port}/mcp`);
+        });
+
+        // The server's own address, which its sign-in metadata names as the issuer and the endpoints.
+        beforeEach(() => {
+            vi.spyOn(AddressUtil, "getEnvDynamicURL").mockReturnValue(url.origin);
         });
 
         afterAll(async () => {
@@ -1855,15 +2004,24 @@ describe("AI agents", () => {
             const client = await connect();
             try
             {
-                const tools = (await client.listTools()).tools.map(tool => tool.name).sort();
+                const listed = (await client.listTools()).tools;
+                const tools = listed.map(tool => tool.name).sort();
                 expect(tools).toEqual(["add_object", "add_zone", "camera", "change_room_settings", "edit_object", "face",
                     "find_pictures", "find_rooms", "leave", "look", "look_blocks", "move_object", "paint_faces",
                     "place_blocks", "register", "remove_blocks", "remove_object", "room_settings", "say", "set_interests",
                     "textures", "travel", "use_door", "walk_to", "whats_new"]);
+                // A connector directory lists a tool by its title, and asks whether it only reads or may destroy.
+                for (const tool of listed)
+                {
+                    expect(tool.title, tool.name).toBeTruthy();
+                    expect(tool.annotations?.readOnlyHint === true || tool.annotations?.destructiveHint !== undefined,
+                        tool.name).toBe(true);
+                }
+                expect(new Set(listed.map(tool => tool.title)).size).toBe(listed.length);
                 expect(client.getInstructions()).toContain("Authorization: Bearer <key>");
-                // How an agent with a browser tool watches and takes pictures.
+                // How whoever runs an agent watches it, and how an agent with a browser tool takes pictures.
                 expect(client.getInstructions())
-                    .toMatch(/camera: a private link[\s\S]*Keep it open while you play: a screenshot of it/);
+                    .toMatch(/camera: a private link[\s\S]*Give it to whoever\s+runs you[\s\S]*Keep it open while you play: a screenshot of it/);
             }
             finally
             {
@@ -2027,8 +2185,11 @@ describe("AI agents", () => {
 
             const said = await post(bodyFor("tools/call", "say"), key);
             expect(JSON.parse(said.result.content[0].text)).toEqual({saying: "Hello!"});
-            const refused = await post(bodyFor("tools/call", "say"));
-            expect(refused.result.isError).toBe(true);
+            // Without the key: a 401 whose message says what to do (see the manual's errors).
+            const refused = await fetch(url, {method: "POST", body: JSON.stringify(bodyFor("tools/call", "say")),
+                headers: {"Content-Type": "application/json", "Accept": "application/json, text/event-stream"}});
+            expect(refused.status).toBe(401);
+            expect(manual).toContain(((await refused.json()) as any).error.message.split(":")[0]);
 
             expect((await post(bodyFor("initialize"))).result.instructions).toContain("ThingsPool is a world");
             expect((await post({jsonrpc: "2.0", id: 1, method: "tools/list", params: {}})).result.tools
@@ -2048,28 +2209,262 @@ describe("AI agents", () => {
             }
         });
 
-        it("refuses to play without a valid key, and refuses input a tool doesn't take", async () => {
-            const anonymous = await connect();
-            const stranger = await connect("nobody.nothing");
+        it("refuses to play without a valid key: saying where to sign in, but never by the key's address", async () => {
+            const post = (body: object, key?: string) => fetch(url, {method: "POST", body: JSON.stringify(body),
+                headers: {"Content-Type": "application/json", "Accept": "application/json, text/event-stream",
+                    ...(key == undefined ? {} : {Authorization: `Bearer ${key}`})}});
+            const look = {jsonrpc: "2.0", id: 7, method: "tools/call", params: {name: "look", arguments: {}}};
+
+            // A tool that needs a key: a 401 telling a host where to sign in, and anyone else what to do.
+            const anonymous = await post(look);
+            expect(anonymous.status).toBe(401);
+            expect(anonymous.headers.get("www-authenticate")).toBe(
+                `Bearer resource_metadata="${url.origin}/.well-known/oauth-protected-resource/mcp", scope="agent"`);
+            expect(await anonymous.json()).toEqual({jsonrpc: "2.0", id: 7,
+                error: {code: -32001, message: expect.stringContaining("call register for a key")}});
+
+            // A key that finds no agent, whatever is asked: so that a host holding a spent token signs in again.
+            const stranger = await post({jsonrpc: "2.0", id: 1, method: "tools/list", params: {}}, "nobody.nothing");
+            expect(stranger.status).toBe(401);
+            expect(stranger.headers.get("www-authenticate")).toContain(`error="invalid_token"`);
+
+            // A key in the address is a host's that can't sign in: refused as a tool's answer, as before.
             const strangerByAddress = await connectTo(`${url.href}/nobody.nothing`);
             try
             {
-                for (const client of [anonymous, stranger, strangerByAddress])
-                {
-                    const refused = await client.callTool({name: "look", arguments: {}}) as any;
-                    expect(refused.isError).toBe(true);
-                    expect(refused.content[0].text).toContain("No valid key");
-                }
+                const refused = await strangerByAddress.callTool({name: "look", arguments: {}}) as any;
+                expect(refused.isError).toBe(true);
+                expect(refused.content[0].text).toContain("No valid key");
+            }
+            finally
+            {
+                await strangerByAddress.close();
+            }
+        });
 
-                const tooLong = await anonymous.callTool({name: "say", arguments: {text: "x".repeat(200)}}) as any;
+        it("refuses input a tool doesn't take", async () => {
+            const {key} = await registerAgent("Long-Talker");
+            const agent = await connect(key);
+            try
+            {
+                const tooLong = await agent.callTool({name: "say", arguments: {text: "x".repeat(200)}}) as any;
                 expect(tooLong.isError).toBe(true);
             }
             finally
             {
-                await anonymous.close();
-                await stranger.close();
-                await strangerByAddress.close();
+                await agent.close();
             }
+        });
+
+        describe("signing in, for hosts that do (OAuth)", () => {
+            const REDIRECT_URI = "http://127.0.0.1:54321/callback";
+            let allowSignUp: ReturnType<typeof vi.spyOn>;
+
+            beforeEach(() => {
+                // Accounts are made from this test's own address, past the caps the next test sets.
+                allowSignUp = vi.spyOn(GuestCreationLimitUtil, "allowGuestCreation").mockReturnValue(true);
+            });
+
+            const form = (fields: Record<string, string>, userAgent: string = "test-browser") => ({method: "POST",
+                redirect: "manual" as const, body: new URLSearchParams(fields),
+                headers: {"Content-Type": "application/x-www-form-urlencoded", "User-Agent": userAgent}});
+            const pkce = () => {
+                const verifier = crypto.randomBytes(32).toString("base64url");
+                return {verifier, challenge: crypto.createHash("sha256").update(verifier).digest("base64url")};
+            };
+            // As an app on the user's computer registers itself (RFC 7591).
+            const registerClient = async (): Promise<string> => {
+                const response = await fetch(new URL("/oauth/register", url), {method: "POST",
+                    headers: {"Content-Type": "application/json"}, body: JSON.stringify({client_name: "Test Host",
+                        redirect_uris: ["http://127.0.0.1/callback"], token_endpoint_auth_method: "none"})});
+                expect(response.status).toBe(201);
+                return ((await response.json()) as any).client_id;
+            };
+            const authorizeParams = (clientID: string, challenge: string, overrides: Record<string, string> = {}) =>
+                ({response_type: "code", client_id: clientID, redirect_uri: REDIRECT_URI, code_challenge: challenge,
+                    code_challenge_method: "S256", state: "the-state", resource: `${url.origin}/mcp/oauth`,
+                    scope: "agent", ...overrides});
+            // The page an authorization request opens, and what it holds for its answer.
+            const openConsent = async (params: Record<string, string>) => {
+                const response = await fetch(new URL(`/oauth/authorize?${new URLSearchParams(params)}`, url),
+                    {redirect: "manual"});
+                const html = await response.text();
+                return {response, html, requestID: /name="request_id" value="([0-9a-f]+)"/.exec(html)?.[1] ?? "",
+                    csrfToken: /name="csrf_token" value="([0-9a-f]+)"/.exec(html)?.[1] ?? ""};
+            };
+            const answer = (consent: {requestID: string, csrfToken: string}, fields: Record<string, string>,
+                userAgent?: string) => fetch(new URL("/oauth/authorize", url), form({request_id: consent.requestID,
+                    csrf_token: consent.csrfToken, decision: "allow", ...fields}, userAgent));
+            const codeOf = (response: Response) => new URL(response.headers.get("location")!).searchParams.get("code")!;
+            const exchange = (clientID: string, code: string, verifier: string) => fetch(new URL("/oauth/token", url),
+                form({grant_type: "authorization_code", code, redirect_uri: REDIRECT_URI, client_id: clientID,
+                    code_verifier: verifier, resource: `${url.origin}/mcp/oauth`}));
+
+            it("says where to sign in, for each endpoint, and challenges every request at the one that asks", async () => {
+                const getJSON = async (pathname: string) => await (await fetch(new URL(pathname, url))).json() as any;
+                expect(await getJSON("/.well-known/oauth-protected-resource/mcp")).toMatchObject(
+                    {resource: `${url.origin}/mcp`, authorization_servers: [url.origin], scopes_supported: ["agent"]});
+                expect(await getJSON("/.well-known/oauth-protected-resource")).toMatchObject({resource: `${url.origin}/mcp`});
+                expect(await getJSON("/.well-known/oauth-protected-resource/mcp/oauth")).toMatchObject(
+                    {resource: `${url.origin}/mcp/oauth`, authorization_servers: [url.origin]});
+                expect(await getJSON("/.well-known/oauth-authorization-server")).toMatchObject({issuer: url.origin,
+                    authorization_endpoint: `${url.origin}/oauth/authorize`, token_endpoint: `${url.origin}/oauth/token`,
+                    registration_endpoint: `${url.origin}/oauth/register`, code_challenge_methods_supported: ["S256"],
+                    token_endpoint_auth_methods_supported: ["none"], client_id_metadata_document_supported: true,
+                    authorization_response_iss_parameter_supported: true});
+
+                const listing = await fetch(new URL("/mcp/oauth", url), {method: "POST",
+                    headers: {"Content-Type": "application/json", "Accept": "application/json, text/event-stream"},
+                    body: JSON.stringify({jsonrpc: "2.0", id: 1, method: "tools/list", params: {}})});
+                expect(listing.status).toBe(401);
+                expect(listing.headers.get("www-authenticate"))
+                    .toContain(`resource_metadata="${url.origin}/.well-known/oauth-protected-resource/mcp/oauth"`);
+            });
+
+            it("connects a new agent the person names, its host given the agent's key once for a token", async () => {
+                const clientID = await registerClient();
+                const {verifier, challenge} = pkce();
+                const consent = await openConsent(authorizeParams(clientID, challenge));
+                expect(consent.response.status).toBe(200);
+                expect(consent.response.headers.get("x-frame-options")).toBe("DENY");
+                expect(consent.html).toContain("Test Host");
+                expect(consent.html).toContain("an app on your own computer");
+
+                const allowed = await answer(consent, {name: "Oauth-Bot"});
+                expect(allowed.status).toBe(302);
+                const back = new URL(allowed.headers.get("location")!);
+                expect(`${back.origin}${back.pathname}`).toBe(REDIRECT_URI);
+                expect(back.searchParams.get("state")).toBe("the-state");
+                expect(back.searchParams.get("iss")).toBe(url.origin);
+
+                const exchanged = await exchange(clientID, codeOf(allowed), verifier);
+                expect(exchanged.headers.get("cache-control")).toBe("no-store");
+                const token = await exchanged.json() as any;
+                expect(token).toMatchObject({token_type: "Bearer", scope: "agent"});
+                expect(token.refresh_token).toBeUndefined();
+                expect((await exchange(clientID, codeOf(allowed), verifier)).status).toBe(400);
+
+                const agent = new Client({name: "test-host", version: "1.0.0"});
+                await agent.connect(new StreamableHTTPClientTransport(new URL("/mcp/oauth", url),
+                    {requestInit: {headers: {Authorization: `Bearer ${token.access_token}`}}}));
+                try
+                {
+                    expect(read(await agent.callTool({name: "look", arguments: {}})).you.name).toBe("Oauth-Bot");
+                }
+                finally
+                {
+                    await agent.close();
+                }
+            });
+
+            it("refuses what the client didn't ask for: a redirect it never named, no PKCE, another verifier", async () => {
+                const clientID = await registerClient();
+                const {challenge} = pkce();
+
+                // Nobody is sent to an address the client never named: the page says what went wrong instead.
+                const elsewhere = await openConsent(authorizeParams(clientID, challenge,
+                    {redirect_uri: "https://elsewhere.example/callback"}));
+                expect(elsewhere.response.status).toBe(200);
+                expect(elsewhere.html).toContain("never named");
+                expect(elsewhere.requestID).toBe("");
+
+                const plain = await openConsent(authorizeParams(clientID, challenge, {code_challenge_method: "plain"}));
+                expect(plain.response.status).toBe(302);
+                expect(new URL(plain.response.headers.get("location")!).searchParams.get("error")).toBe("invalid_request");
+
+                const consent = await openConsent(authorizeParams(clientID, challenge));
+                const allowed = await answer(consent, {name: "Pkce-Bot"});
+                const wrongVerifier = await exchange(clientID, codeOf(allowed), pkce().verifier);
+                expect(wrongVerifier.status).toBe(400);
+                expect(((await wrongVerifier.json()) as any).error).toBe("invalid_grant");
+
+                // A page answered once isn't answered again.
+                expect(await (await answer(consent, {name: "Again-Bot"})).text()).toContain("run out");
+            });
+
+            it("connects an agent the person has by its key, refuses a key no agent has, and takes no for an answer", async () => {
+                const {key} = await registerAgent("Keyed-Bot");
+                const clientID = await registerClient();
+                const {verifier, challenge} = pkce();
+
+                const consent = await openConsent(authorizeParams(clientID, challenge));
+                const token = await (await exchange(clientID, codeOf(await answer(consent, {key})), verifier)).json() as any;
+                expect(token.access_token).toBe(key);
+
+                const another = await openConsent(authorizeParams(clientID, pkce().challenge));
+                expect(await (await answer(another, {key: "nobody.nothing"})).text()).toContain("belongs to no agent");
+                const declined = await answer(another, {decision: "deny"});
+                expect(declined.status).toBe(302);
+                expect(new URL(declined.headers.get("location")!).searchParams.get("error")).toBe("access_denied");
+            });
+
+            it("knows a host by its metadata document, which must name itself, letting an app on the computer pick its port", async () => {
+                const documentURL = "https://host.example/oauth/client.json";
+                const fetchJSON = vi.spyOn(PublicFetchUtil, "fetchJSON").mockResolvedValue(
+                    {client_id: documentURL, client_name: "Doc Host", redirect_uris: ["http://localhost/callback"]});
+                const {challenge} = pkce();
+
+                const consent = await openConsent(authorizeParams(documentURL, challenge,
+                    {redirect_uri: "http://localhost:61234/callback"}));
+                expect(consent.html).toContain("Doc Host");
+                expect(consent.html).toContain("Asked by host.example");
+                expect(fetchJSON).toHaveBeenCalledWith(documentURL, expect.any(Number), expect.any(Number));
+
+                fetchJSON.mockResolvedValue({client_id: "https://another.example/client.json",
+                    redirect_uris: ["http://localhost/callback"]});
+                const impostor = await openConsent(authorizeParams("https://impostor.example/client.json", challenge,
+                    {redirect_uri: "http://localhost:61234/callback"}));
+                expect(impostor.html).toContain("be recognized");
+                expect(impostor.requestID).toBe("");
+            });
+
+            it("counts a new agent against the caps of the person's own browser, where the page is answered", async () => {
+                allowSignUp.mockReturnValue(false);
+                const clientID = await registerClient();
+                const consent = await openConsent(authorizeParams(clientID, pkce().challenge));
+
+                const refused = await answer(consent, {name: "Capped-Bot"}, "Operator-Browser/1.0");
+                expect(await refused.text()).toContain("Too many new accounts");
+                expect(allowSignUp).toHaveBeenCalledWith("127.0.0.1", "Operator-Browser/1.0");
+            });
+
+            it("signs in as the official SDK's client does, from the first challenge to the agent playing", async () => {
+                const stored: {client?: any, tokens?: any, verifier: string} = {verifier: ""};
+                let authorizationURL: URL | undefined;
+                const provider: OAuthClientProvider = {
+                    get redirectUrl() { return REDIRECT_URI; },
+                    get clientMetadata() { return {client_name: "SDK Host", redirect_uris: [REDIRECT_URI],
+                        grant_types: ["authorization_code"], response_types: ["code"], token_endpoint_auth_method: "none"}; },
+                    clientInformation: () => stored.client,
+                    saveClientInformation: (information) => { stored.client = information; },
+                    tokens: () => stored.tokens,
+                    saveTokens: (tokens) => { stored.tokens = tokens; },
+                    redirectToAuthorization: (target) => { authorizationURL = target; },
+                    saveCodeVerifier: (verifier) => { stored.verifier = verifier; },
+                    codeVerifier: () => stored.verifier,
+                };
+                const signedInURL = new URL("/mcp/oauth", url);
+                const transport = new StreamableHTTPClientTransport(signedInURL, {authProvider: provider});
+                await expect(new Client({name: "sdk-host", version: "1.0.0"}).connect(transport)).rejects.toThrow();
+                expect(authorizationURL?.origin).toBe(url.origin);
+
+                // The person allows it on the page the host opened for them.
+                const page = await (await fetch(authorizationURL!)).text();
+                const allowed = await answer({requestID: /name="request_id" value="([0-9a-f]+)"/.exec(page)![1],
+                    csrfToken: /name="csrf_token" value="([0-9a-f]+)"/.exec(page)![1]}, {name: "Sdk-Bot"});
+                await transport.finishAuth(new URL(allowed.headers.get("location")!).searchParams);
+
+                const client = new Client({name: "sdk-host", version: "1.0.0"});
+                await client.connect(new StreamableHTTPClientTransport(signedInURL, {authProvider: provider}));
+                try
+                {
+                    expect(read(await client.callTool({name: "look", arguments: {}})).you.name).toBe("Sdk-Bot");
+                }
+                finally
+                {
+                    await client.close();
+                }
+            });
         });
 
         it("refuses a batch, which would carry any number of calls past the per-address limits", async () => {
@@ -2103,7 +2498,6 @@ describe("AI agents", () => {
             async () => {
             const {key} = await registerAgent("Known-Agent");
             const agent = await connect(key);
-            const forger = await connect(`${key.split(".")[0]}.not-its-secret`);
             const reads = vi.spyOn(DBUserUtil, "findUserById");
             try
             {
@@ -2113,9 +2507,13 @@ describe("AI agents", () => {
                     await agent.callTool({name: "whats_new", arguments: {}});
                 expect(reads).not.toHaveBeenCalled();
 
-                const forged = await forger.callTool({name: "look", arguments: {}}) as any;
-                expect(forged.isError).toBe(true);
-                expect(forged.content[0].text).toContain("No valid key");
+                // The agent's id with another secret finds nobody, present or not.
+                const forged = await fetch(url, {method: "POST", body: JSON.stringify({jsonrpc: "2.0", id: 1,
+                    method: "tools/call", params: {name: "look", arguments: {}}}), headers: {
+                    "Content-Type": "application/json", "Accept": "application/json, text/event-stream",
+                    "Authorization": `Bearer ${key.split(".")[0]}.not-its-secret`}});
+                expect(forged.status).toBe(401);
+                expect(forged.headers.get("www-authenticate")).toContain(`error="invalid_token"`);
 
                 await agent.callTool({name: "leave", arguments: {}});
                 reads.mockClear();
@@ -2126,7 +2524,6 @@ describe("AI agents", () => {
             {
                 reads.mockRestore();
                 await agent.close();
-                await forger.close();
             }
         });
     });

@@ -1,6 +1,6 @@
 # Authentication Flows
 
-Reference: @src/server/sockets/socketsServer.ts , @src/client/networking/client/socketsClient.ts , @src/server/user/util/userIdentificationUtil.ts , @src/server/user/util/userTokenUtil.ts , @src/server/user/util/userAuthGoogleUtil.ts , @src/server/user/util/guestCreationLimitUtil.ts , @src/server/networking/util/rateLimitUtil.ts , @src/server/networking/router/api/userRouter.ts
+Reference: @src/server/sockets/socketsServer.ts , @src/client/networking/client/socketsClient.ts , @src/server/user/util/userIdentificationUtil.ts , @src/server/user/util/userTokenUtil.ts , @src/server/user/util/userSignInUtil.ts , @src/server/user/maps/signInProviderMap.ts , @src/server/user/util/guestCreationLimitUtil.ts , @src/server/networking/util/rateLimitUtil.ts , @src/server/networking/router/api/userRouter.ts
 
 ## Connecting
 1. The client requests the game page. All page and API routes are rate-limited per IP.
@@ -18,14 +18,20 @@ Reference: @src/server/sockets/socketsServer.ts , @src/client/networking/client/
 AI agents use neither cookie nor socket: each request to the MCP endpoint carries the agent's key (see [agents.md](agents.md)). An agent's camera page identifies nobody: it is served without a session, and its socket carries the camera link's token instead of the cookie, which ties it to the agent watched rather than to a user (see [agents.md](agents.md#the-camera)).
 
 ## Sign-in / sign-up (OAuth)
-The sign-in route puts a random `state` in the provider URL and in a short-lived cookie, and the callback goes on only when the two match: only the browser that started a sign-in can finish it.
+A person signs in through a provider (`SignInProviderMap`: Google, GitHub, Discord), from the person button's row in edit mode; the browser is offered only the providers whose OAuth client is set up (all of them in dev, where `DevOAuthUtil` fakes the sign-in). Each provider has its own routes, and the flow after the provider is one (`UserSignInUtil`).
+
+The sign-in route puts a random `state` in the provider URL and in a short-lived cookie, and the callback goes on only when the two match: only the browser that started a sign-in can finish it. The room it was started from is kept beside the state, and the callback sends the person back there, whichever account they now hold.
+
+Accounts are found by email, so a provider must vouch for it: an email it hasn't verified is refused, since anyone could claim one.
 
 After the provider callback, the server takes one of three paths:
-- **New user with a guest session**: the guest is upgraded to a Member in place, keeping its id, token and state.
+- **New user with a guest session**: the guest is upgraded to a Member in place, keeping its id, token and state, and named after the provider's handle.
 - **New user without a session**: a new Member is created.
 - **Returning user**: a token for the existing account is issued, and the orphaned guest is deleted.
 
-A session that already belongs to a Member is never overwritten or deleted. A new Member without a room is given one and redirected into it. Everyone else returns to the room they were in.
+A session that already belongs to a Member is never overwritten or deleted. No person is given a room of their own (see [my_room.md](my_room.md)).
+
+AI agents' hosts sign in by an OAuth of ThingsPool's own, which the server answers rather than asks (see [agents.md](agents.md#signing-in)).
 
 ## Rate limiting
 Reference: @src/server/user/util/userBudgetUtil.ts , @src/server/user/util/userSignalDispatchUtil.ts
@@ -41,4 +47,4 @@ Failures redirect to an error page: **auth failure** (bad token, missing user, m
 ## Stale guest and agent cleanup
 Reference: @src/server/db/util/dbUserUtil.ts , @src/server/system/serverConstants.ts
 
-A periodic task deletes inactive guests, and inactive agents with their rooms by the same rule (see [agents.md](agents.md)), cycling through engagement tiers (disposable, casual, dedicated). More engaged guests are kept longer. Requests close together count as one login. A failed lookup is logged rather than treated as "nothing to delete". The query needs a Firestore composite index (see [deployment.md](../devOps/vps/deployment.md)).
+A periodic task deletes inactive guests, and inactive agents with their rooms (see [agents.md](agents.md)), cycling through engagement tiers (disposable, casual, dedicated). More engaged guests are kept longer. Agents go by the same tiers until they have built; one that has built is kept far longer in each, and for good past enough logins (`AgentCleanupUtil`). Requests close together count as one login. A failed lookup is logged rather than treated as "nothing to delete". The query needs a Firestore composite index (see [deployment.md](../devOps/vps/deployment.md)).

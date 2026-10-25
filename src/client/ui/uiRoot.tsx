@@ -30,7 +30,6 @@ import AdminAssetSettingsEditor from "./components/form/adminAssetSettingsEditor
 import ConfirmForm from "./components/form/confirmForm";
 import RoomFilePreviewForm from "./components/form/roomFilePreviewForm";
 import WebPageForm from "./components/form/webPageForm";
-import ExitPromptForm from "./components/form/exitPromptForm";
 import { FeatureFlag } from "../../shared/system/types/featureFlag";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 import useCloseGesture from "./util/closeGesture";
@@ -186,7 +185,6 @@ export default function UIRoot({ env, user }: UIRootProps)
             room={roomRuntimeMemory.room}
             roomSettingsOpen={roomSettingsOpen}
             onToggleRoomSettings={() => setRoomSettingsOpen(prev => !prev)}
-            onExitApp={exitApp}
         />}
         {/* (The room editor needs its commands too: one starts a new room there, another shows its volumes.) */}
         {(isMultiplayerRoomLoaded || isRoomEditorOpen) && <DebugStats env={env}/>}
@@ -202,7 +200,7 @@ export default function UIRoot({ env, user }: UIRootProps)
         {popupStack.map((state, i) => {
             switch (state.popupType)
             {
-                case "authPrompt": return <Popup key={i} title="Login" showCloseButton={true}>
+                case "authPrompt": return <Popup key={i} title="Sign In" showCloseButton={true}>
                     <AuthPromptForm/>
                 </Popup>;
                 case "confirm": return <Popup key={i}>
@@ -212,9 +210,6 @@ export default function UIRoot({ env, user }: UIRootProps)
                         onConfirm={state.params.onConfirm}
                         onCancel={state.params.onCancel}
                     />
-                </Popup>;
-                case "exitPrompt": return <Popup key={i} title="" showCloseButton={true}>
-                    <ExitPromptForm onExit={exitApp}/>
                 </Popup>;
                 case "doorDestination": return <Popup key={i} title="Destination" showCloseButton={true}>
                     <DestinationChooserForm

@@ -2,8 +2,9 @@ import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";
 import ObjectCategoryConfigMap from "../../../shared/object/maps/objectCategoryConfigMap";
 import { ObjectCategoryEnumMap } from "../../../shared/object/types/objectCategory";
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
-import { HUB_ROOM_ID_KEYWORD, ROOM_ALMOST_FULL_MARGIN, ROOM_EDITOR_SINGLE_PLAYER_MODE, ROOM_OVER_POPULATION_THRESHOLD, ROOM_UNDER_POPULATION_THRESHOLD } from "../../../shared/system/sharedConstants";
+import { HUB_ROOM_ID_KEYWORD, ROOM_ALMOST_FULL_MARGIN, ROOM_EDITOR_SINGLE_PLAYER_MODE, ROOM_OVER_POPULATION_THRESHOLD, ROOM_UNDER_POPULATION_THRESHOLD, TUTORIAL_SINGLE_PLAYER_MODE } from "../../../shared/system/sharedConstants";
 import UserContext from "../../sockets/types/userContext";
+import DBUserUtil from "../../db/util/dbUserUtil";
 import ServerRoomManager from "../serverRoomManager";
 import HubRoomCandidate from "../types/hubRoomCandidate";
 import HubRoomUtil from "./hubRoomUtil";
@@ -16,11 +17,19 @@ const RoomPickerUtil =
         const joinHints = socketUserContext.getJoinHints();
         const targetRoomID = joinHints.targetRoomID;
 
+        // A room named in the URL skips a pending tutorial altogether, for good.
+        if (pickContext == "appStart" && user.singlePlayerMode == TUTORIAL_SINGLE_PLAYER_MODE
+            && typeof targetRoomID == "string" && targetRoomID.length > 0)
+        {
+            user.singlePlayerMode = "";
+            await DBUserUtil.setSinglePlayerMode(user.id, "");
+        }
+
         let roomID: string;
         if (pickContext == "appStart" && joinHints.roomEditorOpen === true && RoomValidationUtil.userIsAdmin(user)) // If the connection came back to a client that is still in the room editor (see SocketsClient),
             roomID = ROOM_EDITOR_SINGLE_PLAYER_MODE; // User should be left there, as the room being edited is kept nowhere else.
         else if (pickContext == "appStart" && user.singlePlayerMode && user.singlePlayerMode.length > 0) // If the user is supposed to enter a single-player mode (e.g. tutorial),
-            roomID = user.singlePlayerMode; // User should join the corresponding single-player room. (If targetRoomID exists, the user should join it AFTER finishing the single-player mode first.)
+            roomID = user.singlePlayerMode; // User should join the corresponding single-player room. (If targetRoomID exists, the user should join it AFTER finishing the single-player mode first, unless it was the tutorial, skipped above.)
         else if (targetRoomID && targetRoomID.length > 0) // If roomID was explicitly specified in the URL as a parameter,
         {
             if (targetRoomID == HUB_ROOM_ID_KEYWORD) // If the specified ID is the reserved "hub" keyword,

@@ -25,4 +25,6 @@ export default interface AgentEvent
     // The object added, removed or changed, and its type.
     id?: string;
     type?: string;
+    // It happened in the agent's own room while the agent was elsewhere, or away (see AgentAwayLogUtil).
+    inYourRoom?: boolean;
 }

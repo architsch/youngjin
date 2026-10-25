@@ -1,6 +1,7 @@
 import express from "express";
 import { Request, Response } from "express";
-import UserAuthGoogleUtil from "../../../user/util/userAuthGoogleUtil";
+import UserSignInUtil from "../../../user/util/userSignInUtil";
+import SignInProviderMap from "../../../user/maps/signInProviderMap";
 import UserTokenUtil from "../../../user/util/userTokenUtil";
 import UserIdentificationUtil from "../../../user/util/userIdentificationUtil";
 import DBUserUtil from "../../../db/util/dbUserUtil";
@@ -10,17 +11,21 @@ import { TUTORIAL_SINGLE_PLAYER_MODE } from "../../../../shared/system/sharedCon
 
 const UserRouter = express.Router();
 
-UserRouter.get("/login_google", async (req: Request, res: Response): Promise<void> => {
-    await UserAuthGoogleUtil.login(req, res);
-    if (res.statusCode >= 200 && res.statusCode <= 299)
-        res.end();
-});
+// A sign-in through each provider, at the paths its OAuth client is registered with (login_google_callback, say).
+for (const provider of SignInProviderMap.getAll())
+{
+    UserRouter.get(`/login_${provider.id}`, async (req: Request, res: Response): Promise<void> => {
+        await UserSignInUtil.login(provider, req, res);
+        if (res.statusCode >= 200 && res.statusCode <= 299)
+            res.end();
+    });
 
-UserRouter.get("/login_google_callback", async (req: Request, res: Response): Promise<void> => {
-    await UserAuthGoogleUtil.loginCallback(req, res);
-    if (res.statusCode >= 200 && res.statusCode <= 299)
-        res.redirect("/");
-});
+    UserRouter.get(`/login_${provider.id}_callback`, async (req: Request, res: Response): Promise<void> => {
+        await UserSignInUtil.loginCallback(provider, req, res);
+        if (res.statusCode >= 200 && res.statusCode <= 299)
+            res.redirect("/");
+    });
+}
 
 UserRouter.post("/logout", (req: Request, res: Response): void => {
     UserTokenUtil.clearToken(req, res);
