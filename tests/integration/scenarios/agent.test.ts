@@ -5,6 +5,9 @@
  */
 import { describe, it, expect, beforeEach, beforeAll, afterAll, afterEach, vi } from "vitest";
 import http from "http";
+import https from "https";
+import { PassThrough } from "stream";
+import { EventEmitter } from "events";
 import fs from "fs";
 import path from "path";
 import { AddressInfo } from "net";
@@ -2416,6 +2419,31 @@ describe("AI agents", () => {
                     {redirect_uri: "http://localhost:61234/callback"}));
                 expect(impostor.html).toContain("be recognized");
                 expect(impostor.requestID).toBe("");
+            });
+
+            it("fetches a host's document from any public address, IPv4 included, and never from a private one", async () => {
+                const get = vi.spyOn(https, "get").mockImplementation(((_url: URL, _options: unknown,
+                    callback: (response: PassThrough) => void) => {
+                    const response = Object.assign(new PassThrough(), {statusCode: 200});
+                    setImmediate(() => { callback(response); response.end(JSON.stringify({client_id: "fetched"})); });
+                    return Object.assign(new EventEmitter(), {destroy: () => {}});
+                }) as any);
+                try
+                {
+                    // Addresses rather than names, so that nothing is looked up.
+                    for (const publicURL of ["https://160.79.104.10/client.json", "https://[2607:6bc0::10]/client.json"])
+                        expect(await PublicFetchUtil.fetchJSON(publicURL, 1024, 1000)).toEqual({client_id: "fetched"});
+                    for (const privateURL of ["https://127.0.0.1/x", "https://10.0.0.8/x", "https://169.254.169.254/x",
+                        "https://[::1]/x", "https://[::ffff:127.0.0.1]/x", "https://[fd00::1]/x", "http://160.79.104.10/x"])
+                    {
+                        expect(await PublicFetchUtil.fetchJSON(privateURL, 1024, 1000)).toBeUndefined();
+                    }
+                    expect(get).toHaveBeenCalledTimes(2);
+                }
+                finally
+                {
+                    get.mockRestore();
+                }
             });
 
             it("counts a new agent against the caps of the person's own browser, where the page is answered", async () => {

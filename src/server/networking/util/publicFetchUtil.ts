@@ -10,7 +10,9 @@ for (const [address, prefix] of [["0.0.0.0", 8], ["10.0.0.0", 8], ["100.64.0.0",
 {
     BLOCKED_ADDRESSES.addSubnet(address, prefix, "ipv4");
 }
-for (const [address, prefix] of [["::", 127], ["::ffff:0:0", 96], ["64:ff9b::", 96], ["100::", 64], ["2001::", 32],
+// No rule for IPv4-mapped addresses (::ffff:0:0/96): BlockList checks those against the IPv4 rules, and would match
+// every IPv4 address against such a rule.
+for (const [address, prefix] of [["::", 127], ["64:ff9b::", 96], ["100::", 64], ["2001::", 32],
     ["2001:db8::", 32], ["fc00::", 7], ["fe80::", 10], ["ff00::", 8]] as const)
 {
     BLOCKED_ADDRESSES.addSubnet(address, prefix, "ipv6");
