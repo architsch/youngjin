@@ -210,6 +210,11 @@ vi.mock("../../../src/server/db/util/dbUserUtil", () => ({
             if (u) u.agentInterests = agentInterests;
             return { success: true, data: [] };
         }),
+        setAgentKeyHash: vi.fn(async (userID: string, agentKeyHash: string) => {
+            const u = _userStore[userID];
+            if (u) u.agentKeyHash = agentKeyHash;
+            return { success: true, data: [] };
+        }),
         setSinglePlayerMode: vi.fn(async () => ({ success: true, data: [] })),
         setFTUE: vi.fn(async (userID: string, ftue: string) => {
             if (_latencyConfig.enabled) await _randomDelay();

@@ -17,8 +17,9 @@ export default class AgentUserContext implements UserContext
     loginCount: number;
     signalThrottleTimestamps: {[signalType: string]: number} = {};
     readonly inbox: AgentInbox;
-    // Its key's hash, by which its requests are known while it is present (see AgentPresenceUtil.findByKey).
-    readonly keyHash: string;
+    // Its key's hash, by which its requests are known while it is present (see AgentPresenceUtil.findByKey), and which
+    // a new key replaces at once (see AgentAccountUtil.replaceKey).
+    keyHash: string;
     // Set once its body is first stepped in a room (see AgentBodyUtil).
     motion: AgentMotion | undefined = undefined;
     // The secret in its camera's link, made when first asked for, and the pages open on it, which are sent what a

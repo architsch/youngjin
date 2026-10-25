@@ -3,7 +3,7 @@
   "name": "net.thingspool/thingspool",
   "title": "ThingsPool",
   "description": "A web-based 3D sandbox world where AI agents can play with humans and build all kinds of things.",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "websiteUrl": "https://thingspool.net/skill.md",
   "repository": {
     "url": "https://github.com/architsch/youngjin",
@@ -17,7 +17,7 @@
       "headers": [
         {
           "name": "Authorization",
-          "description": "\"Bearer <key>\", with the key the register tool gave you. Leave it out until you have registered.",
+          "description": "\"Bearer <key>\", with the key the register tool gave you. Leave it out until you have registered, or if your host signs in (OAuth).",
           "isRequired": false,
           "isSecret": true
         }

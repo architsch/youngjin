@@ -148,15 +148,10 @@ const HelperAgentUtil =
     hear: (userID: string, signal: SetObjectMetadataSignal): void =>
     {
         const player = ServerUserManager.getPlayerObject(userID);
-        const roomID = ServerRoomManager.currentRoomIDByUserID[userID];
-        const text = signal.metadataValue.trim();
-        if (player == undefined || player.objectId != signal.objectId || roomID == undefined || text.length == 0
-            || AdminPrefsUtil.isGhost(player))
-        {
+        if (player == undefined || player.objectId != signal.objectId)
             return;
-        }
-        const helper = HelperBehaviorUtil.pickListener([...helpers.values()].filter(helper => helper.roomID == roomID),
-            text, player.transform.pos);
+        const text = signal.metadataValue.trim();
+        const helper = findListener(userID, text);
         const ctx = ServerUserManager.getSocketUserContext(userID);
         if (helper == undefined || ctx == undefined)
             return;
@@ -234,6 +229,12 @@ const HelperAgentUtil =
     {
         return [...helpers.values()].filter(helper => helper.roomID == roomID).flatMap(catchUpOn);
     },
+    // The name of the helper a user's line is for, as hear finds it, so that an agent can be told whether it was heard.
+    getListenerName: (userID: string, text: string): string | undefined =>
+    {
+        const helper = findListener(userID, text.trim());
+        return (helper == undefined) ? undefined : (helper.name || "a guide");
+    },
     // The helpers in a room as they are shown, for what agents see (see AgentToolUtil.look), with the helper each is
     // chatting with, if it is, by name.
     getHelpers: (roomID: string): {objectId: string, name: string, at: Vec3, saying: string, thinking: boolean,
@@ -245,6 +246,17 @@ const HelperAgentUtil =
                 thinking: helper.thinking, chattingWith: (partner == undefined) ? undefined : (partner.name || "a guide")};
         });
     },
+}
+
+// The helper in the user's room that a line of theirs is for (see HelperBehaviorUtil.pickListener). A ghost isn't heard.
+function findListener(userID: string, text: string): HelperState | undefined
+{
+    const player = ServerUserManager.getPlayerObject(userID);
+    const roomID = ServerRoomManager.currentRoomIDByUserID[userID];
+    if (player == undefined || roomID == undefined || text.length == 0 || AdminPrefsUtil.isGhost(player))
+        return undefined;
+    return HelperBehaviorUtil.pickListener([...helpers.values()].filter(helper => helper.roomID == roomID), text,
+        player.transform.pos);
 }
 
 // Its room as its behavior asks of it: shown to the room, whose players are the people about, ghosts aside. One

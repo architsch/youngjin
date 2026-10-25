@@ -54,7 +54,9 @@ import DoorObjectTypeConfig, { ENTERING_STRIDE_LENGTH,
     ENTRANCE_DOOR_OBJECT_ID } from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import Vec3 from "../../../src/shared/math/types/vec3";
 import Voxel from "../../../src/shared/voxel/types/voxel";
-import { DAY_IN_MS, NUM_VOXEL_COLS, OBJECT_MESSAGE_MAX_LENGTH } from "../../../src/shared/system/sharedConstants";
+import { DAY_IN_MS, NUM_VOXEL_COLS, OBJECT_MESSAGE_MAX_LENGTH,
+    VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
+import { HEARING_DISTANCE } from "../../../src/shared/object/util/helperBehaviorUtil";
 import AgentUserContext from "../../../src/server/agent/types/agentUserContext";
 import AgentInbox from "../../../src/server/agent/types/agentInbox";
 import AdminPrefsUtil from "../../../src/shared/object/util/adminPrefsUtil";
@@ -364,6 +366,22 @@ describe("AI agents", () => {
             // A person's account can't be reached by a key, whatever it says.
             const human = harness.connectUser({id: "human-id", userName: "Alice"});
             expect(await AgentAccountUtil.findByKey(`${human.user.id}.${secret}`)).toBeUndefined();
+        });
+
+        it("replaces a key that may have been seen, the agent's account kept, and the old key stops working at once",
+            async () => {
+            const {key, dbUser} = await registerAgent("Rekeyed-Agent");
+            const agent = await attendAgent(dbUser);
+
+            const newKey = await AgentAccountUtil.replaceKey(agent);
+            expect(newKey).toMatch(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$/);
+            expect(newKey).not.toBe(key);
+
+            // Neither its row nor its presence answers to the old key; both answer to the new one.
+            expect(await AgentAccountUtil.findByKey(key)).toBeUndefined();
+            expect(AgentPresenceUtil.findByKey(key)).toBeUndefined();
+            expect(AgentPresenceUtil.findByKey(newKey!)).toBe(agent);
+            expect(await AgentAccountUtil.findByKey(newKey!)).toMatchObject({id: dbUser.id, userName: "Rekeyed-Agent"});
         });
 
         it("refuses names that aren't letters, digits and '-_.', or that look like a guest's", async () => {
@@ -775,6 +793,28 @@ describe("AI agents", () => {
             const feet = positionOf(agent);
             expect(Math.hypot(feet.x - helper.at.x, feet.z - helper.at.z)).toBeLessThan(2);
         });
+
+        it("tell an agent's say that one heard it", async () => {
+            await standHelper("Mira");
+            const agent = await arriveAgent("Talker");
+
+            expect(await AgentToolUtil.say(agent, "Hello!")).toMatchObject({saying: "Hello!", heardBy: "Mira",
+                note: expect.stringContaining("few seconds")});
+        });
+
+        it("tell an agent's say, when none heard it, how far off the nearest is and how to be heard", async () => {
+            // Well to one side of the entrance the agent comes in by: out of earshot.
+            await standHelper("Mira", "guide", 12);
+            const agent = await arriveAgent("Caller");
+
+            const unheard = await AgentToolUtil.say(agent, "Anyone here?") as any;
+            expect(unheard.heardBy).toBeUndefined();
+            expect(unheard.note).toMatch(new RegExp(`^No guide heard you\\. The nearest, Mira, is \\d+ cells away: a guide `
+                + `hears you within ${HEARING_DISTANCE / VOXEL_CELL_SIZE} cells on its own floor`));
+            // Named, it hears from anywhere in the room; a cleared bubble is no line.
+            expect((await AgentToolUtil.say(agent, "Mira, are you there?") as any).heardBy).toBe("Mira");
+            expect(await AgentToolUtil.say(agent, "")).toEqual({saying: ""});
+        });
     });
 
     describe("tools", () => {
@@ -1147,7 +1187,20 @@ describe("AI agents", () => {
 
             expect((await AgentToolUtil.useDoor(agent, ENTRANCE_DOOR_OBJECT_ID) as any).error).toMatch(/locked/);
             expect((await AgentToolUtil.useDoor(agent, "no-such-door") as any).error).toMatch(/no door/);
-            expect((AgentToolUtil.look(agent) as any).doors[0].leadsTo).toBe("locked");
+        });
+
+        it("look leaves out doors that lead nowhere, but in the agent's own room, where it may set where they lead",
+            async () => {
+            const owner = await agentWithOwnRoom("Owner", HOME_ID);
+            roomOf(owner).objectById[ENTRANCE_DOOR_OBJECT_ID].metadata[ObjectMetadataKeyEnumMap.DestinationRoomId] =
+                new EncodableByteString("");
+            const visitor = await arriveAgent("Visitor");
+            await AgentToolUtil.travel(visitor, HOME_ID);
+
+            expect((AgentToolUtil.look(owner) as any).doors).toContainEqual(expect.objectContaining({
+                id: ENTRANCE_DOOR_OBJECT_ID, leadsTo: "locked"}));
+            expect((AgentToolUtil.look(visitor) as any).doors.some((door: any) => door.id == ENTRANCE_DOOR_OBJECT_ID))
+                .toBe(false);
         });
 
         it("face turns the agent where it stands, toward a person, a place or a direction, as look then says", async () => {
@@ -2010,7 +2063,7 @@ describe("AI agents", () => {
                 const listed = (await client.listTools()).tools;
                 const tools = listed.map(tool => tool.name).sort();
                 expect(tools).toEqual(["add_object", "add_zone", "camera", "change_room_settings", "edit_object", "face",
-                    "find_pictures", "find_rooms", "leave", "look", "look_blocks", "move_object", "paint_faces",
+                    "find_pictures", "find_rooms", "leave", "look", "look_blocks", "move_object", "new_key", "paint_faces",
                     "place_blocks", "register", "remove_blocks", "remove_object", "room_settings", "say", "set_interests",
                     "textures", "travel", "use_door", "walk_to", "whats_new"]);
                 // A connector directory lists a tool by its title, and asks whether it only reads or may destroy.
@@ -2168,6 +2221,13 @@ describe("AI agents", () => {
             expect(manual).toContain(`\nVersion ${version}, `);
         });
 
+        it("tells agents how near a guide must be to hear them, as near as guides hear", () => {
+            const manual = fs.readFileSync(path.resolve(__dirname, "../../../public/skill.md"), "utf8");
+
+            expect(manual.replace(/\s+/g, " "))
+                .toContain(`A guide hears you within ${HEARING_DISTANCE / VOXEL_CELL_SIZE} cells on its own floor`);
+        });
+
         it("answers the calls the agents' manual shows curl making, as it says it does", async () => {
             const manual = fs.readFileSync(path.resolve(__dirname, "../../../public/skill.md"), "utf8");
             const bodies = [...manual.matchAll(/-d '(\{.*\})'/g)].map(match => JSON.parse(match[1]));
@@ -2209,6 +2269,36 @@ describe("AI agents", () => {
             finally
             {
                 await agent.close();
+            }
+        });
+
+        it("gives an agent a new key when asked, after which only the new one plays", async () => {
+            const {key} = await registerAgent("Rekey-Agent");
+            const agent = await connect(key);
+            let newKey = "";
+            try
+            {
+                const given = read(await agent.callTool({name: "new_key", arguments: {}}));
+                newKey = given.key;
+                expect(given.address).toMatch(new RegExp(`/mcp/${newKey.replace(/[.]/g, "\\.")}$`));
+            }
+            finally
+            {
+                await agent.close();
+            }
+
+            const refused = await fetch(url, {method: "POST", body: JSON.stringify({jsonrpc: "2.0", id: 1,
+                method: "tools/call", params: {name: "look", arguments: {}}}), headers: {"Content-Type": "application/json",
+                "Accept": "application/json, text/event-stream", Authorization: `Bearer ${key}`}});
+            expect(refused.status).toBe(401);
+            const renewed = await connect(newKey);
+            try
+            {
+                expect(read(await renewed.callTool({name: "look", arguments: {}})).you.name).toBe("Rekey-Agent");
+            }
+            finally
+            {
+                await renewed.close();
             }
         });
 

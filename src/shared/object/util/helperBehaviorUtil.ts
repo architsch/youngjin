@@ -27,7 +27,7 @@ import QuarterTurnsUtil from "./quarterTurnsUtil";
 
 const UP: Vec3 = {x: 0, y: 1, z: 0};
 // Someone this near on its own floor (feet within this height of its own) is in earshot.
-const HEARING_DISTANCE = 8;
+export const HEARING_DISTANCE = 8;
 const SAME_FLOOR_HEIGHT = 1;
 // Someone's lines are answered together once they have paused this long.
 export const ANSWER_PAUSE_MS = 1500;

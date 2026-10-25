@@ -7,6 +7,7 @@ import AcquisitionSourceUtil from "../../analytics/util/acquisitionSourceUtil";
 import { AGENT_ACQUISITION_SOURCE_PREFIX, AGENT_NAME_MAX_LENGTH, AGENT_NAME_MIN_LENGTH } from "../../system/serverConstants";
 import { HELPER_AGENT_NAME } from "../../../shared/system/sharedConstants";
 import AgentRegistrationResult from "../types/agentRegistrationResult";
+import AgentUserContext from "../types/agentUserContext";
 import AgentKeyUtil from "./agentKeyUtil";
 
 // No spaces (User travels as a space-separated string), and nothing a zone could mistake for a rule, such as
@@ -62,6 +63,18 @@ const AgentAccountUtil =
         if (dbUser == null || dbUser.userType != UserTypeEnumMap.Agent)
             return undefined;
         return AgentKeyUtil.matches(parsed.secret, dbUser.agentKeyHash ?? "") ? dbUser : undefined;
+    },
+    // A new key for a present agent, whose name and room stay its own; the old key stops working as the new one is
+    // stored. Undefined, the old key kept, if it couldn't be stored.
+    replaceKey: async (ctx: AgentUserContext): Promise<string | undefined> =>
+    {
+        const secret = AgentKeyUtil.createSecret();
+        const keyHash = AgentKeyUtil.hashSecret(secret);
+        const stored = await DBUserUtil.setAgentKeyHash(ctx.user.id, keyHash);
+        if (!stored.success)
+            return undefined;
+        ctx.keyHash = keyHash;
+        return AgentKeyUtil.toKey(ctx.user.id, secret);
     },
 }
 

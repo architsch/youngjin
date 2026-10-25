@@ -14,8 +14,9 @@ import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import VoxelPathUtil from "../../../shared/voxel/util/voxelPathUtil";
-import { COLLISION_LAYER_HEIGHT, HUB_ROOM_ID_KEYWORD, OBJECT_MESSAGE_MAX_LENGTH,
+import { COLLISION_LAYER_HEIGHT, HELPER_AGENT_NAME, HUB_ROOM_ID_KEYWORD, OBJECT_MESSAGE_MAX_LENGTH,
     VOXEL_CELL_SIZE } from "../../../shared/system/sharedConstants";
+import { HEARING_DISTANCE } from "../../../shared/object/util/helperBehaviorUtil";
 import ServerRoomManager from "../../room/serverRoomManager";
 import OwnedRoomUtil from "../../room/util/ownedRoomUtil";
 import { AGENT_LOOK_MAX_PEOPLE } from "../../system/serverConstants";
@@ -92,6 +93,8 @@ const AgentToolUtil =
             .sort((a, b) => a.distance - b.distance)
             .slice(0, AGENT_LOOK_MAX_PEOPLE);
 
+        // Doors that lead nowhere cost tokens and go nowhere, so they show only where the agent may set where they lead.
+        const seesLockedDoors = RoomValidationUtil.isRoomSuperuser(ctx.user, room);
         const doors = Object.values(room.objectById)
             .filter(isDoor)
             .map(door => {
@@ -106,6 +109,7 @@ const AgentToolUtil =
                     distance: Math.round(10 * distanceInVoxels(myFeet, floor)) / 10,
                 };
             })
+            .filter(door => seesLockedDoors || door.leadsTo != "locked")
             .sort((a, b) => a.distance - b.distance);
 
         const {objects, more} = AgentObjectUtil.describeObjects(room, me.transform.pos);
@@ -260,9 +264,9 @@ const AgentToolUtil =
                 + `(a link counting as its label): say it shorter.`};
         }
 
-        await AgentSignalUtil.send(ctx, "setObjectMetadataSignal",
+        const said = await AgentSignalUtil.send(ctx, "setObjectMetadataSignal",
             new SetObjectMetadataSignal(room.id, me.objectId, ObjectMetadataKeyEnumMap.SentMessage, text));
-        return {saying: getSpeech(me) ?? ""};
+        return {saying: getSpeech(me) ?? "", ...(said ? describeHearing(ctx, room, me.transform.pos, text) : {})};
     },
     // destination: "hub", "home" (the agent's own room, made on the first trip there), or a room's id or link.
     travel: async (ctx: AgentUserContext, destination: string): Promise<object> =>
@@ -390,6 +394,24 @@ function getSpeech(obj: AddObjectSignal): string | undefined
 {
     const text = obj.metadata[ObjectMetadataKeyEnumMap.SentMessage]?.str ?? "";
     return text.length > 0 ? text : undefined;
+}
+
+// Whether a guide in the room heard a line, which an agent can't otherwise tell from a guide slow to answer.
+function describeHearing(ctx: AgentUserContext, room: Room, myPos: Vec3, text: string): object
+{
+    const guides = HelperAgentUtil.getHelpers(room.id);
+    if (guides.length == 0 || text.trim().length == 0)
+        return {};
+    const heardBy = HelperAgentUtil.getListenerName(ctx.user.id, text);
+    if (heardBy != undefined)
+        return {heardBy, note: "It answers in a few seconds: look shows it thinking until then, and whats_new brings "
+            + "its answer."};
+    const myFeet = VoxelPathUtil.feetOf(myPos);
+    const nearest = guides.map(guide => ({name: guide.name || "a guide", distance: distanceInVoxels(myFeet, guide.at)}))
+        .sort((a, b) => a.distance - b.distance)[0];
+    return {note: `No guide heard you. The nearest, ${nearest.name}, is ${Math.round(nearest.distance)} cells away: a `
+        + `guide hears you within ${HEARING_DISTANCE / VOXEL_CELL_SIZE} cells on its own floor, or from anywhere in the `
+        + `room if you say its name (or "${HELPER_AGENT_NAME}").`};
 }
 
 function distanceInVoxels(a: Vec3, b: Vec3): number

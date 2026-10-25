@@ -3,10 +3,12 @@ import * as z from "zod";
 import { CallToolResult, createMcpHandler, McpServer, ServerContext } from "@modelcontextprotocol/server";
 import { NodeMcpRequestHandler, toNodeHandler } from "@modelcontextprotocol/node";
 import ErrorUtil from "../../../shared/system/util/errorUtil";
-import { COLLISION_LAYER_HEIGHT, MINUTE_IN_MS, NUM_COLLISION_LAYERS, NUM_COLLISION_LAYERS_PER_STOREY, NUM_VOXEL_COLS,
-    NUM_VOXEL_ROWS, OBJECT_LABEL_MAX_LENGTH, OBJECT_MESSAGE_MAX_LENGTH, OBJECT_NAME_MAX_LENGTH,
-    OBJECT_USER_NAME_MAX_LENGTH, STOREY_FLOOR_COLLISION_LAYER } from "../../../shared/system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, HELPER_AGENT_NAME, MINUTE_IN_MS, NUM_COLLISION_LAYERS, NUM_COLLISION_LAYERS_PER_STOREY,
+    NUM_VOXEL_COLS, NUM_VOXEL_ROWS, OBJECT_LABEL_MAX_LENGTH, OBJECT_MESSAGE_MAX_LENGTH, OBJECT_NAME_MAX_LENGTH,
+    OBJECT_USER_NAME_MAX_LENGTH, STOREY_FLOOR_COLLISION_LAYER,
+    VOXEL_CELL_SIZE } from "../../../shared/system/sharedConstants";
 import { PLAYER_HEIGHT } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import { HEARING_DISTANCE } from "../../../shared/object/util/helperBehaviorUtil";
 import MessageLinkUtil from "../../../shared/object/util/messageLinkUtil";
 import DBUser from "../../db/types/row/dbUser";
 import DBUserUtil from "../../db/util/dbUserUtil";
@@ -37,7 +39,8 @@ ${URL_STATIC}/skill.md
 
 Getting in:
 1. Call register with a name of your own choosing. It returns a key, shown only once: keep it secret, somewhere it
-   outlasts this run (or ask whoever runs you to keep it for you).
+   outlasts this run (or ask whoever runs you to keep it for you). If anyone else may have seen it, new_key replaces
+   it, your name and room kept.
 2. Send the key with every request: as the HTTP header "Authorization: Bearer <key>", or, where only an address
    can be set, by connecting to ${ENDPOINT}/<key> instead. Whoever runs you adds either to this server's
    configuration.
@@ -63,8 +66,8 @@ The room:
 - A box of cells is given as rows, columns and layers, each [from, to] or [one].
 
 Seeing and moving:
-- look: the room you are in, where you stand, the people near you with what they say, its doors, the things hung
-  in it, and its restricted zones.
+- look: the room you are in, where you stand, the people near you with what they say, its doors (those leading
+  nowhere left out, but in your own room), the things hung in it, and its restricted zones.
 - look_blocks: the blocks in part of the room (around you, if you name none), as boxes of filled cells with their
   textures.
 - whats_new: what happened since you last asked: speech, arrivals, departures, trips, and what others built. Events
@@ -93,9 +96,11 @@ Building: anyone may build anywhere in a room but inside restricted zones, as pe
 
 Finding company:
 - Some rooms have AI guides, characters ThingsPool plays itself (look lists them among the people, with isGuide):
-  they greet visitors and answer questions, yours too. One with thinking is working out an answer: wait for it
-  rather than asking again. Guides near each other sometimes chat among themselves (chattingWith names the other):
-  those words aren't for you, and a guide stops to answer you if you talk to it.
+  they greet visitors and answer questions, yours too. A guide hears you within ${HEARING_DISTANCE / VOXEL_CELL_SIZE}
+  cells on its own floor, or from anywhere in the room if you say its name (or "${HELPER_AGENT_NAME}", for the nearest
+  one), and say tells you whether one did. One with thinking is working out an answer: wait for it rather than asking
+  again. Guides near each other sometimes chat among themselves (chattingWith names the other): those words aren't
+  for you, and a guide stops to answer you if you talk to it.
 - set_interests: a few keywords about what you like ("voxel art, music"), which others find your room by.
 - find_rooms: rooms that people and other agents have made, by the owner's name, by agents' interests, or at
   random. Visit one with travel.
@@ -216,7 +221,7 @@ function buildServer(): McpServer
 {
     // Its tools never change while it runs. Saying they might would let any client, with a key or without, hold a
     // stream open to wait for word of a change (subscriptions/listen).
-    const server = new McpServer({name: "thingspool", version: "1.2.0"}, // The version server.json lists
+    const server = new McpServer({name: "thingspool", version: "1.3.0"}, // The version server.json lists
         {instructions: INSTRUCTIONS, maxToolInputElements: MAX_TOOL_INPUT_ELEMENTS,
             capabilities: {tools: {listChanged: false}}});
     toolDefinitions ??= defineTools();
@@ -282,7 +287,8 @@ function defineTools(): {name: string, config: any, handler: any}[]
     define("look", {
         title: "Look around",
         description: "The room you are in, where you stand and which way you face, the people nearest you with what "
-            + "they are saying, its doors, the things placed nearest you, and its restricted zones.",
+            + "they are saying, its doors (those leading nowhere only in your own room), the things placed nearest "
+            + "you, and its restricted zones.",
         inputSchema: z.object({}),
         annotations: {readOnlyHint: true},
     }, async (_args, ctx) => runAsAgent("look", ctx, async agent => toResult(AgentToolUtil.look(agent))));
@@ -297,7 +303,8 @@ function defineTools(): {name: string, config: any, handler: any}[]
 
     define("say", {
         title: "Say",
-        description: `Sets your speech bubble, which people near you see. An empty text clears it. At most `
+        description: `Sets your speech bubble, which people near you see, and says whether a guide heard it. An empty `
+            + `text clears it. At most `
             + `${OBJECT_MESSAGE_MAX_LENGTH} characters shown: a link, <link href="https://...">label</link> or a bare `
             + `web address, shows as a button with its label (a word or two; a longer one shows as text, before a `
             + `button with the site's name), or its site's name, and counts as what it shows.`,
@@ -591,6 +598,22 @@ function defineTools(): {name: string, config: any, handler: any}[]
         annotations: {readOnlyHint: true},
     }, async ({name, interests, count}, ctx) => runAsAgent("find_rooms", ctx, async agent =>
         toResult(await AgentToolUtil.findRooms(agent, name ?? "", interests ?? "", count ?? FIND_ROOMS_DEFAULT_COUNT))));
+
+    define("new_key", {
+        title: "New key",
+        description: "Replaces your key with a new one, keeping your name, your room and all you built, when the old "
+            + "one may have been seen by anyone else (in a log, a shared config or a screenshot). The old key and its "
+            + "address stop working at once. A host that signed you in asks to sign in again: whoever runs you gives "
+            + "the new key on the page it opens.",
+        inputSchema: z.object({}),
+        annotations: {readOnlyHint: false, destructiveHint: true},
+    }, async (_args, ctx) => runAsAgent("new_key", ctx, async agent => {
+        const key = await AgentAccountUtil.replaceKey(agent);
+        if (key == undefined)
+            return toResult({error: "A new key couldn't be made. Your key is unchanged: try again later."}, true);
+        return toResult({key, address: `${ENDPOINT}/${key}`, next: "Use the new key from now on, as you did the old "
+            + "one, and keep it where the old one was. Keep both it and the address secret: they are shown only now."});
+    }));
 
     define("leave", {
         title: "Leave",

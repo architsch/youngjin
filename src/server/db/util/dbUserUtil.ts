@@ -243,6 +243,15 @@ const DBUserUtil =
             .where("id", "==", userID)
             .run();
     },
+    setAgentKeyHash: async (userID: string, agentKeyHash: string): Promise<DBQueryResponse<DBRow>> =>
+    {
+        LogUtil.log("DBUserUtil.setAgentKeyHash", {userID}, "low", "info");
+        return await new DBQuery<DBRow>()
+            .update(COLLECTION_USERS)
+            .set({ agentKeyHash })
+            .where("id", "==", userID)
+            .run();
+    },
     setOwnedRoomID: async (userID: string, roomID: string): Promise<DBQueryResponse<DBRow>> =>
     {
         LogUtil.log("DBUserUtil.setOwnedRoomID", {userID, roomID}, "low", "info");
