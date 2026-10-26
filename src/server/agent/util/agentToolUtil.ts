@@ -88,6 +88,8 @@ const AgentToolUtil =
             saying: helper.saying.length > 0 ? MessageLinkUtil.withControlsInWords(helper.saying) : undefined,
             thinking: helper.thinking ? true : undefined,
             chattingWith: helper.chattingWith,
+            waitingFor: helper.waitingFor,
+            lookingAt: helper.lookingAt,
         }));
         const people = [...players, ...guides]
             .sort((a, b) => a.distance - b.distance)

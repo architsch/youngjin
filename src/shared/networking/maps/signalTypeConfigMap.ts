@@ -6,6 +6,7 @@ import AddObjectSignal from "../../object/types/addObjectSignal";
 import SetObjectTransformSignal from "../../object/types/setObjectTransformSignal";
 import HoldObjectSignal from "../../object/types/holdObjectSignal";
 import UserCommandSignal from "../../user/types/userCommandSignal";
+import TypingSignal from "../../user/types/typingSignal";
 import RequestRoomChangeSignal from "../../room/types/requestRoomChangeSignal";
 import RoomChangedSignal from "../../room/types/roomChangedSignal";
 import RoomChangeRejectedSignal from "../../room/types/roomChangeRejectedSignal";
@@ -142,6 +143,13 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
         minClientToServerSendInterval: 0, // never throttled: a dropped letting-go would leave the helper held.
         maxClientSideReceptionPeriod: 0, // not used because the client never receives this signal from the server.
         decode: (bufferState: BufferState) => HoldObjectSignal.decode(bufferState),
+    }],
+    [18, { // Unidirectional (client -> server)
+        // A user starting or stopping typing a line in the chat, which stands the helper it would be for still meanwhile.
+        signalType: "typingSignal",
+        minClientToServerSendInterval: 0, // never throttled: a dropped stop would keep the helper waiting.
+        maxClientSideReceptionPeriod: 0, // not used because the client never receives this signal from the server.
+        decode: (bufferState: BufferState) => TypingSignal.decode(bufferState),
     }],
 ];
 

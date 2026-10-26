@@ -22,6 +22,7 @@ import "./graphics/types/gizmo/objectAttachmentEditGizmos"; // Side-effect: lets
 import "./graphics/types/gizmo/volumeEditGizmos"; // Side-effect: lets the selected volume be resized by its outline's corners
 import "./voxel/util/restrictedZoneOutlineUtil"; // Side-effect: keeps the outlines on the room's restricted zones up to date
 import "./object/util/helperHoldUtil"; // Side-effect: holds a helper still for everyone while an admin has it selected
+import "./object/util/helperWaitUtil"; // Side-effect: holds a helper still for whoever types it a line
 import "./singlePlayer/util/singlePlayerHelperUtil"; // Side-effect: plays a single-player room's NPCs as helpers
 import { preloadGenericWorldSpaceGizmos } from "./graphics/types/gizmo/genericWorldSpaceGizmos"; // Side-effect: registers world-space gizmos that are used for general purposes; also exposes a pre-load hook
 import "./graphics/particle/util/particleTriggerUtil"; // Side-effect: plays the effects gameplay events call for

@@ -30,9 +30,10 @@ and the helpers (the AI guides the server plays) go on telling newcomers how thi
    two), and a changed manual gets a new version.
 5. **What the helpers are told**, under `src/server/agent/data/`: the guide (`helperGuide.ts`) when the
    change alters what a newcomer can do or how they do it, since helpers answer how-to questions from it
-   alone, and any idea in the knowledge (`helperKnowledge.ts`), a character (`helperPersonalities.ts`) or
-   the fixed words helpers chat in (`helperSmallTalk.ts`) that names the feature. The
-   `helper-instructions` skill checks them.
+   alone, and any idea in the knowledge (`helperKnowledge.ts`), a character (`helperPersonalities.ts`), the
+   fixed words helpers chat in (`helperSmallTalk.ts`) or say of what they look at (`helperRemarks.ts`) that
+   names the feature. A new kind of thing in a room may be one they go and look at (`HelperBehaviorUtil`'s
+   `findSights`). The `helper-instructions` skill checks them.
 6. **`docs/networking/agents.md`**, and **tests** in `tests/integration/scenarios/agent.test.ts` (and
    `helper.test.ts` for what helpers do).
 

@@ -101,6 +101,13 @@ Write them from the sample as it came out, not from the photo or the title.
   nothing; add an irregular plural only (`knives`, `shelves`).
 - **Nothing a player wouldn't search for**: no author, no brand or product names, no words about the photo
   (`photo`, `unsplash`, `sample`), and no words for what isn't visible.
+- **Helpers' tastes too.** Keywords also tell the helpers what a picture shows, and so what they like or dislike
+  in it when they go and look at one (see CLAUDE.md, "Picture Keywords Are Helpers' Tastes Too"). A word no entry
+  had before gets its place in `src/server/agent/data/helperTastes.ts` in the same batch: under the interest it
+  shows (`fruit`, `music`, `old`, a color), or in `UNREMARKED_KEYWORDS` when it shows none or could mean two things
+  (`fish`, food or a pet; `corn`, a vegetable or corn flakes). A word the last entry that had it no longer has comes
+  out of that file. `npx vitest run tests/integration/scenarios/helper.test.ts -t "keyword"` checks both, disabled
+  entries included, so it fails as soon as a batch is saved with a word left out.
 
 ## Categories
 
@@ -228,7 +235,8 @@ landing under Office. A painting has none.
    `src/client/object/maps/playModeClickCallbackMap.ts` (the Prop entry). A new kind gets a new empty callback
    only when none fits.
 6. **Report** to the user: each entry (path, title, keywords, source, and the categories suggested for it), the
-   photos skipped and why, and any author names still worth checking. They review in the editor
+   new keywords and where `helperTastes.ts` puts each (see Keywords), the photos skipped and why, and any author
+   names still worth checking. They review in the editor
    (`npm run imageMapEditor`, where disabled entries show dimmed and keywords can be edited), stage the keepers
    to try them in the game on staging or enable them, file them under categories there as an admin, and run
    `npm run beforeCommit` before committing.

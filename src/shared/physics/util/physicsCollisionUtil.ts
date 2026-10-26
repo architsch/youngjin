@@ -64,7 +64,7 @@ const PhysicsCollisionUtil =
         const colliderConfig = object.colliderState.colliderConfig;
 
         const overlaps = PhysicsColliderStateUtil.findOverlappingColliderStates(
-            physicsRoom, objectHitbox);
+            physicsRoom, objectHitbox, object);
 
         let climbing = false;
         overlaps.forEach((overlap) =>

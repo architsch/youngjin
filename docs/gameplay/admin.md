@@ -13,7 +13,7 @@ Admin is a user type that is granted manually in the database. Admins decide by 
 - Laying and editing volumes in any room, which is otherwise the room's superuser's to do (see [restricted_zone.md](restricted_zone.md#volumes)).
 - Laying, moving, resizing, reframing and recoloring a mirror, one to a room, in any room (see [mirror.md](../graphics/mirror.md)).
 - Building single-player rooms in the room editor (see [single_player_mode.md](../networking/single_player_mode.md#room-editor)).
-- Ghost mode: the admin's own character, body and speech bubble alike, is drawn for nobody, the admin included, and is unseen by agents and helpers (`AdminPrefsUtil`; see [agents.md](../networking/agents.md)). The character still moves and collides as usual.
+- Ghost mode: the admin's own character, body and speech bubble alike, is drawn for nobody, the admin included, and is unseen by agents and helpers (`AdminPrefsUtil`; see [agents.md](../networking/agents.md)). The character still moves and collides as usual, but it and other players pass through each other (see [physics.md](../geometry/physics.md)).
 - Setting how the image choosers offer pictures: rearranging a chooser's thumbnails, setting the categories each is filed under, and adding, renaming and deleting the categories themselves, by hand, saving it all as the admin's settings file, and taking a saved file back to go on from (see [image_map.md](../graphics/image_map.md#chooser-ui)).
 
 In all other respects an admin edits like any user.

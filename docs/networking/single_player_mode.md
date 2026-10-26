@@ -45,7 +45,7 @@ On connect (`UserSessionUtil`, as on an agent's first request), `RoomPickerUtil`
 - **Trap**: room files are static assets, which reach every running build at once (see [deployment.md](../devOps/vps/deployment.md)). An edit that the live build's steps cannot play belongs under a new roomPath.
 
 ## NPCs
-- An NPC (see [player_customization.md](../geometry/player_customization.md#npcs)) is a helper here as in a multiplayer room (see [agents.md](agents.md#helpers)) when its mode plays NPCs (`SinglePlayerModeConfig`) and its personality isn't Idle. The browser plays it alone, by the behavior the server's helpers share, and asks the server only for its replies and for the fixed words two helpers chat in.
+- An NPC (see [player_customization.md](../geometry/player_customization.md#npcs)) is a helper here as in a multiplayer room (see [agents.md](agents.md#helpers)) when its mode plays NPCs (`SinglePlayerModeConfig`) and its personality isn't Idle. The browser plays it alone, by the behavior the server's helpers share, and asks the server only for its replies, for the fixed words two helpers chat in, and for which of the things it could look at it goes to and what it says of it.
 - The room editor plays none, since a helper would walk off the spot its file saves.
 - An Idle NPC stands where it was put and says only what the steps give it, as the tutorial's receptionist does.
 

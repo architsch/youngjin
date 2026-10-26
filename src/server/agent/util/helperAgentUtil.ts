@@ -8,6 +8,7 @@ import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap
 import NpcPersonalityMap from "../../../shared/object/maps/npcPersonalityMap";
 import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 import HelperSurroundings from "../../../shared/object/types/helperSurroundings";
+import HelperRemarkSubject from "../../../shared/object/types/helperRemarkSubject";
 import QuarterTurnsUtil from "../../../shared/object/util/quarterTurnsUtil";
 import AdminPrefsUtil from "../../../shared/object/util/adminPrefsUtil";
 import NpcFacingUtil from "../../../shared/object/util/npcFacingUtil";
@@ -26,6 +27,7 @@ import ServerRoomManager from "../../room/serverRoomManager";
 import RoomPickerUtil from "../../room/util/roomPickerUtil";
 import ServerUserManager from "../../user/serverUserManager";
 import HoldObjectSignal from "../../../shared/object/types/holdObjectSignal";
+import TypingSignal from "../../../shared/user/types/typingSignal";
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
 import UserContext from "../../sockets/types/userContext";
 import DBUserUtil from "../../db/util/dbUserUtil";
@@ -38,16 +40,19 @@ import HelperPendingLines from "../types/helperPendingLines";
 import HelperState from "../types/helperState";
 import HelperIdentity from "../types/helperIdentity";
 import HelperChatUtil from "./helperChatUtil";
+import HelperRemarkUtil from "./helperRemarkUtil";
 import HelperSmallTalkUtil from "./helperSmallTalkUtil";
 
 // Helpers: the NPCs an admin stands in multiplayer rooms (see NpcObjectTypeConfig), which the server plays as AI guides,
 // so that a newcomer never arrives to an empty world, each as its BehaviorPrefs have it (one whose personality isn't
 // played isn't a helper). Each behaves as any helper does (see HelperBehaviorUtil); here, it greets each visitor as they
 // come near, once a login, telling anyone never told how to walk and build, answers whoever talks to it nearby, or names
-// it, people and agents alike, through Claude (see HelperChatUtil), and now and then chats with another helper near it in
-// fixed words (see HelperSmallTalkUtil). What it does is shown to the room and never kept: the room keeps it at home, so
-// an admin moving it moves its home. People are shown it is an AI (see NpcGameObject). A single-player room's helpers are
-// played by the browser, which asks here for their answers and their chats (see answerAlone, smallTalkAlone).
+// it, people and agents alike, through Claude (see HelperChatUtil), stands still for a person typing it a line, now and
+// then chats with another helper near it in fixed words (see HelperSmallTalkUtil), and now and then goes and looks at
+// something placed near it, saying what it thinks of it in fixed words too (see HelperRemarkUtil). What it does is
+// shown to the room and never kept: the room keeps it at home, so an admin moving it moves its home. People are shown
+// it is an AI (see NpcGameObject). A single-player room's helpers are played by the browser, which asks here for their
+// answers, their chats and their remarks (see answerAlone, smallTalkAlone, remarkAlone).
 
 const TICK_MS = 1000;
 const NPC_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Npc");
@@ -81,6 +86,8 @@ const state = {
     failureLoggedAt: -Infinity,
     // When each person was last told why no reply came, by the reason; any helper's telling counts.
     refusalToldAt: new Map<string, number>(),
+    // Whoever is typing a line in the chat, as their browser tells (see TypingSignal).
+    typingUserIDs: new Set<string>(),
 };
 
 const HelperAgentUtil =
@@ -95,6 +102,7 @@ const HelperAgentUtil =
         await HelperChatUtil.saveSpending(true);
         helpers.clear();
         state.refusalToldAt.clear();
+        state.typingUserIDs.clear();
         Object.assign(state, {timer: undefined, ticking: false, usageLoggedAt: Date.now(), failureLoggedAt: -Infinity});
     },
     // One beat of every helper's life, each second.
@@ -117,7 +125,9 @@ const HelperAgentUtil =
                 greet(helper, now);
                 answerSpeakers(helper, now);
             }
+            waitOnTypists(now);
             startSmallTalks(now);
+            startSights(now);
             for (const helper of helpers.values())
                 HelperBehaviorUtil.beat(helper, surroundingsOf(helper), now, helper.linesByUserID.size > 0);
             await HelperChatUtil.saveSpending();
@@ -156,9 +166,9 @@ const HelperAgentUtil =
     hear: (userID: string, signal: SetObjectMetadataSignal): void =>
     {
         const player = ServerUserManager.getPlayerObject(userID);
-        if (player == undefined || player.objectId != signal.objectId)
-            return;
         const text = signal.metadataValue.trim();
+        if (player == undefined || player.objectId != signal.objectId || text.length == 0)
+            return;
         const helper = findListener(userID, text);
         const ctx = ServerUserManager.getSocketUserContext(userID);
         if (helper == undefined || ctx == undefined)
@@ -170,6 +180,17 @@ const HelperAgentUtil =
         pending.lastAt = now;
         helper.linesByUserID.set(userID, pending);
         HelperBehaviorUtil.hear(helper, surroundingsOf(helper), userID, now);
+    },
+    // A person starting or stopping typing a line in the chat, as their browser tells: the helper it would be for stands
+    // still facing them meanwhile (see waitOnTypists), at once. An agent's lines come whole (see AgentToolUtil.say), so
+    // no helper waits on one.
+    noteTyping: (ctx: UserContext, signal: TypingSignal): void =>
+    {
+        if (signal.typing)
+            state.typingUserIDs.add(ctx.user.id);
+        else
+            state.typingUserIDs.delete(ctx.user.id);
+        waitOnTypists(Date.now());
     },
     // An admin's edit-mode selection taking hold of a helper, or letting go of it (see HoldObjectSignal). Held, it stands
     // still for everyone, as it does under the admin's own pointer: at home, the way it was put, as the room keeps the
@@ -230,6 +251,18 @@ const HelperAgentUtil =
             name: LabelTextUtil.isShortName(npc.name) ? LabelTextUtil.toName(npc.name) : "",
             personality: NpcPersonalityMap.read(npc.personality)})));
     },
+    // Which of the things a single-player room's helper, which the browser plays, could go and look at it does, and what
+    // it says of it (see SinglePlayerHelperUtil), as one in a multiplayer room would: by the thing's place among them,
+    // and none when nothing of the ask is right (the user isn't in a mode that plays NPCs) or it can say nothing.
+    remarkAlone: (userID: string, npc: {objectId: string, personality: string}, things: HelperRemarkSubject[]):
+        {index: number, text: string} | undefined =>
+    {
+        const ctx = ServerUserManager.getSocketUserContext(userID);
+        if (ctx == undefined || !SinglePlayerModeConfigMap[ctx.singlePlayerMode]?.playsNpcs)
+            return undefined;
+        return HelperRemarkUtil.pick({objectId: npc.objectId, personality: NpcPersonalityMap.read(npc.personality)},
+            things);
+    },
     // What one sent a room is to be told of its helpers besides (see catchUpOn). The helpers tell a newcomer to the room
     // themselves; whatever else shows it (an agent's camera) asks.
     getCatchUpSignals: (roomID: string): {signalType: string, signal: EncodableData}[] =>
@@ -239,29 +272,34 @@ const HelperAgentUtil =
     // The name of the helper a user's line is for, as hear finds it, so that an agent can be told whether it was heard.
     getListenerName: (userID: string, text: string): string | undefined =>
     {
-        const helper = findListener(userID, text.trim());
+        const helper = (text.trim().length == 0) ? undefined : findListener(userID, text.trim());
         return (helper == undefined) ? undefined : (helper.name || "a guide");
     },
     // The helpers in a room as they are shown, for what agents see (see AgentToolUtil.look), with the helper each is
-    // chatting with, if it is, by name.
+    // chatting with, if it is, and the person it stands waiting on as they type it a line, if it is, by name, and the
+    // thing it stands looking at, if it is, by id.
     getHelpers: (roomID: string): {objectId: string, name: string, at: Vec3, saying: string, thinking: boolean,
-        chattingWith: string | undefined}[] =>
+        chattingWith: string | undefined, waitingFor: string | undefined, lookingAt: string | undefined}[] =>
     {
+        const names = ServerRoomManager.roomRuntimeMemories[roomID]?.participantUserNameByID ?? {};
         return [...helpers.values()].filter(helper => helper.roomID == roomID).map(helper => {
             const partner = HelperBehaviorUtil.getSmallTalkPartner(helper);
             return {objectId: helper.objectId, name: helper.name, at: {...helper.at}, saying: helper.saying,
-                thinking: helper.thinking, chattingWith: (partner == undefined) ? undefined : (partner.name || "a guide")};
+                thinking: helper.thinking, chattingWith: (partner == undefined) ? undefined : (partner.name || "a guide"),
+                waitingFor: (helper.waitingFor == undefined) ? undefined : names[helper.waitingFor],
+                lookingAt: HelperBehaviorUtil.getLookedAt(helper)};
         });
     },
 }
 
-// The helper in the user's room that a line of theirs is for (see HelperBehaviorUtil.pickListener). A ghost isn't heard.
-// A player's transform points behind it (see SpawnHotspotUtil), so it faces the other way.
+// The helper in the user's room that a line of theirs is for (see HelperBehaviorUtil.pickListener), or would be, for a
+// line being typed (""). A ghost isn't heard. A player's transform points behind it (see SpawnHotspotUtil), so it faces
+// the other way.
 function findListener(userID: string, text: string): HelperState | undefined
 {
     const player = ServerUserManager.getPlayerObject(userID);
     const roomID = ServerRoomManager.currentRoomIDByUserID[userID];
-    if (player == undefined || roomID == undefined || text.length == 0 || AdminPrefsUtil.isGhost(player))
+    if (player == undefined || roomID == undefined || AdminPrefsUtil.isGhost(player))
         return undefined;
     return HelperBehaviorUtil.pickListener([...helpers.values()].filter(helper => helper.roomID == roomID), text,
         player.transform.pos, Vector3DUtil.scale(player.transform.dir, -1));
@@ -278,13 +316,13 @@ function surroundingsOf(helper: HelperState): HelperSurroundings
     };
     return {
         voxels: memory?.room.voxelGrid.voxels ?? [],
+        objectById: memory?.room.objectById ?? {},
         getPeople: () => Object.keys(memory?.participantUserNameByID ?? {})
             .map(userID => seenPlayerOf(userID)?.transform.pos)
             .filter((pos): pos is Vec3 => pos != undefined),
         getPerson: (userID: string) => (ServerRoomManager.currentRoomIDByUserID[userID] == helper.roomID)
             ? seenPlayerOf(userID)?.transform.pos : undefined,
-        getOtherHelpers: () => [...helpers.values()].filter(other => other.roomID == helper.roomID && other !== helper)
-            .map(other => other.at),
+        getOtherHelpers: () => [...helpers.values()].filter(other => other.roomID == helper.roomID && other !== helper),
         hasLinesWaiting: () => helper.linesByUserID.size > 0,
         isHeld: () => helper.heldBy.size > 0,
         showAt: () => send(helper, "setObjectTransformSignal", transformSignal(helper)),
@@ -329,6 +367,27 @@ function findHelpers(now: number): void
     }
 }
 
+// The helper a line someone is typing would be for, if they said it now (see findListener), stands waiting on them
+// meanwhile, the first of several typing to it; every other waits on nobody. Whoever no longer has a connection types
+// nothing.
+function waitOnTypists(now: number): void
+{
+    const typistOf = new Map<HelperState, string>();
+    for (const userID of state.typingUserIDs)
+    {
+        if (!ServerUserManager.hasUser(userID))
+        {
+            state.typingUserIDs.delete(userID);
+            continue;
+        }
+        const helper = findListener(userID, "");
+        if (helper != undefined && !typistOf.has(helper))
+            typistOf.set(helper, userID);
+    }
+    for (const helper of helpers.values())
+        HelperBehaviorUtil.waitFor(helper, typistOf.get(helper), now);
+}
+
 // Helpers near each other chat now and then, in fixed words (see HelperSmallTalkUtil): only while someone is in their
 // room to see it, and never one held. One with someone to greet or answer has talked with them too lately to.
 function startSmallTalks(now: number): void
@@ -348,6 +407,24 @@ function startSmallTalks(now: number): void
             HelperBehaviorUtil.startSmallTalk(pair, HelperSmallTalkUtil.compose(pair.map(helper =>
                 ({name: helper.name, personality: helper.prefs.personality}))), now);
         }
+    }
+}
+
+// Helpers go and look at things near them now and then, and say what they think of each in fixed words (see
+// HelperRemarkUtil): only while someone is in their room to see it, and never one held (see
+// HelperBehaviorUtil.isDueForSight).
+function startSights(now: number): void
+{
+    for (const helper of helpers.values())
+    {
+        const surroundings = surroundingsOf(helper);
+        if (!HelperBehaviorUtil.isDueForSight(helper, surroundings, now))
+            continue;
+        const sights = HelperBehaviorUtil.findSights(helper, surroundings);
+        const remark = HelperRemarkUtil.pick({objectId: helper.objectId, personality: helper.prefs.personality},
+            sights.map(sight => sight.subject));
+        HelperBehaviorUtil.startSight(helper, surroundings, (remark == undefined) ? undefined : sights[remark.index],
+            remark?.text ?? "", now);
     }
 }
 

@@ -76,6 +76,7 @@ import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import RoomValidationUtil from "../../../src/shared/room/util/roomValidationUtil";
 import SetObjectMetadataSignal from "../../../src/shared/object/types/setObjectMetadataSignal";
+import TypingSignal from "../../../src/shared/user/types/typingSignal";
 import RequestRoomChangeSignal from "../../../src/shared/room/types/requestRoomChangeSignal";
 import EncodableData from "../../../src/shared/networking/types/encodableData";
 import EncodingUtil from "../../../src/shared/networking/util/encodingUtil";
@@ -781,6 +782,37 @@ describe("AI agents", () => {
                 chattingWith: "Bo"});
             expect(seen.people.find((person: any) => person.name == "Bo")).toMatchObject({isGuide: true,
                 chattingWith: "Mira"});
+        });
+
+        it("are seen looking now and then at something placed near them, by the thing's id", async () => {
+            await standHelper("Mira");
+            const agent = await arriveAgent("Watcher");
+            // Far into the room, off the helper's home, which it goes back to between wanders.
+            await flushUntil(AgentToolUtil.walkTo(agent, {row: 20, column: 33, layer: 0}));
+            let seen: any = undefined;
+            for (let second = 0; second < 200 && seen == undefined; ++second)
+            {
+                flush(5);
+                HelperAgentUtil.stepAll(1);
+                await HelperAgentUtil.tick();
+                if (HelperAgentUtil.getHelpers(HUB_ID).some(helper => helper.lookingAt != undefined))
+                    seen = AgentToolUtil.look(agent) as any;
+            }
+
+            expect(seen?.people.find((person: any) => person.name == "Mira")).toMatchObject({isGuide: true,
+                lookingAt: ENTRANCE_DOOR_OBJECT_ID});
+        });
+
+        it("are seen standing still for whoever types one a line, by their name", async () => {
+            await standHelper("Mira");
+            const agent = await arriveAgent("Watcher");
+            const alice = await joinHuman("Alice");
+            const mira = () => (AgentToolUtil.look(agent) as any).people.find((person: any) => person.name == "Mira");
+
+            await dispatchAs(alice, "typingSignal", new TypingSignal(true));
+            expect(mira()).toMatchObject({isGuide: true, waitingFor: "Alice"});
+            await dispatchAs(alice, "typingSignal", new TypingSignal(false));
+            expect(mira().waitingFor).toBeUndefined();
         });
 
         it("can be walked up to by name", async () => {

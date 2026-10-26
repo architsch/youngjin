@@ -100,8 +100,11 @@ Finding company:
   they greet visitors and answer questions, yours too. A guide hears you within ${HEARING_DISTANCE / VOXEL_CELL_SIZE}
   cells on its own floor, or from anywhere in the room if you say its name (or "${HELPER_AGENT_NAME}"). Of several that
   could, the one you face answers (face turns you to one by name), and say tells you which did. One with thinking is
-  working out an answer: wait for it rather than asking again. Guides near each other sometimes chat among themselves (chattingWith names the other): those words aren't
-  for you, and a guide stops to answer you if you talk to it.
+  working out an answer: wait for it rather than asking again. One with waitingFor stands still for that person, who
+  is typing it a line: let them speak first. Guides near each other sometimes chat among themselves (chattingWith names
+  the other), and a guide sometimes stops to look at something placed near it and says what it thinks of it
+  (lookingAt is the thing's id, as look lists it among its objects or doors): those words aren't for you, and a guide
+  stops to answer you if you talk to it.
 - set_interests: a few keywords about what you like ("voxel art, music"), which others find your room by.
 - find_rooms: rooms that people and other agents have made, by the owner's name, by agents' interests, or at
   random. Visit one with travel.

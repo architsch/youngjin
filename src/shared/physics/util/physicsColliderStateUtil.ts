@@ -4,12 +4,14 @@ import Geometry3DUtil from "../../math/util/geometry3DUtil";
 import { ColliderState } from "../types/colliderState";
 import ObjectTypeConfigMap from "../../object/maps/objectTypeConfigMap";
 import ObjectScaleUtil from "../../object/util/objectScaleUtil";
+import AdminPrefsUtil from "../../object/util/adminPrefsUtil";
 // Type-only: the transform is the carrier of position, facing and scale.
 import type ObjectTransform from "../../object/types/objectTransform";
 import { ColliderConfig } from "../types/colliderConfig";
 import PhysicsDebugUtil from "./physicsDebugUtil";
 import PhysicsVoxelUtil from "./physicsVoxelUtil";
 import PhysicsRoom from "../types/physicsRoom";
+import PhysicsObject from "../types/physicsObject";
 import VoxelQueryUtil from "../../voxel/util/voxelQueryUtil";
 import { ATTACHMENT_HITBOX_INSET, COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS,
     NUM_VOXEL_ROWS, VOXEL_CELL_SIZE, ZERO_VEC3 } from "../../system/sharedConstants";
@@ -68,7 +70,8 @@ const PhysicsColliderStateUtil =
         PhysicsDebugUtil.tryShowColliderBox("object", state, "#ff00ff");
         return state;
     },
-    findOverlappingColliderStates(physicsRoom: PhysicsRoom, hitbox: AABB3): Set<ColliderState>
+    // A mover's box meets none of the objects it passes through (see passesThrough).
+    findOverlappingColliderStates(physicsRoom: PhysicsRoom, hitbox: AABB3, mover?: PhysicsObject): Set<ColliderState>
     {
         const minX = hitbox.center.x - hitbox.halfSize.x;
         const maxX = hitbox.center.x + hitbox.halfSize.x;
@@ -122,7 +125,8 @@ const PhysicsColliderStateUtil =
                 const objectHitbox = object.colliderState.hitbox;
                 if (objectHitbox != hitbox &&
                     !set.has(object.colliderState) &&
-                    Geometry3DUtil.AABBsOverlap(hitbox, objectHitbox))
+                    Geometry3DUtil.AABBsOverlap(hitbox, objectHitbox) &&
+                    (mover == undefined || !passesThrough(mover, object)))
                 {
                     set.add(object.colliderState);
                 }
@@ -141,6 +145,17 @@ const PhysicsColliderStateUtil =
         }
         return false;
     },
+}
+
+// Two players pass through each other while either is a ghost (see AdminPrefsUtil.isGhost), read from the room as
+// it stands.
+function passesThrough(mover: PhysicsObject, object: PhysicsObject): boolean
+{
+    const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
+    if (mover.objectTypeIndex != playerTypeIndex || object.objectTypeIndex != playerTypeIndex)
+        return false;
+    const objectById = mover.physicsRoom.room.objectById;
+    return AdminPrefsUtil.isGhost(objectById[mover.objectId]) || AdminPrefsUtil.isGhost(objectById[object.objectId]);
 }
 
 // Laid on its face (see Geometry3DUtil.getAxisFacingBasis). The box is slightly inset on the face's own

@@ -58,15 +58,21 @@ import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objec
 import QuarterTurnsUtil from "../../../src/shared/object/util/quarterTurnsUtil";
 import NpcFacingUtil from "../../../src/shared/object/util/npcFacingUtil";
 import HoldObjectSignal from "../../../src/shared/object/types/holdObjectSignal";
+import TypingSignal from "../../../src/shared/user/types/typingSignal";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import NpcPersonalityMap from "../../../src/shared/object/maps/npcPersonalityMap";
-import HelperBehaviorUtil from "../../../src/shared/object/util/helperBehaviorUtil";
+import { NpcPersonality } from "../../../src/shared/object/types/npcPersonality";
+import HelperBehaviorUtil, { MAX_SIGHTS } from "../../../src/shared/object/util/helperBehaviorUtil";
 import AdminPrefsUtil from "../../../src/shared/object/util/adminPrefsUtil";
 import BehaviorPrefsUtil from "../../../src/shared/object/util/behaviorPrefsUtil";
 import BehaviorPrefs from "../../../src/shared/object/types/behaviorPrefs";
 import { HELPER_SMALL_TALK } from "../../../src/server/agent/data/helperSmallTalk";
 import { HELPER_TOPICS } from "../../../src/server/agent/data/helperTopics";
+import { HELPER_REMARKS, REMARK_WORDS } from "../../../src/server/agent/data/helperRemarks";
+import { HELPER_INTERESTS, HELPER_TASTES, UNREMARKED_KEYWORDS } from "../../../src/server/agent/data/helperTastes";
+import HelperRemarkVoice from "../../../src/server/agent/types/helperRemarkVoice";
+import HelperRemarkUtil from "../../../src/server/agent/util/helperRemarkUtil";
 import DBUserUtil from "../../../src/server/db/util/dbUserUtil";
 import { FTUEElementCodeEnumMap } from "../../../src/shared/user/types/ftueElementCode";
 import FTUEElementUtil from "../../../src/shared/user/util/ftueElementUtil";
@@ -270,6 +276,14 @@ async function talk(person: ConnectedUser, text: string): Promise<void>
     await setOwnValue(person, ObjectMetadataKeyEnumMap.SentMessage, text);
 }
 
+// A person starting or stopping typing a line in the chat, as their browser tells it.
+async function setTyping(person: ConnectedUser, typing: boolean): Promise<void>
+{
+    const bufferState = EncodingUtil.startEncoding();
+    new TypingSignal(typing).encode(bufferState);
+    await UserSignalDispatchUtil.dispatch(person.socketUserContext, "typingSignal", EncodingUtil.endEncoding(bufferState));
+}
+
 // A value of a person's own player, set as their browser sets it.
 async function setOwnValue(person: ConnectedUser, metadataKey: number, value: string): Promise<void>
 {
@@ -355,6 +369,23 @@ async function registerAndAttend(name: string, ip: string): Promise<AgentUserCon
 function across(a: Vec3, b: Vec3): number
 {
     return Math.hypot(a.x - b.x, a.z - b.z);
+}
+
+// Every line a voice has for what it looks at, and its own words for the gaps (see HelperRemarkVoice).
+function remarkLinesOf(voice: HelperRemarkVoice): string[]
+{
+    return [...voice.love, ...voice.like, ...voice.meh, ...voice.dislike, ...voice.mixed,
+        ...Object.values(voice.kinds).flatMap(lines => [...(lines?.liked ?? []), ...(lines?.disliked ?? [])]),
+        ...Object.values(voice.words ?? {}).flat()];
+}
+
+// Each picture the picture map's manifest lists, and its own keywords.
+const PICTURE_MANIFEST: {images: {path: string, author: string, title: string, keywords?: string,
+    disabled?: boolean}[]} = JSON.parse(fs.readFileSync(path.resolve(__dirname,
+    "../../../public/app/assets/pictures/manifest.json"), "utf8"));
+function keywordsOf(picture: {keywords?: string}): string[]
+{
+    return (picture.keywords ?? "").split(",").map(keyword => keyword.trim()).filter(keyword => keyword.length > 0);
 }
 
 describe("helpers", () => {
@@ -824,7 +855,8 @@ describe("helpers", () => {
             ...Object.values(voice.answers).flat()]);
         for (const text of [HELPER_GUIDE, HELPER_KNOWLEDGE, ...Object.values(HELPER_PERSONALITIES).map(({character}) =>
             character), ...played.flatMap(personality => [NpcPersonalityMap.getInvitation(personality),
-            NpcPersonalityMap.getBasics(personality)]), ...smallTalk, ...Object.values(HELPER_TOPICS).flat()])
+            NpcPersonalityMap.getBasics(personality)]), ...smallTalk, ...Object.values(HELPER_TOPICS).flat(),
+            ...Object.values(HELPER_REMARKS).flatMap(remarkLinesOf), ...Object.values(REMARK_WORDS).flat()])
         {
             expect(text, text).not.toMatch(keys);
         }
@@ -999,6 +1031,84 @@ describe("helpers", () => {
         await talk(alice, "what should I build?");
         await live(6);
         expect(heardBy(claude.requests.at(-1).body)).toBe("Cy");
+    });
+
+    it("stands still for whoever near it types it a line, wherever it was going, facing them, and goes on a while after "
+        + "they stop", async () => {
+        const home = inFrontOfEntrance(FIRST_HUB_ID, 4);
+        const mira = standNpc(FIRST_HUB_ID, "Mira", home, 0, behaviorPrefs({minIdleTime: 1, maxIdleTime: 1}));
+        await live(1);
+        const alice = await joinPerson("Alice", "an");
+        await walkIn(alice, 8, 2);
+        const moves = () => shown.filter(({signalType, signal}) => signalType == "setObjectTransformSignal"
+            && signal.objectId == mira).length;
+        // Greeted, and then left to wander off once quiet a while, as it soon does.
+        await live(40);
+        expect(saidBy(mira)).toEqual([expect.stringMatching(/^Hi Alice, welcome/)]);
+        expect(moves()).toBeGreaterThan(0);
+
+        await setTyping(alice, true);
+        const typedAt = moves();
+        await live(40);
+        expect(moves()).toBe(typedAt);
+        expect(helperIn(FIRST_HUB_ID, mira).waitingFor).toBe("Alice");
+        expect(offFrom(lastFacingOf(mira), helperIn(FIRST_HUB_ID, mira).at, playerOf(alice.user.id).transform.pos))
+            .toBeLessThan(3);
+
+        // Stopped without a word, she is no longer waited on: it stays a while, as after a talk, then goes on.
+        await setTyping(alice, false);
+        expect(helperIn(FIRST_HUB_ID, mira).waitingFor).toBeUndefined();
+        await live(25);
+        expect(moves()).toBe(typedAt);
+        await live(30);
+        expect(moves()).toBeGreaterThan(typedAt);
+    });
+
+    it("waits, of the helpers near someone typing, on the one their line would be for, the one they face, and never on "
+        + "one out of earshot, a ghost or one gone", async () => {
+        const still = behaviorPrefs({wanderRadius: 0});
+        const miraAt = inFrontOfEntrance(FIRST_HUB_ID, 6, 2);
+        const boAt = inFrontOfEntrance(FIRST_HUB_ID, 11);
+        const mira = standNpc(FIRST_HUB_ID, "Mira", miraAt, 0, still);
+        const bo = standNpc(FIRST_HUB_ID, "Bo", boAt, 0, still);
+        await live(1);
+        const waitingFor = () => [helperIn(FIRST_HUB_ID, mira).waitingFor, helperIn(FIRST_HUB_ID, bo).waitingFor];
+        const alice = await joinPerson("Alice");
+        await moveTo(alice, inFrontOfEntrance(FIRST_HUB_ID, 6));
+        await live(10);
+        // A cleared bubble is no line.
+        await talk(alice, "");
+        await live(3);
+        expect(thinkingOf(mira)).toEqual([]);
+        expect(thinkingOf(bo)).toEqual([]);
+
+        // Mira is beside her, two steps off; Bo is ahead, five off. Turning as she types, she is waited on by the one
+        // she faces at once, or at its next beat.
+        await turnToward(alice, boAt);
+        await setTyping(alice, true);
+        expect(waitingFor()).toEqual([undefined, "Alice"]);
+        await turnToward(alice, miraAt);
+        await live(1);
+        expect(waitingFor()).toEqual(["Alice", undefined]);
+        await setTyping(alice, false);
+        expect(waitingFor()).toEqual([undefined, undefined]);
+
+        const far = await joinPerson("Faraway");
+        await moveTo(far, inFrontOfEntrance(FIRST_HUB_ID, 20));
+        const ghost = harness.connectUser({id: "id-Ghost", userName: "Ghost", userType: UserTypeEnumMap.Admin,
+            playerMetadata: {[ObjectMetadataKeyEnumMap.AdminPrefs]: AdminPrefsUtil.encode({ghostMode: true})}});
+        await harness.joinRoom(ghost, FIRST_HUB_ID);
+        await moveTo(ghost, inFrontOfEntrance(FIRST_HUB_ID, 6, 1));
+        await setTyping(far, true);
+        await setTyping(ghost, true);
+        await live(1);
+        expect(waitingFor()).toEqual([undefined, undefined]);
+
+        await setTyping(alice, true);
+        expect(waitingFor()).toEqual(["Alice", undefined]);
+        await harness.disconnectUser(alice);
+        await live(1);
+        expect(waitingFor()).toEqual([undefined, undefined]);
     });
 
     it("is heard, called for from anywhere in the room, as the helper the caller faces, though another is nearer",
@@ -1354,6 +1464,216 @@ describe("helpers", () => {
         expect(claude.requests).toEqual([]);
     });
 
+    it("goes now and then to look at something placed near it, in place of a wander, and says what it thinks of it in "
+        + "fixed words, asking no model, only while someone is in the room to see it", async () => {
+        const mira = standNpc(FIRST_HUB_ID, "Mira", inFrontOfEntrance(FIRST_HUB_ID, 3, 1.5));
+        const door = entranceOf(FIRST_HUB_ID);
+        await live(200);
+        expect(saidBy(mira)).toEqual([]);
+
+        // Someone comes in, too far off to be greeted.
+        const alice = await joinPerson("Alice", "an");
+        await walkIn(alice, 14);
+        for (let second = 0; second < 120 && saidBy(mira).length == 0; ++second)
+            await live(1);
+        const [remark] = saidBy(mira);
+        expect(remark).toMatch(/door/i);
+        expect(claude.requests).toEqual([]);
+        // It stands in front of it, facing it, while its words are read, as an agent who looks then sees.
+        const at = helperIn(FIRST_HUB_ID, mira).at;
+        expect(helperIn(FIRST_HUB_ID, mira).lookingAt).toBe(door.objectId);
+        expect(across(at, door.transform.pos)).toBeLessThanOrEqual(3.5 + PATH_END_SLACK);
+        expect(offFrom(lastFacingOf(mira), at, door.transform.pos)).toBeLessThan(3);
+        const agent = await registerAndAttend("Looking-Agent", "10.9.9.5");
+        expect((AgentToolUtil.look(agent) as any).people.find((person: any) => person.name == "Mira").lookingAt)
+            .toBe(door.objectId);
+    });
+
+    it("has words for what it looks at in every played personality's voice: lines for every taste, each short, every gap "
+        + "one it can fill, and lines of its own for some kinds of things", () => {
+        const played = NpcPersonalityMap.getEntries().map(entry => entry.id).filter(NpcPersonalityMap.isPlayed);
+        expect(Object.keys(HELPER_REMARKS).sort()).toEqual([...played].sort());
+        expect(Object.keys(HELPER_TASTES).sort()).toEqual([...played].sort());
+        // The gaps a thing fills, of any kind and of one kind alone (see HelperRemarkThing).
+        const thingGaps = ["thing", "reason", "other"];
+        const kindGaps: {[kind: string]: string[]} = {art: ["title", "painter"], photo: ["title"], lamp: ["color"]};
+        for (const [personality, voice] of Object.entries(HELPER_REMARKS))
+        {
+            const fillable = (line: string, gaps: string[]) => [...line.matchAll(/\{(\w+)\}/g)].every(([, gap]) => {
+                const name = gap.charAt(0).toLowerCase() + gap.slice(1);
+                return gaps.includes(name) || voice.words?.[name] != undefined || REMARK_WORDS[name] != undefined;
+            });
+            for (const taste of ["love", "like", "meh", "dislike", "mixed"] as const)
+            {
+                expect(voice[taste].length, `${personality} ${taste}`).toBeGreaterThanOrEqual(2);
+                for (const line of voice[taste])
+                    expect(fillable(line, thingGaps), line).toBe(true);
+            }
+            // Something to say of a thing it feels nothing for, and of one it likes nothing in.
+            expect(voice.meh.some(line => !/\{reason\}/i.test(line)), personality).toBe(true);
+            expect(voice.mixed.every(line => /\{reason\}/i.test(line) && /\{other\}/i.test(line)), personality).toBe(true);
+            expect(Object.keys(voice.kinds).length, personality).toBeGreaterThanOrEqual(4);
+            for (const [kind, lines] of Object.entries(voice.kinds))
+            {
+                for (const line of [...(lines?.liked ?? []), ...(lines?.disliked ?? [])])
+                    expect(fillable(line, [...thingGaps, ...(kindGaps[kind] ?? [])]), line).toBe(true);
+            }
+            for (const line of remarkLinesOf(voice))
+            {
+                // Plain words and gaps only, [a|b] for one thing or several, and short (the gaps as written).
+                expect(line.replace(/\{\w+\}/g, "").replace(/\[[^[\]|]*\|[^[\]|]*\]/g, ""), line).not.toMatch(/[{}[\]<>|]/);
+                expect(line.length, line).toBeLessThanOrEqual(120);
+            }
+        }
+    });
+
+    it("names, for each keyword a picture in the picture map's manifest has, what helpers may like or dislike in it, or "
+        + "that it shows nothing they could, so that no picture's new keyword is left out of what they think of it", () => {
+        const named = new Map<string, string>();
+        for (const [interest, {phrase, keywords}] of Object.entries(HELPER_INTERESTS))
+        {
+            expect(phrase.length, interest).toBeGreaterThan(0);
+            for (const keyword of keywords)
+            {
+                expect(named.get(keyword), keyword).toBeUndefined();
+                named.set(keyword, interest);
+            }
+        }
+        for (const keyword of UNREMARKED_KEYWORDS)
+        {
+            expect(named.get(keyword), keyword).toBeUndefined();
+            named.set(keyword, "nothing");
+        }
+        // A keyword missing here is one to add to helperTastes.ts: to an interest, or to UNREMARKED_KEYWORDS. Disabled
+        // pictures' too, so that a new sample's keywords are named as it is saved, before anyone enables it.
+        const used = new Set(PICTURE_MANIFEST.images.flatMap(keywordsOf));
+        expect([...used].filter(keyword => !named.has(keyword))).toEqual([]);
+        // And one no picture has any longer is one to take out of it.
+        expect([...named.keys()].filter(keyword => !used.has(keyword))).toEqual([]);
+        for (const [personality, {loves, likes, dislikes}] of Object.entries(HELPER_TASTES))
+        {
+            const all = [...loves, ...likes, ...dislikes];
+            expect(all.every(interest => HELPER_INTERESTS[interest] != undefined), personality).toBe(true);
+            expect(new Set(all).size, personality).toBe(all.length);
+        }
+    });
+
+    it("gives each helper tastes of its own, the same every time, which draw it most to what it loves", () => {
+        const ids = ["npc-a", "npc-b", "npc-c", "npc-d", "npc-e"];
+        const tastesOf = (id: string) => HelperRemarkUtil.getTastes(id, "curator");
+        expect(tastesOf("npc-a")).toEqual(tastesOf("npc-a"));
+        expect(new Set(ids.map(id => JSON.stringify([...tastesOf(id).levels]))).size).toBeGreaterThan(1);
+        for (const id of ids)
+        {
+            // Each a curator still, liking art, and a favorite color and painter of its own.
+            const {levels, painter} = tastesOf(id);
+            expect(levels.get("art"), id).toBeGreaterThanOrEqual(1);
+            expect(["red", "orange", "yellow", "green", "blue", "purple", "pink", "brown", "black", "white", "gray"]
+                .some(color => levels.get(color as any) == 2), id).toBe(true);
+            expect(PICTURE_MANIFEST.images.some(picture => picture.path.startsWith("1/") && picture.author == painter), id)
+                .toBe(true);
+        }
+        // A picture by its favorite painter draws it far more often than a door, and, for one that cares little for art,
+        // far more often than another painter's.
+        const drawnTo = (objectId: string, personality: NpcPersonality, things: object[]) => {
+            const picks = Array.from({length: 600}, () => HelperRemarkUtil.pick({objectId, personality}, things as any)!.index);
+            return picks.filter(index => index == 1).length / picks.filter(index => index == 0).length;
+        };
+        const paintingBy = (author: string) => ({objectType: "Canvas", picture: PICTURE_MANIFEST.images.find(picture =>
+            picture.author == author && !picture.disabled)!.path});
+        expect(drawnTo("npc-a", "curator", [{objectType: "Door"}, paintingBy(tastesOf("npc-a").painter!)]))
+            .toBeGreaterThan(1.5);
+        const builder = ids.find(id => HelperRemarkUtil.getTastes(id, "builder").levels.get("art") == 0)!;
+        const favorite = HelperRemarkUtil.getTastes(builder, "builder").painter!;
+        const another = PICTURE_MANIFEST.images.find(picture => picture.path.startsWith("1/") && !picture.disabled
+            && picture.author != favorite && picture.author != "thingspool")!.author;
+        expect(drawnTo(builder, "builder", [paintingBy(another), paintingBy(favorite)])).toBeGreaterThan(2);
+    });
+
+    it("says what it thinks of a thing by what it likes or dislikes in it, naming the thing", () => {
+        const say = (personality: NpcPersonality, thing: object, objectId = "npc-a") =>
+            HelperRemarkUtil.pick({objectId, personality}, [thing as any])!.text;
+        // A painting by its title and painter, and an everyday object by its name.
+        const painting = PICTURE_MANIFEST.images.find(picture => picture.path == "1/3")!;
+        for (let i = 0; i < 20; ++i)
+        {
+            const said = say("curator", {objectType: "Canvas", picture: painting.path});
+            expect(said, said).toContain(`'${painting.title}'`);
+            expect(said, said).toContain(painting.author);
+        }
+        const tart = PICTURE_MANIFEST.images.find(picture => picture.title == "Lemon Meringue Tart")!;
+        for (let i = 0; i < 10; ++i)
+            expect(say("jester", {objectType: "Prop", picture: tart.path})).toMatch(/[Tt]he lemon meringue tart/);
+        // A lamp by its light's color; a sign and a door by short, plain words on them.
+        expect(say("curator", {objectType: "Lamp", color: 0})).toMatch(/white/i);
+        expect(say("guide", {objectType: "Label", text: "Information Desk"})).toContain("'Information Desk'");
+        expect(say("guide", {objectType: "Label", text: "x".repeat(40)})).not.toContain("xxx");
+        expect(say("explorer", {objectType: "Door", text: "Gallery"})).toMatch(/'Gallery' door|door/i);
+        // A jester that dislikes signs says one of its lines for something disliked of one: the sign, and what it
+        // dislikes in it, put in, and any other gap anything.
+        const disliking = Array.from({length: 40}, (_, i) => `jester-${i}`)
+            .find(id => HelperRemarkUtil.getTastes(id, "jester").levels.get("signs") == -1)!;
+        const disliked = [...HELPER_REMARKS.jester.dislike, ...(HELPER_REMARKS.jester.kinds.sign?.disliked ?? [])]
+            .map(line => new RegExp(`^${line.replace(/[.*+?^$()|[\]\\]/g, "\\$&")
+                .replace(/\\\[([^|\\]*)\\\|[^\\]*\\\]/g, "$1").replace(/\{Thing\}/g, "The sign")
+                .replace(/\{thing\}/g, "the sign").replace(/\{reason\}/g, "signs").replace(/\{\w+\}/g, ".+")}$`));
+        for (let i = 0; i < 10; ++i)
+        {
+            const said = say("jester", {objectType: "Label"}, disliking);
+            expect(disliked.some(pattern => pattern.test(said)), said).toBe(true);
+        }
+        // A jester that loves a lamp's color but dislikes lamps says both.
+        const lightColors = Array.from({length: 24}, (_, color) => color);
+        const torn = Array.from({length: 200}, (_, i) => `jester-${i}`).find(id => {
+            const {levels} = HelperRemarkUtil.getTastes(id, "jester");
+            return levels.get("lamps") == -1 && lightColors.some(color =>
+                levels.get(HelperRemarkUtil.describe({objectType: "Lamp", color})!.interests[1]) == 2);
+        })!;
+        const {levels: tornLevels} = HelperRemarkUtil.getTastes(torn, "jester");
+        const loved = lightColors.find(color =>
+            tornLevels.get(HelperRemarkUtil.describe({objectType: "Lamp", color})!.interests[1]) == 2)!;
+        for (let i = 0; i < 10; ++i)
+        {
+            const said = say("jester", {objectType: "Lamp", color: loved}, torn);
+            expect(said, said).toMatch(/the color \w+/i);
+            expect(said, said).toMatch(/lamps/);
+        }
+        // Nothing to say of a picture the map doesn't have, nor in a personality that isn't played.
+        expect(HelperRemarkUtil.pick({objectId: "npc-a", personality: "curator"},
+            [{objectType: "Canvas", picture: "9/999"}])).toBeUndefined();
+        expect(HelperRemarkUtil.pick({objectId: "npc-a", personality: "idle"}, [{objectType: "Door"}])).toBeUndefined();
+    });
+
+    it("gives a single-player room's helper what it goes to look at and says of it through its route, only for a user in "
+        + "a mode that plays NPCs", async () => {
+        const alice = await joinPerson("Alice");
+        const ask = async (body: object): Promise<{statusCode: number, body: any}> => {
+            const route = (HelperRouter as any).stack.find((layer: any) => layer.route?.path == "/remark").route;
+            const res: any = {statusCode: 200, status(code: number) { this.statusCode = code; return this; },
+                send(data: unknown) { this.body = data; return this; }, json(data: unknown) { this.body = data; return this; }};
+            await route.stack[route.stack.length - 1].handle({userString: alice.user.toString(), body}, res);
+            return res;
+        };
+        const two = {objectId: "npc-1", personality: "curator",
+            things: [{objectType: "Door", text: "Gallery"}, {objectType: "Canvas", picture: "1/3"}]};
+        // Not in a single-player room.
+        expect(await ask(two)).toMatchObject({statusCode: 200, body: {index: -1, text: ""}});
+
+        await harness.joinRoom(alice, SANDBOX_SINGLE_PLAYER_MODE);
+        const {statusCode, body} = await ask(two);
+        expect(statusCode).toBe(200);
+        expect(body.text).toMatch((body.index == 0) ? /door/i : /Ground Swell/);
+        expect((await ask({...two, things: [{objectType: "Canvas", picture: "9/999"}]})).body)
+            .toEqual({index: -1, text: ""});
+        for (const wrong of [{}, {...two, things: []}, {...two, things: Array(MAX_SIGHTS + 1).fill({objectType: "Door"})},
+            {...two, things: [{objectType: 7}]}, {...two, things: [{objectType: "Lamp", color: 200}]},
+            {...two, things: [{objectType: "Label", text: "x".repeat(600)}]}, {...two, objectId: "x".repeat(65)}])
+        {
+            expect((await ask(wrong)).statusCode).toBe(400);
+        }
+        expect(claude.requests).toEqual([]);
+    });
+
     it("says each reply whole in one bubble, links and all, longer than a person's, and gives it time to be read before "
         + "the next", async () => {
         const mira = standNpc(FIRST_HUB_ID, "Mira");
@@ -1528,7 +1848,8 @@ describe("helpers", () => {
     it("without a model only greets, and tells whoever talks to it so, again only once a couple of minutes have passed",
         async () => {
         delete process.env.ANTHROPIC_API_KEY;
-        const mira = standNpc(FIRST_HUB_ID, "Mira");
+        // One that never wanders, so it goes to look at nothing (and says nothing of it) in the long wait.
+        const mira = standNpc(FIRST_HUB_ID, "Mira", undefined, 0, behaviorPrefs({wanderRadius: 0}));
         await live(1);
         const alice = await joinPerson("Alice", "an");
         await live(6);

@@ -22,7 +22,7 @@
   - `/voxel` - Voxel management (ClientVoxelManager), plus the client-only queries about the room as drawn (ClientVoxelQueryUtil) and the pool of mesh instances the visible quads are lent (VoxelQuadInstanceUtil)
   
 - **`/server`** - Server-side code (Node.js/Express)
-  - `/agent` - AI agents as players (the MCP endpoint they play over, their accounts, keys, OAuth sign-in and presence, what happened in their rooms while they were away, their bodies the server walks, their tools for seeing, building, placing things and setting up their rooms, the camera page that shows a browser what one sees, the directory of rooms they find, and the helpers, the NPCs the server plays as AI guides in multiplayer rooms and answers for in single-player ones, with what they are told, and the fixed words they chat in among themselves, under `data/`)
+  - `/agent` - AI agents as players (the MCP endpoint they play over, their accounts, keys, OAuth sign-in and presence, what happened in their rooms while they were away, their bodies the server walks, their tools for seeing, building, placing things and setting up their rooms, the camera page that shows a browser what one sees, the directory of rooms they find, and the helpers, the NPCs the server plays as AI guides in multiplayer rooms and answers for in single-player ones, with what they are told, the fixed words they chat in among themselves and say of the things they look at, and what each likes, under `data/`)
   - `/analytics` - Acquisition analytics (ServerAnalyticsManager — which traffic source a visitor came from, and how far through the funnel they got)
   - `/db` - Database utilities and types (Firestore, Firebase Storage, caching)
   - `/networking` - Express.js routers and general networking utilities (e.g. address (URL) formatting, cookies, firebase-admin, and rate-limiter initialization)
@@ -38,7 +38,7 @@
   - `/graphics` - Shared graphics data (image maps, material params, and the instanced mesh composition system with its codecs and builders)
   - `/math` - Math utilities (vectors, geometry, etc.)
   - `/networking` - Data encoding/decoding utilities and Socket.IO signal type configs
-  - `/object` - Game object types, configs, and shared update logic (ObjectUpdateUtil), and how a helper walks, turns, greets and paces its speech wherever it is played (HelperBehaviorUtil)
+  - `/object` - Game object types, configs, and shared update logic (ObjectUpdateUtil), and how a helper walks, turns, greets, paces its speech and goes to look at things wherever it is played (HelperBehaviorUtil)
   - `/physics` - Physics engine (PhysicsManager — collision detection, hitboxes, step-up, gravity, and the pushes objects give from afar in PhysicsForceUtil)
   - `/room` - Room types, room generation (RoomGenerationUtil — every Hub or Regular room starts out empty), room files, and the room map that catalogs the room files the game ships with
   - `/singlePlayer` - Single-player mode configs and types (SinglePlayerModeConfig — which room file a mode is played in, and who may enter it)
@@ -58,7 +58,7 @@
 
 ### `/dev` - Development Configuration
 - **`/config`** - Webpack config files, tsconfig files, Nginx config files
-- **`/scripts`** - Dev scripts (e.g. dev-server with hot-reloading capability, secrets injector, the composition and image map editors, the picture preparation tool, the helpers' reply and small-talk samplers)
+- **`/scripts`** - Dev scripts (e.g. dev-server with hot-reloading capability, secrets injector, the composition and image map editors, the picture preparation tool, the helpers' reply, small-talk and remark samplers)
 - **`/clawhub`** - The agents' manual as published on ClawHub (MIT-0): `public/skill.md` but for its license, which a test checks
 - **`/assets`** - Full-resolution samples the image map editor keeps to remake pictures (what canvases and props show) at another size, the images of disabled entries, and the index of its source library, whose photos are gitignored (third-party photos; never shipped)
 
@@ -104,6 +104,7 @@
 - **Room Generation Defines What a Room Is**: See *Project Rules* below.
 - **Stored Formats Keep Their History Apart**: A versioned stored type (e.g. `VoxelGrid`, `ObjectGroup`) holds only its current format. Decoders for older layouts, converters and legacy constants live in a sibling `versionMigration/` directory (e.g. `VoxelGridVersionMigration`), as DB row migrations do in `src/server/db/types/versionMigration/`.
 - **Pictured Controls Are Copies**: A control a message pictures (`<control name="..."/>`, mostly in helpers' replies; see `docs/gameplay/chat.md`) is drawn by `ScreenControlPicture`, a hand-made copy that shares only the control's icon. **Whenever a pictured control's look changes** (its frame, face, color, icon or text), **its picture changes to match in the same change**; nothing else carries the redesign over.
+- **Picture Keywords Are Helpers' Tastes Too**: the keywords of the picture map's entries (its `manifest.json`, which canvases' and props' pictures come from) also decide what helpers like or dislike in a picture they look at (`src/server/agent/data/helperTastes.ts`; see `docs/networking/agents.md`). **Whenever a keyword is added, renamed or dropped**, by the image map editor or by hand, **`helperTastes.ts` classifies it in the same change**: under the interest it shows, or in `UNREMARKED_KEYWORDS` when it shows none or could mean two things. `helper.test.ts` fails on a keyword left out, and on one no picture has any longer.
 
 ## Project Rules
 

@@ -13,6 +13,7 @@ import SetVoxelQuadTextureSignal from "../../../shared/voxel/types/update/setVox
 import UserCommandSignal from "../../../shared/user/types/userCommandSignal";
 import RequestRoomChangeSignal from "../../../shared/room/types/requestRoomChangeSignal";
 import HoldObjectSignal from "../../../shared/object/types/holdObjectSignal";
+import TypingSignal from "../../../shared/user/types/typingSignal";
 import ErrorUtil from "../../../shared/system/util/errorUtil";
 import ServerObjectManager from "../../object/serverObjectManager";
 import ServerVoxelManager from "../../voxel/serverVoxelManager";
@@ -74,6 +75,10 @@ const handlers: {[signalType: string]: (ctx: UserContext, bufferState: BufferSta
     },
     holdObjectSignal: async (ctx, bufferState) => {
         HelperAgentUtil.hold(ctx, HoldObjectSignal.decode(bufferState) as HoldObjectSignal);
+        return true;
+    },
+    typingSignal: (ctx, bufferState) => {
+        HelperAgentUtil.noteTyping(ctx, TypingSignal.decode(bufferState) as TypingSignal);
         return true;
     },
 };

@@ -2,6 +2,7 @@ import { ClipboardEvent, FormEvent, KeyboardEvent as ReactKeyboardEvent, useEffe
 import { chatTextInputObservable, numActiveInputElementsObservable } from "../../../../system/clientObservables";
 import { OBJECT_MESSAGE_MAX_LENGTH } from "../../../../../shared/system/sharedConstants";
 import ChatInputEditUtil from "../../../util/chatInputEditUtil";
+import ChatTypingUtil from "../../../util/chatTypingUtil";
 
 // Pasted text and drops come as plain text where a browser can keep them so; elsewhere, pastes are taken as text here,
 // and drops refused.
@@ -26,6 +27,7 @@ export default function ChatTextInput({textInput, setTextInput}
         {
             ChatInputEditUtil.show(editor, textInput);
             shownRef.current = textInput;
+            ChatTypingUtil.change(textInput);
         }
     }, [textInput]);
 
@@ -43,11 +45,14 @@ export default function ChatTextInput({textInput, setTextInput}
         shownRef.current = message;
         setTextInput(message);
         chatTextInputObservable.set(message);
+        ChatTypingUtil.change(message);
     };
 
     const onInput = (event: FormEvent<HTMLDivElement>) => {
         if (!(event.nativeEvent as InputEvent).isComposing)
             commit();
+        else
+            ChatTypingUtil.change(event.currentTarget.textContent ?? "");
     };
 
     // Enter sends (see ChatSendButton) rather than breaking the line. A chip goes whole.
@@ -127,9 +132,11 @@ function getPlainTextEditing(): boolean
 function onFocus()
 {
     numActiveInputElementsObservable.change(n => n + 1);
+    ChatTypingUtil.focus(true);
 }
 
 function onBlur()
 {
     numActiveInputElementsObservable.change(n => n - 1);
+    ChatTypingUtil.focus(false);
 }

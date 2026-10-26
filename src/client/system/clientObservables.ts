@@ -179,6 +179,9 @@ export const orbitCameraAngleHoldRequestObservable = new Observable<boolean>(fal
 // This observable notifies its listeners whenever ChatTextInput's input text changes.
 export const chatTextInputObservable = new Observable<string>("");
 
+// Whether the user is typing a line in the chat (see ChatTypingUtil).
+export const chatTypingObservable = new Observable<boolean>(false);
+
 // Fires with an image map's name each time an admin changes its order or its categories (see
 // AdminAssetSettingsEditor), for a chooser open at the time to show them.
 export const imageMapSettingsChangedObservable = new Observable<string>("");

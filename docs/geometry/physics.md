@@ -8,7 +8,7 @@ The physics engine is shared, so the client and the server simulate movement the
 
 - **Global colliders**: every `PhysicsRoom` has boxes just outside the floor, ceiling and four walls, and every voxel block adds one box (see [voxel_grid.md](voxel_grid.md)).
 - **Hard collision** (voxels and room bounds): a movement ray is cast against target boxes that have been expanded by the mover's half-size (Minkowski sum + slab method). On a hit, the mover slides along the surface, with a few cascaded attempts so it can round corners.
-- **Soft collision** (dynamic objects): overlapping boxes push each other apart along the axis of least overlap, in proportion to the overlap.
+- **Soft collision** (dynamic objects): overlapping boxes push each other apart along the axis of least overlap, in proportion to the overlap. Two players pass through each other while either is a ghost, read from the room each time (see [admin.md](../gameplay/admin.md)).
 - **Step-up**: on a horizontal hit, a short enough obstacle with free space above it is climbed automatically. Only an obstacle that blocks is climbed; a pass-through box, such as a lamp lying on the floor, is walked over.
 - **Gravity**: a constant downward velocity applies whenever the object is not resting on something. Nothing switches it off.
 - **Forces** (`PhysicsForceUtil`): a type with an `ObjectForceConfig` (a fan) speeds up whatever a `Rigidbody` moves through the stream in front of its face.

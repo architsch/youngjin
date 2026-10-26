@@ -22,6 +22,7 @@ import AddVoxelBlockSignal from "../../../shared/voxel/types/update/addVoxelBloc
 import MoveVoxelBlockSignal from "../../../shared/voxel/types/update/moveVoxelBlockSignal";
 import UserCommandSignal from "../../../shared/user/types/userCommandSignal";
 import HoldObjectSignal from "../../../shared/object/types/holdObjectSignal";
+import TypingSignal from "../../../shared/user/types/typingSignal";
 import RoomTexturePackChangedSignal from "../../../shared/room/types/roomTexturePackChangedSignal";
 import RoomPrefsChangedSignal from "../../../shared/room/types/roomPrefsChangedSignal";
 import App from "../../app";
@@ -167,6 +168,7 @@ const SocketsClient =
     emitSetObjectTransformSignal: (params: SetObjectTransformSignal) => emitWhenReady("setObjectTransformSignal", params),
     emitUserCommandSignal: (params: UserCommandSignal) => emitWhenReady("userCommandSignal", params),
     emitHoldObjectSignal: (params: HoldObjectSignal) => emitWhenReady("holdObjectSignal", params),
+    emitTypingSignal: (params: TypingSignal) => emitWhenReady("typingSignal", params),
     emitRequestRoomChangeSignal: (params: RequestRoomChangeSignal) => {
         emitWhenReady("requestRoomChangeSignal", params);
     },

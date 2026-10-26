@@ -17,7 +17,7 @@ type HelperBehavior = {
     // Floor points still to walk, the next first: each a grid vertex, but for home at the end of a way there. What the
     // walk is for, and since when it has stood blocked on its way, if it has.
     path: Vec3[],
-    walk: "wander" | "home" | "meet",
+    walk: "wander" | "home" | "meet" | "see",
     blockedSince: number | undefined,
     // Whom it talks with, whom it looks at, and since when.
     talkingWith: string[],
@@ -27,10 +27,11 @@ type HelperBehavior = {
     // When it next wanders off, and when it heads home again once away.
     nextWanderAt: number,
     returnHomeAt: number,
-    // When it last spoke with someone, or was spoken to.
+    // When it last spoke with someone, or was spoken to (or typed to).
     lastTalkAt: number,
-    // Whom it is thinking of an answer to.
+    // Whom it is thinking of an answer to, and whom it stands waiting on as they type it a line.
     answering: string | undefined,
+    waitingFor: string | undefined,
     // Whether it is shown thinking of an answer (see Thinking): from when it hears a line until it says its answer,
     // or has none to say.
     thinking: boolean,
@@ -40,6 +41,11 @@ type HelperBehavior = {
     // The chat it is having with another helper, if it is, and when it may begin another.
     smallTalk: HelperSmallTalk | undefined,
     nextSmallTalkAt: number,
+    // The thing it has gone to look at, if it has: where the thing was when it set off, the point it faces, what it says
+    // of it, when it says it (none while still on its way), and whether it has. When it may go and look at another.
+    sight: {objectId: string, at: Vec3, point: Vec3, remark: string, saysAt: number | undefined, said: boolean}
+        | undefined,
+    nextSightAt: number,
 };
 
 export default HelperBehavior;

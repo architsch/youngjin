@@ -3,7 +3,7 @@ import ClientObjectManager from "../../object/clientObjectManager";
 import NpcGameObject from "../../object/types/gameObject/npcGameObject";
 import HelperAPIClient from "../../networking/client/helperAPIClient";
 import FTUEUtil from "../../ui/util/ftueUtil";
-import { roomChangedObservable, singlePlayerChatLineObservable,
+import { chatTypingObservable, roomChangedObservable, singlePlayerChatLineObservable,
     updateObservable } from "../../system/clientObservables";
 import Vec3 from "../../../shared/math/types/vec3";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
@@ -22,9 +22,11 @@ import SinglePlayerHelper from "../types/singlePlayerHelper";
 
 // The NPCs of a single-player room played as helpers, by the browser, as the room is the browser's alone (see
 // HelperBehaviorUtil). Each greets the user once as they come near (telling them how to walk and build, if nothing has
-// yet), answers what they say to it through the server (see HelperAPIClient), walks, wanders and turns as a helper in a
-// multiplayer room does, an admin holding it still as there, and chats with another helper near it in words the server
-// gives. Only in a mode that plays NPCs (see NpcGameObject.arePlayedHere), and only NPCs whose personality is played.
+// yet), answers what they say to it through the server (see HelperAPIClient), standing still for them as they type it
+// a line, walks, wanders and turns as a helper in a multiplayer room does, an admin holding it still as there, chats
+// with another helper near it in words the server gives, and goes and looks at things near it, saying what the server
+// gives it to say of each. Only in a mode that plays NPCs (see NpcGameObject.arePlayedHere), and only NPCs whose
+// personality is played.
 
 // As often as the server steps its helpers (see SocketsServer's flush), and gives each a beat.
 const STEP_SECONDS = SIGNAL_BATCH_SEND_INTERVAL / 1000;
@@ -36,8 +38,10 @@ const UP: Vec3 = {x: 0, y: 1, z: 0};
 
 // By object id.
 const helpers = new Map<string, SinglePlayerHelper>();
-// askingSmallTalk: whether the words for a chat are on their way, so that no other is asked for meanwhile.
-const state = {sinceStep: 0, sinceBeat: 0, askingSmallTalk: false};
+// askingSmallTalk: whether the words for a chat are on their way, so that no other is asked for meanwhile; likewise
+// askingRemarkFor, the helper whose remark is on its way, which waits for it rather than wandering off.
+const state = {sinceStep: 0, sinceBeat: 0, askingSmallTalk: false,
+    askingRemarkFor: undefined as SinglePlayerHelper | undefined};
 
 updateObservable.addListener("singlePlayerHelperUtil", (deltaTime: number) => {
     const room = App.getCurrentRoom();
@@ -85,8 +89,11 @@ singlePlayerChatLineObservable.addListener("singlePlayerHelperUtil", (text: stri
     HelperBehaviorUtil.hear(helper, surroundingsOf(helper, room), user.id, now);
 });
 
+chatTypingObservable.addListener("singlePlayerHelperUtil", () => waitOnTypist(Date.now()));
+
 // Each second: the helpers there are now, each greeting the user once they come near, and answering them once they
-// have paused, and those near each other chatting now and then, before each one's own beat.
+// have paused, one waiting on them as they type, those near each other chatting now and then, and each going to look at
+// something now and then, before each one's own beat.
 function beat(room: Room, now: number): void
 {
     findHelpers(room, now);
@@ -106,9 +113,26 @@ function beat(room: Room, now: number): void
         }
         answer(helper, room, now);
     }
+    waitOnTypist(now);
     startSmallTalk(room, now);
+    startSights(room, now);
     for (const helper of helpers.values())
-        HelperBehaviorUtil.beat(helper, surroundingsOf(helper, room), now, helper.lines.length > 0);
+    {
+        HelperBehaviorUtil.beat(helper, surroundingsOf(helper, room), now,
+            helper.lines.length > 0 || state.askingRemarkFor === helper);
+    }
+}
+
+// The helper a line the user is typing would be for, if they said it now, stands waiting on them meanwhile, as a
+// multiplayer room's would (see HelperBehaviorUtil.waitFor); every other waits on nobody.
+function waitOnTypist(now: number): void
+{
+    const user = App.getUser();
+    const me = getMyPosition();
+    const listener = (user == undefined || me == undefined || !chatTypingObservable.peek()) ? undefined
+        : HelperBehaviorUtil.pickListener([...helpers.values()], "", me, getMyFacing());
+    for (const helper of helpers.values())
+        HelperBehaviorUtil.waitFor(helper, (helper === listener) ? user?.id : undefined, now);
 }
 
 // Two helpers near each other, neither held, chat now and then while the user is there to see it (a ghost isn't), in
@@ -131,6 +155,40 @@ function startSmallTalk(room: Room, now: number): void
             HelperBehaviorUtil.startSmallTalk(pair, stillFree ? lines : [], Date.now());
         })
         .finally(() => { state.askingSmallTalk = false; });
+}
+
+// Now and then a helper goes and looks at something near it in place of a wander, as a multiplayer room's would, the
+// server picking which and saying what it thinks of it (see HelperBehaviorUtil.isDueForSight, which leaves out one held,
+// or with the user away). One is asked for at a time.
+function startSights(room: Room, now: number): void
+{
+    if (state.askingRemarkFor != undefined)
+        return;
+    for (const helper of helpers.values())
+    {
+        const surroundings = surroundingsOf(helper, room);
+        if (!HelperBehaviorUtil.isDueForSight(helper, surroundings, now))
+            continue;
+        const sights = HelperBehaviorUtil.findSights(helper, surroundings);
+        if (sights.length == 0)
+        {
+            HelperBehaviorUtil.startSight(helper, surroundings, undefined, "", now);
+            continue;
+        }
+        state.askingRemarkFor = helper;
+        void HelperAPIClient.remark(helper.objectId, helper.prefs.personality, sights.map(sight => sight.subject))
+            .then(remark => {
+                // Only while it is still a helper in the room the user is in.
+                const room = App.getCurrentRoom();
+                if (room != undefined && helpers.get(helper.objectId) === helper)
+                {
+                    HelperBehaviorUtil.startSight(helper, surroundingsOf(helper, room),
+                        (remark == undefined) ? undefined : sights[remark.index], remark?.text ?? "", Date.now());
+                }
+            })
+            .finally(() => { state.askingRemarkFor = undefined; });
+        return;
+    }
 }
 
 // Every NPC of the room whose personality is played is a helper; one made no longer played goes back to where it was
@@ -213,12 +271,13 @@ function surroundingsOf(helper: SinglePlayerHelper, room: Room): HelperSurroundi
 {
     return {
         voxels: room.voxelGrid.voxels,
+        objectById: room.objectById,
         getPeople: () => {
             const me = getMyPosition();
             return (me == undefined) ? [] : [me];
         },
         getPerson: (userID: string) => (userID == App.getUser()?.id) ? getMyPosition() : undefined,
-        getOtherHelpers: () => [...helpers.values()].filter(other => other !== helper).map(other => other.at),
+        getOtherHelpers: () => [...helpers.values()].filter(other => other !== helper),
         hasLinesWaiting: () => helper.lines.length > 0,
         isHeld: () => NpcGameObject.isHeld(helper.objectId),
         showAt: () => {

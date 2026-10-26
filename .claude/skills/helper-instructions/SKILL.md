@@ -1,6 +1,6 @@
 ---
 name: helper-instructions
-description: Bring up to date what the helpers (the NPCs an admin places, which the server plays as AI guides through Claude) are told — the guide to playing, the knowledge they share of ThingsPool's story, ideas to try and the library's writings, each personality's character and the things on its mind — and the fixed small talk they say to one another, from the dev log, the library, well-known facts and the game as it is now; check every claim and address; then hear the helpers answer through the real model, and read their small talk, before handing the change over. Use when asked to update, enrich or refresh what the helpers or NPCs know or say (to visitors or to each other), after new dev-log posts or library writings or new features, or when a helper is reported saying something wrong, stale or dull.
+description: Bring up to date what the helpers (the NPCs an admin places, which the server plays as AI guides through Claude) are told — the guide to playing, the knowledge they share of ThingsPool's story, ideas to try and the library's writings, each personality's character and the things on its mind — and the fixed words they say without a model, the small talk to one another and the remarks on things they go and look at (with the tastes and picture keywords behind those), from the dev log, the library, well-known facts and the game as it is now; check every claim and address; then hear the helpers answer through the real model, and read their small talk and remarks, before handing the change over. Use when asked to update, enrich or refresh what the helpers or NPCs know or say (to visitors, to each other, or of the things around them), after new dev-log posts or library writings or new features, or when a helper is reported saying something wrong, stale or dull.
 ---
 
 # Helper Instructions
@@ -35,8 +35,9 @@ shows as a small copy of the control and agents hear as its words (names in `Scr
 
 `src/shared/object/maps/npcPersonalityMap.ts` holds what an admin is shown for each personality, what
 it greets people as and how it tells the basics. A new personality touches `NpcPersonality`, that map,
-`HELPER_PERSONALITIES`, `HELPER_TOPICS` and `HELPER_SMALL_TALK` together; one that is not played (like
-Idle) has no role, no character, no topics and no small talk.
+`HELPER_PERSONALITIES`, `HELPER_TOPICS`, `HELPER_SMALL_TALK`, `HELPER_TASTES` and `HELPER_REMARKS`
+together; one that is not played (like Idle) has no role, no character, no topics, no small talk, and no
+tastes or remarks.
 
 The guide is also bound by the agents-keep-up rule (`.claude/rules/agents-keep-up.md`): when it
 changes because the game did, the other things agents read may need the same change.
@@ -67,6 +68,24 @@ Any opener can meet any voice's answer, so the lines only work if each keeps to 
   "He tried..."): after another's answer, a bare "it" or "he" points at the wrong thing.
 - An opener drawn from one of the maker's writings names that page in `from`. Nobody hears it; it
   shows what the small talk already covers.
+
+## What the helpers say of what they look at
+
+Now and then, in place of a wander, a helper goes and looks at something placed near it and says what
+it thinks of it, in fixed words too (`HelperRemarkUtil`):
+
+- `src/server/agent/data/helperTastes.ts`: the **interests** a helper may like or dislike (coffee, old
+  things, music, a color, lamps, doors…), each with the phrase it is called by and the picture keywords
+  that show it; `UNREMARKED_KEYWORDS`, the keywords that show none; and what each personality loves,
+  likes and dislikes. Each helper adds a few tastes of its own, by its NPC's id, with a favorite color
+  and painter. Every keyword in the picture map's manifest is in exactly one of these (a test checks),
+  so a new keyword is classified when it arrives (see CLAUDE.md, "Picture Keywords Are Helpers' Tastes
+  Too"). One that could mean two things (`fish`, food or a pet) shows none: a wrong interest gives a
+  wrong reason ("The planted aquarium! I love seafood.").
+- `src/server/agent/data/helperRemarks.ts`: each voice's **lines**, by how much it likes the thing
+  (love, like, meh, dislike, mixed), some for one kind of thing alone (a painting, a door, a mirror),
+  and the **word pools** for their gaps (adjectives and common phrases picked at random, so the same
+  thing is seldom spoken of the same way twice).
 
 ## Step 1 — Read the sources, not memory
 
@@ -147,6 +166,17 @@ Any opener can meet any voice's answer, so the lines only work if each keeps to 
   - Variety comes from more openers and more answers, not longer ones: every voice opens on several
     topics, and a topic many openers share gets more than one answer in each voice, or the same answer
     follows every one of them.
+- **Remarks** (`helperRemarks.ts`) follow the small talk's rules for plain words and truth: each line
+  an opinion, or a fact true of the game as the guide has it or of the world, under about 120
+  characters as written. A line works for every thing it may be said of: `{thing}` is a painting
+  ("'Ground Swell' by Edward Hopper") as often as a lamp or "the swim fins", so a verb or pronoun after
+  it agrees through `[is|are]` and `[it|them]`; `{reason}` and `{other}` are things liked or disliked
+  ("Korean food", "the color blue", "window views"), so they appear only where any of those fits ("I
+  love {reason}", "Nothing beats {reason}"), never as the one doing something. A line never claims
+  something happened ("I showed it to a visitor"), and a kind's own line claims only what is true of
+  every such thing (every room has a door to a hub; only admins hang mirrors). An interest's phrase is
+  a plain noun phrase that reads after "I love" and "I've never cared for" alike: no praise in it
+  ("hearty meals", not "good food", which nobody dislikes).
 - **Topics** (`helperTopics.ts`) follow the small talk's rules for truth and plain words: each a
   statement about something named, in its personality's field, the world's facts well known and certain.
   An idea from a writing is a whole entry, as in the knowledge (title, kind, the link, the idea), retold as
@@ -213,6 +243,18 @@ It prints a chat for every pair of personalities (or `--count` chats for one `--
 with how long it shows, flagging long ones. Run it a few times for every voice you touched: each line
 should say something precise that someone who has never seen its source follows at once, follow
 the one before whoever says it, and sound like its speaker. Check every fact you added.
+
+Then read the remarks, which cost nothing either:
+
+```bash
+node dev/scripts/helper/sampleRemarks.js [--personality=curator] [--npcs=2] [--count=6] [--thing=2/169]
+```
+
+It prints, for two helpers of each personality, what each loves and dislikes and a few remarks on
+things picked at random (or all of them on one picture, by path, or on a "lamp", "fan", "door",
+"mirror" or "sign"). Each remark should name its thing correctly (one, or several, and in the right
+case), give a reason that fits it, and read as its speaker. A reason that doesn't fit its thing comes
+from a keyword under the wrong interest; move it, or into `UNREMARKED_KEYWORDS`.
 
 ## Step 4 — Hand it over
 
