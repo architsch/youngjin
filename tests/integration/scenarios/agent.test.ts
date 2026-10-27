@@ -36,6 +36,13 @@ import AgentAccountUtil from "../../../src/server/agent/util/agentAccountUtil";
 import AgentPresenceUtil from "../../../src/server/agent/util/agentPresenceUtil";
 import AgentToolUtil from "../../../src/server/agent/util/agentToolUtil";
 import AgentRoomSettingsUtil from "../../../src/server/agent/util/agentRoomSettingsUtil";
+import AgentAppearanceUtil from "../../../src/server/agent/util/agentAppearanceUtil";
+import AgentRoomUtil from "../../../src/server/agent/util/agentRoomUtil";
+import UserBudgetUtil from "../../../src/server/user/util/userBudgetUtil";
+import PlayerMessageExpiryUtil from "../../../src/server/user/util/playerMessageExpiryUtil";
+import ObjectCompositionUtil from "../../../src/shared/object/util/objectCompositionUtil";
+import ColorUtil from "../../../src/shared/math/util/colorUtil";
+import { encodePlayerComposition, decodePlayerComposition } from "../helpers/composition";
 import RoomPrefsUtil, { MAX_ROOM_PREFS_STEP } from "../../../src/shared/room/util/roomPrefsUtil";
 import AgentDirectoryUtil from "../../../src/server/agent/util/agentDirectoryUtil";
 import AgentBodyUtil from "../../../src/server/agent/util/agentBodyUtil";
@@ -54,7 +61,7 @@ import DoorObjectTypeConfig, { ENTERING_STRIDE_LENGTH,
     ENTRANCE_DOOR_OBJECT_ID } from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import Vec3 from "../../../src/shared/math/types/vec3";
 import Voxel from "../../../src/shared/voxel/types/voxel";
-import { DAY_IN_MS, NUM_VOXEL_COLS, OBJECT_MESSAGE_MAX_LENGTH,
+import { DAY_IN_MS, NUM_VOXEL_COLS, OBJECT_MESSAGE_MAX_LENGTH, PLAYER_MESSAGE_EXPIRATION_MS,
     VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 import { HEARING_DISTANCE } from "../../../src/shared/object/util/helperBehaviorUtil";
 import AgentUserContext from "../../../src/server/agent/types/agentUserContext";
@@ -716,6 +723,18 @@ describe("AI agents", () => {
             expect(seen.objects.some((obj: any) => obj.id == npc)).toBe(false);
         });
 
+        it("are told by name how they look, as people see them", async () => {
+            const npc = await standHelper("Mira");
+            const agent = await arriveAgent("Admirer");
+
+            const seen = AgentAppearanceUtil.look(agent, "mira") as any;
+            expect(seen.name).toBe("Mira");
+            const drawn: any = {};
+            ObjectCompositionUtil.decode(roomOf(agent).objectById[npc], drawn, []);
+            expect(seen.appearance.head.shape).toBe(drawn.types.head + 1);
+            expect(seen.appearance.bottom.color).toBe(ColorUtil.rgbToHex(drawn.colors.bottom));
+        });
+
         it("aren't played when Idle, and are then seen among the things placed, still and silent, and not among the "
             + "people", async () => {
             const npc = await standHelper("Statue", "idle");
@@ -847,6 +866,22 @@ describe("AI agents", () => {
             expect((await AgentToolUtil.say(agent, "Mira, are you there?") as any).heardBy).toBe("Mira");
             expect(await AgentToolUtil.say(agent, "")).toEqual({saying: ""});
         });
+
+        it("hear what an agent said that none heard once it walks up to one with its bubble still showing it",
+            async () => {
+            await standHelper("Mira", "guide", 12);
+            const agent = await arriveAgent("Caller");
+            const mira = () => (AgentToolUtil.look(agent) as any).people.find((person: any) => person.name == "Mira");
+
+            expect((await AgentToolUtil.say(agent, "Anyone here?") as any).note).toContain("(the first you come that "
+                + "near hears this while your bubble still shows it)");
+            await HelperAgentUtil.tick();
+            expect(mira().thinking).toBeUndefined();
+
+            expect(await flushUntil(AgentToolUtil.walkTo(agent, {person: "mira"}))).toMatchObject({outcome: "arrived"});
+            await HelperAgentUtil.tick();
+            expect(mira().thinking).toBe(true);
+        });
     });
 
     describe("tools", () => {
@@ -876,6 +911,27 @@ describe("AI agents", () => {
             const agent = await arriveAgent("Bot-1");
 
             expect((AgentToolUtil.look(agent) as any).people).toHaveLength(AGENT_LOOK_MAX_PEOPLE);
+        });
+
+        it("look shows a person in edit mode as editing, without the words their bubble no longer shows, and "
+            + "whats_new tells nothing of it", async () => {
+            const human = await joinHuman("Alice");
+            harness.sendObjectMessage(human, "hi bot");
+            const agent = await arriveAgent("Bot-1");
+            const alice = () => (AgentToolUtil.look(agent) as any).people.find((person: any) => person.name == "Alice");
+            const switchMode = async (editing: string) => expect(await dispatchAs(human, "setObjectMetadataSignal",
+                new SetObjectMetadataSignal(HUB_ID, harness.getPlayerObjectId(human)!, ObjectMetadataKeyEnumMap.Editing,
+                    editing))).toBe(true);
+            eventsOf(agent);
+
+            await switchMode("1");
+            expect(alice()).toEqual(expect.objectContaining({editing: true}));
+            expect(alice().saying).toBeUndefined();
+
+            await switchMode("");
+            expect(alice().editing).toBeUndefined();
+            expect(alice().saying).toBe("hi bot");
+            expect(eventsOf(agent)).toEqual([]);
         });
 
         it("say sets the speech bubble the people in the room are sent, and records the agent as having chatted", async () => {
@@ -1356,6 +1412,27 @@ describe("AI agents", () => {
                 && signal.objectId == playerIdOf(agent) && signal.metadataValue == "Cheese!")).toBe(true);
             expect(seen.some(({signalType, signal}) => signalType == "setObjectTransformSignal"
                 && signal.objectId == playerIdOf(agent))).toBe(true);
+            expect(eventsOf(agent)).toEqual([]);
+        });
+
+        it("shows a page the agent's words clearing once their time is up, as the room and look have it", async () => {
+            const human = await joinHuman("Alice");
+            const agent = await arriveAgent("Snapper");
+            const page = openCamera(agent);
+            await AgentToolUtil.say(agent, "Cheese!");
+            cameraReceived(agent, page);
+            receivedSignals(human);
+            eventsOf(agent);
+            const cleared = ({signalType, signal}: {signalType: string, signal: any}) =>
+                signalType == "setObjectMetadataSignal" && signal.objectId == playerIdOf(agent)
+                && signal.metadataKey == ObjectMetadataKeyEnumMap.SentMessage && signal.metadataValue == "";
+
+            vi.setSystemTime(Date.now() + PLAYER_MESSAGE_EXPIRATION_MS);
+            PlayerMessageExpiryUtil.expireAll();
+
+            expect(cameraReceived(agent, page).some(cleared)).toBe(true);
+            expect(receivedSignals(human).some(cleared)).toBe(true);
+            expect((AgentToolUtil.look(agent) as any).you.saying).toBeUndefined();
             expect(eventsOf(agent)).toEqual([]);
         });
 
@@ -1900,6 +1977,110 @@ describe("AI agents", () => {
         });
     });
 
+    describe("appearance", () => {
+        // The look browsers draw a character in.
+        function drawnLook(obj: AddObjectSignal): any
+        {
+            const params: any = {};
+            ObjectCompositionUtil.decode(obj, params, []);
+            return params;
+        }
+
+        it("tells its own look as people see it, part by part as the customize panel has them, with every shape and "
+            + "color each can take", async () => {
+            const agent = await arriveAgent("Model");
+
+            const seen = AgentAppearanceUtil.look(agent) as any;
+            expect(Object.keys(seen.appearance)).toEqual(["head", "eyes", "ears", "hat", "torso", "arms", "bottom"]);
+            // Every shape has words of its own, in the order the panel numbers them from 1.
+            for (const [part, numShapes] of Object.entries(AgentAppearanceUtil.getShapeCounts()))
+            {
+                expect(seen.shapes[part], part).toHaveLength(numShapes);
+                expect(new Set(seen.shapes[part]).size, part).toBe(numShapes);
+                expect(seen.appearance[part].shape_name).toBe(seen.shapes[part][seen.appearance[part].shape - 1]);
+            }
+            expect(seen.part_colors).toHaveLength(ColorUtil.getPaletteSize("Player"));
+            expect(seen.eye_colors[0]).toBe("#189618");
+
+            // Having chosen nothing, it wears the default drawn from its id, as browsers draw it.
+            const drawn = drawnLook(AgentRoomUtil.getMyPlayer(agent)!);
+            expect(seen.appearance.hat.shape).toBe(drawn.types.hat + 1);
+            expect(seen.appearance.arms.color).toBe(ColorUtil.rgbToHex(drawn.colors.arm));
+            expect(seen.appearance.eyes.color).toBe(ColorUtil.rgbToHex(drawn.colors.eye));
+        });
+
+        it("changes its own look as a person does in the customize panel, which the people there see, and keeps it "
+            + "for its next visit", async () => {
+            const {dbUser} = await registerAgent("Dresser");
+            const agent = await attendAgent(dbUser);
+            const human = await joinHuman("Onlooker", currentRoomID(agent));
+            receivedSignals(human);
+            const edits = UserBudgetUtil.getLevel(agent.user.id, "edit");
+
+            const changed = await AgentAppearanceUtil.change(agent, {head: {shape: 4, color: "#1020f0"},
+                eyes: {color: "#ff00ff"}, bottom: {shape: 5}}) as any;
+
+            // A color comes back as the nearest its palette holds.
+            expect(changed.appearance.head).toEqual({shape: 4, shape_name: "rolling pin, round on top", color: "#0905ff"});
+            expect(changed.appearance.eyes).toEqual({color: "#c83cc8"});
+            expect(changed.appearance.bottom.shape).toBe(5);
+            expect(UserBudgetUtil.getLevel(agent.user.id, "edit")).toBeLessThan(edits);
+
+            // The people there are sent it as a browser's change, and draw it.
+            const sent = receivedSignals(human).filter(({signalType, signal}) => signalType == "setObjectMetadataSignal"
+                && signal.metadataKey == ObjectMetadataKeyEnumMap.InstancedMeshComposition);
+            expect(sent).toHaveLength(1);
+            const drawn = drawnLook(AgentRoomUtil.getMyPlayer(agent)!);
+            expect(drawn.types.head).toBe(3);
+            expect(ColorUtil.rgbToHex(drawn.colors.eye)).toBe("#c83cc8");
+
+            await AgentToolUtil.leave(agent);
+            const back = await attendAgent(dbUser);
+            expect((AgentAppearanceUtil.look(back) as any).appearance).toEqual(changed.appearance);
+        });
+
+        it("refuses what its parts can't take, and spends nothing when nothing changes", async () => {
+            const agent = await arriveAgent("Picky");
+            const before = (AgentAppearanceUtil.look(agent) as any).appearance;
+
+            expect((await AgentAppearanceUtil.change(agent, {hat: {shape: 7}}) as any).error)
+                .toMatch(/hat.shape is a number from 1 to 6/);
+            expect((await AgentAppearanceUtil.change(agent, {arms: {color: "gold"}}) as any).error)
+                .toMatch(/arms.color is a color/);
+            expect((await AgentAppearanceUtil.change(agent, {eyes: {shape: 2}}) as any).error).toMatch(/no shape/);
+            expect((await AgentAppearanceUtil.change(agent, {tail: {shape: 1}}) as any).error).toMatch(/no part "tail"/);
+
+            const edits = UserBudgetUtil.getLevel(agent.user.id, "edit");
+            const unchanged = await AgentAppearanceUtil.change(agent, {hat: {shape: before.hat.shape}}) as any;
+            expect(unchanged.appearance).toEqual(before);
+            expect(UserBudgetUtil.getLevel(agent.user.id, "edit")).toBeGreaterThanOrEqual(edits);
+            expect(AgentRoomUtil.getMyPlayer(agent)!.metadata[ObjectMetadataKeyEnumMap.InstancedMeshComposition])
+                .toBeUndefined();
+        });
+
+        it("tells how someone in the room looks, by name, but nothing of a ghost", async () => {
+            const agent = await arriveAgent("Watcher");
+            const stored = encodePlayerComposition(5);
+            await joinHuman("Dressed", currentRoomID(agent),
+                {[ObjectMetadataKeyEnumMap.InstancedMeshComposition]: stored});
+
+            const seen = AgentAppearanceUtil.look(agent, "dressed") as any;
+            expect(seen.name).toBe("Dressed");
+            const {params} = decodePlayerComposition(stored);
+            expect(seen.appearance.torso.shape).toBe(params.types.torso + 1);
+            expect(seen.appearance.eyes.color).toBe(ColorUtil.rgbToHex(params.colors.eye));
+            // What the agent's own can take is for its own alone.
+            expect(seen.shapes).toBeUndefined();
+            expect((AgentAppearanceUtil.look(agent, "Nobody") as any).error).toMatch(/Nobody named "Nobody"/);
+
+            const ghost = harness.connectUser({id: "id-Ghost", userName: "Ghost", userType: UserTypeEnumMap.Admin,
+                playerMetadata: {[ObjectMetadataKeyEnumMap.AdminPrefs]: AdminPrefsUtil.encode({ghostMode: true})}});
+            await harness.joinRoom(ghost, currentRoomID(agent)!);
+            expect((AgentAppearanceUtil.look(agent, "Ghost") as any).error).toMatch(/Nobody named "Ghost"/);
+            await harness.disconnectUser(ghost);
+        });
+    });
+
     describe("limits", () => {
         it("tells an agent when it talks faster than anyone may, rather than letting it speak unheard", async () => {
             const agent = await arriveAgent("Talker");
@@ -2094,7 +2275,8 @@ describe("AI agents", () => {
             {
                 const listed = (await client.listTools()).tools;
                 const tools = listed.map(tool => tool.name).sort();
-                expect(tools).toEqual(["add_object", "add_zone", "camera", "change_room_settings", "edit_object", "face",
+                expect(tools).toEqual(["add_object", "add_zone", "appearance", "camera", "change_appearance",
+                    "change_room_settings", "edit_object", "face",
                     "find_pictures", "find_rooms", "leave", "look", "look_blocks", "move_object", "new_key", "paint_faces",
                     "place_blocks", "register", "remove_blocks", "remove_object", "room_settings", "say", "set_interests",
                     "textures", "travel", "use_door", "walk_to", "whats_new"]);
@@ -2225,6 +2407,29 @@ describe("AI agents", () => {
                 expect(changed.settings.ground).toEqual(expect.objectContaining({color: "#006903", peaks: "#9ce9a1"}));
                 expect(read(await agent.callTool({name: "room_settings", arguments: {}})).settings)
                     .toEqual(changed.settings);
+            }
+            finally
+            {
+                await agent.close();
+            }
+        });
+
+        it("changes an agent's appearance, every part at once, and refuses a shape past the last", async () => {
+            const {key} = await registerAgent("Mcp-Dresser");
+            const agent = await connect(key);
+            try
+            {
+                const everything = {head: {shape: 6, color: "#ffffff"}, eyes: {color: "#2896d2"},
+                    ears: {shape: 6, color: "#ff9e00"}, hat: {shape: 5, color: "#dec900"}, torso: {shape: 6, color: "#0905ff"},
+                    arms: {shape: 4, color: "#979797"}, bottom: {shape: 4, color: "#2a2a2a"}};
+                const changed = read(await agent.callTool({name: "change_appearance", arguments: everything}));
+                expect(changed.appearance.hat).toEqual({shape: 5, shape_name: "crown", color: "#dec900"});
+                expect(changed.appearance.eyes).toEqual({color: "#2896d2"});
+                expect(read(await agent.callTool({name: "appearance", arguments: {}})).appearance)
+                    .toEqual(changed.appearance);
+
+                const refused = await agent.callTool({name: "change_appearance", arguments: {hat: {shape: 7}}}) as any;
+                expect(refused.isError).toBe(true);
             }
             finally
             {

@@ -1,6 +1,7 @@
 import App from "../../app";
 import ClientObjectManager from "../clientObjectManager";
 import SpeechBubble from "../components/speechBubble";
+import NpcGameObject from "../types/gameObject/npcGameObject";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import AdminPrefsUtil from "../../../shared/object/util/adminPrefsUtil";
 import HelperBehaviorUtil from "../../../shared/object/util/helperBehaviorUtil";
@@ -23,10 +24,14 @@ const HelperThinkingUtil =
             return;
         }
         const now = Date.now();
-        // Where each stands as the room was last shown it, which the room's own copy here follows.
+        // Where each was last shown standing, rather than at home, where the room keeps it.
         const helpers = Object.values(room.objectById)
             .filter(obj => obj.objectTypeIndex == NPC_TYPE_INDEX && HelperBehaviorUtil.isPlayed(obj))
-            .map(obj => ({...HelperBehaviorUtil.create(obj, now), objectId: obj.objectId}));
+            .map(obj => {
+                const body = ClientObjectManager.getObjectById(obj.objectId);
+                return {...HelperBehaviorUtil.create(obj, now), objectId: obj.objectId,
+                    at: (body instanceof NpcGameObject) ? body.getShownAt() : {...obj.transform.pos}};
+            });
         // A player's transform points behind it, so it faces the other way (see PlayerController).
         const facing = me.direction.negate();
         const listener = HelperBehaviorUtil.pickListener(helpers, text,

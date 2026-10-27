@@ -22,14 +22,17 @@ vi.mock("../../../src/client/graphics/graphicsManager", async () => {
         setRoomLightingPrefs: () => {} } };
 });
 
-vi.mock("../../../src/client/app", () => ({
-    default: {
+vi.mock("../../../src/client/app", () => {
+    const App = {
         getCurrentRoom: vi.fn(),
         getVoxelQuads: vi.fn(),
         getUser: vi.fn(),
         getEnv: vi.fn(),
-    },
-}));
+        // As with no room on its way.
+        whenInRoom: async (roomID: string) => App.getCurrentRoom()?.id == roomID,
+    };
+    return { default: App };
+});
 
 vi.mock("../../../src/client/graphics/types/gizmo/generic/worldSpaceOutlineRect", () => ({
     default: class WorldSpaceOutlineRectStub

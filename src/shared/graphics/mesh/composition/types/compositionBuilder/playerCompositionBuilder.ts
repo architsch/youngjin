@@ -24,8 +24,8 @@ export default class PlayerCompositionBuilder extends InstancedMeshCompositionBu
     
     protected addEyes(offsetInUnits: Vec3)
     {
-        // Face colors are drawn unlit (see PlayerCompositionCodec), so they are kept dim (full strength
-        // would read as lights); the eye background is lifted off black so it doesn't look like a hole.
+        // Face colors are drawn unlit, so they are kept dim (full strength would read as lights; so is the
+        // eyes' palette); the eye background is lifted off black so it doesn't look like a hole.
         //
         // Background for the eyes (0.01 = offset to prevent z-fighting)
         this.addSquare(
@@ -34,11 +34,11 @@ export default class PlayerCompositionBuilder extends InstancedMeshCompositionBu
         // Eye 1 (0.02 = offset to prevent z-fighting)
         this.addSquare(
             {x: offsetInUnits.x + 0.75, y: offsetInUnits.y, z: offsetInUnits.z - 0.02},
-            {x: 0.75, y: 0.6, z: 1}, {x: 24, y: 150, z: 24});
+            {x: 0.75, y: 0.6, z: 1}, this.params.colors.eye);
         // Eye 2 (0.02 = offset to prevent z-fighting)
         this.addSquare(
             {x: offsetInUnits.x - 0.75, y: offsetInUnits.y, z: offsetInUnits.z - 0.02},
-            {x: 0.75, y: 0.6, z: 1}, {x: 24, y: 150, z: 24});
+            {x: 0.75, y: 0.6, z: 1}, this.params.colors.eye);
     }
 
     protected addBox(offsetInUnits: Vec3, scaleInUnits: Vec3, color: Vec3)

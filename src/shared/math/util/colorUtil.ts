@@ -46,6 +46,11 @@ const ColorUtil =
         const num = parseInt(fullHex, 16);
         return {x: (num >> 16) & 255, y: (num >> 8) & 255, z: num & 255};
     },
+    // Whether text is a color hexToRGB reads: "#rrggbb" or "#rgb", the "#" optional.
+    isHex: (text: string): boolean =>
+    {
+        return /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.test(text);
+    },
     // RGB in [0,255] -> "#rrggbb".
     rgbToHex: (rgb: Vec3): string =>
     {

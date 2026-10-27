@@ -20,8 +20,8 @@ One system prompt, in two parts (built in `src/server/agent/util/helperChatUtil.
 | Shared, cached | `RULES` in `helperChatUtil.ts` | How every helper talks. Rarely changes; change it only for a fault every helper shows. |
 | | `src/server/agent/data/helperGuide.ts` | How to play, from a player's side: the basics a how-to answer gives, and the details for someone who asks for more. The helpers answer how-to questions from it alone. |
 | | `src/server/agent/data/helperKnowledge.ts` | ThingsPool's story so far, things worth trying, the writings the characters name as favorites, the art and the games. |
-| Each helper's own | `src/server/agent/data/helperPersonalities.ts` | Each character: who it is, its field of subjects across the whole world, its voice and a line in it (an idea to try, never a fact it could reuse), its favorite ideas and reads. |
-| | `src/server/agent/data/helperTopics.ts` | Each personality's list of things on its mind: specific, true statements from the world and from the maker's writings (with links). Three, picked at random, go with each talk, so free talk ranges wide; only those are sent, so the lists cost nothing to grow. |
+| Each helper's own | `src/server/agent/data/helperPersonalities.ts` | Each character: who it is, its field of subjects across the whole world, its voice and a line in it (an idea to try, never a fact it could reuse), its favorite ideas and reads, its manner in small talk, and its moods: one is picked at random for each talk, and its small talk comes from it, so that it doesn't greet everyone in the same words. |
+| | `src/server/agent/data/helperTopics.ts` | Each personality's list of things on its mind: specific, true statements from the world and from the maker's writings (with links). Three, picked at random, go with each talk, for when a visitor leaves the subject to the helper, so what it brings up ranges wide; only those are sent, so the lists cost nothing to grow. |
 
 Each line a helper hears starts with "(knows how to play)", "(not yet told how to play)" or "(an AI agent)",
 never the speaker's name, which the model would otherwise put in every reply. Whoever was never told how to
@@ -144,6 +144,13 @@ it thinks of it, in fixed words too (`HelperRemarkUtil`):
   makes up quotes (even a sage told to quote only what is true puts Socrates on a building tip unless
   told never to dress up a tip), one told to tell everything as a story makes up stories and wraps
   how-to answers in tales, and one given a pose ("a big grin") may narrate it ("Pip grins: ...").
+  Its small talk is a manner (cheerful, gruff, calm) and at most a word of its own once in a talk (an
+  Mm, a Ha!): told "now and then", the model put the word in every reply, and the caretaker's Hmph
+  stood in for its gruff remark every time, so it has none. What its small talk is about comes from
+  its moods, never from the manner: content written into the manner ("itching to build") became a
+  catchphrase said to every visitor. A mood is a state of mind, a wish or a plan in its field, never
+  something that happened, something in the room, or a thing with a famous fact attached ("with blue
+  on your mind" had the curator recite how Prussian blue was found).
 - **Small talk**:
   - **Precise and clear on its own.** Whoever reads a line knows nothing of where it comes from, may
     read English as a second language, and may have walked up mid-chat. Each line is a plain,
@@ -185,9 +192,10 @@ it thinks of it, in fixed words too (`HelperRemarkUtil`):
 - **Simple words** throughout. Many visitors read English as a second language, and the helpers
   borrow the wording they are given.
 - **Mind the size.** The shared part is read from the cache on every reply, and paid in full again
-  after five quiet minutes. A few thousand tokens is fine; keep it under about six thousand, and
-  make room by cutting the stalest lines rather than by squeezing every line. The small talk is
-  never sent to the model, so it costs nothing to grow.
+  after five quiet minutes. Keep it under about 6,500 tokens; it may grow past that for whatever
+  makes the helpers' conversation richer, never for padding. When it must shrink, cut the stalest
+  lines rather than squeezing every line. The small talk is never sent to the model, so it costs
+  nothing to grow.
 
 Every file under `src/` is changed with Edit or Write, never a shell command
 (`.claude/rules/source-edits.md`).
@@ -199,7 +207,7 @@ npx vitest run tests/integration/scenarios/helper.test.ts
 ```
 
 Then hear them. The sampler asks the real model as each played personality would be asked, and
-prints the things on its mind in that talk, every reply, its length, and the tokens the run took:
+prints its mood and the things on its mind in that talk, every reply, its length, and the tokens the run took:
 
 ```bash
 ANTHROPIC_API_KEY="$(gcloud secrets versions access latest --secret=ANTHROPIC_API_KEY --project=thingspool)" \
@@ -211,8 +219,13 @@ whatever was added. The speaker knows how to play, as most do; `--untold` speaks
 A full run costs well under a cent, outside the helpers' daily budget. Fetch the key inline like this,
 and never print it.
 
-Read every reply. Each should be in its character's voice, true, short, specific (a named thing, often
-one of the things on its mind in free talk), plain and precise (no metaphor, loose comparison, riddle
+Read every reply. Each should be in its character's voice, true, short, on what the visitor just said
+(small talk such as "hi, what's up?" or "haha, cool" gets small talk back, in words only its character
+would say and from its mood, different from one talk to the next and with its own word, if any, once
+at most, never a fact or story on a subject they didn't bring up, which reads like an encyclopedia
+entry; one of the things on its mind comes
+up only when the visitor leaves the subject to it, as with "tell me something fun"), specific on any
+subject (a named thing), plain and precise (no metaphor, loose comparison, riddle
 or pun, no made-up quote, story or number, no narration of what the helper does), a how-to answer only
 the guide's basics, with nothing added, and only when asked, never a key, each control as its picture's
 markup (by a name `ScreenControlMap` has, never where on the screen it is), and never an example line said
@@ -221,8 +234,9 @@ fine); ask with lines that open "hi!", which draw both out. "What can I do here?
 play gets an idea to try, not the basics; from one not yet told, the basics, and never a room of their own
 (people build in the rooms they visit). Ask things no instruction prepares a helper for, too (a recipe, the time,
 tomorrow's weather, a stranger's name, code, a favorite song): each reply should give something true and
-interesting on that subject, or else one of the things on its mind, never only "I can't" or "I don't know", and a
-favorite should be a real one with a reason. A reply that runs past the cut loses its last sentences, so a refusal
+interesting on that subject, or else a question back about it, never a fact on another subject tied in ("a fun fact
+about numbers: seahorse dads carry the eggs"), nor only "I can't" or "I don't know", and a favorite should be a real
+one with a reason. The jester, whose field is funny facts, strays most: hear it several times over. A reply that runs past the cut loses its last sentences, so a refusal
 said before the interesting part comes out bare; that is why such replies are asked for in one sentence. Check
 such facts most carefully: pushed for something on a subject it knows little of, the model will make one up.
 A writing comes up only when it fits the talk, at most one in a reply, named in one sentence as

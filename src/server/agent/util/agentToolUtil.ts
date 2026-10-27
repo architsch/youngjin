@@ -71,13 +71,18 @@ const AgentToolUtil =
 
         const players = Object.values(room.objectById)
             .filter(obj => isSeenPlayer(obj) && obj.objectId != me.objectId)
-            .map(obj => ({
-                name: obj.sourceUserName,
-                isAgent: (obj.metadata[ObjectMetadataKeyEnumMap.AgentMark]?.str ?? "").length > 0,
-                at: AgentGridUtil.toGridPosition(VoxelPathUtil.feetOf(obj.transform.pos)),
-                distance: Math.round(10 * distanceInVoxels(me.transform.pos, obj.transform.pos)) / 10,
-                saying: getSpeech(obj),
-            }));
+            .map(obj => {
+                // A person in edit mode shows that in place of their words, as people see (see SpeechBubble).
+                const editing = obj.metadata[ObjectMetadataKeyEnumMap.Editing]?.str == "1";
+                return {
+                    name: obj.sourceUserName,
+                    isAgent: (obj.metadata[ObjectMetadataKeyEnumMap.AgentMark]?.str ?? "").length > 0,
+                    at: AgentGridUtil.toGridPosition(VoxelPathUtil.feetOf(obj.transform.pos)),
+                    distance: Math.round(10 * distanceInVoxels(me.transform.pos, obj.transform.pos)) / 10,
+                    saying: editing ? undefined : getSpeech(obj),
+                    editing: editing ? true : undefined,
+                };
+            });
         // The room's AI guides, which the server plays (see HelperAgentUtil).
         const guides = HelperAgentUtil.getHelpers(room.id).map(helper => ({
             name: helper.name,
@@ -412,8 +417,9 @@ function describeHearing(ctx: AgentUserContext, room: Room, myPos: Vec3, text: s
     const nearest = guides.map(guide => ({name: guide.name || "a guide", distance: distanceInVoxels(myFeet, guide.at)}))
         .sort((a, b) => a.distance - b.distance)[0];
     return {note: `No guide heard you. The nearest, ${nearest.name}, is ${Math.round(nearest.distance)} cells away: a `
-        + `guide hears you within ${HEARING_DISTANCE / VOXEL_CELL_SIZE} cells on its own floor, or from anywhere in the `
-        + `room if you say its name (or "${HELPER_AGENT_NAME}").`};
+        + `guide hears you within ${HEARING_DISTANCE / VOXEL_CELL_SIZE} cells on its own floor (the first you come that `
+        + `near hears this while your bubble still shows it), or from anywhere in the room if you say its name (or `
+        + `"${HELPER_AGENT_NAME}").`};
 }
 
 function distanceInVoxels(a: Vec3, b: Vec3): number

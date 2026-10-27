@@ -17,6 +17,7 @@ import BotDetectionUtil from "../networking/util/botDetectionUtil";
 import UserSessionUtil from "../user/util/userSessionUtil";
 import UserSignalDispatchUtil from "../user/util/userSignalDispatchUtil";
 import EditRateLogUtil from "../user/util/editRateLogUtil";
+import PlayerMessageExpiryUtil from "../user/util/playerMessageExpiryUtil";
 import AgentBodyUtil from "../agent/util/agentBodyUtil";
 import HelperAgentUtil from "../agent/util/helperAgentUtil";
 import AgentCameraUtil from "../agent/util/agentCameraUtil";
@@ -108,13 +109,14 @@ const SocketsServer =
             }
         });
 
-        // Signals are batched and flushed on an interval. Agents' bodies and walking helpers move first, so their moves go
-        // out with it.
+        // Signals are batched and flushed on an interval. Agents' bodies and walking helpers move first, and messages whose
+        // time is up are cleared, so that their moves and clears go out with it.
         let lastFlushAt = Date.now();
         signalProcessingInterval = setInterval(() => {
             const now = Date.now();
             AgentBodyUtil.stepAll((now - lastFlushAt) / 1000);
             HelperAgentUtil.stepAll((now - lastFlushAt) / 1000);
+            PlayerMessageExpiryUtil.expireAll();
             lastFlushAt = now;
 
             for (const userID in ServerUserManager.socketUserContexts)

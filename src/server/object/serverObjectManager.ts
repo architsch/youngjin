@@ -132,7 +132,8 @@ const ServerObjectManager =
             socketRoomContext.multicastSignalFromUser("setObjectTransformSignal", signal, socketUserContext);
         }
     },
-    onSetObjectMetadataSignalReceived: (socketUserContext: UserContext, signal: SetObjectMetadataSignal) =>
+    // Whether the change was made.
+    onSetObjectMetadataSignalReceived: (socketUserContext: UserContext, signal: SetObjectMetadataSignal): boolean =>
     {
         const user = socketUserContext.user;
         const roomID = ServerRoomManager.currentRoomIDByUserID[user.id];
@@ -140,7 +141,7 @@ const ServerObjectManager =
         if (!roomRuntimeMemory) // Single-player users have no server-side room; their edits are client-side only and must never mutate the shared room.
         {
             console.error(`ServerObjectManager::onSetObjectMetadataSignalReceived :: No room registered for user (userID = ${user.id})`);
-            return;
+            return false;
         }
         const room = roomRuntimeMemory.room;
 
@@ -157,13 +158,14 @@ const ServerObjectManager =
             socketUserContext.addPendingSignalToUser("setObjectMetadataSignal",
                 new SetObjectMetadataSignal(room.id, obj.objectId, signal.metadataKey,
                     originalMetadataValue, originalTransform));
-            return;
+            return false;
         }
 
         // Broadcast to other clients
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         if (socketRoomContext)
             socketRoomContext.multicastSignalFromUser("setObjectMetadataSignal", signal, socketUserContext);
+        return true;
     },
 }
 

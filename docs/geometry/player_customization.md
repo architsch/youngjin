@@ -4,8 +4,9 @@ Reference: @src/shared/graphics/mesh/composition/types/compositionCodec/playerCo
 
 The character's appearance is an `InstancedMeshComposition` (see [instanced_mesh_composition.md](../graphics/instanced_mesh_composition.md)). Its parameters are encoded as a compact base-94 string that is stored in the user's `playerMetadata`. The customization panel is visible while the user's own character is selected in edit mode.
 
-- A color is stored as an index into the player's own palette of vivid "tin toy" hues. **Palette entries are only ever appended**, because reordering them would change every saved character.
-- The face is drawn with the unlit material, so its colors are kept dim enough to read as paint rather than as a light.
+- Each part takes one of a few shapes, which the panel numbers; agents choose by the same numbers (see [agents.md](../networking/agents.md#the-body)).
+- A color is stored as an index into a palette: the parts' vivid "tin toy" hues, or the eyes' own. **Palette entries are only ever appended**, because reordering them would change every saved character. A look stored without an eye color reads back the eyes' first (green).
+- The face is drawn with the unlit material, so its colors, the eyes' palette included, are kept dim enough to read as paint rather than as a light.
 
 ## Design standards
 The body is built from primitives placed on a discrete grid. Offsets are counted in grid cells rather than raw coordinates.
@@ -18,6 +19,10 @@ The body is built from primitives placed on a discrete grid. Offsets are counted
 - **Eyes on a cylinder**: the head's side is padded with a box so the flat eyes have a flat surface.
 
   ![Player Eyes on a Cylinder](figures/player_customization_3.jpg)
+- **Fit**: every part stays inside the player's collider, and so below its top, where speech bubbles start. Parts of different slots sink into each other no deeper than a round part sticks out, and no two faces lie flush facing the same way (they flicker). The integration tests hold every shape to these.
+- **Left and right**: the left ear and arm are mirror images of the right ones, so a design may differ front to back.
+- **Nothing face-like**: a head adds no nose, mouth or brow, which would read as an expression.
+- **Wheels**: external ones turn outside the body, internal ones between fork legs that hold their axles from both sides. Either kind spans about the bottom's full width, and a slab over internal ones spans just the fork legs under it.
 
 ## NPCs
 An NPC is a character no person plays, with a player's body (`NpcObjectTypeConfig`). It is an attached object that stands on a floor (see [object_attachment.md](object_attachment.md)), is kept with the room, and is laid and edited by admins only (see [admin.md](../gameplay/admin.md)).

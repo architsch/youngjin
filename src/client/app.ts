@@ -23,6 +23,7 @@ import "./graphics/types/gizmo/volumeEditGizmos"; // Side-effect: lets the selec
 import "./voxel/util/restrictedZoneOutlineUtil"; // Side-effect: keeps the outlines on the room's restricted zones up to date
 import "./object/util/helperHoldUtil"; // Side-effect: holds a helper still for everyone while an admin has it selected
 import "./object/util/helperWaitUtil"; // Side-effect: holds a helper still for whoever types it a line
+import "./object/util/playerEditingUtil"; // Side-effect: shows the room the user's player editing while in edit mode
 import "./singlePlayer/util/singlePlayerHelperUtil"; // Side-effect: plays a single-player room's NPCs as helpers
 import { preloadGenericWorldSpaceGizmos } from "./graphics/types/gizmo/genericWorldSpaceGizmos"; // Side-effect: registers world-space gizmos that are used for general purposes; also exposes a pre-load hook
 import "./graphics/particle/util/particleTriggerUtil"; // Side-effect: plays the effects gameplay events call for
@@ -30,8 +31,6 @@ import ParticleSystem from "./graphics/particle/particleSystem";
 import RoomTexturePackChangedSignal from "../shared/room/types/roomTexturePackChangedSignal";
 import RoomPrefsChangedSignal from "../shared/room/types/roomPrefsChangedSignal";
 import RoomLightingUtil from "./graphics/light/util/roomLightingUtil";
-import AsyncUtil from "../shared/system/util/asyncUtil";
-import SignalTypeConfigMap from "../shared/networking/maps/signalTypeConfigMap";
 import SinglePlayerManager from "./singlePlayer/singlePlayerManager";
 import RoomLoadProgressUtil from "./system/util/roomLoadProgressUtil";
 import WatchedPlayerCameraUtil from "./object/util/watchedPlayerCameraUtil";
@@ -47,7 +46,8 @@ let user: User;
 let prevTime: number;
 let deltaTimePending: number;
 let currentRoom: Room | undefined;
-// The room change under way, which the next one waits for (see onRoomChangedSignalReceived).
+// The room change under way, which the next one waits for (see onRoomChangedSignalReceived), as does what the server
+// says of a room meanwhile (see whenInRoom).
 let lastRoomChange: Promise<void> = Promise.resolve();
 
 const tickTimeQueue: number[] = [];
@@ -89,10 +89,14 @@ const App =
     {
         return currentRoom;
     },
+    // Whether the user is in the room once the room changes under way are over. What the server says of a room after
+    // sending it waits on this, so that it reaches the room as sent, in the order said, however long that takes to load.
+    whenInRoom: (roomID: string): Promise<boolean> =>
+    {
+        return lastRoomChange.then(() => currentRoom?.id == roomID);
+    },
     onRoomPrefsChangedSignalReceived: async (params: RoomPrefsChangedSignal) => {
-        const success = await waitUntilSignalProcessingReady("roomPrefsChangedSignal",
-            () => params.roomID === App.getCurrentRoom()?.id);
-        if (!success)
+        if (!await App.whenInRoom(params.roomID))
             return;
         // Ignored while a local edit is pending (see RoomLightingUtil).
         if (!RoomLightingUtil.applyIncoming(params.prefs))
@@ -101,9 +105,7 @@ const App =
         roomPrefsChangedObservable.set(params.roomID);
     },
     onRoomTexturePackChangedSignalReceived: async (params: RoomTexturePackChangedSignal) => {
-        const success = await waitUntilSignalProcessingReady("roomTexturePackChangedSignal",
-            () => params.roomID === App.getCurrentRoom()?.id);
-        if (!success)
+        if (!await App.whenInRoom(params.roomID))
             return;
         currentRoom!.texturePackPath = params.texturePackPath;
         await ClientVoxelManager.applyVoxelTexturePack(params.texturePackPath);
@@ -277,9 +279,5 @@ function update()
 
     prevTime = currTime;
 }
-
-const waitUntilSignalProcessingReady = (signalType: string, successCond: () => boolean): Promise<boolean> =>
-    AsyncUtil.waitUntilSuccess(successCond, SignalTypeConfigMap.getConfigByType(signalType).maxClientSideReceptionPeriod)
-
 
 export default App;

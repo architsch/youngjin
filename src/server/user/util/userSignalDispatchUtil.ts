@@ -23,6 +23,7 @@ import { FunnelMilestoneEnumMap } from "../../analytics/types/funnelMilestone";
 import UserCommandUtil from "./userCommandUtil";
 import EditRateLogUtil from "./editRateLogUtil";
 import UserBudgetUtil from "./userBudgetUtil";
+import PlayerMessageExpiryUtil from "./playerMessageExpiryUtil";
 import HelperAgentUtil from "../../agent/util/helperAgentUtil";
 
 // Every signal a user may send, as it arrives over the wire, whoever sends it (a browser's socket or an AI agent),
@@ -31,6 +32,8 @@ import HelperAgentUtil from "../../agent/util/helperAgentUtil";
 const handlers: {[signalType: string]: (ctx: UserContext, bufferState: BufferState) => boolean | Promise<boolean>} = {
     setObjectTransformSignal: (ctx, bufferState) => {
         const signal = SetObjectTransformSignal.decode(bufferState) as SetObjectTransformSignal;
+        if (signal.shown)
+            return false;
         // A placement of something put in the room is an edit; anything else moves the user's player.
         if (signal.ignorePhysics)
             return edit(ctx, () => ServerObjectManager.onSetObjectTransformSignalReceived(ctx, signal));
@@ -57,13 +60,22 @@ const handlers: {[signalType: string]: (ctx: UserContext, bufferState: BufferSta
         ServerObjectManager.onRemoveObjectSignalReceived(ctx, RemoveObjectSignal.decode(bufferState) as RemoveObjectSignal)),
     setObjectMetadataSignal: (ctx, bufferState) => {
         const signal = SetObjectMetadataSignal.decode(bufferState) as SetObjectMetadataSignal;
+        // A switch of mode arrives on this signal too (Editing metadata), and is neither an edit nor speech.
+        if (signal.metadataKey == ObjectMetadataKeyEnumMap.Editing)
+        {
+            if (!UserBudgetUtil.trySpend(ctx.user.id, "modeSwitches"))
+                return false;
+            ServerObjectManager.onSetObjectMetadataSignalReceived(ctx, signal);
+            return true;
+        }
         // Chat arrives on this signal too (SentMessage metadata), so it's counted as speech rather than an edit.
         if (signal.metadataKey != ObjectMetadataKeyEnumMap.SentMessage)
             return edit(ctx, () => ServerObjectManager.onSetObjectMetadataSignalReceived(ctx, signal));
         EditRateLogUtil.note(ctx.user.id, "speech");
         if (!UserBudgetUtil.trySpend(ctx.user.id, "speech"))
             return false;
-        ServerObjectManager.onSetObjectMetadataSignalReceived(ctx, signal);
+        if (ServerObjectManager.onSetObjectMetadataSignalReceived(ctx, signal))
+            PlayerMessageExpiryUtil.noteMessage(ctx.user.id);
         ServerAnalyticsManager.recordMilestone(ctx.user.id, FunnelMilestoneEnumMap.Chatted, ctx);
         HelperAgentUtil.hear(ctx.user.id, signal);
         return true;

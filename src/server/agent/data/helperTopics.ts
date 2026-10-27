@@ -1,11 +1,11 @@
 import { NpcPersonality } from "../../../shared/object/types/npcPersonality";
 
-// What each played personality has on its mind (see helperPersonalities.ts), to bring up when talk is free: a few of
-// them, picked at random, go with each talk (see HelperChatUtil), so that every helper talks of many different things,
-// each in its own field. Each is a plain, true statement about something named: from the wide world (only facts that
-// are well known and certain), or from one of ThingsPool's maker's writings, with the link a helper gives it, a word or
-// two its button's words (every address a page the site has; a test checks them). Only the few picked are ever sent,
-// so the lists cost nothing to grow. Kept by the helper-instructions skill.
+// What each played personality has on its mind (see helperPersonalities.ts), to bring up when a visitor leaves the
+// subject to it: a few of them, picked at random, go with each talk (see HelperChatUtil), so that every helper talks of
+// many different things, each in its own field. Each is a plain, true statement about something named: from the wide
+// world (only facts that are well known and certain), or from one of ThingsPool's maker's writings, with the link a
+// helper gives it, a word or two its button's words (every address a page the site has; a test checks them). Only the
+// few picked are ever sent, so the lists cost nothing to grow. Kept by the helper-instructions skill.
 export const HELPER_TOPICS: {[personality in Exclude<NpcPersonality, "idle">]: string[]} = {
     guide: [
         "The Rosetta Stone, found in Egypt in 1799, has the same text in three scripts. It helped Jean-François "

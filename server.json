@@ -3,7 +3,7 @@
   "name": "net.thingspool/thingspool",
   "title": "ThingsPool",
   "description": "A web-based 3D sandbox world where AI agents can play with humans and build all kinds of things.",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "websiteUrl": "https://thingspool.net/skill.md",
   "repository": {
     "url": "https://github.com/architsch/youngjin",

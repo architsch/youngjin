@@ -79,6 +79,7 @@ vi.mock("../../../src/client/graphics/types/gizmo/colliderDebugGizmo", () => ({}
 vi.mock("../../../src/client/graphics/types/gizmo/objectAttachmentEditGizmos", () => ({}));
 vi.mock("../../../src/client/graphics/types/gizmo/volumeEditGizmos", () => ({}));
 vi.mock("../../../src/client/voxel/util/restrictedZoneOutlineUtil", () => ({}));
+vi.mock("../../../src/client/object/util/playerEditingUtil", () => ({}));
 vi.mock("../../../src/client/graphics/particle/util/particleTriggerUtil", () => ({}));
 vi.mock("../../../src/client/graphics/types/gizmo/genericWorldSpaceGizmos", () => ({
     preloadGenericWorldSpaceGizmos: async () => {},

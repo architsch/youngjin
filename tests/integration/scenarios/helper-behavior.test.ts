@@ -496,6 +496,31 @@ describe("how a helper wanders", () => {
         expect(seen.some(at => at.z < 15.5)).toBe(true);
     });
 
+    it("turns the way it was put as soon as it is home from a walk, though it talked a moment ago, with nobody near to "
+        + "look at", () => {
+        const home: Vec3 = {x: 16, y: 0, z: 16};
+        const put = HelperBehaviorUtil.getFacingPut(0);
+        const ahead = NpcFacingUtil.getDir(put);
+        // Out in front of home, so that it walks back in facing away from the way it was put.
+        const helper = helperAt(home, {wanderRadius: 10});
+        helper.at = {x: home.x + 4 * ahead.x, y: 0, z: home.z + 4 * ahead.z};
+        helper.returnHomeAt = 0;
+        // Its greeting to someone who has gone since.
+        HelperBehaviorUtil.say(helper, "Hi, welcome to ThingsPool!", ["gone"], 0);
+        const surroundings = around(openGrid());
+        let now = live(helper, surroundings, 0, 2);
+        expect(helper.walk).toBe("home");
+        expect(helper.path.length).toBeGreaterThan(0);
+        expect(Math.abs(NpcFacingUtil.getTurn(helper.facing, put))).toBeGreaterThan(150);
+
+        for (let second = 0; second < 5 && !HelperBehaviorUtil.isSamePlace(helper.at, home); ++second)
+            now = live(helper, surroundings, now, 1);
+        expect(HelperBehaviorUtil.isSamePlace(helper.at, home)).toBe(true);
+        // Long before the talk would be over.
+        expect(now).toBeLessThan(10_000);
+        expect(helper.facing).toBe(put);
+    });
+
     it("goes on where it was headed once whoever stood in its way steps aside in time", () => {
         seedRandom(5);
         const home: Vec3 = {x: 16, y: 0, z: 16};

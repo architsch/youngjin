@@ -7,6 +7,7 @@ import GraphicsManager from "../../../graphics/graphicsManager";
 import WorldSpaceOutlineCircle from "../../../graphics/types/gizmo/generic/worldSpaceOutlineCircle";
 import GizmoDragUtil from "../../../graphics/util/gizmoDragUtil";
 import GameModeUtil from "../../../system/util/gameModeUtil";
+import { ongoingClientProcessExists } from "../../../system/types/clientProcess";
 import { objectSelectionObservable, singlePlayerObservable } from "../../../system/clientObservables";
 import { SELECTION_COLOR } from "../../../system/clientConstants";
 import Vec3 from "../../../../shared/math/types/vec3";
@@ -51,6 +52,8 @@ export default class NpcGameObject extends GameObject
     private wanderCircle: WorldSpaceOutlineCircle | undefined = undefined;
     private wanderCircleMade: boolean = false;
     private despawned: boolean = false;
+    // Whether it has been drawn with its room shown, past the loading (see update).
+    private seen: boolean = false;
 
     // Whether this user holds it, selected in edit mode: it is edited as the room keeps it, facing the way it was put,
     // where a helper is stood as it is held (see HelperBehaviorUtil.standAtHome), and its own turns pass it by meanwhile.
@@ -114,6 +117,14 @@ export default class NpcGameObject extends GameObject
         return this.drawnFacing;
     }
 
+    // Where it was last shown standing, the end of any glide under way: a helper's, wherever it has walked from where its
+    // room keeps it (see SetObjectTransformSignal.shown).
+    getShownAt(): Vec3
+    {
+        const at = this.glide?.to ?? this.obj.position;
+        return {x: at.x, y: at.y, z: at.z};
+    }
+
     setObjectTransform(pos: Vec3, dir: Vec3)
     {
         const from = this.obj.position;
@@ -129,8 +140,12 @@ export default class NpcGameObject extends GameObject
 
     update(deltaTime: number)
     {
-        this.updateGlide(deltaTime);
-        this.updateTurn(deltaTime);
+        // Until first seen, it stands where it was last shown, facing that way, at once: a helper's place and facing are
+        // shown right after its room, so it would otherwise walk and turn there as the room comes into view.
+        const span = this.seen ? deltaTime : Infinity;
+        this.seen = !ongoingClientProcessExists("roomChange");
+        this.updateGlide(span);
+        this.updateTurn(span);
         this.updateWanderCircle();
     }
 

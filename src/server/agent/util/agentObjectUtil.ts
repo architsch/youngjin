@@ -45,8 +45,7 @@ import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import StringUtil from "../../../shared/math/util/stringUtil";
 import DBRoomUtil from "../../db/util/dbRoomUtil";
 import ServerRoomManager from "../../room/serverRoomManager";
-import { AGENT_LOOK_MAX_OBJECTS, IS_PUBLIC_SITE, USER_BUDGETS } from "../../system/serverConstants";
-import UserBudgetUtil from "../../user/util/userBudgetUtil";
+import { AGENT_LOOK_MAX_OBJECTS, IS_PUBLIC_SITE } from "../../system/serverConstants";
 import AgentBudgetUtil from "./agentBudgetUtil";
 import AgentBox from "../types/agentBox";
 import AgentFace from "../types/agentFace";
@@ -137,7 +136,7 @@ const AgentObjectUtil =
             return {error: `Only ${AgentObjectUtil.addableTypes.join(", ")} can be added.`};
         const objectTypeIndex = ObjectTypeConfigMap.getIndexByType(objectType);
         const user = ctx.user;
-        const spent = describeSpentEdits(ctx, 1);
+        const spent = AgentBudgetUtil.describeSpentEdits(ctx.user.id, 1);
         if (spent != undefined)
             return {error: spent};
 
@@ -250,7 +249,7 @@ const AgentObjectUtil =
         const signals = changes.map(({key, value}) => new SetObjectMetadataSignal(room.id, obj.objectId, key, value));
         if (!signals.every(signal => ObjectUpdateUtil.canSetObjectMetadata(ctx.user, room, signal)))
             return {error: describeUntouchable(room, ctx.user, obj, "changes")};
-        const spent = describeSpentEdits(ctx, signals.length);
+        const spent = AgentBudgetUtil.describeSpentEdits(ctx.user.id, signals.length);
         if (spent != undefined)
             return {error: spent};
         for (const signal of signals)
@@ -305,7 +304,7 @@ const AgentObjectUtil =
         const transform = findTransform(room, obj.objectTypeIndex, quadIndex, center, dir, scale, accepts);
         if (transform == undefined)
             return {error: describeNoPlace(room, user, obj.objectTypeIndex, center, dir, scale)};
-        const spent = describeSpentEdits(ctx, 1);
+        const spent = AgentBudgetUtil.describeSpentEdits(ctx.user.id, 1);
         if (spent != undefined)
             return {error: spent};
 
@@ -325,7 +324,7 @@ const AgentObjectUtil =
         const signal = new RemoveObjectSignal(room.id, objectId);
         if (!ObjectUpdateUtil.canRemoveObject(ctx.user, room, signal))
             return {error: describeUntouchable(room, ctx.user, obj, "removes")};
-        const spent = describeSpentEdits(ctx, 1);
+        const spent = AgentBudgetUtil.describeSpentEdits(ctx.user.id, 1);
         if (spent != undefined)
             return {error: spent};
 
@@ -361,7 +360,7 @@ const AgentObjectUtil =
             }));
         if (!ObjectUpdateUtil.canAddObject(user, room, signal))
             return {error: "The zone couldn't be made."};
-        const spent = describeSpentEdits(ctx, 1);
+        const spent = AgentBudgetUtil.describeSpentEdits(ctx.user.id, 1);
         if (spent != undefined)
             return {error: spent};
         await AgentSignalUtil.send(ctx, "addObjectSignal", signal);
@@ -689,16 +688,6 @@ function describeUntouchable(room: Room, user: User, obj: AddObjectSignal, chang
     if (RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex, obj.transform))
         return "A restricted zone covers it (look lists the zones).";
     return "That can't be done to it.";
-}
-
-// Why the edit budget can't pay for so many edits now, if it can't (see UserBudgetUtil), which an agent spends as a
-// person does.
-function describeSpentEdits(ctx: AgentUserContext, edits: number): string | undefined
-{
-    if (UserBudgetUtil.getLevel(ctx.user.id, "edit") >= edits)
-        return undefined;
-    return `Your edits have run out: they come back at ${USER_BUDGETS.edit.refillPerSecond} a second, so try again in `
-        + `about ${AgentBudgetUtil.describeWait(ctx.user.id, "edit", edits)}.`;
 }
 
 function makeObjectId(room: Room): string

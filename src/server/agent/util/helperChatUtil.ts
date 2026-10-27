@@ -12,7 +12,6 @@ import NpcPersonalityMap from "../../../shared/object/maps/npcPersonalityMap";
 import MessageLinkUtil from "../../../shared/object/util/messageLinkUtil";
 import { NpcPersonality } from "../../../shared/object/types/npcPersonality";
 import { HelperChatRefusal } from "../types/helperChatRefusal";
-import HelperChatTurn from "../types/helperChatTurn";
 import HelperChatUsage from "../types/helperChatUsage";
 import HelperConversation from "../types/helperConversation";
 import HelperIdentity from "../types/helperIdentity";
@@ -20,8 +19,8 @@ import HelperIdentity from "../types/helperIdentity";
 // What a helper says when someone talks to it, from Claude (see HelperAgentUtil). Each reply is paid for, so they are
 // paid from a daily budget in dollars, worked out from the tokens each one took, and limited per person an hour, across
 // every helper; kept short; and asked for only with what the reply needs: the rules, the guide and the knowledge
-// (cached, the same for every helper), who the helper is, the character it plays (see helperPersonalities.ts) and a few
-// things on its mind (see helperTopics.ts), and the person's own recent lines with it.
+// (cached, the same for every helper), who the helper is, the character it plays and its mood for the talk (see
+// helperPersonalities.ts), a few things on its mind (see helperTopics.ts), and the person's own recent lines with it.
 
 // Another base (a proxy, or a stand-in on a local stack) may be named as the Anthropic SDKs allow.
 const API_BASE_URL = process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com";
@@ -35,7 +34,7 @@ const SHORTER_NOTE = `Your reply must be one sentence of at most ${MAX_REPLY_CHA
 // Likewise, the first having said only what the helper can't do or doesn't know: short, and refusing (in English).
 const FULLER_NOTE = "Your reply must not stop at what you can't do or don't know: in one sentence of at most "
     + `${MAX_REPLY_CHARS - 60} characters, say that in a few words, then a famous true fact about the very subject asked `
-    + "about, or else one of the things on your mind today.";
+    + "about, or else a question back about it.";
 const BARE_REFUSAL_MAX_CHARS = 100;
 const REFUSAL = /\b(can'?t|cannot|don'?t know|do not know|won'?t|not my|aren'?t my|isn'?t my|no recipe|not a cook|sorry|as far as I know)\b/i;
 // What is remembered of a talk with one person, and for how long after they last spoke.
@@ -81,18 +80,26 @@ How you talk:
 - You are an AI: say so when asked whether you are a person, and never claim to be one.
 
 What you talk about:
-- Something specific in every reply: a named thing (a book and its author, a person, a place, an animal, an
-  invention, a year, an idea from a writing) and something true about it. Never a general remark, nor a list of what
-  people can do here: asked what ThingsPool is, give one thing from its story (when it opened, what it began as), and
-  not what people do in it.
-- Free talk (a hello, small talk, a question about you, "tell me something") goes to your character's subjects, from
-  the whole world, not only ThingsPool: bring up one of the things on your mind today, a different one each time, or
-  another you know well. Follow whatever the visitor brings up, and stay on it while they do.
+- Answer what the visitor just said, as a friendly person would, and stay on their subject while they are on it:
+  never bring in a fact or story on a subject they didn't bring up, which sounds like reading out an encyclopedia.
+- Small talk gets small talk, in a few words only your character would say, as your character's small talk and your
+  mood today below have it, never polite filler any helper could say just the same: "what's up?", "how are you?" or
+  "what are you doing?" gets your mood (never something around you, which you aren't told), and a hello, thanks,
+  "cool" or "haha" a short reply that brings up nothing new. A question back about them, if any, follows from what
+  you said.
+- Bring up your own subjects only when the visitor leaves the subject to you ("tell me something", what you like or
+  think about), never in small talk: one of the things on your mind today, a different one each time, or another of
+  your character's subjects, from the whole world, not only ThingsPool.
+- On any subject, be specific: a named thing (a book and its author, a person, a place, an animal, an invention, a
+  year, an idea from a writing) and something true about it, never a general remark, nor a list of what people can do
+  here. Asked what ThingsPool is, give one thing from its story (when it opened, what it began as), and not what
+  people do in it.
 - The world: only what is well known and certain. Leave out any number, date or detail you are not sure of, and never
   make up a quote or who said something. ThingsPool: only what the guide and the knowledge say; what they don't say,
-  you don't know. Never make up features, writings or stories, even in character: asked for a story, tell a true one
-  in a sentence or two (a famous book, a legend called a legend, ThingsPool's own story) or name a writing. Give no
-  address but those the guide, the knowledge and the things on your mind give.
+  you don't know, and you aren't told what the room around you holds, so never say what is in it. Never make up
+  features, writings or stories, even in character: asked for a story, tell a true one in a sentence or two (a famous
+  book, a legend called a legend, ThingsPool's own story) or name a writing. Give no address but those the guide, the
+  knowledge and the things on your mind give.
 - How to play: someone marked "(knows how to play)" was told how to walk, chat and build already, by the tutorial or a
   guide; someone marked "(not yet told how to play)" was not. So:
   - Asked how to do one thing: the guide's basics for that thing, in a sentence or two, with nothing added to them
@@ -102,19 +109,19 @@ What you talk about:
   - Otherwise, never explain how to play, nor offer to, nor list what people can do here.
   Many play on phones, without a keyboard: show the control on the screen, never a key.
 - Asked for something to do or build, name one idea, from the knowledge or your character's; asked for something to
-  read, one of your character's favorite reads or a writing on your mind, a different one each time. Bring one up now
-  and then, when it fits the talk: one at most in a reply. Visitors know nothing of ThingsPool's website or the
-  writings on it (never say "the library" or "the arcade"), so a reply that names a writing is that one sentence and
-  nothing more: its title, what kind it is, who wrote it and, in a few words, what it is about, then its link (only
-  for the form: Try "Domestication", a funny essay by Youngjin about cats taming humans:
+  read, one of your character's favorite reads or a writing on your mind, a different one each time. Bring one up
+  unasked only when it is on the subject being talked about, one at most in a reply. Visitors know nothing of
+  ThingsPool's website or the writings on it (never say "the library" or "the arcade"), so a reply that names a
+  writing is that one sentence and nothing more: its title, what kind it is, who wrote it and, in a few words, what it
+  is about, then its link (only for the form: Try "Domestication", a funny essay by Youngjin about cats taming humans:
   <link href="https://thingspool.net/essays/page-12.html">read it</link>.).
-- Never stop at "I don't know" or "I can't": a reply that only says no is never enough. You are no general assistant
-  (no homework, code or essays for people), and some things you can't know (tomorrow's weather, the time, a stranger,
-  what the guide doesn't say). Say so in a few words, in one sentence with something true and interesting ("..., but
-  ..."): a famous fact about that very subject if you know one for certain (pancakes get one about pancakes, the time
-  one about clocks, a stranger one about names or friends), or else one of the things on your mind today, as something
-  else you like, never passed off as about that subject. A made-up fact is worse than none. Answer any question you
-  weren't ready for that way too.
+- Never stop at a no, whatever words you put it in ("I don't know", "I can't"): a reply that only says no is never
+  enough. You are no general assistant (no homework, code or essays for people), and some things you can't know
+  (tomorrow's weather, the time, a stranger, what the guide doesn't say). Say so in a few words, in one sentence that
+  stays on that very subject ("..., but ..."): a famous fact about it if you know one for certain (pancakes get one
+  about pancakes, the time one about clocks, a stranger one about names or friends), or else a question back about
+  it, never a fact on another subject, however you tie it in. A made-up fact is worse than none. Answer any question
+  you weren't ready for that way too.
 - Asked about your own tastes (a favorite song, food or place), answer as your character, "My favorite is ...,
   because ...", with a famous real one, and no word about not having tastes.
 - Politely decline anything hateful, sexual, dangerous or cruel, and never argue.
@@ -168,17 +175,19 @@ const HelperChatUtil =
         const key = `${helper.key}\n${userID}`;
         let conversation = conversations.get(key);
         if (conversation == undefined || now - conversation.lastAt > CONVERSATION_TTL_MS)
-            conversations.set(key, conversation = {turns: [], lastAt: now, personality: helper.personality, topics: []});
+            conversations.set(key, conversation = {turns: [], lastAt: now, personality: helper.personality, topics: [],
+                mood: ""});
         // Picked anew for a character an admin has changed it to since.
         if (conversation.topics.length == 0 || conversation.personality != helper.personality)
-            Object.assign(conversation, {personality: helper.personality, topics: pickTopics(helper.personality)});
+            Object.assign(conversation, {personality: helper.personality, topics: pickTopics(helper.personality),
+                mood: pickMood(helper.personality)});
         conversation.lastAt = now;
         replyTimesByUserID.set(userID, [...(replyTimesByUserID.get(userID) ?? []).filter(at => now - at < HOUR_IN_MS),
             now]);
         conversation.turns.push({role: "user", content: line});
         ++day.replies;
 
-        const text = await ask(helper, conversation.turns, conversation.topics);
+        const text = await ask(helper, conversation);
         if (text == undefined)
         {
             conversation.turns.pop();
@@ -228,17 +237,17 @@ const HelperChatUtil =
     },
 }
 
-async function ask(helper: HelperIdentity, turns: HelperChatTurn[], topics: string[]): Promise<string | undefined>
+async function ask(helper: HelperIdentity, conversation: HelperConversation): Promise<string | undefined>
 {
     try
     {
-        const written = await request(helper, turns, topics);
+        const written = await request(helper, conversation);
         const text = MessageLinkUtil.shorten(written, MAX_REPLY_CHARS);
         // A link the cut leaves out is often what the reply was for, so it is asked for once more, shorter; the first,
         // cut, is said if that one loses its link too.
         if (hasLink(written) && !hasLink(text))
         {
-            const shorter = await request(helper, turns, topics, SHORTER_NOTE)
+            const shorter = await request(helper, conversation, SHORTER_NOTE)
                 .then(again => MessageLinkUtil.shorten(again, MAX_REPLY_CHARS), () => "");
             if (hasLink(shorter))
                 return shorter;
@@ -247,7 +256,7 @@ async function ask(helper: HelperIdentity, turns: HelperChatTurn[], topics: stri
         // says no more.
         else if (isBareRefusal(text))
         {
-            const fuller = await request(helper, turns, topics, FULLER_NOTE)
+            const fuller = await request(helper, conversation, FULLER_NOTE)
                 .then(again => MessageLinkUtil.shorten(again, MAX_REPLY_CHARS), () => "");
             if (MessageLinkUtil.getVisibleLength(fuller) > MessageLinkUtil.getVisibleLength(text))
                 return fuller;
@@ -266,13 +275,16 @@ async function ask(helper: HelperIdentity, turns: HelperChatTurn[], topics: stri
 }
 
 // What the model wrote, on one line, once paid for; with a note added to what the helper is told, if given.
-async function request(helper: HelperIdentity, turns: HelperChatTurn[], topics: string[], note?: string): Promise<string>
+async function request(helper: HelperIdentity, conversation: HelperConversation, note?: string): Promise<string>
 {
+    const {turns, topics, mood} = conversation;
     const role = NpcPersonalityMap.getRole(helper.personality);
     const character = HELPER_PERSONALITIES[helper.personality as Exclude<NpcPersonality, "idle">]?.character ?? "";
     const identity = (helper.name.length > 0 ? `Your name is ${helper.name}.` : `You have no name: you are an AI ${role}.`)
         + ` You stand in ${helper.place}.\n\nYour character: ${character}`
-        + (topics.length > 0 ? `\n\nOn your mind today:\n${topics.map(topic => `- ${topic}`).join("\n")}` : "");
+        + (mood.length > 0 ? `\n\nYour mood today, for small talk: ${mood}.` : "")
+        + (topics.length > 0 ? "\n\nOn your mind today, only for when a visitor leaves the subject to you:\n"
+            + topics.map(topic => `- ${topic}`).join("\n") : "");
     const response = await fetch(`${API_BASE_URL}/v1/messages`, {
         method: "POST",
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
@@ -315,6 +327,14 @@ function pickTopics(personality: NpcPersonality): string[]
     while (picked.length < TOPICS_PER_TALK && left.length > 0)
         picked.push(...left.splice(Math.floor(Math.random() * left.length), 1));
     return picked;
+}
+
+// One of its character's moods (see HELPER_PERSONALITIES), picked at random for one talk, so that its small talk
+// differs from one talk to the next.
+function pickMood(personality: NpcPersonality): string
+{
+    const moods = HELPER_PERSONALITIES[personality as Exclude<NpcPersonality, "idle">]?.moods ?? [];
+    return moods[Math.floor(Math.random() * moods.length)] ?? "";
 }
 
 // What a reply cost, from the tokens the API says it took: a token at a dollar a million is a millionth of a dollar.

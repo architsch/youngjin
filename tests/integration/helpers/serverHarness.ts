@@ -308,6 +308,7 @@ import ServerObjectManager from "../../../src/server/object/serverObjectManager"
 import RoomPickerUtil from "../../../src/server/room/util/roomPickerUtil";
 import HubRoomUtil from "../../../src/server/room/util/hubRoomUtil";
 import UserBudgetUtil from "../../../src/server/user/util/userBudgetUtil";
+import PlayerMessageExpiryUtil from "../../../src/server/user/util/playerMessageExpiryUtil";
 import UserRoomChangeResult from "../../../src/server/room/types/userRoomChangeResult";
 import SocketUserContext from "../../../src/server/sockets/types/socketUserContext";
 import DBUserVersionMigration from "../../../src/server/db/types/versionMigration/dbUserVersionMigration";
@@ -396,6 +397,7 @@ export const harness = {
             delete HubRoomUtil.initialJoinPriorityByHubRoomID[hubID];
         // Users' ids come round again from test to test.
         UserBudgetUtil.budgetsByUserID.clear();
+        PlayerMessageExpiryUtil.expiresAtByUserID.clear();
 
         resetStores();
         resetUserCounter();

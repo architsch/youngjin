@@ -1,6 +1,6 @@
 import Vec3 from "../../../../../math/types/vec3";
 import Vector3DUtil from "../../../../../math/util/vector3DUtil";
-import { BACKWARD_DIR, FORWARD_DIR, UNIT_VEC3, ZERO_VEC3 } from "../../../../../system/sharedConstants";
+import { FORWARD_DIR, UNIT_VEC3, ZERO_VEC3 } from "../../../../../system/sharedConstants";
 import { InstancedMeshCompositionParams } from "../compositionParams/instancedMeshCompositionParams";
 import InstancedMeshCompositionPart from "../instancedMeshCompositionPart";
 
@@ -14,6 +14,7 @@ export default abstract class InstancedMeshCompositionBuilder
     protected baseDir: Vec3 = {...FORWARD_DIR};
     protected baseOffset: Vec3 = {...ZERO_VEC3};
     protected baseScale: Vec3 = {...UNIT_VEC3};
+    protected mirroredX: boolean = false;
 
     constructor(params: InstancedMeshCompositionParams, parts: InstancedMeshCompositionPart[],
         objectSize: Vec3 = UNIT_VEC3)
@@ -47,16 +48,21 @@ export default abstract class InstancedMeshCompositionBuilder
         return this;
     }
 
-    backward(): InstancedMeshCompositionBuilder
+    // Reflects the parts across their x = 0 plane (e.g. a left limb built from a right one's design). Every
+    // primitive is symmetric about its own axes, so reflecting each part's place and facing is enough.
+    mirrored(): InstancedMeshCompositionBuilder
     {
-        this.baseDir.x = BACKWARD_DIR.x;
-        this.baseDir.y = BACKWARD_DIR.y;
-        this.baseDir.z = BACKWARD_DIR.z;
+        this.mirroredX = true;
         return this;
     }
 
     protected addPartRelativeToBase(part: InstancedMeshCompositionPart)
     {
+        if (this.mirroredX)
+        {
+            part.offset = {x: -part.offset.x, y: part.offset.y, z: part.offset.z};
+            part.dir = {x: -part.dir.x, y: part.dir.y, z: part.dir.z};
+        }
         // Re-express the part's facing (authored against FORWARD_DIR) relative to baseDir.
         part.dir = Vector3DUtil.rotateFromTo(part.dir, FORWARD_DIR, this.baseDir);
         part.offset = Vector3DUtil.add(this.baseOffset,

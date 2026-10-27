@@ -7,8 +7,8 @@ import { chatTypingObservable, roomChangedObservable, singlePlayerChatLineObserv
     updateObservable } from "../../system/clientObservables";
 import Vec3 from "../../../shared/math/types/vec3";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
+import ObjectMetadataEntryMap from "../../../shared/object/maps/objectMetadataEntryMap";
 import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
-import ObjectTransform from "../../../shared/object/types/objectTransform";
 import HelperSurroundings from "../../../shared/object/types/helperSurroundings";
 import HelperBehaviorUtil, { ANSWER_PAUSE_MS } from "../../../shared/object/util/helperBehaviorUtil";
 import NpcFacingUtil from "../../../shared/object/util/npcFacingUtil";
@@ -22,11 +22,11 @@ import SinglePlayerHelper from "../types/singlePlayerHelper";
 
 // The NPCs of a single-player room played as helpers, by the browser, as the room is the browser's alone (see
 // HelperBehaviorUtil). Each greets the user once as they come near (telling them how to walk and build, if nothing has
-// yet), answers what they say to it through the server (see HelperAPIClient), standing still for them as they type it
-// a line, walks, wanders and turns as a helper in a multiplayer room does, an admin holding it still as there, chats
-// with another helper near it in words the server gives, and goes and looks at things near it, saying what the server
-// gives it to say of each. Only in a mode that plays NPCs (see NpcGameObject.arePlayedHere), and only NPCs whose
-// personality is played.
+// yet), answers what they say to it, or come near still saying, through the server (see HelperAPIClient), standing
+// still for them as they type it a line, walks, wanders and turns as a helper in a multiplayer room does, an admin
+// holding it still as there, chats with another helper near it in words the server gives, and goes and looks at
+// things near it, saying what the server gives it to say of each. Only in a mode that plays NPCs (see
+// NpcGameObject.arePlayedHere), and only NPCs whose personality is played.
 
 // As often as the server steps its helpers (see SocketsServer's flush), and gives each a beat.
 const STEP_SECONDS = SIGNAL_BATCH_SEND_INTERVAL / 1000;
@@ -39,9 +39,10 @@ const UP: Vec3 = {x: 0, y: 1, z: 0};
 // By object id.
 const helpers = new Map<string, SinglePlayerHelper>();
 // askingSmallTalk: whether the words for a chat are on their way, so that no other is asked for meanwhile; likewise
-// askingRemarkFor, the helper whose remark is on its way, which waits for it rather than wandering off.
+// askingRemarkFor, the helper whose remark is on its way, which waits for it rather than wandering off. unheardLine:
+// what the user says that no helper heard as they said it (see hearLateLine).
 const state = {sinceStep: 0, sinceBeat: 0, askingSmallTalk: false,
-    askingRemarkFor: undefined as SinglePlayerHelper | undefined};
+    askingRemarkFor: undefined as SinglePlayerHelper | undefined, unheardLine: ""};
 
 updateObservable.addListener("singlePlayerHelperUtil", (deltaTime: number) => {
     const room = App.getCurrentRoom();
@@ -74,29 +75,23 @@ roomChangedObservable.addListener("singlePlayerHelperUtil", () => {
     helpers.clear();
 });
 
-// A line the user said, for whichever helper it is for (see HelperBehaviorUtil.pickListener).
+// A line the user said, for whichever helper it is for, or else for the one it is for once they come near one (see
+// hearLateLine).
 singlePlayerChatLineObservable.addListener("singlePlayerHelperUtil", (text: string) => {
-    const user = App.getUser();
-    const room = App.getCurrentRoom();
-    const me = getMyPosition();
-    const helper = (me == undefined) ? undefined
-        : HelperBehaviorUtil.pickListener([...helpers.values()], text, me, getMyFacing());
-    if (helper == undefined || user == undefined || room == undefined || text.trim().length == 0)
-        return;
-    const now = Date.now();
-    helper.lines.push(text.trim());
-    helper.linesAt = now;
-    HelperBehaviorUtil.hear(helper, surroundingsOf(helper, room), user.id, now);
+    const line = text.trim();
+    state.unheardLine = (line.length == 0 || hear(line, Date.now())) ? "" : line;
 });
 
 chatTypingObservable.addListener("singlePlayerHelperUtil", () => waitOnTypist(Date.now()));
 
 // Each second: the helpers there are now, each greeting the user once they come near, and answering them once they
-// have paused, one waiting on them as they type, those near each other chatting now and then, and each going to look at
-// something now and then, before each one's own beat.
+// have paused (a line none heard as it was said, once they come near still saying it), one waiting on them as they
+// type, those near each other chatting now and then, and each going to look at something now and then, before each
+// one's own beat.
 function beat(room: Room, now: number): void
 {
     findHelpers(room, now);
+    hearLateLine(room, now);
     const user = App.getUser();
     const me = getMyPosition();
     for (const helper of helpers.values())
@@ -121,6 +116,40 @@ function beat(room: Room, now: number): void
         HelperBehaviorUtil.beat(helper, surroundingsOf(helper, room), now,
             helper.lines.length > 0 || state.askingRemarkFor === helper);
     }
+}
+
+// Whether the helper a line of the user's is for (see HelperBehaviorUtil.pickListener), if any, keeps it to answer.
+function hear(text: string, now: number): boolean
+{
+    const user = App.getUser();
+    const room = App.getCurrentRoom();
+    const me = getMyPosition();
+    const helper = (me == undefined) ? undefined
+        : HelperBehaviorUtil.pickListener([...helpers.values()], text, me, getMyFacing());
+    if (helper == undefined || user == undefined || room == undefined)
+        return false;
+    helper.lines.push(text);
+    helper.linesAt = now;
+    HelperBehaviorUtil.hear(helper, surroundingsOf(helper, room), user.id, now);
+    return true;
+}
+
+// What the user says that no helper heard as they said it is heard by the one it would be for once they come near one,
+// or one comes near them, while it is still up (until they clear it, it expires or they say something else), as in a
+// multiplayer room.
+function hearLateLine(room: Room, now: number): void
+{
+    if (state.unheardLine.length > 0 && (!isSaying(room, state.unheardLine) || hear(state.unheardLine, now)))
+        state.unheardLine = "";
+}
+
+// Whether the user's player still says a line, as the room keeps what it says (see ObjectMetadataEntryMap).
+function isSaying(room: Room, text: string): boolean
+{
+    const objectId = ClientObjectManager.getMyPlayer()?.params.objectId;
+    const said = (objectId == undefined) ? undefined
+        : room.objectById[objectId]?.metadata[ObjectMetadataKeyEnumMap.SentMessage]?.str;
+    return said == ObjectMetadataEntryMap.preprocess(ObjectMetadataKeyEnumMap.SentMessage, text);
 }
 
 // The helper a line the user is typing would be for, if they said it now, stands waiting on them meanwhile, as a
@@ -280,11 +309,7 @@ function surroundingsOf(helper: SinglePlayerHelper, room: Room): HelperSurroundi
         getOtherHelpers: () => [...helpers.values()].filter(other => other !== helper),
         hasLinesWaiting: () => helper.lines.length > 0,
         isHeld: () => NpcGameObject.isHeld(helper.objectId),
-        showAt: () => {
-            const scale = room.objectById[helper.objectId]?.transform.scale ?? {x: 1, y: 1, z: 1};
-            ClientObjectManager.setObjectTransform(helper.objectId,
-                new ObjectTransform({...helper.at}, {...UP}, {...scale}), true, false);
-        },
+        showAt: () => ClientObjectManager.showObjectTransform(helper.objectId, {...helper.at}, {...UP}),
         showFacing: () => ClientObjectManager.setObjectMetadata(helper.objectId, ObjectMetadataKeyEnumMap.Facing,
             NpcFacingUtil.encode(helper.facing), false),
         showSaying: () => ClientObjectManager.setObjectMetadata(helper.objectId, ObjectMetadataKeyEnumMap.SentMessage,

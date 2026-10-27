@@ -5,8 +5,7 @@ import App from "../app";
 import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
 import ObjectTypeConfigMap from "../../shared/object/maps/objectTypeConfigMap";
 import ObjectTransform from "../../shared/object/types/objectTransform";
-import AsyncUtil from "../../shared/system/util/asyncUtil";
-import SignalTypeConfigMap from "../../shared/networking/maps/signalTypeConfigMap";
+import PhysicsManager from "../../shared/physics/physicsManager";
 import RemoveObjectSignal from "../../shared/object/types/removeObjectSignal";
 import SetObjectMetadataSignal from "../../shared/object/types/setObjectMetadataSignal";
 import SetObjectTransformSignal from "../../shared/object/types/setObjectTransformSignal";
@@ -255,6 +254,18 @@ const ClientObjectManager =
             console.error(`ClientObjectManager.setObjectTransform :: GameObject not found (objectId = ${objectId})`);
         return result.transform;
     },
+    // A move only shown (see SetObjectTransformSignal.shown): the object's body and collider go there, at the size the
+    // room keeps it, and the room's data keeps it where it was, as what a room file saves of it.
+    showObjectTransform: (objectId: string, pos: Vec3, dir: Vec3): void =>
+    {
+        const room = App.getCurrentRoom()!;
+        const kept = room.objectById[objectId]?.transform;
+        if (kept == undefined)
+            return;
+        if (PhysicsManager.hasObject(room.id, objectId))
+            PhysicsManager.setObjectTransform(room.id, objectId, new ObjectTransform(pos, dir, kept.scale), true);
+        ClientObjectManager.getObjectById(objectId)?.setObjectTransform(pos, dir);
+    },
     // With the transform the value needs, if it changes the scale the object is pinned to (see
     // SetObjectMetadataSignal.transform).
     setObjectMetadata: (objectId: string, key: ObjectMetadataKey, value: string,
@@ -290,9 +301,7 @@ const ClientObjectManager =
 
     // Spawns once the object's room is available.
     onAddObjectSignalReceived: async (signal: AddObjectSignal) => {
-        const success = await waitUntilSignalProcessingReady("addObjectSignal",
-            () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == signal.roomID);
-        if (!success)
+        if (!await App.whenInRoom(signal.roomID))
             return;
         const gameObject = ObjectFactory.createServerSideObject(signal);
         if (await ClientObjectManager.addObject(gameObject, false))
@@ -300,9 +309,7 @@ const ClientObjectManager =
     },
     // Despawns once the object's room is available.
     onRemoveObjectSignalReceived: async (signal: RemoveObjectSignal) => {
-        const success = await waitUntilSignalProcessingReady("removeObjectSignal",
-            () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == signal.roomID);
-        if (!success)
+        if (!await App.whenInRoom(signal.roomID))
             return;
         // If the removed object was selected, unselect it.
         const sel = objectSelectionObservable.peek();
@@ -322,9 +329,7 @@ const ClientObjectManager =
         // Deferred handling only for non-physics updates (for performance).
         if (signal.ignorePhysics)
         {
-            const success = await waitUntilSignalProcessingReady("setObjectTransformSignal",
-                () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == signal.roomID);
-            if (!success)
+            if (!await App.whenInRoom(signal.roomID))
                 return;
         }
         // A physics update can overtake the add of a player who has just arrived, which waits on the room. The next
@@ -333,8 +338,13 @@ const ClientObjectManager =
             return;
         if (NpcGameObject.isDragged(signal.objectId))
             return;
-        ClientObjectManager.setObjectTransform(signal.objectId, signal.transform,
-            signal.ignorePhysics, false);
+        if (signal.shown)
+            ClientObjectManager.showObjectTransform(signal.objectId, signal.transform.pos, signal.transform.dir);
+        else
+        {
+            ClientObjectManager.setObjectTransform(signal.objectId, signal.transform,
+                signal.ignorePhysics, false);
+        }
 
         // Re-announce a moved selection so its outline and menu follow; skipped for continuous
         // physics updates.
@@ -346,9 +356,7 @@ const ClientObjectManager =
         }
     },
     onSetObjectMetadataSignalReceived: async (signal: SetObjectMetadataSignal) => {
-        const success = await waitUntilSignalProcessingReady("setObjectMetadataSignal",
-            () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == signal.roomID);
-        if (!success)
+        if (!await App.whenInRoom(signal.roomID))
             return;
         ClientObjectManager.setObjectMetadata(signal.objectId, signal.metadataKey,
             signal.metadataValue, false, signal.transform);
@@ -365,9 +373,6 @@ const resyncVoxelsToCurrentGrid = (room: Room): void =>
             (obj as VoxelGameObject).rebindVoxels(room.voxelGrid.voxels);
     }
 }
-
-const waitUntilSignalProcessingReady = (signalType: string, successCond: () => boolean): Promise<boolean> =>
-    AsyncUtil.waitUntilSuccess(successCond, SignalTypeConfigMap.getConfigByType(signalType).maxClientSideReceptionPeriod)
 
 nearbyObjectSelectorObservable.set(ClientObjectManager.trySelectObjectNear);
 

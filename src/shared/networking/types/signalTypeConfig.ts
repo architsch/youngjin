@@ -8,9 +8,6 @@ export default interface SignalTypeConfig
     // Minimum ms between client sends of this signal type.
     minClientToServerSendInterval: number;
 
-    // Maximum ms the client may take to apply a received signal.
-    maxClientSideReceptionPeriod: number;
-
     // Method for decoding the binary-encoded signal back to its original form.
     decode: (bufferState: BufferState) => EncodableData,
 }

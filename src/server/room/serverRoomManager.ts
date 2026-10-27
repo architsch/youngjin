@@ -29,6 +29,7 @@ import RoomPickerUtil from "./util/roomPickerUtil";
 import HubRoomUtil from "./util/hubRoomUtil";
 import RoomValidationUtil from "../../shared/room/util/roomValidationUtil";
 import AgentAwayLogUtil from "../agent/util/agentAwayLogUtil";
+import HelperAgentUtil from "../agent/util/helperAgentUtil";
 
 const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
 const socketRoomContexts: {[roomID: string]: SocketRoomContext} = {};
@@ -234,6 +235,7 @@ const ServerRoomManager =
         // the room context.
         const roomChangedSignal = new RoomChangedSignal(joinedRoomRuntimeMemory);
         socketUserContext.addPendingSignalToUser("roomChangedSignal", roomChangedSignal);
+        HelperAgentUtil.tellNewcomer(roomID, user.id);
         return {type: "success", newRoomID: roomID};
     },
     // An empty room ID or the hub keyword is resolved by the picker (hub load changes over time, so doors
@@ -360,9 +362,11 @@ const ServerRoomManager =
         {
             roomIDsTakingRoomFile.delete(roomID);
 
-            // Changed or not, the room is sent whole, so whatever was queued before it is dropped.
+            // Changed or not, the room is sent whole, its helpers starting over at home, so whatever was queued before it
+            // is dropped.
             if (isStillLoaded())
             {
+                HelperAgentUtil.restart(roomID);
                 for (const socketUserContext of Object.values(socketRoomContexts[roomID].getUserContexts()))
                 {
                     socketUserContext.clearAllPendingSignalsToUser();

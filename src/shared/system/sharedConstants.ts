@@ -46,6 +46,9 @@ export const AWAY_DISCONNECT_DELAY_MS = 10 * MINUTE_IN_MS;
 export const SITE_URL = "https://thingspool.net";
 // What a message shows, in code points, a link counting as its label (see MessageLinkUtil).
 export const OBJECT_MESSAGE_MAX_LENGTH = 72;
+// How long a player's message stays up: from when it is said, or from when its player arrives in a room still saying it
+// (see PlayerMessageExpiryUtil).
+export const PLAYER_MESSAGE_EXPIRATION_MS = 20 * 1000;
 // What an NPC says, which only the server or a room's script writes: a helper's whole reply, in one bubble.
 export const NPC_MESSAGE_MAX_LENGTH = 200;
 // A message's links (see MessageLinkUtil): how many it holds, and how long an address and a label may be, in characters.

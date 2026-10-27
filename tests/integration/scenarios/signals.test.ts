@@ -55,6 +55,18 @@ describe("signal emission scenarios", () => {
         });
     });
 
+    it("a transform signal carries whether physics is ignored, and whether the move is only shown", () => {
+        for (const [ignorePhysics, shown] of [[false, false], [true, false], [true, true]])
+        {
+            const bufferState = EncodingUtil.startEncoding();
+            new SetObjectTransformSignal("room", "object", new ObjectTransform({x: 1, y: 1, z: 1}, {x: 0, y: 1, z: 0},
+                {x: 1, y: 1, z: 1}), ignorePhysics, shown).encode(bufferState);
+            const decoded = SetObjectTransformSignal.decode(
+                new BufferState(new Uint8Array(EncodingUtil.endEncoding(bufferState)))) as SetObjectTransformSignal;
+            expect([decoded.ignorePhysics, decoded.shown]).toEqual([ignorePhysics, shown]);
+        }
+    });
+
     it("voxel add multicast reaches all except sender", async () => {
         await runScenario({
             name: "voxel add multicast",

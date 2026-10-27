@@ -30,14 +30,12 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
         // Client requests to join a room.
         signalType: "requestRoomChangeSignal",
         minClientToServerSendInterval: 2000, // This is necessary because this signal may cost a DB query each time it gets sent.
-        maxClientSideReceptionPeriod: 0, // not used because the client never receives this signal from the server.
         decode: (bufferState: BufferState) => RequestRoomChangeSignal.decode(bufferState),
     }],
     [1, { // Unidirectional (client <- server)
         // Server answers requestRoomChangeSignal; the client loads the room.
         signalType: "roomChangedSignal",
         minClientToServerSendInterval: 0, // not used because the client never sends this signal to the server.
-        maxClientSideReceptionPeriod: 0, // should be 0 because room-loading must be immediate on the client side.
         decode: (bufferState: BufferState) => RoomChangedSignal.decode(bufferState),
     }],
     [13, { // Unidirectional (client <- server)
@@ -45,7 +43,6 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
         // stops waiting and shows the reason.
         signalType: "roomChangeRejectedSignal",
         minClientToServerSendInterval: 0, // not used because the client never sends this signal to the server.
-        maxClientSideReceptionPeriod: 0, // should be 0 because the client is blocked on a loading indicator until this arrives.
         decode: (bufferState: BufferState) => RoomChangeRejectedSignal.decode(bufferState),
     }],
 
@@ -55,28 +52,24 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
         // Client requests an add (server validates and relays), or the server announces one (e.g. a player joins).
         signalType: "addObjectSignal",
         minClientToServerSendInterval: 0,
-        maxClientSideReceptionPeriod: 2000,
         decode: (bufferState: BufferState) => AddObjectSignal.decode(bufferState),
     }],
     [3, { // Bidirectional (client <-> server)
         // Client requests a removal (server validates and relays), or the server announces one (e.g. a player leaves).
         signalType: "removeObjectSignal",
         minClientToServerSendInterval: 0,
-        maxClientSideReceptionPeriod: 2000,
         decode: (bufferState: BufferState) => RemoveObjectSignal.decode(bufferState),
     }],
     [4, { // Bidirectional (client <-> server)
         // Clients send their object's transform; the server applies physics as needed and relays it.
         signalType: "setObjectTransformSignal",
         minClientToServerSendInterval: 0, // should be 0 because object-syncing may happen at an extremely high frequency.
-        maxClientSideReceptionPeriod: 2000, // Note: This value will be ignored if physics is involved.
         decode: (bufferState: BufferState) => SetObjectTransformSignal.decode(bufferState),
     }],
     [5, { // Bidirectional (client <-> server)
         // Client sets object metadata (e.g. a canvas image); the server validates and relays.
         signalType: "setObjectMetadataSignal",
         minClientToServerSendInterval: 0,
-        maxClientSideReceptionPeriod: 2000,
         decode: (bufferState: BufferState) => SetObjectMetadataSignal.decode(bufferState),
     }],
 
@@ -86,28 +79,24 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
         // Client adds a block; the server validates and relays.
         signalType: "addVoxelBlockSignal",
         minClientToServerSendInterval: 0,
-        maxClientSideReceptionPeriod: 2000,
         decode: (bufferState: BufferState) => AddVoxelBlockSignal.decode(bufferState),
     }],
     [7, { // Bidirectional (client <-> server)
         // Client removes a block; the server validates and relays.
         signalType: "removeVoxelBlockSignal",
         minClientToServerSendInterval: 0,
-        maxClientSideReceptionPeriod: 2000,
         decode: (bufferState: BufferState) => RemoveVoxelBlockSignal.decode(bufferState),
     }],
     [8, { // Bidirectional (client <-> server)
         // Client moves a block; the server validates and relays.
         signalType: "moveVoxelBlockSignal",
         minClientToServerSendInterval: 0,
-        maxClientSideReceptionPeriod: 2000,
         decode: (bufferState: BufferState) => MoveVoxelBlockSignal.decode(bufferState),
     }],
     [9, { // Bidirectional (client <-> server)
         // Client sets a quad texture; the server validates and relays.
         signalType: "setVoxelQuadTextureSignal",
         minClientToServerSendInterval: 0,
-        maxClientSideReceptionPeriod: 2000,
         decode: (bufferState: BufferState) => SetVoxelQuadTextureSignal.decode(bufferState),
     }],
 
@@ -117,7 +106,6 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
         // Client sends a user command (e.g. finish tutorial); the server processes it.
         signalType: "userCommandSignal",
         minClientToServerSendInterval: 1000, // This is necessary because this signal may cost a DB query each time it gets sent.
-        maxClientSideReceptionPeriod: 0, // not used because the client never receives this signal from the server.
         decode: (bufferState: BufferState) => UserCommandSignal.decode(bufferState),
     }],
     // (Index 11 is retired, not reused, so an old client bundle can't misread a new signal.)
@@ -126,14 +114,12 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
         // without reloading the room.
         signalType: "roomTexturePackChangedSignal",
         minClientToServerSendInterval: 0, // not used because the client never sends this signal to the server.
-        maxClientSideReceptionPeriod: 2000,
         decode: (bufferState: BufferState) => RoomTexturePackChangedSignal.decode(bufferState),
     }],
     [15, { // Unidirectional (client <- server)
         // Server broadcasts a room prefs change (made via the REST API); clients apply it to the scene.
         signalType: "roomPrefsChangedSignal",
         minClientToServerSendInterval: 0, // not used because the client never sends this signal to the server.
-        maxClientSideReceptionPeriod: 2000,
         decode: (bufferState: BufferState) => RoomPrefsChangedSignal.decode(bufferState),
     }],
     // (Indices 14 and 16 are retired too.)
@@ -141,14 +127,12 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
         // An admin's edit-mode selection taking hold of a helper or letting go of it, which stands it still meanwhile.
         signalType: "holdObjectSignal",
         minClientToServerSendInterval: 0, // never throttled: a dropped letting-go would leave the helper held.
-        maxClientSideReceptionPeriod: 0, // not used because the client never receives this signal from the server.
         decode: (bufferState: BufferState) => HoldObjectSignal.decode(bufferState),
     }],
     [18, { // Unidirectional (client -> server)
         // A user starting or stopping typing a line in the chat, which stands the helper it would be for still meanwhile.
         signalType: "typingSignal",
         minClientToServerSendInterval: 0, // never throttled: a dropped stop would keep the helper waiting.
-        maxClientSideReceptionPeriod: 0, // not used because the client never receives this signal from the server.
         decode: (bufferState: BufferState) => TypingSignal.decode(bufferState),
     }],
 ];

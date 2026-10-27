@@ -18,7 +18,7 @@ An admin who is the room's superuser can save the room to a file on their own ma
 - The contents carry versions of their own; the file's version dates its settings, which carry none. An older file's settings are converted as it is read (`RoomFileVersionMigration`), as a stored room's are when it is loaded.
 - A file holds those bytes gzipped. One holding them plain is read as well.
 - Single-player rooms ship as room files too, made in the room editor, where the same buttons save its room and open a file in its place without the server (see [single_player_mode.md](single_player_mode.md#room-editor)).
-- **Saving** is done by the client, from its own copy of the room.
+- **Saving** is done by the client, from its own copy of the room, which keeps helpers at home, where they were put (see [agents.md](agents.md#helpers)).
 - **Before loading**, the client reads the file itself and asks over a picture of the room it holds (`RoomPreviewUtil`, `RoomFilePreviewForm`), so nothing is sent until the admin has seen what would replace the room:
   - The room is drawn from outside and above, without perspective, off screen by the game's own renderer: in its own texture pack and its objects' own looks, but evenly lit rather than by its lamps.
   - A room with an upper floor is shown as two storeys apart, since the upper would hide the lower. Each is named, by a 2D canvas rather than the renderer, which would need a texture and a shader for the lettering.
@@ -28,7 +28,7 @@ An admin who is the room's superuser can save the room to a file on their own ma
   - If the picture can't be drawn, the question is asked without it.
 - **Loading** is an HTTP route that takes the file as its body, and only for the room the caller is in. Anything but one whole file this build can read is refused. Older contents are converted as they are read, by the voxel and object formats' own versions.
 - The server overwrites the room **in place**, one file at a time:
-  - Its users are told first, by a socket event sent at once rather than with the next signal batch, and wait as they would for a lost connection. Each is then sent the whole room again, and whatever was queued for them before it is dropped.
+  - Its users are told first, by a socket event sent at once rather than with the next signal batch, and wait as they would for a lost connection. Each is then sent the whole room again, and whatever was queued for them before it is dropped. Its helpers start over at home with it.
   - Players are not part of a file. They stay in the room, and each arrives again behind a door (see [room_entrance.md](../geometry/room_entrance.md)).
   - The texture pack and atmosphere are the file's. The join priority stays the room's own, since it is the room's place among the hubs.
   - Settings are stored first, because nothing retries that write and its failure must leave the room untouched. Contents are stored next, and a failed save stays dirty for the auto-save.

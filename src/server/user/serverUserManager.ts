@@ -13,6 +13,7 @@ import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 import ObjectMetadataEntryMap from "../../shared/object/maps/objectMetadataEntryMap";
 import { ObjectMetadataKeyEnumMap } from "../../shared/object/types/objectMetadataKey";
 import { UserTypeEnumMap } from "../../shared/user/types/userType";
+import PlayerMessageExpiryUtil from "./util/playerMessageExpiryUtil";
 
 const socketUserContexts: {[userID: string]: UserContext} = {};
 const playerObjectByUserID: {[userID: string]: AddObjectSignal} = {};
@@ -111,6 +112,8 @@ const ServerUserManager =
         // The joining user is sent their player with the room, so only the others are told now.
         if (ServerObjectManager.addObjectAsServer(roomRuntimeMemory.room, user, playerAddObjectSignal, user.id))
             playerObjectByUserID[userID] = playerAddObjectSignal;
+        // What the player arrives still saying is up for its full time again, as its user's browser shows it (see Chat).
+        PlayerMessageExpiryUtil.noteMessage(userID);
         return roomRuntimeMemory;
     },
     removeUserFromRoom: async (socketUserContext: UserContext, prevRoomShouldExist: boolean,
@@ -225,7 +228,8 @@ function extractPlayerMetadata(userID: string): {[key: string]: string} | undefi
         return undefined;
     const raw = playerObject.metadata;
     const out: {[key: string]: string} = {};
-    for (const key of Object.keys(raw))
+    // Whether the user is editing lasts their stay, since every room arrival is in play mode (see PlayerEditingUtil).
+    for (const key of Object.keys(raw).filter(key => Number(key) != ObjectMetadataKeyEnumMap.Editing))
         out[key] = raw[key as any].str;
     return out;
 }

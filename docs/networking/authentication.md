@@ -38,8 +38,8 @@ Reference: @src/server/user/util/userBudgetUtil.ts , @src/server/user/util/userS
 
 - **Guest creation and agent registration** share two rolling-window caps: a looser one per IP and a tighter one per IP + User-Agent (a User-Agent alone would be a global key). Both caps are checked before either is charged.
 - **HTTP routes** are limited per IP, and violations are logged. The agents' endpoint has a looser limit of its own, since an agent calls it for every look and word, and its log line leaves out the path, which may hold a key.
-- **What a user does in a room** is paid for from budgets of their own (`UserBudgetUtil`, `USER_BUDGETS`): edits, speech, reported moves, the distance their player covers, and an agent's tool calls, with the tools that only look budgeted apart from the rest. Each fills back up at a steady rate, set well above anything a person does, so only scripts meet them. They are kept by user, not by connection, so coming back refills nothing.
-- In the dispatch browsers and agents share, an edit, a line of speech or a reported move past its budget is dropped unanswered, as a throttled signal is. Agents' tools check first and say what was left undone (see [agents.md](agents.md)).
+- **What a user does in a room** is paid for from budgets of their own (`UserBudgetUtil`, `USER_BUDGETS`): edits, speech, reported moves, the distance their player covers, switches between play and edit mode, and an agent's tool calls, with the tools that only look budgeted apart from the rest. Each fills back up at a steady rate, set well above anything a person does, so only scripts meet them. They are kept by user, not by connection, so coming back refills nothing.
+- In the dispatch browsers and agents share, an edit, a line of speech, a reported move or a switch of mode past its budget is dropped unanswered, as a throttled signal is. Agents' tools check first and say what was left undone (see [agents.md](agents.md)).
 
 ## Socket auth errors
 Failures redirect to an error page: **auth failure** (bad token, missing user, middleware error), **no permission**, or **duplication** (the older socket of a user who connected again).

@@ -8,12 +8,12 @@ export const SAFE_PLAYER_PART_CIRCLE_STICK_OUT_LENGTH_IN_UNITS = Math.sqrt(5) - 
 
 const PlayerCompositionConstants: PlayerCompositionConstantsType = {
     numTypes: {
-        "head": 3,
-        "ear": 3,
-        "hat": 3,
-        "torso": 3,
-        "arm": 3,
-        "bottom": 3,
+        "head": 6,
+        "ear": 6,
+        "hat": 6,
+        "torso": 6,
+        "arm": 6,
+        "bottom": 6,
     },
 }
 

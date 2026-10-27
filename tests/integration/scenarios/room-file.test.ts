@@ -55,6 +55,7 @@ const SIGNATURE = "ThingsPoolRoom";
 const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
 const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 const labelTypeIndex = ObjectTypeConfigMap.getIndexByType("Label");
+const npcTypeIndex = ObjectTypeConfigMap.getIndexByType("Npc");
 
 const isPersistent = (obj: AddObjectSignal) =>
     ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).persistent;
@@ -204,6 +205,42 @@ describe("room file: the stored format", () => {
 
         expect(Object.keys(roomFile.objectGroup.objectById).sort())
             .toEqual([SOURCE_LABEL_ID, SOURCE_ZONE_ID, ENTRANCE_DOOR_OBJECT_ID].sort());
+    });
+
+    it("holds a helper as its room keeps it, without what it is only shown, and reads a file that held that without it",
+        () => {
+        // The source room with a helper in it, as a browser holds one it is shown playing, or not (see
+        // NpcObjectTypeConfig.shownMetadataKeys).
+        const roomWithHelper = (shown: boolean) => {
+            const room = makeSourceRoom();
+            room.objectGroup.addObject(new AddObjectSignal(room.id, "an-admin", "Admin", npcTypeIndex, "a-helper",
+                new ObjectTransform({x: 10, y: 0, z: 10}, {x: 0, y: 1, z: 0}, {...UNIT_VEC3}), {
+                    [ObjectMetadataKeyEnumMap.Label]: new EncodableByteString("Mira"),
+                    ...(shown ? {
+                        [ObjectMetadataKeyEnumMap.Facing]: new EncodableByteString("135"),
+                        [ObjectMetadataKeyEnumMap.SentMessage]: new EncodableByteString("Hello!"),
+                        [ObjectMetadataKeyEnumMap.Thinking]: new EncodableByteString("1"),
+                    } : {}),
+                }));
+            return room;
+        };
+        const room = roomWithHelper(true);
+        const kept = [String(ObjectMetadataKeyEnumMap.Label)];
+
+        expect(Array.from(toBytes(RoomFile.fromRoom(room))))
+            .toEqual(Array.from(toBytes(RoomFile.fromRoom(roomWithHelper(false)))));
+
+        // A file an older build wrote, with them in it.
+        const objects = new BufferState(new Uint8Array(4096));
+        writeLegacyObjectGroup(objects, Object.values(room.objectById).filter(isPersistent),
+            ObjectGroup.latestFormatVersion - 1);
+        const older = fromBytes(concat(
+            encodeString(SIGNATURE).slice(0, -1), [1],
+            encodeVoxelGrid(room.voxelGrid),
+            objects.view.subarray(0, objects.byteIndex),
+            encodeString(SOURCE_TEXTURE_PACK_PATH),
+            encodeString(SOURCE_PREFS)));
+        expect(Object.keys(older.objectGroup.objectById["a-helper"].metadata)).toEqual(kept);
     });
 
     it("names no room: its objects are read into whichever room takes it", () => {

@@ -30,6 +30,11 @@ export const ColorPaletteMap: {[colorPaletteName: ColorPaletteName]: string[]} =
 {
     // Tin-toy colors: a character's, and a fan's.
     "Player": [...FULL_SPECTRUM_COLORS],
+    // A character's eyes, drawn unlit, so each is kept about as dim as the first (see PlayerCompositionBuilder). A look
+    // stored without an eye color reads back the first.
+    "PlayerEye": [
+        "#189618", "#d0661c", "#c8aa14", "#2896d2", "#8250dc", "#c83cc8", "#bebebe",
+    ],
     // Joinery (doors, canvas frames, furniture): timber, joinery paints, metal and bone. Mostly mid-brightness because the
     // moulded-timber material ages colors (see @docs/geometry/door_design.md). The vivid bands appended
     // later compensate for that aging, which would otherwise make muted colors read as uniform brown.

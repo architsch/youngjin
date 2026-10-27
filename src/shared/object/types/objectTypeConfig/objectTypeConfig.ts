@@ -31,7 +31,8 @@ export default interface ObjectTypeConfig
     // The push the type gives whatever physics moves in front of its face. Absent means none.
     force?: ObjectForceConfig;
     // Metadata keys its objects are shown with but that the room never keeps (a helper's speech, facing and thinking),
-    // which a copy of one leaves out (see RoomEditUtil). Absent means none.
+    // which a copy of one leaves out (see RoomEditUtil), as do the room's stored contents and its files (see ObjectGroup).
+    // Absent means none.
     shownMetadataKeys?: number[];
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => boolean,
     canUserRemoveObject: (user: User, room: Room, obj: AddObjectSignal) => boolean,

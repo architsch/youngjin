@@ -117,6 +117,10 @@ const entries: {[key: number]: ObjectMetadataEntry} = {
         preprocessingMethod: (rawValue: string) => (rawValue.trim() == "1") ? "1" : "",
         canUserSet: (_user: User) => false,
     },
+    // Tidied as Thinking is, but a player's own user's to set (see PlayerObjectTypeConfig).
+    [ObjectMetadataKeyEnumMap.Editing]: {
+        preprocessingMethod: (rawValue: string) => (rawValue.trim() == "1") ? "1" : "",
+    },
     // Round-tripped as AdminPrefs is, through BehaviorPrefsUtil.
     [ObjectMetadataKeyEnumMap.BehaviorPrefs]: {
         preprocessingMethod: (rawValue: string) => BehaviorPrefsUtil.canonicalize(rawValue),

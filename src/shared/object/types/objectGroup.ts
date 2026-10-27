@@ -122,7 +122,7 @@ export default class ObjectGroup extends EncodableData
             new EncodableRawByteNumber(object.objectTypeIndex).encode(bufferState);
             new EncodableByteString(object.objectId).encode(bufferState);
             object.transform.encode(bufferState);
-            new EncodableMap(object.metadata).encode(bufferState);
+            new EncodableMap(getKeptMetadata(object.objectTypeIndex, object.metadata)).encode(bufferState);
         }
     }
 
@@ -188,10 +188,25 @@ function decodeBody(bufferState: BufferState, formatVersion: number): ObjectGrou
         const objectTypeIndex = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
         const objectId = (EncodableByteString.decode(bufferState) as EncodableByteString).str;
         const transform = ObjectGroupVersionMigration.decodeTransform(bufferState, formatVersion);
-        const metadata = (EncodableMap.decodeWithParams(bufferState, EncodableByteString.decode) as EncodableMap).map as ObjectMetadata;
+        const metadata = getKeptMetadata(objectTypeIndex,
+            (EncodableMap.decodeWithParams(bufferState, EncodableByteString.decode) as EncodableMap).map as ObjectMetadata);
 
         objects.push(new AddObjectSignal(temp_roomID, sourceUserID, sourceUserName, objectTypeIndex, objectId, transform, metadata));
     }
 
     return new ObjectGroup(objects);
+}
+
+// All of an object's metadata but what it is only shown with (see ObjectTypeConfig.shownMetadataKeys), which is never
+// written, and dropped from what was written before.
+function getKeptMetadata(objectTypeIndex: number, metadata: ObjectMetadata): ObjectMetadata
+{
+    const shown = ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex).shownMetadataKeys ?? [];
+    const kept: ObjectMetadata = {};
+    for (const [key, value] of Object.entries(metadata))
+    {
+        if (!shown.includes(Number(key)))
+            kept[Number(key)] = value;
+    }
+    return kept;
 }

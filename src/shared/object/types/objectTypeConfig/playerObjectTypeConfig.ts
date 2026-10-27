@@ -55,10 +55,11 @@ const PlayerObjectTypeConfig =
         if (obj.sourceUserID != user.id)
             return false;
 
-        // User can only set the player's message, appearance or admin prefs (admins only; see
+        // User can only set the player's message, appearance, mode or admin prefs (admins only; see
         // ObjectMetadataEntryMap), nothing else
         if (signal.metadataKey != ObjectMetadataKeyEnumMap.SentMessage &&
             signal.metadataKey != ObjectMetadataKeyEnumMap.InstancedMeshComposition &&
+            signal.metadataKey != ObjectMetadataKeyEnumMap.Editing &&
             signal.metadataKey != ObjectMetadataKeyEnumMap.AdminPrefs)
             return false;
 

@@ -843,7 +843,10 @@ function step(behavior: HelperBehavior, surroundings: HelperSurroundings, second
     if (behavior.path.length > 0)
         faceToward(behavior, surroundings, getNextAim(behavior, surroundings, at, aside, 0).point);
     else
+    {
         arrive(behavior, now);
+        look(behavior, surroundings, now, true);
+    }
     surroundings.showAt();
 }
 
@@ -1055,9 +1058,10 @@ function getIdleTime(prefs: BehaviorPrefs): number
     return 1000 * randomBetween([prefs.minIdleTime, prefs.maxIdleTime]);
 }
 
-// Standing, it looks at whom it talks with, else at what it came to see, and once that is over, at home, the way it was
-// put. Thinking of an answer, it turns to whom it is for as soon as it has nothing else left to say.
-function look(behavior: HelperBehavior, surroundings: HelperSurroundings, now: number): void
+// Standing, it looks at whom it talks with, else at what it came to see, and else, at home, the way it was put: once a
+// talk is over, or as soon as it walks in, which leaves it facing the way it came. Thinking of an answer, it turns to
+// whom it is for as soon as it has nothing else left to say.
+function look(behavior: HelperBehavior, surroundings: HelperSurroundings, now: number, arrived: boolean = false): void
 {
     if (behavior.answering != undefined && behavior.bubbles.length == 0 && now >= behavior.nextBubbleAt)
         HelperBehaviorUtil.talkWith(behavior, [behavior.answering], now);
@@ -1066,8 +1070,11 @@ function look(behavior: HelperBehavior, surroundings: HelperSurroundings, now: n
         faceToward(behavior, surroundings, them);
     else if (behavior.sight?.saysAt != undefined)
         faceToward(behavior, surroundings, behavior.sight.point);
-    else if (HelperBehaviorUtil.isSamePlace(behavior.at, behavior.home) && now - behavior.lastTalkAt >= STAY_AFTER_TALK_MS)
+    else if (HelperBehaviorUtil.isSamePlace(behavior.at, behavior.home)
+        && (arrived || now - behavior.lastTalkAt >= STAY_AFTER_TALK_MS))
+    {
         face(behavior, surroundings, HelperBehaviorUtil.getFacingPut(behavior.homeQuarterTurns));
+    }
 }
 
 // Where whom it talks with stand: the helper it chats with; those it speaks to, or is about to answer, wherever they are

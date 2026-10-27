@@ -38,6 +38,10 @@ const LINK_BUTTON_STYLE = "display:inline-flex; align-items:center; margin:-0.35
     + " border-radius:0.35em / 0.7em; background-image:linear-gradient(#38bdf8, #0369a1); color:white; font-weight:bold;"
     + " white-space:nowrap; box-shadow:inset 0 1px rgba(255, 255, 255, 0.35); cursor:pointer; pointer-events:auto;";
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+// What a speaker in edit mode shows in place of its words: the mode switch's green for Edit (Tailwind's green-300), and
+// how long its dots take to come one by one.
+const EDITING_COLOR = "oklch(87.1% 0.15 154.449)";
+const EDITING_DOTS_CYCLE_MS = 1200;
 // Characters about twice as wide as a Latin letter in the bubble's monospace font: Hangul, kana, CJK ideographs, and
 // full-width forms.
 const WIDE_CHARACTER = /[ᄀ-ᅟ⺀-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]/;
@@ -58,6 +62,9 @@ export default class SpeechBubble extends GameObjectComponent
 
     // Set when the speaker's body isn't drawn (see PlayerGameObject), so the bubble doesn't float alone.
     private hidden: boolean = false;
+    // What it was last given to say, which a redrawn bubble shows again (see refresh). The user's own words are never
+    // written back to their player in a multiplayer room.
+    private message: string = "";
     // Until when a helper is shown thinking before the server says so (see expectThinking).
     private thinkingExpectedUntil: number = 0;
 
@@ -165,6 +172,8 @@ export default class SpeechBubble extends GameObjectComponent
             this.thinkingExpectedUntil = 0;
             this.refresh();
         }
+        else if (key === ObjectMetadataKeyEnumMap.Editing)
+            this.refresh();
     }
 
     // A helper shown thinking at once, for the user's line it is about to hear, until the server's Thinking comes.
@@ -174,11 +183,11 @@ export default class SpeechBubble extends GameObjectComponent
         this.refresh();
     }
 
-    // Shows the message again as it stands, for a speaker whose name has changed (see GameObject.getSpeakerName), or who
-    // starts or stops thinking.
+    // Shows the message again, for a speaker whose name has changed (see GameObject.getSpeakerName), who starts or stops
+    // thinking, or who enters or leaves edit mode.
     refresh(): void
     {
-        this.displayMessage(this.gameObject.params.metadata[ObjectMetadataKeyEnumMap.SentMessage]?.str ?? "", false);
+        this.displayMessage(this.message, false);
     }
 
     // A long message from a speaker close by would rise past the top of the view: it is lowered over the speaker instead,
@@ -217,18 +226,22 @@ export default class SpeechBubble extends GameObjectComponent
             Geometry3DUtil.pointOverlapsAABB(this.gameObject.position, mode.target);
     }
 
-    // Bounces on every change, local or remote.
+    // Bounces on every line it shows, local or remote, but not as one clears (a message's time running out, see
+    // PlayerMessageExpiryUtil), nor while a speaker in edit mode shows only that, under its name (see PlayerEditingUtil).
     private displayMessage(message: string, animate: boolean): void
     {
+        this.message = message;
         const prepend = this.componentConfig.prependUserNameToMessage;
+        const editing = this.gameObject.params.metadata[ObjectMetadataKeyEnumMap.Editing]?.str == "1";
+        const saying = !editing && message.length > 0;
 
-        if (!prepend && message.length === 0)
+        if (!prepend && !editing && !saying)
         {
             this.hideSpeechBubble();
             return;
         }
 
-        const segments = MessageLinkUtil.parse(message);
+        const segments = saying ? MessageLinkUtil.parse(message) : [];
         this.showSpeechBubble();
         this.bubbleElement!.replaceChildren();
         this.bubbleElement!.style.maxWidth = this.getMaxWidth(segments);
@@ -238,7 +251,7 @@ export default class SpeechBubble extends GameObjectComponent
             const userName = this.gameObject.getSpeakerName();
             const userNameSpan = document.createElement("span");
             userNameSpan.style.color = "oklch(87.9% 0.169 91.605)";
-            userNameSpan.textContent = userName + (message.length > 0 ? ":" : "");
+            userNameSpan.textContent = userName + (saying ? ":" : "");
             // A helper thinking of an answer (see HelperBehaviorUtil), with its last words still up.
             if (this.gameObject.params.metadata[ObjectMetadataKeyEnumMap.Thinking]?.str == "1"
                 || performance.now() < this.thinkingExpectedUntil)
@@ -247,10 +260,12 @@ export default class SpeechBubble extends GameObjectComponent
             }
             this.bubbleElement!.appendChild(userNameSpan);
 
-            if (message.length > 0)
+            if (editing || saying)
                 this.bubbleElement!.appendChild(document.createElement("br"));
         }
 
+        if (editing)
+            this.bubbleElement!.appendChild(createEditingLine());
         for (const segment of segments)
         {
             this.bubbleElement!.appendChild((segment.kind == "text") ? document.createTextNode(segment.text)
@@ -258,7 +273,7 @@ export default class SpeechBubble extends GameObjectComponent
                 : ScreenControlPictureUtil.create(segment.control));
         }
 
-        if (animate)
+        if (animate && saying)
             this.playBounce();
     }
 
@@ -353,6 +368,24 @@ function createLinkButton(href: string, label: string): HTMLElement
     button.append(label, createLinkIcon());
     OverlayClickTargetUtil.makeClickable(button, () => MessageLinkOpenUtil.open(href));
     return button;
+}
+
+// "Editing" and its dots, which come one by one and go together, each at a step rather than a fade. Dots not yet come
+// keep their room, so the line stays where it is.
+function createEditingLine(): HTMLElement
+{
+    const line = document.createElement("span");
+    line.style = `color:${EDITING_COLOR}; font-weight:bold;`;
+    line.append("Editing");
+    for (let i = 1; i <= 3; ++i)
+    {
+        const dot = document.createElement("span");
+        dot.textContent = ".";
+        dot.animate([{opacity: 0, easing: "step-end"}, {opacity: 1, offset: i / 4}, {opacity: 1}],
+            {duration: EDITING_DOTS_CYCLE_MS, iterations: Infinity});
+        line.append(dot);
+    }
+    return line;
 }
 
 // A ring with a turning arc, in the name's color.

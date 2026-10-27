@@ -5,6 +5,7 @@ import ObjectTransform from "../../../shared/object/types/objectTransform";
 import SetObjectTransformSignal from "../../../shared/object/types/setObjectTransformSignal";
 import SetObjectMetadataSignal from "../../../shared/object/types/setObjectMetadataSignal";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
+import ObjectMetadataEntryMap from "../../../shared/object/maps/objectMetadataEntryMap";
 import NpcPersonalityMap from "../../../shared/object/maps/npcPersonalityMap";
 import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 import HelperSurroundings from "../../../shared/object/types/helperSurroundings";
@@ -47,12 +48,13 @@ import HelperSmallTalkUtil from "./helperSmallTalkUtil";
 // so that a newcomer never arrives to an empty world, each as its BehaviorPrefs have it (one whose personality isn't
 // played isn't a helper). Each behaves as any helper does (see HelperBehaviorUtil); here, it greets each visitor as they
 // come near, once a login, telling anyone never told how to walk and build, answers whoever talks to it nearby, or names
-// it, people and agents alike, through Claude (see HelperChatUtil), stands still for a person typing it a line, now and
-// then chats with another helper near it in fixed words (see HelperSmallTalkUtil), and now and then goes and looks at
-// something placed near it, saying what it thinks of it in fixed words too (see HelperRemarkUtil). What it does is
-// shown to the room and never kept: the room keeps it at home, so an admin moving it moves its home. People are shown
-// it is an AI (see NpcGameObject). A single-player room's helpers are played by the browser, which asks here for their
-// answers, their chats and their remarks (see answerAlone, smallTalkAlone, remarkAlone).
+// it, or comes near still saying what no helper heard, people and agents alike, through Claude (see HelperChatUtil),
+// stands still for a person typing it a line, now and then chats with another helper near it in fixed words (see
+// HelperSmallTalkUtil), and now and then goes and looks at something placed near it, saying what it thinks of it in
+// fixed words too (see HelperRemarkUtil). What it does is shown to the room and never kept: the room keeps it at home,
+// so an admin moving it moves its home. People are shown it is an AI (see NpcGameObject). A single-player room's
+// helpers are played by the browser, which asks here for their answers, their chats and their remarks (see
+// answerAlone, smallTalkAlone, remarkAlone).
 
 const TICK_MS = 1000;
 const NPC_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Npc");
@@ -88,6 +90,8 @@ const state = {
     refusalToldAt: new Map<string, number>(),
     // Whoever is typing a line in the chat, as their browser tells (see TypingSignal).
     typingUserIDs: new Set<string>(),
+    // What each user says that no helper heard as they said it, and the connection they said it on (see hearLateLines).
+    unheardLines: new Map<string, {ctx: UserContext, text: string}>(),
 };
 
 const HelperAgentUtil =
@@ -103,6 +107,7 @@ const HelperAgentUtil =
         helpers.clear();
         state.refusalToldAt.clear();
         state.typingUserIDs.clear();
+        state.unheardLines.clear();
         Object.assign(state, {timer: undefined, ticking: false, usageLoggedAt: Date.now(), failureLoggedAt: -Infinity});
     },
     // One beat of every helper's life, each second.
@@ -115,12 +120,12 @@ const HelperAgentUtil =
         {
             const now = Date.now();
             findHelpers(now);
+            hearLateLines(now);
             for (const helper of helpers.values())
             {
                 const memory = ServerRoomManager.roomRuntimeMemories[helper.roomID];
                 releaseLeavers(helper, memory, now);
                 followHome(helper, memory.room, now);
-                tellNewcomers(helper, memory);
                 noticeVisitors(helper, memory, now);
                 greet(helper, now);
                 answerSpeakers(helper, now);
@@ -160,26 +165,25 @@ const HelperAgentUtil =
             HelperBehaviorUtil.act(helper, surroundingsOf(helper), seconds, now);
     },
     // A line someone said, as SocketsServer dispatched it (see UserSignalDispatchUtil), for whichever helper it is for
-    // (see HelperBehaviorUtil.pickListener). Only a player's own lines come here: what a helper says goes to its room
-    // directly (see send), so helpers never hear one another, and two near each other chat only in fixed words (see
-    // startSmallTalks), never at the key's expense. A ghost isn't heard, since an answer would show everyone it is there.
+    // (see HelperBehaviorUtil.pickListener), or else for the one it is for once they come near one (see hearLateLines).
+    // Only a player's own lines come here: what a helper says goes to its room directly (see send), so helpers never
+    // hear one another, and two near each other chat only in fixed words (see startSmallTalks), never at the key's
+    // expense. A ghost isn't heard while it is one, since an answer would show everyone it is there.
     hear: (userID: string, signal: SetObjectMetadataSignal): void =>
     {
         const player = ServerUserManager.getPlayerObject(userID);
+        const ctx = ServerUserManager.getSocketUserContext(userID);
+        if (player == undefined || ctx == undefined || player.objectId != signal.objectId)
+            return;
+        state.unheardLines.delete(userID);
         const text = signal.metadataValue.trim();
-        if (player == undefined || player.objectId != signal.objectId || text.length == 0)
+        if (text.length == 0)
             return;
         const helper = findListener(userID, text);
-        const ctx = ServerUserManager.getSocketUserContext(userID);
-        if (helper == undefined || ctx == undefined)
-            return;
-        const now = Date.now();
-        const pending: HelperPendingLines = helper.linesByUserID.get(userID) ?? {isAgent: ctx instanceof AgentUserContext,
-            lines: [], lastAt: now};
-        pending.lines.push(text);
-        pending.lastAt = now;
-        helper.linesByUserID.set(userID, pending);
-        HelperBehaviorUtil.hear(helper, surroundingsOf(helper), userID, now);
+        if (helper == undefined)
+            state.unheardLines.set(userID, {ctx, text});
+        else
+            keepToAnswer(helper, ctx, text, Date.now());
     },
     // A person starting or stopping typing a line in the chat, as their browser tells: the helper it would be for stands
     // still facing them meanwhile (see waitOnTypists), at once. An agent's lines come whole (see AgentToolUtil.say), so
@@ -263,11 +267,41 @@ const HelperAgentUtil =
         return HelperRemarkUtil.pick({objectId: npc.objectId, personality: NpcPersonalityMap.read(npc.personality)},
             things);
     },
-    // What one sent a room is to be told of its helpers besides (see catchUpOn). The helpers tell a newcomer to the room
-    // themselves; whatever else shows it (an agent's camera) asks.
+    // What one sent a room is to be told of its helpers besides, right after it (see catchUpOn): a user who comes into the
+    // room (see tellNewcomer), or an agent's camera.
     getCatchUpSignals: (roomID: string): {signalType: string, signal: EncodableData}[] =>
     {
         return [...helpers.values()].filter(helper => helper.roomID == roomID).flatMap(catchUpOn);
+    },
+    // A user just sent the room they come into (see ServerRoomManager.changeUserRoom), told at once.
+    tellNewcomer: (roomID: string, userID: string): void =>
+    {
+        for (const helper of helpers.values())
+        {
+            if (helper.roomID != roomID)
+                continue;
+            for (const {signalType, signal} of catchUpOn(helper))
+                send(helper, signalType, signal, userID);
+        }
+    },
+    // A room sent whole again, its contents replaced (see ServerRoomManager.loadRoomFile): each helper starts over from
+    // its NPC as the room now keeps it, at home, the way it was put, and silent, as the room is sent; whom it has greeted
+    // and whose lines it is to answer are kept. One whose NPC is gone, or no longer played, is no helper from then on.
+    restart: (roomID: string): void =>
+    {
+        const room = ServerRoomManager.roomRuntimeMemories[roomID]?.room;
+        const now = Date.now();
+        for (const [key, helper] of helpers)
+        {
+            if (helper.roomID != roomID)
+                continue;
+            HelperBehaviorUtil.endSmallTalk(helper);
+            const obj = room?.objectById[helper.objectId];
+            if (obj != undefined && obj.objectTypeIndex == NPC_TYPE_INDEX && HelperBehaviorUtil.isPlayed(obj))
+                Object.assign(helper, HelperBehaviorUtil.create(obj, now));
+            else
+                helpers.delete(key);
+        }
     },
     // The name of the helper a user's line is for, as hear finds it, so that an agent can be told whether it was heard.
     getListenerName: (userID: string, text: string): string | undefined =>
@@ -388,6 +422,47 @@ function waitOnTypists(now: number): void
         HelperBehaviorUtil.waitFor(helper, typistOf.get(helper), now);
 }
 
+// What someone says that no helper heard as they said it is heard by the one it would be for (see findListener) once
+// they come near one, or one comes near them, wherever they go, while it is still up (until they clear it, it expires
+// or they say something else), and only on the connection they said it on.
+function hearLateLines(now: number): void
+{
+    for (const [userID, {ctx, text}] of state.unheardLines)
+    {
+        // Between rooms, a user has no player for a while.
+        const player = ServerUserManager.getPlayerObject(userID);
+        if (ServerUserManager.getSocketUserContext(userID) !== ctx || (player != undefined && !isSaying(player, text)))
+        {
+            state.unheardLines.delete(userID);
+            continue;
+        }
+        const helper = findListener(userID, text);
+        if (helper == undefined)
+            continue;
+        state.unheardLines.delete(userID);
+        keepToAnswer(helper, ctx, text, now);
+    }
+}
+
+// Whether a player still says a line, as the room keeps what it says (see ObjectMetadataEntryMap).
+function isSaying(player: AddObjectSignal, text: string): boolean
+{
+    return player.metadata[ObjectMetadataKeyEnumMap.SentMessage]?.str
+        == ObjectMetadataEntryMap.preprocess(ObjectMetadataKeyEnumMap.SentMessage, text);
+}
+
+// A user's line, kept for a helper to answer once they have paused (see answerSpeakers), which it hears at once.
+function keepToAnswer(helper: HelperState, ctx: UserContext, text: string, now: number): void
+{
+    const userID = ctx.user.id;
+    const pending: HelperPendingLines = helper.linesByUserID.get(userID) ?? {isAgent: ctx instanceof AgentUserContext,
+        lines: [], lastAt: now};
+    pending.lines.push(text);
+    pending.lastAt = now;
+    helper.linesByUserID.set(userID, pending);
+    HelperBehaviorUtil.hear(helper, surroundingsOf(helper), userID, now);
+}
+
 // Helpers near each other chat now and then, in fixed words (see HelperSmallTalkUtil): only while someone is in their
 // room to see it, and never one held. One with someone to greet or answer has talked with them too lately to.
 function startSmallTalks(now: number): void
@@ -431,7 +506,7 @@ function startSights(now: number): void
 function newHelper(roomID: string, obj: AddObjectSignal, now: number): HelperState
 {
     return {...HelperBehaviorUtil.create(obj, now), roomID, objectId: obj.objectId, heldBy: new Set(),
-        greetedLogins: new Map(), greetings: [], linesByUserID: new Map(), toldUserIDs: new Set()};
+        greetedLogins: new Map(), greetings: [], linesByUserID: new Map()};
 }
 
 // An admin holding it who has left its room lets go of it.
@@ -467,25 +542,8 @@ function followHome(helper: HelperState, room: Room, now: number): void
     send(helper, "setObjectMetadataSignal", facingSignal(helper));
 }
 
-function tellNewcomers(helper: HelperState, memory: RoomRuntimeMemory): void
-{
-    for (const userID of helper.toldUserIDs)
-    {
-        if (memory.participantUserNameByID[userID] == undefined)
-            helper.toldUserIDs.delete(userID);
-    }
-    for (const userID of Object.keys(memory.participantUserNameByID))
-    {
-        if (helper.toldUserIDs.has(userID))
-            continue;
-        helper.toldUserIDs.add(userID);
-        for (const {signalType, signal} of catchUpOn(helper))
-            send(helper, signalType, signal, userID);
-    }
-}
-
-// The room one is sent keeps the helper at home, so they are told where it is, which way it faces, what it is saying and
-// whether it is thinking of an answer.
+// The room one is sent keeps the helper at home, so they are told, right after it, where it is, which way it faces, what
+// it is saying and whether it is thinking of an answer.
 function catchUpOn(helper: HelperState): {signalType: string, signal: EncodableData}[]
 {
     const signals: {signalType: string, signal: EncodableData}[] = [];
@@ -627,7 +685,7 @@ function transformSignal(helper: HelperState): SetObjectTransformSignal
     const scale = ServerRoomManager.roomRuntimeMemories[helper.roomID]?.room.objectById[helper.objectId]?.transform.scale
         ?? {x: 1, y: 1, z: 1};
     return new SetObjectTransformSignal(helper.roomID, helper.objectId, new ObjectTransform({...helper.at}, {...UP},
-        {...scale}), true);
+        {...scale}), true, true);
 }
 
 function facingSignal(helper: HelperState): SetObjectMetadataSignal

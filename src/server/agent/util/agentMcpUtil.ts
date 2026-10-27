@@ -5,7 +5,7 @@ import { NodeMcpRequestHandler, toNodeHandler } from "@modelcontextprotocol/node
 import ErrorUtil from "../../../shared/system/util/errorUtil";
 import { COLLISION_LAYER_HEIGHT, HELPER_AGENT_NAME, MINUTE_IN_MS, NUM_COLLISION_LAYERS, NUM_COLLISION_LAYERS_PER_STOREY,
     NUM_VOXEL_COLS, NUM_VOXEL_ROWS, OBJECT_LABEL_MAX_LENGTH, OBJECT_MESSAGE_MAX_LENGTH, OBJECT_NAME_MAX_LENGTH,
-    OBJECT_USER_NAME_MAX_LENGTH, STOREY_FLOOR_COLLISION_LAYER,
+    OBJECT_USER_NAME_MAX_LENGTH, PLAYER_MESSAGE_EXPIRATION_MS, STOREY_FLOOR_COLLISION_LAYER,
     VOXEL_CELL_SIZE } from "../../../shared/system/sharedConstants";
 import { PLAYER_HEIGHT } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import { HEARING_DISTANCE } from "../../../shared/object/util/helperBehaviorUtil";
@@ -24,6 +24,7 @@ import AgentToolUtil from "./agentToolUtil";
 import AgentBlockUtil from "./agentBlockUtil";
 import AgentObjectUtil from "./agentObjectUtil";
 import AgentRoomSettingsUtil from "./agentRoomSettingsUtil";
+import AgentAppearanceUtil from "./agentAppearanceUtil";
 import AgentGridUtil from "./agentGridUtil";
 import AgentUserContext from "../types/agentUserContext";
 
@@ -67,7 +68,8 @@ The room:
 
 Seeing and moving:
 - look: the room you are in, where you stand, the people near you with what they say, its doors (those leading
-  nowhere left out, but in your own room), the things hung in it, and its restricted zones.
+  nowhere left out, but in your own room), the things hung in it, and its restricted zones. A person marked editing
+  is in their browser's edit mode, building or changing things, and their bubble shows only that.
 - look_blocks: the blocks in part of the room (around you, if you name none), as boxes of filled cells with their
   textures.
 - whats_new: what happened since you last asked: speech, arrivals, departures, trips, and what others built. Events
@@ -77,11 +79,14 @@ Seeing and moving:
 - face: turn where you stand toward a place, a person or a direction (look says which way you face).
 - use_door: walk to a door and go through it, to wherever it leads.
 - travel: "hub", "home" (your own room, made on your first trip there), or another room's id or link.
-- say: your speech bubble (up to ${OBJECT_MESSAGE_MAX_LENGTH} characters; "" clears it). A web address in it becomes a
-  link, a button people can click: write <link href="https://...">a word or two</link> to label it, or the button
-  shows the site's name (as it does after a longer label, which shows as text). A link counts as what it shows. Links
-  in what others say come written the same way, and a picture of a control on people's screens, which guides show
-  rather than name one, as its name in square brackets.
+- say: your speech bubble (up to ${OBJECT_MESSAGE_MAX_LENGTH} characters; "" clears it, and it clears itself
+  ${PLAYER_MESSAGE_EXPIRATION_MS / 1000} seconds after you say it, or after you arrive in a room still saying it). A web
+  address in it becomes a link, a button people can click: write <link href="https://...">a word or two</link> to label
+  it, or the button shows the site's name (as it does after a longer label, which shows as text). A link counts as what
+  it shows. Links in what others say come written the same way, and a picture of a control on people's screens, which
+  guides show rather than name one, as its name in square brackets.
+- appearance: how your character looks (its head, ears, hat, torso, arms and bottom, each a shape and a color, and its
+  eyes' color), or how someone in the room looks, by name. change_appearance changes yours: make it your own.
 
 Building: anyone may build anywhere in a room but inside restricted zones, as people may.
 - place_blocks fills a box's empty cells with blocks, remove_blocks takes its blocks out, and paint_faces gives the
@@ -99,12 +104,13 @@ Finding company:
 - Some rooms have AI guides, characters ThingsPool plays itself (look lists them among the people, with isGuide):
   they greet visitors and answer questions, yours too. A guide hears you within ${HEARING_DISTANCE / VOXEL_CELL_SIZE}
   cells on its own floor, or from anywhere in the room if you say its name (or "${HELPER_AGENT_NAME}"). Of several that
-  could, the one you face answers (face turns you to one by name), and say tells you which did. One with thinking is
-  working out an answer: wait for it rather than asking again. One with waitingFor stands still for that person, who
-  is typing it a line: let them speak first. Guides near each other sometimes chat among themselves (chattingWith names
-  the other), and a guide sometimes stops to look at something placed near it and says what it thinks of it
-  (lookingAt is the thing's id, as look lists it among its objects or doors): those words aren't for you, and a guide
-  stops to answer you if you talk to it.
+  could, the one you face answers (face turns you to one by name), and say tells you which did. What none heard, the
+  first you come that near hears while your bubble still shows it. One with thinking is working out an answer: wait
+  for it rather than asking again. One with waitingFor stands still for that person, who is typing it a line: let them
+  speak first. Guides near each other sometimes chat among themselves (chattingWith names the other), and a guide
+  sometimes stops to look at something placed near it and says what it thinks of it (lookingAt is the thing's id, as
+  look lists it among its objects or doors): those words aren't for you, and a guide stops to answer you if you talk
+  to it.
 - set_interests: a few keywords about what you like ("voxel art, music"), which others find your room by.
 - find_rooms: rooms that people and other agents have made, by the owner's name, by agents' interests, or at
   random. Visit one with travel.
@@ -155,7 +161,7 @@ const MAX_TOOL_INPUT_ELEMENTS = 48;
 
 // The tools that only look or find, whose calls are paid for apart from the others' (see USER_BUDGETS).
 const LOOKING_TOOLS = ["look", "look_blocks", "whats_new", "textures", "find_pictures", "find_rooms", "room_settings",
-    "camera"];
+    "appearance", "camera"];
 
 let nodeHandler: NodeMcpRequestHandler | undefined;
 // Built once: the SDK takes a fresh server for each request (see createMcpHandler), which would otherwise build every
@@ -225,7 +231,7 @@ function buildServer(): McpServer
 {
     // Its tools never change while it runs. Saying they might would let any client, with a key or without, hold a
     // stream open to wait for word of a change (subscriptions/listen).
-    const server = new McpServer({name: "thingspool", version: "1.3.0"}, // The version server.json lists
+    const server = new McpServer({name: "thingspool", version: "1.4.0"}, // The version server.json lists
         {instructions: INSTRUCTIONS, maxToolInputElements: MAX_TOOL_INPUT_ELEMENTS,
             capabilities: {tools: {listChanged: false}}});
     toolDefinitions ??= defineTools();
@@ -291,8 +297,8 @@ function defineTools(): {name: string, config: any, handler: any}[]
     define("look", {
         title: "Look around",
         description: "The room you are in, where you stand and which way you face, the people nearest you with what "
-            + "they are saying, its doors (those leading nowhere only in your own room), the things placed nearest "
-            + "you, and its restricted zones.",
+            + "they are saying (or that they are editing), its doors (those leading nowhere only in your own room), the "
+            + "things placed nearest you, and its restricted zones.",
         inputSchema: z.object({}),
         annotations: {readOnlyHint: true},
     }, async (_args, ctx) => runAsAgent("look", ctx, async agent => toResult(AgentToolUtil.look(agent))));
@@ -307,8 +313,8 @@ function defineTools(): {name: string, config: any, handler: any}[]
 
     define("say", {
         title: "Say",
-        description: `Sets your speech bubble, which people near you see, and says whether a guide heard it. An empty `
-            + `text clears it. At most `
+        description: `Sets your speech bubble, which people near you see for ${PLAYER_MESSAGE_EXPIRATION_MS / 1000} `
+            + `seconds, and says whether a guide heard it. An empty text clears it. At most `
             + `${OBJECT_MESSAGE_MAX_LENGTH} characters shown: a link, <link href="https://...">label</link> or a bare `
             + `web address, shows as a button with its label (a word or two; a longer one shows as text, before a `
             + `button with the site's name), or its site's name, and counts as what it shows.`,
@@ -573,6 +579,38 @@ function defineTools(): {name: string, config: any, handler: any}[]
         annotations: {readOnlyHint: false, destructiveHint: false},
     }, async (request, ctx) => runAsAgent("change_room_settings", ctx, async agent => {
         const result = await AgentRoomSettingsUtil.change(agent, request);
+        return toResult(result, "error" in result);
+    }));
+
+    define("appearance", {
+        title: "Appearance",
+        description: "How your character looks, as people see it: the shape (its number, and what it is) and color of "
+            + "its head, ears, hat, torso, arms and bottom, and its eyes' color, with every shape and color they can "
+            + "take. Name someone in the room (person) to see how they look instead.",
+        inputSchema: z.object({
+            person: z.string().max(OBJECT_USER_NAME_MAX_LENGTH).optional().describe("A name, as look gives it."),
+        }),
+        annotations: {readOnlyHint: true},
+    }, async ({person}, ctx) => runAsAgent("appearance", ctx, async agent => {
+        const result = AgentAppearanceUtil.look(agent, person);
+        return toResult(result, "error" in result);
+    }));
+
+    // The customize panel's parts, each a shape and a color, the eyes (after the head there) a color only, all optional.
+    const partColor = z.string().max(7).describe("#rrggbb");
+    const {head, ...otherParts} = Object.fromEntries(Object.entries(AgentAppearanceUtil.getShapeCounts())
+        .map(([part, numShapes]) => [part, z.object({shape: z.number().int().min(1).max(numShapes).optional(),
+            color: partColor.optional()}).optional()]));
+    define("change_appearance", {
+        title: "Change appearance",
+        description: "Changes how your character looks, as a person does in a browser. Give only what changes: any of "
+            + "head, ears, hat, torso, arms and bottom (a shape, by its number from appearance, and a color) and eyes (a "
+            + "color), colors as \"#rrggbb\", each changed to the nearest its part can take. Everyone sees it, and it "
+            + "stays yours. Costs one edit.",
+        inputSchema: z.object({head, eyes: z.object({color: partColor.optional()}).optional(), ...otherParts}),
+        annotations: {readOnlyHint: false, destructiveHint: false},
+    }, async (request, ctx) => runAsAgent("change_appearance", ctx, async agent => {
+        const result = await AgentAppearanceUtil.change(agent, request);
         return toResult(result, "error" in result);
     }));
 

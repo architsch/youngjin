@@ -54,8 +54,6 @@ const SETTINGS: {[group: string]: {[setting: string]: Setting}} = {
     },
 };
 
-const HEX_COLOR_PATTERN = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i;
-
 // How a room looks, as its owner sets it in the browser's customize-room panel: the same settings, by the same
 // names, and through the same calls (see RoomRouter's room settings routes).
 const AgentRoomSettingsUtil =
@@ -110,7 +108,7 @@ const AgentRoomSettingsUtil =
                     continue;
                 if (setting.palette != undefined)
                 {
-                    if (typeof value != "string" || !HEX_COLOR_PATTERN.test(value))
+                    if (typeof value != "string" || !ColorUtil.isHex(value))
                         return {error: `${group}.${name} is a color, given as "#rrggbb".`};
                     prefs[setting.pref] = ColorUtil.rgbToPaletteIndex(setting.palette, ColorUtil.hexToRGB(value));
                 }

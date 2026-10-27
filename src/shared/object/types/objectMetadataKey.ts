@@ -54,4 +54,7 @@ export const ObjectMetadataKeyEnumMap: Record<string, number> =
     // A mirror's surface: its color and how opaque it is over the reflection, one quantized character each (see
     // MirrorObjectTypeConfig), always read and written together.
     MirrorProperties: 23,
+    // "1" while a player's user is in edit mode, which its bubble shows in place of its words (see PlayerEditingUtil).
+    // Set by the user's own browser, and never kept (see ServerUserManager).
+    Editing: 24,
 }

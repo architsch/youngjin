@@ -38,6 +38,10 @@ import Geometry3DUtil from "../../../src/shared/math/util/geometry3DUtil";
 import { DIR_VEC_BY_CODE,
     OBJECT_INSTANCED_MESH_COMPOSITION_METADATA_MAX_LENGTH,
     UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
+import PlayerCompositionConstants, { SAFE_PLAYER_PART_CIRCLE_STICK_OUT_LENGTH_IN_UNITS, UNIT_PLAYER_PART_LENGTH }
+    from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/playerCompositionConstants";
+import PlayerObjectTypeConfig, { PLAYER_HEIGHT, PLAYER_RADIUS_XZ }
+    from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 
 const COMPOSITION_KEY = ObjectMetadataKeyEnumMap.InstancedMeshComposition;
 
@@ -70,6 +74,124 @@ const BUILDER_TYPE_BY_PART: {[part: string]: string} = {
     arm: "PlayerArm",
     bottom: "PlayerBottom",
 };
+
+// Where the codec places each slot, in grid units, the left ear and arm mirrored; and the heights of the neck and the
+// waist every body has. A test holds these to the codec (see PlayerCompositionCodec).
+const SLOT_PLACEMENTS: {[part: string]: {x: number, y: number, z: number, mirrored: boolean}[]} = {
+    head: [{x: 0, y: 6, z: 0, mirrored: false}],
+    ear: [{x: 2.5, y: 6, z: 0, mirrored: false}, {x: -2.5, y: 6, z: 0, mirrored: true}],
+    hat: [{x: 0, y: 9, z: 0, mirrored: false}],
+    torso: [{x: 0, y: -1, z: 0, mirrored: false}],
+    arm: [{x: 2.5, y: -1, z: 0, mirrored: false}, {x: -2.5, y: -1, z: 0, mirrored: true}],
+    bottom: [{x: 0, y: -8, z: 0, mirrored: false}],
+};
+const NECK_Y = 3.5;
+const WAIST_Y = -5.5;
+
+function buildSlot(part: string, params: InstancedMeshCompositionParams): InstancedMeshCompositionPart[]
+{
+    const parts: InstancedMeshCompositionPart[] = [];
+    for (const {x, y, z, mirrored} of SLOT_PLACEMENTS[part])
+    {
+        const builder = InstancedMeshCompositionBuilderMap[`${BUILDER_TYPE_BY_PART[part]}_${params.types[part]}`](
+            params, parts).offset(x, y, z);
+        (mirrored ? builder.mirrored() : builder).run();
+    }
+    return parts;
+}
+
+function buildFixed(params: InstancedMeshCompositionParams, y: number): InstancedMeshCompositionPart[]
+{
+    const parts: InstancedMeshCompositionPart[] = [];
+    InstancedMeshCompositionBuilderMap["PlayerNeckAndWaist"](params, parts).offset(0, y, 0).run();
+    return parts;
+}
+
+// A part's extent as a box, a cylinder's by its axis and diameter, and the axes across which it has flat faces: a box's
+// three, a cylinder's own (its ends), and none of a square's, which lies over another face on purpose (the eyes).
+interface PartBox
+{
+    min: number[];
+    max: number[];
+    flatAxes: number[];
+}
+
+function toPartBox(part: InstancedMeshCompositionPart): PartBox
+{
+    const center = [part.offset.x, part.offset.y, part.offset.z];
+    const dir = [part.dir.x, part.dir.y, part.dir.z].map(Math.abs);
+    const axis = dir.indexOf(Math.max(...dir));
+    let half = [0.5 * part.scale.x, 0.5 * part.scale.y, 0.5 * part.scale.z];
+    let flatAxes = [0, 1, 2];
+    if (part.geometryId == "Cylinder")
+    {
+        const radius = 0.25 * (part.scale.x + part.scale.y);
+        half = [radius, radius, radius];
+        half[axis] = 0.5 * part.scale.z;
+        flatAxes = [axis];
+    }
+    else if (part.geometryId == "Square")
+    {
+        half[axis] = 0;
+        flatAxes = [];
+    }
+    return {min: center.map((c, i) => c - half[i]), max: center.map((c, i) => c + half[i]), flatAxes};
+}
+
+// Every shape of every slot ("head 3", numbered from 1 as the panel numbers them), and the neck and waist, as boxes.
+function getPartBoxesByShape(): {[shape: string]: PartBox[]}
+{
+    const {params} = PlayerCompositionCodec.getRandomComposition(0, UNIT_VEC3);
+    const byShape: {[shape: string]: PartBox[]} = {
+        "neck and waist": [...buildFixed(params, NECK_Y), ...buildFixed(params, WAIST_Y)].map(toPartBox),
+    };
+    for (const part of Object.keys(SLOT_PLACEMENTS))
+    {
+        for (let type = 0; type < PlayerCompositionConstants.numTypes[part]; ++type)
+        {
+            byShape[`${part} ${type + 1}`] = buildSlot(part, {...params, types: {...params.types, [part]: type}})
+                .map(toPartBox);
+        }
+    }
+    return byShape;
+}
+
+// Every two shapes of different slots, the neck and waist counting as one, since any two may meet on a body.
+function forEachShapePair(check: (shapeA: string, a: PartBox[], shapeB: string, b: PartBox[]) => void): void
+{
+    const byShape = getPartBoxesByShape();
+    const shapes = Object.keys(byShape);
+    const slotOf = (shape: string) => shape.split(" ")[0];
+    for (let i = 0; i < shapes.length; ++i)
+        for (let j = i + 1; j < shapes.length; ++j)
+            if (slotOf(shapes[i]) != slotOf(shapes[j]))
+                check(shapes[i], byShape[shapes[i]], shapes[j], byShape[shapes[j]]);
+}
+
+// How deep two boxes sink into each other: the least of their overlaps along the axes (none or less where apart).
+function getDepth(a: PartBox, b: PartBox): number
+{
+    let depth = Infinity;
+    for (let axis = 0; axis < 3; ++axis)
+        depth = Math.min(depth, Math.min(a.max[axis], b.max[axis]) - Math.max(a.min[axis], b.min[axis]));
+    return depth;
+}
+
+// The area over which a flat face of one lies in the same plane as a face of the other turned the same way.
+function getFlushArea(a: PartBox, b: PartBox): number
+{
+    let area = 0;
+    for (const axis of a.flatAxes.filter(axis => b.flatAxes.includes(axis)))
+    {
+        const overlap = [0, 1, 2].filter(i => i != axis).reduce((product, i) =>
+            product * Math.max(0, Math.min(a.max[i], b.max[i]) - Math.max(a.min[i], b.min[i])), 1);
+        if (Math.abs(a.min[axis] - b.min[axis]) < 1e-9)
+            area += overlap;
+        if (Math.abs(a.max[axis] - b.max[axis]) < 1e-9)
+            area += overlap;
+    }
+    return area;
+}
 
 describe("player mesh composition", () => {
     beforeEach(() => {
@@ -296,6 +418,56 @@ describe("player mesh composition", () => {
                 expect(obj!.metadata[COMPOSITION_KEY]?.str).toBe(composition);
             },
         });
+    });
+
+    // ─── Fit ───────────────────────────────────────────────────────────
+
+    it("places every slot's parts where the codec does, so the fit checks below see the body it draws", () => {
+        for (let seed = 0; seed < 50; ++seed)
+        {
+            const {params, parts} = PlayerCompositionCodec.getRandomComposition(seed, UNIT_VEC3);
+            expect([...buildSlot("head", params), ...buildSlot("ear", params), ...buildSlot("hat", params),
+                ...buildFixed(params, NECK_Y), ...buildSlot("torso", params), ...buildSlot("arm", params),
+                ...buildFixed(params, WAIST_Y), ...buildSlot("bottom", params)]).toEqual(parts);
+        }
+    });
+
+    it("keeps every part of every shape inside the player's collider, and so below where speech bubbles start", () => {
+        const bubbleY = PlayerObjectTypeConfig.components.spawnedByAny.speechBubble.yOffset;
+        expect(bubbleY).toBeLessThanOrEqual(0.5 * PLAYER_HEIGHT);
+        for (const [key, boxes] of Object.entries(getPartBoxesByShape()))
+        {
+            for (const box of boxes)
+            {
+                expect(box.min[0], key).toBeGreaterThanOrEqual(-PLAYER_RADIUS_XZ - 1e-9);
+                expect(box.max[0], key).toBeLessThanOrEqual(PLAYER_RADIUS_XZ + 1e-9);
+                expect(box.min[2], key).toBeGreaterThanOrEqual(-PLAYER_RADIUS_XZ - 1e-9);
+                expect(box.max[2], key).toBeLessThanOrEqual(PLAYER_RADIUS_XZ + 1e-9);
+                expect(box.min[1], key).toBeGreaterThanOrEqual(-0.5 * PLAYER_HEIGHT - 1e-9);
+                expect(box.max[1], key).toBeLessThanOrEqual(bubbleY + 1e-9);
+            }
+        }
+    });
+
+    it("sinks no slot's parts into another's deeper than a round part sticks out, whatever their shapes", () => {
+        // A round part covers its square's middle cells, so it sticks out past the square's sides, into its neighbors.
+        const tolerance = SAFE_PLAYER_PART_CIRCLE_STICK_OUT_LENGTH_IN_UNITS * UNIT_PLAYER_PART_LENGTH + 1e-9;
+        forEachShapePair((keyA, a, keyB, b) => {
+            for (const boxA of a)
+                for (const boxB of b)
+                    expect(getDepth(boxA, boxB), `${keyA} in ${keyB}`).toBeLessThanOrEqual(tolerance);
+        });
+    });
+
+    it("lays no two faces of a body flush, facing the same way, where they would flicker", () => {
+        const expectNoneFlush = (key: string, a: PartBox[], b: PartBox[], sameShape: boolean) => {
+            for (let i = 0; i < a.length; ++i)
+                for (let j = sameShape ? i + 1 : 0; j < b.length; ++j)
+                    expect(getFlushArea(a[i], b[j]), `${key}: parts ${i} and ${j}`).toBeLessThan(1e-9);
+        };
+        for (const [key, boxes] of Object.entries(getPartBoxesByShape()))
+            expectNoneFlush(key, boxes, boxes, true);
+        forEachShapePair((keyA, a, keyB, b) => expectNoneFlush(`${keyA} / ${keyB}`, a, b, false));
     });
 
     // ─── Config coherence ──────────────────────────────────────────────

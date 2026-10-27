@@ -29,6 +29,7 @@ export const PlayerCompositionCodec: InstancedMeshCompositionCodec = {
         arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToPaletteIndex("Player", params.colors.torso)));
         arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToPaletteIndex("Player", params.colors.arm)));
         arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToPaletteIndex("Player", params.colors.bottom)));
+        arr.push(StringUtil.convertRawNumberToVisibleASCII(ColorUtil.rgbToPaletteIndex("PlayerEye", params.colors.eye)));
         return arr.join("");
     },
     decode: (strToDecode: string, objectSize: Vec3,
@@ -49,6 +50,8 @@ export const PlayerCompositionCodec: InstancedMeshCompositionCodec = {
         decodedParams.colors.torso = ColorUtil.paletteIndexToRGB("Player", StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++));
         decodedParams.colors.arm = ColorUtil.paletteIndexToRGB("Player", StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++));
         decodedParams.colors.bottom = ColorUtil.paletteIndexToRGB("Player", StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++));
+        // Last, so a look stored without it reads back the palette's first (green).
+        decodedParams.colors.eye = ColorUtil.paletteIndexToRGB("PlayerEye", StringUtil.convertVisibleASCIIToRawNumber(strToDecode, charOffset++));
         constructParts(decodedParams, decodedParts);
     },
     getRandomComposition: (seed: number, objectSize: Vec3):
@@ -69,6 +72,7 @@ export const PlayerCompositionCodec: InstancedMeshCompositionCodec = {
         params.colors.torso = ColorUtil.paletteIndexToRGB("Player", rand.randomInt(0, ColorUtil.getPaletteSize("Player")));
         params.colors.arm = ColorUtil.paletteIndexToRGB("Player", rand.randomInt(0, ColorUtil.getPaletteSize("Player")));
         params.colors.bottom = ColorUtil.paletteIndexToRGB("Player", rand.randomInt(0, ColorUtil.getPaletteSize("Player")));
+        params.colors.eye = ColorUtil.paletteIndexToRGB("PlayerEye", rand.randomInt(0, ColorUtil.getPaletteSize("PlayerEye")));
 
         const parts: InstancedMeshCompositionPart[] = [];
         constructParts(params, parts);
@@ -147,7 +151,8 @@ function countSlotPartsByMesh(slotName: string, type: number): {[instancedMeshId
 function getBaseParams(): PlayerCompositionParams
 {
     const types = {head: 0, ear: 0, hat: 0, torso: 0, arm: 0, bottom: 0};
-    const colors = {head: ZERO_VEC3, ear: ZERO_VEC3, hat: ZERO_VEC3, torso: ZERO_VEC3, arm: ZERO_VEC3, bottom: ZERO_VEC3};
+    const colors = {head: ZERO_VEC3, ear: ZERO_VEC3, hat: ZERO_VEC3, torso: ZERO_VEC3, arm: ZERO_VEC3, bottom: ZERO_VEC3,
+        eye: ColorUtil.paletteIndexToRGB("PlayerEye", 0)};
     return {types, colors};
 }
 
@@ -163,7 +168,7 @@ const SLOT_PART_CONSTRUCTORS: {[slotName: string]:
         getBuilder("PlayerEar", params.types.ear)(params, parts)
             .offset(2.5, 6, 0).run();
         getBuilder("PlayerEar", params.types.ear)(params, parts)
-            .offset(-2.5, 6, 0).backward().run();
+            .offset(-2.5, 6, 0).mirrored().run();
     },
     hat: (params, parts) => {
         getBuilder("PlayerHat", params.types.hat)(params, parts)
@@ -177,7 +182,7 @@ const SLOT_PART_CONSTRUCTORS: {[slotName: string]:
         getBuilder("PlayerArm", params.types.arm)(params, parts)
             .offset(2.5, -1, 0).run();
         getBuilder("PlayerArm", params.types.arm)(params, parts)
-            .offset(-2.5, -1, 0).backward().run();
+            .offset(-2.5, -1, 0).mirrored().run();
     },
     bottom: (params, parts) => {
         getBuilder("PlayerBottom", params.types.bottom)(params, parts)

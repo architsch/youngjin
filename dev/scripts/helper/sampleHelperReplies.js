@@ -1,7 +1,7 @@
 // Asks the real model, as a helper would (see HelperChatUtil), for each played personality's answers to a few lines from
-// a newcomer, and prints them with their lengths and what they cost, after the things on its mind in that talk: to hear
-// the helpers after changing what they are told (see the helper-instructions skill). Spends a little of the helpers' API
-// credit, outside their daily budget (this spending is not saved), and needs their key:
+// a newcomer, and prints them with their lengths and what they cost, after its mood and the things on its mind in that
+// talk: to hear the helpers after changing what they are told (see the helper-instructions skill). Spends a little of
+// the helpers' API credit, outside their daily budget (this spending is not saved), and needs their key:
 //
 //   ANTHROPIC_API_KEY="$(gcloud secrets versions access latest --secret=ANTHROPIC_API_KEY --project=thingspool)" \
 //       node dev/scripts/helper/sampleHelperReplies.js [--personality=jester] [--line="how do I build?"]... [--untold]
@@ -14,9 +14,11 @@ const Module = require("module");
 
 const REPO_ROOT = path.join(__dirname, "../../..");
 const DEFAULT_LINES = [
-    "hi! what is this place?",
+    "hi, what's up?",
+    "what is this place?",
     "how do I build something?",
     "tell me something fun",
+    "haha, cool",
     "what do you like to talk about?",
     "is there anything good to read here?",
 ];
@@ -81,7 +83,8 @@ async function main()
         {
             const reply = await HelperChatUtil.reply(helper, `sample-${personality}`, `${speaker} ${line}`);
             if (i == 0)
-                console.log(`  ${asked?.system[1].text.split("\n\nOn your mind today:\n")[1] ?? "(nothing on its mind)"}`);
+                console.log(`  ${asked?.system[1].text.match(/Your mood today.*/)?.[0] ?? "(no mood)"}\n`
+                    + `  ${asked?.system[1].text.split(/\n\nOn your mind today.*\n/)[1] ?? "(nothing on its mind)"}`);
             // As long as it shows, a link counting as its label and a picture as its control's words.
             const shown = MessageLinkUtil.getVisibleLength(reply ?? "");
             console.log(`> ${line}\n  (${String(shown).padStart(3)}) ${reply ?? "(no reply)"}`);

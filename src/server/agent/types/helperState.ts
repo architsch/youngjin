@@ -12,8 +12,6 @@ type HelperState = HelperBehavior & {
     greetedLogins: Map<string, {loginCount: number, at: number}>,
     greetings: {userID: string, name: string, returning: boolean}[],
     linesByUserID: Map<string, HelperPendingLines>,
-    // Those in its room who have been told where it is, since the room they were sent keeps it at home.
-    toldUserIDs: Set<string>,
 };
 
 export default HelperState;

@@ -140,6 +140,8 @@ export const USER_BUDGETS: {[kind in UserBudgetKind]: {capacity: number, refillP
     moves: {capacity: 25, refillPerSecond: 10},
     // How far one's player moves, in world units: the strongest fan throws one about 16 in a second, at a walk.
     distance: {capacity: 40, refillPerSecond: 20},
+    // Switches between play and edit mode, which one's player shows the room.
+    modeSwitches: {capacity: 20, refillPerSecond: 1},
     // An agent's calls of tools that change nothing, and of the others.
     agentReads: {capacity: 30, refillPerSecond: 1},
     agentActions: {capacity: 15, refillPerSecond: 0.5},

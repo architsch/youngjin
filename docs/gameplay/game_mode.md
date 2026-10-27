@@ -1,11 +1,12 @@
 # Game Mode
 
-Reference: @src/client/system/util/gameModeUtil.ts , @src/client/graphics/util/worldSpaceSelectionUtil.ts , @src/client/graphics/util/selectionStepUtil.ts , @src/client/graphics/util/selectionEditGizmoUtil.ts , @src/client/object/types/objectTypeClientConfig/objectTypeClientConfig.ts , @src/client/ui/util/closablePanelUtil.ts , @src/client/ui/util/shortcutKeyUtil.ts , @src/client/system/util/clientEventHistoryUtil.ts , @src/client/system/util/roomEditUtil.ts
+Reference: @src/client/system/util/gameModeUtil.ts , @src/client/object/util/playerEditingUtil.ts , @src/client/graphics/util/worldSpaceSelectionUtil.ts , @src/client/graphics/util/selectionStepUtil.ts , @src/client/graphics/util/selectionEditGizmoUtil.ts , @src/client/object/types/objectTypeClientConfig/objectTypeClientConfig.ts , @src/client/ui/util/closablePanelUtil.ts , @src/client/ui/util/shortcutKeyUtil.ts , @src/client/system/util/clientEventHistoryUtil.ts , @src/client/system/util/roomEditUtil.ts
 
 A `GameMode` decides the camera behavior, whether the player can walk, and which tools are shown. `GameModeUtil` publishes the current mode, and everything mode-dependent observes it.
 
 - **Play mode**: first-person view, the player walks, and nothing can be selected. A click acts on the room: a door walks through, and any other object runs its type's callback in `PlayModeClickCallbackMap`, picked by a metadata value (a prop's by its image). Any click that hits a voxel quad or object also pitches the view toward it (see [camera_control.md](../graphics/camera_control.md)).
 - **Edit mode**: the camera orbits the current selection, the player stands still, and the selection's editing tools are shown.
+- Others see the mode: in edit mode the user's player shows "Editing..." in its bubble, in place of their words (`PlayerEditingUtil`, the player's `Editing` key). The server never saves it with the player, since every arrival is in play mode.
 
 The mode is stored separately from camera state, because the camera briefly has no target while one selection replaces another.
 

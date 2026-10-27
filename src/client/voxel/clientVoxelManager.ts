@@ -15,8 +15,6 @@ import ObjectTypeConfigMap from "../../shared/object/maps/objectTypeConfigMap";
 import VolumeObjectTypeConfig from "../../shared/object/types/objectTypeConfig/volumeObjectTypeConfig";
 import { restrictedZonesChangedObservable, voxelQuadChangeObservable } from "../../shared/system/sharedObservables";
 import VoxelQuadChange from "../../shared/voxel/types/voxelQuadChange";
-import AsyncUtil from "../../shared/system/util/asyncUtil";
-import SignalTypeConfigMap from "../../shared/networking/maps/signalTypeConfigMap";
 import VoxelGameObject from "../object/types/gameObject/voxelGameObject";
 import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 import InstancedMeshGraphics from "../object/components/instancedMeshGraphics";
@@ -147,36 +145,28 @@ const ClientVoxelManager =
     // --- Signal reception handlers (for signals from other clients via server) ---
 
     onAddVoxelBlockSignalReceived: async (signal: AddVoxelBlockSignal) => {
-        const success = await waitUntilSignalProcessingReady("addVoxelBlockSignal",
-            () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == signal.roomID);
-        if (!success)
+        if (!await App.whenInRoom(signal.roomID))
             return;
         ClientVoxelManager.addVoxelBlock(App.getCurrentRoom()!, signal.quadIndex,
             signal.quadTextureIndicesWithinLayer, false);
         refreshSelections();
     },
     onMoveVoxelBlockSignalReceived: async (signal: MoveVoxelBlockSignal) => {
-        const success = await waitUntilSignalProcessingReady("moveVoxelBlockSignal",
-            () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == signal.roomID);
-        if (!success)
+        if (!await App.whenInRoom(signal.roomID))
             return;
         ClientVoxelManager.moveVoxelBlock(App.getCurrentRoom()!, signal.quadIndex,
             signal.rowOffset, signal.colOffset, signal.collisionLayerOffset, false);
         refreshSelections();
     },
     onRemoveVoxelBlockSignalReceived: async (signal: RemoveVoxelBlockSignal) => {
-        const success = await waitUntilSignalProcessingReady("removeVoxelBlockSignal",
-            () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == signal.roomID);
-        if (!success)
+        if (!await App.whenInRoom(signal.roomID))
             return;
         ClientVoxelManager.removeVoxelBlock(App.getCurrentRoom()!,
             signal.quadIndex, false);
         refreshSelections();
     },
     onSetVoxelQuadTextureSignalReceived: async (signal: SetVoxelQuadTextureSignal) => {
-        const success = await waitUntilSignalProcessingReady("setVoxelQuadTextureSignal",
-            () => App.getCurrentRoom() != undefined && App.getCurrentRoom()!.id == signal.roomID);
-        if (!success)
+        if (!await App.whenInRoom(signal.roomID))
             return;
         ClientVoxelManager.setVoxelQuadTexture(App.getCurrentRoom()!,
             signal.quadIndex, signal.textureIndex, false);
@@ -291,9 +281,6 @@ function getVoxelGameObject(room: Room, row: number, col: number): VoxelGameObje
     }
     return voxelGameObject;
 }
-
-const waitUntilSignalProcessingReady = (signalType: string, successCond: () => boolean): Promise<boolean> =>
-    AsyncUtil.waitUntilSuccess(successCond, SignalTypeConfigMap.getConfigByType(signalType).maxClientSideReceptionPeriod)
 
 restrictedZonesChangedObservable.addListener("clientVoxelManager", onRestrictedZonesChanged);
 

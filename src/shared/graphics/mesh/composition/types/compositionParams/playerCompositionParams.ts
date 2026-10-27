@@ -18,5 +18,6 @@ export default interface PlayerCompositionParams extends InstancedMeshCompositio
         torso: Vec3,
         arm: Vec3,
         bottom: Vec3,
+        eye: Vec3, // from its own palette (see PlayerCompositionCodec)
     },
 }

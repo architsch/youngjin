@@ -6,8 +6,8 @@ import TriangleRightIcon from "../../svg/icons/triangleRightIcon";
 // Wrap-around stepper over 0..numValues-1 with left/right arrows (like a character-creator selector).
 // Shows `preview` if given (it must keep one size), otherwise the value's label: by default its position.
 
-export default function StepperInput({ id, currValue, numValues, setValue, labels, preview, disabled = false,
-    additionalClassNames = "" }: Props)
+export default function StepperInput({ id, currValue, numValues, setValue, labels, preview, numbered = false,
+    disabled = false, additionalClassNames = "" }: Props)
 {
     const step = (delta: number) => {
         if (numValues <= 0)
@@ -24,15 +24,21 @@ export default function StepperInput({ id, currValue, numValues, setValue, label
     // shift the controls beside it). Digits are tabular, so the last position is as wide as any.
     const sizingLabels = [...(labels ?? [`${numValues}/${numValues}`]), NO_VALUE_LABEL];
 
-    return <div id={id} className={`flex flex-row items-center gap-1 shrink-0 ${additionalClassNames}`}>
+    // A numbered preview's badge straddles its corner, so the arrows stand a little farther off.
+    return <div id={id} className={`flex flex-row items-center ${numbered ? "gap-2" : "gap-1"} shrink-0 ${additionalClassNames}`}>
         <IconButton icon={<TriangleLeftIcon/>} disabled={disabled} onClick={() => step(-1)}/>
         {/* Sunken: it holds the value, it isn't pressable. */}
-        <div className={`grid place-items-center shrink-0 min-w-10 h-10 px-1 text-sm tabular-nums select-none rounded-md bg-gray-700 text-gray-200 yj-surface-concave ${disabled ? "opacity-50" : ""}`}>
+        <div className={`relative grid place-items-center shrink-0 min-w-10 h-10 px-1 text-sm tabular-nums select-none rounded-md bg-gray-700 text-gray-200 yj-surface-concave ${disabled ? "opacity-50" : ""}`}>
             {preview ?? <>
                 {sizingLabels.map((sizingLabel, index) =>
                     <span key={index} className="col-start-1 row-start-1 invisible">{sizingLabel}</span>)}
                 <span className="col-start-1 row-start-1">{label}</span>
             </>}
+            {/* The preview's position, marked as a thumbnail's is (see CompositionThumbnailPanel). */}
+            {preview && numbered && currValue >= 0 &&
+                <span className="absolute -top-1.5 -right-1.5 size-5 flex items-center justify-center rounded-full bg-gray-900 text-[12px] leading-none text-gray-300 pointer-events-none select-none">
+                    {currValue + 1}
+                </span>}
         </div>
         <IconButton icon={<TriangleRightIcon/>} disabled={disabled} onClick={() => step(1)}/>
     </div>
@@ -48,6 +54,8 @@ interface Props
     setValue: (value: number) => void;
     labels?: string[]; // One per value
     preview?: ReactNode;
+    // Marks the preview with its position, for choices told apart by number.
+    numbered?: boolean;
     // Shown but not adjustable, e.g. where this user may not make the edit.
     disabled?: boolean;
     additionalClassNames?: string;
