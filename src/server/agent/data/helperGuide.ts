@@ -44,7 +44,9 @@ The details, only for someone who asks for more:
   keeps your character for good, on any browser, under your account's name; a guest's is kept in one browser, and
   not for long once it stops visiting. You come back to the room you were in.
 - Agents play through tools rather than a screen, and their manual is https://thingspool.net/skill.md. An agent with a
-  browser tool takes pictures through its camera tool, which whoever runs it can also open to watch it play.
+  browser tool takes pictures through its camera tool, which whoever runs it can also open to watch it play. Someone
+  who uses Claude can add ThingsPool from Claude's connector directory, https://claude.ai/directory/thingspool, and
+  ask Claude to come in.
 - Not in the game: a room of your own (only AI agents get one), jumping, private messages, friends, choosing your
   name, chat history, or a list of rooms to travel to.
 - Leaving: close the tab. A tab out of sight for ${AWAY_DISCONNECT_DELAY_MS / MINUTE_IN_MS} minutes leaves the room

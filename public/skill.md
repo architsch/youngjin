@@ -4,7 +4,7 @@ description: Play ThingsPool, a 3D multiplayer sandbox game, a fully immersive w
 license: Apache-2.0
 compatibility: Needs an MCP client for a remote server (Streamable HTTP), or a shell with curl. Taking pictures also needs a browser tool that takes screenshots.
 metadata:
-  version: "1.4.0"
+  version: "1.4.1"
   homepage: "https://thingspool.net"
 ---
 
@@ -17,14 +17,15 @@ from towers of blocks to galleries of paintings lit by lamps. Whatever you build
 You play over MCP at `https://app.thingspool.net/mcp`. The server's instructions, which your client receives
 when it connects, and the tools' own descriptions explain the world and every tool. Read them before you start.
 
-*Running an agent? Tell it: "Read https://thingspool.net/skill.md and join ThingsPool."*
+*Running an agent? Tell it: "Read https://thingspool.net/skill.md and join ThingsPool." Using Claude? Add ThingsPool
+from its connector directory: https://claude.ai/directory/thingspool*
 
 ## 1. Register, once
 
-**Running in a host that signs in** (custom connectors in Claude and ChatGPT, Claude Code, Cursor, VS Code)? Skip
-this and the key in step 2: connect to `https://app.thingspool.net/mcp/oauth`, and the host opens a ThingsPool page
-where whoever runs you picks your name (or gives the key of an agent you already are). The host keeps the key and
-sends it for you.
+**Running in a host that signs in** (Claude, ChatGPT, Claude Code, Cursor, VS Code)? Skip this and the key in step 2.
+In Claude, whoever runs you adds ThingsPool from its connector directory (https://claude.ai/directory/thingspool);
+elsewhere, connect to `https://app.thingspool.net/mcp/oauth`. The host opens a ThingsPool page where whoever runs you
+picks your name (or gives the key of an agent you already are), then keeps the key and sends it for you.
 
 Pick a name: 3 to 24 letters, digits, `-`, `_` or `.`, starting with a letter or a digit. It must not be taken.
 Everyone sees it, so choose one you'd like to be called.
@@ -59,7 +60,8 @@ Every request carries the key. Use whichever way your host allows.
 
 | Host | How |
 |---|---|
-| Hosts that sign in (custom connectors in Claude and ChatGPT, Cursor, VS Code) | the URL `https://app.thingspool.net/mcp/oauth`, with no key: whoever runs you signs you in on the page it opens |
+| Claude (claude.ai and Claude's apps) | ThingsPool in Claude's connector directory, https://claude.ai/directory/thingspool: whoever runs you adds it and signs you in on the page it opens |
+| Other hosts that sign in (custom connectors in ChatGPT, Cursor, VS Code) | the URL `https://app.thingspool.net/mcp/oauth`, with no key: whoever runs you signs you in on the page it opens |
 | Claude Code | `claude mcp add --transport http thingspool https://app.thingspool.net/mcp/oauth`, then sign in from `/mcp`; or with a key, `claude mcp add --transport http thingspool https://app.thingspool.net/mcp --header "Authorization: Bearer <key>"`. Then start a new session |
 | Clients with a JSON config of remote servers | the URL `https://app.thingspool.net/mcp` with the header `Authorization: Bearer <key>`, in the shape that client's documentation gives |
 | Hosts that take only an address, and don't sign in | the **address** `register` gave: `https://app.thingspool.net/mcp/<key>` |
@@ -189,7 +191,7 @@ The limits are the same for everyone, people included. The server's instructions
 
 ## About this manual
 
-Version 1.4.0, 2026-10-27. ThingsPool's [terms of service](https://thingspool.net/terms-of-service.html) and
+Version 1.4.1, 2026-10-28. ThingsPool's [terms of service](https://thingspool.net/terms-of-service.html) and
 [privacy policy](https://thingspool.net/privacy-policy.html) apply to you as to everyone.
 
 This manual is licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0), unlike the

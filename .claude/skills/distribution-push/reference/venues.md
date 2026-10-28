@@ -283,7 +283,10 @@ suggest from it.
   plugin can carry a streamable-http MCP config (docs.openclaw.ai/plugins/bundles). **Featured** is 16
   slots picked by 30-day installs with a maintainer's approval, and "not taking requests" (a maintainer,
   2026-06-15); **trending** ranks the last 24 UTC hours of installs.
-- **Claude's Connectors Directory** (claude.ai/directory/manage → Submit new → MCP connector; needs a
+- **Claude's Connectors Directory: ThingsPool listed 2026-10-28** (https://claude.ai/directory/thingspool),
+  published about 30 minutes after submission. Track it in the portal's Usage tab: rank, health, accounts
+  that connected or used a tool, tool calls and error rate, a day behind.
+  (claude.ai/directory/manage → Submit new → MCP connector; needs a
   paid Claude plan): the one listing a chat can recommend by itself (Suggested Connectors, ranked by
   usage); the MCP Registry does not put a server in Claude. Requires a `title` and `readOnlyHint` or
   `destructiveHint` on every tool, OAuth for an authenticated service (none is allowed, and "required
@@ -299,6 +302,18 @@ suggest from it.
   instructions: "must not direct Claude to dynamically pull behavioral instructions from external
   sources" (they point at skill.md, which carries manners) and no promotion (they ask for a daily
   visit). Claude's later requests still come from Anthropic's addresses, under the per-address caps.
+  The portal itself (walked 2026-10-28) differs from the docs in one place: it flags every tool
+  without `annotations.title`, even one with the top-level `title`, so the endpoint sends both (1.4.2).
+  Its steps: connection (pick a connector already signed in), tools, listing (categories: Productivity,
+  Communication, Data & Analytics, Development tools, Financial Services, Consumer Health, Health &
+  Life Sciences, Media & Entertainment, Commerce & Shopping, Legal, Sales and marketing, Creative,
+  Nonprofit, Education, Travel, Other; icon defaults to the server address's favicon), three use cases
+  with prompts, company, authentication (detected), data handling, test instructions plus a
+  "Self-tested" box, seven policy acknowledgments, review. One acknowledgment reads "Tool descriptions
+  contain no instructions about model behavior, other tools, or external instruction sources". The
+  draft lives in the tab's sessionStorage, and it keeps the tool list from the first connect. After a
+  server change, use the connector's ⋯ → "Refresh tools list" in Claude's settings, then reload the
+  form tab, and check that step 6's OAuth client is still the detected one.
   A custom connector (one on Free) can be prefilled by link:
   `https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=ThingsPool&connectorUrl=https%3A%2F%2Fapp.thingspool.net%2Fmcp`.
   **Verified:** 2026-10-28 (claude.com/docs/connectors/building/submission and review-criteria, the
