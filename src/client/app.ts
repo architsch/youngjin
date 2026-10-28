@@ -164,12 +164,20 @@ async function changeRoom(roomChangedSignal: RoomChangedSignal)
         return;
     }
 
-    if (currentRoom != undefined)
+    try
     {
-        RoomLoadProgressUtil.enterPhase("unloadingRoom");
-        await unloadCurrentRoom();
+        if (currentRoom != undefined)
+        {
+            RoomLoadProgressUtil.enterPhase("unloadingRoom");
+            await unloadCurrentRoom();
+        }
+        await loadRoom(roomChangedSignal.roomRuntimeMemory);
     }
-    await loadRoom(roomChangedSignal.roomRuntimeMemory);
+    catch (err)
+    {
+        leaveUnloadedRoom(err);
+        return;
+    }
 
     // Disposes the previous room's gizmos so the pre-load below recreates them.
     roomChangedObservable.set(roomChangedSignal.roomRuntimeMemory);
@@ -204,6 +212,15 @@ async function changeRoom(roomChangedSignal: RoomChangedSignal)
         // None is owed either: the server skips a pending tutorial for a room the address names (see RoomPickerUtil).
         App.getUser().singlePlayerMode = "";
     }
+}
+
+// A room the page fails to load (e.g. for want of WebGL) is left for a page that says so: the server has put the user's
+// player in it, and only this page could walk it out of the door (see PlayerController).
+function leaveUnloadedRoom(err: unknown): void
+{
+    console.error("Failed to load the room.", err);
+    SocketsClient.disconnect();
+    window.location.href = `${env.static_server_url}/error/room-load-failure.html`;
 }
 
 // The address keeps the room it named (the page's target) while the user is on the way there, through a single-player

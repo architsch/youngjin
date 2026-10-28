@@ -84,6 +84,8 @@ const SocketsClient =
             reconnectionAttempts: 20,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
+            // AwayDisconnectUtil makes the first connection, as a page opened in the background waits to be shown.
+            autoConnect: false,
             // Said anew with every connection: one that comes back to a client in the room editor is to leave it
             // there (see RoomPickerUtil). A camera page has its link's token instead of a session.
             auth: (cb) => cb((env.cameraToken.length > 0) ? { cameraToken: env.cameraToken }
@@ -163,6 +165,12 @@ const SocketsClient =
     connect: (): void =>
     {
         socket.connect();
+    },
+    // Calls the listener just before each try at taking a dropped connection up again, which disconnect calls off
+    // (see AwayDisconnectUtil).
+    onReconnectAttempt: (listener: () => void): void =>
+    {
+        socket.io.on("reconnect_attempt", listener);
     },
 
     emitSetObjectTransformSignal: (params: SetObjectTransformSignal) => emitWhenReady("setObjectTransformSignal", params),

@@ -809,7 +809,8 @@ describe("AI agents", () => {
             // Far into the room, off the helper's home, which it goes back to between wanders.
             await flushUntil(AgentToolUtil.walkTo(agent, {row: 20, column: 33, layer: 0}));
             let seen: any = undefined;
-            for (let second = 0; second < 200 && seen == undefined; ++second)
+            // Its first look comes some minutes after it is found.
+            for (let second = 0; second < 360 && seen == undefined; ++second)
             {
                 flush(5);
                 HelperAgentUtil.stepAll(1);

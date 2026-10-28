@@ -16,6 +16,9 @@ import Rigidbody from "./rigidbody";
 import InstancedMeshComposer from "./instancedMeshComposer";
 import { DIRECTION_VECTORS } from "../../system/clientConstants";
 import { cameraModeObservable } from "../../system/clientObservables";
+import ClientObjectManager from "../clientObjectManager";
+import ObjectTransform from "../../../shared/object/types/objectTransform";
+import PeriodicTransformEmitter from "./periodicTransformEmitter";
 
 const forwardTemp = new THREE.Vector3();
 
@@ -54,6 +57,10 @@ export default class PlayerController extends GameObjectComponent
         this.playerCamera.onSpawn(this.gameObject, this.pointerInput);
         this.pointerInput.onSpawn(this);
         this.keyInput.onSpawn(this);
+
+        this.finishEnteringIfHidden = this.finishEnteringIfHidden.bind(this);
+        document.addEventListener("visibilitychange", this.finishEnteringIfHidden);
+        this.finishEnteringIfHidden();
     }
 
     // Single-player rooms aren't entered through a door, so there's nothing to walk out of.
@@ -79,8 +86,28 @@ export default class PlayerController extends GameObjectComponent
         this.enteringTimeLeft = ENTERING_MAX_DURATION;
     }
 
+    // The walk runs on frames, which a hidden page doesn't get: it is made in one step instead, and sent at once, or
+    // everyone else would see the player behind the door until the page is shown.
+    private finishEnteringIfHidden(): void
+    {
+        if (this.fullyEntered || document.visibilityState != "hidden")
+            return;
+        this.fullyEntered = true;
+
+        const {position, direction} = this.gameObject;
+        ClientObjectManager.setObjectTransform(this.gameObject.params.objectId, new ObjectTransform(
+            {
+                x: this.spawnPos.x + this.enteringDir.x * ENTERING_STRIDE_LENGTH,
+                y: position.y,
+                z: this.spawnPos.z + this.enteringDir.z * ENTERING_STRIDE_LENGTH,
+            },
+            {x: direction.x, y: direction.y, z: direction.z}, this.gameObject.params.transform.scale), false);
+        (this.gameObject.components.periodicTransformEmitter as PeriodicTransformEmitter).syncNow();
+    }
+
     async onDespawn(): Promise<void>
     {
+        document.removeEventListener("visibilitychange", this.finishEnteringIfHidden);
         this.playerCamera.onDespawn();
         this.pointerInput.onDespawn(this);
         this.keyInput.onDespawn(this);

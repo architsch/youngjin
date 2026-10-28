@@ -332,12 +332,21 @@ describe("how a helper wanders", () => {
         const npc = npcAt(home, {});
         const helper = HelperBehaviorUtil.create(npc, 0);
         const waitingUntil = helper.nextWanderAt;
-        expect(waitingUntil).toBeGreaterThanOrEqual(20_000);
+        expect(waitingUntil).toBeLessThanOrEqual(30_000);
         HelperBehaviorUtil.takeSettings(helper, npc, 1000);
         expect(helper.nextWanderAt).toBe(waitingUntil);
         HelperBehaviorUtil.takeSettings(helper, npcAt(home, {minIdleTime: 1, maxIdleTime: 2}), 1000);
         expect(helper.nextWanderAt).toBeGreaterThanOrEqual(2000);
         expect(helper.nextWanderAt).toBeLessThanOrEqual(3000);
+    });
+
+    it("is found some way into its first wait, so that helpers found together don't idle in step", () => {
+        seedRandom(29);
+        const found = Array.from({length: 20}, (_, i) => helperAt({x: 4 + 2 * i, y: 0, z: 16},
+            {minIdleTime: 10, maxIdleTime: 10}, 1000));
+        const waits = found.map(helper => helper.nextWanderAt - 1000);
+        expect(waits.every(wait => wait >= 0 && wait <= 10_000), String(waits)).toBe(true);
+        expect(Math.max(...waits) - Math.min(...waits)).toBeGreaterThan(5000);
     });
 
     it("picks somewhere else at once, far from where it was headed, once someone has stood in its way a while", () => {
@@ -627,6 +636,8 @@ describe("helpers chatting", () => {
 
     const LINES = [{by: 0, text: "Hey Bo! Why did the block go to school?"}, {by: 1, text: "To build is to think."},
         {by: 0, text: "Ha! I'll steal that one."}];
+    // Someone far off, so that someone is about to see them.
+    const SOMEONE: Vec3[] = [{x: 4, y: 0, z: 4}];
 
     // Two helpers a few steps apart on an open floor, each free to chat.
     function twoHelpers(): {a: HelperBehavior, b: HelperBehavior, voxels: Voxel[]}
@@ -661,7 +672,7 @@ describe("helpers chatting", () => {
         b.at = {x: 18, y: 0, z: 16};
         // One that has just talked with someone.
         HelperBehaviorUtil.say(a, "Hi Alice!", ["alice"], now);
-        HelperBehaviorUtil.beat(a, around(voxels), now, false);
+        HelperBehaviorUtil.beat(a, around(voxels, SOMEONE), now, false);
         expect(HelperBehaviorUtil.findSmallTalkPair([a, b], voxels, now + 10_000)).toBeUndefined();
         expect(HelperBehaviorUtil.findSmallTalkPair([a, b], voxels, now + 40_000)).toEqual([a, b]);
         // Once they have chatted, not again for a while.
@@ -675,9 +686,9 @@ describe("helpers chatting", () => {
         const {a, b, voxels} = twoHelpers();
         let now = 100_000;
         // One of them is on its way somewhere.
-        const goal = wanderNow(a, around(voxels, [], [b]), now)!;
+        const goal = wanderNow(a, around(voxels, SOMEONE, [b]), now)!;
         expect(goal).toBeDefined();
-        const [aAround, bAround] = [around(voxels, [], [b]), around(voxels, [], [a])];
+        const [aAround, bAround] = [around(voxels, SOMEONE, [b]), around(voxels, SOMEONE, [a])];
         HelperBehaviorUtil.startSmallTalk([a, b], LINES, now);
         expect(HelperBehaviorUtil.getSmallTalkPartner(a)).toBe(b);
 
@@ -754,6 +765,16 @@ describe("helpers chatting", () => {
             HelperBehaviorUtil.beat(b, surroundings, now, true);
         }
         expect(b.saying).toBe("");
+    });
+
+    it("skips a chat that comes due with nobody about to see it, rather than saving it up for whoever comes next", () => {
+        const {a, b, voxels} = twoHelpers();
+        const now = 100_000;
+        HelperBehaviorUtil.beat(a, around(voxels, [], [b]), now, false);
+        HelperBehaviorUtil.beat(b, around(voxels, [], [a]), now, false);
+        // As someone comes: no chat yet, but one as long after as after a chat.
+        expect(HelperBehaviorUtil.findSmallTalkPair([a, b], voxels, now + 1000)).toBeUndefined();
+        expect(HelperBehaviorUtil.findSmallTalkPair([a, b], voxels, now + 180_000)).toEqual([a, b]);
     });
 
     it("starts no chat it is no longer free for, and none in no words", () => {
@@ -936,6 +957,18 @@ describe("helpers looking at things", () => {
         HelperBehaviorUtil.startAnswering(helper, surroundings, "alice", now);
         HelperBehaviorUtil.startSight(helper, surroundings, sight, REMARK, now);
         expect(helper.sight).toBeUndefined();
+    });
+
+    it("skips a look that comes due with nobody about to see it, rather than saving it up for whoever comes next", () => {
+        const voxels = wallGrid();
+        const helper = dueHelper({x: 16, y: 0, z: 17});
+        const now = 100_000;
+        HelperBehaviorUtil.beat(helper, around(voxels, [], [], [canvasAt(16)]), now, false);
+        // Home again, just as it would wander off, as someone comes: no look yet, but one as long after as after a look.
+        Object.assign(helper, {path: [], at: {...helper.home}, nextWanderAt: 0});
+        const watched = around(voxels, SOMEONE, [], [canvasAt(16)]);
+        expect(HelperBehaviorUtil.isDueForSight(helper, watched, now + 1000)).toBe(false);
+        expect(HelperBehaviorUtil.isDueForSight(helper, watched, now + 600_000)).toBe(true);
     });
 
     it("chats with no other helper while it looks at something", () => {

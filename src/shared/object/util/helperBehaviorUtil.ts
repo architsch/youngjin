@@ -89,19 +89,20 @@ const GLANCE_MS = 2000;
 // A turn smaller than this isn't shown.
 const MIN_TURN_DEGREES = 2;
 // Two helpers this near on one floor, in sight of each other at about head height, chat now and then: each first a
-// while after it is found, then a while after each chat it begins.
+// while after it is found, then a while after each chat it begins (or one skipped, see skipUnseen).
 const SMALL_TALK_DISTANCE = 4;
 const FIRST_SMALL_TALK_MS = [45_000, 90_000];
-const SMALL_TALK_INTERVAL_MS = [120_000, 300_000];
+const SMALL_TALK_INTERVAL_MS = [90_000, 180_000];
 const SIGHT_HEIGHT = 0.8 * PLAYER_HEIGHT;
 const SIGHT_STEP = 0.25;
-// Now and then, in place of a wander, it goes and looks a while at one of the things placed near it: first a while after
-// it is found, then a while after each look, or after finding nothing to look at. It stands this far from the thing (but from about its size
-// away, for a thing too large to take in from nearer), in front of one on a wall, looking up or down at most this
-// steeply, with nothing between it and the thing at about the height of its eyes. It looks a moment before it speaks,
-// and goes on a moment after its words have been read.
-const FIRST_SIGHT_MS = [30_000, 90_000];
-const SIGHT_INTERVAL_MS = [90_000, 240_000];
+// Now and then, in place of a wander, it goes and looks a while at one of the things placed near it, as often with one
+// near it as with many: first a while after it is found, then a while after each look (or one skipped, see
+// skipUnseen), or a shorter while after finding nothing to look at. It stands this far from the thing (but from
+// about its size away, for a thing too large to take in from nearer), in front of one on a wall, looking up or down at
+// most this steeply, with nothing between it and the thing at about the height of its eyes. It looks a moment before
+// it speaks, and goes on a moment after its words have been read.
+const FIRST_SIGHT_MS = [90_000, 210_000];
+const SIGHT_INTERVAL_MS = [210_000, 390_000];
 const SIGHT_RETRY_MS = 30_000;
 // Whoever plays it picks which to look at from this many things at most (see findSights).
 export const MAX_SIGHTS = 16;
@@ -122,7 +123,8 @@ const GUEST_NAME_PATTERN = /^guest-/i;
 
 const HelperBehaviorUtil =
 {
-    // A helper as first found where its NPC stands.
+    // A helper as first found where its NPC stands, some way into its first idle wait already, so that those found
+    // together, as a room is loaded or entered, don't idle in step.
     create: (obj: AddObjectSignal, now: number): HelperBehavior =>
     {
         const quarterTurns = QuarterTurnsUtil.getQuarterTurns(obj);
@@ -131,7 +133,7 @@ const HelperBehaviorUtil =
             home: {...obj.transform.pos}, homeQuarterTurns: quarterTurns, at: {...obj.transform.pos},
             facing: HelperBehaviorUtil.getFacingPut(quarterTurns), saying: "", path: [], walk: "wander",
             blockedSince: undefined, talkingWith: [], talkingSince: 0, frozenUntil: 0,
-            nextWanderAt: now + getIdleTime(prefs), returnHomeAt: 0, lastTalkAt: -Infinity,
+            nextWanderAt: now + randomBetween([0, getIdleTime(prefs)]), returnHomeAt: 0, lastTalkAt: -Infinity,
             answering: undefined, waitingFor: undefined, thinking: false, bubbles: [], nextBubbleAt: 0,
             smallTalk: undefined, nextSmallTalkAt: now + randomBetween(FIRST_SMALL_TALK_MS), sight: undefined,
             nextSightAt: now + randomBetween(FIRST_SIGHT_MS)};
@@ -165,9 +167,11 @@ const HelperBehaviorUtil =
     },
     // A beat's worth, each second, once whoever plays it has had it greet and answer: its next line in a chat with
     // another helper, or its remark on what it looks at, its next bubble, and a wander, unless it waits on something
-    // (someone's lines it is to answer, or the words for a remark, see startSight).
+    // (someone's lines it is to answer, or the words for a remark, see startSight); and a look or a chat come due with
+    // nobody to see it is skipped (see skipUnseen).
     beat: (behavior: HelperBehavior, surroundings: HelperSurroundings, now: number, waiting: boolean): void =>
     {
+        skipUnseen(behavior, surroundings, now);
         chatOn(behavior, now);
         lookOn(behavior, surroundings, now);
         speakNextBubble(behavior, surroundings, now);
@@ -546,6 +550,18 @@ function lookOn(behavior: HelperBehavior, surroundings: HelperSurroundings, now:
         else
             behavior.nextWanderAt = now + getIdleTime(behavior.prefs);
     }
+}
+
+// A look, or a chat with another helper, that comes due with nobody in its room to see it is skipped, not saved up for
+// whoever comes next, so that helpers left alone don't all start at once as someone comes.
+function skipUnseen(behavior: HelperBehavior, surroundings: HelperSurroundings, now: number): void
+{
+    if (surroundings.getPeople().length > 0)
+        return;
+    if (now >= behavior.nextSightAt)
+        behavior.nextSightAt = now + randomBetween(SIGHT_INTERVAL_MS);
+    if (now >= behavior.nextSmallTalkAt)
+        behavior.nextSmallTalkAt = now + randomBetween(SMALL_TALK_INTERVAL_MS);
 }
 
 // It stops looking at what it went to see, walking on to where it was going to see it from (if it still was) as to

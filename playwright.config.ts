@@ -3,6 +3,8 @@ import path from "path";
 
 const BASE_URL = process.env.E2E_BASE_URL || "https://staging.thingspool.net";
 const AUTH_STATE_PATH = path.join(__dirname, "tests/e2e/.auth/guest.json");
+// Software WebGL for headless Chromium, without which the game page leaves for its error page (see App).
+const SOFTWARE_WEBGL_ARGS = ["--use-gl=angle", "--use-angle=swiftshader", "--enable-webgl"];
 
 // When the target is a local dev server, Playwright boots it automatically.
 // Remote targets (staging / live) are expected to already be running.
@@ -58,6 +60,7 @@ export default defineConfig({
         {
             name: "setup",
             testMatch: /auth\.setup\.ts/,
+            use: { launchOptions: { args: SOFTWARE_WEBGL_ARGS } },
         },
         // Authenticated tests depend on the setup project
         {
@@ -66,13 +69,7 @@ export default defineConfig({
             use: {
                 ...devices["Desktop Chrome"],
                 storageState: AUTH_STATE_PATH,
-                launchOptions: {
-                    args: [
-                        "--use-gl=angle",
-                        "--use-angle=swiftshader",
-                        "--enable-webgl",
-                    ],
-                },
+                launchOptions: { args: SOFTWARE_WEBGL_ARGS },
             },
             dependencies: ["setup"],
         },

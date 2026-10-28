@@ -22,6 +22,8 @@ Players have no saved position. Every room entry places the player behind a door
 
 The player starts a fixed distance behind the door's face, facing the room, and `PlayerController` walks them forward until they are clear of it (an agent's player, the server: `AgentBodyUtil`). A wall as thick as a generated room's boundary hides them until then; behind a thinner one they start in the open. The walk is limited by both distance and time.
 
+Only the arriving page can walk its player out, and a hidden page runs no frames. So a page out of sight joins no room until it is shown (see [user_state_management.md](../networking/user_state_management.md#server-upkeep)), one hidden on its way in makes the walk in one step, and one that fails to load the room leaves it for an error page.
+
 ## Door behavior
 - **Collider**: a thin pass-through collider, since the wall behind it already blocks movement.
 - **Enter prompt**: shown only when the player is close, looking toward the door, in front of its face and has line of sight. The cheap checks run first. The line-of-sight check is needed because users may have built in front of the door.

@@ -1425,9 +1425,12 @@ describe("helpers", () => {
         expect(saidBy(mira)).toEqual([]);
         expect(saidBy(bo)).toEqual([]);
 
-        // Someone comes in, too far off to be greeted, and so to be talked to.
+        // Someone comes in, too far off to be greeted, and so to be talked to. The chats that came due while nobody was
+        // there were skipped, so the next is up to as long after as after a chat.
         const alice = await joinPerson("Alice", "an");
         await walkIn(alice, 14);
+        for (let second = 0; second < 240 && helperIn(FIRST_HUB_ID, mira).chattingWith == undefined; ++second)
+            await live(1);
         const chattingWith: (string | undefined)[] = [];
         const facedEachOther: boolean[] = [];
         for (let second = 0; second < 40; ++second)
@@ -1463,7 +1466,7 @@ describe("helpers", () => {
 
         // Then not again for a while.
         const said = byMira.length + byBo.length;
-        await live(60);
+        await live(45);
         expect(saidBy(mira).length + saidBy(bo).length).toBe(said);
         expect(helperIn(FIRST_HUB_ID, mira).chattingWith).toBeUndefined();
     });
@@ -1492,10 +1495,12 @@ describe("helpers", () => {
             behaviorPrefs({wanderRadius: 0}));
         const bo = standNpc(FIRST_HUB_ID, "Bo", inFrontOfEntrance(FIRST_HUB_ID, 3, -1.5), 0,
             behaviorPrefs({wanderRadius: 0}));
-        await live(100);
+        await live(1);
+        // Someone in the room from the first, too far off to be greeted, for the two to chat in front of.
         const alice = await joinPerson("Alice", "an");
         await walkIn(alice, 14);
-        await live(2);
+        for (let second = 0; second < 120 && helperIn(FIRST_HUB_ID, mira).chattingWith == undefined; ++second)
+            await live(1);
         expect(helperIn(FIRST_HUB_ID, mira).chattingWith).toBe("Bo");
 
         await walkIn(alice, 6);
@@ -1597,13 +1602,15 @@ describe("helpers", () => {
         + "fixed words, asking no model, only while someone is in the room to see it", async () => {
         const mira = standNpc(FIRST_HUB_ID, "Mira", inFrontOfEntrance(FIRST_HUB_ID, 3, 1.5));
         const door = entranceOf(FIRST_HUB_ID);
-        await live(200);
+        // Alone past when it first would.
+        await live(310);
         expect(saidBy(mira)).toEqual([]);
 
-        // Someone comes in, too far off to be greeted.
+        // Someone comes in, too far off to be greeted. The look that came due while it was alone was skipped, so its next
+        // is up to as long after as after a look.
         const alice = await joinPerson("Alice", "an");
         await walkIn(alice, 14);
-        for (let second = 0; second < 120 && saidBy(mira).length == 0; ++second)
+        for (let second = 0; second < 700 && saidBy(mira).length == 0; ++second)
             await live(1);
         const [remark] = saidBy(mira);
         expect(remark).toMatch(/door/i);
@@ -2239,7 +2246,8 @@ describe("helpers", () => {
 
     it("neither greets, hears nor turns to an admin in ghost mode, whom nobody sees, until they are seen again",
         async () => {
-        const mira = standNpc(FIRST_HUB_ID, "Mira");
+        // Going nowhere, so that no wander turns it.
+        const mira = standNpc(FIRST_HUB_ID, "Mira", undefined, 0, behaviorPrefs({wanderRadius: 0}));
         await live(1);
         const ghost = harness.connectUser({id: "id-Ghost", userName: "Ghost", userType: UserTypeEnumMap.Admin,
             playerMetadata: {[ObjectMetadataKeyEnumMap.AdminPrefs]: AdminPrefsUtil.encode({ghostMode: true})}});

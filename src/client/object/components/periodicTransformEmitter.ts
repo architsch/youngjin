@@ -38,10 +38,7 @@ export default class PeriodicTransformEmitter extends GameObjectComponent
         this.lastSyncedRotation.copy(this.gameObject.rotation);
 
         this.roomID = App.getCurrentRoom()!.id;
-    }
-
-    async onSpawn(): Promise<void>
-    {
+        // Known before the object's components have spawned, as syncNow may be called while they do.
         this.updateEnabled = App.getCurrentRoom()!.roomType != RoomTypeEnumMap.SinglePlayer;
     }
 
@@ -54,28 +51,43 @@ export default class PeriodicTransformEmitter extends GameObjectComponent
         if (currTime - this.lastSyncTime > syncIntervalInMillis)
         {
             this.lastSyncTime = currTime;
-            if (Math.abs(this.gameObject.position.distanceToSquared(this.lastSyncedPosition)) > minSyncDistSqr ||
-                Math.abs(this.gameObject.rotation.x - this.lastSyncedRotation.x) > minSyncAngle ||
-                Math.abs(this.gameObject.rotation.y - this.lastSyncedRotation.y) > minSyncAngle ||
-                Math.abs(this.gameObject.rotation.z - this.lastSyncedRotation.z) > minSyncAngle)
-            {
-                this.lastSyncedPosition.copy(this.gameObject.position);
-                this.lastSyncedRotation.copy(this.gameObject.rotation);
+            this.syncIfChanged();
+        }
+    }
 
-                vec3Temp.setFromEuler(this.lastSyncedRotation).normalize();
-                this.gameObject.obj.getWorldDirection(vec3Temp);
-                const params = new SetObjectTransformSignal(
-                    this.roomID,
-                    this.gameObject.params.objectId,
-                    new ObjectTransform(
-                        {x: this.lastSyncedPosition.x, y: this.lastSyncedPosition.y, z: this.lastSyncedPosition.z},
-                        {x: vec3Temp.x, y: vec3Temp.y, z: vec3Temp.z},
-                        this.gameObject.params.transform.scale
-                    ),
-                    this.ignorePhysics
-                );
-                SocketsClient.emitSetObjectTransformSignal(params);
-            }
+    // Sends a move made while the page runs no frames (see PlayerController), which update would hold until it did.
+    syncNow(): void
+    {
+        if (!this.updateEnabled)
+            return;
+
+        this.lastSyncTime = performance.now();
+        this.syncIfChanged();
+    }
+
+    private syncIfChanged(): void
+    {
+        if (Math.abs(this.gameObject.position.distanceToSquared(this.lastSyncedPosition)) > minSyncDistSqr ||
+            Math.abs(this.gameObject.rotation.x - this.lastSyncedRotation.x) > minSyncAngle ||
+            Math.abs(this.gameObject.rotation.y - this.lastSyncedRotation.y) > minSyncAngle ||
+            Math.abs(this.gameObject.rotation.z - this.lastSyncedRotation.z) > minSyncAngle)
+        {
+            this.lastSyncedPosition.copy(this.gameObject.position);
+            this.lastSyncedRotation.copy(this.gameObject.rotation);
+
+            vec3Temp.setFromEuler(this.lastSyncedRotation).normalize();
+            this.gameObject.obj.getWorldDirection(vec3Temp);
+            const params = new SetObjectTransformSignal(
+                this.roomID,
+                this.gameObject.params.objectId,
+                new ObjectTransform(
+                    {x: this.lastSyncedPosition.x, y: this.lastSyncedPosition.y, z: this.lastSyncedPosition.z},
+                    {x: vec3Temp.x, y: vec3Temp.y, z: vec3Temp.z},
+                    this.gameObject.params.transform.scale
+                ),
+                this.ignorePhysics
+            );
+            SocketsClient.emitSetObjectTransformSignal(params);
         }
     }
 }
