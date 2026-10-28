@@ -77,6 +77,9 @@ export const AGENT_MCP_ROUTE_PATH = "mcp";
 export const AGENT_OAUTH_ROUTE_PATH = "oauth";
 export const AGENT_MCP_SIGNED_IN_ROUTE_PATH = `${AGENT_MCP_ROUTE_PATH}/oauth`;
 export const AGENT_OAUTH_SCOPE = "agent";
+// The site's mark, a file in public/ that is also served from the endpoint's own address (see AgentRouter), where MCP
+// hosts and Claude's connector directory look for a server's icon.
+export const AGENT_ICON_FILE = "largeLogo.jpg";
 // How long a consent page stays good to answer, and a code to exchange for a token.
 export const AGENT_OAUTH_REQUEST_TTL_MS = 10 * MINUTE_IN_MS;
 export const AGENT_OAUTH_CODE_TTL_MS = MINUTE_IN_MS;

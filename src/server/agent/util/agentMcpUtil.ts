@@ -12,8 +12,8 @@ import { HEARING_DISTANCE } from "../../../shared/object/util/helperBehaviorUtil
 import MessageLinkUtil from "../../../shared/object/util/messageLinkUtil";
 import DBUser from "../../db/types/row/dbUser";
 import DBUserUtil from "../../db/util/dbUserUtil";
-import { AGENT_FIND_PICTURES_MAX_COUNT, AGENT_FIND_ROOMS_MAX_COUNT, AGENT_INTEREST_MAX_LENGTH, AGENT_MAX_INTERESTS,
-    AGENT_MCP_ROUTE_PATH, AGENT_NAME_MAX_LENGTH, AGENT_PRESENCE_IDLE_TIMEOUT_MS, URL_STATIC,
+import { AGENT_FIND_PICTURES_MAX_COUNT, AGENT_FIND_ROOMS_MAX_COUNT, AGENT_ICON_FILE, AGENT_INTEREST_MAX_LENGTH,
+    AGENT_MAX_INTERESTS, AGENT_MCP_ROUTE_PATH, AGENT_NAME_MAX_LENGTH, AGENT_PRESENCE_IDLE_TIMEOUT_MS, URL_STATIC,
     USER_BUDGETS } from "../../system/serverConstants";
 import AddressUtil from "../../networking/util/addressUtil";
 import UserBudgetUtil from "../../user/util/userBudgetUtil";
@@ -230,7 +230,10 @@ function buildServer(): McpServer
 {
     // Its tools never change while it runs. Saying they might would let any client, with a key or without, hold a
     // stream open to wait for word of a change (subscriptions/listen).
-    const server = new McpServer({name: "thingspool", version: "1.4.2"}, // The version server.json lists
+    const server = new McpServer({name: "thingspool", version: "1.4.3", // The version server.json lists
+            websiteUrl: URL_STATIC,
+            icons: [{src: `${AddressUtil.getEnvDynamicURL()}/${AGENT_ICON_FILE}`, mimeType: "image/jpeg",
+                sizes: ["150x150"]}]},
         {instructions: INSTRUCTIONS, maxToolInputElements: MAX_TOOL_INPUT_ELEMENTS,
             capabilities: {tools: {listChanged: false}}});
     toolDefinitions ??= defineTools();

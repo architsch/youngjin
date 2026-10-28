@@ -2336,10 +2336,23 @@ describe("AI agents", () => {
             try
             {
                 expect(client.getServerVersion()?.version).toBe(entry.version);
+                // The same icon in both, served from the endpoint's own address.
+                const icon = client.getServerVersion()?.icons?.[0];
+                expect(icon?.src).toBe(`${url.origin}/largeLogo.jpg`);
+                expect(new URL(entry.icons[0].src).pathname).toBe(new URL(icon!.src).pathname);
             }
             finally
             {
                 await client.close();
+            }
+        });
+
+        it("serves the favicon and the icon it names at its own address, where hosts look for them", async () => {
+            for (const file of ["favicon.ico", "largeLogo.jpg"])
+            {
+                const response = await fetch(`${url.origin}/${file}`);
+                expect(response.status, file).toBe(200);
+                expect(response.headers.get("content-type"), file).toMatch(/^image\//);
             }
         });
 
