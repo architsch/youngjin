@@ -73,8 +73,9 @@ jobs:
     - uses: actions/checkout@v4
       with:
         # Only what the VPS runs or serves: the install, the app's entry and the scripts the workflows
-        # run here, the templates the server renders (the game page and the admin console), and the page
-        # Nginx shows while the app restarts. dist/ comes from the build artifact. Sparse checkout also
+        # run here, the templates the server renders (the game page and the admin console), the page
+        # Nginx shows while the app restarts, and the icons the agents' endpoint serves beside itself
+        # (see AgentRouter). dist/ comes from the build artifact. Sparse checkout also
         # fetches the blobs of these files alone. A file the server starts reading must be added here;
         # the game page check after the restart fails without it.
         sparse-checkout-cone-mode: false
@@ -93,6 +94,8 @@ jobs:
           /views/partial/common/ogTags.ejs
           /views/partial/common/googleAnalytics.ejs
           /public/error/deploying.html
+          /public/favicon.ico
+          /public/largeLogo.jpg
 
     - name: Restore live bundles after checkout
       # dist/ isn't checked out, so its directories are made first. They and public/error/ are made

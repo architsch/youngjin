@@ -11,8 +11,9 @@ run time) and restarts the process; it never compiles.
 
 The VPS holds only what it runs or serves. Each deploy empties the workspace and makes a sparse
 checkout of a listed set of files: the install, the app's entry and the scripts the workflows run
-there, the templates the server renders, and the maintenance page. The static site's pages and
-assets are served by GitHub Pages and never reach the VPS. It installs `dependencies` alone
+there, the templates the server renders, the maintenance page, and the site's favicon and logo,
+which the agents' endpoint serves beside itself. The static site's other pages and assets are
+served by GitHub Pages and never reach the VPS. It installs `dependencies` alone
 (`npm ci --omit=dev`): build and test tools, and the packages the client is built from, are
 devDependencies.
 - **A file the server starts reading at run time must be added to that list** in `deploy-staging.yml`.
