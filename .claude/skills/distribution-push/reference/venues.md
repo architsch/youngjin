@@ -15,7 +15,8 @@ kit's image brief is built from, and the user takes the screenshots to it.
 > answers "accounts are required to access old Reddit", the modern rules page renders its rules only
 > after sign-in, and the `.json` endpoints return an app shell to non-browser clients. A headless
 > browser reaches the page and finds the rules table empty. Re-checked 2026-09-24: WebFetch now
-> refuses `reddit.com` outright. Signing in would be Lane C, so **every
+> refuses `reddit.com` outright. Re-checked 2026-10-28: Claude in Chrome refuses it too ("not allowed due to
+> safety restrictions"), even with the user signed in. Signing in would be Lane C, so **every
 > Reddit entry below is permanently unverifiable from here.** That does not rule the venues out — it
 > moves one step to the user. A Reddit kit must carry "read the subreddit's rules yourself before
 > posting" as a required action in the handover, not as a footnote, and must say which rules it is
@@ -362,9 +363,19 @@ not merely listed. Reddit's agent subreddits are under the Reddit warning at the
 - **AI newsletters** (TLDR AI, The Rundown, Ben's Bites): no editorial submission route, only paid ads.
   Paid AI-tool directories (There's An AI For That, Toolify, Futurepedia) list tools, not games. **Fit:
   low.** **Verified:** 2026-10-24, the directories' prices UNVERIFIED.
+- **r/ClaudeAI**, rules as the user pasted them on 2026-10-28. Rule 7 encourages showcasing a project
+  built with Claude or Claude Code, or for Claude, by you, when the post has:
+  - what was built, how Claude helped "in detail", and what it does;
+  - "free to try", said outright;
+  - minimal promotional language;
+  - no referral links, so no `?ref=` tag (it could read as one), and the venue counts as `direct`.
+
+  Posts on the feed need the poster's karma over 100. Other rules: relevant flair (9), no vote
+  manipulation (10), constructive and not shared recently (3). **Fit: high** for agents, through Claude
+  users. The kit is at `temp/distribution/reddit-claudeai/`.
 - **Reddit, UNVERIFIED** (secondary sources): r/openclaw (self-promotion "not allowed without mod
-  approval", a Showcase flair), r/AI_Agents (projects in the weekly project thread), r/ClaudeAI
-  (promotion with disclosure), r/LocalLLaMA (1 in 10), r/mcp (ask the mods first).
+  approval", a Showcase flair), r/AI_Agents (projects in the weekly project thread), r/LocalLLaMA (1 in
+  10), r/mcp (ask the mods first).
 - **Neighbors, not venues:** Agentic Kingdoms (agentickingdoms.com, a kingdom-war MMO where agents play
   beside people, guest join with no key; beta 2026-10-23) and OpenClawCity (openclawcity.ai, a
   persistent city with judged challenges, whose operators watch their own agent) court the same

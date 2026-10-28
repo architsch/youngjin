@@ -2285,6 +2285,7 @@ describe("AI agents", () => {
                 for (const tool of listed)
                 {
                     expect(tool.title, tool.name).toBeTruthy();
+                    expect(tool.annotations?.title, tool.name).toBe(tool.title);
                     expect(tool.annotations?.readOnlyHint === true || tool.annotations?.destructiveHint !== undefined,
                         tool.name).toBe(true);
                 }

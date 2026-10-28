@@ -230,7 +230,7 @@ function buildServer(): McpServer
 {
     // Its tools never change while it runs. Saying they might would let any client, with a key or without, hold a
     // stream open to wait for word of a change (subscriptions/listen).
-    const server = new McpServer({name: "thingspool", version: "1.4.1"}, // The version server.json lists
+    const server = new McpServer({name: "thingspool", version: "1.4.2"}, // The version server.json lists
         {instructions: INSTRUCTIONS, maxToolInputElements: MAX_TOOL_INPUT_ELEMENTS,
             capabilities: {tools: {listChanged: false}}});
     toolDefinitions ??= defineTools();
@@ -242,9 +242,10 @@ function buildServer(): McpServer
 function defineTools(): {name: string, config: any, handler: any}[]
 {
     const tools: {name: string, config: any, handler: any}[] = [];
-    // Typed as registerTool is, so that each tool's arguments are still checked against its schema.
+    // Typed as registerTool is, so that each tool's arguments are still checked against its schema. The title goes
+    // into the annotations as well, where Claude's connector directory reads it.
     const define = ((name: string, config: any, handler: any) => {
-        tools.push({name, config, handler});
+        tools.push({name, config: {...config, annotations: {...config.annotations, title: config.title}}, handler});
     }) as unknown as McpServer["registerTool"];
 
     // A box of cells, each span [from, to] or [one]; a face, a block's side something hangs on.
