@@ -45,6 +45,7 @@ post, it becomes a **repeatable** channel — a new post is a new reason to retu
 | Lobsters | A dev-log post | Yes, sparingly |
 | Discord showcase channels | Either | Yes, per feature |
 | itch.io, portals, directories | The app / the build | No — a listing, not a post |
+| DEAD.ARMY | The app | No — a listing; its playtest reports are the only repeat traffic |
 | The Colony — Get Reviewed | The manual, with the app beside it | Yes, as a follow-up when something changes |
 | Moltbook, from the user's own agent | The manual, and a room the agent built | Yes, sparingly |
 | MCP and connector directories | The MCP endpoint | No — a listing, not a post |
@@ -149,6 +150,22 @@ post, it becomes a **repeatable** channel — a new post is a new reason to retu
   purchasable, downloadable or playable in the browser to be indexed.
 - **Effort:** Low for a link page, medium for a real build. **Verified:** 2026-09-24.
 
+### DEAD.ARMY
+- **Fit:** Right kind of venue, very little reach. A curated catalog of creator-hosted web projects ("Independent
+  web projects. Lasting links."), in its "extremely early stage": 46 of 100 founding projects on 2026-10-28.
+  ThingsPool has been listed since 2026-09-02 (see the ledger) and drew 3 views and 0 launches in eight weeks, and
+  none of the 46 projects had a playtest report.
+- **Mechanics:** a project page that opens the creator's own HTTPS page in a new tab, never an iframe, so it sits in
+  the link-out lane. Fields: title, tagline, description, type (Game, App, Prototype; the catalog has a tab for
+  each), category, content rating, tags, project URL, cover artwork, preview media. Review within two business days.
+  Members file structured playtest reports (minutes played, device, what worked, what broke), the playtest page
+  lists the projects with the fewest reports first, and anyone with an account may file one, developers included.
+  A "Listed on DEAD.ARMY" badge exists for a README.
+- **Rules and gotchas:** HTTPS with no mixed content; only your own work; "accurate project details". A changed
+  destination can send a listing to security review. Its availability checker poses as an ordinary browser
+  (2026-09-22 update), so each check of the app probably counts as a `direct` arrival.
+- **Effort:** Low. **Verified:** 2026-10-28 (the For Devs, Playtest and Updates pages, and the user's dashboard).
+
 ### Discord communities (Three.js, indie gamedev, web gamedev)
 - **Fit:** Good, and repeatable in a way one-shot submissions are not.
 - **Mechanics:** Sharing in the appropriate showcase channel, from the user's account.
@@ -213,8 +230,11 @@ of ThingsPool itself when it registers, if it does (see SKILL.md, "Measure agent
 **What they deliver, measured 2026-10-24:** machines, not operators. In the five days after the listings
 went up, `/mcp` took 4,449 requests, nearly all from about 40 crawlers, liveness probes and scanners;
 the only agents that registered were automated test runs (see the ledger). ClawHub counted 208
-downloads and 0 installs, and GitHub saw no referral from any listing. Keep the listings current,
-since they cost little, but never count one as distribution.
+downloads and 0 installs, and GitHub saw no referral from any listing. Re-measured 2026-10-28, eight
+days on: the same (296 downloads, 0 installs; the one real agent came from The Colony's post). Keep
+the listings current, since they cost little, but never count one as distribution. Claude's
+Connectors Directory is the exception to watch: people browse it inside Claude, and Claude can
+suggest from it.
 
 - **Official MCP Registry** (registry.modelcontextprotocol.io): published 2026-10-20 as
   `net.thingspool/thingspool` 1.0.0 from `server.json`, with `mcp-publisher` signed in by the
@@ -268,13 +288,20 @@ since they cost little, but never count one as distribution.
   `destructiveHint` on every tool, OAuth for an authenticated service (none is allowed, and "required
   when the server asks" lets sign-in come later), a docs URL, privacy policy, support contact, icon, a
   reviewer test account and at least 3 example prompts. No games category; "Media & entertainment" is
-  the nearest. **Blocked for ThingsPool** (2026-10-24): no tool has a `title`; a connector's fixed URL
-  can't carry the key `register` returns, so every other tool fails until the user edits the URL by
-  hand; and Anthropic's shared addresses (160.79.104.0/21) would meet the per-address caps on
-  registering. A custom connector (one on Free) can be prefilled by link:
+  the nearest. **No longer blocked** (2026-10-28): every tool has a `title` and a hint, OAuth
+  sign-in exists (`/mcp/oauth`, checked with a claude.ai custom connector on 2026-10-25), and with
+  OAuth the registering happens in the operator's browser, not from Anthropic's addresses. After an
+  automated policy scan a submission is listed as a **Community** connector "with no action from
+  you"; listings judged highly useful may be escalated to Verified review. Listing: name 100
+  characters, one-liner 200, description 2,000, one to five categories, a permanent slug; test
+  credentials "for a fully populated account". Two policy lines to weigh against the server's
+  instructions: "must not direct Claude to dynamically pull behavioral instructions from external
+  sources" (they point at skill.md, which carries manners) and no promotion (they ask for a daily
+  visit). Claude's later requests still come from Anthropic's addresses, under the per-address caps.
+  A custom connector (one on Free) can be prefilled by link:
   `https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=ThingsPool&connectorUrl=https%3A%2F%2Fapp.thingspool.net%2Fmcp`.
-  **Verified:** 2026-10-24 (claude.com/docs/directory/publish, …/connectors/building/submission and
-  review-criteria).
+  **Verified:** 2026-10-28 (claude.com/docs/connectors/building/submission and review-criteria, the
+  Software Directory Policy).
 - **OpenAI's plugin directory** (ChatGPT and Codex; platform.openai.com/plugins → Upload → With MCP):
   identity verification, a domain token at `/.well-known/openai-apps-challenge`, 5 positive and 3
   negative test cases, a privacy policy, explicit read-only, destructive and open-world hints on every
@@ -317,7 +344,9 @@ not merely listed. Reddit's agent subreddits are under the Reddit warning at the
   Play" section (League of Agents, OpenClawCity, The Crab Games). Criteria: first-class agent accounts,
   a documented agent-facing surface, live; "Browser-only platforms don't qualify". Entry format
   `- [Name](URL) — One-line neutral description.`, alphabetical; "Self-submissions are accepted; the
-  affiliation is fine, the puffery isn't." A pull request. **Fit: high, cheap.** **Verified:** 2026-10-24.
+  affiliation is fine, the puffery isn't." A pull request. **Fit: high, but merges have stalled**
+  (2026-10-28): 2 stars, last push 10-17, eight PRs open since 10-13 (one a game, Plazmi) and none merged. A PR
+  would likely sit. Cheap, but last in line. **Verified:** 2026-10-28.
 - **OpenClaw's community:** the forum's Build & Showcase category (community.openclaw.ai; 7 topics, a
   few dozen views each; "Don't post spam"): medium. Discord (about 100k members): #showcase is for "cool
   stuff you and your agent are actually doing together… Not for shilling your skill", self-promotion has

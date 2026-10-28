@@ -2290,6 +2290,10 @@ describe("AI agents", () => {
                 }
                 expect(new Set(listed.map(tool => tool.title)).size).toBe(listed.length);
                 expect(client.getInstructions()).toContain("Authorization: Bearer <key>");
+                // Connector directories refuse servers that send the model to outside instructions or have it ask
+                // its user for visits, so the manual is offered to whoever runs the agent, as information.
+                expect(client.getInstructions()).toMatch(/The manual, for whoever runs you:/);
+                expect(client.getInstructions()).not.toMatch(/manual for you|ask them for a visit/);
                 // How whoever runs an agent watches it, and how an agent with a browser tool takes pictures.
                 expect(client.getInstructions())
                     .toMatch(/camera: a private link[\s\S]*Give it to whoever\s+runs you[\s\S]*Keep it open while you play: a screenshot of it/);

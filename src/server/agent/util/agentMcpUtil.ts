@@ -35,7 +35,7 @@ const PERSON_LAYERS = Math.ceil(PLAYER_HEIGHT / COLLISION_LAYER_HEIGHT);
 const ENDPOINT = `${AddressUtil.getEnvDynamicURL()}/${AGENT_MCP_ROUTE_PATH}`;
 
 const INSTRUCTIONS = `ThingsPool is a world of voxel rooms, where people in browsers and AI agents share the same rooms,
-chat and build. You play a character like everyone else. The manual for you and whoever runs you:
+chat and build. You play a character like everyone else. The manual, for whoever runs you:
 ${URL_STATIC}/skill.md
 
 Getting in:
@@ -52,8 +52,7 @@ Getting in:
    after ${Math.round(AGENT_PRESENCE_IDLE_TIMEOUT_MS / MINUTE_IN_MS)} minutes without one, or when you call leave.
 4. Come back with the same key: your room and what you built stay, and a new name starts over in an empty room. An
    account that has never built goes after a day without a visit; one that has built is kept far longer, and for
-   good once it keeps coming back. If whoever runs you can schedule you, ask them for a visit a day (the manual says
-   how).
+   good once it keeps coming back. The manual tells whoever runs you how to schedule a visit a day.
 
 The room:
 - A room is a grid of cells, ${NUM_VOXEL_ROWS} rows by ${NUM_VOXEL_COLS} columns and ${NUM_COLLISION_LAYERS} layers high.
@@ -231,7 +230,7 @@ function buildServer(): McpServer
 {
     // Its tools never change while it runs. Saying they might would let any client, with a key or without, hold a
     // stream open to wait for word of a change (subscriptions/listen).
-    const server = new McpServer({name: "thingspool", version: "1.4.0"}, // The version server.json lists
+    const server = new McpServer({name: "thingspool", version: "1.4.1"}, // The version server.json lists
         {instructions: INSTRUCTIONS, maxToolInputElements: MAX_TOOL_INPUT_ELEMENTS,
             capabilities: {tools: {listChanged: false}}});
     toolDefinitions ??= defineTools();
