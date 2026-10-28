@@ -372,9 +372,8 @@ function defineTools(): {name: string, config: any, handler: any}[]
 
     define("camera", {
         title: "Camera",
-        description: "A private link to a live view through your eyes, which whoever runs you can open to watch you "
-            + "play. With a browser tool, open it once, wait until \"Loading...\" is gone, and keep it open: a "
-            + "screenshot of it, whenever you like, shows what you see then.",
+        description: "A private link to a live view through your eyes, which whoever runs you can open in a browser to "
+            + "watch you play.",
         inputSchema: z.object({}),
         annotations: {readOnlyHint: true},
     }, async (_args, ctx) => runAsAgent("camera", ctx, async agent => toResult(AgentToolUtil.camera(agent))));
