@@ -54,3 +54,5 @@ A type with an `ObjectScalingConfig` is resized by the outline's corner handles,
 
 ## Changing the supporting block
 - A block that holds up attached objects cannot be removed on its own. The user can instead remove the block together with its attachments after confirming, but only when the user may remove every one of those attachments. A door, for example, keeps its wall for anyone but the room's superuser.
+- An NPC (`ObjectAttachmentConfig.stepsAside`) is moved instead of removed, unasked: first, as a move of its own, to the nearest spot that takes it off that block (`ObjectAttachmentUtil.findSpotSteppingAside`), on its own floor, else a step up, else further down. Only for a user who may move it; for anyone else, or with no such spot near, the block stays, and the user is told why.
+- **Trap**: these rules find NPCs where the room keeps them, never by their colliders. A helper's shown steps carry its collider in browsers but not on the server (see [agents.md](../networking/agents.md#helpers)), so the two would otherwise disagree over the blocks its home stands on.

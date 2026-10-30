@@ -2651,6 +2651,9 @@ describe("helpers", () => {
         expect(saidBy(mira)).toContain("Coming!");
         expect(helperIn(FIRST_HUB_ID, mira).saying).not.toBe("");
 
+        // Kept from wandering, which it may do as soon as it starts over (see HelperBehaviorUtil.create), out of the
+        // earshot the last check needs her in.
+        setNpcPrefs(FIRST_HUB_ID, mira, {wanderRadius: 0});
         // The room as a file in which it stands elsewhere, turned another way. Whoever is in the room arrives again
         // behind the entrance, near which it now stands.
         const room = ServerRoomManager.roomRuntimeMemories[FIRST_HUB_ID].room;

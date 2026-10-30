@@ -89,12 +89,13 @@ import { ClientEventType } from "../../../src/client/system/types/clientEventTyp
 import ClientEventHistoryUtil from "../../../src/client/system/util/clientEventHistoryUtil";
 import GameModeUtil from "../../../src/client/system/util/gameModeUtil";
 import RoomEditUtil from "../../../src/client/system/util/roomEditUtil";
-import { clientFeatureFlagsObservable, gameModeObservable, objectSelectionObservable,
+import VoxelEditUtil from "../../../src/client/voxel/util/voxelEditUtil";
+import { clientFeatureFlagsObservable, gameModeObservable, notificationMessageObservable, objectSelectionObservable,
     orbitCameraAngleHoldRequestObservable, popupStateObservable, roomChangedObservable,
     voxelQuadSelectionObservable } from "../../../src/client/system/clientObservables";
 import { FeatureFlag } from "../../../src/shared/system/types/featureFlag";
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_POS,
-    LABEL_COLOR_PALETTE_NAME, UNIT_VEC3,
+    LABEL_COLOR_PALETTE_NAME, STOREY_FLOOR_COLLISION_LAYER, UNIT_VEC3,
     VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 import EncodableData from "../../../src/shared/networking/types/encodableData";
 import EncodableByteString from "../../../src/shared/networking/types/encodableByteString";
@@ -158,6 +159,9 @@ const WALL_LAYERS = 4;
 // One of its voxels behind what hangs at the middle of it (x = 10.5), whose faces the scenarios pick out.
 const WALL_COL = VoxelQueryUtil.getVoxelColFromWorldX(10.5);
 const SOUTH = {x: 0, y: 0, z: 1};
+
+// The top of the storey slab the room has everywhere: the upper floor.
+const SLAB_TOP_Y = (STOREY_FLOOR_COLLISION_LAYER + 1) * COLLISION_LAYER_HEIGHT;
 
 let room: Room;
 let numObjects = 0;
@@ -266,7 +270,8 @@ function userAddsBlock(textures: number[] = TEXTURES): void
 }
 
 // What the "remove block" button does on the selected face: what hangs on its block first, then the block,
-// with the selection moved to the face behind it.
+// with the selection moved to the face behind it. (An NPC on the block steps aside instead, which the scenarios
+// covering it take VoxelEditUtil's own handler for.)
 async function userRemovesBlock(): Promise<void>
 {
     const selection = voxelQuadSelectionObservable.peek()!;
@@ -1017,6 +1022,50 @@ describe("an object's edits, undone and redone", () => {
         expect(hasBlockAt(ROW, COL)).toBe(false);
         expect(room.objectById[objectId]).toBeUndefined();
         expect(sentSignals()).toEqual([["removeObject", objectId], ["removeBlock", SOUTH_FACE]]);
+    });
+
+    it("steps an NPC off a block taken down from under it, unasked, and back onto it with an undo", async () => {
+        // On the upper floor, over the middle of the slab blocks it stands on.
+        const standingAt = {x: 15.25, y: SLAB_TOP_Y, z: 20.25};
+        const objectId = await standObject(npcTypeIndex, standingAt, {x: 0, y: 1, z: 0}, {...UNIT_VEC3}, labelled("Mira"));
+        const row = VoxelQueryUtil.getVoxelRowFromWorldZ(standingAt.z);
+        const col = VoxelQueryUtil.getVoxelColFromWorldX(standingAt.x);
+        const textures = texturesAt(row, col, STOREY_FLOOR_COLLISION_LAYER);
+        const topFace = quadIndexOf(row, col, "y", "+", STOREY_FLOOR_COLLISION_LAYER);
+
+        // VoxelEditUtil's own handler, as the "remove block" button calls it.
+        VoxelEditUtil.tryRemoveVoxelBlock(forceSelect(room, topFace));
+        await settle();
+        expect(popupStateObservable.peek().popupType).toBe("none");
+        expect(hasBlockAt(row, col, STOREY_FLOOR_COLLISION_LAYER)).toBe(false);
+        const stepped = transformOf(objectId).pos;
+        expect(stepped[1]).toBe(SLAB_TOP_Y);
+        expect(Math.hypot(stepped[0] - standingAt.x, stepped[2] - standingAt.z)).toBeCloseTo(0.75, 3);
+        expect(sentSignals()).toEqual([["transform", objectId, stepped, [1, 1, 1]], ["removeBlock", topFace]]);
+
+        expect(await ClientEventHistoryUtil.undo()).toBe("done");
+        expect(hasBlockAt(row, col, STOREY_FLOOR_COLLISION_LAYER)).toBe(true);
+        expect(transformOf(objectId).pos).toEqual(rounded(standingAt));
+        expect(sentSignals()).toEqual([["addBlock", quadIndexOf(row, col, "y", "-", STOREY_FLOOR_COLLISION_LAYER), textures],
+            ["transform", objectId, rounded(standingAt), [1, 1, 1]]]);
+
+        expect(await ClientEventHistoryUtil.redo()).toBe("done");
+        expect(hasBlockAt(row, col, STOREY_FLOOR_COLLISION_LAYER)).toBe(false);
+        expect(sentSignals()).toEqual([["transform", objectId, stepped, [1, 1, 1]], ["removeBlock", topFace]]);
+    });
+
+    it("leaves the block an NPC stands on to whoever may move the NPC, and tells anybody else why", async () => {
+        (App.getUser as Mock).mockReturnValue(createEditingUser(UserTypeEnumMap.Guest));
+        const standingAt = {x: 15.25, y: SLAB_TOP_Y, z: 20.25};
+        await standObject(npcTypeIndex, standingAt, {x: 0, y: 1, z: 0}, {...UNIT_VEC3}, labelled("Mira"));
+        const row = VoxelQueryUtil.getVoxelRowFromWorldZ(standingAt.z);
+        const col = VoxelQueryUtil.getVoxelColFromWorldX(standingAt.x);
+
+        VoxelEditUtil.tryRemoveVoxelBlock(forceSelect(room, quadIndexOf(row, col, "y", "+", STOREY_FLOOR_COLLISION_LAYER)));
+        await settle();
+        expect(hasBlockAt(row, col, STOREY_FLOOR_COLLISION_LAYER)).toBe(true);
+        expect(notificationMessageObservable.peek()).toBe("Can't remove a block because a npc is attached to it.");
+        expect(sentSignals()).toEqual([]);
     });
 
     it("puts an object dragged along its wall back where it hung, and there again", async () => {

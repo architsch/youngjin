@@ -35,6 +35,7 @@ const NpcObjectTypeConfig =
     attachment: {
         allowedDirections: [DIR_VEC_BY_NAME["+y"]],
         standsOut: true,
+        stepsAside: true,
     },
     // What a helper says, the way it faces and whether it is thinking are shown to its room as it is played (see
     // HelperBehaviorUtil), and no one may set them.

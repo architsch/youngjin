@@ -659,6 +659,28 @@ describe("restricted zones", () => {
         });
     });
 
+    it("refuses an ordinary user's taking down of a canvas standing in a zone, and gives his own copy back", async () => {
+        await runScenario({
+            name: "canvas taken down inside a zone",
+            rooms: [EMPTY_HUB],
+            users: [userAtCenter("hub")],
+            assertions: ({users}) => {
+                const room = getRoom("hub");
+                const canvas = makeCanvasSignal(room, users[0].user, INSIDE.row, INSIDE.col);
+                room.objectGroup.addObject(canvas);
+                drawZone(room, ZONE);
+
+                expect(ServerObjectManager.onRemoveObjectSignalReceived(users[0].socketUserContext,
+                    new RemoveObjectSignal(room.id, canvas.objectId))).toBe(false);
+                expect(room.objectById[canvas.objectId] === canvas).toBe(true);
+
+                // The client took it down optimistically. Without it, the client would see nothing on the block
+                // behind it, whose every removal the server would then refuse.
+                expect(getPendingSignals(users[0], "addObjectSignal").map(s => s.objectId)).toContain(canvas.objectId);
+            },
+        });
+    });
+
     it("refuses repainting a canvas standing in a zone", async () => {
         await runScenario({
             name: "canvas metadata inside a zone",

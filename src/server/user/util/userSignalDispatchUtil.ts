@@ -36,7 +36,10 @@ const handlers: {[signalType: string]: (ctx: UserContext, bufferState: BufferSta
             return false;
         // A placement of something put in the room is an edit; anything else moves the user's player.
         if (signal.ignorePhysics)
-            return edit(ctx, () => ServerObjectManager.onSetObjectTransformSignalReceived(ctx, signal));
+        {
+            return edit(ctx, () => ServerObjectManager.onSetObjectTransformSignalReceived(ctx, signal),
+                () => ServerObjectManager.refuseSetObjectTransformSignal(ctx, signal));
+        }
         if (!UserBudgetUtil.trySpend(ctx.user.id, "moves"))
             return false;
         ServerObjectManager.onSetObjectTransformSignalReceived(ctx, signal);
@@ -46,18 +49,36 @@ const handlers: {[signalType: string]: (ctx: UserContext, bufferState: BufferSta
         await UserCommandUtil.onUserCommandSignalReceived(ctx.user, UserCommandSignal.decode(bufferState) as UserCommandSignal);
         return true;
     },
-    addVoxelBlockSignal: (ctx, bufferState) => edit(ctx, () =>
-        ServerVoxelManager.onAddVoxelBlockSignalReceived(ctx, AddVoxelBlockSignal.decode(bufferState) as AddVoxelBlockSignal)),
-    moveVoxelBlockSignal: (ctx, bufferState) => edit(ctx, () =>
-        ServerVoxelManager.onMoveVoxelBlockSignalReceived(ctx, MoveVoxelBlockSignal.decode(bufferState) as MoveVoxelBlockSignal)),
-    removeVoxelBlockSignal: (ctx, bufferState) => edit(ctx, () =>
-        ServerVoxelManager.onRemoveVoxelBlockSignalReceived(ctx, RemoveVoxelBlockSignal.decode(bufferState) as RemoveVoxelBlockSignal)),
-    setVoxelQuadTextureSignal: (ctx, bufferState) => edit(ctx, () =>
-        ServerVoxelManager.onSetVoxelQuadTextureSignalReceived(ctx, SetVoxelQuadTextureSignal.decode(bufferState) as SetVoxelQuadTextureSignal)),
-    addObjectSignal: (ctx, bufferState) => edit(ctx, () =>
-        ServerObjectManager.onAddObjectSignalReceived(ctx, AddObjectSignal.decode(bufferState) as AddObjectSignal)),
-    removeObjectSignal: (ctx, bufferState) => edit(ctx, () =>
-        ServerObjectManager.onRemoveObjectSignalReceived(ctx, RemoveObjectSignal.decode(bufferState) as RemoveObjectSignal)),
+    addVoxelBlockSignal: (ctx, bufferState) => {
+        const signal = AddVoxelBlockSignal.decode(bufferState) as AddVoxelBlockSignal;
+        return edit(ctx, () => ServerVoxelManager.onAddVoxelBlockSignalReceived(ctx, signal),
+            () => ServerVoxelManager.refuseAddVoxelBlockSignal(ctx, signal));
+    },
+    moveVoxelBlockSignal: (ctx, bufferState) => {
+        const signal = MoveVoxelBlockSignal.decode(bufferState) as MoveVoxelBlockSignal;
+        return edit(ctx, () => ServerVoxelManager.onMoveVoxelBlockSignalReceived(ctx, signal),
+            () => ServerVoxelManager.refuseMoveVoxelBlockSignal(ctx, signal));
+    },
+    removeVoxelBlockSignal: (ctx, bufferState) => {
+        const signal = RemoveVoxelBlockSignal.decode(bufferState) as RemoveVoxelBlockSignal;
+        return edit(ctx, () => ServerVoxelManager.onRemoveVoxelBlockSignalReceived(ctx, signal),
+            () => ServerVoxelManager.refuseRemoveVoxelBlockSignal(ctx, signal));
+    },
+    setVoxelQuadTextureSignal: (ctx, bufferState) => {
+        const signal = SetVoxelQuadTextureSignal.decode(bufferState) as SetVoxelQuadTextureSignal;
+        return edit(ctx, () => ServerVoxelManager.onSetVoxelQuadTextureSignalReceived(ctx, signal),
+            () => ServerVoxelManager.refuseSetVoxelQuadTextureSignal(ctx, signal));
+    },
+    addObjectSignal: (ctx, bufferState) => {
+        const signal = AddObjectSignal.decode(bufferState) as AddObjectSignal;
+        return edit(ctx, () => ServerObjectManager.onAddObjectSignalReceived(ctx, signal),
+            () => ServerObjectManager.refuseAddObjectSignal(ctx, signal));
+    },
+    removeObjectSignal: (ctx, bufferState) => {
+        const signal = RemoveObjectSignal.decode(bufferState) as RemoveObjectSignal;
+        return edit(ctx, () => ServerObjectManager.onRemoveObjectSignalReceived(ctx, signal),
+            () => ServerObjectManager.refuseRemoveObjectSignal(ctx, signal));
+    },
     setObjectMetadataSignal: (ctx, bufferState) => {
         const signal = SetObjectMetadataSignal.decode(bufferState) as SetObjectMetadataSignal;
         // A switch of mode arrives on this signal too (Editing metadata), and is neither an edit nor speech.
@@ -70,7 +91,10 @@ const handlers: {[signalType: string]: (ctx: UserContext, bufferState: BufferSta
         }
         // Chat arrives on this signal too (SentMessage metadata), so it's counted as speech rather than an edit.
         if (signal.metadataKey != ObjectMetadataKeyEnumMap.SentMessage)
-            return edit(ctx, () => ServerObjectManager.onSetObjectMetadataSignalReceived(ctx, signal));
+        {
+            return edit(ctx, () => ServerObjectManager.onSetObjectMetadataSignalReceived(ctx, signal),
+                () => ServerObjectManager.refuseSetObjectMetadataSignal(ctx, signal));
+        }
         EditRateLogUtil.note(ctx.user.id, "speech");
         if (!UserBudgetUtil.trySpend(ctx.user.id, "speech"))
             return false;
@@ -123,14 +147,18 @@ const UserSignalDispatchUtil =
     },
 }
 
-// An edit is paid for from the user's edit budget, and dropped if it can't be: unanswered, as a throttled signal is,
-// since only a script edits that fast. Counted either way (see EditRateLogUtil). One handled records the Built
-// milestone; only the first reaches the DB (session cache), not awaited, and it never rejects.
-function edit(ctx: UserContext, handle: () => void): boolean
+// An edit is paid for from the user's edit budget. One it can't pay for is refused, and answered as one refused by its
+// own checks is (refuse), since a browser has applied it already: left unanswered, its room would part from the stored
+// one until it came in again. Counted either way (see EditRateLogUtil). One handled records the Built milestone; only
+// the first reaches the DB (session cache), not awaited, and it never rejects.
+function edit(ctx: UserContext, handle: () => void, refuse: () => void): boolean
 {
     EditRateLogUtil.note(ctx.user.id, "edit");
     if (!UserBudgetUtil.trySpend(ctx.user.id, "edit"))
+    {
+        refuse();
         return false;
+    }
     handle();
     ServerAnalyticsManager.recordMilestone(ctx.user.id, FunnelMilestoneEnumMap.Built, ctx);
     return true;

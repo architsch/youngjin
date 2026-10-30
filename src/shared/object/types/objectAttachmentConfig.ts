@@ -11,4 +11,7 @@ export type ObjectAttachmentConfig = {
     // Whether the object stands out from its face, its whole depth in front of it (a figure on a floor), and
     // needs that much open room there. Absent, it lies flat on the face.
     standsOut?: boolean,
+    // Whether the object, standing on a floor whose block is removed, steps to a floor nearby instead of going with it
+    // (see ObjectAttachmentUtil.findSpotSteppingAside). Absent, it goes with the block.
+    stepsAside?: boolean,
 };

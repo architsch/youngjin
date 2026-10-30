@@ -9,9 +9,9 @@ import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_QUADS_PER_COLLISION
 import UserContext from "../sockets/types/userContext";
 import ServerRoomManager from "../room/serverRoomManager";
 
-// A user's edit is applied to their own client first, so one the server refuses is answered with what the
-// cell layers it touched really hold (see sendBlockTruth), which puts the client back in step whatever it
-// had made of them.
+// A user's edit is applied to their own client first, so one the server refuses, whatever refuses it (the edit's own
+// checks, or the user's edit budget; see UserSignalDispatchUtil), is answered with what the room really holds where it
+// touched (see sendBlockTruth), which puts the client back in step whatever it had made of it.
 const ServerVoxelManager =
 {
     onAddVoxelBlockSignalReceived: (socketUserContext: UserContext, signal: AddVoxelBlockSignal) =>
@@ -30,12 +30,18 @@ const ServerVoxelManager =
             signal.quadTextureIndicesWithinLayer, room))
         {
             console.error(`ServerVoxelManager::onAddVoxelBlockSignalReceived :: Failed (quadIndex=${signal.quadIndex})`);
-            sendBlockTruth(socketUserContext, room, signal.quadIndex);
+            ServerVoxelManager.refuseAddVoxelBlockSignal(socketUserContext, signal);
             return;
         }
 
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         socketRoomContext.multicastSignalFromUser("addVoxelBlockSignal", signal, socketUserContext);
+    },
+    refuseAddVoxelBlockSignal: (socketUserContext: UserContext, signal: AddVoxelBlockSignal) =>
+    {
+        const room = getRoomOf(socketUserContext);
+        if (room)
+            sendBlockTruth(socketUserContext, room, signal.quadIndex);
     },
     onRemoveVoxelBlockSignalReceived: (socketUserContext: UserContext, signal: RemoveVoxelBlockSignal) =>
     {
@@ -52,12 +58,18 @@ const ServerVoxelManager =
         if (!VoxelUpdateUtil.removeVoxelBlock(user, room.voxelGrid.voxels, signal.quadIndex, room))
         {
             console.error(`ServerVoxelManager::onRemoveVoxelBlockSignalReceived :: Failed (quadIndex=${signal.quadIndex})`);
-            sendBlockTruth(socketUserContext, room, signal.quadIndex);
+            ServerVoxelManager.refuseRemoveVoxelBlockSignal(socketUserContext, signal);
             return;
         }
 
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         socketRoomContext.multicastSignalFromUser("removeVoxelBlockSignal", signal, socketUserContext);
+    },
+    refuseRemoveVoxelBlockSignal: (socketUserContext: UserContext, signal: RemoveVoxelBlockSignal) =>
+    {
+        const room = getRoomOf(socketUserContext);
+        if (room)
+            sendBlockTruth(socketUserContext, room, signal.quadIndex);
     },
     onMoveVoxelBlockSignalReceived: (socketUserContext: UserContext, signal: MoveVoxelBlockSignal) =>
     {
@@ -74,22 +86,29 @@ const ServerVoxelManager =
         if (!VoxelUpdateUtil.moveVoxelBlock(user, room.voxelGrid.voxels, signal.quadIndex, signal.rowOffset, signal.colOffset, signal.collisionLayerOffset, room))
         {
             console.error(`ServerVoxelManager::onMoveVoxelBlockSignalReceived :: Failed (quadIndex=${signal.quadIndex})`);
-            // Where the block was taken from, and where it was put (if that is anywhere in the room).
-            sendBlockTruth(socketUserContext, room, signal.quadIndex);
-            const targetCollisionLayer =
-                VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(signal.quadIndex) + signal.collisionLayerOffset;
-            if (targetCollisionLayer >= COLLISION_LAYER_MIN && targetCollisionLayer <= COLLISION_LAYER_MAX)
-            {
-                sendBlockTruth(socketUserContext, room, VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(
-                    VoxelQueryUtil.getVoxelRowFromQuadIndex(signal.quadIndex) + signal.rowOffset,
-                    VoxelQueryUtil.getVoxelColFromQuadIndex(signal.quadIndex) + signal.colOffset,
-                    targetCollisionLayer));
-            }
+            ServerVoxelManager.refuseMoveVoxelBlockSignal(socketUserContext, signal);
             return;
         }
 
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         socketRoomContext.multicastSignalFromUser("moveVoxelBlockSignal", signal, socketUserContext);
+    },
+    // Where the block was taken from, and where it was put (if that is anywhere in the room).
+    refuseMoveVoxelBlockSignal: (socketUserContext: UserContext, signal: MoveVoxelBlockSignal) =>
+    {
+        const room = getRoomOf(socketUserContext);
+        if (!room)
+            return;
+        sendBlockTruth(socketUserContext, room, signal.quadIndex);
+        const targetCollisionLayer =
+            VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(signal.quadIndex) + signal.collisionLayerOffset;
+        if (targetCollisionLayer >= COLLISION_LAYER_MIN && targetCollisionLayer <= COLLISION_LAYER_MAX)
+        {
+            sendBlockTruth(socketUserContext, room, VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(
+                VoxelQueryUtil.getVoxelRowFromQuadIndex(signal.quadIndex) + signal.rowOffset,
+                VoxelQueryUtil.getVoxelColFromQuadIndex(signal.quadIndex) + signal.colOffset,
+                targetCollisionLayer));
+        }
     },
     onSetVoxelQuadTextureSignalReceived: (socketUserContext: UserContext, signal: SetVoxelQuadTextureSignal) =>
     {
@@ -103,20 +122,32 @@ const ServerVoxelManager =
         }
         const room = roomRuntimeMemory.room;
 
-        // Capture old texture for potential recovery.
-        const oldTextureIndex = room.voxelGrid.quadsMem.quads[signal.quadIndex] & 0b01111111;
-
         if (!VoxelUpdateUtil.setVoxelQuadTexture(user, room.voxelGrid.voxels, signal.quadIndex, signal.textureIndex, room))
         {
             console.error(`ServerVoxelManager::onSetVoxelQuadTextureSignalReceived :: Failed (quadIndex=${signal.quadIndex})`);
-            socketUserContext.addPendingSignalToUser("setVoxelQuadTextureSignal",
-                new SetVoxelQuadTextureSignal(room.id, signal.quadIndex, oldTextureIndex));
+            ServerVoxelManager.refuseSetVoxelQuadTextureSignal(socketUserContext, signal);
             return;
         }
 
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         socketRoomContext.multicastSignalFromUser("setVoxelQuadTextureSignal", signal, socketUserContext);
     },
+    // The texture the face still has.
+    refuseSetVoxelQuadTextureSignal: (socketUserContext: UserContext, signal: SetVoxelQuadTextureSignal) =>
+    {
+        const room = getRoomOf(socketUserContext);
+        if (!room || !VoxelQueryUtil.isValidVoxelQuadIndex(signal.quadIndex))
+            return;
+        socketUserContext.addPendingSignalToUser("setVoxelQuadTextureSignal", new SetVoxelQuadTextureSignal(room.id,
+            signal.quadIndex, room.voxelGrid.quadsMem.quads[signal.quadIndex] & 0b01111111));
+    },
+}
+
+// The room the user is in on the server, which a single-player user has none of.
+function getRoomOf(socketUserContext: UserContext): Room | undefined
+{
+    const roomID = ServerRoomManager.currentRoomIDByUserID[socketUserContext.user.id];
+    return ServerRoomManager.roomRuntimeMemories[roomID]?.room;
 }
 
 // Tells a user what the cell layer of a quad really holds: its block, by an add (which gives whatever

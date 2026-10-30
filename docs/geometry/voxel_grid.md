@@ -38,5 +38,5 @@ Reference: @src/shared/voxel/types/voxel.ts , @src/shared/voxel/types/voxelGrid.
 
 ## Editing
 - Blocks are added and removed one at a time. Adding on a face fills the cell layer the face looks into; removing takes the block that owns the face.
-- Removing a block that holds up attached objects requires confirmation, and is only possible when the user may remove every one of those objects (see [object_attachment.md](object_attachment.md)).
+- Removing a block that holds up attached objects requires confirmation, and is only possible when the user may remove every one of those objects; an NPC on it steps aside instead (see [object_attachment.md](object_attachment.md#changing-the-supporting-block)).
 - Edits are limited by the grid bounds and by restricted zones (see [restricted_zone.md](../gameplay/restricted_zone.md)).

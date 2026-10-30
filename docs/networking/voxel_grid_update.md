@@ -2,7 +2,7 @@
 
 Reference: @src/shared/voxel/util/voxelUpdateUtil.ts , @src/server/voxel/serverVoxelManager.ts , @src/client/voxel/clientVoxelManager.ts
 
-Voxel edits are **optimistic**: the client validates and applies an edit through the shared `VoxelUpdateUtil`, then emits a signal. The server re-validates with the same utility. On success it relays the signal to everyone else. On failure it answers the sender with what the room really holds, which puts their copy back in step whatever it had made of the edit.
+Voxel edits are **optimistic**: the client validates and applies an edit through the shared `VoxelUpdateUtil`, then emits a signal. The server re-validates with the same utility. On success it relays the signal to everyone else. On failure, or when the sender's edit budget refuses the edit before it is tried (see [authentication.md](authentication.md#rate-limiting)), it answers the sender with what the room really holds, which puts their copy back in step whatever it had made of the edit.
 
 | Signal | Edit | Answer on failure |
 |---|---|---|

@@ -136,7 +136,7 @@ export const HELPER_MAX_REPLIES_PER_AGENT_PER_HOUR = 10;
 // person does, so that only scripts meet them.
 export const USER_BUDGETS: {[kind in UserBudgetKind]: {capacity: number, refillPerSecond: number}} = {
     // Blocks and objects added, removed, moved or changed.
-    edit: {capacity: 100, refillPerSecond: 2},
+    edit: {capacity: 300, refillPerSecond: 6},
     // Speech bubbles set.
     speech: {capacity: 10, refillPerSecond: 0.5},
     // Moves of one's player reported, which a browser reports five times a second.

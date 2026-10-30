@@ -1597,18 +1597,20 @@ describe("AI agents", () => {
             const agent = await arriveAgent("Builder");
             const room = roomOf(agent);
             const {capacity, refillPerSecond} = USER_BUDGETS.edit;
-            const box = {rows: [10, 10 + capacity / 5 + 3], columns: [10, 14], layers: [0]};
-            const total = 5 * (capacity / 5 + 4);
+            const box = {rows: [10, 10 + capacity / 10 + 1], columns: [10, 19], layers: [0]};
+            const total = 10 * (capacity / 10 + 2);
 
             const first = await AgentBlockUtil.placeBlocks(agent, box, "oak") as any;
             expect(first.placed).toBe(capacity);
             expect(first.unfinished).toBe(total - capacity);
-            expect(first.note).toMatch(new RegExp(`call again in about ${(total - capacity) / refillPerSecond} seconds`));
+            expect(first.note).toMatch(
+                new RegExp(`call again in about ${Math.ceil((total - capacity) / refillPerSecond)} seconds`));
 
-            vi.setSystemTime(Date.now() + 1000 * (total - capacity) / refillPerSecond);
+            // (The clock keeps whole milliseconds.)
+            vi.setSystemTime(Date.now() + Math.ceil(1000 * (total - capacity) / refillPerSecond));
             expect(await AgentBlockUtil.placeBlocks(agent, box, "oak")).toEqual({placed: total - capacity, texture: "oak",
                 skipped: {alreadyFilled: capacity}});
-            expect(blockAt(room, 10 + capacity / 5 + 3, 14, 0)).toBe(true);
+            expect(blockAt(room, 10 + capacity / 10 + 1, 19, 0)).toBe(true);
         });
 
         it("place_blocks gives new blocks the texture of what they stand on, unless told one", async () => {
@@ -2097,13 +2099,13 @@ describe("AI agents", () => {
         it("tells an agent whose edits have run out when it may place something again", async () => {
             const agent = await arriveAgent("Builder");
             await AgentBlockUtil.placeBlocks(agent,
-                {rows: [10, 10 + USER_BUDGETS.edit.capacity / 5 - 1], columns: [10, 14], layers: [0]}, "oak");
+                {rows: [10, 10 + USER_BUDGETS.edit.capacity / 10 - 1], columns: [10, 19], layers: [0]}, "oak");
 
             const refused = await AgentObjectUtil.addObject(agent, {type: "lamp",
                 on: {row: 1, column: 20, layer: 2, side: "south"}}) as any;
             expect(refused.error).toMatch(/edits have run out.*try again in about a second/);
 
-            vi.setSystemTime(Date.now() + 1000 / USER_BUDGETS.edit.refillPerSecond);
+            vi.setSystemTime(Date.now() + Math.ceil(1000 / USER_BUDGETS.edit.refillPerSecond));
             expect((await AgentObjectUtil.addObject(agent, {type: "lamp",
                 on: {row: 1, column: 20, layer: 2, side: "south"}}) as any).added).toBeDefined();
         });

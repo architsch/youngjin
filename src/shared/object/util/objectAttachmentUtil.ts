@@ -22,6 +22,9 @@ const FACE_PLANE_STEP = VOXEL_CELL_SIZE;
 // Keeps a footprint edge lying on a block boundary out of the block beyond it.
 const EDGE_EPSILON = 0.01;
 
+// How far across a floor an object that steps aside looks for a spot (see findSpotSteppingAside), in world units.
+const STEP_ASIDE_REACH = 2;
+
 const ObjectAttachmentUtil =
 {
     // Whether the type may face this way, read by the facing's nearest axis.
@@ -70,27 +73,31 @@ const ObjectAttachmentUtil =
         if (!exposed)
             return false;
 
-        // It overlaps no other attached object.
+        // It overlaps no other attached object, NPCs where the room keeps them (see getNpcs).
         const colliderState = PhysicsColliderStateUtil.getObjectColliderState(objectTypeIndex, tr);
         if (!colliderState)
             throw new Error(`ColliderState not found (objectTypeIndex = ${objectTypeIndex})`);
+        const npcTypeIndex = ObjectTypeConfigMap.getIndexByType("Npc");
         const collidingObjects = PhysicsObjectUtil.getObjectsCollidingWith3DVolume(room.id, colliderState);
         for (const collidingObject of Object.values(collidingObjects))
         {
-            if (collidingObject.objectId != objectId &&
+            if (collidingObject.objectId != objectId && collidingObject.objectTypeIndex != npcTypeIndex &&
                 ObjectTypeConfigMap.getConfigByIndex(collidingObject.objectTypeIndex).attachment)
             {
                 return false;
             }
         }
-        return true;
+        return !getNpcs(room).some(npc => npc.objectId != objectId && Geometry3DUtil.AABBsOverlap(colliderState.hitbox,
+            PhysicsColliderStateUtil.getObjectColliderState(npc.objectTypeIndex, npc.transform)!.hitbox));
     },
-    // Attached objects resting on this block (they must be refused or removed along with it).
+    // Attached objects resting on this block (they must be refused, or removed or moved along with it).
     getObjectIdsAttachedToVoxelBlock: (room: Room, quadIndex: number): string[] =>
     {
         const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
         const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
         const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+        const restsOnIt = (object: AddObjectSignal) =>
+            restsOnBlock(object.objectTypeIndex, object.transform, row, col, collisionLayer);
 
         // Whatever rests on the block lies against a face of it, which one that stands out only touches.
         const nearbyVolume = PhysicsColliderStateUtil.getVoxelBlockColliderState(row, col, collisionLayer);
@@ -98,28 +105,65 @@ const ObjectAttachmentUtil =
         nearbyVolume.hitbox.halfSize.y += EDGE_EPSILON;
         nearbyVolume.hitbox.halfSize.z += EDGE_EPSILON;
 
+        const npcTypeIndex = ObjectTypeConfigMap.getIndexByType("Npc");
         const objectIds: string[] = [];
         const nearbyObjects = PhysicsObjectUtil.getObjectsCollidingWith3DVolume(room.id, nearbyVolume);
         for (const nearbyObject of Object.values(nearbyObjects))
         {
-            if (!ObjectTypeConfigMap.getConfigByIndex(nearbyObject.objectTypeIndex).attachment)
+            if (nearbyObject.objectTypeIndex == npcTypeIndex ||
+                !ObjectTypeConfigMap.getConfigByIndex(nearbyObject.objectTypeIndex).attachment)
+            {
                 continue;
+            }
             const object = room.objectById[nearbyObject.objectId];
             if (!object)
             {
                 console.error(`Colliding object not found (objectId = ${nearbyObject.objectId})`);
                 continue;
             }
-            let restsOnIt = false;
-            ObjectAttachmentUtil.forEachSupportingBlock(object.objectTypeIndex, object.transform,
-                (supportRow, supportCol, supportLayer) => {
-                    restsOnIt = supportRow == row && supportCol == col && supportLayer == collisionLayer;
-                    return !restsOnIt;
-                });
-            if (restsOnIt)
+            if (restsOnIt(object))
                 objectIds.push(nearbyObject.objectId);
         }
+        objectIds.push(...getNpcs(room).filter(restsOnIt).map(npc => npc.objectId));
         return objectIds;
+    },
+    // Where an object standing on a floor steps once the block at quadIndex is gone, for a type that steps aside (see
+    // ObjectAttachmentConfig.stepsAside): the nearest spot within reach that accepts takes and that doesn't rest on that
+    // block, on the object's own floor first, then a step up, then each floor further down, as one steps or drops.
+    // Undefined if none takes it.
+    findSpotSteppingAside: (room: Room, obj: AddObjectSignal, quadIndex: number,
+        accepts: (transform: ObjectTransform) => boolean): ObjectTransform | undefined =>
+    {
+        const start = getQuantizedTransform(obj.objectTypeIndex, obj.transform);
+        if (start.dir.y <= 0)
+            return undefined;
+        const row = VoxelQueryUtil.getVoxelRowFromQuadIndex(quadIndex);
+        const col = VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex);
+        const collisionLayer = VoxelQueryUtil.getVoxelQuadCollisionLayerFromQuadIndex(quadIndex);
+
+        const floorYs = [start.pos.y, start.pos.y + COLLISION_LAYER_HEIGHT];
+        for (let y = start.pos.y - COLLISION_LAYER_HEIGHT; y >= 0; y -= COLLISION_LAYER_HEIGHT)
+            floorYs.push(y);
+        const reach = Math.round(STEP_ASIDE_REACH / GRID_STEP);
+        const offsets: {i: number, j: number}[] = [];
+        for (let i = -reach; i <= reach; ++i)
+        {
+            for (let j = -reach; j <= reach; ++j)
+                offsets.push({i, j});
+        }
+        offsets.sort((a, b) => (a.i * a.i + a.j * a.j) - (b.i * b.i + b.j * b.j));
+
+        for (const y of floorYs)
+        {
+            for (const {i, j} of offsets)
+            {
+                const candidate = getQuantizedTransform(obj.objectTypeIndex, new ObjectTransform(
+                    {x: start.pos.x + i * GRID_STEP, y, z: start.pos.z + j * GRID_STEP}, start.dir, start.scale));
+                if (!restsOnBlock(obj.objectTypeIndex, candidate, row, col, collisionLayer) && accepts(candidate))
+                    return candidate;
+            }
+        }
+        return undefined;
     },
     // The blocks right behind an object, which its face lies on, until visit returns false. A layer past the
     // layer range is the room's own floor or ceiling over that cell.
@@ -354,6 +398,27 @@ const ObjectAttachmentUtil =
         }
         return candidates;
     },
+}
+
+// The room's NPCs, which the rules here find where the room keeps them rather than by their colliders: every browser
+// moves a helper's collider along the walk it is shown (see SetObjectTransformSignal.shown), and the server doesn't, so
+// the two would otherwise disagree over the blocks a helper's home stands on.
+function getNpcs(room: Room): AddObjectSignal[]
+{
+    const npcTypeIndex = ObjectTypeConfigMap.getIndexByType("Npc");
+    return Object.values(room.objectById).filter(obj => obj.objectTypeIndex == npcTypeIndex);
+}
+
+function restsOnBlock(objectTypeIndex: number, transform: ObjectTransform,
+    row: number, col: number, collisionLayer: number): boolean
+{
+    let restsOnIt = false;
+    ObjectAttachmentUtil.forEachSupportingBlock(objectTypeIndex, transform,
+        (supportRow, supportCol, supportLayer) => {
+            restsOnIt = supportRow == row && supportCol == col && supportLayer == collisionLayer;
+            return !restsOnIt;
+        });
+    return restsOnIt;
 }
 
 // The corner of anchor that a resize by the corner across from it holds still (see

@@ -6,6 +6,9 @@ import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import ObjectUpdateUtil from "../../../shared/object/util/objectUpdateUtil";
 import ClientObjectManager from "../../object/clientObjectManager";
 import RemoveObjectSignal from "../../../shared/object/types/removeObjectSignal";
+import SetObjectTransformSignal from "../../../shared/object/types/setObjectTransformSignal";
+import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
+import ObjectTransform from "../../../shared/object/types/objectTransform";
 import ObjectAttachmentUtil from "../../../shared/object/util/objectAttachmentUtil";
 import ClientVoxelManager from "../clientVoxelManager";
 import RoomEditUtil from "../../system/util/roomEditUtil";
@@ -99,8 +102,9 @@ const VoxelEditUtil =
         if (reportUndetachableAttachment(room, selection.quadIndex))
             return;
 
-        // Confirm only when hand-placed attachments would be destroyed.
-        if (ObjectAttachmentUtil.getObjectIdsAttachedToVoxelBlock(room, selection.quadIndex).length > 0)
+        // Confirm only when hand-placed attachments would be destroyed: one that steps aside is moved instead.
+        if (ObjectAttachmentUtil.getObjectIdsAttachedToVoxelBlock(room, selection.quadIndex)
+            .some(objectId => !stepsAside(room.objectById[objectId])))
         {
             PopupUtil.openPopup({
                 popupType: "confirm",
@@ -154,8 +158,8 @@ const VoxelEditUtil =
     },
 }
 
-// Reports and returns true if an attachment on the block can't be removed by this user (e.g. a door),
-// instead of confirming a removal that would then fail.
+// Reports and returns true if an attachment on the block can't be taken off it by this user (e.g. a door, or an NPC
+// with nowhere nearby to step to), instead of confirming a removal that would then fail.
 function reportUndetachableAttachment(room: Room, quadIndex: number): boolean
 {
     const user = App.getUser();
@@ -163,19 +167,39 @@ function reportUndetachableAttachment(room: Room, quadIndex: number): boolean
     for (const objectId of ObjectAttachmentUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex))
     {
         const obj = room.objectById[objectId];
-        if (obj == undefined || ObjectUpdateUtil.canRemoveObject(user, room,
-            new RemoveObjectSignal(room.id, objectId)))
-        {
+        if (obj == undefined)
             continue;
-        }
+        // One that steps aside is moved off the block rather than removed with it.
+        const mayTakeOff = stepsAside(obj)
+            ? ObjectUpdateUtil.canSetObjectTransform(user, room, new SetObjectTransformSignal(room.id, objectId,
+                new ObjectTransform({...obj.transform.pos}, {...obj.transform.dir}, {...obj.transform.scale}), true))
+            : ObjectUpdateUtil.canRemoveObject(user, room, new RemoveObjectSignal(room.id, objectId));
+        const hasNowhereToGo = mayTakeOff && stepsAside(obj) && findSpotSteppingAside(room, obj, quadIndex) == undefined;
+        if (mayTakeOff && !hasNowhereToGo)
+            continue;
         // Type names are CamelCase, so split into words for display.
         const objectName = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex)
             .objectType.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase();
-        notificationMessageObservable.set(
-            `Can't remove a block because a ${objectName} is attached to it.`);
+        notificationMessageObservable.set(hasNowhereToGo
+            ? `Can't remove a block because the ${objectName} on it has nowhere nearby to step to.`
+            : `Can't remove a block because a ${objectName} is attached to it.`);
         return true;
     }
     return false;
+}
+
+// Whether an attachment is moved off its block rather than removed with it (see ObjectAttachmentConfig.stepsAside).
+function stepsAside(obj: AddObjectSignal | undefined): boolean
+{
+    return obj != undefined && ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).attachment?.stepsAside == true;
+}
+
+// Where an attachment that steps aside goes as the block at quadIndex is removed: a spot this user may move it to.
+function findSpotSteppingAside(room: Room, obj: AddObjectSignal, quadIndex: number): ObjectTransform | undefined
+{
+    const user = App.getUser();
+    return ObjectAttachmentUtil.findSpotSteppingAside(room, obj, quadIndex, transform =>
+        ObjectUpdateUtil.canSetObjectTransform(user, room, new SetObjectTransformSignal(room.id, obj.objectId, transform, true)));
 }
 
 async function removeVoxelBlockWithItsAttachments(selection: VoxelQuadSelection)
@@ -196,11 +220,13 @@ async function removeVoxelBlockWithItsAttachments(selection: VoxelQuadSelection)
     const removals: EncodableData[] = [];
     const restorals: EncodableData[] = [];
 
-    // Attachments first; the server processes signals in order and reaches the same result.
-    for (const objectId of ObjectAttachmentUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex))
+    // Attachments first; the server processes signals in order and reaches the same result. Those that step aside
+    // go last, so that one may step where another stood.
+    const attached = ObjectAttachmentUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex);
+    for (const objectId of attached)
     {
         // (One may have left the room while another was being removed.)
-        if (room.objectById[objectId] == undefined)
+        if (room.objectById[objectId] == undefined || stepsAside(room.objectById[objectId]))
             continue;
         const signal = new RemoveObjectSignal(room.id, objectId);
         const undoSignal = RoomEditUtil.getUndoSignal(room, signal);
@@ -208,6 +234,22 @@ async function removeVoxelBlockWithItsAttachments(selection: VoxelQuadSelection)
             continue;
         if (isMultiPlayer)
             SocketsClient.emitRemoveObjectSignal(signal);
+        removals.push(signal);
+        restorals.unshift(undoSignal);
+    }
+    for (const objectId of attached)
+    {
+        const obj = room.objectById[objectId];
+        // (With nowhere left to go, it stays, and so does the block it stands on.)
+        const spot = stepsAside(obj) ? findSpotSteppingAside(room, obj, quadIndex) : undefined;
+        if (spot == undefined)
+            continue;
+        const undoSignal = RoomEditUtil.getUndoSignal(room, new SetObjectTransformSignal(room.id, objectId, spot, true));
+        const applied = ClientObjectManager.setObjectTransform(objectId, spot, true, false);
+        const signal = new SetObjectTransformSignal(room.id, objectId,
+            new ObjectTransform({...applied.pos}, {...applied.dir}, {...applied.scale}), true);
+        if (isMultiPlayer)
+            SocketsClient.emitSetObjectTransformSignal(signal);
         removals.push(signal);
         restorals.unshift(undoSignal);
     }

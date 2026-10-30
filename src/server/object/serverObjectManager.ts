@@ -38,14 +38,21 @@ const ServerObjectManager =
         if (!ObjectUpdateUtil.addObject(user, room, obj))
         {
             console.error(`onAddObjectSignalReceived :: Failed (objectId=${obj.objectId})`);
-            socketUserContext.addPendingSignalToUser("removeObjectSignal",
-                new RemoveObjectSignal(room.id, obj.objectId));
+            ServerObjectManager.refuseAddObjectSignal(socketUserContext, obj);
             return false;
         }
 
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         socketRoomContext.multicastSignalFromUser("addObjectSignal", obj, socketUserContext);
         return true;
+    },
+    // A refused edit is answered with what the room really holds of the object, whatever refused it (the edit's own
+    // checks, or the user's edit budget; see UserSignalDispatchUtil), since the sender has applied it already.
+    refuseAddObjectSignal: (socketUserContext: UserContext, obj: AddObjectSignal) =>
+    {
+        const room = getRoomOf(socketUserContext);
+        if (room)
+            socketUserContext.addPendingSignalToUser("removeObjectSignal", new RemoveObjectSignal(room.id, obj.objectId));
     },
     onRemoveObjectSignalReceived: (socketUserContext: UserContext, signal: RemoveObjectSignal): boolean =>
     {
@@ -62,12 +69,20 @@ const ServerObjectManager =
         if (!ObjectUpdateUtil.removeObject(user, room, signal))
         {
             console.error(`onRemoveObjectSignalReceived :: Failed (userID = ${user.id})`);
+            ServerObjectManager.refuseRemoveObjectSignal(socketUserContext, signal);
             return false;
         }
 
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];
         socketRoomContext.multicastSignalFromUser("removeObjectSignal", signal, socketUserContext);
         return true;
+    },
+    // Left out, a block it is attached to could be refused its removal ever after, with nobody told why.
+    refuseRemoveObjectSignal: (socketUserContext: UserContext, signal: RemoveObjectSignal) =>
+    {
+        const obj = getRoomOf(socketUserContext)?.objectById[signal.objectId];
+        if (obj)
+            socketUserContext.addPendingSignalToUser("addObjectSignal", obj);
     },
     // The server's own adds and removes (a joining user's player, say), made for owner and announced to the
     // room except to userIDToExclude. Only these may add or remove what no user may (see
@@ -132,6 +147,18 @@ const ServerObjectManager =
             socketRoomContext.multicastSignalFromUser("setObjectTransformSignal", signal, socketUserContext);
         }
     },
+    // Where the room really keeps the object. (One its checks refuse is put back as a desync, above.)
+    refuseSetObjectTransformSignal: (socketUserContext: UserContext, signal: SetObjectTransformSignal) =>
+    {
+        const room = getRoomOf(socketUserContext);
+        const obj = room?.objectById[signal.objectId];
+        if (room && obj)
+        {
+            socketUserContext.addPendingSignalToUser("setObjectTransformSignal", new SetObjectTransformSignal(room.id,
+                obj.objectId, new ObjectTransform({...obj.transform.pos}, {...obj.transform.dir}, {...obj.transform.scale}),
+                true));
+        }
+    },
     // Whether the change was made.
     onSetObjectMetadataSignalReceived: (socketUserContext: UserContext, signal: SetObjectMetadataSignal): boolean =>
     {
@@ -145,19 +172,10 @@ const ServerObjectManager =
         }
         const room = roomRuntimeMemory.room;
 
-        const obj = room.objectById[signal.objectId];        
-
         if (!ObjectUpdateUtil.setObjectMetadata(user, room, signal))
         {
             console.error(`onSetObjectMetadataSignalReceived :: Failed (objectId = ${signal.objectId})`);
-            const originalMetadata = obj.metadata[signal.metadataKey];
-            const originalMetadataValue = originalMetadata ? originalMetadata.str : "";
-            // The sender applied the transform it sent too, so that is put back as well.
-            const originalTransform = signal.transform ? new ObjectTransform({...obj.transform.pos},
-                {...obj.transform.dir}, {...obj.transform.scale}) : undefined;
-            socketUserContext.addPendingSignalToUser("setObjectMetadataSignal",
-                new SetObjectMetadataSignal(room.id, obj.objectId, signal.metadataKey,
-                    originalMetadataValue, originalTransform));
+            ServerObjectManager.refuseSetObjectMetadataSignal(socketUserContext, signal);
             return false;
         }
 
@@ -167,6 +185,29 @@ const ServerObjectManager =
             socketRoomContext.multicastSignalFromUser("setObjectMetadataSignal", signal, socketUserContext);
         return true;
     },
+    // The value the object still has.
+    refuseSetObjectMetadataSignal: (socketUserContext: UserContext, signal: SetObjectMetadataSignal) =>
+    {
+        const room = getRoomOf(socketUserContext);
+        const obj = room?.objectById[signal.objectId];
+        if (!room || !obj)
+            return;
+        const originalMetadata = obj.metadata[signal.metadataKey];
+        const originalMetadataValue = originalMetadata ? originalMetadata.str : "";
+        // The sender applied the transform it sent too, so that is put back as well.
+        const originalTransform = signal.transform ? new ObjectTransform({...obj.transform.pos},
+            {...obj.transform.dir}, {...obj.transform.scale}) : undefined;
+        socketUserContext.addPendingSignalToUser("setObjectMetadataSignal",
+            new SetObjectMetadataSignal(room.id, obj.objectId, signal.metadataKey,
+                originalMetadataValue, originalTransform));
+    },
+}
+
+// The room the user is in on the server, which a single-player user has none of.
+function getRoomOf(socketUserContext: UserContext): Room | undefined
+{
+    const roomID = ServerRoomManager.currentRoomIDByUserID[socketUserContext.user.id];
+    return ServerRoomManager.roomRuntimeMemories[roomID]?.room;
 }
 
 export default ServerObjectManager;

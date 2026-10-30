@@ -27,10 +27,12 @@ import ObjectAttachmentUtil from "../../../src/shared/object/util/objectAttachme
 import ObjectUpdateUtil from "../../../src/shared/object/util/objectUpdateUtil";
 import QuarterTurnsUtil from "../../../src/shared/object/util/quarterTurnsUtil";
 import PhysicsColliderStateUtil from "../../../src/shared/physics/util/physicsColliderStateUtil";
+import PhysicsManager from "../../../src/shared/physics/physicsManager";
 import Room from "../../../src/shared/room/types/room";
 import RoomFile from "../../../src/shared/room/types/roomFile";
 import { COLLISION_LAYER_HEIGHT, DIR_VEC_BY_NAME, NPC_MESSAGE_MAX_LENGTH, OBJECT_MESSAGE_MAX_LENGTH,
-    OBJECT_NAME_MAX_LENGTH, STOREY_FLOOR_COLLISION_LAYER, UNIT_VEC3 } from "../../../src/shared/system/sharedConstants";
+    OBJECT_NAME_MAX_LENGTH, STOREY_FLOOR_COLLISION_LAYER, UNIT_VEC3,
+    VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 import User from "../../../src/shared/user/types/user";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
@@ -43,6 +45,9 @@ const MEMBER = new User("a-member", "Member", UserTypeEnumMap.Member, "member@te
 const GUEST = new User("a-guest", "Guest", UserTypeEnumMap.Guest, "guest@test.com", "");
 // The owner of the regular fixture room.
 const OWNER = new User("an-owner", "Owner", UserTypeEnumMap.Member, "owner@test.com", "", "", "regular");
+
+// The step of the grid an attached object is placed on across its face: half a block (see ObjectAttachmentUtil).
+const GRID_STEP = 0.5 * VOXEL_CELL_SIZE;
 
 // The middle of a voxel well inside the room, and the voxel itself.
 const SPOT = {x: 10.25, z: 10.25};
@@ -184,7 +189,7 @@ describe("NPCs", () => {
         });
     });
 
-    it("go with a block they stand on", async () => {
+    it("rest on the blocks they stand on", async () => {
         await runScenario({
             name: "the block under an NPC",
             rooms: [EMPTY_HUB],
@@ -201,6 +206,94 @@ describe("NPCs", () => {
                 // Not with one further off, nor with one under the slab.
                 expect(attachedTo(SPOT_ROW, SPOT_COL + 3, STOREY_FLOOR_COLLISION_LAYER)).toEqual([]);
                 expect(attachedTo(SPOT_ROW + 3, SPOT_COL, STOREY_FLOOR_COLLISION_LAYER)).toEqual([]);
+            },
+        });
+    });
+
+    // A browser moves a helper's collider along the walk it is shown, and the server keeps it at home: answered by
+    // their colliders, the two would disagree over the block under its home, which the server would then refuse to
+    // remove every time the browser saw nothing on it.
+    it("rest on the blocks under where their room keeps them, and take up that room, wherever a helper is shown",
+        async () => {
+        await runScenario({
+            name: "a helper's home",
+            rooms: [EMPTY_HUB],
+            users: [userAtCenter("hub")],
+            assertions: () => {
+                const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
+                const upperFloorY = (STOREY_FLOOR_COLLISION_LAYER + 1) * COLLISION_LAYER_HEIGHT;
+                const npc = makeNpcSignal(room, ADMIN, upperFloorY);
+                expect(ObjectUpdateUtil.addObject(ADMIN, room, npc)).toBe(true);
+                const homeBlock = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(SPOT_ROW, SPOT_COL,
+                    STOREY_FLOOR_COLLISION_LAYER);
+                const shownAt = new ObjectTransform({x: SPOT.x + 3, y: upperFloorY, z: SPOT.z},
+                    {...DIR_VEC_BY_NAME["+y"]}, {...UNIT_VEC3});
+                PhysicsManager.setObjectTransform(room.id, npc.objectId, shownAt, true);
+
+                expect(ObjectAttachmentUtil.getObjectIdsAttachedToVoxelBlock(room, homeBlock)).toEqual([npc.objectId]);
+                expect(VoxelUpdateUtil.canRemoveVoxelBlock(ADMIN, room, homeBlock)).toBe(false);
+                expect(ObjectAttachmentUtil.canPlaceObject(room, "another-npc", npcTypeIndex, npc.transform)).toBe(false);
+                expect(ObjectAttachmentUtil.canPlaceObject(room, "another-npc", npcTypeIndex, shownAt)).toBe(true);
+            },
+        });
+    });
+
+    it("step to the nearest floor that takes them as the block they stand on goes, or drop to one further down, for "
+        + "whoever may move them", async () => {
+        await runScenario({
+            name: "an NPC stepping aside",
+            rooms: [EMPTY_HUB],
+            users: [userAtCenter("hub")],
+            assertions: () => {
+                const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
+                const accepts = (user: User, obj: AddObjectSignal) => (tr: ObjectTransform) =>
+                    ObjectUpdateUtil.canSetObjectTransform(user, room, new SetObjectTransformSignal(room.id, obj.objectId,
+                        tr, true));
+                // On the slab, with the block under its middle taken: beside it, on the same floor, as the server takes
+                // the move and then the block.
+                const upperFloorY = (STOREY_FLOOR_COLLISION_LAYER + 1) * COLLISION_LAYER_HEIGHT;
+                const onSlab = makeNpcSignal(room, ADMIN, upperFloorY, "on-the-slab");
+                expect(ObjectUpdateUtil.addObject(ADMIN, room, onSlab)).toBe(true);
+                const underItsMiddle = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(SPOT_ROW, SPOT_COL,
+                    STOREY_FLOOR_COLLISION_LAYER);
+                expect(ObjectAttachmentUtil.findSpotSteppingAside(room, onSlab, underItsMiddle, accepts(GUEST, onSlab)))
+                    .toBeUndefined();
+                const stepped = ObjectAttachmentUtil.findSpotSteppingAside(room, onSlab, underItsMiddle,
+                    accepts(ADMIN, onSlab))!;
+                expect(stepped.pos.y).toBe(upperFloorY);
+                // The least step that takes a footprint as wide as an NPC's, from over a block's middle, off that block.
+                expect(Math.hypot(stepped.pos.x - SPOT.x, stepped.pos.z - SPOT.z)).toBeCloseTo(3 * GRID_STEP, 6);
+                expect(ObjectUpdateUtil.setObjectTransform(ADMIN, room,
+                    new SetObjectTransformSignal(room.id, onSlab.objectId, stepped, true)).desyncDetected).toBe(false);
+                expect(VoxelUpdateUtil.removeVoxelBlock(ADMIN, room.voxelGrid.voxels, underItsMiddle, room)).toBe(true);
+
+                // On a platform just wide enough for it, nowhere on top is clear of the block, and there is none a step
+                // up: it drops to the floor beside the platform.
+                const platformRow = SPOT_ROW + 20, platformCol = SPOT_COL + 20;
+                for (let row = platformRow - 1; row <= platformRow + 1; ++row)
+                {
+                    for (let col = platformCol - 1; col <= platformCol + 1; ++col)
+                    {
+                        for (const layer of [0, 1])
+                        {
+                            expect(VoxelUpdateUtil.addVoxelBlock(undefined, room.voxelGrid.voxels,
+                                VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, col, layer))).toBe(true);
+                        }
+                    }
+                }
+                const platformMiddle = {x: VoxelQueryUtil.getWorldXAtVoxelColCenter(platformCol),
+                    z: VoxelQueryUtil.getWorldZAtVoxelRowCenter(platformRow)};
+                const onPlatform = new AddObjectSignal(room.id, ADMIN.id, ADMIN.userName, npcTypeIndex, "on-the-platform",
+                    new ObjectTransform({x: platformMiddle.x, y: 2 * COLLISION_LAYER_HEIGHT, z: platformMiddle.z},
+                        {...DIR_VEC_BY_NAME["+y"]}, {...UNIT_VEC3}),
+                    {[ObjectMetadataKeyEnumMap.Label]: new EncodableByteString("Lookout")});
+                expect(ObjectUpdateUtil.addObject(ADMIN, room, onPlatform)).toBe(true);
+                const dropped = ObjectAttachmentUtil.findSpotSteppingAside(room, onPlatform,
+                    VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(platformRow, platformCol, 1), accepts(ADMIN, onPlatform))!;
+                expect(dropped.pos.y).toBe(0);
+                // Clear of the platform's three columns, by the least a footprint as wide as an NPC's needs.
+                expect(Math.hypot(dropped.pos.x - platformMiddle.x, dropped.pos.z - platformMiddle.z))
+                    .toBeCloseTo(5 * GRID_STEP, 6);
             },
         });
     });

@@ -2,14 +2,14 @@
 
 Reference: @src/shared/object/util/objectUpdateUtil.ts , @src/server/object/serverObjectManager.ts , @src/client/object/clientObjectManager.ts , @src/shared/physics/physicsManager.ts
 
-Object edits are optimistic: the client validates and applies an edit through the shared `ObjectUpdateUtil`, then emits a signal. The server re-validates, relays the signal to everyone else on success, and corrects the sender on failure.
+Object edits are optimistic: the client validates and applies an edit through the shared `ObjectUpdateUtil`, then emits a signal. The server re-validates, relays the signal to everyone else on success, and corrects the sender on failure, whether its checks or the sender's edit budget refused it (see [authentication.md](authentication.md#rate-limiting)).
 
 ## Add / remove
 ![Object Addition Flow](figures/object_addition_flow.jpg)
 
 - **Add**: the client registers the object, creates its physics body, spawns it as spawned-by-me, and sends `AddObjectSignal` with a locally computed id. The server re-validates it, including that the id is unused and that the owner it names is the sender, and on failure sends `RemoveObjectSignal` back to the sender.
 - **Players**: added and removed by the server alone, as their user joins and leaves a room. A client's request to add or remove one is refused, whoever it belongs to.
-- **Remove**: applied optimistically. A server-side failure is only logged.
+- **Remove**: applied optimistically. On failure the server sends the object back to the sender as it holds it (`AddObjectSignal`), since a block it is attached to stays unremovable for as long as the sender's room lacks it.
 - **Category caps**: every object type belongs to a category (`ObjectCategoryEnumMap`), and a room may hold only so many of each (`ObjectCategoryConfigMap`). Types in one category spend that budget together, so a second kind of lamp does not double how many lamps a room can hold. `ObjectGroup` counts what it holds per category as objects come and go; both the client and the server refuse an add that would pass the cap.
 - **Restricted zones**: adding, moving (into or out of a zone), removing or changing the metadata of a persistent object whose collider touches a zone is refused for anyone but the superuser and the zone's user (see [restricted_zone.md](../gameplay/restricted_zone.md)). Non-persistent objects, including players, are never checked, and neither are volumes, which zones are made of.
 - **Local-only objects** (e.g. render objects spawned from the voxel grid) get client-only ids and are never registered, persisted or signaled. They still get physics bodies.

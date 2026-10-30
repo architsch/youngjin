@@ -143,6 +143,8 @@ const AgentBlockUtil =
             const attached = ObjectAttachmentUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex);
             if (attached.length > 0 && !withAttached)
                 ++skipped.somethingHangsOnIt;
+            // (An NPC steps off a block an admin removes rather than going with it, but no agent may move one or remove
+            // it, so for an agent the block under one holds what isn't theirs; see VoxelEditUtil.)
             else if (attached.some(objectId => !ObjectUpdateUtil.canRemoveObject(ctx.user, room,
                 new RemoveObjectSignal(room.id, objectId))))
                 ++skipped.holdsWhatIsntYoursToRemove;
