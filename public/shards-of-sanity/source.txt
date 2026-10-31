@@ -373,3 +373,239 @@ The logical constructs which I have introduced in this volume, therefore, only f
 To overcome this lack of compatibility, we must invent a whole new language which neither the most sentimental poet nor the purest mathematician has been consciously speaking so far. Such a language ought to (and must) wake us from the intellectual lethargy of this new dark age.
 
 Being new, however, does not require alien words. We can keep using words which are already familiar to us. The real difference lies in the subtlety of their inner meaning, which is what I am going to demonstrate with clarity in the upcoming volumes.
+
+
+
+
+
+
+
+
+:d:How the language of programming can be used for narratives, arts, and design - not just for technical implementation.
+:k:Computer Science, Narrative, Computational Arts, Computational Design, Design Language, AI Design, Vibe Coding, Agentic Coding, AI Agents, Claude Code, Software Engineering, Product Design
+:l:2026-10-31
+
+[Post-AI Computer Science - Volume 3] October 31, 2026
+
+@@<hr>
+@@<h3><b>Elements of a Narrative</b></h3>
+
+I have hitherto been discussing the basic elements out of which a story could be composed, which yields a logical basis for the product's storytelling and hence its overall narrative (which is also associated with the idea of branding).
+
+As I have also mentioned, though, the illustrations I presented in the previous volume still miss the core piece of the puzzle which is requisite to tackle our main problem - i.e. that of developing a narrative. In order for your software project to have its own story to tell (i.e. have its own "spirit"), you need to build a sequence of events which are designed to serve their own objective. What would that be? This is a much deeper question than that of technical design, for what we are facing here pertains to the purpose of life itself, as well as the sense of motivation which springs from it.
+
+The sheer complexity of the problem we are dealing with, though, ought not to prevent us from exploring the veiled horizon of possibilities which may remind us of the struggle of the pioneers in abstract arts against the tyranny of materialism in the early 20th century. What we need is a list of basic archetypes, designed to offer us the power to keep articulating the landscape of human wisdom without hitting a hard limit. Here, I will show you an example.
+
+@@<hr>
+@@<h3><b>Goal</b></h3>
+
+There are moments when we feel the necessity to express not only the current state of affairs, but also how things are supposed to be in the future. We all know that Alice is a human and Dinah is a cat, but what if Alice wishes that her cat, Dinah, were a human instead? One's ideal does not always align with how things currently look; there are, and will always be, mismatches between one's hope and reality.
+
+#$
+Alice is a human.
+Dinah is a cat.
+Alice wishes Dinah is a human.
+#$
+
+<007>
+
+(Note: Each pink sequence of arrows should be thought of as something that is imagined rather than something that is necessarily true.)
+
+The current state and the ideal, of course, do not always misalign. Sometimes they happen to happily coincide, in which case one's wish could be said to have been already fulfilled. If there is a guy (a human being) called Bob and Alice wants Bob to be human, we would say that Alice's wish has already been achieved because Bob already is a human.
+
+#$
+Alice is a human.
+Bob is a human.
+Alice wishes Bob is a human.
+#$
+
+<008>
+
+Why? The answer will turn out to be fairly straightforward if you inspect the diagram above. A separate pathway which traverses the words [Bob -> is -> human] already exists, apart from what Alice wants. That is, "Bob is a human" is an independent statement (i.e. fact) and not just a mere wish. Alice's wish is a pathway which traverses the words [Alice -> wishes -> Bob -> is -> human], and here we can clearly see that the [Bob -> is -> human] portion of her wish is perfectly aligned with an independently claimed fact, meaning that the goal-condition of her wish (i.e. "Bob is a human") is already true and therefore does not require any further action to make it even truer.
+
+@@<hr>
+@@<h3><b>Will</b></h3>
+
+The idea which I have discussed so far illustrates the nature of an objective, which is typically expressed in terms of words such as "wish", "want", "desire", "hope", and so on. The very presence of an objective alone, however, does not suffice when it comes to the execution of one's plan to achieve it. A wish will remain a wish forever, as long as we just keep contemplating it without taking any action to turn it into reality.
+
+A story will manage to tear apart its petty nutshell of self-reflection and pave the way to its own heroic journey, once it stops merely looking at a wish and starts doing something to get closer to it. This is when we need the protagonist's willpower to break the ice and actively be in charge of what he/she is doing - i.e. a set of voluntary actions to make one's dream come true.
+
+Since transforming a cat into a human being is not a realistic goal (at least outside of the realm of magic), Alice's desire to turn Dinah into a bipedal mammal is probably not going to yield any fruitful result no matter what she chooses to do. For now, therefore, let us suppose that she just wants Dinah to be close to her.
+
+#$
+Alice wishes Dinah is with Alice.
+#$
+
+<009>
+
+This is a much more realistic wish than what was said before. Unlike the transformation of one animal species into another (which biologists have found out to be rather difficult), simply transporting one animal to the vicinity of another is far more feasible and can be achieved by means of a sequence of definable actions.
+
+Since Alice wants to be near Dinah, all she needs to do to achieve this goal is simply move herself to a location which is closer to where Dinah is. In other words, Alice just needs to "go to" Dinah in order to be with Dinah.
+
+#$
+Alice wishes Dinah is with Alice.
+Alice will go to Dinah.
+#$
+
+<010>
+
+Here, though, you might be feeling that something is a bit too vague. And the reason why this is the case is that the statement "Alice will go to Dinah" would not really make that much sense if Alice did not wish to be with Dinah. We know that Alice would choose to move toward Dinah IF she wanted to be closer to Dinah. If Alice wished to be as far away from Dinah as possible, the statement "Alice will go to Dinah" would be nonsensical because it suggests a voluntary action which contradicts Alice's intention. The aforementioned statement, therefore, cannot exist independently; its origin must depend on the presence of the necessary precondition which says, "Alice wishes Dinah is with Alice".
+
+Our logical conclusion, then, will be: "Alice will go to Dinah IF Alice wishes Dinah is with Alice". But then, if we do presume that it is a known fact that Alice wants to be close to Dinah, our assertion can be in a more definite form such as: "Alice will go to Dinah BECAUSE Alice wishes Dinah is with Alice".
+
+#$
+Alice wishes Dinah is with Alice.
+Alice will go to Dinah because Alice wishes Dinah is with Alice.
+#$
+
+<011>
+
+@@<hr>
+@@<h3><b>Reference</b></h3>
+
+By now, you may also have realized that there is a great deal of redundancy here. When speaking, we are usually not so fond of repeating the same phrase over and over again as long as the context is already clear. It will be wiser, therefore, to avoid repetition by using a reference to an already asserted fact instead of restating it every time it is meant to be taken into consideration.
+
+When we say "Alice wishes Dinah is with Alice" and then make a statement whose cause depends on it, it is pretty obvious to us that we don't really have to say the preceding statement (i.e. "Alice wishes Dinah is with Alice") all over again; instead, we may as well just use the word "it" to point to the reason behind the latter statement. For example, instead of saying "Alice will go to Dinah because Alice wishes Dinah is with Alice", we could just say "Alice will go to Dinah because of it", since it is clear from the underlying context that the word "it" refers to the fact that Alice wants to be with Dinah.
+
+#$
+Alice wishes Dinah is with Alice.
+Alice will go to Dinah because of it.
+#$
+
+<012>
+
+It is also possible for us to join these two sentences into one, in which the two statements are separated by a comma and the word "so". In this alternative expression, it should be reasonable to say that the word "so" is a reference to the first of the two statements (i.e. "Alice wishes Dinah is with Alice"), whose job is to tell us why Alice is moving toward Dinah.
+
+#$
+Alice wishes Dinah is with Alice,
+    so Alice will go to Dinah.
+#$
+
+<013>
+
+@@<hr>
+@@<h3><b>Belief</b></h3>
+
+From an objective standpoint, however, it often turns out that a will alone does not qualify as the full proof of the validity of its subsequent action. In many cases, the desired consequence of an action is either unattainable due to an obstacle which cannot be removed, or it is already present (in which case the execution of the action would be pointless in the first place). Therefore, it must be sensible for us to say that a motive alone does not give us enough reason to carry out whichever act it requires; it is only when all the other prerequisites are met, that the motive will be imbued with enough power to claim its existence.
+
+For instance, if we suppose that Dinah is already close to Alice, it will imply that Alice's wish is already fulfilled. In this case, therefore, she is not going to produce a meaningful result by attempting to move even closer to Dinah who is already close to her.
+
+#$
+Dinah is with Alice.
+Alice wishes Dinah is with Alice.
+#$
+
+<014>
+
+Does this mean that Alice is not even going to attempt to get closer to Dinah? Probably not. The fact that Alice wishes to be close to Dinah implies that Alice believes she is not close to Dinah yet.
+
+#$
+Dinah is with Alice.
+Alice believes Dinah is not with Alice,
+    so Alice wishes Dinah is with Alice.
+#$
+
+<015>
+
+It is because Alice believes that Dinah is not with her, that Alice is justified in wishing to be close to Dinah. And because her wish is legitimate at least within the scope of her current belief system, Alice is bound to try being closer to Dinah whenever she meets an opportunity to do so.
+
+#$
+Dinah is with Alice.
+Alice believes Dinah is not with Alice,
+    so Alice wishes Dinah is with Alice,
+    so Alice will go to Dinah.
+#$
+
+<016>
+
+Something else is still missing, though. Why does Alice believe that Dinah is not with her? It is probably because Alice does not know that Dinah is with her already. Perhaps Dinah is out of Alice's sight, and it has been a while since Alice last saw Dinah. Whatever the reason, it is logical to conclude that Alice's belief in her isolation from Dinah is an inevitable consequence of her lack of awareness of the fact which says, "Dinah is with Alice".
+
+#$
+Dinah is with Alice.
+Alice doesn't know Dinah is with Alice,
+    so Alice believes Dinah is not with Alice,
+    so Alice wishes Dinah is with Alice,
+    so Alice will go to Dinah.
+#$
+
+<017>
+
+There could be other necessary preconditions for Alice's action. Even if she wishes to be close to Dinah, for example, Alice won't attempt to make that happen if she is trapped inside a locked chamber. It is only when Alice has a goal AND there is an action she is able to execute for the purpose of bringing her closer to that goal, that she will be determined to execute it.
+
+But before delving into this endless rabbit hole of details, let us focus more on the fundamental cause of the goal itself.
+
+@@<hr>
+@@<h3><b>Chain of Reasoning</b></h3>
+
+In the preceding example, we saw that Alice has a desire to stay close to Dinah regardless of the circumstances. This means that "being close to Dinah" is Alice's ideal - a condition which contributes to Alice's overall satisfaction. As long as Alice believes that she is near Dinah, she will stay happy (unless there is a contrary factor which is bad enough to make her unhappy despite the presence of Dinah). Happiness is Alice's state of equilibrium.
+
+If Alice is convinced that she is NOT near Dinah, then, it will signify a lost opportunity for Alice to maximize her happiness. This is when Alice realizes that, since being near to Dinah is her ideal and it is not achieved yet, she ought to wish for it and take measures to achieve it.
+
+In order to understand how this flow of logic works internally, we need to think in terms of conditional statements. Doing this will enable us to justify the origin of each of Alice's decisions.
+
+#$
+IF Dinah is with Alice AND Alice doesn't know it,
+    THEN Alice believes Dinah is not with Alice.
+IF Alice believes Dinah is not with Alice,
+    THEN Alice wishes Dinah is with Alice.
+IF Alice wishes Dinah is with Alice,
+    THEN Alice will go to Dinah.
+#$
+
+What is listed above are conditions and their corresponding results. One condition leads to another, which yet again leads to another and so forth, up until the point at which we are deprived of any more condition to satisfy and hence any newer fact to derive. Once all uncertainties are resolved and all knowable facts are known, our system will come to a halt and our story will be over.
+
+A major problem with the conditionals above, though, is that they are way too specific and thus only applicable to our particular scenario which involves Alice, Dinah, and their relation of proximity. A more versatile approach would be to express them in a generic form by substituting each subject with a variable, like the ones shown below:
+
+#$
+IF Y is with X AND X doesn't know it,
+    THEN X believes Y is not with X.
+IF X believes Y is not with X,
+    THEN X wishes Y is with X.
+IF X wishes Y is with X,
+    THEN X will go to Y.
+
+X = Alice.
+Y = Dinah.
+#$
+
+Yet this approach may still not be enough, and can potentially yield a huge number of redundant conditional expressions due to the fact that the rules we have established are only partially generic. As we encounter more and more ranges of scenarios, it is likely that we will end up dealing with conditions and their respective solutions which all happen to follow the same underlying pattern. Here is an example:
+
+#$
+IF Y is not hungry AND X doesn't know it,
+    THEN X believes Y is hungry.
+IF Y is not anxious AND X doesn't know it,
+    THEN X believes Y is anxious.
+IF Y is not bored AND X doesn't know it,
+    THEN X believes Y is bored.
+...
+#$
+
+Even with X and Y in place of Alice and Dinah, though, the repetition remains. For utmost simplicity, therefore, we need to abstract out the core elements of the conditionals as well.
+
+#$
+C is any condition which makes X happy.
+S is any solution which makes C true.
+
+IF C is true AND X doesn't know it,
+    THEN X believes C is false.
+IF X believes C is false,
+    THEN X wishes C is true.
+IF X wishes C is true,
+    THEN X will execute S.
+
+X = Alice.
+Y = Dinah.
+C = "Y is with X"
+S = "Move X to Y"
+#$
+
+These are the generic rules of the story, from which a series of logical statements may unfold. Because of their abstract nature, we can easily imagine them as building blocks (e.g. gears and levers) of what I would call "a narrative engine" - a machine which takes a number of ingredients (e.g. Alice, Dinah, "is with") and brews a cup of fairy tale.
+
+@@<hr>
+@@<h3><b>Beyond Conditionals</b></h3>
+
+I have introduced quite a number of narrative elements so far, at least from a logical point of view. A story begins when somebody carries out an action to pursue a goal, for it is motivation which awakens the world out of its mechanical slumber and drives its passion-generating engine.
+
+What this is bound to yield is some kind of purposeful expectation - the underlying notion that one's actions, when aimed correctly and exercised sincerely, will eventually manifest themselves in a better future. What seems obvious at this point, then, is that the story will stop short if a single action is all it takes to produce the final result. In order to make the story more interesting, we need to come up with a long chain of actions and a long chain of intermediary goals. The hero's journey cannot be enriched with a plethora of emotional upheavals unless there are waves upon waves of conflicts, unexpected twists, and hidden layers of meaning. And in order to make room for these dynamic constituents, we need something more sophisticated than a mere list of objectives and their subsequent actions.
+
+Our next volume will delve more deeply into this problem, and move on to introduce additional dimensions through which an unforeseen solution may emerge.
