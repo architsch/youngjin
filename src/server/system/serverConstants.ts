@@ -1,4 +1,4 @@
-import { DAY_IN_MS, MINUTE_IN_MS, SITE_URL } from "../../shared/system/sharedConstants";
+import { DAY_IN_MS, HOUR_IN_MS, MINUTE_IN_MS, SITE_URL } from "../../shared/system/sharedConstants";
 import { UserBudgetKind } from "../user/types/userBudgetKind";
 
 // Build Info
@@ -34,6 +34,9 @@ export const DB_MAX_WRITES_PER_COMMIT = 500;
 
 // Minimum gap between "distinct logins"; requests within one visit don't inflate loginCount.
 export const LOGIN_COUNT_MIN_GAP_MS = 1 * DAY_IN_MS;
+// How long after the last login reward, or the account's making, the next can be had (see DBUser.lastLoginRewardAt). Under
+// a day, or someone coming at the same time every day would find it not yet due whenever they came a little early.
+export const LOGIN_REWARD_INTERVAL_MS = 20 * HOUR_IN_MS;
 
 export const GUEST_TIER_NAME_BY_TIER_PHASE = ["disposable", "casual", "dedicated"];
 export const GUEST_MAX_AGE_BY_TIER_PHASE = [
@@ -96,6 +99,8 @@ export const AGENT_INBOX_MAX_EVENTS = 100;
 // How often what happens in agents' rooms without them is handed on (see AgentAwayLogUtil): a run of edits within it is
 // one event, and one write for an agent away.
 export const AGENT_AWAY_LOG_FLUSH_MS = MINUTE_IN_MS / 4;
+// How long an agent's typing shows with no word from it: long enough for a model to work out a line.
+export const AGENT_TYPING_EXPIRATION_MS = MINUTE_IN_MS / 2;
 // How many of the nearest people a look reports.
 export const AGENT_LOOK_MAX_PEOPLE = 16;
 // An agent's interests: at most this many keywords, each at most this long.
@@ -143,8 +148,8 @@ export const USER_BUDGETS: {[kind in UserBudgetKind]: {capacity: number, refillP
     moves: {capacity: 25, refillPerSecond: 10},
     // How far one's player moves, in world units: the strongest fan throws one about 16 in a second, at a walk.
     distance: {capacity: 40, refillPerSecond: 20},
-    // Switches between play and edit mode, which one's player shows the room.
-    modeSwitches: {capacity: 20, refillPerSecond: 1},
+    // Changes of what one is busy with, which one's player shows the room (see SpeakerActivity).
+    activityChanges: {capacity: 20, refillPerSecond: 1},
     // An agent's calls of tools that change nothing, and of the others.
     agentReads: {capacity: 30, refillPerSecond: 1},
     agentActions: {capacity: 15, refillPerSecond: 0.5},

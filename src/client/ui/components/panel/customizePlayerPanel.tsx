@@ -1,13 +1,14 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Text from "../basic/text";
 import GameObject from "../../../object/types/gameObject/gameObject";
 import InstancedMeshComposer from "../../../object/components/instancedMeshComposer";
 import ColorUtil from "../../../../shared/math/util/colorUtil";
 import PlayerCompositionParams from "../../../../shared/graphics/mesh/composition/types/compositionParams/playerCompositionParams";
 import PlayerCompositionConstants from "../../../../shared/graphics/mesh/composition/types/compositionConstants/playerCompositionConstants";
-import StepperInput from "../input/stepperInput";
+import PlayerShapeUnlockUtil from "../../../inventory/util/playerShapeUnlockUtil";
+import { inventoryObservable } from "../../../system/clientObservables";
 import PaletteColorInput from "../input/paletteColorInput";
-import PartShapeIcon from "../../svg/icons/partShapeIcon";
+import PartShapeInput from "../input/partShapeInput";
 import createDeferredSave from "../../util/deferredSave";
 import ScrollPanel from "./scrollPanel";
 
@@ -27,9 +28,16 @@ const columns: {title: string, colorKey: keyof PlayerCompositionParams["colors"]
     {title: "Eyes", colorKey: "eye", paletteName: "PlayerEye"},
 ];
 
-export default function CustomizePlayerPanel({ gameObject, onClose }: Props)
+export default function CustomizePlayerPanel({ gameObject, shapesLocked = false, onClose }: Props)
 {
     const [editCount, setEditCount] = useState(0);
+    // Shows shapes unlocking.
+    const [, setInventory] = useState(inventoryObservable.peek());
+
+    useEffect(() => {
+        inventoryObservable.addListener("ui.customizePlayerPanel", setInventory);
+        return () => inventoryObservable.removeListener("ui.customizePlayerPanel");
+    }, []);
 
     // Re-read 'params' whenever 'editCount' changes.
     const params = useMemo(() => getParams(gameObject), [gameObject, editCount]);
@@ -53,7 +61,6 @@ export default function CustomizePlayerPanel({ gameObject, onClose }: Props)
     return <ScrollPanel id="customizePlayerOptions" onClose={onClose}>
         {columns.map((column, columnIndex) =>
             <div key={"part-slot-" + column.colorKey} className="flex flex-row items-stretch gap-3 shrink-0">
-                {/* Room above a stepper for its preview's number (see StepperInput). */}
                 <div className="flex flex-col items-center gap-2 shrink-0">
                     <div className="flex flex-row items-center gap-1 shrink-0">
                         <Text content={column.title} size="sm"/>
@@ -64,13 +71,16 @@ export default function CustomizePlayerPanel({ gameObject, onClose }: Props)
                                 (p) => p.colors[column.colorKey] = ColorUtil.paletteIndexToRGB(column.paletteName, index))}
                         />
                     </div>
-                    {column.part && <StepperInput
+                    {column.part && <PartShapeInput
+                        id={`partShape_${column.part.key}`}
+                        builderName={column.part.builderName}
+                        numShapes={PlayerCompositionConstants.numTypes[column.part.key]}
+                        params={params}
                         currValue={params.types[column.part.key]}
-                        numValues={PlayerCompositionConstants.numTypes[column.part.key]}
                         setValue={(value: number) => applyEdit((p) => p.types[column.part!.key] = value)}
-                        preview={<PartShapeIcon params={params}
-                            builderType={`${column.part.builderName}_${params.types[column.part.key]}`}/>}
-                        numbered={true}
+                        isLocked={(shape: number) => shapesLocked && PlayerShapeUnlockUtil.isLocked(column.part!.key, shape)}
+                        unlock={(shape: number, elementId: string, onUnlocked: () => void) =>
+                            PlayerShapeUnlockUtil.unlock(column.part!.key, shape, elementId, onUnlocked)}
                     />}
                 </div>
                 {columnIndex < columns.length - 1 &&
@@ -103,6 +113,8 @@ function getParams(gameObject: GameObject): PlayerCompositionParams | undefined
 interface Props
 {
     gameObject: GameObject;
+    // Whether shapes past the free ones have to be bought, as for the user's own character. An NPC's look is an admin's.
+    shapesLocked?: boolean;
     // Absent means it has no close button (see ScrollPanel).
     onClose?: () => void;
 }

@@ -30,6 +30,7 @@ import HubRoomUtil from "./util/hubRoomUtil";
 import RoomValidationUtil from "../../shared/room/util/roomValidationUtil";
 import AgentAwayLogUtil from "../agent/util/agentAwayLogUtil";
 import HelperAgentUtil from "../agent/util/helperAgentUtil";
+import DollarBillUtil from "../inventory/util/dollarBillUtil";
 
 const roomRuntimeMemories: {[roomID: string]: RoomRuntimeMemory} = {};
 const socketRoomContexts: {[roomID: string]: SocketRoomContext} = {};
@@ -236,6 +237,7 @@ const ServerRoomManager =
         const roomChangedSignal = new RoomChangedSignal(joinedRoomRuntimeMemory);
         socketUserContext.addPendingSignalToUser("roomChangedSignal", roomChangedSignal);
         HelperAgentUtil.tellNewcomer(roomID, user.id);
+        DollarBillUtil.tellNewcomer(roomID, user.id);
         return {type: "success", newRoomID: roomID};
     },
     // An empty room ID or the hub keyword is resolved by the picker (hub load changes over time, so doors
@@ -378,22 +380,23 @@ const ServerRoomManager =
     },
 }
 
-// Replaces everything a room file holds of the room. The objects that never persist (its players) stay.
+// Replaces everything a room file holds of the room. Its players, who never persist, stay; bills, which never persist
+// either, go with the old room.
 function applyRoomFile(room: Room, roomFile: RoomFile, prefs: string): void
 {
+    const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
     const isPersistent = (obj: AddObjectSignal) =>
         ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).persistent;
 
     room.voxelGrid = roomFile.voxelGrid;
     room.objectGroup = new ObjectGroup([
         ...Object.values(roomFile.objectGroup.objectById).filter(isPersistent),
-        ...Object.values(room.objectById).filter(obj => !isPersistent(obj)),
+        ...Object.values(room.objectById).filter(obj => obj.objectTypeIndex == playerTypeIndex),
     ]);
     room.texturePackPath = roomFile.texturePackPath;
     room.prefs = prefs;
 
     // Where a player stood means nothing in the new room, so each arrives in it again.
-    const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
     for (const obj of Object.values(room.objectById))
     {
         if (obj.objectTypeIndex == playerTypeIndex)

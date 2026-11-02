@@ -43,6 +43,117 @@
     50%      { opacity: 0.35; }
   }
 
+  /* One-shot bounce and green bloom of the user's dollars as one more comes in, big enough to catch the eye from the
+     corner it grows out of. Every step lists the same filters, so that they blend from one to the next. */
+  --animate-dollar-gain: dollar-gain 1.3s ease-out;
+  @keyframes dollar-gain {
+    0%   { transform: scale(1); filter: drop-shadow(0 0 0 rgba(134, 239, 172, 0)) drop-shadow(0 0 0 rgba(34, 197, 94, 0)) drop-shadow(0 0 0 rgba(22, 163, 74, 0)); }
+    12%  { transform: scale(3.2); filter: drop-shadow(0 0 0.2rem rgba(134, 239, 172, 1)) drop-shadow(0 0 0.6rem rgba(34, 197, 94, 1)) drop-shadow(0 0 1.1rem rgba(22, 163, 74, 1)); }
+    28%  { transform: scale(2); filter: drop-shadow(0 0 0.2rem rgba(134, 239, 172, 1)) drop-shadow(0 0 0.5rem rgba(34, 197, 94, 1)) drop-shadow(0 0 0.9rem rgba(22, 163, 74, 1)); }
+    44%  { transform: scale(2.6); filter: drop-shadow(0 0 0.2rem rgba(134, 239, 172, 1)) drop-shadow(0 0 0.5rem rgba(34, 197, 94, 1)) drop-shadow(0 0 1rem rgba(22, 163, 74, 1)); }
+    60%  { transform: scale(1.6); filter: drop-shadow(0 0 0.15rem rgba(134, 239, 172, 0.9)) drop-shadow(0 0 0.4rem rgba(34, 197, 94, 0.9)) drop-shadow(0 0 0.7rem rgba(22, 163, 74, 0.9)); }
+    76%  { transform: scale(1.9); filter: drop-shadow(0 0 0.15rem rgba(134, 239, 172, 0.8)) drop-shadow(0 0 0.4rem rgba(34, 197, 94, 0.8)) drop-shadow(0 0 0.6rem rgba(22, 163, 74, 0.7)); }
+    100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(134, 239, 172, 0)) drop-shadow(0 0 0 rgba(34, 197, 94, 0)) drop-shadow(0 0 0 rgba(22, 163, 74, 0)); }
+  }
+
+  /* The number within it, which goes green for as long. */
+  --animate-dollar-gain-number: dollar-gain-number 1.3s ease-out;
+  @keyframes dollar-gain-number {
+    0%, 100% { color: #ffffff; }
+    12%, 60% { color: #7dffa8; }
+  }
+
+  /* The same as a login's reward is shown: two full bounces in step with the coach mark just below (see there). */
+  --animate-dollar-reward: dollar-reward 1.5s ease-in-out;
+  @keyframes dollar-reward {
+    0%   { transform: scale(1); filter: drop-shadow(0 0 0 rgba(134, 239, 172, 0)) drop-shadow(0 0 0 rgba(34, 197, 94, 0)) drop-shadow(0 0 0 rgba(22, 163, 74, 0)); }
+    20%  { transform: scale(2.6); filter: drop-shadow(0 0 0.2rem rgba(134, 239, 172, 1)) drop-shadow(0 0 0.6rem rgba(34, 197, 94, 1)) drop-shadow(0 0 1.1rem rgba(22, 163, 74, 1)); }
+    45%  { transform: scale(1.15); filter: drop-shadow(0 0 0.15rem rgba(134, 239, 172, 0.7)) drop-shadow(0 0 0.3rem rgba(34, 197, 94, 0.7)) drop-shadow(0 0 0.5rem rgba(22, 163, 74, 0.6)); }
+    68%  { transform: scale(2.3); filter: drop-shadow(0 0 0.2rem rgba(134, 239, 172, 1)) drop-shadow(0 0 0.6rem rgba(34, 197, 94, 1)) drop-shadow(0 0 1.1rem rgba(22, 163, 74, 1)); }
+    100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(134, 239, 172, 0)) drop-shadow(0 0 0 rgba(34, 197, 94, 0)) drop-shadow(0 0 0 rgba(22, 163, 74, 0)); }
+  }
+
+  --animate-dollar-reward-number: dollar-reward-number 1.5s ease-in-out;
+  @keyframes dollar-reward-number {
+    0%, 100% { color: #ffffff; }
+    20%, 68% { color: #7dffa8; }
+  }
+
+  /* The same in pink and red, and shorter, as dollars are spent. */
+  --animate-dollar-spend: dollar-spend 0.9s ease-out;
+  @keyframes dollar-spend {
+    0%   { transform: scale(1); filter: drop-shadow(0 0 0 rgba(251, 207, 232, 0)) drop-shadow(0 0 0 rgba(244, 63, 94, 0)) drop-shadow(0 0 0 rgba(220, 38, 38, 0)); }
+    18%  { transform: scale(2.6); filter: drop-shadow(0 0 0.2rem rgba(251, 207, 232, 1)) drop-shadow(0 0 0.6rem rgba(244, 63, 94, 1)) drop-shadow(0 0 1.1rem rgba(220, 38, 38, 1)); }
+    42%  { transform: scale(1.5); filter: drop-shadow(0 0 0.15rem rgba(251, 207, 232, 0.9)) drop-shadow(0 0 0.4rem rgba(244, 63, 94, 0.9)) drop-shadow(0 0 0.7rem rgba(220, 38, 38, 0.9)); }
+    64%  { transform: scale(1.9); filter: drop-shadow(0 0 0.2rem rgba(251, 207, 232, 1)) drop-shadow(0 0 0.5rem rgba(244, 63, 94, 1)) drop-shadow(0 0 0.9rem rgba(220, 38, 38, 1)); }
+    100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(251, 207, 232, 0)) drop-shadow(0 0 0 rgba(244, 63, 94, 0)) drop-shadow(0 0 0 rgba(220, 38, 38, 0)); }
+  }
+
+  --animate-dollar-spend-number: dollar-spend-number 0.9s ease-out;
+  @keyframes dollar-spend-number {
+    0%, 100% { color: #ffffff; }
+    18%, 64% { color: #ff8fab; }
+  }
+
+  /* A locked shape coming free (see UnlockFanfare): its picture leaps up out of the dim, lit, over a flash, a shock wave,
+     sparks flying out along their own angles and its lock flying off. */
+  --animate-unlock-pop: unlock-pop 0.9s cubic-bezier(0.2, 0.8, 0.3, 1);
+  @keyframes unlock-pop {
+    0%   { transform: scale(0.5); opacity: 0.35; filter: brightness(1) drop-shadow(0 0 0 rgba(253, 224, 71, 0)); }
+    30%  { transform: scale(1.5); opacity: 1; filter: brightness(1.6) drop-shadow(0 0 0.5rem rgba(253, 224, 71, 1)); }
+    55%  { transform: scale(0.92); opacity: 1; filter: brightness(1.3) drop-shadow(0 0 0.35rem rgba(253, 224, 71, 1)); }
+    75%  { transform: scale(1.1); opacity: 1; filter: brightness(1.15) drop-shadow(0 0 0.25rem rgba(253, 224, 71, 0.8)); }
+    100% { transform: scale(1); opacity: 1; filter: brightness(1) drop-shadow(0 0 0 rgba(253, 224, 71, 0)); }
+  }
+
+  --animate-unlock-flash: unlock-flash 0.7s ease-out forwards;
+  @keyframes unlock-flash {
+    0%   { transform: scale(0.2); opacity: 1; }
+    100% { transform: scale(1.2); opacity: 0; }
+  }
+
+  --animate-unlock-ring: unlock-ring 0.75s ease-out forwards;
+  @keyframes unlock-ring {
+    0%   { transform: scale(0.15); opacity: 1; }
+    100% { transform: scale(1); opacity: 0; }
+  }
+
+  --animate-unlock-spark: unlock-spark 1.1s cubic-bezier(0.15, 0.6, 0.3, 1) forwards;
+  @keyframes unlock-spark {
+    0%   { transform: rotate(var(--unlock-spark-angle)) translateY(0) scale(1.6); opacity: 1; }
+    65%  { opacity: 1; }
+    100% { transform: rotate(var(--unlock-spark-angle)) translateY(var(--unlock-spark-reach)) scale(0.5); opacity: 0; }
+  }
+
+  --animate-unlock-lock: unlock-lock 0.85s ease-out forwards;
+  @keyframes unlock-lock {
+    0%   { transform: translateY(0) rotate(0deg) scale(0.7); opacity: 0; }
+    14%  { transform: translateY(-1.5rem) rotate(-10deg) scale(1.4); opacity: 1; }
+    55%  { opacity: 1; }
+    100% { transform: translateY(-6.5rem) rotate(26deg) scale(1); opacity: 0; }
+  }
+
+  /* The coach mark telling of a reward, popping out of its pointer and bouncing in step with the count it points at,
+     which pushes it down at each peak: it would otherwise cover the count just as that swells over it. */
+  --animate-coach-mark-reward: coach-mark-reward 1.5s ease-in-out;
+  @keyframes coach-mark-reward {
+    0%   { transform: translateY(0) scale(0.4); filter: drop-shadow(0 0 0 rgba(134, 239, 172, 0)) drop-shadow(0 0 0 rgba(34, 197, 94, 0)); }
+    20%  { transform: translateY(2rem) scale(1.3); filter: drop-shadow(0 0 0.3rem rgba(134, 239, 172, 1)) drop-shadow(0 0 0.9rem rgba(34, 197, 94, 1)); }
+    45%  { transform: translateY(0.1rem) scale(0.97); filter: drop-shadow(0 0 0.15rem rgba(134, 239, 172, 0.7)) drop-shadow(0 0 0.4rem rgba(34, 197, 94, 0.7)); }
+    68%  { transform: translateY(1.6rem) scale(1.22); filter: drop-shadow(0 0 0.3rem rgba(134, 239, 172, 1)) drop-shadow(0 0 0.9rem rgba(34, 197, 94, 1)); }
+    100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 0 rgba(134, 239, 172, 0)) drop-shadow(0 0 0 rgba(34, 197, 94, 0)); }
+  }
+
+  /* The coach mark saying why a click came to nothing: a short bounce out of its pointer, in a red glow. */
+  --animate-coach-mark-refusal: coach-mark-refusal 0.8s ease-out;
+  @keyframes coach-mark-refusal {
+    0%   { transform: scale(0.5); filter: drop-shadow(0 0 0 rgba(254, 202, 202, 0)) drop-shadow(0 0 0 rgba(239, 68, 68, 0)) drop-shadow(0 0 0 rgba(220, 38, 38, 0)); }
+    25%  { transform: scale(1.25); filter: drop-shadow(0 0 0.2rem rgba(254, 202, 202, 1)) drop-shadow(0 0 0.6rem rgba(239, 68, 68, 1)) drop-shadow(0 0 1.1rem rgba(220, 38, 38, 1)); }
+    48%  { transform: scale(0.94); filter: drop-shadow(0 0 0.15rem rgba(254, 202, 202, 0.9)) drop-shadow(0 0 0.4rem rgba(239, 68, 68, 0.9)) drop-shadow(0 0 0.7rem rgba(220, 38, 38, 0.9)); }
+    70%  { transform: scale(1.1); filter: drop-shadow(0 0 0.2rem rgba(254, 202, 202, 1)) drop-shadow(0 0 0.5rem rgba(239, 68, 68, 1)) drop-shadow(0 0 0.9rem rgba(220, 38, 38, 1)); }
+    100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(254, 202, 202, 0)) drop-shadow(0 0 0 rgba(239, 68, 68, 0)) drop-shadow(0 0 0 rgba(220, 38, 38, 0)); }
+  }
+
   /* Dramatic, rapid bright<->dark pulse (plus a pulsing glow) for the on-screen outlines. The glow
      is sized in proportion to the outline's line, read from `--yj-outline-thickness`, so that an
      outline drawn with a thinner line around a smaller control brings its glow in to match (see
@@ -201,6 +312,29 @@
      make. It keeps the footprint of the raised look exactly, borders included. */
   .yj-panel-disabled {
     @apply text-gray-200 bg-gray-700 border border-gray-500 rounded-md pointer-events-auto
+  }
+  /* A control in a line of text (a link in a speech bubble, a coach mark's button), so raised (a lit
+     top edge over a darkening face), and taking presses the text around it lets through. A row,
+     since a line may break before an icon even where text may not. Its unpainted border above and
+     below makes it easier to hit with a finger, and its margins give that height and its padding's
+     back, so the lines keep their place. */
+  .yj-link-button {
+    display: inline-flex;
+    align-items: center;
+    margin: -0.35em 0.15em;
+    padding: 0.2em 0.45em;
+    border: 0.15em solid transparent;
+    border-left-width: 0;
+    border-right-width: 0;
+    background-clip: padding-box;
+    border-radius: 0.35em;
+    background-image: linear-gradient(#6b7280, #374151);
+    color: white;
+    font-weight: bold;
+    white-space: nowrap;
+    box-shadow: inset 0 1px rgba(255, 255, 255, 0.35);
+    cursor: pointer;
+    pointer-events: auto;
   }
   /* The look worn by CompactIconButton: round rather than boxy, and with its border pulled in
      close to its fill in brightness, so that a button sitting beside other content stays a quiet

@@ -13,8 +13,9 @@ import SetVoxelQuadTextureSignal from "../../../shared/voxel/types/update/setVox
 import UserCommandSignal from "../../../shared/user/types/userCommandSignal";
 import RequestRoomChangeSignal from "../../../shared/room/types/requestRoomChangeSignal";
 import HoldObjectSignal from "../../../shared/object/types/holdObjectSignal";
-import TypingSignal from "../../../shared/user/types/typingSignal";
+import BuyItemSignal from "../../../shared/inventory/types/buyItemSignal";
 import ErrorUtil from "../../../shared/system/util/errorUtil";
+import ServerInventoryManager from "../../inventory/serverInventoryManager";
 import ServerObjectManager from "../../object/serverObjectManager";
 import ServerVoxelManager from "../../voxel/serverVoxelManager";
 import ServerRoomManager from "../../room/serverRoomManager";
@@ -81,12 +82,13 @@ const handlers: {[signalType: string]: (ctx: UserContext, bufferState: BufferSta
     },
     setObjectMetadataSignal: (ctx, bufferState) => {
         const signal = SetObjectMetadataSignal.decode(bufferState) as SetObjectMetadataSignal;
-        // A switch of mode arrives on this signal too (Editing metadata), and is neither an edit nor speech.
-        if (signal.metadataKey == ObjectMetadataKeyEnumMap.Editing)
+        // What the user is busy with arrives on this signal too (Activity metadata), and is neither an edit nor speech.
+        if (signal.metadataKey == ObjectMetadataKeyEnumMap.Activity)
         {
-            if (!UserBudgetUtil.trySpend(ctx.user.id, "modeSwitches"))
+            if (!UserBudgetUtil.trySpend(ctx.user.id, "activityChanges"))
                 return false;
             ServerObjectManager.onSetObjectMetadataSignalReceived(ctx, signal);
+            HelperAgentUtil.noteTyping(ctx);
             return true;
         }
         // Chat arrives on this signal too (SentMessage metadata), so it's counted as speech rather than an edit.
@@ -113,8 +115,8 @@ const handlers: {[signalType: string]: (ctx: UserContext, bufferState: BufferSta
         HelperAgentUtil.hold(ctx, HoldObjectSignal.decode(bufferState) as HoldObjectSignal);
         return true;
     },
-    typingSignal: (ctx, bufferState) => {
-        HelperAgentUtil.noteTyping(ctx, TypingSignal.decode(bufferState) as TypingSignal);
+    buyItemSignal: async (ctx, bufferState) => {
+        await ServerInventoryManager.buyItem(ctx, (BuyItemSignal.decode(bufferState) as BuyItemSignal).itemType);
         return true;
     },
 };

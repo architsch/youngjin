@@ -19,9 +19,10 @@ module.exports = {
                 },
                 exclude: /node_modules/,
             },
-            // Inlined as a data URL, so a font costs no request of its own (see LabelText).
+            // Inlined as a data URL, so a font or a small image costs no request of its own (see LabelText,
+            // DollarBillGameObject).
             {
-                test: /\.ttf$/,
+                test: /\.(ttf|webp)$/,
                 type: 'asset/inline',
             },
         ],
@@ -56,9 +57,9 @@ module.exports = {
                     name: 'vendor.misc',
                     enforce: true,
                 },
-                // Bundled fonts change as rarely as the dependencies, so they ride in the same chunk.
-                fonts: {
-                    test: /\.ttf$/,
+                // Bundled fonts and images change as rarely as the dependencies, so they ride in the same chunk.
+                inlinedAssets: {
+                    test: /\.(ttf|webp)$/,
                     name: 'vendor.misc',
                     enforce: true,
                 },

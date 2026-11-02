@@ -42,7 +42,7 @@ const NpcObjectTypeConfig =
     shownMetadataKeys: [
         ObjectMetadataKeyEnumMap.SentMessage,
         ObjectMetadataKeyEnumMap.Facing,
-        ObjectMetadataKeyEnumMap.Thinking,
+        ObjectMetadataKeyEnumMap.Activity,
     ],
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => {
         if (!RoomValidationUtil.userIsAdmin(user))

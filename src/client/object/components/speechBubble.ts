@@ -3,6 +3,7 @@ import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 import GraphicsManager from "../../graphics/graphicsManager";
 import GameObjectComponent from "./gameObjectComponent";
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
+import { SpeakerActivity, SpeakerActivityEnumMap } from "../../../shared/object/types/speakerActivity";
 import SetObjectMetadataSignal from "../../../shared/object/types/setObjectMetadataSignal";
 import SocketsClient from "../../networking/client/socketsClient";
 import App from "../../app";
@@ -12,13 +13,14 @@ import { cameraModeObservable, updateObservable } from "../../system/clientObser
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 import MessageSegment from "../../../shared/object/types/messageSegment";
 import MessageLinkUtil from "../../../shared/object/util/messageLinkUtil";
+import SpeakerActivityUtil from "../../../shared/object/util/speakerActivityUtil";
 import OverlayClickTargetUtil from "../../graphics/util/overlayClickTargetUtil";
 import MessageLinkOpenUtil from "../../ui/util/messageLinkOpenUtil";
 import ScreenControlPictureUtil from "../../ui/util/screenControlPictureUtil";
 
 // Room left between a bubble and the edges of the view (see keepInView).
 const VIEW_MARGIN_PX = 8;
-// How long a helper is shown thinking on the browser's word alone, before the server's Thinking takes over (see
+// How long a helper is shown thinking on the browser's word alone, before the server's takes over (see
 // HelperThinkingUtil); one the server never confirms was a wrong guess.
 const EXPECTED_THINKING_MS = 3000;
 const PADDING_X_REM = 0.4;
@@ -30,18 +32,17 @@ const MAX_WIDENING = 2;
 const DEFAULT_WIDTH_IN_CHARS = 18;
 // What a link's button adds to its label, in characters: its margins, padding and icon.
 const LINK_BUTTON_EXTRA_CHARS = 4;
-// A control in the bubble, so raised (a lit top edge over a darkening face), and taking presses the bubble around it
-// lets through. A row, since a line may break before an icon even where text may not. Its unpainted border above and
-// below makes it easier to hit with a finger, and its margins give that height back, so the lines keep their place.
-const LINK_BUTTON_STYLE = "display:inline-flex; align-items:center; margin:-0.35em 0.15em; padding:0 0.35em;"
-    + " border:0.35em solid transparent; border-left-width:0; border-right-width:0; background-clip:padding-box;"
-    + " border-radius:0.35em / 0.7em; background-image:linear-gradient(#38bdf8, #0369a1); color:white; font-weight:bold;"
-    + " white-space:nowrap; box-shadow:inset 0 1px rgba(255, 255, 255, 0.35); cursor:pointer; pointer-events:auto;";
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
-// What a speaker in edit mode shows in place of its words: the mode switch's green for Edit (Tailwind's green-300), and
-// how long its dots take to come one by one.
-const EDITING_COLOR = "oklch(87.1% 0.15 154.449)";
-const EDITING_DOTS_CYCLE_MS = 1200;
+// What a speaker shows in place of its words (see SpeakerActivityUtil.replacesWords): editing in the mode switch's green
+// for Edit (Tailwind's green-300), reading in a medium gray (its gray-400), and how long their dots take to come.
+const ACTIVITY_LINES: {[activity: SpeakerActivity]: {word: string, color: string}} = {
+    [SpeakerActivityEnumMap.Editing]: {word: "Editing", color: "oklch(87.1% 0.15 154.449)"},
+    [SpeakerActivityEnumMap.Reading]: {word: "Reading", color: "oklch(70.7% 0.022 261.325)"},
+};
+const ACTIVITY_DOTS_CYCLE_MS = 1200;
+// The dots by a typist's name: how long each takes to swell and shrink, and how far behind the one before it.
+const TYPING_DOT_CYCLE_MS = 1000;
+const TYPING_DOT_LAG_MS = 160;
 // Characters about twice as wide as a Latin letter in the bubble's monospace font: Hangul, kana, CJK ideographs, and
 // full-width forms.
 const WIDE_CHARACTER = /[ᄀ-ᅟ⺀-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]/;
@@ -167,24 +168,22 @@ export default class SpeechBubble extends GameObjectComponent
     {
         if (key === ObjectMetadataKeyEnumMap.SentMessage)
             this.displayMessage(value, true);
-        else if (key === ObjectMetadataKeyEnumMap.Thinking)
+        else if (key === ObjectMetadataKeyEnumMap.Activity)
         {
             this.thinkingExpectedUntil = 0;
             this.refresh();
         }
-        else if (key === ObjectMetadataKeyEnumMap.Editing)
-            this.refresh();
     }
 
-    // A helper shown thinking at once, for the user's line it is about to hear, until the server's Thinking comes.
+    // A helper shown thinking at once, for the user's line it is about to hear, until the server's word comes.
     expectThinking(): void
     {
         this.thinkingExpectedUntil = performance.now() + EXPECTED_THINKING_MS;
         this.refresh();
     }
 
-    // Shows the message again, for a speaker whose name has changed (see GameObject.getSpeakerName), who starts or stops
-    // thinking, or who enters or leaves edit mode.
+    // Shows the message again, for a speaker whose name has changed (see GameObject.getSpeakerName), or who has turned to
+    // something else (see SpeakerActivity).
     refresh(): void
     {
         this.displayMessage(this.message, false);
@@ -227,15 +226,16 @@ export default class SpeechBubble extends GameObjectComponent
     }
 
     // Bounces on every line it shows, local or remote, but not as one clears (a message's time running out, see
-    // PlayerMessageExpiryUtil), nor while a speaker in edit mode shows only that, under its name (see PlayerEditingUtil).
+    // PlayerMessageExpiryUtil), nor while a speaker shows only what it is busy with, under its name.
     private displayMessage(message: string, animate: boolean): void
     {
         this.message = message;
         const prepend = this.componentConfig.prependUserNameToMessage;
-        const editing = this.gameObject.params.metadata[ObjectMetadataKeyEnumMap.Editing]?.str == "1";
-        const saying = !editing && message.length > 0;
+        const activity = SpeakerActivityUtil.get(this.gameObject.params);
+        const busyElsewhere = SpeakerActivityUtil.replacesWords(activity);
+        const saying = !busyElsewhere && message.length > 0;
 
-        if (!prepend && !editing && !saying)
+        if (!prepend && !busyElsewhere && !saying)
         {
             this.hideSpeechBubble();
             return;
@@ -252,20 +252,17 @@ export default class SpeechBubble extends GameObjectComponent
             const userNameSpan = document.createElement("span");
             userNameSpan.style.color = "oklch(87.9% 0.169 91.605)";
             userNameSpan.textContent = userName + (saying ? ":" : "");
-            // A helper thinking of an answer (see HelperBehaviorUtil), with its last words still up.
-            if (this.gameObject.params.metadata[ObjectMetadataKeyEnumMap.Thinking]?.str == "1"
-                || performance.now() < this.thinkingExpectedUntil)
-            {
-                userNameSpan.appendChild(createThinkingSpinner());
-            }
+            // Someone writing a line, or a helper thinking of an answer, its last words still up.
+            if (activity == SpeakerActivityEnumMap.Typing || performance.now() < this.thinkingExpectedUntil)
+                userNameSpan.appendChild(createTypingDots());
             this.bubbleElement!.appendChild(userNameSpan);
 
-            if (editing || saying)
+            if (busyElsewhere || saying)
                 this.bubbleElement!.appendChild(document.createElement("br"));
         }
 
-        if (editing)
-            this.bubbleElement!.appendChild(createEditingLine());
+        if (busyElsewhere)
+            this.bubbleElement!.appendChild(createActivityLine(ACTIVITY_LINES[activity]));
         for (const segment of segments)
         {
             this.bubbleElement!.appendChild((segment.kind == "text") ? document.createTextNode(segment.text)
@@ -362,51 +359,49 @@ export default class SpeechBubble extends GameObjectComponent
 function createLinkButton(href: string, label: string): HTMLElement
 {
     const button = document.createElement("span");
-    button.className = "speechBubbleLink";
+    button.className = "speechBubbleLink yj-link-button";
     button.title = href;
-    button.style = LINK_BUTTON_STYLE;
     button.append(label, createLinkIcon());
     OverlayClickTargetUtil.makeClickable(button, () => MessageLinkOpenUtil.open(href));
     return button;
 }
 
-// "Editing" and its dots, which come one by one and go together, each at a step rather than a fade. Dots not yet come
-// keep their room, so the line stays where it is.
-function createEditingLine(): HTMLElement
+// A word and its dots, which come one by one and go together, each at a step rather than a fade. Dots not yet come keep
+// their room, so the line stays where it is.
+function createActivityLine({word, color}: {word: string, color: string}): HTMLElement
 {
     const line = document.createElement("span");
-    line.style = `color:${EDITING_COLOR}; font-weight:bold;`;
-    line.append("Editing");
+    line.style = `color:${color}; font-weight:bold;`;
+    line.append(word);
     for (let i = 1; i <= 3; ++i)
     {
         const dot = document.createElement("span");
         dot.textContent = ".";
         dot.animate([{opacity: 0, easing: "step-end"}, {opacity: 1, offset: i / 4}, {opacity: 1}],
-            {duration: EDITING_DOTS_CYCLE_MS, iterations: Infinity});
+            {duration: ACTIVITY_DOTS_CYCLE_MS, iterations: Infinity});
         line.append(dot);
     }
     return line;
 }
 
-// A ring with a turning arc, in the name's color.
-function createThinkingSpinner(): SVGElement
+// Three dots in the name's color, swelling and shrinking one after another. In ems, so that they scale with the bubble.
+function createTypingDots(): HTMLElement
 {
-    const spinner = document.createElementNS(SVG_NAMESPACE, "svg");
-    spinner.setAttribute("viewBox", "0 0 12 12");
-    spinner.setAttribute("style", "display:inline-block; width:0.8em; height:0.8em; margin-left:0.35em;"
-        + " vertical-align:-0.1em;");
-    const ring = document.createElementNS(SVG_NAMESPACE, "circle");
-    ring.setAttribute("cx", "6");
-    ring.setAttribute("cy", "6");
-    ring.setAttribute("r", "4.5");
-    ring.setAttribute("style", "fill:none; stroke:currentColor; stroke-width:1.8; opacity:0.3;");
-    const arc = document.createElementNS(SVG_NAMESPACE, "path");
-    arc.setAttribute("d", "M6 1.5a4.5 4.5 0 0 1 4.5 4.5");
-    arc.setAttribute("style", "fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round;");
-    spinner.append(ring, arc);
-    spinner.animate([{transform: "rotate(0turn)"}, {transform: "rotate(1turn)"}],
-        {duration: 900, iterations: Infinity});
-    return spinner;
+    const dots = document.createElement("span");
+    dots.style = "display:inline-flex; align-items:center; gap:0.18em; height:1em; margin-left:0.35em;"
+        + " vertical-align:-0.15em;";
+    for (let i = 0; i < 3; ++i)
+    {
+        const dot = document.createElement("span");
+        dot.style = "width:0.32em; height:0.32em; border-radius:50%; background-color:currentColor;";
+        dot.animate([{transform: "scale(0.6)", easing: "ease-out"},
+            {transform: "scale(1.35)", offset: 0.25, easing: "ease-in"},
+            {transform: "scale(0.6)", offset: 0.55},
+            {transform: "scale(0.6)"}],
+            {duration: TYPING_DOT_CYCLE_MS, delay: i * TYPING_DOT_LAG_MS, fill: "backwards", iterations: Infinity});
+        dots.append(dot);
+    }
+    return dots;
 }
 
 // An arrow out of the bubble, up and to the right.

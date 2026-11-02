@@ -225,16 +225,26 @@ export default class InstancedMeshBinding
         // Baked under visualObj so cosmetic transforms (e.g. EasingMotion's bounce) apply to the instance.
         InstancedPartUtil.bakePartMatrix(gameObject.visualObj,
             offsetX, offsetY, offsetZ, dirX, dirY, dirZ, xScale, yScale, zScale, matrixTemp);
+        this.updateInstanceMatrix(gameObject, instanceId, matrixTemp);
+    }
 
+    // The instance's world matrix itself, for a pose no offset and facing can say (e.g. a folded dollar bill's halves).
+    updateInstanceMatrix(gameObject: GameObject, instanceId: number, matrix: THREE.Matrix4)
+    {
+        if (!this.instancedMesh)
+        {
+            console.error(`InstancedMesh hasn't been loaded yet (objectId = ${gameObject.params.objectId})`);
+            return;
+        }
         // Buffered while hidden (see setInstanceHidden).
         const ownerMatrix = this.ownerMatrixByHiddenInstanceId?.get(instanceId);
         if (ownerMatrix != undefined)
         {
-            ownerMatrix.copy(matrixTemp);
+            ownerMatrix.copy(matrix);
         }
         else
         {
-            this.writeInstanceMatrix(instanceId, matrixTemp);
+            this.writeInstanceMatrix(instanceId, matrix);
             // Force InstancedMesh.raycast to recompute bounds with the new position.
             this.instancedMesh.boundingSphere = null;
         }

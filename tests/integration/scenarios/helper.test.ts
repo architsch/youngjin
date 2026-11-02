@@ -59,10 +59,10 @@ import SignalTypeConfigMap from "../../../src/shared/networking/maps/signalTypeC
 import DoorObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import { DoorTypeEnumMap } from "../../../src/shared/object/types/doorType";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
+import { SpeakerActivityEnumMap } from "../../../src/shared/object/types/speakerActivity";
 import QuarterTurnsUtil from "../../../src/shared/object/util/quarterTurnsUtil";
 import NpcFacingUtil from "../../../src/shared/object/util/npcFacingUtil";
 import HoldObjectSignal from "../../../src/shared/object/types/holdObjectSignal";
-import TypingSignal from "../../../src/shared/user/types/typingSignal";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import NpcPersonalityMap from "../../../src/shared/object/maps/npcPersonalityMap";
@@ -233,11 +233,11 @@ function facingsOf(objectId: string): number[]
 }
 
 // Whether a helper was shown thinking of an answer, in turn, as the room was shown it.
-function thinkingOf(objectId: string): string[]
+function thinkingOf(objectId: string): boolean[]
 {
     return shown.filter(({signalType, signal, userID}) => userID == undefined && signalType == "setObjectMetadataSignal"
-        && signal.objectId == objectId && signal.metadataKey == ObjectMetadataKeyEnumMap.Thinking)
-        .map(({signal}) => signal.metadataValue);
+        && signal.objectId == objectId && signal.metadataKey == ObjectMetadataKeyEnumMap.Activity)
+        .map(({signal}) => signal.metadataValue == SpeakerActivityEnumMap.Typing);
 }
 
 // The helper a request for a reply is for, by the name it is told it has (see HelperChatUtil).
@@ -292,9 +292,8 @@ async function talk(person: ConnectedUser, text: string): Promise<void>
 // A person starting or stopping typing a line in the chat, as their browser tells it.
 async function setTyping(person: ConnectedUser, typing: boolean): Promise<void>
 {
-    const bufferState = EncodingUtil.startEncoding();
-    new TypingSignal(typing).encode(bufferState);
-    await UserSignalDispatchUtil.dispatch(person.socketUserContext, "typingSignal", EncodingUtil.endEncoding(bufferState));
+    await setOwnValue(person, ObjectMetadataKeyEnumMap.Activity,
+        typing ? SpeakerActivityEnumMap.Typing : SpeakerActivityEnumMap.None);
 }
 
 // A value of a person's own player, set as their browser sets it.
@@ -465,8 +464,8 @@ describe("helpers", () => {
 
         const alice = await joinPerson("Alice");
         await live(6);
-        expect(saidBy(mira)).toEqual(["Hi Alice, welcome to ThingsPool! I'm Mira. Ask me anything, or just "
-            + "look around!"]);
+        expect(saidBy(mira)).toEqual(["Hi Alice, welcome to ThingsPool! I'm Mira. Feel free to explore and build "
+            + "things!"]);
 
         // Out and in again, and a refresh, in the same login.
         await harness.disconnectUser(alice);
@@ -479,7 +478,7 @@ describe("helpers", () => {
         await harness.disconnectUser(harness.connectUser({id: "id-Alice", userName: "Alice"}));
         await joinPerson("Alice", "an", FIRST_HUB_ID, 1);
         await live(6);
-        expect(saidBy(mira)[1]).toBe("Hi Alice, welcome back! I'm Mira. Ask me anything, or just look around!");
+        expect(saidBy(mira)[1]).toBe("Hi Alice, welcome back! I'm Mira. Feel free to explore and build things!");
         expect(claude.requests).toEqual([]);
     });
 
@@ -503,7 +502,7 @@ describe("helpers", () => {
         // No other helper tells her again, nor does any once she is back another day, her row read again.
         await harness.joinRoom(alice, LATER_HUB_ID);
         await live(8);
-        expect(saidBy(bo)).toEqual(["Hi Alice, welcome to ThingsPool! I'm Bo. Ask me anything, or just look around!"]);
+        expect(saidBy(bo)).toEqual(["Hi Alice, welcome to ThingsPool! I'm Bo. Feel free to explore and build things!"]);
         await harness.disconnectUser(alice);
         await live(2);
         await joinPerson("Alice", "an", FIRST_HUB_ID, 1, vi.mocked(DBUserUtil.setFTUE).mock.calls[0][1]);
@@ -542,7 +541,7 @@ describe("helpers", () => {
 
         await moveTo(guest, inFrontOfEntrance(FIRST_HUB_ID, 5));
         await live(3);
-        expect(saidBy(mira)[0]).toBe("Hi, welcome to ThingsPool! I'm Mira. Ask me anything, or just look around!");
+        expect(saidBy(mira)[0]).toBe("Hi, welcome to ThingsPool! I'm Mira. Feel free to explore and build things!");
     });
 
     it("greets and hears by nearness only those on its own floor, and anyone in the room who names it", async () => {
@@ -802,8 +801,7 @@ describe("helpers", () => {
         await live(6);
         await harness.joinRoom(alice, LATER_HUB_ID);
         await live(8);
-        expect(saidBy(bo)).toEqual(["Hi Alice, welcome to ThingsPool! I'm Bo. Ask me anything, or just look "
-            + "around!"]);
+        expect(saidBy(bo)).toEqual(["Hi Alice, welcome to ThingsPool! I'm Bo. Feel free to explore and build things!"]);
         await talk(alice, "hi Bo!");
         await live(6);
 
@@ -989,8 +987,8 @@ describe("helpers", () => {
         await live(1);
         const agent = await registerAndAttend("Chatty-Agent", "10.9.9.7");
         await live(10);
-        expect(saidBy(mira)).toEqual(["Hi Chatty-Agent, welcome to ThingsPool! I'm Mira. Ask me anything, or "
-            + "just look around!"]);
+        expect(saidBy(mira)).toEqual(["Hi Chatty-Agent, welcome to ThingsPool! I'm Mira. Feel free to explore and "
+            + "build things!"]);
 
         await AgentToolUtil.say(agent, "hello, what can I build?");
         await live(6);
@@ -1051,7 +1049,7 @@ describe("helpers", () => {
 
         await walkIn(alice, 8);
         await live(1);
-        expect(thinkingOf(mira)).toEqual(["1"]);
+        expect(thinkingOf(mira)).toEqual([true]);
         await live(3);
         expect(claude.requests.map(request => request.body.messages.at(-1).content))
             .toEqual(["(knows how to play) how do I build?"]);
@@ -1221,6 +1219,13 @@ describe("helpers", () => {
         expect(waitingFor()).toEqual(["Alice", undefined]);
         await setTyping(alice, false);
         expect(waitingFor()).toEqual([undefined, undefined]);
+
+        // Turned to something else, she is no longer typing it.
+        await setTyping(alice, true);
+        expect(waitingFor()).toEqual(["Alice", undefined]);
+        await setOwnValue(alice, ObjectMetadataKeyEnumMap.Activity, SpeakerActivityEnumMap.Reading);
+        expect(waitingFor()).toEqual([undefined, undefined]);
+        await setTyping(alice, false);
 
         const far = await joinPerson("Faraway");
         await moveTo(far, inFrontOfEntrance(FIRST_HUB_ID, 20));
@@ -1851,8 +1856,7 @@ describe("helpers", () => {
         await live(20);
 
         const greetings = saidBy(mira).filter(text => text.includes("welcome to ThingsPool"));
-        expect(greetings[0]).toBe("Hi Alice, welcome to ThingsPool! I'm Mira. Ask me anything, or just look "
-            + "around!");
+        expect(greetings[0]).toBe("Hi Alice, welcome to ThingsPool! I'm Mira. Feel free to explore and build things!");
         expect(greetings.length).toBeLessThanOrEqual(3);
         expect(greetings.slice(1).every(text => text.startsWith("Hi everyone,"))).toBe(true);
     });
@@ -2214,7 +2218,7 @@ describe("helpers", () => {
         shown.length = 0;
 
         await talk(alice, "hi Mira!");
-        expect(thinkingOf(mira)).toEqual(["1"]);
+        expect(thinkingOf(mira)).toEqual([true]);
         expect(claude.requests).toEqual([]);
         await live(3);
         expect(claude.requests).toHaveLength(1);
@@ -2235,12 +2239,12 @@ describe("helpers", () => {
         await live(3);
         await talk(bob, "and me?");
         await live(65);
-        expect(thinkingOf(mira)).toEqual(["1"]);
+        expect(thinkingOf(mira)).toEqual([true]);
 
         // Alice's answer comes after Bob's line has been let go of, which leaves nothing to think of.
         answered();
         await live(3);
-        expect(thinkingOf(mira)).toEqual(["1", ""]);
+        expect(thinkingOf(mira)).toEqual([true, false]);
         expect(claude.requests).toHaveLength(1);
     });
 
@@ -2273,8 +2277,8 @@ describe("helpers", () => {
         const looker = await registerAndAttend("Looker", "10.0.0.9");
         await live(2);
         // Up for a good while yet (see HelperBehaviorUtil's pace).
-        expect(saidBy(mira)).toEqual(["Hi everyone, welcome to ThingsPool! I'm Mira. Ask me anything, or just look "
-            + "around!"]);
+        expect(saidBy(mira)).toEqual(["Hi everyone, welcome to ThingsPool! I'm Mira. Feel free to explore and build "
+            + "things!"]);
         const guideSeen = () => (AgentToolUtil.look(looker) as any).people.find((person: any) => person.name == "Mira");
         expect(guideSeen().thinking).toBeUndefined();
 
@@ -2283,7 +2287,7 @@ describe("helpers", () => {
         shown.length = 0;
         await talk(alice, "hi Mira, what is this place?");
         await live(3);
-        expect(thinkingOf(mira)).toEqual(["1"]);
+        expect(thinkingOf(mira)).toEqual([true]);
         expect(guideSeen().thinking).toBe(true);
         // Its greeting stays up meanwhile.
         expect(shown.filter(({signal}) => signal.objectId == mira
@@ -2294,14 +2298,15 @@ describe("helpers", () => {
         await live(2);
         expect(claude.requests).toHaveLength(1);
         expect(saidBy(mira)).toEqual([]);
-        expect(thinkingOf(mira)).toEqual(["1"]);
+        expect(thinkingOf(mira)).toEqual([true]);
         expect(guideSeen().thinking).toBe(true);
         await live(3);
         const toRoom = shown.filter(({signal, userID}) => userID == undefined && signal.objectId == mira
-            && [ObjectMetadataKeyEnumMap.SentMessage, ObjectMetadataKeyEnumMap.Thinking].includes(signal.metadataKey))
+            && [ObjectMetadataKeyEnumMap.SentMessage, ObjectMetadataKeyEnumMap.Activity].includes(signal.metadataKey))
             .map(({signal}) => [signal.metadataKey, signal.metadataValue]);
-        expect(toRoom).toEqual([[ObjectMetadataKeyEnumMap.Thinking, "1"],
-            [ObjectMetadataKeyEnumMap.SentMessage, "Happy to help!"], [ObjectMetadataKeyEnumMap.Thinking, ""]]);
+        expect(toRoom).toEqual([[ObjectMetadataKeyEnumMap.Activity, SpeakerActivityEnumMap.Typing],
+            [ObjectMetadataKeyEnumMap.SentMessage, "Happy to help!"],
+            [ObjectMetadataKeyEnumMap.Activity, SpeakerActivityEnumMap.None]]);
         expect(guideSeen().thinking).toBeUndefined();
     });
 
@@ -2316,7 +2321,7 @@ describe("helpers", () => {
         claude.failing = true;
         await talk(alice, "hello?");
         await live(4);
-        expect(thinkingOf(mira)).toEqual(["1", ""]);
+        expect(thinkingOf(mira)).toEqual([true, false]);
 
         delete process.env.ANTHROPIC_API_KEY;
         await talk(alice, "anyone there?");
@@ -2324,7 +2329,7 @@ describe("helpers", () => {
         await talk(alice, "hello??");
         await live(12);
         expect(saidBy(mira)).toEqual([expect.stringMatching(/^Sorry, I can only say hello/)]);
-        expect(thinkingOf(mira)).toEqual(["1", "", "1", "", "1", ""]);
+        expect(thinkingOf(mira)).toEqual([true, false, true, false, true, false]);
     });
 
     it("stops being shown thinking once an admin makes it idle as it thinks", async () => {
@@ -2335,11 +2340,11 @@ describe("helpers", () => {
         claude.thinking = new Promise(() => {});
         await talk(alice, "hi Mira!");
         await live(3);
-        expect(thinkingOf(mira)).toEqual(["1"]);
+        expect(thinkingOf(mira)).toEqual([true]);
 
         setNpcPrefs(FIRST_HUB_ID, mira, {personality: "idle"});
         await live(1);
-        expect(thinkingOf(mira)).toEqual(["1", ""]);
+        expect(thinkingOf(mira)).toEqual([true, false]);
     });
 
     it("tells someone who comes into its room while it thinks of an answer that it is", async () => {
@@ -2354,8 +2359,8 @@ describe("helpers", () => {
         const bob = await joinPerson("Bob", "an");
         await live(1);
         expect(shown.filter(({signal, userID}) => userID == bob.user.id && signal.objectId == mira
-            && signal.metadataKey == ObjectMetadataKeyEnumMap.Thinking).map(({signal}) => signal.metadataValue))
-            .toEqual(["1"]);
+            && signal.metadataKey == ObjectMetadataKeyEnumMap.Activity).map(({signal}) => signal.metadataValue))
+            .toEqual([SpeakerActivityEnumMap.Typing]);
     });
 
     it("keeps looking at whom its words are for while they are read, and turns to the next with the next words",
@@ -2718,8 +2723,8 @@ describe("helpers", () => {
         await set(ObjectMetadataKeyEnumMap.Facing, "90");
         expect(metadata[ObjectMetadataKeyEnumMap.Facing]).toBeUndefined();
         expect(facingsOf(mira)).toEqual([]);
-        await set(ObjectMetadataKeyEnumMap.Thinking, "1");
-        expect(metadata[ObjectMetadataKeyEnumMap.Thinking]).toBeUndefined();
+        await set(ObjectMetadataKeyEnumMap.Activity, SpeakerActivityEnumMap.Typing);
+        expect(metadata[ObjectMetadataKeyEnumMap.Activity]).toBeUndefined();
         expect(thinkingOf(mira)).toEqual([]);
         // As an admin's name for it is set, the same way.
         await set(ObjectMetadataKeyEnumMap.Label, "Mia");

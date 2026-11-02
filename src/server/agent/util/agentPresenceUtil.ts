@@ -62,7 +62,7 @@ const AgentPresenceUtil =
 async function arrive(dbUser: DBUser): Promise<AgentUserContext>
 {
     const ctx = new AgentUserContext(DBUserUtil.fromDBType(dbUser), dbUser.funnel ?? "", DBUserUtil.getLoginCount(dbUser),
-        dbUser.agentKeyHash ?? "");
+        dbUser.inventory ?? {}, dbUser.agentKeyHash ?? "");
     // As a browser's visit does, so that a quiet agent is cleaned up as a quiet guest is.
     DBUserUtil.updateLastLogin(ctx.user.id, dbUser.lastLoginAt);
     // What happened in its room while it was away, read as it arrives and told after its arrival.

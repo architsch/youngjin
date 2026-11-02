@@ -1,16 +1,23 @@
 import Vec3 from "../../../../shared/math/types/vec3";
+import AddObjectSignal from "../../../../shared/object/types/addObjectSignal";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
-import { voxelBlockEditObservable } from "../../../system/clientObservables";
+import { objectCollectedObservable, voxelBlockEditObservable } from "../../../system/clientObservables";
 import ParticleSystem from "../particleSystem";
 
 // Which gameplay event plays which effect: the one place gameplay and particles meet, so gameplay code
-// never calls the particle system. Only a block's removal plays one; object edits are left unbound.
+// never calls the particle system. A block's removal plays one, as does someone else collecting a dollar bill, the
+// only thing there is to collect; the user's own collecting is a bill flying to their count, not an effect (see
+// DollarBillGameObject.onCollected). Other object edits are left unbound.
 const ParticleTriggerUtil =
 {
     onVoxelBlockEdit: (edit: {kind: "add" | "remove" | "move" | "retexture", quadIndex: number}): void =>
     {
         if (edit.kind === "remove")
             ParticleSystem.play("blockRemoved", getBlockCenter(edit.quadIndex));
+    },
+    onObjectCollected: (object: AddObjectSignal): void =>
+    {
+        ParticleSystem.play("dollarCollected", object.transform.pos);
     },
 }
 
@@ -40,5 +47,6 @@ function guarded<T>(handle: (event: T) => void): (event: T) => void
 
 // Registered on import (see app.ts); events before the particle system loads play nothing.
 voxelBlockEditObservable.addListener("particleTriggerUtil", guarded(ParticleTriggerUtil.onVoxelBlockEdit));
+objectCollectedObservable.addListener("particleTriggerUtil", guarded(ParticleTriggerUtil.onObjectCollected));
 
 export default ParticleTriggerUtil;

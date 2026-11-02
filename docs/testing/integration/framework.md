@@ -2,14 +2,14 @@
 
 Integration tests run the real server modules (`ServerRoomManager`, `ServerUserManager`, `ServerObjectManager`, `ServerVoxelManager`, `PhysicsManager`, `ObjectUpdateUtil`, `VoxelUpdateUtil`) against a mocked DB, with no network I/O. The DB suite is one exception; `agent.test.ts` is the other, mounting the MCP endpoint and the camera page on a throwaway Express app on a loopback port, since the SDK's client and the page need real HTTP.
 
-Nothing runs the socket flush, so a suite steps agents' bodies and helpers itself (`AgentBodyUtil.stepAll`, `HelperAgentUtil.stepAll` and `tick`), and `helper.test.ts` stands in for Claude by stubbing `fetch`.
+Nothing runs the socket flush, so a suite steps agents' bodies, helpers and dollar bills itself (`AgentBodyUtil.stepAll`, `HelperAgentUtil.stepAll` and `tick`, `DollarBillUtil.stepAll`), and `helper.test.ts` stands in for Claude by stubbing `fetch`.
 
 ```
 Scenario tests → Scenario runner → Action engine / Invariants / Presets → Server harness → Real server modules
 ```
 
 ## Helpers (`tests/integration/helpers/`)
-- **`serverHarness.ts`**: mocks `dbRoomUtil`, `dbUserUtil` and `dbSearchUtil` with in-memory stores (room creation yields real, loadable rooms), calls `setIsServer()`, and supports optional DB latency.
+- **`serverHarness.ts`**: mocks `dbRoomUtil`, `dbUserUtil`, `dbInventoryUtil` and `dbSearchUtil` with in-memory stores (room creation yields real, loadable rooms), calls `setIsServer()`, and supports optional DB latency.
   - Session helpers: `connectUser`, `joinRoom` (explicit destination), `appStartJoin` (mirrors connect-time picking with fallback), `disconnectUser`, `reconnectCaseA` (new socket first), `reconnectCaseB` (old disconnect first), `gracefulShutdown`. Reconnects rebuild the context from the mocked `DBUser`.
   - Population helpers: `loadRoom`, `fillRoomWithUsers`, `setSyntheticRoomPopulation` (fakes participants, so scenarios using it must skip structural invariants).
 - **`roomContent.ts`**: `createTestRoom()` builds a fixed shell (an open floor per storey, the entrance door, a fixed texture pack) of its own, so the suites don't move with the generator. `mockDB.seedRoom()` and `selectionHarness.createRoom()` use it. Single-player rooms are read from their real room files. The generator itself is covered by `room-generation.test.ts`.

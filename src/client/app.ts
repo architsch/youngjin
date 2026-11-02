@@ -22,12 +22,12 @@ import "./graphics/types/gizmo/objectAttachmentEditGizmos"; // Side-effect: lets
 import "./graphics/types/gizmo/volumeEditGizmos"; // Side-effect: lets the selected volume be resized by its outline's corners
 import "./voxel/util/restrictedZoneOutlineUtil"; // Side-effect: keeps the outlines on the room's restricted zones up to date
 import "./object/util/helperHoldUtil"; // Side-effect: holds a helper still for everyone while an admin has it selected
-import "./object/util/helperWaitUtil"; // Side-effect: holds a helper still for whoever types it a line
-import "./object/util/playerEditingUtil"; // Side-effect: shows the room the user's player editing while in edit mode
 import "./singlePlayer/util/singlePlayerHelperUtil"; // Side-effect: plays a single-player room's NPCs as helpers
 import { preloadGenericWorldSpaceGizmos } from "./graphics/types/gizmo/genericWorldSpaceGizmos"; // Side-effect: registers world-space gizmos that are used for general purposes; also exposes a pre-load hook
 import "./graphics/particle/util/particleTriggerUtil"; // Side-effect: plays the effects gameplay events call for
+import "./ui/util/signInPromptUtil"; // Side-effect: asks a guest to sign in as they gain a dollar
 import ParticleSystem from "./graphics/particle/particleSystem";
+import DollarBillGameObject from "./object/types/gameObject/dollarBillGameObject";
 import RoomTexturePackChangedSignal from "../shared/room/types/roomTexturePackChangedSignal";
 import RoomPrefsChangedSignal from "../shared/room/types/roomPrefsChangedSignal";
 import RoomLightingUtil from "./graphics/light/util/roomLightingUtil";
@@ -244,6 +244,9 @@ async function loadRoom(roomRuntimeMemory: RoomRuntimeMemory)
     await GraphicsManager.load(update);
     // Before any object spawns, since objects may own sprites and emitters.
     await ParticleSystem.load();
+    // Only a multiplayer room has bills.
+    if (currentRoom.roomType != RoomTypeEnumMap.SinglePlayer)
+        await DollarBillGameObject.preload();
     // Before the first frame, so the room isn't lit like the previous one.
     RoomLightingUtil.applyRoomLighting(currentRoom.prefs);
     PhysicsManager.load(roomRuntimeMemory);
@@ -261,6 +264,7 @@ async function unloadCurrentRoom()
     if (currentRoom == undefined)
         throw new Error(`No room to unload.`);
 
+    DollarBillGameObject.landFlying();
     ClientVoxelManager.unload();
     await ClientObjectManager.unload();
     // After the objects have released their sprites and emitters.
@@ -284,6 +288,7 @@ function update()
         ClientObjectManager.update(deltaTime);
         // After the watched player has moved this frame.
         WatchedPlayerCameraUtil.update(deltaTime);
+        DollarBillGameObject.updateFlying(deltaTime);
         ParticleSystem.update(deltaTime);
         GraphicsManager.update();
         SinglePlayerManager.update(deltaTime);

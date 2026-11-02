@@ -9,7 +9,11 @@ import ColorUtil from "../../../shared/math/util/colorUtil";
 import CompositionMetadataUtil from "../../../shared/graphics/mesh/composition/util/compositionMetadataUtil";
 import PlayerCompositionConstants from "../../../shared/graphics/mesh/composition/types/compositionConstants/playerCompositionConstants";
 import PlayerCompositionParams from "../../../shared/graphics/mesh/composition/types/compositionParams/playerCompositionParams";
+import BuyItemSignal from "../../../shared/inventory/types/buyItemSignal";
+import { InventoryItemTypeEnumMap } from "../../../shared/inventory/types/inventoryItemType";
+import PlayerShapeItemUtil from "../../../shared/inventory/util/playerShapeItemUtil";
 import Room from "../../../shared/room/types/room";
+import { PLAYER_SHAPE_PRICE_DOLLARS } from "../../../shared/system/sharedConstants";
 import AgentUserContext from "../types/agentUserContext";
 import AgentAppearance from "../types/agentAppearance";
 import AgentRoomUtil from "./agentRoomUtil";
@@ -30,7 +34,7 @@ const PARTS: {[part: string]: keyof PlayerCompositionParams["types"]} = {
 const EYES = "eyes";
 
 // What each shape is, in a few words, in the order of its part's builders (PlayerHead_0 first; see PlayerHead), which
-// the panel numbers them in. A shape redesigned there is described anew here.
+// agents number them by, and the panel lays them out in. A shape redesigned there is described anew here.
 const SHAPE_NAMES: {[part: string]: string[]} = {
     head: ["box", "drum, its round face forward", "can, round all around", "rolling pin, round on top",
         "box banded around the middle", "cylinder banded around the middle"],
@@ -77,10 +81,13 @@ const AgentAppearanceUtil =
         return {
             appearance: describe(me),
             shapes: SHAPE_NAMES,
+            locked_shapes: getLockedShapes(ctx),
+            shape_price_dollars: PLAYER_SHAPE_PRICE_DOLLARS,
+            dollars: ctx.inventory[InventoryItemTypeEnumMap.Dollar] ?? 0,
             part_colors: getHexes(PART_PALETTE),
             eye_colors: getHexes(EYE_PALETTE),
             note: "Each part's shapes are numbered from 1, in the order listed. A color given is changed to the nearest "
-                + "one its part can take. change_appearance changes yours.",
+                + "one its part can take. change_appearance changes yours, but for a locked shape, which unlock_shape buys.",
         };
     },
     // Only what the request names changes. Costs an edit, as a change in the panel does, unless nothing changes.
@@ -107,6 +114,8 @@ const AgentAppearanceUtil =
                 const numShapes = PlayerCompositionConstants.numTypes[key];
                 if (!Number.isInteger(change.shape) || change.shape < 1 || change.shape > numShapes)
                     return {error: `${part}.shape is a number from 1 to ${numShapes}.`};
+                if (change.shape - 1 != params.types[key] && PlayerShapeItemUtil.isLocked(ctx.inventory, key, change.shape - 1))
+                    return {error: `${part} shape ${change.shape} is locked: unlock_shape buys it for $${PLAYER_SHAPE_PRICE_DOLLARS} and puts it on.`};
                 params.types[key] = change.shape - 1;
             }
             if (change.color != undefined)
@@ -132,6 +141,39 @@ const AgentAppearanceUtil =
         return (now.metadata[ObjectMetadataKeyEnumMap.InstancedMeshComposition]?.str == after)
             ? {appearance: describe(now), note: "Everyone sees it, and it stays yours on later visits."}
             : {error: "Your appearance couldn't be changed. Try again later.", appearance: describe(now)};
+    },
+    // Buys a locked shape and puts it on, as a click on it in the panel does. One already held is only put on.
+    unlock: async (ctx: AgentUserContext, part: string, shape: number): Promise<object> =>
+    {
+        const key = PARTS[part];
+        if (key == undefined)
+            return {error: `There is no part "${part}" with shapes: they are ${Object.keys(PARTS).join(", ")}.`};
+        const numShapes = PlayerCompositionConstants.numTypes[key];
+        if (!Number.isInteger(shape) || shape < 1 || shape > numShapes)
+            return {error: `shape is a number from 1 to ${numShapes}.`};
+
+        if (PlayerShapeItemUtil.isLocked(ctx.inventory, key, shape - 1))
+        {
+            const dollars = ctx.inventory[InventoryItemTypeEnumMap.Dollar] ?? 0;
+            if (dollars < PLAYER_SHAPE_PRICE_DOLLARS)
+                return {error: `It costs $${PLAYER_SHAPE_PRICE_DOLLARS}, and you have $${dollars}.`};
+            await AgentSignalUtil.send(ctx, "buyItemSignal", new BuyItemSignal(PlayerShapeItemUtil.getItemType(key, shape - 1)));
+            if (PlayerShapeItemUtil.isLocked(ctx.inventory, key, shape - 1))
+                return {error: "It couldn't be bought, and no dollars were spent. Try again later."};
+        }
+        return await AgentAppearanceUtil.change(ctx, {[part]: {shape}});
+    },
+    // Every shape that has to be bought, in the order appearance lists them, split by whether the agent holds it.
+    getBoughtShapes: (ctx: AgentUserContext): {held: object[], forSale: object[]} =>
+    {
+        const shapes = Object.entries(PARTS).flatMap(([part, key]) => SHAPE_NAMES[part].flatMap((shape_name, index) =>
+            (PlayerShapeItemUtil.getPrice(PlayerShapeItemUtil.getItemType(key, index)) == undefined) ? []
+                : [{part, key, index, shape: index + 1, shape_name}]));
+        const describeShape = ({part, shape, shape_name}: typeof shapes[number]) => ({part, shape, shape_name});
+        return {
+            held: shapes.filter(({key, index}) => !PlayerShapeItemUtil.isLocked(ctx.inventory, key, index)).map(describeShape),
+            forSale: shapes.filter(({key, index}) => PlayerShapeItemUtil.isLocked(ctx.inventory, key, index)).map(describeShape),
+        };
     },
 }
 
@@ -174,6 +216,14 @@ function findCharacter(room: Room, name: string): {name: string, obj: AddObjectS
     const guide = HelperAgentUtil.getHelpers(room.id).find(helper => helper.name.toLowerCase() == wanted);
     const npc = (guide != undefined) ? room.objectById[guide.objectId] : undefined;
     return (guide != undefined && npc != undefined) ? {name: guide.name, obj: npc} : undefined;
+}
+
+// The numbers of the shapes the agent would have to buy, part by part.
+function getLockedShapes(ctx: AgentUserContext): {[part: string]: number[]}
+{
+    return Object.fromEntries(Object.entries(PARTS).map(([part, key]) =>
+        [part, SHAPE_NAMES[part].map((_, index) => index + 1)
+            .filter(shape => PlayerShapeItemUtil.isLocked(ctx.inventory, key, shape - 1))]));
 }
 
 function getHexes(palette: string): string[]

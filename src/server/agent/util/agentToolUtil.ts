@@ -5,10 +5,14 @@ import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import SetObjectMetadataSignal from "../../../shared/object/types/setObjectMetadataSignal";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
+import { SpeakerActivityEnumMap } from "../../../shared/object/types/speakerActivity";
 import DoorObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
+import DollarBillObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/dollarBillObjectTypeConfig";
+import { InventoryItemTypeEnumMap } from "../../../shared/inventory/types/inventoryItemType";
 import LabelTextUtil from "../../../shared/object/util/labelTextUtil";
 import MessageLinkUtil from "../../../shared/object/util/messageLinkUtil";
 import AdminPrefsUtil from "../../../shared/object/util/adminPrefsUtil";
+import SpeakerActivityUtil from "../../../shared/object/util/speakerActivityUtil";
 import RequestRoomChangeSignal from "../../../shared/room/types/requestRoomChangeSignal";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
@@ -19,7 +23,7 @@ import { COLLISION_LAYER_HEIGHT, HELPER_AGENT_NAME, HUB_ROOM_ID_KEYWORD, OBJECT_
 import { HEARING_DISTANCE } from "../../../shared/object/util/helperBehaviorUtil";
 import ServerRoomManager from "../../room/serverRoomManager";
 import OwnedRoomUtil from "../../room/util/ownedRoomUtil";
-import { AGENT_LOOK_MAX_PEOPLE } from "../../system/serverConstants";
+import { AGENT_LOOK_MAX_PEOPLE, AGENT_TYPING_EXPIRATION_MS } from "../../system/serverConstants";
 import AgentUserContext from "../types/agentUserContext";
 import AgentWalkOutcome from "../types/agentWalkOutcome";
 import { AgentHeading } from "../types/agentHeading";
@@ -35,6 +39,7 @@ import DBUserUtil from "../../db/util/dbUserUtil";
 import UserBudgetUtil from "../../user/util/userBudgetUtil";
 import AgentBudgetUtil from "./agentBudgetUtil";
 import HelperAgentUtil from "./helperAgentUtil";
+import AgentTypingUtil from "./agentTypingUtil";
 import AgentCameraUtil from "./agentCameraUtil";
 
 // What an agent's tools do, apart from how they are served (see AgentMcpUtil), building aside (see AgentBlockUtil,
@@ -61,6 +66,7 @@ const WALK_OUTCOME_NOTES: {[outcome in AgentWalkOutcome]: string} = {
 
 const AgentToolUtil =
 {
+    describeMe,
     look: (ctx: AgentUserContext): object =>
     {
         const room = AgentRoomUtil.getCurrentRoom(ctx);
@@ -72,15 +78,17 @@ const AgentToolUtil =
         const players = Object.values(room.objectById)
             .filter(obj => isSeenPlayer(obj) && obj.objectId != me.objectId)
             .map(obj => {
-                // A person in edit mode shows that in place of their words, as people see (see SpeechBubble).
-                const editing = obj.metadata[ObjectMetadataKeyEnumMap.Editing]?.str == "1";
+                // Someone editing or reading shows that in place of their words, as people see (see SpeechBubble).
+                const activity = SpeakerActivityUtil.get(obj);
                 return {
                     name: obj.sourceUserName,
                     isAgent: (obj.metadata[ObjectMetadataKeyEnumMap.AgentMark]?.str ?? "").length > 0,
                     at: AgentGridUtil.toGridPosition(VoxelPathUtil.feetOf(obj.transform.pos)),
                     distance: Math.round(10 * distanceInVoxels(me.transform.pos, obj.transform.pos)) / 10,
-                    saying: editing ? undefined : getSpeech(obj),
-                    editing: editing ? true : undefined,
+                    saying: SpeakerActivityUtil.replacesWords(activity) ? undefined : getSpeech(obj),
+                    typing: (activity == SpeakerActivityEnumMap.Typing) ? true : undefined,
+                    editing: (activity == SpeakerActivityEnumMap.Editing) ? true : undefined,
+                    reading: (activity == SpeakerActivityEnumMap.Reading) ? true : undefined,
                 };
             });
         // The room's AI guides, which the server plays (see HelperAgentUtil).
@@ -119,13 +127,22 @@ const AgentToolUtil =
             .filter(door => seesLockedDoors || door.leadsTo != "locked")
             .sort((a, b) => a.distance - b.distance);
 
+        const bills = Object.values(room.objectById)
+            .filter(obj => obj.objectTypeIndex == ObjectTypeConfigMap.getIndexByType(DollarBillObjectTypeConfig.objectType))
+            .map(bill => ({
+                at: AgentGridUtil.toGridPosition(bill.transform.pos),
+                distance: Math.round(10 * distanceInVoxels(myFeet, bill.transform.pos)) / 10,
+            }))
+            .sort((a, b) => a.distance - b.distance);
+
         const {objects, more} = AgentObjectUtil.describeObjects(room, me.transform.pos);
         return {
             room: describeRoom(ctx),
             you: {name: ctx.user.userName, at: AgentGridUtil.toGridPosition(myFeet), facing: getFacing(me),
-                saying: getSpeech(me)},
+                saying: getSpeech(me), dollars: ctx.inventory[InventoryItemTypeEnumMap.Dollar] ?? 0},
             people,
             doors,
+            bills,
             objects,
             objectsNotShown: more,
             zones: AgentObjectUtil.describeZones(room, ctx.user),
@@ -273,7 +290,29 @@ const AgentToolUtil =
 
         const said = await AgentSignalUtil.send(ctx, "setObjectMetadataSignal",
             new SetObjectMetadataSignal(room.id, me.objectId, ObjectMetadataKeyEnumMap.SentMessage, text));
+        if (said)
+            AgentTypingUtil.stop(ctx);
         return {saying: getSpeech(me) ?? "", ...(said ? describeHearing(ctx, room, me.transform.pos, text) : {})};
+    },
+    // Shows the agent writing a line, or no longer, as a person's browser does (see AgentTypingUtil).
+    typing: async (ctx: AgentUserContext, typing: boolean): Promise<object> =>
+    {
+        const room = AgentRoomUtil.getCurrentRoom(ctx);
+        const me = AgentRoomUtil.getMyPlayer(ctx);
+        if (room == undefined || me == undefined)
+            return {error: "You aren't in a room, so nobody would see it."};
+        const shown = await AgentSignalUtil.send(ctx, "setObjectMetadataSignal", new SetObjectMetadataSignal(room.id,
+            me.objectId, ObjectMetadataKeyEnumMap.Activity,
+            typing ? SpeakerActivityEnumMap.Typing : SpeakerActivityEnumMap.None));
+        if (!shown)
+        {
+            return {error: `You are changing that faster than anyone may: try again in about `
+                + `${AgentBudgetUtil.describeWait(ctx.user.id, "activityChanges")}.`};
+        }
+        if (typing)
+            AgentTypingUtil.noteTyping(ctx.user.id);
+        return {typing, note: typing ? `It stops when you say something, or after ${AGENT_TYPING_EXPIRATION_MS / 1000} `
+            + `seconds.` : undefined};
     },
     // destination: "hub", "home" (the agent's own room, made on the first trip there), or a room's id or link.
     travel: async (ctx: AgentUserContext, destination: string): Promise<object> =>

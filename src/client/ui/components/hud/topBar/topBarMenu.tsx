@@ -3,6 +3,7 @@ import IconButton from "../../input/iconButton";
 import GearIcon from "../../../svg/icons/gearIcon";
 import PersonIcon from "../../../svg/icons/personIcon";
 import GameModeToggleSwitch from "../mode/gameModeToggleSwitch";
+import DollarCounter from "../inventory/dollarCounter";
 import User from "../../../../../shared/user/types/user";
 import Room from "../../../../../shared/room/types/room";
 import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
@@ -15,8 +16,8 @@ import RoomEditorUtil from "../../../../singlePlayer/util/roomEditorUtil";
 import GameModeUtil from "../../../../system/util/gameModeUtil";
 import { gameModeObservable, objectSelectionObservable } from "../../../../system/clientObservables";
 
-// Top bar (same in both modes): mode switch, room settings (for the superuser), and the user's identity (see
-// OwnIdentityUtil). A non-interactive fade sits behind the controls so drags still reach the canvas. It sits below the
+// Top bar (same in both modes): the user's dollars, mode switch, room settings (for the superuser), and the user's
+// identity (see OwnIdentityUtil). A non-interactive fade sits behind the controls so drags still reach the canvas. It sits below the
 // headline, which can take the full width.
 
 export default function TopBarMenu({ user, room, roomSettingsOpen, onToggleRoomSettings }: Props)
@@ -67,6 +68,8 @@ export default function TopBarMenu({ user, room, roomSettingsOpen, onToggleRoomS
     }, [showRoomSettings, inOwnRoom]);
 
     return <div className="absolute top-(--yj-headline-height,0px) inset-x-0 flex flex-row items-center justify-end gap-3 p-2 bg-linear-to-b from-black to-transparent pointer-events-none">
+        {/* Bills come only to multiplayer rooms. */}
+        {room.roomType != RoomTypeEnumMap.SinglePlayer && <DollarCounter/>}
         <GameModeToggleSwitch/>
         {showRoomSettings && <IconButton id="roomSettingsButton" icon={<GearIcon/>} size="sm"
             highlight={roomSettingsOpen}

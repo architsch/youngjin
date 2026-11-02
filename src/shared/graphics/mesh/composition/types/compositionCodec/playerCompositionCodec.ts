@@ -10,7 +10,7 @@ import InstancedMeshIdMap from "../../../maps/instancedMeshIdMap";
 import { InstancedMeshCompositionParams } from "../compositionParams/instancedMeshCompositionParams";
 import PlayerCompositionParams from "../compositionParams/playerCompositionParams";
 import { InstancedMeshCompositionBuilderMap } from "../../maps/instancedMeshCompositionBuilderMap";
-import PlayerCompositionConstants from "../compositionConstants/playerCompositionConstants";
+import PlayerCompositionConstants, { NUM_FREE_PLAYER_PART_TYPES } from "../compositionConstants/playerCompositionConstants";
 
 export const PlayerCompositionCodec: InstancedMeshCompositionCodec = {
     encode: (params: InstancedMeshCompositionParams,
@@ -57,26 +57,7 @@ export const PlayerCompositionCodec: InstancedMeshCompositionCodec = {
     getRandomComposition: (seed: number, objectSize: Vec3):
         {params: InstancedMeshCompositionParams, parts: InstancedMeshCompositionPart[]} =>
     {
-        const rand = new RandomNumberGenerator(seed);
-
-        const params = getBaseParams();
-        params.types.head = rand.randomInt(0, PlayerCompositionConstants.numTypes["head"]);
-        params.types.ear = rand.randomInt(0, PlayerCompositionConstants.numTypes["ear"]);
-        params.types.hat = rand.randomInt(0, PlayerCompositionConstants.numTypes["hat"]);
-        params.types.torso = rand.randomInt(0, PlayerCompositionConstants.numTypes["torso"]);
-        params.types.arm = rand.randomInt(0, PlayerCompositionConstants.numTypes["arm"]);
-        params.types.bottom = rand.randomInt(0, PlayerCompositionConstants.numTypes["bottom"]);
-        params.colors.head = ColorUtil.paletteIndexToRGB("Player", rand.randomInt(0, ColorUtil.getPaletteSize("Player")));
-        params.colors.ear = ColorUtil.paletteIndexToRGB("Player", rand.randomInt(0, ColorUtil.getPaletteSize("Player")));
-        params.colors.hat = ColorUtil.paletteIndexToRGB("Player", rand.randomInt(0, ColorUtil.getPaletteSize("Player")));
-        params.colors.torso = ColorUtil.paletteIndexToRGB("Player", rand.randomInt(0, ColorUtil.getPaletteSize("Player")));
-        params.colors.arm = ColorUtil.paletteIndexToRGB("Player", rand.randomInt(0, ColorUtil.getPaletteSize("Player")));
-        params.colors.bottom = ColorUtil.paletteIndexToRGB("Player", rand.randomInt(0, ColorUtil.getPaletteSize("Player")));
-        params.colors.eye = ColorUtil.paletteIndexToRGB("PlayerEye", rand.randomInt(0, ColorUtil.getPaletteSize("PlayerEye")));
-
-        const parts: InstancedMeshCompositionPart[] = [];
-        constructParts(params, parts);
-        return {params, parts};
+        return drawComposition(seed, partName => PlayerCompositionConstants.numTypes[partName]);
     },
     getStructuralVariants: (): string[] =>
     {
@@ -116,6 +97,39 @@ export const PlayerCompositionCodec: InstancedMeshCompositionCodec = {
         }
         return variants;
     },
+}
+
+// The look a user starts with, which wears nothing they would have to buy (see PlayerShapeItemUtil). The same seed draws
+// the same colors as getRandomComposition.
+export function getRandomFreeComposition(seed: number):
+    {params: InstancedMeshCompositionParams, parts: InstancedMeshCompositionPart[]}
+{
+    return drawComposition(seed, () => NUM_FREE_PLAYER_PART_TYPES);
+}
+
+function drawComposition(seed: number, getNumTypes: (partName: string) => number):
+    {params: InstancedMeshCompositionParams, parts: InstancedMeshCompositionPart[]}
+{
+    const rand = new RandomNumberGenerator(seed);
+
+    const params = getBaseParams();
+    params.types.head = rand.randomInt(0, getNumTypes("head"));
+    params.types.ear = rand.randomInt(0, getNumTypes("ear"));
+    params.types.hat = rand.randomInt(0, getNumTypes("hat"));
+    params.types.torso = rand.randomInt(0, getNumTypes("torso"));
+    params.types.arm = rand.randomInt(0, getNumTypes("arm"));
+    params.types.bottom = rand.randomInt(0, getNumTypes("bottom"));
+    params.colors.head = ColorUtil.paletteIndexToRGB("Player", rand.randomInt(0, ColorUtil.getPaletteSize("Player")));
+    params.colors.ear = ColorUtil.paletteIndexToRGB("Player", rand.randomInt(0, ColorUtil.getPaletteSize("Player")));
+    params.colors.hat = ColorUtil.paletteIndexToRGB("Player", rand.randomInt(0, ColorUtil.getPaletteSize("Player")));
+    params.colors.torso = ColorUtil.paletteIndexToRGB("Player", rand.randomInt(0, ColorUtil.getPaletteSize("Player")));
+    params.colors.arm = ColorUtil.paletteIndexToRGB("Player", rand.randomInt(0, ColorUtil.getPaletteSize("Player")));
+    params.colors.bottom = ColorUtil.paletteIndexToRGB("Player", rand.randomInt(0, ColorUtil.getPaletteSize("Player")));
+    params.colors.eye = ColorUtil.paletteIndexToRGB("PlayerEye", rand.randomInt(0, ColorUtil.getPaletteSize("PlayerEye")));
+
+    const parts: InstancedMeshCompositionPart[] = [];
+    constructParts(params, parts);
+    return {params, parts};
 }
 
 function decodePartType(partTypeName: string, strToDecode: string, charIndex: number): number

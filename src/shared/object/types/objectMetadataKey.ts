@@ -45,16 +45,14 @@ export const ObjectMetadataKeyEnumMap: Record<string, number> =
     Facing: 18,
     // Retired (slots 19 and 20 reserved): a helper's wander radius and personality, now in its BehaviorPrefs. Read only
     // by ObjectGroup's migration.
-    // "1" while a helper thinks of an answer, until it says it: shown to its room and never kept (see
-    // HelperBehaviorUtil). No signal may set it.
-    Thinking: 21,
+    // What a speaker is busy with, which its bubble shows (see SpeakerActivity): a helper's is shown by whoever plays it,
+    // and a player's set by its user's browser (see PlayerActivityUtil) or, for an agent, its tools (see AgentTypingUtil).
+    // Never kept (see ServerUserManager).
+    Activity: 21,
     // How an object behaves, one base-94 character per setting (see BehaviorPrefsUtil). Generic, so any type may read
     // it; an NPC's say how it is played as a helper, as an admin sets them.
     BehaviorPrefs: 22,
     // A mirror's surface: its color and how opaque it is over the reflection, one quantized character each (see
     // MirrorObjectTypeConfig), always read and written together.
     MirrorProperties: 23,
-    // "1" while a player's user is in edit mode, which its bubble shows in place of its words (see PlayerEditingUtil).
-    // Set by the user's own browser, and never kept (see ServerUserManager).
-    Editing: 24,
 }

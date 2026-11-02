@@ -8,6 +8,7 @@ import PopupUtil from "../../ui/util/popupUtil";
 import GraphicsManager from "../../graphics/graphicsManager";
 import SocketsClient from "../../networking/client/socketsClient";
 import SetObjectMetadataSignal from "../../../shared/object/types/setObjectMetadataSignal";
+import UserCommandSignal from "../../../shared/user/types/userCommandSignal";
 import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 import AdminPrefsUtil from "../../../shared/object/util/adminPrefsUtil";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
@@ -44,6 +45,7 @@ const DebugCommandUtil =
             // Enters the room editor on a new empty room: a template, kept nowhere until it is
             // saved as a file (see RoomEditorUtil, LocalRoomFileUtil).
             case "new room template": RoomEditorUtil.openNewRoom(); break;
+            case "fast_forward_daily_reward_clock": fastForwardDailyRewardClock(); break;
             default:
                 notificationMessageObservable.set(
                     ParticleDebugUtil.tryRunCommand(command) ?? "Unknown debug command.");
@@ -132,6 +134,19 @@ function openAdminAssetSettingsEditor(): void
         return;
     }
     PopupUtil.openPopup({popupType: "adminAssetSettings"});
+}
+
+// "fast_forward_daily_reward_clock" debug command. Admin-only (also enforced server-side): makes the daily reward due, for
+// the next page load to bring.
+function fastForwardDailyRewardClock(): void
+{
+    if (!RoomValidationUtil.userIsAdmin(App.getUser()))
+    {
+        notificationMessageObservable.set("Only an admin can fast-forward the daily reward clock.");
+        return;
+    }
+    SocketsClient.emitUserCommandSignal(new UserCommandSignal("fastForwardDailyRewardClock"));
+    notificationMessageObservable.set("The daily reward is due: reload the page.");
 }
 
 export default DebugCommandUtil;

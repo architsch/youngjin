@@ -7,8 +7,9 @@ After the [tutorial](single_player_mode.md), the FTUE points out things nothing 
 One element has no coach mark: `Basics`, having been told how to walk and build. The tutorial's last lesson records it, and so does the server when a helper first tells someone (see [agents.md](agents.md#helpers)), so that no helper tells them again.
 
 ## Coach marks
-A coach mark is a one-line bubble pointing at a control. An observable holds the active marks (element, target DOM id, text), and `ScreenCoachMarks` renders them.
-- Marks ignore pointer input, sit below popups, and stay on screen by flipping side and clamping to the edges.
+A coach mark is a short bubble pointing at a control. An observable holds the active marks (element, target DOM id, text), and `ScreenCoachMarks` renders them.
+- Three advertise no element, so nothing records them (see [inventory.md](../gameplay/inventory.md)): a login's reward, green and bouncing, under the dollar count for a while each time one is given; and the prompt to sign in, with a button and an x, there until closed; and a refusal's (`RefusalCoachMarkUtil`), saying why a click came to nothing, over what was clicked, in a short bounce of red light, for a moment or until closed.
+- Marks ignore pointer input, but for any button of their own, sit below popups, and stay on screen by flipping side and clamping to the edges. A refusal's stands above its target, and over any grid it lies in, which its x leaves open.
 - Several marks can be active at once, at most one per element.
 - **Appear**: the mode switch's mark at a set time after the user lands in the page's first multiplayer room, and the person button's later, each for a while. The tutorial doesn't count, as it guides the user itself, and later rooms don't restart the clock. Room settings' mark is scheduled by the UI that owns the button, once it has been offered and unused for a while. `FTUEUtil` re-checks the element when a mark is due.
 - **Disappear**: when the element is experienced, when a timed mark's while is up, or (room settings') when the owning UI reports that the control is no longer offered (hidden, disabled, or the user left the room); that pending schedule is cancelled too, and the wait restarts next time. A mark whose control is off screen draws nothing meanwhile.

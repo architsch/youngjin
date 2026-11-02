@@ -9,7 +9,7 @@ import PhysicsColliderStateUtil from "../../../../../shared/physics/util/physics
 import ClientVoxelQueryUtil from "../../../../voxel/util/clientVoxelQueryUtil";
 import { DIRECTION_VECTORS } from "../../../../system/clientConstants";
 import { COLLISION_LAYER_HEIGHT } from "../../../../../shared/system/sharedConstants";
-import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import { PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 
 // "firstPerson" pose: camera at the player's eye, pitched by the room ahead, toward what a play-mode click
 // hit, or down to pitchLimit while falling.
@@ -79,7 +79,7 @@ const groundProbe: AABB3 = {
 export default class FirstPersonCameraPose
 {
     // The camera's position in the player's local frame (at the eye).
-    static readonly restPosition = new THREE.Vector3(0, 0.3 * PLAYER_HEIGHT, 0);
+    static readonly restPosition = new THREE.Vector3(0, PLAYER_EYE_HEIGHT, 0);
 
     // Where the gaze has got to on its way back up after a fall (while still falling, as far down as the
     // camera has got), or undefined once there is no rise to make.

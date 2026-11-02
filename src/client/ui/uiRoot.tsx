@@ -48,6 +48,7 @@ import HubRoomWelcomeForm from "./components/form/hubRoomWelcomeForm";
 import DoorSettingsForm from "./components/form/doorSettingsForm";
 import CustomizeRoomPanel from "./components/panel/customizeRoomPanel";
 import RoomEditorUtil from "../singlePlayer/util/roomEditorUtil";
+import DebugPanelUtil from "../system/util/debugPanelUtil";
 
 export default function UIRoot({ env, user }: UIRootProps)
 {
@@ -166,8 +167,6 @@ export default function UIRoot({ env, user }: UIRootProps)
     }, []);
 
     const isRoomLoaded = roomRuntimeMemory != undefined;
-    const isMultiplayerRoomLoaded = isRoomLoaded &&
-        roomRuntimeMemory.room.roomType != RoomTypeEnumMap.SinglePlayer;
     const isRoomEditorOpen = RoomEditorUtil.isEditing(roomRuntimeMemory?.room);
 
     // The room editor's room is kept nowhere until it is saved as a file, so the browser is to ask before the
@@ -187,8 +186,7 @@ export default function UIRoot({ env, user }: UIRootProps)
             roomSettingsOpen={roomSettingsOpen}
             onToggleRoomSettings={() => setRoomSettingsOpen(prev => !prev)}
         />}
-        {/* (The room editor needs its commands too: one starts a new room there, another shows its volumes.) */}
-        {(isMultiplayerRoomLoaded || isRoomEditorOpen) && <DebugStats env={env}/>}
+        {DebugPanelUtil.isAvailable(roomRuntimeMemory?.room) && <DebugStats env={env}/>}
         <CameraZoomSlider/>
         {/* Selection tools are edit-mode only. */}
         <div ref={bottomUIRef} className="flex flex-col absolute bottom-0 w-full pointer-events-none">

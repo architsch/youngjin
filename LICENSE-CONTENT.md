@@ -67,9 +67,10 @@ Concretely, it covers:
 ## Third-party material
 
 Some assets in this repository belong to neither category above: they are
-third-party works redistributed under their own terms. The texture packs and the
-label font under `public/app/assets/resources/` are the main examples: the packs
-are public domain, and the font is under the SIL Open Font License. So are the
+third-party works redistributed under their own terms. The texture packs, the
+label font and the dollar bill texture under `public/app/assets/resources/` are the
+main examples: the packs and the bill are public domain, and the font is under the
+SIL Open Font License. So are the
 photographs of everyday objects in the pictures' subfolder `2/` whose entries in
 `public/app/assets/pictures/manifest.json` name a source and license, which ship
 under `public/app/assets/pictures/2/` once enabled and are parked under

@@ -3,6 +3,7 @@ import ServerUserManager from "../serverUserManager";
 import ServerRoomManager from "../../room/serverRoomManager";
 import RoomPickerUtil from "../../room/util/roomPickerUtil";
 import AddressUtil from "../../networking/util/addressUtil";
+import ServerInventoryManager from "../../inventory/serverInventoryManager";
 import EditRateLogUtil from "./editRateLogUtil";
 
 // How a connected user arrives and leaves, whatever carries them (see UserContext).
@@ -26,6 +27,7 @@ const UserSessionUtil =
     // Joins the best room, falling back to one that isn't full.
     joinFirstRoom: async (ctx: UserContext): Promise<void> =>
     {
+        await ServerInventoryManager.welcomeUser(ctx);
         const roomID = await RoomPickerUtil.pickBestRoomID(ctx, "appStart");
         const roomChangeResult = await ServerRoomManager.changeUserRoom(ctx, roomID, false, false, true);
         ServerRoomManager.notifyRoomChangeRejection(ctx, roomChangeResult);

@@ -1,6 +1,8 @@
 import LogUtil from "../../../shared/system/util/logUtil";
 import UserCommandSignal from "../../../shared/user/types/userCommandSignal";
 import User from "../../../shared/user/types/user";
+import { UserTypeEnumMap } from "../../../shared/user/types/userType";
+import DBInventoryUtil from "../../db/util/dbInventoryUtil";
 import DBUserUtil from "../../db/util/dbUserUtil";
 
 const UserCommandUtil =
@@ -22,6 +24,9 @@ const UserCommandUtil =
                 break;
             case "addFTUEElement":
                 await handleAddFTUEElement(user, words, params);
+                break;
+            case "fastForwardDailyRewardClock":
+                await handleFastForwardDailyRewardClock(user, params);
                 break;
             default:
                 LogUtil.log("Unknown user command type", {commandType, params}, "high", "error");
@@ -59,6 +64,18 @@ async function handleAddFTUEElement(user: User, words: string[], params: UserCom
     // Update the in-memory user too, or later appends and the duplicate check would use a stale string.
     user.ftue = `${user.ftue}${element}`;
     await DBUserUtil.setFTUE(user.id, user.ftue);
+}
+
+// For testing the daily reward, so an admin's alone, which no agent can be. It comes at the next page load, the reward
+// being claimed on arriving (see ServerInventoryManager.welcomeUser).
+async function handleFastForwardDailyRewardClock(user: User, params: UserCommandSignal): Promise<void>
+{
+    if (user.userType != UserTypeEnumMap.Admin)
+    {
+        LogUtil.log("Only an admin can fast-forward the daily reward clock", {params, userID: user.id}, "high", "error");
+        return;
+    }
+    await DBInventoryUtil.fastForwardLoginRewardClock(user.id);
 }
 
 export default UserCommandUtil;

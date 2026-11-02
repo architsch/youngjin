@@ -49,6 +49,13 @@ export default class InstancedMeshGraphics extends GameObjectComponent
     async loadInstancedMesh(geometryId: string, materialParams: MaterialParams,
         maxNumInstances: number, createInstanceIdPool: boolean)
     {
+        await InstancedMeshGraphics.loadInstancedMesh(geometryId, materialParams, maxNumInstances, createInstanceIdPool);
+    }
+
+    // Ahead of any object that will use it, too (see DollarBillGameObject.preload).
+    static async loadInstancedMesh(geometryId: string, materialParams: MaterialParams,
+        maxNumInstances: number, createInstanceIdPool: boolean)
+    {
         const instancedMeshId = MeshDataUtil.getInstancedMeshId(geometryId, materialParams.getMaterialId());
         if (bindingMap[instancedMeshId])
             return;
@@ -90,6 +97,12 @@ export default class InstancedMeshGraphics extends GameObjectComponent
         bindingMap[instancedMeshId].updateInstanceTransform(
             this.gameObject, instanceId,
             offsetX, offsetY, offsetZ, dirX, dirY, dirZ, xScale, yScale, zScale);
+    }
+
+    // See InstancedMeshBinding.updateInstanceMatrix.
+    updateInstanceMatrix(instancedMeshId: string, instanceId: number, matrix: THREE.Matrix4)
+    {
+        bindingMap[instancedMeshId].updateInstanceMatrix(this.gameObject, instanceId, matrix);
     }
 
     // See InstancedMeshBinding.updateInstanceTextureRect.

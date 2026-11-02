@@ -35,9 +35,12 @@ import AgentCameraUtil from "../../../src/server/agent/util/agentCameraUtil";
 import AgentAccountUtil from "../../../src/server/agent/util/agentAccountUtil";
 import AgentPresenceUtil from "../../../src/server/agent/util/agentPresenceUtil";
 import AgentToolUtil from "../../../src/server/agent/util/agentToolUtil";
+import AgentTypingUtil from "../../../src/server/agent/util/agentTypingUtil";
 import AgentRoomSettingsUtil from "../../../src/server/agent/util/agentRoomSettingsUtil";
 import AgentAppearanceUtil from "../../../src/server/agent/util/agentAppearanceUtil";
 import AgentRoomUtil from "../../../src/server/agent/util/agentRoomUtil";
+import DollarBillUtil from "../../../src/server/inventory/util/dollarBillUtil";
+import { InventoryItemTypeEnumMap } from "../../../src/shared/inventory/types/inventoryItemType";
 import UserBudgetUtil from "../../../src/server/user/util/userBudgetUtil";
 import PlayerMessageExpiryUtil from "../../../src/server/user/util/playerMessageExpiryUtil";
 import ObjectCompositionUtil from "../../../src/shared/object/util/objectCompositionUtil";
@@ -51,6 +54,11 @@ import HelperAgentUtil from "../../../src/server/agent/util/helperAgentUtil";
 import SetObjectTransformSignal from "../../../src/shared/object/types/setObjectTransformSignal";
 import NpcFacingUtil from "../../../src/shared/object/util/npcFacingUtil";
 import DBUserUtil from "../../../src/server/db/util/dbUserUtil";
+import DBInventoryUtil from "../../../src/server/db/util/dbInventoryUtil";
+import ServerInventoryManager from "../../../src/server/inventory/serverInventoryManager";
+import AgentInventoryUtil from "../../../src/server/agent/util/agentInventoryUtil";
+import { NUM_FREE_PLAYER_PART_TYPES } from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/playerCompositionConstants";
+import { DOLLAR_BILL_REACH } from "../../../src/shared/object/types/objectTypeConfig/dollarBillObjectTypeConfig";
 import DBRoomUtil from "../../../src/server/db/util/dbRoomUtil";
 import OwnedRoomUtil from "../../../src/server/room/util/ownedRoomUtil";
 import AgentAwayLogUtil from "../../../src/server/agent/util/agentAwayLogUtil";
@@ -61,8 +69,11 @@ import DoorObjectTypeConfig, { ENTERING_STRIDE_LENGTH,
     ENTRANCE_DOOR_OBJECT_ID } from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import Vec3 from "../../../src/shared/math/types/vec3";
 import Voxel from "../../../src/shared/voxel/types/voxel";
-import { DAY_IN_MS, NUM_VOXEL_COLS, OBJECT_MESSAGE_MAX_LENGTH, PLAYER_MESSAGE_EXPIRATION_MS,
-    VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
+import { LOGIN_REWARD_DOLLARS, DAY_IN_MS, HOUR_IN_MS, NUM_VOXEL_COLS, OBJECT_MESSAGE_MAX_LENGTH, PLAYER_MESSAGE_EXPIRATION_MS,
+    PLAYER_SHAPE_PRICE_DOLLARS, VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
+import { AGENT_TYPING_EXPIRATION_MS, LOGIN_REWARD_INTERVAL_MS } from "../../../src/server/system/serverConstants";
+import ServerObjectManager from "../../../src/server/object/serverObjectManager";
+import RemoveObjectSignal from "../../../src/shared/object/types/removeObjectSignal";
 import { HEARING_DISTANCE } from "../../../src/shared/object/util/helperBehaviorUtil";
 import AgentUserContext from "../../../src/server/agent/types/agentUserContext";
 import AgentInbox from "../../../src/server/agent/types/agentInbox";
@@ -79,11 +90,11 @@ import { AGENT_CAMERA_MAX_PAGES, AGENT_INBOX_MAX_EVENTS, AGENT_LOOK_MAX_PEOPLE, 
     AGENT_PRESENCE_IDLE_TIMEOUT_MS, BUILDER_AGENT_KEPT_FOR_GOOD_LOGIN_COUNT, BUILDER_AGENT_MAX_AGE_BY_TIER_PHASE,
     USER_BUDGETS } from "../../../src/server/system/serverConstants";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
+import { SpeakerActivityEnumMap } from "../../../src/shared/object/types/speakerActivity";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import RoomValidationUtil from "../../../src/shared/room/util/roomValidationUtil";
 import SetObjectMetadataSignal from "../../../src/shared/object/types/setObjectMetadataSignal";
-import TypingSignal from "../../../src/shared/user/types/typingSignal";
 import RequestRoomChangeSignal from "../../../src/shared/room/types/requestRoomChangeSignal";
 import EncodableData from "../../../src/shared/networking/types/encodableData";
 import EncodingUtil from "../../../src/shared/networking/util/encodingUtil";
@@ -203,6 +214,14 @@ async function dispatchAs(ctx: ConnectedUser | AgentUserContext, signalType: str
     signal.encode(bufferState);
     const userContext = ctx instanceof AgentUserContext ? ctx : ctx.socketUserContext;
     return await UserSignalDispatchUtil.dispatch(userContext, signalType, EncodingUtil.endEncoding(bufferState));
+}
+
+// What a person is busy with, as their browser tells it.
+async function setActivity(human: ConnectedUser, activity: string): Promise<boolean>
+{
+    return await dispatchAs(human, "setObjectMetadataSignal", new SetObjectMetadataSignal(
+        ServerRoomManager.currentRoomIDByUserID[human.user.id], harness.getPlayerObjectId(human)!,
+        ObjectMetadataKeyEnumMap.Activity, activity));
 }
 
 function currentRoomID(ctx: AgentUserContext): string | undefined
@@ -829,9 +848,27 @@ describe("AI agents", () => {
             const alice = await joinHuman("Alice");
             const mira = () => (AgentToolUtil.look(agent) as any).people.find((person: any) => person.name == "Mira");
 
-            await dispatchAs(alice, "typingSignal", new TypingSignal(true));
+            await setActivity(alice, SpeakerActivityEnumMap.Typing);
             expect(mira()).toMatchObject({isGuide: true, waitingFor: "Alice"});
-            await dispatchAs(alice, "typingSignal", new TypingSignal(false));
+            await setActivity(alice, SpeakerActivityEnumMap.None);
+            expect(mira().waitingFor).toBeUndefined();
+        });
+
+        it("stand still for an agent typing one a line, until it says it, or its typing runs out", async () => {
+            await standHelper("Mira");
+            const agent = await arriveAgent("Typist");
+            const watcher = await arriveAgent("Watcher");
+            const mira = () => (AgentToolUtil.look(watcher) as any).people.find((person: any) => person.name == "Mira");
+
+            await AgentToolUtil.typing(agent, true);
+            expect(mira()).toMatchObject({waitingFor: "Typist"});
+            await AgentToolUtil.say(agent, "");
+            expect(mira().waitingFor).toBeUndefined();
+
+            await AgentToolUtil.typing(agent, true);
+            expect(mira()).toMatchObject({waitingFor: "Typist"});
+            vi.setSystemTime(Date.now() + AGENT_TYPING_EXPIRATION_MS);
+            AgentTypingUtil.expireAll();
             expect(mira().waitingFor).toBeUndefined();
         });
 
@@ -885,6 +922,245 @@ describe("AI agents", () => {
         });
     });
 
+    describe("dollar bills", () => {
+        // A bill come into the agent's room at last, nearest it first.
+        function waitForBill(agent: AgentUserContext): AddObjectSignal
+        {
+            const now = Date.now();
+            vi.spyOn(Math, "random").mockReturnValue(0);
+            DollarBillUtil.stepAll(0.2);
+            vi.spyOn(Date, "now").mockReturnValue(now + 60_000);
+            DollarBillUtil.stepAll(0.2);
+            vi.mocked(Date.now).mockRestore();
+            vi.mocked(Math.random).mockRestore();
+            return Object.values(AgentRoomUtil.getCurrentRoom(agent)!.objectById)
+                .find(obj => obj.objectTypeIndex == ObjectTypeConfigMap.getIndexByType("DollarBill"))!;
+        }
+
+        it("look lists them by where they are and tells how many dollars the agent holds", async () => {
+            const agent = await arriveAgent("Bot-1");
+            expect((AgentToolUtil.look(agent) as any).bills).toEqual([]);
+            expect((AgentToolUtil.look(agent) as any).you.dollars).toBe(0);
+
+            const bill = waitForBill(agent);
+            const [listed] = (AgentToolUtil.look(agent) as any).bills;
+            expect(listed.at).toEqual(AgentGridUtil.toGridPosition(bill.transform.pos));
+            expect(listed.distance).toBeGreaterThan(0);
+        });
+
+        it("are collected by coming near one and facing it, as a person does, whats_new telling how many it holds then", async () => {
+            const agent = await arriveAgent("Bot-1");
+            const bill = waitForBill(agent);
+            agent.inbox.take();
+
+            // Out on the floor, an arrival standing in the doorway, in the wall, with its back to the bill.
+            const {transform} = AgentRoomUtil.getMyPlayer(agent)!;
+            Object.assign(transform.pos, {x: 16, z: 16});
+            Object.assign(transform.dir, {x: 1, y: 0, z: 0});
+            Object.assign(bill.transform.pos, {x: 18, z: 16});
+            DollarBillUtil.stepAll(0.2);
+            expect((AgentToolUtil.look(agent) as any).you.dollars).toBe(0);
+
+            // A player's direction points behind it.
+            Object.assign(transform.dir, {x: -1, y: 0, z: 0});
+            DollarBillUtil.stepAll(0.2);
+            expect((AgentToolUtil.look(agent) as any).bills).toEqual([]);
+            expect((AgentToolUtil.look(agent) as any).you.dollars).toBe(1);
+            expect(agent.inbox.take()).toEqual([expect.objectContaining({kind: "dollarCollected", dollars: 1})]);
+        });
+
+        it("come to an agent that comes back as a reward, which whats_new tells apart from collecting one", async () => {
+            const {dbUser} = await registerAgent("Bot-1");
+            const first = await attendAgent(dbUser);
+            expect(first.inbox.take().map(event => event.kind)).not.toContain("loginReward");
+            expect((AgentToolUtil.look(first) as any).you.dollars).toBe(0);
+            await AgentPresenceUtil.leave(first);
+
+            dbUser.lastLoginRewardAt = Date.now() - DAY_IN_MS;
+            const back = await attendAgent(dbUser);
+            const events = back.inbox.take();
+            expect(events).toContainEqual(expect.objectContaining({kind: "loginReward", dollars: LOGIN_REWARD_DOLLARS, reward: LOGIN_REWARD_DOLLARS}));
+            expect(events.map(event => event.kind)).not.toContain("dollarCollected");
+            expect((AgentToolUtil.look(back) as any).you.dollars).toBe(LOGIN_REWARD_DOLLARS);
+
+            await AgentPresenceUtil.leave(back);
+            const sameLogin = await attendAgent(dbUser);
+            expect(sameLogin.inbox.take().map(event => event.kind)).not.toContain("loginReward");
+            expect((AgentToolUtil.look(sameLogin) as any).you.dollars).toBe(LOGIN_REWARD_DOLLARS);
+        });
+
+        // Flushes as the sockets server's interval does, which is when a bill goes to whoever has it in reach, until the
+        // tool answers; then, with any bill left, until that one is at rest.
+        async function collect(agent: AgentUserContext, midway: (flushes: number) => void = () => {}): Promise<any>
+        {
+            let answer: any = undefined;
+            void AgentInventoryUtil.collectBill(agent).then(result => { answer = result; });
+            for (let i = 0; i < 600 && answer == undefined; ++i)
+            {
+                flush(1);
+                DollarBillUtil.stepAll(0.2);
+                midway(i);
+                await new Promise(resolve => setImmediate(resolve));
+            }
+            expect(answer).toBeDefined();
+            return answer;
+        }
+
+        async function arriveInTheOpen(name: string): Promise<AgentUserContext>
+        {
+            const agent = await arriveAgent(name);
+            await flushUntil(AgentToolUtil.walkTo(agent, {row: 32, column: 32}));
+            return agent;
+        }
+
+        // Lying still where it fell, past the reach of anyone, as it was spawned.
+        function settle(agent: AgentUserContext, bill: AddObjectSignal): void
+        {
+            for (let i = 0; i < 300 && DollarBillUtil.getCatchUpSignals(currentRoomID(agent)!).length > 0; ++i)
+            {
+                vi.setSystemTime(Date.now() + 200);
+                DollarBillUtil.stepAll(0.2);
+            }
+            expect(roomOf(agent).objectById[bill.objectId]).toBe(bill);
+        }
+
+        const flatDistance = (a: Vec3, b: Vec3) => Math.hypot(a.x - b.x, a.z - b.z);
+
+        it("are collected by collect_bill, which walks to the nearest and stops as soon as it has it", async () => {
+            const agent = await arriveInTheOpen("Collector");
+            const bill = waitForBill(agent);
+            settle(agent, bill);
+            const lay = {...bill.transform.pos};
+            agent.inbox.take();
+
+            const answer = await collect(agent);
+
+            expect(answer).toMatchObject({collected: true, dollars: 1});
+            expect(answer.you.at).toBeDefined();
+            expect((AgentToolUtil.look(agent) as any).bills).toEqual([]);
+            expect(agent.inventory[InventoryItemTypeEnumMap.Dollar]).toBe(1);
+            expect(agent.inbox.take().map(event => event.kind)).toContain("dollarCollected");
+            // It comes to whoever has it in reach, so there was no walking the rest of the way.
+            expect(flatDistance(positionOf(agent), lay)).toBeGreaterThan(2);
+            expect(flatDistance(positionOf(agent), lay)).toBeLessThan(DOLLAR_BILL_REACH + 1);
+        });
+
+        // Another bill, put straight into the room: the server spawns no more than one in a while.
+        function addBill(room: Room, like: AddObjectSignal, pos: Vec3): AddObjectSignal
+        {
+            const bill = new AddObjectSignal(room.id, like.sourceUserID, like.sourceUserName, like.objectTypeIndex, `bill-${pos.x}`,
+                new ObjectTransform(pos, {...like.transform.dir}, {...like.transform.scale}), {});
+            room.objectById[bill.objectId] = bill;
+            return bill;
+        }
+
+        it("go to the agent one at a time, the nearest first", async () => {
+            const agent = await arriveInTheOpen("Nearest");
+            const bill = waitForBill(agent);
+            settle(agent, bill);
+            const room = roomOf(agent);
+            const me = positionOf(agent);
+            Object.assign(bill.transform.pos, {x: me.x + 12, z: me.z});
+            const nearer = addBill(room, bill, {x: me.x + 7, y: bill.transform.pos.y, z: me.z});
+            const walk = vi.spyOn(AgentBodyUtil, "walk").mockImplementationOnce(async () => {
+                agent.inventory[InventoryItemTypeEnumMap.Dollar] = 1;
+                return "arrived";
+            });
+
+            await AgentInventoryUtil.collectBill(agent);
+
+            expect(walk).toHaveBeenCalledTimes(1);
+            expect(walk.mock.calls[0][2]?.faceToward).toBe(nearer.transform.pos);
+            walk.mockRestore();
+            delete room.objectById[nearer.objectId];
+        });
+
+        it("says when there is none to go after, without moving", async () => {
+            const agent = await arriveInTheOpen("Early");
+            const before = positionOf(agent);
+            expect((await AgentInventoryUtil.collectBill(agent) as any).error).toMatch(/no bills in this room/);
+            expect(positionOf(agent)).toEqual(before);
+        });
+
+        it("says so when someone else gets there first", async () => {
+            const agent = await arriveInTheOpen("Slow");
+            const bill = waitForBill(agent);
+            settle(agent, bill);
+            const room = roomOf(agent);
+
+            const answer = await collect(agent, flushes => {
+                if (flushes == 0)
+                    ServerObjectManager.removeObjectAsServer(room, agent.user, new RemoveObjectSignal(room.id, bill.objectId));
+            });
+
+            expect(answer).toMatchObject({collected: false, dollars: 0});
+            expect(answer.note).toMatch(/someone else got there first/);
+        });
+
+        it("goes on to another bill if it finds no way to the nearest", async () => {
+            const agent = await arriveInTheOpen("Patient");
+            const bill = waitForBill(agent);
+            const room = roomOf(agent);
+            const other = addBill(room, bill, {x: bill.transform.pos.x + 4, y: bill.transform.pos.y, z: bill.transform.pos.z});
+            const walk = vi.spyOn(AgentBodyUtil, "walk").mockImplementationOnce(async () => "noPath")
+                .mockImplementationOnce(async (_ctx, _goal, options) => {
+                    agent.inventory[InventoryItemTypeEnumMap.Dollar] = 1;
+                    expect(options?.until?.()).toBe(false);
+                    return "arrived";
+                });
+
+            const answer = await AgentInventoryUtil.collectBill(agent) as any;
+
+            expect(answer).toMatchObject({collected: true, dollars: 1});
+            expect(walk).toHaveBeenCalledTimes(2);
+            expect(walk.mock.calls[0][2]?.faceToward).not.toBe(walk.mock.calls[1][2]?.faceToward);
+            walk.mockRestore();
+            delete room.objectById[other.objectId];
+        });
+
+        it("walks after a bill the wind moved, but not for ever", async () => {
+            const agent = await arriveInTheOpen("Chaser");
+            const bill = waitForBill(agent);
+            settle(agent, bill);
+            const walk = vi.spyOn(AgentBodyUtil, "walk").mockImplementation(async () => "arrived");
+
+            const answer = await AgentInventoryUtil.collectBill(agent) as any;
+
+            expect(walk).toHaveBeenCalledTimes(3);
+            expect(answer).toMatchObject({collected: false, dollars: 0});
+            expect(answer.note).toMatch(/out of reach/);
+            walk.mockRestore();
+        });
+
+        it("gives up at once on a walk that was cut short, as by another tool", async () => {
+            const agent = await arriveInTheOpen("Hasty");
+            const bill = waitForBill(agent);
+            settle(agent, bill);
+            for (const outcome of ["interrupted", "timedOut"] as const)
+            {
+                const walk = vi.spyOn(AgentBodyUtil, "walk").mockImplementation(async () => outcome);
+                expect(await AgentInventoryUtil.collectBill(agent)).toMatchObject({collected: false});
+                expect(walk).toHaveBeenCalledTimes(1);
+                walk.mockRestore();
+            }
+        });
+
+        it("tell whats_new nothing as they come and go, being nobody's edit", async () => {
+            const agent = await arriveAgent("Bot-1");
+            const other = await arriveAgent("Bot-2");
+            agent.inbox.take();
+
+            const bill = waitForBill(agent);
+            const {transform} = AgentRoomUtil.getMyPlayer(other)!;
+            Object.assign(transform.pos, {x: 16, z: 16});
+            Object.assign(transform.dir, {x: -1, y: 0, z: 0});
+            Object.assign(bill.transform.pos, {x: 18, z: 16});
+            DollarBillUtil.stepAll(0.2);
+            expect(other.inventory[InventoryItemTypeEnumMap.Dollar]).toBe(1);
+            expect(agent.inbox.take()).toEqual([]);
+        });
+    });
+
     describe("tools", () => {
         it("look tells the room, where the agent stands, and the people nearest it with their speech", async () => {
             const human = await joinHuman("Alice");
@@ -920,20 +1196,108 @@ describe("AI agents", () => {
             harness.sendObjectMessage(human, "hi bot");
             const agent = await arriveAgent("Bot-1");
             const alice = () => (AgentToolUtil.look(agent) as any).people.find((person: any) => person.name == "Alice");
-            const switchMode = async (editing: string) => expect(await dispatchAs(human, "setObjectMetadataSignal",
-                new SetObjectMetadataSignal(HUB_ID, harness.getPlayerObjectId(human)!, ObjectMetadataKeyEnumMap.Editing,
-                    editing))).toBe(true);
             eventsOf(agent);
 
-            await switchMode("1");
+            expect(await setActivity(human, SpeakerActivityEnumMap.Editing)).toBe(true);
             expect(alice()).toEqual(expect.objectContaining({editing: true}));
             expect(alice().saying).toBeUndefined();
 
-            await switchMode("");
+            expect(await setActivity(human, SpeakerActivityEnumMap.None)).toBe(true);
             expect(alice().editing).toBeUndefined();
             expect(alice().saying).toBe("hi bot");
             expect(eventsOf(agent)).toEqual([]);
         });
+
+        it("look shows a person reading likewise, and a person typing with their words still up", async () => {
+            const human = await joinHuman("Alice");
+            harness.sendObjectMessage(human, "hi bot");
+            const agent = await arriveAgent("Bot-1");
+            const alice = () => (AgentToolUtil.look(agent) as any).people.find((person: any) => person.name == "Alice");
+            eventsOf(agent);
+
+            await setActivity(human, SpeakerActivityEnumMap.Reading);
+            expect(alice()).toEqual(expect.objectContaining({reading: true}));
+            expect(alice().saying).toBeUndefined();
+
+            await setActivity(human, SpeakerActivityEnumMap.Typing);
+            expect(alice()).toEqual(expect.objectContaining({typing: true, saying: "hi bot"}));
+            expect(alice().reading).toBeUndefined();
+
+            await setActivity(human, SpeakerActivityEnumMap.None);
+            expect(alice().typing).toBeUndefined();
+            expect(eventsOf(agent)).toEqual([]);
+        });
+
+        it("typing shows the room dots by the agent's name until it stops them, and tells nobody it is news", async () => {
+            const human = await joinHuman("Alice");
+            const agent = await arriveAgent("Bot-1");
+            const other = await arriveAgent("Bot-2");
+            eventsOf(other);
+            const bot = () => (AgentToolUtil.look(other) as any).people.find((person: any) => person.name == "Bot-1");
+
+            expect(await AgentToolUtil.typing(agent, true)).toEqual(expect.objectContaining({typing: true}));
+            expect(bot().typing).toBe(true);
+            expect(await AgentToolUtil.typing(agent, false)).toEqual(expect.objectContaining({typing: false}));
+            expect(bot().typing).toBeUndefined();
+
+            expect(receivedSignals(human)
+                .filter(({signalType, signal}) => signalType == "setObjectMetadataSignal"
+                    && signal.objectId == playerIdOf(agent) && signal.metadataKey == ObjectMetadataKeyEnumMap.Activity)
+                .map(({signal}) => signal.metadataValue))
+                .toEqual([SpeakerActivityEnumMap.Typing, SpeakerActivityEnumMap.None]);
+            expect(eventsOf(other)).toEqual([]);
+        });
+
+        it("say stops the dots, for free, while a line that isn't said leaves them up", async () => {
+            const agent = await arriveAgent("Bot-1");
+            const activity = () => harness.getPlayerObject(agent.user.id)?.metadata[ObjectMetadataKeyEnumMap.Activity]?.str;
+
+            await AgentToolUtil.typing(agent, true);
+            expect("error" in await AgentToolUtil.say(agent, "x".repeat(OBJECT_MESSAGE_MAX_LENGTH + 1))).toBe(true);
+            expect(activity()).toBe(SpeakerActivityEnumMap.Typing);
+
+            const level = UserBudgetUtil.getLevel(agent.user.id, "activityChanges");
+            expect(await AgentToolUtil.say(agent, "hello")).toEqual(expect.objectContaining({saying: "hello"}));
+            expect(activity()).toBe(SpeakerActivityEnumMap.None);
+            expect(UserBudgetUtil.getLevel(agent.user.id, "activityChanges")).toBe(level);
+        });
+
+        it("typing stops by itself once its time is up, and only then, each call giving it its time again", async () => {
+            const agent = await arriveAgent("Bot-1");
+            const activity = () => harness.getPlayerObject(agent.user.id)?.metadata[ObjectMetadataKeyEnumMap.Activity]?.str;
+
+            await AgentToolUtil.typing(agent, true);
+            vi.setSystemTime(Date.now() + AGENT_TYPING_EXPIRATION_MS - 1);
+            AgentTypingUtil.expireAll();
+            expect(activity()).toBe(SpeakerActivityEnumMap.Typing);
+
+            await AgentToolUtil.typing(agent, true);
+            vi.setSystemTime(Date.now() + AGENT_TYPING_EXPIRATION_MS - 1);
+            AgentTypingUtil.expireAll();
+            expect(activity()).toBe(SpeakerActivityEnumMap.Typing);
+
+            vi.setSystemTime(Date.now() + 1);
+            AgentTypingUtil.expireAll();
+            expect(activity()).toBe(SpeakerActivityEnumMap.None);
+            expect(AgentTypingUtil.expiresAtByUserID.size).toBe(0);
+        });
+
+        it("typing lasts its stay in a room, and shows nothing where the agent arrives next", async () => {
+            harness.seedHub(OTHER_HUB_ID);
+            const agent = await arriveAgent("Bot-1");
+            const activity = () => harness.getPlayerObject(agent.user.id)?.metadata[ObjectMetadataKeyEnumMap.Activity]?.str;
+
+            await AgentToolUtil.typing(agent, true);
+            await AgentToolUtil.travel(agent, OTHER_HUB_ID);
+            expect(currentRoomID(agent)).toBe(OTHER_HUB_ID);
+            expect(activity()).toBeUndefined();
+
+            vi.setSystemTime(Date.now() + AGENT_TYPING_EXPIRATION_MS);
+            AgentTypingUtil.expireAll();
+            expect(activity()).toBeUndefined();
+            expect(AgentTypingUtil.expiresAtByUserID.size).toBe(0);
+        });
+
 
         it("say sets the speech bubble the people in the room are sent, and records the agent as having chatted", async () => {
             const human = await joinHuman("Alice");
@@ -1042,6 +1406,7 @@ describe("AI agents", () => {
 
             expect((AgentToolUtil.look(agent) as any).room).toBeNull();
             expect("error" in (await AgentToolUtil.say(agent, "anyone?") as any)).toBe(true);
+            expect("error" in (await AgentToolUtil.typing(agent, true) as any)).toBe(true);
         });
     });
 
@@ -1995,13 +2360,17 @@ describe("AI agents", () => {
 
             const seen = AgentAppearanceUtil.look(agent) as any;
             expect(Object.keys(seen.appearance)).toEqual(["head", "eyes", "ears", "hat", "torso", "arms", "bottom"]);
-            // Every shape has words of its own, in the order the panel numbers them from 1.
+            // Every shape has words of its own, in the order they are numbered from 1, and all but the first three are locked.
             for (const [part, numShapes] of Object.entries(AgentAppearanceUtil.getShapeCounts()))
             {
                 expect(seen.shapes[part], part).toHaveLength(numShapes);
                 expect(new Set(seen.shapes[part]).size, part).toBe(numShapes);
                 expect(seen.appearance[part].shape_name).toBe(seen.shapes[part][seen.appearance[part].shape - 1]);
+                expect(seen.locked_shapes[part], part).toEqual([4, 5, 6]);
+                expect(seen.appearance[part].shape, part).toBeLessThanOrEqual(3);
             }
+            expect(seen.shape_price_dollars).toBe(10);
+            expect(seen.dollars).toBe(0);
             expect(seen.part_colors).toHaveLength(ColorUtil.getPaletteSize("Player"));
             expect(seen.eye_colors[0]).toBe("#189618");
 
@@ -2020,13 +2389,13 @@ describe("AI agents", () => {
             receivedSignals(human);
             const edits = UserBudgetUtil.getLevel(agent.user.id, "edit");
 
-            const changed = await AgentAppearanceUtil.change(agent, {head: {shape: 4, color: "#1020f0"},
-                eyes: {color: "#ff00ff"}, bottom: {shape: 5}}) as any;
+            const changed = await AgentAppearanceUtil.change(agent, {head: {shape: 2, color: "#1020f0"},
+                eyes: {color: "#ff00ff"}, bottom: {shape: 3}}) as any;
 
             // A color comes back as the nearest its palette holds.
-            expect(changed.appearance.head).toEqual({shape: 4, shape_name: "rolling pin, round on top", color: "#0905ff"});
+            expect(changed.appearance.head).toEqual({shape: 2, shape_name: "drum, its round face forward", color: "#0905ff"});
             expect(changed.appearance.eyes).toEqual({color: "#c83cc8"});
-            expect(changed.appearance.bottom.shape).toBe(5);
+            expect(changed.appearance.bottom.shape).toBe(3);
             expect(UserBudgetUtil.getLevel(agent.user.id, "edit")).toBeLessThan(edits);
 
             // The people there are sent it as a browser's change, and draw it.
@@ -2034,7 +2403,7 @@ describe("AI agents", () => {
                 && signal.metadataKey == ObjectMetadataKeyEnumMap.InstancedMeshComposition);
             expect(sent).toHaveLength(1);
             const drawn = drawnLook(AgentRoomUtil.getMyPlayer(agent)!);
-            expect(drawn.types.head).toBe(3);
+            expect(drawn.types.head).toBe(1);
             expect(ColorUtil.rgbToHex(drawn.colors.eye)).toBe("#c83cc8");
 
             await AgentToolUtil.leave(agent);
@@ -2059,6 +2428,111 @@ describe("AI agents", () => {
             expect(UserBudgetUtil.getLevel(agent.user.id, "edit")).toBeGreaterThanOrEqual(edits);
             expect(AgentRoomUtil.getMyPlayer(agent)!.metadata[ObjectMetadataKeyEnumMap.InstancedMeshComposition])
                 .toBeUndefined();
+        });
+
+        // What it holds, there and in its row, which a purchase goes by.
+        async function giveDollars(agent: AgentUserContext, dollars: number): Promise<void>
+        {
+            agent.inventory[InventoryItemTypeEnumMap.Dollar] = dollars;
+            (await DBUserUtil.findUserById(agent.user.id))!.inventory = {...agent.inventory};
+            ServerInventoryManager.tellUser(agent);
+            agent.inbox.take();
+        }
+
+        it("won't put on a locked shape, says what will, and spends nothing", async () => {
+            const agent = await arriveAgent("Window-Shopper");
+            await giveDollars(agent, 50);
+            const before = (AgentAppearanceUtil.look(agent) as any).appearance;
+
+            const refused = await AgentAppearanceUtil.change(agent, {head: {shape: 4, color: "#ffffff"}}) as any;
+
+            expect(refused.error).toMatch(/head shape 4 is locked: unlock_shape buys it for \$10/);
+            expect((AgentAppearanceUtil.look(agent) as any).appearance).toEqual(before);
+            expect(agent.inventory[InventoryItemTypeEnumMap.Dollar]).toBe(50);
+        });
+
+        it("buys a locked shape and puts it on, as a click in the panel does, for the people there to see", async () => {
+            const agent = await arriveAgent("Shopper");
+            const human = await joinHuman("Onlooker", currentRoomID(agent));
+            await giveDollars(agent, 12);
+            receivedSignals(human);
+
+            const unlocked = await AgentAppearanceUtil.unlock(agent, "head", 5) as any;
+
+            expect(unlocked.appearance.head.shape).toBe(5);
+            expect(unlocked.appearance.head.shape_name).toBe("box banded around the middle");
+            expect(agent.inventory[InventoryItemTypeEnumMap.Dollar]).toBe(2);
+            expect(drawnLook(AgentRoomUtil.getMyPlayer(agent)!).types.head).toBe(4);
+            const seen = AgentAppearanceUtil.look(agent) as any;
+            expect(seen.locked_shapes.head).toEqual([4, 6]);
+            expect(seen.locked_shapes.hat).toEqual([4, 5, 6]);
+            expect(seen.dollars).toBe(2);
+            expect(receivedSignals(human).filter(({signalType, signal}) => signalType == "setObjectMetadataSignal"
+                && signal.metadataKey == ObjectMetadataKeyEnumMap.InstancedMeshComposition)).toHaveLength(1);
+
+            // Spending isn't news.
+            expect((AgentToolUtil.whatsNew(agent) as any).events.filter((event: any) => event.kind == "dollarCollected")).toEqual([]);
+        });
+
+        it("takes off what it bought and puts it on again for nothing", async () => {
+            const agent = await arriveAgent("Keeper");
+            await giveDollars(agent, 10);
+            await AgentAppearanceUtil.unlock(agent, "torso", 6);
+
+            expect(((await AgentAppearanceUtil.change(agent, {torso: {shape: 1}})) as any).appearance.torso.shape).toBe(1);
+            expect(((await AgentAppearanceUtil.change(agent, {torso: {shape: 6}})) as any).appearance.torso.shape).toBe(6);
+            expect(agent.inventory[InventoryItemTypeEnumMap.Dollar]).toBe(0);
+
+            await AgentAppearanceUtil.change(agent, {torso: {shape: 1}});
+            expect(((await AgentAppearanceUtil.unlock(agent, "torso", 6)) as any).appearance.torso.shape).toBe(6);
+            expect(agent.inventory[InventoryItemTypeEnumMap.Dollar]).toBe(0);
+        });
+
+        it("just puts on a shape that is free, whatever it has", async () => {
+            const agent = await arriveAgent("Thrifty");
+            expect(((await AgentAppearanceUtil.unlock(agent, "hat", 2)) as any).appearance.hat.shape).toBe(2);
+        });
+
+        it("says what is wrong with what it can't buy, spending nothing", async () => {
+            const agent = await arriveAgent("Short");
+            await giveDollars(agent, 9);
+
+            expect((await AgentAppearanceUtil.unlock(agent, "hat", 4) as any).error).toMatch(/costs \$10, and you have \$9/);
+            expect((await AgentAppearanceUtil.unlock(agent, "tail", 4) as any).error).toMatch(/no part "tail"/);
+            expect((await AgentAppearanceUtil.unlock(agent, "eyes", 1) as any).error).toMatch(/no part "eyes"/);
+            expect((await AgentAppearanceUtil.unlock(agent, "hat", 7) as any).error).toMatch(/from 1 to 6/);
+            expect(agent.inventory[InventoryItemTypeEnumMap.Dollar]).toBe(9);
+        });
+
+        it("says when the row won't have it, spending nothing", async () => {
+            const agent = await arriveAgent("Unlucky");
+            await giveDollars(agent, 10);
+            vi.mocked(DBInventoryUtil.buyItem).mockResolvedValueOnce("refused");
+
+            expect((await AgentAppearanceUtil.unlock(agent, "hat", 4) as any).error).toMatch(/no dollars were spent/);
+            expect(agent.inventory[InventoryItemTypeEnumMap.Dollar]).toBe(10);
+        });
+
+        it("tells all it holds, and everything still for sale, by the numbers appearance gives", async () => {
+            const agent = await arriveAgent("Accountant");
+
+            const empty = AgentInventoryUtil.describe(agent) as any;
+            expect(empty.dollars).toBe(0);
+            expect(empty.shapes_held).toEqual([]);
+            expect(empty.shapes_for_sale).toHaveLength(18);
+            expect(empty.shapes_for_sale[0]).toEqual({part: "head", shape: 4, shape_name: "rolling pin, round on top"});
+            expect(empty.shape_price_dollars).toBe(10);
+            expect(new Set(empty.shapes_for_sale.map(({part}: any) => part)))
+                .toEqual(new Set(Object.keys(AgentAppearanceUtil.getShapeCounts())));
+
+            await giveDollars(agent, 13);
+            await AgentAppearanceUtil.unlock(agent, "hat", 5);
+
+            const after = AgentInventoryUtil.describe(agent) as any;
+            expect(after.dollars).toBe(3);
+            expect(after.shapes_held).toEqual([{part: "hat", shape: 5, shape_name: "crown"}]);
+            expect(after.shapes_for_sale).toHaveLength(17);
+            expect(after.shapes_for_sale).not.toContainEqual({part: "hat", shape: 5, shape_name: "crown"});
         });
 
         it("tells how someone in the room looks, by name, but nothing of a ghost", async () => {
@@ -2116,7 +2590,7 @@ describe("AI agents", () => {
             for (let i = 1; i < AGENT_MAX_PRESENT; ++i)
             {
                 ServerUserManager.socketUserContexts[`stand-in-${i}`] = new AgentUserContext(
-                    new User(`stand-in-${i}`, `Stand-in-${i}`, UserTypeEnumMap.Agent, "", ""), "", 0, "");
+                    new User(`stand-in-${i}`, `Stand-in-${i}`, UserTypeEnumMap.Agent, "", ""), "", 0, {}, "");
             }
 
             const {dbUser: latecomer} = await registerAgent("Latecomer");
@@ -2279,10 +2753,10 @@ describe("AI agents", () => {
                 const listed = (await client.listTools()).tools;
                 const tools = listed.map(tool => tool.name).sort();
                 expect(tools).toEqual(["add_object", "add_zone", "appearance", "camera", "change_appearance",
-                    "change_room_settings", "edit_object", "face",
-                    "find_pictures", "find_rooms", "leave", "look", "look_blocks", "move_object", "new_key", "paint_faces",
+                    "change_room_settings", "collect_bill", "edit_object", "face",
+                    "find_pictures", "find_rooms", "inventory", "leave", "look", "look_blocks", "move_object", "new_key", "paint_faces",
                     "place_blocks", "register", "remove_blocks", "remove_object", "room_settings", "say", "set_interests",
-                    "textures", "travel", "use_door", "walk_to", "whats_new"]);
+                    "textures", "travel", "typing", "unlock_shape", "use_door", "walk_to", "whats_new"]);
                 // A connector directory lists a tool by its title, and asks whether it only reads or may destroy.
                 for (const tool of listed)
                 {
@@ -2293,6 +2767,9 @@ describe("AI agents", () => {
                 }
                 expect(new Set(listed.map(tool => tool.title)).size).toBe(listed.length);
                 expect(client.getInstructions()).toContain("Authorization: Bearer <key>");
+                // What they are told of dollars reaches every tool that gains, spends or counts them.
+                for (const tool of ["collect_bill", "unlock_shape", "inventory", "change_appearance"])
+                    expect(client.getInstructions()!.split("Dollars are what you hold")[1], tool).toContain(tool);
                 // Connector directories refuse servers that send the model to outside instructions or have it ask
                 // its user for visits, so the manual is offered to whoever runs the agent, as information.
                 expect(client.getInstructions()).toMatch(/The manual, for whoever runs you:/);
@@ -2440,22 +2917,97 @@ describe("AI agents", () => {
             const agent = await connect(key);
             try
             {
-                const everything = {head: {shape: 6, color: "#ffffff"}, eyes: {color: "#2896d2"},
-                    ears: {shape: 6, color: "#ff9e00"}, hat: {shape: 5, color: "#dec900"}, torso: {shape: 6, color: "#0905ff"},
-                    arms: {shape: 4, color: "#979797"}, bottom: {shape: 4, color: "#2a2a2a"}};
+                const everything = {head: {shape: 3, color: "#ffffff"}, eyes: {color: "#2896d2"},
+                    ears: {shape: 3, color: "#ff9e00"}, hat: {shape: 2, color: "#dec900"}, torso: {shape: 3, color: "#0905ff"},
+                    arms: {shape: 2, color: "#979797"}, bottom: {shape: 2, color: "#2a2a2a"}};
                 const changed = read(await agent.callTool({name: "change_appearance", arguments: everything}));
-                expect(changed.appearance.hat).toEqual({shape: 5, shape_name: "crown", color: "#dec900"});
+                expect(changed.appearance.hat).toEqual({shape: 2, shape_name: "brimmed hat", color: "#dec900"});
                 expect(changed.appearance.eyes).toEqual({color: "#2896d2"});
                 expect(read(await agent.callTool({name: "appearance", arguments: {}})).appearance)
                     .toEqual(changed.appearance);
 
                 const refused = await agent.callTool({name: "change_appearance", arguments: {hat: {shape: 7}}}) as any;
                 expect(refused.isError).toBe(true);
+                const locked = await agent.callTool({name: "change_appearance", arguments: {hat: {shape: 5}}}) as any;
+                expect(locked.isError).toBe(true);
+                expect(locked.content[0].text).toMatch(/unlock_shape/);
             }
             finally
             {
                 await agent.close();
             }
+        });
+
+        it("unlocks a shape, by its part's name as appearance gives it, and refuses what can't be", async () => {
+            const {key, dbUser} = await registerAgent("Mcp-Shopper");
+            const agent = await connect(key);
+            try
+            {
+                const broke = await agent.callTool({name: "unlock_shape", arguments: {part: "hat", shape: 5}}) as any;
+                expect(broke.isError).toBe(true);
+                expect(broke.content[0].text).toMatch(/costs \$10, and you have \$0/);
+
+                const context = ServerUserManager.getSocketUserContext(dbUser.id!)!;
+                context.inventory[InventoryItemTypeEnumMap.Dollar] = 10;
+                (await DBUserUtil.findUserById(dbUser.id!))!.inventory = {...context.inventory};
+
+                const unlocked = read(await agent.callTool({name: "unlock_shape", arguments: {part: "hat", shape: 5}}));
+                expect(unlocked.appearance.hat.shape_name).toBe("crown");
+                expect(read(await agent.callTool({name: "appearance", arguments: {}})).locked_shapes.hat).toEqual([4, 6]);
+
+                const noSuchPart = await agent.callTool({name: "unlock_shape", arguments: {part: "eyes", shape: 1}}) as any;
+                expect(noSuchPart.isError).toBe(true);
+            }
+            finally
+            {
+                await agent.close();
+            }
+        });
+
+        it("tells of inventory and collecting a bill through the tools, as a read and an action", async () => {
+            const {key, dbUser} = await registerAgent("Mcp-Counter");
+            const agent = await connect(key);
+            try
+            {
+                const held = read(await agent.callTool({name: "inventory", arguments: {}}));
+                expect(held).toMatchObject({dollars: 0, shapes_held: [], shape_price_dollars: 10});
+                expect(held.shapes_for_sale).toHaveLength(18);
+
+                // Looking at what it holds is paid for as looking is.
+                const actions = UserBudgetUtil.getLevel(dbUser.id!, "agentActions");
+                await agent.callTool({name: "inventory", arguments: {}});
+                expect(UserBudgetUtil.getLevel(dbUser.id!, "agentActions")).toBe(actions);
+
+                const listed = (await agent.listTools()).tools;
+                expect(listed.find(tool => tool.name == "inventory")!.annotations?.readOnlyHint).toBe(true);
+                expect(listed.find(tool => tool.name == "collect_bill")!.annotations?.readOnlyHint).toBe(false);
+
+                const none = await agent.callTool({name: "collect_bill", arguments: {}}) as any;
+                expect(none.isError).toBe(true);
+                expect(none.content[0].text).toMatch(/no bills in this room/);
+            }
+            finally
+            {
+                await agent.close();
+            }
+        });
+
+        it("keeps what the manual says of dollars true, tool by tool and number by number", () => {
+            const manual = fs.readFileSync(path.resolve(__dirname, "../../../public/skill.md"), "utf8");
+            const dollars = manual.split("## 5. Dollars")[1].split("## 6. Manners")[0];
+            for (const tool of ["inventory", "look", "whats_new", "collect_bill", "walk_to", "face", "appearance",
+                "unlock_shape", "change_appearance"])
+                expect(dollars, tool).toContain(`\`${tool}\``);
+            expect(dollars).toContain(`arriving gives you $${LOGIN_REWARD_DOLLARS} once a day, ${LOGIN_REWARD_INTERVAL_MS / HOUR_IN_MS} hours or more`);
+            expect(dollars).toContain(`spends $${PLAYER_SHAPE_PRICE_DOLLARS} on it`);
+            expect(DOLLAR_BILL_REACH / VOXEL_CELL_SIZE).toBe(10);
+            expect(dollars).toContain("about ten cells away");
+            expect(NUM_FREE_PLAYER_PART_TYPES).toBe(3);
+            expect(dollars).toContain("six shapes, the first three free");
+            for (const numShapes of Object.values(AgentAppearanceUtil.getShapeCounts()))
+                expect(numShapes).toBe(6);
+            expect(manual).toContain("(see step 8)");
+            expect(manual).toContain("## 8. Coming back");
         });
 
         it("keeps the manual's ClawHub copy in step with it, but for the license ClawHub requires", () => {

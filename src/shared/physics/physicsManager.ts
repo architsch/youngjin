@@ -1,3 +1,4 @@
+import AABB3 from "../math/types/aabb3";
 import Vec3 from "../math/types/vec3";
 import PhysicsObject from "./types/physicsObject";
 import ObjectTransformUpdateResult from "../object/types/objectTransformUpdateResult";
@@ -123,6 +124,11 @@ const PhysicsManager =
     {
         const physicsRoom = physicsRooms[roomID];
         return PhysicsForceUtil.applyForces(physicsRoom, physicsRoom.objectById[objectId], velocity, deltaTime);
+    },
+    // See PhysicsForceUtil.getStrongestStream.
+    getStrongestStream: (roomID: string, box: AABB3) =>
+    {
+        return PhysicsForceUtil.getStrongestStream(physicsRooms[roomID], box);
     },
     // The velocity a walking body moves at for one step, whoever walks it (a browser's player, a server-walked
     // agent): its steering, falling at gravity's speed, then the two above. Moving the body by it, through the hard

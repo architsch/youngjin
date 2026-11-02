@@ -14,6 +14,10 @@ const ATLAS_COLS = 16;
 const ATLAS_ROWS = 8;
 // Every drawing stays this far inside its frame, so mipmaps never blend neighbouring sprites together.
 const GUTTER = 3;
+// "+$1" by the width of its frame, which leaves room at the sides for its glow.
+const DOLLAR_GAIN_FONT_SIZE = 0.44;
+const DOLLAR_GAIN_GLOW_BLUR = 0.09;
+const DOLLAR_GAIN_GLOW_PASSES = 3;
 
 interface SpriteEntry
 {
@@ -33,6 +37,8 @@ const SPRITE_ENTRIES: SpriteEntry[] = [
     {id: "streak", frameCols: 1, frameRows: 2, frames: 1, draw: drawStreak},
     {id: "flame", frameCols: 1, frameRows: 2, frames: 4, draw: drawFlame},
     {id: "fanBlades", frameCols: 4, frameRows: 4, frames: 1, draw: drawFanBlades},
+    {id: "dollarGain", frameCols: 4, frameRows: 4, frames: 1, draw: drawDollarGain},
+    {id: "dollarGainGlow", frameCols: 4, frameRows: 4, frames: 1, draw: drawDollarGainGlow},
 ];
 
 const spriteById: {[id: string]: ParticleAtlasSprite} = {};
@@ -152,6 +158,25 @@ function drawRing(ctx: CanvasRenderingContext2D, width: number, height: number)
     gradient.addColorStop(1, "rgba(255,255,255,0)");
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, width, height);
+}
+
+// "+$1" across the middle of its frame, as a square frame has it.
+function drawDollarGain(ctx: CanvasRenderingContext2D, width: number, height: number)
+{
+    ctx.font = `bold ${Math.round(DOLLAR_GAIN_FONT_SIZE * width)}px Arial, Helvetica, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "rgb(255,255,255)";
+    ctx.fillText("+$1", 0.5 * width, 0.5 * height);
+}
+
+// The same, spread out into the light around it, which the drawing over it stays sharp within.
+function drawDollarGainGlow(ctx: CanvasRenderingContext2D, width: number, height: number)
+{
+    ctx.shadowColor = "rgb(255,255,255)";
+    ctx.shadowBlur = DOLLAR_GAIN_GLOW_BLUR * width;
+    for (let pass = 0; pass < DOLLAR_GAIN_GLOW_PASSES; ++pass)
+        drawDollarGain(ctx, width, height);
 }
 
 // A lumpy cloud of overlapping blobs, for dust and smoke.

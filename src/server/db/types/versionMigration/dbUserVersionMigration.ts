@@ -1,3 +1,6 @@
+import PlayerShapeItemUtil from "../../../../shared/inventory/util/playerShapeItemUtil";
+import StringUtil from "../../../../shared/math/util/stringUtil";
+import { ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
 import { TUTORIAL_SINGLE_PLAYER_MODE } from "../../../../shared/system/sharedConstants";
 import { DBVersionMigration } from "./dbVersionMigration";
 
@@ -34,6 +37,21 @@ const DBUserVersionMigration: DBVersionMigration = [
     async (row: any) => {
         row.agentKeyHash = row.agentKeyHash ?? "";
         row.agentInterests = row.agentInterests ?? "";
+        return row;
+    },
+    // v6 -> v7: add "inventory" and "lastLoginRewardAt", whose wait runs from the user's last visit. Defaulted, not assigned,
+    // as with "funnel": DBInventoryUtil writes both outside DBQuery. Shapes now bought stay free to whoever wears one in
+    // their saved look (see PlayerShapeItemUtil), read as that look was stored until now: the codec's two characters, then
+    // a shape for each part.
+    async (row: any) => {
+        row.inventory = row.inventory ?? {};
+        row.lastLoginRewardAt = row.lastLoginRewardAt ?? row.lastLoginAt ?? 0;
+        const look = row.playerMetadata?.[ObjectMetadataKeyEnumMap.InstancedMeshComposition] ?? "";
+        ["head", "ear", "hat", "torso", "arm", "bottom"].forEach((part, index) => {
+            const itemType = PlayerShapeItemUtil.getItemType(part, StringUtil.convertVisibleASCIIToRawNumber(look, 2 + index, 0));
+            if (PlayerShapeItemUtil.getPrice(itemType) != undefined)
+                row.inventory[itemType] = 1;
+        });
         return row;
     },
 ];

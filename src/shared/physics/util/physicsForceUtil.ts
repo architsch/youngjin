@@ -97,16 +97,35 @@ const PhysicsForceUtil =
             ? carried : {x: 0, y: 0, z: 0};
         return Vector3DUtil.add(velocity, object.carriedVelocity);
     },
+    // The stream pushing hardest at a box, if any has hold of it: for what the wind carries along a path rather than
+    // moving as a body (see DollarBillUtil). distance: how far it has come where it first meets the box.
+    getStrongestStream: (physicsRoom: PhysicsRoom, box: AABB3)
+        : {normal: Vec3, distance: number, acceleration: number, range: number} | undefined =>
+    {
+        let strongest: ReturnType<typeof getHold> = undefined;
+        let strongestPush = 0;
+        for (const emitter of getEmitters(physicsRoom))
+        {
+            const hold = getHold(physicsRoom.room, emitter, box);
+            const push = (hold == undefined) ? 0 : hold.exposure * hold.acceleration * (1 - hold.distance / hold.range);
+            if (push > strongestPush)
+            {
+                strongest = hold;
+                strongestPush = push;
+            }
+        }
+        return strongest;
+    },
 }
 
-// The room's emitters, but for the object itself.
-function getEmitters(physicsRoom: PhysicsRoom, object: PhysicsObject): AddObjectSignal[]
+// The room's emitters, but for the object itself, if there is one.
+function getEmitters(physicsRoom: PhysicsRoom, object?: PhysicsObject): AddObjectSignal[]
 {
     const emitters: AddObjectSignal[] = [];
     for (const emitterId of physicsRoom.forceEmitterIds)
     {
         const emitter = physicsRoom.room.objectById[emitterId];
-        if (emitter != undefined && emitterId != object.objectId)
+        if (emitter != undefined && emitterId != object?.objectId)
             emitters.push(emitter);
     }
     return emitters;

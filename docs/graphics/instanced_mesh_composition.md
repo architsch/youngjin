@@ -45,7 +45,7 @@ Metadata is stored and sent once per object, so a spelled-out composition is exp
 - A type's appearances are the structural variants its codec lists (every distinct set of parts it can build), or its pre-encoded entries for indexed types. A new part type or variant must be reachable from that list. A resizable type is counted at its largest.
 - A cap is shared by its category's types (see `ObjectCategoryConfigMap`), so a category contributes its greediest type once rather than every type it holds.
 - Objects vary independently, so each mesh's maximum is taken on its own; the result is exact, not padded.
-- Only composed meshes are listed. Voxel quads, pictures (a canvas's or a prop's), labels and mirrors' glass size their own meshes from their room caps.
+- Only composed meshes are listed. Voxel quads, pictures (a canvas's or a prop's), labels, mirrors' glass and dollar bills size their own meshes from their room caps.
 - The inputs are code, so an integration test fails when the committed table no longer matches; re-run SSG.
 
 ## Thumbnails

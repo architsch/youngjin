@@ -13,7 +13,7 @@ const clientTemp: THREE.Vector2 = new THREE.Vector2();
 const PointerCoordUtil =
 {
     // NDC = Normalized Device Coordinates (with respect to the game canvas)
-    getNDC: (ev: PointerEvent, outVec: THREE.Vector2): THREE.Vector2 =>
+    getNDC: (ev: {clientX: number, clientY: number}, outVec: THREE.Vector2): THREE.Vector2 =>
     {
         const rect = GraphicsManager.getGameCanvas().getBoundingClientRect();
         outVec.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;

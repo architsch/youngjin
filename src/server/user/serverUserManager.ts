@@ -228,8 +228,8 @@ function extractPlayerMetadata(userID: string): {[key: string]: string} | undefi
         return undefined;
     const raw = playerObject.metadata;
     const out: {[key: string]: string} = {};
-    // Whether the user is editing lasts their stay, since every room arrival is in play mode (see PlayerEditingUtil).
-    for (const key of Object.keys(raw).filter(key => Number(key) != ObjectMetadataKeyEnumMap.Editing))
+    // What the user is busy with lasts their stay: their browser tells it again on each arrival (see PlayerActivityUtil).
+    for (const key of Object.keys(raw).filter(key => Number(key) != ObjectMetadataKeyEnumMap.Activity))
         out[key] = raw[key as any].str;
     return out;
 }

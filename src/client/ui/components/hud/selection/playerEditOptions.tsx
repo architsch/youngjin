@@ -8,6 +8,6 @@ export default function PlayerEditOptions(props: EditOptionsProps)
     // Full width, so the row can scroll horizontally instead of growing.
     return <div className="flex flex-col gap-1 w-full">
         <UserIdentityRow/>
-        <CustomizePlayerPanel gameObject={props.selection.gameObject}/>
+        <CustomizePlayerPanel gameObject={props.selection.gameObject} shapesLocked={true}/>
     </div>;
 }

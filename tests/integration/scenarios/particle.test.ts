@@ -70,7 +70,7 @@ import { ObjectMetadata } from "../../../src/shared/object/types/objectMetadata"
 import AnimatedSprite from "../../../src/client/object/components/animatedSprite";
 import GameObject from "../../../src/client/object/types/gameObject/gameObject";
 import ClientVoxelManager from "../../../src/client/voxel/clientVoxelManager";
-import { roomShapeChangedObservable, voxelBlockEditObservable } from "../../../src/client/system/clientObservables";
+import { objectCollectedObservable, roomShapeChangedObservable, voxelBlockEditObservable } from "../../../src/client/system/clientObservables";
 import Vec2 from "../../../src/shared/math/types/vec2";
 import Waveform from "../../../src/shared/math/types/waveform";
 import WaveformUtil from "../../../src/shared/math/util/waveformUtil";
@@ -83,7 +83,8 @@ import AddVoxelBlockSignal from "../../../src/shared/voxel/types/update/addVoxel
 import RemoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/removeVoxelBlockSignal";
 import SetVoxelQuadTextureSignal from "../../../src/shared/voxel/types/update/setVoxelQuadTextureSignal";
 import Room from "../../../src/shared/room/types/room";
-import { VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
+import { PLAYER_HEIGHT } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import { COLLISION_LAYER_HEIGHT, STOREY_FLOOR_COLLISION_LAYER, VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 import { createEditingUser } from "../helpers/mockUser";
 import { buildPillar, createRoom, quadIndexOf } from "../helpers/selectionHarness";
 
@@ -520,6 +521,53 @@ describe("voxel block events", () => {
         ]);
         // Retexturing leaves the room's shape alone.
         expect(shapeChanges).toEqual([ROOM_ID, ROOM_ID]);
+    });
+
+    it("plays someone's collecting a dollar bill where the bill went, for all to see", () => {
+        const play = vi.spyOn(ParticleSystem, "play").mockImplementation(() => {});
+        const bill = new AddObjectSignal(ROOM_ID, "", "", ObjectTypeConfigMap.getIndexByType("DollarBill"), "@1",
+            new ObjectTransform({x: 3, y: 1, z: 4}, {x: 0, y: 0, z: 1}, {x: 1, y: 1, z: 1}));
+        try
+        {
+            objectCollectedObservable.set(bill);
+            expect(play).toHaveBeenCalledTimes(1);
+            const [effect, place] = play.mock.lastCall!;
+            expect(effect).toBe("dollarCollected");
+            expect(place).toEqual({x: 3, y: 1, z: 4});
+            expect(ParticleEffectConfigMap.getConfig("dollarCollected")).toBeDefined();
+        }
+        finally
+        {
+            play.mockRestore();
+        }
+    });
+
+    it("keeps what a dollar gained says clear of the head it comes out of, and under a storey's ceiling, ending as it fades", () => {
+        const BODY_MIDDLE = 0.5 * PLAYER_HEIGHT, STOREY_CEILING = STOREY_FLOOR_COLLISION_LAYER * COLLISION_LAYER_HEIGHT;
+        // How much of its square its words take up, in height.
+        const WORDS_HEIGHT_SHARE = 0.28;
+        for (const {speed, drag, lifetime, size} of ParticleEffectConfigMap.getConfig("dollarCollected")!.layers)
+        {
+            const rise = speed![1] / drag! * (1 - Math.exp(-drag! * lifetime![1]));
+            const halfHeight = 0.5 * WORDS_HEIGHT_SHARE * size![1];
+            expect(BODY_MIDDLE + rise - halfHeight).toBeGreaterThan(PLAYER_HEIGHT);
+            expect(BODY_MIDDLE + rise + halfHeight).toBeLessThan(STOREY_CEILING);
+        }
+    });
+
+    it("keeps what a dollar gained says small beside the body it comes out of, both layers the one size", () => {
+        for (const {size} of ParticleEffectConfigMap.getConfig("dollarCollected")!.layers)
+            expect(size).toEqual([0.96, 0.96]);
+    });
+
+    it("draws what a dollar gained says upright, whichever way it is looked at", () => {
+        for (const layer of ParticleEffectConfigMap.getConfig("dollarCollected")!.layers)
+        {
+            expect(layer.orientation).toBe("velocity");
+            expect(layer.gravity ?? 0).toBe(0);
+            expect(layer.spin).toBeUndefined();
+            expect(layer.spread ?? 0).toBe(0);
+        }
     });
 
     it("plays a removal's burst in the middle of the block that was there", () => {

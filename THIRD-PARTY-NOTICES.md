@@ -47,6 +47,17 @@ The directory keeps `OFL.txt`, the authoritative terms, and a `README.md`
 recording how the subset was made. The OFL covers the font alone; the code that
 uses it stays under Apache-2.0.
 
+### Dollar bill texture
+
+`public/app/assets/resources/DollarBill/dollarBill.webp` is a reduced copy of
+[File:US one dollar bill, obverse, series 2009.jpg](https://commons.wikimedia.org/wiki/File:US_one_dollar_bill,_obverse,_series_2009.jpg)
+from Wikimedia Commons, a scan by ESEMES of a United States banknote, a work of the
+United States government, which Commons lists as public domain. The game inlines it
+into the client bundle as the face of its $1 bills. Being a picture of money, it is
+also subject to the law on that (18 U.S.C. § 504, 31 CFR Part 411), whatever its
+copyright; the directory's `README.md` records how it was made, and how it is kept
+to that law.
+
 ### Pictures from third parties
 
 The pictures listed below, under `public/app/assets/pictures/` (with their

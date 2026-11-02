@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import App from "../../../../app";
 import ClientObjectManager from "../../../../object/clientObjectManager";
-import { voxelQuadSelectionObservable } from "../../../../system/clientObservables";
+import { debugPanelOpenObservable, voxelQuadSelectionObservable } from "../../../../system/clientObservables";
 import VoxelQueryUtil from "../../../../../shared/voxel/util/voxelQueryUtil";
 import Button from "../../input/button";
 import ThingsPoolEnv from "../../../../system/types/thingsPoolEnv";
@@ -10,15 +10,21 @@ import GraphicsManager from "../../../../graphics/graphicsManager";
 import ParticleSystem from "../../../../graphics/particle/particleSystem";
 import DebugCommandUtil from "../../../../system/util/debugCommandUtil";
 
+// The debug panel, which shows nothing until it is opened (see DebugPanelUtil).
 export default function DebugStats({env}: Props)
 {
+    const [display, setDisplay] = useState<boolean>(debugPanelOpenObservable.peek());
     const [state, setState] = useState<DebugStatsState>({
-        display: false, fpsDesc: "?", playerPosDesc: "?", particleDesc: "?", voxelDesc: "",
-        voxelQuadSelectionDesc: "", debugCommand: "",
+        fpsDesc: "?", playerPosDesc: "?", particleDesc: "?", voxelDesc: "", voxelQuadSelectionDesc: "", debugCommand: "",
     });
 
     useEffect(() => {
-        if (!state.display)
+        debugPanelOpenObservable.addListener("ui.debugStats", setDisplay);
+        return () => debugPanelOpenObservable.removeListener("ui.debugStats");
+    }, []);
+
+    useEffect(() => {
+        if (!display)
             return;
         const interval = setInterval(() => { // start the clock
             const fpsDesc = App.getFPS().toString();
@@ -62,7 +68,10 @@ export default function DebugStats({env}: Props)
         }, 250);
 
         return () => clearInterval(interval); // stop the clock
-    }, [state.display]);
+    }, [display]);
+
+    if (!display)
+        return null;
 
     const voxelDescLine = (state.voxelDesc.length > 0)
         ? <><br/>Voxel: {state.voxelDesc}</>
@@ -73,13 +82,8 @@ export default function DebugStats({env}: Props)
         : null;
     
     return <div className={className}>
-        <Button
-            name={state.display ? "Close Debugger" : "🔍"}
-            size="xs"
-            color={state.display ? "red" : "transparent"}
-            onClick={() => setState({...state, display: !state.display})}
-        />
-        {state.display && <div className="m-0 p-1 text-xs text-gray-400 text-nowrap bg-black overflow-auto pointer-events-auto rounded-md">
+        <Button name="Close Debugger" size="xs" color="red" onClick={() => debugPanelOpenObservable.set(false)}/>
+        <div className="m-0 p-1 text-xs text-gray-400 text-nowrap bg-black overflow-auto pointer-events-auto rounded-md">
             Server: {env.serverType}{env.gitCommit ? ` (${env.gitCommit})` : ""}, FPS: {state.fpsDesc}, Position: {state.playerPosDesc}
             <br/>User: {JSON.stringify(App.getUser())}
             <br/>Particles: {state.particleDesc}
@@ -96,7 +100,7 @@ export default function DebugStats({env}: Props)
                     setState({...state, debugCommand: ""});
                 }}/>
             </div>
-        </div>}
+        </div>
     </div>;
 }
 
@@ -104,7 +108,6 @@ const className = "flex flex-col justify-start absolute left-0 top-0 max-w-full 
 
 interface DebugStatsState
 {
-    display: boolean;
     fpsDesc: string;
     playerPosDesc: string;
     particleDesc: string;

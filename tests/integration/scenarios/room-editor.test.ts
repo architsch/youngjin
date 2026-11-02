@@ -7,7 +7,7 @@
  * a Yes. In a multiplayer room every one of those stays as it was. The room the page's address names stays in the
  * address and in reconnections until another room is entered.
  */
-import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, afterAll, afterEach, vi } from "vitest";
 import fs from "fs";
 import path from "path";
 
@@ -66,6 +66,10 @@ vi.mock("../../../src/client/graphics/particle/particleSystem", () => ({
     default: { load: async () => {}, unload() {}, update() {} },
 }));
 
+vi.mock("../../../src/client/object/types/gameObject/dollarBillGameObject", () => ({
+    default: { preload: async () => {}, updateFlying() {}, landFlying() {} },
+}));
+
 vi.mock("../../../src/client/graphics/light/util/roomLightingUtil", () => ({
     default: { applyRoomLighting() {}, applyIncoming: () => true },
 }));
@@ -79,7 +83,6 @@ vi.mock("../../../src/client/graphics/types/gizmo/colliderDebugGizmo", () => ({}
 vi.mock("../../../src/client/graphics/types/gizmo/objectAttachmentEditGizmos", () => ({}));
 vi.mock("../../../src/client/graphics/types/gizmo/volumeEditGizmos", () => ({}));
 vi.mock("../../../src/client/voxel/util/restrictedZoneOutlineUtil", () => ({}));
-vi.mock("../../../src/client/object/util/playerEditingUtil", () => ({}));
 vi.mock("../../../src/client/graphics/particle/util/particleTriggerUtil", () => ({}));
 vi.mock("../../../src/client/graphics/types/gizmo/genericWorldSpaceGizmos", () => ({
     preloadGenericWorldSpaceGizmos: async () => {},
@@ -90,10 +93,11 @@ import App from "../../../src/client/app";
 import SocketsClient from "../../../src/client/networking/client/socketsClient";
 import DoorGameObject from "../../../src/client/object/types/gameObject/doorGameObject";
 import RoomEditorUtil from "../../../src/client/singlePlayer/util/roomEditorUtil";
-import { connectionStateObservable, notificationMessageObservable,
+import { connectionStateObservable, debugPanelOpenObservable, notificationMessageObservable,
     popupStateObservable } from "../../../src/client/system/clientObservables";
 import { endClientProcess, ongoingClientProcessExists,
     tryStartClientProcess } from "../../../src/client/system/types/clientProcess";
+import DebugPanelUtil from "../../../src/client/system/util/debugPanelUtil";
 import VersionSyncUtil from "../../../src/client/system/util/versionSyncUtil";
 import PopupState from "../../../src/client/ui/types/popupState";
 import PopupUtil from "../../../src/client/ui/util/popupUtil";
@@ -468,6 +472,27 @@ describe("the room editor keeping its room", () => {
         // The room the door leads to is then one the user asked for.
         await arrive(hubRoom());
         expect(isIn("hub")).toBe(true);
+    });
+});
+
+describe("the debug panel, which only a line of chat opens", () => {
+    afterEach(() => debugPanelOpenObservable.set(false));
+
+    it("opens in a multiplayer room on that line, whatever its case, which isn't then said", async () => {
+        await putIn("hub");
+        expect(DebugPanelUtil.tryOpenByChat("hello there")).toBe(false);
+        expect(debugPanelOpenObservable.peek()).toBe(false);
+
+        expect(DebugPanelUtil.tryOpenByChat(" :DEBUG ")).toBe(true);
+        expect(debugPanelOpenObservable.peek()).toBe(true);
+    });
+
+    it("is had in the room editor, which needs its commands, and in no other single-player room", () => {
+        const mode = new Room("a-mode", "A Mode", RoomTypeEnumMap.SinglePlayer, "", "", "default",
+            RoomPrefsUtil.getDefaultPrefsString(), new VoxelGrid([], new VoxelQuadsRuntimeMemory()), new ObjectGroup([]));
+        expect(DebugPanelUtil.isAvailable(editorRoom())).toBe(true);
+        expect(DebugPanelUtil.isAvailable(mode)).toBe(false);
+        expect(DebugPanelUtil.isAvailable(undefined)).toBe(false);
     });
 });
 

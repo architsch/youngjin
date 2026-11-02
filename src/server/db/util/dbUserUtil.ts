@@ -37,6 +37,8 @@ const DBUserUtil =
             // Stamped at creation, so a concurrent milestone can't append to an empty funnel and lose Arrived.
             funnel: FunnelMilestoneEnumMap.Arrived,
             playerMetadata: {},
+            inventory: {},
+            lastLoginRewardAt: createdAt,
             agentKeyHash,
             agentInterests: "",
         };

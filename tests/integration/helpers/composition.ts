@@ -8,7 +8,7 @@ import DoorObjectTypeConfig from "../../../src/shared/object/types/objectTypeCon
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
-import { PlayerCompositionCodec } from "../../../src/shared/graphics/mesh/composition/types/compositionCodec/playerCompositionCodec";
+import { getRandomFreeComposition, PlayerCompositionCodec } from "../../../src/shared/graphics/mesh/composition/types/compositionCodec/playerCompositionCodec";
 import { DoorCompositionCodec } from "../../../src/shared/graphics/mesh/composition/types/compositionCodec/doorCompositionCodec";
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionCodecType";
 import { InstancedMeshCompositionParams } from "../../../src/shared/graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
@@ -33,10 +33,10 @@ export function playerCodecPrefix(
         + StringUtil.convertRawNumberToVisibleASCII(codecVersion);
 }
 
-/** A valid, fully-formed composition metadata string, as a real client would emit it. */
+/** A valid, fully-formed composition metadata string, as a real client would emit it for a user who has bought no shapes. */
 export function encodePlayerComposition(seed: number): string
 {
-    const {params, parts} = PlayerCompositionCodec.getRandomComposition(seed, UNIT_VEC3);
+    const {params, parts} = getRandomFreeComposition(seed);
     return playerCodecPrefix() + PlayerCompositionCodec.encode(params, parts);
 }
 

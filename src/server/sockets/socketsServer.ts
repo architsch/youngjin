@@ -20,8 +20,10 @@ import EditRateLogUtil from "../user/util/editRateLogUtil";
 import PlayerMessageExpiryUtil from "../user/util/playerMessageExpiryUtil";
 import AgentBodyUtil from "../agent/util/agentBodyUtil";
 import HelperAgentUtil from "../agent/util/helperAgentUtil";
+import AgentTypingUtil from "../agent/util/agentTypingUtil";
 import AgentCameraUtil from "../agent/util/agentCameraUtil";
 import AgentUserContext from "../agent/types/agentUserContext";
+import DollarBillUtil from "../inventory/util/dollarBillUtil";
 
 let io: socketIO.Server;
 let signalProcessingInterval: ReturnType<typeof setInterval>;
@@ -109,14 +111,16 @@ const SocketsServer =
             }
         });
 
-        // Signals are batched and flushed on an interval. Agents' bodies and walking helpers move first, and messages whose
-        // time is up are cleared, so that their moves and clears go out with it.
+        // Signals are batched and flushed on an interval. Agents' bodies, walking helpers and dollar bills move first, and
+        // messages and agents' typing whose time is up are cleared, so that their moves and clears go out with it.
         let lastFlushAt = Date.now();
         signalProcessingInterval = setInterval(() => {
             const now = Date.now();
             AgentBodyUtil.stepAll((now - lastFlushAt) / 1000);
             HelperAgentUtil.stepAll((now - lastFlushAt) / 1000);
+            DollarBillUtil.stepAll((now - lastFlushAt) / 1000);
             PlayerMessageExpiryUtil.expireAll();
+            AgentTypingUtil.expireAll();
             lastFlushAt = now;
 
             for (const userID in ServerUserManager.socketUserContexts)
@@ -225,10 +229,10 @@ function makeAuthMiddleware(passCondition: (user: User) => Boolean): SocketMiddl
                 return;
             }
 
-            // Set after the spread so client handshake values are overwritten. funnel and loginCount are server-only
-            // state, deliberately not part of User.
+            // Set after the spread so client handshake values are overwritten. funnel, loginCount and inventory are
+            // server-only state, deliberately not part of User.
             socket.handshake.auth = { ...socket.handshake.auth, user, funnel: dbUser.funnel ?? "",
-                loginCount: DBUserUtil.getLoginCount(dbUser) };
+                loginCount: DBUserUtil.getLoginCount(dbUser), inventory: dbUser.inventory ?? {} };
             next();
         }
         catch (err)

@@ -201,8 +201,8 @@ vi.mock("../../../src/server/db/util/dbUserUtil", () => ({
             singlePlayerMode: string = "tutorial", acquisitionSource: string = "direct", agentKeyHash: string = "") => {
             const id = `user-auto-${++_autoUserCounter.value}`;
             _userStore[id] = { id, userName, userType, email, singlePlayerMode, lastRoomID: "", ownedRoomID: "",
-                ftue: "", playerMetadata: {}, acquisitionSource, funnel: "", agentKeyHash, agentInterests: "",
-                lastLoginAt: Date.now(), loginCount: 0 };
+                ftue: "", playerMetadata: {}, inventory: {}, lastLoginRewardAt: Date.now(), acquisitionSource, funnel: "", agentKeyHash,
+                agentInterests: "", lastLoginAt: Date.now(), loginCount: 0 };
             return { success: true, data: [{ id }] };
         }),
         setAgentInterests: vi.fn(async (userID: string, agentInterests: string) => {
@@ -284,6 +284,40 @@ vi.mock("../../../src/server/db/util/dbAgentAwayEventsUtil", () => ({
         remove: vi.fn(async (agentID: string) => { delete _awayEventStore[agentID]; }),
     },
 }));
+
+vi.mock("../../../src/server/db/util/dbInventoryUtil", async () => {
+    const {LOGIN_REWARD_INTERVAL_MS} = await import("../../../src/server/system/serverConstants");
+    return {default: {
+        addItem: vi.fn(async (userID: string, itemType: string, quantity: number) => {
+            const u = _userStore[userID];
+            if (u == undefined)
+                return false;
+            u.inventory = {...u.inventory, [itemType]: (u.inventory?.[itemType] ?? 0) + quantity};
+            return true;
+        }),
+        // A row that says nothing of it was made just now (the rule itself is the DB suite's).
+        claimLoginReward: vi.fn(async (userID: string, itemType: string, quantity: number) => {
+            const u = _userStore[userID];
+            const now = Date.now();
+            if (u == undefined || now - (u.lastLoginRewardAt ?? now) < LOGIN_REWARD_INTERVAL_MS)
+                return false;
+            u.lastLoginRewardAt = now;
+            u.inventory = {...u.inventory, [itemType]: (u.inventory?.[itemType] ?? 0) + quantity};
+            return true;
+        }),
+        // Its being one transaction is the DB suite's.
+        buyItem: vi.fn(async (userID: string, itemType: string, dollars: number) => {
+            const u = _userStore[userID];
+            const inventory = u?.inventory ?? {};
+            if (inventory[itemType] > 0)
+                return "held";
+            if (!(inventory.dollar >= dollars))
+                return "refused";
+            u.inventory = {...inventory, dollar: inventory.dollar - dollars, [itemType]: 1};
+            return "bought";
+        }),
+    }};
+});
 
 vi.mock("../../../src/server/db/util/dbOAuthClientUtil", () => ({
     default: {
@@ -367,6 +401,7 @@ function reconnectSocket(oldCtx: ConnectedUser): ConnectedUser
         ownedRoomID: storedUser?.ownedRoomID ?? oldCtx.user.ownedRoomID,
     });
     const socket = new MockSocket(newUser);
+    socket.handshake.auth.inventory = storedUser?.inventory;
     const socketUserContext = new SocketUserContext(socket as any);
     ServerUserManager.addUser(socketUserContext);
     return { user: newUser, socket, socketUserContext };

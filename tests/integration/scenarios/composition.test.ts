@@ -138,7 +138,7 @@ function toPartBox(part: InstancedMeshCompositionPart): PartBox
     return {min: center.map((c, i) => c - half[i]), max: center.map((c, i) => c + half[i]), flatAxes};
 }
 
-// Every shape of every slot ("head 3", numbered from 1 as the panel numbers them), and the neck and waist, as boxes.
+// Every shape of every slot ("head 3", numbered from 1 as agents number them), and the neck and waist, as boxes.
 function getPartBoxesByShape(): {[shape: string]: PartBox[]}
 {
     const {params} = PlayerCompositionCodec.getRandomComposition(0, UNIT_VEC3);
@@ -226,7 +226,8 @@ describe("player mesh composition", () => {
 
     it("decoding is idempotent — re-encoding a decoded composition reproduces the string", () => {
         fc.assert(fc.property(fc.integer(), (seed) => {
-            const encoded = encodePlayerComposition(seed);
+            const {params, parts} = PlayerCompositionCodec.getRandomComposition(seed, UNIT_VEC3);
+            const encoded = playerCodecPrefix() + PlayerCompositionCodec.encode(params, parts);
             const decoded = decodePlayerComposition(encoded);
             const reEncoded = playerCodecPrefix()
                 + PlayerCompositionCodec.encode(decoded.params, decoded.parts);
@@ -330,7 +331,7 @@ describe("player mesh composition", () => {
 
     it("an oversized composition is truncated by the server", async () => {
         const oversized = playerCodecPrefix()
-            + "a".repeat(OBJECT_INSTANCED_MESH_COMPOSITION_METADATA_MAX_LENGTH * 2);
+            + "!".repeat(OBJECT_INSTANCED_MESH_COMPOSITION_METADATA_MAX_LENGTH * 2);
         await runScenario({
             name: "oversized composition",
             rooms: [regularRoom("comp-size")],
@@ -366,8 +367,9 @@ describe("player mesh composition", () => {
     });
 
     it("a hostile composition is relayed but still decodes to a body on the receiving side", async () => {
-        // The server relays the string verbatim, so every other client decodes whatever was sent.
-        const hostile = playerCodecPrefix() + "~~~~~~~~~~~~";
+        // The server relays the string verbatim, so every other client decodes whatever was sent. Its shapes are free
+        // ones: what it wears is held to what its sender holds (see shape-unlock.test.ts).
+        const hostile = playerCodecPrefix() + "!!!!!!" + "~~~~~~";
         await runScenario({
             name: "hostile composition relay",
             rooms: [regularRoom("comp-hostile")],

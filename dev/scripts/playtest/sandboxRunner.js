@@ -179,8 +179,6 @@ async function main()
             await leaveTutorial(page);
         if (runScript.sandbox)
             await parkPlayer(ctx);
-        if (runScript.hideDebugUI !== false)
-            await ctx.hideDebugUI();
         if (runScript.dismissPopups !== false)
             await ctx.dismissPopups();
 
@@ -366,7 +364,7 @@ function buildOps(ctx)
     add("", {
         shot: ctx.shot, sleep: ctx.sleep, drag: ctx.drag, clickAt: ctx.clickAt, clickId: ctx.clickId,
         clickText: ctx.clickText, press: ctx.press, hold: ctx.hold, describeUI: ctx.describeUI,
-        hideDebugUI: ctx.hideDebugUI, dismissPopups: ctx.dismissPopups,
+        dismissPopups: ctx.dismissPopups,
         hideHUD: ctx.hideHUD, showHUD: ctx.showHUD,
         // The read-only bridge's own methods (`probeGrid`, `objects`, `context`; see AutomationBridgeUtil).
         bridge: (method, ...args) => ctx.interact.call(method, ...args),
@@ -573,22 +571,6 @@ function makeContext({ page, outDir, slug, files, runScript })
         return out;
     });
 
-    /** Hides the in-game debugger toggle. Matches leaf elements only, since an ancestor's text includes the whole HUD. */
-    const hideDebugUI = () => page.evaluate(() =>
-    {
-        const root = document.getElementById("uiRoot");
-        if (!root)
-            return;
-        for (const el of root.querySelectorAll("div, button"))
-        {
-            if (el.children.length > 0)
-                continue;
-            const text = (el.textContent || "").trim();
-            if (text == "🔍" || text == "Close Debugger")
-                el.style.display = "none";
-        }
-    });
-
     /**
      * Hides or restores the whole HUD. Only for looking at an isolated subject; anything about the game's
      * own controls keeps the HUD, since it's part of what is under test.
@@ -624,7 +606,7 @@ function makeContext({ page, outDir, slug, files, runScript })
     return {
         page, outDir, slug, viewport,
         shot, sleep, center, drag, clickAt, clickId, clickText, press, hold,
-        describeUI, hideDebugUI, dismissPopups, hideHUD, showHUD,
+        describeUI, dismissPopups, hideHUD, showHUD,
         setup, interact,
         waitForGameReady: () => waitForGameReady(page),
         log: (...msg) => console.log("[sandbox]", ...msg),

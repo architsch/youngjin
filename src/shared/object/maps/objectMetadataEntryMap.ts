@@ -15,6 +15,7 @@ import MessageLinkUtil from "../util/messageLinkUtil";
 import AdminPrefsUtil from "../util/adminPrefsUtil";
 import BehaviorPrefsUtil from "../util/behaviorPrefsUtil";
 import QuarterTurnsUtil from "../util/quarterTurnsUtil";
+import SpeakerActivityUtil from "../util/speakerActivityUtil";
 import NpcFacingUtil from "../util/npcFacingUtil";
 import ObjectTagUtil from "../util/objectTagUtil";
 import User from "../../user/types/user";
@@ -112,14 +113,9 @@ const entries: {[key: number]: ObjectMetadataEntry} = {
         preprocessingMethod: (rawValue: string) => NpcFacingUtil.canonicalize(rawValue),
         canUserSet: (_user: User) => false,
     },
-    // Likewise.
-    [ObjectMetadataKeyEnumMap.Thinking]: {
-        preprocessingMethod: (rawValue: string) => (rawValue.trim() == "1") ? "1" : "",
-        canUserSet: (_user: User) => false,
-    },
-    // Tidied as Thinking is, but a player's own user's to set (see PlayerObjectTypeConfig).
-    [ObjectMetadataKeyEnumMap.Editing]: {
-        preprocessingMethod: (rawValue: string) => (rawValue.trim() == "1") ? "1" : "",
+    // A player's own user's to set (see PlayerObjectTypeConfig), and no user's on a helper (see NpcObjectTypeConfig).
+    [ObjectMetadataKeyEnumMap.Activity]: {
+        preprocessingMethod: (rawValue: string) => SpeakerActivityUtil.canonicalize(rawValue),
     },
     // Round-tripped as AdminPrefs is, through BehaviorPrefsUtil.
     [ObjectMetadataKeyEnumMap.BehaviorPrefs]: {

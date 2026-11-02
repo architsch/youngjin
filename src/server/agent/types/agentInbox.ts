@@ -3,6 +3,9 @@ import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import RemoveObjectSignal from "../../../shared/object/types/removeObjectSignal";
 import SetObjectMetadataSignal from "../../../shared/object/types/setObjectMetadataSignal";
 import SetObjectTransformSignal from "../../../shared/object/types/setObjectTransformSignal";
+import InventorySignal from "../../../shared/inventory/types/inventorySignal";
+import LoginRewardSignal from "../../../shared/inventory/types/loginRewardSignal";
+import { InventoryItemTypeEnumMap } from "../../../shared/inventory/types/inventoryItemType";
 import RoomChangedSignal from "../../../shared/room/types/roomChangedSignal";
 import RoomChangeRejectedSignal from "../../../shared/room/types/roomChangeRejectedSignal";
 import { RoomChangeRejectionReasonEnumMap } from "../../../shared/room/types/roomChangeRejectionReason";
@@ -44,6 +47,8 @@ export default class AgentInbox
     private objectTypeById: {[objectId: string]: string} = {};
     // The helpers' names (see HelperAgentUtil): every NPC in a room an agent can be in is one.
     private helperNameById: {[objectId: string]: string} = {};
+    // How many dollars the agent held when last told.
+    private dollars: number | undefined = undefined;
 
     constructor(userID: string)
     {
@@ -169,6 +174,18 @@ export default class AgentInbox
             case "setVoxelQuadTextureSignal":
                 this.noteBlocks("painted", [(signalData as SetVoxelQuadTextureSignal).quadIndex]);
                 break;
+            case "inventorySignal":
+            {
+                const dollars = (signalData as InventorySignal).inventory[InventoryItemTypeEnumMap.Dollar] ?? 0;
+                // The first is what it held on arriving.
+                if (this.dollars != undefined && dollars > this.dollars)
+                    this.push({kind: "dollarCollected", dollars});
+                this.dollars = dollars;
+                break;
+            }
+            case "loginRewardSignal":
+                this.push({kind: "loginReward", dollars: this.dollars, reward: (signalData as LoginRewardSignal).dollars});
+                break;
         }
     }
 
@@ -192,7 +209,8 @@ export default class AgentInbox
             this.events.splice(0, this.events.length - AGENT_INBOX_MAX_EVENTS);
     }
 
-    // Records another user's player, or what any other object is (a zone, for a volume).
+    // Records another user's player, or what any other object is (a zone, for a volume). What no room keeps but players
+    // (a bill blowing about) is nobody's edit, and look tells of it.
     private noteObject(obj: AddObjectSignal): void
     {
         const config = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex);
@@ -205,7 +223,7 @@ export default class AgentInbox
                     ghost: AdminPrefsUtil.isGhost(obj)};
             }
         }
-        else
+        else if (config.persistent)
         {
             this.objectTypeById[obj.objectId] = (config == VolumeObjectTypeConfig) ? "zone" : config.objectType.toLowerCase();
             if (config == NpcObjectTypeConfig)

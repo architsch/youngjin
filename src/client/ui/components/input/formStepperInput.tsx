@@ -1,8 +1,7 @@
-import { ReactNode } from "react";
 import StepperInput from "./stepperInput";
 import Text from "../basic/text";
 
-export default function FormStepperInput({ label, currValue, numValues, setValue, labels, preview }: Props)
+export default function FormStepperInput({ label, currValue, numValues, setValue, labels }: Props)
 {
     return <div className="flex flex-row items-center gap-1">
         <Text content={label}/>
@@ -11,7 +10,6 @@ export default function FormStepperInput({ label, currValue, numValues, setValue
             numValues={numValues}
             setValue={setValue}
             labels={labels}
-            preview={preview}
         />
     </div>
 }
@@ -23,5 +21,4 @@ interface Props
     numValues: number;
     setValue: (value: number) => void;
     labels?: string[]; // One per value
-    preview?: ReactNode;
 }

@@ -13,7 +13,7 @@ const MODE_SWITCH = `<control name="modeSwitch"/>`;
 const entries: {id: NpcPersonality, label: string, description: string, role?: string, invitation?: string,
     basics?: string}[] = [
     {id: "guide", label: "Guide", description: "Friendly and clear. Helps newcomers get started.",
-        role: "guide", invitation: "Ask me anything, or just look around!",
+        role: "guide", invitation: "Feel free to explore and build things!",
         basics: `Here's how to start: drag on the screen to walk, and switch to Edit with ${MODE_SWITCH} to build.`},
     {id: "builder", label: "Builder", description: "Energetic. Loves building, and full of tips.",
         role: "builder", invitation: "Want to build something? Ask me how!",

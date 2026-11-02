@@ -64,6 +64,37 @@
                     "colorCurve": ["#fff1b8", "#ffb040", "#ff5a1a"]
                 }
             ]
+        },
+        "dollarCollected": {
+            "note": "A bill someone else collected: a \"+$1\" shooting up out of their body, white-hot in a bloom of green light, and quickly gone. It rises just far enough to clear their head and stay under a storey's ceiling. Both layers fly alike, turned upright by their motion.",
+            "layers": [
+                {
+                    "sprite": "dollarGainGlow",
+                    "additiveness": 1,
+                    "orientation": "velocity",
+                    "burst": 1,
+                    "speed": [8, 8],
+                    "lifetime": [0.9, 0.9],
+                    "size": [0.96, 0.96],
+                    "drag": 4.5,
+                    "sizeCurve": [0.45, 1.15, 1, 1, 1],
+                    "alphaCurve": [1, 1, 1, 0.85, 0],
+                    "colorCurve": ["#25f06e"]
+                },
+                {
+                    "sprite": "dollarGain",
+                    "additiveness": 0.15,
+                    "orientation": "velocity",
+                    "burst": 1,
+                    "speed": [8, 8],
+                    "lifetime": [0.9, 0.9],
+                    "size": [0.96, 0.96],
+                    "drag": 4.5,
+                    "sizeCurve": [0.45, 1.15, 1, 1, 1],
+                    "alphaCurve": [1, 1, 1, 0.85, 0],
+                    "colorCurve": ["#d2ffe0"]
+                }
+            ]
         }
     }
 }

@@ -7,7 +7,8 @@ const state = {focused: false, written: false, changedAt: -Infinity,
     timer: undefined as ReturnType<typeof setTimeout> | undefined};
 
 // Whether the user is typing a line in the chat (chatTypingObservable): its field focused, something written in it, and
-// changed lately. The helper the line would be for stands waiting on them meanwhile (see HelperBehaviorUtil.waitFor).
+// changed lately. Their player shows it meanwhile (see PlayerActivityUtil), and the helper the line would be for stands
+// waiting on them (see HelperBehaviorUtil.waitFor).
 const ChatTypingUtil =
 {
     // The field taken, or left.

@@ -15,6 +15,7 @@ export default function ScreenCoachMarks()
     }, []);
 
     return <>
-        {coachMarks.map(coachMark => <ScreenCoachMark key={coachMark.ftueElementCode} coachMark={coachMark}/>)}
+        {coachMarks.map(coachMark => <ScreenCoachMark key={coachMark.ftueElementCode ?? `${coachMark.text}#${coachMark.showing}`}
+            coachMark={coachMark}/>)}
     </>;
 }

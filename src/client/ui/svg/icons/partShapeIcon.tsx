@@ -12,7 +12,7 @@ const PADDING = 3;
 // Monochrome (color is shown separately); fills stay opaque so near faces hide far ones.
 const BASE_COLOR = {r: 226, g: 232, b: 240};
 
-export default function PartShapeIcon({ builderType, params, additionalClassNames = "" }: Props)
+export default function PartShapeIcon({ builderType, params }: Props)
 {
     const faces = useMemo(() => {
         const builder = InstancedMeshCompositionBuilderMap[builderType];
@@ -27,8 +27,7 @@ export default function PartShapeIcon({ builderType, params, additionalClassName
         return IsometricProjectionUtil.getFaces(parts, VIEW_BOX_SIZE, PADDING);
     }, [builderType, params]);
 
-    return <svg viewBox={`0 0 ${VIEW_BOX_SIZE} ${VIEW_BOX_SIZE}`}
-        className={`size-8 ${additionalClassNames}`}>
+    return <svg viewBox={`0 0 ${VIEW_BOX_SIZE} ${VIEW_BOX_SIZE}`} className="w-full h-full">
         {faces.map((face, faceIndex) => {
             const color = `rgb(${Math.round(BASE_COLOR.r * face.shade)}, `
                 + `${Math.round(BASE_COLOR.g * face.shade)}, `
@@ -45,5 +44,4 @@ interface Props
     // Key into InstancedMeshCompositionBuilderMap (e.g. "PlayerArm_1").
     builderType: string;
     params: InstancedMeshCompositionParams;
-    additionalClassNames?: string;
 }

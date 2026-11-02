@@ -4,11 +4,10 @@ import AddObjectSignal from "../addObjectSignal";
 import { ObjectCategoryEnumMap } from "../objectCategory";
 import { ObjectMetadataKeyEnumMap } from "../objectMetadataKey";
 import ObjectTypeConfig from "./objectTypeConfig";
-import ObjectScaleUtil from "../../util/objectScaleUtil";
 import SetObjectMetadataSignal from "../setObjectMetadataSignal";
 import SetObjectTransformSignal from "../setObjectTransformSignal";
 import { InstancedMeshCompositionCodecTypeEnumMap } from "../../../graphics/mesh/composition/types/instancedMeshCompositionCodecType";
-import { PlayerCompositionCodec } from "../../../graphics/mesh/composition/types/compositionCodec/playerCompositionCodec";
+import { getRandomFreeComposition } from "../../../graphics/mesh/composition/types/compositionCodec/playerCompositionCodec";
 import StringUtil from "../../../math/util/stringUtil";
 import MessageLinkUtil from "../../util/messageLinkUtil";
 import { OBJECT_MESSAGE_MAX_LENGTH } from "../../../system/sharedConstants";
@@ -16,6 +15,7 @@ import { OBJECT_MESSAGE_MAX_LENGTH } from "../../../system/sharedConstants";
 // The player collider size; exported because much of the game measures against the player's body.
 export const PLAYER_HEIGHT = 2.5;
 export const PLAYER_RADIUS_XZ = 0.375; // radius of the player on the XZ plane.
+export const PLAYER_EYE_HEIGHT = 0.3 * PLAYER_HEIGHT; // how far over the player's middle its eyes are.
 
 // How fast a player walks and turns per unit of steering, and how much steering there can be, whoever steers (see
 // PlayerController, AgentBodyUtil).
@@ -55,11 +55,11 @@ const PlayerObjectTypeConfig =
         if (obj.sourceUserID != user.id)
             return false;
 
-        // User can only set the player's message, appearance, mode or admin prefs (admins only; see
+        // User can only set the player's message, appearance, activity or admin prefs (admins only; see
         // ObjectMetadataEntryMap), nothing else
         if (signal.metadataKey != ObjectMetadataKeyEnumMap.SentMessage &&
             signal.metadataKey != ObjectMetadataKeyEnumMap.InstancedMeshComposition &&
-            signal.metadataKey != ObjectMetadataKeyEnumMap.Editing &&
+            signal.metadataKey != ObjectMetadataKeyEnumMap.Activity &&
             signal.metadataKey != ObjectMetadataKeyEnumMap.AdminPrefs)
             return false;
 
@@ -79,11 +79,7 @@ const PlayerObjectTypeConfig =
             instancedMeshComposer: {
                 codecType: InstancedMeshCompositionCodecTypeEnumMap.Player,
                 codecVersion: 0,
-                generateDefaultParts: (obj: AddObjectSignal) => {
-                    const hashCode = StringUtil.getHashCode(obj.sourceUserID);
-                    return PlayerCompositionCodec.getRandomComposition(hashCode,
-                        ObjectScaleUtil.getObjectSize(obj.objectTypeIndex, obj.transform.scale));
-                },
+                generateDefaultParts: (obj: AddObjectSignal) => getRandomFreeComposition(StringUtil.getHashCode(obj.sourceUserID)),
             },
             collider: {
                 baseHitboxSize: {sizeX: 2 * PLAYER_RADIUS_XZ, sizeY: PLAYER_HEIGHT, sizeZ: 2 * PLAYER_RADIUS_XZ},

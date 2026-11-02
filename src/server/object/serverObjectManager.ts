@@ -11,6 +11,8 @@ import Room from "../../shared/room/types/room";
 import User from "../../shared/user/types/user";
 import ObjectTypeConfigMap from "../../shared/object/maps/objectTypeConfigMap";
 import Vector3DUtil from "../../shared/math/util/vector3DUtil";
+import { ObjectMetadataKeyEnumMap } from "../../shared/object/types/objectMetadataKey";
+import ServerInventoryManager from "../inventory/serverInventoryManager";
 import UserBudgetUtil from "../user/util/userBudgetUtil";
 
 const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
@@ -172,7 +174,7 @@ const ServerObjectManager =
         }
         const room = roomRuntimeMemory.room;
 
-        if (!ObjectUpdateUtil.setObjectMetadata(user, room, signal))
+        if (!canWearLook(socketUserContext, room, signal) || !ObjectUpdateUtil.setObjectMetadata(user, room, signal))
         {
             console.error(`onSetObjectMetadataSignalReceived :: Failed (objectId = ${signal.objectId})`);
             ServerObjectManager.refuseSetObjectMetadataSignal(socketUserContext, signal);
@@ -201,6 +203,15 @@ const ServerObjectManager =
             new SetObjectMetadataSignal(room.id, obj.objectId, signal.metadataKey,
                 originalMetadataValue, originalTransform));
     },
+}
+
+// Whether what the signal sets isn't a look the user would have to buy shapes for. Not a rule of the object's type, which
+// browsers share and which can't see what a user holds. An NPC's look is an admin's, and buys nothing.
+function canWearLook(socketUserContext: UserContext, room: Room, signal: SetObjectMetadataSignal): boolean
+{
+    const obj = room.objectById[signal.objectId];
+    return signal.metadataKey != ObjectMetadataKeyEnumMap.InstancedMeshComposition || obj?.objectTypeIndex != playerTypeIndex
+        || ServerInventoryManager.canWear(socketUserContext, obj, signal.metadataValue);
 }
 
 // The room the user is in on the server, which a single-player user has none of.

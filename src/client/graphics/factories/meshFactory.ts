@@ -7,6 +7,9 @@ import InstancedTexturePackMaterialParams from "../../../shared/graphics/materia
 import GraphicsManager from "../graphicsManager";
 import { MIRRORED_LAYER } from "../../system/clientConstants";
 
+// Over everything but the gizmos that are drawn over the room themselves.
+const OVER_ROOM_RENDER_ORDER = 9000;
+
 const loadedMeshes: { [meshId: string]: THREE.Mesh } = {};
 const loadedLineSegments: { [id: string]: THREE.LineSegments } = {};
 const instanceIdPools: { [meshId: string]: Pool<number> } = {};
@@ -91,6 +94,12 @@ const MeshFactory =
             }
         }
         return ongoingLoad;
+    },
+    // Leaves a loaded mesh out of every raycast, for what is never clicked and never stands in the way of a view or a
+    // click (see DollarBillGameObject).
+    stopRaycasting: (meshId: string): void =>
+    {
+        loadedMeshes[meshId].raycast = () => {};
     },
     // A quad drawn once per instance of the given interleaved attributes (see ParticleBatch). Its instances
     // may be anywhere, so it is never frustum-culled, and it is never raycast: rays would only find its base
@@ -236,8 +245,10 @@ async function createInstancedMesh(meshId: string, geometryId: string, materialP
 {
     const newMesh = await buildInstancedMesh(geometryId, materialParams, maxNumInstances);
     newMesh.name = meshId;
-    // The room's own meshes, which a mirror shows (see MirrorReflectionUtil).
-    newMesh.layers.enable(MIRRORED_LAYER);
+    if ((materialParams as InstancedTexturePackMaterialParams).overRoom)
+        newMesh.renderOrder = OVER_ROOM_RENDER_ORDER;
+    else // The room's own meshes, which a mirror shows (see MirrorReflectionUtil).
+        newMesh.layers.enable(MIRRORED_LAYER);
     GraphicsManager.addObjectToSceneIfNotAlreadyAdded(newMesh);
     loadedMeshes[meshId] = newMesh;
 

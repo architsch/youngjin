@@ -12,6 +12,14 @@ const COVERAGE_MAP_FRAGMENT_GLSL = `
     #endif
 `;
 
+// A two-sided texture is one sheet, which reads the right way round from behind too, rather than mirrored (see
+// InstancedTexturePackMaterialParams.doubleSided).
+const SHEET_MAP_FRAGMENT_GLSL = `
+    #ifdef USE_MAP
+        diffuseColor *= texture2D(map, gl_FrontFacing ? vMapUv : vec2(1.0 - vMapUv.x, vMapUv.y));
+    #endif
+`;
+
 const VERTEX_PARS_GLSL = `
     attribute vec2 uvStart;
     attribute vec2 uvSampleSize;
@@ -45,8 +53,10 @@ function vertexGLSL(uScale: number, vScale: number): string
 export default function installInstancedTexturePackShader(
     shader: THREE.WebGLProgramParametersWithUniforms,
     uvScales: readonly [number, number], outlineColorHex: string | undefined, coverageOnly: boolean,
-    turnable: boolean)
+    turnable: boolean, doubleSided: boolean)
 {
+    if (doubleSided)
+        shader.fragmentShader = shader.fragmentShader.replace("#include <map_fragment>", SHEET_MAP_FRAGMENT_GLSL);
     if (coverageOnly)
     {
         shader.fragmentShader = shader.fragmentShader.replace(

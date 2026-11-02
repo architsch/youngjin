@@ -14,6 +14,7 @@ import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
 import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
 import GameObject from "../../../../object/types/gameObject/gameObject";
 import HelperThinkingUtil from "../../../../object/util/helperThinkingUtil";
+import DebugPanelUtil from "../../../../system/util/debugPanelUtil";
 import { PLAYER_MESSAGE_EXPIRATION_MS } from "../../../../../shared/system/sharedConstants";
 
 export default function Chat({hide}: Props)
@@ -76,6 +77,12 @@ export default function Chat({hide}: Props)
                 message = "Hello";
             else
                 return;
+        }
+
+        if (DebugPanelUtil.tryOpenByChat(message))
+        {
+            setState(prev => ({...prev, textInput: ""}));
+            return;
         }
 
         const player = ClientObjectManager.getMyPlayer();

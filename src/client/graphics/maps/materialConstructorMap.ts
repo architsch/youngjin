@@ -33,8 +33,9 @@ export const MaterialConstructorMap: { [materialType: string]:
 {
     "InstancedTexturePack": async (params: MaterialParams) =>
     {
-        return AtmosphereMaterialUtil.addFogNoise(LightBlockMapMaterialUtil.addSampling(
-            await createInstancedTexturePackMaterial(params as InstancedTexturePackMaterialParams)));
+        const material = await createInstancedTexturePackMaterial(params as InstancedTexturePackMaterialParams);
+        return (params as InstancedTexturePackMaterialParams).overRoom ? material
+            : AtmosphereMaterialUtil.addFogNoise(LightBlockMapMaterialUtil.addSampling(material));
     },
     "InstancedColor": async (params: MaterialParams) =>
     {
@@ -105,6 +106,8 @@ async function createInstancedTexturePackMaterial(p: InstancedTexturePackMateria
     {
         case "staticImageFromPath":
             texture = await TextureFactory.loadStaticImageTexture(p.texturePath);
+            if (p.photographic)
+                texture.colorSpace = THREE.SRGBColorSpace;
             break;
         case "dynamicEmpty":
         {
@@ -118,12 +121,19 @@ async function createInstancedTexturePackMaterial(p: InstancedTexturePackMateria
             throw new Error(`Unknown texture load type :: "${p.textureLoadType}"`);
     }
 
-    const newMaterial = new THREE.MeshPhongMaterial();
+    const newMaterial = p.overRoom ? new THREE.MeshBasicMaterial() : new THREE.MeshPhongMaterial();
     newMaterial.map = texture;
+    if (p.doubleSided)
+        newMaterial.side = THREE.DoubleSide;
     // Transparent quads still depth-test (so walls occlude in-world text) but don't write depth.
     // They never overlap each other, so draw order doesn't matter.
-    newMaterial.transparent = p.transparent;
-    newMaterial.depthWrite = !p.transparent;
+    newMaterial.transparent = p.transparent || p.overRoom;
+    newMaterial.depthWrite = !newMaterial.transparent;
+    if (p.overRoom)
+    {
+        newMaterial.depthTest = false;
+        newMaterial.fog = false;
+    }
     if (p.alphaCutout)
         newMaterial.alphaTest = 0.5;
     if (p.polygonOffsetFactor && p.polygonOffsetUnits)
@@ -136,8 +146,8 @@ async function createInstancedTexturePackMaterial(p: InstancedTexturePackMateria
     // Computed before compilation so the shader inputs are fixed (see ShaderPrecompileUtil).
     const uvScales = getUVScales(p.textureWidth, p.textureHeight,
         p.textureGridCellWidth, p.textureGridCellHeight);
-    newMaterial.onBeforeCompile = (shader) =>
-        installInstancedTexturePackShader(shader, uvScales, p.outlineColorHex, p.coverageOnly, p.turnable);
+    newMaterial.onBeforeCompile = (shader) => installInstancedTexturePackShader(shader, uvScales, p.outlineColorHex,
+        p.coverageOnly, p.turnable, p.doubleSided);
     return newMaterial;
 }
 

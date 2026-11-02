@@ -116,6 +116,7 @@ import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import RemoveObjectSignal from "../../../src/shared/object/types/removeObjectSignal";
 import { ObjectMetadata } from "../../../src/shared/object/types/objectMetadata";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
+import { SpeakerActivityEnumMap } from "../../../src/shared/object/types/speakerActivity";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import Room from "../../../src/shared/room/types/room";
 import RoomRuntimeMemory from "../../../src/shared/room/types/roomRuntimeMemory";
@@ -991,7 +992,8 @@ describe("an object's edits, undone and redone", () => {
         const shown = (value: string) => new EncodableByteString(value);
         const objectId = await standObject(npcTypeIndex, {x: BLOCK_X + 3, y: 0, z: BLOCK_Z}, {x: 0, y: 1, z: 0},
             {...UNIT_VEC3}, {...labelled("Mira"), [ObjectMetadataKeyEnumMap.SentMessage]: shown("Hi there!"),
-                [ObjectMetadataKeyEnumMap.Facing]: shown("90"), [ObjectMetadataKeyEnumMap.Thinking]: shown("1")});
+                [ObjectMetadataKeyEnumMap.Facing]: shown("90"),
+                [ObjectMetadataKeyEnumMap.Activity]: shown(SpeakerActivityEnumMap.Typing)});
         ObjectEditUtil.openRemoveConfirmPopup(await select(objectId), "Want to remove this NPC?");
         const popup = popupStateObservable.peek();
         (popup as Extract<typeof popup, {popupType: "confirm"}>).params.onConfirm();

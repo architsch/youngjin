@@ -4,9 +4,14 @@ import RoomTexturePackChangedSignal from "../../room/types/roomTexturePackChange
 import RoomPrefsChangedSignal from "../../room/types/roomPrefsChangedSignal";
 import AddObjectSignal from "../../object/types/addObjectSignal";
 import SetObjectTransformSignal from "../../object/types/setObjectTransformSignal";
+import SetObjectPathSignal from "../../object/types/setObjectPathSignal";
+import ObjectCollectedSignal from "../../object/types/objectCollectedSignal";
+import InventorySignal from "../../inventory/types/inventorySignal";
+import LoginRewardSignal from "../../inventory/types/loginRewardSignal";
+import BuyItemSignal from "../../inventory/types/buyItemSignal";
+import BuyItemResultSignal from "../../inventory/types/buyItemResultSignal";
 import HoldObjectSignal from "../../object/types/holdObjectSignal";
 import UserCommandSignal from "../../user/types/userCommandSignal";
-import TypingSignal from "../../user/types/typingSignal";
 import RequestRoomChangeSignal from "../../room/types/requestRoomChangeSignal";
 import RoomChangedSignal from "../../room/types/roomChangedSignal";
 import RoomChangeRejectedSignal from "../../room/types/roomChangeRejectedSignal";
@@ -129,11 +134,42 @@ const signalTypeConfigPairs: [number, SignalTypeConfig][] = [
         minClientToServerSendInterval: 0, // never throttled: a dropped letting-go would leave the helper held.
         decode: (bufferState: BufferState) => HoldObjectSignal.decode(bufferState),
     }],
-    [18, { // Unidirectional (client -> server)
-        // A user starting or stopping typing a line in the chat, which stands the helper it would be for still meanwhile.
-        signalType: "typingSignal",
-        minClientToServerSendInterval: 0, // never throttled: a dropped stop would keep the helper waiting.
-        decode: (bufferState: BufferState) => TypingSignal.decode(bufferState),
+    // (Index 18 is retired too.)
+    [19, { // Unidirectional (client <- server)
+        // Where an object the server moves goes next (e.g. a dollar bill on the wind), which clients play out by themselves.
+        signalType: "setObjectPathSignal",
+        minClientToServerSendInterval: 0, // not used because the client never sends this signal to the server.
+        decode: (bufferState: BufferState) => SetObjectPathSignal.decode(bufferState),
+    }],
+    [20, { // Unidirectional (client <- server)
+        // All a user holds, as they connect and whenever it changes.
+        signalType: "inventorySignal",
+        minClientToServerSendInterval: 0, // not used because the client never sends this signal to the server.
+        decode: (bufferState: BufferState) => InventorySignal.decode(bufferState),
+    }],
+    [21, { // Unidirectional (client <- server)
+        // That someone has collected an object (e.g. a dollar bill), just before it goes.
+        signalType: "objectCollectedSignal",
+        minClientToServerSendInterval: 0, // not used because the client never sends this signal to the server.
+        decode: (bufferState: BufferState) => ObjectCollectedSignal.decode(bufferState),
+    }],
+    [22, { // Unidirectional (client <- server)
+        // What coming back has earned a user, as they arrive.
+        signalType: "loginRewardSignal",
+        minClientToServerSendInterval: 0, // not used because the client never sends this signal to the server.
+        decode: (bufferState: BufferState) => LoginRewardSignal.decode(bufferState),
+    }],
+    [23, { // Unidirectional (client -> server)
+        // A user asking to spend dollars on an item (e.g. a shape for their character).
+        signalType: "buyItemSignal",
+        minClientToServerSendInterval: 500, // This is necessary because this signal may cost a DB transaction each time it gets sent.
+        decode: (bufferState: BufferState) => BuyItemSignal.decode(bufferState),
+    }],
+    [24, { // Unidirectional (client <- server)
+        // How that ended, after what they hold now.
+        signalType: "buyItemResultSignal",
+        minClientToServerSendInterval: 0, // not used because the client never sends this signal to the server.
+        decode: (bufferState: BufferState) => BuyItemResultSignal.decode(bufferState),
     }],
 ];
 

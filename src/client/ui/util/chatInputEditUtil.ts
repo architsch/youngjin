@@ -3,7 +3,7 @@ import MessageLinkUtil from "../../../shared/object/util/messageLinkUtil";
 
 // How a link looks in a line of chat (see ChatTextInput, ChatSentMessage): a chip of its label.
 const CHIP_CLASS_NAMES = "inline-block align-middle h-6 leading-6 px-1.5 mx-0.5 rounded-md text-sm font-semibold "
-    + "text-white bg-sky-700 select-none";
+    + "text-white bg-gray-600 select-none";
 
 // Editing the chat input (see ChatTextInput): a line of text in which each web address becomes a chip, the link the
 // message carries (see MessageLinkUtil), which the caret steps over and Backspace takes away whole.

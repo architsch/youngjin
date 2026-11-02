@@ -1,4 +1,6 @@
-import { AWAY_DISCONNECT_DELAY_MS, MINUTE_IN_MS, PLAYER_MESSAGE_EXPIRATION_MS } from "../../../shared/system/sharedConstants";
+import { AWAY_DISCONNECT_DELAY_MS, HOUR_IN_MS, LOGIN_REWARD_DOLLARS, MINUTE_IN_MS, PLAYER_MESSAGE_EXPIRATION_MS,
+    PLAYER_SHAPE_PRICE_DOLLARS } from "../../../shared/system/sharedConstants";
+import { LOGIN_REWARD_INTERVAL_MS } from "../../system/serverConstants";
 
 // What helpers know about playing ThingsPool, from a player's side (see HelperChatUtil): its basics, which a how-to
 // answer gives, and the details, for someone who asks for more. They answer from this alone, so it changes whenever
@@ -27,7 +29,8 @@ The details, only for someone who asks for more:
   A guide answers them when you are near it, or once you walk up to it while they still show; of several guides near
   you, the one you face answers. A web address typed there becomes a link: a button in the
   bubble that others click to open it, a page of ThingsPool's own website over the game and any other in a new tab,
-  and a ThingsPool room by going there.
+  and a ThingsPool room by going there. Dots by your name tell others you are typing, and "Reading..." in your bubble
+  that such a page is open or you are in another browser tab.
 - Edit mode: drag to look around, and zoom with a pinch, the mouse wheel or the slider. Click a block's face, or a
   thing, to select it. The strip of textures under the tools repaints the selected face. A thing goes on the face it
   is added to, so a fan on a floor blows upward. Select a thing to change it: a lamp's color, brightness and reach; a
@@ -38,7 +41,13 @@ The details, only for someone who asks for more:
 - Where you can build: anywhere, hubs and agents' rooms included, except in restricted zones (red outlines in Edit
   mode), which a room's owner keeps for someone.
 - Doors: one shows "Click to Enter" when you are close enough.
-- Your character: choose a shape and color for each part, and a color for its eyes. It is saved for next time.
+- Dollars: $1 bills turn up in the multiplayer rooms, and gusts and fans blow them about. Walk toward one and, once it
+  is close and in front of you, it flies into your count of them, and they stay yours. Coming back also gives you
+  $${LOGIN_REWARD_DOLLARS} once a day, ${LOGIN_REWARD_INTERVAL_MS / HOUR_IN_MS} hours or more after the last time, though not on your first visit. They buy
+  shapes for your character.
+- Your character: choose a shape and color for each part, and a color for its eyes. It is saved for next time. A part
+  shows its shapes as a grid of pictures. A locked one shows a lock and its price: clicking it spends
+  $${PLAYER_SHAPE_PRICE_DOLLARS} and puts it on, and it is yours for good. The rest are free.
 - Mirrors: some rooms have one, which only ThingsPool's admins hang; it shows the room in front of it, you included.
 - Signing in: <control name="person"/> (not during the tutorial) shows your name, with Sign In under it. Signing in
   keeps your character for good, on any browser, under your account's name; a guest's is kept in one browser, and

@@ -9,6 +9,8 @@ import PhysicsManager from "../../shared/physics/physicsManager";
 import RemoveObjectSignal from "../../shared/object/types/removeObjectSignal";
 import SetObjectMetadataSignal from "../../shared/object/types/setObjectMetadataSignal";
 import SetObjectTransformSignal from "../../shared/object/types/setObjectTransformSignal";
+import SetObjectPathSignal from "../../shared/object/types/setObjectPathSignal";
+import ObjectCollectedSignal from "../../shared/object/types/objectCollectedSignal";
 import PeriodicTransformReceiver from "./components/periodicTransformReceiver";
 import VoxelGameObject from "./types/gameObject/voxelGameObject";
 import NpcGameObject from "./types/gameObject/npcGameObject";
@@ -303,6 +305,9 @@ const ClientObjectManager =
     onAddObjectSignalReceived: async (signal: AddObjectSignal) => {
         if (!await App.whenInRoom(signal.roomID))
             return;
+        // Added just as the room was sent, which then held it already.
+        if (ClientObjectManager.getObjectById(signal.objectId) != undefined)
+            return;
         const gameObject = ObjectFactory.createServerSideObject(signal);
         if (await ClientObjectManager.addObject(gameObject, false))
             objectEditObservable.set({kind: "add", object: gameObject.params});
@@ -360,6 +365,19 @@ const ClientObjectManager =
             return;
         ClientObjectManager.setObjectMetadata(signal.objectId, signal.metadataKey,
             signal.metadataValue, false, signal.transform);
+    },
+    // Gone by now, it has nowhere to go.
+    onSetObjectPathSignalReceived: async (signal: SetObjectPathSignal) => {
+        if (!await App.whenInRoom(signal.roomID))
+            return;
+        ClientObjectManager.getObjectById(signal.objectId)?.followPath(signal.waypoints);
+    },
+    // Ahead of the object's removal (see ObjectCollectedSignal), so that it still shows where it was collected.
+    onObjectCollectedSignalReceived: async (signal: ObjectCollectedSignal) => {
+        if (!await App.whenInRoom(signal.roomID))
+            return;
+        ClientObjectManager.getObjectById(signal.objectId)?.onCollected(
+            ClientObjectManager.getPlayerOfUser(signal.collectorUserID), signal.collectorUserID == App.getUser().id);
     },
 }
 

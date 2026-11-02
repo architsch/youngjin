@@ -9,6 +9,7 @@ import Vec3 from "../../../shared/math/types/vec3";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import ObjectMetadataEntryMap from "../../../shared/object/maps/objectMetadataEntryMap";
 import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
+import { SpeakerActivityEnumMap } from "../../../shared/object/types/speakerActivity";
 import HelperSurroundings from "../../../shared/object/types/helperSurroundings";
 import HelperBehaviorUtil, { ANSWER_PAUSE_MS } from "../../../shared/object/util/helperBehaviorUtil";
 import NpcFacingUtil from "../../../shared/object/util/npcFacingUtil";
@@ -314,8 +315,8 @@ function surroundingsOf(helper: SinglePlayerHelper, room: Room): HelperSurroundi
             NpcFacingUtil.encode(helper.facing), false),
         showSaying: () => ClientObjectManager.setObjectMetadata(helper.objectId, ObjectMetadataKeyEnumMap.SentMessage,
             helper.saying, false),
-        showThinking: () => ClientObjectManager.setObjectMetadata(helper.objectId, ObjectMetadataKeyEnumMap.Thinking,
-            helper.thinking ? "1" : "", false),
+        showThinking: () => ClientObjectManager.setObjectMetadata(helper.objectId, ObjectMetadataKeyEnumMap.Activity,
+            helper.thinking ? SpeakerActivityEnumMap.Typing : SpeakerActivityEnumMap.None, false),
     };
 }
 

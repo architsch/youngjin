@@ -10,6 +10,7 @@ import ServerRoomManager from "../../room/serverRoomManager";
 import AddressUtil from "../../networking/util/addressUtil";
 import EJSUtil from "../../ssg/util/ejsUtil";
 import { AGENT_CAMERA_MAX_PAGES, AGENT_CAMERA_ROUTE_PATH, GIT_COMMIT } from "../../system/serverConstants";
+import DollarBillUtil from "../../inventory/util/dollarBillUtil";
 import AgentUserContext from "../types/agentUserContext";
 import HelperAgentUtil from "./helperAgentUtil";
 
@@ -92,8 +93,11 @@ const AgentCameraUtil =
         if (roomRuntimeMemory == undefined)
             return;
         camera.add("roomChangedSignal", new RoomChangedSignal(roomRuntimeMemory));
-        for (const {signalType, signal} of HelperAgentUtil.getCatchUpSignals(roomID))
+        for (const {signalType, signal} of [...HelperAgentUtil.getCatchUpSignals(roomID),
+            ...DollarBillUtil.getCatchUpSignals(roomID)])
+        {
             camera.add(signalType, signal);
+        }
     },
     getPageURL: (token: string): string =>
     {

@@ -39,6 +39,7 @@ import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import ObjectGroup from "../../../src/shared/object/types/objectGroup";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
+import { SpeakerActivityEnumMap } from "../../../src/shared/object/types/speakerActivity";
 import DoorObjectTypeConfig, { ENTRANCE_DOOR_OBJECT_ID } from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import { makeZoneSignal } from "../helpers/restrictedZone";
@@ -219,7 +220,7 @@ describe("room file: the stored format", () => {
                     ...(shown ? {
                         [ObjectMetadataKeyEnumMap.Facing]: new EncodableByteString("135"),
                         [ObjectMetadataKeyEnumMap.SentMessage]: new EncodableByteString("Hello!"),
-                        [ObjectMetadataKeyEnumMap.Thinking]: new EncodableByteString("1"),
+                        [ObjectMetadataKeyEnumMap.Activity]: new EncodableByteString(SpeakerActivityEnumMap.Typing),
                     } : {}),
                 }));
             return room;

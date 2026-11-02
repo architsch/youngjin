@@ -8,10 +8,12 @@ import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap
 import ObjectMetadataEntryMap from "../../../shared/object/maps/objectMetadataEntryMap";
 import NpcPersonalityMap from "../../../shared/object/maps/npcPersonalityMap";
 import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
+import { SpeakerActivityEnumMap } from "../../../shared/object/types/speakerActivity";
 import HelperSurroundings from "../../../shared/object/types/helperSurroundings";
 import HelperRemarkSubject from "../../../shared/object/types/helperRemarkSubject";
 import QuarterTurnsUtil from "../../../shared/object/util/quarterTurnsUtil";
 import AdminPrefsUtil from "../../../shared/object/util/adminPrefsUtil";
+import SpeakerActivityUtil from "../../../shared/object/util/speakerActivityUtil";
 import NpcFacingUtil from "../../../shared/object/util/npcFacingUtil";
 import LabelTextUtil from "../../../shared/object/util/labelTextUtil";
 import HelperBehaviorUtil, { ANSWER_PAUSE_MS,
@@ -28,7 +30,6 @@ import ServerRoomManager from "../../room/serverRoomManager";
 import RoomPickerUtil from "../../room/util/roomPickerUtil";
 import ServerUserManager from "../../user/serverUserManager";
 import HoldObjectSignal from "../../../shared/object/types/holdObjectSignal";
-import TypingSignal from "../../../shared/user/types/typingSignal";
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
 import UserContext from "../../sockets/types/userContext";
 import DBUserUtil from "../../db/util/dbUserUtil";
@@ -88,7 +89,7 @@ const state = {
     failureLoggedAt: -Infinity,
     // When each person was last told why no reply came, by the reason; any helper's telling counts.
     refusalToldAt: new Map<string, number>(),
-    // Whoever is typing a line in the chat, as their browser tells (see TypingSignal).
+    // Whoever is typing a line, as their player shows, in the order they started (see noteTyping).
     typingUserIDs: new Set<string>(),
     // What each user says that no helper heard as they said it, and the connection they said it on (see hearLateLines).
     unheardLines: new Map<string, {ctx: UserContext, text: string}>(),
@@ -185,12 +186,11 @@ const HelperAgentUtil =
         else
             keepToAnswer(helper, ctx, text, Date.now());
     },
-    // A person starting or stopping typing a line in the chat, as their browser tells: the helper it would be for stands
-    // still facing them meanwhile (see waitOnTypists), at once. An agent's lines come whole (see AgentToolUtil.say), so
-    // no helper waits on one.
-    noteTyping: (ctx: UserContext, signal: TypingSignal): void =>
+    // A change in what someone is busy with, as their player shows (see SpeakerActivity): the helper a line they are
+    // typing would be for stands still facing them meanwhile (see waitOnTypists), at once.
+    noteTyping: (ctx: UserContext): void =>
     {
-        if (signal.typing)
+        if (isTyping(ctx.user.id))
             state.typingUserIDs.add(ctx.user.id);
         else
             state.typingUserIDs.delete(ctx.user.id);
@@ -402,14 +402,14 @@ function findHelpers(now: number): void
 }
 
 // The helper a line someone is typing would be for, if they said it now (see findListener), stands waiting on them
-// meanwhile, the first of several typing to it; every other waits on nobody. Whoever no longer has a connection types
-// nothing.
+// meanwhile, the first of several typing to it; every other waits on nobody. A player that has left, or arrived anew, is
+// typing no longer, until its user's next word (see PlayerActivityUtil).
 function waitOnTypists(now: number): void
 {
     const typistOf = new Map<HelperState, string>();
     for (const userID of state.typingUserIDs)
     {
-        if (!ServerUserManager.hasUser(userID))
+        if (!isTyping(userID))
         {
             state.typingUserIDs.delete(userID);
             continue;
@@ -420,6 +420,12 @@ function waitOnTypists(now: number): void
     }
     for (const helper of helpers.values())
         HelperBehaviorUtil.waitFor(helper, typistOf.get(helper), now);
+}
+
+function isTyping(userID: string): boolean
+{
+    const player = ServerUserManager.getPlayerObject(userID);
+    return player != undefined && SpeakerActivityUtil.get(player) == SpeakerActivityEnumMap.Typing;
 }
 
 // What someone says that no helper heard as they said it is heard by the one it would be for (see findListener) once
@@ -701,8 +707,8 @@ function speechSignal(helper: HelperState, text: string): SetObjectMetadataSigna
 
 function thinkingSignal(helper: HelperState): SetObjectMetadataSignal
 {
-    return new SetObjectMetadataSignal(helper.roomID, helper.objectId, ObjectMetadataKeyEnumMap.Thinking,
-        helper.thinking ? "1" : "");
+    return new SetObjectMetadataSignal(helper.roomID, helper.objectId, ObjectMetadataKeyEnumMap.Activity,
+        helper.thinking ? SpeakerActivityEnumMap.Typing : SpeakerActivityEnumMap.None);
 }
 
 // Shown to the room (or to one user in it), without changing what the room keeps.

@@ -6,6 +6,9 @@ export const UNIT_PLAYER_PART_LENGTH = 0.125;
 export const SAFE_PLAYER_PART_CIRCLE_DIAMETER_IN_UNITS = 2 * Math.sqrt(5);
 export const SAFE_PLAYER_PART_CIRCLE_STICK_OUT_LENGTH_IN_UNITS = Math.sqrt(5) - 2;
 
+// How many of each part's shapes, the first ones, are anyone's; the rest have to be bought (see PlayerShapeItemUtil).
+export const NUM_FREE_PLAYER_PART_TYPES = 3;
+
 const PlayerCompositionConstants: PlayerCompositionConstantsType = {
     numTypes: {
         "head": 6,

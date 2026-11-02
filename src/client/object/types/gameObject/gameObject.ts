@@ -7,6 +7,7 @@ import GameObjectComponent from "../../components/gameObjectComponent";
 import ObjectComponentFactory from "../../factories/objectComponentFactory";
 import ObjectTypeConfig, { SpawnType } from "../../../../shared/object/types/objectTypeConfig/objectTypeConfig";
 import { ObjectMetadataKey } from "../../../../shared/object/types/objectMetadataKey";
+import ObjectWaypoint from "../../../../shared/object/types/objectWaypoint";
 import Vec3 from "../../../../shared/math/types/vec3";
 import ObjectPoseUtil from "../../util/objectPoseUtil";
 import ObjectTypeClientConfigMap from "../../maps/objectTypeClientConfigMap";
@@ -124,6 +125,11 @@ export default abstract class GameObject
     // Visits instances the object renders itself, outside its components (e.g. a canvas's picture), so
     // whole-object actions reach them (see OrbitOcclusionHider).
     forEachOwnedInstance(_visit: (instancedMeshId: string, instanceId: number) => void) {}
+    // Invoked when the server sets the object on a path (see SetObjectPathSignal).
+    followPath(_waypoints: ObjectWaypoint[]) {}
+    // Invoked when someone collects the object, just before it is removed (see ObjectCollectedSignal). collector: their
+    // player, if this browser has it; byUser: whether they are this browser's user.
+    onCollected(_collector: GameObject | undefined, _byUser: boolean) {}
     // Per-frame update for objects that override this or have a component with update().
     update(deltaTime: number) {}
 

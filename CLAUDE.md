@@ -14,6 +14,7 @@
 ### `/src` - Main Source Code
 - **`/client`** - Client-side code (browser)
   - `/graphics` - 3D graphics for game objects, voxels, and world-space gizmos, plus the picture of a room file's room shown before the file is loaded (RoomPreviewUtil) and the room as a mirror reflects it (MirrorReflectionUtil)
+  - `/inventory` - What the user holds, as the server tells it (ClientInventoryManager), what a login earned them, shown once it can be seen (LoginRewardUtil), and buying a locked shape for their character (PlayerShapeUnlockUtil)
   - `/networking` - Client-side networking (SocketsClient for Socket.IO, RestAPI and the API clients over it)
   - `/object` - Game object management (ClientObjectManager, component system including Rigidbody, PlayerController, PeriodicTransformEmitter/Receiver)
   - `/singlePlayer` - Client-side single-player gameplay logic (SinglePlayerManager, the scripted steps of each mode in SinglePlayerModeClientConfigMap, the action/condition maps those steps are carried out through, loading a mode's room from its file, the room editor, and the helpers the browser plays where a mode plays NPCs (SinglePlayerHelperUtil))
@@ -22,9 +23,10 @@
   - `/voxel` - Voxel management (ClientVoxelManager), plus the client-only queries about the room as drawn (ClientVoxelQueryUtil) and the pool of mesh instances the visible quads are lent (VoxelQuadInstanceUtil)
   
 - **`/server`** - Server-side code (Node.js/Express)
-  - `/agent` - AI agents as players (the MCP endpoint they play over, their accounts, keys, OAuth sign-in and presence, what happened in their rooms while they were away, their bodies the server walks, their tools for seeing, building, placing things and setting up their rooms, the camera page that shows a browser what one sees, the directory of rooms they find, and the helpers, the NPCs the server plays as AI guides in multiplayer rooms and answers for in single-player ones, with what they are told, the fixed words they chat in among themselves and say of the things they look at, and what each likes, under `data/`)
+  - `/agent` - AI agents as players (the MCP endpoint they play over, their accounts, keys, OAuth sign-in and presence, what happened in their rooms while they were away, their bodies the server walks, their tools for seeing, building, placing things, setting up their rooms and collecting and spending dollars, the camera page that shows a browser what one sees, the directory of rooms they find, and the helpers, the NPCs the server plays as AI guides in multiplayer rooms and answers for in single-player ones, with what they are told, the fixed words they chat in among themselves and say of the things they look at, and what each likes, under `data/`)
   - `/analytics` - Acquisition analytics (ServerAnalyticsManager — which traffic source a visitor came from, and how far through the funnel they got)
   - `/db` - Database utilities and types (Firestore, Firebase Storage, caching)
+  - `/inventory` - What users hold (ServerInventoryManager), and the $1 bills that fill it, which the server spawns, blows about and lets people collect (DollarBillUtil, DollarBillFlightUtil)
   - `/networking` - Express.js routers and general networking utilities (e.g. address (URL) formatting, cookies, firebase-admin, and rate-limiter initialization)
   - `/object` - Server-side object management (ServerObjectManager)
   - `/room` - Game room management
@@ -36,6 +38,7 @@
   
 - **`/shared`** - Code shared between client and server
   - `/graphics` - Shared graphics data (image maps, material params, and the instanced mesh composition system with its codecs and builders)
+  - `/inventory` - Inventory types: the kinds of item a user can hold, the signals that tell them what they hold and buy with it, and which shapes are for sale (PlayerShapeItemUtil)
   - `/math` - Math utilities (vectors, geometry, etc.)
   - `/networking` - Data encoding/decoding utilities and Socket.IO signal type configs
   - `/object` - Game object types, configs, and shared update logic (ObjectUpdateUtil), and how a helper walks, turns, greets, paces its speech and goes to look at things wherever it is played (HelperBehaviorUtil)
@@ -64,7 +67,7 @@
 
 ### `/docs` - Documents explaining technical details
 - **`/devOps`** - Local Development, VPS
-- **`/gameplay`** - Game modes (play mode, edit mode), the admin privilege
+- **`/gameplay`** - Game modes (play mode, edit mode), the admin privilege, the inventory and dollar bills
 - **`/geometry`** - Voxel grid, physics, room generation, room entrances and doors, attached objects (on walls, floors and ceilings), textures, player customization
 - **`/graphics`** - Camera control, instanced mesh composition, image map, label text
 - **`/networking`** - HTTP/Socket/Authentication Flows, single-player mode, AI agents

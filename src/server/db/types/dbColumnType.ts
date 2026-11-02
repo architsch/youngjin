@@ -7,4 +7,5 @@ export type DBColumnType =
     | undefined
     | FieldValue
     | {[key: string]: string}
+    | {[key: string]: number}
     | Array<{[key: string]: string}>;

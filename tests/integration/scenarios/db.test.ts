@@ -23,11 +23,12 @@ import RoomPrefsUtil from "../../../src/shared/room/util/roomPrefsUtil";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import { ColorPaletteMap } from "../../../src/shared/math/maps/colorPaletteMap";
 import StringUtil from "../../../src/shared/math/util/stringUtil";
-import { ATMOSPHERE_COLOR_PALETTE_NAME, DAY_IN_MS, LIGHT_COLOR_PALETTE_NAME,
+import { ATMOSPHERE_COLOR_PALETTE_NAME, DAY_IN_MS, HOUR_IN_MS, LIGHT_COLOR_PALETTE_NAME,
     TUTORIAL_SINGLE_PLAYER_MODE } from "../../../src/shared/system/sharedConstants";
 import { COLLECTION_HELPER_SPENDING, COLLECTION_ROOMS, COLLECTION_USERS,
     DB_MAX_WRITES_PER_COMMIT } from "../../../src/server/system/serverConstants";
 import DBHelperSpendingUtil from "../../../src/server/db/util/dbHelperSpendingUtil";
+import DBInventoryUtil from "../../../src/server/db/util/dbInventoryUtil";
 
 const USER_VERSION = DBUserVersionMigration.length;
 const ROOM_VERSION = DBRoomVersionMigration.length;
@@ -61,8 +62,17 @@ function currentUser(overrides: Partial<DBUser> = {}): DBRow
         ownedRoomID: "",
         ftue: "",
         playerMetadata: {},
+        inventory: {},
+        lastLoginRewardAt: 1_000,
         ...overrides,
     } as DBRow;
+}
+
+// As stored before users had an inventory, which a value of undefined can't say to Firestore.
+function userFromBeforeInventories(overrides: Partial<DBUser> = {}): DBRow
+{
+    const {inventory, lastLoginRewardAt, ...row} = currentUser({version: 6, ...overrides});
+    return row;
 }
 
 function currentRoom(overrides: Partial<DBRoom> = {}): DBRow
@@ -483,6 +493,31 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
             expect(DBUserUtil.getLoginCount(refreshed)).toBe(4);
         });
 
+        it("counts a login once, however many of its requests find the copy of the row kept from before it", async () => {
+            await EmulatorDB.seed(COLLECTION_USERS, { u1: currentUser({ loginCount: 3,
+                lastLoginAt: Date.now() - 2 * DAY_IN_MS }) });
+
+            for (let i = 0; i < 3; ++i)
+            {
+                const {lastLoginAt} = (await DBUserUtil.lookUpUserById("u1")).data[0];
+                await DBUserUtil.updateLastLogin("u1", lastLoginAt);
+            }
+
+            expect((await EmulatorDB.readStored(COLLECTION_USERS, "u1"))?.loginCount).toBe(4);
+            expect(DBUserUtil.getLoginCount((await DBUserUtil.lookUpUserById("u1")).data[0])).toBe(4);
+        });
+
+        it("counts on from what a row holds when a login lands on it as it is being migrated", async () => {
+            await EmulatorDB.seed(COLLECTION_USERS, { u1: currentUser({ version: USER_VERSION - 1, loginCount: 7,
+                lastLoginAt: Date.now() - 2 * DAY_IN_MS }) });
+
+            await DBUserUtil.updateLastLogin("u1", Date.now() - 2 * DAY_IN_MS);
+
+            const stored = await EmulatorDB.readStored(COLLECTION_USERS, "u1");
+            expect(stored?.version).toBe(USER_VERSION);
+            expect(stored?.loginCount).toBe(8);
+        });
+
         it("migrates an outdated row and applies the update in the same write", async () => {
             await EmulatorDB.seed(COLLECTION_USERS, {
                 u1: { version: 0, userName: "old", userType: UserTypeEnumMap.Guest, email: "",
@@ -501,6 +536,236 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
             expect(stored?.userName).toBe("renamed");
             expect(stored?.playerMetadata).toEqual({});
             expect(stored?.totalPlaytimeMs).toBeUndefined();
+        });
+
+        it("gives a migrated user an empty inventory", async () => {
+            await EmulatorDB.seed(COLLECTION_USERS, {u1: userFromBeforeInventories()});
+            await new DBQuery<DBRow>().update(COLLECTION_USERS).set({userName: "renamed"}).where("id", "==", "u1").run();
+            const stored = await EmulatorDB.readStored(COLLECTION_USERS, "u1");
+            expect(stored?.version).toBe(USER_VERSION);
+            expect(stored?.inventory).toEqual({});
+        });
+
+        it("gives nobody the reward on the visit they arrive on, however often they come, until its time is up", async () => {
+            await DBUserUtil.createUser("new", UserTypeEnumMap.Guest, "");
+            const [{id}] = Object.entries(await EmulatorDB.readStoredAll(COLLECTION_USERS)).map(([id]) => ({id}));
+
+            for (let i = 0; i < 3; ++i)
+                expect(await DBInventoryUtil.claimLoginReward(id, "dollar", 10)).toBe(false);
+            expect((await EmulatorDB.readStored(COLLECTION_USERS, id))?.inventory).toEqual({});
+
+            const {lastLoginRewardAt} = (await EmulatorDB.readStored(COLLECTION_USERS, id)) as DBUser;
+            await EmulatorDB.seed(COLLECTION_USERS, {[id]: currentUser({lastLoginRewardAt: lastLoginRewardAt - DAY_IN_MS})});
+            expect(await DBInventoryUtil.claimLoginReward(id, "dollar", 10)).toBe(true);
+        });
+
+        it("runs 20 hours from the last reward: not a minute sooner, however many visits come between", async () => {
+            const almostTime = Date.now() - 20 * HOUR_IN_MS + 60_000;
+            await EmulatorDB.seed(COLLECTION_USERS, {
+                soon: currentUser({lastLoginRewardAt: almostTime}),
+                due: currentUser({lastLoginRewardAt: Date.now() - 20 * HOUR_IN_MS - 1}),
+            });
+
+            expect(await DBInventoryUtil.claimLoginReward("soon", "dollar", 10)).toBe(false);
+            expect(await DBInventoryUtil.claimLoginReward("due", "dollar", 10)).toBe(true);
+            expect(await DBInventoryUtil.claimLoginReward("due", "dollar", 10)).toBe(false);
+            expect((await EmulatorDB.readStored(COLLECTION_USERS, "due"))?.lastLoginRewardAt).toBeGreaterThan(almostTime);
+        });
+
+        it("isn't put off by visits in between, as a count of logins is", async () => {
+            await EmulatorDB.seed(COLLECTION_USERS, {u1: currentUser({lastLoginRewardAt: Date.now() - 2 * DAY_IN_MS})});
+
+            await DBUserUtil.updateLastLogin("u1", Date.now());
+
+            expect(await DBInventoryUtil.claimLoginReward("u1", "dollar", 10)).toBe(true);
+        });
+
+        it("gives the reward once, however many claims arrive together", async () => {
+            await EmulatorDB.seed(COLLECTION_USERS, {u1: currentUser({lastLoginRewardAt: 1, inventory: {dollar: 3}})});
+
+            const claims = await Promise.all([1, 2, 3, 4, 5].map(() => DBInventoryUtil.claimLoginReward("u1", "dollar", 10)));
+
+            expect(claims.filter(claimed => claimed)).toHaveLength(1);
+            expect((await EmulatorDB.readStored(COLLECTION_USERS, "u1"))?.inventory).toEqual({dollar: 13});
+        });
+
+        it("runs a migrated user's day from their last visit, a login landing as they migrate included", async () => {
+            await EmulatorDB.seed(COLLECTION_USERS, {
+                recent: userFromBeforeInventories({lastLoginAt: Date.now() - 1000}),
+                longAgo: userFromBeforeInventories({lastLoginAt: Date.now() - 2 * DAY_IN_MS}),
+                longAgoUnread: userFromBeforeInventories({lastLoginAt: Date.now() - 2 * DAY_IN_MS}),
+                recentUnread: userFromBeforeInventories({lastLoginAt: Date.now() - 1000}),
+            });
+
+            await new DBQuery<DBRow>().update(COLLECTION_USERS).set({userName: "renamed"}).where("id", "==", "recent").run();
+            await DBUserUtil.updateLastLogin("longAgo", Date.now() - 2 * DAY_IN_MS);
+
+            expect((await EmulatorDB.readStored(COLLECTION_USERS, "recent"))?.lastLoginRewardAt).toBeGreaterThan(Date.now() - DAY_IN_MS);
+            expect(await DBInventoryUtil.claimLoginReward("recent", "dollar", 10)).toBe(false);
+            expect(await DBInventoryUtil.claimLoginReward("longAgo", "dollar", 10)).toBe(true);
+            // Not migrated at all yet, as an agent's row can be as it arrives.
+            expect(await DBInventoryUtil.claimLoginReward("recentUnread", "dollar", 10)).toBe(false);
+            expect(await DBInventoryUtil.claimLoginReward("longAgoUnread", "dollar", 10)).toBe(true);
+        });
+
+        it("reads what a claim gave, not the copy of the row kept from before it", async () => {
+            await EmulatorDB.seed(COLLECTION_USERS, {u1: currentUser({lastLoginRewardAt: 1, inventory: {dollar: 3}})});
+            await DBUserUtil.lookUpUserById("u1");
+
+            await DBInventoryUtil.claimLoginReward("u1", "dollar", 10);
+
+            expect((await DBUserUtil.lookUpUserById("u1")).data[0].inventory).toEqual({dollar: 13});
+        });
+
+        it("makes the reward due at once when fast-forwarded, once, whatever copy of the row is kept", async () => {
+            await EmulatorDB.seed(COLLECTION_USERS, {u1: currentUser({lastLoginRewardAt: Date.now(), inventory: {dollar: 3}})});
+            await DBUserUtil.lookUpUserById("u1");
+            expect(await DBInventoryUtil.claimLoginReward("u1", "dollar", 10)).toBe(false);
+
+            await DBInventoryUtil.fastForwardLoginRewardClock("u1");
+
+            expect((await DBUserUtil.lookUpUserById("u1")).data[0].lastLoginRewardAt).toBeLessThan(Date.now() - 19 * HOUR_IN_MS);
+            expect(await DBInventoryUtil.claimLoginReward("u1", "dollar", 10)).toBe(true);
+            expect(await DBInventoryUtil.claimLoginReward("u1", "dollar", 10)).toBe(false);
+            expect((await EmulatorDB.readStored(COLLECTION_USERS, "u1"))?.inventory).toEqual({dollar: 13});
+        });
+
+        it("fast-forwards nobody's clock without a fuss", async () => {
+            await expect(DBInventoryUtil.fastForwardLoginRewardClock("nobody")).resolves.toBeUndefined();
+        });
+
+        it("claims nothing for nobody, and says so", async () => {
+            expect(await DBInventoryUtil.claimLoginReward("nobody", "dollar", 10)).toBe(false);
+        });
+
+        it("spends dollars on an item and gives it in one write, leaving everything else as it was", async () => {
+            await EmulatorDB.seed(COLLECTION_USERS, {u1: currentUser({inventory: {dollar: 12, shape_ear_4: 1}})});
+
+            expect(await DBInventoryUtil.buyItem("u1", "shape_head_3", 10)).toBe("bought");
+
+            const stored = await EmulatorDB.readStored(COLLECTION_USERS, "u1");
+            expect(stored?.inventory).toEqual({dollar: 2, shape_ear_4: 1, shape_head_3: 1});
+            expect(stored?.userName).toBe(currentUser().userName);
+        });
+
+        it("can spend the very last dollar", async () => {
+            await EmulatorDB.seed(COLLECTION_USERS, {u1: currentUser({inventory: {dollar: 10}})});
+            expect(await DBInventoryUtil.buyItem("u1", "shape_head_3", 10)).toBe("bought");
+            expect((await EmulatorDB.readStored(COLLECTION_USERS, "u1"))?.inventory).toEqual({dollar: 0, shape_head_3: 1});
+        });
+
+        it("writes nothing at all for someone a dollar short, or with no dollars, or nobody", async () => {
+            await EmulatorDB.seed(COLLECTION_USERS, {short: currentUser({inventory: {dollar: 9}}), broke: currentUser()});
+
+            expect(await DBInventoryUtil.buyItem("short", "shape_head_3", 10)).toBe("refused");
+            expect(await DBInventoryUtil.buyItem("broke", "shape_head_3", 10)).toBe("refused");
+            expect(await DBInventoryUtil.buyItem("nobody", "shape_head_3", 10)).toBe("refused");
+
+            expect((await EmulatorDB.readStored(COLLECTION_USERS, "short"))?.inventory).toEqual({dollar: 9});
+            expect((await EmulatorDB.readStored(COLLECTION_USERS, "broke"))?.inventory).toEqual({});
+            expect(await EmulatorDB.readStored(COLLECTION_USERS, "nobody")).toBeUndefined();
+        });
+
+        it("charges nothing for what is held already", async () => {
+            await EmulatorDB.seed(COLLECTION_USERS, {u1: currentUser({inventory: {dollar: 30, shape_head_3: 1}})});
+            expect(await DBInventoryUtil.buyItem("u1", "shape_head_3", 10)).toBe("held");
+            expect((await EmulatorDB.readStored(COLLECTION_USERS, "u1"))?.inventory).toEqual({dollar: 30, shape_head_3: 1});
+        });
+
+        it("charges once, however many ask for the one item together", async () => {
+            await EmulatorDB.seed(COLLECTION_USERS, {u1: currentUser({inventory: {dollar: 100}})});
+
+            const outcomes = await Promise.all([1, 2, 3, 4, 5, 6].map(() => DBInventoryUtil.buyItem("u1", "shape_head_3", 10)));
+
+            expect(outcomes.filter(outcome => outcome == "bought")).toHaveLength(1);
+            expect(outcomes.filter(outcome => outcome == "held")).toHaveLength(5);
+            expect((await EmulatorDB.readStored(COLLECTION_USERS, "u1"))?.inventory).toEqual({dollar: 90, shape_head_3: 1});
+        });
+
+        it("never spends what isn't there, however many different items are asked for together", async () => {
+            await EmulatorDB.seed(COLLECTION_USERS, {u1: currentUser({inventory: {dollar: 25}})});
+            const items = [3, 4, 5].flatMap(shape => [`shape_head_${shape}`, `shape_ear_${shape}`]);
+
+            const outcomes = await Promise.all(items.map(item => DBInventoryUtil.buyItem("u1", item, 10)));
+
+            expect(outcomes.filter(outcome => outcome == "bought")).toHaveLength(2);
+            expect(outcomes.filter(outcome => outcome == "refused")).toHaveLength(4);
+            const {inventory} = (await EmulatorDB.readStored(COLLECTION_USERS, "u1"))!;
+            expect(inventory.dollar).toBe(5);
+            expect(Object.keys(inventory)).toHaveLength(3);
+        });
+
+        it("loses neither a purchase nor a bill counted while it goes through", async () => {
+            await EmulatorDB.seed(COLLECTION_USERS, {u1: currentUser({inventory: {dollar: 100}})});
+
+            await Promise.all([1, 2, 3, 4, 5, 6, 7, 8].flatMap(index => [
+                DBInventoryUtil.addItem("u1", "dollar", 1),
+                DBInventoryUtil.buyItem("u1", `shape_${index % 2 == 0 ? "hat" : "arm"}_${3 + index % 3}`, 10),
+            ]));
+
+            const {inventory} = (await EmulatorDB.readStored(COLLECTION_USERS, "u1"))!;
+            const numBought = Object.keys(inventory).length - 1;
+            expect(numBought).toBe(6);
+            expect(inventory.dollar).toBe(100 + 8 - 10 * numBought);
+        });
+
+        it("reads a user's purchase back at once, past the cached row", async () => {
+            await EmulatorDB.seed(COLLECTION_USERS, {u1: currentUser({inventory: {dollar: 10}})});
+            await selectUsers().where("id", "==", "u1").run();
+            await DBInventoryUtil.buyItem("u1", "shape_head_3", 10);
+            expect((await selectUsers().where("id", "==", "u1").run()).data[0].inventory).toEqual({dollar: 0, shape_head_3: 1});
+        });
+
+        it("buys for a row still waiting to be migrated, and its migration keeps the purchase", async () => {
+            await EmulatorDB.seed(COLLECTION_USERS, {u1: userFromBeforeInventories({inventory: undefined})});
+            await DBInventoryUtil.addItem("u1", "dollar", 10);
+            expect(await DBInventoryUtil.buyItem("u1", "shape_head_3", 10)).toBe("bought");
+
+            await new DBQuery<DBRow>().update(COLLECTION_USERS).set({userName: "renamed"}).where("id", "==", "u1").run();
+
+            const stored = await EmulatorDB.readStored(COLLECTION_USERS, "u1");
+            expect(stored?.version).toBe(USER_VERSION);
+            expect(stored?.inventory).toEqual({dollar: 0, shape_head_3: 1});
+        });
+
+        it("keeps a look's locked shapes for whoever wore them as shapes came to be bought", async () => {
+            const look = "!!" + String.fromCharCode(33 + 4) + String.fromCharCode(33 + 1).repeat(5);
+            await EmulatorDB.seed(COLLECTION_USERS, {u1: userFromBeforeInventories({playerMetadata: {"2": look}})});
+
+            await new DBQuery<DBRow>().update(COLLECTION_USERS).set({userName: "renamed"}).where("id", "==", "u1").run();
+
+            const stored = await EmulatorDB.readStored(COLLECTION_USERS, "u1");
+            expect(stored?.inventory).toEqual({shape_head_4: 1});
+            expect(stored?.playerMetadata).toEqual({"2": look});
+        });
+
+        it("adds to what a user holds, losing nothing to writes made together", async () => {
+            await EmulatorDB.seed(COLLECTION_USERS, {u1: currentUser()});
+            expect(await Promise.all([1, 2, 3, 4, 5].map(() => DBInventoryUtil.addItem("u1", "dollar", 1))))
+                .toEqual([true, true, true, true, true]);
+            await DBInventoryUtil.addItem("u1", "somethingElse", 2);
+            expect((await EmulatorDB.readStored(COLLECTION_USERS, "u1"))?.inventory)
+                .toEqual({dollar: 5, somethingElse: 2});
+        });
+
+        it("adds to what a row not yet migrated holds, which its migration then keeps", async () => {
+            await EmulatorDB.seed(COLLECTION_USERS, {u1: userFromBeforeInventories()});
+            expect(await DBInventoryUtil.addItem("u1", "dollar", 3)).toBe(true);
+            const [row] = (await selectUsers().where("id", "==", "u1").run()).data;
+            expect(row.inventory).toEqual({dollar: 3});
+        });
+
+        it("reads what a user holds afresh once it changes, whatever was cached", async () => {
+            await EmulatorDB.seed(COLLECTION_USERS, {u1: currentUser({inventory: {dollar: 1}})});
+            await selectUsers().where("id", "==", "u1").run();
+            await DBInventoryUtil.addItem("u1", "dollar", 1);
+            const [row] = (await selectUsers().where("id", "==", "u1").run()).data;
+            expect(row.inventory).toEqual({dollar: 2});
+        });
+
+        it("says so, and makes no row, for a user who is gone", async () => {
+            expect(await DBInventoryUtil.addItem("nobody", "dollar", 1)).toBe(false);
+            expect(await EmulatorDB.readStored(COLLECTION_USERS, "nobody")).toBeFalsy();
         });
 
         it("does not store the row's id when a migration rewrites the document", async () => {

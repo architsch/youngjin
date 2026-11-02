@@ -1,5 +1,6 @@
 import User from "../../../shared/user/types/user";
 import EncodableData from "../../../shared/networking/types/encodableData";
+import { Inventory } from "../../../shared/inventory/types/inventory";
 import UserContext from "../../sockets/types/userContext";
 import UserJoinHints from "../../sockets/types/userJoinHints";
 import SocketSignalQueue from "../../sockets/types/socketSignalQueue";
@@ -15,6 +16,7 @@ export default class AgentUserContext implements UserContext
     singlePlayerMode: string = "";
     funnel: string;
     loginCount: number;
+    inventory: Inventory;
     signalThrottleTimestamps: {[signalType: string]: number} = {};
     readonly inbox: AgentInbox;
     // Its key's hash, by which its requests are known while it is present (see AgentPresenceUtil.findByKey), and which
@@ -30,11 +32,12 @@ export default class AgentUserContext implements UserContext
     private lastRequestAt: number = Date.now();
     private closed: boolean = false;
 
-    constructor(user: User, funnel: string, loginCount: number, keyHash: string)
+    constructor(user: User, funnel: string, loginCount: number, inventory: Inventory, keyHash: string)
     {
         this.user = user;
         this.funnel = funnel;
         this.loginCount = loginCount;
+        this.inventory = {...inventory};
         this.keyHash = keyHash;
         this.inbox = new AgentInbox(user.id);
     }

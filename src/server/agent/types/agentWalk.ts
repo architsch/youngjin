@@ -14,6 +14,8 @@ export default interface AgentWalk
     target?: Vec3;
     // Turned toward on arrival (a door to go through).
     faceToward?: Vec3;
+    // Arrived as soon as this holds, wherever the walker is (a bill collected on the way).
+    until?: () => boolean;
     deadline: number;
     repaths: number;
     // The nearest the walker has come to its next waypoint, and when: a walk that stops getting nearer is stuck.

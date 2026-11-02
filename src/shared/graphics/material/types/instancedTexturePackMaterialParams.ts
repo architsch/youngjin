@@ -27,6 +27,15 @@ export default class InstancedTexturePackMaterialParams extends MaterialParams
     // Set after construction: each instance turns what it samples by quarter turns (see
     // InstancedMeshBinding.updateInstanceTextureTurns), e.g. a canvas's picture.
     turnable: boolean;
+    // Set after construction: both of each instance's sides are drawn, the whole texture being one sheet, its cells side
+    // by side, which reads the right way round from either, e.g. a dollar bill, which folds and flutters.
+    doubleSided: boolean;
+    // Set after construction: the texture is a photograph, whose colors are decoded from sRGB before they are lit, rather
+    // than taken as they are, as a texture pack's are.
+    photographic: boolean;
+    // Set after construction: what is drawn is on the screen rather than in the room, e.g. a dollar bill flying to the count
+    // there: over everything in the room, which neither lights it, fogs it nor shows it in a mirror.
+    overRoom: boolean;
 
     constructor(texturePath: string, textureWidth: number, textureHeight: number,
         textureGridCellWidth: number, textureGridCellHeight: number,
@@ -50,6 +59,9 @@ export default class InstancedTexturePackMaterialParams extends MaterialParams
         this.alphaCutout = false;
         this.coverageOnly = false;
         this.turnable = false;
+        this.doubleSided = false;
+        this.photographic = false;
+        this.overRoom = false;
     }
 
     protected getDefaultMaterialId(): string

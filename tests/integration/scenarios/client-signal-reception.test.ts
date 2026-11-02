@@ -1,15 +1,18 @@
 /**
  * Integration tests: what a browser does with what the server says of the room it is in (see ClientObjectManager): a
  * helper's moves, which are only shown, carry its body and collider and leave the room's copy of it at home, as a room
- * file saves it, while the browser's guess at which helper will answer goes by where they took it; and what is said of a
- * room while it is still loading reaches it once it has loaded, in the order said.
+ * file saves it, while the browser's guess at which helper will answer goes by where they took it; what is said of a
+ * room while it is still loading reaches it once it has loaded, in the order said; a dollar bill collected, which flies
+ * straight to the count on its collector's screen and into its collector's body on everyone else's; and what coming back
+ * has earned, shown once it can be seen.
  */
 import { describe, it, expect, beforeEach, afterEach, vi, Mock } from "vitest";
 
 vi.mock("../../../src/client/graphics/graphicsManager", async () => {
     const THREE = await import("three");
     const scene = new THREE.Scene();
-    return { default: { getScene: () => scene } };
+    const camera = new THREE.PerspectiveCamera(60, 16 / 9, 0.1, 100);
+    return { default: { getScene: () => scene, addObjectToScene: () => {}, getCamera: () => camera } };
 });
 
 vi.mock("../../../src/client/app", () => ({
@@ -23,13 +26,31 @@ vi.mock("../../../src/client/app", () => ({
 vi.mock("../../../src/client/networking/client/socketsClient", () => ({ default: {} }));
 
 import * as THREE from "three";
+import fc from "fast-check";
 import App from "../../../src/client/app";
+import GraphicsManager from "../../../src/client/graphics/graphicsManager";
+import MeshFactory from "../../../src/client/graphics/factories/meshFactory";
+import ClientInventoryManager from "../../../src/client/inventory/clientInventoryManager";
+import LoginRewardUtil from "../../../src/client/inventory/util/loginRewardUtil";
 import ClientObjectManager from "../../../src/client/object/clientObjectManager";
+import InstancedMeshGraphics from "../../../src/client/object/components/instancedMeshGraphics";
+import DollarBillGameObject from "../../../src/client/object/types/gameObject/dollarBillGameObject";
 import GameObject from "../../../src/client/object/types/gameObject/gameObject";
 import NpcGameObject from "../../../src/client/object/types/gameObject/npcGameObject";
 import HelperThinkingUtil from "../../../src/client/object/util/helperThinkingUtil";
+import { dollarsInFlightObservable, inventoryGainObservable, loginRewardStageObservable, objectCollectedObservable,
+    inventoryObservable, roomChangedObservable, screenCoachMarksObservable } from "../../../src/client/system/clientObservables";
+import { endClientProcess, tryStartClientProcess } from "../../../src/client/system/types/clientProcess";
+import { InventoryItemTypeEnumMap } from "../../../src/shared/inventory/types/inventoryItemType";
+import InventorySignal from "../../../src/shared/inventory/types/inventorySignal";
+import LoginRewardSignal from "../../../src/shared/inventory/types/loginRewardSignal";
+import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
+import { LOGIN_REWARD_DOLLARS } from "../../../src/shared/system/sharedConstants";
+import { FTUEElementCodeEnumMap } from "../../../src/shared/user/types/ftueElementCode";
+import DollarBillObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/dollarBillObjectTypeConfig";
 import { PLAYER_HEIGHT } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
+import ObjectCollectedSignal from "../../../src/shared/object/types/objectCollectedSignal";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import SetObjectTransformSignal from "../../../src/shared/object/types/setObjectTransformSignal";
 import SetObjectMetadataSignal from "../../../src/shared/object/types/setObjectMetadataSignal";
@@ -91,6 +112,15 @@ beforeEach(() => {
 
 afterEach(() => {
     vi.restoreAllMocks();
+});
+
+describe("an object added just as the room was sent", () => {
+    it("is taken once, the room having held it already", async () => {
+        const add = vi.spyOn(ClientObjectManager, "addObject");
+        await ClientObjectManager.onAddObjectSignalReceived(new AddObjectSignal(ROOM_ID, user.id, user.userName,
+            NPC_TYPE_INDEX, NPC_ID, transformTo(HOME), {}));
+        expect(add).not.toHaveBeenCalled();
+    });
 });
 
 describe("a helper's moves in a browser", () => {
@@ -160,5 +190,360 @@ describe("what is said of a room in a browser", () => {
         loaded();
         await Promise.all(received);
         expect(room.objectById[NPC_ID].metadata[ObjectMetadataKeyEnumMap.Facing].str).toBe("270");
+    });
+});
+
+describe("a dollar bill collected, in a browser", () => {
+    const BILL_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType(DollarBillObjectTypeConfig.objectType);
+    const DOLLAR = InventoryItemTypeEnumMap.Dollar;
+    const SOMEONE_ELSE = "someone-else";
+    const FRAME = 1 / 60;
+    const EYES: Vec3 = {x: 10, y: 2, z: 20};
+    // Where the bill makes for, the page in a test having no count on it.
+    const COUNT = {x: -0.95, y: 0.9};
+    const QUAD_CORNERS = [[-0.5, -0.5], [0.5, -0.5], [-0.5, 0.5], [0.5, 0.5]];
+
+    const camera = GraphicsManager.getCamera() as THREE.PerspectiveCamera;
+    // What the bill draws itself with: each instance it holds, by mesh, and the matrix it last wrote of it.
+    let drawn: Map<string, THREE.Matrix4>;
+    let nextInstanceId: number;
+    let plusShownFor: AddObjectSignal[];
+    let gains: string[];
+    let somebody: GameObject;
+
+    beforeEach(() => {
+        drawn = new Map();
+        nextInstanceId = 0;
+        plusShownFor = [];
+        gains = [];
+        somebody = {obj: new THREE.Object3D()} as unknown as GameObject;
+        vi.stubGlobal("document", {getElementById: () => null});
+        vi.spyOn(ClientObjectManager, "getPlayerOfUser").mockReturnValue(somebody);
+        vi.spyOn(InstancedMeshGraphics, "loadInstancedMesh").mockResolvedValue(undefined as never);
+        vi.spyOn(MeshFactory, "stopRaycasting").mockImplementation(() => {});
+        vi.spyOn(InstancedMeshGraphics.prototype, "updateInstanceTextureRect").mockImplementation(() => {});
+        vi.spyOn(InstancedMeshGraphics.prototype, "rentInstanceFromPool").mockImplementation((meshId: string) => {
+            drawn.set(`${meshId}#${nextInstanceId}`, new THREE.Matrix4());
+            return nextInstanceId++;
+        });
+        vi.spyOn(InstancedMeshGraphics.prototype, "returnInstanceToPool").mockImplementation(
+            (meshId: string, instanceId: number) => { drawn.delete(`${meshId}#${instanceId}`); });
+        vi.spyOn(InstancedMeshGraphics.prototype, "updateInstanceMatrix").mockImplementation(
+            (meshId: string, instanceId: number, matrix: THREE.Matrix4) => { drawn.set(`${meshId}#${instanceId}`, matrix.clone()); });
+
+        camera.position.set(EYES.x, EYES.y, EYES.z);
+        camera.lookAt(EYES.x, EYES.y, 0);
+        camera.updateWorldMatrix(true, false);
+        objectCollectedObservable.addListener("test", object => { plusShownFor.push(object); });
+        inventoryGainObservable.addListener("test", item => { gains.push(item); });
+    });
+
+    afterEach(() => {
+        DollarBillGameObject.landFlying();
+        objectCollectedObservable.removeListener("test");
+        inventoryGainObservable.removeListener("test");
+        inventoryObservable.set({});
+        dollarsInFlightObservable.set(0);
+        vi.unstubAllGlobals();
+    });
+
+    async function spawnBill(objectId: string, pos: Vec3): Promise<DollarBillGameObject>
+    {
+        const bill = new DollarBillGameObject(new AddObjectSignal(ROOM_ID, "", "", BILL_TYPE_INDEX, objectId,
+            transformTo(pos), {}));
+        await bill.onSpawn();
+        // Until it has unfolded and settled.
+        bill.update(0.5);
+        bill.update(0.5);
+        return bill;
+    }
+
+    async function collect(bill: DollarBillGameObject, collectorUserID: string): Promise<void>
+    {
+        vi.spyOn(ClientObjectManager, "getObjectById").mockReturnValue(bill);
+        await ClientObjectManager.onObjectCollectedSignalReceived(new ObjectCollectedSignal(ROOM_ID, bill.params.objectId,
+            collectorUserID));
+        await bill.onDespawn();
+    }
+
+    function runFrames(numFrames: number): void
+    {
+        for (let i = 0; i < numFrames; ++i)
+            DollarBillGameObject.updateFlying(FRAME);
+    }
+
+    function meshesDrawnOn(): Set<string>
+    {
+        return new Set([...drawn.keys()].map(key => key.split("#")[0]));
+    }
+
+    function cornersOnScreen(): THREE.Vector3[]
+    {
+        return [...drawn.values()].flatMap(matrix => QUAD_CORNERS.map(([x, y]) =>
+            new THREE.Vector3(x, y, 0).applyMatrix4(matrix).project(camera)));
+    }
+
+    function middleOnScreen(): {x: number, y: number}
+    {
+        const corners = cornersOnScreen();
+        return {x: corners.reduce((sum, {x}) => sum + x, 0) / corners.length,
+            y: corners.reduce((sum, {y}) => sum + y, 0) / corners.length};
+    }
+
+    it("sets off to the count of whoever collected it looking just as it did where it lay, however it lay", async () => {
+        await fc.assert(fc.asyncProperty(fc.integer({min: 34, max: 50}), fc.integer({min: -30, max: 30}), fc.integer({min: 0, max: 1000}),
+            async (ahead, aside, id) => {
+            const bill = await spawnBill(`bill-${id}`, {x: EYES.x + aside / 10, y: 0.2, z: EYES.z - ahead / 10});
+            const lying = cornersOnScreen();
+            const roomMesh = meshesDrawnOn();
+
+            await collect(bill, user.id);
+            DollarBillGameObject.updateFlying(0);
+
+            const flying = cornersOnScreen();
+            expect(flying).toHaveLength(lying.length);
+            flying.forEach((corner, i) => {
+                expect(corner.x).toBeCloseTo(lying[i].x, 5);
+                expect(corner.y).toBeCloseTo(lying[i].y, 5);
+            });
+            expect([...meshesDrawnOn()].some(mesh => roomMesh.has(mesh))).toBe(false);
+            DollarBillGameObject.landFlying();
+        }), {numRuns: 40});
+    });
+
+    it("sets off the same in the middle of a gust", async () => {
+        const bill = await spawnBill("a-bill", {x: 10, y: 0.2, z: 16});
+        bill.followPath([{pos: {x: 10, y: 0.2, z: 16}, speed: 2}, {pos: {x: 12, y: 1, z: 16}, speed: 2}]);
+        for (let i = 0; i < 10; ++i)
+            bill.update(FRAME);
+        const inTheAir = cornersOnScreen();
+
+        await collect(bill, user.id);
+        DollarBillGameObject.updateFlying(0);
+
+        cornersOnScreen().forEach((corner, i) => {
+            expect(corner.x).toBeCloseTo(inTheAir[i].x, 5);
+            expect(corner.y).toBeCloseTo(inTheAir[i].y, 5);
+        });
+    });
+
+    it("flies straight to the count, nearer every frame and past no body, and counts only as it arrives", async () => {
+        ClientInventoryManager.onInventorySignalReceived(new InventorySignal({[DOLLAR]: 3}));
+        const bill = await spawnBill("a-bill", {x: 11, y: 0.2, z: 16});
+
+        await collect(bill, user.id);
+        expect(ClientInventoryManager.getDollarsShown()).toBe(2);
+
+        let farthest = Number.POSITIVE_INFINITY, frames = 0;
+        for (; drawn.size > 0 && frames < 200; ++frames)
+        {
+            runFrames(1);
+            if (drawn.size == 0)
+                break;
+            const {x, y} = middleOnScreen();
+            const away = Math.hypot(x - COUNT.x, y - COUNT.y);
+            expect(away).toBeLessThan(farthest);
+            farthest = away;
+            expect(gains).toEqual([]);
+        }
+        expect(farthest).toBeLessThan(0.1);
+        // Well inside the time the bill was once drawn in and flown after.
+        expect(frames * FRAME).toBeLessThan(1);
+        expect(ClientInventoryManager.getDollarsShown()).toBe(3);
+        expect(gains).toEqual([DOLLAR]);
+        expect(plusShownFor).toEqual([]);
+    });
+
+    it("comes in over the edge of the screen from under the view, one at the user's feet not being in it", async () => {
+        const bill = await spawnBill("a-bill", {x: EYES.x, y: 0.2, z: EYES.z - 1});
+        await collect(bill, user.id);
+        runFrames(1);
+        const {x, y} = middleOnScreen();
+        expect(y).toBeLessThan(-1);
+        expect(Math.abs(x)).toBeLessThan(0.1);
+    });
+
+    it("is drawn into the body of anyone else who collects it, wherever they have gone, and says what it was worth there", async () => {
+        somebody.obj.position.set(13, 1.25, 16);
+        const bill = await spawnBill("a-bill", {x: 10, y: 0.2, z: 12});
+        const roomMesh = meshesDrawnOn();
+
+        await collect(bill, SOMEONE_ELSE);
+        expect(dollarsInFlightObservable.peek()).toBe(0);
+        for (let i = 0; i < 20; ++i)
+        {
+            somebody.obj.position.x -= 0.05;
+            runFrames(1);
+        }
+        expect(meshesDrawnOn()).toEqual(roomMesh);
+        expect(plusShownFor).toEqual([]);
+
+        runFrames(20);
+        expect(plusShownFor).toHaveLength(1);
+        expect(plusShownFor[0].transform.pos).toEqual({x: somebody.obj.position.x, y: somebody.obj.position.y, z: somebody.obj.position.z});
+        expect(drawn.size).toBe(0);
+        expect(gains).toEqual([]);
+        expect(dollarsInFlightObservable.peek()).toBe(0);
+    });
+
+    it("shrinks away where it was if nobody knows who took it", async () => {
+        vi.spyOn(ClientObjectManager, "getPlayerOfUser").mockReturnValue(undefined);
+        const bill = await spawnBill("a-bill", {x: 10, y: 0.2, z: 12});
+        await collect(bill, SOMEONE_ELSE);
+        runFrames(40);
+        expect(plusShownFor).toHaveLength(1);
+        expect(plusShownFor[0].transform.pos).toMatchObject({x: 10, z: 12});
+        expect(drawn.size).toBe(0);
+    });
+
+    it("arrives at once as the room is left, while one on its way to someone else just goes", async () => {
+        ClientInventoryManager.onInventorySignalReceived(new InventorySignal({[DOLLAR]: 1}));
+        await collect(await spawnBill("mine", {x: 11, y: 0.2, z: 16}), user.id);
+        await collect(await spawnBill("theirs", {x: 12, y: 0.2, z: 16}), SOMEONE_ELSE);
+        expect(drawn.size).toBe(4);
+
+        DollarBillGameObject.landFlying();
+        expect(drawn.size).toBe(0);
+        expect(gains).toEqual([DOLLAR]);
+        expect(ClientInventoryManager.getDollarsShown()).toBe(1);
+        expect(plusShownFor).toEqual([]);
+    });
+
+    it("goes as soon as it is removed, if it was only destroyed", async () => {
+        const bill = await spawnBill("a-bill", {x: 10, y: 0.2, z: 12});
+        await bill.onDespawn();
+        expect(drawn.size).toBe(0);
+        runFrames(5);
+        expect(plusShownFor).toEqual([]);
+        expect(gains).toEqual([]);
+    });
+});
+
+describe("what coming back has earned, in a browser", () => {
+    const DOLLAR = InventoryItemTypeEnumMap.Dollar;
+    const MARK = {targetElementId: "dollarCounter", reward: true, text: "Welcome back!\nHere's your $10\ndaily reward."};
+    const FEATURE_MARK = {ftueElementCode: FTUEElementCodeEnumMap.EnterEditMode, targetElementId: "gameModeToggleSwitch", text: "Try Editing"};
+    let hidden: boolean;
+    let onVisibilityChange: (() => void) | undefined;
+    let stages: string[];
+
+    const receive = () => LoginRewardUtil.onLoginRewardSignalReceived(new LoginRewardSignal(LOGIN_REWARD_DOLLARS));
+    const marks = () => screenCoachMarksObservable.peek();
+
+    beforeEach(() => {
+        vi.useFakeTimers();
+        hidden = false;
+        onVisibilityChange = undefined;
+        stages = [];
+        vi.stubGlobal("document", {
+            get hidden() { return hidden; },
+            addEventListener: (_type: string, listener: () => void) => { onVisibilityChange = listener; },
+            removeEventListener: () => { onVisibilityChange = undefined; },
+        });
+        inventoryObservable.set({[DOLLAR]: 3 + LOGIN_REWARD_DOLLARS});
+        loginRewardStageObservable.addListener("test", stage => { stages.push(stage); });
+    });
+
+    afterEach(() => {
+        vi.runAllTimers();
+        vi.useRealTimers();
+        vi.unstubAllGlobals();
+        loginRewardStageObservable.removeListener("test");
+        inventoryObservable.set({});
+        dollarsInFlightObservable.set(0);
+        screenCoachMarksObservable.set([]);
+    });
+
+    it("shows the count rising under a green mark a moment after it is told, and bouncing with it", () => {
+        receive();
+        expect(ClientInventoryManager.getDollarsShown()).toBe(3);
+
+        vi.advanceTimersByTime(499);
+        expect(marks()).toEqual([]);
+        expect(ClientInventoryManager.getDollarsShown()).toBe(3);
+        expect(stages).toEqual(["waiting"]);
+
+        vi.advanceTimersByTime(1);
+        expect(marks()).toEqual([MARK]);
+        expect(ClientInventoryManager.getDollarsShown()).toBe(3 + LOGIN_REWARD_DOLLARS);
+        expect(stages).toEqual(["waiting", "shown"]);
+    });
+
+    it("takes the mark away after 6 seconds, leaving any other", () => {
+        screenCoachMarksObservable.set([FEATURE_MARK]);
+        receive();
+        vi.advanceTimersByTime(500 + 5999);
+        expect(marks()).toEqual([FEATURE_MARK, MARK]);
+        expect(stages[stages.length - 1]).toBe("shown");
+        vi.advanceTimersByTime(1);
+        expect(marks()).toEqual([FEATURE_MARK]);
+        expect(stages[stages.length - 1]).toBe("none");
+    });
+
+    it("leaves the mark alone as a feature's mark goes, being no feature's", () => {
+        receive();
+        vi.advanceTimersByTime(500);
+        screenCoachMarksObservable.change(coachMarks => coachMarks.filter(mark => mark.ftueElementCode != FEATURE_MARK.ftueElementCode));
+        expect(marks()).toEqual([MARK]);
+    });
+
+    it("waits for a multiplayer room, there being no count on a single-player room's screen, however long that takes", () => {
+        (App.getCurrentRoom as Mock).mockReturnValue({...room, roomType: RoomTypeEnumMap.SinglePlayer});
+        receive();
+        vi.advanceTimersByTime(60_000);
+        expect(marks()).toEqual([]);
+        expect(ClientInventoryManager.getDollarsShown()).toBe(3);
+
+        (App.getCurrentRoom as Mock).mockReturnValue(room);
+        roomChangedObservable.set({room} as any);
+        vi.advanceTimersByTime(500);
+        expect(marks()).toEqual([MARK]);
+    });
+
+    it("waits out the loading screen, which would hide it", () => {
+        tryStartClientProcess("roomChange", 1, 0);
+        receive();
+        vi.advanceTimersByTime(60_000);
+        expect(marks()).toEqual([]);
+
+        endClientProcess("roomChange");
+        vi.advanceTimersByTime(500);
+        expect(marks()).toEqual([MARK]);
+    });
+
+    it("waits for a hidden page to be looked at", () => {
+        hidden = true;
+        receive();
+        vi.advanceTimersByTime(60_000);
+        expect(marks()).toEqual([]);
+
+        hidden = false;
+        onVisibilityChange!();
+        vi.advanceTimersByTime(500);
+        expect(marks()).toEqual([MARK]);
+        expect(onVisibilityChange).toBeUndefined();
+    });
+
+    it("shows two told while it waits as one, without listening twice", () => {
+        hidden = true;
+        receive();
+        receive();
+        expect(ClientInventoryManager.getDollarsShown()).toBe(0);
+
+        hidden = false;
+        onVisibilityChange!();
+        vi.advanceTimersByTime(500);
+        expect(stages.filter(stage => stage == "shown")).toHaveLength(1);
+        expect(marks().map(mark => mark.text)).toEqual(["Welcome back!\nHere's your $20\ndaily reward."]);
+    });
+
+    it("can be told again after being shown", () => {
+        receive();
+        vi.advanceTimersByTime(500 + 6000);
+        inventoryObservable.set({[DOLLAR]: 3 + 2 * LOGIN_REWARD_DOLLARS});
+        receive();
+        vi.advanceTimersByTime(500);
+        expect(stages.filter(stage => stage == "shown")).toHaveLength(2);
+        expect(ClientInventoryManager.getDollarsShown()).toBe(3 + 2 * LOGIN_REWARD_DOLLARS);
     });
 });

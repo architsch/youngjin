@@ -3,18 +3,20 @@ import * as z from "zod";
 import { CallToolResult, createMcpHandler, McpServer, ServerContext } from "@modelcontextprotocol/server";
 import { NodeMcpRequestHandler, toNodeHandler } from "@modelcontextprotocol/node";
 import ErrorUtil from "../../../shared/system/util/errorUtil";
-import { COLLISION_LAYER_HEIGHT, HELPER_AGENT_NAME, MINUTE_IN_MS, NUM_COLLISION_LAYERS, NUM_COLLISION_LAYERS_PER_STOREY,
+import { COLLISION_LAYER_HEIGHT, HELPER_AGENT_NAME, HOUR_IN_MS, LOGIN_REWARD_DOLLARS, MINUTE_IN_MS, NUM_COLLISION_LAYERS, NUM_COLLISION_LAYERS_PER_STOREY,
     NUM_VOXEL_COLS, NUM_VOXEL_ROWS, OBJECT_LABEL_MAX_LENGTH, OBJECT_MESSAGE_MAX_LENGTH, OBJECT_NAME_MAX_LENGTH,
-    OBJECT_USER_NAME_MAX_LENGTH, PLAYER_MESSAGE_EXPIRATION_MS, STOREY_FLOOR_COLLISION_LAYER,
+    OBJECT_USER_NAME_MAX_LENGTH, PLAYER_MESSAGE_EXPIRATION_MS, PLAYER_SHAPE_PRICE_DOLLARS, STOREY_FLOOR_COLLISION_LAYER,
     VOXEL_CELL_SIZE } from "../../../shared/system/sharedConstants";
+import { NUM_FREE_PLAYER_PART_TYPES } from "../../../shared/graphics/mesh/composition/types/compositionConstants/playerCompositionConstants";
 import { PLAYER_HEIGHT } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import { HEARING_DISTANCE } from "../../../shared/object/util/helperBehaviorUtil";
 import MessageLinkUtil from "../../../shared/object/util/messageLinkUtil";
+import { DOLLAR_BILL_REACH } from "../../../shared/object/types/objectTypeConfig/dollarBillObjectTypeConfig";
 import DBUser from "../../db/types/row/dbUser";
 import DBUserUtil from "../../db/util/dbUserUtil";
 import { AGENT_FIND_PICTURES_MAX_COUNT, AGENT_FIND_ROOMS_MAX_COUNT, AGENT_ICON_FILE, AGENT_INTEREST_MAX_LENGTH,
-    AGENT_MAX_INTERESTS, AGENT_MCP_ROUTE_PATH, AGENT_NAME_MAX_LENGTH, AGENT_PRESENCE_IDLE_TIMEOUT_MS, URL_STATIC,
-    USER_BUDGETS } from "../../system/serverConstants";
+    AGENT_MAX_INTERESTS, AGENT_MCP_ROUTE_PATH, AGENT_NAME_MAX_LENGTH, AGENT_PRESENCE_IDLE_TIMEOUT_MS,
+    AGENT_TYPING_EXPIRATION_MS, LOGIN_REWARD_INTERVAL_MS, URL_STATIC, USER_BUDGETS } from "../../system/serverConstants";
 import AddressUtil from "../../networking/util/addressUtil";
 import UserBudgetUtil from "../../user/util/userBudgetUtil";
 import AgentBudgetUtil from "./agentBudgetUtil";
@@ -25,6 +27,7 @@ import AgentBlockUtil from "./agentBlockUtil";
 import AgentObjectUtil from "./agentObjectUtil";
 import AgentRoomSettingsUtil from "./agentRoomSettingsUtil";
 import AgentAppearanceUtil from "./agentAppearanceUtil";
+import AgentInventoryUtil from "./agentInventoryUtil";
 import AgentGridUtil from "./agentGridUtil";
 import AgentUserContext from "../types/agentUserContext";
 
@@ -32,7 +35,9 @@ import AgentUserContext from "../types/agentUserContext";
 // key, and the server keeps the agent's presence (see AgentPresenceUtil).
 
 const PERSON_LAYERS = Math.ceil(PLAYER_HEIGHT / COLLISION_LAYER_HEIGHT);
-const ENDPOINT = `${AddressUtil.getEnvDynamicURL()}/${AGENT_MCP_ROUTE_PATH}`;
+const DOLLAR_REACH_CELLS = Math.floor(DOLLAR_BILL_REACH / VOXEL_CELL_SIZE);
+const LOGIN_REWARD_INTERVAL_HOURS = LOGIN_REWARD_INTERVAL_MS / HOUR_IN_MS;
+const ENDPOINT =`${AddressUtil.getEnvDynamicURL()}/${AGENT_MCP_ROUTE_PATH}`;
 
 const INSTRUCTIONS = `ThingsPool is a world of voxel rooms, where people in browsers and AI agents share the same rooms,
 chat and build. You play a character like everyone else. The manual, for whoever runs you:
@@ -67,13 +72,15 @@ The room:
 
 Seeing and moving:
 - look: the room you are in, where you stand, the people near you with what they say, its doors (those leading
-  nowhere left out, but in your own room), the things hung in it, and its restricted zones. A person marked editing
-  is in their browser's edit mode, building or changing things, and their bubble shows only that.
+  nowhere left out, but in your own room), the dollar bills lying about, the things hung in it, and its restricted
+  zones. A person marked typing is writing a line: let them finish. One marked editing is in their browser's edit mode,
+  building or changing things, and one marked reading has a page open over the game, or another browser tab in front
+  of it, so they may be slow to answer: the bubble of either shows only that.
 - look_blocks: the blocks in part of the room (around you, if you name none), as boxes of filled cells with their
   textures.
-- whats_new: what happened since you last asked: speech, arrivals, departures, trips, and what others built. Events
-  marked inYourRoom happened in your own room while you were elsewhere, or away: who came, what they said and built,
-  kept for you until you come back.
+- whats_new: what happened since you last asked: speech, arrivals, departures, trips, what others built, each dollar
+  you collected, and your reward for coming back. Events marked inYourRoom happened in your own room while you were
+  elsewhere, or away: who came, what they said and built, kept for you until you come back.
 - walk_to: walk to a row and column (and layer), or up to a person. Returns once there, or stopped.
 - face: turn where you stand toward a place, a person or a direction (look says which way you face).
 - use_door: walk to a door and go through it, to wherever it leads.
@@ -84,8 +91,24 @@ Seeing and moving:
   it, or the button shows the site's name (as it does after a longer label, which shows as text). A link counts as what
   it shows. Links in what others say come written the same way, and a picture of a control on people's screens, which
   guides show rather than name one, as its name in square brackets.
+- typing: dots by your name, as a person's show while they write a line. Call it with true before you work out what to
+  say to someone near you, so that they know a reply is coming. Saying something stops it, as does typing with false if
+  you decide to say nothing, and it stops by itself after ${AGENT_TYPING_EXPIRATION_MS / 1000} seconds.
 - appearance: how your character looks (its head, ears, hat, torso, arms and bottom, each a shape and a color, and its
   eyes' color), or how someone in the room looks, by name. change_appearance changes yours: make it your own.
+
+Dollars are what you hold in the game, and they stay yours from visit to visit.
+- Getting them: $1 bills turn up now and then in any room with someone in it, up to a few at a time, and gusts and fans
+  blow them about. look lists them, nearest first, under bills, and collect_bill walks you to the nearest and takes it.
+  You can also walk up yourself: come within about ${DOLLAR_REACH_CELLS} cells of one, on your own storey, with nothing in the way,
+  and facing it to within 45 degrees (walking toward one does that, and face turns you where you stand), and it flies
+  to you (a bill moves, and a strong gust can carry one across the room, so look again on the way). Arriving also gives
+  you $${LOGIN_REWARD_DOLLARS} once a day: nothing on your first visit, then once ${LOGIN_REWARD_INTERVAL_HOURS} hours have passed since you first came, or since
+  the last one.
+- Spending them: they buy shapes for your character. The first ${NUM_FREE_PLAYER_PART_TYPES} of each part are free, and unlock_shape spends
+  $${PLAYER_SHAPE_PRICE_DOLLARS} on any other, which is then yours for good and put on. change_appearance puts on any shape you hold.
+- Keeping count: inventory tells all you hold and what is for sale, you.dollars in look how many dollars you hold, and
+  whats_new each one you collect and your reward for coming back.
 
 Building: anyone may build anywhere in a room but inside restricted zones, as people may.
 - place_blocks fills a box's empty cells with blocks, remove_blocks takes its blocks out, and paint_faces gives the
@@ -106,7 +129,7 @@ Finding company:
   could, the one you face answers (face turns you to one by name), and say tells you which did. What none heard, the
   first you come that near hears while your bubble still shows it. One with thinking is working out an answer: wait
   for it rather than asking again. One with waitingFor stands still for that person, who is typing it a line: let them
-  speak first. Guides near each other sometimes chat among themselves (chattingWith names the other), and a guide
+  speak first. Typing yourself, you hold a guide the same way. Guides near each other sometimes chat among themselves (chattingWith names the other), and a guide
   sometimes stops to look at something placed near it and says what it thinks of it (lookingAt is the thing's id, as
   look lists it among its objects or doors): those words aren't for you, and a guide stops to answer you if you talk
   to it.
@@ -160,7 +183,7 @@ const MAX_TOOL_INPUT_ELEMENTS = 48;
 
 // The tools that only look or find, whose calls are paid for apart from the others' (see USER_BUDGETS).
 const LOOKING_TOOLS = ["look", "look_blocks", "whats_new", "textures", "find_pictures", "find_rooms", "room_settings",
-    "appearance", "camera"];
+    "appearance", "inventory", "camera"];
 
 let nodeHandler: NodeMcpRequestHandler | undefined;
 // Built once: the SDK takes a fresh server for each request (see createMcpHandler), which would otherwise build every
@@ -230,7 +253,7 @@ function buildServer(): McpServer
 {
     // Its tools never change while it runs. Saying they might would let any client, with a key or without, hold a
     // stream open to wait for word of a change (subscriptions/listen).
-    const server = new McpServer({name: "thingspool", version: "1.4.3", // The version server.json lists
+    const server = new McpServer({name: "thingspool", version: "1.5.0", // The version server.json lists
             websiteUrl: URL_STATIC,
             icons: [{src: `${AddressUtil.getEnvDynamicURL()}/${AGENT_ICON_FILE}`, mimeType: "image/jpeg",
                 sizes: ["150x150"]}]},
@@ -299,17 +322,19 @@ function defineTools(): {name: string, config: any, handler: any}[]
 
     define("look", {
         title: "Look around",
-        description: "The room you are in, where you stand and which way you face, the people nearest you with what "
-            + "they are saying (or that they are editing), its doors (those leading nowhere only in your own room), the "
-            + "things placed nearest you, and its restricted zones.",
+        description: "The room you are in, where you stand and which way you face, how many dollars you hold, the people "
+            + "nearest you with what they are saying (and whether they are typing, or that they are editing or reading), "
+            + "its doors (those leading nowhere only in your own room), the dollar bills lying about, the things placed "
+            + "nearest you, and its restricted zones.",
         inputSchema: z.object({}),
         annotations: {readOnlyHint: true},
     }, async (_args, ctx) => runAsAgent("look", ctx, async agent => toResult(AgentToolUtil.look(agent))));
 
     define("whats_new", {
         title: "What's new",
-        description: "What happened around you since you last asked: speech, arrivals, departures, trips, and what "
-            + "others built. Those marked inYourRoom happened in your own room while you were elsewhere, or away.",
+        description: "What happened around you since you last asked: speech, arrivals, departures, trips, what others "
+            + "built, each dollar you collected, and your reward for coming back. Those marked inYourRoom happened in "
+            + "your own room while you were elsewhere, or away.",
         inputSchema: z.object({}),
         annotations: {readOnlyHint: true},
     }, async (_args, ctx) => runAsAgent("whats_new", ctx, async agent => toResult(AgentToolUtil.whatsNew(agent))));
@@ -328,6 +353,19 @@ function defineTools(): {name: string, config: any, handler: any}[]
         return toResult(result, "error" in result);
     }));
 
+    define("typing", {
+        title: "Typing",
+        description: "Shows people near you dots by your name, as a person's show while they write a line, or stops "
+            + `showing them. Saying something stops them too, and they stop by themselves after `
+            + `${AGENT_TYPING_EXPIRATION_MS / 1000} seconds.`,
+        inputSchema: z.object({typing: z.boolean().describe("true as you start working out what to say, false if you "
+            + "decide to say nothing.")}),
+        annotations: {readOnlyHint: false, destructiveHint: false},
+    }, async ({typing}, ctx) => runAsAgent("typing", ctx, async agent => {
+        const result = await AgentToolUtil.typing(agent, typing);
+        return toResult(result, "error" in result);
+    }));
+
     define("travel", {
         title: "Travel",
         description: `Takes you to "hub" (a busy public room), "home" (your own room), or another room by its id `
@@ -342,7 +380,8 @@ function defineTools(): {name: string, config: any, handler: any}[]
     define("walk_to", {
         title: "Walk to",
         description: "Walks you to a place in the room (a row and column, and a layer if not your own) or up to a "
-            + "person, around whatever stands in the way. Returns once you are there, or stopped.",
+            + "person, around whatever stands in the way. Returns once you are there, or stopped. For a dollar bill, "
+            + "collect_bill does this and takes it.",
         inputSchema: z.object({
             row: z.number().int().min(0).max(NUM_VOXEL_ROWS - 1).optional(),
             column: z.number().int().min(0).max(NUM_VOXEL_COLS - 1).optional(),
@@ -588,7 +627,8 @@ function defineTools(): {name: string, config: any, handler: any}[]
         title: "Appearance",
         description: "How your character looks, as people see it: the shape (its number, and what it is) and color of "
             + "its head, ears, hat, torso, arms and bottom, and its eyes' color, with every shape and color they can "
-            + "take. Name someone in the room (person) to see how they look instead.",
+            + "take, which shapes you would have to buy first, and what you have to buy them with. Name someone in the "
+            + "room (person) to see how they look instead.",
         inputSchema: z.object({
             person: z.string().max(OBJECT_USER_NAME_MAX_LENGTH).optional().describe("A name, as look gives it."),
         }),
@@ -608,11 +648,48 @@ function defineTools(): {name: string, config: any, handler: any}[]
         description: "Changes how your character looks, as a person does in a browser. Give only what changes: any of "
             + "head, ears, hat, torso, arms and bottom (a shape, by its number from appearance, and a color) and eyes (a "
             + "color), colors as \"#rrggbb\", each changed to the nearest its part can take. Everyone sees it, and it "
-            + "stays yours. Costs one edit.",
+            + "stays yours. A locked shape can't be chosen here: unlock_shape buys it. Costs one edit.",
         inputSchema: z.object({head, eyes: z.object({color: partColor.optional()}).optional(), ...otherParts}),
         annotations: {readOnlyHint: false, destructiveHint: false},
     }, async (request, ctx) => runAsAgent("change_appearance", ctx, async agent => {
         const result = await AgentAppearanceUtil.change(agent, request);
+        return toResult(result, "error" in result);
+    }));
+
+    define("unlock_shape", {
+        title: "Unlock shape",
+        description: `Spends $${PLAYER_SHAPE_PRICE_DOLLARS} of your dollars on one of the locked shapes appearance lists, `
+            + "which is then yours for good, and puts it on, as a person's click on one in a browser does. A shape you "
+            + "hold already is only put on, for nothing. Costs one edit.",
+        inputSchema: z.object({
+            part: z.enum(Object.keys(AgentAppearanceUtil.getShapeCounts()) as [string, ...string[]])
+                .describe("The part the shape is for."),
+            shape: z.number().int().min(1).max(Math.max(...Object.values(AgentAppearanceUtil.getShapeCounts())))
+                .describe("Its number from appearance."),
+        }),
+        annotations: {readOnlyHint: false, destructiveHint: false},
+    }, async ({part, shape}, ctx) => runAsAgent("unlock_shape", ctx, async agent => {
+        const result = await AgentAppearanceUtil.unlock(agent, part, shape);
+        return toResult(result, "error" in result);
+    }));
+
+    define("inventory", {
+        title: "Inventory",
+        description: "All you hold: your dollars and the shapes you have bought for your character, with every shape "
+            + "still for sale and what one costs.",
+        inputSchema: z.object({}),
+        annotations: {readOnlyHint: true},
+    }, async (_args, ctx) => runAsAgent("inventory", ctx, async agent => toResult(AgentInventoryUtil.describe(agent))));
+
+    define("collect_bill", {
+        title: "Collect a dollar bill",
+        description: "Walks you to the nearest dollar bill in your room and collects it, which is a dollar yours for good. "
+            + "Returns once you have it, with how many you hold, or once it got away. Needs a bill in the room: look lists "
+            + "them.",
+        inputSchema: z.object({}),
+        annotations: {readOnlyHint: false, destructiveHint: false},
+    }, async (_args, ctx) => runAsAgent("collect_bill", ctx, async agent => {
+        const result = await AgentInventoryUtil.collectBill(agent);
         return toResult(result, "error" in result);
     }));
 

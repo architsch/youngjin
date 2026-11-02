@@ -1,5 +1,6 @@
 import User from "../../../shared/user/types/user";
 import EncodableData from "../../../shared/networking/types/encodableData";
+import { Inventory } from "../../../shared/inventory/types/inventory";
 import UserJoinHints from "./userJoinHints";
 
 // A connected user, whatever carries them: a browser's socket (SocketUserContext) or an AI agent's requests
@@ -16,6 +17,8 @@ export default interface UserContext
     funnel: string;
     // The login this visit belongs to (see DBUserUtil.getLoginCount), by which a helper greets each visitor once a login.
     loginCount: number;
+    // What the user holds, as read from the row on connecting and kept up to date since (see ServerInventoryManager).
+    inventory: Inventory;
 
     // When each throttled signal type was last let through (see UserSignalDispatchUtil).
     signalThrottleTimestamps: {[signalType: string]: number};

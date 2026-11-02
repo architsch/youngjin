@@ -4,7 +4,7 @@ export default interface AgentEvent
     // Milliseconds since the epoch.
     at: number;
     kind: "speech" | "arrival" | "departure" | "roomEntered" | "roomChangeRefused" | "roomReloading"
-        | "blocksChanged" | "objectAdded" | "objectRemoved" | "objectChanged";
+        | "blocksChanged" | "objectAdded" | "objectRemoved" | "objectChanged" | "dollarCollected" | "loginReward";
     // The player it concerns (speech, arrival, departure), or who added an object.
     who?: string;
     whoIsAgent?: boolean;
@@ -25,6 +25,10 @@ export default interface AgentEvent
     // The object added, removed or changed, and its type.
     id?: string;
     type?: string;
+    // How many dollars the agent holds now that it has collected one, or been given a reward.
+    dollars?: number;
+    // How many it was given for coming back.
+    reward?: number;
     // It happened in the agent's own room while the agent was elsewhere, or away (see AgentAwayLogUtil).
     inYourRoom?: boolean;
 }

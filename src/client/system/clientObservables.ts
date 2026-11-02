@@ -13,6 +13,7 @@ import CoachMark from "../ui/types/coachMark";
 import CameraMode from "../graphics/types/cameraMode";
 import { FeatureFlag } from "../../shared/system/types/featureFlag";
 import AddObjectSignal from "../../shared/object/types/addObjectSignal";
+import { Inventory } from "../../shared/inventory/types/inventory";
 
 // Core Observables
 
@@ -41,6 +42,9 @@ export const voxelBlockEditObservable = new Observable<{kind: "add" | "remove" |
 
 // An object added or removed, including players joining and leaving.
 export const objectEditObservable = new Observable<{kind: "add" | "remove", object: AddObjectSignal}>();
+
+// Fires with an object someone other than the user has just collected, once they have drawn it in.
+export const objectCollectedObservable = new Observable<AddObjectSignal>();
 
 // Fires with the room's id whenever its occupied blocks change, including scripted chunk edits.
 export const roomShapeChangedObservable = new Observable<string>("");
@@ -182,11 +186,33 @@ export const chatTextInputObservable = new Observable<string>("");
 // Whether the user is typing a line in the chat (see ChatTypingUtil).
 export const chatTypingObservable = new Observable<boolean>(false);
 
+// Whether a page of the website is shown over the game (see WebPageForm).
+export const webPageOpenObservable = new Observable<boolean>(false);
+
 // Fires with an image map's name each time an admin changes its order or its categories (see
 // AdminAssetSettingsEditor), for a chooser open at the time to show them.
 export const imageMapSettingsChangedObservable = new Observable<string>("");
 
 // User State Observables
+
+// All the user holds, as the server last told (see ClientInventoryManager).
+export const inventoryObservable = new Observable<Inventory>({});
+
+// How many of the dollars the user holds the count on the screen doesn't show yet: those of bills still flying to it, and
+// of a login's reward not yet shown (see ClientInventoryManager).
+export const dollarsInFlightObservable = new Observable<number>(0);
+
+// Fires with an item's type each time more of it reaches the count on the screen. Never peek() it: it holds the last event.
+export const inventoryGainObservable = new Observable<string>("");
+
+// Fires with how many dollars the user has just spent. Never peek() it: it holds the last event.
+export const dollarsSpentObservable = new Observable<number>(0);
+
+// How far along showing a login's reward is: told of it, on the screen, or neither (see LoginRewardUtil).
+export const loginRewardStageObservable = new Observable<"none" | "waiting" | "shown">("none");
+
+// Whether the debug panel is open (see DebugPanelUtil).
+export const debugPanelOpenObservable = new Observable<boolean>(false);
 
 // Current texture pack URL. "" = none applied yet, so the first real URL registers as a change.
 export const texturePackURLObservable = new Observable<string>("");

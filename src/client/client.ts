@@ -8,6 +8,7 @@ import AutomationSetupUtil from "./system/util/automationSetupUtil";
 import UIManager from "./ui/uiManager";
 import VersionSyncUtil from "./system/util/versionSyncUtil";
 import AwayDisconnectUtil from "./system/util/awayDisconnectUtil";
+import PlayerActivityUtil from "./object/util/playerActivityUtil";
 import { ongoingClientProcessExists } from "./system/types/clientProcess";
 
 import "../shared/graphics/image/imageMapDependencies.ts";
@@ -38,6 +39,7 @@ function start(): void
 
     SocketsClient.init(env); // Starting establishing a socket connection.
     AwayDisconnectUtil.install();
+    PlayerActivityUtil.install();
     UIManager.load(env, App.getUser()); // Initialize the UI system.
 
     // A backgrounded page may have missed a deployment; check the build on return (also checked on

@@ -4,6 +4,12 @@ import SetObjectTransformSignal from "../../../shared/object/types/setObjectTran
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import RemoveObjectSignal from "../../../shared/object/types/removeObjectSignal";
 import SetObjectMetadataSignal from "../../../shared/object/types/setObjectMetadataSignal";
+import SetObjectPathSignal from "../../../shared/object/types/setObjectPathSignal";
+import ObjectCollectedSignal from "../../../shared/object/types/objectCollectedSignal";
+import InventorySignal from "../../../shared/inventory/types/inventorySignal";
+import LoginRewardSignal from "../../../shared/inventory/types/loginRewardSignal";
+import BuyItemSignal from "../../../shared/inventory/types/buyItemSignal";
+import BuyItemResultSignal from "../../../shared/inventory/types/buyItemResultSignal";
 import RoomChangedSignal from "../../../shared/room/types/roomChangedSignal";
 import RoomChangeRejectedSignal from "../../../shared/room/types/roomChangeRejectedSignal";
 import ThingsPoolEnv from "../../system/types/thingsPoolEnv";
@@ -22,12 +28,14 @@ import AddVoxelBlockSignal from "../../../shared/voxel/types/update/addVoxelBloc
 import MoveVoxelBlockSignal from "../../../shared/voxel/types/update/moveVoxelBlockSignal";
 import UserCommandSignal from "../../../shared/user/types/userCommandSignal";
 import HoldObjectSignal from "../../../shared/object/types/holdObjectSignal";
-import TypingSignal from "../../../shared/user/types/typingSignal";
 import RoomTexturePackChangedSignal from "../../../shared/room/types/roomTexturePackChangedSignal";
 import RoomPrefsChangedSignal from "../../../shared/room/types/roomPrefsChangedSignal";
 import App from "../../app";
 import ClientObjectManager from "../../object/clientObjectManager";
 import ClientVoxelManager from "../../voxel/clientVoxelManager";
+import ClientInventoryManager from "../../inventory/clientInventoryManager";
+import LoginRewardUtil from "../../inventory/util/loginRewardUtil";
+import PlayerShapeUnlockUtil from "../../inventory/util/playerShapeUnlockUtil";
 import ErrorUtil from "../../../shared/system/util/errorUtil";
 import { HEALTH_ROUTE_PATH } from "../../../shared/system/sharedConstants";
 import VersionSyncUtil from "../../system/util/versionSyncUtil";
@@ -53,6 +61,16 @@ const incomingSignalHandlers: {[signalType: string]: (data: EncodableData) => vo
         ClientObjectManager.onSetObjectTransformSignalReceived(data as SetObjectTransformSignal),
     "setObjectMetadataSignal": (data: EncodableData) =>
         ClientObjectManager.onSetObjectMetadataSignalReceived(data as SetObjectMetadataSignal),
+    "setObjectPathSignal": (data: EncodableData) =>
+        ClientObjectManager.onSetObjectPathSignalReceived(data as SetObjectPathSignal),
+    "objectCollectedSignal": (data: EncodableData) =>
+        ClientObjectManager.onObjectCollectedSignalReceived(data as ObjectCollectedSignal),
+    "inventorySignal": (data: EncodableData) =>
+        ClientInventoryManager.onInventorySignalReceived(data as InventorySignal),
+    "loginRewardSignal": (data: EncodableData) =>
+        LoginRewardUtil.onLoginRewardSignalReceived(data as LoginRewardSignal),
+    "buyItemResultSignal": (data: EncodableData) =>
+        PlayerShapeUnlockUtil.onBuyItemResultSignalReceived(data as BuyItemResultSignal),
     "addVoxelBlockSignal": (data: EncodableData) =>
         ClientVoxelManager.onAddVoxelBlockSignalReceived(data as AddVoxelBlockSignal),
     "moveVoxelBlockSignal": (data: EncodableData) =>
@@ -172,11 +190,15 @@ const SocketsClient =
     {
         socket.io.on("reconnect_attempt", listener);
     },
+    isConnected: (): boolean =>
+    {
+        return socket.connected;
+    },
 
     emitSetObjectTransformSignal: (params: SetObjectTransformSignal) => emitWhenReady("setObjectTransformSignal", params),
     emitUserCommandSignal: (params: UserCommandSignal) => emitWhenReady("userCommandSignal", params),
     emitHoldObjectSignal: (params: HoldObjectSignal) => emitWhenReady("holdObjectSignal", params),
-    emitTypingSignal: (params: TypingSignal) => emitWhenReady("typingSignal", params),
+    emitBuyItemSignal: (params: BuyItemSignal) => emitWhenReady("buyItemSignal", params),
     emitRequestRoomChangeSignal: (params: RequestRoomChangeSignal) => {
         emitWhenReady("requestRoomChangeSignal", params);
     },

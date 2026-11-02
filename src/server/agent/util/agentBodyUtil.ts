@@ -68,9 +68,10 @@ const AgentBodyUtil =
     },
     // Walks the agent to a vertex it can stand on, replacing any walk under way. Resolves with how the walk ended.
     // arriveWithin and target: arrived once that near the target, which stands on the goal (a person to meet).
-    // faceToward: turned toward once there (a door to go through).
-    walk: (ctx: AgentUserContext, goal: VoxelVertex,
-        options: {arriveWithin?: number, target?: Vec3, faceToward?: Vec3} = {}): Promise<AgentWalkOutcome> =>
+    // faceToward: turned toward once there (a door to go through). until: arrived as soon as it holds, wherever the
+    // agent is, checked once a flush (a bill collected on the way).
+    walk: (ctx: AgentUserContext, goal: VoxelVertex, options: {arriveWithin?: number, target?: Vec3, faceToward?: Vec3,
+        until?: () => boolean} = {}): Promise<AgentWalkOutcome> =>
     {
         AgentBodyUtil.stop(ctx);
         const body = getBody(ctx);
@@ -246,6 +247,11 @@ function checkWalk(motion: AgentMotion, room: Room, pos: Vec3): void
 {
     const walk = motion.walk!;
     const now = Date.now();
+    if (walk.until?.())
+    {
+        finishWalk(motion, "arrived");
+        return;
+    }
     if (now > walk.deadline)
     {
         finishWalk(motion, "timedOut");

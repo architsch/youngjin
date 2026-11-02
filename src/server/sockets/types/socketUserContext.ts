@@ -1,6 +1,7 @@
 import socketIO from "socket.io";
 import User from "../../../shared/user/types/user";
 import EncodableData from "../../../shared/networking/types/encodableData";
+import { Inventory } from "../../../shared/inventory/types/inventory";
 import UserContext from "./userContext";
 import UserJoinHints from "./userJoinHints";
 import SocketSignalQueue from "./socketSignalQueue";
@@ -12,6 +13,7 @@ export default class SocketUserContext implements UserContext
     singlePlayerMode: string = "";
     funnel: string;
     loginCount: number;
+    inventory: Inventory;
     signalThrottleTimestamps: {[signalType: string]: number} = {};
 
     private readonly pendingSignalsToUser: SocketSignalQueue;
@@ -22,6 +24,7 @@ export default class SocketUserContext implements UserContext
         this.user = socket.handshake.auth.user as User;
         this.funnel = (socket.handshake.auth.funnel as string) ?? "";
         this.loginCount = (socket.handshake.auth.loginCount as number) ?? 0;
+        this.inventory = {...socket.handshake.auth.inventory};
         this.pendingSignalsToUser = new SocketSignalQueue(socket);
     }
 
