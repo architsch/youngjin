@@ -17,6 +17,10 @@
 //   node dev/scripts/playtest/stagingAdmin.js seed-agents --count 50 --run <runID>
 //   node dev/scripts/playtest/stagingAdmin.js set-user-type --user <userID> --type admin|member|guest [--run <runID>]
 //   node dev/scripts/playtest/stagingAdmin.js restore-user-type --user <userID>
+//   node dev/scripts/playtest/stagingAdmin.js inspect-user --user <userID>
+//   node dev/scripts/playtest/stagingAdmin.js set-inventory --user <userID> --dollars 25 [--items shape_head_3,shape_hat_5] [--run <runID>]
+//   node dev/scripts/playtest/stagingAdmin.js set-reward-clock --user <userID> --hours-ago 21 [--run <runID>]
+//   node dev/scripts/playtest/stagingAdmin.js downgrade-user --user <userID> [--look <composition>] [--run <runID>]
 //   node dev/scripts/playtest/stagingAdmin.js verify-migration
 //   node dev/scripts/playtest/stagingAdmin.js verify-funnel [--run <runID>]
 //   node dev/scripts/playtest/stagingAdmin.js inspect-content
@@ -49,7 +53,7 @@ function backupRoot() { return `${PREFIX}playtest_backup`; }
 // here detects drift — `inspect` and `verify-migration` both measure against these numbers, so a stale
 // one reports migrated rows as outdated and hides real staleness. Bump alongside
 // src/server/db/types/versionMigration/.
-const CURRENT_VERSION = { users: 6, rooms: 8 };
+const CURRENT_VERSION = { users: 7, rooms: 8 };
 
 const ROOM_TYPE_REGULAR = 1;
 
@@ -93,9 +97,11 @@ function buildUser(version, runID, index)
     // v2 -> v3 adds ftue.
     if (version >= 3) row.ftue = "";
 
-    // v4 -> v5 adds acquisitionSource and funnel; v5 -> v6 agentKeyHash and agentInterests.
+    // v4 -> v5 adds acquisitionSource and funnel; v5 -> v6 agentKeyHash and agentInterests; v6 -> v7 inventory and
+    // lastLoginRewardAt.
     if (version >= 5) { row.acquisitionSource = ""; row.funnel = ""; }
     if (version >= 6) { row.agentKeyHash = ""; row.agentInterests = ""; }
+    if (version >= 7) { row.inventory = {}; row.lastLoginRewardAt = now; }
 
     return addLegacyStoredID(row, version, CURRENT_VERSION.users, runID);
 }
@@ -413,6 +419,77 @@ async function restoreUserType(db, userID)
     });
 
     return { userID, userName: before.userName, userType: before[PRIOR_USER_TYPE_FIELD] };
+}
+
+// ─── Inventory ──────────────────────────────────────────────────────────
+// What only a write can set up on staging: dollars to spend, a reward that is due, and a row from before users held
+// anything. Each refuses an account with an email (a person's), and marks the row for `cleanup`. The server keeps a
+// user's row in a cache for a while after reading it, so leave a user out that long before their next connection.
+
+// The player's look, under its metadata key (see ObjectMetadataKeyEnumMap.InstancedMeshComposition).
+const LOOK_KEY = "2";
+
+async function guestRow(db, userID, command)
+{
+    if (!userID)
+        throw new Error(`${command} needs --user <userID> (the guest minted by the run's own browser).`);
+    const ref = db.collection(collection("users")).doc(userID);
+    const snap = await ref.get();
+    if (!snap.exists)
+        throw new Error(`No user "${userID}" in ${collection("users")}.`);
+    if (snap.data().email)
+        throw new Error(`Refusing to change "${userID}" — it carries an email address, so it belongs to a person.`);
+    return { ref, data: snap.data() };
+}
+
+async function inspectUser(db, userID)
+{
+    const snap = await db.collection(collection("users")).doc(userID).get();
+    if (!snap.exists)
+        throw new Error(`No user "${userID}" in ${collection("users")}.`);
+    const data = snap.data();
+    return {
+        userID, userName: data.userName, userType: data.userType, version: data.version, inventory: data.inventory,
+        lastLoginRewardAt: data.lastLoginRewardAt, hoursSinceReward: data.lastLoginRewardAt == undefined ? null
+            : Math.round((Date.now() - data.lastLoginRewardAt) / 36_000) / 100,
+        loginCount: data.loginCount, look: data.playerMetadata?.[LOOK_KEY] ?? null,
+    };
+}
+
+async function setInventory(db, userID, dollars, items, runID)
+{
+    const { ref } = await guestRow(db, userID, "set-inventory");
+    const inventory = { dollar: dollars };
+    for (const item of items)
+        inventory[item] = 1;
+    await ref.update({ inventory, [MARKER]: runID });
+    return { userID, inventory };
+}
+
+async function setRewardClock(db, userID, hoursAgo, runID)
+{
+    const { ref } = await guestRow(db, userID, "set-reward-clock");
+    const lastLoginRewardAt = Date.now() - hoursAgo * 3_600_000;
+    await ref.update({ lastLoginRewardAt, [MARKER]: runID });
+    return { userID, lastLoginRewardAt, hoursAgo };
+}
+
+// Rewrites the row as version 6 had it: no inventory or reward clock, and the look given, so that the next read
+// migrates it and its write-back is what is under test.
+async function downgradeUser(db, userID, look, runID)
+{
+    const { ref, data } = await guestRow(db, userID, "downgrade-user");
+    const playerMetadata = { ...(data.playerMetadata ?? {}) };
+    if (look)
+        playerMetadata[LOOK_KEY] = look;
+    await ref.update({
+        version: 6,
+        inventory: DBGuard.FieldValue.delete(),
+        lastLoginRewardAt: DBGuard.FieldValue.delete(),
+        playerMetadata,
+        [MARKER]: runID,
+    });
+    return { userID, version: 6, look: playerMetadata[LOOK_KEY] ?? null };
 }
 
 // Reports whether each seeded document was migrated and written back in storage; a row still at its
@@ -767,6 +844,15 @@ async function main()
             output = await setUserType(db, flag("user", ""), flag("type", ""), runID);
             break;
         case "restore-user-type":  output = await restoreUserType(db, flag("user", "")); break;
+        case "inspect-user":       output = await inspectUser(db, flag("user", "")); break;
+        case "set-inventory":
+            output = await setInventory(db, flag("user", ""), parseInt(flag("dollars", "0"), 10),
+                flag("items", "").split(",").filter(item => item.length > 0), runID);
+            break;
+        case "set-reward-clock":
+            output = await setRewardClock(db, flag("user", ""), parseFloat(flag("hours-ago", "21")), runID);
+            break;
+        case "downgrade-user":     output = await downgradeUser(db, flag("user", ""), flag("look", ""), runID); break;
         case "verify-migration":   output = await verifyMigration(db); break;
         case "verify-funnel":      output = await verifyFunnel(db, flag("run", "")); break;
         case "inspect-content":    output = await inspectContent(bucket); break;
@@ -785,7 +871,8 @@ async function main()
         default:
             console.error(`Unknown command: ${command || "(none)"}\n` +
                 `Commands: inspect | seed-users | seed-rooms | seed-population | seed-agents | set-user-type |\n` +
-                `          restore-user-type | verify-migration | verify-funnel | inspect-content |\n` +
+                `          restore-user-type | inspect-user | set-inventory | set-reward-clock | downgrade-user |\n` +
+                `          verify-migration | verify-funnel | inspect-content |\n` +
                 `          downgrade-content | restore-content | list | cleanup\n` +
                 `Targets:  --target staging (default) | --target local`);
             process.exit(2);

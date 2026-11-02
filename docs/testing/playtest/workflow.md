@@ -31,6 +31,10 @@ node dev/scripts/playtest/stagingAdmin.js seed-population --version 99 --count 1
 node dev/scripts/playtest/stagingAdmin.js seed-agents     --count 50 --run <runID>
 node dev/scripts/playtest/stagingAdmin.js set-user-type     --user <userID> --type admin|member|guest [--run <runID>]
 node dev/scripts/playtest/stagingAdmin.js restore-user-type --user <userID>
+node dev/scripts/playtest/stagingAdmin.js inspect-user      --user <userID>
+node dev/scripts/playtest/stagingAdmin.js set-inventory     --user <userID> --dollars 25 [--items shape_head_3,shape_hat_5] [--run <runID>]
+node dev/scripts/playtest/stagingAdmin.js set-reward-clock  --user <userID> --hours-ago 21 [--run <runID>]
+node dev/scripts/playtest/stagingAdmin.js downgrade-user    --user <userID> [--look <composition>] [--run <runID>]
 node dev/scripts/playtest/stagingAdmin.js verify-migration
 node dev/scripts/playtest/stagingAdmin.js verify-funnel     [--run <runID>]
 node dev/scripts/playtest/stagingAdmin.js inspect-content
@@ -46,6 +50,7 @@ node dev/scripts/playtest/stagingAdmin.js cleanup [--run <runID>] [--all]
 - `seed-population` creates Members paired with their rooms. It is the only way to get owned rooms on staging, because production mode disables the dev user switch. **Pass `--with-content`**: a room without a blob cannot be entered and leaves an error in every later baseline.
 - Seeded content comes from the real `RoomGenerationUtil`, and the row gets the texture pack that generation chose.
 - `set-user-type` promotes a guest minted through the real page (the server re-reads the user type on every request). It refuses rows that have an email and marks the row for `cleanup`. Use a plan's `sessionFile` to keep the session across the change.
+- `set-inventory`, `set-reward-clock` and `downgrade-user` set up what only a write can: dollars to spend, a daily reward that is due, and a row from before users held anything (v6, with a saved look, for the migration that keeps the shapes it wears). Each refuses a row with an email and marks it for `cleanup`. The server caches a user's row for 30 s after reading it, so keep the user disconnected that long before their next page load.
 
 ## runPlan.js
 ```
