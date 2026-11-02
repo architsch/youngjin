@@ -48,7 +48,7 @@ gtag('config', 'G-JL7KHR7HK8');
 <div class="s_row"></div>
 
 <h1>Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata</h1>
-<p class="dim">Author: Youngjin Kang&nbsp;&nbsp;&nbsp;Date: 2022</p>
+<p class="dim">Author: <a href="https://www.linkedin.com/in/youngjin-kang-55321882" target="_blank">Youngjin Kang</a>&nbsp;&nbsp;&nbsp;Date: 2022</p>
 <p>The Cellular Automata (CA) model is useful for many applications, such as grid-based videogames, integrated circuit simulations, ecological simulations, particle simulations, and so on. One major limitation of a typical CA system, however, is that each cell is only allowed to modify its own state. This is not a problem when we are dealing with a simple mathematical thought experiment such as Conway's Game of Life, but can really turn out to be a serious bottleneck when we try to establish some form of "Conservation of Matter" in CA, in which an object simply transfers from one location to another instead of allowing itself to be created/destroyed.</p>
 <img class="l_image" src="https://thingspool.net/software-development/001_01.jpg" alt="Parallel Adjacent-Cell Modification Support for General-Purpose Cellular Automata (Figure 1)">
 <p>There are two possible methods of logic for a CA system, which are shown above. The first one is the standard CA logic that can easily be implemented as a shader (or any other equivalent parallel-processing) program, and the other one is a modified CA logic which allows each cell to modify the state of its neighbors, not just its own. This lets us simulate the movement of discrete objects, since a "movement" is nothing more than a simple data-swap between two adjacent cells.</p>

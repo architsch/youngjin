@@ -627,9 +627,6 @@ a:active {
 .dim {
 	${dim_color_frame}
 }
-.seriesLine {
-	${medium_color_frame}
-}
 /* A readable measure for running text, and a size that doesn't shrink with a phone's screen. */
 .fullscreenPanel > p, .fullscreenPanel > h1, .fullscreenPanel > h3, .fullscreenPanel > hr, .fullscreenPanel > pre {
 	max-width: 72ch;

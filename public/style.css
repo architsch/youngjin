@@ -45,10 +45,6 @@ a:active {
 	background-color: #303030;
 	color: #707070;
 }
-.seriesLine {
-	background-color: #303030;
-	color: #a0a0a0;
-}
 /* A readable measure for running text, and a size that doesn't shrink with a phone's screen. */
 .fullscreenPanel > p, .fullscreenPanel > h1, .fullscreenPanel > h3, .fullscreenPanel > hr, .fullscreenPanel > pre {
 	max-width: 72ch;
