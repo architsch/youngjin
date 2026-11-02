@@ -21,7 +21,7 @@ body {
 	height: 100%;
 	padding: 0 0 0 0; margin: 0 0 0 0;
 	font-size: min(1.82vmax, 16.00px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: normal;
 	font-weight: 400;
 	background-color: #303030;
@@ -45,9 +45,25 @@ a:active {
 	background-color: #303030;
 	color: #707070;
 }
+.seriesLine {
+	background-color: #303030;
+	color: #a0a0a0;
+}
+/* A readable measure for running text, and a size that doesn't shrink with a phone's screen. */
+.fullscreenPanel > p, .fullscreenPanel > h1, .fullscreenPanel > h3, .fullscreenPanel > hr, .fullscreenPanel > pre {
+	max-width: 72ch;
+}
+.fullscreenPanel > p, .fullscreenPanel .excerpt {
+	font-size: 16.00px;
+}
+.fullscreenPanel > p {
+	line-height: 1.6;
+	margin-top: 1.1em;
+	margin-bottom: 1.1em;
+}
 .highlight {
 	font-size: min(1.82vmax, 16.00px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: normal;
 	font-weight: 800;
 	background-color: #303030;
@@ -105,7 +121,7 @@ iframe {
 	padding: 0 0 0 0;
 	margin: 1.20% 1.00% 1.20% 0;
 	font-size: min(2.62vmax, 23.04px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: italic;
 	font-weight: 800;
 	background-color: #303030;
@@ -118,7 +134,7 @@ p {
 	padding: 0 0 0 0;
 	margin: 2.40% 1.00% 2.40% 0;
 	font-size: min(1.82vmax, 16.00px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: normal;
 	font-weight: 400;
 	background-color: #303030;
@@ -131,7 +147,7 @@ h3 {
 	padding: 0 0 0 0;
 	margin: 2.40% 1.00% 2.40% 0;
 	font-size: min(2.18vmax, 19.20px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: italic;
 	font-weight: 800;
 	background-color: #303030;
@@ -144,7 +160,7 @@ h2 {
 	padding: 0 0 0 0;
 	margin: 2.40% 1.00% 2.40% 0;
 	font-size: min(3.14vmax, 27.65px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: italic;
 	font-weight: 800;
 	background-color: #303030;
@@ -157,7 +173,7 @@ h1 {
 	padding: 0 0 0 0;
 	margin: 2.40% 1.00% 2.40% 0;
 	font-size: min(3.77vmax, 33.18px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: italic;
 	font-weight: 800;
 	background-color: #303030;
@@ -183,7 +199,7 @@ hr {
 	height: 100%;
 	padding: 0 0 0 0; margin: 0 0 0 0;
 	font-size: min(2.18vmax, 19.20px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: italic;
 	font-weight: 800;
 	background-color: #a0a0a0;
@@ -204,7 +220,7 @@ hr {
 	margin: 0 0 0 0;
 	padding: 0 2.5% 0 2.5%;
 	font-size: min(2.62vmax, 23.04px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: italic;
 	font-weight: 800;
 	background-color: #303030;
@@ -299,7 +315,7 @@ hr {
 		left: 50%;
 		transform: translate(-50%, -50%);
 		font-size: min(3.77vmax, 33.18px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: italic;
 	font-weight: 800;
 		padding: 2.40% 4.00% 2.40% 4.00%;
@@ -347,7 +363,7 @@ hr {
 		left: 50%;
 		transform: translate(-50%, -50%);
 		font-size: min(1.82vmax, 16.00px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: normal;
 	font-weight: 400;
 		padding: 1.20% 2.00% 1.20% 2.00%;
@@ -368,7 +384,7 @@ hr {
 	padding: 0 0 0 0;
 	margin: 1.20% 1.00% 1.20% 0;
 	font-size: min(2.62vmax, 23.04px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: italic;
 	font-weight: 800;
 	background-color: #303030;
@@ -382,7 +398,7 @@ hr {
 	padding: 0 0 0 0;
 	margin: 1.20% 1.00% 1.20% 0;
 	font-size: min(2.62vmax, 23.04px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: italic;
 	font-weight: 800;
 	background-color: #303030;
@@ -396,7 +412,7 @@ hr {
 	padding: 0 0 0 0;
 	margin: 1.20% 1.00% 1.20% 0;
 	font-size: min(2.62vmax, 23.04px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: italic;
 	font-weight: 800;
 	background-color: #303030;
@@ -415,7 +431,7 @@ hr {
 	padding: 0 0 0 0;
 	margin: 1.20% 1.00% 1.20% 0;
 	font-size: min(2.62vmax, 23.04px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: italic;
 	font-weight: 800;
 	background-color: #303030;
@@ -431,7 +447,7 @@ hr {
 	padding: 0.60% 1.00% 0.60% 1.00%;
 	margin: 0.60% 1.00% 0.60% 0;
 	font-size: min(1.82vmax, 16.00px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: normal;
 	font-weight: 800;
 	background-color: #101010;
@@ -448,7 +464,7 @@ hr {
 	padding: 0 0 0 0;
 	margin: 0.60% 1.00% 0.60% 0;
 	font-size: min(1.82vmax, 16.00px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: normal;
 	font-weight: 400;
 }
@@ -474,7 +490,7 @@ hr {
 	padding: 0.60% 1.00% 0.60% 1.00%;
 	margin: 0.60% 1.00% 0.60% 0;
 	font-size: min(1.82vmax, 16.00px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: normal;
 	font-weight: 400;
 	background-color: #a0a0a0;
@@ -492,7 +508,7 @@ hr {
 	padding: 0.60% 1.00% 0.60% 1.00%;
 	margin: 0.60% 1.00% 0.60% 0;
 	font-size: min(1.82vmax, 16.00px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: normal;
 	font-weight: 400;
 	background-color: #707070;
@@ -510,7 +526,7 @@ hr {
 	padding: 0.60% 1.00% 0.60% 1.00%;
 	margin: 0.60% 1.00% 0.60% 0;
 	font-size: min(1.82vmax, 16.00px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: normal;
 	font-weight: 400;
 	background-color: #303030;
@@ -525,7 +541,7 @@ hr {
 	padding: 0.60% 1.00% 0.60% 1.00%;
 	margin: 0.60% 1.00% 0.60% 0;
 	font-size: min(1.82vmax, 16.00px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: normal;
 	font-weight: 400;
 	background-color: #101010;
@@ -552,7 +568,7 @@ hr {
 	padding: 1.20% 2.00% 1.20% 2.00%;
 	margin: 1.20% 2.00% 1.20% 0;
 	font-size: min(2.18vmax, 19.20px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: italic;
 	font-weight: 800;
 	background-color: #101010;
@@ -579,7 +595,7 @@ hr {
 	padding: 0.60% 1.00% 0.60% 1.00%;
 	margin: 0.60% 1.00% 0.60% 0;
 	font-size: min(1.82vmax, 16.00px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: normal;
 	font-weight: 400;
 	text-decoration: none;
@@ -608,13 +624,21 @@ hr {
 	padding: 1.20% 2.00% 1.20% 2.00%;
 	margin: 1.20% 2.00% 1.20% 0;
 	font-size: min(1.82vmax, 16.00px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: normal;
 	font-weight: 800;
 	background-color: #101010;
 	color: #70c060;
 	border-radius: 2vmin;
 	white-space: nowrap;
+	max-width: 100%;
+	margin-right: 0; /* at full width, a right margin would still push the page sideways */
+	box-sizing: border-box;
+	overflow-x: auto;
+}
+/* A long code line scrolls within its block; the global overflow rule would otherwise clip it at the pre. */
+.snippet pre, .snippet code {
+	overflow: visible;
 }
 .excerpt {
 	position: relative;
@@ -623,7 +647,7 @@ hr {
 	padding: 1.20% 2.00% 1.20% 2.00%;
 	margin: 1.20% 2.00% 1.20% 0;
 	font-size: min(1.82vmax, 16.00px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: italic;
 	font-weight: 400;
 	background-color: #101010;
@@ -715,7 +739,7 @@ iframe {
 	padding: 0 0 0 0;
 	margin: 2.00% 2.50% 2.00% 0;
 	font-size: min(2.62vmax, 23.04px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: italic;
 	font-weight: 800;
 	background-color: #303030;
@@ -728,7 +752,7 @@ p {
 	padding: 0 0 0 0;
 	margin: 4.00% 2.50% 4.00% 0;
 	font-size: min(1.82vmax, 16.00px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: normal;
 	font-weight: 400;
 	background-color: #303030;
@@ -741,7 +765,7 @@ h3 {
 	padding: 0 0 0 0;
 	margin: 4.00% 2.50% 4.00% 0;
 	font-size: min(2.18vmax, 19.20px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: italic;
 	font-weight: 800;
 	background-color: #303030;
@@ -754,7 +778,7 @@ h2 {
 	padding: 0 0 0 0;
 	margin: 4.00% 2.50% 4.00% 0;
 	font-size: min(3.14vmax, 27.65px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: italic;
 	font-weight: 800;
 	background-color: #303030;
@@ -767,7 +791,7 @@ h1 {
 	padding: 0 0 0 0;
 	margin: 4.00% 2.50% 4.00% 0;
 	font-size: min(3.77vmax, 33.18px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: italic;
 	font-weight: 800;
 	background-color: #303030;
@@ -793,7 +817,7 @@ hr {
 	height: 12%;
 	padding: 0 0 0 0; margin: 0 0 0 0;
 	font-size: min(2.18vmax, 19.20px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: italic;
 	font-weight: 800;
 	background-color: #a0a0a0;
@@ -814,7 +838,7 @@ hr {
 	margin: 0 0 0 0;
 	padding: 0 2.5% 0 2.5%;
 	font-size: min(2.62vmax, 23.04px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: italic;
 	font-weight: 800;
 	background-color: #303030;
@@ -909,7 +933,7 @@ hr {
 		left: 50%;
 		transform: translate(-50%, -50%);
 		font-size: min(3.77vmax, 33.18px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: italic;
 	font-weight: 800;
 		padding: 4.00% 10.00% 4.00% 10.00%;
@@ -957,7 +981,7 @@ hr {
 		left: 50%;
 		transform: translate(-50%, -50%);
 		font-size: min(1.82vmax, 16.00px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: normal;
 	font-weight: 400;
 		padding: 2.00% 5.00% 2.00% 5.00%;
@@ -978,7 +1002,7 @@ hr {
 	padding: 0 0 0 0;
 	margin: 2.00% 2.50% 2.00% 0;
 	font-size: min(2.62vmax, 23.04px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: italic;
 	font-weight: 800;
 	background-color: #303030;
@@ -992,7 +1016,7 @@ hr {
 	padding: 0 0 0 0;
 	margin: 2.00% 2.50% 2.00% 0;
 	font-size: min(2.62vmax, 23.04px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: italic;
 	font-weight: 800;
 	background-color: #303030;
@@ -1006,7 +1030,7 @@ hr {
 	padding: 0 0 0 0;
 	margin: 2.00% 2.50% 2.00% 0;
 	font-size: min(2.62vmax, 23.04px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: italic;
 	font-weight: 800;
 	background-color: #303030;
@@ -1025,7 +1049,7 @@ hr {
 	padding: 0 0 0 0;
 	margin: 2.00% 2.50% 2.00% 0;
 	font-size: min(2.62vmax, 23.04px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: italic;
 	font-weight: 800;
 	background-color: #303030;
@@ -1041,7 +1065,7 @@ hr {
 	padding: 1.00% 2.50% 1.00% 2.50%;
 	margin: 1.00% 2.50% 1.00% 0;
 	font-size: min(1.82vmax, 16.00px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: normal;
 	font-weight: 800;
 	background-color: #101010;
@@ -1058,7 +1082,7 @@ hr {
 	padding: 0 0 0 0;
 	margin: 1.00% 2.50% 1.00% 0;
 	font-size: min(1.82vmax, 16.00px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: normal;
 	font-weight: 400;
 }
@@ -1084,7 +1108,7 @@ hr {
 	padding: 1.00% 2.50% 1.00% 2.50%;
 	margin: 1.00% 2.50% 1.00% 0;
 	font-size: min(1.82vmax, 16.00px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: normal;
 	font-weight: 400;
 	background-color: #a0a0a0;
@@ -1102,7 +1126,7 @@ hr {
 	padding: 1.00% 2.50% 1.00% 2.50%;
 	margin: 1.00% 2.50% 1.00% 0;
 	font-size: min(1.82vmax, 16.00px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: normal;
 	font-weight: 400;
 	background-color: #707070;
@@ -1120,7 +1144,7 @@ hr {
 	padding: 1.00% 2.50% 1.00% 2.50%;
 	margin: 1.00% 2.50% 1.00% 0;
 	font-size: min(1.82vmax, 16.00px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: normal;
 	font-weight: 400;
 	background-color: #303030;
@@ -1135,7 +1159,7 @@ hr {
 	padding: 1.00% 2.50% 1.00% 2.50%;
 	margin: 1.00% 2.50% 1.00% 0;
 	font-size: min(1.82vmax, 16.00px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: normal;
 	font-weight: 400;
 	background-color: #101010;
@@ -1162,7 +1186,7 @@ hr {
 	padding: 2.00% 5.00% 2.00% 5.00%;
 	margin: 2.00% 5.00% 2.00% 0;
 	font-size: min(2.18vmax, 19.20px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: italic;
 	font-weight: 800;
 	background-color: #101010;
@@ -1189,7 +1213,7 @@ hr {
 	padding: 1.00% 2.50% 1.00% 2.50%;
 	margin: 1.00% 2.50% 1.00% 0;
 	font-size: min(1.82vmax, 16.00px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: normal;
 	font-weight: 400;
 	text-decoration: none;
@@ -1218,13 +1242,21 @@ hr {
 	padding: 2.00% 5.00% 2.00% 5.00%;
 	margin: 2.00% 5.00% 2.00% 0;
 	font-size: min(1.82vmax, 16.00px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: normal;
 	font-weight: 800;
 	background-color: #101010;
 	color: #70c060;
 	border-radius: 2vmin;
 	white-space: nowrap;
+	max-width: 100%;
+	margin-right: 0; /* at full width, a right margin would still push the page sideways */
+	box-sizing: border-box;
+	overflow-x: auto;
+}
+/* A long code line scrolls within its block; the global overflow rule would otherwise clip it at the pre. */
+.snippet pre, .snippet code {
+	overflow: visible;
 }
 .excerpt {
 	position: relative;
@@ -1233,7 +1265,7 @@ hr {
 	padding: 2.00% 5.00% 2.00% 5.00%;
 	margin: 2.00% 5.00% 2.00% 0;
 	font-size: min(1.82vmax, 16.00px);
-	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 	font-style: italic;
 	font-weight: 400;
 	background-color: #101010;

@@ -99,7 +99,7 @@ return `padding: ${verticalPadding} ${horizontalPadding} ${verticalPadding} ${ho
 
 const font = (fontSize: string, isItalic: boolean, fontWeight: number): string =>
 `font-size: ${fontSize};
-\tfont-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, monospace;
+\tfont-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
 \tfont-style: ${isItalic ? "italic" : "normal"};
 \tfont-weight: ${fontWeight};`;
 
@@ -537,6 +537,14 @@ hr {
 	${s_bold_font}
 	${snippet_frame}
 	white-space: nowrap;
+	max-width: 100%;
+	margin-right: 0; /* at full width, a right margin would still push the page sideways */
+	box-sizing: border-box;
+	overflow-x: auto;
+}
+/* A long code line scrolls within its block; the global overflow rule would otherwise clip it at the pre. */
+.snippet pre, .snippet code {
+	overflow: visible;
 }
 .excerpt {
 	${full_row_area(landscape)}
@@ -618,6 +626,21 @@ a:active {
 }
 .dim {
 	${dim_color_frame}
+}
+.seriesLine {
+	${medium_color_frame}
+}
+/* A readable measure for running text, and a size that doesn't shrink with a phone's screen. */
+.fullscreenPanel > p, .fullscreenPanel > h1, .fullscreenPanel > h3, .fullscreenPanel > hr, .fullscreenPanel > pre {
+	max-width: 72ch;
+}
+.fullscreenPanel > p, .fullscreenPanel .excerpt {
+	font-size: ${(font_px_min * fontScaleFactor_px).toFixed(2)}px;
+}
+.fullscreenPanel > p {
+	line-height: 1.6;
+	margin-top: 1.1em;
+	margin-bottom: 1.1em;
 }
 .highlight {
 	${s_bold_font}
