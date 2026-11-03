@@ -674,13 +674,17 @@ describe("holding the screen", () => {
 
         const endHold = ScreenInputBlockUtil.hold();
         const events = ["pointerdown", "click", "wheel", "keydown", "pointerup", "keyup"]
-            .map(type => new Event(type, {cancelable: true}));
+            .map(type => Object.assign(new Event(type, {cancelable: true}), {key: "r"}));
         events.forEach(event => page.dispatchEvent(event));
         // What ends a press or a key still passes, so that nothing held down is left stuck.
         expect(heard).toEqual(["pointerup", "keyup"]);
-        // What the browser does with a key is its own.
+        // What the browser does with a key is its own, but for Escape's close request, which would close a panel.
         expect(events.filter(event => event.defaultPrevented).map(event => event.type)).toEqual(["pointerdown", "click",
             "wheel"]);
+        const escape = Object.assign(new Event("keydown", {cancelable: true}), {key: "Escape"});
+        page.dispatchEvent(escape);
+        expect(escape.defaultPrevented).toBe(true);
+        expect(heard).toEqual(["pointerup", "keyup"]);
 
         endHold();
         endHold();
