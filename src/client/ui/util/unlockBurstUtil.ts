@@ -1,21 +1,27 @@
 // Sparks thrown out of a tile's edges, in CSS px and seconds: how many, how fast, across how wide a fan either side of
-// straight out of the edge (radians), how much faster upward, and how long each burns. Then gravity has them, and the air
-// slows them, by this share a second, as a firework's. Glitter is smaller, slower and shorter-lived, and twinkles more.
-const NUM_SPARKS = 130;
-const SPARK_SPEED = [220, 660];
-const SPARK_SPREAD = 0.7;
-const SPARK_RISE = [60, 220];
-const SPARK_LIFE = [0.9, 1.8];
-const SPARK_SIZE = [1.8, 3.4];
+// straight out of the edge (radians), how much faster upward, and how long each burns. The air slows them by this share a
+// second, and gravity pulls them no faster than a drift (its pull over that share), so that the burst blooms out over the
+// tile, which lies low on the screen, and hangs there as it burns out, as a firework's does. Glitter is smaller and slower,
+// and twinkles more.
+const NUM_SPARKS = 140;
+const SPARK_SPEED = [300, 850];
+const SPARK_SPREAD = 0.8;
+const SPARK_RISE = [150, 400];
+const SPARK_LIFE = [1.8, 3];
+const SPARK_SIZE = [2, 3.6];
 const NUM_GLITTER = 60;
-const GLITTER_SPEED = [20, 150];
-const GLITTER_LIFE = [0.5, 1.2];
-const GLITTER_SIZE = [1, 1.8];
-const GRAVITY = 1000;
-const DRAG = 1.9;
-// How long the edges flash as the sparks leave them, and the longest a burst lasts, in seconds.
+const GLITTER_SPEED = [40, 220];
+const GLITTER_LIFE = [1.2, 2.4];
+const GLITTER_SIZE = [1, 2];
+const DRAG = 2;
+const GRAVITY = 360;
+// How long the edges flash as the sparks leave them, the most of that time a frame moves on, and the longest a burst stays
+// on the page, however slowly its frames come, in seconds.
 const FLASH_SECONDS = 0.35;
-const MAX_SECONDS = 2.4;
+const MAX_STEP_SECONDS = 0.05;
+const MAX_SECONDS = 10;
+// How far under the screen's bottom a spark is gone for good, in CSS px.
+const OFF_SCREEN_MARGIN = 40;
 // A spark's glow, as wide as its size this many times, and its streak, as long as it goes in this long.
 const GLOW_SCALE = 4.5;
 const STREAK_SECONDS = 0.03;
@@ -50,18 +56,24 @@ const UnlockBurstUtil =
 
         const sparks = [...Array.from({length: NUM_SPARKS}, () => createSpark(tile, false)),
             ...Array.from({length: NUM_GLITTER}, () => createSpark(tile, true))];
+        // Its own time goes no faster than a frame's worth at once, so that a slow frame holds it back rather than making it
+        // jump; how long it has been on the page only bounds it.
         let startTime: number | undefined = undefined;
         let lastTime = 0;
+        let seconds = 0;
         let frame = requestAnimationFrame(function step(time: number)
         {
             startTime ??= time;
-            const seconds = (time - startTime) / 1000;
-            const deltaTime = Math.min(0.05, Math.max(0, (time - lastTime) / 1000));
-            lastTime = time;
-            if (seconds > 0)
+            if (time > startTime)
+            {
+                const deltaTime = Math.min(MAX_STEP_SECONDS, (time - lastTime) / 1000);
                 sparks.forEach(spark => moveSpark(spark, deltaTime));
+                seconds += deltaTime;
+            }
+            lastTime = time;
             draw(context, tile, sparks, seconds);
-            if (seconds >= MAX_SECONDS || (seconds >= FLASH_SECONDS && sparks.every(spark => spark.age >= spark.life)))
+            if ((time - startTime) / 1000 >= MAX_SECONDS
+                || (seconds >= FLASH_SECONDS && sparks.every(spark => spark.age >= spark.life)))
             {
                 context.clearRect(0, 0, window.innerWidth, window.innerHeight);
                 onFinished();
@@ -114,6 +126,8 @@ function moveSpark(spark: Spark, deltaTime: number): void
     spark.x += spark.vx * deltaTime;
     spark.y += spark.vy * deltaTime;
     spark.age += deltaTime;
+    if (spark.y > window.innerHeight + OFF_SCREEN_MARGIN)
+        spark.age = spark.life;
 }
 
 function draw(context: CanvasRenderingContext2D, tile: DOMRect, sparks: Spark[], seconds: number): void

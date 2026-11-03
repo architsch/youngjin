@@ -23,6 +23,7 @@ import { connectionStateObservable, dollarsInFlightObservable, dollarsSpentObser
     screenCoachMarksObservable } from "../../../src/client/system/clientObservables";
 import RefusalCoachMarkUtil from "../../../src/client/ui/util/refusalCoachMarkUtil";
 import ScreenInputBlockUtil from "../../../src/client/ui/util/screenInputBlockUtil";
+import UnlockBurstUtil from "../../../src/client/ui/util/unlockBurstUtil";
 import PlayerCompositionConstants, { NUM_FREE_PLAYER_PART_TYPES } from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/playerCompositionConstants";
 import { getRandomFreeComposition, PlayerCompositionCodec } from "../../../src/shared/graphics/mesh/composition/types/compositionCodec/playerCompositionCodec";
 import PlayerCompositionParams from "../../../src/shared/graphics/mesh/composition/types/compositionParams/playerCompositionParams";
@@ -692,5 +693,62 @@ describe("holding the screen", () => {
         ["pointerdown", "keydown"].forEach(type => page.dispatchEvent(new Event(type)));
         expect(heard).toEqual(["pointerdown", "keydown"]);
         vi.unstubAllGlobals();
+    });
+});
+
+describe("the burst over a tile just unlocked", () => {
+    // A tile low on a screen, as the grid it lies in is, and a canvas over the screen that counts the sparks drawn each
+    // frame, under a clock of frames that come as often as asked.
+    const TILE = {left: 600, right: 664, top: 660, bottom: 724, width: 64, height: 64} as DOMRect;
+
+    function play(frameMs: number): {finishedAt: number | undefined, drawnByFrame: number[], frameMs: number}
+    {
+        let drawn = 0;
+        const context = new Proxy({}, {get: (_, name) => (name == "drawImage") ? () => { ++drawn; }
+            : (name == "createRadialGradient") ? () => ({addColorStop: () => {}}) : () => {}, set: () => true});
+        const canvas = {getContext: () => context} as unknown as HTMLCanvasElement;
+        let frames: FrameRequestCallback[] = [];
+        vi.stubGlobal("window", {innerWidth: 1280, innerHeight: 800, devicePixelRatio: 1});
+        vi.stubGlobal("document", {createElement: () => ({getContext: () => context})});
+        vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => frames.push(callback));
+        vi.stubGlobal("cancelAnimationFrame", () => {});
+        let finishedAt: number | undefined = undefined;
+        const drawnByFrame: number[] = [];
+        let time = 1000;
+        UnlockBurstUtil.play(canvas, TILE, () => { finishedAt = time - 1000; });
+        while (frames.length > 0 && time < 30_000)
+        {
+            drawn = 0;
+            const due = frames;
+            frames = [];
+            due.forEach(callback => callback(time));
+            drawnByFrame.push(drawn);
+            time += frameMs;
+        }
+        vi.unstubAllGlobals();
+        return {finishedAt, drawnByFrame, frameMs};
+    }
+
+    // How many sparks are drawn in the frame at a time since the start.
+    const drawnAt = ({drawnByFrame, frameMs}: ReturnType<typeof play>, ms: number) => drawnByFrame[Math.round(ms / frameMs)];
+
+    it("lets its sparks spread and burn for seconds, rather than stopping a moment after it starts", () => {
+        const burst = play(1000 / 60);
+        const most = Math.max(...burst.drawnByFrame);
+        // Random as each burst is, about three in four burn on at a second, where a burst that dropped off the screen
+        // within one kept about a quarter.
+        expect(drawnAt(burst, 1000)).toBeGreaterThan(0.5 * most);
+        expect(drawnAt(burst, 1800)).toBeGreaterThan(0.15 * most);
+        expect(burst.finishedAt).toBeGreaterThan(2500);
+        expect(burst.finishedAt).toBeLessThan(3600);
+    });
+
+    it("plays slower on slow frames, rather than cutting its sparks short", () => {
+        const burst = play(100);
+        const most = Math.max(...burst.drawnByFrame);
+        expect(drawnAt(burst, 3600)).toBeGreaterThan(0.15 * most);
+        // Burnt out before it is gone.
+        expect(burst.drawnByFrame[burst.drawnByFrame.length - 1]).toBe(0);
+        expect(burst.finishedAt).toBeGreaterThan(5000);
     });
 });

@@ -58,7 +58,7 @@ import Geometry3DUtil from "../../../src/shared/math/util/geometry3DUtil";
 import Room from "../../../src/shared/room/types/room";
 import RoomFile from "../../../src/shared/room/types/roomFile";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
-import { COLLISION_LAYER_HEIGHT, GENERATED_WALL_THICKNESS, GRAVITY_SPEED, INITIAL_MULTI_PLAYER_ENTRANCE_POS,
+import { COLLISION_LAYER_HEIGHT, GENERATED_WALL_THICKNESS, INITIAL_MULTI_PLAYER_ENTRANCE_POS,
     LOGIN_REWARD_DOLLARS, MAX_ROOM_Y, NUM_VOXEL_COLS, STOREY_FLOOR_COLLISION_LAYER, UNIT_VEC3,
     VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 import User from "../../../src/shared/user/types/user";
@@ -1310,19 +1310,17 @@ describe("believing how someone got near a bill", () => {
 
     // Walks their body as the room's physics walks any, a browser's or an agent's, at a walk along a heading (standing
     // still where there is none), the server noting where it got to five times a second, as a browser reports it, or
-    // all at once after a stall. Says whether it believed every move, how many a stream had a part in, and how many
-    // were falls.
+    // all at once after a stall. Says whether it believed every move, and how many a stream had a part in.
     function walkByPhysics(user: ConnectedUser, heading: (seconds: number) => number | undefined, seconds: number,
-        stall?: {from: number, to: number}): {believed: boolean, forced: number, falling: number}
+        stall?: {from: number, to: number}): {believed: boolean, forced: number}
     {
         const player = harness.getPlayerObject(user.user.id)!;
         const ctx = user.socketUserContext;
         let pos = {...player.transform.pos};
         let reported = {...pos};
         const held: Vec3[] = [];
-        const result = {believed: true, forced: 0, falling: 0};
+        const result = {believed: true, forced: 0};
         let forced = false;
-        let lastY = pos.y;
         for (let step = 1; step <= Math.round(seconds / SUB_STEP); ++step)
         {
             const angle = heading(step * SUB_STEP);
@@ -1337,9 +1335,7 @@ describe("believing how someone got near a bill", () => {
                 continue;
             vi.setSystemTime(Date.now() + REPORT_MS);
             result.forced += forced ? 1 : 0;
-            result.falling += (pos.y < lastY - 0.25 * GRAVITY_SPEED * REPORT_MS / 1000) ? 1 : 0;
             forced = false;
-            lastY = pos.y;
             held.push({...pos});
             if (stall != undefined && step * SUB_STEP >= stall.from && step * SUB_STEP < stall.to)
                 continue;
@@ -1374,7 +1370,7 @@ describe("believing how someone got near a bill", () => {
         {pos: (at: number) => ({x: at, y: 0.5, z: 32 - WALL_FACE}), dir: {x: 0, y: 0, z: -1}}];
 
     it("believes any walk the room's physics makes: up steps, off ledges and thrown about by fans", async () => {
-        const seen = {forced: 0, falling: 0};
+        let forced = 0;
         await fc.assert(fc.asyncProperty(FLOOR_SPOT, fc.array(BLOCK_ANYWHERE_LOW, {maxLength: 120}),
             fc.array(STAIRS, {maxLength: 6}), fc.array(FAN, {maxLength: 4}), HEADINGS,
             async (start, blocks, stairs, fans, headings) => {
@@ -1403,13 +1399,12 @@ describe("believing how someone got near a bill", () => {
                     const degrees = headings[Math.floor(seconds) % headings.length];
                     return (degrees == undefined) ? undefined : degrees * Math.PI / 180;
                 }, 8);
-                seen.forced += walk.forced;
-                seen.falling += walk.falling;
+                forced += walk.forced;
                 expect(walk.believed).toBe(true);
             }), {numRuns: 60});
-        // Not believed for want of anything to doubt.
-        expect(seen.forced).toBeGreaterThan(20);
-        expect(seen.falling).toBeGreaterThan(2);
+        // Not believed for want of a fan to doubt (falls come too rarely here to count on; the walks off a ledge below
+        // are sure of them).
+        expect(forced).toBeGreaterThan(20);
     });
 
     it("believes a body its physics holds up against a wall, off a step, for as long as it walks into the wall", async () => {
