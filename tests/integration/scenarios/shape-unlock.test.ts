@@ -18,9 +18,11 @@ import UserSignalDispatchUtil from "../../../src/server/user/util/userSignalDisp
 import ClientInventoryManager from "../../../src/client/inventory/clientInventoryManager";
 import PlayerShapeUnlockUtil from "../../../src/client/inventory/util/playerShapeUnlockUtil";
 import SocketsClient from "../../../src/client/networking/client/socketsClient";
-import { dollarsInFlightObservable, dollarsSpentObservable, inventoryObservable, notificationMessageObservable,
+import { connectionStateObservable, dollarsInFlightObservable, dollarsSpentObservable, inventoryObservable,
+    notificationMessageObservable, pendingPurchaseElementObservable,
     screenCoachMarksObservable } from "../../../src/client/system/clientObservables";
 import RefusalCoachMarkUtil from "../../../src/client/ui/util/refusalCoachMarkUtil";
+import ScreenInputBlockUtil from "../../../src/client/ui/util/screenInputBlockUtil";
 import PlayerCompositionConstants, { NUM_FREE_PLAYER_PART_TYPES } from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/playerCompositionConstants";
 import { getRandomFreeComposition, PlayerCompositionCodec } from "../../../src/shared/graphics/mesh/composition/types/compositionCodec/playerCompositionCodec";
 import PlayerCompositionParams from "../../../src/shared/graphics/mesh/composition/types/compositionParams/playerCompositionParams";
@@ -592,5 +594,99 @@ describe("a browser buying a shape", () => {
     it("ignores an answer to nothing it asked", () => {
         answer(true, {[DOLLAR]: 25});
         expect(spent).toEqual([]);
+    });
+
+    describe("while it waits for the answer", () => {
+        let endHold: ReturnType<typeof vi.fn>;
+
+        beforeEach(() => {
+            endHold = vi.fn();
+            vi.spyOn(ScreenInputBlockUtil, "hold").mockReturnValue(endHold as () => void);
+        });
+
+        it("darkens what was clicked and holds the whole screen, until the answer comes", () => {
+            unlockHead();
+            expect(pendingPurchaseElementObservable.peek()).toBe(TILE);
+            expect(ScreenInputBlockUtil.hold).toHaveBeenCalledTimes(1);
+            expect(endHold).not.toHaveBeenCalled();
+
+            answer(true, {[DOLLAR]: 15, [HEAD_ITEM]: 1});
+            expect(pendingPurchaseElementObservable.peek()).toBeNull();
+            expect(endHold).toHaveBeenCalledTimes(1);
+            expect(onUnlocked).toHaveBeenCalledTimes(1);
+        });
+
+        it("lets go of it before a refusal is said, for the mark's x to be pressed", () => {
+            unlockHead();
+            answer(false, {[DOLLAR]: 5, shape_ear_3: 1});
+            expect(endHold).toHaveBeenCalledTimes(1);
+            expect(pendingPurchaseElementObservable.peek()).toBeNull();
+            expect(marks()).toHaveLength(1);
+        });
+
+        it("asks for nothing else meanwhile, nor holds the screen again", () => {
+            unlockHead();
+            PlayerShapeUnlockUtil.unlock("hat", 5, "partShape_hat.5", onUnlocked as () => void);
+            expect(sent.map(signal => signal.itemType)).toEqual([HEAD_ITEM]);
+            expect(ScreenInputBlockUtil.hold).toHaveBeenCalledTimes(1);
+            expect(pendingPurchaseElementObservable.peek()).toBe(TILE);
+        });
+
+        it("gives up when no answer comes in time, and still takes one that comes later", () => {
+            vi.useFakeTimers();
+            unlockHead();
+            vi.advanceTimersByTime(4999);
+            expect(endHold).not.toHaveBeenCalled();
+            vi.advanceTimersByTime(1);
+            expect(endHold).toHaveBeenCalledTimes(1);
+            expect(pendingPurchaseElementObservable.peek()).toBeNull();
+
+            answer(true, {[DOLLAR]: 15, [HEAD_ITEM]: 1});
+            expect(onUnlocked).toHaveBeenCalledTimes(1);
+            expect(endHold).toHaveBeenCalledTimes(1);
+        });
+
+        it("gives up as the connection changes, which takes its answer with it", () => {
+            unlockHead();
+            connectionStateObservable.set("reconnecting");
+            expect(endHold).toHaveBeenCalledTimes(1);
+            expect(pendingPurchaseElementObservable.peek()).toBeNull();
+            connectionStateObservable.set("connected");
+            expect(endHold).toHaveBeenCalledTimes(1);
+        });
+    });
+});
+
+describe("holding the screen", () => {
+    // A window of events alone, as the page's is to what listens on it.
+    const page = new EventTarget();
+    const heard: string[] = [];
+
+    beforeEach(() => {
+        heard.length = 0;
+    });
+
+    it("keeps from everything that listens what would start a press, a click, a scroll or a key", () => {
+        vi.stubGlobal("window", page);
+        ScreenInputBlockUtil.install();
+        for (const type of ["pointerdown", "click", "wheel", "keydown", "pointerup", "keyup"])
+            page.addEventListener(type, () => heard.push(type), true);
+
+        const endHold = ScreenInputBlockUtil.hold();
+        const events = ["pointerdown", "click", "wheel", "keydown", "pointerup", "keyup"]
+            .map(type => new Event(type, {cancelable: true}));
+        events.forEach(event => page.dispatchEvent(event));
+        // What ends a press or a key still passes, so that nothing held down is left stuck.
+        expect(heard).toEqual(["pointerup", "keyup"]);
+        // What the browser does with a key is its own.
+        expect(events.filter(event => event.defaultPrevented).map(event => event.type)).toEqual(["pointerdown", "click",
+            "wheel"]);
+
+        endHold();
+        endHold();
+        heard.length = 0;
+        ["pointerdown", "keydown"].forEach(type => page.dispatchEvent(new Event(type)));
+        expect(heard).toEqual(["pointerdown", "keydown"]);
+        vi.unstubAllGlobals();
     });
 });

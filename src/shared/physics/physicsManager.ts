@@ -10,6 +10,9 @@ import PhysicsForceUtil from "./util/physicsForceUtil";
 import { ColliderState } from "./types/colliderState";
 import ObjectTransform from "../object/types/objectTransform";
 import Vector3DUtil from "../math/util/vector3DUtil";
+import Geometry3DUtil from "../math/util/geometry3DUtil";
+import ObjectTypeConfigMap from "../object/maps/objectTypeConfigMap";
+import PhysicsVoxelUtil from "./util/physicsVoxelUtil";
 import { GRAVITY_SPEED } from "../system/sharedConstants";
 
 const physicsRooms: {[roomID: string]: PhysicsRoom} = {};
@@ -129,6 +132,31 @@ const PhysicsManager =
     getStrongestStream: (roomID: string, box: AABB3) =>
     {
         return PhysicsForceUtil.getStrongestStream(physicsRooms[roomID], box);
+    },
+    // Whether a straight line between two points meets no object's collider, but for the one it is seen from: of an object
+    // whose type draws something, as the collider stands for what of it hides whatever lies behind it, the way a block
+    // does (see VoxelQueryUtil.isLineClear). A volume, which draws nothing, hides nothing.
+    isLineClearOfObjects: (roomID: string, from: Vec3, to: Vec3, viewerObjectId: string): boolean =>
+    {
+        const lineBox: AABB3 = {
+            center: Vector3DUtil.scale(Vector3DUtil.add(from, to), 0.5),
+            halfSize: {x: 0.5 * Math.abs(to.x - from.x), y: 0.5 * Math.abs(to.y - from.y), z: 0.5 * Math.abs(to.z - from.z)},
+        };
+        const point: AABB3 = {center: from, halfSize: {x: 0, y: 0, z: 0}};
+        const checked = new Set<string>([viewerObjectId]);
+        for (const voxel of PhysicsVoxelUtil.getVoxelsInBox(physicsRooms[roomID], lineBox))
+        {
+            for (const object of voxel.intersectingObjects)
+            {
+                if (checked.has(object.objectId))
+                    continue;
+                checked.add(object.objectId);
+                if (ObjectTypeConfigMap.getConfigByIndex(object.objectTypeIndex).components.spawnedByAny?.instancedMeshGraphics
+                    != undefined && Geometry3DUtil.castAABBAgainstAABB(point, to, object.colliderState.hitbox).hitRayScale < 1)
+                    return false;
+            }
+        }
+        return true;
     },
     // The velocity a walking body moves at for one step, whoever walks it (a browser's player, a server-walked
     // agent): its steering, falling at gravity's speed, then the two above. Moving the body by it, through the hard

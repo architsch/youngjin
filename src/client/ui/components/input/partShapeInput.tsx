@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { InstancedMeshCompositionParams } from "../../../../shared/graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
 import { PLAYER_SHAPE_PRICE_DOLLARS } from "../../../../shared/system/sharedConstants";
+import { pendingPurchaseElementObservable } from "../../../system/clientObservables";
 import DollarSignIcon from "../../svg/icons/dollarSignIcon";
 import LockIcon from "../../svg/icons/lockIcon";
 import PartShapeIcon from "../../svg/icons/partShapeIcon";
+import SpinnerIcon from "../../svg/icons/spinnerIcon";
 import RefusalCoachMarkUtil from "../../util/refusalCoachMarkUtil";
 import ToggledGridInput from "./toggledGridInput";
 import UnlockFanfare from "./unlockFanfare";
@@ -11,11 +13,18 @@ import UnlockFanfare from "./unlockFanfare";
 const COLUMNS = 3;
 
 // One of a character's part's shapes, chosen from a grid of their pictures. A locked one is dimmed, marked with its price,
-// and clicking it unlocks it rather than choosing it; once that goes through it is chosen, with the grid left open for its
-// fanfare to be seen.
+// and clicking it unlocks it rather than choosing it, darkened under a spinner until the server answers; once that goes
+// through it is chosen, with the grid left open for its fanfare to be seen.
 export default function PartShapeInput({ id, builderName, numShapes, params, currValue, setValue, isLocked, unlock }: Props)
 {
     const [unlockedShapes, setUnlockedShapes] = useState<number[]>([]);
+    const [pendingElementId, setPendingElementId] = useState(pendingPurchaseElementObservable.peek());
+
+    useEffect(() => {
+        const listenerKey = `ui.partShapeInput.${id}`;
+        pendingPurchaseElementObservable.addListener(listenerKey, setPendingElementId);
+        return () => pendingPurchaseElementObservable.removeListener(listenerKey);
+    }, [id]);
 
     const renderShape = (shape: number, close: () => void) => {
         const locked = isLocked(shape);
@@ -49,6 +58,9 @@ export default function PartShapeInput({ id, builderName, numShapes, params, cur
                     <span className="font-sans text-xs font-bold leading-none text-green-300">{PLAYER_SHAPE_PRICE_DOLLARS}</span>
                 </div>
             </>}
+            {elementId == pendingElementId && <div className="absolute inset-0 flex items-center justify-center rounded bg-black/65">
+                <div className="size-7 text-white"><SpinnerIcon/></div>
+            </div>}
             {justUnlocked && <UnlockFanfare onFinished={() => setUnlockedShapes(prev => prev.filter(other => other != shape))}/>}
         </button>;
     };

@@ -71,6 +71,44 @@ const VoxelQueryUtil =
             VoxelQueryUtil.getVoxelColFromWorldX(point.x), VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(point.y));
     },
 
+    // Whether no block stands on the straight line between two points, the cells holding them included. A walk through
+    // every cell the line crosses, so that it cuts no corner unseen.
+    isLineClear(voxels: Voxel[], from: Vec3, to: Vec3): boolean
+    {
+        let col = VoxelQueryUtil.getVoxelColFromWorldX(from.x);
+        let layer = VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(from.y);
+        let row = VoxelQueryUtil.getVoxelRowFromWorldZ(from.z);
+        const x = getLineAxisWalk(from.x, to.x, col, VOXEL_CELL_SIZE);
+        const y = getLineAxisWalk(from.y, to.y, layer, COLLISION_LAYER_HEIGHT);
+        const z = getLineAxisWalk(from.z, to.z, row, VOXEL_CELL_SIZE);
+        const numCrossings = Math.abs(VoxelQueryUtil.getVoxelColFromWorldX(to.x) - col)
+            + Math.abs(VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(to.y) - layer)
+            + Math.abs(VoxelQueryUtil.getVoxelRowFromWorldZ(to.z) - row);
+        for (let i = 0; ; ++i)
+        {
+            if (VoxelQueryUtil.isVoxelBlockPresentAt(voxels, row, col, layer))
+                return false;
+            if (i == numCrossings)
+                return true;
+            // On into the next cell along whichever axis the line next crosses a cell's boundary on.
+            if (x.next <= y.next && x.next <= z.next)
+            {
+                col += x.step;
+                x.next += x.delta;
+            }
+            else if (y.next <= z.next)
+            {
+                layer += y.step;
+                y.next += y.delta;
+            }
+            else
+            {
+                row += z.step;
+                z.next += z.delta;
+            }
+        }
+    },
+
     // The box in the world of a cell layer, which a block in it fills.
     getVoxelBlockBox(row: number, col: number, collisionLayer: number): AABB3
     {
@@ -396,6 +434,18 @@ function getVoxelQuadIndexOfBlock(row: number, col: number, collisionLayer: numb
 
     const facesTheRoom = facingAxis == "y" && (facingSign > 0) == (collisionLayer < COLLISION_LAYER_MIN);
     return facesTheRoom ? VoxelQueryUtil.getVoxelQuadIndex(row, col, "y", orientation, COLLISION_LAYER_NULL) : -1;
+}
+
+// One axis of a line from a to b that starts in the given cell, in shares of the line's length: where it first crosses
+// into the next cell, how far apart such crossings lie, and which way the cells it crosses into count.
+function getLineAxisWalk(a: number, b: number, cell: number, cellSize: number): {step: number, next: number, delta: number}
+{
+    const length = b - a;
+    if (length == 0)
+        return {step: 0, next: Infinity, delta: Infinity};
+    const step = Math.sign(length);
+    const boundary = ((step > 0) ? cell + 1 : cell) * cellSize;
+    return {step, next: (boundary - a) / length, delta: cellSize / Math.abs(length)};
 }
 
 export default VoxelQueryUtil;

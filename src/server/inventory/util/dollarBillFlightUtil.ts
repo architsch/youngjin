@@ -83,20 +83,6 @@ const DollarBillFlightUtil =
     {
         return pos.y - getLyingHeight(voxels, pos) <= SKIM;
     },
-    // Whether no block stands on the straight way from one place to another, as an eye sees past them.
-    isInSight: (voxels: Voxel[], from: Vec3, to: Vec3): boolean =>
-    {
-        const numSteps = Math.ceil(Math.sqrt(Vector3DUtil.distSqr(from, to)) / SEARCH_STEP);
-        for (let step = 1; step < numSteps; ++step)
-        {
-            const t = step / numSteps;
-            if (VoxelQueryUtil.isVoxelBlockPresentAt(voxels, VoxelQueryUtil.getVoxelRowFromWorldZ(from.z + (to.z - from.z) * t),
-                VoxelQueryUtil.getVoxelColFromWorldX(from.x + (to.x - from.x) * t),
-                VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(from.y + (to.y - from.y) * t)))
-                return false;
-        }
-        return true;
-    },
     // A random gust's flight, no two of the same curve, toward nobody; none if it can find no such flight.
     planGust: (voxels: Voxel[], from: Vec3, people: Vec3[]): ObjectWaypoint[] =>
     {

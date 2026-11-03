@@ -3000,8 +3000,8 @@ describe("AI agents", () => {
                 expect(dollars, tool).toContain(`\`${tool}\``);
             expect(dollars).toContain(`arriving gives you $${LOGIN_REWARD_DOLLARS} once a day, ${LOGIN_REWARD_INTERVAL_MS / HOUR_IN_MS} hours or more`);
             expect(dollars).toContain(`spends $${PLAYER_SHAPE_PRICE_DOLLARS} on it`);
-            expect(DOLLAR_BILL_REACH / VOXEL_CELL_SIZE).toBe(10);
-            expect(dollars).toContain("about ten cells away");
+            expect(DOLLAR_BILL_REACH / VOXEL_CELL_SIZE).toBe(8);
+            expect(dollars).toContain("about eight cells away");
             expect(NUM_FREE_PLAYER_PART_TYPES).toBe(3);
             expect(dollars).toContain("six shapes, the first three free");
             for (const numShapes of Object.values(AgentAppearanceUtil.getShapeCounts()))

@@ -14,6 +14,7 @@ import Vector3DUtil from "../../shared/math/util/vector3DUtil";
 import { ObjectMetadataKeyEnumMap } from "../../shared/object/types/objectMetadataKey";
 import ServerInventoryManager from "../inventory/serverInventoryManager";
 import UserBudgetUtil from "../user/util/userBudgetUtil";
+import PlayerMotionCheckUtil from "../user/util/playerMotionCheckUtil";
 
 const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
 
@@ -125,9 +126,10 @@ const ServerObjectManager =
         // A user's player goes no farther than its distance budget lets it (see USER_BUDGETS): a move past it is taken
         // back from the sender alone, whom nobody else has seen make it.
         const obj = room.objectById[signal.objectId];
-        if (obj != undefined && !signal.ignorePhysics && obj.objectTypeIndex == playerTypeIndex
-            && obj.sourceUserID == user.id && !UserBudgetUtil.trySpend(user.id, "distance",
-                Vector3DUtil.length(Vector3DUtil.subtract(signal.transform.pos, obj.transform.pos))))
+        const ownMove = obj != undefined && !signal.ignorePhysics && obj.objectTypeIndex == playerTypeIndex
+            && obj.sourceUserID == user.id;
+        if (ownMove && !UserBudgetUtil.trySpend(user.id, "distance",
+            Vector3DUtil.length(Vector3DUtil.subtract(signal.transform.pos, obj.transform.pos))))
         {
             socketUserContext.addPendingSignalToUser("setObjectTransformSignal", new SetObjectTransformSignal(room.id,
                 obj.objectId, new ObjectTransform({...obj.transform.pos}, {...obj.transform.dir}, {...obj.transform.scale}),
@@ -135,7 +137,10 @@ const ServerObjectManager =
             return;
         }
 
+        const from = ownMove ? {...obj.transform.pos} : undefined;
         const result = ObjectUpdateUtil.setObjectTransform(user, room, signal);
+        if (from != undefined)
+            PlayerMotionCheckUtil.noteMove(socketUserContext, room, from, obj!.transform.pos);
 
         // On desync, broadcast to everyone including the sender; otherwise to everyone else.
         const socketRoomContext = ServerRoomManager.socketRoomContexts[roomID];

@@ -24,6 +24,8 @@ import User from "../../../shared/user/types/user";
 import { UserTypeEnumMap } from "../../../shared/user/types/userType";
 import Voxel from "../../../shared/voxel/types/voxel";
 import VoxelPathUtil from "../../../shared/voxel/util/voxelPathUtil";
+import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
+import PlayerMotionCheckUtil from "../../user/util/playerMotionCheckUtil";
 import ServerObjectManager from "../../object/serverObjectManager";
 import ServerRoomManager from "../../room/serverRoomManager";
 import UserContext from "../../sockets/types/userContext";
@@ -44,6 +46,9 @@ const GUST_INTERVAL_MS = [4_000, 12_000];
 // below them, and no wider than this of the way they face, across the room, in radians.
 const REACH_UPWARD = 0.5 * PLAYER_HEIGHT + 0.35;
 const REACH_ANGLE = Math.PI / 4;
+// Where on a bill an eye may see it, from the crease's middle, in world units: inside it however it is turned. Any of them
+// in sight is the bill in sight.
+const SIGHT_POINTS = [{x: 0, z: 0}, {x: 0.15, z: 0}, {x: -0.15, z: 0}, {x: 0, z: 0.15}, {x: 0, z: -0.15}];
 const MAX_BILLS_PER_ROOM = ObjectCategoryConfigMap.getMaxCountPerRoom(DollarBillObjectTypeConfig.category);
 
 const BILL_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType(DollarBillObjectTypeConfig.objectType);
@@ -57,9 +62,9 @@ const roomStates = new WeakMap<RoomRuntimeMemory, DollarBillRoomState>();
 // makes way for one), up to a room's cap, at places someone can walk to, since a room's cap is spent on each until it is
 // gone. It flies them along paths (see DollarBillFlightUtil), which clients play out by themselves: blown about by gusts
 // now and then, and by fans' streams as they meet them, dropping onto whatever is under them. Whoever comes near one,
-// looking its way with nothing between them, collects it at once (see ServerInventoryManager): the room is told, and each
-// browser shows it go to them (see DollarBillGameObject.onCollected). A block laid over one destroys it, with no one the
-// richer.
+// looking its way with nothing between them, collects it at once (see ServerInventoryManager), if all they have done is
+// believable (see PlayerMotionCheckUtil): the room is told, and each browser shows it go to them (see
+// DollarBillGameObject.onCollected). A block laid over one destroys it, with no one the richer.
 const DollarBillUtil =
 {
     // Every room's bills, as time passes. From SocketsServer's flush, so what they do goes out with it.
@@ -157,7 +162,7 @@ function stepBill(room: Room, state: DollarBillRoomState, bill: AddObjectSignal,
     }
 
     advance(flight, pos, seconds);
-    const collector = findCollector(voxels, pos, people);
+    const collector = findCollector(room, pos, people, now);
     if (collector != undefined)
     {
         ServerRoomManager.socketRoomContexts[room.id].multicastSignal("objectCollectedSignal",
@@ -199,9 +204,10 @@ function advance(flight: DollarBillFlight, pos: Vec3, seconds: number): void
     }
 }
 
-// Whoever has it within reach, in front of them and in sight: the nearest, if several do.
-function findCollector(voxels: Voxel[], pos: Vec3,
-    people: {ctx: UserContext, player: AddObjectSignal}[]): UserContext | undefined
+// Whoever has it within reach, in front of them and in sight, and is trusted to have got there: the nearest, if several
+// do.
+function findCollector(room: Room, pos: Vec3, people: {ctx: UserContext, player: AddObjectSignal}[],
+    now: number): UserContext | undefined
 {
     let collector: UserContext | undefined = undefined;
     let nearest = DOLLAR_BILL_REACH;
@@ -210,13 +216,26 @@ function findCollector(voxels: Voxel[], pos: Vec3,
         const {pos: at, dir} = player.transform;
         const across = Math.hypot(pos.x - at.x, pos.z - at.z);
         if (across <= nearest && Math.abs(pos.y - at.y) <= REACH_UPWARD && isFaced(at, dir, pos)
-            && DollarBillFlightUtil.isInSight(voxels, {x: at.x, y: at.y + PLAYER_EYE_HEIGHT, z: at.z}, pos))
+            && isInSight(room, player, pos) && PlayerMotionCheckUtil.isTrusted(ctx, now))
         {
             collector = ctx;
             nearest = across;
         }
     }
     return collector;
+}
+
+// Whether any of a bill shows to a player's eyes, with no block, nobody else and nothing drawn in between: wherever it is
+// on their screen, or below it.
+function isInSight(room: Room, player: AddObjectSignal, pos: Vec3): boolean
+{
+    const {pos: at} = player.transform;
+    const eye = {x: at.x, y: at.y + PLAYER_EYE_HEIGHT, z: at.z};
+    return SIGHT_POINTS.some(offset => {
+        const point = {x: pos.x + offset.x, y: pos.y, z: pos.z + offset.z};
+        return VoxelQueryUtil.isLineClear(room.voxelGrid.voxels, eye, point)
+            && PhysicsManager.isLineClearOfObjects(room.id, eye, point, player.objectId);
+    });
 }
 
 // Whether someone at a place, with their transform's direction, is facing within reach of the way to another, across the

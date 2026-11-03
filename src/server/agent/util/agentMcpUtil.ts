@@ -100,7 +100,7 @@ Seeing and moving:
 Dollars are what you hold in the game, and they stay yours from visit to visit.
 - Getting them: $1 bills turn up now and then in any room with someone in it, up to a few at a time, and gusts and fans
   blow them about. look lists them, nearest first, under bills, and collect_bill walks you to the nearest and takes it.
-  You can also walk up yourself: come within about ${DOLLAR_REACH_CELLS} cells of one, on your own storey, with nothing in the way,
+  You can also walk up yourself: come within about ${DOLLAR_REACH_CELLS} cells of one, on your own storey, with nothing and nobody in the way,
   and facing it to within 45 degrees (walking toward one does that, and face turns you where you stand), and it flies
   to you (a bill moves, and a strong gust can carry one across the room, so look again on the way). Arriving also gives
   you $${LOGIN_REWARD_DOLLARS} once a day: nothing on your first visit, then once ${LOGIN_REWARD_INTERVAL_HOURS} hours have passed since you first came, or since

@@ -4,7 +4,7 @@ description: Play ThingsPool, a 3D multiplayer sandbox game, a fully immersive w
 license: Apache-2.0
 compatibility: Needs an MCP client for a remote server (Streamable HTTP), or a shell with curl. Taking pictures also needs a browser tool that takes screenshots.
 metadata:
-  version: "1.4.2"
+  version: "1.4.3"
   homepage: "https://thingspool.net"
 ---
 
@@ -146,8 +146,9 @@ Dollars are what you hold in the game, and they stay yours from visit to visit.
   and fans blow them about. `look` lists them, nearest first, as `bills`, and `collect_bill` walks you to the nearest
   and takes it. If it gets away, `look` again and call it again. With none in the room, try again later, or `travel`
   to a hub.
-- **Or walk up to one:** a bill comes to you once it is about ten cells away, on your own storey, with nothing in the
-  way, and you face it to within 45 degrees. `walk_to` toward it does that, and `face` turns you where you stand.
+- **Or walk up to one:** a bill comes to you once it is about eight cells away, on your own storey, with nothing and
+  nobody in the way, and you face it to within 45 degrees. `walk_to` toward it does that, and `face` turns you where
+  you stand.
 - **Come back:** arriving gives you $10 once a day, 20 hours or more after the last time, though not on your first
   visit. `whats_new` tells you when it comes.
 - **Spend them on shapes:** each part of your character has six shapes, the first three free. `appearance` lists them
@@ -214,7 +215,7 @@ The limits are the same for everyone, people included. The server's instructions
 
 ## About this manual
 
-Version 1.4.2, 2026-11-02. ThingsPool's [terms of service](https://thingspool.net/terms-of-service.html) and
+Version 1.4.3, 2026-11-03. ThingsPool's [terms of service](https://thingspool.net/terms-of-service.html) and
 [privacy policy](https://thingspool.net/privacy-policy.html) apply to you as to everyone.
 
 This manual is licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0), unlike the

@@ -95,8 +95,8 @@
     18%, 64% { color: #ff8fab; }
   }
 
-  /* A locked shape coming free (see UnlockFanfare): its picture leaps up out of the dim, lit, over a flash, a shock wave,
-     sparks flying out along their own angles and its lock flying off. */
+  /* A locked shape coming free: its picture leaps up out of the dim, lit, as sparks burst out of its tile (see
+     UnlockFanfare). */
   --animate-unlock-pop: unlock-pop 0.9s cubic-bezier(0.2, 0.8, 0.3, 1);
   @keyframes unlock-pop {
     0%   { transform: scale(0.5); opacity: 0.35; filter: brightness(1) drop-shadow(0 0 0 rgba(253, 224, 71, 0)); }
@@ -104,33 +104,6 @@
     55%  { transform: scale(0.92); opacity: 1; filter: brightness(1.3) drop-shadow(0 0 0.35rem rgba(253, 224, 71, 1)); }
     75%  { transform: scale(1.1); opacity: 1; filter: brightness(1.15) drop-shadow(0 0 0.25rem rgba(253, 224, 71, 0.8)); }
     100% { transform: scale(1); opacity: 1; filter: brightness(1) drop-shadow(0 0 0 rgba(253, 224, 71, 0)); }
-  }
-
-  --animate-unlock-flash: unlock-flash 0.7s ease-out forwards;
-  @keyframes unlock-flash {
-    0%   { transform: scale(0.2); opacity: 1; }
-    100% { transform: scale(1.2); opacity: 0; }
-  }
-
-  --animate-unlock-ring: unlock-ring 0.75s ease-out forwards;
-  @keyframes unlock-ring {
-    0%   { transform: scale(0.15); opacity: 1; }
-    100% { transform: scale(1); opacity: 0; }
-  }
-
-  --animate-unlock-spark: unlock-spark 1.1s cubic-bezier(0.15, 0.6, 0.3, 1) forwards;
-  @keyframes unlock-spark {
-    0%   { transform: rotate(var(--unlock-spark-angle)) translateY(0) scale(1.6); opacity: 1; }
-    65%  { opacity: 1; }
-    100% { transform: rotate(var(--unlock-spark-angle)) translateY(var(--unlock-spark-reach)) scale(0.5); opacity: 0; }
-  }
-
-  --animate-unlock-lock: unlock-lock 0.85s ease-out forwards;
-  @keyframes unlock-lock {
-    0%   { transform: translateY(0) rotate(0deg) scale(0.7); opacity: 0; }
-    14%  { transform: translateY(-1.5rem) rotate(-10deg) scale(1.4); opacity: 1; }
-    55%  { opacity: 1; }
-    100% { transform: translateY(-6.5rem) rotate(26deg) scale(1); opacity: 0; }
   }
 
   /* The coach mark telling of a reward, popping out of its pointer and bouncing in step with the count it points at,

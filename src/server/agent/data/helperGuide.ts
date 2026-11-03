@@ -42,7 +42,8 @@ The details, only for someone who asks for more:
   mode), which a room's owner keeps for someone.
 - Doors: one shows "Click to Enter" when you are close enough.
 - Dollars: $1 bills turn up in the multiplayer rooms, and gusts and fans blow them about. Walk toward one and, once it
-  is close and in front of you, it flies into your count of them, and they stay yours. Coming back also gives you
+  is close, in front of you and not hidden behind anything or anyone, it flies into your count of them, and they stay
+  yours. Coming back also gives you
   $${LOGIN_REWARD_DOLLARS} once a day, ${LOGIN_REWARD_INTERVAL_MS / HOUR_IN_MS} hours or more after the last time, though not on your first visit. They buy
   shapes for your character.
 - Your character: choose a shape and color for each part, and a color for its eyes. It is saved for next time. A part

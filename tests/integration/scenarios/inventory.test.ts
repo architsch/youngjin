@@ -42,18 +42,25 @@ import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objec
 import DollarBillObjectTypeConfig, { DOLLAR_BILL_REACH,
     DOLLAR_BILL_REST_HEIGHT } from "../../../src/shared/object/types/objectTypeConfig/dollarBillObjectTypeConfig";
 import FanObjectTypeConfig, { FAN_SETTINGS } from "../../../src/shared/object/types/objectTypeConfig/fanObjectTypeConfig";
-import { PLAYER_EYE_HEIGHT, PLAYER_HEIGHT } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import { PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_MAX_WALK_INPUT, PLAYER_RADIUS_XZ,
+    PLAYER_WALK_SPEED_PER_INPUT } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import SetObjectTransformSignal from "../../../src/shared/object/types/setObjectTransformSignal";
+import PlayerMotionCheckUtil from "../../../src/server/user/util/playerMotionCheckUtil";
+import UserSignalDispatchUtil from "../../../src/server/user/util/userSignalDispatchUtil";
+import Vector3DUtil from "../../../src/shared/math/util/vector3DUtil";
 import AdminPrefsUtil from "../../../src/shared/object/util/adminPrefsUtil";
 import ObjectPathUtil from "../../../src/shared/object/util/objectPathUtil";
 import EncodableByteString from "../../../src/shared/networking/types/encodableByteString";
 import EncodableRawByteNumber from "../../../src/shared/networking/types/encodableRawByteNumber";
 import PhysicsManager from "../../../src/shared/physics/physicsManager";
 import Vec3 from "../../../src/shared/math/types/vec3";
+import Geometry3DUtil from "../../../src/shared/math/util/geometry3DUtil";
 import Room from "../../../src/shared/room/types/room";
 import RoomFile from "../../../src/shared/room/types/roomFile";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
-import { COLLISION_LAYER_HEIGHT, INITIAL_MULTI_PLAYER_ENTRANCE_POS, LOGIN_REWARD_DOLLARS, MAX_ROOM_Y, NUM_VOXEL_COLS,
-    STOREY_FLOOR_COLLISION_LAYER, UNIT_VEC3, VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, GENERATED_WALL_THICKNESS, GRAVITY_SPEED, INITIAL_MULTI_PLAYER_ENTRANCE_POS,
+    LOGIN_REWARD_DOLLARS, MAX_ROOM_Y, NUM_VOXEL_COLS, STOREY_FLOOR_COLLISION_LAYER, UNIT_VEC3,
+    VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 import User from "../../../src/shared/user/types/user";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import Voxel from "../../../src/shared/voxel/types/voxel";
@@ -64,6 +71,7 @@ import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
 const HUB_ID = "hubAAAAAAAAAAAAAAAAA";
 const BILL_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType(DollarBillObjectTypeConfig.objectType);
 const FAN_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType(FanObjectTypeConfig.objectType);
+const NPC_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Npc");
 const MAX_BILLS = ObjectCategoryConfigMap.getMaxCountPerRoom(DollarBillObjectTypeConfig.category);
 const DOLLAR = InventoryItemTypeEnumMap.Dollar;
 const FLUSH_MS = 200;
@@ -114,10 +122,12 @@ async function join(id: string, at: Vec3 = {x: 4, y: STANDING_Y, z: 4}): Promise
     return user;
 }
 
-// Where the room keeps their player, as the moves they send leave it.
+// Where the room keeps their player, as the moves they send leave it, their body's box with it.
 function moveTo(user: ConnectedUser, pos: Vec3): void
 {
-    Object.assign(harness.getPlayerObject(user.user.id)!.transform.pos, pos);
+    const player = harness.getPlayerObject(user.user.id)!;
+    Object.assign(player.transform.pos, pos);
+    PhysicsManager.setObjectTransform(HUB_ID, player.objectId, player.transform, true);
 }
 
 // Turns them toward a place, as the moves they send do. A player's transform's direction points behind them.
@@ -409,9 +419,44 @@ describe("a bill's flight", () => {
     it("is seen past nothing but thin air", () => {
         const voxels = strewnRoom([{row: 32, col: 30, layer: 2}]);
         const eye = {x: 12, y: 1.25, z: 16.25};
-        expect(DollarBillFlightUtil.isInSight(voxels, eye, {x: 14, y: 1.25, z: 16.25})).toBe(true);
-        expect(DollarBillFlightUtil.isInSight(voxels, eye, {x: 18, y: 1.25, z: 16.25})).toBe(false);
-        expect(DollarBillFlightUtil.isInSight(voxels, eye, {x: 18, y: 2.75, z: 16.25})).toBe(true);
+        expect(VoxelQueryUtil.isLineClear(voxels, eye, {x: 14, y: 1.25, z: 16.25})).toBe(true);
+        expect(VoxelQueryUtil.isLineClear(voxels, eye, {x: 18, y: 1.25, z: 16.25})).toBe(false);
+        expect(VoxelQueryUtil.isLineClear(voxels, eye, {x: 18, y: 2.75, z: 16.25})).toBe(true);
+    });
+
+    it("is seen past no corner of a block, however little of it a line cuts", () => {
+        // A line cutting a block's corner by a sliver, shorter than any sampling along it would have stepped.
+        const voxels = strewnRoom([{row: 32, col: 32, layer: 1}]);
+        const corner = {x: 16, y: 0.75, z: 16};
+        const from = {x: corner.x - 2, y: corner.y, z: corner.z + 2.02};
+        const to = {x: corner.x + 2.02, y: corner.y, z: corner.z - 2};
+        expect(VoxelQueryUtil.isLineClear(voxels, from, to)).toBe(false);
+        expect(VoxelQueryUtil.isLineClear(voxels, from, {...to, x: to.x - 0.04})).toBe(true);
+    });
+
+    it("is seen exactly where no block's box meets the line, whatever the line and the blocks", () => {
+        // Each block's box the line passes through, found by clipping the line to each in turn.
+        const anyBlockOnLine = (voxels: Voxel[], from: Vec3, to: Vec3): boolean => {
+            const point = {center: from, halfSize: {x: 0, y: 0, z: 0}};
+            for (let row = Math.min(rowOf(from.z), rowOf(to.z)); row <= Math.max(rowOf(from.z), rowOf(to.z)); ++row)
+                for (let col = Math.min(colOf(from.x), colOf(to.x)); col <= Math.max(colOf(from.x), colOf(to.x)); ++col)
+                    for (let layer = 0; layer < 6; ++layer)
+                    {
+                        if (VoxelQueryUtil.isVoxelBlockPresentAt(voxels, row, col, layer) && Geometry3DUtil.castAABBAgainstAABB(
+                            point, to, VoxelQueryUtil.getVoxelBlockBox(row, col, layer)).hitRayScale < 1)
+                            return true;
+                    }
+            return false;
+        };
+        // Off the grid's lines by odd amounts, so that no line is drawn exactly through a corner, where it touches a box.
+        const placeNearMiddle = fc.record({x: fc.integer({min: 1300, max: 1900}), y: fc.integer({min: 5, max: 295}),
+            z: fc.integer({min: 1300, max: 1900})}).map(({x, y, z}) => ({x: x / 100 + 0.00313, y: y / 100 + 0.00471,
+            z: z / 100 + 0.00719}));
+        fc.assert(fc.property(fc.array(BLOCK_NEAR_MIDDLE, {maxLength: 60}), placeNearMiddle, placeNearMiddle,
+            (blocks, from, to) => {
+                const voxels = strewnRoom(blocks);
+                expect(VoxelQueryUtil.isLineClear(voxels, from, to)).toBe(!anyBlockOnLine(voxels, from, to));
+            }), {numRuns: 400});
     });
 
     it("counts anything beyond the room as a block", () => {
@@ -1105,8 +1150,57 @@ describe("collecting a bill", () => {
         const voxels = getRoom().voxelGrid.voxels;
         const middle = {x: MIDDLE_X, y: STANDING_Y, z: MIDDLE_Z};
         const billAt = {x: MIDDLE_X + 3, y: LYING_Y, z: MIDDLE_Z};
-        expect(DollarBillFlightUtil.isInSight(voxels, middle, billAt)).toBe(false);
-        expect(DollarBillFlightUtil.isInSight(voxels, {...middle, y: STANDING_Y + PLAYER_EYE_HEIGHT}, billAt)).toBe(true);
+        expect(VoxelQueryUtil.isLineClear(voxels, middle, billAt)).toBe(false);
+        expect(VoxelQueryUtil.isLineClear(voxels, {...middle, y: STANDING_Y + PLAYER_EYE_HEIGHT}, billAt)).toBe(true);
+        flush();
+        expect(user.socketUserContext.inventory[DOLLAR]).toBe(1);
+    });
+
+    it("works on one at their feet, under the bottom of their view", async () => {
+        const {user} = await withBillBeforeUser(0.3);
+        flush();
+        expect(user.socketUserContext.inventory[DOLLAR]).toBe(1);
+    });
+
+    it("doesn't work with someone else standing in the way, and does once they step aside", async () => {
+        const {user} = await withBillBeforeUser(3);
+        const inTheWay = await join("in the way", {x: MIDDLE_X + 1.5, y: STANDING_Y, z: MIDDLE_Z});
+        faceToward(inTheWay, MIDDLE_X - 4, MIDDLE_Z);
+        flushFor(1_000);
+        expect(getBills()).toHaveLength(1);
+        expect(user.socketUserContext.inventory[DOLLAR]).toBeUndefined();
+
+        moveTo(inTheWay, {x: MIDDLE_X + 1.5, y: STANDING_Y, z: MIDDLE_Z + 2});
+        flush();
+        expect(user.socketUserContext.inventory[DOLLAR]).toBe(1);
+        expect(inTheWay.socketUserContext.inventory[DOLLAR]).toBeUndefined();
+    });
+
+    it("doesn't work with a helper in the way", async () => {
+        const {user} = await withBillBeforeUser(3);
+        const npc = new AddObjectSignal(HUB_ID, ADMIN.id, ADMIN.userName, NPC_TYPE_INDEX, "a-helper",
+            new ObjectTransform({x: MIDDLE_X + 1.5, y: 0, z: MIDDLE_Z}, {x: 0, y: 1, z: 0}, {...UNIT_VEC3}));
+        expect(ServerObjectManager.addObjectAsServer(getRoom(), ADMIN, npc)).toBe(true);
+        flushFor(1_000);
+        expect(user.socketUserContext.inventory[DOLLAR]).toBeUndefined();
+
+        ServerObjectManager.removeObjectAsServer(getRoom(), ADMIN, new RemoveObjectSignal(HUB_ID, npc.objectId));
+        flush();
+        expect(user.socketUserContext.inventory[DOLLAR]).toBe(1);
+    });
+
+    it("works with any of it in sight, however little shows past what is in the way", async () => {
+        const {user} = await withBillBeforeUser(3);
+        // A pillar just short of the bill, hiding its middle and all but one side of it.
+        const pillarCol = colOf(MIDDLE_X + 2.25);
+        for (let layer = 0; layer < 6; ++layer)
+            placeBlock(rowOf(MIDDLE_Z + 0.1), pillarCol, layer);
+        const bill = getBills()[0];
+        Object.assign(bill.transform.pos, {z: MIDDLE_Z + 0.1});
+        const eye = {x: MIDDLE_X, y: STANDING_Y + PLAYER_EYE_HEIGHT, z: MIDDLE_Z};
+        const voxels = getRoom().voxelGrid.voxels;
+        expect(VoxelQueryUtil.isLineClear(voxels, eye, bill.transform.pos)).toBe(false);
+        expect(VoxelQueryUtil.isLineClear(voxels, eye, {...bill.transform.pos, z: bill.transform.pos.z - 0.15})).toBe(true);
         flush();
         expect(user.socketUserContext.inventory[DOLLAR]).toBe(1);
     });
@@ -1194,6 +1288,305 @@ describe("collecting a bill", () => {
         expect(user.socketUserContext.inventory[DOLLAR]).toBe(3);
         expect(vi.mocked(DBInventoryUtil.addItem).mock.calls).toEqual([[user.user.id, DOLLAR, 1], [user.user.id, DOLLAR, 1],
             [user.user.id, DOLLAR, 1]]);
+    });
+});
+
+describe("believing how someone got near a bill", () => {
+    const WALK_SPEED = PLAYER_WALK_SPEED_PER_INPUT * PLAYER_MAX_WALK_INPUT;
+    const REPORT_MS = 200;
+    const SUB_STEP = 1 / 60;
+    const DISTRUST_MS = 3000;
+
+    // A move as their browser reports it, through the server's own handling of it.
+    async function report(user: ConnectedUser, pos: Vec3): Promise<void>
+    {
+        const player = harness.getPlayerObject(user.user.id)!;
+        const bufferState = EncodingUtil.startEncoding();
+        new SetObjectTransformSignal(HUB_ID, player.objectId, new ObjectTransform({...pos}, {...player.transform.dir},
+            {...player.transform.scale}), false).encode(bufferState);
+        await UserSignalDispatchUtil.dispatch(user.socketUserContext, "setObjectTransformSignal",
+            EncodingUtil.endEncoding(bufferState));
+    }
+
+    // Walks their body as the room's physics walks any, a browser's or an agent's, at a walk along a heading (standing
+    // still where there is none), the server noting where it got to five times a second, as a browser reports it, or
+    // all at once after a stall. Says whether it believed every move, how many a stream had a part in, and how many
+    // were falls.
+    function walkByPhysics(user: ConnectedUser, heading: (seconds: number) => number | undefined, seconds: number,
+        stall?: {from: number, to: number}): {believed: boolean, forced: number, falling: number}
+    {
+        const player = harness.getPlayerObject(user.user.id)!;
+        const ctx = user.socketUserContext;
+        let pos = {...player.transform.pos};
+        let reported = {...pos};
+        const held: Vec3[] = [];
+        const result = {believed: true, forced: 0, falling: 0};
+        let forced = false;
+        let lastY = pos.y;
+        for (let step = 1; step <= Math.round(seconds / SUB_STEP); ++step)
+        {
+            const angle = heading(step * SUB_STEP);
+            const steering = (angle == undefined) ? {x: 0, y: 0, z: 0}
+                : {x: Math.cos(angle) * WALK_SPEED, y: 0, z: Math.sin(angle) * WALK_SPEED};
+            const move = PhysicsManager.getStepVelocity(HUB_ID, player.objectId, steering, SUB_STEP);
+            forced ||= move.underForce;
+            pos = {...PhysicsManager.setObjectTransform(HUB_ID, player.objectId, new ObjectTransform(
+                Vector3DUtil.add(pos, Vector3DUtil.scale(move.velocity, SUB_STEP)), player.transform.dir,
+                player.transform.scale), false).transform.pos};
+            if (step % Math.round(REPORT_MS / 1000 / SUB_STEP) != 0)
+                continue;
+            vi.setSystemTime(Date.now() + REPORT_MS);
+            result.forced += forced ? 1 : 0;
+            result.falling += (pos.y < lastY - 0.25 * GRAVITY_SPEED * REPORT_MS / 1000) ? 1 : 0;
+            forced = false;
+            lastY = pos.y;
+            held.push({...pos});
+            if (stall != undefined && step * SUB_STEP >= stall.from && step * SUB_STEP < stall.to)
+                continue;
+            for (const at of held.splice(0))
+            {
+                PlayerMotionCheckUtil.noteMove(ctx, getRoom(), reported, at);
+                reported = at;
+                result.believed &&= PlayerMotionCheckUtil.isTrusted(ctx);
+            }
+        }
+        Object.assign(player.transform.pos, pos);
+        return result;
+    }
+
+    // Somewhere on the floor inside the room's walls, by hundredths, and somewhere along them, by half blocks.
+    const FLOOR_SPOT = fc.record({x: fc.integer({min: 200, max: 3000}), z: fc.integer({min: 200, max: 3000})})
+        .map(({x, z}) => ({x: x / 100, z: z / 100}));
+    const HALF_SPOT = fc.integer({min: 4, max: 60}).map(halves => halves / 2);
+    const HEADINGS = fc.array(fc.option(fc.integer({min: 0, max: 359}), {nil: undefined, freq: 5}),
+        {minLength: 8, maxLength: 8});
+    // Single blocks low in the room, and flights of steps up to a ledge as high as a person can't climb.
+    const BLOCK_ANYWHERE_LOW = fc.record({row: fc.integer({min: 2, max: 61}), col: fc.integer({min: 2, max: 61}),
+        layer: fc.integer({min: 0, max: 1})});
+    const STAIRS = fc.record({row: fc.integer({min: 2, max: 61}), col: fc.integer({min: 2, max: 55})});
+    // A fan on the floor blowing up, or on a wall of the room blowing across it, at any strength.
+    const FAN = fc.record({onWall: fc.integer({min: 0, max: 4}), along: HALF_SPOT, across: HALF_SPOT,
+        setting: fc.integer({min: 0, max: 2})});
+    const WALL_FACE = GENERATED_WALL_THICKNESS * VOXEL_CELL_SIZE;
+    const WALLS = [{pos: (at: number) => ({x: WALL_FACE, y: 0.5, z: at}), dir: {x: 1, y: 0, z: 0}},
+        {pos: (at: number) => ({x: 32 - WALL_FACE, y: 0.5, z: at}), dir: {x: -1, y: 0, z: 0}},
+        {pos: (at: number) => ({x: at, y: 0.5, z: WALL_FACE}), dir: {x: 0, y: 0, z: 1}},
+        {pos: (at: number) => ({x: at, y: 0.5, z: 32 - WALL_FACE}), dir: {x: 0, y: 0, z: -1}}];
+
+    it("believes any walk the room's physics makes: up steps, off ledges and thrown about by fans", async () => {
+        const seen = {forced: 0, falling: 0};
+        await fc.assert(fc.asyncProperty(FLOOR_SPOT, fc.array(BLOCK_ANYWHERE_LOW, {maxLength: 120}),
+            fc.array(STAIRS, {maxLength: 6}), fc.array(FAN, {maxLength: 4}), HEADINGS,
+            async (start, blocks, stairs, fans, headings) => {
+                harness.reset();
+                harness.seedHub(HUB_ID);
+                const user = await join("walker", {x: start.x, y: STANDING_Y, z: start.z});
+                const voxels = getRoom().voxelGrid.voxels;
+                const steps = stairs.flatMap(({row, col}) => Array.from({length: 6}, (_, i) =>
+                    Array.from({length: 1 + (i >> 1)}, (_, layer) => ({row, col: col + i, layer}))).flat());
+                for (const {row, col, layer} of [...blocks, ...steps])
+                {
+                    if (Math.abs(row - rowOf(start.z)) > 1 || Math.abs(col - colOf(start.x)) > 1)
+                        VoxelQueryUtil.getVoxel(voxels, row, col)!.blockLayerMask |= 1 << layer;
+                }
+                for (const [i, {onWall, along, across, setting}] of fans.entries())
+                {
+                    const wall = WALLS[onWall];
+                    const fan = new AddObjectSignal(HUB_ID, ADMIN.id, ADMIN.userName, FAN_TYPE_INDEX, `fan${i}`,
+                        new ObjectTransform(wall?.pos(along) ?? {x: along, y: 0, z: across},
+                            wall?.dir ?? {x: 0, y: 1, z: 0}, {...UNIT_VEC3}),
+                        {[ObjectMetadataKeyEnumMap.ForceProperties]: new EncodableByteString(
+                            FanObjectTypeConfig.util.encodeForceProperties(FAN_SETTINGS[setting]))});
+                    ServerObjectManager.addObjectAsServer(getRoom(), ADMIN, fan);
+                }
+                const walk = walkByPhysics(user, seconds => {
+                    const degrees = headings[Math.floor(seconds) % headings.length];
+                    return (degrees == undefined) ? undefined : degrees * Math.PI / 180;
+                }, 8);
+                seen.forced += walk.forced;
+                seen.falling += walk.falling;
+                expect(walk.believed).toBe(true);
+            }), {numRuns: 60});
+        // Not believed for want of anything to doubt.
+        expect(seen.forced).toBeGreaterThan(20);
+        expect(seen.falling).toBeGreaterThan(2);
+    });
+
+    it("believes a body its physics holds up against a wall, off a step, for as long as it walks into the wall", async () => {
+        // Up a step in a corner of the room and on along its wall, pressing into it, which keeps it up at the step's height.
+        const user = await join("hugger", {x: 2, y: STANDING_Y, z: 2});
+        VoxelQueryUtil.getVoxel(getRoom().voxelGrid.voxels, 2, 3)!.blockLayerMask |= 1;
+        const intoTheWall = 282 * Math.PI / 180;
+        const walk = walkByPhysics(user, seconds => (seconds < 1) ? undefined : intoTheWall, 6);
+        expect(harness.getPlayerObject(user.user.id)!.transform.pos.x).toBeGreaterThan(6);
+        expect(walk.believed).toBe(true);
+    });
+
+    it("believes a body left standing on a mere corner of a block, as its physics holds it there", async () => {
+        const user = await join("perched", {x: 2, y: STANDING_Y, z: 2});
+        VoxelQueryUtil.getVoxel(getRoom().voxelGrid.voxels, 2, 4)!.blockLayerMask |= 1;
+        const headings = [0, 134, undefined, 188, 5, 224, undefined, undefined];
+        const walk = walkByPhysics(user, seconds => {
+            const degrees = headings[Math.floor(seconds) % headings.length];
+            return (degrees == undefined) ? undefined : degrees * Math.PI / 180;
+        }, 7.5);
+        const {pos} = harness.getPlayerObject(user.user.id)!.transform;
+        // Up on it by a sliver of its corner.
+        expect(pos.y - STANDING_Y).toBeCloseTo(COLLISION_LAYER_HEIGHT);
+        const overlap = 5 * VOXEL_CELL_SIZE - (pos.x - PLAYER_RADIUS_XZ);
+        expect(overlap).toBeGreaterThan(0);
+        expect(overlap).toBeLessThan(0.05);
+        expect(walk.believed).toBe(true);
+    });
+
+    it("believes a body tossed up by a fan on the floor, or thrown across the room by one on a wall", async () => {
+        for (const [i, fan] of [{pos: {x: 12.5, y: 0, z: 12.5}, dir: {x: 0, y: 1, z: 0}, start: {x: 10, z: 12.5},
+            heading: 0}, {pos: {x: 12.5, y: 0.5, z: 32 - WALL_FACE}, dir: {x: 0, y: 0, z: -1}, start: {x: 12.5, z: 28},
+            heading: 90}].entries())
+        {
+            harness.reset();
+            harness.seedHub(HUB_ID);
+            const user = await join("tossed", {x: fan.start.x, y: STANDING_Y, z: fan.start.z});
+            expect(ServerObjectManager.addObjectAsServer(getRoom(), ADMIN, new AddObjectSignal(HUB_ID, ADMIN.id,
+                ADMIN.userName, FAN_TYPE_INDEX, "fan", new ObjectTransform(fan.pos, fan.dir, {...UNIT_VEC3}),
+                {[ObjectMetadataKeyEnumMap.ForceProperties]: new EncodableByteString(
+                    FanObjectTypeConfig.util.encodeForceProperties(FAN_SETTINGS[2]))}))).toBe(true);
+            // Onto the floor's fan, or toward the wall's, then still while it has them.
+            const walk = walkByPhysics(user, seconds => (seconds < 0.6) ? fan.heading * Math.PI / 180 : undefined, 6);
+            expect(walk.forced, `fan ${i}`).toBeGreaterThan(3);
+            expect(walk.believed, `fan ${i}`).toBe(true);
+        }
+    });
+
+    it("believes a walk whose moves arrive together after a stall of up to a second", async () => {
+        await fc.assert(fc.asyncProperty(fc.integer({min: 0, max: 359}), fc.integer({min: 0, max: 30}),
+            fc.integer({min: 1, max: 10}), async (degrees, tenthsBefore, tenthsLong) => {
+                harness.reset();
+                harness.seedHub(HUB_ID);
+                const user = await join("walker", {x: MIDDLE_X, y: STANDING_Y, z: MIDDLE_Z});
+                const from = tenthsBefore / 10;
+                const walk = walkByPhysics(user, () => degrees * Math.PI / 180, 5, {from, to: from + tenthsLong / 10});
+                expect(walk.believed).toBe(true);
+            }), {numRuns: 40});
+    });
+
+    it("doesn't believe a leap, for as long as walking there would have taken and a while after", async () => {
+        const user = await join("leaper", {x: 4, y: STANDING_Y, z: MIDDLE_Z});
+        const ctx = user.socketUserContext;
+        const start = Date.now();
+        PlayerMotionCheckUtil.noteMove(ctx, getRoom(), {x: 4, y: STANDING_Y, z: MIDDLE_Z},
+            {x: 4 + 12, y: STANDING_Y, z: MIDDLE_Z});
+        const walkMs = 1000 * (12 - 1.25 * WALK_SPEED) / (1.25 * WALK_SPEED);
+        expect(PlayerMotionCheckUtil.isTrusted(ctx, start + DISTRUST_MS + walkMs - 10)).toBe(false);
+        expect(PlayerMotionCheckUtil.isTrusted(ctx, start + DISTRUST_MS + walkMs + 10)).toBe(true);
+    });
+
+    it("keeps doubting someone through a change of room", async () => {
+        const OTHER_HUB_ID = "hubBBBBBBBBBBBBBBBBB";
+        harness.seedHub(OTHER_HUB_ID);
+        const user = await join("leaper", {x: 4, y: STANDING_Y, z: MIDDLE_Z});
+        const ctx = user.socketUserContext;
+        PlayerMotionCheckUtil.noteMove(ctx, getRoom(), {x: 4, y: STANDING_Y, z: MIDDLE_Z}, {x: 20, y: STANDING_Y, z: MIDDLE_Z});
+        await harness.joinRoom(user, OTHER_HUB_ID);
+        const otherRoom = ServerRoomManager.roomRuntimeMemories[OTHER_HUB_ID].room;
+        const {pos} = harness.getPlayerObject(user.user.id)!.transform;
+        PlayerMotionCheckUtil.noteMove(ctx, otherRoom, {...pos}, {...pos, x: pos.x + 0.5});
+        expect(PlayerMotionCheckUtil.isTrusted(ctx)).toBe(false);
+        expect(PlayerMotionCheckUtil.isTrusted(ctx, Date.now() + 2 * DISTRUST_MS)).toBe(true);
+    });
+
+    it("doesn't believe running at twice the speed of a walk, however smooth", async () => {
+        const user = await join("runner", {x: 4, y: STANDING_Y, z: MIDDLE_Z});
+        const ctx = user.socketUserContext;
+        let at = {x: 4, y: STANDING_Y, z: MIDDLE_Z};
+        let believed = true;
+        for (let i = 0; i < 10; ++i)
+        {
+            vi.setSystemTime(Date.now() + REPORT_MS);
+            const next = {...at, x: at.x + 2 * WALK_SPEED * REPORT_MS / 1000};
+            PlayerMotionCheckUtil.noteMove(ctx, getRoom(), at, next);
+            at = next;
+            believed &&= PlayerMotionCheckUtil.isTrusted(ctx);
+        }
+        expect(believed).toBe(false);
+    });
+
+    // Steps up to a ledge a block and a half high, east of the middle of the room: x from 15 to 17 along it.
+    function buildStepsToLedge(): void
+    {
+        for (const [col, height] of [[30, 1], [31, 2], [32, 3], [33, 3]])
+        {
+            for (let layer = 0; layer < height; ++layer)
+                placeBlock(rowOf(MIDDLE_Z), col, layer);
+        }
+    }
+
+    // Has the server note moves through places, each a report's while after the last, given by x and feet's height. Says
+    // whether it believed each.
+    function noteMoves(user: ConnectedUser, path: {x: number, feet: number}[]): boolean[]
+    {
+        const toPos = ({x, feet}: {x: number, feet: number}) => ({x, y: feet + STANDING_Y, z: MIDDLE_Z + 0.1});
+        return path.slice(1).map((place, i) => {
+            vi.setSystemTime(Date.now() + REPORT_MS);
+            PlayerMotionCheckUtil.noteMove(user.socketUserContext, getRoom(), toPos(path[i]), toPos(place));
+            return PlayerMotionCheckUtil.isTrusted(user.socketUserContext);
+        });
+    }
+
+    it("believes climbing steps a block at a time and falling off the ledge they lead up to", async () => {
+        const user = await join("climber");
+        buildStepsToLedge();
+        moveTo(user, {x: 14.4, y: STANDING_Y, z: MIDDLE_Z + 0.1});
+        expect(noteMoves(user, [{x: 14.4, feet: 0}, {x: 15.2, feet: 0.5}, {x: 15.7, feet: 1}, {x: 16.4, feet: 1.5},
+            {x: 17.2, feet: 1.5}, {x: 17.6, feet: 0.3}, {x: 18.2, feet: 0}, {x: 19, feet: 0}]))
+            .toEqual([true, true, true, true, true, true, true]);
+    });
+
+    it("doesn't believe rising with nothing underfoot", async () => {
+        const user = await join("riser", {x: MIDDLE_X, y: STANDING_Y, z: MIDDLE_Z + 0.1});
+        expect(noteMoves(user, [{x: MIDDLE_X, feet: 0}, {x: MIDDLE_X, feet: 0.4}, {x: MIDDLE_X, feet: 0.8},
+            {x: MIDDLE_X, feet: 1.2}])).toEqual([true, false, false]);
+    });
+
+    it("doesn't believe hanging in the air over a drop, past a moment", async () => {
+        const user = await join("hanger");
+        buildStepsToLedge();
+        moveTo(user, {x: 16.4, y: STANDING_Y + 1.5, z: MIDDLE_Z + 0.1});
+        const believed = noteMoves(user, Array.from({length: 9}, (_, i) => ({x: 16.4 + 0.4 * i, feet: 1.5})));
+        // Off the ledge from the third on, which a moment's grace and a slow fall's allowance cover for a little.
+        expect(believed.slice(0, 3)).toEqual([true, true, true]);
+        expect(believed[believed.length - 1]).toBe(false);
+    });
+
+    it("keeps a bill from someone who leapt to it, until a while after, through the moves the server is sent", async () => {
+        const user = await join("leaper", {x: 4, y: STANDING_Y, z: MIDDLE_Z});
+        holdGusts();
+        faceToward(user, 28, MIDDLE_Z);
+        const bill = spawnBill(28, 4);
+        Object.assign(bill.transform.pos, {x: MIDDLE_X + 3, y: LYING_Y, z: MIDDLE_Z});
+        await report(user, {x: MIDDLE_X, y: STANDING_Y, z: MIDDLE_Z});
+        flushFor(DISTRUST_MS);
+        expect(getBills()).toHaveLength(1);
+        expect(user.socketUserContext.inventory[DOLLAR]).toBeUndefined();
+        flushFor(2_000);
+        expect(user.socketUserContext.inventory[DOLLAR]).toBe(1);
+    });
+
+    it("lets someone who walked up to a bill collect it as they come within reach", async () => {
+        const user = await join("walker", {x: 4, y: STANDING_Y, z: MIDDLE_Z});
+        holdGusts();
+        faceToward(user, 28, MIDDLE_Z);
+        const bill = spawnBill(28, 4);
+        Object.assign(bill.transform.pos, {x: MIDDLE_X + 3, y: LYING_Y, z: MIDDLE_Z});
+        let x = 4;
+        while (user.socketUserContext.inventory[DOLLAR] == undefined && x < MIDDLE_X + 3)
+        {
+            x += WALK_SPEED * REPORT_MS / 1000;
+            await report(user, {x, y: STANDING_Y, z: MIDDLE_Z});
+            flush();
+        }
+        expect(user.socketUserContext.inventory[DOLLAR]).toBe(1);
+        expect(MIDDLE_X + 3 - x).toBeGreaterThan(DOLLAR_BILL_REACH - WALK_SPEED * REPORT_MS / 1000);
     });
 });
 

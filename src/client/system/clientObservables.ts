@@ -208,6 +208,9 @@ export const inventoryGainObservable = new Observable<string>("");
 // Fires with how many dollars the user has just spent. Never peek() it: it holds the last event.
 export const dollarsSpentObservable = new Observable<number>(0);
 
+// The id of the element a purchase awaiting the server's answer was asked for from, or null (see PlayerShapeUnlockUtil).
+export const pendingPurchaseElementObservable = new Observable<string | null>(null);
+
 // How far along showing a login's reward is: told of it, on the screen, or neither (see LoginRewardUtil).
 export const loginRewardStageObservable = new Observable<"none" | "waiting" | "shown">("none");
 
