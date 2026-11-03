@@ -1,5 +1,5 @@
 // Debounce window: one save per slider drag, yet saved before a quick form close.
-const SAVE_INTERVAL_MS = 2000;
+export const SAVE_INTERVAL_MS = 2000;
 
 // A debounced save that runs at most every interval with the latest arguments and reads live state at
 // write time. The state is in the closure, so a save still fires after the form closes. Only the latest

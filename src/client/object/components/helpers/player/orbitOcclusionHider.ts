@@ -82,7 +82,7 @@ let targetSpan = 0;
 
 // A voxel target's block with the blocks around it: two to each side, one above and one below (see
 // setProtectedRegion).
-const protectedNeighborhood: AABB3 = {
+export const protectedNeighborhood: AABB3 = {
     center: {x: 0, y: 0, z: 0},
     halfSize: {x: 2.5 * VOXEL_CELL_SIZE, y: 1.5 * COLLISION_LAYER_HEIGHT, z: 2.5 * VOXEL_CELL_SIZE},
 };

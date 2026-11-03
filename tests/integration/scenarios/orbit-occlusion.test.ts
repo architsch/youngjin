@@ -61,7 +61,8 @@ import MeshFactory from "../../../src/client/graphics/factories/meshFactory";
 import ClientObjectManager from "../../../src/client/object/clientObjectManager";
 import InstancedMeshGraphics from "../../../src/client/object/components/instancedMeshGraphics";
 import OrbitCameraPose from "../../../src/client/object/components/helpers/player/orbitCameraPose";
-import OrbitOcclusionHider from "../../../src/client/object/components/helpers/player/orbitOcclusionHider";
+import OrbitOcclusionHider, { protectedNeighborhood }
+    from "../../../src/client/object/components/helpers/player/orbitOcclusionHider";
 import GameObject from "../../../src/client/object/types/gameObject/gameObject";
 import ClientVoxelQueryUtil from "../../../src/client/voxel/util/clientVoxelQueryUtil";
 import VoxelQuadInstanceUtil from "../../../src/client/voxel/util/voxelQuadInstanceUtil";
@@ -476,12 +477,15 @@ describe("the cone of sight", () => {
         expect(hiddenBlocksOfTheWall()).toEqual([]);
     });
 
-    it("leaves standing what stands within a world unit of a selected block, and takes what stands further off in its way", () => {
+    it("leaves standing what stands near a selected block, and takes what stands further off in its way", () => {
         // The selected block in a wall along the room's z, seen from the west, and a row of posts out from the wall
-        // toward the camera, in line with the block and a block clear of its face.
+        // toward the camera, in line with the block and a block clear of its face, to three past those spared (any
+        // block with some of its width inside the neighbourhood).
         const WALL_COL = COL + 1, BLOCK_LAYER = 2;
+        const SPARED_BLOCKS = Math.ceil(protectedNeighborhood.halfSize.x / VOXEL_CELL_SIZE + 0.5) - 1;
+        const SPARED_LAYERS = Math.ceil(protectedNeighborhood.halfSize.y / COLLISION_LAYER_HEIGHT + 0.5) - 1;
         const block = VoxelQueryUtil.getVoxelBlockBox(ROW, WALL_COL, BLOCK_LAYER);
-        const POST_COLS = [WALL_COL - 2, WALL_COL - 3, WALL_COL - 4, WALL_COL - 5];
+        const POST_COLS = Array.from({length: SPARED_BLOCKS + 2}, (_, i) => WALL_COL - 2 - i);
         standWall(WALL_COL);
         for (const col of POST_COLS)
             standBlocks(ROW, col, NUM_COLLISION_LAYERS_PER_STOREY);
@@ -490,10 +494,11 @@ describe("the cone of sight", () => {
         lookAt(block, 180, 10, 6);
         const hiddenPostCols = sorted(hiddenQuadsWhere((row, col, layer) =>
             row == ROW && col < WALL_COL && layer == BLOCK_LAYER).map(quadIndex => VoxelQueryUtil.getVoxelColFromQuadIndex(quadIndex)));
-        // Two blocks out from the selected one is within a world unit of it; three is not.
-        expect(hiddenPostCols).toEqual([WALL_COL - 5, WALL_COL - 4, WALL_COL - 3]);
+        expect(hiddenPostCols).toEqual([WALL_COL - SPARED_BLOCKS - 3, WALL_COL - SPARED_BLOCKS - 2,
+            WALL_COL - SPARED_BLOCKS - 1]);
         // Nor does a layer above or below the block's own go from so near it.
-        expect(hiddenLayersOf(ROW, WALL_COL - 2).filter(layer => Math.abs(layer - BLOCK_LAYER) <= 1)).toEqual([]);
+        expect(hiddenLayersOf(ROW, WALL_COL - 2).filter(layer => Math.abs(layer - BLOCK_LAYER) <= SPARED_LAYERS))
+            .toEqual([]);
         expect(hiddenLayersOf(ROW, WALL_COL)).toEqual([]);
     });
 
@@ -515,15 +520,18 @@ describe("the cone of sight", () => {
 
         it("is opened under a camera beneath it, to either side of what the samples open", () => {
             lookAt(figure, 0, -10, 8);
-            expect(hiddenFloorTiles()).toContain(`${ROW + 4}/${COL + 14}`);
-            expect(hiddenFloorTiles()).toContain(`${ROW - 4}/${COL + 14}`);
-            expect(hiddenFloorTiles()).not.toContain(`${ROW}/${COL + 2}`); // by the cone's tip
+            const withCone = hiddenFloorTiles();
+            expect(withCone).toContain(`${ROW + 4}/${COL + 14}`);
+            expect(withCone).toContain(`${ROW - 4}/${COL + 14}`);
 
             sightCone.radiusPerDistance = 0;
             lookAt(figure, 0, -10, 8);
             const tiles = hiddenFloorTiles();
             expect(tiles.length).toBeGreaterThan(0);
             expect(tiles.filter(tile => !tile.startsWith(`${ROW}/`))).toEqual([]);
+
+            // By the cone's tip it opens nothing the samples don't.
+            expect(withCone.filter(tile => !tiles.includes(tile))).not.toContain(`${ROW}/${COL + 2}`);
         });
 
         it("is never opened where a selected tile lies in it", () => {

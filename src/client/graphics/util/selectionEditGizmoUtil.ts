@@ -46,11 +46,11 @@ export const HANDLE_MIN_SPACING_PX = 2 * TOUCH_HANDLE_REACH_PX;
 // what it looks at each second, and turns FOLLOW_TURN_SPEED radians a second after a selection that has turned,
 // until it sees that selection's face within FOLLOW_FACING_ANGLE of head-on; nearer the margin's inner side, more
 // slowly.
-const FOLLOW_SIDE_MARGIN_SHARE = 0.2;
-const FOLLOW_MARGIN_SHARE = 0.15;
+export const FOLLOW_SIDE_MARGIN_SHARE = 0.2;
+export const FOLLOW_MARGIN_SHARE = 0.15;
 const FOLLOW_SPEED = 0.6;
 const FOLLOW_TURN_SPEED = 1;
-const FOLLOW_FACING_ANGLE = 0.25 * Math.PI;
+export const FOLLOW_FACING_ANGLE = 0.25 * Math.PI;
 
 const providers: {kind: SelectionKind, provider: SelectionEditGizmoProvider}[] = [];
 

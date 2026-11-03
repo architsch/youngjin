@@ -38,6 +38,7 @@ import LoginRewardUtil from "../../inventory/util/loginRewardUtil";
 import PlayerShapeUnlockUtil from "../../inventory/util/playerShapeUnlockUtil";
 import ErrorUtil from "../../../shared/system/util/errorUtil";
 import { HEALTH_ROUTE_PATH } from "../../../shared/system/sharedConstants";
+import { SOCKET_RECONNECTION_DELAY_MAX_MS, SOCKET_RECONNECTION_DELAY_MS } from "../../system/clientConstants";
 import VersionSyncUtil from "../../system/util/versionSyncUtil";
 import RoomEditorUtil from "../../singlePlayer/util/roomEditorUtil";
 
@@ -100,8 +101,8 @@ const SocketsClient =
             transports: ["websocket", "polling"],
             upgrade: true,
             reconnectionAttempts: 20,
-            reconnectionDelay: 1000,
-            reconnectionDelayMax: 5000,
+            reconnectionDelay: SOCKET_RECONNECTION_DELAY_MS,
+            reconnectionDelayMax: SOCKET_RECONNECTION_DELAY_MAX_MS,
             // AwayDisconnectUtil makes the first connection, as a page opened in the background waits to be shown.
             autoConnect: false,
             // Said anew with every connection: one that comes back to a client in the room editor is to leave it

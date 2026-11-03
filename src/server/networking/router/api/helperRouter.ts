@@ -13,9 +13,9 @@ const HelperRouter = express.Router();
 
 // What the user said to it, at most a few chat lines' worth, links and all (see MessageLinkUtil), and the id of the NPC
 // they said it to.
-const MAX_LINES = 4;
+export const MAX_LINES = 4;
 const MAX_TEXT_LENGTH = MAX_LINES * MessageLinkUtil.getMaxLength(OBJECT_MESSAGE_MAX_LENGTH);
-const MAX_OBJECT_ID_LENGTH = 64;
+export const MAX_OBJECT_ID_LENGTH = 64;
 // Each thing a helper could go and look at, as HelperRemarkSubject describes it.
 const MAX_OBJECT_TYPE_LENGTH = 16;
 const MAX_PICTURE_LENGTH = 32;

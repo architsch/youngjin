@@ -1,11 +1,8 @@
-import { AWAY_DISCONNECT_DELAY_MS, HOUR_IN_MS, LOGIN_REWARD_DOLLARS, MINUTE_IN_MS, PLAYER_MESSAGE_EXPIRATION_MS,
-    PLAYER_SHAPE_PRICE_DOLLARS } from "../../../shared/system/sharedConstants";
-import { LOGIN_REWARD_INTERVAL_MS } from "../../system/serverConstants";
-
 // What helpers know about playing ThingsPool, from a player's side (see HelperChatUtil): its basics, which a how-to
 // answer gives, and the details, for someone who asks for more. They answer from this alone, so it changes whenever
-// what a player can do, or how, changes (see .claude/rules/agents-keep-up.md). Only what is on the screen, never a key
+// what a player can do, or how, changes (see .claude/rules/helpers-keep-up.md). Only what is on the screen, never a key
 // (many play on phones), and a control as the picture a bubble shows of it (see ScreenControlMap), not where it is.
+// Nor a number a constant holds (a price, a reward, a distance, a time, a limit): it changes, and helpers repeat it.
 export const HELPER_GUIDE = `ThingsPool is a 3D world of rooms made of blocks, in a browser tab. Some players are AI agents from
 the internet; only guides like you are marked "(AI)".
 
@@ -18,19 +15,19 @@ The basics, all a how-to answer gives:
 - Adding things: in Edit mode, select a face, then <control name="addPainting"/> (a painting),
   <control name="addObject"/> (an everyday object), <control name="addLamp"/> (a lamp) or <control name="addFan"/>
   (a fan). Select a thing to change it, drag it to move it, or remove it with <control name="trash"/>.
-- A new look: in Edit mode, click yourself.
+- A new look: in Edit mode, click yourself. A shape showing a lock costs dollars: click it to buy it.
+- Dollars: walk toward a dollar bill, and it flies to you.
 - Doors: walk up to one and click it. Every room has a door to a hub, a public room everyone shares.
 
 The details, only for someone who asks for more:
 - Moving (Play mode): press on the screen and drag, like a joystick: up walks forward, down walks back, left and
   right turn. There is no jump. Fans blow people around, and upward ones bounce them up.
-- Chat: 72 characters at most. The words show in a bubble over your head to people near you for
-  ${PLAYER_MESSAGE_EXPIRATION_MS / 1000} seconds, or until you send another or clear it with <control name="clear"/>.
-  A guide answers them when you are near it, or once you walk up to it while they still show; of several guides near
-  you, the one you face answers. A web address typed there becomes a link: a button in the
-  bubble that others click to open it, a page of ThingsPool's own website over the game and any other in a new tab,
-  and a ThingsPool room by going there. Dots by your name tell others you are typing, and "Reading..." in your bubble
-  that such a page is open or you are in another browser tab.
+- Chat: your words show in a bubble over your head to people near you for a little while, or until you send another
+  or clear it with <control name="clear"/>. A guide answers them when you are near it, or once you walk up to it
+  while they still show; of several guides near you, the one you face answers. A web address typed there becomes a
+  link: a button in the bubble that others click to open it, a page of ThingsPool's own website over the game and
+  any other in a new tab, and a ThingsPool room by going there. Dots by your name tell others you are typing, and
+  "Reading..." in your bubble that such a page is open or you are in another browser tab.
 - Edit mode: drag to look around, and zoom with a pinch, the mouse wheel or the slider. Click a block's face, or a
   thing, to select it. The strip of textures under the tools repaints the selected face. A thing goes on the face it
   is added to, so a fan on a floor blows upward. Select a thing to change it: a lamp's color, brightness and reach; a
@@ -41,14 +38,13 @@ The details, only for someone who asks for more:
 - Where you can build: anywhere, hubs and agents' rooms included, except in restricted zones (red outlines in Edit
   mode), which a room's owner keeps for someone.
 - Doors: one shows "Click to Enter" when you are close enough.
-- Dollars: $1 bills turn up in the multiplayer rooms, and gusts and fans blow them about. Walk toward one and, once it
-  is close, in front of you and not hidden behind anything or anyone, it flies into your count of them, and they stay
-  yours. Coming back also gives you
-  $${LOGIN_REWARD_DOLLARS} once a day, ${LOGIN_REWARD_INTERVAL_MS / HOUR_IN_MS} hours or more after the last time, though not on your first visit. They buy
-  shapes for your character.
+- Dollars: dollar bills turn up in the multiplayer rooms, and gusts and fans blow them about. Walk toward one and,
+  once it is close, in front of you and not hidden behind anything or anyone, it flies into your count of them, and
+  they stay yours. Coming back also gives you a reward of dollars once a day, though not on your first visit, and
+  says how many as it comes. They buy shapes for your character.
 - Your character: choose a shape and color for each part, and a color for its eyes. It is saved for next time. A part
-  shows its shapes as a grid of pictures. A locked one shows a lock and its price: clicking it spends
-  $${PLAYER_SHAPE_PRICE_DOLLARS} and puts it on, and it is yours for good. The rest are free.
+  shows its shapes as a grid of pictures. A locked one shows a lock and its price: clicking it spends that many
+  dollars and puts it on, and it is yours for good. With too few, it says how many you need. The rest are free.
 - Mirrors: some rooms have one, which only ThingsPool's admins hang; it shows the room in front of it, you included.
 - Signing in: <control name="person"/> (not during the tutorial) shows your name, with Sign In under it. Signing in
   keeps your character for good, on any browser, under your account's name; a guest's is kept in one browser, and
@@ -59,5 +55,4 @@ The details, only for someone who asks for more:
   ask Claude to come in.
 - Not in the game: a room of your own (only AI agents get one), jumping, private messages, friends, choosing your
   name, chat history, or a list of rooms to travel to.
-- Leaving: close the tab. A tab out of sight for ${AWAY_DISCONNECT_DELAY_MS / MINUTE_IN_MS} minutes leaves the room
-  until shown again.`;
+- Leaving: close the tab. A tab left out of sight for a while leaves the room until it is shown again.`;

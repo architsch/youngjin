@@ -1,6 +1,8 @@
 import { test as setup, expect } from "@playwright/test";
 import path from "path";
 import fs from "fs";
+import { MAX_GUESTS_PER_CLIENT, WINDOW_MS } from "../../../src/server/user/util/guestCreationLimitUtil";
+import { MINUTE_IN_MS } from "../../../src/shared/system/sharedConstants";
 
 const AUTH_STATE_PATH = path.join(__dirname, "../.auth/guest.json");
 const AUTH_STATE_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
@@ -42,8 +44,8 @@ setup("authenticate as guest", async ({ page }) => {
     if (status === 401 || body?.includes("Failed to identify the user")) {
         throw new Error(
             "Guest creation was rate-limited by the staging server. " +
-            "The server allows 3 guest accounts per User-Agent per hour. " +
-            "In CI, this resets on each staging deploy. Locally, wait up to 1 hour."
+            `The server allows ${MAX_GUESTS_PER_CLIENT} guest accounts per User-Agent per ${WINDOW_MS / MINUTE_IN_MS} minutes. ` +
+            `In CI, this resets on each staging deploy. Locally, wait up to ${WINDOW_MS / MINUTE_IN_MS} minutes.`
         );
     }
 

@@ -79,18 +79,18 @@ const WIND_RIDE = 0.15;
 // It unfolds into the room over this long.
 const APPEAR_SECONDS = 0.25;
 // Collected by someone else, it is drawn into their body over this long, spinning at this rate, in radians a second.
-const ABSORB_SECONDS = 0.5;
+export const ABSORB_SECONDS = 0.5;
 const ABSORB_SPIN = 7;
 // Collected by the user, it flies to the count this long, drawn this far ahead of the camera, over the room whatever
 // stands there. By this share of the flight it has turned to face them, and it turns about that way by this much, in
 // radians, as it goes, tumbling by this much either way.
-const COUNT_FLIGHT_SECONDS = 0.85;
+export const COUNT_FLIGHT_SECONDS = 0.85;
 const COUNT_FLIGHT_DEPTH = 2.2;
 const FACING_SHARE = 0.35;
 const FLIGHT_SPIN = 2.2;
 const FLIGHT_TUMBLE = 0.45;
 // Where the count is, in the screen's own units, should the page not have it.
-const COUNT_CORNER: Vec2 = {x: -0.95, y: 0.9};
+export const COUNT_CORNER: Vec2 = {x: -0.95, y: 0.9};
 
 const bodyMatrixTemp = new THREE.Matrix4();
 const halfMatrixTemp = new THREE.Matrix4();

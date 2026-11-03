@@ -379,8 +379,9 @@ describe("ParticleParamTextureUtil", () => {
         // Alpha rides in the color curve's fourth channel; size is packed four samples to a texel.
         expect(texel(PARTICLE_PARAM_TEXEL.colorCurve)[3]).toBe(0);
         expect(texel(PARTICLE_PARAM_TEXEL.colorCurve + PARTICLE_CURVE_SAMPLES - 1)[3]).toBe(1);
+        const lastSample = PARTICLE_CURVE_SAMPLES - 1;
         expect(texel(PARTICLE_PARAM_TEXEL.sizeCurve)[0]).toBe(1);
-        expect(texel(PARTICLE_PARAM_TEXEL.sizeCurve + 1)[3]).toBe(3);
+        expect(texel(PARTICLE_PARAM_TEXEL.sizeCurve + Math.floor(lastSample / 4))[lastSample % 4]).toBe(3);
         // Nothing else is written into the neighbouring row.
         expect(data.subarray(0, PARTICLE_PARAM_ROW_TEXELS * 4).every(v => v == 0)).toBe(true);
     });

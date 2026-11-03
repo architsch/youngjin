@@ -11,7 +11,8 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import fc from "fast-check";
 
-import { DefaultCompositionCodec } from "../../../src/shared/graphics/mesh/composition/types/compositionCodec/defaultCompositionCodec";
+import { DefaultCompositionCodec, OFFSET_STEP, SCALE_STEP }
+    from "../../../src/shared/graphics/mesh/composition/types/compositionCodec/defaultCompositionCodec";
 import { FramedPanelCompositionCodec } from "../../../src/shared/graphics/mesh/composition/types/compositionCodec/framedPanelCompositionCodec";
 import FramedPanelCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/framedPanelCompositionConstants";
 import MouldingCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/mouldingCompositionConstants";
@@ -61,10 +62,6 @@ function canvasBaseSize()
 {
     return ObjectScaleUtil.getObjectSize(CANVAS_TYPE_INDEX, UNIT_VEC3);
 }
-
-// The Default codec's quantization grids. A value on the grid must survive a round trip exactly.
-const OFFSET_STEP = 0.0625;
-const SCALE_STEP = 0.125;
 
 const DEFAULT_CODEC_VERSION = 1;
 const DEFAULT_PREFIX = StringUtil.convertRawNumberToVisibleASCII(InstancedMeshCompositionCodecTypeEnumMap.Default)

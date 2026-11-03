@@ -5,11 +5,11 @@
  * production caps apply. Also covers which User-Agents are treated as bots and never given a guest.
  */
 import { describe, it, expect } from "vitest";
-import GuestCreationLimitUtil from "../../../src/server/user/util/guestCreationLimitUtil";
+import GuestCreationLimitUtil, {
+    MAX_GUESTS_PER_CLIENT as MAX_PER_CLIENT,
+    MAX_GUESTS_PER_IP as MAX_PER_IP,
+} from "../../../src/server/user/util/guestCreationLimitUtil";
 import BotDetectionUtil from "../../../src/server/networking/util/botDetectionUtil";
-
-const MAX_PER_IP = 10;
-const MAX_PER_CLIENT = 3;
 
 // A real-world User-Agent, shared verbatim by every visitor on this browser version.
 const SHARED_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
@@ -24,6 +24,11 @@ function countAllowed(attempts: number, ip: string, userAgent: string): number
             allowed++;
     }
     return allowed;
+}
+
+function userAgents(count: number): string[]
+{
+    return Array.from({ length: count }, (_, i) => `ua-${i}`);
 }
 
 describe("Guest creation limits", () =>
@@ -42,8 +47,8 @@ describe("Guest creation limits", () =>
         {
             const ip = "203.0.113.2";
 
-            // Four browsers on one IP: the per-IP cap binds before the per-client caps.
-            const allowed = ["ua-a", "ua-b", "ua-c", "ua-d"]
+            // Browsers enough on one IP for the per-IP cap to bind before the per-client caps.
+            const allowed = userAgents(Math.floor(MAX_PER_IP / MAX_PER_CLIENT) + 1)
                 .reduce((sum, ua) => sum + countAllowed(MAX_PER_CLIENT, ip, ua), 0);
 
             expect(allowed).toBe(MAX_PER_IP);
@@ -78,8 +83,8 @@ describe("Guest creation limits", () =>
             countAllowed(MAX_PER_CLIENT, ip, "ua-heavy");
             countAllowed(30, ip, "ua-heavy");
 
-            // MAX_PER_IP - MAX_PER_CLIENT should remain for other browsers on this IP.
-            const remaining = ["ua-x", "ua-y", "ua-z"]
+            // MAX_PER_IP - MAX_PER_CLIENT should remain for other browsers on this IP, enough of them to use it up.
+            const remaining = userAgents(Math.floor(MAX_PER_IP / MAX_PER_CLIENT))
                 .reduce((sum, ua) => sum + countAllowed(MAX_PER_CLIENT, ip, ua), 0);
 
             expect(remaining).toBe(MAX_PER_IP - MAX_PER_CLIENT);

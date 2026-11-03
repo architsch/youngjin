@@ -68,6 +68,13 @@ export const IMAGE_CATEGORY_TABS_ENABLED = true;
 // A quicker drag scrolls its grid instead, and a quicker release is a click.
 export const REORDER_HOLD_MS = 300;
 
+// Networking
+
+// How long Socket.IO waits before trying to connect again after a drop: this long at first, growing with each failed
+// try up to the most (in milliseconds; see SocketsClient.init).
+export const SOCKET_RECONNECTION_DELAY_MS = 1000;
+export const SOCKET_RECONNECTION_DELAY_MAX_MS = 5000;
+
 // Voxels
 
 // How wide a patch of the floor plan one VoxelGameObject owns the voxels of, in world units. Each is a

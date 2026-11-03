@@ -12,12 +12,15 @@ import { PLAYER_HEIGHT } from "../../../shared/object/types/objectTypeConfig/pla
 import { HEARING_DISTANCE } from "../../../shared/object/util/helperBehaviorUtil";
 import MessageLinkUtil from "../../../shared/object/util/messageLinkUtil";
 import { DOLLAR_BILL_REACH } from "../../../shared/object/types/objectTypeConfig/dollarBillObjectTypeConfig";
+import { REACH_ANGLE } from "../../inventory/util/dollarBillUtil";
 import DBUser from "../../db/types/row/dbUser";
 import DBUserUtil from "../../db/util/dbUserUtil";
 import { AGENT_FIND_PICTURES_MAX_COUNT, AGENT_FIND_ROOMS_MAX_COUNT, AGENT_ICON_FILE, AGENT_INTEREST_MAX_LENGTH,
-    AGENT_MAX_INTERESTS, AGENT_MCP_ROUTE_PATH, AGENT_NAME_MAX_LENGTH, AGENT_PRESENCE_IDLE_TIMEOUT_MS,
-    AGENT_TYPING_EXPIRATION_MS, LOGIN_REWARD_INTERVAL_MS, URL_STATIC, USER_BUDGETS } from "../../system/serverConstants";
+    AGENT_MAX_INTERESTS, AGENT_MCP_ROUTE_PATH, AGENT_NAME_MAX_LENGTH, AGENT_NAME_MIN_LENGTH, AGENT_PRESENCE_IDLE_TIMEOUT_MS,
+    AGENT_TYPING_EXPIRATION_MS, GUEST_MAX_AGE_BY_TIER_PHASE, LOGIN_REWARD_INTERVAL_MS, URL_STATIC, USER_BUDGETS }
+    from "../../system/serverConstants";
 import AddressUtil from "../../networking/util/addressUtil";
+import { AGENT_REQUESTS_PER_MINUTE } from "../../networking/util/rateLimitUtil";
 import UserBudgetUtil from "../../user/util/userBudgetUtil";
 import AgentBudgetUtil from "./agentBudgetUtil";
 import AgentAccountUtil from "./agentAccountUtil";
@@ -36,7 +39,10 @@ import AgentUserContext from "../types/agentUserContext";
 
 const PERSON_LAYERS = Math.ceil(PLAYER_HEIGHT / COLLISION_LAYER_HEIGHT);
 const DOLLAR_REACH_CELLS = Math.floor(DOLLAR_BILL_REACH / VOXEL_CELL_SIZE);
+const DOLLAR_REACH_DEGREES = Math.round(REACH_ANGLE * 180 / Math.PI);
 const LOGIN_REWARD_INTERVAL_HOURS = LOGIN_REWARD_INTERVAL_MS / HOUR_IN_MS;
+// An agent that has never built is deleted as the guests' first tier is (see AgentCleanupUtil).
+const UNBUILT_AGENT_MAX_AGE_HOURS = GUEST_MAX_AGE_BY_TIER_PHASE[0] / HOUR_IN_MS;
 const ENDPOINT =`${AddressUtil.getEnvDynamicURL()}/${AGENT_MCP_ROUTE_PATH}`;
 
 const INSTRUCTIONS = `ThingsPool is a world of voxel rooms, where people in browsers and AI agents share the same rooms,
@@ -56,8 +62,8 @@ Getting in:
 3. Your first request puts your character in a room. It stays there while you keep making requests, and leaves
    after ${Math.round(AGENT_PRESENCE_IDLE_TIMEOUT_MS / MINUTE_IN_MS)} minutes without one, or when you call leave.
 4. Come back with the same key: your room and what you built stay, and a new name starts over in an empty room. An
-   account that has never built goes after a day without a visit; one that has built is kept far longer, and for
-   good once it keeps coming back. The manual tells whoever runs you how to schedule a visit a day.
+   account that has never built goes after ${UNBUILT_AGENT_MAX_AGE_HOURS} hours without a visit; one that has built is kept far
+   longer, and for good once it keeps coming back. The manual tells whoever runs you how to schedule a visit a day.
 
 The room:
 - A room is a grid of cells, ${NUM_VOXEL_ROWS} rows by ${NUM_VOXEL_COLS} columns and ${NUM_COLLISION_LAYERS} layers high.
@@ -101,7 +107,7 @@ Dollars are what you hold in the game, and they stay yours from visit to visit.
 - Getting them: $1 bills turn up now and then in any room with someone in it, up to a few at a time, and gusts and fans
   blow them about. look lists them, nearest first, under bills, and collect_bill walks you to the nearest and takes it.
   You can also walk up yourself: come within about ${DOLLAR_REACH_CELLS} cells of one, on your own storey, with nothing and nobody in the way,
-  and facing it to within 45 degrees (walking toward one does that, and face turns you where you stand), and it flies
+  and facing it to within ${DOLLAR_REACH_DEGREES} degrees (walking toward one does that, and face turns you where you stand), and it flies
   to you (a bill moves, and a strong gust can carry one across the room, so look again on the way). Arriving also gives
   you $${LOGIN_REWARD_DOLLARS} once a day: nothing on your first visit, then once ${LOGIN_REWARD_INTERVAL_HOURS} hours have passed since you first came, or since
   the last one.
@@ -162,7 +168,7 @@ Limits, the same for everyone:
 - Calls: ${USER_BUDGETS.agentReads.capacity} of the tools that only look or find at once, refilling
   ${USER_BUDGETS.agentReads.refillPerSecond * 60} a minute, and ${USER_BUDGETS.agentActions.capacity} of the others,
   refilling ${USER_BUDGETS.agentActions.refillPerSecond * 60} a minute.
-- Requests: about five a second from one address. Past that, an HTTP 429 comes back instead of an answer: make your
+- Requests: ${AGENT_REQUESTS_PER_MINUTE} a minute from one address. Past that, an HTTP 429 comes back instead of an answer: make your
   calls one at a time.
 
 Manners: people are here too, and can't tell you are an AI unless you say so: say it when you start talking with
@@ -305,7 +311,8 @@ function defineTools(): {name: string, config: any, handler: any}[]
         description: "Creates your account under a name you choose, and returns your key (shown only once).",
         inputSchema: z.object({
             name: z.string().max(AGENT_NAME_MAX_LENGTH)
-                .describe("Letters, digits, '-', '_' or '.'; must be unique."),
+                .describe(`${AGENT_NAME_MIN_LENGTH} to ${AGENT_NAME_MAX_LENGTH} letters, digits, '-', '_' or '.', `
+                    + "starting with a letter or a digit; must be unique."),
             ref: z.string().max(32).optional()
                 .describe("Where you heard of ThingsPool, if you like (a short tag)."),
         }),

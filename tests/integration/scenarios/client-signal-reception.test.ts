@@ -31,10 +31,12 @@ import App from "../../../src/client/app";
 import GraphicsManager from "../../../src/client/graphics/graphicsManager";
 import MeshFactory from "../../../src/client/graphics/factories/meshFactory";
 import ClientInventoryManager from "../../../src/client/inventory/clientInventoryManager";
-import LoginRewardUtil from "../../../src/client/inventory/util/loginRewardUtil";
+import LoginRewardUtil, { COACH_MARK_DURATION_MS as REWARD_MARK_DURATION_MS,
+    SHOW_DELAY_MS as REWARD_SHOW_DELAY_MS } from "../../../src/client/inventory/util/loginRewardUtil";
 import ClientObjectManager from "../../../src/client/object/clientObjectManager";
 import InstancedMeshGraphics from "../../../src/client/object/components/instancedMeshGraphics";
-import DollarBillGameObject from "../../../src/client/object/types/gameObject/dollarBillGameObject";
+import DollarBillGameObject, { ABSORB_SECONDS, COUNT_CORNER,
+    COUNT_FLIGHT_SECONDS } from "../../../src/client/object/types/gameObject/dollarBillGameObject";
 import GameObject from "../../../src/client/object/types/gameObject/gameObject";
 import NpcGameObject from "../../../src/client/object/types/gameObject/npcGameObject";
 import HelperThinkingUtil from "../../../src/client/object/util/helperThinkingUtil";
@@ -198,9 +200,10 @@ describe("a dollar bill collected, in a browser", () => {
     const DOLLAR = InventoryItemTypeEnumMap.Dollar;
     const SOMEONE_ELSE = "someone-else";
     const FRAME = 1 / 60;
+    const ABSORB_FRAMES = Math.round(ABSORB_SECONDS / FRAME);
     const EYES: Vec3 = {x: 10, y: 2, z: 20};
     // Where the bill makes for, the page in a test having no count on it.
-    const COUNT = {x: -0.95, y: 0.9};
+    const COUNT = COUNT_CORNER;
     const QUAD_CORNERS = [[-0.5, -0.5], [0.5, -0.5], [-0.5, 0.5], [0.5, 0.5]];
 
     const camera = GraphicsManager.getCamera() as THREE.PerspectiveCamera;
@@ -347,8 +350,8 @@ describe("a dollar bill collected, in a browser", () => {
             expect(gains).toEqual([]);
         }
         expect(farthest).toBeLessThan(0.1);
-        // Well inside the time the bill was once drawn in and flown after.
-        expect(frames * FRAME).toBeLessThan(1);
+        // No longer than the flight takes, give or take a frame.
+        expect(frames * FRAME).toBeLessThan(COUNT_FLIGHT_SECONDS + FRAME);
         expect(ClientInventoryManager.getDollarsShown()).toBe(3);
         expect(gains).toEqual([DOLLAR]);
         expect(plusShownFor).toEqual([]);
@@ -370,7 +373,9 @@ describe("a dollar bill collected, in a browser", () => {
 
         await collect(bill, SOMEONE_ELSE);
         expect(dollarsInFlightObservable.peek()).toBe(0);
-        for (let i = 0; i < 20; ++i)
+        // Two thirds of the way in, and then twice that long.
+        const partway = Math.floor(2 * ABSORB_FRAMES / 3);
+        for (let i = 0; i < partway; ++i)
         {
             somebody.obj.position.x -= 0.05;
             runFrames(1);
@@ -378,7 +383,7 @@ describe("a dollar bill collected, in a browser", () => {
         expect(meshesDrawnOn()).toEqual(roomMesh);
         expect(plusShownFor).toEqual([]);
 
-        runFrames(20);
+        runFrames(partway);
         expect(plusShownFor).toHaveLength(1);
         expect(plusShownFor[0].transform.pos).toEqual({x: somebody.obj.position.x, y: somebody.obj.position.y, z: somebody.obj.position.z});
         expect(drawn.size).toBe(0);
@@ -390,7 +395,7 @@ describe("a dollar bill collected, in a browser", () => {
         vi.spyOn(ClientObjectManager, "getPlayerOfUser").mockReturnValue(undefined);
         const bill = await spawnBill("a-bill", {x: 10, y: 0.2, z: 12});
         await collect(bill, SOMEONE_ELSE);
-        runFrames(40);
+        runFrames(Math.ceil(4 * ABSORB_FRAMES / 3));
         expect(plusShownFor).toHaveLength(1);
         expect(plusShownFor[0].transform.pos).toMatchObject({x: 10, z: 12});
         expect(drawn.size).toBe(0);
@@ -421,7 +426,8 @@ describe("a dollar bill collected, in a browser", () => {
 
 describe("what coming back has earned, in a browser", () => {
     const DOLLAR = InventoryItemTypeEnumMap.Dollar;
-    const MARK = {targetElementId: "dollarCounter", reward: true, text: "Welcome back!\nHere's your $10\ndaily reward."};
+    const rewardText = (dollars: number) => `Welcome back!\nHere's your $${dollars}\ndaily reward.`;
+    const MARK = {targetElementId: "dollarCounter", reward: true, text: rewardText(LOGIN_REWARD_DOLLARS)};
     const FEATURE_MARK = {ftueElementCode: FTUEElementCodeEnumMap.EnterEditMode, targetElementId: "gameModeToggleSwitch", text: "Try Editing"};
     let hidden: boolean;
     let onVisibilityChange: (() => void) | undefined;
@@ -458,7 +464,7 @@ describe("what coming back has earned, in a browser", () => {
         receive();
         expect(ClientInventoryManager.getDollarsShown()).toBe(3);
 
-        vi.advanceTimersByTime(499);
+        vi.advanceTimersByTime(REWARD_SHOW_DELAY_MS - 1);
         expect(marks()).toEqual([]);
         expect(ClientInventoryManager.getDollarsShown()).toBe(3);
         expect(stages).toEqual(["waiting"]);
@@ -469,10 +475,10 @@ describe("what coming back has earned, in a browser", () => {
         expect(stages).toEqual(["waiting", "shown"]);
     });
 
-    it("takes the mark away after 6 seconds, leaving any other", () => {
+    it(`takes the mark away after ${REWARD_MARK_DURATION_MS / 1000} seconds, leaving any other`, () => {
         screenCoachMarksObservable.set([FEATURE_MARK]);
         receive();
-        vi.advanceTimersByTime(500 + 5999);
+        vi.advanceTimersByTime(REWARD_SHOW_DELAY_MS + REWARD_MARK_DURATION_MS - 1);
         expect(marks()).toEqual([FEATURE_MARK, MARK]);
         expect(stages[stages.length - 1]).toBe("shown");
         vi.advanceTimersByTime(1);
@@ -482,7 +488,7 @@ describe("what coming back has earned, in a browser", () => {
 
     it("leaves the mark alone as a feature's mark goes, being no feature's", () => {
         receive();
-        vi.advanceTimersByTime(500);
+        vi.advanceTimersByTime(REWARD_SHOW_DELAY_MS);
         screenCoachMarksObservable.change(coachMarks => coachMarks.filter(mark => mark.ftueElementCode != FEATURE_MARK.ftueElementCode));
         expect(marks()).toEqual([MARK]);
     });
@@ -496,7 +502,7 @@ describe("what coming back has earned, in a browser", () => {
 
         (App.getCurrentRoom as Mock).mockReturnValue(room);
         roomChangedObservable.set({room} as any);
-        vi.advanceTimersByTime(500);
+        vi.advanceTimersByTime(REWARD_SHOW_DELAY_MS);
         expect(marks()).toEqual([MARK]);
     });
 
@@ -507,7 +513,7 @@ describe("what coming back has earned, in a browser", () => {
         expect(marks()).toEqual([]);
 
         endClientProcess("roomChange");
-        vi.advanceTimersByTime(500);
+        vi.advanceTimersByTime(REWARD_SHOW_DELAY_MS);
         expect(marks()).toEqual([MARK]);
     });
 
@@ -519,30 +525,31 @@ describe("what coming back has earned, in a browser", () => {
 
         hidden = false;
         onVisibilityChange!();
-        vi.advanceTimersByTime(500);
+        vi.advanceTimersByTime(REWARD_SHOW_DELAY_MS);
         expect(marks()).toEqual([MARK]);
         expect(onVisibilityChange).toBeUndefined();
     });
 
     it("shows two told while it waits as one, without listening twice", () => {
+        inventoryObservable.set({[DOLLAR]: 3 + 2 * LOGIN_REWARD_DOLLARS});
         hidden = true;
         receive();
         receive();
-        expect(ClientInventoryManager.getDollarsShown()).toBe(0);
+        expect(ClientInventoryManager.getDollarsShown()).toBe(3);
 
         hidden = false;
         onVisibilityChange!();
-        vi.advanceTimersByTime(500);
+        vi.advanceTimersByTime(REWARD_SHOW_DELAY_MS);
         expect(stages.filter(stage => stage == "shown")).toHaveLength(1);
-        expect(marks().map(mark => mark.text)).toEqual(["Welcome back!\nHere's your $20\ndaily reward."]);
+        expect(marks().map(mark => mark.text)).toEqual([rewardText(2 * LOGIN_REWARD_DOLLARS)]);
     });
 
     it("can be told again after being shown", () => {
         receive();
-        vi.advanceTimersByTime(500 + 6000);
+        vi.advanceTimersByTime(REWARD_SHOW_DELAY_MS + REWARD_MARK_DURATION_MS);
         inventoryObservable.set({[DOLLAR]: 3 + 2 * LOGIN_REWARD_DOLLARS});
         receive();
-        vi.advanceTimersByTime(500);
+        vi.advanceTimersByTime(REWARD_SHOW_DELAY_MS);
         expect(stages.filter(stage => stage == "shown")).toHaveLength(2);
         expect(ClientInventoryManager.getDollarsShown()).toBe(3 + 2 * LOGIN_REWARD_DOLLARS);
     });

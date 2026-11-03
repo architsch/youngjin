@@ -622,7 +622,8 @@ describe("the voxel mesh", () => {
         {
             const numVoxelsPerSide = VoxelGameObject.numVoxelsPerSide;
             expect(numVoxelsPerSide).toBeGreaterThan(1);
-            expect(mesh.gameObjects.length).toBe(grid.voxels.length / (numVoxelsPerSide * numVoxelsPerSide));
+            expect(mesh.gameObjects.length).toBe(Math.ceil(NUM_VOXEL_ROWS / numVoxelsPerSide)
+                * Math.ceil(NUM_VOXEL_COLS / numVoxelsPerSide));
 
             for (const voxel of grid.voxels)
             {

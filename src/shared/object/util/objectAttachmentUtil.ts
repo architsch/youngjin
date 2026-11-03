@@ -16,7 +16,7 @@ import ObjectScaleUtil from "./objectScaleUtil";
 // Placement of objects attached to a voxel face (see @docs/geometry/object_attachment.md). Positions across
 // the face snap to half a block, so an object one block across can sit on a block or astride two; the face
 // itself lies on the side of a block.
-const GRID_STEP = 0.5 * VOXEL_CELL_SIZE;
+export const GRID_STEP = 0.5 * VOXEL_CELL_SIZE;
 const FACE_PLANE_STEP = VOXEL_CELL_SIZE;
 
 // Keeps a footprint edge lying on a block boundary out of the block beyond it.

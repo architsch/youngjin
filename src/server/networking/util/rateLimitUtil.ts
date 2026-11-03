@@ -7,7 +7,7 @@ import { MINUTE_IN_MS } from "../../../shared/system/sharedConstants";
 const REQUESTS_PER_MINUTE = process.env.MODE == "dev" ? 1000 : 20;
 // An agent makes a request for every look and word, as a browser sends a signal; each agent's own calls are capped too
 // (see USER_BUDGETS), so this leaves room for a few agents run from one address.
-const AGENT_REQUESTS_PER_MINUTE = process.env.MODE == "dev" ? 1000 : 300;
+export const AGENT_REQUESTS_PER_MINUTE = process.env.MODE == "dev" ? 1000 : 300;
 // An app registers once per install, or once per connection for some; a stored document each.
 const CLIENT_REGISTRATIONS_PER_HOUR = process.env.MODE == "dev" ? 1000 : 30;
 

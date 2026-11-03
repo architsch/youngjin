@@ -18,8 +18,9 @@ import HelperAgentUtil from "./helperAgentUtil";
 // play mode, so that an agent with a browser tool can take pictures. It adds nobody to the room: the page is sent what
 // the agent is, and the agent's own changes besides (see AgentUserContext.cameras), and nothing it sends is heard.
 
-const TOKEN_BYTES = 24;
-const TOKEN_PATTERN = /^[A-Za-z0-9_-]{32}$/;
+export const TOKEN_BYTES = 24;
+// As long as TOKEN_BYTES come out in base64url, which pads nothing.
+const TOKEN_PATTERN = new RegExp(`^[A-Za-z0-9_-]{${Math.ceil(TOKEN_BYTES * 4 / 3)}}$`);
 
 // Who a camera page's client is: nobody, by an id that no user, and so no object, has.
 const VIEWER = new User("#camera", "Camera", UserTypeEnumMap.Guest, "", "");

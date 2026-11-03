@@ -17,7 +17,7 @@ import PhysicsColliderStateUtil from "./physicsColliderStateUtil";
 const FACE_CLEARANCE = 0.01;
 // How much of a body a stream must reach to push it in full, as a share of the most it could reach; short of that,
 // it pushes by as much less.
-const FULL_EXPOSURE = 0.5;
+export const FULL_EXPOSURE = 0.5;
 
 // How fast gravity takes away the upward velocity a body carries, in world units per second, each second. A body
 // carrying none falls at GRAVITY_SPEED as ever, and none ever falls faster for this.
@@ -25,7 +25,7 @@ const GRAVITY_PULL = 30;
 // The share of whatever else a body carries that drag takes away, each second.
 const DRAG = 4;
 // A stream's push thins out over this much room: the last a body has before something solid ahead of it.
-const CUSHION_LENGTH = 1;
+export const CUSHION_LENGTH = 1;
 // Nearer to something solid than this, a body is against it.
 const CONTACT_DISTANCE = 0.02;
 // How far in from a body's sides that room is looked for, so that what it brushes past is not taken to be ahead.

@@ -58,8 +58,8 @@ to reverse — rules about *how* to write belong in the style page, rules about 
 piece must contain belong in the skill that owns it.
 
 `.claude/rules/` holds the project invariants that CLAUDE.md states in short and delegates the
-reasoning for — room generation, the license files, plan documents, source edits, agents keeping up
-with every feature. They are instructions like any
+reasoning for — room generation, the license files, plan documents, source edits, agents and helpers
+keeping up with every feature, and the documentation and code comment guidelines. They are instructions like any
 other file here, and they make the same checkable claims (module and type names, paths, which files
 a rule reaches), so they drift the same way. Two extra checks for these: the summary of each rule
 in CLAUDE.md must still say the same thing as the page it links to — a rule that has been sharpened
@@ -72,8 +72,8 @@ VPS tooling, the shared automation libraries — and their usage strings and hea
 instructions like any other, read far more often than the code beneath them. The guideline pages
 (`CLAUDE.md`, `docs/devOps/`, `docs/testing/`, the READMEs beside the scripts) are how somebody finds
 the scripts at all, and they carry commands and flags on purpose, so they go stale in exactly the
-places that matter. Hold them to the documentation guidelines in `CLAUDE.md`: fix the line that is
-now wrong rather than adding a note beside it.
+places that matter. Hold them to the documentation guidelines (`.claude/rules/documentation.md`): fix
+the line that is now wrong rather than adding a note beside it.
 
 ## Step 2 — Verify every checkable claim
 
@@ -92,8 +92,8 @@ claim to test, not text to read. In practice that means:
   somewhere — find it and compare. A budget that has drifted produces work that fails validation at
   the last step.
 - **Referenced documents.** Every relative link and `#anchor` resolves; every `/docs` page it points
-  at still covers what the skill says it covers. Those pages are deliberately short maps (CLAUDE.md's
-  Documentation Guidelines), so a skill that needs a precise detail the page does not carry should
+  at still covers what the skill says it covers. Those pages are deliberately short maps (the
+  documentation guidelines, `.claude/rules/documentation.md`), so a skill that needs a precise detail the page does not carry should
   cite the source file or script instead, rather than asking for the page to grow.
 - **Claims about behaviour.** "Staging runs in production mode, so the dev OAuth bypass is off",
   "guest creation is capped per IP and User-Agent" — these are the load-bearing sentences. Confirm

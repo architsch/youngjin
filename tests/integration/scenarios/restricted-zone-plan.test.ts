@@ -78,7 +78,7 @@ import ClientObjectManager from "../../../src/client/object/clientObjectManager"
 import ObjectFactory from "../../../src/client/object/factories/objectFactory";
 import SocketsClient from "../../../src/client/networking/client/socketsClient";
 import ClientEventHistoryUtil from "../../../src/client/system/util/clientEventHistoryUtil";
-import RestrictedZonePlanUtil from "../../../src/client/ui/util/restrictedZonePlanUtil";
+import RestrictedZonePlanUtil, { NEW_ZONE_SIZE } from "../../../src/client/ui/util/restrictedZonePlanUtil";
 import { ZoneHandle } from "../../../src/client/ui/types/zoneHandle";
 import { gameModeObservable, objectSelectionObservable, volumesShownObservable,
     voxelQuadSelectionObservable } from "../../../src/client/system/clientObservables";
@@ -234,8 +234,9 @@ describe("a zone added from the plan", () => {
         expect(objectId).not.toBeNull();
         expect(RestrictedZoneUtil.getZones(room).map(zone => zone.objectId)).toEqual([objectId]);
         expect(userNameOf(objectId!)).toBe(ZONE_USER_NAME_FOR_NOBODY);
-        expect(blocksOf(objectId!)).toEqual({rowMin: NUM_VOXEL_ROWS / 2 - 6, rowMax: NUM_VOXEL_ROWS / 2 + 5,
-            colMin: NUM_VOXEL_COLS / 2 - 6, colMax: NUM_VOXEL_COLS / 2 + 5, ...FULL_HEIGHT});
+        const half = NEW_ZONE_SIZE / 2;
+        expect(blocksOf(objectId!)).toEqual({rowMin: NUM_VOXEL_ROWS / 2 - half, rowMax: NUM_VOXEL_ROWS / 2 + half - 1,
+            colMin: NUM_VOXEL_COLS / 2 - half, colMax: NUM_VOXEL_COLS / 2 + half - 1, ...FULL_HEIGHT});
         expect(ClientObjectManager.getObjectById(objectId!)).toBeDefined();
         expect(sentSignals()).toEqual([["addObject", objectId, ADMIN.id]]);
 
@@ -246,7 +247,7 @@ describe("a zone added from the plan", () => {
             expect(RestrictedZoneUtil.blocksVoxelBlockEdit(MEMBER, room, row, col, layer)).toBe(true);
             expect(RestrictedZoneUtil.blocksVoxelBlockEdit(ADMIN, room, row, col, layer)).toBe(false);
         }
-        expect(RestrictedZoneUtil.blocksVoxelBlockEdit(MEMBER, room, row + 6, col, COLLISION_LAYER_MIN)).toBe(false);
+        expect(RestrictedZoneUtil.blocksVoxelBlockEdit(MEMBER, room, row + half, col, COLLISION_LAYER_MIN)).toBe(false);
     });
 
     it("comes with an id of its own each time", async () => {

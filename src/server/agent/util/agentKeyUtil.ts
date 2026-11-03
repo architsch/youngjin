@@ -2,7 +2,7 @@ import crypto from "crypto";
 
 // An agent's key is "<user id>.<secret>": the id finds the row, which holds only the secret's hash.
 
-const SECRET_BYTES = 32;
+export const SECRET_BYTES = 32;
 // What a document id may hold, so a key can't steer the row lookup elsewhere (a "/" names a sub-path).
 const USER_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 

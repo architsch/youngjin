@@ -992,8 +992,9 @@ describe("a selected object stepped to the nearest object lying that way", () =>
         // side by side.
         const WIDE = {x: 3.5, y: 1, z: 1};
         const start = hangOnWall("start", 10.25, 1.5, WIDE);
-        hangOnWall("beside", 6.25, 1.5, WIDE);
-        expect(10.25 - 6.25).toBeGreaterThan(SELECTION_STEP_OBJECT_REACH);
+        const besideAt = 10.25 - Math.max(SELECTION_STEP_OBJECT_REACH + 1, WIDE.x + 0.5);
+        hangOnWall("beside", besideAt, 1.5, WIDE);
+        expect(10.25 - besideAt).toBeGreaterThan(SELECTION_STEP_OBJECT_REACH);
         // Out of reach on the other side: the reach and a little more past the first one's edge.
         hangOnWall("beyond", 10.25 + 1.75 + SELECTION_STEP_OBJECT_REACH + 0.5 + 0.5);
         faceWallAt(10.25);
@@ -1020,8 +1021,8 @@ describe("a selected object stepped to the nearest object lying that way", () =>
 
     it("counts an object as lying the way it lies most", async () => {
         const start = hangOnWall("start", 10.5, 1.5);
-        // Two units off along the wall and a layer above its top: up and to the right, but more to the right.
-        hangOnWall("diagonal", 7.5, 3);
+        // Within reach along the wall and a layer above its top: up and to the right, but more to the right.
+        hangOnWall("diagonal", 10.5 - SELECTION_STEP_OBJECT_REACH, 3);
         faceWallAt(10.5);
         await select(start);
 
@@ -1137,7 +1138,7 @@ describe("a selected object stepped to the nearest object lying that way", () =>
 
     it("never takes a volume, which only its own button selects, though it lies nearest", async () => {
         const onWall = hangOnWall("onWall", 10.5);
-        hangOnWall("beyond", 7.5);
+        hangOnWall("beyond", 10.5 - SELECTION_STEP_OBJECT_REACH);
         // Round the selected canvas and on toward the next, so that nothing lies nearer that way.
         const volume = new AddObjectSignal(room.id, actingUser.id, actingUser.userName, volumeTypeIndex, "volume",
             VolumeObjectTypeConfig.util.makeTransform({x: 1, y: 1, z: 8}, {x: 2, y: 2, z: 11}), {});

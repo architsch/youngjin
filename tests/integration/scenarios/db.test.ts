@@ -20,15 +20,18 @@ import DBUserVersionMigration from "../../../src/server/db/types/versionMigratio
 import DBRoomVersionMigration from "../../../src/server/db/types/versionMigration/dbRoomVersionMigration";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import RoomPrefsUtil from "../../../src/shared/room/util/roomPrefsUtil";
+import { CLOUD_COLOR_CHAR_INDEX, FOG_COLOR_CHAR_INDEX, GROUND_COLOR_CHAR_INDEX, GROUND_PEAK_COLOR_CHAR_INDEX,
+    SKY_COLOR_CHAR_INDEX } from "../../../src/shared/room/versionMigration/roomPrefsVersionMigration";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import { ColorPaletteMap } from "../../../src/shared/math/maps/colorPaletteMap";
 import StringUtil from "../../../src/shared/math/util/stringUtil";
-import { ATMOSPHERE_COLOR_PALETTE_NAME, DAY_IN_MS, HOUR_IN_MS, LIGHT_COLOR_PALETTE_NAME,
-    TUTORIAL_SINGLE_PLAYER_MODE } from "../../../src/shared/system/sharedConstants";
-import { COLLECTION_HELPER_SPENDING, COLLECTION_ROOMS, COLLECTION_USERS,
-    DB_MAX_WRITES_PER_COMMIT } from "../../../src/server/system/serverConstants";
+import { ATMOSPHERE_COLOR_PALETTE_NAME, HOUR_IN_MS, LIGHT_COLOR_PALETTE_NAME, LOGIN_REWARD_DOLLARS,
+    MINUTE_IN_MS, TUTORIAL_SINGLE_PLAYER_MODE } from "../../../src/shared/system/sharedConstants";
+import { COLLECTION_HELPER_SPENDING, COLLECTION_ROOMS, COLLECTION_USERS, DB_MAX_WRITES_PER_COMMIT,
+    GUEST_MAX_AGE_BY_TIER_PHASE, LOGIN_COUNT_MIN_GAP_MS, LOGIN_REWARD_INTERVAL_MS } from "../../../src/server/system/serverConstants";
 import DBHelperSpendingUtil from "../../../src/server/db/util/dbHelperSpendingUtil";
 import DBInventoryUtil from "../../../src/server/db/util/dbInventoryUtil";
+import { NUM_FREE_PLAYER_PART_TYPES } from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/playerCompositionConstants";
 
 const USER_VERSION = DBUserVersionMigration.length;
 const ROOM_VERSION = DBRoomVersionMigration.length;
@@ -495,7 +498,7 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
 
         it("counts a login once, however many of its requests find the copy of the row kept from before it", async () => {
             await EmulatorDB.seed(COLLECTION_USERS, { u1: currentUser({ loginCount: 3,
-                lastLoginAt: Date.now() - 2 * DAY_IN_MS }) });
+                lastLoginAt: Date.now() - 2 * LOGIN_COUNT_MIN_GAP_MS }) });
 
             for (let i = 0; i < 3; ++i)
             {
@@ -509,9 +512,9 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
 
         it("counts on from what a row holds when a login lands on it as it is being migrated", async () => {
             await EmulatorDB.seed(COLLECTION_USERS, { u1: currentUser({ version: USER_VERSION - 1, loginCount: 7,
-                lastLoginAt: Date.now() - 2 * DAY_IN_MS }) });
+                lastLoginAt: Date.now() - 2 * LOGIN_COUNT_MIN_GAP_MS }) });
 
-            await DBUserUtil.updateLastLogin("u1", Date.now() - 2 * DAY_IN_MS);
+            await DBUserUtil.updateLastLogin("u1", Date.now() - 2 * LOGIN_COUNT_MIN_GAP_MS);
 
             const stored = await EmulatorDB.readStored(COLLECTION_USERS, "u1");
             expect(stored?.version).toBe(USER_VERSION);
@@ -551,83 +554,85 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
             const [{id}] = Object.entries(await EmulatorDB.readStoredAll(COLLECTION_USERS)).map(([id]) => ({id}));
 
             for (let i = 0; i < 3; ++i)
-                expect(await DBInventoryUtil.claimLoginReward(id, "dollar", 10)).toBe(false);
+                expect(await DBInventoryUtil.claimLoginReward(id, "dollar", LOGIN_REWARD_DOLLARS)).toBe(false);
             expect((await EmulatorDB.readStored(COLLECTION_USERS, id))?.inventory).toEqual({});
 
             const {lastLoginRewardAt} = (await EmulatorDB.readStored(COLLECTION_USERS, id)) as DBUser;
-            await EmulatorDB.seed(COLLECTION_USERS, {[id]: currentUser({lastLoginRewardAt: lastLoginRewardAt - DAY_IN_MS})});
-            expect(await DBInventoryUtil.claimLoginReward(id, "dollar", 10)).toBe(true);
+            await EmulatorDB.seed(COLLECTION_USERS, {[id]: currentUser({lastLoginRewardAt: lastLoginRewardAt - LOGIN_REWARD_INTERVAL_MS})});
+            expect(await DBInventoryUtil.claimLoginReward(id, "dollar", LOGIN_REWARD_DOLLARS)).toBe(true);
         });
 
-        it("runs 20 hours from the last reward: not a minute sooner, however many visits come between", async () => {
-            const almostTime = Date.now() - 20 * HOUR_IN_MS + 60_000;
+        it(`runs ${LOGIN_REWARD_INTERVAL_MS / HOUR_IN_MS} hours from the last reward: not a minute sooner, however many visits come between`, async () => {
+            const almostTime = Date.now() - LOGIN_REWARD_INTERVAL_MS + MINUTE_IN_MS;
             await EmulatorDB.seed(COLLECTION_USERS, {
                 soon: currentUser({lastLoginRewardAt: almostTime}),
-                due: currentUser({lastLoginRewardAt: Date.now() - 20 * HOUR_IN_MS - 1}),
+                due: currentUser({lastLoginRewardAt: Date.now() - LOGIN_REWARD_INTERVAL_MS - 1}),
             });
 
-            expect(await DBInventoryUtil.claimLoginReward("soon", "dollar", 10)).toBe(false);
-            expect(await DBInventoryUtil.claimLoginReward("due", "dollar", 10)).toBe(true);
-            expect(await DBInventoryUtil.claimLoginReward("due", "dollar", 10)).toBe(false);
+            expect(await DBInventoryUtil.claimLoginReward("soon", "dollar", LOGIN_REWARD_DOLLARS)).toBe(false);
+            expect(await DBInventoryUtil.claimLoginReward("due", "dollar", LOGIN_REWARD_DOLLARS)).toBe(true);
+            expect(await DBInventoryUtil.claimLoginReward("due", "dollar", LOGIN_REWARD_DOLLARS)).toBe(false);
             expect((await EmulatorDB.readStored(COLLECTION_USERS, "due"))?.lastLoginRewardAt).toBeGreaterThan(almostTime);
         });
 
         it("isn't put off by visits in between, as a count of logins is", async () => {
-            await EmulatorDB.seed(COLLECTION_USERS, {u1: currentUser({lastLoginRewardAt: Date.now() - 2 * DAY_IN_MS})});
+            await EmulatorDB.seed(COLLECTION_USERS, {u1: currentUser({lastLoginRewardAt: Date.now() - 2 * LOGIN_REWARD_INTERVAL_MS})});
 
             await DBUserUtil.updateLastLogin("u1", Date.now());
 
-            expect(await DBInventoryUtil.claimLoginReward("u1", "dollar", 10)).toBe(true);
+            expect(await DBInventoryUtil.claimLoginReward("u1", "dollar", LOGIN_REWARD_DOLLARS)).toBe(true);
         });
 
         it("gives the reward once, however many claims arrive together", async () => {
             await EmulatorDB.seed(COLLECTION_USERS, {u1: currentUser({lastLoginRewardAt: 1, inventory: {dollar: 3}})});
 
-            const claims = await Promise.all([1, 2, 3, 4, 5].map(() => DBInventoryUtil.claimLoginReward("u1", "dollar", 10)));
+            const claims = await Promise.all([1, 2, 3, 4, 5].map(() => DBInventoryUtil.claimLoginReward("u1", "dollar", LOGIN_REWARD_DOLLARS)));
 
             expect(claims.filter(claimed => claimed)).toHaveLength(1);
-            expect((await EmulatorDB.readStored(COLLECTION_USERS, "u1"))?.inventory).toEqual({dollar: 13});
+            expect((await EmulatorDB.readStored(COLLECTION_USERS, "u1"))?.inventory).toEqual({dollar: 3 + LOGIN_REWARD_DOLLARS});
         });
 
         it("runs a migrated user's day from their last visit, a login landing as they migrate included", async () => {
             await EmulatorDB.seed(COLLECTION_USERS, {
                 recent: userFromBeforeInventories({lastLoginAt: Date.now() - 1000}),
-                longAgo: userFromBeforeInventories({lastLoginAt: Date.now() - 2 * DAY_IN_MS}),
-                longAgoUnread: userFromBeforeInventories({lastLoginAt: Date.now() - 2 * DAY_IN_MS}),
+                longAgo: userFromBeforeInventories({lastLoginAt: Date.now() - 2 * LOGIN_REWARD_INTERVAL_MS}),
+                longAgoUnread: userFromBeforeInventories({lastLoginAt: Date.now() - 2 * LOGIN_REWARD_INTERVAL_MS}),
                 recentUnread: userFromBeforeInventories({lastLoginAt: Date.now() - 1000}),
             });
 
             await new DBQuery<DBRow>().update(COLLECTION_USERS).set({userName: "renamed"}).where("id", "==", "recent").run();
-            await DBUserUtil.updateLastLogin("longAgo", Date.now() - 2 * DAY_IN_MS);
+            await DBUserUtil.updateLastLogin("longAgo", Date.now() - 2 * LOGIN_REWARD_INTERVAL_MS);
 
-            expect((await EmulatorDB.readStored(COLLECTION_USERS, "recent"))?.lastLoginRewardAt).toBeGreaterThan(Date.now() - DAY_IN_MS);
-            expect(await DBInventoryUtil.claimLoginReward("recent", "dollar", 10)).toBe(false);
-            expect(await DBInventoryUtil.claimLoginReward("longAgo", "dollar", 10)).toBe(true);
+            expect((await EmulatorDB.readStored(COLLECTION_USERS, "recent"))?.lastLoginRewardAt)
+                .toBeGreaterThan(Date.now() - LOGIN_REWARD_INTERVAL_MS);
+            expect(await DBInventoryUtil.claimLoginReward("recent", "dollar", LOGIN_REWARD_DOLLARS)).toBe(false);
+            expect(await DBInventoryUtil.claimLoginReward("longAgo", "dollar", LOGIN_REWARD_DOLLARS)).toBe(true);
             // Not migrated at all yet, as an agent's row can be as it arrives.
-            expect(await DBInventoryUtil.claimLoginReward("recentUnread", "dollar", 10)).toBe(false);
-            expect(await DBInventoryUtil.claimLoginReward("longAgoUnread", "dollar", 10)).toBe(true);
+            expect(await DBInventoryUtil.claimLoginReward("recentUnread", "dollar", LOGIN_REWARD_DOLLARS)).toBe(false);
+            expect(await DBInventoryUtil.claimLoginReward("longAgoUnread", "dollar", LOGIN_REWARD_DOLLARS)).toBe(true);
         });
 
         it("reads what a claim gave, not the copy of the row kept from before it", async () => {
             await EmulatorDB.seed(COLLECTION_USERS, {u1: currentUser({lastLoginRewardAt: 1, inventory: {dollar: 3}})});
             await DBUserUtil.lookUpUserById("u1");
 
-            await DBInventoryUtil.claimLoginReward("u1", "dollar", 10);
+            await DBInventoryUtil.claimLoginReward("u1", "dollar", LOGIN_REWARD_DOLLARS);
 
-            expect((await DBUserUtil.lookUpUserById("u1")).data[0].inventory).toEqual({dollar: 13});
+            expect((await DBUserUtil.lookUpUserById("u1")).data[0].inventory).toEqual({dollar: 3 + LOGIN_REWARD_DOLLARS});
         });
 
         it("makes the reward due at once when fast-forwarded, once, whatever copy of the row is kept", async () => {
             await EmulatorDB.seed(COLLECTION_USERS, {u1: currentUser({lastLoginRewardAt: Date.now(), inventory: {dollar: 3}})});
             await DBUserUtil.lookUpUserById("u1");
-            expect(await DBInventoryUtil.claimLoginReward("u1", "dollar", 10)).toBe(false);
+            expect(await DBInventoryUtil.claimLoginReward("u1", "dollar", LOGIN_REWARD_DOLLARS)).toBe(false);
 
             await DBInventoryUtil.fastForwardLoginRewardClock("u1");
 
-            expect((await DBUserUtil.lookUpUserById("u1")).data[0].lastLoginRewardAt).toBeLessThan(Date.now() - 19 * HOUR_IN_MS);
-            expect(await DBInventoryUtil.claimLoginReward("u1", "dollar", 10)).toBe(true);
-            expect(await DBInventoryUtil.claimLoginReward("u1", "dollar", 10)).toBe(false);
-            expect((await EmulatorDB.readStored(COLLECTION_USERS, "u1"))?.inventory).toEqual({dollar: 13});
+            expect((await DBUserUtil.lookUpUserById("u1")).data[0].lastLoginRewardAt)
+                .toBeLessThanOrEqual(Date.now() - LOGIN_REWARD_INTERVAL_MS);
+            expect(await DBInventoryUtil.claimLoginReward("u1", "dollar", LOGIN_REWARD_DOLLARS)).toBe(true);
+            expect(await DBInventoryUtil.claimLoginReward("u1", "dollar", LOGIN_REWARD_DOLLARS)).toBe(false);
+            expect((await EmulatorDB.readStored(COLLECTION_USERS, "u1"))?.inventory).toEqual({dollar: 3 + LOGIN_REWARD_DOLLARS});
         });
 
         it("fast-forwards nobody's clock without a fuss", async () => {
@@ -635,7 +640,7 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
         });
 
         it("claims nothing for nobody, and says so", async () => {
-            expect(await DBInventoryUtil.claimLoginReward("nobody", "dollar", 10)).toBe(false);
+            expect(await DBInventoryUtil.claimLoginReward("nobody", "dollar", LOGIN_REWARD_DOLLARS)).toBe(false);
         });
 
         it("spends dollars on an item and gives it in one write, leaving everything else as it was", async () => {
@@ -729,13 +734,15 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
         });
 
         it("keeps a look's locked shapes for whoever wore them as shapes came to be bought", async () => {
-            const look = "!!" + String.fromCharCode(33 + 4) + String.fromCharCode(33 + 1).repeat(5);
+            // The first shape for sale on the head, and a free one on every other part.
+            const headShape = NUM_FREE_PLAYER_PART_TYPES;
+            const look = "!!" + String.fromCharCode(33 + headShape) + String.fromCharCode(33 + 1).repeat(5);
             await EmulatorDB.seed(COLLECTION_USERS, {u1: userFromBeforeInventories({playerMetadata: {"2": look}})});
 
             await new DBQuery<DBRow>().update(COLLECTION_USERS).set({userName: "renamed"}).where("id", "==", "u1").run();
 
             const stored = await EmulatorDB.readStored(COLLECTION_USERS, "u1");
-            expect(stored?.inventory).toEqual({shape_head_4: 1});
+            expect(stored?.inventory).toEqual({[`shape_head_${headShape}`]: 1});
             expect(stored?.playerMetadata).toEqual({"2": look});
         });
 
@@ -849,8 +856,8 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
 
         it("finds stale guests and stale agents by the same tiers, each of its own type only", async () => {
             const now = Date.now();
-            // Past the first tier's cutoff, short of the last's.
-            const longAgo = now - 2 * DAY_IN_MS;
+            // Past the first tier's cutoff, short of the next's.
+            const longAgo = now - (GUEST_MAX_AGE_BY_TIER_PHASE[0] + GUEST_MAX_AGE_BY_TIER_PHASE[1]) / 2;
             await EmulatorDB.seed(COLLECTION_USERS, {
                 staleGuest: currentUser({ userType: UserTypeEnumMap.Guest, lastLoginAt: longAgo, loginCount: 1 }),
                 staleAgent: currentUser({ userType: UserTypeEnumMap.Agent, lastLoginAt: longAgo, loginCount: 1 }),
@@ -1131,8 +1138,8 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
 
         it("carries a room's air over to the colors that look nearest it in the palette it is painted from now", async () => {
             // v7 -> v8: the fog, sky, cloud and ground colors were positions in the "Fog" and "Scenery" palettes
-            // (see room-prefs.test.ts). The air generation wrote turns into the air it writes now, and the rest of
-            // a string is kept as it was. Here a fog with a near-black red cast, and a deep red cloud.
+            // (see room-prefs.test.ts). The air generation wrote turns black, with a white cloud and a dark grey peak,
+            // and the rest of a string is kept as it was. Here a fog with a near-black red cast, and a deep red cloud.
             const char = StringUtil.convertRawNumberToVisibleASCII;
             await EmulatorDB.seed(COLLECTION_ROOMS, {
                 generated: currentRoom({ version: 7, prefs: LEGACY_DEFAULT_PREFS }),
@@ -1145,7 +1152,14 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
             const tinted = RoomPrefsUtil.decode(prefsByID.tinted);
 
             expect(result.data.every(row => row.version === ROOM_VERSION)).toBe(true);
-            expect(prefsByID.generated).toBe(RoomPrefsUtil.getDefaultPrefsString());
+            const generated = RoomPrefsUtil.decode(prefsByID.generated);
+            expect([generated.fogColorIndex, generated.skyColorIndex, generated.cloudColorIndex, generated.groundColorIndex,
+                generated.groundPeakColorIndex].map(index => ColorPaletteMap[ATMOSPHERE_COLOR_PALETTE_NAME][index]))
+                .toEqual(["#000000", "#000000", "#ffffff", "#000000", "#2a2a2a"]);
+            const colorChars = [FOG_COLOR_CHAR_INDEX, SKY_COLOR_CHAR_INDEX, CLOUD_COLOR_CHAR_INDEX, GROUND_COLOR_CHAR_INDEX,
+                GROUND_PEAK_COLOR_CHAR_INDEX];
+            const withoutColors = (prefs: string) => [...prefs].filter((_, i) => !colorChars.includes(i)).join("");
+            expect(withoutColors(prefsByID.generated)).toBe(withoutColors(LEGACY_DEFAULT_PREFS));
             expect([tinted.fogColorIndex, tinted.cloudColorIndex]
                 .map(index => ColorPaletteMap[ATMOSPHERE_COLOR_PALETTE_NAME][index])).toEqual(["#000000", "#95002d"]);
             expect(prefsByID.tinted.substring(4, 7)).toBe("~~@");

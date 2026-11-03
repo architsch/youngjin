@@ -18,11 +18,14 @@ import { dollarsInFlightObservable, inventoryGainObservable,
     inventoryObservable } from "../../../src/client/system/clientObservables";
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
 import ServerObjectManager from "../../../src/server/object/serverObjectManager";
-import DollarBillUtil from "../../../src/server/inventory/util/dollarBillUtil";
-import DollarBillFlightUtil from "../../../src/server/inventory/util/dollarBillFlightUtil";
+import DollarBillUtil, { GUST_INTERVAL_MS, REACH_ANGLE, REACH_UPWARD as UPWARD_REACH,
+    SPAWN_INTERVAL_MS } from "../../../src/server/inventory/util/dollarBillUtil";
+import DollarBillFlightUtil, { CLEARANCE as FLIGHT_CLEARANCE,
+    GUST_MIN_ANGLE } from "../../../src/server/inventory/util/dollarBillFlightUtil";
 import ServerInventoryManager from "../../../src/server/inventory/serverInventoryManager";
 import { LOGIN_REWARD_INTERVAL_MS } from "../../../src/server/system/serverConstants";
-import DollarBillPoseUtil from "../../../src/client/object/util/dollarBillPoseUtil";
+import DollarBillPoseUtil, { ABSORB_VANISHING_SHARE, FLIGHT_SHRINK, GROWING_SHARE, LEANS, MAX_FLIGHT_START,
+    VANISHING_SHARE } from "../../../src/client/object/util/dollarBillPoseUtil";
 import UserSessionUtil from "../../../src/server/user/util/userSessionUtil";
 import InventorySignal from "../../../src/shared/inventory/types/inventorySignal";
 import LoginRewardSignal from "../../../src/shared/inventory/types/loginRewardSignal";
@@ -45,7 +48,7 @@ import FanObjectTypeConfig, { FAN_SETTINGS } from "../../../src/shared/object/ty
 import { PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_MAX_WALK_INPUT, PLAYER_RADIUS_XZ,
     PLAYER_WALK_SPEED_PER_INPUT } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import SetObjectTransformSignal from "../../../src/shared/object/types/setObjectTransformSignal";
-import PlayerMotionCheckUtil from "../../../src/server/user/util/playerMotionCheckUtil";
+import PlayerMotionCheckUtil, { ALLOWANCE, DISTRUST_MS } from "../../../src/server/user/util/playerMotionCheckUtil";
 import UserSignalDispatchUtil from "../../../src/server/user/util/userSignalDispatchUtil";
 import Vector3DUtil from "../../../src/shared/math/util/vector3DUtil";
 import AdminPrefsUtil from "../../../src/shared/object/util/adminPrefsUtil";
@@ -59,7 +62,7 @@ import Room from "../../../src/shared/room/types/room";
 import RoomFile from "../../../src/shared/room/types/roomFile";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import { COLLISION_LAYER_HEIGHT, GENERATED_WALL_THICKNESS, INITIAL_MULTI_PLAYER_ENTRANCE_POS,
-    LOGIN_REWARD_DOLLARS, MAX_ROOM_Y, NUM_VOXEL_COLS, STOREY_FLOOR_COLLISION_LAYER, UNIT_VEC3,
+    LOGIN_REWARD_DOLLARS, MAX_ROOM_Y, NUM_VOXEL_COLS, SIGNAL_BATCH_SEND_INTERVAL, STOREY_FLOOR_COLLISION_LAYER, UNIT_VEC3,
     VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 import User from "../../../src/shared/user/types/user";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
@@ -73,6 +76,10 @@ const BILL_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType(DollarBillObjectTypeC
 const FAN_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType(FanObjectTypeConfig.objectType);
 const NPC_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Npc");
 const MAX_BILLS = ObjectCategoryConfigMap.getMaxCountPerRoom(DollarBillObjectTypeConfig.category);
+// How far ahead of someone a bill lies well within their reach, and how far it lies in the scenes with something in
+// the way, whose walls and steps are laid out for it.
+const WITHIN_REACH = 0.75 * DOLLAR_BILL_REACH;
+const OBSTRUCTED_AHEAD = 3;
 const DOLLAR = InventoryItemTypeEnumMap.Dollar;
 const FLUSH_MS = 200;
 const ADMIN = new User("an-admin", "Admin", UserTypeEnumMap.Admin, "", "");
@@ -104,7 +111,7 @@ function flushFor(ms: number): void
         flush();
 }
 
-function flushUntil(done: () => boolean, withinMs: number = 90_000): void
+function flushUntil(done: () => boolean, withinMs: number = SPAWN_INTERVAL_MS[1] + 30_000): void
 {
     for (let elapsed = 0; !done(); elapsed += FLUSH_MS)
     {
@@ -334,7 +341,7 @@ describe("a bill's flight", () => {
     const BLOCK_NEAR_MIDDLE = fc.record({row: fc.integer({min: 26, max: 38}), col: fc.integer({min: 26, max: 38}),
         layer: fc.integer({min: 0, max: 5})});
     // Over the highest any of them lies, so that it starts clear of them all, and under the storey's slab.
-    const HIGH_UP = {x: MIDDLE_X, y: 6 * COLLISION_LAYER_HEIGHT + 0.25, z: MIDDLE_Z};
+    const HIGH_UP = {x: MIDDLE_X, y: 6 * COLLISION_LAYER_HEIGHT + LYING_Y + 0.05, z: MIDDLE_Z};
     const DIRECTION_ANGLE = fc.double({min: 0, max: 2 * Math.PI, noNaN: true});
 
     it("never passes through a block or stops in the air, however the room is strewn with them", () => {
@@ -390,7 +397,7 @@ describe("a bill's flight", () => {
         const voxels = strewnRoom([]);
         for (let row = 28; row < 36; ++row)
             VoxelQueryUtil.getVoxel(voxels, row, 33)!.blockLayerMask = 0b111111;
-        const against = {x: 16.5 - 0.3 - 0.01, y: LYING_Y, z: MIDDLE_Z};
+        const against = {x: 16.5 - FLIGHT_CLEARANCE - 0.01, y: LYING_Y, z: MIDDLE_Z};
         expect(DollarBillFlightUtil.planFlight(voxels, against, steadyWind({x: 1, y: 0, z: 0}, 3), 2)).toEqual([]);
     });
 
@@ -398,7 +405,7 @@ describe("a bill's flight", () => {
         const voxels = strewnRoom([{row: 32, col: 32, layer: 0}]);
         const blockTop = COLLISION_LAYER_HEIGHT;
         // A hair within reach of the block, which is under only its edge.
-        const edge = 32 * VOXEL_CELL_SIZE - 0.29;
+        const edge = 32 * VOXEL_CELL_SIZE - (FLIGHT_CLEARANCE - 0.01);
         const [fall] = DollarBillFlightUtil.planFall(voxels, {x: edge, y: 3, z: 16.25});
         expect(fall.pos).toEqual({x: edge, y: blockTop + LYING_Y, z: 16.25});
     });
@@ -470,7 +477,9 @@ describe("a bill's flight", () => {
         const from = {x: MIDDLE_X, y: LYING_Y, z: MIDDLE_Z};
         const PERSON = fc.record({x: fc.integer({min: 6, max: 26}), z: fc.integer({min: 6, max: 26})})
             .filter(({x, z}) => x != MIDDLE_X || z != MIDDLE_Z);
-        fc.assert(fc.property(fc.array(PERSON, {minLength: 1, maxLength: 5}), (people) => {
+        // A few: fewer than the cones they keep it out of would take to fill the circle.
+        const fewest = Math.round(Math.PI / GUST_MIN_ANGLE) - 1;
+        fc.assert(fc.property(fc.array(PERSON, {minLength: 1, maxLength: fewest}), (people) => {
             const direction = DollarBillFlightUtil.pickGustDirection(voxels, from,
                 people.map(({x, z}) => ({x, y: STANDING_Y, z})));
             for (const {x, z} of people)
@@ -478,7 +487,7 @@ describe("a bill's flight", () => {
                 const toPerson = Math.atan2(z - from.z, x - from.x);
                 const off = Math.abs(Math.atan2(Math.sin(toPerson - Math.atan2(direction.z, direction.x)),
                     Math.cos(toPerson - Math.atan2(direction.z, direction.x))));
-                expect(off).toBeGreaterThanOrEqual(Math.PI / 6 - 1e-9);
+                expect(off).toBeGreaterThanOrEqual(GUST_MIN_ANGLE - 1e-9);
             }
         }), {numRuns: 200});
     });
@@ -605,8 +614,8 @@ describe("how a bill lies", () => {
 
     it("differs from bill to bill and place to place: standing, or flat on either half, turned any way", () => {
         const poses = Array.from({length: 300}, (_, i) => DollarBillPoseUtil.getRestPose(`@${i}`, {x: 3 + i / 50, y: 0.2, z: 7}));
-        expect(new Set(poses.map(({lean}) => lean))).toEqual(new Set([-1, 0, 1]));
-        for (const lean of [-1, 0, 1])
+        expect(new Set(poses.map(({lean}) => lean))).toEqual(new Set(LEANS));
+        for (const lean of LEANS)
             expect(poses.filter(pose => pose.lean == lean).length).toBeGreaterThan(50);
         expect(new Set(poses.map(({yaw}) => Math.floor(yaw))).size).toBe(7);
         expect(DollarBillPoseUtil.getRestPose("@7", {x: 3, y: 0.2, z: 7}))
@@ -637,21 +646,21 @@ describe("bills in a room", () => {
         expect(getBills()).toHaveLength(1);
     });
 
-    it("come 20 seconds after the wait starts at the soonest", async () => {
+    it(`come ${SPAWN_INTERVAL_MS[0] / 1000} seconds after the wait starts at the soonest`, async () => {
         await join("someone");
         vi.spyOn(Math, "random").mockReturnValue(0);
         flush();
-        flushFor(19_000);
+        flushFor(SPAWN_INTERVAL_MS[0] - 1_000);
         expect(getBills()).toHaveLength(0);
         flushFor(2_000);
         expect(getBills()).toHaveLength(1);
     });
 
-    it("come 60 seconds after it at the latest", async () => {
+    it(`come ${SPAWN_INTERVAL_MS[1] / 1000} seconds after it at the latest`, async () => {
         await join("someone");
         vi.spyOn(Math, "random").mockReturnValue(0.999);
         flush();
-        flushFor(58_000);
+        flushFor(SPAWN_INTERVAL_MS[1] - 2_000);
         expect(getBills()).toHaveLength(0);
         flushFor(2_000);
         expect(getBills()).toHaveLength(1);
@@ -712,16 +721,15 @@ describe("bills in a room", () => {
     it("stop at the room's cap, however long it stays full", async () => {
         holdGusts();
         await join("someone");
-        flushUntil(() => getBills().length == MAX_BILLS, 300_000);
-        flushFor(200_000);
+        flushUntil(() => getBills().length == MAX_BILLS, MAX_BILLS * SPAWN_INTERVAL_MS[1] + 60_000);
+        flushFor(MAX_BILLS * SPAWN_INTERVAL_MS[1]);
         expect(getBills()).toHaveLength(MAX_BILLS);
-        expect(MAX_BILLS).toBe(4);
     });
 
-    it("start another wait once one has gone: no sooner than 20 seconds after", async () => {
+    it(`start another wait once one has gone: no sooner than ${SPAWN_INTERVAL_MS[0] / 1000} seconds after`, async () => {
         holdGusts();
         const user = await join("someone", {x: 4, y: STANDING_Y, z: 4});
-        flushUntil(() => getBills().length == MAX_BILLS, 300_000);
+        flushUntil(() => getBills().length == MAX_BILLS, MAX_BILLS * SPAWN_INTERVAL_MS[1] + 60_000);
         vi.spyOn(Math, "random").mockReturnValue(0);
         flushFor(100_000);
 
@@ -730,7 +738,7 @@ describe("bills in a room", () => {
         faceToward(user, 4.5, 4);
         flush();
         expect(getBills()).toHaveLength(MAX_BILLS - 1);
-        flushFor(19_000);
+        flushFor(SPAWN_INTERVAL_MS[0] - 1_000);
         expect(getBills()).toHaveLength(MAX_BILLS - 1);
         flushFor(2_000);
         expect(getBills()).toHaveLength(MAX_BILLS);
@@ -808,13 +816,15 @@ describe("a gust", () => {
         const watcher = await join("watcher");
         const bill = spawnBill();
         // A flight longer than the shortest wait between gusts, which is the wait each time.
-        const end = {x: MIDDLE_X - 4, y: LYING_Y, z: MIDDLE_Z - 4};
+        const away = GUST_INTERVAL_MS[0] / 1000;
+        const end = {x: MIDDLE_X - away, y: LYING_Y, z: MIDDLE_Z - away};
+        const flightMs = 1000 * Math.hypot(away, away);
         vi.spyOn(DollarBillFlightUtil, "planGust").mockReturnValue([{pos: end, speed: 1}]);
         vi.spyOn(Math, "random").mockReturnValue(0);
         flushUntil(() => pathsSentTo(watcher, bill.objectId).length > 0, 30_000);
-        flushUntil(() => bill.transform.pos.x == end.x, 7_000);
+        flushUntil(() => bill.transform.pos.x == end.x, flightMs + 1_400);
 
-        flushFor(3_800);
+        flushFor(GUST_INTERVAL_MS[0] - 200);
         expect(pathsSentTo(watcher, bill.objectId)).toHaveLength(1);
         flushFor(1_000);
         expect(pathsSentTo(watcher, bill.objectId)).toHaveLength(2);
@@ -934,7 +944,7 @@ describe("a fan's stream", () => {
         flushFor(3_000);
         const wallFace = (wallRow + 1) * VOXEL_CELL_SIZE;
         expect(bill.transform.pos.z).toBeGreaterThanOrEqual(wallFace);
-        expect(bill.transform.pos.z).toBeLessThan(wallFace + 0.5);
+        expect(bill.transform.pos.z).toBeLessThan(wallFace + FLIGHT_CLEARANCE + 0.2);
 
         const flown = pathsSentTo(watcher, bill.objectId).length;
         flushFor(2_000);
@@ -1024,7 +1034,7 @@ describe("a bill under what the room does", () => {
 });
 
 describe("collecting a bill", () => {
-    const UPWARD_REACH = 0.5 * PLAYER_HEIGHT + 0.35;
+    const REACH_DEGREES = Math.round(REACH_ANGLE * 180 / Math.PI);
 
     // Someone in the middle of the floor looking east, and a bill as far ahead of them and to the south of that as asked.
     async function withBillBeforeUser(ahead: number, aside: number = 0, upward: number = 0)
@@ -1036,6 +1046,13 @@ describe("collecting a bill", () => {
         const bill = spawnBill(4, 4);
         Object.assign(bill.transform.pos, {x: MIDDLE_X + ahead, y: LYING_Y + upward, z: MIDDLE_Z + aside});
         return {user, bill};
+    }
+
+    // The bill the scenes with something in the way are laid out for, which they need within reach.
+    async function withObstructedBill()
+    {
+        expect(OBSTRUCTED_AHEAD, "the scene's bill is out of reach").toBeLessThan(DOLLAR_BILL_REACH);
+        return await withBillBeforeUser(OBSTRUCTED_AHEAD);
     }
 
     function atAngle(degrees: number, distance: number): [number, number]
@@ -1057,12 +1074,12 @@ describe("collecting a bill", () => {
         expect(user.socketUserContext.inventory[DOLLAR]).toBeUndefined();
     });
 
-    it("works up to 45 degrees to either side of the way they face", async () => {
+    it(`works up to ${REACH_DEGREES} degrees to either side of the way they face`, async () => {
         for (const side of [1, -1])
         {
             harness.reset();
             harness.seedHub(HUB_ID);
-            const [ahead, aside] = atAngle(side * 44, 3);
+            const [ahead, aside] = atAngle(side * (REACH_DEGREES - 1), WITHIN_REACH);
             await withBillBeforeUser(ahead, aside);
             flush();
             expect(getBills()).toHaveLength(0);
@@ -1070,7 +1087,7 @@ describe("collecting a bill", () => {
     });
 
     it("doesn't work any wider than that, however near", async () => {
-        for (const degrees of [46, -46, 90, -90, 135])
+        for (const degrees of [REACH_DEGREES + 1, -(REACH_DEGREES + 1), 90, -90, 135])
         {
             harness.reset();
             harness.seedHub(HUB_ID);
@@ -1093,7 +1110,7 @@ describe("collecting a bill", () => {
     });
 
     it("goes by the way they face across the room alone", async () => {
-        const {user} = await withBillBeforeUser(3);
+        const {user} = await withBillBeforeUser(WITHIN_REACH);
         const {transform} = harness.getPlayerObject(user.user.id)!;
         transform.dir = {x: -Math.SQRT1_2, y: Math.SQRT1_2, z: 0};
         flush();
@@ -1101,7 +1118,7 @@ describe("collecting a bill", () => {
     });
 
     it("doesn't work through a wall, which a bill would have to fly through", async () => {
-        const {user} = await withBillBeforeUser(3);
+        const {user} = await withObstructedBill();
         const wallCol = colOf(MIDDLE_X + 1.5);
         for (const row of [rowOf(MIDDLE_Z) - 1, rowOf(MIDDLE_Z), rowOf(MIDDLE_Z) + 1])
         {
@@ -1114,7 +1131,7 @@ describe("collecting a bill", () => {
     });
 
     it("works past a low step, which the eyes look over", async () => {
-        const {user} = await withBillBeforeUser(3);
+        const {user} = await withObstructedBill();
         placeBlock(rowOf(MIDDLE_Z), colOf(MIDDLE_X + 1.5), 0);
         flush();
         expect(user.socketUserContext.inventory[DOLLAR]).toBe(1);
@@ -1142,14 +1159,14 @@ describe("collecting a bill", () => {
     });
 
     it("sees from their eyes, over what their middle couldn't see past", async () => {
-        const {user} = await withBillBeforeUser(3);
+        const {user} = await withObstructedBill();
         // Two blocks high and close by, a line from their middle to the bill passing into the upper one.
         const wall = colOf(MIDDLE_X + 0.75);
         placeBlock(rowOf(MIDDLE_Z), wall, 0);
         placeBlock(rowOf(MIDDLE_Z), wall, 1);
         const voxels = getRoom().voxelGrid.voxels;
         const middle = {x: MIDDLE_X, y: STANDING_Y, z: MIDDLE_Z};
-        const billAt = {x: MIDDLE_X + 3, y: LYING_Y, z: MIDDLE_Z};
+        const billAt = {x: MIDDLE_X + OBSTRUCTED_AHEAD, y: LYING_Y, z: MIDDLE_Z};
         expect(VoxelQueryUtil.isLineClear(voxels, middle, billAt)).toBe(false);
         expect(VoxelQueryUtil.isLineClear(voxels, {...middle, y: STANDING_Y + PLAYER_EYE_HEIGHT}, billAt)).toBe(true);
         flush();
@@ -1163,7 +1180,7 @@ describe("collecting a bill", () => {
     });
 
     it("doesn't work with someone else standing in the way, and does once they step aside", async () => {
-        const {user} = await withBillBeforeUser(3);
+        const {user} = await withBillBeforeUser(WITHIN_REACH);
         const inTheWay = await join("in the way", {x: MIDDLE_X + 1.5, y: STANDING_Y, z: MIDDLE_Z});
         faceToward(inTheWay, MIDDLE_X - 4, MIDDLE_Z);
         flushFor(1_000);
@@ -1177,7 +1194,7 @@ describe("collecting a bill", () => {
     });
 
     it("doesn't work with a helper in the way", async () => {
-        const {user} = await withBillBeforeUser(3);
+        const {user} = await withBillBeforeUser(WITHIN_REACH);
         const npc = new AddObjectSignal(HUB_ID, ADMIN.id, ADMIN.userName, NPC_TYPE_INDEX, "a-helper",
             new ObjectTransform({x: MIDDLE_X + 1.5, y: 0, z: MIDDLE_Z}, {x: 0, y: 1, z: 0}, {...UNIT_VEC3}));
         expect(ServerObjectManager.addObjectAsServer(getRoom(), ADMIN, npc)).toBe(true);
@@ -1190,9 +1207,9 @@ describe("collecting a bill", () => {
     });
 
     it("works with any of it in sight, however little shows past what is in the way", async () => {
-        const {user} = await withBillBeforeUser(3);
+        const {user} = await withObstructedBill();
         // A pillar just short of the bill, hiding its middle and all but one side of it.
-        const pillarCol = colOf(MIDDLE_X + 2.25);
+        const pillarCol = colOf(MIDDLE_X + OBSTRUCTED_AHEAD - 0.75);
         for (let layer = 0; layer < 6; ++layer)
             placeBlock(rowOf(MIDDLE_Z + 0.1), pillarCol, layer);
         const bill = getBills()[0];
@@ -1207,7 +1224,7 @@ describe("collecting a bill", () => {
 
     it("goes to the nearest of two who have it before them, once", async () => {
         const near = await join("near", {x: MIDDLE_X - 1, y: STANDING_Y, z: MIDDLE_Z});
-        const far = await join("far", {x: MIDDLE_X + 3, y: STANDING_Y, z: MIDDLE_Z});
+        const far = await join("far", {x: MIDDLE_X + WITHIN_REACH, y: STANDING_Y, z: MIDDLE_Z});
         holdGusts();
         flush();
         const bill = spawnBill(28, 28);
@@ -1221,7 +1238,7 @@ describe("collecting a bill", () => {
 
     it("goes to one looking at it, not to one nearer with their back to it", async () => {
         const nearer = await join("nearer", {x: MIDDLE_X - 1, y: STANDING_Y, z: MIDDLE_Z});
-        const looking = await join("looking", {x: MIDDLE_X + 3, y: STANDING_Y, z: MIDDLE_Z});
+        const looking = await join("looking", {x: MIDDLE_X + WITHIN_REACH, y: STANDING_Y, z: MIDDLE_Z});
         holdGusts();
         flush();
         const bill = spawnBill(28, 28);
@@ -1293,9 +1310,9 @@ describe("collecting a bill", () => {
 
 describe("believing how someone got near a bill", () => {
     const WALK_SPEED = PLAYER_WALK_SPEED_PER_INPUT * PLAYER_MAX_WALK_INPUT;
-    const REPORT_MS = 200;
+    // How often a browser reports its player's move (see PeriodicTransformEmitter).
+    const REPORT_MS = SIGNAL_BATCH_SEND_INTERVAL;
     const SUB_STEP = 1 / 60;
-    const DISTRUST_MS = 3000;
 
     // A move as their browser reports it, through the server's own handling of it.
     async function report(user: ConnectedUser, pos: Vec3): Promise<void>
@@ -1453,9 +1470,11 @@ describe("believing how someone got near a bill", () => {
         }
     });
 
-    it("believes a walk whose moves arrive together after a stall of up to a second", async () => {
+    it("believes a walk whose moves arrive together after a stall the allowance can take at once", async () => {
+        // In tenths of a second, as long a walk as the allowance holds, with some to spare.
+        const longestStall = Math.floor(0.8 * 10 * ALLOWANCE.capacity / WALK_SPEED);
         await fc.assert(fc.asyncProperty(fc.integer({min: 0, max: 359}), fc.integer({min: 0, max: 30}),
-            fc.integer({min: 1, max: 10}), async (degrees, tenthsBefore, tenthsLong) => {
+            fc.integer({min: 1, max: longestStall}), async (degrees, tenthsBefore, tenthsLong) => {
                 harness.reset();
                 harness.seedHub(HUB_ID);
                 const user = await join("walker", {x: MIDDLE_X, y: STANDING_Y, z: MIDDLE_Z});
@@ -1469,9 +1488,11 @@ describe("believing how someone got near a bill", () => {
         const user = await join("leaper", {x: 4, y: STANDING_Y, z: MIDDLE_Z});
         const ctx = user.socketUserContext;
         const start = Date.now();
+        const leap = 2 * ALLOWANCE.capacity;
         PlayerMotionCheckUtil.noteMove(ctx, getRoom(), {x: 4, y: STANDING_Y, z: MIDDLE_Z},
-            {x: 4 + 12, y: STANDING_Y, z: MIDDLE_Z});
-        const walkMs = 1000 * (12 - 1.25 * WALK_SPEED) / (1.25 * WALK_SPEED);
+            {x: 4 + leap, y: STANDING_Y, z: MIDDLE_Z});
+        // How long the allowance takes to make up what the leap went past it.
+        const walkMs = 1000 * (leap - ALLOWANCE.capacity) / ALLOWANCE.refillPerSecond;
         expect(PlayerMotionCheckUtil.isTrusted(ctx, start + DISTRUST_MS + walkMs - 10)).toBe(false);
         expect(PlayerMotionCheckUtil.isTrusted(ctx, start + DISTRUST_MS + walkMs + 10)).toBe(true);
     });
@@ -1481,24 +1502,31 @@ describe("believing how someone got near a bill", () => {
         harness.seedHub(OTHER_HUB_ID);
         const user = await join("leaper", {x: 4, y: STANDING_Y, z: MIDDLE_Z});
         const ctx = user.socketUserContext;
-        PlayerMotionCheckUtil.noteMove(ctx, getRoom(), {x: 4, y: STANDING_Y, z: MIDDLE_Z}, {x: 20, y: STANDING_Y, z: MIDDLE_Z});
+        const leap = 2 * ALLOWANCE.capacity;
+        PlayerMotionCheckUtil.noteMove(ctx, getRoom(), {x: 4, y: STANDING_Y, z: MIDDLE_Z}, {x: 4 + leap, y: STANDING_Y, z: MIDDLE_Z});
         await harness.joinRoom(user, OTHER_HUB_ID);
         const otherRoom = ServerRoomManager.roomRuntimeMemories[OTHER_HUB_ID].room;
         const {pos} = harness.getPlayerObject(user.user.id)!.transform;
-        PlayerMotionCheckUtil.noteMove(ctx, otherRoom, {...pos}, {...pos, x: pos.x + 0.5});
+        const step = 0.5;
+        PlayerMotionCheckUtil.noteMove(ctx, otherRoom, {...pos}, {...pos, x: pos.x + step});
         expect(PlayerMotionCheckUtil.isTrusted(ctx)).toBe(false);
-        expect(PlayerMotionCheckUtil.isTrusted(ctx, Date.now() + 2 * DISTRUST_MS)).toBe(true);
+        // Once the allowance has made up the leap and the step after it.
+        const madeUpMs = 1000 * (leap + step - ALLOWANCE.capacity) / ALLOWANCE.refillPerSecond;
+        expect(PlayerMotionCheckUtil.isTrusted(ctx, Date.now() + DISTRUST_MS + madeUpMs + 100)).toBe(true);
     });
 
-    it("doesn't believe running at twice the speed of a walk, however smooth", async () => {
+    it("doesn't believe running at twice the speed a walk is allowed, however smooth", async () => {
         const user = await join("runner", {x: 4, y: STANDING_Y, z: MIDDLE_Z});
         const ctx = user.socketUserContext;
         let at = {x: 4, y: STANDING_Y, z: MIDDLE_Z};
         let believed = true;
-        for (let i = 0; i < 10; ++i)
+        // Twice as fast as the allowance lets through, for as long as it takes to go past all it holds at once.
+        const speed = 2 * ALLOWANCE.refillPerSecond;
+        const numReports = Math.ceil(ALLOWANCE.capacity / ((speed - ALLOWANCE.refillPerSecond) * REPORT_MS / 1000)) + 1;
+        for (let i = 0; i < numReports; ++i)
         {
             vi.setSystemTime(Date.now() + REPORT_MS);
-            const next = {...at, x: at.x + 2 * WALK_SPEED * REPORT_MS / 1000};
+            const next = {...at, x: at.x + speed * REPORT_MS / 1000};
             PlayerMotionCheckUtil.noteMove(ctx, getRoom(), at, next);
             at = next;
             believed &&= PlayerMotionCheckUtil.isTrusted(ctx);
@@ -1558,7 +1586,7 @@ describe("believing how someone got near a bill", () => {
         holdGusts();
         faceToward(user, 28, MIDDLE_Z);
         const bill = spawnBill(28, 4);
-        Object.assign(bill.transform.pos, {x: MIDDLE_X + 3, y: LYING_Y, z: MIDDLE_Z});
+        Object.assign(bill.transform.pos, {x: MIDDLE_X + WITHIN_REACH, y: LYING_Y, z: MIDDLE_Z});
         await report(user, {x: MIDDLE_X, y: STANDING_Y, z: MIDDLE_Z});
         flushFor(DISTRUST_MS);
         expect(getBills()).toHaveLength(1);
@@ -1655,8 +1683,9 @@ describe("a bill being drawn in", () => {
     });
 
     it("shrinks only at the end", () => {
-        expect(DollarBillPoseUtil.getAbsorptionStep(0.7).size).toBe(1);
-        expect(DollarBillPoseUtil.getAbsorptionStep(0.9).size).toBeLessThan(0.5);
+        expect(DollarBillPoseUtil.getAbsorptionStep(ABSORB_VANISHING_SHARE - 0.05).size).toBe(1);
+        expect(DollarBillPoseUtil.getAbsorptionStep(ABSORB_VANISHING_SHARE + 0.6 * (1 - ABSORB_VANISHING_SHARE)).size)
+            .toBeLessThan(0.5);
     });
 });
 
@@ -1672,14 +1701,15 @@ describe("a bill flying to the count on the screen", () => {
     it("comes in over the nearest edge from under the view, as one at the user's feet does", () => {
         // Straight below the view, as a bill just walked up to is.
         const start = DollarBillPoseUtil.getFlightStart(0, -3, 1);
-        expect(start).toEqual({x: 0, y: -1.2});
+        expect(start.x).toBeCloseTo(0, 9);
+        expect(start.y).toBeCloseTo(-MAX_FLIGHT_START, 9);
     });
 
     it("comes in from just past the edge even from behind the camera, or from right where the camera is", () => {
         for (const [x, y, depth] of [[0.5, -1, -2], [2, 0.5, -0.1], [0, -1, 0], [0, 0, 0], [0, 0, -3]])
         {
             const start = DollarBillPoseUtil.getFlightStart(x, y, depth);
-            expect(Math.max(Math.abs(start.x), Math.abs(start.y))).toBeCloseTo(1.2);
+            expect(Math.max(Math.abs(start.x), Math.abs(start.y))).toBeCloseTo(MAX_FLIGHT_START);
         }
     });
 
@@ -1698,12 +1728,13 @@ describe("a bill flying to the count on the screen", () => {
 
     it("comes up to size, shrinks from then on, and most of all as it is sucked up at the end", () => {
         const sizes = Array.from({length: 21}, (_, i) => DollarBillPoseUtil.getFlightStep(i / 20, {x: 0, y: -1.2}, COUNT, 0.5).size);
-        for (let i = 1; i <= 8; ++i)
+        const grownAt = Math.ceil(GROWING_SHARE * 20), vanishingAt = Math.round(VANISHING_SHARE * 20);
+        for (let i = 1; i <= grownAt; ++i)
             expect(sizes[i]).toBeGreaterThan(sizes[i - 1]);
-        for (let i = 9; i < sizes.length; ++i)
+        for (let i = grownAt + 1; i < sizes.length; ++i)
             expect(sizes[i]).toBeLessThan(sizes[i - 1]);
         // Nearly all of what it has left goes in the last fifth of the flight.
-        expect(sizes[16]).toBeGreaterThan(0.7);
+        expect(sizes[vanishingAt]).toBeGreaterThan(1 - FLIGHT_SHRINK * VANISHING_SHARE - 0.02);
         expect(sizes[19]).toBeLessThan(0.15);
     });
 

@@ -8,8 +8,8 @@ import ClientInventoryManager from "../clientInventoryManager";
 
 const LISTENER_KEY = "loginRewardUtil";
 // Once it can be seen, a moment for the eye to settle on the room.
-const SHOW_DELAY_MS = 500;
-const COACH_MARK_DURATION_MS = 6000;
+export const SHOW_DELAY_MS = 500;
+export const COACH_MARK_DURATION_MS = 6000;
 
 let dollarsToShow = 0;
 

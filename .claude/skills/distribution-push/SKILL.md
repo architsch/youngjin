@@ -368,7 +368,7 @@ that blurs them leaves the user believing the work is finished when it is sittin
 - **Two or three venues per run.** A wider push is not a faster one; it is a spam pattern.
 - **No `src/`, `docs/`, `tests/`, `CLAUDE.md` or `README.md` edits.** Findings only. What agents read
   (`server.json`, the manual and its ClawHub copy) changes only under the agents-keep-up rule: both
-  copies together, a new version, and `agent.test.ts` passing.
+  copies together, a new version only once the one there is published, and `agent.test.ts` passing.
 - **Nothing goes out that the user has not seen.** Every outbound artifact — post text, store
   listing, description — is shown to the user in full before it is placed anywhere.
 - **Report a venue's rejection as a rejection.** A portal that declined, a post that was removed by a

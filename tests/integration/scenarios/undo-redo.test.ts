@@ -86,7 +86,7 @@ import SocketsClient from "../../../src/client/networking/client/socketsClient";
 import ObjectEditUtil from "../../../src/client/ui/util/objectEditUtil";
 import ClientEvent from "../../../src/client/system/types/clientEvent";
 import { ClientEventType } from "../../../src/client/system/types/clientEventType";
-import ClientEventHistoryUtil from "../../../src/client/system/util/clientEventHistoryUtil";
+import ClientEventHistoryUtil, { MERGE_WINDOW_MS } from "../../../src/client/system/util/clientEventHistoryUtil";
 import GameModeUtil from "../../../src/client/system/util/gameModeUtil";
 import RoomEditUtil from "../../../src/client/system/util/roomEditUtil";
 import VoxelEditUtil from "../../../src/client/voxel/util/voxelEditUtil";
@@ -652,10 +652,11 @@ describe("the order edits are undone and redone in", () => {
     });
 
     it("has edits entered under one key in quick succession count as one", async () => {
+        const quickly = MERGE_WINDOW_MS - 100;
         ClientEventHistoryUtil.add(edit("before"));
         ClientEventHistoryUtil.add(edit("typed 1", {mergeKey: "text", time: 1000}));
-        ClientEventHistoryUtil.add(edit("typed 2", {mergeKey: "text", time: 1900}));
-        ClientEventHistoryUtil.add(edit("typed 3", {mergeKey: "text", time: 2800}));
+        ClientEventHistoryUtil.add(edit("typed 2", {mergeKey: "text", time: 1000 + quickly}));
+        ClientEventHistoryUtil.add(edit("typed 3", {mergeKey: "text", time: 1000 + 2 * quickly}));
 
         // Undone to where the first began, and redone to where the last ended.
         expect(await ClientEventHistoryUtil.undo()).toBe("done");
@@ -669,11 +670,12 @@ describe("the order edits are undone and redone in", () => {
     });
 
     it("keeps them apart after a pause, under another key, or with another edit between", async () => {
+        const later = 1000 + MERGE_WINDOW_MS + 1;
         ClientEventHistoryUtil.add(edit("typed", {mergeKey: "text", time: 1000}));
-        ClientEventHistoryUtil.add(edit("typed later", {mergeKey: "text", time: 2001}));
-        ClientEventHistoryUtil.add(edit("other text", {mergeKey: "other", time: 2002}));
-        ClientEventHistoryUtil.add(edit("a click", {time: 2003}));
-        ClientEventHistoryUtil.add(edit("other text again", {mergeKey: "other", time: 2004}));
+        ClientEventHistoryUtil.add(edit("typed later", {mergeKey: "text", time: later}));
+        ClientEventHistoryUtil.add(edit("other text", {mergeKey: "other", time: later + 1}));
+        ClientEventHistoryUtil.add(edit("a click", {time: later + 2}));
+        ClientEventHistoryUtil.add(edit("other text again", {mergeKey: "other", time: later + 3}));
 
         for (let i = 0; i < 5; ++i)
             expect(await ClientEventHistoryUtil.undo()).toBe("done");
@@ -781,7 +783,7 @@ describe("the order edits are undone and redone in", () => {
 
         // One typed over by the next is undone through that one from then on.
         const typed = edit("typed", {mergeKey: "text", time: 1000});
-        const typedOver = edit("typed over", {mergeKey: "text", time: 1500});
+        const typedOver = edit("typed over", {mergeKey: "text", time: 1000 + MERGE_WINDOW_MS / 2});
         ClientEventHistoryUtil.add(typed);
         ClientEventHistoryUtil.add(typedOver);
         expect(held(typed)).toEqual([false, false]);
@@ -1185,7 +1187,7 @@ describe("a text typed into a field", () => {
         const now = vi.spyOn(performance, "now");
         now.mockReturnValue(1000);
         type(selection, "G", "Ga");
-        now.mockReturnValue(5000);
+        now.mockReturnValue(1000 + 4 * MERGE_WINDOW_MS);
         type(selection, "Gal", "Gall");
 
         expect(await ClientEventHistoryUtil.undo()).toBe("done");

@@ -93,7 +93,7 @@ export const DOCUMENT_ID_MAX_LENGTH = 1500;
 export const HUB_ROOM_ID_KEYWORD = "hub";
 
 // What coming back earns a user, once a day (see ServerInventoryManager.welcomeUser).
-export const LOGIN_REWARD_DOLLARS = 10;
+export const LOGIN_REWARD_DOLLARS = 5;
 // What a shape of a character's part costs, past the free ones (see PlayerShapeItemUtil).
 export const PLAYER_SHAPE_PRICE_DOLLARS = 10;
 

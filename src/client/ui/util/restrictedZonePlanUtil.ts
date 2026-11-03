@@ -18,7 +18,7 @@ import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, NUM_VOXEL_COLS, NUM_VOXEL_ROW
 import RestrictedZoneUtil from "../../../shared/voxel/util/restrictedZoneUtil";
 
 // New zone size in voxels: grabbable on a phone, obviously resizable.
-const NEW_ZONE_SIZE = 12;
+export const NEW_ZONE_SIZE = 12;
 
 const volumeTypeIndex = ObjectTypeConfigMap.getIndexByType(VolumeObjectTypeConfig.objectType);
 

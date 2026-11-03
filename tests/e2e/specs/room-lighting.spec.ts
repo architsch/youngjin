@@ -5,9 +5,7 @@
 import { test, expect } from "../fixtures/auth.fixture";
 import { SELECTORS, TIMEOUTS } from "../helpers/constants";
 import { waitForGameReady, waitForRoomLoaded, captureConsole } from "../helpers/game";
-
-// Written out (not imported), to check what arrived rather than what the bundle believes.
-const MAX_ROOM_PREFS_STEP = 93;
+import { MAX_ROOM_PREFS_STEP } from "../../../src/shared/room/util/roomPrefsUtil";
 
 interface RoomLighting
 {

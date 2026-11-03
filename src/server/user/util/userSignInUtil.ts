@@ -13,7 +13,7 @@ import CookieUtil from "../../networking/util/cookieUtil";
 import LogUtil from "../../../shared/system/util/logUtil";
 import SignInProvider from "../types/signInProvider/signInProvider";
 
-const USER_NAME_BASE_MAX_LENGTH = 24;
+export const USER_NAME_BASE_MAX_LENGTH = 24;
 
 // A person's sign-in through a provider (see SignInProviderMap): the trip there, and the callback that signs the
 // browser into the account its verified email belongs to, or makes one of the browser's guest. No account is given a

@@ -11,7 +11,7 @@ import ClientInventoryManager from "../clientInventoryManager";
 
 // Past this an answer isn't coming, the connection having gone, and the user may ask again, which pays for nothing twice
 // (see ServerInventoryManager.buyItem).
-const ANSWER_TIMEOUT_MS = 5000;
+export const ANSWER_TIMEOUT_MS = 5000;
 const TOO_FEW_DOLLARS_MESSAGE = `You need $${PLAYER_SHAPE_PRICE_DOLLARS}\nto unlock this.`;
 const CONNECTION_LISTENER_KEY = "playerShapeUnlockUtil";
 

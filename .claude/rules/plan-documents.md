@@ -12,7 +12,7 @@ understood, the approach chosen, the open questions, the author's own wording an
 snapshot is the entire value of the file. A plan reconciled with what was eventually built records
 nothing at all; the repository already has the built thing.
 
-This is why the Documentation Guidelines in [`../../CLAUDE.md`](../../CLAUDE.md) exclude them, in
+This is why the documentation guidelines ([`documentation.md`](documentation.md)) exclude them, in
 their heading and in their opening. Plans legitimately contain internal symbol names, exact numbers, speculation,
 first-person reasoning, abandoned ideas, and things that turned out to be wrong. None of that is a
 defect to be cleaned up — it is the record.

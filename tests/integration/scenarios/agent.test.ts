@@ -29,17 +29,20 @@ import { harness, ConnectedUser } from "../helpers/serverHarness";
 import AgentRouter from "../../../src/server/networking/router/agentRouter";
 import AddressUtil from "../../../src/server/networking/util/addressUtil";
 import PublicFetchUtil from "../../../src/server/networking/util/publicFetchUtil";
-import GuestCreationLimitUtil from "../../../src/server/user/util/guestCreationLimitUtil";
+import GuestCreationLimitUtil, { MAX_GUESTS_PER_CLIENT } from "../../../src/server/user/util/guestCreationLimitUtil";
 import { MockSocket } from "../helpers/mockSocket";
-import AgentCameraUtil from "../../../src/server/agent/util/agentCameraUtil";
+import AgentCameraUtil, { TOKEN_BYTES as CAMERA_TOKEN_BYTES } from "../../../src/server/agent/util/agentCameraUtil";
+import { SECRET_BYTES as KEY_SECRET_BYTES } from "../../../src/server/agent/util/agentKeyUtil";
 import AgentAccountUtil from "../../../src/server/agent/util/agentAccountUtil";
 import AgentPresenceUtil from "../../../src/server/agent/util/agentPresenceUtil";
-import AgentToolUtil from "../../../src/server/agent/util/agentToolUtil";
+import AgentToolUtil, { MEETING_DISTANCE } from "../../../src/server/agent/util/agentToolUtil";
 import AgentTypingUtil from "../../../src/server/agent/util/agentTypingUtil";
 import AgentRoomSettingsUtil from "../../../src/server/agent/util/agentRoomSettingsUtil";
 import AgentAppearanceUtil from "../../../src/server/agent/util/agentAppearanceUtil";
 import AgentRoomUtil from "../../../src/server/agent/util/agentRoomUtil";
-import DollarBillUtil from "../../../src/server/inventory/util/dollarBillUtil";
+import DollarBillUtil, { REACH_ANGLE } from "../../../src/server/inventory/util/dollarBillUtil";
+import { AGENT_REQUESTS_PER_MINUTE } from "../../../src/server/networking/util/rateLimitUtil";
+import { GAME_NUMBER } from "../helpers/gameNumbers";
 import { InventoryItemTypeEnumMap } from "../../../src/shared/inventory/types/inventoryItemType";
 import UserBudgetUtil from "../../../src/server/user/util/userBudgetUtil";
 import PlayerMessageExpiryUtil from "../../../src/server/user/util/playerMessageExpiryUtil";
@@ -56,7 +59,7 @@ import NpcFacingUtil from "../../../src/shared/object/util/npcFacingUtil";
 import DBUserUtil from "../../../src/server/db/util/dbUserUtil";
 import DBInventoryUtil from "../../../src/server/db/util/dbInventoryUtil";
 import ServerInventoryManager from "../../../src/server/inventory/serverInventoryManager";
-import AgentInventoryUtil from "../../../src/server/agent/util/agentInventoryUtil";
+import AgentInventoryUtil, { MAX_TRIES as MAX_BILL_TRIES } from "../../../src/server/agent/util/agentInventoryUtil";
 import { NUM_FREE_PLAYER_PART_TYPES } from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/playerCompositionConstants";
 import { DOLLAR_BILL_REACH } from "../../../src/shared/object/types/objectTypeConfig/dollarBillObjectTypeConfig";
 import DBRoomUtil from "../../../src/server/db/util/dbRoomUtil";
@@ -69,9 +72,10 @@ import DoorObjectTypeConfig, { ENTERING_STRIDE_LENGTH,
     ENTRANCE_DOOR_OBJECT_ID } from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import Vec3 from "../../../src/shared/math/types/vec3";
 import Voxel from "../../../src/shared/voxel/types/voxel";
-import { LOGIN_REWARD_DOLLARS, DAY_IN_MS, HOUR_IN_MS, NUM_VOXEL_COLS, OBJECT_MESSAGE_MAX_LENGTH, PLAYER_MESSAGE_EXPIRATION_MS,
-    PLAYER_SHAPE_PRICE_DOLLARS, VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
-import { AGENT_TYPING_EXPIRATION_MS, LOGIN_REWARD_INTERVAL_MS } from "../../../src/server/system/serverConstants";
+import { LOGIN_REWARD_DOLLARS, DAY_IN_MS, HOUR_IN_MS, MINUTE_IN_MS, NUM_VOXEL_COLS, OBJECT_MESSAGE_MAX_LENGTH,
+    PLAYER_MESSAGE_EXPIRATION_MS, PLAYER_SHAPE_PRICE_DOLLARS, VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
+import { AGENT_TYPING_EXPIRATION_MS, GUEST_MAX_AGE_BY_TIER_PHASE, LOGIN_REWARD_INTERVAL_MS }
+    from "../../../src/server/system/serverConstants";
 import ServerObjectManager from "../../../src/server/object/serverObjectManager";
 import RemoveObjectSignal from "../../../src/shared/object/types/removeObjectSignal";
 import { HEARING_DISTANCE } from "../../../src/shared/object/util/helperBehaviorUtil";
@@ -86,9 +90,9 @@ import ServerRoomManager from "../../../src/server/room/serverRoomManager";
 import ServerUserManager from "../../../src/server/user/serverUserManager";
 import DBUser from "../../../src/server/db/types/row/dbUser";
 import { FunnelMilestoneEnumMap } from "../../../src/server/analytics/types/funnelMilestone";
-import { AGENT_CAMERA_MAX_PAGES, AGENT_INBOX_MAX_EVENTS, AGENT_LOOK_MAX_PEOPLE, AGENT_MAX_PRESENT,
-    AGENT_PRESENCE_IDLE_TIMEOUT_MS, BUILDER_AGENT_KEPT_FOR_GOOD_LOGIN_COUNT, BUILDER_AGENT_MAX_AGE_BY_TIER_PHASE,
-    USER_BUDGETS } from "../../../src/server/system/serverConstants";
+import { AGENT_CAMERA_MAX_PAGES, AGENT_INBOX_MAX_EVENTS, AGENT_LOOK_MAX_PEOPLE, AGENT_MAX_INTERESTS, AGENT_MAX_PRESENT,
+    AGENT_NAME_MAX_LENGTH, AGENT_NAME_MIN_LENGTH, AGENT_PRESENCE_IDLE_TIMEOUT_MS, BUILDER_AGENT_KEPT_FOR_GOOD_LOGIN_COUNT,
+    BUILDER_AGENT_MAX_AGE_BY_TIER_PHASE, USER_BUDGETS } from "../../../src/server/system/serverConstants";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
 import { SpeakerActivityEnumMap } from "../../../src/shared/object/types/speakerActivity";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
@@ -119,6 +123,8 @@ import RoomVolume from "../../../src/shared/room/types/roomVolume";
 import Room from "../../../src/shared/room/types/room";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
+import ObjectScaleUtil from "../../../src/shared/object/util/objectScaleUtil";
+import { START_SCALES as CANVAS_START_SCALES } from "../../../src/shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
 import NpcPersonalityMap from "../../../src/shared/object/maps/npcPersonalityMap";
 import BehaviorPrefsUtil from "../../../src/shared/object/util/behaviorPrefsUtil";
 import VolumeObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/volumeObjectTypeConfig";
@@ -136,6 +142,24 @@ const OTHER_HUB_ID = "hubBBBBBBBBBBBBBBBBB";
 const REGULAR_ID = "roomCCCCCCCCCCCCCCCC";
 const MISSING_ID = "roomDDDDDDDDDDDDDDDD";
 const HOME_ID = "homeEEEEEEEEEEEEEEEE";
+
+// How many characters random bytes take, written in base64url (no padding).
+const base64urlLength = (numBytes: number): number => Math.ceil(numBytes * 4 / 3);
+const KEY_PATTERN = new RegExp(`^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]{${base64urlLength(KEY_SECRET_BYTES)}}$`);
+const CAMERA_TOKEN_LENGTH = base64urlLength(CAMERA_TOKEN_BYTES);
+
+// The shapes of a part are numbered from 1; those past the free ones have to be bought.
+const FIRST_LOCKED_SHAPE = NUM_FREE_PLAYER_PART_TYPES + 1;
+const lockedShapesOf = (numShapes: number): number[] =>
+    Array.from({length: numShapes - NUM_FREE_PLAYER_PART_TYPES}, (_, i) => FIRST_LOCKED_SHAPE + i);
+// One with others for sale on either side of it, if the part has that many.
+const middleLockedShape = (numShapes: number): number =>
+{
+    const locked = lockedShapesOf(numShapes);
+    return locked[Math.floor((locked.length - 1) / 2)];
+};
+const numShapesForSale = (): number => Object.values(AgentAppearanceUtil.getShapeCounts())
+    .reduce((sum, numShapes) => sum + lockedShapesOf(numShapes).length, 0);
 
 // The per-IP account caps outlive harness.reset, so each registration comes from an address of its own.
 let addressCounter = 0;
@@ -359,7 +383,7 @@ describe("AI agents", () => {
                 return;
 
             expect(result.userName).toBe("Builder-01");
-            expect(result.key).toMatch(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$/);
+            expect(result.key).toMatch(KEY_PATTERN);
 
             const dbUser = await AgentAccountUtil.findByKey(result.key);
             expect(dbUser?.userName).toBe("Builder-01");
@@ -401,7 +425,7 @@ describe("AI agents", () => {
             const agent = await attendAgent(dbUser);
 
             const newKey = await AgentAccountUtil.replaceKey(agent);
-            expect(newKey).toMatch(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$/);
+            expect(newKey).toMatch(KEY_PATTERN);
             expect(newKey).not.toBe(key);
 
             // Neither its row nor its presence answers to the old key; both answer to the new one.
@@ -412,7 +436,8 @@ describe("AI agents", () => {
         });
 
         it("refuses names that aren't letters, digits and '-_.', or that look like a guest's", async () => {
-            for (const name of ["ab", "has space", "*", "-leading", "Guest-1a2b", "guest-xyz", "x".repeat(25), "名前です"])
+            for (const name of ["x".repeat(AGENT_NAME_MIN_LENGTH - 1), "has space", "*", "-leading", "Guest-1a2b", "guest-xyz",
+                "x".repeat(AGENT_NAME_MAX_LENGTH + 1), "名前です"])
             {
                 const result = await AgentAccountUtil.register(name, undefined, nextAddress(), "test-agent");
                 expect("error" in result, name).toBe(true);
@@ -440,13 +465,14 @@ describe("AI agents", () => {
 
         it("shares the guests' per-IP account cap, charged only for accounts made", async () => {
             const address = nextAddress();
-            for (let i = 0; i < 5; ++i)
+            for (let i = 0; i < MAX_GUESTS_PER_CLIENT + 2; ++i)
                 expect("error" in await AgentAccountUtil.register("no good", undefined, address, "cap-test")).toBe(true);
 
-            for (let i = 0; i < 3; ++i)
+            for (let i = 0; i < MAX_GUESTS_PER_CLIENT; ++i)
                 expect("key" in await AgentAccountUtil.register(`Capped-${i}`, undefined, address, "cap-test")).toBe(true);
 
-            const refused = await AgentAccountUtil.register("Capped-3", undefined, address, "cap-test");
+            const refused = await AgentAccountUtil.register(`Capped-${MAX_GUESTS_PER_CLIENT}`, undefined, address,
+                "cap-test");
             expect("error" in refused && refused.error.includes("Too many")).toBe(true);
         });
     });
@@ -976,7 +1002,7 @@ describe("AI agents", () => {
             expect((AgentToolUtil.look(first) as any).you.dollars).toBe(0);
             await AgentPresenceUtil.leave(first);
 
-            dbUser.lastLoginRewardAt = Date.now() - DAY_IN_MS;
+            dbUser.lastLoginRewardAt = Date.now() - LOGIN_REWARD_INTERVAL_MS;
             const back = await attendAgent(dbUser);
             const events = back.inbox.take();
             expect(events).toContainEqual(expect.objectContaining({kind: "loginReward", dollars: LOGIN_REWARD_DOLLARS, reward: LOGIN_REWARD_DOLLARS}));
@@ -997,9 +1023,9 @@ describe("AI agents", () => {
             void AgentInventoryUtil.collectBill(agent).then(result => { answer = result; });
             for (let i = 0; i < 600 && answer == undefined; ++i)
             {
+                midway(i);
                 flush(1);
                 DollarBillUtil.stepAll(0.2);
-                midway(i);
                 await new Promise(resolve => setImmediate(resolve));
             }
             expect(answer).toBeDefined();
@@ -1040,8 +1066,9 @@ describe("AI agents", () => {
             expect((AgentToolUtil.look(agent) as any).bills).toEqual([]);
             expect(agent.inventory[InventoryItemTypeEnumMap.Dollar]).toBe(1);
             expect(agent.inbox.take().map(event => event.kind)).toContain("dollarCollected");
-            // It comes to whoever has it in reach, so there was no walking the rest of the way.
-            expect(flatDistance(positionOf(agent), lay)).toBeGreaterThan(2);
+            // It comes to whoever has it in reach, so there was no walking the rest of the way: it is had a step or two
+            // inside the reach.
+            expect(flatDistance(positionOf(agent), lay)).toBeGreaterThan(DOLLAR_BILL_REACH - 2);
             expect(flatDistance(positionOf(agent), lay)).toBeLessThan(DOLLAR_BILL_REACH + 1);
         });
 
@@ -1126,7 +1153,7 @@ describe("AI agents", () => {
 
             const answer = await AgentInventoryUtil.collectBill(agent) as any;
 
-            expect(walk).toHaveBeenCalledTimes(3);
+            expect(walk).toHaveBeenCalledTimes(MAX_BILL_TRIES);
             expect(answer).toMatchObject({collected: false, dollars: 0});
             expect(answer.note).toMatch(/out of reach/);
             walk.mockRestore();
@@ -1435,10 +1462,12 @@ describe("AI agents", () => {
         it("keeps a few clean keywords as an agent's interests", async () => {
             const agent = await arriveAgent("Bot-1");
 
+            // More than an agent may keep, after a duplicate.
+            const more = Array.from({length: AGENT_MAX_INTERESTS}, (_, i) => `k${i}`);
             const result = await AgentToolUtil.setInterests(agent,
-                "Voxel  Art, MUSIC!!, music, cats & dogs, a, b, c, d, e, f, g") as any;
+                ["Voxel  Art", "MUSIC!!", "music", "cats & dogs", ...more].join(", ")) as any;
 
-            expect(result.interests).toEqual(["voxel art", "music", "cats dogs", "a", "b", "c", "d", "e"]);
+            expect(result.interests).toEqual(["voxel art", "music", "cats dogs", ...more].slice(0, AGENT_MAX_INTERESTS));
             expect(result.note).toMatch(/travel home/);
         });
 
@@ -1603,7 +1632,7 @@ describe("AI agents", () => {
 
             expect(result.outcome).toBe("arrived");
             const [a, b] = [positionOf(agent), positionOf(human)];
-            expect(Math.hypot(a.x - b.x, a.z - b.z)).toBeLessThanOrEqual(1.6);
+            expect(Math.hypot(a.x - b.x, a.z - b.z)).toBeLessThanOrEqual(MEETING_DISTANCE + 0.4);
             expect("error" in (await AgentToolUtil.walkTo(agent, {person: "Nobody"}) as any)).toBe(true);
         });
 
@@ -1724,11 +1753,11 @@ describe("AI agents", () => {
             const other = await arriveAgent("Other-1");
             const link = cameraLinkOf(agent);
 
-            expect(link).toMatch(/^http:\/\/localhost:3000\/camera\/[A-Za-z0-9_-]{32}$/);
+            expect(link).toMatch(new RegExp(`^http://localhost:3000/camera/[A-Za-z0-9_-]{${CAMERA_TOKEN_LENGTH}}$`));
             expect(cameraLinkOf(agent)).toBe(link);
             expect(AgentCameraUtil.findByToken(tokenOf(link)) === agent).toBe(true);
             expect(AgentCameraUtil.findByToken(tokenOf(cameraLinkOf(other))) === other).toBe(true);
-            expect(AgentCameraUtil.findByToken("A".repeat(32))).toBeUndefined();
+            expect(AgentCameraUtil.findByToken("A".repeat(CAMERA_TOKEN_LENGTH))).toBeUndefined();
             expect(AgentCameraUtil.findByToken(`${tokenOf(link)}x`)).toBeUndefined();
             expect(AgentCameraUtil.findByToken(undefined)).toBeUndefined();
         });
@@ -1833,9 +1862,9 @@ describe("AI agents", () => {
             const agent = await arriveAgent("Snapper");
             const link = cameraLinkOf(agent);
 
-            const pages = [openCamera(agent), openCamera(agent), openCamera(agent)];
+            const pages = Array.from({length: AGENT_CAMERA_MAX_PAGES + 1}, () => openCamera(agent));
 
-            expect(pages.map(page => page.connected)).toEqual([false, true, true]);
+            expect(pages.map(page => page.connected)).toEqual([false, ...pages.slice(1).map(() => true)]);
             expect(pages[0].getEmitted("forceRedirect")).toEqual([`${link}?elsewhere`]);
             expect(agent.cameras.length).toBe(AGENT_CAMERA_MAX_PAGES);
         });
@@ -2071,7 +2100,10 @@ describe("AI agents", () => {
             const result = await AgentObjectUtil.addObject(agent, {type: "canvas",
                 on: {row: 1, column: 20, layer: 2, side: "south"}, picture}) as any;
 
-            expect(result.added).toEqual(expect.objectContaining({type: "canvas", picture, look: 0, size: [2, 2],
+            // The first size a new canvas tries, in blocks.
+            const size = ObjectScaleUtil.getObjectSize(ObjectTypeConfigMap.getIndexByType("Canvas"), CANVAS_START_SCALES[0]);
+            expect(result.added).toEqual(expect.objectContaining({type: "canvas", picture, look: 0,
+                size: [size.x / VOXEL_CELL_SIZE, size.y / VOXEL_CELL_SIZE],
                 on: {row: 1, column: 20, layer: 2, side: "south"}, by: "Hanger"}));
             expect(receivedSignals(human).filter(({signalType}) => signalType == "addObjectSignal")
                 .map(({signal}) => signal.objectId)).toEqual([result.added.id]);
@@ -2221,7 +2253,10 @@ describe("AI agents", () => {
                 return (AgentToolUtil.look(agent) as any).objects.find((obj: any) => obj.id == "a-mirror").note;
             };
             expect(seen.note).not.toMatch(/tint/);
-            expect(noteWith(7)).toMatch(/^A mirror tinted #000000, 35% opaque: it shows the room in front of it reflected/);
+            const tintStep = 7;
+            const tintPercent = Math.round(100 * tintStep / (NUM_MIRROR_OPACITY_STEPS - 1));
+            expect(noteWith(tintStep)).toMatch(new RegExp(
+                `^A mirror tinted #000000, ${tintPercent}% opaque: it shows the room in front of it reflected`));
             expect(noteWith(NUM_MIRROR_OPACITY_STEPS - 1))
                 .toMatch(/^A mirror covered over in #000000: it shows no reflection/);
 
@@ -2360,16 +2395,16 @@ describe("AI agents", () => {
 
             const seen = AgentAppearanceUtil.look(agent) as any;
             expect(Object.keys(seen.appearance)).toEqual(["head", "eyes", "ears", "hat", "torso", "arms", "bottom"]);
-            // Every shape has words of its own, in the order they are numbered from 1, and all but the first three are locked.
+            // Every shape has words of its own, in the order they are numbered from 1; those past the free ones are locked.
             for (const [part, numShapes] of Object.entries(AgentAppearanceUtil.getShapeCounts()))
             {
                 expect(seen.shapes[part], part).toHaveLength(numShapes);
                 expect(new Set(seen.shapes[part]).size, part).toBe(numShapes);
                 expect(seen.appearance[part].shape_name).toBe(seen.shapes[part][seen.appearance[part].shape - 1]);
-                expect(seen.locked_shapes[part], part).toEqual([4, 5, 6]);
-                expect(seen.appearance[part].shape, part).toBeLessThanOrEqual(3);
+                expect(seen.locked_shapes[part], part).toEqual(lockedShapesOf(numShapes));
+                expect(seen.appearance[part].shape, part).toBeLessThanOrEqual(NUM_FREE_PLAYER_PART_TYPES);
             }
-            expect(seen.shape_price_dollars).toBe(10);
+            expect(seen.shape_price_dollars).toBe(PLAYER_SHAPE_PRICE_DOLLARS);
             expect(seen.dollars).toBe(0);
             expect(seen.part_colors).toHaveLength(ColorUtil.getPaletteSize("Player"));
             expect(seen.eye_colors[0]).toBe("#189618");
@@ -2390,12 +2425,12 @@ describe("AI agents", () => {
             const edits = UserBudgetUtil.getLevel(agent.user.id, "edit");
 
             const changed = await AgentAppearanceUtil.change(agent, {head: {shape: 2, color: "#1020f0"},
-                eyes: {color: "#ff00ff"}, bottom: {shape: 3}}) as any;
+                eyes: {color: "#ff00ff"}, bottom: {shape: NUM_FREE_PLAYER_PART_TYPES}}) as any;
 
             // A color comes back as the nearest its palette holds.
             expect(changed.appearance.head).toEqual({shape: 2, shape_name: "drum, its round face forward", color: "#0905ff"});
             expect(changed.appearance.eyes).toEqual({color: "#c83cc8"});
-            expect(changed.appearance.bottom.shape).toBe(3);
+            expect(changed.appearance.bottom.shape).toBe(NUM_FREE_PLAYER_PART_TYPES);
             expect(UserBudgetUtil.getLevel(agent.user.id, "edit")).toBeLessThan(edits);
 
             // The people there are sent it as a browser's change, and draw it.
@@ -2441,32 +2476,38 @@ describe("AI agents", () => {
 
         it("won't put on a locked shape, says what will, and spends nothing", async () => {
             const agent = await arriveAgent("Window-Shopper");
-            await giveDollars(agent, 50);
+            const plenty = 5 * PLAYER_SHAPE_PRICE_DOLLARS;
+            await giveDollars(agent, plenty);
             const before = (AgentAppearanceUtil.look(agent) as any).appearance;
 
-            const refused = await AgentAppearanceUtil.change(agent, {head: {shape: 4, color: "#ffffff"}}) as any;
+            const refused = await AgentAppearanceUtil.change(agent,
+                {head: {shape: FIRST_LOCKED_SHAPE, color: "#ffffff"}}) as any;
 
-            expect(refused.error).toMatch(/head shape 4 is locked: unlock_shape buys it for \$10/);
+            expect(refused.error).toContain(`head shape ${FIRST_LOCKED_SHAPE} is locked: unlock_shape buys it for `
+                + `$${PLAYER_SHAPE_PRICE_DOLLARS}`);
             expect((AgentAppearanceUtil.look(agent) as any).appearance).toEqual(before);
-            expect(agent.inventory[InventoryItemTypeEnumMap.Dollar]).toBe(50);
+            expect(agent.inventory[InventoryItemTypeEnumMap.Dollar]).toBe(plenty);
         });
 
         it("buys a locked shape and puts it on, as a click in the panel does, for the people there to see", async () => {
             const agent = await arriveAgent("Shopper");
             const human = await joinHuman("Onlooker", currentRoomID(agent));
-            await giveDollars(agent, 12);
+            const left = 2;
+            await giveDollars(agent, PLAYER_SHAPE_PRICE_DOLLARS + left);
             receivedSignals(human);
+            const counts = AgentAppearanceUtil.getShapeCounts();
+            const shape = middleLockedShape(counts.head);
 
-            const unlocked = await AgentAppearanceUtil.unlock(agent, "head", 5) as any;
+            const unlocked = await AgentAppearanceUtil.unlock(agent, "head", shape) as any;
 
-            expect(unlocked.appearance.head.shape).toBe(5);
-            expect(unlocked.appearance.head.shape_name).toBe("box banded around the middle");
-            expect(agent.inventory[InventoryItemTypeEnumMap.Dollar]).toBe(2);
-            expect(drawnLook(AgentRoomUtil.getMyPlayer(agent)!).types.head).toBe(4);
             const seen = AgentAppearanceUtil.look(agent) as any;
-            expect(seen.locked_shapes.head).toEqual([4, 6]);
-            expect(seen.locked_shapes.hat).toEqual([4, 5, 6]);
-            expect(seen.dollars).toBe(2);
+            expect(unlocked.appearance.head.shape).toBe(shape);
+            expect(unlocked.appearance.head.shape_name).toBe(seen.shapes.head[shape - 1]);
+            expect(agent.inventory[InventoryItemTypeEnumMap.Dollar]).toBe(left);
+            expect(drawnLook(AgentRoomUtil.getMyPlayer(agent)!).types.head).toBe(shape - 1);
+            expect(seen.locked_shapes.head).toEqual(lockedShapesOf(counts.head).filter(other => other != shape));
+            expect(seen.locked_shapes.hat).toEqual(lockedShapesOf(counts.hat));
+            expect(seen.dollars).toBe(left);
             expect(receivedSignals(human).filter(({signalType, signal}) => signalType == "setObjectMetadataSignal"
                 && signal.metadataKey == ObjectMetadataKeyEnumMap.InstancedMeshComposition)).toHaveLength(1);
 
@@ -2476,15 +2517,19 @@ describe("AI agents", () => {
 
         it("takes off what it bought and puts it on again for nothing", async () => {
             const agent = await arriveAgent("Keeper");
-            await giveDollars(agent, 10);
-            await AgentAppearanceUtil.unlock(agent, "torso", 6);
+            await giveDollars(agent, PLAYER_SHAPE_PRICE_DOLLARS);
+            // The last shape of the part, which is for sale.
+            const bought = AgentAppearanceUtil.getShapeCounts().torso;
+            await AgentAppearanceUtil.unlock(agent, "torso", bought);
 
             expect(((await AgentAppearanceUtil.change(agent, {torso: {shape: 1}})) as any).appearance.torso.shape).toBe(1);
-            expect(((await AgentAppearanceUtil.change(agent, {torso: {shape: 6}})) as any).appearance.torso.shape).toBe(6);
+            expect(((await AgentAppearanceUtil.change(agent, {torso: {shape: bought}})) as any).appearance.torso.shape)
+                .toBe(bought);
             expect(agent.inventory[InventoryItemTypeEnumMap.Dollar]).toBe(0);
 
             await AgentAppearanceUtil.change(agent, {torso: {shape: 1}});
-            expect(((await AgentAppearanceUtil.unlock(agent, "torso", 6)) as any).appearance.torso.shape).toBe(6);
+            expect(((await AgentAppearanceUtil.unlock(agent, "torso", bought)) as any).appearance.torso.shape)
+                .toBe(bought);
             expect(agent.inventory[InventoryItemTypeEnumMap.Dollar]).toBe(0);
         });
 
@@ -2495,44 +2540,54 @@ describe("AI agents", () => {
 
         it("says what is wrong with what it can't buy, spending nothing", async () => {
             const agent = await arriveAgent("Short");
-            await giveDollars(agent, 9);
+            const dollars = PLAYER_SHAPE_PRICE_DOLLARS - 1;
+            await giveDollars(agent, dollars);
+            const numHatShapes = AgentAppearanceUtil.getShapeCounts().hat;
 
-            expect((await AgentAppearanceUtil.unlock(agent, "hat", 4) as any).error).toMatch(/costs \$10, and you have \$9/);
-            expect((await AgentAppearanceUtil.unlock(agent, "tail", 4) as any).error).toMatch(/no part "tail"/);
+            expect((await AgentAppearanceUtil.unlock(agent, "hat", FIRST_LOCKED_SHAPE) as any).error)
+                .toContain(`costs $${PLAYER_SHAPE_PRICE_DOLLARS}, and you have $${dollars}`);
+            expect((await AgentAppearanceUtil.unlock(agent, "tail", FIRST_LOCKED_SHAPE) as any).error)
+                .toMatch(/no part "tail"/);
             expect((await AgentAppearanceUtil.unlock(agent, "eyes", 1) as any).error).toMatch(/no part "eyes"/);
-            expect((await AgentAppearanceUtil.unlock(agent, "hat", 7) as any).error).toMatch(/from 1 to 6/);
-            expect(agent.inventory[InventoryItemTypeEnumMap.Dollar]).toBe(9);
+            expect((await AgentAppearanceUtil.unlock(agent, "hat", numHatShapes + 1) as any).error)
+                .toContain(`from 1 to ${numHatShapes}`);
+            expect(agent.inventory[InventoryItemTypeEnumMap.Dollar]).toBe(dollars);
         });
 
         it("says when the row won't have it, spending nothing", async () => {
             const agent = await arriveAgent("Unlucky");
-            await giveDollars(agent, 10);
+            await giveDollars(agent, PLAYER_SHAPE_PRICE_DOLLARS);
             vi.mocked(DBInventoryUtil.buyItem).mockResolvedValueOnce("refused");
 
-            expect((await AgentAppearanceUtil.unlock(agent, "hat", 4) as any).error).toMatch(/no dollars were spent/);
-            expect(agent.inventory[InventoryItemTypeEnumMap.Dollar]).toBe(10);
+            expect((await AgentAppearanceUtil.unlock(agent, "hat", FIRST_LOCKED_SHAPE) as any).error)
+                .toMatch(/no dollars were spent/);
+            expect(agent.inventory[InventoryItemTypeEnumMap.Dollar]).toBe(PLAYER_SHAPE_PRICE_DOLLARS);
         });
 
         it("tells all it holds, and everything still for sale, by the numbers appearance gives", async () => {
             const agent = await arriveAgent("Accountant");
 
+            const shapeNames = (AgentAppearanceUtil.look(agent) as any).shapes;
             const empty = AgentInventoryUtil.describe(agent) as any;
             expect(empty.dollars).toBe(0);
             expect(empty.shapes_held).toEqual([]);
-            expect(empty.shapes_for_sale).toHaveLength(18);
-            expect(empty.shapes_for_sale[0]).toEqual({part: "head", shape: 4, shape_name: "rolling pin, round on top"});
-            expect(empty.shape_price_dollars).toBe(10);
+            expect(empty.shapes_for_sale).toHaveLength(numShapesForSale());
+            expect(empty.shapes_for_sale[0]).toEqual({part: "head", shape: FIRST_LOCKED_SHAPE,
+                shape_name: shapeNames.head[FIRST_LOCKED_SHAPE - 1]});
+            expect(empty.shape_price_dollars).toBe(PLAYER_SHAPE_PRICE_DOLLARS);
             expect(new Set(empty.shapes_for_sale.map(({part}: any) => part)))
                 .toEqual(new Set(Object.keys(AgentAppearanceUtil.getShapeCounts())));
 
-            await giveDollars(agent, 13);
-            await AgentAppearanceUtil.unlock(agent, "hat", 5);
+            const left = 3;
+            await giveDollars(agent, PLAYER_SHAPE_PRICE_DOLLARS + left);
+            const bought = {part: "hat", shape: FIRST_LOCKED_SHAPE, shape_name: shapeNames.hat[FIRST_LOCKED_SHAPE - 1]};
+            await AgentAppearanceUtil.unlock(agent, bought.part, bought.shape);
 
             const after = AgentInventoryUtil.describe(agent) as any;
-            expect(after.dollars).toBe(3);
-            expect(after.shapes_held).toEqual([{part: "hat", shape: 5, shape_name: "crown"}]);
-            expect(after.shapes_for_sale).toHaveLength(17);
-            expect(after.shapes_for_sale).not.toContainEqual({part: "hat", shape: 5, shape_name: "crown"});
+            expect(after.dollars).toBe(left);
+            expect(after.shapes_held).toEqual([bought]);
+            expect(after.shapes_for_sale).toHaveLength(numShapesForSale() - 1);
+            expect(after.shapes_for_sale).not.toContainEqual(bought);
         });
 
         it("tells how someone in the room looks, by name, but nothing of a ghost", async () => {
@@ -2565,7 +2620,9 @@ describe("AI agents", () => {
                 expect((await AgentToolUtil.say(agent, `line ${i}`) as any).saying).toBe(`line ${i}`);
 
             const refused = await AgentToolUtil.say(agent, "one too many") as any;
-            expect(refused.error).toMatch(new RegExp(`try again in about ${1 / USER_BUDGETS.speech.refillPerSecond} seconds`));
+            // Until the budget holds one more line, in whole seconds.
+            const wait = Math.max(1, Math.ceil(1 / USER_BUDGETS.speech.refillPerSecond));
+            expect(refused.error).toContain(`try again in about ${(wait == 1) ? "a second" : `${wait} seconds`}.`);
             expect(playerMetadataOf(agent.user.id)[ObjectMetadataKeyEnumMap.SentMessage])
                 .toBe(`line ${USER_BUDGETS.speech.capacity - 1}`);
         });
@@ -2770,6 +2827,19 @@ describe("AI agents", () => {
                 // What they are told of dollars reaches every tool that gains, spends or counts them.
                 for (const tool of ["collect_bill", "unlock_shape", "inventory", "change_appearance"])
                     expect(client.getInstructions()!.split("Dollars are what you hold")[1], tool).toContain(tool);
+                // The numbers the manual leaves to them, from the constants themselves.
+                const instructions = client.getInstructions()!.replace(/\s+/g, " ");
+                for (const number of [`leaves after ${AGENT_PRESENCE_IDLE_TIMEOUT_MS / MINUTE_IN_MS} minutes without one`,
+                    `goes after ${GUEST_MAX_AGE_BY_TIER_PHASE[0] / HOUR_IN_MS} hours without a visit`,
+                    `come within about ${Math.floor(DOLLAR_BILL_REACH / VOXEL_CELL_SIZE)} cells of one`,
+                    `facing it to within ${Math.round(REACH_ANGLE * 180 / Math.PI)} degrees`,
+                    `gives you $${LOGIN_REWARD_DOLLARS} once a day`,
+                    `once ${LOGIN_REWARD_INTERVAL_MS / HOUR_IN_MS} hours have passed`,
+                    `The first ${NUM_FREE_PLAYER_PART_TYPES} of each part are free`,
+                    `unlock_shape spends $${PLAYER_SHAPE_PRICE_DOLLARS} on any other`,
+                    `hears you within ${HEARING_DISTANCE / VOXEL_CELL_SIZE} cells on its own floor`,
+                    `Requests: ${AGENT_REQUESTS_PER_MINUTE} a minute from one address`])
+                    expect(instructions).toContain(number);
                 // Connector directories refuse servers that send the model to outside instructions or have it ask
                 // its user for visits, so the manual is offered to whoever runs the agent, as information.
                 expect(client.getInstructions()).toMatch(/The manual, for whoever runs you:/);
@@ -2917,18 +2987,23 @@ describe("AI agents", () => {
             const agent = await connect(key);
             try
             {
-                const everything = {head: {shape: 3, color: "#ffffff"}, eyes: {color: "#2896d2"},
-                    ears: {shape: 3, color: "#ff9e00"}, hat: {shape: 2, color: "#dec900"}, torso: {shape: 3, color: "#0905ff"},
-                    arms: {shape: 2, color: "#979797"}, bottom: {shape: 2, color: "#2a2a2a"}};
+                const lastFree = NUM_FREE_PLAYER_PART_TYPES;
+                const everything = {head: {shape: lastFree, color: "#ffffff"}, eyes: {color: "#2896d2"},
+                    ears: {shape: lastFree, color: "#ff9e00"}, hat: {shape: 2, color: "#dec900"},
+                    torso: {shape: lastFree, color: "#0905ff"}, arms: {shape: 2, color: "#979797"},
+                    bottom: {shape: 2, color: "#2a2a2a"}};
                 const changed = read(await agent.callTool({name: "change_appearance", arguments: everything}));
                 expect(changed.appearance.hat).toEqual({shape: 2, shape_name: "brimmed hat", color: "#dec900"});
                 expect(changed.appearance.eyes).toEqual({color: "#2896d2"});
                 expect(read(await agent.callTool({name: "appearance", arguments: {}})).appearance)
                     .toEqual(changed.appearance);
 
-                const refused = await agent.callTool({name: "change_appearance", arguments: {hat: {shape: 7}}}) as any;
+                const numHatShapes = AgentAppearanceUtil.getShapeCounts().hat;
+                const refused = await agent.callTool({name: "change_appearance",
+                    arguments: {hat: {shape: numHatShapes + 1}}}) as any;
                 expect(refused.isError).toBe(true);
-                const locked = await agent.callTool({name: "change_appearance", arguments: {hat: {shape: 5}}}) as any;
+                const locked = await agent.callTool({name: "change_appearance",
+                    arguments: {hat: {shape: middleLockedShape(numHatShapes)}}}) as any;
                 expect(locked.isError).toBe(true);
                 expect(locked.content[0].text).toMatch(/unlock_shape/);
             }
@@ -2943,17 +3018,20 @@ describe("AI agents", () => {
             const agent = await connect(key);
             try
             {
-                const broke = await agent.callTool({name: "unlock_shape", arguments: {part: "hat", shape: 5}}) as any;
+                const numHatShapes = AgentAppearanceUtil.getShapeCounts().hat;
+                const shape = middleLockedShape(numHatShapes);
+                const broke = await agent.callTool({name: "unlock_shape", arguments: {part: "hat", shape}}) as any;
                 expect(broke.isError).toBe(true);
-                expect(broke.content[0].text).toMatch(/costs \$10, and you have \$0/);
+                expect(broke.content[0].text).toContain(`costs $${PLAYER_SHAPE_PRICE_DOLLARS}, and you have $0`);
 
                 const context = ServerUserManager.getSocketUserContext(dbUser.id!)!;
-                context.inventory[InventoryItemTypeEnumMap.Dollar] = 10;
+                context.inventory[InventoryItemTypeEnumMap.Dollar] = PLAYER_SHAPE_PRICE_DOLLARS;
                 (await DBUserUtil.findUserById(dbUser.id!))!.inventory = {...context.inventory};
 
-                const unlocked = read(await agent.callTool({name: "unlock_shape", arguments: {part: "hat", shape: 5}}));
-                expect(unlocked.appearance.hat.shape_name).toBe("crown");
-                expect(read(await agent.callTool({name: "appearance", arguments: {}})).locked_shapes.hat).toEqual([4, 6]);
+                const unlocked = read(await agent.callTool({name: "unlock_shape", arguments: {part: "hat", shape}}));
+                const seen = read(await agent.callTool({name: "appearance", arguments: {}}));
+                expect(unlocked.appearance.hat.shape_name).toBe(seen.shapes.hat[shape - 1]);
+                expect(seen.locked_shapes.hat).toEqual(lockedShapesOf(numHatShapes).filter(other => other != shape));
 
                 const noSuchPart = await agent.callTool({name: "unlock_shape", arguments: {part: "eyes", shape: 1}}) as any;
                 expect(noSuchPart.isError).toBe(true);
@@ -2970,8 +3048,9 @@ describe("AI agents", () => {
             try
             {
                 const held = read(await agent.callTool({name: "inventory", arguments: {}}));
-                expect(held).toMatchObject({dollars: 0, shapes_held: [], shape_price_dollars: 10});
-                expect(held.shapes_for_sale).toHaveLength(18);
+                expect(held).toMatchObject({dollars: 0, shapes_held: [],
+                    shape_price_dollars: PLAYER_SHAPE_PRICE_DOLLARS});
+                expect(held.shapes_for_sale).toHaveLength(numShapesForSale());
 
                 // Looking at what it holds is paid for as looking is.
                 const actions = UserBudgetUtil.getLevel(dbUser.id!, "agentActions");
@@ -2992,22 +3071,24 @@ describe("AI agents", () => {
             }
         });
 
-        it("keeps what the manual says of dollars true, tool by tool and number by number", () => {
+        it("keeps what the manual says of dollars true, tool by tool", () => {
             const manual = fs.readFileSync(path.resolve(__dirname, "../../../public/skill.md"), "utf8");
             const dollars = manual.split("## 5. Dollars")[1].split("## 6. Manners")[0];
             for (const tool of ["inventory", "look", "whats_new", "collect_bill", "walk_to", "face", "appearance",
                 "unlock_shape", "change_appearance"])
                 expect(dollars, tool).toContain(`\`${tool}\``);
-            expect(dollars).toContain(`arriving gives you $${LOGIN_REWARD_DOLLARS} once a day, ${LOGIN_REWARD_INTERVAL_MS / HOUR_IN_MS} hours or more`);
-            expect(dollars).toContain(`spends $${PLAYER_SHAPE_PRICE_DOLLARS} on it`);
-            expect(DOLLAR_BILL_REACH / VOXEL_CELL_SIZE).toBe(8);
-            expect(dollars).toContain("about eight cells away");
-            expect(NUM_FREE_PLAYER_PART_TYPES).toBe(3);
-            expect(dollars).toContain("six shapes, the first three free");
-            for (const numShapes of Object.values(AgentAppearanceUtil.getShapeCounts()))
-                expect(numShapes).toBe(6);
             expect(manual).toContain("(see step 8)");
             expect(manual).toContain("## 8. Coming back");
+        });
+
+        // It is published apart from the server, so a number in it would stay behind when its constant changed.
+        it("gives no number the game could change, and sends agents to the server's instructions for them", () => {
+            const manual = fs.readFileSync(path.resolve(__dirname, "../../../public/skill.md"), "utf8")
+                .replace(/\s+/g, " ");
+
+            expect(manual).not.toMatch(GAME_NUMBER);
+            expect(manual).toContain("The server's instructions, which your client receives when it connects, and the "
+                + "tools' own descriptions explain the world and every tool, with the numbers this manual leaves out");
         });
 
         it("keeps the manual's ClawHub copy in step with it, but for the license ClawHub requires", () => {
@@ -3029,13 +3110,6 @@ describe("AI agents", () => {
 
             expect(version).toBeDefined();
             expect(manual).toContain(`\nVersion ${version}, `);
-        });
-
-        it("tells agents how near a guide must be to hear them, as near as guides hear", () => {
-            const manual = fs.readFileSync(path.resolve(__dirname, "../../../public/skill.md"), "utf8");
-
-            expect(manual.replace(/\s+/g, " "))
-                .toContain(`A guide hears you within ${HEARING_DISTANCE / VOXEL_CELL_SIZE} cells on its own floor`);
         });
 
         it("answers the calls the agents' manual shows curl making, as it says it does", async () => {

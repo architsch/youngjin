@@ -3,11 +3,11 @@ import AtmospherePaletteVersionMigration from "../../math/versionMigration/atmos
 
 // Where the prefs string holds the colors the legacy "Fog" palette painted (the fog, the sky) and the legacy "Scenery"
 // one painted (the clouds, the ground's low and its peaks); see RoomPrefsUtil.
-const FOG_COLOR_CHAR_INDEX = 3;
-const SKY_COLOR_CHAR_INDEX = 23;
-const CLOUD_COLOR_CHAR_INDEX = 7;
-const GROUND_COLOR_CHAR_INDEX = 12;
-const GROUND_PEAK_COLOR_CHAR_INDEX = 13;
+export const FOG_COLOR_CHAR_INDEX = 3;
+export const SKY_COLOR_CHAR_INDEX = 23;
+export const CLOUD_COLOR_CHAR_INDEX = 7;
+export const GROUND_COLOR_CHAR_INDEX = 12;
+export const GROUND_PEAK_COLOR_CHAR_INDEX = 13;
 
 // Converts a room's settings, which carry no version of their own, for the stored formats that date them (see
 // DBRoomVersionMigration, RoomFileVersionMigration).

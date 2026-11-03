@@ -276,7 +276,7 @@ describe("object transform ranges and migration", () => {
             "between": [legacyFont(false, 72), {autoSize: false, fontSize: 80}],
             "largest": [legacyFont(true, 248), {autoSize: true, fontSize: 256}],
             "flags-only": [legacyFont(false, 16).substring(0, 1), {autoSize: false, fontSize: 64}],
-            "unset": [undefined, {autoSize: true, fontSize: 64}],
+            "unset": [undefined, LabelTextUtil.getFont(label("unset", undefined))],
         };
 
         const blob = buildRoomBlob(encodeCurrentVoxelGrid(),

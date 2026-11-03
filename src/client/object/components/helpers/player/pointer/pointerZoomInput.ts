@@ -1,7 +1,7 @@
 import NumUtil from "../../../../../../shared/math/util/numUtil";
 
 // How much of the view one wheel notch adds or takes away.
-const viewScalePerWheelNotch = 1.15;
+export const viewScalePerWheelNotch = 1.15;
 
 // Wheel pixels per notch. Trackpads send small continuous deltas (and pinch as ctrl+wheel), which the
 // continuous reading handles.

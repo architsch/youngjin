@@ -66,8 +66,10 @@ import * as THREE from "three";
 import App from "../../../src/client/app";
 import GraphicsManager from "../../../src/client/graphics/graphicsManager";
 import GameObject from "../../../src/client/object/types/gameObject/gameObject";
-import PlayerCamera from "../../../src/client/object/components/helpers/player/playerCamera";
-import FirstPersonCameraPose from "../../../src/client/object/components/helpers/player/firstPersonCameraPose";
+import PlayerCamera, { trailRate as CAMERA_TRAIL_RATE }
+    from "../../../src/client/object/components/helpers/player/playerCamera";
+import FirstPersonCameraPose, { easingRate as CAMERA_EASING_RATE, freeFallClearance as FREE_FALL_CLEARANCE,
+    lookMaxSpeed as LOOK_MAX_SPEED } from "../../../src/client/object/components/helpers/player/firstPersonCameraPose";
 import PlayerPointerInput from "../../../src/client/object/components/helpers/player/playerPointerInput";
 import PlayerController from "../../../src/client/object/components/playerController";
 import VoxelGameObject from "../../../src/client/object/types/gameObject/voxelGameObject";
@@ -118,6 +120,9 @@ const ROOM_ID = "game-mode-room";
 const NO_IMPOSED_DISPLACEMENT = {x: 0, y: 0, z: 0};
 // Nor by any force of the room's (see Rigidbody.isUnderForce).
 const NO_FORCE = false;
+
+// How long a spring or an easing of a rate, per second, takes to have all but run out: sixteen times its time constant.
+const settlingTimeAt = (ratePerSecond: number): number => 16 / ratePerSecond;
 
 // The boundary wall on the room's north side: the innermost of its rows of voxels, and the plane their inner
 // faces lie in, looking toward +z.
@@ -299,11 +304,12 @@ describe("a click in play mode", () => {
 
     // Walking speeds, per second, either side of lookMaxSpeed (see FirstPersonCameraPose): one a look lasts
     // through, and one that ends it.
-    const SLOW_WALK = 1;
-    const BRISK_WALK = 5;
+    const SLOW_WALK = 0.25 * LOOK_MAX_SPEED;
+    const BRISK_WALK = 1.25 * LOOK_MAX_SPEED;
 
-    // Lifted this far off the floor, the user falls, with the storey above still well overhead.
-    const FALL_HEIGHT = 0.8;
+    // Lifted this far off the floor, past where a fall begins, the user falls, with the storey above still well
+    // overhead.
+    const FALL_HEIGHT = (4 / 3) * FREE_FALL_CLEARANCE;
 
     let player: THREE.Object3D;
     let playerObject: GameObject;
@@ -311,10 +317,10 @@ describe("a click in play mode", () => {
     let playerCamera: PlayerCamera;
 
     /** One frame, long enough for the camera to ease all the way to its pose, with a click's hit if given. */
-    function frame(clickedPoint?: THREE.Vector3): void
+    function frame(clickedPoint?: THREE.Vector3, seconds: number = 1): void
     {
         pointerInput.clickedPoint = clickedPoint;
-        playerCamera.update(1, playerObject, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
+        playerCamera.update(seconds, playerObject, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
     }
 
     /** How far up the view a point shows, in NDC: 0 is the middle. */
@@ -432,9 +438,8 @@ describe("a click in play mode", () => {
         player.position.z += push.z;
         pointerInput.clickedPoint = undefined;
         playerCamera.update(SHORT_FRAME, playerObject, push, NO_FORCE);
-        frame();
+        frame(undefined, settlingTimeAt(CAMERA_TRAIL_RATE));
 
-        // Still trailing the push by a hair (see PlayerCamera).
         expect(screenYOf(FLOOR_POINT)).toBeCloseTo(0, 4);
     });
 
@@ -570,7 +575,7 @@ describe("a click in play mode", () => {
 
         // The force over: how far the camera turns in each frame on, until it has long since caught up.
         const turns: number[] = [];
-        for (let frames = 0; frames < 120; ++frames)
+        for (let frames = Math.round(settlingTimeAt(CAMERA_EASING_RATE) / FRAME); frames > 0; --frames)
         {
             const before = camera.quaternion.clone();
             playerCamera.update(FRAME, playerObject, NO_IMPOSED_DISPLACEMENT, NO_FORCE);
@@ -592,8 +597,8 @@ describe("the eye camera trailing a move the user didn't steer", () => {
     const FALL_SPEED = GRAVITY_SPEED;
     const THROW_SPEED = 5 * GRAVITY_SPEED;
 
-    // About as far behind as a fall leaves the camera.
-    const FALL_TRAIL = 1;
+    // About as far behind as a fall leaves the camera: twice its speed over the spring's stiffness.
+    const FALL_TRAIL = 2 * FALL_SPEED / CAMERA_TRAIL_RATE;
 
     let player: THREE.Object3D;
     let playerObject: GameObject;
@@ -656,7 +661,7 @@ describe("the eye camera trailing a move the user didn't steer", () => {
     it("goes along with a wind's throw and to a stop after it with no jump in its pace, even when the throw stops dead", () => {
         const camera = GraphicsManager.getCamera();
         const along: number[] = [];
-        for (const [speed, seconds] of [[THROW_SPEED, 0.5], [0, 1]])
+        for (const [speed, seconds] of [[THROW_SPEED, 0.5], [0, settlingTimeAt(CAMERA_TRAIL_RATE)]])
         {
             for (let frames = Math.round(seconds / FRAME); frames > 0; frames--)
             {

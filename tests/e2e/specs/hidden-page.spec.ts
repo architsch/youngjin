@@ -5,9 +5,10 @@ import { Page } from "@playwright/test";
 import { test, expect } from "../fixtures/auth.fixture";
 import { TIMEOUTS } from "../helpers/constants";
 import { isSocketConnected, waitForRoomLoaded } from "../helpers/game";
+import { SOCKET_RECONNECTION_DELAY_MAX_MS } from "../../../src/client/system/clientConstants";
 
-// Longer than Socket.IO's first retry after a drop takes to come (see SocketsClient.init).
-const RETRY_WAIT_MS = 5000;
+// As long as Socket.IO ever waits to retry after a drop, so that a retry would have come by then.
+const RETRY_WAIT_MS = SOCKET_RECONNECTION_DELAY_MAX_MS;
 
 function emulateHiddenPage(startHidden: boolean): void
 {

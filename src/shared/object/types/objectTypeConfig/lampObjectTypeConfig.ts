@@ -33,7 +33,7 @@ const SIZES: Vec3[] = [
 ];
 
 // The sizes a new lamp tries, in order (see scaling).
-const START_SCALES: Vec3[] = [SIZES[1], SIZES[0]];
+export const START_SCALES: Vec3[] = [SIZES[1], SIZES[0]];
 
 // Character positions in the stored string; never reorder.
 const COLOR_CHAR_INDEX = 0;

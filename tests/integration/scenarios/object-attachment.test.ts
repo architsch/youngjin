@@ -14,13 +14,15 @@ import { EMPTY_HUB, userAtCenter } from "../helpers/scenarioPresets";
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 import ObjectUpdateUtil from "../../../src/shared/object/util/objectUpdateUtil";
-import ObjectAttachmentUtil from "../../../src/shared/object/util/objectAttachmentUtil";
+import ObjectAttachmentUtil, { GRID_STEP } from "../../../src/shared/object/util/objectAttachmentUtil";
 import ObjectScaleUtil from "../../../src/shared/object/util/objectScaleUtil";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import RemoveObjectSignal from "../../../src/shared/object/types/removeObjectSignal";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
-import CanvasObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
-import LampObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/lampObjectTypeConfig";
+import CanvasObjectTypeConfig, { START_SCALES as CANVAS_START_SCALES }
+    from "../../../src/shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
+import LampObjectTypeConfig, { START_SCALES as LAMP_START_SCALES }
+    from "../../../src/shared/object/types/objectTypeConfig/lampObjectTypeConfig";
 import SetObjectTransformSignal from "../../../src/shared/object/types/setObjectTransformSignal";
 import SetObjectMetadataSignal from "../../../src/shared/object/types/setObjectMetadataSignal";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
@@ -45,9 +47,6 @@ const propTypeIndex = ObjectTypeConfigMap.getIndexByType("Prop");
 const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
 const scaling = CanvasObjectTypeConfig.scaling;
-
-// The step of the grid an object is placed on across its face: half a block (see ObjectAttachmentUtil).
-const GRID_STEP = 0.5 * VOXEL_CELL_SIZE;
 
 // A wall facing -z (its face at z = WALL_Z), wide and tall enough for the largest canvas grown from any
 // corner of one hung in its middle. It is exactly that tall: the canvas can grow by the difference in size
@@ -579,7 +578,7 @@ describe("where a drag or a click puts an attached object", () => {
     it("adds a new lamp at a size the side of a lone block holds, where a larger one finds no room", async () => {
         await inTheRoom((user, room) => {
             const wide = ObjectScaleUtil.getDefaultScale(lampTypeIndex, () => true);
-            expect(wide).toEqual({x: 1, y: 0.5, z: 1});
+            expect(wide).toEqual(LAMP_START_SCALES[0]);
             expect(ObjectScaleUtil.sanitize(lampTypeIndex, wide)).toEqual(wide);
 
             const accepts = (tr: ObjectTransform) => ObjectAttachmentUtil.canPlaceObject(room, "lamp", lampTypeIndex, tr);
@@ -622,19 +621,20 @@ describe("where a drag or a click puts an attached object", () => {
 
             // The wall's lowest and highest layers: a unit square centred on either would run off the wall.
             const top = WALL_LAYERS * COLLISION_LAYER_HEIGHT;
+            const halfFirstHeight = 0.5 * ObjectScaleUtil.getObjectSize(canvasTypeIndex, CANVAS_START_SCALES[0]).y;
             const low = addedAt({x: MIDDLE.x, y: 0.5 * COLLISION_LAYER_HEIGHT, z: WALL_Z}, FACING);
-            expect(low.scale).toEqual(UNIT_VEC3);
-            expect(low.pos.y).toBeCloseTo(0.5, 6);
+            expect(low.scale).toEqual(CANVAS_START_SCALES[0]);
+            expect(low.pos.y).toBeCloseTo(halfFirstHeight, 6);
             const high = addedAt({x: MIDDLE.x, y: top - 0.5 * COLLISION_LAYER_HEIGHT, z: WALL_Z}, FACING);
-            expect(high.scale).toEqual(UNIT_VEC3);
-            expect(high.pos.y).toBeCloseTo(top - 0.5, 6);
+            expect(high.scale).toEqual(CANVAS_START_SCALES[0]);
+            expect(high.pos.y).toBeCloseTo(top - halfFirstHeight, 6);
 
             for (const dir of WALL_DIRECTIONS)
             {
                 const label = `facing ${JSON.stringify(dir)}`;
                 // The platform's side, a unit wide, holds one layer.
                 const onPlatform = addedAt(Vector3DUtil.add(PLATFORM_CENTRE, Vector3DUtil.scale(dir, 0.5)), dir);
-                expect(onPlatform.scale, label).toEqual({x: 1, y: 0.5, z: 1});
+                expect(onPlatform.scale, label).toEqual(CANVAS_START_SCALES[1]);
                 expect(onPlatform.pos.y, label).toBeCloseTo(PLATFORM_CENTRE.y, 6);
 
                 // The side of the lone block holds nothing larger than itself.
@@ -644,12 +644,13 @@ describe("where a drag or a click puts an attached object", () => {
                 expect(onBlock.pos, label).toEqual(blockSide);
             }
 
-            expect(addedAt({x: 3.5, y: 0, z: 3.5}, UP).scale).toEqual(UNIT_VEC3);
+            expect(addedAt({x: 3.5, y: 0, z: 3.5}, UP).scale).toEqual(CANVAS_START_SCALES[0]);
         });
     });
 
     it("adds every other type at unit scale unless it says otherwise", () => {
-        for (const objectTypeIndex of [canvasTypeIndex, propTypeIndex, doorTypeIndex])
+        expect(ObjectScaleUtil.getDefaultScale(canvasTypeIndex, () => true)).toEqual(CANVAS_START_SCALES[0]);
+        for (const objectTypeIndex of [propTypeIndex, doorTypeIndex])
             expect(ObjectScaleUtil.getDefaultScale(objectTypeIndex, () => true)).toEqual(UNIT_VEC3);
     });
 });
@@ -817,8 +818,8 @@ describe("resizing an attached object where it stands", () => {
 
     it("keeps its centre across a floor, and its bottom edge on a wall, so going back puts it back exactly", async () => {
         await inTheRoom((user, room) => {
-            const onFloor = new ObjectTransform({x: 3.5, y: 0, z: 3.5}, UP, {x: 1, y: 0.5, z: 1});
-            const onWall = new ObjectTransform({x: MIDDLE.x, y: 1.25, z: WALL_Z}, FACING, {x: 1, y: 0.5, z: 1});
+            const onFloor = new ObjectTransform({x: 3.5, y: 0, z: 3.5}, UP, {...LAMP_START_SCALES[0]});
+            const onWall = new ObjectTransform({x: MIDDLE.x, y: 1.25, z: WALL_Z}, FACING, {...LAMP_START_SCALES[0]});
             for (const start of [onFloor, onWall])
             {
                 const startSize = ObjectScaleUtil.getObjectSize(lampTypeIndex, start.scale);

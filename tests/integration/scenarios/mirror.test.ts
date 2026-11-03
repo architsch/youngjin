@@ -34,7 +34,9 @@ import MirrorObjectTypeConfig, { MIRROR_COLOR_PALETTE_NAME,
 import ColorUtil from "../../../src/shared/math/util/colorUtil";
 import MirrorMaterialUtil from "../../../src/client/graphics/util/mirrorMaterialUtil";
 import FanObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/fanObjectTypeConfig";
-import CanvasObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
+import CanvasObjectTypeConfig, {
+    START_SCALES as CANVAS_START_SCALES } from "../../../src/shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
+import { PLAYER_HEIGHT } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import RemoveObjectSignal from "../../../src/shared/object/types/removeObjectSignal";
 import SetObjectMetadataSignal from "../../../src/shared/object/types/setObjectMetadataSignal";
@@ -215,8 +217,10 @@ describe("mirror permissions", () => {
 });
 
 describe("the mirrors a room holds", () => {
-    it("are one at most, whoever asks, and another goes up once it is gone", async () => {
-        expect(ObjectCategoryConfigMap.getMaxCountPerRoom(MirrorObjectTypeConfig.category)).toBe(1);
+    it("are as many at most as their cap, whoever asks, and another goes up once one is gone", async () => {
+        const cap = ObjectCategoryConfigMap.getMaxCountPerRoom(MirrorObjectTypeConfig.category);
+        // Along the wall, apart from one another.
+        const spotAt = (i: number) => ({...WALL_SPOT, x: WALL_SPOT.x - 3 * i});
 
         await runScenario({
             name: "the mirror cap",
@@ -224,20 +228,24 @@ describe("the mirrors a room holds", () => {
             users: [userAtCenter("hub"), userAtCenter("regular")],
             assertions: () => {
                 const room = getHub();
-                expect(ObjectUpdateUtil.addObject(ADMIN, room, makeMirrorSignal(room, ADMIN, "mirror"))).toBe(true);
-                expect(ObjectUpdateUtil.canAddObject(ADMIN, room, makeMirrorSignal(room, ADMIN, "second",
-                    {...WALL_SPOT, x: WALL_SPOT.x - 3}))).toBe(false);
+                for (let i = 0; i < cap; ++i)
+                {
+                    expect(ObjectUpdateUtil.addObject(ADMIN, room, makeMirrorSignal(room, ADMIN, `mirror-${i}`, spotAt(i))))
+                        .toBe(true);
+                }
+                expect(ObjectUpdateUtil.canAddObject(ADMIN, room, makeMirrorSignal(room, ADMIN, "one-more", spotAt(cap))))
+                    .toBe(false);
 
-                // The cap is the mirrors' own: a canvas still goes up beside it, and another room takes a mirror.
+                // The cap is the mirrors' own: a canvas still goes up beside them, and another room takes a mirror.
                 expect(ObjectUpdateUtil.canAddObject(ADMIN, room, new AddObjectSignal(room.id, ADMIN.id,
-                    ADMIN.userName, canvasTypeIndex, "a-canvas", new ObjectTransform({...WALL_SPOT, x: WALL_SPOT.x - 3},
+                    ADMIN.userName, canvasTypeIndex, "a-canvas", new ObjectTransform(spotAt(cap),
                         {...WALL_FACING}, {x: 1, y: 1, z: 1})))).toBe(true);
                 const regular = ServerRoomManager.roomRuntimeMemories["regular"].room;
                 expect(ObjectUpdateUtil.canAddObject(ADMIN, regular, makeMirrorSignal(regular, ADMIN))).toBe(true);
 
-                expect(ObjectUpdateUtil.removeObject(ADMIN, room, new RemoveObjectSignal(room.id, "mirror"))).toBe(true);
-                expect(ObjectUpdateUtil.canAddObject(ADMIN, room, makeMirrorSignal(room, ADMIN, "second",
-                    {...WALL_SPOT, x: WALL_SPOT.x - 3}))).toBe(true);
+                expect(ObjectUpdateUtil.removeObject(ADMIN, room, new RemoveObjectSignal(room.id, "mirror-0"))).toBe(true);
+                expect(ObjectUpdateUtil.canAddObject(ADMIN, room, makeMirrorSignal(room, ADMIN, "one-more", spotAt(cap))))
+                    .toBe(true);
             },
         });
     });
@@ -290,10 +298,14 @@ describe("a mirror's size", () => {
     });
 
     it("starts tall enough to show a person whole, or as large as a canvas would where that doesn't fit", () => {
-        expect(ObjectScaleUtil.getDefaultScale(mirrorTypeIndex, () => true)).toEqual({x: 1, y: 1.5, z: 1});
-        expect(ObjectScaleUtil.getDefaultScale(mirrorTypeIndex, scale => scale.y <= 1)).toEqual({x: 1, y: 1, z: 1});
-        expect(ObjectScaleUtil.getDefaultScale(mirrorTypeIndex, scale => scale.x <= 0.5))
-            .toEqual({x: 0.5, y: 0.5, z: 1});
+        // A flat mirror needs half their height.
+        const tallest = ObjectScaleUtil.getDefaultScale(mirrorTypeIndex, () => true);
+        expect(ObjectScaleUtil.getObjectSize(mirrorTypeIndex, tallest).y).toBeGreaterThanOrEqual(0.5 * PLAYER_HEIGHT);
+        for (const canvasScale of CANVAS_START_SCALES)
+        {
+            const fits = (scale: Vec3) => scale.x <= canvasScale.x && scale.y <= canvasScale.y;
+            expect(ObjectScaleUtil.getDefaultScale(mirrorTypeIndex, fits)).toEqual(canvasScale);
+        }
     });
 });
 
@@ -344,10 +356,10 @@ describe("a mirror's surface", () => {
         "mirror", new ObjectTransform({...WALL_SPOT}, {...WALL_FACING}, {x: 1, y: 1, z: 1}),
         mirrorProperties == undefined ? {} : {[SURFACE_KEY]: new EncodableByteString(mirrorProperties)});
 
-    it("is any color of the full spectrum, its own copy, and an opacity in steps of 5%, coming back exactly as set", () => {
+    it("is any color of the full spectrum, its own copy, and an opacity in steps of "
+        + `${100 / (NUM_MIRROR_OPACITY_STEPS - 1)}%, coming back exactly as set`, () => {
         const numColors = ColorUtil.getPaletteSize(MIRROR_COLOR_PALETTE_NAME);
         expect(numColors).toBe(ColorUtil.getPaletteSize("Player"));
-        expect(NUM_MIRROR_OPACITY_STEPS).toBe(21);
         // Stored as one character for the color, then one for the opacity, which never trade places.
         expect(UTIL.encodeMirrorProperties(5, 3)).toBe("&$");
         expect(UTIL.getDefaultMirrorProperties()).toBe("#!");
@@ -358,7 +370,7 @@ describe("a mirror's surface", () => {
                 const mirror = mirrorWith(UTIL.encodeMirrorProperties(colorIndex, step));
                 expect(UTIL.getColorIndex(mirror)).toBe(colorIndex);
                 expect(UTIL.getOpacityStep(mirror)).toBe(step);
-                expect(UTIL.getOpacity(mirror)).toBeCloseTo(step / 20, 12);
+                expect(UTIL.getOpacity(mirror)).toBeCloseTo(step / (NUM_MIRROR_OPACITY_STEPS - 1), 12);
             }
         }
     });

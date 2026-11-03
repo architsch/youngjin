@@ -6,8 +6,8 @@ import { NUM_COLLISION_LAYERS, NUM_VOXEL_BLOCKS, NUM_VOXEL_COLS, NUM_VOXEL_ROWS 
 // only the columns of layers that light is in or beside (most of a room is usually dark).
 
 // Narrow tent kernel; wider would visibly shift light away from its lamp.
-const CENTER_WEIGHT = 0.5;
-const NEIGHBOR_WEIGHT = 0.25;
+export const CENTER_WEIGHT = 0.5;
+export const NEIGHBOR_WEIGHT = 0.25;
 
 // What renormalizes a sum, by how many of the two neighbours took part in it.
 const NORMALIZE_BY_NUM_NEIGHBORS = [

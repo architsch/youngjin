@@ -14,9 +14,9 @@ import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../object/types/objectTypeCo
 if (PLAYER_RADIUS_XZ >= VOXEL_CELL_SIZE)
     throw new Error("VoxelPathUtil assumes a player narrower than two voxels");
 
-const BODY_LAYERS = Math.ceil(PLAYER_HEIGHT / COLLISION_LAYER_HEIGHT);
+export const BODY_LAYERS = Math.ceil(PLAYER_HEIGHT / COLLISION_LAYER_HEIGHT);
 // One layer is the most a walking body climbs (see ColliderConfig.maxClimbableHeight); a fall can be deeper.
-const MAX_DROP_LAYERS = 8;
+export const MAX_DROP_LAYERS = 8;
 // Bounds a search in a room with no way through, which would otherwise visit every vertex.
 const MAX_EXPANSIONS = 40_000;
 const NUM_VERTEX_ROWS = NUM_VOXEL_ROWS + 1;

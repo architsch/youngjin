@@ -1,6 +1,6 @@
 // How far an element's contents must reach past its box for it to scroll: layout rounding can leave a pixel
 // of overflow that scrolls nothing.
-const MIN_OVERFLOW_PX = 1;
+export const MIN_OVERFLOW_PX = 1;
 
 // What a wheel that reports lines scrolls by per line, so that its notch of three matches a notch in pixels.
 const WHEEL_LINE_PX = 100 / 3;

@@ -5,6 +5,12 @@
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import RoomPrefsUtil from "../../../src/shared/room/util/roomPrefsUtil";
+import { SAVE_INTERVAL_MS } from "../../../src/client/ui/util/deferredSave";
+
+// Times as shares of the wait before a save: short of it, a little past it, and long enough for it to be done.
+const BEFORE_SAVE_MS = 0.25 * SAVE_INTERVAL_MS;
+const AFTER_SAVE_MS = 1.25 * SAVE_INTERVAL_MS;
+const WELL_AFTER_SAVE_MS = 2.5 * SAVE_INTERVAL_MS;
 
 const appliedPrefs: string[] = [];
 const sentPrefs: string[] = [];
@@ -67,9 +73,9 @@ describe("editing a room's lighting", () => {
 
     it("writes down the setting the user finished on, not the one that armed the timer", async () => {
         RoomLightingUtil.applyLocalEdit(prefsWithFogColor(3), "room-1");
-        await vi.advanceTimersByTimeAsync(500);
+        await vi.advanceTimersByTimeAsync(BEFORE_SAVE_MS);
         RoomLightingUtil.applyLocalEdit(prefsWithFogColor(7), "room-1");
-        await vi.advanceTimersByTimeAsync(5000);
+        await vi.advanceTimersByTimeAsync(WELL_AFTER_SAVE_MS);
 
         expect(sentPrefs).toEqual([encodedFogColor(7)]);
     });
@@ -78,7 +84,7 @@ describe("editing a room's lighting", () => {
         // Edit, save, edit, then the first echo arrives: applying it would revert the color (and, if the
         // pending save read the room, persist the old one).
         RoomLightingUtil.applyLocalEdit(prefsWithFogColor(3), "room-1");
-        await vi.advanceTimersByTimeAsync(2500);
+        await vi.advanceTimersByTimeAsync(AFTER_SAVE_MS);
         expect(sentPrefs).toEqual([encodedFogColor(3)]);
 
         RoomLightingUtil.applyLocalEdit(prefsWithFogColor(7), "room-1");
@@ -89,13 +95,13 @@ describe("editing a room's lighting", () => {
         expect(currentRoom.prefs).toBe(encodedFogColor(7));
         expect(appliedPrefs[appliedPrefs.length - 1]).toBe(encodedFogColor(7));
 
-        await vi.advanceTimersByTimeAsync(5000);
+        await vi.advanceTimersByTimeAsync(WELL_AFTER_SAVE_MS);
         expect(sentPrefs[sentPrefs.length - 1]).toBe(encodedFogColor(7));
     });
 
     it("takes its own setting back once it has come around", async () => {
         RoomLightingUtil.applyLocalEdit(prefsWithFogColor(3), "room-1");
-        await vi.advanceTimersByTimeAsync(2500);
+        await vi.advanceTimersByTimeAsync(AFTER_SAVE_MS);
 
         expect(RoomLightingUtil.applyIncoming(asServerWouldStore(encodedFogColor(3)))).toBe(true);
         // And with nothing of its own outstanding any more, somebody else's change lands.
@@ -113,7 +119,7 @@ describe("editing a room's lighting", () => {
         // A failed request must not leave the client ignoring others' changes.
         saveResponseStatus = 500;
         RoomLightingUtil.applyLocalEdit(prefsWithFogColor(3), "room-1");
-        await vi.advanceTimersByTimeAsync(5000);
+        await vi.advanceTimersByTimeAsync(WELL_AFTER_SAVE_MS);
 
         expect(RoomLightingUtil.applyIncoming(encodedFogColor(9))).toBe(true);
         expect(currentRoom.prefs).toBe(encodedFogColor(9));
@@ -125,7 +131,7 @@ describe("editing a room's lighting", () => {
 
         // The new room's lighting stands; the save still carries its own setting.
         expect(currentRoom.prefs).toBe(encodedFogColor(20));
-        await vi.advanceTimersByTimeAsync(5000);
+        await vi.advanceTimersByTimeAsync(WELL_AFTER_SAVE_MS);
         expect(sentPrefs).toEqual([encodedFogColor(3)]);
     });
 });

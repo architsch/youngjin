@@ -34,7 +34,7 @@ const TUTORIAL_CAMERA_TURN_DEG = 20;
 
 // How far below the camera edit mode's opening face is looked for: about a block's height, landing in the
 // middle of a block layer for a standing user rather than on the boundary between two.
-const WALL_QUAD_DEPTH_BELOW_CAMERA = 0.75;
+export const WALL_QUAD_DEPTH_BELOW_CAMERA = 0.75;
 
 // How close to and how far from that face the camera may be as edit mode opens on it.
 const WALL_QUAD_MIN_CAMERA_DIST = 2.5;

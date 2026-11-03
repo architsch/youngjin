@@ -16,7 +16,7 @@ import AgentRoomUtil from "./agentRoomUtil";
 import AgentToolUtil from "./agentToolUtil";
 
 // How many bills a call goes after, or walks after one the wind has moved, before giving up.
-const MAX_TRIES = 3;
+export const MAX_TRIES = 3;
 
 const billTypeIndex = ObjectTypeConfigMap.getIndexByType(DollarBillObjectTypeConfig.objectType);
 

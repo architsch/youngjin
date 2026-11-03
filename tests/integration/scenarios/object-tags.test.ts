@@ -61,7 +61,9 @@ describe("a tags string", () => {
     });
 
     it("keeps as many whole tags as fit its length, never part of one", () => {
-        const tag = "t".repeat(19); // 20 characters with its number, so three and their commas fit, and no fourth
+        // Long enough with its number that three tags and their commas fit, and no fourth.
+        const tagLength = Math.floor((OBJECT_TAGS_MAX_LENGTH - 2) / 3);
+        const tag = "t".repeat(tagLength - 1);
         const stored = preprocess([`${tag}1`, `${tag}2`, `${tag}3`, `${tag}4`].join(","));
         expect(stored).toBe(`${tag}1,${tag}2,${tag}3`);
         expect(stored.length).toBeLessThanOrEqual(OBJECT_TAGS_MAX_LENGTH);

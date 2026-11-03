@@ -9,24 +9,24 @@ const NUM_SPARKS = 140;
 const SPARK_SPEED = [300, 850];
 const SPARK_SPREAD = 0.8;
 const SPARK_RISE = [150, 400];
-const SPARK_LIFE = [1.8, 3];
+export const SPARK_LIFE = [1.8, 3];
 const SPARK_SIZE = [2, 3.6];
 const NUM_GLITTER = 60;
 const GLITTER_SPEED = [40, 220];
-const GLITTER_LIFE = [1.2, 2.4];
+export const GLITTER_LIFE = [1.2, 2.4];
 const GLITTER_SIZE = [1, 2];
 const DRAG = 2;
 const GRAVITY = 360;
 // How long the edges flash as the sparks leave them, the most of that time a frame moves on, and the longest a burst stays
 // on the page, however slowly its frames come, in seconds.
 const FLASH_SECONDS = 0.35;
-const MAX_STEP_SECONDS = 0.05;
+export const MAX_STEP_SECONDS = 0.05;
 const MAX_SECONDS = 10;
 // How long the screen takes no input as a burst starts, in its own seconds: through the tile's pop and the sparks' bloom,
 // which a click taking the grid away from under them would cut short. What is left only drifts down and fades, on a canvas
 // nothing else can take away. Should its frames stop coming (a hidden page), the hold ends after this long all the same.
-const HOLD_SECONDS = 1.5;
-const MAX_HOLD_MS = 4000;
+export const HOLD_SECONDS = 1.5;
+export const MAX_HOLD_MS = 4000;
 // How far under the screen's bottom a spark is gone for good, in CSS px.
 const OFF_SCREEN_MARGIN = 40;
 // A spark's glow, as wide as its size this many times, and its streak, as long as it goes in this long.

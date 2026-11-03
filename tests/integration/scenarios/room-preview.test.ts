@@ -683,7 +683,8 @@ describe("the objects drawn", () => {
         const size = box.getSize(new THREE.Vector3());
         expect(size.x).toBeLessThan(2);
         expect(size.x).toBeGreaterThan(1);
-        expect(size.x / size.y).toBeCloseTo(4 / 3, 6);
+        // Float32 positions: as close as their precision allows, whatever the frame's thickness.
+        expect(size.x / size.y).toBeCloseTo(4 / 3, 5);
         expect(box.max.z).toBeLessThan(farWallZ);
         expect(box.max.z).toBeGreaterThan(farWallZ - 0.1);
         expect(getNumInstances(levels[0])).toBe(getNumParts(canvas)); // its frame

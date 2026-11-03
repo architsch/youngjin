@@ -19,7 +19,7 @@ const LINK_MARKUP_LENGTH = `<link href=""></link>`.length;
 const CONTROL_MARKUP_PER_SHOWN_CHAR = Math.max(1, ...ScreenControlMap.getControls().map(control =>
     formatControl(control).length / Array.from(toShownText({kind: "control", control})).length));
 const MAX_CANONICALIZING_PASSES = 8;
-const CUT_MARK = "...";
+export const CUT_MARK = "...";
 
 // Links in what players and NPCs say (their SentMessage), written <link href="https://...">label</link> and shown as a
 // button with that label, or else the site's name (see SpeechBubble). Whoever writes a message, a person's chat input,

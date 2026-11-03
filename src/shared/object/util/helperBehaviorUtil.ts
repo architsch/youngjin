@@ -38,7 +38,7 @@ import QuarterTurnsUtil from "./quarterTurnsUtil";
 const UP: Vec3 = {x: 0, y: 1, z: 0};
 // Someone this near on its own floor (feet within this height of its own) is in earshot.
 export const HEARING_DISTANCE = 8;
-const SAME_FLOOR_HEIGHT = 1;
+export const SAME_FLOOR_HEIGHT = 1;
 // A helper this little farther off the way a speaker faces than the one most in front of them is as good as faced too,
 // and the nearest of those hears them (see pickListener): a helper just behind another in view isn't the one faced.
 const FACING_TIE_DEGREES = 10;
@@ -46,22 +46,22 @@ const FACING_TIE_DEGREES = 10;
 export const ANSWER_PAUSE_MS = 1500;
 // How long a bubble stays before the next, so it can be read: a moment to notice it, then its words at an easy pace, as
 // many read English as a second language. The last is taken down once it has been quiet this long.
-const MIN_BUBBLE_MS = 3000;
-const BUBBLE_NOTICE_MS = 1000;
-const BUBBLE_MS_PER_CHAR = 80;
-const BUBBLE_CLEARED_AFTER_MS = 20_000;
+export const MIN_BUBBLE_MS = 3000;
+export const BUBBLE_NOTICE_MS = 1000;
+export const BUBBLE_MS_PER_CHAR = 80;
+export const BUBBLE_CLEARED_AFTER_MS = 20_000;
 // A stroll, in world units a second.
 const WALK_SPEED = 2;
 // Where it goes, idly or part of the way to meet someone it answers from farther off than APPROACH_FROM (to stop
 // MEETING_DISTANCE short of them), is within its wander radius of home (see BehaviorPrefs). It never walks up closer
 // than PERSONAL_SPACE to anyone, so that its bubble keeps in their view.
-const APPROACH_FROM = 5;
-const MEETING_DISTANCE = 3.5;
-const PERSONAL_SPACE = 3;
+export const APPROACH_FROM = 5;
+export const MEETING_DISTANCE = 3.5;
+export const PERSONAL_SPACE = 3;
 // Another helper it never stops for, since two that did would wait on each other for good: it passes one up to
 // PASSING_LOOKAHEAD ahead HELPER_SPACE off to one side, up to MAX_ASIDE_LANES grid steps off its way, as far as the
 // floor there allows (see getAside).
-const HELPER_SPACE = 1;
+export const HELPER_SPACE = 1;
 const PASSING_LOOKAHEAD = 3;
 const MAX_ASIDE_LANES = 2;
 // The most of its pace it walks at while it lets another helper walking its way go first (see getStride).
@@ -72,27 +72,27 @@ const PLANNED_SPACE = PERSONAL_SPACE + VOXEL_CELL_SIZE;
 // Where it wanders to is at least this share of its radius from where it stands. Kept from going there (or home) this
 // long, it wanders off at once to somewhere at least REPICK_DISTANCE from there instead, or as far as its radius allows.
 const MIN_WANDER_SHARE = 0.4;
-const BLOCKED_GIVE_UP_MS = 2000;
-const REPICK_DISTANCE = 2 * PERSONAL_SPACE;
+export const BLOCKED_GIVE_UP_MS = 2000;
+export const REPICK_DISTANCE = 2 * PERSONAL_SPACE;
 // Its way anywhere is looked for out to a walk this many times as long as the farthest it may go, and a little more.
 const MAX_DETOUR = 3;
 const DETOUR_SLACK = 4;
 // Idle at home (or, roaming, wherever it is) between wanders as long as its prefs say (see BehaviorPrefs), and away this
 // long before it heads back (or, after a talk, this long after it).
 const WANDER_STAY_MS = [1_000, 8_000];
-const STAY_AFTER_TALK_MS = 30_000;
+export const STAY_AFTER_TALK_MS = 30_000;
 // Still this long after it was moved somewhere new, or let go of.
 export const FROZEN_AFTER_MOVE_MS = 10_000;
 const FROZEN_AFTER_RELEASE_MS = 3000;
 // Speaking to several at once, it looks at each in turn, this long each.
-const GLANCE_MS = 2000;
+export const GLANCE_MS = 2000;
 // A turn smaller than this isn't shown.
 const MIN_TURN_DEGREES = 2;
 // Two helpers this near on one floor, in sight of each other at about head height, chat now and then: each first a
 // while after it is found, then a while after each chat it begins (or one skipped, see skipUnseen).
-const SMALL_TALK_DISTANCE = 4;
-const FIRST_SMALL_TALK_MS = [45_000, 90_000];
-const SMALL_TALK_INTERVAL_MS = [90_000, 180_000];
+export const SMALL_TALK_DISTANCE = 4;
+export const FIRST_SMALL_TALK_MS = [45_000, 90_000];
+export const SMALL_TALK_INTERVAL_MS = [90_000, 180_000];
 const SIGHT_HEIGHT = 0.8 * PLAYER_HEIGHT;
 const SIGHT_STEP = 0.25;
 // Now and then, in place of a wander, it goes and looks a while at one of the things placed near it, as often with one
@@ -106,9 +106,9 @@ const SIGHT_INTERVAL_MS = [210_000, 390_000];
 const SIGHT_RETRY_MS = 30_000;
 // Whoever plays it picks which to look at from this many things at most (see findSights).
 export const MAX_SIGHTS = 16;
-const VIEW_DISTANCE = [1.5, 3.5];
-const VIEW_DISTANCE_PER_SIZE = [0.5, 1.2];
-const MOST_VIEW_DEGREES_OFF = 50;
+export const VIEW_DISTANCE = [1.5, 3.5];
+export const VIEW_DISTANCE_PER_SIZE = [0.5, 1.2];
+export const MOST_VIEW_DEGREES_OFF = 50;
 const MOST_VIEW_SLOPE = 1.5;
 const SIGHT_QUIET_MS = [1500, 3000];
 const SIGHT_AFTER_MS = 1500;

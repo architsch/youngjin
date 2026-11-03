@@ -39,8 +39,9 @@ it greets people as and how it tells the basics. A new personality touches `NpcP
 together; one that is not played (like Idle) has no role, no character, no topics, no small talk, and no
 tastes or remarks.
 
-The guide is also bound by the agents-keep-up rule (`.claude/rules/agents-keep-up.md`): when it
-changes because the game did, the other things agents read may need the same change.
+When all of this must change is the helpers-keep-up rule's to say (`.claude/rules/helpers-keep-up.md`):
+with every feature, in the same change. When the guide changes because the game did, what agents read
+may need the same change (`.claude/rules/agents-keep-up.md`).
 
 ## What the helpers say to each other
 
@@ -79,8 +80,7 @@ it thinks of it, in fixed words too (`HelperRemarkUtil`):
   that show it; `UNREMARKED_KEYWORDS`, the keywords that show none; and what each personality loves,
   likes and dislikes. Each helper adds a few tastes of its own, by its NPC's id, with a favorite color
   and painter. Every keyword in the picture map's manifest is in exactly one of these (a test checks),
-  so a new keyword is classified when it arrives (see CLAUDE.md, "Picture Keywords Are Helpers' Tastes
-  Too"). One that could mean two things (`fish`, food or a pet) shows none: a wrong interest gives a
+  so a new keyword is classified when it arrives (see `.claude/rules/helpers-keep-up.md`). One that could mean two things (`fish`, food or a pet) shows none: a wrong interest gives a
   wrong reason ("The planted aquarium! I love seafood.").
 - `src/server/agent/data/helperRemarks.ts`: each voice's **lines**, by how much it likes the thing
   (love, like, meh, dislike, mixed), some for one kind of thing alone (a painting, a door, a mirror),
@@ -120,6 +120,12 @@ it thinks of it, in fixed words too (`HelperRemarkUtil`):
   `ScreenControlMap`, its drawing in `ScreenControlPicture` (from the control's own icon and face), and
   its width in `ScreenControlPictureUtil`. A tall one (a slider standing upright) doesn't fit a line of
   text, so it is named in words instead.
+- **No number a constant holds** (a price, a reward, a distance, a time, a limit), written out or built into the
+  text from the constant: the constant changes, and helpers go on repeating whatever they heard. Say it the way a
+  player meets it ("a locked shape shows its price", "for a little while"); a test checks the guide, the knowledge
+  and the characters. Asked for such a number, a helper says what the guide says, and at most that it doesn't know
+  it exactly. A rule telling them so made it worse (they gave the reason, named "the guide", or claimed the game
+  doesn't show the price), so there is none: the guide without numbers is enough.
 - **Real addresses only**, each a page under `public/` (a test checks), and each written as the link a helper gives,
   `<link href="https://...">read it</link>`, a word or two its button's words: the model copies that markup more
   faithfully than it follows a rule about links (see `docs/gameplay/chat.md`).

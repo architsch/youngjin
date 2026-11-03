@@ -38,6 +38,7 @@ import ObjectScaleUtil from "../../../src/shared/object/util/objectScaleUtil";
 import Vec3 from "../../../src/shared/math/types/vec3";
 import PreEncodedCompositionIndexMap from "../../../src/shared/graphics/mesh/composition/maps/preEncodedCompositionIndexMap";
 import PreEncodedCompositionStringMap from "../../../src/shared/graphics/mesh/composition/maps/preEncodedCompositionStringMap";
+import { MAX_ROOM_PREFS_STEP } from "../../../src/shared/room/util/roomPrefsUtil";
 
 const lampTypeIndex = ObjectTypeConfigMap.getIndexByType("Lamp");
 const MAX_LAMPS_PER_ROOM = ObjectCategoryConfigMap.getMaxCountPerRoom(LampObjectTypeConfig.category);
@@ -325,12 +326,15 @@ describe("what a lamp gives off", () => {
             }));
     });
 
-    it("offers a dozen whole values on each of its two dials", () => {
-        // Few whole-quantity steps: intensity is linear, range is in blocks (see LampLightUtil).
+    it("offers whole values on each of its two dials, no more than the one character each is stored in holds", () => {
+        // Whole-quantity steps: intensity is linear, range is in blocks (see LampLightUtil).
         for (const [min, max] of [[MIN_LAMP_INTENSITY, MAX_LAMP_INTENSITY],
             [MIN_LAMP_RANGE, MAX_LAMP_RANGE]])
         {
-            expect(max - min + 1).toBe(12);
+            expect(Number.isInteger(min) && Number.isInteger(max)).toBe(true);
+            expect(min).toBeGreaterThanOrEqual(0);
+            expect(max).toBeGreaterThan(min);
+            expect(max).toBeLessThanOrEqual(MAX_ROOM_PREFS_STEP);
         }
     });
 

@@ -22,12 +22,11 @@ import { ColorPaletteMap } from "../../../src/shared/math/maps/colorPaletteMap";
 import LightPaletteVersionMigration from "../../../src/shared/math/versionMigration/lightPaletteVersionMigration";
 import AtmospherePaletteVersionMigration
     from "../../../src/shared/math/versionMigration/atmospherePaletteVersionMigration";
-import RoomPrefsVersionMigration from "../../../src/shared/room/versionMigration/roomPrefsVersionMigration";
+import RoomPrefsVersionMigration, { CLOUD_COLOR_CHAR_INDEX as CLOUD_CHAR, FOG_COLOR_CHAR_INDEX as FOG_CHAR,
+    GROUND_COLOR_CHAR_INDEX as GROUND_CHAR, GROUND_PEAK_COLOR_CHAR_INDEX as GROUND_PEAK_CHAR, SKY_COLOR_CHAR_INDEX as SKY_CHAR }
+    from "../../../src/shared/room/versionMigration/roomPrefsVersionMigration";
 import { ATMOSPHERE_COLOR_PALETTE_NAME, COMPOSITION_PALETTE_NAME_BY_MATERIAL_ID, INSTANCED_TIN_MATERIAL_ID,
     LIGHT_COLOR_PALETTE_NAME } from "../../../src/shared/system/sharedConstants";
-
-// The eye camera's far plane (the renderer's, written out); the default fog must lie beyond it.
-const CAMERA_FAR_PLANE = 45;
 
 // Every encodable character, so decoding is exercised over its whole domain.
 const prefsStrings = fc.array(fc.integer({min: 33, max: 126}), {maxLength: 34})
@@ -162,7 +161,8 @@ describe("a room that has said nothing", () => {
     });
 
     it("has no fog the camera can reach", () => {
-        expect(RoomPrefsUtil.getFogNearDistance(defaults)).toBeGreaterThanOrEqual(CAMERA_FAR_PLANE);
+        // The top of the range, which the renderer takes for no fog at all (see GraphicsManager.refreshFog).
+        expect(RoomPrefsUtil.getFogNearDistance(defaults)).toBeGreaterThanOrEqual(MAX_FOG_DISTANCE);
         expect(ColorPaletteMap[ATMOSPHERE_COLOR_PALETTE_NAME][defaults.fogColorIndex]).toBe("#000000");
     });
 
@@ -196,7 +196,7 @@ describe("a room that has said nothing", () => {
         // Smoke defaults on at no cost (the default fog is past the far plane), so pulled-in fog already moves.
         expect(RoomPrefsUtil.getFogSmokeAmplitude(defaults)).toBeGreaterThan(0);
         expect(RoomPrefsUtil.getFogSmokeSpeed(defaults)).toBeGreaterThan(0);
-        expect(RoomPrefsUtil.getFogNearDistance(defaults)).toBeGreaterThanOrEqual(CAMERA_FAR_PLANE);
+        expect(RoomPrefsUtil.getFogNearDistance(defaults)).toBeGreaterThanOrEqual(MAX_FOG_DISTANCE);
     });
 
     it("sends the smoke off an axis, and gently upward", () => {
@@ -495,9 +495,6 @@ const SCENERY_TO_ATMOSPHERE = [0, 1, 1, 1, 6, 2, 2, 2, 3, 3, 3, 7, 8, 24, 24, 24
 // The prefs string generation wrote while the air was painted from those palettes.
 const LEGACY_DEFAULT_PREFS = "!!_!~~@+XC!X\"$KBY;-[_Z_!&";
 
-// Where the prefs string holds the colors the conversion carries over (see RoomPrefsUtil).
-const FOG_CHAR = 3, CLOUD_CHAR = 7, GROUND_CHAR = 12, GROUND_PEAK_CHAR = 13, SKY_CHAR = 23;
-
 describe("a room's air carried over to the palette it is painted from now", () => {
     const atmosphere = ColorPaletteMap[ATMOSPHERE_COLOR_PALETTE_NAME];
     const convertPair = AtmospherePaletteVersionMigration.convertSceneryColorPair;
@@ -586,14 +583,20 @@ describe("a room's air carried over to the palette it is painted from now", () =
         }));
     });
 
-    it("turns the air generation wrote into the air it writes now", () => {
-        expect(RoomPrefsVersionMigration.convertToAtmospherePalette(LEGACY_DEFAULT_PREFS))
-            .toBe(RoomPrefsUtil.getDefaultPrefsString());
-        // A string too short to hold a color reads its default, which is where the legacy default goes.
+    it("turns the air generation wrote black, with a white cloud and a dark grey peak", () => {
+        // Only the colors are the conversion's to carry; the other settings stay as stored, whatever they default to.
+        const colorFields = ["fogColorIndex", "skyColorIndex", "cloudColorIndex", "groundColorIndex",
+            "groundPeakColorIndex"] as const;
+        const carried = RoomPrefsUtil.decode(RoomPrefsVersionMigration.convertToAtmospherePalette(LEGACY_DEFAULT_PREFS));
+        expect(colorFields.map(field => atmosphere[carried[field]]))
+            .toEqual(["#000000", "#000000", "#ffffff", "#000000", "#2a2a2a"]);
+        // A string too short to hold a color reads the default ones.
         expect(RoomPrefsVersionMigration.convertToAtmospherePalette("")).toBe("");
         const short = LEGACY_DEFAULT_PREFS.substring(0, FOG_CHAR);
         expect(RoomPrefsVersionMigration.convertToAtmospherePalette(short)).toBe(short);
-        expect(RoomPrefsUtil.decode(short)).toEqual(RoomPrefsUtil.decode(RoomPrefsUtil.getDefaultPrefsString()));
+        const written = RoomPrefsUtil.decode(RoomPrefsUtil.getDefaultPrefsString());
+        for (const field of colorFields)
+            expect(RoomPrefsUtil.decode(short)[field], field).toBe(written[field]);
     });
 });
 

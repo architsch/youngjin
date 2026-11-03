@@ -7,6 +7,7 @@ import ImageMapUtil from "../../../shared/graphics/image/util/imageMapUtil";
 import PictureSearchUtil from "../../../shared/graphics/image/util/pictureSearchUtil";
 import PreEncodedCompositionIndexMap from "../../../shared/graphics/mesh/composition/maps/preEncodedCompositionIndexMap";
 import CompositionMetadataUtil from "../../../shared/graphics/mesh/composition/util/compositionMetadataUtil";
+import { DOOR_FOOTPRINT_WIDTH } from "../../../shared/graphics/mesh/composition/types/compositionConstants/doorCompositionConstants";
 import ObjectCategoryConfigMap from "../../../shared/object/maps/objectCategoryConfigMap";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
@@ -655,8 +656,8 @@ function describeNoPlace(room: Room, user: User, objectTypeIndex: number, center
         return "A restricted zone covers that spot (look lists the zones).";
     }
     if (objectTypeIndex == doorTypeIndex)
-        return "A door needs a stretch of wall 3 blocks wide and a storey high there, standing on the storey's floor, "
-            + "open in front and with nothing else hanging on it.";
+        return `A door needs a stretch of wall ${DOOR_FOOTPRINT_WIDTH / VOXEL_CELL_SIZE} blocks wide and a storey high `
+            + "there, standing on the storey's floor, open in front and with nothing else hanging on it.";
     return "There is no room for it on that face: something else hangs there, or the face is too small.";
 }
 

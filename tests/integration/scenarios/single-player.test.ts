@@ -85,7 +85,9 @@ import FirstPersonCameraPose from "../../../src/client/object/components/helpers
 import { voxelQuadSelectionObservable } from "../../../src/client/system/clientObservables";
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
 import { PLAYER_HEIGHT } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
-import { COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, HUB_ROOM_ID_KEYWORD, MAX_ROOM_X, MAX_ROOM_Z,
+import { WALL_QUAD_DEPTH_BELOW_CAMERA }
+    from "../../../src/client/singlePlayer/types/singlePlayerModeClientConfig/tutorialSinglePlayerModeClientConfig";
+import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MAX, COLLISION_LAYER_MIN, HUB_ROOM_ID_KEYWORD, MAX_ROOM_X, MAX_ROOM_Z,
     NUM_VOXEL_COLS, NUM_VOXEL_ROWS, ROOM_EDITOR_SINGLE_PLAYER_MODE, SANDBOX_SINGLE_PLAYER_MODE, SINGLE_PLAYER_START_TAG, STOREY_FLOOR_COLLISION_LAYER,
     TUTORIAL_SINGLE_PLAYER_MODE, UNIT_VEC3, VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
@@ -493,10 +495,9 @@ describe("tutorial edit mode opening", () => {
             col: VoxelQueryUtil.getVoxelColFromWorldX(eye.x), facing: "+z"});
         expect(VoxelQueryUtil.isVoxelQuadVisible(room.voxelGrid.voxels, quadIndex), "the face is not drawn").toBe(true);
 
-        // About a block's height below the eye.
+        // In the layer the opening looks for below the eye: its middle no more than half a layer off.
         const drop = EYE_Y - VoxelQueryUtil.getWorldYAtVoxelCollisionLayerCenter(quad.collisionLayer);
-        expect(drop).toBeGreaterThan(0.5);
-        expect(drop).toBeLessThan(1.5);
+        expect(Math.abs(drop - WALL_QUAD_DEPTH_BELOW_CAMERA)).toBeLessThanOrEqual(0.5 * COLLISION_LAYER_HEIGHT);
     });
 
     it("opens on the dividing wall when the user turns to face it", () => {

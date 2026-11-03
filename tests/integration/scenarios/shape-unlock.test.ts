@@ -16,14 +16,15 @@ import DBUserUtil from "../../../src/server/db/util/dbUserUtil";
 import DBUserVersionMigration from "../../../src/server/db/types/versionMigration/dbUserVersionMigration";
 import UserSignalDispatchUtil from "../../../src/server/user/util/userSignalDispatchUtil";
 import ClientInventoryManager from "../../../src/client/inventory/clientInventoryManager";
-import PlayerShapeUnlockUtil from "../../../src/client/inventory/util/playerShapeUnlockUtil";
+import PlayerShapeUnlockUtil, { ANSWER_TIMEOUT_MS } from "../../../src/client/inventory/util/playerShapeUnlockUtil";
 import SocketsClient from "../../../src/client/networking/client/socketsClient";
 import { connectionStateObservable, dollarsInFlightObservable, dollarsSpentObservable, inventoryObservable,
     notificationMessageObservable, pendingPurchaseElementObservable,
     screenCoachMarksObservable } from "../../../src/client/system/clientObservables";
-import RefusalCoachMarkUtil from "../../../src/client/ui/util/refusalCoachMarkUtil";
+import RefusalCoachMarkUtil, { DURATION_MS as REFUSAL_MARK_MS } from "../../../src/client/ui/util/refusalCoachMarkUtil";
 import ScreenInputBlockUtil from "../../../src/client/ui/util/screenInputBlockUtil";
-import UnlockBurstUtil from "../../../src/client/ui/util/unlockBurstUtil";
+import UnlockBurstUtil, { GLITTER_LIFE, HOLD_SECONDS, MAX_HOLD_MS, MAX_STEP_SECONDS, SPARK_LIFE }
+    from "../../../src/client/ui/util/unlockBurstUtil";
 import PlayerCompositionConstants, { NUM_FREE_PLAYER_PART_TYPES } from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/playerCompositionConstants";
 import { getRandomFreeComposition, PlayerCompositionCodec } from "../../../src/shared/graphics/mesh/composition/types/compositionCodec/playerCompositionCodec";
 import PlayerCompositionParams from "../../../src/shared/graphics/mesh/composition/types/compositionParams/playerCompositionParams";
@@ -55,9 +56,16 @@ import ServerRoomManager from "../../../src/server/room/serverRoomManager";
 const HUB_ID = "hubAAAAAAAAAAAAAAAAA";
 const DOLLAR = InventoryItemTypeEnumMap.Dollar;
 const PARTS = Object.keys(PlayerCompositionConstants.numTypes);
-// The fourth of a head's shapes, which is the first to be bought.
+// The first of a head's shapes to be bought.
 const HEAD_SHAPE = NUM_FREE_PLAYER_PART_TYPES;
 const HEAD_ITEM = PlayerShapeItemUtil.getItemType("head", HEAD_SHAPE);
+const EAR_ITEM = PlayerShapeItemUtil.getItemType("ear", NUM_FREE_PLAYER_PART_TYPES);
+// Every shape for sale: each part's past its free ones.
+const FOR_SALE = PARTS.flatMap(part => Array.from({length: PlayerCompositionConstants.numTypes[part] - NUM_FREE_PLAYER_PART_TYPES},
+    (_, i) => PlayerShapeItemUtil.getItemType(part, NUM_FREE_PLAYER_PART_TYPES + i)));
+// The last of a part's shapes, which is for sale, and enough dollars for a few.
+const lastShapeOf = (part: string) => PlayerCompositionConstants.numTypes[part] - 1;
+const PLENTY = 3 * PLAYER_SHAPE_PRICE_DOLLARS;
 const COMPOSER = PlayerObjectTypeConfig.components.spawnedByAny.instancedMeshComposer;
 
 beforeEach(() => {
@@ -135,28 +143,28 @@ function worn(user: ConnectedUser): string | undefined
 }
 
 describe("what is for sale", () => {
-    it("is every part's shapes past its first three, and nothing else, at one price", () => {
+    it("is every part's shapes past its free ones, and nothing else, at one price", () => {
         for (const part of PARTS)
         {
             for (let shape = 0; shape < PlayerCompositionConstants.numTypes[part]; ++shape)
             {
                 const itemType = PlayerShapeItemUtil.getItemType(part, shape);
                 expect(PlayerShapeItemUtil.getPrice(itemType), itemType)
-                    .toBe(shape < 3 ? undefined : PLAYER_SHAPE_PRICE_DOLLARS);
-                expect(PlayerShapeItemUtil.isLocked({}, part, shape), itemType).toBe(shape >= 3);
+                    .toBe(shape < NUM_FREE_PLAYER_PART_TYPES ? undefined : PLAYER_SHAPE_PRICE_DOLLARS);
+                expect(PlayerShapeItemUtil.isLocked({}, part, shape), itemType)
+                    .toBe(shape >= NUM_FREE_PLAYER_PART_TYPES);
             }
         }
-        expect(PLAYER_SHAPE_PRICE_DOLLARS).toBe(10);
         expect(PlayerShapeItemUtil.getPrice(DOLLAR)).toBeUndefined();
-        expect(PlayerShapeItemUtil.getPrice("shape_head_6")).toBeUndefined();
+        expect(PlayerShapeItemUtil.getPrice(`shape_head_${PlayerCompositionConstants.numTypes.head}`)).toBeUndefined();
         expect(PlayerShapeItemUtil.getPrice("shape_tail_3")).toBeUndefined();
         expect(PlayerShapeItemUtil.getPrice("__proto__")).toBeUndefined();
     });
 
     it("names its items so that they can be a field of the stored inventory, each its own", () => {
-        const itemTypes = PARTS.flatMap(part => [3, 4, 5].map(shape => PlayerShapeItemUtil.getItemType(part, shape)));
-        expect(new Set(itemTypes).size).toBe(18);
-        for (const itemType of itemTypes)
+        expect(FOR_SALE.length).toBeGreaterThan(0);
+        expect(new Set(FOR_SALE).size).toBe(FOR_SALE.length);
+        for (const itemType of FOR_SALE)
             expect(itemType).toMatch(/^[a-z_0-9]+$/);
     });
 
@@ -190,7 +198,7 @@ describe("what goes over the wire", () => {
 
 describe("spending dollars on a shape", () => {
     it("takes its price and gives it, and answers after telling what they now hold", async () => {
-        const user = await arrive("Buyer", {[DOLLAR]: 12});
+        const user = await arrive("Buyer", {[DOLLAR]: PLAYER_SHAPE_PRICE_DOLLARS + 2});
 
         expect(await buy(user, HEAD_ITEM)).toEqual([true]);
 
@@ -222,48 +230,50 @@ describe("spending dollars on a shape", () => {
     });
 
     it("sells nothing that isn't for sale, and never touches what they hold of it", async () => {
-        const user = await arrive("Tricky", {[DOLLAR]: 50});
-        for (const itemType of [DOLLAR, PlayerShapeItemUtil.getItemType("head", 0), "shape_head_6", "shape_tail_3",
-            "__proto__", "constructor", "inventory", ""])
+        const user = await arrive("Tricky", {[DOLLAR]: PLENTY});
+        for (const itemType of [DOLLAR, PlayerShapeItemUtil.getItemType("head", 0),
+            `shape_head_${PlayerCompositionConstants.numTypes.head}`, "shape_tail_3", "__proto__", "constructor", "inventory", ""])
         {
             await dispatchAs(user, "buyItemSignal", new BuyItemSignal(itemType));
             delete user.socketUserContext.signalThrottleTimestamps.buyItemSignal;
         }
         expect(DBInventoryUtil.buyItem).not.toHaveBeenCalled();
-        expect(user.socketUserContext.inventory).toEqual({[DOLLAR]: 50});
+        expect(user.socketUserContext.inventory).toEqual({[DOLLAR]: PLENTY});
         expect(getPendingSignals(user, "buyItemResultSignal").every((signal: BuyItemResultSignal) => !signal.bought)).toBe(true);
     });
 
     it("charges nothing for a shape already held, and says they have it, so that a repeated request is harmless", async () => {
-        const user = await arrive("Twice", {[DOLLAR]: 30});
+        const user = await arrive("Twice", {[DOLLAR]: 3 * PLAYER_SHAPE_PRICE_DOLLARS});
         await buy(user, HEAD_ITEM);
         expect(await buy(user, HEAD_ITEM)).toEqual([true, true]);
         expect(DBInventoryUtil.buyItem).toHaveBeenCalledTimes(1);
-        expect(user.socketUserContext.inventory[DOLLAR]).toBe(20);
+        expect(user.socketUserContext.inventory[DOLLAR]).toBe(2 * PLAYER_SHAPE_PRICE_DOLLARS);
     });
 
     it("goes by the row when it refuses, and gives nothing", async () => {
-        const user = await arrive("Unlucky", {[DOLLAR]: 30});
+        const user = await arrive("Unlucky", {[DOLLAR]: PLENTY});
         vi.mocked(DBInventoryUtil.buyItem).mockResolvedValueOnce("refused");
         expect(await buy(user, HEAD_ITEM)).toEqual([false]);
-        expect(user.socketUserContext.inventory).toEqual({[DOLLAR]: 30});
-        expect(getPendingSignals(user, "inventorySignal").pop().inventory).toEqual({[DOLLAR]: 30});
+        expect(user.socketUserContext.inventory).toEqual({[DOLLAR]: PLENTY});
+        expect(getPendingSignals(user, "inventorySignal").pop().inventory).toEqual({[DOLLAR]: PLENTY});
     });
 
     it("spends nothing when the row says it is held already", async () => {
-        const user = await arrive("Elsewhere", {[DOLLAR]: 30});
+        const user = await arrive("Elsewhere", {[DOLLAR]: PLENTY});
         vi.mocked(DBInventoryUtil.buyItem).mockResolvedValueOnce("held");
         expect(await buy(user, HEAD_ITEM)).toEqual([true]);
-        expect(user.socketUserContext.inventory).toEqual({[DOLLAR]: 30, [HEAD_ITEM]: 1});
+        expect(user.socketUserContext.inventory).toEqual({[DOLLAR]: PLENTY, [HEAD_ITEM]: 1});
     });
 
     it("never takes more than they have, however requests for different shapes cross", async () => {
-        await fc.assert(fc.asyncProperty(fc.integer({min: 0, max: 45}), fc.uniqueArray(fc.integer({min: 0, max: 17}),
-            {minLength: 1, maxLength: 8}), async (dollars, picks) => {
+        // Up to enough for a few of what is asked for, but not all.
+        await fc.assert(fc.asyncProperty(fc.integer({min: 0, max: Math.floor(4.5 * PLAYER_SHAPE_PRICE_DOLLARS)}),
+            fc.uniqueArray(fc.integer({min: 0, max: FOR_SALE.length - 1}), {minLength: 1, maxLength: 8}),
+            async (dollars, picks) => {
             harness.reset();
             harness.seedHub(HUB_ID);
             const user = await arrive("Crossing", {[DOLLAR]: dollars});
-            const itemTypes = picks.map(pick => PlayerShapeItemUtil.getItemType(PARTS[pick % 6], 3 + Math.floor(pick / 6)));
+            const itemTypes = picks.map(pick => FOR_SALE[pick]);
 
             await Promise.all(itemTypes.map(itemType => {
                 delete user.socketUserContext.signalThrottleTimestamps.buyItemSignal;
@@ -281,7 +291,7 @@ describe("spending dollars on a shape", () => {
 
 describe("a look its wearer doesn't hold", () => {
     it("is refused for a locked shape, told to nobody, and put back for the one who sent it", async () => {
-        const user = await arrive("Cheat", {[DOLLAR]: 50});
+        const user = await arrive("Cheat", {[DOLLAR]: PLENTY});
         const onlooker = await arrive("Onlooker");
         const onlookerSignals = getPendingSignals(onlooker, "setObjectMetadataSignal").length;
         await setLook(user, lookWith({head: 1}));
@@ -323,7 +333,7 @@ describe("a look its wearer doesn't hold", () => {
     });
 
     it("goes through once the shape is bought, for everyone to see, and lasts", async () => {
-        const user = await arrive("Honest", {[DOLLAR]: 10});
+        const user = await arrive("Honest", {[DOLLAR]: PLAYER_SHAPE_PRICE_DOLLARS});
         const onlooker = await arrive("Onlooker");
         await buy(user, HEAD_ITEM);
 
@@ -334,7 +344,7 @@ describe("a look its wearer doesn't hold", () => {
     });
 
     it("leaves a shape they took off bought, to put on again for nothing", async () => {
-        const user = await arrive("Changing", {[DOLLAR]: 10});
+        const user = await arrive("Changing", {[DOLLAR]: PLAYER_SHAPE_PRICE_DOLLARS});
         await buy(user, HEAD_ITEM);
         await setLook(user, lookWith({head: HEAD_SHAPE}));
         await setLook(user, lookWith({head: 0}));
@@ -398,8 +408,9 @@ describe("the looks characters start with", () => {
             for (const part of PARTS)
                 seen[part].add((free.types as any)[part]);
         }
+        const freeShapes = Array.from({length: NUM_FREE_PLAYER_PART_TYPES}, (_, shape) => shape);
         for (const part of PARTS)
-            expect([...seen[part]].sort(), part).toEqual([0, 1, 2]);
+            expect([...seen[part]].sort(), part).toEqual(freeShapes);
     });
 
     it("leave an NPC's look drawn as it always was, from all its shapes", () => {
@@ -419,13 +430,16 @@ describe("a saved look from before shapes were bought", () => {
     const toV7 = DBUserVersionMigration[6];
 
     it("keeps its locked shapes for nothing, each one held", async () => {
-        const look = lookWith({head: 4, hat: 3, bottom: 5, arm: 2});
+        const [first, second, third] = [0, 1, 2].map(shape => NUM_FREE_PLAYER_PART_TYPES + shape);
+        const look = lookWith({head: second, hat: first, bottom: third, arm: NUM_FREE_PLAYER_PART_TYPES - 1});
         const migrated = await toV7({lastLoginAt: 5, playerMetadata: {[ObjectMetadataKeyEnumMap.InstancedMeshComposition]: look}});
-        expect(migrated.inventory).toEqual({shape_head_4: 1, shape_hat_3: 1, shape_bottom_5: 1});
+        expect(migrated.inventory).toEqual({[PlayerShapeItemUtil.getItemType("head", second)]: 1,
+            [PlayerShapeItemUtil.getItemType("hat", first)]: 1, [PlayerShapeItemUtil.getItemType("bottom", third)]: 1});
     });
 
     it("gives nothing for free shapes, or to someone with no saved look", async () => {
-        const free = await toV7({playerMetadata: {[ObjectMetadataKeyEnumMap.InstancedMeshComposition]: lookWith({head: 2})}});
+        const free = await toV7({playerMetadata: {[ObjectMetadataKeyEnumMap.InstancedMeshComposition]:
+            lookWith({head: NUM_FREE_PLAYER_PART_TYPES - 1})}});
         expect(free.inventory).toEqual({});
         expect((await toV7({playerMetadata: {}})).inventory).toEqual({});
         expect((await toV7({})).inventory).toEqual({});
@@ -434,8 +448,8 @@ describe("a saved look from before shapes were bought", () => {
 
     it("keeps what the row holds already", async () => {
         const migrated = await toV7({inventory: {[DOLLAR]: 7}, playerMetadata: {
-            [ObjectMetadataKeyEnumMap.InstancedMeshComposition]: lookWith({ear: 5})}});
-        expect(migrated.inventory).toEqual({[DOLLAR]: 7, shape_ear_5: 1});
+            [ObjectMetadataKeyEnumMap.InstancedMeshComposition]: lookWith({ear: lastShapeOf("ear")})}});
+        expect(migrated.inventory).toEqual({[DOLLAR]: 7, [PlayerShapeItemUtil.getItemType("ear", lastShapeOf("ear"))]: 1});
     });
 });
 
@@ -444,6 +458,9 @@ describe("a browser buying a shape", () => {
     let spent: number[];
     let onUnlocked: ReturnType<typeof vi.fn>;
     const TILE = "partShape_head.3";
+    const TOO_FEW_DOLLARS_MESSAGE = `You need $${PLAYER_SHAPE_PRICE_DOLLARS}\nto unlock this.`;
+    const holdOneDollarShort = () => ClientInventoryManager.onInventorySignalReceived(
+        new InventorySignal({[DOLLAR]: PLAYER_SHAPE_PRICE_DOLLARS - 1}));
     const unlockHead = () => PlayerShapeUnlockUtil.unlock("head", HEAD_SHAPE, TILE, onUnlocked as () => void);
     const marks = () => screenCoachMarksObservable.peek();
 
@@ -453,7 +470,7 @@ describe("a browser buying a shape", () => {
         onUnlocked = vi.fn();
         vi.spyOn(SocketsClient, "emitBuyItemSignal").mockImplementation((signal: BuyItemSignal) => { sent.push(signal); });
         dollarsSpentObservable.addListener("test", dollars => { spent.push(dollars); });
-        ClientInventoryManager.onInventorySignalReceived(new InventorySignal({[DOLLAR]: 25}));
+        ClientInventoryManager.onInventorySignalReceived(new InventorySignal({[DOLLAR]: PLENTY}));
         // A failed answer of an earlier test leaves nothing to find.
         PlayerShapeUnlockUtil.onBuyItemResultSignalReceived(new BuyItemResultSignal(HEAD_ITEM, false));
         notificationMessageObservable.set(null);
@@ -481,10 +498,10 @@ describe("a browser buying a shape", () => {
         expect(onUnlocked).not.toHaveBeenCalled();
         expect(spent).toEqual([]);
 
-        answer(true, {[DOLLAR]: 15, [HEAD_ITEM]: 1});
+        answer(true, {[DOLLAR]: PLENTY - PLAYER_SHAPE_PRICE_DOLLARS, [HEAD_ITEM]: 1});
 
         expect(PlayerShapeUnlockUtil.isLocked("head", HEAD_SHAPE)).toBe(false);
-        expect(ClientInventoryManager.getDollarsShown()).toBe(15);
+        expect(ClientInventoryManager.getDollarsShown()).toBe(PLENTY - PLAYER_SHAPE_PRICE_DOLLARS);
         expect(onUnlocked).toHaveBeenCalledTimes(1);
         expect(spent).toEqual([PLAYER_SHAPE_PRICE_DOLLARS]);
     });
@@ -497,20 +514,20 @@ describe("a browser buying a shape", () => {
     });
 
     it("doesn't ask with fewer dollars than it costs, and says so over what was clicked, with an x", () => {
-        ClientInventoryManager.onInventorySignalReceived(new InventorySignal({[DOLLAR]: 9}));
+        holdOneDollarShort();
         unlockHead();
         expect(sent).toEqual([]);
         expect(marks()).toHaveLength(1);
-        expect(marks()[0]).toMatchObject({targetElementId: TILE, text: "You need $10\nto unlock this.", refusal: true});
+        expect(marks()[0]).toMatchObject({targetElementId: TILE, text: TOO_FEW_DOLLARS_MESSAGE, refusal: true});
         expect(marks()[0].onDismiss).toBeDefined();
         expect(notificationMessageObservable.peek()).toBeNull();
     });
 
-    it("takes the mark away after three seconds at most, or at once by its x", () => {
+    it("takes the mark away after its time at most, or at once by its x", () => {
         vi.useFakeTimers();
-        ClientInventoryManager.onInventorySignalReceived(new InventorySignal({[DOLLAR]: 9}));
+        holdOneDollarShort();
         unlockHead();
-        vi.advanceTimersByTime(2999);
+        vi.advanceTimersByTime(REFUSAL_MARK_MS - 1);
         expect(marks()).toHaveLength(1);
         vi.advanceTimersByTime(1);
         expect(marks()).toEqual([]);
@@ -519,31 +536,31 @@ describe("a browser buying a shape", () => {
         marks()[0].onDismiss!();
         expect(marks()).toEqual([]);
         // Its time running out later changes nothing, as for a mark shown since.
-        vi.advanceTimersByTime(1000);
+        vi.advanceTimersByTime(REFUSAL_MARK_MS / 3);
         unlockHead();
-        vi.advanceTimersByTime(2999);
+        vi.advanceTimersByTime(REFUSAL_MARK_MS - 1);
         expect(marks()).toHaveLength(1);
     });
 
     it("keeps one mark up, the last click's, for its full time, each coming in afresh", () => {
         vi.useFakeTimers();
-        ClientInventoryManager.onInventorySignalReceived(new InventorySignal({[DOLLAR]: 9}));
+        holdOneDollarShort();
         unlockHead();
         const first = marks()[0];
-        vi.advanceTimersByTime(2000);
-        PlayerShapeUnlockUtil.unlock("hat", 5, "partShape_hat.5", onUnlocked as () => void);
+        vi.advanceTimersByTime(REFUSAL_MARK_MS / 2);
+        PlayerShapeUnlockUtil.unlock("hat", lastShapeOf("hat"), `partShape_hat.${lastShapeOf("hat")}`, onUnlocked as () => void);
 
         expect(marks()).toHaveLength(1);
-        expect(marks()[0].targetElementId).toBe("partShape_hat.5");
+        expect(marks()[0].targetElementId).toBe(`partShape_hat.${lastShapeOf("hat")}`);
         expect(marks()[0].showing).not.toBe(first.showing);
-        vi.advanceTimersByTime(2999);
+        vi.advanceTimersByTime(REFUSAL_MARK_MS - 1);
         expect(marks()).toHaveLength(1);
     });
 
     it("leaves other marks up, whatever becomes of its own", () => {
         const other = {targetElementId: "dollarCounter", text: "Something else"};
         screenCoachMarksObservable.set([other]);
-        ClientInventoryManager.onInventorySignalReceived(new InventorySignal({[DOLLAR]: 9}));
+        holdOneDollarShort();
         unlockHead();
         expect(marks()).toHaveLength(2);
         RefusalCoachMarkUtil.hide();
@@ -552,7 +569,7 @@ describe("a browser buying a shape", () => {
     });
 
     it("counts only what the user can see they have", () => {
-        ClientInventoryManager.onInventorySignalReceived(new InventorySignal({[DOLLAR]: 10}));
+        ClientInventoryManager.onInventorySignalReceived(new InventorySignal({[DOLLAR]: PLAYER_SHAPE_PRICE_DOLLARS}));
         ClientInventoryManager.onDollarTakingOff();
         unlockHead();
         expect(sent).toEqual([]);
@@ -564,7 +581,7 @@ describe("a browser buying a shape", () => {
 
     it("says so when it is refused, spends nothing, and lets the user try again", () => {
         unlockHead();
-        answer(false, {[DOLLAR]: 25});
+        answer(false, {[DOLLAR]: PLENTY});
         expect(onUnlocked).not.toHaveBeenCalled();
         expect(spent).toEqual([]);
         expect(notificationMessageObservable.peek()).toMatch(/no dollars were spent/);
@@ -575,16 +592,16 @@ describe("a browser buying a shape", () => {
 
     it("says the price over what was clicked, not to try again, when the dollars went on something else first", () => {
         unlockHead();
-        answer(false, {[DOLLAR]: 5, shape_ear_3: 1});
+        answer(false, {[DOLLAR]: PLAYER_SHAPE_PRICE_DOLLARS - 1, [EAR_ITEM]: 1});
         expect(marks()).toHaveLength(1);
-        expect(marks()[0]).toMatchObject({targetElementId: TILE, text: "You need $10\nto unlock this.", refusal: true});
+        expect(marks()[0]).toMatchObject({targetElementId: TILE, text: TOO_FEW_DOLLARS_MESSAGE, refusal: true});
         expect(notificationMessageObservable.peek()).toBeNull();
     });
 
     it("may ask again once an answer can't be coming", () => {
         vi.useFakeTimers({toFake: ["Date"]});
         unlockHead();
-        vi.advanceTimersByTime(4999);
+        vi.advanceTimersByTime(ANSWER_TIMEOUT_MS - 1);
         unlockHead();
         expect(sent).toHaveLength(1);
         vi.advanceTimersByTime(1);
@@ -593,7 +610,7 @@ describe("a browser buying a shape", () => {
     });
 
     it("ignores an answer to nothing it asked", () => {
-        answer(true, {[DOLLAR]: 25});
+        answer(true, {[DOLLAR]: PLENTY});
         expect(spent).toEqual([]);
     });
 
@@ -611,7 +628,7 @@ describe("a browser buying a shape", () => {
             expect(ScreenInputBlockUtil.hold).toHaveBeenCalledTimes(1);
             expect(endHold).not.toHaveBeenCalled();
 
-            answer(true, {[DOLLAR]: 15, [HEAD_ITEM]: 1});
+            answer(true, {[DOLLAR]: PLENTY - PLAYER_SHAPE_PRICE_DOLLARS, [HEAD_ITEM]: 1});
             expect(pendingPurchaseElementObservable.peek()).toBeNull();
             expect(endHold).toHaveBeenCalledTimes(1);
             expect(onUnlocked).toHaveBeenCalledTimes(1);
@@ -619,7 +636,7 @@ describe("a browser buying a shape", () => {
 
         it("lets go of it before a refusal is said, for the mark's x to be pressed", () => {
             unlockHead();
-            answer(false, {[DOLLAR]: 5, shape_ear_3: 1});
+            answer(false, {[DOLLAR]: PLAYER_SHAPE_PRICE_DOLLARS - 1, [EAR_ITEM]: 1});
             expect(endHold).toHaveBeenCalledTimes(1);
             expect(pendingPurchaseElementObservable.peek()).toBeNull();
             expect(marks()).toHaveLength(1);
@@ -627,7 +644,7 @@ describe("a browser buying a shape", () => {
 
         it("asks for nothing else meanwhile, nor holds the screen again", () => {
             unlockHead();
-            PlayerShapeUnlockUtil.unlock("hat", 5, "partShape_hat.5", onUnlocked as () => void);
+            PlayerShapeUnlockUtil.unlock("hat", lastShapeOf("hat"), `partShape_hat.${lastShapeOf("hat")}`, onUnlocked as () => void);
             expect(sent.map(signal => signal.itemType)).toEqual([HEAD_ITEM]);
             expect(ScreenInputBlockUtil.hold).toHaveBeenCalledTimes(1);
             expect(pendingPurchaseElementObservable.peek()).toBe(TILE);
@@ -636,13 +653,13 @@ describe("a browser buying a shape", () => {
         it("gives up when no answer comes in time, and still takes one that comes later", () => {
             vi.useFakeTimers();
             unlockHead();
-            vi.advanceTimersByTime(4999);
+            vi.advanceTimersByTime(ANSWER_TIMEOUT_MS - 1);
             expect(endHold).not.toHaveBeenCalled();
             vi.advanceTimersByTime(1);
             expect(endHold).toHaveBeenCalledTimes(1);
             expect(pendingPurchaseElementObservable.peek()).toBeNull();
 
-            answer(true, {[DOLLAR]: 15, [HEAD_ITEM]: 1});
+            answer(true, {[DOLLAR]: PLENTY - PLAYER_SHAPE_PRICE_DOLLARS, [HEAD_ITEM]: 1});
             expect(onUnlocked).toHaveBeenCalledTimes(1);
             expect(endHold).toHaveBeenCalledTimes(1);
         });
@@ -739,36 +756,41 @@ describe("the burst over a tile just unlocked", () => {
 
     // How many sparks are drawn in the frame at a time since the start.
     const drawnAt = ({drawnByFrame, frameMs}: ReturnType<typeof play>, ms: number) => drawnByFrame[Math.round(ms / frameMs)];
+    // Frames twice as long as the burst's clock may move on in one, which play it at half speed.
+    const SLOW_FRAME_MS = 2 * 1000 * MAX_STEP_SECONDS;
+    // A spark's shortest life, in milliseconds.
+    const SHORTEST_LIFE_MS = 1000 * SPARK_LIFE[0];
 
     it("lets its sparks spread and burn for seconds, rather than stopping a moment after it starts", () => {
         const burst = play(1000 / 60);
         const most = Math.max(...burst.drawnByFrame);
-        // Random as each burst is, about three in four burn on at a second, where a burst that dropped off the screen
-        // within one kept about a quarter.
-        expect(drawnAt(burst, 1000)).toBeGreaterThan(0.5 * most);
-        expect(drawnAt(burst, 1800)).toBeGreaterThan(0.15 * most);
-        expect(burst.finishedAt).toBeGreaterThan(2500);
-        expect(burst.finishedAt).toBeLessThan(3600);
+        // Random as each burst is, most burn on halfway through the shortest life, where a burst whose sparks dropped
+        // off the screen kept about a quarter. It ends as the longest-lived burns out.
+        expect(drawnAt(burst, SHORTEST_LIFE_MS / 2)).toBeGreaterThan(0.5 * most);
+        expect(drawnAt(burst, SHORTEST_LIFE_MS)).toBeGreaterThan(0.15 * most);
+        expect(burst.finishedAt).toBeGreaterThan(SHORTEST_LIFE_MS);
+        expect(burst.finishedAt).toBeLessThanOrEqual(1000 * Math.max(SPARK_LIFE[1], GLITTER_LIFE[1]) + 2 * burst.frameMs);
     });
 
     it("plays slower on slow frames, rather than cutting its sparks short", () => {
-        const burst = play(100);
+        const smooth = play(1000 / 60);
+        const burst = play(SLOW_FRAME_MS);
         const most = Math.max(...burst.drawnByFrame);
-        expect(drawnAt(burst, 3600)).toBeGreaterThan(0.15 * most);
-        // Burnt out before it is gone.
+        expect(drawnAt(burst, 2 * SHORTEST_LIFE_MS)).toBeGreaterThan(0.15 * most);
+        // Burnt out before it is gone, about twice as late as on smooth frames.
         expect(burst.drawnByFrame[burst.drawnByFrame.length - 1]).toBe(0);
-        expect(burst.finishedAt).toBeGreaterThan(5000);
+        expect(burst.finishedAt).toBeGreaterThan(1.5 * smooth.finishedAt!);
     });
 
     it("holds the screen through its pop and bloom, by its own clock, and lets go long before it is over", () => {
         const smooth = play(1000 / 60);
-        expect(smooth.holdEndedAt).toBeGreaterThan(1450);
-        expect(smooth.holdEndedAt).toBeLessThan(1550);
-        expect(smooth.finishedAt! - smooth.holdEndedAt!).toBeGreaterThan(1000);
+        expect(Math.abs(smooth.holdEndedAt! - 1000 * HOLD_SECONDS)).toBeLessThan(3 * smooth.frameMs);
+        // Before any spark could have burnt out.
+        expect(smooth.finishedAt! - smooth.holdEndedAt!).toBeGreaterThan(SHORTEST_LIFE_MS - 1000 * HOLD_SECONDS);
         // Slow frames slow the hold as they do the sparks.
-        const slow = play(100);
-        expect(slow.holdEndedAt).toBeGreaterThan(2900);
-        expect(slow.holdEndedAt).toBeLessThan(3100);
+        const slow = play(SLOW_FRAME_MS);
+        // Within a frame, as its clock's sum of steps may fall a hair short.
+        expect(Math.abs(slow.holdEndedAt! - 2 * 1000 * HOLD_SECONDS)).toBeLessThanOrEqual(slow.frameMs);
     });
 
     it("lets go of the screen all the same if its frames stop coming", () => {
@@ -785,10 +807,10 @@ describe("the burst over a tile just unlocked", () => {
             vi.stubGlobal("requestAnimationFrame", () => 0);
             const startedAt = Date.now();
             UnlockBurstUtil.burstOver({getBoundingClientRect: () => TILE} as unknown as Element);
-            vi.advanceTimersByTime(3999);
+            vi.advanceTimersByTime(MAX_HOLD_MS - 1);
             expect(endedAfter).toBeUndefined();
             vi.advanceTimersByTime(1);
-            expect(endedAfter! - startedAt).toBe(4000);
+            expect(endedAfter! - startedAt).toBe(MAX_HOLD_MS);
         }
         finally
         {

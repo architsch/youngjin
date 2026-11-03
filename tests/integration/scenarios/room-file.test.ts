@@ -26,6 +26,10 @@ import RoomFile from "../../../src/shared/room/types/roomFile";
 import RoomChangedSignal from "../../../src/shared/room/types/roomChangedSignal";
 import RoomRuntimeMemory from "../../../src/shared/room/types/roomRuntimeMemory";
 import RoomPrefsUtil from "../../../src/shared/room/util/roomPrefsUtil";
+import { CLOUD_COLOR_CHAR_INDEX, FOG_COLOR_CHAR_INDEX, GROUND_COLOR_CHAR_INDEX, GROUND_PEAK_COLOR_CHAR_INDEX,
+    SKY_COLOR_CHAR_INDEX } from "../../../src/shared/room/versionMigration/roomPrefsVersionMigration";
+import { ColorPaletteMap } from "../../../src/shared/math/maps/colorPaletteMap";
+import { ATMOSPHERE_COLOR_PALETTE_NAME } from "../../../src/shared/system/sharedConstants";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import BufferState from "../../../src/shared/networking/types/bufferState";
@@ -286,17 +290,26 @@ describe("room file: the stored format", () => {
 
     it("carries the settings of a file from before the air's palette changed over to it", () => {
         // Version 0 painted the fog and sky from the "Fog" palette and the clouds and ground from "Scenery" (see
-        // room-prefs.test.ts): the air generation wrote then reads as the air it writes now.
+        // room-prefs.test.ts): the air generation wrote then reads black, with a white cloud and a dark grey peak, and
+        // the rest of its settings as they were.
+        const legacyPrefs = "!!_!~~@+XC!X\"$KBY;-[_Z_!&";
         const room = makeSourceRoom();
         const roomFile = fromBytes(concat(
             encodeString(SIGNATURE).slice(0, -1), [0],
             encodeStoredContent(room),
             encodeString(SOURCE_TEXTURE_PACK_PATH),
-            encodeString("!!_!~~@+XC!X\"$KBY;-[_Z_!&")));
-        expect(roomFile.prefs).toBe(RoomPrefsUtil.getDefaultPrefsString());
+            encodeString(legacyPrefs)));
+        const prefs = RoomPrefsUtil.decode(roomFile.prefs);
+        expect([prefs.fogColorIndex, prefs.skyColorIndex, prefs.cloudColorIndex, prefs.groundColorIndex,
+            prefs.groundPeakColorIndex].map(index => ColorPaletteMap[ATMOSPHERE_COLOR_PALETTE_NAME][index]))
+            .toEqual(["#000000", "#000000", "#ffffff", "#000000", "#2a2a2a"]);
+        const colorChars = [FOG_COLOR_CHAR_INDEX, SKY_COLOR_CHAR_INDEX, CLOUD_COLOR_CHAR_INDEX, GROUND_COLOR_CHAR_INDEX,
+            GROUND_PEAK_COLOR_CHAR_INDEX];
+        const withoutColors = (prefs: string) => [...prefs].filter((_, i) => !colorChars.includes(i)).join("");
+        expect(withoutColors(roomFile.prefs)).toBe(withoutColors(legacyPrefs));
 
         // Written again, it is in today's format, and its settings are read as they stand.
-        expect(fromBytes(toBytes(roomFile)).prefs).toBe(RoomPrefsUtil.getDefaultPrefsString());
+        expect(fromBytes(toBytes(roomFile)).prefs).toBe(roomFile.prefs);
     });
 
     describe("refuses", () => {

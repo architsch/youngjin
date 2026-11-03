@@ -41,13 +41,13 @@ const REFUSAL = /\b(can'?t|cannot|don'?t know|do not know|won'?t|not my|aren'?t 
 const MAX_REMEMBERED_TURNS = 8;
 const CONVERSATION_TTL_MS = 20 * MINUTE_IN_MS;
 // Things on its mind in one talk (see HELPER_TOPICS).
-const TOPICS_PER_TALK = 3;
+export const TOPICS_PER_TALK = 3;
 const REQUEST_TIMEOUT_MS = 20_000;
 // Failures are logged at most this often.
 const FAILURE_LOG_INTERVAL_MS = MINUTE_IN_MS;
 // The day's spending is saved at most this often (see DBHelperSpendingUtil), so a restart loses no more than this
 // much of it, and is read again no sooner than this after a failed read, paying for nothing meanwhile.
-const SAVE_INTERVAL_MS = 30_000;
+export const SAVE_INTERVAL_MS = 30_000;
 const LOAD_RETRY_MS = MINUTE_IN_MS;
 const BUDGET_MICRO_DOLLARS = HELPER_DAILY_BUDGET_DOLLARS * 1_000_000;
 

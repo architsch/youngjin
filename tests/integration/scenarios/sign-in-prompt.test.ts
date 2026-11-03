@@ -10,8 +10,7 @@ vi.mock("../../../src/client/app", () => ({ default: { getUser: vi.fn() } }));
 
 import { InventoryItemTypeEnumMap } from "../../../src/shared/inventory/types/inventoryItemType";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
-
-const SHOW_DELAY_MS = 1400;
+import { SHOW_DELAY_MS } from "../../../src/client/ui/util/signInPromptUtil";
 
 describe("asking a guest to sign in", () => {
     let observables: typeof import("../../../src/client/system/clientObservables");

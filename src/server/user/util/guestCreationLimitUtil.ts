@@ -1,13 +1,13 @@
 import { HOUR_IN_MS, MINUTE_IN_MS } from "../../../shared/system/sharedConstants";
 import LogUtil from "../../../shared/system/util/logUtil";
 
-const WINDOW_MS = HOUR_IN_MS; // 1-hour window
+export const WINDOW_MS = HOUR_IN_MS; // 1-hour window
 // Guest creation caps: a looser per-IP cap (shared networks) and a tighter per-IP+User-Agent cap (a
 // User-Agent alone would be a global key). Dev uses effectively unlimited caps, since E2E creates a
 // guest per test from one IP and UA.
 const isDev = process.env.MODE == "dev";
-const MAX_GUESTS_PER_IP = isDev ? 1_000_000 : 10;     // Max guest accounts per IP per window
-const MAX_GUESTS_PER_CLIENT = isDev ? 1_000_000 : 3;  // Max guest accounts per IP + User-Agent per window
+export const MAX_GUESTS_PER_IP = isDev ? 1_000_000 : 10;     // Max guest accounts per IP per window
+export const MAX_GUESTS_PER_CLIENT = isDev ? 1_000_000 : 3;  // Max guest accounts per IP + User-Agent per window
 const CLEANUP_INTERVAL_MS = 10 * MINUTE_IN_MS; // Clean up stale entries every 10 minutes
 
 type RateLimitRecord = {count: number, windowStart: number};

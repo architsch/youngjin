@@ -27,11 +27,11 @@ const lookPitchLimit = 1.3;
 
 // How fast the user may walk, per second, before the look a click took ends. Only their own steering
 // counts: a push or a step climbed doesn't, and turning in place keeps the look.
-const lookMaxSpeed = 4;
+export const lookMaxSpeed = 4;
 
 // Easing rate of the camera toward this pose, per second (see PlayerCamera): where the user moves on their
 // own, and where a force of the room's has a part in it (a fan lifting them), when the gaze follows more gently.
-const easingRate = 8;
+export const easingRate = 8;
 const easingRateUnderForce = 0.5 * easingRate;
 
 // Easing rate of the pitch the gaze turns through under a force (per second, like easingRate). The camera eases
@@ -49,7 +49,7 @@ const lookSettledAngle = 0.01;
 
 // Gap under the feet past which the player is falling: more than one collision layer, so stepping down
 // a stair isn't a fall.
-const freeFallClearance = 1.2 * COLLISION_LAYER_HEIGHT;
+export const freeFallClearance = 1.2 * COLLISION_LAYER_HEIGHT;
 
 // Footprint inset of the ground probe, so a wall touched from the side isn't taken for ground.
 const groundProbeInset = 0.1;

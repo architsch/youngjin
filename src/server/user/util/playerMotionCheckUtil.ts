@@ -16,7 +16,7 @@ import PlayerMotionState from "../types/playerMotionState";
 // together after the connection stalls. While a fan's stream reaches them, as fast as the strongest throws one, and
 // farther at once, for what they carry out of it.
 const WALK_SPEED = PLAYER_WALK_SPEED_PER_INPUT * PLAYER_MAX_WALK_INPUT;
-const ALLOWANCE = {capacity: 1.25 * WALK_SPEED, refillPerSecond: 1.25 * WALK_SPEED};
+export const ALLOWANCE = {capacity: 1.25 * WALK_SPEED, refillPerSecond: 1.25 * WALK_SPEED};
 const FORCED_ALLOWANCE = {capacity: 3 * WALK_SPEED, refillPerSecond: 25};
 // How far over where they were last held up (by something under them, or a stream) a player with nothing under them may
 // be, in world units: a step's climb. A stream tosses nobody higher than it reaches. Past a moment unheld, they must be
@@ -30,7 +30,7 @@ const SUPPORT_DEPTH = 0.15;
 const LEAN_REACH = 0.05;
 // How long a player stays distrusted after a move they couldn't have made, besides the time for walking to have taken
 // them as far.
-const DISTRUST_MS = 3000;
+export const DISTRUST_MS = 3000;
 
 const states = new WeakMap<UserContext, PlayerMotionState>();
 

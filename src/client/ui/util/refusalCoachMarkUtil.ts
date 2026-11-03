@@ -1,7 +1,7 @@
 import { screenCoachMarksObservable } from "../../system/clientObservables";
 import CoachMark from "../types/coachMark";
 
-const DURATION_MS = 3000;
+export const DURATION_MS = 3000;
 
 let shown: CoachMark | undefined = undefined;
 let timeout: ReturnType<typeof setTimeout> | undefined = undefined;

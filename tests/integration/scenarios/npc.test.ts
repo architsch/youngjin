@@ -14,7 +14,7 @@ import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objec
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import NpcObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/npcObjectTypeConfig";
 import BehaviorPrefs from "../../../src/shared/object/types/behaviorPrefs";
-import BehaviorPrefsUtil, { LONGEST_IDLE_TIME, MAX_WANDER_RADIUS,
+import BehaviorPrefsUtil, { DEFAULT_MIN_IDLE_TIME, DEFAULT_WANDER_RADIUS, LONGEST_IDLE_TIME, MAX_WANDER_RADIUS,
     SHORTEST_IDLE_TIME } from "../../../src/shared/object/util/behaviorPrefsUtil";
 import ObjectGroup from "../../../src/shared/object/types/objectGroup";
 import BufferState from "../../../src/shared/networking/types/bufferState";
@@ -353,8 +353,8 @@ describe("NPCs", () => {
 
                 // Until an admin says otherwise, a guide going a little way on its own floor now and then, and home
                 // after each wander.
-                expect(prefs()).toEqual({personality: "guide", wanderRadius: 3, canClimb: false, anchoredToHome: true,
-                    minIdleTime: 20, maxIdleTime: LONGEST_IDLE_TIME});
+                expect(prefs()).toEqual({personality: "guide", wanderRadius: DEFAULT_WANDER_RADIUS, canClimb: false,
+                    anchoredToHome: true, minIdleTime: DEFAULT_MIN_IDLE_TIME, maxIdleTime: LONGEST_IDLE_TIME});
 
                 for (const user of [MEMBER, GUEST])
                     expect(set(user, encode({personality: "jester"}))).toBe(false);

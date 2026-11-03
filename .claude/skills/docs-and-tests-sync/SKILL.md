@@ -105,8 +105,8 @@ attribution goes in the other files.
 
 ### The rules that govern /docs
 
-CLAUDE.md's **Documentation Guidelines** are the rules; read them before editing a page. What they
-mean for a sync pass:
+The **documentation guidelines** ([`../../rules/documentation.md`](../../rules/documentation.md)) are
+the rules; read them before editing a page. What they mean for a sync pass:
 
 - **A page is a short map, and a sync keeps it one.** Most behavior changes alter a bullet or a
   clause, not add a paragraph. If an edit makes a page longer, check whether what was added is
@@ -122,7 +122,8 @@ mean for a sync pass:
   without the user's approval.
 
 Code comments the batch touched are in scope too: a comment the change made wrong gets fixed or
-deleted, and one written as an essay gets cut to CLAUDE.md's **Code Comment Guidelines**.
+deleted, and one written as an essay gets cut to the **code comment guidelines**
+([`../../rules/code-comments.md`](../../rules/code-comments.md)).
 
 ### One architectural check worth making every time
 
@@ -143,15 +144,17 @@ room nobody can leave.
 This is a *report* if it is unfixable within the scope of a doc/test pass — say plainly that the
 feature is incomplete rather than documenting it as though it works everywhere.
 
-### And one more: agents keep up
+### And one more: agents and helpers keep up
 
-CLAUDE.md's rule that **agents keep up with every feature**, in full at
-[`../../rules/agents-keep-up.md`](../../rules/agents-keep-up.md), is broken by every change that
-remembers only the browser. For each behaviour change a player could notice, check the agents' side:
-the tools reach it, what agents see describes it, and the endpoint's instructions, the manual (with its
-ClawHub copy), what the helpers are told and `docs/networking/agents.md` say it. As with room generation, a
-missing tool is a *report* if it is beyond a doc/test pass; a stale sentence in what agents read is
-fixed here.
+The rules that **agents and helpers keep up with every feature**, in full at
+[`../../rules/agents-keep-up.md`](../../rules/agents-keep-up.md) and
+[`../../rules/helpers-keep-up.md`](../../rules/helpers-keep-up.md), are broken by every change that
+remembers only the browser. For each behaviour change a player could notice, run both pages' lists: the
+tools reach it, what agents see describes it, and the endpoint's instructions, the manual (with its
+ClawHub copy), `server.json`, what the helpers are told and the fixed words they say, and
+`docs/networking/agents.md` say it, with versions bumped as the agents' page says. As with room
+generation, a missing tool is a *report* if it is beyond a doc/test pass; a stale sentence in what
+agents or helpers read is fixed here.
 
 ## Step 3 — Map behaviour to tests
 

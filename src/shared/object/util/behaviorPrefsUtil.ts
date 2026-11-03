@@ -17,11 +17,11 @@ const MAX_IDLE_TIME_CHAR_INDEX = 5;
 // In whole world units, each stored as the number itself: at most a room's width corner to corner, so from anywhere in
 // it the whole room.
 export const MAX_WANDER_RADIUS = 45;
-const DEFAULT_WANDER_RADIUS = 3;
+export const DEFAULT_WANDER_RADIUS = 3;
 // In whole seconds, likewise.
 export const SHORTEST_IDLE_TIME = 1;
 export const LONGEST_IDLE_TIME = 30;
-const DEFAULT_MIN_IDLE_TIME = 20;
+export const DEFAULT_MIN_IDLE_TIME = 20;
 const DEFAULT_MAX_IDLE_TIME = LONGEST_IDLE_TIME;
 
 // Encodes and decodes BehaviorPrefs. Decoding is total, so any string (including "") is a valid value: by default a guide

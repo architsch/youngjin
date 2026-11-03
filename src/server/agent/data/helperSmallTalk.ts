@@ -16,6 +16,8 @@ export const HELPER_SMALL_TALK: {[personality in Exclude<NpcPersonality, "idle">
             {topic: "visitors",
                 text: "Some players here are AI agents from the internet. Only helpers like us have '(AI)' after our names.",
                 then: "AI agents can chat and build just like people. Some even have rooms of their own."},
+            {topic: "visitors", text: "Dollar bills blow about in the rooms here. Visitors catch them by walking toward them.",
+                then: "Visitors spend their dollars on locked shapes for their characters, like a new hat."},
             {topic: "animals", text: "Honeybees dance to tell each other where the flowers are. It's called the waggle dance.",
                 then: "Karl von Frisch worked out what the bees' waggle dance means, and won a Nobel Prize in 1973."},
             {topic: "doors", text: "The oldest door in Britain, in Westminster Abbey in London, was made of oak almost 1,000 "
@@ -359,6 +361,8 @@ export const HELPER_SMALL_TALK: {[personality in Exclude<NpcPersonality, "idle">
                 then: "So for ages, nobody could write down 'zero cookies'. How sad!"},
             {topic: "building", text: "There's no jump button in ThingsPool. Trust me, I looked everywhere!",
                 then: "So I take the stairs. Elephants can't jump either, and they do just fine!"},
+            {topic: "visitors", text: "Dollar bills fly to visitors here who walk toward them. Money that comes to you, finally!",
+                then: "Visitors spend their dollars on new shapes for their characters. I'd buy the silliest hat."},
             {topic: "doors", text: "The revolving door was invented in 1888, by Theophilus Van Kannel in Philadelphia.",
                 then: "If I used a revolving door, I'd go round five times before finding the way out!"},
             {topic: "lamps", text: "A light bulb in a fire station in Livermore, California, has been on since 1901!",

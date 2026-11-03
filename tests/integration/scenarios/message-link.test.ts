@@ -28,7 +28,7 @@ describe("message links", () => {
             .toEqual([{kind: "link", href: ESSAY, label: "a good read"}]);
         expect(MessageLinkUtil.parse(link("https://www.linkedin.com/in/someone", "")))
             .toEqual([{kind: "link", href: "https://www.linkedin.com/in/someone", label: "linkedin.com"}]);
-        const title = "A Game Developer's Journey";
+        const title = "A Game Developer's Journey".padEnd(MESSAGE_LINK_LABEL_MAX_LENGTH + 1, "!");
         expect(Array.from(title).length).toBeGreaterThan(MESSAGE_LINK_LABEL_MAX_LENGTH);
         expect(MessageLinkUtil.parse(`Try ${link(ESSAY, ` "${title}" `)}, a story.`)).toEqual([
             {kind: "text", text: `Try "${title}" `},

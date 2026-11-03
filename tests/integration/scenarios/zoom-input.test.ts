@@ -61,12 +61,14 @@ vi.mock("../../../src/client/graphics/util/cameraUtil", () => ({
 import PlayerPointerInput from "../../../src/client/object/components/helpers/player/playerPointerInput";
 import PlayerController from "../../../src/client/object/components/playerController";
 import GizmoDragUtil from "../../../src/client/graphics/util/gizmoDragUtil";
-import ScrollAreaUtil from "../../../src/client/ui/util/scrollAreaUtil";
+import ScrollAreaUtil, { MIN_OVERFLOW_PX } from "../../../src/client/ui/util/scrollAreaUtil";
 import { gameModeObservable, numOpenPopupsObservable } from "../../../src/client/system/clientObservables";
 import { endClientProcess, tryStartClientProcess } from "../../../src/client/system/types/clientProcess";
+import { viewScalePerWheelNotch } from "../../../src/client/object/components/helpers/player/pointer/pointerZoomInput";
 
-// What one notch of a wheel pushed away scales the view by (see PointerZoomInput).
-const ONE_NOTCH_IN = 1.15;
+// What one notch of a wheel pushed away scales the view by, and what a browser reports a notch as, in pixels (or as
+// three lines, or a page).
+const ONE_NOTCH_IN = viewScalePerWheelNotch;
 const NOTCH_PX = 100;
 
 /** A row of tiles wider than its box, which scrolls sideways only (e.g. the texture strip). */
@@ -267,9 +269,11 @@ describe("a scrollable area", () => {
             expect(ScrollAreaUtil.find(inside(element))).toBeNull();
     });
 
-    it("is not an element overflowing by the single pixel a layout's rounding leaves", () => {
-        const rounded = new FakeElement({overflowX: "auto", overflowY: "auto", scrollWidth: 301, scrollHeight: 81});
-        const real = new FakeElement({overflowX: "scroll", scrollWidth: 302});
+    it("is not an element overflowing by no more than a layout's rounding leaves", () => {
+        const fitting = new FakeElement();
+        const rounded = new FakeElement({overflowX: "auto", overflowY: "auto",
+            scrollWidth: fitting.clientWidth + MIN_OVERFLOW_PX, scrollHeight: fitting.clientHeight + MIN_OVERFLOW_PX});
+        const real = new FakeElement({overflowX: "scroll", scrollWidth: fitting.clientWidth + MIN_OVERFLOW_PX + 1});
 
         expect(ScrollAreaUtil.find(rounded)).toBeNull();
         expect(ScrollAreaUtil.find(real)).toBe(real);

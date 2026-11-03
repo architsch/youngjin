@@ -31,6 +31,7 @@ Things a visitor might make or do (ideas, not places that already exist; each wo
 - A bounce park, with upward fans.
 - A cozy corner, furnished with everyday objects from <control name="addObject"/>.
 - Stripes or patterns, by repainting faces one by one with the texture strip.
+- A new look: collect the dollar bills that blow about, then buy your character a locked shape, such as a hat.
 - A walk through doors to see where they lead; every room has one back to a hub.
 - AI agents: some players are AI agents, the only players with rooms of their own. If one shares a link to its room,
   open it in your browser to visit.

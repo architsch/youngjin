@@ -6,7 +6,10 @@
  * look at something, and when, and how it stands waiting on someone typing it a line.
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
-import HelperBehaviorUtil from "../../../src/shared/object/util/helperBehaviorUtil";
+import HelperBehaviorUtil, { APPROACH_FROM, BLOCKED_GIVE_UP_MS, BUBBLE_CLEARED_AFTER_MS, FIRST_SMALL_TALK_MS,
+    HELPER_SPACE, MIN_BUBBLE_MS, MOST_VIEW_DEGREES_OFF, PERSONAL_SPACE, REPICK_DISTANCE, SAME_FLOOR_HEIGHT,
+    SMALL_TALK_DISTANCE, SMALL_TALK_INTERVAL_MS, STAY_AFTER_TALK_MS, VIEW_DISTANCE }
+    from "../../../src/shared/object/util/helperBehaviorUtil";
 import BehaviorPrefsUtil from "../../../src/shared/object/util/behaviorPrefsUtil";
 import BehaviorPrefs from "../../../src/shared/object/types/behaviorPrefs";
 import HelperBehavior from "../../../src/shared/object/types/helperBehavior";
@@ -23,7 +26,7 @@ import Voxel from "../../../src/shared/voxel/types/voxel";
 import VoxelPathUtil from "../../../src/shared/voxel/util/voxelPathUtil";
 import NpcFacingUtil from "../../../src/shared/object/util/npcFacingUtil";
 import Vec3 from "../../../src/shared/math/types/vec3";
-import { NUM_VOXEL_COLS } from "../../../src/shared/system/sharedConstants";
+import { NUM_VOXEL_COLS, VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 
 const NPC_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Npc");
 
@@ -224,7 +227,7 @@ describe("how a helper wanders", () => {
             else
             {
                 // Never by the ground, so never to the other platform, which is as high.
-                expect(goals.every(goal => Math.abs(goal.y - PLATFORM_HOME.y) <= 1)).toBe(true);
+                expect(goals.every(goal => Math.abs(goal.y - PLATFORM_HOME.y) <= SAME_FLOOR_HEIGHT)).toBe(true);
                 expect(goals.every(goal => goal.x <= FIRST_PLATFORM_EAST_EDGE)).toBe(true);
             }
         }
@@ -239,7 +242,8 @@ describe("how a helper wanders", () => {
         {
             helper.at = {...PLATFORM_HOME};
             wanderNow(helper, surroundings, 1000 * pick);
-            expect(helper.path.every(point => Math.abs(point.y - PLATFORM_HOME.y) <= 1), `pick ${pick}`).toBe(true);
+            expect(helper.path.every(point => Math.abs(point.y - PLATFORM_HOME.y) <= SAME_FLOOR_HEIGHT),
+                `pick ${pick}`).toBe(true);
         }
     });
 
@@ -253,7 +257,7 @@ describe("how a helper wanders", () => {
         for (let pick = 0; pick < 10; ++pick)
         {
             const goal = wanderNow(helper, surroundings, 1000 * pick)!;
-            expect(Math.abs(goal.y - PLATFORM_HOME.y), JSON.stringify(goal)).toBeLessThanOrEqual(1);
+            expect(Math.abs(goal.y - PLATFORM_HOME.y), JSON.stringify(goal)).toBeLessThanOrEqual(SAME_FLOOR_HEIGHT);
             expect(helper.path.some(point => point.y > 0 && point.y < 2)).toBe(true);
         }
     });
@@ -360,7 +364,7 @@ describe("how a helper wanders", () => {
         const inTheWay = around(voxels, [helper.path[8]]);
         let now = stepUntilBlocked(helper, inTheWay, 0);
         const blockedAt = {...helper.at};
-        while (now - helper.blockedSince! < 1800)
+        while (now - helper.blockedSince! < BLOCKED_GIVE_UP_MS - 200)
         {
             now += 200;
             HelperBehaviorUtil.act(helper, inTheWay, 0.2, now);
@@ -373,7 +377,7 @@ describe("how a helper wanders", () => {
         HelperBehaviorUtil.act(helper, inTheWay, 0.2, now);
         const newGoal = helper.path[helper.path.length - 1];
         expect(newGoal).toBeDefined();
-        expect(across(newGoal, goal)).toBeGreaterThanOrEqual(6);
+        expect(across(newGoal, goal)).toBeGreaterThanOrEqual(REPICK_DISTANCE);
         expect(across(newGoal, home)).toBeLessThanOrEqual(15);
         // And off it goes, never up close to whoever stood in its way.
         const stoppedAt = {...helper.at};
@@ -381,7 +385,8 @@ describe("how a helper wanders", () => {
         live(helper, inTheWay, now, 10, seen);
         expect(seen.some(at => across(at, stoppedAt) > 1)).toBe(true);
         const them = inTheWay.getPeople()[0];
-        expect(seen.every(at => across(at, them) >= 3 || across(at, them) >= across(stoppedAt, them))).toBe(true);
+        expect(seen.every(at => across(at, them) >= PERSONAL_SPACE || across(at, them) >= across(stoppedAt, them)))
+            .toBe(true);
     });
 
     it("never stops for another helper standing in its way, but walks on past it, a body's width or more to one side",
@@ -468,7 +473,7 @@ describe("how a helper wanders", () => {
         expect(Math.min(...seen[0].map(at => across(at, onHome.at)))).toBeGreaterThanOrEqual(2 * PLAYER_RADIUS_XZ);
         // There a while, short of its home.
         expect(seen[0].slice(-25).every(at => HelperBehaviorUtil.isSamePlace(at, helper.at))).toBe(true);
-        expect(across(helper.at, onHome.at)).toBeLessThan(1.5);
+        expect(across(helper.at, onHome.at)).toBeLessThan(HELPER_SPACE + VOXEL_CELL_SIZE);
     });
 
     it("never wanders to where another helper stands, or is going", () => {
@@ -495,13 +500,13 @@ describe("how a helper wanders", () => {
         const helper = helperAt(home, {wanderRadius: 10});
         helper.at = {x: 22, y: 0, z: 16};
         helper.returnHomeAt = 0;
-        // Off to one side of the straight way, well within a few steps of it.
-        const person = {x: 19, y: 0, z: 18.5};
+        // Off to one side of the straight way, just within the space it keeps from people.
+        const person = {x: 19, y: 0, z: 16 + PERSONAL_SPACE - 0.5};
         const inTheWay = around(voxels, [person]);
         const seen: Vec3[] = [];
         live(helper, inTheWay, 0, 20, seen);
         expect(seen.some(at => HelperBehaviorUtil.isSamePlace(at, home))).toBe(true);
-        expect(Math.min(...seen.map(at => across(at, person)))).toBeGreaterThanOrEqual(3);
+        expect(Math.min(...seen.map(at => across(at, person)))).toBeGreaterThanOrEqual(PERSONAL_SPACE);
         expect(seen.some(at => at.z < 15.5)).toBe(true);
     });
 
@@ -538,7 +543,8 @@ describe("how a helper wanders", () => {
         const goal = wanderNow(helper, around(voxels), 0)!;
         const inTheWay = around(voxels, [helper.path[8]]);
         let now = stepUntilBlocked(helper, inTheWay, 0);
-        for (let flush = 0; flush < 8; ++flush)
+        // Not so long that it gives up.
+        for (let flush = 0; flush < Math.floor(BLOCKED_GIVE_UP_MS / 200) - 2; ++flush)
         {
             now += 200;
             HelperBehaviorUtil.act(helper, inTheWay, 0.2, now);
@@ -594,18 +600,19 @@ describe("how a helper wanders", () => {
         const home: Vec3 = {x: 16, y: 0, z: 16};
         const voxels = openGrid();
         const helper = helperAt(home, {wanderRadius: 3});
-        helper.at = {x: 19, y: 0, z: 16};
+        const stuckAt: Vec3 = {x: 19, y: 0, z: 16};
+        helper.at = {...stuckAt};
         helper.returnHomeAt = 0;
         const seen: Vec3[] = [];
         // Someone stands on its home a few seconds, then goes.
-        let now = live(helper, around(voxels, [home]), 0, 3, seen);
+        let now = live(helper, around(voxels, [home]), 0, Math.ceil(BLOCKED_GIVE_UP_MS / 1000) + 1, seen);
         expect(helper.path).toEqual([]);
         // Still there, though its home is free again, for the while it drew when it gave up.
         const setsOffAt = helper.returnHomeAt;
         expect(setsOffAt).toBeGreaterThan(now);
         while (now < setsOffAt)
             now = live(helper, around(voxels), now, 1, seen);
-        expect(seen.every(at => HelperBehaviorUtil.isSamePlace(at, {x: 19, y: 0, z: 16}))).toBe(true);
+        expect(seen.every(at => HelperBehaviorUtil.isSamePlace(at, stuckAt))).toBe(true);
         live(helper, around(voxels), now, 20, seen);
         expect(seen.some(at => HelperBehaviorUtil.isSamePlace(at, home))).toBe(true);
     });
@@ -619,12 +626,12 @@ describe("how a helper wanders", () => {
         helper.returnHomeAt = 0;
         // Someone stands at its home.
         const onHome = around(voxels, [{x: 16.5, y: 0, z: 16}]);
-        let now = live(helper, onHome, 0, 1);
+        let now = live(helper, onHome, 0, Math.ceil(BLOCKED_GIVE_UP_MS / 1000) - 1);
         expect(helper.path).toEqual([]);
         now = live(helper, onHome, now, 2);
         const goal = helper.path[helper.path.length - 1];
         expect(goal).toBeDefined();
-        expect(across(goal, home)).toBeGreaterThanOrEqual(6);
+        expect(across(goal, home)).toBeGreaterThanOrEqual(REPICK_DISTANCE);
         expect(helper.walk).toBe("wander");
     });
 });
@@ -655,7 +662,7 @@ describe("helpers chatting", () => {
         expect(HelperBehaviorUtil.findSmallTalkPair([a, b], voxels, now)).toEqual([a, b]);
 
         // Farther apart.
-        b.at = {x: 20, y: 0, z: 16};
+        b.at = {x: a.at.x + SMALL_TALK_DISTANCE + 1, y: 0, z: 16};
         expect(HelperBehaviorUtil.findSmallTalkPair([a, b], voxels, now)).toBeUndefined();
         b.at = {x: 18, y: 0, z: 16};
         // A wall between them, taller than they are.
@@ -673,11 +680,12 @@ describe("helpers chatting", () => {
         // One that has just talked with someone.
         HelperBehaviorUtil.say(a, "Hi Alice!", ["alice"], now);
         HelperBehaviorUtil.beat(a, around(voxels, SOMEONE), now, false);
-        expect(HelperBehaviorUtil.findSmallTalkPair([a, b], voxels, now + 10_000)).toBeUndefined();
-        expect(HelperBehaviorUtil.findSmallTalkPair([a, b], voxels, now + 40_000)).toEqual([a, b]);
+        const stayedAfterTalk = now + STAY_AFTER_TALK_MS + 10_000;
+        expect(HelperBehaviorUtil.findSmallTalkPair([a, b], voxels, now + STAY_AFTER_TALK_MS / 3)).toBeUndefined();
+        expect(HelperBehaviorUtil.findSmallTalkPair([a, b], voxels, stayedAfterTalk)).toEqual([a, b]);
         // Once they have chatted, not again for a while.
-        HelperBehaviorUtil.startSmallTalk([a, b], [], now + 40_000);
-        expect(HelperBehaviorUtil.findSmallTalkPair([a, b], voxels, now + 50_000)).toBeUndefined();
+        HelperBehaviorUtil.startSmallTalk([a, b], [], stayedAfterTalk);
+        expect(HelperBehaviorUtil.findSmallTalkPair([a, b], voxels, stayedAfterTalk + 10_000)).toBeUndefined();
         expect(HelperBehaviorUtil.findSmallTalkPair([a, b], voxels, now + 400_000)).toEqual([a, b]);
     });
 
@@ -701,6 +709,9 @@ describe("helpers chatting", () => {
         let mostBothUp = 0;
         for (let second = 0; second < 30; ++second)
         {
+            // Its last words still up, a beat before they would be taken down.
+            if (a.saying.length > 0 && now + 1000 >= a.nextBubbleAt + BUBBLE_CLEARED_AFTER_MS)
+                break;
             for (let flush = 0; flush < 5; ++flush)
             {
                 now += 200;
@@ -774,7 +785,7 @@ describe("helpers chatting", () => {
         HelperBehaviorUtil.beat(b, around(voxels, [], [a]), now, false);
         // As someone comes: no chat yet, but one as long after as after a chat.
         expect(HelperBehaviorUtil.findSmallTalkPair([a, b], voxels, now + 1000)).toBeUndefined();
-        expect(HelperBehaviorUtil.findSmallTalkPair([a, b], voxels, now + 180_000)).toEqual([a, b]);
+        expect(HelperBehaviorUtil.findSmallTalkPair([a, b], voxels, now + SMALL_TALK_INTERVAL_MS[1])).toEqual([a, b]);
     });
 
     it("starts no chat it is no longer free for, and none in no words", () => {
@@ -863,9 +874,10 @@ describe("helpers looking at things", () => {
         // Somewhere in front of the painting, as far off as suits one its size.
         const point: Vec3 = {x: 16, y: 1.5, z: 19.9};
         const end = helper.path[helper.path.length - 1];
-        expect(across(end, point)).toBeGreaterThanOrEqual(1.5);
-        expect(across(end, point)).toBeLessThanOrEqual(3.5);
-        expect(point.z - end.z).toBeGreaterThanOrEqual(Math.cos(50 * Math.PI / 180) * across(end, point));
+        expect(across(end, point)).toBeGreaterThanOrEqual(VIEW_DISTANCE[0]);
+        expect(across(end, point)).toBeLessThanOrEqual(VIEW_DISTANCE[1]);
+        expect(point.z - end.z)
+            .toBeGreaterThanOrEqual(Math.cos(MOST_VIEW_DEGREES_OFF * Math.PI / 180) * across(end, point));
         expect(HelperBehaviorUtil.getLookedAt(helper)).toBeUndefined();
 
         let arrivedAt: number | undefined = undefined;
@@ -995,7 +1007,7 @@ describe("helpers waiting on someone typing them a line", () => {
     // A few steps from home: in earshot of it, and of anywhere a few steps from it.
     const ALICE: Vec3 = {x: 16, y: 0, z: 20};
     // Off the other way, farther than it answers anyone from without walking up to them.
-    const BOB: Vec3 = {x: 16, y: 0, z: 9};
+    const BOB: Vec3 = {x: 16, y: 0, z: HOME.z - APPROACH_FROM - 2};
 
     // Where it is played, with Alice and Bob there by their user ids, and these other helpers.
     function withPeople(voxels: Voxel[], others: HelperBehavior[] = []): HelperSurroundings
@@ -1054,10 +1066,10 @@ describe("helpers waiting on someone typing them a line", () => {
 
         // Once she stops, it stays, still facing her; then heads home, as it does a while after each wander.
         const after: Vec3[] = [];
-        now = liveTypedTo(helper, surroundings, now, 25, undefined, after);
+        now = liveTypedTo(helper, surroundings, now, STAY_AFTER_TALK_MS / 1000 - 5, undefined, after);
         expect(after.every(at => HelperBehaviorUtil.isSamePlace(at, stopped))).toBe(true);
         expect(faces(helper, ALICE)).toBe(true);
-        liveTypedTo(helper, surroundings, now, 30, undefined, after);
+        liveTypedTo(helper, surroundings, now, STAY_AFTER_TALK_MS / 1000, undefined, after);
         expect(after.some(at => HelperBehaviorUtil.isSamePlace(at, HOME))).toBe(true);
     });
 
@@ -1067,7 +1079,7 @@ describe("helpers waiting on someone typing them a line", () => {
         const a = helperAt({x: 15, y: 0, z: 16}, {wanderRadius: 6});
         const b = helperAt({x: 18, y: 0, z: 16}, {wanderRadius: 6});
         const surroundings = withPeople(voxels, [b]);
-        let now = 100_000;
+        let now = FIRST_SMALL_TALK_MS[1] + 10_000;
         HelperBehaviorUtil.startSmallTalk([a, b], [{by: 0, text: "Hey Bo!"}, {by: 1, text: "Hello!"}], now);
         HelperBehaviorUtil.beat(a, surroundings, now, false);
         expect(a.saying).toBe("Hey Bo!");
@@ -1106,7 +1118,7 @@ describe("helpers waiting on someone typing them a line", () => {
         expect(faces(helper, BOB)).toBe(true);
         HelperBehaviorUtil.meet(helper, surroundings, "bob", now + 400);
         expect(helper.path).toEqual([]);
-        now = liveTypedTo(helper, surroundings, now + 400, 5, "alice");
+        now = liveTypedTo(helper, surroundings, now + 400, Math.ceil(MIN_BUBBLE_MS / 1000) + 2, "alice");
         expect(faces(helper, ALICE)).toBe(true);
         expect(helper.at).toEqual(HOME);
 

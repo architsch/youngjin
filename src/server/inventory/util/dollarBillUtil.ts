@@ -38,14 +38,14 @@ import DollarBillFlightUtil from "./dollarBillFlightUtil";
 // A new bill comes this long after the last (or after the room had room for one), somewhere at least this far from
 // everyone, out of their reach as it flutters down, this high over the floor. Then gusts blow it about, each this long
 // after the last.
-const SPAWN_INTERVAL_MS = [20_000, 60_000];
+export const SPAWN_INTERVAL_MS = [20_000, 60_000];
 const SPAWN_MIN_DISTANCE = DOLLAR_BILL_REACH + 1.5;
 const SPAWN_HEIGHT = 1.5;
-const GUST_INTERVAL_MS = [4_000, 12_000];
+export const GUST_INTERVAL_MS = [4_000, 12_000];
 // A player draws in a bill no farther over or under their middle than this, in world units, which leaves out the storey
 // below them, and no wider than this of the way they face, across the room, in radians.
-const REACH_UPWARD = 0.5 * PLAYER_HEIGHT + 0.35;
-const REACH_ANGLE = Math.PI / 4;
+export const REACH_UPWARD = 0.5 * PLAYER_HEIGHT + 0.35;
+export const REACH_ANGLE = Math.PI / 4;
 // Where on a bill an eye may see it, from the crease's middle, in world units: inside it however it is turned. Any of them
 // in sight is the bill in sight.
 const SIGHT_POINTS = [{x: 0, z: 0}, {x: 0.15, z: 0}, {x: -0.15, z: 0}, {x: 0, z: 0.15}, {x: 0, z: -0.15}];

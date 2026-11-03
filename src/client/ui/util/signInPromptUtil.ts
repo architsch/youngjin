@@ -7,7 +7,7 @@ import PopupUtil from "./popupUtil";
 
 const LISTENER_KEY = "signInPromptUtil";
 // Long enough for the count's bounce to end (see dollar-gain), and to set this apart from a reward's mark just gone.
-const SHOW_DELAY_MS = 1400;
+export const SHOW_DELAY_MS = 1400;
 
 let gainedDollar = false;
 let prompted = false;

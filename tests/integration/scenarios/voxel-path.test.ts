@@ -3,7 +3,7 @@
  * through walls, climbing one layer at a time and dropping from ledges, and refusing what nobody could reach.
  */
 import { describe, it, expect } from "vitest";
-import VoxelPathUtil from "../../../src/shared/voxel/util/voxelPathUtil";
+import VoxelPathUtil, { BODY_LAYERS, MAX_DROP_LAYERS } from "../../../src/shared/voxel/util/voxelPathUtil";
 import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import Voxel from "../../../src/shared/voxel/types/voxel";
 import VoxelVertex from "../../../src/shared/voxel/types/voxelVertex";
@@ -65,9 +65,11 @@ describe("walking paths", () => {
     });
 
     it("drops down from a ledge however high, within reason", () => {
+        // As far as a path may drop, or as high as the room leaves a body room to stand.
+        const drop = Math.min(MAX_DROP_LAYERS, NUM_COLLISION_LAYERS - BODY_LAYERS);
         const voxels = openGrid();
-        fill(voxels, [20, 30], [20, 30], [0, 5]);
-        expect(VoxelPathUtil.findPath(voxels, vertex(25, 25, 6), vertex(10, 10, 0))).toBeDefined();
+        fill(voxels, [20, 30], [20, 30], [0, drop - 1]);
+        expect(VoxelPathUtil.findPath(voxels, vertex(25, 25, drop), vertex(10, 10, 0))).toBeDefined();
     });
 
     it("stands a body only where all of it fits and something is under it", () => {

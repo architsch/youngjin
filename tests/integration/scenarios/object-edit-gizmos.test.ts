@@ -71,7 +71,8 @@ import "../../../src/client/graphics/types/gizmo/objectAttachmentEditGizmos";
 import WorldSpaceOutlineRect from "../../../src/client/graphics/types/gizmo/generic/worldSpaceOutlineRect";
 import GizmoDragUtil from "../../../src/client/graphics/util/gizmoDragUtil";
 import CameraUtil from "../../../src/client/graphics/util/cameraUtil";
-import SelectionEditGizmoUtil, { HANDLE_MIN_SPACING_PX } from "../../../src/client/graphics/util/selectionEditGizmoUtil";
+import SelectionEditGizmoUtil, { FOLLOW_FACING_ANGLE, FOLLOW_MARGIN_SHARE, FOLLOW_SIDE_MARGIN_SHARE,
+    HANDLE_MIN_SPACING_PX } from "../../../src/client/graphics/util/selectionEditGizmoUtil";
 import ObjectSelection from "../../../src/client/graphics/types/gizmo/objectSelection";
 import GameObject from "../../../src/client/object/types/gameObject/gameObject";
 import ClientObjectManager from "../../../src/client/object/clientObjectManager";
@@ -578,8 +579,9 @@ describe("the corner handles of an object far from the camera", () => {
         dragThrough(onWall(11.3, 1.8), onWall(11.6, 2.1));
         expect(objectTransform().scale).toEqual([1.5, 1.5, 1]);
 
-        // Far enough off for its corners, grown apart, to show too close together.
-        lookFrom(distanceShowing(1.5 + 2 * OUTLINE_OUTSET, HANDLE_MIN_SPACING_PX) + 1);
+        // Far enough off for its corners, grown apart, to show too close together, and past where any object has them.
+        const cornersCrowd = distanceShowing(1.5 + 2 * OUTLINE_OUTSET, HANDLE_MIN_SPACING_PX);
+        lookFrom(Math.max(cornersCrowd, SELECTION_HANDLE_MAX_DISTANCE) + 1);
         expect(handleIds()).toEqual(["1,1"]);
         await settle();
         frame();
@@ -601,6 +603,14 @@ describe("the view following the pointer that drags an object to its edge", () =
         placeCamera({x, y: 1, z: WALL_Z + distance}, {x, y: 1, z: WALL_Z});
     // So near that the wall fills the view.
     const lookFromHardBy = () => lookFromNear(10.5, 0.5 * VIEW_DISTANCE);
+    // How far the view reaches from its middle to a side, on the wall's plane (60 degrees up and down, 800 by 600).
+    const HALF_VIEW_WIDTH = VIEW_DISTANCE * Math.tan(THREE.MathUtils.degToRad(30)) * 800 / 600;
+    // On the wall, east of the view's middle and short of the margin at its east edge: halfway to where that begins.
+    const KEEPING_TO_THE_MIDDLE = 10.5 + 0.5 * (1 - 2 * FOLLOW_SIDE_MARGIN_SHARE) * HALF_VIEW_WIDTH;
+    // On the wall, a little way into that margin.
+    const JUST_INSIDE_THE_MARGIN = 10.5 + (1 - 2 * FOLLOW_SIDE_MARGIN_SHARE + 0.07) * HALF_VIEW_WIDTH;
+    // How far from head-on the view lets a selection's face be seen, in degrees.
+    const FACING_DEGREES = THREE.MathUtils.radToDeg(FOLLOW_FACING_ANGLE);
     const frame = (seconds: number = 1 / 60) => updateObservable.set(seconds);
     // Where the orbit's pivot is.
     const pivot = (): Vec3 => {
@@ -655,7 +665,7 @@ describe("the view following the pointer that drags an object to its edge", () =
     });
 
     it("holds still while the pointer keeps to the middle of the view", () => {
-        dragCanvasToWall(11.5);
+        dragCanvasToWall(KEEPING_TO_THE_MIDDLE);
         frame(1);
         expect(pivot()).toEqual({x: 10.5, y: 1, z: WALL_Z});
         expect(view()).toEqual({azimuth: 0, polar: 90});
@@ -692,7 +702,7 @@ describe("the view following the pointer that drags an object to its edge", () =
     });
 
     it("slides the faster the further into the margin the pointer is, and twice as far in a frame twice as long", () => {
-        const justInside = slideAfter(12.05, 0.25);
+        const justInside = slideAfter(JUST_INSIDE_THE_MARGIN, 0.25);
         const nearTheEdge = slideAfter(12.75, 0.25);
         expect(justInside).toBeGreaterThan(0);
         expect(nearTheEdge).toBeGreaterThan(2 * justInside);
@@ -700,8 +710,8 @@ describe("the view following the pointer that drags an object to its edge", () =
     });
 
     it("takes the pointer for near a side edge of the view from further off than for near its top or bottom", () => {
-        // As far from an edge each time: near enough for a side one alone.
-        const OFF_THE_EDGE = 120;
+        // As far from an edge each time: near enough for a side one alone, halfway between the two margins.
+        const OFF_THE_EDGE = 0.5 * (FOLLOW_SIDE_MARGIN_SHARE * 800 + FOLLOW_MARGIN_SHARE * 600);
         lookFromHardBy();
         expect(slideAt({x: 800 - OFF_THE_EDGE, y: 300}, 0.25)).toBeGreaterThan(0.01);
         expect(slideAt({x: OFF_THE_EDGE, y: 300}, 0.25)).toBeGreaterThan(0.01);
@@ -737,7 +747,7 @@ describe("the view following the pointer that drags an object to its edge", () =
 
         // At the foot of the view and east of the middle: down, and not across.
         bottomUIHeightObservable.set(200);
-        dragCanvasTo(onWall(11, 0.75), onWall(11.5, 0.5));
+        dragCanvasTo(onWall(11, 0.75), onWall(KEEPING_TO_THE_MIDDLE, 0.5));
         frame(0.25);
         expect(pivot().y).toBeLessThan(0.99);
         expect(pivot().x).toBe(10.5);
@@ -852,14 +862,14 @@ describe("the view following the pointer that drags an object to its edge", () =
         frame(0.5);
         const turning = view();
         expect(turning.polar).toBeLessThan(89);
-        expect(turning.polar).toBeGreaterThan(46);
+        expect(turning.polar).toBeGreaterThan(FACING_DEGREES + 1);
         expect(turning.azimuth).toBeCloseTo(0, 6);
         expect(pivot().y).toBeLessThan(1);
 
         // And goes no further over it than shows the object well.
         for (let i = 0; i < 20; ++i)
             frame(0.5);
-        expect(view().polar).toBeCloseTo(45, 6);
+        expect(view().polar).toBeCloseTo(FACING_DEGREES, 6);
         expect(view().azimuth).toBeCloseTo(0, 6);
     });
 
@@ -921,7 +931,8 @@ describe("the view following the pointer that drags an object to its edge", () =
         expect(objectTransform().dir).toEqual([0, 0, 1]);
         frame(1);
         expect(view().polar).toBeGreaterThan(21);
-        expect(view().polar).toBeLessThanOrEqual(45 + 1e-6);
+        // As near head-on as it lets a wall's face be seen from, the wall's head-on being level.
+        expect(view().polar).toBeLessThanOrEqual(90 - FACING_DEGREES + 1e-6);
     });
 });
 

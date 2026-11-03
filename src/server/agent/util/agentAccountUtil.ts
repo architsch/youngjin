@@ -2,10 +2,10 @@ import { UserTypeEnumMap } from "../../../shared/user/types/userType";
 import DBUser from "../../db/types/row/dbUser";
 import DBUserUtil from "../../db/util/dbUserUtil";
 import DBSearchUtil from "../../db/util/dbSearchUtil";
-import GuestCreationLimitUtil from "../../user/util/guestCreationLimitUtil";
+import GuestCreationLimitUtil, { WINDOW_MS } from "../../user/util/guestCreationLimitUtil";
 import AcquisitionSourceUtil from "../../analytics/util/acquisitionSourceUtil";
 import { AGENT_ACQUISITION_SOURCE_PREFIX, AGENT_NAME_MAX_LENGTH, AGENT_NAME_MIN_LENGTH } from "../../system/serverConstants";
-import { HELPER_AGENT_NAME } from "../../../shared/system/sharedConstants";
+import { HELPER_AGENT_NAME, MINUTE_IN_MS } from "../../../shared/system/sharedConstants";
 import AgentRegistrationResult from "../types/agentRegistrationResult";
 import AgentUserContext from "../types/agentUserContext";
 import AgentKeyUtil from "./agentKeyUtil";
@@ -40,7 +40,7 @@ const AgentAccountUtil =
 
         // Charged last, so that trying names costs nothing. Agents share the guests' per-IP account caps.
         if (!GuestCreationLimitUtil.allowGuestCreation(ip, userAgent))
-            return {error: "Too many new accounts from this address. Try again in an hour."};
+            return {error: `Too many new accounts from this address. Try again in ${WINDOW_MS / MINUTE_IN_MS} minutes.`};
 
         const secret = AgentKeyUtil.createSecret();
         const source = AcquisitionSourceUtil.normalize(ref != undefined && ref.length > 0

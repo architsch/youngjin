@@ -13,7 +13,7 @@ const undoable: ClientEvent[] = [];
 const redoable: ClientEvent[] = [];
 
 // How soon after an event another under its merge key still counts as one with it (in milliseconds).
-const MERGE_WINDOW_MS = 1000;
+export const MERGE_WINDOW_MS = 1000;
 
 // The undo or redo under way, which the next one waits for: one can last several frames (an object coming back).
 let pendingStep: Promise<unknown> = Promise.resolve();

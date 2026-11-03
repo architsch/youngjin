@@ -64,7 +64,7 @@ const UP: Vec3 = {x: 0, y: 1, z: 0};
 const UNANSWERED_LINES_TTL_MS = MINUTE_IN_MS;
 // Someone it can't answer is told why, and told again at most this often while they keep talking to it, so that it
 // neither seems to ignore them nor says the same thing to every line.
-const REFUSAL_RETOLD_AFTER_MS = 2 * MINUTE_IN_MS;
+export const REFUSAL_RETOLD_AFTER_MS = 2 * MINUTE_IN_MS;
 const USAGE_LOG_INTERVAL_MS = HOUR_IN_MS;
 const FAILURE_LOG_INTERVAL_MS = MINUTE_IN_MS;
 // Where a single-player room's helper stands, as it is told.

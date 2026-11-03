@@ -3,18 +3,18 @@ import Vec3 from "../../../shared/math/types/vec3";
 import StringUtil from "../../../shared/math/util/stringUtil";
 
 // Which way a bill may lean as it rests: over onto one half of it, standing on both, or over onto the other.
-const LEANS = [-1, 0, 1];
+export const LEANS = [-1, 0, 1];
 // A flight to the count on the screen starts no farther out than this on either axis, in the screen's own units (from -1
 // to 1 across it): out of view, it comes in over the nearest edge. It bows out from the straight way by this much, toward
 // the screen's middle. It comes up to its full size over this share of the flight, from how large the bill looked where
 // it lay, shrinks by this share as it goes, and then all the way down from this share of the flight on, as it is sucked up.
-const MAX_FLIGHT_START = 1.2;
+export const MAX_FLIGHT_START = 1.2;
 const FLIGHT_BOW = 0.35;
-const GROWING_SHARE = 0.4;
-const FLIGHT_SHRINK = 0.35;
-const VANISHING_SHARE = 0.8;
+export const GROWING_SHARE = 0.4;
+export const FLIGHT_SHRINK = 0.35;
+export const VANISHING_SHARE = 0.8;
 // Drawn in, it shrinks away from this share of the way on.
-const ABSORB_VANISHING_SHARE = 0.75;
+export const ABSORB_VANISHING_SHARE = 0.75;
 
 // How a bill lies: which way it is turned, in radians, and how far it has tipped over; how it is drawn into someone else
 // who collects it; and how it flies to the count on the screen of the user who does (see DollarBillGameObject).

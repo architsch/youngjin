@@ -20,9 +20,9 @@ import InstancedMeshCompositionCodec from "./instancedMeshCompositionCodec";
 //
 // Offsets and scales are quantized to the steps the game authors on, so a value on the grid survives
 // a round trip exactly. Each reaches 94 steps from its minimum, the alphabet's width.
-const OFFSET_STEP = 0.0625;
+export const OFFSET_STEP = 0.0625;
 const OFFSET_MIN = -2.9375;
-const SCALE_STEP = 0.125;
+export const SCALE_STEP = 0.125;
 const SCALE_MIN = -5.875;
 
 // Material codes share a char with the geometry code, which caps them at 3 bits.

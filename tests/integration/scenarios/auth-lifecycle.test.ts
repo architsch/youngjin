@@ -106,7 +106,7 @@ vi.mock("../../../src/server/user/util/guestCreationLimitUtil", () => ({
 
 // ─── Import after mocks ──────────────────────────────────────────────────
 
-import UserSignInUtil from "../../../src/server/user/util/userSignInUtil";
+import UserSignInUtil, { USER_NAME_BASE_MAX_LENGTH } from "../../../src/server/user/util/userSignInUtil";
 import GoogleSignInProvider from "../../../src/server/user/types/signInProvider/googleSignInProvider";
 import GitHubSignInProvider from "../../../src/server/user/types/signInProvider/gitHubSignInProvider";
 import DiscordSignInProvider from "../../../src/server/user/types/signInProvider/discordSignInProvider";
@@ -481,7 +481,7 @@ describe("signing in through GitHub and Discord, and where a sign-in returns to 
         expect(await named("a b+c!d")).toBe("abcd");
         expect(await named("Guest-1234")).toBe("member-Guest-1234");
         expect(await named("xy")).toBe("member-xy");
-        expect(await named("a".repeat(40))).toHaveLength(24);
+        expect(await named("a".repeat(2 * USER_NAME_BASE_MAX_LENGTH))).toHaveLength(USER_NAME_BASE_MAX_LENGTH);
     });
 
     it("keeps the room a sign-in starts from, and returns there; nothing but a room's id is kept", async () => {
@@ -700,14 +700,10 @@ function isDistinctLogin(nowMs: number, prevLastLoginAt: number | undefined): bo
 }
 
 describe("distinct-login gap for loginCount (Scenario 12)", () => {
-    it("minimum gap between distinct logins is one day", () => {
-        expect(LOGIN_COUNT_MIN_GAP_MS).toBe(1 * DAY_IN_MS);
-    });
-
     it("requests within the gap belong to the same login", () => {
         const now = Date.now();
         expect(isDistinctLogin(now, now)).toBe(false);
-        expect(isDistinctLogin(now, now - 5000)).toBe(false);
+        expect(isDistinctLogin(now, now - LOGIN_COUNT_MIN_GAP_MS / 2)).toBe(false);
         expect(isDistinctLogin(now, now - LOGIN_COUNT_MIN_GAP_MS + 1)).toBe(false);
     });
 

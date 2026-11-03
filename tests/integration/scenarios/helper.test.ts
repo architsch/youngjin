@@ -28,15 +28,16 @@ vi.mock("../../../src/server/db/util/dbHelperSpendingUtil", () => ({ default: {
 }}));
 
 import { harness, ConnectedUser } from "../helpers/serverHarness";
-import HelperAgentUtil from "../../../src/server/agent/util/helperAgentUtil";
-import HelperChatUtil from "../../../src/server/agent/util/helperChatUtil";
+import HelperAgentUtil, { REFUSAL_RETOLD_AFTER_MS } from "../../../src/server/agent/util/helperAgentUtil";
+import HelperChatUtil, { SAVE_INTERVAL_MS, TOPICS_PER_TALK } from "../../../src/server/agent/util/helperChatUtil";
 import AgentBodyUtil from "../../../src/server/agent/util/agentBodyUtil";
 import AgentAccountUtil from "../../../src/server/agent/util/agentAccountUtil";
 import AgentPresenceUtil from "../../../src/server/agent/util/agentPresenceUtil";
 import AgentToolUtil from "../../../src/server/agent/util/agentToolUtil";
 import AgentUserContext from "../../../src/server/agent/types/agentUserContext";
 import HelperIdentity from "../../../src/server/agent/types/helperIdentity";
-import HelperRouter from "../../../src/server/networking/router/api/helperRouter";
+import HelperRouter, { MAX_LINES, MAX_OBJECT_ID_LENGTH }
+    from "../../../src/server/networking/router/api/helperRouter";
 import { HELPER_PERSONALITIES } from "../../../src/server/agent/data/helperPersonalities";
 import { HELPER_GUIDE } from "../../../src/server/agent/data/helperGuide";
 import { HELPER_KNOWLEDGE } from "../../../src/server/agent/data/helperKnowledge";
@@ -67,9 +68,12 @@ import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import NpcPersonalityMap from "../../../src/shared/object/maps/npcPersonalityMap";
 import { NpcPersonality } from "../../../src/shared/object/types/npcPersonality";
-import HelperBehaviorUtil, { HEARING_DISTANCE, MAX_SIGHTS } from "../../../src/shared/object/util/helperBehaviorUtil";
+import HelperBehaviorUtil, { ANSWER_PAUSE_MS, BUBBLE_MS_PER_CHAR, BUBBLE_NOTICE_MS, FIRST_SMALL_TALK_MS, GLANCE_MS,
+    HEARING_DISTANCE, MAX_SIGHTS, MEETING_DISTANCE, MIN_BUBBLE_MS, PERSONAL_SPACE, STAY_AFTER_TALK_MS, VIEW_DISTANCE,
+    VIEW_DISTANCE_PER_SIZE } from "../../../src/shared/object/util/helperBehaviorUtil";
+import ObjectScaleUtil from "../../../src/shared/object/util/objectScaleUtil";
 import AdminPrefsUtil from "../../../src/shared/object/util/adminPrefsUtil";
-import BehaviorPrefsUtil from "../../../src/shared/object/util/behaviorPrefsUtil";
+import BehaviorPrefsUtil, { DEFAULT_WANDER_RADIUS } from "../../../src/shared/object/util/behaviorPrefsUtil";
 import BehaviorPrefs from "../../../src/shared/object/types/behaviorPrefs";
 import { HELPER_SMALL_TALK } from "../../../src/server/agent/data/helperSmallTalk";
 import { HELPER_TOPICS } from "../../../src/server/agent/data/helperTopics";
@@ -80,14 +84,15 @@ import HelperRemarkUtil from "../../../src/server/agent/util/helperRemarkUtil";
 import DBUserUtil from "../../../src/server/db/util/dbUserUtil";
 import { FTUEElementCodeEnumMap } from "../../../src/shared/user/types/ftueElementCode";
 import FTUEElementUtil from "../../../src/shared/user/util/ftueElementUtil";
-import MessageLinkUtil from "../../../src/shared/object/util/messageLinkUtil";
-import { NPC_MESSAGE_MAX_LENGTH, NUM_VOXEL_COLS, OBJECT_MESSAGE_MAX_LENGTH, OBJECT_NAME_MAX_LENGTH,
-    PLAYER_MESSAGE_EXPIRATION_MS, ROOM_EDITOR_SINGLE_PLAYER_MODE, SANDBOX_SINGLE_PLAYER_MODE,
+import MessageLinkUtil, { CUT_MARK } from "../../../src/shared/object/util/messageLinkUtil";
+import { NPC_MESSAGE_MAX_LENGTH, NUM_VOXEL_COLS, OBJECT_LABEL_MAX_LENGTH, OBJECT_MESSAGE_MAX_LENGTH,
+    OBJECT_NAME_MAX_LENGTH, PLAYER_MESSAGE_EXPIRATION_MS, ROOM_EDITOR_SINGLE_PLAYER_MODE, SANDBOX_SINGLE_PLAYER_MODE,
     TUTORIAL_SINGLE_PLAYER_MODE } from "../../../src/shared/system/sharedConstants";
 import { HELPER_DAILY_BUDGET_DOLLARS, HELPER_MAX_REPLIES_PER_AGENT_PER_HOUR,
     HELPER_MAX_REPLIES_PER_PERSON_PER_HOUR, HELPER_MODEL, HELPER_MODEL_PRICES } from "../../../src/server/system/serverConstants";
 import Vec3 from "../../../src/shared/math/types/vec3";
 import LogUtil from "../../../src/shared/system/util/logUtil";
+import { GAME_NUMBER } from "../helpers/gameNumbers";
 import "../../../src/shared/graphics/image/imageMapDependencies";
 
 const FIRST_HUB_ID = "hubAAAAAAAAAAAAAAAAA";
@@ -96,6 +101,19 @@ const NPC_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Npc");
 const UP: Vec3 = {x: 0, y: 1, z: 0};
 // A helper's walk ends on the grid vertex nearest where it was headed, at most half a cell's diagonal off.
 const PATH_END_SLACK = 0.36;
+
+// How long a bubble of a text stays up before the next is shown (see HelperBehaviorUtil).
+const bubbleSecondsOf = (text: string): number => Math.max(MIN_BUBBLE_MS,
+    BUBBLE_NOTICE_MS + BUBBLE_MS_PER_CHAR * MessageLinkUtil.getVisibleLength(text)) / 1000;
+// From a line said to a helper with nothing else to say until its answer is up: the pause for more lines, and a beat.
+const ANSWER_SECONDS = Math.ceil(ANSWER_PAUSE_MS / 1000) + 1;
+
+// A reply of as many whole sentences as leave room for its closing words, and for the mark of a cut after the sentence
+// before them; or of as few as take it past the longest a reply may be.
+const fitBefore = (sentence: string, closing: string) => sentence.repeat(Math.floor(
+    (NPC_MESSAGE_MAX_LENGTH - MessageLinkUtil.getVisibleLength(closing) - 1 - CUT_MARK.length) / sentence.length));
+const overflowBefore = (sentence: string, closing: string) => sentence.repeat(1 + Math.floor(
+    (NPC_MESSAGE_MAX_LENGTH - MessageLinkUtil.getVisibleLength(closing)) / sentence.length));
 const TOLD_BASICS = FTUEElementUtil.toChar(FTUEElementCodeEnumMap.Basics);
 // What a helper's mood and the things on its mind come under, in a request for its reply (see HelperChatUtil).
 const MOOD_HEADING = "Your mood today, for small talk:";
@@ -309,6 +327,13 @@ async function setOwnValue(person: ConnectedUser, metadataKey: number, value: st
 function helperIn(roomID: string, objectId: string)
 {
     return HelperAgentUtil.getHelpers(roomID).find(helper => helper.objectId == objectId)!;
+}
+
+// Lives on until the words a helper put up last, this moment, have been read, and a beat more for it to turn to
+// whom it keeps in view.
+async function liveUntilRead(objectId: string): Promise<void>
+{
+    await live(Math.ceil(bubbleSecondsOf(saidBy(objectId).at(-1)!)) + 1);
 }
 
 function playerOf(userID: string)
@@ -579,7 +604,7 @@ describe("helpers", () => {
         // Done speaking (its greeting read), it keeps her in view while she stays near.
         await live(5);
         expect(saidBy(mira)).toHaveLength(1);
-        await walkIn(alice, 5, -1);
+        await walkIn(alice, 4, 3);
         await live(1);
         expect(offFrom(lastFacingOf(mira), at, playerOf(alice.user.id).transform.pos)).toBeLessThan(3);
         expect(facingsOf(mira).length).toBeLessThan(10);
@@ -595,7 +620,7 @@ describe("helpers", () => {
         await walkIn(bob, 6, -3);
         await walkIn(carol, 7);
         shown.length = 0;
-        await live(6);
+        await live(3 * GLANCE_MS / 1000);
 
         expect(saidBy(mira)).toHaveLength(1);
         expect(saidBy(mira)[0]).toMatch(/^Hi everyone,/);
@@ -617,7 +642,8 @@ describe("helpers", () => {
         // them.
         await walkIn(alice, 6, 2);
         await walkIn(bob, 5.5, -2);
-        await live(10);
+        await live(1);
+        await liveUntilRead(mira);
         claude.answers = ["Hello Alice!", "Hello Bob!"];
         const facingAt = (person: ConnectedUser) => offFrom(lastFacingOf(mira), helperIn(FIRST_HUB_ID, mira).at,
             playerOf(person.user.id).transform.pos);
@@ -632,13 +658,13 @@ describe("helpers", () => {
         expect(claude.requests).toHaveLength(0);
 
         // Bob talks to it while it answers her: it keeps to her until it is done, then turns to him to answer.
-        await live(2);
+        await live(ANSWER_SECONDS - 1);
         expect(saidBy(mira)).toContain("Hello Alice!");
         await talk(bob, "hello?");
         await live(1);
         expect(facingAt(alice)).toBeLessThan(3);
         // Thinking of what to say to him while she reads what it said to her (his answer shown only as this ends).
-        await live(2);
+        await live(Math.ceil(bubbleSecondsOf("Hello Alice!")) - 1);
         expect(claude.requests).toHaveLength(2);
         expect(facingAt(alice)).toBeLessThan(3);
         await live(3);
@@ -673,7 +699,7 @@ describe("helpers", () => {
             + `in.\n\nYour character: ${HELPER_PERSONALITIES.guide.character}\n\n${MOOD_HEADING} ${moodIn(body)}.\n\n`
             + `${TOPICS_HEADING}\n${topicsIn(body).map(topic => `- ${topic}`).join("\n")}`);
         expect(HELPER_PERSONALITIES.guide.moods).toContain(moodIn(body));
-        expect(topicsIn(body)).toHaveLength(3);
+        expect(topicsIn(body)).toHaveLength(TOPICS_PER_TALK);
         expect(topicsIn(body).every(topic => HELPER_TOPICS.guide.includes(topic))).toBe(true);
         expect(body.messages).toEqual([{role: "user", content: "(knows how to play) how do I build?"}]);
         expect(saidBy(mira).slice(1)).toEqual(["Switch to Edit mode with the toggle at the top. Then click a block, and "
@@ -697,12 +723,14 @@ describe("helpers", () => {
         expect(saidBy(mira).at(-1)).toBe("Read it at <link href=\"https://thingspool.net/essays/page-12.html\">"
             + "thingspool.net</link>, it's funny!");
 
-        const kept = `${"Cats are great. ".repeat(11)}See <link href="https://thingspool.net/">this essay</link> now.`;
-        claude.answers.push(`${kept} More words here.`);
+        const closing = "See <link href=\"https://thingspool.net/\">this essay</link> now.";
+        const kept = `${fitBefore("Cats are great. ", closing)}${closing}`;
+        const reply = `${kept} More words here. More words here.`;
+        claude.answers.push(reply);
         await talk(alice, "more?");
         await live(20);
         const said = saidBy(mira).at(-1)!;
-        expect(MessageLinkUtil.getVisibleLength(`${kept} More words here.`)).toBeGreaterThan(NPC_MESSAGE_MAX_LENGTH);
+        expect(MessageLinkUtil.getVisibleLength(reply)).toBeGreaterThan(NPC_MESSAGE_MAX_LENGTH);
         expect(said).toBe(kept);
         expect(claude.requests[1].body.messages.at(-1)).toEqual({role: "user", content: "(knows how to play) more?"});
     });
@@ -715,7 +743,8 @@ describe("helpers", () => {
         await live(8);
 
         const essay = "<link href=\"https://thingspool.net/essays/page-12.html\">read it</link>";
-        const long = `${"Cats are great. ".repeat(11)}Try "Domestication", a funny essay: ${essay}.`;
+        const closing = `Try "Domestication", a funny essay: ${essay}.`;
+        const long = `${overflowBefore("Cats are great. ", closing)}${closing}`;
         const shorter = `Try "Domestication", a funny essay by Youngjin about cats: ${essay}.`;
         expect(MessageLinkUtil.getVisibleLength(long)).toBeGreaterThan(NPC_MESSAGE_MAX_LENGTH);
         claude.answers.push(long, shorter);
@@ -727,7 +756,8 @@ describe("helpers", () => {
         expect(claude.requests[1].body.system.slice(0, 2)).toEqual(claude.requests[0].body.system);
         expect(claude.requests[1].body.system[2].text).toContain("one sentence");
 
-        claude.answers.push(long, `${"Dogs are great. ".repeat(12)}Try "Flatland": ${essay}.`);
+        const flatland = `Try "Flatland": ${essay}.`;
+        claude.answers.push(long, `${overflowBefore("Dogs are great. ", flatland)}${flatland}`);
         await talk(alice, "and another?");
         await live(8);
         expect(saidBy(mira).at(-1)).toBe(MessageLinkUtil.shorten(long, NPC_MESSAGE_MAX_LENGTH));
@@ -739,28 +769,31 @@ describe("helpers", () => {
         const mira = standNpc(FIRST_HUB_ID, "Mira");
         await live(1);
         const alice = await joinPerson("Alice");
-        await live(8);
+        await live(1);
+        await liveUntilRead(mira);
 
-        const fuller = "I can't know tomorrow's weather, but here is a fact: a falling raindrop is shaped more like a "
+        const fuller ="I can't know tomorrow's weather, but here is a fact: a falling raindrop is shaped more like a "
             + "hamburger bun than a tear.";
         claude.answers.push("I can't know tomorrow's weather, sorry.", fuller);
         await talk(alice, "will it rain tomorrow?");
-        await live(8);
+        await live(ANSWER_SECONDS);
         expect(saidBy(mira).at(-1)).toBe(fuller);
         expect(claude.requests).toHaveLength(2);
         expect(claude.requests[1].body.messages).toEqual(claude.requests[0].body.messages);
         expect(claude.requests[1].body.system[2].text).toContain("must not stop at what you can't do");
 
+        await liveUntilRead(mira);
         claude.answers.push("I don't know her, sorry.", "I don't know Minji.");
         await talk(alice, "do you know my friend Minji?");
-        await live(8);
+        await live(ANSWER_SECONDS);
         expect(saidBy(mira).at(-1)).toBe("I don't know her, sorry.");
         expect(claude.requests).toHaveLength(4);
 
         // A short reply that refuses nothing is said as it is.
+        await liveUntilRead(mira);
         claude.answers.push("Hello again! Good to see you.");
         await talk(alice, "hello!");
-        await live(8);
+        await live(ANSWER_SECONDS);
         expect(saidBy(mira).at(-1)).toBe("Hello again! Good to see you.");
         expect(claude.requests).toHaveLength(5);
     });
@@ -882,6 +915,16 @@ describe("helpers", () => {
         }
     });
 
+    it("tells helpers no number the game could change, which they would go on repeating after it did", () => {
+        const played = NpcPersonalityMap.getEntries().map(entry => entry.id).filter(NpcPersonalityMap.isPlayed);
+        for (const text of [HELPER_GUIDE, HELPER_KNOWLEDGE, ...Object.values(HELPER_PERSONALITIES).flatMap(
+            ({character, moods}) => [character, ...moods]), ...played.flatMap(personality => [
+            NpcPersonalityMap.getInvitation(personality), NpcPersonalityMap.getBasics(personality)])])
+        {
+            expect(text.replace(/\s+/g, " "), text).not.toMatch(GAME_NUMBER);
+        }
+    });
+
     it("shows each control it names as its picture, written as a bubble keeps it, and never says where on the screen one "
         + "is", async () => {
         standNpc(FIRST_HUB_ID, "Mira");
@@ -962,8 +1005,8 @@ describe("helpers", () => {
         await talk(alice, "tell me something");
         await live(6);
         const [first, second] = claude.requests.map(request => topicsIn(request.body));
-        expect(first).toHaveLength(3);
-        expect(new Set(first).size).toBe(3);
+        expect(first).toHaveLength(TOPICS_PER_TALK);
+        expect(new Set(first).size).toBe(TOPICS_PER_TALK);
         expect(first.every(topic => HELPER_TOPICS.explorer.includes(topic))).toBe(true);
         expect(second).toEqual(first);
         const mood = moodIn(claude.requests[0].body);
@@ -1170,13 +1213,13 @@ describe("helpers", () => {
         const moves = () => shown.filter(({signalType, signal}) => signalType == "setObjectTransformSignal"
             && signal.objectId == mira).length;
         // Greeted, and then left to wander off once quiet a while, as it soon does.
-        await live(40);
+        await live(STAY_AFTER_TALK_MS / 1000 + 10);
         expect(saidBy(mira)).toEqual([expect.stringMatching(/^Hi Alice, welcome/)]);
         expect(moves()).toBeGreaterThan(0);
 
         await setTyping(alice, true);
         const typedAt = moves();
-        await live(40);
+        await live(STAY_AFTER_TALK_MS / 1000 + 10);
         expect(moves()).toBe(typedAt);
         expect(helperIn(FIRST_HUB_ID, mira).waitingFor).toBe("Alice");
         expect(offFrom(lastFacingOf(mira), helperIn(FIRST_HUB_ID, mira).at, playerOf(alice.user.id).transform.pos))
@@ -1185,9 +1228,9 @@ describe("helpers", () => {
         // Stopped without a word, she is no longer waited on: it stays a while, as after a talk, then goes on.
         await setTyping(alice, false);
         expect(helperIn(FIRST_HUB_ID, mira).waitingFor).toBeUndefined();
-        await live(25);
+        await live(STAY_AFTER_TALK_MS / 1000 - 5);
         expect(moves()).toBe(typedAt);
-        await live(30);
+        await live(STAY_AFTER_TALK_MS / 1000);
         expect(moves()).toBeGreaterThan(typedAt);
     });
 
@@ -1228,7 +1271,7 @@ describe("helpers", () => {
         await setTyping(alice, false);
 
         const far = await joinPerson("Faraway");
-        await moveTo(far, inFrontOfEntrance(FIRST_HUB_ID, 20));
+        await moveTo(far, inFrontOfEntrance(FIRST_HUB_ID, 12 + HEARING_DISTANCE));
         const ghost = harness.connectUser({id: "id-Ghost", userName: "Ghost", userType: UserTypeEnumMap.Admin,
             playerMetadata: {[ObjectMetadataKeyEnumMap.AdminPrefs]: AdminPrefsUtil.encode({ghostMode: true})}});
         await harness.joinRoom(ghost, FIRST_HUB_ID);
@@ -1373,7 +1416,7 @@ describe("helpers", () => {
             body: {reply: "Ha! Welcome aboard!"}});
         expect(claude.requests[0].body.messages).toEqual([{role: "user", content: "(knows how to play) hi there"}]);
 
-        for (const wrong of [{...pip, text: "x".repeat(4 * OBJECT_MESSAGE_MAX_LENGTH + 1)}, {...pip, text: "   "},
+        for (const wrong of [{...pip, text: "x".repeat(MAX_LINES * OBJECT_MESSAGE_MAX_LENGTH + 1)}, {...pip, text: "   "},
             {...pip, text: 7}, {...pip, objectId: undefined, text: "hi"},
             {...pip, name: "n".repeat(OBJECT_NAME_MAX_LENGTH + 1), text: "hi"}])
         {
@@ -1396,7 +1439,7 @@ describe("helpers", () => {
             expect(await HelperAgentUtil.answerAlone(alice.user.id, pip, `question ${i}`)).toBe("Happy to help!");
         expect(await HelperAgentUtil.answerAlone(alice.user.id, pip, "one more")).toMatch(/^Let's take a little break/);
         expect(await HelperAgentUtil.answerAlone(alice.user.id, pip, "and another")).toBe("");
-        vi.setSystemTime(Date.now() + 2 * 60_000 + 1000);
+        vi.setSystemTime(Date.now() + REFUSAL_RETOLD_AFTER_MS + 1000);
         expect(await HelperAgentUtil.answerAlone(alice.user.id, pip, "still there?")).toMatch(/^Let's take a little break/);
         expect(claude.requests).toHaveLength(HELPER_MAX_REPLIES_PER_PERSON_PER_HOUR);
     });
@@ -1433,7 +1476,7 @@ describe("helpers", () => {
         // Someone comes in, too far off to be greeted, and so to be talked to. The chats that came due while nobody was
         // there were skipped, so the next is up to as long after as after a chat.
         const alice = await joinPerson("Alice", "an");
-        await walkIn(alice, 14);
+        await walkIn(alice, 3 + HEARING_DISTANCE + 3);
         for (let second = 0; second < 240 && helperIn(FIRST_HUB_ID, mira).chattingWith == undefined; ++second)
             await live(1);
         const chattingWith: (string | undefined)[] = [];
@@ -1484,7 +1527,7 @@ describe("helpers", () => {
         await live(1);
         const admin = connectAdmin();
         await harness.joinRoom(admin, FIRST_HUB_ID);
-        await moveTo(admin, inFrontOfEntrance(FIRST_HUB_ID, 14));
+        await moveTo(admin, inFrontOfEntrance(FIRST_HUB_ID, 3 + HEARING_DISTANCE + 3));
         HelperAgentUtil.hold(admin.socketUserContext, new HoldObjectSignal(FIRST_HUB_ID, mira, true));
         await live(150);
         expect(saidBy(mira)).toEqual([]);
@@ -1503,13 +1546,15 @@ describe("helpers", () => {
         await live(1);
         // Someone in the room from the first, too far off to be greeted, for the two to chat in front of.
         const alice = await joinPerson("Alice", "an");
-        await walkIn(alice, 14);
-        for (let second = 0; second < 120 && helperIn(FIRST_HUB_ID, mira).chattingWith == undefined; ++second)
+        await walkIn(alice, 3 + HEARING_DISTANCE + 3);
+        for (let second = 0; second < FIRST_SMALL_TALK_MS[1] / 1000 + 30
+            && helperIn(FIRST_HUB_ID, mira).chattingWith == undefined; ++second)
             await live(1);
         expect(helperIn(FIRST_HUB_ID, mira).chattingWith).toBe("Bo");
 
         await walkIn(alice, 6);
-        await live(12);
+        // Each greets once the line of the chat it broke off has been read.
+        await live(2 + Math.max(...[mira, bo].map(id => Math.ceil(bubbleSecondsOf(saidBy(id).at(-1) ?? "")))));
         expect(saidBy(mira).at(-1)).toMatch(/^Hi Alice, welcome back!/);
         expect(saidBy(bo).at(-1)).toMatch(/^Hi Alice, welcome back!/);
         expect(helperIn(FIRST_HUB_ID, mira).chattingWith).toBeUndefined();
@@ -1614,7 +1659,7 @@ describe("helpers", () => {
         // Someone comes in, too far off to be greeted. The look that came due while it was alone was skipped, so its next
         // is up to as long after as after a look.
         const alice = await joinPerson("Alice", "an");
-        await walkIn(alice, 14);
+        await walkIn(alice, 3 + DEFAULT_WANDER_RADIUS + HEARING_DISTANCE + 1);
         for (let second = 0; second < 700 && saidBy(mira).length == 0; ++second)
             await live(1);
         const [remark] = saidBy(mira);
@@ -1623,7 +1668,9 @@ describe("helpers", () => {
         // It stands in front of it, facing it, while its words are read, as an agent who looks then sees.
         const at = helperIn(FIRST_HUB_ID, mira).at;
         expect(helperIn(FIRST_HUB_ID, mira).lookingAt).toBe(door.objectId);
-        expect(across(at, door.transform.pos)).toBeLessThanOrEqual(3.5 + PATH_END_SLACK);
+        const doorSize = ObjectScaleUtil.getObjectSize(door.objectTypeIndex, door.transform.scale);
+        const farthestView = Math.max(VIEW_DISTANCE[1], VIEW_DISTANCE_PER_SIZE[1] * Math.max(doorSize.x, doorSize.y));
+        expect(across(at, door.transform.pos)).toBeLessThanOrEqual(farthestView + PATH_END_SLACK);
         expect(offFrom(lastFacingOf(mira), at, door.transform.pos)).toBeLessThan(3);
         const agent = await registerAndAttend("Looking-Agent", "10.9.9.5");
         expect((AgentToolUtil.look(agent) as any).people.find((person: any) => person.name == "Mira").lookingAt)
@@ -1808,7 +1855,8 @@ describe("helpers", () => {
             .toEqual({index: -1, text: ""});
         for (const wrong of [{}, {...two, things: []}, {...two, things: Array(MAX_SIGHTS + 1).fill({objectType: "Door"})},
             {...two, things: [{objectType: 7}]}, {...two, things: [{objectType: "Lamp", color: 200}]},
-            {...two, things: [{objectType: "Label", text: "x".repeat(600)}]}, {...two, objectId: "x".repeat(65)}])
+            {...two, things: [{objectType: "Label", text: "x".repeat(OBJECT_LABEL_MAX_LENGTH + 1)}]},
+            {...two, objectId: "x".repeat(MAX_OBJECT_ID_LENGTH + 1)}])
         {
             expect((await ask(wrong)).statusCode).toBe(400);
         }
@@ -1821,7 +1869,8 @@ describe("helpers", () => {
         await live(1);
         const alice = await joinPerson("Alice");
         const bob = await joinPerson("Bob");
-        await live(12);
+        await live(1);
+        await liveUntilRead(mira);
         expect(saidBy(mira)).toHaveLength(1);
 
         // Read at the pace of what it shows, its link's label and not its address.
@@ -1830,15 +1879,15 @@ describe("helpers", () => {
         expect(MessageLinkUtil.getVisibleLength(toAlice)).toBeGreaterThan(OBJECT_MESSAGE_MAX_LENGTH);
         claude.answers.push(toAlice, "Hi Bob!");
         await talk(alice, "can AIs play?");
-        await live(3);
+        await live(ANSWER_SECONDS);
         expect(saidBy(mira).slice(1)).toEqual([toAlice]);
 
         // Bob's answer is ready in moments, but waits until hers has had time to be read, at an easy pace.
         await talk(bob, "hello!");
-        await live(9);
+        await live(Math.ceil(bubbleSecondsOf(toAlice)) - 1);
         expect(claude.requests).toHaveLength(2);
         expect(saidBy(mira).slice(1)).toEqual([toAlice]);
-        await live(4);
+        await live(1);
         expect(saidBy(mira).slice(1)).toEqual([toAlice, "Hi Bob!"]);
     });
 
@@ -1876,7 +1925,7 @@ describe("helpers", () => {
         // Each says who they are, as Claude isn't told.
         for (const person of crowd)
             await talk(person, `hi there, I'm ${person.user.userName}!`);
-        await live(3);
+        await live(ANSWER_SECONDS);
         expect(claude.requests).toHaveLength(1);
 
         await live(120);
@@ -1895,25 +1944,27 @@ describe("helpers", () => {
         await live(10);
         expect(HELPER_MAX_REPLIES_PER_AGENT_PER_HOUR).toBeLessThan(HELPER_MAX_REPLIES_PER_PERSON_PER_HOUR);
 
+        // Each line is answered once the last answer has been up long enough to read.
+        const perLine = Math.ceil(MIN_BUBBLE_MS / 1000) + 1;
         for (let i = 0; i < HELPER_MAX_REPLIES_PER_AGENT_PER_HOUR; ++i)
         {
             await AgentToolUtil.say(agent, `and another thing, ${i}`);
-            await live(4);
+            await live(perLine);
         }
         expect(claude.requests).toHaveLength(HELPER_MAX_REPLIES_PER_AGENT_PER_HOUR);
-        await live(4);
+        await live(perLine);
 
         const before = saidBy(mira).length;
         await AgentToolUtil.say(agent, "one more?");
-        await live(4);
+        await live(perLine);
         await AgentToolUtil.say(agent, "and another?");
-        await live(4);
+        await live(perLine);
         expect(claude.requests).toHaveLength(HELPER_MAX_REPLIES_PER_AGENT_PER_HOUR);
         expect(saidBy(mira).slice(before)).toEqual(["Let's take a little break. Try exploring, and talk to me again later!"]);
 
         vi.setSystemTime(Date.now() + 60 * 60 * 1000);
         await AgentToolUtil.say(agent, "back again!");
-        await live(4);
+        await live(perLine);
         expect(claude.requests).toHaveLength(HELPER_MAX_REPLIES_PER_AGENT_PER_HOUR + 1);
     });
 
@@ -1966,7 +2017,7 @@ describe("helpers", () => {
         expect(await HelperChatUtil.getRefusal("someone", false)).toBeUndefined();
     });
 
-    it("saves what it spent within half a minute, and the rest as it stops", async () => {
+    it("saves what it spent every so often, and the rest as it stops", async () => {
         standNpc(FIRST_HUB_ID, "Mira");
         await live(1);
         const alice = await joinPerson("Alice", "an");
@@ -1976,7 +2027,7 @@ describe("helpers", () => {
         await live(3);
         const oneReply = Math.ceil(REPLY_USAGE.input_tokens * HELPER_MODEL_PRICES.input
             + REPLY_USAGE.output_tokens * HELPER_MODEL_PRICES.output);
-        await live(31);
+        await live(SAVE_INTERVAL_MS / 1000 + 1);
         expect(_spending.byDate.get(today())).toBe(oneReply);
 
         await talk(alice, "and again!");
@@ -1985,7 +2036,7 @@ describe("helpers", () => {
         expect(_spending.byDate.get(today())).toBe(2 * oneReply);
     });
 
-    it("without a model only greets, and tells whoever talks to it so, again only once a couple of minutes have passed",
+    it("without a model only greets, and tells whoever talks to it so, again only once a while has passed",
         async () => {
         delete process.env.ANTHROPIC_API_KEY;
         // One that never wanders, so it goes to look at nothing (and says nothing of it) in the long wait.
@@ -2003,7 +2054,7 @@ describe("helpers", () => {
         expect(saidBy(mira).slice(greeted)).toEqual([sorry]);
 
         // Still talking to it a while later, she is told again rather than met with silence.
-        await live(100);
+        await live(REFUSAL_RETOLD_AFTER_MS / 1000 - 20);
         await talk(alice, "how are you?");
         await live(4);
         expect(saidBy(mira).slice(greeted)).toEqual([sorry]);
@@ -2045,14 +2096,14 @@ describe("helpers", () => {
         const them = playerOf(alice.user.id).transform.pos;
         // As far as one an admin has set no radius for goes, give or take where a path's end falls.
         expect(across(met, home)).toBeGreaterThan(2);
-        expect(across(met, home)).toBeLessThanOrEqual(3 + PATH_END_SLACK);
+        expect(across(met, home)).toBeLessThanOrEqual(DEFAULT_WANDER_RADIUS + PATH_END_SLACK);
         expect(across(met, them)).toBeLessThan(across(home, them));
         expect(shown.some(({signalType, signal}) => signalType == "setObjectTransformSignal" && signal.objectId == mira))
             .toBe(true);
         expect(ServerRoomManager.roomRuntimeMemories[FIRST_HUB_ID].room.objectById[mira].transform.pos).toEqual(home);
         expect(offFrom(lastFacingOf(mira), met, them)).toBeLessThan(3);
 
-        await live(45);
+        await live(STAY_AFTER_TALK_MS / 1000 + 15);
         expect(across(helperIn(FIRST_HUB_ID, mira).at, home)).toBeLessThan(0.05);
     });
 
@@ -2079,7 +2130,7 @@ describe("helpers", () => {
         const met = helperIn(FIRST_HUB_ID, mira).at;
         const her = playerOf(alice.user.id).transform.pos;
         expect(across(met, home)).toBeGreaterThan(2);
-        expect(across(met, her)).toBeGreaterThan(3.5 - PATH_END_SLACK);
+        expect(across(met, her)).toBeGreaterThan(MEETING_DISTANCE - PATH_END_SLACK);
         expect(across(met, her)).toBeLessThan(across(home, her));
     });
 
@@ -2103,7 +2154,7 @@ describe("helpers", () => {
         }
         const him = playerOf(bob.user.id).transform.pos;
         expect(walked.some(at => across(at, home) > 1)).toBe(true);
-        expect(Math.min(...walked.map(at => across(at, him)))).toBeGreaterThanOrEqual(3);
+        expect(Math.min(...walked.map(at => across(at, him)))).toBeGreaterThanOrEqual(PERSONAL_SPACE);
     });
 
     it("walks on past an admin in ghost mode in its way, whom it doesn't see", async () => {
@@ -2126,7 +2177,7 @@ describe("helpers", () => {
             walked.push(helperIn(FIRST_HUB_ID, mira).at);
         }
         const unseen = playerOf(ghost.user.id).transform.pos;
-        expect(Math.min(...walked.map(at => across(at, unseen)))).toBeLessThan(3);
+        expect(Math.min(...walked.map(at => across(at, unseen)))).toBeLessThan(PERSONAL_SPACE);
     });
 
     it("wanders to no place farther from home than an admin sets, and nowhere at all when that is none", async () => {
@@ -2172,7 +2223,7 @@ describe("helpers", () => {
 
         // She stays near, saying nothing.
         const looked = facingsOf(mira).length;
-        await live(30);
+        await live(STAY_AFTER_TALK_MS / 1000);
         expect(facingsOf(mira).slice(looked)[0]).toBe(facingPut(0));
     });
 
@@ -2183,24 +2234,25 @@ describe("helpers", () => {
         const bob = await joinPerson("Bob", "an");
         await walkIn(alice, 6, 2);
         await walkIn(bob, 6, -2);
-        await live(10);
+        await live(1);
+        await liveUntilRead(mira);
         const toAlice = "Hello Alice! The hub is where everyone arrives, so have a look around.";
         expect(toAlice.length).toBeLessThanOrEqual(OBJECT_MESSAGE_MAX_LENGTH);
         claude.answers = [toAlice, "Hello Bob!"];
         const facingAt = (person: ConnectedUser) => offFrom(lastFacingOf(mira), helperIn(FIRST_HUB_ID, mira).at,
             playerOf(person.user.id).transform.pos);
         await talk(alice, "hi Mira!");
-        await live(3);
+        await live(ANSWER_SECONDS);
         expect(saidBy(mira)).toContain(toAlice);
 
         // Bob's answer is slow in coming: it thinks of it while she reads hers, looking at her until she has had time to.
         let answered = () => {};
         claude.thinking = new Promise(resolve => { answered = resolve; });
         await talk(bob, "hello?");
-        await live(3);
+        await live(ANSWER_SECONDS);
         expect(claude.requests).toHaveLength(2);
         expect(facingAt(alice)).toBeLessThan(3);
-        await live(4);
+        await live(Math.ceil(bubbleSecondsOf(toAlice)) - ANSWER_SECONDS);
         expect(saidBy(mira)).not.toContain("Hello Bob!");
         expect(facingAt(bob)).toBeLessThan(3);
 
@@ -2275,10 +2327,9 @@ describe("helpers", () => {
         await live(1);
         const alice = await joinPerson("Alice", "an");
         const looker = await registerAndAttend("Looker", "10.0.0.9");
-        await live(2);
-        // Up for a good while yet (see HelperBehaviorUtil's pace).
-        expect(saidBy(mira)).toEqual(["Hi everyone, welcome to ThingsPool! I'm Mira. Feel free to explore and build "
-            + "things!"]);
+        await live(1);
+        const greeting = "Hi everyone, welcome to ThingsPool! I'm Mira. Feel free to explore and build things!";
+        expect(saidBy(mira)).toEqual([greeting]);
         const guideSeen = () => (AgentToolUtil.look(looker) as any).people.find((person: any) => person.name == "Mira");
         expect(guideSeen().thinking).toBeUndefined();
 
@@ -2286,7 +2337,7 @@ describe("helpers", () => {
         claude.thinking = new Promise(resolve => { answered = resolve; });
         shown.length = 0;
         await talk(alice, "hi Mira, what is this place?");
-        await live(3);
+        await live(ANSWER_SECONDS);
         expect(thinkingOf(mira)).toEqual([true]);
         expect(guideSeen().thinking).toBe(true);
         // Its greeting stays up meanwhile.
@@ -2295,7 +2346,7 @@ describe("helpers", () => {
 
         // An answer that comes while the greeting is still being read waits for it, and is thought of until it is up.
         answered();
-        await live(2);
+        await live(Math.ceil(bubbleSecondsOf(greeting)) - 1 - ANSWER_SECONDS);
         expect(claude.requests).toHaveLength(1);
         expect(saidBy(mira)).toEqual([]);
         expect(thinkingOf(mira)).toEqual([true]);
@@ -2369,14 +2420,15 @@ describe("helpers", () => {
         await live(1);
         const alice = await joinPerson("Alice", "an");
         await walkIn(alice, 6, 2);
-        await live(10);
+        await live(1);
+        await liveUntilRead(mira);
         const answer = "Hello Alice! The hub is where everyone arrives, so have a look around.";
         expect(answer.length).toBeLessThanOrEqual(OBJECT_MESSAGE_MAX_LENGTH);
         claude.answers = [answer];
         const facingAt = (person: ConnectedUser) => offFrom(lastFacingOf(mira), helperIn(FIRST_HUB_ID, mira).at,
             playerOf(person.user.id).transform.pos);
         await talk(alice, "hi!");
-        await live(3);
+        await live(ANSWER_SECONDS);
         expect(saidBy(mira)[saidBy(mira).length - 1]).toBe(answer);
 
         // Bob comes near as she reads it: his greeting waits for her to have read it, and so does the turn to him.
@@ -2385,7 +2437,7 @@ describe("helpers", () => {
         await live(2);
         expect(saidBy(mira)[saidBy(mira).length - 1]).toBe(answer);
         expect(facingAt(alice)).toBeLessThan(3);
-        await live(6);
+        await live(Math.ceil(bubbleSecondsOf(answer)) - 1);
         expect(saidBy(mira).slice(-2)).toEqual([answer, expect.stringMatching(/^Hi Bob,/)]);
         expect(facingAt(bob)).toBeLessThan(3);
     });
@@ -2445,7 +2497,7 @@ describe("helpers", () => {
             seen.push(helperIn(FIRST_HUB_ID, mira).at);
         }
         expect(seen.some(at => across(at, moved) > 0.5)).toBe(true);
-        expect(seen.every(at => across(at, moved) <= 3 + PATH_END_SLACK)).toBe(true);
+        expect(seen.every(at => across(at, moved) <= DEFAULT_WANDER_RADIUS + PATH_END_SLACK)).toBe(true);
     });
 
     it("walks round blocks in its way, never into one", async () => {
@@ -2649,10 +2701,11 @@ describe("helpers", () => {
         await live(1);
         const alice = await joinPerson("Alice", "an");
         await walkIn(alice, 11, 3);
-        await live(6);
+        await live(1);
+        await liveUntilRead(mira);
         claude.answers = ["Coming!"];
         await talk(alice, "over here!");
-        await live(4);
+        await live(ANSWER_SECONDS);
         expect(saidBy(mira)).toContain("Coming!");
         expect(helperIn(FIRST_HUB_ID, mira).saying).not.toBe("");
 

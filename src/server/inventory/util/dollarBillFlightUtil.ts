@@ -7,7 +7,7 @@ import Voxel from "../../../shared/voxel/types/voxel";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 
 // A bill keeps this far from a block's side, about its reach as it lies however it is turned.
-const CLEARANCE = 0.3;
+export const CLEARANCE = 0.3;
 // Its lower edges keep this far over what it lies on.
 const SKIM = 0.01;
 // How finely a way is searched for blocks.
@@ -58,7 +58,7 @@ const WHIRL_SPEED = [4, 7];
 // Directions are tried evenly round a bill, enough that a few people can't rule them all out; one this near the way to
 // anyone (in radians) is one blowing it toward them, and one with less than this much room goes nowhere much.
 const GUST_DIRECTIONS = 12;
-const GUST_MIN_ANGLE = Math.PI / 6;
+export const GUST_MIN_ANGLE = Math.PI / 6;
 const GUST_MIN_ROOM = 0.5;
 // A gust's curve may bring a bill nearer to someone only while it stays this far from them, out of their reach; this many
 // curves are tried, and with none of them keeping clear, it doesn't blow.

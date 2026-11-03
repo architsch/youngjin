@@ -102,7 +102,7 @@ Write them from the sample as it came out, not from the photo or the title.
 - **Nothing a player wouldn't search for**: no author, no brand or product names, no words about the photo
   (`photo`, `unsplash`, `sample`), and no words for what isn't visible.
 - **Helpers' tastes too.** Keywords also tell the helpers what a picture shows, and so what they like or dislike
-  in it when they go and look at one (see CLAUDE.md, "Picture Keywords Are Helpers' Tastes Too"). A word no entry
+  in it when they go and look at one (see `.claude/rules/helpers-keep-up.md`). A word no entry
   had before gets its place in `src/server/agent/data/helperTastes.ts` in the same batch: under the interest it
   shows (`fruit`, `music`, `old`, a color), or in `UNREMARKED_KEYWORDS` when it shows none or could mean two things
   (`fish`, food or a pet; `corn`, a vegetable or corn flakes). A word the last entry that had it no longer has comes

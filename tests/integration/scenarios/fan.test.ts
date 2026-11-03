@@ -6,8 +6,8 @@
  * range, and the
  * push itself through the real physics engine: a force along the facing, as hard as its strength makes it,
  * thinning out to the end of its range and where a body runs out of room, on a body by as much of it as the stream
- * reaches (in full from half), stopped by a block only where the block lies across the stream, read from the room
- * as it stands; the velocity a body is given and keeps until gravity and drag have taken it away; and a fan blowing
+ * reaches (in full from a share of the most it could), stopped by a block only where the block lies across the
+ * stream, read from the room as it stands; the velocity a body is given and keeps until gravity and drag have taken it away; and a fan blowing
  * upward making up for gravity without switching it off, so that a player over one bounces and goes on bouncing.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
@@ -26,7 +26,8 @@ import ObjectCompositionUtil from "../../../src/shared/object/util/objectComposi
 import InstancedMeshCompositionPart from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
 import ColorUtil from "../../../src/shared/math/util/colorUtil";
 import ObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/objectTypeConfig";
-import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import { PLAYER_HEIGHT, PLAYER_MAX_WALK_INPUT, PLAYER_RADIUS_XZ,
+    PLAYER_WALK_SPEED_PER_INPUT } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import RemoveObjectSignal from "../../../src/shared/object/types/removeObjectSignal";
 import SetObjectMetadataSignal from "../../../src/shared/object/types/setObjectMetadataSignal";
@@ -43,6 +44,7 @@ import StringUtil from "../../../src/shared/math/util/stringUtil";
 import WaveformUtil from "../../../src/shared/math/util/waveformUtil";
 import PhysicsManager from "../../../src/shared/physics/physicsManager";
 import PhysicsColliderStateUtil from "../../../src/shared/physics/util/physicsColliderStateUtil";
+import { CUSHION_LENGTH, FULL_EXPOSURE } from "../../../src/shared/physics/util/physicsForceUtil";
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import PreEncodedCompositionIndexMap from "../../../src/shared/graphics/mesh/composition/maps/preEncodedCompositionIndexMap";
@@ -96,7 +98,7 @@ const SLAB_TOP_Y = SLAB_UNDERSIDE_Y + COLLISION_LAYER_HEIGHT;
 const FRAME = 1 / 60;
 const AN_INSTANT = 0.00000001;
 // As fast as a player walks.
-const WALKING_SPEED = 5.4;
+const WALKING_SPEED = PLAYER_WALK_SPEED_PER_INPUT * PLAYER_MAX_WALK_INPUT;
 // An upward speed for a body to be carrying where gravity's pull on what it carries is to show.
 const RISING = 10;
 
@@ -335,11 +337,12 @@ describe("fan permissions", () => {
 
 describe("a fan's setting", () => {
     it("offers one, two or three blades, the more of them the stronger and the farther its wind", () => {
-        expect(FAN_SETTINGS).toEqual([
-            {blades: 1, strength: 3, range: 3},
-            {blades: 2, strength: 5, range: 5},
-            {blades: 3, strength: 7, range: 7},
-        ]);
+        expect(FAN_SETTINGS.map(setting => setting.blades)).toEqual([1, 2, 3]);
+        for (let i = 1; i < FAN_SETTINGS.length; ++i)
+        {
+            expect(FAN_SETTINGS[i].strength).toBeGreaterThan(FAN_SETTINGS[i - 1].strength);
+            expect(FAN_SETTINGS[i].range).toBeGreaterThan(FAN_SETTINGS[i - 1].range);
+        }
         // An ordinary one is the middle one.
         expect(DEFAULT).toBe(FAN_SETTINGS[1]);
     });
@@ -394,14 +397,16 @@ describe("a fan's setting", () => {
         // nothing after it counts.
         const storing = (...numbers: number[]) => UTIL.getSetting({[FORCE_KEY]: new EncodableByteString(
             numbers.map(StringUtil.convertRawNumberToVisibleASCII).join(""))});
+        const midway = (weaker: FanSetting, stronger: FanSetting) =>
+            Math.floor(0.5 * (weaker.strength + stronger.strength));
         expect(storing(0)).toBe(WEAKEST);
         expect(storing(1)).toBe(WEAKEST);
-        expect(storing(4)).toBe(WEAKEST);
-        expect(storing(6)).toBe(FAN_SETTINGS[1]);
-        expect(storing(8)).toBe(STRONGEST);
+        expect(storing(midway(WEAKEST, FAN_SETTINGS[1]))).toBe(WEAKEST);
+        expect(storing(midway(FAN_SETTINGS[1], STRONGEST))).toBe(FAN_SETTINGS[1]);
+        expect(storing(STRONGEST.strength + 1)).toBe(STRONGEST);
         expect(storing(93)).toBe(STRONGEST);
-        expect(storing(1, 9)).toBe(WEAKEST);
-        expect(storing(9, 1)).toBe(STRONGEST);
+        expect(storing(WEAKEST.strength, STRONGEST.strength)).toBe(WEAKEST);
+        expect(storing(STRONGEST.strength, WEAKEST.strength)).toBe(STRONGEST);
     });
 
     it("takes one shape only: its housing, which is never stored", () => {
@@ -593,6 +598,8 @@ describe("a fan's push", () => {
     const PUSH = FORCE.getAcceleration(windOf(DEFAULT), WALL_FACING);
     // A hair: less than anything measured here, more than what rounding leaves.
     const HAIR = 0.001;
+    // The share of its push a stream gives a body, by the share of the most it could that the stream reaches of it.
+    const takenFor = (reached: number) => Math.min(1, reached / FULL_EXPOSURE);
 
     function addWallFan(room: Room, objectId: string = "wall-fan", setting: FanSetting = DEFAULT): void
     {
@@ -730,7 +737,7 @@ describe("a fan's push", () => {
         });
     });
 
-    it("pushes a body by as much of it as its stream reaches, across it and up it: in full from half of the most it could", async () => {
+    it("pushes a body by as much of it as its stream reaches, across it and up it: in full from a share of the most it could", async () => {
         await runScenario({
             name: "the width of a wall fan's stream",
             rooms: [EMPTY_HUB],
@@ -744,15 +751,22 @@ describe("a fan's push", () => {
                 // The stream is the fan's own unit square; a player is narrower than it and taller. The most of a
                 // player it could reach across is all of the player's width.
                 const halfStream = 0.5, halfBody = PLAYER_RADIUS_XZ;
+                // How far past the stream's edge a body's middle can be with the push still in full.
+                const fullUpTo = halfBody * (1 - 2 * FULL_EXPOSURE);
                 expect(pushBeside(0)).toBeCloseTo(PUSH, 3);
                 for (const side of [1, -1])
                 {
                     expect(pushBeside(side * (halfStream - halfBody))).toBeCloseTo(PUSH, 3); // wholly in it
-                    expect(pushBeside(side * halfStream)).toBeCloseTo(PUSH, 3); // half in it
-                    // Less in it, by as much less, to nothing at its edge.
-                    expect(pushBeside(side * (halfStream + HAIR))).toBeLessThan(PUSH);
-                    for (const out of [HAIR, 0.25 * halfBody, 0.5 * halfBody, 0.75 * halfBody, halfBody - HAIR])
-                        expect(pushBeside(side * (halfStream + out)), `${side * out}`).toBeCloseTo(PUSH * (1 - out / halfBody), 3);
+                    // As much in it as the full push takes; less in it, by as much less, to nothing at its edge.
+                    expect(pushBeside(side * (halfStream + fullUpTo))).toBeCloseTo(PUSH, 3);
+                    expect(pushBeside(side * (halfStream + fullUpTo + HAIR))).toBeLessThan(PUSH);
+                    const ramp = [fullUpTo + HAIR, halfBody - HAIR,
+                        ...[0.25, 0.5, 0.75].map(share => fullUpTo + share * (halfBody - fullUpTo))];
+                    for (const out of ramp)
+                    {
+                        expect(pushBeside(side * (halfStream + out)), `${side * out}`)
+                            .toBeCloseTo(PUSH * takenFor(0.5 * (1 - out / halfBody)), 3);
+                    }
                     expect(pushBeside(side * (halfStream + halfBody - HAIR))).toBeGreaterThan(0);
                     expect(pushBeside(side * (halfStream + halfBody + HAIR))).toBe(0); // beside it
                     expect(pushBeside(side * (halfStream + halfBody + 1))).toBe(0);
@@ -767,14 +781,14 @@ describe("a fan's push", () => {
                     pushBeside(highSpot.x - WALL_SPOT.x + sideways, STANDING_Y + feetOffTheFloor);
                 expect(pushUnderHighFan(0)).toBe(0);
                 expect(pushUnderHighFan(HAIR)).toBeGreaterThan(0);
-                expect(pushUnderHighFan(0.25)).toBeCloseTo(0.5 * PUSH, 3);
-                expect(pushUnderHighFan(0.5)).toBeCloseTo(PUSH, 3);
+                expect(pushUnderHighFan(0.25)).toBeCloseTo(PUSH * takenFor(0.25), 3);
+                expect(pushUnderHighFan(0.5)).toBeCloseTo(PUSH * takenFor(0.5), 3);
                 expect(pushUnderHighFan(1)).toBeCloseTo(PUSH, 3);
 
                 // By how much of the body it reaches, not by each way apart: half in it across and half up it, a
-                // body is a quarter in it, and pushed by half.
-                expect(pushUnderHighFan(0.5, halfStream)).toBeCloseTo(0.5 * PUSH, 3);
-                expect(pushUnderHighFan(0.5, -halfStream)).toBeCloseTo(0.5 * PUSH, 3);
+                // body is a quarter in it.
+                expect(pushUnderHighFan(0.5, halfStream)).toBeCloseTo(PUSH * takenFor(0.25), 3);
+                expect(pushUnderHighFan(0.5, -halfStream)).toBeCloseTo(PUSH * takenFor(0.25), 3);
             },
         });
     });
@@ -790,7 +804,8 @@ describe("a fan's push", () => {
                 // Blocks four units out. A body before them, with room enough that nothing eases its push, or just
                 // behind them; how much of the push it takes, of what it would there with nothing in the way.
                 const blockDistance = 4;
-                const before = blockDistance - 2 * PLAYER_RADIUS_XZ - 1.5, behind = blockDistance + VOXEL_CELL_SIZE + 0.05;
+                const before = blockDistance - 2 * PLAYER_RADIUS_XZ - (CUSHION_LENGTH + 0.5);
+                const behind = blockDistance + VOXEL_CELL_SIZE + 0.05;
                 const shareOf = (pos: Vec3, distance: number) => pushOutOfWall(room, pos) / pushAt(STRONGEST, distance);
                 const shareAt = (distance: number, sideways: number = 0) =>
                     shareOf(inFrontOfWallFan(distance, sideways), distance);
@@ -807,21 +822,24 @@ describe("a fan's push", () => {
                         expect(VoxelUpdateUtil.addVoxelBlock(undefined, room.voxelGrid.voxels, quadAt(col, layer))).toBe(true);
                 };
 
-                // Across the half of it toward +x: nothing for a body on that side; all for one in the middle (half
-                // its width still reached is half of the most) or on the other side; by as much less in between.
+                // A body off to one side by its half width has half the stream's width to be reached in.
+                const offToASide = takenFor(0.5 / (2 * halfBody));
+
+                // Across the half of it toward +x: nothing for a body on that side; what the part still reached gives
+                // one in the middle (half its width) and one on the other side; by as much less in between.
                 fill([[plusX, lower], [plusX, upper]]);
                 expect(pushOutOfWall(room, inFrontOfWallFan(behind, halfBody))).toBe(0);
-                expect(shareAt(behind, 0.5 * halfBody)).toBeCloseTo(0.5, 5);
-                expect(shareAt(behind, 0)).toBeCloseTo(1, 5);
-                expect(shareAt(behind, -halfBody)).toBeCloseTo(1, 5);
-                expect(shareAt(behind + 2, 0.5 * halfBody)).toBeCloseTo(0.5, 5);
+                expect(shareAt(behind, 0.5 * halfBody)).toBeCloseTo(takenFor(0.25), 5);
+                expect(shareAt(behind, 0)).toBeCloseTo(takenFor(0.5), 5);
+                expect(shareAt(behind, -halfBody)).toBeCloseTo(offToASide, 5);
+                expect(shareAt(behind + 2, 0.5 * halfBody)).toBeCloseTo(takenFor(0.25), 5);
                 // Before them, untouched by them.
-                expect(shareAt(before, halfBody)).toBeCloseTo(1, 5);
+                expect(shareAt(before, halfBody)).toBeCloseTo(offToASide, 5);
 
                 // Across three quarters of it: a body in the middle is reached across half its width and up half
-                // the stream's height, a quarter of the most, and pushed by half.
+                // the stream's height, a quarter of the most.
                 fill([[minusX, upper]]);
-                expect(shareAt(behind)).toBeCloseTo(0.5, 5);
+                expect(shareAt(behind)).toBeCloseTo(takenFor(0.25), 5);
 
                 // Across all of it: nothing behind, wherever the body stands, and all of it before.
                 fill([[minusX, lower]]);
@@ -832,7 +850,7 @@ describe("a fan's push", () => {
                 // With the blocks gone again, so is their shelter.
                 for (const [col, layer] of [[plusX, lower], [plusX, upper], [minusX, lower], [minusX, upper]])
                     expect(VoxelUpdateUtil.removeVoxelBlock(undefined, room.voxelGrid.voxels, quadAt(col, layer))).toBe(true);
-                expect(shareAt(behind, halfBody)).toBeCloseTo(1, 5);
+                expect(shareAt(behind, halfBody)).toBeCloseTo(offToASide, 5);
 
                 // A second fan, whose middle is in the middle of a cell: blocks across that cell leave only its
                 // stream's two edges, half a cell each, to get past, and a body behind them in the middle is reached
@@ -844,9 +862,9 @@ describe("a fan's push", () => {
                 expect((middleCol + 0.5) * VOXEL_CELL_SIZE).toBeCloseTo(offCellSpot.x, 9);
                 fill([[middleCol, lower], [middleCol, upper]]);
                 const reachedWidth = 2 * (halfBody - 0.5 * VOXEL_CELL_SIZE);
-                // Of half the body's width, the most it could be reached across being all of it.
+                // Of the body's width, the most it could be reached across being all of it.
                 expect(shareOf(inFrontOfWallFan(behind, offCellSpot.x - WALL_SPOT.x), behind))
-                    .toBeCloseTo(reachedWidth / halfBody, 5);
+                    .toBeCloseTo(takenFor(reachedWidth / (2 * halfBody)), 5);
             },
         });
     });
@@ -877,18 +895,21 @@ describe("a fan's push", () => {
                 const unhindered = (roomAhead: number) =>
                     pushAt(STRONGEST, wallDistance - roomAhead - 2 * PLAYER_RADIUS_XZ);
 
-                expect(pushWithRoom(3)).toBeCloseTo(unhindered(3), 3);
-                expect(pushWithRoom(1.5)).toBeCloseTo(unhindered(1.5), 3);
-                const closeIn = pushWithRoom(0.5) / unhindered(0.5);
+                // (Room enough, to the nearest solid thing, that nothing eases the push.)
+                const ample = CUSHION_LENGTH + 2, roomy = CUSHION_LENGTH + 0.5;
+                const scant = 0.5 * CUSHION_LENGTH, scanter = 0.25 * CUSHION_LENGTH;
+                expect(pushWithRoom(ample)).toBeCloseTo(unhindered(ample), 3);
+                expect(pushWithRoom(roomy)).toBeCloseTo(unhindered(roomy), 3);
+                const closeIn = pushWithRoom(scant) / unhindered(scant);
                 expect(closeIn).toBeGreaterThan(0.1);
                 expect(closeIn).toBeLessThan(0.9);
                 // By as much as the room has shrunk: half of it, half the push.
-                expect(pushWithRoom(0.25) / unhindered(0.25)).toBeCloseTo(0.5 * closeIn, 3);
+                expect(pushWithRoom(scanter) / unhindered(scanter)).toBeCloseTo(0.5 * closeIn, 3);
                 expect(pushWithRoom(0)).toBeCloseTo(0, 3);
 
                 // Somebody standing just ahead is nothing solid: no room is lost to them.
-                putBody(room, "bystander", inFrontOfWallFan(wallDistance - 3 - 2 * PLAYER_RADIUS_XZ + 1.25));
-                expect(pushWithRoom(3)).toBeCloseTo(unhindered(3), 3);
+                putBody(room, "bystander", inFrontOfWallFan(wallDistance - ample - 2 * PLAYER_RADIUS_XZ + 1.25));
+                expect(pushWithRoom(ample)).toBeCloseTo(unhindered(ample), 3);
             },
         });
     });

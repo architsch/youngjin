@@ -24,7 +24,7 @@ const maxViewReferenceDistance = 8;
 // Stiffness of the spring the first-person camera trails the physics' moves on (see updateTrail). Never capped:
 // a wind lifting or throwing the player fast leaves it further behind, since any limit would jolt the camera into
 // step with the player, and again to a stop when the player hits something.
-const trailRate = 12;
+export const trailRate = 12;
 
 // Parents the camera to the player and eases it toward the active mode's pose (FirstPersonCameraPose,
 // OrbitCameraPose, FreeCameraPose), so mode changes glide. Without a pointer input, which only the user's own player

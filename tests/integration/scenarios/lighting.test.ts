@@ -11,7 +11,8 @@ import LightBlockPropagationUtil, { getDistanceAttenuation, getLightLuminance,
     LightPropagationScratch }
     from "../../../src/client/graphics/light/util/lightBlockPropagationUtil";
 import LightSource from "../../../src/client/graphics/light/types/lightSource";
-import LightBlockSmoothingUtil from "../../../src/client/graphics/light/util/lightBlockSmoothingUtil";
+import LightBlockSmoothingUtil, { CENTER_WEIGHT, NEIGHBOR_WEIGHT }
+    from "../../../src/client/graphics/light/util/lightBlockSmoothingUtil";
 import LightBlockDilationUtil, { NEARBY_LIGHT_SPREAD }
     from "../../../src/client/graphics/light/util/lightBlockDilationUtil";
 import LightRegionUtil from "../../../src/client/graphics/light/util/lightRegionUtil";
@@ -299,15 +300,16 @@ describe("Light propagation", () =>
 
             // A lamp is treated as having a size (point falloff is infinite at zero distance).
             expect(result.at(LAMP)).toBeCloseTo(2 * getDistanceAttenuation(LIGHT_SOURCE_MIN_DISTANCE, 8, 1), 5);
+            const expectedAt = (distance: number) =>
+                2 * getDistanceAttenuation(Math.max(LIGHT_SOURCE_MIN_DISTANCE, distance), 8, 1);
 
             // A block is as far along any axis as it is tall.
-            expect(result.at({...LAMP, x: LAMP.x + 1})).toBeCloseTo(2 * getDistanceAttenuation(1, 8, 1), 5);
-            expect(result.at({...LAMP, x: LAMP.x + 1.5})).toBeCloseTo(2 * getDistanceAttenuation(1.5, 8, 1), 5);
-            expect(result.at({...LAMP, y: LAMP.y + 1.5})).toBeCloseTo(2 * getDistanceAttenuation(1.5, 8, 1), 5);
+            expect(result.at({...LAMP, x: LAMP.x + 1})).toBeCloseTo(expectedAt(1), 5);
+            expect(result.at({...LAMP, x: LAMP.x + 1.5})).toBeCloseTo(expectedAt(1.5), 5);
+            expect(result.at({...LAMP, y: LAMP.y + 1.5})).toBeCloseTo(expectedAt(1.5), 5);
 
             // Diagonally: distance is straight-line, not the grid route (3 + 3 is 6 by route, ~4.24 straight).
-            expect(result.at({...LAMP, x: LAMP.x + 3, z: LAMP.z + 3}))
-                .toBeCloseTo(2 * getDistanceAttenuation(Math.hypot(3, 3), 8, 1), 5);
+            expect(result.at({...LAMP, x: LAMP.x + 3, z: LAMP.z + 3})).toBeCloseTo(expectedAt(Math.hypot(3, 3)), 5);
         });
 
         it("measures from where the lamp stands, not from the middle of a block", () =>
@@ -318,7 +320,7 @@ describe("Light propagation", () =>
 
             for (const reach of [0.75, 1.25, 2.75])
             {
-                const expected = getDistanceAttenuation(reach, 8, 1);
+                const expected = getDistanceAttenuation(Math.max(LIGHT_SOURCE_MIN_DISTANCE, reach), 8, 1);
                 expect(result.at({...lamp, x: lamp.x + reach}), `${reach} toward +x`).toBeCloseTo(expected, 5);
                 expect(result.at({...lamp, x: lamp.x - reach}), `${reach} toward -x`).toBeCloseTo(expected, 5);
             }
@@ -634,8 +636,8 @@ describe("Light propagation", () =>
 
         it("gives what a sweep of every block would, though it visits only those near light", () =>
         {
-            // The plain kernel, a block at a time along each axis in turn: half of itself and a quarter of
-            // each open neighbour, renormalized over those that took part.
+            // The plain kernel, a block at a time along each axis in turn: the centre's weight of itself and a
+            // neighbour's weight of each open neighbour, renormalized over those that took part.
             const strides = [1, NUM_COLLISION_LAYERS, NUM_COLLISION_LAYERS * NUM_VOXEL_COLS];
             const lengths = [NUM_COLLISION_LAYERS, NUM_VOXEL_COLS, NUM_VOXEL_ROWS];
             const sweepEveryBlock = (field: Float32Array, isOpen: Uint8Array): Float32Array =>
@@ -656,10 +658,11 @@ describe("Light propagation", () =>
                             neighbors.push(blockIndex + strides[axis]);
                         for (let channel = 0; channel < 3; ++channel)
                         {
-                            let sum = 0.5 * source[blockIndex * 3 + channel];
+                            let sum = CENTER_WEIGHT * source[blockIndex * 3 + channel];
                             for (const neighbor of neighbors)
-                                sum += 0.25 * source[neighbor * 3 + channel];
-                            target[blockIndex * 3 + channel] = sum / (0.5 + 0.25 * neighbors.length);
+                                sum += NEIGHBOR_WEIGHT * source[neighbor * 3 + channel];
+                            target[blockIndex * 3 + channel] =
+                                sum / (CENTER_WEIGHT + NEIGHBOR_WEIGHT * neighbors.length);
                         }
                     }
                     source = target;
