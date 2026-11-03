@@ -7,8 +7,8 @@ const HELD_KEY_EVENT_TYPE = "keydown";
 
 let numHolds = 0;
 
-// Holds the whole screen from the user, and shows nothing of it, while something under way is not to be interfered with
-// (see PlayerShapeUnlockUtil). Installed before anything else listens, so that a held event is stopped at the window as it
+// Holds the whole screen from the user, and shows nothing of it, while something under way is not to be interfered with:
+// a purchase awaiting its answer (see PlayerShapeUnlockUtil), and then the burst of what it unlocked (see UnlockBurstUtil). Installed before anything else listens, so that a held event is stopped at the window as it
 // sets out, before it reaches anything. A key still does what the browser does with it (a reload, say), but nothing here,
 // and Escape not even that.
 const ScreenInputBlockUtil =

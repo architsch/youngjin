@@ -697,26 +697,34 @@ describe("holding the screen", () => {
 });
 
 describe("the burst over a tile just unlocked", () => {
-    // A tile low on a screen, as the grid it lies in is, and a canvas over the screen that counts the sparks drawn each
-    // frame, under a clock of frames that come as often as asked.
+    // A tile low on a screen, as the grid it lies in is, and a page whose canvases count the sparks drawn each frame and
+    // note when they are taken away, under a clock of frames that come as often as asked.
     const TILE = {left: 600, right: 664, top: 660, bottom: 724, width: 64, height: 64} as DOMRect;
 
-    function play(frameMs: number): {finishedAt: number | undefined, drawnByFrame: number[], frameMs: number}
+    // Frames every frameMs, none at all for Infinity. Says when the burst was taken away and when it let go of the screen,
+    // from its start, and how many sparks each frame drew.
+    function play(frameMs: number): {finishedAt: number | undefined, holdEndedAt: number | undefined,
+        drawnByFrame: number[], frameMs: number}
     {
         let drawn = 0;
+        let time = 1000;
+        let finishedAt: number | undefined = undefined;
+        let holdEndedAt: number | undefined = undefined;
         const context = new Proxy({}, {get: (_, name) => (name == "drawImage") ? () => { ++drawn; }
             : (name == "createRadialGradient") ? () => ({addColorStop: () => {}}) : () => {}, set: () => true});
-        const canvas = {getContext: () => context} as unknown as HTMLCanvasElement;
         let frames: FrameRequestCallback[] = [];
+        let added = 0;
         vi.stubGlobal("window", {innerWidth: 1280, innerHeight: 800, devicePixelRatio: 1});
-        vi.stubGlobal("document", {createElement: () => ({getContext: () => context})});
+        vi.stubGlobal("document", {createElement: () => ({getContext: () => context,
+            remove: () => { finishedAt = time - 1000; }}), body: {appendChild: () => { ++added; }}});
         vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => frames.push(callback));
-        vi.stubGlobal("cancelAnimationFrame", () => {});
-        let finishedAt: number | undefined = undefined;
+        const hold = vi.spyOn(ScreenInputBlockUtil, "hold").mockReturnValue(() => { holdEndedAt ??= time - 1000; });
         const drawnByFrame: number[] = [];
-        let time = 1000;
-        UnlockBurstUtil.play(canvas, TILE, () => { finishedAt = time - 1000; });
-        while (frames.length > 0 && time < 30_000)
+        UnlockBurstUtil.burstOver({getBoundingClientRect: () => TILE} as unknown as Element);
+        expect(added).toBe(1);
+        expect(hold).toHaveBeenCalledTimes(1);
+        hold.mockRestore();
+        while (frames.length > 0 && time < 30_000 && frameMs != Infinity)
         {
             drawn = 0;
             const due = frames;
@@ -726,7 +734,7 @@ describe("the burst over a tile just unlocked", () => {
             time += frameMs;
         }
         vi.unstubAllGlobals();
-        return {finishedAt, drawnByFrame, frameMs};
+        return {finishedAt, holdEndedAt, drawnByFrame, frameMs};
     }
 
     // How many sparks are drawn in the frame at a time since the start.
@@ -750,5 +758,42 @@ describe("the burst over a tile just unlocked", () => {
         // Burnt out before it is gone.
         expect(burst.drawnByFrame[burst.drawnByFrame.length - 1]).toBe(0);
         expect(burst.finishedAt).toBeGreaterThan(5000);
+    });
+
+    it("holds the screen through its pop and bloom, by its own clock, and lets go long before it is over", () => {
+        const smooth = play(1000 / 60);
+        expect(smooth.holdEndedAt).toBeGreaterThan(1450);
+        expect(smooth.holdEndedAt).toBeLessThan(1550);
+        expect(smooth.finishedAt! - smooth.holdEndedAt!).toBeGreaterThan(1000);
+        // Slow frames slow the hold as they do the sparks.
+        const slow = play(100);
+        expect(slow.holdEndedAt).toBeGreaterThan(2900);
+        expect(slow.holdEndedAt).toBeLessThan(3100);
+    });
+
+    it("lets go of the screen all the same if its frames stop coming", () => {
+        vi.useFakeTimers();
+        try
+        {
+            const stalled = play(Infinity);
+            expect(stalled.holdEndedAt).toBeUndefined();
+            let endedAfter: number | undefined = undefined;
+            vi.spyOn(ScreenInputBlockUtil, "hold").mockReturnValue(() => { endedAfter ??= Date.now(); });
+            vi.stubGlobal("window", {innerWidth: 1280, innerHeight: 800, devicePixelRatio: 1});
+            vi.stubGlobal("document", {createElement: () => ({getContext: () => new Proxy({}, {get: () => () => ({}),
+                set: () => true}), remove: () => {}}), body: {appendChild: () => {}}});
+            vi.stubGlobal("requestAnimationFrame", () => 0);
+            const startedAt = Date.now();
+            UnlockBurstUtil.burstOver({getBoundingClientRect: () => TILE} as unknown as Element);
+            vi.advanceTimersByTime(3999);
+            expect(endedAfter).toBeUndefined();
+            vi.advanceTimersByTime(1);
+            expect(endedAfter! - startedAt).toBe(4000);
+        }
+        finally
+        {
+            vi.unstubAllGlobals();
+            vi.useRealTimers();
+        }
     });
 });

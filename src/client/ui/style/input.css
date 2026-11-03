@@ -96,7 +96,7 @@
   }
 
   /* A locked shape coming free: its picture leaps up out of the dim, lit, as sparks burst out of its tile (see
-     UnlockFanfare). */
+     UnlockBurstUtil). */
   --animate-unlock-pop: unlock-pop 0.9s cubic-bezier(0.2, 0.8, 0.3, 1);
   @keyframes unlock-pop {
     0%   { transform: scale(0.5); opacity: 0.35; filter: brightness(1) drop-shadow(0 0 0 rgba(253, 224, 71, 0)); }

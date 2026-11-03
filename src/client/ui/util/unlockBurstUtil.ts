@@ -1,3 +1,5 @@
+import ScreenInputBlockUtil from "./screenInputBlockUtil";
+
 // Sparks thrown out of a tile's edges, in CSS px and seconds: how many, how fast, across how wide a fan either side of
 // straight out of the edge (radians), how much faster upward, and how long each burns. The air slows them by this share a
 // second, and gravity pulls them no faster than a drift (its pull over that share), so that the burst blooms out over the
@@ -20,6 +22,11 @@ const GRAVITY = 360;
 const FLASH_SECONDS = 0.35;
 const MAX_STEP_SECONDS = 0.05;
 const MAX_SECONDS = 10;
+// How long the screen takes no input as a burst starts, in its own seconds: through the tile's pop and the sparks' bloom,
+// which a click taking the grid away from under them would cut short. What is left only drifts down and fades, on a canvas
+// nothing else can take away. Should its frames stop coming (a hidden page), the hold ends after this long all the same.
+const HOLD_SECONDS = 1.5;
+const MAX_HOLD_MS = 4000;
 // How far under the screen's bottom a spark is gone for good, in CSS px.
 const OFF_SCREEN_MARGIN = 40;
 // A spark's glow, as wide as its size this many times, and its streak, as long as it goes in this long.
@@ -36,56 +43,75 @@ type Spark = {
 
 let glowSprites: HTMLCanvasElement[] | undefined = undefined;
 
-// A firework of sparks over a tile just unlocked (see UnlockFanfare): thrown out all round its edges as they flash, then
-// falling away, glowing and twinkling as they burn out. Drawn on a canvas over the whole screen, frame by frame.
+// A firework of sparks over a tile just unlocked: thrown out all round its edges as they flash, then blooming up and
+// drifting down, glowing and twinkling as they burn out.
 const UnlockBurstUtil =
 {
-    // Over a tile's rect on the screen. Returns what stops it early; once over, it stops by itself and calls onFinished.
-    play: (canvas: HTMLCanvasElement, tile: DOMRect, onFinished: () => void): (() => void) =>
+    // Once, over an element where it is on the screen now: on a canvas of its own over the whole screen, outside anything
+    // the element lies in, which would clip it or come and go, and gone once its sparks have burnt out, whatever has become
+    // of the element by then. The screen takes no input meanwhile, for a while (see HOLD_SECONDS).
+    burstOver: (element: Element): void =>
     {
-        const context = canvas.getContext("2d");
-        if (context == null)
+        const canvas = document.createElement("canvas");
+        canvas.className = "fixed inset-0 z-55 w-screen h-screen pointer-events-none";
+        document.body.appendChild(canvas);
+        const endHold = ScreenInputBlockUtil.hold();
+        const holdTimeout = setTimeout(endHold, MAX_HOLD_MS);
+        const letGo = () => {
+            clearTimeout(holdTimeout);
+            endHold();
+        };
+        play(canvas, element.getBoundingClientRect(), seconds => {
+            if (seconds >= HOLD_SECONDS)
+                letGo();
+        }, () => {
+            letGo();
+            canvas.remove();
+        });
+    },
+}
+
+// Frame by frame until it is over, telling onStep how far it has got by its own clock after each, then calls onFinished.
+function play(canvas: HTMLCanvasElement, tile: DOMRect, onStep: (seconds: number) => void, onFinished: () => void): void
+{
+    const context = canvas.getContext("2d");
+    if (context == null)
+    {
+        onFinished();
+        return;
+    }
+    const pixelRatio = window.devicePixelRatio || 1;
+    canvas.width = Math.round(window.innerWidth * pixelRatio);
+    canvas.height = Math.round(window.innerHeight * pixelRatio);
+    context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+
+    const sparks = [...Array.from({length: NUM_SPARKS}, () => createSpark(tile, false)),
+        ...Array.from({length: NUM_GLITTER}, () => createSpark(tile, true))];
+    // Its own time goes no faster than a frame's worth at once, so that a slow frame holds it back rather than making it
+    // jump; how long it has been on the page only bounds it.
+    let startTime: number | undefined = undefined;
+    let lastTime = 0;
+    let seconds = 0;
+    requestAnimationFrame(function step(time: number)
+    {
+        startTime ??= time;
+        if (time > startTime)
+        {
+            const deltaTime = Math.min(MAX_STEP_SECONDS, (time - lastTime) / 1000);
+            sparks.forEach(spark => moveSpark(spark, deltaTime));
+            seconds += deltaTime;
+        }
+        lastTime = time;
+        draw(context, tile, sparks, seconds);
+        onStep(seconds);
+        if ((time - startTime) / 1000 >= MAX_SECONDS
+            || (seconds >= FLASH_SECONDS && sparks.every(spark => spark.age >= spark.life)))
         {
             onFinished();
-            return () => {};
+            return;
         }
-        const pixelRatio = window.devicePixelRatio || 1;
-        canvas.width = Math.round(window.innerWidth * pixelRatio);
-        canvas.height = Math.round(window.innerHeight * pixelRatio);
-        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-
-        const sparks = [...Array.from({length: NUM_SPARKS}, () => createSpark(tile, false)),
-            ...Array.from({length: NUM_GLITTER}, () => createSpark(tile, true))];
-        // Its own time goes no faster than a frame's worth at once, so that a slow frame holds it back rather than making it
-        // jump; how long it has been on the page only bounds it.
-        let startTime: number | undefined = undefined;
-        let lastTime = 0;
-        let seconds = 0;
-        let frame = requestAnimationFrame(function step(time: number)
-        {
-            startTime ??= time;
-            if (time > startTime)
-            {
-                const deltaTime = Math.min(MAX_STEP_SECONDS, (time - lastTime) / 1000);
-                sparks.forEach(spark => moveSpark(spark, deltaTime));
-                seconds += deltaTime;
-            }
-            lastTime = time;
-            draw(context, tile, sparks, seconds);
-            if ((time - startTime) / 1000 >= MAX_SECONDS
-                || (seconds >= FLASH_SECONDS && sparks.every(spark => spark.age >= spark.life)))
-            {
-                context.clearRect(0, 0, window.innerWidth, window.innerHeight);
-                onFinished();
-                return;
-            }
-            frame = requestAnimationFrame(step);
-        });
-        return () => {
-            cancelAnimationFrame(frame);
-            context.clearRect(0, 0, window.innerWidth, window.innerHeight);
-        };
-    },
+        requestAnimationFrame(step);
+    });
 }
 
 // Somewhere on the tile's edges, thrown out of it.

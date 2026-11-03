@@ -7,17 +7,18 @@ import LockIcon from "../../svg/icons/lockIcon";
 import PartShapeIcon from "../../svg/icons/partShapeIcon";
 import SpinnerIcon from "../../svg/icons/spinnerIcon";
 import RefusalCoachMarkUtil from "../../util/refusalCoachMarkUtil";
+import UnlockBurstUtil from "../../util/unlockBurstUtil";
 import ToggledGridInput from "./toggledGridInput";
-import UnlockFanfare from "./unlockFanfare";
 
 const COLUMNS = 3;
 
 // One of a character's part's shapes, chosen from a grid of their pictures. A locked one is dimmed, marked with its price,
 // and clicking it unlocks it rather than choosing it, darkened under a spinner until the server answers; once that goes
-// through it is chosen, with the grid left open for its fanfare to be seen.
+// through it is chosen, with the grid left open, its picture pops and sparks burst over it, once.
 export default function PartShapeInput({ id, builderName, numShapes, params, currValue, setValue, isLocked, unlock }: Props)
 {
-    const [unlockedShapes, setUnlockedShapes] = useState<number[]>([]);
+    // Those whose pictures are popping, as they do once on being unlocked: never again on the grid's opening again.
+    const [poppingShapes, setPoppingShapes] = useState<number[]>([]);
     const [pendingElementId, setPendingElementId] = useState(pendingPurchaseElementObservable.peek());
 
     useEffect(() => {
@@ -28,7 +29,7 @@ export default function PartShapeInput({ id, builderName, numShapes, params, cur
 
     const renderShape = (shape: number, close: () => void) => {
         const locked = isLocked(shape);
-        const justUnlocked = unlockedShapes.includes(shape);
+        const popping = poppingShapes.includes(shape);
         const elementId = `${id}.${shape}`;
         return <button
             key={"shape-" + shape}
@@ -43,11 +44,17 @@ export default function PartShapeInput({ id, builderName, numShapes, params, cur
                 }
                 unlock(shape, elementId, () => {
                     setValue(shape);
-                    setUnlockedShapes(prev => [...prev, shape]);
+                    // Only over the tile it is, in the grid still open (an answer coming late may find it closed).
+                    const tile = document.getElementById(elementId);
+                    if (tile == null)
+                        return;
+                    setPoppingShapes(prev => [...prev, shape]);
+                    UnlockBurstUtil.burstOver(tile);
                 });
             }}
         >
-            <div className={`size-full ${locked ? "opacity-35" : ""} ${justUnlocked ? "animate-unlock-pop" : ""}`}>
+            <div className={`size-full ${locked ? "opacity-35" : ""} ${popping ? "animate-unlock-pop" : ""}`}
+                onAnimationEnd={() => setPoppingShapes(prev => prev.filter(other => other != shape))}>
                 <PartShapeIcon params={params} builderType={`${builderName}_${shape}`}/>
             </div>
             {locked && <>
@@ -61,7 +68,6 @@ export default function PartShapeInput({ id, builderName, numShapes, params, cur
             {elementId == pendingElementId && <div className="absolute inset-0 flex items-center justify-center rounded bg-black/65">
                 <div className="size-7 text-white"><SpinnerIcon/></div>
             </div>}
-            {justUnlocked && <UnlockFanfare onFinished={() => setUnlockedShapes(prev => prev.filter(other => other != shape))}/>}
         </button>;
     };
 
@@ -73,7 +79,10 @@ export default function PartShapeInput({ id, builderName, numShapes, params, cur
         renderCell={renderShape}
         buttonClassNames="flex items-center justify-center w-full h-10 shrink-0 rounded-md cursor-pointer select-none touch-manipulation bg-gray-700 yj-surface-concave"
         buttonContent={<div className="size-8"><PartShapeIcon params={params} builderType={`${builderName}_${currValue}`}/></div>}
-        onClose={RefusalCoachMarkUtil.hide}
+        onClose={() => {
+            RefusalCoachMarkUtil.hide();
+            setPoppingShapes([]);
+        }}
     />;
 }
 
