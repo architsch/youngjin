@@ -104,8 +104,9 @@ must read the rules himself. Then give him, per venue:
 - exactly where (channel, category or thread) and what account, fee or wait it needs;
 - the rule lines that bear on this post, quoted, including any rule on machine-written text;
 - the form the venue expects: a summary comment, one complete message, the page's own title;
-- the link, tagged `?ref=<venue-slug>` (`a-z`, `0-9`, `-`, `_`, at most 32 characters, matching the
-  ledger row), except on Hacker News, where the bare URL goes;
+- the link: tagged `?ref=<venue-slug>` (`a-z`, `0-9`, `-`, `_`, at most 32 characters, matching the
+  ledger row) where the venue hides where visitors came from (Slack, Discord, email); bare wherever
+  Analytics sees the referrer anyway (Hacker News, Reddit, MetaFilter, forums);
 - what to expect, from the registry's evidence.
 
 The words of his post are his. Draft one only when he asks, and mark it as a draft for him to rewrite.
