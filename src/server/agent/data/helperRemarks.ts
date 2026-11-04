@@ -6,7 +6,7 @@ import HelperRemarkVoice from "../types/helperRemarkVoice";
 // dislikes in it (see helperTastes.ts), and for words picked at random, so that the same thing is seldom spoken of in
 // the same words twice. Like the small talk (see helperSmallTalk.ts), each line is plain and clear on its own: an
 // opinion, or a fact true of the game as the guide has it (see helperGuide.ts) or of the world, never a pun, nor a
-// metaphor a reader must decode. What fills {reason} or {other} is a thing liked ("Korean food", "the color blue"), so a
+// metaphor a reader must decode. What fills {reason} or {other} is a thing liked ("Mexican food", "the color blue"), so a
 // line says it only where any of those fits ("I love {reason}", "Nothing beats {reason}"), never as the one doing
 // something.
 
@@ -29,7 +29,7 @@ export const REMARK_WORDS: {[gap: string]: string[]} = {
 };
 
 // Words a thing's name keeps as they are in the middle of a sentence: names of peoples, places and brands.
-export const PROPER_WORDS: string[] = ["Japanese", "Korean", "Mexican", "Italian", "Chinese", "Macintosh"];
+export const PROPER_WORDS: string[] = ["Japanese", "Mexican", "Italian", "Chinese", "Macintosh"];
 
 export const HELPER_REMARKS: {[personality in Exclude<NpcPersonality, "idle">]: HelperRemarkVoice} = {
     guide: {

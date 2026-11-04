@@ -2,7 +2,7 @@
 // games, nature and the like, which the pictures' keywords show; colors; and the kinds of things a room has that show
 // no picture (lamps, fans, doors, mirrors, signs).
 export type HelperInterest = "coffee" | "tea" | "sweets" | "bread" | "meat" | "barbecue" | "seafood" | "vegetables"
-    | "fruit" | "snacks" | "pizza" | "cheese" | "korean" | "mexican" | "breakfast" | "restaurants" | "food" | "drinks"
+    | "fruit" | "snacks" | "pizza" | "cheese" | "mexican" | "breakfast" | "restaurants" | "food" | "drinks"
     | "bottles" | "cooking" | "tableware" | "machines" | "gadgets" | "planes" | "science" | "telephones" | "laundry"
     | "plumbing" | "tidiness" | "workshops" | "wood" | "metal" | "old" | "art" | "photos" | "books" | "writing"
     | "studying" | "music" | "games" | "toys" | "sports" | "swimming" | "clothes" | "nature" | "pets" | "views" | "fire"

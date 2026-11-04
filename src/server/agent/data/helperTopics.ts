@@ -240,8 +240,6 @@ export const HELPER_TOPICS: {[personality in Exclude<NpcPersonality, "idle">]: s
         "The Panchatantra, old animal fables from India, were told to teach three princes how to be wise.",
         "In a Japanese folk tale, Momotaro is born from a giant peach and sets off to fight ogres with a dog, a monkey "
             + "and a pheasant.",
-        "In a Korean folk tale, a brother and sister escape a tiger by climbing a rope from the sky, and become the sun "
-            + "and the moon.",
         "In a Greek myth, Icarus flies on wings of feathers and wax, goes too close to the sun, and falls into the sea.",
         "In the Greek myth, Pandora opens a jar that lets every trouble out into the world. Only hope stays inside.",
         "Sinbad the Sailor, from \"One Thousand and One Nights\", makes seven voyages, and meets a bird big enough to "

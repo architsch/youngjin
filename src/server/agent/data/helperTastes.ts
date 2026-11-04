@@ -3,8 +3,8 @@ import { HelperInterest } from "../types/helperInterest";
 
 // What helpers like and dislike in the things they go and look at (see HelperRemarkUtil), so that each says something
 // of its own about one. A picture's keywords (its entry in the picture map's manifest, see image_map.md) tell what it
-// shows; each keyword names one interest here, or is listed as naming none, and a test holds every keyword a picture has
-// to one or the other. So a picture given a new keyword, or a keyword changed, changes this file in the same change.
+// shows; each keyword names one interest here, or is listed as naming none or as never spoken of, and a test holds every
+// keyword a picture has to one of these. So a picture given a new keyword, or a keyword changed, changes this file in the same change.
 
 // Each interest: what a helper calls it, a plain noun phrase that reads as well disliked as loved ("I love ...", "I've
 // never cared for ..."), and the picture keywords that show it. A keyword that could mean two things (a bean in a candy
@@ -32,7 +32,6 @@ export const HELPER_INTERESTS: {[interest in HelperInterest]: {phrase: string, k
         "fritter", "pakora", "croquette", "dip", "hummus"]},
     pizza: {phrase: "pizza", keywords: ["pizza", "pepperoni", "topping", "italian"]},
     cheese: {phrase: "cheese", keywords: ["cheese", "feta"]},
-    korean: {phrase: "Korean food", keywords: ["korean", "kimbap", "gimbap", "kimchi"]},
     mexican: {phrase: "Mexican food", keywords: ["mexican", "taco", "tortilla", "nachos", "wrap", "jalapeno", "salsa"]},
     breakfast: {phrase: "big breakfasts", keywords: ["breakfast", "egg", "yolk", "pancake", "cereal", "oats"]},
     restaurants: {phrase: "fine dining", keywords: ["restaurant", "dining", "appetizer", "starter"]},
@@ -143,6 +142,10 @@ export const UNREMARKED_KEYWORDS: string[] = [
     "washing", "water", "wet", "whole", "wide", "window", "winter", "wire", "wood",
 ];
 
+// Picture keywords of things helpers never speak of, at ThingsPool's maker's wish: Korea and its food. A picture with
+// one is never remarked on, so no helper goes to look at it.
+export const UNSPOKEN_KEYWORDS: string[] = ["gimbap", "kimbap", "kimchi", "korean"];
+
 // What each played personality loves, likes and dislikes; anything else it neither likes nor dislikes. Each helper has
 // a few tastes of its own besides (see HelperRemarkUtil), so that no two react alike.
 export const HELPER_TASTES: {[personality in Exclude<NpcPersonality, "idle">]: {loves: HelperInterest[],
@@ -159,7 +162,7 @@ export const HELPER_TASTES: {[personality in Exclude<NpcPersonality, "idle">]: {
     },
     explorer: {
         loves: ["doors", "views", "nature"],
-        likes: ["mexican", "korean", "seafood", "photos", "clocks", "swimming", "planes", "telephones", "mail", "mirrors",
+        likes: ["mexican", "seafood", "photos", "clocks", "swimming", "planes", "telephones", "mail", "mirrors",
             "signs"],
         dislikes: ["tidiness", "laundry", "studying"],
     },

@@ -77,7 +77,8 @@ it thinks of it, in fixed words too (`HelperRemarkUtil`):
 
 - `src/server/agent/data/helperTastes.ts`: the **interests** a helper may like or dislike (coffee, old
   things, music, a color, lamps, doors…), each with the phrase it is called by and the picture keywords
-  that show it; `UNREMARKED_KEYWORDS`, the keywords that show none; and what each personality loves,
+  that show it; `UNREMARKED_KEYWORDS`, the keywords that show none; `UNSPOKEN_KEYWORDS`, those of
+  things helpers never speak of (Korea and its food), whose pictures are never remarked on; and what each personality loves,
   likes and dislikes. Each helper adds a few tastes of its own, by its NPC's id, with a favorite color
   and painter. Every keyword in the picture map's manifest is in exactly one of these (a test checks),
   so a new keyword is classified when it arrives (see `.claude/rules/helpers-keep-up.md`). One that could mean two things (`fish`, food or a pet) shows none: a wrong interest gives a
@@ -120,9 +121,21 @@ it thinks of it, in fixed words too (`HelperRemarkUtil`):
   `ScreenControlMap`, its drawing in `ScreenControlPicture` (from the control's own icon and face), and
   its width in `ScreenControlPictureUtil`. A tall one (a slider standing upright) doesn't fit a line of
   text, so it is named in words instead.
+- **For someone who has never played.** Say what a thing is for, in everyday words, never in a word only
+  players know: "They buy shapes for your character" reached visitors as nonsense, since nobody new knows
+  what a shape is, nor that others see them as a character they can change. Say what it is for in general
+  ("You can spend dollars to unlock new items"), never by one use of it, which may later be only a part of
+  it: the use goes in the details as the answer to "which" ("Asked which items: only some of the looks"),
+  for a helper to say only when asked. Named there plainly, a use still leaked into first answers; named
+  nowhere, helpers made the items up. No add-ons either, least of all how the screen marks a thing (a lock,
+  an outline): a visitor is seldom looking at it while reading, so "new items, which show a lock" was vague.
+  A bare sentence tempts the model to finish it with an example ("like new looks for yourself"), which the
+  rules forbid until asked which; a how-to sentence beside the answer to "which" brought the leak back.
+  The details too give only the idea, never the fine print a player finds out by playing (which bill flies
+  to whom, what a refusal says).
 - **No number a constant holds** (a price, a reward, a distance, a time, a limit), written out or built into the
   text from the constant: the constant changes, and helpers go on repeating whatever they heard. Say it the way a
-  player meets it ("a locked shape shows its price", "for a little while"); a test checks the guide, the knowledge
+  player meets it ("an item you can unlock shows its price", "for a little while"); a test checks the guide, the knowledge
   and the characters. Asked for such a number, a helper says what the guide says, and at most that it doesn't know
   it exactly. A rule telling them so made it worse (they gave the reason, named "the guide", or claimed the game
   doesn't show the price), so there is none: the guide without numbers is enough.
@@ -138,6 +151,9 @@ it thinks of it, in fixed words too (`HelperRemarkUtil`):
   a story in 12 chapters), who wrote it where that isn't ThingsPool's maker, its link, and one
   specific thing from it a helper can retell. A bare link is not enough: the model cannot open
   pages, so it would have nothing to say about one.
+- **No Korea.** At the maker's wish, nothing the helpers are told or say speaks of Korea or its food: no
+  line of small talk, remark, topic or knowledge, and no picture of it remarked on (its keywords go in
+  `UNSPOKEN_KEYWORDS`); a test checks.
 - **Satire is labelled**, with what it pokes fun at. Crude jokes are not repeated, and writings about
   politics or other divisive subjects are left out: helpers talk with everyone.
 - **Characters**: favorite reads by the knowledge's exact titles (a test checks); ideas using only the
@@ -184,7 +200,7 @@ it thinks of it, in fixed words too (`HelperRemarkUtil`):
   characters as written. A line works for every thing it may be said of: `{thing}` is a painting
   ("'Ground Swell' by Edward Hopper") as often as a lamp or "the swim fins", so a verb or pronoun after
   it agrees through `[is|are]` and `[it|them]`; `{reason}` and `{other}` are things liked or disliked
-  ("Korean food", "the color blue", "window views"), so they appear only where any of those fits ("I
+  ("Mexican food", "the color blue", "window views"), so they appear only where any of those fits ("I
   love {reason}", "Nothing beats {reason}"), never as the one doing something. A line never claims
   something happened ("I showed it to a visitor"), and a kind's own line claims only what is true of
   every such thing (every room has a door to a hub; only admins hang mirrors). An interest's phrase is
@@ -195,8 +211,10 @@ it thinks of it, in fixed words too (`HelperRemarkUtil`):
   An idea from a writing is a whole entry, as in the knowledge (title, kind, the link, the idea), retold as
   the writing has it. No entry appears twice across the lists (a test checks). A writing whose idea is a
   topic need not be in the knowledge too, which keeps the shared part small.
-- **Simple words** throughout. Many visitors read English as a second language, and the helpers
-  borrow the wording they are given.
+- **Simple, natural words** throughout, as a friendly person says them out loud, with the visitor doing
+  what they can do ("You can spend dollars to unlock new items", never "Dollars unlock items"). Many visitors read
+  English as a second language, and the helpers borrow the wording they are given, so the guide is written
+  as they should say it, not in the terse style of the code's comments.
 - **Mind the size.** The shared part is read from the cache on every reply, and paid in full again
   after five quiet minutes. Keep it under about 6,500 tokens; it may grow past that for whatever
   makes the helpers' conversation richer, never for padding. When it must shrink, cut the stalest
@@ -233,7 +251,8 @@ entry; one of the things on its mind comes
 up only when the visitor leaves the subject to it, as with "tell me something fun"), specific on any
 subject (a named thing), plain and precise (no metaphor, loose comparison, riddle
 or pun, no made-up quote, story or number, no narration of what the helper does), a how-to answer only
-the guide's basics, with nothing added, and only when asked, never a key, each control as its picture's
+the guide's basics, with nothing added, and only when asked, in everyday words someone who has never played
+follows (no "shape", "face" or "your character"), never a key, each control as its picture's
 markup (by a name `ScreenControlMap` has, never where on the screen it is), and never an example line said
 back. No reply welcomes the visitor again or gives the helper's name (a short hello back to a hello is
 fine); ask with lines that open "hi!", which draw both out. "What can I do here?" from one who knows how to

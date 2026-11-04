@@ -78,7 +78,10 @@ import BehaviorPrefs from "../../../src/shared/object/types/behaviorPrefs";
 import { HELPER_SMALL_TALK } from "../../../src/server/agent/data/helperSmallTalk";
 import { HELPER_TOPICS } from "../../../src/server/agent/data/helperTopics";
 import { HELPER_REMARKS, REMARK_WORDS } from "../../../src/server/agent/data/helperRemarks";
-import { HELPER_INTERESTS, HELPER_TASTES, UNREMARKED_KEYWORDS } from "../../../src/server/agent/data/helperTastes";
+import { HELPER_INTERESTS, HELPER_TASTES, UNREMARKED_KEYWORDS, UNSPOKEN_KEYWORDS }
+    from "../../../src/server/agent/data/helperTastes";
+import { CANVAS_IMAGE_SUBFOLDER } from "../../../src/shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
+import { PROP_IMAGE_SUBFOLDER } from "../../../src/shared/object/types/objectTypeConfig/propObjectTypeConfig";
 import HelperRemarkVoice from "../../../src/server/agent/types/helperRemarkVoice";
 import HelperRemarkUtil from "../../../src/server/agent/util/helperRemarkUtil";
 import DBUserUtil from "../../../src/server/db/util/dbUserUtil";
@@ -1727,13 +1730,18 @@ describe("helpers", () => {
                 named.set(keyword, interest);
             }
         }
-        for (const keyword of UNREMARKED_KEYWORDS)
+        const unnamed: [string[], string][] = [[UNREMARKED_KEYWORDS, "nothing"], [UNSPOKEN_KEYWORDS, "never spoken of"]];
+        for (const [keywords, kind] of unnamed)
         {
-            expect(named.get(keyword), keyword).toBeUndefined();
-            named.set(keyword, "nothing");
+            for (const keyword of keywords)
+            {
+                expect(named.get(keyword), keyword).toBeUndefined();
+                named.set(keyword, kind);
+            }
         }
-        // A keyword missing here is one to add to helperTastes.ts: to an interest, or to UNREMARKED_KEYWORDS. Disabled
-        // pictures' too, so that a new sample's keywords are named as it is saved, before anyone enables it.
+        // A keyword missing here is one to add to helperTastes.ts: to an interest, to UNREMARKED_KEYWORDS, or to
+        // UNSPOKEN_KEYWORDS. Disabled pictures' too, so that a new sample's keywords are named as it is saved, before
+        // anyone enables it.
         const used = new Set(PICTURE_MANIFEST.images.flatMap(keywordsOf));
         expect([...used].filter(keyword => !named.has(keyword))).toEqual([]);
         // And one no picture has any longer is one to take out of it.
@@ -1743,6 +1751,36 @@ describe("helpers", () => {
             const all = [...loves, ...likes, ...dislikes];
             expect(all.every(interest => HELPER_INTERESTS[interest] != undefined), personality).toBe(true);
             expect(new Set(all).size, personality).toBe(all.length);
+        }
+    });
+
+    it("never speaks of Korea or its food, at ThingsPool's maker's wish: in nothing it is told or says, nor of any "
+        + "picture showing them, which it never goes to look at", () => {
+        const korea = /korea|kimchi|kimbap|gimbap|bibimbap|bulgogi|seoul|hangul/i;
+        const played = NpcPersonalityMap.getEntries().map(entry => entry.id).filter(NpcPersonalityMap.isPlayed);
+        const smallTalk = Object.values(HELPER_SMALL_TALK).flatMap(voice => [...voice.hellos, ...voice.nods,
+            ...voice.goodbyes, ...voice.openers.flatMap(opener => [opener.text, opener.then ?? ""]),
+            ...Object.values(voice.answers).flat()]);
+        for (const text of [HELPER_GUIDE, HELPER_KNOWLEDGE, ...Object.values(HELPER_PERSONALITIES).flatMap(
+            ({character, moods}) => [character, ...moods]), ...played.flatMap(personality => [
+            NpcPersonalityMap.getInvitation(personality), NpcPersonalityMap.getBasics(personality)]), ...smallTalk,
+            ...Object.values(HELPER_TOPICS).flat(), ...Object.values(HELPER_REMARKS).flatMap(remarkLinesOf),
+            ...Object.values(REMARK_WORDS).flat(), ...Object.values(HELPER_INTERESTS).map(({phrase}) => phrase)])
+        {
+            expect(text, text).not.toMatch(korea);
+        }
+        const objectTypes: {[subfolder: string]: string} = {[CANVAS_IMAGE_SUBFOLDER]: "Canvas",
+            [PROP_IMAGE_SUBFOLDER]: "Prop"};
+        for (const picture of PICTURE_MANIFEST.images.filter(picture => !picture.disabled))
+        {
+            const objectType = objectTypes[picture.path.split("/")[0]];
+            if (objectType == undefined)
+                continue;
+            const thing = HelperRemarkUtil.describe({objectType, picture: picture.path});
+            if (keywordsOf(picture).some(keyword => UNSPOKEN_KEYWORDS.includes(keyword)))
+                expect(thing, picture.path).toBeUndefined();
+            else
+                expect(thing?.name ?? "", picture.path).not.toMatch(korea);
         }
     });
 

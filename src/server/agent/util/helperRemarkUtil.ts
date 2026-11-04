@@ -6,7 +6,7 @@ import { CANVAS_IMAGE_SUBFOLDER } from "../../../shared/object/types/objectTypeC
 import LabelTextUtil from "../../../shared/object/util/labelTextUtil";
 import { LIGHT_COLOR_PALETTE_NAME } from "../../../shared/system/sharedConstants";
 import { HELPER_REMARKS, PROPER_WORDS, REMARK_WORDS } from "../data/helperRemarks";
-import { HELPER_INTERESTS, HELPER_TASTES } from "../data/helperTastes";
+import { HELPER_INTERESTS, HELPER_TASTES, UNSPOKEN_KEYWORDS } from "../data/helperTastes";
 import { HelperInterest } from "../types/helperInterest";
 import { HelperRemarkTaste } from "../types/helperRemarkTaste";
 import HelperRemarkThing from "../types/helperRemarkThing";
@@ -14,8 +14,10 @@ import HelperRemarkVoice from "../types/helperRemarkVoice";
 
 // The pictures canvases and props show, as the picture map's manifest has them (see image_map.md), bundled with the
 // server: each one's title, who made it, and its own keywords. ThingsPool's own pictures are credited to OWN_AUTHOR.
+// Those showing something helpers never speak of (see UNSPOKEN_KEYWORDS) are left out, so nothing is said of them.
 const PICTURES = new Map((pictureManifest.images as {path: string, author: string, title: string, keywords?: string,
-    disabled?: boolean}[]).filter(picture => !picture.disabled).map(picture => [picture.path, picture]));
+    disabled?: boolean}[]).filter(picture => !picture.disabled && !(picture.keywords ?? "").split(",")
+    .some(keyword => UNSPOKEN_KEYWORDS.includes(keyword.trim()))).map(picture => [picture.path, picture]));
 const OWN_AUTHOR = "thingspool";
 const PAINTERS = [...new Set([...PICTURES.values()]
     .filter(picture => picture.path.startsWith(`${CANVAS_IMAGE_SUBFOLDER}/`) && picture.author != OWN_AUTHOR)

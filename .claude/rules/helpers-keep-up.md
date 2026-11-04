@@ -48,7 +48,7 @@ What they show and look at:
 
 None of it names a number a constant holds (a price, a reward, a distance, a time, a limit): the
 constant changes, and helpers go on repeating what they heard. It says it the way a player meets it
-("a locked shape shows its price", "for a little while"); a test checks.
+("an item you can unlock shows its price", "for a little while"); a test checks.
 
 ## Two more changes that reach them
 
