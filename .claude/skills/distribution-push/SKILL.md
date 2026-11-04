@@ -12,7 +12,7 @@ somebody clicks**, and venues are worth what they are worth according to how wel
 
 This skill covers both halves of that work — finding the venues and actually placing the app in them.
 It does not write dev-log posts. When a run needs a post that does not exist yet, say so and leave
-it to the user.
+it to the user. Essays and the rest of the library's writing are promoted by `writing-push`.
 
 What this skill does write is the copy each venue asks for — a title, a one-liner, a body at that
 venue's length. That copy obeys the same house style as everything else published in the user's
