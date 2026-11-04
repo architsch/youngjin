@@ -110,6 +110,9 @@ must read the rules himself. Then give him, per venue:
 - what to expect, from the registry's evidence.
 
 The words of his post are his. Draft one only when he asks, and mark it as a draft for him to rewrite.
+Never for Hacker News, posts or comments alike: it bans "generated comments or AI-edited comments", and
+its software kills text it classifies as machine-written. Help him there by finding live threads he has
+firsthand experience for, never by suggesting what to say.
 
 ## Lane C — never
 
