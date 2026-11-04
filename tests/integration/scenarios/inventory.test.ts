@@ -82,6 +82,8 @@ const WITHIN_REACH = 0.75 * DOLLAR_BILL_REACH;
 const OBSTRUCTED_AHEAD = 3;
 const DOLLAR = InventoryItemTypeEnumMap.Dollar;
 const FLUSH_MS = 200;
+// Long enough for a bill lying still to be blown, even should the first gust find no way to go.
+const GUST_WITHIN_MS = 2.5 * GUST_INTERVAL_MS[1];
 const ADMIN = new User("an-admin", "Admin", UserTypeEnumMap.Admin, "", "");
 // The middle of the lower storey's floor, a bill lying on it, and a player standing on it.
 const MIDDLE_X = 16, MIDDLE_Z = 16;
@@ -127,6 +129,17 @@ async function join(id: string, at: Vec3 = {x: 4, y: STANDING_Y, z: 4}): Promise
     await harness.joinRoom(user, HUB_ID);
     moveTo(user, at);
     return user;
+}
+
+// An admin in ghost mode, whom nobody sees (see AdminPrefsUtil.isGhost).
+async function joinAsGhost(id: string, at: Vec3): Promise<ConnectedUser>
+{
+    const ghost = harness.connectUser({id, userName: id, userType: UserTypeEnumMap.Admin,
+        playerMetadata: {[ObjectMetadataKeyEnumMap.AdminPrefs]: AdminPrefsUtil.encode({ghostMode: true})}});
+    await harness.joinRoom(ghost, HUB_ID);
+    expect(AdminPrefsUtil.isGhost(harness.getPlayerObject(id))).toBe(true);
+    moveTo(ghost, at);
+    return ghost;
 }
 
 // Where the room keeps their player, as the moves they send leave it, their body's box with it.
@@ -731,7 +744,7 @@ describe("bills in a room", () => {
         const user = await join("someone", {x: 4, y: STANDING_Y, z: 4});
         flushUntil(() => getBills().length == MAX_BILLS, MAX_BILLS * SPAWN_INTERVAL_MS[1] + 60_000);
         vi.spyOn(Math, "random").mockReturnValue(0);
-        flushFor(100_000);
+        flushFor(SPAWN_INTERVAL_MS[1]);
 
         // Blown to the user's feet, and no other with it.
         Object.assign(getBills()[0].transform.pos, {x: 4.5, y: LYING_Y, z: 4});
@@ -744,17 +757,44 @@ describe("bills in a room", () => {
         expect(getBills()).toHaveLength(MAX_BILLS);
     });
 
-    it("don't come with nobody in the room, nor with only a ghost there to see them", async () => {
+    it("don't come with nobody in the room", async () => {
         await harness.loadRoom(HUB_ID);
-        flushFor(120_000);
+        flushFor(2 * SPAWN_INTERVAL_MS[1]);
         expect(getBills()).toHaveLength(0);
+    });
 
-        const admin = harness.connectUser({id: "admin", userName: "admin", userType: UserTypeEnumMap.Admin});
-        await harness.joinRoom(admin, HUB_ID);
-        harness.getPlayerObject(admin.user.id)!.metadata[ObjectMetadataKeyEnumMap.AdminPrefs] =
-            new EncodableByteString(AdminPrefsUtil.encode({...AdminPrefsUtil.decode(""), ghostMode: true}));
-        flushFor(120_000);
+    it("neither come nor move with only a ghost in the room, though the ghost collects one left there", async () => {
+        const user = await join("someone");
+        const bill = spawnBill();
+        await harness.disconnectUser(user);
+        // Within reach of it, but facing away until the end.
+        const ghost = await joinAsGhost("ghost", {x: MIDDLE_X - WITHIN_REACH, y: STANDING_Y, z: MIDDLE_Z});
+        faceToward(ghost, 0, MIDDLE_Z);
+        flushFor(2 * SPAWN_INTERVAL_MS[1]);
+        expect(getBills().map(({objectId}) => objectId)).toEqual([bill.objectId]);
+        expect(bill.transform.pos).toMatchObject({x: MIDDLE_X, y: LYING_Y, z: MIDDLE_Z});
+        expect(pathsSentTo(ghost, bill.objectId)).toEqual([]);
+
+        faceToward(ghost, MIDDLE_X, MIDDLE_Z);
+        flush();
         expect(getBills()).toHaveLength(0);
+        expect(ghost.socketUserContext.inventory[DOLLAR]).toBe(1);
+    });
+
+    it("come and are blown about making way for a ghost as for anyone, with someone else in the room", async () => {
+        // Each facing into a corner, where no bill comes or is blown.
+        const ghost = await joinAsGhost("ghost", {x: 4, y: STANDING_Y, z: 4});
+        faceToward(ghost, 0, 0);
+        const other = await join("other", {x: 28, y: STANDING_Y, z: 28});
+        faceToward(other, 32, 32);
+        flushUntil(() => getBills().length == 1);
+        const [bill] = getBills();
+        const at = harness.getPlayerObject(ghost.user.id)!.transform.pos;
+        expect(Math.hypot(bill.transform.pos.x - at.x, bill.transform.pos.z - at.z)).toBeGreaterThan(DOLLAR_BILL_REACH);
+
+        const gusts = vi.spyOn(DollarBillFlightUtil, "planGust");
+        flushUntil(() => gusts.mock.calls.length > 0, GUST_WITHIN_MS);
+        expect(gusts.mock.calls[0][2]).toContainEqual(at);
     });
 
     it("are announced to everyone in the room, and are in what a newcomer is sent", async () => {
@@ -791,11 +831,11 @@ describe("bills in a room", () => {
         const bill = spawnBill();
         await harness.disconnectUser(user);
         const {x, z} = bill.transform.pos;
-        flushFor(30_000);
+        flushFor(GUST_WITHIN_MS);
         expect(bill.transform.pos).toMatchObject({x, z});
 
         const newcomer = await join("newcomer", {x: 4, y: STANDING_Y, z: 4});
-        flushUntil(() => pathsSentTo(newcomer, bill.objectId).length > 0, 30_000);
+        flushUntil(() => pathsSentTo(newcomer, bill.objectId).length > 0, GUST_WITHIN_MS);
     });
 });
 
@@ -803,7 +843,7 @@ describe("a gust", () => {
     it("comes now and then, blows a bill elsewhere, and leaves it lying", async () => {
         const watcher = await join("watcher");
         const bill = spawnBill();
-        flushUntil(() => pathsSentTo(watcher, bill.objectId).length > 0, 30_000);
+        flushUntil(() => pathsSentTo(watcher, bill.objectId).length > 0, GUST_WITHIN_MS);
         const [path] = pathsSentTo(watcher, bill.objectId);
 
         const end = path[path.length - 1].pos;
@@ -821,7 +861,7 @@ describe("a gust", () => {
         const flightMs = 1000 * Math.hypot(away, away);
         vi.spyOn(DollarBillFlightUtil, "planGust").mockReturnValue([{pos: end, speed: 1}]);
         vi.spyOn(Math, "random").mockReturnValue(0);
-        flushUntil(() => pathsSentTo(watcher, bill.objectId).length > 0, 30_000);
+        flushUntil(() => pathsSentTo(watcher, bill.objectId).length > 0, GUST_WITHIN_MS);
         flushUntil(() => bill.transform.pos.x == end.x, flightMs + 1_400);
 
         flushFor(GUST_INTERVAL_MS[0] - 200);
@@ -833,7 +873,7 @@ describe("a gust", () => {
     it("is told to everyone in the room once, the whole way at once", async () => {
         const watchers = [await join("first"), await join("second")];
         const bill = spawnBill();
-        flushUntil(() => pathsSentTo(watchers[0], bill.objectId).length > 0, 30_000);
+        flushUntil(() => pathsSentTo(watchers[0], bill.objectId).length > 0, GUST_WITHIN_MS);
         expect(pathsSentTo(watchers[0], bill.objectId)).toHaveLength(1);
         expect(pathsSentTo(watchers[0], bill.objectId)[0].length).toBeGreaterThan(2);
         expect(pathsSentTo(watchers[1], bill.objectId)).toEqual(pathsSentTo(watchers[0], bill.objectId));
@@ -842,7 +882,7 @@ describe("a gust", () => {
     it("tells whoever comes in during a flight the rest of it", async () => {
         const watcher = await join("watcher");
         const bill = spawnBill();
-        flushUntil(() => pathsSentTo(watcher, bill.objectId).length > 0, 30_000);
+        flushUntil(() => pathsSentTo(watcher, bill.objectId).length > 0, GUST_WITHIN_MS);
         const [path] = pathsSentTo(watcher, bill.objectId);
 
         const newcomer = await join("newcomer", {x: 28, y: STANDING_Y, z: 28});
@@ -862,7 +902,7 @@ describe("a gust", () => {
     it("never takes one into a block a moment later", async () => {
         const watcher = await join("watcher");
         const bill = spawnBill();
-        for (let i = 0; i < 400; ++i)
+        for (let elapsed = 0; elapsed < 6 * GUST_INTERVAL_MS[1]; elapsed += FLUSH_MS)
         {
             flush();
             expect(DollarBillFlightUtil.isInBlock(getRoom().voxelGrid.voxels, bill.transform.pos)).toBe(false);
@@ -1193,6 +1233,15 @@ describe("collecting a bill", () => {
         expect(inTheWay.socketUserContext.inventory[DOLLAR]).toBeUndefined();
     });
 
+    it("works with a ghost in the way, whom nobody sees", async () => {
+        const {user} = await withBillBeforeUser(WITHIN_REACH);
+        const ghost = await joinAsGhost("ghost", {x: MIDDLE_X + 1.5, y: STANDING_Y, z: MIDDLE_Z});
+        faceToward(ghost, MIDDLE_X - 4, MIDDLE_Z);
+        flush();
+        expect(user.socketUserContext.inventory[DOLLAR]).toBe(1);
+        expect(ghost.socketUserContext.inventory[DOLLAR]).toBeUndefined();
+    });
+
     it("doesn't work with a helper in the way", async () => {
         const {user} = await withBillBeforeUser(WITHIN_REACH);
         const npc = new AddObjectSignal(HUB_ID, ADMIN.id, ADMIN.userName, NPC_TYPE_INDEX, "a-helper",
@@ -1250,20 +1299,23 @@ describe("collecting a bill", () => {
         expect(nearer.socketUserContext.inventory[DOLLAR]).toBeUndefined();
     });
 
-    it("can't be done by a ghost, for whom no bill makes way", async () => {
-        const admin = harness.connectUser({id: "admin", userName: "admin", userType: UserTypeEnumMap.Admin});
-        await harness.joinRoom(admin, HUB_ID);
-        moveTo(admin, {x: MIDDLE_X, y: STANDING_Y, z: MIDDLE_Z});
+    it("is done by a ghost as by anyone, told to the ghost alone: everyone else sees the bill only go", async () => {
+        const ghost = await joinAsGhost("ghost", {x: MIDDLE_X, y: STANDING_Y, z: MIDDLE_Z});
         const other = await join("other", {x: 4, y: STANDING_Y, z: 4});
         holdGusts();
-        spawnBill(28, 28);
-        const bill = getBills()[0];
-        harness.getPlayerObject(admin.user.id)!.metadata[ObjectMetadataKeyEnumMap.AdminPrefs] =
-            new EncodableByteString(AdminPrefsUtil.encode({...AdminPrefsUtil.decode(""), ghostMode: true}));
-        faceToward(admin, MIDDLE_X + 1, MIDDLE_Z);
+        const bill = spawnBill(28, 28);
+        faceToward(ghost, MIDDLE_X + 1, MIDDLE_Z);
         Object.assign(bill.transform.pos, {x: MIDDLE_X + 1, z: MIDDLE_Z});
         flush();
-        expect(getBills()).toHaveLength(1);
+        expect(getBills()).toHaveLength(0);
+        expect(ghost.socketUserContext.inventory[DOLLAR]).toBe(1);
+        expect(inventoriesSentTo(ghost)).toEqual([{[DOLLAR]: 1}]);
+        expect(collectionsSentTo(ghost)).toEqual([{objectId: bill.objectId, collectorUserID: ghost.user.id}]);
+        const sent = signalTypesSentTo(ghost);
+        expect(sent.indexOf("objectCollectedSignal")).toBeLessThan(sent.indexOf("removeObjectSignal"));
+
+        expect(collectionsSentTo(other)).toEqual([]);
+        expect(removalsSentTo(other)).toContain(bill.objectId);
         expect(other.socketUserContext.inventory[DOLLAR]).toBeUndefined();
     });
 

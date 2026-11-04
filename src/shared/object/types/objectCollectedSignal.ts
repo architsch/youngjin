@@ -2,9 +2,9 @@ import BufferState from "../../networking/types/bufferState";
 import EncodableData from "../../networking/types/encodableData";
 import EncodableByteString from "../../networking/types/encodableByteString";
 
-// That someone has collected an object, sent to the whole room ahead of its removal, for each to show while it is still
-// there: whoever collected it, in one way, and everyone else, in another (see ClientObjectManager). Unlike a removal, it is
-// only ever a collecting.
+// That someone has collected an object, sent to the whole room ahead of its removal (but a ghost's collecting to the
+// ghost alone; see DollarBillUtil), for each to show while it is still there: whoever collected it, in one way, and
+// everyone else, in another (see ClientObjectManager). Unlike a removal, it is only ever a collecting.
 export default class ObjectCollectedSignal extends EncodableData
 {
     roomID: string;

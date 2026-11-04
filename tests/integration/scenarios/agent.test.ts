@@ -40,7 +40,7 @@ import AgentTypingUtil from "../../../src/server/agent/util/agentTypingUtil";
 import AgentRoomSettingsUtil from "../../../src/server/agent/util/agentRoomSettingsUtil";
 import AgentAppearanceUtil from "../../../src/server/agent/util/agentAppearanceUtil";
 import AgentRoomUtil from "../../../src/server/agent/util/agentRoomUtil";
-import DollarBillUtil, { REACH_ANGLE } from "../../../src/server/inventory/util/dollarBillUtil";
+import DollarBillUtil, { REACH_ANGLE, SPAWN_INTERVAL_MS } from "../../../src/server/inventory/util/dollarBillUtil";
 import { AGENT_REQUESTS_PER_MINUTE } from "../../../src/server/networking/util/rateLimitUtil";
 import { GAME_NUMBER } from "../helpers/gameNumbers";
 import { InventoryItemTypeEnumMap } from "../../../src/shared/inventory/types/inventoryItemType";
@@ -955,7 +955,7 @@ describe("AI agents", () => {
             const now = Date.now();
             vi.spyOn(Math, "random").mockReturnValue(0);
             DollarBillUtil.stepAll(0.2);
-            vi.spyOn(Date, "now").mockReturnValue(now + 60_000);
+            vi.spyOn(Date, "now").mockReturnValue(now + SPAWN_INTERVAL_MS[1]);
             DollarBillUtil.stepAll(0.2);
             vi.mocked(Date.now).mockRestore();
             vi.mocked(Math.random).mockRestore();

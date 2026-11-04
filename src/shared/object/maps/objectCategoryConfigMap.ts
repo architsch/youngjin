@@ -34,7 +34,7 @@ const configByCategory: {[category: string]: ObjectCategoryConfig} =
     [ObjectCategoryEnumMap.Mirror]: {maxCountPerRoom: 1},
     // What lies about a room to be collected at once, none of it stored. Also sizes the bills' mesh (see
     // DollarBillGameObject).
-    [ObjectCategoryEnumMap.Collectible]: {maxCountPerRoom: 4},
+    [ObjectCategoryEnumMap.Collectible]: {maxCountPerRoom: 2},
 }
 
 const ObjectCategoryConfigMap =

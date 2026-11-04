@@ -12,6 +12,7 @@ import ObjectTransform from "../object/types/objectTransform";
 import Vector3DUtil from "../math/util/vector3DUtil";
 import Geometry3DUtil from "../math/util/geometry3DUtil";
 import ObjectTypeConfigMap from "../object/maps/objectTypeConfigMap";
+import AdminPrefsUtil from "../object/util/adminPrefsUtil";
 import PhysicsVoxelUtil from "./util/physicsVoxelUtil";
 import { GRAVITY_SPEED } from "../system/sharedConstants";
 
@@ -135,16 +136,18 @@ const PhysicsManager =
     },
     // Whether a straight line between two points meets no object's collider, but for the one it is seen from: of an object
     // whose type draws something, as the collider stands for what of it hides whatever lies behind it, the way a block
-    // does (see VoxelQueryUtil.isLineClear). A volume, which draws nothing, hides nothing.
+    // does (see VoxelQueryUtil.isLineClear). A volume, which draws nothing, hides nothing, nor does a ghost, drawn for
+    // nobody (see AdminPrefsUtil.isGhost).
     isLineClearOfObjects: (roomID: string, from: Vec3, to: Vec3, viewerObjectId: string): boolean =>
     {
+        const physicsRoom = physicsRooms[roomID];
         const lineBox: AABB3 = {
             center: Vector3DUtil.scale(Vector3DUtil.add(from, to), 0.5),
             halfSize: {x: 0.5 * Math.abs(to.x - from.x), y: 0.5 * Math.abs(to.y - from.y), z: 0.5 * Math.abs(to.z - from.z)},
         };
         const point: AABB3 = {center: from, halfSize: {x: 0, y: 0, z: 0}};
         const checked = new Set<string>([viewerObjectId]);
-        for (const voxel of PhysicsVoxelUtil.getVoxelsInBox(physicsRooms[roomID], lineBox))
+        for (const voxel of PhysicsVoxelUtil.getVoxelsInBox(physicsRoom, lineBox))
         {
             for (const object of voxel.intersectingObjects)
             {
@@ -152,7 +155,8 @@ const PhysicsManager =
                     continue;
                 checked.add(object.objectId);
                 if (ObjectTypeConfigMap.getConfigByIndex(object.objectTypeIndex).components.spawnedByAny?.instancedMeshGraphics
-                    != undefined && Geometry3DUtil.castAABBAgainstAABB(point, to, object.colliderState.hitbox).hitRayScale < 1)
+                    != undefined && !AdminPrefsUtil.isGhost(physicsRoom.room.objectById[object.objectId])
+                    && Geometry3DUtil.castAABBAgainstAABB(point, to, object.colliderState.hitbox).hitRayScale < 1)
                     return false;
             }
         }

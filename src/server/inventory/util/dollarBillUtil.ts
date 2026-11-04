@@ -38,10 +38,10 @@ import DollarBillFlightUtil from "./dollarBillFlightUtil";
 // A new bill comes this long after the last (or after the room had room for one), somewhere at least this far from
 // everyone, out of their reach as it flutters down, this high over the floor. Then gusts blow it about, each this long
 // after the last.
-export const SPAWN_INTERVAL_MS = [20_000, 60_000];
+export const SPAWN_INTERVAL_MS = [40_000, 120_000];
 const SPAWN_MIN_DISTANCE = DOLLAR_BILL_REACH + 1.5;
 const SPAWN_HEIGHT = 1.5;
-export const GUST_INTERVAL_MS = [4_000, 12_000];
+export const GUST_INTERVAL_MS = [9_000, 26_000];
 // A player draws in a bill no farther over or under their middle than this, in world units, which leaves out the storey
 // below them, and no wider than this of the way they face, across the room, in radians.
 export const REACH_UPWARD = 0.5 * PLAYER_HEIGHT + 0.35;
@@ -58,12 +58,12 @@ const NOBODY = new User("", "", UserTypeEnumMap.Guest, "", "");
 // Kept with each room as long as it is loaded, whose unloading forgets it.
 const roomStates = new WeakMap<RoomRuntimeMemory, DollarBillRoomState>();
 
-// $1 bills, which the server spawns in multiplayer rooms while someone is there to see it (a ghost isn't, as no bill
-// makes way for one), up to a room's cap, at places someone can walk to, since a room's cap is spent on each until it is
-// gone. It flies them along paths (see DollarBillFlightUtil), which clients play out by themselves: blown about by gusts
-// now and then, and by fans' streams as they meet them, dropping onto whatever is under them. Whoever comes near one,
-// looking its way with nothing between them, collects it at once (see ServerInventoryManager), if all they have done is
-// believable (see PlayerMotionCheckUtil): the room is told, and each browser shows it go to them (see
+// $1 bills, which the server spawns in multiplayer rooms while anyone but a ghost is there, up to a room's cap, at
+// places someone can walk to, since a room's cap is spent on each until it is gone. It flies them along paths (see
+// DollarBillFlightUtil), which clients play out by themselves: blown about by gusts now and then, and by fans' streams
+// as they meet them, dropping onto whatever is under them. Whoever comes near one, looking its way with nothing
+// between them, collects it at once (see ServerInventoryManager), if all they have done is believable (see
+// PlayerMotionCheckUtil): the room is told (see tellCollected), and each browser shows it go to them (see
 // DollarBillGameObject.onCollected). A block laid over one destroys it, with no one the richer.
 const DollarBillUtil =
 {
@@ -107,22 +107,27 @@ const DollarBillUtil =
     },
 }
 
+// With only ghosts there, bills neither come nor move, as with nobody, but a ghost still collects one.
 function stepRoom(memory: RoomRuntimeMemory, seconds: number, now: number): void
 {
     const people = getPeople(memory);
     if (people.length == 0)
         return;
 
+    const onlyGhosts = people.every(({player}) => AdminPrefsUtil.isGhost(player));
     const state = getRoomState(memory);
     for (const [objectId, flight] of state.flights)
     {
         const bill = memory.room.objectById[objectId];
         if (bill == undefined)
             state.flights.delete(objectId);
+        else if (onlyGhosts)
+            collectIfReached(memory.room, state, bill, people, now);
         else
             stepBill(memory.room, state, bill, flight, people, seconds, now);
     }
-    spawnWhenDue(memory.room, state, people, now);
+    if (!onlyGhosts)
+        spawnWhenDue(memory.room, state, people, now);
 }
 
 function getRoomState(memory: RoomRuntimeMemory): DollarBillRoomState
@@ -136,7 +141,7 @@ function getRoomState(memory: RoomRuntimeMemory): DollarBillRoomState
     return state;
 }
 
-// The players in a room who count: anyone but a ghost.
+// Ghosts included: bills make way for one, and go to one, as for anyone (see stepRoom).
 function getPeople(memory: RoomRuntimeMemory): {ctx: UserContext, player: AddObjectSignal}[]
 {
     const people: {ctx: UserContext, player: AddObjectSignal}[] = [];
@@ -144,7 +149,7 @@ function getPeople(memory: RoomRuntimeMemory): {ctx: UserContext, player: AddObj
     {
         const ctx = ServerUserManager.getSocketUserContext(userID);
         const player = ServerUserManager.getPlayerObject(userID);
-        if (ctx != undefined && player != undefined && !AdminPrefsUtil.isGhost(player))
+        if (ctx != undefined && player != undefined)
             people.push({ctx, player});
     }
     return people;
@@ -162,15 +167,8 @@ function stepBill(room: Room, state: DollarBillRoomState, bill: AddObjectSignal,
     }
 
     advance(flight, pos, seconds);
-    const collector = findCollector(room, pos, people, now);
-    if (collector != undefined)
-    {
-        ServerRoomManager.socketRoomContexts[room.id].multicastSignal("objectCollectedSignal",
-            new ObjectCollectedSignal(room.id, bill.objectId, collector.user.id));
-        destroy(room, state, bill);
-        ServerInventoryManager.addItem(collector, InventoryItemTypeEnumMap.Dollar, 1);
+    if (collectIfReached(room, state, bill, people, now))
         return;
-    }
 
     const stream = flight.blown ? undefined : PhysicsManager.getStrongestStream(room.id, getBox(pos));
     const blow = (stream == undefined) ? [] : DollarBillFlightUtil.planBlow(voxels, pos, stream);
@@ -207,22 +205,47 @@ function advance(flight: DollarBillFlight, pos: Vec3, seconds: number): void
 // Whoever has it within reach, in front of them and in sight, and is trusted to have got there: the nearest, if several
 // do.
 function findCollector(room: Room, pos: Vec3, people: {ctx: UserContext, player: AddObjectSignal}[],
-    now: number): UserContext | undefined
+    now: number): {ctx: UserContext, player: AddObjectSignal} | undefined
 {
-    let collector: UserContext | undefined = undefined;
+    let collector: {ctx: UserContext, player: AddObjectSignal} | undefined = undefined;
     let nearest = DOLLAR_BILL_REACH;
-    for (const {ctx, player} of people)
+    for (const person of people)
     {
+        const {ctx, player} = person;
         const {pos: at, dir} = player.transform;
         const across = Math.hypot(pos.x - at.x, pos.z - at.z);
         if (across <= nearest && Math.abs(pos.y - at.y) <= REACH_UPWARD && isFaced(at, dir, pos)
             && isInSight(room, player, pos) && PlayerMotionCheckUtil.isTrusted(ctx, now))
         {
-            collector = ctx;
+            collector = person;
             nearest = across;
         }
     }
     return collector;
+}
+
+function collectIfReached(room: Room, state: DollarBillRoomState, bill: AddObjectSignal,
+    people: {ctx: UserContext, player: AddObjectSignal}[], now: number): boolean
+{
+    const collector = findCollector(room, bill.transform.pos, people, now);
+    if (collector == undefined)
+        return false;
+    tellCollected(room, bill, collector);
+    destroy(room, state, bill);
+    ServerInventoryManager.addItem(collector.ctx, InventoryItemTypeEnumMap.Dollar, 1);
+    return true;
+}
+
+// Told to the room, but a ghost's collecting to the ghost alone: everyone else sees the bill only go, as one destroyed,
+// rather than drawn into somebody they can't see.
+function tellCollected(room: Room, bill: AddObjectSignal, collector: {ctx: UserContext, player: AddObjectSignal}): void
+{
+    const signal = new ObjectCollectedSignal(room.id, bill.objectId, collector.ctx.user.id);
+    const roomContext = ServerRoomManager.socketRoomContexts[room.id];
+    if (AdminPrefsUtil.isGhost(collector.player))
+        roomContext.unicastSignal("objectCollectedSignal", signal, collector.ctx.user.id);
+    else
+        roomContext.multicastSignal("objectCollectedSignal", signal);
 }
 
 // Whether any of a bill shows to a player's eyes, with no block, nobody else and nothing drawn in between: wherever it is
