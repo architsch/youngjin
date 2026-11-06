@@ -12,11 +12,11 @@ The venue's rule on machine-written text decides, and the hand-over quotes it:
 |---|---|
 | Bans generated text in posts (Hacker News) | The submission's fields, filled from his page. Nothing written |
 | Bans AI-assisted material (r/philosophy) | His own sentences, quoted from the post, to choose from and write with. Nothing written |
-| Allows AI help but not a message written whole by AI (intfiction.org), or wants AI text labelled (The Motte) | A draft he rewrites in his own words before posting |
+| Allows AI help but not a message written whole by AI (intfiction.org), or wants AI text labeled (The Motte) | A draft he rewrites in his own words before posting |
 | Says nothing | A draft he rewrites, and a line saying the venue is silent |
 
 A draft is never his finished words. Hand it over saying so: he rewrites it in his own words, not a word
-or two changed, or posts it labelled as AI-written where the venue accepts that.
+or two changed, or posts it labeled as AI-written where the venue accepts that.
 
 ## Writing a draft
 
@@ -84,13 +84,16 @@ or two changed, or posts it labelled as AI-written where the venue accepts that.
 
 ### intfiction.org
 
-- **A new topic**, in the category whose description fits: Authoring › General Design Discussions for
-  making games and the stories in them, Authoring › Story Research and Design for modelling a story,
-  Playing › IF Reviews and Essays for writing about IF. Announcements › Games asks new accounts to "join
-  the conversation a bit first".
-- **Body:** a hello and who he is, in one line; what the post claims, in IF's terms (stories, world
-  models, characters); the link alone on its own line, which the forum previews; and a question for IF
-  authors. One link is enough, as Discourse limits a new account's links per post. Bare, since the forum
-  passes its address on.
+- **A new topic**, in the category whose description fits: Authoring › General Design Discussions for an
+  essay on making games and the stories in them, Authoring › Story Research and Design for help with one's
+  own game ("Possible spoilers for games in progress"), Playing › IF Reviews and Essays for writing about
+  IF. Announcements › Games asks new accounts to "join the conversation a bit first".
+- **The story at the center.** The room talks about stories, characters and world models, so the
+  introduction is about what the post says of those, and whatever else it argues gets a sentence at most.
+  Of a series, introduce the part with the story in it: where the post he names has none, say which part
+  has before drafting, rather than stretch it to fit.
+- **Body:** a hello and who he is, in one line; what the post claims, in those terms; the link alone on
+  its own line, which the forum previews; and a question for IF authors. One link is enough, as Discourse
+  limits a new account's links per post. Bare, since the forum passes its address on.
 - **AI:** "It's okay to use AI to assist your writing, but please don't use an AI to generate your entire
   message." So he rewrites it. A new user's first post waits for a moderator.
