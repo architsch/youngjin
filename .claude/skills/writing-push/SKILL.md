@@ -1,6 +1,6 @@
 ---
 name: writing-push
-description: Get the user's essays and other library writing on thingspool.net in front of readers — do the few things an assistant may do on its own (notify search engines through IndexNow, list the site's feed in small-web directories, send one invited suggestion to a curator, draft a cross-post through an official API), each only after the user has seen it; hand over what each human-only venue requires for the posts he writes himself; and record every submission and what came of it. Use when asked to promote, advertise, share or spread a blog post, essay or library writing, to find where to post one, or after a new essay is published. For the game itself, use distribution-push.
+description: Get the user's essays and other library writing on thingspool.net in front of readers — do the few things an assistant may do on its own (notify search engines through IndexNow, list the site's feed in small-web directories, send one invited suggestion to a curator, draft a cross-post through an official API), each only after the user has seen it; hand over what each human-only venue requires for the posts he writes himself, with any introduction he asks for prepared as far as that venue's rule on AI-written text allows (a draft he rewrites, his own sentences only, or the submission's fields only); and record every submission and what came of it. Use when asked to promote, advertise, share or spread a blog post, essay or library writing, to find where to post one, to draft a post introducing one on a forum (Hacker News, r/philosophy, The Motte, intfiction.org and the like), or after a new essay is published. For the game itself, use distribution-push.
 ---
 
 # Writing Push
@@ -27,6 +27,7 @@ whenever the user asks what was automated, and never present a listing as reach 
   and the routes this skill may take alone, each with the date it was checked.
 - `temp/writings-strategy/ledger.md`: every submission and listing, and what came of it. It is history,
   not instructions: never rewrite or delete a row.
+- `temp/writings-strategy/drafts/`: each introduction prepared for him, one file per post and venue.
 - `temp/writings-strategy/STRATEGY.md` and the dated research folders beside it: background only.
 
 `temp/` is gitignored, so these stay private, and names of individual people go there, never into
@@ -105,14 +106,18 @@ must read the rules himself. Then give him, per venue:
 - the rule lines that bear on this post, quoted, including any rule on machine-written text;
 - the form the venue expects: a summary comment, one complete message, the page's own title;
 - the link: tagged `?ref=<venue-slug>` (`a-z`, `0-9`, `-`, `_`, at most 32 characters, matching the
-  ledger row) where the venue hides where visitors came from (Slack, Discord, email); bare wherever
-  Analytics sees the referrer anyway (Hacker News, Reddit, MetaFilter, forums);
+  ledger row) where the venue hides where visitors came from (Slack, Discord, email, and any site whose
+  outbound links carry `rel="noreferrer"`, as The Motte's do); bare wherever Analytics sees the referrer
+  anyway (Hacker News, Reddit, MetaFilter, Discourse forums such as intfiction.org);
 - what to expect, from the registry's evidence.
 
-The words of his post are his. Draft one only when he asks, and mark it as a draft for him to rewrite.
-Never for Hacker News, posts or comments alike: it bans "generated comments or AI-edited comments", and
-its software kills text it classifies as machine-written. Help him there by finding live threads he has
-firsthand experience for, never by suggesting what to say.
+The words of his post are his. When he asks for an introduction, prepare it as
+[`introductions.md`](introductions.md) says, which holds each venue's form. The venue's rule on
+machine-written text decides how much is drafted: a draft he rewrites in his own words (The Motte,
+intfiction.org), only his own sentences quoted from the post (r/philosophy, which bans AI-assisted
+material), or only the submission's fields (Hacker News, which bans generated text in posts and comments
+alike; help him there by finding live threads he has firsthand experience for, never by suggesting what
+to say).
 
 ## Lane C — never
 
