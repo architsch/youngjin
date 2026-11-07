@@ -11,6 +11,7 @@ import VolumeObjectTypeConfig from "../types/objectTypeConfig/volumeObjectTypeCo
 import FanObjectTypeConfig from "../types/objectTypeConfig/fanObjectTypeConfig";
 import MirrorObjectTypeConfig from "../types/objectTypeConfig/mirrorObjectTypeConfig";
 import DollarBillObjectTypeConfig from "../types/objectTypeConfig/dollarBillObjectTypeConfig";
+import { ObjectCategoryEnumMap } from "../types/objectCategory";
 
 // All GameObject types and the components each spawns with. Type indices are stored with objects, so
 // they are append-only. The list is read lazily on first lookup, because configs import this map (an
@@ -75,6 +76,13 @@ const ObjectTypeConfigMap =
     {
         ensureIndexed();
         return Object.values(indexToConfig);
+    },
+    // What a room's stored contents hold: what persists, and what lies about it to be collected, which outlasts its
+    // unloading and a restart without being any part of what is built, so that it is in no file of it (see DollarBillUtil).
+    isStoredWithRoom: (objectTypeIndex: number): boolean =>
+    {
+        const config = ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex);
+        return config.persistent || config.category == ObjectCategoryEnumMap.Collectible;
     },
 }
 

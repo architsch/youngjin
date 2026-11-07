@@ -127,7 +127,8 @@ function encodeStoredContent(room: Room): Uint8Array
 {
     const bufferState = EncodingUtil.startEncoding();
     room.voxelGrid.encode(bufferState);
-    new ObjectGroup(Object.values(room.objectById).filter(isPersistent)).encode(bufferState);
+    new ObjectGroup(Object.values(room.objectById).filter(obj => ObjectTypeConfigMap.isStoredWithRoom(obj.objectTypeIndex)))
+        .encode(bufferState);
     return new Uint8Array(EncodingUtil.endEncoding(bufferState));
 }
 

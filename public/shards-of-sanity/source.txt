@@ -609,3 +609,183 @@ I have introduced quite a number of narrative elements so far, at least from a l
 What this is bound to yield is some kind of purposeful expectation - the underlying notion that one's actions, when aimed correctly and exercised sincerely, will eventually manifest themselves in a better future. What seems obvious at this point, then, is that the story will stop short if a single action is all it takes to produce the final result. In order to make the story more interesting, we need to come up with a long chain of actions and a long chain of intermediary goals. The hero's journey cannot be enriched with a plethora of emotional upheavals unless there are waves upon waves of conflicts, unexpected twists, and hidden layers of meaning. And in order to make room for these dynamic constituents, we need something more sophisticated than a mere list of objectives and their subsequent actions.
 
 Our next volume will delve more deeply into this problem, and move on to introduce additional dimensions through which an unforeseen solution may emerge.
+
+
+
+
+
+
+
+:d:Reinventing computer science in the age of AI coding agents.
+:k:Computer Science, Narrative, Computational Logic, Technical Design, Semantics, Systems Thinking, Vibe Coding, Agentic Engineering, AI Agents
+:l:2026-11-07
+
+[Post-AI Computer Science - Volume 4] November 7, 2026
+
+@@<hr>
+@@<h3><b>Progression</b></h3>
+
+So far, I have introduced quite a number of ways in which a software engineer (or architect) could orchestrate the narrative aspect of the program by means of logical pieces. What is lacking, though, is a way to glue these fragmentary building blocks together and make them manifest themselves in an internally coherent and self-sustaining work of composition, which is capable of growing itself over time by chasing the complex trajectories of its surroundings.
+
+What we need, in other words, is a method of establishing the idea of progression in whichever software product we happen to be designing. By following the course through which the application matures its own narrative, the user (i.e. master of the program) will be convinced that the content he/she is seeing is an elaborate self-expression of a meaningful substance, rather than a random heap of information which is irrelevant to his/her life.
+
+@@<hr>
+@@<h3><b>On the Fallacy of Arbitrary Rules</b></h3>
+
+The most challenging side of such an objective is that, in order for a system to be endowed with its own mechanic of progression, a set of rules which are robust enough to give birth to a long self-growing chain of emergent behaviors is requisite. Yet as soon as we begin trying to come up with such rules, we find ourselves making up seemingly random logical assumptions which are quite out of place with the reality of our everyday lives.
+
+For example, let us review the conditional statement below, which is one of the conditionals I introduced in the previous volume.
+
+#$
+IF Dinah is with Alice AND Alice doesn't know it,
+    THEN Alice believes Dinah is not with Alice.
+#$
+
+What you are seeing here is essentially a rule which dictates that Alice must believe she is not near Dinah, as long as she is unaware of Dinah's nearby presence. An astute reader is likely to point out the obvious shortage of logical coherence in the foregoing conclusion and say, "It is absolute nonsense! Just because Alice doesn't know that Dinah is nearby does not mean that Alice is justified in believing that Dinah is far away from her!"
+
+Before conceding that our example rule is downright flawed, of course, we should be justified in our claim that a belief is subjective in nature and therefore does not have to be logically sound. This argument, however, still does not tell us the reason why Alice would make such a choice of belief in the first place.
+
+We could technically attribute Alice's decision to her personality as well as her personal memories, which would then play the role of the underlying causes behind her behavioral tendency. However, I am not yet going to conduct such an exhaustive survey of these contributing factors in order to fully unravel the origin of Alice's personal choices, for it is likely to be a painstaking task which will deter us from concentrating on the essence of the problem.
+
+@@<hr>
+@@<h3><b>A Sense of Purpose</b></h3>
+
+A narrative begins with its own set of rules, for otherwise it will forever remain in its infantile toybox of sporadic daydreams. And even in the presence of fairly solid rules, the narrative quickly loses its emotional appeal as soon as the audience realizes that the rules themselves are contrived in an arbitrary manner without any shared objective.
+
+It is necessary, therefore, to ensure that the rules are ultimately goal-driven, meaning that they ought to be designed to play their own parts in the manifestation of the "purpose of life". And in order to kickstart this monumental task, we first need to make sense of what "purpose of life" even means.
+
+Whenever we say that the purpose of something is so-and-so, we are basically implying the existence of two distinct entities: (1) An ideal state which we haven't reached yet, and (2) An act which is supposed to bring us closer to that ideal state. A rule which is designed to make sense, then, will be a rule which invokes an act of directing the trajectory of the story toward the ideal we are aiming for. The question is, what exactly is that ideal we are trying to identify?
+
+The main problem is that there seems to be an indefinitely long chain of ideals, which makes it rather difficult for us to reach its terminal point. Imagine, for instance, that Alice wants to be close to Dinah. If someone asks why, we may answer him/her by saying, "Because Alice is fond of seeing Dinah". If the person asks why Alice is fond of seeing Dinah, we may reply, "Because Dinah is Alice's cat and Alice has spent most of her childhood with Dinah, which makes her prefer seeing Dinah as often as possible in order to constantly bring up the sweet memories of her bygone days". And the person might question this as well, in which case we may respond by saying, "Because repeatedly reminding herself of her source of happiness is one of the most direct ways of maintaining her emotional stability, which reinforces Alice's confidence in her personal security". And, of course, the person may proceed to ask why personal security is considered important, in which case we will need to come up with a more fundamental reason to justify it, and so on.
+
+As we start seeking the ultimate purpose of one's decision, we soon find ourselves being stuck in a ceaseless succession of inquiries. And apparently, there is no logical way to resolve this by simply pointing at something definite and saying, "THIS is the ultimate goal of life, the universe, and everything!" So, what shall we do to circumvent this apparent incompleteness in logic?
+
+@@<hr>
+@@<h3><b>Command</b></h3>
+
+While the "ultimate goal" of the universe is not something we are able to fully identify right now (assuming that the very idea of purpose itself is still somewhat relevant on a cosmic scale), I would like to entertain the notion that it is of pragmatic value to suppose that there is some kind of supreme authority (i.e. God) which governs the full trajectory of our lives and dictates its destiny. Given this premise, we may anchor our intuition to the belief that the purpose of life is the fulfillment of commands which are handed to us by that authority, whose will is beyond our scope of rationality.
+
+(Side Note: By means of the word "God", I do not mean to be speaking in any religious context. I am using this particular word just for the sake of indicating the hypothetical "administrator" of whichever system we happen to imagine.)
+
+This, of course, could be considered a mere pretense which deliberately puts aside any chance of human reason by assuming the inevitable presence of a mystical black box. Yet it turns out to be a pretty useful stance to take, considering that it provides us with a solid starting point of wisdom - a set of axioms to which our focal point of sanity will be able to fall back even in times of the most devastating existential crisis.
+
+Our next object of exploration should be the very definition of the word "command", for if we are to entertain the notion that a command is the most fundamental origin of our sense of purpose, we had better investigate the inner workings of the method by which the supreme authority assigns it to us and lets us be aware of its significance.
+
+What do we mean by "command"? One thing I can tell with a high degree of confidence is that the existence of a command presumes the existence of an authority as well as its intention to exercise its power over a subject that is under control. Moreover, we can definitely say that a command always involves an objective (goal) which the authority expects its subject to pursue.
+
+@@<hr>
+@@<h3><b>Universal Law</b></h3>
+
+If the subject of a command is universal (i.e. the command is addressed to everyone and not just to a specific individual), we can say that such a command is more of a "universal law" than a momentary task which only applies to a particular region in space and time. In English, this concept can be minimally expressed by means of a simple sentence, which may include verbs and objects but not a subject (because the subject is supposed to encompass the whole environment, which means an explicit mention of it is superfluous).
+
+For example, a law which declares that Alice is a human being (rather than some other species) could be stated as the following:
+
+#$
+Let Alice be a human.
+#$
+
+<018>
+
+Instead of just saying, "Alice is a human", the law above instructs the universe to put Alice into the category called "human", by means of the special keyword called "let" (which is what makes this sentence a command, rather than a mere announcement of an already established fact).
+
+And the result of this is pretty straightforward. After the declaration of Alice as a human being (which is done by the command: "Let Alice be a human"), what we are expecting to see is a solidified fact which simply calls out the name of the class to which Alice belongs (i.e. "human").
+
+#$
+Let Alice be a human.
+Alice is a human.
+#$
+
+<019>
+
+@@<hr>
+@@<h3><b>Cause and Effect</b></h3>
+
+What we just witnessed above is a succession of two events, where the former is the cause of the latter. First of all, there is an establishment of a law (i.e. command) which tells us what "should be". Secondly, there is an establishment of a fact which tells us what "is", based on what the law says it should be.
+
+At this point, you may wonder what exactly is the relation between these two events, and how to make sense of it grammatically. In the context of ordinary speech, it is probably going to make sense if we just say that the first statement (i.e. "Let Alice be a human") is the cause of the follow-up statement (i.e. "Alice is a human"). In this interpretation, the former is the cause of the latter and the latter is the effect of the former.
+
+#$
+Cause:
+    Let Alice be a human.
+Effect:
+    Alice is a human.
+#$
+
+A more engineering-oriented interpretation would be to model these two statements as an input followed by its corresponding output. Suppose that the universe is a computer program and the user is its sole administrator who has the exclusive right to send commands to the engine of its inner cosmos. Each of these commands, then, will be a message that the program is going to evaluate for the purpose of generating its subsequent return value.
+
+#$
+Input:
+    Let Alice be a human.
+Output:
+    Alice is a human.
+#$
+
+@@<hr>
+@@<h3><b>Passage of Time</b></h3>
+
+These foregoing depictions, though, are still not enough to let us lay down a firm conceptual foundation of what we are dealing with. The example scenario we saw is a transition in time - a modification of our universe from one state to another, each of which belongs to a distinct phase in time. Simply associating each statement with a descriptive word does not fully reflect the idea of change, which constitutes one of the core backbones of the very mechanic which impels the story to blossom over time.
+
+For a quick demonstration of such a deficiency, let me revisit our previous example which is reproduced below.
+
+#$
+Let Alice be a human.
+Alice is a human.
+#$
+
+<019>
+
+Here, the main problem we notice is that there is no explicit differentiation between what belongs to the past, what belongs to the present, and what belongs to the future. The only hint we can find is that "Alice is a human" comes after "Let Alice be a human", which implicitly tells us that the act of letting Alice be defined as a human basically precedes the act of echoing the already declared fact that Alice indeed is a human.
+
+Such an unspoken agreement may feel sufficient for now. As we start introducing more and more complex chains of causality to our system, however, the soundness of the assumption that the order of statements is a direct mirror image of the order in which causes and their effects are chained up sequentially is likely to fall apart, since it will be apparent to us that the concept of sequential order alone is incapable of fully representing scenarios in which multiple causes lead to a single effect, scenarios in which a single cause leads to multiple effects, or scenarios in which multiple causes simultaneously lead to multiple effects (aka "transaction").
+
+It is necessary, therefore, to come up with a way to express temporal phenomena (e.g. causality) which is versatile enough to render a plethora of situations in an accurate manner, while also being fairly easy to understand.
+
+First of all, we ought to understand what it really means to be in the past, present, or future. A short answer is that it depends on what the current time is. If the clock is showing us that it is 8:00AM, any event which happened before 8:00AM must belong to the past and any event which is bound to happen after 8:00AM must belong to the future. And this particular point in time (i.e. 8:00AM), which we commonly refer to as "now", is the division between past and future events which continuously shifts as time passes by.
+
+In our everyday language, though, we usually do not denote such a temporal boundary in so precise a manner. Instead, when we find ourselves communicating with one another, we often just make use of tenses without mentioning exact moments in time, chiefly because such a level of detail is unnecessary in most cases.
+
+In our example, therefore, it suffices to attach a temporal expression to each sentence to specify the phase in time to which it belongs. The following example illustrates how it can be done.
+
+#$
+God said, "Let Alice be a human".
+Now Alice is a human.
+#$
+
+<020>
+
+If we suppose that the existence of Alice as a human being (i.e. "Alice is a human") belongs to the present, it will be reasonable to claim that the preceding declaration of Alice as a human being (i.e. "Let Alice be a human") must have happened in the past.
+
+Merely arranging the two events in the correct order, however, is still not enough. We should also state clearly that the latter was caused by the former in order to draw the full picture. Such a relation of causality can be expressed by joining the two statements with the word "so".
+
+#$
+God said, "Let Alice be a human",
+    so now Alice is a human.
+#$
+
+<021>
+
+And again, we may as well imagine the presence of a conditional statement (i.e. rule) through which these two statements express their logical coherence. For instance, if we do suppose that anything God says must come true right after he says it, we will be able to rephrase our foregoing expression in the following way:
+
+#$
+IF God said, "Let Alice be a human",
+    THEN now Alice is a human.
+#$
+
+This, of course, is way too specific. We need a more general rule, which states that any definition of the form "Let X be Y" (where both X and Y can be anything), which is spoken by God, must be transformed into a fact which says, "X is Y".
+
+#$
+IF God said, "Let X be Y",
+    THEN now X is Y.
+#$
+
+Still, this is not generic enough. A more comprehensive approach would be to set up a rule which allows God to make anything (i.e. X) true by simply saying it out loud and waiting for its effect to propagate through time.
+
+#$
+IF God said X,
+    THEN now X.
+#$
+
+@@<hr>
+@@<h3><b>Seed of Meaning</b></h3>
+
+What you just saw is an example of a "fundamental law", which precedes all worldly truths because it touches the essence of pure mind without relying upon any other axiom. From this standpoint, we may proclaim that a sufficiently general law (e.g. IF God said X THEN now X) is able to function as a seed of meaning - i.e. the very fountain of inspiration from which innumerable branches of senses, feelings, and quantifiable patterns may emerge.

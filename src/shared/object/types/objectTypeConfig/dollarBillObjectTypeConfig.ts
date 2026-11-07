@@ -13,9 +13,10 @@ export const DOLLAR_BILL_REST_HEIGHT = 0.5 * DOLLAR_BILL_LENGTH * Math.sin(DOLLA
 export const DOLLAR_BILL_REACH = 4;
 
 // A $1 bill folded in half, which the server spawns in a multiplayer room and blows about, and whoever comes near it,
-// looking its way, collects (see DollarBillUtil). Nobody may touch it by any signal, and no room keeps it. It has no collider: wind moves
-// it along paths rather than physics, and nothing is ever stopped by it. Its position is the crease's middle as it stands
-// on its two edges, however it lies: that is for each browser to draw (see DollarBillGameObject).
+// looking its way, collects (see DollarBillUtil). Nobody may touch it by any signal. It is no part of what is built,
+// though the room's saves keep it (see ObjectTypeConfigMap.isStoredWithRoom). It has no collider: wind moves it along
+// paths rather than physics, and nothing is ever stopped by it. Its position is the crease's middle as it stands on its
+// two edges, however it lies: that is for each browser to draw (see DollarBillGameObject).
 const DollarBillObjectTypeConfig =
 {
     objectType: "DollarBill",

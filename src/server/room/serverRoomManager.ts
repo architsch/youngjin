@@ -380,8 +380,8 @@ const ServerRoomManager =
     },
 }
 
-// Replaces everything a room file holds of the room. Its players, who never persist, stay; bills, which never persist
-// either, go with the old room.
+// Replaces everything a room file holds of the room. Its players, who never persist, stay; its bills, which no file
+// holds, go with the old room.
 function applyRoomFile(room: Room, roomFile: RoomFile, prefs: string): void
 {
     const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");

@@ -159,7 +159,7 @@ const AgentObjectUtil =
         if ("error" in made)
             return made;
 
-        const objectId = makeObjectId(room);
+        const objectId = ObjectIdUtil.generateUniqueObjectId(room.objectById);
         const accepts = (transform: ObjectTransform) => ObjectUpdateUtil.canAddObject(user, room,
             new AddObjectSignal(room.id, user.id, user.userName, objectTypeIndex, objectId, transform, made.metadata));
         const transform = findTransform(room, objectTypeIndex, quadIndex, center, dir, made.scale, accepts);
@@ -353,7 +353,7 @@ const AgentObjectUtil =
         if (problem != undefined)
             return {error: problem};
 
-        const objectId = makeObjectId(room);
+        const objectId = ObjectIdUtil.generateUniqueObjectId(room.objectById);
         const signal = new AddObjectSignal(room.id, user.id, user.userName, volumeTypeIndex, objectId,
             VolumeObjectTypeConfig.util.makeTransformOfRoomVolume(volume), toMetadata({
                 [ObjectMetadataKeyEnumMap.Label]: name,
@@ -689,14 +689,6 @@ function describeUntouchable(room: Room, user: User, obj: AddObjectSignal, chang
     if (RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex, obj.transform))
         return "A restricted zone covers it (look lists the zones).";
     return "That can't be done to it.";
-}
-
-function makeObjectId(room: Room): string
-{
-    let objectId = ObjectIdUtil.generateRandomObjectId();
-    while (room.objectById[objectId] != undefined)
-        objectId = ObjectIdUtil.generateRandomObjectId();
-    return objectId;
 }
 
 // Hung on a face (a canvas, prop, lamp, fan, label, door, NPC or mirror), rather than a player, a zone or the room's

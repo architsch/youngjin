@@ -1,5 +1,6 @@
 // Global Parameters
 
+const blackColor = "#000000";
 const extraDarkColor = "#101010";
 const darkColor = "#303030";
 const dimColor = "#707070";
@@ -247,6 +248,7 @@ const lightYellow_color_frame = simpleFrame(darkColor, lightYellowColor);
 const mediumYellow_color_frame = simpleFrame(darkColor, mediumYellowColor);
 const linkImage_frame = elevatedFrame(darkColor, mediumColor, mediumColor);
 const img_frame = roundedFrame(darkColor, lightColor);
+const collapsible_content_frame = roundedFrame(blackColor, lightColor);
 const snippet_frame = roundedFrame(extraDarkColor, lightGreenColor);
 const excerpt_frame = roundedFrame(extraDarkColor, lightGreenColor);
 const button_frame = elevatedFrame(extraDarkColor, mediumColor, dimColor, "0.5");
@@ -531,6 +533,52 @@ hr {
 .inlineTabButton.selected:hover {
 	color: ${lightYellowColor};
 }
+/* Unclipped, unlike everything else: clipping would keep its contents' margins from collapsing with those around it. */
+.collapsible {
+	overflow: visible;
+}
+.collapsible > summary {
+	${flexible_row_area(landscape)}
+	${m_spacing_marginOnly(landscape)}
+	${m_bold_font}
+	${medium_color_frame}
+	cursor: pointer;
+	-webkit-user-select: none;
+	user-select: none;
+}
+.collapsible > summary::-webkit-details-marker {
+	display: none;
+}
+.collapsible > summary::before {
+	content: "";
+	display: inline-block;
+	margin-right: 0.5em;
+	border-left: 0.6em solid;
+	border-top: 0.3em solid transparent;
+	border-bottom: 0.3em solid transparent;
+	transition: transform 0.15s ease-out;
+}
+.collapsible[open] > summary::before {
+	transform: rotate(90deg);
+}
+.collapsible[open] > summary > .collapsedLabel, .collapsible:not([open]) > summary > .expandedLabel {
+	display: none;
+}
+/* On the baseline the triangle stands on, which the global middle alignment would drop the label below. */
+.collapsible > summary > span {
+	vertical-align: baseline;
+}
+.collapsible > summary:hover {
+	color: ${lightYellowColor};
+}
+.collapsibleContent {
+	${spacing(landscape, 1, 2, true)}
+	${collapsible_content_frame}
+}
+/* Text and pictures paint the page's colour behind themselves; inside the black region they let it show through. */
+.collapsibleContent :is(h1, h2, h3, p, hr, .highlight, .dim, .s_image, .m_image, .l_image) {
+	background-color: transparent;
+}
 .snippet {
 	${flexible_row_area(landscape)}
 	${m_spacing(landscape)}
@@ -627,14 +675,16 @@ a:active {
 .dim {
 	${dim_color_frame}
 }
-/* A readable measure for running text, and a size that doesn't shrink with a phone's screen. */
-.fullscreenPanel > p, .fullscreenPanel > h1, .fullscreenPanel > h3, .fullscreenPanel > hr, .fullscreenPanel > pre {
+/* A readable measure for running text (in the panel, or in a collapsible group there), and a size
+   that doesn't shrink with a phone's screen. */
+.fullscreenPanel > p, .fullscreenPanel > h1, .fullscreenPanel > h3, .fullscreenPanel > hr, .fullscreenPanel > pre,
+.collapsibleContent > p, .collapsibleContent > h1, .collapsibleContent > h3, .collapsibleContent > hr, .collapsibleContent > pre {
 	max-width: 72ch;
 }
-.fullscreenPanel > p, .fullscreenPanel .excerpt {
+.fullscreenPanel > p, .collapsibleContent > p, .fullscreenPanel .excerpt {
 	font-size: ${(font_px_min * fontScaleFactor_px).toFixed(2)}px;
 }
-.fullscreenPanel > p {
+.fullscreenPanel > p, .collapsibleContent > p {
 	line-height: 1.6;
 	margin-top: 1.1em;
 	margin-bottom: 1.1em;

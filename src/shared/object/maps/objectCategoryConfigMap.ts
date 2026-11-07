@@ -32,8 +32,8 @@ const configByCategory: {[category: string]: ObjectCategoryConfig} =
     // One reflection is drawn a frame, into the one render target (see MirrorReflectionUtil). Also sizes the glass's
     // mesh and the frames' share of the shared mesh pools (see InstancedMeshCapacityBuilder).
     [ObjectCategoryEnumMap.Mirror]: {maxCountPerRoom: 1},
-    // What lies about a room to be collected at once, none of it stored. Also sizes the bills' mesh (see
-    // DollarBillGameObject).
+    // What lies about a room to be collected at once, kept by its saves but no part of what is built (see
+    // ObjectTypeConfigMap.isStoredWithRoom). Also sizes the bills' mesh (see DollarBillGameObject).
     [ObjectCategoryEnumMap.Collectible]: {maxCountPerRoom: 2},
 }
 

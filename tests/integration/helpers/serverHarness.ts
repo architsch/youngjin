@@ -347,6 +347,7 @@ import UserRoomChangeResult from "../../../src/server/room/types/userRoomChangeR
 import SocketUserContext from "../../../src/server/sockets/types/socketUserContext";
 import DBUserVersionMigration from "../../../src/server/db/types/versionMigration/dbUserVersionMigration";
 import PhysicsManager from "../../../src/shared/physics/physicsManager";
+import DollarBillUtil from "../../../src/server/inventory/util/dollarBillUtil";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import SetObjectTransformSignal from "../../../src/shared/object/types/setObjectTransformSignal";
 import SetObjectMetadataSignal from "../../../src/shared/object/types/setObjectMetadataSignal";
@@ -691,6 +692,7 @@ export const harness = {
     /** Simulates a graceful shutdown. */
     async gracefulShutdown(): Promise<void>
     {
+        DollarBillUtil.markRoomsToSave();
         await ServerRoomManager.saveMultiplayerRooms(true);
         await ServerRoomManager.saveAllUsersPlayerMetadata(ServerUserManager.socketUserContexts);
 

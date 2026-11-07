@@ -3,15 +3,21 @@
  * wire and a path played out alike by whoever follows it; a bill's flight, property-based over rooms of random blocks:
  * never through a block, ending on whatever is under it, a gust's curve differing from the last and blowing it toward
  * nobody, and how it lies on every screen alike; and, through the real server modules, bills in a room: when and where
- * they come, how many, who sees them come and go, gusts, fans' streams, a block laid over one or taken from under one,
- * whoever comes near collecting one, what coming back earns, and what a user holds lasting.
+ * they come, how many, who sees them come and go, what the room's saves keep of them, gusts, fans' streams, a block laid
+ * over one or taken from under one, whoever comes near collecting one, what coming back earns, and what a user holds
+ * lasting.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import fc from "fast-check";
 import { harness, ConnectedUser } from "../helpers/serverHarness";
 import { getPendingSignals } from "../helpers/invariants";
 import { createTestRoom } from "../helpers/roomContent";
+import DBFileStorageUtil from "../../../src/server/db/util/dbFileStorageUtil";
 import DBInventoryUtil from "../../../src/server/db/util/dbInventoryUtil";
+import DBRoomUtil from "../../../src/server/db/util/dbRoomUtil";
+import ServerLifecycleUtil from "../../../src/server/system/util/serverLifecycleUtil";
+import ObjectGroup from "../../../src/shared/object/types/objectGroup";
+import VoxelGrid from "../../../src/shared/voxel/types/voxelGrid";
 import DBUserUtil from "../../../src/server/db/util/dbUserUtil";
 import ClientInventoryManager from "../../../src/client/inventory/clientInventoryManager";
 import { dollarsInFlightObservable, inventoryGainObservable,
@@ -805,15 +811,89 @@ describe("bills in a room", () => {
         expect(getRoom().objectById[bill.objectId]).toBeDefined();
     });
 
-    it("are kept by no save of the room or file of it", async () => {
-        await join("someone");
+    it("are kept by the room's saves, under ids of their own, but by no file of it, and mark nothing to save", async () => {
+        const user = await join("someone");
         const bill = spawnBill();
         const room = getRoom();
-        const persistent = Object.values(room.objectById)
-            .filter(obj => ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).persistent);
-        expect(persistent.map(obj => obj.objectId)).not.toContain(bill.objectId);
         expect(room.dirty).toBe(false);
         expect(Object.keys(RoomFile.fromRoom(room).objectGroup.objectById)).not.toContain(bill.objectId);
+        // Not one of the server's own, which start over with each restart that the saves keep it through.
+        expect(bill.objectId[0]).not.toBe(ServerObjectManager.generateNonPersistentObjectId()[0]);
+
+        // The real save, what it would store kept here.
+        const {default: storingDBRoomUtil} = await vi.importActual<typeof import("../../../src/server/db/util/dbRoomUtil")>(
+            "../../../src/server/db/util/dbRoomUtil");
+        const saveFile = vi.spyOn(DBFileStorageUtil, "saveBinaryFile").mockResolvedValue(true);
+        expect(await storingDBRoomUtil.saveRoomContent(room)).toBe(true);
+        const bufferState = new BufferState(new Uint8Array(saveFile.mock.calls[0][1]));
+        const voxelGrid = VoxelGrid.decode(bufferState) as VoxelGrid;
+        const storedObjects = (ObjectGroup.decodeWithParams(bufferState, room.id, voxelGrid) as ObjectGroup).objectById;
+        const storedBill = storedObjects[bill.objectId];
+        expect(storedBill).toBeDefined();
+        // As finely as a room stores where anything is.
+        for (const axis of ["x", "y", "z"] as const)
+            expect(storedBill.transform.pos[axis]).toBeCloseTo(bill.transform.pos[axis], 2);
+        expect(storedObjects[harness.getPlayerObject(user.user.id)!.objectId]).toBeUndefined();
+    });
+
+    it("come back as they lay when the room loads again, and are collected as any", async () => {
+        const user = await join("someone");
+        const bill = spawnBill();
+        const lay = {...bill.transform.pos};
+        await harness.disconnectUser(user);
+        // As after a restart or its unloading: the harness's store hands back the room as it was kept.
+        ServerRoomManager.unloadRoom(HUB_ID);
+        await harness.loadRoom(HUB_ID);
+        expect(getBills().map(({objectId}) => objectId)).toEqual([bill.objectId]);
+        expect(bill.transform.pos).toEqual(lay);
+
+        const newcomer = await join("newcomer", {x: lay.x - WITHIN_REACH, y: STANDING_Y, z: lay.z});
+        faceToward(newcomer, lay.x, lay.z);
+        flush();
+        expect(getBills()).toHaveLength(0);
+        expect(newcomer.socketUserContext.inventory[DOLLAR]).toBe(1);
+    });
+
+    it("count toward the cap of the room they come back to, which tries to add none past it", async () => {
+        holdGusts();
+        const user = await join("someone");
+        flushUntil(() => getBills().length == MAX_BILLS, MAX_BILLS * SPAWN_INTERVAL_MS[1] + 60_000);
+        const kept = getBills().map(({objectId}) => objectId);
+        await harness.disconnectUser(user);
+        ServerRoomManager.unloadRoom(HUB_ID);
+        await harness.loadRoom(HUB_ID);
+
+        await join("newcomer");
+        const adding = vi.spyOn(ServerObjectManager, "addObjectAsServer");
+        flushFor(2 * SPAWN_INTERVAL_MS[1]);
+        expect(getBills().map(({objectId}) => objectId)).toEqual(kept);
+        expect(adding).not.toHaveBeenCalled();
+    });
+
+    it("keep still once the server starts shutting down, and each room stepped since it loaded is saved", async () => {
+        const OTHER_HUB_ID = "hubBBBBBBBBBBBBBBBBB";
+        harness.seedHub(OTHER_HUB_ID);
+        await harness.loadRoom(OTHER_HUB_ID);
+        const user = await join("someone");
+        const bill = spawnBill();
+        const lay = {...bill.transform.pos};
+        const room = getRoom();
+
+        // Within its reach and facing it, with gusts coming due.
+        vi.spyOn(ServerLifecycleUtil, "isShuttingDown").mockReturnValue(true);
+        moveTo(user, {x: lay.x - WITHIN_REACH, y: STANDING_Y, z: lay.z});
+        faceToward(user, lay.x, lay.z);
+        flushFor(GUST_WITHIN_MS);
+        expect(getBills().map(({objectId}) => objectId)).toEqual([bill.objectId]);
+        expect(bill.transform.pos).toEqual(lay);
+        expect(user.socketUserContext.inventory[DOLLAR]).toBeUndefined();
+
+        expect(room.dirty).toBe(false);
+        const save = vi.mocked(DBRoomUtil.saveRoomContent);
+        save.mockClear();
+        await harness.gracefulShutdown();
+        expect(save.mock.calls.some(([saved]) => saved === room)).toBe(true);
+        expect(save.mock.calls.some(([saved]) => saved.id == OTHER_HUB_ID)).toBe(false);
     });
 
     it("go with the old room when a room file is loaded over it", async () => {

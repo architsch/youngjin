@@ -14,6 +14,7 @@ import ObjectWaypoint from "../../../shared/object/types/objectWaypoint";
 import RemoveObjectSignal from "../../../shared/object/types/removeObjectSignal";
 import SetObjectPathSignal from "../../../shared/object/types/setObjectPathSignal";
 import AdminPrefsUtil from "../../../shared/object/util/adminPrefsUtil";
+import ObjectIdUtil from "../../../shared/object/util/objectIdUtil";
 import ObjectPathUtil from "../../../shared/object/util/objectPathUtil";
 import PhysicsManager from "../../../shared/physics/physicsManager";
 import Room from "../../../shared/room/types/room";
@@ -29,6 +30,7 @@ import PlayerMotionCheckUtil from "../../user/util/playerMotionCheckUtil";
 import ServerObjectManager from "../../object/serverObjectManager";
 import ServerRoomManager from "../../room/serverRoomManager";
 import UserContext from "../../sockets/types/userContext";
+import ServerLifecycleUtil from "../../system/util/serverLifecycleUtil";
 import ServerUserManager from "../../user/serverUserManager";
 import ServerInventoryManager from "../serverInventoryManager";
 import DollarBillFlight from "../types/dollarBillFlight";
@@ -64,12 +66,16 @@ const roomStates = new WeakMap<RoomRuntimeMemory, DollarBillRoomState>();
 // as they meet them, dropping onto whatever is under them. Whoever comes near one, looking its way with nothing
 // between them, collects it at once (see ServerInventoryManager), if all they have done is believable (see
 // PlayerMotionCheckUtil): the room is told (see tellCollected), and each browser shows it go to them (see
-// DollarBillGameObject.onCollected). A block laid over one destroys it, with no one the richer.
+// DollarBillGameObject.onCollected). A block laid over one destroys it, with no one the richer. A room's saves keep
+// its bills (see ObjectTypeConfigMap.isStoredWithRoom), taken up again where they are when it loads (see getRoomState).
 const DollarBillUtil =
 {
-    // Every room's bills, as time passes. From SocketsServer's flush, so what they do goes out with it.
+    // Every room's bills, as time passes. From SocketsServer's flush, so what they do goes out with it. They keep still
+    // once the server starts shutting down, as its last save keeps them: nobody collects one that the save brings back.
     stepAll: (seconds: number): void =>
     {
+        if (ServerLifecycleUtil.isShuttingDown())
+            return;
         const now = Date.now();
         for (const memory of Object.values(ServerRoomManager.roomRuntimeMemories))
         {
@@ -105,6 +111,16 @@ const DollarBillUtil =
         for (const {signalType, signal} of DollarBillUtil.getCatchUpSignals(roomID))
             ServerRoomManager.socketRoomContexts[roomID].unicastSignal(signalType, signal, userID);
     },
+    // Ahead of the shutdown's save, which takes only rooms marked as changed: each room stepped since it loaded, whose
+    // bills may have changed with it.
+    markRoomsToSave: (): void =>
+    {
+        for (const memory of Object.values(ServerRoomManager.roomRuntimeMemories))
+        {
+            if (roomStates.has(memory))
+                memory.room.dirty = true;
+        }
+    },
 }
 
 // With only ghosts there, bills neither come nor move, as with nobody, but a ghost still collects one.
@@ -115,7 +131,7 @@ function stepRoom(memory: RoomRuntimeMemory, seconds: number, now: number): void
         return;
 
     const onlyGhosts = people.every(({player}) => AdminPrefsUtil.isGhost(player));
-    const state = getRoomState(memory);
+    const state = getRoomState(memory, now);
     for (const [objectId, flight] of state.flights)
     {
         const bill = memory.room.objectById[objectId];
@@ -130,12 +146,18 @@ function stepRoom(memory: RoomRuntimeMemory, seconds: number, now: number): void
         spawnWhenDue(memory.room, state, people, now);
 }
 
-function getRoomState(memory: RoomRuntimeMemory): DollarBillRoomState
+// Made as the room is first stepped since it loaded, taking up the bills it was stored with where they are.
+function getRoomState(memory: RoomRuntimeMemory, now: number): DollarBillRoomState
 {
     let state = roomStates.get(memory);
     if (state == undefined)
     {
         state = {flights: new Map(), nextSpawnAt: undefined};
+        for (const obj of Object.values(memory.room.objectById))
+        {
+            if (obj.objectTypeIndex == BILL_TYPE_INDEX)
+                state.flights.set(obj.objectId, createFlight(now));
+        }
         roomStates.set(memory, state);
     }
     return state;
@@ -307,13 +329,19 @@ function spawn(room: Room, state: DollarBillRoomState, people: Vec3[], now: numb
     const place = pickSpawnPlace(room.voxelGrid.voxels, people);
     if (place == undefined)
         return;
-    const bill = new AddObjectSignal(room.id, "", "", BILL_TYPE_INDEX, ServerObjectManager.generateNonPersistentObjectId(),
+    // Not one of the server's own ids (see ServerObjectManager.generateNonPersistentObjectId), which start over with each
+    // restart that the room's saves keep it through.
+    const objectId = ObjectIdUtil.generateUniqueObjectId(room.objectById);
+    const bill = new AddObjectSignal(room.id, "", "", BILL_TYPE_INDEX, objectId,
         new ObjectTransform(place, {x: 0, y: 0, z: 1}, {...UNIT_VEC3}));
     if (ServerObjectManager.addObjectAsServer(room, NOBODY, bill))
-    {
-        state.flights.set(bill.objectId, {waypoints: [], next: 0, blown: false,
-            nextGustAt: now + randomBetween(GUST_INTERVAL_MS)});
-    }
+        state.flights.set(bill.objectId, createFlight(now));
+}
+
+// With no flight under way, its first gust a while off.
+function createFlight(now: number): DollarBillFlight
+{
+    return {waypoints: [], next: 0, blown: false, nextGustAt: now + randomBetween(GUST_INTERVAL_MS)};
 }
 
 // A random place over a floor that someone in the room can walk to, and far enough from all of them. There is no such

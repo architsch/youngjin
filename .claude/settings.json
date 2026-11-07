@@ -58,7 +58,10 @@
       "ClaudeInChromeDomain(hosting.cafe24.com)",
       "ClaudeInChromeDomain(help.cafe24.com)",
       "ClaudeInChromeDomain(analytics.google.com)",
-      "ClaudeInChromeDomain(ooh.directory)"
+      "ClaudeInChromeDomain(ooh.directory)",
+      "ClaudeInChromeDomain(feedle.world)",
+      "ClaudeInChromeDomain(tally.so)",
+      "ClaudeInChromeDomain(mail.google.com)"
     ],
     "deny": [
       "Bash(gcloud firestore:*)",

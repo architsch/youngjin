@@ -20,7 +20,7 @@ What a user holds, the game's measure of progress, and the $1 bills that fill it
 - **Agents** hold, gain and spend alike, through tools of their own that send the same signals (see [agents.md](../networking/agents.md)).
 
 ## Dollar bills
-A `DollarBill` is a non-persistent object in the `Collectible` category, whose cap is the most a room holds at once. Only the server adds, moves or removes one (`DollarBillUtil`, stepped from the socket flush). It has no collider, so nothing is stopped by it, and it stays out of raycasts, so no click or view is either. Single-player rooms have none, having no server-side room.
+A `DollarBill` is a non-persistent object in the `Collectible` category, whose cap is the most a room holds at once: no part of what is built, and in no room file, but kept by the room's saves (see Kept with the room). Only the server adds, moves or removes one (`DollarBillUtil`, stepped from the socket flush). It has no collider, so nothing is stopped by it, and it stays out of raycasts, so no click or view is either. Single-player rooms have none, having no server-side room.
 
 - **Who counts**: nothing happens to a room's bills with nobody in it, and with only ghosts in it none come or move, though a ghost still collects one. Otherwise a ghost counts as anyone does: bills make way for one and are collected by one, though nobody else sees that (see Collecting).
 - **Spawning**: after a random wait, which starts once the room has space for one, somewhere a person in the room can walk to and out of everyone's reach, in the air over the floor. Only such places, since a bill nobody can reach would keep a slot of the cap for good.
@@ -35,6 +35,10 @@ A `DollarBill` is a non-persistent object in the `Collectible` category, whose c
   - **Only by a player whose moves are believable** (`PlayerMotionCheckUtil`): a browser's reports are otherwise taken as told within its budgets, so a forged leap, run or hover could reach any bill. Going farther across the room than a walk would (more where a fan's stream reaches them), or rising or staying up in the air with nothing under them, keeps a player from collecting for a while: about as long as walking there would have taken, and more. A body pressed against a block it could step onto is held up by the physics for as long as it presses, which counts as held, though not as footing to rise from. Agents, whose bodies the server walks, pass it as browsers do.
   - The server counts it and removes it at once, telling the room who collected it just before (`ObjectCollectedSignal`), and a gain to them alone. Only a ghost is told of its own collecting, so that to everyone else the bill just goes, as a destroyed one does, rather than into someone they can't see. What follows is each browser's to show. A bill that is only destroyed shows nothing.
 - **Blocks**: one laid over a bill destroys it, with nobody the richer. Blocks aren't refused for a bill.
+- **Kept with the room**: every save of a room stores its bills (`ObjectTypeConfigMap`), though nothing a bill does marks a room for saving, so they are stored when it unloads, at shutdown, and with any save made for something else.
+  - **At shutdown** bills keep still from the moment it begins, so that none collected comes back, and the last save takes every room stepped since it loaded.
+  - **Loaded again**, a room's bills are taken up where they are and count toward its cap; one stored in flight flutters down. After a crash, a room comes back with the bills of its last save.
+  - **Ids**: a bill's is random, like a built object's, since the server's own ids start over with each restart and would clash with a stored one.
 - **A room file** loaded over a room takes its bills with it, and the room's life goes on.
 
 ## Drawing

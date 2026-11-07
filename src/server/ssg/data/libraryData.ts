@@ -4,9 +4,6 @@ export const LibraryData: {
     entriesByCategory: { [category: string]: PostEntry[] }
 } = {
     entriesByCategory : {
-        "Dev Log": [
-            { dirName: "devlog-2026", title: "Dev Log - 2026"},
-        ],
         "Nonfiction": [
             { dirName: "metaphysics", title: "형이상학 (2013 - 2014)"},
             { dirName: "game-analysis", title: "게임분석 (2019)"},
@@ -28,6 +25,9 @@ export const LibraryData: {
             { dirName: "infsoc", title: "Influential Social Posts (2023)"},
             { dirName: "gamedev-journey", title: "A Game Developer's Journey (2023)"},
             { dirName: "sandwich", title: "Sandwich Engineering (2025)"},
+        ],
+        "Dev Log": [
+            { dirName: "devlog-2026", title: "Dev Log - 2026"},
         ],
         "Arts": [
             { dirName: "illustrations", title: "Illustrations (2009 - 2014)"},

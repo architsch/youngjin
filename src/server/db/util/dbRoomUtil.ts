@@ -57,13 +57,12 @@ const DBRoomUtil =
         const bufferState = EncodingUtil.startEncoding();
         room.voxelGrid.encode(bufferState);
 
-        // Only persistent objects are saved, except on the first save after generation (all generated
-        // objects are intrinsic content).
-        const persistentObjects = forceSaveNonPersistentObjects
+        // Only what a room stores is saved (see ObjectTypeConfigMap.isStoredWithRoom), except on the first save after
+        // generation (all generated objects are intrinsic content).
+        const storedObjects = forceSaveNonPersistentObjects
             ? Object.values(room.objectById)
-            : Object.values(room.objectById)
-                .filter(obj => ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).persistent);
-        new ObjectGroup(persistentObjects).encode(bufferState);
+            : Object.values(room.objectById).filter(obj => ObjectTypeConfigMap.isStoredWithRoom(obj.objectTypeIndex));
+        new ObjectGroup(storedObjects).encode(bufferState);
 
         const buffer = Buffer.from(EncodingUtil.endEncoding(bufferState));
         return await DBFileStorageUtil.saveBinaryFile(getRoomContentFilePath(room.id), buffer);

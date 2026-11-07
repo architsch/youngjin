@@ -209,8 +209,8 @@ export default class AgentInbox
             this.events.splice(0, this.events.length - AGENT_INBOX_MAX_EVENTS);
     }
 
-    // Records another user's player, or what any other object is (a zone, for a volume). What no room keeps but players
-    // (a bill blowing about) is nobody's edit, and look tells of it.
+    // Records another user's player, or what any other object is (a zone, for a volume). What isn't built, players aside
+    // (a bill blowing about), is nobody's edit, and look tells of it.
     private noteObject(obj: AddObjectSignal): void
     {
         const config = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex);
