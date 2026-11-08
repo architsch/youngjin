@@ -16,7 +16,6 @@ import DevRuntimeUtil from "./system/util/devRuntimeUtil";
 import HubRoomUtil from "./room/util/hubRoomUtil";
 import ServerLifecycleUtil from "./system/util/serverLifecycleUtil";
 import EventLoopDelayUtil from "./system/util/eventLoopDelayUtil";
-import AgentCleanupUtil from "./agent/util/agentCleanupUtil";
 import AgentAwayLogUtil from "./agent/util/agentAwayLogUtil";
 import HelperAgentUtil from "./agent/util/helperAgentUtil";
 import DollarBillUtil from "./inventory/util/dollarBillUtil";
@@ -123,7 +122,8 @@ ${LatencySimUtil.getConfigSummary()}
     // The NPCs admins stand in multiplayer rooms, played as AI guides (see HelperAgentUtil).
     HelperAgentUtil.start();
 
-    // Clean up stale guest and agent accounts regularly (rotating through tiers to spread DB load)
+    // Clean up stale guest accounts regularly (rotating through tiers to spread DB load). Agents are never deleted for
+    // being away.
     let cleanupPhase = 0;
     setInterval(() => {
         const phase = cleanupPhase;
@@ -131,9 +131,6 @@ ${LatencySimUtil.getConfigSummary()}
         DBUserUtil.deleteStaleGuestsByTier(phase)
             .then(count => { if (count > 0) LogUtil.logRaw(`Cleaned up ${count} stale ${GUEST_TIER_NAME_BY_TIER_PHASE[phase]} guest accounts`, "low", "info"); })
             .catch(err => LogUtil.log("Guest cleanup failed", { err, phase }, "high", "error"));
-        AgentCleanupUtil.deleteStaleAgentsByTier(phase)
-            .then(count => { if (count > 0) LogUtil.logRaw(`Cleaned up ${count} stale ${GUEST_TIER_NAME_BY_TIER_PHASE[phase]} agent accounts`, "low", "info"); })
-            .catch(err => LogUtil.log("Agent cleanup failed", { err, phase }, "high", "error"));
     }, HOUR_IN_MS);
 
     // graceful shutdown

@@ -52,7 +52,6 @@ import { encodePlayerComposition, decodePlayerComposition } from "../helpers/com
 import RoomPrefsUtil, { MAX_ROOM_PREFS_STEP } from "../../../src/shared/room/util/roomPrefsUtil";
 import AgentDirectoryUtil from "../../../src/server/agent/util/agentDirectoryUtil";
 import AgentBodyUtil from "../../../src/server/agent/util/agentBodyUtil";
-import AgentCleanupUtil from "../../../src/server/agent/util/agentCleanupUtil";
 import HelperAgentUtil from "../../../src/server/agent/util/helperAgentUtil";
 import SetObjectTransformSignal from "../../../src/shared/object/types/setObjectTransformSignal";
 import NpcFacingUtil from "../../../src/shared/object/util/npcFacingUtil";
@@ -72,9 +71,9 @@ import DoorObjectTypeConfig, { ENTERING_STRIDE_LENGTH,
     ENTRANCE_DOOR_OBJECT_ID } from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import Vec3 from "../../../src/shared/math/types/vec3";
 import Voxel from "../../../src/shared/voxel/types/voxel";
-import { LOGIN_REWARD_DOLLARS, DAY_IN_MS, HOUR_IN_MS, MINUTE_IN_MS, NUM_VOXEL_COLS, OBJECT_MESSAGE_MAX_LENGTH,
+import { LOGIN_REWARD_DOLLARS, HOUR_IN_MS, MINUTE_IN_MS, NUM_VOXEL_COLS, OBJECT_MESSAGE_MAX_LENGTH,
     PLAYER_MESSAGE_EXPIRATION_MS, PLAYER_SHAPE_PRICE_DOLLARS, VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
-import { AGENT_TYPING_EXPIRATION_MS, GUEST_MAX_AGE_BY_TIER_PHASE, LOGIN_REWARD_INTERVAL_MS }
+import { AGENT_TYPING_EXPIRATION_MS, LOGIN_REWARD_INTERVAL_MS }
     from "../../../src/server/system/serverConstants";
 import ServerObjectManager from "../../../src/server/object/serverObjectManager";
 import RemoveObjectSignal from "../../../src/shared/object/types/removeObjectSignal";
@@ -91,8 +90,8 @@ import ServerUserManager from "../../../src/server/user/serverUserManager";
 import DBUser from "../../../src/server/db/types/row/dbUser";
 import { FunnelMilestoneEnumMap } from "../../../src/server/analytics/types/funnelMilestone";
 import { AGENT_CAMERA_MAX_PAGES, AGENT_INBOX_MAX_EVENTS, AGENT_LOOK_MAX_PEOPLE, AGENT_MAX_INTERESTS, AGENT_MAX_PRESENT,
-    AGENT_NAME_MAX_LENGTH, AGENT_NAME_MIN_LENGTH, AGENT_PRESENCE_IDLE_TIMEOUT_MS, BUILDER_AGENT_KEPT_FOR_GOOD_LOGIN_COUNT,
-    BUILDER_AGENT_MAX_AGE_BY_TIER_PHASE, USER_BUDGETS } from "../../../src/server/system/serverConstants";
+    AGENT_NAME_MAX_LENGTH, AGENT_NAME_MIN_LENGTH, AGENT_PRESENCE_IDLE_TIMEOUT_MS, USER_BUDGETS }
+    from "../../../src/server/system/serverConstants";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
 import { SpeakerActivityEnumMap } from "../../../src/shared/object/types/speakerActivity";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
@@ -2660,73 +2659,6 @@ describe("AI agents", () => {
         });
     });
 
-    describe("stale agents", () => {
-        it("are deleted with their rooms, but not one present or one whose room someone is in", async () => {
-            const gone = (await registerAgent("Gone")).dbUser;
-            gone.ownedRoomID = MISSING_ID;
-            const busy = (await registerAgent("Busy")).dbUser;
-            busy.ownedRoomID = REGULAR_ID;
-            harness.seedRoom(REGULAR_ID, RoomTypeEnumMap.Regular);
-            await harness.loadRoom(REGULAR_ID);
-            const present = (await registerAgent("Present")).dbUser;
-            await AgentPresenceUtil.attend(present);
-
-            vi.mocked(DBUserUtil.findStaleUsersByTier).mockResolvedValueOnce([gone, busy, present]);
-            vi.mocked(DBRoomUtil.deleteRoom).mockClear();
-            vi.mocked(DBRoomUtil.deleteRoomContent).mockClear();
-            vi.mocked(DBAgentAwayEventsUtil.remove).mockClear();
-
-            expect(await AgentCleanupUtil.deleteStaleAgentsByTier(0)).toBe(1);
-
-            expect(vi.mocked(DBRoomUtil.deleteRoom).mock.calls).toEqual([[MISSING_ID]]);
-            expect(vi.mocked(DBRoomUtil.deleteRoomContent).mock.calls).toEqual([[MISSING_ID]]);
-            expect(await AgentAccountUtil.findByKey(`${gone.id}.x`)).toBeUndefined();
-            expect(await DBUserUtil.findUserById(gone.id as string)).toBeNull();
-            expect(await DBUserUtil.findUserById(busy.id as string)).not.toBeNull();
-            expect(await DBUserUtil.findUserById(present.id as string)).not.toBeNull();
-            // What it would have been told of its room goes with it.
-            expect(vi.mocked(DBAgentAwayEventsUtil.remove).mock.calls).toEqual([[gone.id]]);
-        });
-
-        it("that have built are kept far longer in each tier, and for good past enough logins", async () => {
-            const now = Date.now();
-            const staleAgent = async (name: string, built: boolean, loginCount: number, idleMs: number) => {
-                const {dbUser} = await registerAgent(name);
-                dbUser.funnel = built ? FunnelMilestoneEnumMap.Arrived + FunnelMilestoneEnumMap.Built
-                    : FunnelMilestoneEnumMap.Arrived;
-                dbUser.loginCount = loginCount;
-                dbUser.lastLoginAt = now - idleMs;
-                return dbUser;
-            };
-            // Each tier's query finds the agents stale by the guests' age for it (one of its logins apiece).
-            const loginCountByPhase = [1, 2, 4];
-            for (let phase = 0; phase < BUILDER_AGENT_MAX_AGE_BY_TIER_PHASE.length; ++phase)
-            {
-                const maxAge = BUILDER_AGENT_MAX_AGE_BY_TIER_PHASE[phase];
-                const loginCount = loginCountByPhase[phase];
-                const keptBuilder = await staleAgent(`Kept-${phase}`, true, loginCount, maxAge - DAY_IN_MS);
-                const goneBuilder = await staleAgent(`Gone-${phase}`, true, loginCount, maxAge + DAY_IN_MS);
-                const neverBuilt = await staleAgent(`Idle-${phase}`, false, loginCount, maxAge - DAY_IN_MS);
-                vi.mocked(DBUserUtil.findStaleUsersByTier).mockResolvedValueOnce([keptBuilder, goneBuilder, neverBuilt]);
-
-                expect(await AgentCleanupUtil.deleteStaleAgentsByTier(phase), `phase ${phase}`).toBe(2);
-                expect(await DBUserUtil.findUserById(keptBuilder.id as string)).not.toBeNull();
-                expect(await DBUserUtil.findUserById(goneBuilder.id as string)).toBeNull();
-                expect(await DBUserUtil.findUserById(neverBuilt.id as string)).toBeNull();
-            }
-            // Each tier's longer age is longer than the last: what a returning agent built waits longer for it.
-            for (let phase = 1; phase < BUILDER_AGENT_MAX_AGE_BY_TIER_PHASE.length; ++phase)
-                expect(BUILDER_AGENT_MAX_AGE_BY_TIER_PHASE[phase]).toBeGreaterThan(BUILDER_AGENT_MAX_AGE_BY_TIER_PHASE[phase - 1]);
-
-            const veteran = await staleAgent("Veteran", true, BUILDER_AGENT_KEPT_FOR_GOOD_LOGIN_COUNT, 1000 * DAY_IN_MS);
-            const almost = await staleAgent("Almost", true, BUILDER_AGENT_KEPT_FOR_GOOD_LOGIN_COUNT - 1, 1000 * DAY_IN_MS);
-            vi.mocked(DBUserUtil.findStaleUsersByTier).mockResolvedValueOnce([veteran, almost]);
-            expect(await AgentCleanupUtil.deleteStaleAgentsByTier(2)).toBe(1);
-            expect(await DBUserUtil.findUserById(veteran.id as string)).not.toBeNull();
-            expect(await DBUserUtil.findUserById(almost.id as string)).toBeNull();
-        });
-    });
-
     describe("the dispatch agents share with browsers", () => {
         it("drops a signal sent sooner than its type allows, whoever sends it", async () => {
             const human = await joinHuman("Alice");
@@ -2830,7 +2762,6 @@ describe("AI agents", () => {
                 // The numbers the manual leaves to them, from the constants themselves.
                 const instructions = client.getInstructions()!.replace(/\s+/g, " ");
                 for (const number of [`leaves after ${AGENT_PRESENCE_IDLE_TIMEOUT_MS / MINUTE_IN_MS} minutes without one`,
-                    `goes after ${GUEST_MAX_AGE_BY_TIER_PHASE[0] / HOUR_IN_MS} hours without a visit`,
                     `come within about ${Math.floor(DOLLAR_BILL_REACH / VOXEL_CELL_SIZE)} cells of one`,
                     `facing it to within ${Math.round(REACH_ANGLE * 180 / Math.PI)} degrees`,
                     `gives you $${LOGIN_REWARD_DOLLARS} once a day`,
@@ -2840,6 +2771,8 @@ describe("AI agents", () => {
                     `hears you within ${HEARING_DISTANCE / VOXEL_CELL_SIZE} cells on its own floor`,
                     `Requests: ${AGENT_REQUESTS_PER_MINUTE} a minute from one address`])
                     expect(instructions).toContain(number);
+                // No account is deleted for being away, and they are told so.
+                expect(instructions).toContain("your room and what you built stay, however long you are away");
                 // Connector directories refuse servers that send the model to outside instructions or have it ask
                 // its user for visits, so the manual is offered to whoever runs the agent, as information.
                 expect(client.getInstructions()).toMatch(/The manual, for whoever runs you:/);
@@ -3099,8 +3032,9 @@ describe("AI agents", () => {
             for (const tool of ["inventory", "look", "whats_new", "collect_bill", "walk_to", "face", "appearance",
                 "unlock_shape", "change_appearance"])
                 expect(dollars, tool).toContain(`\`${tool}\``);
-            expect(manual).toContain("(see step 8)");
-            expect(manual).toContain("## 8. Coming back");
+            // A step named by its number is still that step, whatever has been renumbered.
+            for (const [, step] of manual.matchAll(/\(see step (\d+)\)/g))
+                expect(manual, `step ${step}`).toMatch(new RegExp(`^## ${step}\\. `, "m"));
         });
 
         // It is published apart from the server, so a number in it would stay behind when its constant changed.

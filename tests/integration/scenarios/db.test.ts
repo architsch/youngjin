@@ -854,26 +854,20 @@ describe.skipIf(!emulatorAvailable)("DB query layer (Firestore emulator)", () =>
             expect(Object.keys(await EmulatorDB.readStoredAll(COLLECTION_ROOMS))).toHaveLength(0);
         }, 60_000);
 
-        it("finds stale guests and stale agents by the same tiers, each of its own type only", async () => {
-            const now = Date.now();
-            // Past the first tier's cutoff, short of the next's.
-            const longAgo = now - (GUEST_MAX_AGE_BY_TIER_PHASE[0] + GUEST_MAX_AGE_BY_TIER_PHASE[1]) / 2;
+        it("sweeps stale guests alone: agents and members stay, however long they are away", async () => {
+            // Past every tier's cutoff.
+            const longAgo = Date.now() - 2 * GUEST_MAX_AGE_BY_TIER_PHASE[GUEST_MAX_AGE_BY_TIER_PHASE.length - 1];
             await EmulatorDB.seed(COLLECTION_USERS, {
                 staleGuest: currentUser({ userType: UserTypeEnumMap.Guest, lastLoginAt: longAgo, loginCount: 1 }),
                 staleAgent: currentUser({ userType: UserTypeEnumMap.Agent, lastLoginAt: longAgo, loginCount: 1 }),
-                recentAgent: currentUser({ userType: UserTypeEnumMap.Agent, lastLoginAt: now, loginCount: 1 }),
                 returningAgent: currentUser({ userType: UserTypeEnumMap.Agent, lastLoginAt: longAgo, loginCount: 5 }),
                 staleMember: currentUser({ userType: UserTypeEnumMap.Member, lastLoginAt: longAgo, loginCount: 1 }),
             });
 
-            const staleAgents = await DBUserUtil.findStaleUsersByTier(UserTypeEnumMap.Agent, 0);
-            expect(staleAgents?.map(row => row.id)).toEqual(["staleAgent"]);
-            expect(await DBUserUtil.findStaleUsersByTier(UserTypeEnumMap.Agent, 2)).toEqual([]);
-
-            expect(await DBUserUtil.deleteStaleGuestsByTier(0)).toBe(1);
-            await DBUserUtil.deleteUsers(["staleAgent"]);
+            for (let phase = 0; phase < GUEST_MAX_AGE_BY_TIER_PHASE.length; ++phase)
+                await DBUserUtil.deleteStaleGuestsByTier(phase);
             expect(Object.keys(await EmulatorDB.readStoredAll(COLLECTION_USERS)).sort())
-                .toEqual(["recentAgent", "returningAgent", "staleMember"]);
+                .toEqual(["returningAgent", "staleAgent", "staleMember"]);
         });
     });
 

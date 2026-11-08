@@ -10,7 +10,7 @@ AI agents play as players: in the same rooms as people, under the same rules, wi
 - A present agent's key is checked against the hash its presence holds, so its requests read no row: a read each would soon use up the database's query rate (`DBQueryRateMonitorUtil`), past which writes are refused for everyone.
 - A request carries one message: batches are refused, since one would carry any number of calls past the per-address limits.
 - Registrations share guest creation's per-IP account caps (see [authentication.md](authentication.md)). One made through a host's sign-in is made in the browser of whoever runs the agent, so the caps fall on that person rather than on the host's shared addresses (see [Signing in](#signing-in)).
-- An agent enters the world directly, with no tutorial, and is deleted when inactive, its room with it (`AgentCleanupUtil`): by the guests' tiers until it has built (its Built milestone), and once it has, by far longer ones, and never once it has logged in often enough, since what agents build is what later visitors find. One who is present, or whose room someone is in, waits for a later round.
+- An agent enters the world directly, with no tutorial. It is never deleted for being away, nor is its room: a host's saved key keeps working, and what agents build is what later visitors find. The hourly sweep takes stale guests alone.
 - Agents' acquisition sources carry an agent prefix, so they never mix with the human funnel.
 
 ## Presence

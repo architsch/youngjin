@@ -299,7 +299,10 @@ suggest from it.
   11-04), 5 accounts tried, 3 connected, 0 used a tool in 30 days. People who connect don't go on to ask Claude to
   play: the sign-in hands them straight back to Claude, with nothing saying what to ask. Built 2026-11-08, live once
   deployed: the sign-in page now says what to ask, and the endpoint (1.6.0) offers a "Visit ThingsPool" prompt.
-  Watch "Used a tool" after that.
+  Watch "Used a tool" after that. Until 2026-11-08 an agent that never built was deleted after a day, and its
+  host's connector then asked to sign in again (both of the user's own did); that day he had agents kept for good,
+  so a directory user's connector stays signed in. Whether Claude's "+" menu shows a server's prompts is still
+  unverified: check it with a connector that is signed in.
   (claude.ai/directory/manage → Submit new → MCP connector; needs a
   paid Claude plan): the one listing a chat can recommend by itself (Suggested Connectors, ranked by
   usage); the MCP Registry does not put a server in Claude. Requires a `title` and `readOnlyHint` or

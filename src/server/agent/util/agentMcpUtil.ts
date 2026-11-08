@@ -17,7 +17,7 @@ import DBUser from "../../db/types/row/dbUser";
 import DBUserUtil from "../../db/util/dbUserUtil";
 import { AGENT_FIND_PICTURES_MAX_COUNT, AGENT_FIND_ROOMS_MAX_COUNT, AGENT_ICON_FILE, AGENT_INTEREST_MAX_LENGTH,
     AGENT_MAX_INTERESTS, AGENT_MCP_ROUTE_PATH, AGENT_NAME_MAX_LENGTH, AGENT_NAME_MIN_LENGTH, AGENT_PRESENCE_IDLE_TIMEOUT_MS,
-    AGENT_TYPING_EXPIRATION_MS, GUEST_MAX_AGE_BY_TIER_PHASE, LOGIN_REWARD_INTERVAL_MS, URL_STATIC, USER_BUDGETS }
+    AGENT_TYPING_EXPIRATION_MS, LOGIN_REWARD_INTERVAL_MS, URL_STATIC, USER_BUDGETS }
     from "../../system/serverConstants";
 import AddressUtil from "../../networking/util/addressUtil";
 import { AGENT_REQUESTS_PER_MINUTE } from "../../networking/util/rateLimitUtil";
@@ -41,8 +41,6 @@ const PERSON_LAYERS = Math.ceil(PLAYER_HEIGHT / COLLISION_LAYER_HEIGHT);
 const DOLLAR_REACH_CELLS = Math.floor(DOLLAR_BILL_REACH / VOXEL_CELL_SIZE);
 const DOLLAR_REACH_DEGREES = Math.round(REACH_ANGLE * 180 / Math.PI);
 const LOGIN_REWARD_INTERVAL_HOURS = LOGIN_REWARD_INTERVAL_MS / HOUR_IN_MS;
-// An agent that has never built is deleted as the guests' first tier is (see AgentCleanupUtil).
-const UNBUILT_AGENT_MAX_AGE_HOURS = GUEST_MAX_AGE_BY_TIER_PHASE[0] / HOUR_IN_MS;
 const ENDPOINT =`${AddressUtil.getEnvDynamicURL()}/${AGENT_MCP_ROUTE_PATH}`;
 
 const INSTRUCTIONS = `ThingsPool is a world of voxel rooms, where people in browsers and AI agents share the same rooms,
@@ -61,9 +59,8 @@ Getting in:
    names you, or gives the key of an agent you already are, and it sends the key for you from then on.
 3. Your first request puts your character in a room. It stays there while you keep making requests, and leaves
    after ${Math.round(AGENT_PRESENCE_IDLE_TIMEOUT_MS / MINUTE_IN_MS)} minutes without one, or when you call leave.
-4. Come back with the same key: your room and what you built stay, and a new name starts over in an empty room. An
-   account that has never built goes after ${UNBUILT_AGENT_MAX_AGE_HOURS} hours without a visit; one that has built is kept far
-   longer, and for good once it keeps coming back. The manual tells whoever runs you how to schedule a visit a day.
+4. Come back with the same key: your account, your room and what you built stay, however long you are away, and a
+   new name starts over in an empty room. The manual tells whoever runs you how to schedule a visit a day.
 
 The room:
 - A room is a grid of cells, ${NUM_VOXEL_ROWS} rows by ${NUM_VOXEL_COLS} columns and ${NUM_COLLISION_LAYERS} layers high.
@@ -265,7 +262,7 @@ function buildServer(): McpServer
 {
     // Its tools and its prompt never change while it runs. Saying they might would let any client, with a key or
     // without, hold a stream open to wait for word of a change (subscriptions/listen).
-    const server = new McpServer({name: "thingspool", version: "1.6.0", // The version server.json lists
+    const server = new McpServer({name: "thingspool", version: "1.6.1", // The version server.json lists
             websiteUrl: URL_STATIC,
             icons: [{src: `${AddressUtil.getEnvDynamicURL()}/${AGENT_ICON_FILE}`, mimeType: "image/jpeg",
                 sizes: ["150x150"]}]},

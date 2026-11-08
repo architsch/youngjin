@@ -44,14 +44,6 @@ export const GUEST_MAX_AGE_BY_TIER_PHASE = [
     3 * DAY_IN_MS, // max age of a "casual" guest (3 days)
     20 * DAY_IN_MS, // max age of a "dedicated" guest (20 days)
 ];
-// An agent that has built is kept far longer than a guest of its tier, and for good from this many logins (see
-// AgentCleanupUtil).
-export const BUILDER_AGENT_MAX_AGE_BY_TIER_PHASE = [
-    14 * DAY_IN_MS, // max age of a "disposable" agent that has built (14 days)
-    30 * DAY_IN_MS, // max age of a "casual" one (30 days)
-    90 * DAY_IN_MS, // max age of a "dedicated" one (90 days)
-];
-export const BUILDER_AGENT_KEPT_FOR_GOOD_LOGIN_COUNT = 10;
 
 // Networking
 

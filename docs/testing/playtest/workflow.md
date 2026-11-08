@@ -102,7 +102,7 @@ The only end-to-end test of [analytics](../../devOps/analytics.md). Tag the star
 | `seed-population` at current version with `--persist` | yes | reading does not change it |
 | outdated `seed-users` / `seed-rooms` | no | the first read migrates them |
 | seeded guests | no | the stale-guest sweep deletes them |
-| `seed-agents` | no | the stale-agent sweep deletes them, as it does guests |
+| `seed-agents` | no | nothing sweeps agents, so `cleanup` removes them |
 | `downgrade-content` | no | the next save re-encodes it, so always restore |
 
 `cleanup` keeps `--persist` seeds, and `cleanup --all` removes them too.
