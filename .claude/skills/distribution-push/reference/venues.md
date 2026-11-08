@@ -90,7 +90,8 @@ post, it becomes a **repeatable** channel — a new post is a new reason to retu
   posts, sign-up pages, landing pages, quickly generated one-offs and minor updates;
   newsguidelines.html: the generated-text rule above).
 - **Kit prepared:** 2026-08-22, `temp/distribution/hn-show/`. Not posted. Rebuilt 2026-10-20 for the
-  AI-agents launch, as notes rather than copy (see above).
+  AI-agents launch, as notes rather than copy (see above). **Dropped 2026-11-08:** it needs his own words and his
+  presence for hours, and he works only venues where his part is a yes.
 
 ### r/iogames
 - **Fit:** Good. Audience is specifically browser multiplayer.
@@ -154,8 +155,8 @@ post, it becomes a **repeatable** channel — a new post is a new reason to retu
 ### DEAD.ARMY
 - **Fit:** Right kind of venue, very little reach. A curated catalog of creator-hosted web projects ("Independent
   web projects. Lasting links."), in its "extremely early stage": 46 of 100 founding projects on 2026-10-28.
-  ThingsPool has been listed since 2026-09-02 (see the ledger) and drew 3 views and 0 launches in eight weeks, and
-  none of the 46 projects had a playtest report.
+  ThingsPool has been listed since 2026-09-02 (see the ledger) and drew 3 views and 0 launches in ten weeks (still so
+  on 2026-11-08, after the 10-28 refresh went live), and none of the 46 projects had a playtest report (10-28).
 - **Mechanics:** a project page that opens the creator's own HTTPS page in a new tab, never an iframe, so it sits in
   the link-out lane. Fields: title, tagline, description, type (Game, App, Prototype; the catalog has a tab for
   each), category, content rating, tags, project URL, cover artwork, preview media. Review within two business days.
@@ -165,7 +166,10 @@ post, it becomes a **repeatable** channel — a new post is a new reason to retu
 - **Rules and gotchas:** HTTPS with no mixed content; only your own work; "accurate project details". A changed
   destination can send a listing to security review. Its availability checker poses as an ordinary browser
   (2026-09-22 update), so each check of the app probably counts as a `direct` arrival.
-- **Effort:** Low. **Verified:** 2026-10-28 (the For Devs, Playtest and Updates pages, and the user's dashboard).
+- **Public page vs dashboard:** on 2026-11-08 the public page showed "Destination check: Needs review" beside "Alive",
+  while the owner's dashboard showed nothing needing attention or in review. Read the dashboard before acting on it.
+- **Effort:** Low. **Verified:** 2026-10-28 (the For Devs, Playtest and Updates pages, and the user's dashboard);
+  the listing and dashboard re-read 2026-11-08.
 
 ### Discord communities (Three.js, indie gamedev, web gamedev)
 - **Fit:** Good, and repeatable in a way one-shot submissions are not.
@@ -232,8 +236,10 @@ of ThingsPool itself when it registers, if it does (see SKILL.md, "Measure agent
 went up, `/mcp` took 4,449 requests, nearly all from about 40 crawlers, liveness probes and scanners;
 the only agents that registered were automated test runs (see the ledger). ClawHub counted 208
 downloads and 0 installs, and GitHub saw no referral from any listing. Re-measured 2026-10-28, eight
-days on: the same (296 downloads, 0 installs; the one real agent came from The Colony's post). Keep
-the listings current, since they cost little, but never count one as distribution. Claude's
+days on: the same (296 downloads, 0 installs; the one real agent came from The Colony's post). Re-measured
+2026-11-08, nineteen days on: ClawHub 465 downloads and 0 installs; Claude's directory 5 accounts tried, 3
+connected, 0 used a tool; the only new agent was the same automated tester under a new name. Keep the listings
+current, since they cost little, but never count one as distribution. Claude's
 Connectors Directory is the exception to watch: people browse it inside Claude, and Claude can
 suggest from it.
 
@@ -244,11 +250,14 @@ suggest from it.
   `glama.ai/mcp/connectors/net.thingspool/thingspool` within the hour, "Healthy", with all 25 tools and a
   tool-quality score being calculated. The owner may "claim ownership" by verifying the domain or a
   GitHub account, which adds control over the page; nothing else is needed. **Verified:** 2026-10-20.
+  Re-read 2026-11-08: Healthy, 100% uptime over 20 days, re-tested daily, TDQS A (3.5/5) across 32 tools, filed
+  under Art & Culture, Entertainment & Media and Games & Gamification. It re-tests and re-scores a new version on its
+  own within the hour, so Test Connection is rarely needed.
 - **PulseMCP** (pulsemcp.com/submit): "We are not accepting new MCP server or client submissions right
   now." It says to publish to the official registry first, and that "we will pick it up automatically
   once we are back". No date given. **Verified:** 2026-10-20. Still paused 2026-10-24 ("New server
   submissions and listing changes are still paused", updated 2026-09-03), and its newsletter, now The
-  Agentic Loop, last went out 2026-05-20.
+  Agentic Loop, last went out 2026-05-20. Still paused 2026-11-08 (search finds no ThingsPool).
 - **mcp.so** (mcp.so/submit): **free, through a review queue.** The submit page's button reads as
   paid, but a submission made from a signed-in account is "Queued for review" for free; $39 only
   skips the queue ("Skip review — go live now", with a "Verified" badge and featured placement).
@@ -267,14 +276,15 @@ suggest from it.
   setting. A third-party collector tool posts to an undocumented mcp.so API; it goes around the
   site's own form, so it is not a path to use. **Verified:** 2026-10-20 (by the user's own
   submission); types and categories 2026-10-22.
-- **Smithery** (smithery.ai/new): takes a server by its public HTTPS address, or by
-  `smithery mcp publish "<url>" -n @<org>/<name>`, and scans its tools (public servers scan without
-  help). An auth-required server must support OAuth; ThingsPool's key is optional, so the scan works.
-  **It relays:** its gateway proxies every connection, from Cloudflare Workers with the UA
-  `SmitheryBot/1.0` (smithery.ai/docs/build/publish.md). So all its users would share one set of the
-  per-address caps on registering (10 an hour; `guestCreationLimitUtil.ts`). Not before those limits
-  go by agent or client rather than by address. **Verified:** 2026-10-24.
-- **ClawHub** (clawhub.ai): the manual's MIT-0 copy, published 2026-10-20 as `thingspool` 1.1.0 with
+  **The free queue is not first come, first served** (2026-11-08): a sweep around 11-05 put 23 free remote servers
+  live (on `/remote-servers?sort=latest`, those without the Verified tag; `&tag=verified` filters to the paid ones),
+  and passed over ThingsPool, queued since 10-20. Listings now live at `/servers/<slug>`, and the list pages render in
+  the browser, so read them there rather than with curl.
+- **Smithery: dead since 2026-10-31.** It became part of Arcade and shut down its proxy (`server.smithery.ai`,
+  run.tools), accounts, API keys, CLI and SDKs; what remains is a curated, non-proxied registry of about 214 servers
+  with no way to publish (`/new` and `/docs` answer 404). Its relay, which would have put every user behind one
+  address, went with it. **Verified:** 2026-11-08.
+- **ClawHub** (clawhub.ai; 465 downloads, 0 installs, 0 stars on 2026-11-08): the manual's MIT-0 copy, published 2026-10-20 as `thingspool` 1.1.0 with
   `npx clawhub@0.23.3` after the user's `login`. The scan's verdict was "clean", but ClawHub still held it
   as "pending publication" (hidden) an hour later, 19:41 to 20:39 KST: its own review. Its page will be
   `clawhub.ai/architsch/thingspool`. **Search** (2026-10-24, `clawhub search`): found for "sandbox
@@ -285,7 +295,11 @@ suggest from it.
   2026-06-15); **trending** ranks the last 24 UTC hours of installs.
 - **Claude's Connectors Directory: ThingsPool listed 2026-10-28** (https://claude.ai/directory/thingspool),
   published about 30 minutes after submission. Track it in the portal's Usage tab: rank, health, accounts
-  that connected or used a tool, tool calls and error rate, a day behind.
+  that connected or used a tool, tool calls and error rate, a day behind. On 2026-11-08: rank #7,252 (#6,732 on
+  11-04), 5 accounts tried, 3 connected, 0 used a tool in 30 days. People who connect don't go on to ask Claude to
+  play: the sign-in hands them straight back to Claude, with nothing saying what to ask. Built 2026-11-08, live once
+  deployed: the sign-in page now says what to ask, and the endpoint (1.6.0) offers a "Visit ThingsPool" prompt.
+  Watch "Used a tool" after that.
   (claude.ai/directory/manage → Submit new → MCP connector; needs a
   paid Claude plan): the one listing a chat can recommend by itself (Suggested Connectors, ranked by
   usage); the MCP Registry does not put a server in Claude. Requires a `title` and `readOnlyHint` or
@@ -322,14 +336,89 @@ suggest from it.
   identity verification, a domain token at `/.well-known/openai-apps-challenge`, 5 positive and 3
   negative test cases, a privacy policy, explicit read-only, destructive and open-world hints on every
   tool, no keys or tokens in tool responses, and content suitable for 13 to 17. A UI is optional.
-  ChatGPT "can't present custom API keys", so it needs OAuth or no auth. **Blocked** until OAuth exists
-  (`register` hands back a key). **Verified:** 2026-10-24 (developers.openai.com plugin docs).
-- **GitHub MCP Registry and VS Code's gallery** (github.com/mcp; the `@mcp` gallery reads the same
-  list): curated by hand, not mirrored from the official registry: "onboarding a new server is still a
-  manual curation process today" (GitHub staff, 2026-05-19). ThingsPool is not in it. A request goes in
-  github.com/github/github-mcp-server/discussions/1257. Cheap, low odds. **Verified:** 2026-10-24.
+  ChatGPT "can't present custom API keys", so it needs OAuth or no auth. **Verified:** 2026-10-24 (developers.openai.com plugin docs).
+  Re-read 2026-11-08: OAuth no longer blocks it (dynamic registration and metadata documents are both accepted), but
+  it **doesn't fit a yes-or-no-only push:** identity verification means a physical government ID, perhaps with a
+  selfie; a demo video goes with the submission; the reviewer's account may not need "additional login steps, such
+  as a new account sign-up" (the sign-in page names a new agent); none of the 32 tools sets `openWorldHint`; and its
+  rules forbid soliciting API keys, so `register` and `new_key` would likely have to be left off what it reaches.
+  It re-checks the live server daily.
+- **GitHub MCP Registry** (github.com/mcp): curated by hand; once a server is onboarded, its new versions sync
+  from the official registry by themselves. Since a maintainer's note of 2026-11-05 (SamMorrowDrums, in
+  github/github-mcp-server discussion 1257), each request is **its own Q&A discussion** in that repository, with
+  the registry record, namespace and latest version, transport and auth, repository and license, and a
+  verification query ("does not … imply an ETA"). About ten requests a day; onboarding does happen (Antevo: asked
+  10-18, live by 11-04). `https://api.mcp.github.com/v0.1/servers?search=thingspool` shows whether it is in (0 on
+  11-08). VS Code's docs no longer say where its `@mcp` gallery comes from, so whether it follows is unverified.
+  Approve-only, through his `gh`; kit at `temp/distribution/github-mcp-registry/`. **Verified:** 2026-11-08.
+  **Requested 2026-11-08** (discussion #3743).
 - **MCP Market** (mcpmarket.com/submit): takes a GitHub repository URL; free in 4 to 6 weeks, or $29
-  for 24 hours. Remote listings unclear, traffic unknown. Optional. **Verified:** 2026-10-24.
+  for 24 hours. Its "Remote MCP" terms didn't render (a September dev.to post says $69). Traffic unknown.
+  Low. **Verified:** 2026-11-08.
+- **MCP server lists on GitHub** (a pull request from his `gh`; researched 2026-11-08):
+  - **TensorBlock/awesome-mcp-servers** (1,041 stars): **high.** `docs/gaming.md` already holds hosted agent
+    worlds (Brontide, DrinkedIn, Agentic Kingdoms, Plazmi), each with its endpoint, auth, registry id and docs.
+    Merges within a day; no Glama, star or AI rule; a merged entry also becomes a profile in its hosted MCP Index.
+    Kit at `temp/distribution/tensorblock-mcp/`. **Submitted 2026-11-08** (PR #5542; see the ledger).
+  - **punkpeye/awesome-remote-mcp-servers** (2.8k stars; Gaming holds Agentic Kingdoms, Elsewhere, Plazmi,
+    SpaceMolt): needs a Glama connector badge (ThingsPool's exists), an entry of name, endpoint, auth markers and
+    one sentence of at most 120 characters; CI sends a keyless `initialize`, so `/mcp` reads as 🔓 ("🔓 🔐" is
+    accurate). "PRs are not merged unless the account opening them has starred the repo." For agents: "add
+    `🤖🤖🤖` to the end of the PR title to opt-in. Merging your PR will be fast-tracked." **Stalled:** 2 merges
+    since 10-24 against 1,321 new PRs. punkpeye's main list sends remote-only servers here. Kit at
+    `temp/distribution/awesome-remote-mcp/`. **Submitted 2026-11-08** (PR #4166, CI passed).
+  - **stacklok/toolhive-catalog** (a PR with `server.json`; small audience), mcpHQ, AIAnytime, MobinX (wants a
+    stars badge), yzfly (entries in Chinese): medium to low.
+  - **Low or closed:** toolsdk-mcp-registry relays every call through its gateway (one address for all its users);
+    the Docker MCP Catalog takes remote and OAuth servers but rarely reviews (6 merges since 09-01 against 1,847
+    PRs); Cline's marketplace wants a 400×400 PNG and vets maintainers' identity; appcypher's list is archived,
+    jaw9c's dormant since 06-23; modelcontextprotocol/servers holds reference servers only; mcpserverfinder
+    submits by email only; OpenTools retired its CLI for the official registry.
+  - **Already carrying ThingsPool, unasked** (copied from the registry): bendyline/gilde,
+    rogerchappel/mcpchangefeed, rdmgator12/awesome-claude-connectors.
+- **Directory sites with a form** (researched 2026-11-08):
+  - **mcpservers.org** (wong2's site; the repo takes no PRs): name, category, description, a link, optional
+    registry name, a "supports remote connections" box and an email; "$0 – Review within 2 weeks". Needs his
+    email, which is his to give.
+  - **cursor.directory** (now Cursor's `cursor/community-plugins`; `/mcp/new` → `/plugins/new?type=mcp_server`):
+    sign in once with GitHub or Google, then name, a description and one MCP component, logo optional,
+    "Auto-reviewed by a Cursor SDK agent." Never its auto mode on youngjin: it wants a root `.mcp.json`, which
+    Claude Code would also load in his sessions.
+  - **LobeHub** (`lhm` CLI): a browser sign-in plus connecting GitHub, and the repo must be his;
+    "Publish creates the listing immediately." Whether its cloud connects from its own addresses is unverified.
+  - **mcp.directory** says it imports from the registry, but ThingsPool wasn't found there, and its form wants a
+    GitHub repo. Unverified.
+- **Gemini CLI extension gallery: fading.** "You don't need to submit an issue or email us"; it "crawls tagged
+  repositories daily" for a public repo with the `gemini-cli-extension` topic and `gemini-extension.json` at its
+  root (remote servers by `httpUrl`; OAuth discovered, dynamic registration supported). But Antigravity CLI replaced
+  Gemini CLI for free, Pro and Ultra users on 2026-06-18, and the gallery's data file last changed 10-16. Installing
+  clones the repo, so it would need a new small public repo of his. Low. Antigravity's own marketplace (launched
+  10-29) takes partners by an intake form. **Verified:** 2026-11-08.
+- **Plugin and skill directories** (researched 2026-11-08). **The game repo is too big for them:** youngjin is about
+  242 MiB as an archive, 5,984 files.
+  - **Anthropic's plugin directory** (claude.ai/directory/manage, shown in Claude Code's `/plugin` Discover; the
+    official marketplace holds 317): **high fit**, paired with the connector listing. A plugin folder needs
+    `.claude-plugin/plugin.json`, `.mcp.json` (`type: "http"`, the connector's URL), `skills/thingspool/SKILL.md`, a
+    README of 40+ words and a LICENSE. The whole repo must stay under 50 MiB as an archive and 256 MiB unpacked, so
+    youngjin is refused ("Repository too large to validate") and it needs a new small public repo, his decision.
+    He ticks four compliance boxes himself; a person reviews each new listing.
+  - **One small repo could serve them all**: `.claude-plugin/`, `.cursor-plugin/`, a root `plugin.json`,
+    `gemini-extension.json` and `skills/thingspool/SKILL.md`. That is a third copy of the manual to keep in step.
+  - **skills.sh:** no submission; a page appears after the first `npx skills add`. On `architsch/youngjin` that
+    command finds the nine internal skills under `.claude/skills/` first and never offers ThingsPool's. The clean
+    route is a file on thingspool.net, `/.well-known/agent-skills/index.json` (draft format 0.2.0: name, `type:
+    "skill-md"`, the URL `/skill.md` and a sha256 that must change with every edit of the manual), after which
+    `npx skills add https://thingspool.net` gives it a page. A change to the site, so his call. The CLI's own
+    find-skills skill tells agents to be wary of skills under 100 installs. Medium.
+  - **claude-plugins.dev** indexes `skills/` folders and plugin marketplaces by itself (0-star repos included);
+    `dev/clawhub/` doesn't match its pattern. **claudemarketplaces.com:** a free form after a GitHub sign-in. **SkillsMP**
+    reportedly crawls repos with 2+ stars (unverified; 403). **agentskills.io** is a spec, not a directory. Low.
+  - **Cursor Marketplace** (cursor.com/marketplace/publish): open source only, a `.cursor-plugin/` manifest, every
+    plugin reviewed by hand; form fields unverified. **Kiro powers:** a form, mostly AWS. Low.
+- **No way in:** goose retired its directory on 07-30 and reads the official registry (so ThingsPool is covered);
+  Le Chat's directory is curated by Mistral; Perplexity, Windsurf, LM Studio and Raycast take servers only from
+  their users. No directory of games for agents was found: League of Agents refuses connections, and OpenClawCity,
+  Agent Arcade and letaiplay.games run only their own games. **Verified:** 2026-11-08.
 
 ### Agent networks and operator communities (the AI-agents angle)
 Where agents post and their operators read along. Agents arrive because an operator, or a post an agent
@@ -346,13 +435,19 @@ not merely listed. Reddit's agent subreddits are under the Reddit warning at the
     each and shipped fixes, so reviewers came back to recheck (20 replies). A browser MMO for agents and
     people ("join in one step, no key") drew 4, which reviewed its skill file without playing.
   - **Fit: high**, the only venue built for inviting agents to try something. **Verified:** 2026-10-24.
+  - **A challenge drew words, not visits.** The build week in the `art` colony (10-28 to 11-04: a small museum in a
+    room of one's own) drew five room proposals in comments, and not one agent registered with its tag or built a
+    room. Agents there describe what they would do far more readily than they connect; one said its token budget was
+    the reason. The review request, which asked for a visit and a report, is what brought the one real agent.
 - **Moltbook** (moltbook.com): live (a new post every 30 to 40 s), Meta-owned since 2026-03-10. Only
   agents post; the human claims one with an email and a public post on X naming @moltbook. A new agent
   may post once every two hours for its first day. Rules: "Don't spam or self-promote excessively"; the
   terms forbid "unauthorized advertising". Submolts: m/builds ("Show what you made", about 2,600),
   m/openclaw-explorers (about 2,700), m/buildlogs, m/mcp, m/gaming. Link posts there have sent 1,000+
   agents to a site within a week (Zenity Labs, 2026-02). Posting is the user's own agent's act.
-  **Fit: medium-high**; posts sink fast. **Verified:** 2026-10-24 (rules.md, skill.md v1.12.0).
+  **Fit: medium-high**; posts sink fast. **Verified:** 2026-10-24 (rules.md, skill.md v1.12.0). Still so on
+  2026-11-08: the human verifies an email **and posts a verification tweet** (one agent per X account), so it is
+  outside a yes-or-no-only push.
 - **4claw** (4claw.org): agents only; its skill.md says "Avoid self-promotion of products", and no board
   suits a game. **Fit: low.** **Verified:** 2026-10-24.
 - **awesome-agent-native-social** (github.com/ColonistOne/awesome-agent-native-social, kept by The
@@ -362,7 +457,8 @@ not merely listed. Reddit's agent subreddits are under the Reddit warning at the
   `- [Name](URL) — One-line neutral description.`, alphabetical; "Self-submissions are accepted; the
   affiliation is fine, the puffery isn't." A pull request. **Fit: high, but merges have stalled**
   (2026-10-28): 2 stars, last push 10-17, eight PRs open since 10-13 (one a game, Plazmi) and none merged. A PR
-  would likely sit. Cheap, but last in line. **Verified:** 2026-10-28.
+  would likely sit. Cheap, but last in line. **Verified:** 2026-10-28. Still dormant 2026-11-08 (nine PRs open,
+  nothing merged since 10-17).
 - **OpenClaw's community:** the forum's Build & Showcase category (community.openclaw.ai; 7 topics, a
   few dozen views each; "Don't post spam"): medium. Discord (about 100k members): #showcase is for "cool
   stuff you and your agent are actually doing together… Not for shilling your skill", self-promotion has
@@ -387,7 +483,8 @@ not merely listed. Reddit's agent subreddits are under the Reddit warning at the
 
   Posts on the feed need the poster's karma over 100. Other rules: relevant flair (9), no vote
   manipulation (10), constructive and not shared recently (3). **Fit: high** for agents, through Claude
-  users. The kit is at `temp/distribution/reddit-claudeai/`.
+  users. The kit is at `temp/distribution/reddit-claudeai/`. **Dropped 2026-11-08:** it is his own post, gated on
+  his karma, and he works only venues where his part is a yes.
 - **Reddit, UNVERIFIED** (secondary sources): r/openclaw (self-promotion "not allowed without mod
   approval", a Showcase flair), r/AI_Agents (projects in the weekly project thread), r/LocalLLaMA (1 in
   10), r/mcp (ask the mods first).
@@ -398,11 +495,46 @@ not merely listed. Reddit's agent subreddits are under the Reddit warning at the
   394 sign-ups in one day once Ars Technica and PC Gamer wrote it up.
 
 ### Directory and list placements
-- **Fit:** Low individually, but they accumulate, they are permanent, and they are pure link-out.
-- **Candidates:** GitHub topics on the repository itself, `awesome-*` list pull requests (awesome
-  webgl, awesome threejs, awesome gamedev), AlternativeTo, browser-game directory sites.
-- **Rules and gotchas:** Awesome-list maintainers reject entries that do not meet a quality bar; read
-  the list's contribution guide. **Unverified.**
+- **Fit:** Low individually, but they accumulate, they are permanent, and they are pure link-out. Each form below
+  takes a plain URL, so each can carry its own `?ref=` tag. Researched 2026-11-08 against each venue's own pages;
+  none of them bans AI-written submissions, and non-free assets disqualify none of them.
+- **OSGL, the Open Source Games List** (Trilarion/opensourcegames, 1,114 stars, and its site): **high** for
+  open-source fans. A PR adding `entries/thingspool.md` from `template.md`; a game must be at least beta with
+  something playable, its code public under a FOSS license. First keyword a category (`simulation`, as
+  Infiniminer), `Apache-2.0` a known license, and "Assets license: Custom (…)" has precedent (Civic Nightmare,
+  08-19). Merges in batches (08-17, 09-06, 09-20, 10-10), entry PRs waiting since 10-24. An open proposal (#504)
+  would require projects six months old. Kit at `temp/distribution/osgl/`. **Submitted 2026-11-08** (PR #507).
+- **michelpereira/awesome-open-source-games** (3.4k stars): Browser-Based › Sandbox, `[Name](link) - Description.`
+  Its rule asks for 40 stars and 30 days; the repo has 1 star, and the rule is applied loosely (Parlour merged at
+  6), but some PRs have sat since July. A gamble.
+- **Forms with no account** (the assistant fills, he says yes): **Indielisted** (indielisted.com/submit: URL, up
+  to three categories such as Multiplayer and Creative, optional text of **200 characters at most**, which the
+  field cuts silently, "It's my project"; free review "can take up to 28 days"; free, independent, no adult
+  content; 57+ listings, reach unknown; **submitted 2026-11-08**); **Neon Gamewall** (neongamewall.com/submit: name, creator, URL,
+  optional pitch; "We never host or embed your game"; centered on AI-made games but "unusual indie games are
+  welcome too"; 6 of 78 suggestions posted, its top game about 1,950 clicks a week; an unlabeled "Website" field
+  is a trap for bots, left empty; **submitted 2026-11-08**); **Zadely** (zadely.com/submit:
+  "Indie original" accepted, a "link only" option, free review 2–3+ weeks).
+- **browsergames.top** (363 games): its "form" opens the sender's mail app, so it is an email from his account. Its
+  criteria (browser, persistent, multiplayer) fit, but its genres (RPG, strategy, nation sims, MUDs…) have no
+  sandbox. Medium-low.
+- **mesh3d.gallery** (a Three.js showcase, 340+ entries, mostly studio sites): URL and a note, with a CAPTCHA he
+  must solve himself.
+- **AlternativeTo:** an account with a verified email first, then "Suggest new application"; a backlog of "several
+  thousand apps", and "Our standard for games is higher"; descriptions may not contain links; a square icon of 280
+  px or more is suggested (his largest square logo is 150 px). Pages to list it against: Mozilla Hubs (shut down
+  2024-05-31, 15 alternatives), Roblox, Second Life, Minecraft Classic (only one alternative, none on the web).
+- **Not for this game:** lappemic/awesome-ai-built-games and Player1AI require that AI tools wrote most of the
+  code, which ThingsPool's history doesn't show. bobeff/open-source-games is its owner's bookmarks (no merge since
+  02-25); proyecto26/awesome-jsgames merges about every eight months; leereilly/games is archived;
+  M3-org/awesome-metaverse dormant since 2024-09; AxiomeCG/awesome-threejs and meshula/awesome-voxel have no games
+  section; sjfricke/awesome-webgl takes WebGL case-study articles only. GAMES.GG's free listing names no browser
+  platform. Startup directories (BetaList, Uneed, Fazier, SaaSHub, opensourcealternative.to) want payment, a
+  backlink, a launch day or self-hosting. Experiments with Google's submit page answers 404.
+- **GitHub topics:** 19 of 20 used; `threejs`, `webgl` and `voxel` are missing, but topic pages sort by stars, so
+  the effect is tiny.
+- **Unverified:** IndieDB (403 to automated reads), threejsresources.com ("Free submissions · reviewed within 7
+  days"), browse.games (sign-in first; tiny).
 - **iogames.space:** There is no submission form. Its "feature your game" page says to contact the
   site, and its paid feature tokens are "not currently available". The site favors competitive
   pick-up-and-play games, which a sandbox is not. Low fit. **Verified:** 2026-09-24.
@@ -452,7 +584,10 @@ Confirm that has been resolved before preparing any submission in this lane.
 ### Newgrounds, GameJolt
 - **Fit:** Moderate. Smaller than the above, but engaged, and the submission effort is low once a
   build exists.
-- **Rules and gotchas:** Not yet read. **Unverified.**
+- **Rules and gotchas:** Both take uploaded builds only, never an outbound link: Newgrounds shows an SWF or HTML5
+  zip in an iframe, and Game Jolt's builds are uploaded files (a work-in-progress page may have none; its thumbnail
+  is 16:9, at least 588×331). So both sit in this lane. **Verified:** 2026-11-08 (Game Jolt's own help docs, last
+  updated 2022).
 
 ### Y8, Armor Games, Addicting Games
 - **Fit:** Low. Listed for completeness; older portals with declining relevance to this kind of game.
@@ -468,14 +603,21 @@ online and still read as live, which is exactly why this entry exists — do not
 rediscovering it. Only previously approved developers retain upload access.
 **Verified:** 2026-08-22.
 
+### Smithery, OpenTools, and dormant lists
+Smithery shut down its proxy, accounts, CLI and publishing on 2026-10-31 (now part of Arcade; see Lane 1).
+OpenTools retired its CLI in favor of the official registry. appcypher/awesome-mcp-servers and leereilly/games
+are archived. **Verified:** 2026-11-08.
+
 ---
 
 ## Not yet researched
 
-Leads worth a future survey, recorded so they are not lost: browser-game aggregator sites that accept
-external links; university and hobbyist metaverse or virtual-world communities; Bluesky and
-Mastodon (gamedev.place) gamedev circles; creative-coding and generative-art communities, which suit the
-build-a-room framing; teacher and classroom-tool directories, which suit the shared-space framing.
+Leads worth a future survey, recorded so they are not lost: university and hobbyist metaverse or virtual-world
+communities; Bluesky and Mastodon (gamedev.place) gamedev circles; generative-art communities. Browser-game
+directories, creative-coding showcases and classroom-tool directories were surveyed on 2026-11-08 (see "Directory
+and list placements"; the classroom ones don't fit: ISTE's index is for school districts, and open chat with
+strangers is a likely blocker). Since 2026-11-08 the user wants only venues the assistant can work with his yes or
+no alone, so a lead that needs him to post, write or make images is recorded but not worked.
 
 For the AI-agents angle (see SKILL.md), added 2026-10-20 and not yet verified:
 - AI-curious subreddits (r/mcp, r/artificial, r/ClaudeAI, r/AI_Agents, r/LocalLLaMA), each to be

@@ -218,7 +218,9 @@ the date and the reason** rather than deleted — the next run needs to know not
 Rank the candidates by reach × audience fit, divided by effort, with the link-out lane preferred.
 Then propose to the user a short, ordered list — **two or three venues, not ten**.
 
-Small is deliberate. Every venue costs a tailored kit and a real post from the user's own account,
+Only venues that Lane B (step 6) can work make the list: his part is a yes.
+
+Small is deliberate. Every venue costs a tailored kit and a real submission in the user's name,
 and a batch of near-identical posts appearing across the web on one afternoon is the exact pattern
 every spam filter and every moderator is trained on. Sequenced venues also produce readable
 attribution; simultaneous ones produce one indistinguishable traffic spike.
@@ -283,19 +285,25 @@ has supplied:
   itch.io `butler` tool is the realistic example.
 - All verification: fetching a page to confirm a submission landed, checking a preview renders.
 
-### Lane B — prepare it, and hand it to the user
+### Lane B — show it in full, then submit it in his name on his yes
 
-Every community venue: Reddit, Hacker News, Discord, forums, and any portal whose submission form
-sits behind the user's login. Here you produce a post the user pastes and sends themselves, and the
-handover contains everything needed to act without opening a file:
+The user works only venues where his part is a yes. A Lane B action is a submission made in his
+name, with his own tools, once he has read the whole text and said yes: a pull request, issue or
+discussion through his `gh`, a form in his signed-in Chrome, a reply he approved on a thread he
+started. The handover contains everything he needs to decide without opening a file:
 
-- The exact title, in a copyable block.
-- The exact body, in a copyable block, at the venue's length.
-- The tagged link, and which flair or category to choose.
-- The venue's rules that bear on this post, in one or two lines.
-- The image brief — what each image must show, its size and format, and where to save it — since
-  those are the one part of the kit the user still has to make.
-- The ledger row that will be filled in once it is posted.
+- The exact text, in copyable blocks: title, body or field values, at the venue's length.
+- The tagged link, and the category or flair it goes under.
+- The venue's rules that bear on it, in one or two lines.
+- What will be done, from which of his accounts, and any side effect (a fork, a star the list
+  requires).
+- The ledger row that will be filled in once it is submitted.
+
+A venue that needs more from him is not worked: his own post or comment (Reddit, Hacker News, forums,
+Discord), writing, new images, an account he doesn't have, identity papers, payment, or being present
+on a launch day. Record it in the registry, with what it would need, and move on. Never act where a
+venue's rules forbid AI-written text, and never sign in for him: when his session has lapsed, the
+action waits for him to sign in.
 
 ### Lane C — never
 

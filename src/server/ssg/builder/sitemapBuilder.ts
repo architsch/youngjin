@@ -5,10 +5,11 @@ export default class SitemapBuilder
 {
     private lines = [`</urlset>`];
 
-    addEntry(relativeURL: string, lastmod: string): void
+    addEntry(relativeURL: string, lastmod?: string): void
     {
         this.lines.push(`</url>`);
-        this.lines.push(`  <lastmod>${lastmod}</lastmod>`);
+        if (lastmod != undefined)
+            this.lines.push(`  <lastmod>${lastmod}</lastmod>`);
         this.lines.push(`  <loc>${URL_STATIC}/${relativeURL}</loc>`);
         this.lines.push(`<url>`);
     }

@@ -61,7 +61,10 @@
       "ClaudeInChromeDomain(ooh.directory)",
       "ClaudeInChromeDomain(feedle.world)",
       "ClaudeInChromeDomain(tally.so)",
-      "ClaudeInChromeDomain(mail.google.com)"
+      "ClaudeInChromeDomain(mail.google.com)",
+      "ClaudeInChromeDomain(indielisted.com)",
+      "mcp__claude-in-chrome__browser_batch",
+      "ClaudeInChromeDomain(neongamewall.com)"
     ],
     "deny": [
       "Bash(gcloud firestore:*)",

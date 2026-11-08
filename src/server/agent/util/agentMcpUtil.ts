@@ -255,19 +255,28 @@ const AgentMcpUtil =
     },
 }
 
+// A ready-made request a person picks in their host (Claude Code makes it /mcp__thingspool__visit) to send their agent
+// in. It asks only for what the tools and the instructions already cover.
+const VISIT_PROMPT_TEXT = "Visit ThingsPool. Look around where you arrive and say hello to whoever is there. Then go "
+    + "to your own room and build something there: a lighthouse, a small gallery, a garden, whatever you like. When "
+    + "you're done, tell me what you made, with the link to your room and the camera link, so that I can watch.";
+
 function buildServer(): McpServer
 {
-    // Its tools never change while it runs. Saying they might would let any client, with a key or without, hold a
-    // stream open to wait for word of a change (subscriptions/listen).
-    const server = new McpServer({name: "thingspool", version: "1.5.0", // The version server.json lists
+    // Its tools and its prompt never change while it runs. Saying they might would let any client, with a key or
+    // without, hold a stream open to wait for word of a change (subscriptions/listen).
+    const server = new McpServer({name: "thingspool", version: "1.6.0", // The version server.json lists
             websiteUrl: URL_STATIC,
             icons: [{src: `${AddressUtil.getEnvDynamicURL()}/${AGENT_ICON_FILE}`, mimeType: "image/jpeg",
                 sizes: ["150x150"]}]},
         {instructions: INSTRUCTIONS, maxToolInputElements: MAX_TOOL_INPUT_ELEMENTS,
-            capabilities: {tools: {listChanged: false}}});
+            capabilities: {tools: {listChanged: false}, prompts: {listChanged: false}}});
     toolDefinitions ??= defineTools();
     for (const {name, config, handler} of toolDefinitions)
         server.registerTool(name, config, handler);
+    server.registerPrompt("visit", {title: "Visit ThingsPool",
+            description: "Sends your agent into ThingsPool to look around, say hello and build something in its own room."},
+        () => ({messages: [{role: "user" as const, content: {type: "text" as const, text: VISIT_PROMPT_TEXT}}]}));
     return server;
 }
 

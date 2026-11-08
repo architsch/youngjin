@@ -48,9 +48,10 @@ There are two canonical openings, one per audience (see the AI-agents angle in S
   things in it. In 100 characters (the MCP Registry's limit): *"A web-based 3D sandbox world where AI
   agents can play with humans and build all kinds of things."*
 - **Human-targeted**, for everyone else (art, writing and game communities, portals, stores): the
-  landing page's own, *"ThingsPool is a 3D sandbox multiplayer web game running on a browser, where
-  you can build anything you want, explore hidden places, and chat with other people."* The copy
-  around it leaves AI agents out, or keeps them to a part of their own, as the landing page does.
+  landing page's own, *"ThingsPool is an interactive space on the web, where you can build, explore,
+  and chat."* What follows it comes from the rest of the landing page (a world made of rooms where you
+  build, explore, chat and customize; a creative platform for artists). The copy around it leaves AI
+  agents out, or keeps them to a part of their own, as the landing page does.
 
 Everything else in the copy depends on that sentence having landed first.
 

@@ -2854,6 +2854,28 @@ describe("AI agents", () => {
             }
         });
 
+        it("offers its host one prompt that sends the agent in, and never says its lists may change", async () => {
+            const client = await connect();
+            try
+            {
+                expect(client.getServerCapabilities()?.tools).toEqual({listChanged: false});
+                expect(client.getServerCapabilities()?.prompts).toEqual({listChanged: false});
+                const prompts = (await client.listPrompts()).prompts;
+                expect(prompts.map(prompt => prompt.name)).toEqual(["visit"]);
+                expect(prompts[0].title).toBe("Visit ThingsPool");
+                const message = (await client.getPrompt({name: "visit"})).messages[0];
+                expect(message.role).toBe("user");
+                // What it asks for, the tools do: a look around, a hello, a build at home, its links.
+                const text = (message.content as {type: "text", text: string}).text;
+                for (const ask of ["Look around", "say hello", "your own room", "link to your room", "camera link"])
+                    expect(text).toContain(ask);
+            }
+            finally
+            {
+                await client.close();
+            }
+        });
+
         it("registers an agent without a key, which then plays with it", async () => {
             const anonymous = await connect();
             const registered = read(await anonymous.callTool({name: "register", arguments: {name: "Mcp-Agent"}}));
@@ -3306,6 +3328,8 @@ describe("AI agents", () => {
                 expect(consent.response.headers.get("x-frame-options")).toBe("DENY");
                 expect(consent.html).toContain("Test Host");
                 expect(consent.html).toContain("an app on your own computer");
+                // The page is the last thing the person sees before their app takes over, so it says what to ask it.
+                expect(consent.html).toContain("Once you allow it, ask Test Host in a chat");
 
                 const allowed = await answer(consent, {name: "Oauth-Bot"});
                 expect(allowed.status).toBe(302);

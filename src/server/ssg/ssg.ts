@@ -12,7 +12,6 @@ import InstancedMeshCapacityBuilder from "./builder/instancedMeshCapacityBuilder
 import ImageMapBuilder from "./builder/imageMapBuilder";
 import VoxelTexturePackBuilder from "./builder/voxelTexturePackBuilder";
 import CompositionThumbnailBuilder from "./builder/compositionThumbnailBuilder";
-import { LibraryData } from "./data/libraryData";
 import { ImageMapSeeds } from "./data/imageMapSeeds";
 import RoomMapBuilder from "./builder/roomMapBuilder";
 import { RoomMapSeeds } from "./data/roomMapSeeds";
@@ -31,12 +30,10 @@ export default async function SSG(): Promise<void>
     const atomFeedB = new AtomFeedBuilder();
 
     let tb = new TextFileBuilder();
-    // The landing page links to the newest dev-log year, from the Library's list.
-    const devlogEntries = LibraryData.entriesByCategory["Dev Log"];
-    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/static/index.ejs", {
-        latestDevlogEntry: devlogEntries[devlogEntries.length - 1],
-    }));
+    tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/static/index.ejs", {}));
     await tb.build("index.html");
+    // No lastmod: nothing records when the landing page last changed, and a guessed date would mislead crawlers.
+    sitemapB.addEntry("");
 
     tb = new TextFileBuilder();
     tb.addLine(await EJSUtil.createStaticHTMLFromEJS("page/static/portfolio.ejs", {}));
