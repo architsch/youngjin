@@ -1,8 +1,8 @@
 import * as THREE from "three";
 import GameObject from "../../../types/gameObject/gameObject";
 import GraphicsManager from "../../../../graphics/graphicsManager";
-import { cameraModeObservable, orbitCameraAngleHoldRequestObservable, orbitCameraDistanceRangeRequestObservable,
-    orbitCameraViewRequestObservable } from "../../../../system/clientObservables";
+import { cameraModeObservable, cameraShakeObservable, orbitCameraAngleHoldRequestObservable,
+    orbitCameraDistanceRangeRequestObservable, orbitCameraViewRequestObservable } from "../../../../system/clientObservables";
 import AABB3 from "../../../../../shared/math/types/aabb3";
 import FirstPersonCameraPose from "./firstPersonCameraPose";
 import OrbitCameraPose from "./orbitCameraPose";
@@ -15,6 +15,7 @@ const viewReferenceTemp = new THREE.Vector3();
 const roomLightTemp = new THREE.Color();
 const vectorTemp = new THREE.Vector3();
 const quaternionTemp = new THREE.Quaternion();
+const eulerTemp = new THREE.Euler();
 
 // How far in front of the camera the head light and the fog may be measured from (see
 // GraphicsManager.setViewReferenceOffset). Past it, an orbit lights and fogs the room the way it
@@ -25,6 +26,19 @@ const maxViewReferenceDistance = 8;
 // a wind lifting or throwing the player fast leaves it further behind, since any limit would jolt the camera into
 // step with the player, and again to a stop when the player hits something.
 export const trailRate = 12;
+
+// A full shake of the first-person view (see cameraShakeObservable): how long it lasts, in seconds, how far it throws
+// the view about at first, in world units and in radians, and how fast it goes back and forth each way, in radians a
+// second, at rates that never fall in step.
+export const shakeSeconds = 0.4;
+const shakeDistance = 0.05;
+const shakeAngle = 0.022;
+const shakeRates = [61, 83, 47];
+
+// The shake under way, of the one camera there is, whoever it is mounted in: how hard it began, and how much of it is
+// left.
+let shakeStrength = 0;
+let shakeSecondsLeft = 0;
 
 // Parents the camera to the player and eases it toward the active mode's pose (FirstPersonCameraPose,
 // OrbitCameraPose, FreeCameraPose), so mode changes glide. Without a pointer input, which only the user's own player
@@ -62,6 +76,10 @@ export default class PlayerCamera
     private trailVelocity = new THREE.Vector3();
     private appliedTrailOffset = new THREE.Vector3();
 
+    // What the camera now carries of a shake (see updateShake).
+    private appliedShakeOffset = new THREE.Vector3();
+    private appliedShakeTurn = new THREE.Quaternion();
+
     onSpawn(player: GameObject, pointerInput?: PlayerPointerInput): void
     {
         this.pointerInput = pointerInput;
@@ -89,8 +107,9 @@ export default class PlayerCamera
     {
         const mode = cameraModeObservable.peek();
 
-        // The poses and the easing work without the trail; it is laid back on after them.
-        this.camera!.position.sub(this.appliedTrailOffset);
+        // The poses and the easing work without the trail and the shake; they are laid back on after them.
+        this.camera!.position.sub(this.appliedTrailOffset).sub(this.appliedShakeOffset);
+        this.camera!.quaternion.multiply(this.appliedShakeTurn.invert());
 
         // Requests are consumed here, after framing, so they aren't overwritten. Always cleared so a
         // stale request can't apply to a later orbit.
@@ -173,6 +192,9 @@ export default class PlayerCamera
         player.obj.getWorldQuaternion(quaternionTemp).invert();
         this.appliedTrailOffset.copy(this.trailOffset).applyQuaternion(quaternionTemp);
         this.camera!.position.add(this.appliedTrailOffset);
+        this.updateShake(deltaTime, mode.type === "firstPerson");
+        this.camera!.position.add(this.appliedShakeOffset);
+        this.camera!.quaternion.multiply(this.appliedShakeTurn);
 
         // Light and fog stand where a player looking at the same subject would, which is the camera
         // itself until it is pulled further back than maxViewReferenceDistance.
@@ -221,6 +243,20 @@ export default class PlayerCamera
             .multiply(this.orbitWorldQuaternion);
     }
 
+    // What the camera carries of a shake this frame, in its own frame: dying away as it goes, and nothing outside
+    // first person, whose view alone it is.
+    private updateShake(deltaTime: number, shakes: boolean): void
+    {
+        shakeSecondsLeft = Math.max(0, shakeSecondsLeft - deltaTime);
+        const left = shakeSecondsLeft / shakeSeconds;
+        const size = shakes ? shakeStrength * left * left : 0;
+        const clock = shakeSeconds - shakeSecondsLeft;
+        const [swingX, swingY, swingZ] = shakeRates.map(rate => size * Math.sin(rate * clock));
+        this.appliedShakeOffset.set(shakeDistance * swingX, shakeDistance * swingY, 0)
+            .applyQuaternion(this.camera!.quaternion);
+        this.appliedShakeTurn.setFromEuler(eulerTemp.set(shakeAngle * swingY, shakeAngle * swingX, shakeAngle * swingZ));
+    }
+
     // Physics moves the player in jolts (a step climbed, a drop, a push) that steering never makes.
     // The camera is held against those and catches up on a critically damped spring, while steering
     // is followed as is, so a staircase becomes a steady glide and walking never lags.
@@ -238,3 +274,8 @@ export default class PlayerCamera
         this.trailVelocity.addScaledVector(step, -trailRate).multiplyScalar(decay);
     }
 }
+
+cameraShakeObservable.addListener("playerCamera", (strength: number) => {
+    shakeStrength = strength;
+    shakeSecondsLeft = shakeSeconds;
+});

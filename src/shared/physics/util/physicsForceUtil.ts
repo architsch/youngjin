@@ -97,6 +97,23 @@ const PhysicsForceUtil =
             ? carried : {x: 0, y: 0, z: 0};
         return Vector3DUtil.add(velocity, object.carriedVelocity);
     },
+    // The speed the room's streams add to a box in a second where it is, each by as much of it as it reaches: for what
+    // flies on its own way rather than walking (see CannonBallMotionUtil), which takes what share of it its weight lets
+    // it. Nothing is made up for gravity here, nor eased off before a wall.
+    getPush: (physicsRoom: PhysicsRoom, box: AABB3): Vec3 =>
+    {
+        let push: Vec3 = {x: 0, y: 0, z: 0};
+        for (const emitter of getEmitters(physicsRoom))
+        {
+            const hold = getHold(physicsRoom.room, emitter, box);
+            if (hold != undefined)
+            {
+                push = Vector3DUtil.add(push, Vector3DUtil.scale(hold.normal,
+                    hold.acceleration * hold.exposure * (1 - hold.distance / hold.range)));
+            }
+        }
+        return push;
+    },
     // The stream pushing hardest at a box, if any has hold of it: for what the wind carries along a path rather than
     // moving as a body (see DollarBillUtil). distance: how far it has come where it first meets the box.
     getStrongestStream: (physicsRoom: PhysicsRoom, box: AABB3)

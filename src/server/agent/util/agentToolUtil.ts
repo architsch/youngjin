@@ -8,9 +8,12 @@ import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMet
 import { SpeakerActivityEnumMap } from "../../../shared/object/types/speakerActivity";
 import DoorObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import DollarBillObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/dollarBillObjectTypeConfig";
+import CannonBallObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/cannonBallObjectTypeConfig";
+import CannonBallStateUtil from "../../../shared/object/util/cannonBallStateUtil";
 import { InventoryItemTypeEnumMap } from "../../../shared/inventory/types/inventoryItemType";
 import LabelTextUtil from "../../../shared/object/util/labelTextUtil";
 import MessageLinkUtil from "../../../shared/object/util/messageLinkUtil";
+import ObjectObstacleUtil from "../../../shared/object/util/objectObstacleUtil";
 import AdminPrefsUtil from "../../../shared/object/util/adminPrefsUtil";
 import SpeakerActivityUtil from "../../../shared/object/util/speakerActivityUtil";
 import RequestRoomChangeSignal from "../../../shared/room/types/requestRoomChangeSignal";
@@ -18,8 +21,8 @@ import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import VoxelPathUtil from "../../../shared/voxel/util/voxelPathUtil";
-import { COLLISION_LAYER_HEIGHT, HELPER_AGENT_NAME, HUB_ROOM_ID_KEYWORD, OBJECT_MESSAGE_MAX_LENGTH,
-    VOXEL_CELL_SIZE } from "../../../shared/system/sharedConstants";
+import { COLLISION_LAYER_HEIGHT, HELPER_AGENT_NAME, HUB_ROOM_ID_KEYWORD, MAX_ROOM_X, MAX_ROOM_Y, MAX_ROOM_Z,
+    OBJECT_MESSAGE_MAX_LENGTH, VOXEL_CELL_SIZE } from "../../../shared/system/sharedConstants";
 import { HEARING_DISTANCE } from "../../../shared/object/util/helperBehaviorUtil";
 import ServerRoomManager from "../../room/serverRoomManager";
 import OwnedRoomUtil from "../../room/util/ownedRoomUtil";
@@ -135,6 +138,21 @@ const AgentToolUtil =
             }))
             .sort((a, b) => a.distance - b.distance);
 
+        // Those still in the room: one that has flown out of it comes back to nobody.
+        const cannonBalls = Object.values(room.objectById)
+            .filter(obj => obj.objectTypeIndex == ObjectTypeConfigMap.getIndexByType(CannonBallObjectTypeConfig.objectType))
+            .map(ball => CannonBallStateUtil.getObjectState(ball))
+            .filter(({pos}) => pos.x >= 0 && pos.x <= MAX_ROOM_X && pos.y >= 0 && pos.y <= MAX_ROOM_Y && pos.z >= 0
+                && pos.z <= MAX_ROOM_Z)
+            .map(({pos, vel}) => ({
+                at: AgentGridUtil.toGridPosition(pos),
+                // How many cells it goes in a second: toward higher rows (south), columns (east) and layers (up).
+                goingBy: {rows: toTenths(vel.z / VOXEL_CELL_SIZE), columns: toTenths(vel.x / VOXEL_CELL_SIZE),
+                    layers: toTenths(vel.y / COLLISION_LAYER_HEIGHT)},
+                distance: toTenths(distanceInVoxels(myFeet, pos)),
+            }))
+            .sort((a, b) => a.distance - b.distance);
+
         const {objects, more} = AgentObjectUtil.describeObjects(room, me.transform.pos);
         return {
             room: describeRoom(ctx),
@@ -143,6 +161,7 @@ const AgentToolUtil =
             people,
             doors,
             bills,
+            cannonBalls,
             objects,
             objectsNotShown: more,
             zones: AgentObjectUtil.describeZones(room, ctx.user),
@@ -177,7 +196,8 @@ const AgentToolUtil =
         else
             return {error: "Give a row and a column (and a layer, if not your own), or a person's name."};
 
-        const goal = VoxelPathUtil.findStandingVertexNear(room.voxelGrid.voxels, feet);
+        const goal = VoxelPathUtil.findStandingVertexNear(room.voxelGrid.voxels, feet, undefined,
+            ObjectObstacleUtil.getClearance(room.objectById));
         if (goal == undefined)
             return {error: "Nobody could stand there."};
 
@@ -246,7 +266,8 @@ const AgentToolUtil =
         const {pos, dir} = door.transform;
         const front = {x: pos.x + dir.x * DOOR_STANDING_DISTANCE, y: DoorObjectTypeConfig.util.getFloorY(door),
             z: pos.z + dir.z * DOOR_STANDING_DISTANCE};
-        const goal = VoxelPathUtil.findStandingVertexNear(room.voxelGrid.voxels, front);
+        const goal = VoxelPathUtil.findStandingVertexNear(room.voxelGrid.voxels, front, undefined,
+            ObjectObstacleUtil.getClearance(room.objectById));
         if (goal == undefined)
             return {error: "Nobody could stand in front of this door."};
         const outcome = await AgentBodyUtil.walk(ctx, goal, {faceToward: pos});
@@ -464,6 +485,11 @@ function describeHearing(ctx: AgentUserContext, room: Room, myPos: Vec3, text: s
 function distanceInVoxels(a: Vec3, b: Vec3): number
 {
     return Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z) / VOXEL_CELL_SIZE;
+}
+
+function toTenths(n: number): number
+{
+    return Math.round(10 * n) / 10;
 }
 
 export default AgentToolUtil;

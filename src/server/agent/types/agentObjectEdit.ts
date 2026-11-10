@@ -9,4 +9,6 @@ export default interface AgentObjectEdit
     arriveAt?: string;
     keepFor?: string;
     name?: string;
+    // A cannon's switch.
+    switchedOn?: boolean;
 }

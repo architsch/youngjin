@@ -55,4 +55,7 @@ export const ObjectMetadataKeyEnumMap: Record<string, number> =
     // A mirror's surface: its color and how opaque it is over the reflection, one quantized character each (see
     // MirrorObjectTypeConfig), always read and written together.
     MirrorProperties: 23,
+    // A cannon's state, or a cannon ball's, as quantized characters: the first a switch a user may set (a cannon's,
+    // on or off), the rest what the server alone writes as it plays them (see CannonStateUtil, CannonBallStateUtil).
+    CannonState: 24,
 }

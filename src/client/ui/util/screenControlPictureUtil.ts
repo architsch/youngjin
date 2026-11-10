@@ -7,7 +7,7 @@ import ScreenControlPicture from "../components/basic/screenControlPicture";
 // How wide each picture is drawn (see ScreenControlPicture), in characters of the monospace text around it.
 const widthsInChars: {[control in ScreenControl]: number} = {
     modeSwitch: 10, messageBox: 11, send: 6, clear: 3, addBlock: 3, trash: 3, addPainting: 3, addObject: 3, addLamp: 3,
-    addFan: 3, rotate: 3, person: 3,
+    addFan: 3, addCannon: 3, rotate: 3, person: 3,
 };
 // Each picture drawn by React once, to be copied after.
 const drawn = new Map<ScreenControl, Element>();

@@ -348,6 +348,8 @@ import SocketUserContext from "../../../src/server/sockets/types/socketUserConte
 import DBUserVersionMigration from "../../../src/server/db/types/versionMigration/dbUserVersionMigration";
 import PhysicsManager from "../../../src/shared/physics/physicsManager";
 import DollarBillUtil from "../../../src/server/inventory/util/dollarBillUtil";
+import CannonUtil from "../../../src/server/object/util/cannonUtil";
+import CannonBallUtil from "../../../src/server/object/util/cannonBallUtil";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import SetObjectTransformSignal from "../../../src/shared/object/types/setObjectTransformSignal";
 import SetObjectMetadataSignal from "../../../src/shared/object/types/setObjectMetadataSignal";
@@ -693,6 +695,8 @@ export const harness = {
     async gracefulShutdown(): Promise<void>
     {
         DollarBillUtil.markRoomsToSave();
+        CannonUtil.markRoomsToSave();
+        CannonBallUtil.markRoomsToSave();
         await ServerRoomManager.saveMultiplayerRooms(true);
         await ServerRoomManager.saveAllUsersPlayerMetadata(ServerUserManager.socketUserContexts);
 

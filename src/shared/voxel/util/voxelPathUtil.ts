@@ -9,7 +9,8 @@ import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../object/types/objectTypeCo
 // Walking paths for a player's body over the voxel grid, by A* to one place, or by Dijkstra to everywhere near at once
 // (see findReach). A path runs between grid vertices: a body narrower than two voxels, standing on one, covers exactly
 // the four voxels around it, so it passes wherever a person could, through a corridor two voxels wide. Only blocks
-// count; objects on the way are left to the physics.
+// count, and what else a caller's `isOpen` keeps a body off (objects as solid as blocks, see ObjectObstacleUtil); other
+// objects on the way are left to the physics.
 
 if (PLAYER_RADIUS_XZ >= VOXEL_CELL_SIZE)
     throw new Error("VoxelPathUtil assumes a player narrower than two voxels");
@@ -25,6 +26,7 @@ const NUM_VERTEX_COLS = NUM_VOXEL_COLS + 1;
 const ON_VERTEX = 1e-6;
 
 const DIRECTIONS: [number, number][] = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]];
+const ANYWHERE = (): boolean => true;
 
 const VoxelPathUtil =
 {
@@ -55,8 +57,9 @@ const VoxelPathUtil =
     {
         return {x: playerPos.x, y: playerPos.y - 0.5 * PLAYER_HEIGHT, z: playerPos.z};
     },
-    // The standable vertex nearest a body's feet, searched out to maxRadius vertices and layers; undefined if none.
-    findStandingVertexNear: (voxels: Voxel[], feet: Vec3, maxRadius: number = 3): VoxelVertex | undefined =>
+    // The standable, open vertex nearest a body's feet, searched out to maxRadius vertices and layers; undefined if none.
+    findStandingVertexNear: (voxels: Voxel[], feet: Vec3, maxRadius: number = 3,
+        isOpen: (vertex: VoxelVertex) => boolean = ANYWHERE): VoxelVertex | undefined =>
     {
         const row = Math.round(feet.z / VOXEL_CELL_SIZE);
         const col = Math.round(feet.x / VOXEL_CELL_SIZE);
@@ -71,7 +74,7 @@ const VoxelPathUtil =
                 {
                     const vertex = {row: row + dr, col: col + dc, layer: layer + dl};
                     const distance = dr * dr + dc * dc + dl * dl;
-                    if (distance < bestDistance && VoxelPathUtil.isStandable(voxels, vertex))
+                    if (distance < bestDistance && VoxelPathUtil.isStandable(voxels, vertex) && isOpen(vertex))
                     {
                         best = vertex;
                         bestDistance = distance;
@@ -81,11 +84,12 @@ const VoxelPathUtil =
         }
         return best;
     },
-    // The vertices from start to goal, both included, with straight runs reduced to their ends; undefined if the
-    // goal can't be reached (or not within the search's bound).
-    findPath: (voxels: Voxel[], start: VoxelVertex, goal: VoxelVertex): VoxelVertex[] | undefined =>
+    // The vertices from start to goal, both included, with straight runs reduced to their ends, over open vertices
+    // (start aside); undefined if the goal can't be reached (or not within the search's bound).
+    findPath: (voxels: Voxel[], start: VoxelVertex, goal: VoxelVertex,
+        isOpen: (vertex: VoxelVertex) => boolean = ANYWHERE): VoxelVertex[] | undefined =>
     {
-        if (!VoxelPathUtil.isStandable(voxels, start) || !VoxelPathUtil.isStandable(voxels, goal))
+        if (!VoxelPathUtil.isStandable(voxels, start) || !VoxelPathUtil.isStandable(voxels, goal) || !isOpen(goal))
             return undefined;
 
         const startKey = toKey(start);
@@ -106,7 +110,7 @@ const VoxelPathUtil =
             const currentCost = costSoFar.get(currentKey)!;
             for (const [dr, dc] of DIRECTIONS)
             {
-                const next = findStep(voxels, current, dr, dc);
+                const next = findStep(voxels, current, dr, dc, isOpen);
                 if (next == undefined)
                     continue;
 
@@ -126,7 +130,8 @@ const VoxelPathUtil =
     // takes: onto vertices `passes` lets it (start aside), out to a walk of about maxDistance world units. One search
     // finds the way to each of them (see getPathWithin), so a walker picking where to go picks only where it can get to.
     findReach: (voxels: Voxel[], start: VoxelVertex, maxDistance: number,
-        passes: (vertex: VoxelVertex) => boolean = () => true): VoxelReach =>
+        passes: (vertex: VoxelVertex) => boolean = ANYWHERE,
+        isOpen: (vertex: VoxelVertex) => boolean = ANYWHERE): VoxelReach =>
     {
         const maxCost = maxDistance / VOXEL_CELL_SIZE;
         const startKey = toKey(start);
@@ -147,7 +152,7 @@ const VoxelPathUtil =
             vertices.push(current);
             for (const [dr, dc] of DIRECTIONS)
             {
-                const next = findStep(voxels, current, dr, dc);
+                const next = findStep(voxels, current, dr, dc, isOpen);
                 if (next == undefined || !passes(next))
                     continue;
 
@@ -181,8 +186,10 @@ function getStepCost(from: VoxelVertex, to: VoxelVertex, dr: number, dc: number)
 }
 
 // Where a step from the vertex in a direction lands: on the same layer, else one up, else the highest of a few
-// below (a fall). A diagonal step also needs both vertices beside it clear, so no corner is cut.
-function findStep(voxels: Voxel[], from: VoxelVertex, dr: number, dc: number): VoxelVertex | undefined
+// below (a fall), if that is open. A diagonal step also needs both vertices beside it clear and open, so no corner is
+// cut.
+function findStep(voxels: Voxel[], from: VoxelVertex, dr: number, dc: number,
+    isOpen: (vertex: VoxelVertex) => boolean): VoxelVertex | undefined
 {
     const row = from.row + dr;
     const col = from.col + dc;
@@ -210,7 +217,7 @@ function findStep(voxels: Voxel[], from: VoxelVertex, dr: number, dc: number): V
             }
         }
     }
-    if (layer == undefined)
+    if (layer == undefined || !isOpen({row, col, layer}))
         return undefined;
 
     if (dr != 0 && dc != 0)
@@ -219,6 +226,11 @@ function findStep(voxels: Voxel[], from: VoxelVertex, dr: number, dc: number): V
         const high = Math.max(from.layer, layer) + BODY_LAYERS - 1;
         if (!isClear(voxels, from.row + dr, from.col, low, high) || !isClear(voxels, from.row, from.col + dc, low, high))
             return undefined;
+        for (const beside of [{row: from.row + dr, col: from.col}, {row: from.row, col: from.col + dc}])
+        {
+            if (!isOpen({...beside, layer: from.layer}) || !isOpen({...beside, layer}))
+                return undefined;
+        }
     }
     return {row, col, layer};
 }

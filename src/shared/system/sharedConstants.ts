@@ -96,6 +96,8 @@ export const HUB_ROOM_ID_KEYWORD = "hub";
 export const LOGIN_REWARD_DOLLARS = 5;
 // What a shape of a character's part costs, past the free ones (see PlayerShapeItemUtil).
 export const PLAYER_SHAPE_PRICE_DOLLARS = 10;
+// What adding a cannon to a room costs, each time (see CannonObjectTypeConfig).
+export const CANNON_PRICE_DOLLARS = 10;
 
 // Physics
 

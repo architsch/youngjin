@@ -1,8 +1,11 @@
 /**
  * Which event sounds as what (see AudioTriggerUtil), with the audio itself stood in for: someone else's edits where they
  * are made (blocks, a face's texture, and the room's own objects as the same edit of a block, a change to one's settings as
- * a breath), the user's own alike from anywhere (a block's edit by its kind, an object added or placed as a click, and
- * nothing for one taken away or changed), never a player's or a bill's as an edit; others coming and going (not the user,
+ * a breath), the user's own alike from anywhere (a block's edit by its kind, an object added or placed as a click, none
+ * for one that costs dollars, and nothing for one changed), never a player's, a bill's or a cannon ball's as an edit; an
+ * attached object taken away as its coming apart, whoever took it (an NPC's going as any object's, a spent cannon's as
+ * a puff); a cannon's shot and its ball's burst where they are, the burst alone of all its blast breaks; a cannon's own
+ * gears while it turns to aim; others coming and going (not the user,
  * nor a ghost); dollars (the user's own as they reach the count, others' where they are collected, the day's reward as it
  * shows, a cash register as they are spent); a refusal; the UI (presses, popups and panels opening and closing, nothing
  * for no change, nor for the game mode itself); the selection (a face or an object picked out, another in its place,
@@ -46,8 +49,8 @@ vi.mock("../../../src/client/networking/client/socketsClient", () => ({default: 
 vi.mock("../../../src/client/graphics/types/gizmo/voxelQuadSelection", () => ({default: class {}}));
 vi.mock("../../../src/client/graphics/types/gizmo/objectSelection", () => ({default: class {}}));
 
-import AudioTriggerUtil, { ARRIVAL_SOUND_RANGE, COLLECT_SOUND_RANGE, EDIT_SOUND_RANGE, OBJECT_SELECTION_RATE,
-    PITCH_VARIATION, SOUND_MOMENT_MS } from "../../../src/client/audio/util/audioTriggerUtil";
+import AudioTriggerUtil, { ARRIVAL_SOUND_RANGE, CANNON_SOUND_RANGE, COLLECT_SOUND_RANGE, EDIT_SOUND_RANGE,
+    OBJECT_SELECTION_RATE, PITCH_VARIATION, SOUND_MOMENT_MS } from "../../../src/client/audio/util/audioTriggerUtil";
 import AudioBundleMap from "../../../src/client/audio/maps/audioBundleMap";
 import ClosablePanelUtil from "../../../src/client/ui/util/closablePanelUtil";
 import RefusalCoachMarkUtil from "../../../src/client/ui/util/refusalCoachMarkUtil";
@@ -58,8 +61,18 @@ import FanGameObject, { ONE_BLADE_WIND_RATE, ONE_BLADE_WIND_VOLUME, WIND_HEARD_P
     WIND_SOURCE_OFFSET, WIND_VOLUME_PER_BLADE } from "../../../src/client/object/types/gameObject/fanGameObject";
 import FanObjectTypeConfig, { FAN_SETTINGS }
     from "../../../src/shared/object/types/objectTypeConfig/fanObjectTypeConfig";
+import CannonGameObject, { TURN_SOUND_RANGE, TURN_SOUND_VOLUME }
+    from "../../../src/client/object/types/gameObject/cannonGameObject";
+import { CannonPhaseEnumMap } from "../../../src/shared/object/types/cannonPhase";
+import CannonState from "../../../src/shared/object/types/cannonState";
+import { CANNON_BALL_COUNT, CANNON_MAX_RANGE, CANNON_TURN_RATE }
+    from "../../../src/shared/object/types/objectTypeConfig/cannonObjectTypeConfig";
+import CannonAimUtil from "../../../src/shared/object/util/cannonAimUtil";
+import CannonStateUtil from "../../../src/shared/object/util/cannonStateUtil";
+import PhysicsColliderStateUtil from "../../../src/shared/physics/util/physicsColliderStateUtil";
 import Geometry3DUtil from "../../../src/shared/math/util/geometry3DUtil";
-import { chatLineSentObservable, clickRefusedObservable, controlPressedObservable, dollarsSpentObservable,
+import { cannonBallBurstObservable, cannonBlastObservable, cannonFiredObservable, chatLineSentObservable,
+    clickRefusedObservable, controlPressedObservable, dollarsSpentObservable,
     gameModeObservable, headlineMessageObservable, inventoryGainObservable, loginRewardStageObservable,
     numOpenPanelsObservable, numOpenPopupsObservable, objectCollectedObservable, objectEditObservable,
     objectPlacedObservable, objectSelectionObservable, roomTravelObservable, screenArrowTargetObservable,
@@ -73,7 +86,7 @@ import { InventoryItemTypeEnumMap } from "../../../src/shared/inventory/types/in
 import EncodableByteString from "../../../src/shared/networking/types/encodableByteString";
 import AdminPrefsUtil from "../../../src/shared/object/util/adminPrefsUtil";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
-import { COLLISION_LAYER_MIN } from "../../../src/shared/system/sharedConstants";
+import { CANNON_PRICE_DOLLARS, COLLISION_LAYER_MIN, SIGNAL_BATCH_SEND_INTERVAL } from "../../../src/shared/system/sharedConstants";
 
 const AT = {x: 3, y: 1, z: 5};
 
@@ -161,9 +174,10 @@ describe("which event sounds as what", () => {
 
     it("sounds someone else's edit of one of the room's own objects where it is, as the same edit of a block would, " +
         "and a change to its settings as a breath", () => {
+        // (What is taken away of those not attached to a face: an attached one comes apart, below.)
         for (const set of [
             () => objectEditObservable.set({kind: "add", object: makeObject("Prop"), own: false}),
-            () => objectEditObservable.set({kind: "remove", object: makeObject("Lamp"), own: false}),
+            () => objectEditObservable.set({kind: "remove", object: makeObject("Volume"), own: false}),
             () => objectPlacedObservable.set({object: makeObject("Fan"), own: false}),
             () => objectEditObservable.set({kind: "change", object: makeObject("Canvas"), own: false})])
         {
@@ -176,13 +190,13 @@ describe("which event sounds as what", () => {
         audio.calls.forEach(call => expectVaried(call.options.rate));
     });
 
-    it("clicks for the user's own object added or placed, sounds nothing of one taken away or changed, and no player " +
-        "or bill as an edit", () => {
+    it("clicks for the user's own object added or placed, sounds nothing of one changed, nor of one taken away that " +
+        "hung on no face, and no player, bill or cannon ball as an edit", () => {
         objectEditObservable.set({kind: "add", object: makeObject("Prop"), own: true});
         settle();
         objectPlacedObservable.set({object: makeObject("Fan"), own: true});
         settle();
-        objectEditObservable.set({kind: "remove", object: makeObject("Lamp"), own: true});
+        objectEditObservable.set({kind: "remove", object: makeObject("Volume"), own: true});
         objectEditObservable.set({kind: "change", object: makeObject("Canvas"), own: true});
         settle();
         expect(audio.calls.map(call => [call.method, call.clip])).toEqual([["play", "ui/press"], ["play", "ui/press"]]);
@@ -192,11 +206,74 @@ describe("which event sounds as what", () => {
         {
             objectEditObservable.set({kind: "add", object: makeObject("DollarBill", ""), own});
             objectPlacedObservable.set({object: makeObject("DollarBill", ""), own});
+            objectEditObservable.set({kind: "add", object: makeObject("CannonBall", ""), own});
+            objectEditObservable.set({kind: "remove", object: makeObject("CannonBall", ""), own});
             objectPlacedObservable.set({object: makeObject("Player"), own});
             objectEditObservable.set({kind: "change", object: makeObject("Player"), own});
             settle();
         }
         expect(audio.calls).toEqual([]);
+    });
+
+    it("sounds an attached object taken away as its coming apart, whoever took it: someone else's from its middle, the " +
+        "user's own from anywhere; but an NPC's going as any object's, and a spent cannon's as a puff", () => {
+        const middleOf = (object: AddObjectSignal) =>
+            PhysicsColliderStateUtil.getObjectColliderState(object.objectTypeIndex, object.transform)!.hitbox.center;
+        const cannon = makeObject("Cannon");
+        expect(middleOf(cannon), "a cannon's middle is in front of its face").not.toEqual(AT);
+
+        for (const object of [makeObject("Lamp"), makeObject("Canvas"), makeObject("Door"), cannon])
+        {
+            audio.calls.length = 0;
+            objectEditObservable.set({kind: "remove", object, own: false});
+            settle();
+            objectEditObservable.set({kind: "remove", object, own: true});
+            settle();
+            expect(audio.calls).toMatchObject([
+                {method: "playAt", clip: "edit/objectDestroy", position: middleOf(object), options: {range: EDIT_SOUND_RANGE}},
+                {method: "play", clip: "edit/objectDestroy", position: undefined}]);
+            audio.calls.forEach(call => expectVaried(call.options.rate));
+        }
+
+        audio.calls.length = 0;
+        objectEditObservable.set({kind: "remove", object: makeObject("Npc"), own: false});
+        settle();
+        objectEditObservable.set({kind: "remove", object: makeObject("Npc"), own: true});
+        settle();
+        expect(audio.calls.map(call => [call.method, call.clip])).toEqual([["playAt", "edit/blockRemove"]]);
+
+        audio.calls.length = 0;
+        const spent = makeObject("Cannon", "someone", {[ObjectMetadataKeyEnumMap.CannonState]: CannonStateUtil.encode(
+            {...CannonStateUtil.decode(""), ballsLeft: 0})});
+        objectEditObservable.set({kind: "remove", object: spent, own: false});
+        expect(audio.calls).toMatchObject([{method: "playAt", clip: "cannon/puff", position: middleOf(spent),
+            options: {range: EDIT_SOUND_RANGE}}]);
+    });
+
+    it("sounds a cannon's shot and its ball's burst where they are, far off too, whatever else the moment sounds", () => {
+        const muzzle = {x: 7, y: 2, z: 9};
+        cannonFiredObservable.set({position: muzzle, direction: {x: 1, y: 0, z: 0}});
+        // In the moment of the user's own edit, which holds no burst back.
+        voxelBlockEditObservable.set({kind: "add", quadIndex: 0, own: true});
+        cannonBallBurstObservable.set({position: AT});
+        expect(audio.calls).toMatchObject([
+            {method: "playAt", clip: "cannon/fire", position: muzzle, options: {range: CANNON_SOUND_RANGE}},
+            {method: "play", clip: "edit/blockAdd"},
+            {method: "playAt", clip: "cannon/explosion", position: AT, options: {range: CANNON_SOUND_RANGE}}]);
+        expect(CANNON_SOUND_RANGE).toBeGreaterThan(EDIT_SOUND_RANGE);
+        expectVaried(audio.calls[0].options.rate);
+        expectVaried(audio.calls[2].options.rate);
+    });
+
+    it("sounds no click for the user's own object added that costs dollars, which sounds as their spending does", () => {
+        expect(ObjectTypeConfigMap.getConfigByIndex(ObjectTypeConfigMap.getIndexByType("Cannon")).price)
+            .toBe(CANNON_PRICE_DOLLARS);
+        objectEditObservable.set({kind: "add", object: makeObject("Cannon", me.userID), own: true});
+        settle();
+        expect(audio.calls).toEqual([]);
+        // Someone else's is added as anything is.
+        objectEditObservable.set({kind: "add", object: makeObject("Cannon"), own: false});
+        expect(audio.calls).toMatchObject([{method: "playAt", clip: "edit/blockAdd"}]);
     });
 
     it("sounds others coming and going where they do, never the user, nor a ghost", () => {
@@ -430,19 +507,53 @@ describe("one action, one sound", () => {
         expect(clips()).toEqual(["ui/press"]);
     });
 
-    it("hears the popup a removal was confirmed in, over the selection it moves, and nothing of the removal itself", () => {
-        objectSelectionObservable.set(object("Lamp-1"));
-        numOpenPopupsObservable.set(numOpenPopupsObservable.peek() + 1);
+    it("hears an attached object's coming apart alone, over the popup its removal was confirmed in and the selection " +
+        "it moves; and of one that hung on no face, the popup", () => {
+        for (const [objectType, heard] of [["Lamp", "edit/objectDestroy"], ["Volume", "ui/popupClose"]])
+        {
+            objectSelectionObservable.set(object(`${objectType}-1`));
+            numOpenPopupsObservable.set(numOpenPopupsObservable.peek() + 1);
+            settle();
+            audio.calls.length = 0;
+            // The confirming press, the popup going, the object with it, and a face picked out where it was.
+            controlPressedObservable.set("confirmButton");
+            numOpenPopupsObservable.set(numOpenPopupsObservable.peek() - 1);
+            objectEditObservable.set({kind: "remove", object: makeObject(objectType, me.userID), own: true});
+            objectSelectionObservable.set(null);
+            voxelQuadSelectionObservable.set(quad(9));
+            settle();
+            expect(clips()).toEqual([heard]);
+            voxelQuadSelectionObservable.set(null as unknown as VoxelQuadSelection);
+            settle();
+        }
+    });
+
+    it("hears a ball's burst alone of all its blast breaks, whether the burst was heard as the ball struck or with the " +
+        "server's word of it", () => {
+        const quadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(10, 12, COLLISION_LAYER_MIN);
+        const broken = () => {
+            cannonBlastObservable.set({position: AT, hitObjectIds: []});
+            objectEditObservable.set({kind: "remove", object: makeObject("Canvas"), own: false});
+            voxelBlockEditObservable.set({kind: "remove", quadIndex, own: false});
+        };
+        // Told by the server, with what it broke right after.
+        cannonBallBurstObservable.set({position: AT});
+        broken();
         settle();
+        expect(clips()).toEqual(["cannon/explosion"]);
+
+        // Heard as the ball struck, a moment before the server's word.
         audio.calls.length = 0;
-        // The confirming press, the popup going, the lamp with it, and a face picked out where it hung.
-        controlPressedObservable.set("confirmButton");
-        numOpenPopupsObservable.set(numOpenPopupsObservable.peek() - 1);
-        objectEditObservable.set({kind: "remove", object: makeObject("Lamp", me.userID), own: true});
-        objectSelectionObservable.set(null);
-        voxelQuadSelectionObservable.set(quad(9));
+        cannonBallBurstObservable.set({position: AT});
+        vi.advanceTimersByTime(4 * SOUND_MOMENT_MS);
+        broken();
         settle();
-        expect(clips()).toEqual(["ui/popupClose"]);
+        expect(clips()).toEqual(["cannon/explosion"]);
+
+        // Its own moment over, a block goes with its usual sound again.
+        audio.calls.length = 0;
+        voxelBlockEditObservable.set({kind: "remove", quadIndex, own: false});
+        expect(clips()).toEqual(["edit/blockRemove"]);
     });
 
     it("hears the most telling of the slight sounds of a moment, whatever their order", () => {
@@ -547,5 +658,120 @@ describe("a fan's own sound", () => {
         await fan.onDespawn();
         expect(audio.calls[1].voice.stops).toBe(1);
         expect(audio.calls.length).toBe(2);
+    });
+});
+
+describe("a cannon's own sounds", () => {
+    const FRAME_SECONDS = 1 / 60;
+    const facing = {x: 0, y: 1, z: 0};
+
+    function makeCannon(): {cannon: CannonGameObject, tell: (state: Partial<CannonState>) => void}
+    {
+        const params = makeObject("Cannon");
+        params.transform = new ObjectTransform({...AT}, facing, {x: 1, y: 1, z: 1});
+        const state = CannonStateUtil.getObjectState(params);
+        // Its barrel and gauges are its composer's, which plays no part here.
+        const cannon = Object.assign(Object.create(CannonGameObject.prototype), {params, components: {},
+            obj: new THREE.Object3D(), instancedMeshComposer: {getParts: () => [], redrawParts() {}},
+            state, shownAim: CannonStateUtil.getShownAim(state, facing), turnSoundSecondsLeft: 0}) as CannonGameObject;
+        // As the server tells of it: what it now is, under its one key.
+        const tell = (change: Partial<CannonState>) => {
+            const value = CannonStateUtil.encode({...CannonStateUtil.getObjectState(params), ...change});
+            params.metadata[ObjectMetadataKeyEnumMap.CannonState] = new EncodableByteString(value);
+            cannon.onSetMetadata(ObjectMetadataKeyEnumMap.CannonState, value);
+        };
+        return {cannon, tell};
+    }
+
+    function turnFor(cannon: CannonGameObject, seconds: number): void
+    {
+        for (let elapsed = 0; elapsed < seconds; elapsed += FRAME_SECONDS)
+            cannon.update(FRAME_SECONDS);
+    }
+
+    it("are its gears, from its pivot, for as long as it turns to aim at someone, and no longer", async () => {
+        const {cannon, tell} = makeCannon();
+        turnFor(cannon, 0.5);
+        expect(audio.calls).toEqual([]);
+
+        // Aiming, it is told where to turn a step at a time, as far as the server turns it between two flushes.
+        const stepSeconds = SIGNAL_BATCH_SEND_INTERVAL / 1000;
+        const pitch = CannonStateUtil.decode("").aim.pitch;
+        const tellStep = (step: number) => tell({aim: {yaw: step * CANNON_TURN_RATE * stepSeconds, pitch}});
+        tell({phase: CannonPhaseEnumMap.Aiming});
+        cannon.update(FRAME_SECONDS);
+        expect(audio.calls).toEqual([]);
+        tellStep(1);
+        cannon.update(FRAME_SECONDS);
+        expect(audio.calls).toMatchObject([{method: "playLoopAt", clip: "cannon/turn",
+            position: CannonAimUtil.getPivot(AT, facing), options: {volume: TURN_SOUND_VOLUME, range: TURN_SOUND_RANGE}}]);
+        // Whoever it may fire at hears it turning.
+        expect(TURN_SOUND_RANGE).toBeGreaterThan(CANNON_MAX_RANGE);
+
+        // Still turning, a step after another: one voice, going on.
+        for (let step = 2; step <= 12; ++step)
+        {
+            turnFor(cannon, stepSeconds);
+            tellStep(step);
+            expect(audio.calls.length).toBe(1);
+            expect(audio.calls[0].voice.stops).toBe(0);
+        }
+        // There, and standing aimed: its gears stop.
+        tell({phase: CannonPhaseEnumMap.Ready});
+        turnFor(cannon, stepSeconds + 0.5);
+        expect(audio.calls[0].voice.stops).toBe(1);
+        expect(audio.calls.length).toBe(1);
+    });
+
+    it("stop while it stays on someone standing still, not aimed yet, and start again as they move", async () => {
+        const {cannon, tell} = makeCannon();
+        const stepSeconds = SIGNAL_BATCH_SEND_INTERVAL / 1000;
+        const pitch = CannonStateUtil.decode("").aim.pitch;
+        tell({phase: CannonPhaseEnumMap.Aiming});
+        tell({aim: {yaw: CANNON_TURN_RATE * stepSeconds, pitch}});
+        turnFor(cannon, stepSeconds);
+        expect(audio.calls.length).toBe(1);
+        // On them, and they stand still: nothing more is told while it stays on them, and it has nothing to turn for.
+        turnFor(cannon, 0.5);
+        expect(audio.calls[0].voice.stops).toBe(1);
+        // They move again before it is aimed: its gears start again.
+        tell({aim: {yaw: 2 * CANNON_TURN_RATE * stepSeconds, pitch}});
+        cannon.update(FRAME_SECONDS);
+        expect(audio.calls.length).toBe(2);
+        expect(audio.calls[1].voice.stops).toBe(0);
+    });
+
+    it("are none as its barrel drops or rises with its switch, and its gears stop as it goes", async () => {
+        const {cannon, tell} = makeCannon();
+        tell({on: false});
+        turnFor(cannon, 1);
+        tell({on: true});
+        turnFor(cannon, 1);
+        expect(audio.calls).toEqual([]);
+
+        tell({phase: CannonPhaseEnumMap.Aiming, aim: {yaw: 2, pitch: 0}});
+        cannon.update(FRAME_SECONDS);
+        expect(audio.calls.length).toBe(1);
+        await cannon.onDespawn();
+        expect(audio.calls[0].voice.stops).toBe(1);
+    });
+
+    it("are a shot from its barrel's mouth, the way it points, each time it has a ball fewer", () => {
+        const {tell} = makeCannon();
+        const aim = {yaw: 0.7, pitch: 0.2};
+        tell({aim, phase: CannonPhaseEnumMap.Ready});
+        expect(audio.calls).toEqual([]);
+
+        const shots: {position: {x: number, y: number, z: number}, direction: {x: number, y: number, z: number}}[] = [];
+        cannonFiredObservable.addListener("test", shot => { shots.push(shot); });
+        tell({ballsLeft: CANNON_BALL_COUNT - 1, phase: CannonPhaseEnumMap.Waiting});
+        cannonFiredObservable.removeListener("test");
+
+        // (As its state keeps the aim, to less than a hundredth of a degree.)
+        const kept = CannonStateUtil.decode(CannonStateUtil.encode({...CannonStateUtil.decode(""), aim})).aim;
+        expect(shots).toHaveLength(1);
+        expect(shots[0].position).toEqual(CannonAimUtil.getMuzzle(AT, facing, kept));
+        expect(shots[0].direction).toEqual(CannonAimUtil.getDirection(facing, kept));
+        expect(audio.calls).toMatchObject([{method: "playAt", clip: "cannon/fire", position: shots[0].position}]);
     });
 });

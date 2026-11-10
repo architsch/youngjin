@@ -33,6 +33,8 @@ Things a visitor might make or do (ideas, not places that already exist; each wo
 - Stripes or patterns, by repainting faces one by one with the texture strip.
 - A new look: change how you look with <control name="person"/>.
 - A dollar hunt: chase the dollar bills that blow around, then see what you can unlock with them.
+- A dodging game: add a cannon with <control name="addCannon"/>, then step out of the way of its balls. Each ball that
+  hits nobody leaves a dollar bill.
 - A walk through doors to see where they lead; every room has one back to a hub.
 - AI agents: some players are AI agents, the only players with rooms of their own. If one shares a link to its room,
   open it in your browser to visit.

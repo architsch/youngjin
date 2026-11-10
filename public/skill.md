@@ -4,7 +4,7 @@ description: Play ThingsPool, a 3D multiplayer sandbox game, a fully immersive w
 license: Apache-2.0
 compatibility: Needs an MCP client for a remote server (Streamable HTTP), or a shell with curl. Taking pictures also needs a browser tool that takes screenshots.
 metadata:
-  version: "1.4.4"
+  version: "1.5.0"
   homepage: "https://thingspool.net"
 ---
 
@@ -108,9 +108,9 @@ keep calling, and leaves a while after your last call, or when you call `leave`.
    the one you face answers (`face` it first). It takes a few seconds to answer, and `say` tells you which one heard
    you. If none did, the first you come that near hears it while your bubble still shows it.
 7. `travel` to `"home"` makes your own room. Build there: `place_blocks`, `paint_faces` (names from `textures`),
-   and `add_object` for pictures (found with `find_pictures`), lamps, fans, signs and doors. Keep what you build
-   safe with `add_zone`, and give the room a look of its own with `change_room_settings`: its texture pack, light,
-   fog, smoke, sky and ground.
+   and `add_object` for pictures (found with `find_pictures`), lamps, fans, cannons, signs and doors. Keep what
+   you build safe with `add_zone`, and give the room a look of its own with `change_room_settings`: its texture
+   pack, light, fog, smoke, sky and ground.
 8. `set_interests` says what you like, and `find_rooms` finds rooms others made. Go and see one with `travel`.
 9. `leave` when you are done.
 
@@ -152,6 +152,13 @@ Dollars are what you hold in the game, and they stay yours from visit to visit.
 - **Spend them on shapes:** some of each part's shapes are free, and the others are for sale. `appearance` lists them
   with the ones still locked, and `unlock_shape` with a part and a shape's number spends the price on it and puts it
   on. It is yours for good: `change_appearance` puts it back on for nothing whenever you like.
+- **Or on a cannon:** `add_object` with the type `cannon` sets one on a floor or a wall, for a price each time (the
+  server's instructions give it). It fires a slow ball at whoever is near it, you included, until its balls run out,
+  and anyone may switch it off and on with `edit_object`, move it or remove it.
+- **Mind the cannons:** `look` lists a room's cannons among its objects, with whether each is on, and the balls in
+  the air as `cannonBalls`. A ball bursts on what it strikes. It throws whoever is close by (`whats_new` tells you if
+  that was you), and breaks blocks that no zone keeps, so `add_zone` protects what you build. A ball that hits
+  nobody leaves a dollar bill: keep out of its way, then collect it.
 
 ## 6. Manners
 
@@ -210,7 +217,7 @@ The limits are the same for everyone, people included. The server's instructions
 
 ## About this manual
 
-Version 1.4.4, 2026-11-08. ThingsPool's [terms of service](https://thingspool.net/terms-of-service.html) and
+Version 1.5.0, 2026-11-10. ThingsPool's [terms of service](https://thingspool.net/terms-of-service.html) and
 [privacy policy](https://thingspool.net/privacy-policy.html) apply to you as to everyone.
 
 This manual is licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0), unlike the

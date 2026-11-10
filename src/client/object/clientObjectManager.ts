@@ -24,6 +24,7 @@ import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../shared/object
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 import Room from "../../shared/room/types/room";
 import ClientObjectUtil from "./util/clientObjectUtil";
+import CannonStateUtil from "../../shared/object/util/cannonStateUtil";
 import RoomLoadProgressUtil from "../system/util/roomLoadProgressUtil";
 import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
 
@@ -299,7 +300,7 @@ const ClientObjectManager =
 
         // Re-announce the edited object's selection so its menu and chooser read the new value.
         const selection = objectSelectionObservable.peek();
-        if (selection && selection.gameObject.params.objectId === objectId)
+        if (selection && selection.gameObject.params.objectId === objectId && !isPlayedState(key, value))
             objectSelectionObservable.notify();
 
         return true;
@@ -378,7 +379,7 @@ const ClientObjectManager =
         if (signal.transform)
             announcePlacement(signal.objectId);
         else
-            announceChange(signal.objectId, signal.metadataKey);
+            announceChange(signal.objectId, signal.metadataKey, signal.metadataValue);
     },
     // Gone by now, it has nowhere to go.
     onSetObjectPathSignalReceived: async (signal: SetObjectPathSignal) => {
@@ -404,15 +405,22 @@ function announcePlacement(objectId: string): void
 }
 
 // Someone else's change to the settings of one of the room's own objects, which what a helper shows of what it is doing
-// (see LIVE_METADATA_KEYS) is none of.
-function announceChange(objectId: string, key: ObjectMetadataKey): void
+// (see LIVE_METADATA_KEYS) is none of, nor what the server tells of a cannon it plays.
+function announceChange(objectId: string, key: ObjectMetadataKey, value: string): void
 {
     const obj = App.getCurrentRoom()?.objectById[objectId];
     if (obj != undefined && ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).persistent &&
-        !LIVE_METADATA_KEYS.includes(key))
+        !LIVE_METADATA_KEYS.includes(key) && !isPlayedState(key, value))
     {
         objectEditObservable.set({kind: "change", object: obj, own: false});
     }
+}
+
+// Whether a value is the server's word of a cannon as it plays it, or of its ball: of that key a user sets the switch
+// alone, which is the one setting any tool shows (see CannonStateUtil.merge).
+function isPlayedState(key: ObjectMetadataKey, value: string): boolean
+{
+    return key == ObjectMetadataKeyEnumMap.CannonState && !CannonStateUtil.isSwitch(value);
 }
 
 // Rebinds persisted voxel objects to the new room's voxels, each to its own patch of them, which re-stamps

@@ -92,7 +92,8 @@ const ObjectUpdateUtil =
         return true;
     },
 
-    // asServer: as for canAddObject.
+    // asServer: as for canAddObject, and no restricted zone holds against it either, which keeps a stretch of the room
+    // from users.
     canRemoveObject(user: User, room: Room, signal: RemoveObjectSignal, asServer: boolean = false): boolean
     {
         // Check if the room doesn't match.
@@ -110,7 +111,7 @@ const ObjectUpdateUtil =
             return false;
 
         // Check if the object stands in a stretch of the room that is not this user's to clear.
-        if (RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex, obj.transform))
+        if (!asServer && RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex, obj.transform))
             return false;
 
         return true;
@@ -233,7 +234,8 @@ const ObjectUpdateUtil =
         // Check if the object as it will be has a scale its metadata allows (see
         // ObjectScalingConfig.getFixedScale).
         const metadata = {...obj.metadata, [signal.metadataKey]: new EncodableByteString(
-            ObjectMetadataEntryMap.preprocess(signal.metadataKey, signal.metadataValue))};
+            ObjectMetadataEntryMap.preprocess(signal.metadataKey, signal.metadataValue,
+                obj.metadata[signal.metadataKey]?.str))};
         return ObjectScaleUtil.allowsScale(obj.objectTypeIndex, metadata,
             (signal.transform ?? obj.transform).scale);
     },
@@ -248,7 +250,8 @@ const ObjectUpdateUtil =
         // Set the metadata.
         const obj = room.objectById[signal.objectId];
         obj.metadata[signal.metadataKey] = new EncodableByteString(
-            ObjectMetadataEntryMap.preprocess(signal.metadataKey, signal.metadataValue));
+            ObjectMetadataEntryMap.preprocess(signal.metadataKey, signal.metadataValue,
+                obj.metadata[signal.metadataKey]?.str));
 
         // And the transform that came with it, already checked as a move.
         const transformSignal = getTransformSignal(signal);

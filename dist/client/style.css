@@ -317,6 +317,9 @@
   .top-\[0\.1em\] {
     top: 0.1em;
   }
+  .top-full {
+    top: 100%;
+  }
   .-right-2 {
     right: calc(var(--spacing) * -2);
   }
@@ -433,6 +436,9 @@
   }
   .-mt-6 {
     margin-top: calc(var(--spacing) * -6);
+  }
+  .mt-1 {
+    margin-top: calc(var(--spacing) * 1);
   }
   .mt-\[clamp\(0\.5rem\,2vw\,1\.25rem\)\] {
     margin-top: clamp(0.5rem, 2vw, 1.25rem);
@@ -1305,6 +1311,15 @@
   .fill-fuchsia-400 {
     fill: var(--color-fuchsia-400);
   }
+  .fill-red-400 {
+    fill: var(--color-red-400);
+  }
+  .fill-red-400\/40 {
+    fill: color-mix(in srgb, oklch(70.4% 0.191 22.216) 40%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      fill: color-mix(in oklab, var(--color-red-400) 40%, transparent);
+    }
+  }
   .fill-violet-300\/40 {
     fill: color-mix(in srgb, oklch(81.1% 0.111 293.571) 40%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
@@ -1334,6 +1349,9 @@
   }
   .stroke-green-400 {
     stroke: var(--color-green-400);
+  }
+  .stroke-red-400 {
+    stroke: var(--color-red-400);
   }
   .stroke-sky-300 {
     stroke: var(--color-sky-300);
@@ -1466,6 +1484,9 @@
   }
   .pr-7 {
     padding-right: calc(var(--spacing) * 7);
+  }
+  .pb-6 {
+    padding-bottom: calc(var(--spacing) * 6);
   }
   .pl-0 {
     padding-left: calc(var(--spacing) * 0);

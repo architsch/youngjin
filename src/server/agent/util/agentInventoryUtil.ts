@@ -4,9 +4,9 @@ import Vector3DUtil from "../../../shared/math/util/vector3DUtil";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import DollarBillObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/dollarBillObjectTypeConfig";
+import ObjectObstacleUtil from "../../../shared/object/util/objectObstacleUtil";
 import Room from "../../../shared/room/types/room";
 import { COLLISION_LAYER_HEIGHT, PLAYER_SHAPE_PRICE_DOLLARS } from "../../../shared/system/sharedConstants";
-import Voxel from "../../../shared/voxel/types/voxel";
 import VoxelVertex from "../../../shared/voxel/types/voxelVertex";
 import VoxelPathUtil from "../../../shared/voxel/util/voxelPathUtil";
 import AgentUserContext from "../types/agentUserContext";
@@ -53,7 +53,7 @@ const AgentInventoryUtil =
             const bill = findNearestBill(ctx, room, unreachable);
             if (bill == undefined)
                 break;
-            const goal = findPlaceUnder(room.voxelGrid.voxels, bill.transform.pos);
+            const goal = findPlaceUnder(room, bill.transform.pos);
             const outcome = (goal == undefined) ? "noPath" : await AgentBodyUtil.walk(ctx, goal,
                 {faceToward: bill.transform.pos, until: () => room.objectById[bill.objectId] != bill});
             if (getDollars(ctx) > before)
@@ -90,11 +90,13 @@ function findNearestBill(ctx: AgentUserContext, room: Room, unreachable: Set<str
 }
 
 // Where to stand for a bill, which may be up in the air: on the nearest floor below it.
-function findPlaceUnder(voxels: Voxel[], pos: Vec3): VoxelVertex | undefined
+function findPlaceUnder(room: Room, pos: Vec3): VoxelVertex | undefined
 {
+    const isOpen = ObjectObstacleUtil.getClearance(room.objectById);
     for (let y = pos.y; y >= 0; y -= COLLISION_LAYER_HEIGHT)
     {
-        const vertex = VoxelPathUtil.findStandingVertexNear(voxels, {x: pos.x, y, z: pos.z});
+        const vertex = VoxelPathUtil.findStandingVertexNear(room.voxelGrid.voxels, {x: pos.x, y, z: pos.z}, undefined,
+            isOpen);
         if (vertex != undefined)
             return vertex;
     }

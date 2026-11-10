@@ -55,6 +55,7 @@ export const HELPER_REMARKS: {[personality in Exclude<NpcPersonality, "idle">]: 
             sign: {liked: ["{Thing}. Good signs help newcomers find their way."]},
             mirror: {liked: ["{Thing}! I can see myself in it. Looking good, if I say so myself."]},
             lamp: {liked: ["{Thing} gives such a {nice} light. It makes the room feel friendly."]},
+            cannon: {liked: ["{Thing}. It shoots balls at whoever is near. A ball that hits nobody leaves a dollar bill."]},
         },
     },
     builder: {
@@ -74,6 +75,8 @@ export const HELPER_REMARKS: {[personality in Exclude<NpcPersonality, "idle">]: 
             art: {liked: ["'{title}' by {painter}. A picture this good deserves a big, solid wall."]},
             lamp: {liked: ["{Thing}! A lamp at the top of the stairs is my favorite trick. You can change its color, too."]},
             fan: {liked: ["{Thing}! Put a fan on the floor and it bounces people up. Best bounce pad there is."]},
+            cannon: {disliked: ["{Thing}... Its balls break blocks! Not in a restricted zone, though. That's where "
+                + "I'd build."]},
             door: {liked: ["{Thing}. A frame of blocks around a door makes it look great."]},
             sign: {liked: ["{Thing}. Every good building needs clear signs."]},
             mirror: {liked: ["{Thing}! Only ThingsPool's admins can hang a mirror. I'd put one in every room."]},
@@ -99,6 +102,7 @@ export const HELPER_REMARKS: {[personality in Exclude<NpcPersonality, "idle">]: 
                 + "farther.", "A door! You click one to go through it. I could open doors all day."]},
             mirror: {liked: ["{Thing}! It shows the whole room behind me. Handy for an explorer."]},
             sign: {liked: ["{Thing}. Signs are how I find my way around a new room."]},
+            cannon: {liked: ["{Thing}! It shoots at whoever comes near. A room with a cannon in it is a real adventure."]},
         },
     },
     storyteller: {
@@ -147,6 +151,8 @@ export const HELPER_REMARKS: {[personality in Exclude<NpcPersonality, "idle">]: 
             photo: {liked: ["'{title}'! Youngjin, who made ThingsPool, took this photo. Nice shot, Youngjin!"]},
             mirror: {liked: ["{Thing}! Hello, gorgeous. Oh wait, that's me."]},
             fan: {liked: ["{Thing}! Fans blow people around here. I call it a free flying lesson."]},
+            cannon: {liked: ["{Thing}! It shoots balls at whoever is near. Step out of the way, and the ball leaves a "
+                + "dollar bill!"]},
             door: {liked: ["{Thing}! Doors here open with a click. No keys to lose. My kind of door!"]},
             lamp: {liked: ["{Thing}! You can change a lamp's color here. I'd make every lamp a different color."]},
             sign: {liked: ["{Thing}. I read every sign twice. You never know when one will be funny."],
@@ -207,6 +213,7 @@ export const HELPER_REMARKS: {[personality in Exclude<NpcPersonality, "idle">]: 
             photo: {liked: ["'{title}', a photo by Youngjin, who made ThingsPool. Hung nice and straight. Good."]},
             fan: {liked: ["{Thing}. Handy on a hot day, I suppose. Mind it doesn't blow you away."],
                 disliked: ["{Thing}. Fans blow people all over the room. Hmph."]},
+            cannon: {disliked: ["{Thing}. It shoots balls at people, and the balls break blocks. Hmph. More to tidy up."]},
             lamp: {liked: ["{Thing}. A well-lit room is a safe room. Good."]},
             door: {liked: ["{Thing}. Keep the way to a door clear, I always say."]},
             sign: {liked: ["{Thing}. Signs keep order. I like order."]},

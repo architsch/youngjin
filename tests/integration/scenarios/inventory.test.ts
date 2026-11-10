@@ -39,7 +39,6 @@ import { InventoryItemTypeEnumMap } from "../../../src/shared/inventory/types/in
 import EncodingUtil from "../../../src/shared/networking/util/encodingUtil";
 import SignalTypeConfigMap from "../../../src/shared/networking/maps/signalTypeConfigMap";
 import BufferState from "../../../src/shared/networking/types/bufferState";
-import ObjectCategoryConfigMap from "../../../src/shared/object/maps/objectCategoryConfigMap";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
@@ -48,8 +47,8 @@ import ObjectWaypoint from "../../../src/shared/object/types/objectWaypoint";
 import RemoveObjectSignal from "../../../src/shared/object/types/removeObjectSignal";
 import SetObjectPathSignal from "../../../src/shared/object/types/setObjectPathSignal";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
-import DollarBillObjectTypeConfig, { DOLLAR_BILL_REACH,
-    DOLLAR_BILL_REST_HEIGHT } from "../../../src/shared/object/types/objectTypeConfig/dollarBillObjectTypeConfig";
+import DollarBillObjectTypeConfig, { DOLLAR_BILL_REACH, DOLLAR_BILL_REST_HEIGHT,
+    DOLLAR_BILL_SPAWN_CAP } from "../../../src/shared/object/types/objectTypeConfig/dollarBillObjectTypeConfig";
 import FanObjectTypeConfig, { FAN_SETTINGS } from "../../../src/shared/object/types/objectTypeConfig/fanObjectTypeConfig";
 import { PLAYER_EYE_HEIGHT, PLAYER_HEIGHT, PLAYER_MAX_WALK_INPUT, PLAYER_RADIUS_XZ,
     PLAYER_WALK_SPEED_PER_INPUT } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
@@ -81,7 +80,8 @@ const HUB_ID = "hubAAAAAAAAAAAAAAAAA";
 const BILL_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType(DollarBillObjectTypeConfig.objectType);
 const FAN_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType(FanObjectTypeConfig.objectType);
 const NPC_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Npc");
-const MAX_BILLS = ObjectCategoryConfigMap.getMaxCountPerRoom(DollarBillObjectTypeConfig.category);
+// As many as a room brings by itself: with that many in it, whatever left them there, it brings no more.
+const MAX_BILLS = DOLLAR_BILL_SPAWN_CAP;
 // How far ahead of someone a bill lies well within their reach, and how far it lies in the scenes with something in
 // the way, whose walls and steps are laid out for it.
 const WITHIN_REACH = 0.75 * DOLLAR_BILL_REACH;
@@ -737,7 +737,7 @@ describe("bills in a room", () => {
         }
     });
 
-    it("stop at the room's cap, however long it stays full", async () => {
+    it("stop once the room holds as many as it brings by itself, however long it stays so", async () => {
         holdGusts();
         await join("someone");
         flushUntil(() => getBills().length == MAX_BILLS, MAX_BILLS * SPAWN_INTERVAL_MS[1] + 60_000);

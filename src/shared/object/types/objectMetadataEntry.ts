@@ -2,7 +2,9 @@ import User from "../../user/types/user";
 
 export default interface ObjectMetadataEntry
 {
-    preprocessingMethod: (rawValue: string) => string;
+    // What a value is stored as. currentValue: what the object holds under the key as the value is set, for a key
+    // only part of which a setting changes; absent as an object is added.
+    preprocessingMethod: (rawValue: string, currentValue?: string) => string;
     // Who may set the key on any object, on top of the object type's own rule (see
     // ObjectTypeConfig.canUserSetObjectMetadata). Absent means whoever the type allows.
     canUserSet?: (user: User) => boolean;

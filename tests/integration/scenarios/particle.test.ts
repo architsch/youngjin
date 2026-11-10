@@ -3,7 +3,8 @@
  * high-water mark), sprite slots and phase continuity, clock rebasing, waveforms (level and closed-form
  * integral), parameter-row baking, the effect definitions in their JSON map (each one sound, the checker
  * catching what a compiler would, and every one an object type names being there), how far an effect's stream
- * carries, the gameplay events that trigger effects (fired by edits only), and the components' baseline +
+ * carries, the gameplay events that trigger effects (a block's removal, fired by edits only; an attached object's
+ * going, broken all over its face; a cannon's shot, its ball's burst, and its own going in a puff), and the components' baseline +
  * override resolution, an emitter's reach and its particles' pace among it. What the shader draws is checked headlessly instead (see
  * docs/testing/integration/scenarios.md).
  */
@@ -70,7 +71,14 @@ import { ObjectMetadata } from "../../../src/shared/object/types/objectMetadata"
 import AnimatedSprite from "../../../src/client/object/components/animatedSprite";
 import GameObject from "../../../src/client/object/types/gameObject/gameObject";
 import ClientVoxelManager from "../../../src/client/voxel/clientVoxelManager";
-import { objectCollectedObservable, roomShapeChangedObservable, voxelBlockEditObservable } from "../../../src/client/system/clientObservables";
+import { cannonBallBurstObservable, cannonFiredObservable, objectCollectedObservable, objectEditObservable,
+    roomShapeChangedObservable, voxelBlockEditObservable } from "../../../src/client/system/clientObservables";
+import { BREAK_SPACING, MAX_BREAKS } from "../../../src/client/graphics/particle/util/particleTriggerUtil";
+import CannonStateUtil from "../../../src/shared/object/util/cannonStateUtil";
+import PhysicsColliderStateUtil from "../../../src/shared/physics/util/physicsColliderStateUtil";
+import EncodableByteString from "../../../src/shared/networking/types/encodableByteString";
+import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
+import Vec3 from "../../../src/shared/math/types/vec3";
 import Vec2 from "../../../src/shared/math/types/vec2";
 import Waveform from "../../../src/shared/math/types/waveform";
 import WaveformUtil from "../../../src/shared/math/util/waveformUtil";
@@ -413,8 +421,33 @@ describe("effect definitions", () => {
     });
 
     it("include every effect the gameplay events play, whatever the editor renamed", () => {
-        for (const effect of ["blockRemoved"])
+        for (const effect of ["blockRemoved", "dollarCollected", "cannonFire", "cannonBallBurst", "cannonPuff", "objectDestroyed"])
             expect(ParticleEffectConfigMap.getConfig(effect), effect).toBeDefined();
+    });
+
+    it("draws a sleeper's letters upright, a few at a time, rising", () => {
+        const [layer] = ParticleEffectConfigMap.getConfig("cannonSleep")!.layers;
+        expect(layer.sprite).toBe("sleepZ");
+        expect(layer.orientation).toBe("velocity");
+        expect(layer.gravity ?? 0).toBe(0);
+        expect(layer.spin).toBeUndefined();
+        expect(layer.burst).toBeUndefined();
+        // No more than a few in the air at once.
+        expect(layer.rate! * layer.lifetime[1]).toBeLessThanOrEqual(4);
+    });
+
+    it("keeps each of an object's breaks slight: a few small chips, and dust that hides nothing", () => {
+        const breakLayers = ParticleEffectConfigMap.getConfig("objectDestroyed")!.layers;
+        const blockLayers = ParticleEffectConfigMap.getConfig("blockRemoved")!.layers;
+        const chips = breakLayers.find(layer => layer.sprite == "chip")!;
+        const blockChips = blockLayers.find(layer => layer.sprite == "chip")!;
+        expect(chips.burst!).toBeLessThan(blockChips.burst!);
+        expect(chips.size[1]).toBeLessThan(blockChips.size[1]);
+        expect(chips.speed[1]).toBeLessThan(blockChips.speed[1]);
+        for (const layer of breakLayers.filter(layer => layer.sprite != "chip"))
+            expect(Math.max(...layer.alphaCurve!)).toBeLessThanOrEqual(0.5);
+        for (const layer of breakLayers)
+            expect(layer.lifetime[1]).toBeLessThanOrEqual(0.6);
     });
 
     it("include every effect and sprite an object type shows, which it names from shared code", () => {
@@ -611,6 +644,104 @@ describe("voxel block events", () => {
         ClientVoxelManager.removeVoxelBlocksByChunk(room, 4, 4, 2, 2, 1, 2, false);
         expect(blockEdits).toEqual([]);
         expect(shapeChanges).toEqual([ROOM_ID, ROOM_ID]);
+    });
+});
+
+describe("object and cannon events", () => {
+    const AT = {x: 6, y: 1.5, z: 9};
+    const WALL_FACING = {x: 0, y: 0, z: 1};
+    let play: ReturnType<typeof vi.spyOn>;
+
+    function makeObject(objectType: string, scale = {x: 1, y: 1, z: 1}, metadata: {[key: number]: string} = {},
+        facing = WALL_FACING): AddObjectSignal
+    {
+        const signal = new AddObjectSignal("room", "someone", "Someone", ObjectTypeConfigMap.getIndexByType(objectType),
+            `${objectType}-1`, new ObjectTransform({...AT}, {...facing}, {...scale}));
+        for (const [key, value] of Object.entries(metadata))
+            signal.metadata[Number(key)] = new EncodableByteString(value);
+        return signal;
+    }
+
+    function played(effect: string): {position: Vec3, options: {direction?: Vec3} | undefined}[]
+    {
+        return play.mock.calls.filter(call => call[0] == effect).map(call => ({position: call[1] as Vec3,
+            options: call[2] as {direction?: Vec3} | undefined}));
+    }
+
+    beforeEach(() => {
+        play = vi.spyOn(ParticleSystem, "play").mockImplementation(() => {});
+        return () => play.mockRestore();
+    });
+
+    it("breaks an attached object taken away all over its face, whoever took it, each break out of the face", () => {
+        for (const own of [false, true])
+        {
+            play.mockClear();
+            const lamp = makeObject("Lamp");
+            objectEditObservable.set({kind: "remove", object: lamp, own});
+            const breaks = played("objectDestroyed");
+            const {hitbox} = PhysicsColliderStateUtil.getObjectColliderState(lamp.objectTypeIndex, lamp.transform)!;
+            const size = ObjectScaleUtil.getObjectSize(lamp.objectTypeIndex, lamp.transform.scale);
+            expect(breaks.length).toBe(Math.max(1, Math.floor(size.x / BREAK_SPACING)) * Math.max(1, Math.floor(size.y / BREAK_SPACING)));
+            for (const {position, options} of breaks)
+            {
+                expect(Math.abs(position.x - hitbox.center.x)).toBeLessThanOrEqual(0.5 * size.x);
+                expect(Math.abs(position.y - hitbox.center.y)).toBeLessThanOrEqual(0.5 * size.y);
+                expect(position.z).toBeCloseTo(hitbox.center.z, 9);
+                expect(options?.direction).toEqual(WALL_FACING);
+            }
+            // Spread over it, about its middle.
+            const mean = (axis: "x" | "y") => breaks.reduce((sum, {position}) => sum + position[axis], 0) / breaks.length;
+            expect(mean("x")).toBeCloseTo(hitbox.center.x, 9);
+            expect(mean("y")).toBeCloseTo(hitbox.center.y, 9);
+            expect(new Set(breaks.map(({position}) => `${position.x},${position.y}`)).size).toBe(breaks.length);
+        }
+    });
+
+    it(`breaks a large one in no more than ${MAX_BREAKS} places, as much farther apart`, () => {
+        const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
+        const largest = ObjectScaleUtil.getMaxObjectSize(canvasTypeIndex);
+        const canvas = makeObject("Canvas", {x: largest.x, y: largest.y, z: 1});
+        const size = ObjectScaleUtil.getObjectSize(canvasTypeIndex, canvas.transform.scale);
+        expect(size.x * size.y, "the largest canvas is larger than the breaks a block apart would cover")
+            .toBeGreaterThan(MAX_BREAKS * BREAK_SPACING * BREAK_SPACING);
+        objectEditObservable.set({kind: "remove", object: canvas, own: false});
+        const breaks = played("objectDestroyed");
+        expect(breaks.length).toBeLessThanOrEqual(MAX_BREAKS);
+        expect(breaks.length).toBeGreaterThanOrEqual(0.5 * MAX_BREAKS);
+        const xs = [...new Set(breaks.map(({position}) => position.x))].sort((a, b) => a - b);
+        expect(xs[1] - xs[0]).toBeGreaterThan(BREAK_SPACING);
+    });
+
+    it("plays nothing for an object added or changed, nor for the going of one that hung on no face, nor of an NPC", () => {
+        objectEditObservable.set({kind: "add", object: makeObject("Lamp"), own: true});
+        objectEditObservable.set({kind: "change", object: makeObject("Lamp"), own: false});
+        objectEditObservable.set({kind: "remove", object: makeObject("Volume"), own: false});
+        objectEditObservable.set({kind: "remove", object: makeObject("Player"), own: false});
+        objectEditObservable.set({kind: "remove", object: makeObject("CannonBall"), own: false});
+        objectEditObservable.set({kind: "remove", object: makeObject("Npc", undefined, {}, {x: 0, y: 1, z: 0}), own: false});
+        expect(play).not.toHaveBeenCalled();
+    });
+
+    it("sends a cannon that has fired its last ball off in one puff from its middle, and breaks one that hasn't", () => {
+        const floor = {x: 0, y: 1, z: 0};
+        const spent = makeObject("Cannon", undefined, {[ObjectMetadataKeyEnumMap.CannonState]:
+            CannonStateUtil.encode({...CannonStateUtil.decode(""), ballsLeft: 0})}, floor);
+        objectEditObservable.set({kind: "remove", object: spent, own: false});
+        expect(play.mock.calls).toEqual([["cannonPuff",
+            PhysicsColliderStateUtil.getObjectColliderState(spent.objectTypeIndex, spent.transform)!.hitbox.center]]);
+
+        play.mockClear();
+        objectEditObservable.set({kind: "remove", object: makeObject("Cannon", undefined, {}, floor), own: true});
+        expect(played("cannonPuff")).toEqual([]);
+        expect(played("objectDestroyed").length).toBeGreaterThan(1);
+    });
+
+    it("plays a cannon's shot at its barrel's mouth, out the way it points, and its ball's burst where it burst", () => {
+        const direction = {x: 0.6, y: 0, z: 0.8};
+        cannonFiredObservable.set({position: AT, direction});
+        cannonBallBurstObservable.set({position: {x: 1, y: 2, z: 3}});
+        expect(play.mock.calls).toEqual([["cannonFire", AT, {direction}], ["cannonBallBurst", {x: 1, y: 2, z: 3}]]);
     });
 });
 

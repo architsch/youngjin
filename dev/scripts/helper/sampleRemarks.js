@@ -6,7 +6,7 @@
 //
 // By default, every played personality, two helpers of each (with tastes of their own), and six remarks from each on
 // things picked at random from every picture, lamp color and kind of thing there is; --thing hears them all on one
-// picture (by its path), or "lamp", "fan", "door", "mirror" or "sign".
+// picture (by its path), or "lamp", "fan", "cannon", "door", "mirror" or "sign".
 
 const path = require("path");
 const Module = require("module");
@@ -50,7 +50,7 @@ function allThings()
     const pictures = manifest.images.filter(image => !image.disabled)
         .map(image => ({objectType: image.path.startsWith("1/") ? "Canvas" : "Prop", picture: image.path}));
     const lamps = Array.from({length: LIGHT_COLORS}, (_, color) => ({objectType: "Lamp", color}));
-    return [...pictures, ...lamps, {objectType: "Fan"}, {objectType: "Door", text: "Gallery"}, {objectType: "Door"},
+    return [...pictures, ...lamps, {objectType: "Fan"}, {objectType: "Cannon"}, {objectType: "Door", text: "Gallery"}, {objectType: "Door"},
         {objectType: "Mirror"}, {objectType: "Label", text: "Information Desk"}, {objectType: "Label"}];
 }
 
@@ -67,7 +67,7 @@ function main()
     const personalities = (option("personality") != undefined) ? [option("personality")] : played;
     const everything = allThings();
     const things = (wanted == undefined) ? everything : everything.filter(thing => thing.picture == wanted
-        || ({lamp: "Lamp", fan: "Fan", door: "Door", mirror: "Mirror", sign: "Label"})[wanted] == thing.objectType);
+        || ({lamp: "Lamp", fan: "Fan", cannon: "Cannon", door: "Door", mirror: "Mirror", sign: "Label"})[wanted] == thing.objectType);
     if (things.length == 0)
     {
         console.log(`No thing "${wanted}".`);

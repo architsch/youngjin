@@ -19,6 +19,10 @@ import CanvasObjectTypeConfig, {
     CANVAS_IMAGE_SUBFOLDER } from "../../../shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
 import DoorObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import FanObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/fanObjectTypeConfig";
+import { CANNON_FIRE_INTERVAL_SECONDS, CANNON_MAX_RANGE,
+    CANNON_MIN_RANGE } from "../../../shared/object/types/objectTypeConfig/cannonObjectTypeConfig";
+import CannonStateUtil from "../../../shared/object/util/cannonStateUtil";
+import { InventoryItemTypeEnumMap } from "../../../shared/inventory/types/inventoryItemType";
 import LampObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/lampObjectTypeConfig";
 import MirrorObjectTypeConfig, {
     MIRROR_COLOR_PALETTE_NAME } from "../../../shared/object/types/objectTypeConfig/mirrorObjectTypeConfig";
@@ -38,7 +42,7 @@ import ObjectUpdateUtil from "../../../shared/object/util/objectUpdateUtil";
 import QuarterTurnsUtil from "../../../shared/object/util/quarterTurnsUtil";
 import Room from "../../../shared/room/types/room";
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
-import { HUB_ROOM_ID_KEYWORD, OBJECT_USER_NAME_MAX_LENGTH, UNIT_VEC3, VOXEL_CELL_SIZE,
+import { DIR_VEC_BY_NAME, HUB_ROOM_ID_KEYWORD, OBJECT_USER_NAME_MAX_LENGTH, UNIT_VEC3, VOXEL_CELL_SIZE,
     ZONE_USER_NAME_FOR_NOBODY } from "../../../shared/system/sharedConstants";
 import User from "../../../shared/user/types/user";
 import RestrictedZoneUtil from "../../../shared/voxel/util/restrictedZoneUtil";
@@ -65,7 +69,7 @@ const MIRROR_ADMIN_NOTE = "Only an admin changes one.";
 
 // What agents may add, by the names they give the types. NPCs, with how a helper is played (its BehaviorPrefs), and
 // mirrors are an admin's alone (see NpcObjectTypeConfig, MirrorObjectTypeConfig), and no agent is one.
-const ADDABLE_OBJECT_TYPES = ["Canvas", "Prop", "Lamp", "Fan", "Label", "Door"];
+const ADDABLE_OBJECT_TYPES = ["Canvas", "Prop", "Lamp", "Fan", "Cannon", "Label", "Door"];
 // The types whose look is chosen, by its number among their pre-encoded looks (a lamp's follows its size).
 const LOOK_CHOOSING_OBJECT_TYPES = ["Canvas", "Label", "Door"];
 
@@ -82,6 +86,12 @@ const PICTURE_DESCRIPTION_WORDS = 3;
 const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 const npcTypeIndex = ObjectTypeConfigMap.getIndexByType("Npc");
 const mirrorTypeIndex = ObjectTypeConfigMap.getIndexByType("Mirror");
+const cannonTypeIndex = ObjectTypeConfigMap.getIndexByType("Cannon");
+
+const CANNON_NOTE = `A cannon: while on, every ${CANNON_FIRE_INTERVAL_SECONDS[0]} to ${CANNON_FIRE_INTERVAL_SECONDS[1]} `
+    + `seconds it turns to the nearest person within ${CANNON_MAX_RANGE / VOXEL_CELL_SIZE} cells of it, no nearer than `
+    + `${CANNON_MIN_RANGE / VOXEL_CELL_SIZE}, with nothing between, and fires a ball at where they stand. Its last ball `
+    + "fired, it is gone. Anyone may switch it off or on (edit_object with switched_on), move it or remove it.";
 
 // What an agent places and arranges: canvases, props, lamps, fans, and (in a room of its own) labels, doors and
 // restricted zones. Each change is sent as the signal a browser sends for a person's, so it passes the same checks
@@ -147,13 +157,18 @@ const AgentObjectUtil =
         const full = describeFull(room, objectTypeIndex);
         if (full != undefined)
             return {error: full};
+        // What costs dollars the server takes as it adds it (see ServerObjectManager), and refuses whoever is short.
+        const price = ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex).price ?? 0;
+        if (getDollars(ctx) < price)
+            return {error: `A ${request.type} costs $${price}, and you hold $${getDollars(ctx)}. collect_bill gets you `
+                + "dollars, and coming back gives you some once a day."};
 
         const quadIndex = AgentGridUtil.getFaceQuadIndex(request.on);
         if (quadIndex < 0 || !VoxelQueryUtil.isVoxelQuadVisible(room.voxelGrid.voxels, quadIndex))
             return {error: describeHiddenFace(request.on)};
         const {center, dir} = AgentGridUtil.getFaceCenter(room.voxelGrid.voxels, quadIndex);
         if (!ObjectAttachmentUtil.allowsFacing(objectTypeIndex, dir))
-            return {error: `A ${request.type} hangs only on a wall: a north, south, east or west side.`};
+            return {error: describeFacings(objectTypeIndex)};
 
         const made = await makeContent(ctx, room, objectType, request, dir);
         if ("error" in made)
@@ -169,7 +184,10 @@ const AgentObjectUtil =
         await AgentSignalUtil.send(ctx, "addObjectSignal",
             new AddObjectSignal(room.id, user.id, user.userName, objectTypeIndex, objectId, transform, made.metadata));
         const added = room.objectById[objectId];
-        return (added != undefined) ? {added: describeObject(added)} : {error: "It couldn't be added there."};
+        if (added == undefined)
+            return {error: "It couldn't be added there."};
+        return (price > 0) ? {added: describeObject(added), spent: price, dollars: getDollars(ctx)}
+            : {added: describeObject(added)};
     },
     editObject: async (ctx: AgentUserContext, edit: AgentObjectEdit): Promise<object> =>
     {
@@ -231,6 +249,12 @@ const AgentObjectUtil =
                 return refuse("door to arrive at");
             changes.push({key: ObjectMetadataKeyEnumMap.DestinationDoorLabel, value: edit.arriveAt});
         }
+        if (edit.switchedOn != undefined)
+        {
+            if (objectType != "Cannon")
+                return refuse("switch");
+            changes.push({key: ObjectMetadataKeyEnumMap.CannonState, value: CannonStateUtil.encodeSwitch(edit.switchedOn)});
+        }
         if (edit.keepFor != undefined || edit.name != undefined)
         {
             if (objectType != "Volume")
@@ -283,7 +307,7 @@ const AgentObjectUtil =
             return {error: describeHiddenFace(on)};
         const {center, dir} = AgentGridUtil.getFaceCenter(room.voxelGrid.voxels, quadIndex);
         if (!ObjectAttachmentUtil.allowsFacing(obj.objectTypeIndex, dir))
-            return {error: `A ${config.objectType.toLowerCase()} hangs only on a wall: a north, south, east or west side.`};
+            return {error: describeFacings(obj.objectTypeIndex)};
 
         // A picture is turned to suit the face it goes on, which changes a prop's shape as it changes its turn.
         const hasTurns = obj.metadata[ObjectMetadataKeyEnumMap.QuarterTurns] != undefined;
@@ -389,9 +413,32 @@ function describeObject(obj: AddObjectSignal): object
         text: (text.length > 0) ? text : undefined,
         look: getLookNumber(obj),
         by: (obj.sourceUserName.length > 0) ? obj.sourceUserName : undefined,
+        ...((obj.objectTypeIndex == cannonTypeIndex) ? describeCannon(obj) : {}),
         note: (obj.objectTypeIndex == npcTypeIndex) ? STILL_NPC_NOTE
-            : (obj.objectTypeIndex == mirrorTypeIndex) ? describeMirror(obj) : undefined,
+            : (obj.objectTypeIndex == mirrorTypeIndex) ? describeMirror(obj)
+            : (obj.objectTypeIndex == cannonTypeIndex) ? CANNON_NOTE : undefined,
     };
+}
+
+// Whether a cannon is switched on, and how many balls it has left to fire.
+function describeCannon(obj: AddObjectSignal): {switchedOn: boolean, ballsLeft: number}
+{
+    const {on, ballsLeft} = CannonStateUtil.getObjectState(obj);
+    return {switchedOn: on, ballsLeft};
+}
+
+// Why a type can't go on the side asked for: which sides of a block it takes.
+function describeFacings(objectTypeIndex: number): string
+{
+    const typeName = ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex).objectType.toLowerCase();
+    return ObjectAttachmentUtil.allowsFacing(objectTypeIndex, DIR_VEC_BY_NAME["+y"])
+        ? `A ${typeName} stands only on a floor or a wall: an up, north, south, east or west side.`
+        : `A ${typeName} hangs only on a wall: a north, south, east or west side.`;
+}
+
+function getDollars(ctx: AgentUserContext): number
+{
+    return ctx.inventory[InventoryItemTypeEnumMap.Dollar] ?? 0;
 }
 
 // What a mirror shows, through its surface's color as far as that is opaque (see MirrorObjectTypeConfig).
@@ -541,6 +588,11 @@ async function makeContent(ctx: AgentUserContext, room: Room, objectType: string
             return {scale: undefined, metadata: toMetadata({
                 [ObjectMetadataKeyEnumMap.ForceProperties]: FanObjectTypeConfig.util.getDefaultForceProperties(),
                 [ObjectMetadataKeyEnumMap.FanColor]: FanObjectTypeConfig.util.getDefaultColor(),
+            })};
+        // Switched on, as a browser adds one: the server plays it from there (see CannonUtil).
+        case "Cannon":
+            return {scale: undefined, metadata: toMetadata({
+                [ObjectMetadataKeyEnumMap.CannonState]: CannonStateUtil.encodeSwitch(true),
             })};
         case "Label":
             return {scale: sized, metadata: toMetadata({

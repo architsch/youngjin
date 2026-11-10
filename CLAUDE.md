@@ -29,7 +29,7 @@
   - `/db` - Database utilities and types (Firestore, Firebase Storage, caching)
   - `/inventory` - What users hold (ServerInventoryManager), and the $1 bills that fill it, which the server spawns, blows about and lets people collect (DollarBillUtil, DollarBillFlightUtil)
   - `/networking` - Express.js routers and general networking utilities (e.g. address (URL) formatting, cookies, firebase-admin, and rate-limiter initialization)
-  - `/object` - Server-side object management (ServerObjectManager)
+  - `/object` - Server-side object management (ServerObjectManager), and the cannons and cannon balls the server plays (CannonUtil, CannonBallUtil)
   - `/room` - Game room management
   - `/sockets` - Socket.IO initializer and event handlers
   - `/ssg` - Static Site Generator (builds static pages)
@@ -42,8 +42,8 @@
   - `/inventory` - Inventory types: the kinds of item a user can hold, the signals that tell them what they hold and buy with it, and which shapes are for sale (PlayerShapeItemUtil)
   - `/math` - Math utilities (vectors, geometry, etc.)
   - `/networking` - Data encoding/decoding utilities and Socket.IO signal type configs
-  - `/object` - Game object types, configs, and shared update logic (ObjectUpdateUtil), and how a helper walks, turns, greets, paces its speech and goes to look at things wherever it is played (HelperBehaviorUtil)
-  - `/physics` - Physics engine (PhysicsManager — collision detection, hitboxes, step-up, gravity, and the pushes objects give from afar in PhysicsForceUtil)
+  - `/object` - Game object types, configs, and shared update logic (ObjectUpdateUtil), how a helper walks, turns, greets, paces its speech and goes to look at things wherever it is played (HelperBehaviorUtil), and a cannon's state and aim and its ball's flight (CannonStateUtil, CannonAimUtil, CannonBallMotionUtil)
+  - `/physics` - Physics engine (PhysicsManager — collision detection, hitboxes, step-up, gravity, the pushes objects give from afar in PhysicsForceUtil, and spheres swept through a room in PhysicsSphereUtil)
   - `/room` - Room types, room generation (RoomGenerationUtil — every Hub or Regular room starts out empty), room files, and the room map that catalogs the room files the game ships with
   - `/singlePlayer` - Single-player mode configs and types (SinglePlayerModeConfig — which room file a mode is played in, and who may enter it)
   - `/system` - Shared observables, constants, logging, and error handling
@@ -68,7 +68,7 @@
 
 ### `/docs` - Documents explaining technical details
 - **`/devOps`** - Local Development, VPS
-- **`/gameplay`** - Game modes (play mode, edit mode), the admin privilege, the inventory and dollar bills
+- **`/gameplay`** - Game modes (play mode, edit mode), the admin privilege, the inventory and dollar bills, cannons
 - **`/geometry`** - Voxel grid, physics, room generation, room entrances and doors, attached objects (on walls, floors and ceilings), textures, player customization
 - **`/graphics`** - Camera control, instanced mesh composition, image map, label text
 - **`/audio`** - The audio system: the bundle of clips and the streams, sound at a position in the world, and what sounds when

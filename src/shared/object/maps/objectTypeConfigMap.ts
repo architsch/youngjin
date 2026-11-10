@@ -11,6 +11,8 @@ import VolumeObjectTypeConfig from "../types/objectTypeConfig/volumeObjectTypeCo
 import FanObjectTypeConfig from "../types/objectTypeConfig/fanObjectTypeConfig";
 import MirrorObjectTypeConfig from "../types/objectTypeConfig/mirrorObjectTypeConfig";
 import DollarBillObjectTypeConfig from "../types/objectTypeConfig/dollarBillObjectTypeConfig";
+import CannonObjectTypeConfig from "../types/objectTypeConfig/cannonObjectTypeConfig";
+import CannonBallObjectTypeConfig from "../types/objectTypeConfig/cannonBallObjectTypeConfig";
 import { ObjectCategoryEnumMap } from "../types/objectCategory";
 
 // All GameObject types and the components each spawns with. Type indices are stored with objects, so
@@ -31,6 +33,8 @@ function getObjectTypeConfigPairs(): [number, ObjectTypeConfig][]
         [9, FanObjectTypeConfig],
         [10, MirrorObjectTypeConfig],
         [11, DollarBillObjectTypeConfig],
+        [12, CannonObjectTypeConfig],
+        [13, CannonBallObjectTypeConfig],
     ];
 }
 
@@ -77,12 +81,14 @@ const ObjectTypeConfigMap =
         ensureIndexed();
         return Object.values(indexToConfig);
     },
-    // What a room's stored contents hold: what persists, and what lies about it to be collected, which outlasts its
-    // unloading and a restart without being any part of what is built, so that it is in no file of it (see DollarBillUtil).
+    // What a room's stored contents hold: what persists, and what lies about it to be collected or flies through it,
+    // which outlasts its unloading and a restart without being any part of what is built, so that it is in no file
+    // of it (see DollarBillUtil, CannonBallUtil).
     isStoredWithRoom: (objectTypeIndex: number): boolean =>
     {
         const config = ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex);
-        return config.persistent || config.category == ObjectCategoryEnumMap.Collectible;
+        return config.persistent || config.category == ObjectCategoryEnumMap.Collectible
+            || config.category == ObjectCategoryEnumMap.CannonBall;
     },
 }
 

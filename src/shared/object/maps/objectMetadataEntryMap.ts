@@ -18,6 +18,7 @@ import QuarterTurnsUtil from "../util/quarterTurnsUtil";
 import SpeakerActivityUtil from "../util/speakerActivityUtil";
 import NpcFacingUtil from "../util/npcFacingUtil";
 import ObjectTagUtil from "../util/objectTagUtil";
+import CannonStateUtil from "../util/cannonStateUtil";
 import User from "../../user/types/user";
 import RoomValidationUtil from "../../room/util/roomValidationUtil";
 
@@ -121,6 +122,10 @@ const entries: {[key: number]: ObjectMetadataEntry} = {
     [ObjectMetadataKeyEnumMap.BehaviorPrefs]: {
         preprocessingMethod: (rawValue: string) => BehaviorPrefsUtil.canonicalize(rawValue),
     },
+    // Set in two parts, of which a user may set the first alone (see CannonStateUtil.merge).
+    [ObjectMetadataKeyEnumMap.CannonState]: {
+        preprocessingMethod: (rawValue: string, currentValue?: string) => CannonStateUtil.merge(rawValue, currentValue),
+    },
 };
 
 const ObjectMetadataEntryMap =
@@ -129,11 +134,12 @@ const ObjectMetadataEntryMap =
     {
         return entries[metadataKey];
     },
-    preprocess: (metadataKey: number, rawValue: string): string =>
+    // currentValue: what the object holds under the key as the value is set; absent as it is added.
+    preprocess: (metadataKey: number, rawValue: string, currentValue?: string): string =>
     {
         const entry = entries[metadataKey];
         if (entry)
-            return entry.preprocessingMethod(rawValue);
+            return entry.preprocessingMethod(rawValue, currentValue);
         return rawValue;
     },
     canUserSet: (metadataKey: number, user: User): boolean =>

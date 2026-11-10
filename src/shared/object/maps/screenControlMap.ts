@@ -14,6 +14,7 @@ const words: {[control in ScreenControl]: string} = {
     addObject: "cart button",
     addLamp: "sun button",
     addFan: "pinwheel button",
+    addCannon: "cannon button",
     rotate: "turn button",
     person: "person button",
 };

@@ -33,8 +33,15 @@ const configByCategory: {[category: string]: ObjectCategoryConfig} =
     // mesh and the frames' share of the shared mesh pools (see InstancedMeshCapacityBuilder).
     [ObjectCategoryEnumMap.Mirror]: {maxCountPerRoom: 1},
     // What lies about a room to be collected at once, kept by its saves but no part of what is built (see
-    // ObjectTypeConfigMap.isStoredWithRoom). Also sizes the bills' mesh (see DollarBillGameObject).
-    [ObjectCategoryEnumMap.Collectible]: {maxCountPerRoom: 2},
+    // ObjectTypeConfigMap.isStoredWithRoom): the few the room brings by itself (see DOLLAR_BILL_SPAWN_CAP), and those
+    // cannon balls leave behind. Also sizes the bills' mesh (see DollarBillGameObject).
+    [ObjectCategoryEnumMap.Collectible]: {maxCountPerRoom: 8},
+    // As many as a room has room to dodge the balls of. Also sizes the meshes they are composed of (see
+    // InstancedMeshCapacityBuilder).
+    [ObjectCategoryEnumMap.Cannon]: {maxCountPerRoom: 8},
+    // More than a room's cannons keep in the air at once, each firing its next before its last has flown out of
+    // sight. Kept by the room's saves as bills are. Also sizes the balls' mesh (see InstancedMeshCapacityBuilder).
+    [ObjectCategoryEnumMap.CannonBall]: {maxCountPerRoom: 32},
 }
 
 const ObjectCategoryConfigMap =

@@ -24,8 +24,9 @@ import { DIR_VEC_BY_NAME, UNIT_VEC3, VOXEL_CELL_SIZE } from "../../../shared/sys
 import QuarterTurnsUtil from "../../../shared/object/util/quarterTurnsUtil";
 import PointerCoordUtil from "../../graphics/util/pointerCoordUtil";
 import ObjectIdUtil from "../../../shared/object/util/objectIdUtil";
-import { clientFeatureFlagsObservable, objectInstalledObservable,
+import { clientFeatureFlagsObservable, dollarsSpentObservable, objectInstalledObservable,
     voxelQuadSelectionObservable } from "../../system/clientObservables";
+import CannonStateUtil from "../../../shared/object/util/cannonStateUtil";
 import { DISABLE_AUTO_SELECTION_ON_OBJECT_INSTALLATION,
     SUB_PANELS_BENEATH_SELECTION_TOOLS } from "../../system/clientConstants";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
@@ -49,6 +50,7 @@ const npcTypeIndex = ObjectTypeConfigMap.getIndexByType("Npc");
 const volumeTypeIndex = ObjectTypeConfigMap.getIndexByType("Volume");
 const fanTypeIndex = ObjectTypeConfigMap.getIndexByType("Fan");
 const mirrorTypeIndex = ObjectTypeConfigMap.getIndexByType("Mirror");
+const cannonTypeIndex = ObjectTypeConfigMap.getIndexByType("Cannon");
 
 // What a new label says, so it shows (and can be clicked) before anything is written on it.
 const NEW_LABEL_TEXT = "Label";
@@ -123,6 +125,13 @@ const ObjectPlacementUtil =
                 new EncodableByteString(FanObjectTypeConfig.util.getDefaultForceProperties()),
             [ObjectMetadataKeyEnumMap.FanColor]:
                 new EncodableByteString(FanObjectTypeConfig.util.getDefaultColor()),
+        });
+    },
+    // Switched on, with all its balls: the server takes it up from there (see CannonUtil), and its price with it.
+    tryAddCannon: async (selection: VoxelQuadSelection): Promise<void> =>
+    {
+        await tryAddObject(selection, cannonTypeIndex, {
+            [ObjectMetadataKeyEnumMap.CannonState]: new EncodableByteString(CannonStateUtil.encodeSwitch(true)),
         });
     },
     tryAddLabel: async (selection: VoxelQuadSelection, compositionIndex: number): Promise<void> =>
@@ -290,6 +299,10 @@ async function addObject(objectTypeIndex: number, tr: ObjectTransform, metadata:
         {
             if (room.roomType != RoomTypeEnumMap.SinglePlayer)
                 SocketsClient.emitAddObjectSignal(signal);
+            // What it costs the server takes as it adds it (see ServerObjectManager); the count shows it spent.
+            const price = ObjectTypeConfigMap.getConfigByIndex(objectTypeIndex).price ?? 0;
+            if (price > 0)
+                dollarsSpentObservable.set(price);
             VoxelQuadSelection.unselect();
             // Complete as added, it leaves the selection on a face near it, to add the next from. With more to pick
             // (only where its panel takes the tools' place), or with no face to take the selection, it is selected

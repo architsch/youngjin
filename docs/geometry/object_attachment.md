@@ -2,7 +2,7 @@
 
 Reference: @src/shared/object/util/objectAttachmentUtil.ts , @src/shared/object/types/objectAttachmentConfig.ts , @src/shared/physics/util/physicsColliderStateUtil.ts , @src/client/graphics/types/gizmo/objectAttachmentEditGizmos.ts
 
-An attached object (a canvas, a prop, a [door](door_design.md), a lamp, a fan, an NPC, a [mirror](../graphics/mirror.md)) rests on a voxel face: a wall, a floor or a ceiling. Its type's `ObjectAttachmentConfig` lists the facings it may take (walls only for doors and labels, floors only for NPCs, any face for canvases, props, lamps, fans and mirrors), and the placement rule enforces it on the server as well.
+An attached object (a canvas, a prop, a [door](door_design.md), a lamp, a fan, a [cannon](../gameplay/cannon.md), an NPC, a [mirror](../graphics/mirror.md)) rests on a voxel face: a wall, a floor or a ceiling. Its type's `ObjectAttachmentConfig` lists the facings it may take (walls only for doors and labels, floors only for NPCs, floors and walls for cannons, any face for canvases, props, lamps, fans and mirrors), and the placement rule enforces it on the server as well.
 
 ## Frame
 - The facing is the normal of the face the object rests on: up for a floor, down for a ceiling.
@@ -18,7 +18,7 @@ An attached object (a canvas, a prop, a [door](door_design.md), a lamp, a fan, a
   - the face lies on its plane, a voxel's side;
   - horizontal centres snap to the grid;
   - vertically, the **bottom edge** snaps, not the centre, so an object stands on the grid whatever its height.
-- The collider is centred on the position, so a door's origin sits half its height above the floor. A type that **stands out** from its face (`ObjectAttachmentConfig.standsOut`: an NPC) has its origin on the face instead, and its collider in front of it.
+- The collider is centred on the position, so a door's origin sits half its height above the floor. A type that **stands out** from its face (`ObjectAttachmentConfig.standsOut`: an NPC, a cannon) has its origin on the face instead, and its collider in front of it.
 - The collision test box is shrunk slightly along the face's own axes (in `PhysicsColliderStateUtil`), so that neighbours sharing an edge never register as overlapping.
 - **Trap**: a stored position decodes slightly below the value that was written, so an origin can land on either side of its face. Always find the block an object rests on from its facing, never from the cell its origin falls in.
 

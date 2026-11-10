@@ -111,6 +111,13 @@ export const ProceduralSounds: ProceduralSoundSpec[] = [
         {attack: 0.003, decay: 0.11, gain: 1, tone: {frequency: [783.99, 783.99], partials: BELL}},
     ]},
 
+    // A cannon that has fired its last ball, gone: a soft puff of air, falling away.
+    {name: "cannon/puff", duration: 0.45, peak: 0.5, layers: [
+        {attack: 0.012, decay: 0.09, gain: 1, noise: {filter: "lowpass", frequency: [1400, 350], glide: 0.25, q: 0.8}},
+        {attack: 0.02, decay: 0.07, gain: 0.35, noise: {filter: "bandpass", frequency: [900, 500], glide: 0.2, q: 1.2}},
+        {attack: 0.004, decay: 0.07, gain: 0.4, tone: {frequency: [150, 85], glide: 0.1}},
+    ]},
+
     // A fan's air, whirring with its blades and humming with its motor: a loop.
     {name: "fan/wind", duration: 2, peak: 0.5, loop: true, layers: [
         {attack: 0, decay: Infinity, gain: 1, noise: {filter: "lowpass", frequency: [900, 900], q: 0.7}},

@@ -31,13 +31,18 @@ const LEAN_REACH = 0.05;
 // How long a player stays distrusted after a move they couldn't have made, besides the time for walking to have taken
 // them as far.
 export const DISTRUST_MS = 3000;
+// How long after a blast throws a player their moves count as a stream's would: time enough to be thrown and to land.
+export const BLAST_GRACE_MS = 2000;
 
 const states = new WeakMap<UserContext, PlayerMotionState>();
+// When each player a blast has thrown is done being thrown by it (see noteBlast).
+const thrownUntil = new WeakMap<UserContext, number>();
 
-// Whether the moves a user's player is reported making are ones a player can make: walking, climbing a step, falling, or
-// carried by a fan's stream. What a browser reports is otherwise taken as told (see ServerObjectManager), within its
-// budgets (see USER_BUDGETS), so this is what keeps a forged run, leap or hover from what only a player who got there
-// can have: a bill collected (see DollarBillUtil). Agents' bodies, which the server walks, pass it as browsers' do.
+// Whether the moves a user's player is reported making are ones a player can make: walking, climbing a step, falling,
+// carried by a fan's stream, or thrown by a cannon ball's blast. What a browser reports is otherwise taken as told (see
+// ServerObjectManager), within its budgets (see USER_BUDGETS), so this is what keeps a forged run, leap or hover from
+// what only a player who got there can have: a bill collected (see DollarBillUtil). Agents' bodies, which the server
+// walks, pass it as browsers' do.
 const PlayerMotionCheckUtil =
 {
     // From where the room had them to where it has them now, as each move is made. A new room starts over, but for a
@@ -52,7 +57,7 @@ const PlayerMotionCheckUtil =
             states.set(ctx, state);
         }
 
-        const forced = isInStream(room.id, from) || isInStream(room.id, to);
+        const forced = now < (thrownUntil.get(ctx) ?? 0) || isInStream(room.id, from) || isInStream(room.id, to);
         const rate = (forced || state.forced) ? FORCED_ALLOWANCE : ALLOWANCE;
         state.allowance = refill(state.allowance, rate, now - state.at) - Math.hypot(to.x - from.x, to.z - from.z);
         state.at = now;
@@ -77,6 +82,12 @@ const PlayerMotionCheckUtil =
         if (feetY > state.heldFeetY + MAX_STEP_UP
             - MIN_FALL_SPEED * Math.max(0, now - state.heldAt - FALL_GRACE_MS) / 1000)
             distrust(state, now + DISTRUST_MS);
+    },
+    // A cannon ball's blast has thrown the user's player (see CannonBallUtil): for a while, it goes as far and as high
+    // as a stream would take it.
+    noteBlast: (ctx: UserContext, now: number = Date.now()): void =>
+    {
+        thrownUntil.set(ctx, now + BLAST_GRACE_MS);
     },
     // Whether all the user's player has done lately is believable. One whose moves were never noted has done nothing.
     isTrusted: (ctx: UserContext, now: number = Date.now()): boolean =>

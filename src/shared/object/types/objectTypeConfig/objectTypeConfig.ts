@@ -34,6 +34,9 @@ export default interface ObjectTypeConfig
     // which a copy of one leaves out (see RoomEditUtil), as do the room's stored contents and its files (see ObjectGroup).
     // Absent means none.
     shownMetadataKeys?: number[];
+    // What adding one costs its user each time, in dollars, which the server takes as it adds it (see
+    // ServerObjectManager). Absent means nothing.
+    price?: number;
     canUserAddObject: (user: User, room: Room, obj: AddObjectSignal) => boolean,
     canUserRemoveObject: (user: User, room: Room, obj: AddObjectSignal) => boolean,
     canUserSetObjectTransform: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => boolean,

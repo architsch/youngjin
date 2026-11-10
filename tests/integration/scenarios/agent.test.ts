@@ -70,9 +70,20 @@ import EncodableByteString from "../../../src/shared/networking/types/encodableB
 import DoorObjectTypeConfig, { ENTERING_STRIDE_LENGTH,
     ENTRANCE_DOOR_OBJECT_ID } from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import Vec3 from "../../../src/shared/math/types/vec3";
+import Geometry3DUtil from "../../../src/shared/math/util/geometry3DUtil";
+import PhysicsColliderStateUtil from "../../../src/shared/physics/util/physicsColliderStateUtil";
+import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import Voxel from "../../../src/shared/voxel/types/voxel";
 import { LOGIN_REWARD_DOLLARS, HOUR_IN_MS, MINUTE_IN_MS, NUM_VOXEL_COLS, OBJECT_MESSAGE_MAX_LENGTH,
     PLAYER_MESSAGE_EXPIRATION_MS, PLAYER_SHAPE_PRICE_DOLLARS, VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
+import { CANNON_PRICE_DOLLARS, STOREY_FLOOR_COLLISION_LAYER } from "../../../src/shared/system/sharedConstants";
+import { CANNON_BALL_COUNT, CANNON_FIRE_INTERVAL_SECONDS, CANNON_MAX_RANGE }
+    from "../../../src/shared/object/types/objectTypeConfig/cannonObjectTypeConfig";
+import { CANNON_BALL_SPEED } from "../../../src/shared/object/types/objectTypeConfig/cannonBallObjectTypeConfig";
+import CannonStateUtil from "../../../src/shared/object/util/cannonStateUtil";
+import CannonUtil from "../../../src/server/object/util/cannonUtil";
+import CannonBallUtil from "../../../src/server/object/util/cannonBallUtil";
+import PlayerMotionCheckUtil from "../../../src/server/user/util/playerMotionCheckUtil";
 import { AGENT_TYPING_EXPIRATION_MS, LOGIN_REWARD_INTERVAL_MS }
     from "../../../src/server/system/serverConstants";
 import ServerObjectManager from "../../../src/server/object/serverObjectManager";
@@ -1187,6 +1198,191 @@ describe("AI agents", () => {
         });
     });
 
+    describe("cannons", () => {
+        const FLOOR: AgentFace = {row: 20, column: 20, layer: -1, side: "up"};
+        const DOLLAR = InventoryItemTypeEnumMap.Dollar;
+        const cannonsIn = (room: Room) => Object.values(room.objectById)
+            .filter(obj => obj.objectTypeIndex == ObjectTypeConfigMap.getIndexByType("Cannon"));
+        const stateOf = (room: Room, id: string) => CannonStateUtil.getObjectState(room.objectById[id]);
+
+        it("add_object sets one on a floor or a wall for its price, which whoever holds less is refused", async () => {
+            const human = await joinHuman("Alice");
+            const agent = await arriveAgent("Gunner");
+            agent.inventory[DOLLAR] = CANNON_PRICE_DOLLARS - 1;
+            const refused = await AgentObjectUtil.addObject(agent, {type: "cannon", on: FLOOR}) as any;
+            expect(refused.error).toContain(`costs $${CANNON_PRICE_DOLLARS}`);
+            expect(refused.error).toContain(`hold $${CANNON_PRICE_DOLLARS - 1}`);
+            expect(cannonsIn(roomOf(agent))).toEqual([]);
+            expect(agent.inventory[DOLLAR]).toBe(CANNON_PRICE_DOLLARS - 1);
+
+            agent.inventory[DOLLAR] = CANNON_PRICE_DOLLARS + 2;
+            const ceiling = await AgentObjectUtil.addObject(agent, {type: "cannon",
+                on: {row: 20, column: 20, layer: STOREY_FLOOR_COLLISION_LAYER, side: "down"}}) as any;
+            expect(ceiling.error).toMatch(/only on a floor or a wall/);
+            expect(agent.inventory[DOLLAR]).toBe(CANNON_PRICE_DOLLARS + 2);
+
+            receivedSignals(human);
+            const result = await AgentObjectUtil.addObject(agent, {type: "cannon", on: FLOOR}) as any;
+            expect(result).toEqual(expect.objectContaining({spent: CANNON_PRICE_DOLLARS, dollars: 2}));
+            expect(result.added).toEqual(expect.objectContaining({type: "cannon", on: FLOOR, switchedOn: true,
+                ballsLeft: CANNON_BALL_COUNT, by: "Gunner"}));
+            expect(result.added.note).toContain(`${CANNON_MAX_RANGE / VOXEL_CELL_SIZE} cells`);
+            expect(agent.inventory[DOLLAR]).toBe(2);
+            // The room is sent it as a person's is, and the next one is refused for want of dollars.
+            expect(receivedSignals(human).filter(({signalType}) => signalType == "addObjectSignal")).toHaveLength(1);
+            expect((await AgentObjectUtil.addObject(agent, {type: "cannon",
+                on: {row: 24, column: 24, layer: -1, side: "up"}}) as any).error).toContain(`hold $2`);
+
+            // On a wall too.
+            agent.inventory[DOLLAR] = CANNON_PRICE_DOLLARS;
+            const onWall = await AgentObjectUtil.addObject(agent, {type: "cannon",
+                on: {row: 1, column: 20, layer: 3, side: "south"}}) as any;
+            expect(onWall.added).toEqual(expect.objectContaining({type: "cannon"}));
+            expect(agent.inventory[DOLLAR]).toBe(0);
+        });
+
+        it("edit_object switches one off and on, move_object rehangs it, and remove_object takes it for good", async () => {
+            const agent = await arriveAgent("Gunner");
+            agent.inventory[DOLLAR] = CANNON_PRICE_DOLLARS;
+            const {id} = (await AgentObjectUtil.addObject(agent, {type: "cannon", on: FLOOR}) as any).added;
+            const room = roomOf(agent);
+
+            const off = await AgentObjectUtil.editObject(agent, {id, switchedOn: false}) as any;
+            expect(off.edited).toEqual(expect.objectContaining({switchedOn: false, ballsLeft: CANNON_BALL_COUNT}));
+            expect(stateOf(room, id).on).toBe(false);
+            expect((await AgentObjectUtil.editObject(agent, {id, switchedOn: true}) as any).edited.switchedOn).toBe(true);
+            // Only a cannon has a switch.
+            const lamp = (await AgentObjectUtil.addObject(agent, {type: "lamp",
+                on: {row: 1, column: 30, layer: 4, side: "south"}}) as any).added;
+            expect((await AgentObjectUtil.editObject(agent, {id: lamp.id, switchedOn: false}) as any).error).toMatch(/no switch/);
+
+            const there: AgentFace = {row: 30, column: 30, layer: -1, side: "up"};
+            expect((await AgentObjectUtil.moveObject(agent, id, there) as any).moved.on).toEqual(there);
+            expect((await AgentObjectUtil.moveObject(agent, id,
+                {row: 30, column: 30, layer: STOREY_FLOOR_COLLISION_LAYER, side: "down"}) as any).error)
+                .toMatch(/only on a floor or a wall/);
+
+            expect(await AgentObjectUtil.removeObject(agent, id)).toEqual({removed: id});
+            expect(agent.inventory[DOLLAR]).toBe(0);
+        });
+
+        it("look lists a room's cannons with their switch and the balls they have left, and the balls in the air", async () => {
+            const agent = await arriveAgent("Watcher");
+            const room = roomOf(agent);
+            agent.inventory[DOLLAR] = CANNON_PRICE_DOLLARS;
+            const {id} = (await AgentObjectUtil.addObject(agent, {type: "cannon", on: FLOOR}) as any).added;
+            expect((AgentToolUtil.look(agent) as any).cannonBalls).toEqual([]);
+            // As the server has it once it has fired a few.
+            room.objectById[id].metadata[ObjectMetadataKeyEnumMap.CannonState] = new EncodableByteString(
+                CannonStateUtil.encode({...CannonStateUtil.decode(""), ballsLeft: 13}));
+            expect((AgentToolUtil.look(agent) as any).objects).toContainEqual(expect.objectContaining({id, type: "cannon",
+                switchedOn: true, ballsLeft: 13}));
+
+            const at = {x: 12.25, y: 2.1, z: 14.25};
+            expect(CannonBallUtil.launch(room, at, {x: CANNON_BALL_SPEED, y: 0, z: 0})).toBe(true);
+            // One far out of the room is no one's to mind.
+            expect(CannonBallUtil.launch(room, {x: -10, y: 2, z: 14}, {x: -CANNON_BALL_SPEED, y: 0, z: 0})).toBe(true);
+            const {cannonBalls} = AgentToolUtil.look(agent) as any;
+            expect(cannonBalls).toHaveLength(1);
+            expect(cannonBalls[0].at).toEqual(AgentGridUtil.toGridPosition(at));
+            expect(cannonBalls[0].goingBy).toEqual({rows: 0, columns: CANNON_BALL_SPEED / VOXEL_CELL_SIZE, layers: 0});
+            expect(cannonBalls[0].distance).toBeGreaterThan(0);
+        });
+
+        it("a ball's burst throws an agent's body, which the server moves, and whats_new tells it so", async () => {
+            const agent = await arriveAgent("Target");
+            const room = roomOf(agent);
+            // Walked out to the middle of the room, where it stands with open floor all round.
+            await flushUntil(AgentToolUtil.walkTo(agent, {row: 32, column: 32}));
+            agent.inbox.take();
+            const before = positionOf(agent);
+
+            expect(CannonBallUtil.launch(room, {x: before.x - 2, y: before.y, z: before.z},
+                {x: CANNON_BALL_SPEED, y: 0, z: 0})).toBe(true);
+            for (let i = 0; i < 10; ++i)
+            {
+                vi.setSystemTime(Date.now() + 200);
+                AgentBodyUtil.stepAll(0.2);
+                CannonBallUtil.stepAll(0.2);
+            }
+            expect(eventsOf(agent).map(event => event.kind)).toEqual(["cannonBallHit"]);
+            // Thrown far on along the ball's way, which the server believes of its own throw.
+            expect(positionOf(agent).x).toBeGreaterThan(before.x + 2 * PLAYER_HEIGHT);
+            expect(PlayerMotionCheckUtil.isTrusted(agent)).toBe(true);
+            expect(Math.abs(positionOf(agent).z - before.z)).toBeLessThan(0.1);
+            expect((AgentToolUtil.look(agent) as any).cannonBalls).toEqual([]);
+            // No bill for a ball that threw someone.
+            expect((AgentToolUtil.look(agent) as any).bills).toEqual([]);
+        });
+
+        it("tells of the server's own words about a cannon as no one's edit, and of a switch thrown as one", async () => {
+            const human = await joinHuman("Alice");
+            const agent = await arriveAgent("Watcher");
+            const room = roomOf(agent);
+            human.socketUserContext.inventory[DOLLAR] = CANNON_PRICE_DOLLARS;
+            agent.inbox.take();
+            const id = "alices-cannon";
+            await dispatchAs(human, "addObjectSignal", new AddObjectSignal(room.id, human.user.id, human.user.userName,
+                ObjectTypeConfigMap.getIndexByType("Cannon"), id, new ObjectTransform({x: 10.5, y: 0, z: 10.5},
+                    {x: 0, y: 1, z: 0}, {x: 1, y: 1, z: 1}), {[ObjectMetadataKeyEnumMap.CannonState]:
+                    new EncodableByteString(CannonStateUtil.encodeSwitch(true))}));
+            expect(eventsOf(agent)).toContainEqual(expect.objectContaining({kind: "objectAdded", id, type: "cannon", who: "Alice"}));
+
+            // Played by the server for a while: turning, counting down, telling the room.
+            vi.spyOn(Math, "random").mockReturnValue(0);
+            for (let i = 0; i < 60; ++i)
+            {
+                vi.setSystemTime(Date.now() + 200);
+                CannonUtil.stepAll(0.2);
+            }
+            vi.mocked(Math.random).mockRestore();
+            expect(eventsOf(agent).filter(event => event.kind == "objectChanged")).toEqual([]);
+
+            await dispatchAs(human, "setObjectMetadataSignal", new SetObjectMetadataSignal(room.id, id,
+                ObjectMetadataKeyEnumMap.CannonState, CannonStateUtil.encodeSwitch(false)));
+            expect(eventsOf(agent)).toContainEqual(expect.objectContaining({kind: "objectChanged", id, type: "cannon"}));
+        });
+
+        it("walk_to goes round a cannon in the way, which is as solid as a block, and stops beside one it is sent into",
+            async () => {
+            const agent = await arriveAgent("Walker");
+            agent.inventory[DOLLAR] = CANNON_PRICE_DOLLARS;
+            await flushUntil(AgentToolUtil.walkTo(agent, {row: 32, column: 28, layer: 0}));
+            // One on the straight way east, switched off so that it only stands there.
+            const {id} = (await AgentObjectUtil.addObject(agent, {type: "cannon",
+                on: {row: 32, column: 34, layer: -1, side: "up"}}) as any).added;
+            await AgentObjectUtil.editObject(agent, {id, switchedOn: false});
+            const cannon = roomOf(agent).objectById[id];
+            const box = PhysicsColliderStateUtil.getObjectColliderState(cannon.objectTypeIndex, cannon.transform)!.hitbox;
+            const inCannon = () => Geometry3DUtil.AABBsOverlap(box, {center: positionOf(agent),
+                halfSize: {x: PLAYER_RADIUS_XZ, y: 0.5 * PLAYER_HEIGHT, z: PLAYER_RADIUS_XZ}});
+            const from = positionOf(agent);
+            expect(Math.abs(cannon.transform.pos.z - from.z)).toBeLessThan(0.5 + PLAYER_RADIUS_XZ);
+
+            const walking = AgentToolUtil.walkTo(agent, {row: 32, column: 40, layer: 0});
+            let settled = false;
+            let aside = 0;
+            void walking.then(() => { settled = true; });
+            for (let i = 0; i < 400 && !settled; ++i)
+            {
+                flush(1);
+                await new Promise(resolve => setImmediate(resolve));
+                aside = Math.max(aside, Math.abs(positionOf(agent).z - from.z));
+                expect(inCannon()).toBe(false);
+            }
+            expect((await walking as any).outcome).toBe("arrived");
+            expect(positionOf(agent).x).toBeGreaterThan(cannon.transform.pos.x + 1);
+            expect(aside).toBeGreaterThan(0.4);
+
+            // Sent to the cells it stands on: as near as a body can stand.
+            const result = await flushUntil(AgentToolUtil.walkTo(agent, {row: 32, column: 34, layer: 0})) as any;
+            expect(result.outcome).toBe("arrived");
+            expect(inCannon()).toBe(false);
+            expect(Math.hypot(positionOf(agent).x - cannon.transform.pos.x, positionOf(agent).z - cannon.transform.pos.z))
+                .toBeLessThan(2);
+        });
+    });
+
     describe("tools", () => {
         it("look tells the room, where the agent stands, and the people nearest it with their speech", async () => {
             const human = await joinHuman("Alice");
@@ -2267,7 +2463,7 @@ describe("AI agents", () => {
             expect((await AgentObjectUtil.removeObject(agent, "a-mirror") as any).error)
                 .toMatch(/Only an admin removes a mirror/);
             expect((await AgentObjectUtil.addObject(agent, {type: "mirror", on: {row: 1, column: 20, layer: 2,
-                side: "south"}} as any) as any).error).toMatch(/^Only canvas, prop, lamp, fan, label, door can be added/);
+                side: "south"}} as any) as any).error).toMatch(/^Only canvas, prop, lamp, fan, cannon, label, door can be added/);
             expect(room.objectById["a-mirror"].transform).toEqual(transform);
         });
 
@@ -2734,6 +2930,28 @@ describe("AI agents", () => {
         {
             return JSON.parse(result.content[0].text);
         }
+
+        it("says what a cannon costs and does where agents read of it, each number from its constant", async () => {
+            const client = await connect();
+            try
+            {
+                const instructions = client.getInstructions()!;
+                expect(instructions).toContain(`$${CANNON_PRICE_DOLLARS} each time`);
+                expect(instructions).toContain(`every ${CANNON_FIRE_INTERVAL_SECONDS[0]} to ${CANNON_FIRE_INTERVAL_SECONDS[1]} seconds`);
+                expect(instructions).toContain(`within ${CANNON_MAX_RANGE / VOXEL_CELL_SIZE} cells`);
+                expect(instructions).toContain(`It has ${CANNON_BALL_COUNT} balls`);
+                expect(instructions).toContain(`${CANNON_BALL_SPEED / VOXEL_CELL_SIZE} cells a second`);
+                const tools = (await client.listTools()).tools;
+                const addObject = tools.find(tool => tool.name == "add_object")!;
+                expect(addObject.description).toContain(`$${CANNON_PRICE_DOLLARS}`);
+                expect(JSON.stringify(addObject.inputSchema)).toContain("cannon");
+                expect(JSON.stringify(tools.find(tool => tool.name == "edit_object")!.inputSchema)).toContain("switched_on");
+            }
+            finally
+            {
+                await client.close();
+            }
+        });
 
         it("serves the tools, with instructions on how to get in", async () => {
             const client = await connect();

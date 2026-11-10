@@ -14,9 +14,12 @@ import Geometry3DUtil from "../math/util/geometry3DUtil";
 import ObjectTypeConfigMap from "../object/maps/objectTypeConfigMap";
 import AdminPrefsUtil from "../object/util/adminPrefsUtil";
 import PhysicsVoxelUtil from "./util/physicsVoxelUtil";
+import PhysicsSphereUtil from "./util/physicsSphereUtil";
+import PhysicsSphereHit from "./types/physicsSphereHit";
 import { GRAVITY_SPEED } from "../system/sharedConstants";
 
 const physicsRooms: {[roomID: string]: PhysicsRoom} = {};
+const NO_OBJECT_IDS: ReadonlySet<string> = new Set<string>();
 
 const PhysicsManager =
 {
@@ -133,6 +136,31 @@ const PhysicsManager =
     getStrongestStream: (roomID: string, box: AABB3) =>
     {
         return PhysicsForceUtil.getStrongestStream(physicsRooms[roomID], box);
+    },
+    // See PhysicsForceUtil.getPush.
+    getPush: (roomID: string, box: AABB3): Vec3 =>
+    {
+        return PhysicsForceUtil.getPush(physicsRooms[roomID], box);
+    },
+    // A blow to a body: a velocity it carries from now on, on top of what it carries already, which gravity and drag
+    // take away again as they do a stream's (see PhysicsForceUtil). Nothing for an object the room doesn't hold.
+    addCarriedVelocity: (roomID: string, objectId: string, velocity: Vec3): void =>
+    {
+        const object = physicsRooms[roomID]?.objectById[objectId];
+        if (object != undefined)
+            object.carriedVelocity = Vector3DUtil.add(object.carriedVelocity, velocity);
+    },
+    // See PhysicsSphereUtil.cast.
+    castSphere: (roomID: string, from: Vec3, to: Vec3, radius: number,
+        ignoredObjectIds: ReadonlySet<string> = NO_OBJECT_IDS): PhysicsSphereHit | undefined =>
+    {
+        return PhysicsSphereUtil.cast(physicsRooms[roomID], from, to, radius, ignoredObjectIds);
+    },
+    // See PhysicsSphereUtil.getReached.
+    getReachedBySphere: (roomID: string, center: Vec3, radius: number,
+        ignoredObjectIds: ReadonlySet<string> = NO_OBJECT_IDS) =>
+    {
+        return PhysicsSphereUtil.getReached(physicsRooms[roomID], center, radius, ignoredObjectIds);
     },
     // Whether a straight line between two points meets no object's collider, but for the one it is seen from: of an object
     // whose type draws something, as the collider stands for what of it hides whatever lies behind it, the way a block

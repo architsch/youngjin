@@ -15,4 +15,6 @@ export const ObjectCategoryEnumMap: Record<string, ObjectCategory> =
     Fan: "Fan",
     Mirror: "Mirror",
     Collectible: "Collectible",
+    Cannon: "Cannon",
+    CannonBall: "CannonBall",
 }

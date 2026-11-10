@@ -61,7 +61,7 @@ The mode is stored separately from camera state, because the camera briefly has 
 ## Undo and redo
 - In edit mode Ctrl+Z undoes the latest thing the user did there, and Ctrl+Y or Ctrl+Shift+Z redoes the one last undone (`KeyPressUtil`; Command stands in for Ctrl). A press is one step, and a held chord doesn't repeat. The keys reach the room where the HUD's keys do, and not during a drag of the selection; in a text field they are the field's own.
 - What can be undone is of two kinds, taken in the order they were made:
-  - an edit by the selection's tools or outline: a block added, removed with what hung on it, or retextured; an object added, removed, moved, resized, turned or given another value. Room settings and the user's own character are not;
+  - an edit by the selection's tools or outline: a block added, removed with what hung on it, or retextured; an object added, removed, moved, resized, turned or given another value. Room settings and the user's own character are not, nor is an object that costs dollars coming or going (a [cannon](cannon.md)): a step back would buy one or throw one away, so it is left out of the edit it was part of;
   - a selection the user made by hand: a click on a face or an object, or a movement key's step. Not one the user didn't make: what edit mode opens on, or where a tool or somebody else's edit moves the selection.
 - Each is entered in `ClientEventHistoryUtil` as a `ClientEvent` that carries how to undo and redo it. The history lasts one stay in edit mode: it starts over as the mode ends, and so on every room arrival.
 - A new edit or selection ends what could be redone. A text typed into a field is one edit, not one for each letter.

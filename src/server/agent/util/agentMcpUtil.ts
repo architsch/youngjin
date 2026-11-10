@@ -3,12 +3,16 @@ import * as z from "zod";
 import { CallToolResult, createMcpHandler, McpServer, ServerContext } from "@modelcontextprotocol/server";
 import { NodeMcpRequestHandler, toNodeHandler } from "@modelcontextprotocol/node";
 import ErrorUtil from "../../../shared/system/util/errorUtil";
-import { COLLISION_LAYER_HEIGHT, HELPER_AGENT_NAME, HOUR_IN_MS, LOGIN_REWARD_DOLLARS, MINUTE_IN_MS, NUM_COLLISION_LAYERS, NUM_COLLISION_LAYERS_PER_STOREY,
+import { CANNON_PRICE_DOLLARS, COLLISION_LAYER_HEIGHT, HELPER_AGENT_NAME, HOUR_IN_MS, LOGIN_REWARD_DOLLARS, MINUTE_IN_MS, NUM_COLLISION_LAYERS, NUM_COLLISION_LAYERS_PER_STOREY,
     NUM_VOXEL_COLS, NUM_VOXEL_ROWS, OBJECT_LABEL_MAX_LENGTH, OBJECT_MESSAGE_MAX_LENGTH, OBJECT_NAME_MAX_LENGTH,
     OBJECT_USER_NAME_MAX_LENGTH, PLAYER_MESSAGE_EXPIRATION_MS, PLAYER_SHAPE_PRICE_DOLLARS, STOREY_FLOOR_COLLISION_LAYER,
     VOXEL_CELL_SIZE } from "../../../shared/system/sharedConstants";
 import { NUM_FREE_PLAYER_PART_TYPES } from "../../../shared/graphics/mesh/composition/types/compositionConstants/playerCompositionConstants";
 import { PLAYER_HEIGHT } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import { CANNON_BALL_COUNT, CANNON_FIRE_INTERVAL_SECONDS, CANNON_LOCK_SECONDS, CANNON_MAX_RANGE, CANNON_MIN_RANGE,
+    CANNON_REST_SECONDS, CANNON_TURN_RATE } from "../../../shared/object/types/objectTypeConfig/cannonObjectTypeConfig";
+import { CANNON_BALL_BLAST_RADIUS,
+    CANNON_BALL_SPEED } from "../../../shared/object/types/objectTypeConfig/cannonBallObjectTypeConfig";
 import { HEARING_DISTANCE } from "../../../shared/object/util/helperBehaviorUtil";
 import MessageLinkUtil from "../../../shared/object/util/messageLinkUtil";
 import { DOLLAR_BILL_REACH } from "../../../shared/object/types/objectTypeConfig/dollarBillObjectTypeConfig";
@@ -38,6 +42,13 @@ import AgentUserContext from "../types/agentUserContext";
 // key, and the server keeps the agent's presence (see AgentPresenceUtil).
 
 const PERSON_LAYERS = Math.ceil(PLAYER_HEIGHT / COLLISION_LAYER_HEIGHT);
+// A cannon's and its ball's numbers, in cells.
+const CANNON_CELLS = Math.round(1 / VOXEL_CELL_SIZE);
+const CANNON_RANGE_CELLS = Math.round(CANNON_MAX_RANGE / VOXEL_CELL_SIZE);
+const CANNON_NEAR_CELLS = Math.round(CANNON_MIN_RANGE / VOXEL_CELL_SIZE);
+const CANNON_TURN_DEGREES_A_SECOND = Math.round(CANNON_TURN_RATE * 180 / Math.PI);
+const CANNON_BALL_CELLS_A_SECOND = Math.round(CANNON_BALL_SPEED / VOXEL_CELL_SIZE);
+const CANNON_BLAST_CELLS = Math.round(CANNON_BALL_BLAST_RADIUS / VOXEL_CELL_SIZE);
 const DOLLAR_REACH_CELLS = Math.floor(DOLLAR_BILL_REACH / VOXEL_CELL_SIZE);
 const DOLLAR_REACH_DEGREES = Math.round(REACH_ANGLE * 180 / Math.PI);
 const LOGIN_REWARD_INTERVAL_HOURS = LOGIN_REWARD_INTERVAL_MS / HOUR_IN_MS;
@@ -75,14 +86,14 @@ The room:
 
 Seeing and moving:
 - look: the room you are in, where you stand, the people near you with what they say, its doors (those leading
-  nowhere left out, but in your own room), the dollar bills lying about, the things hung in it, and its restricted
-  zones. A person marked typing is writing a line: let them finish. One marked editing is in their browser's edit mode,
+  nowhere left out, but in your own room), the dollar bills lying about, the cannon balls in the air, the things
+  placed in it, and its restricted zones. A person marked typing is writing a line: let them finish. One marked editing is in their browser's edit mode,
   building or changing things, and one marked reading has a page open over the game, or another browser tab in front
   of it, so they may be slow to answer: the bubble of either shows only that.
 - look_blocks: the blocks in part of the room (around you, if you name none), as boxes of filled cells with their
   textures.
 - whats_new: what happened since you last asked: speech, arrivals, departures, trips, what others built, each dollar
-  you collected, and your reward for coming back. Events marked inYourRoom happened in your own room while you were
+  you collected, your reward for coming back, and each cannon ball that hit you. Events marked inYourRoom happened in your own room while you were
   elsewhere, or away: who came, what they said and built, kept for you until you come back.
 - walk_to: walk to a row and column (and layer), or up to a person. Returns once there, or stopped.
 - face: turn where you stand toward a place, a person or a direction (look says which way you face).
@@ -110,6 +121,7 @@ Dollars are what you hold in the game, and they stay yours from visit to visit.
   the last one.
 - Spending them: they buy shapes for your character. The first ${NUM_FREE_PLAYER_PART_TYPES} of each part are free, and unlock_shape spends
   $${PLAYER_SHAPE_PRICE_DOLLARS} on any other, which is then yours for good and put on. change_appearance puts on any shape you hold.
+  They also buy cannons, $${CANNON_PRICE_DOLLARS} each (see Cannons).
 - Keeping count: inventory tells all you hold and what is for sale, you.dollars in look how many dollars you hold, and
   whats_new each one you collect and your reward for coming back.
 
@@ -117,13 +129,31 @@ Building: anyone may build anywhere in a room but inside restricted zones, as pe
 - place_blocks fills a box's empty cells with blocks, remove_blocks takes its blocks out, and paint_faces gives the
   showing sides of its blocks a texture. textures names the room's textures.
 - add_object hangs something on a block's side: a canvas (a painting), a prop (an everyday object, at its real
-  size), a lamp or a fan. find_pictures finds the pictures for canvases and props.
+  size), a lamp, a fan or a cannon. find_pictures finds the pictures for canvases and props.
 - edit_object, move_object and remove_object change, rehang or remove something placed, by the id look gives.
 - In your own room you may also add labels (signs with text) and doors, a door leading to any room: "hub", or a
   room's id or link. There, add_zone keeps a box of the room for one person, or for you alone ("*"): nobody else
   may build in it. Protect what you build with zones.
 - room_settings tells how a room looks: its texture pack, light, fog, smoke, sky, clouds and ground. In your own
   room, change_room_settings changes them: make it look like yours.
+
+Cannons fire at whoever is near, people and agents alike.
+- add_object with type "cannon" sets one on a floor or a wall (an up, north, south, east or west side), where it
+  takes ${CANNON_CELLS} by ${CANNON_CELLS} cells and stands ${CANNON_CELLS} out, for $${CANNON_PRICE_DOLLARS} each time. Nothing comes back for one removed. Anyone may switch
+  one off and on (edit_object with switched_on), move it or remove it, except in a restricted zone kept from them.
+- While on, a cannon rests ${CANNON_REST_SECONDS} seconds, then every ${CANNON_FIRE_INTERVAL_SECONDS[0]} to ${CANNON_FIRE_INTERVAL_SECONDS[1]} seconds turns toward the nearest person within ${CANNON_RANGE_CELLS} cells
+  of it, no nearer than ${CANNON_NEAR_CELLS}, with nothing between them, ${CANNON_TURN_DEGREES_A_SECOND} degrees a second. Once it has pointed at them for ${CANNON_LOCK_SECONDS} ${CANNON_LOCK_SECONDS == 1 ? "second" : "seconds"}
+  without a break, it fires a ball that way: whoever keeps going round it faster than it turns is never fired at.
+  look lists each cannon among the objects, with switchedOn and ballsLeft. It has ${CANNON_BALL_COUNT} balls, and is gone once it has
+  fired the last.
+- A ball flies straight at ${CANNON_BALL_CELLS_A_SECOND} cells a second, slow enough to walk out of the way of, and a fan's wind turns it
+  aside. look lists the balls in the air under cannonBalls, with where each is and how many cells it goes a second.
+  A ball bursts on the first thing it strikes. The burst throws everyone within ${CANNON_BLAST_CELLS} ${CANNON_BLAST_CELLS == 1 ? "cell" : "cells"} of where it struck hard,
+  many cells across the room and up into the air (whats_new tells you with cannonBallHit if it threw you: look again
+  to see where you are), and breaks the blocks it reaches, with what hangs on them, unless they are in a restricted zone or hold up
+  something only a room's owner or an admin could take off (a door, a label, a mirror, a guide). Zones keep what you
+  build from them.
+- A ball that throws nobody leaves a $1 bill where it burst: stay clear of a ball, then collect what it leaves.
 
 Finding company:
 - Some rooms have AI guides, characters ThingsPool plays itself (look lists them among the people, with isGuide):
@@ -262,7 +292,7 @@ function buildServer(): McpServer
 {
     // Its tools and its prompt never change while it runs. Saying they might would let any client, with a key or
     // without, hold a stream open to wait for word of a change (subscriptions/listen).
-    const server = new McpServer({name: "thingspool", version: "1.6.1", // The version server.json lists
+    const server = new McpServer({name: "thingspool", version: "1.7.0", // The version server.json lists
             websiteUrl: URL_STATIC,
             icons: [{src: `${AddressUtil.getEnvDynamicURL()}/${AGENT_ICON_FILE}`, mimeType: "image/jpeg",
                 sizes: ["150x150"]}]},
@@ -337,8 +367,9 @@ function defineTools(): {name: string, config: any, handler: any}[]
         title: "Look around",
         description: "The room you are in, where you stand and which way you face, how many dollars you hold, the people "
             + "nearest you with what they are saying (and whether they are typing, or that they are editing or reading), "
-            + "its doors (those leading nowhere only in your own room), the dollar bills lying about, the things placed "
-            + "nearest you, and its restricted zones.",
+            + "its doors (those leading nowhere only in your own room), the dollar bills lying about, the cannon balls "
+            + "in the air (where each is, and how many cells it goes a second), the things placed nearest you (a "
+            + "cannon with whether it is on and its balls left), and its restricted zones.",
         inputSchema: z.object({}),
         annotations: {readOnlyHint: true},
     }, async (_args, ctx) => runAsAgent("look", ctx, async agent => toResult(AgentToolUtil.look(agent))));
@@ -346,8 +377,8 @@ function defineTools(): {name: string, config: any, handler: any}[]
     define("whats_new", {
         title: "What's new",
         description: "What happened around you since you last asked: speech, arrivals, departures, trips, what others "
-            + "built, each dollar you collected, and your reward for coming back. Those marked inYourRoom happened in "
-            + "your own room while you were elsewhere, or away.",
+            + "built, each dollar you collected, your reward for coming back, and each cannon ball whose burst threw "
+            + "you (cannonBallHit). Those marked inYourRoom happened in your own room while you were elsewhere, or away.",
         inputSchema: z.object({}),
         annotations: {readOnlyHint: true},
     }, async (_args, ctx) => runAsAgent("whats_new", ctx, async agent => toResult(AgentToolUtil.whatsNew(agent))));
@@ -521,11 +552,13 @@ function defineTools(): {name: string, config: any, handler: any}[]
         description: "Hangs something on a block's side, as near its middle as it fits. canvas: a painting (a "
             + "picture from find_pictures; width and height in blocks; look 0 is frameless, the others frames). prop: "
             + "an everyday object (a picture from find_pictures). lamp: width and height 1 or 2. fan: blows away from "
-            + "its side. In your own room also, on walls: label (its text) and door (text is its plate; destination "
+            + `its side. cannon: on a floor or a wall, for $${CANNON_PRICE_DOLLARS} of yours each time (refused, saying `
+            + "so, if you hold fewer); it fires at whoever is near, you included, until its balls run out. In your own "
+            + "room also, on walls: label (its text) and door (text is its plate; destination "
             + "is \"hub\", or a room's id or link; arrive_at is the plate of the door to come out of there). On a floor "
             + "or ceiling, top is the way a picture's top points.",
         inputSchema: z.object({
-            type: z.enum(["canvas", "prop", "lamp", "fan", "label", "door"]),
+            type: z.enum(["canvas", "prop", "lamp", "fan", "cannon", "label", "door"]),
             on: face,
             picture: z.string().max(64).optional(),
             text: text.optional(),
@@ -545,7 +578,8 @@ function defineTools(): {name: string, config: any, handler: any}[]
     define("edit_object", {
         title: "Edit an object",
         description: "Changes something placed: a label's text or a door's plate (text), a canvas's picture, a "
-            + "canvas's, label's or door's look, where a door leads (destination, arrive_at), or whom a zone is kept "
+            + "canvas's, label's or door's look, where a door leads (destination, arrive_at), whether a cannon is "
+            + "switched on (switched_on: false stops it firing, true starts it again once it has rested), or whom a zone is kept "
             + "for (keep_for) and its name.",
         inputSchema: z.object({
             id: objectId,
@@ -556,18 +590,20 @@ function defineTools(): {name: string, config: any, handler: any}[]
             arrive_at: text.optional(),
             keep_for: keepFor.optional(),
             name: zoneName.optional(),
+            switched_on: z.boolean().optional(),
         }),
         annotations: {readOnlyHint: false, destructiveHint: false},
-    }, async ({arrive_at, keep_for, ...edit}, ctx) => runAsAgent("edit_object", ctx, async agent => {
-        const result = await AgentObjectUtil.editObject(agent, {...edit, arriveAt: arrive_at, keepFor: keep_for});
+    }, async ({arrive_at, keep_for, switched_on, ...edit}, ctx) => runAsAgent("edit_object", ctx, async agent => {
+        const result = await AgentObjectUtil.editObject(agent, {...edit, arriveAt: arrive_at, keepFor: keep_for,
+            switchedOn: switched_on});
         return toResult(result, "error" in result);
     }));
 
     define("move_object", {
         title: "Move an object",
-        description: "Moves something placed (a canvas, prop, lamp or fan, or in your own room a label or door) onto "
+        description: "Moves something placed (a canvas, prop, lamp, fan or cannon, or in your own room a label or door) onto "
             + "another block's side, keeping its size, as near the side's middle as it fits; labels and doors go only on "
-            + "walls. Use edit_object to change what it shows, add_object for a new one. A zone can't move: remove it "
+            + "walls, and a cannon on a floor or a wall. Use edit_object to change what it shows, add_object for a new one. A zone can't move: remove it "
             + "and add another. Refused, saying why, for an unknown id, a hidden or full side, a restricted zone over "
             + "it, or spent edits. Costs one edit.",
         inputSchema: z.object({id: objectId, on: face, top: top.optional()}),
@@ -579,8 +615,8 @@ function defineTools(): {name: string, config: any, handler: any}[]
 
     define("remove_object", {
         title: "Remove an object",
-        description: "Removes for good something placed (a canvas, prop, lamp, fan, label or door) or a restricted "
-            + "zone, by its id from look. Removing a zone lifts its protection; the blocks in it stay (remove_blocks "
+        description: "Removes for good something placed (a canvas, prop, lamp, fan, cannon, label or door) or a restricted "
+            + "zone, by its id from look. A cannon's price doesn't come back. Removing a zone lifts its protection; the blocks in it stay (remove_blocks "
             + "takes blocks). To change a thing instead, use edit_object or move_object. Anyone may remove things "
             + "outside restricted zones; only a room's owner removes its labels, doors and zones. Only adding it again "
             + "undoes it. Costs one edit.",

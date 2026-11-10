@@ -1,5 +1,8 @@
 import NumUtil from "./numUtil";
 
+// The largest number two visible-ASCII characters hold.
+const MAX_RAW_PAIR = 94 * 94 - 1;
+
 const StringUtil =
 {
     // Counts code points, so surrogate pairs (e.g. emoji) are never split.
@@ -43,6 +46,23 @@ const StringUtil =
     convertRawNumberToVisibleASCII: (raw: number): string =>
     {
         return String.fromCharCode(33 + raw);
+    },
+    // The same over two characters, the first the more significant, for what one character's 94 steps are too coarse
+    // for. The fallback is for a string that ends before the two.
+    convertVisibleASCIIPairToNumber: (str: string, charIndex: number, min: number, max: number,
+        fallback: number): number =>
+    {
+        if (charIndex + 1 >= str.length)
+            return fallback;
+        const raw = StringUtil.convertVisibleASCIIToRawNumber(str, charIndex) * 94
+            + StringUtil.convertVisibleASCIIToRawNumber(str, charIndex + 1);
+        return min + (max - min) * raw / MAX_RAW_PAIR;
+    },
+    convertNumberToVisibleASCIIPair: (n: number, min: number, max: number): string =>
+    {
+        const raw = Number.isFinite(n) ? Math.round(NumUtil.normalizeInRange(n, min, max) * MAX_RAW_PAIR) : 0;
+        return StringUtil.convertRawNumberToVisibleASCII(Math.floor(raw / 94))
+            + StringUtil.convertRawNumberToVisibleASCII(raw % 94);
     },
 }
 

@@ -290,8 +290,8 @@ node dev/scripts/helper/sampleRemarks.js [--personality=curator] [--npcs=2] [--c
 ```
 
 It prints, for two helpers of each personality, what each loves and dislikes and a few remarks on
-things picked at random (or all of them on one picture, by path, or on a "lamp", "fan", "door",
-"mirror" or "sign"). Each remark should name its thing correctly (one, or several, and in the right
+things picked at random (or all of them on one picture, by path, or on a "lamp", "fan", "cannon",
+"door", "mirror" or "sign"). Each remark should name its thing correctly (one, or several, and in the right
 case), give a reason that fits it, and read as its speaker. A reason that doesn't fit its thing comes
 from a keyword under the wrong interest; move it, or into `UNREMARKED_KEYWORDS`.
 

@@ -5,7 +5,7 @@ import BufferState from "../types/bufferState";
 // solid voxel grid plus an object allowance that covers every category at its cap with every string at
 // its longest (tests assert it). Typed arrays silently drop out-of-range writes, so an undersized buffer
 // would silently truncate a full room.
-export const MAX_ENCODED_OBJECTS_BYTES = 256 * 1024;
+export const MAX_ENCODED_OBJECTS_BYTES = 288 * 1024;
 const writeBuffer = new ArrayBuffer(MAX_ENCODED_VOXEL_GRID_BYTES + MAX_ENCODED_OBJECTS_BYTES);
 
 let writeBufferReserved = false;

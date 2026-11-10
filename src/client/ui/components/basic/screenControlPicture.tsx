@@ -7,6 +7,7 @@ import AddCanvasIcon from "../../svg/icons/addCanvasIcon";
 import AddPropIcon from "../../svg/icons/addPropIcon";
 import AddLampIcon from "../../svg/icons/addLampIcon";
 import AddFanIcon from "../../svg/icons/addFanIcon";
+import AddCannonIcon from "../../svg/icons/addCannonIcon";
 import RotateClockwiseIcon from "../../svg/icons/rotateClockwiseIcon";
 import CloseIcon from "../../svg/icons/closeIcon";
 import PersonIcon from "../../svg/icons/personIcon";
@@ -57,6 +58,9 @@ function draw(control: ScreenControl): ReactNode
             return button("yj-panel-gray", <AddLampIcon/>);
         case "addFan":
             return button("yj-panel-gray", <AddFanIcon/>);
+        // Without the price under it, which a line of text has no room for.
+        case "addCannon":
+            return button("yj-panel-gray", <AddCannonIcon/>);
         case "rotate":
             return button("yj-panel-gray", <RotateClockwiseIcon/>);
         case "person":

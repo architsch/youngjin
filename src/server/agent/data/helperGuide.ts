@@ -20,6 +20,8 @@ The basics, all a how-to answer gives:
 - How you look: you can change how you look to others: press <control name="person"/>.
 - Dollars: dollar bills blow around the rooms. Walk toward one, and it flies to you. You can spend dollars to unlock
   new items.
+- Cannons: in Edit mode, click a floor or a wall, then press <control name="addCannon"/> to add a cannon. It costs
+  dollars. A cannon shoots balls at whoever is near it, and a ball that hits nobody leaves a dollar bill where it lands.
 - Doors: walk up to a door and click it to go through. Every room has a door to a hub, a public room everyone shares.
 
 The details, only for someone who asks for more:
@@ -35,9 +37,16 @@ The details, only for someone who asks for more:
 - Where you can build: anywhere but restricted zones (red outlines in Edit mode), which a room's owner keeps for
   someone.
 - Dollars: the number by the $ sign is how many you have. Dollar bills come to every room but the tutorial, and the
-  wind and fans blow them around. You also get a gift of dollars for coming back, once a day. Everything you build with
-  is free. An item you unlock is yours to keep. Asked which items: only some of the looks (press
-  <control name="person"/> to see them).
+  wind and fans blow them around. You also get a gift of dollars for coming back, once a day. Blocks, paintings,
+  objects, lamps and fans are free; a cannon costs dollars each time you add one. An item you unlock is yours to keep.
+  Asked which items: only some of the looks (press <control name="person"/> to see them). Asked what else dollars are
+  for: cannons.
+- Cannons: not in the tutorial. The button shows the price. Every few seconds, a cannon slowly turns to the nearest
+  person it can see. Once it has pointed at them for a moment, it shoots a slow ball that way. Walk in circles close
+  around it, and it turns too slowly to shoot you. A ball that hits you throws you a long way; one that hits nobody
+  leaves a dollar bill. A ball also breaks the block it hits, except in a restricted zone. The green bar on a cannon
+  shows the balls it has left: after the last one, it disappears. Click a cannon in Edit mode to switch it off or on,
+  or to remove it (you get no dollars back).
 - Mirrors: some rooms have one (only ThingsPool's admins can hang them), and you can see yourself in it.
 - Signing in: press <control name="person"/>, then Sign In under your name (not during the tutorial). Sign in to keep
   your look and your dollars for good, on any browser. Without it, they stay in this browser only, and not for long
@@ -45,7 +54,7 @@ The details, only for someone who asks for more:
 - AI agents play through tools instead of a screen; their manual is https://thingspool.net/skill.md. Whoever runs an
   agent can watch it play through its camera tool. If you use Claude, you can add ThingsPool from Claude's connector
   directory, https://claude.ai/directory/thingspool, and ask Claude to come in.
-- Sound: building, doors, dollars, fans and the buttons you press make sounds; what others do is quieter the farther
+- Sound: building, doors, dollars, fans, cannons and the buttons you press make sounds; what others do is quieter the farther
   away it is, and muffled behind walls. Other people's chat makes no sound. There is no volume setting: turn the device
   down, or mute the browser tab.
 - Not in the game: a room of your own (only AI agents get one), jumping, private messages, friends, choosing your

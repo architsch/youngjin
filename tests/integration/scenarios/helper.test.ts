@@ -60,6 +60,10 @@ import SignalTypeConfigMap from "../../../src/shared/networking/maps/signalTypeC
 import DoorObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import { DoorTypeEnumMap } from "../../../src/shared/object/types/doorType";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
+import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import CannonStateUtil from "../../../src/shared/object/util/cannonStateUtil";
+import PhysicsColliderStateUtil from "../../../src/shared/physics/util/physicsColliderStateUtil";
+import Geometry3DUtil from "../../../src/shared/math/util/geometry3DUtil";
 import { SpeakerActivityEnumMap } from "../../../src/shared/object/types/speakerActivity";
 import QuarterTurnsUtil from "../../../src/shared/object/util/quarterTurnsUtil";
 import NpcFacingUtil from "../../../src/shared/object/util/npcFacingUtil";
@@ -164,8 +168,9 @@ function tenthOfBudgetUsage(): typeof REPLY_USAGE
 // What the server showed rooms (and who to, when only one user was told).
 const shown: {signalType: string, signal: any, userID?: string}[] = [];
 
-// Seconds of the helpers' lives: each a tick, with the flushes between that step agents' bodies and walking helpers.
-async function live(seconds: number): Promise<void>
+// Seconds of the helpers' lives: each a tick, with the flushes between that step agents' bodies and walking helpers
+// (and whatever a test watches after each).
+async function live(seconds: number, afterFlush?: () => void): Promise<void>
 {
     for (let i = 0; i < seconds; ++i)
     {
@@ -174,6 +179,7 @@ async function live(seconds: number): Promise<void>
             vi.setSystemTime(Date.now() + 200);
             AgentBodyUtil.stepAll(0.2);
             HelperAgentUtil.stepAll(0.2);
+            afterFlush?.();
         }
         await HelperAgentUtil.tick();
         // Lets a reply that was asked for come back.
@@ -1835,6 +1841,14 @@ describe("helpers", () => {
         expect(say("guide", {objectType: "Label", text: "Information Desk"})).toContain("'Information Desk'");
         expect(say("guide", {objectType: "Label", text: "x".repeat(40)})).not.toContain("xxx");
         expect(say("explorer", {objectType: "Door", text: "Gallery"})).toMatch(/'Gallery' door|door/i);
+        // A cannon as what it is, by one who likes cannons and by one who doesn't.
+        const tasteFor = (personality: NpcPersonality, level: number) => Array.from({length: 40}, (_, i) => `npc-${i}`)
+            .find(id => HelperRemarkUtil.getTastes(id, personality).levels.get("cannons") == level)!;
+        for (let i = 0; i < 10; ++i)
+        {
+            expect(say("jester", {objectType: "Cannon"}, tasteFor("jester", 1))).toMatch(/[Tt]he cannon/);
+            expect(say("caretaker", {objectType: "Cannon"}, tasteFor("caretaker", -1))).toMatch(/[Tt]he cannon/);
+        }
         // A jester that dislikes signs says one of its lines for something disliked of one: the sign, and what it
         // dislikes in it, put in, and any other gap anything.
         const disliking = Array.from({length: 40}, (_, i) => `jester-${i}`)
@@ -2571,6 +2585,36 @@ describe("helpers", () => {
         expect(along(met)).toBeGreaterThan(2);
         expect(walked.some(at => Math.abs((at.x - home.x) * dir.z - (at.z - home.z) * dir.x) > 2.5)).toBe(true);
         expect(walked.filter(blocked)).toEqual([]);
+    });
+
+    it("walks round a cannon in its way, which is as solid as a block, never through it", async () => {
+        const home = inFrontOfEntrance(FIRST_HUB_ID, 4);
+        const mira = standNpc(FIRST_HUB_ID, "Mira", home, 0, behaviorPrefs({wanderRadius: 8}));
+        await live(1);
+        const alice = await joinPerson("Alice", "an");
+        await moveTo(alice, inFrontOfEntrance(FIRST_HUB_ID, 10));
+        // A cannon on the straight way to her, switched off, as the room keeps one.
+        const room = ServerRoomManager.roomRuntimeMemories[FIRST_HUB_ID].room;
+        const cannon = new AddObjectSignal(FIRST_HUB_ID, alice.user.id, "Alice", ObjectTypeConfigMap.getIndexByType("Cannon"),
+            "cannon", new ObjectTransform(inFrontOfEntrance(FIRST_HUB_ID, 5.5), {...UP}, {x: 1, y: 1, z: 1}),
+            {[ObjectMetadataKeyEnumMap.CannonState]: new EncodableByteString(CannonStateUtil.encodeSwitch(false))});
+        room.objectById[cannon.objectId] = cannon;
+        const box = PhysicsColliderStateUtil.getObjectColliderState(cannon.objectTypeIndex, cannon.transform)!.hitbox;
+        const inCannon = (feet: Vec3) => Geometry3DUtil.AABBsOverlap(box, {
+            center: {x: feet.x, y: feet.y + 0.5 * PLAYER_HEIGHT, z: feet.z},
+            halfSize: {x: PLAYER_RADIUS_XZ, y: 0.5 * PLAYER_HEIGHT, z: PLAYER_RADIUS_XZ}});
+        expect(inCannon(inFrontOfEntrance(FIRST_HUB_ID, 5.5))).toBe(true);
+
+        await talk(alice, "come round here!");
+        const walked: Vec3[] = [];
+        await live(12, () => walked.push({...helperIn(FIRST_HUB_ID, mira).at}));
+        const {dir} = entranceOf(FIRST_HUB_ID).transform;
+        const along = (at: Vec3) => (at.x - home.x) * dir.x + (at.z - home.z) * dir.z;
+        const aside = (at: Vec3) => Math.abs((at.x - home.x) * dir.z - (at.z - home.z) * dir.x);
+        // Past it, by a step to one side of it.
+        expect(along(walked[walked.length - 1])).toBeGreaterThan(2);
+        expect(Math.max(...walked.map(aside))).toBeGreaterThan(0.75);
+        expect(walked.filter(inCannon)).toEqual([]);
     });
 
     it("holds still for everyone while an admin holds it, the drop included, and goes on once let go", async () => {

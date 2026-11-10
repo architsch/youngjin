@@ -12,9 +12,11 @@ import ParticleSpawnUtil from "../../graphics/particle/util/particleSpawnUtil";
 import { roomShapeChangedObservable } from "../../system/clientObservables";
 import App from "../../app";
 import GameObjectComponent from "./gameObjectComponent";
+import PhysicsColliderStateUtil from "../../../shared/physics/util/physicsColliderStateUtil";
 
 // No stream reaches farther than this before a wall stops it.
 const MAX_STOP_DISTANCE = 32;
+const WORLD_UP: Vec3 = {x: 0, y: 1, z: 0};
 
 // A stream of particles out of its object's face (see ParticleSystem.createEmitter), resolved like
 // AnimatedSprite's: its type's baseline, changed by what getOverride makes of the object's metadata. Sized
@@ -70,7 +72,7 @@ export default class ParticleEmitter extends GameObjectComponent
         const sizeScale = Math.max(size.x, size.y);
         // Thickened by as much as its reach speeds it up, so a longer stream is no thinner along its way.
         const reachBoost = this.getReachBoost(descriptor, sizeScale);
-        this.handle.setPose(this.getOrigin(descriptor), this.getNormal());
+        this.handle.setPose(this.getOrigin(descriptor), descriptor.upright ? WORLD_UP : this.getNormal());
         this.handle.setScales((descriptor.rateScale ?? 1) * reachBoost, (descriptor.speedScale ?? 1) * reachBoost,
             sizeScale);
         this.handle.setParticleTimeScale(descriptor.particleTimeScale ?? 1);
@@ -90,8 +92,8 @@ export default class ParticleEmitter extends GameObjectComponent
     {
         const voxels = App.getCurrentRoom()?.voxelGrid.voxels;
         const blockDistance = (descriptor.stopAtBlocks && voxels != undefined)
-            ? VoxelQueryUtil.getDistanceToOccupiedBlock(voxels, this.getOrigin(descriptor), this.getNormal(),
-                MAX_STOP_DISTANCE)
+            ? VoxelQueryUtil.getDistanceToOccupiedBlock(voxels, this.getOrigin(descriptor),
+                descriptor.upright ? WORLD_UP : this.getNormal(), MAX_STOP_DISTANCE)
             : Infinity;
         this.handle?.setStopDistance(Math.min(blockDistance, this.getReach(descriptor)));
     }
@@ -124,9 +126,17 @@ export default class ParticleEmitter extends GameObjectComponent
 
     private getOrigin(descriptor: ParticleEmitterDescriptor): Vec3
     {
-        const pos = this.gameObject.params.transform.pos;
-        const normal = this.getNormal();
+        const {objectTypeIndex, transform} = this.gameObject.params;
         const offset = descriptor.faceOffset ?? 0;
+        // Over the middle of the object's box (see ParticleEmitterDescriptor.upright), or its position where it has none.
+        if (descriptor.upright)
+        {
+            const middle = PhysicsColliderStateUtil.getObjectColliderState(objectTypeIndex, transform)?.hitbox.center
+                ?? transform.pos;
+            return {x: middle.x, y: middle.y + offset, z: middle.z};
+        }
+        const pos = transform.pos;
+        const normal = this.getNormal();
         return {x: pos.x + normal.x * offset, y: pos.y + normal.y * offset, z: pos.z + normal.z * offset};
     }
 

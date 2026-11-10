@@ -15,6 +15,8 @@ export default class PhysicsRoom
     // The objects whose type pushes others (see PhysicsForceUtil), each read from the room as it stands.
     forceEmitterIds: Set<string>;
     globalColliders: ColliderState[];
+    // Those of them the room shows a surface of, which stop what its unseen sides let out (see PhysicsSphereUtil).
+    floorAndCeiling: ColliderState[];
 
     constructor(room: Room)
     {
@@ -24,6 +26,7 @@ export default class PhysicsRoom
         this.forceEmitterIds = new Set<string>();
         // The boundary is solid all the way round (doors hang on it).
         this.globalColliders = [floor, ceiling, wall_lowerX, wall_upperX, wall_lowerZ, wall_upperZ];
+        this.floorAndCeiling = [floor, ceiling];
     }
 }
 

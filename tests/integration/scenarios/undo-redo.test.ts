@@ -7,8 +7,9 @@
  * room; each kind of edit taken back and made again as the user's own (checked, applied, and sent as the
  * signals that undo it): blocks put up, taken down and painted, objects hung, taken down, moved,
  * turned and given other values, a block taken down with what hung on it; a single-player room sending
- * nothing; where each step leaves the selection; and selections by a click or a movement key undone and
- * redone, in their order among the edits.
+ * nothing; where each step leaves the selection; selections by a click or a movement key undone and
+ * redone, in their order among the edits; and an object that costs dollars, whose adding and removal are
+ * no part of the history, though a throw of its switch is.
  * Browser-bound client modules are stubbed; the room, the rules, the managers, the gizmos, the object
  * tools, the click path and the key steps run for real. The face tools' own handlers are private to their
  * components, so their sequences are mirrored here.
@@ -89,12 +90,13 @@ import { ClientEventType } from "../../../src/client/system/types/clientEventTyp
 import ClientEventHistoryUtil, { MERGE_WINDOW_MS } from "../../../src/client/system/util/clientEventHistoryUtil";
 import GameModeUtil from "../../../src/client/system/util/gameModeUtil";
 import RoomEditUtil from "../../../src/client/system/util/roomEditUtil";
+import CannonStateUtil from "../../../src/shared/object/util/cannonStateUtil";
 import VoxelEditUtil from "../../../src/client/voxel/util/voxelEditUtil";
 import { clientFeatureFlagsObservable, gameModeObservable, notificationMessageObservable, objectEditObservable,
     objectPlacedObservable, objectSelectionObservable, orbitCameraAngleHoldRequestObservable, popupStateObservable,
     roomChangedObservable, voxelQuadSelectionObservable } from "../../../src/client/system/clientObservables";
 import { FeatureFlag } from "../../../src/shared/system/types/featureFlag";
-import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_POS,
+import { CANNON_PRICE_DOLLARS, COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_POS,
     LABEL_COLOR_PALETTE_NAME, STOREY_FLOOR_COLLISION_LAYER, UNIT_VEC3,
     VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 import EncodableData from "../../../src/shared/networking/types/encodableData";
@@ -1602,5 +1604,92 @@ describe("a selection the user makes by hand", () => {
             expect(SelectionStepUtil.tryStep("up")).toBe(false);
             expect(numSelectionsEntered()).toBe(0);
         });
+    });
+});
+
+describe("an object that costs dollars", () => {
+    const cannonTypeIndex = ObjectTypeConfigMap.getIndexByType("Cannon");
+    const STATE_KEY = ObjectMetadataKeyEnumMap.CannonState;
+    // On the room's own floor, clear of the wall and the block.
+    const CANNON_POS = {x: 22.5, y: 0, z: 22.5};
+    const UP = {x: 0, y: 1, z: 0};
+    const switched = (on: boolean): ObjectMetadata => ({[STATE_KEY]: new EncodableByteString(CannonStateUtil.encodeSwitch(on))});
+    const stateOf = (objectId: string) => CannonStateUtil.getObjectState(room.objectById[objectId]);
+
+    it("is not taken away by an undo, which takes back what was done before it was added", async () => {
+        expect(ObjectTypeConfigMap.getConfigByIndex(cannonTypeIndex).price).toBe(CANNON_PRICE_DOLLARS);
+        const canvasId = await userHangs(canvasTypeIndex, onWallAt(10.5), SOUTH, {...UNIT_VEC3});
+        const cannonId = await userHangs(cannonTypeIndex, CANNON_POS, UP, {...UNIT_VEC3}, switched(true));
+        sentSignals();
+
+        expect(await ClientEventHistoryUtil.undo()).toBe("done");
+        expect(room.objectById[cannonId]).toBeDefined();
+        expect(room.objectById[canvasId]).toBeUndefined();
+        expect(sentSignals()).toEqual([["removeObject", canvasId]]);
+        // Nor is another added by a redo.
+        expect(await ClientEventHistoryUtil.redo()).toBe("done");
+        expect(await ClientEventHistoryUtil.redo()).toBe("none");
+        expect(sentSignals()).toEqual([["addObject", canvasId, actingUser.id]]);
+    });
+
+    it("is not brought back by an undo once its tools have taken it away", async () => {
+        const cannonId = await standObject(cannonTypeIndex, CANNON_POS, UP, {...UNIT_VEC3}, switched(true));
+        ObjectEditUtil.openRemoveConfirmPopup(await select(cannonId), "Want to remove this?");
+        const popup = popupStateObservable.peek();
+        (popup as Extract<typeof popup, {popupType: "confirm"}>).params.onConfirm();
+        await settle();
+        expect(room.objectById[cannonId]).toBeUndefined();
+        sentSignals();
+
+        expect(await ClientEventHistoryUtil.undo()).not.toBe("done");
+        await settle();
+        expect(room.objectById[cannonId]).toBeUndefined();
+        expect(sentSignals().filter(([kind]) => kind == "addObject")).toEqual([]);
+    });
+
+    it("is left out of an edit that took it away with other things, the rest of which is undone and redone", async () => {
+        const cannonId = await standObject(cannonTypeIndex, CANNON_POS, UP, {...UNIT_VEC3}, switched(true));
+        const cannon = room.objectById[cannonId];
+        // As a block taken down with what stood on it is entered: here, a face painted and the cannon taken away.
+        const paint = new SetVoxelQuadTextureSignal(room.id, SOUTH_FACE, 9);
+        const unpaint = RoomEditUtil.getUndoSignal(room, paint);
+        const remove = new RemoveObjectSignal(room.id, cannonId);
+        const restore = RoomEditUtil.getUndoSignal(room, remove);
+        expect(ClientVoxelManager.setVoxelQuadTexture(room, SOUTH_FACE, 9)).toBe(true);
+        expect(await ClientObjectManager.removeObject(cannonId)).toBe(true);
+        RoomEditUtil.record(ClientEventType.ManuallyRemovedVoxelBlock, room, {redo: [remove, paint], undo: [unpaint, restore]});
+        sentSignals();
+
+        expect(await ClientEventHistoryUtil.undo()).toBe("done");
+        expect(textureAt(SOUTH_FACE)).not.toBe(9);
+        expect(room.objectById[cannonId]).toBeUndefined();
+        expect(sentSignals().map(([kind]) => kind)).toEqual(["texture"]);
+
+        // Stood there again by its owner meanwhile, a redo of that edit leaves it standing.
+        expect(await ClientObjectManager.addObject(fakeGameObject(cannon), false)).toBe(true);
+        expect(await ClientEventHistoryUtil.redo()).toBe("done");
+        expect(textureAt(SOUTH_FACE)).toBe(9);
+        expect(room.objectById[cannonId]).toBeDefined();
+        expect(sentSignals().map(([kind]) => kind)).toEqual(["texture"]);
+    });
+
+    it("has a throw of its switch undone and redone as the switch alone, whatever the server has told of it since", async () => {
+        const cannonId = await standObject(cannonTypeIndex, CANNON_POS, UP, {...UNIT_VEC3}, switched(true));
+        ObjectEditUtil.trySetObjectMetadata(await select(cannonId), STATE_KEY, CannonStateUtil.encodeSwitch(false));
+        expect(stateOf(cannonId).on).toBe(false);
+        expect(sentSignals()).toEqual([["metadata", cannonId, STATE_KEY, CannonStateUtil.encodeSwitch(false)]]);
+        // The server's word since: it had fired by then, and stands turned another way.
+        const told = CannonStateUtil.encode({...CannonStateUtil.decode(""), ballsLeft: 7, aim: {yaw: 2, pitch: 0.1}});
+        expect(ClientObjectManager.setObjectMetadata(cannonId, STATE_KEY, told, false)).toBe(true);
+        expect(stateOf(cannonId)).toMatchObject({on: false, ballsLeft: 7});
+
+        expect(await ClientEventHistoryUtil.undo()).toBe("done");
+        expect(stateOf(cannonId)).toMatchObject({on: true, ballsLeft: 7});
+        expect(stateOf(cannonId).aim.yaw).toBeCloseTo(2, 2);
+        expect(sentSignals()).toEqual([["metadata", cannonId, STATE_KEY, CannonStateUtil.encodeSwitch(true)]]);
+
+        expect(await ClientEventHistoryUtil.redo()).toBe("done");
+        expect(stateOf(cannonId)).toMatchObject({on: false, ballsLeft: 7});
+        expect(sentSignals()).toEqual([["metadata", cannonId, STATE_KEY, CannonStateUtil.encodeSwitch(false)]]);
     });
 });

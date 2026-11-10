@@ -363,6 +363,10 @@ export const HELPER_SMALL_TALK: {[personality in Exclude<NpcPersonality, "idle">
                 then: "So I take the stairs. Elephants can't jump either, and they do just fine!"},
             {topic: "visitors", text: "Here, dollar bills fly to anyone who walks toward them. Money that comes to you, finally!",
                 then: "Visitors can spend their dollars to unlock new items. I'd unlock everything in one day!"},
+            {topic: "games",
+                text: "A cannon here shoots balls at whoever is near it. Step out of the way, and the ball leaves a dollar bill!",
+                then: "A cannon costs dollars to add, and every ball that misses leaves a dollar bill. I can't tell if that's "
+                    + "a good deal!"},
             {topic: "doors", text: "The revolving door was invented in 1888, by Theophilus Van Kannel in Philadelphia.",
                 then: "If I used a revolving door, I'd go round five times before finding the way out!"},
             {topic: "lamps", text: "A light bulb in a fire station in Livermore, California, has been on since 1901!",
@@ -502,6 +506,9 @@ export const HELPER_SMALL_TALK: {[personality in Exclude<NpcPersonality, "idle">
                 then: "The first Swiss Army knife had a blade, a can opener and a screwdriver. All a caretaker needs."},
             {topic: "building", text: "A room's owner can keep part of the room for one person. That's called a restricted zone.",
                 then: "In Edit mode, a restricted zone has red outlines. Only the owner and that person can build inside."},
+            {topic: "building", text: "Anyone can add a cannon here. It shoots balls at people, and the balls break blocks. Hmph.",
+                then: "A cannon ball can't break a block in a restricted zone, at least. And after its last ball, a cannon "
+                    + "is gone."},
             {topic: "lamps", text: "In London, some old gas street lamps are still lit and looked after by hand.",
                 then: "Those London gas lamps have been cared for over a hundred years. That's proper upkeep."},
             {topic: "history", text: "In the old days, there were no doors here. Doors only came on August 30.",

@@ -8,6 +8,7 @@ import AddPropIcon from "../../../svg/icons/addPropIcon";
 import AddDoorIcon from "../../../svg/icons/addDoorIcon";
 import AddLampIcon from "../../../svg/icons/addLampIcon";
 import AddFanIcon from "../../../svg/icons/addFanIcon";
+import AddCannonIcon from "../../../svg/icons/addCannonIcon";
 import AddLabelIcon from "../../../svg/icons/addLabelIcon";
 import AddNpcIcon from "../../../svg/icons/addNpcIcon";
 import AddMirrorIcon from "../../../svg/icons/addMirrorIcon";
@@ -20,8 +21,13 @@ import ImageMetadata from "../../../../../shared/graphics/image/types/imageMetad
 import ImageChoiceUtil from "../../../util/imageChoiceUtil";
 import VoxelEditUtil from "../../../../voxel/util/voxelEditUtil";
 import DoorObjectTypeConfig from "../../../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
-import { clientFeatureFlagsObservable, volumesShownObservable } from "../../../../system/clientObservables";
+import { clientFeatureFlagsObservable, dollarsInFlightObservable, inventoryObservable,
+    volumesShownObservable } from "../../../../system/clientObservables";
 import { SUB_PANELS_BENEATH_SELECTION_TOOLS } from "../../../../system/clientConstants";
+import { CANNON_PRICE_DOLLARS } from "../../../../../shared/system/sharedConstants";
+import { RoomTypeEnumMap } from "../../../../../shared/room/types/roomType";
+import ClientInventoryManager from "../../../../inventory/clientInventoryManager";
+import PriceTag from "../../basic/priceTag";
 import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
 import ClosablePanelUtil from "../../../util/closablePanelUtil";
 import RoomValidationUtil from "../../../../../shared/room/util/roomValidationUtil";
@@ -43,6 +49,7 @@ const labelTypeIndex = ObjectTypeConfigMap.getIndexByType("Label");
 const npcTypeIndex = ObjectTypeConfigMap.getIndexByType("Npc");
 const fanTypeIndex = ObjectTypeConfigMap.getIndexByType("Fan");
 const mirrorTypeIndex = ObjectTypeConfigMap.getIndexByType("Mirror");
+const cannonTypeIndex = ObjectTypeConfigMap.getIndexByType("Cannon");
 
 // Feature flags whose toggling changes whether this menu's buttons are enabled.
 const placementFeatureFlags = [
@@ -63,16 +70,20 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
     // Whether a pick from a chooser beneath this row is still going up.
     const addingRef = useRef(false);
 
-    // Re-render this menu only when the feature flags it depends on change (e.g. tutorial steps), or volumes are
-    // shown or hidden.
+    // Re-render this menu only when the feature flags it depends on change (e.g. tutorial steps), volumes are shown
+    // or hidden, or the dollars the user's count shows change, which what costs any is offered by.
     useEffect(() => {
         for (const flag of placementFeatureFlags)
             clientFeatureFlagsObservable.addElementListener("voxelQuadPlacementOptions", flag, forceRefresh);
         volumesShownObservable.addListener("voxelQuadPlacementOptions", forceRefresh);
+        inventoryObservable.addListener("voxelQuadPlacementOptions", forceRefresh);
+        dollarsInFlightObservable.addListener("voxelQuadPlacementOptions", forceRefresh);
         return () => {
             for (const flag of placementFeatureFlags)
                 clientFeatureFlagsObservable.removeElementListener("voxelQuadPlacementOptions", flag);
             volumesShownObservable.removeListener("voxelQuadPlacementOptions");
+            inventoryObservable.removeListener("voxelQuadPlacementOptions");
+            dollarsInFlightObservable.removeListener("voxelQuadPlacementOptions");
         };
     }, []);
 
@@ -85,6 +96,10 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
     const canAddLamp = (PreEncodedCompositionIndexMap.Lamp ?? []).some(lampSizeFits);
     // A fan has one look and one size, so it is added as it is.
     const canAddFan = ObjectPlacementUtil.canAddObject(props.selection, fanTypeIndex);
+    // So is a cannon, by whoever has the dollars it costs. Only a room the server plays has any.
+    const offersCannon = App.getCurrentRoom()?.roomType != RoomTypeEnumMap.SinglePlayer;
+    const canAddCannon = offersCannon && ClientInventoryManager.getDollarsShown() >= CANNON_PRICE_DOLLARS
+        && ObjectPlacementUtil.canAddObject(props.selection, cannonTypeIndex);
 
     // Doors and labels: the room's superuser only (see RoomValidationUtil).
     const room = App.getCurrentRoom();
@@ -149,9 +164,11 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
     };
 
     // Full width, so the rows can scroll horizontally instead of growing. The buttons ScreenControlMap names are pictured
-    // in messages by hand-made copies (see ScreenControlPicture): a new icon or color for one goes there too.
+    // in messages by hand-made copies (see ScreenControlPicture): a new icon or color for one goes there too. The row
+    // is deeper beneath its buttons where one of them has a price to show there.
     return <div className="flex flex-col gap-1 w-full">
-        {(SUB_PANELS_BENEATH_SELECTION_TOOLS || choosing == null) && <SelectionToolRow>
+        {(SUB_PANELS_BENEATH_SELECTION_TOOLS || choosing == null) && <SelectionToolRow
+            additionalClassNames={offersCannon ? "pb-6" : ""}>
             <IconButton id="removeVoxelBlockButton" icon={<TrashIcon/>} size="md" color="red" shortcutKey="Delete"
                 disabled={!VoxelEditUtil.canRemoveVoxelBlock(props.selection)}
                 onClick={() => VoxelEditUtil.tryRemoveVoxelBlock(props.selection)}/>
@@ -163,6 +180,11 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
             {addButton("addLampButton", <AddLampIcon/>, lampTypeIndex)}
             <IconButton id="addFanButton" icon={<AddFanIcon/>} size="md"
                 disabled={!canAddFan} onClick={() => ObjectPlacementUtil.tryAddFan(props.selection)}/>
+            {offersCannon && <div className="relative shrink-0">
+                <IconButton id="addCannonButton" icon={<AddCannonIcon/>} size="md"
+                    disabled={!canAddCannon} onClick={() => ObjectPlacementUtil.tryAddCannon(props.selection)}/>
+                <PriceTag dollars={CANNON_PRICE_DOLLARS} additionalClassNames="absolute top-full left-1/2 -translate-x-1/2 mt-1"/>
+            </div>}
             {isSuperuser && addButton("addLabelButton", <AddLabelIcon/>, labelTypeIndex)}
             {isSuperuser && addButton("addDoorButton", <AddDoorIcon/>, doorTypeIndex)}
             {isAdmin && <IconButton id="addNpcButton" icon={<AddNpcIcon/>} size="md"

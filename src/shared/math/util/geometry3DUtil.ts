@@ -165,6 +165,91 @@ const Geometry3DUtil =
 
         return { hitRayScale: tmin, hitNormal };
     },
+    // Whether a sphere reaches into a box (one that only touches it doesn't).
+    sphereOverlapsAABB: (center: Vec3, radius: number, box: AABB3): boolean =>
+    {
+        const gapX = Math.max(0, Math.abs(center.x - box.center.x) - box.halfSize.x);
+        const gapY = Math.max(0, Math.abs(center.y - box.center.y) - box.halfSize.y);
+        const gapZ = Math.max(0, Math.abs(center.z - box.center.z) - box.halfSize.z);
+        return gapX * gapX + gapY * gapY + gapZ * gapZ < radius * radius;
+    },
+    // Ray scale factor that moves a sphere's centre to where the sphere first touches a box, with the way out of the
+    // box there; no hit normal if it never does. One touching the box as it sets off hits at 0. Between the points
+    // where the centre passes a face plane of the box, its squared distance to the box is a quadratic in how far it
+    // has come (see coneReachesAABB).
+    castSphereAgainstAABB: (center: Vec3, destination: Vec3, radius: number, target: AABB3): RaycastHitResult3 =>
+    {
+        const rayX = destination.x - center.x, rayY = destination.y - center.y, rayZ = destination.z - center.z;
+        // The box's bounds, from where the sphere sets off.
+        const minX = target.center.x - target.halfSize.x - center.x, maxX = target.center.x + target.halfSize.x - center.x;
+        const minY = target.center.y - target.halfSize.y - center.y, maxY = target.center.y + target.halfSize.y - center.y;
+        const minZ = target.center.z - target.halfSize.z - center.z, maxZ = target.center.z + target.halfSize.z - center.z;
+
+        coneBreakpointsTemp.length = 0;
+        addConeBreakpoint(minX, rayX, 1);
+        addConeBreakpoint(maxX, rayX, 1);
+        addConeBreakpoint(minY, rayY, 1);
+        addConeBreakpoint(maxY, rayY, 1);
+        addConeBreakpoint(minZ, rayZ, 1);
+        addConeBreakpoint(maxZ, rayZ, 1);
+        coneBreakpointsTemp.sort(ascending);
+        coneBreakpointsTemp.push(1);
+
+        let from = 0;
+        for (let i = 0; i < coneBreakpointsTemp.length; ++i)
+        {
+            const to = coneBreakpointsTemp[i];
+            const middle = 0.5 * (from + to);
+            gapA = gapB = gapC = 0;
+            addSlabGap(minX, maxX, rayX, middle);
+            addSlabGap(minY, maxY, rayY, middle);
+            addSlabGap(minZ, maxZ, rayZ, middle);
+
+            // The squared distance to the box, less the sphere's squared radius: touching where it comes down to zero.
+            const c = gapC - radius * radius;
+            let hitRayScale: number | undefined = undefined;
+            if (gapA * from * from + gapB * from + c <= 0)
+                hitRayScale = from;
+            else if (gapA > 0)
+            {
+                const discriminant = gapB * gapB - 4 * gapA * c;
+                const root = (discriminant >= 0) ? (-gapB - Math.sqrt(discriminant)) / (2 * gapA) : Infinity;
+                if (root > from && root <= to)
+                    hitRayScale = root;
+            }
+            if (hitRayScale != undefined)
+            {
+                const at: Vec3 = {x: center.x + rayX * hitRayScale, y: center.y + rayY * hitRayScale,
+                    z: center.z + rayZ * hitRayScale};
+                return {hitRayScale, hitNormal: getWayOutOfAABB(at, target, {x: -rayX, y: -rayY, z: -rayZ})};
+            }
+            from = to;
+        }
+        return {hitRayScale: 1, hitNormal: undefined};
+    },
+    // The same against another sphere, where it stands: the way out of it is from its centre to the moving one's. One
+    // moving away from it never hits, unless they overlap as it sets off.
+    castSphereAgainstSphere: (center: Vec3, destination: Vec3, radius: number, targetCenter: Vec3,
+        targetRadius: number): RaycastHitResult3 =>
+    {
+        const apart = Vector3DUtil.subtract(center, targetCenter);
+        const ray = Vector3DUtil.subtract(destination, center);
+        const reach = radius + targetRadius;
+        const c = Vector3DUtil.lengthSqr(apart) - reach * reach;
+        if (c <= 0)
+            return {hitRayScale: 0, hitNormal: normalizeOr(apart, Vector3DUtil.scale(ray, -1))};
+
+        const a = Vector3DUtil.lengthSqr(ray);
+        const b = 2 * Vector3DUtil.dot(apart, ray);
+        const discriminant = b * b - 4 * a * c;
+        if (a == 0 || b >= 0 || discriminant < 0)
+            return {hitRayScale: 1, hitNormal: undefined};
+        const hitRayScale = (-b - Math.sqrt(discriminant)) / (2 * a);
+        if (hitRayScale > 1)
+            return {hitRayScale: 1, hitNormal: undefined};
+        return {hitRayScale, hitNormal: Vector3DUtil.normalize(
+            Vector3DUtil.add(apart, Vector3DUtil.scale(ray, hitRayScale)))};
+    },
     // Whether a box reaches into a cone that widens from its apex to a flat base centred on baseCenter, its
     // radius growing by radiusPerDistance with each unit of distance from the apex along its axis.
     // A ball travelling the axis and growing with it sweeps the cone out, so the box is in the cone where it
@@ -266,6 +351,24 @@ function addSlabGap(min: number, max: number, rate: number, at: number): void
     gapA += slope * slope;
     gapB += 2 * offset * slope;
     gapC += offset * offset;
+}
+
+// From the nearest point of a box to a point outside it; for a point inside, the fallback's way (up, if that is nothing).
+function getWayOutOfAABB(point: Vec3, box: AABB3, fallback: Vec3): Vec3
+{
+    const nearest: Vec3 = {
+        x: Math.max(box.center.x - box.halfSize.x, Math.min(box.center.x + box.halfSize.x, point.x)),
+        y: Math.max(box.center.y - box.halfSize.y, Math.min(box.center.y + box.halfSize.y, point.y)),
+        z: Math.max(box.center.z - box.halfSize.z, Math.min(box.center.z + box.halfSize.z, point.z)),
+    };
+    return normalizeOr(Vector3DUtil.subtract(point, nearest), fallback);
+}
+
+function normalizeOr(v: Vec3, fallback: Vec3): Vec3
+{
+    if (Vector3DUtil.lengthSqr(v) > 0)
+        return Vector3DUtil.normalize(v);
+    return (Vector3DUtil.lengthSqr(fallback) > 0) ? Vector3DUtil.normalize(fallback) : {...WORLD_UP};
 }
 
 // Adding 0 turns a rounded -0 into 0, which strict comparisons tell apart.

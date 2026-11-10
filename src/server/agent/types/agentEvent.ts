@@ -3,8 +3,10 @@ export default interface AgentEvent
 {
     // Milliseconds since the epoch.
     at: number;
+    // cannonBallHit: a cannon ball burst on the agent and threw it from where it stood.
     kind: "speech" | "arrival" | "departure" | "roomEntered" | "roomChangeRefused" | "roomReloading"
-        | "blocksChanged" | "objectAdded" | "objectRemoved" | "objectChanged" | "dollarCollected" | "loginReward";
+        | "blocksChanged" | "objectAdded" | "objectRemoved" | "objectChanged" | "dollarCollected" | "loginReward"
+        | "cannonBallHit";
     // The player it concerns (speech, arrival, departure), or who added an object.
     who?: string;
     whoIsAgent?: boolean;

@@ -38,7 +38,12 @@ const ServerObjectManager =
         }
         const room = roomRuntimeMemory.room;
 
-        if (!ObjectUpdateUtil.addObject(user, room, obj))
+        // What costs dollars to add (see ObjectTypeConfig.price) is paid for as it is added, and refused whoever can't.
+        // Checked first, so that nobody pays for what the room then refuses.
+        const price = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).price ?? 0;
+        if (!ObjectUpdateUtil.canAddObject(user, room, obj)
+            || (price > 0 && !ServerInventoryManager.spendDollars(socketUserContext, price))
+            || !ObjectUpdateUtil.addObject(user, room, obj, false))
         {
             console.error(`onAddObjectSignalReceived :: Failed (objectId=${obj.objectId})`);
             ServerObjectManager.refuseAddObjectSignal(socketUserContext, obj);

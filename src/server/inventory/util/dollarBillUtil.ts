@@ -6,8 +6,8 @@ import ObjectCategoryConfigMap from "../../../shared/object/maps/objectCategoryC
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
-import DollarBillObjectTypeConfig, { DOLLAR_BILL_LENGTH, DOLLAR_BILL_REACH,
-    DOLLAR_BILL_REST_HEIGHT } from "../../../shared/object/types/objectTypeConfig/dollarBillObjectTypeConfig";
+import DollarBillObjectTypeConfig, { DOLLAR_BILL_LENGTH, DOLLAR_BILL_REACH, DOLLAR_BILL_REST_HEIGHT,
+    DOLLAR_BILL_SPAWN_CAP } from "../../../shared/object/types/objectTypeConfig/dollarBillObjectTypeConfig";
 import { PLAYER_EYE_HEIGHT, PLAYER_HEIGHT } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import ObjectCollectedSignal from "../../../shared/object/types/objectCollectedSignal";
 import ObjectWaypoint from "../../../shared/object/types/objectWaypoint";
@@ -51,7 +51,13 @@ export const REACH_ANGLE = Math.PI / 4;
 // Where on a bill an eye may see it, from the crease's middle, in world units: inside it however it is turned. Any of them
 // in sight is the bill in sight.
 const SIGHT_POINTS = [{x: 0, z: 0}, {x: 0.15, z: 0}, {x: -0.15, z: 0}, {x: 0, z: 0.15}, {x: 0, z: -0.15}];
+// The most a room holds at once, whatever leaves them there (see drop).
 const MAX_BILLS_PER_ROOM = ObjectCategoryConfigMap.getMaxCountPerRoom(DollarBillObjectTypeConfig.category);
+// How far around a place one is dropped at room is looked for, where it has none there: in rings this far apart, in
+// world units, each asked this many ways round.
+const DROP_SEARCH_STEP = 0.15;
+const DROP_SEARCH_RINGS = 4;
+const DROP_SEARCH_DIRECTIONS = 8;
 
 const BILL_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType(DollarBillObjectTypeConfig.objectType);
 // The server adds and removes bills of its own accord, for nobody.
@@ -60,8 +66,9 @@ const NOBODY = new User("", "", UserTypeEnumMap.Guest, "", "");
 // Kept with each room as long as it is loaded, whose unloading forgets it.
 const roomStates = new WeakMap<RoomRuntimeMemory, DollarBillRoomState>();
 
-// $1 bills, which the server spawns in multiplayer rooms while anyone but a ghost is there, up to a room's cap, at
-// places someone can walk to, since a room's cap is spent on each until it is gone. It flies them along paths (see
+// $1 bills, which the server spawns in multiplayer rooms while anyone but a ghost is there, until a room holds a few
+// (see DOLLAR_BILL_SPAWN_CAP), at places someone can walk to, since each counts until it is gone; and which a cannon
+// ball that threw nobody leaves where it burst (see drop), up to a room's cap. It flies them along paths (see
 // DollarBillFlightUtil), which clients play out by themselves: blown about by gusts now and then, and by fans' streams
 // as they meet them, dropping onto whatever is under them. Whoever comes near one, looking its way with nothing
 // between them, collects it at once (see ServerInventoryManager), if all they have done is believable (see
@@ -110,6 +117,17 @@ const DollarBillUtil =
     {
         for (const {signalType, signal} of DollarBillUtil.getCatchUpSignals(roomID))
             ServerRoomManager.socketRoomContexts[roomID].unicastSignal(signalType, signal, userID);
+    },
+    // Leaves a bill in the air at a place, or as near to it as a bill has room (what leaves one may be nearer a wall
+    // than a bill keeps from one), to flutter down from there, unless the room holds as many as it may: whether it
+    // did.
+    drop: (room: Room, pos: Vec3, now: number = Date.now()): boolean =>
+    {
+        const memory = ServerRoomManager.roomRuntimeMemories[room.id];
+        if (memory == undefined)
+            return false;
+        const place = findRoomNear(room.voxelGrid.voxels, pos);
+        return place != undefined && add(room, getRoomState(memory, now), place, now);
     },
     // Ahead of the shutdown's save, which takes only rooms marked as changed: each room stepped since it loaded, whose
     // bills may have changed with it.
@@ -310,10 +328,10 @@ function fly(room: Room, bill: AddObjectSignal, flight: DollarBillFlight, waypoi
         new SetObjectPathSignal(room.id, bill.objectId, waypoints));
 }
 
-// The wait for the next bill starts as soon as the room has room for one.
+// The wait for the next bill starts as soon as the room holds few enough for another of its own.
 function spawnWhenDue(room: Room, state: DollarBillRoomState, people: {player: AddObjectSignal}[], now: number): void
 {
-    if (state.flights.size >= MAX_BILLS_PER_ROOM)
+    if (state.flights.size >= DOLLAR_BILL_SPAWN_CAP)
         state.nextSpawnAt = undefined;
     else if (state.nextSpawnAt == undefined)
         state.nextSpawnAt = now + randomBetween(SPAWN_INTERVAL_MS);
@@ -327,15 +345,44 @@ function spawnWhenDue(room: Room, state: DollarBillRoomState, people: {player: A
 function spawn(room: Room, state: DollarBillRoomState, people: Vec3[], now: number): void
 {
     const place = pickSpawnPlace(room.voxelGrid.voxels, people);
-    if (place == undefined)
-        return;
+    if (place != undefined)
+        add(room, state, place, now);
+}
+
+// Whether a bill was added at a place: none past the room's cap.
+function add(room: Room, state: DollarBillRoomState, place: Vec3, now: number): boolean
+{
+    if (state.flights.size >= MAX_BILLS_PER_ROOM)
+        return false;
     // Not one of the server's own ids (see ServerObjectManager.generateNonPersistentObjectId), which start over with each
     // restart that the room's saves keep it through.
     const objectId = ObjectIdUtil.generateUniqueObjectId(room.objectById);
     const bill = new AddObjectSignal(room.id, "", "", BILL_TYPE_INDEX, objectId,
-        new ObjectTransform(place, {x: 0, y: 0, z: 1}, {...UNIT_VEC3}));
-    if (ServerObjectManager.addObjectAsServer(room, NOBODY, bill))
-        state.flights.set(bill.objectId, createFlight(now));
+        new ObjectTransform({...place}, {x: 0, y: 0, z: 1}, {...UNIT_VEC3}));
+    if (!ServerObjectManager.addObjectAsServer(room, NOBODY, bill))
+        return false;
+    state.flights.set(bill.objectId, createFlight(now));
+    return true;
+}
+
+// A place a bill has room at: the one given, or the nearest of those around it at its own height, in rings a step
+// apart. None within the last ring.
+function findRoomNear(voxels: Voxel[], pos: Vec3): Vec3 | undefined
+{
+    if (!DollarBillFlightUtil.isInBlock(voxels, pos))
+        return pos;
+    for (let ring = 1; ring <= DROP_SEARCH_RINGS; ++ring)
+    {
+        for (let i = 0; i < DROP_SEARCH_DIRECTIONS; ++i)
+        {
+            const angle = 2 * Math.PI * i / DROP_SEARCH_DIRECTIONS;
+            const place = {x: pos.x + ring * DROP_SEARCH_STEP * Math.cos(angle), y: pos.y,
+                z: pos.z + ring * DROP_SEARCH_STEP * Math.sin(angle)};
+            if (!DollarBillFlightUtil.isInBlock(voxels, place))
+                return place;
+        }
+    }
+    return undefined;
 }
 
 // With no flight under way, its first gust a while off.

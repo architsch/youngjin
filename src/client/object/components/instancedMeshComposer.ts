@@ -201,6 +201,17 @@ export default class InstancedMeshComposer extends GameObjectComponent
     {
         this.decodeParts(this.encodeParts());
     }
+    // The parts as they stand, for an object that moves some of its own between rebuilds (a cannon's barrel; see
+    // CannonGameObject): it says so with redrawParts once it has.
+    getParts(): InstancedMeshCompositionPart[]
+    {
+        return this.instancedMeshComposition.parts;
+    }
+    redrawParts()
+    {
+        if (this.updateState == "upToDate")
+            this.updateState = "refreshPending";
+    }
 
     private allPartMeshesAreLoaded(): boolean
     {

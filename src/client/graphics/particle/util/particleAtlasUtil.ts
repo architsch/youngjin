@@ -18,6 +18,9 @@ const GUTTER = 3;
 const DOLLAR_GAIN_FONT_SIZE = 0.44;
 const DOLLAR_GAIN_GLOW_BLUR = 0.09;
 const DOLLAR_GAIN_GLOW_PASSES = 3;
+// A sleeper's "Z" and the dark edge around it, by the width of its frame.
+const SLEEP_Z_FONT_SIZE = 0.8;
+const SLEEP_Z_EDGE_WIDTH = 0.1;
 
 interface SpriteEntry
 {
@@ -39,6 +42,7 @@ const SPRITE_ENTRIES: SpriteEntry[] = [
     {id: "fanBlades", frameCols: 4, frameRows: 4, frames: 1, draw: drawFanBlades},
     {id: "dollarGain", frameCols: 4, frameRows: 4, frames: 1, draw: drawDollarGain},
     {id: "dollarGainGlow", frameCols: 4, frameRows: 4, frames: 1, draw: drawDollarGainGlow},
+    {id: "sleepZ", frameCols: 2, frameRows: 2, frames: 1, draw: drawSleepZ},
 ];
 
 const spriteById: {[id: string]: ParticleAtlasSprite} = {};
@@ -177,6 +181,20 @@ function drawDollarGainGlow(ctx: CanvasRenderingContext2D, width: number, height
     ctx.shadowBlur = DOLLAR_GAIN_GLOW_BLUR * width;
     for (let pass = 0; pass < DOLLAR_GAIN_GLOW_PASSES; ++pass)
         drawDollarGain(ctx, width, height);
+}
+
+// A "Z" filling its frame, dark at its edge so that it shows against a light wall as against a dark one.
+function drawSleepZ(ctx: CanvasRenderingContext2D, width: number, height: number)
+{
+    ctx.font = `bold ${Math.round(SLEEP_Z_FONT_SIZE * width)}px Arial, Helvetica, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = SLEEP_Z_EDGE_WIDTH * width;
+    ctx.strokeStyle = "rgb(36,36,36)";
+    ctx.strokeText("Z", 0.5 * width, 0.53 * height);
+    ctx.fillStyle = "rgb(255,255,255)";
+    ctx.fillText("Z", 0.5 * width, 0.53 * height);
 }
 
 // A lumpy cloud of overlapping blobs, for dust and smoke.

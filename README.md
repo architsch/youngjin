@@ -53,6 +53,7 @@ The ThingsPool source code is open source under the Apache License 2.0. It is bu
     - [Restricted Zones](docs/gameplay/restricted_zone.md)
     - [Chat](docs/gameplay/chat.md)
     - [Inventory and Dollar Bills](docs/gameplay/inventory.md)
+    - [Cannons](docs/gameplay/cannon.md)
 
 - **Networking**
     - [Authentication Flows](docs/networking/authentication.md)

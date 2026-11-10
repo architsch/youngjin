@@ -11,6 +11,9 @@ export const DOLLAR_BILL_REST_HEIGHT = 0.5 * DOLLAR_BILL_LENGTH * Math.sin(DOLLA
 // How far across the room from a player's middle they collect a bill, in world units, whether or not it is still on their
 // screen: one at their feet has dropped below a first-person view.
 export const DOLLAR_BILL_REACH = 4;
+// How many bills a room holds before it brings no more of its own, however those came: the ones cannon balls leave
+// count too, though they may take a room past it (see ObjectCategoryConfigMap).
+export const DOLLAR_BILL_SPAWN_CAP = 2;
 
 // A $1 bill folded in half, which the server spawns in a multiplayer room and blows about, and whoever comes near it,
 // looking its way, collects (see DollarBillUtil). Nobody may touch it by any signal. It is no part of what is built,

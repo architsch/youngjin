@@ -24,6 +24,7 @@ import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../shared/obj
 import ObjectUpdateUtil from "../../../shared/object/util/objectUpdateUtil";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import LabelTextUtil from "../../../shared/object/util/labelTextUtil";
+import CannonStateUtil from "../../../shared/object/util/cannonStateUtil";
 import AddVoxelBlockSignal from "../../../shared/voxel/types/update/addVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../../shared/voxel/types/update/removeVoxelBlockSignal";
 import SetVoxelQuadTextureSignal from "../../../shared/voxel/types/update/setVoxelQuadTextureSignal";
@@ -47,8 +48,16 @@ const RoomEditUtil =
         selectionBefore?: VoxelQuadSelection | ObjectSelection | null, mergeKey?: string}): void =>
     {
         const roomID = room.id;
-        const redo = edit.redo.map(keep);
-        const undo = edit.undo.map(keep);
+        // What costs dollars to add (see ObjectTypeConfig.price) is neither added again nor taken away by an undo or
+        // a redo, so the adding and the removal of one are left out, whatever else the edit did.
+        const pricedIds = new Set([...edit.redo, ...edit.undo].filter(isPricedAddition)
+            .map(signal => (signal as AddObjectSignal).objectId));
+        const kept = (signal: EncodableData) => !isPricedAddition(signal)
+            && !(signal instanceof RemoveObjectSignal && pricedIds.has(signal.objectId));
+        const redo = edit.redo.filter(kept).map(keep);
+        const undo = edit.undo.filter(kept).map(keep);
+        if (redo.length == 0 && undo.length == 0)
+            return;
         const selectionAfter = getSelection();
         const selectionBefore = (edit.selectionBefore !== undefined) ? edit.selectionBefore : selectionAfter;
         ClientEventHistoryUtil.add(new ClientEvent(type, {
@@ -285,6 +294,12 @@ function keep(signal: EncodableData): EncodableData
     return (signal instanceof AddObjectSignal) ? copyObject(signal) : signal;
 }
 
+function isPricedAddition(signal: EncodableData): boolean
+{
+    return signal instanceof AddObjectSignal
+        && (ObjectTypeConfigMap.getConfigByIndex(signal.objectTypeIndex).price ?? 0) > 0;
+}
+
 // An object as it stands, as the signal this user adds it by: under their own name, as whoever adds one must (see
 // ObjectTypeConfig.canUserAddObject), and as its room keeps it, without what it was only shown with.
 function copyObject(obj: AddObjectSignal): AddObjectSignal
@@ -322,6 +337,9 @@ function getVoxelBlockAddSignal(room: Room, quadIndex: number): AddVoxelBlockSig
 // which for an ink is no palette position that writing nothing would give (see LabelTextUtil.getColorIndex).
 function getRestorableValue(obj: AddObjectSignal, metadataKey: ObjectMetadataKey): string
 {
+    // Of a cannon's state, its switch alone is its user's to set (see CannonStateUtil.merge).
+    if (metadataKey == ObjectMetadataKeyEnumMap.CannonState)
+        return CannonStateUtil.encodeSwitch(CannonStateUtil.getObjectState(obj).on);
     const stored = obj.metadata[metadataKey]?.str;
     if (stored != undefined)
         return stored;

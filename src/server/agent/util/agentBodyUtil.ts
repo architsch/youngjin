@@ -7,6 +7,7 @@ import { ENTERING_MAX_DURATION, ENTERING_SPEED,
     ENTERING_STRIDE_LENGTH } from "../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import { PLAYER_MAX_TURN_INPUT, PLAYER_MAX_WALK_INPUT, PLAYER_TURN_RATE_PER_INPUT,
     PLAYER_WALK_SPEED_PER_INPUT } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import ObjectObstacleUtil from "../../../shared/object/util/objectObstacleUtil";
 import PhysicsManager from "../../../shared/physics/physicsManager";
 import Room from "../../../shared/room/types/room";
 import VoxelVertex from "../../../shared/voxel/types/voxelVertex";
@@ -116,6 +117,16 @@ const AgentBodyUtil =
     {
         if (ctx.motion != undefined)
             finishWalk(ctx.motion, outcome);
+    },
+    // A blow to the agent's body (a cannon ball's blast), which it then carries as a browser's player does (see
+    // PhysicsManager.addCarriedVelocity): its body is stepped in full again until it has come to rest.
+    push: (ctx: AgentUserContext, velocity: Vec3): void =>
+    {
+        const body = getBody(ctx);
+        if (body == undefined)
+            return;
+        PhysicsManager.addCarriedVelocity(body.room.id, body.player.objectId, velocity);
+        getMotion(ctx, body.player).settled = false;
     },
 }
 
@@ -296,12 +307,14 @@ function finishWalk(motion: AgentMotion, outcome: AgentWalkOutcome): void
     walk.finish(outcome);
 }
 
-// Feet positions from the vertex nearest the feet to the goal; undefined if there's no way.
+// Feet positions from the vertex nearest the feet to the goal, round the room's blocks and what is as solid as one;
+// undefined if there's no way.
 function planPath(room: Room, feet: Vec3, goal: VoxelVertex): Vec3[] | undefined
 {
     const voxels = room.voxelGrid.voxels;
-    const start = VoxelPathUtil.findStandingVertexNear(voxels, feet);
-    const path = start == undefined ? undefined : VoxelPathUtil.findPath(voxels, start, goal);
+    const isOpen = ObjectObstacleUtil.getClearance(room.objectById);
+    const start = VoxelPathUtil.findStandingVertexNear(voxels, feet, undefined, isOpen);
+    const path = start == undefined ? undefined : VoxelPathUtil.findPath(voxels, start, goal, isOpen);
     return path?.map(VoxelPathUtil.toWorld);
 }
 

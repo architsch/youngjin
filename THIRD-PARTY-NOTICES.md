@@ -73,6 +73,10 @@ requires no credit; the attribution below is given because it is deserved.
 | `BigSoundBank/doorClosing.wav` | Apartment Door, Closing #1 | Joseph Sardin | [BigSoundBank #1704](https://bigsoundbank.com/apartment-door-closing-1-s1704.html) |
 | `BigSoundBank/blockDrop.wav` | Jumping on wooden pontoon #1 | Joseph Sardin | [BigSoundBank #1841](https://bigsoundbank.com/jumping-on-wooden-pontoon-1-s1841.html) |
 | `Freesound/cashRegister.wav` | Cash Register Fake.wav | CapsLok | [Freesound #184438](https://freesound.org/people/CapsLok/sounds/184438/) |
+| `Freesound/cannonShot.wav` | Cannon Fires, Take 1, Half Speed | CHallSmith | [Freesound #870741](https://freesound.org/people/CHallSmith/sounds/870741/) |
+| `Freesound/powderBurst.wav` | Fuse and small Explosion | diakunik | [Freesound #556367](https://freesound.org/people/diakunik/sounds/556367/) |
+| `Freesound/gearGrind.wav` | Grinding Gears and Steady Clinking.wav | Ted_Erski | [Freesound #535021](https://freesound.org/people/Ted_Erski/sounds/535021/) |
+| `Freesound/rubbleDrop.wav` | Concrete Breaks Several Denoised | loganzsound | [Freesound #843339](https://freesound.org/people/loganzsound/sounds/843339/) |
 
 Each folder's `README.md` records the terms as its source states them, and how
 each file was cut from the recording.

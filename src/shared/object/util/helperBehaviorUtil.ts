@@ -23,6 +23,7 @@ import BehaviorPrefsUtil from "./behaviorPrefsUtil";
 import LabelTextUtil from "./labelTextUtil";
 import MessageLinkUtil from "./messageLinkUtil";
 import NpcFacingUtil from "./npcFacingUtil";
+import ObjectObstacleUtil from "./objectObstacleUtil";
 import ObjectScaleUtil from "./objectScaleUtil";
 import QuarterTurnsUtil from "./quarterTurnsUtil";
 
@@ -583,8 +584,8 @@ function isFreeToLook(behavior: HelperBehavior, surroundings: HelperSurroundings
 }
 
 // What a thing placed in its room is, as whoever finds the words for a remark on it asks (see HelperRemarkSubject), if
-// it is worth a look: a canvas or prop showing a picture, a lamp, a fan, a sign or a door (with the words on it), or a
-// mirror that shows a reflection (none, wholly covered over).
+// it is worth a look: a canvas or prop showing a picture, a lamp, a fan, a cannon, a sign or a door (with the words on
+// it), or a mirror that shows a reflection (none, wholly covered over).
 function describeSight(obj: AddObjectSignal): HelperRemarkSubject | undefined
 {
     const objectType = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).objectType;
@@ -597,7 +598,7 @@ function describeSight(obj: AddObjectSignal): HelperRemarkSubject | undefined
         return {objectType, text: LabelTextUtil.getText(obj)};
     if (objectType == "Mirror")
         return (MirrorObjectTypeConfig.util.getOpacity(obj) < 1) ? {objectType} : undefined;
-    return (objectType == "Fan") ? {objectType} : undefined;
+    return (objectType == "Fan" || objectType == "Cannon") ? {objectType} : undefined;
 }
 
 // Where it could stand to look at something: where it stands, and the places it can walk to within its wander radius of
@@ -757,7 +758,8 @@ function goHome(behavior: HelperBehavior, surroundings: HelperSurroundings, now:
         HelperBehaviorUtil.standAtHome(behavior, surroundings);
         return;
     }
-    const end = VoxelPathUtil.findStandingVertexNear(surroundings.voxels, behavior.home, 1);
+    const end = VoxelPathUtil.findStandingVertexNear(surroundings.voxels, behavior.home, 1,
+        ObjectObstacleUtil.getClearance(surroundings.objectById));
     const way = (end == undefined) ? undefined : VoxelPathUtil.getPathWithin(reach, end);
     if (way != undefined)
         walkAlong(behavior, way, "home", behavior.home);
@@ -767,9 +769,10 @@ function goHome(behavior: HelperBehavior, surroundings: HelperSurroundings, now:
         wanderOff(behavior, surroundings, now, behavior.home);
 }
 
-// Where it can walk from where it stands, and how: never up closer than PLANNED_SPACE to anyone (but on away from someone
-// already that close), and on the floor of home unless it may climb, or has strayed off it and must find its way back;
-// out to a walk long enough to reach anywhere it may go. None where it stands on nothing a body could.
+// Where it can walk from where it stands, and how: round what is as solid as a block (see ObjectObstacleUtil), never up
+// closer than PLANNED_SPACE to anyone (but on away from someone already that close), and on the floor of home unless it
+// may climb, or has strayed off it and must find its way back; out to a walk long enough to reach anywhere it may go.
+// None where it stands on nothing a body could.
 function findReach(behavior: HelperBehavior, surroundings: HelperSurroundings): VoxelReach | undefined
 {
     const start = VoxelPathUtil.findStandingVertexNear(surroundings.voxels, behavior.at, 1);
@@ -785,7 +788,7 @@ function findReach(behavior: HelperBehavior, surroundings: HelperSurroundings): 
         return (!keepsToFloor || onFloorOfHome(behavior, point)) && !people.some(feet =>
             Math.abs(feet.y - point.y) <= SAME_FLOOR_HEIGHT && distanceAcross(feet, point) < PLANNED_SPACE
             && distanceAcross(feet, point) <= distanceAcross(feet, from));
-    });
+    }, ObjectObstacleUtil.getClearance(surroundings.objectById));
 }
 
 // Sets off along a way it found, from where it stands, to its end, and on to a place off the grid's vertices beyond it
@@ -1001,11 +1004,12 @@ function countLanes(behavior: HelperBehavior, surroundings: HelperSurroundings, 
     if (next == undefined || VoxelPathUtil.toVertex(next) == undefined)
         return 0;
     const along = {x: next.x - point.x, z: next.z - point.z};
+    const isOpen = ObjectObstacleUtil.getClearance(surroundings.objectById);
     let lanes = 0;
     while (lanes < most && [-1, 0, 1].every(i => {
         const vertex = VoxelPathUtil.toVertex({x: point.x + i * along.x - side * (lanes + 1) * along.z, y: point.y,
             z: point.z + i * along.z + side * (lanes + 1) * along.x});
-        return vertex != undefined && VoxelPathUtil.isStandable(surroundings.voxels, vertex);
+        return vertex != undefined && VoxelPathUtil.isStandable(surroundings.voxels, vertex) && isOpen(vertex);
     }))
     {
         ++lanes;
@@ -1026,16 +1030,17 @@ function aim(behavior: HelperBehavior, surroundings: HelperSurroundings, index: 
     return {x: point.x - lanes * (next.z - point.z), y: point.y, z: point.z + lanes * (next.x - point.x)};
 }
 
-// Whether a step to there, past the first `reached` points of its way, is kept from it: by a block on a vertex it would
-// step on (home, where it was put, aside), or by coming up closer to someone than it may (stepping away from someone
-// already that close is fine).
+// Whether a step to there, past the first `reached` points of its way, is kept from it: by a block, or something as
+// solid, on a vertex it would step on (home, where it was put, aside), or by coming up closer to someone than it may
+// (stepping away from someone already that close is fine).
 function isBlocked(behavior: HelperBehavior, surroundings: HelperSurroundings, to: Vec3, reached: number): boolean
 {
     const steppedOn = behavior.path.slice(0, reached + 1)
         .filter(point => !HelperBehaviorUtil.isSamePlace(point, behavior.home))
         .map(point => VoxelPathUtil.toVertex(point))
         .filter((vertex): vertex is VoxelVertex => vertex != undefined);
-    if (steppedOn.some(vertex => !VoxelPathUtil.isStandable(surroundings.voxels, vertex)))
+    const isOpen = ObjectObstacleUtil.getClearance(surroundings.objectById);
+    if (steppedOn.some(vertex => !VoxelPathUtil.isStandable(surroundings.voxels, vertex) || !isOpen(vertex)))
         return true;
     return getPeopleOnFloor(behavior, surroundings).some(them => closesIn(behavior, them, to, PERSONAL_SPACE));
 }

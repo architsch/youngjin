@@ -19,6 +19,8 @@ import EventLoopDelayUtil from "./system/util/eventLoopDelayUtil";
 import AgentAwayLogUtil from "./agent/util/agentAwayLogUtil";
 import HelperAgentUtil from "./agent/util/helperAgentUtil";
 import DollarBillUtil from "./inventory/util/dollarBillUtil";
+import CannonUtil from "./object/util/cannonUtil";
+import CannonBallUtil from "./object/util/cannonBallUtil";
 
 require("../shared/graphics/image/imageMapDependencies.ts");
 
@@ -148,8 +150,10 @@ ${LatencySimUtil.getConfigSummary()}
         await HelperAgentUtil.stop();
         console.log("Saving all multiplayer rooms and user gameplay states before shutdown...");
 
-        // Their bills with them, kept still since shutdown began.
+        // Their bills, cannons and cannon balls with them, kept still since shutdown began.
         DollarBillUtil.markRoomsToSave();
+        CannonUtil.markRoomsToSave();
+        CannonBallUtil.markRoomsToSave();
         await ServerRoomManager.saveMultiplayerRooms(true);
         console.log("All rooms saved.");
 

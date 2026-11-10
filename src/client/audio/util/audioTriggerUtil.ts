@@ -1,11 +1,14 @@
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import AdminPrefsUtil from "../../../shared/object/util/adminPrefsUtil";
+import CannonStateUtil from "../../../shared/object/util/cannonStateUtil";
+import PhysicsColliderStateUtil from "../../../shared/physics/util/physicsColliderStateUtil";
 import VoxelQueryUtil from "../../../shared/voxel/util/voxelQueryUtil";
 import Vec3 from "../../../shared/math/types/vec3";
 import { InventoryItemTypeEnumMap } from "../../../shared/inventory/types/inventoryItemType";
 import App from "../../app";
-import { chatLineSentObservable, clickRefusedObservable, controlPressedObservable, dollarsSpentObservable,
+import { cannonBallBurstObservable, cannonBlastObservable, cannonFiredObservable, chatLineSentObservable,
+    clickRefusedObservable, controlPressedObservable, dollarsSpentObservable,
     downwardArrowTargetObservable, headlineMessageObservable, inventoryGainObservable, loginRewardStageObservable,
     navigationArrowTargetObservable, numOpenPanelsObservable, numOpenPopupsObservable, objectCollectedObservable,
     objectEditObservable, objectPlacedObservable, objectSelectionObservable, roomTravelObservable,
@@ -17,10 +20,11 @@ import AudioBundleMap from "../maps/audioBundleMap";
 import AudioClipName from "../types/audioClipName";
 
 // How far the sound of someone else's edit carries, block or object, in world units; that of someone coming or going;
-// and that of someone else's dollar.
+// that of someone else's dollar; and that of a cannon's shot or its ball's burst.
 export const EDIT_SOUND_RANGE = 14;
 export const ARRIVAL_SOUND_RANGE = 14;
 export const COLLECT_SOUND_RANGE = 12;
+export const CANNON_SOUND_RANGE = 22;
 // How far either way the pitch of a sound heard over and over is varied, so that no two of them sound alike.
 export const PITCH_VARIATION = 0.05;
 // How long the moment lasts whose sounds are heard as one (see tell and cueSlight).
@@ -64,10 +68,10 @@ let doorShutAt = -Infinity;
 let arrivalTimer: ReturnType<typeof setTimeout> | undefined;
 
 // Which event sounds as what: the one place gameplay and the UI meet sound, so neither calls AudioManager itself.
-// Others' edits sound where they are made (an object's own, a fan's wind, sounds where it stands; see FanGameObject), as
-// do others coming and going and collecting; what the user does and is given, their own edits included, is heard alike
-// from anywhere. Whatever one action sets off at once (a press, the panel it opens, the selection an edit moves) is heard
-// as one sound, the most telling.
+// Others' edits sound where they are made (an object's own, a fan's wind or a cannon's gears, sounds where it stands; see
+// FanGameObject, CannonGameObject), as do others coming and going and collecting, and what cannons do; what the user
+// does and is given, their own edits included, is heard alike from anywhere. Whatever one action sets off at once (a
+// press, the panel it opens, the selection an edit moves) is heard as one sound, the most telling.
 const AudioTriggerUtil =
 {
     onVoxelBlockEdit: (edit: {kind: "add" | "remove" | "move" | "retexture", quadIndex: number, own: boolean}): void =>
@@ -79,8 +83,9 @@ const AudioTriggerUtil =
                 {volume: sound.volume, range: EDIT_SOUND_RANGE, rate: vary()}));
     },
     // Players come and go through doors; the user's own coming and going sounds as they travel (see onRoomTravel), and an
-    // admin's in ghost mode not at all. The user's own object added clicks as a press of the UI does, and one taken away
-    // or changed sounds as the control pressed for it, or the popup it was confirmed in, already does.
+    // admin's in ghost mode not at all. The user's own object added clicks as a press of the UI does, and one changed
+    // sounds as the control pressed for it already does. An attached object taken away, by anyone or anything, sounds
+    // as its coming apart (see tellObjectDestroyed).
     onObjectEdit: (edit: {kind: "add" | "remove" | "change", object: AddObjectSignal, own: boolean}): void =>
     {
         const {kind, object} = edit;
@@ -95,11 +100,30 @@ const AudioTriggerUtil =
         }
         else if (isRoomObject(object))
         {
-            if (!edit.own)
+            if (kind == "remove" && comesApart(object))
+                tellObjectDestroyed(object, edit.own);
+            else if (!edit.own)
                 tellOthersObjectEdit(kind, object.transform.pos);
-            else if (kind == "add")
+            // (One that costs dollars sounds as their spending does; see onDollarsSpent.)
+            else if (kind == "add" && !isPriced(object))
                 tell(playClick);
         }
+    },
+    onCannonFired: (shot: {position: Vec3}): void =>
+    {
+        AudioManager.playAt("cannon/fire", shot.position, {volume: 0.7, range: CANNON_SOUND_RANGE, rate: vary()});
+    },
+    // Heard whatever else the moment sounds, and in place of all its blast breaks (see onCannonBlast).
+    onCannonBallBurst: (burst: {position: Vec3}): void =>
+    {
+        hush();
+        AudioManager.playAt("cannon/explosion", burst.position, {volume: 0.8, range: CANNON_SOUND_RANGE, rate: vary()});
+    },
+    // What a blast breaks comes right after the server's word of it, and sounds as the burst alone, which may have
+    // been heard a moment sooner (see CannonBallGameObject).
+    onCannonBlast: (): void =>
+    {
+        hush();
     },
     onObjectPlaced: (placement: {object: AddObjectSignal, own: boolean}): void =>
     {
@@ -205,14 +229,19 @@ const AudioTriggerUtil =
 // A sound of something done, heard at once: the first of its moment, in place of every slight one the moment brings.
 function tell(play: () => void): void
 {
-    const now = performance.now();
-    if (now < quietUntil)
+    if (performance.now() < quietUntil)
         return;
-    quietUntil = now + SOUND_MOMENT_MS;
+    hush();
+    play();
+}
+
+// Starts a moment in which nothing else is heard.
+function hush(): void
+{
+    quietUntil = performance.now() + SOUND_MOMENT_MS;
     slightSound = undefined;
     clearTimeout(slightSoundTimer);
     slightSoundTimer = undefined;
-    play();
 }
 
 // A slight sound waits out its moment, and is heard unless the moment brings one above it, or a telling one.
@@ -247,6 +276,32 @@ function tellOthersObjectEdit(kind: "add" | "remove" | "move" | "change", positi
 {
     const sound = OBJECT_EDIT_SOUNDS[kind];
     tell(() => AudioManager.playAt(sound.clip, position, {volume: sound.volume, range: EDIT_SOUND_RANGE, rate: vary()}));
+}
+
+// An attached object coming apart, whatever took it away, heard from its middle: the user's own removal of one as any
+// of their edits is, from anywhere. A cannon that has fired its last ball goes in a puff instead.
+function tellObjectDestroyed(object: AddObjectSignal, own: boolean): void
+{
+    const middle = PhysicsColliderStateUtil.getObjectColliderState(object.objectTypeIndex, object.transform)?.hitbox.center
+        ?? object.transform.pos;
+    if (CannonStateUtil.isSpent(object))
+        tell(() => AudioManager.playAt("cannon/puff", middle, {volume: 0.6, range: EDIT_SOUND_RANGE}));
+    else if (own)
+        tell(() => AudioManager.play("edit/objectDestroy", {volume: 0.5, rate: vary()}));
+    else
+        tell(() => AudioManager.playAt("edit/objectDestroy", middle, {volume: 0.5, range: EDIT_SOUND_RANGE, rate: vary()}));
+}
+
+// One attached to a face, but for an NPC, which steps off a block rather than going with it (see ParticleTriggerUtil).
+function comesApart(object: AddObjectSignal): boolean
+{
+    const attachment = ObjectTypeConfigMap.getConfigByIndex(object.objectTypeIndex).attachment;
+    return attachment != undefined && !attachment.stepsAside;
+}
+
+function isPriced(object: AddObjectSignal): boolean
+{
+    return (ObjectTypeConfigMap.getConfigByIndex(object.objectTypeIndex).price ?? 0) > 0;
 }
 
 function isPlayer(object: AddObjectSignal): boolean
@@ -305,6 +360,9 @@ voxelBlockEditObservable.addListener(LISTENER_KEY, guarded(AudioTriggerUtil.onVo
 objectEditObservable.addListener(LISTENER_KEY, guarded(AudioTriggerUtil.onObjectEdit));
 objectPlacedObservable.addListener(LISTENER_KEY, guarded(AudioTriggerUtil.onObjectPlaced));
 objectCollectedObservable.addListener(LISTENER_KEY, guarded(AudioTriggerUtil.onObjectCollected));
+cannonFiredObservable.addListener(LISTENER_KEY, guarded(AudioTriggerUtil.onCannonFired));
+cannonBallBurstObservable.addListener(LISTENER_KEY, guarded(AudioTriggerUtil.onCannonBallBurst));
+cannonBlastObservable.addListener(LISTENER_KEY, guarded(AudioTriggerUtil.onCannonBlast));
 inventoryGainObservable.addListener(LISTENER_KEY, guarded(AudioTriggerUtil.onInventoryGain));
 loginRewardStageObservable.addListener(LISTENER_KEY, guarded(AudioTriggerUtil.onLoginRewardStage));
 dollarsSpentObservable.addListener(LISTENER_KEY, guarded(AudioTriggerUtil.onDollarsSpent));

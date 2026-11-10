@@ -86,8 +86,8 @@ const HelperRemarkUtil =
         levels.set(favoriteOf(objectId, COLOR_INTERESTS)!, 2);
         return {levels, painter: favoriteOf(objectId, PAINTERS)};
     },
-    // What a remark says of a thing, if it can say anything: a picture the manifest has, a lamp, a fan, a door, a mirror
-    // or a sign.
+    // What a remark says of a thing, if it can say anything: a picture the manifest has, a lamp, a fan, a cannon, a door,
+    // a mirror or a sign.
     describe: (subject: HelperRemarkSubject): HelperRemarkThing | undefined =>
     {
         const picture = (subject.picture == undefined) ? undefined : PICTURES.get(subject.picture);
@@ -121,6 +121,8 @@ const HelperRemarkUtil =
             return {kind: "door", name: `the ${words}door`, plural: false, interests: ["doors"]};
         if (subject.objectType == "Fan")
             return {kind: "fan", name: "the fan", plural: false, interests: ["fans"]};
+        if (subject.objectType == "Cannon")
+            return {kind: "cannon", name: "the cannon", plural: false, interests: ["cannons"]};
         return (subject.objectType == "Mirror")
             ? {kind: "mirror", name: "the mirror", plural: false, interests: ["mirrors"]} : undefined;
     },

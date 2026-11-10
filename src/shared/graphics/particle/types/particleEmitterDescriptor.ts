@@ -16,6 +16,9 @@ export default interface ParticleEmitterDescriptor
     level?: Waveform;
     // How far in front of the object's face it emits from, in world units.
     faceOffset?: number;
+    // Whether it streams straight up from over the object's middle, by that offset, whichever way its face looks,
+    // rather than out of the face.
+    upright?: boolean;
     // How far from the face its particles carry, in world units: sped up where the effect's own speeds would fall
     // short of it (and as many more of them emitted), and ended there. As far as those speeds take them if absent.
     reach?: number;

@@ -40,6 +40,17 @@ const ServerInventoryManager =
         ServerInventoryManager.tellUser(ctx);
         void DBInventoryUtil.addItem(ctx.user.id, itemType, quantity);
     },
+    // Takes dollars from the user for something that isn't theirs to hold (a cannon set in a room), if they have them:
+    // whether it did. What is kept here decides, at once, so that what is paid for is made in the same breath, with
+    // nothing arriving in between; the row follows, as it does a gain.
+    spendDollars: (ctx: UserContext, dollars: number): boolean =>
+    {
+        const dollar = InventoryItemTypeEnumMap.Dollar;
+        if (!((ctx.inventory[dollar] ?? 0) >= dollars))
+            return false;
+        ServerInventoryManager.addItem(ctx, dollar, -dollars);
+        return true;
+    },
     // Spends the user's dollars on an item for sale that they don't hold yet, and answers. The row decides, in one
     // transaction (see DBInventoryUtil.buyItem): what is kept here only spares it the requests that can't succeed. Asking
     // for what they hold costs nothing, so that a request repeated for want of an answer isn't paid for twice.

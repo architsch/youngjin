@@ -16,6 +16,7 @@ import NpcObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/n
 import LabelTextUtil from "../../../shared/object/util/labelTextUtil";
 import MessageLinkUtil from "../../../shared/object/util/messageLinkUtil";
 import AdminPrefsUtil from "../../../shared/object/util/adminPrefsUtil";
+import CannonStateUtil from "../../../shared/object/util/cannonStateUtil";
 import AddVoxelBlockSignal from "../../../shared/voxel/types/update/addVoxelBlockSignal";
 import MoveVoxelBlockSignal from "../../../shared/voxel/types/update/moveVoxelBlockSignal";
 import RemoveVoxelBlockSignal from "../../../shared/voxel/types/update/removeVoxelBlockSignal";
@@ -134,6 +135,10 @@ export default class AgentInbox
                         this.push({kind: "speech", who: player.name, whoIsAgent: player.isAgent,
                             text: MessageLinkUtil.withControlsInWords(text)});
                 }
+                // What the server tells of a cannon as it plays it is nobody's edit; its switch thrown is.
+                else if (signal.metadataKey == ObjectMetadataKeyEnumMap.CannonState
+                    && !CannonStateUtil.isSwitch(signal.metadataValue))
+                    break;
                 else if (helperName != undefined)
                 {
                     // A helper's speech, or a new name; which way it faces is its own doing, not anyone's edit.
@@ -192,6 +197,12 @@ export default class AgentInbox
     noteRoomReloading(): void
     {
         this.push({kind: "roomReloading"});
+    }
+
+    // A cannon ball's blast threw the agent (see CannonBallUtil), which no signal tells of.
+    noteThrown(): void
+    {
+        this.push({kind: "cannonBallHit"});
     }
 
     take(): AgentEvent[]

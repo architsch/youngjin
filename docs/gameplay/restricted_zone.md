@@ -35,6 +35,8 @@ A zone that reaches the bottom or the top of the room takes in the room's own fl
 
 Selecting things, entering edit mode and walking around are all still allowed. Anything already present when a zone is laid stays.
 
+A cannon ball breaks only what anybody at all could remove (see [cannon.md](../gameplay/cannon.md)), so nothing in a zone, whoever it is kept for.
+
 `VoxelUpdateUtil` and `ObjectUpdateUtil` enforce these rules through `RestrictedZoneUtil`, on both the client and the server. On the client, tools that a zone forbids are disabled. Because the selection is re-announced whenever a zone changes, the tools re-check their state after each change.
 
 ## Display

@@ -101,6 +101,7 @@ export const HELPER_INTERESTS: {[interest in HelperInterest]: {phrase: string, k
         "voltage", "lightning", "smoking", "spitting", "cigarette"]},
     lamps: {phrase: "lamps", keywords: []},
     fans: {phrase: "fans", keywords: []},
+    cannons: {phrase: "cannons", keywords: []},
     doors: {phrase: "doors", keywords: []},
     mirrors: {phrase: "mirrors", keywords: []},
     red: {phrase: "the color red", keywords: ["red"]},
@@ -158,12 +159,12 @@ export const HELPER_TASTES: {[personality in Exclude<NpcPersonality, "idle">]: {
     builder: {
         loves: ["wood", "workshops", "machines"],
         likes: ["lamps", "fans", "doors", "cooking", "metal", "barbecue", "sports", "tidiness", "gadgets"],
-        dislikes: ["clothes", "restaurants", "toys"],
+        dislikes: ["clothes", "restaurants", "toys", "cannons"],
     },
     explorer: {
         loves: ["doors", "views", "nature"],
         likes: ["mexican", "seafood", "photos", "clocks", "swimming", "planes", "telephones", "mail", "mirrors",
-            "signs"],
+            "signs", "cannons"],
         dislikes: ["tidiness", "laundry", "studying"],
     },
     storyteller: {
@@ -173,7 +174,7 @@ export const HELPER_TASTES: {[personality in Exclude<NpcPersonality, "idle">]: {
     },
     jester: {
         loves: ["toys", "games", "sweets"],
-        likes: ["snacks", "pizza", "mirrors", "fans", "movies", "colorful", "plumbing", "cheese"],
+        likes: ["snacks", "pizza", "mirrors", "fans", "cannons", "movies", "colorful", "plumbing", "cheese"],
         dislikes: ["tidiness", "signs", "studying"],
     },
     sage: {
@@ -184,7 +185,7 @@ export const HELPER_TASTES: {[personality in Exclude<NpcPersonality, "idle">]: {
     caretaker: {
         loves: ["tidiness", "plumbing", "workshops"],
         likes: ["laundry", "cooking", "clocks", "lamps", "signs", "breakfast", "wood", "metal"],
-        dislikes: ["fans", "toys", "colorful"],
+        dislikes: ["fans", "cannons", "toys", "colorful"],
     },
     curator: {
         loves: ["art", "photos", "lamps"],

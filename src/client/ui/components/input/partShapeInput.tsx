@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { InstancedMeshCompositionParams } from "../../../../shared/graphics/mesh/composition/types/compositionParams/instancedMeshCompositionParams";
 import { PLAYER_SHAPE_PRICE_DOLLARS } from "../../../../shared/system/sharedConstants";
 import { pendingPurchaseElementObservable } from "../../../system/clientObservables";
-import DollarSignIcon from "../../svg/icons/dollarSignIcon";
+import PriceTag from "../basic/priceTag";
 import LockIcon from "../../svg/icons/lockIcon";
 import PartShapeIcon from "../../svg/icons/partShapeIcon";
 import SpinnerIcon from "../../svg/icons/spinnerIcon";
@@ -59,11 +59,7 @@ export default function PartShapeInput({ id, builderName, numShapes, params, cur
             </div>
             {locked && <>
                 <div className="absolute top-0.5 left-0.5 size-4 text-white"><LockIcon/></div>
-                <div className="absolute bottom-0.5 right-0.5 flex flex-row items-center gap-0.5">
-                    <div className="size-3.5 shrink-0"><DollarSignIcon/></div>
-                    {/* Not the UI's monospace, whose zero is slashed. */}
-                    <span className="font-sans text-xs font-bold leading-none text-green-300">{PLAYER_SHAPE_PRICE_DOLLARS}</span>
-                </div>
+                <PriceTag dollars={PLAYER_SHAPE_PRICE_DOLLARS} additionalClassNames="absolute bottom-0.5 right-0.5"/>
             </>}
             {elementId == pendingElementId && <div className="absolute inset-0 flex items-center justify-center rounded bg-black/65">
                 <div className="size-7 text-white"><SpinnerIcon/></div>

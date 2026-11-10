@@ -3,7 +3,7 @@ import AudioBundleInfo from "../types/audioBundleInfo";
 
 const AudioBundleMap = {
     path: "audio/bundle.mp3",
-    version: "da985ac55e433b58",
+    version: "a7da64f3cb26f519",
     markerTime: 0.1,
     clips: {
         "ui/press": {start: 0.35, duration: 0.05},
@@ -23,11 +23,16 @@ const AudioBundleMap = {
         "chat/send": {start: 5.92, duration: 0.18},
         "tutorial/show": {start: 6.2, duration: 0.28},
         "tutorial/clear": {start: 6.58, duration: 0.35},
-        "fan/wind": {start: 7.03, duration: 2},
-        "edit/blockAdd": {start: 9.13, duration: 0.22501133786848074},
-        "room/leave": {start: 9.45501133786848, duration: 0.37501133786848073},
-        "room/arrive": {start: 9.93002267573696, duration: 0.5},
-        "dollar/spend": {start: 10.530022675736962, duration: 1.4649886621315193},
+        "cannon/puff": {start: 7.03, duration: 0.45},
+        "fan/wind": {start: 7.58, duration: 2},
+        "edit/blockAdd": {start: 9.68, duration: 0.22501133786848074},
+        "room/leave": {start: 10.005011337868481, duration: 0.37501133786848073},
+        "room/arrive": {start: 10.480022675736961, duration: 0.5},
+        "dollar/spend": {start: 11.080022675736961, duration: 1.4649886621315193},
+        "edit/objectDestroy": {start: 12.64501133786848, duration: 0.48},
+        "cannon/fire": {start: 13.22501133786848, duration: 0.45},
+        "cannon/explosion": {start: 13.77501133786848, duration: 0.5},
+        "cannon/turn": {start: 14.37501133786848, duration: 0.6901133786848073},
     },
     streams: {},
 } as const satisfies AudioBundleInfo;

@@ -50,6 +50,17 @@ export const objectPlacedObservable = new Observable<{object: AddObjectSignal, o
 // Fires with an object someone other than the user has just collected, once they have drawn it in.
 export const objectCollectedObservable = new Observable<AddObjectSignal>();
 
+// A cannon firing a ball: where its barrel's mouth is, and the way it points.
+export const cannonFiredObservable = new Observable<{position: Vec3, direction: Vec3}>();
+
+// A cannon ball shown bursting where it struck, at its middle: as it strikes here, where that is plain, or as the
+// server says it has (see CannonBallGameObject).
+export const cannonBallBurstObservable = new Observable<{position: Vec3}>();
+
+// The server's word of a ball's burst: where its middle was, and the players its blast threw, by their objects' ids.
+// What the blast broke comes right after it.
+export const cannonBlastObservable = new Observable<{position: Vec3, hitObjectIds: string[]}>();
+
 // What else befalls the user, or those around them, for whatever presents it (see AudioTriggerUtil). Never peek() one:
 // it holds the last event.
 
@@ -172,6 +183,10 @@ export const bottomUIHeightObservable = new Observable<number>(0);
 
 // Camera mode, including the orbit target. Drives PlayerCamera and own-body visibility.
 export const cameraModeObservable = new Observable<CameraMode>({type: "firstPerson"});
+
+// Fires with how hard the first-person view is to shake for a moment, from 0 to 1 (see PlayerCamera). Never peek()
+// it: it holds the last shake.
+export const cameraShakeObservable = new Observable<number>(0);
 
 // Whether a scripted step hides the user's own character and its speech bubble, whatever the camera does.
 // Hidden parts are parked out of the room, so raycasts pass through them too.
