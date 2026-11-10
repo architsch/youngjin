@@ -1,7 +1,8 @@
 /**
  * Integration tests: what a browser does with what the server says of the room it is in (see ClientObjectManager): a
  * helper's moves, which are only shown, carry its body and collider and leave the room's copy of it at home, as a room
- * file saves it, while the browser's guess at which helper will answer goes by where they took it; what is said of a
+ * file saves it, while the browser's guess at which helper will answer goes by where they took it; someone else's change
+ * to an object's settings told of as theirs, and none of what a helper shows of what it is doing; what is said of a
  * room while it is still loading reaches it once it has loaded, in the order said; a dollar bill collected, which flies
  * straight to the count on its collector's screen and into its collector's body on everyone else's; and what coming back
  * has earned, shown once it can be seen.
@@ -41,7 +42,9 @@ import GameObject from "../../../src/client/object/types/gameObject/gameObject";
 import NpcGameObject from "../../../src/client/object/types/gameObject/npcGameObject";
 import HelperThinkingUtil from "../../../src/client/object/util/helperThinkingUtil";
 import { dollarsInFlightObservable, inventoryGainObservable, loginRewardStageObservable, objectCollectedObservable,
-    inventoryObservable, roomChangedObservable, screenCoachMarksObservable } from "../../../src/client/system/clientObservables";
+    inventoryObservable, objectEditObservable, objectPlacedObservable, roomChangedObservable, screenCoachMarksObservable }
+    from "../../../src/client/system/clientObservables";
+import { SpeakerActivityEnumMap } from "../../../src/shared/object/types/speakerActivity";
 import { endClientProcess, tryStartClientProcess } from "../../../src/client/system/types/clientProcess";
 import { InventoryItemTypeEnumMap } from "../../../src/shared/inventory/types/inventoryItemType";
 import InventorySignal from "../../../src/shared/inventory/types/inventorySignal";
@@ -142,6 +145,25 @@ describe("a helper's moves in a browser", () => {
         expect(room.objectById[NPC_ID].transform.pos).toEqual(AWAY);
     });
 
+    it("tell of an admin's move of it as someone else's placement, and of none of its own steps", async () => {
+        const placed: [string, boolean][] = [];
+        objectPlacedObservable.addListener("test", ({object, own}) => { placed.push([object.objectId, own]); });
+        await ClientObjectManager.onSetObjectTransformSignalReceived(
+            new SetObjectTransformSignal(ROOM_ID, NPC_ID, transformTo(AWAY), true, true));
+        expect(placed).toEqual([]);
+        await ClientObjectManager.onSetObjectTransformSignalReceived(
+            new SetObjectTransformSignal(ROOM_ID, NPC_ID, transformTo(AWAY), true));
+        expect(placed).toEqual([[NPC_ID, false]]);
+
+        // Nor is a player moved outside physics, which is none of the room's own.
+        expect(ObjectUpdateUtil.addObject(user, room, new AddObjectSignal(ROOM_ID, user.id, user.userName,
+            ObjectTypeConfigMap.getIndexByType("Player"), "a-player", transformTo(HOME), {}), false)).toBe(true);
+        await ClientObjectManager.onSetObjectTransformSignalReceived(
+            new SetObjectTransformSignal(ROOM_ID, "a-player", transformTo(AWAY), true));
+        expect(placed).toEqual([[NPC_ID, false]]);
+        objectPlacedObservable.removeListener("test");
+    });
+
     it("leave it where the browser guesses which helper will answer a line from, as the server picks it", () => {
         // The user stands facing north, one helper at home ahead of them but shown off to their right, the other the
         // other way round.
@@ -172,6 +194,25 @@ describe("a helper's moves in a browser", () => {
 
         HelperThinkingUtil.expectAnswerTo("hello?");
         expect(thinking).toEqual(["right-at-home"]);
+    });
+});
+
+describe("someone else's change to an object, in a browser", () => {
+    it("is told of as theirs, and none of what a helper shows of what it is doing is", async () => {
+        const changed: [string, string, boolean][] = [];
+        objectEditObservable.addListener("test", ({kind, object, own}) => { changed.push([kind, object.objectId, own]); });
+        for (const [key, value] of [[ObjectMetadataKeyEnumMap.Facing, NpcFacingUtil.encode(90)],
+            [ObjectMetadataKeyEnumMap.SentMessage, "Hello!"],
+            [ObjectMetadataKeyEnumMap.Activity, SpeakerActivityEnumMap.Typing]] as [number, string][])
+        {
+            await ClientObjectManager.onSetObjectMetadataSignalReceived(new SetObjectMetadataSignal(ROOM_ID, NPC_ID, key,
+                value));
+        }
+        expect(changed).toEqual([]);
+        await ClientObjectManager.onSetObjectMetadataSignalReceived(new SetObjectMetadataSignal(ROOM_ID, NPC_ID,
+            ObjectMetadataKeyEnumMap.Tags, "guide"));
+        expect(changed).toEqual([["change", NPC_ID, false]]);
+        objectEditObservable.removeListener("test");
     });
 });
 

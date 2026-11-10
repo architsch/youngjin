@@ -26,7 +26,7 @@ Reference: @src/client/graphics/particle/particleSystem.ts , @src/client/graphic
 ## Triggers
 - **Gameplay events**: gameplay never calls the particle system. It publishes what happened (`voxelBlockEditObservable`, `objectEditObservable`, `objectCollectedObservable`).
   - These fire only for edits and collecting: local, remote or rolled back, never for a room loading or unloading.
-  - `ParticleTriggerUtil` is the one table of which event plays which effect: a block's removal, and someone else's collecting a dollar bill, which says "+$1". Sound can listen to the same events.
+  - `ParticleTriggerUtil` is the one table of which event plays which effect: a block's removal, and someone else's collecting a dollar bill, which says "+$1". `AudioTriggerUtil` binds the same events to sounds (see [audio.md](../audio/audio.md)).
 - **Object components**: effects that belong to an object are the `AnimatedSprite` and `ParticleEmitter` components. A fan has both: one to three blades by its setting, all turning at one steady rate, and one wind out of its middle, as long as its range, whose puffs go faster and closer together the stronger it is, at the size and look the effect is drawn with, in the fan's own color (`FanObjectTypeConfig`).
   - A type config gives each a baseline descriptor, plus an optional override derived from the object's own metadata (`getOverride`). The components read no metadata key themselves.
   - A sprite's descriptor may list centers across its object's face, and the sprite is shown at each (a fan's blades).

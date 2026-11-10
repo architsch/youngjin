@@ -17,6 +17,7 @@ Scenario tests → Scenario runner → Action engine / Invariants / Presets → 
 - **`actions.ts`**: the `Action` union covers session, room, movement, chat and metadata, voxel, ownership (`setRoomOwner` writes both sides and `DBUser`), `parallel` (`Promise.allSettled`, for race conditions), shutdown and latency operations.
 - **`invariants.ts`**: structural consistency checks across users, contexts, rooms, objects, physics and ownership. There are three sets: `"structural"`, `"full"` and `"extended"`. A clean-state check runs after everyone has disconnected (hubs may remain loaded but must be empty). Signal helpers: `getPendingSignals`, `checkMulticastSignalReach`, `checkUnicastSignalReach`.
 - **`scenarioPresets.ts`**: reusable room, user, action, permission and composite presets.
+- **`fakeWebAudio.ts`**: stand-ins for the Web Audio API, the media elements streams play through, and the page (its inputs, whether it is shown, whether it has been used); the context's time moves only by `FakeAudioContext.advance`. **`wavFixture.ts`** writes the WAV files the audio bundle builder reads.
 - **`pictureFixture.ts`**: `useFixturePictures()` adds an everyday-object image of each size and a painting to the picture map for a suite, each in the subfolder of the type that shows it, so no test depends on which shipped images are enabled.
 
 ## The DB Suite

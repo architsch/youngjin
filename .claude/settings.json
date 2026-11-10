@@ -86,13 +86,17 @@
       "Bash(gh workflow run restart-live.yml:*)",
       "Bash(gh workflow run \"Promote to Live\":*)",
       "Bash(gh workflow run \"Rollback Live\":*)",
-      "Bash(gh workflow run \"Restart Live\":*)"
+      "Bash(gh workflow run \"Restart Live\":*)",
+      "Edit(/public/**/source.txt)"
     ],
     "ask": [
       "Bash(ssh:*)",
       "Bash(scp:*)",
       "Bash(npm run nginx:*)"
     ]
+  },
+  "env": {
+    "CLAUDE_CODE_SHELL_PREFIX": "/Volumes/work/youngjin/.claude/hooks/pageSourcesShell.sh"
   },
   "hooks": {
     "PreToolUse": [
@@ -102,6 +106,16 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/autoApproveBash.js\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/protectLibrarySources.js\"",
             "timeout": 10
           }
         ]
@@ -165,6 +179,22 @@
     "gets no decision, and these rules apply untouched. Its own hard-block list mirrors the",
     "deny list above so a hook decision can never route around it, and it withholds",
     "`maintenance.js --apply` for the same reason this file does. Edit it with the self-test:",
-    "`node .claude/hooks/autoApproveBash.js --self-test`."
+    "`node .claude/hooks/autoApproveBash.js --self-test`.",
+    "",
+    "The `source.txt` beside each library and arcade page under public/ is the author's own",
+    "text, which his pages are built from, and no assistant edits, overwrites, moves or",
+    "deletes one. The deny rule covers the file tools; the second PreToolUse hook,",
+    ".claude/hooks/protectLibrarySources.js, covers them too and denies any shell command that",
+    "would write, move or remove one (by name, through a folder or a glob holding one, or by a",
+    "git command that would discard uncommitted changes to one). Its deny outranks the allow",
+    "the hook above gives local commands. Edit it with its self-test:",
+    "`node .claude/hooks/protectLibrarySources.js --self-test`.",
+    "",
+    "Neither can see inside a script, so `env` sets CLAUDE_CODE_SHELL_PREFIX to",
+    ".claude/hooks/pageSourcesShell.sh, which runs every shell command Claude Code spawns",
+    "(hooks and stdio MCP servers too) in a macOS sandbox that allows everything but writing,",
+    "moving or removing those files and the folders holding them: the kernel refuses a script",
+    "that never names one. Nothing inside it can start a sandbox of its own, so `/sandbox`",
+    "stays off. Remove the `env` line to turn it off (see .claude/rules/page-sources.md)."
   ]
 }

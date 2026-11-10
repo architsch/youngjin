@@ -26,12 +26,12 @@ export const LibraryData: {
             { dirName: "gamedev-journey", title: "A Game Developer's Journey (2023)"},
             { dirName: "sandwich", title: "Sandwich Engineering (2025)"},
         ],
-        "Dev Log": [
-            { dirName: "devlog-2026", title: "Dev Log - 2026"},
-        ],
         "Arts": [
             { dirName: "illustrations", title: "Illustrations (2009 - 2014)"},
             { dirName: "cartoons", title: "Cartoons (2011 - 2015)"},
+        ],
+        "Dev Log": [
+            { dirName: "devlog-2026", title: "Dev Log - 2026"},
         ],
     }
 };

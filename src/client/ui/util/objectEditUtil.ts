@@ -13,7 +13,8 @@ import CompositionMetadataUtil from "../../../shared/graphics/mesh/composition/u
 import InstancedMeshComposer from "../../object/components/instancedMeshComposer";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 import { FeatureFlag } from "../../../shared/system/types/featureFlag";
-import { clientFeatureFlagsObservable, objectSelectionObservable } from "../../system/clientObservables";
+import { clientFeatureFlagsObservable, objectEditObservable, objectPlacedObservable, objectSelectionObservable }
+    from "../../system/clientObservables";
 import RoomEditUtil from "../../system/util/roomEditUtil";
 import { ClientEventType } from "../../system/types/clientEventType";
 import KeyPressUtil from "./keyPressUtil";
@@ -103,6 +104,11 @@ const ObjectEditUtil =
         RoomEditUtil.record(ClientEventType.ManuallyChangedObjectMetadata, room, {redo: [signal], undo: [undoSignal],
             // A text is one edit as it is typed, not one for each letter.
             mergeKey: KeyPressUtil.isTyping() ? `${objectId}.${metadataKey}` : undefined});
+        // A turn that moved the object along with it.
+        if (transform)
+            objectPlacedObservable.set({object: applied, own: true});
+        else
+            objectEditObservable.set({kind: "change", object: applied, own: true});
     },
     // Transforms set by a tool are placements, which ignore physics (as a drag's do).
     canSetObjectTransform: (selection: ObjectSelection, transform: ObjectTransform): boolean =>
@@ -130,6 +136,7 @@ const ObjectEditUtil =
         if (room.roomType != RoomTypeEnumMap.SinglePlayer)
             SocketsClient.emitSetObjectTransformSignal(signal);
         RoomEditUtil.record(ClientEventType.ManuallyChangedObjectTransform, room, {redo: [signal], undo: [undoSignal]});
+        objectPlacedObservable.set({object: room.objectById[objectId], own: true});
         // Re-announced so the outline and the tools catch up with where and how big it now is.
         objectSelectionObservable.notify();
     },

@@ -58,6 +58,25 @@ also subject to the law on that (18 U.S.C. § 504, 31 CFR Part 411), whatever it
 copyright; the directory's `README.md` records how it was made, and how it is kept
 to that law.
 
+### Recordings — BigSoundBank and Freesound
+
+The recordings under `public/app/assets/audio/BigSoundBank/` and
+`public/app/assets/audio/Freesound/` are cut from sounds released under
+[CC0 1.0 Universal (Public Domain Dedication)](https://creativecommons.org/publicdomain/zero/1.0/).
+The static site generator encodes them, with the game's own synthesized sounds,
+into the bundle the game plays (`public/app/assets/audio/bundle.mp3`). CC0
+requires no credit; the attribution below is given because it is deserved.
+
+| File | Sound | Author | Source |
+|---|---|---|---|
+| `BigSoundBank/doorOpening.wav` | Apartment Door, Opening #1 | Joseph Sardin | [BigSoundBank #1702](https://bigsoundbank.com/apartment-door-opening-1-s1702.html) |
+| `BigSoundBank/doorClosing.wav` | Apartment Door, Closing #1 | Joseph Sardin | [BigSoundBank #1704](https://bigsoundbank.com/apartment-door-closing-1-s1704.html) |
+| `BigSoundBank/blockDrop.wav` | Jumping on wooden pontoon #1 | Joseph Sardin | [BigSoundBank #1841](https://bigsoundbank.com/jumping-on-wooden-pontoon-1-s1841.html) |
+| `Freesound/cashRegister.wav` | Cash Register Fake.wav | CapsLok | [Freesound #184438](https://freesound.org/people/CapsLok/sounds/184438/) |
+
+Each folder's `README.md` records the terms as its source states them, and how
+each file was cut from the recording.
+
 ### Pictures from third parties
 
 The pictures listed below, under `public/app/assets/pictures/` (with their
@@ -244,6 +263,13 @@ made with them.
 | [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN), its macOS build and models | BSD-3-Clause | a picture is to be enlarged |
 | [ONNX Runtime](https://github.com/microsoft/onnxruntime), as its `onnxruntime-node` and `onnxruntime-common` packages | MIT | a thing is to be cut out of its background |
 | [Segment Anything 2](https://github.com/facebookresearch/sam2) (Meta), its large model in the [ONNX export](https://huggingface.co/vietanhdev/segment-anything-2-onnx-models) by Viet-Anh Nguyen | Apache-2.0 | likewise |
+
+The static site generator encodes the game's sounds into an MP3 file with
+[LAME](https://lame.sourceforge.io/), which is under the LGPL and installed apart
+from npm (see `docs/devOps/local_dev.md`). Like the programs above, it is run as a
+separate program, is not a dependency in `package.json`, and is never committed,
+bundled or shipped; its license covers the program and sets no terms on the file
+made with it.
 
 ## Fonts
 

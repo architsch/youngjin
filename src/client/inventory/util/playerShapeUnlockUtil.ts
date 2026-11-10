@@ -3,8 +3,8 @@ import BuyItemSignal from "../../../shared/inventory/types/buyItemSignal";
 import PlayerShapeItemUtil from "../../../shared/inventory/util/playerShapeItemUtil";
 import { PLAYER_SHAPE_PRICE_DOLLARS } from "../../../shared/system/sharedConstants";
 import SocketsClient from "../../networking/client/socketsClient";
-import { connectionStateObservable, dollarsSpentObservable, inventoryObservable, notificationMessageObservable,
-    pendingPurchaseElementObservable } from "../../system/clientObservables";
+import { clickRefusedObservable, connectionStateObservable, dollarsSpentObservable, inventoryObservable,
+    notificationMessageObservable, pendingPurchaseElementObservable } from "../../system/clientObservables";
 import RefusalCoachMarkUtil from "../../ui/util/refusalCoachMarkUtil";
 import ScreenInputBlockUtil from "../../ui/util/screenInputBlockUtil";
 import ClientInventoryManager from "../clientInventoryManager";
@@ -60,7 +60,10 @@ const PlayerShapeUnlockUtil =
         if (!signal.bought)
         {
             if (canAfford())
+            {
                 notificationMessageObservable.set("That couldn't be unlocked, and no dollars were spent. Try again.");
+                clickRefusedObservable.set(ask.elementId);
+            }
             else
                 RefusalCoachMarkUtil.show(ask.elementId, TOO_FEW_DOLLARS_MESSAGE);
             return;

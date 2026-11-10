@@ -79,7 +79,7 @@ import ClientObjectManager from "../../../src/client/object/clientObjectManager"
 import ClientVoxelQueryUtil from "../../../src/client/voxel/util/clientVoxelQueryUtil";
 import SocketsClient from "../../../src/client/networking/client/socketsClient";
 import ObjectEditUtil from "../../../src/client/ui/util/objectEditUtil";
-import { bottomUIHeightObservable, cameraModeObservable, gameModeObservable, objectEditObservable,
+import { bottomUIHeightObservable, cameraModeObservable, gameModeObservable, objectEditObservable, objectPlacedObservable,
     objectSelectionObservable, orbitCameraAnglesObservable, orbitCameraTargetOverrideObservable,
     selectionEditBlockedObservable, updateObservable,
     voxelQuadSelectionObservable } from "../../../src/client/system/clientObservables";
@@ -328,6 +328,21 @@ describe("dragging the selected object by the inside of its outline", () => {
         expect(sentSignals()).toEqual([]);
     });
 
+    it("tells of the object placed as a drag is let go of, and of nothing for one abandoned or never begun", () => {
+        const placed: [string, boolean][] = [];
+        objectPlacedObservable.addListener("test", ({object, own}) => { placed.push([object.objectId, own]); });
+        hangCanvas(10.5, 1);
+        expect(press(onWall(10.5, 1))).toBe(true);
+        release();
+        expect(press(onWall(10.5, 1))).toBe(true);
+        dragThrough(onWall(11, 1));
+        GizmoDragUtil.cancel();
+        expect(placed).toEqual([]);
+        expect(drag(onWall(10.5, 1), onWall(11, 1), onWall(11.5, 1))).toBe(true);
+        expect(placed).toEqual([[OBJECT_ID, true]]);
+        objectPlacedObservable.removeListener("test");
+    });
+
     it("changes nothing for a press that never becomes a drag", () => {
         hangCanvas(10.5, 1);
         expect(press(onWall(10.5, 1))).toBe(true);
@@ -476,12 +491,12 @@ describe("dragging a corner of the selected object's outline", () => {
         for (const neighbour of neighbours)
         {
             expect(ObjectUpdateUtil.addObject(actingUser, room, neighbour)).toBe(true);
-            objectEditObservable.set({kind: "add", object: neighbour});
+            objectEditObservable.set({kind: "add", object: neighbour, own: false});
         }
         expect(handleIds()).toEqual([]);
 
         expect(ObjectUpdateUtil.removeObject(actingUser, room, new RemoveObjectSignal(room.id, "beside"))).toBe(true);
-        objectEditObservable.set({kind: "remove", object: neighbours[0]});
+        objectEditObservable.set({kind: "remove", object: neighbours[0], own: false});
         expect(handleIds()).toEqual(["1,-1", "1,1"]);
     });
 });

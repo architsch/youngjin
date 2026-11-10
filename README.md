@@ -85,6 +85,9 @@ The ThingsPool source code is open source under the Apache License 2.0. It is bu
     - [Mirror](docs/graphics/mirror.md)
     - [Particles and Animated Sprites](docs/graphics/particles.md)
 
+- **Audio**
+    - [Audio System](docs/audio/audio.md)
+
 - **Testing**
     - E2E Tests
         - [Workflow](docs/testing/e2e/workflow.md)

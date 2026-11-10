@@ -10,6 +10,7 @@ import VersionSyncUtil from "./system/util/versionSyncUtil";
 import AwayDisconnectUtil from "./system/util/awayDisconnectUtil";
 import PlayerActivityUtil from "./object/util/playerActivityUtil";
 import ScreenInputBlockUtil from "./ui/util/screenInputBlockUtil";
+import ControlPressUtil from "./ui/util/controlPressUtil";
 import { ongoingClientProcessExists } from "./system/types/clientProcess";
 
 import "../shared/graphics/image/imageMapDependencies.ts";
@@ -35,6 +36,7 @@ function start(): void
 {
     // First, so that a hold of the screen comes before every other listener.
     ScreenInputBlockUtil.install();
+    ControlPressUtil.install();
 
     // Automation surfaces for playtests and screen capture: one only reports, the other only arranges.
     // Installed before the first room, and not on the public site (see AutomationBridgeUtil).

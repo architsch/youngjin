@@ -14,12 +14,13 @@ import ObjectCollectedSignal from "../../shared/object/types/objectCollectedSign
 import PeriodicTransformReceiver from "./components/periodicTransformReceiver";
 import VoxelGameObject from "./types/gameObject/voxelGameObject";
 import NpcGameObject from "./types/gameObject/npcGameObject";
-import { nearbyObjectSelectorObservable, objectEditObservable, objectSelectionObservable } from "../system/clientObservables";
+import { nearbyObjectSelectorObservable, objectEditObservable, objectPlacedObservable, objectSelectionObservable }
+    from "../system/clientObservables";
 import { AUTO_SELECTION_MAX_DISTANCE } from "../system/clientConstants";
 import ObjectSelection from "../graphics/types/gizmo/objectSelection";
 import ObjectUpdateUtil from "../../shared/object/util/objectUpdateUtil";
 import Vec3 from "../../shared/math/types/vec3";
-import { ObjectMetadataKey } from "../../shared/object/types/objectMetadataKey";
+import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../shared/object/types/objectMetadataKey";
 import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
 import Room from "../../shared/room/types/room";
 import ClientObjectUtil from "./util/clientObjectUtil";
@@ -31,6 +32,9 @@ const updatableGameObjects: {[objectId: string]: GameObject} = {};
 const playerByUserID: {[userID: string]: GameObject} = {};
 const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
 const voxelTypeIndex = ObjectTypeConfigMap.getIndexByType("Voxel");
+// What a helper shows of what it is doing as whoever plays it sets it, which is no edit of the room.
+const LIVE_METADATA_KEYS: ObjectMetadataKey[] = [ObjectMetadataKeyEnumMap.SentMessage, ObjectMetadataKeyEnumMap.Facing,
+    ObjectMetadataKeyEnumMap.Activity];
 
 // Voxel objects are spawned once (autoUnload=false) and persist for the app's lifetime.
 let voxelsSpawned = false;
@@ -198,7 +202,7 @@ const ClientObjectManager =
             RoomLoadProgressUtil.reportUnitSpawned();
             // The user's own edit. Room loads never validate; remote edits announce themselves on arrival.
             if (validate)
-                objectEditObservable.set({kind: "add", object: object.params});
+                objectEditObservable.set({kind: "add", object: object.params, own: true});
             return true;
         }
         else
@@ -226,7 +230,7 @@ const ClientObjectManager =
                 delete playerByUserID[object.params.sourceUserID];
             await object.onDespawn(); // Asynchronous despawning process must be called AFTER unregistering the object, since the per-frame update call may still unexpectedly access the object while it is being partially torn down.
             if (validate)
-                objectEditObservable.set({kind: "remove", object: object.params});
+                objectEditObservable.set({kind: "remove", object: object.params, own: true});
             return true;
         }
         else
@@ -310,7 +314,7 @@ const ClientObjectManager =
             return;
         const gameObject = ObjectFactory.createServerSideObject(signal);
         if (await ClientObjectManager.addObject(gameObject, false))
-            objectEditObservable.set({kind: "add", object: gameObject.params});
+            objectEditObservable.set({kind: "add", object: gameObject.params, own: false});
     },
     // Despawns once the object's room is available.
     onRemoveObjectSignalReceived: async (signal: RemoveObjectSignal) => {
@@ -328,7 +332,7 @@ const ClientObjectManager =
         if (selected)
             VoxelQuadSelection.trySelectBestQuadNearby(selected.gameObject.params.transform.pos);
         if (await removal && removed)
-            objectEditObservable.set({kind: "remove", object: removed.params});
+            objectEditObservable.set({kind: "remove", object: removed.params, own: false});
     },
     onSetObjectTransformSignalReceived: async (signal: SetObjectTransformSignal) => {
         // Deferred handling only for non-physics updates (for performance).
@@ -349,6 +353,8 @@ const ClientObjectManager =
         {
             ClientObjectManager.setObjectTransform(signal.objectId, signal.transform,
                 signal.ignorePhysics, false);
+            if (signal.ignorePhysics)
+                announcePlacement(signal.objectId);
         }
 
         // Re-announce a moved selection so its outline and menu follow; skipped for continuous
@@ -363,8 +369,16 @@ const ClientObjectManager =
     onSetObjectMetadataSignalReceived: async (signal: SetObjectMetadataSignal) => {
         if (!await App.whenInRoom(signal.roomID))
             return;
-        ClientObjectManager.setObjectMetadata(signal.objectId, signal.metadataKey,
-            signal.metadataValue, false, signal.transform);
+        if (!ClientObjectManager.setObjectMetadata(signal.objectId, signal.metadataKey, signal.metadataValue, false,
+            signal.transform))
+        {
+            return;
+        }
+        // A turn that moved the object along with it.
+        if (signal.transform)
+            announcePlacement(signal.objectId);
+        else
+            announceChange(signal.objectId, signal.metadataKey);
     },
     // Gone by now, it has nowhere to go.
     onSetObjectPathSignalReceived: async (signal: SetObjectPathSignal) => {
@@ -379,6 +393,26 @@ const ClientObjectManager =
         ClientObjectManager.getObjectById(signal.objectId)?.onCollected(
             ClientObjectManager.getPlayerOfUser(signal.collectorUserID), signal.collectorUserID == App.getUser().id);
     },
+}
+
+// Someone else's placement, of one of the room's own objects: anything else moved outside physics is no edit.
+function announcePlacement(objectId: string): void
+{
+    const obj = App.getCurrentRoom()?.objectById[objectId];
+    if (obj != undefined && ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).persistent)
+        objectPlacedObservable.set({object: obj, own: false});
+}
+
+// Someone else's change to the settings of one of the room's own objects, which what a helper shows of what it is doing
+// (see LIVE_METADATA_KEYS) is none of.
+function announceChange(objectId: string, key: ObjectMetadataKey): void
+{
+    const obj = App.getCurrentRoom()?.objectById[objectId];
+    if (obj != undefined && ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).persistent &&
+        !LIVE_METADATA_KEYS.includes(key))
+    {
+        objectEditObservable.set({kind: "change", object: obj, own: false});
+    }
 }
 
 // Rebinds persisted voxel objects to the new room's voxels, each to its own patch of them, which re-stamps

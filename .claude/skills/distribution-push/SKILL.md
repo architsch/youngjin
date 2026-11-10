@@ -1,6 +1,6 @@
 ---
 name: distribution-push
-description: Find where ThingsPool can be published or promoted on the web and get it in front of players there — re-verify candidate venues against their current rules, check the game is ready to spend a first impression on one, build the copy each venue asks for plus a brief for the images the user supplies, hand over post-ready text for the places that require a human account, and record every submission and what came of it. Use when asked to promote, advertise, market, distribute, publish or launch the app, to find places to post it, to reach more players, or to work out why nobody is playing.
+description: Find where ThingsPool can be published or promoted on the web and get it in front of players there — review where every earlier submission and listing stands and bring the ledger, the registry and the live listings back in step with the game, re-verify candidate venues against their current rules and research new ones that widen the audience, check the game is ready to spend a first impression on one, build the copy each venue asks for plus a brief for the images the user supplies, submit in his name where his part is only a yes, and record every submission and what came of it. Use when asked to promote, advertise, market, distribute, publish or launch the app, to find places to post it, to reach more players, or to work out why nobody is playing.
 ---
 
 # Distribution Push
@@ -10,7 +10,8 @@ accounts, and a player reaches it by clicking `https://app.thingspool.net` and l
 That single fact decides most of what follows: the natural unit of distribution here is **a link
 somebody clicks**, and venues are worth what they are worth according to how well they carry one.
 
-This skill covers both halves of that work — finding the venues and actually placing the app in them.
+This skill covers that work: finding the venues, placing the app in them, and keeping the places it is
+already in up to date.
 It does not write dev-log posts. When a run needs a post that does not exist yet, say so and leave
 it to the user. Essays and the rest of the library's writing are promoted by `writing-push`.
 
@@ -133,19 +134,46 @@ games can say that, so it is a strong hook, but it suits some audiences far bett
   under `agent-<that tag>` sources. People who open a room link an agent passed on count under
   `via-agent`.
 
-## Step 1 — Read the ledger before anything else
+## Step 1 — Review where everything stands, and sync it
 
 ```bash
 cat .claude/skills/distribution-push/ledger.md
 ```
 
-This is first because the most damaging act available in this skill is **posting the same link to
-the same community twice**. On Reddit, Hacker News and every forum worth posting to, a repeat
+The ledger comes first because the most damaging act available in this skill is **posting the same
+link to the same community twice**. On Reddit, Hacker News and every forum worth posting to, a repeat
 submission of the same URL reads as spam, and the penalty falls on the project's name rather than on
 the post. The ledger is the only record of what has already been spent.
 
 From it, work out: which venues are done, which are pending a result, which were rejected and why,
 and which have a cooling-off period still running.
+
+A row says what was true when it was written. Before anything new is spent, check at the venue itself
+every row whose outcome is still open: a review queue, an unmerged pull request, a listing not yet
+seen live, a post with no result yet.
+
+- A pull request, issue or discussion: its state and any reply, through `gh` (`gh pr view <url> --json
+  state,mergedAt,comments`, `gh issue view`, `gh api graphql` for a discussion). A question asked of
+  him goes in the report.
+- A listing, store page or queue: fetch it, or search the venue for the game. It is live, still
+  queued, changed or gone.
+- A tagged link: its source in the funnel report, read as step 7 says.
+- A listing of the MCP endpoint or the manual: the version it shows (the commands are under "Versions"
+  in `.claude/rules/agents-keep-up.md`) and, where it keeps its own copy, its description and tool list.
+
+Then sync what was found:
+
+- **The ledger.** Add each finding to its row's Result, dated, after what is already there, and move
+  its Status only to what the venue now shows. "Nothing yet" and "nothing came of it" are findings too.
+- **The registry.** Restamp those venues' entries in `reference/venues.md`, and mark one found closed
+  as dead, with the date and the reason.
+- **The listings.** A live listing that has fallen behind the game is brought back in step: a version
+  of the endpoint or the manual that the repo holds but the MCP Registry or ClawHub does not yet, a
+  mirror (Glama, PulseMCP) still behind the registry, a description a change has made untrue, a
+  hand-kept tool list missing a tool. Each update is proposed beside step 4's list, outside its count,
+  and made on his yes through the venue's own CLI, his `gh` or his signed-in Chrome (Lane B). One only
+  he can make is named in the report. Text the repo carries (`server.json`, the manual) changes only
+  under the agents-keep-up rule (see the boundaries below).
 
 ## Step 2 — The readiness gate
 
@@ -213,9 +241,26 @@ Write what you learn back into `reference/venues.md`, restamping the verificatio
 found along the way get added in the right lane. Venues found to be closed are marked dead **with
 the date and the reason** rather than deleted — the next run needs to know not to re-research them.
 
+### Look for new venues
+
+Do this every run, not only when the registry runs short. The registry holds what earlier runs
+happened to find, and the audience grows only where the game has not been seen yet. Start from the
+registry's "Not yet researched" leads. Then search for where things like ThingsPool are listed or
+shown and the ledger has not reached yet: browser and multiplayer game directories, voxel and
+creative-building communities, lists of MCP servers and of games agents play, and the lists that link
+to other lists. Following where comparable projects got themselves listed is often the quickest way
+to the next one.
+
+Check each find against its own pages, as above, and record it in the right lane with the date,
+whatever the verdict. A find that Lane B can work, where his part is only a yes, goes on to step 4's
+shortlist. A find that needs real work from him (his own post or comment, writing, new images, an
+account he lacks, identity papers, payment, a launch day) is recorded with what it would need, and
+not worked.
+
 ## Step 4 — Choose what this run will do
 
-Rank the candidates by reach × audience fit, divided by effort, with the link-out lane preferred.
+Rank the candidates by reach × audience fit, divided by effort, with the link-out lane preferred, and
+an audience the ledger has not reached yet ahead of one it has.
 Then propose to the user a short, ordered list — **two or three venues, not ten**.
 
 Only venues that Lane B (step 6) can work make the list: his part is a yes.
@@ -356,12 +401,15 @@ produced nothing, write down that it produced nothing, so the next run spends th
 
 ## Step 8 — Report
 
+- Where each earlier submission now stands (step 1), and each listing brought back in step or still
+  behind, with what it waits on.
 - What was posted, where, and by whom — separating what you did from what the user must still do.
 - The prepared kits, with the pasteable text inline so the user need not open files, and each kit's
   image brief inline beside it — a kit is not actionable until those images exist.
 - Findings that need a decision, each anchored to a `path:line`: embed blockers, oversized payloads,
   missing assets, a readiness gate that failed.
-- What the registry learned this run — venues newly verified, newly found, newly dead.
+- What the registry learned this run — venues newly verified, newly found by step 3's search (or
+  that it found none), newly dead.
 - What you deliberately did not do, and why.
 
 Keep the first two apart from each other. "Prepared" and "posted" are different states, and a report

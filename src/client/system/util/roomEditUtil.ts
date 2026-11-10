@@ -5,8 +5,8 @@ import ObjectFactory from "../../object/factories/objectFactory";
 import ClientVoxelManager from "../../voxel/clientVoxelManager";
 import ObjectSelection from "../../graphics/types/gizmo/objectSelection";
 import VoxelQuadSelection from "../../graphics/types/gizmo/voxelQuadSelection";
-import { manualSelectionObservable, objectSelectionObservable, orbitCameraAngleHoldRequestObservable,
-    voxelQuadSelectionObservable } from "../clientObservables";
+import { manualSelectionObservable, objectEditObservable, objectPlacedObservable, objectSelectionObservable,
+    orbitCameraAngleHoldRequestObservable, voxelQuadSelectionObservable } from "../clientObservables";
 import ClientEvent from "../types/clientEvent";
 import { ClientEventType } from "../types/clientEventType";
 import ClientEventHistoryUtil from "./clientEventHistoryUtil";
@@ -194,6 +194,7 @@ async function make(room: Room, signal: EncodableData): Promise<boolean>
             SocketsClient.emitSetObjectTransformSignal(new SetObjectTransformSignal(room.id, signal.objectId,
                 copyTransform(applied), true));
         }
+        objectPlacedObservable.set({object: room.objectById[signal.objectId], own: true});
         return true;
     }
     if (signal instanceof SetObjectMetadataSignal)
@@ -209,6 +210,11 @@ async function make(room: Room, signal: EncodableData): Promise<boolean>
                 signal.metadataKey, signal.metadataValue,
                 transform ? copyTransform(room.objectById[signal.objectId].transform) : undefined));
         }
+        // A turn that moved the object along with it.
+        if (transform)
+            objectPlacedObservable.set({object: room.objectById[signal.objectId], own: true});
+        else
+            objectEditObservable.set({kind: "change", object: room.objectById[signal.objectId], own: true});
         return true;
     }
     return false;

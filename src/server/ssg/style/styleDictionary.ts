@@ -542,6 +542,7 @@ hr {
 	${m_spacing_marginOnly(landscape)}
 	${m_bold_font}
 	${medium_color_frame}
+	overflow: visible; /* the italic label's last letter leans past the box, which the global overflow rule would clip */
 	cursor: pointer;
 	-webkit-user-select: none;
 	user-select: none;

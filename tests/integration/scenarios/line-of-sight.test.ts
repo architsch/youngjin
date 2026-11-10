@@ -179,6 +179,9 @@ describe("Seeing past the room's own geometry", () => {
         const belowSlab = new THREE.Vector3(MIDDLE_X, 1.75, MIDDLE_Z);
         const aboveSlab = new THREE.Vector3(MIDDLE_X, (STOREY_FLOOR_COLLISION_LAYER + 2.5) * 0.5, MIDDLE_Z);
         expect(isBlocked(belowSlab, aboveSlab)).toBe(true);
+        // One wall, from either storey.
+        expect(ClientVoxelQueryUtil.countDrawnVoxelBlocksBetween(belowSlab, aboveSlab, 9)).toBe(1);
+        expect(ClientVoxelQueryUtil.countDrawnVoxelBlocksBetween(aboveSlab, belowSlab, 9)).toBe(1);
     });
 
     it("reports the boundary wall as standing in the way of what lies beyond it", () => {
@@ -362,6 +365,29 @@ describe("Blocks standing in the open along a line", () => {
         const face = firstFace(at(3, 0.5), at(-2, 0.5))!;
         expect(face.point.x).toBeCloseTo(at(1, 0).x, 6);
         expect(face.normal).toEqual({x: 1, y: 0, z: 0});
+    });
+
+    it("counts the walls between two points as the line meets them, each once however thick, up to the most asked", () => {
+        const count = (from: THREE.Vector3, to: THREE.Vector3, max: number = 9) =>
+            ClientVoxelQueryUtil.countDrawnVoxelBlocksBetween(from, to, max);
+        expect(count(at(-2, 0.5), at(3, 0.5))).toBe(0);
+        standPillar();
+        expect(count(at(-2, 0.5), at(3, 0.5))).toBe(1);
+        expect(count(at(3, 0.5), at(-2, 0.5))).toBe(1);
+        // A second wall, a few blocks on.
+        for (let layer = COLLISION_LAYER_MIN; layer < COLLISION_LAYER_MIN + NUM_LAYERS; ++layer)
+        {
+            for (const row of [ROW, ROW + 1])
+            {
+                VoxelUpdateUtil.addVoxelBlock(undefined, room.voxelGrid.voxels,
+                    VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(row, COL + 4, layer));
+            }
+        }
+        expect(count(at(-2, 0.5), at(3, 0.5))).toBe(2);
+        expect(count(at(-2, 0.5), at(3, 0.5), 1)).toBe(1);
+        expect(count(at(-2, 0.5), at(3, 0.5), 0)).toBe(0);
+        // Past them all, beside them.
+        expect(count(at(-2, -1), at(3, -1))).toBe(0);
     });
 });
 

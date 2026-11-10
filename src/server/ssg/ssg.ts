@@ -15,6 +15,7 @@ import CompositionThumbnailBuilder from "./builder/compositionThumbnailBuilder";
 import { ImageMapSeeds } from "./data/imageMapSeeds";
 import RoomMapBuilder from "./builder/roomMapBuilder";
 import { RoomMapSeeds } from "./data/roomMapSeeds";
+import AudioBundleBuilder from "./builder/audioBundleBuilder";
 // Capacities decode compositions, which needs the part builders registered.
 import "../../shared/graphics/mesh/composition/instancedMeshCompositionBuilderMapDependencies";
 
@@ -78,6 +79,10 @@ export default async function SSG(): Promise<void>
     const preEncodedCompositions = await new PreEncodedCompositionBuilder().build();
     await new InstancedMeshCapacityBuilder(preEncodedCompositions).build();
     await new CompositionThumbnailBuilder(preEncodedCompositions, process.env.MODE == "ssg").build();
+
+    // Generate the Audio Bundle, last: the dev server watches the map it writes, and restarts as soon as that changes.
+
+    await new AudioBundleBuilder().build();
 
     console.log("SSG END");
 }

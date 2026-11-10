@@ -64,7 +64,7 @@ const ClientVoxelManager =
         if (success)
         {
             onRoomShapeChanged(room);
-            voxelBlockEditObservable.set({kind: "add", quadIndex});
+            voxelBlockEditObservable.set({kind: "add", quadIndex, own: validate});
         }
         return success;
     },
@@ -97,7 +97,7 @@ const ClientVoxelManager =
         if (success && hadBlock)
         {
             onRoomShapeChanged(room);
-            voxelBlockEditObservable.set({kind: "remove", quadIndex});
+            voxelBlockEditObservable.set({kind: "remove", quadIndex, own: validate});
         }
         return success;
     },
@@ -129,7 +129,7 @@ const ClientVoxelManager =
         if (success)
         {
             onRoomShapeChanged(room);
-            voxelBlockEditObservable.set({kind: "move", quadIndex});
+            voxelBlockEditObservable.set({kind: "move", quadIndex, own: validate});
         }
         return success;
     },
@@ -139,7 +139,7 @@ const ClientVoxelManager =
         const success = VoxelUpdateUtil.setVoxelQuadTexture(App.getUser(), room.voxelGrid.voxels,
             quadIndex, textureIndex, validate ? room : undefined);
         if (success)
-            voxelBlockEditObservable.set({kind: "retexture", quadIndex});
+            voxelBlockEditObservable.set({kind: "retexture", quadIndex, own: validate});
         return success;
     },
     // --- Signal reception handlers (for signals from other clients via server) ---

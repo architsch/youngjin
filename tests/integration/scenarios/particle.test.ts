@@ -516,9 +516,9 @@ describe("voxel block events", () => {
         await ClientVoxelManager.onRemoveVoxelBlockSignalReceived(new RemoveVoxelBlockSignal(ROOM_ID, added));
 
         expect(blockEdits).toEqual([
-            {kind: "add", quadIndex: added},
-            {kind: "retexture", quadIndex: added},
-            {kind: "remove", quadIndex: added},
+            {kind: "add", quadIndex: added, own: false},
+            {kind: "retexture", quadIndex: added, own: false},
+            {kind: "remove", quadIndex: added, own: false},
         ]);
         // Retexturing leaves the room's shape alone.
         expect(shapeChanges).toEqual([ROOM_ID, ROOM_ID]);

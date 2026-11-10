@@ -32,19 +32,32 @@ export const connectionStateObservable = new Observable<string>();
 // Fires when the current room has fully loaded.
 export const roomChangedObservable = new Observable<RoomRuntimeMemory>();
 
-// Gameplay events: what an edit did, for whatever presents it (see ParticleTriggerUtil). They fire for local,
-// remote and rolled-back edits, never for a room loading or unloading. Never peek() one: it holds the last
-// event.
+// Gameplay events: what an edit did, for whatever presents it (see ParticleTriggerUtil, AudioTriggerUtil). They fire
+// for local, remote and rolled-back edits, never for a room loading or unloading, and own tells the user's (an undo or
+// a redo of one included) from someone else's. Never peek() one: it holds the last event.
 
 // A voxel block added, removed, moved or retextured.
 export const voxelBlockEditObservable = new Observable<{kind: "add" | "remove" | "move" | "retexture",
-    quadIndex: number}>();
+    quadIndex: number, own: boolean}>();
 
-// An object added or removed, including players joining and leaving.
-export const objectEditObservable = new Observable<{kind: "add" | "remove", object: AddObjectSignal}>();
+// An object added or removed, including players joining and leaving, or a room's object's settings changed.
+export const objectEditObservable = new Observable<{kind: "add" | "remove" | "change", object: AddObjectSignal,
+    own: boolean}>();
+
+// A room's object placed somewhere else: a drag let go of, a tool's move, an undo or a redo of one, or someone else's.
+export const objectPlacedObservable = new Observable<{object: AddObjectSignal, own: boolean}>();
 
 // Fires with an object someone other than the user has just collected, once they have drawn it in.
 export const objectCollectedObservable = new Observable<AddObjectSignal>();
+
+// What else befalls the user, or those around them, for whatever presents it (see AudioTriggerUtil). Never peek() one:
+// it holds the last event.
+
+// The user leaving a room, as the next one comes to take its place, or arriving in one, once it is on screen.
+export const roomTravelObservable = new Observable<{kind: "leave" | "arrive", roomID: string}>();
+
+// A line the user has just sent to the chat.
+export const chatLineSentObservable = new Observable<string>("");
 
 // Fires with the room's id whenever its occupied blocks change, including scripted chunk edits.
 export const roomShapeChangedObservable = new Observable<string>("");
@@ -141,6 +154,17 @@ export const popupStateObservable = new Observable<PopupState>({ popupType: "non
 
 // Number of popups on screen; 0 means none stands between the user and the room.
 export const numOpenPopupsObservable = new Observable<number>(0);
+
+// Number of closable panels open (see ClosablePanelUtil): sub-panels, choosers and the lists of dropdowns.
+export const numOpenPanelsObservable = new Observable<number>(0);
+
+// Fires with the id of each of the UI's controls the user presses (see ControlPressUtil), "" for one with none. Never
+// peek() it: it holds the last press.
+export const controlPressedObservable = new Observable<string>("");
+
+// Fires with the id of a control whose click came to nothing, as the user is told why (see RefusalCoachMarkUtil). Never
+// peek() it: it holds the last refusal.
+export const clickRefusedObservable = new Observable<string>("");
 
 // How much of the screen's bottom the 2D UI stands along (the selection tools, the chat), in CSS px, as UIRoot
 // measures it: the room shows clear of it only above.

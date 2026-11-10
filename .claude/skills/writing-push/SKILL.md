@@ -1,6 +1,6 @@
 ---
 name: writing-push
-description: Get the user's essays and other library writing on thingspool.net in front of readers through what an assistant can do on its own, each action only after he has seen it — notify search engines through IndexNow, list the site's feed in small-web directories, send one invited suggestion to a curator — and record every submission and what came of it. It gives him nothing to write or post: no Hacker News, Reddit, forum, Slack or LinkedIn posts. Use when asked to promote, advertise, share or spread a blog post, essay or library writing, or after a new essay is published. For the game itself, use distribution-push.
+description: Get the user's essays and other library writing on thingspool.net in front of readers through what an assistant can do on its own, each action only after he has seen it — review where every earlier submission and listing stands and bring the ledger and the registry up to date, research new routes that reach more readers, notify search engines through IndexNow, list the site's feed in small-web directories, send one invited suggestion to a curator — and record every submission and what came of it. It gives him nothing to write or post: no Hacker News, Reddit, forum, Slack or LinkedIn posts. Use when asked to promote, advertise, share or spread a blog post, essay or library writing, or after a new essay is published. For the game itself, use distribution-push.
 ---
 
 # Writing Push
@@ -33,12 +33,31 @@ he asks what was reached, and never present a listing as reach it hasn't shown.
 `temp/` is gitignored, so these stay private, and names of individual people go there, never into
 `.claude/`. If a file is missing, recreate it from this page rather than guessing what it held.
 
-## Step 1 — Read the ledger and the registry
+## Step 1 — Review where everything stands, and sync it
 
 The most damaging act available here is sending the same link to the same place twice: it reads as spam,
 and the penalty falls on his name and his domain. From the ledger, work out what was done once per site
 (directory listings, the IndexNow key), what was done for this post, and what is still waiting on a reply
 or a merge.
+
+A row says what was true when it was written. Check every row whose result is still open, at the venue
+itself:
+
+- A pull request or an issue: its state and any reply (`gh`).
+- A listing: the directory's own page or export (the feed in Kagi's `smallweb.txt`, the site on
+  indieblog.page, and so on). One listed earlier may also have gone.
+- A curator's reply: his Gmail, searched only for that curator's address.
+- Visits, when he asks how many came: Google Analytics' Acquisition > Traffic acquisition shows referrers
+  such as Bing or Kagi.
+
+Then sync:
+
+- Write what each check found into its row's result, dated, after what is there, "nothing came of it"
+  included, and move the status only to what the venue now shows.
+- A library post published or changed since its last IndexNow row is one to ping: compare the
+  `<updated>` dates in `public/feed.atom` with the ledger, and add those posts to step 4's list.
+- In `VENUES.md`, restamp each route checked. One that has closed or changed its rules is marked so, with
+  the date and why, never deleted.
 
 ## Step 2 — The post
 
@@ -50,7 +69,25 @@ or a merge.
   canonical link are present, and the image loads; a series volume links to its neighbors and to the
   series list; the feed carries it. A failure is a finding for him, not something this skill fixes.
 
-## Step 3 — Propose, then act on his word
+## Step 3 — Look for new routes
+
+The routes in `VENUES.md` are the ones earlier runs found. Every run, look for more, aiming at readers
+they don't reach yet:
+
+- directories, webrings and feed catalogs that take a feed or a site by pull request, issue, API or open
+  form;
+- search engines with a submission route of their own;
+- curators, newsletters and link roundups whose own page invites suggestions, on subjects the post's
+  argument fits.
+
+Check each against its own rules page, then write it into `VENUES.md` with the date, whatever the verdict:
+under "Routes the assistant can take alone" if it is one, or else with what rules it out. A route rules
+itself out when it needs more of him than a yes or a single step (his own post, his words, an account to
+keep up), needs a login or a CAPTCHA, or bars self-promotion or AI-made pull requests. Notes go in a dated
+folder beside the earlier ones (`temp/writings-strategy/venues-<date>/`), and a curator's name stays in
+`temp/`. A route that fits joins step 4's list. Finding nothing new is a result too, and is reported.
+
+## Step 4 — Propose, then act on his word
 
 Propose this run's actions as one list, then act on his word. Nothing goes out unseen, and approval for
 one run does not carry to the next.
@@ -102,25 +139,16 @@ one run does not carry to the next.
 - Send the same text to many places, or a second message to a curator who has not answered.
 - Write or change his essays, their titles or their subjects.
 
-## Step 4 — Record
+## Step 5 — Record
 
 One ledger row per action, at the moment it happens: date, post, venue, lane (`alone`, or `him` where he
 did it himself), what was sent, status (`prepared` · `sent` · `listed` · `posted` · `rejected` ·
-`removed`), and the result, filled in later. A `prepared` row, such as an email or a draft waiting for
-his word, stays prepared until it goes out.
-
-## Step 5 — Measure, on the next run
-
-- Every ledger row whose result is still open: a pull request or an issue (`gh`), a curator's reply (his
-  Gmail, searched only for that curator's address).
-- Listings: confirm each one once its pull request merges or its form is reviewed (the feed in Kagi's
-  `smallweb.txt`, the site on indieblog.page, and so on).
-- Visits, when he asks how many came: Google Analytics' Acquisition > Traffic acquisition shows
-  referrers such as Bing or Kagi.
-- Write outcomes into the ledger, including "nothing came of it".
+`removed`), and the result, filled in on a later run (step 1). A `prepared` row, such as an email or a
+draft waiting for his word, stays prepared until it goes out.
 
 ## Step 6 — Report
 
-What was done, with links; what waits for his word; what came of earlier rows; what the registry learned
-(checked, new, dead); and what was not done, and why. Keep "prepared" and "sent" apart, and report a
+What was done, with links; what waits for his word; where earlier rows now stand (step 1); what the
+registry learned (checked, newly found by step 3's search or that it found none, dead); and what was not
+done, and why. Keep "prepared" and "sent" apart, and report a
 rejection or a removal as exactly that.

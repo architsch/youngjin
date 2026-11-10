@@ -64,6 +64,23 @@ const ClientVoxelQueryUtil =
             voxelBlockFaceIsDrawn(voxels, row, col, collisionLayer, entryAxis, entryOrientation));
     },
 
+    // How many walls stand between two points, up to max: the blocks the segment enters through a drawn face, as
+    // lineSegmentIsBlockedByDrawnVoxelBlock judges one. A wall however thick is entered once.
+    countDrawnVoxelBlocksBetween(from: THREE.Vector3, to: THREE.Vector3, max: number): number
+    {
+        const room = App.getCurrentRoom();
+        if (room == undefined || max <= 0)
+            return 0;
+        const voxels = room.voxelGrid.voxels;
+        let count = 0;
+        walkBlocks(from, to, (row, col, collisionLayer, entryAxis, entryOrientation) => {
+            if (voxelBlockFaceIsDrawn(voxels, row, col, collisionLayer, entryAxis, entryOrientation))
+                ++count;
+            return count >= max;
+        });
+        return count;
+    },
+
     // The first drawn face the ray meets, as lineSegmentIsBlockedByDrawnVoxelBlock judges one: where it
     // is met, and the axis direction the face looks along. Objects are not considered.
     getFirstDrawnFaceAlongRay(ray: THREE.Ray): {point: Vec3, normal: Vec3} | undefined

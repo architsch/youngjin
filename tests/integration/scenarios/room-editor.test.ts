@@ -66,6 +66,10 @@ vi.mock("../../../src/client/graphics/particle/particleSystem", () => ({
     default: { load: async () => {}, unload() {}, update() {} },
 }));
 
+vi.mock("../../../src/client/audio/audioManager", () => ({
+    default: { load() {}, unload() {}, update() {} },
+}));
+
 vi.mock("../../../src/client/object/types/gameObject/dollarBillGameObject", () => ({
     default: { preload: async () => {}, updateFlying() {}, landFlying() {} },
 }));
@@ -84,6 +88,7 @@ vi.mock("../../../src/client/graphics/types/gizmo/objectAttachmentEditGizmos", (
 vi.mock("../../../src/client/graphics/types/gizmo/volumeEditGizmos", () => ({}));
 vi.mock("../../../src/client/voxel/util/restrictedZoneOutlineUtil", () => ({}));
 vi.mock("../../../src/client/graphics/particle/util/particleTriggerUtil", () => ({}));
+vi.mock("../../../src/client/audio/util/audioTriggerUtil", () => ({}));
 vi.mock("../../../src/client/graphics/types/gizmo/genericWorldSpaceGizmos", () => ({
     preloadGenericWorldSpaceGizmos: async () => {},
 }));

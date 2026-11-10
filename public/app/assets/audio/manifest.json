@@ -1,0 +1,8 @@
+{
+    "clips": [
+        {"name": "edit/blockAdd", "file": "BigSoundBank/blockDrop.wav"},
+        {"name": "room/leave", "file": "BigSoundBank/doorClosing.wav"},
+        {"name": "room/arrive", "file": "BigSoundBank/doorOpening.wav"},
+        {"name": "dollar/spend", "file": "Freesound/cashRegister.wav"}
+    ]
+}

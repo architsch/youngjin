@@ -15,11 +15,12 @@ import AgentRouter from "./agentRouter";
 export default function Router(app: Express): void
 {
     // Dev mode emulates the static web server. "/" is left to PageRouter (the game page);
-    // index.html remains at "/index.html".
+    // index.html remains at "/index.html". Files are found by path alone, as a static server finds them,
+    // since some URLs carry a version query (e.g. the audio bundle's).
     if (process.env.MODE == "dev")
     {
         app.get(/.*\.html$/, async (req: Request, res: Response): Promise<void> => {
-            const staticContent = await FileUtil.read(req.url);
+            const staticContent = await FileUtil.read(req.path);
             res.status(200).setHeader("content-type", "text/html")
                 .send(EJSUtil.postProcessHTML(staticContent));
         });
@@ -39,10 +40,10 @@ export default function Router(app: Express): void
         });
         app.get(/.*\.js$/, async (req: Request, res: Response): Promise<void> => {
             res.status(200).setHeader("content-type", "text/javascript")
-                .sendFile(FileUtil.getAbsoluteFilePath(req.url));
+                .sendFile(FileUtil.getAbsoluteFilePath(req.path));
         });
-        app.get(/(.*\.css)|(.*\.jpg)|(.*\.png)|(.*\.webp)|(.*\.svg)|(.*\.ico)|(.*\.atom)|(.*\.xml)|(.*\.txt)|(.*\.json)|(.*\.pdf)|(.*\.room)|(.*\.md)$/, async (req: Request, res: Response): Promise<void> => {
-            res.sendFile(FileUtil.getAbsoluteFilePath(req.url));
+        app.get(/(.*\.css)|(.*\.jpg)|(.*\.png)|(.*\.webp)|(.*\.svg)|(.*\.ico)|(.*\.atom)|(.*\.xml)|(.*\.txt)|(.*\.json)|(.*\.pdf)|(.*\.room)|(.*\.mp3)|(.*\.md)$/, async (req: Request, res: Response): Promise<void> => {
+            res.sendFile(FileUtil.getAbsoluteFilePath(req.path));
         });
     }
 

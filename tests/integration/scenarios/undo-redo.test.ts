@@ -90,9 +90,9 @@ import ClientEventHistoryUtil, { MERGE_WINDOW_MS } from "../../../src/client/sys
 import GameModeUtil from "../../../src/client/system/util/gameModeUtil";
 import RoomEditUtil from "../../../src/client/system/util/roomEditUtil";
 import VoxelEditUtil from "../../../src/client/voxel/util/voxelEditUtil";
-import { clientFeatureFlagsObservable, gameModeObservable, notificationMessageObservable, objectSelectionObservable,
-    orbitCameraAngleHoldRequestObservable, popupStateObservable, roomChangedObservable,
-    voxelQuadSelectionObservable } from "../../../src/client/system/clientObservables";
+import { clientFeatureFlagsObservable, gameModeObservable, notificationMessageObservable, objectEditObservable,
+    objectPlacedObservable, objectSelectionObservable, orbitCameraAngleHoldRequestObservable, popupStateObservable,
+    roomChangedObservable, voxelQuadSelectionObservable } from "../../../src/client/system/clientObservables";
 import { FeatureFlag } from "../../../src/shared/system/types/featureFlag";
 import { COLLISION_LAYER_HEIGHT, COLLISION_LAYER_MIN, INITIAL_MULTI_PLAYER_ENTRANCE_POS,
     LABEL_COLOR_PALETTE_NAME, STOREY_FLOOR_COLLISION_LAYER, UNIT_VEC3,
@@ -1101,6 +1101,37 @@ describe("an object's edits, undone and redone", () => {
 
         expect(await ClientEventHistoryUtil.redo()).toBe("done");
         expect(transformOf(objectId)).toEqual({pos: [10.5, 0.75, WALL_Z], scale: [1, 0.5, 1]});
+    });
+
+    it("tells of every move of an object as the user's own placement: a tool's, a turn that moves it, and an undo or redo of either", async () => {
+        const placed: [string, boolean][] = [];
+        objectPlacedObservable.addListener("test", ({object, own}) => { placed.push([object.objectId, own]); });
+        const objectId = await userHangs(canvasTypeIndex, {x: 10.5, y: 0.75, z: WALL_Z}, SOUTH, {x: 1, y: 0.5, z: 1},
+            {[ObjectMetadataKeyEnumMap.QuarterTurns]: new EncodableByteString(QuarterTurnsUtil.encode(0))});
+        ObjectEditUtil.trySetObjectTransform(objectSelectionObservable.peek()!,
+            new ObjectTransform({x: 11.5, y: 0.75, z: WALL_Z}, SOUTH, {x: 1, y: 0.5, z: 1}));
+        ObjectEditUtil.tryQuarterTurn(objectSelectionObservable.peek()!);
+        expect(placed).toEqual([[objectId, true], [objectId, true]]);
+        await ClientEventHistoryUtil.undo();
+        await ClientEventHistoryUtil.undo();
+        await ClientEventHistoryUtil.redo();
+        expect(placed).toEqual(Array(5).fill([objectId, true]));
+        objectPlacedObservable.removeListener("test");
+    });
+
+    it("tells of a change to an object's settings, and an undo or redo of it, as the user's own, and never as a placement", async () => {
+        const changed: [string, string, boolean][] = [];
+        objectEditObservable.addListener("test", ({kind, object, own}) => { changed.push([kind, object.objectId, own]); });
+        const placed = vi.fn();
+        objectPlacedObservable.addListener("test", placed);
+        const objectId = await standObject(labelTypeIndex, LABEL_POS, LABEL_DIR, {...UNIT_VEC3}, labelled("Library"));
+        ObjectEditUtil.trySetObjectMetadata(await select(objectId), ObjectMetadataKeyEnumMap.Label, "Gallery");
+        expect(await ClientEventHistoryUtil.undo()).toBe("done");
+        expect(await ClientEventHistoryUtil.redo()).toBe("done");
+        expect(changed.filter(([kind]) => kind == "change")).toEqual(Array(3).fill(["change", objectId, true]));
+        expect(placed).not.toHaveBeenCalled();
+        objectEditObservable.removeListener("test");
+        objectPlacedObservable.removeListener("test");
     });
 
     it("turns an object the rotate tool turned back, its footprint with it, as the one edit it was", async () => {

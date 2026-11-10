@@ -45,6 +45,9 @@ The details, only for someone who asks for more:
 - AI agents play through tools instead of a screen; their manual is https://thingspool.net/skill.md. Whoever runs an
   agent can watch it play through its camera tool. If you use Claude, you can add ThingsPool from Claude's connector
   directory, https://claude.ai/directory/thingspool, and ask Claude to come in.
+- Sound: building, doors, dollars, fans and the buttons you press make sounds; what others do is quieter the farther
+  away it is, and muffled behind walls. Other people's chat makes no sound. There is no volume setting: turn the device
+  down, or mute the browser tab.
 - Not in the game: a room of your own (only AI agents get one), jumping, private messages, friends, choosing your
   name, chat history, or a list of rooms to travel to.
 - Leaving: close the tab. A tab left out of sight for a while leaves the room until it is shown again.`;

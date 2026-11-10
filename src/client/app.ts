@@ -15,7 +15,8 @@ import Room from "../shared/room/types/room";
 import { RoomTypeEnumMap } from "../shared/room/types/roomType";
 import { endClientProcess, ongoingClientProcessExists, tryStartClientProcess } from "./system/types/clientProcess";
 import User from "../shared/user/types/user";
-import { roomChangedObservable, updateObservable, singlePlayerObservable, notificationMessageObservable } from "./system/clientObservables";
+import { roomChangedObservable, updateObservable, singlePlayerObservable, notificationMessageObservable,
+    roomTravelObservable } from "./system/clientObservables";
 import { roomPrefsChangedObservable } from "../shared/system/sharedObservables";
 import "./graphics/types/gizmo/colliderDebugGizmo";
 import "./graphics/types/gizmo/objectAttachmentEditGizmos"; // Side-effect: lets the selected attached object be dragged and resized by its outline
@@ -25,6 +26,7 @@ import "./object/util/helperHoldUtil"; // Side-effect: holds a helper still for 
 import "./singlePlayer/util/singlePlayerHelperUtil"; // Side-effect: plays a single-player room's NPCs as helpers
 import { preloadGenericWorldSpaceGizmos } from "./graphics/types/gizmo/genericWorldSpaceGizmos"; // Side-effect: registers world-space gizmos that are used for general purposes; also exposes a pre-load hook
 import "./graphics/particle/util/particleTriggerUtil"; // Side-effect: plays the effects gameplay events call for
+import "./audio/util/audioTriggerUtil"; // Side-effect: plays the sounds gameplay and UI events call for
 import "./ui/util/signInPromptUtil"; // Side-effect: asks a guest to sign in as they gain a dollar
 import ParticleSystem from "./graphics/particle/particleSystem";
 import DollarBillGameObject from "./object/types/gameObject/dollarBillGameObject";
@@ -34,6 +36,7 @@ import RoomLightingUtil from "./graphics/light/util/roomLightingUtil";
 import SinglePlayerManager from "./singlePlayer/singlePlayerManager";
 import RoomLoadProgressUtil from "./system/util/roomLoadProgressUtil";
 import WatchedPlayerCameraUtil from "./object/util/watchedPlayerCameraUtil";
+import AudioManager from "./audio/audioManager";
 
 const minFramesPerSecond = 20;
 const maxFramesPerSecond = 60;
@@ -151,6 +154,10 @@ async function changeRoom(roomChangedSignal: RoomChangedSignal)
     const roomToJoin = roomChangedSignal.roomRuntimeMemory.room;
     if (RoomEditorUtil.turnAwayUnasked(roomToJoin))
         return;
+    // Along with the first room, so that its arrival is heard once it is on screen if an input has let the page make
+    // sound by then. A camera page is never heard.
+    if (App.getWatchedUserID().length == 0)
+        AudioManager.load(env.assets_url);
 
     // Whoever asked for the room has put up the loading screen already; an unasked one puts it up here.
     tryStartClientProcess("roomChange", 1, 0);
@@ -164,6 +171,9 @@ async function changeRoom(roomChangedSignal: RoomChangedSignal)
         return;
     }
 
+    // Not on coming back into the same room, as a connection taken up again does.
+    if (currentRoom != undefined && currentRoom.id != roomToJoin.id)
+        roomTravelObservable.set({kind: "leave", roomID: currentRoom.id});
     try
     {
         if (currentRoom != undefined)
@@ -212,6 +222,8 @@ async function changeRoom(roomChangedSignal: RoomChangedSignal)
         // None is owed either: the server skips a pending tutorial for a room the address names (see RoomPickerUtil).
         App.getUser().singlePlayerMode = "";
     }
+
+    roomTravelObservable.set({kind: "arrive", roomID: joinedRoom.id});
 }
 
 // A room the page fails to load (e.g. for want of WebGL) is left for a page that says so: the server has put the user's
@@ -267,8 +279,9 @@ async function unloadCurrentRoom()
     DollarBillGameObject.landFlying();
     ClientVoxelManager.unload();
     await ClientObjectManager.unload();
-    // After the objects have released their sprites and emitters.
+    // After the objects have released their sprites, emitters and sounds.
     ParticleSystem.unload();
+    AudioManager.unload();
     PhysicsManager.unload(currentRoom.id);
     await GraphicsManager.unload();
 
@@ -291,6 +304,7 @@ function update()
         DollarBillGameObject.updateFlying(deltaTime);
         ParticleSystem.update(deltaTime);
         GraphicsManager.update();
+        AudioManager.update();
         SinglePlayerManager.update(deltaTime);
         updateObservable.set(deltaTime);
 

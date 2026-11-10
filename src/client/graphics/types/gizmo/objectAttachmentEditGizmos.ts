@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import ObjectSelection from "./objectSelection";
-import { gameModeObservable, objectEditObservable, objectSelectionObservable,
+import { gameModeObservable, objectEditObservable, objectPlacedObservable, objectSelectionObservable,
     roomChangedObservable } from "../../../system/clientObservables";
 import GameModeUtil from "../../../system/util/gameModeUtil";
 import RoomEditUtil from "../../../system/util/roomEditUtil";
@@ -448,6 +448,7 @@ function finishDrag(objectId: string, start: ObjectTransform, keep: boolean, sta
         RoomEditUtil.record(ClientEventType.ManuallyChangedObjectTransform, room, {redo: [signal],
             undo: [new SetObjectMetadataSignal(room.id, objectId, ObjectMetadataKeyEnumMap.QuarterTurns,
                 QuarterTurnsUtil.encode(startQuarterTurns), start)]});
+        objectPlacedObservable.set({object: obj, own: true});
     }
     else if (!transformsMatch(obj.transform, start))
     {
@@ -456,6 +457,7 @@ function finishDrag(objectId: string, start: ObjectTransform, keep: boolean, sta
             SocketsClient.emitSetObjectTransformSignal(signal);
         RoomEditUtil.record(ClientEventType.ManuallyChangedObjectTransform, room,
             {redo: [signal], undo: [new SetObjectTransformSignal(room.id, objectId, start, true)]});
+        objectPlacedObservable.set({object: obj, own: true});
     }
 }
 

@@ -4,6 +4,7 @@
 1. `gcloud auth application-default login`. `devRunner.js` reads secrets from Secret Manager with these credentials (see [firebase.md](firebase.md)).
 2. `npm install -g firebase-tools pm2`. Both are global CLIs, so **switching Node.js versions strands them and breaks `npm run dev`**. Reinstall them after a switch (see [maintenance.md](vps/maintenance.md#global-clis-do-not-survive-a-nodejs-switch)).
 3. A JDK on `PATH` (the Firestore and Storage emulators run on the JVM).
+4. LAME on `PATH` (`brew install lame`), but only to rebuild the audio bundle once a clip changes; SSG fails without it then (see [audio.md](../audio/audio.md)).
 
 ## Running
 | Command | Purpose |

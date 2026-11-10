@@ -2,17 +2,18 @@
 
 ## Technology Stack
 - **Runtime**: Node.js with TypeScript
-- **Frontend**: Three.js (3D graphics), React, Tailwind CSS, EJS
+- **Frontend**: Three.js (3D graphics), Web Audio API (sound), React, Tailwind CSS, EJS
 - **Networking**: Express.js (HTTP requests, authentication), Socket.IO (real-time communication), Fetch API (HTTP requests from the client and to external APIs), Nginx (VPS's web server)
 - **AI**: MCP TypeScript SDK (the endpoint AI agents play over, Streamable HTTP), Claude through the Anthropic Messages API (the helpers' replies)
 - **Database**: Firebase (Firestore, Cloud Storage, Content Distribution)
-- **Build Tools**: Webpack (typescript compiler, bundler), Sharp (static site image generation)
+- **Build Tools**: Webpack (typescript compiler, bundler), Sharp (static site image generation), LAME (static site audio encoding)
 - **Dev Tools**: Husky (git hooks), PM2 (runtime process management), GitHub (source control, workflows, and static page hosting), VS Code (IDE), Claude Code (AI assistant)
 - **Tests**: Playwright (E2E tests), Vitest (Integration tests), fast-check (Property-based testing)
 
 ## Project Structure
 ### `/src` - Main Source Code
 - **`/client`** - Client-side code (browser)
+  - `/audio` - Sound (AudioManager): a clip once, or one looping or several in an endless shuffled sequence, at a fixed volume or at a world-space position heard from the camera and muffled by the walls in between; short clips cut from the one bundled file SSG builds (AudioBundleBuilder, the game's own sounds made by ProceduralSoundUtil), long ones streamed; and the one table of which gameplay or UI event sounds as what (AudioTriggerUtil)
   - `/graphics` - 3D graphics for game objects, voxels, and world-space gizmos, plus the picture of a room file's room shown before the file is loaded (RoomPreviewUtil) and the room as a mirror reflects it (MirrorReflectionUtil)
   - `/inventory` - What the user holds, as the server tells it (ClientInventoryManager), what a login earned them, shown once it can be seen (LoginRewardUtil), and buying a locked shape for their character (PlayerShapeUnlockUtil)
   - `/networking` - Client-side networking (SocketsClient for Socket.IO, RestAPI and the API clients over it)
@@ -70,6 +71,7 @@
 - **`/gameplay`** - Game modes (play mode, edit mode), the admin privilege, the inventory and dollar bills
 - **`/geometry`** - Voxel grid, physics, room generation, room entrances and doors, attached objects (on walls, floors and ceilings), textures, player customization
 - **`/graphics`** - Camera control, instanced mesh composition, image map, label text
+- **`/audio`** - The audio system: the bundle of clips and the streams, sound at a position in the world, and what sounds when
 - **`/networking`** - HTTP/Socket/Authentication Flows, single-player mode, AI agents
 - **`/testing`** - E2E and integration test workflows, framework, and scenario coverage
 - **`/plans`** - Dated design/planning notes, filed by year. **Historical records, not descriptions of the present — edited only with the user's approval.** See "Plan Documents Are Historical Records" below.
@@ -114,6 +116,7 @@ Each rule is binding as written. Its page in `.claude/rules/`, loaded along with
 - **The License Files Must Describe What Actually Ships** ([`license-files.md`](.claude/rules/license-files.md)): when the set of things that ship changes, `LICENSE-CONTENT.md` and `THIRD-PARTY-NOTICES.md` change in the same commit. A copyleft or source-available dependency is the user's decision; `LICENSE` is never edited.
 - **Plan Documents Are Historical Records** ([`plan-documents.md`](.claude/rules/plan-documents.md)): a file under `/docs/plans` is edited only with the user's approval, whatever its date; sweeping edits skip it.
 - **Source Changes Go Through the File-Editing Tools** ([`source-edits.md`](.claude/rules/source-edits.md)): every file created or modified under `src/` is written with Edit or Write, never by a shell command.
+- **Page Sources Are the Author's Alone** ([`page-sources.md`](.claude/rules/page-sources.md)): the `source.txt` that each library and arcade page under `public/` is built from is never edited, overwritten, moved or deleted; a deny rule, a hook and a sandbox around every shell command, all set in `.claude/settings.json`, enforce it.
 - **Agents Keep Up With Every Feature** ([`agents-keep-up.md`](.claude/rules/agents-keep-up.md)): when a feature is added or changed, what AI agents can do over MCP and what they are told change with it, in the same change, unasked: the tools, what they see, the endpoint's instructions, the manual and its ClawHub copy, and `server.json`. A version is bumped only once the one there has been published.
 - **Helpers Keep Up With Every Feature** ([`helpers-keep-up.md`](.claude/rules/helpers-keep-up.md)): when a feature is added or changed, what the helpers are told and the fixed words they say change with it, in the same change, unasked: the guide and the rest of the instructions Claude replies from, their greetings, small talk and remarks, and the pictures of controls they show. A pictured control's new look and a changed picture keyword reach them too.
 - **Documentation Guidelines** ([`documentation.md`](.claude/rules/documentation.md)): a `/docs` page is a short map of one subsystem, for a developer about to work on it: terse, in the present tense, without exact numbers or internal names. `/docs/plans` is outside them.

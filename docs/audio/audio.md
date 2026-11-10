@@ -1,0 +1,47 @@
+# Audio System
+
+Reference: @src/client/audio/audioManager.ts , @src/client/audio/util/audioTriggerUtil.ts , @src/client/audio/types/audioVoice.ts , @src/client/audio/types/spatialAudioVoice.ts , @src/client/audio/types/bundledClipPlayer.ts , @src/client/audio/types/streamedClipPlayer.ts , @src/client/audio/util/audioContextUtil.ts , @src/client/audio/util/audioStreamUtil.ts , @src/client/audio/util/audioBundleUtil.ts , @src/client/audio/util/spatialAudioUtil.ts , @src/client/audio/maps/audioBundleMap.ts , @src/server/ssg/builder/audioBundleBuilder.ts , @src/server/ssg/data/proceduralSounds.ts , @src/server/ssg/util/proceduralSoundUtil.ts , @public/app/assets/audio/manifest.json
+
+`AudioManager` plays sound in the browser; the server plays none. Short clips are cut from one bundled file on the static site, downloaded and decoded once; long ones stream from files of their own.
+
+## Playing
+- Four kinds of sound, each a voice its owner keeps to change its volume or stop it: a clip once, or one clip looping, or several in an endless shuffled sequence (each once a round, never one twice in a row), at a fixed volume or at a position in the world. A voice may play faster, and so higher.
+- A positioned voice's position is its owner's to move as its source does. After each frame is drawn it is heard from the camera (`SpatialAudioUtil`):
+  - fading with distance, to silence at its range;
+  - quieter and duller for each wall in between: a block the line enters through a drawn face, as the eye would meet it, so a wall hidden from the orbit camera muffles nothing;
+  - panned toward the side it is on, never into one ear alone.
+- A clip is named by `ProceduralSounds` or the audio manifest. `AudioClipName` comes from the generated map, so a name in neither fails to compile.
+- Between rooms, positioned voices stop with the room, and the rest play on. A positioned loop its owner never stopped is reported.
+
+## What sounds
+- Gameplay and the UI never call `AudioManager`. They publish what happened, and `AudioTriggerUtil` is the one table of which event sounds as what, as `ParticleTriggerUtil` is for effects.
+  - Others' edits sound where they are made: blocks put up, taken down, moved and given another texture, and the room's own objects put up, taken down and placed (as the same edit of a block) or changed (a breath). So do others coming and going (a door opening, a door shutting) and the dollars they collect. A ghost is never heard, nor is what anyone says, nor what a helper shows of what it is doing.
+  - What the user does and is given is heard alike from anywhere: their own edits, a press of a control (anything that shows the hand pointer), popups and panels coming and going, a face or an object selected or let go of (which is all that entering or leaving edit mode sounds as), the tutorial's marks showing and clearing away, a door shutting as they leave a room and one opening as they arrive in any (once the first has shut), a line sent, dollars reaching the count, the day's reward, dollars spent, and a refusal.
+  - The user's own object added or placed clicks as a press does; one taken away or changed sounds as the control pressed for it, or the popup it was confirmed in, already does.
+- One action is one sound: what it sets off at once is heard as the most telling of it.
+  - A sound of something done (an edit, travel, a refusal, dollars spent, a line sent) plays at once, and is the only one of its moment.
+  - The slight ones (a press, a panel, the selection, a popup, the tutorial) wait out a moment, and the most telling of them plays, unless a sound of something done came in it.
+  - Others' coming and going and collected dollars are each their own.
+- An object's own sound is its game object's: a fan's wind is a loop from just in front of it, louder and higher the more blades it has (`FanGameObject`).
+
+## When sound is heard
+- Browsers keep a page silent until the user does something on it, so the AudioContext is made at once only on a page already used, and else at the first input (`AudioContextUtil`).
+- A clip played once is heard now or never: asked for before the page can make sound, or while it is hidden, it is dropped rather than saved up. A loop waits, and starts as soon as it can: a stream once there is a context, a clip of the bundle once it is decoded too.
+- While the page is hidden the context is suspended and streams pause, since no frame runs there to keep positions in step with the room. They go on where they were once the page is shown. A stream the browser refuses to start waits for the next input.
+- The bundle downloads along with the first room, so that coming into it is heard if an input has let the page make sound by then. An agent's camera page loads no sound.
+
+## The clips
+- SSG's `AudioBundleBuilder` makes them, and writes where each is to `AudioBundleMap`.
+- Most are made, not recorded: `ProceduralSounds` describes each as tones and filtered noise under envelopes, which `ProceduralSoundUtil` renders the same every time.
+- The audio manifest lists the recordings (the doors, a block set down, a cash register), each by name and file: a WAV file goes in the bundle, and an MP3 file streams from where it is. Anything long has to stream, since the whole bundle downloads before any clip plays and stays decoded in memory.
+- The bundle is one MP3, the one compact format every browser decodes (Safari included), at one rate, and stereo if any clip is.
+  - Each clip lies between paddings: silence, which takes in what the encoder smears across its edges, or, for a loop, its own other end, so that its seam is encoded as it sounds looping. A loop is resampled as a periodic signal for the same reason.
+  - It opens with a click alone in silence. Decoders differ in how much of the encoder's delay they trim, so the client finds the click and shifts every clip by as much as it moved.
+- Each file is fetched under a version, a hash of what it holds, so a cached older file is never cut by a newer map.
+- The bundle is encoded only when its samples change, so SSG needs an encoder (LAME, see [local_dev.md](../devOps/local_dev.md)) only then. The map is written only when it changes, since the dev server restarts on it.
+- A recording comes with terms: the README in its folder names its source, author and license and how it was cut (a test checks each file is named there), and `THIRD-PARTY-NOTICES.md` lists it. Keep recordings mono, since one stereo clip makes the whole bundle stereo.
+
+## Traps
+- A stream plays through a media element, which can't be scheduled: a sequence of streams has a short gap between files, and a streamed loop's seam isn't exact.
+- The wall count leaves out the block a point lies in, so a sound placed on a wall's face would carry through that wall unmuffled: a fan's wind sounds from just in front of it.
+- Panning is stereo alone: a sound in front of the camera and one behind it sound alike.

@@ -1,4 +1,4 @@
-import { screenCoachMarksObservable } from "../../system/clientObservables";
+import { clickRefusedObservable, screenCoachMarksObservable } from "../../system/clientObservables";
 import CoachMark from "../types/coachMark";
 
 export const DURATION_MS = 3000;
@@ -19,6 +19,7 @@ const RefusalCoachMarkUtil =
         shown = coachMark;
         screenCoachMarksObservable.change(coachMarks => [...coachMarks, coachMark]);
         timeout = setTimeout(RefusalCoachMarkUtil.hide, DURATION_MS);
+        clickRefusedObservable.set(targetElementId);
     },
     hide: (): void =>
     {
