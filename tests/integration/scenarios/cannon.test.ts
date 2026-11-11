@@ -23,7 +23,7 @@ import CannonUtil from "../../../src/server/object/util/cannonUtil";
 import CannonBallUtil from "../../../src/server/object/util/cannonBallUtil";
 import DollarBillUtil, { SPAWN_INTERVAL_MS } from "../../../src/server/inventory/util/dollarBillUtil";
 import DollarBillFlightUtil from "../../../src/server/inventory/util/dollarBillFlightUtil";
-import PlayerMotionCheckUtil, { BLAST_GRACE_MS } from "../../../src/server/user/util/playerMotionCheckUtil";
+import PlayerMotionCheckUtil, { ALLOWANCE, BLAST_GRACE_MS } from "../../../src/server/user/util/playerMotionCheckUtil";
 import { InventoryItemTypeEnumMap } from "../../../src/shared/inventory/types/inventoryItemType";
 import InventorySignal from "../../../src/shared/inventory/types/inventorySignal";
 import SignalTypeConfigMap from "../../../src/shared/networking/maps/signalTypeConfigMap";
@@ -39,10 +39,10 @@ import { ObjectMetadata } from "../../../src/shared/object/types/objectMetadata"
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
 import CannonBallObjectTypeConfig, { CANNON_BALL_BLAST_RADIUS, CANNON_BALL_MAX_SPEED, CANNON_BALL_RADIUS, CANNON_BALL_SPEED,
-    CANNON_BALL_VANISH_DISTANCE } from "../../../src/shared/object/types/objectTypeConfig/cannonBallObjectTypeConfig";
+    CANNON_BALL_VANISH_DISTANCE, CANNON_BALL_WIND_SHARE, CANNON_BLAST_PUSH_SPEED } from "../../../src/shared/object/types/objectTypeConfig/cannonBallObjectTypeConfig";
 import CannonObjectTypeConfig, { CANNON_AIM_TOLERANCE, CANNON_BALL_COUNT, CANNON_FIRE_INTERVAL_SECONDS, CANNON_LOCK_SECONDS,
-    CANNON_MAX_AIM_SECONDS, CANNON_MAX_PITCH, CANNON_MAX_RANGE, CANNON_MIN_PITCH, CANNON_MIN_RANGE, CANNON_READY_SECONDS,
-    CANNON_REST_SECONDS, CANNON_SLEEP_PITCH, CANNON_SPENT_SECONDS, CANNON_TURN_RATE }
+    CANNON_MAX_PITCH, CANNON_MAX_RANGE, CANNON_MIN_PITCH, CANNON_MIN_RANGE, CANNON_READY_SECONDS, CANNON_REST_SECONDS,
+    CANNON_SLEEP_PITCH, CANNON_SPENT_SECONDS, CANNON_TURN_RATE }
     from "../../../src/shared/object/types/objectTypeConfig/cannonObjectTypeConfig";
 import DollarBillObjectTypeConfig, { DOLLAR_BILL_REST_HEIGHT, DOLLAR_BILL_SPAWN_CAP }
     from "../../../src/shared/object/types/objectTypeConfig/dollarBillObjectTypeConfig";
@@ -66,6 +66,7 @@ import CannonCompositionConstants from "../../../src/shared/graphics/mesh/compos
 import CannonCompositionUtil from "../../../src/shared/graphics/mesh/composition/util/cannonCompositionUtil";
 import PhysicsManager from "../../../src/shared/physics/physicsManager";
 import PhysicsColliderStateUtil from "../../../src/shared/physics/util/physicsColliderStateUtil";
+import PhysicsForceUtil from "../../../src/shared/physics/util/physicsForceUtil";
 import AABB3 from "../../../src/shared/math/types/aabb3";
 import Vec3 from "../../../src/shared/math/types/vec3";
 import Geometry3DUtil from "../../../src/shared/math/util/geometry3DUtil";
@@ -220,6 +221,20 @@ function placeWallAcross(x: number, exceptZ?: number): void
             const voxel = VoxelQueryUtil.getVoxel(getRoom().voxelGrid.voxels, row, col)!;
             if (exceptZ == undefined || Math.abs(z - exceptZ) > 1)
                 voxel.blockLayerMask |= 1 << VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(y);
+        }
+    }
+}
+
+// That wall taken away again, the room's own walls at its ends left standing.
+function removeWallAcross(x: number): void
+{
+    const ends = GENERATED_WALL_THICKNESS * VOXEL_CELL_SIZE;
+    for (let z = ends + 0.5 * VOXEL_CELL_SIZE; z < MAX_ROOM_Z - ends; z += VOXEL_CELL_SIZE)
+    {
+        for (let y = 0.5 * COLLISION_LAYER_HEIGHT; y < SLAB_UNDERSIDE_Y; y += COLLISION_LAYER_HEIGHT)
+        {
+            VoxelQueryUtil.getVoxel(getRoom().voxelGrid.voxels, VoxelQueryUtil.getVoxelRowFromWorldZ(z),
+                VoxelQueryUtil.getVoxelColFromWorldX(x))!.blockLayerMask &= ~(1 << VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(y));
         }
     }
 }
@@ -1003,7 +1018,7 @@ describe("a cannon the server plays", () => {
     });
 
     it(`then waits between ${CANNON_FIRE_INTERVAL_SECONDS[0]} and ${CANNON_FIRE_INTERVAL_SECONDS[1]} seconds, as chance has it, ` +
-        "before it looks for someone", async () => {
+        "before it turns to someone", async () => {
         const [shortest, longest] = CANNON_FIRE_INTERVAL_SECONDS;
         await join("someone");
         const quick = placeCannon({phase: CannonPhaseEnumMap.Resting, timeLeft: 0});
@@ -1052,13 +1067,31 @@ describe("a cannon the server plays", () => {
         expect(statesToldTo(user, cannon.objectId).length).toBe(turns + 1);
     });
 
-    it(`turns slowly enough to walk round ahead of: half a turn takes it ${Math.PI / CANNON_TURN_RATE} seconds, ` +
-        "which it has the time for, and to stay on them after", () => {
+    it("turns to another as soon as they are the nearest", async () => {
+        const first = await join("someone");
+        const other = {x: CANNON_SPOT.x, y: STANDING_Y, z: CANNON_SPOT.z + 6};
+        await join("another", other);
+        const cannon = placeCannon({phase: CannonPhaseEnumMap.Waiting, timeLeft: 0, aim: {yaw: 0, pitch: 0}});
+        const aimAt = (spot: Vec3): CannonAim => CannonAimUtil.getAim(cannon.transform.dir,
+            Vector3DUtil.subtract(spot, CannonAimUtil.getPivot(cannon.transform.pos, cannon.transform.dir))).aim;
+        const settle = Math.PI / CANNON_TURN_RATE + 1;
+        // The other is the nearer.
+        flushUntil(() => CannonAimUtil.getAngleBetween(stateOf(cannon).aim, aimAt(other)) <= CANNON_AIM_TOLERANCE + ANGLE_STEP, settle);
+        // The first comes nearer than they are, before it has stayed on them its while.
+        const nearer = {x: CANNON_SPOT.x + 3, y: STANDING_Y, z: CANNON_SPOT.z};
+        moveTo(first, nearer);
+        flushUntil(() => CannonAimUtil.getAngleBetween(stateOf(cannon).aim, aimAt(nearer)) <= CANNON_AIM_TOLERANCE + ANGLE_STEP, settle);
+        expect(getBalls()).toEqual([]);
+        flushUntil(() => getBalls().length == 1, CANNON_LOCK_SECONDS + 2 * CANNON_READY_SECONDS);
+        expect(angleBetween(CannonBallStateUtil.getObjectState(getBalls()[0]).vel,
+            CannonAimUtil.getDirection(cannon.transform.dir, aimAt(nearer)))).toBeLessThan(CANNON_AIM_TOLERANCE + 0.01);
+    });
+
+    it("turns slowly enough to walk round ahead of, from its near limit well out, but not as far as it fires", () => {
         const walkSpeed = PLAYER_WALK_SPEED_PER_INPUT * PLAYER_MAX_WALK_INPUT;
-        // Someone walking round it goes round faster than it turns from its near limit out to here.
+        // How far from it someone walking round it goes round as fast as it turns.
         expect(walkSpeed / CANNON_TURN_RATE).toBeGreaterThan(2 * CANNON_MIN_RANGE);
         expect(walkSpeed / CANNON_TURN_RATE).toBeLessThan(CANNON_MAX_RANGE);
-        expect(CANNON_MAX_AIM_SECONDS).toBeGreaterThan(Math.PI / CANNON_TURN_RATE + CANNON_LOCK_SECONDS);
     });
 
     describe("staying on whoever it turns to", () => {
@@ -1108,6 +1141,24 @@ describe("a cannon the server plays", () => {
             expect(stateOf(cannon).phase).toBe(CannonPhaseEnumMap.Ready);
         });
 
+        it("starts that over for another, though they stand on the line it points along", async () => {
+            const first = await join("someone", around(0));
+            // Behind the first, twice as far from it.
+            const behind = {x: pivot.x + 2 * RADIUS, y: STANDING_Y, z: pivot.z};
+            await join("another", behind);
+            const cannon = placeCannon({phase: CannonPhaseEnumMap.Waiting, timeLeft: 0, aim: aimAt(around(0))});
+            flushFor(2 * FLUSH_SECONDS);
+            flushFor(CANNON_LOCK_SECONDS - FLUSH_SECONDS);
+            expect(stateOf(cannon).phase).toBe(CannonPhaseEnumMap.Aiming);
+            // The first gone far off the other way, the other is the nearest: its while is theirs from the start.
+            moveTo(first, {x: pivot.x - 3 * RADIUS, y: STANDING_Y, z: pivot.z});
+            flushFor(CANNON_LOCK_SECONDS - FLUSH_SECONDS);
+            expect(stateOf(cannon).phase).toBe(CannonPhaseEnumMap.Aiming);
+            flushFor(3 * FLUSH_SECONDS);
+            expect(stateOf(cannon).phase).toBe(CannonPhaseEnumMap.Ready);
+            expect(CannonAimUtil.getAngleBetween(stateOf(cannon).aim, aimAt(behind))).toBeLessThanOrEqual(CANNON_AIM_TOLERANCE + ANGLE_STEP);
+        });
+
         it("starts that over whenever they get off its line", async () => {
             const user = await join("someone", around(0));
             const cannon = placeCannon({phase: CannonPhaseEnumMap.Waiting, timeLeft: 0, aim: aimAt(around(0))});
@@ -1132,28 +1183,26 @@ describe("a cannon the server plays", () => {
             expect(getBalls()).toEqual([]);
         });
 
-        it("never fires at whoever keeps going round it faster than it turns, and gives up after " +
-            `${CANNON_MAX_AIM_SECONDS} seconds, to wait and try again`, async () => {
+        it("never fires at whoever keeps going round it faster than it turns, and goes on turning after them all the " +
+            "while, with no wait, until they stop", async () => {
             const user = await join("someone", around(0));
             const cannon = placeCannon({phase: CannonPhaseEnumMap.Waiting, timeLeft: 0, aim: aimAt(around(0))});
             flush();
             expect(stateOf(cannon).phase).toBe(CannonPhaseEnumMap.Aiming);
 
+            // Many times as long as it waits between two shots.
             const rate = 1.25 * CANNON_TURN_RATE;
-            const chased = circle(user, cannon, 0, rate, CANNON_MAX_AIM_SECONDS - 2 * FLUSH_SECONDS);
+            const seconds = 6 * CANNON_FIRE_INTERVAL_SECONDS[1];
+            const chased = circle(user, cannon, 0, rate, seconds);
             expect([...chased.phases]).toEqual([CannonPhaseEnumMap.Aiming]);
-            // It went after them all the while, as fast as it turns, and fell behind.
-            expect(chased.turned).toBeGreaterThan(0.9 * CANNON_TURN_RATE * (CANNON_MAX_AIM_SECONDS - 2 * FLUSH_SECONDS));
-            expect(CannonAimUtil.getAngleBetween(stateOf(cannon).aim, aimAt(around(chased.angle)))).toBeGreaterThan(1);
-            const givenUp = circle(user, cannon, chased.angle, rate, CANNON_LOCK_SECONDS + 2 * FLUSH_SECONDS);
-            expect(stateOf(cannon).phase).toBe(CannonPhaseEnumMap.Waiting);
-            expect(givenUp.phases.has(CannonPhaseEnumMap.Ready)).toBe(false);
-
-            // Round after round of it.
-            const later = circle(user, cannon, givenUp.angle, rate, 3 * (CANNON_FIRE_INTERVAL_SECONDS[0] + CANNON_MAX_AIM_SECONDS));
-            expect([...later.phases].sort()).toEqual([CannonPhaseEnumMap.Waiting, CannonPhaseEnumMap.Aiming]);
+            expect(chased.turned).toBeGreaterThan(0.9 * CANNON_TURN_RATE * seconds);
             expect(getBalls()).toEqual([]);
             expect(stateOf(cannon).ballsLeft).toBe(CANNON_BALL_COUNT);
+
+            // They stop: it comes round onto them, stays its while, and fires.
+            flushUntil(() => getBalls().length == 1, Math.PI / CANNON_TURN_RATE + CANNON_LOCK_SECONDS + 2 * CANNON_READY_SECONDS + 1);
+            expect(angleBetween(CannonBallStateUtil.getObjectState(getBalls()[0]).vel,
+                CannonAimUtil.getDirection(FLOOR_FACING, aimAt(around(chased.angle))))).toBeLessThan(CANNON_AIM_TOLERANCE + 0.01);
         });
 
         it("fires at whoever goes round it slower than it turns, the way it pointed as it was aimed", async () => {
@@ -1214,69 +1263,109 @@ describe("a cannon the server plays", () => {
         expect(CannonBallObjectTypeConfig.persistent).toBe(false);
     });
 
-    it(`fires at nobody farther off than ${CANNON_MAX_RANGE} units, nor nearer than ${CANNON_MIN_RANGE}`, async () => {
-        const user = await join("someone");
-        const cannon = placeCannon({phase: CannonPhaseEnumMap.Waiting, timeLeft: 0}, {x: 6.5, y: 0, z: 6.5});
-        const pivot = CannonAimUtil.getPivot(cannon.transform.pos, cannon.transform.dir);
+    describe("turning after someone it may not fire at", () => {
+        // Long enough for it to turn to someone from any way it points, and to stay on them its while several times.
+        const LONG_ENOUGH = Math.PI / CANNON_TURN_RATE + 3 * CANNON_LOCK_SECONDS + 1;
+        const aimAt = (cannon: AddObjectSignal, spot: Vec3): CannonAim => CannonAimUtil.getAim(cannon.transform.dir,
+            Vector3DUtil.subtract(spot, CannonAimUtil.getPivot(cannon.transform.pos, cannon.transform.dir))).aim;
+        const isOn = (cannon: AddObjectSignal, spot: Vec3): boolean =>
+            CannonAimUtil.getAngleBetween(stateOf(cannon).aim, aimAt(cannon, spot)) <= CANNON_AIM_TOLERANCE + ANGLE_STEP;
+        // The phases it goes through over a while.
+        const watch = (cannon: AddObjectSignal, seconds: number = LONG_ENOUGH): number[] => {
+            const phases = new Set<number>();
+            for (let i = 0; i < Math.round(seconds / FLUSH_SECONDS); ++i)
+            {
+                flush();
+                phases.add(stateOf(cannon).phase);
+            }
+            return [...phases];
+        };
+        // Someone a distance from its pivot, along one line from it.
+        const CORNER_SPOT: Vec3 = {x: 6.5, y: 0, z: 6.5};
         const at = (distance: number): Vec3 => {
+            const pivot = CannonAimUtil.getPivot(CORNER_SPOT, FLOOR_FACING);
             const across = Math.sqrt(distance * distance - (STANDING_Y - pivot.y) ** 2);
             return {x: pivot.x + across * Math.SQRT1_2, y: STANDING_Y, z: pivot.z + across * Math.SQRT1_2};
         };
-        const aimed = () => {
-            let was = false;
-            for (let i = 0; i < Math.round((CANNON_FIRE_INTERVAL_SECONDS[0] + 1) / FLUSH_SECONDS); ++i)
-            {
-                flush();
-                was ||= stateOf(cannon).phase == CannonPhaseEnumMap.Aiming || stateOf(cannon).phase == CannonPhaseEnumMap.Ready;
-            }
-            return was;
-        };
 
-        moveTo(user, at(CANNON_MAX_RANGE + 0.2));
-        expect(aimed()).toBe(false);
-        moveTo(user, at(CANNON_MIN_RANGE - 0.2));
-        expect(aimed()).toBe(false);
-        expect(getBalls()).toEqual([]);
-        expect(stateOf(cannon).ballsLeft).toBe(CANNON_BALL_COUNT);
-        moveTo(user, at(CANNON_MAX_RANGE - 0.2));
-        expect(aimed()).toBe(true);
-    });
+        it(`goes on with someone farther off than ${CANNON_MAX_RANGE} units, whom it never fires at, and has them in ` +
+            "its sights only from where they come within that", async () => {
+            const user = await join("someone", at(CANNON_MAX_RANGE + 0.2));
+            const cannon = placeCannon({phase: CannonPhaseEnumMap.Waiting, timeLeft: 0, aim: {yaw: 0, pitch: 0}}, CORNER_SPOT);
+            expect(watch(cannon)).toEqual([CannonPhaseEnumMap.Aiming]);
+            expect(isOn(cannon, at(CANNON_MAX_RANGE + 0.2))).toBe(true);
+            expect(getBalls()).toEqual([]);
 
-    it("fires at nobody it has no clear line to, from its barrel's mouth to their middle", async () => {
-        await join("someone");
-        const cannon = placeCannon({phase: CannonPhaseEnumMap.Waiting, timeLeft: 0});
-        placeWallAcross(14.25);
-        flushFor(CANNON_FIRE_INTERVAL_SECONDS[0] + 4);
-        expect(getBalls()).toEqual([]);
-        expect(stateOf(cannon)).toMatchObject({phase: CannonPhaseEnumMap.Waiting, ballsLeft: CANNON_BALL_COUNT});
-        expect(CannonAimUtil.getAngleBetween(stateOf(cannon).aim, NEW.aim)).toBeLessThan(ANGLE_STEP);
-    });
+            // A step nearer, on the line it points along: its while starts there, however long it has been on them.
+            moveTo(user, at(CANNON_MAX_RANGE - 0.2));
+            expect(watch(cannon, CANNON_LOCK_SECONDS)).toEqual([CannonPhaseEnumMap.Aiming]);
+            flushFor(2 * FLUSH_SECONDS);
+            expect(stateOf(cannon).phase).toBe(CannonPhaseEnumMap.Ready);
+        });
 
-    it("gives up on someone who gets behind a wall as it turns, and waits again", async () => {
-        const user = await join("someone");
-        const cannon = placeCannon({phase: CannonPhaseEnumMap.Waiting, timeLeft: 0, aim: {yaw: 0, pitch: 0}});
-        flushFor(2 * FLUSH_SECONDS);
-        expect(stateOf(cannon).phase).toBe(CannonPhaseEnumMap.Aiming);
-        placeWallAcross(14.25);
-        moveTo(user, TARGET_SPOT);
-        flushUntil(() => stateOf(cannon).phase != CannonPhaseEnumMap.Aiming, 10);
-        expect(stateOf(cannon).phase).toBe(CannonPhaseEnumMap.Waiting);
-        expect(getBalls()).toEqual([]);
-    });
+        it(`goes on with someone nearer than ${CANNON_MIN_RANGE} units, whom it never fires at`, async () => {
+            const user = await join("someone", at(CANNON_MIN_RANGE - 0.2));
+            const cannon = placeCannon({phase: CannonPhaseEnumMap.Waiting, timeLeft: 0, aim: {yaw: 0, pitch: 0}}, CORNER_SPOT);
+            expect(watch(cannon)).toEqual([CannonPhaseEnumMap.Aiming]);
+            expect(isOn(cannon, at(CANNON_MIN_RANGE - 0.2))).toBe(true);
+            // Round it they go, as near, and it after them.
+            const pivot = CannonAimUtil.getPivot(CORNER_SPOT, FLOOR_FACING);
+            const beside = {x: pivot.x - (at(CANNON_MIN_RANGE - 0.2).x - pivot.x), y: STANDING_Y, z: at(CANNON_MIN_RANGE - 0.2).z};
+            moveTo(user, beside);
+            expect(watch(cannon)).toEqual([CannonPhaseEnumMap.Aiming]);
+            expect(isOn(cannon, beside)).toBe(true);
+            expect(getBalls()).toEqual([]);
+            expect(stateOf(cannon).ballsLeft).toBe(CANNON_BALL_COUNT);
+        });
 
-    it("takes a ghost for nobody, and fires at whoever else is there", async () => {
-        await join("a-ghost", {x: CANNON_SPOT.x + 4, y: STANDING_Y, z: CANNON_SPOT.z}, {userType: UserTypeEnumMap.Admin,
-            playerMetadata: {[ObjectMetadataKeyEnumMap.AdminPrefs]: AdminPrefsUtil.encode({ghostMode: true})}});
-        const cannon = placeCannon({phase: CannonPhaseEnumMap.Waiting, timeLeft: 0});
-        flushFor(CANNON_FIRE_INTERVAL_SECONDS[0] + 2);
-        expect(stateOf(cannon).phase).toBe(CannonPhaseEnumMap.Waiting);
-        expect(getBalls()).toEqual([]);
+        it("goes on with someone it has no clear line to, from its barrel's mouth to their middle, and has them in its " +
+            "sights only from where the line is clear", async () => {
+            const user = await join("someone");
+            const cannon = placeCannon({phase: CannonPhaseEnumMap.Waiting, timeLeft: 0, aim: {yaw: 0, pitch: 0}});
+            placeWallAcross(14.25);
+            expect(watch(cannon)).toEqual([CannonPhaseEnumMap.Aiming]);
+            expect(isOn(cannon, TARGET_SPOT)).toBe(true);
+            // They walk on behind the wall, and it follows.
+            const along = {x: TARGET_SPOT.x, y: STANDING_Y, z: TARGET_SPOT.z + 5};
+            moveTo(user, along);
+            expect(watch(cannon)).toEqual([CannonPhaseEnumMap.Aiming]);
+            expect(isOn(cannon, along)).toBe(true);
+            expect(getBalls()).toEqual([]);
 
-        await join("someone", {x: CANNON_SPOT.x, y: STANDING_Y, z: CANNON_SPOT.z + 7});
-        flushUntil(() => getBalls().length == 1, CANNON_FIRE_INTERVAL_SECONDS[0] + 8);
-        const {pos, dir} = cannon.transform;
-        expect(angleBetween(CannonBallStateUtil.getObjectState(getBalls()[0]).vel,
-            Vector3DUtil.subtract({x: pos.x, y: STANDING_Y, z: pos.z + 7}, CannonAimUtil.getPivot(pos, dir)))).toBeLessThan(0.05);
+            // The wall gone from between them: its while starts there.
+            removeWallAcross(14.25);
+            expect(watch(cannon, CANNON_LOCK_SECONDS)).toEqual([CannonPhaseEnumMap.Aiming]);
+            flushFor(2 * FLUSH_SECONDS);
+            expect(stateOf(cannon).phase).toBe(CannonPhaseEnumMap.Ready);
+        });
+
+        it("keeps still with only a ghost there, who is nobody to it, and turns to whoever else comes", async () => {
+            await join("a-ghost", {x: CANNON_SPOT.x + 4, y: STANDING_Y, z: CANNON_SPOT.z}, {userType: UserTypeEnumMap.Admin,
+                playerMetadata: {[ObjectMetadataKeyEnumMap.AdminPrefs]: AdminPrefsUtil.encode({ghostMode: true})}});
+            const cannon = placeCannon({phase: CannonPhaseEnumMap.Waiting, timeLeft: 0});
+            expect(watch(cannon)).toEqual([CannonPhaseEnumMap.Aiming]);
+            expect(CannonAimUtil.getAngleBetween(stateOf(cannon).aim, NEW.aim)).toBeLessThan(ANGLE_STEP);
+            expect(getBalls()).toEqual([]);
+
+            // With no wait first: it was only waiting for someone.
+            const spot = {x: CANNON_SPOT.x, y: STANDING_Y, z: CANNON_SPOT.z + 7};
+            await join("someone", spot);
+            flush();
+            expect(CannonAimUtil.getAngleBetween(stateOf(cannon).aim, NEW.aim)).toBeGreaterThan(ANGLE_STEP);
+            flushUntil(() => getBalls().length == 1, LONG_ENOUGH);
+            expect(angleBetween(CannonBallStateUtil.getObjectState(getBalls()[0]).vel,
+                CannonAimUtil.getDirection(cannon.transform.dir, aimAt(cannon, spot)))).toBeLessThan(0.05);
+        });
+
+        it("goes on turning from where its room kept it, if kept as it turned", async () => {
+            await join("someone");
+            // As a room loaded again finds one: turning, with nothing of whom it was turning to.
+            const cannon = placeCannon({phase: CannonPhaseEnumMap.Aiming, timeLeft: 0, aim: {yaw: 0, pitch: 0}});
+            flush();
+            expect(stateOf(cannon).phase).toBe(CannonPhaseEnumMap.Aiming);
+            expect(CannonAimUtil.getAngleBetween(stateOf(cannon).aim, {yaw: 0, pitch: 0})).toBeGreaterThan(ANGLE_STEP);
+            flushUntil(() => getBalls().length == 1, LONG_ENOUGH);
+        });
     });
 
     it("fires from a wall as from a floor", async () => {
@@ -1357,15 +1446,22 @@ describe("a cannon the server plays", () => {
         expect(statesToldTo(other, cannon.objectId)).toEqual([CannonStateUtil.encodeSwitch(false)]);
     });
 
-    it("tells the room nothing while only its time passes", async () => {
+    it("tells the room nothing while only its time passes, nor while it stays on someone who keeps still", async () => {
         const user = await join("someone", {x: 28, y: STANDING_Y, z: 28});
-        const cannon = placeCannon({phase: CannonPhaseEnumMap.Waiting, timeLeft: 0}, {x: 4.5, y: 0, z: 4.5});
+        const cannon = placeCannon({phase: CannonPhaseEnumMap.Resting, timeLeft: 0}, {x: 4.5, y: 0, z: 4.5});
         flush();
+        expect(stateOf(cannon).phase).toBe(CannonPhaseEnumMap.Waiting);
         forget(user);
-        // Out of its range, they are never turned to: it only waits, again and again.
-        flushFor(3 * CANNON_FIRE_INTERVAL_SECONDS[0]);
+        flushFor(CANNON_FIRE_INTERVAL_SECONDS[0] - 2 * FLUSH_SECONDS);
         expect(statesToldTo(user, cannon.objectId)).toEqual([]);
         expect(stateOf(cannon).timeLeft).toBeLessThan(CANNON_FIRE_INTERVAL_SECONDS[0]);
+
+        // Then it turns to them, out of its range as they are, and once on them has no more to tell.
+        flushFor(Math.PI / CANNON_TURN_RATE + 1);
+        expect(stateOf(cannon).phase).toBe(CannonPhaseEnumMap.Aiming);
+        forget(user);
+        flushFor(3 * CANNON_LOCK_SECONDS);
+        expect(statesToldTo(user, cannon.objectId)).toEqual([]);
     });
 
     it("keeps still with nobody in the room", async () => {
@@ -1443,12 +1539,12 @@ describe("a cannon ball the server flies", () => {
         return statesToldTo(user, ball.objectId).map(value => CannonBallStateUtil.decode(value));
     }
 
+    // A fan at its gentlest, which turns a ball without sending it as fast as one goes at most.
     function addFan(pos: Vec3, dir: Vec3): void
     {
-        const strongest = FAN_SETTINGS[FAN_SETTINGS.length - 1];
         const fan = new AddObjectSignal(HUB_ID, ADMIN.id, ADMIN.userName, FAN_TYPE_INDEX, `fan-${pos.x}-${pos.z}`,
             new ObjectTransform(pos, dir, {...UNIT_VEC3}), {[ObjectMetadataKeyEnumMap.ForceProperties]:
-                new EncodableByteString(FanObjectTypeConfig.util.encodeForceProperties(strongest))});
+                new EncodableByteString(FanObjectTypeConfig.util.encodeForceProperties(FAN_SETTINGS[0]))});
         expect(ServerObjectManager.addObjectAsServer(getRoom(), ADMIN, fan)).toBe(true);
     }
 
@@ -1488,20 +1584,31 @@ describe("a cannon ball the server flies", () => {
 
     it("is pushed off its way by a fan's stream as it crosses it, and the room is told how it now goes", async () => {
         const user = await join("someone", {x: 26, y: STANDING_Y, z: 26});
-        // A fan on the floor under its way, blowing up.
+        // A fan on the floor under its way, blowing up, with nothing over it for the ball to rise into.
         addFan({x: 14.5, y: 0, z: 12.5}, FLOOR_FACING);
+        for (let x = 13; x < MAX_ROOM_X; x += VOXEL_CELL_SIZE)
+        {
+            for (let z = 11.5; z <= 13.5; z += VOXEL_CELL_SIZE)
+            {
+                VoxelQueryUtil.getVoxel(getRoom().voxelGrid.voxels, VoxelQueryUtil.getVoxelRowFromWorldZ(z),
+                    VoxelQueryUtil.getVoxelColFromWorldX(x))!.blockLayerMask &= ~(1 << STOREY_FLOOR_COLLISION_LAYER);
+            }
+        }
         const ball = launch({x: 10, y: 1, z: 12.5}, {x: CANNON_BALL_SPEED, y: 0, z: 0});
         forget(user);
         flushFor(2.2);
         const flight = flightOf(ball);
-        expect(flight.vel.y).toBeGreaterThan(0.2);
+        // By the share of the stream's push that it takes, over the time it takes to cross it: some units a second
+        // for each unit of that share.
+        expect(flight.vel.y).toBeGreaterThan(2 * CANNON_BALL_WIND_SHARE);
+        expect(flight.vel.y).toBeLessThan(8 * CANNON_BALL_WIND_SHARE);
         expect(flight.pos.y).toBeGreaterThan(1.05);
         expect(flight.vel.x).toBeCloseTo(CANNON_BALL_SPEED, 2);
         expect(Vector3DUtil.length(flight.vel)).toBeLessThanOrEqual(CANNON_BALL_MAX_SPEED + SPEED_STEP);
         const words = wordsOf(user, ball);
         expect(words.length).toBeGreaterThan(0);
         expect(words.every(word => !word.exploded)).toBe(true);
-        expect(words[words.length - 1].vel.y).toBeGreaterThan(0.2);
+        expect(words[words.length - 1].vel.y).toBeGreaterThan(2 * CANNON_BALL_WIND_SHARE);
         // Past the stream, it flies straight again, and nothing more is told.
         flushFor(1);
         forget(user);
@@ -1689,13 +1796,13 @@ describe("a cannon ball the server flies", () => {
 
     it("throws a player hard: more than twice their height across the room, and higher than they stand where there is " +
         "room over them, all of which the server believes of them", async () => {
-        const start = {x: 8.25, y: STANDING_Y, z: 16.25};
+        const start = {x: 4.25, y: STANDING_Y, z: 16.25};
         const walkSpeed = PLAYER_WALK_SPEED_PER_INPUT * PLAYER_MAX_WALK_INPUT;
         const seconds = BLAST_GRACE_MS / 1000;
         const user = await join("someone", start);
         const player = harness.getPlayerObject("someone")!;
-        // Nothing over their head along the way: the slab between the storeys is taken out there.
-        for (let x = start.x - 1; x < start.x + 4 * PLAYER_HEIGHT + walkSpeed * seconds; x += VOXEL_CELL_SIZE)
+        // Nothing over their head all the way across the room: the slab between the storeys is taken out there.
+        for (let x = start.x - 1; x < MAX_ROOM_X; x += VOXEL_CELL_SIZE)
         {
             for (let z = start.z - 1; z <= start.z + 1; z += VOXEL_CELL_SIZE)
             {
@@ -1703,7 +1810,7 @@ describe("a cannon ball the server flies", () => {
                     VoxelQueryUtil.getVoxelColFromWorldX(x))!.blockLayerMask &= ~(1 << STOREY_FLOOR_COLLISION_LAYER);
             }
         }
-        const ball = launch({x: start.x - 3, y: STANDING_Y, z: start.z}, {x: CANNON_BALL_SPEED, y: 0, z: 0});
+        const ball = launch({x: start.x - 2, y: STANDING_Y, z: start.z}, {x: CANNON_BALL_SPEED, y: 0, z: 0});
         forget(user);
         flushUntil(() => !isFlying(ball), 3);
         const [word] = wordsOf(user, ball);
@@ -1734,6 +1841,34 @@ describe("a cannon ball the server flies", () => {
         // Down again by then.
         expect(pos.y).toBeCloseTo(STANDING_Y, 2);
         expect(Math.abs(pos.z - start.z)).toBeLessThan(0.1);
+    });
+
+    it("believes of someone a blast threw as far as it carries a body, even told all at once after a stall, but no " +
+        "longer than its while", async () => {
+        const walkSpeed = PLAYER_WALK_SPEED_PER_INPUT * PLAYER_MAX_WALK_INPUT;
+        const reach = PhysicsForceUtil.getCarriedReach(CANNON_BLAST_PUSH_SPEED);
+        const thrown = (await join("someone", {x: 4.25, y: STANDING_Y, z: 12.25})).socketUserContext;
+        const from = {x: 4.25, y: STANDING_Y, z: 12.25};
+        PlayerMotionCheckUtil.noteMove(thrown, getRoom(), from, from);
+        PlayerMotionCheckUtil.noteBlast(thrown);
+        // Nothing heard of them for a second: then the whole throw, with that second's walk on top.
+        vi.setSystemTime(Date.now() + 1000);
+        PlayerMotionCheckUtil.noteMove(thrown, getRoom(), from, {...from, x: from.x + reach + walkSpeed});
+        expect(PlayerMotionCheckUtil.isTrusted(thrown)).toBe(true);
+
+        // Nor twice as far: back the way they came, in the next flush, is more than is left to believe of them.
+        vi.setSystemTime(Date.now() + SIGNAL_BATCH_SEND_INTERVAL);
+        PlayerMotionCheckUtil.noteMove(thrown, getRoom(), {...from, x: from.x + reach + walkSpeed}, {...from, x: from.x - 1});
+        expect(PlayerMotionCheckUtil.isTrusted(thrown)).toBe(false);
+
+        // One the blast left where they stood can't go as far on their own, once its while is over.
+        const still = (await join("another", {x: 4.25, y: STANDING_Y, z: 20.25})).socketUserContext;
+        const spot = {x: 4.25, y: STANDING_Y, z: 20.25};
+        PlayerMotionCheckUtil.noteMove(still, getRoom(), spot, spot);
+        PlayerMotionCheckUtil.noteBlast(still);
+        vi.setSystemTime(Date.now() + BLAST_GRACE_MS + SIGNAL_BATCH_SEND_INTERVAL);
+        PlayerMotionCheckUtil.noteMove(still, getRoom(), spot, {...spot, x: spot.x + reach + ALLOWANCE.capacity});
+        expect(PlayerMotionCheckUtil.isTrusted(still)).toBe(false);
     });
 
     it("bounces off another ball as a billiard ball does, and neither bursts", async () => {

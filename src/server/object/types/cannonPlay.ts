@@ -7,8 +7,8 @@ export default interface CannonPlay
     state: CannonState;
     // The player it is turning toward, by their object's id, while it aims.
     targetObjectId: string | undefined;
-    // How long its barrel has stayed on them without a break, in seconds, while it is on them.
-    onTargetSeconds: number | undefined;
+    // How long it has had them in its sights without a break, in seconds, while it has.
+    inSightsSeconds: number | undefined;
     // What of its stored state the room was last told (see CannonStateUtil.getShownPart).
     told: string;
 }

@@ -141,9 +141,10 @@ Cannons fire at whoever is near, people and agents alike.
 - add_object with type "cannon" sets one on a floor or a wall (an up, north, south, east or west side), where it
   takes ${CANNON_CELLS} by ${CANNON_CELLS} cells and stands ${CANNON_CELLS} out, for $${CANNON_PRICE_DOLLARS} each time. Nothing comes back for one removed. Anyone may switch
   one off and on (edit_object with switched_on), move it or remove it, except in a restricted zone kept from them.
-- While on, a cannon rests ${CANNON_REST_SECONDS} seconds, then every ${CANNON_FIRE_INTERVAL_SECONDS[0]} to ${CANNON_FIRE_INTERVAL_SECONDS[1]} seconds turns toward the nearest person within ${CANNON_RANGE_CELLS} cells
-  of it, no nearer than ${CANNON_NEAR_CELLS}, with nothing between them, ${CANNON_TURN_DEGREES_A_SECOND} degrees a second. Once it has pointed at them for ${CANNON_LOCK_SECONDS} ${CANNON_LOCK_SECONDS == 1 ? "second" : "seconds"}
-  without a break, it fires a ball that way: whoever keeps going round it faster than it turns is never fired at.
+- While on, a cannon rests ${CANNON_REST_SECONDS} seconds and waits ${CANNON_FIRE_INTERVAL_SECONDS[0]} to ${CANNON_FIRE_INTERVAL_SECONDS[1]} seconds. Then it turns toward the nearest person, ${CANNON_TURN_DEGREES_A_SECOND} degrees a
+  second, and goes on turning after them wherever they go. Once it has pointed for ${CANNON_LOCK_SECONDS} ${CANNON_LOCK_SECONDS == 1 ? "second" : "seconds"} without a break at one
+  it can fire at (within ${CANNON_RANGE_CELLS} cells of it, no nearer than ${CANNON_NEAR_CELLS}, with nothing between them), it fires a ball that
+  way and waits ${CANNON_FIRE_INTERVAL_SECONDS[0]} to ${CANNON_FIRE_INTERVAL_SECONDS[1]} seconds again: whoever keeps going round it faster than it turns is never fired at.
   look lists each cannon among the objects, with switchedOn and ballsLeft. It has ${CANNON_BALL_COUNT} balls, and is gone once it has
   fired the last.
 - A ball flies straight at ${CANNON_BALL_CELLS_A_SECOND} cells a second, slow enough to walk out of the way of, and a fan's wind turns it

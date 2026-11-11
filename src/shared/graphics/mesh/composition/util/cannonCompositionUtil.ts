@@ -73,6 +73,25 @@ const CannonCompositionUtil =
                 C.gaugeFillWidth, fillLength, lengthIsHeight);
         });
     },
+    // Dims the gauges' green strips to a share of their glow, toward the dark strips behind them: their own color at 1,
+    // and no more to be told from those at 0. Whether that changed how any of them shows.
+    setGaugeGlow: (parts: InstancedMeshCompositionPart[], glow: number): boolean =>
+    {
+        const share = Math.max(0, Math.min(1, glow));
+        const dimmed = (dark: number, bright: number) => dark + (bright - dark) * share;
+        const color: Vec3 = {x: dimmed(C.gaugeColor.x, C.gaugeFillColor.x), y: dimmed(C.gaugeColor.y, C.gaugeFillColor.y),
+            z: dimmed(C.gaugeColor.z, C.gaugeFillColor.z)};
+        let changed = false;
+        for (let i = 0; i < C.numGauges; ++i)
+        {
+            const part = parts[C.firstGaugeIndex + C.numGauges + i];
+            if (part == undefined || (part.color != undefined && Vector3DUtil.equal(part.color, color)))
+                continue;
+            part.color = {...color};
+            changed = true;
+        }
+        return changed;
+    },
 }
 
 function makePart(geometryId: string, materialId: string, color: Vec3, scale: Vec3, z: number): InstancedMeshCompositionPart

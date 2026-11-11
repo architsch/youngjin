@@ -1,4 +1,7 @@
 {
+  "env": {
+    "CLAUDE_CODE_SHELL_PREFIX": "/Volumes/work/youngjin/.claude/hooks/pageSourcesShell.sh"
+  },
   "permissions": {
     "allow": [
       "Bash(which *)",
@@ -64,7 +67,14 @@
       "ClaudeInChromeDomain(mail.google.com)",
       "ClaudeInChromeDomain(indielisted.com)",
       "mcp__claude-in-chrome__browser_batch",
-      "ClaudeInChromeDomain(neongamewall.com)"
+      "ClaudeInChromeDomain(neongamewall.com)",
+      "ClaudeInChromeDomain(mcpservers.org)",
+      "ClaudeInChromeDomain(mcpnewsletter.com)",
+      "ClaudeInChromeDomain(zadely.com)",
+      "ClaudeInChromeDomain(reffpa.com)",
+      "ClaudeInChromeDomain(www.tensorblock.co)",
+      "ClaudeInChromeDomain(claudemarketplaces.com)",
+      "ClaudeInChromeDomain(browse.games)"
     ],
     "deny": [
       "Bash(gcloud firestore:*)",
@@ -94,9 +104,6 @@
       "Bash(scp:*)",
       "Bash(npm run nginx:*)"
     ]
-  },
-  "env": {
-    "CLAUDE_CODE_SHELL_PREFIX": "/Volumes/work/youngjin/.claude/hooks/pageSourcesShell.sh"
   },
   "hooks": {
     "PreToolUse": [

@@ -1,3 +1,4 @@
+import * as THREE from "three";
 import GameObject from "./gameObject";
 import AddObjectSignal from "../../../../shared/object/types/addObjectSignal";
 import CannonAim from "../../../../shared/object/types/cannonAim";
@@ -11,6 +12,7 @@ import CannonCompositionUtil from "../../../../shared/graphics/mesh/composition/
 import InstancedMeshComposer from "../../components/instancedMeshComposer";
 import AudioManager from "../../../audio/audioManager";
 import SpatialAudioVoice from "../../../audio/types/spatialAudioVoice";
+import GraphicsManager from "../../../graphics/graphicsManager";
 import { cannonFiredObservable } from "../../../system/clientObservables";
 
 // Its gears, heard from its pivot, from farther off than it fires, while it turns to aim at someone, by more than
@@ -23,11 +25,18 @@ const TURN_SOUND_HOLD_SECONDS = 0.12;
 // Its barrel is never further behind where it is told to point than it can turn in this long, in seconds: more than
 // the server's steps are apart, so that it turns at the server's own rate unless it has fallen behind.
 const CATCH_UP_SECONDS = 0.3;
+// Its gauges' green dims with the camera's distance from it, in world units: from here on, and dimmed out by here. In
+// this many steps, each a redraw.
+export const GAUGE_DIM_START_DISTANCE = 5;
+export const GAUGE_DIM_END_DISTANCE = 20;
+const GAUGE_DIM_STEPS = 32;
+
+const cameraPositionTemp = new THREE.Vector3();
 
 // A cannon, which the server plays (see CannonUtil): all this does is show what its state says. The barrel turns to
 // where the state has it aim, at the rate the server turns it, so that an aim told in steps shows as one turn; the
-// gauges follow the balls left; a ball fewer is a shot, told to whatever shows and sounds one. Its sleep, while
-// switched off, is its ParticleEmitter's.
+// gauges follow the balls left, their glow dimmer the farther off the camera is; a ball fewer is a shot, told to
+// whatever shows and sounds one. Its sleep, while switched off, is its ParticleEmitter's.
 export default class CannonGameObject extends GameObject
 {
     private instancedMeshComposer: InstancedMeshComposer;
@@ -104,6 +113,20 @@ export default class CannonGameObject extends GameObject
         this.turnSoundSecondsLeft = (turning && aiming) ? TURN_SOUND_HOLD_SECONDS
             : Math.max(0, this.turnSoundSecondsLeft - deltaTime);
         this.setTurnSound(this.turnSoundSecondsLeft > 0);
+
+        // Set on the parts as they stand, which a recomposing gives their full glow again.
+        if (CannonCompositionUtil.setGaugeGlow(this.instancedMeshComposer.getParts(), this.getGaugeGlow()))
+            this.instancedMeshComposer.redrawParts();
+    }
+
+    // How much of their glow its gauges show from where the camera is.
+    private getGaugeGlow(): number
+    {
+        const pivot = this.getPivot();
+        const camera = GraphicsManager.getCamera().getWorldPosition(cameraPositionTemp);
+        const distance = Math.hypot(camera.x - pivot.x, camera.y - pivot.y, camera.z - pivot.z);
+        const glow = (GAUGE_DIM_END_DISTANCE - distance) / (GAUGE_DIM_END_DISTANCE - GAUGE_DIM_START_DISTANCE);
+        return Math.round(Math.max(0, Math.min(1, glow)) * GAUGE_DIM_STEPS) / GAUGE_DIM_STEPS;
     }
 
     private getTarget(): CannonAim

@@ -2,14 +2,13 @@ import Vector3DUtil from "../../../shared/math/util/vector3DUtil";
 import EncodableByteString from "../../../shared/networking/types/encodableByteString";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
-import CannonAim from "../../../shared/object/types/cannonAim";
 import { CannonPhaseEnumMap } from "../../../shared/object/types/cannonPhase";
 import CannonState from "../../../shared/object/types/cannonState";
 import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 import { CANNON_BALL_SPEED } from "../../../shared/object/types/objectTypeConfig/cannonBallObjectTypeConfig";
 import CannonObjectTypeConfig, { CANNON_AIM_TOLERANCE, CANNON_FIRE_INTERVAL_SECONDS, CANNON_LOCK_SECONDS,
-    CANNON_MAX_AIM_SECONDS, CANNON_MAX_RANGE, CANNON_MIN_RANGE, CANNON_READY_SECONDS, CANNON_REST_SECONDS,
-    CANNON_SPENT_SECONDS, CANNON_TURN_RATE } from "../../../shared/object/types/objectTypeConfig/cannonObjectTypeConfig";
+    CANNON_MAX_RANGE, CANNON_MIN_RANGE, CANNON_READY_SECONDS, CANNON_REST_SECONDS, CANNON_SPENT_SECONDS,
+    CANNON_TURN_RATE } from "../../../shared/object/types/objectTypeConfig/cannonObjectTypeConfig";
 import RemoveObjectSignal from "../../../shared/object/types/removeObjectSignal";
 import SetObjectMetadataSignal from "../../../shared/object/types/setObjectMetadataSignal";
 import AdminPrefsUtil from "../../../shared/object/util/adminPrefsUtil";
@@ -38,13 +37,13 @@ const NOBODY = new User("", "", UserTypeEnumMap.Guest, "", "");
 const roomPlays = new WeakMap<RoomRuntimeMemory, Map<string, CannonPlay>>();
 
 // Cannons, which the server plays in multiplayer rooms while anyone is there. One just installed, or switched on,
-// rests a moment. Then, each time a wait of some seconds runs out, it looks for the player nearest its pivot: one in
-// range, not too near, whom its barrel can tilt to and nothing stands between. It turns toward them as they move,
-// slowly, and only once it has stayed on them a while without a break is it aimed: so whoever keeps going round it
-// faster than it turns is never fired at. Aimed, it stands a moment and fires that way, wherever they have gone by
-// then (see CannonBallUtil). With nobody to fire at, or its turning outrun, it waits again. Its last ball fired, it
-// stands a moment more and is taken away. Switched off, it does nothing, and starts over rested when switched on. A
-// ghost is nobody to it (see AdminPrefsUtil.isGhost).
+// rests a moment. Then, each time a wait of some seconds runs out, it turns toward the player nearest its pivot,
+// slowly, and goes on turning after them wherever they go, for as long as it takes to have them in its sights a
+// while without a break: pointing at them, from where it may fire at them (in range, not too near, where its barrel
+// tilts to, with nothing between). So whoever keeps going round it faster than it turns is never fired at. Aimed, it
+// stands a moment and fires that way, wherever they have gone by then (see CannonBallUtil), and waits again. Its last
+// ball fired, it stands a moment more and is taken away. Switched off, it does nothing, and starts over rested when
+// switched on. A ghost is nobody to it (see AdminPrefsUtil.isGhost).
 //
 // All of it is kept in the cannon's own CannonState, so that a room's saves keep it: written as it changes, and told
 // to the room only where a browser shows it (see CannonStateUtil.getShownPart), the time left never. Its switch is
@@ -130,7 +129,7 @@ function stepCannon(room: Room, plays: Map<string, CannonPlay>, cannon: AddObjec
     // Taken up as its room keeps it: as it was stored, or as its user just added it.
     if (play == undefined)
     {
-        play = {state: stored, targetObjectId: undefined, onTargetSeconds: undefined,
+        play = {state: stored, targetObjectId: undefined, inSightsSeconds: undefined,
             told: CannonStateUtil.getShownPart(CannonStateUtil.encode(stored))};
         plays.set(cannon.objectId, play);
     }
@@ -140,25 +139,28 @@ function stepCannon(room: Room, plays: Map<string, CannonPlay>, cannon: AddObjec
     if (stored.on != state.on)
     {
         state.on = stored.on;
-        play.targetObjectId = undefined;
         setPhase(state, CannonPhaseEnumMap.Resting, CANNON_REST_SECONDS);
     }
     else if (state.on)
     {
-        state.timeLeft -= seconds;
+        // Its turning to someone has no time to run out: it lasts until it is aimed.
         if (state.phase == CannonPhaseEnumMap.Aiming)
-            aim(room, cannon, play, seconds);
-        else if (state.timeLeft <= 0 && !advance(room, cannon, play, players))
+            aim(room, cannon, play, players, seconds);
+        else
         {
-            plays.delete(cannon.objectId);
-            return;
+            state.timeLeft -= seconds;
+            if (state.timeLeft <= 0 && !advance(room, cannon, play))
+            {
+                plays.delete(cannon.objectId);
+                return;
+            }
         }
     }
     keep(room, cannon, play);
 }
 
 // What a cannon does as its rest, its wait or its standing aimed runs out. False once it is gone.
-function advance(room: Room, cannon: AddObjectSignal, play: CannonPlay, players: AddObjectSignal[]): boolean
+function advance(room: Room, cannon: AddObjectSignal, play: CannonPlay): boolean
 {
     const state = play.state;
     switch (state.phase)
@@ -167,63 +169,49 @@ function advance(room: Room, cannon: AddObjectSignal, play: CannonPlay, players:
             wait(state);
             return true;
         case CannonPhaseEnumMap.Waiting:
-        {
             if (state.ballsLeft <= 0)
             {
                 ServerObjectManager.removeObjectAsServer(room, NOBODY, new RemoveObjectSignal(room.id, cannon.objectId));
                 return false;
             }
-            const target = getNearestPlayer(cannon, players);
-            if (target == undefined || getAimAt(room, cannon, target) == undefined)
-                wait(state);
-            else
-            {
-                play.targetObjectId = target.objectId;
-                play.onTargetSeconds = undefined;
-                setPhase(state, CannonPhaseEnumMap.Aiming, CANNON_MAX_AIM_SECONDS);
-            }
+            play.targetObjectId = undefined;
+            play.inSightsSeconds = undefined;
+            setPhase(state, CannonPhaseEnumMap.Aiming, 0);
             return true;
-        }
         default:
             fire(room, cannon, play);
             return true;
     }
 }
 
-// Turns the barrel toward whoever it picked, wherever they now are. It stops once it has pointed near enough at them
-// for long enough without a break: aimed, if it may still fire at them from there. Its time up, it gives up, unless it
-// is on them just then.
-function aim(room: Room, cannon: AddObjectSignal, play: CannonPlay, seconds: number): void
+// Turns the barrel toward whoever is nearest, wherever they are and whether or not it may fire at them, for as long
+// as it takes. It is aimed once it has had them in its sights long enough without a break: pointing near enough at
+// them, from where it may fire at them. With nobody to turn to, it keeps still.
+function aim(room: Room, cannon: AddObjectSignal, play: CannonPlay, players: AddObjectSignal[], seconds: number): void
 {
     const state = play.state;
-    const target = (play.targetObjectId == undefined) ? undefined : room.objectById[play.targetObjectId];
-    if (target == undefined || AdminPrefsUtil.isGhost(target))
+    const target = getNearestPlayer(cannon, players);
+    if (target?.objectId != play.targetObjectId)
     {
-        wait(state);
-        return;
+        play.targetObjectId = target?.objectId;
+        play.inSightsSeconds = undefined;
     }
+    if (target == undefined)
+        return;
 
     const {pos, dir} = cannon.transform;
     const wanted = CannonAimUtil.getAim(dir, Vector3DUtil.subtract(target.transform.pos, CannonAimUtil.getPivot(pos, dir))).aim;
     state.aim = CannonAimUtil.turnToward(state.aim, wanted, CANNON_TURN_RATE * seconds);
-    // Counted from the step it came onto them, so that it has stayed on them at least as long as it counts.
-    if (CannonAimUtil.getAngleBetween(state.aim, wanted) > CANNON_AIM_TOLERANCE)
-        play.onTargetSeconds = undefined;
+    const inSights = CannonAimUtil.getAngleBetween(state.aim, wanted) <= CANNON_AIM_TOLERANCE
+        && mayFireAt(room, cannon, target);
+    // Counted from the step they came into them, so that they have stayed there at least as long as it counts.
+    if (!inSights)
+        play.inSightsSeconds = undefined;
     else
-        play.onTargetSeconds = (play.onTargetSeconds == undefined) ? 0 : play.onTargetSeconds + seconds;
+        play.inSightsSeconds = (play.inSightsSeconds == undefined) ? 0 : play.inSightsSeconds + seconds;
 
-    if (play.onTargetSeconds == undefined)
-    {
-        if (state.timeLeft <= 0)
-            wait(state);
-    }
-    else if (play.onTargetSeconds >= CANNON_LOCK_SECONDS)
-    {
-        if (getAimAt(room, cannon, target) != undefined)
-            setPhase(state, CannonPhaseEnumMap.Ready, CANNON_READY_SECONDS);
-        else
-            wait(state);
-    }
+    if (play.inSightsSeconds != undefined && play.inSightsSeconds >= CANNON_LOCK_SECONDS)
+        setPhase(state, CannonPhaseEnumMap.Ready, CANNON_READY_SECONDS);
 }
 
 // Fires the way the barrel points. A ball the room has no room for is not spent. Emptied, it has one short wait
@@ -235,7 +223,6 @@ function fire(room: Room, cannon: AddObjectSignal, play: CannonPlay): void
     const velocity = Vector3DUtil.scale(CannonAimUtil.getDirection(dir, state.aim), CANNON_BALL_SPEED);
     if (CannonBallUtil.launch(room, CannonAimUtil.getMuzzle(pos, dir, state.aim), velocity))
         --state.ballsLeft;
-    play.targetObjectId = undefined;
     if (state.ballsLeft > 0)
         wait(state);
     else
@@ -259,25 +246,25 @@ function getNearestPlayer(cannon: AddObjectSignal, players: AddObjectSignal[]): 
     return nearest;
 }
 
-// The aim that points a cannon at a player's middle, if it may fire at them: in range and not too near, where its
-// barrel tilts to, and with nothing between the barrel's mouth, so aimed, and them.
-function getAimAt(room: Room, cannon: AddObjectSignal, player: AddObjectSignal): CannonAim | undefined
+// Whether a cannon may fire at a player: in range and not too near, where its barrel tilts to, and with nothing
+// between the barrel's mouth, pointed at their middle, and them.
+function mayFireAt(room: Room, cannon: AddObjectSignal, player: AddObjectSignal): boolean
 {
     const {pos, dir} = cannon.transform;
     const middle = player.transform.pos;
     const toward = Vector3DUtil.subtract(middle, CannonAimUtil.getPivot(pos, dir));
     const distance = Vector3DUtil.length(toward);
     if (distance > CANNON_MAX_RANGE || distance < CANNON_MIN_RANGE)
-        return undefined;
+        return false;
     const {aim, reachable} = CannonAimUtil.getAim(dir, toward);
     if (!reachable)
-        return undefined;
+        return false;
     const struck = PhysicsManager.castSphere(room.id, CannonAimUtil.getMuzzle(pos, dir, aim), middle, 0,
         new Set<string>([cannon.objectId]));
-    return (struck == undefined || struck.object?.objectId == player.objectId) ? aim : undefined;
+    return struck == undefined || struck.object?.objectId == player.objectId;
 }
 
-// Until it next looks for someone to fire at.
+// Until it next turns to someone.
 function wait(state: CannonState): void
 {
     const [shortest, longest] = CANNON_FIRE_INTERVAL_SECONDS;

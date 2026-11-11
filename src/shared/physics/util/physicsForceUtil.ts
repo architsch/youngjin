@@ -97,6 +97,11 @@ const PhysicsForceUtil =
             ? carried : {x: 0, y: 0, z: 0};
         return Vector3DUtil.add(velocity, object.carriedVelocity);
     },
+    // How far across the room a velocity a body is given to carry takes it, before drag has taken it all away.
+    getCarriedReach: (speed: number): number =>
+    {
+        return speed / DRAG;
+    },
     // The speed the room's streams add to a box in a second where it is, each by as much of it as it reaches: for what
     // flies on its own way rather than walking (see CannonBallMotionUtil), which takes what share of it its weight lets
     // it. Nothing is made up for gravity here, nor eased off before a wall.

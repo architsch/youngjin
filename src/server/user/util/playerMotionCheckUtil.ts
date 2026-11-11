@@ -2,8 +2,10 @@ import AABB3 from "../../../shared/math/types/aabb3";
 import Vec3 from "../../../shared/math/types/vec3";
 import PlayerObjectTypeConfig, { PLAYER_HEIGHT, PLAYER_MAX_WALK_INPUT, PLAYER_RADIUS_XZ,
     PLAYER_WALK_SPEED_PER_INPUT } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import { CANNON_BLAST_PUSH_SPEED } from "../../../shared/object/types/objectTypeConfig/cannonBallObjectTypeConfig";
 import PhysicsManager from "../../../shared/physics/physicsManager";
 import PhysicsColliderStateUtil from "../../../shared/physics/util/physicsColliderStateUtil";
+import PhysicsForceUtil from "../../../shared/physics/util/physicsForceUtil";
 import Room from "../../../shared/room/types/room";
 import { GRAVITY_SPEED } from "../../../shared/system/sharedConstants";
 import Voxel from "../../../shared/voxel/types/voxel";
@@ -32,11 +34,14 @@ const LEAN_REACH = 0.05;
 // them as far.
 export const DISTRUST_MS = 3000;
 // How long after a blast throws a player their moves count as a stream's would: time enough to be thrown and to land.
+// Meanwhile it accounts for as far across the room as its push carries a body, on top of that.
 export const BLAST_GRACE_MS = 2000;
+const BLAST_REACH = PhysicsForceUtil.getCarriedReach(CANNON_BLAST_PUSH_SPEED);
 
 const states = new WeakMap<UserContext, PlayerMotionState>();
-// When each player a blast has thrown is done being thrown by it (see noteBlast).
-const thrownUntil = new WeakMap<UserContext, number>();
+// Each player a blast has thrown (see noteBlast): when they are done being thrown, and how far the blasts that threw
+// them may yet carry them.
+const throws = new WeakMap<UserContext, {until: number, reachLeft: number}>();
 
 // Whether the moves a user's player is reported making are ones a player can make: walking, climbing a step, falling,
 // carried by a fan's stream, or thrown by a cannon ball's blast. What a browser reports is otherwise taken as told (see
@@ -57,9 +62,18 @@ const PlayerMotionCheckUtil =
             states.set(ctx, state);
         }
 
-        const forced = now < (thrownUntil.get(ctx) ?? 0) || isInStream(room.id, from) || isInStream(room.id, to);
+        const thrown = throws.get(ctx);
+        const beingThrown = thrown != undefined && now < thrown.until;
+        const forced = beingThrown || isInStream(room.id, from) || isInStream(room.id, to);
         const rate = (forced || state.forced) ? FORCED_ALLOWANCE : ALLOWANCE;
-        state.allowance = refill(state.allowance, rate, now - state.at) - Math.hypot(to.x - from.x, to.z - from.z);
+        let unexplained = Math.hypot(to.x - from.x, to.z - from.z);
+        if (beingThrown)
+        {
+            const carried = Math.min(unexplained, thrown.reachLeft);
+            thrown.reachLeft -= carried;
+            unexplained -= carried;
+        }
+        state.allowance = refill(state.allowance, rate, now - state.at) - unexplained;
         state.at = now;
         state.forced = forced;
         if (state.allowance < 0)
@@ -83,11 +97,13 @@ const PlayerMotionCheckUtil =
             - MIN_FALL_SPEED * Math.max(0, now - state.heldAt - FALL_GRACE_MS) / 1000)
             distrust(state, now + DISTRUST_MS);
     },
-    // A cannon ball's blast has thrown the user's player (see CannonBallUtil): for a while, it goes as far and as high
-    // as a stream would take it.
+    // A cannon ball's blast has thrown the user's player (see CannonBallUtil): for a while, it goes as far as the blast
+    // carries it, and as far and as high besides as a stream would take it. A blast on top of another adds its own.
     noteBlast: (ctx: UserContext, now: number = Date.now()): void =>
     {
-        thrownUntil.set(ctx, now + BLAST_GRACE_MS);
+        const thrown = throws.get(ctx);
+        const reachLeft = (thrown != undefined && now < thrown.until) ? thrown.reachLeft : 0;
+        throws.set(ctx, {until: now + BLAST_GRACE_MS, reachLeft: reachLeft + BLAST_REACH});
     },
     // Whether all the user's player has done lately is believable. One whose moves were never noted has done nothing.
     isTrusted: (ctx: UserContext, now: number = Date.now()): boolean =>

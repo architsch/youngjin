@@ -5,7 +5,8 @@
  * of it bringing only what the blast did; waiting at a body for that word, and no longer than a moment; taken up
  * again where the server has one that a burst was shown of too soon; and a word that turns one drawn without a
  * jump. And what a blast does to the user's own player (see CannonBlastThrowUtil): thrown as the server throws an
- * agent's, with a shake of the view in play mode alone.
+ * agent's, with a shake of the view in play mode alone. And a cannon's gauges (see CannonGameObject), whose green
+ * dims as the camera goes farther from it.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as THREE from "three";
@@ -21,12 +22,21 @@ vi.mock("../../../src/client/graphics/graphicsManager", async () => {
     return {default: {getCamera: () => camera}};
 });
 vi.mock("../../../src/client/networking/client/socketsClient", () => ({default: {}}));
+// A cannon's gears, which sound nothing here.
+vi.mock("../../../src/client/audio/audioManager", () => ({default: {}}));
 vi.mock("../../../src/client/graphics/types/gizmo/voxelQuadSelection", () => ({default: class {}}));
 vi.mock("../../../src/client/graphics/types/gizmo/objectSelection", () => ({default: class {}}));
 
 import { createTestRoom } from "../helpers/roomContent";
 import CannonBallGameObject, { MAX_HELD_SECONDS, MAX_UNCONFIRMED_SECONDS }
     from "../../../src/client/object/types/gameObject/cannonBallGameObject";
+import CannonGameObject, { GAUGE_DIM_END_DISTANCE, GAUGE_DIM_START_DISTANCE }
+    from "../../../src/client/object/types/gameObject/cannonGameObject";
+import GraphicsManager from "../../../src/client/graphics/graphicsManager";
+import CannonCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/cannonCompositionConstants";
+import CannonCompositionUtil from "../../../src/shared/graphics/mesh/composition/util/cannonCompositionUtil";
+import CannonAimUtil from "../../../src/shared/object/util/cannonAimUtil";
+import CannonStateUtil from "../../../src/shared/object/util/cannonStateUtil";
 import "../../../src/client/object/util/cannonBlastThrowUtil";
 import { cameraShakeObservable, cannonBallBurstObservable, cannonBlastObservable,
     gameModeObservable } from "../../../src/client/system/clientObservables";
@@ -371,5 +381,102 @@ describe("a blast that reaches the user's own player", () => {
         const both = Vector3DUtil.add(CannonBlastUtil.getThrow(BURST_AT, me.position),
             CannonBlastUtil.getThrow({x: 10.6, y: STANDING_Y, z: 9.5}, me.position));
         expect(dist(carried(me.playerObjectId), both)).toBeLessThan(0.000001);
+    });
+});
+
+describe("a cannon's gauges in a browser", () => {
+    const C = CannonCompositionConstants;
+    const AT: Vec3 = {x: 16.5, y: 0, z: 16.5};
+    const FACING: Vec3 = {x: 0, y: 1, z: 0};
+    const pivot = CannonAimUtil.getPivot(AT, FACING);
+
+    // A cannon as the room sends one, with its real parts and what draws them stood in for.
+    function makeCannon()
+    {
+        const params = new AddObjectSignal(ROOM_ID, "", "", ObjectTypeConfigMap.getIndexByType("Cannon"), "a-cannon",
+            new ObjectTransform({...AT}, {...FACING}, {...UNIT_VEC3}));
+        const state = CannonStateUtil.getObjectState(params);
+        const drawn = {parts: CannonCompositionUtil.buildParts(), redraws: 0};
+        const cannon = Object.assign(Object.create(CannonGameObject.prototype), {params, components: {},
+            obj: new THREE.Object3D(), instancedMeshComposer: {getParts: () => drawn.parts, redrawParts() { ++drawn.redraws; }},
+            state, shownAim: CannonStateUtil.getShownAim(state, FACING), turnSoundSecondsLeft: 0}) as CannonGameObject;
+        const green = () => drawn.parts.slice(C.firstGaugeIndex + C.numGauges, C.firstGaugeIndex + 2 * C.numGauges)
+            .map(part => part.color as Vec3);
+        const dark = () => drawn.parts.slice(C.firstGaugeIndex, C.firstGaugeIndex + C.numGauges).map(part => part.color as Vec3);
+        return {cannon, drawn, green, dark};
+    }
+
+    // The camera a distance from the cannon's pivot, off to one side of it and above.
+    function watchFrom(cannon: CannonGameObject, distance: number): void
+    {
+        const away = Vector3DUtil.normalize({x: 2, y: 1, z: -1});
+        GraphicsManager.getCamera().position.set(pivot.x + away.x * distance, pivot.y + away.y * distance, pivot.z + away.z * distance);
+        GraphicsManager.getCamera().updateMatrixWorld(true);
+        cannon.update(FRAME_MS / 1000);
+    }
+
+    // How much of its own color a strip shows, from none (the dark strip's) to all of it.
+    function glowOf(color: Vec3): number
+    {
+        return (color.y - C.gaugeColor.y) / (C.gaugeFillColor.y - C.gaugeColor.y);
+    }
+
+    it(`glow in full from within ${GAUGE_DIM_START_DISTANCE} units, dim evenly from there on, and are dimmed out, no more ` +
+        `to be told from the dark strips behind them, from ${GAUGE_DIM_END_DISTANCE}`, () => {
+        const {cannon, green, dark} = makeCannon();
+        for (const distance of [0.5, 0.5 * GAUGE_DIM_START_DISTANCE, GAUGE_DIM_START_DISTANCE])
+        {
+            watchFrom(cannon, distance);
+            for (const color of green())
+                expect(color).toEqual(C.gaugeFillColor);
+        }
+        const span = GAUGE_DIM_END_DISTANCE - GAUGE_DIM_START_DISTANCE;
+        let last = 1;
+        for (const share of [0.1, 0.25, 0.5, 0.75, 0.9])
+        {
+            watchFrom(cannon, GAUGE_DIM_START_DISTANCE + share * span);
+            for (const color of green())
+            {
+                // In steps too fine to see, each color between the two in the same measure.
+                expect(glowOf(color)).toBeCloseTo(1 - share, 1);
+                expect((color.x - C.gaugeColor.x) / (C.gaugeFillColor.x - C.gaugeColor.x)).toBeCloseTo(glowOf(color), 9);
+                expect((color.z - C.gaugeColor.z) / (C.gaugeFillColor.z - C.gaugeColor.z)).toBeCloseTo(glowOf(color), 9);
+                expect(glowOf(color)).toBeLessThan(last);
+            }
+            last = glowOf(green()[0]);
+        }
+        for (const distance of [GAUGE_DIM_END_DISTANCE, 1.5 * GAUGE_DIM_END_DISTANCE, 100])
+        {
+            watchFrom(cannon, distance);
+            for (const color of green())
+                expect(color).toEqual(C.gaugeColor);
+        }
+        // The dark strips are as they were, and it all comes back as the camera does.
+        for (const color of dark())
+            expect(color).toEqual(C.gaugeColor);
+        watchFrom(cannon, 1);
+        for (const color of green())
+            expect(color).toEqual(C.gaugeFillColor);
+    });
+
+    it("are drawn again only as their glow changes, and dimmed again after its parts are made anew", () => {
+        const {cannon, drawn, green} = makeCannon();
+        watchFrom(cannon, 1);
+        expect(drawn.redraws).toBe(0);
+        const far = 0.5 * (GAUGE_DIM_START_DISTANCE + GAUGE_DIM_END_DISTANCE);
+        watchFrom(cannon, far);
+        expect(drawn.redraws).toBe(1);
+        // The camera still, or moved less than shows.
+        watchFrom(cannon, far);
+        watchFrom(cannon, far + 0.001);
+        expect(drawn.redraws).toBe(1);
+
+        // Its parts made anew, as a recomposing leaves them: in full glow, until its next frame.
+        const dimmed = green()[0];
+        drawn.parts = CannonCompositionUtil.buildParts();
+        expect(green()[0]).toEqual(C.gaugeFillColor);
+        watchFrom(cannon, far);
+        expect(green()[0]).toEqual(dimmed);
+        expect(drawn.redraws).toBe(2);
     });
 });

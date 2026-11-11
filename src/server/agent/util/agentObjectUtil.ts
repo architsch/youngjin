@@ -88,10 +88,11 @@ const npcTypeIndex = ObjectTypeConfigMap.getIndexByType("Npc");
 const mirrorTypeIndex = ObjectTypeConfigMap.getIndexByType("Mirror");
 const cannonTypeIndex = ObjectTypeConfigMap.getIndexByType("Cannon");
 
-const CANNON_NOTE = `A cannon: while on, every ${CANNON_FIRE_INTERVAL_SECONDS[0]} to ${CANNON_FIRE_INTERVAL_SECONDS[1]} `
-    + `seconds it turns to the nearest person within ${CANNON_MAX_RANGE / VOXEL_CELL_SIZE} cells of it, no nearer than `
-    + `${CANNON_MIN_RANGE / VOXEL_CELL_SIZE}, with nothing between, and fires a ball at where they stand. Its last ball `
-    + "fired, it is gone. Anyone may switch it off or on (edit_object with switched_on), move it or remove it.";
+const CANNON_NOTE = `A cannon: while on, it waits ${CANNON_FIRE_INTERVAL_SECONDS[0]} to ${CANNON_FIRE_INTERVAL_SECONDS[1]} `
+    + "seconds, then turns after the nearest person until it has pointed a while at one it can fire at (within "
+    + `${CANNON_MAX_RANGE / VOXEL_CELL_SIZE} cells of it, no nearer than ${CANNON_MIN_RANGE / VOXEL_CELL_SIZE}, with `
+    + "nothing between), and fires a ball that way. Its last ball fired, it is gone. Anyone may switch it off or on "
+    + "(edit_object with switched_on), move it or remove it.";
 
 // What an agent places and arranges: canvases, props, lamps, fans, and (in a room of its own) labels, doors and
 // restricted zones. Each change is sent as the signal a browser sends for a person's, so it passes the same checks

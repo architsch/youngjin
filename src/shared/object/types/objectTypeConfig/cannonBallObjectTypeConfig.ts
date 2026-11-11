@@ -10,14 +10,14 @@ export const CANNON_BALL_RADIUS = 0.25;
 export const CANNON_BALL_SPEED = 3;
 export const CANNON_BALL_MAX_SPEED = 6;
 // The share of the push a fan's stream gives a body (see PhysicsForceUtil) that a ball takes, being heavy.
-export const CANNON_BALL_WIND_SHARE = 0.1;
+export const CANNON_BALL_WIND_SHARE = 0.2;
 // How far from where a ball strikes its blast reaches, in world units.
 export const CANNON_BALL_BLAST_RADIUS = 0.5;
 // How far past the room a ball flies before it is gone, in world units.
 export const CANNON_BALL_VANISH_DISTANCE = 20;
 // How a blast throws a body it reaches, in world units a second: across the room, away from the ball, and upward.
-export const CANNON_BLAST_PUSH_SPEED = 32;
-export const CANNON_BLAST_LIFT_SPEED = 22;
+export const CANNON_BLAST_PUSH_SPEED = 64;
+export const CANNON_BLAST_LIFT_SPEED = 44;
 
 // A cannon's ball, which the server fires and flies (see CannonBallUtil): straight, with no weight, but for what a
 // fan's stream does to it. Nobody may touch it by any signal. Whatever it strikes it bursts on, throwing the players

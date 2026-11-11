@@ -41,12 +41,13 @@ The details, only for someone who asks for more:
   objects, lamps and fans are free; a cannon costs dollars each time you add one. An item you unlock is yours to keep.
   Asked which items: only some of the looks (press <control name="person"/> to see them). Asked what else dollars are
   for: cannons.
-- Cannons: not in the tutorial. The button shows the price. Every few seconds, a cannon slowly turns to the nearest
-  person it can see. Once it has pointed at them for a moment, it shoots a slow ball that way. Walk in circles close
-  around it, and it turns too slowly to shoot you. A ball that hits you throws you a long way; one that hits nobody
-  leaves a dollar bill. A ball also breaks the block it hits, except in a restricted zone. The green bar on a cannon
-  shows the balls it has left: after the last one, it disappears. Click a cannon in Edit mode to switch it off or on,
-  or to remove it (you get no dollars back).
+- Cannons: not in the tutorial. The button shows the price. A cannon slowly turns toward the nearest person and keeps
+  following them, even behind a wall or far away. It only shoots someone it can see, not too far away: once it has
+  pointed at them for a moment, it shoots a slow ball that way, then rests for a few seconds. Walk in circles around
+  it, and it turns too slowly to shoot you. A ball that hits you throws you a long way; one that hits nobody leaves a
+  dollar bill. A ball also breaks the block it hits, except in a restricted zone. The green bar on a cannon, seen
+  from close by, shows the balls it has left. After its last ball, the cannon disappears. Click a cannon in Edit mode
+  to switch it off or on, or to remove it (you get no dollars back).
 - Mirrors: some rooms have one (only ThingsPool's admins can hang them), and you can see yourself in it.
 - Signing in: press <control name="person"/>, then Sign In under your name (not during the tutorial). Sign in to keep
   your look and your dollars for good, on any browser. Without it, they stay in this browser only, and not for long
