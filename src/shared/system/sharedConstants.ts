@@ -94,6 +94,8 @@ export const HUB_ROOM_ID_KEYWORD = "hub";
 
 // What coming back earns a user, once a day (see ServerInventoryManager.welcomeUser).
 export const LOGIN_REWARD_DOLLARS = 5;
+// What the cheat code gives, on a dev server alone (see DebugCommandUtil, UserCommandUtil).
+export const CHEAT_DOLLARS = 10;
 // What a shape of a character's part costs, past the free ones (see PlayerShapeItemUtil).
 export const PLAYER_SHAPE_PRICE_DOLLARS = 10;
 // What adding a cannon to a room costs, each time (see CannonObjectTypeConfig).

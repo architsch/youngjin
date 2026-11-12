@@ -19,6 +19,7 @@ What a user holds, the game's measure of progress, and the $1 bills that fill it
   - Whoever wore a locked shape in a saved look when it went on sale holds it (`DBUserVersionMigration`).
 - **Buying an object**: a type with a price (`ObjectTypeConfig.price`: a [cannon](cannon.md)) costs that each time one is added. The server takes it as it accepts the add, and refuses whoever holds less, telling them alone to take their own copy away again. A browser offers the add only to whoever holds enough, and shows the dollars leaving as it sends it. Nothing comes back for one removed.
 - **Agents** hold, gain and spend alike, through tools of their own that send the same signals (see [agents.md](../networking/agents.md)).
+- **Cheat code**: on a dev server, the `rosebud` debug command gives whoever runs it `CHEAT_DOLLARS`, for testing what dollars buy. The server checks it is a dev server (`UserCommandUtil`); anywhere else it is no command.
 
 ## Dollar bills
 A `DollarBill` is a non-persistent object in the `Collectible` category, whose cap is the most a room ever holds at once: no part of what is built, and in no room file, but kept by the room's saves (see Kept with the room). Only the server adds, moves or removes one (`DollarBillUtil`, stepped from the socket flush). It has no collider, so nothing is stopped by it, and it stays out of raycasts, so no click or view is either. Single-player rooms have none, having no server-side room.

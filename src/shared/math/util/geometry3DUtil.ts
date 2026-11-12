@@ -14,6 +14,9 @@ let gapA = 0, gapB = 0, gapC = 0;
 const ascending = (a: number, b: number): number => a - b;
 // How far clear of a cone a box must be to be told so without the full test, which rounding could not undo.
 const CONE_CLEARANCE_MARGIN = 0.0001;
+// How many times a sphere's way is narrowed down to where it is nearest an upright cylinder, and again to where it
+// first touches it.
+const CYLINDER_SEARCH_STEPS = 48;
 
 const Geometry3DUtil =
 {
@@ -250,6 +253,51 @@ const Geometry3DUtil =
         return {hitRayScale, hitNormal: Vector3DUtil.normalize(
             Vector3DUtil.add(apart, Vector3DUtil.scale(ray, hitRayScale)))};
     },
+    // The same against an upright cylinder standing in a box, as wide as the box is along x and as tall: the way out of
+    // it is level off its side, straight up or down off an end, and between the two off an end's rim. Along a straight
+    // way the sphere's distance to it falls and then rises, never the other way round, so the first touch lies between
+    // where the sphere touches the box and where it is nearest the cylinder.
+    castSphereAgainstUprightCylinder: (center: Vec3, destination: Vec3, radius: number,
+        target: AABB3): RaycastHitResult3 =>
+    {
+        const box = Geometry3DUtil.castSphereAgainstAABB(center, destination, radius, target);
+        if (box.hitNormal == undefined)
+            return box;
+
+        const rayX = destination.x - center.x, rayY = destination.y - center.y, rayZ = destination.z - center.z;
+        const clearance = (rayScale: number): number => getDistanceToUprightCylinder(center.x + rayX * rayScale,
+            center.y + rayY * rayScale, center.z + rayZ * rayScale, target) - radius;
+
+        let hitRayScale = box.hitRayScale;
+        if (clearance(hitRayScale) > 0)
+        {
+            let low = hitRayScale, high = 1;
+            for (let i = 0; i < CYLINDER_SEARCH_STEPS; ++i)
+            {
+                const third = (high - low) / 3;
+                if (clearance(low + third) <= clearance(high - third))
+                    high -= third;
+                else
+                    low += third;
+            }
+            let touching = 0.5 * (low + high);
+            if (clearance(touching) > 0)
+                return {hitRayScale: 1, hitNormal: undefined};
+            let clear = hitRayScale;
+            for (let i = 0; i < CYLINDER_SEARCH_STEPS; ++i)
+            {
+                const middle = 0.5 * (clear + touching);
+                if (clearance(middle) > 0)
+                    clear = middle;
+                else
+                    touching = middle;
+            }
+            hitRayScale = touching;
+        }
+        const at: Vec3 = {x: center.x + rayX * hitRayScale, y: center.y + rayY * hitRayScale,
+            z: center.z + rayZ * hitRayScale};
+        return {hitRayScale, hitNormal: getWayOutOfUprightCylinder(at, target, {x: -rayX, y: -rayY, z: -rayZ})};
+    },
     // Whether a box reaches into a cone that widens from its apex to a flat base centred on baseCenter, its
     // radius growing by radiusPerDistance with each unit of distance from the apex along its axis.
     // A ball travelling the axis and growing with it sweeps the cone out, so the box is in the cone where it
@@ -362,6 +410,29 @@ function getWayOutOfAABB(point: Vec3, box: AABB3, fallback: Vec3): Vec3
         z: Math.max(box.center.z - box.halfSize.z, Math.min(box.center.z + box.halfSize.z, point.z)),
     };
     return normalizeOr(Vector3DUtil.subtract(point, nearest), fallback);
+}
+
+// How far a point is from an upright cylinder standing in a box (see castSphereAgainstUprightCylinder), or 0 inside it.
+function getDistanceToUprightCylinder(x: number, y: number, z: number, box: AABB3): number
+{
+    const past = Math.max(0, Math.hypot(x - box.center.x, z - box.center.z) - box.halfSize.x);
+    const over = Math.max(0, Math.abs(y - box.center.y) - box.halfSize.y);
+    return Math.hypot(past, over);
+}
+
+// From the nearest point of that cylinder to a point outside it; for a point inside, level, straight away from its
+// middle line, and on that line the fallback's way.
+function getWayOutOfUprightCylinder(point: Vec3, box: AABB3, fallback: Vec3): Vec3
+{
+    const fromMiddle: Vec3 = {x: point.x - box.center.x, y: 0, z: point.z - box.center.z};
+    const across = Math.hypot(fromMiddle.x, fromMiddle.z);
+    const past = Math.max(0, across - box.halfSize.x);
+    const height = point.y - box.center.y;
+    const over = (Math.abs(height) > box.halfSize.y) ? height - Math.sign(height) * box.halfSize.y : 0;
+    if (past == 0 && over == 0)
+        return normalizeOr(fromMiddle, fallback);
+    const share = (past > 0) ? past / across : 0;
+    return Vector3DUtil.normalize({x: fromMiddle.x * share, y: over, z: fromMiddle.z * share});
 }
 
 function normalizeOr(v: Vec3, fallback: Vec3): Vec3

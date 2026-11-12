@@ -1,5 +1,3 @@
-import { numOpenPanelsObservable } from "../../system/clientObservables";
-
 // Stack of open closable panels (newest last). Panels register themselves from anywhere in the tree;
 // the back gesture closes the newest one per gesture (see UIRoot).
 
@@ -16,7 +14,6 @@ const ClosablePanelUtil =
     {
         const token = nextToken++;
         openPanels.push({token, close, overTools});
-        numOpenPanelsObservable.set(openPanels.length);
         return token;
     },
     unregister: (token: number): void =>
@@ -25,7 +22,6 @@ const ClosablePanelUtil =
         if (index < 0)
             return;
         openPanels.splice(index, 1);
-        numOpenPanelsObservable.set(openPanels.length);
     },
     hasOpenPanel: (): boolean =>
     {

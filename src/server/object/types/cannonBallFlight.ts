@@ -6,4 +6,6 @@ export default interface CannonBallFlight
 {
     pos: Vec3;
     vel: Vec3;
+    // See CannonBallState.
+    bounces: number;
 }

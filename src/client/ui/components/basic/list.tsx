@@ -1,5 +1,6 @@
 import { ReactNode, UIEvent, useCallback, useEffect, useRef } from "react";
 import useMouseDragScroll from "../../util/mouseDragScroll";
+import ScrollHints from "./scrollHints";
 
 // Vertical list with optional infinite scroll and mouse-drag scrolling. Layout via additionalClassNames.
 export default function List<T>({ items, renderItem, getItemKey,
@@ -32,6 +33,7 @@ export default function List<T>({ items, renderItem, getItemKey,
 
     return <div ref={refCallback} onScroll={handleScroll}
         className={`flex flex-col overflow-y-auto ${additionalClassNames}`}>
+        <ScrollHints/>
         {items.length === 0 && !loading && emptyMessage && (
             <div className="yj-text-xs text-gray-400 text-center py-2">{emptyMessage}</div>
         )}

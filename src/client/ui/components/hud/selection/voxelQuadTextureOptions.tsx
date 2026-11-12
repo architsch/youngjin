@@ -6,6 +6,7 @@ import VoxelEditUtil from "../../../../voxel/util/voxelEditUtil";
 import VoxelQuadTextureUtil from "../../../../voxel/util/voxelQuadTextureUtil";
 import VoxelGameObject from "../../../../object/types/gameObject/voxelGameObject";
 import useMouseDragScroll from "../../../util/mouseDragScroll";
+import ScrollHints from "../../basic/scrollHints";
 import { FeatureFlag } from "../../../../../shared/system/types/featureFlag";
 import { NUM_PACK_VOXEL_TEXTURES } from "../../../../../shared/system/sharedConstants";
 import { useEffect, useReducer } from "react";
@@ -53,6 +54,7 @@ export default function VoxelQuadTextureOptions(props: {selection: VoxelQuadSele
     // Dimmed but still scrollable; disabled state is also declared via aria.
     return <div id="voxelQuadTextureOptions" ref={onRefChange} aria-disabled={disabled}
         className={`flex flex-row gap-2 p-2 w-full overflow-x-auto no-scrollbar pointer-events-auto bg-gray-800 rounded-md yj-surface-convex ${disabled ? "opacity-50" : ""}`}>
+        <ScrollHints/>
         {textureIndices.map((textureIndex) => {
             const col = textureIndex % numCols;
             const row = Math.floor(textureIndex / numCols);

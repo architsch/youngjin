@@ -8,7 +8,8 @@ import PhysicsSphereUtil from "../../../../shared/physics/util/physicsSphereUtil
 import Vec3 from "../../../../shared/math/types/vec3";
 import Vector3DUtil from "../../../../shared/math/util/vector3DUtil";
 import InstancedMeshComposer from "../../components/instancedMeshComposer";
-import { cannonBallBurstObservable, cannonBlastObservable } from "../../../system/clientObservables";
+import { cannonBallBounceObservable, cannonBallBurstObservable,
+    cannonBlastObservable } from "../../../system/clientObservables";
 
 // How quickly what is drawn closes on where the ball is, once the server's word has moved that, a share a second.
 const SETTLE_RATE = 12;
@@ -25,12 +26,21 @@ const SAME_BURST_DISTANCE = 1;
 // The longest it flies in one go, in seconds, however long it is since it last did: a page long out of sight flies
 // none of what it missed.
 const MAX_STEP_SECONDS = 0.25;
+// How many times in one go it may bounce off something before it rests until the next, as the server's does (see
+// CannonBallUtil).
+const MAX_BOUNCES_PER_STEP = 4;
+// A bounce it makes ahead of the server's word is taken back after this long without one, in seconds: longer than the
+// server's steps are apart, by more than the way from it may add.
+export const MAX_UNTOLD_BOUNCE_SECONDS = 0.5;
 
 // A cannon's ball, which the server flies and ends (see CannonBallUtil). A browser is told of one only as it is fired,
 // whenever something turns it, and as it bursts; in between it flies the ball itself, as the server does (see
-// CannonBallMotionUtil), through other balls, whose bounces the server tells of. Where it strikes the room itself, or
-// something that stands still, it is shown bursting at once: the server's word of that, a moment later, brings
-// whatever the blast did. At a body, which may not be where the server has it, it waits for that word instead.
+// CannonBallMotionUtil), through other balls, whose bounces the server tells of. Off a mirror, an NPC or a cannon it
+// bounces at once, as the server's does: if the server's word of that hasn't come in a moment, its ball never did,
+// and this one goes back to the way it went. Each bounce is shown as it is made here, or, made by the server's ball
+// alone, as its word comes, which counts them. Where it strikes the room itself, or something else that stands still,
+// it is shown bursting at once: the server's word of that, a moment later, brings whatever the blast did. At a body,
+// which may not be where the server has it, it waits for that word instead.
 export default class CannonBallGameObject extends GameObject
 {
     // Every ball in the room.
@@ -44,8 +54,14 @@ export default class CannonBallGameObject extends GameObject
     private drawnOffset: Vec3 = {x: 0, y: 0, z: 0};
     private heldSeconds = 0;
     private owedSeconds = 0;
-    // The bodies it was held at for nothing.
+    // The bodies it was held at for nothing, and what it bounced off for nothing.
     private passedObjectIds: Set<string> | undefined;
+    // How many times it has bounced, as flown here (see CannonBallState), and the last of those that was shown.
+    private bounces: number;
+    private bouncesShown: number;
+    // The first bounce it made here that the server has yet to tell of: off what, where it was, how it went and how
+    // many times it had bounced as it struck that, and how long it has flown since.
+    private untoldBounce: {objectId: string, at: Vec3, vel: Vec3, bounces: number, seconds: number} | undefined;
     // Where it was shown bursting, and for how long the server has yet to say so. Once that proves wrong, it bursts
     // only on the server's word.
     private burstShownAt: Vec3 | undefined;
@@ -62,9 +78,11 @@ export default class CannonBallGameObject extends GameObject
         if (!this.instancedMeshComposer)
             throw new Error("CannonBallGameObject requires InstancedMeshComposer component");
 
-        const {pos, vel} = CannonBallStateUtil.getObjectState(params);
+        const {pos, vel, bounces} = CannonBallStateUtil.getObjectState(params);
         this.at = pos;
         this.vel = vel;
+        this.bounces = bounces;
+        this.bouncesShown = bounces;
         this.obj.position.set(pos.x, pos.y, pos.z);
     }
 
@@ -87,13 +105,14 @@ export default class CannonBallGameObject extends GameObject
             return;
 
         const state = CannonBallStateUtil.getObjectState(this.params);
+        this.untoldBounce = undefined;
         if (state.exploded)
         {
             const shownAt = this.burstShownAt;
             if (shownAt == undefined || Vector3DUtil.distSqr(shownAt, state.pos) > SAME_BURST_DISTANCE * SAME_BURST_DISTANCE)
                 this.showBurst(state.pos);
             this.burstConfirmed = true;
-            cannonBlastObservable.set({position: state.pos, hitObjectIds: state.hitObjectIds});
+            cannonBlastObservable.set({position: state.pos, hitObjectIds: state.hitObjectIds, struck: state.struck});
             return;
         }
 
@@ -101,6 +120,15 @@ export default class CannonBallGameObject extends GameObject
         if (this.burstShownAt != undefined)
             this.flyOnUnseeing();
         const {x, y, z} = this.obj.position;
+        // A bounce of the server's ball that this one never made is shown where this one is drawn, about where it
+        // would have made it (two balls that bounced having flown on into each other here), out the way the word
+        // turns it.
+        this.bounces = state.bounces;
+        if (CannonBallStateUtil.isBounceCountAhead(this.bounces, this.bouncesShown))
+        {
+            const turn = Vector3DUtil.subtract(state.vel, this.vel);
+            this.showBounce({x, y, z}, (Vector3DUtil.lengthSqr(turn) > 0) ? Vector3DUtil.normalize(turn) : {x: 0, y: 1, z: 0});
+        }
         this.at = state.pos;
         this.vel = state.vel;
         this.drawnOffset = {x: x - state.pos.x, y: y - state.pos.y, z: z - state.pos.z};
@@ -127,6 +155,8 @@ export default class CannonBallGameObject extends GameObject
         this.fly(seconds);
         if (this.burstShownAt != undefined)
             return;
+        if (this.untoldBounce != undefined && this.untoldBounce.seconds >= MAX_UNTOLD_BOUNCE_SECONDS)
+            this.takeBackBounce();
         const kept = Math.exp(-SETTLE_RATE * seconds);
         this.drawnOffset.x *= kept;
         this.drawnOffset.y *= kept;
@@ -143,32 +173,53 @@ export default class CannonBallGameObject extends GameObject
 
         const catchUp = Math.min(this.owedSeconds, CATCH_UP_SHARE * seconds);
         this.owedSeconds -= catchUp;
-        const {hit, secondsLeft} = CannonBallMotionUtil.advance(roomID, this.at, this.vel, seconds + catchUp,
-            this.getIgnoredObjectIds());
-        if (hit == undefined)
+        let secondsLeft = seconds + catchUp;
+        if (this.untoldBounce != undefined)
+            this.untoldBounce.seconds += secondsLeft;
+        for (let bounces = 0; bounces < MAX_BOUNCES_PER_STEP && secondsLeft > 0; ++bounces)
         {
-            this.heldSeconds = 0;
-            return;
-        }
-        // Whatever it strikes here the server's ball didn't, or its word would have come.
-        if (this.strikesUnseen)
-        {
-            Object.assign(this.at, Vector3DUtil.add(this.at, Vector3DUtil.scale(this.vel, secondsLeft)));
-            return;
-        }
-        if (hit.object == undefined || !PhysicsSphereUtil.isBody(PhysicsManager.physicsRooms[roomID], hit.object))
-        {
-            this.showBurst(this.at);
-            return;
-        }
+            const flown = CannonBallMotionUtil.advance(roomID, this.at, this.vel, secondsLeft, this.getIgnoredObjectIds());
+            secondsLeft = flown.secondsLeft;
+            const hit = flown.hit;
+            if (hit == undefined)
+            {
+                this.heldSeconds = 0;
+                return;
+            }
+            // Whatever it strikes here the server's ball didn't, or its word would have come.
+            if (this.strikesUnseen)
+            {
+                Object.assign(this.at, Vector3DUtil.add(this.at, Vector3DUtil.scale(this.vel, secondsLeft)));
+                return;
+            }
+            if (hit.object != undefined && PhysicsSphereUtil.bounces(hit.object))
+            {
+                this.untoldBounce ??= {objectId: hit.object.objectId, at: {...this.at}, vel: {...this.vel},
+                    bounces: this.bounces, seconds: secondsLeft};
+                CannonBallMotionUtil.rebound(this.vel, hit.normal);
+                this.bounces = CannonBallStateUtil.countBounce(this.bounces);
+                // (One made again, the server's word having taken the ball back to before it, was shown already.)
+                if (CannonBallStateUtil.isBounceCountAhead(this.bounces, this.bouncesShown))
+                    this.showBounce(hit.center, hit.normal);
+                continue;
+            }
+            if (hit.object == undefined || !PhysicsSphereUtil.isBody(PhysicsManager.physicsRooms[roomID], hit.object))
+            {
+                // Where a bounce the server has yet to tell of leads it, its ball may never come: it waits here.
+                if (this.untoldBounce == undefined)
+                    this.showBurst(this.at);
+                return;
+            }
 
-        this.heldSeconds += secondsLeft;
-        this.owedSeconds = Math.min(MAX_OWED_SECONDS, this.owedSeconds + secondsLeft);
-        if (this.heldSeconds >= MAX_HELD_SECONDS)
-        {
-            this.passedObjectIds ??= new Set();
-            this.passedObjectIds.add(hit.object.objectId);
-            this.heldSeconds = 0;
+            this.heldSeconds += secondsLeft;
+            this.owedSeconds = Math.min(MAX_OWED_SECONDS, this.owedSeconds + secondsLeft);
+            if (this.heldSeconds >= MAX_HELD_SECONDS)
+            {
+                this.passedObjectIds ??= new Set();
+                this.passedObjectIds.add(hit.object.objectId);
+                this.heldSeconds = 0;
+            }
+            return;
         }
     }
 
@@ -184,6 +235,29 @@ export default class CannonBallGameObject extends GameObject
         this.unconfirmedSeconds = 0;
         this.instancedMeshComposer.setHidden(true);
         cannonBallBurstObservable.set({position: this.burstShownAt});
+    }
+
+    // Where its middle is as it bounces, and the way it comes off what it bounces off.
+    private showBounce(middle: Vec3, normal: Vec3): void
+    {
+        this.bouncesShown = this.bounces;
+        cannonBallBounceObservable.set({position: {...middle}, normal: {...normal}});
+    }
+
+    // The bounce the server never told of never happened: it is where it would have flown without it, drawn from
+    // where it was, and passes what it bounced off.
+    private takeBackBounce(): void
+    {
+        const {objectId, at, vel, bounces, seconds} = this.untoldBounce!;
+        this.untoldBounce = undefined;
+        const {x, y, z} = this.obj.position;
+        this.at = Vector3DUtil.add(at, Vector3DUtil.scale(vel, seconds));
+        this.vel = vel;
+        this.bounces = bounces;
+        this.bouncesShown = bounces;
+        this.drawnOffset = {x: x - this.at.x, y: y - this.at.y, z: z - this.at.z};
+        this.passedObjectIds ??= new Set();
+        this.passedObjectIds.add(objectId);
     }
 
     // The burst shown never happened: drawn again, it goes wherever the server's ball does.

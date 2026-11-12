@@ -35,9 +35,15 @@ const PhysicsSphereUtil =
         return ObjectTypeConfigMap.getConfigByIndex(object.objectTypeIndex).components.spawnedByMe?.rigidbody != undefined
             && !AdminPrefsUtil.isGhost(physicsRoom.room.objectById[object.objectId]);
     },
+    // Whether a sphere that strikes an object bounces off it (see ColliderConfig.bouncesSpheres).
+    bounces: (object: PhysicsObject): boolean =>
+    {
+        return object.colliderState.colliderConfig.bouncesSpheres == true;
+    },
     // The first thing a sphere strikes as its middle goes from one place to another, if anything: a voxel block, the
-    // room's own floor or ceiling, a body, another sphere, or an object that stops bodies, unless the sphere sets off
-    // from inside that one. The room's sides, beyond its blocks, stop nothing. A radius of zero casts a ray.
+    // room's own floor or ceiling, a body, another sphere, an object that stops bodies, unless the sphere sets off
+    // from inside that one, or any other object spheres bounce off, if the sphere is closing on it. The room's sides,
+    // beyond its blocks, stop nothing. A radius of zero casts a ray.
     cast: (physicsRoom: PhysicsRoom, from: Vec3, to: Vec3, radius: number,
         ignoredObjectIds: ReadonlySet<string>): PhysicsSphereHit | undefined =>
     {
@@ -65,12 +71,21 @@ const PhysicsSphereUtil =
                     PhysicsSphereUtil.getRadius(object.colliderState)), undefined, object);
             }
             else if (PhysicsSphereUtil.isBody(physicsRoom, object))
-                consider(Geometry3DUtil.castSphereAgainstAABB(from, to, radius, hitbox), undefined, object);
+                consider(castAgainstShape(object, from, to, radius), undefined, object);
             else if (colliderConfig.applyHardCollisionToOthers)
             {
                 const result = Geometry3DUtil.castSphereAgainstAABB(from, to, radius, hitbox);
                 if (result.hitRayScale > 0)
                     consider(result, undefined, object);
+            }
+            else if (PhysicsSphereUtil.bounces(object))
+            {
+                const result = castAgainstShape(object, from, to, radius);
+                const normal = (result.hitNormal == undefined) ? undefined
+                    : getBounceNormal(physicsRoom, object, result.hitNormal);
+                // One it is leaving, as it is having bounced off it, lets it go.
+                if (normal != undefined && Vector3DUtil.dot(Vector3DUtil.subtract(to, from), normal) < 0)
+                    consider({hitRayScale: result.hitRayScale, hitNormal: normal}, undefined, object);
             }
         }
         if (struck.length == 0)
@@ -100,6 +115,25 @@ const PhysicsSphereUtil =
                 : Geometry3DUtil.sphereOverlapsAABB(center, reach, object.colliderState.hitbox));
         return {blocks, objects};
     },
+}
+
+// A sphere's way against an object, as the shape a sphere meets it as (see ColliderConfig.shape).
+function castAgainstShape(object: PhysicsObject, from: Vec3, to: Vec3, radius: number): RaycastHitResult3
+{
+    const {hitbox, colliderConfig} = object.colliderState;
+    return (colliderConfig.shape == "cylinder")
+        ? Geometry3DUtil.castSphereAgainstUprightCylinder(from, to, radius, hitbox)
+        : Geometry3DUtil.castSphereAgainstAABB(from, to, radius, hitbox);
+}
+
+// The way a sphere bounces off an object that stops no body, where it touches it: out of a cylinder there, and, off a
+// box, the way the room keeps it facing (none for one the room no longer keeps).
+function getBounceNormal(physicsRoom: PhysicsRoom, object: PhysicsObject, wayOut: Vec3): Vec3 | undefined
+{
+    if (object.colliderState.colliderConfig.shape == "cylinder")
+        return wayOut;
+    const facing = physicsRoom.room.objectById[object.objectId]?.transform.dir;
+    return (facing == undefined) ? undefined : Geometry3DUtil.getAxisFacingBasis(facing).normal;
 }
 
 // The room's blocks whose cells a box reaches into, from its grid as it stands.

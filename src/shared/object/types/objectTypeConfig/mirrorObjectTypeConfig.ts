@@ -108,6 +108,7 @@ const MirrorObjectTypeConfig =
                     sizeY: 1,
                     sizeZ: 0.5 * ATTACHMENT_HITBOX_INSET
                 },
+                bouncesSpheres: true, // a cannon ball comes off its glass as light does
                 applyHardCollisionToOthers: false,
                 outgoingSoftCollisionForceMultiplier: 0,
                 incomingSoftCollisionForceMultiplier: 0,

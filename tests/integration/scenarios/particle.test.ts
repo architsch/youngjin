@@ -71,8 +71,9 @@ import { ObjectMetadata } from "../../../src/shared/object/types/objectMetadata"
 import AnimatedSprite from "../../../src/client/object/components/animatedSprite";
 import GameObject from "../../../src/client/object/types/gameObject/gameObject";
 import ClientVoxelManager from "../../../src/client/voxel/clientVoxelManager";
-import { cannonBallBurstObservable, cannonFiredObservable, objectCollectedObservable, objectEditObservable,
-    roomShapeChangedObservable, voxelBlockEditObservable } from "../../../src/client/system/clientObservables";
+import { cannonBallBounceObservable, cannonBallBurstObservable, cannonFiredObservable, objectCollectedObservable,
+    objectEditObservable, roomShapeChangedObservable, voxelBlockEditObservable }
+    from "../../../src/client/system/clientObservables";
 import { BREAK_SPACING, MAX_BREAKS } from "../../../src/client/graphics/particle/util/particleTriggerUtil";
 import CannonStateUtil from "../../../src/shared/object/util/cannonStateUtil";
 import PhysicsColliderStateUtil from "../../../src/shared/physics/util/physicsColliderStateUtil";
@@ -737,11 +738,15 @@ describe("object and cannon events", () => {
         expect(played("objectDestroyed").length).toBeGreaterThan(1);
     });
 
-    it("plays a cannon's shot at its barrel's mouth, out the way it points, and its ball's burst where it burst", () => {
+    it("plays a cannon's shot at its barrel's mouth, out the way it points, its ball's bounce where the ball then " +
+        "is, out the way it comes off what it bounced off, and its ball's burst where it burst", () => {
         const direction = {x: 0.6, y: 0, z: 0.8};
+        const normal = {x: 0, y: 0.6, z: -0.8};
         cannonFiredObservable.set({position: AT, direction});
+        cannonBallBounceObservable.set({position: {x: 4, y: 5, z: 6}, normal});
         cannonBallBurstObservable.set({position: {x: 1, y: 2, z: 3}});
-        expect(play.mock.calls).toEqual([["cannonFire", AT, {direction}], ["cannonBallBurst", {x: 1, y: 2, z: 3}]]);
+        expect(play.mock.calls).toEqual([["cannonFire", AT, {direction}],
+            ["cannonBallBounce", {x: 4, y: 5, z: 6}, {direction: normal}], ["cannonBallBurst", {x: 1, y: 2, z: 3}]]);
     });
 });
 

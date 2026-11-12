@@ -178,13 +178,13 @@ export default function VoxelQuadPlacementOptions(props: {selection: VoxelQuadSe
             {addButton("addCanvasButton", <AddCanvasIcon/>, canvasTypeIndex)}
             {addButton("addPropButton", <AddPropIcon/>, propTypeIndex)}
             {addButton("addLampButton", <AddLampIcon/>, lampTypeIndex)}
-            <IconButton id="addFanButton" icon={<AddFanIcon/>} size="md"
-                disabled={!canAddFan} onClick={() => ObjectPlacementUtil.tryAddFan(props.selection)}/>
             {offersCannon && <div className="relative shrink-0">
                 <IconButton id="addCannonButton" icon={<AddCannonIcon/>} size="md"
                     disabled={!canAddCannon} onClick={() => ObjectPlacementUtil.tryAddCannon(props.selection)}/>
                 <PriceTag dollars={CANNON_PRICE_DOLLARS} additionalClassNames="absolute top-full left-1/2 -translate-x-1/2 mt-1"/>
             </div>}
+            <IconButton id="addFanButton" icon={<AddFanIcon/>} size="md"
+                disabled={!canAddFan} onClick={() => ObjectPlacementUtil.tryAddFan(props.selection)}/>
             {isSuperuser && addButton("addLabelButton", <AddLabelIcon/>, labelTypeIndex)}
             {isSuperuser && addButton("addDoorButton", <AddDoorIcon/>, doorTypeIndex)}
             {isAdmin && <IconButton id="addNpcButton" icon={<AddNpcIcon/>} size="md"

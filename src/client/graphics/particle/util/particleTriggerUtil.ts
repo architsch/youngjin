@@ -7,8 +7,8 @@ import CannonStateUtil from "../../../../shared/object/util/cannonStateUtil";
 import ObjectScaleUtil from "../../../../shared/object/util/objectScaleUtil";
 import PhysicsColliderStateUtil from "../../../../shared/physics/util/physicsColliderStateUtil";
 import VoxelQueryUtil from "../../../../shared/voxel/util/voxelQueryUtil";
-import { cannonBallBurstObservable, cannonFiredObservable, objectCollectedObservable, objectEditObservable,
-    voxelBlockEditObservable } from "../../../system/clientObservables";
+import { cannonBallBounceObservable, cannonBallBurstObservable, cannonFiredObservable, objectCollectedObservable,
+    objectEditObservable, voxelBlockEditObservable } from "../../../system/clientObservables";
 import ParticleSystem from "../particleSystem";
 
 // An attached object comes apart in small breaks about this far apart across its face, in world units, and never in
@@ -19,8 +19,8 @@ export const MAX_BREAKS = 24;
 // Which gameplay event plays which effect: the one place gameplay and particles meet, so gameplay code
 // never calls the particle system. A block's removal plays one, as does someone else collecting a dollar bill, the
 // only thing there is to collect; the user's own collecting is a bill flying to their count, not an effect (see
-// DollarBillGameObject.onCollected). A cannon's shot and its ball's burst play one each. An attached object taken
-// away, by anyone or anything, comes apart all over its face; other object edits are left unbound.
+// DollarBillGameObject.onCollected). A cannon's shot, its ball's bounce and its ball's burst play one each. An attached
+// object taken away, by anyone or anything, comes apart all over its face; other object edits are left unbound.
 const ParticleTriggerUtil =
 {
     onVoxelBlockEdit: (edit: {kind: "add" | "remove" | "move" | "retexture", quadIndex: number}): void =>
@@ -35,6 +35,10 @@ const ParticleTriggerUtil =
     onCannonFired: (shot: {position: Vec3, direction: Vec3}): void =>
     {
         ParticleSystem.play("cannonFire", shot.position, {direction: shot.direction});
+    },
+    onCannonBallBounce: (bounce: {position: Vec3, normal: Vec3}): void =>
+    {
+        ParticleSystem.play("cannonBallBounce", bounce.position, {direction: bounce.normal});
     },
     onCannonBallBurst: (burst: {position: Vec3}): void =>
     {
@@ -111,6 +115,7 @@ function guarded<T>(handle: (event: T) => void): (event: T) => void
 voxelBlockEditObservable.addListener("particleTriggerUtil", guarded(ParticleTriggerUtil.onVoxelBlockEdit));
 objectCollectedObservable.addListener("particleTriggerUtil", guarded(ParticleTriggerUtil.onObjectCollected));
 cannonFiredObservable.addListener("particleTriggerUtil", guarded(ParticleTriggerUtil.onCannonFired));
+cannonBallBounceObservable.addListener("particleTriggerUtil", guarded(ParticleTriggerUtil.onCannonBallBounce));
 cannonBallBurstObservable.addListener("particleTriggerUtil", guarded(ParticleTriggerUtil.onCannonBallBurst));
 objectEditObservable.addListener("particleTriggerUtil", guarded(ParticleTriggerUtil.onObjectEdit));
 

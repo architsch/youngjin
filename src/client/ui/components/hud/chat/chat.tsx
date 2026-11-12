@@ -5,8 +5,8 @@ import ChatSentMessage from "./chatSentMessage";
 import ClientObjectManager from "../../../../object/clientObjectManager";
 import SpeechBubble from "../../../../object/components/speechBubble";
 import { ObjectMetadataKeyEnumMap } from "../../../../../shared/object/types/objectMetadataKey";
-import { chatLineSentObservable, clientFeatureFlagsObservable, roomChangedObservable,
-    singlePlayerChatLineObservable } from "../../../../system/clientObservables";
+import { clientFeatureFlagsObservable, roomChangedObservable, singlePlayerChatLineObservable }
+    from "../../../../system/clientObservables";
 import App from "../../../../app";
 import RoomRuntimeMemory from "../../../../../shared/room/types/roomRuntimeMemory";
 import AsyncUtil from "../../../../../shared/system/util/asyncUtil";
@@ -94,7 +94,6 @@ export default function Chat({hide}: Props)
 
         setMyPlayerSentMessage(player, message);
         setState({textInput: "", sentMessage: message, sentMessageSince: Date.now()});
-        chatLineSentObservable.set(message);
     };
 
     const clearSentMessage = () => {

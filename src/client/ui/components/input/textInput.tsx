@@ -1,11 +1,13 @@
-import { FormEvent, useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { FormEvent, KeyboardEvent as ReactKeyboardEvent, RefObject, useCallback, useEffect, useLayoutEffect,
+    useRef } from "react";
 import { numActiveInputElementsObservable } from "../../../system/clientObservables";
 
 export default function TextInput({id, type = "text", size = "md", placeholder = "", currValue,
-    filterTextInput = (str => str), setTextInput, maxVisibleLines, additionalClassNames = "" }: Props)
+    filterTextInput = (str => str), setTextInput, onEnter, fieldRef, maxVisibleLines, additionalClassNames = "" }: Props)
 {
     // An input, or a textarea when the field is multiline.
-    const inputRef = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
+    const ownRef = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
+    const inputRef = fieldRef ?? ownRef;
     const multiline = maxVisibleLines != undefined;
 
     // Whether this field currently counts toward active inputs.
@@ -25,6 +27,15 @@ export default function TextInput({id, type = "text", size = "md", placeholder =
         isFocused.current = false;
         numActiveInputElementsObservable.change(n => n - 1);
     }, []);
+
+    // Given onEnter, Enter is the field's alone: no other listener hears it (the chat's send among them), and the field
+    // keeps the keyboard for what is typed next. Not while an IME composes, whose Enter only ends the composition.
+    const onInputKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+        if (onEnter == undefined || event.key != "Enter" || event.nativeEvent.isComposing)
+            return;
+        event.stopPropagation();
+        onEnter();
+    };
 
     // In a multiline field Enter starts a new line, so only Escape leaves it.
     const onKeyDown = useCallback((ev: KeyboardEvent) =>
@@ -106,6 +117,7 @@ export default function TextInput({id, type = "text", size = "md", placeholder =
         placeholder={placeholder}
         value={currValue}
         onInput={onInput}
+        onKeyDown={onInputKeyDown}
         onFocus={onFocus}
         onBlur={onBlur}
     >
@@ -141,6 +153,10 @@ interface Props
     currValue: string;
     filterTextInput?: (rawTextInput: string) => string;
     setTextInput: (newTextInput: string) => void;
+    // What Enter in the field does. Ignored by a multiline field, where Enter starts a new line.
+    onEnter?: () => void;
+    // The field itself, for an owner that gives it the keyboard or takes it away.
+    fieldRef?: RefObject<(HTMLInputElement & HTMLTextAreaElement) | null>;
     // Makes the field multiline: its text wraps instead of scrolling sideways, Enter starts a new line, and
     // it grows up to this many lines before scrolling.
     maxVisibleLines?: number;

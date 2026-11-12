@@ -6,7 +6,7 @@
 | `cannonShot.wav` | [Cannon Fires, Take 1, Half Speed](https://freesound.org/people/CHallSmith/sounds/870741/) (#870741) | CHallSmith | [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) |
 | `powderBurst.wav` | [Fuse and small Explosion](https://freesound.org/people/diakunik/sounds/556367/) (#556367) | diakunik | [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) |
 | `gearGrind.wav` | [Grinding Gears and Steady Clinking.wav](https://freesound.org/people/Ted_Erski/sounds/535021/) (#535021) | Ted_Erski | [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) |
-| `rubbleDrop.wav` | [Concrete Breaks Several Denoised](https://freesound.org/people/loganzsound/sounds/843339/) (#843339) | loganzsound | [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `anvilHit.wav` | [Anvil Hit 1](https://freesound.org/people/michorvath/sounds/270589/) (#270589) | michorvath | [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) |
 
 Each sound's own page names the license, and none of them is in a remix group. CC0 requires no credit; it is given
 here because it is deserved. Each was cut from Freesound's high-quality MP3 preview of it (the original's download asks
@@ -41,9 +41,9 @@ Its author's description: "Grinding gears and steady clinking of an antique, han
 Cut to loop: the stretch from 27.9632 s to 28.7033 s, between two of its clinks, with its last 0.05 s crossfaded into
 its first 0.05 s, which leaves 0.69 s that ends where it begins, at 44.1 kHz (its two channels are the same).
 
-## `rubbleDrop.wav`
+## `anvilHit.wav`
 
-Its author's description: "Several concrete bits being dropped from 4 feet onto asphalt, recorded on a Zoom H5-XY and
-denoised with Izotope RX 11".
+Its author's description: "An anvil being struck by a metal hammer."
 
-Cut: the last of its drops, 6.1724 s to 6.6524 s, its last 0.168 s faded out, at 44.1 kHz (its two channels averaged).
+Cut: the hit alone, 0.2858 s to 0.5358 s, played at half its speed, which lowers it an octave and leaves 0.5 s, its
+last 0.2 s faded out, at 44.1 kHz (a mono recording).

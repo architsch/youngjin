@@ -29,7 +29,8 @@ vi.mock("../../../src/server/db/util/dbHelperSpendingUtil", () => ({ default: {
 
 import { harness, ConnectedUser } from "../helpers/serverHarness";
 import HelperAgentUtil, { REFUSAL_RETOLD_AFTER_MS } from "../../../src/server/agent/util/helperAgentUtil";
-import HelperChatUtil, { SAVE_INTERVAL_MS, TOPICS_PER_TALK } from "../../../src/server/agent/util/helperChatUtil";
+import HelperChatUtil, { SAVE_INTERVAL_MS, SHARED_PROMPT_MAX_LENGTH, TOPICS_PER_TALK }
+    from "../../../src/server/agent/util/helperChatUtil";
 import AgentBodyUtil from "../../../src/server/agent/util/agentBodyUtil";
 import AgentAccountUtil from "../../../src/server/agent/util/agentAccountUtil";
 import AgentPresenceUtil from "../../../src/server/agent/util/agentPresenceUtil";
@@ -39,7 +40,7 @@ import HelperIdentity from "../../../src/server/agent/types/helperIdentity";
 import HelperRouter, { MAX_LINES, MAX_OBJECT_ID_LENGTH }
     from "../../../src/server/networking/router/api/helperRouter";
 import { HELPER_PERSONALITIES } from "../../../src/server/agent/data/helperPersonalities";
-import { HELPER_GUIDE } from "../../../src/server/agent/data/helperGuide";
+import { HELPER_GUIDE, HELPER_GUIDE_MAX_LENGTH } from "../../../src/server/agent/data/helperGuide";
 import { HELPER_KNOWLEDGE } from "../../../src/server/agent/data/helperKnowledge";
 import SocketRoomContext from "../../../src/server/sockets/types/socketRoomContext";
 import ServerRoomManager from "../../../src/server/room/serverRoomManager";
@@ -62,6 +63,7 @@ import { DoorTypeEnumMap } from "../../../src/shared/object/types/doorType";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
 import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import CannonStateUtil from "../../../src/shared/object/util/cannonStateUtil";
+import PhysicsManager from "../../../src/shared/physics/physicsManager";
 import PhysicsColliderStateUtil from "../../../src/shared/physics/util/physicsColliderStateUtil";
 import Geometry3DUtil from "../../../src/shared/math/util/geometry3DUtil";
 import { SpeakerActivityEnumMap } from "../../../src/shared/object/types/speakerActivity";
@@ -881,14 +883,36 @@ describe("helpers", () => {
         }
     });
 
-    it("points helpers only at pages the site has, and gives a character as favorite reads only writings the knowledge "
-        + "every helper shares describes", () => {
-        const addresses = [...`${HELPER_GUIDE}\n${HELPER_KNOWLEDGE}`.matchAll(/https:\/\/thingspool\.net\/[^\s),"<>]*/g)]
+    it("tells helpers of the game in outline only, and mostly of ThingsPool's maker and his writings: a guide no longer "
+        + `than ${HELPER_GUIDE_MAX_LENGTH} characters, a knowledge several times as long, and all that every helper `
+        + "shares within what it may run to", async () => {
+        expect(HELPER_GUIDE.length).toBeLessThanOrEqual(HELPER_GUIDE_MAX_LENGTH);
+        expect(HELPER_KNOWLEDGE.length).toBeGreaterThan(4 * HELPER_GUIDE.length);
+        // An outline has one level: nothing set aside for whoever asks for more.
+        expect(HELPER_GUIDE).not.toMatch(/\bdetails?\b/i);
+
+        standNpc(FIRST_HUB_ID, "Mira");
+        await live(1);
+        await talk(await joinPerson("Alice"), "Mira, who made this place?");
+        await live(6);
+        const shared = claude.requests[0].body.system[0].text as string;
+        expect(shared.length).toBeLessThanOrEqual(SHARED_PROMPT_MAX_LENGTH);
+        expect(shared.length).toBeGreaterThan(HELPER_GUIDE.length + HELPER_KNOWLEDGE.length);
+    });
+
+    it("points helpers only at pages the site has, each as a link of a word or two, and gives a character as favorite "
+        + "reads only writings the knowledge every helper shares describes", () => {
+        const told = `${HELPER_GUIDE}\n${HELPER_KNOWLEDGE}`;
+        const addresses = [...told.matchAll(/https:\/\/thingspool\.net\/[^\s),"<>]*/g)]
             .map(match => match[0].replace(/\.$/, ""));
         expect(addresses.length).toBeGreaterThan(10);
         for (const address of addresses)
             expect(fs.existsSync(path.resolve(__dirname, "../../../public", new URL(address).pathname.slice(1))), address)
                 .toBe(true);
+        // No address but in a link, as helpers are to give them, its words a word or two.
+        expect(told.replace(/<link href="[^"]+">[^<]+<\/link>/g, "")).not.toMatch(/https?:/);
+        for (const [written, , words] of told.matchAll(/<link href="([^"]+)">([^<]+)<\/link>/g))
+            expect(words.split(" ").length, written).toBeLessThanOrEqual(2);
 
         const knowledge = HELPER_KNOWLEDGE.replace(/\s+/g, " ");
         for (const [personality, {character}] of Object.entries(HELPER_PERSONALITIES))
@@ -2157,6 +2181,38 @@ describe("helpers", () => {
 
         await live(STAY_AFTER_TALK_MS / 1000 + 15);
         expect(across(helperIn(FIRST_HUB_ID, mira).at, home)).toBeLessThan(0.05);
+    });
+
+    it("takes its collider where it is shown, as each browser's goes, and home again with it, while the room keeps it "
+        + "at home", async () => {
+        const home = inFrontOfEntrance(FIRST_HUB_ID, 4);
+        const mira = standNpc(FIRST_HUB_ID, "Mira", home);
+        // As physics has an NPC its room was loaded with: where the room keeps it.
+        const room = ServerRoomManager.roomRuntimeMemories[FIRST_HUB_ID].room;
+        const boxAt = (floor: Vec3) => PhysicsColliderStateUtil.getObjectColliderState(NPC_TYPE_INDEX,
+            new ObjectTransform({...floor}, {...UP}, {x: 1, y: 1, z: 1}))!.hitbox;
+        PhysicsManager.addObject(FIRST_HUB_ID, mira, NPC_TYPE_INDEX, {...PhysicsColliderStateUtil.getObjectColliderState(
+            NPC_TYPE_INDEX, room.objectById[mira].transform)!});
+        const collider = () => PhysicsManager.physicsRooms[FIRST_HUB_ID].objectById[mira].colliderState.hitbox;
+        await live(1);
+        expect(collider()).toEqual(boxAt(home));
+
+        const alice = await joinPerson("Alice", "an");
+        await moveTo(alice, inFrontOfEntrance(FIRST_HUB_ID, 11));
+        await live(6);
+        await talk(alice, "over here!");
+        const walked: boolean[] = [];
+        await live(8, () => walked.push(Geometry3DUtil.areAABBsEqual(collider(), boxAt(helperIn(FIRST_HUB_ID, mira).at))));
+        const met = helperIn(FIRST_HUB_ID, mira).at;
+        expect(across(met, home)).toBeGreaterThan(2);
+        // At every flush on the way, and where it stands now.
+        expect(walked).not.toContain(false);
+        expect(collider()).toEqual(boxAt(met));
+        expect(room.objectById[mira].transform.pos).toEqual(home);
+
+        await live(STAY_AFTER_TALK_MS / 1000 + 15);
+        expect(across(helperIn(FIRST_HUB_ID, mira).at, home)).toBeLessThan(0.05);
+        expect(collider()).toEqual(boxAt(helperIn(FIRST_HUB_ID, mira).at));
     });
 
     it("keeps a little way off from whom it answers: stays put for someone near, stops short of someone farther off",

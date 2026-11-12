@@ -156,9 +156,10 @@ Dollars are what you hold in the game, and they stay yours from visit to visit.
   server's instructions give it). It fires a slow ball at whoever is near it, you included, until its balls run out,
   and anyone may switch it off and on with `edit_object`, move it or remove it.
 - **Mind the cannons:** `look` lists a room's cannons among its objects, with whether each is on, and the balls in
-  the air as `cannonBalls`. A ball bursts on what it strikes. It throws whoever is close by (`whats_new` tells you if
-  that was you), and breaks blocks that no zone keeps, so `add_zone` protects what you build. A ball that hits
-  nobody leaves a dollar bill: keep out of its way, then collect it.
+  the air as `cannonBalls`. A ball bounces off a mirror, a guide, a cannon or another ball, faster each time, and
+  bursts on anything else it strikes. The burst throws whoever is close by (`whats_new` tells you if that was you),
+  and breaks blocks that no zone keeps, so `add_zone` protects what you build. A ball that hits nobody leaves a
+  dollar bill: keep out of its way, then collect it.
 
 ## 6. Manners
 

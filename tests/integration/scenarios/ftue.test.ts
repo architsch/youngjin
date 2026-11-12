@@ -122,6 +122,7 @@ import { screenCoachMarksObservable } from "../../../src/client/system/clientObs
 import UserCommandUtil from "../../../src/server/user/util/userCommandUtil";
 import UserCommandSignal from "../../../src/shared/user/types/userCommandSignal";
 import UserRouter from "../../../src/server/networking/router/api/userRouter";
+import UserContext from "../../../src/server/sockets/types/userContext";
 import User from "../../../src/shared/user/types/user";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
 import Room from "../../../src/shared/room/types/room";
@@ -140,8 +141,14 @@ function makeUser(ftue: string = "", singlePlayerMode: string = ""): User
 /** Runs the add-FTUE-element command the way a client would send it. */
 async function sendAddFTUEElement(user: User, element: string): Promise<void>
 {
-    await UserCommandUtil.onUserCommandSignalReceived(user,
+    await UserCommandUtil.onUserCommandSignalReceived(contextOf(user),
         new UserCommandSignal(`addFTUEElement ${element}`));
+}
+
+/** The connection a command comes in on, as far as these commands read it. */
+function contextOf(user: User): UserContext
+{
+    return {user} as unknown as UserContext;
 }
 
 /** Calls a POST route on UserRouter directly, with an already-identified user. */
@@ -468,7 +475,7 @@ describe("FTUE client/server agreement", () => {
             FTUEUtil.tryAddFTUEElement(code);
 
             const serverUser = makeUser();
-            await UserCommandUtil.onUserCommandSignalReceived(serverUser,
+            await UserCommandUtil.onUserCommandSignalReceived(contextOf(serverUser),
                 new UserCommandSignal(_emittedUserCommands[0]));
 
             expect(serverUser.ftue, `element code ${code}`).toBe(_clientUser.current.ftue);
@@ -528,7 +535,7 @@ describe("FTUE user command (server)", () => {
 
     it("ignores an unknown command without touching the record", async () => {
         const user = makeUser("A");
-        await UserCommandUtil.onUserCommandSignalReceived(user, new UserCommandSignal("addFTUEElements A B"));
+        await UserCommandUtil.onUserCommandSignalReceived(contextOf(user), new UserCommandSignal("addFTUEElements A B"));
 
         expect(user.ftue).toBe("A");
         expect(_mockDBUserUtil.setFTUE).not.toHaveBeenCalled();

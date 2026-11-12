@@ -1,3 +1,5 @@
+import { ScrollEdge } from "../types/scrollEdge";
+
 // How far an element's contents must reach past its box for it to scroll: layout rounding can leave a pixel
 // of overflow that scrolls nothing.
 export const MIN_OVERFLOW_PX = 1;
@@ -5,7 +7,7 @@ export const MIN_OVERFLOW_PX = 1;
 // What a wheel that reports lines scrolls by per line, so that its notch of three matches a notch in pixels.
 const WHEEL_LINE_PX = 100 / 3;
 
-// The 2D UI's scrollable areas, as a wheel rolled over one finds them.
+// The 2D UI's scrollable areas: the one a wheel rolled over finds, and the edges an area's contents run past.
 const ScrollAreaUtil =
 {
     // The nearest element around a target, itself included, that scrolls (along the axis given, or either): its
@@ -23,6 +25,53 @@ const ScrollAreaUtil =
             }
         }
         return null;
+    },
+
+    // The nearest element around a target, itself included, whose style lets it scroll, whether or not its contents
+    // overflow it yet. Null where the target is in none.
+    findContainer: (target: Element): Element | null =>
+    {
+        for (let element: Element | null = target; element != null; element = element.parentElement)
+        {
+            const style = getComputedStyle(element);
+            if (letsScroll(style.overflowX) || letsScroll(style.overflowY))
+                return element;
+        }
+        return null;
+    },
+
+    // The edges of an area that its contents run past, which scrolling toward would show more of.
+    getCutOffEdges: (element: Element): ScrollEdge[] =>
+    {
+        const style = getComputedStyle(element);
+        const maxLeft = element.scrollWidth - element.clientWidth;
+        const maxTop = element.scrollHeight - element.clientHeight;
+        const edges: ScrollEdge[] = [];
+        if (scrolls(style.overflowX, maxLeft))
+        {
+            if (element.scrollLeft > MIN_OVERFLOW_PX)
+                edges.push("left");
+            if (element.scrollLeft < maxLeft - MIN_OVERFLOW_PX)
+                edges.push("right");
+        }
+        if (scrolls(style.overflowY, maxTop))
+        {
+            if (element.scrollTop > MIN_OVERFLOW_PX)
+                edges.push("top");
+            if (element.scrollTop < maxTop - MIN_OVERFLOW_PX)
+                edges.push("bottom");
+        }
+        return edges;
+    },
+
+    // Scrolls an area about a page toward one of its edges, smoothly: what lay within hintPx of that edge (under its
+    // hint; see ScrollHints) comes to lie just past the hint the opposite edge then shows.
+    scrollPage: (element: Element, edge: ScrollEdge, hintPx: number): void =>
+    {
+        const sideways = (edge == "left" || edge == "right");
+        const pagePx = sideways ? element.clientWidth : element.clientHeight;
+        const stepPx = Math.max(pagePx - 2 * hintPx, pagePx / 2) * ((edge == "left" || edge == "top") ? -1 : 1);
+        element.scrollBy(sideways ? {left: stepPx, behavior: "smooth"} : {top: stepPx, behavior: "smooth"});
     },
 
     // Scrolls sideways the strip a wheel was rolled up or down over, which a browser leaves still: an area that
@@ -43,9 +92,14 @@ const ScrollAreaUtil =
     },
 }
 
+function letsScroll(overflow: string): boolean
+{
+    return overflow == "auto" || overflow == "scroll";
+}
+
 function scrolls(overflow: string, overflowPx: number): boolean
 {
-    return (overflow == "auto" || overflow == "scroll") && overflowPx > MIN_OVERFLOW_PX;
+    return letsScroll(overflow) && overflowPx > MIN_OVERFLOW_PX;
 }
 
 function getWheelPx(ev: WheelEvent, pagePx: number): number

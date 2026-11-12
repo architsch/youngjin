@@ -15,16 +15,12 @@ Reference: @src/client/audio/audioManager.ts , @src/client/audio/util/audioTrigg
 
 ## What sounds
 - Gameplay and the UI never call `AudioManager`. They publish what happened, and `AudioTriggerUtil` is the one table of which event sounds as what, as `ParticleTriggerUtil` is for effects.
-  - Others' edits sound where they are made: blocks put up, taken down, moved and given another texture, and the room's own objects put up and placed (as the same edit of a block), changed (a breath) or coming apart (see below). So do others coming and going (a door opening, a door shutting) and the dollars they collect. A ghost is never heard, nor is what anyone says, nor what a helper shows of what it is doing.
-  - What the user does and is given is heard alike from anywhere: their own edits, a press of a control (anything that shows the hand pointer), popups and panels coming and going, a face or an object selected or let go of (which is all that entering or leaving edit mode sounds as), the tutorial's marks showing and clearing away, a door shutting as they leave a room and one opening as they arrive in any (once the first has shut), a line sent, dollars reaching the count, the day's reward, dollars spent, and a refusal.
-  - The user's own object added or placed clicks as a press does (one paid for sounds as the dollars spent alone); one changed sounds as the control pressed for it already does.
-  - An attached object coming apart sounds as that, whatever took it away (a user, the block under it, a ball's blast): from its middle, or from anywhere when the user did it. A [cannon](../gameplay/cannon.md) that has fired its last puffs away instead. What only steps aside (an NPC) or isn't attached (a bill, a ball) makes none.
-  - A cannon firing and a ball bursting sound where they happen. A burst is the only sound of its moment, whatever it breaks.
-- One action is one sound: what it sets off at once is heard as the most telling of it.
-  - A sound of something done (an edit, travel, a refusal, dollars spent, a line sent) plays at once, and is the only one of its moment.
-  - The slight ones (a press, a panel, the selection, a popup, the tutorial) wait out a moment, and the most telling of them plays, unless a sound of something done came in it.
-  - Others' coming and going and collected dollars are each their own.
-- An object's own sound is its game object's: a fan's wind is a loop from just in front of it, louder and higher the more blades it has (`FanGameObject`), and a cannon's gears grind while its barrel turns toward someone, heard from farther off than it fires (`CannonGameObject`).
+  - The UI, chat and building make none, whoever builds: no press, popup, panel, selection, tutorial mark or line sent, and nothing put up, taken down, moved, turned, repainted or changed.
+  - Others coming and going sound where they do (a door opening, a door shutting), as do the dollars they collect. A ghost is never heard, nor is what anyone says, nor what a helper shows of what it is doing.
+  - What the user is given and spends, and their travel, are heard alike from anywhere: a door shutting as they leave a room and one opening as they arrive in any (once the first has shut), dollars reaching the count, the day's reward, and dollars spent.
+  - A [cannon](../gameplay/cannon.md) firing, and its ball bouncing or bursting, sound where they happen, fading more slowly than anything else, the shot and the burst the loudest. Two balls bouncing off each other clang once; what a blast breaks makes no sound. A cannon that has fired its last puffs away.
+- One moment is one sound: a sound of something done (travel, dollars spent, the day's reward, a spent cannon's puff) plays at once, and is the only one of its moment. Others' coming and going, collected dollars and what cannons do are each their own.
+- An object's own sound is its game object's: a fan's wind is a loop from just in front of it, louder and higher the more blades it has, its air above a cannon's gears and its hum below them (`FanGameObject`), and a cannon's gears grind while its barrel turns toward someone, heard from farther off than it fires (`CannonGameObject`).
 
 ## When sound is heard
 - Browsers keep a page silent until the user does something on it, so the AudioContext is made at once only on a page already used, and else at the first input (`AudioContextUtil`).
@@ -35,7 +31,7 @@ Reference: @src/client/audio/audioManager.ts , @src/client/audio/util/audioTrigg
 ## The clips
 - SSG's `AudioBundleBuilder` makes them, and writes where each is to `AudioBundleMap`.
 - Most are made, not recorded: `ProceduralSounds` describes each as tones and filtered noise under envelopes, which `ProceduralSoundUtil` renders the same every time.
-- The audio manifest lists the recordings (the doors, a block set down, a cash register, a cannon's shot, burst and gears, rubble), each by name and file: a WAV file goes in the bundle, and an MP3 file streams from where it is. Anything long has to stream, since the whole bundle downloads before any clip plays and stays decoded in memory.
+- The audio manifest lists the recordings (the doors, a cash register, a cannon's shot, burst and gears, an anvil struck for its ball's bounce), each by name and file: a WAV file goes in the bundle, and an MP3 file streams from where it is. Anything long has to stream, since the whole bundle downloads before any clip plays and stays decoded in memory.
 - The bundle is one MP3, the one compact format every browser decodes (Safari included), at one rate, and stereo if any clip is.
   - Each clip lies between paddings: silence, which takes in what the encoder smears across its edges, or, for a loop, its own other end, so that its seam is encoded as it sounds looping. A loop is resampled as a periodic signal for the same reason.
   - It opens with a click alone in silence. Decoders differ in how much of the encoder's delay they trim, so the client finds the click and shifts every clip by as much as it moved.

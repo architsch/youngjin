@@ -64,6 +64,13 @@ export const HELPER_TOPICS: {[personality in Exclude<NpcPersonality, "idle">]: s
         "Youngjin's review of an article by the game designer Katarina Gyllenbäck (<link "
             + "href=\"https://thingspool.net/read-rec/page-7.html\">read it</link>): rewards and punishments can push "
             + "out real curiosity, so a good experience starts from a goal people want for themselves.",
+        "\"Electricity as a Currency\", a short note by Youngjin (<link "
+            + "href=\"https://thingspool.net/essays/page-6.html\">read it</link>): he imagines an internet that carries "
+            + "electric power between its users, where paying someone is one more field in a web request.",
+        "Youngjin's introduction to an article by the game designer Katarina Gyllenbäck on learning (<link "
+            + "href=\"https://thingspool.net/read-rec/page-5.html\">read it</link>): curiosity comes from a goal that "
+            + "is easy to understand but takes new knowledge to reach, like a locked treasure chest that makes you "
+            + "want to learn where the key is.",
     ],
     builder: [
         "The Pantheon in Rome, finished around 126 AD, still has the largest dome of plain, unreinforced concrete in "
@@ -142,6 +149,18 @@ export const HELPER_TOPICS: {[personality in Exclude<NpcPersonality, "idle">]: s
         "\"Post-AI Computer Science\", an essay by Youngjin (<link "
             + "href=\"https://thingspool.net/shards-of-sanity/page-1.html\">read it</link>): with AI writing most "
             + "code, still write a program's core rules yourself.",
+        "\"Game Programming in Prolog\", Youngjin's series in 18 parts (<link "
+            + "href=\"https://thingspool.net/morsels/page-14.html\">read it</link>): one rule there covers many cases: "
+            + "anything hot burns anything flammable it touches, whether the hot thing is fire, lava or an oven.",
+        "\"Linear Algebra for Game Development\", Youngjin's series in 30 parts (<link "
+            + "href=\"https://thingspool.net/concepts-of-plan/page-36.html\">read it</link>): crafting as multiplying: "
+            + "if an empty cup is 2 and water is 3, then a cup of water is 6.",
+        "\"Functional Programming for Game Development\", an essay by Youngjin (<link "
+            + "href=\"https://thingspool.net/software-development/page-21.html\">read it</link>): a game that builds a "
+            + "new copy of its world for every frame can't get two explosions out of one bomb by bad timing.",
+        "\"Force-Exchange Network for Gameplay Systems\", an essay by Youngjin (<link "
+            + "href=\"https://thingspool.net/morsels/page-7.html\">read it</link>): a \"peace zone\" in a game needs no "
+            + "special rule: the place simply drops every harmful force that passes through it.",
     ],
     explorer: [
         "The Mariana Trench is nearly 11 km deep. In 2012, the film director James Cameron dove to its bottom alone.",
@@ -215,6 +234,13 @@ export const HELPER_TOPICS: {[personality in Exclude<NpcPersonality, "idle">]: s
         "\"Intergraph\", an essay by Youngjin (<link href=\"https://thingspool.net/software-development/page-11.html\">"
             + "read it</link>): the links between a game's map and its story; without them, you could collect a sunken "
             + "ship's treasure from your bed.",
+        "\"Beyond Physics Engine\", a short note by Youngjin (<link "
+            + "href=\"https://thingspool.net/software-development/page-5.html\">read it</link>): he wishes for game "
+            + "worlds filled with gas, liquid, electric charges and magnetic fields, not only solid objects.",
+        "\"Game Design using Gärdenfors' Event Model\", an essay by Youngjin (<link "
+            + "href=\"https://thingspool.net/morsels/page-4.html\">read it</link>): a hill the player can only reach "
+            + "with a strong enough jump works like a locked door: it takes the right key, and patience alone never "
+            + "gets past it.",
     ],
     storyteller: [
         "In the folk tales of the Akan people of Ghana, Anansi the spider wins all the world's stories from the sky god "
@@ -289,6 +315,13 @@ export const HELPER_TOPICS: {[personality in Exclude<NpcPersonality, "idle">]: s
             + "href=\"https://thingspool.net/gamedev-journey/page-8.html\">read it</link>): in chapter 8, a talking "
             + "square tells him a fantasy world's long history, full of strange names, until he shouts \"That's "
             + "enough!\"",
+        "\"Post-AI Computer Science\", Youngjin's newest series (<link "
+            + "href=\"https://thingspool.net/shards-of-sanity/page-3.html\">read it</link>): with Alice and her cat "
+            + "Dinah, from \"Alice's Adventures in Wonderland\", he shows that a story starts when someone acts on a "
+            + "wish; a wish that is only thought about stays a wish forever.",
+        "\"The Celebrity\", a short poem by Youngjin that pokes fun at online stars (<link "
+            + "href=\"https://thingspool.net/essays/page-22.html\">read it</link>): its star \"mirrors what everyone "
+            + "wants to see\" and \"echoes what everyone wants to hear\".",
     ],
     jester: [
         "Wombats make cube-shaped droppings. No other animal is known to do that.",
@@ -361,6 +394,9 @@ export const HELPER_TOPICS: {[personality in Exclude<NpcPersonality, "idle">]: s
         "\"Technical Memes\", Youngjin's joke charts (<link href=\"https://thingspool.net/concepts-of-plan/page-2.html\">"
             + "read it</link>): game development as a cycle: a new idea, a quick prototype, a cleanup, doubts, a lesson, "
             + "and a new idea again.",
+        "\"Abacus Engineer\", Youngjin's made-up social media post, dated 1645 (<link "
+            + "href=\"https://thingspool.net/infsoc/page-3.html\">read it</link>): a proud master warns, \"Just because "
+            + "you own an abacus doesn't mean you are a real abacus engineer.\"",
     ],
     sage: [
         "The Chinese thinker Zhuangzi dreamed he was a butterfly. Awake, he wondered if he was now a butterfly dreaming "
@@ -430,6 +466,18 @@ export const HELPER_TOPICS: {[personality in Exclude<NpcPersonality, "idle">]: s
         "\"Artificial Emotion\", an essay by Youngjin (<link "
             + "href=\"https://thingspool.net/software-development/page-15.html\">read it</link>): AI solves the "
             + "problems it is given; he says emotions are what would make it look for problems of its own.",
+        "\"Good and Evil\", a short essay by Youngjin (<link href=\"https://thingspool.net/morsels/page-5.html\">read "
+            + "it</link>): a thermostat's whole world is one line of temperatures, and its best possible state is "
+            + "the temperature it was told to reach.",
+        "\"Thought Particles\", a short note by Youngjin (<link href=\"https://thingspool.net/essays/page-17.html\">read "
+            + "it</link>): think of feelings and memories as particles that carry energy, which join like atoms into "
+            + "bigger ideas.",
+        "Youngjin's review of David Hume's \"An Enquiry Concerning Human Understanding\" (<link "
+            + "href=\"https://thingspool.net/read-rec/page-6.html\">read it</link>): we never see a cause force its "
+            + "effect; we only see one kind of event keep following another.",
+        "\"Idea Space\", a short note by Youngjin (<link href=\"https://thingspool.net/essays/page-18.html\">read "
+            + "it</link>): an apple belongs to the world of physics, but the idea of an apple belongs to a world of "
+            + "ideas.",
     ],
     caretaker: [
         "Kintsugi is the Japanese way of mending broken pottery with lacquer and gold, so that the repair shows "
@@ -487,6 +535,9 @@ export const HELPER_TOPICS: {[personality in Exclude<NpcPersonality, "idle">]: s
             + "href=\"https://thingspool.net/essays/page-19.html\">read it</link>): the best sandwich maker in a village "
             + "of ten thousand, cut off from the world, never lacks customers; once the village trades with the world, "
             + "he competes with billions.",
+        "\"Emergent Systems based on Glenn Puchtel's Biocybernetic Theory\", an essay by Youngjin (<link "
+            + "href=\"https://thingspool.net/morsels/page-6.html\">read it</link>): among ants, the same scent makes a "
+            + "worker and a soldier do different things; he builds software from small parts that work the same way.",
     ],
     curator: [
         "Hokusai's woodblock print \"The Great Wave off Kanagawa\", from about 1831, shows Mount Fuji small behind a "
@@ -555,5 +606,8 @@ export const HELPER_TOPICS: {[personality in Exclude<NpcPersonality, "idle">]: s
             + "href=\"https://thingspool.net/software-development/page-8.html\">read it</link>): game art people "
             + "already know explains itself: a pirate with a sword is plainly an enemy, but a purple circle pointing a "
             + "triangle is not.",
+        "\"Photography is the Future\", Youngjin's made-up social media post, dated London, 1838 (<link "
+            + "href=\"https://thingspool.net/infsoc/page-1.html\">read it</link>): \"Painting is dead,\" it says, since no "
+            + "painting will ever be as realistic as a photo.",
     ],
 };

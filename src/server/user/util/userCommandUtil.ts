@@ -2,13 +2,18 @@ import LogUtil from "../../../shared/system/util/logUtil";
 import UserCommandSignal from "../../../shared/user/types/userCommandSignal";
 import User from "../../../shared/user/types/user";
 import { UserTypeEnumMap } from "../../../shared/user/types/userType";
+import { InventoryItemTypeEnumMap } from "../../../shared/inventory/types/inventoryItemType";
+import { CHEAT_DOLLARS } from "../../../shared/system/sharedConstants";
 import DBInventoryUtil from "../../db/util/dbInventoryUtil";
 import DBUserUtil from "../../db/util/dbUserUtil";
+import ServerInventoryManager from "../../inventory/serverInventoryManager";
+import UserContext from "../../sockets/types/userContext";
 
 const UserCommandUtil =
 {
-    onUserCommandSignalReceived: async (user: User, params: UserCommandSignal): Promise<void> =>
+    onUserCommandSignalReceived: async (ctx: UserContext, params: UserCommandSignal): Promise<void> =>
     {
+        const user = ctx.user;
         const words = params.message.split(" ");
         if (words.length == 0)
         {
@@ -27,6 +32,9 @@ const UserCommandUtil =
                 break;
             case "fastForwardDailyRewardClock":
                 await handleFastForwardDailyRewardClock(user, params);
+                break;
+            case "grantCheatDollars":
+                handleGrantCheatDollars(ctx, params);
                 break;
             default:
                 LogUtil.log("Unknown user command type", {commandType, params}, "high", "error");
@@ -76,6 +84,17 @@ async function handleFastForwardDailyRewardClock(user: User, params: UserCommand
         return;
     }
     await DBInventoryUtil.fastForwardLoginRewardClock(user.id);
+}
+
+// The cheat code, for testing what dollars buy: a dev server's alone, for whoever asks there.
+function handleGrantCheatDollars(ctx: UserContext, params: UserCommandSignal): void
+{
+    if (process.env.MODE != "dev")
+    {
+        LogUtil.log("Cheats are for dev servers alone", {params, userID: ctx.user.id}, "high", "error");
+        return;
+    }
+    ServerInventoryManager.addItem(ctx, InventoryItemTypeEnumMap.Dollar, CHEAT_DOLLARS);
 }
 
 export default UserCommandUtil;

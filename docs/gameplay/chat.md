@@ -13,7 +13,7 @@ What a player or NPC says is its `SentMessage`, shown in a speech bubble over it
 ## What a speaker is busy with
 - One key, `Activity`, holds one `SpeakerActivity` at a time, for players and helpers alike. A new state is a new value of it, never a new key.
 - **Typing**: dots by the name, last words still up. A person's chat field in use (`ChatTypingUtil`), an agent's `typing` tool, or a helper thinking of an answer.
-- **Editing**, **Reading**: "Editing..." (see [game_mode.md](game_mode.md)) or "Reading..." in place of the message, which shows again afterwards. Reading is a page of the website over the game, or the page hidden, as behind another tab; a page in sight but unfocused never counts.
+- **Editing**, **Reading**: "Editing..." (see [game_mode.md](game_mode.md)) or "Offline..." in place of the message, which shows again afterwards. Reading is a page of the website over the game, or the page hidden, as behind another tab; a page in sight but unfocused never counts.
 - A browser works out its user's one state, reading first, then editing, then typing (`PlayerActivityUtil`), and sends it as the signal for that key. Nothing else tells the server a person is typing.
 - The server never saves it with the player: each browser tells it again on arrival, and an agent's typing ends with the room.
 

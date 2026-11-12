@@ -11,7 +11,7 @@ import { NUM_FREE_PLAYER_PART_TYPES } from "../../../shared/graphics/mesh/compos
 import { PLAYER_HEIGHT } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import { CANNON_BALL_COUNT, CANNON_FIRE_INTERVAL_SECONDS, CANNON_LOCK_SECONDS, CANNON_MAX_RANGE, CANNON_MIN_RANGE,
     CANNON_REST_SECONDS, CANNON_TURN_RATE } from "../../../shared/object/types/objectTypeConfig/cannonObjectTypeConfig";
-import { CANNON_BALL_BLAST_RADIUS,
+import { CANNON_BALL_BLAST_RADIUS, CANNON_BALL_BOUNCE_BOOST, CANNON_BALL_MAX_SPEED,
     CANNON_BALL_SPEED } from "../../../shared/object/types/objectTypeConfig/cannonBallObjectTypeConfig";
 import { HEARING_DISTANCE } from "../../../shared/object/util/helperBehaviorUtil";
 import MessageLinkUtil from "../../../shared/object/util/messageLinkUtil";
@@ -48,6 +48,8 @@ const CANNON_RANGE_CELLS = Math.round(CANNON_MAX_RANGE / VOXEL_CELL_SIZE);
 const CANNON_NEAR_CELLS = Math.round(CANNON_MIN_RANGE / VOXEL_CELL_SIZE);
 const CANNON_TURN_DEGREES_A_SECOND = Math.round(CANNON_TURN_RATE * 180 / Math.PI);
 const CANNON_BALL_CELLS_A_SECOND = Math.round(CANNON_BALL_SPEED / VOXEL_CELL_SIZE);
+const CANNON_BALL_BOOST_CELLS_A_SECOND = Math.round(CANNON_BALL_BOUNCE_BOOST / VOXEL_CELL_SIZE);
+const CANNON_BALL_MAX_CELLS_A_SECOND = Math.round(CANNON_BALL_MAX_SPEED / VOXEL_CELL_SIZE);
 const CANNON_BLAST_CELLS = Math.round(CANNON_BALL_BLAST_RADIUS / VOXEL_CELL_SIZE);
 const DOLLAR_REACH_CELLS = Math.floor(DOLLAR_BILL_REACH / VOXEL_CELL_SIZE);
 const DOLLAR_REACH_DEGREES = Math.round(REACH_ANGLE * 180 / Math.PI);
@@ -149,11 +151,13 @@ Cannons fire at whoever is near, people and agents alike.
   fired the last.
 - A ball flies straight at ${CANNON_BALL_CELLS_A_SECOND} cells a second, slow enough to walk out of the way of, and a fan's wind turns it
   aside. look lists the balls in the air under cannonBalls, with where each is and how many cells it goes a second.
-  A ball bursts on the first thing it strikes. The burst throws everyone within ${CANNON_BLAST_CELLS} ${CANNON_BLAST_CELLS == 1 ? "cell" : "cells"} of where it struck hard,
+  A ball bounces off a mirror, a guide, a cannon or another ball, and flies on another way, faster: each bounce adds
+  up to ${CANNON_BALL_BOOST_CELLS_A_SECOND} cells a second, to ${CANNON_BALL_MAX_CELLS_A_SECOND} at most. Look again to see where it goes.
+  It bursts on the first thing else it strikes. The burst throws everyone within ${CANNON_BLAST_CELLS} ${CANNON_BLAST_CELLS == 1 ? "cell" : "cells"} of where it struck hard,
   many cells across the room and up into the air (whats_new tells you with cannonBallHit if it threw you: look again
   to see where you are), and breaks the blocks it reaches, with what hangs on them, unless they are in a restricted zone or hold up
-  something only a room's owner or an admin could take off (a door, a label, a mirror, a guide). Zones keep what you
-  build from them.
+  a cannon, or something only a room's owner or an admin could take off (a door, a label, a mirror, a guide). Zones
+  keep what you build from them.
 - A ball that throws nobody leaves a $1 bill where it burst: stay clear of a ball, then collect what it leaves.
 
 Finding company:

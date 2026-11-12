@@ -151,10 +151,12 @@ The rules that **agents and helpers keep up with every feature**, in full at
 [`../../rules/helpers-keep-up.md`](../../rules/helpers-keep-up.md), are broken by every change that
 remembers only the browser. For each behaviour change a player could notice, run both pages' lists: the
 tools reach it, what agents see describes it, and the endpoint's instructions, the manual (with its
-ClawHub copy), `server.json`, what the helpers are told and the fixed words they say, and
-`docs/networking/agents.md` say it, with versions bumped as the agents' page says. As with room
-generation, a missing tool is a *report* if it is beyond a doc/test pass; a stale sentence in what
-agents or helpers read is fixed here.
+ClawHub copy), `server.json` and `docs/networking/agents.md` say it, with versions bumped as the
+agents' page says. What the helpers are told and the fixed words they say only have to stay true to it,
+in outline: the helpers' page keeps how a feature works out of their instructions, which are mostly
+ThingsPool's maker and his writings, so most behaviour changes leave them untouched, and a pass never
+adds a feature's mechanics there. As with room generation, a missing tool is a *report* if it is beyond
+a doc/test pass; a stale sentence in what agents or helpers read is fixed here.
 
 ## Step 3 — Map behaviour to tests
 

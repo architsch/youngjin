@@ -6,9 +6,11 @@ import ObjectTypeConfig from "./objectTypeConfig";
 
 export const CANNON_BALL_RADIUS = 0.25;
 // How fast a ball leaves its cannon, in world units a second: slow enough to step out of the way of. A fan's stream
-// may speed one up, never past the most.
+// may speed one up, as far as a wind takes one, and each bounce does, by its boost: never past the most.
 export const CANNON_BALL_SPEED = 3;
-export const CANNON_BALL_MAX_SPEED = 6;
+export const CANNON_BALL_MAX_WIND_SPEED = 6;
+export const CANNON_BALL_BOUNCE_BOOST = 3;
+export const CANNON_BALL_MAX_SPEED = 9;
 // The share of the push a fan's stream gives a body (see PhysicsForceUtil) that a ball takes, being heavy.
 export const CANNON_BALL_WIND_SHARE = 0.2;
 // How far from where a ball strikes its blast reaches, in world units.
@@ -21,8 +23,10 @@ export const CANNON_BLAST_LIFT_SPEED = 44;
 
 // A cannon's ball, which the server fires and flies (see CannonBallUtil): straight, with no weight, but for what a
 // fan's stream does to it. Nobody may touch it by any signal. Whatever it strikes it bursts on, throwing the players
-// its blast reaches and breaking the blocks it reaches that anyone could remove; two balls bounce off each other
-// instead. It is no part of what is built, though the room's saves keep it (see ObjectTypeConfigMap.isStoredWithRoom).
+// its blast reaches and breaking the blocks it reaches that anyone could remove, save those a cannon hangs on. But two
+// balls bounce off each other, and one bounces off a mirror, an NPC or a cannon (see ColliderConfig.bouncesSpheres),
+// the faster for each bounce.
+// It is no part of what is built, though the room's saves keep it (see ObjectTypeConfigMap.isStoredWithRoom).
 // Its collider is a sphere. Its place and speed are its CannonState (see CannonBallStateUtil), since it may fly past
 // what a transform holds.
 const CannonBallObjectTypeConfig =

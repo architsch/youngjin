@@ -2,7 +2,8 @@
  * Scenario tests: the wheel and the pinch as the camera reads them (PlayerPointerInput + PointerZoomInput)
  * — on the canvas in either mode, and in edit mode over the 2D UI too, except where a scrollable area
  * keeps the wheel, under a popup, and behind the loading indicator — and the scrollable areas themselves
- * (ScrollAreaUtil), a sideways one scrolled by a wheel rolled up or down. The DOM is stood in for.
+ * (ScrollAreaUtil): a sideways one scrolled by a wheel rolled up or down, the edges one's contents run past, and
+ * paging one toward an edge (see ScrollHints). The DOM is stood in for.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
@@ -32,10 +33,18 @@ class FakeElement
     scrollHeight = 80;
     clientHeight = 80;
     scrollLeft = 0;
+    scrollTop = 0;
+    // Each scroll asked for by scrollBy, which a browser may animate.
+    scrolledBy: ScrollToOptions[] = [];
 
     constructor(init: Partial<FakeElement> = {})
     {
         Object.assign(this, init);
+    }
+
+    scrollBy(options: ScrollToOptions): void
+    {
+        this.scrolledBy.push(options);
     }
 }
 vi.stubGlobal("Element", FakeElement);
@@ -282,6 +291,76 @@ describe("a scrollable area", () => {
     it("is none for what is no element at all", () => {
         expect(ScrollAreaUtil.find(null)).toBeNull();
         expect(ScrollAreaUtil.find(canvas as unknown as EventTarget)).toBeNull();
+    });
+
+    it("holding a scroll hint is the nearest element whose style scrolls, its contents overflowing it yet or not", () => {
+        const fitting = new FakeElement({overflowX: "auto"});
+        const clipped = new FakeElement({overflowX: "hidden", overflowY: "hidden", scrollWidth: 900});
+
+        expect(ScrollAreaUtil.findContainer(inside(inside(fitting)) as unknown as Element)).toBe(fitting);
+        expect(ScrollAreaUtil.findContainer(fitting as unknown as Element)).toBe(fitting);
+        expect(ScrollAreaUtil.findContainer(inside(clipped) as unknown as Element)).toBeNull();
+    });
+});
+
+describe("the edges a scrollable area's contents run past", () => {
+    function edgesOf(element: FakeElement): string[]
+    {
+        return ScrollAreaUtil.getCutOffEdges(element as unknown as Element);
+    }
+
+    it("are those it can scroll toward, along the ways its style scrolls", () => {
+        const row = strip();
+        expect(edgesOf(row)).toEqual(["right"]);
+        row.scrollLeft = 300;
+        expect(edgesOf(row)).toEqual(["left", "right"]);
+        row.scrollLeft = row.scrollWidth - row.clientWidth;
+        expect(edgesOf(row)).toEqual(["left"]);
+
+        const column = list();
+        expect(edgesOf(column)).toEqual(["bottom"]);
+        column.scrollTop = column.scrollHeight - column.clientHeight;
+        expect(edgesOf(column)).toEqual(["top"]);
+
+        const bothWays = new FakeElement({overflowX: "auto", overflowY: "auto", scrollWidth: 900, scrollHeight: 400,
+            scrollLeft: 300, scrollTop: 100});
+        expect(edgesOf(bothWays)).toEqual(["left", "right", "top", "bottom"]);
+    });
+
+    it("are none where the contents fit, or the style only clips them", () => {
+        expect(edgesOf(new FakeElement({overflowX: "auto", overflowY: "auto"}))).toEqual([]);
+        expect(edgesOf(new FakeElement({overflowX: "hidden", overflowY: "hidden", scrollWidth: 900, scrollHeight: 400,
+            scrollLeft: 300, scrollTop: 100}))).toEqual([]);
+    });
+
+    it("leave out an edge scrolled to within a layout's rounding", () => {
+        const row = strip();
+        row.scrollLeft = MIN_OVERFLOW_PX;
+        expect(edgesOf(row)).toEqual(["right"]);
+        row.scrollLeft = row.scrollWidth - row.clientWidth - MIN_OVERFLOW_PX;
+        expect(edgesOf(row)).toEqual(["left"]);
+    });
+});
+
+describe("paging a scrollable area toward an edge", () => {
+    const HINT_PX = 32;
+
+    it("scrolls it smoothly that way by its view, less a hint's depth at either end", () => {
+        const row = strip();
+        ScrollAreaUtil.scrollPage(row as unknown as Element, "right", HINT_PX);
+        ScrollAreaUtil.scrollPage(row as unknown as Element, "left", HINT_PX);
+
+        const pagePx = row.clientWidth - 2 * HINT_PX;
+        expect(row.scrolledBy).toEqual([{left: pagePx, behavior: "smooth"}, {left: -pagePx, behavior: "smooth"}]);
+    });
+
+    it("scrolls a view too short for that by half of it", () => {
+        const column = new FakeElement({overflowY: "auto", scrollHeight: 400, clientHeight: 3 * HINT_PX});
+        ScrollAreaUtil.scrollPage(column as unknown as Element, "bottom", HINT_PX);
+        ScrollAreaUtil.scrollPage(column as unknown as Element, "top", HINT_PX);
+
+        const pagePx = column.clientHeight / 2;
+        expect(column.scrolledBy).toEqual([{top: pagePx, behavior: "smooth"}, {top: -pagePx, behavior: "smooth"}]);
     });
 });
 

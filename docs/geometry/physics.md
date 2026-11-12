@@ -2,7 +2,7 @@
 
 Reference: @src/shared/physics/physicsManager.ts , @src/shared/physics/util/physicsCollisionUtil.ts , @src/shared/physics/util/physicsForceUtil.ts , @src/shared/physics/util/physicsColliderStateUtil.ts , @src/shared/physics/types/physicsRoom.ts , @src/shared/object/types/objectForceConfig.ts
 
-The physics engine is shared, so the client and the server simulate movement the same way. All colliders are axis-aligned boxes, but a cannon ball's, which is a sphere.
+The physics engine is shared, so the client and the server simulate movement the same way. All colliders are axis-aligned boxes, but a cannon ball's, which is a sphere. A sphere alone meets a player or an NPC as an upright cylinder standing in its box (`ColliderConfig.shape`).
 
 - **The walking step** (`PhysicsManager.getStepVelocity`): a body's steering with gravity, soft collisions and step-up, and forces, all in one step. It is the only one: a browser's `Rigidbody` moves its person's player by it, and the server moves an agent's by it (see [agents.md](../networking/agents.md)), so a fan pushes both alike.
 
@@ -23,6 +23,7 @@ The physics engine is shared, so the client and the server simulate movement the
 - **Size**: a collider's box is its type's `baseHitboxSize` at the object's own scale, resolved through `ObjectScaleUtil` before an attached object's inset and the orientation, so the inset stays an absolute distance at any size.
 - **Kinds**: whether an object is driven by physics is its type's `Rigidbody` component, and whether it is fixed to a face is its type's attachment. The collider itself says only how it collides.
 - **Spheres** (`PhysicsSphereUtil`): a sphere swept through the room finds the first thing it strikes (a block, the room's own floor or ceiling, a body, another sphere, a solid object; never the room's sides), and a sphere at rest what it reaches into. Nothing there moves anything: what a strike does is its caller's.
+  - An object a sphere bounces off (`ColliderConfig.bouncesSpheres`: a mirror, an NPC, a cannon) is struck only by a sphere closing on it, and tells the way it bounces the sphere: out of a cylinder or a solid box where the two touch, and off any other box the way the object faces.
 - **Carried velocity** is also how anything outside the step throws a body (`PhysicsManager.addCarriedVelocity`): a ball's blast adds to it, and gravity and drag wear it away as they do a fan's push.
 - **Paths** planned over the voxel grid know blocks alone, so a caller gives them the objects as solid as one (`ObjectObstacleUtil`).
 - **Spatial acceleration**: a box is tested against the global colliders, the blocks of the grid cells under its footprint (read from the room's grid as it stands), and the objects kept in the physics voxels it reaches into. A `PhysicsVoxel` is a box of the room's space far coarser than a grid cell and a storey high, so each storey's objects are kept apart (`PhysicsVoxelUtil`). An object beyond the room counts as in the nearest ones.

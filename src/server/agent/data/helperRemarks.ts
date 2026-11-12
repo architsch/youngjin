@@ -149,7 +149,8 @@ export const HELPER_REMARKS: {[personality in Exclude<NpcPersonality, "idle">]: 
         kinds: {
             art: {liked: ["'{title}' by {painter}. I've looked at it so long, I think it's looking back."]},
             photo: {liked: ["'{title}'! Youngjin, who made ThingsPool, took this photo. Nice shot, Youngjin!"]},
-            mirror: {liked: ["{Thing}! Hello, gorgeous. Oh wait, that's me."]},
+            mirror: {liked: ["{Thing}! Hello, gorgeous. Oh wait, that's me.",
+                "{Thing}! A cannon ball bounces right off a mirror. It bounces off me too, I'm happy to say!"]},
             fan: {liked: ["{Thing}! Fans blow people around here. I call it a free flying lesson."]},
             cannon: {liked: ["{Thing}! It shoots balls at whoever is near. Step out of the way, and the ball leaves a "
                 + "dollar bill!"]},

@@ -11,4 +11,10 @@ export default interface CannonBallState
     exploded: boolean;
     // The players its blast threw, by their objects' ids.
     hitObjectIds: string[];
+    // The one of them the ball itself struck, if it struck one, and the way that throws them across the room, as the
+    // server had the two meet (see CannonBlastUtil.getHeading).
+    struck?: {objectId: string, heading: number};
+    // How many times it has bounced off something, counted round (see CannonBallStateUtil.countBounce), which tells a
+    // browser of a bounce it hasn't shown. Nothing once it has burst.
+    bounces: number;
 }

@@ -53,22 +53,25 @@ export const objectCollectedObservable = new Observable<AddObjectSignal>();
 // A cannon firing a ball: where its barrel's mouth is, and the way it points.
 export const cannonFiredObservable = new Observable<{position: Vec3, direction: Vec3}>();
 
+// A cannon ball bouncing off something: where its middle is as it does, and the way it comes off that (see
+// CannonBallGameObject).
+export const cannonBallBounceObservable = new Observable<{position: Vec3, normal: Vec3}>();
+
 // A cannon ball shown bursting where it struck, at its middle: as it strikes here, where that is plain, or as the
 // server says it has (see CannonBallGameObject).
 export const cannonBallBurstObservable = new Observable<{position: Vec3}>();
 
-// The server's word of a ball's burst: where its middle was, and the players its blast threw, by their objects' ids.
-// What the blast broke comes right after it.
-export const cannonBlastObservable = new Observable<{position: Vec3, hitObjectIds: string[]}>();
+// The server's word of a ball's burst: where its middle was, the players its blast threw, by their objects' ids, and
+// the one of them the ball itself struck, if it struck one, with the way that throws them (see CannonBallState). What
+// the blast broke comes right after it.
+export const cannonBlastObservable = new Observable<{position: Vec3, hitObjectIds: string[],
+    struck?: {objectId: string, heading: number}}>();
 
 // What else befalls the user, or those around them, for whatever presents it (see AudioTriggerUtil). Never peek() one:
 // it holds the last event.
 
 // The user leaving a room, as the next one comes to take its place, or arriving in one, once it is on screen.
 export const roomTravelObservable = new Observable<{kind: "leave" | "arrive", roomID: string}>();
-
-// A line the user has just sent to the chat.
-export const chatLineSentObservable = new Observable<string>("");
 
 // Fires with the room's id whenever its occupied blocks change, including scripted chunk edits.
 export const roomShapeChangedObservable = new Observable<string>("");
@@ -165,17 +168,6 @@ export const popupStateObservable = new Observable<PopupState>({ popupType: "non
 
 // Number of popups on screen; 0 means none stands between the user and the room.
 export const numOpenPopupsObservable = new Observable<number>(0);
-
-// Number of closable panels open (see ClosablePanelUtil): sub-panels, choosers and the lists of dropdowns.
-export const numOpenPanelsObservable = new Observable<number>(0);
-
-// Fires with the id of each of the UI's controls the user presses (see ControlPressUtil), "" for one with none. Never
-// peek() it: it holds the last press.
-export const controlPressedObservable = new Observable<string>("");
-
-// Fires with the id of a control whose click came to nothing, as the user is told why (see RefusalCoachMarkUtil). Never
-// peek() it: it holds the last refusal.
-export const clickRefusedObservable = new Observable<string>("");
 
 // How much of the screen's bottom the 2D UI stands along (the selection tools, the chat), in CSS px, as UIRoot
 // measures it: the room shows clear of it only above.

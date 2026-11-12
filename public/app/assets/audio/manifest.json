@@ -1,12 +1,11 @@
 {
     "clips": [
-        {"name": "edit/blockAdd", "file": "BigSoundBank/blockDrop.wav"},
         {"name": "room/leave", "file": "BigSoundBank/doorClosing.wav"},
         {"name": "room/arrive", "file": "BigSoundBank/doorOpening.wav"},
         {"name": "dollar/spend", "file": "Freesound/cashRegister.wav"},
-        {"name": "edit/objectDestroy", "file": "Freesound/rubbleDrop.wav"},
         {"name": "cannon/fire", "file": "Freesound/cannonShot.wav"},
         {"name": "cannon/explosion", "file": "Freesound/powderBurst.wav"},
+        {"name": "cannon/bounce", "file": "Freesound/anvilHit.wav"},
         {"name": "cannon/turn", "file": "Freesound/gearGrind.wav", "loop": true}
     ]
 }

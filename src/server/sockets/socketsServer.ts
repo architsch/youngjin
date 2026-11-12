@@ -113,17 +113,18 @@ const SocketsServer =
             }
         });
 
-        // Signals are batched and flushed on an interval. Agents' bodies, walking helpers, dollar bills, cannon balls and
-        // cannons move first (balls ahead of the cannons that fire them, so that a new one flies from the next flush),
-        // and messages and agents' typing whose time is up are cleared, so that their moves and clears go out with it.
+        // Signals are batched and flushed on an interval. Agents' bodies, dollar bills, cannon balls, cannons and walking
+        // helpers move first (balls ahead of the cannons that fire them, so that a new one flies from the next flush,
+        // and ahead of the helpers they bounce off, which browsers fly them past where each was last shown), and
+        // messages and agents' typing whose time is up are cleared, so that their moves and clears go out with it.
         let lastFlushAt = Date.now();
         signalProcessingInterval = setInterval(() => {
             const now = Date.now();
             AgentBodyUtil.stepAll((now - lastFlushAt) / 1000);
-            HelperAgentUtil.stepAll((now - lastFlushAt) / 1000);
             DollarBillUtil.stepAll((now - lastFlushAt) / 1000);
             CannonBallUtil.stepAll((now - lastFlushAt) / 1000);
             CannonUtil.stepAll((now - lastFlushAt) / 1000);
+            HelperAgentUtil.stepAll((now - lastFlushAt) / 1000);
             PlayerMessageExpiryUtil.expireAll();
             AgentTypingUtil.expireAll();
             lastFlushAt = now;

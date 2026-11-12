@@ -3,6 +3,7 @@ import { numActiveInputElementsObservable } from "../../../system/clientObservab
 import useMouseDragScroll from "../../util/mouseDragScroll";
 import ClosablePanelUtil from "../../util/closablePanelUtil";
 import KeyPressUtil from "../../util/keyPressUtil";
+import ScrollHints from "../basic/scrollHints";
 
 const GRID_GAP = 4; // Space kept between the button and the grid above it
 const SCREEN_MARGIN = 8; // Space kept between the grid and the screen edges
@@ -130,6 +131,7 @@ export default function ToggledGridInput({ id, numCells, columnsOnHorizontalScre
                 <div ref={onGridRefChange}
                     className={`absolute p-2 flex flex-col gap-0.5 bg-gray-700 rounded-lg overflow-y-auto pointer-events-auto yj-surface-convex ${(gridStyle == undefined) ? "invisible" : ""}`}
                     style={gridStyle}>
+                    <ScrollHints/>
                     {Array.from({length: Math.ceil(numCells / gridColumns)}, (_, rowIndex) =>
                         <div key={"grid-row-" + rowIndex} className="flex flex-row gap-0.5">
                             {Array.from({length: gridColumns}, (_, columnIndex) =>

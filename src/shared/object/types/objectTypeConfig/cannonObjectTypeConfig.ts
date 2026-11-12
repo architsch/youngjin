@@ -45,9 +45,9 @@ const SLEEP_EFFECT_HEIGHT = 0.6;
 
 // Cannons, on floors and walls: a barrel on a pillar, which the server plays (see CannonUtil). Every so often one turns
 // after the nearest player and, aimed, fires a ball at where they stand (see CannonBallObjectTypeConfig), until it has
-// fired its last and destroys itself; a gauge on its pillar shows how many are left. Anyone may add one, for a price, switch it
-// off and on, move it or remove it, subject to restricted zones (see ObjectUpdateUtil). All it keeps of itself is its
-// CannonState, of which a user sets the switch alone.
+// fired its last and destroys itself; its counters show how many are left (see CannonCompositionUtil). Anyone may add
+// one, for a price, switch it off and on, move it or remove it, subject to restricted zones (see ObjectUpdateUtil).
+// All it keeps of itself is its CannonState, of which a user sets the switch alone.
 const CannonObjectTypeConfig =
 {
     objectType: "Cannon",
@@ -86,6 +86,7 @@ const CannonObjectTypeConfig =
                     sizeY: 1,
                     sizeZ: 1 - ATTACHMENT_HITBOX_INSET
                 },
+                bouncesSpheres: true, // a cannon ball comes off its box where the two touch
                 applyHardCollisionToOthers: true,
                 outgoingSoftCollisionForceMultiplier: 1,
                 incomingSoftCollisionForceMultiplier: 0,
@@ -98,13 +99,13 @@ const CannonObjectTypeConfig =
                 generateDefaultParts: (obj: AddObjectSignal) => {
                     return {params: {}, parts: CannonCompositionUtil.buildParts()};
                 },
-                // Its barrel points where its state has it aim, and its gauges show the balls left. Changes of
+                // Its barrel points where its state has it aim, and its counters show the balls left. Changes of
                 // either recompose the parts (see CannonGameObject), which turns the barrel smoothly between them.
                 deriveParts: (obj: AddObjectSignal, parts: InstancedMeshCompositionPart[]) => {
                     const state = CannonStateUtil.getObjectState(obj);
                     CannonCompositionUtil.pose(parts, obj.transform.dir,
                         CannonAimUtil.getLocalDirection(CannonStateUtil.getShownAim(state, obj.transform.dir)),
-                        state.ballsLeft / CANNON_BALL_COUNT);
+                        state.ballsLeft);
                 },
             },
             // Only while it is switched off.

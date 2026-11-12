@@ -30,9 +30,9 @@ export const trailRate = 12;
 // A full shake of the first-person view (see cameraShakeObservable): how long it lasts, in seconds, how far it throws
 // the view about at first, in world units and in radians, and how fast it goes back and forth each way, in radians a
 // second, at rates that never fall in step.
-export const shakeSeconds = 0.4;
-const shakeDistance = 0.05;
-const shakeAngle = 0.022;
+export const shakeSeconds = 0.6;
+const shakeDistance = 0.14;
+const shakeAngle = 0.06;
 const shakeRates = [61, 83, 47];
 
 // The shake under way, of the one camera there is, whoever it is mounted in: how hard it began, and how much of it is

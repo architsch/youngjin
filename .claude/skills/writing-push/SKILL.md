@@ -1,13 +1,14 @@
 ---
 name: writing-push
-description: Get the user's essays and other library writing on thingspool.net in front of readers through what an assistant can do on its own, each action only after he has seen it — review where every earlier submission and listing stands and bring the ledger and the registry up to date, research new routes that reach more readers, notify search engines through IndexNow, list the site's feed in small-web directories, send one invited suggestion to a curator — and record every submission and what came of it. It gives him nothing to write or post: no Hacker News, Reddit, forum, Slack or LinkedIn posts. Use when asked to promote, advertise, share or spread a blog post, essay or library writing, or after a new essay is published. For the game itself, use distribution-push.
+description: Get the user's essays and other library writing on thingspool.net in front of readers through what an assistant can do on its own, each action only after he has seen it (but for clean directory listings, which he lets go out unseen) — review where every earlier submission and listing stands and bring the ledger and the registry up to date, research new routes that reach more readers, notify search engines through IndexNow, list the site's feed in small-web directories, send one invited suggestion to a curator — and record every submission and what came of it. It gives him nothing to write or post: no Hacker News, Reddit, forum, Slack or LinkedIn posts. Use when asked to promote, advertise, share or spread a blog post, essay or library writing, or after a new essay is published. For the game itself, use distribution-push.
 ---
 
 # Writing Push
 
 The user publishes essays and other writing in the library on `thingspool.net`, a GitHub Pages site built
 from `public/`. This skill gets a published post in front of readers through what the assistant can do
-itself. His part is a yes or no to each action and, where a route needs it, a one-time setup. It never
+itself. His part is a yes or no to each action (not even that for a clean directory listing, see step 4)
+and, where a route needs it, a one-time setup. It never
 writes, edits, titles or chooses the subject of his writing, and it does not promote the game: that is
 `distribution-push`.
 
@@ -90,8 +91,8 @@ folder beside the earlier ones (`temp/writings-strategy/venues-<date>/`), and a 
 
 ## Step 4 — Propose, then act on his word
 
-Propose this run's actions as one list, then act on his word. Nothing goes out unseen, and approval for
-one run does not carry to the next.
+Propose this run's actions as one list, then act on his word. But for a clean directory listing (below),
+nothing goes out unseen, and approval for one run does not carry to the next.
 
 - **IndexNow, for every new or changed post.** The key file is `public/<key>.txt`, 32 hex characters,
   containing the key itself. If there is none, adding it is a one-time change he approves and deploys
@@ -120,6 +121,19 @@ one run does not carry to the next.
   - The registry's further lists and directories, each once per site, as its row says. Skip any form
     that needs an account he doesn't have or shows a CAPTCHA, and any list whose rules bar
     self-promotion or AI-made pull requests.
+- **A clean directory listing goes out without showing him first**: his standing word (2026-11-12). It is
+  clean when all of these hold:
+  - a directory, feed catalog or search engine whose own page invites the site or its feed, by an open
+    form, an API, a pull request or an issue;
+  - no rule there against self-submission, or against automated or AI-made submissions;
+  - no login, CAPTCHA or bot question, and no terms or consent to accept;
+  - it carries only the site's and the feed's addresses, his name, a category, and a description an
+    earlier listing already used (cut to the field's length if need be);
+  - the ledger shows the site was never sent there.
+
+  Say in its ledger row that it went out unseen, and list it in the report. Everything else still waits
+  for his word in the run: an email or any message to a person, a consent or terms, new wording in his
+  name, a list whose rules are unclear.
 - **His one-step routes**, such as a bridge that makes the site a fediverse account: hand him the link
   and the step, once. The assistant never creates an account for him.
 - **One invited suggestion to a curator, rarely.** Only a curator whose own page invites suggestions,

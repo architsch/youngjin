@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import App from "../../../../app";
 import ClientObjectManager from "../../../../object/clientObjectManager";
-import { debugPanelOpenObservable, voxelQuadSelectionObservable } from "../../../../system/clientObservables";
+import { debugPanelOpenObservable, popupStateObservable,
+    voxelQuadSelectionObservable } from "../../../../system/clientObservables";
 import VoxelQueryUtil from "../../../../../shared/voxel/util/voxelQueryUtil";
 import Button from "../../input/button";
 import ThingsPoolEnv from "../../../../system/types/thingsPoolEnv";
@@ -17,11 +18,18 @@ export default function DebugStats({env}: Props)
     const [state, setState] = useState<DebugStatsState>({
         fpsDesc: "?", playerPosDesc: "?", particleDesc: "?", voxelDesc: "", voxelQuadSelectionDesc: "", debugCommand: "",
     });
+    const commandFieldRef = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
 
     useEffect(() => {
         debugPanelOpenObservable.addListener("ui.debugStats", setDisplay);
         return () => debugPanelOpenObservable.removeListener("ui.debugStats");
     }, []);
+
+    // The command field has the keyboard from the moment the panel opens.
+    useEffect(() => {
+        if (display)
+            commandFieldRef.current?.focus();
+    }, [display]);
 
     useEffect(() => {
         if (!display)
@@ -80,7 +88,17 @@ export default function DebugStats({env}: Props)
     const voxelQuadSelectionDescLine = (state.voxelQuadSelectionDesc.length > 0)
         ? <><br/>VoxelQuad: {state.voxelQuadSelectionDesc}</>
         : null;
-    
+
+    // The field takes the keyboard back for the next command, unless this one opened a popup, which has the user now.
+    const runCommand = () => {
+        DebugCommandUtil.run(state.debugCommand);
+        setState(prev => ({...prev, debugCommand: ""}));
+        if (popupStateObservable.peek().popupType == "none")
+            commandFieldRef.current?.focus();
+        else
+            commandFieldRef.current?.blur();
+    };
+
     return <div className={className}>
         <Button name="Close Debugger" size="xs" color="red" onClick={() => debugPanelOpenObservable.set(false)}/>
         <div className="m-0 p-1 text-xs text-gray-400 text-nowrap bg-black overflow-auto pointer-events-auto rounded-md">
@@ -91,14 +109,12 @@ export default function DebugStats({env}: Props)
             {voxelQuadSelectionDescLine}
             <br/>
             <div className="flex flex-row items-center gap-1">
-                <TextInput size="xs" placeholder="Debug Command"
+                <TextInput size="xs" placeholder="Debug Command" fieldRef={commandFieldRef}
                     currValue={state.debugCommand}
-                    setTextInput={(input: string) => setState({...state, debugCommand: input})}
+                    setTextInput={(input: string) => setState(prev => ({...prev, debugCommand: input}))}
+                    onEnter={() => { if (state.debugCommand.trim().length > 0) runCommand(); }}
                 />
-                <Button name="Run" size="xs" onClick={() => {
-                    DebugCommandUtil.run(state.debugCommand);
-                    setState({...state, debugCommand: ""});
-                }}/>
+                <Button name="Run" size="xs" onClick={runCommand}/>
             </div>
         </div>
     </div>;

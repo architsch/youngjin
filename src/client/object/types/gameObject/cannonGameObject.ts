@@ -5,7 +5,7 @@ import CannonAim from "../../../../shared/object/types/cannonAim";
 import { CannonPhaseEnumMap } from "../../../../shared/object/types/cannonPhase";
 import CannonState from "../../../../shared/object/types/cannonState";
 import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../../shared/object/types/objectMetadataKey";
-import { CANNON_BALL_COUNT, CANNON_TURN_RATE } from "../../../../shared/object/types/objectTypeConfig/cannonObjectTypeConfig";
+import { CANNON_TURN_RATE } from "../../../../shared/object/types/objectTypeConfig/cannonObjectTypeConfig";
 import CannonAimUtil from "../../../../shared/object/util/cannonAimUtil";
 import CannonStateUtil from "../../../../shared/object/util/cannonStateUtil";
 import CannonCompositionUtil from "../../../../shared/graphics/mesh/composition/util/cannonCompositionUtil";
@@ -25,18 +25,22 @@ const TURN_SOUND_HOLD_SECONDS = 0.12;
 // Its barrel is never further behind where it is told to point than it can turn in this long, in seconds: more than
 // the server's steps are apart, so that it turns at the server's own rate unless it has fallen behind.
 const CATCH_UP_SECONDS = 0.3;
-// Its gauges' green dims with the camera's distance from it, in world units: from here on, and dimmed out by here. In
+// Its counters' digits dim with the camera's distance from it, in world units: from here on, and dimmed out by here. In
 // this many steps, each a redraw.
-export const GAUGE_DIM_START_DISTANCE = 5;
-export const GAUGE_DIM_END_DISTANCE = 20;
-const GAUGE_DIM_STEPS = 32;
+export const COUNTER_DIM_START_DISTANCE = 5;
+export const COUNTER_DIM_END_DISTANCE = 20;
+const COUNTER_DIM_STEPS = 32;
+// With this many balls left or fewer, its counters warn of it: red, blinking, each blink this long in seconds, lit for
+// its first half.
+export const COUNTER_WARNING_BALLS = 3;
+export const COUNTER_BLINK_SECONDS = 0.6;
 
 const cameraPositionTemp = new THREE.Vector3();
 
 // A cannon, which the server plays (see CannonUtil): all this does is show what its state says. The barrel turns to
 // where the state has it aim, at the rate the server turns it, so that an aim told in steps shows as one turn; the
-// gauges follow the balls left, their glow dimmer the farther off the camera is; a ball fewer is a shot, told to
-// whatever shows and sounds one. Its sleep, while switched off, is its ParticleEmitter's.
+// counters show the balls left, red and blinking when few are, dimmer the farther off the camera is; a ball fewer is a
+// shot, told to whatever shows and sounds one. Its sleep, while switched off, is its ParticleEmitter's.
 export default class CannonGameObject extends GameObject
 {
     private instancedMeshComposer: InstancedMeshComposer;
@@ -44,6 +48,8 @@ export default class CannonGameObject extends GameObject
     private shownAim: CannonAim;
     private turnSound: SpatialAudioVoice | undefined;
     private turnSoundSecondsLeft = 0;
+    // How long its counters have warned, which their blink is timed from.
+    private warningSeconds = 0;
 
     constructor(params: AddObjectSignal)
     {
@@ -87,7 +93,7 @@ export default class CannonGameObject extends GameObject
         }
     }
 
-    // On another face its gauges may lie the other way along their squares (see CannonCompositionUtil.pose).
+    // On another face its counters may be elsewhere, their digits running another way (see CannonCompositionUtil.pose).
     onTransformChanged(resized: boolean)
     {
         this.pose();
@@ -114,19 +120,23 @@ export default class CannonGameObject extends GameObject
             : Math.max(0, this.turnSoundSecondsLeft - deltaTime);
         this.setTurnSound(this.turnSoundSecondsLeft > 0);
 
-        // Set on the parts as they stand, which a recomposing gives their full glow again.
-        if (CannonCompositionUtil.setGaugeGlow(this.instancedMeshComposer.getParts(), this.getGaugeGlow()))
+        const warning = this.state.ballsLeft <= COUNTER_WARNING_BALLS;
+        this.warningSeconds = warning ? this.warningSeconds + deltaTime : 0;
+        const lit = !warning || this.warningSeconds % COUNTER_BLINK_SECONDS < 0.5 * COUNTER_BLINK_SECONDS;
+        // Set on the parts as they stand, which a recomposing gives their full green again.
+        const parts = this.instancedMeshComposer.getParts();
+        if (CannonCompositionUtil.setCounterLight(parts, this.getCounterGlow(), warning, lit))
             this.instancedMeshComposer.redrawParts();
     }
 
-    // How much of their glow its gauges show from where the camera is.
-    private getGaugeGlow(): number
+    // How much of their glow its counters' digits show from where the camera is.
+    private getCounterGlow(): number
     {
         const pivot = this.getPivot();
         const camera = GraphicsManager.getCamera().getWorldPosition(cameraPositionTemp);
         const distance = Math.hypot(camera.x - pivot.x, camera.y - pivot.y, camera.z - pivot.z);
-        const glow = (GAUGE_DIM_END_DISTANCE - distance) / (GAUGE_DIM_END_DISTANCE - GAUGE_DIM_START_DISTANCE);
-        return Math.round(Math.max(0, Math.min(1, glow)) * GAUGE_DIM_STEPS) / GAUGE_DIM_STEPS;
+        const glow = (COUNTER_DIM_END_DISTANCE - distance) / (COUNTER_DIM_END_DISTANCE - COUNTER_DIM_START_DISTANCE);
+        return Math.round(Math.max(0, Math.min(1, glow)) * COUNTER_DIM_STEPS) / COUNTER_DIM_STEPS;
     }
 
     private getTarget(): CannonAim
@@ -137,7 +147,7 @@ export default class CannonGameObject extends GameObject
     private pose(): void
     {
         CannonCompositionUtil.pose(this.instancedMeshComposer.getParts(), this.params.transform.dir,
-            CannonAimUtil.getLocalDirection(this.shownAim), this.state.ballsLeft / CANNON_BALL_COUNT);
+            CannonAimUtil.getLocalDirection(this.shownAim), this.state.ballsLeft);
         this.instancedMeshComposer.redrawParts();
     }
 

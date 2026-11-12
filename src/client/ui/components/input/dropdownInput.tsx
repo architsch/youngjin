@@ -4,6 +4,7 @@ import useMouseDragScroll from "../../util/mouseDragScroll";
 import ClosablePanelUtil from "../../util/closablePanelUtil";
 import KeyPressUtil from "../../util/keyPressUtil";
 import TriangleDownIcon from "../../svg/icons/triangleDownIcon";
+import ScrollHints from "../basic/scrollHints";
 
 const LIST_GAP = 4; // Space kept between the button and the list above it
 const SCREEN_MARGIN = 8; // Space kept between the list and the screen edges
@@ -135,6 +136,7 @@ export default function DropdownInput({ id, options, currValue, setValue, disabl
                 <div ref={onListRefChange}
                     className={`absolute p-2 flex flex-col gap-1 bg-gray-700 rounded-lg overflow-y-auto pointer-events-auto yj-surface-convex ${(listStyle == undefined) ? "invisible" : ""}`}
                     style={listStyle}>
+                    <ScrollHints/>
                     {options.map(option =>
                         <button
                             key={option.value}

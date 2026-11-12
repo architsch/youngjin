@@ -144,6 +144,48 @@
                 }
             ]
         },
+        "cannonBallBounce": {
+            "note": "A cannon ball bouncing off something: a flash about the ball, a ring out from it, and hot sparks thrown off the way the ball comes away.",
+            "layers": [
+                {
+                    "sprite": "softDot",
+                    "additiveness": 1,
+                    "burst": 1,
+                    "speed": [0, 0],
+                    "lifetime": [0.14, 0.14],
+                    "size": [1.6, 1.6],
+                    "sizeCurve": [0.5, 1, 0.75],
+                    "alphaCurve": [1, 0.8, 0],
+                    "colorCurve": ["#ffffff", "#ffd98a"]
+                },
+                {
+                    "sprite": "ring",
+                    "additiveness": 0.8,
+                    "burst": 1,
+                    "speed": [0, 0],
+                    "lifetime": [0.24, 0.24],
+                    "size": [1.9, 1.9],
+                    "sizeCurve": [0.2, 0.65, 0.9, 1],
+                    "alphaCurve": [1, 0.8, 0.35, 0],
+                    "colorCurve": ["#fff3d6", "#ffc56e"]
+                },
+                {
+                    "sprite": "spark",
+                    "additiveness": 1,
+                    "orientation": "velocity",
+                    "stretch": 0.12,
+                    "burst": 24,
+                    "spread": 1.25,
+                    "speed": [4, 10],
+                    "lifetime": [0.22, 0.4],
+                    "size": [0.16, 0.26],
+                    "gravity": 9,
+                    "drag": 3,
+                    "alphaCurve": [1, 1, 0.7, 0],
+                    "colorCurve": ["#ffffff", "#ffe08a", "#ff9a2a"]
+                }
+            ]
+        },
         "cannonBallBurst": {
             "note": "A cannon ball bursting: a flash, a ring thrown out from it, dark smoke and a few hot sparks.",
             "layers": [

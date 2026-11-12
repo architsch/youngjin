@@ -7,7 +7,8 @@ export default interface PhysicsSphereHit
     // How far along its move it strikes, from 0 to 1, and where its middle is then.
     rayScale: number;
     center: Vec3;
-    // Where the two touch, and the way out of what is struck there.
+    // Where the two touch, and the way out of what is struck there: for an object the sphere bounces off, the way it
+    // bounces the sphere (see PhysicsSphereUtil.bounces).
     contact: Vec3;
     normal: Vec3;
     // What is struck: a voxel block, or an object. Neither: the room's own floor or ceiling.

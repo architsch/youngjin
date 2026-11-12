@@ -1,14 +1,19 @@
 /**
  * Integration tests: cannons and their balls (see @docs/gameplay/cannon.md) — a cannon's state under its one key
  * (decoded from anything, kept through its encoding, its switch its user's and the rest the server's, whichever
- * comes last); a ball's, past the room too; where a barrel points on each face it may stand on, and how it turns;
- * a sphere swept against a box and against another, held to a slow walk along the same way; what a ball strikes in
- * a room and what its blast reaches; who may add, move, switch and remove a cannon, and what it costs; and,
- * through the real server modules: a cannon resting, waiting, picking whom to fire at, turning, staying on them
- * until it is aimed (never, on whoever outruns it), standing aimed and firing, emptied and gone, switched off and
- * on, kept by the room's saves; and a ball flying straight, pushed by a fan, bouncing off another, bursting on
- * blocks, players and the room's own floor, breaking what anybody could remove and nothing else, throwing whoever
- * its blast reaches, leaving a bill where it threw nobody, and going out of the room without a word; and the ways
+ * comes last); a ball's, past the room too, with its bounces counted; where a barrel points on each face it may
+ * stand on, and how it turns; its counters, round its pillar on a floor, and on its plate and its pillar's two
+ * sides on a wall; a sphere swept against a box, an upright
+ * cylinder and another sphere, held to a slow walk along the same way; what a ball strikes in a room (a player and
+ * an NPC as round bodies, a mirror and an NPC only as it closes on them, a cannon as its box) and what its blast
+ * reaches; who may add, move, switch and remove a cannon, and what it costs; and, through the real server modules: a
+ * cannon resting, waiting, picking whom to fire at, turning, staying on them until it is aimed (never, on whoever
+ * outruns it, and on someone behind an NPC or another cannon all the same), standing aimed and firing, emptied and
+ * gone, switched off and on, kept by the room's saves; and a ball flying straight, pushed by a fan, bouncing off
+ * another, off a mirror, off an NPC and off a cannon, each bounce counted and leaving it faster, up to the most a
+ * ball goes, bursting on blocks, players and the room's own floor, breaking what anybody could remove and nothing
+ * else, a cannon and the blocks it hangs on never, throwing whoever its blast reaches, the one it struck off its side
+ * where the two met, leaving a bill where it threw nobody, and going out of the room without a word; and the ways
  * planned over the grid for bodies the server walks, which lead round a cannon as round a block.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
@@ -38,8 +43,10 @@ import CannonState from "../../../src/shared/object/types/cannonState";
 import { ObjectMetadata } from "../../../src/shared/object/types/objectMetadata";
 import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
 import ObjectTransform from "../../../src/shared/object/types/objectTransform";
-import CannonBallObjectTypeConfig, { CANNON_BALL_BLAST_RADIUS, CANNON_BALL_MAX_SPEED, CANNON_BALL_RADIUS, CANNON_BALL_SPEED,
-    CANNON_BALL_VANISH_DISTANCE, CANNON_BALL_WIND_SHARE, CANNON_BLAST_PUSH_SPEED } from "../../../src/shared/object/types/objectTypeConfig/cannonBallObjectTypeConfig";
+import CannonBallObjectTypeConfig, { CANNON_BALL_BLAST_RADIUS, CANNON_BALL_BOUNCE_BOOST, CANNON_BALL_MAX_SPEED,
+    CANNON_BALL_MAX_WIND_SPEED, CANNON_BALL_RADIUS, CANNON_BALL_SPEED, CANNON_BALL_VANISH_DISTANCE, CANNON_BALL_WIND_SHARE,
+    CANNON_BLAST_LIFT_SPEED, CANNON_BLAST_PUSH_SPEED }
+    from "../../../src/shared/object/types/objectTypeConfig/cannonBallObjectTypeConfig";
 import CannonObjectTypeConfig, { CANNON_AIM_TOLERANCE, CANNON_BALL_COUNT, CANNON_FIRE_INTERVAL_SECONDS, CANNON_LOCK_SECONDS,
     CANNON_MAX_PITCH, CANNON_MAX_RANGE, CANNON_MIN_PITCH, CANNON_MIN_RANGE, CANNON_READY_SECONDS, CANNON_REST_SECONDS,
     CANNON_SLEEP_PITCH, CANNON_SPENT_SECONDS, CANNON_TURN_RATE }
@@ -59,22 +66,25 @@ import CannonBallStateUtil from "../../../src/shared/object/util/cannonBallState
 import CannonBlastUtil from "../../../src/shared/object/util/cannonBlastUtil";
 import CannonStateUtil from "../../../src/shared/object/util/cannonStateUtil";
 import ObjectAttachmentUtil from "../../../src/shared/object/util/objectAttachmentUtil";
+import ObjectCompositionUtil from "../../../src/shared/object/util/objectCompositionUtil";
 import ObjectIdUtil from "../../../src/shared/object/util/objectIdUtil";
 import ObjectObstacleUtil from "../../../src/shared/object/util/objectObstacleUtil";
 import ObjectUpdateUtil from "../../../src/shared/object/util/objectUpdateUtil";
 import CannonCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/cannonCompositionConstants";
 import CannonCompositionUtil from "../../../src/shared/graphics/mesh/composition/util/cannonCompositionUtil";
+import InstancedMeshCompositionPart from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
 import PhysicsManager from "../../../src/shared/physics/physicsManager";
 import PhysicsColliderStateUtil from "../../../src/shared/physics/util/physicsColliderStateUtil";
 import PhysicsForceUtil from "../../../src/shared/physics/util/physicsForceUtil";
 import AABB3 from "../../../src/shared/math/types/aabb3";
 import Vec3 from "../../../src/shared/math/types/vec3";
 import Geometry3DUtil from "../../../src/shared/math/util/geometry3DUtil";
+import StringUtil from "../../../src/shared/math/util/stringUtil";
 import Vector3DUtil from "../../../src/shared/math/util/vector3DUtil";
 import Room from "../../../src/shared/room/types/room";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
 import { ATTACHMENT_HITBOX_INSET, CANNON_PRICE_DOLLARS, COLLISION_LAYER_HEIGHT, GENERATED_WALL_THICKNESS, MAX_ROOM_X,
-    MAX_ROOM_Y, MAX_ROOM_Z,
+    MAX_ROOM_Y, MAX_ROOM_Z, RELIEF_STEP,
     SIGNAL_BATCH_SEND_INTERVAL, STOREY_FLOOR_COLLISION_LAYER, UNIT_VEC3,
     VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 import User from "../../../src/shared/user/types/user";
@@ -90,6 +100,8 @@ const BALL_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType(CannonBallObjectTypeC
 const BILL_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType(DollarBillObjectTypeConfig.objectType);
 const FAN_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType(FanObjectTypeConfig.objectType);
 const LABEL_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Label");
+const MIRROR_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Mirror");
+const NPC_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Npc");
 const STATE_KEY = ObjectMetadataKeyEnumMap.CannonState;
 const DOLLAR = InventoryItemTypeEnumMap.Dollar;
 const MAX_BALLS = ObjectCategoryConfigMap.getMaxCountPerRoom(CannonBallObjectTypeConfig.category);
@@ -237,6 +249,46 @@ function removeWallAcross(x: number): void
                 VoxelQueryUtil.getVoxelColFromWorldX(x))!.blockLayerMask &= ~(1 << VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(y));
         }
     }
+}
+
+// Where the mirror of the scenes that hang one is: in the middle of the west side of a wall of blocks three units
+// wide and two high, a block thick, standing free in the lower storey.
+const MIRROR_SPOT: Vec3 = {x: 16, y: 1.5, z: 16.5};
+
+// That wall, and the mirror on it, a unit square, as the room keeps one. Its box, as physics has it.
+function hangMirror(): {mirror: AddObjectSignal, box: AABB3}
+{
+    for (let z = MIRROR_SPOT.z - 1.25; z < MIRROR_SPOT.z + 1.5; z += VOXEL_CELL_SIZE)
+    {
+        for (let y = MIRROR_SPOT.y - 0.75; y < MIRROR_SPOT.y + 1; y += COLLISION_LAYER_HEIGHT)
+            placeBlock(MIRROR_SPOT.x + 0.5 * VOXEL_CELL_SIZE, y, z);
+    }
+    const transform = ObjectAttachmentUtil.findPlacement(getRoom(), MIRROR_TYPE_INDEX, MIRROR_SPOT, {x: -1, y: 0, z: 0},
+        {...UNIT_VEC3}, () => true)!;
+    expect(transform, "the scene's wall takes a mirror").toBeDefined();
+    expect(ServerObjectManager.addObjectAsServer(getRoom(), ADMIN, new AddObjectSignal(HUB_ID, ADMIN.id, ADMIN.userName,
+        MIRROR_TYPE_INDEX, "a-mirror", transform))).toBe(true);
+    const mirror = getRoom().objectById["a-mirror"];
+    expect(dist(mirror.transform.pos, MIRROR_SPOT)).toBeLessThan(0.000001);
+    return {mirror, box: PhysicsManager.physicsRooms[HUB_ID].objectById[mirror.objectId].colliderState.hitbox};
+}
+
+// An NPC on the lower storey's floor, as the room keeps one, near a spot. Its box, as physics has it.
+function standNpc(near: {x: number, z: number}, objectId: string = "an-npc"): {npc: AddObjectSignal, box: AABB3}
+{
+    const transform = ObjectAttachmentUtil.findPlacement(getRoom(), NPC_TYPE_INDEX, {x: near.x, y: 0, z: near.z},
+        FLOOR_FACING, {...UNIT_VEC3}, () => true)!;
+    expect(transform, "the scene's floor takes an NPC").toBeDefined();
+    expect(ServerObjectManager.addObjectAsServer(getRoom(), ADMIN, new AddObjectSignal(HUB_ID, ADMIN.id, ADMIN.userName,
+        NPC_TYPE_INDEX, objectId, transform, {[ObjectMetadataKeyEnumMap.Label]: new EncodableByteString("Mira")}))).toBe(true);
+    const npc = getRoom().objectById[objectId];
+    return {npc, box: PhysicsManager.physicsRooms[HUB_ID].objectById[objectId].colliderState.hitbox};
+}
+
+// A level direction, by its angle from x toward z, in degrees.
+function levelWay(degrees: number): Vec3
+{
+    return {x: Math.cos(degrees * Math.PI / 180), y: 0, z: Math.sin(degrees * Math.PI / 180)};
 }
 
 // The types of what is queued for a user, in order.
@@ -450,47 +502,107 @@ describe("a cannon's state", () => {
 });
 
 describe("a cannon ball's state", () => {
+    // The most a character of it counts to: what the highest character there is reads as.
+    const MOST_COUNTED = StringUtil.convertVisibleASCIIToRawNumber(String.fromCharCode(0xffff), 0);
     const placeArb = fc.record({x: scaled(-CANNON_BALL_VANISH_DISTANCE, MAX_ROOM_X + CANNON_BALL_VANISH_DISTANCE),
         y: scaled(-CANNON_BALL_VANISH_DISTANCE, MAX_ROOM_Y + CANNON_BALL_VANISH_DISTANCE),
         z: scaled(-CANNON_BALL_VANISH_DISTANCE, MAX_ROOM_Z + CANNON_BALL_VANISH_DISTANCE)});
 
-    it("keeps where it is and how it moves to a fine step, as far past the room as a ball ever flies", () => {
-        fc.assert(fc.property(placeArb, vec3In(-CANNON_BALL_MAX_SPEED, CANNON_BALL_MAX_SPEED), (pos, vel) => {
-            const encoded = CannonBallStateUtil.encode({pos, vel, exploded: false, hitObjectIds: []});
-            const kept = CannonBallStateUtil.decode(encoded);
-            expect(kept.exploded).toBe(false);
-            expect(kept.hitObjectIds).toEqual([]);
-            for (const axis of ["x", "y", "z"] as const)
-            {
-                expect(Math.abs(kept.pos[axis] - pos[axis])).toBeLessThan(PLACE_STEP);
-                expect(Math.abs(kept.vel[axis] - vel[axis])).toBeLessThan(SPEED_STEP);
-            }
-            expect(encoded.length).toBeLessThanOrEqual(14);
-            expect(encoded).toMatch(/^[\x21-\x7e]*$/);
-        }));
+    it("keeps where it is and how it moves to a fine step, as far past the room as a ball ever flies, and how many " +
+        "times it has bounced", () => {
+        fc.assert(fc.property(placeArb, vec3In(-CANNON_BALL_MAX_SPEED, CANNON_BALL_MAX_SPEED), fc.nat({max: MOST_COUNTED}),
+            (pos, vel, bounces) => {
+                const encoded = CannonBallStateUtil.encode({pos, vel, exploded: false, hitObjectIds: [], bounces});
+                const kept = CannonBallStateUtil.decode(encoded);
+                expect(kept.exploded).toBe(false);
+                expect(kept.hitObjectIds).toEqual([]);
+                expect(kept.struck).toBeUndefined();
+                expect(kept.bounces).toBe(bounces);
+                for (const axis of ["x", "y", "z"] as const)
+                {
+                    expect(Math.abs(kept.pos[axis] - pos[axis])).toBeLessThan(PLACE_STEP);
+                    expect(Math.abs(kept.vel[axis] - vel[axis])).toBeLessThan(SPEED_STEP);
+                }
+                expect(encoded.length).toBeLessThanOrEqual(15);
+                expect(encoded).toMatch(/^[\x21-\x7e]*$/);
+                // One that ends before its bounces is of a ball that never bounced, going the same way.
+                expect(CannonBallStateUtil.decode(encoded.slice(0, -1))).toEqual({...kept, bounces: 0});
+            }));
     });
 
-    it("keeps where it burst and whom its blast threw", () => {
-        fc.assert(fc.property(placeArb, fc.array(fc.stringMatching(/^[A-Za-z0-9#@]{1,12}$/), {maxLength: 6}), (pos, ids) => {
-            const kept = CannonBallStateUtil.decode(CannonBallStateUtil.encode({pos, vel: {x: 1, y: 2, z: 3},
-                exploded: true, hitObjectIds: ids}));
-            expect(kept.exploded).toBe(true);
-            expect(kept.hitObjectIds).toEqual(ids);
-            expect(kept.vel).toEqual({x: 0, y: 0, z: 0});
-            for (const axis of ["x", "y", "z"] as const)
-                expect(Math.abs(kept.pos[axis] - pos[axis])).toBeLessThan(PLACE_STEP);
-        }));
+    it("counts its bounces round, as far as a character holds, and tells which of two counts is ahead", () => {
+        const flying = {pos: {x: 1, y: 1, z: 1}, vel: {x: 1, y: 0, z: 0}, exploded: false, hitObjectIds: []};
+        const counts = new Set<number>();
+        let bounces = 0;
+        for (let i = 0; i <= MOST_COUNTED; ++i)
+        {
+            counts.add(bounces);
+            const next = CannonBallStateUtil.countBounce(bounces);
+            expect(CannonBallStateUtil.isBounceCountAhead(next, bounces)).toBe(true);
+            expect(CannonBallStateUtil.isBounceCountAhead(bounces, next)).toBe(false);
+            expect(CannonBallStateUtil.isBounceCountAhead(bounces, bounces)).toBe(false);
+            expect(CannonBallStateUtil.decode(CannonBallStateUtil.encode({...flying, bounces: next})).bounces).toBe(next);
+            bounces = next;
+        }
+        // Every count a character holds, once, and then the first again.
+        expect(counts.size).toBe(MOST_COUNTED + 1);
+        expect(bounces).toBe(0);
+        // A few more is ahead, though the count started over in between.
+        expect(CannonBallStateUtil.isBounceCountAhead(2, MOST_COUNTED - 1)).toBe(true);
+        expect(CannonBallStateUtil.isBounceCountAhead(MOST_COUNTED - 1, 2)).toBe(false);
+    });
+
+    it("keeps where it burst, whom its blast threw, and which of them it struck, thrown which way to a fine step", () => {
+        fc.assert(fc.property(placeArb, fc.array(fc.stringMatching(/^[A-Za-z0-9#@]{1,12}$/), {maxLength: 6}), fc.nat(),
+            scaled(-Math.PI, Math.PI), (pos, ids, pick, heading) => {
+                // It struck any one of them, or none of them.
+                const struckId: string | undefined = ids[pick % (ids.length + 1)];
+                const struck = (struckId == undefined) ? undefined : {objectId: struckId, heading};
+                const kept = CannonBallStateUtil.decode(CannonBallStateUtil.encode({pos, vel: {x: 1, y: 2, z: 3},
+                    exploded: true, hitObjectIds: ids, struck, bounces: 5}));
+                expect(kept.exploded).toBe(true);
+                expect(kept.hitObjectIds).toEqual(ids);
+                expect(kept.vel).toEqual({x: 0, y: 0, z: 0});
+                expect(kept.bounces).toBe(0);
+                for (const axis of ["x", "y", "z"] as const)
+                    expect(Math.abs(kept.pos[axis] - pos[axis])).toBeLessThan(PLACE_STEP);
+                expect(kept.struck?.objectId).toBe(struckId);
+                if (struck != undefined)
+                    expect(Math.abs(kept.struck!.heading - heading)).toBeLessThan(ANGLE_STEP);
+            }));
+        // One it didn't throw is none it struck.
+        const burst = {pos: {x: 1, y: 1, z: 1}, vel: {x: 0, y: 0, z: 0}, exploded: true, bounces: 0};
+        expect(CannonBallStateUtil.decode(CannonBallStateUtil.encode({...burst, hitObjectIds: ["someone"],
+            struck: {objectId: "another", heading: 1}}))).toMatchObject({hitObjectIds: ["someone"], struck: undefined});
+        // Nor is one farther down a list than a character counts to, a list longer than any blast makes: nobody else
+        // is taken for them, and what is stored stays text.
+        const crowd = Array.from({length: MOST_COUNTED + 30}, (_, i) => `body${i}`);
+        for (const struckIndex of [MOST_COUNTED - 2, MOST_COUNTED - 1, MOST_COUNTED, MOST_COUNTED + 1, crowd.length - 1])
+        {
+            const encoded = CannonBallStateUtil.encode({...burst, hitObjectIds: crowd,
+                struck: {objectId: crowd[struckIndex], heading: 1}});
+            expect(encoded).toMatch(/^[\x21-\x7e]*$/);
+            const kept = CannonBallStateUtil.decode(encoded);
+            expect(kept.hitObjectIds).toEqual(crowd);
+            expect(kept.struck?.objectId).toBe((struckIndex < MOST_COUNTED) ? crowd[struckIndex] : undefined);
+        }
     });
 
     it("reads from anything at all, and never as a switch alone", () => {
         fc.assert(fc.property(fc.string({maxLength: 40}), text => {
             const state = CannonBallStateUtil.decode(text);
             expect(Number.isFinite(state.pos.x + state.pos.y + state.pos.z + state.vel.x + state.vel.y + state.vel.z)).toBe(true);
+            // Whoever it says it struck is one of those it says it threw.
+            if (state.struck != undefined)
+            {
+                expect(state.hitObjectIds).toContain(state.struck.objectId);
+                expect(Math.abs(state.struck.heading)).toBeLessThanOrEqual(Math.PI);
+            }
         }));
         const flying = CannonBallStateUtil.encode({pos: {x: 1, y: 1, z: 1}, vel: {x: 0, y: 0, z: 0}, exploded: false,
-            hitObjectIds: []});
+            hitObjectIds: [], bounces: 3});
         const burst = CannonBallStateUtil.encode({pos: {x: 1, y: 1, z: 1}, vel: {x: 0, y: 0, z: 0}, exploded: true,
-            hitObjectIds: []});
+            hitObjectIds: [], bounces: 0});
         for (const value of [flying, burst])
         {
             expect(CannonStateUtil.isSwitch(value)).toBe(false);
@@ -563,49 +675,245 @@ describe("where a cannon's barrel points", () => {
     });
 });
 
-describe("a cannon's gauges", () => {
+describe("a cannon's counters", () => {
     const C = CannonCompositionConstants;
-    const fullLength = C.gaugeLength - 2 * C.gaugeFillMargin;
+    const SEGMENTS_PER_COUNTER = C.digitsPerCounter * C.segmentsPerDigit;
+    // A digital display's digits, by the segments each lights: the top bar (a), upper right (b), lower right (c), bottom
+    // bar (d), lower left (e), upper left (f) and middle bar (g).
+    const DISPLAY_DIGITS: {[segments: string]: string} = {abcdef: "0", bc: "1", abdeg: "2", abcdg: "3", bcfg: "4",
+        acdfg: "5", acdefg: "6", abc: "7", abcdefg: "8", abcdfg: "9"};
 
-    // Each side's dark strip and green one, as [from, to] out of the face the cannon stands on.
-    function stripsOf(facing: Vec3, share: number): {dark: [number, number], green: [number, number]}[]
+    function posed(facing: Vec3, ballsLeft: number): InstancedMeshCompositionPart[]
     {
         const parts = CannonCompositionUtil.buildParts();
-        CannonCompositionUtil.pose(parts, facing, CannonAimUtil.getLocalDirection({yaw: 0, pitch: 0}), share);
-        const span = (index: number, width: number): [number, number] => {
-            const {offset, scale} = parts[index];
-            const length = (Math.abs(scale.x - width) < 0.000001) ? scale.y : scale.x;
-            return [offset.z - 0.5 * length, offset.z + 0.5 * length];
-        };
-        return Array.from({length: C.numGauges}, (_, side) => ({dark: span(C.firstGaugeIndex + side, C.gaugeWidth),
-            green: span(C.firstGaugeIndex + C.numGauges + side, C.gaugeFillWidth)}));
+        CannonCompositionUtil.pose(parts, facing, CannonAimUtil.getLocalDirection({yaw: 0, pitch: 0}), ballsLeft);
+        return parts;
     }
 
-    it("start a little over its plate and end under its barrel lying level, on whatever face it stands", () => {
+    // A direction in the frame of the face a cannon stands on, as it lies in the room.
+    function inRoom(facing: Vec3, direction: Vec3): Vec3
+    {
+        const face = Geometry3DUtil.getAxisFacingBasis(facing);
+        return Vector3DUtil.add(Vector3DUtil.add(Vector3DUtil.scale(face.right, direction.x),
+            Vector3DUtil.scale(face.up, direction.y)), Vector3DUtil.scale(face.normal, direction.z));
+    }
+
+    // A counter's panel's own axes in the face's frame, as a square facing its way is turned in the room (see
+    // Geometry3DUtil.getFacingBasis): its right and up, as seen from in front of it.
+    function panelAxes(facing: Vec3, way: Vec3): {right: Vec3, up: Vec3}
+    {
+        const face = Geometry3DUtil.getAxisFacingBasis(facing);
+        const own = Geometry3DUtil.getFacingBasis(inRoom(facing, way));
+        const toFace = (v: Vec3): Vec3 => ({x: Vector3DUtil.dot(v, face.right), y: Vector3DUtil.dot(v, face.up),
+            z: Vector3DUtil.dot(v, face.normal)});
+        return {right: toFace(own.right), up: toFace(own.up)};
+    }
+
+    function segmentsOf(parts: InstancedMeshCompositionPart[], counter: number): InstancedMeshCompositionPart[]
+    {
+        return parts.slice(C.firstSegmentIndex + counter * SEGMENTS_PER_COUNTER,
+            C.firstSegmentIndex + (counter + 1) * SEGMENTS_PER_COUNTER);
+    }
+
+    // Nothing of a counter is drawn: neither its panel nor any segment of its digits.
+    function isUnseen(parts: InstancedMeshCompositionPart[], counter: number): boolean
+    {
+        return [parts[C.firstCounterIndex + counter], ...segmentsOf(parts, counter)]
+            .every(part => part.scale.x == 0 && part.scale.y == 0);
+    }
+
+    // Every segment of a counter showing 88, lit, just proud of its panel, facing the same way, and inside it.
+    function expectDigitsOnPanel(parts: InstancedMeshCompositionPart[], facing: Vec3, counter: number): void
+    {
+        const panel = parts[C.firstCounterIndex + counter];
+        const {right, up} = panelAxes(facing, panel.dir);
+        for (const part of segmentsOf(parts, counter))
+        {
+            const relative = Vector3DUtil.subtract(part.offset, panel.offset);
+            expect(part.dir).toEqual(panel.dir);
+            expect(part.scale.x * part.scale.y).toBeGreaterThan(0);
+            expect(Vector3DUtil.dot(relative, panel.dir)).toBeCloseTo(RELIEF_STEP, 9);
+            expect(Math.abs(Vector3DUtil.dot(relative, right)) + 0.5 * part.scale.x).toBeLessThanOrEqual(0.5 * C.counterSize);
+            expect(Math.abs(Vector3DUtil.dot(relative, up)) + 0.5 * part.scale.y).toBeLessThanOrEqual(0.5 * C.counterSize);
+        }
+    }
+
+    // What a counter shows, as someone in front of it reads it: its lit segments, each where it lies across and up its
+    // panel, one digit in the middle unless some lie past a digit's half width, then two side by side, and each named
+    // by where it lies in its digit.
+    function readCounter(parts: InstancedMeshCompositionPart[], facing: Vec3, counter: number): string
+    {
+        const panel = parts[C.firstCounterIndex + counter];
+        const {right, up} = panelAxes(facing, panel.dir);
+        const lit = segmentsOf(parts, counter)
+            .filter(part => part.scale.x > 0 && part.scale.y > 0)
+            .map(part => {
+                const relative = Vector3DUtil.subtract(part.offset, panel.offset);
+                return {across: Vector3DUtil.dot(relative, right), up: Vector3DUtil.dot(relative, up),
+                    isBar: part.scale.x > part.scale.y};
+            });
+        const twoDigits = lit.some(segment => Math.abs(segment.across) > 0.5 * C.digitWidth);
+        const spacing = 0.5 * (C.digitWidth + C.digitGap);
+        const digits = twoDigits ? [{middle: -spacing, segments: lit.filter(segment => segment.across < 0)},
+            {middle: spacing, segments: lit.filter(segment => segment.across > 0)}] : [{middle: 0, segments: lit}];
+        return digits.map(({middle, segments}) => DISPLAY_DIGITS[segments.map(segment => {
+            const across = segment.across - middle;
+            if (segment.isBar)
+                return (segment.up > 0.25 * C.digitHeight) ? "a" : (segment.up < -0.25 * C.digitHeight) ? "d" : "g";
+            return (across > 0) ? ((segment.up > 0) ? "b" : "c") : ((segment.up > 0) ? "f" : "e");
+        }).sort().join("")] ?? "?").join("");
+    }
+
+    it("stand on every side of its pillar on a floor, a little over its plate and under its barrel lying level, each " +
+        "digit on its panel", () => {
+        const middleZ = C.plateSize.z + C.counterBottom + 0.5 * C.counterSize;
+        expect(middleZ - 0.5 * C.counterSize).toBeGreaterThan(C.plateSize.z);
+        expect(middleZ + 0.5 * C.counterSize).toBeLessThan(C.pivotHeight - 0.5 * C.barrelDiameter);
+        expect(C.counterSize).toBeLessThan(Math.min(C.pillarSize.x, C.pillarSize.y));
+        expect(2 * C.digitWidth + C.digitGap).toBeLessThan(C.counterSize);
+        expect(C.digitHeight).toBeLessThan(C.counterSize);
+
+        const parts = posed(FLOOR_FACING, 88);
+        const sides = new Set<string>();
+        for (let counter = 0; counter < C.numCounters; ++counter)
+        {
+            const panel = parts[C.firstCounterIndex + counter];
+            sides.add(JSON.stringify(panel.dir));
+            const reach = 0.5 * ((panel.dir.x != 0) ? C.pillarSize.x : C.pillarSize.y);
+            expect(panel.dir.z).toBe(0);
+            expect(Vector3DUtil.dot(panel.offset, panel.dir)).toBeCloseTo(reach + RELIEF_STEP, 9);
+            expect(panel.offset.z).toBeCloseTo(middleZ, 9);
+            expect(panel.scale).toEqual({x: C.counterSize, y: C.counterSize, z: 1});
+            expectDigitsOnPanel(parts, FLOOR_FACING, counter);
+        }
+        expect(sides.size).toBe(C.numCounters);
+    });
+
+    it("are three on a wall, each with its digits upright as the room has up: one on its plate, over its pillar, " +
+        "facing out of the wall, and one on its pillar's side to either hand, with nothing on the pillar's upper and " +
+        "lower sides", () => {
+        // The plate's lies between the pillar and the plate's upper edge, clear of both; a side's as far out of the
+        // wall as it stands over a floor.
+        const middleUp = 0.5 * C.plateSize.y - C.plateCounterInset - 0.5 * C.counterSize;
+        const middleOut = C.plateSize.z + C.counterBottom + 0.5 * C.counterSize;
+        expect(C.plateCounterInset).toBeGreaterThan(0);
+        expect(middleUp - 0.5 * C.counterSize).toBeGreaterThan(0.5 * C.pillarSize.y);
+        for (const facing of WALL_FACINGS)
+        {
+            const parts = posed(facing, 88);
+            const seen = [...Array(C.numCounters).keys()].filter(counter => !isUnseen(parts, counter));
+            expect(seen).toHaveLength(3);
+            const sideWays: Vec3[] = [];
+            for (const counter of seen)
+            {
+                const panel = parts[C.firstCounterIndex + counter];
+                // Which way it faces in the room, and where it is from the middle of the cannon's place on the wall.
+                const way = inRoom(facing, panel.dir);
+                const middle = inRoom(facing, panel.offset);
+                expect(panel.scale).toEqual({x: C.counterSize, y: C.counterSize, z: 1});
+                // None faces up or down the room, and each one's digits stand the way the room is up.
+                expect(way.y).toBeCloseTo(0, 9);
+                expectAxis(inRoom(facing, panelAxes(facing, panel.dir).up), {x: 0, y: 1, z: 0});
+                expectDigitsOnPanel(parts, facing, counter);
+                if (Vector3DUtil.dot(way, facing) > 0.5)
+                {
+                    // The plate's: straight up the wall from the cannon's middle, and just proud of the plate.
+                    expect(middle.y).toBeCloseTo(middleUp, 9);
+                    expect(Vector3DUtil.dot(middle, facing)).toBeCloseTo(C.plateSize.z + RELIEF_STEP, 9);
+                    expect(Math.hypot(middle.x, middle.z)).toBeCloseTo(C.plateSize.z + RELIEF_STEP, 9);
+                }
+                else
+                {
+                    // A side's: level with the cannon's middle, and just proud of the pillar's side.
+                    sideWays.push(way);
+                    expect(Vector3DUtil.dot(way, facing)).toBeCloseTo(0, 9);
+                    expect(middle.y).toBeCloseTo(0, 9);
+                    expect(Vector3DUtil.dot(middle, way)).toBeCloseTo(0.5 * C.pillarSize.x + RELIEF_STEP, 9);
+                    expect(Vector3DUtil.dot(middle, facing)).toBeCloseTo(middleOut, 9);
+                }
+            }
+            // One along the wall each way.
+            expect(sideWays).toHaveLength(2);
+            expect(Vector3DUtil.dot(sideWays[0], sideWays[1])).toBeCloseTo(-1, 9);
+        }
+    });
+
+    it(`show the balls left, from ${CANNON_BALL_COUNT} down to none, reading the right way round: on every side of the ` +
+        "pillar on a floor, and on the plate and the pillar's two sides on whichever wall it stands", () => {
         for (const facing of [FLOOR_FACING, ...WALL_FACINGS])
         {
-            for (const {dark} of stripsOf(facing, 1))
+            const full = posed(facing, 88);
+            const seen = [...Array(C.numCounters).keys()].filter(counter => !isUnseen(full, counter));
+            expect(seen).toHaveLength((facing == FLOOR_FACING) ? C.numCounters : 3);
+            for (let ballsLeft = 0; ballsLeft <= CANNON_BALL_COUNT; ++ballsLeft)
             {
-                expect(dark[0]).toBeCloseTo(C.plateSize.z + C.gaugeBottom, 9);
-                expect(dark[0]).toBeGreaterThan(C.plateSize.z);
-                expect(dark[1]).toBeLessThan(C.pivotHeight - 0.5 * C.barrelDiameter);
+                const parts = posed(facing, ballsLeft);
+                for (let counter = 0; counter < C.numCounters; ++counter)
+                {
+                    if (seen.includes(counter))
+                        expect(readCounter(parts, facing, counter), `${ballsLeft} on counter ${counter}`).toBe(`${ballsLeft}`);
+                    else
+                        expect(isUnseen(parts, counter), `${ballsLeft} on counter ${counter}`).toBe(true);
+                }
             }
         }
     });
 
-    it(`are full with every ball, and a ${CANNON_BALL_COUNT}th shorter from the top for each one fired, down to nothing`, () => {
-        for (const facing of [FLOOR_FACING, ...WALL_FACINGS])
+    it("go where each face has them as a cannon is moved from one to another, its parts posed anew", () => {
+        const aim = CannonAimUtil.getLocalDirection({yaw: 0, pitch: 0});
+        const parts = CannonCompositionUtil.buildParts();
+        for (const facing of [WALL_FACINGS[0], FLOOR_FACING, WALL_FACINGS[3], WALL_FACINGS[1], FLOOR_FACING])
         {
-            for (let ballsLeft = CANNON_BALL_COUNT; ballsLeft >= 0; --ballsLeft)
+            CannonCompositionUtil.pose(parts, facing, aim, 17);
+            expect(parts).toEqual(posed(facing, 17));
+        }
+    });
+
+    it("show the balls left wherever a cannon is composed, on a floor or a wall", () => {
+        for (const facing of [FLOOR_FACING, WALL_FACINGS[1]])
+        {
+            for (let ballsLeft = 0; ballsLeft <= CANNON_BALL_COUNT; ++ballsLeft)
             {
-                for (const {dark, green} of stripsOf(facing, ballsLeft / CANNON_BALL_COUNT))
-                {
-                    expect(green[0]).toBeCloseTo(dark[0] + C.gaugeFillMargin, 9);
-                    expect(green[1] - green[0]).toBeCloseTo(fullLength * ballsLeft / CANNON_BALL_COUNT, 9);
-                    expect(green[1]).toBeLessThanOrEqual(dark[1] - C.gaugeFillMargin + 0.000001);
-                }
+                const state = {...CannonStateUtil.decode(""), ballsLeft};
+                // As anything that draws one composes it, from the object alone.
+                const cannon = new AddObjectSignal(HUB_ID, "", "", CANNON_TYPE_INDEX, "a-cannon",
+                    new ObjectTransform({...CANNON_SPOT}, {...facing}, {x: 1, y: 1, z: 1}),
+                    {[ObjectMetadataKeyEnumMap.CannonState]: new EncodableByteString(CannonStateUtil.encode(state))});
+                const composed: InstancedMeshCompositionPart[] = [];
+                ObjectCompositionUtil.decode(cannon, {}, composed);
+                // (Aimed as its state keeps the aim.)
+                const kept = CannonStateUtil.decode(CannonStateUtil.encode(state));
+                const expected = CannonCompositionUtil.buildParts();
+                CannonCompositionUtil.pose(expected, facing,
+                    CannonAimUtil.getLocalDirection(CannonStateUtil.getShownAim(kept, facing)), ballsLeft);
+                expect(composed).toEqual(expected);
             }
         }
+    });
+
+    it("light their digits green, or red while warning, dimmed toward the black behind them, and black while not lit", () => {
+        const parts = posed(FLOOR_FACING, 12);
+        const digits = () => parts.slice(C.firstSegmentIndex).map(part => part.color);
+        const panels = () => parts.slice(C.firstCounterIndex, C.firstSegmentIndex).map(part => part.color);
+        const allOf = (color: Vec3) => Array(C.numCounters * SEGMENTS_PER_COUNTER).fill(color);
+        expect(CannonCompositionUtil.setCounterLight(parts, 1, false, true)).toBe(false);
+        expect(digits()).toEqual(allOf(C.digitColor));
+        expect(CannonCompositionUtil.setCounterLight(parts, 1, true, true)).toBe(true);
+        expect(digits()).toEqual(allOf(C.digitWarningColor));
+        // Told again, nothing changes.
+        expect(CannonCompositionUtil.setCounterLight(parts, 1, true, true)).toBe(false);
+
+        const halfway = (from: Vec3, to: Vec3) => ({x: (from.x + to.x) / 2, y: (from.y + to.y) / 2, z: (from.z + to.z) / 2});
+        expect(CannonCompositionUtil.setCounterLight(parts, 0.5, true, true)).toBe(true);
+        expect(digits()).toEqual(allOf(halfway(C.counterColor, C.digitWarningColor)));
+        expect(CannonCompositionUtil.setCounterLight(parts, 0.5, false, true)).toBe(true);
+        expect(digits()).toEqual(allOf(halfway(C.counterColor, C.digitColor)));
+        for (const [glow, warning, lit] of [[0, false, true], [0, true, true], [1, true, false], [1, false, false]] as const)
+        {
+            CannonCompositionUtil.setCounterLight(parts, glow, warning, lit);
+            expect(digits()).toEqual(allOf(C.counterColor));
+        }
+        expect(panels()).toEqual(Array(C.numCounters).fill(C.counterColor));
     });
 });
 
@@ -677,6 +985,87 @@ describe("a sphere swept through a room", () => {
                     expect(dist(at, other)).toBeLessThanOrEqual(reach + 0.000001);
                 expect(angleBetween(hit.hitNormal, Vector3DUtil.subtract(at, other))).toBeLessThan(0.0001);
             }), {numRuns: 300});
+    });
+
+    // An upright cylinder standing in a box: as wide as the box is along x, and as tall.
+    const cylinder: AABB3 = {center: {x: 0.5, y: -0.25, z: 0.25}, halfSize: {x: 0.6, y: 1.1, z: 0.6}};
+    const acrossFromCylinder = (point: Vec3): number =>
+        Math.hypot(point.x - cylinder.center.x, point.z - cylinder.center.z);
+    const distanceToCylinder = (point: Vec3): number => Math.hypot(
+        Math.max(0, acrossFromCylinder(point) - cylinder.halfSize.x),
+        Math.max(0, Math.abs(point.y - cylinder.center.y) - cylinder.halfSize.y));
+
+    it("strikes an upright cylinder where it first touches it, as a slow walk along the same way finds, with the way " +
+        "out of it there: level off its side, straight up or down off an end", () => {
+        fc.assert(fc.property(vec3In(-4, 4), vec3In(-4, 4), scaled(0, 0.8), (from, to, radius) => {
+            const hit = Geometry3DUtil.castSphereAgainstUprightCylinder(from, to, radius, cylinder);
+            const steps = 400;
+            if (hit.hitNormal == undefined)
+            {
+                for (let i = 0; i <= steps; ++i)
+                    expect(distanceToCylinder(along(from, to, i / steps))).toBeGreaterThan(radius - 0.000001);
+                return;
+            }
+            expect(hit.hitRayScale).toBeGreaterThanOrEqual(0);
+            expect(hit.hitRayScale).toBeLessThanOrEqual(1);
+            const at = along(from, to, hit.hitRayScale);
+            const touching = distanceToCylinder(at);
+            if (hit.hitRayScale > 0)
+                expect(touching).toBeCloseTo(radius, 6);
+            else
+                expect(touching).toBeLessThanOrEqual(radius + 0.000001);
+            for (let i = 0; i < steps && i / steps < hit.hitRayScale - 0.000001; ++i)
+                expect(distanceToCylinder(along(from, to, i / steps))).toBeGreaterThan(radius - 0.000001);
+            expect(Vector3DUtil.length(hit.hitNormal)).toBeCloseTo(1, 6);
+
+            // (Clear of the cylinder itself, and of the rim between its side and an end.)
+            const height = at.y - cylinder.center.y;
+            if (touching < 0.001)
+                return;
+            if (Math.abs(height) < cylinder.halfSize.y - 0.001)
+            {
+                expect(hit.hitNormal.y).toBe(0);
+                expect(angleBetween(hit.hitNormal, {x: at.x - cylinder.center.x, y: 0, z: at.z - cylinder.center.z}))
+                    .toBeLessThan(0.0001);
+            }
+            else if (acrossFromCylinder(at) < cylinder.halfSize.x - 0.001)
+                expectAxis(hit.hitNormal, {x: 0, y: Math.sign(height), z: 0});
+        }), {numRuns: 300});
+    });
+
+    it("strikes that cylinder's side at its radius from it whichever way it comes, misses the corners of the box it " +
+        "stands in, and comes off the rim of its top between up and out", () => {
+        const {center, halfSize} = cylinder;
+        const radius = 0.25;
+        for (const degrees of [0, 30, 45, 90, 135, 200, 315])
+        {
+            const way = levelWay(degrees);
+            const hit = Geometry3DUtil.castSphereAgainstUprightCylinder(Vector3DUtil.add(center, Vector3DUtil.scale(way, 5)),
+                center, radius, cylinder);
+            expect(hit.hitRayScale).toBeCloseTo((5 - halfSize.x - radius) / 5, 9);
+            expect(dist(hit.hitNormal!, way)).toBeLessThan(0.000001);
+        }
+
+        // Past a corner of the box, nearer than the corner reaches with the sphere, but farther than the side does.
+        const passing = halfSize.x + radius + 0.05;
+        expect(passing).toBeLessThan(Math.SQRT2 * halfSize.x + radius);
+        const beside = Vector3DUtil.add(center, Vector3DUtil.scale(levelWay(45), passing));
+        const [a, b] = [-4, 4].map(far => Vector3DUtil.add(beside, Vector3DUtil.scale(levelWay(135), far)));
+        expect(Geometry3DUtil.castSphereAgainstAABB(a, b, radius, cylinder).hitNormal).toBeDefined();
+        expect(Geometry3DUtil.castSphereAgainstUprightCylinder(a, b, radius, cylinder).hitNormal).toBeUndefined();
+
+        // Down onto its top, and down past its top's rim, within the sphere's radius of it.
+        const top = center.y + halfSize.y;
+        const onto = Geometry3DUtil.castSphereAgainstUprightCylinder({x: center.x + 0.2, y: top + 3, z: center.z},
+            {x: center.x + 0.2, y: top - 1, z: center.z}, radius, cylinder);
+        expect(onto.hitRayScale).toBeCloseTo((3 - radius) / 4, 9);
+        expectAxis(onto.hitNormal, {x: 0, y: 1, z: 0});
+        const rim = Geometry3DUtil.castSphereAgainstUprightCylinder({x: center.x + halfSize.x + 0.15, y: top + 3, z: center.z},
+            {x: center.x + halfSize.x + 0.15, y: top - 1, z: center.z}, radius, cylinder);
+        expect(rim.hitRayScale).toBeCloseTo((3 - Math.sqrt(radius * radius - 0.15 * 0.15)) / 4, 9);
+        expect(rim.hitNormal!.x).toBeCloseTo(0.15 / radius, 6);
+        expect(rim.hitNormal!.y).toBeCloseTo(Math.sqrt(radius * radius - 0.15 * 0.15) / radius, 6);
+        expect(rim.hitNormal!.z).toBeCloseTo(0, 9);
     });
 
     it("reaches into a box exactly when it comes nearer than its radius", () => {
@@ -768,15 +1157,118 @@ describe("what a ball strikes in a room, and what a blast reaches", () => {
         expect(cast(low.from, low.to)).toBeUndefined();
     });
 
-    it("is a cannon in its way, as solid as a block, but not the one it sets off from inside", () => {
+    it("meets a player as a round body: by their side at its radius from their middle line whichever way it comes, " +
+        "past the corners of their box, and by the top of their head from above", async () => {
+        const at = {x: 16.25, y: STANDING_Y, z: 16.25};
+        await join("someone", at);
+        const playerId = harness.getPlayerObject("someone")!.objectId;
+        const reach = PLAYER_RADIUS_XZ + CANNON_BALL_RADIUS;
+        for (const degrees of [0, 45, 90, 160, 225, 300])
+        {
+            const way = levelWay(degrees);
+            const hit = cast(Vector3DUtil.add(at, Vector3DUtil.scale(way, 4)), at)!;
+            expect(hit.object?.objectId).toBe(playerId);
+            expect(Math.hypot(hit.center.x - at.x, hit.center.z - at.z)).toBeCloseTo(reach, 6);
+            expect(dist(hit.normal, way)).toBeLessThan(0.000001);
+        }
+
+        // Past a corner of the box they are to all else, where a box would be struck: a miss. A little nearer: a hit.
+        const passing = reach + 0.05;
+        expect(passing).toBeLessThan(Math.SQRT2 * PLAYER_RADIUS_XZ + CANNON_BALL_RADIUS);
+        const pass = (across: number) => {
+            const beside = Vector3DUtil.add(at, Vector3DUtil.scale(levelWay(45), across));
+            return cast(Vector3DUtil.add(beside, Vector3DUtil.scale(levelWay(135), -3)),
+                Vector3DUtil.add(beside, Vector3DUtil.scale(levelWay(135), 3)));
+        };
+        expect(pass(passing)).toBeUndefined();
+        expect(pass(passing - 0.1)?.object?.objectId).toBe(playerId);
+
+        // (From under the slab over the lower storey.)
+        const down = cast({x: at.x + 0.1, y: SLAB_UNDERSIDE_Y - 2 * CANNON_BALL_RADIUS, z: at.z},
+            {x: at.x + 0.1, y: STANDING_Y, z: at.z})!;
+        expect(down.object?.objectId).toBe(playerId);
+        expect(down.center.y).toBeCloseTo(PLAYER_HEIGHT + CANNON_BALL_RADIUS, 6);
+        expectAxis(down.normal, {x: 0, y: 1, z: 0});
+    });
+
+    it("is a mirror it closes on, by the way the mirror faces whichever part of it the ball touches, and never one it " +
+        "leaves; past the mirror's edge, the wall it hangs on", () => {
+        const {mirror, box} = hangMirror();
+        const front = box.center.x - box.halfSize.x;
+        const level = {from: {x: 12, y: MIRROR_SPOT.y, z: MIRROR_SPOT.z}, to: {x: 17, y: MIRROR_SPOT.y, z: MIRROR_SPOT.z}};
+        const hit = cast(level.from, level.to)!;
+        expect(hit.object?.objectId).toBe(mirror.objectId);
+        expect(hit.block).toBeUndefined();
+        expect(hit.center.x).toBeCloseTo(front - CANNON_BALL_RADIUS, 9);
+        expect(front).toBeLessThan(MIRROR_SPOT.x);
+        expectAxis(hit.normal, {x: -1, y: 0, z: 0});
+
+        // Just past its edge, where its box alone would send a ball off at a slant: the same way.
+        const edgeZ = box.center.z + box.halfSize.z + 0.02;
+        const byEdge = cast({...level.from, z: edgeZ}, {...level.to, z: edgeZ})!;
+        expect(byEdge.object?.objectId).toBe(mirror.objectId);
+        expectAxis(byEdge.normal, {x: -1, y: 0, z: 0});
+        // Farther past it, the wall is struck first.
+        const pastZ = box.center.z + box.halfSize.z + 0.2;
+        const past = cast({...level.from, z: pastZ}, {...level.to, z: pastZ})!;
+        expect(past.object).toBeUndefined();
+        expect(past.block).toBeDefined();
+        expect(past.center.x).toBeCloseTo(MIRROR_SPOT.x - CANNON_BALL_RADIUS, 9);
+
+        // Touching it, a ball that flies off it, or along it, is free of it.
+        expect(cast(hit.center, level.from)).toBeUndefined();
+        expect(cast(hit.center, {...hit.center, z: hit.center.z - 0.4})).toBeUndefined();
+    });
+
+    it("is an NPC it closes on, round as a player is, and never one it leaves, even from inside it", () => {
+        const {npc, box} = standNpc({x: 16.25, z: 16.25});
+        const reach = box.halfSize.x + CANNON_BALL_RADIUS;
+        const low = {from: {x: 8, y: STANDING_Y, z: box.center.z}, to: {x: 24, y: STANDING_Y, z: box.center.z}};
+        const hit = cast(low.from, low.to)!;
+        expect(hit.object?.objectId).toBe(npc.objectId);
+        expect(hit.center.x).toBeCloseTo(box.center.x - reach, 6);
+        expectAxis(hit.normal, {x: -1, y: 0, z: 0});
+
+        // To one side of its middle line: off its side there, level.
+        const aside = 0.3;
+        const glancing = cast({...low.from, z: box.center.z + aside}, {...low.to, z: box.center.z + aside})!;
+        expect(glancing.center.x).toBeCloseTo(box.center.x - Math.sqrt(reach * reach - aside * aside), 6);
+        expect(glancing.normal.y).toBe(0);
+        expect(angleBetween(glancing.normal, {x: glancing.center.x - box.center.x, y: 0, z: aside})).toBeLessThan(0.000001);
+
+        expect(cast(hit.center, low.from)).toBeUndefined();
+        expect(cast({x: box.center.x - 0.1, y: STANDING_Y, z: box.center.z}, low.from)).toBeUndefined();
+        // Over its head, it passes.
+        const over = box.center.y + box.halfSize.y + CANNON_BALL_RADIUS + 0.1;
+        expect(cast({...low.from, y: over}, {...low.to, y: over})).toBeUndefined();
+        // Ignored, it is passed.
+        expect(cast(low.from, low.to, new Set([npc.objectId]))).toBeUndefined();
+    });
+
+    it("is a cannon in its way, as solid as a block, with the way out of its box where the two touch, but not one it " +
+        "leaves, nor the one it sets off from inside", () => {
         const cannon = placeCannon({on: false}, {x: 16.5, y: 0, z: 16.5});
+        const box = PhysicsColliderStateUtil.getObjectColliderState(CANNON_TYPE_INDEX, cannon.transform)!.hitbox;
         const low = {from: {x: 8, y: 0.5, z: 16.5}, to: {x: 24, y: 0.5, z: 16.5}};
         const hit = cast(low.from, low.to)!;
         expect(hit.object?.objectId).toBe(cannon.objectId);
-        expect(hit.center.x).toBeLessThan(16);
+        expect(hit.center.x).toBeCloseTo(box.center.x - box.halfSize.x - CANNON_BALL_RADIUS, 9);
+        expectAxis(hit.normal, {x: -1, y: 0, z: 0});
+        // Over its top edge by less than its radius: off that edge, aslant, not as off its face up.
+        const above = 0.15;
+        const edge = {x: box.center.x - box.halfSize.x, y: box.center.y + box.halfSize.y, z: 16.5};
+        const byEdge = cast({...low.from, y: edge.y + above}, {...low.to, y: edge.y + above})!;
+        expect(byEdge.object?.objectId).toBe(cannon.objectId);
+        expect(byEdge.center.x).toBeCloseTo(edge.x - Math.sqrt(CANNON_BALL_RADIUS ** 2 - above ** 2), 6);
+        expect(angleBetween(byEdge.normal, Vector3DUtil.subtract(byEdge.center, edge))).toBeLessThan(0.000001);
+        expect(byEdge.normal.x).toBeLessThan(-0.5);
+        expect(byEdge.normal.y).toBeGreaterThan(0.5);
+
+        // Touching it, a ball that flies off it is free of it.
+        expect(cast(hit.center, low.from)).toBeUndefined();
+        expect(cast(byEdge.center, {...low.from, y: 3})).toBeUndefined();
         // From its own barrel's mouth, which is inside its box, a ball flies free of it.
         const muzzle = CannonAimUtil.getMuzzle(cannon.transform.pos, cannon.transform.dir, {yaw: 0, pitch: 0});
-        const box = PhysicsColliderStateUtil.getObjectColliderState(CANNON_TYPE_INDEX, cannon.transform)!.hitbox;
         expect(distanceToBox(muzzle, box)).toBe(0);
         const away = Vector3DUtil.add(muzzle, Vector3DUtil.scale(CannonAimUtil.getDirection(cannon.transform.dir, {yaw: 0, pitch: 0}), 6));
         expect(cast(muzzle, away)).toBeUndefined();
@@ -1368,6 +1860,57 @@ describe("a cannon the server plays", () => {
         });
     });
 
+    it("fires at someone behind an NPC all the same, whom nothing a ball bounces off hides from it, and its ball " +
+        "bounces off the NPC", async () => {
+        const user = await join("someone");
+        const cannon = placeCannon({phase: CannonPhaseEnumMap.Waiting, timeLeft: 0});
+        // Midway on the line from its barrel's mouth to their middle.
+        const {box} = standNpc({x: 0.5 * (CANNON_SPOT.x + TARGET_SPOT.x), z: TARGET_SPOT.z});
+        const pivot = CannonAimUtil.getPivot(cannon.transform.pos, cannon.transform.dir);
+        expect(Geometry3DUtil.castSphereAgainstUprightCylinder(pivot, TARGET_SPOT, 0, box).hitNormal).toBeDefined();
+
+        flushUntil(() => getBalls().length == 1, Math.PI / CANNON_TURN_RATE + CANNON_LOCK_SECONDS + CANNON_READY_SECONDS + 2);
+        const [ball] = getBalls();
+        const fired = CannonBallStateUtil.getObjectState(ball).vel;
+        expect(angleBetween(fired, Vector3DUtil.subtract(TARGET_SPOT, pivot))).toBeLessThanOrEqual(CANNON_AIM_TOLERANCE + 0.01);
+        forget(user);
+        // Back off the NPC, toward the cannon, and nobody is thrown.
+        const isFlying = () => getRoom().objectById[ball.objectId] != undefined;
+        flushUntil(() => !isFlying() || CannonBallStateUtil.getObjectState(ball).vel.x < 0,
+            (box.center.x - pivot.x) / fired.x + 2 * FLUSH_SECONDS);
+        expect(isFlying()).toBe(true);
+        expect(CannonBallStateUtil.getObjectState(ball).vel.x).toBeLessThan(0);
+        expect(statesToldTo(user, ball.objectId).map(value => CannonBallStateUtil.decode(value).exploded)).toEqual([false]);
+        expect(getBills()).toEqual([]);
+    });
+
+    it("fires at someone behind another cannon all the same, which a ball bounces off too, and its ball bounces off " +
+        "that cannon, which stays", async () => {
+        const user = await join("someone");
+        const cannon = placeCannon({phase: CannonPhaseEnumMap.Waiting, timeLeft: 0});
+        // Switched off, midway on the line from the first one's barrel's mouth to their middle.
+        const between = placeCannon({on: false}, {x: 0.5 * (CANNON_SPOT.x + TARGET_SPOT.x), y: 0, z: TARGET_SPOT.z},
+            FLOOR_FACING, "another-cannon");
+        const box = PhysicsColliderStateUtil.getObjectColliderState(CANNON_TYPE_INDEX, between.transform)!.hitbox;
+        const pivot = CannonAimUtil.getPivot(cannon.transform.pos, cannon.transform.dir);
+        expect(Geometry3DUtil.castSphereAgainstAABB(pivot, TARGET_SPOT, 0, box).hitNormal).toBeDefined();
+
+        flushUntil(() => getBalls().length == 1, Math.PI / CANNON_TURN_RATE + CANNON_LOCK_SECONDS + CANNON_READY_SECONDS + 2);
+        const [ball] = getBalls();
+        const fired = CannonBallStateUtil.getObjectState(ball).vel;
+        expect(angleBetween(fired, Vector3DUtil.subtract(TARGET_SPOT, pivot))).toBeLessThanOrEqual(CANNON_AIM_TOLERANCE + 0.01);
+        forget(user);
+        // Back off the other cannon, toward the first, and nobody is thrown.
+        const isFlying = () => getRoom().objectById[ball.objectId] != undefined;
+        flushUntil(() => !isFlying() || CannonBallStateUtil.getObjectState(ball).vel.x < 0,
+            (box.center.x - pivot.x) / fired.x + 2 * FLUSH_SECONDS);
+        expect(isFlying()).toBe(true);
+        expect(CannonBallStateUtil.getObjectState(ball).vel.x).toBeLessThan(0);
+        expect(statesToldTo(user, ball.objectId).map(value => CannonBallStateUtil.decode(value).exploded)).toEqual([false]);
+        expect(getRoom().objectById[between.objectId]).toBeDefined();
+        expect(getBills()).toEqual([]);
+    });
+
     it("fires from a wall as from a floor", async () => {
         await join("someone", {x: 16.5, y: STANDING_Y, z: 16.5});
         // On the inside of the west boundary wall.
@@ -1388,7 +1931,7 @@ describe("a cannon the server plays", () => {
         flushUntil(() => stateOf(cannon).ballsLeft == 1, 12);
         expect(getRoom().objectById[cannon.objectId]).toBeDefined();
         flushUntil(() => stateOf(cannon).ballsLeft == 0, CANNON_FIRE_INTERVAL_SECONDS[0] + 12);
-        // Empty, it still stands, for those who watch its gauge run out.
+        // Empty, it still stands, for those who watch its counter run out.
         forget(user);
         flushFor(CANNON_SPENT_SECONDS - FLUSH_SECONDS);
         expect(getRoom().objectById[cannon.objectId]).toBeDefined();
@@ -1539,7 +2082,20 @@ describe("a cannon ball the server flies", () => {
         return statesToldTo(user, ball.objectId).map(value => CannonBallStateUtil.decode(value));
     }
 
-    // A fan at its gentlest, which turns a ball without sending it as fast as one goes at most.
+    // How fast a ball leaves a bounce it came to at some speed.
+    function speedAfterBounce(speed: number): number
+    {
+        return Math.max(speed, Math.min(speed + CANNON_BALL_BOUNCE_BOOST, CANNON_BALL_MAX_SPEED));
+    }
+
+    // How a ball goes on from a bounce off something that stands still, which turns it some way: that way, faster.
+    function boosted(turned: Vec3): Vec3
+    {
+        const speed = Vector3DUtil.length(turned);
+        return Vector3DUtil.scale(turned, speedAfterBounce(speed) / speed);
+    }
+
+    // A fan at its gentlest, which turns a ball without sending it as fast as a wind takes one at most.
     function addFan(pos: Vec3, dir: Vec3): void
     {
         const fan = new AddObjectSignal(HUB_ID, ADMIN.id, ADMIN.userName, FAN_TYPE_INDEX, `fan-${pos.x}-${pos.z}`,
@@ -1560,7 +2116,7 @@ describe("a cannon ball the server flies", () => {
             new RemoveObjectSignal(HUB_ID, ball.objectId))).toBe(false);
         expect(ServerObjectManager.onSetObjectMetadataSignalReceived(user.socketUserContext, new SetObjectMetadataSignal(
             HUB_ID, ball.objectId, STATE_KEY, CannonBallStateUtil.encode({pos: {x: 1, y: 1, z: 1}, vel: {x: 0, y: 0, z: 0},
-                exploded: true, hitObjectIds: []})))).toBe(false);
+                exploded: true, hitObjectIds: [], bounces: 0})))).toBe(false);
         expect(isFlying(ball)).toBe(true);
     });
 
@@ -1604,11 +2160,13 @@ describe("a cannon ball the server flies", () => {
         expect(flight.vel.y).toBeLessThan(8 * CANNON_BALL_WIND_SHARE);
         expect(flight.pos.y).toBeGreaterThan(1.05);
         expect(flight.vel.x).toBeCloseTo(CANNON_BALL_SPEED, 2);
-        expect(Vector3DUtil.length(flight.vel)).toBeLessThanOrEqual(CANNON_BALL_MAX_SPEED + SPEED_STEP);
+        expect(Vector3DUtil.length(flight.vel)).toBeLessThanOrEqual(CANNON_BALL_MAX_WIND_SPEED + SPEED_STEP);
         const words = wordsOf(user, ball);
         expect(words.length).toBeGreaterThan(0);
         expect(words.every(word => !word.exploded)).toBe(true);
         expect(words[words.length - 1].vel.y).toBeGreaterThan(2 * CANNON_BALL_WIND_SHARE);
+        // A turn the air gives it is no bounce.
+        expect(words.every(word => word.bounces == 0)).toBe(true);
         // Past the stream, it flies straight again, and nothing more is told.
         flushFor(1);
         forget(user);
@@ -1618,7 +2176,7 @@ describe("a cannon ball the server flies", () => {
         expect(flightOf(ball).vel).toEqual(after);
     });
 
-    it(`never flies faster than ${CANNON_BALL_MAX_SPEED} units a second, however long a stream has it`, async () => {
+    it(`is sped up by a stream to ${CANNON_BALL_MAX_WIND_SPEED} units a second at most, however long the stream has it`, async () => {
         await join("someone", {x: 26, y: STANDING_Y, z: 26});
         // Fans along the floor, each blowing up the shaft over it... and one ball let go in their streams, going up.
         const pos = {x: 10, y: 0.5, z: 10};
@@ -1627,9 +2185,29 @@ describe("a cannon ball the server flies", () => {
         for (let i = 0; i < 30; ++i)
         {
             CannonBallMotionUtil.advance(HUB_ID, pos, vel, 1 / 60, new Set());
-            expect(Vector3DUtil.length(vel)).toBeLessThanOrEqual(CANNON_BALL_MAX_SPEED + 0.000001);
+            expect(Vector3DUtil.length(vel)).toBeLessThanOrEqual(CANNON_BALL_MAX_WIND_SPEED + 0.000001);
         }
-        expect(Vector3DUtil.length(vel)).toBeCloseTo(CANNON_BALL_MAX_SPEED, 6);
+        expect(Vector3DUtil.length(vel)).toBeCloseTo(CANNON_BALL_MAX_WIND_SPEED, 6);
+    });
+
+    it("is sped up by no stream once bounces have it going faster than a stream takes one, though turned by it, and " +
+        "slowed by one it flies into", async () => {
+        await join("someone", {x: 26, y: STANDING_Y, z: 26});
+        expect(CANNON_BALL_MAX_SPEED).toBeGreaterThanOrEqual(CANNON_BALL_MAX_WIND_SPEED);
+        vi.spyOn(PhysicsManager, "getPush").mockReturnValue({x: 0, y: 400, z: 0});
+        const flown = (vel: Vec3): Vec3 => {
+            CannonBallMotionUtil.advance(HUB_ID, {x: 10, y: 1.5, z: 10}, vel, 1 / 60, new Set());
+            return vel;
+        };
+        const fast = CANNON_BALL_MAX_SPEED;
+        // Along the stream, across it, and into it.
+        expect(flown({x: 0, y: fast, z: 0}).y).toBeCloseTo(fast, 6);
+        const across = flown({x: fast, y: 0, z: 0});
+        expect(Vector3DUtil.length(across)).toBeCloseTo(fast, 6);
+        expect(across.y).toBeGreaterThan(0);
+        const into = flown({x: 0, y: -fast, z: 0});
+        expect(into.y).toBeGreaterThan(-fast);
+        expect(into.y).toBeLessThan(0);
     });
 
     it("bursts on a block anybody could remove, which goes with it, and leaves a bill there", async () => {
@@ -1721,6 +2299,38 @@ describe("a cannon ball the server flies", () => {
         expect(getBills()).toHaveLength(1);
     });
 
+    it("leaves a block a cannon hangs on, and the cannon, though anybody could take both off, and breaks the rest",
+        async () => {
+        const user = await join("someone", {x: 26, y: STANDING_Y, z: 26});
+        // A pillar two blocks square, with a cannon on top.
+        const blocks = [];
+        for (const x of [16.25, 16.75])
+        {
+            for (const z of [16.25, 16.75])
+            {
+                for (const y of [1.25, 1.75])
+                    blocks.push(placeBlock(x, y, z));
+            }
+        }
+        const cannon = placeCannon({on: false}, {x: 16.5, y: 2, z: 16.5});
+        expect(ObjectUpdateUtil.canRemoveObject(GUEST, getRoom(), new RemoveObjectSignal(HUB_ID, cannon.objectId))).toBe(true);
+        const top = VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(1.75);
+        const under = blocks.filter(block => block.layer == top);
+
+        // At the middle of the pillar's west side, where its blast reaches the blocks the cannon stands on, and those
+        // under them.
+        const ball = launch({x: 12, y: 1.5, z: 16.5}, {x: CANNON_BALL_SPEED, y: 0, z: 0});
+        forget(user);
+        flushUntil(() => !isFlying(ball), 3);
+        expect(wordsOf(user, ball)).toMatchObject([{exploded: true}]);
+        expect(getRoom().objectById[cannon.objectId]).toBeDefined();
+        expect(under.every(hasBlock)).toBe(true);
+        const broken = blocks.filter(block => !hasBlock(block));
+        expect(broken.length).toBeGreaterThanOrEqual(1);
+        expect(broken.every(block => block.layer < top)).toBe(true);
+        expect(removalsSentTo(user)).toEqual([ball.objectId]);
+    });
+
     it("breaks no block in a restricted zone, whoever the zone is kept for", async () => {
         const user = await join("someone", {x: 26, y: STANDING_Y, z: 26});
         const block = placeBlock(16.25, FLIGHT_Y, 16.25);
@@ -1759,6 +2369,9 @@ describe("a cannon ball the server flies", () => {
         const [word] = wordsOf(user, ball);
         expect(word).toMatchObject({exploded: true, hitObjectIds: [playerId]});
         expect(word.pos.x).toBeCloseTo(16.25 - PLAYER_RADIUS_XZ - CANNON_BALL_RADIUS, 1);
+        // Struck in the middle, they are thrown straight on along its way.
+        expect(word.struck?.objectId).toBe(playerId);
+        expect(Math.abs(word.struck!.heading)).toBeLessThan(ANGLE_STEP);
         expect(getBills()).toEqual([]);
         // Their browser throws them; the server believes how far they then go.
         expect(noted).toHaveBeenCalledWith(user.socketUserContext);
@@ -1775,23 +2388,53 @@ describe("a cannon ball the server flies", () => {
         flushUntil(() => !isFlying(ball), 3);
         expect(wordsOf(user, ball)[0].hitObjectIds).toEqual([harness.getPlayerObject("someone")!.objectId]);
         expect(wordsOf(far, ball)[0].hitObjectIds).toEqual([harness.getPlayerObject("someone")!.objectId]);
+        // The ball struck the block, and nobody.
+        expect(wordsOf(user, ball)[0].struck).toBeUndefined();
         expect(hasBlock(block)).toBe(false);
         expect(getBills()).toEqual([]);
+    });
+
+    it("throws the player it strikes off their side where the two met, a body being round to it, and tells the room " +
+        "which way", async () => {
+        const at = {x: 16.25, y: STANDING_Y, z: 16.25};
+        const reach = PLAYER_RADIUS_XZ + CANNON_BALL_RADIUS;
+        for (const aside of [0.35, -0.5])
+        {
+            const name = `someone-${aside}`;
+            const user = await join(name, at);
+            const playerId = harness.getPlayerObject(name)!.objectId;
+            // Along x, past their middle line by less than it reaches them from.
+            const ball = launch({x: 12, y: STANDING_Y, z: at.z + aside}, {x: CANNON_BALL_SPEED, y: 0, z: 0});
+            forget(user);
+            flushUntil(() => !isFlying(ball), 3);
+            const [word] = wordsOf(user, ball);
+            const struckAt = {x: at.x - Math.sqrt(reach * reach - aside * aside), y: STANDING_Y, z: at.z + aside};
+            expect(word.hitObjectIds).toEqual([playerId]);
+            expect(dist(word.pos, struckAt)).toBeLessThan(0.001 + 2 * PLACE_STEP);
+            // Away from the ball's middle as it touched them: on along its way, and off to the side it wasn't on.
+            expect(word.struck?.objectId).toBe(playerId);
+            expect(Math.abs(word.struck!.heading - Math.atan2(at.z - struckAt.z, at.x - struckAt.x))).toBeLessThan(ANGLE_STEP);
+            const thrown = CannonBlastUtil.getThrow(word.struck!.heading);
+            expect(thrown.x).toBeGreaterThan(0);
+            expect(Math.sign(thrown.z)).toBe(-Math.sign(aside));
+            expect(Math.abs(thrown.z / thrown.x)).toBeCloseTo(Math.abs(aside) / (at.x - struckAt.x), 2);
+            await harness.disconnectUser(user);
+        }
     });
 
     it("throws a body away from where it burst, across the room, and up off its feet", () => {
         const burst = {x: 10, y: 1, z: 10};
         fc.assert(fc.property(vec3In(-3, 3), offset => {
             fc.pre(Math.hypot(offset.x, offset.z) > 0.01);
-            const thrown = CannonBlastUtil.getThrow(burst, Vector3DUtil.add(burst, offset));
-            expect(thrown.y).toBeGreaterThan(0);
+            const thrown = CannonBlastUtil.getThrow(CannonBlastUtil.getHeading(burst, Vector3DUtil.add(burst, offset)));
+            expect(thrown.y).toBe(CANNON_BLAST_LIFT_SPEED);
             expect(angleBetween({x: thrown.x, y: 0, z: thrown.z}, {x: offset.x, y: 0, z: offset.z})).toBeLessThan(0.000001);
-            expect(Math.hypot(thrown.x, thrown.z)).toBeCloseTo(Math.hypot(...Object.values(CannonBlastUtil.getThrow(burst,
-                {x: burst.x + 1, y: burst.y, z: burst.z})).filter((_, i) => i != 1)), 9);
+            expect(Math.hypot(thrown.x, thrown.z)).toBeCloseTo(CANNON_BLAST_PUSH_SPEED, 9);
         }));
+        expect(CANNON_BLAST_LIFT_SPEED).toBeGreaterThan(0);
         // Right over it, some way all the same.
-        const straightUp = CannonBlastUtil.getThrow(burst, {x: burst.x, y: burst.y + 1, z: burst.z});
-        expect(Math.hypot(straightUp.x, straightUp.z)).toBeGreaterThan(0);
+        const straightUp = CannonBlastUtil.getThrow(CannonBlastUtil.getHeading(burst, {x: burst.x, y: burst.y + 1, z: burst.z}));
+        expect(Math.hypot(straightUp.x, straightUp.z)).toBeCloseTo(CANNON_BLAST_PUSH_SPEED, 9);
     });
 
     it("throws a player hard: more than twice their height across the room, and higher than they stand where there is " +
@@ -1818,7 +2461,7 @@ describe("a cannon ball the server flies", () => {
 
         // Their browser throws them as it hears of the burst (see CannonBlastThrowUtil), and moves them a frame at a
         // time, telling the server where they are at each flush. They walk on the way it sends them all the while.
-        PhysicsManager.addCarriedVelocity(HUB_ID, player.objectId, CannonBlastUtil.getThrow(word.pos, player.transform.pos));
+        PhysicsManager.addCarriedVelocity(HUB_ID, player.objectId, CannonBlastUtil.getThrow(word.struck!.heading));
         const frameSeconds = 1 / 60;
         const framesPerFlush = Math.round(FLUSH_SECONDS / frameSeconds);
         let pos = {...player.transform.pos}, reported = {...pos}, highest = pos.y;
@@ -1871,7 +2514,122 @@ describe("a cannon ball the server flies", () => {
         expect(PlayerMotionCheckUtil.isTrusted(still)).toBe(false);
     });
 
-    it("bounces off another ball as a billiard ball does, and neither bursts", async () => {
+    it("bounces off a mirror as light does, faster than it came by what a bounce adds, and the room is told how it now " +
+        "goes: nothing bursts, nothing behind the mirror breaks, and no bill is left", async () => {
+        const user = await join("someone", {x: 26, y: STANDING_Y, z: 26});
+        const {mirror, box} = hangMirror();
+        const blocksBefore = getRoom().voxelGrid.voxels.map(voxel => voxel.blockLayerMask);
+        // At the mirror's middle, from a second's flight away, coming at a slant across it and up it.
+        const vel = Vector3DUtil.scale(Vector3DUtil.normalize({x: 2, y: 0.3, z: -0.8}), CANNON_BALL_SPEED);
+        const struckAt = {x: box.center.x - box.halfSize.x - CANNON_BALL_RADIUS, y: MIRROR_SPOT.y, z: MIRROR_SPOT.z};
+        const ball = launch(Vector3DUtil.subtract(struckAt, vel), vel);
+        forget(user);
+        flushFor(2);
+
+        expect(isFlying(ball)).toBe(true);
+        // What carried it into the mirror now carries it out of it, the rest as it was, and it goes that way faster.
+        const after = boosted({x: -vel.x, y: vel.y, z: vel.z});
+        expect(Vector3DUtil.length(after)).toBeCloseTo(speedAfterBounce(CANNON_BALL_SPEED), 6);
+        expect(Vector3DUtil.length(after)).toBeGreaterThan(CANNON_BALL_SPEED);
+        expect(dist(flightOf(ball).vel, after)).toBeLessThan(2 * SPEED_STEP);
+        expect(dist(flightOf(ball).pos, Vector3DUtil.add(struckAt, after))).toBeLessThan(0.001 + 2 * PLACE_STEP);
+        const words = wordsOf(user, ball);
+        expect(words).toHaveLength(1);
+        expect(words[0].exploded).toBe(false);
+        expect(words[0].bounces).toBe(1);
+        expect(dist(words[0].vel, after)).toBeLessThan(2 * SPEED_STEP);
+        expect(signalTypesSentTo(user)).toEqual(["setObjectMetadataSignal"]);
+        expect(getRoom().objectById[mirror.objectId]).toBeDefined();
+        expect(getRoom().voxelGrid.voxels.map(voxel => voxel.blockLayerMask)).toEqual(blocksBefore);
+        expect(getBills()).toEqual([]);
+    });
+
+    it("bounces off an NPC as off a round body, off its side where it strikes it, as level as it came and faster by " +
+        "what a bounce adds, and the room is told how it now goes: nothing bursts, and no bill is left", async () => {
+        const user = await join("someone", {x: 26, y: STANDING_Y, z: 26});
+        const {npc, box} = standNpc({x: 16.25, z: 16.25});
+        const home = {...npc.transform.pos};
+        const reach = box.halfSize.x + CANNON_BALL_RADIUS;
+        // Past its middle line by some way, falling a little as it goes, from a second's flight away.
+        const aside = 0.3;
+        const vel = Vector3DUtil.scale(Vector3DUtil.normalize({x: 1, y: -0.1, z: 0}), CANNON_BALL_SPEED);
+        const struckAt = {x: box.center.x - Math.sqrt(reach * reach - aside * aside), y: STANDING_Y, z: box.center.z + aside};
+        const ball = launch(Vector3DUtil.subtract(struckAt, vel), vel);
+        forget(user);
+        flushFor(2);
+
+        expect(isFlying(ball)).toBe(true);
+        const wayOut = Vector3DUtil.normalize({x: struckAt.x - box.center.x, y: 0, z: aside});
+        const turned = Vector3DUtil.subtract(vel, Vector3DUtil.scale(wayOut, 2 * Vector3DUtil.dot(vel, wayOut)));
+        expect(turned.y).toBe(vel.y);
+        const after = boosted(turned);
+        expect(after.x).toBeLessThan(0);
+        expect(after.z).toBeGreaterThan(0);
+        expect(dist(flightOf(ball).vel, after)).toBeLessThan(2 * SPEED_STEP);
+        expect(Vector3DUtil.length(flightOf(ball).vel)).toBeCloseTo(speedAfterBounce(CANNON_BALL_SPEED), 1);
+        expect(dist(flightOf(ball).pos, Vector3DUtil.add(struckAt, after))).toBeLessThan(0.001 + 2 * PLACE_STEP);
+        const words = wordsOf(user, ball);
+        expect(words).toHaveLength(1);
+        expect(words[0].exploded).toBe(false);
+        expect(words[0].bounces).toBe(1);
+        expect(dist(words[0].vel, after)).toBeLessThan(2 * SPEED_STEP);
+        expect(signalTypesSentTo(user)).toEqual(["setObjectMetadataSignal"]);
+        expect(npc.transform.pos).toEqual(home);
+        expect(getBills()).toEqual([]);
+    });
+
+    it("bounces off a cannon as off the box it is, off the side it strikes, faster than it came by what a bounce adds, " +
+        "and the room is told how it now goes: nothing bursts, and the cannon and the blocks it stands on stay", async () => {
+        const user = await join("someone", {x: 26, y: STANDING_Y, z: 26});
+        // On blocks of its own, which a blast where the ball strikes it would reach.
+        const blocks = [16.25, 16.75].flatMap(x => [16.25, 16.75].map(z => placeBlock(x, 0.25, z)));
+        const cannon = placeCannon({on: false}, {x: 16.5, y: 0.5, z: 16.5});
+        const box = PhysicsColliderStateUtil.getObjectColliderState(CANNON_TYPE_INDEX, cannon.transform)!.hitbox;
+        const blocksBefore = getRoom().voxelGrid.voxels.map(voxel => voxel.blockLayerMask);
+        // Low on its west side, from a second's flight away, coming at a slant across it.
+        const struckAt = {x: box.center.x - box.halfSize.x - CANNON_BALL_RADIUS, y: 0.8, z: box.center.z};
+        expect(PhysicsManager.getReachedBySphere(HUB_ID, {...struckAt, x: struckAt.x + CANNON_BALL_RADIUS},
+            CANNON_BALL_BLAST_RADIUS).blocks.length).toBeGreaterThan(0);
+        const vel = Vector3DUtil.scale(Vector3DUtil.normalize({x: 2, y: 0, z: -0.5}), CANNON_BALL_SPEED);
+        const ball = launch(Vector3DUtil.subtract(struckAt, vel), vel);
+        forget(user);
+        flushFor(2);
+
+        expect(isFlying(ball)).toBe(true);
+        // What carried it into that side now carries it out of it, the rest as it was, and it goes that way faster.
+        const after = boosted({x: -vel.x, y: vel.y, z: vel.z});
+        expect(dist(flightOf(ball).vel, after)).toBeLessThan(2 * SPEED_STEP);
+        expect(dist(flightOf(ball).pos, Vector3DUtil.add(struckAt, after))).toBeLessThan(0.001 + 2 * PLACE_STEP);
+        const words = wordsOf(user, ball);
+        expect(words).toHaveLength(1);
+        expect(words[0].exploded).toBe(false);
+        expect(words[0].bounces).toBe(1);
+        expect(signalTypesSentTo(user)).toEqual(["setObjectMetadataSignal"]);
+        expect(getRoom().objectById[cannon.objectId]).toBeDefined();
+        expect(blocks.every(hasBlock)).toBe(true);
+        expect(getRoom().voxelGrid.voxels.map(voxel => voxel.blockLayerMask)).toEqual(blocksBefore);
+        expect(getBills()).toEqual([]);
+    });
+
+    it("bursts on a block beside an NPC without a word to the NPC, which no blast throws", async () => {
+        const user = await join("someone", {x: 26, y: STANDING_Y, z: 26});
+        const {npc, box} = standNpc({x: 15.75, z: 17});
+        const block = placeBlock(16.25, 1.25, 16.25);
+        // Within the blast's reach of where the ball strikes the block, and out of the ball's way.
+        expect(distanceToBox({x: 16, y: 1.25, z: 16.25}, box)).toBeLessThan(CANNON_BALL_BLAST_RADIUS);
+        expect(box.center.z - box.halfSize.x - 16.25).toBeGreaterThan(CANNON_BALL_RADIUS);
+        const ball = launch({x: 12, y: 1.25, z: 16.25}, {x: CANNON_BALL_SPEED, y: 0, z: 0});
+        forget(user);
+        flushUntil(() => !isFlying(ball), 3);
+        expect(wordsOf(user, ball)).toMatchObject([{exploded: true, hitObjectIds: []}]);
+        expect(hasBlock(block)).toBe(false);
+        expect(getRoom().objectById[npc.objectId]).toBeDefined();
+        // Having thrown nobody, it leaves its bill.
+        expect(getBills()).toHaveLength(1);
+    });
+
+    it("bounces off another ball as a billiard ball does, the two pushed apart by what a bounce adds, and neither " +
+        "bursts", async () => {
         const user = await join("someone", {x: 26, y: STANDING_Y, z: 26});
         const a = launch({x: 10, y: FLIGHT_Y, z: 12}, {x: CANNON_BALL_SPEED, y: 0, z: 0});
         const b = launch({x: 14, y: FLIGHT_Y, z: 12}, {x: -CANNON_BALL_SPEED, y: 0, z: 0});
@@ -1879,25 +2637,122 @@ describe("a cannon ball the server flies", () => {
         flushFor(1.4);
         expect(isFlying(a)).toBe(true);
         expect(isFlying(b)).toBe(true);
-        // Head on, each takes the other's way.
-        expect(flightOf(a).vel.x).toBeCloseTo(-CANNON_BALL_SPEED, 2);
-        expect(flightOf(b).vel.x).toBeCloseTo(CANNON_BALL_SPEED, 2);
+        // Head on, each takes the other's way, and goes it faster.
+        expect(flightOf(a).vel.x).toBeCloseTo(-speedAfterBounce(CANNON_BALL_SPEED), 2);
+        expect(flightOf(b).vel.x).toBeCloseTo(speedAfterBounce(CANNON_BALL_SPEED), 2);
         expect(flightOf(a).pos.x).toBeLessThan(flightOf(b).pos.x);
         for (const ball of [a, b])
         {
             const words = wordsOf(user, ball);
             expect(words.length).toBeGreaterThanOrEqual(1);
             expect(words.every(word => !word.exploded)).toBe(true);
+            // Each is told to have bounced, once.
+            expect(words[words.length - 1].bounces).toBe(1);
+            expect(flightOf(ball).bounces).toBe(1);
         }
         expect(getBills()).toEqual([]);
     });
 
-    it("shares what two balls carry along the line between them, whatever way they meet", () => {
-        fc.assert(fc.property(vec3In(-2, 2), vec3In(-3, 3), vec3In(-3, 3), (apart, velA, velB) => {
+    it("counts each bounce, off whatever it is, in what it tells of the ball and in what the room's saves keep of it, " +
+        "and counts on from there", async () => {
+        const user = await join("someone", {x: 26, y: STANDING_Y, z: 26});
+        const {box} = hangMirror();
+        const struckAt = {x: box.center.x - box.halfSize.x - CANNON_BALL_RADIUS, y: MIRROR_SPOT.y, z: MIRROR_SPOT.z};
+        const east = {x: CANNON_BALL_SPEED, y: 0, z: 0};
+        const ball = launch(Vector3DUtil.subtract(struckAt, east), east);
+        expect(flightOf(ball).bounces).toBe(0);
+        forget(user);
+        flushFor(1.5);
+        expect(flightOf(ball).bounces).toBe(1);
+        expect(wordsOf(user, ball).map(word => word.bounces)).toEqual([1]);
+
+        await harness.disconnectUser(user);
+        ServerRoomManager.unloadRoom(HUB_ID);
+        await harness.loadRoom(HUB_ID);
+        const back = getRoom().objectById[ball.objectId];
+        expect(flightOf(back).bounces).toBe(1);
+
+        // Another comes at it along its way back, two seconds' flight off: they meet, and a moment more goes by.
+        const newcomer = await join("newcomer", {x: 26, y: STANDING_Y, z: 26});
+        const other = launch(Vector3DUtil.subtract(flightOf(back).pos, Vector3DUtil.scale(east, 2)), east);
+        forget(newcomer);
+        flushFor((2 * CANNON_BALL_SPEED - 2 * CANNON_BALL_RADIUS) / (speedAfterBounce(CANNON_BALL_SPEED) + CANNON_BALL_SPEED)
+            + 2 * FLUSH_SECONDS);
+        expect(flightOf(back).vel.x).toBeGreaterThan(0);
+        expect(flightOf(back).bounces).toBe(2);
+        expect(flightOf(other).bounces).toBe(1);
+        expect(wordsOf(newcomer, back).pop()?.bounces).toBe(2);
+        expect(wordsOf(newcomer, other).pop()?.bounces).toBe(1);
+    });
+
+    it("goes on faster from each bounce, off whatever it is, as the room is told each time", async () => {
+        const user = await join("someone", {x: 26, y: STANDING_Y, z: 26});
+        const {box} = hangMirror();
+        const struckAt = {x: box.center.x - box.halfSize.x - CANNON_BALL_RADIUS, y: MIRROR_SPOT.y, z: MIRROR_SPOT.z};
+        // An NPC in its way back from the mirror, and the ball let go between the two, half a second from the mirror.
+        const {box: npcBox} = standNpc({x: struckAt.x - 3, z: struckAt.z});
+        expect(Math.abs(npcBox.center.z - struckAt.z)).toBeLessThan(npcBox.halfSize.x);
+        const east = {x: CANNON_BALL_SPEED, y: 0, z: 0};
+        const ball = launch(Vector3DUtil.subtract(struckAt, Vector3DUtil.scale(east, 0.5)), east);
+        forget(user);
+        flushUntil(() => flightOf(ball).bounces == 2, 3);
+
+        const once = speedAfterBounce(CANNON_BALL_SPEED), twice = speedAfterBounce(once);
+        expect(once).toBeGreaterThan(CANNON_BALL_SPEED);
+        expect(twice).toBeGreaterThanOrEqual(once);
+        const words = wordsOf(user, ball);
+        expect(words.map(word => word.bounces)).toEqual([1, 2]);
+        expect(Vector3DUtil.length(words[0].vel)).toBeCloseTo(once, 2);
+        expect(words[0].vel.x).toBeLessThan(0);
+        expect(Vector3DUtil.length(words[1].vel)).toBeCloseTo(twice, 2);
+        expect(Vector3DUtil.length(flightOf(ball).vel)).toBeCloseTo(twice, 2);
+    });
+
+    it("leaves a bounce off what stands still the way that turns it, faster by what a bounce adds, however it comes: " +
+        `never past ${CANNON_BALL_MAX_SPEED} units a second, and never slower than it came`, () => {
+        fc.assert(fc.property(vec3In(-1, 1), vec3In(-1, 1), scaled(0.01, 1.5 * CANNON_BALL_MAX_SPEED), (way, facing, speed) => {
+            fc.pre(Vector3DUtil.length(way) > 0.1 && Vector3DUtil.length(facing) > 0.1);
+            const normal = Vector3DUtil.normalize(facing);
+            const vel = Vector3DUtil.scale(Vector3DUtil.normalize(way), speed);
+            // (Only what closes on a thing bounces off it.)
+            fc.pre(Vector3DUtil.dot(vel, normal) < -0.001);
+            const turned = Vector3DUtil.subtract(vel, Vector3DUtil.scale(normal, 2 * Vector3DUtil.dot(vel, normal)));
+            CannonBallMotionUtil.rebound(vel, normal);
+            const after = Vector3DUtil.length(vel);
+            expect(dist(Vector3DUtil.normalize(vel), Vector3DUtil.normalize(turned))).toBeLessThan(0.000001);
+            // (One already faster than a ball goes, as a room kept under other numbers may hold, keeps its speed.)
+            expect(after).toBeCloseTo((speed > CANNON_BALL_MAX_SPEED) ? speed
+                : Math.min(speed + CANNON_BALL_BOUNCE_BOOST, CANNON_BALL_MAX_SPEED), 6);
+            expect(after).toBeGreaterThanOrEqual(speed - 0.000001);
+        }));
+        // Bounce after bounce, from the speed it is fired at up to the most, where another adds nothing.
+        const vel = {x: CANNON_BALL_SPEED, y: 0, z: 0};
+        const speeds: number[] = [];
+        for (let i = 0; i < 2 + Math.ceil((CANNON_BALL_MAX_SPEED - CANNON_BALL_SPEED) / CANNON_BALL_BOUNCE_BOOST); ++i)
+        {
+            CannonBallMotionUtil.rebound(vel, {x: -Math.sign(vel.x), y: 0, z: 0});
+            speeds.push(Math.abs(vel.x));
+        }
+        expect(speeds[0]).toBeGreaterThan(CANNON_BALL_SPEED);
+        speeds.forEach((speed, i) => expect(speed).toBeCloseTo(
+            Math.min(CANNON_BALL_SPEED + (i + 1) * CANNON_BALL_BOUNCE_BOOST, CANNON_BALL_MAX_SPEED), 6));
+        expect(speeds[speeds.length - 1]).toBeCloseTo(speeds[speeds.length - 2], 6);
+    });
+
+    it("shares what two balls carry along the line between them and pushes each off the other by what a bounce adds, " +
+        "whatever way they meet: they come apart, neither faster than a ball goes at most", () => {
+        const most = CANNON_BALL_MAX_SPEED;
+        const velArb = fc.tuple(vec3In(-1, 1), scaled(0, most)).filter(([way]) => Vector3DUtil.length(way) > 0.1)
+            .map(([way, speed]) => Vector3DUtil.scale(Vector3DUtil.normalize(way), speed));
+        fc.assert(fc.property(vec3In(-2, 2), velArb, velArb, (apart, velA, velB) => {
             fc.pre(Vector3DUtil.length(apart) > 0.1);
             const posA = {x: 5, y: 5, z: 5}, posB = Vector3DUtil.add(posA, apart);
             const beforeA = {...velA}, beforeB = {...velB};
-            const closing = Vector3DUtil.dot(Vector3DUtil.subtract(velA, velB), Vector3DUtil.normalize(Vector3DUtil.subtract(posA, posB)));
+            // The way from the second to the first, and what a ball carries along it and across it.
+            const line = Vector3DUtil.normalize(Vector3DUtil.subtract(posA, posB));
+            const along = (vel: Vec3) => Vector3DUtil.dot(vel, line);
+            const across = (vel: Vec3) => Vector3DUtil.subtract(vel, Vector3DUtil.scale(line, along(vel)));
+            const closing = along(velA) - along(velB);
             const bounced = CannonBallMotionUtil.bounce(posA, velA, posB, velB);
             expect(bounced).toBe(closing < 0);
             if (!bounced)
@@ -1906,13 +2761,25 @@ describe("a cannon ball the server flies", () => {
                 expect(velB).toEqual(beforeB);
                 return;
             }
-            // What they carry between them is kept, and so is how lively they are.
-            const sum = (a: Vec3, b: Vec3) => Vector3DUtil.add(a, b);
-            expect(dist(sum(velA, velB), sum(beforeA, beforeB))).toBeLessThan(0.000001);
-            expect(Vector3DUtil.lengthSqr(velA) + Vector3DUtil.lengthSqr(velB))
-                .toBeCloseTo(Vector3DUtil.lengthSqr(beforeA) + Vector3DUtil.lengthSqr(beforeB), 6);
-            // And they are coming apart.
-            expect(Vector3DUtil.dot(Vector3DUtil.subtract(velA, velB), Vector3DUtil.subtract(posA, posB))).toBeGreaterThanOrEqual(-0.000001);
+            // What each carries across the line is its own still.
+            expect(dist(across(velA), across(beforeA))).toBeLessThan(0.000001);
+            expect(dist(across(velB), across(beforeB))).toBeLessThan(0.000001);
+            // Along it, each has what the other had, and what a bounce adds the way off the other: short of that
+            // only where it would be faster than a ball goes.
+            const held = (wanted: number, carriedAcross: Vec3) =>
+                Math.min(wanted, Math.sqrt(Math.max(0, most * most - Vector3DUtil.lengthSqr(carriedAcross))));
+            expect(along(velA)).toBeCloseTo(held(along(beforeB) + CANNON_BALL_BOUNCE_BOOST, across(beforeA)), 5);
+            expect(-along(velB)).toBeCloseTo(held(-along(beforeA) + CANNON_BALL_BOUNCE_BOOST, across(beforeB)), 5);
+            expect(Vector3DUtil.length(velA)).toBeLessThanOrEqual(most + 0.000001);
+            expect(Vector3DUtil.length(velB)).toBeLessThanOrEqual(most + 0.000001);
+            // And they are coming apart: by what both bounces add, and more, where neither is held back.
+            expect(along(velA) - along(velB)).toBeGreaterThanOrEqual(-0.000001);
+            if (Vector3DUtil.length(velA) < most - 0.001 && Vector3DUtil.length(velB) < most - 0.001)
+            {
+                expect(along(velA) - along(velB)).toBeCloseTo(2 * CANNON_BALL_BOUNCE_BOOST - closing, 5);
+                // What the two carry between them is kept, each pushed as hard as the other.
+                expect(dist(Vector3DUtil.add(velA, velB), Vector3DUtil.add(beforeA, beforeB))).toBeLessThan(0.000001);
+            }
         }));
     });
 

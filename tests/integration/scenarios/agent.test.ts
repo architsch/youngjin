@@ -79,7 +79,8 @@ import { LOGIN_REWARD_DOLLARS, HOUR_IN_MS, MINUTE_IN_MS, NUM_VOXEL_COLS, OBJECT_
 import { CANNON_PRICE_DOLLARS, STOREY_FLOOR_COLLISION_LAYER } from "../../../src/shared/system/sharedConstants";
 import { CANNON_BALL_COUNT, CANNON_FIRE_INTERVAL_SECONDS, CANNON_LOCK_SECONDS, CANNON_MAX_RANGE, CANNON_TURN_RATE }
     from "../../../src/shared/object/types/objectTypeConfig/cannonObjectTypeConfig";
-import { CANNON_BALL_SPEED } from "../../../src/shared/object/types/objectTypeConfig/cannonBallObjectTypeConfig";
+import { CANNON_BALL_BOUNCE_BOOST, CANNON_BALL_MAX_SPEED, CANNON_BALL_SPEED }
+    from "../../../src/shared/object/types/objectTypeConfig/cannonBallObjectTypeConfig";
 import CannonStateUtil from "../../../src/shared/object/util/cannonStateUtil";
 import CannonUtil from "../../../src/server/object/util/cannonUtil";
 import CannonBallUtil from "../../../src/server/object/util/cannonBallUtil";
@@ -2943,6 +2944,10 @@ describe("AI agents", () => {
                 expect(instructions).toContain(`within ${CANNON_MAX_RANGE / VOXEL_CELL_SIZE} cells`);
                 expect(instructions).toContain(`It has ${CANNON_BALL_COUNT} balls`);
                 expect(instructions).toContain(`${CANNON_BALL_SPEED / VOXEL_CELL_SIZE} cells a second`);
+                expect(instructions.replace(/\s+/g, " ")).toContain(`each bounce adds up to ${
+                    CANNON_BALL_BOUNCE_BOOST / VOXEL_CELL_SIZE} cells a second, to ${CANNON_BALL_MAX_SPEED / VOXEL_CELL_SIZE} at most`);
+                expect(instructions.replace(/\s+/g, " ")).toMatch(/A ball bounces off [^.:]*\ba cannon\b/);
+                expect(instructions.replace(/\s+/g, " ")).toMatch(/breaks the blocks it reaches[^.]*\bhold up a cannon\b/);
                 const tools = (await client.listTools()).tools;
                 const addObject = tools.find(tool => tool.name == "add_object")!;
                 expect(addObject.description).toContain(`$${CANNON_PRICE_DOLLARS}`);

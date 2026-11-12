@@ -7,6 +7,7 @@ import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
 import CannonBallObjectTypeConfig, { CANNON_BALL_BLAST_RADIUS } from "../../../shared/object/types/objectTypeConfig/cannonBallObjectTypeConfig";
+import CannonObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/cannonObjectTypeConfig";
 import RemoveObjectSignal from "../../../shared/object/types/removeObjectSignal";
 import SetObjectMetadataSignal from "../../../shared/object/types/setObjectMetadataSignal";
 import CannonBallMotionUtil from "../../../shared/object/util/cannonBallMotionUtil";
@@ -39,9 +40,10 @@ import ServerObjectManager from "../serverObjectManager";
 import CannonBallFlight from "../types/cannonBallFlight";
 
 const BALL_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType(CannonBallObjectTypeConfig.objectType);
+const CANNON_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType(CannonObjectTypeConfig.objectType);
 const STATE_KEY = ObjectMetadataKeyEnumMap.CannonState;
-// How many times in one step a ball may strike something that doesn't end it (another ball), before it rests until the
-// next.
+// How many times in one step a ball may strike something that doesn't end it (another ball, a mirror, an NPC), before
+// it rests until the next.
 const MAX_STRIKES_PER_STEP = 4;
 // The server flies and ends balls of its own accord, for nobody: and whatever a ball breaks, it breaks as nobody in
 // particular might, by the rules that hold anyone (see breakBlock).
@@ -52,13 +54,14 @@ const roomFlights = new WeakMap<RoomRuntimeMemory, Map<string, CannonBallFlight>
 
 // Cannon balls, which cannons fire (see CannonUtil) and the server flies in multiplayer rooms while anyone is there
 // (see CannonBallMotionUtil): each straight on until it strikes something, or is far out of the room, where it is
-// taken away without a word. Where one strikes, everything within its blast's reach of that spot is looked at. Balls
-// there bounce off it as billiard balls do. With a player there, a voxel block, the room's own floor or ceiling, or
-// having struck anything else solid, it bursts: the players are thrown, each by whoever moves them (see
-// CannonBlastUtil), the blocks are broken, with what hangs on them, where anybody at all could have taken them away,
-// and it leaves a dollar bill behind if it threw nobody. Browsers fly each ball by themselves from what they are told
-// of it: as it is fired, whenever something turns it, and that it burst, just before it goes. A room's saves keep its
-// balls as they fly (see ObjectTypeConfigMap.isStoredWithRoom).
+// taken away without a word. Off a mirror, an NPC or a cannon it bounces, the faster for it, and that is all. Where it
+// strikes anything else, everything within its blast's reach of that spot is looked at. Balls there bounce off it as
+// billiard balls do, pushed apart. With a player there, a voxel block, the room's own floor or ceiling, or having
+// struck anything else solid, it bursts: the players are thrown, each by whoever moves them (see CannonBlastUtil), the
+// blocks are broken, with what hangs on them, where anybody at all could have taken them away and no cannon hangs on
+// them, and it leaves a dollar bill behind if it threw nobody. Browsers fly each ball by themselves from what they are
+// told of it: as it is fired, whenever something turns it, and that it burst, just before it goes. A room's saves keep
+// its balls as they fly (see ObjectTypeConfigMap.isStoredWithRoom).
 const CannonBallUtil =
 {
     // Every room's balls, as time passes. From SocketsServer's flush, so what they do goes out with it. They keep still
@@ -86,7 +89,7 @@ const CannonBallUtil =
         const memory = ServerRoomManager.roomRuntimeMemories[room.id];
         if (memory == undefined)
             return false;
-        const flight: CannonBallFlight = {pos: {...pos}, vel: {...vel}};
+        const flight: CannonBallFlight = {pos: {...pos}, vel: {...vel}, bounces: 0};
         // Not one of the server's own ids (see ServerObjectManager.generateNonPersistentObjectId), which start over with
         // each restart that the room's saves keep it through.
         const ball = new AddObjectSignal(room.id, "", "", BALL_TYPE_INDEX, ObjectIdUtil.generateUniqueObjectId(room.objectById),
@@ -136,8 +139,8 @@ function getFlights(memory: RoomRuntimeMemory): Map<string, CannonBallFlight>
         {
             if (obj.objectTypeIndex != BALL_TYPE_INDEX)
                 continue;
-            const {pos, vel} = CannonBallStateUtil.getObjectState(obj);
-            flights.set(obj.objectId, {pos, vel});
+            const {pos, vel, bounces} = CannonBallStateUtil.getObjectState(obj);
+            flights.set(obj.objectId, {pos, vel, bounces});
         }
         roomFlights.set(memory, flights);
     }
@@ -148,6 +151,7 @@ function stepBall(room: Room, flights: Map<string, CannonBallFlight>, ball: AddO
     seconds: number): void
 {
     const velBefore = {...flight.vel};
+    const bouncesBefore = flight.bounces;
     const ignoredObjectIds = new Set<string>([ball.objectId]);
     let secondsLeft = seconds;
     for (let strikes = 0; strikes < MAX_STRIKES_PER_STEP && secondsLeft > 0; ++strikes)
@@ -166,15 +170,23 @@ function stepBall(room: Room, flights: Map<string, CannonBallFlight>, ball: AddO
         return;
     }
     place(room, ball, flight);
-    if (!Vector3DUtil.equal(velBefore, flight.vel))
+    if (!Vector3DUtil.equal(velBefore, flight.vel) || bouncesBefore != flight.bounces)
         tell(room, ball);
 }
 
 // What becomes of a ball that has struck something, and of whatever its blast reaches: whether it burst. One that
-// only met other balls flies on, turned by those it was closing in on, and through any it wasn't.
+// struck what balls bounce off flies on, turned by it, and one that only met other balls, turned by those it was
+// closing in on, and through any it wasn't.
 function strike(room: Room, flights: Map<string, CannonBallFlight>, ball: AddObjectSignal, flight: CannonBallFlight,
     hit: PhysicsSphereHit, ignoredObjectIds: Set<string>): boolean
 {
+    if (hit.object != undefined && PhysicsSphereUtil.bounces(hit.object))
+    {
+        CannonBallMotionUtil.rebound(flight.vel, hit.normal);
+        flight.bounces = CannonBallStateUtil.countBounce(flight.bounces);
+        return false;
+    }
+
     const physicsRoom = PhysicsManager.physicsRooms[room.id];
     const reached = PhysicsManager.getReachedBySphere(room.id, hit.contact, CANNON_BALL_BLAST_RADIUS,
         new Set<string>([ball.objectId]));
@@ -188,6 +200,8 @@ function strike(room: Room, flights: Map<string, CannonBallFlight>, ball: AddObj
             continue;
         if (CannonBallMotionUtil.bounce(flight.pos, flight.vel, other.pos, other.vel))
         {
+            flight.bounces = CannonBallStateUtil.countBounce(flight.bounces);
+            other.bounces = CannonBallStateUtil.countBounce(other.bounces);
             const otherBall = room.objectById[object.objectId];
             place(room, otherBall, other);
             tell(room, otherBall);
@@ -198,20 +212,26 @@ function strike(room: Room, flights: Map<string, CannonBallFlight>, ball: AddObj
     if (struckBall && thrown.length == 0 && reached.blocks.length == 0)
         return false;
 
-    burst(room, flights, ball, flight, thrown, reached.blocks);
+    burst(room, flights, ball, flight, thrown, reached.blocks, hit.object?.objectId);
     return true;
 }
 
 // The ball's end where it struck: told first, so that it is what browsers show and sound of all that follows from it.
+// Each body is thrown away from where the ball's middle then is, from where the server has the body: the one the ball
+// itself struck, off its side where the two met, which its browser is told, having it elsewhere by now.
 function burst(room: Room, flights: Map<string, CannonBallFlight>, ball: AddObjectSignal, flight: CannonBallFlight,
-    thrown: PhysicsObject[], blocks: {row: number, col: number, collisionLayer: number}[]): void
+    thrown: PhysicsObject[], blocks: {row: number, col: number, collisionLayer: number}[],
+    struckObjectId: string | undefined): void
 {
+    const headings = thrown.map(object => CannonBlastUtil.getHeading(flight.pos, object.colliderState.hitbox.center));
+    const struckIndex = thrown.findIndex(object => object.objectId == struckObjectId);
+    const struck = (struckIndex < 0) ? undefined
+        : {objectId: thrown[struckIndex].objectId, heading: headings[struckIndex]};
     ball.metadata[STATE_KEY] = new EncodableByteString(CannonBallStateUtil.encode({pos: flight.pos,
-        vel: {x: 0, y: 0, z: 0}, exploded: true, hitObjectIds: thrown.map(object => object.objectId)}));
+        vel: {x: 0, y: 0, z: 0}, exploded: true, hitObjectIds: thrown.map(object => object.objectId), struck, bounces: 0}));
     tell(room, ball);
 
-    for (const object of thrown)
-        throwPlayer(room, flight.pos, object);
+    thrown.forEach((object, i) => throwBody(room, object, headings[i]));
     const nearness = (block: {row: number, col: number, collisionLayer: number}) => Vector3DUtil.distSqr(flight.pos,
         VoxelQueryUtil.getVoxelBlockBox(block.row, block.col, block.collisionLayer).center);
     for (const block of [...blocks].sort((a, b) => nearness(a) - nearness(b)))
@@ -222,33 +242,37 @@ function burst(room: Room, flights: Map<string, CannonBallFlight>, ball: AddObje
         DollarBillUtil.drop(room, flight.pos);
 }
 
-// A browser throws its own user's player as it is told of the burst; an agent's, which the server walks, is thrown
-// here. Either way their moves are believed for a while, however far and high they go (see PlayerMotionCheckUtil).
-function throwPlayer(room: Room, burstPos: Vec3, object: PhysicsObject): void
+// A browser throws the bodies it moves, its own user's player among them, as it is told of the burst (see
+// CannonBlastThrowUtil); an agent's, which the server walks, is thrown here. Either way their moves are believed for a
+// while, however far and high they go (see PlayerMotionCheckUtil).
+function throwBody(room: Room, object: PhysicsObject, heading: number): void
 {
-    const player = room.objectById[object.objectId];
-    const ctx = (player == undefined) ? undefined : ServerUserManager.getSocketUserContext(player.sourceUserID);
-    if (player == undefined || ctx == undefined)
+    const body = room.objectById[object.objectId];
+    const ctx = (body == undefined) ? undefined : ServerUserManager.getSocketUserContext(body.sourceUserID);
+    if (body == undefined || ctx == undefined)
         return;
     PlayerMotionCheckUtil.noteBlast(ctx);
     if (ctx instanceof AgentUserContext)
     {
-        AgentBodyUtil.push(ctx, CannonBlastUtil.getThrow(burstPos, player.transform.pos));
+        AgentBodyUtil.push(ctx, CannonBlastUtil.getThrow(heading));
         ctx.inbox.noteThrown();
     }
 }
 
 // Breaks a block and takes what hangs on it with it, if anybody at all could: one in nobody's restricted zone, with
 // nothing on it that only an admin or the room's superuser may take off (see VoxelEditUtil, where a user does the
-// same). Otherwise all of it stays.
+// same), and no cannon, which anybody may take off but no ball does. Otherwise all of it stays.
 function breakBlock(room: Room, block: {row: number, col: number, collisionLayer: number}): void
 {
     const quadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(block.row, block.col, block.collisionLayer);
     if (!VoxelUpdateUtil.canRemoveVoxelBlockWithItsAttachments(NOBODY, room, quadIndex))
         return;
     const attachedIds = ObjectAttachmentUtil.getObjectIdsAttachedToVoxelBlock(room, quadIndex);
-    if (!attachedIds.every(objectId => ObjectUpdateUtil.canRemoveObject(NOBODY, room, new RemoveObjectSignal(room.id, objectId))))
+    if (!attachedIds.every(objectId => room.objectById[objectId].objectTypeIndex != CANNON_TYPE_INDEX
+        && ObjectUpdateUtil.canRemoveObject(NOBODY, room, new RemoveObjectSignal(room.id, objectId))))
+    {
         return;
+    }
 
     for (const objectId of attachedIds)
         ServerObjectManager.removeObjectAsServer(room, NOBODY, new RemoveObjectSignal(room.id, objectId));
@@ -289,7 +313,8 @@ function tell(room: Room, ball: AddObjectSignal): void
 
 function encodeFlight(flight: CannonBallFlight): string
 {
-    return CannonBallStateUtil.encode({pos: flight.pos, vel: flight.vel, exploded: false, hitObjectIds: []});
+    return CannonBallStateUtil.encode({pos: flight.pos, vel: flight.vel, exploded: false, hitObjectIds: [],
+        bounces: flight.bounces});
 }
 
 // A ball's transform, which holds no place past the room (see ObjectTransform): the nearest in it. It faces the way

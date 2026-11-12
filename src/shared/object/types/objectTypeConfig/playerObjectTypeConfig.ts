@@ -83,6 +83,7 @@ const PlayerObjectTypeConfig =
             },
             collider: {
                 baseHitboxSize: {sizeX: 2 * PLAYER_RADIUS_XZ, sizeY: PLAYER_HEIGHT, sizeZ: 2 * PLAYER_RADIUS_XZ},
+                shape: "cylinder", // round to a cannon ball, which strikes it by its side wherever it comes from
                 applyHardCollisionToOthers: false,
                 outgoingSoftCollisionForceMultiplier: 1,
                 outgoingSoftCollisionForceLimit: {x: 1, y: 0, z: 1},

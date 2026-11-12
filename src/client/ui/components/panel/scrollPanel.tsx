@@ -2,6 +2,7 @@ import { ReactNode, RefObject, useCallback, useEffect, useRef } from "react";
 import IconButton from "../input/iconButton";
 import CloseIcon from "../../svg/icons/closeIcon";
 import useMouseDragScroll from "../../util/mouseDragScroll";
+import ScrollHints from "../basic/scrollHints";
 import useTrackedElementRect from "../../util/trackedElementRect";
 import ClosablePanelUtil from "../../util/closablePanelUtil";
 
@@ -51,15 +52,17 @@ export default function ScrollPanel({ children, id, onClose, closeRowContent, an
         <div id={id} className={`${tight ? "" : "p-2"} flex flex-col w-fit max-w-full ${maxHeightClassNames[size]} bg-gray-700 rounded-lg pointer-events-auto yj-surface-convex`}>
             {overhang
                 // The scroller clips, so it reaches up past the panel's edge; only the row inside it takes
-                // pointer input, which keeps that extra room click-through.
+                // pointer input, which keeps that extra room click-through, and only the row shows the hints.
                 ? <div ref={setScroller} onScroll={onScroll}
                     className="w-full min-h-0 -mt-6 pt-6 overflow-auto no-scrollbar pointer-events-none">
                     <div className={`${rowClassNames} w-max pointer-events-auto`}>
+                        <ScrollHints/>
                         {children}
                     </div>
                 </div>
                 : <div ref={setScroller} onScroll={onScroll}
                     className={`${rowClassNames} w-full min-h-0 overflow-auto no-scrollbar`}>
+                    <ScrollHints/>
                     {children}
                 </div>}
         </div>

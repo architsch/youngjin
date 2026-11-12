@@ -23,6 +23,7 @@ import { notificationMessageObservable } from "../../../src/client/system/client
 import DebugCommandUtil from "../../../src/client/system/util/debugCommandUtil";
 import DBInventoryUtil from "../../../src/server/db/util/dbInventoryUtil";
 import UserCommandUtil from "../../../src/server/user/util/userCommandUtil";
+import UserContext from "../../../src/server/sockets/types/userContext";
 import User from "../../../src/shared/user/types/user";
 import UserCommandSignal from "../../../src/shared/user/types/userCommandSignal";
 import { UserTypeEnumMap } from "../../../src/shared/user/types/userType";
@@ -31,6 +32,8 @@ const COMMAND = "fast_forward_daily_reward_clock";
 const SIGNAL = "fastForwardDailyRewardClock";
 
 const userOfType = (userType: number) => new User("someone", "someone", userType, "");
+// The connection a command comes in on, as far as this one reads it.
+const contextOf = (user: User) => ({user}) as unknown as UserContext;
 
 describe("the debug command that fast-forwards the daily reward's clock", () => {
     const emit = () => SocketsClient.emitUserCommandSignal as Mock;
@@ -53,7 +56,7 @@ describe("the debug command that fast-forwards the daily reward's clock", () => 
         expect(signal.message).toBe(SIGNAL);
         expect(notificationMessageObservable.peek()).toMatch(/reload/i);
 
-        await UserCommandUtil.onUserCommandSignalReceived(admin, signal);
+        await UserCommandUtil.onUserCommandSignalReceived(contextOf(admin), signal);
         expect(fastForward()).toHaveBeenCalledExactlyOnceWith("someone");
     });
 
@@ -69,7 +72,7 @@ describe("the debug command that fast-forwards the daily reward's clock", () => 
 
     it("is refused by the server from anyone else, whatever their browser sends", async () => {
         for (const userType of [UserTypeEnumMap.Guest, UserTypeEnumMap.Member, UserTypeEnumMap.Agent])
-            await UserCommandUtil.onUserCommandSignalReceived(userOfType(userType), new UserCommandSignal(SIGNAL));
+            await UserCommandUtil.onUserCommandSignalReceived(contextOf(userOfType(userType)), new UserCommandSignal(SIGNAL));
         expect(fastForward()).not.toHaveBeenCalled();
     });
 });

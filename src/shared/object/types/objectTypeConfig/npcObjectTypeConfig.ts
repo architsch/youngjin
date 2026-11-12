@@ -93,6 +93,9 @@ const NpcObjectTypeConfig =
             collider: {
                 // A player's body, laid out as an attached object's is: across its floor, then its height.
                 baseHitboxSize: {sizeX: 2 * PLAYER_RADIUS_XZ, sizeY: 2 * PLAYER_RADIUS_XZ, sizeZ: PLAYER_HEIGHT},
+                // Round to a cannon ball, as a player is, but nothing a blast throws: a ball bounces off it.
+                shape: "cylinder",
+                bouncesSpheres: true,
                 applyHardCollisionToOthers: false,
                 outgoingSoftCollisionForceMultiplier: 1,
                 outgoingSoftCollisionForceLimit: {x: 1, y: 0, z: 1},

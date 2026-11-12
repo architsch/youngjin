@@ -5,7 +5,7 @@ const InstancedMeshCapacityMap: {[instancedMeshId: string]: number} = {
     "Cylinder+InstancedEmissive": 8,
     "Cylinder+InstancedTin": 1768,
     "Icosphere+InstancedTin": 32,
-    "Square+InstancedEmissive": 368,
+    "Square+InstancedEmissive": 784,
     "Square+InstancedWood": 385
 };
 

@@ -29,6 +29,7 @@ import ErrorUtil from "../../../shared/system/util/errorUtil";
 import ServerRoomManager from "../../room/serverRoomManager";
 import RoomPickerUtil from "../../room/util/roomPickerUtil";
 import ServerUserManager from "../../user/serverUserManager";
+import PhysicsManager from "../../../shared/physics/physicsManager";
 import HoldObjectSignal from "../../../shared/object/types/holdObjectSignal";
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
 import UserContext from "../../sockets/types/userContext";
@@ -359,7 +360,7 @@ function surroundingsOf(helper: HelperState): HelperSurroundings
         getOtherHelpers: () => [...helpers.values()].filter(other => other.roomID == helper.roomID && other !== helper),
         hasLinesWaiting: () => helper.linesByUserID.size > 0,
         isHeld: () => helper.heldBy.size > 0,
-        showAt: () => send(helper, "setObjectTransformSignal", transformSignal(helper)),
+        showAt: () => showAt(helper),
         showFacing: () => send(helper, "setObjectMetadataSignal", facingSignal(helper)),
         showSaying: () => send(helper, "setObjectMetadataSignal", speechSignal(helper, helper.saying)),
         showThinking: () => send(helper, "setObjectMetadataSignal", thinkingSignal(helper)),
@@ -684,6 +685,16 @@ function identityOf(helper: HelperState): HelperIdentity
     const place = (helper.roomID == RoomPickerUtil.getFirstHubRoomID()) ? "the main hub, the public room newcomers arrive in"
         : (room?.roomType == RoomTypeEnumMap.Hub) ? "one of the public hubs" : "a room one of the players made";
     return {key: `${helper.roomID}/${helper.objectId}`, name: helper.name, place, personality: helper.prefs.personality};
+}
+
+// Where it stands, shown to the room. Its collider goes there too, as each browser's does (see
+// ClientObjectManager.showObjectTransform), for whatever the server flies or walks past it; the room keeps it at home.
+function showAt(helper: HelperState): void
+{
+    const signal = transformSignal(helper);
+    if (PhysicsManager.hasRoom(helper.roomID) && PhysicsManager.hasObject(helper.roomID, helper.objectId))
+        PhysicsManager.setObjectTransform(helper.roomID, helper.objectId, signal.transform, true);
+    send(helper, "setObjectTransformSignal", signal);
 }
 
 function transformSignal(helper: HelperState): SetObjectTransformSignal

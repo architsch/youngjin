@@ -47,7 +47,7 @@ const handlers: {[signalType: string]: (ctx: UserContext, bufferState: BufferSta
         return true;
     },
     userCommandSignal: async (ctx, bufferState) => {
-        await UserCommandUtil.onUserCommandSignalReceived(ctx.user, UserCommandSignal.decode(bufferState) as UserCommandSignal);
+        await UserCommandUtil.onUserCommandSignalReceived(ctx, UserCommandSignal.decode(bufferState) as UserCommandSignal);
         return true;
     },
     addVoxelBlockSignal: (ctx, bufferState) => {

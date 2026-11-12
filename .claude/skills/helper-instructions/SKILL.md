@@ -1,6 +1,6 @@
 ---
 name: helper-instructions
-description: Bring up to date what the helpers (the NPCs an admin places, which the server plays as AI guides through Claude) are told — the guide to playing, the knowledge they share of ThingsPool's story, ideas to try and the library's writings, each personality's character and the things on its mind — and the fixed words they say without a model, the small talk to one another and the remarks on things they go and look at (with the tastes and picture keywords behind those), from the dev log, the library, well-known facts and the game as it is now; check every claim and address; then hear the helpers answer through the real model, and read their small talk and remarks, before handing the change over. Use when asked to update, enrich or refresh what the helpers or NPCs know or say (to visitors, to each other, or of the things around them), after new dev-log posts or library writings or new features, or when a helper is reported saying something wrong, stale or dull.
+description: Bring up to date what the helpers (the NPCs an admin places, which the server plays as AI guides through Claude) are told — mostly ThingsPool's maker, his writings and the subjects they join, with ThingsPool's story, ideas to try, and no more than an outline of the game itself (what people can do, add to a room, unlock or buy; never how a feature works), each personality's character and the things on its mind — and the fixed words they say without a model, the small talk to one another and the remarks on things they go and look at (with the tastes and picture keywords behind those), from the library, the dev log, well-known facts and the game as it is now; check every claim and address; then hear the helpers answer through the real model, and read their small talk and remarks, before handing the change over. Use when asked to update, enrich or refresh what the helpers or NPCs know or say (to visitors, to each other, or of the things around them), after new library writings or dev-log posts, when a new feature changes the outline of what people can do, or when a helper is reported saying something wrong, stale or dull.
 ---
 
 # Helper Instructions
@@ -11,6 +11,13 @@ true, current and worth listening to. Helpers also chat with each other in fixed
 writes, which visitors overhear, so those are kept the same way. It is a small job: read the sources,
 edit a handful of files, run one test file, and listen to the result.
 
+**What fills it, at the maker's wish (2026-11-12):** mostly ThingsPool's maker, his writings and the
+subjects those join, so that a talk with a helper is rich and can go anywhere. Of the game itself the
+helpers are told an outline and nothing more: what people can do in general, the kinds of thing they
+can add to a room, and the kinds of thing they can unlock or buy. They are not the game's manual, and
+their instructions are no encyclopedia of its mechanics: a new feature never brings how it works with
+it (see "An outline, not a manual" below, and `.claude/rules/helpers-keep-up.md`).
+
 ## What the helpers are told
 
 One system prompt, in two parts (built in `src/server/agent/util/helperChatUtil.ts`):
@@ -18,8 +25,8 @@ One system prompt, in two parts (built in `src/server/agent/util/helperChatUtil.
 | Part | File | What it holds |
 |---|---|---|
 | Shared, cached | `RULES` in `helperChatUtil.ts` | How every helper talks. Rarely changes; change it only for a fault every helper shows. |
-| | `src/server/agent/data/helperGuide.ts` | How to play, from a player's side: the basics a how-to answer gives, and the details for someone who asks for more. The helpers answer how-to questions from it alone. |
-| | `src/server/agent/data/helperKnowledge.ts` | ThingsPool's story so far, things worth trying, the writings the characters name as favorites, the art and the games. |
+| | `src/server/agent/data/helperGuide.ts` | An outline of the game, from a player's side: what people can do, the kinds of thing they can add to a room, what dollars unlock or buy, each with the control it is done with, and what is not in the game. All a how-to answer gives; never how a thing works. A test holds its length. |
+| | `src/server/agent/data/helperKnowledge.ts` | The larger part by far: who ThingsPool's maker is, what he writes about and how he joins one field to another, and his writings by subject, each with its link and one idea from it; then ThingsPool's story so far, things worth trying, his art and his games. |
 | Each helper's own | `src/server/agent/data/helperPersonalities.ts` | Each character: who it is, its field of subjects across the whole world, its voice and a line in it (an idea to try, never a fact it could reuse), its favorite ideas and reads, its manner in small talk, and its moods: one is picked at random for each talk, and its small talk comes from it, so that it doesn't greet everyone in the same words. |
 | | `src/server/agent/data/helperTopics.ts` | Each personality's list of things on its mind: specific, true statements from the world and from the maker's writings (with links). Three, picked at random, go with each talk, for when a visitor leaves the subject to the helper, so what it brings up ranges wide; only those are sent, so the lists cost nothing to grow. |
 
@@ -40,8 +47,9 @@ together; one that is not played (like Idle) has no role, no character, no topic
 tastes or remarks.
 
 When all of this must change is the helpers-keep-up rule's to say (`.claude/rules/helpers-keep-up.md`):
-with every feature, in the same change. When the guide changes because the game did, what agents read
-may need the same change (`.claude/rules/agents-keep-up.md`).
+with every feature, in the same change, but in outline only, which for most changes means not at all.
+What agents read is another matter (`.claude/rules/agents-keep-up.md`): agents act on the details, and
+get them.
 
 ## What the helpers say to each other
 
@@ -90,18 +98,25 @@ it thinks of it, in fixed words too (`HelperRemarkUtil`):
 
 ## Step 1 — Read the sources, not memory
 
+- **The library**, the main source: indexed in `src/server/ssg/data/libraryData.ts`, each writing's
+  text in `public/<dirName>/source.txt`, which is read and never written (read it with the Read tool
+  or plain grep; a hook refuses an inline script that names one). A post starts at a `[Title] date`
+  line, the Nth such line in a file being page N, under the author's own `:d:` description and `:k:`
+  keywords: `grep -n "^\[\|^:d:\|^:k:"` over a file lists its posts. Read a writing before describing
+  it. Its address is the page it is published as (`https://thingspool.net/<dirName>/page-<N>.html`,
+  or `list.html` for a series). Take from a writing a concrete claim someone who never read it can
+  follow at once (cats tamed humans; a horror game should give its ghosts gyms), and note which fields
+  it joins. Every new post gets an entry in the knowledge, under its subject; see which writings the
+  knowledge, the topics and the small talk's `from` already cover, to draw on others.
+- **The maker**, from what he has published about himself: the portfolio page
+  (`views/partial/info/portfolio.ejs`) and his memoirs in the library. Nothing he hasn't published, and
+  nothing of Korea (see below).
 - **The dev log**, `public/devlog-<year>/source.txt`: every post newer than the last line of the
-  story so far becomes a line of it, dated, in a few plain words. A new feature, or a new turn in
-  ThingsPool's story, also becomes an opener or two in the small talk (the game's topics, with its
-  date and the button that does it), and answers on those topics may need a word for it.
-- **The library**, indexed in `src/server/ssg/data/libraryData.ts`, each writing's text in
-  `public/<dirName>/source.txt`. Read a writing before describing it. Its address is the page it is
-  published as (`https://thingspool.net/<dirName>/page-<N>.html`, or `list.html` for a series). For
-  the small talk, take from a writing a concrete claim someone who never read it can follow at once
-  (cats tamed humans; a horror game should give its ghosts gyms), and see which writings the openers'
-  `from` already covers, to draw on others.
-- **The game**, for the guide and every idea: the `/docs` page of the feature, and the UI code under
-  `src/client/ui/components/hud/` for what a player actually clicks.
+  story so far becomes a line of it, dated, in a few plain words. A new turn in ThingsPool's story
+  may also become an opener or two in the small talk (the game's topics, with its date).
+- **The game**, only for the guide's outline and the ideas to try: the UI code under
+  `src/client/ui/components/hud/` for what a player actually clicks. A feature's `/docs` page says how
+  it works, which the helpers are not told.
 - **The world**, for the small talk's books, people, places and things: only facts that are well known
   and certain. Look up any date, number or attribution you are not sure of, and leave out what you
   can't confirm.
@@ -110,29 +125,39 @@ it thinks of it, in fixed words too (`HelperRemarkUtil`):
 
 ## Step 2 — Write it
 
-- **True.** Every feature an idea, the knowledge or a line of small talk names works as the guide
-  says. If the guide doesn't say how, add that to the guide from the UI code, or drop the idea. A
-  helper told about a thing without the how makes the how up.
-- **Brief how-to.** A new feature's how goes into the guide's basics in a few words (the button or
-  switch it is done with, as its picture's markup, never a key or where on the screen it is), and
-  anything more into its details, which a helper gives only to someone who asks. Leave out what a
-  player sees anyway (every part the character editor lists, every setting of a fan): the model passes
-  on whatever sits beside the basics. A control with no picture yet gets one: a name and its words in
-  `ScreenControlMap`, its drawing in `ScreenControlPicture` (from the control's own icon and face), and
-  its width in `ScreenControlPictureUtil`. A tall one (a slider standing upright) doesn't fit a line of
-  text, so it is named in words instead.
+- **Mostly the maker and his writings.** The knowledge is where the size goes: who he is, what he
+  writes about, and his writings by subject, with a line on how each group joins one field to another
+  (games and biology, math and cooking, philosophy and computing). That is what gives a helper
+  something true and particular to say on almost any subject a visitor brings up, so when there is
+  room, it goes to another writing, never to the game.
+- **True.** Every feature an idea, the knowledge or a line of small talk names is one the guide's
+  outline names, done with the control it gives. An idea that needs more than the outline says is
+  dropped, not explained: the rules have a helper asked how something works say it is something to
+  find out by trying, and never guess.
+- **An outline, not a manual.** The guide lists what people can do (explore, chat, build, add things
+  to a room, change how they look, collect and spend dollars, sign in, bring an AI agent), each in a
+  line: what it is, in everyday words, and the control it is done with, as its picture's markup, never
+  a key or where on the screen it is. A new feature gets a clause there only if it is a new thing to
+  do, a new kind of thing to add to a room, or a new kind of thing to unlock or buy ("a cannon, which
+  shoots balls at whoever is near"). How it works never goes in: how fast, how far or how long, what
+  bounces off or breaks what, how it aims or counts, its settings and states, anything a player sees
+  within a moment of trying it. The model passes on whatever the guide holds, and every such line
+  takes room from the conversation; a test holds the guide's length (`HELPER_GUIDE_MAX_LENGTH`), and
+  the answer to a guide that outgrows it is to cut, not to raise the cap. A control with no picture
+  yet gets one: a name and its words in `ScreenControlMap`, its drawing in `ScreenControlPicture`
+  (from the control's own icon and face), and its width in `ScreenControlPictureUtil`. A tall one (a
+  slider standing upright) doesn't fit a line of text, so it is named in words instead.
 - **For someone who has never played.** Say what a thing is for, in everyday words, never in a word only
   players know: "They buy shapes for your character" reached visitors as nonsense, since nobody new knows
   what a shape is, nor that others see them as a character they can change. Say what it is for in general
   ("You can spend dollars to unlock new items"), never by one use of it, which may later be only a part of
-  it: the use goes in the details as the answer to "which" ("Asked which items: only some of the looks"),
-  for a helper to say only when asked. Named there plainly, a use still leaked into first answers; named
+  it: the kinds of item follow as the answer to "which" ("Asked which items: some of the looks, and
+  cannons"), for a helper to say only when asked. Named plainly, a use still leaked into first answers; named
   nowhere, helpers made the items up. No add-ons either, least of all how the screen marks a thing (a lock,
   an outline): a visitor is seldom looking at it while reading, so "new items, which show a lock" was vague.
   A bare sentence tempts the model to finish it with an example ("like new looks for yourself"), which the
-  rules forbid until asked which; a how-to sentence beside the answer to "which" brought the leak back.
-  The details too give only the idea, never the fine print a player finds out by playing (which bill flies
-  to whom, what a refusal says).
+  rules forbid until asked which. Nothing in the guide gives the fine print a player finds out by playing
+  (which bill flies to whom, what a refusal says).
 - **No number a constant holds** (a price, a reward, a distance, a time, a limit), written out or built into the
   text from the constant: the constant changes, and helpers go on repeating whatever they heard. Say it the way a
   player meets it ("an item you can unlock shows its price", "for a little while"); a test checks the guide, the knowledge
@@ -151,6 +176,13 @@ it thinks of it, in fixed words too (`HelperRemarkUtil`):
   a story in 12 chapters), who wrote it where that isn't ThingsPool's maker, its link, and one
   specific thing from it a helper can retell. A bare link is not enough: the model cannot open
   pages, so it would have nothing to say about one.
+- **His ideas, never stretched.** An entry gives one idea as the writing has it, and the rules have a
+  helper tell it with the writing's title, never as what he "thinks" in general: asked a wide question
+  ("can games teach us about life?"), the model otherwise turns an entry into a claim he never made
+  ("Youngjin wrote that games work like the real world"). A series gets one entry, with its list page
+  or its first part, and its most vivid example. Left out: writings on politics or other divisive
+  subjects, scornful or crude ones, and whatever a reader would have to trust the helper on because
+  nobody has read it yet.
 - **No Korea.** At the maker's wish, nothing the helpers are told or say speaks of Korea or its food: no
   line of small talk, remark, topic or knowledge, and no picture of it remarked on (its keywords go in
   `UNSPOKEN_KEYWORDS`); a test checks.
@@ -209,17 +241,21 @@ it thinks of it, in fixed words too (`HelperRemarkUtil`):
 - **Topics** (`helperTopics.ts`) follow the small talk's rules for truth and plain words: each a
   statement about something named, in its personality's field, the world's facts well known and certain.
   An idea from a writing is a whole entry, as in the knowledge (title, kind, the link, the idea), retold as
-  the writing has it. No entry appears twice across the lists (a test checks). A writing whose idea is a
-  topic need not be in the knowledge too, which keeps the shared part small.
+  the writing has it. No entry appears twice across the lists (a test checks). A writing may be in the
+  knowledge and a topic too: the topic puts one more idea of it on a helper's mind for a talk.
 - **Simple, natural words** throughout, as a friendly person says them out loud, with the visitor doing
   what they can do ("You can spend dollars to unlock new items", never "Dollars unlock items"). Many visitors read
   English as a second language, and the helpers borrow the wording they are given, so the guide is written
   as they should say it, not in the terse style of the code's comments.
 - **Mind the size.** The shared part is read from the cache on every reply, and paid in full again
-  after five quiet minutes. Keep it under about 6,500 tokens; it may grow past that for whatever
-  makes the helpers' conversation richer, never for padding. When it must shrink, cut the stalest
-  lines rather than squeezing every line. The small talk is never sent to the model, so it costs
-  nothing to grow.
+  after five quiet minutes. It may run to about 10,000 tokens (the maker raised it from 6,500 on
+  2026-11-12, for richer talk and more flexible answers), and a test holds it in characters
+  (`SHARED_PROMPT_MAX_LENGTH`). What fills it is the knowledge of the maker and his writings, never
+  the game's details and never padding. When it must shrink, cut the stalest lines rather than
+  squeezing every line. A link costs about 27 tokens, so the whole runs at under three characters a
+  token; the sampler's `cacheWriteTokens` is the shared part's size, and the API's free
+  `/v1/messages/count_tokens` weighs one part or one section alone. The small talk is never sent to
+  the model, so it costs nothing to grow.
 
 Every file under `src/` is changed with Edit or Write, never a shell command
 (`.claude/rules/source-edits.md`).
@@ -251,12 +287,18 @@ entry; one of the things on its mind comes
 up only when the visitor leaves the subject to it, as with "tell me something fun"), specific on any
 subject (a named thing), plain and precise (no metaphor, loose comparison, riddle
 or pun, no made-up quote, story or number, no narration of what the helper does), a how-to answer only
-the guide's basics, with nothing added, and only when asked, in everyday words someone who has never played
-follows (no "shape", "face" or "your character"), never a key, each control as its picture's
+what the guide's outline says of the thing, with nothing added, and only when asked, in everyday words someone
+who has never played follows (no "shape", "face" or "your character"), never a key, each control as its picture's
 markup (by a name `ScreenControlMap` has, never where on the screen it is), and never an example line said
-back. No reply welcomes the visitor again or gives the helper's name (a short hello back to a hello is
+back. Ask how something works, too (how fast a ball flies, how a cannon picks whom to shoot): the reply should
+say in a few words that it is something to find out by trying, with no guess and no made-up detail. And ask
+about ThingsPool's maker and the subjects he writes on (who made this, a game idea, math, AI and art, what is
+real): each reply should give one true thing from the knowledge, about him or from a writing it names by its
+title, with that writing's link at most once in the reply. Ask a wide question on one of his subjects several times
+over, and check each thing said in his name against the knowledge: that is where the model strays. A form
+the rules give "only for the form" is still said back nearly word for word, so it has to be one worth saying. No reply welcomes the visitor again or gives the helper's name (a short hello back to a hello is
 fine); ask with lines that open "hi!", which draw both out. "What can I do here?" from one who knows how to
-play gets an idea to try, not the basics; from one not yet told, the basics, and never a room of their own
+play gets an idea to try, not the basics; from one not yet told, how to walk and build, and never a room of their own
 (people build in the rooms they visit). Ask things no instruction prepares a helper for, too (a recipe, the time,
 tomorrow's weather, a stranger's name, code, a favorite song): each reply should give something true and
 interesting on that subject, or else a question back about it, never a fact on another subject tied in ("a fun fact

@@ -34,10 +34,11 @@ const DEFAULT_WIDTH_IN_CHARS = 18;
 const LINK_BUTTON_EXTRA_CHARS = 4;
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 // What a speaker shows in place of its words (see SpeakerActivityUtil.replacesWords): editing in the mode switch's green
-// for Edit (Tailwind's green-300), reading in a medium gray (its gray-400), and how long their dots take to come.
+// for Edit (Tailwind's green-300), reading (away from the game) as offline in a medium gray (its gray-400), and how long
+// their dots take to come.
 const ACTIVITY_LINES: {[activity: SpeakerActivity]: {word: string, color: string}} = {
     [SpeakerActivityEnumMap.Editing]: {word: "Editing", color: "oklch(87.1% 0.15 154.449)"},
-    [SpeakerActivityEnumMap.Reading]: {word: "Reading", color: "oklch(70.7% 0.022 261.325)"},
+    [SpeakerActivityEnumMap.Reading]: {word: "Offline", color: "oklch(70.7% 0.022 261.325)"},
 };
 const ACTIVITY_DOTS_CYCLE_MS = 1200;
 // The dots by a typist's name: how long each takes to swell and shrink, and how far behind the one before it.

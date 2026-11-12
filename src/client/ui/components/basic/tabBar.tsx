@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import useMouseDragScroll from "../../util/mouseDragScroll";
+import ScrollHints from "./scrollHints";
 
 export default function TabBar({ id, tabNames, selectedTabName, onSelect, getTabLabel, size = "md",
     additionalClassNames = "" }: Props)
@@ -18,6 +19,7 @@ export default function TabBar({ id, tabNames, selectedTabName, onSelect, getTab
     return <div id={id} className={`bg-gray-800 ${paddingClassNames[size]} rounded-md yj-surface-concave ${additionalClassNames}`}>
         <div ref={onRefChange}
             className="flex flex-row gap-1 w-full overflow-x-auto no-scrollbar">
+            <ScrollHints/>
             {tabNames.map(tabName => {
                 const isActive = tabName === selectedTabName;
                 const baseClasses = "px-2 py-1 yj-text-xs cursor-pointer whitespace-nowrap rounded-sm";

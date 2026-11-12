@@ -15,6 +15,7 @@ import AdminPrefsUtil from "../../../shared/object/util/adminPrefsUtil";
 import CannonAimUtil from "../../../shared/object/util/cannonAimUtil";
 import CannonStateUtil from "../../../shared/object/util/cannonStateUtil";
 import PhysicsManager from "../../../shared/physics/physicsManager";
+import PhysicsSphereUtil from "../../../shared/physics/util/physicsSphereUtil";
 import Room from "../../../shared/room/types/room";
 import RoomRuntimeMemory from "../../../shared/room/types/roomRuntimeMemory";
 import ErrorUtil from "../../../shared/system/util/errorUtil";
@@ -247,7 +248,8 @@ function getNearestPlayer(cannon: AddObjectSignal, players: AddObjectSignal[]): 
 }
 
 // Whether a cannon may fire at a player: in range and not too near, where its barrel tilts to, and with nothing
-// between the barrel's mouth, pointed at their middle, and them.
+// between the barrel's mouth, pointed at their middle, and them, but what a ball bounces off (a mirror, an NPC, another
+// cannon), which hides nobody from it.
 function mayFireAt(room: Room, cannon: AddObjectSignal, player: AddObjectSignal): boolean
 {
     const {pos, dir} = cannon.transform;
@@ -259,9 +261,17 @@ function mayFireAt(room: Room, cannon: AddObjectSignal, player: AddObjectSignal)
     const {aim, reachable} = CannonAimUtil.getAim(dir, toward);
     if (!reachable)
         return false;
-    const struck = PhysicsManager.castSphere(room.id, CannonAimUtil.getMuzzle(pos, dir, aim), middle, 0,
-        new Set<string>([cannon.objectId]));
-    return struck == undefined || struck.object?.objectId == player.objectId;
+    const muzzle = CannonAimUtil.getMuzzle(pos, dir, aim);
+    const lookedPast = new Set<string>([cannon.objectId]);
+    while (true)
+    {
+        const struck = PhysicsManager.castSphere(room.id, muzzle, middle, 0, lookedPast);
+        if (struck == undefined || struck.object?.objectId == player.objectId)
+            return true;
+        if (struck.object == undefined || !PhysicsSphereUtil.bounces(struck.object))
+            return false;
+        lookedPast.add(struck.object.objectId);
+    }
 }
 
 // Until it next turns to someone.

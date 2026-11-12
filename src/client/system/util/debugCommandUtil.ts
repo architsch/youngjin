@@ -14,6 +14,7 @@ import AdminPrefsUtil from "../../../shared/object/util/adminPrefsUtil";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
 import ParticleDebugUtil from "../../graphics/particle/util/particleDebugUtil";
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
+import { CHEAT_DOLLARS } from "../../../shared/system/sharedConstants";
 import RoomEditorUtil from "../../singlePlayer/util/roomEditorUtil";
 
 // The debug panel's commands (see DebugStats), each run by the text typed for it.
@@ -46,12 +47,28 @@ const DebugCommandUtil =
             // saved as a file (see RoomEditorUtil, LocalRoomFileUtil).
             case "new room template": RoomEditorUtil.openNewRoom(); break;
             case "fast_forward_daily_reward_clock": fastForwardDailyRewardClock(); break;
-            default:
-                notificationMessageObservable.set(
-                    ParticleDebugUtil.tryRunCommand(command) ?? "Unknown debug command.");
+            // A dev server's alone: anywhere else, no command at all.
+            case "rosebud":
+                if (App.getEnv().mode == "dev")
+                    grantCheatDollars();
+                else
+                    tellUnknown(command);
                 break;
+            default: tellUnknown(command); break;
         }
     },
+}
+
+function tellUnknown(command: string): void
+{
+    notificationMessageObservable.set(ParticleDebugUtil.tryRunCommand(command) ?? "Unknown debug command.");
+}
+
+// "rosebud" debug command: dollars for testing what they buy (also enforced server-side).
+function grantCheatDollars(): void
+{
+    SocketsClient.emitUserCommandSignal(new UserCommandSignal("grantCheatDollars"));
+    notificationMessageObservable.set(`Rosebud: +$${CHEAT_DOLLARS}.`);
 }
 
 // "restart tutorial" debug command. Only allowed when not in a single-player mode (also enforced

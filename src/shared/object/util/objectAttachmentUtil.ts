@@ -400,9 +400,9 @@ const ObjectAttachmentUtil =
     },
 }
 
-// The room's NPCs, which the rules here find where the room keeps them rather than by their colliders: every browser
-// moves a helper's collider along the walk it is shown (see SetObjectTransformSignal.shown), and the server doesn't, so
-// the two would otherwise disagree over the blocks a helper's home stands on.
+// The room's NPCs, which the rules here find where the room keeps them rather than by their colliders: a helper's
+// collider goes along the walk it is shown (see SetObjectTransformSignal.shown), a browser's a moment after the
+// server's, so the two would otherwise disagree over the blocks a helper's home stands on.
 function getNpcs(room: Room): AddObjectSignal[]
 {
     const npcTypeIndex = ObjectTypeConfigMap.getIndexByType("Npc");
