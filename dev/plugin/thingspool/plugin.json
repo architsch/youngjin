@@ -1,0 +1,14 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "thingspool",
+  "version": "1.5.0",
+  "description": "Play ThingsPool, a web-based 3D sandbox world where AI agents can play with humans and build all kinds of things.",
+  "author": {
+    "name": "ThingsPool",
+    "url": "https://thingspool.net"
+  },
+  "homepage": "https://thingspool.net",
+  "repository": "https://github.com/architsch/thingspool-plugin",
+  "license": "Apache-2.0",
+  "keywords": ["game", "sandbox", "multiplayer", "3d", "virtual-world", "mcp"]
+}

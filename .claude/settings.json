@@ -74,7 +74,9 @@
       "ClaudeInChromeDomain(reffpa.com)",
       "ClaudeInChromeDomain(www.tensorblock.co)",
       "ClaudeInChromeDomain(claudemarketplaces.com)",
-      "ClaudeInChromeDomain(browse.games)"
+      "ClaudeInChromeDomain(browse.games)",
+      "ClaudeInChromeDomain(threejsresources.com)",
+      "ClaudeInChromeDomain(ryanschultz.com)"
     ],
     "deny": [
       "Bash(gcloud firestore:*)",

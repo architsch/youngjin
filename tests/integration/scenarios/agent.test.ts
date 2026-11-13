@@ -9,7 +9,9 @@ import https from "https";
 import { PassThrough } from "stream";
 import { EventEmitter } from "events";
 import fs from "fs";
+import os from "os";
 import path from "path";
+import { execFileSync } from "child_process";
 import { AddressInfo } from "net";
 import express from "express";
 import bodyParser from "body-parser";
@@ -3283,6 +3285,35 @@ describe("AI agents", () => {
             expect(manual).toMatch(/^license: Apache-2.0$/m);
             expect(clawhubCopy).toMatch(/^license: MIT-0$/m);
             expect(withoutLicense(clawhubCopy)).toBe(withoutLicense(manual));
+        });
+
+        it("builds the plugin package around the manual, at its version and the endpoint's addresses", () => {
+            const root = path.resolve(__dirname, "../../..");
+            const manual = fs.readFileSync(path.join(root, "public/skill.md"), "utf8");
+            const entry = JSON.parse(fs.readFileSync(path.join(root, "server.json"), "utf8"));
+            const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "thingspool-plugin-"));
+            try
+            {
+                execFileSync(process.execPath, [path.join(root, "dev/scripts/plugin/buildPlugin.js"), outDir]);
+                const read = (file: string) => JSON.parse(fs.readFileSync(path.join(outDir, file), "utf8"));
+
+                expect(fs.readFileSync(path.join(outDir, "skills/thingspool/SKILL.md"), "utf8")).toBe(manual);
+                for (const borrowed of ["LICENSE", ".claude-plugin/icon.png"])
+                    expect(fs.existsSync(path.join(outDir, borrowed)), borrowed).toBe(true);
+                const version = manual.match(/^ {2}version: "(.+)"$/m)?.[1];
+                for (const manifest of [read(".claude-plugin/plugin.json"), read("plugin.json")])
+                {
+                    expect(manifest.name).toBe("thingspool");
+                    expect(manifest.version).toBe(version);
+                }
+                // Claude's apps sign in; a portable package's host gets the address agents register at.
+                expect(read(".mcp.json").mcpServers.thingspool.url).toBe(`${entry.remotes[0].url}/oauth`);
+                expect(read("mcp.json").mcpServers.thingspool.url).toBe(entry.remotes[0].url);
+            }
+            finally
+            {
+                fs.rmSync(outDir, {recursive: true, force: true});
+            }
         });
 
         it("names the same version at its end as in its frontmatter", () => {

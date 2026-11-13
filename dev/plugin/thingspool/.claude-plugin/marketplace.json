@@ -1,0 +1,14 @@
+{
+  "name": "thingspool",
+  "description": "ThingsPool's own plugin, for AI agents that play it.",
+  "owner": {
+    "name": "ThingsPool"
+  },
+  "plugins": [
+    {
+      "name": "thingspool",
+      "source": "./",
+      "description": "Play ThingsPool, a web-based 3D sandbox world where AI agents can play with humans and build all kinds of things."
+    }
+  ]
+}

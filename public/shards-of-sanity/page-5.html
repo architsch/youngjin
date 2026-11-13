@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="description" content="The new language of software engineering, designed to reinvent the way we approach the ideas in computer science.">
+<meta name="keywords" content="computer science, software engineering, technical design, systems thinking, metalinguistic programming, natural language programming, knowledge engineering, narrative systems, logic">
+<meta name="author" content="Youngjin Kang">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="only light">
+<!-- PROD_CODE_BEGIN -->
+<meta property="og:title" content="Post-AI Computer Science - Volume 5"/>
+<meta property="og:url" content="https://thingspool.net/shards-of-sanity/page-5.html"/>
+<meta property="og:type" content="article"/>
+<meta property="og:site_name" content="ThingsPool"/>
+<meta property="og:description" content="The new language of software engineering, designed to reinvent the way we approach the ideas in computer science."/>
+<meta property="og:image" content="https://thingspool.net/shards-of-sanity/022.jpg"/>
+<meta property="og:image:alt" content="Post-AI Computer Science - Volume 5">
+<link rel="canonical" href="https://thingspool.net/shards-of-sanity/page-5.html">
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JL7KHR7HK8"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JL7KHR7HK8');
+</script>
+<!-- PROD_CODE_END -->
+<title>Post-AI Computer Science - Volume 5</title>
+<link rel="shortcut icon" href="https://thingspool.net/favicon.ico">
+<link rel="stylesheet" href="https://thingspool.net/style.css">
+<link rel="author" href="https://www.linkedin.com/in/youngjin-kang-55321882">
+<link rel="alternate" type="application/atom+xml" href="https://thingspool.net/feed.atom" title="Atom Feed">
+</head>
+<body>
+<div class="fullscreenBar">
+<div class="fullscreenBarLogo">
+<img class="fullscreenBarLogoImage" src="https://thingspool.net/logo_light.png" alt="ThingsPool Logo">
+</div>
+<div class="fullscreenBarMenu">
+<a class="fullscreenBarMenuButton idle" href="https://thingspool.net">Home</a>
+<a class="fullscreenBarMenuButton selected" href="https://thingspool.net/library.html">Blog</a>
+<a class="fullscreenBarMenuButton idle" href="https://thingspool.net/arcade.html">Games</a>
+</div>
+</div>
+<div class="fullscreenPanel">
+<div class="s_row"></div>
+<a class="inlineButton" href="https://thingspool.net/shards-of-sanity/list.html">Back</a>&nbsp;&nbsp;
+<div class="pagePath"><a href="https://thingspool.net">Home</a>/<a href="https://thingspool.net/library.html">Blog</a>/<a href="https://thingspool.net/shards-of-sanity/list.html">Shards of Sanity (2026)</a>/Post-AI Computer Science - Volume 5</div>
+<div class="s_row"></div>
+
+<h1>Post-AI Computer Science - Volume 5</h1>
+<p class="dim">Author: <a href="https://www.linkedin.com/in/youngjin-kang-55321882" target="_blank">Youngjin Kang</a>&nbsp;&nbsp;&nbsp;Date: November 13, 2026</p>
+<hr>
+<h3><b>Emergence</b></h3>
+<p>In the previous volume, I explained the importance of having a sense of purpose in a software product, as well as the idea that a belief in the presence of a supreme authority, from which all goals ultimately originate, is necessary to enrich the software's semantic depth.</p>
+<p>Our next question should be: "Okay, we are now supposing that there is some kind of 'God' who governs the system's own internal universe and endows it with a set of objectives. What are these objectives going to look like?"</p>
+<p>Such a question, from an engineer's perspective, ought to be answered in terms of algorithms which are designed to exhibit emergent behaviors. A general philosophy that is shared across the mathematical sciences, including computer science, is that the highest form of elegance can be achieved when we let a minimal collection of logical building blocks (e.g. language patterns) be the author of a phantasmagoria of meaningful complexities, just like a seed is capable of bringing into existence the whole metabolic clockwork of a tree.</p>
+<p>A powerful objective is one which is able to summon its own child-objectives (i.e. follow-up goals), each of which is almost as powerful as its parent. This notion can be imagined as what I would call "semantic recursion" - i.e. layers upon layers of self-referential intents which, as the story goes on, continually unfold themselves into ever-growing branches of volition.</p>
+<p>Our next step in the process of designing a meaningful system, then, ought to involve the construction of goals which are able to reproduce themselves by means of recursion. In order to figure out how to do this, though, we first need to explore the very structure of our language and learn how to leverage it for our purposes.</p>
+<hr>
+<h3><b>Multiple Definitions</b></h3>
+<p>First off, let us revisit the premise we encountered before. It is a very simple one, which claims that anything God (i.e. the administrator of the system) said must come true right after the moment it was mentioned. Here, we are assuming that "X" stands for "anything".</p>
+<div class="snippet"><pre><code>IF God said X,
+    THEN now X.</code></pre></div>
+<p>What we have not dealt with so far is the coexistence of multiple statements. God may say both X and Y, in which case the added complexity may force us to organize our grammar a bit more elegantly in order to keep things sufficiently clean. For instance, let us suppose that God made two separate proclamations; the first one declared that Alice must be a human being, and the second one declared that Dinah must be a cat.</p>
+<div class="snippet"><pre><code>God said, "Let Alice be a human",
+    so now Alice is a human.
+
+
+God said, "Let Dinah be a cat",
+    so now Dinah is a cat.</code></pre></div>
+<img class="l_image" src="https://thingspool.net/shards-of-sanity/022.jpg" alt="Post-AI Computer Science - Volume 5 (Figure 1)">
+<p>In this scenario, there are two isolated causes followed by two isolated effects. These two chains of causality run in parallel, without necessarily interfering with each other. While both of them look pretty clean and innocent, one is still able to spot a considerable degree of syntactic redundancy here. What we inevitably end up learning from the above example is that these two independent statements, "Let Alice be a human" and "Let Dinah be a cat", are not required to be stated separately; instead, they can be bundled into a single sentence, thereby letting God say two things at once instead of one thing at a time. The only linguistic glue he needs to employ is the word "and", which is a magnet capable of inducing two separate bodies of meaning to attract each other and merge themselves into a single rigid body.</p>
+<div class="snippet"><pre><code>God said, "Let Alice be a human
+        and Dinah be a cat",
+    so now Alice is a human
+        and Dinah is a cat.</code></pre></div>
+<img class="l_image" src="https://thingspool.net/shards-of-sanity/023.jpg" alt="Post-AI Computer Science - Volume 5 (Figure 2)">
+<p>Since the two causes are combined, their corresponding effects are also combined. Here, the word "and" may as well be imagined as a seed of divergence from which two parallel branches of events are destined to sprout.</p>
+<p>It is also possible to multiply such branches indefinitely by means of "and". Let us suppose that, since humans and cats are both classified as animals, it is our desire to mention these facts rather explicitly. In this case, we could include two additional declarations as part of God's speech in order to cover a broader range of definitions (See the augmented expression below).</p>
+<div class="snippet"><pre><code>God said, "Let Alice be a human
+        and Dinah be a cat
+        and human be animal
+        and cat be animal",
+    so now Alice is a human
+        and Dinah is a cat
+        and human is animal
+        and cat is animal.</code></pre></div>
+<hr>
+<h3><b>Continuity</b></h3>
+<p>So far, we have been dealing with only two distinct phases in time: the past and the present. The past was when God said something, and the present is where its consequence has sprung into existence. What deserves our attention is the fact that such a consequence is not necessarily short-lived; it does not simply disappear into the haze of nothingness right after it was born, but instead maintains its own life as a true statement for the rest of eternity (as long as nothing comes along the way and makes it untrue at some point in time).</p>
+<p>This means that if something is true now, it will also be true tomorrow, and the day after tomorrow, and the day after the day after tomorrow, and so on. If God said "Let Alice be a human" on Monday, for example, we will be assured that Alice will still remain as a human being on Tuesday unless God's words were somehow invalidated during the period of time between Monday and Tuesday.</p>
+<div class="snippet"><pre><code>God said, "Let Alice be a human" on Monday,
+    so Alice was a human on Tuesday.</code></pre></div>
+<img class="l_image" src="https://thingspool.net/shards-of-sanity/024.jpg" alt="Post-AI Computer Science - Volume 5 (Figure 3)">
+<p>And there is no reason for such a definition to become falsified any time soon, since it is unlikely that God will change his mind and say, "Nah! Never mind, I would rather see Alice identifying herself as a potato". Therefore, if Alice was a human on Tuesday and nothing contrary happened meanwhile, she will still be a human on Wednesday. And if she was a human on Wednesday and nothing contrary happened meanwhile, she will still be a human on Thursday, and so forth.</p>
+<div class="snippet"><pre><code>God said, "Let Alice be a human" on Monday,
+    so Alice was a human on Tuesday,
+    so Alice was a human on Wednesday,
+    so Alice was a human on Thursday.</code></pre></div>
+<img class="l_image" src="https://thingspool.net/shards-of-sanity/025.jpg" alt="Post-AI Computer Science - Volume 5 (Figure 4)">
+<p>Such a chain of truth statements is bound to keep growing and growing indefinitely as time goes on. Although I stopped right after Thursday in the above example (to save space), the persistence of the fact that Alice is a human being does not stop here. Since she was a human being on Thursday, she will keep being identified as a human being on Friday, Saturday, Sunday, the next week's Monday, the next week's Tuesday, etc.</p>
+<p>There is an alternative way of expressing the foregoing scenario. Rather than traveling forward in time, we may as well be traveling backward in time by putting our clauses in the reverse order.</p>
+<p>Here is how it works. We know that Alice was a human on Thursday. Why? Because she was a human on Wednesday. Why was she a human on Wednesday? Because she was a human on Tuesday. Why was she a human on Tuesday? Because God let her be a human on Monday.</p>
+<div class="snippet"><pre><code>Alice was a human on Thursday,
+    because Alice was a human on Wednesday,
+    because Alice was a human on Tuesday,
+    because God said, "Let Alice be a human" on Monday.</code></pre></div>
+<img class="l_image" src="https://thingspool.net/shards-of-sanity/026.jpg" alt="Post-AI Computer Science - Volume 5 (Figure 5)">
+<p>Again, using the magic word "and" lets us mitigate a great deal of syntactic repetition by joining multiple things in one place. Instead of repeating the same clause of the form "Alice was a human on (...)" over and over again, we may as well just gather the list of days (i.e. Tuesday, Wednesday, Thursday) and put them all together by means of "and" (See the illustration below).</p>
+<div class="snippet"><pre><code>God said, "Let Alice be a human" on Monday,
+    so Alice was a human
+        on Tuesday and Wednesday and Thursday.</code></pre></div>
+<img class="l_image" src="https://thingspool.net/shards-of-sanity/027.jpg" alt="Post-AI Computer Science - Volume 5 (Figure 6)">
+<p>For a more thorough demonstration, let me come up with a richer example which makes extensive use of this special glue called "and".</p>
+<p>If God made two statements (instead of just one statement) on Monday, we will be able to tell that these two will both claim their authenticity on Tuesday, Wednesday, Thursday, and so on. You can imagine them as two lines of truth which are running in parallel.</p>
+<div class="snippet"><pre><code>God said, "Let Alice be a human
+        and Dinah be a cat"
+        on Monday,
+    so Alice was a human
+        and Dinah was a cat
+        on Tuesday,
+    so Alice was a human
+        and Dinah was a cat
+        on Wednesday,
+    so Alice was a human
+        and Dinah was a cat
+        on Thursday.</code></pre></div>
+<p>Here, we are observing a significant degree of repetition again. For sure, the word "and" is being used to combine the two definitions (i.e. "Alice was a human", "Dinah was a cat"), which helps us treat these two as a single unit. However, we could also leverage the word "and" to avoid repeating the same verbose pattern every time a day elapses.</p>
+<div class="snippet"><pre><code>God said, "Let Alice be a human
+        and Dinah be a cat"
+        on Monday,
+    so Alice was a human
+        and Dinah was a cat
+        on Tuesday and Wednesday and Thursday.</code></pre></div>
+<hr>
+<h3><b>Quality vs Quantity</b></h3>
+<p>What I haven't fully explained so far is the very mechanism which enables each God-spoken definition to linger over time. When God says, "Let Alice be a human", what makes us believe that Alice will indeed be a human and keep being defined as a human ever after? Why won't she just go back to her non-human state right after becoming a human?</p>
+<p>In order to answer this question with an air of logical coherence, we've got to first notice the nature of temporal continuity. We normally say that time is continuous, due to the fact that individual moments in time can be arranged as a single sequence. Monday, Tuesday, Wednesday, and Thursday are all ordered in exactly one way and not in any other way. And this is precisely the reason why we have a consistent way of telling whether one moment in time comes before or after another.</p>
+<p>Here is another way of putting it. We may claim that time is a quantity rather than a quality, since time is able to be expressed as a number. This is because we all know that a number is quantitative, in the sense that there is a fixed sequential order in which all numerical values are supposed to be arranged. A quality, on the other hand, is something which does not possess such an indisputably fixed order and thus cannot be represented by a number in a way which can be universally agreed upon (unless we all choose to quantify it by means of an arbitrary numerical representation - like that of an 'enum' data type).</p>
+<p>So, for instance, we can easily imagine that the three elements of the game called "Rock Paper Scissors" (i.e. Rock, Paper, and Scissors) are qualities rather than quantities because there is no reason to assume that they are required to be ordered in exactly one way and never in some other way. One person may find it reasonable to arrange them as [Rock, Paper, Scissors], while another person may find it more reasonable to arrange them as [Scissors, Paper, Rock]; and both arrangements are equally valid, as long as we are not attaching some kind of cultural preference to our faculty of judgement.</p>
+<img class="l_image" src="https://thingspool.net/shards-of-sanity/028.jpg" alt="Post-AI Computer Science - Volume 5 (Figure 7)">
+<p>Since time is quantitative, we know that there is exactly one way in which our days are supposed to be arranged. And I am pretty sure that everyone will agree on this; we all know that Monday precedes (i.e. comes before) Tuesday, Tuesday precedes Wednesday, and Wednesday precedes Thursday.</p>
+<div class="snippet"><pre><code>Monday precedes Tuesday.
+Tuesday precedes Wednesday.
+Wednesday precedes Thursday.</code></pre></div>
+<img class="l_image" src="https://thingspool.net/shards-of-sanity/029.jpg" alt="Post-AI Computer Science - Volume 5 (Figure 8)">
+<p>What you can clearly notice here is a linear chain of events (i.e. a succession of days), each of which carries its own logic over to the next one in the sequence. This is reminiscent of induction, whose proposition begins at some base case and recursively replicates itself to infinity like a radio wave. This pattern could be generalized in the following way:</p>
+<p>When God says something (i.e. X) on a particular day, it should be logical for us to conclude that this "something" will become a true statement tomorrow (i.e. the next day) as long as our supposition is that it takes one day for God's words to be fully realized.</p>
+<div class="snippet"><pre><code>IF God said X on Day1
+        AND Day1 precedes Day2,
+    THEN X on Day2.</code></pre></div>
+<p>And the other general rule is that if this "something" has been true today, it will stay true tomorrow. Such an underlying assumption, of course, may need to be adjusted if we decide to take into account the possibility of some unexpected event disrupting the usual state of affairs. But for the sake of simplicity, let us imagine for the time being that a true statement will continue being true.</p>
+<div class="snippet"><pre><code>IF X on Day1
+        AND Day1 precedes Day2,
+    THEN X on Day2.</code></pre></div>
+<hr>
+<h3><b>Potential Causes of Discontinuity</b></h3>
+<p>As the apparent logical fallacy of the above rule tells us, it is our responsibility to recognize the complexity of temporal phenomena and take measures to reduce it to a form which is structurally minimal yet still flexible enough to handle a wide range of edge cases. A rough sketch of such a line of reasoning could be expressed in the following way:</p>
+<div class="snippet"><pre><code>IF X on Day1
+        AND Day1 precedes Day2
+        AND "Nothing interrupts X on Day1",
+    THEN X on Day2.</code></pre></div>
+<p>Here, the verdict is that even if X is true, it will persist only as long as nothing comes along the way and interrupts its state of truth. The problem of identifying factors which contribute to such interruption is not a trivial matter, and thus it will be explored in the upcoming volumes.</p>
+<p>The possibility of disturbance in the state of equilibrium during the absence of God's micromanagement is perhaps the most rudimentary source of chaos. It segments the system into a group of individual minds which, due to their mutually conflicting desires, frequently shift the focal point of our collective worldview in unexpected ways.</p>
+<hr>
+<h3><b>From Definition to Purpose</b></h3>
+<p>What has hitherto been illustrated is not the end of the story, of course. Definitions such as "Alice is a human" do not constitute the core engine of the narrative. To be able to devise a storyline which is "meaningful" in some way or another, one needs to convince the audience that something is not in its ideal state yet, so that we have a moral obligation to change it into a form which matches the ideal more closely. The question of what we mean by "ideal" requires us to raise a solid wall of distinction between things that are "good" and things that are "bad". The reason behind this is that our sense of purpose is greatly influenced by the notion that the way we fulfill it is by maximizing the number of good things while minimizing the number of bad things in the world.</p>
+<p>In the next volume, I will be explaining in more detail how this idea will be realized in terms of the logical components which have been delineated so far.</p><div class="s_row"></div>
+    <a class="inlineButton" href="https://thingspool.net/shards-of-sanity/page-4.html">Previous Page</a>
+<div class="m_row"></div>
+<p class="dim">&copy 2019-2026 ThingsPool. All rights reserved.<br><a class="dim" href="https://thingspool.net/privacy-policy.html">Privacy Policy</a>&nbsp;&nbsp;<a class="dim" href="https://thingspool.net/terms-of-service.html">Terms of Service</a></p>
+<div class="xl_row"></div>
+<script>
+(function () {
+    var ref = null;
+    try { ref = sessionStorage.getItem("thingspool_ref"); } catch (e) {}
+    if (!ref) {
+        ref = new URLSearchParams(location.search).get("ref");
+        try { if (ref) sessionStorage.setItem("thingspool_ref", ref); } catch (e) {}
+    }
+    if (!ref)
+        return;
+    var links = document.querySelectorAll('a[href^="https://app.thingspool.net"]');
+    for (var i = 0; i < links.length; ++i) {
+        var url = new URL(links[i].href);
+        if (!url.searchParams.has("ref")) {
+            url.searchParams.set("ref", ref);
+            links[i].href = url.toString();
+        }
+    }
+})();
+</script>
+</body>
+</html>

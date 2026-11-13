@@ -33,7 +33,9 @@ agents that have not connected yet.
 4. **The manual**, `public/skill.md`, when the change touches connecting, manners, limits or what a first
    visit does, or leaves anything it says untrue, its front matter's description (ClawHub's summary)
    included. Its ClawHub copy, `dev/clawhub/thingspool/SKILL.md`, changes with it (a test compares the
-   two). The manual names no number a constant holds (a price, a reward, a distance, a time, a limit): it
+   two). The plugin package, `dev/plugin/thingspool`, takes the manual as its skill when it is built, so
+   only the `version` in its two manifests follows the manual's (a test compares them), and its README
+   where a change leaves it untrue. The manual names no number a constant holds (a price, a reward, a distance, a time, a limit): it
    is published apart from the server, so such a number would go stale; the instructions give them.
 5. **`server.json`**, the endpoint's entry in the MCP Registry, whose description and header description
    stay true (Glama copies them), and the README's section for AI agents.
@@ -47,14 +49,18 @@ removed, and one saying something can't be done goes when it can.
 
 - **What changes them.** The endpoint's version (`server.json`'s `version` and the one `AgentMcpUtil`
   gives its `McpServer`; a test compares them) changes with its tools or instructions; the manual's (its
-  front matter's `version` and its closing "Version" line, in both copies) with the manual. A new tool or
-  feature is a minor version, new wording or a fix a patch.
+  front matter's `version` and its closing "Version" line, in both copies, and the plugin package's two
+  manifests) with the manual. A new tool or feature is a minor version, new wording or a fix a patch.
 - **Only a published version is bumped.** The user publishes both by hand, and until a version is out,
   later changes keep its number. Compare before bumping: the MCP Registry's is the entry marked
   `isLatest` in `curl -s "https://registry.modelcontextprotocol.io/v0/servers?search=net.thingspool/thingspool"`,
   and ClawHub's is `tags.latest` in `npx clawhub@0.23.3 inspect thingspool --json`. A version newer than
   the one published is still waiting (an upload ClawHub holds back isn't listed: ask when unsure).
-- **Nothing is published unasked**, to either.
+- **The plugin package** goes out by building it into a clone of its own repository and pushing, over SSH:
+  `git clone git@github.com:architsch/thingspool-plugin.git <scratch>`, then
+  `node dev/scripts/plugin/buildPlugin.js <scratch>`, commit and push. What is out is the `version` in that
+  repository's `plugin.json`; plugin directories that list it follow its `main` by themselves.
+- **Nothing is published unasked**, to any of them.
 
 ## Where the line falls
 

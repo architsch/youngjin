@@ -64,6 +64,7 @@
 - **`/config`** - Webpack config files, tsconfig files, Nginx config files
 - **`/scripts`** - Dev scripts (e.g. dev-server with hot-reloading capability, secrets injector, the composition and image map editors, the picture preparation tool, the helpers' reply, small-talk and remark samplers)
 - **`/clawhub`** - The agents' manual as published on ClawHub (MIT-0): `public/skill.md` but for its license, which a test checks
+- **`/plugin`** - The plugin package for agents' hosts (a Claude plugin and an Agent Plugins package in one folder): its manifests and README, which `dev/scripts/plugin/buildPlugin.js` puts together with the manual as its skill
 - **`/assets`** - Full-resolution samples the image map editor keeps to remake pictures (what canvases and props show) at another size, the images of disabled entries, and the index of its source library, whose photos are gitignored (third-party photos; never shipped)
 
 ### `/docs` - Documents explaining technical details
@@ -98,7 +99,7 @@
 - `src/shared/system/sharedObservables.ts` - Observables used by both the client and server apps (for internal event handling)
 - `views/page/dynamic/mypage.ejs` - Page where the client app runs (This is where gameplay takes place). This client app authenticates the user via the server's user-API routes and makes a socket connection (game_sockets) with the server's Socket.IO instance. It is also an agent's camera (`/camera/<token>`, see AgentCameraUtil): no sign-in, the token on its socket, and only the view through the agent's eyes.
 - `src/server/agent/util/agentMcpUtil.ts` - The MCP endpoint AI agents play over: its tools, and `INSTRUCTIONS`, which every agent reads on connecting.
-- `public/skill.md` - The agents' manual, served at thingspool.net/skill.md (Apache-2.0); its ClawHub copy is `dev/clawhub/thingspool/SKILL.md`.
+- `public/skill.md` - The agents' manual, served at thingspool.net/skill.md (Apache-2.0); its ClawHub copy is `dev/clawhub/thingspool/SKILL.md`, and the plugin package (`dev/plugin/thingspool`) is built around it.
 - `server.json` - The endpoint's entry in the official MCP Registry (`net.thingspool/thingspool`), published by hand with `mcp-publisher`; its `version` is the one the endpoint reports.
 
 ## Architecture Notes
@@ -117,7 +118,7 @@ Each rule is binding as written. Its page in `.claude/rules/`, loaded along with
 - **Plan Documents Are Historical Records** ([`plan-documents.md`](.claude/rules/plan-documents.md)): a file under `/docs/plans` is edited only with the user's approval, whatever its date; sweeping edits skip it.
 - **Source Changes Go Through the File-Editing Tools** ([`source-edits.md`](.claude/rules/source-edits.md)): every file created or modified under `src/` is written with Edit or Write, never by a shell command.
 - **Page Sources Are the Author's Alone** ([`page-sources.md`](.claude/rules/page-sources.md)): the `source.txt` that each library and arcade page under `public/` is built from is never edited, overwritten, moved or deleted; a deny rule, a hook and a sandbox around every shell command, all set in `.claude/settings.json`, enforce it.
-- **Agents Keep Up With Every Feature** ([`agents-keep-up.md`](.claude/rules/agents-keep-up.md)): when a feature is added or changed, what AI agents can do over MCP and what they are told change with it, in the same change, unasked: the tools, what they see, the endpoint's instructions, the manual and its ClawHub copy, and `server.json`. A version is bumped only once the one there has been published.
+- **Agents Keep Up With Every Feature** ([`agents-keep-up.md`](.claude/rules/agents-keep-up.md)): when a feature is added or changed, what AI agents can do over MCP and what they are told change with it, in the same change, unasked: the tools, what they see, the endpoint's instructions, the manual, its ClawHub copy and the plugin package, and `server.json`. A version is bumped only once the one there has been published.
 - **Helpers Keep Up With Every Feature** ([`helpers-keep-up.md`](.claude/rules/helpers-keep-up.md)): when a feature is added or changed, what the helpers are told and the fixed words they say stay true to it, in the same change, unasked, in outline only: what people can do, add, unlock or buy, with the pictures of the controls for it, never how it works. Their instructions are mostly ThingsPool's maker, his writings and their subjects, not the game's mechanics. A pictured control's new look and a changed picture keyword reach them too.
 - **Documentation Guidelines** ([`documentation.md`](.claude/rules/documentation.md)): a `/docs` page is a short map of one subsystem, for a developer about to work on it: terse, in the present tense, without exact numbers or internal names. `/docs/plans` is outside them.
 - **Code Comment Guidelines** ([`code-comments.md`](.claude/rules/code-comments.md)): default to no comment; one says only what the code cannot, in a line or two.
