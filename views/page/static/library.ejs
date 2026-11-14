@@ -15,4 +15,7 @@
 <a class="postEntryButton" href="<%= URL_STATIC %>/<%= entry.dirName %>/list.html"><%= entry.title %></a>
 <%_ } _%>
 <%_ } _%>
+<hr>
+<%_ /* I ♥ RSS lists the RSS feed only while this page links back to it (see RssFeedBuilder). */ _%>
+<p class="dim"><a class="dim" href="<%= URL_STATIC %>/feed.atom">Atom Feed</a>&nbsp;&nbsp;<a class="dim" href="<%= URL_STATIC %>/rss.xml">RSS Feed</a>&nbsp;&nbsp;<a class="dim" href="https://iheartrss.com/">I &hearts; RSS</a></p>
 <%- include(`${ejsPartialRootPath}/common/footer.ejs`) %>

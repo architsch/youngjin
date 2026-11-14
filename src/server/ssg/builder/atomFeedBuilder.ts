@@ -15,6 +15,17 @@ export default class AtomFeedBuilder
         this.entries.push({ url, title, date, description });
     }
 
+    // Newest first: some readers (Bridgy Fed) read only the top entries and skip old ones by their date.
+    getEntriesNewestFirst()
+    {
+        return [...this.entries].reverse().sort((a, b) => b.date.getTime() - a.date.getTime());
+    }
+
+    getLatestUpdate(): Date
+    {
+        return this.globalLatestUpdate;
+    }
+
     async build(): Promise<void>
     {
         const lines = [
@@ -30,9 +41,8 @@ export default class AtomFeedBuilder
             `<id>urn:uuid:02210672-5391-4cc8-800a-2a88f3a6d00c</id>`, // uuid randomly generated
         ];
 
-        // Newest first, each dated by <published>: some readers (Bridgy Fed) read only the top entries and skip old ones by that date.
-        const entries = [...this.entries].reverse().sort((a, b) => b.date.getTime() - a.date.getTime());
-        for (const entry of entries)
+        // Each dated by <published>, the date by which those readers skip old entries.
+        for (const entry of this.getEntriesNewestFirst())
         {
             lines.push(`<entry>`);
             lines.push(`  <title>${entry.title}</title>`);

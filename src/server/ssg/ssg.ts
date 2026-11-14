@@ -2,6 +2,7 @@ import FileUtil from "./util/fileUtil";
 import EJSUtil from "./util/ejsUtil";
 import SitemapBuilder from "./builder/sitemapBuilder";
 import AtomFeedBuilder from "./builder/atomFeedBuilder";
+import RssFeedBuilder from "./builder/rssFeedBuilder";
 import ArcadePageBuilder from "./builder/page/arcadePageBuilder";
 import LibraryPageBuilder from "./builder/page/libraryPageBuilder";
 import TextFileBuilder from "./builder/textFileBuilder";
@@ -58,6 +59,7 @@ export default async function SSG(): Promise<void>
 
     await sitemapB.build();
     await atomFeedB.build();
+    await new RssFeedBuilder(atomFeedB).build();
 
     // Generate CSS
 
