@@ -7,8 +7,8 @@ import CannonState from "../../../shared/object/types/cannonState";
 import { ObjectMetadataKeyEnumMap } from "../../../shared/object/types/objectMetadataKey";
 import { CANNON_BALL_SPEED } from "../../../shared/object/types/objectTypeConfig/cannonBallObjectTypeConfig";
 import CannonObjectTypeConfig, { CANNON_AIM_TOLERANCE, CANNON_FIRE_INTERVAL_SECONDS, CANNON_LOCK_SECONDS,
-    CANNON_MAX_RANGE, CANNON_MIN_RANGE, CANNON_READY_SECONDS, CANNON_REST_SECONDS, CANNON_SPENT_SECONDS,
-    CANNON_TURN_RATE } from "../../../shared/object/types/objectTypeConfig/cannonObjectTypeConfig";
+    CANNON_MAX_RANGE, CANNON_MIN_RANGE, CANNON_READY_SECONDS, CANNON_REST_SECONDS, CANNON_SHOTS_IN_A_ROW,
+    CANNON_SPENT_SECONDS, CANNON_TURN_RATE } from "../../../shared/object/types/objectTypeConfig/cannonObjectTypeConfig";
 import RemoveObjectSignal from "../../../shared/object/types/removeObjectSignal";
 import SetObjectMetadataSignal from "../../../shared/object/types/setObjectMetadataSignal";
 import AdminPrefsUtil from "../../../shared/object/util/adminPrefsUtil";
@@ -43,12 +43,13 @@ const roomPlays = new WeakMap<RoomRuntimeMemory, Map<string, CannonPlay>>();
 // while without a break: pointing at them, from where it may fire at them (in range, not too near, where its barrel
 // tilts to, with nothing between). So whoever keeps going round it faster than it turns is never fired at. Aimed, it
 // stands a moment and fires that way, wherever they have gone by then (see CannonBallUtil), and waits again. Its last
-// ball fired, it stands a moment more and is taken away. Switched off, it does nothing, and starts over rested when
-// switched on. A ghost is nobody to it (see AdminPrefsUtil.isGhost).
+// ball fired, it stands a moment more and is taken away; the last of a row since it was switched on
+// (CANNON_SHOTS_IN_A_ROW), and it switches itself off instead. Switched off, it does nothing, and starts over rested,
+// with a row of its own, when switched on. A ghost is nobody to it (see AdminPrefsUtil.isGhost).
 //
 // All of it is kept in the cannon's own CannonState, so that a room's saves keep it: written as it changes, and told
-// to the room only where a browser shows it (see CannonStateUtil.getShownPart), the time left never. Its switch is
-// its user's, and only read here.
+// to the room only where a browser shows it (see CannonStateUtil.getShownPart), the time left and the row's count
+// never. Its switch is its user's, which it throws only to switch itself off, telling the room as of a user's throw.
 const CannonUtil =
 {
     // Every room's cannons, as time passes. From SocketsServer's flush, so what they do goes out with it. They keep
@@ -125,23 +126,20 @@ function getPlayers(memory: RoomRuntimeMemory): AddObjectSignal[]
 function stepCannon(room: Room, plays: Map<string, CannonPlay>, cannon: AddObjectSignal, players: AddObjectSignal[],
     seconds: number): void
 {
-    const stored = CannonStateUtil.getObjectState(cannon);
     let play = plays.get(cannon.objectId);
     // Taken up as its room keeps it: as it was stored, or as its user just added it.
     if (play == undefined)
     {
+        const stored = CannonStateUtil.getObjectState(cannon);
         play = {state: stored, targetObjectId: undefined, inSightsSeconds: undefined,
-            told: CannonStateUtil.getShownPart(CannonStateUtil.encode(stored))};
+            told: CannonStateUtil.getShownPart(CannonStateUtil.encode(stored)), kept: cannon.metadata[STATE_KEY]};
         plays.set(cannon.objectId, play);
     }
     const state = play.state;
 
-    // Its switch thrown either way, it starts over rested.
-    if (stored.on != state.on)
-    {
-        state.on = stored.on;
-        setPhase(state, CannonPhaseEnumMap.Resting, CANNON_REST_SECONDS);
-    }
+    // Its switch set since its last step, it starts over, even if thrown off and on again in between (see CannonPlay.kept).
+    if (cannon.metadata[STATE_KEY] !== play.kept)
+        startOver(state, CannonStateUtil.getObjectState(cannon).on);
     else if (state.on)
     {
         // Its turning to someone has no time to run out: it lasts until it is aimed.
@@ -174,6 +172,11 @@ function advance(room: Room, cannon: AddObjectSignal, play: CannonPlay): boolean
             {
                 ServerObjectManager.removeObjectAsServer(room, NOBODY, new RemoveObjectSignal(room.id, cannon.objectId));
                 return false;
+            }
+            if (state.shotsInARow >= CANNON_SHOTS_IN_A_ROW)
+            {
+                switchOff(room, cannon, play);
+                return true;
             }
             play.targetObjectId = undefined;
             play.inSightsSeconds = undefined;
@@ -215,19 +218,30 @@ function aim(room: Room, cannon: AddObjectSignal, play: CannonPlay, players: Add
         setPhase(state, CannonPhaseEnumMap.Ready, CANNON_READY_SECONDS);
 }
 
-// Fires the way the barrel points. A ball the room has no room for is not spent. Emptied, it has one short wait
-// left, at the end of which it goes.
+// Fires the way the barrel points. A ball the room has no room for is not spent, nor one of its row. Emptied, or its
+// row fired, it has one short wait left, at the end of which it goes, or switches itself off.
 function fire(room: Room, cannon: AddObjectSignal, play: CannonPlay): void
 {
     const state = play.state;
     const {pos, dir} = cannon.transform;
     const velocity = Vector3DUtil.scale(CannonAimUtil.getDirection(dir, state.aim), CANNON_BALL_SPEED);
     if (CannonBallUtil.launch(room, CannonAimUtil.getMuzzle(pos, dir, state.aim), velocity))
+    {
         --state.ballsLeft;
-    if (state.ballsLeft > 0)
+        ++state.shotsInARow;
+    }
+    if (state.ballsLeft > 0 && state.shotsInARow < CANNON_SHOTS_IN_A_ROW)
         wait(state);
     else
         setPhase(state, CannonPhaseEnumMap.Waiting, CANNON_SPENT_SECONDS);
+}
+
+// As a user would: the room hears of its switch alone (see CannonStateUtil.merge).
+function switchOff(room: Room, cannon: AddObjectSignal, play: CannonPlay): void
+{
+    startOver(play.state, false);
+    ServerRoomManager.socketRoomContexts[room.id].multicastSignal("setObjectMetadataSignal",
+        new SetObjectMetadataSignal(room.id, cannon.objectId, STATE_KEY, CannonStateUtil.encodeSwitch(false)));
 }
 
 function getNearestPlayer(cannon: AddObjectSignal, players: AddObjectSignal[]): AddObjectSignal | undefined
@@ -281,6 +295,14 @@ function wait(state: CannonState): void
     setPhase(state, CannonPhaseEnumMap.Waiting, shortest + Math.random() * (longest - shortest));
 }
 
+// As its switch is thrown, either way: rested, with none of its row fired.
+function startOver(state: CannonState, on: boolean): void
+{
+    state.on = on;
+    state.shotsInARow = 0;
+    setPhase(state, CannonPhaseEnumMap.Resting, CANNON_REST_SECONDS);
+}
+
 function setPhase(state: CannonState, phase: number, seconds: number): void
 {
     state.phase = phase;
@@ -291,7 +313,8 @@ function setPhase(state: CannonState, phase: number, seconds: number): void
 function keep(room: Room, cannon: AddObjectSignal, play: CannonPlay): void
 {
     const encoded = CannonStateUtil.encode(play.state);
-    cannon.metadata[STATE_KEY] = new EncodableByteString(encoded);
+    play.kept = new EncodableByteString(encoded);
+    cannon.metadata[STATE_KEY] = play.kept;
     const shown = CannonStateUtil.getShownPart(encoded);
     if (shown == play.told)
         return;

@@ -2,19 +2,19 @@
 
 Reference: @src/shared/object/types/objectTypeConfig/cannonObjectTypeConfig.ts , @src/shared/object/types/objectTypeConfig/cannonBallObjectTypeConfig.ts , @src/server/object/util/cannonUtil.ts , @src/server/object/util/cannonBallUtil.ts , @src/shared/object/util/cannonStateUtil.ts , @src/shared/object/util/cannonBallStateUtil.ts , @src/shared/object/util/cannonAimUtil.ts , @src/shared/object/util/cannonBallMotionUtil.ts , @src/shared/object/util/cannonBlastUtil.ts , @src/shared/physics/util/physicsSphereUtil.ts , @src/shared/object/util/objectObstacleUtil.ts , @src/shared/graphics/mesh/composition/util/cannonCompositionUtil.ts , @src/client/object/types/gameObject/cannonGameObject.ts , @src/client/object/types/gameObject/cannonBallGameObject.ts , @src/client/object/util/cannonBlastThrowUtil.ts , @src/client/ui/components/hud/selection/cannonEditOptions.tsx
 
-An object anyone buys and sets down, which the server then plays: it fires balls at whoever is near, until it has none left and is gone.
+An object anyone buys and sets down, which the server then plays: it fires balls at whoever is near, a few in a row each time it is switched on, until it has none left and is gone.
 
 ## The cannon
 - **Placed** as an attached object standing out of a floor or a wall, never a ceiling, in a cube of its own (see [object_attachment.md](../geometry/object_attachment.md)). It is the one object as solid as a block (see [physics.md](../geometry/physics.md)).
 - **Bought each time**: its type has a price, which the server takes as it accepts the add (see [inventory.md](inventory.md)). Nothing comes back for one removed. Single-player rooms have none, nothing there playing one.
 - **Anyone's** to switch off and on, move or remove, subject to restricted zones.
-- **One metadata key** (`CannonState`) holds all of it, in two parts: the switch, which is a user's, and the rest (where in its round it is, the balls left, its aim, the time left), which is the server's. `CannonStateUtil` merges a value into the stored one by the part it carries, so neither overwrites the other's, whichever word comes last.
-- **Played by the server** (`CannonUtil`, stepped from the socket flush, while someone is in the room): it rests, waits a random while, then turns after the nearest player for as long as it takes to be aimed, stands aimed a moment, fires that way, and waits again. Its last ball fired, it is taken away.
+- **One metadata key** (`CannonState`) holds all of it, in two parts: the switch, which is a user's (and the server's, as it ends a row of shots), and the rest (where in its round it is, the balls left, its aim, the time left, the shots of its row), which is the server's. `CannonStateUtil` merges a value into the stored one by the part it carries, so neither overwrites the other's, whichever word comes last.
+- **Played by the server** (`CannonUtil`, stepped from the socket flush, while someone is in the room): it rests, waits a random while, then turns after the nearest player for as long as it takes to be aimed, stands aimed a moment, fires that way, and waits again. Its row fired (a set number of shots since it was switched on), it stands a moment and switches itself off; its last ball fired, it is taken away instead.
   - **Whom it turns after**: the nearest player at each step, wherever they are, in its range and sight or not. A ghost is nobody, and so is a helper; with nobody, it keeps still until someone comes.
   - **Aimed** once it has had them in its sights a while without a break: pointing at them, from where it may fire at them (in range, not too near, within its barrel's tilt, in clear sight of its muzzle, which nothing a ball bounces off blocks: a mirror, an NPC, another cannon). The while is the server's to count, and starts over with whoever is the nearest.
   - **It turns slowly**, so that whoever keeps going round it outruns it and is never fired at.
-  - Switched off it does nothing, and starts over rested once on.
-- **Told sparingly**: the room hears its state only where a browser would show a difference, never time passing.
+  - Switched off it does nothing, and starts over rested, with a new row, once on. Any word of its switch since the server's last step counts as a throw (each one stores a value of its own), so off and on again between two steps starts it over too.
+- **Told sparingly**: the room hears its state only where a browser would show a difference, never time passing nor its row's count. Its own switching off goes out as a user's throw of the switch.
 - **Kept by the room's saves** as it stands, so a reload or a restart goes on from there. At shutdown it keeps still.
 
 ## The ball

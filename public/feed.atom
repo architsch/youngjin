@@ -3,11 +3,19 @@
 <title>ThingsPool</title>
 <link rel="self" type="application/atom+xml" href="https://thingspool.net/feed.atom"/>
 <link href="https://thingspool.net"/>
-<updated>2026-11-13T00:00:00.000Z</updated>
+<updated>2026-11-14T00:00:00.000Z</updated>
 <author>
   <name>Youngjin Kang</name>
 </author>
 <id>urn:uuid:02210672-5391-4cc8-800a-2a88f3a6d00c</id>
+<entry>
+  <title>Currency System and Cannons</title>
+  <link href="https://thingspool.net/devlog-2026/page-10.html"/>
+  <id>https://thingspool.net/devlog-2026/page-10.html</id>
+  <published>2026-11-14T00:00:00.000Z</published>
+  <updated>2026-11-14T00:00:00.000Z</updated>
+  <summary>ThingsPool now has its own currency, and offers purchasable items such as cannons.</summary>
+</entry>
 <entry>
   <title>Post-AI Computer Science - Volume 5</title>
   <link href="https://thingspool.net/shards-of-sanity/page-5.html"/>
@@ -38,7 +46,7 @@
   <id>https://thingspool.net/devlog-2026/page-9.html</id>
   <published>2026-10-22T00:00:00.000Z</published>
   <updated>2026-10-22T00:00:00.000Z</updated>
-  <summary>ThingsPool now have helpful AI assistant characters and wind-blowing fans.</summary>
+  <summary>ThingsPool now has helpful AI assistant characters and wind-blowing fans.</summary>
 </entry>
 <entry>
   <title>Post-AI Computer Science - Volume 2</title>

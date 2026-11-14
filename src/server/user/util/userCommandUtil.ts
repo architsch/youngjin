@@ -4,6 +4,7 @@ import User from "../../../shared/user/types/user";
 import { UserTypeEnumMap } from "../../../shared/user/types/userType";
 import { InventoryItemTypeEnumMap } from "../../../shared/inventory/types/inventoryItemType";
 import { CHEAT_DOLLARS } from "../../../shared/system/sharedConstants";
+import EncodableRaw4ByteNumber from "../../../shared/networking/types/encodableRaw4ByteNumber";
 import DBInventoryUtil from "../../db/util/dbInventoryUtil";
 import DBUserUtil from "../../db/util/dbUserUtil";
 import ServerInventoryManager from "../../inventory/serverInventoryManager";
@@ -34,7 +35,7 @@ const UserCommandUtil =
                 await handleFastForwardDailyRewardClock(user, params);
                 break;
             case "grantCheatDollars":
-                handleGrantCheatDollars(ctx, params);
+                handleGrantCheatDollars(ctx, words, params);
                 break;
             default:
                 LogUtil.log("Unknown user command type", {commandType, params}, "high", "error");
@@ -86,15 +87,24 @@ async function handleFastForwardDailyRewardClock(user: User, params: UserCommand
     await DBInventoryUtil.fastForwardLoginRewardClock(user.id);
 }
 
-// The cheat code, for testing what dollars buy: a dev server's alone, for whoever asks there.
-function handleGrantCheatDollars(ctx: UserContext, params: UserCommandSignal): void
+// The cheat code, for testing what dollars buy: a dev server's alone, for whoever asks there. Its word is how many times
+// over CHEAT_DOLLARS it gives (once, given none), never taking the count past what InventorySignal can send.
+function handleGrantCheatDollars(ctx: UserContext, words: string[], params: UserCommandSignal): void
 {
     if (process.env.MODE != "dev")
     {
         LogUtil.log("Cheats are for dev servers alone", {params, userID: ctx.user.id}, "high", "error");
         return;
     }
-    ServerInventoryManager.addItem(ctx, InventoryItemTypeEnumMap.Dollar, CHEAT_DOLLARS);
+    const multiplier = (words[1] == undefined) ? 1 : (/^\d+$/.test(words[1]) ? Number(words[1]) : 0);
+    const dollars = multiplier * CHEAT_DOLLARS;
+    const held = ctx.inventory[InventoryItemTypeEnumMap.Dollar] ?? 0;
+    if (multiplier < 1 || held + dollars > EncodableRaw4ByteNumber.MAX_VALUE)
+    {
+        LogUtil.log("Cheat dollars are not properly specified", {params, userID: ctx.user.id}, "high", "error");
+        return;
+    }
+    ServerInventoryManager.addItem(ctx, InventoryItemTypeEnumMap.Dollar, dollars);
 }
 
 export default UserCommandUtil;

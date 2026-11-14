@@ -19,8 +19,8 @@ import CanvasObjectTypeConfig, {
     CANVAS_IMAGE_SUBFOLDER } from "../../../shared/object/types/objectTypeConfig/canvasObjectTypeConfig";
 import DoorObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import FanObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/fanObjectTypeConfig";
-import { CANNON_FIRE_INTERVAL_SECONDS, CANNON_MAX_RANGE,
-    CANNON_MIN_RANGE } from "../../../shared/object/types/objectTypeConfig/cannonObjectTypeConfig";
+import { CANNON_FIRE_INTERVAL_SECONDS, CANNON_MAX_RANGE, CANNON_MIN_RANGE,
+    CANNON_SHOTS_IN_A_ROW } from "../../../shared/object/types/objectTypeConfig/cannonObjectTypeConfig";
 import CannonStateUtil from "../../../shared/object/util/cannonStateUtil";
 import { InventoryItemTypeEnumMap } from "../../../shared/inventory/types/inventoryItemType";
 import LampObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/lampObjectTypeConfig";
@@ -91,8 +91,9 @@ const cannonTypeIndex = ObjectTypeConfigMap.getIndexByType("Cannon");
 const CANNON_NOTE = `A cannon: while on, it waits ${CANNON_FIRE_INTERVAL_SECONDS[0]} to ${CANNON_FIRE_INTERVAL_SECONDS[1]} `
     + "seconds, then turns after the nearest person until it has pointed a while at one it can fire at (within "
     + `${CANNON_MAX_RANGE / VOXEL_CELL_SIZE} cells of it, no nearer than ${CANNON_MIN_RANGE / VOXEL_CELL_SIZE}, with `
-    + "nothing between), and fires a ball that way. Its last ball fired, it is gone. Anyone may switch it off or on "
-    + "(edit_object with switched_on), move it or remove it.";
+    + `nothing between), and fires a ball that way. Once it has fired ${CANNON_SHOTS_IN_A_ROW} since it was switched on, `
+    + "it switches itself off; its last ball fired, it is gone. Anyone may switch it off or on (edit_object with "
+    + "switched_on), move it or remove it.";
 
 // What an agent places and arranges: canvases, props, lamps, fans, and (in a room of its own) labels, doors and
 // restricted zones. Each change is sent as the signal a browser sends for a person's, so it passes the same checks

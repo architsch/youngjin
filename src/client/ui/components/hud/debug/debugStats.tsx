@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import App from "../../../../app";
 import ClientObjectManager from "../../../../object/clientObjectManager";
-import { debugPanelOpenObservable, popupStateObservable,
+import { debugPanelOpenObservable, numOpenPopupsObservable, popupStateObservable,
     voxelQuadSelectionObservable } from "../../../../system/clientObservables";
 import VoxelQueryUtil from "../../../../../shared/voxel/util/voxelQueryUtil";
 import Button from "../../input/button";
@@ -10,6 +10,7 @@ import TextInput from "../../input/textInput";
 import GraphicsManager from "../../../../graphics/graphicsManager";
 import ParticleSystem from "../../../../graphics/particle/particleSystem";
 import DebugCommandUtil from "../../../../system/util/debugCommandUtil";
+import ClosablePanelUtil from "../../../util/closablePanelUtil";
 
 // The debug panel, which shows nothing until it is opened (see DebugPanelUtil).
 export default function DebugStats({env}: Props)
@@ -29,6 +30,28 @@ export default function DebugStats({env}: Props)
     useEffect(() => {
         if (display)
             commandFieldRef.current?.focus();
+    }, [display]);
+
+    // A back gesture closes the panel, as it does any (see ClosablePanelUtil). An input's Escape is its own (see UIRoot),
+    // so the field's closes the panel itself, in one press in every browser, but leaves a popup over it to the popup.
+    useEffect(() => {
+        if (!display)
+            return;
+        const close = () => debugPanelOpenObservable.set(false);
+        const token = ClosablePanelUtil.register(close, false);
+        const field = commandFieldRef.current;
+        const onFieldKeyDown = (ev: KeyboardEvent) => {
+            if (ev.key != "Escape" || ev.isComposing || numOpenPopupsObservable.peek() > 0)
+                return;
+            // Kept from the browser, whose own close request would go on to close what is beneath (see useCloseGesture).
+            ev.preventDefault();
+            close();
+        };
+        field?.addEventListener("keydown", onFieldKeyDown);
+        return () => {
+            ClosablePanelUtil.unregister(token);
+            field?.removeEventListener("keydown", onFieldKeyDown);
+        };
     }, [display]);
 
     useEffect(() => {

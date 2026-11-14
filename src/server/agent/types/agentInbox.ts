@@ -135,7 +135,8 @@ export default class AgentInbox
                         this.push({kind: "speech", who: player.name, whoIsAgent: player.isAgent,
                             text: MessageLinkUtil.withControlsInWords(text)});
                 }
-                // What the server tells of a cannon as it plays it is nobody's edit; its switch thrown is.
+                // What the server tells of a cannon as it plays it is nobody's edit; its switch thrown is a change,
+                // whoever threw it (a cannon ending its row of shots switches itself off).
                 else if (signal.metadataKey == ObjectMetadataKeyEnumMap.CannonState
                     && !CannonStateUtil.isSwitch(signal.metadataValue))
                     break;

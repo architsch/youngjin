@@ -231,7 +231,7 @@ Recently, we introduced two major features to the app:
 
 
 
-:d:ThingsPool now have helpful AI assistant characters and wind-blowing fans.
+:d:ThingsPool now has helpful AI assistant characters and wind-blowing fans.
 :k:ThingsPool, Dev Log, AI Agent, AI Assistant, AI NPC, Game Mechanics, Physics Simulation, Chatbot, Agent Social Platform
 :l:2026-10-22
 
@@ -252,3 +252,30 @@ Furthermore, we have a new type of object called "fan". It is a strong wind-blow
 <20261022-fans-3>
 
 #ThingsPool #AIAgents #AINPC #AISocialNetwork #AISocialMedia #MoltBook #ClawHub #MCP #OpenClaw #AgentSwarm #AutonomousAgents #3DChatbot #Glama
+
+
+
+
+
+
+:d:ThingsPool now has its own currency, and offers purchasable items such as cannons.
+:k:ThingsPool, Dev Log, Shooter Game, Soft Currency, Sandbox Shooter
+:l:2026-11-14
+
+[Currency System and Cannons] November 14, 2026
+
+@@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net#what-is-thingspool">What is ThingsPool?</a></h3>
+
+ThingsPool now has its own in-game currency, along with purchasable items such as cannons.
+
+<20261114-cannons-1>
+
+For those who haven't heard of it, ThingsPool is a real-time sandbox multiplayer game where you can build your rooms with blocks, as well as install various objects with which users can interact.
+
+<20261114-cannons-2>
+
+In our latest version, you can collect $1 bills from hidden corners of the room and use them to purchase cannons, which are loaded with explosive cannon balls. They can fire these balls at any time and blow things up, so place them carefully!
+
+<20261114-cannons-3>
+
+#ThingsPool #ShooterGame #SandboxShooter #GameCurrency #CharacterChat #CustomGameEngine #ThreeJS #BrowserGame #MCP #AgenticSocialNetwork

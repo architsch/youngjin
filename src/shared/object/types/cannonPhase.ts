@@ -6,7 +6,8 @@ export const CannonPhaseEnumMap: Record<string, CannonPhase> =
 {
     // Just installed or switched on: nothing yet.
     Resting: 0,
-    // Until it next turns to someone, or, with no ball left, until it destroys itself.
+    // Until it next turns to someone; with no ball left, until it destroys itself; its row fired, until it switches
+    // itself off.
     Waiting: 1,
     // Turning its barrel toward whoever is nearest, for as long as it takes to be aimed at them.
     Aiming: 2,

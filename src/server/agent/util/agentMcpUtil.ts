@@ -10,7 +10,8 @@ import { CANNON_PRICE_DOLLARS, COLLISION_LAYER_HEIGHT, HELPER_AGENT_NAME, HOUR_I
 import { NUM_FREE_PLAYER_PART_TYPES } from "../../../shared/graphics/mesh/composition/types/compositionConstants/playerCompositionConstants";
 import { PLAYER_HEIGHT } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import { CANNON_BALL_COUNT, CANNON_FIRE_INTERVAL_SECONDS, CANNON_LOCK_SECONDS, CANNON_MAX_RANGE, CANNON_MIN_RANGE,
-    CANNON_REST_SECONDS, CANNON_TURN_RATE } from "../../../shared/object/types/objectTypeConfig/cannonObjectTypeConfig";
+    CANNON_REST_SECONDS, CANNON_SHOTS_IN_A_ROW,
+    CANNON_TURN_RATE } from "../../../shared/object/types/objectTypeConfig/cannonObjectTypeConfig";
 import { CANNON_BALL_BLAST_RADIUS, CANNON_BALL_BOUNCE_BOOST, CANNON_BALL_MAX_SPEED,
     CANNON_BALL_SPEED } from "../../../shared/object/types/objectTypeConfig/cannonBallObjectTypeConfig";
 import { HEARING_DISTANCE } from "../../../shared/object/util/helperBehaviorUtil";
@@ -144,9 +145,10 @@ Cannons fire at whoever is near, people and agents alike.
   takes ${CANNON_CELLS} by ${CANNON_CELLS} cells and stands ${CANNON_CELLS} out, for $${CANNON_PRICE_DOLLARS} each time. Nothing comes back for one removed. Anyone may switch
   one off and on (edit_object with switched_on), move it or remove it, except in a restricted zone kept from them.
 - While on, a cannon rests ${CANNON_REST_SECONDS} seconds and waits ${CANNON_FIRE_INTERVAL_SECONDS[0]} to ${CANNON_FIRE_INTERVAL_SECONDS[1]} seconds. Then it turns toward the nearest person, ${CANNON_TURN_DEGREES_A_SECOND} degrees a
-  second, and goes on turning after them wherever they go. Once it has pointed for ${CANNON_LOCK_SECONDS} ${CANNON_LOCK_SECONDS == 1 ? "second" : "seconds"} without a break at one
+  second, and goes on turning after them wherever they go. Once it has pointed for ${CANNON_LOCK_SECONDS} s without a break at one
   it can fire at (within ${CANNON_RANGE_CELLS} cells of it, no nearer than ${CANNON_NEAR_CELLS}, with nothing between them), it fires a ball that
   way and waits ${CANNON_FIRE_INTERVAL_SECONDS[0]} to ${CANNON_FIRE_INTERVAL_SECONDS[1]} seconds again: whoever keeps going round it faster than it turns is never fired at.
+  Once it has fired ${CANNON_SHOTS_IN_A_ROW} since it was last switched on, it switches itself off.
   look lists each cannon among the objects, with switchedOn and ballsLeft. It has ${CANNON_BALL_COUNT} balls, and is gone once it has
   fired the last.
 - A ball flies straight at ${CANNON_BALL_CELLS_A_SECOND} cells a second, slow enough to walk out of the way of, and a fan's wind turns it
@@ -297,7 +299,7 @@ function buildServer(): McpServer
 {
     // Its tools and its prompt never change while it runs. Saying they might would let any client, with a key or
     // without, hold a stream open to wait for word of a change (subscriptions/listen).
-    const server = new McpServer({name: "thingspool", version: "1.7.0", // The version server.json lists
+    const server = new McpServer({name: "thingspool", version: "1.7.1", // The version server.json lists
             websiteUrl: URL_STATIC,
             icons: [{src: `${AddressUtil.getEnvDynamicURL()}/${AGENT_ICON_FILE}`, mimeType: "image/jpeg",
                 sizes: ["150x150"]}]},

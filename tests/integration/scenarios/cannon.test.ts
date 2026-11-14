@@ -8,8 +8,9 @@
  * an NPC as round bodies, a mirror and an NPC only as it closes on them, a cannon as its box) and what its blast
  * reaches; who may add, move, switch and remove a cannon, and what it costs; and, through the real server modules: a
  * cannon resting, waiting, picking whom to fire at, turning, staying on them until it is aimed (never, on whoever
- * outruns it, and on someone behind an NPC or another cannon all the same), standing aimed and firing, emptied and
- * gone, switched off and on, kept by the room's saves; and a ball flying straight, pushed by a fan, bouncing off
+ * outruns it, and on someone behind an NPC or another cannon all the same), standing aimed and firing, a row of shots
+ * and then switching itself off, the row started over by any throw of its switch, emptied and gone, switched off and
+ * on, kept by the room's saves; and a ball flying straight, pushed by a fan, bouncing off
  * another, off a mirror, off an NPC and off a cannon, each bounce counted and leaving it faster, up to the most a
  * ball goes, bursting on blocks, players and the room's own floor, breaking what anybody could remove and nothing
  * else, a cannon and the blocks it hangs on never, throwing whoever its blast reaches, the one it struck off its side
@@ -49,7 +50,7 @@ import CannonBallObjectTypeConfig, { CANNON_BALL_BLAST_RADIUS, CANNON_BALL_BOUNC
     from "../../../src/shared/object/types/objectTypeConfig/cannonBallObjectTypeConfig";
 import CannonObjectTypeConfig, { CANNON_AIM_TOLERANCE, CANNON_BALL_COUNT, CANNON_FIRE_INTERVAL_SECONDS, CANNON_LOCK_SECONDS,
     CANNON_MAX_PITCH, CANNON_MAX_RANGE, CANNON_MIN_PITCH, CANNON_MIN_RANGE, CANNON_READY_SECONDS, CANNON_REST_SECONDS,
-    CANNON_SLEEP_PITCH, CANNON_SPENT_SECONDS, CANNON_TURN_RATE }
+    CANNON_SHOTS_IN_A_ROW, CANNON_SLEEP_PITCH, CANNON_SPENT_SECONDS, CANNON_TURN_RATE }
     from "../../../src/shared/object/types/objectTypeConfig/cannonObjectTypeConfig";
 import DollarBillObjectTypeConfig, { DOLLAR_BILL_REST_HEIGHT, DOLLAR_BILL_SPAWN_CAP }
     from "../../../src/shared/object/types/objectTypeConfig/dollarBillObjectTypeConfig";
@@ -356,7 +357,7 @@ const aimArb: fc.Arbitrary<CannonAim> = fc.record({yaw: scaled(0, 2 * Math.PI - 
     pitch: scaled(CANNON_MIN_PITCH + 0.001, CANNON_MAX_PITCH - 0.001)});
 const stateArb: fc.Arbitrary<CannonState> = fc.record({on: fc.boolean(),
     phase: fc.constantFrom(...Object.values(CannonPhaseEnumMap)), ballsLeft: fc.integer({min: 0, max: CANNON_BALL_COUNT}),
-    aim: aimArb, timeLeft: scaled(0, 15)});
+    aim: aimArb, timeLeft: scaled(0, 15), shotsInARow: fc.integer({min: 0, max: CANNON_SHOTS_IN_A_ROW})});
 
 beforeEach(() => {
     vi.spyOn(console, "error").mockImplementation(() => {});
@@ -376,9 +377,9 @@ afterEach(() => {
 });
 
 describe("a cannon's state", () => {
-    it("reads from nothing as a cannon just installed: on, resting, with every ball", () => {
+    it("reads from nothing as a cannon just installed: on, resting, with every ball and none of its row fired", () => {
         expect(NEW).toMatchObject({on: true, phase: CannonPhaseEnumMap.Resting, ballsLeft: CANNON_BALL_COUNT,
-            timeLeft: CANNON_REST_SECONDS});
+            timeLeft: CANNON_REST_SECONDS, shotsInARow: 0});
         expect(NEW.aim.yaw).toBe(0);
         expect(NEW.aim.pitch).toBeGreaterThan(0);
         expect(NEW.aim.pitch).toBeLessThan(CANNON_MAX_PITCH);
@@ -399,24 +400,29 @@ describe("a cannon's state", () => {
             expect(state.aim.pitch).toBeGreaterThanOrEqual(CANNON_MIN_PITCH);
             expect(state.aim.pitch).toBeLessThanOrEqual(CANNON_MAX_PITCH);
             expect(state.timeLeft).toBeGreaterThanOrEqual(0);
+            expect(Number.isInteger(state.shotsInARow)).toBe(true);
+            expect(state.shotsInARow).toBeGreaterThanOrEqual(0);
+            expect(state.shotsInARow).toBeLessThanOrEqual(CANNON_SHOTS_IN_A_ROW);
             // And is kept as read.
             const kept = CannonStateUtil.decode(CannonStateUtil.encode(state));
-            expect(kept).toMatchObject({on: state.on, phase: state.phase, ballsLeft: state.ballsLeft});
+            expect(kept).toMatchObject({on: state.on, phase: state.phase, ballsLeft: state.ballsLeft,
+                shotsInARow: state.shotsInARow});
             expect(CannonAimUtil.getAngleBetween(kept.aim, state.aim)).toBeLessThan(ANGLE_STEP);
             expect(Math.abs(kept.timeLeft - state.timeLeft)).toBeLessThan(0.002);
         }));
     });
 
-    it("keeps its switch, its phase and its balls exactly, and its aim and its time to a fine step", () => {
+    it("keeps its switch, its phase, its balls and its row exactly, and its aim and its time to a fine step", () => {
         fc.assert(fc.property(stateArb, state => {
             const encoded = CannonStateUtil.encode(state);
             const kept = CannonStateUtil.decode(encoded);
-            expect(kept).toMatchObject({on: state.on, phase: state.phase, ballsLeft: state.ballsLeft});
+            expect(kept).toMatchObject({on: state.on, phase: state.phase, ballsLeft: state.ballsLeft,
+                shotsInARow: state.shotsInARow});
             expect(Math.abs(kept.aim.yaw - state.aim.yaw)).toBeLessThan(ANGLE_STEP);
             expect(Math.abs(kept.aim.pitch - state.aim.pitch)).toBeLessThan(ANGLE_STEP);
             expect(Math.abs(kept.timeLeft - state.timeLeft)).toBeLessThan(0.002);
             // In few enough characters that every one of them is visible ASCII.
-            expect(encoded.length).toBeLessThanOrEqual(9);
+            expect(encoded.length).toBeLessThanOrEqual(10);
             expect(encoded).toMatch(/^[\x21-\x7e]*$/);
         }));
     });
@@ -459,9 +465,9 @@ describe("a cannon's state", () => {
         expect(ObjectMetadataEntryMap.preprocess(STATE_KEY, "x".repeat(500)).length).toBeLessThanOrEqual(128);
     });
 
-    it("shows all of the server's part but the time left, which is counted and never told", () => {
+    it("shows all of the server's part but the time left and the row's count, which are counted and never told", () => {
         const state = {...NEW, phase: CannonPhaseEnumMap.Waiting, timeLeft: 5};
-        const later = {...state, timeLeft: 1.3};
+        const later = {...state, timeLeft: 1.3, shotsInARow: CANNON_SHOTS_IN_A_ROW};
         expect(CannonStateUtil.getShownPart(CannonStateUtil.encode(later)))
             .toBe(CannonStateUtil.getShownPart(CannonStateUtil.encode(state)));
         expect(CannonStateUtil.getShownPart(CannonStateUtil.encode({...state, on: false})))
@@ -1975,6 +1981,91 @@ describe("a cannon the server plays", () => {
         expect(stateOf(cannon).ballsLeft).toBe(8);
     });
 
+    describe(`firing ${CANNON_SHOTS_IN_A_ROW} in a row`, () => {
+        // Long enough for a shot from just switched on: its rest, its longest wait, a turn from any way it points, its
+        // while on them and its standing aimed.
+        const SHOT_SECONDS = CANNON_REST_SECONDS + CANNON_FIRE_INTERVAL_SECONDS[1] + Math.PI / CANNON_TURN_RATE
+            + CANNON_LOCK_SECONDS + CANNON_READY_SECONDS + 1;
+        const throwSwitch = (user: ConnectedUser, cannon: AddObjectSignal, on: boolean) =>
+            expect(ServerObjectManager.onSetObjectMetadataSignalReceived(user.socketUserContext,
+                new SetObjectMetadataSignal(HUB_ID, cannon.objectId, STATE_KEY, CannonStateUtil.encodeSwitch(on)))).toBe(true);
+        const fire = (cannon: AddObjectSignal, count: number) => {
+            const left = stateOf(cannon).ballsLeft - count;
+            flushUntil(() => stateOf(cannon).ballsLeft == left, count * SHOT_SECONDS);
+        };
+        // How many it fires before it switches itself off.
+        const fireUntilOff = (cannon: AddObjectSignal): number => {
+            const before = stateOf(cannon).ballsLeft;
+            flushUntil(() => !stateOf(cannon).on, CANNON_SHOTS_IN_A_ROW * SHOT_SECONDS + CANNON_SPENT_SECONDS + 1);
+            return before - stateOf(cannon).ballsLeft;
+        };
+
+        it("it then stands a moment and switches itself off, the room told of its switch alone, as of a user's throw, " +
+            "and keeps its other balls for whoever switches it on again", async () => {
+            const user = await join("someone");
+            const cannon = placeCannon({phase: CannonPhaseEnumMap.Waiting, timeLeft: 0});
+            fire(cannon, CANNON_SHOTS_IN_A_ROW);
+            expect(stateOf(cannon)).toMatchObject({on: true, shotsInARow: CANNON_SHOTS_IN_A_ROW});
+            forget(user);
+            flushFor(CANNON_SPENT_SECONDS - FLUSH_SECONDS);
+            expect(stateOf(cannon).on).toBe(true);
+            flushFor(2 * FLUSH_SECONDS);
+            expect(stateOf(cannon)).toMatchObject({on: false, phase: CannonPhaseEnumMap.Resting, shotsInARow: 0,
+                ballsLeft: CANNON_BALL_COUNT - CANNON_SHOTS_IN_A_ROW});
+            const [thrown, ...after] = statesToldTo(user, cannon.objectId);
+            expect(thrown).toBe(CannonStateUtil.encodeSwitch(false));
+            expect(after.map(value => CannonStateUtil.decode(value).phase)).toEqual([CannonPhaseEnumMap.Resting]);
+
+            flushFor(2 * SHOT_SECONDS);
+            expect(stateOf(cannon)).toMatchObject({on: false, ballsLeft: CANNON_BALL_COUNT - CANNON_SHOTS_IN_A_ROW});
+            throwSwitch(user, cannon, true);
+            expect(fireUntilOff(cannon)).toBe(CANNON_SHOTS_IN_A_ROW);
+        });
+
+        it("starts its row over each time its switch is thrown, even off and on again between two of the server's steps",
+            async () => {
+            expect(CANNON_SHOTS_IN_A_ROW, "a row the scene can break off").toBeGreaterThan(1);
+            expect(4 * CANNON_SHOTS_IN_A_ROW - 2, "balls enough for the scene").toBeLessThan(CANNON_BALL_COUNT);
+            const user = await join("someone");
+            const cannon = placeCannon({phase: CannonPhaseEnumMap.Waiting, timeLeft: 0});
+            fire(cannon, CANNON_SHOTS_IN_A_ROW - 1);
+            throwSwitch(user, cannon, false);
+            flush();
+            expect(stateOf(cannon)).toMatchObject({on: false, shotsInARow: 0});
+            throwSwitch(user, cannon, true);
+            expect(fireUntilOff(cannon)).toBe(CANNON_SHOTS_IN_A_ROW);
+
+            throwSwitch(user, cannon, true);
+            fire(cannon, CANNON_SHOTS_IN_A_ROW - 1);
+            throwSwitch(user, cannon, false);
+            throwSwitch(user, cannon, true);
+            expect(fireUntilOff(cannon)).toBe(CANNON_SHOTS_IN_A_ROW);
+        });
+
+        it("goes once it has fired its last ball, though that is the last of its row too", async () => {
+            await join("someone");
+            const cannon = placeCannon({phase: CannonPhaseEnumMap.Waiting, timeLeft: 0, ballsLeft: 1,
+                shotsInARow: CANNON_SHOTS_IN_A_ROW - 1});
+            fire(cannon, 1);
+            flushUntil(() => getRoom().objectById[cannon.objectId] == undefined, CANNON_SPENT_SECONDS + 2 * FLUSH_SECONDS);
+            expect(stateOf(cannon).on).toBe(true);
+        });
+
+        it("is kept by the room's saves as far as it has got, and goes on from there", async () => {
+            expect(CANNON_SHOTS_IN_A_ROW, "a row the scene can break off").toBeGreaterThan(1);
+            const user = await join("someone");
+            const cannon = placeCannon({phase: CannonPhaseEnumMap.Waiting, timeLeft: 0});
+            fire(cannon, CANNON_SHOTS_IN_A_ROW - 1);
+            await harness.disconnectUser(user);
+            ServerRoomManager.unloadRoom(HUB_ID);
+            await harness.loadRoom(HUB_ID);
+            const back = getRoom().objectById[cannon.objectId];
+            expect(stateOf(back).shotsInARow).toBe(CANNON_SHOTS_IN_A_ROW - 1);
+            await join("newcomer");
+            expect(fireUntilOff(back)).toBe(1);
+        });
+    });
+
     it("refuses a user's word of anything but its switch, and tells the room of a switch thrown", async () => {
         const user = await join("someone");
         const other = await join("another", {x: 22, y: STANDING_Y, z: 22});
@@ -2839,7 +2930,8 @@ describe("a cannon ball the server flies", () => {
         const cannon = placeCannon({phase: CannonPhaseEnumMap.Waiting, timeLeft: 0, ballsLeft: 5});
         flushUntil(() => stateOf(cannon).phase == CannonPhaseEnumMap.Ready, 10);
         flushFor(CANNON_READY_SECONDS + 2 * FLUSH_SECONDS);
-        expect(stateOf(cannon)).toMatchObject({ballsLeft: 5, phase: CannonPhaseEnumMap.Waiting});
+        // Nor counted in its row.
+        expect(stateOf(cannon)).toMatchObject({ballsLeft: 5, shotsInARow: 0, phase: CannonPhaseEnumMap.Waiting});
         expect(getBalls()).toHaveLength(MAX_BALLS);
     });
 

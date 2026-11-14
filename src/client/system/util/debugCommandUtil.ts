@@ -16,6 +16,11 @@ import ParticleDebugUtil from "../../graphics/particle/util/particleDebugUtil";
 import RoomValidationUtil from "../../../shared/room/util/roomValidationUtil";
 import { CHEAT_DOLLARS } from "../../../shared/system/sharedConstants";
 import RoomEditorUtil from "../../singlePlayer/util/roomEditorUtil";
+import ClientInventoryManager from "../../inventory/clientInventoryManager";
+import EncodableRaw4ByteNumber from "../../../shared/networking/types/encodableRaw4ByteNumber";
+
+// The cheat code: "rosebud", or "rosebud N" for N times its dollars.
+const CHEAT_COMMAND_PATTERN = /^rosebud(?:\s+(\d+))?$/;
 
 // The debug panel's commands (see DebugStats), each run by the text typed for it.
 const DebugCommandUtil =
@@ -24,6 +29,13 @@ const DebugCommandUtil =
     run: (input: string): void =>
     {
         const command = input.toLowerCase().trim();
+        // The cheat code is a dev server's alone: anywhere else, no command at all.
+        const cheatMultiplier = getCheatMultiplier(command);
+        if (cheatMultiplier != undefined && App.getEnv().mode == "dev")
+        {
+            grantCheatDollars(cheatMultiplier);
+            return;
+        }
         switch (command)
         {
             case "show collider": colliderDebugEnabledObservable.set(true); break;
@@ -47,13 +59,6 @@ const DebugCommandUtil =
             // saved as a file (see RoomEditorUtil, LocalRoomFileUtil).
             case "new room template": RoomEditorUtil.openNewRoom(); break;
             case "fast_forward_daily_reward_clock": fastForwardDailyRewardClock(); break;
-            // A dev server's alone: anywhere else, no command at all.
-            case "rosebud":
-                if (App.getEnv().mode == "dev")
-                    grantCheatDollars();
-                else
-                    tellUnknown(command);
-                break;
             default: tellUnknown(command); break;
         }
     },
@@ -64,11 +69,28 @@ function tellUnknown(command: string): void
     notificationMessageObservable.set(ParticleDebugUtil.tryRunCommand(command) ?? "Unknown debug command.");
 }
 
-// "rosebud" debug command: dollars for testing what they buy (also enforced server-side).
-function grantCheatDollars(): void
+// N in "rosebud N", 1 for a bare "rosebud", undefined for anything else, N being a whole number from 1 up.
+function getCheatMultiplier(command: string): number | undefined
 {
-    SocketsClient.emitUserCommandSignal(new UserCommandSignal("grantCheatDollars"));
-    notificationMessageObservable.set(`Rosebud: +$${CHEAT_DOLLARS}.`);
+    const match = CHEAT_COMMAND_PATTERN.exec(command);
+    if (!match)
+        return undefined;
+    const multiplier = (match[1] == undefined) ? 1 : Number(match[1]);
+    return (multiplier >= 1) ? multiplier : undefined;
+}
+
+// "rosebud" debug command: dollars for testing what they buy (also enforced server-side), never more than the count can
+// be sent with (see InventorySignal).
+function grantCheatDollars(multiplier: number): void
+{
+    const dollars = multiplier * CHEAT_DOLLARS;
+    if (ClientInventoryManager.getDollarsShown() + dollars > EncodableRaw4ByteNumber.MAX_VALUE)
+    {
+        notificationMessageObservable.set("Rosebud: more dollars than the count can hold.");
+        return;
+    }
+    SocketsClient.emitUserCommandSignal(new UserCommandSignal(`grantCheatDollars ${multiplier}`));
+    notificationMessageObservable.set(`Rosebud: +$${dollars}.`);
 }
 
 // "restart tutorial" debug command. Only allowed when not in a single-player mode (also enforced

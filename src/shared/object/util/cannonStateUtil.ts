@@ -6,8 +6,8 @@ import CannonAim from "../types/cannonAim";
 import CannonState from "../types/cannonState";
 import { CannonPhaseEnumMap } from "../types/cannonPhase";
 import { ObjectMetadataKeyEnumMap } from "../types/objectMetadataKey";
-import { CANNON_BALL_COUNT, CANNON_MAX_PITCH, CANNON_MIN_PITCH,
-    CANNON_REST_SECONDS } from "../types/objectTypeConfig/cannonObjectTypeConfig";
+import { CANNON_BALL_COUNT, CANNON_MAX_PITCH, CANNON_MIN_PITCH, CANNON_REST_SECONDS,
+    CANNON_SHOTS_IN_A_ROW } from "../types/objectTypeConfig/cannonObjectTypeConfig";
 import CannonAimUtil from "./cannonAimUtil";
 
 // Character positions in the stored string (see StringUtil); the aim's angles and the time take two each. Never
@@ -18,6 +18,7 @@ const BALLS_CHAR_INDEX = 2;
 const YAW_CHAR_INDEX = 3;
 const PITCH_CHAR_INDEX = 5;
 const TIME_CHAR_INDEX = 7;
+const SHOTS_CHAR_INDEX = 9;
 // What a phase's time left is stored within, in seconds: longer than any phase lasts.
 const MAX_TIME_LEFT = 16;
 // How a new cannon's barrel is raised, in radians.
@@ -46,6 +47,7 @@ const CannonStateUtil =
             },
             timeLeft: StringUtil.convertVisibleASCIIPairToNumber(state, TIME_CHAR_INDEX, 0, MAX_TIME_LEFT,
                 CANNON_REST_SECONDS),
+            shotsInARow: Math.min(CANNON_SHOTS_IN_A_ROW, StringUtil.convertVisibleASCIIToRawNumber(state, SHOTS_CHAR_INDEX, 0)),
         };
     },
     encode: (state: CannonState): string =>
@@ -54,18 +56,19 @@ const CannonStateUtil =
         chars[SWITCH_CHAR_INDEX] = encodeSwitchChar(state.on);
         chars[PHASE_CHAR_INDEX] = StringUtil.convertRawNumberToVisibleASCII(
             phases.includes(state.phase) ? state.phase : CannonPhaseEnumMap.Resting);
-        chars[BALLS_CHAR_INDEX] = StringUtil.convertRawNumberToVisibleASCII(
-            Number.isFinite(state.ballsLeft) ? Math.round(NumUtil.clampInRange(state.ballsLeft, 0, CANNON_BALL_COUNT)) : 0);
+        chars[BALLS_CHAR_INDEX] = encodeCount(state.ballsLeft, CANNON_BALL_COUNT);
         chars[YAW_CHAR_INDEX] = StringUtil.convertNumberToVisibleASCIIPair(state.aim.yaw, 0, 2 * Math.PI);
         chars[PITCH_CHAR_INDEX] = StringUtil.convertNumberToVisibleASCIIPair(state.aim.pitch, CANNON_MIN_PITCH,
             CANNON_MAX_PITCH);
         chars[TIME_CHAR_INDEX] = StringUtil.convertNumberToVisibleASCIIPair(state.timeLeft, 0, MAX_TIME_LEFT);
+        chars[SHOTS_CHAR_INDEX] = encodeCount(state.shotsInARow, CANNON_SHOTS_IN_A_ROW);
         return chars.join("");
     },
     // What a value set under the key leaves stored, given what the object holds there (nothing, as it is added). One
     // character sets the switch alone; anything longer sets the rest, and keeps the switch the object has. So a user,
     // who may set only one character (see CannonObjectTypeConfig), never touches what the server keeps, nor does what
-    // the server tells of that undo a switch its user has just thrown.
+    // the server tells of that undo a switch its user has just thrown. The server's own throw, ending a row of shots,
+    // is told as a user's is.
     merge: (rawValue: string, currentValue?: string): string =>
     {
         const value = StringUtil.truncateByCodePoints(rawValue, MAX_VALUE_LENGTH);
@@ -83,8 +86,8 @@ const CannonStateUtil =
     {
         return value.length <= 1;
     },
-    // What of a stored state's server's part shows: all but the time left, which only the server counts, and tells
-    // nobody of.
+    // What of a stored state's server's part shows: all but the time left and the shots in a row, which only the
+    // server counts, and tells nobody of.
     getShownPart: (state: string): string =>
     {
         return state.slice(PHASE_CHAR_INDEX, TIME_CHAR_INDEX);
@@ -116,6 +119,12 @@ function readSwitch(state: string): boolean
 function encodeSwitchChar(on: boolean): string
 {
     return StringUtil.convertRawNumberToVisibleASCII(on ? 1 : 0);
+}
+
+function encodeCount(count: number, most: number): string
+{
+    return StringUtil.convertRawNumberToVisibleASCII(
+        Number.isFinite(count) ? Math.round(NumUtil.clampInRange(count, 0, most)) : 0);
 }
 
 export default CannonStateUtil;

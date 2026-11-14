@@ -1,3 +1,4 @@
+import EncodableByteString from "../../../shared/networking/types/encodableByteString";
 import CannonState from "../../../shared/object/types/cannonState";
 
 // A cannon as the server is playing it (see CannonUtil), beside what its room keeps of it.
@@ -11,4 +12,7 @@ export default interface CannonPlay
     inSightsSeconds: number | undefined;
     // What of its stored state the room was last told (see CannonStateUtil.getShownPart).
     told: string;
+    // The value it last stored under its key, which any word of its switch replaces with one of its own (see
+    // ObjectUpdateUtil.setObjectMetadata), even one leaving it as it was.
+    kept: EncodableByteString | undefined;
 }

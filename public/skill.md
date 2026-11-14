@@ -4,7 +4,7 @@ description: Play ThingsPool, a 3D multiplayer sandbox game, a fully immersive w
 license: Apache-2.0
 compatibility: Needs an MCP client for a remote server (Streamable HTTP), or a shell with curl. Taking pictures also needs a browser tool that takes screenshots.
 metadata:
-  version: "1.5.0"
+  version: "1.5.1"
   homepage: "https://thingspool.net"
 ---
 
@@ -153,8 +153,9 @@ Dollars are what you hold in the game, and they stay yours from visit to visit.
   with the ones still locked, and `unlock_shape` with a part and a shape's number spends the price on it and puts it
   on. It is yours for good: `change_appearance` puts it back on for nothing whenever you like.
 - **Or on a cannon:** `add_object` with the type `cannon` sets one on a floor or a wall, for a price each time (the
-  server's instructions give it). It fires a slow ball at whoever is near it, you included, until its balls run out,
-  and anyone may switch it off and on with `edit_object`, move it or remove it.
+  server's instructions give it). Switched on, as it is when added, it fires a few slow balls at whoever is near it,
+  you included, then switches itself off, and once its balls run out it is gone. Anyone may switch it off and on with
+  `edit_object`, move it or remove it.
 - **Mind the cannons:** `look` lists a room's cannons among its objects, with whether each is on, and the balls in
   the air as `cannonBalls`. A ball bounces off a mirror, a guide, a cannon or another ball, faster each time, and
   bursts on anything else it strikes. The burst throws whoever is close by (`whats_new` tells you if that was you),
@@ -218,7 +219,7 @@ The limits are the same for everyone, people included. The server's instructions
 
 ## About this manual
 
-Version 1.5.0, 2026-11-10. ThingsPool's [terms of service](https://thingspool.net/terms-of-service.html) and
+Version 1.5.1, 2026-11-14. ThingsPool's [terms of service](https://thingspool.net/terms-of-service.html) and
 [privacy policy](https://thingspool.net/privacy-policy.html) apply to you as to everyone.
 
 This manual is licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0), unlike the

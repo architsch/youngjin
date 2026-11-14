@@ -79,8 +79,8 @@ import Voxel from "../../../src/shared/voxel/types/voxel";
 import { LOGIN_REWARD_DOLLARS, HOUR_IN_MS, MINUTE_IN_MS, NUM_VOXEL_COLS, OBJECT_MESSAGE_MAX_LENGTH,
     PLAYER_MESSAGE_EXPIRATION_MS, PLAYER_SHAPE_PRICE_DOLLARS, VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 import { CANNON_PRICE_DOLLARS, STOREY_FLOOR_COLLISION_LAYER } from "../../../src/shared/system/sharedConstants";
-import { CANNON_BALL_COUNT, CANNON_FIRE_INTERVAL_SECONDS, CANNON_LOCK_SECONDS, CANNON_MAX_RANGE, CANNON_TURN_RATE }
-    from "../../../src/shared/object/types/objectTypeConfig/cannonObjectTypeConfig";
+import { CANNON_BALL_COUNT, CANNON_FIRE_INTERVAL_SECONDS, CANNON_LOCK_SECONDS, CANNON_MAX_RANGE, CANNON_SHOTS_IN_A_ROW,
+    CANNON_TURN_RATE } from "../../../src/shared/object/types/objectTypeConfig/cannonObjectTypeConfig";
 import { CANNON_BALL_BOUNCE_BOOST, CANNON_BALL_MAX_SPEED, CANNON_BALL_SPEED }
     from "../../../src/shared/object/types/objectTypeConfig/cannonBallObjectTypeConfig";
 import CannonStateUtil from "../../../src/shared/object/util/cannonStateUtil";
@@ -1230,6 +1230,7 @@ describe("AI agents", () => {
             expect(result.added).toEqual(expect.objectContaining({type: "cannon", on: FLOOR, switchedOn: true,
                 ballsLeft: CANNON_BALL_COUNT, by: "Gunner"}));
             expect(result.added.note).toContain(`${CANNON_MAX_RANGE / VOXEL_CELL_SIZE} cells`);
+            expect(result.added.note).toContain(`fired ${CANNON_SHOTS_IN_A_ROW} since it was switched on, it switches itself off`);
             expect(agent.inventory[DOLLAR]).toBe(2);
             // The room is sent it as a person's is, and the next one is refused for want of dollars.
             expect(receivedSignals(human).filter(({signalType}) => signalType == "addObjectSignal")).toHaveLength(1);
@@ -2942,9 +2943,11 @@ describe("AI agents", () => {
                 expect(instructions).toContain(`$${CANNON_PRICE_DOLLARS} each time`);
                 expect(instructions).toContain(`waits ${CANNON_FIRE_INTERVAL_SECONDS[0]} to ${CANNON_FIRE_INTERVAL_SECONDS[1]} seconds`);
                 expect(instructions).toContain(`${Math.round(CANNON_TURN_RATE * 180 / Math.PI)} degrees a`);
-                expect(instructions.replace(/\s+/g, " ")).toContain(`pointed for ${CANNON_LOCK_SECONDS} second`);
+                expect(instructions.replace(/\s+/g, " ")).toContain(`pointed for ${CANNON_LOCK_SECONDS} s without a break`);
                 expect(instructions).toContain(`within ${CANNON_MAX_RANGE / VOXEL_CELL_SIZE} cells`);
                 expect(instructions).toContain(`It has ${CANNON_BALL_COUNT} balls`);
+                expect(instructions.replace(/\s+/g, " ")).toContain(
+                    `Once it has fired ${CANNON_SHOTS_IN_A_ROW} since it was last switched on, it switches itself off`);
                 expect(instructions).toContain(`${CANNON_BALL_SPEED / VOXEL_CELL_SIZE} cells a second`);
                 expect(instructions.replace(/\s+/g, " ")).toContain(`each bounce adds up to ${
                     CANNON_BALL_BOUNCE_BOOST / VOXEL_CELL_SIZE} cells a second, to ${CANNON_BALL_MAX_SPEED / VOXEL_CELL_SIZE} at most`);
