@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+<title>ThingsPool - Narrative</title>
+<link rel="self" type="application/atom+xml" href="https://thingspool.net/narrative.atom"/>
+<link href="https://thingspool.net"/>
+<updated>2026-11-13T00:00:00.000Z</updated>
+<author>
+  <name>Youngjin Kang</name>
+</author>
+<id>https://thingspool.net/narrative.atom</id>
+<entry>
+  <title>Post-AI Computer Science - Volume 5</title>
+  <link href="https://thingspool.net/shards-of-sanity/page-5.html"/>
+  <id>https://thingspool.net/shards-of-sanity/page-5.html</id>
+  <published>2026-11-13T00:00:00.000Z</published>
+  <updated>2026-11-13T00:00:00.000Z</updated>
+  <summary>The new language of software engineering, designed to reinvent the way we approach the ideas in computer science.</summary>
+</entry>
+<entry>
+  <title>Post-AI Computer Science - Volume 4</title>
+  <link href="https://thingspool.net/shards-of-sanity/page-4.html"/>
+  <id>https://thingspool.net/shards-of-sanity/page-4.html</id>
+  <published>2026-11-07T00:00:00.000Z</published>
+  <updated>2026-11-07T00:00:00.000Z</updated>
+  <summary>Reinventing computer science in the age of AI coding agents.</summary>
+</entry>
+<entry>
+  <title>Post-AI Computer Science - Volume 3</title>
+  <link href="https://thingspool.net/shards-of-sanity/page-3.html"/>
+  <id>https://thingspool.net/shards-of-sanity/page-3.html</id>
+  <published>2026-10-31T00:00:00.000Z</published>
+  <updated>2026-10-31T00:00:00.000Z</updated>
+  <summary>How the language of programming can be used for narratives, arts, and design - not just for technical implementation.</summary>
+</entry>
+</feed>

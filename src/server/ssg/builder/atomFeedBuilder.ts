@@ -1,5 +1,6 @@
 import FileUtil from "../../ssg/util/fileUtil";
 import { GLOBAL_LAST_MOD, URL_STATIC } from "../../system/serverConstants";
+import { FeedTopicData } from "../data/feedTopicData";
 
 export default class AtomFeedBuilder
 {
@@ -28,21 +29,38 @@ export default class AtomFeedBuilder
 
     async build(): Promise<void>
     {
+        const entries = this.getEntriesNewestFirst();
+        await this.writeFeed("feed.atom", "ThingsPool", "urn:uuid:02210672-5391-4cc8-800a-2a88f3a6d00c", // uuid randomly generated
+            this.globalLatestUpdate, entries);
+
+        for (const [fileName, topic] of Object.entries(FeedTopicData))
+        {
+            const urls = topic.postPaths.map(path => `${URL_STATIC}/${path}`);
+            const topicEntries = entries.filter(entry => urls.includes(entry.url));
+            if (topicEntries.length != urls.length)
+                throw new Error(`${fileName} lists a post the site doesn't have: ${urls.filter(url => !topicEntries.some(entry => entry.url == url)).join(", ")}`);
+            await this.writeFeed(fileName, topic.title, `${URL_STATIC}/${fileName}`, topicEntries[0].date, topicEntries);
+        }
+    }
+
+    private async writeFeed(fileName: string, title: string, id: string, updated: Date,
+        entries: ReturnType<AtomFeedBuilder["getEntriesNewestFirst"]>): Promise<void>
+    {
         const lines = [
             `<?xml version="1.0" encoding="utf-8"?>`,
             `<feed xmlns="http://www.w3.org/2005/Atom">`,
-            `<title>ThingsPool</title>`,
-            `<link rel="self" type="application/atom+xml" href="${URL_STATIC}/feed.atom"/>`,
+            `<title>${title}</title>`,
+            `<link rel="self" type="application/atom+xml" href="${URL_STATIC}/${fileName}"/>`,
             `<link href="${URL_STATIC}"/>`,
-            `<updated>${this.globalLatestUpdate.toISOString()}</updated>`,
+            `<updated>${updated.toISOString()}</updated>`,
             `<author>`,
             `  <name>Youngjin Kang</name>`,
             `</author>`,
-            `<id>urn:uuid:02210672-5391-4cc8-800a-2a88f3a6d00c</id>`, // uuid randomly generated
+            `<id>${id}</id>`,
         ];
 
         // Each dated by <published>, the date by which those readers skip old entries.
-        for (const entry of this.getEntriesNewestFirst())
+        for (const entry of entries)
         {
             lines.push(`<entry>`);
             lines.push(`  <title>${entry.title}</title>`);
@@ -55,6 +73,6 @@ export default class AtomFeedBuilder
         }
         lines.push(`</feed>`);
 
-        await FileUtil.write(`feed.atom`, lines.join("\n"));
+        await FileUtil.write(fileName, lines.join("\n"));
     }
 }

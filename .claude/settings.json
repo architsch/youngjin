@@ -76,7 +76,8 @@
       "ClaudeInChromeDomain(claudemarketplaces.com)",
       "ClaudeInChromeDomain(browse.games)",
       "ClaudeInChromeDomain(threejsresources.com)",
-      "ClaudeInChromeDomain(ryanschultz.com)"
+      "ClaudeInChromeDomain(ryanschultz.com)",
+      "ClaudeInChromeDomain(searchadvisor.naver.com)"
     ],
     "deny": [
       "Bash(gcloud firestore:*)",
