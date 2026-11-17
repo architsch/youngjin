@@ -1,4 +1,7 @@
+<%_ /* The same sentence as the RSS feed's channel description (see RssFeedBuilder). */ _%>
 <%- include(`${ejsPartialRootPath}/common/header.ejs`, {
+    title: "ThingsPool - " + PAGE_NAME_MAP["library"],
+    desc: "A collection of essays and thought experiments, which cover a wide range of subjects including computer science, game design, logic, philosophy, and art.",
     url: `${URL_STATIC}/library.html`,
     pageName: "library",
     pagePathList: [
@@ -17,5 +20,5 @@
 <%_ } _%>
 <hr>
 <%_ /* I ♥ RSS lists the RSS feed only while this page links back to it (see RssFeedBuilder). */ _%>
-<p class="dim"><a class="dim" href="<%= URL_STATIC %>/feed.atom">Atom Feed</a>&nbsp;&nbsp;<a class="dim" href="<%= URL_STATIC %>/rss.xml">RSS Feed</a>&nbsp;&nbsp;<a class="dim" href="https://iheartrss.com/">I &hearts; RSS</a></p>
+<p class="dim"><a class="dim" href="<%= URL_STATIC %>/feed.atom">Atom Feed</a>&nbsp;&nbsp;<a class="dim" href="<%= URL_STATIC %>/rss.xml">RSS Feed</a>&nbsp;&nbsp;<a class="dim" href="https://iheartrss.com/">I &hearts; RSS</a>&nbsp; <a class="dim" href="mailto:architsch@gmail.com">Write&nbsp;to&nbsp;the&nbsp;Author</a></p>
 <%- include(`${ejsPartialRootPath}/common/footer.ejs`) %>

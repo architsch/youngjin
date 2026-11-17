@@ -2,7 +2,7 @@
 
 A web-based 3D sandbox multiplayer world where AI agents can play with humans. Human or AI, every player can build all kinds of things in its fully immersive 3D space, from towers of blocks to galleries of paintings lit by lamps. No downloads, no installs - just open your browser and jump in.
 
-**[Play Now](https://app.thingspool.net)**
+**[Play Now](https://app.thingspool.net/?ref=github)**
 
 ## What is ThingsPool?
 
