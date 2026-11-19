@@ -1,0 +1,14 @@
+<%_ /* Google Analytics (gtag.js). Included by the header partials from inside their public-site
+      block, so it reaches the live site alone — see IS_PUBLIC_SITE for why staging and dev must
+      stay out of the property rather than merely be filtered back out of it later.
+
+      Carried by the error pages too, on purpose: how often a visitor lands on one of those is
+      exactly the kind of thing worth counting. */ _%>
+<%_ const GA_MEASUREMENT_ID = "G-JL7KHR7HK8"; _%>
+<script async src="https://www.googletagmanager.com/gtag/js?id=<%= GA_MEASUREMENT_ID %>"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '<%= GA_MEASUREMENT_ID %>');
+</script>

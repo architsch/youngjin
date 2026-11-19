@@ -1,7 +1,7 @@
 # The Submission Kit
 
 One folder per venue, at `temp/distribution/<venue-slug>/`, holding everything needed to place
-ThingsPool there. `temp/` is gitignored, so kits never enter the change set — the ledger row is what
+Robot Rooms there. `temp/` is gitignored, so kits never enter the change set — the ledger row is what
 persists.
 
 A kit exists so that the user's part of the work is *take the images, paste, and send*. If they have
@@ -38,26 +38,29 @@ up — a short description is a shortened long one, never a stretched one-liner.
 | Long description | 2–4 paragraphs | itch.io page body, portal listings, forum posts |
 | Tag list | 5–15 terms | itch.io, portals, GitHub topics |
 
-**The first sentence of every one of these does the same job:** it says what ThingsPool is to a
+**The first sentence of every one of these does the same job:** it says what Robot Rooms is to a
 reader who has never heard of it. Not what is new about it, not why it is interesting — what it is.
 There are two canonical openings, one per audience (see the AI-agents angle in SKILL.md):
 
 - **AI-targeted**, where readers run agents or are agents (MCP directories, ClawHub, agent builders,
-  Hacker News): the README's own, *"ThingsPool is a web-based 3D sandbox multiplayer world where AI
-  agents can play with humans,"* then its sandbox: human or AI, every player can build all kinds of
-  things in it. In 100 characters (the MCP Registry's limit): *"A web-based 3D sandbox world where AI
-  agents can play with humans and build all kinds of things."*
-- **Human-targeted**, for everyone else (art, writing and game communities, portals, stores): the
-  landing page's own, *"ThingsPool is an interactive space on the web, where you can build, explore,
-  and chat."* What follows it comes from the rest of the landing page (a world made of rooms where you
-  build, explore, chat and customize; a creative platform for artists). The copy around it leaves AI
-  agents out, or keeps them to a part of their own, as the landing page does.
+  Hacker News): that of the game's README, *"Robot Rooms is a web-based 3D sandbox multiplayer world
+  where AI agents can play with humans,"* then its sandbox: human or AI, every player can build all
+  kinds of things in it. In 100 characters (the MCP Registry's limit): *"A web-based 3D sandbox world
+  where AI agents can play with humans and build all kinds of things."*
+- **Human-targeted**, for everyone else (art, writing and game communities, portals, stores): that of
+  the game's own page (`https://thingspool.net/RobotRooms/page.html`), *"Robot Rooms is an interactive
+  space on the web, where you can build, explore, and chat."* What follows it comes from the rest of
+  that page (a world made of rooms where you build, explore, chat and customize; a creative platform
+  for artists). The copy around it leaves AI agents out, or keeps them to a part of their own, as that
+  page does.
 
-Everything else in the copy depends on that sentence having landed first.
+Everything else in the copy depends on that sentence having landed first. ThingsPool is the maker's
+name and his site's, never the game's: where a venue asks who made it, it is "Robot Rooms, by
+ThingsPool".
 
 **When the destination is a dev-log post,** the body introduces that post rather than pitching the
 game: what the post is about, what is worth looking at in it, and the one line of context saying
-what ThingsPool is. The post does the selling once they arrive — it was written for exactly that.
+what Robot Rooms is. The post does the selling once they arrive — it was written for exactly that.
 Copy that pitches the game while linking to an article makes the reader feel misdirected, which is
 the reaction the whole approach exists to avoid. Do not paste the post's own text into the venue
 either; a duplicate of the page defeats the point of linking to it.

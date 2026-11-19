@@ -4,14 +4,21 @@
 <title>ThingsPool</title>
 <link>https://thingspool.net/library.html</link>
 <description>A collection of essays and thought experiments, which cover a wide range of subjects including computer science, game design, logic, philosophy, and art.</description>
-<lastBuildDate>Sat, 14 Nov 2026 00:00:00 GMT</lastBuildDate>
+<lastBuildDate>Wed, 18 Nov 2026 00:00:00 GMT</lastBuildDate>
 <atom:link href="https://thingspool.net/rss.xml" rel="self" type="application/rss+xml"/>
+<item>
+  <title>Robot Rooms</title>
+  <link>https://thingspool.net/RobotRooms/page.html</link>
+  <guid isPermaLink="true">https://thingspool.net/RobotRooms/page.html</guid>
+  <pubDate>Wed, 18 Nov 2026 00:00:00 GMT</pubDate>
+  <description>Robot Rooms is a 3D sandbox game that runs in your browser, with no download. Build with blocks, chat with people, and explore a world made of rooms.</description>
+</item>
 <item>
   <title>Currency System and Cannons</title>
   <link>https://thingspool.net/devlog-2026/page-10.html</link>
   <guid isPermaLink="true">https://thingspool.net/devlog-2026/page-10.html</guid>
   <pubDate>Sat, 14 Nov 2026 00:00:00 GMT</pubDate>
-  <description>ThingsPool now has its own currency, and offers purchasable items such as cannons.</description>
+  <description>Robot Rooms now has its own currency, and offers purchasable items such as cannons.</description>
 </item>
 <item>
   <title>Post-AI Computer Science - Volume 5</title>
@@ -39,7 +46,7 @@
   <link>https://thingspool.net/devlog-2026/page-9.html</link>
   <guid isPermaLink="true">https://thingspool.net/devlog-2026/page-9.html</guid>
   <pubDate>Thu, 22 Oct 2026 00:00:00 GMT</pubDate>
-  <description>ThingsPool now has helpful AI assistant characters and wind-blowing fans.</description>
+  <description>Robot Rooms now has helpful AI assistant characters and wind-blowing fans.</description>
 </item>
 <item>
   <title>Post-AI Computer Science - Volume 2</title>
@@ -60,56 +67,56 @@
   <link>https://thingspool.net/devlog-2026/page-8.html</link>
   <guid isPermaLink="true">https://thingspool.net/devlog-2026/page-8.html</guid>
   <pubDate>Mon, 12 Oct 2026 00:00:00 GMT</pubDate>
-  <description>ThingsPool now has two new features - props and tiny blocks.</description>
+  <description>Robot Rooms now has two new features - props and tiny blocks.</description>
 </item>
 <item>
   <title>Colored Fog, and Other Visual Subtleties</title>
   <link>https://thingspool.net/devlog-2026/page-7.html</link>
   <guid isPermaLink="true">https://thingspool.net/devlog-2026/page-7.html</guid>
   <pubDate>Sat, 19 Sep 2026 00:00:00 GMT</pubDate>
-  <description>ThingsPool's new feature update include colored fog.</description>
+  <description>Robot Rooms' new feature update include colored fog.</description>
 </item>
 <item>
   <title>Lights, Sky, and Fog!</title>
   <link>https://thingspool.net/devlog-2026/page-6.html</link>
   <guid isPermaLink="true">https://thingspool.net/devlog-2026/page-6.html</guid>
   <pubDate>Sun, 13 Sep 2026 00:00:00 GMT</pubDate>
-  <description>ThingsPool now has lights, sky, and fog.</description>
+  <description>Robot Rooms now has lights, sky, and fog.</description>
 </item>
 <item>
   <title>Restricted Zones</title>
   <link>https://thingspool.net/devlog-2026/page-5.html</link>
   <guid isPermaLink="true">https://thingspool.net/devlog-2026/page-5.html</guid>
   <pubDate>Sat, 05 Sep 2026 00:00:00 GMT</pubDate>
-  <description>ThingsPool now lets you keep part of a room to yourself.</description>
+  <description>Robot Rooms now lets you keep part of a room to yourself.</description>
 </item>
 <item>
   <title>Dynamic Doors</title>
   <link>https://thingspool.net/devlog-2026/page-4.html</link>
   <guid isPermaLink="true">https://thingspool.net/devlog-2026/page-4.html</guid>
   <pubDate>Sun, 30 Aug 2026 00:00:00 GMT</pubDate>
-  <description>ThingsPool's rooms now open onto one another through doors.</description>
+  <description>Robot Rooms' rooms now open onto one another through doors.</description>
 </item>
 <item>
   <title>Second Floor</title>
   <link>https://thingspool.net/devlog-2026/page-3.html</link>
   <guid isPermaLink="true">https://thingspool.net/devlog-2026/page-3.html</guid>
   <pubDate>Fri, 21 Aug 2026 00:00:00 GMT</pubDate>
-  <description>ThingsPool now supports two-story rooms.</description>
+  <description>Robot Rooms now supports two-story rooms.</description>
 </item>
 <item>
   <title>Game Modes</title>
   <link>https://thingspool.net/devlog-2026/page-2.html</link>
   <guid isPermaLink="true">https://thingspool.net/devlog-2026/page-2.html</guid>
   <pubDate>Sat, 15 Aug 2026 00:00:00 GMT</pubDate>
-  <description>ThingsPool now supports distinct game modes.</description>
+  <description>Robot Rooms now supports distinct game modes.</description>
 </item>
 <item>
-  <title>Introducing ThingsPool</title>
+  <title>Introducing Robot Rooms</title>
   <link>https://thingspool.net/devlog-2026/page-1.html</link>
   <guid isPermaLink="true">https://thingspool.net/devlog-2026/page-1.html</guid>
   <pubDate>Sat, 08 Aug 2026 00:00:00 GMT</pubDate>
-  <description>ThingsPool is a 3D chat app which runs in a browser tab.</description>
+  <description>Robot Rooms is a 3D chat app which runs in a browser tab.</description>
 </item>
 <item>
   <title>Linear Algebra for Game Development - Part 30</title>
@@ -326,7 +333,7 @@
   <link>https://thingspool.net/ArtRaider/page.html</link>
   <guid isPermaLink="true">https://thingspool.net/ArtRaider/page.html</guid>
   <pubDate>Tue, 15 Apr 2025 00:00:00 GMT</pubDate>
-  <description>ArtRaider</description>
+  <description>ArtRaider is a free web game which includes stealth action, first-person control, and online art exhibition. It also comes with a custom level editor, which lets you design your own virtual art exhibition rooms.</description>
 </item>
 <item>
   <title>To Every Lonely Artist</title>
@@ -1124,7 +1131,7 @@
   <link>https://thingspool.net/SpaceTown/page.html</link>
   <guid isPermaLink="true">https://thingspool.net/SpaceTown/page.html</guid>
   <pubDate>Wed, 20 Sep 2023 00:00:00 GMT</pubDate>
-  <description>SpaceTown</description>
+  <description>SpaceTown is a space construction simulator with emergent gameplay mechanics and a variety of collectibles.</description>
 </item>
 <item>
   <title>The Island of Infinite Treasures - 10</title>
@@ -3196,21 +3203,21 @@
   <link>https://thingspool.net/PoliceChase/page.html</link>
   <guid isPermaLink="true">https://thingspool.net/PoliceChase/page.html</guid>
   <pubDate>Sun, 10 Sep 2023 00:00:00 GMT</pubDate>
-  <description>Police Chase</description>
+  <description>Police Chase is a puzzle game which features turn-based tabletop mechanics and item-based tactics.</description>
 </item>
 <item>
   <title>HuntLand</title>
   <link>https://thingspool.net/HuntLand/page.html</link>
   <guid isPermaLink="true">https://thingspool.net/HuntLand/page.html</guid>
   <pubDate>Sun, 10 Sep 2023 00:00:00 GMT</pubDate>
-  <description>HuntLand</description>
+  <description>HuntLand is a free web game (Free browser game) which features sandbox action, first-person control, and open-world gameplay.</description>
 </item>
 <item>
   <title>Water vs Fire</title>
   <link>https://thingspool.net/Water-vs-Fire/page.html</link>
   <guid isPermaLink="true">https://thingspool.net/Water-vs-Fire/page.html</guid>
   <pubDate>Sun, 10 Sep 2023 00:00:00 GMT</pubDate>
-  <description>Water vs Fire</description>
+  <description>Water vs Fire is a minimalistic RTS which features a battle between two opposing elements - Water and Fire.</description>
 </item>
 </channel>
 </rss>

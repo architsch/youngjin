@@ -1,6 +1,6 @@
 # Helpers Keep Up With Every Feature
 
-The rule in one line, as [`../../CLAUDE.md`](../../CLAUDE.md) states it: **when a feature is added or
+The rule in one line, as [`../../robot-rooms/CLAUDE.md`](../../robot-rooms/CLAUDE.md) states it: **when a feature is added or
 changed, what the helpers are told and the fixed words they say stay true to it, in the same change,
 unasked: in outline only, never how it works.** This page is why, and what that touches. Its twin for
 what AI agents can do and read over MCP is [`agents-keep-up.md`](agents-keep-up.md); most features
@@ -9,14 +9,14 @@ change that one far more than this one.
 ## Why
 
 The helpers are the NPCs played as AI guides, by the server in multiplayer rooms and by the browser in
-single-player ones (see [`../../docs/networking/agents.md`](../../docs/networking/agents.md)). Claude
+single-player ones (see [`../../robot-rooms/docs/networking/agents.md`](../../robot-rooms/docs/networking/agents.md)). Claude
 writes their replies through the Anthropic API, from instructions sent with every reply; everything else
 they say is fixed words no model writes. They know the game only from that text, and repeat it to every
 visitor: a changed feature they go on teaching as it was, and a removed one they still send people
 looking for. Nothing fails when this drifts.
 
 But they are not the game's manual, and their instructions are not its encyclopedia. At the maker's
-wish (2026-11-12), what they are told is **mostly ThingsPool's maker, his writings and the subjects
+wish (2026-11-12), what they are told is **mostly the game's maker, his writings and the subjects
 those join**, which is what makes them worth talking to. Of the game they are told only **an outline**:
 what people can do in general (explore, chat, build, change how they look), the kinds of thing they can
 add to a room, and the kinds of thing they can unlock or buy. How a feature works is never part of it.
@@ -40,6 +40,8 @@ a remark may mention a feature, never explain how it works.
 
 ## What a change touches
 
+Paths here are from `robot-rooms/`, where the game's commands run too.
+
 The instructions Claude replies from, put together in `HelperChatUtil`:
 
 1. **The guide** (`src/server/agent/data/helperGuide.ts`): the outline. It changes only when a change
@@ -53,7 +55,7 @@ The instructions Claude replies from, put together in `HelperChatUtil`:
    every reply must handle differently (a new kind of markup or of speaker), never to carry a feature's
    facts.
 3. **The knowledge, the characters and the topics** (`helperKnowledge.ts`, `helperPersonalities.ts`,
-   `helperTopics.ts`): every line of ThingsPool's story, idea to try, favorite or mood that names the
+   `helperTopics.ts`): every line of the game's story, idea to try, favorite or mood that names the
    feature. A feature worth trying may become one idea there, in the guide's words. The rest of the
    knowledge is the maker and his writings, which a feature doesn't touch.
 
@@ -91,7 +93,9 @@ What they show and look at:
 
 1. **Find every line that names the feature**, by its new words, its old ones and its controls' names:
    grep `src/server/agent/data/`, `RULES`, `NpcPersonalityMap` and `REFUSAL_LINES`, not only the guide.
-   A line made untrue is rewritten or removed, never left beside a new one. Most changes to how
+   A line made untrue is rewritten or removed, never left beside a new one; where putting it right
+   would take a detail of how the thing works, it is cut, not corrected. A small addition to a feature
+   earns no line of its own, only a feature on the scale of cannons or dollars does. Most changes to how
    something behaves find nothing to change, and that is the right outcome.
 2. **Write it**, if anything, as the [`helper-instructions`](../skills/helper-instructions/SKILL.md)
    skill says: true, a clause or a line, in plain words, minding the size of the part every reply sends.

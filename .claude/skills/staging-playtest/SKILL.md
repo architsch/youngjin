@@ -26,6 +26,10 @@ that are genuinely hard to produce by hand:
 - **A whole client run, watched** — page errors, failed asset requests and what actually rendered,
   across a room load and a mode change, which a human notices only if they happen to be looking.
 
+Paths and commands here are from `robot-rooms/`, the game's project folder (`cd robot-rooms`
+first), except those of `public/`, `.claude/`, `.github/`, the root `CLAUDE.md` and `README.md` and
+the license files, which are at the repository's root.
+
 ## Roles
 
 Run these as parallel subagents when the user asks for multiple agents; otherwise do them in
@@ -169,7 +173,7 @@ fixture that no seeding could produce. So:
 | `seed-population` at the current version | **Yes** — use `--persist` | Reading it does not change it. A stable population makes pagination deterministic between runs. Check `inspect` reports it as `outdated: 0`; if not, the schema moved and the fixture is now single-use. |
 | `seed-users` / `seed-rooms` at an outdated version | **No** | Single-use by nature: the first read migrates the row and writes it back at the current version, after which it is no longer the fixture the test needed. Re-seed every run. |
 | Seeded guests (`userType` 2) | **No** | The server's own hourly stale-guest sweep deletes them regardless of intent. |
-| `seed-agents` | **No** | The same sweep deletes inactive agents by the guests' tiers, their home rooms with them. |
+| `seed-agents` | **No** | Nothing sweeps agents, however long they are away, so `cleanup` removes them, their home rooms with them. |
 | `downgrade-content` | **No** — and only within one decoder | Refused outright across a change of decoder (see above). Where it is allowed, the next room save re-encodes the blob at the current version, so it is single-use. Always `restore-content` afterwards. |
 | A room already stored below the current version | **No** | Single-use, and not seeded at all — it is left over from before the format changed. The first save after it is entered spends it. |
 

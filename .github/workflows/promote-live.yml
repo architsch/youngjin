@@ -12,6 +12,10 @@ concurrency:
 jobs:
   promote:
     runs-on: self-hosted
+    # The app's own folder in the workspace the last staging deploy laid out.
+    defaults:
+      run:
+        working-directory: robot-rooms
 
     steps:
     - name: Back up current live bundles
@@ -23,7 +27,11 @@ jobs:
       run: node dev/scripts/promoteBundles.js promote
 
     - name: Restart live server
-      run: pm2 startOrRestart ecosystem.config.js --only live
+      # Registered anew rather than restarted, and saved (see deploy-staging.yml).
+      run: |
+        pm2 delete live 2>/dev/null || true
+        pm2 start ecosystem.config.js --only live
+        pm2 save
 
     - name: Verify deployment
       run: |

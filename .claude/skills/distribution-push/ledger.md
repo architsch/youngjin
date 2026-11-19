@@ -1,6 +1,17 @@
 # Distribution Ledger
 
-A running record of every place ThingsPool has been submitted or posted, and what came of it.
+A running record of every place Robot Rooms has been submitted or posted, and what came of it.
+
+**2026-11-18: the game was renamed Robot Rooms.** Every listing below was made under the name
+ThingsPool, and still carries it until its row says otherwise; so do the dated records in
+`reference/venues.md`. The MCP Registry entry, the ClawHub skill and the plugin are renamed in the
+repository but not yet published. **2026-11-19:** the plugin's marketplace is named `robot-rooms` too,
+and its files name its repository `architsch/robot-rooms-plugin`, which the repository on GitHub
+(`architsch/thingspool-plugin`) becomes only when he renames it. The same day the manual moved, in the
+repository, to `https://thingspool.net/RobotRooms/skill.md`; the address every row below names,
+`https://thingspool.net/skill.md`, now holds a pointer to it, so those rows' links still lead there, and
+a listing's documentation link takes the new address when the listing is next edited. The kits the
+rows name are in `robot-rooms/temp/distribution/`.
 
 **This file is history, not instructions.** Its rows record what actually happened. Never rewrite a
 row to match a later understanding, and never delete one because it records a failure — a venue that

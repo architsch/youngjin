@@ -1,0 +1,20 @@
+<%- include(`${ejsPartialRootPath}/common/header.ejs`, {
+    title: "ThingsPool - Research Lab for Digital Humanities",
+    url: URL_STATIC,
+    pageName: "index",
+}) %>
+
+<h1>ThingsPool</h1>
+<h3>ThingsPool is an independent research lab which reinvents computer science through the lens of philosophy. We develop unconventional thought experiments and software toys, for the purpose of exploring new ideas in digital humanities.</h3>
+<hr>
+
+<h4>Featured App</h4>
+<div class="imageButtonGroup">
+<p>A world made of virtual rooms, where you can build, explore, and chat. Click "Play" to join! (<a href="<%= URL_STATIC %>/RobotRooms/page.html">More Info</a>)</p>
+<a class="noTextDeco imageButton" href="<%= URL_ROBOT_ROOMS %>" ontouchstart=""><img class="s_image" src="<%= URL_STATIC %>/play.png" alt="Play"></a>
+</div>
+
+<h4>Featured Articles</h4>
+<%- include(`${ejsPartialRootPath}/info/featureLinks.ejs`) %>
+
+<%- include(`${ejsPartialRootPath}/common/footer.ejs`) %>

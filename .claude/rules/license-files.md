@@ -8,7 +8,7 @@ follows from it.
 
 This repository is **dual-natured on purpose**: the code is open source under Apache-2.0, while the
 written and illustrated works under `public/` are all rights reserved (but for the agents' manual,
-`public/skill.md`, which is Apache-2.0, and its MIT-0 copy for ClawHub in `dev/clawhub/`), and some
+`public/RobotRooms/skill.md`, which is Apache-2.0, and its MIT-0 copy for ClawHub in `robot-rooms/dev/clawhub/`), and some
 bundled assets belong to third parties under their own terms. That boundary exists only in
 [`../../LICENSE-CONTENT.md`](../../LICENSE-CONTENT.md) and
 [`../../THIRD-PARTY-NOTICES.md`](../../THIRD-PARTY-NOTICES.md). Nothing enforces it, no test fails
@@ -34,8 +34,9 @@ It fails in one of two directions, and both are public:
    unknown**; "found on the internet" is not a license.
 3. **A new `public/` directory** — a library section, a dev-log year, an arcade entry — is *content*.
    It is all rights reserved, and it belongs in the illustrative list in `LICENSE-CONTENT.md`.
-4. **A new top-level code directory** belongs in the "What Apache-2.0 covers" table in
-   `LICENSE-CONTENT.md`, so the open-source half of the boundary stays complete too.
+4. **A new code directory**, at the repository's root (a project beside `robot-rooms/`) or at the top
+   of `robot-rooms/`, belongs in the "What Apache-2.0 covers" table in `LICENSE-CONTENT.md`, so the
+   open-source half of the boundary stays complete too.
 5. **`LICENSE` is verbatim Apache-2.0 and is never edited.** Scope statements, exclusions and
    attributions go in the other three files. Editing the license text produces a licence that is no
    longer Apache-2.0 and that nobody can evaluate.

@@ -8,23 +8,26 @@ terms. The [LICENSE](LICENSE) file — the Apache License, Version 2.0 — cover
 
 ## What Apache-2.0 covers
 
-The source code and the machinery that builds and runs it:
+The source code and the machinery that builds and runs it: the generator of this
+site's pages (`ssg/`), and the game Robot Rooms, which is the project in
+`robot-rooms/`:
 
 | | |
 |---|---|
-| `src/` | client, server and shared TypeScript |
-| `views/` | EJS templates |
-| `dev/` | build configuration and helper scripts, but not the images in `dev/assets/`, which are copies of the game's pictures on the same terms as them (below), nor `dev/clawhub/` (below the table) |
-| `tests/` | E2E and integration tests |
-| `docs/` | technical documentation |
+| `ssg/` | the generator of this site's pages (TypeScript), with its EJS templates (`ssg/views/`), tests and configuration |
+| `robot-rooms/src/` | client, server and shared TypeScript |
+| `robot-rooms/views/` | the game's EJS templates |
+| `robot-rooms/dev/` | build configuration and helper scripts, but not the images in `robot-rooms/dev/assets/`, which are copies of the game's pictures on the same terms as them (below), nor `robot-rooms/dev/clawhub/` (below the table) |
+| `robot-rooms/tests/` | E2E and integration tests |
+| `robot-rooms/docs/` | technical documentation |
 | `.github/` | workflows |
-| root config | `package.json`, `webpack` and `tsconfig` files, `firebase.json`, `server.json`, and the like |
-| `public/skill.md` | the manual for AI agents, the one written work under `public/` that Apache-2.0 covers, since it is meant to be copied and installed wherever agents keep their skills |
+| `robot-rooms/` config | `package.json`, `webpack` and `tsconfig` files, `firebase.json`, `server.json`, and the like |
+| `public/RobotRooms/skill.md` | Robot Rooms' manual for AI agents, the one written work under `public/` that Apache-2.0 covers, since it is meant to be copied and installed wherever agents keep their skills |
 
 Compiled and generated output derived from those files is covered on the same
 terms.
 
-`dev/clawhub/` holds the copy of the agents' manual published on ClawHub, which
+`robot-rooms/dev/clawhub/` holds the copy of the agents' manual published on ClawHub, which
 licenses every skill under MIT-0 and allows no other license. That copy, and it
 alone, is under MIT-0.
 
@@ -49,20 +52,21 @@ Concretely, it covers:
 - **Illustrations, cartoons and photographs** — including `public/illustrations/`
   (2009–2014) and `public/cartoons/` (2011–2015), and any image accompanying a
   library post.
-- **The arcade showcase pages** — the descriptions and screenshots of other games
-  under `public/ArtRaider/`, `public/HuntLand/`, `public/PoliceChase/`,
-  `public/SpaceTown/` and `public/Water-vs-Fire/`.
+- **The arcade showcase pages** — the descriptions, screenshots and banners of the
+  games under `public/ArtRaider/`, `public/HuntLand/`, `public/PoliceChase/`,
+  `public/RobotRooms/` (but for the agents' manual in it, above), `public/SpaceTown/`
+  and `public/Water-vs-Fire/`.
 - **Dev-log prose and its screenshots** — `public/devlog-2026/` and later years.
 - **Original game artwork** — the textures, pictures, character atlases,
-  icons, logos and sounds authored for ThingsPool under `public/app/assets/` and
-  `public/`, excluding the third-party packs, recordings and photographs listed below. This includes the
+  icons, logos and sounds authored for Robot Rooms and for the site under
+  `public/app/assets/` and `public/`, excluding the third-party packs, recordings and photographs listed below. This includes the
   authored descriptions of that artwork as well as the images themselves —
   `public/app/assets/instanced_mesh_composition/`, which is the source the
   game's object appearances are composed from.
 - **Authored rooms** — the room files under `public/app/assets/rooms/`, each a
   room built by hand for the game, the tutorial's among them.
-- **The ThingsPool name and logo.** Apache-2.0 grants no trademark rights
-  (section 6), and none are granted here either.
+- **The ThingsPool and Robot Rooms names, and the ThingsPool logo.** Apache-2.0
+  grants no trademark rights (section 6), and none are granted here either.
 
 ## Third-party material
 
@@ -76,12 +80,12 @@ some of the game's sounds, beside its own in `public/app/assets/audio/bundle.mp3
 photographs of everyday objects in the pictures' subfolder `2/` whose entries in
 `public/app/assets/pictures/manifest.json` name a source and license, which ship
 under `public/app/assets/pictures/2/` once enabled and are parked under
-`dev/assets/disabled_pictures/2/` until then, and the full-resolution samples
-of them under `dev/assets/pictures/2/`, all used under the Unsplash License.
+`robot-rooms/dev/assets/disabled_pictures/2/` until then, and the full-resolution samples
+of them under `robot-rooms/dev/assets/pictures/2/`, all used under the Unsplash License.
 The other photographs in `2/` are ThingsPool's own, covered above as original
 game artwork, as are the photographs in `1/` whose entries name thingspool as
-their author, with their samples and parked copies under `dev/assets/`.
-(`dev/assets/pictures/1/` also holds copies of the paintings under
+their author, with their samples and parked copies under `robot-rooms/dev/assets/`.
+(`robot-rooms/dev/assets/pictures/1/` also holds copies of the paintings under
 `public/app/assets/pictures/1/`, which keep those images' terms.) See
 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for the full list.
 
@@ -91,7 +95,7 @@ You may read, fork, modify, self-host and build upon **the code**, commercially
 or otherwise, under the terms of Apache-2.0.
 
 You may not republish **the writing, the artwork or the illustrations** without
-permission, the agents' manual (`public/skill.md`) aside. If you fork this
+permission, the agents' manual (`public/RobotRooms/skill.md`) aside. If you fork this
 repository to build something of your own, replace them with your own.
 
 For permission beyond these terms, ask: <https://thingspool.net>

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "robot-rooms",
+  "version": "1.5.2",
+  "description": "Play Robot Rooms, a web-based 3D sandbox world where AI agents can play with humans and build all kinds of things.",
+  "author": {
+    "name": "ThingsPool",
+    "url": "https://thingspool.net"
+  },
+  "homepage": "https://thingspool.net/RobotRooms/page.html",
+  "repository": "https://github.com/architsch/robot-rooms-plugin",
+  "license": "Apache-2.0",
+  "keywords": ["game", "sandbox", "multiplayer", "3d", "virtual-world", "mcp"]
+}

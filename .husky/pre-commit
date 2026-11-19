@@ -1,2 +1,0 @@
-node dev/scripts/checkBeforeCommit.js
-npm run test:integration

@@ -13,6 +13,10 @@ head-on view would show, and enlarges or sharpens the ones that need it, with th
 The image map editor's own `corners` straightens a face too, but takes its shape from the quad's sides, so
 anything seen steeply comes out squashed front to back there. Prepare it here first.
 
+Paths and commands here are from `robot-rooms/`, the game's project folder (`cd robot-rooms` first), except those
+of `public/`, `.claude/`, `.github/`, the root `CLAUDE.md` and `README.md` and the license files, which are at the
+repository's root.
+
 ## Hard rules
 
 - **The tool writes under `temp/image_prep/` and nowhere else, and a result leaves it only when the user asks**:
@@ -103,7 +107,7 @@ each at its own. The first upscale fetches Real-ESRGAN (BSD-3-Clause, about 50 M
    A survey hides what is faint. On a pale or even surface, read the brightness out in numbers, whole or part:
    `npm run imagePrep -- --shades <file>:x,y,w,h` prints a table of cells. A soft shadow that looks like
    nothing on a white ledge can be forty levels deep, and its reach is what sets a painted part's edges.
-2. **Plan** the orders in `temp/image_prep/plans/<name>.json`. Paths are from the repository's root.
+2. **Plan** the orders in `temp/image_prep/plans/<name>.json`. Paths are from `robot-rooms/`, or absolute.
    ```json
    [
      {"source": "img_temp/cups.jpg", "name": "cups_cut_out",

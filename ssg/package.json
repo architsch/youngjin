@@ -1,0 +1,31 @@
+{
+	"name": "thingspool-site",
+	"description": "The generator of thingspool.net: the library, the arcade, the home page, the feeds and the sitemap.",
+	"homepage": "https://thingspool.net",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/architsch/youngjin.git",
+		"directory": "ssg"
+	},
+	"license": "Apache-2.0",
+	"private": true,
+	"type": "module",
+	"engines": {
+		"node": ">=24"
+	},
+	"scripts": {
+		"build": "node build.ts",
+		"check": "node build.ts --check",
+		"preview": "node preview.ts",
+		"test": "node --test",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"ejs": "^3.1.10"
+	},
+	"devDependencies": {
+		"@types/ejs": "^3.1.5",
+		"@types/node": "^24.13.3",
+		"typescript": "^5.9.3"
+	}
+}

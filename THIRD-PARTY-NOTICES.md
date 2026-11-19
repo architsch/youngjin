@@ -63,7 +63,7 @@ to that law.
 The recordings under `public/app/assets/audio/BigSoundBank/` and
 `public/app/assets/audio/Freesound/` are cut from sounds released under
 [CC0 1.0 Universal (Public Domain Dedication)](https://creativecommons.org/publicdomain/zero/1.0/).
-The static site generator encodes them, with the game's own synthesized sounds,
+The game's build encodes them, with the game's own synthesized sounds,
 into the bundle the game plays (`public/app/assets/audio/bundle.mp3`). CC0
 requires no credit; the attribution below is given because it is deserved.
 
@@ -92,13 +92,13 @@ Unsplash photo here is a free one, not an Unsplash+ one.
 
 Each was sampled from its photo, and straightened, cut out of its background or
 retouched, in the image map editor (`npm run imageMapEditor`). The editor keeps
-each sample at full resolution under `dev/assets/pictures/2/` (never shipped),
+each sample at full resolution under `robot-rooms/dev/assets/pictures/2/` (never shipped),
 and writes this table from the map's manifest. A disabled entry's image is parked
-under `dev/assets/disabled_pictures/` and left out of this table, since it
+under `robot-rooms/dev/assets/disabled_pictures/` and left out of this table, since it
 doesn't ship. Every sample and parked image keeps the photographer and license of
 the photo it came from, which the manifest names for each entry, enabled or not.
 The original photos are never committed; only their index,
-`dev/assets/picture_sources/index.json`, naming where each came from.
+`robot-rooms/dev/assets/picture_sources/index.json`, naming where each came from.
 The license grants no trademark or likeness rights, so prominent logos and brand
 plates were painted out; small incidental labels on goods remain.
 
@@ -232,7 +232,7 @@ The substantive ones, for attribution:
 | [tailwindcss](https://github.com/tailwindlabs/tailwindcss) | MIT | styling |
 | [firebase-admin](https://github.com/firebase/firebase-admin-node) | Apache-2.0 | database and storage |
 | [@google-cloud/secret-manager](https://github.com/googleapis/google-cloud-node) | Apache-2.0 | secret loading |
-| [ejs](https://github.com/mde/ejs) | Apache-2.0 | templating |
+| [ejs](https://github.com/mde/ejs) | Apache-2.0 | templating, of the game's pages and of the site's (`ssg/`) |
 | [typescript](https://github.com/microsoft/TypeScript) | Apache-2.0 | compiler (dev) |
 | [webpack](https://github.com/webpack/webpack) | MIT | bundler (dev) |
 | [vitest](https://github.com/vitest-dev/vitest) | MIT | integration tests (dev) |
@@ -267,9 +267,9 @@ made with them.
 | [ONNX Runtime](https://github.com/microsoft/onnxruntime), as its `onnxruntime-node` and `onnxruntime-common` packages | MIT | a thing is to be cut out of its background |
 | [Segment Anything 2](https://github.com/facebookresearch/sam2) (Meta), its large model in the [ONNX export](https://huggingface.co/vietanhdev/segment-anything-2-onnx-models) by Viet-Anh Nguyen | Apache-2.0 | likewise |
 
-The static site generator encodes the game's sounds into an MP3 file with
+The game's build encodes its sounds into an MP3 file with
 [LAME](https://lame.sourceforge.io/), which is under the LGPL and installed apart
-from npm (see `docs/devOps/local_dev.md`). Like the programs above, it is run as a
+from npm (see `robot-rooms/docs/devOps/local_dev.md`). Like the programs above, it is run as a
 separate program, is not a dependency in `package.json`, and is never committed,
 bundled or shipped; its license covers the program and sets no terms on the file
 made with it.

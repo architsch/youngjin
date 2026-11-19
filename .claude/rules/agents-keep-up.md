@@ -1,13 +1,13 @@
 # Agents Keep Up With Every Feature
 
-The rule in one line, as [`../../CLAUDE.md`](../../CLAUDE.md) states it: **when a feature is added or
+The rule in one line, as [`../../robot-rooms/CLAUDE.md`](../../robot-rooms/CLAUDE.md) states it: **when a feature is added or
 changed, what AI agents can do over MCP and what they are told change with it, in the same change,
 unasked.** This page is why, and what that touches. Its twin for the helpers, the NPCs played as AI
 guides, is [`helpers-keep-up.md`](helpers-keep-up.md); most features change both.
 
 ## Why
 
-AI agents are players (see [`../../docs/networking/agents.md`](../../docs/networking/agents.md)): they
+AI agents are players (see [`../../robot-rooms/docs/networking/agents.md`](../../robot-rooms/docs/networking/agents.md)): they
 share rooms with people, under the same rules. But an agent has no screen. It can do only what the MCP
 endpoint's tools reach, sees only what those tools put into words, and knows only what it is told. So
 every feature has two front ends, the browser's and the agents', and only the browser's is noticed when
@@ -21,6 +21,8 @@ agents that have not connected yet.
 
 ## What a change touches
 
+Paths here are from `robot-rooms/`, where the game's commands run too, but for `public/RobotRooms/skill.md`.
+
 1. **The tools** (`AgentMcpUtil` and the agent utils under `src/server/agent/`): an agent can do with the
    feature what a person can, through the same signals or calls and the same checks. Where it can't (an
    admin's tool, say), the change says why, in a comment. Each tool's title, description and arguments
@@ -30,15 +32,17 @@ agents that have not connected yet.
 3. **The endpoint's instructions** (`INSTRUCTIONS` in `AgentMcpUtil`): a line where the feature fits.
    They are what every agent reads on connecting. A number agents act on (a price, a distance, a limit)
    is built into them, and into the tools' descriptions, from its constant, never typed by hand.
-4. **The manual**, `public/skill.md`, when the change touches connecting, manners, limits or what a first
+4. **The manual**, `public/RobotRooms/skill.md`, when the change touches connecting, manners, limits or what a first
    visit does, or leaves anything it says untrue, its front matter's description (ClawHub's summary)
-   included. Its ClawHub copy, `dev/clawhub/thingspool/SKILL.md`, changes with it (a test compares the
-   two). The plugin package, `dev/plugin/thingspool`, takes the manual as its skill when it is built, so
+   included. Its ClawHub copy, `dev/clawhub/robot-rooms/SKILL.md`, changes with it (a test compares the
+   two). The plugin package, `dev/plugin/robot-rooms`, takes the manual as its skill when it is built, so
    only the `version` in its two manifests follows the manual's (a test compares them), and its README
    where a change leaves it untrue. The manual names no number a constant holds (a price, a reward, a distance, a time, a limit): it
-   is published apart from the server, so such a number would go stale; the instructions give them.
+   is published apart from the server, so such a number would go stale; the instructions give them. Its address is
+   `AGENT_MANUAL_URL` wherever the code names it. The site's own `public/skill.md` is no manual: it points to each
+   one's address, and changes only when a manual moves or another piece of software gets one.
 5. **`server.json`**, the endpoint's entry in the MCP Registry, whose description and header description
-   stay true (Glama copies them), and the README's section for AI agents.
+   stay true (Glama copies them), and the section for AI agents in the game's `README.md`.
 6. **`docs/networking/agents.md`**, and **tests** in `tests/integration/scenarios/agent.test.ts`.
 
 Find every line that names the feature, by its new words and its old ones, in `INSTRUCTIONS`, the tools'
@@ -53,13 +57,17 @@ removed, and one saying something can't be done goes when it can.
   manifests) with the manual. A new tool or feature is a minor version, new wording or a fix a patch.
 - **Only a published version is bumped.** The user publishes both by hand, and until a version is out,
   later changes keep its number. Compare before bumping: the MCP Registry's is the entry marked
-  `isLatest` in `curl -s "https://registry.modelcontextprotocol.io/v0/servers?search=net.thingspool/thingspool"`,
-  and ClawHub's is `tags.latest` in `npx clawhub@0.23.3 inspect thingspool --json`. A version newer than
-  the one published is still waiting (an upload ClawHub holds back isn't listed: ask when unsure).
+  `isLatest` in `curl -s "https://registry.modelcontextprotocol.io/v0/servers?search=net.thingspool/robot-rooms"`,
+  and ClawHub's is `tags.latest` in `npx clawhub@0.23.3 inspect robot-rooms --json`. A version newer than
+  the one published is still waiting (an upload ClawHub holds back isn't listed: ask when unsure), and a
+  name neither lists has never been published.
 - **The plugin package** goes out by building it into a clone of its own repository and pushing, over SSH:
-  `git clone git@github.com:architsch/thingspool-plugin.git <scratch>`, then
-  `node dev/scripts/plugin/buildPlugin.js <scratch>`, commit and push. What is out is the `version` in that
-  repository's `plugin.json`; plugin directories that list it follow its `main` by themselves.
+  `git clone git@github.com:architsch/robot-rooms-plugin.git <scratch>` (the repository answers only at
+  `architsch/thingspool-plugin` until he renames it on GitHub, as its files already name it), then
+  `node dev/scripts/plugin/buildPlugin.js <scratch>`, commit and push. The build only adds and replaces
+  files, so a skill folder under a name the package no longer uses is removed from the clone by hand. What
+  is out is the `version` in that repository's `plugin.json`; plugin directories that list it follow its
+  `main` by themselves.
 - **Nothing is published unasked**, to any of them.
 
 ## Where the line falls

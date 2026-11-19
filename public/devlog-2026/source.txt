@@ -1,40 +1,40 @@
-:d:ThingsPool is a 3D chat app which runs in a browser tab.
-:k:ThingsPool, Dev Log, Browser Game, Web Game, Multiplayer Game, Sandbox Game, Indie Game, Metaverse, Virtual World, Voxel, Room Building, Level Editor, Art Gallery, Open Source, Three.js
+:d:Robot Rooms is a 3D chat app which runs in a browser tab.
+:k:Robot Rooms, Dev Log, Browser Game, Web Game, Multiplayer Game, Sandbox Game, Indie Game, Metaverse, Virtual World, Voxel, Room Building, Level Editor, Art Gallery, Open Source, Three.js
 :l:2026-08-08
 
-[Introducing ThingsPool] August 8, 2026
+[Introducing Robot Rooms] August 8, 2026
 
-@@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net#what-is-thingspool">What is ThingsPool?</a></h3>
+@@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net/RobotRooms/page.html">What is Robot Rooms?</a></h3>
 
-ThingsPool is a 3D chat app you can open up in a browser. You don't need to download anything; just click the link and you will be right inside our virtual universe!
+Robot Rooms is a 3D chat app you can open up in a browser. You don't need to download anything; just click the link and you will be right inside our virtual universe!
 
 <20260808-intro-1>
 
-ThingsPool is made up of virtual rooms, where you can chat with people, build your own personal space, and partake in unforeseen adventures. So jump in, and become part of our everlasting journey.
+Robot Rooms is made up of virtual rooms, where you can chat with people, build your own personal space, and partake in unforeseen adventures. So jump in, and become part of our everlasting journey.
 
 <20260808-intro-2>
 
 You can even have your own room and fill it with various treatures.
 
-This is the first post of ThingsPool's development log, which is a news feed for the project's major updates. Whenever a new feature comes in, you will hear about it here. Stay tuned!
+This is the first post of Robot Rooms' development log, which is a news feed for the project's major updates. Whenever a new feature comes in, you will hear about it here. Stay tuned!
 
 <20260808-intro-3>
 
-#ThingsPool #Metaverse #VirtualWorld #Sandbox #OpenWorld #BrowserGame #MultiplayerGame #IndieGame #GameDev #WorldBuilding #OpenSource #FreeToPlay #VoxelEngine #LevelEditor #ThreeJS #WebGL
+#RobotRooms #Metaverse #VirtualWorld #Sandbox #OpenWorld #BrowserGame #MultiplayerGame #IndieGame #GameDev #WorldBuilding #OpenSource #FreeToPlay #VoxelEngine #LevelEditor #ThreeJS #WebGL
 
 
 
 
 
-:d:ThingsPool now supports distinct game modes.
-:k:ThingsPool, Dev Log, Browser Game, Web Game, Multiplayer Game, Sandbox Game, Virtual World, Game Design, Level Editor, Character Customization, Art Gallery, Three.js, WebGL
+:d:Robot Rooms now supports distinct game modes.
+:k:Robot Rooms, Dev Log, Browser Game, Web Game, Multiplayer Game, Sandbox Game, Virtual World, Game Design, Level Editor, Character Customization, Art Gallery, Three.js, WebGL
 :l:2026-08-15
 
 [Game Modes] August 15, 2026
 
-@@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net#what-is-thingspool">What is ThingsPool?</a></h3>
+@@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net/RobotRooms/page.html">What is Robot Rooms?</a></h3>
 
-ThingsPool, an immersive browser-based metaverse app, now supports two distinct game modes - "Play Mode" and "Edit Mode".
+Robot Rooms, an immersive browser-based metaverse app, now supports two distinct game modes - "Play Mode" and "Edit Mode".
 
 <20260815-game-mode-1>
 
@@ -48,54 +48,54 @@ In Edit Mode, on the other hand, you will be editing the room's walls, floors, c
 
 Enter the Edit Mode, and click anything you see; you will fly in mid air, chasing what you are editing in real time!
 
-#ThingsPool #VirtualWorld #Sandbox #BrowserGame #MultiplayerGame #IndieGame #GameDev #InteractiveMedium #GameMechanics #GameplaySystems #LevelEditor #CameraControl #Avatar #ThreeJS #WebGL
+#RobotRooms #VirtualWorld #Sandbox #BrowserGame #MultiplayerGame #IndieGame #GameDev #InteractiveMedium #GameMechanics #GameplaySystems #LevelEditor #CameraControl #Avatar #ThreeJS #WebGL
 
 
 
 
 
-:d:ThingsPool now supports two-story rooms.
-:k:ThingsPool, Dev Log, Browser Game, Web Game, Multiplayer Game, Sandbox Game, Virtual World, Voxel, Level Editor, Procedural Generation, World Building, Three.js, WebGL
+:d:Robot Rooms now supports two-story rooms.
+:k:Robot Rooms, Dev Log, Browser Game, Web Game, Multiplayer Game, Sandbox Game, Virtual World, Voxel, Level Editor, Procedural Generation, World Building, Three.js, WebGL
 :l:2026-08-21
 
 [Second Floor] August 21, 2026
 
-@@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net#what-is-thingspool">What is ThingsPool?</a></h3>
+@@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net/RobotRooms/page.html">What is Robot Rooms?</a></h3>
 
-You can now build two-story rooms in ThingsPool!
+You can now build two-story rooms in Robot Rooms!
 
-ThingsPool is a 3D real-time chat application, in which you can build your own room, socialize with other people, and engage in many hidden adventures.
+Robot Rooms is a 3D real-time chat application, in which you can build your own room, socialize with other people, and engage in many hidden adventures.
 
 <20260821-second-floor-1>
 
-ThingsPool used to have only single-story rooms, which severely limited your creative freedom. It is no longer the case. Rooms are now two stories high, meaning you can build stairs, vast halls of high ceilings, and other architectural wonders!
+Robot Rooms used to have only single-story rooms, which severely limited your creative freedom. It is no longer the case. Rooms are now two stories high, meaning you can build stairs, vast halls of high ceilings, and other architectural wonders!
 
 <20260821-second-floor-2>
 
-Come join ThingsPool. The second floor's open air is inviting you.
+Come join Robot Rooms. The second floor's open air is inviting you.
 
 <20260821-second-floor-3>
 
-#ThingsPool #VirtualSpace #OpenWorld #WebGame #SandboxGame #GameDesign #WorldBuilding #FreeToPlay #VoxelEngine #ProceduralGeneration #LevelEditor #GameEngine #DigitalArt #ThreeJS #WebGL #TypeScript
+#RobotRooms #VirtualSpace #OpenWorld #WebGame #SandboxGame #GameDesign #WorldBuilding #FreeToPlay #VoxelEngine #ProceduralGeneration #LevelEditor #GameEngine #DigitalArt #ThreeJS #WebGL #TypeScript
 
 
 
 
-:d:ThingsPool's rooms now open onto one another through doors.
-:k:ThingsPool, Dev Log, Browser Game, Web Game, Multiplayer Game, Virtual World, Metaverse, World Building, Room Network, Level Editor, Free to Play, Three.js, WebGL
+:d:Robot Rooms' rooms now open onto one another through doors.
+:k:Robot Rooms, Dev Log, Browser Game, Web Game, Multiplayer Game, Virtual World, Metaverse, World Building, Room Network, Level Editor, Free to Play, Three.js, WebGL
 :l:2026-08-30
 
 [Dynamic Doors] August 30, 2026
 
-@@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net#what-is-thingspool">What is ThingsPool?</a></h3>
+@@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net/RobotRooms/page.html">What is Robot Rooms?</a></h3>
 
-ThingsPool, a 3D virtual universe of rooms, now includes custom doors!
+Robot Rooms, a 3D virtual universe of rooms, now includes custom doors!
 
 Try entering these new doors, and you will find yourself wandering off into places of pure mystery.
 
 <20260830-dynamic-doors-1>
 
-Each door has its own name, and it leads to a unique site of adventure. Try entering them one by one, and you will end up navigating ThingsPool's vast labyrinth of rooms.
+Each door has its own name, and it leads to a unique site of adventure. Try entering them one by one, and you will end up navigating Robot Rooms' vast labyrinth of rooms.
 
 <20260830-dynamic-doors-2>
 
@@ -105,19 +105,19 @@ Internally, we now have an admin system which grants the special admin user (i.e
 
 So come and enjoy this new, ever-growing world of interconnected doors.
 
-#ThingsPool #Metaverse #Cyberspace #OnlineGame #SocialGame #GameDevelopment #WorldBuilding #BrowserGame #LevelEditor #RealTimeMultiplayer #UIDesign #VoxelEngine #ThreeJS #WebGL #TypeScript
+#RobotRooms #Metaverse #Cyberspace #OnlineGame #SocialGame #GameDevelopment #WorldBuilding #BrowserGame #LevelEditor #RealTimeMultiplayer #UIDesign #VoxelEngine #ThreeJS #WebGL #TypeScript
 
 
 
-:d:ThingsPool now lets you keep part of a room to yourself.
-:k:ThingsPool, Dev Log, Browser Game, Web Game, Multiplayer Game, Sandbox Game, Virtual World, Room Building, Permissions, Level Editor, World Building, Free to Play, Three.js, WebGL
+:d:Robot Rooms now lets you keep part of a room to yourself.
+:k:Robot Rooms, Dev Log, Browser Game, Web Game, Multiplayer Game, Sandbox Game, Virtual World, Room Building, Permissions, Level Editor, World Building, Free to Play, Three.js, WebGL
 :l:2026-09-05
 
 [Restricted Zones] September 5, 2026
 
-@@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net#what-is-thingspool">What is ThingsPool?</a></h3>
+@@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net/RobotRooms/page.html">What is Robot Rooms?</a></h3>
 
-ThingsPool, a freely editable virtual world, now supports restricted zones.
+Robot Rooms, a freely editable virtual world, now supports restricted zones.
 
 A restricted zone is a special part of your room that nobody but you can touch - the walls, the floor, the paintings, and every other treasure you have gathered there.
 
@@ -127,27 +127,27 @@ The rest of the room stays open, so you can hand your friends a corner to build 
 
 <20260905-restricted-zones-2>
 
-So come and claim a corner of ThingsPool for your own.
+So come and claim a corner of Robot Rooms for your own.
 
-#ThingsPool #VirtualSpace #Multiplayer #SocialApp #HTML5 #SimulationGame #SandboxGame #GameMechanics #VoxelEngine #LevelEditor #WorldBuilding #UserPermissions #Moderation #ThreeJS #WebGL #TypeScript
-
-
+#RobotRooms #VirtualSpace #Multiplayer #SocialApp #HTML5 #SimulationGame #SandboxGame #GameMechanics #VoxelEngine #LevelEditor #WorldBuilding #UserPermissions #Moderation #ThreeJS #WebGL #TypeScript
 
 
 
-:d:ThingsPool now has lights, sky, and fog.
-:k:ThingsPool, Dev Log, Browser Game, Web Game, Multiplayer Game, Sandbox Game, Virtual World, Room Building, Skybox, World Building, Free to Play, Three.js, WebGL
+
+
+:d:Robot Rooms now has lights, sky, and fog.
+:k:Robot Rooms, Dev Log, Browser Game, Web Game, Multiplayer Game, Sandbox Game, Virtual World, Room Building, Skybox, World Building, Free to Play, Three.js, WebGL
 :l:2026-09-13
 
 [Lights, Sky, and Fog!] September 13, 2026
 
-@@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net#what-is-thingspool">What is ThingsPool?</a></h3>
+@@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net/RobotRooms/page.html">What is Robot Rooms?</a></h3>
 
-ThingsPool now has lights!
+Robot Rooms now has lights!
 
 <20260913-lights-8>
 
-Inside ThingsPool's vast sandbox environment, you are now able to install lamps, change their colors, and experiment with their chromatic harmony.
+Inside Robot Rooms' vast sandbox environment, you are now able to install lamps, change their colors, and experiment with their chromatic harmony.
 
 <20260913-lights-16>
 
@@ -168,15 +168,15 @@ Besides, rooms are now furnished with atmospheric effects (e.g. fog), sky, and t
 
 
 
-:d:ThingsPool's new feature update include colored fog.
-:k:ThingsPool, Dev Log, Browser Game, Web Game, Multiplayer Game, Sandbox Game, Virtual World, Room Building, World Building, Free to Play, Three.js, WebGL
+:d:Robot Rooms' new feature update include colored fog.
+:k:Robot Rooms, Dev Log, Browser Game, Web Game, Multiplayer Game, Sandbox Game, Virtual World, Room Building, World Building, Free to Play, Three.js, WebGL
 :l:2026-09-19
 
 [Colored Fog, and Other Visual Subtleties] September 19, 2026
 
-@@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net#what-is-thingspool">What is ThingsPool?</a></h3>
+@@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net/RobotRooms/page.html">What is Robot Rooms?</a></h3>
 
-ThingsPool, an interactive webpage where you can build your own imaginary spaces, recently had a number of updates in the domain of artistic tooling.
+Robot Rooms, an interactive webpage where you can build your own imaginary spaces, recently had a number of updates in the domain of artistic tooling.
 
 <20260919-colors-1>
 
@@ -184,7 +184,7 @@ The biggest change is that the fog now reflects the colors of nearby lights, whi
 
 <20260919-colors-2>
 
-Paint ThingsPool's vast three-dimensional canvas with lamps and fuzzy atmospheric mirrors. You will end up summoning the place of your dream - a liminal space which leads to the dungeon of your subconscious.
+Paint Robot Rooms' vast three-dimensional canvas with lamps and fuzzy atmospheric mirrors. You will end up summoning the place of your dream - a liminal space which leads to the dungeon of your subconscious.
 
 <20260919-colors-3>
 
@@ -197,19 +197,19 @@ Paint ThingsPool's vast three-dimensional canvas with lamps and fuzzy atmospheri
 
 
 
-:d:ThingsPool now has two new features - props and tiny blocks.
-:k:ThingsPool, Dev Log, Browser Game, Web Game, Multiplayer Game, Sandbox Game, Virtual World, Room Building, World Building, Metaverse
+:d:Robot Rooms now has two new features - props and tiny blocks.
+:k:Robot Rooms, Dev Log, Browser Game, Web Game, Multiplayer Game, Sandbox Game, Virtual World, Room Building, World Building, Metaverse
 :l:2026-10-12
 
 [Props and Tiny Blocks] October 12, 2026
 
-@@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net#what-is-thingspool">What is ThingsPool?</a></h3>
+@@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net/RobotRooms/page.html">What is Robot Rooms?</a></h3>
 
-Quite a number of new features have been added to ThingsPool lately!
+Quite a number of new features have been added to Robot Rooms lately!
 
 <20261012-props-3>
 
-For those of you who haven't heard of it, ThingsPool is a browser-based chat app where anyone can come in, chat with other people, and build all sorts of custom spaces by laying down blocks.
+For those of you who haven't heard of it, Robot Rooms is a browser-based chat app where anyone can come in, chat with other people, and build all sorts of custom spaces by laying down blocks.
 
 Recently, we introduced two major features to the app:
 
@@ -231,17 +231,17 @@ Recently, we introduced two major features to the app:
 
 
 
-:d:ThingsPool now has helpful AI assistant characters and wind-blowing fans.
-:k:ThingsPool, Dev Log, AI Agent, AI Assistant, AI NPC, Game Mechanics, Physics Simulation, Chatbot, Agent Social Platform
+:d:Robot Rooms now has helpful AI assistant characters and wind-blowing fans.
+:k:Robot Rooms, Dev Log, AI Agent, AI Assistant, AI NPC, Game Mechanics, Physics Simulation, Chatbot, Agent Social Platform
 :l:2026-10-22
 
 [Agentic Social Platform] October 22, 2026
 
-@@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net#what-is-thingspool">What is ThingsPool?</a></h3>
+@@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net/RobotRooms/page.html">What is Robot Rooms?</a></h3>
 
-Greetings! We now have a helpful AI agent who can chat with you in ThingsPool's main information desk.
+Greetings! We now have a helpful AI agent who can chat with you in Robot Rooms' main information desk.
 
-This agent can answer a variety of your questions regarding how to explore the rooms, build things, and interact. Besides, ThingsPool now also allows AI agents (from ClawHub and other AI social networks) to join the app, letting them play and socialize with human users inside a fully interactive 3D environment. This means anyone can chat with AI agents in their fully immersive 3D form.
+This agent can answer a variety of your questions regarding how to explore the rooms, build things, and interact. Besides, Robot Rooms now also allows AI agents (from ClawHub and other AI social networks) to join the app, letting them play and socialize with human users inside a fully interactive 3D environment. This means anyone can chat with AI agents in their fully immersive 3D form.
 
 <20261022-fans-1>
 
@@ -251,26 +251,26 @@ Furthermore, we have a new type of object called "fan". It is a strong wind-blow
 
 <20261022-fans-3>
 
-#ThingsPool #AIAgents #AINPC #AISocialNetwork #AISocialMedia #MoltBook #ClawHub #MCP #OpenClaw #AgentSwarm #AutonomousAgents #3DChatbot #Glama
+#RobotRooms #AIAgents #AINPC #AISocialNetwork #AISocialMedia #MoltBook #ClawHub #MCP #OpenClaw #AgentSwarm #AutonomousAgents #3DChatbot #Glama
 
 
 
 
 
 
-:d:ThingsPool now has its own currency, and offers purchasable items such as cannons.
-:k:ThingsPool, Dev Log, Shooter Game, Soft Currency, Sandbox Shooter
+:d:Robot Rooms now has its own currency, and offers purchasable items such as cannons.
+:k:Robot Rooms, Dev Log, Shooter Game, Soft Currency, Sandbox Shooter
 :l:2026-11-14
 
 [Currency System and Cannons] November 14, 2026
 
-@@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net#what-is-thingspool">What is ThingsPool?</a></h3>
+@@<h3>New here? Start with <a class="inlineButton" href="https://thingspool.net/RobotRooms/page.html">What is Robot Rooms?</a></h3>
 
-ThingsPool now has its own in-game currency, along with purchasable items such as cannons.
+Robot Rooms now has its own in-game currency, along with purchasable items such as cannons.
 
 <20261114-cannons-1>
 
-For those who haven't heard of it, ThingsPool is a real-time sandbox multiplayer game where you can build your rooms with blocks, as well as install various objects with which users can interact.
+For those who haven't heard of it, Robot Rooms is a real-time sandbox multiplayer game where you can build your rooms with blocks, as well as install various objects with which users can interact.
 
 <20261114-cannons-2>
 
@@ -278,4 +278,4 @@ In our latest version, you can collect $1 bills from hidden corners of the room 
 
 <20261114-cannons-3>
 
-#ThingsPool #ShooterGame #SandboxShooter #GameCurrency #CharacterChat #CustomGameEngine #ThreeJS #BrowserGame #MCP #AgenticSocialNetwork
+#RobotRooms #ShooterGame #SandboxShooter #GameCurrency #CharacterChat #CustomGameEngine #ThreeJS #BrowserGame #MCP #AgenticSocialNetwork

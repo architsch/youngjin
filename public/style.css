@@ -45,16 +45,22 @@ a:active {
 	background-color: #303030;
 	color: #707070;
 }
-/* A readable measure for running text (in the panel, or in a collapsible group there), and a size
-   that doesn't shrink with a phone's screen. */
+/* A readable measure for running text (in the panel, or in a collapsible group there, or with its image button),
+   and a size that doesn't shrink with a phone's screen. */
 .fullscreenPanel > p, .fullscreenPanel > h1, .fullscreenPanel > h3, .fullscreenPanel > hr, .fullscreenPanel > pre,
-.collapsibleContent > p, .collapsibleContent > h1, .collapsibleContent > h3, .collapsibleContent > hr, .collapsibleContent > pre {
+.collapsibleContent > p, .collapsibleContent > h1, .collapsibleContent > h3, .collapsibleContent > hr, .collapsibleContent > pre,
+.imageButtonGroup {
 	max-width: 72ch;
 }
-.fullscreenPanel > p, .collapsibleContent > p, .fullscreenPanel .excerpt {
+.fullscreenPanel > p, .collapsibleContent > p, .imageButtonGroup, .imageButtonGroup > p, .fullscreenPanel .excerpt {
 	font-size: 16.00px;
 }
-.fullscreenPanel > p, .collapsibleContent > p {
+/* In its paragraph's own weight and slant, since its measure is counted in that font's characters. */
+.imageButtonGroup {
+	font-style: normal;
+	font-weight: 400;
+}
+.fullscreenPanel > p, .collapsibleContent > p, .imageButtonGroup {
 	line-height: 1.6;
 	margin-top: 1.1em;
 	margin-bottom: 1.1em;
@@ -137,6 +143,19 @@ p {
 	font-weight: 400;
 	background-color: #303030;
 	color: #c0c0c0;
+}
+h4 {
+	position: relative;
+	display: block;
+	max-width: 100.00%;
+	padding: 0 0 0 0;
+	margin: 2.40% 1.00% 2.40% 0;
+	font-size: min(2.18vmax, 19.20px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
+	font-style: italic;
+	font-weight: 800;
+	background-color: #303030;
+	color: #707070;
 }
 h3 {
 	position: relative;
@@ -388,6 +407,32 @@ hr {
 	background-color: #303030;
 	color: #c0c0c0;
 	border-radius: 2vmin;
+}
+/* A paragraph and the image button that goes with it, together no wider than running text: the button beside the
+   paragraph on a wide screen and under it on a tall one, small either way, so that what follows starts higher up
+   the page. Unclipped, unlike everything else: the button's glow reaches past its box. */
+.imageButtonGroup {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	overflow: visible;
+}
+.imageButtonGroup > p {
+	flex: 1 1 0;
+	min-width: 0;
+	margin: 0;
+}
+/* As wide as its picture, up to a share of the group's width, and on a tall screen never wider than on a wide one. */
+.imageButtonGroup > .imageButton {
+	flex: 0 0 auto;
+	max-width: 24%;
+	margin: 0 0 0 2%;
+	overflow: visible;
+}
+.imageButtonGroup > .imageButton > img {
+	display: block;
+	max-width: 100%;
+	margin: 0;
 }
 .m_image {
 	position: relative;
@@ -815,6 +860,19 @@ p {
 	background-color: #303030;
 	color: #c0c0c0;
 }
+h4 {
+	position: relative;
+	display: block;
+	max-width: 100.00%;
+	padding: 0 0 0 0;
+	margin: 4.00% 2.50% 4.00% 0;
+	font-size: min(2.18vmax, 19.20px);
+	font-family: "Lucida Console", "Lucida Sans Typewriter", "Monaco", Consolas, ui-monospace, Menlo, monospace;
+	font-style: italic;
+	font-weight: 800;
+	background-color: #303030;
+	color: #707070;
+}
 h3 {
 	position: relative;
 	display: block;
@@ -1065,6 +1123,32 @@ hr {
 	background-color: #303030;
 	color: #c0c0c0;
 	border-radius: 2vmin;
+}
+/* A paragraph and the image button that goes with it, together no wider than running text: the button beside the
+   paragraph on a wide screen and under it on a tall one, small either way, so that what follows starts higher up
+   the page. Unclipped, unlike everything else: the button's glow reaches past its box. */
+.imageButtonGroup {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	overflow: visible;
+}
+.imageButtonGroup > p {
+	align-self: stretch;
+	min-width: 0;
+	margin: 0;
+}
+/* As wide as its picture, up to a share of the group's width, and on a tall screen never wider than on a wide one. */
+.imageButtonGroup > .imageButton {
+	flex: 0 0 auto;
+	max-width: min(32%, 17.28ch);
+	margin: 0.7em 0 0 0;
+	overflow: visible;
+}
+.imageButtonGroup > .imageButton > img {
+	display: block;
+	max-width: 100%;
+	margin: 0;
 }
 .m_image {
 	position: relative;

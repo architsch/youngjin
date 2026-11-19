@@ -3,18 +3,26 @@
 <title>ThingsPool</title>
 <link rel="self" type="application/atom+xml" href="https://thingspool.net/feed.atom"/>
 <link href="https://thingspool.net"/>
-<updated>2026-11-14T00:00:00.000Z</updated>
+<updated>2026-11-18T00:00:00.000Z</updated>
 <author>
   <name>Youngjin Kang</name>
 </author>
 <id>urn:uuid:02210672-5391-4cc8-800a-2a88f3a6d00c</id>
+<entry>
+  <title>Robot Rooms</title>
+  <link href="https://thingspool.net/RobotRooms/page.html"/>
+  <id>https://thingspool.net/RobotRooms/page.html</id>
+  <published>2026-11-18T00:00:00.000Z</published>
+  <updated>2026-11-18T00:00:00.000Z</updated>
+  <summary>Robot Rooms is a 3D sandbox game that runs in your browser, with no download. Build with blocks, chat with people, and explore a world made of rooms.</summary>
+</entry>
 <entry>
   <title>Currency System and Cannons</title>
   <link href="https://thingspool.net/devlog-2026/page-10.html"/>
   <id>https://thingspool.net/devlog-2026/page-10.html</id>
   <published>2026-11-14T00:00:00.000Z</published>
   <updated>2026-11-14T00:00:00.000Z</updated>
-  <summary>ThingsPool now has its own currency, and offers purchasable items such as cannons.</summary>
+  <summary>Robot Rooms now has its own currency, and offers purchasable items such as cannons.</summary>
 </entry>
 <entry>
   <title>Post-AI Computer Science - Volume 5</title>
@@ -46,7 +54,7 @@
   <id>https://thingspool.net/devlog-2026/page-9.html</id>
   <published>2026-10-22T00:00:00.000Z</published>
   <updated>2026-10-22T00:00:00.000Z</updated>
-  <summary>ThingsPool now has helpful AI assistant characters and wind-blowing fans.</summary>
+  <summary>Robot Rooms now has helpful AI assistant characters and wind-blowing fans.</summary>
 </entry>
 <entry>
   <title>Post-AI Computer Science - Volume 2</title>
@@ -70,7 +78,7 @@
   <id>https://thingspool.net/devlog-2026/page-8.html</id>
   <published>2026-10-12T00:00:00.000Z</published>
   <updated>2026-10-12T00:00:00.000Z</updated>
-  <summary>ThingsPool now has two new features - props and tiny blocks.</summary>
+  <summary>Robot Rooms now has two new features - props and tiny blocks.</summary>
 </entry>
 <entry>
   <title>Colored Fog, and Other Visual Subtleties</title>
@@ -78,7 +86,7 @@
   <id>https://thingspool.net/devlog-2026/page-7.html</id>
   <published>2026-09-19T00:00:00.000Z</published>
   <updated>2026-09-19T00:00:00.000Z</updated>
-  <summary>ThingsPool's new feature update include colored fog.</summary>
+  <summary>Robot Rooms' new feature update include colored fog.</summary>
 </entry>
 <entry>
   <title>Lights, Sky, and Fog!</title>
@@ -86,7 +94,7 @@
   <id>https://thingspool.net/devlog-2026/page-6.html</id>
   <published>2026-09-13T00:00:00.000Z</published>
   <updated>2026-09-13T00:00:00.000Z</updated>
-  <summary>ThingsPool now has lights, sky, and fog.</summary>
+  <summary>Robot Rooms now has lights, sky, and fog.</summary>
 </entry>
 <entry>
   <title>Restricted Zones</title>
@@ -94,7 +102,7 @@
   <id>https://thingspool.net/devlog-2026/page-5.html</id>
   <published>2026-09-05T00:00:00.000Z</published>
   <updated>2026-09-05T00:00:00.000Z</updated>
-  <summary>ThingsPool now lets you keep part of a room to yourself.</summary>
+  <summary>Robot Rooms now lets you keep part of a room to yourself.</summary>
 </entry>
 <entry>
   <title>Dynamic Doors</title>
@@ -102,7 +110,7 @@
   <id>https://thingspool.net/devlog-2026/page-4.html</id>
   <published>2026-08-30T00:00:00.000Z</published>
   <updated>2026-08-30T00:00:00.000Z</updated>
-  <summary>ThingsPool's rooms now open onto one another through doors.</summary>
+  <summary>Robot Rooms' rooms now open onto one another through doors.</summary>
 </entry>
 <entry>
   <title>Second Floor</title>
@@ -110,7 +118,7 @@
   <id>https://thingspool.net/devlog-2026/page-3.html</id>
   <published>2026-08-21T00:00:00.000Z</published>
   <updated>2026-08-21T00:00:00.000Z</updated>
-  <summary>ThingsPool now supports two-story rooms.</summary>
+  <summary>Robot Rooms now supports two-story rooms.</summary>
 </entry>
 <entry>
   <title>Game Modes</title>
@@ -118,15 +126,15 @@
   <id>https://thingspool.net/devlog-2026/page-2.html</id>
   <published>2026-08-15T00:00:00.000Z</published>
   <updated>2026-08-15T00:00:00.000Z</updated>
-  <summary>ThingsPool now supports distinct game modes.</summary>
+  <summary>Robot Rooms now supports distinct game modes.</summary>
 </entry>
 <entry>
-  <title>Introducing ThingsPool</title>
+  <title>Introducing Robot Rooms</title>
   <link href="https://thingspool.net/devlog-2026/page-1.html"/>
   <id>https://thingspool.net/devlog-2026/page-1.html</id>
   <published>2026-08-08T00:00:00.000Z</published>
   <updated>2026-08-08T00:00:00.000Z</updated>
-  <summary>ThingsPool is a 3D chat app which runs in a browser tab.</summary>
+  <summary>Robot Rooms is a 3D chat app which runs in a browser tab.</summary>
 </entry>
 <entry>
   <title>Linear Algebra for Game Development - Part 30</title>
@@ -374,7 +382,7 @@
   <id>https://thingspool.net/ArtRaider/page.html</id>
   <published>2025-04-15T00:00:00.000Z</published>
   <updated>2025-04-15T00:00:00.000Z</updated>
-  <summary>ArtRaider</summary>
+  <summary>ArtRaider is a free web game which includes stealth action, first-person control, and online art exhibition. It also comes with a custom level editor, which lets you design your own virtual art exhibition rooms.</summary>
 </entry>
 <entry>
   <title>To Every Lonely Artist</title>
@@ -1286,7 +1294,7 @@
   <id>https://thingspool.net/SpaceTown/page.html</id>
   <published>2023-09-20T00:00:00.000Z</published>
   <updated>2023-09-20T00:00:00.000Z</updated>
-  <summary>SpaceTown</summary>
+  <summary>SpaceTown is a space construction simulator with emergent gameplay mechanics and a variety of collectibles.</summary>
 </entry>
 <entry>
   <title>The Island of Infinite Treasures - 10</title>
@@ -3654,7 +3662,7 @@
   <id>https://thingspool.net/PoliceChase/page.html</id>
   <published>2023-09-10T00:00:00.000Z</published>
   <updated>2023-09-10T00:00:00.000Z</updated>
-  <summary>Police Chase</summary>
+  <summary>Police Chase is a puzzle game which features turn-based tabletop mechanics and item-based tactics.</summary>
 </entry>
 <entry>
   <title>HuntLand</title>
@@ -3662,7 +3670,7 @@
   <id>https://thingspool.net/HuntLand/page.html</id>
   <published>2023-09-10T00:00:00.000Z</published>
   <updated>2023-09-10T00:00:00.000Z</updated>
-  <summary>HuntLand</summary>
+  <summary>HuntLand is a free web game (Free browser game) which features sandbox action, first-person control, and open-world gameplay.</summary>
 </entry>
 <entry>
   <title>Water vs Fire</title>
@@ -3670,6 +3678,6 @@
   <id>https://thingspool.net/Water-vs-Fire/page.html</id>
   <published>2023-09-10T00:00:00.000Z</published>
   <updated>2023-09-10T00:00:00.000Z</updated>
-  <summary>Water vs Fire</summary>
+  <summary>Water vs Fire is a minimalistic RTS which features a battle between two opposing elements - Water and Fire.</summary>
 </entry>
 </feed>

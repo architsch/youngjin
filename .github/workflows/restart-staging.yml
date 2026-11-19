@@ -41,8 +41,8 @@ jobs:
         curl -fsS --max-time 10 http://127.0.0.1:3001/health || echo "(no answer — the app is already down)"
 
     - name: Restart the staging app
-      # `pm2 restart` deliberately, rather than the `pm2 startOrRestart ecosystem.config.js`
-      # that the deploy workflow uses: this workflow must not be able to change what runs.
+      # `pm2 restart` deliberately, rather than registering the app anew from
+      # ecosystem.config.js as the deploy workflow does: this workflow must not be able to change what runs.
       # A plain restart respawns the app from the same script, bundle and captured
       # environment, which is also why `--update-env` is left off.
       #
@@ -80,4 +80,5 @@ jobs:
     - name: Verify runtime Node.js version
       # A restart is exactly when a PM2 daemon still holding an old interpreter would put the
       # app back onto it, so this is worth asserting here as much as after a deployment.
+      working-directory: robot-rooms
       run: node dev/scripts/assertRuntimeNodeVersion.js staging

@@ -1,6 +1,6 @@
 ---
 name: writing-push
-description: Get the user's essays and other library writing on thingspool.net in front of readers, above all the ones it is written for (philosophers, engineers and other curious people who think hard, who would understand it in depth and care to pass it on), through what an assistant can do on its own, each action only after he has seen it (but for clean directory listings, which he lets go out unseen) — review where every earlier submission and listing stands and who has read, linked or answered since, bring the ledger, the registry and the readers file up to date, look for the people whose own work a post meets and for routes that reach such readers, notify search engines through IndexNow, list the site's feed in small-web directories, send one invited suggestion to a curator — and record everything and what came of it. It writes nothing to a reader in his name and prepares no Hacker News, Reddit, forum, Slack or LinkedIn posts. Use when asked to promote, advertise, share or spread a blog post, essay or library writing, to find or attract readers for it, to see who has read or answered it, or after a new essay is published. For the game itself, use distribution-push.
+description: Get the user's essays and other library writing on thingspool.net in front of readers, above all the ones it is written for (philosophers, engineers and other curious people who think hard, who would understand it in depth and care to pass it on), through what an assistant can do on its own, each action only after he has seen it (but for clean directory listings, which he lets go out unseen) — review where every earlier submission and listing stands and who has read, linked or answered since, bring the ledger, the registry and the readers file up to date, look for the people whose own work a post meets and for routes that reach such readers, notify search engines through IndexNow, list the site's feed in small-web directories, send one invited suggestion to a curator — and record everything and what came of it. It writes nothing to a reader in his name and prepares no Hacker News, Reddit, forum, Slack or LinkedIn posts. Use when asked to promote, advertise, share or spread a blog post, essay or library writing, to find or attract readers for it, to see who has read or answered it, or after a new essay is published. For the game itself (Robot Rooms), use distribution-push.
 ---
 
 # Writing Push
@@ -11,6 +11,9 @@ written for (see The aim), through what the assistant can do itself. His part is
 action (not even that for a clean directory listing, see step 4) and, where a route needs it, a one-time
 setup. It never writes, edits, titles or chooses the subject of his writing, and it does not promote the
 game: that is `distribution-push`.
+
+Paths here are from the repository's root, where the site's generator is too (`ssg/`, with its templates
+in `ssg/views/`): `npm run build` in `ssg/` builds the pages, and the root `CLAUDE.md` tells the rest.
 
 ## The aim
 
@@ -100,9 +103,9 @@ Then sync:
   series list; the feed carries it. A failure is a finding for him, not something this skill fixes. So
   is a page that gives an arriving reader no way to write to him: it is reported once, as a fact, and
   noted in `READERS.md`.
-- If it continues a subject that has a feed of its own (`src/server/ssg/data/feedTopicData.ts`; Planet IF
-  reads `narrative.atom`), ask him whether it joins. Adding its path there is a site change he approves
-  and deploys.
+- If it continues a subject that has a feed of its own
+  (`ssg/data/feedTopicData.ts`; Planet IF reads `narrative.atom`), ask him
+  whether it joins. Adding its path there is a site change he approves and deploys.
 
 ## Step 3 — Look for people and routes
 

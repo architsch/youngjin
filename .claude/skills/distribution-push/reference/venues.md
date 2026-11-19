@@ -1,6 +1,6 @@
 # Venue Registry
 
-What is currently known about each place ThingsPool could be published or promoted. Every entry
+What is currently known about each place Robot Rooms could be published or promoted. Every entry
 carries a **Verified** date. Entries stamped more than a couple of months ago are hypotheses, not
 facts — step 3 of the skill re-fetches the venue's own rules page before the venue is used.
 
@@ -236,7 +236,7 @@ post, it becomes a **repeatable** channel — a new post is a new reason to retu
 ### MCP server directories (the AI-agents angle)
 Where people who run agents look for servers to connect them to. They list the MCP endpoint
 (`https://app.thingspool.net/mcp`), not a page, so no `?ref=` tag applies: an agent says where it heard
-of ThingsPool itself when it registers, if it does (see SKILL.md, "Measure agents apart").
+of Robot Rooms itself when it registers, if it does (see SKILL.md, "Measure agents apart").
 
 **What they deliver, measured 2026-10-24:** machines, not operators. In the five days after the listings
 went up, `/mcp` took 4,449 requests, nearly all from about 40 crawlers, liveness probes and scanners;
@@ -334,7 +334,16 @@ suggest from it.
   automated policy scan a submission is listed as a **Community** connector "with no action from
   you"; listings judged highly useful may be escalated to Verified review. Listing: name 100
   characters, one-liner 200, description 2,000, one to five categories, a permanent slug; test
-  credentials "for a fully populated account". Two policy lines to weigh against the server's
+  credentials "for a fully populated account". **Renaming** (docs read 2026-11-19, for the game's new
+  name): the display name is edited in the portal and re-reviewed ("changing the name of a published
+  server affects existing users and requires re-review"), but "the URL slug is locked", so
+  `claude.ai/directory/thingspool` stays this listing's address under any name. A connector is removed
+  only by email to `mcp-review@anthropic.com`, which also takes "other edits or escalations"; whether
+  a removed listing's slug can be used again, or two listings may name one server, is not documented.
+  He chose to keep the address (2026-11-19: not "worthwhile to poke Anthropic's team" over what is meant
+  to be permanent), so replacing the listing is not proposed again; its title and description are still
+  his to edit when the rename goes live.
+  Two policy lines to weigh against the server's
   instructions: "must not direct Claude to dynamically pull behavioral instructions from external
   sources" (they point at skill.md, which carries manners) and no promotion (they ask for a daily
   visit). Claude's later requests still come from Anthropic's addresses, under the per-address caps.
@@ -503,7 +512,11 @@ suggest from it.
     `claude.ai/directory/manage/plugins/9110197f-239c-482d-9114-232f00f94cbb` (tabs for the review, versions, usage
     and settings); a passing version is not live until Publish is pressed, and the first one always waits for a
     reviewer. Its scheduled check reads the repository about every six hours; a push webhook is optional and was
-    left off. The steps, at
+    left off. **Renaming** (docs read 2026-11-19): a listed plugin's "name and short description follow the version
+    that's live", so a new name arrives with a new version, and it must be one "no other organization's plugin
+    uses". A submission in review and never published can be withdrawn, and submitting "the same repository and
+    path" again reopens it. A submission's repository and folder cannot be changed; what a renamed GitHub repository
+    does to one, and how a plugin's page address is formed, are not documented. The steps, at
     claude.ai/directory/manage → Submit new → Plugin bundle: the repository, Validate, the listing details it reads
     from `plugin.json` and the README, four data-handling questions (personal data, data sent beyond its declared
     connector, retention, under-18 use), a contact email and four acknowledgements (his to tick), and how new
@@ -516,7 +529,9 @@ suggest from it.
     `mcp.json`, valid against that spec's schemas), which Hermes loads; `.cursor-plugin/` and
     `gemini-extension.json` are not in it. The manual is not a third copy in the repository: the build takes it.
     Claude Code users can already add it from the repository (`claude plugin marketplace add
-    architsch/thingspool-plugin`, then `claude plugin install thingspool@thingspool`).
+    architsch/thingspool-plugin`, then `claude plugin install thingspool@thingspool`; once the package
+    renamed on 2026-11-18 and 11-19 is pushed and he has renamed the repository, `architsch/robot-rooms-plugin`
+    and `robot-rooms@robot-rooms`).
   - **skills.sh:** no submission; a page appears after the first `npx skills add`. On `architsch/youngjin` that
     command finds the nine internal skills under `.claude/skills/` first and never offers ThingsPool's. The clean
     route is a file on thingspool.net, `/.well-known/agent-skills/index.json` (draft format 0.2.0: name, `type:

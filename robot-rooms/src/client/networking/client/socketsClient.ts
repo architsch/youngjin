@@ -1,0 +1,377 @@
+import { io, Socket } from "socket.io-client";
+import { inflateSync } from "fflate";
+import SetObjectTransformSignal from "../../../shared/object/types/setObjectTransformSignal";
+import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
+import RemoveObjectSignal from "../../../shared/object/types/removeObjectSignal";
+import SetObjectMetadataSignal from "../../../shared/object/types/setObjectMetadataSignal";
+import SetObjectPathSignal from "../../../shared/object/types/setObjectPathSignal";
+import ObjectCollectedSignal from "../../../shared/object/types/objectCollectedSignal";
+import InventorySignal from "../../../shared/inventory/types/inventorySignal";
+import LoginRewardSignal from "../../../shared/inventory/types/loginRewardSignal";
+import BuyItemSignal from "../../../shared/inventory/types/buyItemSignal";
+import BuyItemResultSignal from "../../../shared/inventory/types/buyItemResultSignal";
+import RoomChangedSignal from "../../../shared/room/types/roomChangedSignal";
+import RoomChangeRejectedSignal from "../../../shared/room/types/roomChangeRejectedSignal";
+import RobotRoomsEnv from "../../system/types/robotRoomsEnv";
+import EncodingUtil from "../../../shared/networking/util/encodingUtil";
+import EncodableArray from "../../../shared/networking/types/encodableArray";
+import EncodableRawByteNumber from "../../../shared/networking/types/encodableRawByteNumber";
+import SignalTypeConfigMap from "../../../shared/networking/maps/signalTypeConfigMap";
+import EncodableData from "../../../shared/networking/types/encodableData";
+import RequestRoomChangeSignal from "../../../shared/room/types/requestRoomChangeSignal";
+import { connectionStateObservable, notificationMessageObservable } from "../../system/clientObservables";
+import { tryStartClientProcess, endClientProcess, ongoingClientProcessExists } from "../../system/types/clientProcess";
+import BufferState from "../../../shared/networking/types/bufferState";
+import SetVoxelQuadTextureSignal from "../../../shared/voxel/types/update/setVoxelQuadTextureSignal";
+import RemoveVoxelBlockSignal from "../../../shared/voxel/types/update/removeVoxelBlockSignal";
+import AddVoxelBlockSignal from "../../../shared/voxel/types/update/addVoxelBlockSignal";
+import MoveVoxelBlockSignal from "../../../shared/voxel/types/update/moveVoxelBlockSignal";
+import UserCommandSignal from "../../../shared/user/types/userCommandSignal";
+import HoldObjectSignal from "../../../shared/object/types/holdObjectSignal";
+import RoomTexturePackChangedSignal from "../../../shared/room/types/roomTexturePackChangedSignal";
+import RoomPrefsChangedSignal from "../../../shared/room/types/roomPrefsChangedSignal";
+import App from "../../app";
+import ClientObjectManager from "../../object/clientObjectManager";
+import ClientVoxelManager from "../../voxel/clientVoxelManager";
+import ClientInventoryManager from "../../inventory/clientInventoryManager";
+import LoginRewardUtil from "../../inventory/util/loginRewardUtil";
+import PlayerShapeUnlockUtil from "../../inventory/util/playerShapeUnlockUtil";
+import ErrorUtil from "../../../shared/system/util/errorUtil";
+import { HEALTH_ROUTE_PATH } from "../../../shared/system/sharedConstants";
+import { SOCKET_RECONNECTION_DELAY_MAX_MS, SOCKET_RECONNECTION_DELAY_MS } from "../../system/clientConstants";
+import VersionSyncUtil from "../../system/util/versionSyncUtil";
+import RoomEditorUtil from "../../singlePlayer/util/roomEditorUtil";
+
+let socket: Socket;
+let pollingForServer = false;
+
+const incomingSignalHandlers: {[signalType: string]: (data: EncodableData) => void} = {
+    "roomChangedSignal": (data: EncodableData) =>
+    {
+        // The room arriving is what ends the wait a "roomReloadStarted" began.
+        endReconnectWait();
+        App.onRoomChangedSignalReceived(data as RoomChangedSignal);
+    },
+    "roomChangeRejectedSignal": (data: EncodableData) =>
+        App.onRoomChangeRejectedSignalReceived(data as RoomChangeRejectedSignal),
+    "addObjectSignal": (data: EncodableData) =>
+        ClientObjectManager.onAddObjectSignalReceived(data as AddObjectSignal),
+    "removeObjectSignal": (data: EncodableData) =>
+        ClientObjectManager.onRemoveObjectSignalReceived(data as RemoveObjectSignal),
+    "setObjectTransformSignal": (data: EncodableData) =>
+        ClientObjectManager.onSetObjectTransformSignalReceived(data as SetObjectTransformSignal),
+    "setObjectMetadataSignal": (data: EncodableData) =>
+        ClientObjectManager.onSetObjectMetadataSignalReceived(data as SetObjectMetadataSignal),
+    "setObjectPathSignal": (data: EncodableData) =>
+        ClientObjectManager.onSetObjectPathSignalReceived(data as SetObjectPathSignal),
+    "objectCollectedSignal": (data: EncodableData) =>
+        ClientObjectManager.onObjectCollectedSignalReceived(data as ObjectCollectedSignal),
+    "inventorySignal": (data: EncodableData) =>
+        ClientInventoryManager.onInventorySignalReceived(data as InventorySignal),
+    "loginRewardSignal": (data: EncodableData) =>
+        LoginRewardUtil.onLoginRewardSignalReceived(data as LoginRewardSignal),
+    "buyItemResultSignal": (data: EncodableData) =>
+        PlayerShapeUnlockUtil.onBuyItemResultSignalReceived(data as BuyItemResultSignal),
+    "addVoxelBlockSignal": (data: EncodableData) =>
+        ClientVoxelManager.onAddVoxelBlockSignalReceived(data as AddVoxelBlockSignal),
+    "moveVoxelBlockSignal": (data: EncodableData) =>
+        ClientVoxelManager.onMoveVoxelBlockSignalReceived(data as MoveVoxelBlockSignal),
+    "removeVoxelBlockSignal": (data: EncodableData) =>
+        ClientVoxelManager.onRemoveVoxelBlockSignalReceived(data as RemoveVoxelBlockSignal),
+    "setVoxelQuadTextureSignal": (data: EncodableData) =>
+        ClientVoxelManager.onSetVoxelQuadTextureSignalReceived(data as SetVoxelQuadTextureSignal),
+    "roomTexturePackChangedSignal": (data: EncodableData) =>
+        App.onRoomTexturePackChangedSignalReceived(data as RoomTexturePackChangedSignal),
+    "roomPrefsChangedSignal": (data: EncodableData) =>
+        App.onRoomPrefsChangedSignalReceived(data as RoomPrefsChangedSignal),
+}
+
+const lastSignalSentTimes: {[signalType: string]: number} = {};
+
+const SocketsClient =
+{
+    init: (env: RobotRoomsEnv) =>
+    {
+        if (!tryStartClientProcess("roomChange", 1, 0))
+            throw new Error("'roomChange' process is already ongoing.");
+
+        const connectionURL = env.socket_server_url;
+        console.log(`Attempting to establish a socket connection with: [${connectionURL}]`);
+        socket = io(connectionURL, {
+            transports: ["websocket", "polling"],
+            upgrade: true,
+            reconnectionAttempts: 20,
+            reconnectionDelay: SOCKET_RECONNECTION_DELAY_MS,
+            reconnectionDelayMax: SOCKET_RECONNECTION_DELAY_MAX_MS,
+            // AwayDisconnectUtil makes the first connection, as a page opened in the background waits to be shown.
+            autoConnect: false,
+            // Said anew with every connection: one that comes back to a client in the room editor is to leave it
+            // there (see RoomPickerUtil). A camera page has its link's token instead of a session.
+            auth: (cb) => cb((env.cameraToken.length > 0) ? { cameraToken: env.cameraToken }
+                : { targetRoomID: env.targetRoomID, roomEditorOpen: RoomEditorUtil.isEditing() }),
+        });
+
+        // Expose for E2E test teardown (explicit disconnect prevents stale players)
+        (window as any).__socket_io_instance = socket;
+
+        let hasConnectedBefore = false;
+
+        socket.on("connect", () => {
+            console.log(`Successfully connected to socket server (transport: ${socket.io.engine.transport.name})`);
+            endReconnectWait();
+            if (hasConnectedBefore && !worksWithoutServer())
+            {
+                // Start a roomChange process so the server's auto-join (roomChangedSignal) can complete.
+                tryStartClientProcess("roomChange", 1, 0);
+
+                // A drop may have been a deployment the page slept through; reload if the build changed.
+                void VersionSyncUtil.reloadIfOutdated(env.gitCommit);
+            }
+            hasConnectedBefore = true;
+        });
+
+        socket.on("forceRedirect", (url: string) => {
+            if (!worksWithoutServer())
+                window.location.href = url;
+        });
+
+        // The server is overwriting the room with its users still in it (see
+        // ServerRoomManager.loadRoomFile), and sends the room again once it is done.
+        socket.on("roomReloadStarted", beginReconnectWait);
+
+        socket.on("disconnect", (reason) => {
+            console.warn(`Socket disconnected (reason: ${reason})`);
+            if (worksWithoutServer())
+                return;
+            beginReconnectWait();
+
+            if (reason === "io server disconnect")
+            {
+                // Server-initiated (shutdown/deploy): Socket.IO won't auto-reconnect, so poll and reload.
+                pollServerAndReload();
+            }
+        });
+
+        socket.io.on("reconnect_failed", () => {
+            if (worksWithoutServer())
+                return;
+            // Reconnection exhausted. Wait for the server before reloading (the proxy would serve an error).
+            console.warn("All reconnection attempts exhausted. Waiting for the server to come back...");
+            pollServerAndReload();
+        });
+
+        socket.on("connect_error", (err) => {
+            console.error("SocketIO connection error");
+            console.error(`Error message: ${err.message}`);
+            console.error(`Error data:`, err);
+            if (err.message.startsWith("http") && !worksWithoutServer())
+                (window as any).location.href = err.message;
+        });
+
+        socket.on("signalBatch", (buffer: ArrayBuffer) => receiveSignalBatch(() => new Uint8Array(buffer)));
+
+        // A long batch arrives deflated (see SocketUserContext). Inflated at once, so batches are still
+        // handled in the order they arrive.
+        socket.on("deflatedSignalBatch", (buffer: ArrayBuffer) =>
+            receiveSignalBatch(() => inflateSync(new Uint8Array(buffer))));
+    },
+    // Ends the connection, and with it any attempt to take it up again, until connect is called (see
+    // AwayDisconnectUtil). The server puts a user who connects again back in their room (see RoomPickerUtil).
+    disconnect: (): void =>
+    {
+        socket.disconnect();
+    },
+    connect: (): void =>
+    {
+        socket.connect();
+    },
+    // Calls the listener just before each try at taking a dropped connection up again, which disconnect calls off
+    // (see AwayDisconnectUtil).
+    onReconnectAttempt: (listener: () => void): void =>
+    {
+        socket.io.on("reconnect_attempt", listener);
+    },
+    isConnected: (): boolean =>
+    {
+        return socket.connected;
+    },
+
+    emitSetObjectTransformSignal: (params: SetObjectTransformSignal) => emitWhenReady("setObjectTransformSignal", params),
+    emitUserCommandSignal: (params: UserCommandSignal) => emitWhenReady("userCommandSignal", params),
+    emitHoldObjectSignal: (params: HoldObjectSignal) => emitWhenReady("holdObjectSignal", params),
+    emitBuyItemSignal: (params: BuyItemSignal) => emitWhenReady("buyItemSignal", params),
+    emitRequestRoomChangeSignal: (params: RequestRoomChangeSignal) => {
+        emitWhenReady("requestRoomChangeSignal", params);
+    },
+    // Asks the server for another room on the user's behalf, with the loading screen up until one arrives (see
+    // App), and says whether it asked. Not without a connection, over which the request would only go out once
+    // one came back; nor while another room is on its way.
+    requestRoomChange: (params: RequestRoomChangeSignal): boolean =>
+    {
+        if (!socket.connected)
+        {
+            notificationMessageObservable.set("The server can't be reached right now.");
+            return false;
+        }
+        if (!tryStartClientProcess("roomChange", 1, 1))
+            return false;
+        emitWhenReady("requestRoomChangeSignal", params);
+        return true;
+    },
+    emitMoveVoxelBlockSignal: (params: MoveVoxelBlockSignal) =>
+    {
+        emitWhenReady("moveVoxelBlockSignal", params);
+    },
+    emitAddVoxelBlockSignal: (params: AddVoxelBlockSignal) =>
+    {
+        emitWhenReady("addVoxelBlockSignal", params);
+    },
+    emitRemoveVoxelBlockSignal: (params: RemoveVoxelBlockSignal) =>
+    {
+        emitWhenReady("removeVoxelBlockSignal", params);
+    },
+    emitSetVoxelQuadTextureSignal: (params: SetVoxelQuadTextureSignal) =>
+    {
+        emitWhenReady("setVoxelQuadTextureSignal", params);
+    },
+    emitAddObjectSignal: (params: AddObjectSignal) =>
+    {
+        emitWhenReady("addObjectSignal", params);
+    },
+    emitRemoveObjectSignal: (params: RemoveObjectSignal) =>
+    {
+        emitWhenReady("removeObjectSignal", params);
+    },
+    emitSetObjectMetadataSignal: (params: SetObjectMetadataSignal) =>
+    {
+        emitWhenReady("setObjectMetadataSignal", params);
+    },
+}
+
+// Hands each signal of a batch to its handler, in the order sent.
+function receiveSignalBatch(readBatch: () => Uint8Array)
+{
+    try {
+        const bufferState = new BufferState(readBatch());
+        //console.log(`signalBatch received - length = ${bufferState.view.byteLength}`);
+        while (bufferState.byteIndex < bufferState.view.byteLength)
+        {
+            const signalTypeIndex = (EncodableRawByteNumber.decode(bufferState) as EncodableRawByteNumber).n;
+            const signalConfig = SignalTypeConfigMap.getConfigByIndex(signalTypeIndex);
+            if (!signalConfig)
+            {
+                console.error(`Unknown signal type index: ${signalTypeIndex}`);
+                return;
+            }
+            const incomingSignalHandler = incomingSignalHandlers[signalConfig.signalType];
+            if (!incomingSignalHandler)
+            {
+                console.error(`Incoming Signal handler not found (signal type = ${signalConfig.signalType})`);
+                return;
+            }
+            const arr = (EncodableArray.decodeWithParams(bufferState, signalConfig.decode, 65535) as EncodableArray).arr;
+            for (const data of arr)
+                incomingSignalHandler(data);
+        }
+    } catch (err) {
+        console.error(`Exception while receiving a signalBatch from the server :: Error: ${ErrorUtil.getErrorMessage(err)}`);
+    }
+}
+
+// Whether the client is where the server isn't needed: in the room editor, whose room is the client's alone and
+// kept nowhere until it is saved (see RoomEditorUtil). Nothing the connection does is then to hold its user up,
+// move them to another room, or take the page from them.
+function worksWithoutServer(): boolean
+{
+    return RoomEditorUtil.isEditing();
+}
+
+// The "Reconnecting..." wait: for a lost connection, or for a room the server is reloading.
+function beginReconnectWait()
+{
+    connectionStateObservable.set("reconnecting");
+    tryStartClientProcess("reconnect", 1, 0);
+}
+
+function endReconnectWait()
+{
+    connectionStateObservable.set("connected");
+    if (ongoingClientProcessExists("reconnect"))
+        endClientProcess("reconnect");
+}
+
+function emitWhenReady(signalType: string, signalData: EncodableData,
+    maxRetries: number = 10, retryInterval: number = 200)
+{
+    const minClientToServerSendInterval = SignalTypeConfigMap.getConfigByType(signalType).minClientToServerSendInterval;
+    if (minClientToServerSendInterval <= 0)
+    {
+        trySendEncodedSignal(signalType, signalData);
+    }
+    else
+    {
+        const attempt = (remaining: number) => {
+            if (trySendEncodedSignal(signalType, signalData))
+                return;
+            if (remaining > 0)
+                setTimeout(() => attempt(remaining - 1), retryInterval);
+            else
+                console.warn(`Signal '${signalType}' dropped after max retries`);
+        };
+        attempt(maxRetries);
+    }
+}
+
+function trySendEncodedSignal(signalType: string, signalData: EncodableData): boolean
+{
+    if (!canEmit(signalType))
+        return false;
+    lastSignalSentTimes[signalType] = Date.now();
+
+    const bufferState = EncodingUtil.startEncoding();
+    signalData.encode(bufferState);
+    const subBuffer = EncodingUtil.endEncoding(bufferState);
+    socket.emit(signalType, subBuffer);
+    return true;
+}
+
+// Polls until the app can serve the page, then reloads. nginx answers with a gateway error while the
+// app is down, so readiness is judged by the /health status code (same-origin, so it's readable).
+// /health also reports not-ready for a process that is shutting down. Polls forever with backoff.
+function pollServerAndReload(initialInterval: number = 2000, maxInterval: number = 30000)
+{
+    if (pollingForServer) // Both disconnect paths can lead here, but one waiting loop is enough.
+        return;
+    pollingForServer = true;
+
+    let interval = initialInterval;
+
+    const poll = () => {
+        fetch(`/${HEALTH_ROUTE_PATH}`, { method: "GET", cache: "no-store" })
+            .then(res => res.ok)
+            .catch(() => false)
+            .then(serverIsReady => {
+                if (serverIsReady)
+                {
+                    console.log("Server is back up. Reloading the page...");
+                    window.location.reload();
+                    return;
+                }
+                interval = Math.min(interval * 1.5, maxInterval);
+                setTimeout(poll, interval);
+            });
+    };
+    setTimeout(poll, interval);
+}
+
+function canEmit(signalType: string): boolean
+{
+    const lastSignalSentTime = lastSignalSentTimes[signalType];
+    const minClientToServerSendInterval = SignalTypeConfigMap.getConfigByType(signalType).minClientToServerSendInterval;
+    if (minClientToServerSendInterval <= 0)
+        return true;
+    return lastSignalSentTime == undefined ||
+        Date.now() >= lastSignalSentTime + minClientToServerSendInterval + 200; // 200 = extra time margin (to reduce the chance that the signal will be rejected by the server due to an earlier signal arriving at the server too late)
+}
+
+export default SocketsClient;

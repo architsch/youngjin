@@ -1,6 +1,6 @@
 # Room Generation Defines What a Room Is
 
-The rule in one line, as [`../../CLAUDE.md`](../../CLAUDE.md) states it: **a new room-level parameter
+The rule in one line, as [`../../robot-rooms/CLAUDE.md`](../../robot-rooms/CLAUDE.md) states it: **a new room-level parameter
 must be chosen by room generation in the same change that introduces it.** This page is why, and how
 far the obligation reaches.
 
@@ -57,4 +57,4 @@ somewhere to build rather than a full house.
 - Where the parameter has curated data behind it — as texture packs have palettes in `RoomPaletteMap`
   — extend that curation to cover **every** option a room can be generated with.
 
-Conceptual details live in [`../../docs/geometry/room_generation.md`](../../docs/geometry/room_generation.md).
+Conceptual details live in [`../../robot-rooms/docs/geometry/room_generation.md`](../../robot-rooms/docs/geometry/room_generation.md).

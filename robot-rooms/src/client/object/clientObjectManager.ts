@@ -1,0 +1,444 @@
+import GameObject from "./types/gameObject/gameObject";
+import AddObjectSignal from "../../shared/object/types/addObjectSignal";
+import ObjectFactory from "./factories/objectFactory";
+import App from "../app";
+import RoomRuntimeMemory from "../../shared/room/types/roomRuntimeMemory";
+import ObjectTypeConfigMap from "../../shared/object/maps/objectTypeConfigMap";
+import ObjectTransform from "../../shared/object/types/objectTransform";
+import PhysicsManager from "../../shared/physics/physicsManager";
+import RemoveObjectSignal from "../../shared/object/types/removeObjectSignal";
+import SetObjectMetadataSignal from "../../shared/object/types/setObjectMetadataSignal";
+import SetObjectTransformSignal from "../../shared/object/types/setObjectTransformSignal";
+import SetObjectPathSignal from "../../shared/object/types/setObjectPathSignal";
+import ObjectCollectedSignal from "../../shared/object/types/objectCollectedSignal";
+import PeriodicTransformReceiver from "./components/periodicTransformReceiver";
+import VoxelGameObject from "./types/gameObject/voxelGameObject";
+import NpcGameObject from "./types/gameObject/npcGameObject";
+import { nearbyObjectSelectorObservable, objectEditObservable, objectPlacedObservable, objectSelectionObservable }
+    from "../system/clientObservables";
+import { AUTO_SELECTION_MAX_DISTANCE } from "../system/clientConstants";
+import ObjectSelection from "../graphics/types/gizmo/objectSelection";
+import ObjectUpdateUtil from "../../shared/object/util/objectUpdateUtil";
+import Vec3 from "../../shared/math/types/vec3";
+import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../shared/object/types/objectMetadataKey";
+import { RoomTypeEnumMap } from "../../shared/room/types/roomType";
+import Room from "../../shared/room/types/room";
+import ClientObjectUtil from "./util/clientObjectUtil";
+import CannonStateUtil from "../../shared/object/util/cannonStateUtil";
+import RoomLoadProgressUtil from "../system/util/roomLoadProgressUtil";
+import VoxelQuadSelection from "../graphics/types/gizmo/voxelQuadSelection";
+
+const gameObjects: {[objectId: string]: GameObject} = {};
+const updatableGameObjects: {[objectId: string]: GameObject} = {};
+const playerByUserID: {[userID: string]: GameObject} = {};
+const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
+const voxelTypeIndex = ObjectTypeConfigMap.getIndexByType("Voxel");
+const cannonTypeIndex = ObjectTypeConfigMap.getIndexByType("Cannon");
+// What a helper shows of what it is doing as whoever plays it sets it, which is no edit of the room.
+const LIVE_METADATA_KEYS: ObjectMetadataKey[] = [ObjectMetadataKeyEnumMap.SentMessage, ObjectMetadataKeyEnumMap.Facing,
+    ObjectMetadataKeyEnumMap.Activity];
+
+// Voxel objects are spawned once (autoUnload=false) and persist for the app's lifetime.
+let voxelsSpawned = false;
+
+const ClientObjectManager =
+{
+    getObjectById: (objectId: string): GameObject | undefined =>
+    {
+        return gameObjects[objectId];
+    },
+    getMyPlayer: (): GameObject | undefined =>
+    {
+        const user = App.getUser();
+        if (user)
+            return playerByUserID[user.id];
+        console.error(`Failed to fetch the user data (env = ${JSON.stringify(App.getEnv())})`);
+        return undefined;
+    },
+    getPlayerOfUser: (userID: string): GameObject | undefined =>
+    {
+        return playerByUserID[userID];
+    },
+    // Selects the attached object nearest a position that this user may select, no further off than
+    // AUTO_SELECTION_MAX_DISTANCE, and returns whether it did (see nearbyObjectSelectorObservable).
+    trySelectObjectNear: (position: Vec3): boolean =>
+    {
+        const room = App.getCurrentRoom();
+        if (!room)
+            return false;
+
+        const nearby: {objectId: string, distance: number}[] = [];
+        for (const object of Object.values(room.objectById))
+        {
+            if (!ObjectTypeConfigMap.getConfigByIndex(object.objectTypeIndex).attachment)
+                continue;
+            const pos = object.transform.pos;
+            const distance = Math.hypot(pos.x - position.x, pos.y - position.y, pos.z - position.z);
+            if (distance <= AUTO_SELECTION_MAX_DISTANCE)
+                nearby.push({objectId: object.objectId, distance});
+        }
+        nearby.sort((a, b) => a.distance - b.distance);
+
+        for (const {objectId} of nearby)
+        {
+            const gameObject = ClientObjectManager.getObjectById(objectId);
+            if (gameObject?.canBeSelected() && ObjectSelection.trySelect(gameObject))
+                return true;
+        }
+        return false;
+    },
+    update: (deltaTime: number) =>
+    {
+        for (const id in updatableGameObjects)
+        {
+            const gameObject = updatableGameObjects[id];
+            gameObject.update(deltaTime);
+            const components = gameObject.components;
+            for (const name in components)
+            {
+                if (components[name].update)
+                    components[name].update(deltaTime);
+            }
+        }
+        for (const id in updatableGameObjects)
+        {
+            const components = updatableGameObjects[id].components;
+            for (const name in components)
+                components[name].lateUpdate?.(deltaTime);
+        }
+    },
+    load: async (roomRuntimeMemory: RoomRuntimeMemory) =>
+    {
+        const room = roomRuntimeMemory.room;
+
+        // Declares the spawn count up front so the loading bar measures real progress.
+        RoomLoadProgressUtil.expectUnits(
+            (voxelsSpawned ? 0 : ClientObjectUtil.getNumVoxelObjects()) +
+            Object.keys(room.objectById).length + 1);
+
+        // Voxels persist across rooms: created on the first load, then rebound to each new grid.
+        if (!voxelsSpawned)
+        {
+            await ClientObjectUtil.spawnVoxelsFromGrid(room);
+            voxelsSpawned = true;
+        }
+        else
+            resyncVoxelsToCurrentGrid(room);
+        let playerPos: Vec3 = {x: 0, y: 0, z: 0};
+
+        // Find the player's initial position for distance-based loading order
+        if (room.roomType != RoomTypeEnumMap.SinglePlayer)
+        {
+            for (const obj of Object.values(room.objectById))
+            {
+                if (obj.objectTypeIndex === playerTypeIndex)
+                {
+                    playerPos = obj.transform.pos;
+                    break;
+                }
+            }
+        }
+        else
+            playerPos = ClientObjectUtil.getSingleModePlayerPosition(room);
+
+        // Nearest-first, so pictures near the player load first.
+        const objects = Object.values(room.objectById);
+        objects.sort((a, b) =>
+        {
+            const da = (a.transform.pos.x - playerPos.x) ** 2 + (a.transform.pos.y - playerPos.y) ** 2 + (a.transform.pos.z - playerPos.z) ** 2;
+            const db = (b.transform.pos.x - playerPos.x) ** 2 + (b.transform.pos.y - playerPos.y) ** 2 + (b.transform.pos.z - playerPos.z) ** 2;
+            return da - db;
+        });
+        for (const obj of objects)
+        {
+            if (obj.objectTypeIndex == voxelTypeIndex)
+                throw new Error(`Voxel object is not allowed to spawn via objectById.`);
+            const gameObject = ObjectFactory.createServerSideObject(obj);
+            await ClientObjectManager.addObject(gameObject, false, false); // Don't try to add the object to the room data again because it is already part of it.
+        }
+
+        // Single-player rooms spawn the player client-side (the server has no copy). Multiplayer
+        // players and doors arrive from the server.
+        if (room.roomType == RoomTypeEnumMap.SinglePlayer)
+            await ClientObjectUtil.spawnSingleModePlayer(room);
+    },
+    unload: async () =>
+    {
+        for (const objectId of Object.keys(gameObjects))
+        {
+            // autoUnload=false objects (e.g. voxels) are rebound to the next room, not destroyed.
+            const config = ObjectTypeConfigMap.getConfigByIndex(gameObjects[objectId].params.objectTypeIndex);
+            if (!config.autoUnload)
+                continue;
+            // Objects whose IDs start with "#" (i.e. client-only objects) are excluded from room data.
+            await ClientObjectManager.removeObject(objectId, false, !objectId.startsWith("#"));
+        }
+    },
+    addObject: async (object: GameObject, validate: boolean = true,
+        addToRoomData: boolean = true): Promise<boolean> =>
+    {
+        const user = App.getUser();
+        const room = App.getCurrentRoom()!;
+
+        if (!ObjectUpdateUtil.addObject(user, room, object.params, validate, addToRoomData))
+            return false;
+
+        if (gameObjects[object.params.objectId] == undefined)
+        {
+            gameObjects[object.params.objectId] = object;
+
+            if (object.params.objectTypeIndex === playerTypeIndex)
+                playerByUserID[object.params.sourceUserID] = object;
+
+            // Updatable if the GameObject itself overrides "update", or any component has an "update" or "lateUpdate".
+            let updatable = object.update !== GameObject.prototype.update;
+            for (const component of Object.values(object.components))
+            {
+                if (component.update || component.lateUpdate)
+                    updatable = true;
+            }
+            if (updatable)
+                updatableGameObjects[object.params.objectId] = object;
+            await object.onSpawn();
+            // Counts toward the loading bar during a room load; a no-op otherwise.
+            RoomLoadProgressUtil.reportUnitSpawned();
+            // The user's own edit. Room loads never validate; remote edits announce themselves on arrival.
+            if (validate)
+                objectEditObservable.set({kind: "add", object: object.params, own: true});
+            return true;
+        }
+        else
+        {
+            console.error(`Object (ID = ${object.params.objectId}) has already been spawned.`);
+            return false;
+        }
+    },
+    removeObject: async (objectId: string, validate: boolean = true,
+        removeFromRoomData: boolean = true): Promise<boolean> =>
+    {
+        const user = App.getUser();
+        const room = App.getCurrentRoom()!;
+
+        if (!ObjectUpdateUtil.removeObject(user, room, new RemoveObjectSignal(room.id, objectId), validate, removeFromRoomData))
+            return false;
+
+        if (gameObjects[objectId] != undefined)
+        {
+            const object = gameObjects[objectId];
+            delete gameObjects[objectId];
+            if (updatableGameObjects[object.params.objectId] != undefined)
+                delete updatableGameObjects[object.params.objectId];
+            if (object.params.objectTypeIndex === playerTypeIndex)
+                delete playerByUserID[object.params.sourceUserID];
+            await object.onDespawn(); // Asynchronous despawning process must be called AFTER unregistering the object, since the per-frame update call may still unexpectedly access the object while it is being partially torn down.
+            if (validate)
+                objectEditObservable.set({kind: "remove", object: object.params, own: true});
+            return true;
+        }
+        else
+        {
+            console.error(`Object (ID = ${objectId}) has already been despawned.`);
+            return false;
+        }
+    },
+    setObjectTransform: (objectId: string, transform: ObjectTransform, ignorePhysics: boolean,
+        validate: boolean = true): ObjectTransform =>
+    {
+        const user = App.getUser();
+        const room = App.getCurrentRoom()!;
+
+        const signal = new SetObjectTransformSignal(room.id, objectId, transform, ignorePhysics);
+        const result = ObjectUpdateUtil.setObjectTransform(user, room, signal, validate);
+        const object = ClientObjectManager.getObjectById(objectId);
+        if (object)
+        {
+            if (object.components.periodicTransformReceiver)
+                (object.components.periodicTransformReceiver as PeriodicTransformReceiver).setObjectTransform(result.transform);
+            else
+                object.setObjectTransform(result.transform.pos, result.transform.dir);
+        }
+        // An object of a room still loading spawns later, from the room's data, which already has the move.
+        else if (room.objectById[objectId] == undefined)
+            console.error(`ClientObjectManager.setObjectTransform :: GameObject not found (objectId = ${objectId})`);
+        return result.transform;
+    },
+    // A move only shown (see SetObjectTransformSignal.shown): the object's body and collider go there, at the size the
+    // room keeps it, and the room's data keeps it where it was, as what a room file saves of it.
+    showObjectTransform: (objectId: string, pos: Vec3, dir: Vec3): void =>
+    {
+        const room = App.getCurrentRoom()!;
+        const kept = room.objectById[objectId]?.transform;
+        if (kept == undefined)
+            return;
+        if (PhysicsManager.hasObject(room.id, objectId))
+            PhysicsManager.setObjectTransform(room.id, objectId, new ObjectTransform(pos, dir, kept.scale), true);
+        ClientObjectManager.getObjectById(objectId)?.setObjectTransform(pos, dir);
+    },
+    // With the transform the value needs, if it changes the scale the object is pinned to (see
+    // SetObjectMetadataSignal.transform).
+    setObjectMetadata: (objectId: string, key: ObjectMetadataKey, value: string,
+        validate: boolean = true, transform?: ObjectTransform): boolean =>
+    {
+        const user = App.getUser();
+        const room = App.getCurrentRoom()!;
+
+        const signal = new SetObjectMetadataSignal(room.id, objectId, key, value, transform);
+        if (!ObjectUpdateUtil.setObjectMetadata(user, room, signal, validate))
+            return false;
+
+        const object = ClientObjectManager.getObjectById(objectId);
+        if (object)
+        {
+            if (transform)
+            {
+                const applied = room.objectById[objectId].transform;
+                object.setObjectTransform(applied.pos, applied.dir);
+            }
+            object.onSetMetadata(key, value);
+        }
+        else
+            console.error(`ClientObjectManager.setObjectMetadata :: GameObject not found (objectId = ${objectId})`);
+
+        // Re-announce the edited object's selection so its menu and chooser read the new value.
+        const selection = objectSelectionObservable.peek();
+        if (selection && selection.gameObject.params.objectId === objectId && !isPlayedState(objectId, key, value))
+            objectSelectionObservable.notify();
+
+        return true;
+    },
+
+    // Spawns once the object's room is available.
+    onAddObjectSignalReceived: async (signal: AddObjectSignal) => {
+        if (!await App.whenInRoom(signal.roomID))
+            return;
+        // Added just as the room was sent, which then held it already.
+        if (ClientObjectManager.getObjectById(signal.objectId) != undefined)
+            return;
+        const gameObject = ObjectFactory.createServerSideObject(signal);
+        if (await ClientObjectManager.addObject(gameObject, false))
+            objectEditObservable.set({kind: "add", object: gameObject.params, own: false});
+    },
+    // Despawns once the object's room is available.
+    onRemoveObjectSignalReceived: async (signal: RemoveObjectSignal) => {
+        if (!await App.whenInRoom(signal.roomID))
+            return;
+        // If the removed object was selected, unselect it.
+        const sel = objectSelectionObservable.peek();
+        const selected = (sel?.gameObject.params.objectId === signal.objectId) ? sel : null;
+        if (selected)
+            ObjectSelection.unselect();
+        const removed = ClientObjectManager.getObjectById(signal.objectId);
+        const removal = ClientObjectManager.removeObject(signal.objectId, false);
+        // The selection moves on once the room no longer holds the object (removeObject sees to that before it
+        // first waits), so the face it leaves counts as clear.
+        if (selected)
+            VoxelQuadSelection.trySelectBestQuadNearby(selected.gameObject.params.transform.pos);
+        if (await removal && removed)
+            objectEditObservable.set({kind: "remove", object: removed.params, own: false});
+    },
+    onSetObjectTransformSignalReceived: async (signal: SetObjectTransformSignal) => {
+        // Deferred handling only for non-physics updates (for performance).
+        if (signal.ignorePhysics)
+        {
+            if (!await App.whenInRoom(signal.roomID))
+                return;
+        }
+        // A physics update can overtake the add of a player who has just arrived, which waits on the room. The next
+        // update moves them.
+        else if (App.getCurrentRoom()?.objectById[signal.objectId] == undefined)
+            return;
+        if (NpcGameObject.isDragged(signal.objectId))
+            return;
+        if (signal.shown)
+            ClientObjectManager.showObjectTransform(signal.objectId, signal.transform.pos, signal.transform.dir);
+        else
+        {
+            ClientObjectManager.setObjectTransform(signal.objectId, signal.transform,
+                signal.ignorePhysics, false);
+            if (signal.ignorePhysics)
+                announcePlacement(signal.objectId);
+        }
+
+        // Re-announce a moved selection so its outline and menu follow; skipped for continuous
+        // physics updates.
+        if (signal.ignorePhysics)
+        {
+            const sel = objectSelectionObservable.peek();
+            if (sel && sel.gameObject.params.objectId === signal.objectId)
+                objectSelectionObservable.notify();
+        }
+    },
+    onSetObjectMetadataSignalReceived: async (signal: SetObjectMetadataSignal) => {
+        if (!await App.whenInRoom(signal.roomID))
+            return;
+        if (!ClientObjectManager.setObjectMetadata(signal.objectId, signal.metadataKey, signal.metadataValue, false,
+            signal.transform))
+        {
+            return;
+        }
+        // A turn that moved the object along with it.
+        if (signal.transform)
+            announcePlacement(signal.objectId);
+        else
+            announceChange(signal.objectId, signal.metadataKey, signal.metadataValue);
+    },
+    // Gone by now, it has nowhere to go.
+    onSetObjectPathSignalReceived: async (signal: SetObjectPathSignal) => {
+        if (!await App.whenInRoom(signal.roomID))
+            return;
+        ClientObjectManager.getObjectById(signal.objectId)?.followPath(signal.waypoints);
+    },
+    // Ahead of the object's removal (see ObjectCollectedSignal), so that it still shows where it was collected.
+    onObjectCollectedSignalReceived: async (signal: ObjectCollectedSignal) => {
+        if (!await App.whenInRoom(signal.roomID))
+            return;
+        ClientObjectManager.getObjectById(signal.objectId)?.onCollected(
+            ClientObjectManager.getPlayerOfUser(signal.collectorUserID), signal.collectorUserID == App.getUser().id);
+    },
+}
+
+// Someone else's placement, of one of the room's own objects: anything else moved outside physics is no edit.
+function announcePlacement(objectId: string): void
+{
+    const obj = App.getCurrentRoom()?.objectById[objectId];
+    if (obj != undefined && ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).persistent)
+        objectPlacedObservable.set({object: obj, own: false});
+}
+
+// Someone else's change to the settings of one of the room's own objects, which what a helper shows of what it is doing
+// (see LIVE_METADATA_KEYS) is none of, nor what the server tells of a cannon it plays.
+function announceChange(objectId: string, key: ObjectMetadataKey, value: string): void
+{
+    const obj = App.getCurrentRoom()?.objectById[objectId];
+    if (obj != undefined && ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).persistent &&
+        !LIVE_METADATA_KEYS.includes(key) && !isPlayedState(objectId, key, value))
+    {
+        objectEditObservable.set({kind: "change", object: obj, own: false});
+    }
+}
+
+// Whether a value is the server's word of a cannon as it plays it, or of its ball: of that key a user sets the switch
+// alone, which is the one setting any tool shows (see CannonStateUtil.merge). Its word that a cannon is scrap is no
+// such word: that changes the room's own object, and takes the switch from its tools.
+function isPlayedState(objectId: string, key: ObjectMetadataKey, value: string): boolean
+{
+    if (key != ObjectMetadataKeyEnumMap.CannonState || CannonStateUtil.isSwitch(value))
+        return false;
+    return App.getCurrentRoom()?.objectById[objectId]?.objectTypeIndex != cannonTypeIndex
+        || !CannonStateUtil.tellsOfScrap(value);
+}
+
+// Rebinds persisted voxel objects to the new room's voxels, each to its own patch of them, which re-stamps
+// each voxel's gameObjectId (which quad edits rely on).
+const resyncVoxelsToCurrentGrid = (room: Room): void =>
+{
+    for (const obj of Object.values(gameObjects))
+    {
+        if (obj.params.objectTypeIndex === voxelTypeIndex)
+            (obj as VoxelGameObject).rebindVoxels(room.voxelGrid.voxels);
+    }
+}
+
+nearbyObjectSelectorObservable.set(ClientObjectManager.trySelectObjectNear);
+
+export default ClientObjectManager;

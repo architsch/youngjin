@@ -9,6 +9,10 @@ Turns photos into entries of the picture map (`public/app/assets/pictures/manife
 image map editor's own pipeline (`dev/scripts/imageMapEditor`, see its `server.js` for every command). This skill
 only proposes entries: **the user reviews each one and stages or enables what they keep.**
 
+Paths and commands here are from `robot-rooms/`, the game's project folder (`cd robot-rooms` first), except those
+of `public/`, `.claude/`, `.github/`, the root `CLAUDE.md` and `README.md` and the license files, which are at the
+repository's root.
+
 ## Hard rules
 
 - **Every entry made here is disabled.** `--save-samples` saves it so, every time. Never enable or stage an entry
@@ -147,7 +151,7 @@ landing under Office. A painting has none.
    drops accents and capitals: where a name probably lost them (Czech, Polish, Spanish, …), check the photo's
    page and correct `author` in `dev/assets/picture_sources/index.json` before saving, since entries take
    it from there.
-   **Picture files** go in by their paths (from the repository's root), each run saying whose they are:
+   **Picture files** go in by their paths (from `robot-rooms/`, or absolute), each run saying whose they are:
    - The user's own: `--add-sources <file> ... --author thingspool`. Such an entry names no source or license, and
      `picture.test.ts` holds its author to that name.
    - One made from someone else's photo (a cut-out prepared with `image-upscale-remap`):

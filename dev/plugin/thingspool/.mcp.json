@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "thingspool": {
-      "type": "http",
-      "url": "https://app.thingspool.net/mcp/oauth"
-    }
-  }
-}

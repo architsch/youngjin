@@ -1,11 +1,11 @@
 ---
 name: distribution-push
-description: Find where ThingsPool can be published or promoted on the web and get it in front of players there — review where every earlier submission and listing stands and bring the ledger, the registry and the live listings back in step with the game, re-verify candidate venues against their current rules and research new ones that widen the audience, check the game is ready to spend a first impression on one, build the copy each venue asks for plus a brief for the images the user supplies, submit in his name where his part is only a yes, and record every submission and what came of it. Use when asked to promote, advertise, market, distribute, publish or launch the app, to find places to post it, to reach more players, or to work out why nobody is playing.
+description: Find where Robot Rooms (ThingsPool's game) can be published or promoted on the web and get it in front of players there — review where every earlier submission and listing stands and bring the ledger, the registry and the live listings back in step with the game, re-verify candidate venues against their current rules and research new ones that widen the audience, check the game is ready to spend a first impression on one, build the copy each venue asks for plus a brief for the images the user supplies, submit in his name where his part is only a yes, and record every submission and what came of it. Use when asked to promote, advertise, market, distribute, publish or launch the app, to find places to post it, to reach more players, or to work out why nobody is playing.
 ---
 
 # Distribution Push
 
-ThingsPool is a live page, not a file. It runs on a server this project operates, behind its own
+Robot Rooms is a live page, not a file. It runs on a server this project operates, behind its own
 accounts, and a player reaches it by clicking `https://app.thingspool.net` and landing in the game.
 That single fact decides most of what follows: the natural unit of distribution here is **a link
 somebody clicks**, and venues are worth what they are worth according to how well they carry one.
@@ -28,13 +28,20 @@ each image must show and why, the size and format the venue demands, and the fil
 under. Getting that brief right — from the venue's own stated requirements — is this skill's share of
 the work, and a kit whose brief is vague costs the user a second round of guessing.
 
+Paths and commands in this skill, its ledger and its reference pages are from `robot-rooms/`, the
+game's project folder (`cd robot-rooms` first), so `CLAUDE.md` is the game's. Those of `public/`,
+`.claude/`, `.github/`, the root `CLAUDE.md` and `README.md` and the license files are at the
+repository's root, as is the site's generator with its templates, named here as the repository's
+`ssg/`.
+
 ## What this skill owns
 
 - `.claude/skills/distribution-push/ledger.md` — the running record of every submission made.
 - `reference/venues.md` — what is currently known about each candidate venue.
 - The submission kits it builds, under `temp/distribution/`.
 
-It does **not** edit `src/`, `docs/`, `tests/`, `CLAUDE.md` or `README.md`. Distribution work
+It does **not** edit `src/`, `docs/`, `tests/`, the repository's `ssg/`, either `CLAUDE.md` or either
+`README.md`. Distribution work
 routinely turns up real code problems — an embed that cannot authenticate, a payload too large for a
 portal, a missing share-preview image. Those are **findings**, reported with a `path:line`, and the
 user decides whether to fix them. A marketing run that quietly edits the application is a run whose
@@ -67,23 +74,28 @@ Report that as a blocker on any embed-lane submission and let the user decide. N
 embedding portal without either confirming the cookie behaviour has changed or telling the user
 plainly that it has not.
 
-## Choosing the destination: the app, or a dev-log post
+## Choosing the destination: the app, its page, or a dev-log post
 
-There are two things a link can point at, and picking the wrong one is a common way to waste a good
+There are three things a link can point at, and picking the wrong one is a common way to waste a good
 venue.
 
 **The app itself** — `https://app.thingspool.net`. The shortest path from a click to playing. Right
 wherever the audience arrived looking for something to play: the browser-game communities, the
 portals, the game directories.
 
+**The game's own page** — `https://thingspool.net/RobotRooms/page.html`. What the game is, with its
+Play button: the address for a venue's "website" or "homepage" field, and for readers who should learn
+what it is before they play. `https://thingspool.net` itself is ThingsPool's home page, about its
+maker's work at large, so it is never given as the game's.
+
 **A dev-log post** — `https://thingspool.net/devlog-<year>/page-<N>.html`. A written piece about one
-finished feature, with screenshots from the running game, which then leads the reader into the app
-through the "New here? Start with What is ThingsPool?" line every post opens with. These pages
+finished feature, with screenshots from the running game, which then leads the reader to the game's
+page through the "New here? Start with What is Robot Rooms?" line every post opens with. These pages
 serve tagged URLs normally and carry `og:title` / `og:image`, so they preview properly when shared.
 
 A tagged post is measured twice. Google Analytics sees its page views with the query string. The
 static pages also carry the tag onto their links into the app for the rest of the session, so a
-reader who clicks through, even by way of the landing page, is counted under the venue's tag in the
+reader who clicks through, even by way of the home page, is counted under the venue's tag in the
 funnel report.
 
 Link to a post rather than to the app when:
@@ -103,7 +115,7 @@ Link to a post rather than to the app when:
 Link to the app directly when the audience is players, when the venue's whole purpose is games to
 click, or when the game itself is the news.
 
-Venues for AI agents take two more: **the manual** (`https://thingspool.net/skill.md`), which an
+Venues for AI agents take two more: **the manual** (`https://thingspool.net/RobotRooms/skill.md`), which an
 operator hands their agent, and **the MCP endpoint** (`https://app.thingspool.net/mcp`), which server
 directories list. Neither carries a `?ref=` tag; an agent names its own source when it registers (the
 `ref` on `register`), if it does.
@@ -113,7 +125,7 @@ choosing between them; pick the one whose subject fits the venue, not simply the
 
 ## The AI-agents angle
 
-ThingsPool has AI agents in it (see [`docs/networking/agents.md`](../../../docs/networking/agents.md)).
+Robot Rooms has AI agents in it (see [`docs/networking/agents.md`](../../../robot-rooms/docs/networking/agents.md)).
 Helpers, AI guides the server plays as NPCs an admin stands in multiplayer rooms, each in a character of
 its own, greet newcomers and answer their questions. AI agents from the internet can also come in and build rooms of their own beside people. Few
 games can say that, so it is a strong hook, but it suits some audiences far better than others.
@@ -125,12 +137,12 @@ games can say that, so it is a strong hook, but it suits some audiences far bett
   someone who clicks right now would find (see the readiness gate).
 - **Lead with it** where the audience is interested in AI. That means general AI-curious communities,
   people who build agents, and Hacker News, where the agents are the news. For anyone there who runs an
-  agent, the manual is a second link: "Tell your agent: Read https://thingspool.net/skill.md and join
-  ThingsPool."
+  agent, the manual is a second link: "Tell your agent: Read https://thingspool.net/RobotRooms/skill.md and
+  join Robot Rooms."
 - **Don't lead with it** where the audience dislikes AI. Many art, writing and game communities have
   rules against AI content. There, lead with the game, and mention the AI guide no more than the
   venue's rules allow, if at all.
-- **Measure agents apart.** Agents that register say where they heard of ThingsPool, and are counted
+- **Measure agents apart.** Agents that register say where they heard of Robot Rooms, and are counted
   under `agent-<that tag>` sources. People who open a room link an agent passed on count under
   `via-agent`.
 
@@ -171,8 +183,8 @@ Then sync what was found:
   as dead, with the date and the reason.
 - **The listings.** A live listing that has fallen behind the game is brought back in step: a version
   of the endpoint or the manual that the repo holds but the MCP Registry or ClawHub does not yet, a
-  mirror (Glama, PulseMCP) still behind the registry, a description a change has made untrue, a
-  hand-kept tool list missing a tool. Each update is proposed beside step 4's list, outside its count,
+  mirror (Glama, PulseMCP) still behind the registry, a name or a description a change has made
+  untrue, a hand-kept tool list missing a tool. Each update is proposed beside step 4's list, outside its count,
   and made on his yes through the venue's own CLI, his `gh` or his signed-in Chrome (Lane B). One only
   he can make is named in the report. Text the repo carries (`server.json`, the manual) changes only
   under the agents-keep-up rule (see the boundaries below).
@@ -185,7 +197,7 @@ has already decided. So check, before preparing anything:
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" --max-time 10 https://app.thingspool.net/health
-curl -s -o /dev/null -w "%{http_code}\n" --max-time 10 https://thingspool.net/
+curl -s -o /dev/null -w "%{http_code}\n" --max-time 10 https://thingspool.net/RobotRooms/page.html
 ```
 
 Both must answer `200`. Then the judgements that need actual looking:
@@ -199,11 +211,14 @@ Both must answer `200`. Then the judgements that need actual looking:
   against what visitors actually did: the `direct` cohort in the step 7 report is the baseline, and
   its `tutorialDone` and `returned` rates say how the first minute and the first day are going
   before any venue is spent on them.
-- **Does the landing page explain the game to a stranger?** The link lands somebody who has never
-  heard of it. Check that `https://thingspool.net` answers "what is this and why would I click play"
-  above the fold.
-- **Does the shared link preview well?** The Open Graph tags in `views/partial/common/ogTags.ejs`
-  decide what a Reddit or Discord post looks like. A link with no preview image loses most of its
+- **Does the game's page explain the game to a stranger?** The link lands somebody who has never
+  heard of it. Check that `https://thingspool.net/RobotRooms/page.html` answers "what is this and why
+  would I click play" above the fold.
+- **Does the shared link preview well?** The Open Graph tags decide what a Reddit or Discord post looks
+  like: the app's own address gets them from `views/partial/common/ogTags.ejs`, with what
+  `views/page/dynamic/mypage.ejs` gives it, and the game's page on the site from the repository's
+  `ssg/views/partial/common/ogTags.ejs`, with the `shareImage` its entry names in the repository's
+  `ssg/data/arcadeData.ts`. A link with no preview image loses most of its
   clicks before anyone reads the title. Fetch the URL being promoted and confirm the tags resolve to
   an image that exists. Fetch an app URL only with the link-check command in step 5.
 - **If the copy mentions AI agents, is a helper there to meet?** It is what makes the claim true for
@@ -247,7 +262,7 @@ the date and the reason** rather than deleted — the next run needs to know not
 
 Do this every run, not only when the registry runs short. The registry holds what earlier runs
 happened to find, and the audience grows only where the game has not been seen yet. Start from the
-registry's "Not yet researched" leads. Then search for where things like ThingsPool are listed or
+registry's "Not yet researched" leads. Then search for where things like Robot Rooms are listed or
 shown and the ledger has not reached yet: browser and multiplayer game directories, voxel and
 creative-building communities, lists of MCP servers and of games agents play, and the lists that link
 to other lists. Following where comparable projects got themselves listed is often the quickest way
@@ -309,7 +324,7 @@ Three rules that do not bend:
 
   A client that `BotDetectionUtil` does not recognize is given a guest account when it loads an app
   page, and its arrival is counted under the tag. A self-declared bot still gets a `200` but no
-  account. The full mechanism is in [`docs/devOps/analytics.md`](../../../docs/devOps/analytics.md).
+  account. The full mechanism is in [`docs/devOps/analytics.md`](../../../robot-rooms/docs/devOps/analytics.md).
 - **Truth.** Every claim traceable to the code, or to a `/docs` page describing it. Possibilities are
   written as possibilities. This is the standard the house style sets for every piece of public
   copy, and for the same reason — a promotional claim that the game does not deliver is discovered
@@ -325,8 +340,8 @@ doing.
 Anything on the project's own property, and anything an official tool does with credentials the user
 has supplied:
 
-- Copy and assets on `thingspool.net` itself, the README, GitHub repository topics and description,
-  the Atom feed, Open Graph tags. (Reported as findings if they need `src/` or `README.md` edits —
+- Copy and assets on `thingspool.net` itself, the two READMEs, GitHub repository topics and description,
+  the Atom feed, Open Graph tags. (Reported as findings if they need `src/` or README edits —
   see the ownership rules above — but researched and drafted here.)
 - Official CLIs and APIs run with the user's own key, where the user has explicitly asked for it. The
   itch.io `butler` tool is the realistic example.
@@ -395,7 +410,7 @@ node dev/scripts/analytics/funnelReport.js report --app live --days 30
 
 It prints JSON: arrivals per source, the share of each source's arrivals that reached each funnel
 step, and a `ranking` ordered by returned rate. Read
-[`docs/devOps/analytics.md`](../../../docs/devOps/analytics.md) before interpreting it — what the
+[`docs/devOps/analytics.md`](../../../robot-rooms/docs/devOps/analytics.md) before interpreting it — what the
 rates are shares *of* is the part that is easy to get wrong.
 
 Three things to hold onto when reading it:
@@ -441,7 +456,8 @@ that blurs them leaves the user believing the work is finished when it is sittin
 - **Never post the same link to the same venue twice** without a genuinely new reason, a real
   interval, and a ledger row explaining both.
 - **Two or three venues per run.** A wider push is not a faster one; it is a spam pattern.
-- **No `src/`, `docs/`, `tests/`, `CLAUDE.md` or `README.md` edits.** Findings only. What agents read
+- **No edits to `src/`, `docs/`, `tests/`, the repository's `ssg/`, either `CLAUDE.md` or either
+  `README.md`.** Findings only. What agents read
   (`server.json`, the manual and its ClawHub copy) changes only under the agents-keep-up rule: both
   copies together, a new version only once the one there is published, and `agent.test.ts` passing.
 - **Nothing goes out that the user has not seen.** Every outbound artifact — post text, store

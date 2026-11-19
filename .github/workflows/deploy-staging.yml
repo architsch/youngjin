@@ -1,6 +1,9 @@
 # Deploys the latest code to the staging server on the VPS.
 # Secrets are fetched at runtime from Google Secret Manager (not from GitHub Secrets).
 #
+# The app is the project in robot-rooms/, where its steps run; the static site's pages are in
+# public/, beside it.
+#
 # The build runs on a GitHub-hosted runner and only its output is shipped to the VPS, which has
 # under 1 GB of RAM — not enough to webpack the client bundle without leaning on swap. The VPS
 # job installs runtime dependencies (the server bundle externalizes node_modules) and restarts
@@ -20,6 +23,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: robot-rooms
 
     steps:
     - uses: actions/checkout@v4
@@ -27,8 +33,9 @@ jobs:
     - name: Use Node.js from .nvmrc
       uses: actions/setup-node@v4
       with:
-        node-version-file: '.nvmrc'
+        node-version-file: 'robot-rooms/.nvmrc'
         cache: 'npm'
+        cache-dependency-path: 'robot-rooms/package-lock.json'
 
     - name: Install dependencies
       run: npm ci
@@ -45,7 +52,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: dist
-        path: dist/
+        path: robot-rooms/dist/
         retention-days: 7
 
   deploy:
@@ -58,11 +65,18 @@ jobs:
       # copy the promote/rollback flow owns. The client is a set of chunks whose names change as the
       # build does, so whole groups are moved rather than named files. Backups are carried across too:
       # without them a rollback is impossible from the moment staging is next deployed.
+      #
+      # A workspace laid out before the app moved into robot-rooms/ holds them in dist/, where
+      # nothing below would save them, so it stops here until that layout is linked to this one.
       run: |
+        if [ -d dist ] && [ ! -e robot-rooms ]; then
+          echo "This workspace predates robot-rooms/. Run 'ln -s . robot-rooms' in $PWD, then run this workflow again."
+          exit 1
+        fi
         rm -rf /tmp/thingspool-live-bundles
         mkdir -p /tmp/thingspool-live-bundles/server /tmp/thingspool-live-bundles/client
-        cp dist/server/*.live.* dist/server/*.backup.* /tmp/thingspool-live-bundles/server/ 2>/dev/null || true
-        cp dist/client/*.live.* dist/client/*.backup.* /tmp/thingspool-live-bundles/client/ 2>/dev/null || true
+        cp robot-rooms/dist/server/*.live.* robot-rooms/dist/server/*.backup.* /tmp/thingspool-live-bundles/server/ 2>/dev/null || true
+        cp robot-rooms/dist/client/*.live.* robot-rooms/dist/client/*.backup.* /tmp/thingspool-live-bundles/client/ 2>/dev/null || true
 
     - name: Empty the workspace
       # So checkout clones afresh and the VPS keeps nothing it doesn't use: no file a fuller checkout
@@ -80,19 +94,19 @@ jobs:
         # the game page check after the restart fails without it.
         sparse-checkout-cone-mode: false
         sparse-checkout: |
-          /package.json
-          /package-lock.json
-          /.nvmrc
-          /ecosystem.config.js
-          /dev/scripts/bootstrap.js
-          /dev/scripts/promoteBundles.js
-          /dev/scripts/assertRuntimeNodeVersion.js
-          /views/page/dynamic/
-          /views/page/development/console.ejs
-          /views/partial/common/header_min.ejs
-          /views/partial/common/footer_min.ejs
-          /views/partial/common/ogTags.ejs
-          /views/partial/common/googleAnalytics.ejs
+          /robot-rooms/package.json
+          /robot-rooms/package-lock.json
+          /robot-rooms/.nvmrc
+          /robot-rooms/ecosystem.config.js
+          /robot-rooms/dev/scripts/bootstrap.js
+          /robot-rooms/dev/scripts/promoteBundles.js
+          /robot-rooms/dev/scripts/assertRuntimeNodeVersion.js
+          /robot-rooms/views/page/dynamic/
+          /robot-rooms/views/page/development/console.ejs
+          /robot-rooms/views/partial/common/header_min.ejs
+          /robot-rooms/views/partial/common/footer_min.ejs
+          /robot-rooms/views/partial/common/ogTags.ejs
+          /robot-rooms/views/partial/common/googleAnalytics.ejs
           /public/error/deploying.html
           /public/favicon.ico
           /public/largeLogo.jpg
@@ -102,23 +116,25 @@ jobs:
       # anew each deploy, so Nginx, reading as another user, is let through them here (see
       # basic-setup.md's note on permissions).
       run: |
-        mkdir -p dist/server dist/client
-        chmod o+x dist dist/client public public/error
-        cp /tmp/thingspool-live-bundles/server/* dist/server/ 2>/dev/null || true
-        cp /tmp/thingspool-live-bundles/client/* dist/client/ 2>/dev/null || true
+        mkdir -p robot-rooms/dist/server robot-rooms/dist/client
+        chmod o+x robot-rooms robot-rooms/dist robot-rooms/dist/client public public/error
+        cp /tmp/thingspool-live-bundles/server/* robot-rooms/dist/server/ 2>/dev/null || true
+        cp /tmp/thingspool-live-bundles/client/* robot-rooms/dist/client/ 2>/dev/null || true
         rm -rf /tmp/thingspool-live-bundles
 
     - name: Use Node.js from .nvmrc
       uses: actions/setup-node@v4
       with:
-        node-version-file: '.nvmrc'
+        node-version-file: 'robot-rooms/.nvmrc'
         cache: 'npm'
+        cache-dependency-path: 'robot-rooms/package-lock.json'
 
     - name: Install dependencies
       # Runtime dependencies only — nothing is compiled here. The server bundle is built with
       # webpack-node-externals, so it require()s these from node_modules at run time. Build and test
       # tools, and the packages the client is built from, are devDependencies and never reach the VPS
       # (package.json's prepare script tolerates husky's absence).
+      working-directory: robot-rooms
       run: npm ci --omit=dev
 
     - name: Remove sharp before runtime
@@ -130,6 +146,7 @@ jobs:
       # Do NOT use `npm prune --omit=optional` here: that prunes optional deps tree-wide,
       # including `@google-cloud/firestore` (an optionalDependency of `firebase-admin` that we
       # very much DO need at runtime).
+      working-directory: robot-rooms
       run: rm -rf node_modules/sharp node_modules/@img
 
     - name: Download build output
@@ -138,13 +155,21 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: dist
-        path: dist/
+        path: robot-rooms/dist/
 
     - name: Report what is being deployed
+      working-directory: robot-rooms
       run: ls -la dist/client dist/server
 
     - name: Restart staging server
-      run: pm2 startOrRestart ecosystem.config.js --only staging
+      # Registered anew rather than restarted: PM2 keeps the script path and working directory an
+      # app was first started with, whatever its config says since, and each deploy lays the
+      # workspace out afresh. Saving keeps the list PM2 restores after a reboot in step.
+      working-directory: robot-rooms
+      run: |
+        pm2 delete staging 2>/dev/null || true
+        pm2 start ecosystem.config.js --only staging
+        pm2 save
 
     - name: Verify deployment
       run: |
@@ -167,4 +192,5 @@ jobs:
         exit 1
 
     - name: Verify runtime Node.js version
+      working-directory: robot-rooms
       run: node dev/scripts/assertRuntimeNodeVersion.js staging

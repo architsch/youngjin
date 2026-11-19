@@ -1,6 +1,6 @@
 ---
 name: helper-instructions
-description: Bring up to date what the helpers (the NPCs an admin places, which the server plays as AI guides through Claude) are told — mostly ThingsPool's maker, his writings and the subjects they join, with ThingsPool's story, ideas to try, and no more than an outline of the game itself (what people can do, add to a room, unlock or buy; never how a feature works), each personality's character and the things on its mind — and the fixed words they say without a model, the small talk to one another and the remarks on things they go and look at (with the tastes and picture keywords behind those), from the library, the dev log, well-known facts and the game as it is now; check every claim and address; then hear the helpers answer through the real model, and read their small talk and remarks, before handing the change over. Use when asked to update, enrich or refresh what the helpers or NPCs know or say (to visitors, to each other, or of the things around them), after new library writings or dev-log posts, when a new feature changes the outline of what people can do, or when a helper is reported saying something wrong, stale or dull.
+description: Bring up to date what the helpers (the NPCs an admin places, which the server plays as AI guides through Claude) are told — mostly ThingsPool's maker, his writings and the subjects they join, with the story of Robot Rooms (ThingsPool's game), ideas to try, and no more than an outline of the game itself (what people can do, add to a room, unlock or buy; never how a feature works), each personality's character and the things on its mind — and the fixed words they say without a model, the small talk to one another and the remarks on things they go and look at (with the tastes and picture keywords behind those), from the library, the dev log, well-known facts and the game as it is now; check every claim and address; then hear the helpers answer through the real model, and read their small talk and remarks, before handing the change over. Use when asked to update, enrich or refresh what the helpers or NPCs know or say (to visitors, to each other, or of the things around them), after new library writings or dev-log posts, when a new feature changes the outline of what people can do, or when a helper is reported saying something wrong, stale or dull.
 ---
 
 # Helper Instructions
@@ -18,6 +18,11 @@ can add to a room, and the kinds of thing they can unlock or buy. They are not t
 their instructions are no encyclopedia of its mechanics: a new feature never brings how it works with
 it (see "An outline, not a manual" below, and `.claude/rules/helpers-keep-up.md`).
 
+Paths and commands here are from `robot-rooms/`, the game's project folder (`cd robot-rooms` first),
+except those of `public/`, `.claude/`, `.github/`, the root `CLAUDE.md` and `README.md` and the license
+files, which are at the repository's root, as is the site's generator with its templates, named here as
+the repository's `ssg/`.
+
 ## What the helpers are told
 
 One system prompt, in two parts (built in `src/server/agent/util/helperChatUtil.ts`):
@@ -26,7 +31,7 @@ One system prompt, in two parts (built in `src/server/agent/util/helperChatUtil.
 |---|---|---|
 | Shared, cached | `RULES` in `helperChatUtil.ts` | How every helper talks. Rarely changes; change it only for a fault every helper shows. |
 | | `src/server/agent/data/helperGuide.ts` | An outline of the game, from a player's side: what people can do, the kinds of thing they can add to a room, what dollars unlock or buy, each with the control it is done with, and what is not in the game. All a how-to answer gives; never how a thing works. A test holds its length. |
-| | `src/server/agent/data/helperKnowledge.ts` | The larger part by far: who ThingsPool's maker is, what he writes about and how he joins one field to another, and his writings by subject, each with its link and one idea from it; then ThingsPool's story so far, things worth trying, his art and his games. |
+| | `src/server/agent/data/helperKnowledge.ts` | The larger part by far: who ThingsPool's maker is, what he writes about and how he joins one field to another, and his writings by subject, each with its link and one idea from it; then the game's story so far, things worth trying, his art and his games. |
 | Each helper's own | `src/server/agent/data/helperPersonalities.ts` | Each character: who it is, its field of subjects across the whole world, its voice and a line in it (an idea to try, never a fact it could reuse), its favorite ideas and reads, its manner in small talk, and its moods: one is picked at random for each talk, and its small talk comes from it, so that it doesn't greet everyone in the same words. |
 | | `src/server/agent/data/helperTopics.ts` | Each personality's list of things on its mind: specific, true statements from the world and from the maker's writings (with links). Three, picked at random, go with each talk, for when a visitor leaves the subject to the helper, so what it brings up ranges wide; only those are sent, so the lists cost nothing to grow. |
 
@@ -98,7 +103,7 @@ it thinks of it, in fixed words too (`HelperRemarkUtil`):
 
 ## Step 1 — Read the sources, not memory
 
-- **The library**, the main source: indexed in `src/server/ssg/data/libraryData.ts`, each writing's
+- **The library**, the main source: indexed in the repository's `ssg/data/libraryData.ts`, each writing's
   text in `public/<dirName>/source.txt`, which is read and never written (read it with the Read tool
   or plain grep; a hook refuses an inline script that names one). A post starts at a `[Title] date`
   line, the Nth such line in a file being page N, under the author's own `:d:` description and `:k:`
@@ -109,10 +114,10 @@ it thinks of it, in fixed words too (`HelperRemarkUtil`):
   it joins. Every new post gets an entry in the knowledge, under its subject; see which writings the
   knowledge, the topics and the small talk's `from` already cover, to draw on others.
 - **The maker**, from what he has published about himself: the portfolio page
-  (`views/partial/info/portfolio.ejs`) and his memoirs in the library. Nothing he hasn't published, and
+  (the repository's `ssg/views/partial/info/portfolio.ejs`) and his memoirs in the library. Nothing he hasn't published, and
   nothing of Korea (see below).
 - **The dev log**, `public/devlog-<year>/source.txt`: every post newer than the last line of the
-  story so far becomes a line of it, dated, in a few plain words. A new turn in ThingsPool's story
+  story so far becomes a line of it, dated, in a few plain words. A new turn in the game's story
   may also become an opener or two in the small talk (the game's topics, with its date).
 - **The game**, only for the guide's outline and the ideas to try: the UI code under
   `src/client/ui/components/hud/` for what a player actually clicks. A feature's `/docs` page says how
@@ -167,7 +172,7 @@ it thinks of it, in fixed words too (`HelperRemarkUtil`):
 - **Real addresses only**, each a page under `public/` (a test checks), and each written as the link a helper gives,
   `<link href="https://...">read it</link>`, a word or two its button's words: the model copies that markup more
   faithfully than it follows a rule about links (see `docs/gameplay/chat.md`).
-- **Visitors know nothing of the website.** Nobody arriving in the game knows that ThingsPool has a
+- **Visitors know nothing of the website.** Nobody arriving in the game knows that its maker has a
   website with writings, art and games on it. So nothing the helpers are told calls those by the
   site's own section names ("the library", "the arcade") as if they were known, and the rules have a
   helper introduce a writing in one sentence: its title, who wrote it, what kind of writing it is, in a
@@ -219,7 +224,7 @@ it thinks of it, in fixed words too (`HelperRemarkUtil`):
     a nod may go in front), in its character's voice, so that the same idea sounds different from
     each.
   - An idea from a writing is retold as the writing has it, satire as satire, and credited to
-    "Youngjin, who made ThingsPool" where it could pass for a fact about the game or the world. A
+    "Youngjin, who made Robot Rooms" where it could pass for a fact about the game or the world. A
     line that names a writing gives its title and what kind it is, and only a then carries a link,
     so a chat has at most one.
   - Nothing is claimed to have happened in the game that didn't ("someone built a castle today"): a

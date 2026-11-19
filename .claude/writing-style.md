@@ -29,11 +29,12 @@ The posts are also the only writing on the site to take style from. The books an
 in the Library are a different genre — long-form, discursive, written to explain rather than to
 invite — and that voice does not transfer to a short piece of promotional copy.
 
-Published posts are dated records. Fix the draft, never the published ones.
+Published posts are dated records. Fix the draft, never the published ones. The game is Robot Rooms
+in every draft, and ThingsPool is the name of its maker and his site.
 
 ## Who reads it
 
-Someone who has never heard of ThingsPool, does not write software, and owes the text nothing. They
+Someone who has never heard of Robot Rooms, does not write software, and owes the text nothing. They
 will read one sentence before deciding whether to read the second. Many of them read English as a
 second language, so every individual word has to be a common one — but a common word arranged into
 an exciting sentence is exactly what is wanted.
@@ -137,7 +138,7 @@ built themselves and are proud of.
   in real time!"* A real mechanic described as a sensation. Usually the best line in the piece, and
   the line that cancels itself out if there are three. Find several, keep one.
 - **End by inviting them in.** *"So jump in, and become part of our everlasting journey."* / *"Come
-  join ThingsPool."* The copy asks for the click.
+  join Robot Rooms."* The copy asks for the click.
 
 ## 4. Say it once, in ordinary words
 
@@ -168,8 +169,8 @@ are all fine. The corpus uses every one of them.
 
 The corpus shares it, and it is a good default:
 
-1. **The announcement** — preferably one appositive sentence carrying what ThingsPool is and what is
-   new at once: *"ThingsPool, a 3D virtual universe of rooms, now includes custom doors!"* Two
+1. **The announcement** — preferably one appositive sentence carrying what Robot Rooms is and what is
+   new at once: *"Robot Rooms, a 3D virtual universe of rooms, now includes custom doors!"* Two
    sentences is the older shape and still fine, but it spends a paragraph on what one sentence can do.
 2. **The promise** — what the reader gets to do now, in open terms.
 3. **A short paragraph per part of the feature**, each ending in an open list.
@@ -184,7 +185,7 @@ Read the finished text once for each, and fix what fails. The skill that owns th
 
 1. **Would a stranger want to click after reading this?** If the honest answer is "it is accurate",
    it has failed and needs rewriting, not polishing.
-2. **The reader learns what ThingsPool is** in the opening.
+2. **The reader learns what Robot Rooms is** in the opening.
 3. **What the product is, is concrete; what the reader might do, is open.** Not the other way round.
 4. **At least one open-ended list**, at most one vivid physical image, one or two exclamation marks.
 5. **Every named item is real** in the code. The open tail needs no check.

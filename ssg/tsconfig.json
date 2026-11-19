@@ -1,0 +1,19 @@
+{
+	"compilerOptions": {
+		"target": "es2024",
+		"lib": ["es2024"],
+		"module": "nodenext",
+		"moduleResolution": "nodenext",
+		"types": ["node"],
+		"strict": true,
+		"skipLibCheck": true,
+		"noEmit": true,
+		// Node runs these files as they are, taking only the types out, so each import names its file's
+		// extension and nothing here may need compiling (an enum, a parameter property).
+		"allowImportingTsExtensions": true,
+		"verbatimModuleSyntax": true,
+		"erasableSyntaxOnly": true
+	},
+	"include": ["**/*.ts"],
+	"exclude": ["node_modules"]
+}

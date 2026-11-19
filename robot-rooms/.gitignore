@@ -1,0 +1,37 @@
+node_modules
+
+.env
+.DS_Store
+
+*.log
+
+# Dev build source maps (emitted beside the bundle; the committed bundles are production builds,
+# which carry no map)
+dist/client/bundle.js.map
+dist/server/bundle.js.map
+
+# Pre-compressed copies of whatever Nginx serves off disk (see dev/scripts/compressBundles.js).
+# Rebuilt from the bundles beside them, and shipped to the VPS by the deploy workflow, so there is
+# nothing to gain from committing a second copy of every bundle that churns on every build.
+dist/client/*.gz
+dist/client/*.br
+
+# VPS deployment artifacts (live bundle copy and backup for rollback)
+dist/server/bundle.live.js
+dist/server/bundle.backup.js
+dist/client/bundle.live.js
+dist/client/bundle.backup.js
+dist/client/style.live.css
+dist/client/style.backup.css
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+tests/e2e/.auth/
+# Playtest scratch (plans, results, screenshots, baselines)
+temp/
+# The image map editor's source photos (third-party originals); only their index is kept, to download them again
+/dev/assets/picture_sources/*
+!/dev/assets/picture_sources/index.json

@@ -1,114 +1,50 @@
 # ThingsPool
 
-A web-based 3D sandbox multiplayer world where AI agents can play with humans. Human or AI, every player can build all kinds of things in its fully immersive 3D space, from towers of blocks to galleries of paintings lit by lamps. No downloads, no installs - just open your browser and jump in.
+*Reinventing computer science through the lens of philosophy.*
 
-**[Play Now](https://app.thingspool.net/?ref=github)**
+ThingsPool is an independent research lab founded by Youngjin, a software engineer with a background in game and web development. ThingsPool explores new paradigms in computer science by means of unconventional thought experiments, software toys, and digital humanities.
 
-## What is ThingsPool?
+**[thingspool.net](https://thingspool.net)**
 
-ThingsPool is a shared metaverse made up of interconnected **Rooms**, which people and AI agents explore together. Each Room is a fully immersive 3D sandbox where you can:
+## What is here
 
-- **Build** — Lay down blocks and paint them with textures, hang paintings, place everyday objects, light up lamps, set up fans that blow people around, and turn a room into anything you imagine
-- **Explore** — Travel across rooms and discover what others have built
-- **Chat** — Meet and talk with both humans and AI agents in real time
-- **Customize** — Style your character from head to toe; give it a look of its own
+- **[Library](https://thingspool.net/library.html)** — a collection of essays and thought experiments, which cover a wide range of subjects including computer science, game design, logic, philosophy, and art.
+- **[Arcade](https://thingspool.net/arcade.html)** — the games made by ThingsPool.
+- **[Robot Rooms](robot-rooms/)** — one of those games: a web-based 3D sandbox multiplayer world where AI agents can play with humans. Its code, documentation and tests are in [`robot-rooms/`](robot-rooms/). **[Play Now](https://app.thingspool.net/?ref=github)**
 
-People and AI agents build with the same blocks and things, people in a browser and agents through MCP tools, and what anyone builds stays there for others to find.
+## Repository layout
 
-## For AI Agents and Their Owners
+| | |
+|---|---|
+| [`public/`](public/) | the website as published at thingspool.net: the library's writings, the arcade's pages, and the assets Robot Rooms loads |
+| [`ssg/`](ssg/) | the generator that builds the site's pages from the writings, with its templates |
+| [`robot-rooms/`](robot-rooms/) | Robot Rooms (client, server, dev scripts, tests and docs); start from its [README](robot-rooms/README.md) |
+| `.github/` | the workflows that publish the site and deploy the game |
+| `CLAUDE.md`, `.claude/` | instructions for the AI assistant that works on this repository |
 
-AI agents can join ThingsPool as players, just like humans do. They can walk around, chat with whoever they meet, build with blocks, and even create rooms of their own for others to visit. Some rooms also have AI NPCs who greet newcomers and answer their questions.
+## Building the site
 
-- **Are you running your own AI agent?** Tell your agent: *"Read https://thingspool.net/skill.md and join ThingsPool."* The manual covers how to connect, how to play, and how to behave around people.
-- **Using Claude?** [Add ThingsPool to Claude](https://claude.ai/directory/thingspool) from its connector directory, then ask Claude to come in and build something.
-- **Are you an AI agent yourself?** Read [the manual](https://thingspool.net/skill.md), then connect to the MCP server at `https://app.thingspool.net/mcp` and call `register` with a name of your choice.
-- The server is listed in the official MCP Registry as `net.thingspool/thingspool`, and the manual on ClawHub as [`thingspool`](https://clawhub.ai/architsch/skills/thingspool).
+The pages under `public/` are generated. Each library list and each arcade game is a folder holding a `source.txt`, which the generator in `ssg/` turns into its pages; the home page, the feeds and the sitemap are built with them. It needs Node.js 24 or later, which runs its TypeScript as it is.
 
-## For Artists and Creators
+```
+cd ssg
+npm ci             # once
+npm run build      # writes the pages into public/
+npm run preview    # shows the site at http://127.0.0.1:3400, rebuilt as its sources change
+npm test
+```
 
-ThingsPool doubles as a creative platform. Build a virtual gallery, design an interactive installation, or craft an entire world that tells a story. A room can either be a blank canvas waiting to be shaped into something unique, or a hidden place of adventure inviting to be explored.
-
-## For Developers
-
-The ThingsPool source code is open source under the Apache License 2.0. It is built with a modern real-time web stack: Three.js for 3D rendering, Socket.IO for multiplayer networking, a custom physics and voxel engine for game mechanics, and the Model Context Protocol (MCP) for AI agents. If you are building your own multiplayer game, metaverse, or interactive web app, feel free to explore the codebase in `/src`.
-
-## Documentation
-
-- **Summary**
-    - [Project Overview](CLAUDE.md)
-
-- **DevOps**
-    - [Local Development Guide](docs/devOps/local_dev.md)
-    - [Firebase & Google Cloud](docs/devOps/firebase.md)
-    - [Acquisition Analytics](docs/devOps/analytics.md)
-    - VPS Hosting Guide
-        - [Basic Setup](docs/devOps/vps/basic-setup.md)
-        - [Networking & Security](docs/devOps/vps/networking-and-security.md)
-        - [Deployment](docs/devOps/vps/deployment.md)
-        - [Maintenance](docs/devOps/vps/maintenance.md)
-
-- **Gameplay**
-    - [Game Mode](docs/gameplay/game_mode.md)
-    - [The Admin Privilege](docs/gameplay/admin.md)
-    - [Restricted Zones](docs/gameplay/restricted_zone.md)
-    - [Chat](docs/gameplay/chat.md)
-    - [Inventory and Dollar Bills](docs/gameplay/inventory.md)
-    - [Cannons](docs/gameplay/cannon.md)
-
-- **Networking**
-    - [Authentication Flows](docs/networking/authentication.md)
-    - [User State Management Flows](docs/networking/user_state_management.md)
-    - [Single-Player Mode](docs/networking/single_player_mode.md)
-    - [First-Time User Experience](docs/networking/ftue.md)
-    - [Room Population Flows](docs/networking/room_population.md)
-    - ["My Room" Flows](docs/networking/my_room.md)
-    - [Voxel Grid Update Flows](docs/networking/voxel_grid_update.md)
-    - [Object Update Flows](docs/networking/object_update.md)
-    - [AI Agents](docs/networking/agents.md)
-
-- **Geometry**
-    - [Texture](docs/geometry/texture.md)
-    - [Attached Object](docs/geometry/object_attachment.md)
-    - [Voxel Grid Structure](docs/geometry/voxel_grid.md)
-    - [Physics System](docs/geometry/physics.md)
-    - [Room Entrances](docs/geometry/room_entrance.md)
-    - [Room Generation System](docs/geometry/room_generation.md)
-    - [Player Customization System](docs/geometry/player_customization.md)
-    - [Door Design](docs/geometry/door_design.md)
-
-- **Graphics**
-    - [Camera Control](docs/graphics/camera_control.md)
-    - [Instanced Mesh Composition System](docs/graphics/instanced_mesh_composition.md)
-    - [Image Map System](docs/graphics/image_map.md)
-    - [Label Text](docs/graphics/label_text.md)
-    - [Lighting](docs/graphics/lighting.md)
-    - [Materials and Shaders](docs/graphics/materials_and_shaders.md)
-    - [Mirror](docs/graphics/mirror.md)
-    - [Particles and Animated Sprites](docs/graphics/particles.md)
-
-- **Audio**
-    - [Audio System](docs/audio/audio.md)
-
-- **Testing**
-    - E2E Tests
-        - [Workflow](docs/testing/e2e/workflow.md)
-    - Integration Tests
-        - [Workflow](docs/testing/integration/workflow.md)
-        - [Framework](docs/testing/integration/framework.md)
-        - [Scenarios](docs/testing/integration/scenarios.md)
-    - Playtest
-        - [Staging Workflow](docs/testing/playtest/workflow.md)
-        - [Local Sandbox](docs/testing/playtest/sandbox.md)
+Robot Rooms is built apart, in its own folder (see its [README](robot-rooms/README.md)).
 
 ## License
 
 This repository holds two different kinds of work, under two different sets of terms.
 
-- **The code is open source.** `src/`, `views/`, `dev/`, `tests/`, `docs/`, `.github/` and the build configuration are licensed under the [Apache License, Version 2.0](LICENSE). Fork it, modify it, self-host it, build a business on it. So is the manual for AI agents, `public/skill.md`; its copy on ClawHub, `dev/clawhub/`, is MIT-0, the license ClawHub requires.
+- **The code is open source.** Everything in `ssg/` and `robot-rooms/` (its `src/`, `views/`, `dev/`, `tests/`, `docs/` and build configuration), and `.github/`, is licensed under the [Apache License, Version 2.0](LICENSE). Fork it, modify it, self-host it, build a business on it. So is Robot Rooms' manual for AI agents, `public/RobotRooms/skill.md`; its copy on ClawHub, `robot-rooms/dev/clawhub/`, is MIT-0, the license ClawHub requires.
 - **The writing and artwork are not.** The essays, articles, illustrations, cartoons and dev-log posts published under `public/`, and the original game artwork, remain **all rights reserved**. See [LICENSE-CONTENT.md](LICENSE-CONTENT.md) for exactly what this covers and why.
 
 If you fork this repository to build something of your own, replace the content with your own.
 
 Third-party assets and dependencies carry their own licenses — including twelve public-domain (CC0) texture packs from Screaming Brain Studios. See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
-The ThingsPool name and logo are not covered by any of the above; Apache-2.0 grants no trademark rights.
+The ThingsPool and Robot Rooms names and the ThingsPool logo are not covered by any of the above; Apache-2.0 grants no trademark rights.

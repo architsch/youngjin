@@ -1,0 +1,29 @@
+<%- include(`${ejsPartialRootPath}/common/header.ejs`, {
+    title: "ThingsPool - " + entry.title,
+    desc: description,
+    keywords: keywords,
+    url: `${URL_STATIC}/${relativeURL}`,
+    pageName: "arcade",
+    pagePathList: [
+        {title: PAGE_NAME_MAP["index"], url: URL_STATIC},
+        {title: PAGE_NAME_MAP["arcade"], url: `${URL_STATIC}/arcade.html`},
+        {title: entry.title, url: undefined},
+    ],
+    backDestination_href: `${URL_STATIC}/arcade.html`,
+    ogImageURL: entry.shareImage ? `${URL_STATIC}/${entry.shareImage.path}` : undefined,
+    ogImageWidth: entry.shareImage?.width,
+    ogImageHeight: entry.shareImage?.height,
+    ogImageAlt: entry.shareImage?.alt,
+}) %>
+<h1><%= entry.title %></h1>
+<%_ /* A store's own badge (playLinkImagePathOverride) is shown as the store made it, without the Play button's glow. */ _%>
+<%_ if (entry.playLinkImagePathOverride == undefined) { _%>
+<a class="noTextDeco imageButton" href="<%= entry.playLinkURL %>" ontouchstart="">
+<%_ } else { _%>
+<a class="noTextDeco" href="<%= entry.playLinkURL %>">
+<%_ } _%>
+<img class="s_image" src="<%= URL_STATIC %>/<%= playLinkImagePath %>" alt="Play">
+</a>
+<div class="zero_row"></div>
+<%- content %>
+<%- include(`${ejsPartialRootPath}/common/footer.ejs`) %>

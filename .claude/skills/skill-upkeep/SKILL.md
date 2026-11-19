@@ -1,6 +1,6 @@
 ---
 name: skill-upkeep
-description: Audit and repair this project's own development instructions and tooling — the skills under .claude, the house writing-style page, the project rules in .claude/rules, the dev scripts under dev/scripts that run and drive the app, and the guideline pages in CLAUDE.md, docs/devOps and docs/testing — verifying every command, path, script flag, selector and factual claim still holds against the current codebase, fixing what has drifted, filling in what the app can now do and the tooling cannot reach, and tightening instructions that have proven ambiguous in practice. Use when a skill misbehaves or gives stale instructions, after changing a script a skill drives, or when a dev script or setup guide has fallen behind the app.
+description: Audit and repair this project's own development instructions and tooling — the skills under .claude, the house writing-style page, the project rules in .claude/rules, the dev scripts under robot-rooms/dev/scripts that run and drive the app, and the guideline pages in the two CLAUDE.md files (the repository's and robot-rooms'), robot-rooms/docs/devOps and robot-rooms/docs/testing — verifying every command, path, script flag, selector and factual claim still holds against the current codebase, fixing what has drifted, filling in what the app can now do and the tooling cannot reach, and tightening instructions that have proven ambiguous in practice. Use when a skill misbehaves or gives stale instructions, after changing a script a skill drives, or when a dev script or setup guide has fallen behind the app.
 ---
 
 # Skill Upkeep
@@ -12,14 +12,21 @@ than a missing one — it is confidently wrong, and the agent following it will 
 
 The same is true one layer down, of the tooling the skills drive and the guideline pages that
 describe it: **the dev scripts under `dev/scripts/` — the ones used to run, open and drive the app —
-and the guideline documents (`CLAUDE.md`, `docs/devOps/`, `docs/testing/`, and the READMEs beside the
-scripts).** They are audited here for the same reason, and for one more: a script can be perfectly
+and the guideline documents (the two `CLAUDE.md` files, `docs/devOps/`, `docs/testing/`, and the READMEs
+beside the scripts).** They are audited here for the same reason, and for one more: a script can be perfectly
 accurate and still be *behind* the app, with no way to reach something the game has since grown.
 
 This is an audit against reality, not a rewrite. **Prose that is still accurate stays as it is.**
 Rewording a working instruction costs review attention and risks losing a hard-won caveat; the
 sentences in these files that read like odd trivia are usually the scar tissue from a run that went
 wrong once.
+
+Paths and commands here are from `robot-rooms/`, the game's project folder (`cd robot-rooms` first),
+so `CLAUDE.md` is the game's. Those of `public/`, `.claude/`, `.github/`, the root `CLAUDE.md` and
+`README.md` and the license files are at the repository's root, as is the site's generator with its
+templates, named here as the repository's `ssg/`. The root `CLAUDE.md` and `README.md`
+carry that generator's commands (`npm run build`, `check`, `preview` and `test`, in its folder), which
+are checked like any others here.
 
 ## Step 1 — Find what moved
 
@@ -40,15 +47,16 @@ The `src/` half of that diff is read differently: not for what the tooling says 
 Then enumerate the instructions themselves:
 
 ```bash
-ls .claude/skills/*/SKILL.md .claude/skills/*/reference/*.md .claude/writing-style.md .claude/rules/*.md
+ls .claude/skills/*/SKILL.md .claude/skills/*/reference/*.md .claude/writing-style.md .claude/rules/*.md   # at the repository's root
 ls dev/scripts/*.js dev/scripts/*/*.js docs/devOps/*.md docs/devOps/*/*.md docs/testing/*/*.md
+ls CLAUDE.md ../CLAUDE.md ../README.md ../ssg/package.json   # the two instruction files, and the site generator's commands
 ```
 
 Every one gets checked, not only the ones the diff touched — drift accumulates from changes made
 long before this batch. `docs/plans/` is not touched without the user's approval, whatever a sweep here turns up
 ([`../../rules/plan-documents.md`](../../rules/plan-documents.md)), and the other `/docs` pages —
 the subject maps — belong to `docs-and-tests-sync`, not here. So do the agents' manual and its ClawHub
-copy (`public/skill.md`, `dev/clawhub/thingspool/SKILL.md`): skills in form, but written for AI agents
+copy (`public/RobotRooms/skill.md`, `dev/clawhub/robot-rooms/SKILL.md`): skills in form, but written for AI agents
 playing the game, not for this project's work. They change under the agents-keep-up rule, both together
 or neither, since a test compares them.
 
@@ -57,20 +65,21 @@ Audit it like any other file here, and treat a style rule that has migrated into
 to reverse — rules about *how* to write belong in the style page, rules about what a particular
 piece must contain belong in the skill that owns it.
 
-`.claude/rules/` holds the project invariants that CLAUDE.md states in short and delegates the
-reasoning for — room generation, the license files, plan documents, source edits, agents and helpers
-keeping up with every feature, and the documentation and code comment guidelines. They are instructions like any
+`.claude/rules/` holds the project invariants that the two `CLAUDE.md` files state in short and delegate
+the reasoning for: the repository's in the root one (the license files, source edits, page sources, the
+code comment guidelines), the game's in its own (room generation, plan documents, agents and helpers
+keeping up with every feature, the documentation guidelines). They are instructions like any
 other file here, and they make the same checkable claims (module and type names, paths, which files
 a rule reaches), so they drift the same way. Two extra checks for these: the summary of each rule
-in CLAUDE.md must still say the same thing as the page it links to — a rule that has been sharpened
+in its `CLAUDE.md` must still say the same thing as the page it links to — a rule that has been sharpened
 in one place and not the other is worse than one written down once — and every link between
-CLAUDE.md and `.claude/rules/` must resolve in both directions.
+that file and `.claude/rules/` must resolve in both directions.
 
 The **dev scripts and the guideline pages** are the same job in a different register. The scripts are
 what a session actually runs — the dev server launcher, the local sandbox runner, the playtest and
 VPS tooling, the shared automation libraries — and their usage strings and header comments are
 instructions like any other, read far more often than the code beneath them. The guideline pages
-(`CLAUDE.md`, `docs/devOps/`, `docs/testing/`, the READMEs beside the scripts) are how somebody finds
+(the two `CLAUDE.md` files, `docs/devOps/`, `docs/testing/`, the READMEs beside the scripts) are how somebody finds
 the scripts at all, and they carry commands and flags on purpose, so they go stale in exactly the
 places that matter. Hold them to the documentation guidelines (`.claude/rules/documentation.md`): fix
 the line that is now wrong rather than adding a note beside it.

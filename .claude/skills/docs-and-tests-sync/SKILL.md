@@ -1,6 +1,6 @@
 ---
 name: docs-and-tests-sync
-description: Bring the documentation, the license files and the test suites back in line with recent code changes — survey everything committed-but-unpushed plus everything uncommitted, work out which /docs pages, CLAUDE.md sections, README entries, LICENSE-CONTENT/THIRD-PARTY-NOTICES entries and integration/e2e tests the change has made wrong or incomplete, then fix them and verify the suites still pass. Use when asked whether the docs are up to date, when tests need to catch up with a feature, when a new dependency or external asset or public/ directory has been added, or to catch up a batch of work whose docs and tests were not kept in step as it was built.
+description: Bring the documentation, the license files and the test suites back in line with recent code changes — survey everything committed-but-unpushed plus everything uncommitted, work out which robot-rooms/docs pages, CLAUDE.md sections, README entries, LICENSE-CONTENT/THIRD-PARTY-NOTICES entries and integration/e2e tests the change has made wrong or incomplete, then fix them and verify the suites still pass. Use when asked whether the docs are up to date, when tests need to catch up with a feature, when a new dependency or external asset or public/ directory has been added, or to catch up a batch of work whose docs and tests were not kept in step as it was built.
 ---
 
 # Docs and Tests Sync
@@ -12,6 +12,12 @@ The job is **not** to review the code, propose refactors, or write documentation
 It is narrower and more useful than that: find the places where the change that was just made has
 left a doc describing behaviour that no longer exists, or left a behaviour with no test asserting
 it, and fix exactly those.
+
+Paths and commands here are from `robot-rooms/`, the game's project folder (`cd robot-rooms` first),
+so `/docs` is `robot-rooms/docs`, `/src` is `robot-rooms/src` and `CLAUDE.md` is the game's. Those of
+`public/`, `.claude/`, `.github/`, the root `CLAUDE.md` and `README.md` and the license files are at the
+repository's root, as is the site's generator with its templates, named here as the repository's `ssg/`
+(the game has an `ssg` and a `views/` of its own).
 
 ## Step 1 — Establish the change set
 
@@ -36,7 +42,7 @@ docs would use, not in terms of files. "Rooms now carry a fog setting" is a chan
 
 ## Step 2 — Map behaviour to documents
 
-The documentation index in [README.md](../../../README.md) is the authoritative list of pages, and
+The documentation index in [robot-rooms/README.md](../../../robot-rooms/README.md) is the authoritative list of pages, and
 each page owns a subject. For every behaviour change, ask which page's subject it falls under. A
 change usually lands in one; occasionally it contradicts a sentence in a second page that mentions
 the same mechanism in passing, and that second one is the one that gets missed — grep for the
@@ -54,22 +60,28 @@ break it, because sweeping `/docs` for stale descriptions is exactly what it doe
 **Rewrite the passage that is now wrong; do not append the new behaviour beside it** — see
 [The rules that govern /docs](#the-rules-that-govern-docs) below.
 
-Three documents sit outside `/docs` and are checked separately:
+Four documents sit outside `/docs` and are checked separately:
 
-- **CLAUDE.md** — its project structure section and its architecture notes. A new top-level
-  directory, a new subsystem under `/src`, or a new architectural invariant belongs here. Not
-  individual features.
-- **README.md** — its documentation index. **A new page under `/docs` that is not linked here does
-  not exist**, so any page you add gets a line in the index in the same change. `/docs/plans` is the
-  exception: the index lists the pages that describe the present, and plans are not among them.
+- **CLAUDE.md** — its project structure section and its architecture notes. A new directory at the
+  top of `robot-rooms/`, a new subsystem under `/src`, or a new architectural invariant belongs here.
+  Not individual features.
+- **The root `CLAUDE.md`** — the repository's folders and the website's: what `public/` and the
+  repository's `ssg/` hold, and the site generator's commands. A new folder at the root
+  belongs here, and the game's own matters do not.
+- **robot-rooms/README.md** — its documentation index. **A new page under `/docs` that is not linked
+  here does not exist**, so any page you add gets a line in the index in the same change.
+  `/docs/plans` is the exception: the index lists the pages that describe the present, and plans are
+  not among them.
+- **README.md** at the repository's root — what ThingsPool is, and its table of the repository's
+  layout. A new folder at the root gets a row there.
 - **`.claude/skills/*/SKILL.md`** — out of scope here. The `skill-upkeep` skill owns those.
 
 ### The license files are documentation too
 
 `LICENSE-CONTENT.md` and `THIRD-PARTY-NOTICES.md` describe *what ships and under whose terms*, and
 they go stale exactly the way a `/docs` page does — except that nothing fails when they do, and the
-consequence is legal rather than confusing. CLAUDE.md's **"The License Files Must Describe What
-Actually Ships"** rule, in full at [`../../rules/license-files.md`](../../rules/license-files.md), is
+consequence is legal rather than confusing. The root `CLAUDE.md`'s **"The License Files Must Describe
+What Actually Ships"** rule, in full at [`../../rules/license-files.md`](../../rules/license-files.md), is
 the rule; this is where the pass enforces it.
 
 Four questions, answered from the Step 1 change set:
@@ -81,7 +93,9 @@ Four questions, answered from the Step 1 change set:
    ```
 
    Silence means every dependency is permissive. (`NOT INSTALLED` lines are noise from an optional
-   platform-specific package, not a licensing finding.)
+   platform-specific package, not a licensing finding.) The site's generator has a `package.json` of
+   its own, the repository's `ssg/package.json`: when that one changed, run the same command in that
+   folder.
 
    Anything else it prints is a finding to **report, not to absorb**. A copyleft or source-available
    dependency (GPL, AGPL, LGPL, MPL, SSPL, BUSL, PolyForm, "non-commercial") can force this
@@ -97,8 +111,9 @@ Four questions, answered from the Step 1 change set:
    that is content, all rights reserved, and it belongs in the illustrative list in
    `LICENSE-CONTENT.md`.
 
-4. **Is there a new top-level code directory?** It belongs in the "What Apache-2.0 covers" table in
-   `LICENSE-CONTENT.md`, so the open-source half of the boundary stays complete.
+4. **Is there a new code directory, at the repository's root or at the top of `robot-rooms/`?** It
+   belongs in the "What Apache-2.0 covers" table in `LICENSE-CONTENT.md`, so the open-source half of
+   the boundary stays complete.
 
 **Never edit `LICENSE`.** It is verbatim Apache-2.0. Every scope statement, exclusion and
 attribution goes in the other files.
@@ -164,8 +179,9 @@ a doc/test pass; a stale sentence in what agents or helpers read is fixed here.
 |---|---|---|
 | Integration (Vitest) | `tests/integration/scenarios/` | Server logic through the real routers and socket handlers against a mocked DB; the `db.test.ts` suite runs against the Firestore emulator |
 | E2E (Playwright) | `tests/e2e/` | Whole flows through a real browser against a running server |
+| The site generator's (`node --test`) | the repository's `ssg/tests/` | How a source's text becomes pages, what a build writes, and the preview; nothing of the game |
 
-Read [docs/testing/](../../../docs/testing/) before adding anything — the harness conventions
+Read [docs/testing/](../../../robot-rooms/docs/testing/) before adding anything — the harness conventions
 (`tests/integration/helpers/`) matter more than the assertions do, and a test that bypasses them is
 a test that will break for reasons unrelated to what it covers.
 
@@ -204,6 +220,14 @@ Do **not** reach for a bare `npx tsc --noEmit` against the tsconfigs in `dev/con
 them includes `tests/`, and both emit a wall of pre-existing `node_modules` declaration errors that
 have nothing to do with this change — it is a signal you would have to learn to ignore, which makes
 it worse than no signal.
+
+A change to the site's generator or its templates (the repository's `ssg/`) is verified in
+that folder instead, and its pages are built again, since the pre-commit hook also refuses pages in
+`public/` that a build would change:
+
+```bash
+cd ../ssg && npm run typecheck && npm test && npm run build
+```
 
 E2E only if the change plausibly affects a browser flow, and only against a local server:
 

@@ -1,0 +1,1017 @@
+/**
+ * Particles and animated sprites, without a GPU: the ring allocator (wrapping, at most two upload ranges, its
+ * high-water mark), sprite slots and phase continuity, clock rebasing, waveforms (level and closed-form
+ * integral), parameter-row baking, the effect definitions in their JSON map (each one sound, the checker
+ * catching what a compiler would, and every one an object type names being there), how far an effect's stream
+ * carries, the gameplay events that trigger effects (a block's removal, fired by edits only; an attached object's
+ * going, broken all over its face; a cannon's shot, its ball's burst, and its turning to scrap in a puff), and the components' baseline +
+ * override resolution, an emitter's reach and its particles' pace among it. What the shader draws is checked headlessly instead (see
+ * docs/testing/integration/scenarios.md).
+ */
+import { describe, it, expect, beforeEach, afterEach, vi, Mock } from "vitest";
+import fc from "fast-check";
+
+vi.mock("../../../src/client/graphics/graphicsManager", async () => {
+    const THREE = await import("three");
+    const camera = new THREE.PerspectiveCamera();
+    const scene = new THREE.Scene();
+    const lightBlockMap = { requestRecomputation() {}, resetForRoom(_voxels?: unknown) {},
+        getNearbyLightAt(_worldPos: unknown, out: any) { return out.setRGB(0, 0, 0); } };
+    return { default: { getCamera: () => camera, getScene: () => scene,
+        getLightBlockMap: () => lightBlockMap, isResolutionAtFloor: () => false,
+        setViewReferenceOffset: () => {}, setPointLightSurroundings: () => {},
+        setRoomLightingPrefs: () => {} } };
+});
+
+vi.mock("../../../src/client/app", () => {
+    const App = {
+        getCurrentRoom: vi.fn(),
+        getVoxelQuads: vi.fn(),
+        getUser: vi.fn(),
+        getEnv: vi.fn(),
+        // As with no room on its way.
+        whenInRoom: async (roomID: string) => App.getCurrentRoom()?.id == roomID,
+    };
+    return { default: App };
+});
+
+vi.mock("../../../src/client/graphics/types/gizmo/generic/worldSpaceOutlineRect", () => ({
+    default: class WorldSpaceOutlineRectStub
+    {
+        static async create() { return new WorldSpaceOutlineRectStub(); }
+        addToParent() {}
+        setTransform() {}
+        setTransformRaw() {}
+        setVisible() {}
+        dispose() {}
+    },
+}));
+
+import App from "../../../src/client/app";
+import ParticleRingAllocator from "../../../src/client/graphics/particle/types/particleRingAllocator";
+import ParticleBatch from "../../../src/client/graphics/particle/types/particleBatch";
+import ParticleSpawn from "../../../src/client/graphics/particle/types/particleSpawn";
+import SpriteHandle from "../../../src/client/graphics/particle/types/spriteHandle";
+import ParticleParamTextureUtil from "../../../src/client/graphics/particle/util/particleParamTextureUtil";
+import ParticleEffectConfigUtil from "../../../src/client/graphics/particle/util/particleEffectConfigUtil";
+import ParticleEffectConfigMap from "../../../src/client/graphics/particle/maps/particleEffectConfigMap";
+import SpriteConfigMap from "../../../src/client/graphics/particle/maps/spriteConfigMap";
+import ObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/objectTypeConfig";
+import ParticleLayerConfig from "../../../src/client/graphics/particle/types/particleLayerConfig";
+import ParticleSystem from "../../../src/client/graphics/particle/particleSystem";
+import ParticleTriggerUtil from "../../../src/client/graphics/particle/util/particleTriggerUtil";
+import ParticleSpawnUtil from "../../../src/client/graphics/particle/util/particleSpawnUtil";
+import ParticleEmitterHandle from "../../../src/client/graphics/particle/types/particleEmitterHandle";
+import ParticleEmitterDescriptor from "../../../src/shared/graphics/particle/types/particleEmitterDescriptor";
+import ParticleEmitter from "../../../src/client/object/components/particleEmitter";
+import { PARTICLE_CURVE_SAMPLES, PARTICLE_KIND_CODE, PARTICLE_ORIENTATION_CODE, PARTICLE_PARAM_ROW_TEXELS,
+    PARTICLE_PARAM_TEXEL } from "../../../src/client/graphics/shaders/particleShader";
+import { unpackWaveformShape } from "../../../src/client/graphics/shaders/waveformGLSL";
+import { ObjectMetadata } from "../../../src/shared/object/types/objectMetadata";
+import AnimatedSprite from "../../../src/client/object/components/animatedSprite";
+import GameObject from "../../../src/client/object/types/gameObject/gameObject";
+import ClientVoxelManager from "../../../src/client/voxel/clientVoxelManager";
+import { cannonBallBounceObservable, cannonBallBurstObservable, cannonFiredObservable, cannonScrappedObservable,
+    objectCollectedObservable, objectEditObservable, roomShapeChangedObservable, voxelBlockEditObservable }
+    from "../../../src/client/system/clientObservables";
+import { BREAK_SPACING, MAX_BREAKS } from "../../../src/client/graphics/particle/util/particleTriggerUtil";
+import { CannonPhaseEnumMap } from "../../../src/shared/object/types/cannonPhase";
+import CannonStateUtil from "../../../src/shared/object/util/cannonStateUtil";
+import PhysicsColliderStateUtil from "../../../src/shared/physics/util/physicsColliderStateUtil";
+import EncodableByteString from "../../../src/shared/networking/types/encodableByteString";
+import { ObjectMetadataKeyEnumMap } from "../../../src/shared/object/types/objectMetadataKey";
+import Vec3 from "../../../src/shared/math/types/vec3";
+import Vec2 from "../../../src/shared/math/types/vec2";
+import Waveform from "../../../src/shared/math/types/waveform";
+import WaveformUtil from "../../../src/shared/math/util/waveformUtil";
+import ObjectScaleUtil from "../../../src/shared/object/util/objectScaleUtil";
+import AnimatedSpriteDescriptor from "../../../src/shared/graphics/particle/types/animatedSpriteDescriptor";
+import ObjectTransform from "../../../src/shared/object/types/objectTransform";
+import AddObjectSignal from "../../../src/shared/object/types/addObjectSignal";
+import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
+import AddVoxelBlockSignal from "../../../src/shared/voxel/types/update/addVoxelBlockSignal";
+import RemoveVoxelBlockSignal from "../../../src/shared/voxel/types/update/removeVoxelBlockSignal";
+import SetVoxelQuadTextureSignal from "../../../src/shared/voxel/types/update/setVoxelQuadTextureSignal";
+import Room from "../../../src/shared/room/types/room";
+import { PLAYER_HEIGHT } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import { COLLISION_LAYER_HEIGHT, STOREY_FLOOR_COLLISION_LAYER, VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
+import { createEditingUser } from "../helpers/mockUser";
+import { buildPillar, createRoom, quadIndexOf } from "../helpers/selectionHarness";
+
+const FLOATS_PER_INSTANCE = 16;
+
+// ─── Fixtures ───
+
+function makeSpawn(overrides: Partial<ParticleSpawn> = {}): ParticleSpawn
+{
+    return {origin: {x: 1, y: 2, z: 3}, spawnTime: 0, velocity: {x: 0, y: 1, z: 0}, lifetime: 1,
+        paramRow: 0, seed: 0.5, size: 0.2, timeScale: 1, packedTint: 0xffffff, levelAtBirth: 1, landingY: -1e6, ...overrides};
+}
+
+// The batch's own instance data, which is what the shader reads.
+function instanceData(batch: ParticleBatch): Float32Array
+{
+    return (batch as unknown as {data: Float32Array}).data;
+}
+
+// A sprite's rate as its slot holds it (float32, duty packed), which is what the shader integrates.
+function storedWaveform(batch: ParticleBatch, slot: number): Waveform
+{
+    const data = instanceData(batch);
+    const o = slot * FLOATS_PER_INSTANCE;
+    const {shape, duty} = unpackWaveformShape(data[o + 10]);
+    return {shape, duty, low: data[o + 12], high: data[o + 13], frequency: data[o + 14], phase: data[o + 15]};
+}
+
+// A sprite's phase at a time, as the shader works it out from its slot.
+function spritePhaseAt(batch: ParticleBatch, slot: number, time: number): number
+{
+    const data = instanceData(batch);
+    const o = slot * FLOATS_PER_INSTANCE;
+    return data[o + 5] + WaveformUtil.integrate(storedWaveform(batch, slot), data[o + 3], time);
+}
+
+const waveformArbitrary: fc.Arbitrary<Waveform> = fc.record({
+    shape: fc.constantFrom("constant" as const, "sine" as const, "pulse" as const),
+    low: fc.double({min: -2, max: 2, noNaN: true}),
+    high: fc.double({min: -2, max: 4, noNaN: true}),
+    frequency: fc.double({min: 0.05, max: 4, noNaN: true}),
+    phase: fc.double({min: -3, max: 3, noNaN: true}),
+    duty: fc.double({min: 0.05, max: 1, noNaN: true}),
+});
+
+// Midpoint-rule integral of the level, fine enough to check the closed form.
+function integrateNumerically(waveform: Waveform, t0: number, t1: number, steps: number = 20000): number
+{
+    const dt = (t1 - t0) / steps;
+    let sum = 0;
+    for (let i = 0; i < steps; ++i)
+        sum += WaveformUtil.getLevel(waveform, t0 + (i + 0.5) * dt) * dt;
+    return sum;
+}
+
+beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+});
+
+// ─── The ring of transient particles ───
+
+describe("ParticleRingAllocator", () => {
+    it("wraps its head, and draws no more than it has written", () => {
+        const ring = new ParticleRingAllocator(8);
+        expect(ring.getHighWaterMark()).toBe(0);
+        const indices = Array.from({length: 11}, () => ring.allocate());
+        expect(indices).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2]);
+        expect(ring.getHighWaterMark()).toBe(8);
+    });
+
+    it("reports what each frame wrote as at most two runs, covering exactly what was written", () => {
+        fc.assert(fc.property(fc.integer({min: 1, max: 64}), fc.array(fc.integer({min: 0, max: 100}), {maxLength: 30}),
+            (capacity, framesOfSpawns) => {
+                const ring = new ParticleRingAllocator(capacity);
+                const ranges: {start: number, count: number}[] = [];
+                for (const spawns of framesOfSpawns)
+                {
+                    const written = new Set<number>();
+                    for (let i = 0; i < spawns; ++i)
+                        written.add(ring.allocate());
+                    ring.takeDirtyRanges(ranges);
+
+                    expect(ranges.length).toBeLessThanOrEqual(2);
+                    const covered = new Set<number>();
+                    for (const range of ranges)
+                    {
+                        expect(range.start).toBeGreaterThanOrEqual(0);
+                        expect(range.start + range.count).toBeLessThanOrEqual(capacity);
+                        for (let i = range.start; i < range.start + range.count; ++i)
+                            covered.add(i);
+                    }
+                    expect([...covered].sort((a, b) => a - b)).toEqual([...written].sort((a, b) => a - b));
+                    expect(ring.getHighWaterMark()).toBeLessThanOrEqual(capacity);
+                }
+            }));
+    });
+
+    it("draws and reports nothing without capacity", () => {
+        const ring = new ParticleRingAllocator(0);
+        expect(ring.allocate()).toBe(-1);
+        expect(ring.takeDirtyRanges([])).toEqual([]);
+        expect(ring.getHighWaterMark()).toBe(0);
+    });
+});
+
+// ─── A batch: sprite slots and the ring ───
+
+describe("ParticleBatch", () => {
+    it("reuses freed sprite slots, lowest first, and never moves a live one", () => {
+        const batch = new ParticleBatch("solid", 4, 0);
+        const slots = [batch.rentSlot(0, 0), batch.rentSlot(0, 0), batch.rentSlot(0, 0)];
+        expect(slots).toEqual([0, 1, 2]);
+        batch.releaseSlot(1);
+        expect(batch.rentSlot(0, 0)).toBe(1);
+        expect(batch.rentSlot(0, 0)).toBe(3);
+        expect(batch.rentSlot(0, 0)).toBeUndefined();
+        expect(batch.getNumLiveSprites()).toBe(4);
+    });
+
+    it("writes a released slot as all zeros, which draws nothing", () => {
+        const batch = new ParticleBatch("solid", 2, 0);
+        const slot = batch.rentSlot(3, 0)!;
+        batch.setSpritePose(slot, {x: 1, y: 2, z: 3}, 5, 1, 1);
+        batch.releaseSlot(slot);
+        const data = instanceData(batch);
+        expect([...data.subarray(slot * FLOATS_PER_INSTANCE, (slot + 1) * FLOATS_PER_INSTANCE)].every(v => v == 0))
+            .toBe(true);
+        expect(batch.getNumLiveSprites()).toBe(0);
+    });
+
+    it("keeps a sprite's phase continuous across a change of rate, then follows the new rate", () => {
+        fc.assert(fc.property(waveformArbitrary, waveformArbitrary, fc.double({min: 0.1, max: 30, noNaN: true}),
+            (first, second, changeAt) => {
+                const batch = new ParticleBatch("solid", 1, 0);
+                const slot = batch.rentSlot(0, 0)!;
+                batch.setSpriteRate(slot, first, 0);
+                const before = spritePhaseAt(batch, slot, changeAt);
+                batch.setSpriteRate(slot, second, changeAt);
+                expect(spritePhaseAt(batch, slot, changeAt)).toBeCloseTo(before, 3);
+
+                const stored = storedWaveform(batch, slot);
+                expect(stored.shape).toBe(second.shape);
+                expect(stored.low).toBeCloseTo(second.low, 5);
+                expect(stored.high).toBeCloseTo(second.high, 5);
+                expect(stored.frequency).toBeCloseTo(second.frequency, 5);
+            }));
+    });
+
+    it("counts live particles it overwrote, and none it didn't", () => {
+        const batch = new ParticleBatch("blended", 0, 4);
+        for (let i = 0; i < 4; ++i)
+            batch.writeParticle(makeSpawn({spawnTime: 0, lifetime: 10}), 0);
+        expect(batch.getNumOverwrites()).toBe(0);
+        batch.writeParticle(makeSpawn({spawnTime: 1, lifetime: 10}), 1);
+        expect(batch.getNumOverwrites()).toBe(1);
+        // Past every death, overwriting costs nothing.
+        batch.writeParticle(makeSpawn({spawnTime: 20, lifetime: 1}), 20);
+        expect(batch.getNumOverwrites()).toBe(1);
+        expect(batch.getNumLiveParticles(1)).toBe(4);
+    });
+
+    it("keeps every age, phase and level on a clock rebase", () => {
+        const waveform: Waveform = {shape: "sine", low: 0.5, high: 2.5, frequency: 0.37, phase: 0.2, duty: 1};
+        const batch = new ParticleBatch("blended", 1, 2);
+        const slot = batch.rentSlot(0, 100)!;
+        batch.setSpriteRate(slot, waveform, 3500);
+        batch.writeParticle(makeSpawn({spawnTime: 3599, lifetime: 5}), 3599);
+
+        const now = 3601, delta = 3600;
+        const phaseBefore = spritePhaseAt(batch, slot, now);
+        const levelBefore = WaveformUtil.getLevel(storedWaveform(batch, slot), now);
+        const spawnTimeBefore = instanceData(batch)[FLOATS_PER_INSTANCE + 3];
+        batch.shiftTimes(delta);
+
+        const data = instanceData(batch);
+        expect(spritePhaseAt(batch, slot, now - delta)).toBeCloseTo(phaseBefore, 2);
+        expect(WaveformUtil.getLevel(storedWaveform(batch, slot), now - delta)).toBeCloseTo(levelBefore, 3);
+        expect(now - spawnTimeBefore).toBeCloseTo((now - delta) - data[FLOATS_PER_INSTANCE + 3], 3);
+        expect(batch.getNumLiveParticles(now - delta)).toBe(1);
+    });
+
+    it("writes a particle's time scale where the shader reads it, after its landing height", () => {
+        const batch = new ParticleBatch("blended", 1, 2);
+        batch.writeParticle(makeSpawn({landingY: 0.5, timeScale: 0.7}), 0);
+        // The first ring instance comes after the one sprite slot.
+        const data = instanceData(batch).subarray(FLOATS_PER_INSTANCE, 2 * FLOATS_PER_INSTANCE);
+        expect(data[13]).toBe(0.5);
+        expect(data[14]).toBeCloseTo(0.7, 6);
+        expect(data[15]).toBe(0);
+    });
+
+    it("forgets every particle when cleared, so none reappears under a new clock", () => {
+        const batch = new ParticleBatch("blended", 0, 4);
+        batch.writeParticle(makeSpawn({spawnTime: 5, lifetime: 10}), 5);
+        batch.clearParticles();
+        expect(batch.getNumLiveParticles(6)).toBe(0);
+    });
+});
+
+describe("SpriteHandle", () => {
+    it("forwards only real changes of rate, so an unchanged one never rebases the phase", () => {
+        const batch = new ParticleBatch("solid", 1, 0);
+        const slot = batch.rentSlot(0, 0)!;
+        let time = 1;
+        const released: SpriteHandle[] = [];
+        const handle = new SpriteHandle("fanBlades", batch, slot, () => time, (h) => released.push(h));
+        const waveform: Waveform = {shape: "sine", low: 1, high: 3, frequency: 0.5, phase: 0, duty: 1};
+
+        handle.setRate(waveform);
+        expect(instanceData(batch)[3]).toBe(1);
+        time = 5;
+        handle.setRate({...waveform});
+        expect(instanceData(batch)[3]).toBe(1);
+
+        handle.release();
+        expect(handle.isReleased()).toBe(true);
+        expect(released).toEqual([handle]);
+        handle.release();
+        expect(released.length).toBe(1);
+    });
+});
+
+// ─── Waveforms ───
+
+describe("WaveformUtil", () => {
+    it("keeps every level within its range", () => {
+        fc.assert(fc.property(waveformArbitrary, fc.double({min: -100, max: 100, noNaN: true}), (waveform, t) => {
+            const level = WaveformUtil.getLevel(waveform, t);
+            const low = Math.min(waveform.low, waveform.high), high = Math.max(waveform.low, waveform.high);
+            if (waveform.shape === "constant")
+                expect(level).toBeCloseTo(waveform.high, 9);
+            else
+            {
+                expect(level).toBeGreaterThanOrEqual(low - 1e-9);
+                expect(level).toBeLessThanOrEqual(high + 1e-9);
+            }
+        }));
+    });
+
+    it("integrates to what summing its level gives", () => {
+        fc.assert(fc.property(waveformArbitrary, fc.double({min: -20, max: 20, noNaN: true}),
+            fc.double({min: 0, max: 6, noNaN: true}), (waveform, t0, duration) => {
+                expect(WaveformUtil.integrate(waveform, t0, t0 + duration))
+                    .toBeCloseTo(integrateNumerically(waveform, t0, t0 + duration), 3);
+            }), {numRuns: 60});
+    });
+
+    it("integrates additively over any split, so there is no jump at a cycle's end", () => {
+        fc.assert(fc.property(waveformArbitrary, fc.double({min: -50, max: 50, noNaN: true}),
+            fc.double({min: 0, max: 10, noNaN: true}), fc.double({min: 0, max: 10, noNaN: true}),
+            (waveform, a, first, second) => {
+                const whole = WaveformUtil.integrate(waveform, a, a + first + second);
+                const parts = WaveformUtil.integrate(waveform, a, a + first) +
+                    WaveformUtil.integrate(waveform, a + first, a + first + second);
+                expect(parts).toBeCloseTo(whole, 6);
+            }));
+    });
+
+    it("holds a constant waveform at its level", () => {
+        const waveform = WaveformUtil.constant(2.5);
+        expect(WaveformUtil.getLevel(waveform, 123.4)).toBe(2.5);
+        expect(WaveformUtil.integrate(waveform, 1, 5)).toBeCloseTo(10, 9);
+    });
+});
+
+// ─── Parameter rows ───
+
+describe("ParticleParamTextureUtil", () => {
+    it("resamples a curve linearly from its first value to its last", () => {
+        expect(ParticleParamTextureUtil.resampleCurve([2], 4)).toEqual([2, 2, 2, 2]);
+        const samples = ParticleParamTextureUtil.resampleCurve([0, 1, 0], 5);
+        expect(samples.map(v => Number(v.toFixed(6)))).toEqual([0, 0.5, 1, 0.5, 0]);
+    });
+
+    it("lays a layer's row out as the shader reads it", () => {
+        const data = new Float32Array(2 * PARTICLE_PARAM_ROW_TEXELS * 4);
+        const sprite = {u: 0.25, v: 0.5, width: 0.0625, height: 0.125, frames: 4};
+        ParticleParamTextureUtil.writeLayerRow(data, 1, {
+            sprite: "puff", orientation: "velocity", additiveness: 0.7, lit: true,
+            speed: [1, 2], lifetime: [1, 1], size: [0.1, 0.1], spin: [-1, 3], gravity: 9, drag: 2,
+            turbulence: 0.1, stretch: 0.3, frameRate: 12,
+            alphaCurve: [0, 1], sizeCurve: [1, 3], colorCurve: ["#ffffff"],
+        }, sprite);
+        const texel = (index: number) => [...data.subarray((PARTICLE_PARAM_ROW_TEXELS + index) * 4,
+            (PARTICLE_PARAM_ROW_TEXELS + index) * 4 + 4)].map(v => Number(v.toFixed(5)));
+        expect(texel(PARTICLE_PARAM_TEXEL.atlasRect)).toEqual([0.25, 0.5, 0.0625, 0.125]);
+        expect(texel(PARTICLE_PARAM_TEXEL.animation))
+            .toEqual([4, 12, PARTICLE_KIND_CODE.particle, PARTICLE_ORIENTATION_CODE.velocity]);
+        expect(texel(PARTICLE_PARAM_TEXEL.motion)).toEqual([9, 2, 0.1, 0.3]);
+        expect(texel(PARTICLE_PARAM_TEXEL.look)).toEqual([0.7, 1, -1, 3]);
+        // Alpha rides in the color curve's fourth channel; size is packed four samples to a texel.
+        expect(texel(PARTICLE_PARAM_TEXEL.colorCurve)[3]).toBe(0);
+        expect(texel(PARTICLE_PARAM_TEXEL.colorCurve + PARTICLE_CURVE_SAMPLES - 1)[3]).toBe(1);
+        const lastSample = PARTICLE_CURVE_SAMPLES - 1;
+        expect(texel(PARTICLE_PARAM_TEXEL.sizeCurve)[0]).toBe(1);
+        expect(texel(PARTICLE_PARAM_TEXEL.sizeCurve + Math.floor(lastSample / 4))[lastSample % 4]).toBe(3);
+        // Nothing else is written into the neighbouring row.
+        expect(data.subarray(0, PARTICLE_PARAM_ROW_TEXELS * 4).every(v => v == 0)).toBe(true);
+    });
+
+    it("never marks a solid layer additive or lit", () => {
+        const data = new Float32Array(PARTICLE_PARAM_ROW_TEXELS * 4);
+        ParticleParamTextureUtil.writeLayerRow(data, 0, {sprite: "puff", renderState: "solid", additiveness: 1,
+            lit: true, speed: [1, 1], lifetime: [1, 1], size: [1, 1]},
+            {u: 0, v: 0, width: 1, height: 1, frames: 1});
+        expect(data[PARTICLE_PARAM_TEXEL.look * 4]).toBe(0);
+        expect(data[PARTICLE_PARAM_TEXEL.look * 4 + 1]).toBe(0);
+    });
+});
+
+// ─── Effect definitions ───
+
+describe("effect definitions", () => {
+    const SOUND_LAYER: ParticleLayerConfig = {sprite: "puff", burst: 4, speed: [1, 2], lifetime: [0.5, 1],
+        size: [0.2, 0.4]};
+    const problemsWith = (change: object) =>
+        ParticleEffectConfigUtil.getProblems({layers: [{...SOUND_LAYER, ...change} as ParticleLayerConfig]});
+
+    it("are all sound, since the JSON map is never type-checked", () => {
+        for (const effect of ParticleEffectConfigMap.getEffects())
+        {
+            const problems = ParticleEffectConfigUtil.getProblems(ParticleEffectConfigMap.getConfig(effect)!);
+            expect({effect, problems}).toEqual({effect, problems: []});
+        }
+    });
+
+    it("include every effect the gameplay events play, whatever the editor renamed", () => {
+        for (const effect of ["blockRemoved", "dollarCollected", "cannonFire", "cannonBallBurst", "cannonPuff", "objectDestroyed"])
+            expect(ParticleEffectConfigMap.getConfig(effect), effect).toBeDefined();
+    });
+
+    it("draws a sleeper's letters upright, a few at a time, rising", () => {
+        const [layer] = ParticleEffectConfigMap.getConfig("cannonSleep")!.layers;
+        expect(layer.sprite).toBe("sleepZ");
+        expect(layer.orientation).toBe("velocity");
+        expect(layer.gravity ?? 0).toBe(0);
+        expect(layer.spin).toBeUndefined();
+        expect(layer.burst).toBeUndefined();
+        // No more than a few in the air at once.
+        expect(layer.rate! * layer.lifetime[1]).toBeLessThanOrEqual(4);
+    });
+
+    it("keeps each of an object's breaks slight: a few small chips, and dust that hides nothing", () => {
+        const breakLayers = ParticleEffectConfigMap.getConfig("objectDestroyed")!.layers;
+        const blockLayers = ParticleEffectConfigMap.getConfig("blockRemoved")!.layers;
+        const chips = breakLayers.find(layer => layer.sprite == "chip")!;
+        const blockChips = blockLayers.find(layer => layer.sprite == "chip")!;
+        expect(chips.burst!).toBeLessThan(blockChips.burst!);
+        expect(chips.size[1]).toBeLessThan(blockChips.size[1]);
+        expect(chips.speed[1]).toBeLessThan(blockChips.speed[1]);
+        for (const layer of breakLayers.filter(layer => layer.sprite != "chip"))
+            expect(Math.max(...layer.alphaCurve!)).toBeLessThanOrEqual(0.5);
+        for (const layer of breakLayers)
+            expect(layer.lifetime[1]).toBeLessThanOrEqual(0.6);
+    });
+
+    it("include every effect and sprite an object type shows, which it names from shared code", () => {
+        const typesShowingOne: string[] = [];
+        for (const config of ObjectTypeConfigMap.getAllConfigs())
+        {
+            const components: ObjectTypeConfig["components"]["spawnedByAny"] = config.components.spawnedByAny;
+            const effect = components?.particleEmitter?.baseline.effect;
+            const sprite = components?.animatedSprite?.baseline.sprite;
+            if (effect != undefined)
+                expect(ParticleEffectConfigMap.getConfig(effect), `${config.objectType}: ${effect}`).toBeDefined();
+            if (sprite != undefined)
+                expect(SpriteConfigMap.getConfig(sprite), `${config.objectType}: ${sprite}`).toBeDefined();
+            if (effect != undefined || sprite != undefined)
+                typesShowingOne.push(config.objectType);
+        }
+        expect(typesShowingOne).toContain("Fan");
+    });
+
+    it("carry at least as far along their axis as their slowest, shortest-lived, widest-thrown particle does", () => {
+        // How far one particle gets, by adding up its slowing speed rather than by the closed form.
+        const travelled = (speed: number, lifetime: number, drag: number, steps: number = 4000): number => {
+            const dt = lifetime / steps;
+            let distance = 0;
+            for (let i = 0; i < steps; ++i)
+                distance += speed * Math.exp(-drag * (i + 0.5) * dt) * dt;
+            return distance;
+        };
+        const layerArbitrary = fc.record({
+            minSpeed: fc.integer({min: 1, max: 80}), extraSpeed: fc.integer({min: 0, max: 40}),
+            minLifetime: fc.integer({min: 2, max: 30}), extraLifetime: fc.integer({min: 0, max: 20}),
+            drag: fc.integer({min: 0, max: 40}), spread: fc.integer({min: 0, max: 12}),
+        }).map(({minSpeed, extraSpeed, minLifetime, extraLifetime, drag, spread}): ParticleLayerConfig => ({
+            ...SOUND_LAYER, burst: 0, rate: 20, speed: [minSpeed / 10, (minSpeed + extraSpeed) / 10],
+            lifetime: [minLifetime / 10, (minLifetime + extraLifetime) / 10], drag: drag / 10, spread: spread / 10,
+        }));
+
+        fc.assert(fc.property(fc.array(layerArbitrary, {minLength: 1, maxLength: 3}), (layers) => {
+            const shortest = Math.min(...layers.map(layer =>
+                travelled(layer.speed[0] * Math.cos(layer.spread!), layer.lifetime[0], layer.drag!)));
+            expect(ParticleSpawnUtil.getShortestCarry({layers})).toBeCloseTo(shortest, 3);
+        }));
+
+        // A layer that only bursts is not part of the stream, and an effect with none has no end to speak of.
+        const burstOnly: ParticleLayerConfig = {...SOUND_LAYER, speed: [0.1, 0.1]};
+        const stream: ParticleLayerConfig = {...SOUND_LAYER, burst: 0, rate: 5, speed: [2, 3], lifetime: [1, 2]};
+        expect(ParticleSpawnUtil.getShortestCarry({layers: [burstOnly, stream]})).toBeCloseTo(2, 9);
+        expect(ParticleSpawnUtil.getShortestCarry({layers: [burstOnly]})).toBe(Infinity);
+    });
+
+    it("are checked for what a compiler would catch, and for what it wouldn't", () => {
+        expect(ParticleEffectConfigUtil.getProblems({layers: [SOUND_LAYER]})).toEqual([]);
+        expect(ParticleEffectConfigUtil.getProblems({layers: []})).toEqual(["It has no layers."]);
+        expect(problemsWith({sprite: "smoke"})).toEqual([expect.stringMatching(/^Layer 1: "sprite" is not/)]);
+        expect(problemsWith({speeed: 2})).toEqual(["Layer 1: unknown field \"speeed\"."]);
+        expect(problemsWith({launch: "outward"})).toEqual([expect.stringMatching(/"launch" is not one of/)]);
+        expect(problemsWith({size: [0.4, 0.2]})).toEqual([expect.stringMatching(/"size" runs backwards/)]);
+        expect(problemsWith({lifetime: [0, 1]})).toEqual([expect.stringMatching(/"lifetime" must start above 0/)]);
+        expect(problemsWith({colorCurve: ["#fff"]})).toEqual([expect.stringMatching(/"colorCurve"/)]);
+        expect(problemsWith({alphaCurve: [0, 1.5]})).toEqual([expect.stringMatching(/"alphaCurve"/)]);
+        expect(problemsWith({spread: 4})).toEqual([expect.stringMatching(/"spread" is outside/)]);
+        expect(problemsWith({burst: 2.5})).toEqual([expect.stringMatching(/"burst" is not a whole number/)]);
+        expect(problemsWith({burst: 0})).toEqual([expect.stringMatching(/never emits/)]);
+        expect(problemsWith({burst: 0, rate: 5})).toEqual([]);
+    });
+});
+
+// ─── Gameplay events ───
+
+describe("voxel block events", () => {
+    const ROOM_ID = "particle-room";
+    const TEXTURES = [1, 1, 1, 1, 1, 1];
+    let room: Room;
+    let blockEdits: {kind: string, quadIndex: number}[];
+    let shapeChanges: string[];
+
+    beforeEach(() => {
+        room = createRoom(ROOM_ID);
+        (App.getCurrentRoom as Mock).mockReturnValue(room);
+        (App.getVoxelQuads as Mock).mockReturnValue(room.voxelQuads);
+        (App.getUser as Mock).mockReturnValue(createEditingUser());
+        blockEdits = [];
+        shapeChanges = [];
+        voxelBlockEditObservable.addListener("particleTest", (edit) => { blockEdits.push({...edit}); });
+        roomShapeChangedObservable.addListener("particleTest", (roomId) => { shapeChanges.push(roomId); });
+        return () => {
+            voxelBlockEditObservable.removeListener("particleTest");
+            roomShapeChangedObservable.removeListener("particleTest");
+        };
+    });
+
+    it("fires once per edit, with what the edit did", async () => {
+        buildPillar(room, 10, 5);
+        blockEdits.length = 0;
+        const added = quadIndexOf(10, 6, "x", "+", 2);
+        await ClientVoxelManager.onAddVoxelBlockSignalReceived(new AddVoxelBlockSignal(ROOM_ID, added, TEXTURES));
+        await ClientVoxelManager.onSetVoxelQuadTextureSignalReceived(
+            new SetVoxelQuadTextureSignal(ROOM_ID, added, 2));
+        await ClientVoxelManager.onRemoveVoxelBlockSignalReceived(new RemoveVoxelBlockSignal(ROOM_ID, added));
+
+        expect(blockEdits).toEqual([
+            {kind: "add", quadIndex: added, own: false},
+            {kind: "retexture", quadIndex: added, own: false},
+            {kind: "remove", quadIndex: added, own: false},
+        ]);
+        // Retexturing leaves the room's shape alone.
+        expect(shapeChanges).toEqual([ROOM_ID, ROOM_ID]);
+    });
+
+    it("plays someone's collecting a dollar bill where the bill went, for all to see", () => {
+        const play = vi.spyOn(ParticleSystem, "play").mockImplementation(() => {});
+        const bill = new AddObjectSignal(ROOM_ID, "", "", ObjectTypeConfigMap.getIndexByType("DollarBill"), "@1",
+            new ObjectTransform({x: 3, y: 1, z: 4}, {x: 0, y: 0, z: 1}, {x: 1, y: 1, z: 1}));
+        try
+        {
+            objectCollectedObservable.set(bill);
+            expect(play).toHaveBeenCalledTimes(1);
+            const [effect, place] = play.mock.lastCall!;
+            expect(effect).toBe("dollarCollected");
+            expect(place).toEqual({x: 3, y: 1, z: 4});
+            expect(ParticleEffectConfigMap.getConfig("dollarCollected")).toBeDefined();
+        }
+        finally
+        {
+            play.mockRestore();
+        }
+    });
+
+    it("keeps what a dollar gained says clear of the head it comes out of, and under a storey's ceiling, ending as it fades", () => {
+        const BODY_MIDDLE = 0.5 * PLAYER_HEIGHT, STOREY_CEILING = STOREY_FLOOR_COLLISION_LAYER * COLLISION_LAYER_HEIGHT;
+        // How much of its square its words take up, in height.
+        const WORDS_HEIGHT_SHARE = 0.28;
+        for (const {speed, drag, lifetime, size} of ParticleEffectConfigMap.getConfig("dollarCollected")!.layers)
+        {
+            const rise = speed![1] / drag! * (1 - Math.exp(-drag! * lifetime![1]));
+            const halfHeight = 0.5 * WORDS_HEIGHT_SHARE * size![1];
+            expect(BODY_MIDDLE + rise - halfHeight).toBeGreaterThan(PLAYER_HEIGHT);
+            expect(BODY_MIDDLE + rise + halfHeight).toBeLessThan(STOREY_CEILING);
+        }
+    });
+
+    it("keeps what a dollar gained says small beside the body it comes out of, both layers the one size", () => {
+        for (const {size} of ParticleEffectConfigMap.getConfig("dollarCollected")!.layers)
+            expect(size).toEqual([0.96, 0.96]);
+    });
+
+    it("draws what a dollar gained says upright, whichever way it is looked at", () => {
+        for (const layer of ParticleEffectConfigMap.getConfig("dollarCollected")!.layers)
+        {
+            expect(layer.orientation).toBe("velocity");
+            expect(layer.gravity ?? 0).toBe(0);
+            expect(layer.spin).toBeUndefined();
+            expect(layer.spread ?? 0).toBe(0);
+        }
+    });
+
+    it("plays a removal's burst in the middle of the block that was there", () => {
+        const play = vi.spyOn(ParticleSystem, "play").mockImplementation(() => {});
+        try
+        {
+            const quadIndex = quadIndexOf(10, 6, "x", "+", 2);
+            ParticleTriggerUtil.onVoxelBlockEdit({kind: "remove", quadIndex});
+            expect(play).toHaveBeenLastCalledWith("blockRemoved",
+                {x: 6.5 * VOXEL_CELL_SIZE, y: 1.25, z: 10.5 * VOXEL_CELL_SIZE});
+
+            // Only a removal plays anything.
+            play.mockClear();
+            for (const kind of ["add", "move", "retexture"] as const)
+                ParticleTriggerUtil.onVoxelBlockEdit({kind, quadIndex});
+            expect(play).not.toHaveBeenCalled();
+        }
+        finally
+        {
+            play.mockRestore();
+        }
+    });
+
+    it("fires nothing for an edit that is refused", async () => {
+        buildPillar(room, 10, 5);
+        const added = quadIndexOf(10, 6, "x", "+", 2);
+        await ClientVoxelManager.onAddVoxelBlockSignalReceived(new AddVoxelBlockSignal(ROOM_ID, added, TEXTURES));
+        await ClientVoxelManager.onRemoveVoxelBlockSignalReceived(new RemoveVoxelBlockSignal(ROOM_ID, added));
+        blockEdits.length = 0;
+        shapeChanges.length = 0;
+
+        // The user's own removal of a block that is already gone.
+        expect(ClientVoxelManager.removeVoxelBlock(room, added, true)).toBe(false);
+        expect(blockEdits).toEqual([]);
+        expect(shapeChanges).toEqual([]);
+    });
+
+    it("fires no block event for a scripted chunk edit, but still reports the room's new shape", () => {
+        ClientVoxelManager.addVoxelBlocksByChunk(room, 4, 4, 2, 2, 1, 2, TEXTURES, false);
+        ClientVoxelManager.removeVoxelBlocksByChunk(room, 4, 4, 2, 2, 1, 2, false);
+        expect(blockEdits).toEqual([]);
+        expect(shapeChanges).toEqual([ROOM_ID, ROOM_ID]);
+    });
+});
+
+describe("object and cannon events", () => {
+    const AT = {x: 6, y: 1.5, z: 9};
+    const WALL_FACING = {x: 0, y: 0, z: 1};
+    let play: ReturnType<typeof vi.spyOn>;
+
+    function makeObject(objectType: string, scale = {x: 1, y: 1, z: 1}, metadata: {[key: number]: string} = {},
+        facing = WALL_FACING): AddObjectSignal
+    {
+        const signal = new AddObjectSignal("room", "someone", "Someone", ObjectTypeConfigMap.getIndexByType(objectType),
+            `${objectType}-1`, new ObjectTransform({...AT}, {...facing}, {...scale}));
+        for (const [key, value] of Object.entries(metadata))
+            signal.metadata[Number(key)] = new EncodableByteString(value);
+        return signal;
+    }
+
+    function played(effect: string): {position: Vec3, options: {direction?: Vec3} | undefined}[]
+    {
+        return play.mock.calls.filter(call => call[0] == effect).map(call => ({position: call[1] as Vec3,
+            options: call[2] as {direction?: Vec3} | undefined}));
+    }
+
+    beforeEach(() => {
+        play = vi.spyOn(ParticleSystem, "play").mockImplementation(() => {});
+        return () => play.mockRestore();
+    });
+
+    it("breaks an attached object taken away all over its face, whoever took it, each break out of the face", () => {
+        for (const own of [false, true])
+        {
+            play.mockClear();
+            const lamp = makeObject("Lamp");
+            objectEditObservable.set({kind: "remove", object: lamp, own});
+            const breaks = played("objectDestroyed");
+            const {hitbox} = PhysicsColliderStateUtil.getObjectColliderState(lamp.objectTypeIndex, lamp.transform)!;
+            const size = ObjectScaleUtil.getObjectSize(lamp.objectTypeIndex, lamp.transform.scale);
+            expect(breaks.length).toBe(Math.max(1, Math.floor(size.x / BREAK_SPACING)) * Math.max(1, Math.floor(size.y / BREAK_SPACING)));
+            for (const {position, options} of breaks)
+            {
+                expect(Math.abs(position.x - hitbox.center.x)).toBeLessThanOrEqual(0.5 * size.x);
+                expect(Math.abs(position.y - hitbox.center.y)).toBeLessThanOrEqual(0.5 * size.y);
+                expect(position.z).toBeCloseTo(hitbox.center.z, 9);
+                expect(options?.direction).toEqual(WALL_FACING);
+            }
+            // Spread over it, about its middle.
+            const mean = (axis: "x" | "y") => breaks.reduce((sum, {position}) => sum + position[axis], 0) / breaks.length;
+            expect(mean("x")).toBeCloseTo(hitbox.center.x, 9);
+            expect(mean("y")).toBeCloseTo(hitbox.center.y, 9);
+            expect(new Set(breaks.map(({position}) => `${position.x},${position.y}`)).size).toBe(breaks.length);
+        }
+    });
+
+    it(`breaks a large one in no more than ${MAX_BREAKS} places, as much farther apart`, () => {
+        const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
+        const largest = ObjectScaleUtil.getMaxObjectSize(canvasTypeIndex);
+        const canvas = makeObject("Canvas", {x: largest.x, y: largest.y, z: 1});
+        const size = ObjectScaleUtil.getObjectSize(canvasTypeIndex, canvas.transform.scale);
+        expect(size.x * size.y, "the largest canvas is larger than the breaks a block apart would cover")
+            .toBeGreaterThan(MAX_BREAKS * BREAK_SPACING * BREAK_SPACING);
+        objectEditObservable.set({kind: "remove", object: canvas, own: false});
+        const breaks = played("objectDestroyed");
+        expect(breaks.length).toBeLessThanOrEqual(MAX_BREAKS);
+        expect(breaks.length).toBeGreaterThanOrEqual(0.5 * MAX_BREAKS);
+        const xs = [...new Set(breaks.map(({position}) => position.x))].sort((a, b) => a - b);
+        expect(xs[1] - xs[0]).toBeGreaterThan(BREAK_SPACING);
+    });
+
+    it("plays nothing for an object added or changed, nor for the going of one that hung on no face, nor of an NPC", () => {
+        objectEditObservable.set({kind: "add", object: makeObject("Lamp"), own: true});
+        objectEditObservable.set({kind: "change", object: makeObject("Lamp"), own: false});
+        objectEditObservable.set({kind: "remove", object: makeObject("Volume"), own: false});
+        objectEditObservable.set({kind: "remove", object: makeObject("Player"), own: false});
+        objectEditObservable.set({kind: "remove", object: makeObject("CannonBall"), own: false});
+        objectEditObservable.set({kind: "remove", object: makeObject("Npc", undefined, {}, {x: 0, y: 1, z: 0}), own: false});
+        expect(play).not.toHaveBeenCalled();
+    });
+
+    it("plays a cannon's turning to scrap as one puff where it is told, and breaks a cannon taken away as anything " +
+        "attached, scrap or not, with no puff", () => {
+        cannonScrappedObservable.set({position: {x: 7, y: 8, z: 9}});
+        expect(play.mock.calls).toEqual([["cannonPuff", {x: 7, y: 8, z: 9}]]);
+
+        const floor = {x: 0, y: 1, z: 0};
+        const scrap = {[ObjectMetadataKeyEnumMap.CannonState]: CannonStateUtil.encode({...CannonStateUtil.decode(""),
+            phase: CannonPhaseEnumMap.Scrap, ballsLeft: 0})};
+        for (const metadata of [scrap, {}])
+        {
+            play.mockClear();
+            objectEditObservable.set({kind: "remove", object: makeObject("Cannon", undefined, metadata, floor), own: true});
+            expect(played("cannonPuff")).toEqual([]);
+            expect(played("objectDestroyed").length).toBeGreaterThan(1);
+        }
+    });
+
+    it("plays a cannon's shot at its barrel's mouth, out the way it points, its ball's bounce where the ball then " +
+        "is, out the way it comes off what it bounced off, and its ball's burst where it burst", () => {
+        const direction = {x: 0.6, y: 0, z: 0.8};
+        const normal = {x: 0, y: 0.6, z: -0.8};
+        cannonFiredObservable.set({position: AT, direction});
+        cannonBallBounceObservable.set({position: {x: 4, y: 5, z: 6}, normal});
+        cannonBallBurstObservable.set({position: {x: 1, y: 2, z: 3}});
+        expect(play.mock.calls).toEqual([["cannonFire", AT, {direction}],
+            ["cannonBallBounce", {x: 4, y: 5, z: 6}, {direction: normal}], ["cannonBallBurst", {x: 1, y: 2, z: 3}]]);
+    });
+});
+
+// ─── Components ───
+
+describe("AnimatedSprite", () => {
+    const canvasTypeIndex = ObjectTypeConfigMap.getIndexByType("Canvas");
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    function makeObject(metadata: {[key: number]: string}): GameObject
+    {
+        const params = new AddObjectSignal("room", "user", "User", canvasTypeIndex, "sprite-object",
+            new ObjectTransform({x: 5, y: 1, z: 3}, {x: 0, y: 0, z: 1}, {x: 1, y: 1, z: 1}),
+            metadata as unknown as ObjectMetadata);
+        return {params} as unknown as GameObject;
+    }
+
+    function fakeHandle(sprite: string)
+    {
+        return {sprite, setPose: vi.fn(), setRate: vi.fn(), setTint: vi.fn(), release: vi.fn()};
+    }
+
+    it("shows its baseline, changed by what the type makes of the object's metadata", async () => {
+        const handles: ReturnType<typeof fakeHandle>[] = [];
+        vi.spyOn(ParticleSystem, "createSprite").mockImplementation((sprite: string) => {
+            handles.push(fakeHandle(sprite));
+            return handles[handles.length - 1] as unknown as SpriteHandle;
+        });
+        const fast: Waveform = {shape: "sine", low: 1, high: 4, frequency: 0.5, phase: 0, duty: 1};
+        const baseline: AnimatedSpriteDescriptor = {sprite: "fanBlades", faceOffset: 0.1, widthScale: 0.5};
+        const component = new AnimatedSprite(makeObject({7: "fast"}), {
+            baseline,
+            getOverride: (metadata: {[key: number]: string}) => (metadata[7] === "fast") ? {rate: fast} : undefined,
+        });
+
+        await component.onSpawn();
+        expect(handles.map(h => h.sprite)).toEqual(["fanBlades"]);
+        expect(handles[0].setRate).toHaveBeenLastCalledWith(fast);
+        const [position, facing, quarterTurns, width] = handles[0].setPose.mock.lastCall!;
+        expect(position.z).toBeCloseTo(3.1, 6);
+        expect(facing).toEqual({x: 0, y: 0, z: 1});
+        expect(quarterTurns).toBe(0);
+        expect(width).toBeGreaterThan(0);
+
+        await component.onDespawn();
+        expect(handles[0].release).toHaveBeenCalledOnce();
+    });
+
+    it("swaps its sprite when the override names another", async () => {
+        const handles: ReturnType<typeof fakeHandle>[] = [];
+        vi.spyOn(ParticleSystem, "createSprite").mockImplementation((sprite: string) => {
+            handles.push(fakeHandle(sprite));
+            return handles[handles.length - 1] as unknown as SpriteHandle;
+        });
+        const object = makeObject({});
+        const component = new AnimatedSprite(object, {
+            baseline: {sprite: "fanBlades"},
+            getOverride: (metadata: {[key: number]: string}) => (metadata[7] === "lit") ? {sprite: "glow"} : undefined,
+        });
+        await component.onSpawn();
+        object.params.metadata[7] = "lit";
+        component.onSetMetadata();
+        expect(handles.map(h => h.sprite)).toEqual(["fanBlades", "glow"]);
+        expect(handles[0].release).toHaveBeenCalledOnce();
+    });
+
+    it("shows a copy at each of the centers it is given, and lets go of those no longer wanted", async () => {
+        const handles: ReturnType<typeof fakeHandle>[] = [];
+        vi.spyOn(ParticleSystem, "createSprite").mockImplementation((sprite: string) => {
+            handles.push(fakeHandle(sprite));
+            return handles[handles.length - 1] as unknown as SpriteHandle;
+        });
+        const centersBy: {[key: string]: Vec2[] | undefined} = {
+            three: [{x: 0, y: 0.25}, {x: -0.25, y: -0.2}, {x: 0.3, y: -0.2}],
+            one: [{x: 0.1, y: 0}],
+        };
+        const object = makeObject({7: "three"});
+        const size = ObjectScaleUtil.getObjectSize(canvasTypeIndex, object.params.transform.scale);
+        const component = new AnimatedSprite(object, {
+            baseline: {sprite: "fanBlades", faceOffset: 0.1, widthScale: 0.4, heightScale: 0.3},
+            getOverride: (metadata: {[key: number]: string}) => ({centers: centersBy[metadata[7]]}),
+        });
+        const poseOf = (handle: ReturnType<typeof fakeHandle>) => {
+            const [position, facing, quarterTurns, width, height] = handle.setPose.mock.lastCall!;
+            return {position, facing, quarterTurns, width, height};
+        };
+
+        // Each as far across (+x, on a face looking along +z) and up from the face's middle as its share of the
+        // footprint, all of one size and facing.
+        await component.onSpawn();
+        expect(handles).toHaveLength(3);
+        handles.forEach((handle, i) => {
+            const pose = poseOf(handle);
+            expect(pose.position.x).toBeCloseTo(5 + centersBy.three![i].x * size.x, 6);
+            expect(pose.position.y).toBeCloseTo(1 + centersBy.three![i].y * size.y, 6);
+            expect(pose.position.z).toBeCloseTo(3.1, 6);
+            expect(pose.facing).toEqual({x: 0, y: 0, z: 1});
+            expect(pose.width).toBeCloseTo(0.4 * size.x, 6);
+            expect(pose.height).toBeCloseTo(0.3 * size.y, 6);
+        });
+
+        // Fewer: the first kept and moved, the rest let go.
+        object.params.metadata[7] = "one";
+        component.onSetMetadata();
+        expect(handles).toHaveLength(3);
+        expect(handles[0].release).not.toHaveBeenCalled();
+        expect(handles[1].release).toHaveBeenCalledOnce();
+        expect(handles[2].release).toHaveBeenCalledOnce();
+        expect(poseOf(handles[0]).position.x).toBeCloseTo(5 + 0.1 * size.x, 6);
+
+        // None given: the one, in the middle.
+        object.params.metadata[7] = "none";
+        component.onSetMetadata();
+        expect(handles).toHaveLength(3);
+        expect(poseOf(handles[0]).position.x).toBeCloseTo(5, 6);
+        expect(poseOf(handles[0]).position.y).toBeCloseTo(1, 6);
+
+        // More again: as many more rented, and every one let go in the end.
+        object.params.metadata[7] = "three";
+        component.onSetMetadata();
+        expect(handles).toHaveLength(5);
+        await component.onDespawn();
+        for (const handle of handles)
+            expect(handle.release).toHaveBeenCalledOnce();
+    });
+});
+
+describe("ParticleEmitter", () => {
+    const fanTypeIndex = ObjectTypeConfigMap.getIndexByType("Fan");
+    const windCarry = ParticleSpawnUtil.getShortestCarry(ParticleEffectConfigMap.getConfig("wind")!);
+    // On a face looking along +x, with nothing in front of it.
+    const POS = {x: 5, y: 1.75, z: 5.25};
+    const FACE_OFFSET = 0.1;
+    let room: Room;
+
+    beforeEach(() => {
+        room = createRoom("emitter-room");
+        (App.getCurrentRoom as Mock).mockReturnValue(room);
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    // A component on a fan-sized object, with the handle the particle system would have given it.
+    async function spawn(baseline: ParticleEmitterDescriptor)
+    {
+        const handle = {effect: baseline.effect, config: ParticleEffectConfigMap.getConfig(baseline.effect)!,
+            setPose: vi.fn(), setScales: vi.fn(), setParticleTimeScale: vi.fn(), setLevel: vi.fn(), setStopDistance: vi.fn(),
+            setTint: vi.fn(), stop: vi.fn()};
+        vi.spyOn(ParticleSystem, "createEmitter").mockReturnValue(handle as unknown as ParticleEmitterHandle);
+        const params = new AddObjectSignal(room.id, "user", "User", fanTypeIndex, "emitter-object",
+            new ObjectTransform({...POS}, {x: 1, y: 0, z: 0}, {x: 1, y: 1, z: 1}), {});
+        const component = new ParticleEmitter({params} as unknown as GameObject, {baseline});
+        await component.onSpawn();
+        return {handle, component};
+    }
+
+    it("ends its stream at its reach from the face, speeding its particles up only as far as the slowest needs", async () => {
+        for (const reach of [1, 3, 5, 7, 9])
+        {
+            const {handle, component} = await spawn({effect: "wind", faceOffset: FACE_OFFSET, reach});
+            const fromEmitter = reach - FACE_OFFSET;
+            expect(handle.setStopDistance).toHaveBeenLastCalledWith(fromEmitter);
+            const [rateScale, speedScale] = handle.setScales.mock.lastCall!;
+            expect(speedScale).toBeCloseTo(Math.max(1, fromEmitter / windCarry), 9);
+            // Sped up or not, its slowest particle now carries that far, to be ended there.
+            expect(windCarry * speedScale).toBeGreaterThanOrEqual(fromEmitter - 1e-9);
+            // And as many more of them come out as they are faster, so the stream is no thinner for it.
+            expect(rateScale).toBeCloseTo(speedScale, 9);
+            await component.onDespawn();
+        }
+        // The wind's own speeds carry it past the shortest of those reaches and short of the longest.
+        expect(windCarry).toBeGreaterThan(1);
+        expect(windCarry).toBeLessThan(9);
+    });
+
+    it("ends at the first block in its way where that is nearer, re-measured as the room's shape changes", async () => {
+        const {handle, component} = await spawn({effect: "wind", faceOffset: FACE_OFFSET, reach: 5, stopAtBlocks: true});
+        expect(handle.setStopDistance).toHaveBeenLastCalledWith(5 - FACE_OFFSET);
+
+        // A pillar whose near side is two units from the face.
+        const row = Math.floor(POS.z / VOXEL_CELL_SIZE), col = Math.floor((POS.x + 2) / VOXEL_CELL_SIZE);
+        buildPillar(room, row, col);
+        roomShapeChangedObservable.set(room.id);
+        expect(handle.setStopDistance.mock.lastCall![0]).toBeCloseTo(2 - FACE_OFFSET, 9);
+        await component.onDespawn();
+
+        // A block beyond its reach changes nothing.
+        const short = await spawn({effect: "wind", faceOffset: FACE_OFFSET, reach: 1, stopAtBlocks: true});
+        expect(short.handle.setStopDistance).toHaveBeenLastCalledWith(1 - FACE_OFFSET);
+        await short.component.onDespawn();
+    });
+
+    it("leaves its speeds alone without a reach, and where they carry past one already", async () => {
+        const {handle, component} = await spawn({effect: "wind", rateScale: 0.5, speedScale: 2.5});
+        expect(handle.setScales.mock.lastCall!.slice(0, 2)).toEqual([0.5, 2.5]);
+        expect(handle.setStopDistance).toHaveBeenLastCalledWith(Infinity);
+        await component.onDespawn();
+
+        const fast = await spawn({effect: "wind", rateScale: 0.5, speedScale: 4, reach: 3});
+        expect(fast.handle.setScales.mock.lastCall!.slice(0, 2)).toEqual([0.5, 4]);
+        expect(fast.handle.setStopDistance).toHaveBeenLastCalledWith(3);
+
+        // Its own rate and speed scales still count where its reach asks for more of both.
+        const far = await spawn({effect: "wind", rateScale: 0.5, speedScale: 1.5, reach: 9});
+        const [rateScale, speedScale] = far.handle.setScales.mock.lastCall!;
+        expect(speedScale).toBeCloseTo(9 / windCarry, 9);
+        expect(rateScale).toBeCloseTo(0.5 * speedScale / 1.5, 9);
+        await far.component.onDespawn();
+
+        // One that stands still has no speed to raise, and nothing about it is.
+        const still = await spawn({effect: "wind", speedScale: 0, reach: 9});
+        expect(still.handle.setScales.mock.lastCall!.slice(0, 2)).toEqual([1, 0]);
+        await still.component.onDespawn();
+        await fast.component.onDespawn();
+    });
+
+    it("tints the particles it lets out as it is told, and leaves them white where it is told nothing", async () => {
+        const plain = await spawn({effect: "wind"});
+        expect(plain.handle.setTint).toHaveBeenLastCalledWith("#ffffff");
+        const tinted = await spawn({effect: "wind", tint: "#ce0048"});
+        expect(tinted.handle.setTint).toHaveBeenLastCalledWith("#ce0048");
+        expect(tinted.handle.setScales.mock.lastCall).toEqual(plain.handle.setScales.mock.lastCall);
+        await plain.component.onDespawn();
+        await tinted.component.onDespawn();
+    });
+
+    it("paces its particles by its own time scale, along the same paths over as much longer lives, and nothing else", async () => {
+        const plain = await spawn({effect: "wind", faceOffset: FACE_OFFSET, reach: 9});
+        expect(plain.handle.setParticleTimeScale).toHaveBeenLastCalledWith(1);
+        const slow = await spawn({effect: "wind", faceOffset: FACE_OFFSET, reach: 9, particleTimeScale: 0.5});
+        expect(slow.handle.setParticleTimeScale).toHaveBeenLastCalledWith(0.5);
+        expect(slow.handle.setScales.mock.lastCall).toEqual(plain.handle.setScales.mock.lastCall);
+        expect(slow.handle.setStopDistance.mock.lastCall).toEqual(plain.handle.setStopDistance.mock.lastCall);
+        await plain.component.onDespawn();
+        await slow.component.onDespawn();
+
+        // A particle it spawns starts out just the same, to live as many times longer as it is paced slower: whether
+        // its life is its own, or how long it takes to reach where its stream ends.
+        for (const stopDistance of [Infinity, 4])
+        {
+            const emitter = new ParticleEmitterHandle("wind", ParticleEffectConfigMap.getConfig("wind")!);
+            emitter.setScales(1.5, 2, 1.25);
+            emitter.setStopDistance(stopDistance);
+            const spawned = (timeScale: number): ParticleSpawn => {
+                emitter.setParticleTimeScale(timeScale);
+                const out = ParticleSpawnUtil.createSpawn();
+                const random = vi.spyOn(Math, "random").mockReturnValue(0.3);
+                ParticleSpawnUtil.fill(out, emitter, emitter.config.layers[0], 0, 0, 1, 0);
+                random.mockRestore();
+                return out;
+            };
+            const usual = spawned(1), slower = spawned(0.5);
+            expect(usual.timeScale).toBe(1);
+            expect(slower.timeScale).toBe(0.5);
+            expect(slower.lifetime, `stopping at ${stopDistance}`).toBeCloseTo(2 * usual.lifetime, 9);
+            expect({...slower, lifetime: usual.lifetime, timeScale: 1}).toEqual(usual);
+        }
+    });
+});

@@ -1,0 +1,35 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "net.thingspool/robot-rooms",
+  "title": "Robot Rooms",
+  "description": "A web-based 3D sandbox world where AI agents can play with humans and build all kinds of things.",
+  "version": "1.7.2",
+  "websiteUrl": "https://thingspool.net/RobotRooms/skill.md",
+  "icons": [
+    {
+      "src": "https://app.thingspool.net/largeLogo.jpg",
+      "mimeType": "image/jpeg",
+      "sizes": ["150x150"]
+    }
+  ],
+  "repository": {
+    "url": "https://github.com/architsch/youngjin",
+    "source": "github",
+    "id": "637290531",
+    "subfolder": "robot-rooms"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://app.thingspool.net/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "\"Bearer <key>\", with the key the register tool gave you. Leave it out until you have registered, or if your host signs in (OAuth).",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

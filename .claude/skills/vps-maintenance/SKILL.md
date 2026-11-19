@@ -14,6 +14,10 @@ it for as long as it lasts.
 So the work is split by blast radius, and the split is enforced by the tool rather than by
 intention.
 
+Paths and commands here are from `robot-rooms/`, the game's project folder (`cd robot-rooms` first),
+except those of `public/`, `.claude/`, `.github/`, the root `CLAUDE.md` and `README.md` and the license
+files, which are at the repository's root.
+
 ## The tool
 
 ```
@@ -63,9 +67,10 @@ Three of these mislead if read naively, and the audit is built around exactly th
   run. Never conclude "patching is fine" from a service state. The evidence is the length of the
   upgradable list, `APT::Periodic::Unattended-Upgrade` reading `"1"`, and the `apt-daily-upgrade`
   timer having a next run time — all three of which the audit reports.
-- **PM2 restart counts are cumulative since the process was created**, so on a machine that deploys
-  from CI they are largely a deployment count. The finding is reported as `info` for that reason.
-  What makes a restart count interesting is a *rise since the previous audit that no deployment
+- **PM2 restart counts are cumulative since the process was created**, and a deploy, a promote or a
+  rollback creates it anew (`pm2 delete`, then `pm2 start`), so a count runs from the last of those
+  and holds only the restart workflows' runs and PM2's own restarts. The finding is reported as
+  `info`. What makes a restart count interesting is a *rise that no run of a restart workflow
   explains*, or a non-zero `unstableRestarts`, which means the process died again within seconds of
   coming up — a crash loop, and always critical.
 - **A certificate with fewer than 30 days left is already a failure.** Certbot renews at 30 days,
@@ -114,7 +119,7 @@ not before.
 - **Never reboot the machine, and never propose doing so as part of an automated run.** The script
   has no reboot verb. A pending reboot is reported and left pending. When one is genuinely needed,
   hand the user
-  [docs/devOps/vps/maintenance.md](../../../docs/devOps/vps/maintenance.md#applying-a-kernel-update),
+  [docs/devOps/vps/maintenance.md](../../../robot-rooms/docs/devOps/vps/maintenance.md#applying-a-kernel-update),
   which covers the parts that are easy to lose: `pm2 save` first, because the boot unit resurrects
   the *saved* process list rather than what is currently running, and confirming a fallback kernel
   is still installed.
@@ -128,7 +133,7 @@ not before.
   so a `differs` finding is reported for the user to run, never run here.
 - **The Node.js upgrade procedure is not this skill's to run.** If the audit reports a version
   mismatch, report it and point at
-  [the documented procedure](../../../docs/devOps/vps/maintenance.md#how-to-upgrade-the-nodejs-version)
+  [the documented procedure](../../../robot-rooms/docs/devOps/vps/maintenance.md#how-to-upgrade-the-nodejs-version)
   — the ordering there (VPS first, push second) exists because getting it backwards fails the
   deployment and silently skips the e2e suite along with it.
 - Log *reading* for application errors belongs to `serverMonitor.js` and the `staging-playtest`
