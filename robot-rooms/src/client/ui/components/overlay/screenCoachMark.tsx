@@ -37,8 +37,8 @@ export default function ScreenCoachMark({coachMark}: {coachMark: CoachMark})
             width: width,
             transformOrigin: `${pointerLeft}px ${showBelowTarget ? "0" : "100%"}`,
         }}>
-        {/* Pointer: a rotated square half-hidden behind the bubble, showing a triangle. */}
-        <div className={`absolute size-3 -ml-1.5 rotate-45 ${color}`}
+        {/* Pointer: a rotated square half-hidden in the bubble, showing a triangle, and beneath the text and button it reaches. */}
+        <div className={`absolute -z-10 size-3 -ml-1.5 rotate-45 ${color}`}
             style={showBelowTarget ? { left: pointerLeft, top: -4 } : { left: pointerLeft, bottom: -4 }}/>
         {button && <><span className="yj-link-button" onClick={button.onClick}>{button.label}</span>{" "}</>}
         {text}

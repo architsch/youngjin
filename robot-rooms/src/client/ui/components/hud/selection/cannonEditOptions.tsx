@@ -16,20 +16,21 @@ export default function CannonEditOptions(props: EditOptionsProps)
     // Read off the cannon each render, as every throw of its switch re-announces the selection (see
     // ClientObjectManager), as does its turning to scrap: the user's own throw, one undone, or somebody else's.
     const {on, phase} = CannonStateUtil.getObjectState(props.selection.gameObject.params);
+    const scrap = phase == CannonPhaseEnumMap.Scrap;
     const setSwitch = (value: boolean) => ObjectEditUtil.trySetObjectMetadata(props.selection,
         ObjectMetadataKeyEnumMap.CannonState, CannonStateUtil.encodeSwitch(value));
 
     return <SelectionToolRow>
-        <IconButton id="removeCannonButton" icon={<TrashIcon/>} size="md" color="red" shortcutKey="Delete"
+        {scrap && <IconButton id="removeCannonButton" icon={<TrashIcon/>} size="md" color="red" shortcutKey="Delete"
             disabled={!ObjectEditUtil.canRemoveObject(props.selection)}
             onClick={() => ObjectEditUtil.openRemoveConfirmPopup(props.selection, "Want to remove this?")}
-        />
-        {phase != CannonPhaseEnumMap.Scrap && <ToggleSwitchInput id="cannonSwitch" checked={on} onChange={setSwitch}
+        />}
+        {!scrap && <ToggleSwitchInput id="cannonSwitch" checked={on} onChange={setSwitch}
             // Recomputed each render; zone changes re-announce the selection (see ClientVoxelManager).
             disabled={!ObjectEditUtil.canSetObjectMetadata(props.selection, ObjectMetadataKeyEnumMap.CannonState,
                 CannonStateUtil.encodeSwitch(!on))}
         />}
-        {phase == CannonPhaseEnumMap.Scrap && <IconButton id="rotateCannonScrapButton" icon={<RotateClockwiseIcon/>}
+        {scrap && <IconButton id="rotateCannonScrapButton" icon={<RotateClockwiseIcon/>}
             size="md" disabled={!ObjectEditUtil.canQuarterTurn(props.selection)}
             onClick={() => ObjectEditUtil.tryQuarterTurn(props.selection)}
         />}
