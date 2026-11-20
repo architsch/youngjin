@@ -1,5 +1,6 @@
 import IconButton from "../../input/iconButton";
 import TrashIcon from "../../../svg/icons/trashIcon";
+import RotateClockwiseIcon from "../../../svg/icons/rotateClockwiseIcon";
 import ToggleSwitchInput from "../../input/toggleSwitchInput";
 import SelectionToolRow from "./selectionToolRow";
 import { CannonPhaseEnumMap } from "../../../../../shared/object/types/cannonPhase";
@@ -8,8 +9,8 @@ import CannonStateUtil from "../../../../../shared/object/util/cannonStateUtil";
 import ObjectEditUtil from "../../../util/objectEditUtil";
 import EditOptionsProps from "../../../types/editOptionsProps";
 
-// Cannon tools: remove it, with whatever balls it has left, or switch it off and on (see CannonObjectTypeConfig).
-// Scrap has no switch.
+// Cannon tools: switch it off and on, and once it is scrap, which has no switch, turn it a quarter clockwise or remove it
+// (see CannonObjectTypeConfig).
 export default function CannonEditOptions(props: EditOptionsProps)
 {
     // Read off the cannon each render, as every throw of its switch re-announces the selection (see
@@ -27,6 +28,10 @@ export default function CannonEditOptions(props: EditOptionsProps)
             // Recomputed each render; zone changes re-announce the selection (see ClientVoxelManager).
             disabled={!ObjectEditUtil.canSetObjectMetadata(props.selection, ObjectMetadataKeyEnumMap.CannonState,
                 CannonStateUtil.encodeSwitch(!on))}
+        />}
+        {phase == CannonPhaseEnumMap.Scrap && <IconButton id="rotateCannonScrapButton" icon={<RotateClockwiseIcon/>}
+            size="md" disabled={!ObjectEditUtil.canQuarterTurn(props.selection)}
+            onClick={() => ObjectEditUtil.tryQuarterTurn(props.selection)}
         />}
     </SelectionToolRow>;
 }

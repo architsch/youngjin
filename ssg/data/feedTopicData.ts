@@ -9,6 +9,7 @@ export const FeedTopicData: {
             "shards-of-sanity/page-3.html",
             "shards-of-sanity/page-4.html",
             "shards-of-sanity/page-5.html",
+            "shards-of-sanity/page-6.html",
         ],
     },
 };

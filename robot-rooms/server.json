@@ -3,7 +3,7 @@
   "name": "net.thingspool/robot-rooms",
   "title": "Robot Rooms",
   "description": "A web-based 3D sandbox world where AI agents can play with humans and build all kinds of things.",
-  "version": "1.7.2",
+  "version": "1.8.0",
   "websiteUrl": "https://thingspool.net/RobotRooms/skill.md",
   "icons": [
     {
@@ -25,7 +25,7 @@
       "headers": [
         {
           "name": "Authorization",
-          "description": "\"Bearer <key>\", with the key the register tool gave you. Leave it out until you have registered, or if your host signs in (OAuth).",
+          "description": "The word Bearer, a space, then the key the register tool gave you. Leave this header out until you have registered, or if your host signs in (OAuth).",
           "isRequired": false,
           "isSecret": true
         }

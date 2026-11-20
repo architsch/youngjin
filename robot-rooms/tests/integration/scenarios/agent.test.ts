@@ -84,6 +84,8 @@ import { CANNON_BALL_COUNT, CANNON_FIRE_INTERVAL_SECONDS, CANNON_LOCK_SECONDS, C
 import { CANNON_BALL_BOUNCE_BOOST, CANNON_BALL_MAX_SPEED, CANNON_BALL_SPEED }
     from "../../../src/shared/object/types/objectTypeConfig/cannonBallObjectTypeConfig";
 import CannonStateUtil from "../../../src/shared/object/util/cannonStateUtil";
+import QuarterTurnsUtil from "../../../src/shared/object/util/quarterTurnsUtil";
+import VoxelPathUtil from "../../../src/shared/voxel/util/voxelPathUtil";
 import { CannonPhaseEnumMap } from "../../../src/shared/object/types/cannonPhase";
 import ObjectCategoryConfigMap from "../../../src/shared/object/maps/objectCategoryConfigMap";
 import CannonUtil from "../../../src/server/object/util/cannonUtil";
@@ -1251,7 +1253,8 @@ describe("AI agents", () => {
             expect(agent.inventory[DOLLAR]).toBe(0);
         });
 
-        it("edit_object switches one off and on, move_object rehangs it, and remove_object takes it for good", async () => {
+        it("edit_object switches one off and on, move_object rehangs it, and remove_object takes it only once it is scrap",
+            async () => {
             const agent = await arriveAgent("Gunner");
             agent.inventory[DOLLAR] = CANNON_PRICE_DOLLARS;
             const {id} = (await AgentObjectUtil.addObject(agent, {type: "cannon", on: FLOOR}) as any).added;
@@ -1261,10 +1264,13 @@ describe("AI agents", () => {
             expect(off.edited).toEqual(expect.objectContaining({switchedOn: false, ballsLeft: CANNON_BALL_COUNT}));
             expect(stateOf(room, id).on).toBe(false);
             expect((await AgentObjectUtil.editObject(agent, {id, switchedOn: true}) as any).edited.switchedOn).toBe(true);
-            // Only a cannon has a switch.
+            // Only a cannon has a switch, and only its scrap turns.
             const lamp = (await AgentObjectUtil.addObject(agent, {type: "lamp",
                 on: {row: 1, column: 30, layer: 4, side: "south"}}) as any).added;
             expect((await AgentObjectUtil.editObject(agent, {id: lamp.id, switchedOn: false}) as any).error).toMatch(/no switch/);
+            expect((await AgentObjectUtil.editObject(agent, {id: lamp.id, turn: 1}) as any).error).toMatch(/scrap/);
+            expect((await AgentObjectUtil.editObject(agent, {id, turn: 1}) as any).error).toMatch(/scrap/);
+            expect(room.objectById[id].metadata[ObjectMetadataKeyEnumMap.QuarterTurns]).toBeUndefined();
 
             const there: AgentFace = {row: 30, column: 30, layer: -1, side: "up"};
             expect((await AgentObjectUtil.moveObject(agent, id, there) as any).moved.on).toEqual(there);
@@ -1272,6 +1278,14 @@ describe("AI agents", () => {
                 {row: 30, column: 30, layer: STOREY_FLOOR_COLLISION_LAYER, side: "down"}) as any).error)
                 .toMatch(/only on a floor or a wall/);
 
+            // Nobody takes it away while it works, which it is told, with what it may do instead.
+            const refused = await AgentObjectUtil.removeObject(agent, id) as any;
+            expect(refused.error).toMatch(/scrap/);
+            expect(refused.error).toContain("switched_on");
+            expect(room.objectById[id]).toBeDefined();
+            // As the server leaves it once it has fired its last ball.
+            room.objectById[id].metadata[ObjectMetadataKeyEnumMap.CannonState] = new EncodableByteString(
+                CannonStateUtil.encode({...CannonStateUtil.decode(""), phase: CannonPhaseEnumMap.Scrap, ballsLeft: 0}));
             expect(await AgentObjectUtil.removeObject(agent, id)).toEqual({removed: id});
             expect(agent.inventory[DOLLAR]).toBe(0);
         });
@@ -1299,8 +1313,8 @@ describe("AI agents", () => {
             expect(cannonBalls[0].distance).toBeGreaterThan(0);
         });
 
-        it("look marks a cannon that is scrap, with what that means, edit_object refuses its switch, saying why, a room " +
-            "full of scrap says so, and remove_object takes it", async () => {
+        it("look marks a cannon that is scrap, with what that means and the way it lies, edit_object refuses its switch, " +
+            "saying why, and turns it, a room full of scrap says so, and remove_object takes it", async () => {
             const agent = await arriveAgent("Sweeper");
             const room = roomOf(agent);
             const cannonTypeIndex = ObjectTypeConfigMap.getIndexByType("Cannon");
@@ -1323,6 +1337,25 @@ describe("AI agents", () => {
                 expect(refused.error).toContain("remove_object");
             }
             expect(stateOf(room, id).phase).toBe(CannonPhaseEnumMap.Scrap);
+
+            // A quarter further round for each turn, clockwise as seen from above, and back after four.
+            expect(listed.note).toContain("turn");
+            const compass = ["north", "east", "south", "west"];
+            const first = compass.indexOf(listed.pointing);
+            expect(first).toBeGreaterThanOrEqual(0);
+            for (let turns = 1; turns <= 4; ++turns)
+            {
+                const turned = await AgentObjectUtil.editObject(agent, {id, turn: 1}) as any;
+                expect(turned.edited).toEqual(expect.objectContaining({scrap: true, pointing: compass[(first + turns) % 4]}));
+            }
+            expect((await AgentObjectUtil.editObject(agent, {id, turn: 3}) as any).edited.pointing)
+                .toBe(compass[(first + 3) % 4]);
+            expect(QuarterTurnsUtil.getQuarterTurns(room.objectById[id])).toBe(3);
+            expect(stateOf(room, id)).toMatchObject({phase: CannonPhaseEnumMap.Scrap, ballsLeft: 0});
+            // Moved, it keeps the way it lies.
+            const there: AgentFace = {row: 30, column: 30, layer: -1, side: "up"};
+            expect((await AgentObjectUtil.moveObject(agent, id, there, "south") as any).moved.pointing)
+                .toBe(compass[(first + 3) % 4]);
 
             // With as many as the room holds, scrap all of it, a cannon more is refused, and told why.
             const most = ObjectCategoryConfigMap.getMaxCountPerRoom(ObjectTypeConfigMap.getConfigByIndex(cannonTypeIndex).category);
@@ -1828,6 +1861,19 @@ describe("AI agents", () => {
             const moves = receivedSignals(human).filter(({signalType, signal}) =>
                 signalType == "setObjectTransformSignal" && signal.objectId == playerIdOf(agent));
             expect(moves.length).toBeGreaterThan(0);
+        });
+
+        it("puts an agent arriving through a doorway blocks fill past them, where it walks nowhere", async () => {
+            const human = await joinHuman("Alice");
+            // The storey in front of the room's way in, filled four rows deep and well to either side of the door.
+            fillBlocks(roomOf(human).voxelGrid.voxels, [58, 61], [28, 38], [0, STOREY_FLOOR_COLLISION_LAYER - 1]);
+            const agent = await arriveAgent("Bot-1");
+            const start = positionOf(agent);
+            expect(VoxelPathUtil.toVertex(VoxelPathUtil.feetOf(start))).toEqual({row: 57, col: 33, layer: 0});
+
+            flush(10);
+
+            expect(positionOf(agent)).toEqual(start);
         });
 
         it("first moves an arriving agent a flush after the one that sends the room its player", async () => {
@@ -3152,6 +3198,29 @@ describe("AI agents", () => {
                 const icon = client.getServerVersion()?.icons?.[0];
                 expect(icon?.src).toBe(`${url.origin}/largeLogo.jpg`);
                 expect(new URL(entry.icons[0].src).pathname).toBe(new URL(icon!.src).pathname);
+            }
+            finally
+            {
+                await client.close();
+            }
+        });
+
+        // A registry's reviewer learns the server from the README alone, which is published apart from it.
+        it("has every one of its tools, and its address, in the game's README", async () => {
+            const root = path.resolve(__dirname, "../../..");
+            const entry = JSON.parse(fs.readFileSync(path.join(root, "server.json"), "utf8"));
+            const section = fs.readFileSync(path.join(root, "README.md"), "utf8")
+                .split("\n## MCP Server\n")[1].split("\n## ")[0];
+            const named = [...section.split("\n### Tools\n")[1].matchAll(/^\| `([a-z_]+)` \|/gm)]
+                .map(match => match[1]);
+            const client = await connect();
+            try
+            {
+                const tools = (await client.listTools()).tools.map(tool => tool.name);
+
+                expect([...named].sort()).toEqual([...tools].sort());
+                expect(section).toContain(`\`${entry.remotes[0].url}\``);
+                expect(section).toContain(`\`${entry.name}\``);
             }
             finally
             {

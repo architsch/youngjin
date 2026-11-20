@@ -91,6 +91,7 @@ import ClientEventHistoryUtil, { MERGE_WINDOW_MS } from "../../../src/client/sys
 import GameModeUtil from "../../../src/client/system/util/gameModeUtil";
 import RoomEditUtil from "../../../src/client/system/util/roomEditUtil";
 import CannonStateUtil from "../../../src/shared/object/util/cannonStateUtil";
+import { CannonPhaseEnumMap } from "../../../src/shared/object/types/cannonPhase";
 import VoxelEditUtil from "../../../src/client/voxel/util/voxelEditUtil";
 import { clientFeatureFlagsObservable, gameModeObservable, notificationMessageObservable, objectEditObservable,
     objectPlacedObservable, objectSelectionObservable, orbitCameraAngleHoldRequestObservable, popupStateObservable,
@@ -1614,6 +1615,9 @@ describe("an object that costs dollars", () => {
     const CANNON_POS = {x: 22.5, y: 0, z: 22.5};
     const UP = {x: 0, y: 1, z: 0};
     const switched = (on: boolean): ObjectMetadata => ({[STATE_KEY]: new EncodableByteString(CannonStateUtil.encodeSwitch(on))});
+    // As the server leaves one once it has fired its last ball: only then may anybody take it away.
+    const scrap = (): ObjectMetadata => ({[STATE_KEY]: new EncodableByteString(CannonStateUtil.encode(
+        {...CannonStateUtil.decode(""), phase: CannonPhaseEnumMap.Scrap, ballsLeft: 0}))});
     const stateOf = (objectId: string) => CannonStateUtil.getObjectState(room.objectById[objectId]);
 
     it("is not taken away by an undo, which takes back what was done before it was added", async () => {
@@ -1633,7 +1637,7 @@ describe("an object that costs dollars", () => {
     });
 
     it("is not brought back by an undo once its tools have taken it away", async () => {
-        const cannonId = await standObject(cannonTypeIndex, CANNON_POS, UP, {...UNIT_VEC3}, switched(true));
+        const cannonId = await standObject(cannonTypeIndex, CANNON_POS, UP, {...UNIT_VEC3}, scrap());
         ObjectEditUtil.openRemoveConfirmPopup(await select(cannonId), "Want to remove this?");
         const popup = popupStateObservable.peek();
         (popup as Extract<typeof popup, {popupType: "confirm"}>).params.onConfirm();
@@ -1648,7 +1652,7 @@ describe("an object that costs dollars", () => {
     });
 
     it("is left out of an edit that took it away with other things, the rest of which is undone and redone", async () => {
-        const cannonId = await standObject(cannonTypeIndex, CANNON_POS, UP, {...UNIT_VEC3}, switched(true));
+        const cannonId = await standObject(cannonTypeIndex, CANNON_POS, UP, {...UNIT_VEC3}, scrap());
         const cannon = room.objectById[cannonId];
         // As a block taken down with what stood on it is entered: here, a face painted and the cannon taken away.
         const paint = new SetVoxelQuadTextureSignal(room.id, SOUTH_FACE, 9);
@@ -1691,5 +1695,28 @@ describe("an object that costs dollars", () => {
         expect(await ClientEventHistoryUtil.redo()).toBe("done");
         expect(stateOf(cannonId)).toMatchObject({on: false, ballsLeft: 7});
         expect(sentSignals()).toEqual([["metadata", cannonId, STATE_KEY, CannonStateUtil.encodeSwitch(false)]]);
+    });
+
+    it("has its scrap turned by its tools, which a working one isn't, and the turn undone and redone", async () => {
+        const working = await select(await standObject(cannonTypeIndex, CANNON_POS, UP, {...UNIT_VEC3}, switched(true)));
+        expect(ObjectEditUtil.canQuarterTurn(working)).toBe(false);
+        expect(ObjectEditUtil.canRemoveObject(working)).toBe(false);
+
+        const cannonId = await standObject(cannonTypeIndex, {...CANNON_POS, x: CANNON_POS.x - 2}, UP, {...UNIT_VEC3}, scrap());
+        const selection = await select(cannonId);
+        expect(ObjectEditUtil.canQuarterTurn(selection)).toBe(true);
+        expect(ObjectEditUtil.canRemoveObject(selection)).toBe(true);
+        sentSignals();
+        ObjectEditUtil.tryQuarterTurn(selection);
+        ObjectEditUtil.tryQuarterTurn(selection);
+        expect(QuarterTurnsUtil.getQuarterTurns(room.objectById[cannonId])).toBe(2);
+        expect(sentSignals()).toEqual([1, 2].map(quarterTurns =>
+            ["metadata", cannonId, ObjectMetadataKeyEnumMap.QuarterTurns, QuarterTurnsUtil.encode(quarterTurns)]));
+
+        expect(await ClientEventHistoryUtil.undo()).toBe("done");
+        expect(QuarterTurnsUtil.getQuarterTurns(room.objectById[cannonId])).toBe(1);
+        expect(await ClientEventHistoryUtil.redo()).toBe("done");
+        expect(QuarterTurnsUtil.getQuarterTurns(room.objectById[cannonId])).toBe(2);
+        expect(stateOf(cannonId)).toMatchObject({phase: CannonPhaseEnumMap.Scrap, ballsLeft: 0});
     });
 });

@@ -3,6 +3,7 @@
  * how their metadata is validated, the wall one needs behind it, and where arriving players spawn.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import fc from "fast-check";
 import { runScenario, VoxelPlacement } from "../helpers/scenarioRunner";
 import { EMPTY_HUB, EMPTY_REGULAR, userAtCenter } from "../helpers/scenarioPresets";
 import { getLooks } from "../helpers/composition";
@@ -11,9 +12,12 @@ import SpawnHotspotUtil from "../../../src/server/room/util/spawnHotspotUtil";
 import ObjectTypeConfigMap from "../../../src/shared/object/maps/objectTypeConfigMap";
 import ObjectMetadataEntryMap from "../../../src/shared/object/maps/objectMetadataEntryMap";
 import ObjectUpdateUtil from "../../../src/shared/object/util/objectUpdateUtil";
-import DoorObjectTypeConfig, { ENTRANCE_DIST_IN_FRONT_OF_DOOR, ENTRANCE_DOOR_OBJECT_ID,
-    SPAWN_DIST_BEHIND_DOOR } from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
-import { PLAYER_RADIUS_XZ } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import DoorObjectTypeConfig, { ENTERING_SPEED, ENTERING_STRIDE_LENGTH, ENTRANCE_DIST_IN_FRONT_OF_DOOR,
+    ENTRANCE_DOOR_OBJECT_ID, SPAWN_DIST_BEHIND_DOOR } from "../../../src/shared/object/types/objectTypeConfig/doorObjectTypeConfig";
+import { PLAYER_HEIGHT, PLAYER_RADIUS_XZ } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import DoorEntranceUtil from "../../../src/shared/object/util/doorEntranceUtil";
+import ObjectObstacleUtil from "../../../src/shared/object/util/objectObstacleUtil";
+import VoxelPathUtil from "../../../src/shared/voxel/util/voxelPathUtil";
 import PhysicsManager from "../../../src/shared/physics/physicsManager";
 import PhysicsColliderStateUtil from "../../../src/shared/physics/util/physicsColliderStateUtil";
 import LabelTextUtil from "../../../src/shared/object/util/labelTextUtil";
@@ -36,9 +40,9 @@ import ColorUtil from "../../../src/shared/math/util/colorUtil";
 import Vec3 from "../../../src/shared/math/types/vec3";
 import ObjectAttachmentUtil from "../../../src/shared/object/util/objectAttachmentUtil";
 import { COLLISION_LAYER_HEIGHT, GENERATED_WALL_THICKNESS, GRAVITY_SPEED,
-    LABEL_COLOR_PALETTE_NAME, INITIAL_MULTI_PLAYER_ENTRANCE_POS, MAX_ROOM_X, MAX_ROOM_Z, OBJECT_LABEL_MAX_LENGTH,
-    SANDBOX_SINGLE_PLAYER_MODE, STOREY_FLOOR_COLLISION_LAYER, TUTORIAL_SINGLE_PLAYER_MODE, UNIT_VEC3,
-    VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
+    LABEL_COLOR_PALETTE_NAME, INITIAL_MULTI_PLAYER_ENTRANCE_POS, MAX_ROOM_X, MAX_ROOM_Z, NUM_COLLISION_LAYERS,
+    NUM_VOXEL_COLS, NUM_VOXEL_ROWS, OBJECT_LABEL_MAX_LENGTH, SANDBOX_SINGLE_PLAYER_MODE, STOREY_FLOOR_COLLISION_LAYER,
+    TUTORIAL_SINGLE_PLAYER_MODE, UNIT_VEC3, VOXEL_CELL_SIZE } from "../../../src/shared/system/sharedConstants";
 import VoxelQueryUtil from "../../../src/shared/voxel/util/voxelQueryUtil";
 import VoxelUpdateUtil from "../../../src/shared/voxel/util/voxelUpdateUtil";
 
@@ -562,6 +566,267 @@ describe("the wall a door needs", () => {
                     expect((pos.z - wallZ) * FACING.z, label).toBeGreaterThan(PLAYER_RADIUS_XZ);
                 }
             },
+        });
+    });
+});
+
+/**
+ * An arrival whose walk out of the doorway would end where something solid stands: put down instead on the nearest spot
+ * in front of the door where a body stands clear, to walk nowhere.
+ */
+describe("arriving through a doorway something solid fills", () => {
+    beforeEach(() => {
+        vi.spyOn(console, "error").mockImplementation(() => {});
+        vi.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    const playerTypeIndex = ObjectTypeConfigMap.getIndexByType("Player");
+    const cannonTypeIndex = ObjectTypeConfigMap.getIndexByType("Cannon");
+    // The cells the room's own way in looks out on, as a generated room has it: its face on the boundary wall's inner
+    // side, facing north, and the door's middle on the line between two columns.
+    const FACE_ROW = INITIAL_MULTI_PLAYER_ENTRANCE_POS.z / VOXEL_CELL_SIZE;
+    const DOOR_COL = INITIAL_MULTI_PLAYER_ENTRANCE_POS.x / VOXEL_CELL_SIZE;
+    const LOWER_STOREY: [number, number] = [0, STOREY_FLOOR_COLLISION_LAYER - 1];
+
+    type CellRange = [number, number];
+
+    // Blocks in every cell of a box, set straight into the room's grid; undone by putting back what was there.
+    function fill(room: Room, rows: CellRange, cols: CellRange, layers: CellRange): () => void
+    {
+        const kept = room.voxelGrid.voxels.map(voxel => voxel.blockLayerMask);
+        for (let row = rows[0]; row <= rows[1]; ++row)
+        {
+            for (let col = cols[0]; col <= cols[1]; ++col)
+            {
+                for (let layer = layers[0]; layer <= layers[1]; ++layer)
+                    room.voxelGrid.voxels[row * NUM_VOXEL_COLS + col].blockLayerMask |= 1 << layer;
+            }
+        }
+        return () => room.voxelGrid.voxels.forEach((voxel, i) => { voxel.blockLayerMask = kept[i]; });
+    }
+
+    // Whether a body with its middle there reaches into a block, past the room's sides, or into a solid object, as the
+    // physics finds it.
+    function meetsSolid(room: Room, center: Vec3): boolean
+    {
+        const inset = 0.001;
+        return PhysicsColliderStateUtil.boxOverlapsHardCollider(PhysicsManager.physicsRooms[room.id], {center,
+            halfSize: {x: PLAYER_RADIUS_XZ - inset, y: 0.5 * PLAYER_HEIGHT - inset, z: PLAYER_RADIUS_XZ - inset}});
+    }
+
+    // Where the feet of a body walking out of the door end up, along the way it faces.
+    function walkEndFeet(door: AddObjectSignal): Vec3
+    {
+        return {x: door.transform.pos.x + door.transform.dir.x * ENTRANCE_DIST_IN_FRONT_OF_DOOR,
+            y: DoorObjectTypeConfig.util.getFloorY(door),
+            z: door.transform.pos.z + door.transform.dir.z * ENTRANCE_DIST_IN_FRONT_OF_DOOR};
+    }
+
+    // How far in front of the door's face a point is.
+    function inFront(door: AddObjectSignal, point: Vec3): number
+    {
+        return (point.x - door.transform.pos.x) * door.transform.dir.x + (point.z - door.transform.pos.z) * door.transform.dir.z;
+    }
+
+    // The distance from where the walk out ends to the nearest vertex a body stands on clear, wholly in front of the
+    // door, found by trying every vertex of the room.
+    function nearestOpenInFront(room: Room, door: AddObjectSignal): number
+    {
+        const isOpen = ObjectObstacleUtil.getClearance(room.objectById);
+        const end = walkEndFeet(door);
+        let nearest = Infinity;
+        for (let layer = 0; layer < NUM_COLLISION_LAYERS; ++layer)
+        {
+            for (let row = 0; row <= NUM_VOXEL_ROWS; ++row)
+            {
+                for (let col = 0; col <= NUM_VOXEL_COLS; ++col)
+                {
+                    const vertex = {row, col, layer};
+                    const at = VoxelPathUtil.toWorld(vertex);
+                    if (inFront(door, at) >= PLAYER_RADIUS_XZ && VoxelPathUtil.isStandable(room.voxelGrid.voxels, vertex)
+                        && isOpen(vertex))
+                    {
+                        nearest = Math.min(nearest, Math.hypot(at.x - end.x, at.y - end.y, at.z - end.z));
+                    }
+                }
+            }
+        }
+        return nearest;
+    }
+
+    // Where a door puts an arrival whose walk out ends clear.
+    function behindDoor(door: AddObjectSignal): ObjectTransform
+    {
+        const {pos, dir} = door.transform;
+        return new ObjectTransform({x: pos.x - dir.x * SPAWN_DIST_BEHIND_DOOR,
+            y: DoorObjectTypeConfig.util.getFloorY(door) + 0.5 * PLAYER_HEIGHT, z: pos.z - dir.z * SPAWN_DIST_BEHIND_DOOR},
+            {x: -dir.x, y: 0, z: -dir.z}, {...UNIT_VEC3});
+    }
+
+    // Where a body put down behind the door gets to in a second of walking out through the real physics, as
+    // PlayerController walks him.
+    function walkOut(room: Room, spawn: ObjectTransform): Vec3
+    {
+        const deltaTime = 1 / 60;
+        let pos = {...spawn.pos};
+        PhysicsManager.addObject(room.id, "arrival", playerTypeIndex, PhysicsColliderStateUtil
+            .getObjectColliderState(playerTypeIndex, new ObjectTransform(pos, spawn.dir, {...UNIT_VEC3}))!);
+        for (let frame = 0; frame < 60 && Math.hypot(pos.x - spawn.pos.x, pos.z - spawn.pos.z) < ENTERING_STRIDE_LENGTH;
+            ++frame)
+        {
+            const velocity = PhysicsManager.getAdjustedVelocity(room.id, "arrival",
+                {x: -ENTERING_SPEED * spawn.dir.x, y: -GRAVITY_SPEED, z: -ENTERING_SPEED * spawn.dir.z});
+            pos = PhysicsManager.setObjectTransform(room.id, "arrival", new ObjectTransform(
+                {x: pos.x + velocity.x * deltaTime, y: pos.y + velocity.y * deltaTime,
+                    z: pos.z + velocity.z * deltaTime}, spawn.dir, {...UNIT_VEC3}), false).transform.pos;
+        }
+        PhysicsManager.removeObject(room.id, "arrival");
+        return pos;
+    }
+
+    // Put down where nothing is in his way, the nearest such spot in front of the door, facing as he would have walked
+    // out, with no door he stands behind to walk out of.
+    function expectPutDownInFront(room: Room, door: AddObjectSignal, spawn: ObjectTransform): void
+    {
+        const feet = VoxelPathUtil.feetOf(spawn.pos);
+        const vertex = VoxelPathUtil.toVertex(feet);
+        expect(vertex, JSON.stringify(spawn.pos)).toBeDefined();
+        expect(VoxelPathUtil.isStandable(room.voxelGrid.voxels, vertex!)).toBe(true);
+        expect(meetsSolid(room, spawn.pos)).toBe(false);
+        expect(inFront(door, feet)).toBeGreaterThanOrEqual(PLAYER_RADIUS_XZ);
+        const end = walkEndFeet(door);
+        expect(Math.hypot(feet.x - end.x, feet.y - end.y, feet.z - end.z)).toBeCloseTo(nearestOpenInFront(room, door), 6);
+        expect(spawn.dir).toEqual({x: -door.transform.dir.x, y: 0, z: -door.transform.dir.z});
+        expect(DoorEntranceUtil.findDoorBehind(room, spawn.pos)).toBeUndefined();
+    }
+
+    function expectPutDownBehind(room: Room, door: AddObjectSignal, spawn: ObjectTransform): void
+    {
+        expect(DoorEntranceUtil.findDoorBehind(room, spawn.pos)).toBe(door);
+        expect(inFront(door, spawn.pos)).toBeCloseTo(-SPAWN_DIST_BEHIND_DOOR, 6);
+        // And his walk out gets him clear of the wall, into the room.
+        expect(inFront(door, walkOut(room, spawn))).toBeGreaterThan(PLAYER_RADIUS_XZ);
+    }
+
+    function scenario(assertions: (room: Room, door: AddObjectSignal) => void): Promise<unknown>
+    {
+        return runScenario({
+            name: "a doorway with something in it",
+            rooms: [EMPTY_HUB],
+            users: [userAtCenter("hub")],
+            assertions: () => {
+                const room = ServerRoomManager.roomRuntimeMemories["hub"].room;
+                assertions(room, getEntranceDoor(room));
+            },
+        });
+    }
+
+    it("keeps putting him behind the door while his walk out ends clear, however near the blocks come", async () => {
+        await scenario((room, door) => {
+            // Either side of the doorway, over his head and just past where he ends up.
+            fill(room, [FACE_ROW - 1, FACE_ROW - 1], [DOOR_COL - 2, DOOR_COL - 2], LOWER_STOREY);
+            fill(room, [FACE_ROW - 1, FACE_ROW - 1], [DOOR_COL + 1, DOOR_COL + 1], LOWER_STOREY);
+            fill(room, [FACE_ROW - 2, FACE_ROW - 1], [DOOR_COL - 1, DOOR_COL],
+                [PLAYER_HEIGHT / COLLISION_LAYER_HEIGHT, STOREY_FLOOR_COLLISION_LAYER - 1]);
+            fill(room, [FACE_ROW - 6, FACE_ROW - 3], [DOOR_COL - 6, DOOR_COL + 5], LOWER_STOREY);
+            expectPutDownBehind(room, door, SpawnHotspotUtil.pickSpawnTransform(room, ""));
+        });
+    });
+
+    it("puts him past blocks filling the doorway, on the nearest spot in front of the door where he stands clear",
+        async () => {
+        await scenario((room, door) => {
+            fill(room, [FACE_ROW - 4, FACE_ROW - 1], [DOOR_COL - 5, DOOR_COL + 5], LOWER_STOREY);
+            const spawn = SpawnHotspotUtil.pickSpawnTransform(room, "");
+            expectPutDownInFront(room, door, spawn);
+            // Straight on, on the floor just past them.
+            expect(VoxelPathUtil.toVertex(VoxelPathUtil.feetOf(spawn.pos)))
+                .toEqual({row: FACE_ROW - 5, col: DOOR_COL, layer: 0});
+        });
+    });
+
+    it("puts him beside a block at his feet, which he couldn't step up onto from inside the wall", async () => {
+        await scenario((room, door) => {
+            fill(room, [FACE_ROW - 1, FACE_ROW - 1], [DOOR_COL, DOOR_COL], [0, 0]);
+            expectPutDownInFront(room, door, SpawnHotspotUtil.pickSpawnTransform(room, ""));
+            // Walking out from behind the door would have left him in the wall.
+            expect(inFront(door, walkOut(room, behindDoor(door)))).toBeLessThan(PLAYER_RADIUS_XZ);
+        });
+    });
+
+    it("puts him up on the storey above when that is the nearest spot clear", async () => {
+        await scenario((room, door) => {
+            const walls = GENERATED_WALL_THICKNESS;
+            fill(room, [NUM_VOXEL_ROWS / 2, FACE_ROW - 1], [walls, NUM_VOXEL_COLS - 1 - walls], LOWER_STOREY);
+            const spawn = SpawnHotspotUtil.pickSpawnTransform(room, "");
+            expectPutDownInFront(room, door, spawn);
+            expect(VoxelPathUtil.feetOf(spawn.pos).y).toBeCloseTo((STOREY_FLOOR_COLLISION_LAYER + 1) * COLLISION_LAYER_HEIGHT, 6);
+        });
+    });
+
+    it("keeps him off a cannon standing in the doorway", async () => {
+        await scenario((room, door) => {
+            const cannon = new AddObjectSignal(room.id, ADMIN.id, ADMIN.userName, cannonTypeIndex, "a-cannon",
+                new ObjectTransform({x: door.transform.pos.x, y: 0, z: door.transform.pos.z - 0.75}, {x: 0, y: 1, z: 0},
+                    {...UNIT_VEC3}));
+            expect(ObjectUpdateUtil.addObject(ADMIN, room, cannon, false)).toBe(true);
+            expect(PhysicsManager.hasObject(room.id, cannon.objectId)).toBe(true);
+            const spawn = SpawnHotspotUtil.pickSpawnTransform(room, "");
+            expectPutDownInFront(room, door, spawn);
+        });
+    });
+
+    it("puts him wherever in front of the door the room leaves room for him, and behind it otherwise", async () => {
+        await scenario((room, door) => {
+            const box = fc.tuple(fc.integer({min: FACE_ROW - 8, max: FACE_ROW - 1}), fc.integer({min: 0, max: 4}),
+                fc.integer({min: DOOR_COL - 6, max: DOOR_COL + 5}), fc.integer({min: 0, max: 4}),
+                fc.integer({min: 0, max: STOREY_FLOOR_COLLISION_LAYER - 1}), fc.integer({min: 0, max: 5}));
+            fc.assert(fc.property(fc.array(box, {minLength: 1, maxLength: 4}), boxes => {
+                const undo = boxes.map(([row, rows, col, cols, layer, layers]) => fill(room,
+                    [Math.max(0, row - rows), row], [col, col + cols], [layer, Math.min(STOREY_FLOOR_COLLISION_LAYER - 1,
+                        layer + layers)]));
+                try
+                {
+                    const spawn = SpawnHotspotUtil.pickSpawnTransform(room, "");
+                    if (DoorEntranceUtil.findDoorBehind(room, spawn.pos) != undefined)
+                        expectPutDownBehind(room, door, spawn);
+                    else
+                        expectPutDownInFront(room, door, spawn);
+                }
+                finally
+                {
+                    undo[0]();
+                }
+            }), {numRuns: 40});
+        });
+    });
+
+    it("puts him anywhere in the room nothing fills when nothing in front of the door will do, and behind it when " +
+        "nothing anywhere will", async () => {
+        await scenario((room, door) => {
+            const walls = GENERATED_WALL_THICKNESS;
+            const inside: CellRange[] = [[walls, NUM_VOXEL_ROWS - 1 - walls], [walls, NUM_VOXEL_COLS - 1 - walls]];
+            // A wall across the room's middle, both storeys, with a door on its south side looking out on all that is
+            // filled.
+            const middle = NUM_VOXEL_ROWS / 2;
+            fill(room, [middle - 2, middle - 1], inside[1], [0, NUM_COLLISION_LAYERS - 1]);
+            const inner = new AddObjectSignal(room.id, ADMIN.id, ADMIN.userName, doorTypeIndex, "inner-door",
+                new ObjectTransform({x: door.transform.pos.x, y: 0.5 * DOOR_FOOTPRINT_HEIGHT, z: middle * VOXEL_CELL_SIZE},
+                    {x: 0, y: 0, z: 1}, {...UNIT_VEC3}), {[ObjectMetadataKeyEnumMap.Label]: new EncodableByteString("Inner")});
+            expect(ObjectUpdateUtil.addObject(ADMIN, room, inner)).toBe(true);
+            const undoSouth = fill(room, [middle, inside[0][1]], inside[1], [0, NUM_COLLISION_LAYERS - 1]);
+
+            const spawn = SpawnHotspotUtil.pickSpawnTransform(room, "Inner");
+            expect(DoorEntranceUtil.findDoorBehind(room, spawn.pos)).toBeUndefined();
+            expect(VoxelPathUtil.isStandable(room.voxelGrid.voxels, VoxelPathUtil.toVertex(VoxelPathUtil.feetOf(spawn.pos))!))
+                .toBe(true);
+            expect(meetsSolid(room, spawn.pos)).toBe(false);
+            expect(inFront(inner, spawn.pos)).toBeLessThan(0);
+
+            undoSouth();
+            fill(room, inside[0], inside[1], [0, NUM_COLLISION_LAYERS - 1]);
+            const nowhere = SpawnHotspotUtil.pickSpawnTransform(room, "Inner");
+            expect(DoorEntranceUtil.findDoorBehind(room, nowhere.pos)).toBe(inner);
         });
     });
 });

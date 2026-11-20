@@ -47,6 +47,7 @@ import CannonCompositionConstants from "../../../src/shared/graphics/mesh/compos
 import CannonCompositionUtil from "../../../src/shared/graphics/mesh/composition/util/cannonCompositionUtil";
 import CannonAimUtil from "../../../src/shared/object/util/cannonAimUtil";
 import CannonStateUtil from "../../../src/shared/object/util/cannonStateUtil";
+import QuarterTurnsUtil from "../../../src/shared/object/util/quarterTurnsUtil";
 import "../../../src/client/object/util/cannonBlastThrowUtil";
 import { cameraShakeObservable, cannonBallBounceObservable, cannonBallBurstObservable, cannonBlastObservable,
     cannonScrappedObservable, gameModeObservable } from "../../../src/client/system/clientObservables";
@@ -770,7 +771,7 @@ describe("a cannon's counters in a browser", () => {
         const drawn = {parts: CannonCompositionUtil.buildParts(), redraws: 0};
         const cannon = Object.assign(Object.create(CannonGameObject.prototype), {params, components: {},
             obj: new THREE.Object3D(), instancedMeshComposer: {getParts: () => drawn.parts, redrawParts() { ++drawn.redraws; }},
-            state, shownAim: CannonStateUtil.getShownAim(state, FACING), turnSoundSecondsLeft: 0,
+            state, shownAim: CannonStateUtil.getShownAim(state, FACING, 0), turnSoundSecondsLeft: 0,
             warningSeconds: 0}) as CannonGameObject;
         const digits = () => drawn.parts.slice(C.firstSegmentIndex).map(part => part.color as Vec3);
         const panels = () => drawn.parts.slice(C.firstCounterIndex, C.firstSegmentIndex).map(part => part.color as Vec3);
@@ -784,14 +785,22 @@ describe("a cannon's counters in a browser", () => {
         return {cannon, drawn, digits, panels, tell, tellBallsLeft};
     }
 
-    // A cannon's parts as anything composes them once it is scrap, on the face it stands on.
+    // A cannon's parts as anything composes them once it is scrap, on the face it stands on, turned as it is.
     function scrapParts(cannon: CannonGameObject)
     {
         const parts = CannonCompositionUtil.buildParts();
         const {dir} = cannon.params.transform;
-        CannonCompositionUtil.poseScrap(parts, CannonAimUtil.getLocalDirection(
-            CannonStateUtil.getShownAim(CannonStateUtil.getObjectState(cannon.params), dir)));
+        CannonCompositionUtil.poseScrap(parts, CannonAimUtil.getLocalDirection(CannonStateUtil.getShownAim(
+            CannonStateUtil.getObjectState(cannon.params), dir, QuarterTurnsUtil.getQuarterTurns(cannon.params))));
         return parts;
+    }
+
+    // As a turn of it is told, by the user's own tool or anybody else's.
+    function turn(cannon: CannonGameObject, quarterTurns: number): void
+    {
+        const value = QuarterTurnsUtil.encode(quarterTurns);
+        cannon.params.metadata[ObjectMetadataKeyEnumMap.QuarterTurns] = new EncodableByteString(value);
+        cannon.onSetMetadata(ObjectMetadataKeyEnumMap.QuarterTurns, value);
     }
 
     // Which segments the counters light, and how, for a number of balls, as any cannon composes them.
@@ -979,5 +988,39 @@ describe("a cannon's counters in a browser", () => {
         expect(JSON.stringify(drawn.parts.slice(0, C.firstCounterIndex))).not.toBe(onFloor);
         expect(scrapped).toHaveLength(1);
         cannonScrappedObservable.removeListener("test");
+    });
+
+    it("lie as scrap turned at once, each turn a quarter further round, back as they were after four", () => {
+        for (const dir of [FACING, {x: 1, y: 0, z: 0}])
+        {
+            const {cannon, drawn, tell} = makeCannon();
+            cannon.params.transform.dir = {...dir};
+            const scrapped: Vec3[] = [];
+            cannonScrappedObservable.addListener("test", ({position}) => { scrapped.push({...position}); });
+            tell({aim: {yaw: 1.2, pitch: 0.2}, phase: CannonPhaseEnumMap.Scrap, ballsLeft: 0});
+            const lying = [JSON.stringify(drawn.parts)];
+            for (let quarterTurns = 1; quarterTurns <= 4; ++quarterTurns)
+            {
+                const redraws = drawn.redraws;
+                turn(cannon, quarterTurns);
+                expect(drawn.parts).toEqual(scrapParts(cannon));
+                expect(drawn.redraws).toBe(redraws + 1);
+                lying.push(JSON.stringify(drawn.parts));
+            }
+            expect(new Set(lying.slice(0, 4)).size).toBe(4);
+            expect(lying[4]).toBe(lying[0]);
+            expect(scrapped).toHaveLength(1);
+            cannonScrappedObservable.removeListener("test");
+        }
+    });
+
+    it("are left as they are by a turn while it works", () => {
+        const {cannon, drawn, tell} = makeCannon();
+        tell({aim: {yaw: 1.2, pitch: 0.2}, phase: CannonPhaseEnumMap.Ready});
+        const shown = JSON.stringify(drawn.parts);
+        const redraws = drawn.redraws;
+        turn(cannon, 1);
+        expect(JSON.stringify(drawn.parts)).toBe(shown);
+        expect(drawn.redraws).toBe(redraws);
     });
 });

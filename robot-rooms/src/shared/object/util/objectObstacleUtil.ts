@@ -17,14 +17,7 @@ const ObjectObstacleUtil =
     // stand.
     getClearance: (objectById: {[objectId: string]: AddObjectSignal}): ((vertex: VoxelVertex) => boolean) =>
     {
-        const boxes: AABB3[] = [];
-        for (const objectId in objectById)
-        {
-            const obj = objectById[objectId];
-            const collider = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).components.spawnedByAny?.collider;
-            if (collider?.applyHardCollisionToOthers)
-                boxes.push(PhysicsColliderStateUtil.getObjectColliderState(obj.objectTypeIndex, obj.transform)!.hitbox);
-        }
+        const boxes = getSolidBoxes(objectById);
         if (boxes.length == 0)
             return () => true;
 
@@ -34,6 +27,24 @@ const ObjectObstacleUtil =
             return !boxes.some(box => Geometry3DUtil.AABBsOverlap(body, box));
         };
     },
+    // Whether a box is clear of every such object among those given, as they now stand.
+    isBoxClear: (objectById: {[objectId: string]: AddObjectSignal}, box: AABB3): boolean =>
+    {
+        return !getSolidBoxes(objectById).some(solid => Geometry3DUtil.AABBsOverlap(box, solid));
+    },
+}
+
+function getSolidBoxes(objectById: {[objectId: string]: AddObjectSignal}): AABB3[]
+{
+    const boxes: AABB3[] = [];
+    for (const objectId in objectById)
+    {
+        const obj = objectById[objectId];
+        const collider = ObjectTypeConfigMap.getConfigByIndex(obj.objectTypeIndex).components.spawnedByAny?.collider;
+        if (collider?.applyHardCollisionToOthers)
+            boxes.push(PhysicsColliderStateUtil.getObjectColliderState(obj.objectTypeIndex, obj.transform)!.hitbox);
+    }
+    return boxes;
 }
 
 export default ObjectObstacleUtil;

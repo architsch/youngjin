@@ -15,6 +15,7 @@ import SetObjectMetadataSignal from "../setObjectMetadataSignal";
 import SetObjectTransformSignal from "../setObjectTransformSignal";
 import CannonAimUtil from "../../util/cannonAimUtil";
 import CannonStateUtil from "../../util/cannonStateUtil";
+import QuarterTurnsUtil from "../../util/quarterTurnsUtil";
 import ObjectTypeConfig from "./objectTypeConfig";
 
 // How many balls a cannon comes with: it turns to scrap once it has fired the last. How many it fires in a row once
@@ -50,10 +51,10 @@ const SLEEP_EFFECT_HEIGHT = 0.6;
 // Cannons, on floors and walls: a barrel on a pillar, which the server plays (see CannonUtil). Every so often one turns
 // after the nearest player and, aimed, fires a ball at where they stand (see CannonBallObjectTypeConfig), a few in a
 // row before it switches itself off, until it has fired its last and turns to scrap; its counters show how many are
-// left (see CannonCompositionUtil). Anyone may add one, for a price, switch it off and on, move it or remove it,
-// subject to restricted zones (see ObjectUpdateUtil). All it keeps of itself is its CannonState, of which a user sets
-// the switch alone. Scrap is the same object, played no more: as solid, off which a ball bounces as before, with no
-// switch left to throw, and anyone's to move or remove.
+// left (see CannonCompositionUtil). Anyone may add one, for a price, switch it off and on or move it, subject to
+// restricted zones (see ObjectUpdateUtil), and nobody may remove one before it is scrap. All it keeps of itself is its
+// CannonState, of which a user sets the switch alone. Scrap is the same object, played no more: as solid, off which a
+// ball bounces as before, with no switch left to throw, and anyone's to move, turn a quarter at a time or remove.
 const CannonObjectTypeConfig =
 {
     objectType: "Cannon",
@@ -71,14 +72,17 @@ const CannonObjectTypeConfig =
         return obj.sourceUserID == user.id && room.roomType != RoomTypeEnumMap.SinglePlayer;
     },
     canUserRemoveObject: (user: User, room: Room, obj: AddObjectSignal) => {
-        return true;
+        return CannonStateUtil.isScrap(obj);
     },
     canUserSetObjectTransform: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectTransformSignal) => {
         // A cannon is dragged from face to face by a gizmo, which is a placement rather than a motion.
         return signal.ignorePhysics;
     },
     canUserSetObjectMetadata: (user: User, room: Room, obj: AddObjectSignal, signal: SetObjectMetadataSignal) => {
-        // Its switch alone, until it is scrap: the rest of its state is the server's (see CannonStateUtil.merge).
+        // Its switch alone, until it is scrap: the rest of its state is the server's (see CannonStateUtil.merge). Scrap
+        // has no switch, but turns (see CannonStateUtil.getShownAim).
+        if (signal.metadataKey == ObjectMetadataKeyEnumMap.QuarterTurns)
+            return CannonStateUtil.isScrap(obj);
         return signal.metadataKey == ObjectMetadataKeyEnumMap.CannonState && CannonStateUtil.isSwitch(signal.metadataValue)
             && !CannonStateUtil.isScrap(obj);
     },
@@ -108,10 +112,11 @@ const CannonObjectTypeConfig =
                 },
                 // Its barrel points where its state has it aim, and its counters show the balls left. Changes of
                 // either recompose the parts (see CannonGameObject), which turns the barrel smoothly between them.
-                // Scrap lies as it fell.
+                // Scrap lies as it fell, turned as it has been since.
                 deriveParts: (obj: AddObjectSignal, parts: InstancedMeshCompositionPart[]) => {
                     const state = CannonStateUtil.getObjectState(obj);
-                    const shown = CannonAimUtil.getLocalDirection(CannonStateUtil.getShownAim(state, obj.transform.dir));
+                    const shown = CannonAimUtil.getLocalDirection(CannonStateUtil.getShownAim(state, obj.transform.dir,
+                        QuarterTurnsUtil.getQuarterTurns(obj)));
                     if (state.phase == CannonPhaseEnumMap.Scrap)
                         CannonCompositionUtil.poseScrap(parts, shown);
                     else

@@ -29,7 +29,7 @@ An admin who is the room's superuser can save the room to a file on their own ma
 - **Loading** is an HTTP route that takes the file as its body, and only for the room the caller is in. Anything but one whole file this build can read is refused. Older contents are converted as they are read, by the voxel and object formats' own versions.
 - The server overwrites the room **in place**, one file at a time:
   - Its users are told first, by a socket event sent at once rather than with the next signal batch, and wait as they would for a lost connection. Each is then sent the whole room again, and whatever was queued for them before it is dropped. Its helpers start over at home with it.
-  - Players are not part of a file. They stay in the room, and each arrives again behind a door (see [room_entrance.md](../geometry/room_entrance.md)).
+  - Players are not part of a file. They stay in the room, and each arrives again at a door (see [room_entrance.md](../geometry/room_entrance.md)).
   - The texture pack and atmosphere are the file's. The join priority stays the room's own, since it is the room's place among the hubs.
   - Settings are stored first, because nothing retries that write and its failure must leave the room untouched. Contents are stored next, and a failed save stays dirty for the auto-save.
 - A client changes rooms one at a time, since a room sent this way can arrive while another is still loading.

@@ -1,7 +1,7 @@
 {
   "name": "robot-rooms",
   "displayName": "Robot Rooms",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "description": "Play Robot Rooms, a web-based 3D sandbox world where AI agents can play with humans and build all kinds of things.",
   "author": {
     "name": "ThingsPool",

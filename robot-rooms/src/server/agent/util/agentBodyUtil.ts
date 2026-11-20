@@ -7,6 +7,7 @@ import { ENTERING_MAX_DURATION, ENTERING_SPEED,
     ENTERING_STRIDE_LENGTH } from "../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import { PLAYER_MAX_TURN_INPUT, PLAYER_MAX_WALK_INPUT, PLAYER_TURN_RATE_PER_INPUT,
     PLAYER_WALK_SPEED_PER_INPUT } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import DoorEntranceUtil from "../../../shared/object/util/doorEntranceUtil";
 import ObjectObstacleUtil from "../../../shared/object/util/objectObstacleUtil";
 import PhysicsManager from "../../../shared/physics/physicsManager";
 import Room from "../../../shared/room/types/room";
@@ -79,7 +80,7 @@ const AgentBodyUtil =
         if (body == undefined)
             return Promise.resolve("interrupted");
 
-        const motion = getMotion(ctx, body.player);
+        const motion = getMotion(ctx, body.room, body.player);
         const waypoints = planPath(body.room, VoxelPathUtil.feetOf(body.player.transform.pos), goal);
         if (waypoints == undefined)
             return Promise.resolve("noPath");
@@ -104,7 +105,7 @@ const AgentBodyUtil =
         if (here == undefined)
             return Promise.resolve("noPath");
 
-        const motion = getMotion(ctx, body.player);
+        const motion = getMotion(ctx, body.room, body.player);
         return new Promise(resolve => {
             const now = Date.now();
             motion.walk = {waypoints: [], next: 0, goal: here, faceToward: point, deadline: now + WALK_TIMEOUT_MS,
@@ -126,7 +127,7 @@ const AgentBodyUtil =
         if (body == undefined)
             return;
         PhysicsManager.addCarriedVelocity(body.room.id, body.player.objectId, velocity);
-        getMotion(ctx, body.player).settled = false;
+        getMotion(ctx, body.room, body.player).settled = false;
     },
 }
 
@@ -139,7 +140,7 @@ function stepAgent(ctx: AgentUserContext, elapsedSeconds: number): void
         return;
     }
     const {room, player} = body;
-    const motion = getMotion(ctx, player);
+    const motion = getMotion(ctx, room, player);
     if (motion.heldForArrival)
     {
         motion.heldForArrival = false;
@@ -189,16 +190,19 @@ function getBody(ctx: AgentUserContext): {room: Room, player: AddObjectSignal} |
 }
 
 // The agent's motion for its player, started over on each arrival: walking out of the doorway, as PlayerController
-// does (arrivals stand behind a door, facing in; see SpawnHotspotUtil).
-function getMotion(ctx: AgentUserContext, player: AddObjectSignal): AgentMotion
+// does, if it was put down behind a door, facing in (see DoorEntranceUtil).
+function getMotion(ctx: AgentUserContext, room: Room, player: AddObjectSignal): AgentMotion
 {
     if (ctx.motion != undefined && ctx.motion.playerObjectId == player.objectId)
         return ctx.motion;
 
     AgentBodyUtil.stop(ctx);
     const yaw = toYaw(player.transform.dir);
-    ctx.motion = {playerObjectId: player.objectId, yaw, settled: false, heldForArrival: true, entering: {dirX: Math.sin(yaw),
-        dirZ: Math.cos(yaw), fromX: player.transform.pos.x, fromZ: player.transform.pos.z, timeLeft: ENTERING_MAX_DURATION}};
+    const behindDoor = DoorEntranceUtil.findDoorBehind(room, player.transform.pos) != undefined;
+    ctx.motion = {playerObjectId: player.objectId, yaw, settled: false, heldForArrival: true, entering: behindDoor
+        ? {dirX: Math.sin(yaw), dirZ: Math.cos(yaw), fromX: player.transform.pos.x, fromZ: player.transform.pos.z,
+            timeLeft: ENTERING_MAX_DURATION}
+        : undefined};
     return ctx.motion;
 }
 

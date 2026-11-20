@@ -21,6 +21,7 @@ import DoorObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/
 import FanObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/fanObjectTypeConfig";
 import { CANNON_FIRE_INTERVAL_SECONDS, CANNON_MAX_RANGE, CANNON_MIN_RANGE,
     CANNON_SHOTS_IN_A_ROW } from "../../../shared/object/types/objectTypeConfig/cannonObjectTypeConfig";
+import CannonAimUtil from "../../../shared/object/util/cannonAimUtil";
 import CannonStateUtil from "../../../shared/object/util/cannonStateUtil";
 import { InventoryItemTypeEnumMap } from "../../../shared/inventory/types/inventoryItemType";
 import LampObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/lampObjectTypeConfig";
@@ -93,11 +94,18 @@ const CANNON_NOTE = `A cannon: while on, it waits ${CANNON_FIRE_INTERVAL_SECONDS
     + `${CANNON_MAX_RANGE / VOXEL_CELL_SIZE} cells of it, no nearer than ${CANNON_MIN_RANGE / VOXEL_CELL_SIZE}, with `
     + `nothing between), and fires a ball that way. Once it has fired ${CANNON_SHOTS_IN_A_ROW} since it was switched on, `
     + "it switches itself off; its last ball fired, it turns to scrap. Anyone may switch it off or on (edit_object "
-    + "with switched_on), move it or remove it.";
+    + "with switched_on) or move it, but nobody may remove it before it is scrap.";
 const SCRAP_NOTE = "Scrap: a cannon that has fired its last ball. It does nothing more, but is still in the way, and a "
-    + "ball still bounces off it. Anyone may remove it (remove_object).";
+    + "ball still bounces off it. pointing is the way its fallen barrel lies. Anyone may turn it (edit_object with turn) "
+    + "or remove it (remove_object).";
 const SCRAP_HAS_NO_SWITCH = "That cannon is scrap: it has fired its last ball, and has no switch left. remove_object "
     + "takes it away.";
+const CANNON_STAYS = "Nobody removes a cannon before it is scrap, once it has fired its last ball. Until then you may "
+    + "switch it off (edit_object with switched_on: false) or move it.";
+const CANNON_TURNS_ITSELF = "A working cannon turns itself, after whoever is near: turn is for its scrap, once it has "
+    + "fired its last ball.";
+const ONLY_SCRAP_TURNS = "Only a cannon's scrap turns this way. A picture on a floor or ceiling turns its top toward "
+    + "the side move_object's top names.";
 
 // What an agent places and arranges: canvases, props, lamps, fans, and (in a room of its own) labels, doors and
 // restricted zones. Each change is sent as the signal a browser sends for a person's, so it passes the same checks
@@ -263,6 +271,15 @@ const AgentObjectUtil =
                 return {error: SCRAP_HAS_NO_SWITCH};
             changes.push({key: ObjectMetadataKeyEnumMap.CannonState, value: CannonStateUtil.encodeSwitch(edit.switchedOn)});
         }
+        if (edit.turn != undefined)
+        {
+            if (objectType != "Cannon")
+                return {error: ONLY_SCRAP_TURNS};
+            if (!CannonStateUtil.isScrap(obj))
+                return {error: CANNON_TURNS_ITSELF};
+            changes.push({key: ObjectMetadataKeyEnumMap.QuarterTurns,
+                value: QuarterTurnsUtil.encode(QuarterTurnsUtil.getQuarterTurns(obj) + edit.turn)});
+        }
         if (edit.keepFor != undefined || edit.name != undefined)
         {
             if (objectType != "Volume")
@@ -317,8 +334,9 @@ const AgentObjectUtil =
         if (!ObjectAttachmentUtil.allowsFacing(obj.objectTypeIndex, dir))
             return {error: describeFacings(obj.objectTypeIndex)};
 
-        // A picture is turned to suit the face it goes on, which changes a prop's shape as it changes its turn.
-        const hasTurns = obj.metadata[ObjectMetadataKeyEnumMap.QuarterTurns] != undefined;
+        // A picture is turned to suit the face it goes on, which changes a prop's shape as it changes its turn. Scrap
+        // keeps its own.
+        const hasTurns = config.objectType != "Cannon" && obj.metadata[ObjectMetadataKeyEnumMap.QuarterTurns] != undefined;
         const turns = hasTurns ? getQuarterTurns(dir, top) : 0;
         const turnsChange = hasTurns && turns != QuarterTurnsUtil.getQuarterTurns(obj);
         const imagePath = obj.metadata[ObjectMetadataKeyEnumMap.ImagePath]?.str ?? "";
@@ -429,11 +447,18 @@ function describeObject(obj: AddObjectSignal): object
     };
 }
 
-// Whether a cannon is switched on, and how many balls it has left to fire; or that it is scrap, which has no switch.
-function describeCannon(obj: AddObjectSignal): {switchedOn?: boolean, ballsLeft: number, scrap?: boolean}
+// Whether a cannon is switched on, and how many balls it has left to fire; or that it is scrap, which has no switch, and
+// the side of the room its fallen barrel lies toward.
+function describeCannon(obj: AddObjectSignal): {switchedOn?: boolean, ballsLeft: number, scrap?: boolean,
+    pointing?: AgentSide}
 {
-    const {on, ballsLeft} = CannonStateUtil.getObjectState(obj);
-    return CannonStateUtil.isScrap(obj) ? {scrap: true, ballsLeft} : {switchedOn: on, ballsLeft};
+    const state = CannonStateUtil.getObjectState(obj);
+    if (!CannonStateUtil.isScrap(obj))
+        return {switchedOn: state.on, ballsLeft: state.ballsLeft};
+    const {dir} = obj.transform;
+    const lies = CannonStateUtil.getShownAim(state, dir, QuarterTurnsUtil.getQuarterTurns(obj));
+    return {scrap: true, ballsLeft: state.ballsLeft,
+        pointing: AgentGridUtil.getSide(CannonAimUtil.getDirection(dir, {yaw: lies.yaw, pitch: 0}))};
 }
 
 // Why a type can't go on the side asked for: which sides of a block it takes.
@@ -749,6 +774,8 @@ function describeUntouchable(room: Room, user: User, obj: AddObjectSignal, chang
     }
     if (objectType == "Mirror" && !RoomValidationUtil.userIsAdmin(user))
         return `Only an admin ${change} a mirror.`;
+    if (objectType == "Cannon" && change == "removes" && !CannonStateUtil.isScrap(obj))
+        return CANNON_STAYS;
     if (RestrictedZoneUtil.blocksObjectEdit(user, room, obj.objectTypeIndex, obj.transform))
         return "A restricted zone covers it (look lists the zones).";
     return "That can't be done to it.";

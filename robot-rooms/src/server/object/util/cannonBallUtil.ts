@@ -261,7 +261,7 @@ function throwBody(room: Room, object: PhysicsObject, heading: number): void
 
 // Breaks a block and takes what hangs on it with it, if anybody at all could: one in nobody's restricted zone, with
 // nothing on it that only an admin or the room's superuser may take off (see VoxelEditUtil, where a user does the
-// same), and no cannon, which anybody may take off but no ball does. Otherwise all of it stays.
+// same), and no cannon, not even scrap, which anybody may take off but no ball does. Otherwise all of it stays.
 function breakBlock(room: Room, block: {row: number, col: number, collisionLayer: number}): void
 {
     const quadIndex = VoxelQueryUtil.getFirstVoxelQuadIndexInLayer(block.row, block.col, block.collisionLayer);

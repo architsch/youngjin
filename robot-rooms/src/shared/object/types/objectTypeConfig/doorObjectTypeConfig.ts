@@ -28,13 +28,13 @@ export const ENTRANCE_DOOR_OBJECT_ID = "entrance_door";
 
 // Spawn and walk-out distances along the door's facing: spawn behind the door's face, out of sight where the
 // wall is twice as deep (as a generated room's boundary is), and walk out as far in front of it (see
-// SpawnHotspotUtil, PlayerController).
+// DoorEntranceUtil, PlayerController).
 export const SPAWN_DIST_BEHIND_DOOR = 0.5;
 export const ENTRANCE_DIST_IN_FRONT_OF_DOOR = 0.5;
 
 // The walk out of the doorway on arrival, whoever walks it (see PlayerController, AgentBodyUtil). Normally ends by
-// distance; the time limit covers arriving facing something solid. The stride spans from behind the door to just
-// clear of it.
+// distance; the time limit covers something solid put in the way after the arrival was (see DoorEntranceUtil). The
+// stride spans from behind the door to just clear of it.
 export const ENTERING_STRIDE_LENGTH = SPAWN_DIST_BEHIND_DOOR + ENTRANCE_DIST_IN_FRONT_OF_DOOR;
 export const ENTERING_SPEED = 3;
 export const ENTERING_MAX_DURATION = 1.5; // in seconds

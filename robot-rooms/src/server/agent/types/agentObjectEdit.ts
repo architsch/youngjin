@@ -11,4 +11,6 @@ export default interface AgentObjectEdit
     name?: string;
     // A cannon's switch.
     switchedOn?: boolean;
+    // Quarter turns clockwise for a cannon's scrap, as seen from in front of the side it lies on.
+    turn?: number;
 }

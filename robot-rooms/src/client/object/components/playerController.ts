@@ -7,6 +7,7 @@ import { PLAYER_MAX_TURN_INPUT, PLAYER_MAX_WALK_INPUT, PLAYER_TURN_RATE_PER_INPU
     PLAYER_WALK_SPEED_PER_INPUT } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
 import { NEAR_EPSILON } from "../../../shared/system/sharedConstants";
 import { RoomTypeEnumMap } from "../../../shared/room/types/roomType";
+import DoorEntranceUtil from "../../../shared/object/util/doorEntranceUtil";
 import App from "../../app";
 import PlayerCamera from "./helpers/player/playerCamera";
 import PlayerProximityDetectionUpdater from "./helpers/player/playerProximityDetectionUpdater";
@@ -27,7 +28,7 @@ export default class PlayerController extends GameObjectComponent
     dx: number = 0;
     dy: number = 0;
 
-    // Multiplayer arrivals spawn behind a door (see SpawnHotspotUtil) and walk out along -Z, so the
+    // A multiplayer arrival put down behind a door (see DoorEntranceUtil) walks out along -Z, so the
     // first view is the room and the player never rests in the doorway.
     private fullyEntered: boolean = false;
     private spawnPos: {x: number, z: number} = {x: 0, z: 0};
@@ -63,10 +64,13 @@ export default class PlayerController extends GameObjectComponent
         this.finishEnteringIfHidden();
     }
 
-    // Single-player rooms aren't entered through a door, so there's nothing to walk out of.
+    // Single-player rooms aren't entered through a door, so there's nothing to walk out of, nor is there for an arrival
+    // put down in front of a door whose doorway is blocked, or in a room with none.
     private beginEntering(): void
     {
-        this.fullyEntered = App.getCurrentRoom()?.roomType == RoomTypeEnumMap.SinglePlayer;
+        const room = App.getCurrentRoom();
+        this.fullyEntered = room == undefined || room.roomType == RoomTypeEnumMap.SinglePlayer
+            || DoorEntranceUtil.findDoorBehind(room, this.gameObject.position) == undefined;
         if (this.fullyEntered)
             return;
 

@@ -1,10 +1,10 @@
-import Vec3 from "../../../shared/math/types/vec3";
 import ObjectTypeConfigMap from "../../../shared/object/maps/objectTypeConfigMap";
 import AddObjectSignal from "../../../shared/object/types/addObjectSignal";
 import { DoorTypeEnumMap } from "../../../shared/object/types/doorType";
 import ObjectTransform from "../../../shared/object/types/objectTransform";
-import DoorObjectTypeConfig, { SPAWN_DIST_BEHIND_DOOR } from "../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
+import DoorObjectTypeConfig from "../../../shared/object/types/objectTypeConfig/doorObjectTypeConfig";
 import { PLAYER_HEIGHT } from "../../../shared/object/types/objectTypeConfig/playerObjectTypeConfig";
+import DoorEntranceUtil from "../../../shared/object/util/doorEntranceUtil";
 import LabelTextUtil from "../../../shared/object/util/labelTextUtil";
 import Room from "../../../shared/room/types/room";
 import { MAX_ROOM_X, MAX_ROOM_Z, UNIT_VEC3 } from "../../../shared/system/sharedConstants";
@@ -12,7 +12,7 @@ import { MAX_ROOM_X, MAX_ROOM_Z, UNIT_VEC3 } from "../../../shared/system/shared
 const doorTypeIndex = ObjectTypeConfigMap.getIndexByType("Door");
 
 // Where an arriving player is placed (RoomPickerUtil decides the room). Tries in order: the named door,
-// a default-entrance door, any door, the room centre.
+// a default-entrance door, any door, the room centre. Where at a door, DoorEntranceUtil says.
 const SpawnHotspotUtil =
 {
     pickSpawnTransform: (room: Room, destinationDoorLabel: string): ObjectTransform =>
@@ -27,16 +27,16 @@ const SpawnHotspotUtil =
             const named = doors.filter(door =>
                 LabelTextUtil.toName(LabelTextUtil.getText(door)) === destinationDoorName);
             if (named.length > 0)
-                return getTransformBehindDoor(pickOne(named));
+                return DoorEntranceUtil.getArrivalTransform(room, pickOne(named));
         }
 
         const defaultEntrances = doors.filter(door =>
             DoorObjectTypeConfig.util.getDoorType(door) === DoorTypeEnumMap.DefaultEntrance);
         if (defaultEntrances.length > 0)
-            return getTransformBehindDoor(pickOne(defaultEntrances));
+            return DoorEntranceUtil.getArrivalTransform(room, pickOne(defaultEntrances));
 
         if (doors.length > 0)
-            return getTransformBehindDoor(pickOne(doors));
+            return DoorEntranceUtil.getArrivalTransform(room, pickOne(doors));
 
         return getRoomCenterTransform();
     },
@@ -46,21 +46,6 @@ const SpawnHotspotUtil =
 function pickOne(doors: AddObjectSignal[]): AddObjectSignal
 {
     return doors[Math.floor(Math.random() * doors.length)];
-}
-
-// Behind the door's face, on its floor, facing into the room (PlayerController walks the player out).
-// Door and player origins are at mid-height; the player's transform direction points behind them
-// (see PlayerProximityDetector), hence the flip.
-function getTransformBehindDoor(door: AddObjectSignal): ObjectTransform
-{
-    const {pos, dir} = door.transform;
-    const floorY = DoorObjectTypeConfig.util.getFloorY(door);
-    const spawnPos: Vec3 = {
-        x: pos.x - dir.x * SPAWN_DIST_BEHIND_DOOR,
-        y: floorY + 0.5 * PLAYER_HEIGHT,
-        z: pos.z - dir.z * SPAWN_DIST_BEHIND_DOOR,
-    };
-    return new ObjectTransform(spawnPos, {x: -dir.x, y: 0, z: -dir.z}, {...UNIT_VEC3});
 }
 
 // Last resort for rooms without doors.

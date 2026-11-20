@@ -1,6 +1,6 @@
 # Room Entrances
 
-Reference: @src/shared/object/types/objectTypeConfig/doorObjectTypeConfig.ts , @src/server/room/util/spawnHotspotUtil.ts
+Reference: @src/shared/object/types/objectTypeConfig/doorObjectTypeConfig.ts , @src/server/room/util/spawnHotspotUtil.ts , @src/shared/object/util/doorEntranceUtil.ts
 
 A room's only entrances are its **doors**. A door is an attached object on a wall (see [object_attachment.md](object_attachment.md)) that is stored with the room and used by clicking it. No hole is cut behind a door: it hangs on solid wall as any attached object does, so room boundaries stay solid all the way round.
 
@@ -14,13 +14,15 @@ Besides its appearance ([door_design.md](door_design.md)), a door stores:
 - **Door type**: whether the door counts as one of the room's default entrances.
 
 ## Spawning
-Players have no saved position. Every room entry places the player behind a door, chosen by `SpawnHotspotUtil` in this order:
+Players have no saved position. Every room entry places the player at a door, chosen by `SpawnHotspotUtil` in this order:
 1. a door whose label matches the requested one (random among matches);
 2. a default-entrance door (random);
 3. any door;
 4. the room center.
 
 The player starts a fixed distance behind the door's face, facing the room, and `PlayerController` walks them forward until they are clear of it (an agent's player, the server: `AgentBodyUtil`). A wall as thick as a generated room's boundary hides them until then; behind a thinner one they start in the open. The walk is limited by both distance and time.
+
+Where blocks or a solid object (a cannon) fill the place that walk would end, it would never get there, since nobody steps up out of a wall. `DoorEntranceUtil` puts the player down instead on the nearest spot in front of the door where a body stands clear, on another storey if that is nearer; failing any, anywhere in the room. Only a player put down where a door puts its arrivals walks out of one, so the browser and the server tell the two apart by where the player stands.
 
 Only the arriving page can walk its player out, and a hidden page runs no frames. So a page out of sight joins no room until it is shown (see [user_state_management.md](../networking/user_state_management.md#server-upkeep)), one hidden on its way in makes the walk in one step, and one that fails to load the room leaves it for an error page.
 

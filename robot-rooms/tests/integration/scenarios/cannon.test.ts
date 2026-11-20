@@ -10,7 +10,8 @@
  * cannon resting, waiting, picking whom to fire at, turning, staying on them until it is aimed (never, on whoever
  * outruns it, and on someone behind an NPC or another cannon all the same), standing aimed and firing, a row of shots
  * and then switching itself off, the row started over by any throw of its switch, emptied and turned to scrap (played
- * no more, with no switch, as solid as before, anyone's to move or remove), switched off and
+ * no more, with no switch, as solid as before, anyone's to move, turn or remove, as a working one is nobody's to
+ * remove), switched off and
  * on, kept by the room's saves; and a ball flying straight, pushed by a fan, bouncing off
  * another, off a mirror, off an NPC and off a cannon, each bounce counted and leaving it faster, up to the most a
  * ball goes, bursting on blocks, players and the room's own floor, breaking what anybody could remove and nothing
@@ -72,6 +73,7 @@ import ObjectCompositionUtil from "../../../src/shared/object/util/objectComposi
 import ObjectIdUtil from "../../../src/shared/object/util/objectIdUtil";
 import ObjectObstacleUtil from "../../../src/shared/object/util/objectObstacleUtil";
 import ObjectUpdateUtil from "../../../src/shared/object/util/objectUpdateUtil";
+import QuarterTurnsUtil from "../../../src/shared/object/util/quarterTurnsUtil";
 import CannonCompositionConstants from "../../../src/shared/graphics/mesh/composition/types/compositionConstants/cannonCompositionConstants";
 import CannonCompositionUtil from "../../../src/shared/graphics/mesh/composition/util/cannonCompositionUtil";
 import InstancedMeshCompositionPart from "../../../src/shared/graphics/mesh/composition/types/instancedMeshCompositionPart";
@@ -481,21 +483,24 @@ describe("a cannon's state", () => {
         }
     });
 
-    it("shows its barrel hanging down while it is switched off, and where it aims again once on", () => {
+    it("shows its barrel hanging down while it is switched off, and where it aims again once on, turns or none", () => {
         const aim = {yaw: 2, pitch: 0.6};
-        for (const facing of [FLOOR_FACING, ...WALL_FACINGS])
-            expect(CannonStateUtil.getShownAim({...NEW, aim}, facing)).toEqual(aim);
-        // On a floor, tipped toward it the way it was turned.
-        expect(CannonStateUtil.getShownAim({...NEW, aim, on: false}, FLOOR_FACING))
-            .toEqual({yaw: aim.yaw, pitch: CANNON_SLEEP_PITCH});
+        for (const quarterTurns of [0, 1, 3])
+        {
+            for (const facing of [FLOOR_FACING, ...WALL_FACINGS])
+                expect(CannonStateUtil.getShownAim({...NEW, aim}, facing, quarterTurns)).toEqual(aim);
+            // On a floor, tipped toward it the way it was turned.
+            expect(CannonStateUtil.getShownAim({...NEW, aim, on: false}, FLOOR_FACING, quarterTurns))
+                .toEqual({yaw: aim.yaw, pitch: CANNON_SLEEP_PITCH});
+            // On a wall, straight down along it.
+            for (const facing of WALL_FACINGS)
+            {
+                const asleep = CannonStateUtil.getShownAim({...NEW, aim, on: false}, facing, quarterTurns);
+                expect(dist(CannonAimUtil.getDirection(facing, asleep), {x: 0, y: -1, z: 0})).toBeLessThan(0.000001);
+            }
+        }
         expect(CANNON_SLEEP_PITCH).toBeLessThan(0);
         expect(CANNON_SLEEP_PITCH).toBeGreaterThanOrEqual(CANNON_MIN_PITCH);
-        // On a wall, straight down along it.
-        for (const facing of WALL_FACINGS)
-        {
-            const asleep = CannonStateUtil.getShownAim({...NEW, aim, on: false}, facing);
-            expect(dist(CannonAimUtil.getDirection(facing, asleep), {x: 0, y: -1, z: 0})).toBeLessThan(0.000001);
-        }
     });
 
     it("is scrap once its phase says so, not for having no ball left, which nothing that is no cannon ever reads as", () => {
@@ -520,11 +525,43 @@ describe("a cannon's state", () => {
         const aim = {yaw: 2, pitch: 0.6};
         for (const facing of [FLOOR_FACING, ...WALL_FACINGS])
         {
-            const asleep = CannonStateUtil.getShownAim({...NEW, aim, on: false}, facing);
+            const asleep = CannonStateUtil.getShownAim({...NEW, aim, on: false}, facing, 0);
             for (const on of [false, true])
             {
-                expect(CannonStateUtil.getShownAim({...NEW, aim, on, phase: CannonPhaseEnumMap.Scrap}, facing))
+                expect(CannonStateUtil.getShownAim({...NEW, aim, on, phase: CannonPhaseEnumMap.Scrap}, facing, 0))
                     .toEqual(asleep);
+            }
+        }
+    });
+
+    it("lies as scrap a quarter further round, clockwise as seen from in front of its face, for each of its turns", () => {
+        for (const yaw of [0, 2, 4.5])
+        {
+            const scrap = {...NEW, aim: {yaw, pitch: 0.6}, phase: CannonPhaseEnumMap.Scrap};
+            for (const facing of [FLOOR_FACING, ...WALL_FACINGS])
+            {
+                const {normal, right, up} = Geometry3DUtil.getAxisFacingBasis(facing);
+                // From the face's up toward its right.
+                const clockwise = (v: Vec3) => Vector3DUtil.add(Vector3DUtil.add(
+                    Vector3DUtil.scale(right, Vector3DUtil.dot(v, up)), Vector3DUtil.scale(up, -Vector3DUtil.dot(v, right))),
+                    Vector3DUtil.scale(normal, Vector3DUtil.dot(v, normal)));
+                const lies = (quarterTurns: number) =>
+                    CannonAimUtil.getDirection(facing, CannonStateUtil.getShownAim(scrap, facing, quarterTurns));
+                for (let quarterTurns = 0; quarterTurns < 4; ++quarterTurns)
+                {
+                    expect(dist(lies(quarterTurns + 1), clockwise(lies(quarterTurns))), `${yaw}, ${quarterTurns}`)
+                        .toBeLessThan(0.000001);
+                }
+                // Round in four, and on a wall the opposite way to a picture's top with as many turns.
+                expect(dist(lies(0), clockwise(lies(3)))).toBeLessThan(0.000001);
+                if (normal.y == 0)
+                {
+                    for (let quarterTurns = 0; quarterTurns < 4; ++quarterTurns)
+                    {
+                        expect(dist(lies(quarterTurns), Vector3DUtil.scale(QuarterTurnsUtil.getContentUp(facing,
+                            quarterTurns), -1))).toBeLessThan(0.000001);
+                    }
+                }
             }
         }
     });
@@ -914,8 +951,41 @@ describe("a cannon's counters", () => {
                 const kept = CannonStateUtil.decode(CannonStateUtil.encode(state));
                 const expected = CannonCompositionUtil.buildParts();
                 CannonCompositionUtil.pose(expected, facing,
-                    CannonAimUtil.getLocalDirection(CannonStateUtil.getShownAim(kept, facing)), ballsLeft);
+                    CannonAimUtil.getLocalDirection(CannonStateUtil.getShownAim(kept, facing, 0)), ballsLeft);
                 expect(composed).toEqual(expected);
+            }
+        }
+    });
+
+    it("show scrap lying turned as its turns have it wherever it is composed, and the turns nothing of a working one", () => {
+        for (const facing of [FLOOR_FACING, WALL_FACINGS[1]])
+        {
+            for (const phase of [CannonPhaseEnumMap.Scrap, CannonPhaseEnumMap.Waiting])
+            {
+                const state = {...CannonStateUtil.decode(""), phase, aim: {yaw: 2, pitch: 0.4}};
+                for (let quarterTurns = 0; quarterTurns < 4; ++quarterTurns)
+                {
+                    const cannon = new AddObjectSignal(HUB_ID, "", "", CANNON_TYPE_INDEX, "a-cannon",
+                        new ObjectTransform({...CANNON_SPOT}, {...facing}, {x: 1, y: 1, z: 1}), {
+                            [ObjectMetadataKeyEnumMap.CannonState]: new EncodableByteString(CannonStateUtil.encode(state)),
+                            [ObjectMetadataKeyEnumMap.QuarterTurns]: new EncodableByteString(
+                                QuarterTurnsUtil.encode(quarterTurns))});
+                    const composed: InstancedMeshCompositionPart[] = [];
+                    ObjectCompositionUtil.decode(cannon, {}, composed);
+                    const kept = CannonStateUtil.decode(CannonStateUtil.encode(state));
+                    const expected = CannonCompositionUtil.buildParts();
+                    if (phase == CannonPhaseEnumMap.Scrap)
+                    {
+                        CannonCompositionUtil.poseScrap(expected, CannonAimUtil.getLocalDirection(
+                            CannonStateUtil.getShownAim(kept, facing, quarterTurns)));
+                    }
+                    else
+                    {
+                        CannonCompositionUtil.pose(expected, facing,
+                            CannonAimUtil.getLocalDirection(CannonStateUtil.getShownAim(kept, facing, 0)), kept.ballsLeft);
+                    }
+                    expect(composed, `${phase}, ${quarterTurns}`).toEqual(expected);
+                }
             }
         }
     });
@@ -1551,7 +1621,8 @@ describe("a cannon in a room", () => {
             {x: CANNON_SPOT.x + 1, y: 0, z: CANNON_SPOT.z}))).toBe(true);
     });
 
-    it("lets a user set its switch and nothing else of its state, and anyone move it or take it away", async () => {
+    it("lets a user set its switch and nothing else of its state, anyone move it, and nobody turn it or take it away",
+        async () => {
         await harness.loadRoom(HUB_ID);
         const room = getRoom();
         const cannon = placeCannon({ballsLeft: 4, phase: CannonPhaseEnumMap.Waiting});
@@ -1562,7 +1633,9 @@ describe("a cannon in a room", () => {
             expect(ObjectUpdateUtil.canSetObjectMetadata(user, room, set(CannonStateUtil.encode({...NEW})))).toBe(false);
             expect(ObjectUpdateUtil.canSetObjectMetadata(user, room, new SetObjectMetadataSignal(HUB_ID, cannon.objectId,
                 ObjectMetadataKeyEnumMap.FanColor, "!"))).toBe(false);
-            expect(ObjectUpdateUtil.canRemoveObject(user, room, new RemoveObjectSignal(HUB_ID, cannon.objectId))).toBe(true);
+            expect(ObjectUpdateUtil.canSetObjectMetadata(user, room, new SetObjectMetadataSignal(HUB_ID, cannon.objectId,
+                ObjectMetadataKeyEnumMap.QuarterTurns, QuarterTurnsUtil.encode(1)))).toBe(false);
+            expect(ObjectUpdateUtil.canRemoveObject(user, room, new RemoveObjectSignal(HUB_ID, cannon.objectId))).toBe(false);
             expect(ObjectUpdateUtil.canSetObjectTransform(user, room, new SetObjectTransformSignal(HUB_ID, cannon.objectId,
                 new ObjectTransform({x: 12.5, y: 0, z: 12.5}, {...FLOOR_FACING}, {...UNIT_VEC3}), true))).toBe(true);
             // A placement, never a motion.
@@ -1599,11 +1672,15 @@ describe("a cannon in a room", () => {
             colMin: VoxelQueryUtil.getVoxelColFromWorldX(CANNON_SPOT.x) - 2,
             colMax: VoxelQueryUtil.getVoxelColFromWorldX(CANNON_SPOT.x) + 2}, MEMBER.userName);
         const off = new SetObjectMetadataSignal(HUB_ID, cannon.objectId, STATE_KEY, CannonStateUtil.encodeSwitch(false));
-        const remove = new RemoveObjectSignal(HUB_ID, cannon.objectId);
+        const move = new SetObjectTransformSignal(HUB_ID, cannon.objectId,
+            new ObjectTransform({x: CANNON_SPOT.x + 1, y: 0, z: CANNON_SPOT.z}, {...FLOOR_FACING}, {...UNIT_VEC3}), true);
         expect(ObjectUpdateUtil.canSetObjectMetadata(GUEST, room, off)).toBe(false);
-        expect(ObjectUpdateUtil.canRemoveObject(GUEST, room, remove)).toBe(false);
+        expect(ObjectUpdateUtil.canSetObjectTransform(GUEST, room, move)).toBe(false);
         expect(ObjectUpdateUtil.canSetObjectMetadata(MEMBER, room, off)).toBe(true);
-        expect(ObjectUpdateUtil.canRemoveObject(MEMBER, room, remove)).toBe(true);
+        expect(ObjectUpdateUtil.canSetObjectTransform(MEMBER, room, move)).toBe(true);
+        // Nor may the one it is kept for take a cannon away before it is scrap.
+        for (const user of [GUEST, MEMBER])
+            expect(ObjectUpdateUtil.canRemoveObject(user, room, new RemoveObjectSignal(HUB_ID, cannon.objectId))).toBe(false);
         expect(ObjectUpdateUtil.canAddObject(GUEST, room, cannonSignal(GUEST, "new", {x: CANNON_SPOT.x, y: 0, z: CANNON_SPOT.z + 1})))
             .toBe(false);
     });
@@ -1675,10 +1752,16 @@ describe("paying for a cannon", () => {
         expect(user.socketUserContext.inventory[DOLLAR]).toBe(1);
     });
 
-    it("gives nothing back for one taken away", async () => {
+    it("can't be taken away by whoever bought it before it is scrap, and gives nothing back once it is", async () => {
         const user = await join("someone");
         user.socketUserContext.inventory[DOLLAR] = CANNON_PRICE_DOLLARS;
         expect(add(user, "mine")).toBe(true);
+        expect(ServerObjectManager.onRemoveObjectSignalReceived(user.socketUserContext, new RemoveObjectSignal(HUB_ID, "mine")))
+            .toBe(false);
+        expect(getRoom().objectById["mine"]).toBeDefined();
+        // As the server leaves it once it has fired its last ball.
+        getRoom().objectById["mine"].metadata[STATE_KEY] = new EncodableByteString(
+            CannonStateUtil.encode({...NEW, phase: CannonPhaseEnumMap.Scrap, ballsLeft: 0}));
         expect(ServerObjectManager.onRemoveObjectSignalReceived(user.socketUserContext, new RemoveObjectSignal(HUB_ID, "mine")))
             .toBe(true);
         expect(user.socketUserContext.inventory[DOLLAR]).toBe(0);
@@ -2304,7 +2387,30 @@ describe("a cannon the server plays", () => {
             expect(getBalls()).toEqual([]);
         });
 
-        it("is anyone's to move or take away, as a cannon is, with nothing given back for it", async () => {
+        it("is anyone's to turn a quarter at a time, as the room is told, which leaves the rest of it as it was", async () => {
+            const user = await join("someone");
+            const other = await join("another", {x: 22, y: STANDING_Y, z: 22});
+            const scrap = placeCannon({...SCRAP, aim: {yaw: 2, pitch: 0.4}});
+            const before = scrap.metadata[STATE_KEY].str;
+            const turn = (quarterTurns: number) => new SetObjectMetadataSignal(HUB_ID, scrap.objectId,
+                ObjectMetadataKeyEnumMap.QuarterTurns, QuarterTurnsUtil.encode(quarterTurns));
+            for (const who of [GUEST, MEMBER, ADMIN])
+                expect(ObjectUpdateUtil.canSetObjectMetadata(who, getRoom(), turn(1))).toBe(true);
+            forget(other);
+            for (const quarterTurns of [1, 2, 3, 0])
+            {
+                expect(ServerObjectManager.onSetObjectMetadataSignalReceived(user.socketUserContext, turn(quarterTurns)))
+                    .toBe(true);
+                expect(QuarterTurnsUtil.getQuarterTurns(scrap)).toBe(quarterTurns);
+            }
+            expect(getPendingSignals(other, "setObjectMetadataSignal")
+                .filter((signal: SetObjectMetadataSignal) => signal.objectId == scrap.objectId)
+                .map((signal: SetObjectMetadataSignal) => QuarterTurnsUtil.decode(signal.metadataValue))).toEqual([1, 2, 3, 0]);
+            expect(scrap.metadata[STATE_KEY].str).toBe(before);
+            expect(getRoom().objectById[scrap.objectId]).toBe(scrap);
+        });
+
+        it("is anyone's to move or take away, unlike a working cannon, with nothing given back for it", async () => {
             const user = await join("someone");
             const other = await join("another", {x: 22, y: STANDING_Y, z: 22});
             const scrap = placeCannon(SCRAP);
@@ -2333,8 +2439,12 @@ describe("a cannon the server plays", () => {
                 colMin: VoxelQueryUtil.getVoxelColFromWorldX(CANNON_SPOT.x) - 2,
                 colMax: VoxelQueryUtil.getVoxelColFromWorldX(CANNON_SPOT.x) + 2}, MEMBER.userName);
             const remove = new RemoveObjectSignal(HUB_ID, scrap.objectId);
+            const turn = new SetObjectMetadataSignal(HUB_ID, scrap.objectId, ObjectMetadataKeyEnumMap.QuarterTurns,
+                QuarterTurnsUtil.encode(1));
             expect(ObjectUpdateUtil.canRemoveObject(GUEST, getRoom(), remove)).toBe(false);
+            expect(ObjectUpdateUtil.canSetObjectMetadata(GUEST, getRoom(), turn)).toBe(false);
             expect(ObjectUpdateUtil.canRemoveObject(MEMBER, getRoom(), remove)).toBe(true);
+            expect(ObjectUpdateUtil.canSetObjectMetadata(MEMBER, getRoom(), turn)).toBe(true);
         });
 
         it("stands in the cube it stood in, as solid as a block, and counts among the cannons a room holds", async () => {
@@ -2697,7 +2807,7 @@ describe("a cannon ball the server flies", () => {
         expect(getBills()).toHaveLength(1);
     });
 
-    it("leaves a block a cannon hangs on, and the cannon, though anybody could take both off, and breaks the rest",
+    it("leaves a block a cannon's scrap hangs on, and the scrap, though anybody could take both off, and breaks the rest",
         async () => {
         const user = await join("someone", {x: 26, y: STANDING_Y, z: 26});
         // A pillar two blocks square, with a cannon on top.
@@ -2710,7 +2820,7 @@ describe("a cannon ball the server flies", () => {
                     blocks.push(placeBlock(x, y, z));
             }
         }
-        const cannon = placeCannon({on: false}, {x: 16.5, y: 2, z: 16.5});
+        const cannon = placeCannon({phase: CannonPhaseEnumMap.Scrap, ballsLeft: 0}, {x: 16.5, y: 2, z: 16.5});
         expect(ObjectUpdateUtil.canRemoveObject(GUEST, getRoom(), new RemoveObjectSignal(HUB_ID, cannon.objectId))).toBe(true);
         const top = VoxelQueryUtil.getVoxelCollisionLayerFromWorldY(1.75);
         const under = blocks.filter(block => block.layer == top);

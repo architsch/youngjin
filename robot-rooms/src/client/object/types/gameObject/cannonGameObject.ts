@@ -8,6 +8,7 @@ import { ObjectMetadataKey, ObjectMetadataKeyEnumMap } from "../../../../shared/
 import { CANNON_TURN_RATE } from "../../../../shared/object/types/objectTypeConfig/cannonObjectTypeConfig";
 import CannonAimUtil from "../../../../shared/object/util/cannonAimUtil";
 import CannonStateUtil from "../../../../shared/object/util/cannonStateUtil";
+import QuarterTurnsUtil from "../../../../shared/object/util/quarterTurnsUtil";
 import CannonCompositionUtil from "../../../../shared/graphics/mesh/composition/util/cannonCompositionUtil";
 import PhysicsColliderStateUtil from "../../../../shared/physics/util/physicsColliderStateUtil";
 import InstancedMeshComposer from "../../components/instancedMeshComposer";
@@ -42,7 +43,7 @@ const cameraPositionTemp = new THREE.Vector3();
 // where the state has it aim, at the rate the server turns it, so that an aim told in steps shows as one turn; the
 // counters show the balls left, red and blinking when few are, dimmer the farther off the camera is; a ball fewer is a
 // shot, told to whatever shows and sounds one. Its sleep, while switched off, is its ParticleEmitter's. Told it is
-// scrap, it lies wrecked from then on, which is told once too, and shows nothing more.
+// scrap, it lies wrecked from then on, which is told once too, and shows nothing more but the turns it is given.
 export default class CannonGameObject extends GameObject
 {
     private instancedMeshComposer: InstancedMeshComposer;
@@ -76,6 +77,8 @@ export default class CannonGameObject extends GameObject
     onSetMetadata(key: ObjectMetadataKey, value: string)
     {
         super.onSetMetadata(key, value);
+        if (key === ObjectMetadataKeyEnumMap.QuarterTurns && this.isScrap())
+            this.pose();
         if (key !== ObjectMetadataKeyEnumMap.CannonState)
             return;
 
@@ -152,7 +155,7 @@ export default class CannonGameObject extends GameObject
 
     private getTarget(): CannonAim
     {
-        return CannonStateUtil.getShownAim(this.state, this.params.transform.dir);
+        return CannonStateUtil.getShownAim(this.state, this.params.transform.dir, QuarterTurnsUtil.getQuarterTurns(this.params));
     }
 
     private isScrap(): boolean

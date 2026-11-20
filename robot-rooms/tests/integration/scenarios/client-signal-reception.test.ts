@@ -54,7 +54,11 @@ import { InventoryItemTypeEnumMap } from "../../../src/shared/inventory/types/in
 import InventorySignal from "../../../src/shared/inventory/types/inventorySignal";
 import LoginRewardSignal from "../../../src/shared/inventory/types/loginRewardSignal";
 import { RoomTypeEnumMap } from "../../../src/shared/room/types/roomType";
-import { LOGIN_REWARD_DOLLARS } from "../../../src/shared/system/sharedConstants";
+import { LOGIN_REWARD_DOLLARS, NUM_VOXEL_COLS,
+    STOREY_FLOOR_COLLISION_LAYER } from "../../../src/shared/system/sharedConstants";
+import PlayerController from "../../../src/client/object/components/playerController";
+import ObjectPoseUtil from "../../../src/client/object/util/objectPoseUtil";
+import SpawnHotspotUtil from "../../../src/server/room/util/spawnHotspotUtil";
 import { FTUEElementCodeEnumMap } from "../../../src/shared/user/types/ftueElementCode";
 import DollarBillObjectTypeConfig from "../../../src/shared/object/types/objectTypeConfig/dollarBillObjectTypeConfig";
 import { PLAYER_HEIGHT } from "../../../src/shared/object/types/objectTypeConfig/playerObjectTypeConfig";
@@ -633,5 +637,51 @@ describe("what coming back has earned, in a browser", () => {
         vi.advanceTimersByTime(REWARD_SHOW_DELAY_MS);
         expect(stages.filter(stage => stage == "shown")).toHaveLength(2);
         expect(ClientInventoryManager.getDollarsShown()).toBe(3 + 2 * LOGIN_REWARD_DOLLARS);
+    });
+});
+
+describe("where the user's own player arrives, in a browser", () => {
+    const DOOR_TYPE_INDEX = ObjectTypeConfigMap.getIndexByType("Door");
+
+    // The user's player put down where the server puts an arrival in the room, and its controller as it sets out:
+    // whether it walks the player out of a doorway, and which way.
+    function arrive(): {walks: boolean, way: {x: number, z: number}}
+    {
+        const {pos, dir} = SpawnHotspotUtil.pickSpawnTransform(room, "");
+        const obj = new THREE.Object3D();
+        ObjectPoseUtil.pose(obj, false, pos, dir);
+        obj.updateMatrixWorld(true);
+        const controller = Object.assign(Object.create(PlayerController.prototype), {gameObject: {position: obj.position, obj},
+            spawnPos: {x: 0, z: 0}, enteringDir: {x: 0, z: 0}});
+        controller.beginEntering();
+        return {walks: !controller.fullyEntered, way: {...controller.enteringDir}};
+    }
+
+    it("walks a player put down behind the door out into the room, the way the door faces", () => {
+        const door = Object.values(room.objectById).find(obj => obj.objectTypeIndex == DOOR_TYPE_INDEX)!;
+        const {walks, way} = arrive();
+        expect(walks).toBe(true);
+        expect(way.x).toBeCloseTo(door.transform.dir.x, 6);
+        expect(way.z).toBeCloseTo(door.transform.dir.z, 6);
+    });
+
+    it("walks nowhere a player put down past blocks filling the doorway, nor one in a room with no door", () => {
+        // The storey in front of the door, filled four rows deep and well to either side of it.
+        for (let row = 58; row <= 61; ++row)
+        {
+            for (let col = 28; col <= 38; ++col)
+            {
+                for (let layer = 0; layer < STOREY_FLOOR_COLLISION_LAYER; ++layer)
+                    room.voxelGrid.voxels[row * NUM_VOXEL_COLS + col].blockLayerMask |= 1 << layer;
+            }
+        }
+        expect(arrive().walks).toBe(false);
+
+        for (const obj of Object.values(room.objectById))
+        {
+            if (obj.objectTypeIndex == DOOR_TYPE_INDEX)
+                room.objectGroup.removeObject(obj.objectId);
+        }
+        expect(arrive().walks).toBe(false);
     });
 });

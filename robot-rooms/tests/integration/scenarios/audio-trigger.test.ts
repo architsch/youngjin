@@ -465,7 +465,7 @@ describe("a cannon's own sounds", () => {
         // Its barrel and counters are its composer's, which plays no part here.
         const cannon = Object.assign(Object.create(CannonGameObject.prototype), {params, components: {},
             obj: new THREE.Object3D(), instancedMeshComposer: {getParts: () => [], redrawParts() {}},
-            state, shownAim: CannonStateUtil.getShownAim(state, facing), turnSoundSecondsLeft: 0}) as CannonGameObject;
+            state, shownAim: CannonStateUtil.getShownAim(state, facing, 0), turnSoundSecondsLeft: 0}) as CannonGameObject;
         // As the server tells of it: what it now is, under its one key.
         const tell = (change: Partial<CannonState>) => {
             const value = CannonStateUtil.encode({...CannonStateUtil.getObjectState(params), ...change});

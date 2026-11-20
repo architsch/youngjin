@@ -142,15 +142,17 @@ Building: anyone may build anywhere in a room but inside restricted zones, as pe
 
 Cannons fire at whoever is near, people and agents alike.
 - add_object with type "cannon" sets one on a floor or a wall (an up, north, south, east or west side), where it
-  takes ${CANNON_CELLS} by ${CANNON_CELLS} cells and stands ${CANNON_CELLS} out, for $${CANNON_PRICE_DOLLARS} each time. Nothing comes back for one removed. Anyone may switch
-  one off and on (edit_object with switched_on), move it or remove it, except in a restricted zone kept from them.
+  takes ${CANNON_CELLS} by ${CANNON_CELLS} cells and stands ${CANNON_CELLS} out, for $${CANNON_PRICE_DOLLARS} each time. Anyone may switch
+  one off and on (edit_object with switched_on) or move it, except in a restricted zone kept from them, but nobody
+  may remove one before it is scrap, and nothing comes back for one removed.
 - While on, a cannon rests ${CANNON_REST_SECONDS} seconds and waits ${CANNON_FIRE_INTERVAL_SECONDS[0]} to ${CANNON_FIRE_INTERVAL_SECONDS[1]} seconds. Then it turns toward the nearest person, ${CANNON_TURN_DEGREES_A_SECOND} degrees a
   second, and goes on turning after them wherever they go. Once it has pointed for ${CANNON_LOCK_SECONDS} s without a break at one
   it can fire at (within ${CANNON_RANGE_CELLS} cells of it, no nearer than ${CANNON_NEAR_CELLS}, with nothing between them), it fires a ball that
   way and waits ${CANNON_FIRE_INTERVAL_SECONDS[0]} to ${CANNON_FIRE_INTERVAL_SECONDS[1]} seconds again: whoever keeps going round it faster than it turns is never fired at.
   Once it has fired ${CANNON_SHOTS_IN_A_ROW} since it was last switched on, it switches itself off.
   look lists each cannon among the objects, with switchedOn and ballsLeft. It has ${CANNON_BALL_COUNT} balls, and once it has
-  fired the last it is scrap (look marks it): it does nothing more, and stays until someone removes it.
+  fired the last it is scrap (look marks it, with the way its fallen barrel points): it does nothing more, and stays
+  until someone removes it. edit_object with turn turns scrap a quarter clockwise for each turn.
 - A ball flies straight at ${CANNON_BALL_CELLS_A_SECOND} cells a second, slow enough to walk out of the way of, and a fan's wind turns it
   aside. look lists the balls in the air under cannonBalls, with where each is and how many cells it goes a second.
   A ball bounces off a mirror, a guide, a cannon or another ball, and flies on another way, faster: each bounce adds
@@ -299,7 +301,7 @@ function buildServer(): McpServer
 {
     // Its tools and its prompt never change while it runs. Saying they might would let any client, with a key or
     // without, hold a stream open to wait for word of a change (subscriptions/listen).
-    const server = new McpServer({name: "robot-rooms", title: "Robot Rooms", version: "1.7.2", // The version server.json lists
+    const server = new McpServer({name: "robot-rooms", title: "Robot Rooms", version: "1.8.0", // The version server.json lists
             websiteUrl: URL_STATIC,
             icons: [{src: `${AddressUtil.getEnvDynamicURL()}/${AGENT_ICON_FILE}`, mimeType: "image/jpeg",
                 sizes: ["150x150"]}]},
@@ -586,7 +588,8 @@ function defineTools(): {name: string, config: any, handler: any}[]
         title: "Edit an object",
         description: "Changes something placed: a label's text or a door's plate (text), a canvas's picture, a "
             + "canvas's, label's or door's look, where a door leads (destination, arrive_at), whether a cannon is "
-            + "switched on (switched_on: false stops it firing, true starts it again once it has rested), or whom a zone is kept "
+            + "switched on (switched_on: false stops it firing, true starts it again once it has rested), which way a "
+            + "cannon's scrap lies (turn: quarter turns clockwise, as seen from in front of the side it lies on), or whom a zone is kept "
             + "for (keep_for) and its name.",
         inputSchema: z.object({
             id: objectId,
@@ -598,6 +601,7 @@ function defineTools(): {name: string, config: any, handler: any}[]
             keep_for: keepFor.optional(),
             name: zoneName.optional(),
             switched_on: z.boolean().optional(),
+            turn: z.number().int().min(1).max(3).optional(),
         }),
         annotations: {readOnlyHint: false, destructiveHint: false},
     }, async ({arrive_at, keep_for, switched_on, ...edit}, ctx) => runAsAgent("edit_object", ctx, async agent => {
@@ -625,7 +629,8 @@ function defineTools(): {name: string, config: any, handler: any}[]
         description: "Removes for good something placed (a canvas, prop, lamp, fan, cannon, label or door) or a restricted "
             + "zone, by its id from look. A cannon's price doesn't come back. Removing a zone lifts its protection; the blocks in it stay (remove_blocks "
             + "takes blocks). To change a thing instead, use edit_object or move_object. Anyone may remove things "
-            + "outside restricted zones; only a room's owner removes its labels, doors and zones. Only adding it again "
+            + "outside restricted zones, a cannon only once it is scrap; only a room's owner removes its labels, doors "
+            + "and zones. Only adding it again "
             + "undoes it. Costs one edit.",
         inputSchema: z.object({id: objectId}),
         annotations: {readOnlyHint: false, destructiveHint: true},

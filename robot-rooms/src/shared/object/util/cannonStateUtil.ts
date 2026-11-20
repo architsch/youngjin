@@ -109,11 +109,17 @@ const CannonStateUtil =
         return CannonStateUtil.decode(value).phase == CannonPhaseEnumMap.Scrap;
     },
     // Where its barrel shows pointing, on the face it stands on: as it aims, or hanging down, asleep, while it is
-    // switched off. As scrap it lies the way it would hang, whatever its switch (see CannonCompositionUtil.poseScrap).
-    getShownAim: (state: CannonState, facing: Vec3): CannonAim =>
+    // switched off. As scrap it lies the way it would hang, whatever its switch (see CannonCompositionUtil.poseScrap),
+    // turned by its QuarterTurns, which nothing else of a cannon's reads.
+    getShownAim: (state: CannonState, facing: Vec3, quarterTurns: number): CannonAim =>
     {
-        return (state.on && state.phase != CannonPhaseEnumMap.Scrap) ? state.aim
-            : CannonAimUtil.getSleepAim(facing, state.aim);
+        if (state.on && state.phase != CannonPhaseEnumMap.Scrap)
+            return state.aim;
+        const asleep = CannonAimUtil.getSleepAim(facing, state.aim);
+        if (state.phase != CannonPhaseEnumMap.Scrap)
+            return asleep;
+        // A yaw turns toward the face's right, which is clockwise as seen from in front of it, as a turn goes.
+        return {yaw: (asleep.yaw + quarterTurns * 0.5 * Math.PI) % (2 * Math.PI), pitch: asleep.pitch};
     },
 }
 
